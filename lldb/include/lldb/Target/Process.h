@@ -1887,15 +1887,13 @@ public:
     //------------------------------------------------------------------
     lldb::StateType
     GetState ();
-    
+
     lldb::ExpressionResults
-    RunThreadPlan (ExecutionContext &exe_ctx,    
-                    lldb::ThreadPlanSP &thread_plan_sp,
-                    const EvaluateExpressionOptions &options,
-                    Stream &errors);
+    RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_plan_sp,
+                  const EvaluateExpressionOptions &options, DiagnosticManager &diagnostic_manager);
 
     static const char *
-    ExecutionResultAsCString (lldb::ExpressionResults result);
+    ExecutionResultAsCString(lldb::ExpressionResults result);
 
     void
     GetStatus (Stream &ostrm);

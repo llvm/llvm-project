@@ -57,7 +57,7 @@ public:
     /// Parse a single expression and convert it to IR using Clang.  Don't
     /// wrap the expression in anything at all.
     ///
-    /// @param[in] stream
+    /// @param[in] diagnostic_manager
     ///     The stream to print errors to.
     ///
     /// @return
@@ -65,7 +65,7 @@ public:
     ///     success.
     //------------------------------------------------------------------
     virtual unsigned
-    Parse (Stream &stream,
+    Parse (DiagnosticManager &diagnostic_manager,
            uint32_t first_line = 0,
            uint32_t last_line = UINT32_MAX,
            uint32_t line_offset = 0) = 0;

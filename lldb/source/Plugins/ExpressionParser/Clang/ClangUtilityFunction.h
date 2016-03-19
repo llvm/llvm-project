@@ -124,12 +124,12 @@ public:
     {
         m_type_system_helper.ResetDeclMap(exe_ctx, keep_result_in_memory);
     }
-    
+
     bool
-    Install (Stream &error_stream, ExecutionContext &exe_ctx) override;
-    
+    Install(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) override;
+
 private:
-    ClangUtilityFunctionHelper  m_type_system_helper;    ///< The map to use when parsing and materializing the expression.
+    ClangUtilityFunctionHelper m_type_system_helper; ///< The map to use when parsing and materializing the expression.
 };
 
 } // namespace lldb_private

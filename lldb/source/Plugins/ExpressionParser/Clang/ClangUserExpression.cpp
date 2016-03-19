@@ -333,7 +333,7 @@ ApplyObjcCastHack(std::string &expr)
 }
 
 bool
-ClangUserExpression::Parse (Stream &error_stream,
+ClangUserExpression::Parse (DiagnosticManager &diagnostic_manager,
                             ExecutionContext &exe_ctx,
                             lldb_private::ExecutionPolicy execution_policy,
                             bool keep_result_in_memory,
@@ -354,13 +354,13 @@ ClangUserExpression::Parse (Stream &error_stream,
         }
         else
         {
-            error_stream.PutCString ("error: couldn't start parsing (no persistent data)");
+            diagnostic_manager.PutCString(eDiagnosticSeverityError, "couldn't start parsing (no persistent data)");
             return false;
         }
     }
     else
     {
-        error_stream.PutCString ("error: couldn't start parsing (no target)");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "error: couldn't start parsing (no target)");
         return false;
     }
 
@@ -368,7 +368,7 @@ ClangUserExpression::Parse (Stream &error_stream,
 
     if (!err.Success())
     {
-        error_stream.Printf("warning: %s\n", err.AsCString());
+        diagnostic_manager.PutCString(eDiagnosticSeverityWarning, err.AsCString());
     }
 
     StreamString m_transformed_stream;
@@ -438,7 +438,7 @@ ClangUserExpression::Parse (Stream &error_stream,
                               exe_ctx,
                               first_body_line))
     {
-        error_stream.PutCString ("error: couldn't construct expression body");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "couldn't construct expression body");
         return false;
     }
 
@@ -453,7 +453,7 @@ ClangUserExpression::Parse (Stream &error_stream,
 
     if (!target)
     {
-        error_stream.PutCString ("error: invalid target\n");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "invalid target");
         return false;
     }
 
@@ -487,7 +487,8 @@ ClangUserExpression::Parse (Stream &error_stream,
 
     if (!DeclMap()->WillParse(exe_ctx, m_materializer_ap.get()))
     {
-        error_stream.PutCString ("error: current process state is unsuitable for expression parsing\n");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError,
+                                      "current process state is unsuitable for expression parsing");
 
         ResetDeclMap(); // We are being careful here in the case of breakpoint conditions.
 
@@ -502,10 +503,16 @@ ClangUserExpression::Parse (Stream &error_stream,
 
     ClangExpressionParser parser(exe_scope, *this, generate_debug_info);
 
-    unsigned num_errors = parser.Parse (error_stream);
+    unsigned num_errors = parser.Parse(diagnostic_manager);
 
     if (num_errors)
     {
+<<<<<<< HEAD
+=======
+        diagnostic_manager.Printf(eDiagnosticSeverityError, "%u error%s parsing expression", num_errors,
+                                  num_errors == 1 ? "" : "s");
+
+>>>>>>> de67aaa9cdd... Add a DiagnosticManager replace error streams in the expression parser.
         ResetDeclMap(); // We are being careful here in the case of breakpoint conditions.
 
         return false;
@@ -554,22 +561,20 @@ ClangUserExpression::Parse (Stream &error_stream,
     {
         const char *error_cstr = jit_error.AsCString();
         if (error_cstr && error_cstr[0])
-            error_stream.Printf ("error: %s\n", error_cstr);
+            diagnostic_manager.PutCString(eDiagnosticSeverityError, error_cstr);
         else
-            error_stream.Printf ("error: expression can't be interpreted or run\n");
+            diagnostic_manager.Printf(eDiagnosticSeverityError, "expression can't be interpreted or run");
         return false;
     }
 }
 
 bool
-ClangUserExpression::AddArguments (ExecutionContext &exe_ctx,
-                                   std::vector<lldb::addr_t> &args,
-                                   lldb::addr_t struct_address,
-                                   Stream &error_stream)
+ClangUserExpression::AddArguments(ExecutionContext &exe_ctx, std::vector<lldb::addr_t> &args,
+                                  lldb::addr_t struct_address, DiagnosticManager &diagnostic_manager)
 {
     lldb::addr_t object_ptr = LLDB_INVALID_ADDRESS;
-    lldb::addr_t cmd_ptr    = LLDB_INVALID_ADDRESS;
-    
+    lldb::addr_t cmd_ptr = LLDB_INVALID_ADDRESS;
+
     if (m_needs_object_ptr)
     {
         lldb::StackFrameSP frame_sp = exe_ctx.GetFrameSP();
@@ -588,7 +593,7 @@ ClangUserExpression::AddArguments (ExecutionContext &exe_ctx,
         }
         else
         {
-            error_stream.Printf("Need object pointer but don't know the language\n");
+            diagnostic_manager.PutCString(eDiagnosticSeverityError, "need object pointer but don't know the language");
             return false;
         }
 
@@ -598,7 +603,9 @@ ClangUserExpression::AddArguments (ExecutionContext &exe_ctx,
 
         if (!object_ptr_error.Success())
         {
-            error_stream.Printf("warning: couldn't get required object pointer (substituting NULL): %s\n", object_ptr_error.AsCString());
+            diagnostic_manager.Printf(eDiagnosticSeverityWarning,
+                                      "couldn't get required object pointer (substituting NULL): %s",
+                                      object_ptr_error.AsCString());
             object_ptr = 0;
         }
 
@@ -610,7 +617,9 @@ ClangUserExpression::AddArguments (ExecutionContext &exe_ctx,
 
             if (!object_ptr_error.Success())
             {
-                error_stream.Printf("warning: couldn't get cmd pointer (substituting NULL): %s\n", object_ptr_error.AsCString());
+                diagnostic_manager.Printf(eDiagnosticSeverityWarning,
+                                          "couldn't get cmd pointer (substituting NULL): %s",
+                                          object_ptr_error.AsCString());
                 cmd_ptr = 0;
             }
         }

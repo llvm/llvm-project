@@ -22,19 +22,20 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Expression/UserExpression.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
+#include "lldb/Expression/UserExpression.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -738,11 +739,11 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler (const ProcessSP &process
 }
 
 lldb::addr_t
-AppleObjCTrampolineHandler::SetupDispatchFunction (Thread &thread, ValueList &dispatch_values)
+AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread, ValueList &dispatch_values)
 {
-    ExecutionContext exe_ctx (thread.shared_from_this());
-    StreamString errors;
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_STEP));
+    ExecutionContext exe_ctx(thread.shared_from_this());
+    DiagnosticManager diagnostics;
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
     lldb::addr_t args_addr = LLDB_INVALID_ADDRESS;
     FunctionCaller *impl_function_caller = nullptr;
 
@@ -768,11 +769,14 @@ AppleObjCTrampolineHandler::SetupDispatchFunction (Thread &thread, ValueList &di
                     m_impl_code.reset();
                     return args_addr;
                 }
-                
-                if (!m_impl_code->Install(errors, exe_ctx))
+
+                if (!m_impl_code->Install(diagnostics, exe_ctx))
                 {
                     if (log)
-                        log->Printf ("Failed to install implementation lookup: %s.", errors.GetData());
+                    {
+                        log->Printf("Failed to install implementation lookup.");
+                        diagnostics.Dump(log);
+                    }
                     m_impl_code.reset();
                     return args_addr;
                 }
@@ -781,10 +785,8 @@ AppleObjCTrampolineHandler::SetupDispatchFunction (Thread &thread, ValueList &di
             {
                 if (log)
                     log->Printf("No method lookup implementation code.");
-                errors.Printf ("No method lookup implementation code found.");
                 return LLDB_INVALID_ADDRESS;
             }
-            
 
             // Next make the runner function for our implementation utility function.
             ClangASTContext *clang_ast_context = thread.GetProcess()->GetTarget().GetScratchClangASTContext();
@@ -806,20 +808,23 @@ AppleObjCTrampolineHandler::SetupDispatchFunction (Thread &thread, ValueList &di
             impl_function_caller = m_impl_code->GetFunctionCaller();
         }
     }
-    
-    errors.Clear();
-    
+
+    diagnostics.Clear();
+
     // Now write down the argument values for this particular call.  This looks like it might be a race condition
     // if other threads were calling into here, but actually it isn't because we allocate a new args structure for
     // this call by passing args_addr = LLDB_INVALID_ADDRESS...
 
-    if (impl_function_caller->WriteFunctionArguments (exe_ctx, args_addr, dispatch_values, errors))
+    if (impl_function_caller->WriteFunctionArguments(exe_ctx, args_addr, dispatch_values, diagnostics))
     {
         if (log)
-            log->Printf ("Error writing function arguments: \"%s\".", errors.GetData());
+        {
+            log->Printf("Error writing function arguments.");
+            diagnostics.Dump(log);
+        }
         return args_addr;
     }
-        
+
     return args_addr;
 }
 

@@ -1448,6 +1448,8 @@ Host::ShellExpandArguments (ProcessLaunchInfo &launch_info)
     return error;
 }
 
+#include <thread>
+
 HostThread
 Host::StartMonitoringChildProcess(Host::MonitorChildProcessCallback callback, void *callback_baton, lldb::pid_t pid, bool monitor_signals)
 {
@@ -1458,30 +1460,20 @@ Host::StartMonitoringChildProcess(Host::MonitorChildProcessCallback callback, vo
     Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_HOST | LIBLLDB_LOG_PROCESS));
 
 
-    dispatch_source_t source = ::dispatch_source_create (DISPATCH_SOURCE_TYPE_PROC, 
-                                                         pid, 
-                                                         mask, 
-                                                         ::dispatch_get_global_queue (DISPATCH_QUEUE_PRIORITY_DEFAULT,0));
-
     if (log)
-        log->Printf ("Host::StartMonitoringChildProcess (callback=%p, baton=%p, pid=%i, monitor_signals=%i) source = %p\n", 
+        log->Printf ("Host::StartMonitoringChildProcess (callback=%p, baton=%p, pid=%i, monitor_signals=%i)\n",
                      callback, 
                      callback_baton, 
                      (int)pid, 
-                     monitor_signals, 
-                     source);
-
-    if (source)
-    {
-        ::dispatch_source_set_cancel_handler (source, ^{
-            ::dispatch_release (source);
-        });
-        ::dispatch_source_set_event_handler (source, ^{
-            
-            int status= 0;
-            int wait_pid = 0;
-            bool cancel = false;
-            bool exited = false;
+                     monitor_signals);
+    
+    std::thread GrimReaper([callback, pid, log, callback_baton]() {
+        int status= 0;
+        int wait_pid = 0;
+        bool cancel = false;
+        bool exited = false;
+        while(!exited)
+        {
             do
             {
                 wait_pid = ::waitpid (pid, &status, 0);
@@ -1526,16 +1518,12 @@ Host::StartMonitoringChildProcess(Host::MonitorChildProcessCallback callback, vo
                 
                 if (callback)
                     cancel = callback (callback_baton, pid, exited, signal, exit_status);
-                
-                if (exited || cancel)
-                {
-                    ::dispatch_source_cancel(source);
-                }
             }
-        });
-
-        ::dispatch_resume (source);
-    }
+        }
+    });
+    
+    GrimReaper.detach();
+    
     return HostThread();
 }
 

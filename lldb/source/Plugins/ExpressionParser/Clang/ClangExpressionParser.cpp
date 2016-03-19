@@ -11,7 +11,9 @@
 // C++ Includes
 // Other libraries and framework includes
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ExternalASTSource.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
@@ -66,21 +68,23 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StringList.h"
 #include "lldb/Core/StreamString.h"
+#include "lldb/Core/StringList.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRDynamicChecks.h"
+#include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/Language.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 using namespace clang;
 using namespace llvm;
@@ -157,6 +161,76 @@ public:
     {
         return m_error_stream.GetString();
     }
+};
+
+class ClangDiagnosticManagerAdapter : public clang::DiagnosticConsumer
+{
+public:
+    ClangDiagnosticManagerAdapter() : m_passthrough(new clang::TextDiagnosticBuffer) {}
+
+    ClangDiagnosticManagerAdapter(const std::shared_ptr<clang::TextDiagnosticBuffer> &passthrough)
+        : m_passthrough(passthrough)
+    {
+    }
+
+    void
+    ResetManager(DiagnosticManager *manager = nullptr)
+    {
+        m_manager = manager;
+    }
+
+    void
+    HandleDiagnostic(DiagnosticsEngine::Level DiagLevel, const clang::Diagnostic &Info)
+    {
+        if (m_manager)
+        {
+            llvm::SmallVector<char, 32> diag_str;
+            Info.FormatDiagnostic(diag_str);
+            diag_str.push_back('\0');
+            const char *data = diag_str.data();
+
+            switch (DiagLevel)
+            {
+                case DiagnosticsEngine::Level::Fatal:
+                case DiagnosticsEngine::Level::Error:
+                    m_manager->AddDiagnostic(data, eDiagnosticSeverityError, eDiagnosticOriginClang, Info.getID());
+                    break;
+                case DiagnosticsEngine::Level::Warning:
+                    m_manager->AddDiagnostic(data, eDiagnosticSeverityWarning, eDiagnosticOriginClang, Info.getID());
+                    break;
+                case DiagnosticsEngine::Level::Remark:
+                case DiagnosticsEngine::Level::Ignored:
+                    m_manager->AddDiagnostic(data, eDiagnosticSeverityRemark, eDiagnosticOriginClang, Info.getID());
+                    break;
+                case DiagnosticsEngine::Level::Note:
+                    m_manager->AppendMessageToDiagnostic(data);
+            }
+        }
+
+        m_passthrough->HandleDiagnostic(DiagLevel, Info);
+    }
+
+    void
+    FlushDiagnostics(DiagnosticsEngine &Diags)
+    {
+        m_passthrough->FlushDiagnostics(Diags);
+    }
+
+    DiagnosticConsumer *
+    clone(DiagnosticsEngine &Diags) const
+    {
+        return new ClangDiagnosticManagerAdapter(m_passthrough);
+    }
+
+    clang::TextDiagnosticBuffer *
+    GetPassthrough()
+    {
+        return m_passthrough.get();
+    }
+
+private:
+    DiagnosticManager *m_manager = nullptr;
+    std::shared_ptr<clang::TextDiagnosticBuffer> m_passthrough;
 };
 
 //===----------------------------------------------------------------------===//
@@ -392,7 +466,7 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
 
     // 6. Set up the diagnostic buffer for reporting errors
 
-    m_compiler->getDiagnostics().setClient(new clang::TextDiagnosticBuffer);
+    m_compiler->getDiagnostics().setClient(new ClangDiagnosticManagerAdapter);
 
     // 7. Set up the source management objects inside the compiler
 
@@ -457,14 +531,17 @@ ClangExpressionParser::~ClangExpressionParser()
 }
 
 unsigned
-ClangExpressionParser::Parse (Stream &stream,
+ClangExpressionParser::Parse (DiagnosticManager &diagnostic_manager,
                               uint32_t first_line,
                               uint32_t last_line,
                               uint32_t line_offset)
 {
-    TextDiagnosticBuffer *diag_buf = static_cast<TextDiagnosticBuffer*>(m_compiler->getDiagnostics().getClient());
+    ClangDiagnosticManagerAdapter *adapter =
+        static_cast<ClangDiagnosticManagerAdapter *>(m_compiler->getDiagnostics().getClient());
+    clang::TextDiagnosticBuffer *diag_buf = adapter->GetPassthrough();
+    diag_buf->FlushDiagnostics(m_compiler->getDiagnostics());
 
-    diag_buf->FlushDiagnostics (m_compiler->getDiagnostics());
+    adapter->ResetManager(&diagnostic_manager);
 
     const char *expr_text = m_expr.Text();
 
@@ -514,45 +591,31 @@ ClangExpressionParser::Parse (Stream &stream,
 
     diag_buf->EndSourceFile();
 
-    TextDiagnosticBuffer::const_iterator diag_iterator;
+    unsigned num_errors = diag_buf->getNumErrors();
 
-    int num_errors = 0;
-    
     if (m_pp_callbacks && m_pp_callbacks->hasErrors())
     {
         num_errors++;
-        
-        stream.PutCString(m_pp_callbacks->getErrorString().c_str());
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "while importing modules:");
+        diagnostic_manager.AppendMessageToDiagnostic(m_pp_callbacks->getErrorString().c_str());
     }
-
-    for (diag_iterator = diag_buf->warn_begin();
-         diag_iterator != diag_buf->warn_end();
-         ++diag_iterator)
-        stream.Printf("warning: %s\n", (*diag_iterator).second.c_str());
-
-    for (diag_iterator = diag_buf->err_begin();
-         diag_iterator != diag_buf->err_end();
-         ++diag_iterator)
-    {
-        num_errors++;
-        stream.Printf("error: %s\n", (*diag_iterator).second.c_str());
-    }
-
-    for (diag_iterator = diag_buf->note_begin();
-         diag_iterator != diag_buf->note_end();
-         ++diag_iterator)
-        stream.Printf("note: %s\n", (*diag_iterator).second.c_str());
 
     if (!num_errors)
     {
         if (type_system_helper->DeclMap() && !type_system_helper->DeclMap()->ResolveUnknownTypes())
         {
-            stream.Printf("error: Couldn't infer the type of a variable\n");
+            diagnostic_manager.Printf(eDiagnosticSeverityError, "Couldn't infer the type of a variable");
             num_errors++;
         }
     }
-    
-    stream.Printf ("error: %d errors parsing expression\n", num_errors);
+
+    if (!num_errors)
+    {
+        type_system_helper->CommitPersistentDecls();
+    }
+
+    adapter->ResetManager();
+
     return num_errors;
 }
 
@@ -691,14 +754,14 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
                 {
                     DynamicCheckerFunctions *dynamic_checkers = new DynamicCheckerFunctions();
 
-                    StreamString install_errors;
+                    DiagnosticManager install_diagnostics;
 
-                    if (!dynamic_checkers->Install(install_errors, exe_ctx))
+                    if (!dynamic_checkers->Install(install_diagnostics, exe_ctx))
                     {
-                        if (install_errors.GetString().empty())
-                            err.SetErrorString ("couldn't install checkers, unknown error");
+                        if (install_diagnostics.Diagnostics().size())
+                            err.SetErrorString("couldn't install checkers, unknown error");
                         else
-                            err.SetErrorString (install_errors.GetString().c_str());
+                            err.SetErrorString(install_diagnostics.GetString().c_str());
 
                         return err;
                     }

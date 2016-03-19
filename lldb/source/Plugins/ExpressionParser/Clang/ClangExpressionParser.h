@@ -10,11 +10,12 @@
 #ifndef liblldb_ClangExpressionParser_h_
 #define liblldb_ClangExpressionParser_h_
 
-#include "lldb/lldb-public.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Core/Error.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionParser.h"
+#include "lldb/lldb-public.h"
 
 #include <string>
 #include <vector>
@@ -62,15 +63,15 @@ public:
     /// Parse a single expression and convert it to IR using Clang.  Don't
     /// wrap the expression in anything at all.
     ///
-    /// @param[in] stream
-    ///     The stream to print errors to.
+    /// @param[in] diagnostic_manager
+    ///     The diagnostic manager to report errors to.
     ///
     /// @return
     ///     The number of errors encountered during parsing.  0 means
     ///     success.
     //------------------------------------------------------------------
     unsigned
-    Parse (Stream &stream,
+    Parse (DiagnosticManager &diagnostic_manager,
            uint32_t first_line = 0,
            uint32_t last_line = UINT32_MAX,
            uint32_t line_offset = 0) override;
@@ -100,7 +101,7 @@ public:
     ///
     /// @param[out] const_result
     ///     If the result of the expression is constant, and the
-    ///     expression has no side effects, this is set to the result of the 
+    ///     expression has no side effects, this is set to the result of the
     ///     expression.
     ///
     /// @param[in] execution_policy

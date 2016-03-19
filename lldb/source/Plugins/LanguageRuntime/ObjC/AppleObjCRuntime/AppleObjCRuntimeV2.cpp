@@ -36,6 +36,7 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Core/ValueObjectVariable.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Host/StringConvert.h"
@@ -1259,13 +1260,13 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
     
     if (!ast)
         return false;
-    
+
     Address function_address;
-    
-    StreamString errors;
-    
+
+    DiagnosticManager diagnostics;
+
     const uint32_t addr_size = process->GetAddressByteSize();
-    
+
     Error err;
     
     // Read the total number of classes from the hash table
@@ -1299,12 +1300,15 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
         }
         else
         {
-            errors.Clear();
-            
-            if (!m_get_class_info_code->Install(errors, exe_ctx))
+            diagnostics.Clear();
+
+            if (!m_get_class_info_code->Install(diagnostics, exe_ctx))
             {
                 if (log)
-                    log->Printf ("Failed to install implementation lookup: %s.", errors.GetData());
+                {
+                    log->Printf("Failed to install implementation lookup");
+                    diagnostics.Dump(log);
+                }
                 m_get_class_info_code.reset();
             }
         }
@@ -1339,14 +1343,18 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
         if (!get_class_info_function)
         {
             if (log)
-                log->Printf ("Failed to get implementation lookup function caller: %s.", errors.GetData());
+            {
+                log->Printf("Failed to get implementation lookup function caller.");
+                diagnostics.Dump(log);
+            }
+
             return false;
         }
         arguments = get_class_info_function->GetArgumentValues();
     }
 
-    errors.Clear();
-    
+    diagnostics.Clear();
+
     const uint32_t class_info_byte_size = addr_size + 4;
     const uint32_t class_infos_byte_size = num_classes * class_info_byte_size;
     lldb::addr_t class_infos_addr = process->AllocateMemory(class_infos_byte_size,
@@ -1362,16 +1370,13 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
     arguments.GetValueAtIndex(0)->GetScalar() = hash_table.GetTableLoadAddress();
     arguments.GetValueAtIndex(1)->GetScalar() = class_infos_addr;
     arguments.GetValueAtIndex(2)->GetScalar() = class_infos_byte_size;
-    
+
     bool success = false;
-    
-    errors.Clear();
-    
+
+    diagnostics.Clear();
+
     // Write our function arguments into the process so we can run our function
-    if (get_class_info_function->WriteFunctionArguments (exe_ctx,
-                                                           m_get_class_info_args,
-                                                           arguments,
-                                                           errors))
+    if (get_class_info_function->WriteFunctionArguments(exe_ctx, m_get_class_info_args, arguments, diagnostics))
     {
         EvaluateExpressionOptions options;
         options.SetUnwindOnError(true);
@@ -1383,18 +1388,15 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
         Value return_value;
         return_value.SetValueType (Value::eValueTypeScalar);
         //return_value.SetContext (Value::eContextTypeClangType, clang_uint32_t_type);
-        return_value.SetCompilerType (clang_uint32_t_type);
+        return_value.SetCompilerType(clang_uint32_t_type);
         return_value.GetScalar() = 0;
-        
-        errors.Clear();
-        
+
+        diagnostics.Clear();
+
         // Run the function
-        ExpressionResults results = get_class_info_function->ExecuteFunction (exe_ctx,
-                                                                              &m_get_class_info_args,
-                                                                              options,
-                                                                              errors,
-                                                                              return_value);
-        
+        ExpressionResults results = get_class_info_function->ExecuteFunction(exe_ctx, &m_get_class_info_args, options,
+                                                                             diagnostics, return_value);
+
         if (results == eExpressionCompleted)
         {
             // The result is the number of ClassInfo structures that were filled in
@@ -1420,15 +1422,21 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
         else
         {
             if (log)
-                log->Printf("Error evaluating our find class name function: %s.\n", errors.GetData());
+            {
+                log->Printf("Error evaluating our find class name function.");
+                diagnostics.Dump(log);
+            }
         }
     }
     else
     {
         if (log)
-            log->Printf ("Error writing function arguments: \"%s\".", errors.GetData());
+        {
+            log->Printf("Error writing function arguments.");
+            diagnostics.Dump(log);
+        }
     }
-    
+
     // Deallocate the memory we allocated for the ClassInfo array
     process->DeallocateMemory(class_infos_addr);
     
@@ -1504,13 +1512,13 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
     
     if (!ast)
         return DescriptorMapUpdateResult::Fail();
-    
+
     Address function_address;
-    
-    StreamString errors;
-    
+
+    DiagnosticManager diagnostics;
+
     const uint32_t addr_size = process->GetAddressByteSize();
-    
+
     Error err;
     
     const lldb::addr_t objc_opt_ptr = GetSharedCacheReadOnlyAddress();
@@ -1549,16 +1557,19 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
         }
         else
         {
-            errors.Clear();
-            
-            if (!m_get_shared_cache_class_info_code->Install(errors, exe_ctx))
+            diagnostics.Clear();
+
+            if (!m_get_shared_cache_class_info_code->Install(diagnostics, exe_ctx))
             {
                 if (log)
-                    log->Printf ("Failed to install implementation lookup: %s.", errors.GetData());
+                {
+                    log->Printf("Failed to install implementation lookup.");
+                    diagnostics.Dump(log);
+                }
                 m_get_shared_cache_class_info_code.reset();
             }
         }
-        
+
         if (!m_get_shared_cache_class_info_code.get())
             return DescriptorMapUpdateResult::Fail();
     
@@ -1590,9 +1601,9 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
             return DescriptorMapUpdateResult::Fail();
         arguments = get_shared_cache_class_info_function->GetArgumentValues();
     }
-    
-    errors.Clear();
-    
+
+    diagnostics.Clear();
+
     const uint32_t class_info_byte_size = addr_size + 4;
     const uint32_t class_infos_byte_size = num_classes * class_info_byte_size;
     lldb::addr_t class_infos_addr = process->AllocateMemory (class_infos_byte_size,
@@ -1608,17 +1619,15 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
     arguments.GetValueAtIndex(0)->GetScalar() = objc_opt_ptr;
     arguments.GetValueAtIndex(1)->GetScalar() = class_infos_addr;
     arguments.GetValueAtIndex(2)->GetScalar() = class_infos_byte_size;
-    
+
     bool success = false;
     bool any_found = false;
-    
-    errors.Clear();
-    
+
+    diagnostics.Clear();
+
     // Write our function arguments into the process so we can run our function
-    if (get_shared_cache_class_info_function->WriteFunctionArguments (exe_ctx,
-                                                                      m_get_shared_cache_class_info_args,
-                                                                      arguments,
-                                                                      errors))
+    if (get_shared_cache_class_info_function->WriteFunctionArguments(exe_ctx, m_get_shared_cache_class_info_args,
+                                                                     arguments, diagnostics))
     {
         EvaluateExpressionOptions options;
         options.SetUnwindOnError(true);
@@ -1630,18 +1639,15 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
         Value return_value;
         return_value.SetValueType (Value::eValueTypeScalar);
         //return_value.SetContext (Value::eContextTypeClangType, clang_uint32_t_type);
-        return_value.SetCompilerType (clang_uint32_t_type);
+        return_value.SetCompilerType(clang_uint32_t_type);
         return_value.GetScalar() = 0;
-        
-        errors.Clear();
-        
+
+        diagnostics.Clear();
+
         // Run the function
-        ExpressionResults results = get_shared_cache_class_info_function->ExecuteFunction (exe_ctx,
-                                                                                           &m_get_shared_cache_class_info_args,
-                                                                                           options,
-                                                                                           errors,
-                                                                                           return_value);
-        
+        ExpressionResults results = get_shared_cache_class_info_function->ExecuteFunction(
+            exe_ctx, &m_get_shared_cache_class_info_args, options, diagnostics, return_value);
+
         if (results == eExpressionCompleted)
         {
             // The result is the number of ClassInfo structures that were filled in
@@ -1687,15 +1693,21 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
         else
         {
             if (log)
-                log->Printf("Error evaluating our find class name function: %s.\n", errors.GetData());
+            {
+                log->Printf("Error evaluating our find class name function.");
+                diagnostics.Dump(log);
+            }
         }
     }
     else
     {
         if (log)
-            log->Printf ("Error writing function arguments: \"%s\".", errors.GetData());
+        {
+            log->Printf("Error writing function arguments.");
+            diagnostics.Dump(log);
+        }
     }
-    
+
     // Deallocate the memory we allocated for the ClassInfo array
     process->DeallocateMemory(class_infos_addr);
     

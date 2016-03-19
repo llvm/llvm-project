@@ -66,11 +66,11 @@ class GoUserExpression : public UserExpression
                      lldb::LanguageType language, ResultType desired_type, const EvaluateExpressionOptions &options);
 
     bool
-    Parse(Stream &error_stream, ExecutionContext &exe_ctx, lldb_private::ExecutionPolicy execution_policy,
+    Parse(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx, lldb_private::ExecutionPolicy execution_policy,
           bool keep_result_in_memory, bool generate_debug_info, uint32_t line_offset) override;
 
     lldb::ExpressionResults
-    Execute(Stream &error_stream, ExecutionContext &exe_ctx,
+    Execute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
             const EvaluateExpressionOptions &options,
             lldb::UserExpressionSP &shared_ptr_to_me,
             lldb::ExpressionVariableSP &result) override;

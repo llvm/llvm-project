@@ -61,8 +61,8 @@ public:
     /// Install the utility functions into a process.  This binds the
     /// instance of DynamicCheckerFunctions to that process.
     ///
-    /// @param[in] error_stream
-    ///     A stream to print errors on.
+    /// @param[in] diagnostic_manager
+    ///     A diagnostic manager to report errors to.
     ///
     /// @param[in] exe_ctx
     ///     The execution context to install the functions into.
@@ -71,11 +71,12 @@ public:
     ///     True on success; false on failure, or if the functions have
     ///     already been installed.
     //------------------------------------------------------------------
-    bool Install (Stream &error_stream,
-                  ExecutionContext &exe_ctx);
-    
-    bool DoCheckersExplainStop (lldb::addr_t addr, Stream &message);
-    
+    bool
+    Install(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx);
+
+    bool
+    DoCheckersExplainStop(lldb::addr_t addr, Stream &message);
+
     std::unique_ptr<UtilityFunction> m_valid_pointer_check;
     std::unique_ptr<UtilityFunction> m_objc_object_check;
 };
