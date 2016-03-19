@@ -564,7 +564,7 @@ lto_codegen_set_should_embed_uselists(lto_code_gen_t cg,
  * \since LTO_API_VERSION=18
  */
 typedef struct {
-  void *Buffer;
+  const char *Buffer;
   size_t Size;
 } LTOObjectBuffer;
 
