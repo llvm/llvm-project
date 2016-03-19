@@ -5671,6 +5671,7 @@ std::error_code FunctionIndexBitcodeReader::parseEntireSummary() {
       FS->setModulePath(
           TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0));
       SummaryMap[ValueID] = std::move(FS);
+      break;
     }
     // FS_COMBINED_ENTRY: [modid, linkage, instcount]
     case bitc::FS_CODE_COMBINED_ENTRY: {
@@ -5682,6 +5683,7 @@ std::error_code FunctionIndexBitcodeReader::parseEntireSummary() {
       FS->setFunctionLinkage(getDecodedLinkage(RawLinkage));
       FS->setModulePath(ModuleIdMap[ModuleId]);
       SummaryMap[CurRecordBit] = std::move(FS);
+      break;
     }
     }
   }
