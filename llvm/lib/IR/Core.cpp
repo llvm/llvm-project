@@ -2908,6 +2908,61 @@ LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B,LLVMAtomicRMWBinOp op,
     mapFromLLVMOrdering(ordering), singleThread ? SingleThread : CrossThread));
 }
 
+LLVMValueRef LLVMBuildAtomicCmpXchg(LLVMBuilderRef B, LLVMValueRef Ptr,
+                                    LLVMValueRef Cmp, LLVMValueRef New,
+                                    LLVMAtomicOrdering SuccessOrdering,
+                                    LLVMAtomicOrdering FailureOrdering,
+                                    LLVMBool singleThread) {
+
+  return wrap(unwrap(B)->CreateAtomicCmpXchg(unwrap(Ptr), unwrap(Cmp),
+                unwrap(New), mapFromLLVMOrdering(SuccessOrdering),
+                mapFromLLVMOrdering(FailureOrdering),
+                singleThread ? SingleThread : CrossThread));
+}
+
+
+LLVMBool LLVMIsAtomicSingleThread(LLVMValueRef AtomicInst) {
+  Value *P = unwrap<Value>(AtomicInst);
+
+  if (AtomicRMWInst *I = dyn_cast<AtomicRMWInst>(P))
+    return I->getSynchScope() == SingleThread;
+  return cast<AtomicCmpXchgInst>(P)->getSynchScope() == SingleThread;
+}
+
+void LLVMSetAtomicSingleThread(LLVMValueRef AtomicInst, LLVMBool NewValue) {
+  Value *P = unwrap<Value>(AtomicInst);
+  SynchronizationScope Sync = NewValue ? SingleThread : CrossThread;
+
+  if (AtomicRMWInst *I = dyn_cast<AtomicRMWInst>(P))
+    return I->setSynchScope(Sync);
+  return cast<AtomicCmpXchgInst>(P)->setSynchScope(Sync);
+}
+
+LLVMAtomicOrdering LLVMGetCmpXchgSuccessOrdering(LLVMValueRef CmpXchgInst)  {
+  Value *P = unwrap<Value>(CmpXchgInst);
+  return mapToLLVMOrdering(cast<AtomicCmpXchgInst>(P)->getSuccessOrdering());
+}
+
+void LLVMSetCmpXchgSuccessOrdering(LLVMValueRef CmpXchgInst,
+                                   LLVMAtomicOrdering Ordering) {
+  Value *P = unwrap<Value>(CmpXchgInst);
+  AtomicOrdering O = mapFromLLVMOrdering(Ordering);
+
+  return cast<AtomicCmpXchgInst>(P)->setSuccessOrdering(O);
+}
+
+LLVMAtomicOrdering LLVMGetCmpXchgFailureOrdering(LLVMValueRef CmpXchgInst)  {
+  Value *P = unwrap<Value>(CmpXchgInst);
+  return mapToLLVMOrdering(cast<AtomicCmpXchgInst>(P)->getFailureOrdering());
+}
+
+void LLVMSetCmpXchgFailureOrdering(LLVMValueRef CmpXchgInst,
+                                   LLVMAtomicOrdering Ordering) {
+  Value *P = unwrap<Value>(CmpXchgInst);
+  AtomicOrdering O = mapFromLLVMOrdering(Ordering);
+
+  return cast<AtomicCmpXchgInst>(P)->setFailureOrdering(O);
+}
 
 /*===-- Module providers --------------------------------------------------===*/
 

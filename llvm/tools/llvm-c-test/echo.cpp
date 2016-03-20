@@ -522,6 +522,17 @@ struct FunCloner {
           Dst = LLVMBuildGEP(Builder, Ptr, Idx.data(), NumIdx, Name);
         break;
       }
+      case LLVMAtomicCmpXchg: {
+        LLVMValueRef Ptr = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Cmp = CloneValue(LLVMGetOperand(Src, 1));
+        LLVMValueRef New = CloneValue(LLVMGetOperand(Src, 2));
+        LLVMAtomicOrdering Succ = LLVMGetCmpXchgSuccessOrdering(Src);
+        LLVMAtomicOrdering Fail = LLVMGetCmpXchgFailureOrdering(Src);
+        LLVMBool SingleThread = LLVMIsAtomicSingleThread(Src);
+
+        Dst = LLVMBuildAtomicCmpXchg(Builder, Ptr, Cmp, New, Succ, Fail,
+                                     SingleThread);
+      } break;
       case LLVMBitCast: {
         LLVMValueRef V = CloneValue(LLVMGetOperand(Src, 0));
         Dst = LLVMBuildBitCast(Builder, V, CloneType(Src), Name);
