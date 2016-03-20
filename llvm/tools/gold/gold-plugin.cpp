@@ -1289,10 +1289,14 @@ static ld_plugin_status all_symbols_read_hook(void) {
 
   if (options::TheOutputType == options::OT_BC_ONLY ||
       options::TheOutputType == options::OT_DISABLE) {
-    if (options::TheOutputType == options::OT_DISABLE)
+    if (options::TheOutputType == options::OT_DISABLE) {
       // Remove the output file here since ld.bfd creates the output file
       // early.
-      sys::fs::remove(output_name);
+      std::error_code EC = sys::fs::remove(output_name);
+      if (EC)
+        message(LDPL_ERROR, "Failed to delete '%s': %s", output_name.c_str(),
+                EC.message().c_str());
+    }
     exit(0);
   }
 
