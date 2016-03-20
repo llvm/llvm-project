@@ -1641,3 +1641,43 @@ define void @store_i8_i1(i8 %x, i1 *%y) {
   store i1 %c, i1* %y
   ret void
 }
+
+define <32 x i16> @test_build_vec_v32i1(<32 x i16> %x) {
+; KNL-LABEL: test_build_vec_v32i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; KNL-NEXT:    vpsllw $15, %ymm2, %ymm2
+; KNL-NEXT:    vpsraw $15, %ymm2, %ymm2
+; KNL-NEXT:    vpand %ymm0, %ymm2, %ymm0
+; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; KNL-NEXT:    vpsllw $15, %ymm2, %ymm2
+; KNL-NEXT:    vpsraw $15, %ymm2, %ymm2
+; KNL-NEXT:    vpand %ymm1, %ymm2, %ymm1
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_build_vec_v32i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    movl $1497715861, %eax ## imm = 0x59455495
+; SKX-NEXT:    kmovd %eax, %k1
+; SKX-NEXT:    vmovdqu16 %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+  %ret = select <32 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false>, <32 x i16> %x, <32 x i16> zeroinitializer
+  ret <32 x i16> %ret
+}
+
+define <64 x i8> @test_build_vec_v64i1(<64 x i8> %x) {
+; KNL-LABEL: test_build_vec_v64i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; KNL-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm1
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_build_vec_v64i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    movabsq $6432645796886517060, %rax ## imm = 0x5945594549549544
+; SKX-NEXT:    kmovq %rax, %k1
+; SKX-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+  %ret = select <64 x i1> <i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false>, <64 x i8> %x, <64 x i8> zeroinitializer
+  ret <64 x i8> %ret
+}

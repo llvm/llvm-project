@@ -1676,6 +1676,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::TRUNCATE,           MVT::v32i8, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE,     MVT::v32i1, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE,     MVT::v64i1, Custom);
+    setOperationAction(ISD::BUILD_VECTOR,       MVT::v32i1, Custom);
+    setOperationAction(ISD::BUILD_VECTOR,       MVT::v64i1, Custom);
 
     setOperationAction(ISD::SMAX,               MVT::v64i8, Legal);
     setOperationAction(ISD::SMAX,               MVT::v32i16, Legal);
@@ -5212,7 +5214,7 @@ static bool setTargetShuffleZeroElements(SDValue N,
   while (V2.getOpcode() == ISD::BITCAST)
     V2 = V2->getOperand(0);
 
-  for (int i = 0, Size = Mask.size(); i != Size; ++i) {
+  for (int i = 0, Size = Mask.size(); i < Size; ++i) {
     int M = Mask[i];
 
     // Already decoded as SM_SentinelZero / SM_SentinelUndef.
@@ -5237,7 +5239,7 @@ static bool setTargetShuffleZeroElements(SDValue N,
     // element must be UNDEF/ZERO.
     // TODO: Is it worth testing the individual bits of a constant?
     if ((Size % V.getNumOperands()) == 0) {
-      unsigned Scale = Size / V->getNumOperands();
+      int Scale = Size / V->getNumOperands();
       SDValue Op = V.getOperand(M / Scale);
       if (Op.isUndef())
         Mask[i] = SM_SentinelUndef;
@@ -5249,10 +5251,10 @@ static bool setTargetShuffleZeroElements(SDValue N,
     // If the BUILD_VECTOR has more elements then all the (smaller) source
     // elements must be all UNDEF or all ZERO.
     if ((V.getNumOperands() % Size) == 0) {
-      unsigned Scale = V->getNumOperands() / Size;
+      int Scale = V->getNumOperands() / Size;
       bool AllUndef = true;
       bool AllZero = true;
-      for (unsigned j = 0; j != Scale; ++j) {
+      for (int j = 0; j < Scale; ++j) {
         SDValue Op = V.getOperand((M * Scale) + j);
         AllUndef &= Op.isUndef();
         AllZero &= X86::isZeroNode(Op);
@@ -7255,6 +7257,10 @@ static SmallBitVector computeZeroableShuffleElements(ArrayRef<int> Mask,
   bool V1IsZero = ISD::isBuildVectorAllZeros(V1.getNode());
   bool V2IsZero = ISD::isBuildVectorAllZeros(V2.getNode());
 
+  int VectorSizeInBits = V1.getValueType().getSizeInBits();
+  int ScalarSizeInBits = VectorSizeInBits / Mask.size();
+  assert(!(VectorSizeInBits % ScalarSizeInBits) && "Illegal shuffle mask size");
+
   for (int i = 0, Size = Mask.size(); i < Size; ++i) {
     int M = Mask[i];
     // Handle the easy cases.
@@ -7263,17 +7269,47 @@ static SmallBitVector computeZeroableShuffleElements(ArrayRef<int> Mask,
       continue;
     }
 
-    // If this is an index into a build_vector node (which has the same number
-    // of elements), dig out the input value and use it.
+    // Determine shuffle input and normalize the mask.
     SDValue V = M < Size ? V1 : V2;
-    if (V.getOpcode() != ISD::BUILD_VECTOR || Size != (int)V.getNumOperands())
+    M %= Size;
+
+    // Currently we can only search BUILD_VECTOR for UNDEF/ZERO elements.
+    if (V.getOpcode() != ISD::BUILD_VECTOR)
       continue;
 
-    SDValue Input = V.getOperand(M % Size);
-    // The UNDEF opcode check really should be dead code here, but not quite
-    // worth asserting on (it isn't invalid, just unexpected).
-    if (Input.isUndef() || X86::isZeroNode(Input))
-      Zeroable[i] = true;
+    // If the BUILD_VECTOR has fewer elements then the bitcasted portion of
+    // the (larger) source element must be UNDEF/ZERO.
+    if ((Size % V.getNumOperands()) == 0) {
+      int Scale = Size / V->getNumOperands();
+      SDValue Op = V.getOperand(M / Scale);
+      if (Op.isUndef() || X86::isZeroNode(Op))
+        Zeroable[i] = true;
+      else if (ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(Op)) {
+        APInt Val = Cst->getAPIntValue();
+        Val = Val.lshr((M % Scale) * ScalarSizeInBits);
+        Val = Val.getLoBits(ScalarSizeInBits);
+        Zeroable[i] = (Val == 0);
+      } else if (ConstantFPSDNode *Cst = dyn_cast<ConstantFPSDNode>(Op)) {
+        APInt Val = Cst->getValueAPF().bitcastToAPInt();
+        Val = Val.lshr((M % Scale) * ScalarSizeInBits);
+        Val = Val.getLoBits(ScalarSizeInBits);
+        Zeroable[i] = (Val == 0);
+      }
+      continue;
+    }
+
+    // If the BUILD_VECTOR has more elements then all the (smaller) source
+    // elements must be UNDEF or ZERO.
+    if ((V.getNumOperands() % Size) == 0) {
+      int Scale = V->getNumOperands() / Size;
+      bool AllZeroable = true;
+      for (int j = 0; j < Scale; ++j) {
+        SDValue Op = V.getOperand((M * Scale) + j);
+        AllZeroable &= (Op.isUndef() || X86::isZeroNode(Op));
+      }
+      Zeroable[i] = AllZeroable;
+      continue;
+    }
   }
 
   return Zeroable;

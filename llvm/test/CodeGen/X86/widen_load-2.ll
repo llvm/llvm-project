@@ -210,26 +210,26 @@ define void @add31i8(%i8vec31* nocapture sret %ret, %i8vec31* %ap, %i8vec31* %bp
 define void @rot(%i8vec3pack* nocapture sret %result, %i8vec3pack* %X, %i8vec3pack* %rot) nounwind {
 ; CHECK-LABEL: rot:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = <158,158,158,u>
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u>
-; CHECK-NEXT:    pshufb %xmm1, %xmm0
-; CHECK-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = <0,4,8,128,u,u,u,u,u,u,u,u,u,u,u,u>
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <158,158,158,u>
+; CHECK-NEXT:    pshufb %xmm0, %xmm1
+; CHECK-NEXT:    pmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
+; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    movw %ax, (%rsi)
 ; CHECK-NEXT:    movb $-98, 2(%rsi)
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = <1,1,1,u>
-; CHECK-NEXT:    pshufb %xmm1, %xmm0
-; CHECK-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <1,1,1,u>
+; CHECK-NEXT:    pshufb %xmm0, %xmm1
+; CHECK-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    movw %ax, (%rdx)
 ; CHECK-NEXT:    movb $1, 2(%rdx)
 ; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; CHECK-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-NEXT:    psrld $1, %xmm2
-; CHECK-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5],xmm0[6,7]
-; CHECK-NEXT:    pextrb $8, %xmm2, 2(%rdi)
-; CHECK-NEXT:    pshufb %xmm1, %xmm2
-; CHECK-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    psrld $1, %xmm1
+; CHECK-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5],xmm0[6,7]
+; CHECK-NEXT:    pextrb $8, %xmm1, 2(%rdi)
+; CHECK-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    movw %ax, (%rdi)
 ; CHECK-NEXT:    movq %rdi, %rax
