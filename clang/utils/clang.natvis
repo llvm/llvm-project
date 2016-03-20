@@ -29,6 +29,7 @@ or create a symbolic link so it updates automatically.
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::TemplateTypeParm" IncludeView="poly">{*(clang::TemplateTypeParmType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::SubstTemplateTypeParm" IncludeView="poly">{*(clang::SubstTemplateTypeParmType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Record" IncludeView="poly">{*(clang::RecordType *)this}</DisplayString>
+    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::FunctionProto" IncludeView="poly">{*(clang::FunctionProtoType *)this}</DisplayString>
     <DisplayString IncludeView="cpp">{*this,view(poly)}</DisplayString>
     <DisplayString IncludeView="poly">{*this,view(cmn)}"</DisplayString> <!-- Not yet implemented Type subclass -->
     <DisplayString>{*this,view(cmn)}  {{{*this,view(poly)}}}</DisplayString>
@@ -44,6 +45,7 @@ or create a symbolic link so it updates automatically.
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::TemplateTypeParm">(clang::TemplateTypeParmType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::SubstTemplateTypeParm">(clang::SubstTemplateTypeParmType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::Record">(clang::RecordType *)this</ExpandedItem>
+      <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::FunctionProto">(clang::FunctionProtoType *)this</ExpandedItem>
     </Expand>
   </Type>
   <Type Name="clang::PointerType">
@@ -132,6 +134,36 @@ or create a symbolic link so it updates automatically.
       <Item Name="Replaced">*Replaced</Item>
     </Expand>
   </Type>
+  <!-- We only show the first 5 parameter types in the display string (can't figure out how to loop in DisplayString)
+       but the expansion has all parameters -->
+  <Type Name="clang::FunctionProtoType">
+    <DisplayString IncludeView="parm0" Condition="NumParams==0"></DisplayString>
+    <DisplayString IncludeView="parm0">{*(clang::QualType *)(this+1),view(cpp)}{*this,view(parm1)}</DisplayString>
+    <DisplayString IncludeView="parm1" Condition="NumParams==1"></DisplayString>
+    <DisplayString IncludeView="parm1">, {*((clang::QualType *)(this+1)+1),view(cpp)}{*this,view(parm2)}</DisplayString>
+    <DisplayString IncludeView="parm2" Condition="NumParams==2"></DisplayString>
+    <DisplayString IncludeView="parm2">, {*((clang::QualType *)(this+1)+2),view(cpp)}{*this,view(parm3)}</DisplayString>
+    <DisplayString IncludeView="parm3" Condition="NumParams==3"></DisplayString>
+    <DisplayString IncludeView="parm3">, {*((clang::QualType *)(this+1)+3),view(cpp)}{*this,view(parm4)}</DisplayString>
+    <DisplayString IncludeView="parm4" Condition="NumParams==4"></DisplayString>
+    <DisplayString IncludeView="parm4">, {*((clang::QualType *)(this+1)+4),view(cpp)}{*this,view(parm5)}</DisplayString>
+    <DisplayString IncludeView="parm5" Condition="NumParams==5"></DisplayString>
+    <DisplayString IncludeView="parm5">, /* expand for more params */</DisplayString>
+    <DisplayString>{ResultType,view(cpp)}({*this,view(parm0)})</DisplayString>
+    <Expand>
+      <Item Name="ReturnType">ResultType</Item>
+      <Synthetic Name="Parameter Types">
+        <DisplayString>{*this,view(parm0)}</DisplayString>
+        <Expand>
+          <ArrayItems>
+            <Size>NumParams</Size>
+            <ValuePointer>(clang::QualType *)(this+1)</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+      <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
+    </Expand>
+  </Type>
   <Type Name="clang::TemplateTypeParmType">
     <DisplayString>typename {*TTPDecl,view(cpp)}</DisplayString>
   </Type>
@@ -157,7 +189,33 @@ or create a symbolic link so it updates automatically.
       <!-- TODO: Other kinds-->
     </Expand>
   </Type>
+  <!-- Builtin types that have C++ keywords are manually displayed as that keyword. Otherwise, just use the enum name -->
   <Type Name="clang::BuiltinType">
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Void">void</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Bool">bool</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Char_U">char</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::UChar">unsigned char</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::WChar_U">wchar_t</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Char16">char16_t</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Char32">char32_t</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::UShort">unsigned short</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::UInt">unsigned int</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::ULong">unsigned long</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::ULongLong">unsigned long long</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::UInt128">__uint128_t</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Char_S">char</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::SChar">signed char</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::WChar_S">wchar_t</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Short">short</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Int">int</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Long">long</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::LongLong">long long</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Int128">__int128_t</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Half">__fp16</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Float">float</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::Double">double</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::LongDouble">long double</DisplayString>
+    <DisplayString Condition="BuiltinTypeBits.Kind==clang::BuiltinType::NullPtr">nullptr_t</DisplayString>
     <DisplayString>{(clang::BuiltinType::Kind)BuiltinTypeBits.Kind, en}</DisplayString>
     <Expand>
       <Item Name="Kind">(clang::BuiltinType::Kind)BuiltinTypeBits.Kind</Item>
