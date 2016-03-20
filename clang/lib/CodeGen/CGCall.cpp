@@ -3583,7 +3583,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   }
 
   llvm::Instruction *CI = CS.getInstruction();
-  if (!CI->getType()->isVoidTy())
+  if (Builder.isNamePreserving() && !CI->getType()->isVoidTy())
     CI->setName("call");
 
   // Emit any writebacks immediately.  Arguably this should happen
