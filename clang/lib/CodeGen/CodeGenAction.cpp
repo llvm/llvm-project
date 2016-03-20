@@ -629,7 +629,7 @@ CodeGenAction::CodeGenAction(unsigned _Act, LLVMContext *_VMContext)
 #ifdef NDEBUG
   // FIXME: change this to be controlled by a cc1 flag that the driver passes,
   // on the model of --disable-free
-  _VMContext->setDiscardValueNames(true);
+  _VMContext.setDiscardValueNames(true);
 #endif
 }
 
