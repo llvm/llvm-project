@@ -22,11 +22,22 @@
 # CHECK-NEXT:   Entry {
 # CHECK-NEXT:     Address: 0x20010
 # CHECK-NEXT:     Access: -32736
-# CHECK-NEXT:     Initial: 0x0
+# CHECK-NEXT:     Initial: 0x40008
+#                          ^-- glb1
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Entry {
 # CHECK-NEXT:     Address: 0x20014
 # CHECK-NEXT:     Access: -32732
+# CHECK-NEXT:     Initial: 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Entry {
+# CHECK-NEXT:     Address: 0x20018
+# CHECK-NEXT:     Access: -32728
+# CHECK-NEXT:     Initial: 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Entry {
+# CHECK-NEXT:     Address: 0x2001C
+# CHECK-NEXT:     Access: -32724
 # CHECK-NEXT:     Initial: 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
@@ -42,6 +53,8 @@ foo:
   addi    $t0, $t0, %lo(loc3)
   lw      $t0, %got(loc4)($gp)
   addi    $t0, $t0, %lo(loc4)
+  lw      $t0, %got(glb1)($gp)
+  lw      $t0, %got(glb1)($gp)
 
   .section .data.1,"aw",%progbits
 loc1:
@@ -49,6 +62,10 @@ loc1:
 loc2:
   .word 0
 loc3:
+  .word 0
+  .global glb1
+  .hidden glb1
+glb1:
   .word 0
 
   .section .data.2,"aw",%progbits
