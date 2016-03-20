@@ -310,6 +310,7 @@ llvm::sys::fs::UniqueID getNextVirtualUniqueID();
 IntrusiveRefCntPtr<FileSystem>
 getVFSFromYAML(std::unique_ptr<llvm::MemoryBuffer> Buffer,
                llvm::SourceMgr::DiagHandlerTy DiagHandler,
+               StringRef YAMLFilePath,
                void *DiagContext = nullptr,
                IntrusiveRefCntPtr<FileSystem> ExternalFS = getRealFileSystem());
 
@@ -323,6 +324,8 @@ struct YAMLVFSEntry {
 class YAMLVFSWriter {
   std::vector<YAMLVFSEntry> Mappings;
   Optional<bool> IsCaseSensitive;
+  Optional<bool> IsOverlayRelative;
+  std::string OverlayDir;
 
 public:
   YAMLVFSWriter() {}
@@ -330,6 +333,11 @@ public:
   void setCaseSensitivity(bool CaseSensitive) {
     IsCaseSensitive = CaseSensitive;
   }
+  void setOverlayDir(StringRef OverlayDirectory) {
+    IsOverlayRelative = true;
+    OverlayDir.assign(OverlayDirectory.str());
+  }
+
   void write(llvm::raw_ostream &OS);
 };
 

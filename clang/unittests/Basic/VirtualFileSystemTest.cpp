@@ -662,7 +662,7 @@ public:
   getFromYAMLRawString(StringRef Content,
                        IntrusiveRefCntPtr<vfs::FileSystem> ExternalFS) {
     std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(Content);
-    return getVFSFromYAML(std::move(Buffer), CountingDiagHandler, this,
+    return getVFSFromYAML(std::move(Buffer), CountingDiagHandler, "", this,
                           ExternalFS);
   }
 
