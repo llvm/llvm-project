@@ -7,7 +7,7 @@
 // RUN: mkdir -p %t/i %t/m %t
 
 // RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
-// RUN: %clang -fsyntax-only %s -I %S/Inputs/System -isysroot %/t/i/    \
+// RUN: %clang -fsyntax-only %s -I %S/Inputs/crash-recovery -isysroot %/t/i/    \
 // RUN: -fmodules -fmodules-cache-path=%t/m/ 2>&1 | FileCheck %s
 
 // RUN: FileCheck --check-prefix=CHECKSRC %s -input-file %t/crash-vfs-*.m
@@ -15,7 +15,7 @@
 // RUN: FileCheck --check-prefix=CHECKYAML %s -input-file \
 // RUN: %t/crash-vfs-*.cache/vfs/vfs.yaml
 // RUN: find %t/crash-vfs-*.cache/vfs | \
-// RUN:   grep "Inputs/System/usr/include/stdio.h" | count 1
+// RUN:   grep "Inputs/crash-recovery/usr/include/stdio.h" | count 1
 
 #include "usr/include/stdio.h"
 
@@ -35,20 +35,20 @@
 // CHECKSH: "-ivfsoverlay" "crash-vfs-{{[^ ]*}}.cache/vfs/vfs.yaml"
 
 // CHECKYAML: 'type': 'directory'
-// CHECKYAML: 'name': "/[[PATH:.*]]/Inputs/System/usr/include",
+// CHECKYAML: 'name': "/[[PATH:.*]]/Inputs/crash-recovery/usr/include",
 // CHECKYAML-NEXT: 'contents': [
 // CHECKYAML-NEXT:   {
 // CHECKYAML-NEXT:     'type': 'file',
 // CHECKYAML-NEXT:     'name': "module.map",
 // CHECKYAML-NOT:      'external-contents': "{{[^ ]*}}.cache
-// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/Inputs/System/usr/include/module.map"
+// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/Inputs/crash-recovery/usr/include/module.map"
 // CHECKYAML-NEXT:   },
 
 // Test that reading the YAML file will yield the correct path after
 // the overlay dir is prefixed to access headers in .cache/vfs directory.
 
 // RUN: unset FORCE_CLANG_DIAGNOSTICS_CRASH
-// RUN: %clang -E %s -I %S/Inputs/System -isysroot %/t/i/ \
+// RUN: %clang -E %s -I %S/Inputs/crash-recovery -isysroot %/t/i/ \
 // RUN:     -ivfsoverlay %t/crash-vfs-*.cache/vfs/vfs.yaml -fmodules \
 // RUN:     -fmodules-cache-path=%t/m/ 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=CHECKOVERLAY

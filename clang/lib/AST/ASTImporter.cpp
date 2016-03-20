@@ -619,8 +619,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, Function1->getReturnType(),
                                   Function2->getReturnType()))
       return false;
-      if (Function1->getExtInfo() != Function2->getExtInfo())
-        return false;
+    if (Function1->getExtInfo() != Function2->getExtInfo())
+      return false;
     break;
   }
    
@@ -4940,9 +4940,13 @@ Stmt *ASTNodeImporter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
     dyn_cast_or_null<DeclStmt>(Importer.Import(S->getRangeStmt()));
   if (!ToRange && S->getRangeStmt())
     return nullptr;
-  DeclStmt *ToBeginEnd =
-    dyn_cast_or_null<DeclStmt>(Importer.Import(S->getBeginEndStmt()));
-  if (!ToBeginEnd && S->getBeginEndStmt())
+  DeclStmt *ToBegin =
+    dyn_cast_or_null<DeclStmt>(Importer.Import(S->getBeginStmt()));
+  if (!ToBegin && S->getBeginStmt())
+    return nullptr;
+  DeclStmt *ToEnd =
+    dyn_cast_or_null<DeclStmt>(Importer.Import(S->getEndStmt()));
+  if (!ToEnd && S->getEndStmt())
     return nullptr;
   Expr *ToCond = Importer.Import(S->getCond());
   if (!ToCond && S->getCond())
@@ -4961,7 +4965,7 @@ Stmt *ASTNodeImporter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   SourceLocation ToCoawaitLoc = Importer.Import(S->getCoawaitLoc());
   SourceLocation ToColonLoc = Importer.Import(S->getColonLoc());
   SourceLocation ToRParenLoc = Importer.Import(S->getRParenLoc());
-  return new (Importer.getToContext()) CXXForRangeStmt(ToRange, ToBeginEnd,
+  return new (Importer.getToContext()) CXXForRangeStmt(ToRange, ToBegin, ToEnd,
                                                        ToCond, ToInc,
                                                        ToLoopVar, ToBody,
                                                        ToForLoc, ToCoawaitLoc,

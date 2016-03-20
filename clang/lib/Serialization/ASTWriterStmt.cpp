@@ -1161,7 +1161,8 @@ void ASTStmtWriter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   Writer.AddSourceLocation(S->getColonLoc(), Record);
   Writer.AddSourceLocation(S->getRParenLoc(), Record);
   Writer.AddStmt(S->getRangeStmt());
-  Writer.AddStmt(S->getBeginEndStmt());
+  Writer.AddStmt(S->getBeginStmt());
+  Writer.AddStmt(S->getEndStmt());
   Writer.AddStmt(S->getCond());
   Writer.AddStmt(S->getInc());
   Writer.AddStmt(S->getLoopVarStmt());

@@ -409,7 +409,8 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     RecordStmtCount(S);
     Visit(S->getLoopVarStmt());
     Visit(S->getRangeStmt());
-    Visit(S->getBeginEndStmt());
+    Visit(S->getBeginStmt());
+    Visit(S->getEndStmt());
 
     uint64_t ParentCount = CurrentCount;
     BreakContinueStack.push_back(BreakContinue());
