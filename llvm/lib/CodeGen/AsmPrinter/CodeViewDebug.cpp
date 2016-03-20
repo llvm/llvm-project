@@ -288,6 +288,7 @@ void CodeViewDebug::emitTypeInformation() {
   // Emit LF_FUNC_ID records for all inlined subprograms to the type stream.
   // Allocate one type index for each func id.
   unsigned NextIdx = getNextTypeIndex(InlinedSubprograms.size());
+  (void)NextIdx;
   assert(NextIdx == FuncIdTypeIndexStart && "func id type indices broken");
   for (auto *SP : InlinedSubprograms) {
     StringRef DisplayName = SP->getDisplayName();
