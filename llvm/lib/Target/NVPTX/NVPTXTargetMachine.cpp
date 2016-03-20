@@ -48,12 +48,18 @@
 
 using namespace llvm;
 
+static cl::opt<bool> UseInferAddressSpaces(
+    "nvptx-use-infer-addrspace", cl::init(false), cl::Hidden,
+    cl::desc("Optimize address spaces using NVPTXInferAddressSpaces instead of "
+             "NVPTXFavorNonGenericAddrSpaces"));
+
 namespace llvm {
 void initializeNVVMReflectPass(PassRegistry&);
 void initializeGenericToNVVMPass(PassRegistry&);
 void initializeNVPTXAllocaHoistingPass(PassRegistry &);
 void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry&);
 void initializeNVPTXFavorNonGenericAddrSpacesPass(PassRegistry &);
+void initializeNVPTXInferAddressSpacesPass(PassRegistry &);
 void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
 void initializeNVPTXLowerKernelArgsPass(PassRegistry &);
 void initializeNVPTXLowerAllocaPass(PassRegistry &);
@@ -72,6 +78,7 @@ extern "C" void LLVMInitializeNVPTXTarget() {
   initializeNVPTXAllocaHoistingPass(PR);
   initializeNVPTXAssignValidGlobalNamesPass(PR);
   initializeNVPTXFavorNonGenericAddrSpacesPass(PR);
+  initializeNVPTXInferAddressSpacesPass(PR);
   initializeNVPTXLowerKernelArgsPass(PR);
   initializeNVPTXLowerAllocaPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
@@ -149,7 +156,7 @@ private:
   void addEarlyCSEOrGVNPass();
 
   // Add passes that propagate special memory spaces.
-  void addMemorySpaceInferencePasses();
+  void addAddressSpaceInferencePasses();
 
   // Add passes that perform straight-line scalar optimizations.
   void addStraightLineScalarOptimizationPasses();
@@ -173,17 +180,21 @@ void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
     addPass(createEarlyCSEPass());
 }
 
-void NVPTXPassConfig::addMemorySpaceInferencePasses() {
+void NVPTXPassConfig::addAddressSpaceInferencePasses() {
   addPass(createNVPTXLowerKernelArgsPass(&getNVPTXTargetMachine()));
   // NVPTXLowerKernelArgs emits alloca for byval parameters which can often
   // be eliminated by SROA.
   addPass(createSROAPass());
   addPass(createNVPTXLowerAllocaPass());
-  addPass(createNVPTXFavorNonGenericAddrSpacesPass());
-  // FavorNonGenericAddrSpaces shortcuts unnecessary addrspacecasts, and leave
-  // them unused. We could remove dead code in an ad-hoc manner, but that
-  // requires manual work and might be error-prone.
-  addPass(createDeadCodeEliminationPass());
+  if (UseInferAddressSpaces) {
+    addPass(createNVPTXInferAddressSpacesPass());
+  } else {
+    addPass(createNVPTXFavorNonGenericAddrSpacesPass());
+    // FavorNonGenericAddrSpaces shortcuts unnecessary addrspacecasts, and leave
+    // them unused. We could remove dead code in an ad-hoc manner, but that
+    // requires manual work and might be error-prone.
+    addPass(createDeadCodeEliminationPass());
+  }
 }
 
 void NVPTXPassConfig::addStraightLineScalarOptimizationPasses() {
@@ -220,7 +231,7 @@ void NVPTXPassConfig::addIRPasses() {
   addPass(createGenericToNVVMPass());
 
   if (getOptLevel() != CodeGenOpt::None) {
-    addMemorySpaceInferencePasses();
+    addAddressSpaceInferencePasses();
     addStraightLineScalarOptimizationPasses();
   }
 
