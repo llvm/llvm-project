@@ -6,6 +6,8 @@
 ; RUN: llc < %s -mtriple=armv7k-apple-watchos2.0 -O0 | FileCheck --check-prefix=CHECK-O0 --check-prefix=WATCH-O0 %s
 ; RUN: llc < %s -mtriple=armv7-apple-ios8.0 -O0 | FileCheck --check-prefix=CHECK-O0 --check-prefix=IOS-O0 %s
 
+; RUN: llc < %s -mtriple=thumbv7-apple-ios8.0 | FileCheck --check-prefix=THUMB %s
+
 %struct.S = type { i8 }
 
 @sg = internal thread_local global %struct.S zeroinitializer, align 1
@@ -20,6 +22,17 @@ declare %struct.S* @_ZN1SC1Ev(%struct.S* returned)
 declare %struct.S* @_ZN1SD1Ev(%struct.S* returned)
 declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
 
+; Make sure Epilog does not overwrite an explicitly-handled CSR in CXX_FAST_TLS.
+; THUMB-LABEL: _ZTW2sg
+; THUMB: push {{.*}}lr
+; THUMB: blx
+; THUMB: bne [[TH_end:.?LBB0_[0-9]+]]
+; THUMB: blx
+; THUMB: tlv_atexit
+; THUMB: [[TH_end]]:
+; THUMB: blx
+; THUMB: r4
+; THUMB: pop {{.*}}r4
 define cxx_fast_tlscc nonnull %struct.S* @_ZTW2sg() nounwind {
   %.b.i = load i1, i1* @__tls_guard, align 1
   br i1 %.b.i, label %__tls_init.exit, label %init.i
@@ -35,9 +48,8 @@ __tls_init.exit:
 }
 
 ; CHECK-LABEL: _ZTW2sg
-; CHECK: push {lr}
-; CHECK-NOT: push {r1, r2, r3, r4, r7, lr}
-; CHECK-NOT: push {r9, r12}
+; CHECK: push {r4, r5, r7, lr}
+; CHECK: push {r11, r12}
 ; CHECK-NOT: vpush {d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31}
 ; CHECK-NOT: vpush {d0, d1, d2, d3, d4, d5, d6, d7}
 ; CHECK: blx
@@ -50,7 +62,7 @@ __tls_init.exit:
 ; CHECK-NOT: vpop {d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31}
 ; CHECK-NOT: pop {r9, r12}
 ; CHECK-NOT: pop {r1, r2, r3, r4, r7, pc}
-; CHECK: pop {lr}
+; CHECK: pop {r4, r5, r7, pc}
 
 ; CHECK-O0-LABEL: _ZTW2sg
 ; WATCH-O0: push {r1, r2, r3, r6, r7, lr}
