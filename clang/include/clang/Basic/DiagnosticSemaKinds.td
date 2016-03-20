@@ -30,23 +30,6 @@ def warn_redundant_loop_iteration : Warning<
   InGroup<ForLoopAnalysis>, DefaultIgnore;
 def note_loop_iteration_here : Note<"%select{decremented|incremented}0 here">;
 
-def warn_for_range_const_reference_copy : Warning<
-  "loop variable %0 "
-  "%diff{has type $ but is initialized with type $"
-  "| is initialized with a value of a different type}1,2 resulting in a copy">,
-  InGroup<RangeLoopAnalysis>, DefaultIgnore;
-def note_use_type_or_non_reference : Note<
-  "use non-reference type %0 to keep the copy or type %1 to prevent copying">;
-def warn_for_range_variable_always_copy : Warning<
-  "loop variable %0 is always a copy because the range of type %1 does not "
-  "return a reference">,
-  InGroup<RangeLoopAnalysis>, DefaultIgnore;
-def note_use_non_reference_type : Note<"use non-reference type %0">;
-def warn_for_range_copy : Warning<
-  "loop variable %0 of type %1 creates a copy from type %2">,
-  InGroup<RangeLoopAnalysis>, DefaultIgnore;
-def note_use_reference_type : Note<"use reference type %0 to prevent copying">;
-
 def warn_duplicate_enum_values : Warning<
   "element %0 has been implicitly assigned %1 which another element has "
   "been assigned">, InGroup<DiagGroup<"duplicate-enum">>, DefaultIgnore;
@@ -1922,8 +1905,12 @@ def err_for_range_iter_deduction_failure : Error<
   "cannot use type %0 as an iterator">;
 def err_for_range_member_begin_end_mismatch : Error<
   "range type %0 has '%select{begin|end}1' member but no '%select{end|begin}1' member">;
-def err_for_range_begin_end_types_differ : Error<
-  "'begin' and 'end' must return the same type (got %0 and %1)">;
+def ext_for_range_begin_end_types_differ : ExtWarn<
+  "'begin' and 'end' returning different types (%0 and %1) is a C++1z extension">,
+  InGroup<CXX1z>;
+def warn_for_range_begin_end_types_differ : Warning<
+  "'begin' and 'end' returning different types (%0 and %1) is incompatible "
+  "with C++ standards before C++1z">, InGroup<CXXPre1zCompat>, DefaultIgnore;
 def note_in_for_range: Note<
   "when looking up '%select{begin|end}0' function for range expression "
   "of type %1">;
@@ -1940,6 +1927,22 @@ def note_for_range_invalid_iterator : Note <
   "in implicit call to 'operator%select{!=|*|++}0' for iterator of type %1">;
 def note_for_range_begin_end : Note<
   "selected '%select{begin|end}0' %select{function|template }1%2 with iterator type %3">;
+def warn_for_range_const_reference_copy : Warning<
+  "loop variable %0 "
+  "%diff{has type $ but is initialized with type $"
+  "| is initialized with a value of a different type}1,2 resulting in a copy">,
+  InGroup<RangeLoopAnalysis>, DefaultIgnore;
+def note_use_type_or_non_reference : Note<
+  "use non-reference type %0 to keep the copy or type %1 to prevent copying">;
+def warn_for_range_variable_always_copy : Warning<
+  "loop variable %0 is always a copy because the range of type %1 does not "
+  "return a reference">,
+  InGroup<RangeLoopAnalysis>, DefaultIgnore;
+def note_use_non_reference_type : Note<"use non-reference type %0">;
+def warn_for_range_copy : Warning<
+  "loop variable %0 of type %1 creates a copy from type %2">,
+  InGroup<RangeLoopAnalysis>, DefaultIgnore;
+def note_use_reference_type : Note<"use reference type %0 to prevent copying">;
 
 // C++11 constexpr
 def warn_cxx98_compat_constexpr : Warning<
