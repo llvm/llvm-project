@@ -10,6 +10,7 @@
 #ifndef lldb_DiagnosticManager_h
 #define lldb_DiagnosticManager_h
 
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
 #include <string>
