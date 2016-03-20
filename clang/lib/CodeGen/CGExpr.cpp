@@ -66,6 +66,8 @@ Address CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
 /// block.
 llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
                                                     const Twine &Name) {
+  if (!Builder.isNamePreserving())
+    return new llvm::AllocaInst(Ty, nullptr, "", AllocaInsertPt);
   return new llvm::AllocaInst(Ty, nullptr, Name, AllocaInsertPt);
 }
 
