@@ -118,7 +118,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                  VersionTuple(),
                  /*Unavailable=*/true,
                  CopyString(S.Context, Info.UnavailableMsg),
-                 /*Nopartial=*/true));
+                 /*Strict=*/false,
+                 /*Replacement=*/StringRef()));
   }
 
   // swift_name
