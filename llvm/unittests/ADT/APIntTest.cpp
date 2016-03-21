@@ -1023,3 +1023,45 @@ TEST(APIntTest, SelfMoveAssignment) {
 #pragma clang diagnostic pop
 #endif
 }
+
+TEST(APIntTest, reverseBits) {
+  EXPECT_EQ(1, APInt(1, 1).reverseBits());
+  EXPECT_EQ(0, APInt(1, 0).reverseBits());
+
+  EXPECT_EQ(3, APInt(2, 3).reverseBits());
+  EXPECT_EQ(3, APInt(2, 3).reverseBits());
+
+  EXPECT_EQ(0xb, APInt(4, 0xd).reverseBits());
+  EXPECT_EQ(0xd, APInt(4, 0xb).reverseBits());
+  EXPECT_EQ(0xf, APInt(4, 0xf).reverseBits());
+
+  EXPECT_EQ(0x30, APInt(7, 0x6).reverseBits());
+  EXPECT_EQ(0x5a, APInt(7, 0x2d).reverseBits());
+
+  EXPECT_EQ(0x0f, APInt(8, 0xf0).reverseBits());
+  EXPECT_EQ(0xf0, APInt(8, 0x0f).reverseBits());
+
+  EXPECT_EQ(0x0f0f, APInt(16, 0xf0f0).reverseBits());
+  EXPECT_EQ(0xf0f0, APInt(16, 0x0f0f).reverseBits());
+
+  EXPECT_EQ(0x0f0f0f0f, APInt(32, 0xf0f0f0f0).reverseBits());
+  EXPECT_EQ(0xf0f0f0f0, APInt(32, 0x0f0f0f0f).reverseBits());
+
+  EXPECT_EQ(0x402880a0 >> 1, APInt(31, 0x05011402).reverseBits());
+
+  EXPECT_EQ(0x0f0f0f0f, APInt(32, 0xf0f0f0f0).reverseBits());
+  EXPECT_EQ(0xf0f0f0f0, APInt(32, 0x0f0f0f0f).reverseBits());
+
+  EXPECT_EQ(0x0f0f0f0f0f0f0f0f, APInt(64, 0xf0f0f0f0f0f0f0f0).reverseBits());
+  EXPECT_EQ(0xf0f0f0f0f0f0f0f0, APInt(64, 0x0f0f0f0f0f0f0f0f).reverseBits());
+
+  for (unsigned N : { 1, 8, 16, 24, 31, 32, 33,
+                      63, 64, 65, 127, 128, 257, 1024 }) {
+    for (unsigned I = 0; I < N; ++I) {
+      APInt X = APInt::getOneBitSet(N, I);
+      APInt Y = APInt::getOneBitSet(N, N - (I + 1));
+      EXPECT_EQ(Y, X.reverseBits());
+      EXPECT_EQ(X, Y.reverseBits());
+    }
+  }
+}

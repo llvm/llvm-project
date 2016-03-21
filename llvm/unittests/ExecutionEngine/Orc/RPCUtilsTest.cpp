@@ -44,18 +44,10 @@ private:
 class DummyRPC : public testing::Test,
                  public RPC<QueueChannel> {
 public:
-  typedef Procedure<1, bool> Proc1;
-  typedef Procedure<2, int8_t,
-                       uint8_t,
-                       int16_t,
-                       uint16_t,
-                       int32_t,
-                       uint32_t,
-                       int64_t,
-                       uint64_t,
-                       bool,
-                       std::string,
-                       std::vector<int>> AllTheTypes;
+  typedef Procedure<1, void(bool)> Proc1;
+  typedef Procedure<2, void(int8_t, uint8_t, int16_t, uint16_t,
+                            int32_t, uint32_t, int64_t, uint64_t,
+                            bool, std::string, std::vector<int>)> AllTheTypes;
 };
 
 

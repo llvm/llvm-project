@@ -1402,6 +1402,7 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfs(
 bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
     MachineInstr *LdSt, unsigned &BaseReg, int64_t &Offset, unsigned &Width,
     const TargetRegisterInfo *TRI) const {
+  assert(LdSt->mayLoadOrStore() && "Expected a memory operation.");
   // Handle only loads/stores with base register followed by immediate offset.
   if (LdSt->getNumOperands() != 3)
     return false;
@@ -3081,8 +3082,8 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
 /// to
 ///   b.<condition code>
 ///
-/// \brief Replace compare and branch sequence by TBZ/TBNZ instruction when
-/// the compare's constant operand is power of 2.
+/// Replace compare and branch sequence by TBZ/TBNZ instruction when the
+/// compare's constant operand is power of 2.
 ///
 /// Examples:
 ///   and  w8, w8, #0x400

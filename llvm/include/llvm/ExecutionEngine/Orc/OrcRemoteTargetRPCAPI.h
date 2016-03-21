@@ -82,108 +82,109 @@ public:
 
   static const char *getJITProcIdName(JITProcId Id);
 
-  typedef Procedure<CallIntVoidId, TargetAddress /* FnAddr */> CallIntVoid;
+  typedef Procedure<CallIntVoidId, void(TargetAddress Addr)> CallIntVoid;
 
-  typedef Procedure<CallIntVoidResponseId, int /* Result */>
-      CallIntVoidResponse;
+  typedef Procedure<CallIntVoidResponseId, void(int Result)>
+    CallIntVoidResponse;
 
-  typedef Procedure<CallMainId, TargetAddress /* FnAddr */,
-                    std::vector<std::string> /* Args */>
+  typedef Procedure<CallMainId, void(TargetAddress Addr,
+                                     std::vector<std::string> Args)>
       CallMain;
 
-  typedef Procedure<CallMainResponseId, int /* Result */> CallMainResponse;
+  typedef Procedure<CallMainResponseId, void(int Result)> CallMainResponse;
 
-  typedef Procedure<CallVoidVoidId, TargetAddress /* FnAddr */> CallVoidVoid;
+  typedef Procedure<CallVoidVoidId, void(TargetAddress FnAddr)> CallVoidVoid;
 
-  typedef Procedure<CallVoidVoidResponseId> CallVoidVoidResponse;
+  typedef Procedure<CallVoidVoidResponseId, void()> CallVoidVoidResponse;
 
   typedef Procedure<CreateRemoteAllocatorId,
-                    ResourceIdMgr::ResourceId /* Allocator ID */>
+                    void(ResourceIdMgr::ResourceId AllocatorID)>
       CreateRemoteAllocator;
 
   typedef Procedure<CreateIndirectStubsOwnerId,
-                    ResourceIdMgr::ResourceId /* StubsOwner ID */>
-      CreateIndirectStubsOwner;
+                    void(ResourceIdMgr::ResourceId StubOwnerID)>
+    CreateIndirectStubsOwner;
 
-  typedef Procedure<DeregisterEHFramesId, TargetAddress /* Addr */,
-                    uint32_t /* Size */>
+  typedef Procedure<DeregisterEHFramesId,
+                    void(TargetAddress Addr, uint32_t Size)>
       DeregisterEHFrames;
 
   typedef Procedure<DestroyRemoteAllocatorId,
-                    ResourceIdMgr::ResourceId /* Allocator ID */>
+                    void(ResourceIdMgr::ResourceId AllocatorID)>
       DestroyRemoteAllocator;
 
   typedef Procedure<DestroyIndirectStubsOwnerId,
-                    ResourceIdMgr::ResourceId /* StubsOwner ID */>
+                    void(ResourceIdMgr::ResourceId StubsOwnerID)>
       DestroyIndirectStubsOwner;
 
   typedef Procedure<EmitIndirectStubsId,
-                    ResourceIdMgr::ResourceId /* StubsOwner ID */,
-                    uint32_t /* NumStubsRequired */>
+                    void(ResourceIdMgr::ResourceId StubsOwnerID,
+                         uint32_t NumStubsRequired)>
       EmitIndirectStubs;
 
-  typedef Procedure<
-      EmitIndirectStubsResponseId, TargetAddress /* StubsBaseAddr */,
-      TargetAddress /* PtrsBaseAddr */, uint32_t /* NumStubsEmitted */>
+  typedef Procedure<EmitIndirectStubsResponseId,
+                    void(TargetAddress StubsBaseAddr,
+                         TargetAddress PtrsBaseAddr,
+                         uint32_t NumStubsEmitted)>
       EmitIndirectStubsResponse;
 
-  typedef Procedure<EmitResolverBlockId> EmitResolverBlock;
+  typedef Procedure<EmitResolverBlockId, void()> EmitResolverBlock;
 
-  typedef Procedure<EmitTrampolineBlockId> EmitTrampolineBlock;
+  typedef Procedure<EmitTrampolineBlockId, void()> EmitTrampolineBlock;
 
   typedef Procedure<EmitTrampolineBlockResponseId,
-                    TargetAddress /* BlockAddr */,
-                    uint32_t /* NumTrampolines */>
+                    void(TargetAddress BlockAddr, uint32_t NumTrampolines)>
       EmitTrampolineBlockResponse;
 
-  typedef Procedure<GetSymbolAddressId, std::string /*SymbolName*/>
+  typedef Procedure<GetSymbolAddressId, void(std::string SymbolName)>
       GetSymbolAddress;
 
-  typedef Procedure<GetSymbolAddressResponseId, uint64_t /* SymbolAddr */>
+  typedef Procedure<GetSymbolAddressResponseId, void(uint64_t SymbolAddr)>
       GetSymbolAddressResponse;
 
-  typedef Procedure<GetRemoteInfoId> GetRemoteInfo;
+  typedef Procedure<GetRemoteInfoId, void()> GetRemoteInfo;
 
-  typedef Procedure<GetRemoteInfoResponseId, std::string /* Triple */,
-                    uint32_t /* PointerSize */, uint32_t /* PageSize */,
-                    uint32_t /* TrampolineSize */,
-                    uint32_t /* IndirectStubSize */>
+  typedef Procedure<GetRemoteInfoResponseId,
+                    void(std::string Triple, uint32_t PointerSize,
+                         uint32_t PageSize, uint32_t TrampolineSize,
+                         uint32_t IndirectStubSize)>
       GetRemoteInfoResponse;
 
-  typedef Procedure<ReadMemId, TargetAddress /* Src */, uint64_t /* Size */>
+  typedef Procedure<ReadMemId, void(TargetAddress Src, uint64_t Size)>
       ReadMem;
 
-  typedef Procedure<ReadMemResponseId> ReadMemResponse;
+  typedef Procedure<ReadMemResponseId, void()> ReadMemResponse;
 
-  typedef Procedure<RegisterEHFramesId, TargetAddress /* Addr */,
-                    uint32_t /* Size */>
+  typedef Procedure<RegisterEHFramesId,
+                    void(TargetAddress Addr, uint32_t Size)>
       RegisterEHFrames;
 
-  typedef Procedure<ReserveMemId, ResourceIdMgr::ResourceId /* Id */,
-                    uint64_t /* Size */, uint32_t /* Align */>
+  typedef Procedure<ReserveMemId,
+                    void(ResourceIdMgr::ResourceId AllocID, uint64_t Size,
+                         uint32_t Align)>
       ReserveMem;
 
-  typedef Procedure<ReserveMemResponseId, TargetAddress /* Addr */>
+  typedef Procedure<ReserveMemResponseId, void(TargetAddress Addr)>
       ReserveMemResponse;
 
-  typedef Procedure<RequestCompileId, TargetAddress /* TrampolineAddr */>
+  typedef Procedure<RequestCompileId, void(TargetAddress TrampolineAddr)>
       RequestCompile;
 
-  typedef Procedure<RequestCompileResponseId, TargetAddress /* ImplAddr */>
+  typedef Procedure<RequestCompileResponseId, void(TargetAddress ImplAddr)>
       RequestCompileResponse;
 
-  typedef Procedure<SetProtectionsId, ResourceIdMgr::ResourceId /* Id */,
-                    TargetAddress /* Dst */, uint32_t /* ProtFlags */>
+  typedef Procedure<SetProtectionsId,
+                    void(ResourceIdMgr::ResourceId AllocID, TargetAddress Dst,
+                         uint32_t ProtFlags)>
       SetProtections;
 
-  typedef Procedure<TerminateSessionId> TerminateSession;
+  typedef Procedure<TerminateSessionId, void()> TerminateSession;
 
-  typedef Procedure<WriteMemId, TargetAddress /* Dst */, uint64_t /* Size */
-                    /* Data should follow */>
+  typedef Procedure<WriteMemId,
+                    void(TargetAddress Dst, uint64_t Size /* Data to follow */)>
       WriteMem;
 
-  typedef Procedure<WritePtrId, TargetAddress /* Dst */,
-                    TargetAddress /* Val */>
+  typedef Procedure<WritePtrId, void(TargetAddress Dst, TargetAddress Val)>
       WritePtr;
 };
 

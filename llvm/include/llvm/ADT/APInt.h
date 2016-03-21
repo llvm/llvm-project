@@ -1451,6 +1451,10 @@ public:
   /// \returns a byte-swapped representation of this APInt Value.
   APInt LLVM_ATTRIBUTE_UNUSED_RESULT byteSwap() const;
 
+  /// \returns the value with the bit representation reversed of this APInt
+  /// Value.
+  APInt LLVM_ATTRIBUTE_UNUSED_RESULT reverseBits() const;
+
   /// \brief Converts this APInt to a double value.
   double roundToDouble(bool isSigned) const;
 

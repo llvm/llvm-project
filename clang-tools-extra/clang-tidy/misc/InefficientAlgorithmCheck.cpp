@@ -38,7 +38,8 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
                  "::std::lower_bound", "::std::upper_bound");
   const auto ContainerMatcher = classTemplateSpecializationDecl(hasAnyName(
       "::std::set", "::std::map", "::std::multiset", "::std::multimap",
-      "::std::unordered_set", "::std::unordered_map"));
+      "::std::unordered_set", "::std::unordered_map",
+      "::std::unordered_multiset", "::std::unordered_multimap"));
 
   const auto Matcher =
       callExpr(

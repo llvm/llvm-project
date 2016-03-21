@@ -919,6 +919,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::f32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
 
+  // Thumb-1 cannot currently select ARMISD::SUBE.
+  if (!Subtarget->isThumb1Only())
+    setOperationAction(ISD::SETCCE, MVT::i32, Custom);
+
   setOperationAction(ISD::BRCOND,    MVT::Other, Expand);
   setOperationAction(ISD::BR_CC,     MVT::i32,   Custom);
   setOperationAction(ISD::BR_CC,     MVT::f32,   Custom);
@@ -4899,6 +4903,30 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) {
   return Result;
 }
 
+static SDValue LowerSETCCE(SDValue Op, SelectionDAG &DAG) {
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue Carry = Op.getOperand(2);
+  SDValue Cond = Op.getOperand(3);
+  SDLoc DL(Op);
+
+  assert(LHS.getSimpleValueType().isInteger() && "SETCCE is integer only.");
+
+  assert(Carry.getOpcode() != ISD::CARRY_FALSE);
+  SDVTList VTs = DAG.getVTList(LHS.getValueType(), MVT::i32);
+  SDValue Cmp = DAG.getNode(ARMISD::SUBE, DL, VTs, LHS, RHS, Carry);
+
+  SDValue FVal = DAG.getConstant(0, DL, MVT::i32);
+  SDValue TVal = DAG.getConstant(1, DL, MVT::i32);
+  SDValue ARMcc = DAG.getConstant(
+      IntCCToARMCC(cast<CondCodeSDNode>(Cond)->get()), DL, MVT::i32);
+  SDValue CCR = DAG.getRegister(ARM::CPSR, MVT::i32);
+  SDValue Chain = DAG.getCopyToReg(DAG.getEntryNode(), DL, ARM::CPSR,
+                                   Cmp.getValue(1), SDValue());
+  return DAG.getNode(ARMISD::CMOV, DL, Op.getValueType(), FVal, TVal, ARMcc,
+                     CCR, Chain.getValue(1));
+}
+
 /// isNEONModifiedImm - Check if the specified splat value corresponds to a
 /// valid vector constant for a NEON instruction with a "modified immediate"
 /// operand (e.g., VMOV).  If so, return the encoded value.
@@ -7014,6 +7042,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CTTZ_ZERO_UNDEF: return LowerCTTZ(Op.getNode(), DAG, Subtarget);
   case ISD::CTPOP:         return LowerCTPOP(Op.getNode(), DAG, Subtarget);
   case ISD::SETCC:         return LowerVSETCC(Op, DAG);
+  case ISD::SETCCE:        return LowerSETCCE(Op, DAG);
   case ISD::ConstantFP:    return LowerConstantFP(Op, DAG, Subtarget);
   case ISD::BUILD_VECTOR:  return LowerBUILD_VECTOR(Op, DAG, Subtarget);
   case ISD::VECTOR_SHUFFLE: return LowerVECTOR_SHUFFLE(Op, DAG);
@@ -10640,6 +10669,46 @@ SDValue ARMTargetLowering::PerformCMOVToBFICombine(SDNode *CMOV, SelectionDAG &D
   return V;
 }
 
+/// PerformBRCONDCombine - Target-specific DAG combining for ARMISD::BRCOND.
+SDValue
+ARMTargetLowering::PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const {
+  SDValue Cmp = N->getOperand(4);
+  if (Cmp.getOpcode() != ARMISD::CMPZ)
+    // Only looking at NE cases.
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDLoc dl(N);
+  SDValue LHS = Cmp.getOperand(0);
+  SDValue RHS = Cmp.getOperand(1);
+  SDValue Chain = N->getOperand(0);
+  SDValue BB = N->getOperand(1);
+  SDValue ARMcc = N->getOperand(2);
+  ARMCC::CondCodes CC =
+    (ARMCC::CondCodes)cast<ConstantSDNode>(ARMcc)->getZExtValue();
+
+  // (brcond Chain BB ne CPSR (cmpz (and (cmov 0 1 CC CPSR Cmp) 1) 0))
+  // -> (brcond Chain BB CC CPSR Cmp)
+  if (CC == ARMCC::NE && LHS.getOpcode() == ISD::AND && LHS->hasOneUse() &&
+      LHS->getOperand(0)->getOpcode() == ARMISD::CMOV &&
+      LHS->getOperand(0)->hasOneUse()) {
+    auto *LHS00C = dyn_cast<ConstantSDNode>(LHS->getOperand(0)->getOperand(0));
+    auto *LHS01C = dyn_cast<ConstantSDNode>(LHS->getOperand(0)->getOperand(1));
+    auto *LHS1C = dyn_cast<ConstantSDNode>(LHS->getOperand(1));
+    auto *RHSC = dyn_cast<ConstantSDNode>(RHS);
+    if ((LHS00C && LHS00C->getZExtValue() == 0) &&
+        (LHS01C && LHS01C->getZExtValue() == 1) &&
+        (LHS1C && LHS1C->getZExtValue() == 1) &&
+        (RHSC && RHSC->getZExtValue() == 0)) {
+      return DAG.getNode(
+          ARMISD::BRCOND, dl, VT, Chain, BB, LHS->getOperand(0)->getOperand(2),
+          LHS->getOperand(0)->getOperand(3), LHS->getOperand(0)->getOperand(4));
+    }
+  }
+
+  return SDValue();
+}
+
 /// PerformCMOVCombine - Target-specific DAG combining for ARMISD::CMOV.
 SDValue
 ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
@@ -10693,6 +10762,21 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
                       N->getOperand(3), NewCmp);
   }
 
+  // (cmov F T ne CPSR (cmpz (cmov 0 1 CC CPSR Cmp) 0))
+  // -> (cmov F T CC CPSR Cmp)
+  if (CC == ARMCC::NE && LHS.getOpcode() == ARMISD::CMOV && LHS->hasOneUse()) {
+    auto *LHS0C = dyn_cast<ConstantSDNode>(LHS->getOperand(0));
+    auto *LHS1C = dyn_cast<ConstantSDNode>(LHS->getOperand(1));
+    auto *RHSC = dyn_cast<ConstantSDNode>(RHS);
+    if ((LHS0C && LHS0C->getZExtValue() == 0) &&
+        (LHS1C && LHS1C->getZExtValue() == 1) &&
+        (RHSC && RHSC->getZExtValue() == 0)) {
+      return DAG.getNode(ARMISD::CMOV, dl, VT, FalseVal, TrueVal,
+                         LHS->getOperand(2), LHS->getOperand(3),
+                         LHS->getOperand(4));
+    }
+  }
+
   if (Res.getNode()) {
     APInt KnownZero, KnownOne;
     DAG.computeKnownBits(SDValue(N,0), KnownZero, KnownOne);
@@ -10743,6 +10827,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ZERO_EXTEND:
   case ISD::ANY_EXTEND: return PerformExtendCombine(N, DCI.DAG, Subtarget);
   case ARMISD::CMOV: return PerformCMOVCombine(N, DCI.DAG);
+  case ARMISD::BRCOND: return PerformBRCONDCombine(N, DCI.DAG);
   case ISD::LOAD:       return PerformLOADCombine(N, DCI);
   case ARMISD::VLD2DUP:
   case ARMISD::VLD3DUP:

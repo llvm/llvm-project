@@ -1314,7 +1314,7 @@ TEST(APFloatTest, roundToIntegral) {
   P.roundToIntegral(APFloat::rmTowardZero);
   EXPECT_TRUE(std::isinf(P.convertToDouble()) && P.convertToDouble() < 0.0);
 }
-  
+
 TEST(APFloatTest, isInteger) {
   APFloat T(-0.0);
   EXPECT_TRUE(T.isInteger());
@@ -3017,5 +3017,131 @@ TEST(APFloatTest, scalbn) {
   EXPECT_TRUE(
     APFloat(APFloat::IEEEdouble, "0x1p-103")
     .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEdouble, "0x1p-51"), -52, RM)));
+}
+
+TEST(APFloatTest, frexp) {
+  const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
+
+  APFloat PZero = APFloat::getZero(APFloat::IEEEdouble, false);
+  APFloat MZero = APFloat::getZero(APFloat::IEEEdouble, true);
+  APFloat One(1.0);
+  APFloat MOne(-1.0);
+  APFloat Two(2.0);
+  APFloat MTwo(-2.0);
+
+  APFloat LargestDenormal(APFloat::IEEEdouble, "0x1.ffffffffffffep-1023");
+  APFloat NegLargestDenormal(APFloat::IEEEdouble, "-0x1.ffffffffffffep-1023");
+
+  APFloat Smallest = APFloat::getSmallest(APFloat::IEEEdouble, false);
+  APFloat NegSmallest = APFloat::getSmallest(APFloat::IEEEdouble, true);
+
+  APFloat Largest = APFloat::getLargest(APFloat::IEEEdouble, false);
+  APFloat NegLargest = APFloat::getLargest(APFloat::IEEEdouble, true);
+
+  APFloat PInf = APFloat::getInf(APFloat::IEEEdouble, false);
+  APFloat MInf = APFloat::getInf(APFloat::IEEEdouble, true);
+
+  APFloat QPNaN = APFloat::getNaN(APFloat::IEEEdouble, false);
+  APFloat QMNaN = APFloat::getNaN(APFloat::IEEEdouble, true);
+  APFloat SNaN = APFloat::getSNaN(APFloat::IEEEdouble, false);
+
+  // Make sure highest bit of payload is preserved.
+  const APInt Payload(64, (UINT64_C(1) << 50) |
+                      (UINT64_C(1) << 49) |
+                      (UINT64_C(1234) << 32) |
+                      1);
+
+  APFloat SNaNWithPayload = APFloat::getSNaN(APFloat::IEEEdouble, false,
+                                             &Payload);
+
+  APFloat SmallestNormalized
+    = APFloat::getSmallestNormalized(APFloat::IEEEdouble, false);
+  APFloat NegSmallestNormalized
+    = APFloat::getSmallestNormalized(APFloat::IEEEdouble, true);
+
+  int Exp;
+  APFloat Frac(APFloat::IEEEdouble);
+
+
+  Frac = frexp(PZero, Exp, RM);
+  EXPECT_EQ(0, Exp);
+  EXPECT_TRUE(Frac.isPosZero());
+
+  Frac = frexp(MZero, Exp, RM);
+  EXPECT_EQ(0, Exp);
+  EXPECT_TRUE(Frac.isNegZero());
+
+
+  Frac = frexp(One, Exp, RM);
+  EXPECT_EQ(1, Exp);
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p-1").bitwiseIsEqual(Frac));
+
+  Frac = frexp(MOne, Exp, RM);
+  EXPECT_EQ(1, Exp);
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-0x1p-1").bitwiseIsEqual(Frac));
+
+  Frac = frexp(LargestDenormal, Exp, RM);
+  EXPECT_EQ(-1022, Exp);
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-1").bitwiseIsEqual(Frac));
+
+  Frac = frexp(NegLargestDenormal, Exp, RM);
+  EXPECT_EQ(-1022, Exp);
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-0x1.ffffffffffffep-1").bitwiseIsEqual(Frac));
+
+
+  Frac = frexp(Smallest, Exp, RM);
+  EXPECT_EQ(-1073, Exp);
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p-1").bitwiseIsEqual(Frac));
+
+  Frac = frexp(NegSmallest, Exp, RM);
+  EXPECT_EQ(-1073, Exp);
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-0x1p-1").bitwiseIsEqual(Frac));
+
+
+  Frac = frexp(Largest, Exp, RM);
+  EXPECT_EQ(1024, Exp);
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.fffffffffffffp-1").bitwiseIsEqual(Frac));
+
+  Frac = frexp(NegLargest, Exp, RM);
+  EXPECT_EQ(1024, Exp);
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-0x1.fffffffffffffp-1").bitwiseIsEqual(Frac));
+
+
+  Frac = frexp(PInf, Exp, RM);
+  EXPECT_EQ(INT_MAX, Exp);
+  EXPECT_TRUE(Frac.isInfinity() && !Frac.isNegative());
+
+  Frac = frexp(MInf, Exp, RM);
+  EXPECT_EQ(INT_MAX, Exp);
+  EXPECT_TRUE(Frac.isInfinity() && Frac.isNegative());
+
+  Frac = frexp(QPNaN, Exp, RM);
+  EXPECT_EQ(INT_MIN, Exp);
+  EXPECT_TRUE(Frac.isNaN());
+
+  Frac = frexp(QMNaN, Exp, RM);
+  EXPECT_EQ(INT_MIN, Exp);
+  EXPECT_TRUE(Frac.isNaN());
+
+  Frac = frexp(SNaN, Exp, RM);
+  EXPECT_EQ(INT_MIN, Exp);
+  EXPECT_TRUE(Frac.isNaN() && !Frac.isSignaling());
+
+  Frac = frexp(SNaNWithPayload, Exp, RM);
+  EXPECT_EQ(INT_MIN, Exp);
+  EXPECT_TRUE(Frac.isNaN() && !Frac.isSignaling());
+  EXPECT_EQ(Payload, Frac.bitcastToAPInt().getLoBits(51));
+
+  Frac = frexp(APFloat(APFloat::IEEEdouble, "0x0.ffffp-1"), Exp, RM);
+  EXPECT_EQ(-1, Exp);
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.fffep-1").bitwiseIsEqual(Frac));
+
+  Frac = frexp(APFloat(APFloat::IEEEdouble, "0x1p-51"), Exp, RM);
+  EXPECT_EQ(-50, Exp);
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p-1").bitwiseIsEqual(Frac));
+
+  Frac = frexp(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp+51"), Exp, RM);
+  EXPECT_EQ(52, Exp);
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp-1").bitwiseIsEqual(Frac));
 }
 }

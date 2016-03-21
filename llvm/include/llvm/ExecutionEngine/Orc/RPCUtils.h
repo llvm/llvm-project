@@ -26,7 +26,7 @@ namespace remote {
 // partially specialized.
 class RPCBase {
 protected:
-  template <typename ProcedureIdT, ProcedureIdT ProcId, typename... Ts>
+  template <typename ProcedureIdT, ProcedureIdT ProcId, typename FnT>
   class ProcedureHelper {
   public:
     static const ProcedureIdT Id = ProcId;
@@ -36,7 +36,8 @@ protected:
 
   template <typename ChannelT, typename ProcedureIdT, ProcedureIdT ProcId,
             typename... ArgTs>
-  class CallHelper<ChannelT, ProcedureHelper<ProcedureIdT, ProcId, ArgTs...>> {
+  class CallHelper<ChannelT,
+                   ProcedureHelper<ProcedureIdT, ProcId, void(ArgTs...)>> {
   public:
     static std::error_code call(ChannelT &C, const ArgTs &... Args) {
       if (auto EC = serialize(C, ProcId))
@@ -52,7 +53,7 @@ protected:
   template <typename ChannelT, typename ProcedureIdT, ProcedureIdT ProcId,
             typename... ArgTs>
   class HandlerHelper<ChannelT,
-                      ProcedureHelper<ProcedureIdT, ProcId, ArgTs...>> {
+                      ProcedureHelper<ProcedureIdT, ProcId, void(ArgTs...)>> {
   public:
     template <typename HandlerT>
     static std::error_code handle(ChannelT &C, HandlerT Handler) {
@@ -179,8 +180,8 @@ public:
   ///         })
   ///     /* handle EC */;
   ///
-  template <ProcedureIdT ProcId, typename... Ts>
-  using Procedure = ProcedureHelper<ProcedureIdT, ProcId, Ts...>;
+  template <ProcedureIdT ProcId, typename FnT>
+  using Procedure = ProcedureHelper<ProcedureIdT, ProcId, FnT>;
 
   /// Serialize Args... to channel C, but do not call C.send().
   ///

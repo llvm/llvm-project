@@ -516,6 +516,8 @@ public:
   /// \brief Returns: X * 2^Exp for integral exponents.
   friend APFloat scalbn(APFloat X, int Exp, roundingMode);
 
+  friend APFloat frexp(const APFloat &X, int &Exp, roundingMode);
+
 private:
 
   /// \name Simple Queries
@@ -570,6 +572,7 @@ private:
                          const APInt *fill);
   void makeInf(bool Neg = false);
   void makeZero(bool Neg = false);
+  void makeQuiet();
 
   /// @}
 
@@ -644,6 +647,12 @@ private:
 hash_code hash_value(const APFloat &Arg);
 int ilogb(const APFloat &Arg);
 APFloat scalbn(APFloat X, int Exp, APFloat::roundingMode);
+
+/// \brief Equivalent of C standard library function.
+///
+/// While the C standard says Exp is an unspecified value for infinity and nan,
+/// this returns INT_MAX for infinities, and INT_MIN for NaNs.
+APFloat frexp(const APFloat &Val, int &Exp, APFloat::roundingMode RM);
 
 /// \brief Returns the absolute value of the argument.
 inline APFloat abs(APFloat X) {
