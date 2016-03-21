@@ -19,6 +19,10 @@ int __tsan_get_report_data(void *report, const char **description, int *count,
 int __tsan_get_report_mop(void *report, unsigned long idx, int *tid,
                           void **addr, int *size, int *write, int *atomic,
                           void **trace, unsigned long trace_size);
+int __tsan_get_report_thread(void *report, unsigned long idx, int *tid,
+                             unsigned long *pid, int *running,
+                             const char **name, int *parent_tid, void **trace,
+                             unsigned long trace_size);
 }
 
 long my_global;
@@ -82,6 +86,22 @@ void __tsan_on_report(void *report) {
   // CHECK: tid = 0, addr = [[GLOBAL]], size = 8, write = 1, atomic = 0
   fprintf(stderr, "trace[0] = %p, trace[1] = %p\n", trace[0], trace[1]);
   // CHECK: trace[0] = 0x{{[0-9a-f]+}}, trace[1] = {{0x0|\(nil\)|\(null\)}}
+
+  fprintf(stderr, "thread_count = %d\n", thread_count);
+  // CHECK: thread_count = 2
+
+  unsigned long pid;
+  int running;
+  const char *name;
+  int parent_tid;
+
+  __tsan_get_report_thread(report, 0, &tid, &pid, &running, &name, &parent_tid, trace, 16);
+  fprintf(stderr, "tid = %d\n", tid);
+  // CHECK: tid = 1
+
+  __tsan_get_report_thread(report, 1, &tid, &pid, &running, &name, &parent_tid, trace, 16);
+  fprintf(stderr, "tid = %d\n", tid);
+  // CHECK: tid = 0
 }
 
 // CHECK: Done.
