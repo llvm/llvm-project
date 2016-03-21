@@ -159,9 +159,6 @@ private:
 
   void parseDynamicTable(ArrayRef<const Elf_Phdr *> LoadSegments);
 
-  void printSymbol(const Elf_Sym *Symbol, const Elf_Sym *FirstSym,
-                   StringRef StrTable, bool IsDynamic);
-
   void printValue(uint64_t Type, uint64_t Value);
 
   StringRef getDynamicString(uint64_t Offset) const;
@@ -182,6 +179,7 @@ private:
   const Elf_Hash *HashTable = nullptr;
   const Elf_GnuHash *GnuHashTable = nullptr;
   const Elf_Shdr *DotSymtabSec = nullptr;
+  StringRef DynSymtabName;
   ArrayRef<Elf_Word> ShndxTable;
 
   const Elf_Shdr *dot_gnu_version_sec = nullptr;   // .gnu.version
@@ -224,6 +222,8 @@ public:
   Elf_Rela_Range dyn_relas() const;
   std::string getFullSymbolName(const Elf_Sym *Symbol, StringRef StrTable,
                                 bool IsDynamic) const;
+
+  void printSymbolsHelper(bool IsDynamic) const;
   const Elf_Shdr *getDotSymtabSec() const { return DotSymtabSec; }
   ArrayRef<Elf_Word> getShndxTable() const { return ShndxTable; }
   StringRef getDynamicStringTable() const { return DynamicStringTable; }
@@ -232,19 +232,54 @@ public:
   const DynRegionInfo &getDynPLTRelRegion() const { return DynPLTRelRegion; }
 };
 
+template <class ELFT>
+void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
+  StringRef StrTable, SymtabName;
+  size_t Entries = 0;
+  Elf_Sym_Range Syms(nullptr, nullptr);
+  if (IsDynamic) {
+    StrTable = DynamicStringTable;
+    Syms = dynamic_symbols();
+    SymtabName = DynSymtabName;
+    if (DynSymRegion.Addr)
+      Entries = DynSymRegion.Size / DynSymRegion.EntSize;
+  } else {
+    if (!DotSymtabSec)
+      return;
+    StrTable = unwrapOrError(Obj->getStringTableForSymtab(*DotSymtabSec));
+    Syms = Obj->symbols(DotSymtabSec);
+    SymtabName = unwrapOrError(Obj->getSectionName(DotSymtabSec));
+    Entries = DotSymtabSec->getEntityCount();
+  }
+  if (Syms.begin() == Syms.end())
+    return;
+  ELFDumperStyle->printSymtabMessage(Obj, SymtabName, Entries);
+  for (const auto &Sym : Syms)
+    ELFDumperStyle->printSymbol(Obj, &Sym, Syms.begin(), StrTable, IsDynamic);
+}
+
 template <typename ELFT> class DumpStyle {
 public:
-  virtual void printFileHeaders(const ELFFile<ELFT> *Obj) = 0;
-  virtual ~DumpStyle() { }
+  using Elf_Shdr = typename ELFFile<ELFT>::Elf_Shdr;
+  using Elf_Sym =  typename ELFFile<ELFT>::Elf_Sym;
+
   DumpStyle(ELFDumper<ELFT> *Dumper) : Dumper(Dumper) {}
+  virtual ~DumpStyle() {}
+  virtual void printFileHeaders(const ELFFile<ELFT> *Obj) = 0;
   virtual void printGroupSections(const ELFFile<ELFT> *Obj) = 0;
   virtual void printRelocations(const ELFFile<ELFT> *Obj) = 0;
   virtual void printSections(const ELFFile<ELFT> *Obj) = 0;
   virtual void printSymbols(const ELFFile<ELFT> *Obj) = 0;
   virtual void printDynamicSymbols(const ELFFile<ELFT> *Obj) = 0;
   virtual void printDynamicRelocations(const ELFFile<ELFT> *Obj) = 0;
+  virtual void printSymtabMessage(const ELFFile<ELFT> *obj, StringRef Name,
+                                  size_t Offset) {
+    return;
+  }
+  virtual void printSymbol(const ELFFile<ELFT> *Obj, const Elf_Sym *Symbol,
+                           const Elf_Sym *FirstSym, StringRef StrTable,
+                           bool IsDynamic) = 0;
   const ELFDumper<ELFT> *dumper() const { return Dumper; }
-
 private:
   const ELFDumper<ELFT> *Dumper;
 };
@@ -262,6 +297,8 @@ public:
   void printSymbols(const ELFO *Obj) override;
   void printDynamicSymbols(const ELFO *Obj) override;
   void printDynamicRelocations(const ELFO *Obj) override;
+  virtual void printSymtabMessage(const ELFO *Obj, StringRef Name,
+                                  size_t Offset) override;
 
 private:
   struct Field {
@@ -278,6 +315,7 @@ private:
         return EnumItem.AltName;
     return to_hexString(Value, false);
   }
+
   formatted_raw_ostream &printField(struct Field F) {
     if (F.Column != 0)
       OS.PadToColumn(F.Column);
@@ -287,6 +325,10 @@ private:
   }
   void printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
                        const Elf_Rela &R, bool IsRela);
+  void printSymbol(const ELFO *Obj, const Elf_Sym *Symbol, const Elf_Sym *First,
+                   StringRef StrTable, bool IsDynamic) override;
+  std::string getSymbolSectionNdx(const ELFO *Obj, const Elf_Sym *Symbol,
+                                  const Elf_Sym *FirstSym);
 };
 
 template <typename ELFT> class LLVMStyle : public DumpStyle<ELFT> {
@@ -300,17 +342,15 @@ public:
   void printRelocations(const ELFO *Obj) override;
   void printRelocations(const Elf_Shdr *Sec, const ELFO *Obj);
   void printSections(const ELFO *Obj) override;
-  void printSymbolsHelper(const ELFO *Obj, bool IsDynamic);
   void printSymbols(const ELFO *Obj) override;
   void printDynamicSymbols(const ELFO *Obj) override;
   void printDynamicRelocations(const ELFO *Obj) override;
 
 private:
   void printRelocation(const ELFO *Obj, Elf_Rela Rel, const Elf_Shdr *SymTab);
-  void printSymbol(const ELFO *Obj, const Elf_Sym *Symbol, const Elf_Sym *First,
-                   StringRef StrTable, bool IsDynamic);
   void printDynamicRelocation(const ELFO *Obj, Elf_Rela Rel);
-
+  void printSymbol(const ELFO *Obj, const Elf_Sym *Symbol, const Elf_Sym *First,
+                   StringRef StrTable, bool IsDynamic) override;
   StreamWriter &W;
 };
 
@@ -840,15 +880,21 @@ static const EnumEntry<unsigned> ElfSymbolBindings[] = {
     {"Weak",   "WEAK",   ELF::STB_WEAK},
     {"Unique", "UNIQUE", ELF::STB_GNU_UNIQUE}};
 
+static const EnumEntry<unsigned> ElfSymbolVisibilities[] = {
+    {"DEFAULT",   "DEFAULT",   ELF::STV_DEFAULT},
+    {"INTERNAL",  "INTERNAL",  ELF::STV_INTERNAL},
+    {"HIDDEN",    "HIDDEN",    ELF::STV_HIDDEN},
+    {"PROTECTED", "PROTECTED", ELF::STV_PROTECTED}};
+
 static const EnumEntry<unsigned> ElfSymbolTypes[] = {
-    {"None",      "NOTYPE",   ELF::STT_NOTYPE},
-    {"Object",    "OBJECT",   ELF::STT_OBJECT},
-    {"Function",  "FUNCTION", ELF::STT_FUNC},
-    {"Section",   "SECTION",  ELF::STT_SECTION},
-    {"File",      "FILE",     ELF::STT_FILE},
-    {"Common",    "COMMON",   ELF::STT_COMMON},
-    {"TLS",       "TLS",      ELF::STT_TLS},
-    {"GNU_IFunc", "IFUNC",    ELF::STT_GNU_IFUNC}};
+    {"None",      "NOTYPE",  ELF::STT_NOTYPE},
+    {"Object",    "OBJECT",  ELF::STT_OBJECT},
+    {"Function",  "FUNC",    ELF::STT_FUNC},
+    {"Section",   "SECTION", ELF::STT_SECTION},
+    {"File",      "FILE",    ELF::STT_FILE},
+    {"Common",    "COMMON",  ELF::STT_COMMON},
+    {"TLS",       "TLS",     ELF::STT_TLS},
+    {"GNU_IFunc", "IFUNC",   ELF::STT_GNU_IFUNC}};
 
 static const EnumEntry<unsigned> AMDGPUSymbolTypes[] = {
   { "AMDGPU_HSA_KERNEL",            ELF::STT_AMDGPU_HSA_KERNEL },
@@ -1108,6 +1154,8 @@ ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, StreamWriter &Writer)
       if (DynSymRegion.Size)
         reportError("Multilpe SHT_DYNSYM");
       DynSymRegion = createDRIFrom(&Sec);
+      // This is only used (if Elf_Shdr present)for naming section in GNU style
+      DynSymtabName = unwrapOrError(Obj->getSectionName(&Sec));
       break;
     case ELF::SHT_SYMTAB_SHNDX:
       ShndxTable = unwrapOrError(Obj->getSHNDXTable(Sec));
@@ -2468,13 +2516,117 @@ template <class ELFT> void GNUStyle<ELFT>::printSections(const ELFO *Obj) {
  p (processor specific)\n";
 }
 
+template <class ELFT>
+void GNUStyle<ELFT>::printSymtabMessage(const ELFO *Obj, StringRef Name,
+                                        size_t Entries) {
+  if (Name.size())
+    OS << "\nSymbol table '" << Name << "' contains " << Entries
+       << " entries:\n";
+  else
+    OS << "\n Symbol table for image:\n";
+
+  if (ELFT::Is64Bits)
+    OS << "   Num:    Value          Size Type    Bind   Vis      Ndx Name\n";
+  else
+    OS << "   Num:    Value  Size Type    Bind   Vis      Ndx Name\n";
+}
+
+template <class ELFT>
+std::string GNUStyle<ELFT>::getSymbolSectionNdx(const ELFO *Obj,
+                                                const Elf_Sym *Symbol,
+                                                const Elf_Sym *FirstSym) {
+  unsigned SectionIndex = Symbol->st_shndx;
+  switch (SectionIndex) {
+  case ELF::SHN_UNDEF:
+    return "UND";
+  case ELF::SHN_ABS:
+    return "ABS";
+  case ELF::SHN_COMMON:
+    return "COM";
+  case ELF::SHN_XINDEX:
+    SectionIndex = Obj->getExtendedSymbolTableIndex(
+        Symbol, FirstSym, this->dumper()->getShndxTable());
+  default:
+    // Find if:
+    // Processor specific
+    if (SectionIndex >= ELF::SHN_LOPROC && SectionIndex <= ELF::SHN_HIPROC)
+      return std::string("PRC[0x") +
+             to_string(format_hex_no_prefix(SectionIndex, 4)) + "]";
+    // OS specific
+    if (SectionIndex >= ELF::SHN_LOOS && SectionIndex <= ELF::SHN_HIOS)
+      return std::string("OS[0x") +
+             to_string(format_hex_no_prefix(SectionIndex, 4)) + "]";
+    // Architecture reserved:
+    if (SectionIndex >= ELF::SHN_LORESERVE &&
+        SectionIndex <= ELF::SHN_HIRESERVE)
+      return std::string("RSV[0x") +
+             to_string(format_hex_no_prefix(SectionIndex, 4)) + "]";
+    // A normal section with an index
+    return to_string(format_decimal(SectionIndex, 3));
+  }
+}
+
+template <class ELFT>
+void GNUStyle<ELFT>::printSymbol(const ELFO *Obj, const Elf_Sym *Symbol,
+                                 const Elf_Sym *FirstSym, StringRef StrTable,
+                                 bool IsDynamic) {
+  static int Idx = 0;
+  static bool Dynamic = true;
+  size_t Width;
+
+  // If this function was called with a different value from IsDynamic
+  // from last call, happens when we move from dynamic to static symbol
+  // table, "Num" field should be reset.
+  if (!Dynamic != !IsDynamic) {
+    Idx = 0;
+    Dynamic = false;
+  }
+  std::string Num, Name, Value, Size, Binding, Type, Visibility, Section;
+  unsigned Bias = 0;
+  if (ELFT::Is64Bits) {
+    Bias = 8;
+    Width = 16;
+  } else {
+    Bias = 0;
+    Width = 8;
+  }
+  Field Fields[8] = {0,         8,         17 + Bias, 23 + Bias,
+                     31 + Bias, 38 + Bias, 47 + Bias, 51 + Bias};
+  Num = to_string(format_decimal(Idx++, 6)) + ":";
+  Value = to_string(format_hex_no_prefix(Symbol->st_value, Width));
+  Size = to_string(format_decimal(Symbol->st_size, 5));
+  unsigned char SymbolType = Symbol->getType();
+  if (Obj->getHeader()->e_machine == ELF::EM_AMDGPU &&
+      SymbolType >= ELF::STT_LOOS && SymbolType < ELF::STT_HIOS)
+    Type = printEnum(SymbolType, makeArrayRef(AMDGPUSymbolTypes));
+  else
+    Type = printEnum(SymbolType, makeArrayRef(ElfSymbolTypes));
+  unsigned Vis = Symbol->getVisibility();
+  Binding = printEnum(Symbol->getBinding(), makeArrayRef(ElfSymbolBindings));
+  Visibility = printEnum(Vis, makeArrayRef(ElfSymbolVisibilities));
+  Section = getSymbolSectionNdx(Obj, Symbol, FirstSym);
+  Name = this->dumper()->getFullSymbolName(Symbol, StrTable, IsDynamic);
+  Fields[0].Str = Num;
+  Fields[1].Str = Value;
+  Fields[2].Str = Size;
+  Fields[3].Str = Type;
+  Fields[4].Str = Binding;
+  Fields[5].Str = Visibility;
+  Fields[6].Str = Section;
+  Fields[7].Str = Name;
+  for (auto &Entry : Fields)
+    printField(Entry);
+  OS << "\n";
+}
+
 template <class ELFT> void GNUStyle<ELFT>::printSymbols(const ELFO *Obj) {
-  OS << "GNU style symbols not implemented!\n";
+  this->dumper()->printSymbolsHelper(true);
+  this->dumper()->printSymbolsHelper(false);
 }
 
 template <class ELFT>
 void GNUStyle<ELFT>::printDynamicSymbols(const ELFO *Obj) {
-  OS << "GNU style dynamic symbols not implemented!\n";
+  this->dumper()->printSymbolsHelper(true);
 }
 
 template <class ELFT>
@@ -2735,33 +2887,15 @@ void LLVMStyle<ELFT>::printSymbol(const ELFO *Obj, const Elf_Sym *Symbol,
   W.printHex("Section", SectionName, SectionIndex);
 }
 
-template <class ELFT>
-void LLVMStyle<ELFT>::printSymbolsHelper(const ELFO *Obj, bool IsDynamic) {
-  StringRef StrTable;
-  typename ELFO::Elf_Sym_Range Syms(nullptr, nullptr);
-  if (IsDynamic) {
-    StrTable = this->dumper()->getDynamicStringTable();
-    Syms = this->dumper()->dynamic_symbols();
-  } else {
-    if (!this->dumper()->getDotSymtabSec())
-      return;
-    const auto DotSymtabSec = this->dumper()->getDotSymtabSec();
-    StrTable = unwrapOrError(Obj->getStringTableForSymtab(*DotSymtabSec));
-    Syms = Obj->symbols(DotSymtabSec);
-  }
-  for (const Elf_Sym &Sym : Syms)
-    printSymbol(Obj, &Sym, Syms.begin(), StrTable, IsDynamic);
-}
-
 template <class ELFT> void LLVMStyle<ELFT>::printSymbols(const ELFO *Obj) {
   ListScope Group(W, "Symbols");
-  printSymbolsHelper(Obj, false);
+  this->dumper()->printSymbolsHelper(false);
 }
 
 template <class ELFT>
 void LLVMStyle<ELFT>::printDynamicSymbols(const ELFO *Obj) {
   ListScope Group(W, "DynamicSymbols");
-  printSymbolsHelper(Obj, true);
+  this->dumper()->printSymbolsHelper(true);
 }
 
 template <class ELFT>

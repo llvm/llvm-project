@@ -1286,6 +1286,7 @@ bool llvm::canConstantFoldCallTo(const Function *F) {
   case Intrinsic::umul_with_overflow:
   case Intrinsic::convert_from_fp16:
   case Intrinsic::convert_to_fp16:
+  case Intrinsic::bitreverse:
   case Intrinsic::x86_sse_cvtss2si:
   case Intrinsic::x86_sse_cvtss2si64:
   case Intrinsic::x86_sse_cvttss2si:
@@ -1618,6 +1619,8 @@ static Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID,
         return ConstantInt::get(Ty->getContext(), Op->getValue().byteSwap());
       case Intrinsic::ctpop:
         return ConstantInt::get(Ty, Op->getValue().countPopulation());
+      case Intrinsic::bitreverse:
+        return ConstantInt::get(Ty->getContext(), Op->getValue().reverseBits());
       case Intrinsic::convert_from_fp16: {
         APFloat Val(APFloat::IEEEhalf, Op->getValue());
 
