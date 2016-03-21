@@ -44,11 +44,11 @@
  *
  */
 enum stats_flags_e {
-    noTotal      = 1<<0,             //!< do not show a TOTAL_aggregation for this statistic
-    onlyInMaster = (1<<1) | noTotal, //!< statistic is valid only for master
-    noUnits      = (1<<2) | noTotal, //!< statistic doesn't need units printed next to it in output
-    notInMaster  = 1<<3,             //!< statistic is valid only for non-master threads
-    logEvent     = 1<<4              //!< statistic can be logged when KMP_STATS_EVENTS is on (valid only for timers)
+    noTotal      = 1<<0,     //!< do not show a TOTAL_aggregation for this statistic
+    onlyInMaster = 1<<1,     //!< statistic is valid only for master
+    noUnits      = 1<<2,     //!< statistic doesn't need units printed next to it in output
+    notInMaster  = 1<<3,     //!< statistic is valid only for non-master threads
+    logEvent     = 1<<4      //!< statistic can be logged on the event timeline when KMP_STATS_EVENTS is on (valid only for timers)
 };
 
 /*!
@@ -68,7 +68,7 @@ enum stats_flags_e {
  * @ingroup STATS_GATHERING
  */
 #define KMP_FOREACH_COUNTER(macro, arg)                         \
-    macro (OMP_PARALLEL, stats_flags_e::onlyInMaster, arg)      \
+    macro (OMP_PARALLEL, stats_flags_e::onlyInMaster | stats_flags_e::noTotal, arg) \
     macro (OMP_NESTED_PARALLEL, 0, arg)                         \
     macro (OMP_FOR_static, 0, arg)                              \
     macro (OMP_FOR_dynamic, 0, arg)                             \
@@ -103,21 +103,21 @@ enum stats_flags_e {
  *
  * @ingroup STATS_GATHERING2
  */
-#define KMP_FOREACH_TIMER(macro, arg)                           \
-    macro (OMP_start_end, stats_flags_e::onlyInMaster, arg)     \
-    macro (OMP_serial, stats_flags_e::onlyInMaster, arg)        \
-    macro (OMP_work, 0, arg)                                    \
-    macro (OMP_barrier, 0, arg)                                 \
-    macro (FOR_static_scheduling, 0, arg)                       \
-    macro (FOR_dynamic_scheduling, 0, arg)                      \
-    macro (OMP_task,   0, arg)                                  \
-    macro (OMP_single, 0, arg)                                  \
-    macro (OMP_master, 0, arg)                                  \
-    macro (OMP_set_numthreads, stats_flags_e::noUnits, arg)     \
-    macro (OMP_PARALLEL_args,  stats_flags_e::noUnits, arg)     \
-    macro (FOR_static_iterations, stats_flags_e::noUnits, arg)  \
-    macro (FOR_dynamic_iterations, stats_flags_e::noUnits, arg) \
-    KMP_FOREACH_DEVELOPER_TIMER(macro, arg)                     \
+#define KMP_FOREACH_TIMER(macro, arg)                                   \
+    macro (OMP_start_end, stats_flags_e::onlyInMaster | stats_flags_e::noTotal, arg) \
+    macro (OMP_serial,    stats_flags_e::onlyInMaster | stats_flags_e::noTotal, arg) \
+    macro (OMP_work,      0, arg)                                       \
+    macro (OMP_barrier,   0, arg)                                       \
+    macro (FOR_static_scheduling, 0, arg)                               \
+    macro (FOR_dynamic_scheduling, 0, arg)                              \
+    macro (OMP_task,      0, arg)                                       \
+    macro (OMP_single,    0, arg)                                       \
+    macro (OMP_master,    0, arg)                                       \
+    macro (OMP_set_numthreads,    stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
+    macro (OMP_PARALLEL_args,     stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
+    macro (FOR_static_iterations, stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
+    macro (FOR_dynamic_iterations,stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
+    KMP_FOREACH_DEVELOPER_TIMER(macro, arg)                             \
     macro (LAST,0, arg)
 
 
@@ -272,7 +272,7 @@ class timeStat : public statistic
  public:
     timeStat() : statistic() {}
     static const char * name(timer_e e) { return timerInfo[e].name; }
-    static bool  noTotal    (timer_e e) { return timerInfo[e].flags & stats_flags_e::noTotal; }
+    static bool  noTotal    (timer_e e) { return timerInfo[e].flags & stats_flags_e::noTotal;      }
     static bool  masterOnly (timer_e e) { return timerInfo[e].flags & stats_flags_e::onlyInMaster; }
     static bool  workerOnly (timer_e e) { return timerInfo[e].flags & stats_flags_e::notInMaster;  }
     static bool  noUnits    (timer_e e) { return timerInfo[e].flags & stats_flags_e::noUnits;      }

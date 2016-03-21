@@ -345,16 +345,18 @@
 // SWIFT-THUMB:#define __ARM_FEATURE_DSP
 // SWIFT-THUMB:#define __ARM_FP 0xE
 
-// Test whether predefines are as expected when targeting cortex-a53.
-// RUN: %clang -target armv8 -mcpu=cortex-a53 -x c -E -dM %s -o - | FileCheck --check-prefix=A53-ARM %s
-// A53-ARM:#define __ARM_ARCH_EXT_IDIV__ 1
-// A53-ARM:#define __ARM_FEATURE_DSP
-// A53-ARM:#define __ARM_FP 0xE
+// Test whether predefines are as expected when targeting ARMv8-A Cortex implementations
+// RUN: %clang -target armv8 -mcpu=cortex-a32 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8-ARM %s
+// RUN: %clang -target armv8 -mcpu=cortex-a53 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8-ARM %s
+// ARMV8-ARM:#define __ARM_ARCH_EXT_IDIV__ 1
+// ARMV8-ARM:#define __ARM_FEATURE_DSP
+// ARMV8-ARM:#define __ARM_FP 0xE
 
-// RUN: %clang -target armv8 -mthumb -mcpu=cortex-a53 -x c -E -dM %s -o - | FileCheck --check-prefix=A53-THUMB %s
-// A53-THUMB:#define __ARM_ARCH_EXT_IDIV__ 1
-// A53-THUMB:#define __ARM_FEATURE_DSP
-// A53-THUMB:#define __ARM_FP 0xE
+// RUN: %clang -target armv8 -mthumb -mcpu=cortex-a32 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8-THUMB %s
+// RUN: %clang -target armv8 -mthumb -mcpu=cortex-a53 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8-THUMB %s
+// ARMV8-THUMB:#define __ARM_ARCH_EXT_IDIV__ 1
+// ARMV8-THUMB:#define __ARM_FEATURE_DSP
+// ARMV8-THUMB:#define __ARM_FP 0xE
 
 // Test whether predefines are as expected when targeting cortex-r4.
 // RUN: %clang -target armv7 -mcpu=cortex-r4 -x c -E -dM %s -o - | FileCheck --check-prefix=R4-ARM %s

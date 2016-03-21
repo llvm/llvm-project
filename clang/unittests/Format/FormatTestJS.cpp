@@ -847,6 +847,14 @@ TEST_F(FormatTestJS, TypeAnnotations) {
                getGoogleJSStyleWithColumns(60));
 }
 
+TEST_F(FormatTestJS, UnionIntersectionTypes) {
+  verifyFormat("let x: A|B = A | B;");
+  verifyFormat("let x: A&B|C = A & B;");
+  verifyFormat("let x: Foo<A|B> = new Foo<A|B>();");
+  verifyFormat("function(x: A|B): C&D {}");
+  verifyFormat("function(x: A|B = A | B): C&D {}");
+}
+
 TEST_F(FormatTestJS, ClassDeclarations) {
   verifyFormat("class C {\n  x: string = 12;\n}");
   verifyFormat("class C {\n  x(): string => 12;\n}");

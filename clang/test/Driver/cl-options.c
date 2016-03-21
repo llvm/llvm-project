@@ -249,6 +249,7 @@
 // RUN:    /cgthreads8 \
 // RUN:    /d2Zi+ \
 // RUN:    /errorReport:foo \
+// RUN:    /FC \
 // RUN:    /Fdfoo \
 // RUN:    /FS \
 // RUN:    /Gd \

@@ -300,6 +300,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.ExperimentalAutoDetectBinPacking);
     IO.mapOptional("ForEachMacros", Style.ForEachMacros);
     IO.mapOptional("IncludeCategories", Style.IncludeCategories);
+    IO.mapOptional("IncludeIsMainRegex", Style.IncludeIsMainRegex);
     IO.mapOptional("IndentCaseLabels", Style.IndentCaseLabels);
     IO.mapOptional("IndentWidth", Style.IndentWidth);
     IO.mapOptional("IndentWrappedFunctionNames",
@@ -517,6 +518,7 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.IncludeCategories = {{"^\"(llvm|llvm-c|clang|clang-c)/", 2},
                                  {"^(<|\"(gtest|isl|json)/)", 3},
                                  {".*", 1}};
+  LLVMStyle.IncludeIsMainRegex = "$";
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentWrappedFunctionNames = false;
   LLVMStyle.IndentWidth = 2;
@@ -569,6 +571,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.ConstructorInitializerAllOnOneLineOrOnePerLine = true;
   GoogleStyle.DerivePointerAlignment = true;
   GoogleStyle.IncludeCategories = {{"^<.*\\.h>", 1}, {"^<.*", 2}, {".*", 3}};
+  GoogleStyle.IncludeIsMainRegex = "([-_](test|unittest))?$";
   GoogleStyle.IndentCaseLabels = true;
   GoogleStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
   GoogleStyle.ObjCSpaceAfterProperty = false;
@@ -1961,8 +1964,12 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
           StringRef HeaderStem =
               llvm::sys::path::stem(IncludeName.drop_front(1).drop_back(1));
           if (FileStem.startswith(HeaderStem)) {
-            Category = 0;
-            MainIncludeFound = true;
+            llvm::Regex MainIncludeRegex(
+                (HeaderStem + Style.IncludeIsMainRegex).str());
+            if (MainIncludeRegex.match(FileStem)) {
+              Category = 0;
+              MainIncludeFound = true;
+            }
           }
         }
         IncludesInBlock.push_back({IncludeName, Line, Prev, Category});

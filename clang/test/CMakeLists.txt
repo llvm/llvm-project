@@ -40,6 +40,7 @@ endif ()
 
 if (ENABLE_CLANG_EXAMPLES)
   list(APPEND CLANG_TEST_DEPS
+    AnnotateFunctions
     clang-interpreter
     PrintFunctionNames
     )

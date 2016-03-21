@@ -1961,6 +1961,7 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(NamedDecl *D, SourceRange Range,
                                               bool IsUnavailable,
                                               StringRef Message,
                                               bool IsStrict,
+                                              StringRef Replacement,
                                               AvailabilityMergeKind AMK,
                                               unsigned AttrSpellingListIndex) {
   VersionTuple MergedIntroduced = Introduced;
@@ -2107,7 +2108,8 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(NamedDecl *D, SourceRange Range,
     return ::new (Context) AvailabilityAttr(Range, Context, Platform,
                                             Introduced, Deprecated,
                                             Obsoleted, IsUnavailable, Message,
-                                            IsStrict, AttrSpellingListIndex);
+                                            IsStrict, Replacement,
+                                            AttrSpellingListIndex);
   }
   return nullptr;
 }
@@ -2139,6 +2141,10 @@ static void handleAvailabilityAttr(Sema &S, Decl *D,
   if (const StringLiteral *SE =
           dyn_cast_or_null<StringLiteral>(Attr.getMessageExpr()))
     Str = SE->getString();
+  StringRef Replacement;
+  if (const StringLiteral *SE =
+          dyn_cast_or_null<StringLiteral>(Attr.getReplacementExpr()))
+    Replacement = SE->getString();
 
   if (II->getName() == "swift") {
     if (Introduced.isValid() || Deprecated.isValid() || Obsoleted.isValid() ||
@@ -2153,7 +2159,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D,
                                                       Deprecated.Version,
                                                       Obsoleted.Version,
                                                       IsUnavailable, Str,
-                                                      IsStrict,
+                                                      IsStrict, Replacement,
                                                       Sema::AMK_None,
                                                       Index);
   if (NewAttr)
@@ -2199,6 +2205,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D,
                                                             NewObsoleted,
                                                             IsUnavailable, Str,
                                                             IsStrict,
+                                                            Replacement,
                                                             Sema::AMK_None,
                                                             Index);
         if (NewAttr)
@@ -2222,6 +2229,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D,
                                                             Obsoleted.Version,
                                                             IsUnavailable, Str,
                                                             IsStrict,
+                                                            Replacement,
                                                             Sema::AMK_None,
                                                             Index);
         if (NewAttr)
@@ -6632,6 +6640,8 @@ static void DoEmitAvailabilityWarning(Sema &S, Sema::AvailabilityDiagnostic K,
   StringRef Replacement;
   if (K == Sema::AD_Deprecation) {
     if (auto attr = D->getAttr<DeprecatedAttr>())
+      Replacement = attr->getReplacement();
+    if (auto attr = D->getAttr<AvailabilityAttr>())
       Replacement = attr->getReplacement();
 
     if (!Replacement.empty())

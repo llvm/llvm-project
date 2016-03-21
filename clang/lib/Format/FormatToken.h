@@ -54,6 +54,7 @@ namespace format {
   TYPE(JsComputedPropertyName) \
   TYPE(JsFatArrow) \
   TYPE(JsTypeColon) \
+  TYPE(JsTypeOperator) \
   TYPE(JsTypeOptionalQuestion) \
   TYPE(LambdaArrow) \
   TYPE(LambdaLSquare) \
