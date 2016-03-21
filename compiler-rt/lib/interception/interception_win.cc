@@ -119,6 +119,11 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
         cursor += 4;
         continue;
     }
+    switch (*(unsigned int *)(code + cursor)) {
+      case 0X2444B60F:  // 0F B6 44 24 XX = movzx eax, byte ptr [esp+XXh]
+        cursor += 5;
+        continue;
+    }
 
     // Unknown instruction!
     // FIXME: Unknown instruction failures might happen when we add a new
