@@ -2110,7 +2110,7 @@ public:
                                           VersionTuple Obsoleted,
                                           bool IsUnavailable,
                                           StringRef Message,
-                                          bool IsStrict,
+                                          bool IsStrict, StringRef Replacement,
                                           AvailabilityMergeKind AMK,
                                           unsigned AttrSpellingListIndex);
   TypeVisibilityAttr *mergeTypeVisibilityAttr(Decl *D, SourceRange Range,
