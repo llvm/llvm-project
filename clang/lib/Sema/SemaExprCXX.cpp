@@ -845,11 +845,34 @@ QualType Sema::getCurrentThisType() {
       // within a default initializer - so use the enclosing class as 'this'.
       // There is no enclosing member function to retrieve the 'this' pointer
       // from.
+
+      // FIXME: This looks wrong. If we're in a lambda within a lambda within a
+      // default member initializer, we need to recurse up more parents to find
+      // the right context. Looks like we should be walking up to the parent of
+      // the closure type, checking whether that is itself a lambda, and if so,
+      // recursing, until we reach a class or a function that isn't a lambda
+      // call operator. And we should accumulate the constness of *this on the
+      // way.
+
       QualType ClassTy = Context.getTypeDeclType(
           cast<CXXRecordDecl>(CurContext->getParent()->getParent()));
       // There are no cv-qualifiers for 'this' within default initializers, 
       // per [expr.prim.general]p4.
-      return Context.getPointerType(ClassTy);
+      ThisTy = Context.getPointerType(ClassTy);
+    }
+  }
+   // Add const for '* this' capture if not mutable.
+  if (isLambdaCallOperator(CurContext)) {
+    LambdaScopeInfo *LSI = getCurLambda();
+    assert(LSI);
+    if (LSI->isCXXThisCaptured()) {
+      auto C = LSI->getCXXThisCapture();
+      QualType BaseType = ThisTy->getPointeeType();
+      if ((C.isThisCapture() && C.isCopyCapture()) &&
+          LSI->CallOperator->isConst() && !BaseType.isConstQualified()) {
+        BaseType.addConst();
+        ThisTy = Context.getPointerType(BaseType);
+      }
     }
   }
   return ThisTy;
@@ -884,28 +907,70 @@ Sema::CXXThisScopeRAII::~CXXThisScopeRAII() {
   }
 }
 
-static Expr *captureThis(ASTContext &Context, RecordDecl *RD,
-                         QualType ThisTy, SourceLocation Loc) {
+static Expr *captureThis(Sema &S, ASTContext &Context, RecordDecl *RD,
+                         QualType ThisTy, SourceLocation Loc,
+                         const bool ByCopy) {
+  QualType CaptureThisTy = ByCopy ? ThisTy->getPointeeType() : ThisTy;
+ 
   FieldDecl *Field
-    = FieldDecl::Create(Context, RD, Loc, Loc, nullptr, ThisTy,
-                        Context.getTrivialTypeSourceInfo(ThisTy, Loc),
+       = FieldDecl::Create(Context, RD, Loc, Loc, nullptr, CaptureThisTy,
+                       Context.getTrivialTypeSourceInfo(CaptureThisTy, Loc),
                         nullptr, false, ICIS_NoInit);
   Field->setImplicit(true);
   Field->setAccess(AS_private);
   RD->addDecl(Field);
-  return new (Context) CXXThisExpr(Loc, ThisTy, /*isImplicit*/true);
+  Expr *This = new (Context) CXXThisExpr(Loc, ThisTy, /*isImplicit*/true);
+  if (ByCopy) {
+    Expr *StarThis =  S.CreateBuiltinUnaryOp(Loc,
+                                      UO_Deref,
+                                      This).get();
+    InitializedEntity Entity = InitializedEntity::InitializeLambdaCapture(
+      nullptr, CaptureThisTy, Loc);
+    InitializationKind InitKind = InitializationKind::CreateDirect(Loc, Loc, Loc);
+    InitializationSequence Init(S, Entity, InitKind, StarThis);
+    ExprResult ER = Init.Perform(S, Entity, InitKind, StarThis);
+    if (ER.isInvalid()) return nullptr;
+    return ER.get();
+  }
+  return This;
 }
 
-bool Sema::CheckCXXThisCapture(SourceLocation Loc, bool Explicit, 
-    bool BuildAndDiagnose, const unsigned *const FunctionScopeIndexToStopAt) {
+bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit, 
+    bool BuildAndDiagnose, const unsigned *const FunctionScopeIndexToStopAt,
+    const bool ByCopy) {
   // We don't need to capture this in an unevaluated context.
   if (isUnevaluatedContext() && !Explicit)
     return true;
+  
+  assert((!ByCopy || Explicit) && "cannot implicitly capture *this by value");
 
   const unsigned MaxFunctionScopesIndex = FunctionScopeIndexToStopAt ?
-    *FunctionScopeIndexToStopAt : FunctionScopes.size() - 1;  
- // Otherwise, check that we can capture 'this'.
-  unsigned NumClosures = 0;
+    *FunctionScopeIndexToStopAt : FunctionScopes.size() - 1;
+  
+  // Check that we can capture the *enclosing object* (referred to by '*this')
+  // by the capturing-entity/closure (lambda/block/etc) at 
+  // MaxFunctionScopesIndex-deep on the FunctionScopes stack.  
+
+  // Note: The *enclosing object* can only be captured by-value by a 
+  // closure that is a lambda, using the explicit notation: 
+  //    [*this] { ... }.
+  // Every other capture of the *enclosing object* results in its by-reference
+  // capture.
+
+  // For a closure 'L' (at MaxFunctionScopesIndex in the FunctionScopes
+  // stack), we can capture the *enclosing object* only if:
+  // - 'L' has an explicit byref or byval capture of the *enclosing object*
+  // -  or, 'L' has an implicit capture.
+  // AND 
+  //   -- there is no enclosing closure
+  //   -- or, there is some enclosing closure 'E' that has already captured the 
+  //      *enclosing object*, and every intervening closure (if any) between 'E' 
+  //      and 'L' can implicitly capture the *enclosing object*.
+  //   -- or, every enclosing closure can implicitly capture the 
+  //      *enclosing object*
+  
+  
+  unsigned NumCapturingClosures = 0;
   for (unsigned idx = MaxFunctionScopesIndex; idx != 0; idx--) {
     if (CapturingScopeInfo *CSI =
             dyn_cast<CapturingScopeInfo>(FunctionScopes[idx])) {
@@ -917,44 +982,69 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, bool Explicit,
       if (LSI && isGenericLambdaCallOperatorSpecialization(LSI->CallOperator)) {
         // This context can't implicitly capture 'this'; fail out.
         if (BuildAndDiagnose)
-          Diag(Loc, diag::err_this_capture) << Explicit;
+          Diag(Loc, diag::err_this_capture)
+              << (Explicit && idx == MaxFunctionScopesIndex);
         return true;
       }
       if (CSI->ImpCaptureStyle == CapturingScopeInfo::ImpCap_LambdaByref ||
           CSI->ImpCaptureStyle == CapturingScopeInfo::ImpCap_LambdaByval ||
           CSI->ImpCaptureStyle == CapturingScopeInfo::ImpCap_Block ||
           CSI->ImpCaptureStyle == CapturingScopeInfo::ImpCap_CapturedRegion ||
-          Explicit) {
+          (Explicit && idx == MaxFunctionScopesIndex)) {
+        // Regarding (Explicit && idx == MaxFunctionScopesIndex): only the first
+        // iteration through can be an explicit capture, all enclosing closures,
+        // if any, must perform implicit captures.
+
         // This closure can capture 'this'; continue looking upwards.
-        NumClosures++;
-        Explicit = false;
+        NumCapturingClosures++;
         continue;
       }
       // This context can't implicitly capture 'this'; fail out.
       if (BuildAndDiagnose)
-        Diag(Loc, diag::err_this_capture) << Explicit;
+        Diag(Loc, diag::err_this_capture)
+            << (Explicit && idx == MaxFunctionScopesIndex);
       return true;
     }
     break;
   }
   if (!BuildAndDiagnose) return false;
-  // Mark that we're implicitly capturing 'this' in all the scopes we skipped.
+
+  // If we got here, then the closure at MaxFunctionScopesIndex on the
+  // FunctionScopes stack, can capture the *enclosing object*, so capture it
+  // (including implicit by-reference captures in any enclosing closures).
+
+  // In the loop below, respect the ByCopy flag only for the closure requesting
+  // the capture (i.e. first iteration through the loop below).  Ignore it for
+  // all enclosing closure's upto NumCapturingClosures (since they must be
+  // implicitly capturing the *enclosing  object* by reference (see loop
+  // above)).
+  assert((!ByCopy ||
+          dyn_cast<LambdaScopeInfo>(FunctionScopes[MaxFunctionScopesIndex])) &&
+         "Only a lambda can capture the enclosing object (referred to by "
+         "*this) by copy");
   // FIXME: We need to delay this marking in PotentiallyPotentiallyEvaluated
   // contexts.
-  for (unsigned idx = MaxFunctionScopesIndex; NumClosures; 
-      --idx, --NumClosures) {
+
+  for (unsigned idx = MaxFunctionScopesIndex; NumCapturingClosures; 
+      --idx, --NumCapturingClosures) {
     CapturingScopeInfo *CSI = cast<CapturingScopeInfo>(FunctionScopes[idx]);
     Expr *ThisExpr = nullptr;
     QualType ThisTy = getCurrentThisType();
-    if (LambdaScopeInfo *LSI = dyn_cast<LambdaScopeInfo>(CSI))
-      // For lambda expressions, build a field and an initializing expression.
-      ThisExpr = captureThis(Context, LSI->Lambda, ThisTy, Loc);
-    else if (CapturedRegionScopeInfo *RSI
+    if (LambdaScopeInfo *LSI = dyn_cast<LambdaScopeInfo>(CSI)) {
+      // For lambda expressions, build a field and an initializing expression,
+      // and capture the *enclosing object* by copy only if this is the first
+      // iteration.
+      ThisExpr = captureThis(*this, Context, LSI->Lambda, ThisTy, Loc,
+                             ByCopy && idx == MaxFunctionScopesIndex);
+      
+    } else if (CapturedRegionScopeInfo *RSI
         = dyn_cast<CapturedRegionScopeInfo>(FunctionScopes[idx]))
-      ThisExpr = captureThis(Context, RSI->TheRecordDecl, ThisTy, Loc);
+      ThisExpr =
+          captureThis(*this, Context, RSI->TheRecordDecl, ThisTy, Loc,
+                      false/*ByCopy*/);
 
-    bool isNested = NumClosures > 1;
-    CSI->addThisCapture(isNested, Loc, ThisTy, ThisExpr);
+    bool isNested = NumCapturingClosures > 1;
+    CSI->addThisCapture(isNested, Loc, ThisTy, ThisExpr, ByCopy);
   }
   return false;
 }

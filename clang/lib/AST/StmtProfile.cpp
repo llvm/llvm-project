@@ -1258,6 +1258,7 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
        C != CEnd; ++C) {
     ID.AddInteger(C->getCaptureKind());
     switch (C->getCaptureKind()) {
+    case LCK_StarThis:
     case LCK_This:
       break;
     case LCK_ByRef:

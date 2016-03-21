@@ -1497,6 +1497,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
       bool IsImplicit = Record[Idx++];
       LambdaCaptureKind Kind = static_cast<LambdaCaptureKind>(Record[Idx++]);
       switch (Kind) {
+      case LCK_StarThis: 
       case LCK_This:
       case LCK_VLAType:
         *ToCapture++ = Capture(Loc, IsImplicit, Kind, nullptr,SourceLocation());

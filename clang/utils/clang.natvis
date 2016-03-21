@@ -137,6 +137,7 @@ or create a symbolic link so it updates automatically.
   <!-- We only show the first 5 parameter types in the display string (can't figure out how to loop in DisplayString)
        but the expansion has all parameters -->
   <Type Name="clang::FunctionProtoType">
+    <DisplayString IncludeView="retType">{ResultType,view(cpp)}</DisplayString>
     <DisplayString IncludeView="parm0" Condition="NumParams==0"></DisplayString>
     <DisplayString IncludeView="parm0">{*(clang::QualType *)(this+1),view(cpp)}{*this,view(parm1)}</DisplayString>
     <DisplayString IncludeView="parm1" Condition="NumParams==1"></DisplayString>
@@ -149,7 +150,7 @@ or create a symbolic link so it updates automatically.
     <DisplayString IncludeView="parm4">, {*((clang::QualType *)(this+1)+4),view(cpp)}{*this,view(parm5)}</DisplayString>
     <DisplayString IncludeView="parm5" Condition="NumParams==5"></DisplayString>
     <DisplayString IncludeView="parm5">, /* expand for more params */</DisplayString>
-    <DisplayString>{ResultType,view(cpp)}({*this,view(parm0)})</DisplayString>
+    <DisplayString>{*this,view(retType)}({*this,view(parm0)})</DisplayString>
     <Expand>
       <Item Name="ReturnType">ResultType</Item>
       <Synthetic Name="Parameter Types">
@@ -234,6 +235,7 @@ or create a symbolic link so it updates automatically.
     </Expand>
   </Type>
   <Type Name="clang::DeclarationName">
+    <DisplayString Condition="Ptr == 0" IncludeView="cpp"></DisplayString>
     <DisplayString Condition="Ptr == 0">Empty</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredIdentifier" IncludeView="cpp">{*(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)}</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredIdentifier">{{Identifier ({*(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)})}}</DisplayString>
@@ -270,12 +272,50 @@ or create a symbolic link so it updates automatically.
       <Item Name="InitStyle">(clang::VarDecl::InitializationStyle)InitStyle</Item>
     </Expand>
   </Type>
+  <Type Name="clang::DeclaratorDecl">
+    <DisplayString>{DeclType,view(cpp)} {Name,view(cpp)}</DisplayString>
+  </Type>
   <Type Name="clang::VarDecl">
-    <DisplayString>{Name}</DisplayString>
+    <DisplayString>{*(DeclaratorDecl*)this,nd}</DisplayString>
     <Expand>
       <ExpandedItem>*(DeclaratorDecl*)this,nd</ExpandedItem>
       <Item Name="VarDeclBits">VarDeclBits</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::ParmVarDecl">
+    <DisplayString>{*(VarDecl*)this,nd}</DisplayString>
+    <Expand>
       <Item Name="ParmVarDeclBits">ParmVarDeclBits</Item>
+      <ExpandedItem>*(VarDecl*)this,nd</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="clang::FunctionDecl">
+    <DisplayString IncludeView="retType">{*(clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType,view(retType)}</DisplayString>
+    <DisplayString IncludeView="parm0" Condition="0 == ((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams"></DisplayString>
+    <DisplayString IncludeView="parm0">{*ParamInfo[0]}{*this,view(parm1)}</DisplayString>
+    <DisplayString IncludeView="parm1" Condition="1 == ((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams"></DisplayString>
+    <DisplayString IncludeView="parm1">, {*ParamInfo[1]}{*this,view(parm2)}</DisplayString>
+    <DisplayString IncludeView="parm2" Condition="2 == ((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams"></DisplayString>
+    <DisplayString IncludeView="parm2">, {*ParamInfo[2]}{*this,view(parm3)}</DisplayString>
+    <DisplayString IncludeView="parm3" Condition="3 == ((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams"></DisplayString>
+    <DisplayString IncludeView="parm3">, {*ParamInfo[3]}{*this,view(parm4)}</DisplayString>
+    <DisplayString IncludeView="parm4" Condition="4 == ((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams"></DisplayString>
+    <DisplayString IncludeView="parm4">, {*ParamInfo[4]}{*this,view(parm5)}</DisplayString>
+    <DisplayString IncludeView="parm5" Condition="5 == ((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams"></DisplayString>
+    <DisplayString IncludeView="parm5">, /* expand for more params */</DisplayString>
+    <DisplayString>{*this,view(retType)} {Name,view(cpp)}({*this,view(parm0)})</DisplayString>
+    <Expand>
+      <Item Name="ReturnType">*this,view(retType)</Item>
+      <Synthetic Name="Parameter Types">
+        <DisplayString>{*this,view(parm0)}</DisplayString>
+        <Expand>
+          <ArrayItems>
+            <Size>((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams</Size>
+            <ValuePointer>ParamInfo</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+      <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
     </Expand>
   </Type>
   <Type Name="clang::OpaquePtr&lt;*&gt;">

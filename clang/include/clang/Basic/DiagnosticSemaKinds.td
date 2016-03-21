@@ -6016,6 +6016,13 @@ let CategoryName = "Lambda Issue" in {
     "cannot deduce type for lambda capture %0 from initializer of type %2">;
   def err_init_capture_deduction_failure_from_init_list : Error<
     "cannot deduce type for lambda capture %0 from initializer list">;
+
+  // C++1z '*this' captures.
+  def warn_cxx14_compat_star_this_lambda_capture : Warning<
+    "by value capture of '*this' is incompatible with C++ standards before C++1z">,
+     InGroup<CXXPre1zCompat>, DefaultIgnore;
+  def ext_star_this_lambda_capture_cxx1z : ExtWarn<
+    "capture of '*this' by copy is a C++1z extension">, InGroup<CXX1z>;
 }
 
 def err_return_in_captured_stmt : Error<

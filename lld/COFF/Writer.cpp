@@ -639,7 +639,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   // The first 4 bytes is length including itself.
   Buf = reinterpret_cast<uint8_t *>(&SymbolTable[NumberOfSymbols]);
   write32le(Buf, Strtab.size() + 4);
-  memcpy(Buf + 4, Strtab.data(), Strtab.size());
+  if (!Strtab.empty())
+    memcpy(Buf + 4, Strtab.data(), Strtab.size());
 }
 
 void Writer::openFile(StringRef Path) {
