@@ -619,9 +619,6 @@ void MaybeReexec() {
   Dl_info info_pthread_create;
   void *dlopen_addr = dlsym(RTLD_DEFAULT, "pthread_create");
   CHECK(dladdr(dlopen_addr, &info_pthread_create));
-  Report("info.dli_fname = %p = %s, info_pthread_create.dli_fname = %p = %s\n",
-         info.dli_fname, info.dli_fname, info_pthread_create.dli_fname,
-         info_pthread_create.dli_fname);
   if (internal_strcmp(info.dli_fname, info_pthread_create.dli_fname) != 0) {
     Report(
         "ERROR: Interceptors are not working. This may be because %s is "
