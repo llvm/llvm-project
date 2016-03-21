@@ -762,10 +762,6 @@ void CheckVMASize() {
   // Do nothing.
 }
 
-void DisableReexec() {
-  // No need to re-exec on Windows.
-}
-
 void MaybeReexec() {
   // No need to re-exec on Windows.
 }
