@@ -519,6 +519,19 @@ the configuration (without a prefix: ``Auto``).
       - Regex:           '.\*'
         Priority:        1
 
+**IncludeIsMainRegex** (``std::string``)
+  Specify a regular expression of suffixes that are allowed in the
+  file-to-main-include mapping.
+
+  When guessing whether a #include is the "main" include (to assign
+  category 0, see above), use this regex of allowed suffixes to the header
+  stem. A partial match is done, so that:
+  - "" means "arbitrary suffix"
+  - "$" means "no suffix"
+
+  For example, if configured to "(_test)?$", then a header a.h would be seen
+  as the "main" include in both a.cc and a_test.cc.
+
 **IndentCaseLabels** (``bool``)
   Indent case labels one level from the switch statement.
 
@@ -531,6 +544,22 @@ the configuration (without a prefix: ``Auto``).
 **IndentWrappedFunctionNames** (``bool``)
   Indent if a function definition or declaration is wrapped after the
   type.
+
+**JavaScriptQuotes** (``JavaScriptQuoteStyle``)
+  The JavaScriptQuoteStyle to use for JavaScript strings.
+
+  Possible values:
+
+  * ``JSQS_Leave`` (in configuration: ``Leave``)
+    Leave string quotes as they are.
+
+  * ``JSQS_Single`` (in configuration: ``Single``)
+    Always use single quotes.
+
+  * ``JSQS_Double`` (in configuration: ``Double``)
+    Always use double quotes.
+
+
 
 **KeepEmptyLinesAtTheStartOfBlocks** (``bool``)
   If true, empty lines at the start of blocks are kept.

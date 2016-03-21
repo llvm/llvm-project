@@ -401,6 +401,19 @@ struct FormatStyle {
   /// \endcode
   std::vector<IncludeCategory> IncludeCategories;
 
+  /// \brief Specify a regular expression of suffixes that are allowed in the
+  /// file-to-main-include mapping.
+  ///
+  /// When guessing whether a #include is the "main" include (to assign
+  /// category 0, see above), use this regex of allowed suffixes to the header
+  /// stem. A partial match is done, so that:
+  /// - "" means "arbitrary suffix"
+  /// - "$" means "no suffix"
+  ///
+  /// For example, if configured to "(_test)?$", then a header a.h would be seen
+  /// as the "main" include in both a.cc and a_test.cc.
+  std::string IncludeIsMainRegex;
+
   /// \brief Indent case labels one level from the switch statement.
   ///
   /// When ``false``, use the same indentation level as for the switch statement.

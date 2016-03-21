@@ -175,6 +175,7 @@ TEST_F(SortIncludesTest, HandlesMultilineIncludes) {
 }
 
 TEST_F(SortIncludesTest, LeavesMainHeaderFirst) {
+  Style.IncludeIsMainRegex = "([-_](test|unittest))?$";
   EXPECT_EQ("#include \"llvm/a.h\"\n"
             "#include \"b.h\"\n"
             "#include \"c.h\"\n",
@@ -188,7 +189,7 @@ TEST_F(SortIncludesTest, LeavesMainHeaderFirst) {
             sort("#include \"llvm/a.h\"\n"
                  "#include \"c.h\"\n"
                  "#include \"b.h\"\n",
-                 "a_main.cc"));
+                 "a_test.cc"));
   EXPECT_EQ("#include \"llvm/input.h\"\n"
             "#include \"b.h\"\n"
             "#include \"c.h\"\n",
@@ -196,6 +197,24 @@ TEST_F(SortIncludesTest, LeavesMainHeaderFirst) {
                  "#include \"c.h\"\n"
                  "#include \"b.h\"\n",
                  "input.mm"));
+
+  // Don't allow prefixes.
+  EXPECT_EQ("#include \"b.h\"\n"
+            "#include \"c.h\"\n"
+            "#include \"llvm/not_a.h\"\n",
+            sort("#include \"llvm/not_a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"b.h\"\n",
+                 "a.cc"));
+
+  // Don't do this for _main and other suffixes.
+  EXPECT_EQ("#include \"b.h\"\n"
+            "#include \"c.h\"\n"
+            "#include \"llvm/a.h\"\n",
+            sort("#include \"llvm/a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"b.h\"\n",
+                 "a_main.cc"));
 
   // Don't do this in headers.
   EXPECT_EQ("#include \"b.h\"\n"

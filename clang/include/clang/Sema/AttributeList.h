@@ -46,6 +46,28 @@ struct AvailabilityChange {
   bool isValid() const { return !Version.empty(); }
 };
 
+namespace {
+enum AvailabilitySlot {
+  IntroducedSlot, DeprecatedSlot, ObsoletedSlot, NumAvailabilitySlots
+};
+
+/// Describes the trailing object for Availability attribute in AttributeList.
+struct AvailabilityData {
+  AvailabilityChange Changes[NumAvailabilitySlots];
+  SourceLocation StrictLoc;
+  const Expr *Replacement;
+  AvailabilityData(const AvailabilityChange &Introduced,
+                   const AvailabilityChange &Deprecated,
+                   const AvailabilityChange &Obsoleted,
+                   SourceLocation Strict, const Expr *ReplaceExpr)
+    : StrictLoc(Strict), Replacement(ReplaceExpr) {
+    Changes[IntroducedSlot] = Introduced;
+    Changes[DeprecatedSlot] = Deprecated;
+    Changes[ObsoletedSlot] = Obsoleted;
+  }
+};
+}
+
 /// \brief Wraps an identifier and optional source location for the identifier.
 struct IdentifierLoc {
   SourceLocation Loc;
@@ -148,30 +170,13 @@ private:
     return reinterpret_cast<ArgsUnion const *>(this + 1);
   }
 
-  enum AvailabilitySlot {
-    IntroducedSlot, DeprecatedSlot, ObsoletedSlot
-  };
-
   /// Availability information is stored immediately following the arguments,
   /// if any, at the end of the object.
-  AvailabilityChange &getAvailabilitySlot(AvailabilitySlot index) {    
-    return reinterpret_cast<AvailabilityChange*>(getArgsBuffer()
-                                                 + NumArgs)[index];
+  AvailabilityData *getAvailabilityData() {
+    return reinterpret_cast<AvailabilityData*>(getArgsBuffer() + NumArgs);
   }
-  const AvailabilityChange &getAvailabilitySlot(AvailabilitySlot index) const {
-    return reinterpret_cast<const AvailabilityChange*>(getArgsBuffer()
-                                                       + NumArgs)[index];
-  }
-
-  /// The location of the 'strict' keyword in an availability attribute.
-  SourceLocation *getStrictSlot() {
-    return reinterpret_cast<SourceLocation*>(
-               &getAvailabilitySlot(ObsoletedSlot) + 1);
-  }
-
-  SourceLocation const *getStrictSlot() const {
-    return reinterpret_cast<SourceLocation const*>(
-               &getAvailabilitySlot(ObsoletedSlot) + 1);
+  const AvailabilityData *getAvailabilityData() const {
+    return reinterpret_cast<const AvailabilityData*>(getArgsBuffer() + NumArgs);
   }
 
 public:
@@ -251,7 +256,8 @@ private:
                 const AvailabilityChange &obsoleted,
                 SourceLocation unavailable, 
                 const Expr *messageExpr,
-                Syntax syntaxUsed, SourceLocation strict)
+                Syntax syntaxUsed, SourceLocation strict,
+                const Expr *replacementExpr)
     : AttrName(attrName), ScopeName(scopeName), AttrRange(attrRange),
       ScopeLoc(scopeLoc), EllipsisLoc(), NumArgs(1), SyntaxUsed(syntaxUsed),
       Invalid(false), UsedAsTypeAttr(false), IsAvailability(true),
@@ -260,10 +266,8 @@ private:
       MessageExpr(messageExpr), NextInPosition(nullptr), NextInPool(nullptr) {
     ArgsUnion PVal(Parm);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
-    new (&getAvailabilitySlot(IntroducedSlot)) AvailabilityChange(introduced);
-    new (&getAvailabilitySlot(DeprecatedSlot)) AvailabilityChange(deprecated);
-    new (&getAvailabilitySlot(ObsoletedSlot)) AvailabilityChange(obsoleted);
-    memcpy(getStrictSlot(), &strict, sizeof(SourceLocation));
+    new (getAvailabilityData()) AvailabilityData(
+        introduced, deprecated, obsoleted, strict, replacementExpr);
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
 
@@ -428,22 +432,22 @@ public:
 
   const AvailabilityChange &getAvailabilityIntroduced() const {
     assert(getKind() == AT_Availability && "Not an availability attribute");
-    return getAvailabilitySlot(IntroducedSlot);
+    return getAvailabilityData()->Changes[IntroducedSlot];
   }
 
   const AvailabilityChange &getAvailabilityDeprecated() const {
     assert(getKind() == AT_Availability && "Not an availability attribute");
-    return getAvailabilitySlot(DeprecatedSlot);
+    return getAvailabilityData()->Changes[DeprecatedSlot];
   }
 
   const AvailabilityChange &getAvailabilityObsoleted() const {
     assert(getKind() == AT_Availability && "Not an availability attribute");
-    return getAvailabilitySlot(ObsoletedSlot);
+    return getAvailabilityData()->Changes[ObsoletedSlot];
   }
 
   SourceLocation getStrictLoc() const {
     assert(getKind() == AT_Availability && "Not an availability attribute");
-    return *getStrictSlot();
+    return getAvailabilityData()->StrictLoc;
   }
 
   SourceLocation getUnavailableLoc() const {
@@ -454,6 +458,11 @@ public:
   const Expr * getMessageExpr() const {
     assert(getKind() == AT_Availability && "Not an availability attribute");
     return MessageExpr;
+  }
+
+  const Expr *getReplacementExpr() const {
+    assert(getKind() == AT_Availability && "Not an availability attribute");
+    return getAvailabilityData()->Replacement;
   }
 
   const ParsedType &getMatchingCType() const {
@@ -522,8 +531,7 @@ public:
     /// which we want to ensure is a multiple of sizeof(void*).
     AvailabilityAllocSize =
       sizeof(AttributeList)
-      + ((3 * sizeof(AvailabilityChange) + sizeof(void*) +
-         sizeof(ArgsUnion) + sizeof(SourceLocation) - 1)
+      + ((sizeof(AvailabilityData) + sizeof(void*) + sizeof(ArgsUnion) - 1)
          / sizeof(void*) * sizeof(void*)),
     TypeTagForDatatypeAllocSize =
       sizeof(AttributeList)
@@ -642,13 +650,13 @@ public:
                         SourceLocation unavailable,
                         const Expr *MessageExpr,
                         AttributeList::Syntax syntax,
-                        SourceLocation strict) {
+                        SourceLocation strict, const Expr *ReplacementExpr) {
     void *memory = allocate(AttributeFactory::AvailabilityAllocSize);
     return add(new (memory) AttributeList(attrName, attrRange,
                                           scopeName, scopeLoc,
                                           Param, introduced, deprecated,
                                           obsoleted, unavailable, MessageExpr,
-                                          syntax, strict));
+                                          syntax, strict, ReplacementExpr));
   }
 
   AttributeList *create(IdentifierInfo *attrName, SourceRange attrRange,
@@ -778,11 +786,11 @@ public:
                         SourceLocation unavailable,
                         const Expr *MessageExpr,
                         AttributeList::Syntax syntax,
-                        SourceLocation strict) {
+                        SourceLocation strict, const Expr *ReplacementExpr) {
     AttributeList *attr =
       pool.create(attrName, attrRange, scopeName, scopeLoc, Param, introduced,
                   deprecated, obsoleted, unavailable, MessageExpr, syntax,
-                  strict);
+                  strict, ReplacementExpr);
     add(attr);
     return attr;
   }

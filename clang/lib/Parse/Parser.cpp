@@ -492,6 +492,7 @@ void Parser::Initialize() {
   Ident_obsoleted = nullptr;
   Ident_unavailable = nullptr;
   Ident_strict = nullptr;
+  Ident_replacement = nullptr;
 
   Ident__except = nullptr;
 
