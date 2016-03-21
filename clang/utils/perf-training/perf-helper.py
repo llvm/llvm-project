@@ -15,6 +15,9 @@ import subprocess
 import argparse
 import time
 import bisect
+import shlex
+
+test_env = { 'PATH'    : os.environ['PATH'] }
 
 def findFilesWithExtension(path, extension):
   filenames = []
@@ -52,6 +55,8 @@ def dtrace(args):
     help='Use dtrace\'s oneshot probes')
   parser.add_argument('--use-ustack', required=False, action='store_true',
     help='Use dtrace\'s ustack to print function names')
+  parser.add_argument('--cc1', required=False, action='store_true',
+    help='Execute cc1 directly (don\'t profile the driver)')
   parser.add_argument('cmd', nargs='*', help='')
 
   # Use python's arg parser to handle all leading option arguments, but pass
@@ -61,6 +66,9 @@ def dtrace(args):
 
   opts = parser.parse_args(args[:last_arg_idx])
   cmd = args[last_arg_idx:]
+
+  if opts.cc1:
+    cmd = get_cc1_command_for_args(cmd, test_env)
 
   if opts.use_oneshot:
       target = "oneshot$target:::entry"
@@ -97,6 +105,57 @@ def dtrace(args):
   print("... data collection took %.4fs" % elapsed)
 
   return 0
+
+def get_cc1_command_for_args(cmd, env):
+  # Find the cc1 command used by the compiler. To do this we execute the
+  # compiler with '-###' to figure out what it wants to do.
+  cmd = cmd + ['-###']
+  cc_output = check_output(cmd, stderr=subprocess.STDOUT, env=env).strip()
+  cc_commands = []
+  for ln in cc_output.split('\n'):
+      # Filter out known garbage.
+      if (ln == 'Using built-in specs.' or
+          ln.startswith('Configured with:') or
+          ln.startswith('Target:') or
+          ln.startswith('Thread model:') or
+          ln.startswith('InstalledDir:') or
+          ' version ' in ln):
+          continue
+      cc_commands.append(ln)
+
+  if len(cc_commands) != 1:
+      print('Fatal error: unable to determine cc1 command: %r' % cc_output)
+      exit(1)
+
+  cc1_cmd = shlex.split(cc_commands[0])
+  if not cc1_cmd:
+      print('Fatal error: unable to determine cc1 command: %r' % cc_output)
+      exit(1)
+
+  return cc1_cmd
+
+def cc1(args):
+  parser = argparse.ArgumentParser(prog='perf-helper cc1',
+    description='cc1 wrapper for order file generation')
+  parser.add_argument('cmd', nargs='*', help='')
+
+  # Use python's arg parser to handle all leading option arguments, but pass
+  # everything else through to dtrace
+  first_cmd = next(arg for arg in args if not arg.startswith("--"))
+  last_arg_idx = args.index(first_cmd)
+
+  opts = parser.parse_args(args[:last_arg_idx])
+  cmd = args[last_arg_idx:]
+
+  # clear the profile file env, so that we don't generate profdata
+  # when capturing the cc1 command
+  cc1_env = test_env
+  cc1_env["LLVM_PROFILE_FILE"] = "driver.prfraw"
+  cc1_cmd = get_cc1_command_for_args(cmd, cc1_env)
+  os.remove("driver.prfraw")
+
+  subprocess.check_call(cc1_cmd)
+  return 0;
 
 def parse_dtrace_symbol_file(path, all_symbols, all_symbols_set,
                              missing_symbols, opts):
@@ -341,6 +400,7 @@ def genOrderFile(args):
 commands = {'clean' : clean,
   'merge' : merge, 
   'dtrace' : dtrace,
+  'cc1' : cc1,
   'gen-order-file' : genOrderFile}
 
 def main():
