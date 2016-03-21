@@ -846,8 +846,16 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     IdentifierInfo *Id = nullptr;
     SourceLocation EllipsisLoc;
     ExprResult Init;
-    
-    if (Tok.is(tok::kw_this)) {
+
+    if (Tok.is(tok::star)) {
+      Loc = ConsumeToken(); 
+      if (Tok.is(tok::kw_this)) {
+        ConsumeToken();     
+        Kind = LCK_StarThis;      
+      } else {
+        return DiagResult(diag::err_expected_star_this_capture);
+      }
+    } else if (Tok.is(tok::kw_this)) {
       Kind = LCK_This;
       Loc = ConsumeToken();
     } else {
