@@ -86,8 +86,8 @@ int __tsan_get_report_stack(void *report, uptr idx, void **trace,
   const ReportDesc *rep = (ReportDesc *)report;
   CHECK_LT(idx, rep->stacks.Size());
   ReportStack *stack = rep->stacks[idx];
-  CopyTrace(stack->frames, trace, trace_size);
-  return 1;
+  if (stack) CopyTrace(stack->frames, trace, trace_size);
+  return stack ? 1 : 0;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -102,7 +102,7 @@ int __tsan_get_report_mop(void *report, uptr idx, int *tid, void **addr,
   *size = mop->size;
   *write = mop->write ? 1 : 0;
   *atomic = mop->atomic ? 1 : 0;
-  CopyTrace(mop->stack->frames, trace, trace_size);
+  if (mop->stack) CopyTrace(mop->stack->frames, trace, trace_size);
   return 1;
 }
 
@@ -134,7 +134,7 @@ int __tsan_get_report_mutex(void *report, uptr idx, uptr *mutex_id, void **addr,
   *mutex_id = mutex->id;
   *addr = (void *)mutex->addr;
   *destroyed = mutex->destroyed;
-  CopyTrace(mutex->stack->frames, trace, trace_size);
+  if (mutex->stack) CopyTrace(mutex->stack->frames, trace, trace_size);
   return 1;
 }
 
@@ -150,7 +150,7 @@ int __tsan_get_report_thread(void *report, uptr idx, int *tid, uptr *pid,
   *running = thread->running;
   *name = thread->name;
   *parent_tid = thread->parent_tid;
-  CopyTrace(thread->stack->frames, trace, trace_size);
+  if (thread->stack) CopyTrace(thread->stack->frames, trace, trace_size);
   return 1;
 }
 
