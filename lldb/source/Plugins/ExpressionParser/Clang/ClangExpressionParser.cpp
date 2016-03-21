@@ -89,6 +89,7 @@
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/LLDBAssert.h"
 
 using namespace clang;
@@ -259,6 +260,56 @@ public:
 
 private:
     DiagnosticManager *m_manager = nullptr;
+    std::shared_ptr<clang::TextDiagnosticBuffer> m_passthrough;
+};
+
+class LoggingDiagnosticConsumer : public clang::DiagnosticConsumer
+{
+public:
+    LoggingDiagnosticConsumer ()
+    {
+        m_log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS);
+        m_passthrough.reset(new clang::TextDiagnosticBuffer);
+    }
+    
+    LoggingDiagnosticConsumer (const std::shared_ptr<clang::TextDiagnosticBuffer> &passthrough)
+    {
+        m_log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS);
+        m_passthrough = passthrough;
+    }
+    
+    void HandleDiagnostic (DiagnosticsEngine::Level DiagLevel, const clang::Diagnostic &Info)
+    {
+        if (m_log)
+        {
+            llvm::SmallVector<char, 32> diag_str;
+            Info.FormatDiagnostic(diag_str);
+            diag_str.push_back('\0');
+            const char *data = diag_str.data();
+            m_log->Printf("[clang] COMPILER DIAGNOSTIC: %s", data);
+
+            lldbassert(Info.getID() != clang::diag::err_unsupported_ast_node && "'log enable lldb expr' to investigate.");
+        }
+        
+        m_passthrough->HandleDiagnostic(DiagLevel, Info);
+    }
+    
+    void FlushDiagnostics (DiagnosticsEngine &Diags)
+    {
+        m_passthrough->FlushDiagnostics(Diags);
+    }
+    
+    DiagnosticConsumer *clone (DiagnosticsEngine &Diags) const
+    {
+        return new LoggingDiagnosticConsumer (m_passthrough);
+    }
+    
+    clang::TextDiagnosticBuffer *GetPassthrough()
+    {
+        return m_passthrough.get();
+    }
+private:
+    Log * m_log;
     std::shared_ptr<clang::TextDiagnosticBuffer> m_passthrough;
 };
 
@@ -895,5 +946,53 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
         execution_unit_sp->GetRunnableInfo(err, func_addr, func_end);
     }
 
+    return err;
+}
+
+Error
+ClangExpressionParser::RunStaticInitializers (lldb::IRExecutionUnitSP &execution_unit_sp,
+                                              ExecutionContext &exe_ctx)
+{
+    Error err;
+    
+    lldbassert(execution_unit_sp.get());
+    lldbassert(exe_ctx.HasThreadScope());
+    
+    if (!execution_unit_sp.get())
+    {
+        err.SetErrorString ("can't run static initializers for a NULL execution unit");
+        return err;
+    }
+    
+    if (!exe_ctx.HasThreadScope())
+    {
+        err.SetErrorString ("can't run static initializers without a thread");
+        return err;
+    }
+    
+    std::vector<lldb::addr_t> static_initializers;
+    
+    execution_unit_sp->GetStaticInitializers(static_initializers);
+    
+    for (lldb::addr_t static_initializer : static_initializers)
+    {
+        EvaluateExpressionOptions options;
+                
+        lldb::ThreadPlanSP call_static_initializer(new ThreadPlanCallFunction(exe_ctx.GetThreadRef(),
+                                                                              Address(static_initializer),
+                                                                              CompilerType(),
+                                                                              llvm::ArrayRef<lldb::addr_t>(),
+                                                                              options));
+        
+        DiagnosticManager execution_errors;
+        lldb::ExpressionResults results = exe_ctx.GetThreadRef().GetProcess()->RunThreadPlan(exe_ctx, call_static_initializer, options, execution_errors);
+        
+        if (results != lldb::eExpressionCompleted)
+        {
+            err.SetErrorStringWithFormat ("couldn't run static initializer: %s", execution_errors.GetString().c_str());
+            return err;
+        }
+    }
+    
     return err;
 }

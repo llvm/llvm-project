@@ -123,6 +123,22 @@ public:
                          ExecutionContext &exe_ctx,
                          bool &can_interpret,
                          lldb_private::ExecutionPolicy execution_policy) override;
+    
+    //------------------------------------------------------------------
+    /// Run all static initializers for an execution unit.
+    ///
+    /// @param[in] execution_unit_sp
+    ///     The execution unit.
+    ///
+    /// @param[in] exe_ctx
+    ///     The execution context to use when running them.  Thread can't be null.
+    ///
+    /// @return
+    ///     The error code indicating the 
+    //------------------------------------------------------------------
+    Error
+    RunStaticInitializers (lldb::IRExecutionUnitSP &execution_unit_sp,
+                           ExecutionContext &exe_ctx);
         
 private:
     std::unique_ptr<llvm::LLVMContext>       m_llvm_context;         ///< The LLVM context to generate IR into

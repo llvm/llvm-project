@@ -16,6 +16,8 @@
 #include <vector>
 
 // Other libraries and framework includes
+#include "llvm/ADT/DenseMap.h"
+
 // Project includes
 #include "lldb/lldb-public.h"
 #include "lldb/Core/ConstString.h"
@@ -309,10 +311,19 @@ public:
     RemovePersistentVariable (lldb::ExpressionVariableSP variable) = 0;
     
     virtual lldb::addr_t
-    LookupSymbol (const ConstString &name) = 0;
+    LookupSymbol (const ConstString &name);
+    
+    void
+    RegisterExecutionUnit (lldb::IRExecutionUnitSP &execution_unit_sp);
     
 private:
     LLVMCastKind m_kind;
+    
+    typedef std::set<lldb::IRExecutionUnitSP>               ExecutionUnitSet;
+    ExecutionUnitSet                                        m_execution_units;              ///< The execution units that contain valuable symbols.
+    
+    typedef llvm::DenseMap<const char *, lldb::addr_t>      SymbolMap;
+    SymbolMap                                               m_symbol_map;                   ///< The addresses of the symbols in m_execution_units.
 };
     
 } // namespace lldb_private
