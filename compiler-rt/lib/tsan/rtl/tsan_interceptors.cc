@@ -699,31 +699,6 @@ TSAN_INTERCEPTOR(void*, memmove, void *dst, void *src, uptr n) {
   return REAL(memmove)(dst, src, n);
 }
 
-TSAN_INTERCEPTOR(char*, strchr, char *s, int c) {
-  SCOPED_TSAN_INTERCEPTOR(strchr, s, c);
-  char *res = REAL(strchr)(s, c);
-  uptr len = internal_strlen(s);
-  uptr n = res ? (char*)res - (char*)s + 1 : len + 1;
-  READ_STRING_OF_LEN(thr, pc, s, len, n);
-  return res;
-}
-
-#if !SANITIZER_MAC
-TSAN_INTERCEPTOR(char*, strchrnul, char *s, int c) {
-  SCOPED_TSAN_INTERCEPTOR(strchrnul, s, c);
-  char *res = REAL(strchrnul)(s, c);
-  uptr len = (char*)res - (char*)s + 1;
-  READ_STRING(thr, pc, s, len);
-  return res;
-}
-#endif
-
-TSAN_INTERCEPTOR(char*, strrchr, char *s, int c) {
-  SCOPED_TSAN_INTERCEPTOR(strrchr, s, c);
-  MemoryAccessRange(thr, pc, (uptr)s, internal_strlen(s) + 1, false);
-  return REAL(strrchr)(s, c);
-}
-
 TSAN_INTERCEPTOR(char*, strcpy, char *dst, const char *src) {  // NOLINT
   SCOPED_TSAN_INTERCEPTOR(strcpy, dst, src);  // NOLINT
   uptr srclen = internal_strlen(src);
@@ -2620,9 +2595,6 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(memset);
   TSAN_INTERCEPT(memcpy);
   TSAN_INTERCEPT(memmove);
-  TSAN_INTERCEPT(strchr);
-  TSAN_INTERCEPT(strchrnul);
-  TSAN_INTERCEPT(strrchr);
   TSAN_INTERCEPT(strcpy);  // NOLINT
   TSAN_INTERCEPT(strncpy);
   TSAN_INTERCEPT(strdup);

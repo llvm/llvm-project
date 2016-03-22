@@ -108,6 +108,9 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
       case 0x3D83:  // 83 3D XX YY ZZ WW TT = cmp TT, WWZZYYXX
         cursor += 7;
         continue;
+      case 0x7D83:  // 83 7D XX YY = cmp dword ptr [ebp+XXh], YY
+        cursor += 4;
+        continue;
     }
     switch (0x00FFFFFF & *(unsigned int*)(code + cursor)) {
       case 0x24448A:  // 8A 44 24 XX = mov eal, dword ptr [esp+XXh]
@@ -120,7 +123,7 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
         continue;
     }
     switch (*(unsigned int *)(code + cursor)) {
-      case 0X2444B60F:  // 0F B6 44 24 XX = movzx eax, byte ptr [esp+XXh]
+      case 0x2444B60F:  // 0F B6 44 24 XX = movzx eax, byte ptr [esp+XXh]
         cursor += 5;
         continue;
     }

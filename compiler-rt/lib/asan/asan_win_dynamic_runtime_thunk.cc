@@ -29,7 +29,7 @@
 
 // First, declare CRT sections we'll be using in this file
 #pragma section(".CRT$XID", long, read)  // NOLINT
-#pragma section(".CRT$XIZ", long, read)  // NOLINT
+#pragma section(".CRT$XCAB", long, read)  // NOLINT
 #pragma section(".CRT$XTW", long, read)  // NOLINT
 #pragma section(".CRT$XTY", long, read)  // NOLINT
 
@@ -93,7 +93,8 @@ static int SetSEHFilter() { return __asan_set_seh_filter(); }
 
 // Unfortunately, putting a pointer to __asan_set_seh_filter into
 // __asan_intercept_seh gets optimized out, so we have to use an extra function.
-__declspec(allocate(".CRT$XIZ")) int (*__asan_seh_interceptor)() = SetSEHFilter;
+__declspec(allocate(".CRT$XCAB")) int (*__asan_seh_interceptor)() =
+    SetSEHFilter;
 }
 
 #endif // ASAN_DYNAMIC_RUNTIME_THUNK

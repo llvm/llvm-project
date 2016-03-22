@@ -20,9 +20,7 @@ int main() {
 // CHECK:   {{#0 .* main .*}}intercept_strdup.cc:[[@LINE-3]]
 // CHECK: [[ADDR]] is located 1 bytes to the left of 6-byte region
 // CHECK: allocated by thread T0 here:
-// CHECK:   {{#0 .* malloc }}
-// FIXME: llvm-symbolizer can't find strdup in the CRT.
-// CHECKX:   {{#1 .*strdup}}
-// CHECK:   {{#2 .* main .*}}intercept_strdup.cc:[[@LINE-17]]
+// CHECK:   {{#[0-9] .*strdup}}
+// CHECK:   {{#[0-9] .* main .*}}intercept_strdup.cc:[[@LINE-15]]
   free(ptr);
 }
