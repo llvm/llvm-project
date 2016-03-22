@@ -52,13 +52,10 @@ public:
     class ClangUserExpressionHelper : public ClangExpressionHelper
     {
     public:
-        ClangUserExpressionHelper (Target &target) :
-            m_target(target)
-        {
-        }
-        
+        ClangUserExpressionHelper(Target &target, bool top_level) : m_target(target), m_top_level(top_level) {}
+
         ~ClangUserExpressionHelper() override = default;
-        
+
         //------------------------------------------------------------------
         /// Return the object that the parser should use when resolving external
         /// values.  May be NULL if everything should be self-contained.
@@ -89,11 +86,16 @@ public:
         clang::ASTConsumer *
         ASTTransformer(clang::ASTConsumer *passthrough) override;
 
+        void
+        CommitPersistentDecls() override;
+
     private:
-        Target                                  &m_target;
+        Target &m_target;
         std::unique_ptr<ClangExpressionDeclMap> m_expr_decl_map_up;
-        std::unique_ptr<ASTStructExtractor> m_struct_extractor_up;         ///< The class that generates the argument struct layout.
+        std::unique_ptr<ASTStructExtractor>
+            m_struct_extractor_up; ///< The class that generates the argument struct layout.
         std::unique_ptr<ASTResultSynthesizer> m_result_synthesizer_up;
+        bool m_top_level;
     };
 
     //------------------------------------------------------------------

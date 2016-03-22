@@ -689,6 +689,11 @@ ClangExpressionParser::Parse (DiagnosticManager &diagnostic_manager,
         }
     }
 
+    if (!num_errors)
+    {
+        type_system_helper->CommitPersistentDecls();
+    }
+
     adapter->ResetManager();
 
     return num_errors;
@@ -825,24 +830,27 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
         function.setAttributes(attributes.removeAttributes(function.getContext(), llvm::AttributeSet::FunctionIndex, llvm::AttributeSet::get(function.getContext(), llvm::AttributeSet::FunctionIndex, attributes_to_remove)));
     }
 
-    // Find the actual name of the function (it's often mangled somehow)
-
     ConstString function_name;
 
-    if (!FindFunctionInModule(function_name, llvm_module_ap.get(), m_expr.FunctionName()))
+    if (execution_policy != eExecutionPolicyTopLevel)
     {
-        err.SetErrorToGenericError();
-        err.SetErrorStringWithFormat("Couldn't find %s() in the module", m_expr.FunctionName());
-        return err;
+        // Find the actual name of the function (it's often mangled somehow)
+
+        if (!FindFunctionInModule(function_name, llvm_module_ap.get(), m_expr.FunctionName()))
+        {
+            err.SetErrorToGenericError();
+            err.SetErrorStringWithFormat("Couldn't find %s() in the module", m_expr.FunctionName());
+            return err;
+        }
+        else
+        {
+            if (log)
+                log->Printf("Found function %s for %s", function_name.AsCString(), m_expr.FunctionName());
+        }
     }
-    else
-    {
-        if (log)
-            log->Printf("Found function %s for %s", function_name.AsCString(), m_expr.FunctionName());
-    }
-    
+
     SymbolContext sc;
-    
+
     if (lldb::StackFrameSP frame_sp = exe_ctx.GetFrameSP())
     {
         sc = frame_sp->GetSymbolContext(lldb::eSymbolContextEverything);
@@ -869,30 +877,32 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
         if (target)
             error_stream = target->GetDebugger().GetErrorFile().get();
 
-        IRForTarget ir_for_target(decl_map,
-                                  m_expr.NeedsVariableResolution(),
-                                  *execution_unit_sp,
-                                  error_stream,
+        IRForTarget ir_for_target(decl_map, m_expr.NeedsVariableResolution(), *execution_unit_sp, error_stream,
                                   function_name.AsCString());
 
         bool ir_can_run = ir_for_target.runOnModule(*execution_unit_sp->GetModule());
 
-        Error interpret_error;
         Process *process = exe_ctx.GetProcessPtr();
 
-        bool interpret_function_calls = !process ? false : process->CanInterpretFunctionCalls();
-        can_interpret = IRInterpreter::CanInterpret(*execution_unit_sp->GetModule(), *execution_unit_sp->GetFunction(), interpret_error, interpret_function_calls);
+        if (execution_policy != eExecutionPolicyAlways && execution_policy != eExecutionPolicyTopLevel)
+        {
+            Error interpret_error;
 
+            bool interpret_function_calls = !process ? false : process->CanInterpretFunctionCalls();
+            can_interpret =
+                IRInterpreter::CanInterpret(*execution_unit_sp->GetModule(), *execution_unit_sp->GetFunction(),
+                                            interpret_error, interpret_function_calls);
+
+            if (!can_interpret && execution_policy == eExecutionPolicyNever)
+            {
+                err.SetErrorStringWithFormat("Can't run the expression locally: %s", interpret_error.AsCString());
+                return err;
+            }
+        }
 
         if (!ir_can_run)
         {
             err.SetErrorString("The expression could not be prepared to run in the target");
-            return err;
-        }
-
-        if (!can_interpret && execution_policy == eExecutionPolicyNever)
-        {
-            err.SetErrorStringWithFormat("Can't run the expression locally: %s", interpret_error.AsCString());
             return err;
         }
 
@@ -902,7 +912,15 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
             return err;
         }
 
-        if (execution_policy == eExecutionPolicyAlways || !can_interpret)
+        if (!process && execution_policy == eExecutionPolicyTopLevel)
+        {
+            err.SetErrorString(
+                "Top-level code needs to be inserted into a runnable target, but the target can't be run");
+            return err;
+        }
+
+        if (execution_policy == eExecutionPolicyAlways ||
+            (execution_policy != eExecutionPolicyTopLevel && !can_interpret))
         {
             if (m_expr.NeedsValidation() && process)
             {
@@ -937,7 +955,11 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
                     return err;
                 }
             }
+        }
 
+        if (execution_policy == eExecutionPolicyAlways || execution_policy == eExecutionPolicyTopLevel ||
+            !can_interpret)
+        {
             execution_unit_sp->GetRunnableInfo(err, func_addr, func_end);
         }
     }
