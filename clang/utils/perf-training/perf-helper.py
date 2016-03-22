@@ -16,6 +16,7 @@ import argparse
 import time
 import bisect
 import shlex
+import tempfile
 
 test_env = { 'PATH'    : os.environ['PATH'] }
 
@@ -149,10 +150,12 @@ def cc1(args):
 
   # clear the profile file env, so that we don't generate profdata
   # when capturing the cc1 command
+  handle, profraw_file = tempfile.mkstemp()
+  os.close(handle)
   cc1_env = test_env
-  cc1_env["LLVM_PROFILE_FILE"] = "driver.prfraw"
+  cc1_env["LLVM_PROFILE_FILE"] = profraw_file
   cc1_cmd = get_cc1_command_for_args(cmd, cc1_env)
-  os.remove("driver.prfraw")
+  os.remove(profraw_file)
 
   subprocess.check_call(cc1_cmd)
   return 0;
