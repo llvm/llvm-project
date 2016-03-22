@@ -916,7 +916,7 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
   buildGraphFrom(*this, Fn, ReturnedValues, Map, Graph);
 
   DenseMap<GraphT::Node, Value *> NodeValueMap;
-  NodeValueMap.resize(Map.size());
+  NodeValueMap.reserve(Map.size());
   for (const auto &Pair : Map)
     NodeValueMap.insert(std::make_pair(Pair.second, Pair.first));
 

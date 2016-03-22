@@ -119,6 +119,34 @@ your GPU <https://developer.nvidia.com/cuda-gpus>`_. For example, if you want
 to run your program on a GPU with compute capability of 3.5, you should specify
 ``--cuda-gpu-arch=sm_35``.
 
+Detecting clang vs NVCC
+=======================
+
+Although clang's CUDA implementation is largely compatible with NVCC's, you may
+still want to detect when you're compiling CUDA code specifically with clang.
+
+This is tricky, because clang defines the ``__NVCC__`` macro, and because NVCC
+may invoke clang as part of its own compilation process!  For example, NVCC
+uses the host compiler's preprocessor when compiling for device code, and that
+host compiler may in fact be clang.
+
+When clang is actually compiling CUDA code -- rather than being used as a
+subtool of NVCC's -- it defines the ``__CUDA__`` macro.  ``__CUDA_ARCH__`` is
+defined only in device mode (but will be defined if NVCC is using clang as a
+preprocessor).  So you can use the following incantations to detect clang CUDA
+compilation, in host and device modes:
+
+.. code-block:: c++
+
+  #if defined(__clang__) && defined(__CUDA__) && !defined(__CUDA_ARCH__)
+    // clang compiling CUDA code, host mode.
+  #endif
+
+  #if defined(__clang__) && defined(__CUDA__) && defined(__CUDA_ARCH__)
+    // clang compiling CUDA code, device mode.
+  #endif
+
+
 Optimizations
 =============
 

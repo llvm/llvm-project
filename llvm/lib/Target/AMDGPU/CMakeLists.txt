@@ -63,6 +63,7 @@ add_llvm_target(AMDGPUCodeGen
   SIRegisterInfo.cpp
   SIShrinkInstructions.cpp
   SITypeRewriter.cpp
+  SIWholeQuadMode.cpp
   )
 
 add_subdirectory(AsmParser)

@@ -54,6 +54,13 @@ defm CLZ : UnaryInt<ctlz, "clz ">;
 defm CTZ : UnaryInt<cttz, "ctz ">;
 defm POPCNT : UnaryInt<ctpop, "popcnt">;
 
+def EQZ_I32 : I<(outs I32:$dst), (ins I32:$src),
+                [(set I32:$dst, (setcc I32:$src, 0, SETEQ))],
+                "i32.eqz \t$dst, $src">;
+def EQZ_I64 : I<(outs I32:$dst), (ins I64:$src),
+                [(set I32:$dst, (setcc I64:$src, 0, SETEQ))],
+                "i64.eqz \t$dst, $src">;
+
 } // Defs = [ARGUMENTS]
 
 // Expand the "don't care" operations to supported operations.

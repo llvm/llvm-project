@@ -1369,6 +1369,12 @@ bool FastISel::selectInstruction(const Instruction *I) {
     }
   }
 
+  // FastISel does not handle any operand bundles except OB_funclet.
+  if (ImmutableCallSite CS = ImmutableCallSite(I))
+    for (unsigned i = 0, e = CS.getNumOperandBundles(); i != e; ++i)
+      if (CS.getOperandBundleAt(i).getTagID() != LLVMContext::OB_funclet)
+        return false;
+
   DbgLoc = I->getDebugLoc();
 
   SavedInsertPt = FuncInfo.InsertPt;

@@ -143,7 +143,8 @@ private:
   /// If true, the given use is added to the list of dominated uses for
   /// the related existing point.
   /// \param NewPt the insertion point to be checked
-  /// \param Use the use to be added into the list of dominated uses
+  /// \param User the user of the constant
+  /// \param OpNo the operand number of the use
   /// \param InsertPts existing insertion points
   /// \pre NewPt and all instruction in InsertPts belong to the same function
   /// \return true if one of the insertion point in InsertPts dominates NewPt,
@@ -156,7 +157,8 @@ private:
   /// If true, the given use is added to the list of the created insertion
   /// point.
   /// \param NewPt the insertion point to be checked
-  /// \param Use the use to be added into the list of dominated uses
+  /// \param User the user of the constant
+  /// \param OpNo the operand number of the use
   /// \param InsertPts existing insertion points
   /// \pre NewPt and all instruction in InsertPts belong to the same function
   /// \pre isDominated returns false for the exact same parameters.
@@ -170,8 +172,9 @@ private:
   /// uses of value.
   /// Insertion points are group per function and each insertion point
   /// contains a list of all the uses it dominates within the related function
-  /// \param Val constant to be examined
-  /// \param[out] InsPtsPerFunc output storage of the analysis
+  /// \param User the user of the constant
+  /// \param OpNo the operand number of the constant
+  /// \param[out] InsertPts output storage of the analysis
   void computeInsertionPoint(Instruction *User, unsigned OpNo,
                              InsertionPoints &InsertPts);
 
