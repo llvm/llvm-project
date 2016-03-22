@@ -2284,6 +2284,11 @@ void Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
       // case there are multiple paths (without loop back edges) to the
       // successor block.
       isl_set *&SuccDomain = DomainMap[SuccBB];
+
+      if (HasComplexCFG) {
+        isl_set_free(CondSet);
+        continue;
+      }
       if (!SuccDomain)
         SuccDomain = CondSet;
       else
@@ -2294,6 +2299,7 @@ void Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
         auto *Empty = isl_set_empty(isl_set_get_space(SuccDomain));
         isl_set_free(SuccDomain);
         SuccDomain = Empty;
+        HasComplexCFG = true;
         invalidate(ERROR_DOMAINCONJUNCTS, DebugLoc());
       }
     }
@@ -2771,9 +2777,10 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
            unsigned MaxLoopDepth)
     : SE(&ScalarEvolution), R(R), IsOptimized(false),
       HasSingleExitEdge(R.getExitingBlock()), HasErrorBlock(false),
-      MaxLoopDepth(MaxLoopDepth), IslCtx(isl_ctx_alloc(), isl_ctx_free),
-      Context(nullptr), Affinator(this, LI), AssumedContext(nullptr),
-      InvalidContext(nullptr), Schedule(nullptr) {
+      HasComplexCFG(false), MaxLoopDepth(MaxLoopDepth),
+      IslCtx(isl_ctx_alloc(), isl_ctx_free), Context(nullptr),
+      Affinator(this, LI), AssumedContext(nullptr), InvalidContext(nullptr),
+      Schedule(nullptr) {
   isl_options_set_on_error(getIslCtx(), ISL_ON_ERROR_ABORT);
   buildContext();
 }

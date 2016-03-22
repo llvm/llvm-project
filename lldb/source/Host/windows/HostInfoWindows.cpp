@@ -15,9 +15,10 @@
 
 #include "lldb/Host/windows/HostInfoWindows.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace lldb_private;
 
@@ -92,23 +93,24 @@ HostInfoWindows::GetOSKernelDescription(std::string &s)
 bool
 HostInfoWindows::GetHostname(std::string &s)
 {
-    char buffer[MAX_COMPUTERNAME_LENGTH + 1];
+    wchar_t buffer[MAX_COMPUTERNAME_LENGTH + 1];
     DWORD dwSize = MAX_COMPUTERNAME_LENGTH + 1;
-    if (!::GetComputerName(buffer, &dwSize))
+    if (!::GetComputerNameW(buffer, &dwSize))
         return false;
 
-    s.assign(buffer, buffer + dwSize);
-    return true;
+    return llvm::convertWideToUTF8(buffer, s);
 }
 
 FileSpec
 HostInfoWindows::GetProgramFileSpec()
 {
     static std::once_flag g_once_flag;
-    std::call_once(g_once_flag,  []() {
-        char buffer[PATH_MAX];
-        ::GetModuleFileName(NULL, buffer, sizeof(buffer));
-        m_program_filespec.SetFile(buffer, false);
+    std::call_once(g_once_flag, []() {
+        std::vector<wchar_t> buffer(PATH_MAX);
+        ::GetModuleFileNameW(NULL, buffer.data(), buffer.size());
+        std::string path;
+        llvm::convertWideToUTF8(buffer.data(), path);
+        m_program_filespec.SetFile(path, false);
     });
     return m_program_filespec;
 }
@@ -116,7 +118,9 @@ HostInfoWindows::GetProgramFileSpec()
 FileSpec
 HostInfoWindows::GetDefaultShell()
 {
-    return FileSpec(::getenv("ComSpec"), false);
+    std::string shell;
+    GetEnvironmentVar("ComSpec", shell);
+    return FileSpec(shell, false);
 }
 
 bool
@@ -131,4 +135,16 @@ HostInfoWindows::ComputePythonDirectory(FileSpec &file_spec)
     std::replace(path.begin(), path.end(), '\\', '/');
     file_spec.GetDirectory().SetString(path.c_str());
     return true;
+}
+
+bool
+HostInfoWindows::GetEnvironmentVar(const std::string &var_name, std::string &var)
+{
+    std::wstring wvar_name;
+    if (!llvm::ConvertUTF8toWide(var_name, wvar_name))
+        return false;
+
+    if (const wchar_t *wvar = _wgetenv(wvar_name.c_str()))
+        return llvm::convertWideToUTF8(wvar, var);
+    return false;
 }

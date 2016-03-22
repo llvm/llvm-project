@@ -41,13 +41,16 @@ public:
     ///     pass to the next step in the chain after processing.  Passthrough is
     ///     the next ASTConsumer, or NULL if none is required.
     ///
+    /// @param[in] top_level
+    ///     If true, register all top-level Decls and don't try to handle the
+    ///     main function.
+    ///
     /// @param[in] target
     ///     The target, which contains the persistent variable store and the
     ///     AST importer.
     //----------------------------------------------------------------------
-    ASTResultSynthesizer(clang::ASTConsumer *passthrough,
-                         Target &target);
-    
+    ASTResultSynthesizer(clang::ASTConsumer *passthrough, bool top_level, Target &target);
+
     //----------------------------------------------------------------------
     /// Destructor
     //----------------------------------------------------------------------
@@ -106,11 +109,18 @@ public:
     ///     casts it to an Action for actual use.
     //----------------------------------------------------------------------
     void InitializeSema(clang::Sema &S) override;
-    
+
     //----------------------------------------------------------------------
     /// Reset the Sema to NULL now that transformations are done
     //----------------------------------------------------------------------
-    void ForgetSema() override;
+    void
+    ForgetSema() override;
+
+    //----------------------------------------------------------------------
+    /// The parse has succeeded, so record its persistent decls
+    //----------------------------------------------------------------------
+    void
+    CommitPersistentDecls();
 
 private:
     //----------------------------------------------------------------------
@@ -171,13 +181,30 @@ private:
     /// @param[in] Body
     ///     The body of the function.
     //----------------------------------------------------------------------
-    void MaybeRecordPersistentType(clang::TypeDecl *D);
-    
-    clang::ASTContext *m_ast_context;           ///< The AST context to use for identifiers and types.
-    clang::ASTConsumer *m_passthrough;          ///< The ASTConsumer down the chain, for passthrough.  NULL if it's a SemaConsumer.
-    clang::SemaConsumer *m_passthrough_sema;    ///< The SemaConsumer down the chain, for passthrough.  NULL if it's an ASTConsumer.
-    Target &m_target;                           ///< The target, which contains the persistent variable store and the
-    clang::Sema *m_sema;                        ///< The Sema to use.
+    void
+    MaybeRecordPersistentType(clang::TypeDecl *D);
+
+    //----------------------------------------------------------------------
+    /// Given a NamedDecl, register it as a pointer type in the target's scratch
+    /// AST context.
+    ///
+    /// @param[in] Body
+    ///     The body of the function.
+    //----------------------------------------------------------------------
+    void
+    RecordPersistentDecl(clang::NamedDecl *D);
+
+    clang::ASTContext *m_ast_context; ///< The AST context to use for identifiers and types.
+    clang::ASTConsumer
+        *m_passthrough; ///< The ASTConsumer down the chain, for passthrough.  NULL if it's a SemaConsumer.
+    clang::SemaConsumer
+        *m_passthrough_sema; ///< The SemaConsumer down the chain, for passthrough.  NULL if it's an ASTConsumer.
+
+    std::vector<clang::NamedDecl *> m_decls; ///< Persistent declarations to register assuming the expression succeeds.
+
+    Target &m_target;    ///< The target, which contains the persistent variable store and the
+    clang::Sema *m_sema; ///< The Sema to use.
+    bool m_top_level;
 };
 
 } // namespace lldb_private

@@ -18,10 +18,11 @@
 #include "llvm/ADT/SmallString.h"
 
 // Project includes
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Core/FileSpecList.h"
-#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/PluginManager.h"
+#include "lldb/Host/FileSpec.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -30,6 +31,8 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/CleanUp.h"
+
+#include "llvm/ADT/SmallString.h"
 
 using namespace lldb_private;
 
@@ -160,8 +163,7 @@ FileSpec::EnumerateDirectoryResult DiskFilesOrDirectoriesCallback(void *baton, F
             isa_directory = true;
         else if (file_type == FileSpec::eFileTypeSymbolicLink)
         {
-            struct stat stat_buf;
-            if ((stat(partial_name_copy, &stat_buf) == 0) && S_ISDIR(stat_buf.st_mode))
+            if (FileSpec(partial_name_copy, false).IsDirectory())
                 isa_directory = true;
         }
 

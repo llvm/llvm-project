@@ -15,6 +15,7 @@
 #include "lld/Core/SharedLibraryAtom.h"
 #include "lld/Core/UndefinedAtom.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <functional>
@@ -105,17 +106,69 @@ public:
   }
 
   /// The type of atom mutable container.
-  template <typename T> using AtomVector = std::vector<const T *>;
+  template <typename T> using AtomVector = std::vector<OwningAtomPtr<T>>;
 
-  /// The range type for the atoms. It's backed by a std::vector, but hides
-  /// its member functions so that you can only call begin or end.
+  /// The range type for the atoms.
   template <typename T> class AtomRange {
   public:
-    AtomRange(AtomVector<T> v) : _v(v) {}
-    typename AtomVector<T>::const_iterator begin() const { return _v.begin(); }
-    typename AtomVector<T>::const_iterator end() const { return _v.end(); }
-    typename AtomVector<T>::iterator begin() { return _v.begin(); }
-    typename AtomVector<T>::iterator end() { return _v.end(); }
+    AtomRange(AtomVector<T> &v) : _v(v) {}
+    AtomRange(const AtomVector<T> &v) : _v(const_cast<AtomVector<T> &>(v)) {}
+
+    typedef std::pointer_to_unary_function<const OwningAtomPtr<T>&,
+                                           const T*> ConstDerefFn;
+
+    typedef std::pointer_to_unary_function<OwningAtomPtr<T>&, T*> DerefFn;
+
+    typedef llvm::mapped_iterator<typename AtomVector<T>::const_iterator,
+                                  ConstDerefFn> ConstItTy;
+    typedef llvm::mapped_iterator<typename AtomVector<T>::iterator,
+                                  DerefFn> ItTy;
+
+    static const T* DerefConst(const OwningAtomPtr<T> &p) {
+      return p.get();
+    }
+
+    static T* Deref(OwningAtomPtr<T> &p) {
+      return p.get();
+    }
+
+    ConstItTy begin() const {
+      return ConstItTy(_v.begin(), ConstDerefFn(DerefConst));
+    }
+    ConstItTy end() const {
+      return ConstItTy(_v.end(), ConstDerefFn(DerefConst));
+    }
+
+    ItTy begin() {
+      return ItTy(_v.begin(), DerefFn(Deref));
+    }
+    ItTy end() {
+      return ItTy(_v.end(), DerefFn(Deref));
+    }
+
+    llvm::iterator_range<typename AtomVector<T>::iterator> owning_ptrs() {
+      return llvm::make_range(_v.begin(), _v.end());
+    }
+
+    llvm::iterator_range<typename AtomVector<T>::iterator> owning_ptrs() const {
+      return llvm::make_range(_v.begin(), _v.end());
+    }
+
+    bool empty() const {
+      return _v.empty();
+    }
+
+    size_t size() const {
+      return _v.size();
+    }
+
+    const OwningAtomPtr<T> &operator[](size_t idx) const {
+      return _v[idx];
+    }
+
+    OwningAtomPtr<T> &operator[](size_t idx) {
+      return _v[idx];
+    }
 
   private:
     AtomVector<T> &_v;
@@ -123,19 +176,25 @@ public:
 
   /// \brief Must be implemented to return the AtomVector object for
   /// all DefinedAtoms in this File.
-  virtual const AtomVector<DefinedAtom> &defined() const = 0;
+  virtual const AtomRange<DefinedAtom> defined() const = 0;
 
   /// \brief Must be implemented to return the AtomVector object for
   /// all UndefinedAtomw in this File.
-  virtual const AtomVector<UndefinedAtom> &undefined() const = 0;
+  virtual const AtomRange<UndefinedAtom> undefined() const = 0;
 
   /// \brief Must be implemented to return the AtomVector object for
   /// all SharedLibraryAtoms in this File.
-  virtual const AtomVector<SharedLibraryAtom> &sharedLibrary() const = 0;
+  virtual const AtomRange<SharedLibraryAtom> sharedLibrary() const = 0;
 
   /// \brief Must be implemented to return the AtomVector object for
   /// all AbsoluteAtoms in this File.
-  virtual const AtomVector<AbsoluteAtom> &absolute() const = 0;
+  virtual const AtomRange<AbsoluteAtom> absolute() const = 0;
+
+  /// Drop all of the atoms owned by this file.  This will result in all of
+  /// the atoms running their destructors.
+  /// This is required because atoms may be allocated on a BumpPtrAllocator
+  /// of a different file.  We need to destruct all atoms before any files.
+  virtual void clearAtoms() = 0;
 
   /// \brief If a file is parsed using a different method than doParse(),
   /// one must use this method to set the last error status, so that
@@ -194,17 +253,20 @@ public:
 
   std::error_code doParse() override { return _ec; }
 
-  const AtomVector<DefinedAtom> &defined() const override {
+  const AtomRange<DefinedAtom> defined() const override {
     llvm_unreachable("internal error");
   }
-  const AtomVector<UndefinedAtom> &undefined() const override {
+  const AtomRange<UndefinedAtom> undefined() const override {
     llvm_unreachable("internal error");
   }
-  const AtomVector<SharedLibraryAtom> &sharedLibrary() const override {
+  const AtomRange<SharedLibraryAtom> sharedLibrary() const override {
     llvm_unreachable("internal error");
   }
-  const AtomVector<AbsoluteAtom> &absolute() const override {
+  const AtomRange<AbsoluteAtom> absolute() const override {
     llvm_unreachable("internal error");
+  }
+
+  void clearAtoms() override {
   }
 
 private:

@@ -12,6 +12,8 @@
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Host/windows/win32.h"
 
+#include "llvm/Support/ConvertUTF.h"
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -25,6 +27,29 @@ extern "C"
 {
     char *_getcwd(char *buffer, int maxlen);
     int _chdir(const char *path);
+}
+
+namespace
+{
+bool
+utf8ToWide(const char *utf8, wchar_t *buf, size_t bufSize)
+{
+    const UTF8 *sourceStart = reinterpret_cast<const UTF8 *>(utf8);
+    size_t sourceLen = strlen(utf8) + 1 /* convert null too */;
+    UTF16 *target = reinterpret_cast<UTF16 *>(buf);
+    ConversionFlags flags = strictConversion;
+    return ConvertUTF8toUTF16(&sourceStart, sourceStart + sourceLen, &target, target + bufSize, flags) == conversionOK;
+}
+
+bool
+wideToUtf8(const wchar_t *wide, char *buf, size_t bufSize)
+{
+    const UTF16 *sourceStart = reinterpret_cast<const UTF16 *>(wide);
+    size_t sourceLen = wcslen(wide) + 1 /* convert null too */;
+    UTF8 *target = reinterpret_cast<UTF8 *>(buf);
+    ConversionFlags flags = strictConversion;
+    return ConvertUTF16toUTF8(&sourceStart, sourceStart + sourceLen, &target, target + bufSize, flags) == conversionOK;
+}
 }
 
 int vasprintf(char **ret, const char *fmt, va_list ap)
@@ -75,80 +100,89 @@ char* strcasestr(const char *s, const char* find)
 
 char* realpath(const char * name, char * resolved)
 {
-    char *retname = NULL;  /* we will return this, if we fail */
+    char *retname = NULL;
 
     /* SUSv3 says we must set `errno = EINVAL', and return NULL,
     * if `name' is passed as a NULL pointer.
     */
-
     if (name == NULL)
+    {
         errno = EINVAL;
+        return NULL;
+    }
 
     /* Otherwise, `name' must refer to a readable filesystem object,
     * if we are going to resolve its absolute path name.
     */
-
-    else if (access(name, 4) == 0)
+    wchar_t wideNameBuffer[PATH_MAX];
+    wchar_t *wideName = wideNameBuffer;
+    if (!utf8ToWide(name, wideName, PATH_MAX))
     {
-        /* If `name' didn't point to an existing entity,
-        * then we don't get to here; we simply fall past this block,
-        * returning NULL, with `errno' appropriately set by `access'.
-        *
-        * When we _do_ get to here, then we can use `_fullpath' to
-        * resolve the full path for `name' into `resolved', but first,
-        * check that we have a suitable buffer, in which to return it.
-        */
-
-        if ((retname = resolved) == NULL)
-        {
-            /* Caller didn't give us a buffer, so we'll exercise the
-            * option granted by SUSv3, and allocate one.
-            *
-            * `_fullpath' would do this for us, but it uses `malloc', and
-            * Microsoft's implementation doesn't set `errno' on failure.
-            * If we don't do this explicitly ourselves, then we will not
-            * know if `_fullpath' fails on `malloc' failure, or for some
-            * other reason, and we want to set `errno = ENOMEM' for the
-            * `malloc' failure case.
-            */
-
-            retname = (char*) malloc(_MAX_PATH);
-        }
-
-        /* By now, we should have a valid buffer.
-        * If we don't, then we know that `malloc' failed,
-        * so we can set `errno = ENOMEM' appropriately.
-        */
-
-        if (retname == NULL)
-            errno = ENOMEM;
-
-        /* Otherwise, when we do have a valid buffer,
-        * `_fullpath' should only fail if the path name is too long.
-        */
-
-        else if ((retname = _fullpath(retname, name, _MAX_PATH)) == NULL)
-            errno = ENAMETOOLONG;
+        errno = EINVAL;
+        return NULL;
     }
 
-    /* By the time we get to here,
-    * `retname' either points to the required resolved path name,
-    * or it is NULL, with `errno' set appropriately, either of which
-    * is our required return condition.
+    if (_waccess(wideName, 4) != 0)
+        return NULL;
+
+    /* If `name' didn't point to an existing entity,
+    * then we don't get to here; we simply fall past this block,
+    * returning NULL, with `errno' appropriately set by `access'.
+    *
+    * When we _do_ get to here, then we can use `_fullpath' to
+    * resolve the full path for `name' into `resolved', but first,
+    * check that we have a suitable buffer, in which to return it.
     */
 
-    if (retname != NULL)
+    if ((retname = resolved) == NULL)
     {
-        // Do a LongPath<->ShortPath roundtrip so that case is resolved by OS
-        int initialLength = strlen(retname);
-        TCHAR buffer[MAX_PATH];
-        GetShortPathName(retname, buffer, MAX_PATH);
-        GetLongPathName(buffer, retname, initialLength + 1);
+        /* Caller didn't give us a buffer, so we'll exercise the
+        * option granted by SUSv3, and allocate one.
+        *
+        * `_fullpath' would do this for us, but it uses `malloc', and
+        * Microsoft's implementation doesn't set `errno' on failure.
+        * If we don't do this explicitly ourselves, then we will not
+        * know if `_fullpath' fails on `malloc' failure, or for some
+        * other reason, and we want to set `errno = ENOMEM' for the
+        * `malloc' failure case.
+        */
 
-        // Force drive to be upper case
-        if (retname[1] == ':')
-            retname[0] = toupper(retname[0]);
+        retname = (char *)malloc(PATH_MAX);
+        if (retname == NULL)
+        {
+            errno = ENOMEM;
+            return NULL;
+        }
     }
+
+    /* Otherwise, when we do have a valid buffer,
+    * `_fullpath' should only fail if the path name is too long.
+    */
+
+    wchar_t wideFullPathBuffer[PATH_MAX];
+    wchar_t *wideFullPath;
+    if ((wideFullPath = _wfullpath(wideFullPathBuffer, wideName, PATH_MAX)) == NULL)
+    {
+        errno = ENAMETOOLONG;
+        return NULL;
+    }
+
+    // Do a LongPath<->ShortPath roundtrip so that case is resolved by OS
+    // FIXME: Check for failure
+    size_t initialLength = wcslen(wideFullPath);
+    GetShortPathNameW(wideFullPath, wideNameBuffer, PATH_MAX);
+    GetLongPathNameW(wideNameBuffer, wideFullPathBuffer, initialLength + 1);
+
+    // Convert back to UTF-8
+    if (!wideToUtf8(wideFullPathBuffer, retname, PATH_MAX))
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    // Force drive to be upper case
+    if (retname[1] == ':')
+        retname[0] = toupper(retname[0]);
 
     return retname;
 }
@@ -167,7 +201,27 @@ char* basename(char *path)
 // use _getcwd() instead of GetCurrentDirectory() because it updates errno
 char* getcwd(char* path, int max)
 {
-    return _getcwd(path, max);
+    assert(path == NULL || max <= PATH_MAX);
+    wchar_t wpath[PATH_MAX];
+    if (wchar_t *wresult = _wgetcwd(wpath, PATH_MAX))
+    {
+        // Caller is allowed to pass in NULL for `path`.
+        // In that case, we're supposed to allocate a
+        // buffer on the caller's behalf.
+        if (path == NULL)
+        {
+            max = UNI_MAX_UTF8_BYTES_PER_CODE_POINT * wcslen(wresult) + 1;
+            path = (char *)malloc(max);
+            if (path == NULL)
+            {
+                errno = ENOMEM;
+                return NULL;
+            }
+        }
+        if (wideToUtf8(wresult, path, max))
+            return path;
+    }
+    return NULL;
 }
 
 // use _chdir() instead of SetCurrentDirectory() because it updates errno

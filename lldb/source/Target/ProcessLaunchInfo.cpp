@@ -13,13 +13,20 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/Config.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Log.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Target/FileAction.h"
+#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Target.h"
+
+#include "llvm/Support/ConvertUTF.h"
+
+#if !defined(_WIN32)
+#include <limits.h>
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -449,8 +456,8 @@ ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell (Error &error,
                         if (cwd && cwd[0])
                             new_path += cwd;
                     }
-                    const char *curr_path = getenv("PATH");
-                    if (curr_path)
+                    std::string curr_path;
+                    if (HostInfo::GetEnvironmentVar("PATH", curr_path))
                     {
                         if (new_path.size() > empty_path_len)
                             new_path += ':';

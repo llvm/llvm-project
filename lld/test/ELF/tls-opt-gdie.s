@@ -6,15 +6,15 @@
 // RUN: llvm-objdump -d %t1 | FileCheck --check-prefix=DISASM %s
 
 //RELOC:      Section {
-//RELOC:      Index: 9
-//RELOC-NEXT: Name: .got
+//RELOC:      Index:
+//RELOC:      Name: .got
 //RELOC-NEXT: Type: SHT_PROGBITS
 //RELOC-NEXT: Flags [
 //RELOC-NEXT:   SHF_ALLOC
 //RELOC-NEXT:   SHF_WRITE
 //RELOC-NEXT: ]
-//RELOC-NEXT: Address: 0x120F0
-//RELOC-NEXT: Offset: 0x20F0
+//RELOC-NEXT: Address: 0x120B0
+//RELOC-NEXT: Offset: 0x20B0
 //RELOC-NEXT: Size: 16
 //RELOC-NEXT: Link: 0
 //RELOC-NEXT: Info: 0
@@ -23,22 +23,19 @@
 //RELOC-NEXT: }
 //RELOC:      Relocations [
 //RELOC-NEXT:   Section (4) .rela.dyn {
-//RELOC-NEXT:     0x120F0 R_X86_64_TPOFF64 tlsshared0 0x0
-//RELOC-NEXT:     0x120F8 R_X86_64_TPOFF64 tlsshared1 0x0
-//RELOC-NEXT:   }
-//RELOC-NEXT:   Section (5) .rela.plt {
-//RELOC-NEXT:     0x13018 R_X86_64_JUMP_SLOT __tls_get_addr 0x0
+//RELOC-NEXT:     0x120B0 R_X86_64_TPOFF64 tlsshared0 0x0
+//RELOC-NEXT:     0x120B8 R_X86_64_TPOFF64 tlsshared1 0x0
 //RELOC-NEXT:   }
 //RELOC-NEXT: ]
 
-//0x11009 + (4304 + 7) = 0x120F0
-//0x11019 + (4296 + 7) = 0x120F8
+//0x11009 + (4256 + 7) = 0x120B0
+//0x11019 + (4248 + 7) = 0x120B8
 // DISASM:      Disassembly of section .text:
 // DISASM-NEXT: _start:
-// DISASM-NEXT: 11000: 64 48 8b 04 25 00 00 00 00 movq %fs:0, %rax
-// DISASM-NEXT: 11009: 48 03 05 e0 10 00 00       addq 4320(%rip), %rax
-// DISASM-NEXT: 11010: 64 48 8b 04 25 00 00 00 00 movq %fs:0, %rax
-// DISASM-NEXT: 11019: 48 03 05 d8 10 00 00       addq 4312(%rip), %rax
+// DISASM-NEXT: 11000: {{.*}} movq %fs:0, %rax
+// DISASM-NEXT: 11009: {{.*}} addq 4256(%rip), %rax
+// DISASM-NEXT: 11010: {{.*}} movq %fs:0, %rax
+// DISASM-NEXT: 11019: {{.*}} addq 4248(%rip), %rax
 
 .section .text
 .globl _start

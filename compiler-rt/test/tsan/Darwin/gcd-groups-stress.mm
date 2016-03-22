@@ -30,7 +30,7 @@ int main() {
     dispatch_async(q, ^{
       dispatch_group_leave(g);
     });
-    dispatch_group_notify_f(g, q, nullptr, &notify_callback);
+    dispatch_group_notify_f(g, q, NULL, &notify_callback);
     dispatch_release(g);
   }
 

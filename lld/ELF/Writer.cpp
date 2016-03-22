@@ -258,21 +258,22 @@ template <bool Is64Bits> struct DenseMapInfo<SectionKey<Is64Bits>> {
 };
 }
 
+// Returns the number of relocations processed.
 template <class ELFT, class RelT>
-static bool handleTlsRelocation(uint32_t Type, SymbolBody &Body,
-                                InputSectionBase<ELFT> &C, RelT &RI) {
+static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
+                                    InputSectionBase<ELFT> &C, RelT &RI) {
   if (Target->pointsToLocalDynamicGotEntry(Type)) {
     if (Target->canRelaxTls(Type, nullptr))
-      return true;
+      return 1;
     if (Out<ELFT>::Got->addTlsIndex())
       Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel,
                                     DynamicReloc<ELFT>::Off_LTlsIndex,
                                     nullptr});
-    return true;
+    return 1;
   }
 
   if (!Body.IsTls)
-    return false;
+    return 0;
 
   if (Target->isTlsGlobalDynamicRel(Type)) {
     if (!Target->canRelaxTls(Type, &Body)) {
@@ -283,12 +284,16 @@ static bool handleTlsRelocation(uint32_t Type, SymbolBody &Body,
         Out<ELFT>::RelaDyn->addReloc(
             {Target->TlsOffsetRel, DynamicReloc<ELFT>::Off_GTlsOffset, &Body});
       }
-      return true;
+      return 1;
     }
     if (!Body.isPreemptible())
-      return true;
+      return 1;
+    Out<ELFT>::Got->addEntry(Body);
+    Out<ELFT>::RelaDyn->addReloc(
+        {Target->TlsGotRel, DynamicReloc<ELFT>::Off_Got, false, &Body});
+    return 2;
   }
-  return false;
+  return 0;
 }
 
 // The reason we have to do this early scan is as follows
@@ -309,7 +314,8 @@ template <class RelTy>
 void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
                               iterator_range<const RelTy *> Rels) {
   const elf::ObjectFile<ELFT> &File = *C.getFile();
-  for (const RelTy &RI : Rels) {
+  for (auto I = Rels.begin(), E = Rels.end(); I != E; ++I) {
+    const RelTy &RI = *I;
     uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
     SymbolBody &OrigBody = File.getSymbolBody(SymIndex);
     SymbolBody &Body = OrigBody.repl();
@@ -328,20 +334,14 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
         S->File->IsUsed = true;
 
     bool Preemptible = Body.isPreemptible();
-    if (handleTlsRelocation<ELFT>(Type, Body, C, RI))
+    if (unsigned Processed = handleTlsRelocation<ELFT>(Type, Body, C, RI)) {
+      I += (Processed - 1);
       continue;
+    }
 
     if (Target->needsDynRelative(Type))
       Out<ELFT>::RelaDyn->addReloc({Target->RelativeRel, &C, RI.r_offset, true,
                                     &Body, getAddend<ELFT>(RI)});
-
-    // MIPS has a special rule to create GOTs for local symbols.
-    if (Config->EMachine == EM_MIPS && !Preemptible &&
-        Target->needsGot(Type, Body)) {
-      // FIXME (simon): Do not add so many redundant entries.
-      Out<ELFT>::Got->addMipsLocalEntry();
-      continue;
-    }
 
     // If a symbol in a DSO is referenced directly instead of through GOT,
     // we need to create a copy relocation for the symbol.
@@ -407,15 +407,13 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
         continue;
       Out<ELFT>::Got->addEntry(Body);
 
-      if (Config->EMachine == EM_MIPS) {
+      if (Config->EMachine == EM_MIPS)
         // MIPS ABI has special rules to process GOT entries
         // and doesn't require relocation entries for them.
         // See "Global Offset Table" in Chapter 5 in the following document
         // for detailed description:
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-        Body.MustBeInDynSym = true;
         continue;
-      }
 
       bool Dynrel = Config->Pic && !Target->isRelRelative(Type) &&
                     !Target->isSizeRel(Type);

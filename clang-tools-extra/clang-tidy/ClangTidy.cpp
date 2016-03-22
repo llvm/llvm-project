@@ -128,13 +128,20 @@ public:
       auto Diag = Diags.Report(Loc, Diags.getCustomDiagID(Level, "%0 [%1]"))
                   << Message.Message << Name;
       for (const tooling::Replacement &Fix : Error.Fix) {
-        SmallString<128> FixAbsoluteFilePath = Fix.getFilePath();
-        Files.makeAbsolutePath(FixAbsoluteFilePath);
-        SourceLocation FixLoc =
-            getLocation(FixAbsoluteFilePath, Fix.getOffset());
-        SourceLocation FixEndLoc = FixLoc.getLocWithOffset(Fix.getLength());
-        Diag << FixItHint::CreateReplacement(SourceRange(FixLoc, FixEndLoc),
-                                             Fix.getReplacementText());
+        // Retrieve the source range for applicable fixes. Macro definitions
+        // on the command line have locations in a virtual buffer and don't
+        // have valid file paths and are therefore not applicable.
+        SourceRange Range;
+        SourceLocation FixLoc;
+        if (Fix.isApplicable()) {
+          SmallString<128> FixAbsoluteFilePath = Fix.getFilePath();
+          Files.makeAbsolutePath(FixAbsoluteFilePath);
+          FixLoc = getLocation(FixAbsoluteFilePath, Fix.getOffset());
+          SourceLocation FixEndLoc = FixLoc.getLocWithOffset(Fix.getLength());
+          Range = SourceRange(FixLoc, FixEndLoc);
+          Diag << FixItHint::CreateReplacement(Range, Fix.getReplacementText());
+        }
+              
         ++TotalFixes;
         if (ApplyFixes) {
           bool Success = Fix.isApplicable() && Fix.apply(Rewrite);

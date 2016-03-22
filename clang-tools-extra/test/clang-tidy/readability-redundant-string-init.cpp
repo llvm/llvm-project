@@ -84,3 +84,50 @@ void h() {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: redundant string initialization
   // CHECK-FIXES: N
 }
+
+typedef std::string MyString;
+#define STRING MyString
+#define DECL_STRING(name, val) STRING name = val
+
+void i() {
+  MyString a = "";
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: redundant string initialization
+  // CHECK-FIXES: MyString a;
+  STRING b = "";
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: redundant string initialization
+  // CHECK-FIXES: STRING b;
+  MyString c = "" "" "";
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: redundant string initialization
+  // CHECK-FIXES: MyString c;
+  STRING d = "" "" "";
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: redundant string initialization
+  // CHECK-FIXES: STRING d;
+  DECL_STRING(e, "");
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: redundant string initialization
+
+  MyString f = "u";
+  STRING g = "u";
+  DECL_STRING(h, "u");
+}
+
+#define EMPTY_STR ""
+void j() {
+  std::string a(EMPTY_STR);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: redundant string initialization
+  // CHECK-FIXES: std::string a;
+  std::string b = (EMPTY_STR);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: redundant string initialization
+  // CHECK-FIXES: std::string b;
+
+  std::string c(EMPTY_STR "u" EMPTY_STR);
+}
+
+void k() {
+  std::string a = "", b = "", c = "";
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: redundant string initialization
+  // CHECK-MESSAGES: [[@LINE-2]]:23: warning: redundant string initialization
+  // CHECK-MESSAGES: [[@LINE-3]]:31: warning: redundant string initialization
+  // CHECK-FIXES: std::string a, b, c;
+
+  std::string d = "u", e = "u", f = "u";
+}

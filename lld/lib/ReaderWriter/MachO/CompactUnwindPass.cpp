@@ -88,6 +88,8 @@ public:
     addSecondLevelPages(pages);
   }
 
+  ~UnwindInfoAtom() override = default;
+
   ContentType contentType() const override {
     return DefinedAtom::typeProcessedUnwindInfo;
   }

@@ -14,7 +14,6 @@
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <sys/stat.h>
 
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"
@@ -22,6 +21,7 @@
 #include <sys/ioctl.h>
 #endif
 
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Process.h" // for llvm::sys::Process::FileDescriptorHasColors()
 
 #include "lldb/Core/DataBufferHeap.h"
@@ -29,6 +29,7 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Host/FileSystem.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -267,7 +268,18 @@ File::Open (const char *path, uint32_t options, uint32_t permissions)
 
     do
     {
+#ifdef _WIN32
+        std::wstring wpath;
+        if (!llvm::ConvertUTF8toWide(path, wpath))
+        {
+            m_descriptor = -1;
+            error.SetErrorString("Error converting path to UTF-16");
+            return error;
+        }
+        ::_wsopen_s(&m_descriptor, wpath.c_str(), oflag, _SH_DENYNO, mode);
+#else
         m_descriptor = ::open(path, oflag, mode);
+#endif
     } while (m_descriptor < 0 && errno == EINTR);
 
     if (!DescriptorIsValid())
@@ -287,7 +299,8 @@ File::GetPermissions(const FileSpec &file_spec, Error &error)
     if (file_spec)
     {
         struct stat file_stats;
-        if (::stat(file_spec.GetCString(), &file_stats) == -1)
+        int stat_result = FileSystem::Stat(file_spec.GetCString(), &file_stats);
+        if (stat_result == -1)
             error.SetErrorToErrno();
         else
         {

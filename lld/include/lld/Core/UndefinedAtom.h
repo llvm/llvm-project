@@ -59,6 +59,8 @@ public:
 
 protected:
   UndefinedAtom() : Atom(definitionUndefined) {}
+
+  ~UndefinedAtom() override = default;
 };
 
 } // namespace lld

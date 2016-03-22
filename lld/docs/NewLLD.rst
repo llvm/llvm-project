@@ -274,7 +274,7 @@ Link-Time Optimization
 
 LTO is implemented by handling LLVM bitcode files as object files.
 The linker resolves symbols in bitcode files normally. If all symbols
-are successfully resolved, it then calls an LLVM libLTO function
+are successfully resolved, it then runs LLVM passes
 with all bitcode files to convert them to one big regular ELF/COFF file.
 Finally, the linker replaces bitcode symbols with ELF/COFF symbols,
 so that they are linked as if they were in the native format from the beginning.

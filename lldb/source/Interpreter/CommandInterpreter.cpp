@@ -344,10 +344,14 @@ CommandInterpreter::Initialize ()
     cmd_obj_sp = GetCommandSPExact ("expression", false);
     if (cmd_obj_sp)
     {        
-        AddAlias ("p", cmd_obj_sp, "--");
-        AddAlias ("print", cmd_obj_sp, "--");
-        AddAlias ("call", cmd_obj_sp, "--");
-        AddAlias ("po", cmd_obj_sp, "-O --");
+        AddAlias ("p", cmd_obj_sp, "--")->SetHelpLong("");
+        AddAlias ("print", cmd_obj_sp, "--")->SetHelpLong("");
+        AddAlias ("call", cmd_obj_sp, "--")->SetHelpLong("");
+        if (auto po = AddAlias ("po", cmd_obj_sp, "-O --"))
+        {
+            po->SetHelp("Evaluate an expression in the current program context, using user defined variables and variables currently in scope, and display the result of evaluation in a language-specific manner.");
+            po->SetHelpLong("");
+        }
     }
     
     cmd_obj_sp = GetCommandSPExact ("process kill", false);
@@ -1359,8 +1363,9 @@ CommandInterpreter::BuildAliasResult (const char *alias_name,
     
     if (alias_cmd_obj && alias_cmd_obj->IsAlias())
     {
-        OptionArgVectorSP option_arg_vector_sp =  ((CommandAlias*)alias_cmd_obj)->GetOptionArguments();
-        alias_cmd_obj = ((CommandAlias*)alias_cmd_obj)->GetUnderlyingCommand().get();
+        std::pair<CommandObjectSP, OptionArgVectorSP> desugared = ((CommandAlias*)alias_cmd_obj)->Desugar();
+        OptionArgVectorSP option_arg_vector_sp =  desugared.second;
+        alias_cmd_obj = desugared.first.get();
         std::string alias_name_str = alias_name;
         if ((cmd_args.GetArgumentCount() == 0)
             || (alias_name_str.compare (cmd_args.GetArgumentAtIndex(0)) != 0))

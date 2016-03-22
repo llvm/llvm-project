@@ -178,7 +178,7 @@ static void CheckODRViolationViaPoisoning(const Global *g) {
 }
 
 // Clang provides two different ways for global variables protection:
-// it can poison the global itself or it's private alias. In former
+// it can poison the global itself or its private alias. In former
 // case we may poison same symbol multiple times, that can help us to
 // cheaply detect ODR violation: if we try to poison an already poisoned
 // global, we have ODR violation error.

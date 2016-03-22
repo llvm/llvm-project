@@ -154,17 +154,11 @@ public:
     const char *
     GetCommandName ();
 
-    void
+    virtual void
     SetHelp (const char * str);
 
-    void
-    SetHelp (std::string str);
-    
-    void
+    virtual void
     SetHelpLong (const char * str);
-
-    void
-    SetHelpLong (std::string str);
 
     void
     SetSyntax (const char *str);

@@ -1169,7 +1169,14 @@ bool link(llvm::ArrayRef<const char *> args, raw_ostream &diagnostics) {
   Resolver resolver(ctx);
   if (!resolver.resolve())
     return false;
-  std::unique_ptr<SimpleFile> merged = resolver.resultFile();
+  SimpleFile *merged = nullptr;
+  {
+    std::unique_ptr<SimpleFile> mergedFile = resolver.resultFile();
+    merged = mergedFile.get();
+    auto &members = ctx.getNodes();
+    members.insert(members.begin(),
+                   llvm::make_unique<FileNode>(std::move(mergedFile)));
+  }
   resolveTask.end();
 
   // Run passes on linked atoms.

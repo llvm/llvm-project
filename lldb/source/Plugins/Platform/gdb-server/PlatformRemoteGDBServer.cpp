@@ -1002,6 +1002,22 @@ PlatformRemoteGDBServer::ConnectProcess(const char* connect_url,
 }
 
 size_t
+PlatformRemoteGDBServer::ConnectToWaitingProcesses(Debugger& debugger, Error& error)
+{
+    std::vector<std::string> connection_urls;
+    GetPendingGdbServerList(connection_urls);
+
+    for (size_t i = 0; i < connection_urls.size(); ++i)
+    {
+        ConnectProcess(connection_urls[i].c_str(), nullptr, debugger, nullptr, error);
+        if (error.Fail())
+            return i; // We already connected to i process succsessfully
+    }
+    return connection_urls.size();
+
+}
+
+size_t
 PlatformRemoteGDBServer::GetPendingGdbServerList(std::vector<std::string>& connection_urls)
 {
     std::vector<std::pair<uint16_t, std::string>> remote_servers;

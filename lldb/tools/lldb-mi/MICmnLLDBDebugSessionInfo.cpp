@@ -18,15 +18,16 @@
 #include "lldb/API/SBBreakpointLocation.h"
 
 // In-house headers:
+#include "MICmdData.h"
 #include "MICmnLLDBDebugSessionInfo.h"
 #include "MICmnLLDBDebugger.h"
-#include "MICmnResources.h"
+#include "MICmnLLDBUtilSBValue.h"
 #include "MICmnMIResultRecord.h"
 #include "MICmnMIValueConst.h"
 #include "MICmnMIValueList.h"
 #include "MICmnMIValueTuple.h"
-#include "MICmdData.h"
-#include "MICmnLLDBUtilSBValue.h"
+#include "MICmnResources.h"
+#include "Platform.h"
 
 //++ ------------------------------------------------------------------------------------
 // Details: CMICmnLLDBDebugSessionInfo constructor.
@@ -614,7 +615,7 @@ CMICmnLLDBDebugSessionInfo::GetFrameInfo(const lldb::SBFrame &vrFrame, lldb::add
 {
     lldb::SBFrame &rFrame = const_cast<lldb::SBFrame &>(vrFrame);
 
-    static char pBuffer[MAX_PATH];
+    static char pBuffer[PATH_MAX];
     const MIuint nBytes = rFrame.GetLineEntry().GetFileSpec().GetPath(&pBuffer[0], sizeof(pBuffer));
     MIunused(nBytes);
     CMIUtilString strResolvedPath(&pBuffer[0]);

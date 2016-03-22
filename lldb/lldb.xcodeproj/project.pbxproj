@@ -8169,7 +8169,7 @@
 				);
 				PRODUCT_NAME = lldb;
 				STRIP_INSTALLED_PRODUCT = YES;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = BuildAndIntegration;
@@ -8708,7 +8708,6 @@
 				INFOPLIST_FILE = "lldb-Info.plist";
 				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
-				LLVM_BUILD_DIR_ARCH = "$(OBJROOT)/llvm";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-sectcreate",
@@ -8718,7 +8717,7 @@
 					"-Wl,-rpath,@loader_path",
 				);
 				PRODUCT_NAME = lldb;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
@@ -8746,7 +8745,7 @@
 					"-Wl,-rpath,@loader_path",
 				);
 				PRODUCT_NAME = lldb;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
@@ -8884,7 +8883,6 @@
 				INFOPLIST_FILE = "lldb-Info.plist";
 				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
-				LLVM_BUILD_DIR_ARCH = "$(OBJROOT)/llvm";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-sectcreate",
@@ -8894,7 +8892,7 @@
 					"-Wl,-rpath,@loader_path",
 				);
 				PRODUCT_NAME = lldb;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = DebugClang;

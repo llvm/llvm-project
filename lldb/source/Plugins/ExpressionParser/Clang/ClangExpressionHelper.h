@@ -67,11 +67,14 @@ public:
     ///     the ASTs to after transformation.
     //------------------------------------------------------------------
     virtual clang::ASTConsumer *
-    ASTTransformer (clang::ASTConsumer *passthrough) = 0;
-    
+    ASTTransformer(clang::ASTConsumer *passthrough) = 0;
+
+    virtual void
+    CommitPersistentDecls()
+    {
+    }
 
 protected:
-
 };
 
 } // namespace lldb_private

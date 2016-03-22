@@ -88,16 +88,31 @@ public:
     const char*
     GetHelpLong () override;
     
+    void
+    SetHelp (const char * str) override;
+    
+    void
+    SetHelpLong (const char * str) override;
+    
     bool
     Execute(const char *args_string, CommandReturnObject &result) override;
     
     lldb::CommandObjectSP GetUnderlyingCommand() { return m_underlying_command_sp; }
     OptionArgVectorSP GetOptionArguments() { return m_option_args_sp; }
+    const char* GetOptionString() { return m_option_string.c_str(); }
+    
+    // this takes an alias - potentially nested (i.e. an alias to an alias)
+    // and expands it all the way to a non-alias command
+    std::pair<lldb::CommandObjectSP, OptionArgVectorSP>
+    Desugar ();
     
 private:
     lldb::CommandObjectSP m_underlying_command_sp;
+    std::string m_option_string;
     OptionArgVectorSP m_option_args_sp ;
     LazyBool m_is_dashdash_alias;
+    bool m_did_set_help : 1;
+    bool m_did_set_help_long : 1;
 };
 } // namespace lldb_private
 

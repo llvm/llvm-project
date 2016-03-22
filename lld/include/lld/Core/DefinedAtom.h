@@ -363,6 +363,8 @@ protected:
   // constructor.
   DefinedAtom() : Atom(definitionRegular) { }
 
+  ~DefinedAtom() override = default;
+
   /// \brief Returns a pointer to the Reference object that the abstract
   /// iterator "points" to.
   virtual const Reference *derefIterator(const void *iter) const = 0;

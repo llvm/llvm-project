@@ -1,6 +1,6 @@
 // RUN: %libomp-compile-and-run | FileCheck %s
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck --check-prefix=THREADS %s
-// REQUIRES: ompt, ompt-trace
+// REQUIRES: ompt
 #include "callback.h"
 #include <omp.h>
 

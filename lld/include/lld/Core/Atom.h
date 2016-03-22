@@ -16,6 +16,9 @@ namespace lld {
 
 class File;
 
+template<typename T>
+class OwningAtomPtr;
+
 ///
 /// The linker has a Graph Theory model of linking. An object file is seen
 /// as a set of Atoms with References to other Atoms.  Each Atom is a node
@@ -24,6 +27,7 @@ class File;
 /// undefined symbol (extern declaration).
 ///
 class Atom {
+  template<typename T> friend class OwningAtomPtr;
 public:
   /// Whether this atom is defined or a proxy for an undefined symbol
   enum Definition {
@@ -69,6 +73,55 @@ protected:
 
 private:
   Definition _definition;
+};
+
+/// Class which owns an atom pointer and runs the atom destructor when the
+/// owning pointer goes out of scope.
+template<typename T>
+class OwningAtomPtr {
+private:
+  OwningAtomPtr(const OwningAtomPtr &) = delete;
+  void operator=(const OwningAtomPtr&) = delete;
+public:
+  OwningAtomPtr() : atom(nullptr) { }
+  OwningAtomPtr(T *atom) : atom(atom) { }
+
+  ~OwningAtomPtr() {
+    if (atom)
+      runDestructor(atom);
+  }
+
+  void runDestructor(Atom *atom) {
+    atom->~Atom();
+  }
+
+  OwningAtomPtr(OwningAtomPtr &&ptr) : atom(ptr.atom) {
+    ptr.atom = nullptr;
+  }
+
+  void operator=(OwningAtomPtr&& ptr) {
+    if (atom)
+      runDestructor(atom);
+    atom = ptr.atom;
+    ptr.atom = nullptr;
+  }
+
+  T *const &get() const {
+    return atom;
+  }
+
+  T *&get() {
+    return atom;
+  }
+
+  T *release() {
+    auto *v = atom;
+    atom = nullptr;
+    return v;
+  }
+
+private:
+  T *atom;
 };
 
 } // namespace lld

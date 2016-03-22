@@ -171,7 +171,19 @@ bool MachOLinkingContext::sliceFromFatFile(MemoryBufferRef mb, uint32_t &offset,
 
 MachOLinkingContext::MachOLinkingContext() {}
 
-MachOLinkingContext::~MachOLinkingContext() {}
+MachOLinkingContext::~MachOLinkingContext() {
+  // Atoms are allocated on BumpPtrAllocator's on File's.
+  // As we transfer atoms from one file to another, we need to clear all of the
+  // atoms before we remove any of the BumpPtrAllocator's.
+  auto &nodes = getNodes();
+  for (unsigned i = 0, e = nodes.size(); i != e; ++i) {
+    FileNode *node = dyn_cast<FileNode>(nodes[i].get());
+    if (!node)
+      continue;
+    File *file = node->getFile();
+    file->clearAtoms();
+  }
+}
 
 void MachOLinkingContext::configure(HeaderFileType type, Arch arch, OS os,
                                     uint32_t minOSVersion,

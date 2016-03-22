@@ -37,6 +37,8 @@ public:
   LazyPointerAtom(const File &file, bool is64)
     : SimpleDefinedAtom(file), _is64(is64) { }
 
+  ~LazyPointerAtom() override = default;
+
   ContentType contentType() const override {
     return DefinedAtom::typeLazyPointer;
   }
@@ -70,6 +72,8 @@ class NonLazyPointerAtom : public SimpleDefinedAtom {
 public:
   NonLazyPointerAtom(const File &file, bool is64, ContentType contentType)
     : SimpleDefinedAtom(file), _is64(is64), _contentType(contentType) { }
+
+  ~NonLazyPointerAtom() override = default;
 
   ContentType contentType() const override {
     return _contentType;
@@ -106,6 +110,8 @@ public:
   StubAtom(const File &file, const ArchHandler::StubInfo &stubInfo)
       : SimpleDefinedAtom(file), _stubInfo(stubInfo){ }
 
+  ~StubAtom() override = default;
+
   ContentType contentType() const override {
     return DefinedAtom::typeStub;
   }
@@ -137,6 +143,8 @@ class StubHelperAtom : public SimpleDefinedAtom {
 public:
   StubHelperAtom(const File &file, const ArchHandler::StubInfo &stubInfo)
       : SimpleDefinedAtom(file), _stubInfo(stubInfo) { }
+
+  ~StubHelperAtom() override = default;
 
   ContentType contentType() const override {
     return DefinedAtom::typeStubHelper;
@@ -170,6 +178,8 @@ class StubHelperCommonAtom : public SimpleDefinedAtom {
 public:
   StubHelperCommonAtom(const File &file, const ArchHandler::StubInfo &stubInfo)
       : SimpleDefinedAtom(file), _stubInfo(stubInfo) { }
+
+  ~StubHelperCommonAtom() override = default;
 
   ContentType contentType() const override {
     return DefinedAtom::typeStubHelper;

@@ -97,6 +97,7 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
         continue;
       case 0x458B:  // 8B 45 XX = mov eax, dword ptr [ebp+XXh]
       case 0x5D8B:  // 8B 5D XX = mov ebx, dword ptr [ebp+XXh]
+      case 0x7D8B:  // 8B 7D XX = mov edi, dword ptr [ebp+XXh]
       case 0xEC83:  // 83 EC XX = sub esp, XX
       case 0x75FF:  // FF 75 XX = push dword ptr [ebp+XXh]
         cursor += 3;
@@ -196,6 +197,7 @@ static void **InterestingDLLsAvailable() {
     "kernel32.dll",
     "msvcr110.dll", // VS2012
     "msvcr120.dll", // VS2013
+    "ucrtbase.dll", // Universal CRT
     // NTDLL should go last as it exports some functions that we should override
     // in the CRT [presumably only used internally].
     "ntdll.dll", NULL

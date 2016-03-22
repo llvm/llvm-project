@@ -195,7 +195,7 @@ private:
 
 /// Mapping of Atoms.
 template <typename T> class AtomList {
-  typedef lld::File::AtomVector<T> Ty;
+  using Ty = std::vector<OwningAtomPtr<T>>;
 
 public:
   typename Ty::iterator begin() { return _atoms.begin(); }
@@ -503,10 +503,20 @@ template <> struct MappingTraits<ArchMember> {
 // Declare that an AtomList is a yaml sequence.
 template <typename T> struct SequenceTraits<AtomList<T> > {
   static size_t size(IO &io, AtomList<T> &seq) { return seq._atoms.size(); }
-  static const T *&element(IO &io, AtomList<T> &seq, size_t index) {
+  static T *&element(IO &io, AtomList<T> &seq, size_t index) {
     if (index >= seq._atoms.size())
       seq._atoms.resize(index + 1);
-    return seq._atoms[index];
+    return seq._atoms[index].get();
+  }
+};
+
+// Declare that an AtomRange is a yaml sequence.
+template <typename T> struct SequenceTraits<File::AtomRange<T> > {
+  static size_t size(IO &io, File::AtomRange<T> &seq) { return seq.size(); }
+  static T *&element(IO &io, File::AtomRange<T> &seq, size_t index) {
+    assert(io.outputting() && "AtomRange only used when outputting");
+    assert(index < seq.size() && "Out of range access");
+    return seq[index].get();
   }
 };
 
@@ -558,21 +568,27 @@ template <> struct MappingTraits<const lld::File *> {
 
     const lld::File *denormalize(IO &io) { return this; }
 
-    const AtomVector<lld::DefinedAtom> &defined() const override {
+    const AtomRange<lld::DefinedAtom> defined() const override {
       return _noDefinedAtoms;
     }
 
-    const AtomVector<lld::UndefinedAtom> &undefined() const override {
+    const AtomRange<lld::UndefinedAtom> undefined() const override {
       return _noUndefinedAtoms;
     }
 
-    const AtomVector<lld::SharedLibraryAtom> &
-    sharedLibrary() const override {
+    const AtomRange<lld::SharedLibraryAtom> sharedLibrary() const override {
       return _noSharedLibraryAtoms;
     }
 
-    const AtomVector<lld::AbsoluteAtom> &absolute() const override {
+    const AtomRange<lld::AbsoluteAtom> absolute() const override {
       return _noAbsoluteAtoms;
+    }
+
+    void clearAtoms() override {
+      _noDefinedAtoms.clear();
+      _noUndefinedAtoms.clear();
+      _noSharedLibraryAtoms.clear();
+      _noAbsoluteAtoms.clear();
     }
 
     File *find(StringRef name, bool dataSymbolOnly) override {
@@ -606,36 +622,46 @@ template <> struct MappingTraits<const lld::File *> {
   class NormalizedFile : public lld::File {
   public:
     NormalizedFile(IO &io)
-      : File("", kindNormalizedObject), _io(io), _rnb(nullptr) {}
+      : File("", kindNormalizedObject), _io(io), _rnb(nullptr),
+        _definedAtomsRef(_definedAtoms._atoms),
+        _undefinedAtomsRef(_undefinedAtoms._atoms),
+        _sharedLibraryAtomsRef(_sharedLibraryAtoms._atoms),
+        _absoluteAtomsRef(_absoluteAtoms._atoms) {}
     NormalizedFile(IO &io, const lld::File *file)
         : File(file->path(), kindNormalizedObject), _io(io),
-          _rnb(new RefNameBuilder(*file)), _path(file->path()) {
-      for (const lld::DefinedAtom *a : file->defined())
-        _definedAtoms._atoms.push_back(a);
-      for (const lld::UndefinedAtom *a : file->undefined())
-        _undefinedAtoms._atoms.push_back(a);
-      for (const lld::SharedLibraryAtom *a : file->sharedLibrary())
-        _sharedLibraryAtoms._atoms.push_back(a);
-      for (const lld::AbsoluteAtom *a : file->absolute())
-        _absoluteAtoms._atoms.push_back(a);
+          _rnb(new RefNameBuilder(*file)), _path(file->path()),
+        _definedAtomsRef(file->defined()),
+        _undefinedAtomsRef(file->undefined()),
+        _sharedLibraryAtomsRef(file->sharedLibrary()),
+        _absoluteAtomsRef(file->absolute()) {
     }
+
+    ~NormalizedFile() override {
+    }
+
     const lld::File *denormalize(IO &io);
 
-    const AtomVector<lld::DefinedAtom> &defined() const override {
-      return _definedAtoms._atoms;
+    const AtomRange<lld::DefinedAtom> defined() const override {
+      return _definedAtomsRef;
     }
 
-    const AtomVector<lld::UndefinedAtom> &undefined() const override {
-      return _undefinedAtoms._atoms;
+    const AtomRange<lld::UndefinedAtom> undefined() const override {
+      return _undefinedAtomsRef;
     }
 
-    const AtomVector<lld::SharedLibraryAtom> &
-    sharedLibrary() const override {
-      return _sharedLibraryAtoms._atoms;
+    const AtomRange<lld::SharedLibraryAtom> sharedLibrary() const override {
+      return _sharedLibraryAtomsRef;
     }
 
-    const AtomVector<lld::AbsoluteAtom> &absolute() const override {
-      return _absoluteAtoms._atoms;
+    const AtomRange<lld::AbsoluteAtom> absolute() const override {
+      return _absoluteAtomsRef;
+    }
+
+    void clearAtoms() override {
+      _definedAtoms._atoms.clear();
+      _undefinedAtoms._atoms.clear();
+      _sharedLibraryAtoms._atoms.clear();
+      _absoluteAtoms._atoms.clear();
     }
 
     // Allocate a new copy of this string in _storage, so the strings
@@ -653,6 +679,10 @@ template <> struct MappingTraits<const lld::File *> {
     AtomList<lld::UndefinedAtom>         _undefinedAtoms;
     AtomList<lld::SharedLibraryAtom>     _sharedLibraryAtoms;
     AtomList<lld::AbsoluteAtom>          _absoluteAtoms;
+    AtomRange<lld::DefinedAtom>          _definedAtomsRef;
+    AtomRange<lld::UndefinedAtom>        _undefinedAtomsRef;
+    AtomRange<lld::SharedLibraryAtom>    _sharedLibraryAtomsRef;
+    AtomRange<lld::AbsoluteAtom>         _absoluteAtomsRef;
     llvm::BumpPtrAllocator               _storage;
   };
 
@@ -676,10 +706,18 @@ template <> struct MappingTraits<const lld::File *> {
     info->_file = keys.operator->();
 
     io.mapOptional("path",                 keys->_path);
-    io.mapOptional("defined-atoms",        keys->_definedAtoms);
-    io.mapOptional("undefined-atoms",      keys->_undefinedAtoms);
-    io.mapOptional("shared-library-atoms", keys->_sharedLibraryAtoms);
-    io.mapOptional("absolute-atoms",       keys->_absoluteAtoms);
+
+    if (io.outputting()) {
+      io.mapOptional("defined-atoms",        keys->_definedAtomsRef);
+      io.mapOptional("undefined-atoms",      keys->_undefinedAtomsRef);
+      io.mapOptional("shared-library-atoms", keys->_sharedLibraryAtomsRef);
+      io.mapOptional("absolute-atoms",       keys->_absoluteAtomsRef);
+    } else {
+      io.mapOptional("defined-atoms",        keys->_definedAtoms);
+      io.mapOptional("undefined-atoms",      keys->_undefinedAtoms);
+      io.mapOptional("shared-library-atoms", keys->_sharedLibraryAtoms);
+      io.mapOptional("absolute-atoms",       keys->_absoluteAtoms);
+    }
   }
 
   static void mappingArchive(IO &io, const lld::File *&file) {
@@ -790,6 +828,9 @@ template <> struct MappingTraits<const lld::DefinedAtom *> {
       for (uint8_t x : cont)
         _content.push_back(x);
     }
+
+    ~NormalizedAtom() override = default;
+    
     const lld::DefinedAtom *denormalize(IO &io) {
       YamlContext *info = reinterpret_cast<YamlContext *>(io.getContext());
       assert(info != nullptr);
@@ -938,6 +979,14 @@ template <> struct MappingTraits<const lld::DefinedAtom *> {
   }
 };
 
+template <> struct MappingTraits<lld::DefinedAtom *> {
+  static void mapping(IO &io, lld::DefinedAtom *&atom) {
+    const lld::DefinedAtom *atomPtr = atom;
+    MappingTraits<const lld::DefinedAtom *>::mapping(io, atomPtr);
+    atom = const_cast<lld::DefinedAtom *>(atomPtr);
+  }
+};
+
 // YAML conversion for const lld::UndefinedAtom*
 template <> struct MappingTraits<const lld::UndefinedAtom *> {
 
@@ -949,6 +998,8 @@ template <> struct MappingTraits<const lld::UndefinedAtom *> {
     NormalizedAtom(IO &io, const lld::UndefinedAtom *atom)
         : _file(fileFromContext(io)), _name(atom->name()),
           _canBeNull(atom->canBeNull()) {}
+
+    ~NormalizedAtom() override = default;
 
     const lld::UndefinedAtom *denormalize(IO &io) {
       YamlContext *info = reinterpret_cast<YamlContext *>(io.getContext());
@@ -993,6 +1044,14 @@ template <> struct MappingTraits<const lld::UndefinedAtom *> {
   }
 };
 
+template <> struct MappingTraits<lld::UndefinedAtom *> {
+  static void mapping(IO &io, lld::UndefinedAtom *&atom) {
+    const lld::UndefinedAtom *atomPtr = atom;
+    MappingTraits<const lld::UndefinedAtom *>::mapping(io, atomPtr);
+    atom = const_cast<lld::UndefinedAtom *>(atomPtr);
+  }
+};
+
 // YAML conversion for const lld::SharedLibraryAtom*
 template <> struct MappingTraits<const lld::SharedLibraryAtom *> {
 
@@ -1005,6 +1064,8 @@ template <> struct MappingTraits<const lld::SharedLibraryAtom *> {
         : _file(fileFromContext(io)), _name(atom->name()),
           _loadName(atom->loadName()), _canBeNull(atom->canBeNullAtRuntime()),
           _type(atom->type()), _size(atom->size()) {}
+
+    ~NormalizedAtom() override = default;
 
     const lld::SharedLibraryAtom *denormalize(IO &io) {
       YamlContext *info = reinterpret_cast<YamlContext *>(io.getContext());
@@ -1061,6 +1122,14 @@ template <> struct MappingTraits<const lld::SharedLibraryAtom *> {
   }
 };
 
+template <> struct MappingTraits<lld::SharedLibraryAtom *> {
+  static void mapping(IO &io, lld::SharedLibraryAtom *&atom) {
+    const lld::SharedLibraryAtom *atomPtr = atom;
+    MappingTraits<const lld::SharedLibraryAtom *>::mapping(io, atomPtr);
+    atom = const_cast<lld::SharedLibraryAtom *>(atomPtr);
+  }
+};
+
 // YAML conversion for const lld::AbsoluteAtom*
 template <> struct MappingTraits<const lld::AbsoluteAtom *> {
 
@@ -1071,6 +1140,9 @@ template <> struct MappingTraits<const lld::AbsoluteAtom *> {
     NormalizedAtom(IO &io, const lld::AbsoluteAtom *atom)
         : _file(fileFromContext(io)), _name(atom->name()),
           _scope(atom->scope()), _value(atom->value()) {}
+
+    ~NormalizedAtom() override = default;
+
     const lld::AbsoluteAtom *denormalize(IO &io) {
       YamlContext *info = reinterpret_cast<YamlContext *>(io.getContext());
       assert(info != nullptr);
@@ -1126,6 +1198,14 @@ template <> struct MappingTraits<const lld::AbsoluteAtom *> {
     io.mapOptional("ref-name", keys->_refName, StringRef());
     io.mapOptional("scope",    keys->_scope);
     io.mapRequired("value",    keys->_value);
+  }
+};
+
+template <> struct MappingTraits<lld::AbsoluteAtom *> {
+  static void mapping(IO &io, lld::AbsoluteAtom *&atom) {
+    const lld::AbsoluteAtom *atomPtr = atom;
+    MappingTraits<const lld::AbsoluteAtom *>::mapping(io, atomPtr);
+    atom = const_cast<lld::AbsoluteAtom *>(atomPtr);
   }
 };
 
