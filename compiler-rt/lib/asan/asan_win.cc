@@ -242,10 +242,16 @@ int __asan_set_seh_filter() {
 }
 
 #if !ASAN_DYNAMIC
-// Put a pointer to __asan_set_seh_filter at the end of the global list
-// of C initializers, after the default EH is set by the CRT.
-#pragma section(".CRT$XIZ", long, read)  // NOLINT
-__declspec(allocate(".CRT$XIZ"))
+// The CRT runs initializers in this order:
+// - C initializers, from XIA to XIZ
+// - C++ initializers, from XCA to XCZ
+// Prior to 2015, the CRT set the unhandled exception filter at priority XIY,
+// near the end of C initialization. Starting in 2015, it was moved to the
+// beginning of C++ initialization. We set our priority to XCAB to run
+// immediately after the CRT runs. This way, our exception filter is called
+// first and we can delegate to their filter if appropriate.
+#pragma section(".CRT$XCAB", long, read)  // NOLINT
+__declspec(allocate(".CRT$XCAB"))
     int (*__intercept_seh)() = __asan_set_seh_filter;
 #endif
 // }}}

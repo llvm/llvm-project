@@ -189,6 +189,7 @@ AppleGetItemInfoHandler::SetupGetItemInfoFunction(Thread &thread, ValueList &get
             
             get_item_info_caller = m_get_item_info_impl_code->MakeFunctionCaller(get_item_info_return_type,
                                                                                  get_item_info_arglist,
+                                                                                 thread.shared_from_this(),
                                                                                  error);
             if (error.Fail())
             {

@@ -163,6 +163,10 @@ void InitializeFlags() {
     Report("WARNING: strlen interceptor is enabled even though replace_str=0. "
            "Use intercept_strlen=0 to disable it.");
   }
+  if (!f->replace_str && common_flags()->intercept_strchr) {
+    Report("WARNING: strchr* interceptors are enabled even though "
+           "replace_str=0. Use intercept_strchr=0 to disable them.");
+  }
 }
 
 }  // namespace __asan

@@ -200,7 +200,8 @@ class StubsPass : public Pass {
 public:
   StubsPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _stubInfo(_archHandler.stubInfo()), _file("<mach-o Stubs pass>") {
+        _stubInfo(_archHandler.stubInfo()),
+        _file(*_ctx.make_file<MachOFile>("<mach-o Stubs pass>")) {
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
@@ -356,7 +357,7 @@ private:
   const MachOLinkingContext &_ctx;
   mach_o::ArchHandler                            &_archHandler;
   const ArchHandler::StubInfo                    &_stubInfo;
-  MachOFile                                       _file;
+  MachOFile                                      &_file;
   TargetToUses                                    _targetToUses;
 };
 

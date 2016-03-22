@@ -65,7 +65,7 @@ class TLVPass : public Pass {
 public:
   TLVPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _file("<mach-o TLV Pass>") {
+        _file(*_ctx.make_file<MachOFile>("<mach-o TLV pass>")) {
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
@@ -126,7 +126,7 @@ private:
 
   const MachOLinkingContext &_ctx;
   mach_o::ArchHandler &_archHandler;
-  MachOFile _file;
+  MachOFile           &_file;
   llvm::DenseMap<const Atom*, const TLVPEntryAtom*> _targetToTLVP;
 };
 

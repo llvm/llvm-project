@@ -273,7 +273,7 @@ class CompactUnwindPass : public Pass {
 public:
   CompactUnwindPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _file("<mach-o Compact Unwind Pass>"),
+        _file(*_ctx.make_file<MachOFile>("<mach-o Compact Unwind Pass>")),
         _isBig(MachOLinkingContext::isBigEndian(_ctx.arch())) {
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
@@ -567,7 +567,7 @@ private:
 
   const MachOLinkingContext &_ctx;
   mach_o::ArchHandler &_archHandler;
-  MachOFile _file;
+  MachOFile &_file;
   bool _isBig;
 };
 

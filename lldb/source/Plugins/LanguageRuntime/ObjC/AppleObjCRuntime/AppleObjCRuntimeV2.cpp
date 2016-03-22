@@ -1308,6 +1308,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
         
         get_class_info_function = m_get_class_info_code->MakeFunctionCaller(clang_uint32_t_type,
                                                                             arguments,
+                                                                            thread_sp,
                                                                             error);
         
         if (error.Fail())
@@ -1567,6 +1568,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
         
         get_shared_cache_class_info_function = m_get_shared_cache_class_info_code->MakeFunctionCaller(clang_uint32_t_type,
                                                                                                       arguments,
+                                                                                                      thread_sp,
                                                                                                       error);
         
         if (get_shared_cache_class_info_function == nullptr)

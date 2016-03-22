@@ -49,6 +49,11 @@ void _free_dbg(void *ptr, int) {
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE
+void _free_base(void *ptr) {
+  free(ptr);
+}
+
+ALLOCATION_FUNCTION_ATTRIBUTE
 void cfree(void *ptr) {
   CHECK(!"cfree() should not be used on Windows");
 }
@@ -60,6 +65,11 @@ void *malloc(size_t size) {
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE
+void *_malloc_base(size_t size) {
+  return malloc(size);
+}
+
+ALLOCATION_FUNCTION_ATTRIBUTE
 void *_malloc_dbg(size_t size, int, const char *, int) {
   return malloc(size);
 }
@@ -68,6 +78,11 @@ ALLOCATION_FUNCTION_ATTRIBUTE
 void *calloc(size_t nmemb, size_t size) {
   GET_STACK_TRACE_MALLOC;
   return asan_calloc(nmemb, size, &stack);
+}
+
+ALLOCATION_FUNCTION_ATTRIBUTE
+void *_calloc_base(size_t nmemb, size_t size) {
+  return calloc(nmemb, size);
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE
@@ -90,6 +105,11 @@ ALLOCATION_FUNCTION_ATTRIBUTE
 void *_realloc_dbg(void *ptr, size_t size, int) {
   CHECK(!"_realloc_dbg should not exist!");
   return 0;
+}
+
+ALLOCATION_FUNCTION_ATTRIBUTE
+void *_realloc_base(void *ptr, size_t size) {
+  return realloc(ptr, size);
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE

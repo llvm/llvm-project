@@ -93,7 +93,7 @@ class ObjCPass : public Pass {
 public:
   ObjCPass(const MachOLinkingContext &context)
       : _ctx(context),
-        _file("<mach-o objc pass>") {
+        _file(*_ctx.make_file<MachOFile>("<mach-o objc pass>")) {
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
@@ -113,7 +113,7 @@ private:
   }
 
   const MachOLinkingContext   &_ctx;
-  MachOFile                   _file;
+  MachOFile                   &_file;
 };
 
 

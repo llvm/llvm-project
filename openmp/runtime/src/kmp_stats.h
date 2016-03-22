@@ -111,6 +111,8 @@ enum stats_flags_e {
     macro (FOR_static_scheduling, 0, arg)                               \
     macro (FOR_dynamic_scheduling, 0, arg)                              \
     macro (OMP_task,      0, arg)                                       \
+    macro (OMP_critical,  0, arg)                                       \
+    macro (OMP_critical_wait,  0, arg)                                  \
     macro (OMP_single,    0, arg)                                       \
     macro (OMP_master,    0, arg)                                       \
     macro (OMP_set_numthreads,    stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
@@ -198,6 +200,7 @@ enum stats_flags_e {
 #define KMP_FOREACH_EXPLICIT_TIMER(macro, arg)          \
     macro(OMP_serial, 0, arg)                           \
     macro(OMP_start_end, 0, arg)                        \
+    macro(OMP_critical, 0, arg)                         \
     macro(OMP_single, 0, arg)                           \
     macro(OMP_master, 0, arg)                           \
     KMP_FOREACH_EXPLICIT_DEVELOPER_TIMER(macro,arg)     \

@@ -741,9 +741,11 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler (const ProcessSP &process
 lldb::addr_t
 AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread, ValueList &dispatch_values)
 {
-    ExecutionContext exe_ctx(thread.shared_from_this());
+    ThreadSP thread_sp(thread.shared_from_this());
+    ExecutionContext exe_ctx (thread_sp);
     DiagnosticManager diagnostics;
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+
     lldb::addr_t args_addr = LLDB_INVALID_ADDRESS;
     FunctionCaller *impl_function_caller = nullptr;
 
@@ -795,6 +797,7 @@ AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread, ValueList &dis
             
             impl_function_caller = m_impl_code->MakeFunctionCaller(clang_void_ptr_type,
                                                                    dispatch_values,
+                                                                   thread_sp,
                                                                    error);
             if (error.Fail())
             {

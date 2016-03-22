@@ -70,7 +70,7 @@ UtilityFunction::~UtilityFunction ()
 // FIXME: We should check that every time this is called it is called with the same return type & arguments...
 
 FunctionCaller *
-UtilityFunction::MakeFunctionCaller (const CompilerType &return_type, const ValueList &arg_value_list, Error &error)
+UtilityFunction::MakeFunctionCaller (const CompilerType &return_type, const ValueList &arg_value_list, lldb::ThreadSP thread_to_use_sp, Error &error)
 {
     if (m_caller_up)
         return m_caller_up.get();
@@ -99,7 +99,7 @@ UtilityFunction::MakeFunctionCaller (const CompilerType &return_type, const Valu
     {
         DiagnosticManager diagnostics;
 
-        unsigned num_errors = m_caller_up->CompileFunction(diagnostics);
+        unsigned num_errors = m_caller_up->CompileFunction(thread_to_use_sp, diagnostics);
         if (num_errors)
         {
             error.SetErrorStringWithFormat("Error compiling %s caller function: \"%s\".", m_function_name.c_str(),

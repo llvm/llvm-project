@@ -7,6 +7,7 @@ SubModule1/Header1.h
 SubModule1/Header2.h
 SubModule2/Header3.h
 SubModule2/Header4.h
+SubModule2/Header5-dash.dot.h
 SubModule2.h
 
 # CHECK: // Output/NoProblemsAssistant.txt
@@ -37,6 +38,10 @@ SubModule2.h
 # CHECK-NEXT:     }
 # CHECK-NEXT:     module Header4 {
 # CHECK-NEXT:       header "SubModule2/Header4.h"
+# CHECK-NEXT:       export *
+# CHECK-NEXT:     }
+# CHECK-NEXT:     module Header5_dash_dot {
+# CHECK-NEXT:       header "SubModule2/Header5-dash.dot.h"
 # CHECK-NEXT:       export *
 # CHECK-NEXT:     }
 # CHECK-NEXT:     header "SubModule2.h"

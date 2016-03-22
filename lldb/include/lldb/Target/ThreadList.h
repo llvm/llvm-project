@@ -62,7 +62,7 @@ public:
         
         ~ExpressionExecutionThreadPusher()
         {
-            if (m_thread_list)
+            if (m_thread_list && m_tid != LLDB_INVALID_THREAD_ID)
                 m_thread_list->PopExpressionExecutionThread(m_tid);
         }
         
