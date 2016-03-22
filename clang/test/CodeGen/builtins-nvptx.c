@@ -189,7 +189,7 @@ __shared__ long long sll;
 
 // Check for atomic intrinsics
 // CHECK-LABEL: nvvm_atom
-__device__ void nvvm_atom(float *fp, float f, int *ip, int i, long *lp, long l,
+__device__ void nvvm_atom(float *fp, float f, int *ip, int i, unsigned int *uip, unsigned ui, long *lp, long l,
                           long long *llp, long long ll) {
   // CHECK: atomicrmw add
   __nvvm_atom_add_gen_i(ip, i);
@@ -271,6 +271,12 @@ __device__ void nvvm_atom(float *fp, float f, int *ip, int i, long *lp, long l,
 
   // CHECK: call float @llvm.nvvm.atomic.load.add.f32.p0f32
   __nvvm_atom_add_gen_f(fp, f);
+
+  // CHECK: call i32 @llvm.nvvm.atomic.load.inc.32.p0i32
+  __nvvm_atom_inc_gen_ui(uip, ui);
+
+  // CHECK: call i32 @llvm.nvvm.atomic.load.dec.32.p0i32
+  __nvvm_atom_dec_gen_ui(uip, ui);
 
   // CHECK: ret
 }

@@ -86,9 +86,7 @@ FunctionScopeInfo::WeakObjectProfileTy::getBaseInfo(const Expr *E) {
     if (BaseProp) {
       D = getBestPropertyDecl(BaseProp);
 
-      if (BaseProp->isClassReceiver())
-        IsExact = true;
-      else {
+      if (BaseProp->isObjectReceiver()) {
         const Expr *DoubleBase = BaseProp->getBase();
         if (const OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(DoubleBase))
           DoubleBase = OVE->getSourceExpr();

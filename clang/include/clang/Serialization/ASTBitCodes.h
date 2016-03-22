@@ -484,9 +484,8 @@ namespace clang {
       /// that were modified after being deserialized and need updates.
       DECL_UPDATE_OFFSETS = 29,
 
-      /// \brief Record of updates for a declaration that was modified after
-      /// being deserialized.
-      DECL_UPDATES = 30,
+      // ID 30 used to be a decl update record. These are now in the DECLTYPES
+      // block.
       
       /// \brief Record code for the table of offsets to CXXBaseSpecifier
       /// sets.
@@ -833,7 +832,7 @@ namespace clang {
     /// These constants describe the type records that can occur within a
     /// block identified by DECLTYPES_BLOCK_ID in the AST file. Each
     /// constant describes a record for a specific type class in the
-    /// AST.
+    /// AST. Note that DeclCode values share this code space.
     enum TypeCode {
       /// \brief An ExtQualType record.
       TYPE_EXT_QUAL                 = 1,
@@ -1010,15 +1009,20 @@ namespace clang {
     /// \c PredefinedDeclIDs type and the PREDEF_DECL_*_ID constants.
     const unsigned int NUM_PREDEF_DECL_IDS = 16;
 
+    /// \brief Record of updates for a declaration that was modified after
+    /// being deserialized. This can occur within DECLTYPES_BLOCK_ID.
+    const unsigned int DECL_UPDATES = 49;
+
     /// \brief Record code for a list of local redeclarations of a declaration.
+    /// This can occur within DECLTYPES_BLOCK_ID.
     const unsigned int LOCAL_REDECLARATIONS = 50;
     
     /// \brief Record codes for each kind of declaration.
     ///
     /// These constants describe the declaration records that can occur within
-    /// a declarations block (identified by DECLS_BLOCK_ID). Each
+    /// a declarations block (identified by DECLTYPES_BLOCK_ID). Each
     /// constant describes a record for a specific declaration class
-    /// in the AST.
+    /// in the AST. Note that TypeCode values share this code space.
     enum DeclCode {
       /// \brief A TypedefDecl record.
       DECL_TYPEDEF = 51,

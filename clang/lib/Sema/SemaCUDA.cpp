@@ -210,31 +210,28 @@ bool Sema::CheckCUDATarget(const FunctionDecl *Caller,
   return false;
 }
 
-template <typename T, typename FetchDeclFn>
-static void EraseUnwantedCUDAMatchesImpl(Sema &S, const FunctionDecl *Caller,
-                                         llvm::SmallVectorImpl<T> &Matches,
-                                         FetchDeclFn FetchDecl) {
+template <typename T>
+static void EraseUnwantedCUDAMatchesImpl(
+    Sema &S, const FunctionDecl *Caller, llvm::SmallVectorImpl<T> &Matches,
+    std::function<const FunctionDecl *(const T &)> FetchDecl) {
   assert(S.getLangOpts().CUDATargetOverloads &&
          "Should not be called w/o enabled target overloads.");
   if (Matches.size() <= 1)
     return;
 
+  // Gets the CUDA function preference for a call from Caller to Match.
+  auto GetCFP = [&](const T &Match) {
+    return S.IdentifyCUDAPreference(Caller, FetchDecl(Match));
+  };
+
   // Find the best call preference among the functions in Matches.
-  Sema::CUDAFunctionPreference P, BestCFP = Sema::CFP_Never;
-  for (auto const &Match : Matches) {
-    P = S.IdentifyCUDAPreference(Caller, FetchDecl(Match));
-    if (P > BestCFP)
-      BestCFP = P;
-  }
+  Sema::CUDAFunctionPreference BestCFP = GetCFP(*std::max_element(
+      Matches.begin(), Matches.end(),
+      [&](const T &M1, const T &M2) { return GetCFP(M1) < GetCFP(M2); }));
 
   // Erase all functions with lower priority.
-  for (unsigned I = 0, N = Matches.size(); I != N;)
-    if (S.IdentifyCUDAPreference(Caller, FetchDecl(Matches[I])) < BestCFP) {
-      Matches[I] = Matches[--N];
-      Matches.resize(N);
-    } else {
-      ++I;
-    }
+  Matches.erase(llvm::remove_if(
+      Matches, [&](const T &Match) { return GetCFP(Match) < BestCFP; }));
 }
 
 void Sema::EraseUnwantedCUDAMatches(const FunctionDecl *Caller,

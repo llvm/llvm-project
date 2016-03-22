@@ -707,9 +707,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  if (Args.hasArg(OPT_fno_objc_convert_messages_to_runtime_calls))
-    Opts.ObjCConvertMessagesToRuntimeCalls = 0;
-
   Opts.EmulatedTLS =
       Args.hasFlag(OPT_femulated_tls, OPT_fno_emulated_tls, false);
 

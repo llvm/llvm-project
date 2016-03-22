@@ -113,10 +113,7 @@ struct OrderGlobalInits {
 struct ObjCEntrypoints {
   ObjCEntrypoints() { memset(this, 0, sizeof(*this)); }
 
-  /// void objc_alloc(id);
-  llvm::Constant *objc_alloc;
-
-  /// void objc_autoreleasePoolPop(void*);
+    /// void objc_autoreleasePoolPop(void*);
   llvm::Constant *objc_autoreleasePoolPop;
 
   /// void *objc_autoreleasePoolPush(void);
