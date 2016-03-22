@@ -13,6 +13,7 @@
 #include "lld/Core/LinkingContext.h"
 #include "lld/Core/Reader.h"
 #include "lld/Core/Writer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -92,6 +93,18 @@ public:
   std::string demangle(StringRef symbolName) const override;
 
   void createImplicitFiles(std::vector<std::unique_ptr<File>> &) override;
+
+  /// Creates a new file which is owned by the context.  Returns a pointer to
+  /// the new file.
+  template <class T, class... Args>
+  typename std::enable_if<!std::is_array<T>::value, T *>::type
+  make_file(Args &&... args) const {
+    auto file = std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+    auto *filePtr = file.get();
+    auto *ctx = const_cast<MachOLinkingContext *>(this);
+    ctx->getNodes().push_back(llvm::make_unique<FileNode>(std::move(file)));
+    return filePtr;
+  }
 
   uint32_t getCPUType() const;
   uint32_t getCPUSubType() const;

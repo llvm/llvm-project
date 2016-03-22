@@ -157,9 +157,7 @@ static int compareCommons(DefinedCommon *A, DefinedCommon *B) {
   if (Config->WarnCommon)
     warning("multiple common of " + A->getName());
   A->Alignment = B->Alignment = std::max(A->Alignment, B->Alignment);
-  if (A->Size < B->Size)
-    return -1;
-  return 1;
+  return A->Size < B->Size ? -1 : 1;
 }
 
 // Returns 1, 0 or -1 if this symbol should take precedence

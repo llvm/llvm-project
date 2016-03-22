@@ -91,7 +91,7 @@ class GOTPass : public Pass {
 public:
   GOTPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _file("<mach-o GOT Pass>") {
+        _file(*_ctx.make_file<MachOFile>("<mach-o GOT Pass>")) {
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
@@ -169,7 +169,7 @@ private:
 
   const MachOLinkingContext &_ctx;
   mach_o::ArchHandler                             &_archHandler;
-  MachOFile                                        _file;
+  MachOFile                                       &_file;
   llvm::DenseMap<const Atom*, const GOTEntryAtom*> _targetToGOT;
 };
 

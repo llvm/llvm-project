@@ -139,9 +139,11 @@ AppleGetPendingItemsHandler::Detach ()
 lldb::addr_t
 AppleGetPendingItemsHandler::SetupGetPendingItemsFunction(Thread &thread, ValueList &get_pending_items_arglist)
 {
-    ExecutionContext exe_ctx(thread.shared_from_this());
+    ThreadSP thread_sp (thread.shared_from_this());
+    ExecutionContext exe_ctx (thread_sp);
     DiagnosticManager diagnostics;
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
+
     lldb::addr_t args_addr = LLDB_INVALID_ADDRESS;
     FunctionCaller *get_pending_items_caller = nullptr;
 
@@ -191,6 +193,7 @@ AppleGetPendingItemsHandler::SetupGetPendingItemsFunction(Thread &thread, ValueL
             CompilerType get_pending_items_return_type = clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
             get_pending_items_caller = m_get_pending_items_impl_code->MakeFunctionCaller (get_pending_items_return_type,
                                                                                           get_pending_items_arglist,
+                                                                                          thread_sp,
                                                                                           error);
             if (error.Fail())
             {

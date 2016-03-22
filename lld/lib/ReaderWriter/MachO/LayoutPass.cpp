@@ -333,8 +333,8 @@ void LayoutPass::buildFollowOnTable(SimpleFile::DefinedAtomRange &range) {
   ScopedTask task(getDefaultDomain(), "LayoutPass::buildFollowOnTable");
   // Set the initial size of the followon and the followonNext hash to the
   // number of atoms that we have.
-  _followOnRoots.resize(range.size());
-  _followOnNexts.resize(range.size());
+  _followOnRoots.reserve(range.size());
+  _followOnNexts.reserve(range.size());
   for (const DefinedAtom *ai : range) {
     for (const Reference *r : *ai) {
       if (r->kindNamespace() != lld::Reference::KindNamespace::all ||

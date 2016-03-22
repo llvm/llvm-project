@@ -142,7 +142,8 @@ AppleGetThreadItemInfoHandler::Detach ()
 lldb::addr_t
 AppleGetThreadItemInfoHandler::SetupGetThreadItemInfoFunction (Thread &thread, ValueList &get_thread_item_info_arglist)
 {
-    ExecutionContext exe_ctx(thread.shared_from_this());
+    ThreadSP thread_sp(thread.shared_from_this());
+    ExecutionContext exe_ctx (thread_sp);
     Address impl_code_address;
     DiagnosticManager diagnostics;
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
@@ -199,6 +200,7 @@ AppleGetThreadItemInfoHandler::SetupGetThreadItemInfoFunction (Thread &thread, V
             
             get_thread_item_info_caller =  m_get_thread_item_info_impl_code->MakeFunctionCaller (get_thread_item_info_return_type,
                                                                                                  get_thread_item_info_arglist,
+                                                                                                 thread_sp,
                                                                                                  error);
             if (error.Fail())
             {

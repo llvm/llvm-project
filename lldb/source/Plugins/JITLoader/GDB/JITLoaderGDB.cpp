@@ -90,14 +90,24 @@ typedef enum
     JIT_UNREGISTER_FN
 } jit_actions_t;
 
-template <typename ptr_t>
+template <typename ptr_t, bool packed_size>
 struct jit_code_entry
 {
     ptr_t    next_entry; // pointer
     ptr_t    prev_entry; // pointer
     ptr_t    symfile_addr; // pointer
-    uint64_t symfile_size;
+    uint64_t symfile_size __attribute__ ((aligned (8)));
 };
+
+template <typename ptr_t>
+struct jit_code_entry<ptr_t, true>
+{
+    ptr_t    next_entry; // pointer
+    ptr_t    prev_entry; // pointer
+    ptr_t    symfile_addr; // pointer
+    uint64_t symfile_size __attribute__ ((packed));
+};
+
 template <typename ptr_t>
 struct jit_descriptor
 {
@@ -269,13 +279,20 @@ bool
 JITLoaderGDB::ReadJITDescriptor(bool all_entries)
 {
     Target &target = m_process->GetTarget();
-    if (target.GetArchitecture().GetAddressByteSize() == 8)
-        return ReadJITDescriptorImpl<uint64_t>(all_entries);
+    const ArchSpec &arch_spec = target.GetArchitecture();
+    if (arch_spec.GetAddressByteSize() == 8)
+        return ReadJITDescriptorImpl<uint64_t, false>(all_entries);
     else
-        return ReadJITDescriptorImpl<uint32_t>(all_entries);
+    {
+        ArchSpec::Core core = arch_spec.GetCore();
+        if (ArchSpec::kCore_x86_32_first <= core && core <= ArchSpec::kCore_x86_32_last)
+            return ReadJITDescriptorImpl<uint32_t, true>(all_entries);
+        else
+            return ReadJITDescriptorImpl<uint32_t, false>(all_entries);
+    }
 }
 
-template <typename ptr_t>
+template <typename ptr_t, bool packed>
 bool
 JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries)
 {
@@ -309,7 +326,7 @@ JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries)
 
     while (jit_relevant_entry != 0)
     {
-        jit_code_entry<ptr_t> jit_entry;
+        jit_code_entry<ptr_t, packed> jit_entry;
         const size_t jit_entry_size = sizeof(jit_entry);
         bytes_read = m_process->DoReadMemory(jit_relevant_entry, &jit_entry, jit_entry_size, error);
         if (bytes_read != jit_entry_size || !error.Success())

@@ -10,8 +10,6 @@
 #include "gtest/gtest.h"
 #include "../../lib/ReaderWriter/MachO/MachONormalizedFile.h"
 #include "llvm/Support/MachO.h"
-#include <assert.h>
-#include <vector>
 
 using llvm::ErrorOr;
 

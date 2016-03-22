@@ -1114,6 +1114,7 @@ __kmpc_critical( ident_t * loc, kmp_int32 global_tid, kmp_critical_name * crit )
     __kmpc_critical_with_hint(loc, global_tid, crit, omp_lock_hint_none);
 #else
     KMP_COUNT_BLOCK(OMP_CRITICAL);
+    KMP_TIME_BLOCK(OMP_critical_wait);        /* Time spent waiting to enter the critical section */
     kmp_user_lock_p lck;
 
     KC_TRACE( 10, ("__kmpc_critical: called T#%d\n", global_tid ) );
@@ -1155,6 +1156,7 @@ __kmpc_critical( ident_t * loc, kmp_int32 global_tid, kmp_critical_name * crit )
     __kmp_itt_critical_acquired( lck );
 #endif /* USE_ITT_BUILD */
 
+    KMP_START_EXPLICIT_TIMER(OMP_critical);
     KA_TRACE( 15, ("__kmpc_critical: done T#%d\n", global_tid ));
 #endif // KMP_USE_DYNAMIC_LOCK
 }
@@ -1359,7 +1361,7 @@ __kmpc_end_critical(ident_t *loc, kmp_int32 global_tid, kmp_critical_name *crit)
 #endif
 
 #endif // KMP_USE_DYNAMIC_LOCK
-
+    KMP_STOP_EXPLICIT_TIMER(OMP_critical);
     KA_TRACE( 15, ("__kmpc_end_critical: done T#%d\n", global_tid ));
 }
 

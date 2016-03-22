@@ -35,7 +35,11 @@ template <typename K, typename V, typename Cmp = less<K>> struct map {
   iterator end() const;
 };
 
+template <typename K, typename V> struct multimap : map<K, V> {};
 template <typename K> struct unordered_set : set<K> {};
+template <typename K, typename V> struct unordered_map : map<K, V> {};
+template <typename K> struct unordered_multiset : set<K> {};
+template <typename K, typename V> struct unordered_multimap : map<K, V> {};
 
 template <typename K, typename Cmp = less<K>> struct multiset : set<K, Cmp> {};
 
@@ -114,10 +118,30 @@ int main() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be
   // CHECK-FIXES: {{^  }}us.find(10);{{$}}
 
+  std::unordered_multiset<int> ums;
+  find(ums.begin(), ums.end(), 10);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be
+  // CHECK-FIXES: {{^  }}ums.find(10);{{$}}
+
   std::map<int, int> intmap;
   find(intmap.begin(), intmap.end(), 46);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be
   // CHECK-FIXES: {{^  }}find(intmap.begin(), intmap.end(), 46);{{$}}
+
+  std::multimap<int, int> intmmap;
+  find(intmmap.begin(), intmmap.end(), 46);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be
+  // CHECK-FIXES: {{^  }}find(intmmap.begin(), intmmap.end(), 46);{{$}}
+
+  std::unordered_map<int, int> umap;
+  find(umap.begin(), umap.end(), 46);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be
+  // CHECK-FIXES: {{^  }}find(umap.begin(), umap.end(), 46);{{$}}
+
+  std::unordered_multimap<int, int> ummap;
+  find(ummap.begin(), ummap.end(), 46);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be
+  // CHECK-FIXES: {{^  }}find(ummap.begin(), ummap.end(), 46);{{$}}
 }
 
 struct Value {

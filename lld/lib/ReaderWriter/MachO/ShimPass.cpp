@@ -42,7 +42,8 @@ class ShimPass : public Pass {
 public:
   ShimPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _stubInfo(_archHandler.stubInfo()), _file("<mach-o shim pass>") {
+        _stubInfo(_archHandler.stubInfo()),
+        _file(*_ctx.make_file<MachOFile>("<mach-o shim pass>")) {
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
@@ -114,7 +115,7 @@ private:
   const MachOLinkingContext &_ctx;
   mach_o::ArchHandler                            &_archHandler;
   const ArchHandler::StubInfo                    &_stubInfo;
-  MachOFile                                       _file;
+  MachOFile                                      &_file;
   llvm::DenseMap<const Atom*, const DefinedAtom*> _targetToShim;
 };
 

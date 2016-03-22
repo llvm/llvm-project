@@ -147,7 +147,9 @@ AppleGetQueuesHandler::Detach ()
 lldb::addr_t
 AppleGetQueuesHandler::SetupGetQueuesFunction (Thread &thread, ValueList &get_queues_arglist)
 {
-    ExecutionContext exe_ctx(thread.shared_from_this());
+    ThreadSP thread_sp(thread.shared_from_this());
+    ExecutionContext exe_ctx (thread_sp);
+
     Address impl_code_address;
     DiagnosticManager diagnostics;
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
@@ -205,6 +207,7 @@ AppleGetQueuesHandler::SetupGetQueuesFunction (Thread &thread, ValueList &get_qu
         Error error;
         get_queues_caller = m_get_queues_impl_code_up->MakeFunctionCaller (get_queues_return_type,
                                                                        get_queues_arglist,
+                                                                       thread_sp,
                                                                        error);
         if (error.Fail())
         {
