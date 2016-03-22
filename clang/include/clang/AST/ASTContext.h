@@ -36,6 +36,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/Allocator.h"
@@ -393,8 +394,8 @@ private:
 
   /// \brief Side-table of mangling numbers for declarations which rarely
   /// need them (like static local vars).
-  llvm::DenseMap<const NamedDecl *, unsigned> MangleNumbers;
-  llvm::DenseMap<const VarDecl *, unsigned> StaticLocalNumbers;
+  llvm::MapVector<const NamedDecl *, unsigned> MangleNumbers;
+  llvm::MapVector<const VarDecl *, unsigned> StaticLocalNumbers;
 
   /// \brief Mapping that stores parameterIndex values for ParmVarDecls when
   /// that value exceeds the bitfield size of ParmVarDeclBits.ParameterIndex.

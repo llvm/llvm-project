@@ -189,6 +189,7 @@ public:
   /// [self foo].prop   | 0 (unknown)         | prop (ObjCPropertyDecl)
   /// self.prop1.prop2  | prop1 (ObjCPropertyDecl)    | prop2 (ObjCPropertyDecl)
   /// MyClass.prop      | MyClass (ObjCInterfaceDecl) | -prop (ObjCMethodDecl)
+  /// MyClass.foo.prop  | +foo (ObjCMethodDecl)       | -prop (ObjCPropertyDecl)
   /// weakVar           | 0 (known)           | weakVar (VarDecl)
   /// self->weakIvar    | self (VarDecl)      | weakIvar (ObjCIvarDecl)
   ///

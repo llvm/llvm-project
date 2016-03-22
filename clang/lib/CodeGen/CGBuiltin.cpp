@@ -7439,6 +7439,22 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(FnALAF32, {Ptr, Val});
   }
 
+  case NVPTX::BI__nvvm_atom_inc_gen_ui: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Value *Val = EmitScalarExpr(E->getArg(1));
+    Value *FnALI32 =
+        CGM.getIntrinsic(Intrinsic::nvvm_atomic_load_inc_32, Ptr->getType());
+    return Builder.CreateCall(FnALI32, {Ptr, Val});
+  }
+
+  case NVPTX::BI__nvvm_atom_dec_gen_ui: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Value *Val = EmitScalarExpr(E->getArg(1));
+    Value *FnALD32 =
+        CGM.getIntrinsic(Intrinsic::nvvm_atomic_load_dec_32, Ptr->getType());
+    return Builder.CreateCall(FnALD32, {Ptr, Val});
+  }
+
   default:
     return nullptr;
   }

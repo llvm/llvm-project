@@ -4182,6 +4182,14 @@ void CGOpenMPRuntime::emitTargetOutlinedFunction(
     CGF.EmitStmt(CS.getCapturedStmt());
   };
 
+  emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
+                                   IsOffloadEntry, CodeGen);
+}
+
+void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
+    const OMPExecutableDirective &D, StringRef ParentName,
+    llvm::Function *&OutlinedFn, llvm::Constant *&OutlinedFnID,
+    bool IsOffloadEntry, const RegionCodeGenTy &CodeGen) {
   // Create a unique name for the entry function using the source location
   // information of the current target region. The name will be something like:
   //
@@ -4202,6 +4210,8 @@ void CGOpenMPRuntime::emitTargetOutlinedFunction(
     OS << "__omp_offloading" << llvm::format("_%x", DeviceID)
        << llvm::format("_%x_", FileID) << ParentName << "_l" << Line;
   }
+
+  const CapturedStmt &CS = *cast<CapturedStmt>(D.getAssociatedStmt());
 
   CodeGenFunction CGF(CGM, true);
   CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);

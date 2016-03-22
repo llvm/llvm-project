@@ -29,6 +29,7 @@ or create a symbolic link so it updates automatically.
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::TemplateTypeParm" IncludeView="poly">{*(clang::TemplateTypeParmType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::SubstTemplateTypeParm" IncludeView="poly">{*(clang::SubstTemplateTypeParmType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Record" IncludeView="poly">{*(clang::RecordType *)this}</DisplayString>
+    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Record" IncludeView="cpp">{*(clang::RecordType *)this,view(cpp)}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::FunctionProto" IncludeView="poly">{*(clang::FunctionProtoType *)this}</DisplayString>
     <DisplayString IncludeView="cpp">{*this,view(poly)}</DisplayString>
     <DisplayString IncludeView="poly">{*this,view(cmn)}"</DisplayString> <!-- Not yet implemented Type subclass -->
@@ -81,40 +82,51 @@ or create a symbolic link so it updates automatically.
     <DisplayString>{(clang::Decl::Kind)DeclKind,en}Decl</DisplayString>
     <Expand>
       <Item Name="DeclKind">(clang::Decl::Kind)DeclKind,en</Item>
-      <LinkedListItems>
-        <HeadPointer>FirstDecl</HeadPointer>
-        <NextPointer>(clang::Decl *)(NextInContextAndBits.Value &amp; ~3)</NextPointer>
-        <ValueNode>*this</ValueNode>
-      </LinkedListItems>
+      <Synthetic Name="Members">
+        <DisplayString></DisplayString>
+        <Expand>
+          <LinkedListItems>
+            <HeadPointer>FirstDecl</HeadPointer>
+            <NextPointer>(clang::Decl *)(NextInContextAndBits.Value &amp; ~3)</NextPointer>
+            <ValueNode>*this</ValueNode>
+          </LinkedListItems>
+        </Expand>
+      </Synthetic>
     </Expand>
   </Type>
   <Type Name="clang::FieldDecl">
     <DisplayString>Field {{{*(clang::NamedDecl *)this,view(cpp)nd}}}</DisplayString>
   </Type>
   <Type Name="clang::CXXMethodDecl">
-    <DisplayString>Method {{{*(clang::NamedDecl *)this,view(cpp)nd}}}</DisplayString>
+    <DisplayString IncludeView="cpp">{*(clang::FunctionDecl *)this,nd}</DisplayString>
+    <DisplayString>Method {{{*this,view(cpp)}}}</DisplayString>
   </Type>
   <Type Name="clang::CXXConstructorDecl">
-    <DisplayString>Constructor {{{*(clang::NamedDecl *)this,view(cpp)nd}}}</DisplayString>
+    <DisplayString>Constructor {{{Name,view(cpp)}({*(clang::FunctionDecl *)this,view(parm0)nd})}}</DisplayString>
   </Type>
   <Type Name="clang::CXXDestructorDecl">
-    <DisplayString>Destructor {{{*(clang::NamedDecl *)this,view(cpp)nd}}}</DisplayString>
+    <DisplayString>Destructor {{~{Name,view(cpp)}()}}</DisplayString>
   </Type>
   <Type Name="clang::NamedDecl" >
     <DisplayString IncludeView="cpp">{Name,view(cpp)}</DisplayString>
     <DisplayString>{Name}</DisplayString>
   </Type>
   <Type Name="clang::TagDecl">
-    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Struct">struct {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Interface">interface {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Union">union {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Class">class {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Enum">enum {Name,view(cpp)}</DisplayString>
+    <DisplayString IncludeView="implicit" Condition="Implicit">implicit{" ",sb}</DisplayString>
+    <DisplayString IncludeView="implicit"></DisplayString>
+    <DisplayString IncludeView="modifiers">{*this,view(implicit)}</DisplayString>
+    <DisplayString IncludeView="cpp">{*this,view(modifiers)}{Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Struct">{*this,view(modifiers)}struct {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Interface">{*this,view(modifiers)}interface {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Union">{*this,view(modifiers)}union {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Class">{*this,view(modifiers)}class {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Enum">{*this,view(modifiers)}enum {Name,view(cpp)}</DisplayString>
     <Expand>
       <ExpandedItem>(clang::DeclContext *)this</ExpandedItem>
     </Expand>
   </Type>
   <Type Name="clang::TagType">
+    <DisplayString IncludeView="cpp">{*decl,view(cpp)}</DisplayString>
     <DisplayString>{*decl}</DisplayString>
     <Expand>
       <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
@@ -122,6 +134,7 @@ or create a symbolic link so it updates automatically.
     </Expand>
   </Type>
   <Type Name="clang::RecordType">
+    <DisplayString IncludeView="cpp">{*(clang::TagType *)this,view(cpp)}</DisplayString>
     <DisplayString>{*(clang::TagType *)this}</DisplayString>
     <Expand>
       <Item Name="TagType">*(clang::TagType *)this</Item>
@@ -241,13 +254,22 @@ or create a symbolic link so it updates automatically.
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredIdentifier">{{Identifier ({*(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)})}}</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredObjCZeroArgSelector">{{ObjC Zero Arg Selector (*{(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)})}}</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredObjCOneArgSelector">{{ObjC One Arg Selector (*{(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)})}}</DisplayString>
-    <DisplayString Condition="(Ptr &amp; PtrMask) == StoredDeclarationNameExtra">{{Extra ({(clang::DeclarationNameExtra::ExtraKind)((clang::DeclarationNameExtra *)(Ptr &amp; ~PtrMask))-&gt;ExtraKindOrNumArgs})}}</DisplayString>
+    <DisplayString Condition="(Ptr &amp; PtrMask) == StoredDeclarationNameExtra"
+                   IncludeView="cpp">{*(clang::DeclarationNameExtra *)(Ptr &amp; ~PtrMask),view(cpp)}</DisplayString>
+    <DisplayString Condition="(Ptr &amp; PtrMask) == StoredDeclarationNameExtra">{{Extra ({*(clang::DeclarationNameExtra *)(Ptr &amp; ~PtrMask)})}}</DisplayString>
     <Expand>
       <Item Condition="(Ptr &amp; PtrMask) == StoredIdentifier" Name="[Identifier]">*(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)</Item>
       <Item Condition="(Ptr &amp; PtrMask) == StoredObjCZeroArgSelector" Name="[ObjC Zero Arg Selector]">*(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)</Item>
       <Item Condition="(Ptr &amp; PtrMask) == StoredObjCOneArgSelector" Name="[ObjC One Arg Selector]">*(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)</Item>
-      <Item Condition="(Ptr &amp; PtrMask) == StoredDeclarationNameExtra" Name="[Extra]">(clang::DeclarationNameExtra::ExtraKind)((clang::DeclarationNameExtra *)(Ptr &amp; ~PtrMask))-&gt;ExtraKindOrNumArgs</Item>
+      <Item Condition="(Ptr &amp; PtrMask) == StoredDeclarationNameExtra" Name="[Extra]">(clang::DeclarationNameExtra *)(Ptr &amp; ~PtrMask)</Item>
     </Expand>
+  </Type>
+  <Type Name="clang::DeclarationNameExtra">
+    <DisplayString IncludeView="cpp"
+                   Condition="ExtraKindOrNumArgs &gt;= clang::DeclarationNameExtra::CXXConstructor 
+                   &amp;&amp; ExtraKindOrNumArgs &lt;= clang::DeclarationNameExtra::CXXConversionFunction"
+                   >{((clang::CXXSpecialName *)this)-&gt;Type,view(cpp)}</DisplayString>
+    <DisplayString>{(clang::DeclarationNameExtra::ExtraKind)ExtraKindOrNumArgs,en}{"  ",sb}{*this,view(cpp)}</DisplayString>
   </Type>
   <Type Name="clang::Token">
     <DisplayString Condition="Kind != clang::tok::identifier">{(clang::tok::TokenKind)Kind,en}</DisplayString>
@@ -292,22 +314,22 @@ or create a symbolic link so it updates automatically.
   <Type Name="clang::FunctionDecl">
     <DisplayString IncludeView="retType">{*(clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType,view(retType)}</DisplayString>
     <DisplayString IncludeView="parm0" Condition="0 == ((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams"></DisplayString>
-    <DisplayString IncludeView="parm0">{*ParamInfo[0]}{*this,view(parm1)}</DisplayString>
+    <DisplayString IncludeView="parm0">{*ParamInfo[0]}{*this,view(parm1)nd}</DisplayString>
     <DisplayString IncludeView="parm1" Condition="1 == ((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams"></DisplayString>
-    <DisplayString IncludeView="parm1">, {*ParamInfo[1]}{*this,view(parm2)}</DisplayString>
+    <DisplayString IncludeView="parm1">, {*ParamInfo[1]}{*this,view(parm2)nd}</DisplayString>
     <DisplayString IncludeView="parm2" Condition="2 == ((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams"></DisplayString>
-    <DisplayString IncludeView="parm2">, {*ParamInfo[2]}{*this,view(parm3)}</DisplayString>
+    <DisplayString IncludeView="parm2">, {*ParamInfo[2]}{*this,view(parm3)nd}</DisplayString>
     <DisplayString IncludeView="parm3" Condition="3 == ((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams"></DisplayString>
-    <DisplayString IncludeView="parm3">, {*ParamInfo[3]}{*this,view(parm4)}</DisplayString>
+    <DisplayString IncludeView="parm3">, {*ParamInfo[3]}{*this,view(parm4)nd}</DisplayString>
     <DisplayString IncludeView="parm4" Condition="4 == ((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams"></DisplayString>
-    <DisplayString IncludeView="parm4">, {*ParamInfo[4]}{*this,view(parm5)}</DisplayString>
+    <DisplayString IncludeView="parm4">, {*ParamInfo[4]}{*this,view(parm5)nd}</DisplayString>
     <DisplayString IncludeView="parm5" Condition="5 == ((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams"></DisplayString>
     <DisplayString IncludeView="parm5">, /* expand for more params */</DisplayString>
-    <DisplayString>{*this,view(retType)} {Name,view(cpp)}({*this,view(parm0)})</DisplayString>
+    <DisplayString>{*this,view(retType)nd} {Name,view(cpp)nd}({*this,view(parm0)nd})</DisplayString>
     <Expand>
-      <Item Name="ReturnType">*this,view(retType)</Item>
+      <Item Name="ReturnType">*this,view(retType)nd</Item>
       <Synthetic Name="Parameter Types">
-        <DisplayString>{*this,view(parm0)}</DisplayString>
+        <DisplayString>{*this,view(parm0)nd}</DisplayString>
         <Expand>
           <ArrayItems>
             <Size>((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)-&gt;NumParams</Size>

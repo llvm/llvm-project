@@ -49,7 +49,31 @@ class CodeGenModule;
 typedef llvm::function_ref<void(CodeGenFunction &)> RegionCodeGenTy;
 
 class CGOpenMPRuntime {
+protected:
   CodeGenModule &CGM;
+
+  /// \brief Creates offloading entry for the provided entry ID \a ID,
+  /// address \a Addr and size \a Size.
+  virtual void createOffloadEntry(llvm::Constant *ID, llvm::Constant *Addr,
+                                  uint64_t Size);
+
+  /// \brief Helper to emit outlined function for 'target' directive.
+  /// \param D Directive to emit.
+  /// \param ParentName Name of the function that encloses the target region.
+  /// \param OutlinedFn Outlined function value to be defined by this call.
+  /// \param OutlinedFnID Outlined function ID value to be defined by this call.
+  /// \param IsOffloadEntry True if the outlined function is an offload entry.
+  /// \param CodeGen Lambda codegen specific to an accelerator device.
+  /// An oulined function may not be an entry if, e.g. the if clause always
+  /// evaluates to false.
+  virtual void emitTargetOutlinedFunctionHelper(const OMPExecutableDirective &D,
+                                                StringRef ParentName,
+                                                llvm::Function *&OutlinedFn,
+                                                llvm::Constant *&OutlinedFnID,
+                                                bool IsOffloadEntry,
+                                                const RegionCodeGenTy &CodeGen);
+
+private:
   /// \brief Default const ident_t object used for initialization of all other
   /// ident_t objects.
   llvm::Constant *DefaultOpenMPPSource = nullptr;
@@ -266,11 +290,6 @@ class CGOpenMPRuntime {
   /// \brief Creates and registers offloading binary descriptor for the current
   /// compilation unit. The function that does the registration is returned.
   llvm::Function *createOffloadingBinaryDescriptorRegistration();
-
-  /// \brief Creates offloading entry for the provided entry ID \a ID,
-  /// address \a Addr and size \a Size.
-  void createOffloadEntry(llvm::Constant *ID, llvm::Constant *Addr,
-                          uint64_t Size);
 
   /// \brief Creates all the offload entries in the current compilation unit
   /// along with the associated metadata.
