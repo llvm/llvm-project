@@ -344,7 +344,7 @@ TYPED_TEST(DenseMapTest, ConstIteratorTest) {
 TEST(DenseMapCustomTest, ResizeTest) {
   for (unsigned Size = 16; Size < 32; ++Size) {
     DenseMap<unsigned, unsigned> Map;
-    Map.resize(Size);
+    Map.reserve(Size);
     unsigned MemorySize = Map.getMemorySize();
     for (unsigned i = 0; i < Size; ++i)
       Map[i] = i;

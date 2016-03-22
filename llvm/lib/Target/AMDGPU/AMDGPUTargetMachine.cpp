@@ -57,6 +57,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIAnnotateControlFlowPass(*PR);
   initializeSIInsertNopsPass(*PR);
   initializeSIInsertWaitsPass(*PR);
+  initializeSIWholeQuadModePass(*PR);
   initializeSILowerControlFlowPass(*PR);
 }
 
@@ -346,6 +347,7 @@ void GCNPassConfig::addPreRegAlloc() {
     insertPass(&MachineSchedulerID, &RegisterCoalescerID);
   }
   addPass(createSIShrinkInstructionsPass(), false);
+  addPass(createSIWholeQuadModePass());
 }
 
 void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {

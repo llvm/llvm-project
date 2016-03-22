@@ -45,7 +45,7 @@ namespace llvm {
                                                ArrayRef<unsigned> Idxs);
   Constant *ConstantFoldBinaryInstruction(unsigned Opcode, Constant *V1,
                                           Constant *V2);
-  Constant *ConstantFoldCompareInstruction(unsigned short predicate, 
+  Constant *ConstantFoldCompareInstruction(unsigned short predicate,
                                            Constant *C1, Constant *C2);
   Constant *ConstantFoldGetElementPtr(Type *Ty, Constant *C, bool inBounds,
                                       ArrayRef<Constant *> Idxs);

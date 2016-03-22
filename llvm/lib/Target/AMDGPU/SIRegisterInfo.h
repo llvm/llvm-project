@@ -72,9 +72,12 @@ public:
   }
 
   bool isSGPRReg(const MachineRegisterInfo &MRI, unsigned Reg) const {
+    const TargetRegisterClass *RC;
     if (TargetRegisterInfo::isVirtualRegister(Reg))
-      return isSGPRClass(MRI.getRegClass(Reg));
-    return getPhysRegClass(Reg);
+      RC = MRI.getRegClass(Reg);
+    else
+      RC = getPhysRegClass(Reg);
+    return isSGPRClass(RC);
   }
 
   /// \returns true if this class contains VGPR registers.

@@ -64,7 +64,7 @@ public:
   void AddInitialGroup(ArrayRef<Instruction *> List) {
     assert(Worklist.empty() && "Worklist must be empty to add initial group");
     Worklist.reserve(List.size()+16);
-    WorklistMap.resize(List.size());
+    WorklistMap.reserve(List.size());
     DEBUG(dbgs() << "IC: ADDING: " << List.size() << " instrs to worklist\n");
     unsigned Idx = 0;
     for (Instruction *I : reverse(List)) {

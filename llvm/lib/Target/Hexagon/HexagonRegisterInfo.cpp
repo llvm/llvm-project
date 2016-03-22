@@ -109,8 +109,6 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   const {
   BitVector Reserved(getNumRegs());
-  Reserved.set(HEXAGON_RESERVED_REG_1);
-  Reserved.set(HEXAGON_RESERVED_REG_2);
   Reserved.set(Hexagon::R29);
   Reserved.set(Hexagon::R30);
   Reserved.set(Hexagon::R31);

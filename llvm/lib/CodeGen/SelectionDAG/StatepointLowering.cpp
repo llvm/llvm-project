@@ -441,25 +441,30 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // Lower the deopt and gc arguments for this statepoint.  Layout will be:
   // deopt argument length, deopt arguments.., gc arguments...
 #ifndef NDEBUG
-  // Check that each of the gc pointer and bases we've gotten out of the
-  // safepoint is something the strategy thinks might be a pointer (or vector
-  // of pointers) into the GC heap.  This is basically just here to help catch
-  // errors during statepoint insertion. TODO: This should actually be in the
-  // Verifier, but we can't get to the GCStrategy from there (yet).
-  GCStrategy &S = Builder.GFI->getStrategy();
-  for (const Value *V : SI.Bases) {
-    auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
-    if (Opt.hasValue()) {
-      assert(Opt.getValue() &&
-             "non gc managed base pointer found in statepoint");
+  if (auto *GFI = Builder.GFI) {
+    // Check that each of the gc pointer and bases we've gotten out of the
+    // safepoint is something the strategy thinks might be a pointer (or vector
+    // of pointers) into the GC heap.  This is basically just here to help catch
+    // errors during statepoint insertion. TODO: This should actually be in the
+    // Verifier, but we can't get to the GCStrategy from there (yet).
+    GCStrategy &S = GFI->getStrategy();
+    for (const Value *V : SI.Bases) {
+      auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
+      if (Opt.hasValue()) {
+        assert(Opt.getValue() &&
+               "non gc managed base pointer found in statepoint");
+      }
     }
-  }
-  for (const Value *V : SI.Ptrs) {
-    auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
-    if (Opt.hasValue()) {
-      assert(Opt.getValue() &&
-             "non gc managed derived pointer found in statepoint");
+    for (const Value *V : SI.Ptrs) {
+      auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
+      if (Opt.hasValue()) {
+        assert(Opt.getValue() &&
+               "non gc managed derived pointer found in statepoint");
+      }
     }
+  } else {
+    assert(SI.Bases.empty() && "No gc specified, so cannot relocate pointers!");
+    assert(SI.Ptrs.empty() && "No gc specified, so cannot relocate pointers!");
   }
 #endif
 
@@ -550,7 +555,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   }
 }
 
-SDValue SelectionDAGBuilder::LowerAsStatepoint(
+SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     SelectionDAGBuilder::StatepointLoweringInfo &SI) {
   // The basic scheme here is that information about both the original call and
   // the safepoint is encoded in the CallInst.  We create a temporary call and
@@ -794,7 +799,7 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
   SI.NumPatchBytes = ISP.getNumPatchBytes();
   SI.EHPadBB = EHPadBB;
 
-  SDValue ReturnValue = LowerAsStatepoint(SI);
+  SDValue ReturnValue = LowerAsSTATEPOINT(SI);
 
   // Export the result value if needed
   const Instruction *GCResult = ISP.getGCResult();
@@ -827,6 +832,37 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
   } else {
     // The token value is never used from here on, just generate a poison value
     setValue(ISP.getInstruction(), DAG.getIntPtrConstant(-1, getCurSDLoc()));
+  }
+}
+
+void SelectionDAGBuilder::LowerCallSiteWithDeoptBundle(
+    ImmutableCallSite CS, SDValue Callee, const BasicBlock *EHPadBB) {
+  assert(CS.getNumOperandBundles() == 1 &&
+         "Only deopt operand bundles can be lowered!");
+
+  StatepointLoweringInfo SI(DAG);
+  unsigned ArgBeginIndex = CS.arg_begin() - CS.getInstruction()->op_begin();
+  populateCallLoweringInfo(SI.CLI, CS, ArgBeginIndex, CS.getNumArgOperands(),
+                           Callee, CS.getType(), false);
+
+  auto DeoptBundle = CS.getOperandBundleAt(0);
+  assert(DeoptBundle.getTagID() == LLVMContext::OB_deopt && "Should be!");
+
+  unsigned DefaultID = StatepointDirectives::DeoptBundleStatepointID;
+
+  auto SD = parseStatepointDirectivesFromAttrs(CS.getAttributes());
+  SI.ID = SD.StatepointID.getValueOr(DefaultID);
+  SI.NumPatchBytes = SD.NumPatchBytes.getValueOr(0);
+
+  SI.DeoptState =
+      ArrayRef<const Use>(DeoptBundle.Inputs.begin(), DeoptBundle.Inputs.end());
+  SI.StatepointFlags = static_cast<uint64_t>(StatepointFlags::None);
+  SI.EHPadBB = EHPadBB;
+
+  if (SDValue ReturnVal = LowerAsSTATEPOINT(SI)) {
+    const Instruction *Inst = CS.getInstruction();
+    ReturnVal = lowerRangeToAssertZExt(DAG, *Inst, ReturnVal);
+    setValue(Inst, ReturnVal);
   }
 }
 

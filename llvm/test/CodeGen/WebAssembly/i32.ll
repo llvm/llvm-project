@@ -188,3 +188,14 @@ define i32 @popcnt32(i32 %x) {
   %a = call i32 @llvm.ctpop.i32(i32 %x)
   ret i32 %a
 }
+
+; CHECK-LABEL: eqz32:
+; CHECK-NEXT: .param i32{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: i32.eqz $push0=, $0{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @eqz32(i32 %x) {
+  %a = icmp eq i32 %x, 0
+  %b = zext i1 %a to i32
+  ret i32 %b
+}

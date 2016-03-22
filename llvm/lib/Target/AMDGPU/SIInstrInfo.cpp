@@ -1248,6 +1248,19 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
                  .addImm(0); // omod
 }
 
+bool SIInstrInfo::isSchedulingBoundary(const MachineInstr *MI,
+                                       const MachineBasicBlock *MBB,
+                                       const MachineFunction &MF) const {
+  // Target-independent instructions do not have an implicit-use of EXEC, even
+  // when they operate on VGPRs. Treating EXEC modifications as scheduling
+  // boundaries prevents incorrect movements of such instructions.
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  if (MI->modifiesRegister(AMDGPU::EXEC, TRI))
+    return true;
+
+  return AMDGPUInstrInfo::isSchedulingBoundary(MI, MBB, MF);
+}
+
 bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
   int64_t SVal = Imm.getSExtValue();
   if (SVal >= -16 && SVal <= 64)

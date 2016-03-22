@@ -253,17 +253,13 @@ MemorySSAWalker *MemorySSA::buildMemorySSA(AliasAnalysis *AA,
   // Go through each block, figure out where defs occur, and chain together all
   // the accesses.
   for (BasicBlock &B : F) {
-    bool InsertIntoDefUse = false;
     bool InsertIntoDef = false;
     AccessListType *Accesses = nullptr;
     for (Instruction &I : B) {
       MemoryUseOrDef *MUD = createNewAccess(&I, true);
       if (!MUD)
         continue;
-      if (isa<MemoryDef>(MUD))
-        InsertIntoDef = true;
-      else
-        InsertIntoDefUse = true;
+      InsertIntoDef |= isa<MemoryDef>(MUD);
 
       if (!Accesses)
         Accesses = getOrCreateAccessList(&B);
@@ -271,7 +267,7 @@ MemorySSAWalker *MemorySSA::buildMemorySSA(AliasAnalysis *AA,
     }
     if (InsertIntoDef)
       DefiningBlocks.insert(&B);
-    if (InsertIntoDefUse)
+    if (Accesses)
       DefUseBlocks.insert(&B);
   }
 

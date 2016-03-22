@@ -315,20 +315,24 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   return true;
 }
 
-static bool shouldInstrumentBlock(const BasicBlock *BB,
-                                  const DominatorTree *DT) {
+static bool shouldInstrumentBlock(const BasicBlock *BB, const DominatorTree *DT,
+                                  const PostDominatorTree *PDT) {
   if (!ClPruneBlocks)
-    return true;
-  if (succ_begin(BB) == succ_end(BB))
     return true;
 
   // Check if BB dominates all its successors.
+  bool DominatesAll = succ_begin(BB) != succ_end(BB);
   for (const BasicBlock *SUCC : make_range(succ_begin(BB), succ_end(BB))) {
-    if (!DT->dominates(BB, SUCC))
-      return true;
+    DominatesAll &= DT->dominates(BB, SUCC);
   }
 
-  return false;
+  // Check if BB pre-dominates all predecessors.
+  bool PreDominatesAll = pred_begin(BB) != pred_end(BB);
+  for (const BasicBlock *PRED : make_range(pred_begin(BB), pred_end(BB))) {
+    PreDominatesAll &= PDT->dominates(BB, PRED);
+  }
+
+  return !(DominatesAll || PreDominatesAll);
 }
 
 bool SanitizerCoverageModule::runOnFunction(Function &F) {
@@ -349,10 +353,13 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
   SmallVector<Instruction *, 8> CmpTraceTargets;
   SmallVector<Instruction *, 8> SwitchTraceTargets;
 
-  DominatorTree DT;
-  DT.recalculate(F);
+  const DominatorTree *DT =
+      &getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+  const PostDominatorTree *PDT =
+      &getAnalysis<PostDominatorTreeWrapperPass>(F).getPostDomTree();
+
   for (auto &BB : F) {
-    if (shouldInstrumentBlock(&BB, &DT))
+    if (shouldInstrumentBlock(&BB, DT, PDT))
       BlocksToInstrument.push_back(&BB);
     for (auto &Inst : BB) {
       if (Options.IndirectCalls) {

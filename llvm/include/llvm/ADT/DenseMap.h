@@ -84,7 +84,7 @@ public:
   /// Grow the densemap so that it can contain at least Size items before
   /// resizing again. This means somewhat more than Size buckets because
   /// densemap resizes upon reaching 3/4 full.
-  void resize(size_type Size) {
+  void reserve(size_type Size) {
     // Size *= (4/3), rounding up.
     Size = (Size * 4 + 2) / 3;
     incrementEpoch();

@@ -1046,26 +1046,19 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
 static bool needToReserveScavengingSpillSlots(MachineFunction &MF,
                                               const HexagonRegisterInfo &HRI) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const MCPhysReg *CallerSavedRegs = HRI.getCallerSavedRegs(&MF);
-  // Check for an unused caller-saved register.
-  for ( ; *CallerSavedRegs; ++CallerSavedRegs) {
-    MCPhysReg FreeReg = *CallerSavedRegs;
-    if (MRI.isPhysRegUsed(FreeReg))
-      continue;
+  BitVector Reserved = HRI.getReservedRegs(MF);
 
-    // Check aliased register usage.
-    bool IsCurrentRegUsed = false;
-    for (MCRegAliasIterator AI(FreeReg, &HRI, false); AI.isValid(); ++AI)
-      if (MRI.isPhysRegUsed(*AI)) {
-        IsCurrentRegUsed = true;
-        break;
-      }
-    if (IsCurrentRegUsed)
-      continue;
-
-    // Neither directly used nor used through an aliased register.
+  auto IsUsed = [&HRI,&MRI] (unsigned Reg) -> bool {
+    for (MCRegAliasIterator AI(Reg, &HRI, true); AI.isValid(); ++AI)
+      if (MRI.isPhysRegUsed(*AI))
+        return true;
     return false;
-  }
+  };
+
+  // Check for an unused caller-saved register.
+  for (const MCPhysReg *P = HRI.getCallerSavedRegs(&MF); *P; ++P)
+    if (!IsUsed(*P))
+      return false;
   // All caller-saved registers are used.
   return true;
 }

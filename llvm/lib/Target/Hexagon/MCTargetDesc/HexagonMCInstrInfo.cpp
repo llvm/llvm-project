@@ -191,6 +191,55 @@ MCInstrDesc const &HexagonMCInstrInfo::getDesc(MCInstrInfo const &MCII,
   return (MCII.get(MCI.getOpcode()));
 }
 
+unsigned HexagonMCInstrInfo::getDuplexRegisterNumbering(unsigned Reg) {
+  using namespace Hexagon;
+  switch (Reg) {
+  default:
+    llvm_unreachable("unknown duplex register");
+  // Rs       Rss
+  case R0:
+  case D0:
+    return 0;
+  case R1:
+  case D1:
+    return 1;
+  case R2:
+  case D2:
+    return 2;
+  case R3:
+  case D3:
+    return 3;
+  case R4:
+  case D8:
+    return 4;
+  case R5:
+  case D9:
+    return 5;
+  case R6:
+  case D10:
+    return 6;
+  case R7:
+  case D11:
+    return 7;
+  case R16:
+    return 8;
+  case R17:
+    return 9;
+  case R18:
+    return 10;
+  case R19:
+    return 11;
+  case R20:
+    return 12;
+  case R21:
+    return 13;
+  case R22:
+    return 14;
+  case R23:
+    return 15;
+  }
+}
+
 MCExpr const &HexagonMCInstrInfo::getExpr(MCExpr const &Expr) {
   const auto &HExpr = cast<HexagonMCExpr>(Expr);
   assert(HExpr.getExpr());
@@ -547,6 +596,66 @@ bool HexagonMCInstrInfo::isMemStoreReorderEnabled(MCInst const &MCI) {
   assert(isBundle(MCI));
   auto Flags = MCI.getOperand(0).getImm();
   return (Flags & memStoreReorderEnabledMask) != 0;
+}
+
+bool HexagonMCInstrInfo::isSubInstruction(MCInst const &MCI) {
+  switch (MCI.getOpcode()) {
+  default:
+    return false;
+  case Hexagon::V4_SA1_addi:
+  case Hexagon::V4_SA1_addrx:
+  case Hexagon::V4_SA1_addsp:
+  case Hexagon::V4_SA1_and1:
+  case Hexagon::V4_SA1_clrf:
+  case Hexagon::V4_SA1_clrfnew:
+  case Hexagon::V4_SA1_clrt:
+  case Hexagon::V4_SA1_clrtnew:
+  case Hexagon::V4_SA1_cmpeqi:
+  case Hexagon::V4_SA1_combine0i:
+  case Hexagon::V4_SA1_combine1i:
+  case Hexagon::V4_SA1_combine2i:
+  case Hexagon::V4_SA1_combine3i:
+  case Hexagon::V4_SA1_combinerz:
+  case Hexagon::V4_SA1_combinezr:
+  case Hexagon::V4_SA1_dec:
+  case Hexagon::V4_SA1_inc:
+  case Hexagon::V4_SA1_seti:
+  case Hexagon::V4_SA1_setin1:
+  case Hexagon::V4_SA1_sxtb:
+  case Hexagon::V4_SA1_sxth:
+  case Hexagon::V4_SA1_tfr:
+  case Hexagon::V4_SA1_zxtb:
+  case Hexagon::V4_SA1_zxth:
+  case Hexagon::V4_SL1_loadri_io:
+  case Hexagon::V4_SL1_loadrub_io:
+  case Hexagon::V4_SL2_deallocframe:
+  case Hexagon::V4_SL2_jumpr31:
+  case Hexagon::V4_SL2_jumpr31_f:
+  case Hexagon::V4_SL2_jumpr31_fnew:
+  case Hexagon::V4_SL2_jumpr31_t:
+  case Hexagon::V4_SL2_jumpr31_tnew:
+  case Hexagon::V4_SL2_loadrb_io:
+  case Hexagon::V4_SL2_loadrd_sp:
+  case Hexagon::V4_SL2_loadrh_io:
+  case Hexagon::V4_SL2_loadri_sp:
+  case Hexagon::V4_SL2_loadruh_io:
+  case Hexagon::V4_SL2_return:
+  case Hexagon::V4_SL2_return_f:
+  case Hexagon::V4_SL2_return_fnew:
+  case Hexagon::V4_SL2_return_t:
+  case Hexagon::V4_SL2_return_tnew:
+  case Hexagon::V4_SS1_storeb_io:
+  case Hexagon::V4_SS1_storew_io:
+  case Hexagon::V4_SS2_allocframe:
+  case Hexagon::V4_SS2_storebi0:
+  case Hexagon::V4_SS2_storebi1:
+  case Hexagon::V4_SS2_stored_sp:
+  case Hexagon::V4_SS2_storeh_io:
+  case Hexagon::V4_SS2_storew_sp:
+  case Hexagon::V4_SS2_storewi0:
+  case Hexagon::V4_SS2_storewi1:
+    return true;
+  }
 }
 
 bool HexagonMCInstrInfo::isSoloAX(MCInstrInfo const &MCII, MCInst const &MCI) {

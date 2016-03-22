@@ -768,13 +768,22 @@ unsigned
 HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         MCSubtargetInfo const &STI) const {
-  if (MO.isReg())
-    return MCT.getRegisterInfo()->getEncodingValue(MO.getReg());
-  if (MO.isImm())
-    return static_cast<unsigned>(MO.getImm());
+  assert(!MO.isImm());
+  if (MO.isReg()) {
+    unsigned Reg = MO.getReg();
+    if (HexagonMCInstrInfo::isSubInstruction(MI))
+      return HexagonMCInstrInfo::getDuplexRegisterNumbering(Reg);
+    switch(MI.getOpcode()){
+    case Hexagon::A2_tfrrcr:
+    case Hexagon::A2_tfrcrr:
+      if(Reg == Hexagon::M0)
+        Reg = Hexagon::C6;
+      if(Reg == Hexagon::M1)
+        Reg = Hexagon::C7;
+    }
+    return MCT.getRegisterInfo()->getEncodingValue(Reg);
+  }
 
-  // MO must be an ME.
-  assert(MO.isExpr());
   return getExprOpValue(MI, MO, MO.getExpr(), Fixups, STI);
 }
 

@@ -188,3 +188,14 @@ define i64 @popcnt64(i64 %x) {
   %a = call i64 @llvm.ctpop.i64(i64 %x)
   ret i64 %a
 }
+
+; CHECK-LABEL: eqz64:
+; CHECK-NEXT: .param i64{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: i64.eqz $push0=, $0{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @eqz64(i64 %x) {
+  %a = icmp eq i64 %x, 0
+  %b = zext i1 %a to i32
+  ret i32 %b
+}

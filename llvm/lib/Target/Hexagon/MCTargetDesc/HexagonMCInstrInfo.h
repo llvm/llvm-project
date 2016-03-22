@@ -107,6 +107,7 @@ unsigned getDuplexCandidateGroup(MCInst const &MI);
 // Return a list of all possible instruction duplex combinations
 SmallVector<DuplexCandidate, 8> getDuplexPossibilties(MCInstrInfo const &MCII,
                                                       MCInst const &MCB);
+unsigned getDuplexRegisterNumbering(unsigned Reg);
 
 MCExpr const &getExpr(MCExpr const &Expr);
 
@@ -262,6 +263,7 @@ bool isSoloAX(MCInstrInfo const &MCII, MCInst const &MCI);
 
 /// Return whether the insn can be packaged only with an A-type insn in slot #1.
 bool isSoloAin1(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isSubInstruction(MCInst const &MCI);
 bool isVector(MCInstrInfo const &MCII, MCInst const &MCI);
 bool mustExtend(MCExpr const &Expr);
 bool mustNotExtend(MCExpr const &Expr);

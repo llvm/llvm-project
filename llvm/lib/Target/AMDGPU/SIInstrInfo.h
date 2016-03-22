@@ -149,6 +149,10 @@ public:
                                       MachineBasicBlock::iterator &MI,
                                       LiveVariables *LV) const override;
 
+  bool isSchedulingBoundary(const MachineInstr *MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const override;
+
   static bool isSALU(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SALU;
   }

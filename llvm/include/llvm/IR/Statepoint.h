@@ -411,6 +411,7 @@ struct StatepointDirectives {
   Optional<uint64_t> StatepointID;
 
   static const uint64_t DefaultStatepointID = 0xABCDEF00;
+  static const uint64_t DeoptBundleStatepointID = 0xABCDEF0F;
 };
 
 /// Parse out statepoint directives from the function attributes present in \p
