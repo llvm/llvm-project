@@ -92,7 +92,7 @@ CGOpenMPRuntimeNVPTX::WorkerFunctionState::WorkerFunctionState(
     CodeGenModule &CGM)
     : WorkerFn(nullptr), CGFI(nullptr) {
   createWorkerFunction(CGM);
-};
+}
 
 void CGOpenMPRuntimeNVPTX::WorkerFunctionState::createWorkerFunction(
     CodeGenModule &CGM) {

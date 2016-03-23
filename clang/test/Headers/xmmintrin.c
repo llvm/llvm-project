@@ -23,3 +23,7 @@ __m128 test_xmmintrin_provides_emmintrin(__m128d __a, __m128d __b) {
   return _mm_add_sd(__a, __b);
 }
 
+#if __STDC_HOSTED__
+// Make sure stdlib.h symbols are accessible.
+void *p = NULL;
+#endif

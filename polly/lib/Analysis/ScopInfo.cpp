@@ -2101,7 +2101,6 @@ static bool containsErrorBlock(RegionNode *RN, const Region &R, LoopInfo &LI,
 
 static inline __isl_give isl_set *addDomainDimId(__isl_take isl_set *Domain,
                                                  unsigned Dim, Loop *L) {
-  Domain = isl_set_lower_bound_si(Domain, isl_dim_set, Dim, -1);
   isl_id *DimId =
       isl_id_alloc(isl_set_get_ctx(Domain), nullptr, static_cast<void *>(L));
   return isl_set_set_dim_id(Domain, isl_dim_set, Dim, DimId);
@@ -2366,7 +2365,6 @@ void Scop::propagateDomainConstraints(Region *R, ScopDetection &SD,
     }
 
     Loop *BBLoop = getRegionNodeLoop(RN, LI);
-    int BBLoopDepth = getRelativeLoopDepth(BBLoop);
 
     isl_set *PredDom = isl_set_empty(isl_set_get_space(Domain));
     for (auto *PredBB : predecessors(BB)) {
@@ -2383,32 +2381,30 @@ void Scop::propagateDomainConstraints(Region *R, ScopDetection &SD,
 
       if (!PredBBDom) {
         // Determine the loop depth of the predecessor and adjust its domain to
-        // the domain of the current block. This can mean we have to:
-        //  o) Drop a dimension if this block is the exit of a loop, not the
-        //     header of a new loop and the predecessor was part of the loop.
-        //  o) Add an unconstrainted new dimension if this block is the header
-        //     of a loop and the predecessor is not part of it.
-        //  o) Drop the information about the innermost loop dimension when the
-        //     predecessor and the current block are surrounded by different
-        //     loops in the same depth.
+        // the domain of the current block. This means we have to:
+        //  o) Drop all loop dimension of loops we are leaving.
+        //  o) Add a dimension for each loop we are entering.
         PredBBDom = getDomainForBlock(PredBB, DomainMap, *R->getRegionInfo());
         Loop *PredBBLoop = LI.getLoopFor(PredBB);
         while (BoxedLoops.count(PredBBLoop))
           PredBBLoop = PredBBLoop->getParentLoop();
 
-        int PredBBLoopDepth = getRelativeLoopDepth(PredBBLoop);
-        unsigned LoopDepthDiff = std::abs(BBLoopDepth - PredBBLoopDepth);
-        if (BBLoopDepth < PredBBLoopDepth)
-          PredBBDom = isl_set_project_out(
-              PredBBDom, isl_dim_set, isl_set_n_dim(PredBBDom) - LoopDepthDiff,
-              LoopDepthDiff);
-        else if (PredBBLoopDepth < BBLoopDepth) {
-          assert(LoopDepthDiff == 1);
-          PredBBDom = isl_set_add_dims(PredBBDom, isl_dim_set, 1);
-        } else if (BBLoop != PredBBLoop && BBLoopDepth >= 0) {
-          assert(LoopDepthDiff <= 1);
-          PredBBDom = isl_set_drop_constraints_involving_dims(
-              PredBBDom, isl_dim_set, BBLoopDepth, 1);
+        Loop *LeaveL = PredBBLoop;
+        while (getRegion().contains(LeaveL) &&
+               (!BBLoop || !LeaveL->contains(BBLoop))) {
+          PredBBDom = isl_set_project_out(PredBBDom, isl_dim_set,
+                                          isl_set_n_dim(PredBBDom) - 1, 1);
+          LeaveL = LeaveL->getParentLoop();
+        }
+        unsigned CommonDepth = isl_set_n_dim(PredBBDom);
+
+        Loop *EnterL = BBLoop;
+        while (getRegion().contains(EnterL) &&
+               (!PredBBLoop || !EnterL->contains(PredBBLoop))) {
+          PredBBDom =
+              isl_set_insert_dims(PredBBDom, isl_dim_set, CommonDepth, 1);
+          PredBBDom = addDomainDimId(PredBBDom, CommonDepth, EnterL);
+          EnterL = EnterL->getParentLoop();
         }
       }
 

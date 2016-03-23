@@ -1066,6 +1066,8 @@ void MachOFileLayout::appendSymbols(const std::vector<Symbol> &symbols,
 }
 
 void MachOFileLayout::writeFunctionStartsInfo() {
+  if (!_functionStartsSize)
+    return;
   memcpy(&_buffer[_startOfFunctionStarts], _file.functionStarts.data(),
          _functionStartsSize);
 }

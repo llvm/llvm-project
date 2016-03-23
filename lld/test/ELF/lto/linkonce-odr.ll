@@ -9,8 +9,9 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @f()
 
 define void @g() {
-  call void @f() ret void
-} 
+  call void @f()
+  ret void
+}
 
 ; Be sure that the linkonce_odr symbol 'f' is kept.
 ; CHECK: Symbol {

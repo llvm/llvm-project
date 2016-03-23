@@ -5008,6 +5008,22 @@ AST_MATCHER_P(Decl, hasAttr, attr::Kind, AttrKind) {
   return false;
 }
 
+/// \brief Matches the return value expression of a return statement
+///
+/// Given
+/// \code
+///   return a + b;
+/// \endcode
+/// hasReturnValue(binaryOperator())
+///   matches 'return a + b'
+/// with binaryOperator()
+///   matching 'a + b'
+AST_MATCHER_P(ReturnStmt, hasReturnValue, internal::Matcher<Expr>, 
+              InnerMatcher) {
+  return InnerMatcher.matches(*Node.getRetValue(), Finder, Builder);
+}
+
+
 /// \brief Matches CUDA kernel call expression.
 ///
 /// Example matches,

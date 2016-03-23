@@ -99,9 +99,11 @@ def dtrace(args):
   if sys.platform == "darwin":
     dtrace_args.append('-xmangled')
 
-  f = open("%d.dtrace" % os.getpid(), "w")
   start_time = time.time()
-  subprocess.check_call(dtrace_args, stdout=f, stderr=subprocess.PIPE)
+
+  with open("%d.dtrace" % os.getpid(), "w") as f:
+    subprocess.check_call(dtrace_args, stdout=f, stderr=subprocess.PIPE)
+
   elapsed = time.time() - start_time
   print("... data collection took %.4fs" % elapsed)
 
@@ -111,7 +113,7 @@ def get_cc1_command_for_args(cmd, env):
   # Find the cc1 command used by the compiler. To do this we execute the
   # compiler with '-###' to figure out what it wants to do.
   cmd = cmd + ['-###']
-  cc_output = check_output(cmd, stderr=subprocess.STDOUT, env=env).strip()
+  cc_output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=env).strip()
   cc_commands = []
   for ln in cc_output.split('\n'):
       # Filter out known garbage.
@@ -150,12 +152,9 @@ def cc1(args):
 
   # clear the profile file env, so that we don't generate profdata
   # when capturing the cc1 command
-  handle, profraw_file = tempfile.mkstemp()
-  os.close(handle)
   cc1_env = test_env
-  cc1_env["LLVM_PROFILE_FILE"] = profraw_file
+  cc1_env["LLVM_PROFILE_FILE"] = os.devnull
   cc1_cmd = get_cc1_command_for_args(cmd, cc1_env)
-  os.remove(profraw_file)
 
   subprocess.check_call(cc1_cmd)
   return 0;
@@ -245,13 +244,6 @@ def parse_dtrace_symbol_file(path, all_symbols, all_symbols_set,
         # is an over-approximation, but it should be ok in practice.
         for s in possible_symbols:
           yield (current_timestamp, s)
-
-def check_output(*popen_args, **popen_kwargs):
-    p = subprocess.Popen(stdout=subprocess.PIPE, *popen_args, **popen_kwargs)
-    stdout,stderr = p.communicate()
-    if p.wait() != 0:
-        raise RuntimeError("process failed")
-    return stdout
 
 def uniq(list):
   seen = set()
@@ -346,7 +338,7 @@ def genOrderFile(args):
   # If the user gave us a binary, get all the symbols in the binary by
   # snarfing 'nm' output.
   if opts.binary_path is not None:
-     output = check_output(['nm', '-P', opts.binary_path])
+     output = subprocess.check_output(['nm', '-P', opts.binary_path])
      lines = output.split("\n")
      all_symbols = [ln.split(' ',1)[0]
                     for ln in lines

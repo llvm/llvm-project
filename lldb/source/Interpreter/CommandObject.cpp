@@ -411,7 +411,11 @@ CommandObject::HandleCompletion
 }
 
 bool
-CommandObject::HelpTextContainsWord (const char *search_word)
+CommandObject::HelpTextContainsWord (const char *search_word,
+                                     bool search_short_help,
+                                     bool search_long_help,
+                                     bool search_syntax,
+                                     bool search_options)
 {
     std::string options_usage_help;
 
@@ -421,14 +425,15 @@ CommandObject::HelpTextContainsWord (const char *search_word)
     const char *long_help = GetHelpLong();
     const char *syntax_help = GetSyntax();
     
-    if (short_help && strcasestr (short_help, search_word))
+    if (search_short_help && short_help && strcasestr (short_help, search_word))
         found_word = true;
-    else if (long_help && strcasestr (long_help, search_word))
+    else if (search_long_help && long_help && strcasestr (long_help, search_word))
         found_word = true;
-    else if (syntax_help && strcasestr (syntax_help, search_word))
+    else if (search_syntax && syntax_help && strcasestr (syntax_help, search_word))
         found_word = true;
 
     if (!found_word
+        && search_options
         && GetOptions() != nullptr)
     {
         StreamString usage_help;

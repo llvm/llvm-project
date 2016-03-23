@@ -764,13 +764,30 @@ public:
         return LT_ImportStatement;
     }
 
+    // import {...} from '...';
+    if (Style.Language == FormatStyle::LK_JavaScript &&
+        CurrentToken->is(Keywords.kw_import))
+      return LT_ImportStatement;
+
     bool KeywordVirtualFound = false;
     bool ImportStatement = false;
     while (CurrentToken) {
       if (CurrentToken->is(tok::kw_virtual))
         KeywordVirtualFound = true;
-      if (isImportStatement(*CurrentToken))
-        ImportStatement = true;
+      if (Style.Language == FormatStyle::LK_JavaScript) {
+        // export {...} from '...';
+        // An export followed by "from 'some string';" is a re-export from
+        // another module identified by a URI and is treated as a
+        // LT_ImportStatement (i.e. prevent wraps on it for long URIs).
+        // Just "export {...};" or "export class ..." should not be treated as
+        // an import in this sense.
+        if (Line.First->is(tok::kw_export) &&
+            CurrentToken->is(Keywords.kw_from) && CurrentToken->Next &&
+            CurrentToken->Next->isStringLiteral())
+          ImportStatement = true;
+        if (isClosureImportStatement(*CurrentToken))
+          ImportStatement = true;
+      }
       if (!consumeToken())
         return LT_Invalid;
     }
@@ -790,11 +807,10 @@ public:
   }
 
 private:
-  bool isImportStatement(const FormatToken &Tok) {
+  bool isClosureImportStatement(const FormatToken &Tok) {
     // FIXME: Closure-library specific stuff should not be hard-coded but be
     // configurable.
-    return Style.Language == FormatStyle::LK_JavaScript &&
-           Tok.TokenText == "goog" && Tok.Next && Tok.Next->is(tok::period) &&
+    return Tok.TokenText == "goog" && Tok.Next && Tok.Next->is(tok::period) &&
            Tok.Next->Next && (Tok.Next->Next->TokenText == "module" ||
                               Tok.Next->Next->TokenText == "provide" ||
                               Tok.Next->Next->TokenText == "require" ||

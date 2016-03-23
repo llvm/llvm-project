@@ -35,6 +35,12 @@ __device__ void vararg(const char* x, ...) {}
 // expected-error@-2 {{CUDA device code does not support variadic functions}}
 #endif
 
+template <typename T>
+__device__ void vararg(T t, ...) {}
+#ifdef EXPECT_VARARG_ERR
+// expected-error@-2 {{CUDA device code does not support variadic functions}}
+#endif
+
 extern "C" __device__ int printf(const char* fmt, ...);  // OK, special case.
 
 // Definition of printf not allowed.

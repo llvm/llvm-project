@@ -20,7 +20,7 @@ class MultipleDebuggersCommandsTestCase(TestBase):
     def test_multipledebuggers_commands(self):
         """Test that commands do not try and hold on to stale CommandInterpreters in a multiple debuggers scenario"""
         source_init_files = False
-        magic_text = "The following built-in commands may relate to 'env'"
+        magic_text = "The following commands may relate to 'env'"
         
         debugger_1 = lldb.SBDebugger.Create(source_init_files)
         interpreter_1 = debugger_1.GetCommandInterpreter()

@@ -1402,8 +1402,10 @@ TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr, QualType SrcType,
 
   // Lock down the inheritance model right now in MS ABI, whether or not the
   // pointee types are the same.
-  if (Self.Context.getTargetInfo().getCXXABI().isMicrosoft())
+  if (Self.Context.getTargetInfo().getCXXABI().isMicrosoft()) {
     (void)Self.isCompleteType(OpRange.getBegin(), SrcType);
+    (void)Self.isCompleteType(OpRange.getBegin(), DestType);
+  }
 
   // T == T, modulo cv
   if (!Self.Context.hasSameUnqualifiedType(SrcMemPtr->getPointeeType(),

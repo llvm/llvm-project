@@ -44,6 +44,7 @@ module _Builtin_intrinsics [system] [extern_c] {
     }
 
     explicit module sse {
+      export mm_malloc
       export mmx
       export sse2 // note: for hackish <emmintrin.h> dependency
       header "xmmintrin.h"

@@ -201,8 +201,6 @@ class CommandInterpreter :
     public IOHandlerDelegate
 {
 public:
-    typedef std::map<std::string, lldb::CommandObjectSP> CommandAliasMap;
-    
     enum
     {
         eBroadcastBitThreadShouldExit       = (1 << 0),
@@ -527,7 +525,8 @@ public:
                             StringList &commands_found, 
                             StringList &commands_help,
                             bool search_builtin_commands,
-                            bool search_user_commands);
+                            bool search_user_commands,
+                            bool search_alias_commands);
                            
     bool
     GetBatchCommandMode () { return m_batch_command_mode; }
@@ -680,13 +679,19 @@ private:
     CommandObject *
     ResolveCommandImpl(std::string &command_line, CommandReturnObject &result);
 
+    void
+    FindCommandsForApropos (const char *word,
+                            StringList &commands_found,
+                            StringList &commands_help,
+                            CommandObject::CommandMap &command_map);
+    
     Debugger &m_debugger;                       // The debugger session that this interpreter is associated with
     ExecutionContextRef m_exe_ctx_ref;          // The current execution context to use when handling commands
     bool m_synchronous_execution;
     bool m_skip_lldbinit_files;
     bool m_skip_app_init_files;
     CommandObject::CommandMap m_command_dict;   // Stores basic built-in commands (they cannot be deleted, removed or overwritten).
-    CommandAliasMap m_alias_dict;               // Stores user aliases/abbreviations for commands
+    CommandObject::CommandMap m_alias_dict;     // Stores user aliases/abbreviations for commands
     CommandObject::CommandMap m_user_dict;      // Stores user-defined commands
     CommandHistory m_command_history;
     std::string m_repeat_command;               // Stores the command that will be executed for an empty command string.

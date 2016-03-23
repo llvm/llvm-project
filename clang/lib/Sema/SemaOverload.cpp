@@ -8488,7 +8488,7 @@ Sema::AddArgumentDependentLookupCandidates(DeclarationName Name,
 // Cand1's first N enable_if attributes have precisely the same conditions as
 // Cand2's first N enable_if attributes (where N = the number of enable_if
 // attributes on Cand2), and Cand1 has more than N enable_if attributes.
-static bool hasBetterEnableIfAttrs(Sema &S, const FunctionDecl *Cand1,
+static bool hasBetterEnableIfAttrs(const Sema &S, const FunctionDecl *Cand1,
                                    const FunctionDecl *Cand2) {
 
   // FIXME: The next several lines are just
@@ -10299,13 +10299,25 @@ public:
   bool hasComplained() const { return HasComplained; }
 
 private:
-  // Is A considered a better overload candidate for the desired type than B?
-  bool isBetterCandidate(const FunctionDecl *A, const FunctionDecl *B) {
-    return hasBetterEnableIfAttrs(S, A, B);
+  bool candidateHasExactlyCorrectType(const FunctionDecl *FD) {
+    QualType Discard;
+    return Context.hasSameUnqualifiedType(TargetFunctionType, FD->getType()) ||
+           S.IsNoReturnConversion(FD->getType(), TargetFunctionType, Discard);
   }
 
-  // Returns true if we've eliminated any (read: all but one) candidates, false
-  // otherwise.
+  /// \return true if A is considered a better overload candidate for the
+  /// desired type than B.
+  bool isBetterCandidate(const FunctionDecl *A, const FunctionDecl *B) {
+    // If A doesn't have exactly the correct type, we don't want to classify it
+    // as "better" than anything else. This way, the user is required to
+    // disambiguate for us if there are multiple candidates and no exact match.
+    return candidateHasExactlyCorrectType(A) &&
+           (!candidateHasExactlyCorrectType(B) ||
+            hasBetterEnableIfAttrs(S, A, B));
+  }
+
+  /// \return true if we were able to eliminate all but one overload candidate,
+  /// false otherwise.
   bool eliminiateSuboptimalOverloadCandidates() {
     // Same algorithm as overload resolution -- one pass to pick the "best",
     // another pass to be sure that nothing is better than the best.
@@ -10418,12 +10430,9 @@ private:
       if (!S.checkAddressOfFunctionIsAvailable(FunDecl))
         return false;
 
-      QualType ResultTy;
-      if (Context.hasSameUnqualifiedType(TargetFunctionType,
-                                         FunDecl->getType()) ||
-          S.IsNoReturnConversion(FunDecl->getType(), TargetFunctionType,
-                                 ResultTy) ||
-          (!S.getLangOpts().CPlusPlus && TargetType->isVoidPointerType())) {
+      // If we're in C, we need to support types that aren't exactly identical.
+      if (!S.getLangOpts().CPlusPlus ||
+          candidateHasExactlyCorrectType(FunDecl)) {
         Matches.push_back(std::make_pair(
             CurAccessFunPair, cast<FunctionDecl>(FunDecl->getCanonicalDecl())));
         FoundNonTemplateFunction = true;

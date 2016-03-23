@@ -231,7 +231,8 @@ CMIUtilFileStd::IsFileExist(const CMIUtilString &vFileNamePath) const
     if (vFileNamePath.empty())
         return false;
 
-    FILE *pTmp = lldb_private::FileSystem::Fopen(vFileNamePath.c_str(), "wb");
+    FILE *pTmp = nullptr;
+    pTmp = ::fopen(vFileNamePath.c_str(), "wb");
     if (pTmp != nullptr)
     {
         ::fclose(pTmp);

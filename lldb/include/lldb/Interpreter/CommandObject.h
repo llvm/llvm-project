@@ -373,7 +373,11 @@ public:
     }
     
     bool
-    HelpTextContainsWord (const char *search_word);
+    HelpTextContainsWord (const char *search_word,
+                          bool search_short_help = true,
+                          bool search_long_help = true,
+                          bool search_syntax = true,
+                          bool search_options = true);
 
     //------------------------------------------------------------------
     /// The flags accessor.

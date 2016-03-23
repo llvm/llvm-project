@@ -28,7 +28,7 @@ entry:
 ; CHECK-LABEL: polly.start:
 ; CHECK:         store i32 %x, i32* %x.addr.0.phiops
 
-; CHECK-LABEL: polly.merge:
+; CHECK-LABEL: polly.exiting:
 ; CHECK:         %x.addr.0.final_reload = load i32, i32* %x.addr.0.s2a
 
 for.cond:                                         ; preds = %for.inc4, %entry

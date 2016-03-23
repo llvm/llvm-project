@@ -672,6 +672,11 @@ void Util::copySectionContent(NormalizedFile &file) {
     uint8_t *sectionContent = file.ownedAllocations.Allocate<uint8_t>(si->size);
     normSect->content = llvm::makeArrayRef(sectionContent, si->size);
     for (AtomInfo &ai : si->atomsAndOffsets) {
+      if (!ai.atom->size()) {
+        assert(ai.atom->begin() == ai.atom->end() &&
+               "Cannot have references without content");
+        continue;
+      }
       uint8_t *atomContent = reinterpret_cast<uint8_t*>
                                           (&sectionContent[ai.offsetInSection]);
       _archHandler.generateAtomContent(*ai.atom, r, addrForAtom,
