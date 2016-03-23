@@ -82,6 +82,9 @@ public:
     bool
     GetStopReasonExtendedInfoAsJSON (lldb::SBStream &stream);
     
+    SBThreadCollection
+    GetStopReasonExtendedBacktraces (InstrumentationRuntimeType type);
+    
     size_t
     GetStopDescription (char *dst, size_t dst_len);
     

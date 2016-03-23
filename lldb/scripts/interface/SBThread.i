@@ -118,6 +118,15 @@ public:
     ") GetStopReasonExtendedInfoAsJSON;
     bool
     GetStopReasonExtendedInfoAsJSON (lldb::SBStream &stream);
+    
+    %feature("autodoc", "
+    Returns a collection of historical stack traces that are significant to the
+    current stop reason. Used by ThreadSanitizer, where we provide various stack
+    traces that were involved in a data race or other type of detected issue.
+    ") GetStopReasonExtendedBacktraces;
+    SBThreadCollection
+    GetStopReasonExtendedBacktraces (InstrumentationRuntimeType type);
+
 
     %feature("autodoc", "
     Pass only an (int)length and expect to get a Python string describing the

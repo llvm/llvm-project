@@ -44,6 +44,7 @@
 #include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
 #include "Plugins/InstrumentationRuntime/AddressSanitizer/AddressSanitizerRuntime.h"
+#include "Plugins/InstrumentationRuntime/ThreadSanitizer/ThreadSanitizerRuntime.h"
 #include "Plugins/JITLoader/GDB/JITLoaderGDB.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/Go/GoLanguage.h"
@@ -319,6 +320,7 @@ SystemInitializerFull::Initialize()
 #endif
     MemoryHistoryASan::Initialize();
     AddressSanitizerRuntime::Initialize();
+    ThreadSanitizerRuntime::Initialize();
 
     SymbolVendorELF::Initialize();
     SymbolFileDWARF::Initialize();
@@ -441,6 +443,7 @@ SystemInitializerFull::Terminate()
 #endif
     MemoryHistoryASan::Terminate();
     AddressSanitizerRuntime::Terminate();
+    ThreadSanitizerRuntime::Terminate();
     SymbolVendorELF::Terminate();
     SymbolFileDWARF::Terminate();
     SymbolFileSymtab::Terminate();
