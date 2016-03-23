@@ -85,6 +85,7 @@ public:
   void writePltZero(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
+  bool isRelRelative(uint32_t Type) const override;
   bool needsCopyRelImpl(uint32_t Type) const override;
   bool needsDynRelative(uint32_t Type) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
@@ -394,6 +395,17 @@ X86TargetInfo::X86TargetInfo() {
   UseLazyBinding = true;
   PltEntrySize = 16;
   PltZeroSize = 16;
+}
+
+bool X86TargetInfo::isRelRelative(uint32_t Type) const {
+  switch (Type) {
+  default:
+    return false;
+  case R_386_PC32:
+  case R_386_PLT32:
+  case R_386_TLS_LDO_32:
+    return true;
+  }
 }
 
 void X86TargetInfo::writeGotPltHeader(uint8_t *Buf) const {

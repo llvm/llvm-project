@@ -187,7 +187,10 @@ private:
         continue;
 
       // Returns true if it's a data symbol.
-      SymbolRef::Type type = sym.getType();
+      ErrorOr<SymbolRef::Type> typeOrErr = sym.getType();
+      if (typeOrErr.getError())
+        return false;
+      SymbolRef::Type type = *typeOrErr;
       if (type == SymbolRef::ST_Data)
         return true;
     }

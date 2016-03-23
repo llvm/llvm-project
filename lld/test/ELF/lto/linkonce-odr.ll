@@ -1,8 +1,8 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %p/Inputs/linkonce-odr.ll -o %t1.o
 ; RUN: llc %s -o %t2.o -filetype=obj
-; RUN: ld.lld %t1.o %t2.o -o %t.so -shared
-; RUN: llvm-readobj -t %t.so | FileCheck %s
+; RUN: ld.lld %t1.o %t2.o -o %t.so -shared -save-temps
+; RUN: llvm-dis %t.so.lto.opt.bc -o - | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -13,13 +13,5 @@ define void @g() {
   ret void
 }
 
-; Be sure that the linkonce_odr symbol 'f' is kept.
-; CHECK: Symbol {
-; CHECK:   Name: f
-; CHECK:   Value: 0x1010
-; CHECK:   Size: 1
-; CHECK:   Binding: Weak
-; CHECK:   Type: Function
-; CHECK:   Other: 0
-; CHECK:   Section: .text
-; CHECK: }
+; Be sure that 'f' is kept and has weak_odr linkage.
+; CHECK: define weak_odr void @f()

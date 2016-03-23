@@ -110,6 +110,17 @@ public:
     }
   }
 
+  /// @brief Mark a basic block unreachable.
+  ///
+  /// Marks the basic block @p Block unreachable by equipping it with an
+  /// UnreachableInst.
+  void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
+    auto *OrigTerminator = Block.getTerminator();
+    Builder.SetInsertPoint(OrigTerminator);
+    Builder.CreateUnreachable();
+    OrigTerminator->eraseFromParent();
+  }
+
   /// @brief Generate LLVM-IR for the SCoP @p S.
   bool runOnScop(Scop &S) override {
     AI = &getAnalysis<IslAstInfo>();
@@ -146,7 +157,7 @@ public:
     // code generating this scop.
     BasicBlock *StartBlock =
         executeScopConditionally(S, this, Builder.getTrue());
-    auto SplitBlock = StartBlock->getSinglePredecessor();
+    auto *SplitBlock = StartBlock->getSinglePredecessor();
 
     // First generate code for the hoisted invariant loads and transitively the
     // parameters they reference. Afterwards, for the remaining parameters that
@@ -156,15 +167,26 @@ public:
     Builder.SetInsertPoint(SplitBlock->getTerminator());
     if (!NodeBuilder.preloadInvariantLoads()) {
 
+      // Patch the introduced branch condition to ensure that we always execute
+      // the original SCoP.
       auto *FalseI1 = Builder.getFalse();
       auto *SplitBBTerm = Builder.GetInsertBlock()->getTerminator();
       SplitBBTerm->setOperand(0, FalseI1);
-      auto *StartBBTerm = StartBlock->getTerminator();
-      Builder.SetInsertPoint(StartBBTerm);
-      Builder.CreateUnreachable();
-      StartBBTerm->eraseFromParent();
-      isl_ast_node_free(AstRoot);
 
+      // Since the other branch is hence ignored we mark it as unreachable and
+      // adjust the dominator tree accordingly.
+      auto *ExitingBlock = StartBlock->getUniqueSuccessor();
+      assert(ExitingBlock);
+      auto *MergeBlock = ExitingBlock->getUniqueSuccessor();
+      assert(MergeBlock);
+      markBlockUnreachable(*StartBlock, Builder);
+      markBlockUnreachable(*ExitingBlock, Builder);
+      auto *ExitingBB = R->getExitingBlock();
+      assert(ExitingBB);
+      DT->changeImmediateDominator(MergeBlock, ExitingBB);
+      DT->eraseNode(ExitingBlock);
+
+      isl_ast_node_free(AstRoot);
     } else {
 
       NodeBuilder.addParameters(S.getContext());

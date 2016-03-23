@@ -724,6 +724,7 @@
 		6D99A3631BBC2F3200979793 /* ArmUnwindInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D99A3621BBC2F3200979793 /* ArmUnwindInfo.cpp */; };
 		6D9AB3DD1BB2B74E003F2289 /* TypeMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D9AB3DC1BB2B74E003F2289 /* TypeMap.cpp */; };
 		6DEC6F391BD66D750091ABA6 /* TaskPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6DEC6F381BD66D750091ABA6 /* TaskPool.cpp */; };
+		8C26C4261C3EA5F90031DF7C /* ThreadSanitizerRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C26C4241C3EA4340031DF7C /* ThreadSanitizerRuntime.cpp */; };
 		8C2D6A53197A1EAF006989C9 /* MemoryHistory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C2D6A52197A1EAF006989C9 /* MemoryHistory.cpp */; };
 		8C2D6A5E197A250F006989C9 /* MemoryHistoryASan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C2D6A5A197A1FDC006989C9 /* MemoryHistoryASan.cpp */; };
 		8CCB017E19BA28A80009FD44 /* ThreadCollection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8CCB017A19BA283D0009FD44 /* ThreadCollection.cpp */; };
@@ -2454,6 +2455,8 @@
 		6D9AB3DE1BB2B76B003F2289 /* TypeMap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = TypeMap.h; path = include/lldb/Symbol/TypeMap.h; sourceTree = "<group>"; };
 		6DEC6F381BD66D750091ABA6 /* TaskPool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TaskPool.cpp; path = source/Utility/TaskPool.cpp; sourceTree = "<group>"; };
 		6DEC6F3A1BD66D950091ABA6 /* TaskPool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TaskPool.h; path = include/lldb/Utility/TaskPool.h; sourceTree = "<group>"; };
+		8C26C4241C3EA4340031DF7C /* ThreadSanitizerRuntime.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadSanitizerRuntime.cpp; path = ThreadSanitizer/ThreadSanitizerRuntime.cpp; sourceTree = "<group>"; };
+		8C26C4251C3EA4340031DF7C /* ThreadSanitizerRuntime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ThreadSanitizerRuntime.h; path = ThreadSanitizer/ThreadSanitizerRuntime.h; sourceTree = "<group>"; };
 		8C2D6A52197A1EAF006989C9 /* MemoryHistory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MemoryHistory.cpp; path = source/Target/MemoryHistory.cpp; sourceTree = "<group>"; };
 		8C2D6A54197A1EBE006989C9 /* MemoryHistory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MemoryHistory.h; path = include/lldb/Target/MemoryHistory.h; sourceTree = "<group>"; };
 		8C2D6A5A197A1FDC006989C9 /* MemoryHistoryASan.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MemoryHistoryASan.cpp; sourceTree = "<group>"; };
@@ -5482,6 +5485,15 @@
 			path = Android;
 			sourceTree = "<group>";
 		};
+		8C26C4221C3EA4050031DF7C /* ThreadSanitizer */ = {
+			isa = PBXGroup;
+			children = (
+				8C26C4241C3EA4340031DF7C /* ThreadSanitizerRuntime.cpp */,
+				8C26C4251C3EA4340031DF7C /* ThreadSanitizerRuntime.h */,
+			);
+			name = ThreadSanitizer;
+			sourceTree = "<group>";
+		};
 		8C2D6A58197A1FB9006989C9 /* MemoryHistory */ = {
 			isa = PBXGroup;
 			children = (
@@ -5502,6 +5514,7 @@
 		8CF02ADD19DCBEC200B14BE0 /* InstrumentationRuntime */ = {
 			isa = PBXGroup;
 			children = (
+				8C26C4221C3EA4050031DF7C /* ThreadSanitizer */,
 				8CF02ADE19DCBEE600B14BE0 /* AddressSanitizer */,
 			);
 			path = InstrumentationRuntime;
@@ -6926,6 +6939,7 @@
 				2642FBAE13D003B400ED6808 /* CommunicationKDP.cpp in Sources */,
 				2642FBB013D003B400ED6808 /* ProcessKDP.cpp in Sources */,
 				23D4007E1C210201000C3885 /* DebugMacros.cpp in Sources */,
+				8C26C4261C3EA5F90031DF7C /* ThreadSanitizerRuntime.cpp in Sources */,
 				2642FBB213D003B400ED6808 /* ProcessKDPLog.cpp in Sources */,
 				263641191B34AEE200145B2F /* ABISysV_mips64.cpp in Sources */,
 				26957D9813D381C900670048 /* RegisterContextDarwin_arm.cpp in Sources */,

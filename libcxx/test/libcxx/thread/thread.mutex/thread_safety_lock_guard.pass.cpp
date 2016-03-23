@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: libcpp-has-no-threads
 // REQUIRES: thread-safety
 
 // <mutex>

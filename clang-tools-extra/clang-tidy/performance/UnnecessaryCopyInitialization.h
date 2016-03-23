@@ -30,6 +30,12 @@ public:
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  void handleCopyFromMethodReturn(const VarDecl &Var, const Stmt &BlockStmt,
+                                  ASTContext &Context);
+  void handleCopyFromLocalVar(const VarDecl &NewVar, const VarDecl &OldVar,
+                              const Stmt &BlockStmt, ASTContext &Context);
 };
 
 } // namespace performance

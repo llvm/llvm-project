@@ -380,11 +380,11 @@ readBinary(std::unique_ptr<MemoryBuffer> &mb,
             reinterpret_cast<const nlist_64 *>(start + symOffset);
         // Convert each nlist_64 to a lld::mach_o::normalized::Symbol.
         for(uint32_t i=0; i < symCount; ++i) {
-          const nlist_64 *sin = &symbols[i];
           nlist_64 tempSym;
-          if (isBig != llvm::sys::IsBigEndianHost) {
-            tempSym = *sin; swapStruct(tempSym); sin = &tempSym;
-          }
+          memcpy(&tempSym, &symbols[i], sizeof(nlist_64));
+          const nlist_64 *sin = &tempSym;
+          if (isBig != llvm::sys::IsBigEndianHost)
+            swapStruct(tempSym);
           Symbol sout;
           if (sin->n_strx > strSize)
             return true;

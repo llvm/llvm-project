@@ -1,5 +1,5 @@
 ; REQUIRES: x86
-; RUN: rm -f %t %t.lto.bc %t.lto.opt.bc %t.lto.o
+; RUN: rm -f %t.so.lto.bc %t.so.lto.opt.bc %t.so.lto.o
 ; RUN: llvm-as %s -o %t.o
 ; RUN: ld.lld -m elf_x86_64 %t.o -o %t.so -save-temps -shared
 ; RUN: llvm-dis %t.so.lto.opt.bc -o - | FileCheck %s

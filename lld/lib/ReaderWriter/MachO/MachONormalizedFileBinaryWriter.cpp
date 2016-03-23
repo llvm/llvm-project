@@ -928,12 +928,15 @@ std::error_code MachOFileLayout::writeLoadCommands() {
 
     // Add LC_SOURCE_VERSION
     {
-      source_version_command* sv = reinterpret_cast<source_version_command*>(lc);
-      sv->cmd       = LC_SOURCE_VERSION;
-      sv->cmdsize   = sizeof(source_version_command);
-      sv->version   = _file.sourceVersion;
+      // Note, using a temporary here to appease UB as we may not be aligned
+      // enough for a struct containing a uint64_t when emitting a 32-bit binary
+      source_version_command sv;
+      sv.cmd       = LC_SOURCE_VERSION;
+      sv.cmdsize   = sizeof(source_version_command);
+      sv.version   = _file.sourceVersion;
       if (_swap)
-        swapStruct(*sv);
+        swapStruct(sv);
+      memcpy(lc, &sv, sizeof(source_version_command));
       lc += sizeof(source_version_command);
     }
 

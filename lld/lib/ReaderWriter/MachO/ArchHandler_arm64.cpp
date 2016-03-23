@@ -164,7 +164,7 @@ public:
                            FindAddressForAtom findAddress,
                            FindAddressForAtom findSectionAddress,
                            uint64_t imageBaseAddress,
-                           uint8_t *atomContentBuffer) override;
+                    llvm::MutableArrayRef<uint8_t> atomContentBuffer) override;
 
   void appendSectionRelocations(const DefinedAtom &atom,
                                 uint64_t atomSectionOffset,
@@ -537,9 +537,10 @@ std::error_code ArchHandler_arm64::getPairReferenceInfo(
 void ArchHandler_arm64::generateAtomContent(
     const DefinedAtom &atom, bool relocatable, FindAddressForAtom findAddress,
     FindAddressForAtom findSectionAddress, uint64_t imageBaseAddress,
-    uint8_t *atomContentBuffer) {
+    llvm::MutableArrayRef<uint8_t> atomContentBuffer) {
   // Copy raw bytes.
-  memcpy(atomContentBuffer, atom.rawContent().data(), atom.size());
+  std::copy(atom.rawContent().begin(), atom.rawContent().end(),
+            atomContentBuffer.begin());
   // Apply fix-ups.
 #ifndef NDEBUG
   if (atom.begin() != atom.end()) {

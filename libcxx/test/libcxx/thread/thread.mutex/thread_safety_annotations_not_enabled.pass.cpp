@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: libcpp-has-no-threads
+
 // <mutex>
 
 // This test does not define _LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS so it

@@ -1,28 +1,33 @@
 // RUN: %check_clang_tidy %s performance-unnecessary-copy-initialization %t
 
 struct ExpensiveToCopyType {
-  ExpensiveToCopyType() {}
-  virtual ~ExpensiveToCopyType() {}
-  const ExpensiveToCopyType &reference() const { return *this; }
-  void nonConstMethod() {}
+  ExpensiveToCopyType();
+  virtual ~ExpensiveToCopyType();
+  const ExpensiveToCopyType &reference() const;
+  void nonConstMethod();
+  bool constMethod() const;
 };
 
 struct TrivialToCopyType {
-  const TrivialToCopyType &reference() const { return *this; }
+  const TrivialToCopyType &reference() const;
 };
 
-const ExpensiveToCopyType &ExpensiveTypeReference() {
-  static const ExpensiveToCopyType *Type = new ExpensiveToCopyType();
-  return *Type;
-}
+struct WeirdCopyCtorType {
+  WeirdCopyCtorType();
+  WeirdCopyCtorType(const WeirdCopyCtorType &w, bool oh_yes = true);
 
-const TrivialToCopyType &TrivialTypeReference() {
-  static const TrivialToCopyType *Type = new TrivialToCopyType();
-  return *Type;
-}
+  void nonConstMethod();
+  bool constMethod() const;
+};
+
+ExpensiveToCopyType global_expensive_to_copy_type;
+
+const ExpensiveToCopyType &ExpensiveTypeReference();
+const TrivialToCopyType &TrivialTypeReference();
 
 void mutate(ExpensiveToCopyType &);
 void mutate(ExpensiveToCopyType *);
+void useAsConstPointer(const ExpensiveToCopyType *);
 void useAsConstReference(const ExpensiveToCopyType &);
 void useByValue(ExpensiveToCopyType);
 
@@ -203,23 +208,133 @@ struct NegativeConstructor {
   ExpensiveToCopyType Obj;
 };
 
-#define UNNECESSARY_COPY_INIT_IN_MACRO_BODY(TYPE)	\
-  void functionWith##TYPE(const TYPE& T) {		\
-    auto AssignedInMacro = T.reference();		\
-  }							\
+#define UNNECESSARY_COPY_INIT_IN_MACRO_BODY(TYPE)                              \
+  void functionWith##TYPE(const TYPE &T) {                                     \
+    auto AssignedInMacro = T.reference();                                      \
+  }                                                                            \
 // Ensure fix is not applied.
 // CHECK-FIXES: auto AssignedInMacro = T.reference();
-
 
 UNNECESSARY_COPY_INIT_IN_MACRO_BODY(ExpensiveToCopyType)
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: the variable 'AssignedInMacro' is copy-constructed
 
-#define UNNECESSARY_COPY_INIT_IN_MACRO_ARGUMENT(ARGUMENT)	\
-  ARGUMENT
+#define UNNECESSARY_COPY_INIT_IN_MACRO_ARGUMENT(ARGUMENT) ARGUMENT
 
 void PositiveMacroArgument(const ExpensiveToCopyType &Obj) {
   UNNECESSARY_COPY_INIT_IN_MACRO_ARGUMENT(auto CopyInMacroArg = Obj.reference());
   // CHECK-MESSAGES: [[@LINE-1]]:48: warning: the variable 'CopyInMacroArg' is copy-constructed
   // Ensure fix is not applied.
   // CHECK-FIXES: auto CopyInMacroArg = Obj.reference()
+}
+
+void PositiveLocalCopyConstMethodInvoked() {
+  ExpensiveToCopyType orig;
+  ExpensiveToCopyType copy_1 = orig;
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: local copy 'copy_1' of the variable 'orig' is never modified; consider avoiding the copy [performance-unnecessary-copy-initialization]
+  // CHECK-FIXES: const ExpensiveToCopyType& copy_1 = orig;
+  copy_1.constMethod();
+  orig.constMethod();
+}
+
+void PositiveLocalCopyUsingExplicitCopyCtor() {
+  ExpensiveToCopyType orig;
+  ExpensiveToCopyType copy_2(orig);
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: local copy 'copy_2'
+  // CHECK-FIXES: const ExpensiveToCopyType& copy_2(orig);
+  copy_2.constMethod();
+  orig.constMethod();
+}
+
+void PositiveLocalCopyCopyIsArgument(const ExpensiveToCopyType &orig) {
+  ExpensiveToCopyType copy_3 = orig;
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: local copy 'copy_3'
+  // CHECK-FIXES: const ExpensiveToCopyType& copy_3 = orig;
+  copy_3.constMethod();
+}
+
+void PositiveLocalCopyUsedAsConstRef() {
+  ExpensiveToCopyType orig;
+  ExpensiveToCopyType copy_4 = orig;
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: local copy 'copy_4'
+  // CHECK-FIXES: const ExpensiveToCopyType& copy_4 = orig;
+  useAsConstReference(orig);
+}
+
+void PositiveLocalCopyTwice() {
+  ExpensiveToCopyType orig;
+  ExpensiveToCopyType copy_5 = orig;
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: local copy 'copy_5'
+  // CHECK-FIXES: const ExpensiveToCopyType& copy_5 = orig;
+  ExpensiveToCopyType copy_6 = copy_5;
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: local copy 'copy_6'
+  // CHECK-FIXES: const ExpensiveToCopyType& copy_6 = copy_5;
+  copy_5.constMethod();
+  copy_6.constMethod();
+  orig.constMethod();
+}
+
+
+void PositiveLocalCopyWeirdCopy() {
+  WeirdCopyCtorType orig;
+  WeirdCopyCtorType weird_1(orig);
+  // CHECK-MESSAGES: [[@LINE-1]]:21: warning: local copy 'weird_1'
+  // CHECK-FIXES: const WeirdCopyCtorType& weird_1(orig);
+  weird_1.constMethod();
+
+  WeirdCopyCtorType weird_2 = orig;
+  // CHECK-MESSAGES: [[@LINE-1]]:21: warning: local copy 'weird_2'
+  // CHECK-FIXES: const WeirdCopyCtorType& weird_2 = orig;
+  weird_2.constMethod();
+}
+
+void NegativeLocalCopySimpleTypes() {
+  int i1 = 0;
+  int i2 = i1;
+}
+
+void NegativeLocalCopyCopyIsModified() {
+  ExpensiveToCopyType orig;
+  ExpensiveToCopyType neg_copy_1 = orig;
+  neg_copy_1.nonConstMethod();
+}
+
+void NegativeLocalCopyOriginalIsModified() {
+  ExpensiveToCopyType orig;
+  ExpensiveToCopyType neg_copy_2 = orig;
+  orig.nonConstMethod();
+}
+
+void NegativeLocalCopyUsedAsRefArg() {
+  ExpensiveToCopyType orig;
+  ExpensiveToCopyType neg_copy_3 = orig;
+  mutate(neg_copy_3);
+}
+
+void NegativeLocalCopyUsedAsPointerArg() {
+  ExpensiveToCopyType orig;
+  ExpensiveToCopyType neg_copy_4 = orig;
+  mutate(&neg_copy_4);
+}
+
+void NegativeLocalCopyCopyFromGlobal() {
+  ExpensiveToCopyType neg_copy_5 = global_expensive_to_copy_type;
+}
+
+void NegativeLocalCopyCopyToStatic() {
+  ExpensiveToCopyType orig;
+  static ExpensiveToCopyType neg_copy_6 = orig;
+}
+
+void NegativeLocalCopyNonConstInForLoop() {
+  ExpensiveToCopyType orig;
+  for (ExpensiveToCopyType neg_copy_7 = orig; orig.constMethod();
+       orig.nonConstMethod()) {
+    orig.constMethod();
+  }
+}
+
+void NegativeLocalCopyWeirdNonCopy() {
+  WeirdCopyCtorType orig;
+  WeirdCopyCtorType neg_weird_1(orig, false);
+  WeirdCopyCtorType neg_weird_2(orig, true);
 }

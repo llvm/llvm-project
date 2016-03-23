@@ -434,6 +434,7 @@ namespace lldb {
     enum InstrumentationRuntimeType
     {
         eInstrumentationRuntimeTypeAddressSanitizer = 0x0000,
+        eInstrumentationRuntimeTypeThreadSanitizer = 0x0001,
         eNumInstrumentationRuntimeTypes
     };
 
