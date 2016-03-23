@@ -100,7 +100,6 @@ public:
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
   void addEntry(SymbolBody &Sym);
-  void addMipsLocalEntry();
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
   bool empty() const { return MipsLocalEntries == 0 && Entries.empty(); }

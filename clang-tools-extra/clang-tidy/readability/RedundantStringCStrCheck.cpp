@@ -85,23 +85,29 @@ void RedundantStringCStrCheck::registerMatchers(
   if (!getLangOpts().CPlusPlus)
     return;
 
-  Finder->addMatcher(
+  // Match string constructor.
+  const auto StringConstructorExpr = expr(anyOf(
       cxxConstructExpr(
-          hasDeclaration(cxxMethodDecl(hasName(StringConstructor))),
+          argumentCountIs(1),
+          hasDeclaration(cxxMethodDecl(hasName(StringConstructor)))),
+      cxxConstructExpr(
           argumentCountIs(2),
-          // The first argument must have the form x.c_str() or p->c_str()
-          // where the method is string::c_str().  We can use the copy
-          // constructor of string instead (or the compiler might share
-          // the string object).
-          hasArgument(0, cxxMemberCallExpr(
-                             callee(memberExpr().bind("member")),
-                             callee(cxxMethodDecl(hasName(StringCStrMethod))),
-                             on(expr().bind("arg")))
-                             .bind("call")),
-          // The second argument is the alloc object which must not be
-          // present explicitly.
-          hasArgument(1, cxxDefaultArgExpr())),
+          hasDeclaration(cxxMethodDecl(hasName(StringConstructor))),
+          // If present, the second argument is the alloc object which must not
+          // be present explicitly.
+          hasArgument(1, cxxDefaultArgExpr()))));
+
+  // Match a call to the string 'c_str()' method.
+  const auto StringCStrCallExpr = cxxMemberCallExpr(
+                            callee(memberExpr().bind("member")),
+                            callee(cxxMethodDecl(hasName(StringCStrMethod))),
+                            on(expr().bind("arg"))).bind("call");
+
+  Finder->addMatcher(
+      cxxConstructExpr(StringConstructorExpr,
+                       hasArgument(0, StringCStrCallExpr)),
       this);
+
   Finder->addMatcher(
       cxxConstructExpr(
           // Implicit constructors of these classes are overloaded
@@ -117,11 +123,7 @@ void RedundantStringCStrCheck::registerMatchers(
           // a constructor from string which is more efficient (avoids
           // strlen), so we can construct StringRef from the string
           // directly.
-          hasArgument(0, cxxMemberCallExpr(
-                             callee(memberExpr().bind("member")),
-                             callee(cxxMethodDecl(hasName(StringCStrMethod))),
-                             on(expr().bind("arg")))
-                             .bind("call"))),
+          hasArgument(0, StringCStrCallExpr)),
       this);
 }
 

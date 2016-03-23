@@ -14,8 +14,11 @@
 #include <cerrno>
 
 // In-house headers:
-#include "MIUtilFileStd.h"
 #include "MICmnResources.h"
+#include "MIUtilFileStd.h"
+#include "lldb/Host/FileSystem.h"
+
+#include "llvm/Support/ConvertUTF.h"
 
 //++ ------------------------------------------------------------------------------------
 // Details: CMIUtilFileStd constructor.
@@ -82,7 +85,14 @@ CMIUtilFileStd::CreateWrite(const CMIUtilString &vFileNamePath, bool &vwrbNewCre
     m_pFileHandle = ::fopen(vFileNamePath.c_str(), "wb");
 #else
     // Open a file with exclusive write and shared read permissions
-    m_pFileHandle = ::_fsopen(vFileNamePath.c_str(), "wb", _SH_DENYWR);
+    std::wstring path;
+    if (llvm::ConvertUTF8toWide(vFileNamePath.c_str(), path))
+        m_pFileHandle = ::_wfsopen(path.c_str(), L"wb", _SH_DENYWR);
+    else
+    {
+        errno = EINVAL;
+        m_pFileHandle = nullptr;
+    }
 #endif // !defined( _MSC_VER )
 
     if (m_pFileHandle == nullptr)

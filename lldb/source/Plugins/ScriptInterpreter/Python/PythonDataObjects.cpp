@@ -19,7 +19,10 @@
 
 #include "lldb/Core/Stream.h"
 #include "lldb/Host/File.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+
+#include "llvm/Support/ConvertUTF.h"
 
 #include <stdio.h>
 
@@ -1162,9 +1165,7 @@ PythonFile::PythonFile(File &file, const char *mode)
 
 PythonFile::PythonFile(const char *path, const char *mode)
 {
-    FILE *fp = nullptr;
-    fp = fopen(path, mode);
-    lldb_private::File file(fp, true);
+    lldb_private::File file(path, GetOptionsFromMode(mode));
     Reset(file, mode);
 }
 

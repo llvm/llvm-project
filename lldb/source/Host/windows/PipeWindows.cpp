@@ -73,8 +73,8 @@ PipeWindows::CreateNew(llvm::StringRef name, bool child_process_inherit)
 
     // Always open for overlapped i/o.  We implement blocking manually in Read and Write.
     DWORD read_mode = FILE_FLAG_OVERLAPPED;
-    m_read =
-        ::CreateNamedPipe(pipe_path.c_str(), PIPE_ACCESS_INBOUND | read_mode, PIPE_TYPE_BYTE | PIPE_WAIT, 1, 1024, 1024, 120 * 1000, NULL);
+    m_read = ::CreateNamedPipeA(pipe_path.c_str(), PIPE_ACCESS_INBOUND | read_mode, PIPE_TYPE_BYTE | PIPE_WAIT, 1, 1024,
+                                1024, 120 * 1000, NULL);
     if (INVALID_HANDLE_VALUE == m_read)
         return Error(::GetLastError(), eErrorTypeWin32);
     m_read_fd = _open_osfhandle((intptr_t)m_read, _O_RDONLY);
@@ -153,7 +153,8 @@ PipeWindows::OpenNamedPipe(llvm::StringRef name, bool child_process_inherit, boo
 
     if (is_read)
     {
-        m_read = ::CreateFile(pipe_path.c_str(), GENERIC_READ, 0, &attributes, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+        m_read =
+            ::CreateFileA(pipe_path.c_str(), GENERIC_READ, 0, &attributes, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
         if (INVALID_HANDLE_VALUE == m_read)
             return Error(::GetLastError(), eErrorTypeWin32);
 
@@ -164,7 +165,8 @@ PipeWindows::OpenNamedPipe(llvm::StringRef name, bool child_process_inherit, boo
     }
     else
     {
-        m_write = ::CreateFile(pipe_path.c_str(), GENERIC_WRITE, 0, &attributes, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+        m_write =
+            ::CreateFileA(pipe_path.c_str(), GENERIC_WRITE, 0, &attributes, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
         if (INVALID_HANDLE_VALUE == m_write)
             return Error(::GetLastError(), eErrorTypeWin32);
 

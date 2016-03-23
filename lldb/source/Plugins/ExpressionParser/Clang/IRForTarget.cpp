@@ -1957,25 +1957,29 @@ IRForTarget::runOnModule (Module &llvm_module)
         log->Printf("Module as passed in to IRForTarget: \n\"%s\"", s.c_str());
     }
 
-    Function* main_function = m_module->getFunction(StringRef(m_func_name.c_str()));
+    Function *const main_function = m_func_name.IsEmpty() ? nullptr : m_module->getFunction(m_func_name.GetStringRef());
 
-    if (!main_function)
+    if (!m_func_name.IsEmpty() && !main_function)
     {
         if (log)
-            log->Printf("Couldn't find \"%s()\" in the module", m_func_name.c_str());
+            log->Printf("Couldn't find \"%s()\" in the module", m_func_name.AsCString());
 
         if (m_error_stream)
-            m_error_stream->Printf("Internal error [IRForTarget]: Couldn't find wrapper '%s' in the module", m_func_name.c_str());
+            m_error_stream->Printf("Internal error [IRForTarget]: Couldn't find wrapper '%s' in the module",
+                                   m_func_name.AsCString());
 
         return false;
     }
 
-    if (!FixFunctionLinkage (*main_function))
+    if (main_function)
     {
-        if (log)
-            log->Printf("Couldn't fix the linkage for the function");
+        if (!FixFunctionLinkage(*main_function))
+        {
+            if (log)
+                log->Printf("Couldn't fix the linkage for the function");
 
-        return false;
+            return false;
+        }
     }
 
     llvm::Type *int8_ty = Type::getInt8Ty(m_module->getContext());
@@ -1994,14 +1998,17 @@ IRForTarget::runOnModule (Module &llvm_module)
     // Replace $__lldb_expr_result with a persistent variable
     //
 
-    if (!CreateResultVariable(*main_function))
+    if (main_function)
     {
-        if (log)
-            log->Printf("CreateResultVariable() failed");
+        if (!CreateResultVariable(*main_function))
+        {
+            if (log)
+                log->Printf("CreateResultVariable() failed");
 
-        // CreateResultVariable() reports its own errors, so we don't do so here
+            // CreateResultVariable() reports its own errors, so we don't do so here
 
-        return false;
+            return false;
+        }
     }
 
     if (log && log->GetVerbose())
@@ -2125,24 +2132,27 @@ IRForTarget::runOnModule (Module &llvm_module)
     // Run function-level passes that only make sense on the main function
     //
 
-    if (!ResolveExternals(*main_function))
+    if (main_function)
     {
-        if (log)
-            log->Printf("ResolveExternals() failed");
+        if (!ResolveExternals(*main_function))
+        {
+            if (log)
+                log->Printf("ResolveExternals() failed");
 
-        // ResolveExternals() reports its own errors, so we don't do so here
+            // ResolveExternals() reports its own errors, so we don't do so here
 
-        return false;
-    }
+            return false;
+        }
 
-    if (!ReplaceVariables(*main_function))
-    {
-        if (log)
-            log->Printf("ReplaceVariables() failed");
+        if (!ReplaceVariables(*main_function))
+        {
+            if (log)
+                log->Printf("ReplaceVariables() failed");
 
-        // ReplaceVariables() reports its own errors, so we don't do so here
+            // ReplaceVariables() reports its own errors, so we don't do so here
 
-        return false;
+            return false;
+        }
     }
 
     if (log && log->GetVerbose())

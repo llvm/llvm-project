@@ -33,7 +33,10 @@ class HostInfoPosix : public HostInfoBase
 
     static FileSpec GetDefaultShell();
 
-  protected:
+    static bool
+    GetEnvironmentVar(const std::string &var_name, std::string &var);
+
+protected:
     static bool ComputeSupportExeDirectory(FileSpec &file_spec);
     static bool ComputeHeaderDirectory(FileSpec &file_spec);
     static bool ComputePythonDirectory(FileSpec &file_spec);

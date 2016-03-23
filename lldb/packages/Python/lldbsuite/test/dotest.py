@@ -659,7 +659,7 @@ def setupSysPath():
                 print("     location of LLDB\'s site-packages folder.")
                 print("  3) A different version of Python than that which was built against is exported in")
                 print("     the system\'s PATH environment variable, causing conflicts.")
-                print("  4) The executable '%s' could not be found.  Please check " % lldbExecutable)
+                print("  4) The executable '%s' could not be found.  Please check " % lldbtest_config.lldbExec)
                 print("     that it exists and is executable.")
 
     if lldbPythonDir:

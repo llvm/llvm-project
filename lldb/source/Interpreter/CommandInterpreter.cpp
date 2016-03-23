@@ -344,10 +344,14 @@ CommandInterpreter::Initialize ()
     cmd_obj_sp = GetCommandSPExact ("expression", false);
     if (cmd_obj_sp)
     {        
-        AddAlias ("p", cmd_obj_sp, "--");
-        AddAlias ("print", cmd_obj_sp, "--");
-        AddAlias ("call", cmd_obj_sp, "--");
-        AddAlias ("po", cmd_obj_sp, "-O --");
+        AddAlias ("p", cmd_obj_sp, "--")->SetHelpLong("");
+        AddAlias ("print", cmd_obj_sp, "--")->SetHelpLong("");
+        AddAlias ("call", cmd_obj_sp, "--")->SetHelpLong("");
+        if (auto po = AddAlias ("po", cmd_obj_sp, "-O --"))
+        {
+            po->SetHelp("Evaluate an expression in the current program context, using user defined variables and variables currently in scope, and display the result of evaluation in a language-specific manner.");
+            po->SetHelpLong("");
+        }
     }
     
     cmd_obj_sp = GetCommandSPExact ("process kill", false);
@@ -776,7 +780,7 @@ CommandInterpreter::GetCommandSP (const char *cmd_cstr, bool include_aliases, bo
 
     if (include_aliases && HasAliases())
     {
-        CommandAliasMap::iterator alias_pos = m_alias_dict.find(cmd);
+        auto alias_pos = m_alias_dict.find(cmd);
         if (alias_pos != m_alias_dict.end())
             command_sp = alias_pos->second;
     }
@@ -827,7 +831,7 @@ CommandInterpreter::GetCommandSP (const char *cmd_cstr, bool include_aliases, bo
         if (num_alias_matches == 1)
         {
             cmd.assign(matches->GetStringAtIndex (num_cmd_matches));
-            CommandAliasMap::iterator alias_pos = m_alias_dict.find(cmd);
+            auto alias_pos = m_alias_dict.find(cmd);
             if (alias_pos != m_alias_dict.end())
                 alias_match_sp = alias_pos->second;
         }
@@ -1359,8 +1363,9 @@ CommandInterpreter::BuildAliasResult (const char *alias_name,
     
     if (alias_cmd_obj && alias_cmd_obj->IsAlias())
     {
-        OptionArgVectorSP option_arg_vector_sp =  ((CommandAlias*)alias_cmd_obj)->GetOptionArguments();
-        alias_cmd_obj = ((CommandAlias*)alias_cmd_obj)->GetUnderlyingCommand().get();
+        std::pair<CommandObjectSP, OptionArgVectorSP> desugared = ((CommandAlias*)alias_cmd_obj)->Desugar();
+        OptionArgVectorSP option_arg_vector_sp =  desugared.second;
+        alias_cmd_obj = desugared.first.get();
         std::string alias_name_str = alias_name;
         if ((cmd_args.GetArgumentCount() == 0)
             || (alias_name_str.compare (cmd_args.GetArgumentAtIndex(0)) != 0))
@@ -2776,54 +2781,63 @@ CommandInterpreter::OutputHelpText (Stream &strm,
 }
 
 void
-CommandInterpreter::FindCommandsForApropos (const char *search_word, StringList &commands_found,
-                                            StringList &commands_help, bool search_builtin_commands, bool search_user_commands)
+CommandInterpreter::FindCommandsForApropos (const char *search_word,
+                                            StringList &commands_found,
+                                            StringList &commands_help,
+                                            CommandObject::CommandMap &command_map)
+{
+    CommandObject::CommandMap::const_iterator pos;
+    
+    for (pos = command_map.begin(); pos != command_map.end(); ++pos)
+    {
+        const char *command_name = pos->first.c_str();
+        CommandObject *cmd_obj = pos->second.get();
+        
+        const bool search_short_help = true;
+        const bool search_long_help = false;
+        const bool search_syntax = false;
+        const bool search_options = false;
+        if (strcasestr(command_name, search_word) ||
+            cmd_obj->HelpTextContainsWord (search_word,
+                                           search_short_help,
+                                           search_long_help,
+                                           search_syntax,
+                                           search_options))
+        {
+            commands_found.AppendString (command_name);
+            commands_help.AppendString (cmd_obj->GetHelp());
+        }
+        
+        if (cmd_obj->IsMultiwordObject())
+        {
+            CommandObjectMultiword *cmd_multiword = (CommandObjectMultiword*)cmd_obj;
+            FindCommandsForApropos(search_word,
+                                   commands_found,
+                                   commands_help,
+                                   cmd_multiword->GetSubcommandDictionary());
+        }
+    }
+}
+
+
+void
+CommandInterpreter::FindCommandsForApropos (const char *search_word,
+                                            StringList &commands_found,
+                                            StringList &commands_help,
+                                            bool search_builtin_commands,
+                                            bool search_user_commands,
+                                            bool search_alias_commands)
 {
     CommandObject::CommandMap::const_iterator pos;
 
     if (search_builtin_commands)
-    {
-        for (pos = m_command_dict.begin(); pos != m_command_dict.end(); ++pos)
-        {
-            const char *command_name = pos->first.c_str();
-            CommandObject *cmd_obj = pos->second.get();
-
-            if (cmd_obj->HelpTextContainsWord (search_word))
-            {
-                commands_found.AppendString (command_name);
-                commands_help.AppendString (cmd_obj->GetHelp());
-            }
-
-            if (cmd_obj->IsMultiwordObject())
-                cmd_obj->AproposAllSubCommands (command_name,
-                                                search_word,
-                                                commands_found,
-                                                commands_help);
-          
-        }
-    }
+        FindCommandsForApropos(search_word, commands_found, commands_help, m_command_dict);
     
     if (search_user_commands)
-    {
-        for (pos = m_user_dict.begin(); pos != m_user_dict.end(); ++pos)
-        {
-            const char *command_name = pos->first.c_str();
-            CommandObject *cmd_obj = pos->second.get();
+        FindCommandsForApropos(search_word, commands_found, commands_help, m_user_dict);
 
-            if (cmd_obj->HelpTextContainsWord (search_word))
-            {
-                commands_found.AppendString (command_name);
-                commands_help.AppendString (cmd_obj->GetHelp());
-            }
-
-            if (cmd_obj->IsMultiwordObject())
-                cmd_obj->AproposAllSubCommands (command_name,
-                                                search_word,
-                                                commands_found,
-                                                commands_help);
-          
-        }
-    }
+    if (search_alias_commands)
+        FindCommandsForApropos(search_word, commands_found, commands_help, m_alias_dict);
 }
 
 void

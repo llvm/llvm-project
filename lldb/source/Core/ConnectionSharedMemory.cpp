@@ -32,6 +32,8 @@
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Log.h"
 
+#include "llvm/Support/ConvertUTF.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -135,18 +137,18 @@ ConnectionSharedMemory::Open (bool create, const char *name, size_t size, Error 
     m_name.assign (name);
 
 #ifdef _WIN32
-    HANDLE handle;
-    if (create) {
-        handle = CreateFileMapping(
-            INVALID_HANDLE_VALUE,
-            nullptr,
-            PAGE_READWRITE,
-            llvm::Hi_32(size),
-            llvm::Lo_32(size),
-            name);
+    HANDLE handle = INVALID_HANDLE_VALUE;
+    std::wstring wname;
+    if (llvm::ConvertUTF8toWide(name, wname))
+    {
+        if (create)
+        {
+            handle = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, llvm::Hi_32(size),
+                                        llvm::Lo_32(size), wname.c_str());
+        }
+        else
+            handle = OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, wname.c_str());
     }
-    else
-        handle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, name);
 
     m_fd = _open_osfhandle((intptr_t)handle, 0);
 #else

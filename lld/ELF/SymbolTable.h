@@ -11,6 +11,7 @@
 #define LLD_ELF_SYMBOL_TABLE_H
 
 #include "InputFiles.h"
+#include "LTO.h"
 #include "llvm/ADT/MapVector.h"
 
 namespace llvm {
@@ -74,8 +75,6 @@ private:
   std::unique_ptr<InputFile> codegen(llvm::Module &M);
   std::string conflictMsg(SymbolBody *Old, SymbolBody *New);
 
-  SmallString<0> OwningLTOData;
-  std::unique_ptr<MemoryBuffer> LtoBuffer;
   ObjectFile<ELFT> *createCombinedLtoObject();
 
   // The order the global symbols are in is not defined. We can use an arbitrary
@@ -101,6 +100,8 @@ private:
 
   // Set of .so files to not link the same shared object file more than once.
   llvm::DenseSet<StringRef> SoNames;
+
+  std::unique_ptr<BitcodeCompiler> Lto;
 };
 
 } // namespace elf

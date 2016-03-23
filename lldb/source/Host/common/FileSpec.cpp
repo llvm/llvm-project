@@ -17,7 +17,6 @@
 #ifndef _MSC_VER
 #include <libgen.h>
 #endif
-#include <sys/stat.h>
 #include <set>
 #include <string.h>
 #include <fstream>
@@ -40,6 +39,7 @@
 #include "lldb/Utility/CleanUp.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -90,7 +90,7 @@ GetFileStats (const FileSpec *file_spec, struct stat *stats_ptr)
 {
     char resolved_path[PATH_MAX];
     if (file_spec->GetPath (resolved_path, sizeof(resolved_path)))
-        return ::stat (resolved_path, stats_ptr) == 0;
+        return FileSystem::Stat(resolved_path, stats_ptr) == 0;
     return false;
 }
 
@@ -206,15 +206,10 @@ FileSpec::Resolve (llvm::SmallVectorImpl<char> &path)
 #endif // #ifdef LLDB_CONFIG_TILDE_RESOLVES_TO_USER
 
     // Save a copy of the original path that's passed in
-    llvm::SmallString<PATH_MAX> original_path(path.begin(), path.end());
+    llvm::SmallString<128> original_path(path.begin(), path.end());
 
     llvm::sys::fs::make_absolute(path);
-
-    
-    path.push_back(0);  // Be sure we have a nul terminated string
-    path.pop_back();
-    struct stat file_stats;
-    if (::stat (path.data(), &file_stats) != 0)
+    if (!llvm::sys::fs::exists(path))
     {
         path.clear();
         path.append(original_path.begin(), original_path.end());
@@ -815,7 +810,10 @@ FileSpec::IsSymbolicLink () const
         return false;
 
 #ifdef _WIN32
-    auto attrs = ::GetFileAttributes (resolved_path);
+    std::wstring wpath;
+    if (!llvm::ConvertUTF8toWide(resolved_path, wpath))
+        return false;
+    auto attrs = ::GetFileAttributesW(wpath.c_str());
     if (attrs == INVALID_FILE_ATTRIBUTES)
         return false;
 
@@ -1114,12 +1112,18 @@ FileSpec::ForEachItemInDirectory (const char *dir_path, DirectoryCallback const 
 {
     if (dir_path && dir_path[0])
     {
-#if _WIN32
+#ifdef _WIN32
         std::string szDir(dir_path);
         szDir += "\\*";
 
-        WIN32_FIND_DATA ffd;
-        HANDLE hFind = FindFirstFile(szDir.c_str(), &ffd);
+        std::wstring wszDir;
+        if (!llvm::ConvertUTF8toWide(szDir, wszDir))
+        {
+            return eEnumerateDirectoryResultNext;
+        }
+
+        WIN32_FIND_DATAW ffd;
+        HANDLE hFind = FindFirstFileW(wszDir.c_str(), &ffd);
 
         if (hFind == INVALID_HANDLE_VALUE)
         {
@@ -1131,12 +1135,12 @@ FileSpec::ForEachItemInDirectory (const char *dir_path, DirectoryCallback const 
             FileSpec::FileType file_type = eFileTypeUnknown;
             if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             {
-                size_t len = strlen(ffd.cFileName);
+                size_t len = wcslen(ffd.cFileName);
 
-                if (len == 1 && ffd.cFileName[0] == '.')
+                if (len == 1 && ffd.cFileName[0] == L'.')
                     continue;
 
-                if (len == 2 && ffd.cFileName[0] == '.' && ffd.cFileName[1] == '.')
+                if (len == 2 && ffd.cFileName[0] == L'.' && ffd.cFileName[1] == L'.')
                     continue;
 
                 file_type = eFileTypeDirectory;
@@ -1150,12 +1154,19 @@ FileSpec::ForEachItemInDirectory (const char *dir_path, DirectoryCallback const 
                 file_type = eFileTypeRegular;
             }
 
-            char child_path[MAX_PATH];
-            const int child_path_len = ::snprintf (child_path, sizeof(child_path), "%s\\%s", dir_path, ffd.cFileName);
-            if (child_path_len < (int)(sizeof(child_path) - 1))
+            std::string fileName;
+            if (!llvm::convertWideToUTF8(ffd.cFileName, fileName))
+            {
+                continue;
+            }
+
+            std::vector<char> child_path(PATH_MAX);
+            const int child_path_len =
+                ::snprintf(child_path.data(), child_path.size(), "%s\\%s", dir_path, fileName.c_str());
+            if (child_path_len < (int)(child_path.size() - 1))
             {
                 // Don't resolve the file type or path
-                FileSpec child_path_spec (child_path, false);
+                FileSpec child_path_spec(child_path.data(), false);
 
                 EnumerateDirectoryResult result = callback (file_type, child_path_spec);
 
@@ -1168,7 +1179,8 @@ FileSpec::ForEachItemInDirectory (const char *dir_path, DirectoryCallback const 
                         break;
 
                     case eEnumerateDirectoryResultEnter: // Recurse into the current entry if it is a directory or symlink, or next if not
-                        if (FileSpec::ForEachItemInDirectory(child_path, callback) == eEnumerateDirectoryResultQuit)
+                        if (FileSpec::ForEachItemInDirectory(child_path.data(), callback) ==
+                            eEnumerateDirectoryResultQuit)
                         {
                             // The subdirectory returned Quit, which means to
                             // stop all directory enumerations at all levels.
@@ -1185,7 +1197,7 @@ FileSpec::ForEachItemInDirectory (const char *dir_path, DirectoryCallback const 
                         return eEnumerateDirectoryResultQuit;
                 }
             }
-        } while (FindNextFile(hFind, &ffd) != 0);
+        } while (FindNextFileW(hFind, &ffd) != 0);
 
         FindClose(hFind);
 #else

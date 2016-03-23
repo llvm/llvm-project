@@ -299,3 +299,15 @@ FileSystem::IsLocal(const FileSpec &spec)
     return false;
 }
 #endif
+
+FILE *
+FileSystem::Fopen(const char *path, const char *mode)
+{
+    return ::fopen(path, mode);
+}
+
+int
+FileSystem::Stat(const char *path, struct stat *stats)
+{
+    return ::stat(path, stats);
+}

@@ -1287,6 +1287,9 @@ private:
   /// @brief Flag to remember if the SCoP contained an error block or not.
   bool HasErrorBlock;
 
+  /// @brief Flag to indicate if the SCop has a complex control flow.
+  bool HasComplexCFG;
+
   /// Max loop depth.
   unsigned MaxLoopDepth;
 

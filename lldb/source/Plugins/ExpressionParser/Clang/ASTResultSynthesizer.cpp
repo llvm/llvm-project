@@ -11,6 +11,11 @@
 
 #include "ClangPersistentVariables.h"
 
+#include "lldb/Core/Log.h"
+#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangASTImporter.h"
+#include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "stdlib.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -23,22 +28,18 @@
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
-#include "lldb/Core/Log.h"
-#include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Symbol/ClangASTImporter.h"
-#include "lldb/Target/Target.h"
 
 using namespace llvm;
 using namespace clang;
 using namespace lldb_private;
 
-ASTResultSynthesizer::ASTResultSynthesizer(ASTConsumer *passthrough,
-                                           Target &target) :
-    m_ast_context (NULL),
-    m_passthrough (passthrough),
-    m_passthrough_sema (NULL),
-    m_target (target),
-    m_sema (NULL)
+ASTResultSynthesizer::ASTResultSynthesizer(ASTConsumer *passthrough, bool top_level, Target &target)
+    : m_ast_context(NULL),
+      m_passthrough(passthrough),
+      m_passthrough_sema(NULL),
+      m_target(target),
+      m_sema(NULL),
+      m_top_level(top_level)
 {
     if (!m_passthrough)
         return;
@@ -76,6 +77,10 @@ ASTResultSynthesizer::TransformTopLevelDecl(Decl* D)
                 log->Printf("TransformTopLevelDecl(<complex>)");
         }
 
+        if (m_top_level)
+        {
+            RecordPersistentDecl(named_decl);
+        }
     }
 
     if (LinkageSpecDecl *linkage_spec_decl = dyn_cast<LinkageSpecDecl>(D))
@@ -89,22 +94,23 @@ ASTResultSynthesizer::TransformTopLevelDecl(Decl* D)
             TransformTopLevelDecl(*decl_iterator);
         }
     }
-    else if (ObjCMethodDecl *method_decl = dyn_cast<ObjCMethodDecl>(D))
+    else if (!m_top_level)
     {
-        if (m_ast_context &&
-            !method_decl->getSelector().getAsString().compare("$__lldb_expr:"))
+        if (ObjCMethodDecl *method_decl = dyn_cast<ObjCMethodDecl>(D))
         {
-            RecordPersistentTypes(method_decl);
-            SynthesizeObjCMethodResult(method_decl);
+            if (m_ast_context && !method_decl->getSelector().getAsString().compare("$__lldb_expr:"))
+            {
+                RecordPersistentTypes(method_decl);
+                SynthesizeObjCMethodResult(method_decl);
+            }
         }
-    }
-    else if (FunctionDecl *function_decl = dyn_cast<FunctionDecl>(D))
-    {
-        if (m_ast_context &&
-            !function_decl->getNameInfo().getAsString().compare("$__lldb_expr"))
+        else if (FunctionDecl *function_decl = dyn_cast<FunctionDecl>(D))
         {
-            RecordPersistentTypes(function_decl);
-            SynthesizeFunctionResult(function_decl);
+            if (m_ast_context && !function_decl->getNameInfo().getAsString().compare("$__lldb_expr"))
+            {
+                RecordPersistentTypes(function_decl);
+                SynthesizeFunctionResult(function_decl);
+            }
         }
     }
 }
@@ -457,14 +463,66 @@ ASTResultSynthesizer::MaybeRecordPersistentType(TypeDecl *D)
     ConstString name_cs(name.str().c_str());
 
     if (log)
-        log->Printf ("Recording persistent type %s\n", name_cs.GetCString());
+        log->Printf("Recording persistent type %s\n", name_cs.GetCString());
 
-    Decl *D_scratch = m_target.GetClangASTImporter()->DeportDecl(m_target.GetScratchClangASTContext()->getASTContext(),
-                                                                 m_ast_context,
-                                                                 D);
+    m_decls.push_back(D);
+}
 
-    if (TypeDecl *TypeDecl_scratch = dyn_cast<TypeDecl>(D_scratch))
-        llvm::cast<ClangPersistentVariables>(m_target.GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC))->RegisterPersistentDecl(name_cs, TypeDecl_scratch);
+void
+ASTResultSynthesizer::RecordPersistentDecl(NamedDecl *D)
+{
+    lldbassert(m_top_level);
+
+    if (!D->getIdentifier())
+        return;
+
+    StringRef name = D->getName();
+
+    if (name.size() == 0)
+        return;
+
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+    ConstString name_cs(name.str().c_str());
+
+    if (log)
+        log->Printf("Recording persistent decl %s\n", name_cs.GetCString());
+
+    m_decls.push_back(D);
+}
+
+void
+ASTResultSynthesizer::CommitPersistentDecls()
+{
+    for (clang::NamedDecl *decl : m_decls)
+    {
+        StringRef name = decl->getName();
+        ConstString name_cs(name.str().c_str());
+
+        Decl *D_scratch = m_target.GetClangASTImporter()->DeportDecl(
+            m_target.GetScratchClangASTContext()->getASTContext(), m_ast_context, decl);
+
+        if (!D_scratch)
+        {
+            Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+            if (log)
+            {
+                std::string s;
+                llvm::raw_string_ostream ss(s);
+                decl->dump(ss);
+                ss.flush();
+
+                log->Printf("Couldn't commit persistent  decl: %s\n", s.c_str());
+            }
+
+            continue;
+        }
+
+        if (NamedDecl *NamedDecl_scratch = dyn_cast<NamedDecl>(D_scratch))
+            llvm::cast<ClangPersistentVariables>(m_target.GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC))
+                ->RegisterPersistentDecl(name_cs, NamedDecl_scratch);
+    }
 }
 
 void

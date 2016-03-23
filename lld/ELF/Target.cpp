@@ -736,7 +736,8 @@ bool X86_64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
 }
 
 bool X86_64TargetInfo::refersToGotEntry(uint32_t Type) const {
-  return Type == R_X86_64_GOTPCREL;
+  return Type == R_X86_64_GOTPCREL || Type == R_X86_64_GOTPCRELX ||
+         Type == R_X86_64_REX_GOTPCRELX;
 }
 
 bool X86_64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
@@ -934,6 +935,8 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     write32le(Loc, SA);
     break;
   case R_X86_64_GOTPCREL:
+  case R_X86_64_GOTPCRELX:
+  case R_X86_64_REX_GOTPCRELX:
   case R_X86_64_PC32:
   case R_X86_64_PLT32:
   case R_X86_64_TLSGD:

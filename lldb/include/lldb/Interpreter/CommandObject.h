@@ -154,17 +154,11 @@ public:
     const char *
     GetCommandName ();
 
-    void
+    virtual void
     SetHelp (const char * str);
 
-    void
-    SetHelp (std::string str);
-    
-    void
+    virtual void
     SetHelpLong (const char * str);
-
-    void
-    SetHelpLong (std::string str);
 
     void
     SetSyntax (const char *str);
@@ -379,7 +373,11 @@ public:
     }
     
     bool
-    HelpTextContainsWord (const char *search_word);
+    HelpTextContainsWord (const char *search_word,
+                          bool search_short_help = true,
+                          bool search_long_help = true,
+                          bool search_syntax = true,
+                          bool search_options = true);
 
     //------------------------------------------------------------------
     /// The flags accessor.

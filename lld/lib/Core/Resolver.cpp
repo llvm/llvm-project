@@ -33,16 +33,16 @@ ErrorOr<bool> Resolver::handleFile(File &file) {
   if (auto ec = _ctx.handleLoadedFile(file))
     return ec;
   bool undefAdded = false;
-  for (const DefinedAtom *atom : file.defined())
-    doDefinedAtom(*atom);
-  for (const UndefinedAtom *atom : file.undefined()) {
-    if (doUndefinedAtom(*atom))
+  for (auto &atom : file.defined().owning_ptrs())
+    doDefinedAtom(std::move(atom));
+  for (auto &atom : file.undefined().owning_ptrs()) {
+    if (doUndefinedAtom(std::move(atom)))
       undefAdded = true;
   }
-  for (const SharedLibraryAtom *atom : file.sharedLibrary())
-    doSharedLibraryAtom(*atom);
-  for (const AbsoluteAtom *atom : file.absolute())
-    doAbsoluteAtom(*atom);
+  for (auto &atom : file.sharedLibrary().owning_ptrs())
+    doSharedLibraryAtom(std::move(atom));
+  for (auto &atom : file.absolute().owning_ptrs())
+    doAbsoluteAtom(std::move(atom));
   return undefAdded;
 }
 
@@ -113,9 +113,9 @@ std::error_code Resolver::handleSharedLibrary(File &file) {
   undefAddedOrError = forEachUndefines(file, searchForOverrides,
                                        [&](StringRef undefName,
                                            bool dataSymbolOnly)->ErrorOr<bool> {
-    if (const SharedLibraryAtom *atom =
-            sharedLibrary->exports(undefName, dataSymbolOnly))
-      doSharedLibraryAtom(*atom);
+    auto atom = sharedLibrary->exports(undefName, dataSymbolOnly);
+    if (atom.get())
+      doSharedLibraryAtom(std::move(atom));
     return false;
   });
 
@@ -124,84 +124,79 @@ std::error_code Resolver::handleSharedLibrary(File &file) {
   return std::error_code();
 }
 
-bool Resolver::doUndefinedAtom(const UndefinedAtom &atom) {
+bool Resolver::doUndefinedAtom(OwningAtomPtr<UndefinedAtom> atom) {
   DEBUG_WITH_TYPE("resolver", llvm::dbgs()
                     << "       UndefinedAtom: "
-                    << llvm::format("0x%09lX", &atom)
-                    << ", name=" << atom.name() << "\n");
-
-  // add to list of known atoms
-  _atoms.push_back(&atom);
+                    << llvm::format("0x%09lX", atom.get())
+                    << ", name=" << atom.get()->name() << "\n");
 
   // tell symbol table
-  bool newUndefAdded = _symbolTable.add(atom);
+  bool newUndefAdded = _symbolTable.add(*atom.get());
   if (newUndefAdded)
-    _undefines.push_back(atom.name());
+    _undefines.push_back(atom.get()->name());
+
+  // add to list of known atoms
+  _atoms.push_back(OwningAtomPtr<Atom>(atom.release()));
 
   return newUndefAdded;
 }
 
 // Called on each atom when a file is added. Returns true if a given
 // atom is added to the symbol table.
-void Resolver::doDefinedAtom(const DefinedAtom &atom) {
+void Resolver::doDefinedAtom(OwningAtomPtr<DefinedAtom> atom) {
   DEBUG_WITH_TYPE("resolver", llvm::dbgs()
                     << "         DefinedAtom: "
-                    << llvm::format("0x%09lX", &atom)
+                    << llvm::format("0x%09lX", atom.get())
                     << ", file=#"
-                    << atom.file().ordinal()
+                    << atom.get()->file().ordinal()
                     << ", atom=#"
-                    << atom.ordinal()
+                    << atom.get()->ordinal()
                     << ", name="
-                    << atom.name()
+                    << atom.get()->name()
                     << ", type="
-                    << atom.contentType()
+                    << atom.get()->contentType()
                     << "\n");
-
-  // add to list of known atoms
-  _atoms.push_back(&atom);
-  _symbolTable.add(atom);
 
   // An atom that should never be dead-stripped is a dead-strip root.
-  if (_ctx.deadStrip() && atom.deadStrip() == DefinedAtom::deadStripNever) {
-    _deadStripRoots.insert(&atom);
+  if (_ctx.deadStrip() &&
+      atom.get()->deadStrip() == DefinedAtom::deadStripNever) {
+    _deadStripRoots.insert(atom.get());
   }
+
+  // add to list of known atoms
+  _symbolTable.add(*atom.get());
+  _atoms.push_back(OwningAtomPtr<Atom>(atom.release()));
 }
 
-void Resolver::doSharedLibraryAtom(const SharedLibraryAtom &atom) {
+void Resolver::doSharedLibraryAtom(OwningAtomPtr<SharedLibraryAtom> atom) {
   DEBUG_WITH_TYPE("resolver", llvm::dbgs()
                     << "   SharedLibraryAtom: "
-                    << llvm::format("0x%09lX", &atom)
+                    << llvm::format("0x%09lX", atom.get())
                     << ", name="
-                    << atom.name()
+                    << atom.get()->name()
                     << "\n");
 
-  // add to list of known atoms
-  _atoms.push_back(&atom);
-
   // tell symbol table
-  _symbolTable.add(atom);
+  _symbolTable.add(*atom.get());
+
+  // add to list of known atoms
+  _atoms.push_back(OwningAtomPtr<Atom>(atom.release()));
 }
 
-void Resolver::doAbsoluteAtom(const AbsoluteAtom &atom) {
+void Resolver::doAbsoluteAtom(OwningAtomPtr<AbsoluteAtom> atom) {
   DEBUG_WITH_TYPE("resolver", llvm::dbgs()
                     << "       AbsoluteAtom: "
-                    << llvm::format("0x%09lX", &atom)
+                    << llvm::format("0x%09lX", atom.get())
                     << ", name="
-                    << atom.name()
+                    << atom.get()->name()
                     << "\n");
 
-  // add to list of known atoms
-  _atoms.push_back(&atom);
-
   // tell symbol table
-  if (atom.scope() != Atom::scopeTranslationUnit)
-    _symbolTable.add(atom);
-}
+  if (atom.get()->scope() != Atom::scopeTranslationUnit)
+    _symbolTable.add(*atom.get());
 
-// utility to add a vector of atoms
-void Resolver::addAtoms(const std::vector<const DefinedAtom *> &newAtoms) {
-  for (const DefinedAtom *newAtom : newAtoms)
-    doDefinedAtom(*newAtom);
+  // add to list of known atoms
+  _atoms.push_back(OwningAtomPtr<Atom>(atom.release()));
 }
 
 // Returns true if at least one of N previous files has created an
@@ -316,8 +311,8 @@ void Resolver::updateReferences() {
   DEBUG_WITH_TYPE("resolver",
                   llvm::dbgs() << "******** Updating references:\n");
   ScopedTask task(getDefaultDomain(), "updateReferences");
-  for (const Atom *atom : _atoms) {
-    if (const DefinedAtom *defAtom = dyn_cast<DefinedAtom>(atom)) {
+  for (const OwningAtomPtr<Atom> &atom : _atoms) {
+    if (const DefinedAtom *defAtom = dyn_cast<DefinedAtom>(atom.get())) {
       for (const Reference *ref : *defAtom) {
         // A reference of type kindAssociate should't be updated.
         // Instead, an atom having such reference will be removed
@@ -325,7 +320,7 @@ void Resolver::updateReferences() {
         // go away as a group.
         if (ref->kindNamespace() == lld::Reference::KindNamespace::all &&
             ref->kindValue() == lld::Reference::kindAssociate) {
-          if (_symbolTable.isCoalescedAway(atom))
+          if (_symbolTable.isCoalescedAway(atom.get()))
             _deadAtoms.insert(ref->target());
           continue;
         }
@@ -373,19 +368,19 @@ void Resolver::deadStripOptimize() {
   // Make a reverse map of such references before traversing the graph.
   // While traversing the list of atoms, mark AbsoluteAtoms as live
   // in order to avoid reclaim.
-  for (const Atom *atom : _atoms) {
-    if (const DefinedAtom *defAtom = dyn_cast<DefinedAtom>(atom))
+  for (const OwningAtomPtr<Atom> &atom : _atoms) {
+    if (const DefinedAtom *defAtom = dyn_cast<DefinedAtom>(atom.get()))
       for (const Reference *ref : *defAtom)
         if (isBackref(ref))
-          _reverseRef.insert(std::make_pair(ref->target(), atom));
-    if (const AbsoluteAtom *absAtom = dyn_cast<AbsoluteAtom>(atom))
+          _reverseRef.insert(std::make_pair(ref->target(), atom.get()));
+    if (const AbsoluteAtom *absAtom = dyn_cast<AbsoluteAtom>(atom.get()))
       markLive(absAtom);
   }
 
   // By default, shared libraries are built with all globals as dead strip roots
   if (_ctx.globalsAreDeadStripRoots())
-    for (const Atom *atom : _atoms)
-      if (const DefinedAtom *defAtom = dyn_cast<DefinedAtom>(atom))
+    for (const OwningAtomPtr<Atom> &atom : _atoms)
+      if (const DefinedAtom *defAtom = dyn_cast<DefinedAtom>(atom.get()))
         if (defAtom->scope() == DefinedAtom::scopeGlobal)
           _deadStripRoots.insert(defAtom);
 
@@ -401,8 +396,9 @@ void Resolver::deadStripOptimize() {
     markLive(dsrAtom);
 
   // now remove all non-live atoms from _atoms
-  _atoms.erase(std::remove_if(_atoms.begin(), _atoms.end(), [&](const Atom *a) {
-                 return _liveAtoms.count(a) == 0;
+  _atoms.erase(std::remove_if(_atoms.begin(), _atoms.end(),
+                              [&](OwningAtomPtr<Atom> &a) {
+                 return _liveAtoms.count(a.get()) == 0;
                }),
                _atoms.end());
 }
@@ -461,8 +457,10 @@ void Resolver::removeCoalescedAwayAtoms() {
   DEBUG_WITH_TYPE("resolver",
                   llvm::dbgs() << "******** Removing coalesced away atoms:\n");
   ScopedTask task(getDefaultDomain(), "removeCoalescedAwayAtoms");
-  _atoms.erase(std::remove_if(_atoms.begin(), _atoms.end(), [&](const Atom *a) {
-                 return _symbolTable.isCoalescedAway(a) || _deadAtoms.count(a);
+  _atoms.erase(std::remove_if(_atoms.begin(), _atoms.end(),
+                              [&](OwningAtomPtr<Atom> &a) {
+                 return _symbolTable.isCoalescedAway(a.get()) ||
+                        _deadAtoms.count(a.get());
                }),
                _atoms.end());
 }
@@ -488,15 +486,16 @@ bool Resolver::resolve() {
   return true;
 }
 
-void Resolver::MergedFile::addAtoms(std::vector<const Atom *> &all) {
+void Resolver::MergedFile::addAtoms(
+                              llvm::MutableArrayRef<OwningAtomPtr<Atom>> all) {
   ScopedTask task(getDefaultDomain(), "addAtoms");
   DEBUG_WITH_TYPE("resolver", llvm::dbgs() << "Resolver final atom list:\n");
 
-  for (const Atom *atom : all) {
+  for (OwningAtomPtr<Atom> &atom : all) {
 #ifndef NDEBUG
-    if (auto *definedAtom = dyn_cast<DefinedAtom>(atom)) {
+    if (auto *definedAtom = dyn_cast<DefinedAtom>(atom.get())) {
       DEBUG_WITH_TYPE("resolver", llvm::dbgs()
-                      << llvm::format("    0x%09lX", atom)
+                      << llvm::format("    0x%09lX", definedAtom)
                       << ", file=#"
                       << definedAtom->file().ordinal()
                       << ", atom=#"
@@ -508,13 +507,13 @@ void Resolver::MergedFile::addAtoms(std::vector<const Atom *> &all) {
                       << "\n");
     } else {
       DEBUG_WITH_TYPE("resolver", llvm::dbgs()
-                      << llvm::format("    0x%09lX", atom)
+                      << llvm::format("    0x%09lX", atom.get())
                       << ", name="
-                      << atom->name()
+                      << atom.get()->name()
                       << "\n");
     }
 #endif
-    addAtom(*atom);
+    addAtom(*atom.release());
   }
 }
 

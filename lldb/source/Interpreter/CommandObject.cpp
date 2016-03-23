@@ -118,25 +118,19 @@ CommandObject::SetCommandName (const char *name)
 void
 CommandObject::SetHelp (const char *cstr)
 {
-    m_cmd_help_short = cstr;
-}
-
-void
-CommandObject::SetHelp (std::string str)
-{
-    m_cmd_help_short = str;
+    if (cstr)
+        m_cmd_help_short = cstr;
+    else
+        m_cmd_help_short.assign("");
 }
 
 void
 CommandObject::SetHelpLong (const char *cstr)
 {
-    m_cmd_help_long = cstr;
-}
-
-void
-CommandObject::SetHelpLong (std::string str)
-{
-    m_cmd_help_long = str;
+    if (cstr)
+        m_cmd_help_long = cstr;
+    else
+        m_cmd_help_long.assign("");
 }
 
 void
@@ -417,7 +411,11 @@ CommandObject::HandleCompletion
 }
 
 bool
-CommandObject::HelpTextContainsWord (const char *search_word)
+CommandObject::HelpTextContainsWord (const char *search_word,
+                                     bool search_short_help,
+                                     bool search_long_help,
+                                     bool search_syntax,
+                                     bool search_options)
 {
     std::string options_usage_help;
 
@@ -427,14 +425,15 @@ CommandObject::HelpTextContainsWord (const char *search_word)
     const char *long_help = GetHelpLong();
     const char *syntax_help = GetSyntax();
     
-    if (short_help && strcasestr (short_help, search_word))
+    if (search_short_help && short_help && strcasestr (short_help, search_word))
         found_word = true;
-    else if (long_help && strcasestr (long_help, search_word))
+    else if (search_long_help && long_help && strcasestr (long_help, search_word))
         found_word = true;
-    else if (syntax_help && strcasestr (syntax_help, search_word))
+    else if (search_syntax && syntax_help && strcasestr (syntax_help, search_word))
         found_word = true;
 
     if (!found_word
+        && search_options
         && GetOptions() != nullptr)
     {
         StreamString usage_help;
@@ -932,23 +931,26 @@ CommandObject::GenerateHelpText (Stream &output_strm)
         if ((long_help != nullptr)
             && (strlen (long_help) > 0))
             FormatLongHelpText (output_strm, long_help);
-        if (WantsRawCommandString() && !WantsCompletion())
+        if (!IsDashDashCommand())
         {
-            // Emit the message about using ' -- ' between the end of the command options and the raw input
-            // conditionally, i.e., only if the command object does not want completion.
-            interpreter.OutputFormattedHelpText (output_strm, "", "",
-                                                 "\nIMPORTANT NOTE:  Because this command takes 'raw' input, if you use any command options"
-                                                 " you must use ' -- ' between the end of the command options and the beginning of the raw input.", 1);
-        }
-        else if (GetNumArgumentEntries() > 0
-                 && GetOptions()
-                 && GetOptions()->NumCommandOptions() > 0)
-        {
-            // Also emit a warning about using "--" in case you are using a command that takes options and arguments.
-            interpreter.OutputFormattedHelpText (output_strm, "", "",
-                                                 "\nThis command takes options and free-form arguments.  If your arguments resemble"
-                                                 " option specifiers (i.e., they start with a - or --), you must use ' -- ' between"
-                                                 " the end of the command options and the beginning of the arguments.", 1);
+            if (WantsRawCommandString() && !WantsCompletion())
+            {
+                // Emit the message about using ' -- ' between the end of the command options and the raw input
+                // conditionally, i.e., only if the command object does not want completion.
+                interpreter.OutputFormattedHelpText (output_strm, "", "",
+                                                     "\nIMPORTANT NOTE:  Because this command takes 'raw' input, if you use any command options"
+                                                     " you must use ' -- ' between the end of the command options and the beginning of the raw input.", 1);
+            }
+            else if (GetNumArgumentEntries() > 0
+                     && GetOptions()
+                     && GetOptions()->NumCommandOptions() > 0)
+            {
+                // Also emit a warning about using "--" in case you are using a command that takes options and arguments.
+                interpreter.OutputFormattedHelpText (output_strm, "", "",
+                                                     "\nThis command takes options and free-form arguments.  If your arguments resemble"
+                                                     " option specifiers (i.e., they start with a - or --), you must use ' -- ' between"
+                                                     " the end of the command options and the beginning of the arguments.", 1);
+            }
         }
     }
     else if (IsMultiwordObject())

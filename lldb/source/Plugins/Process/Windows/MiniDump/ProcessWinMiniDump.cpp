@@ -370,14 +370,21 @@ ProcessWinMiniDump::Impl::MapMiniDumpIntoMemory()
 {
     Error error;
     const char *file = m_core_file.GetCString();
-    m_dump_file = ::CreateFile(file, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    std::wstring wfile;
+    if (!llvm::ConvertUTF8toWide(file, wfile))
+    {
+        error.SetErrorString("Error converting path to UTF-16");
+        return error;
+    }
+    m_dump_file =
+        ::CreateFileW(wfile.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (m_dump_file == INVALID_HANDLE_VALUE)
     {
         error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
         return error;
     }
 
-    m_mapping = ::CreateFileMapping(m_dump_file, NULL, PAGE_READONLY, 0, 0, NULL);
+    m_mapping = ::CreateFileMappingW(m_dump_file, NULL, PAGE_READONLY, 0, 0, NULL);
     if (m_mapping == NULL)
     {
         error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
@@ -509,7 +516,7 @@ ProcessWinMiniDump::Impl::GetMiniDumpString(RVA rva) const
     auto source_start = reinterpret_cast<const UTF16 *>(md_string->Buffer);
     const auto source_length = ::wcslen(md_string->Buffer);
     const auto source_end = source_start + source_length;
-    result.resize(4 * source_length); // worst case length
+    result.resize(UNI_MAX_UTF8_BYTES_PER_CODE_POINT * source_length); // worst case length
     auto result_start = reinterpret_cast<UTF8 *>(&result[0]);
     const auto result_end = result_start + result.size();
     ConvertUTF16toUTF8(&source_start, source_end, &result_start, result_end, strictConversion);

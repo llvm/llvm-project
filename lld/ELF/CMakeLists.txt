@@ -9,6 +9,7 @@ add_lld_library(lldELF
   ICF.cpp
   InputFiles.cpp
   InputSection.cpp
+  LTO.cpp
   LinkerScript.cpp
   MarkLive.cpp
   OutputSections.cpp

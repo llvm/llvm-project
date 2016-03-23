@@ -1345,7 +1345,7 @@ public:
                 std::string docstring;
                 m_fetched_help_long = scripter->GetDocumentationForItem(m_function_name.c_str(),docstring);
                 if (!docstring.empty())
-                    SetHelpLong(docstring);
+                    SetHelpLong(docstring.c_str());
             }
         }
         return CommandObjectRaw::GetHelpLong();
@@ -1446,7 +1446,7 @@ public:
                 std::string docstring;
                 m_fetched_help_short = scripter->GetShortHelpForCommandObject(m_cmd_obj_sp,docstring);
                 if (!docstring.empty())
-                    SetHelp(docstring);
+                    SetHelp(docstring.c_str());
             }
         }
         return CommandObjectRaw::GetHelp();
@@ -1463,7 +1463,7 @@ public:
                 std::string docstring;
                 m_fetched_help_long = scripter->GetLongHelpForCommandObject(m_cmd_obj_sp,docstring);
                 if (!docstring.empty())
-                    SetHelpLong(docstring);
+                    SetHelpLong(docstring.c_str());
             }
         }
         return CommandObjectRaw::GetHelpLong();

@@ -242,3 +242,14 @@ HostInfoPosix::ComputePythonDirectory(FileSpec &file_spec)
     return false;
 #endif
 }
+
+bool
+HostInfoPosix::GetEnvironmentVar(const std::string &var_name, std::string &var)
+{
+    if (const char *pvar = ::getenv(var_name.c_str()))
+    {
+        var = std::string(pvar);
+        return true;
+    }
+    return false;
+}

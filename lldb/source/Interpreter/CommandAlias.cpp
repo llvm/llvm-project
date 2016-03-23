@@ -85,8 +85,11 @@ CommandAlias::CommandAlias (CommandInterpreter &interpreter,
                   syntax,
                   flags),
 m_underlying_command_sp(),
+m_option_string(options_args ? options_args : ""),
 m_option_args_sp(new OptionArgVector),
-m_is_dashdash_alias(eLazyBoolCalculate)
+m_is_dashdash_alias(eLazyBoolCalculate),
+m_did_set_help(false),
+m_did_set_help_long(false)
 {
     if (ProcessAliasOptionsArgs(cmd_sp, options_args, m_option_args_sp))
     {
@@ -238,12 +241,44 @@ CommandAlias::IsDashDashCommand ()
     return (m_is_dashdash_alias == eLazyBoolYes);
 }
 
+std::pair<lldb::CommandObjectSP, OptionArgVectorSP>
+CommandAlias::Desugar ()
+{
+    auto underlying = GetUnderlyingCommand();
+    if (!underlying)
+        return {nullptr,nullptr};
+    
+    if (underlying->IsAlias())
+    {
+        auto desugared = ((CommandAlias*)underlying.get())->Desugar();
+        auto options = GetOptionArguments();
+        options->insert(options->begin(), desugared.second->begin(), desugared.second->end());
+        return {desugared.first,options};
+    }
+
+    return {underlying,GetOptionArguments()};
+}
+
 // allow CommandAlias objects to provide their own help, but fallback to the info
 // for the underlying command if no customization has been provided
+void
+CommandAlias::SetHelp (const char * str)
+{
+    this->CommandObject::SetHelp(str);
+    m_did_set_help = true;
+}
+
+void
+CommandAlias::SetHelpLong (const char * str)
+{
+    this->CommandObject::SetHelpLong(str);
+    m_did_set_help_long = true;
+}
+
 const char*
 CommandAlias::GetHelp ()
 {
-    if (!m_cmd_help_short.empty())
+    if (!m_cmd_help_short.empty() || m_did_set_help)
         return m_cmd_help_short.c_str();
     if (IsValid())
         return m_underlying_command_sp->GetHelp();
@@ -253,7 +288,7 @@ CommandAlias::GetHelp ()
 const char*
 CommandAlias::GetHelpLong ()
 {
-    if (!m_cmd_help_long.empty())
+    if (!m_cmd_help_long.empty() || m_did_set_help_long)
         return m_cmd_help_long.c_str();
     if (IsValid())
         return m_underlying_command_sp->GetHelpLong();

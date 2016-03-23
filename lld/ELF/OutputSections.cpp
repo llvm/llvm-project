@@ -90,12 +90,20 @@ GotSection<ELFT>::GotSection()
 }
 
 template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody &Sym) {
+  if (Config->EMachine == EM_MIPS) {
+    if (Sym.isPreemptible())
+      // All symbols with MIPS GOT entries should be represented
+      // in the dynamic symbols table. See "Global Offset Table" in Chapter 5:
+      // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+      Sym.MustBeInDynSym = true;
+    else {
+      // FIXME (simon): Do not add so many redundant entries.
+      ++MipsLocalEntries;
+      return;
+    }
+  }
   Sym.GotIndex = Entries.size();
   Entries.push_back(&Sym);
-}
-
-template <class ELFT> void GotSection<ELFT>::addMipsLocalEntry() {
-  ++MipsLocalEntries;
 }
 
 template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {

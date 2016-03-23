@@ -18,6 +18,7 @@ endmacro()
 
 pythonize_bool(LIBOMP_USE_HWLOC)
 pythonize_bool(LIBOMP_OMPT_SUPPORT)
+pythonize_bool(LIBOMP_OMPT_BLAME)
 pythonize_bool(LIBOMP_OMPT_TRACE)
 
 set(LIBOMP_TEST_CFLAGS "" CACHE STRING

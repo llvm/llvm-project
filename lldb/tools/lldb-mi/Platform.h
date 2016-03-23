@@ -58,7 +58,7 @@ struct termios
 typedef long pid_t;
 
 #define STDIN_FILENO 0
-#define PATH_MAX MAX_PATH
+#define PATH_MAX 32768
 #define snprintf _snprintf
 
 extern int ioctl(int d, int request, ...);

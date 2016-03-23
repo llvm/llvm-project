@@ -12,7 +12,7 @@
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_for_next
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [n] -> { Stmt_for_next[i0] : i0 >= 0 and 2i0 <= -3 + n };
+; CHECK-NEXT:             [n] -> { Stmt_for_next[i0] : n > 0 and i0 >= 0 and 2i0 <= -3 + n };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [n] -> { Stmt_for_next[i0] -> [i0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]

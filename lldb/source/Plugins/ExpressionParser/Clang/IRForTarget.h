@@ -546,40 +546,45 @@ private:
     /// @return
     ///     True on success; false otherwise
     //------------------------------------------------------------------
-    bool 
-    ReplaceVariables (llvm::Function &llvm_function);
-    
-    
+    bool
+    ReplaceVariables(llvm::Function &llvm_function);
+
     /// Flags
-    bool                                    m_resolve_vars;             ///< True if external variable references and persistent variable references should be resolved
-    std::string                             m_func_name;                ///< The name of the function to translate
-    lldb_private::ConstString               m_result_name;              ///< The name of the result variable ($0, $1, ...)
-    lldb_private::TypeFromParser            m_result_type;              ///< The type of the result variable.
-    llvm::Module                           *m_module;                   ///< The module being processed, or NULL if that has not been determined yet.
-    std::unique_ptr<llvm::DataLayout>       m_target_data;              ///< The target data for the module being processed, or NULL if there is no module.
-    lldb_private::ClangExpressionDeclMap   *m_decl_map;                 ///< The DeclMap containing the Decls 
-    llvm::Constant                         *m_CFStringCreateWithBytes;  ///< The address of the function CFStringCreateWithBytes, cast to the appropriate function pointer type
-    llvm::Constant                         *m_sel_registerName;         ///< The address of the function sel_registerName, cast to the appropriate function pointer type
-    llvm::IntegerType                      *m_intptr_ty;                ///< The type of an integer large enough to hold a pointer.
-    lldb_private::Stream                   *m_error_stream;             ///< If non-NULL, the stream on which errors should be printed
-    lldb_private::IRExecutionUnit          &m_execution_unit;           ///< The execution unit containing the IR being created.
-    
-    llvm::StoreInst                        *m_result_store;             ///< If non-NULL, the store instruction that writes to the result variable.  If m_has_side_effects is true, this is NULL.
-    bool                                    m_result_is_pointer;        ///< True if the function's result in the AST is a pointer (see comments in ASTResultSynthesizer::SynthesizeBodyResult)
-    
-    llvm::GlobalVariable                   *m_reloc_placeholder;        ///< A placeholder that will be replaced by a pointer to the final location of the static allocation.
-    
+    bool m_resolve_vars; ///< True if external variable references and persistent variable references should be resolved
+    lldb_private::ConstString m_func_name;      ///< The name of the function to translate
+    lldb_private::ConstString m_result_name;    ///< The name of the result variable ($0, $1, ...)
+    lldb_private::TypeFromParser m_result_type; ///< The type of the result variable.
+    llvm::Module *m_module; ///< The module being processed, or NULL if that has not been determined yet.
+    std::unique_ptr<llvm::DataLayout>
+        m_target_data; ///< The target data for the module being processed, or NULL if there is no module.
+    lldb_private::ClangExpressionDeclMap *m_decl_map; ///< The DeclMap containing the Decls
+    llvm::Constant *m_CFStringCreateWithBytes; ///< The address of the function CFStringCreateWithBytes, cast to the
+                                               ///appropriate function pointer type
+    llvm::Constant *m_sel_registerName;   ///< The address of the function sel_registerName, cast to the appropriate
+                                          ///function pointer type
+    llvm::IntegerType *m_intptr_ty;       ///< The type of an integer large enough to hold a pointer.
+    lldb_private::Stream *m_error_stream; ///< If non-NULL, the stream on which errors should be printed
+    lldb_private::IRExecutionUnit &m_execution_unit; ///< The execution unit containing the IR being created.
+
+    llvm::StoreInst *m_result_store; ///< If non-NULL, the store instruction that writes to the result variable.  If
+                                     ///m_has_side_effects is true, this is NULL.
+    bool m_result_is_pointer;        ///< True if the function's result in the AST is a pointer (see comments in
+                                     ///ASTResultSynthesizer::SynthesizeBodyResult)
+
+    llvm::GlobalVariable *m_reloc_placeholder; ///< A placeholder that will be replaced by a pointer to the final
+                                               ///location of the static allocation.
+
     //------------------------------------------------------------------
-    /// UnfoldConstant operates on a constant [Old] which has just been 
-    /// replaced with a value [New].  We assume that new_value has 
-    /// been properly placed early in the function, in front of the 
-    /// first instruction in the entry basic block 
-    /// [FirstEntryInstruction].  
+    /// UnfoldConstant operates on a constant [Old] which has just been
+    /// replaced with a value [New].  We assume that new_value has
+    /// been properly placed early in the function, in front of the
+    /// first instruction in the entry basic block
+    /// [FirstEntryInstruction].
     ///
-    /// UnfoldConstant reads through the uses of Old and replaces Old 
-    /// in those uses with New.  Where those uses are constants, the 
-    /// function generates new instructions to compute the result of the 
-    /// new, non-constant expression and places them before 
+    /// UnfoldConstant reads through the uses of Old and replaces Old
+    /// in those uses with New.  Where those uses are constants, the
+    /// function generates new instructions to compute the result of the
+    /// new, non-constant expression and places them before
     /// FirstEntryInstruction.  These instructions replace the constant
     /// uses, so UnfoldConstant calls itself recursively for those.
     ///
@@ -589,7 +594,7 @@ private:
     /// @return
     ///     True on success; false otherwise
     //------------------------------------------------------------------
-    
+
     class FunctionValueCache {
     public:
         typedef std::function <llvm::Value *(llvm::Function *)> Maker;

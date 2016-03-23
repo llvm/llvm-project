@@ -275,7 +275,8 @@ public:
 
   MachODylibFile(StringRef path) : SharedLibraryFile(path) {}
 
-  const SharedLibraryAtom *exports(StringRef name, bool isData) const override {
+  OwningAtomPtr<SharedLibraryAtom> exports(StringRef name,
+                                           bool isData) const override {
     // Pass down _installName so that if this requested symbol
     // is re-exported through this dylib, the SharedLibraryAtom's loadName()
     // is this dylib installName and not the implementation dylib's.
@@ -328,25 +329,30 @@ public:
   }
 
 private:
-  const SharedLibraryAtom *exports(StringRef name,
+  OwningAtomPtr<SharedLibraryAtom> exports(StringRef name,
                                    StringRef installName) const {
     // First, check if requested symbol is directly implemented by this dylib.
     auto entry = _nameToAtom.find(name);
     if (entry != _nameToAtom.end()) {
-      if (!entry->second.atom) {
-        // Lazily create SharedLibraryAtom.
-        entry->second.atom =
-          new (allocator()) MachOSharedLibraryAtom(*this, name, installName,
-                                                   entry->second.weakDef);
-      }
-      return entry->second.atom;
+      // FIXME: Make this map a set and only used in assert builds.
+      // Note, its safe to assert here as the resolver is the only client of
+      // this API and it only requests exports for undefined symbols.
+      // If we return from here we are no longer undefined so we should never
+      // get here again.
+      assert(!entry->second.atom && "Duplicate shared library export");
+      bool weakDef = entry->second.weakDef;
+      auto *atom = new (allocator()) MachOSharedLibraryAtom(*this, name,
+                                                            installName,
+                                                            weakDef);
+      entry->second.atom = atom;
+      return atom;
     }
 
     // Next, check if symbol is implemented in some re-exported dylib.
     for (const ReExportedDylib &dylib : _reExportedDylibs) {
       assert(dylib.file);
       auto atom = dylib.file->exports(name, installName);
-      if (atom)
+      if (atom.get())
         return atom;
     }
 

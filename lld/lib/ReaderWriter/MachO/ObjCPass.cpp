@@ -56,6 +56,8 @@ public:
     Data.info.flags |= (swiftVersion << 8);
   }
 
+  ~ObjCImageInfoAtom() override = default;
+
   ContentType contentType() const override {
     return DefinedAtom::typeObjCImageInfo;
   }

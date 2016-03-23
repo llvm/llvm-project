@@ -96,6 +96,11 @@ public:
     }
     
 protected:
+    CommandObject::CommandMap&
+    GetSubcommandDictionary ()
+    {
+        return m_subcommand_dict;
+    }
 
     CommandObject::CommandMap m_subcommand_dict;
     bool m_can_be_removed;

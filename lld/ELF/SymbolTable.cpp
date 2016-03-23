@@ -18,16 +18,8 @@
 #include "Config.h"
 #include "Error.h"
 #include "Symbols.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/ReaderWriter.h"
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/Linker/IRMover.h"
 #include "llvm/Support/StringSaver.h"
-#include "llvm/Support/TargetRegistry.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -101,130 +93,17 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
     resolve(B);
 }
 
-// This is for use when debugging LTO.
-static void saveLtoObjectFile(StringRef Buffer) {
-  std::error_code EC;
-  raw_fd_ostream OS(Config->OutputFile.str() + ".lto.o", EC,
-                    sys::fs::OpenFlags::F_None);
-  check(EC);
-  OS << Buffer;
-}
-
-// This is for use when debugging LTO.
-static void saveBCFile(Module &M, StringRef Suffix) {
-  std::error_code EC;
-  raw_fd_ostream OS(Config->OutputFile.str() + Suffix.str(), EC,
-                    sys::fs::OpenFlags::F_None);
-  check(EC);
-  WriteBitcodeToFile(&M, OS, /* ShouldPreserveUseListOrder */ true);
-}
-
-static void runLTOPasses(Module &M, TargetMachine &TM) {
-  // Run LTO passes.
-  // FIXME: Reduce code duplication by sharing this code with the gold plugin.
-  legacy::PassManager LtoPasses;
-  LtoPasses.add(
-      createTargetTransformInfoWrapperPass(TM.getTargetIRAnalysis()));
-  PassManagerBuilder PMB;
-  PMB.LibraryInfo = new TargetLibraryInfoImpl(Triple(TM.getTargetTriple()));
-  PMB.Inliner = createFunctionInliningPass();
-  PMB.VerifyInput = true;
-  PMB.VerifyOutput = true;
-  PMB.LoopVectorize = true;
-  PMB.SLPVectorize = true;
-  PMB.OptLevel = 2; // FIXME: This should be an option.
-  PMB.populateLTOPassManager(LtoPasses);
-  LtoPasses.run(M);
-
-  if (Config->SaveTemps)
-    saveBCFile(M, ".lto.opt.bc");
-}
-
-// Codegen the module M and returns the resulting InputFile.
-template <class ELFT>
-std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
-  StringRef TripleStr = M.getTargetTriple();
-  Triple TheTriple(TripleStr);
-
-  // FIXME: Should we have a default triple? The gold plugin uses
-  // sys::getDefaultTargetTriple(), but that is probably wrong given that this
-  // might be a cross linker.
-
-  std::string ErrMsg;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleStr, ErrMsg);
-  if (!TheTarget)
-    fatal("target not found: " + ErrMsg);
-
-  TargetOptions Options;
-  Reloc::Model R = Config->Pic ? Reloc::PIC_ : Reloc::Static;
-  std::unique_ptr<TargetMachine> TM(
-      TheTarget->createTargetMachine(TripleStr, "", "", Options, R));
-
-  runLTOPasses(M, *TM);
-
-  raw_svector_ostream OS(OwningLTOData);
-  legacy::PassManager CodeGenPasses;
-  if (TM->addPassesToEmitFile(CodeGenPasses, OS,
-                              TargetMachine::CGFT_ObjectFile))
-    fatal("failed to setup codegen");
-  CodeGenPasses.run(M);
-  LtoBuffer = MemoryBuffer::getMemBuffer(OwningLTOData, "", false);
-  if (Config->SaveTemps)
-    saveLtoObjectFile(LtoBuffer->getBuffer());
-  return createObjectFile(*LtoBuffer);
-}
-
-static void addBitcodeFile(IRMover &Mover, BitcodeFile &F,
-                           LLVMContext &Context) {
-
-  std::unique_ptr<IRObjectFile> Obj =
-      check(IRObjectFile::create(F.MB, Context));
-  std::vector<GlobalValue *> Keep;
-  unsigned BodyIndex = 0;
-  ArrayRef<SymbolBody *> Bodies = F.getSymbols();
-
-  for (const BasicSymbolRef &Sym : Obj->symbols()) {
-    GlobalValue *GV = Obj->getSymbolGV(Sym.getRawDataRefImpl());
-    assert(GV);
-    if (GV->hasAppendingLinkage()) {
-      Keep.push_back(GV);
-      continue;
-    }
-    if (BitcodeFile::shouldSkip(Sym))
-      continue;
-    SymbolBody *B = Bodies[BodyIndex++];
-    if (!B || &B->repl() != B)
-      continue;
-    auto *DB = dyn_cast<DefinedBitcode>(B);
-    if (!DB)
-      continue;
-    Keep.push_back(GV);
-  }
-
-  Mover.move(Obj->takeModule(), Keep,
-             [](GlobalValue &, IRMover::ValueAdder) {});
-}
-
-// Merge all the bitcode files we have seen, codegen the result and return
-// the resulting ObjectFile.
-template <class ELFT>
-elf::ObjectFile<ELFT> *SymbolTable<ELFT>::createCombinedLtoObject() {
-  LLVMContext Context;
-  Module Combined("ld-temp.o", Context);
-  IRMover Mover(Combined);
-  for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles)
-    addBitcodeFile(Mover, *F, Context);
-  if (Config->SaveTemps)
-    saveBCFile(Combined, ".lto.bc");
-  std::unique_ptr<InputFile> F = codegen(Combined);
-  ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(F.release()));
-  return &*ObjectFiles.back();
-}
-
 template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
   if (BitcodeFiles.empty())
     return;
-  ObjectFile<ELFT> *Obj = createCombinedLtoObject();
+
+  // Compile bitcode files.
+  Lto.reset(new BitcodeCompiler);
+  for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles)
+    Lto->add(*F);
+  std::unique_ptr<ObjectFile<ELFT>> Obj = Lto->compile<ELFT>();
+
+  // Replace bitcode symbols.
   llvm::DenseSet<StringRef> DummyGroups;
   Obj->parse(DummyGroups);
   for (SymbolBody *Body : Obj->getNonLocalSymbols()) {
@@ -233,6 +112,7 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
       continue;
     Sym->Body = Body;
   }
+  ObjectFiles.push_back(std::move(Obj));
 }
 
 // Add an undefined symbol.
