@@ -174,23 +174,6 @@ void ReplaceSystemMalloc() {
   __interception::OverrideFunction("_recalloc_crt", (uptr)_recalloc);
   __interception::OverrideFunction("_msize", (uptr)_msize);
   __interception::OverrideFunction("_expand", (uptr)_expand);
-
-  // Override different versions of 'operator new' and 'operator delete'.
-  // No need to override the nothrow versions as they just wrap the throw
-  // versions.
-  // FIXME: Unfortunately, MSVC miscompiles the statements that take the
-  // addresses of the array versions of these operators,
-  // see https://connect.microsoft.com/VisualStudio/feedbackdetail/view/946992
-  // We might want to try to work around this by [inline] assembly or compiling
-  // parts of the RTL with Clang.
-  void *(*op_new)(size_t sz) = operator new;
-  void (*op_delete)(void *p) = operator delete;
-  void *(*op_array_new)(size_t sz) = operator new[];
-  void (*op_array_delete)(void *p) = operator delete[];
-  __interception::OverrideFunction("??2@YAPAXI@Z", (uptr)op_new);
-  __interception::OverrideFunction("??3@YAXPAX@Z", (uptr)op_delete);
-  __interception::OverrideFunction("??_U@YAPAXI@Z", (uptr)op_array_new);
-  __interception::OverrideFunction("??_V@YAXPAX@Z", (uptr)op_array_delete);
 #endif
 }
 }  // namespace __asan

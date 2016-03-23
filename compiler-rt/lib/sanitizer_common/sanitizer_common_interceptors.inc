@@ -218,6 +218,20 @@ INTERCEPTOR(SIZE_T, strlen, const char *s) {
 #define INIT_STRLEN
 #endif
 
+#if SANITIZER_INTERCEPT_STRNLEN
+INTERCEPTOR(SIZE_T, strnlen, const char *s, SIZE_T maxlen) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, strnlen, s, maxlen);
+  SIZE_T length = REAL(strnlen)(s, maxlen);
+  if (common_flags()->intercept_strlen)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, s, Min(length + 1, maxlen));
+  return length;
+}
+#define INIT_STRNLEN COMMON_INTERCEPT_FUNCTION(strnlen)
+#else
+#define INIT_STRNLEN
+#endif
+
 #if SANITIZER_INTERCEPT_TEXTDOMAIN
 INTERCEPTOR(char*, textdomain, const char *domainname) {
   void *ctx;
@@ -5445,6 +5459,7 @@ static void InitializeCommonInterceptors() {
 
   INIT_TEXTDOMAIN;
   INIT_STRLEN;
+  INIT_STRNLEN;
   INIT_STRCMP;
   INIT_STRNCMP;
   INIT_STRCASECMP;
