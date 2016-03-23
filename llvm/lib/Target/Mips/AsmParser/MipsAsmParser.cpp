@@ -1080,6 +1080,11 @@ public:
     return isConstantImm() &&
            isShiftedUInt<Bits, ShiftLeftAmount>(getConstantImm());
   }
+  template <unsigned Bits, unsigned ShiftLeftAmount>
+  bool isScaledSImm() const {
+    return isConstantImm() &&
+           isShiftedInt<Bits, ShiftLeftAmount>(getConstantImm());
+  }
   bool isRegList16() const {
     if (!isRegList())
       return false;
@@ -3729,6 +3734,9 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_UImm5_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 5-bit unsigned immediate");
+  case Match_SImm5_0:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 5-bit signed immediate");
   case Match_UImm5_1:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range 1 .. 32");
@@ -3761,6 +3769,12 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_UImm7_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 7-bit unsigned immediate");
+  case Match_UImm7_N1:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range -1 .. 126");
+  case Match_SImm7_Lsl2:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected both 9-bit signed immediate and multiple of 4");
   case Match_UImm8_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 8-bit unsigned immediate");

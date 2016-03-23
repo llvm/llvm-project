@@ -27,8 +27,12 @@ struct SIRegisterInfo final : public AMDGPURegisterInfo {
 private:
   unsigned SGPR32SetID;
   unsigned VGPR32SetID;
+  BitVector SGPRPressureSets;
+  BitVector VGPRPressureSets;
 
   void reserveRegisterTuples(BitVector &, unsigned Reg) const;
+  void classifyPressureSet(unsigned PSetID, unsigned Reg,
+                           BitVector &PressureSets) const;
 
 public:
   SIRegisterInfo();

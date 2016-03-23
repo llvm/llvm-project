@@ -102,6 +102,11 @@ class ModuleLinker {
     return DGV;
   }
 
+  /// Drop GV if it is a member of a comdat that we are dropping.
+  /// This can happen with COFF's largest selection kind.
+  void dropReplacedComdat(GlobalValue &GV,
+                          const DenseSet<const Comdat *> &ReplacedDstComdats);
+
   bool linkIfNeeded(GlobalValue &GV);
 
   /// Helper method to check if we are importing from the current source
@@ -449,7 +454,45 @@ void ModuleLinker::addLazyFor(GlobalValue &GV, IRMover::ValueAdder Add) {
   }
 }
 
+void ModuleLinker::dropReplacedComdat(
+    GlobalValue &GV, const DenseSet<const Comdat *> &ReplacedDstComdats) {
+  Comdat *C = GV.getComdat();
+  if (!C)
+    return;
+  if (!ReplacedDstComdats.count(C))
+    return;
+  if (GV.use_empty()) {
+    GV.eraseFromParent();
+    return;
+  }
+
+  if (auto *F = dyn_cast<Function>(&GV)) {
+    F->deleteBody();
+  } else if (auto *Var = dyn_cast<GlobalVariable>(&GV)) {
+    Var->setInitializer(nullptr);
+  } else {
+    auto &Alias = cast<GlobalAlias>(GV);
+    Module &M = *Alias.getParent();
+    PointerType &Ty = *cast<PointerType>(Alias.getType());
+    GlobalValue *Declaration;
+    if (auto *FTy = dyn_cast<FunctionType>(Alias.getValueType())) {
+      Declaration = Function::Create(FTy, GlobalValue::ExternalLinkage, "", &M);
+    } else {
+      Declaration =
+          new GlobalVariable(M, Ty.getElementType(), /*isConstant*/ false,
+                             GlobalValue::ExternalLinkage,
+                             /*Initializer*/ nullptr);
+    }
+    Declaration->takeName(&Alias);
+    Alias.replaceAllUsesWith(Declaration);
+    Alias.eraseFromParent();
+  }
+}
+
 bool ModuleLinker::run() {
+  Module &DstM = Mover.getModule();
+  DenseSet<const Comdat *> ReplacedDstComdats;
+
   for (const auto &SMEC : SrcM->getComdatSymbolTable()) {
     const Comdat &C = SMEC.getValue();
     if (ComdatsChosen.count(&C))
@@ -459,6 +502,35 @@ bool ModuleLinker::run() {
     if (getComdatResult(&C, SK, LinkFromSrc))
       return true;
     ComdatsChosen[&C] = std::make_pair(SK, LinkFromSrc);
+
+    if (!LinkFromSrc)
+      continue;
+
+    Module::ComdatSymTabType &ComdatSymTab = DstM.getComdatSymbolTable();
+    Module::ComdatSymTabType::iterator DstCI = ComdatSymTab.find(C.getName());
+    if (DstCI == ComdatSymTab.end())
+      continue;
+
+    // The source comdat is replacing the dest one.
+    const Comdat *DstC = &DstCI->second;
+    ReplacedDstComdats.insert(DstC);
+  }
+
+  // Alias have to go first, since we are not able to find their comdats
+  // otherwise.
+  for (auto I = DstM.alias_begin(), E = DstM.alias_end(); I != E;) {
+    GlobalAlias &GV = *I++;
+    dropReplacedComdat(GV, ReplacedDstComdats);
+  }
+
+  for (auto I = DstM.global_begin(), E = DstM.global_end(); I != E;) {
+    GlobalVariable &GV = *I++;
+    dropReplacedComdat(GV, ReplacedDstComdats);
+  }
+
+  for (auto I = DstM.begin(), E = DstM.end(); I != E;) {
+    Function &GV = *I++;
+    dropReplacedComdat(GV, ReplacedDstComdats);
   }
 
   for (GlobalVariable &GV : SrcM->globals())
@@ -507,7 +579,6 @@ bool ModuleLinker::run() {
                  },
                  ValIDToTempMDMap, false))
     return true;
-  Module &DstM = Mover.getModule();
   for (auto &P : Internalize) {
     GlobalValue *GV = DstM.getNamedValue(P.first());
     GV->setLinkage(GlobalValue::InternalLinkage);

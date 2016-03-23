@@ -317,32 +317,6 @@ static std::pair<SDValue, SDNode *> lowerCallFromStatepointLoweringInfo(
   return std::make_pair(ReturnValue, CallEnd->getOperand(0).getNode());
 }
 
-/// Callect all gc pointers coming into statepoint intrinsic, clean them up,
-/// and return two arrays:
-///   Bases - base pointers incoming to this statepoint
-///   Ptrs - derived pointers incoming to this statepoint
-///   Relocs - the gc_relocate corresponding to each base/ptr pair
-/// Elements of this arrays should be in one-to-one correspondence with each
-/// other i.e Bases[i], Ptrs[i] are from the same gcrelocate call
-static void getIncomingStatepointGCValues(
-    SmallVectorImpl<const Value *> &Bases, SmallVectorImpl<const Value *> &Ptrs,
-    SmallVectorImpl<const GCRelocateInst *> &Relocs,
-    ImmutableStatepoint StatepointSite, SelectionDAGBuilder &Builder) {
-  for (const GCRelocateInst *Relocate : StatepointSite.getRelocates()) {
-    Relocs.push_back(Relocate);
-    Bases.push_back(Relocate->getBasePtr());
-    Ptrs.push_back(Relocate->getDerivedPtr());
-  }
-
-  // Remove any redundant llvm::Values which map to the same SDValue as another
-  // input.  Also has the effect of removing duplicates in the original
-  // llvm::Value input list as well.  This is a useful optimization for
-  // reducing the size of the StackMap section.  It has no other impact.
-  removeDuplicatesGCPtrs(Bases, Ptrs, Relocs, Builder);
-
-  assert(Bases.size() == Ptrs.size() && Ptrs.size() == Relocs.size());
-}
-
 /// Spill a value incoming to the statepoint. It might be either part of
 /// vmstate
 /// or gcstate. In both cases unconditionally spill it on the stack unless it
@@ -566,10 +540,20 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   StatepointLowering.startNewStatepoint(*this);
 
 #ifndef NDEBUG
+  // We schedule gc relocates before removeDuplicatesGCPtrs since we _will_
+  // encounter the duplicate gc relocates we elide in removeDuplicatesGCPtrs.
   for (auto *Reloc : SI.GCRelocates)
     if (Reloc->getParent() == SI.StatepointInstr->getParent())
       StatepointLowering.scheduleRelocCall(*Reloc);
 #endif
+
+  // Remove any redundant llvm::Values which map to the same SDValue as another
+  // input.  Also has the effect of removing duplicates in the original
+  // llvm::Value input list as well.  This is a useful optimization for
+  // reducing the size of the StackMap section.  It has no other impact.
+  removeDuplicatesGCPtrs(SI.Bases, SI.Ptrs, SI.GCRelocates, *this);
+  assert(SI.Bases.size() == SI.Ptrs.size() &&
+         SI.Ptrs.size() == SI.GCRelocates.size());
 
   // Lower statepoint vmstate and gcstate arguments
   SmallVector<SDValue, 10> LoweredMetaArgs;
@@ -742,12 +726,6 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
 void
 SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
                                      const BasicBlock *EHPadBB /*= nullptr*/) {
-  SmallVector<const Value *, 16> Bases;
-  SmallVector<const Value *, 16> Ptrs;
-  SmallVector<const GCRelocateInst *, 16> GCRelocates;
-
-  getIncomingStatepointGCValues(Bases, Ptrs, GCRelocates, ISP, *this);
-
   assert(ISP.getCallSite().getCallingConv() != CallingConv::AnyReg &&
          "anyregcc is not supported on statepoints!");
 
@@ -786,9 +764,12 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
                            ISP.getNumCallArgs(), ActualCallee,
                            ISP.getActualReturnType(), false /* IsPatchPoint */);
 
-  SI.Bases = Bases;
-  SI.Ptrs = Ptrs;
-  SI.GCRelocates = GCRelocates;
+  for (const GCRelocateInst *Relocate : ISP.getRelocates()) {
+    SI.GCRelocates.push_back(Relocate);
+    SI.Bases.push_back(Relocate->getBasePtr());
+    SI.Ptrs.push_back(Relocate->getDerivedPtr());
+  }
+
   SI.GCArgs = ArrayRef<const Use>(ISP.gc_args_begin(), ISP.gc_args_end());
   SI.StatepointInstr = ISP.getInstruction();
   SI.GCTransitionArgs =
@@ -837,16 +818,12 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
 
 void SelectionDAGBuilder::LowerCallSiteWithDeoptBundle(
     ImmutableCallSite CS, SDValue Callee, const BasicBlock *EHPadBB) {
-  assert(CS.getNumOperandBundles() == 1 &&
-         "Only deopt operand bundles can be lowered!");
-
   StatepointLoweringInfo SI(DAG);
   unsigned ArgBeginIndex = CS.arg_begin() - CS.getInstruction()->op_begin();
   populateCallLoweringInfo(SI.CLI, CS, ArgBeginIndex, CS.getNumArgOperands(),
                            Callee, CS.getType(), false);
 
-  auto DeoptBundle = CS.getOperandBundleAt(0);
-  assert(DeoptBundle.getTagID() == LLVMContext::OB_deopt && "Should be!");
+  auto DeoptBundle = *CS.getOperandBundle(LLVMContext::OB_deopt);
 
   unsigned DefaultID = StatepointDirectives::DeoptBundleStatepointID;
 

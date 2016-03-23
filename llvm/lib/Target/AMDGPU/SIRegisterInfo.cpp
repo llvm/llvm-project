@@ -23,7 +23,28 @@
 
 using namespace llvm;
 
-SIRegisterInfo::SIRegisterInfo() : AMDGPURegisterInfo() {
+static bool hasPressureSet(const int *PSets, unsigned PSetID) {
+  for (unsigned i = 0; PSets[i] != -1; ++i) {
+    if (PSets[i] == (int)PSetID)
+      return true;
+  }
+  return false;
+}
+
+void SIRegisterInfo::classifyPressureSet(unsigned PSetID, unsigned Reg,
+                                         BitVector &PressureSets) const {
+  for (MCRegUnitIterator U(Reg, this); U.isValid(); ++U) {
+    const int *PSets = getRegUnitPressureSets(*U);
+    if (hasPressureSet(PSets, PSetID)) {
+      PressureSets.set(PSetID);
+      break;
+    }
+  }
+}
+
+SIRegisterInfo::SIRegisterInfo() : AMDGPURegisterInfo(),
+                                   SGPRPressureSets(getNumRegPressureSets()),
+                                   VGPRPressureSets(getNumRegPressureSets()) {
   unsigned NumRegPressureSets = getNumRegPressureSets();
 
   SGPR32SetID = NumRegPressureSets;
@@ -33,6 +54,9 @@ SIRegisterInfo::SIRegisterInfo() : AMDGPURegisterInfo() {
       SGPR32SetID = i;
     else if (strncmp("VGPR_32", getRegPressureSetName(i), 7) == 0)
       VGPR32SetID = i;
+
+    classifyPressureSet(i, AMDGPU::SGPR0, SGPRPressureSets);
+    classifyPressureSet(i, AMDGPU::VGPR0, VGPRPressureSets);
   }
   assert(SGPR32SetID < NumRegPressureSets &&
          VGPR32SetID < NumRegPressureSets);
@@ -151,31 +175,16 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
 
   unsigned VSLimit = SGPRLimit + VGPRLimit;
 
-  for (regclass_iterator I = regclass_begin(), E = regclass_end();
-       I != E; ++I) {
-    const TargetRegisterClass *RC = *I;
-
-    unsigned NumSubRegs = std::max((int)RC->getSize() / 4, 1);
-    unsigned Limit;
-
-    if (isPseudoRegClass(RC)) {
-      // FIXME: This is a hack. We should never be considering the pressure of
-      // these since no virtual register should ever have this class.
-      Limit = VSLimit;
-    } else if (isSGPRClass(RC)) {
-      Limit = SGPRLimit / NumSubRegs;
-    } else {
-      Limit = VGPRLimit / NumSubRegs;
-    }
-
-    const int *Sets = getRegClassPressureSets(RC);
-    assert(Sets);
-    for (unsigned i = 0; Sets[i] != -1; ++i) {
-      if (Sets[i] == (int)Idx)
-        return Limit;
-    }
+  if (SGPRPressureSets.test(Idx) && VGPRPressureSets.test(Idx)) {
+    // FIXME: This is a hack. We should never be considering the pressure of
+    // these since no virtual register should ever have this class.
+    return VSLimit;
   }
-  return 256;
+
+  if (SGPRPressureSets.test(Idx))
+    return SGPRLimit;
+
+  return VGPRLimit;
 }
 
 bool SIRegisterInfo::requiresRegisterScavenging(const MachineFunction &Fn) const {

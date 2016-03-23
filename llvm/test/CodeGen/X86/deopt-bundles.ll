@@ -35,6 +35,13 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; STACKMAPS-NEXT: Stack Maps: 		Loc 2: Constant 1	[encoding: .byte 4, .byte 8, .short 0, .int 1]
 ; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Constant 3	[encoding: .byte 4, .byte 8, .short 0, .int 3]
 ; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
+; STACKMAPS-NEXT: Stack Maps: callsite 4243
+; STACKMAPS-NEXT: Stack Maps:   has 4 locations
+; STACKMAPS-NEXT: Stack Maps: 		Loc 0: Constant 0	[encoding: .byte 4, .byte 8, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps: 		Loc 1: Constant 0	[encoding: .byte 4, .byte 8, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps: 		Loc 2: Constant 1	[encoding: .byte 4, .byte 8, .short 0, .int 1]
+; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Constant 55	[encoding: .byte 4, .byte 8, .short 0, .int 55]
+; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
 
 
 declare i32 @callee_0()
@@ -103,3 +110,22 @@ uw:
 ; CHECK:	popq	%rcx
 ; CHECK:	retq
 }
+
+define i32 @invoker_2() personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  %val = invoke i32 @callee_1(i32 1)
+          to label %try.cont unwind label %catch.dispatch
+
+catch.dispatch:
+  %cs1 = catchswitch within none [label %catch] unwind to caller
+
+catch:
+  %cp1 = catchpad within %cs1 [i8* null, i32 64, i8* null]
+  %val2 = call i32 @callee_1(i32 100) "statepoint-id"="4243" [ "funclet"(token %cp1), "deopt"(i32 55) ]
+  catchret from %cp1 to label %try.cont
+
+try.cont:
+  ret i32 0
+}
+
+declare i32 @__CxxFrameHandler3(...)

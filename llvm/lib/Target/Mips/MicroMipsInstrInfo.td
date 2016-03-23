@@ -1,11 +1,6 @@
 def addrimm12 : ComplexPattern<iPTR, 2, "selectIntAddrMM", [frameindex]>;
 def addrimm4lsl2 : ComplexPattern<iPTR, 2, "selectIntAddrLSL2MM", [frameindex]>;
 
-def simm7 : Operand<i32>;
-def li_simm7 : Operand<i32> {
-  let DecoderMethod = "DecodeLiSimm7";
-}
-
 def simm12 : Operand<i32> {
   let DecoderMethod = "DecodeSimm12";
 }
@@ -88,7 +83,7 @@ def mem_mm_sp_imm5_lsl2 : Operand<i32> {
 
 def mem_mm_gp_imm7_lsl2 : Operand<i32> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops GPRMM16:$base, simm7:$offset);
+  let MIOperandInfo = (ops GPRMM16:$base, simm7_lsl2:$offset);
   let OperandType = "OPERAND_MEMORY";
   let EncoderMethod = "getMemEncodingMMGPImm7Lsl2";
 }
@@ -621,7 +616,7 @@ def MFHI16_MM : MoveFromHILOMM<"mfhi", GPR32Opnd, AC0>, MFHILO_FM_MM16<0x10>;
 def MFLO16_MM : MoveFromHILOMM<"mflo", GPR32Opnd, AC0>, MFHILO_FM_MM16<0x12>;
 def MOVE16_MM : MoveMM16<"move", GPR32Opnd>, MOVE_FM_MM16<0x03>;
 def MOVEP_MM : MovePMM16<"movep", GPRMM16OpndMoveP>, MOVEP_FM_MM16;
-def LI16_MM : LoadImmMM16<"li16", li_simm7, GPRMM16Opnd>, LI_FM_MM16,
+def LI16_MM : LoadImmMM16<"li16", li16_imm, GPRMM16Opnd>, LI_FM_MM16,
               IsAsCheapAsAMove;
 def JALR16_MM : JumpLinkRegMM16<"jalr", GPR32Opnd>, JALR_FM_MM16<0x0e>,
                 ISA_MICROMIPS32_NOT_MIPS32R6;

@@ -229,22 +229,23 @@ bool ELFAsmParser::ParseSectionName(StringRef &SectionName) {
   }
 
   for (;;) {
-    unsigned CurSize;
-
+    
     SMLoc PrevLoc = getLexer().getLoc();
-    if (getLexer().is(AsmToken::Minus)) {
-      CurSize = 1;
-      Lex(); // Consume the "-".
-    } else if (getLexer().is(AsmToken::String)) {
+    if (getLexer().is(AsmToken::Comma) ||
+      getLexer().is(AsmToken::EndOfStatement))
+      break;
+    
+    unsigned CurSize;
+    if (getLexer().is(AsmToken::String)) {
       CurSize = getTok().getIdentifier().size() + 2;
       Lex();
     } else if (getLexer().is(AsmToken::Identifier)) {
       CurSize = getTok().getIdentifier().size();
       Lex();
     } else {
-      break;
+      CurSize = getTok().getString().size();
+      Lex();
     }
-
     Size += CurSize;
     SectionName = StringRef(FirstLoc.getPointer(), Size);
 

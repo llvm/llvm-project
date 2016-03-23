@@ -1,5 +1,7 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-scops -polly-allow-nonaffine -analyze < %s | FileCheck %s --check-prefix=NONAFFINE
+; RUN: opt %loadPolly -polly-scops -analyze -polly-allow-modref-calls \
+; RUN:  < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -polly-allow-nonaffine -analyze \
+; RUN: -polly-allow-modref-calls < %s | FileCheck %s --check-prefix=NONAFFINE
 
 ;  TODO: We should delinearize the accesses despite the use in a call to a
 ;        readonly function. For now we verify we do not delinearize them though.

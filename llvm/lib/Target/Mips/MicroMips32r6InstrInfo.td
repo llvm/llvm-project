@@ -821,7 +821,7 @@ class SRL16_MMR6_DESC : ShiftIMM16<"srl16", uimm3_shift, GPRMM16Opnd, II_SRL>,
       MMR6Arch<"srl16">;
 class BREAK16_MMR6_DESC : BrkSdbbp16MM<"break16">, MMR6Arch<"srl16">,
       MicroMipsR6Inst16;
-class LI16_MMR6_DESC : LoadImmMM16<"li16", li_simm7, GPRMM16Opnd>,
+class LI16_MMR6_DESC : LoadImmMM16<"li16", li16_imm, GPRMM16Opnd>,
       MMR6Arch<"srl16">, MicroMipsR6Inst16, IsAsCheapAsAMove;
 class MOVE16_MMR6_DESC : MoveMM16<"move16", GPR32Opnd>, MMR6Arch<"srl16">,
       MicroMipsR6Inst16;

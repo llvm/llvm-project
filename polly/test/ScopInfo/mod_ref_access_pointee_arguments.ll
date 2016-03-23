@@ -1,5 +1,7 @@
-; RUN: opt %loadPolly -basicaa -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -basicaa -polly-codegen -disable-output < %s
+; RUN: opt %loadPolly -basicaa -polly-scops -analyze -polly-allow-modref-calls \
+; RUN:  < %s | FileCheck %s
+; RUN: opt %loadPolly -basicaa -polly-codegen -polly-allow-modref-calls \
+; RUN: -disable-output < %s
 ;
 ; Verify that we model the may-write access of the prefetch intrinsic
 ; correctly, thus that A is accessed by it but B is not.

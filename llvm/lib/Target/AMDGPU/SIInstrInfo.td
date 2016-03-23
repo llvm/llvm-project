@@ -2372,6 +2372,7 @@ class VINTRP_Real_si <bits <2> op, string opName, dag outs, dag ins,
   VINTRPCommon <outs, ins, asm, []>,
   VINTRPe <op>,
   SIMCInstr<opName, SISubtarget.SI> {
+  let AssemblerPredicate = SIAssemblerPredicate;
   let DecoderNamespace = "SICI";
   let DisableDecoder = DisableSIDecoder;
 }
@@ -2381,6 +2382,7 @@ class VINTRP_Real_vi <bits <2> op, string opName, dag outs, dag ins,
   VINTRPCommon <outs, ins, asm, []>,
   VINTRPe_vi <op>,
   SIMCInstr<opName, SISubtarget.VI> {
+  let AssemblerPredicate = VIAssemblerPredicate;
   let DecoderNamespace = "VI";
   let DisableDecoder = DisableVIDecoder;
 }
@@ -2742,6 +2744,7 @@ class MUBUF_Real_si <mubuf op, string opName, dag outs, dag ins,
   MUBUFe <op.SI>,
   SIMCInstr<opName, SISubtarget.SI> {
   let lds = 0;
+  let AssemblerPredicate = SIAssemblerPredicate;
   let DecoderNamespace="SICI";
   let DisableDecoder = DisableSIDecoder;
 }
@@ -2752,6 +2755,7 @@ class MUBUF_Real_vi <mubuf op, string opName, dag outs, dag ins,
   MUBUFe_vi <op.VI>,
   SIMCInstr<opName, SISubtarget.VI> {
   let lds = 0;
+  let AssemblerPredicate = VIAssemblerPredicate;
   let DecoderNamespace="VI";
   let DisableDecoder = DisableVIDecoder;
 }

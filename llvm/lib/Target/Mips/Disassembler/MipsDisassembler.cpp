@@ -362,7 +362,7 @@ static DecodeStatus DecodeAddiur2Simm7(MCInst &Inst,
                                        uint64_t Address,
                                        const void *Decoder);
 
-static DecodeStatus DecodeLiSimm7(MCInst &Inst,
+static DecodeStatus DecodeLi16Imm(MCInst &Inst,
                                   unsigned Value,
                                   uint64_t Address,
                                   const void *Decoder);
@@ -390,9 +390,10 @@ static DecodeStatus DecodeUImmWithOffset(MCInst &Inst, unsigned Value,
                                                        Decoder);
 }
 
-template <unsigned Bits, int Offset = 0>
-static DecodeStatus DecodeSImmWithOffset(MCInst &Inst, unsigned Value,
-                                         uint64_t Address, const void *Decoder);
+template <unsigned Bits, int Offset = 0, int ScaleBy = 1>
+static DecodeStatus DecodeSImmWithOffsetAndScale(MCInst &Inst, unsigned Value,
+                                                 uint64_t Address,
+                                                 const void *Decoder);
 
 static DecodeStatus DecodeInsSize(MCInst &Inst,
                                   unsigned Insn,
@@ -1897,7 +1898,7 @@ static DecodeStatus DecodeAddiur2Simm7(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeLiSimm7(MCInst &Inst,
+static DecodeStatus DecodeLi16Imm(MCInst &Inst,
                                   unsigned Value,
                                   uint64_t Address,
                                   const void *Decoder) {
@@ -1934,11 +1935,11 @@ static DecodeStatus DecodeUImmWithOffsetAndScale(MCInst &Inst, unsigned Value,
   return MCDisassembler::Success;
 }
 
-template <unsigned Bits, int Offset>
-static DecodeStatus DecodeSImmWithOffset(MCInst &Inst, unsigned Value,
-                                         uint64_t Address,
-                                         const void *Decoder) {
-  int32_t Imm = SignExtend32<Bits>(Value);
+template <unsigned Bits, int Offset, int ScaleBy>
+static DecodeStatus DecodeSImmWithOffsetAndScale(MCInst &Inst, unsigned Value,
+                                                 uint64_t Address,
+                                                 const void *Decoder) {
+  int32_t Imm = SignExtend32<Bits>(Value) * ScaleBy;
   Inst.addOperand(MCOperand::createImm(Imm + Offset));
   return MCDisassembler::Success;
 }
