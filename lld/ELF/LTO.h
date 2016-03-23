@@ -39,6 +39,8 @@ public:
   template <class ELFT> std::unique_ptr<ObjectFile<ELFT>> compile();
 
 private:
+  llvm::TargetMachine *getTargetMachine();
+
   llvm::LLVMContext Context;
   llvm::Module Combined{"ld-temp.o", Context};
   llvm::IRMover Mover{Combined};

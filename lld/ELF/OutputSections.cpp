@@ -91,13 +91,37 @@ GotSection<ELFT>::GotSection()
 
 template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody &Sym) {
   if (Config->EMachine == EM_MIPS) {
+    // For "true" local symbols which can be referenced from the same module
+    // only compiler creates two instructions for address loading:
+    //
+    // lw   $8, 0($gp) # R_MIPS_GOT16
+    // addi $8, $8, 0  # R_MIPS_LO16
+    //
+    // The first instruction loads high 16 bits of the symbol address while
+    // the second adds an offset. That allows to reduce number of required
+    // GOT entries because only one global offset table entry is necessary
+    // for every 64 KBytes of local data. So for local symbols we need to
+    // allocate number of GOT entries to hold all required "page" addresses.
+    //
+    // All global symbols (hidden and regular) considered by compiler uniformly.
+    // It always generates a single `lw` instruction and R_MIPS_GOT16 relocation
+    // to load address of the symbol. So for each such symbol we need to
+    // allocate dedicated GOT entry to store its address.
+    //
+    // If a symbol is preemptible we need help of dynamic linker to get its
+    // final address. The corresponding GOT entries are allocated in the
+    // "global" part of GOT. Entries for non preemptible global symbol allocated
+    // in the "local" part of GOT.
+    //
+    // See "Global Offset Table" in Chapter 5:
+    // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+    //
+    // FIXME (simon): Now LLD allocates GOT entries for each
+    // "local symbol+addend" pair. That should be fixed to reduce size
+    // of generated GOT.
     if (Sym.isPreemptible())
-      // All symbols with MIPS GOT entries should be represented
-      // in the dynamic symbols table. See "Global Offset Table" in Chapter 5:
-      // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
       Sym.MustBeInDynSym = true;
     else {
-      // FIXME (simon): Do not add so many redundant entries.
       ++MipsLocalEntries;
       return;
     }

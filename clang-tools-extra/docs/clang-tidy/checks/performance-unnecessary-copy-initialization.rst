@@ -17,18 +17,21 @@ Example:
 
 .. code-block:: c++
 
-  const string& constReference() {
-  }
-  void function() {
+  const string& constReference();
+  void Function() {
     // The warning will suggest making this a const reference.
     const string UnnecessaryCopy = constReference();
   }
 
   struct Foo {
     const string& name() const;
-  }
+  };
   void Function(const Foo& foo) {
     // The warning will suggest making this a const reference.
-    string UnnecessaryCopy = foo.name();
-    UnnecessaryCopy.find("bar");
+    string UnnecessaryCopy1 = foo.name();
+    UnnecessaryCopy1.find("bar");
+
+    // The warning will suggest making this a const reference.
+    string UnnecessaryCopy2 = UnnecessaryCopy1;
+    UnnecessaryCopy2.find("bar");
   }

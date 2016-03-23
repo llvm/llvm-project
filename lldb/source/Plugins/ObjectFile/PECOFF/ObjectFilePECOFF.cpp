@@ -192,7 +192,8 @@ ObjectFilePECOFF::ObjectFilePECOFF (const lldb::ModuleSP &module_sp,
     m_dos_header (),
     m_coff_header (),
     m_coff_header_opt (),
-    m_sect_headers ()
+    m_sect_headers (),
+    m_entry_point_address ()
 {
     ::memset (&m_dos_header, 0, sizeof(m_dos_header));
     ::memset (&m_coff_header, 0, sizeof(m_coff_header));
@@ -812,6 +813,25 @@ uint32_t
 ObjectFilePECOFF::GetDependentModules (FileSpecList& files)
 {
     return 0;
+}
+
+lldb_private::Address
+ObjectFilePECOFF::GetEntryPointAddress ()
+{
+    if (m_entry_point_address.IsValid())
+        return m_entry_point_address;
+
+    if (!ParseHeader() || !IsExecutable())
+        return m_entry_point_address;
+
+    SectionList *section_list = GetSectionList();
+    addr_t offset = m_coff_header_opt.entry;
+
+    if (!section_list)
+        m_entry_point_address.SetOffset(offset);
+    else
+        m_entry_point_address.ResolveAddressUsingFileSections(offset, section_list);
+    return m_entry_point_address;
 }
 
 

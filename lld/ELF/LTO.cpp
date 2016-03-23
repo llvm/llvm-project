@@ -83,13 +83,20 @@ void BitcodeCompiler::add(BitcodeFile &F) {
       continue;
     }
     if (!BitcodeFile::shouldSkip(Sym)) {
-
-      if (GV->getLinkage() == llvm::GlobalValue::LinkOnceODRLinkage)
-        GV->setLinkage(GlobalValue::WeakODRLinkage);
-
       if (SymbolBody *B = Bodies[BodyIndex++])
-        if (&B->repl() == B && isa<DefinedBitcode>(B))
+        if (&B->repl() == B && isa<DefinedBitcode>(B)) {
+          switch (GV->getLinkage()) {
+          default:
+            break;
+          case llvm::GlobalValue::LinkOnceAnyLinkage:
+            GV->setLinkage(GlobalValue::WeakAnyLinkage);
+            break;
+          case llvm::GlobalValue::LinkOnceODRLinkage:
+            GV->setLinkage(GlobalValue::WeakODRLinkage);
+            break;
+          }
           Keep.push_back(GV);
+        }
     }
   }
 
@@ -104,23 +111,7 @@ std::unique_ptr<elf::ObjectFile<ELFT>> BitcodeCompiler::compile() {
   if (Config->SaveTemps)
     saveBCFile(Combined, ".lto.bc");
 
-  StringRef TripleStr = Combined.getTargetTriple();
-  Triple TheTriple(TripleStr);
-
-  // FIXME: Should we have a default triple? The gold plugin uses
-  // sys::getDefaultTargetTriple(), but that is probably wrong given that this
-  // might be a cross linker.
-
-  std::string ErrMsg;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleStr, ErrMsg);
-  if (!TheTarget)
-    fatal("target not found: " + ErrMsg);
-
-  TargetOptions Options;
-  Reloc::Model R = Config->Pic ? Reloc::PIC_ : Reloc::Static;
-  std::unique_ptr<TargetMachine> TM(
-      TheTarget->createTargetMachine(TripleStr, "", "", Options, R));
-
+  std::unique_ptr<TargetMachine> TM(getTargetMachine());
   runLTOPasses(Combined, *TM);
 
   raw_svector_ostream OS(OwningData);
@@ -137,6 +128,17 @@ std::unique_ptr<elf::ObjectFile<ELFT>> BitcodeCompiler::compile() {
   std::unique_ptr<InputFile> IF = createObjectFile(*MB);
   auto *OF = cast<ObjectFile<ELFT>>(IF.release());
   return std::unique_ptr<ObjectFile<ELFT>>(OF);
+}
+
+TargetMachine *BitcodeCompiler::getTargetMachine() {
+  StringRef TripleStr = Combined.getTargetTriple();
+  std::string Msg;
+  const Target *T = TargetRegistry::lookupTarget(TripleStr, Msg);
+  if (!T)
+    fatal("target not found: " + Msg);
+  TargetOptions Options;
+  Reloc::Model R = Config->Pic ? Reloc::PIC_ : Reloc::Static;
+  return T->createTargetMachine(TripleStr, "", "", Options, R);
 }
 
 template std::unique_ptr<elf::ObjectFile<ELF32LE>> BitcodeCompiler::compile();

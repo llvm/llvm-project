@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S -polly-delinearize < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
 
 ; CHECK: entry:
 ; CHECK-NEXT: %0 = zext i32 %n to i64

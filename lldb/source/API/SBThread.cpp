@@ -34,13 +34,14 @@
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
-
+#include "Plugins/Process/Utility/HistoryThread.h"
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBProcess.h"
+#include "lldb/API/SBThreadCollection.h"
 #include "lldb/API/SBThreadPlan.h"
 #include "lldb/API/SBValue.h"
 
@@ -326,6 +327,62 @@ SBThread::GetStopReasonExtendedInfoAsJSON (lldb::SBStream &stream)
     info->Dump(strm);
     
     return true;
+}
+
+static void
+AddThreadsForPath(std::string path, ThreadCollectionSP threads, ProcessSP process_sp, StructuredData::ObjectSP info)
+{
+    info->GetObjectForDotSeparatedPath(path)->GetAsArray()->ForEach([process_sp, threads] (StructuredData::Object *o) -> bool {
+        std::vector<lldb::addr_t> pcs;
+        o->GetObjectForDotSeparatedPath("trace")->GetAsArray()->ForEach([&pcs] (StructuredData::Object *pc) -> bool {
+            pcs.push_back(pc->GetAsInteger()->GetValue());
+            return true;
+        });
+        
+        tid_t tid = o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
+        uint32_t stop_id = 0;
+        bool stop_id_is_valid = false;
+        HistoryThread *history_thread = new HistoryThread(*process_sp, tid, pcs, stop_id, stop_id_is_valid);
+        ThreadSP new_thread_sp(history_thread);
+        // Save this in the Process' ExtendedThreadList so a strong pointer retains the object
+        process_sp->GetExtendedThreadList().AddThread(new_thread_sp);
+        threads->AddThread(new_thread_sp);
+        
+        return true;
+    });
+}
+
+SBThreadCollection
+SBThread::GetStopReasonExtendedBacktraces (InstrumentationRuntimeType type)
+{
+    ThreadCollectionSP threads;
+    threads.reset(new ThreadCollection());
+    
+    // We currently only support ThreadSanitizer.
+    if (type != eInstrumentationRuntimeTypeThreadSanitizer)
+        return threads;
+
+    ExecutionContext exe_ctx (m_opaque_sp.get());
+    if (! exe_ctx.HasThreadScope())
+        return SBThreadCollection(threads);
+    
+    ProcessSP process_sp = exe_ctx.GetProcessSP();
+    
+    StopInfoSP stop_info = exe_ctx.GetThreadPtr()->GetStopInfo();
+    StructuredData::ObjectSP info = stop_info->GetExtendedInfo();
+    if (! info)
+        return threads;
+    
+    if (info->GetObjectForDotSeparatedPath("instrumentation_class")->GetStringValue() != "ThreadSanitizer")
+        return threads;
+    
+    AddThreadsForPath("stacks", threads, process_sp, info);
+    AddThreadsForPath("mops", threads, process_sp, info);
+    AddThreadsForPath("locs", threads, process_sp, info);
+    AddThreadsForPath("mutexes", threads, process_sp, info);
+    AddThreadsForPath("threads", threads, process_sp, info);
+    
+    return threads;
 }
 
 size_t

@@ -183,7 +183,7 @@ COMMON_FLAG(bool, intercept_strpbrk, true,
             "If set, uses custom wrappers for strpbrk function "
             "to find more errors.")
 COMMON_FLAG(bool, intercept_strlen, true,
-            "If set, uses custom wrappers for strlen function "
+            "If set, uses custom wrappers for strlen and strnlen functions "
             "to find more errors.")
 COMMON_FLAG(bool, intercept_strchr, true,
             "If set, uses custom wrappers for strchr, strchrnul, and strrchr "

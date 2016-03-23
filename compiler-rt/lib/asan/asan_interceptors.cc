@@ -111,7 +111,7 @@ static inline bool RangesOverlap(const char *offset1, uptr length1,
 } while (0)
 
 static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
-#if ASAN_INTERCEPT_STRNLEN
+#if SANITIZER_INTERCEPT_STRNLEN
   if (REAL(strnlen)) {
     return REAL(strnlen)(s, maxlen);
   }
@@ -583,19 +583,6 @@ INTERCEPTOR(char*, strncpy, char *to, const char *from, uptr size) {
   return REAL(strncpy)(to, from, size);
 }
 
-#if ASAN_INTERCEPT_STRNLEN
-INTERCEPTOR(uptr, strnlen, const char *s, uptr maxlen) {
-  void *ctx;
-  ASAN_INTERCEPTOR_ENTER(ctx, strnlen);
-  ENSURE_ASAN_INITED();
-  uptr length = REAL(strnlen)(s, maxlen);
-  if (flags()->replace_str) {
-    ASAN_READ_RANGE(ctx, s, Min(length + 1, maxlen));
-  }
-  return length;
-}
-#endif  // ASAN_INTERCEPT_STRNLEN
-
 INTERCEPTOR(long, strtol, const char *nptr,  // NOLINT
             char **endptr, int base) {
   void *ctx;
@@ -728,9 +715,6 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(strncat);
   ASAN_INTERCEPT_FUNC(strncpy);
   ASAN_INTERCEPT_FUNC(strdup);
-#if ASAN_INTERCEPT_STRNLEN
-  ASAN_INTERCEPT_FUNC(strnlen);
-#endif
 #if ASAN_INTERCEPT_INDEX && ASAN_USE_ALIAS_ATTRIBUTE_FOR_INDEX
   ASAN_INTERCEPT_FUNC(index);
 #endif
