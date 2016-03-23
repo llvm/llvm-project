@@ -99,8 +99,7 @@ llvm::collectUsedGlobalVariables(Module &M, SmallPtrSetImpl<GlobalValue *> &Set,
     return GV;
 
   const ConstantArray *Init = cast<ConstantArray>(GV->getInitializer());
-  for (unsigned I = 0, E = Init->getNumOperands(); I != E; ++I) {
-    Value *Op = Init->getOperand(I);
+  for (Value *Op : Init->operands()) {
     GlobalValue *G = cast<GlobalValue>(Op->stripPointerCastsNoFollowAliases());
     Set.insert(G);
   }

@@ -3403,7 +3403,7 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode, SDLoc DL,
   EVT LegalSVT = VT.getScalarType();
   if (LegalSVT.isInteger()) {
     LegalSVT = TLI->getTypeToTransformTo(*getContext(), LegalSVT);
-    if (LegalSVT.bitsLT(SVT))
+    if (LegalSVT.bitsLT(VT.getScalarType()))
       return SDValue();
   }
 

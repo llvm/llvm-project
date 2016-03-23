@@ -2180,14 +2180,11 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
   MachineBasicBlock *Return = FuncInfo.MBBMap[I.getSuccessor(0)];
   const BasicBlock *EHPadBB = I.getSuccessor(1);
 
-#ifndef NDEBUG
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
-  for (unsigned i = 0, e = I.getNumOperandBundles(); i != e; ++i)
-    assert((I.getOperandBundleAt(i).isDeoptOperandBundle() ||
-            I.getOperandBundleAt(i).isFuncletOperandBundle()) &&
-           "Cannot lower invokes with arbitrary operand bundles yet!");
-#endif
+  assert(!I.hasOperandBundlesOtherThan(
+             {LLVMContext::OB_deopt, LLVMContext::OB_funclet}) &&
+         "Cannot lower invokes with arbitrary operand bundles yet!");
 
   const Value *Callee(I.getCalledValue());
   const Function *Fn = dyn_cast<Function>(Callee);
@@ -6273,14 +6270,11 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         RenameFn,
         DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout()));
 
-#ifndef NDEBUG
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
-  for (unsigned i = 0, e = I.getNumOperandBundles(); i != e; ++i)
-    assert((I.getOperandBundleAt(i).isDeoptOperandBundle() ||
-            I.getOperandBundleAt(i).isFuncletOperandBundle()) &&
-           "Cannot lower calls with arbitrary operand bundles!");
-#endif
+  assert(!I.hasOperandBundlesOtherThan(
+             {LLVMContext::OB_deopt, LLVMContext::OB_funclet}) &&
+         "Cannot lower calls with arbitrary operand bundles!");
 
   if (I.countOperandBundlesOfType(LLVMContext::OB_deopt))
     LowerCallSiteWithDeoptBundle(&I, Callee, nullptr);

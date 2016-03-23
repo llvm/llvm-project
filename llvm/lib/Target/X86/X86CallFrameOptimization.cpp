@@ -169,7 +169,7 @@ bool X86CallFrameOptimization::isLegal(MachineFunction &MF) {
   return true;
 }
 
-// Check whether this trasnformation is profitable for a particular
+// Check whether this transformation is profitable for a particular
 // function - in terms of code size.
 bool X86CallFrameOptimization::isProfitable(MachineFunction &MF, 
   ContextVector &CallSeqVector) {

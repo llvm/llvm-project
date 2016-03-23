@@ -95,7 +95,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   for (auto T : {MVT::i32, MVT::i64}) {
     // Expand unavailable integer operations.
     for (auto Op :
-         {ISD::BSWAP, ISD::ROTL, ISD::ROTR, ISD::SMUL_LOHI, ISD::UMUL_LOHI,
+         {ISD::BSWAP, ISD::SMUL_LOHI, ISD::UMUL_LOHI,
           ISD::MULHS, ISD::MULHU, ISD::SDIVREM, ISD::UDIVREM, ISD::SHL_PARTS,
           ISD::SRA_PARTS, ISD::SRL_PARTS, ISD::ADDC, ISD::ADDE, ISD::SUBC,
           ISD::SUBE}) {

@@ -43,7 +43,7 @@ define half @load_half(half* %fptr) {
 ; CHECK-LABEL: @load_half
 ; CHECK: movw	(%rdi), %ax
 ; CHECK: movzwl	%ax, %edi
-; CHECK: jmp	__gnu_h2f_ieee
+; CHECK: callq	__gnu_h2f_ieee
   %v = load atomic half, half* %fptr unordered, align 2
   ret half %v
 }

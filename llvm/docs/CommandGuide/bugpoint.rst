@@ -15,7 +15,7 @@ can be used to debug three types of failures: optimizer crashes, miscompilations
 by optimizers, or bad native code generation (including problems in the static
 and JIT compilers).  It aims to reduce large test cases to small, useful ones.
 For more information on the design and inner workings of **bugpoint**, as well as
-advice for using bugpoint, see *llvm/docs/Bugpoint.html* in the LLVM
+advice for using bugpoint, see :doc:`/Bugpoint` in the LLVM
 distribution.
 
 OPTIONS
@@ -151,7 +151,12 @@ OPTIONS
 **--compile-command** *command*
 
  This option defines the command to use with the **--compile-custom**
- option to compile the bitcode testcase. This can be useful for
+ option to compile the bitcode testcase. The command should exit with a
+ failure exit code if the file is "interesting" and should exit with a
+ success exit code (i.e. 0) otherwise (this is the same as if it crashed on
+ "interesting" inputs).
+
+ This can be useful for
  testing compiler output without running any link or execute stages. To
  generate a reduced unit test, you may add CHECK directives to the
  testcase and pass the name of an executable compile-command script in this form:

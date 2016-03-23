@@ -353,7 +353,7 @@ static Value *foldSelectICmpAndOr(const SelectInst &SI, Value *TrueVal,
 ///   %1 = icmp ne i32 %x, 0
 ///   %2 = select i1 %1, i32 %0, i32 32
 /// \code
-/// 
+///
 /// into:
 ///   %0 = tail call i32 @llvm.cttz.i32(i32 %x, i1 false)
 static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,

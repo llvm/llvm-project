@@ -55,9 +55,7 @@ struct SparseInstrProfTest : public InstrProfTest {
 
 struct MaybeSparseInstrProfTest : public InstrProfTest,
                                   public ::testing::WithParamInterface<bool> {
-  void SetUp() {
-    Writer.setOutputSparse(GetParam());
-  }
+  void SetUp() { Writer.setOutputSparse(GetParam()); }
 };
 
 TEST_P(MaybeSparseInstrProfTest, write_and_read_empty_profile) {

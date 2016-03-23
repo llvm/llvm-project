@@ -158,7 +158,7 @@ class TypePromotionTransaction;
     const char *getPassName() const override { return "CodeGen Prepare"; }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addPreserved<DominatorTreeWrapperPass>();
+      // FIXME: When we can selectively preserve passes, preserve the domtree.
       AU.addRequired<TargetLibraryInfoWrapperPass>();
       AU.addRequired<TargetTransformInfoWrapperPass>();
     }
@@ -5277,6 +5277,7 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool& ModifiedDT) {
     for (auto &I : reverse(BB)) {
       if (makeBitReverse(I, *DL, *TLI)) {
         MadeBitReverse = MadeChange = true;
+        ModifiedDT = true;
         break;
       }
     }

@@ -2247,9 +2247,12 @@ SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
   SDValue InChain = DAG.getEntryNode();
 
   // isTailCall may be true since the callee does not reference caller stack
-  // frame. Check if it's in the right position.
+  // frame. Check if it's in the right position and that the return types match.
   SDValue TCChain = InChain;
-  bool isTailCall = TLI.isInTailCallPosition(DAG, Node, TCChain);
+  const Function *F = DAG.getMachineFunction().getFunction();
+  bool isTailCall =
+      TLI.isInTailCallPosition(DAG, Node, TCChain) &&
+      (RetTy == F->getReturnType() || F->getReturnType()->isVoidTy());
   if (isTailCall)
     InChain = TCChain;
 

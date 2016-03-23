@@ -28634,7 +28634,9 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
 
   // If target-size is 128-bits (or 256-bits on AVX2 target), then convert to
   // ISD::*_EXTEND_VECTOR_INREG which ensures lowering to X86ISD::V*EXT.
-  if (VT.is128BitVector() || (VT.is256BitVector() && Subtarget.hasInt256())) {
+  // Also use this if we don't have SSE41 to allow the legalizer do its job.
+  if (!Subtarget.hasSSE41() || VT.is128BitVector() ||
+      (VT.is256BitVector() && Subtarget.hasInt256())) {
     SDValue ExOp = ExtendVecSize(DL, N0, VT.getSizeInBits());
     return Opcode == ISD::SIGN_EXTEND
                ? DAG.getSignExtendVectorInReg(ExOp, DL, VT)

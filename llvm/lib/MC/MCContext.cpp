@@ -44,11 +44,6 @@ MCContext::MCContext(const MCAsmInfo *mai, const MCRegisterInfo *mri,
       GenDwarfForAssembly(false), GenDwarfFileNumber(0), DwarfVersion(4),
       AllowTemporaryLabels(true), DwarfCompileUnitID(0),
       AutoReset(DoAutoReset), HadError(false) {
-
-  std::error_code EC = llvm::sys::fs::current_path(CompilationDir);
-  if (EC)
-    CompilationDir.clear();
-
   SecureLogFile = getenv("AS_SECURE_LOG_FILE");
   SecureLog = nullptr;
   SecureLogUsed = false;

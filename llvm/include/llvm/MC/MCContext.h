@@ -404,14 +404,11 @@ namespace llvm {
     /// @{
 
     /// \brief Get the compilation directory for DW_AT_comp_dir
-    /// This can be overridden by clients which want to control the reported
-    /// compilation directory and have it be something other than the current
-    /// working directory.
-    /// Returns an empty string if the current directory cannot be determined.
+    /// The compilation directory should be set with \c setCompilationDir before
+    /// calling this function. If it is unset, an empty string will be returned.
     StringRef getCompilationDir() const { return CompilationDir; }
 
     /// \brief Set the compilation directory for DW_AT_comp_dir
-    /// Override the default (CWD) compilation directory.
     void setCompilationDir(StringRef S) { CompilationDir = S.str(); }
 
     /// \brief Get the main file name for use in error messages and debug

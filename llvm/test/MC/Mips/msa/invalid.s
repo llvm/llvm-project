@@ -5,6 +5,100 @@
 # RUN: FileCheck %s < %t1
 
     .set noat
+    addvi.b $w1, $w2, -1 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    addvi.b $w1, $w2, 32 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    addvi.h $w1, $w2, -1 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    addvi.h $w1, $w2, 32 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    addvi.w $w1, $w2, -1 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    addvi.w $w1, $w2, 32 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    addvi.d $w1, $w2, -1 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    addvi.d $w1, $w2, 32 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    andi.b $w1, $w2, -1  # CHECK: :[[@LINE]]:22: error: expected 8-bit unsigned immediate
+    andi.b $w1, $w2, 256 # CHECK: :[[@LINE]]:22: error: expected 8-bit unsigned immediate
+    bclri.b $w1, $w2, -1 # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
+    bclri.b $w1, $w2, 8  # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
+    bclri.h $w1, $w2, -1 # CHECK: :[[@LINE]]:23: error: expected 4-bit unsigned immediate
+    bclri.h $w1, $w2, 16 # CHECK: :[[@LINE]]:23: error: expected 4-bit unsigned immediate
+    bclri.w $w1, $w2, -1 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    bclri.w $w1, $w2, 32 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    bclri.d $w1, $w2, -1 # CHECK: :[[@LINE]]:23: error: expected 6-bit unsigned immediate
+    bclri.d $w1, $w2, 64 # CHECK: :[[@LINE]]:23: error: expected 6-bit unsigned immediate
+    binsli.b $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
+    binsli.b $w1, $w2, 8  # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
+    binsli.h $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 4-bit unsigned immediate
+    binsli.h $w1, $w2, 16 # CHECK: :[[@LINE]]:24: error: expected 4-bit unsigned immediate
+    binsli.w $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    binsli.w $w1, $w2, 32 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    binsli.d $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 6-bit unsigned immediate
+    binsli.d $w1, $w2, 64 # CHECK: :[[@LINE]]:24: error: expected 6-bit unsigned immediate
+    binsri.b $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
+    binsri.b $w1, $w2, 8  # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
+    binsri.h $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 4-bit unsigned immediate
+    binsri.h $w1, $w2, 16 # CHECK: :[[@LINE]]:24: error: expected 4-bit unsigned immediate
+    binsri.w $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    binsri.w $w1, $w2, 32 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    binsri.d $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 6-bit unsigned immediate
+    binsri.d $w1, $w2, 64 # CHECK: :[[@LINE]]:24: error: expected 6-bit unsigned immediate
+    bmnzi.b $w1, $w2, -1  # CHECK: :[[@LINE]]:23: error: expected 8-bit unsigned immediate
+    bmnzi.b $w1, $w2, 256 # CHECK: :[[@LINE]]:23: error: expected 8-bit unsigned immediate
+    bmzi.b $w1, $w2, -1   # CHECK: :[[@LINE]]:22: error: expected 8-bit unsigned immediate
+    bmzi.b $w1, $w2, 256  # CHECK: :[[@LINE]]:22: error: expected 8-bit unsigned immediate
+    bnegi.b $w1, $w2, -1  # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
+    bnegi.b $w1, $w2, 8   # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
+    bnegi.h $w1, $w2, -1  # CHECK: :[[@LINE]]:23: error: expected 4-bit unsigned immediate
+    bnegi.h $w1, $w2, 16  # CHECK: :[[@LINE]]:23: error: expected 4-bit unsigned immediate
+    bnegi.w $w1, $w2, -1  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    bnegi.w $w1, $w2, 32  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    bnegi.d $w1, $w2, -1  # CHECK: :[[@LINE]]:23: error: expected 6-bit unsigned immediate
+    bnegi.d $w1, $w2, 64  # CHECK: :[[@LINE]]:23: error: expected 6-bit unsigned immediate
+    bseli.b $w1, $w2, -1  # CHECK: :[[@LINE]]:23: error: expected 8-bit unsigned immediate
+    bseli.b $w1, $w2, 256 # CHECK: :[[@LINE]]:23: error: expected 8-bit unsigned immediate
+    bseti.b $w1, $w2, -1  # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
+    bseti.b $w1, $w2, 8   # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
+    bseti.h $w1, $w2, -1  # CHECK: :[[@LINE]]:23: error: expected 4-bit unsigned immediate
+    bseti.h $w1, $w2, 16  # CHECK: :[[@LINE]]:23: error: expected 4-bit unsigned immediate
+    bseti.w $w1, $w2, -1  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    bseti.w $w1, $w2, 32  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    bseti.d $w1, $w2, -1  # CHECK: :[[@LINE]]:23: error: expected 6-bit unsigned immediate
+    bseti.d $w1, $w2, 64  # CHECK: :[[@LINE]]:23: error: expected 6-bit unsigned immediate
+    clei_u.b $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clei_u.b $w1, $w2, 32 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clei_u.h $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clei_u.h $w1, $w2, 32 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clei_u.w $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clei_u.w $w1, $w2, 32 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clei_u.d $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clei_u.d $w1, $w2, 32 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clti_u.b $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clti_u.b $w1, $w2, 32 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clti_u.h $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clti_u.h $w1, $w2, 32 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clti_u.w $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clti_u.w $w1, $w2, 32 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clti_u.d $w1, $w2, -1 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    clti_u.d $w1, $w2, 32 # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    copy_s.b $2, $w9[-1]  # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
+    copy_s.b $2, $w9[16]  # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
+    copy_s.h $2, $w9[-1]  # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
+    copy_s.h $2, $w9[8]   # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
+    copy_s.w $2, $w9[-1]  # CHECK: :[[@LINE]]:22: error: expected 2-bit unsigned immediate
+    copy_s.w $2, $w9[4]   # CHECK: :[[@LINE]]:22: error: expected 2-bit unsigned immediate
+    copy_s.d $2, $w9[-1]  # CHECK: :[[@LINE]]:22: error: expected 1-bit unsigned immediate
+    copy_s.d $2, $w9[2]   # CHECK: :[[@LINE]]:22: error: expected 1-bit unsigned immediate
+    copy_u.b $2, $w9[-1]  # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
+    copy_u.b $2, $w9[16]  # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
+    copy_u.h $2, $w9[-1]  # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
+    copy_u.h $2, $w9[8]   # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
+    copy_u.w $2, $w9[-1]  # CHECK: :[[@LINE]]:22: error: expected 2-bit unsigned immediate
+    copy_u.w $2, $w9[4]   # CHECK: :[[@LINE]]:22: error: expected 2-bit unsigned immediate
+    insert.b $w9[-1], $2  # CHECK: :[[@LINE]]:18: error: expected 4-bit unsigned immediate
+    insert.b $w9[16], $2  # CHECK: :[[@LINE]]:18: error: expected 4-bit unsigned immediate
+    insert.h $w9[-1], $2  # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
+    insert.h $w9[8], $2   # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
+    insert.w $w9[-1], $2  # CHECK: :[[@LINE]]:18: error: expected 2-bit unsigned immediate
+    insert.w $w9[4], $2   # CHECK: :[[@LINE]]:18: error: expected 2-bit unsigned immediate
+    insert.d $w9[-1], $2  # CHECK: :[[@LINE]]:18: error: expected 1-bit unsigned immediate
+    insert.d $w9[2], $2   # CHECK: :[[@LINE]]:18: error: expected 1-bit unsigned immediate
     insve.b $w25[-1], $w9[0] # CHECK: :[[@LINE]]:18: error: expected 4-bit unsigned immediate
     insve.b $w25[16], $w9[0] # CHECK: :[[@LINE]]:18: error: expected 4-bit unsigned immediate
     insve.h $w24[-1], $w2[0] # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
@@ -19,6 +113,26 @@
     insve.d $w3[0], $w18[1] # CHECK: :[[@LINE]]:26: error: expected '0'
     lsa     $2, $3, $4, 0   # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 4
     lsa     $2, $3, $4, 5   # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 4
+    maxi_u.b $w1, $w2, -1   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    maxi_u.b $w1, $w2, 32   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    maxi_u.h $w1, $w2, -1   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    maxi_u.h $w1, $w2, 32   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    maxi_u.w $w1, $w2, -1   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    maxi_u.w $w1, $w2, 32   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    maxi_u.d $w1, $w2, -1   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    maxi_u.d $w1, $w2, 32   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    mini_u.b $w1, $w2, -1   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    mini_u.b $w1, $w2, 32   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    mini_u.h $w1, $w2, -1   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    mini_u.h $w1, $w2, 32   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    mini_u.w $w1, $w2, -1   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    mini_u.w $w1, $w2, 32   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    mini_u.d $w1, $w2, -1   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    mini_u.d $w1, $w2, 32   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
+    nori.b $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 8-bit unsigned immediate
+    nori.b $w1, $w2, 256    # CHECK: :[[@LINE]]:22: error: expected 8-bit unsigned immediate
+    ori.b $w1, $w2, -1      # CHECK: :[[@LINE]]:21: error: expected 8-bit unsigned immediate
+    ori.b $w1, $w2, 256     # CHECK: :[[@LINE]]:21: error: expected 8-bit unsigned immediate
     sat_s.b $w31, $w31, -1  # CHECK: :[[@LINE]]:25: error: expected 3-bit unsigned immediate
     sat_s.b $w31, $w31, 8   # CHECK: :[[@LINE]]:25: error: expected 3-bit unsigned immediate
     sat_s.h $w31, $w31, -1  # CHECK: :[[@LINE]]:25: error: expected 4-bit unsigned immediate
@@ -43,12 +157,36 @@
     shf.w $w14, $w3, 256    # CHECK: :[[@LINE]]:22: error: expected 8-bit unsigned immediate
     sldi.b $w0, $w29[-1]    # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
     sldi.b $w0, $w29[16]    # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
-    sldi.d $w4, $w12[-1]    # CHECK: :[[@LINE]]:22: error: expected 1-bit unsigned immediate
-    sldi.d $w4, $w12[2]     # CHECK: :[[@LINE]]:22: error: expected 1-bit unsigned immediate
     sldi.h $w8, $w17[-1]    # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
     sldi.h $w8, $w17[8]     # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
     sldi.w $w20, $w27[-1]   # CHECK: :[[@LINE]]:23: error: expected 2-bit unsigned immediate
     sldi.w $w20, $w27[4]    # CHECK: :[[@LINE]]:23: error: expected 2-bit unsigned immediate
+    sldi.d $w4, $w12[-1]    # CHECK: :[[@LINE]]:22: error: expected 1-bit unsigned immediate
+    sldi.d $w4, $w12[2]     # CHECK: :[[@LINE]]:22: error: expected 1-bit unsigned immediate
+    slli.b $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
+    slli.b $w1, $w2, 8      # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
+    slli.h $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
+    slli.h $w1, $w2, 16     # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
+    slli.w $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
+    slli.w $w1, $w2, 32     # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
+    slli.d $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
+    slli.d $w1, $w2, 64     # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
+    splati.b $w0, $w29[-1]  # CHECK: :[[@LINE]]:24: error: expected 4-bit unsigned immediate
+    splati.b $w0, $w29[16]  # CHECK: :[[@LINE]]:24: error: expected 4-bit unsigned immediate
+    splati.h $w8, $w17[-1]  # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
+    splati.h $w8, $w17[8]   # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
+    splati.w $w2, $w27[-1]  # CHECK: :[[@LINE]]:24: error: expected 2-bit unsigned immediate
+    splati.w $w2, $w27[4]   # CHECK: :[[@LINE]]:24: error: expected 2-bit unsigned immediate
+    splati.d $w4, $w12[-1]  # CHECK: :[[@LINE]]:24: error: expected 1-bit unsigned immediate
+    splati.d $w4, $w12[2]   # CHECK: :[[@LINE]]:24: error: expected 1-bit unsigned immediate
+    srai.b $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
+    srai.b $w1, $w2, 8      # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
+    srai.h $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
+    srai.h $w1, $w2, 16     # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
+    srai.w $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
+    srai.w $w1, $w2, 32     # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
+    srai.d $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
+    srai.d $w1, $w2, 64     # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
     srari.b $w5, $w25, -1   # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
     srari.b $w5, $w25, 8    # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
     srari.h $w5, $w25, -1   # CHECK: :[[@LINE]]:24: error: expected 4-bit unsigned immediate
@@ -57,6 +195,14 @@
     srari.w $w5, $w25, 32   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
     srari.d $w5, $w25, -1   # CHECK: :[[@LINE]]:24: error: expected 6-bit unsigned immediate
     srari.d $w5, $w25, 64   # CHECK: :[[@LINE]]:24: error: expected 6-bit unsigned immediate
+    srli.b $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
+    srli.b $w1, $w2, 8      # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
+    srli.h $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
+    srli.h $w1, $w2, 16     # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
+    srli.w $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
+    srli.w $w1, $w2, 32     # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
+    srli.d $w1, $w2, -1     # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
+    srli.d $w1, $w2, 64     # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
     srlri.b $w18, $w3, -1   # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
     srlri.b $w18, $w3, 8    # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
     srlri.h $w18, $w3, -1   # CHECK: :[[@LINE]]:24: error: expected 4-bit unsigned immediate
@@ -65,3 +211,13 @@
     srlri.w $w18, $w3, 32   # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
     srlri.d $w18, $w3, -1   # CHECK: :[[@LINE]]:24: error: expected 6-bit unsigned immediate
     srlri.d $w18, $w3, 64   # CHECK: :[[@LINE]]:24: error: expected 6-bit unsigned immediate
+    subvi.b $w1, $w2, -1 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    subvi.b $w1, $w2, 32 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    subvi.h $w1, $w2, -1 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    subvi.h $w1, $w2, 32 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    subvi.w $w1, $w2, -1 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    subvi.w $w1, $w2, 32 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    subvi.d $w1, $w2, -1 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    subvi.d $w1, $w2, 32 # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+    xori.b $w1, $w2, -1  # CHECK: :[[@LINE]]:22: error: expected 8-bit unsigned immediate
+    xori.b $w1, $w2, 256 # CHECK: :[[@LINE]]:22: error: expected 8-bit unsigned immediate
