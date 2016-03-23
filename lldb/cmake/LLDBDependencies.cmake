@@ -73,6 +73,7 @@ set( LLDB_USED_LIBS
   lldbPluginOSPython
   lldbPluginMemoryHistoryASan
   lldbPluginInstrumentationRuntimeAddressSanitizer
+  lldbPluginInstrumentationRuntimeThreadSanitizer
   lldbPluginSystemRuntimeMacOSX
   lldbPluginProcessElfCore
   lldbPluginJITLoaderGDB
