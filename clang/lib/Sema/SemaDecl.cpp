@@ -13927,7 +13927,10 @@ EnumConstantDecl *Sema::CheckEnumConstant(EnumDecl *Enum,
             } else
               Diag(IdLoc, diag::err_enumerator_too_large) << EltTy;
           } else
-            Val = ImpCastExprToType(Val, EltTy, CK_IntegralCast).get();
+            Val = ImpCastExprToType(Val, EltTy,
+                                    EltTy->isBooleanType() ?
+                                    CK_IntegralToBoolean : CK_IntegralCast)
+                    .get();
         } else if (getLangOpts().CPlusPlus) {
           // C++11 [dcl.enum]p5:
           //   If the underlying type is not fixed, the type of each enumerator
