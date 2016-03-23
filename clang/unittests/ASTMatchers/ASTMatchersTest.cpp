@@ -5488,5 +5488,11 @@ TEST(NullPointerConstants, Basic) {
   EXPECT_TRUE(notMatches("int i = 0;", expr(nullPointerConstant())));
 }
 
+TEST(StatementMatcher, HasReturnValue) {
+  StatementMatcher RetVal = returnStmt(hasReturnValue(binaryOperator()));
+  EXPECT_TRUE(matches("int F() { int a, b; return a + b; }", RetVal));
+  EXPECT_FALSE(matches("int F() { int a; return a; }", RetVal));
+}
+
 } // end namespace ast_matchers
 } // end namespace clang

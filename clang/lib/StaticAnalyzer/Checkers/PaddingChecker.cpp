@@ -168,7 +168,7 @@ public:
                                         const ASTRecordLayout &RL) {
     CharUnits PaddingSum;
     CharUnits Offset = ASTContext.toCharUnitsFromBits(RL.getFieldOffset(0));
-    for (const auto &FD : RD->fields()) {
+    for (const FieldDecl *FD : RD->fields()) {
       // This checker only cares about the padded size of the
       // field, and not the data size. If the field is a record
       // with tail padding, then we won't put that number in our

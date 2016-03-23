@@ -537,6 +537,7 @@ struct AdditionalKeywords {
 
     kw_finally = &IdentTable.get("finally");
     kw_function = &IdentTable.get("function");
+    kw_from = &IdentTable.get("from");
     kw_import = &IdentTable.get("import");
     kw_is = &IdentTable.get("is");
     kw_let = &IdentTable.get("let");
@@ -583,6 +584,7 @@ struct AdditionalKeywords {
   // JavaScript keywords.
   IdentifierInfo *kw_finally;
   IdentifierInfo *kw_function;
+  IdentifierInfo *kw_from;
   IdentifierInfo *kw_import;
   IdentifierInfo *kw_is;
   IdentifierInfo *kw_let;
