@@ -2,7 +2,14 @@
 #include <inttypes.h>
 #include <ompt.h>
 
+static ompt_get_task_id_t ompt_get_task_id;
 static ompt_get_thread_id_t ompt_get_thread_id;
+static ompt_get_parallel_id_t ompt_get_parallel_id;
+
+static void print_ids(int level)
+{
+  printf("%" PRIu64 ": level %d: parallel_id=%" PRIu64 ", task_id=%" PRIu64 "\n", ompt_get_thread_id(), level, ompt_get_parallel_id(level), ompt_get_task_id(level));
+}
 
 static void
 on_ompt_event_barrier_begin(
@@ -37,6 +44,23 @@ on_ompt_event_implicit_task_end(
 }
 
 static void
+on_ompt_event_loop_begin(
+  ompt_parallel_id_t parallel_id,
+  ompt_task_id_t parent_task_id,
+  void *workshare_function)
+{
+  printf("%" PRIu64 ": ompt_event_loop_begin: parallel_id=%" PRIu64 ", parent_task_id=%" PRIu64 ", workshare_function=%p\n", ompt_get_thread_id(), parallel_id, parent_task_id, workshare_function);
+}
+
+static void
+on_ompt_event_loop_end(
+  ompt_parallel_id_t parallel_id,
+  ompt_task_id_t task_id)
+{
+  printf("%" PRIu64 ": ompt_event_loop_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 "\n", ompt_get_thread_id(), parallel_id, task_id);
+}
+
+static void
 on_ompt_event_parallel_begin(
   ompt_task_id_t parent_task_id,
   ompt_frame_t *parent_task_frame,
@@ -64,12 +88,16 @@ void ompt_initialize(
   unsigned int ompt_version)
 {
   ompt_set_callback_t ompt_set_callback = (ompt_set_callback_t) lookup("ompt_set_callback");
+  ompt_get_task_id = (ompt_get_task_id_t) lookup("ompt_get_task_id");
   ompt_get_thread_id = (ompt_get_thread_id_t) lookup("ompt_get_thread_id");
+  ompt_get_parallel_id = (ompt_get_parallel_id_t) lookup("ompt_get_parallel_id");
 
   ompt_set_callback(ompt_event_barrier_begin, (ompt_callback_t) &on_ompt_event_barrier_begin);
   ompt_set_callback(ompt_event_barrier_end, (ompt_callback_t) &on_ompt_event_barrier_end);
   ompt_set_callback(ompt_event_implicit_task_begin, (ompt_callback_t) &on_ompt_event_implicit_task_begin);
   ompt_set_callback(ompt_event_implicit_task_end, (ompt_callback_t) &on_ompt_event_implicit_task_end);
+  ompt_set_callback(ompt_event_loop_begin, (ompt_callback_t) &on_ompt_event_loop_begin);
+  ompt_set_callback(ompt_event_loop_end, (ompt_callback_t) &on_ompt_event_loop_end);
   ompt_set_callback(ompt_event_parallel_begin, (ompt_callback_t) &on_ompt_event_parallel_begin);
   ompt_set_callback(ompt_event_parallel_end, (ompt_callback_t) &on_ompt_event_parallel_end);
 }

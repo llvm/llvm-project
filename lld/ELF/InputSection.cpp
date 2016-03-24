@@ -274,7 +274,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     if (Config->EMachine == EM_MIPS)
       PairedLoc = findMipsPairedReloc(Buf, &RI, Rels.end());
 
-    if (Target->needsPlt<ELFT>(Type, Body)) {
+    if (Target->needsPlt(Type, Body)) {
       SymVA = Body.getPltVA<ELFT>() + A;
     } else if (Target->needsGot(Type, Body)) {
       if (Config->EMachine == EM_MIPS)

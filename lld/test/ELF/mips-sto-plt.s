@@ -24,8 +24,9 @@
 # CHECK-NEXT:   Size: 0
 # CHECK-NEXT:   Binding: Global
 # CHECK-NEXT:   Type: Function
-# CHECK-NEXT:   Other: 8
-#                      ^-- STO_MIPS_PLT
+# CHECK-NEXT:   Other [ (0x8)
+# CHECK-NEXT:     STO_MIPS_PLT
+# CHECK-NEXT:   ]
 # CHECK-NEXT:   Section: Undefined
 # CHECK-NEXT: }
 

@@ -715,6 +715,11 @@ void Util::updateSectionInfo(NormalizedFile &file) {
 }
 
 void Util::copyEntryPointAddress(NormalizedFile &nFile) {
+  if (!_entryAtom) {
+    nFile.entryAddress = 0;
+    return;
+  }
+
   if (_ctx.outputTypeHasEntry()) {
     if (_archHandler.isThumbFunction(*_entryAtom))
       nFile.entryAddress = (_atomToAddress[_entryAtom] | 1);

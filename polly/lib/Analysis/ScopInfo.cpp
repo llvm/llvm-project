@@ -99,12 +99,6 @@ static cl::opt<bool> DetectReductions("polly-detect-reductions",
                                       cl::Hidden, cl::ZeroOrMore,
                                       cl::init(true), cl::cat(PollyCategory));
 
-static cl::opt<int> MaxDisjunctsAssumed(
-    "polly-max-disjuncts-assumed",
-    cl::desc("The maximal number of disjuncts we allow in the assumption "
-             "context (this bounds compile time)"),
-    cl::Hidden, cl::ZeroOrMore, cl::init(150), cl::cat(PollyCategory));
-
 static cl::opt<bool> IgnoreIntegerWrapping(
     "polly-ignore-integer-wrapping",
     cl::desc("Do not build run-time checks to proof absence of integer "
@@ -2923,9 +2917,15 @@ const InvariantEquivClassTy *Scop::lookupInvariantEquivClass(Value *Val) const {
 
   Type *Ty = LInst->getType();
   const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
-  for (auto &IAClass : InvariantEquivClasses)
-    if (PointerSCEV == std::get<0>(IAClass) && Ty == std::get<3>(IAClass))
-      return &IAClass;
+  for (auto &IAClass : InvariantEquivClasses) {
+    if (PointerSCEV != std::get<0>(IAClass) || Ty != std::get<3>(IAClass))
+      continue;
+
+    auto &MAs = std::get<1>(IAClass);
+    for (auto *MA : MAs)
+      if (MA->getAccessInstruction() == Val)
+        return &IAClass;
+  }
 
   return nullptr;
 }
@@ -3064,14 +3064,7 @@ bool Scop::isHoistableAccess(MemoryAccess *Access,
     return false;
 
   isl_map *AccessRelation = Access->getAccessRelation();
-
-  // Skip accesses that have an empty access relation. These can be caused
-  // by multiple offsets with a type cast in-between that cause the overall
-  // byte offset to be not divisible by the new types sizes.
-  if (isl_map_is_empty(AccessRelation)) {
-    isl_map_free(AccessRelation);
-    return false;
-  }
+  assert(!isl_map_is_empty(AccessRelation));
 
   if (isl_map_involves_dims(AccessRelation, isl_dim_in, 0,
                             Stmt.getNumIterators())) {
@@ -3949,8 +3942,17 @@ bool ScopInfo::buildAccessMemIntrinsic(
 
   auto *DestPtrVal = MemIntr->getDest();
   assert(DestPtrVal);
+
   auto *DestAccFunc = SE->getSCEVAtScope(DestPtrVal, L);
   assert(DestAccFunc);
+  // Ignore accesses to "NULL".
+  // TODO: We could use this to optimize the region further, e.g., intersect
+  //       the context with
+  //          isl_set_complement(isl_set_params(getDomain()))
+  //       as we know it would be undefined to execute this instruction anyway.
+  if (DestAccFunc->isZero())
+    return true;
+
   auto *DestPtrSCEV = dyn_cast<SCEVUnknown>(SE->getPointerBase(DestAccFunc));
   assert(DestPtrSCEV);
   DestAccFunc = SE->getMinusSCEV(DestAccFunc, DestPtrSCEV);
@@ -3964,8 +3966,14 @@ bool ScopInfo::buildAccessMemIntrinsic(
 
   auto *SrcPtrVal = MemTrans->getSource();
   assert(SrcPtrVal);
+
   auto *SrcAccFunc = SE->getSCEVAtScope(SrcPtrVal, L);
   assert(SrcAccFunc);
+  // Ignore accesses to "NULL".
+  // TODO: See above TODO
+  if (SrcAccFunc->isZero())
+    return true;
+
   auto *SrcPtrSCEV = dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccFunc));
   assert(SrcPtrSCEV);
   SrcAccFunc = SE->getMinusSCEV(SrcAccFunc, SrcPtrSCEV);

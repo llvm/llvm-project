@@ -3404,6 +3404,9 @@ public:
             }
         }
         
+        if (!any_found)
+            result.AppendMessageWithFormat("no type was found matching '%s'\n", name_of_type);
+        
         result.SetStatus (any_found ? lldb::eReturnStatusSuccessFinishResult : lldb::eReturnStatusSuccessFinishNoResult);
         return true;
     }

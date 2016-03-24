@@ -943,13 +943,16 @@ std::error_code MachOFileLayout::writeLoadCommands() {
     // If main executable, add LC_MAIN.
     if (_file.fileType == llvm::MachO::MH_EXECUTE) {
       // Build LC_MAIN load command.
-      entry_point_command* ep = reinterpret_cast<entry_point_command*>(lc);
-      ep->cmd       = LC_MAIN;
-      ep->cmdsize   = sizeof(entry_point_command);
-      ep->entryoff  = _file.entryAddress - _seg1addr;
-      ep->stacksize = _file.stackSize;
+      // Note, using a temporary here to appease UB as we may not be aligned
+      // enough for a struct containing a uint64_t when emitting a 32-bit binary
+      entry_point_command ep;
+      ep.cmd       = LC_MAIN;
+      ep.cmdsize   = sizeof(entry_point_command);
+      ep.entryoff  = _file.entryAddress - _seg1addr;
+      ep.stacksize = _file.stackSize;
       if (_swap)
-        swapStruct(*ep);
+        swapStruct(ep);
+      memcpy(lc, &ep, sizeof(entry_point_command));
       lc += sizeof(entry_point_command);
     }
 

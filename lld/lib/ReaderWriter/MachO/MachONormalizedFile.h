@@ -105,6 +105,9 @@ typedef std::vector<uint32_t> IndirectSymbols;
 /// A typedef so that YAML I/O can encode/decode section attributes.
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, SectionAttr)
 
+/// A typedef so that YAML I/O can encode/decode section alignment.
+LLVM_YAML_STRONG_TYPEDEF(uint16_t, SectionAlignment)
+
 /// Mach-O has a 32-bit and 64-bit section record.  This normalized form
 /// can support either kind.
 struct Section {
@@ -115,7 +118,7 @@ struct Section {
   StringRef       sectionName;
   SectionType     type;
   SectionAttr     attributes;
-  uint16_t        alignment;
+  SectionAlignment        alignment;
   Hex64           address;
   ArrayRef<uint8_t> content;
   Relocations     relocations;

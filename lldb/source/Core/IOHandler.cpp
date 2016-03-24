@@ -47,6 +47,10 @@
 #include "lldb/Target/StackFrame.h"
 #endif
 
+#ifdef _MSC_VER
+#include <Windows.h>
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -773,7 +777,26 @@ IOHandlerEditline::PrintAsync (Stream *stream, const char *s, size_t len)
         m_editline_ap->PrintAsync(stream, s, len);
     else
 #endif
+    {
+        const char *prompt = GetPrompt();
+#ifdef _MSC_VER
+        if (prompt)
+        {
+            // Back up over previous prompt using Windows API
+            CONSOLE_SCREEN_BUFFER_INFO screen_buffer_info;
+            HANDLE console_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+            GetConsoleScreenBufferInfo(console_handle, &screen_buffer_info);
+            COORD coord = screen_buffer_info.dwCursorPosition;
+            coord.X -= strlen(prompt);
+            if (coord.X < 0)
+                coord.X = 0;
+            SetConsoleCursorPosition(console_handle, coord);
+        }
+#endif
         IOHandler::PrintAsync(stream, s, len);
+        if (prompt)
+            IOHandler::PrintAsync(GetOutputStreamFile().get(), prompt, strlen(prompt));
+    }
 }
 
 // we may want curses to be disabled for some builds

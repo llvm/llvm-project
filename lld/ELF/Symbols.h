@@ -74,7 +74,6 @@ public:
   bool isLocal() const { return IsLocal; }
   bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
   bool isPreemptible() const;
-  template <class ELFT> bool isGnuIfunc() const;
 
   // Returns the symbol name.
   StringRef getName() const { return Name; }
@@ -120,6 +119,7 @@ protected:
         MustBeInDynSym(false), NeedsCopyOrPltAddr(false), Name(Name) {
     IsFunc = Type == llvm::ELF::STT_FUNC;
     IsTls = Type == llvm::ELF::STT_TLS;
+    IsGnuIFunc = Type == llvm::ELF::STT_GNU_IFUNC;
     IsUsedInRegularObj = K != SharedKind && K != LazyKind;
   }
 
@@ -144,6 +144,7 @@ public:
 
   unsigned IsTls : 1;
   unsigned IsFunc : 1;
+  unsigned IsGnuIFunc : 1;
 
 protected:
   StringRef Name;

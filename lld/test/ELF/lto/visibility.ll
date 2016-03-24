@@ -9,7 +9,9 @@
 ; CHECK-NEXT: Size: 0
 ; CHECK-NEXT: Binding: Local
 ; CHECK-NEXT: Type: None
-; CHECK-NEXT: Other: 2
+; CHECK-NEXT: Other [ (0x2)
+; CHECK-NEXT:   STV_HIDDEN
+; CHECK-NEXT: ]
 ; CHECK-NEXT: Section: .text
 
 ; CHECK:      Name: a
@@ -17,7 +19,9 @@
 ; CHECK-NEXT: Size: 0
 ; CHECK-NEXT: Binding: Local
 ; CHECK-NEXT: Type: None
-; CHECK-NEXT: Other: 2
+; CHECK-NEXT: Other [ (0x2)
+; CHECK-NEXT:   STV_HIDDEN
+; CHECK-NEXT: ]
 ; CHECK-NEXT: Section: .data
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

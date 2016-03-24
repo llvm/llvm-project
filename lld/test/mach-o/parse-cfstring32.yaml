@@ -21,7 +21,7 @@ sections:
     section:         __cfstring
     type:            S_REGULAR
     attributes:      [  ]
-    alignment:       3
+    alignment:       8
     address:         0x0000000000000010
     content:         [ 0x00, 0x00, 0x00, 0x00, 0xC8, 0x07, 0x00, 0x00,
                        0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,

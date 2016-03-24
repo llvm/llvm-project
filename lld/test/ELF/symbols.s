@@ -86,7 +86,9 @@ internal:
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 2
+// CHECK-NEXT:     Other [ (0x2)
+// CHECK-NEXT:       STV_HIDDEN
+// CHECK-NEXT:     ]
 // CHECK-NEXT:     Section: foobar
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
@@ -95,7 +97,9 @@ internal:
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 1
+// CHECK-NEXT:     Other [ (0x1)
+// CHECK-NEXT:       STV_INTERNAL
+// CHECK-NEXT:     ]
 // CHECK-NEXT:     Section: foobar
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
@@ -149,7 +153,9 @@ internal:
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 3
+// CHECK-NEXT:     Other [ (0x3)
+// CHECK-NEXT:       STV_PROTECTED
+// CHECK-NEXT:     ]
 // CHECK-NEXT:     Section: foobar
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {

@@ -66,7 +66,9 @@ foo:
 // READ-NEXT:     Size: 0
 // READ-NEXT:     Binding: Local
 // READ-NEXT:     Type: None
-// READ-NEXT:     Other: 2
+// READ-NEXT:     Other [ (0x2)
+// READ-NEXT:       STV_HIDDEN
+// READ-NEXT:     ]
 // READ-NEXT:     Section: .dynamic
 // READ-NEXT:   }
 // READ-NEXT:   Symbol {

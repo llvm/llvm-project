@@ -112,12 +112,6 @@ bool SymbolBody::isPreemptible() const {
   return true;
 }
 
-template <class ELFT> bool SymbolBody::isGnuIfunc() const {
-  if (auto *D = dyn_cast<DefinedElf<ELFT>>(this))
-    return D->Sym.getType() == STT_GNU_IFUNC;
-  return false;
-}
-
 template <class ELFT>
 typename ELFT::uint SymbolBody::getVA(typename ELFT::uint Addend) const {
   typename ELFT::uint OutVA = getSymVA<ELFT>(*this, Addend);
@@ -278,11 +272,6 @@ std::string elf::demangle(StringRef Name) {
   return S;
 #endif
 }
-
-template bool SymbolBody::template isGnuIfunc<ELF32LE>() const;
-template bool SymbolBody::template isGnuIfunc<ELF32BE>() const;
-template bool SymbolBody::template isGnuIfunc<ELF64LE>() const;
-template bool SymbolBody::template isGnuIfunc<ELF64BE>() const;
 
 template uint32_t SymbolBody::template getVA<ELF32LE>(uint32_t) const;
 template uint32_t SymbolBody::template getVA<ELF32BE>(uint32_t) const;

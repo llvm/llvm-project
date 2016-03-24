@@ -65,14 +65,6 @@ formatDereference(const ast_matchers::MatchFinder::MatchResult &Result,
   return (llvm::Twine("*") + Text).str();
 }
 
-const char StringConstructor[] =
-    "::std::basic_string<char, std::char_traits<char>, std::allocator<char> >"
-    "::basic_string";
-
-const char StringCStrMethod[] =
-    "::std::basic_string<char, std::char_traits<char>, std::allocator<char> >"
-    "::c_str";
-
 } // end namespace
 
 namespace tidy {
@@ -85,23 +77,31 @@ void RedundantStringCStrCheck::registerMatchers(
   if (!getLangOpts().CPlusPlus)
     return;
 
+  // Match expressions of type 'string' or 'string*'.
+  const auto StringDecl =
+      cxxRecordDecl(hasName("::std::basic_string"));
+  const auto StringExpr =
+      expr(anyOf(hasType(StringDecl),
+                 hasType(qualType(pointsTo(StringDecl)))));
+
   // Match string constructor.
   const auto StringConstructorExpr = expr(anyOf(
       cxxConstructExpr(
           argumentCountIs(1),
-          hasDeclaration(cxxMethodDecl(hasName(StringConstructor)))),
+          hasDeclaration(cxxMethodDecl(hasName("basic_string")))),
       cxxConstructExpr(
           argumentCountIs(2),
-          hasDeclaration(cxxMethodDecl(hasName(StringConstructor))),
+          hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
           // If present, the second argument is the alloc object which must not
           // be present explicitly.
           hasArgument(1, cxxDefaultArgExpr()))));
 
   // Match a call to the string 'c_str()' method.
-  const auto StringCStrCallExpr = cxxMemberCallExpr(
-                            callee(memberExpr().bind("member")),
-                            callee(cxxMethodDecl(hasName(StringCStrMethod))),
-                            on(expr().bind("arg"))).bind("call");
+  const auto StringCStrCallExpr =
+      cxxMemberCallExpr(on(StringExpr.bind("arg")),
+                        callee(memberExpr().bind("member")),
+                        callee(cxxMethodDecl(hasName("c_str"))))
+          .bind("call");
 
   Finder->addMatcher(
       cxxConstructExpr(StringConstructorExpr,

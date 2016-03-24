@@ -40,7 +40,9 @@ zed:
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 2
+// CHECK-NEXT:     Other [ (0x2)
+// CHECK-NEXT:       STV_HIDDEN
+// CHECK-NEXT:     ]
 // CHECK-NEXT:     Section: .dynamic
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
