@@ -396,6 +396,7 @@ void CodeGenModule::Release() {
       AddGlobalCtor(OpenMPRegistrationFunction, 0);
   if (PGOReader) {
     getModule().setMaximumFunctionCount(PGOReader->getMaximumFunctionCount());
+    getModule().setProfileSummary(PGOReader->getSummary().getMD(VMContext));
     if (PGOStats.hasDiagnostics())
       PGOStats.reportDiagnostics(getDiags(), getCodeGenOpts().MainFileName);
   }

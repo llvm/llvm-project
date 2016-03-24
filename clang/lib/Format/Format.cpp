@@ -2005,6 +2005,7 @@ tooling::Replacements formatReplacements(StringRef Code,
 
   tooling::Replacements MergedReplacements =
       mergeReplacements(Replaces, FormatReplaces);
+
   return MergedReplacements;
 }
 
@@ -2098,7 +2099,10 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
 }
 
 FormatStyle getStyle(StringRef StyleName, StringRef FileName,
-                     StringRef FallbackStyle) {
+                     StringRef FallbackStyle, vfs::FileSystem *FS) {
+  if (!FS) {
+    FS = vfs::getRealFileSystem().get();
+  }
   FormatStyle Style = getLLVMStyle();
   Style.Language = getLanguageByFileName(FileName);
   if (!getPredefinedStyle(FallbackStyle, Style.Language, &Style)) {
@@ -2129,28 +2133,34 @@ FormatStyle getStyle(StringRef StyleName, StringRef FileName,
   llvm::sys::fs::make_absolute(Path);
   for (StringRef Directory = Path; !Directory.empty();
        Directory = llvm::sys::path::parent_path(Directory)) {
-    if (!llvm::sys::fs::is_directory(Directory))
+
+    auto Status = FS->status(Directory);
+    if (!Status ||
+        Status->getType() != llvm::sys::fs::file_type::directory_file) {
       continue;
+    }
+
     SmallString<128> ConfigFile(Directory);
 
     llvm::sys::path::append(ConfigFile, ".clang-format");
     DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
-    bool IsFile = false;
-    // Ignore errors from is_regular_file: we only need to know if we can read
-    // the file or not.
-    llvm::sys::fs::is_regular_file(Twine(ConfigFile), IsFile);
 
+    Status = FS->status(ConfigFile.str());
+    bool IsFile =
+        Status && (Status->getType() == llvm::sys::fs::file_type::regular_file);
     if (!IsFile) {
       // Try _clang-format too, since dotfiles are not commonly used on Windows.
       ConfigFile = Directory;
       llvm::sys::path::append(ConfigFile, "_clang-format");
       DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
-      llvm::sys::fs::is_regular_file(Twine(ConfigFile), IsFile);
+      Status = FS->status(ConfigFile.str());
+      IsFile = Status &&
+               (Status->getType() == llvm::sys::fs::file_type::regular_file);
     }
 
     if (IsFile) {
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-          llvm::MemoryBuffer::getFile(ConfigFile.c_str());
+          FS->getBufferForFile(ConfigFile.str());
       if (std::error_code EC = Text.getError()) {
         llvm::errs() << EC.message() << "\n";
         break;
