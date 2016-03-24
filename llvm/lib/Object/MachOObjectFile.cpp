@@ -443,7 +443,8 @@ uint64_t MachOObjectFile::getCommonSymbolSizeImpl(DataRefImpl DRI) const {
   return getNValue(DRI);
 }
 
-SymbolRef::Type MachOObjectFile::getSymbolType(DataRefImpl Symb) const {
+ErrorOr<SymbolRef::Type>
+MachOObjectFile::getSymbolType(DataRefImpl Symb) const {
   MachO::nlist_base Entry = getSymbolTableEntryBase(this, Symb);
   uint8_t n_type = Entry.n_type;
 
@@ -455,7 +456,10 @@ SymbolRef::Type MachOObjectFile::getSymbolType(DataRefImpl Symb) const {
     case MachO::N_UNDF :
       return SymbolRef::ST_Unknown;
     case MachO::N_SECT :
-      section_iterator Sec = *getSymbolSection(Symb);
+      ErrorOr<section_iterator> SecOrError = getSymbolSection(Symb);
+      if (!SecOrError)
+        return SecOrError.getError();
+      section_iterator Sec = *SecOrError;
       if (Sec->isData() || Sec->isBSS())
         return SymbolRef::ST_Data;
       return SymbolRef::ST_Function;
@@ -511,8 +515,11 @@ MachOObjectFile::getSymbolSection(DataRefImpl Symb) const {
     return section_end();
   DataRefImpl DRI;
   DRI.d.a = index - 1;
-  if (DRI.d.a >= Sections.size())
+  if (DRI.d.a >= Sections.size()){
+    // Diagnostic("bad section index (" + index + ") for symbol at index " +
+    //  SymbolIndex);
     return object_error::parse_failed;
+  }
   return section_iterator(SectionRef(DRI, this));
 }
 

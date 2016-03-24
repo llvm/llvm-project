@@ -589,6 +589,15 @@ TEST(StringRefTest, joinStrings) {
 
 TEST(StringRefTest, AllocatorCopy) {
   BumpPtrAllocator Alloc;
+  // First test empty strings.  We don't want these to allocate anything on the
+  // allocator.
+  StringRef StrEmpty = "";
+  StringRef StrEmptyc = StrEmpty.copy(Alloc);
+  EXPECT_TRUE(StrEmpty.equals(StrEmptyc));
+  EXPECT_EQ(StrEmptyc.data(), nullptr);
+  EXPECT_EQ(StrEmptyc.size(), 0u);
+  EXPECT_EQ(Alloc.getTotalMemory(), 0u);
+
   StringRef Str1 = "hello";
   StringRef Str2 = "bye";
   StringRef Str1c = Str1.copy(Alloc);

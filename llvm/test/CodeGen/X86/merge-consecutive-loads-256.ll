@@ -641,3 +641,116 @@ define <32 x i8> @merge_32i8_i8_23u5uuuuuuuuuuzzzzuuuuuuuuuuuuuu(i8* %ptr) nounw
   %resH = insertelement <32 x i8> %resG, i8     0, i8 17
   ret <32 x i8> %resH
 }
+
+;
+; consecutive loads including any/all volatiles may not be combined
+;
+
+define <4 x double> @merge_4f64_f64_34uz_volatile(double* %ptr) nounwind uwtable noinline ssp {
+; AVX1-LABEL: merge_4f64_f64_34uz_volatile:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: merge_4f64_f64_34uz_volatile:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX2-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: merge_4f64_f64_34uz_volatile:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512F-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; X32-AVX-LABEL: merge_4f64_f64_34uz_volatile:
+; X32-AVX:       # BB#0:
+; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-AVX-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; X32-AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; X32-AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X32-AVX-NEXT:    retl
+  %ptr0 = getelementptr inbounds double, double* %ptr, i64 3
+  %ptr1 = getelementptr inbounds double, double* %ptr, i64 4
+  %val0 = load volatile double, double* %ptr0
+  %val1 = load volatile double, double* %ptr1
+  %res0 = insertelement <4 x double> undef, double %val0, i32 0
+  %res1 = insertelement <4 x double> %res0, double %val1, i32 1
+  %res3 = insertelement <4 x double> %res1, double   0.0, i32 3
+  ret <4 x double> %res3
+}
+
+define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile(i16* %ptr) nounwind uwtable noinline ssp {
+; AVX1-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
+; AVX1-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrw $4, 24(%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrw $6, 28(%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrw $7, 30(%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
+; AVX2-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
+; AVX2-NEXT:    vpinsrw $4, 24(%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrw $6, 28(%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrw $7, 30(%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm1
+; AVX512F-NEXT:    vpinsrw $3, 6(%rdi), %xmm1, %xmm1
+; AVX512F-NEXT:    vpinsrw $4, 24(%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    vpinsrw $6, 28(%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    vpinsrw $7, 30(%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512F-NEXT:    retq
+;
+; X32-AVX-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile:
+; X32-AVX:       # BB#0:
+; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; X32-AVX-NEXT:    vpinsrw $0, (%eax), %xmm0, %xmm1
+; X32-AVX-NEXT:    vpinsrw $3, 6(%eax), %xmm1, %xmm1
+; X32-AVX-NEXT:    vpinsrw $4, 24(%eax), %xmm0, %xmm0
+; X32-AVX-NEXT:    vpinsrw $6, 28(%eax), %xmm0, %xmm0
+; X32-AVX-NEXT:    vpinsrw $7, 30(%eax), %xmm0, %xmm0
+; X32-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-AVX-NEXT:    retl
+  %ptr0 = getelementptr inbounds i16, i16* %ptr, i64 0
+  %ptr3 = getelementptr inbounds i16, i16* %ptr, i64 3
+  %ptrC = getelementptr inbounds i16, i16* %ptr, i64 12
+  %ptrE = getelementptr inbounds i16, i16* %ptr, i64 14
+  %ptrF = getelementptr inbounds i16, i16* %ptr, i64 15
+  %val0 = load volatile i16, i16* %ptr0
+  %val3 = load i16, i16* %ptr3
+  %valC = load i16, i16* %ptrC
+  %valE = load i16, i16* %ptrE
+  %valF = load volatile i16, i16* %ptrF
+  %res0 = insertelement <16 x i16> undef, i16 %val0, i16 0
+  %res3 = insertelement <16 x i16> %res0, i16 %val3, i16 3
+  %res4 = insertelement <16 x i16> %res3, i16     0, i16 4
+  %res5 = insertelement <16 x i16> %res4, i16     0, i16 5
+  %resC = insertelement <16 x i16> %res5, i16 %valC, i16 12
+  %resD = insertelement <16 x i16> %resC, i16     0, i16 13
+  %resE = insertelement <16 x i16> %resD, i16 %valE, i16 14
+  %resF = insertelement <16 x i16> %resE, i16 %valF, i16 15
+  ret <16 x i16> %resF
+}

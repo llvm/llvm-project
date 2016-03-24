@@ -143,7 +143,7 @@ public:
   /// @brief Get the alignment of this symbol as the actual value (not log 2).
   uint32_t getAlignment() const;
   uint64_t getCommonSize() const;
-  SymbolRef::Type getType() const;
+  ErrorOr<SymbolRef::Type> getType() const;
 
   /// @brief Get section this symbol is defined in reference to. Result is
   /// end_sections() if it is undefined or is an absolute symbol.
@@ -201,7 +201,7 @@ protected:
   virtual uint64_t getSymbolValueImpl(DataRefImpl Symb) const = 0;
   virtual uint32_t getSymbolAlignment(DataRefImpl Symb) const;
   virtual uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const = 0;
-  virtual SymbolRef::Type getSymbolType(DataRefImpl Symb) const = 0;
+  virtual ErrorOr<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const = 0;
   virtual ErrorOr<section_iterator>
   getSymbolSection(DataRefImpl Symb) const = 0;
 
@@ -329,7 +329,7 @@ inline ErrorOr<section_iterator> SymbolRef::getSection() const {
   return getObject()->getSymbolSection(getRawDataRefImpl());
 }
 
-inline SymbolRef::Type SymbolRef::getType() const {
+inline ErrorOr<SymbolRef::Type> SymbolRef::getType() const {
   return getObject()->getSymbolType(getRawDataRefImpl());
 }
 

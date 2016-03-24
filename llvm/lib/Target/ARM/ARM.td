@@ -278,6 +278,8 @@ def ProcR5      : SubtargetFeature<"r5", "ARMProcFamily", "CortexR5",
 def ProcR7      : SubtargetFeature<"r7", "ARMProcFamily", "CortexR7",
                                    "Cortex-R7 ARM processors", []>;
 
+def ProcM3      : SubtargetFeature<"m3", "ARMProcFamily", "CortexM3",
+                                   "Cortex-M3 ARM processors", []>;
 
 //===----------------------------------------------------------------------===//
 // ARM schedules.
@@ -641,8 +643,8 @@ def : ProcessorModel<"cortex-r8",   CortexA8Model,      [ARMv7r,
                                                          FeatureAvoidPartialCPSR,
                                                          FeatureT2XtPk]>;
 
-def : ProcNoItin<"cortex-m3",                           [ARMv7m]>;
-def : ProcNoItin<"sc300",                               [ARMv7m]>;
+def : ProcNoItin<"cortex-m3",                           [ARMv7m, ProcM3]>;
+def : ProcNoItin<"sc300",                               [ARMv7m, ProcM3]>;
 
 def : ProcNoItin<"cortex-m4",                           [ARMv7em,
                                                          FeatureVFP4,

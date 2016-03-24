@@ -9,6 +9,7 @@
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "gtest/gtest.h"
 #include <memory>
 
@@ -28,6 +29,10 @@ public:
   // Log this error to a stream.
   void log(raw_ostream &OS) const override {
     OS << "CustomError { " << getInfo() << "}";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    llvm_unreachable("CustomError doesn't support ECError conversion");
   }
 
 protected:
@@ -55,6 +60,10 @@ public:
   // Log this error to a stream.
   void log(raw_ostream &OS) const override {
     OS << "CustomSubError { " << getInfo() << ", " << getExtraInfo() << "}";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    llvm_unreachable("CustomSubError doesn't support ECError conversion");
   }
 
 protected:
@@ -407,7 +416,7 @@ TEST(Error, ExpectedCovariance) {
   A2 = Expected<std::unique_ptr<D>>(nullptr);
 }
 
-TEST(Error, ECError) {
+TEST(Error, ErrorCodeConversions) {
   // Round-trip a success value to check that it converts correctly.
   EXPECT_EQ(errorToErrorCode(errorCodeToError(std::error_code())),
             std::error_code())
@@ -418,6 +427,29 @@ TEST(Error, ECError) {
             errc::invalid_argument)
       << "std::error_code error value should round-trip via Error "
          "conversions";
+
+  // Round-trip a success value through ErrorOr/Expected to check that it
+  // converts correctly.
+  {
+    auto Orig = ErrorOr<int>(42);
+    auto RoundTripped =
+      expectedToErrorOr(errorOrToExpected(ErrorOr<int>(42)));
+    EXPECT_EQ(*Orig, *RoundTripped)
+      << "ErrorOr<T> success value should round-trip via Expected<T> "
+         "conversions.";
+  }
+
+  // Round-trip a failure value through ErrorOr/Expected to check that it
+  // converts correctly.
+  {
+    auto Orig = ErrorOr<int>(errc::invalid_argument);
+    auto RoundTripped =
+      expectedToErrorOr(
+          errorOrToExpected(ErrorOr<int>(errc::invalid_argument)));
+    EXPECT_EQ(Orig.getError(), RoundTripped.getError())
+      << "ErrorOr<T> failure value should round-trip via Expected<T> "
+         "conversions.";
+  }
 }
 
 } // end anon namespace

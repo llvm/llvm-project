@@ -48,8 +48,6 @@ bb2:
   ret double %phi
 }
 
-; FIXME: With branch weights indicated, bb2 should be placed ahead of bb1.
-
 define double @profile_metadata(double %x, double %y) {
 ; CHECK-LABEL: profile_metadata:
 ; CHECK:       # BB#0: # %entry
@@ -57,11 +55,12 @@ define double @profile_metadata(double %x, double %y) {
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0
 ; CHECK-NEXT:    jne .LBB1_1
-; CHECK-NEXT:    jnp .LBB1_2
-; CHECK-NEXT:  .LBB1_1: # %bb1
-; CHECK-NEXT:    addsd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    jp .LBB1_1
 ; CHECK-NEXT:  .LBB1_2: # %bb2
 ; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB1_1: # %bb1
+; CHECK-NEXT:    addsd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    jmp .LBB1_2
 
 entry:
   %mul = fmul double %x, %y
@@ -77,5 +76,32 @@ bb2:
   ret double %phi
 }
 
-!1 = !{!"branch_weights", i32 1, i32 1000}
+; Test if the negation of the non-equality check between floating points are
+; translated to jnp followed by jne.
 
+define void @foo(float %f) {
+; CHECK-LABEL: foo:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-NEXT:    jne .LBB2_2
+; CHECK-NEXT:    jnp .LBB2_1
+; CHECK-NEXT:  .LBB2_2: # %if.then
+; CHECK-NEXT:    jmp a # TAILCALL
+; CHECK-NEXT:  .LBB2_1: # %if.end
+; CHECK-NEXT:    retq
+entry:
+  %cmp = fcmp une float %f, 0.000000e+00
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @a()
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+declare void @a()
+
+!1 = !{!"branch_weights", i32 1, i32 1000}

@@ -3061,19 +3061,6 @@ class DSAtomicRetPat<DS inst, ValueType vt, PatFrag frag> : Pat <
   (inst $ptr, $value, (as_i16imm $offset), (i1 0))
 >;
 
-// Special case of DSAtomicRetPat for add / sub 1 -> inc / dec
-//
-// We need to use something for the data0, so we set a register to
-// -1. For the non-rtn variants, the manual says it does
-// DS[A] = (DS[A] >= D0) ? 0 : DS[A] + 1, and setting D0 to uint_max
-// will always do the increment so I'm assuming it's the same.
-class DSAtomicIncRetPat<DS inst, ValueType vt,
-                        Instruction LoadImm, PatFrag frag> : Pat <
-  (frag (DS1Addr1Offset i32:$ptr, i32:$offset), (vt 1)),
-  (inst $ptr, (LoadImm (vt -1)), (as_i16imm $offset), (i1 0))
->;
-
-
 class DSAtomicCmpXChg <DS inst, ValueType vt, PatFrag frag> : Pat <
   (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$cmp, vt:$swap),
   (inst $ptr, $cmp, $swap, (as_i16imm $offset), (i1 0))
@@ -3081,11 +3068,6 @@ class DSAtomicCmpXChg <DS inst, ValueType vt, PatFrag frag> : Pat <
 
 
 // 32-bit atomics.
-def : DSAtomicIncRetPat<DS_INC_RTN_U32, i32,
-                        V_MOV_B32_e32, si_atomic_load_add_local>;
-def : DSAtomicIncRetPat<DS_DEC_RTN_U32, i32,
-                        V_MOV_B32_e32, si_atomic_load_sub_local>;
-
 def : DSAtomicRetPat<DS_WRXCHG_RTN_B32, i32, si_atomic_swap_local>;
 def : DSAtomicRetPat<DS_ADD_RTN_U32, i32, si_atomic_load_add_local>;
 def : DSAtomicRetPat<DS_SUB_RTN_U32, i32, si_atomic_load_sub_local>;
@@ -3100,11 +3082,6 @@ def : DSAtomicRetPat<DS_MAX_RTN_U32, i32, si_atomic_load_umax_local>;
 def : DSAtomicCmpXChg<DS_CMPST_RTN_B32, i32, si_atomic_cmp_swap_32_local>;
 
 // 64-bit atomics.
-def : DSAtomicIncRetPat<DS_INC_RTN_U64, i64,
-                        V_MOV_B64_PSEUDO, si_atomic_load_add_local>;
-def : DSAtomicIncRetPat<DS_DEC_RTN_U64, i64,
-                        V_MOV_B64_PSEUDO, si_atomic_load_sub_local>;
-
 def : DSAtomicRetPat<DS_WRXCHG_RTN_B64, i64, si_atomic_swap_local>;
 def : DSAtomicRetPat<DS_ADD_RTN_U64, i64, si_atomic_load_add_local>;
 def : DSAtomicRetPat<DS_SUB_RTN_U64, i64, si_atomic_load_sub_local>;

@@ -185,18 +185,5 @@ SummaryEntryVector &ProfileSummary::getDetailedSummary() {
   return DetailedSummary;
 }
 
-/// Helper to compute the profile count for a block, based on the
-/// ratio of its frequency to the entry block frequency, multiplied
-/// by the entry block count.
-inline uint64_t getBlockProfileCount(uint64_t BlockFreq, uint64_t EntryFreq,
-                                     uint64_t EntryCount) {
-  APInt ScaledCount(128, EntryCount);
-  APInt BlockFreqAPInt(128, BlockFreq);
-  APInt EntryFreqAPInt(128, EntryFreq);
-  ScaledCount *= BlockFreqAPInt;
-  ScaledCount = ScaledCount.udiv(EntryFreqAPInt);
-  return ScaledCount.getLimitedValue();
-}
-
 } // end namespace llvm
 #endif

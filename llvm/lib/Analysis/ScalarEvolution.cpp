@@ -9908,10 +9908,20 @@ const SCEV *ScalarEvolution::rewriteUsingPredicate(const SCEV *S, const Loop *L,
   return SCEVPredicateRewriter::rewrite(S, L, *this, Preds, false);
 }
 
-const SCEV *
+const SCEVAddRecExpr *
 ScalarEvolution::convertSCEVToAddRecWithPredicates(const SCEV *S, const Loop *L,
                                                    SCEVUnionPredicate &Preds) {
-  return SCEVPredicateRewriter::rewrite(S, L, *this, Preds, true);
+  SCEVUnionPredicate TransformPreds;
+  S = SCEVPredicateRewriter::rewrite(S, L, *this, TransformPreds, true);
+  auto *AddRec = dyn_cast<SCEVAddRecExpr>(S);
+
+  if (!AddRec)
+    return nullptr;
+
+  // Since the transformation was successful, we can now transfer the SCEV
+  // predicates.
+  Preds.add(&TransformPreds);
+  return AddRec;
 }
 
 /// SCEV predicates
@@ -10126,9 +10136,13 @@ bool PredicatedScalarEvolution::hasNoOverflow(
   return Flags == SCEVWrapPredicate::IncrementAnyWrap;
 }
 
-const SCEV *PredicatedScalarEvolution::getAsAddRec(Value *V) {
+const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(Value *V) {
   const SCEV *Expr = this->getSCEV(V);
-  const SCEV *New = SE.convertSCEVToAddRecWithPredicates(Expr, &L, Preds);
+  auto *New = SE.convertSCEVToAddRecWithPredicates(Expr, &L, Preds);
+
+  if (!New)
+    return nullptr;
+
   updateGeneration();
   RewriteMap[SE.getSCEV(V)] = {Generation, New};
   return New;

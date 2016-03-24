@@ -198,7 +198,10 @@ Decoder::getSectionContaining(const COFFObjectFile &COFF, uint64_t VA) {
 ErrorOr<object::SymbolRef> Decoder::getSymbol(const COFFObjectFile &COFF,
                                               uint64_t VA, bool FunctionOnly) {
   for (const auto &Symbol : COFF.symbols()) {
-    if (FunctionOnly && Symbol.getType() != SymbolRef::ST_Function)
+    ErrorOr<SymbolRef::Type> Type = Symbol.getType();
+    if (std::error_code EC = Type.getError())
+      return EC;
+    if (FunctionOnly && *Type != SymbolRef::ST_Function)
       continue;
 
     ErrorOr<uint64_t> Address = Symbol.getAddress();

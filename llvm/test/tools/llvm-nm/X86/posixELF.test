@@ -1,0 +1,4 @@
+# RUN: llvm-nm -P %p/Inputs/hello.obj.elf-x86_64 | FileCheck %s
+
+CHECK: main T 0000000000000000 0000000000000000
+CHECK: puts U                  0000000000000000

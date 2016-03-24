@@ -315,24 +315,39 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   return true;
 }
 
+// True if block has successors and it dominates all of them.
+static bool isFullDominator(const BasicBlock *BB, const DominatorTree *DT) {
+  if (succ_begin(BB) == succ_end(BB))
+    return false;
+
+  for (const BasicBlock *SUCC : make_range(succ_begin(BB), succ_end(BB))) {
+    if (!DT->dominates(BB, SUCC))
+      return false;
+  }
+
+  return true;
+}
+
+// True if block has predecessors and it postdominates all of them.
+static bool isFullPostDominator(const BasicBlock *BB,
+                                const PostDominatorTree *PDT) {
+  if (pred_begin(BB) == pred_end(BB))
+    return false;
+
+  for (const BasicBlock *PRED : make_range(pred_begin(BB), pred_end(BB))) {
+    if (!PDT->dominates(BB, PRED))
+      return false;
+  }
+
+  return true;
+}
+
 static bool shouldInstrumentBlock(const BasicBlock *BB, const DominatorTree *DT,
                                   const PostDominatorTree *PDT) {
   if (!ClPruneBlocks)
     return true;
 
-  // Check if BB dominates all its successors.
-  bool DominatesAll = succ_begin(BB) != succ_end(BB);
-  for (const BasicBlock *SUCC : make_range(succ_begin(BB), succ_end(BB))) {
-    DominatesAll &= DT->dominates(BB, SUCC);
-  }
-
-  // Check if BB pre-dominates all predecessors.
-  bool PreDominatesAll = pred_begin(BB) != pred_end(BB);
-  for (const BasicBlock *PRED : make_range(pred_begin(BB), pred_end(BB))) {
-    PreDominatesAll &= PDT->dominates(BB, PRED);
-  }
-
-  return !(DominatesAll || PreDominatesAll);
+  return !(isFullDominator(BB, DT) || isFullPostDominator(BB, PDT));
 }
 
 bool SanitizerCoverageModule::runOnFunction(Function &F) {

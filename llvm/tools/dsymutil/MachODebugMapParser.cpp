@@ -437,7 +437,10 @@ void MachODebugMapParser::loadMainBinarySymbols(
   section_iterator Section = MainBinary.section_end();
   MainBinarySymbolAddresses.clear();
   for (const auto &Sym : MainBinary.symbols()) {
-    SymbolRef::Type Type = Sym.getType();
+    ErrorOr<SymbolRef::Type> TypeOrErr = Sym.getType();
+    if (!TypeOrErr)
+      continue;
+    SymbolRef::Type Type = *TypeOrErr;
     // Skip undefined and STAB entries.
     if ((Type & SymbolRef::ST_Debug) || (Type & SymbolRef::ST_Unknown))
       continue;

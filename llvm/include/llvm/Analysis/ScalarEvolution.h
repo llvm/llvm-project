@@ -1397,8 +1397,9 @@ namespace llvm {
                                       SCEVUnionPredicate &A);
     /// Tries to convert the \p S expression to an AddRec expression,
     /// adding additional predicates to \p Preds as required.
-    const SCEV *convertSCEVToAddRecWithPredicates(const SCEV *S, const Loop *L,
-                                                  SCEVUnionPredicate &Preds);
+    const SCEVAddRecExpr *
+    convertSCEVToAddRecWithPredicates(const SCEV *S, const Loop *L,
+                                      SCEVUnionPredicate &Preds);
 
   private:
     /// Compute the backedge taken count knowing the interval difference, the
@@ -1495,8 +1496,10 @@ namespace llvm {
     /// \brief Adds a new predicate.
     void addPredicate(const SCEVPredicate &Pred);
     /// \brief Attempts to produce an AddRecExpr for V by adding additional
-    /// SCEV predicates.
-    const SCEV *getAsAddRec(Value *V);
+    /// SCEV predicates. If we can't transform the expression into an
+    /// AddRecExpr we return nullptr and not add additional SCEV predicates
+    /// to the current context.
+    const SCEVAddRecExpr *getAsAddRec(Value *V);
     /// \brief Proves that V doesn't overflow by adding SCEV predicate.
     void setNoOverflow(Value *V, SCEVWrapPredicate::IncrementWrapFlags Flags);
     /// \brief Returns true if we've proved that V doesn't wrap by means of a

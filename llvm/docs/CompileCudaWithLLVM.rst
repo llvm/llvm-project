@@ -125,10 +125,9 @@ Detecting clang vs NVCC
 Although clang's CUDA implementation is largely compatible with NVCC's, you may
 still want to detect when you're compiling CUDA code specifically with clang.
 
-This is tricky, because clang defines the ``__NVCC__`` macro, and because NVCC
-may invoke clang as part of its own compilation process!  For example, NVCC
-uses the host compiler's preprocessor when compiling for device code, and that
-host compiler may in fact be clang.
+This is tricky, because NVCC may invoke clang as part of its own compilation
+process!  For example, NVCC uses the host compiler's preprocessor when
+compiling for device code, and that host compiler may in fact be clang.
 
 When clang is actually compiling CUDA code -- rather than being used as a
 subtool of NVCC's -- it defines the ``__CUDA__`` macro.  ``__CUDA_ARCH__`` is
@@ -146,6 +145,8 @@ compilation, in host and device modes:
     // clang compiling CUDA code, device mode.
   #endif
 
+Both clang and nvcc define ``__CUDACC__`` during CUDA compilation.  You can
+detect NVCC specifically by looking for ``__NVCC__``.
 
 Optimizations
 =============

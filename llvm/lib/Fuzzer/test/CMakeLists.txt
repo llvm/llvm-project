@@ -22,6 +22,7 @@ set(Tests
   InitializeTest
   MemcmpTest
   LeakTest
+  LeakTimeoutTest
   NullDerefTest
   NthRunCrashTest
   RepeatedMemcmp

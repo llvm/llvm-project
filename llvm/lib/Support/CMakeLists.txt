@@ -48,6 +48,7 @@ add_llvm_library(LLVMSupport
   DeltaAlgorithm.cpp
   DAGDeltaAlgorithm.cpp
   Dwarf.cpp
+  Error.cpp
   ErrorHandling.cpp
   FileUtilities.cpp
   FileOutputBuffer.cpp

@@ -1293,7 +1293,9 @@ void llvm::PrintSymbolTable(const ObjectFile *o) {
     ErrorOr<uint64_t> AddressOrError = Symbol.getAddress();
     error(AddressOrError.getError());
     uint64_t Address = *AddressOrError;
-    SymbolRef::Type Type = Symbol.getType();
+    ErrorOr<SymbolRef::Type> TypeOrError = Symbol.getType();
+    error(TypeOrError.getError());
+    SymbolRef::Type Type = *TypeOrError;
     uint32_t Flags = Symbol.getFlags();
     ErrorOr<section_iterator> SectionOrErr = Symbol.getSection();
     error(SectionOrErr.getError());

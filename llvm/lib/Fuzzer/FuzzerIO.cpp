@@ -20,7 +20,7 @@
 
 namespace fuzzer {
 
-static int OutputFd = 2;
+static FILE *OutputFile = stderr;
 
 bool IsFile(const std::string &Path) {
   struct stat St;
@@ -117,24 +117,23 @@ std::string DirPlusFile(const std::string &DirPath,
 }
 
 void DupAndCloseStderr() {
-  assert(OutputFd == 2);
-  OutputFd = dup(OutputFd);
-  if (OutputFd < 0)
-    OutputFd = 2;
-  else
-    close(2);
+  int OutputFd = dup(2);
+  if (OutputFd > 0) {
+    FILE *NewOutputFile = fdopen(OutputFd, "w");
+    if (NewOutputFile) {
+      OutputFile = NewOutputFile;
+      close(2);
+    }
+  }
 }
 
 void CloseStdout() { close(1); }
 
 void Printf(const char *Fmt, ...) {
-  char Buf[1024];
   va_list ap;
   va_start(ap, Fmt);
-  int Formatted = vsnprintf(Buf, sizeof(Buf), Fmt, ap);
+  vfprintf(OutputFile, Fmt, ap);
   va_end(ap);
-  if (Formatted)
-    write(OutputFd, Buf, Formatted);
 }
 
 }  // namespace fuzzer

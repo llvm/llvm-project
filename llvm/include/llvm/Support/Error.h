@@ -35,6 +35,12 @@ public:
   /// Print an error message to an output stream.
   virtual void log(raw_ostream &OS) const = 0;
 
+  /// Convert this error to a std::error_code.
+  ///
+  /// This is a temporary crutch to enable interaction with code still
+  /// using std::error_code. It will be removed in the future.
+  virtual std::error_code convertToErrorCode() const = 0;
+
   // Check whether this instance is a subclass of the class identified by
   // ClassID.
   virtual bool isA(const void *const ClassID) const {
@@ -308,6 +314,8 @@ public:
       OS << "\n";
     }
   }
+
+  std::error_code convertToErrorCode() const override;
 
 private:
   ErrorList(std::unique_ptr<ErrorInfoBase> Payload1,
@@ -717,7 +725,8 @@ class ECError : public ErrorInfo<ECError> {
 public:
   ECError() = default;
   ECError(std::error_code EC) : EC(EC) {}
-  std::error_code getErrorCode() const { return EC; }
+  void setErrorCode(std::error_code EC) { this->EC = EC; }
+  std::error_code convertToErrorCode() const override { return EC; }
   void log(raw_ostream &OS) const override { OS << EC.message(); }
 
 protected:
@@ -738,8 +747,26 @@ inline Error errorCodeToError(std::error_code EC) {
 inline std::error_code errorToErrorCode(Error Err) {
   std::error_code EC;
   handleAllErrors(std::move(Err),
-                  [&](const ECError &ECE) { EC = ECE.getErrorCode(); });
+                  [&](const ErrorInfoBase &EI) {
+                    EC = EI.convertToErrorCode();
+                  });
   return EC;
+}
+
+/// Convert an ErrorOr<T> to an Expected<T>.
+template <typename T>
+Expected<T> errorOrToExpected(ErrorOr<T> &&EO) {
+  if (auto EC = EO.getError())
+    return errorCodeToError(EC);
+  return std::move(*EO);
+}
+
+/// Convert an Expected<T> to an ErrorOr<T>.
+template <typename T>
+ErrorOr<T> expectedToErrorOr(Expected<T> &&E) {
+  if (auto Err = E.takeError())
+    return errorToErrorCode(std::move(Err));
+  return std::move(*E);
 }
 
 /// Helper for check-and-exit error handling.

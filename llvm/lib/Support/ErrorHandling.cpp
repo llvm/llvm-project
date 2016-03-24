@@ -139,9 +139,6 @@ void LLVMResetFatalErrorHandler() {
   remove_fatal_error_handler();
 }
 
-void ErrorInfoBase::anchor() {}
-char ErrorInfoBase::ID = 0;
-
 #ifdef LLVM_ON_WIN32
 
 #include <winerror.h>

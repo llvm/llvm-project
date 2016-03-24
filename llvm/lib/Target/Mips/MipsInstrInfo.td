@@ -1801,11 +1801,12 @@ def MULT  : MMRel, Mult<"mult", II_MULT, GPR32Opnd, [HI0, LO0]>,
             MULT_FM<0, 0x18>, ISA_MIPS1_NOT_32R6_64R6;
 def MULTu : MMRel, Mult<"multu", II_MULTU, GPR32Opnd, [HI0, LO0]>,
             MULT_FM<0, 0x19>, ISA_MIPS1_NOT_32R6_64R6;
-def SDIV  : MMRel, Div<"div", II_DIV, GPR32Opnd, [HI0, LO0]>,
-            MULT_FM<0, 0x1a>, ISA_MIPS1_NOT_32R6_64R6;
-def UDIV  : MMRel, Div<"divu", II_DIVU, GPR32Opnd, [HI0, LO0]>,
-            MULT_FM<0, 0x1b>, ISA_MIPS1_NOT_32R6_64R6;
-
+let AdditionalPredicates = [NotInMicroMips] in {
+  def SDIV  : MMRel, Div<"div", II_DIV, GPR32Opnd, [HI0, LO0]>,
+              MULT_FM<0, 0x1a>, ISA_MIPS1_NOT_32R6_64R6;
+  def UDIV  : MMRel, Div<"divu", II_DIVU, GPR32Opnd, [HI0, LO0]>,
+              MULT_FM<0, 0x1b>, ISA_MIPS1_NOT_32R6_64R6;
+}
 def MTHI : MMRel, MoveToLOHI<"mthi", GPR32Opnd, [HI0]>, MTLO_FM<0x11>,
            ISA_MIPS1_NOT_32R6_64R6;
 def MTLO : MMRel, MoveToLOHI<"mtlo", GPR32Opnd, [LO0]>, MTLO_FM<0x13>,
@@ -1873,12 +1874,12 @@ def PseudoMSUBU : MAddSubPseudo<MSUBU, MipsMSubu, II_MSUBU>,
                   ISA_MIPS32_NOT_32R6_64R6;
 }
 
-def PseudoSDIV : MultDivPseudo<SDIV, ACC64, GPR32Opnd, MipsDivRem, II_DIV,
-                               0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
-def PseudoUDIV : MultDivPseudo<UDIV, ACC64, GPR32Opnd, MipsDivRemU, II_DIVU,
-                               0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
 let AdditionalPredicates = [NotInMicroMips] in {
-def RDHWR : MMRel, ReadHardware<GPR32Opnd, HWRegsOpnd>, RDHWR_FM;
+  def PseudoSDIV : MultDivPseudo<SDIV, ACC64, GPR32Opnd, MipsDivRem, II_DIV,
+                                 0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
+  def PseudoUDIV : MultDivPseudo<UDIV, ACC64, GPR32Opnd, MipsDivRemU, II_DIVU,
+                                 0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
+  def RDHWR : MMRel, ReadHardware<GPR32Opnd, HWRegsOpnd>, RDHWR_FM;
 }
 // TODO: Add '0 < pos+size <= 32' constraint check to ext instruction
 def EXT : MMRel, ExtBase<"ext", GPR32Opnd, uimm5, uimm5_plus1, immZExt5,
@@ -1888,7 +1889,10 @@ def INS : MMRel, InsBase<"ins", GPR32Opnd, uimm5, uimm5_inssize_plus1, MipsIns>,
 
 /// Move Control Registers From/To CPU Registers
 def MFC0 : MFC3OP<"mfc0", GPR32Opnd, COP0Opnd>, MFC3OP_FM<0x10, 0>, ISA_MIPS32;
-def MTC0 : MTC3OP<"mtc0", COP0Opnd, GPR32Opnd>, MFC3OP_FM<0x10, 4>, ISA_MIPS32;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def MTC0 : MTC3OP<"mtc0", COP0Opnd, GPR32Opnd>, MFC3OP_FM<0x10, 4>,
+             ISA_MIPS32;
+}
 def MFC2 : MFC3OP<"mfc2", GPR32Opnd, COP2Opnd>, MFC3OP_FM<0x12, 0>;
 def MTC2 : MTC3OP<"mtc2", COP2Opnd, GPR32Opnd>, MFC3OP_FM<0x12, 4>;
 
@@ -2215,10 +2219,10 @@ def SDivMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
 def UDivMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
                                   "divu\t$rs, $rt">; //, ISA_MIPS1_NOT_32R6_64R6;
 
-def DSDivMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
+def DSDivMacro : MipsAsmPseudoInst<(outs), (ins GPR64Opnd:$rs, GPR64Opnd:$rt),
                                    "ddiv\t$rs, $rt">; //, ISA_MIPS64_NOT_64R6;
 
-def DUDivMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
+def DUDivMacro : MipsAsmPseudoInst<(outs), (ins GPR64Opnd:$rs, GPR64Opnd:$rt),
                                    "ddivu\t$rs, $rt">; //, ISA_MIPS64_NOT_64R6;
 
 def Ulh : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins mem:$addr),

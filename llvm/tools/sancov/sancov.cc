@@ -63,7 +63,8 @@ enum ActionType {
   PrintCovPointsAction,
   CoveredFunctionsAction,
   NotCoveredFunctionsAction,
-  HtmlReportAction
+  HtmlReportAction,
+  StatsAction
 };
 
 cl::opt<ActionType> Action(
@@ -77,6 +78,8 @@ cl::opt<ActionType> Action(
                           "Print all not covered funcions."),
                clEnumValN(HtmlReportAction, "html-report",
                           "Print HTML coverage report."),
+               clEnumValN(StatsAction, "print-coverage-stats",
+                          "Print coverage statistics."),
                clEnumValEnd));
 
 static cl::list<std::string>
@@ -516,6 +519,23 @@ static ErrorOr<bool> isCoverageFile(std::string FileName) {
   return Header->Magic == BinCoverageMagic;
 }
 
+struct CoverageStats {
+  CoverageStats() : AllPoints(0), CovPoints(0), AllFns(0), CovFns(0) {}
+
+  size_t AllPoints;
+  size_t CovPoints;
+  size_t AllFns;
+  size_t CovFns;
+};
+
+static raw_ostream &operator<<(raw_ostream &OS, const CoverageStats &Stats) {
+  OS << "all-points: " << Stats.AllPoints << "\n";
+  OS << "cov-points: " << Stats.CovPoints << "\n";
+  OS << "all-fns: " << Stats.AllFns << "\n";
+  OS << "cov-fns: " << Stats.CovFns << "\n";
+  return OS;
+}
+
 class CoverageData {
 public:
   // Read single file coverage data.
@@ -615,9 +635,8 @@ public:
     MIXED = 3
   };
 
-  SourceCoverageData(std::string ObjectFile, const std::set<uint64_t> &Addrs) {
-    std::set<uint64_t> AllCovPoints = getCoveragePoints(ObjectFile);
-
+  SourceCoverageData(std::string ObjectFile, const std::set<uint64_t> &Addrs)
+      : AllCovPoints(getCoveragePoints(ObjectFile)) {
     if (!std::includes(AllCovPoints.begin(), AllCovPoints.end(), Addrs.begin(),
                        Addrs.end())) {
       Fail("Coverage points in binary and .sancov file do not match.");
@@ -776,7 +795,15 @@ public:
     return Files;
   }
 
+  void collectStats(CoverageStats *Stats) const {
+    Stats->AllPoints += AllCovPoints.size();
+    Stats->AllFns += computeAllFunctions().size();
+    Stats->CovFns += computeCoveredFunctions().size();
+  }
+
 private:
+  const std::set<uint64_t> AllCovPoints;
+
   std::vector<AddrInfo> AllAddrInfo;
   std::vector<AddrInfo> CovAddrInfo;
 };
@@ -954,6 +981,13 @@ public:
     }
   }
 
+  void collectStats(CoverageStats *Stats) const {
+    Stats->CovPoints += Addrs->size();
+
+    SourceCoverageData SCovData(ObjectFile, *Addrs);
+    SCovData.collectStats(Stats);
+  }
+
 private:
   CoverageDataWithObjectFile(std::string ObjectFile,
                              std::unique_ptr<CoverageData> Coverage)
@@ -1046,6 +1080,14 @@ public:
     for (const auto &Cov : Coverage) {
       Cov->printNotCoveredFunctions(OS);
     }
+  }
+
+  void printStats(raw_ostream &OS) const {
+    CoverageStats Stats;
+    for (const auto &Cov : Coverage) {
+      Cov->collectStats(&Stats);
+    }
+    OS << Stats;
   }
 
   void printReport(raw_ostream &OS) const {
@@ -1170,6 +1212,10 @@ int main(int argc, char **argv) {
   }
   case HtmlReportAction: {
     CovDataSet.get()->printReport(outs());
+    return 0;
+  }
+  case StatsAction: {
+    CovDataSet.get()->printStats(outs());
     return 0;
   }
   case PrintAction:

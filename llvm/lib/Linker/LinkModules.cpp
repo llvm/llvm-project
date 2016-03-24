@@ -76,8 +76,8 @@ class ModuleLinker {
       ComdatsChosen;
   bool getComdatResult(const Comdat *SrcC, Comdat::SelectionKind &SK,
                        bool &LinkFromSrc);
-  // Keep track of the global value members of each comdat in source.
-  DenseMap<const Comdat *, std::vector<GlobalValue *>> ComdatMembers;
+  // Keep track of the lazy linked global members of each comdat in source.
+  DenseMap<const Comdat *, std::vector<GlobalValue *>> LazyComdatMembers;
 
   /// Given a global in the source module, return the global in the
   /// destination module that is being linked to, if any.
@@ -422,9 +422,8 @@ bool ModuleLinker::linkIfNeeded(GlobalValue &GV) {
     bool LinkFromSrc;
     Comdat::SelectionKind SK;
     std::tie(SK, LinkFromSrc) = ComdatsChosen[SC];
-    if (LinkFromSrc)
-      ValuesToLink.insert(&GV);
-    return false;
+    if (!LinkFromSrc)
+      return false;
   }
 
   bool LinkFromSrc = true;
@@ -447,8 +446,8 @@ void ModuleLinker::addLazyFor(GlobalValue &GV, IRMover::ValueAdder Add) {
   const Comdat *SC = GV.getComdat();
   if (!SC)
     return;
-  for (GlobalValue *GV2 : ComdatMembers[SC]) {
-    if (!GV2->hasLocalLinkage() && shouldInternalizeLinkedSymbols())
+  for (GlobalValue *GV2 : LazyComdatMembers[SC]) {
+    if (shouldInternalizeLinkedSymbols())
       Internalize.insert(GV2->getName());
     Add(*GV2);
   }
@@ -534,16 +533,19 @@ bool ModuleLinker::run() {
   }
 
   for (GlobalVariable &GV : SrcM->globals())
-    if (const Comdat *SC = GV.getComdat())
-      ComdatMembers[SC].push_back(&GV);
+    if (GV.hasLinkOnceLinkage())
+      if (const Comdat *SC = GV.getComdat())
+        LazyComdatMembers[SC].push_back(&GV);
 
   for (Function &SF : *SrcM)
-    if (const Comdat *SC = SF.getComdat())
-      ComdatMembers[SC].push_back(&SF);
+    if (SF.hasLinkOnceLinkage())
+      if (const Comdat *SC = SF.getComdat())
+        LazyComdatMembers[SC].push_back(&SF);
 
   for (GlobalAlias &GA : SrcM->aliases())
-    if (const Comdat *SC = GA.getComdat())
-      ComdatMembers[SC].push_back(&GA);
+    if (GA.hasLinkOnceLinkage())
+      if (const Comdat *SC = GA.getComdat())
+        LazyComdatMembers[SC].push_back(&GA);
 
   // Insert all of the globals in src into the DstM module... without linking
   // initializers (which could refer to functions not yet mapped over).
@@ -564,7 +566,7 @@ bool ModuleLinker::run() {
     const Comdat *SC = GV->getComdat();
     if (!SC)
       continue;
-    for (GlobalValue *GV2 : ComdatMembers[SC])
+    for (GlobalValue *GV2 : LazyComdatMembers[SC])
       ValuesToLink.insert(GV2);
   }
 

@@ -172,8 +172,16 @@ static const Target *GetTarget(const MachOObjectFile *MachOObj,
 
 struct SymbolSorter {
   bool operator()(const SymbolRef &A, const SymbolRef &B) {
-    uint64_t AAddr = (A.getType() != SymbolRef::ST_Function) ? 0 : A.getValue();
-    uint64_t BAddr = (B.getType() != SymbolRef::ST_Function) ? 0 : B.getValue();
+    ErrorOr<SymbolRef::Type> ATypeOrErr = A.getType();
+    if (std::error_code EC = ATypeOrErr.getError())
+        report_fatal_error(EC.message());
+    SymbolRef::Type AType = *ATypeOrErr;
+    ErrorOr<SymbolRef::Type> BTypeOrErr = B.getType();
+    if (std::error_code EC = BTypeOrErr.getError())
+        report_fatal_error(EC.message());
+    SymbolRef::Type BType = *BTypeOrErr;
+    uint64_t AAddr = (AType != SymbolRef::ST_Function) ? 0 : A.getValue();
+    uint64_t BAddr = (BType != SymbolRef::ST_Function) ? 0 : B.getValue();
     return AAddr < BAddr;
   }
 };
@@ -573,7 +581,10 @@ static void CreateSymbolAddressMap(MachOObjectFile *O,
                                    SymbolAddressMap *AddrMap) {
   // Create a map of symbol addresses to symbol names.
   for (const SymbolRef &Symbol : O->symbols()) {
-    SymbolRef::Type ST = Symbol.getType();
+    ErrorOr<SymbolRef::Type> STOrErr = Symbol.getType();
+    if (std::error_code EC = STOrErr.getError())
+        report_fatal_error(EC.message());
+    SymbolRef::Type ST = *STOrErr;
     if (ST == SymbolRef::ST_Function || ST == SymbolRef::ST_Data ||
         ST == SymbolRef::ST_Other) {
       uint64_t Address = Symbol.getValue();
@@ -6083,7 +6094,10 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     SymbolAddressMap AddrMap;
     bool DisSymNameFound = false;
     for (const SymbolRef &Symbol : MachOOF->symbols()) {
-      SymbolRef::Type ST = Symbol.getType();
+      ErrorOr<SymbolRef::Type> STOrErr = Symbol.getType();
+      if (std::error_code EC = STOrErr.getError())
+          report_fatal_error(EC.message());
+      SymbolRef::Type ST = *STOrErr;
       if (ST == SymbolRef::ST_Function || ST == SymbolRef::ST_Data ||
           ST == SymbolRef::ST_Other) {
         uint64_t Address = Symbol.getValue();
@@ -6134,7 +6148,10 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         report_fatal_error(EC.message());
       StringRef SymName = *SymNameOrErr;
 
-      SymbolRef::Type ST = Symbols[SymIdx].getType();
+      ErrorOr<SymbolRef::Type> STOrErr = Symbols[SymIdx].getType();
+      if (std::error_code EC = STOrErr.getError())
+          report_fatal_error(EC.message());
+      SymbolRef::Type ST = *STOrErr;
       if (ST != SymbolRef::ST_Function && ST != SymbolRef::ST_Data)
         continue;
 
@@ -6158,7 +6175,10 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       uint64_t NextSym = 0;
       uint64_t NextSymIdx = SymIdx + 1;
       while (Symbols.size() > NextSymIdx) {
-        SymbolRef::Type NextSymType = Symbols[NextSymIdx].getType();
+        ErrorOr<SymbolRef::Type> STOrErr = Symbols[NextSymIdx].getType();
+        if (std::error_code EC = STOrErr.getError())
+            report_fatal_error(EC.message());
+        SymbolRef::Type NextSymType = *STOrErr;
         if (NextSymType == SymbolRef::ST_Function) {
           containsNextSym =
               Sections[SectIdx].containsSymbol(Symbols[NextSymIdx]);

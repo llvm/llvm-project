@@ -205,7 +205,7 @@ protected:
   uint32_t getSymbolFlags(DataRefImpl Symb) const override;
   uint8_t getSymbolOther(DataRefImpl Symb) const override;
   uint8_t getSymbolELFType(DataRefImpl Symb) const override;
-  SymbolRef::Type getSymbolType(DataRefImpl Symb) const override;
+  ErrorOr<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
   ErrorOr<section_iterator> getSymbolSection(const Elf_Sym *Symb,
                                              const Elf_Shdr *SymTab) const;
   ErrorOr<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
@@ -445,7 +445,8 @@ uint8_t ELFObjectFile<ELFT>::getSymbolELFType(DataRefImpl Symb) const {
 }
 
 template <class ELFT>
-SymbolRef::Type ELFObjectFile<ELFT>::getSymbolType(DataRefImpl Symb) const {
+ErrorOr<SymbolRef::Type>
+ELFObjectFile<ELFT>::getSymbolType(DataRefImpl Symb) const {
   const Elf_Sym *ESym = getSymbol(Symb);
 
   switch (ESym->getType()) {
