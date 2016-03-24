@@ -762,7 +762,7 @@ int asan_posix_memalign(void **memptr, uptr alignment, uptr size,
   return 0;
 }
 
-uptr asan_malloc_usable_size(void *ptr, uptr pc, uptr bp) {
+uptr asan_malloc_usable_size(const void *ptr, uptr pc, uptr bp) {
   if (!ptr) return 0;
   uptr usable_size = instance.AllocationSize(reinterpret_cast<uptr>(ptr));
   if (flags()->check_malloc_usable_size && (usable_size == 0)) {

@@ -82,15 +82,20 @@ namespace __sanitizer {
 
 #include "sanitizer_syscall_generic.inc"
 
+// Direct syscalls, don't call libmalloc hooks.
+extern "C" void *__mmap(void *addr, size_t len, int prot, int flags, int fildes,
+                        off_t off);
+extern "C" int __munmap(void *, size_t);
+
 // ---------------------- sanitizer_libc.h
 uptr internal_mmap(void *addr, size_t length, int prot, int flags,
                    int fd, u64 offset) {
   if (fd == -1) fd = VM_MAKE_TAG(VM_MEMORY_ANALYSIS_TOOL);
-  return (uptr)mmap(addr, length, prot, flags, fd, offset);
+  return (uptr)__mmap(addr, length, prot, flags, fd, offset);
 }
 
 uptr internal_munmap(void *addr, uptr length) {
-  return munmap(addr, length);
+  return __munmap(addr, length);
 }
 
 int internal_mprotect(void *addr, uptr length, int prot) {

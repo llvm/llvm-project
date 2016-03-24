@@ -59,7 +59,6 @@ public:
   virtual bool refersToGotEntry(uint32_t Type) const;
 
   enum PltNeed { Plt_No, Plt_Explicit, Plt_Implicit };
-  template <class ELFT>
   PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const;
 
   virtual void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,

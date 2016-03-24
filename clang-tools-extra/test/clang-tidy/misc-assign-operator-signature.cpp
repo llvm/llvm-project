@@ -18,6 +18,8 @@ struct BadReturn {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'BadReturn&' [misc-assign-operator-signature]
   const BadReturn& operator=(BadReturn&&);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'Bad
+  void operator=(int);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'Bad
 };
 struct BadReturn2 {
   BadReturn2&& operator=(const BadReturn2&);

@@ -300,10 +300,9 @@ bool TargetInfo::needsPltImpl(uint32_t Type) const { return false; }
 
 bool TargetInfo::refersToGotEntry(uint32_t Type) const { return false; }
 
-template <class ELFT>
 TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
                                          const SymbolBody &S) const {
-  if (S.isGnuIfunc<ELFT>())
+  if (S.IsGnuIFunc)
     return Plt_Explicit;
   if (S.isPreemptible() && needsPltImpl(Type))
     return Plt_Explicit;
@@ -329,9 +328,8 @@ TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
   // that points to the real function is a dedicated got entry used by the
   // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
   // R_386_JMP_SLOT, etc).
-  if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(&S))
-    if (!Config->Pic && SS->Sym.getType() == STT_FUNC &&
-        !refersToGotEntry(Type))
+  if (S.isShared())
+    if (!Config->Pic && S.IsFunc && !refersToGotEntry(Type))
       return Plt_Implicit;
 
   return Plt_No;
@@ -500,7 +498,7 @@ bool X86TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
     return Target->canRelaxTls(Type, &S) && S.isPreemptible();
   if (Type == R_386_TLS_GOTIE || Type == R_386_TLS_IE)
     return !canRelaxTls(Type, &S);
-  return Type == R_386_GOT32 || needsPlt<ELF32LE>(Type, S);
+  return Type == R_386_GOT32 || needsPlt(Type, S);
 }
 
 bool X86TargetInfo::needsPltImpl(uint32_t Type) const {
@@ -757,7 +755,7 @@ bool X86_64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
     return Target->canRelaxTls(Type, &S) && S.isPreemptible();
   if (Type == R_X86_64_GOTTPOFF)
     return !canRelaxTls(Type, &S);
-  return refersToGotEntry(Type) || needsPlt<ELF64LE>(Type, S);
+  return refersToGotEntry(Type) || needsPlt(Type, S);
 }
 
 uint32_t X86_64TargetInfo::getTlsGotRel(uint32_t Type) const {
@@ -1061,7 +1059,7 @@ void PPC64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 }
 
 bool PPC64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
-  if (needsPlt<ELF64BE>(Type, S))
+  if (needsPlt(Type, S))
     return true;
 
   switch (Type) {
@@ -1225,11 +1223,25 @@ AArch64TargetInfo::AArch64TargetInfo() {
 }
 
 bool AArch64TargetInfo::isRelRelative(uint32_t Type) const {
-  return Type == R_AARCH64_PREL32 || Type == R_AARCH64_ADR_PREL_PG_HI21 ||
-         Type == R_AARCH64_LDST8_ABS_LO12_NC ||
-         Type == R_AARCH64_LDST32_ABS_LO12_NC ||
-         Type == R_AARCH64_LDST64_ABS_LO12_NC ||
-         Type == R_AARCH64_ADD_ABS_LO12_NC || Type == R_AARCH64_CALL26;
+  switch (Type) {
+  default:
+    return false;
+  case R_AARCH64_PREL32:
+  case R_AARCH64_ADR_PREL_LO21:
+  case R_AARCH64_ADR_PREL_PG_HI21:
+  case R_AARCH64_ADR_GOT_PAGE:
+  case R_AARCH64_LDST8_ABS_LO12_NC:
+  case R_AARCH64_LDST16_ABS_LO12_NC:
+  case R_AARCH64_LDST32_ABS_LO12_NC:
+  case R_AARCH64_LDST64_ABS_LO12_NC:
+  case R_AARCH64_LDST128_ABS_LO12_NC:
+  case R_AARCH64_ADD_ABS_LO12_NC:
+  case R_AARCH64_CALL26:
+  case R_AARCH64_JUMP26:
+  case R_AARCH64_CONDBR19:
+  case R_AARCH64_TSTBR14:
+    return true;
+  }
 }
 
 bool AArch64TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
@@ -1333,7 +1345,7 @@ bool AArch64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   case R_AARCH64_LD64_GOT_LO12_NC:
     return true;
   default:
-    return needsPlt<ELF64LE>(Type, S);
+    return needsPlt(Type, S);
   }
 }
 
@@ -1674,7 +1686,7 @@ bool MipsTargetInfo<ELFT>::needsCopyRelImpl(uint32_t Type) const {
 
 template <class ELFT>
 bool MipsTargetInfo<ELFT>::needsGot(uint32_t Type, SymbolBody &S) const {
-  return needsPlt<ELFT>(Type, S) || refersToGotEntry(Type);
+  return needsPlt(Type, S) || refersToGotEntry(Type);
 }
 
 template <class ELFT>
@@ -1829,14 +1841,5 @@ template bool TargetInfo::needsCopyRel<ELF64LE>(uint32_t,
                                                 const SymbolBody &) const;
 template bool TargetInfo::needsCopyRel<ELF64BE>(uint32_t,
                                                 const SymbolBody &) const;
-
-template TargetInfo::PltNeed
-TargetInfo::needsPlt<ELF32LE>(uint32_t, const SymbolBody &) const;
-template TargetInfo::PltNeed
-TargetInfo::needsPlt<ELF32BE>(uint32_t, const SymbolBody &) const;
-template TargetInfo::PltNeed
-TargetInfo::needsPlt<ELF64LE>(uint32_t, const SymbolBody &) const;
-template TargetInfo::PltNeed
-TargetInfo::needsPlt<ELF64BE>(uint32_t, const SymbolBody &) const;
 }
 }

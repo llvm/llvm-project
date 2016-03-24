@@ -194,14 +194,14 @@ bool OverrideFunction(uptr old_func, uptr new_func, uptr *orig_old_func) {
 
 static void **InterestingDLLsAvailable() {
   const char *InterestingDLLs[] = {
-    "kernel32.dll",
-    "msvcr110.dll", // VS2012
-    "msvcr120.dll", // VS2013
-    "ucrtbase.dll", // Universal CRT
-    // NTDLL should go last as it exports some functions that we should override
-    // in the CRT [presumably only used internally].
-    "ntdll.dll", NULL
-  };
+      "kernel32.dll",
+      "msvcr110.dll",      // VS2012
+      "msvcr120.dll",      // VS2013
+      "vcruntime140.dll",  // VS2015
+      "ucrtbase.dll",      // Universal CRT
+      // NTDLL should go last as it exports some functions that we should
+      // override in the CRT [presumably only used internally].
+      "ntdll.dll", NULL};
   static void *result[ARRAY_SIZE(InterestingDLLs)] = { 0 };
   if (!result[0]) {
     for (size_t i = 0, j = 0; InterestingDLLs[i]; ++i) {
@@ -276,6 +276,71 @@ bool OverrideFunction(const char *name, uptr new_func, uptr *orig_old_func) {
   if (!GetFunctionAddressInDLLs(name, &orig_func))
     return false;
   return OverrideFunction(orig_func, new_func, orig_old_func);
+}
+
+bool OverrideImportedFunction(const char *module_to_patch,
+                              const char *imported_module,
+                              const char *function_name, uptr new_function,
+                              uptr *orig_old_func) {
+  HMODULE module = GetModuleHandleA(module_to_patch);
+  if (!module)
+    return false;
+
+  // Check that the module header is full and present.
+  RVAPtr<IMAGE_DOS_HEADER> dos_stub(module, 0);
+  RVAPtr<IMAGE_NT_HEADERS> headers(module, dos_stub->e_lfanew);
+  if (!module || dos_stub->e_magic != IMAGE_DOS_SIGNATURE || // "MZ"
+      headers->Signature != IMAGE_NT_SIGNATURE ||           // "PE\0\0"
+      headers->FileHeader.SizeOfOptionalHeader <
+          sizeof(IMAGE_OPTIONAL_HEADER)) {
+    return false;
+  }
+
+  IMAGE_DATA_DIRECTORY *import_directory =
+      &headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+
+  // Iterate the list of imported DLLs. FirstThunk will be null for the last
+  // entry.
+  RVAPtr<IMAGE_IMPORT_DESCRIPTOR> imports(module,
+                                          import_directory->VirtualAddress);
+  for (; imports->FirstThunk != 0; ++imports) {
+    RVAPtr<const char> modname(module, imports->Name);
+    if (_stricmp(&*modname, imported_module) == 0)
+      break;
+  }
+  if (imports->FirstThunk == 0)
+    return false;
+
+  // We have two parallel arrays: the import address table (IAT) and the table
+  // of names. They start out containing the same data, but the loader rewrites
+  // the IAT to hold imported addresses and leaves the name table in
+  // OriginalFirstThunk alone.
+  RVAPtr<IMAGE_THUNK_DATA> name_table(module, imports->OriginalFirstThunk);
+  RVAPtr<IMAGE_THUNK_DATA> iat(module, imports->FirstThunk);
+  for (; name_table->u1.Ordinal != 0; ++name_table, ++iat) {
+    if (!IMAGE_SNAP_BY_ORDINAL(name_table->u1.Ordinal)) {
+      RVAPtr<IMAGE_IMPORT_BY_NAME> import_by_name(
+          module, name_table->u1.ForwarderString);
+      const char *funcname = &import_by_name->Name[0];
+      if (strcmp(funcname, function_name) == 0)
+        break;
+    }
+  }
+  if (name_table->u1.Ordinal == 0)
+    return false;
+
+  // Now we have the correct IAT entry. Do the swap. We have to make the page
+  // read/write first.
+  if (orig_old_func)
+    *orig_old_func = iat->u1.AddressOfData;
+  DWORD old_prot, unused_prot;
+  if (!VirtualProtect(&iat->u1.AddressOfData, 4, PAGE_EXECUTE_READWRITE,
+                      &old_prot))
+    return false;
+  iat->u1.AddressOfData = new_function;
+  if (!VirtualProtect(&iat->u1.AddressOfData, 4, old_prot, &unused_prot))
+    return false;  // Not clear if this failure bothers us.
+  return true;
 }
 
 }  // namespace __interception

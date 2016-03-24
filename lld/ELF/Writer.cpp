@@ -359,7 +359,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
     // An STT_GNU_IFUNC symbol always uses a PLT entry, and all references
     // to the symbol go through the PLT. This is true even for a local
     // symbol, although local symbols normally do not require PLT entries.
-    if (Body.isGnuIfunc<ELFT>()) {
+    if (Body.IsGnuIFunc) {
       if (Body.isInPlt())
         continue;
       Out<ELFT>::Plt->addEntry(Body);
@@ -379,7 +379,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
 
     // If a relocation needs PLT, we create a PLT and a GOT slot
     // for the symbol.
-    TargetInfo::PltNeed NeedPlt = Target->needsPlt<ELFT>(Type, Body);
+    TargetInfo::PltNeed NeedPlt = Target->needsPlt(Type, Body);
     if (NeedPlt) {
       if (NeedPlt == TargetInfo::Plt_Implicit)
         Body.NeedsCopyOrPltAddr = true;
