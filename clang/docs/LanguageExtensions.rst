@@ -1506,7 +1506,7 @@ C-style cast applied to each element of the first argument.
 Query for this feature with ``__has_builtin(__builtin_convertvector)``.
 
 ``__builtin_bitreverse``
----------------------
+------------------------
 
 * ``__builtin_bitreverse8``
 * ``__builtin_bitreverse16``
@@ -1516,11 +1516,13 @@ Query for this feature with ``__has_builtin(__builtin_convertvector)``.
 **Syntax**:
 
 .. code-block:: c++
+
      __builtin_bitreverse32(x)
 
 **Examples**:
 
 .. code-block:: c++
+
       uint8_t rev_x = __builtin_bitreverse8(x);
       uint16_t rev_x = __builtin_bitreverse16(x);
       uint32_t rev_y = __builtin_bitreverse32(y);
