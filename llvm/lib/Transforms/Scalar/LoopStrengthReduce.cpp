@@ -4353,6 +4353,11 @@ LSRInstance::HoistInsertPosition(BasicBlock::iterator IP,
     bool AllDominate = true;
     Instruction *BetterPos = nullptr;
     Instruction *Tentative = IDom->getTerminator();
+    // Don't bother attempting to insert before a catchswitch, their basic block
+    // cannot have other non-PHI instructions.
+    if (isa<CatchSwitchInst>(Tentative))
+      return IP;
+
     for (Instruction *Inst : Inputs) {
       if (Inst == Tentative || !DT.dominates(Inst, Tentative)) {
         AllDominate = false;
@@ -4426,7 +4431,7 @@ LSRInstance::AdjustInsertPositionForExpand(BasicBlock::iterator LowestIP,
   while (isa<PHINode>(IP)) ++IP;
 
   // Ignore landingpad instructions.
-  while (!isa<TerminatorInst>(IP) && IP->isEHPad()) ++IP;
+  while (IP->isEHPad()) ++IP;
 
   // Ignore debug intrinsics.
   while (isa<DbgInfoIntrinsic>(IP)) ++IP;
