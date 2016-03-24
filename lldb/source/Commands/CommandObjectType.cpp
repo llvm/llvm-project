@@ -3393,7 +3393,7 @@ public:
         {
             StreamString stream;
             // FIXME: hardcoding languages is not good
-            lldb::LanguageType languages[] = {eLanguageTypeObjC,eLanguageTypeC_plus_plus};
+            lldb::LanguageType languages[] = {eLanguageTypeObjC,eLanguageTypeC_plus_plus,eLanguageTypeSwift};
             
             for(const auto lang_type : languages)
             {

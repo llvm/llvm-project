@@ -57,6 +57,9 @@ public:
     std::unique_ptr<TypeScavenger>
     GetTypeScavenger () override;
     
+    const char*
+    GetLanguageSpecificTypeLookupHelp () override;
+    
     bool
     GetFormatterPrefixSuffix (ValueObject& valobj, ConstString type_hint,
                               std::string& prefix, std::string& suffix) override;

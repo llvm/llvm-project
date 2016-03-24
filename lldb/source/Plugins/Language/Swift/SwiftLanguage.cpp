@@ -964,6 +964,16 @@ SwiftLanguage::GetTypeScavenger ()
     return std::unique_ptr<TypeScavenger>(new SwiftTypeScavenger());
 }
 
+const char*
+SwiftLanguage::GetLanguageSpecificTypeLookupHelp ()
+{
+    return "\nFor Swift, in addition to a simple type name (such as String, Int, NSObject, ..), one can also provide:\n"
+    "- a mangled type name (e.g. _TtSi)\n"
+    "- the name of a function, even if multiple overloads of it exist\n"
+    "- the name of an operator\n"
+    "- the name of a module available in the current target, which will print all types and declarations available in that module";
+}
+
 bool
 SwiftLanguage::GetFormatterPrefixSuffix (ValueObject& valobj, ConstString type_hint,
                                          std::string& prefix, std::string& suffix)
