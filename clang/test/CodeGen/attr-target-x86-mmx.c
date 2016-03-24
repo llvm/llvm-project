@@ -19,4 +19,4 @@ void __attribute__((target("sse"))) shift(__m64 a, __m64 b, int c) {
   _mm_srai_pi32(a, c);
 }
 
-// CHECK: "target-features"="+mmx,+sse"
+// CHECK: "target-features"="+mmx,+sse,+x87"

@@ -360,19 +360,19 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   // Handle generating header include information, if requested.
   if (DepOpts.ShowHeaderIncludes)
-    AttachHeaderIncludeGen(*PP, DepOpts.ExtraDeps);
+    AttachHeaderIncludeGen(*PP, DepOpts);
   if (!DepOpts.HeaderIncludeOutputFile.empty()) {
     StringRef OutputPath = DepOpts.HeaderIncludeOutputFile;
     if (OutputPath == "-")
       OutputPath = "";
-    AttachHeaderIncludeGen(*PP, DepOpts.ExtraDeps,
+    AttachHeaderIncludeGen(*PP, DepOpts,
                            /*ShowAllHeaders=*/true, OutputPath,
                            /*ShowDepth=*/false);
   }
 
   if (DepOpts.PrintShowIncludes) {
-    AttachHeaderIncludeGen(*PP, DepOpts.ExtraDeps,
-                           /*ShowAllHeaders=*/false, /*OutputPath=*/"",
+    AttachHeaderIncludeGen(*PP, DepOpts,
+                           /*ShowAllHeaders=*/true, /*OutputPath=*/"",
                            /*ShowDepth=*/true, /*MSStyle=*/true);
   }
 }
@@ -772,7 +772,7 @@ bool CompilerInstance::InitializeSourceManager(
                             /*SuggestedModule=*/nullptr, /*SkipCache=*/true);
       // Also add the header to /showIncludes output.
       if (File)
-        DepOpts.ExtraDeps.push_back(File->getName());
+        DepOpts.ShowIncludesPretendHeader = File->getName();
     }
     if (!File) {
       Diags.Report(diag::err_fe_error_reading) << InputFile;

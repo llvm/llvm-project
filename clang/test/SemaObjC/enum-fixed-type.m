@@ -38,3 +38,8 @@ int arr3[(long long)Bar == (long long)-1 ? 1 : -1];
 
 typedef enum : Integer { BaseElem } BaseEnum;
 typedef enum : BaseEnum { DerivedElem } DerivedEnum; // expected-error {{non-integral type 'BaseEnum' is an invalid underlying type}}
+
+// <rdar://problem/24999533>
+enum MyEnum : _Bool {
+  MyThing = 0
+};

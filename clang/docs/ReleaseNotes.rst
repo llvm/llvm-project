@@ -79,6 +79,7 @@ TLS is enabled for Cygwin defaults to -femulated-tls.
 
 C Language Changes in Clang
 ---------------------------
+The -faltivec and -maltivec flags no longer silently include altivec.h on Power platforms.
 
 ...
 

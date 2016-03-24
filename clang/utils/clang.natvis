@@ -95,7 +95,7 @@ or create a symbolic link so it updates automatically.
     </Expand>
   </Type>
   <Type Name="clang::FieldDecl">
-    <DisplayString>Field {{{*(clang::NamedDecl *)this,view(cpp)nd}}}</DisplayString>
+    <DisplayString>Field {{{*(clang::DeclaratorDecl *)this,view(cpp)nd}}}</DisplayString>
   </Type>
   <Type Name="clang::CXXMethodDecl">
     <DisplayString IncludeView="cpp">{*(clang::FunctionDecl *)this,nd}</DisplayString>
@@ -182,11 +182,23 @@ or create a symbolic link so it updates automatically.
     <DisplayString>typename {*TTPDecl,view(cpp)}</DisplayString>
   </Type>
   <Type Name="clang::QualType">
-    <!-- TODO: Qualifiers. Also, when VS2013 support is deprecated, change 4 to clang::TypeAlignmentInBits (not properly recognized by VS2013) -->
-    <DisplayString IncludeView="poly">{*((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType,view(poly)}</DisplayString>
-    <DisplayString IncludeView="cpp">{*((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType,view(cpp)}</DisplayString>
-    <DisplayString>{*((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType}</DisplayString>
+    <!-- When VS2013 support is deprecated, change 4 to clang::TypeAlignmentInBits (not properly recognized by VS2013) -->
+    <DisplayString IncludeView="poly">{*((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType,view(poly)}{*this,view(fastQuals)}</DisplayString>
+    <DisplayString IncludeView="cpp">{*((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType,view(cpp)}{*this,view(fastQuals)}</DisplayString>
+    <!-- For the Fast Qualifiers, it is simpler (and probably more efficient) just to list all 8 cases than create
+          views for each qualifier. TODO: Non-fast qualifiers -->
+    <DisplayString IncludeView="fastQuals" Condition="(Value.Value &amp; 15)==0"></DisplayString>
+    <DisplayString IncludeView="fastQuals" Condition="(Value.Value &amp; 15)==1">{" ",sb}const</DisplayString>
+    <DisplayString IncludeView="fastQuals" Condition="(Value.Value &amp; 15)==2">{" ",sb}restrict</DisplayString>
+    <DisplayString IncludeView="fastQuals" Condition="(Value.Value &amp; 15)==3">{" ",sb}const restrict</DisplayString>
+    <DisplayString IncludeView="fastQuals" Condition="(Value.Value &amp; 15)==4">{" ",sb}volatile</DisplayString>
+    <DisplayString IncludeView="fastQuals" Condition="(Value.Value &amp; 15)==5">{" ",sb}const volatile</DisplayString>
+    <DisplayString IncludeView="fastQuals" Condition="(Value.Value &amp; 15)==6">{" ",sb}volatile restrict</DisplayString>
+    <DisplayString IncludeView="fastQuals" Condition="(Value.Value &amp; 15)==7">{" ",sb}const volatile restrict</DisplayString>
+    <DisplayString IncludeView="fastQuals">Cannot visualize non-fast qualifiers</DisplayString>
+    <DisplayString>{*((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType}{*this,view(fastQuals)}</DisplayString>
     <Expand>
+      <Item Name="Fast Quals">*this,view(fastQuals)</Item>
       <Item Name="BaseType">*((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType</Item>
     </Expand>
   </Type>

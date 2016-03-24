@@ -409,6 +409,7 @@ BUILTIN(__builtin_bswap16, "UsUs", "nc")
 BUILTIN(__builtin_bswap32, "UiUi", "nc")
 BUILTIN(__builtin_bswap64, "ULLiULLi", "nc")
 
+BUILTIN(__builtin_bitreverse8, "UcUc", "nc")
 BUILTIN(__builtin_bitreverse16, "UsUs", "nc")
 BUILTIN(__builtin_bitreverse32, "UiUi", "nc")
 BUILTIN(__builtin_bitreverse64, "ULLiULLi", "nc")
