@@ -21,11 +21,20 @@ define <16 x i8> @combine_vpperm_identity(<16 x i8> %a0, <16 x i8> %a1) {
   ret <16 x i8> %res1
 }
 
-define <16 x i8> @combine_vpperm_as_unpckhwd(<16 x i8> %a0, <16 x i8> %a1) {
-; CHECK-LABEL: combine_vpperm_as_unpckhwd:
+define <16 x i8> @combine_vpperm_as_unary_unpckhwd(<16 x i8> %a0, <16 x i8> %a1) {
+; CHECK-LABEL: combine_vpperm_as_unary_unpckhwd:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vpperm {{.*}}(%rip), %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a0, <16 x i8> <i8 8, i8 24, i8 9, i8 25, i8 10, i8 26, i8 11, i8 27, i8 12, i8 28, i8 13, i8 29, i8 14, i8 30, i8 15, i8 31>)
+  ret <16 x i8> %res0
+}
+
+define <16 x i8> @combine_vpperm_as_unpckhwd(<16 x i8> %a0, <16 x i8> %a1) {
+; CHECK-LABEL: combine_vpperm_as_unpckhwd:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpperm {{.*}}(%rip), %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> <i8 8, i8 24, i8 9, i8 25, i8 10, i8 26, i8 11, i8 27, i8 12, i8 28, i8 13, i8 29, i8 14, i8 30, i8 15, i8 31>)
   ret <16 x i8> %res0
 }

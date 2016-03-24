@@ -46,6 +46,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <algorithm>
 #include <set>
 #include <stdio.h>
 #include <string>
@@ -490,6 +491,19 @@ static std::string escapeHtml(const std::string &S) {
   return Result;
 }
 
+// Adds leading zeroes wrapped in 'lz' style.
+// Leading zeroes help locate 000% coverage.
+static std::string formatHtmlPct(size_t Pct) {
+  Pct = std::max(std::size_t{0}, std::min(std::size_t{100}, Pct));
+
+  std::string Num = std::to_string(Pct);
+  std::string Zeroes(3 - Num.size(), '0');
+  if (!Zeroes.empty())
+    Zeroes = "<span class='lz'>" + Zeroes + "</span>";
+
+  return Zeroes + Num;
+}
+
 static std::string anchorName(std::string Anchor) {
   llvm::MD5 Hasher;
   llvm::MD5::MD5Result Hash;
@@ -529,10 +543,10 @@ struct CoverageStats {
 };
 
 static raw_ostream &operator<<(raw_ostream &OS, const CoverageStats &Stats) {
-  OS << "all-points: " << Stats.AllPoints << "\n";
-  OS << "cov-points: " << Stats.CovPoints << "\n";
-  OS << "all-fns: " << Stats.AllFns << "\n";
-  OS << "cov-fns: " << Stats.CovFns << "\n";
+  OS << "all-edges: " << Stats.AllPoints << "\n";
+  OS << "cov-edges: " << Stats.CovPoints << "\n";
+  OS << "all-functions: " << Stats.AllFns << "\n";
+  OS << "cov-functions: " << Stats.CovFns << "\n";
   return OS;
 }
 
@@ -885,7 +899,7 @@ public:
 
       OS << "<tr><td><a href=\"#" << anchorName(FileName) << "\">"
          << stripPathPrefix(FileName) << "</a></td>"
-         << "<td>" << CovPct << "%</td>"
+         << "<td>" << formatHtmlPct(CovPct) << "%</td>"
          << "<td>" << FC.first << " (" << FC.second << ")"
          << "</tr>\n";
     }
@@ -923,7 +937,8 @@ public:
         std::string FunctionName = P.first.FunctionName;
 
         OS << "<div class='fn' style='order: " << P.second << "'>";
-        OS << "<span class='pct'>" << P.second << "%</span>&nbsp;";
+        OS << "<span class='pct'>" << formatHtmlPct(P.second)
+           << "%</span>&nbsp;";
         OS << "<span class='name'><a href=\"#"
            << anchorName(FileName + "::" + FunctionName) << "\">";
         OS << escapeHtml(FunctionName) << "</a></span>";
@@ -1108,6 +1123,7 @@ public:
     OS << ".fn { display: flex; flex-flow: row nowrap; }\n";
     OS << ".pct { width: 3em; text-align: right; margin-right: 1em; }\n";
     OS << ".name { flex: 2; }\n";
+    OS << ".lz { color: lightgray; }\n";
     OS << "</style>\n";
     OS << "<title>" << Title << "</title>\n";
     OS << "</head>\n";

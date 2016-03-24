@@ -70,11 +70,6 @@ def immZExt4Ptr : ImmLeaf<iPTR, [{return isUInt<4>(Imm);}]>;
 
 // Operands
 
-
-def vsplat_simm5 : Operand<vAny>;
-
-def vsplat_simm10 : Operand<vAny>;
-
 def immZExt2Lsa : ImmLeaf<i32, [{return isUInt<2>(Imm - 1);}]>;
 
 // Pattern fragments

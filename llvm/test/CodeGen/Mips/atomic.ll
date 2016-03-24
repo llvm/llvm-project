@@ -357,10 +357,17 @@ entry:
 ; NO-SEB-SEH:    sll     $[[R18:[0-9]+]], $[[R17]], 24
 ; NO-SEB-SEH:    sra     $[[R19:[0-9]+]], $[[R18]], 24
 
+; FIXME: -march=mips produces a redundant sign extension here...
+; NO-SEB-SEH:    sll     $[[R20:[0-9]+]], $5, 24
+; NO-SEB-SEH:    sra     $[[R20]], $[[R20]], 24
+
 ; HAS-SEB-SEH:   seb     $[[R19:[0-9]+]], $[[R17]]
 
-; ALL:           xor     $[[R20:[0-9]+]], $[[R19]], $5
-; ALL:           sltiu   $2, $[[R20]], 1
+; FIXME: ...Leading to this split check.
+; NO-SEB-SEH:    xor     $[[R21:[0-9]+]], $[[R19]], $[[R20]]
+; HAS-SEB-SEH:   xor     $[[R21:[0-9]+]], $[[R19]], $5
+
+; ALL: sltiu   $2, $[[R21]], 1
 }
 
 ; Check one i16 so that we cover the seh sign extend
@@ -407,6 +414,49 @@ entry:
 ; MIPS32R2:      seh     $2, $[[R16]]
 }
 
+; Test that the i16 return value from cmpxchg is recognised as signed,
+; so that setCC doesn't end up comparing an unsigned value to a signed
+; value.
+; The rest of the functions here are testing the atomic expansion, so
+; we just match the end of the function.
+define {i16, i1} @foo(i16* %addr, i16 %l, i16 %r, i16 %new) {
+  %desired = add i16 %l, %r
+  %res = cmpxchg i16* %addr, i16 %desired, i16 %new seq_cst seq_cst
+  ret {i16, i1} %res
+
+; ALL-LABEL: foo
+; MIPSR6:        addu    $[[R2:[0-9]+]], $[[R1:[0-9]+]], $[[R0:[0-9]+]]
+; NOT-MICROMIPS: addu    $[[R2:[0-9]+]], $[[R1:[0-9]+]], $[[R0:[0-9]+]]
+; MICROMIPS:     addu16  $[[R2:[0-9]+]], $[[R1:[0-9]+]], $[[R0:[0-9]+]]
+
+; ALL:           sync
+
+; ALL:           andi    $[[R3:[0-9]+]], $[[R2]], 65535
+; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:           ll      $[[R4:[0-9]+]], 0($[[R5:[0-9]+]])
+; ALL:           and     $[[R6:[0-9]+]], $[[R4]], $
+; ALL:           and     $[[R7:[0-9]+]], $[[R4]], $
+; ALL:           or      $[[R8:[0-9]+]], $[[R7]], $
+; ALL:           sc      $[[R8]], 0($[[R5]])
+; NOT-MICROMIPS: beqz    $[[R8]], $[[BB0]]
+; MICROMIPS:     beqzc   $[[R8]], $[[BB0]]
+; MIPSR6:        beqzc   $[[R8]], $[[BB0]]
+
+; ALL:           srlv    $[[R9:[0-9]+]], $[[R6]], $
+
+; NO-SEB-SEH:    sll     $[[R10:[0-9]+]], $[[R9]], 16
+; NO-SEB-SEH:    sra     $[[R11:[0-9]+]], $[[R10]], 16
+
+; NO-SEB-SEH:    sll     $[[R12:[0-9]+]], $[[R2]], 16
+; NO-SEB-SEH:    sra     $[[R13:[0-9]+]], $[[R12]], 16
+
+; HAS-SEB-SEH:   seh     $[[R11:[0-9]+]], $[[R9]]
+; HAS-SEB-SEH:   seh     $[[R13:[0-9]+]], $[[R2]]
+
+; ALL:           xor     $[[R12:[0-9]+]], $[[R11]], $[[R13]]
+; ALL:           sltiu   $3, $[[R12]], 1
+; ALL:           sync
+}
 
 @countsint = common global i32 0, align 4
 

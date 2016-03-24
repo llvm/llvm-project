@@ -781,6 +781,8 @@ public:
   void LowerCallSiteWithDeoptBundle(ImmutableCallSite CS, SDValue Callee,
                                     const BasicBlock *EHPadBB);
 
+  void LowerDeoptimizeCall(const CallInst *CI);
+
 private:
   // Terminator instructions.
   void visitRet(const ReturnInst &I);

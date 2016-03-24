@@ -9,6 +9,7 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
 // Other libraries and framework includes
 // Project includes
 #include "CommandObjectPlatform.h"
@@ -1461,10 +1462,30 @@ protected:
     class CommandOptions : public Options
     {
     public:
-        CommandOptions (CommandInterpreter &interpreter) :
-            Options (interpreter),
-            match_info ()
+        CommandOptions(CommandInterpreter &interpreter) :
+            Options(interpreter),
+            match_info(),
+            show_args(false),
+            verbose(false)
         {
+            static std::once_flag g_once_flag;
+            std::call_once(g_once_flag,  []() {
+                PosixPlatformCommandOptionValidator *posix_validator = new PosixPlatformCommandOptionValidator();
+                for (size_t i=0; g_option_table[i].short_option != 0; ++i)
+                {
+                    switch (g_option_table[i].short_option)
+                    {
+                    case 'u':
+                    case 'U':
+                    case 'g':
+                    case 'G':
+                        g_option_table[i].validator = posix_validator;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            });
         }
 
         ~CommandOptions() override = default;
@@ -1576,7 +1597,7 @@ protected:
         // Options table: Required for subclasses of Options.
         
         static OptionDefinition g_option_table[];
-        
+
         // Instance variables to hold the values for command options.
         
         ProcessInstanceInfoMatch match_info;
@@ -1586,11 +1607,6 @@ protected:
 
     CommandOptions m_options;
 };
-
-namespace
-{
-    PosixPlatformCommandOptionValidator g_posix_validator;
-}
 
 OptionDefinition
 CommandObjectPlatformProcessList::CommandOptions::g_option_table[] =
@@ -1602,10 +1618,10 @@ CommandObjectPlatformProcessList::CommandOptions::g_option_table[] =
 { LLDB_OPT_SET_5            , true , "contains"   , 'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeProcessName      , "Find processes with executable basenames that contain a string." },
 { LLDB_OPT_SET_6            , true , "regex"      , 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeRegularExpression, "Find processes with executable basenames that match a regular expression." },
 { LLDB_OPT_SET_FROM_TO(2, 6), false, "parent"     , 'P', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypePid              , "Find processes that have a matching parent process ID." },
-{ LLDB_OPT_SET_FROM_TO(2, 6), false, "uid"        , 'u', OptionParser::eRequiredArgument, &g_posix_validator, nullptr, 0, eArgTypeUnsignedInteger  , "Find processes that have a matching user ID." },
-{ LLDB_OPT_SET_FROM_TO(2, 6), false, "euid"       , 'U', OptionParser::eRequiredArgument, &g_posix_validator, nullptr, 0, eArgTypeUnsignedInteger  , "Find processes that have a matching effective user ID." },
-{ LLDB_OPT_SET_FROM_TO(2, 6), false, "gid"        , 'g', OptionParser::eRequiredArgument, &g_posix_validator, nullptr, 0, eArgTypeUnsignedInteger  , "Find processes that have a matching group ID." },
-{ LLDB_OPT_SET_FROM_TO(2, 6), false, "egid"       , 'G', OptionParser::eRequiredArgument, &g_posix_validator, nullptr, 0, eArgTypeUnsignedInteger  , "Find processes that have a matching effective group ID." },
+{ LLDB_OPT_SET_FROM_TO(2, 6), false, "uid"        , 'u', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger  , "Find processes that have a matching user ID." },
+{ LLDB_OPT_SET_FROM_TO(2, 6), false, "euid"       , 'U', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger  , "Find processes that have a matching effective user ID." },
+{ LLDB_OPT_SET_FROM_TO(2, 6), false, "gid"        , 'g', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger  , "Find processes that have a matching group ID." },
+{ LLDB_OPT_SET_FROM_TO(2, 6), false, "egid"       , 'G', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger  , "Find processes that have a matching effective group ID." },
 { LLDB_OPT_SET_FROM_TO(2, 6), false, "arch"       , 'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeArchitecture     , "Find processes that have a matching architecture." },
 { LLDB_OPT_SET_FROM_TO(1, 6), false, "show-args"  , 'A', OptionParser::eNoArgument      , nullptr, nullptr, 0, eArgTypeNone             , "Show process arguments instead of the process executable basename." },
 { LLDB_OPT_SET_FROM_TO(1, 6), false, "verbose"    , 'v', OptionParser::eNoArgument      , nullptr, nullptr, 0, eArgTypeNone             , "Enable verbose output." },

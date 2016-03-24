@@ -441,6 +441,8 @@ namespace llvm {
       VPSHA, VPSHL,
       // XOP signed/unsigned integer comparisons
       VPCOM, VPCOMU,
+      // XOP packed permute bytes
+      VPPERM,
 
       // Vector multiply packed unsigned doubleword integers
       PMULUDQ,

@@ -67,6 +67,9 @@ defm J2_call: T_Calls<"">, PredRel;
 let isCodeGenOnly = 1, isCall = 1, hasSideEffects = 1, Defs = VolatileV3.Regs in
 def CALLv3nr :  T_Call<"">, PredRel;
 
+let isCodeGenOnly = 1, isCall = 1, hasSideEffects = 1, Defs = [PC, R31, R6, R7, P0] in
+def CALLstk :  T_Call<"">, PredRel;
+
 //===----------------------------------------------------------------------===//
 // J -
 //===----------------------------------------------------------------------===//

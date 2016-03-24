@@ -238,6 +238,10 @@ namespace llvm {
     bool isCheapToSpeculateCttz() const override;
     bool isCheapToSpeculateCtlz() const override;
 
+    bool hasSignExtendedAtomicOps() const override {
+      return true;
+    }
+
     void LowerOperationWrapper(SDNode *N,
                                SmallVectorImpl<SDValue> &Results,
                                SelectionDAG &DAG) const override;

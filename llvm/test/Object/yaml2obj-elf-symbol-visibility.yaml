@@ -26,7 +26,9 @@
 # OBJ-NEXT:   Size: 4
 # OBJ-NEXT:   Binding: Global (0x1)
 # OBJ-NEXT:   Type: Object (0x1)
-# OBJ-NEXT:   Other: 1
+# OBJ-NEXT:   Other [ (0x1)
+# OBJ-NEXT:     STV_INTERNAL
+# OBJ-NEXT:   ]
 # OBJ-NEXT:   Section: .data (0x1)
 # OBJ-NEXT: }
 # OBJ-NEXT: Symbol {
@@ -35,7 +37,9 @@
 # OBJ-NEXT:   Size: 4
 # OBJ-NEXT:   Binding: Global (0x1)
 # OBJ-NEXT:   Type: Object (0x1)
-# OBJ-NEXT:   Other: 2
+# OBJ-NEXT:   Other [ (0x2)
+# OBJ-NEXT:     STV_HIDDEN
+# OBJ-NEXT:   ]
 # OBJ-NEXT:   Section: .data (0x1)
 # OBJ-NEXT: }
 # OBJ-NEXT: Symbol {
@@ -44,7 +48,11 @@
 # OBJ-NEXT:   Size: 4
 # OBJ-NEXT:   Binding: Global (0x1)
 # OBJ-NEXT:   Type: Object (0x1)
-# OBJ-NEXT:   Other: 163
+# OBJ-NEXT:   Other [ (0xA3)
+# OBJ-NEXT:     STO_MIPS_MICROMIPS
+# OBJ-NEXT:     STO_MIPS_PIC
+# OBJ-NEXT:     STV_PROTECTED
+# OBJ-NEXT:   ]
 # OBJ-NEXT:   Section: .data (0x1)
 # OBJ-NEXT: }
 

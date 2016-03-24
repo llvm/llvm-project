@@ -251,6 +251,10 @@ def X86vpcomu  : SDNode<"X86ISD::VPCOMU",
                                              SDTCisSameAs<0,2>,
                                              SDTCisVT<3, i8>]>>;
 
+def X86vpperm : SDNode<"X86ISD::VPPERM",
+                        SDTypeProfile<1, 3, [SDTCisVT<0, v16i8>, SDTCisSameAs<0,1>,
+                                             SDTCisSameAs<0,2>]>>;
+
 def SDTX86CmpPTest : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
                                           SDTCisVec<1>,
                                           SDTCisSameAs<2, 1>]>;

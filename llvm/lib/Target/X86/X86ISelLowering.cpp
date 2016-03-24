@@ -14519,6 +14519,24 @@ static bool hasNonFlagsUse(SDValue Op) {
   return false;
 }
 
+// Emit KTEST instruction for bit vectors on AVX-512
+static SDValue EmitKTEST(SDValue Op, SelectionDAG &DAG,
+                         const X86Subtarget &Subtarget) {
+  if (Op.getOpcode() == ISD::BITCAST) {
+    auto hasKTEST = [&](MVT VT) {
+      unsigned SizeInBits = VT.getSizeInBits();
+      return (Subtarget.hasDQI() && (SizeInBits == 8 || SizeInBits == 8)) ||
+        (Subtarget.hasBWI() && (SizeInBits == 32 || SizeInBits == 64));
+    };
+    SDValue Op0 = Op.getOperand(0);
+    MVT Op0VT = Op0.getValueType().getSimpleVT();
+    if (Op0VT.isVector() && Op0VT.getVectorElementType() == MVT::i1 &&
+        hasKTEST(Op0VT))
+      return DAG.getNode(X86ISD::KTEST, SDLoc(Op), Op0VT, Op0, Op0);
+  }
+  return SDValue();
+}
+
 /// Emit nodes that will be selected as "test Op0,Op0", or something
 /// equivalent.
 SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, SDLoc dl,
@@ -14564,10 +14582,10 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, SDLoc dl,
   // doing a separate TEST. TEST always sets OF and CF to 0, so unless
   // we prove that the arithmetic won't overflow, we can't use OF or CF.
   if (Op.getResNo() != 0 || NeedOF || NeedCF) {
+    // Emit KTEST for bit vectors
+    if (auto Node = EmitKTEST(Op, DAG, Subtarget))
+      return Node;
     // Emit a CMP with 0, which is the TEST pattern.
-    //if (Op.getValueType() == MVT::i1)
-    //  return DAG.getNode(X86ISD::CMP, dl, MVT::i1, Op,
-    //                     DAG.getConstant(0, MVT::i1));
     return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op,
                        DAG.getConstant(0, dl, Op.getValueType()));
   }
@@ -14739,11 +14757,15 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, SDLoc dl,
     }
   }
 
-  if (Opcode == 0)
+  if (Opcode == 0) {
+    // Emit KTEST for bit vectors
+    if (auto Node = EmitKTEST(Op, DAG, Subtarget))
+      return Node;
+
     // Emit a CMP with 0, which is the TEST pattern.
     return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op,
                        DAG.getConstant(0, dl, Op.getValueType()));
-
+  }
   SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
   SmallVector<SDValue, 4> Ops(Op->op_begin(), Op->op_begin() + NumOperands);
 
@@ -21514,6 +21536,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VSRAI:              return "X86ISD::VSRAI";
   case X86ISD::VROTLI:             return "X86ISD::VROTLI";
   case X86ISD::VROTRI:             return "X86ISD::VROTRI";
+  case X86ISD::VPPERM:             return "X86ISD::VPPERM";
   case X86ISD::CMPP:               return "X86ISD::CMPP";
   case X86ISD::PCMPEQ:             return "X86ISD::PCMPEQ";
   case X86ISD::PCMPGT:             return "X86ISD::PCMPGT";

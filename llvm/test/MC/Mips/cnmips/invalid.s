@@ -17,3 +17,7 @@ foo:
     ins $2, $3, 32, 1    # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
     ins $2, $3, 0, -1    # CHECK: :[[@LINE]]:20: error: expected immediate in range 1 .. 32
     ins $2, $3, 0, 33    # CHECK: :[[@LINE]]:20: error: expected immediate in range 1 .. 32
+    seqi $2, $3, -1025   # CHECK: :[[@LINE]]:18: error: expected 10-bit signed immediate
+    seqi $2, $3, 1024    # CHECK: :[[@LINE]]:18: error: expected 10-bit signed immediate
+    snei $2, $3, -1025   # CHECK: :[[@LINE]]:18: error: expected 10-bit signed immediate
+    snei $2, $3, 1024    # CHECK: :[[@LINE]]:18: error: expected 10-bit signed immediate

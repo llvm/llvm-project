@@ -85,10 +85,10 @@ private:
 
   void expandAlloca(MachineInstr *AI, const HexagonInstrInfo &TII,
       unsigned SP, unsigned CF) const;
-  void insertPrologueInBlock(MachineBasicBlock &MBB) const;
+  void insertPrologueInBlock(MachineBasicBlock &MBB, bool PrologueStubs) const;
   void insertEpilogueInBlock(MachineBasicBlock &MBB) const;
   bool insertCSRSpillsInBlock(MachineBasicBlock &MBB, const CSIVect &CSI,
-      const HexagonRegisterInfo &HRI) const;
+      const HexagonRegisterInfo &HRI, bool &PrologueStubs) const;
   bool insertCSRRestoresInBlock(MachineBasicBlock &MBB, const CSIVect &CSI,
       const HexagonRegisterInfo &HRI) const;
   void insertCFIInstructionsAt(MachineBasicBlock &MBB,

@@ -109,15 +109,36 @@ public:
   /// Track virtual registers created for exception pointers.
   DenseMap<const Value *, unsigned> CatchPadExceptionPointers;
 
-  // Keep track of frame indices allocated for statepoints as they could be used
-  // across basic block boundaries.
-  // Key of the map is statepoint instruction, value is a map from spilled
-  // llvm Value to the optional stack stack slot index.
-  // If optional is unspecified it means that we have visited this value
-  // but didn't spill it.
-  typedef DenseMap<const Value*, Optional<int>> StatepointSpilledValueMapTy;
-  DenseMap<const Instruction*, StatepointSpilledValueMapTy>
-    StatepointRelocatedValues;
+  /// Keep track of frame indices allocated for statepoints as they could be
+  /// used across basic block boundaries.  This struct is more complex than a
+  /// simple map because the stateopint lowering code de-duplicates gc pointers
+  /// based on their SDValue (so %p and (bitcast %p to T) will get the same
+  /// slot), and we track that here.
+
+  struct StatepointSpillMap {
+    typedef DenseMap<const Value *, Optional<int>> SlotMapTy;
+
+    /// Maps uniqued llvm IR values to the slots they were spilled in.  If a
+    /// value is mapped to None it means we visited the value but didn't spill
+    /// it (because it was a constant, for instance).
+    SlotMapTy SlotMap;
+
+    /// Maps llvm IR values to the values they were de-duplicated to.
+    DenseMap<const Value *, const Value *> DuplicateMap;
+
+    SlotMapTy::const_iterator find(const Value *V) const {
+      auto DuplIt = DuplicateMap.find(V);
+      if (DuplIt != DuplicateMap.end())
+        V = DuplIt->second;
+      return SlotMap.find(V);
+    }
+
+    SlotMapTy::const_iterator end() const { return SlotMap.end(); }
+  };
+
+  /// Maps gc.statepoint instructions to their corresponding StatepointSpillMap
+  /// instances.
+  DenseMap<const Instruction *, StatepointSpillMap> StatepointSpillMaps;
 
   /// StaticAllocaMap - Keep track of frame indices for fixed sized allocas in
   /// the entry block.  This allows the allocas to be efficiently referenced

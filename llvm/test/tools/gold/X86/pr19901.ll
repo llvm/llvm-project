@@ -10,8 +10,9 @@
 ; CHECK-NEXT:    Size:
 ; CHECK-NEXT:    Binding: Local
 ; CHECK-NEXT:    Type: Function
-; CHECK-NEXT:    Other: {{2|0}}
-; CHECK-NEXT:    Section: .text
+; CHECK-NEXT:    Other
+; CHECK-NOT:     Seciton
+; CHECK:         Section: .text
 ; CHECK-NEXT:  }
 
 target triple = "x86_64-unknown-linux-gnu"

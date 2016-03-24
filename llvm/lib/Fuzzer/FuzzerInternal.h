@@ -92,6 +92,7 @@ void SetSigAbrtHandler();
 void SetSigIllHandler();
 void SetSigFpeHandler();
 void SetSigIntHandler();
+void SetSigTermHandler();
 std::string Base64(const Unit &U);
 int ExecuteCommand(const std::string &Command);
 size_t GetPeakRSSMb();

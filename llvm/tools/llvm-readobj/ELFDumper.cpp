@@ -1128,6 +1128,25 @@ static const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_MIPS_ARCH_64R6)
 };
 
+static const EnumEntry<unsigned> ElfSymOtherFlags[] = {
+  LLVM_READOBJ_ENUM_ENT(ELF, STV_INTERNAL),
+  LLVM_READOBJ_ENUM_ENT(ELF, STV_HIDDEN),
+  LLVM_READOBJ_ENUM_ENT(ELF, STV_PROTECTED)
+};
+
+static const EnumEntry<unsigned> ElfMipsSymOtherFlags[] = {
+  LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_OPTIONAL),
+  LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_PLT),
+  LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_PIC),
+  LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_MICROMIPS)
+};
+
+static const EnumEntry<unsigned> ElfMips16SymOtherFlags[] = {
+  LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_OPTIONAL),
+  LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_PLT),
+  LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_MIPS16)
+};
+
 template <typename ELFT>
 ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, StreamWriter &Writer)
     : ObjDumper(Writer), Obj(Obj) {
@@ -2883,7 +2902,28 @@ void LLVMStyle<ELFT>::printSymbol(const ELFO *Obj, const Elf_Sym *Symbol,
     W.printEnum("Type", SymbolType, makeArrayRef(AMDGPUSymbolTypes));
   else
     W.printEnum("Type", SymbolType, makeArrayRef(ElfSymbolTypes));
-  W.printNumber("Other", Symbol->st_other);
+  if (Symbol->st_other == 0)
+    // Usually st_other flag is zero. Do not pollute the output
+    // by flags enumeration in that case.
+    W.printNumber("Other", 0);
+  else {
+    std::vector<EnumEntry<unsigned>> SymOtherFlags(std::begin(ElfSymOtherFlags),
+                                                   std::end(ElfSymOtherFlags));
+    if (Obj->getHeader()->e_machine == EM_MIPS) {
+      // Someones in their infinite wisdom decided to make STO_MIPS_MIPS16
+      // flag overlapped with other ST_MIPS_xxx flags. So consider both
+      // cases separately.
+      if ((Symbol->st_other & STO_MIPS_MIPS16) == STO_MIPS_MIPS16)
+        SymOtherFlags.insert(SymOtherFlags.end(),
+                             std::begin(ElfMips16SymOtherFlags),
+                             std::end(ElfMips16SymOtherFlags));
+      else
+        SymOtherFlags.insert(SymOtherFlags.end(),
+                             std::begin(ElfMipsSymOtherFlags),
+                             std::end(ElfMipsSymOtherFlags));
+    }
+    W.printFlags("Other", Symbol->st_other, makeArrayRef(SymOtherFlags), 0x3u);
+  }
   W.printHex("Section", SectionName, SectionIndex);
 }
 
