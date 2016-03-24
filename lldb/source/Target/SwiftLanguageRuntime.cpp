@@ -1071,6 +1071,7 @@ SwiftLanguageRuntime::GetNominalTypeDescriptorType ()
             {"FieldNames", uint32},
             {"GetTypes", uint32},
             {"PatternAndKid", uint32},
+            {"Unused", uint32},
             //, {"GenericParams", swift::GenericParameterDescriptor}
             {"GpdOffset", uint32},
             {"GpdNumParams", uint32},
