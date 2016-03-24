@@ -1449,7 +1449,8 @@ protected:
     Value::ValueType
     GetValueType (Value::ValueType static_value_type,
                   const CompilerType& static_type,
-                  const CompilerType& dynamic_type);
+                  const CompilerType& dynamic_type,
+                  bool is_indirect_enum_case);
     
     virtual bool
     GetDynamicTypeAndAddress_Class (ValueObject &in_value,

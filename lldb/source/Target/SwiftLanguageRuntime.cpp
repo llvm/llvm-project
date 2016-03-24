@@ -1272,6 +1272,14 @@ SwiftLanguageRuntime::GetNominalTypeDescriptorForLocation (lldb::addr_t addr)
 SwiftLanguageRuntime::MetadataSP
 SwiftLanguageRuntime::GetMetadataForLocation (lldb::addr_t addr)
 {
+    if (auto objc_runtime = GetObjCRuntime())
+    {
+        if (objc_runtime->GetRuntimeVersion() == ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2)
+        {
+            addr = ((AppleObjCRuntimeV2*)objc_runtime)->GetPointerISA(addr);
+        }
+    }
+
     MetadataSP metadata_sp;
     if (addr == LLDB_INVALID_ADDRESS || addr == 0)
         return metadata_sp;
@@ -3212,7 +3220,8 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_IndirectEnumCase (ValueObject &in
 Value::ValueType
 SwiftLanguageRuntime::GetValueType (Value::ValueType static_value_type,
                                     const CompilerType& static_type,
-                                    const CompilerType& dynamic_type)
+                                    const CompilerType& dynamic_type,
+                                    bool is_indirect_enum_case)
 {
     Flags static_type_flags(static_type.GetTypeInfo());
     Flags dynamic_type_flags(dynamic_type.GetTypeInfo());
@@ -3250,8 +3259,12 @@ SwiftLanguageRuntime::GetValueType (Value::ValueType static_value_type,
             if (dynamic_type_flags.AllClear(eTypeIsPointer | eTypeIsReference | eTypeInstanceIsPointer))
                 return Value::eValueTypeLoadAddress;
         }
+
         if (static_type_flags.AllSet(eTypeIsSwift | eTypeIsPointer) && static_type_flags.AllClear(eTypeIsArchetype))
-            return Value::eValueTypeLoadAddress;
+        {
+            if (is_indirect_enum_case || static_type_flags.AllClear(eTypeIsBuiltIn))
+                return Value::eValueTypeLoadAddress;
+        }
     }
     
     if (static_type_flags.AllSet(eTypeIsSwift) &&
@@ -3293,8 +3306,9 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress (ValueObject &in_value,
         return false;
     
     bool success = false;
+    const bool is_indirect_enum_case = IsIndirectEnumCase(in_value);
     
-    if (IsIndirectEnumCase(in_value))
+    if (is_indirect_enum_case)
         success = GetDynamicTypeAndAddress_IndirectEnumCase(in_value,use_dynamic,class_type_or_name,address);
     else
     {
@@ -3314,6 +3328,8 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress (ValueObject &in_value,
                 success = GetDynamicTypeAndAddress_Tuple(in_value,use_dynamic,class_type_or_name,address);
             else if (type_info.AnySet(eTypeIsStructUnion))
                 success = GetDynamicTypeAndAddress_Struct(in_value,use_dynamic,class_type_or_name,address);
+            else if (type_info.AllSet(eTypeIsBuiltIn | eTypeIsPointer | eTypeHasValue))
+                success = GetDynamicTypeAndAddress_Class(in_value,use_dynamic,class_type_or_name,address);
         }
     }
     
@@ -3321,7 +3337,8 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress (ValueObject &in_value,
     {
         value_type = GetValueType(in_value.GetValue().GetValueType(),
                                   in_value.GetCompilerType(),
-                                  class_type_or_name.GetCompilerType());
+                                  class_type_or_name.GetCompilerType(),
+                                  is_indirect_enum_case);
     }
     return success;
 }
@@ -3341,7 +3358,7 @@ SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName& type_and_or_name,
     // could either be a Swift type (no need to change anything), or an ObjC type
     // in which case it needs to be made into a pointer
     if (type_flags.AnySet(eTypeIsPointer))
-        should_be_made_into_ptr = (type_flags.AllClear(eTypeIsArchetype) && !IsIndirectEnumCase(static_value));
+        should_be_made_into_ptr = (type_flags.AllClear(eTypeIsArchetype | eTypeIsBuiltIn) && !IsIndirectEnumCase(static_value));
     else if (type_flags.AnySet(eTypeInstanceIsPointer))
         should_be_made_into_ptr = !type_andor_name_flags.AllSet(eTypeIsSwift);
     else if (type_flags.AnySet(eTypeIsReference))

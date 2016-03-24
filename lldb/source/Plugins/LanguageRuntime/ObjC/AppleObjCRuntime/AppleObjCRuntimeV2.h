@@ -319,6 +319,7 @@ private:
     GetSharedCacheReadOnlyAddress();
     
     friend class ClassDescriptorV2;
+    friend class SwiftLanguageRuntime;
 
     std::unique_ptr<UtilityFunction>        m_get_class_info_code;
     lldb::addr_t                            m_get_class_info_args;

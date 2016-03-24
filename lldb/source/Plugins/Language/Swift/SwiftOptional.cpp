@@ -151,8 +151,11 @@ lldb_private::formatters::swift::SwiftOptionalSummaryProvider::DoesPrintChildren
     
     lldb_private::Flags some_flags(some->GetCompilerType().GetTypeInfo());
     
-    if (some_flags.AllSet(eTypeIsSwift | eTypeInstanceIsPointer))
-        return true;
+    if (some_flags.AllSet(eTypeIsSwift))
+    {
+        if (some_flags.AnySet(eTypeInstanceIsPointer | eTypeIsProtocol))
+            return true;
+    }
     
     lldb::TypeSummaryImplSP summary_sp = some->GetSummaryFormat();
     
