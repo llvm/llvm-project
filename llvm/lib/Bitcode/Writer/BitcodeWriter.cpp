@@ -1306,6 +1306,36 @@ static void WriteDIImportedEntity(const DIImportedEntity *N,
   Record.clear();
 }
 
+static unsigned createNamedMetadataAbbrev(BitstreamWriter &Stream) {
+  BitCodeAbbrev *Abbv = new BitCodeAbbrev();
+  Abbv->Add(BitCodeAbbrevOp(bitc::METADATA_NAME));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8));
+  return Stream.EmitAbbrev(Abbv);
+}
+
+static void writeNamedMetadata(const Module &M, const ValueEnumerator &VE,
+                               BitstreamWriter &Stream,
+                               SmallVectorImpl<uint64_t> &Record) {
+  if (M.named_metadata_empty())
+    return;
+
+  unsigned Abbrev = createNamedMetadataAbbrev(Stream);
+  for (const NamedMDNode &NMD : M.named_metadata()) {
+    // Write name.
+    StringRef Str = NMD.getName();
+    Record.append(Str.bytes_begin(), Str.bytes_end());
+    Stream.EmitRecord(bitc::METADATA_NAME, Record, Abbrev);
+    Record.clear();
+
+    // Write named metadata operands.
+    for (const MDNode *N : NMD.operands())
+      Record.push_back(VE.getMetadataID(N));
+    Stream.EmitRecord(bitc::METADATA_NAMED_NODE, Record, 0);
+    Record.clear();
+  }
+}
+
 static void WriteModuleMetadata(const Module &M,
                                 const ValueEnumerator &VE,
                                 BitstreamWriter &Stream) {
@@ -1360,16 +1390,6 @@ static void WriteModuleMetadata(const Module &M,
     GenericDINodeAbbrev = Stream.EmitAbbrev(Abbv);
   }
 
-  unsigned NameAbbrev = 0;
-  if (!M.named_metadata_empty()) {
-    // Abbrev for METADATA_NAME.
-    BitCodeAbbrev *Abbv = new BitCodeAbbrev();
-    Abbv->Add(BitCodeAbbrevOp(bitc::METADATA_NAME));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8));
-    NameAbbrev = Stream.EmitAbbrev(Abbv);
-  }
-
   SmallVector<uint64_t, 64> Record;
   for (const Metadata *MD : MDs) {
     if (const MDNode *N = dyn_cast<MDNode>(MD)) {
@@ -1398,21 +1418,7 @@ static void WriteModuleMetadata(const Module &M,
     Record.clear();
   }
 
-  // Write named metadata.
-  for (const NamedMDNode &NMD : M.named_metadata()) {
-    // Write name.
-    StringRef Str = NMD.getName();
-    Record.append(Str.bytes_begin(), Str.bytes_end());
-    Stream.EmitRecord(bitc::METADATA_NAME, Record, NameAbbrev);
-    Record.clear();
-
-    // Write named metadata operands.
-    for (const MDNode *N : NMD.operands())
-      Record.push_back(VE.getMetadataID(N));
-    Stream.EmitRecord(bitc::METADATA_NAMED_NODE, Record, 0);
-    Record.clear();
-  }
-
+  writeNamedMetadata(M, VE, Stream, Record);
   Stream.ExitBlock();
 }
 
