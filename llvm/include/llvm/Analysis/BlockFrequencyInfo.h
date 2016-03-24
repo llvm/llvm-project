@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_BLOCKFREQUENCYINFO_H
 #define LLVM_ANALYSIS_BLOCKFREQUENCYINFO_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include <climits>
@@ -44,6 +45,11 @@ public:
   /// comparison to the other block frequencies. We do this to avoid using of
   /// floating points.
   BlockFrequency getBlockFreq(const BasicBlock *BB) const;
+
+  /// \brief Returns the estimated profile count of \p BB.
+  /// This computes the relative block frequency of \p BB and multiplies it by
+  /// the enclosing function's count (if available) and returns the value.
+  Optional<uint64_t> getBlockProfileCount(const BasicBlock *BB) const;
 
   // Set the frequency of the given basic block.
   void setBlockFreq(const BasicBlock *BB, uint64_t Freq);

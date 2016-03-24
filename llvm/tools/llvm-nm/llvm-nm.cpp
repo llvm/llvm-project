@@ -658,7 +658,7 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
       if (MachO)
         outs() << I->Address << " " << "0" /* SymbolSizeStr */ << "\n";
       else
-        outs() << SymbolAddrStr << SymbolSizeStr << "\n";
+        outs() << SymbolAddrStr << " " << SymbolSizeStr << "\n";
     } else if (OutputFormat == bsd || (OutputFormat == darwin && !MachO)) {
       if (PrintAddress)
         outs() << SymbolAddrStr << ' ';

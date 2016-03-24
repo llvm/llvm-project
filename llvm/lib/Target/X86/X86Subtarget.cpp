@@ -239,6 +239,7 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 void X86Subtarget::initializeEnvironment() {
   X86SSELevel = NoSSE;
   X863DNowLevel = NoThreeDNow;
+  HasX87 = false;
   HasCMov = false;
   HasX86_64 = false;
   HasPOPCNT = false;

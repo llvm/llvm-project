@@ -359,7 +359,7 @@ that inherits from the ErrorInfo utility:
 Error values can be implicitly converted to bool: true for error, false for
 success, enabling the following idiom:
 
-.. code-block::
+.. code-block:: c++
 
   if (auto Err = mayFail())
     return Err;

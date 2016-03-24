@@ -11320,9 +11320,8 @@ void DAGCombiner::getStoreMergeAndAliasCandidates(
       break;
 
     // No truncation.
-    if (StoreSDNode *St = dyn_cast<StoreSDNode>(Index))
-      if (St->isTruncatingStore())
-        break;
+    if (Index->isTruncatingStore())
+      break;
 
     // The stored memory type must be the same.
     if (Index->getMemoryVT() != MemVT)

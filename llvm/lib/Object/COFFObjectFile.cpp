@@ -179,7 +179,7 @@ ErrorOr<uint64_t> COFFObjectFile::getSymbolAddress(DataRefImpl Ref) const {
   return Result;
 }
 
-SymbolRef::Type COFFObjectFile::getSymbolType(DataRefImpl Ref) const {
+ErrorOr<SymbolRef::Type> COFFObjectFile::getSymbolType(DataRefImpl Ref) const {
   COFFSymbolRef Symb = getCOFFSymbol(Ref);
   int32_t SectionNumber = Symb.getSectionNumber();
 

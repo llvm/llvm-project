@@ -31,6 +31,9 @@ class DMODU_MM64R6_ENC : POOL32A_DIVMOD_FM_MMR6<"dmodu", 0b111011000>;
 class DINSU_MM64R6_ENC : POOL32S_EXTBITS_FM_MMR6<0b110100>;
 class DINSM_MM64R6_ENC : POOL32S_EXTBITS_FM_MMR6<0b000100>;
 class DINS_MM64R6_ENC : POOL32S_EXTBITS_FM_MMR6<0b001100>;
+class DMTC0_MM64R6_ENC : POOL32S_DMFTC0_FM_MMR6<"dmtc0", 0b01011>;
+class DMTC1_MM64R6_ENC : POOL32F_MFTC1_FM_MMR6<"dmtc1", 0b10110000>;
+class DMTC2_MM64R6_ENC : POOL32A_MFTC2_FM_MMR6<"dmtc2", 0b0111110100>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -88,16 +91,20 @@ class DALIGN_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
 
 class DALIGN_MMR6_DESC : DALIGN_DESC_BASE<"dalign", GPR64Opnd, uimm3>;
 
-class DDIV_MM64R6_DESC : ArithLogicR<"ddiv", GPR32Opnd>;
-class DMOD_MM64R6_DESC : ArithLogicR<"dmod", GPR32Opnd>;
-class DDIVU_MM64R6_DESC : ArithLogicR<"ddivu", GPR32Opnd>;
-class DMODU_MM64R6_DESC : ArithLogicR<"dmodu", GPR32Opnd>;
+class DDIV_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"ddiv", GPR64Opnd, sdiv>;
+class DMOD_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"dmod", GPR64Opnd, srem>;
+class DDIVU_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"ddivu", GPR64Opnd, udiv>;
+class DMODU_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"dmodu", GPR64Opnd, urem>;
 
 class DINSU_MM64R6_DESC : InsBase<"dinsu", GPR64Opnd, uimm5_plus32,
                                   uimm5_inssize_plus1, MipsIns>;
 class DINSM_MM64R6_DESC : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64>;
 class DINS_MM64R6_DESC : InsBase<"dins", GPR64Opnd, uimm5, uimm5_inssize_plus1,
                                  MipsIns>;
+class DMTC0_MM64R6_DESC : MTC0_MMR6_DESC_BASE<"dmtc0", COP0Opnd, GPR64Opnd>;
+class DMTC1_MM64R6_DESC : MTC1_MMR6_DESC_BASE<"dmtc1", FGR64Opnd, GPR64Opnd,
+                                              II_DMTC1, bitconvert>;
+class DMTC2_MM64R6_DESC : MTC2_MMR6_DESC_BASE<"dmtc2", COP2Opnd, GPR64Opnd>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -131,4 +138,16 @@ let DecoderNamespace = "MicroMipsR6" in {
                     ISA_MICROMIPS64R6;
   def DINS_MM64R6: R6MMR6Rel, DINS_MM64R6_DESC, DINS_MM64R6_ENC,
                    ISA_MICROMIPS64R6;
+  def DMTC0_MM64R6 : StdMMR6Rel, DMTC0_MM64R6_ENC, DMTC0_MM64R6_DESC,
+                     ISA_MICROMIPS64R6;
+  def DMTC1_MM64R6 : StdMMR6Rel, DMTC1_MM64R6_DESC, DMTC1_MM64R6_ENC,
+                     ISA_MICROMIPS64R6;
+  def DMTC2_MM64R6 : StdMMR6Rel, DMTC2_MM64R6_ENC, DMTC2_MM64R6_DESC,
+                     ISA_MICROMIPS64R6;
 }
+
+//===----------------------------------------------------------------------===//
+// Instruction aliases
+//===----------------------------------------------------------------------===//
+def : MipsInstAlias<"dmtc0 $rt, $rd",
+                    (DMTC0_MM64R6 COP0Opnd:$rd, GPR64Opnd:$rt, 0), 0>;

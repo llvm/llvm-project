@@ -918,6 +918,17 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       Size = 4;
       return Result;
     }
+
+    if (hasMips32r6()) {
+      DEBUG(dbgs() << "Trying MicroMips32r6FPU table (32-bit opcodes):\n");
+      Result = decodeInstruction(DecoderTableMicroMips32r6FPU32, Instr, Insn,
+                                 Address, this, STI);
+      if (Result != MCDisassembler::Fail) {
+        Size = 4;
+        return Result;
+      }
+    }
+
     // This is an invalid instruction. Let the disassembler move forward by the
     // minimum instruction size.
     Size = 2;

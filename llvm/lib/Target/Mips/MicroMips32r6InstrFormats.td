@@ -870,3 +870,49 @@ class POOL32A_TLBINV_FM_MMR6<string instr_asm, bits<10> funct>
   let Inst{15-6}  = funct;
   let Inst{5-0}   = 0b111100;
 }
+
+class POOL32A_MFTC0_FM_MMR6<string instr_asm, bits<5> funct, bits<6> opcode>
+    : MMR6Arch<instr_asm>, MipsR6Inst {
+  bits<5> rt;
+  bits<5> rs;
+  bits<3> sel;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b000000;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rs;
+  let Inst{15-14} = 0;
+  let Inst{13-11} = sel;
+  let Inst{10-6}  = funct;
+  let Inst{5-0}   = opcode;
+}
+
+class POOL32F_MFTC1_FM_MMR6<string instr_asm, bits<8> funct>
+    : MMR6Arch<instr_asm> {
+  bits<5> rt;
+  bits<5> fs;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010101;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = fs;
+  let Inst{15-14} = 0;
+  let Inst{13-6}  = funct;
+  let Inst{5-0}   = 0b111011;
+}
+
+class POOL32A_MFTC2_FM_MMR6<string instr_asm, bits<10> funct>
+    : MMR6Arch<instr_asm>, MipsR6Inst {
+  bits<5> rt;
+  bits<5> impl;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b000000;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = impl;
+  let Inst{15-6}  = funct;
+  let Inst{5-0}   = 0b111100;
+}

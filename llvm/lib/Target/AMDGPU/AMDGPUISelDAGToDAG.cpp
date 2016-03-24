@@ -19,6 +19,7 @@
 #include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
@@ -1556,6 +1557,61 @@ bool AMDGPUDAGToDAGISel::SelectVOP3Mods0Clamp0OMod(SDValue In, SDValue &Src,
 
 void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
   bool Modified = false;
+
+  MachineFrameInfo *MFI = CurDAG->getMachineFunction().getFrameInfo();
+
+  // Handle the perverse case where a frame index is being stored. We don't
+  // want to see multiple frame index operands on the same instruction since
+  // it complicates things and violates some assumptions about frame index
+  // lowering.
+  for (int I = MFI->getObjectIndexBegin(), E = MFI->getObjectIndexEnd();
+       I != E; ++I) {
+    SDValue FI = CurDAG->getTargetFrameIndex(I, MVT::i32);
+
+    // It's possible that we have a frame index defined in the function that
+    // isn't used in this block.
+    if (FI.use_empty())
+      continue;
+
+    // Skip over the AssertZext inserted during lowering.
+    SDValue EffectiveFI = FI;
+    auto It = FI->use_begin();
+    if (It->getOpcode() == ISD::AssertZext && FI->hasOneUse()) {
+      EffectiveFI = SDValue(*It, 0);
+      It = EffectiveFI->use_begin();
+    }
+
+    for (auto It = EffectiveFI->use_begin(); !It.atEnd(); ) {
+      SDUse &Use = It.getUse();
+      SDNode *User = Use.getUser();
+      unsigned OpIdx = It.getOperandNo();
+      ++It;
+
+      if (MemSDNode *M = dyn_cast<MemSDNode>(User)) {
+        unsigned PtrIdx = M->getOpcode() == ISD::STORE ? 2 : 1;
+        if (OpIdx == PtrIdx)
+          continue;
+
+        unsigned OpN = OpN = M->getNumOperands();
+        SDValue NewOps[8];
+
+        assert(OpN < array_lengthof(NewOps));
+        for (unsigned Op = 0; Op != OpN; ++Op) {
+          if (Op != OpIdx) {
+            NewOps[Op] = M->getOperand(Op);
+            continue;
+          }
+
+          MachineSDNode *Mov = CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32,
+                                                      SDLoc(M), MVT::i32, FI);
+          NewOps[Op] = SDValue(Mov, 0);
+        }
+
+        CurDAG->UpdateNodeOperands(M, makeArrayRef(NewOps, OpN));
+        Modified = true;
+      }
+    }
+  }
 
   // XXX - Other targets seem to be able to do this without a worklist.
   SmallVector<LoadSDNode *, 8> LoadsToReplace;

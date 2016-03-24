@@ -1190,7 +1190,10 @@ relocation_iterator RuntimeDyldELF::processRelocationRef(
   RTDyldSymbolTable::const_iterator gsi = GlobalSymbolTable.end();
   if (Symbol != Obj.symbol_end()) {
     gsi = GlobalSymbolTable.find(TargetName.data());
-    SymType = Symbol->getType();
+    ErrorOr<SymbolRef::Type> SymTypeOrErr = Symbol->getType();
+    if (std::error_code EC = SymTypeOrErr.getError())
+      report_fatal_error(EC.message());
+    SymType = *SymTypeOrErr;
   }
   if (gsi != GlobalSymbolTable.end()) {
     const auto &SymInfo = gsi->second;

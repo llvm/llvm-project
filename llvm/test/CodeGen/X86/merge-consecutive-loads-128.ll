@@ -202,6 +202,7 @@ define <4 x float> @merge_4f32_f32_45zz(float* %ptr) nounwind uwtable noinline s
   %res1 = insertelement <4 x float> %res0, float %val1, i32 1
   ret <4 x float> %res1
 }
+
 define <4 x float> @merge_4f32_f32_012u(float* %ptr) nounwind uwtable noinline ssp {
 ; SSE2-LABEL: merge_4f32_f32_012u:
 ; SSE2:       # BB#0:
@@ -653,4 +654,91 @@ define void @merge_4i32_i32_combine(<4 x i32>* %dst, i32* %src) {
  %6 = and <4 x i32> %5, <i32 -1, i32 0, i32 0, i32 0>
  store <4 x i32> %6, <4 x i32>* %dst
  ret void
+}
+
+;
+; consecutive loads including any/all volatiles may not be combined
+;
+
+define <2 x i64> @merge_2i64_i64_12_volatile(i64* %ptr) nounwind uwtable noinline ssp {
+; SSE-LABEL: merge_2i64_i64_12_volatile:
+; SSE:       # BB#0:
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: merge_2i64_i64_12_volatile:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    retq
+;
+; X32-SSE-LABEL: merge_2i64_i64_12_volatile:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-SSE-NEXT:    pinsrd $1, 12(%eax), %xmm0
+; X32-SSE-NEXT:    pinsrd $2, 16(%eax), %xmm0
+; X32-SSE-NEXT:    pinsrd $3, 20(%eax), %xmm0
+; X32-SSE-NEXT:    retl
+  %ptr0 = getelementptr inbounds i64, i64* %ptr, i64 1
+  %ptr1 = getelementptr inbounds i64, i64* %ptr, i64 2
+  %val0 = load volatile i64, i64* %ptr0
+  %val1 = load volatile i64, i64* %ptr1
+  %res0 = insertelement <2 x i64> undef, i64 %val0, i32 0
+  %res1 = insertelement <2 x i64> %res0, i64 %val1, i32 1
+  ret <2 x i64> %res1
+}
+
+define <4 x float> @merge_4f32_f32_2345_volatile(float* %ptr) nounwind uwtable noinline ssp {
+; SSE2-LABEL: merge_4f32_f32_2345_volatile:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: merge_4f32_f32_2345_volatile:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: merge_4f32_f32_2345_volatile:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; AVX-NEXT:    retq
+;
+; X32-SSE-LABEL: merge_4f32_f32_2345_volatile:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; X32-SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; X32-SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; X32-SSE-NEXT:    retl
+  %ptr0 = getelementptr inbounds float, float* %ptr, i64 2
+  %ptr1 = getelementptr inbounds float, float* %ptr, i64 3
+  %ptr2 = getelementptr inbounds float, float* %ptr, i64 4
+  %ptr3 = getelementptr inbounds float, float* %ptr, i64 5
+  %val0 = load volatile float, float* %ptr0
+  %val1 = load float, float* %ptr1
+  %val2 = load float, float* %ptr2
+  %val3 = load float, float* %ptr3
+  %res0 = insertelement <4 x float> undef, float %val0, i32 0
+  %res1 = insertelement <4 x float> %res0, float %val1, i32 1
+  %res2 = insertelement <4 x float> %res1, float %val2, i32 2
+  %res3 = insertelement <4 x float> %res2, float %val3, i32 3
+  ret <4 x float> %res3
 }

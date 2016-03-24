@@ -15,6 +15,7 @@
 #include "MCTargetDesc/AArch64FixupKinds.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -62,6 +63,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
 
   if (IsPCRel) {
     switch ((unsigned)Fixup.getKind()) {
+    case FK_Data_1:
+      Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
+      return ELF::R_AARCH64_NONE;
     case FK_Data_2:
       return ELF::R_AARCH64_PREL16;
     case FK_Data_4:
@@ -80,7 +84,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21;
       if (SymLoc == AArch64MCExpr::VK_TLSDESC && !IsNC)
         return ELF::R_AARCH64_TLSDESC_ADR_PAGE21;
-      llvm_unreachable("invalid symbol kind for ADRP relocation");
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid symbol kind for ADRP relocation");
+      return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_pcrel_branch26:
       return ELF::R_AARCH64_JUMP26;
     case AArch64::fixup_aarch64_pcrel_call26:
@@ -94,10 +100,14 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case AArch64::fixup_aarch64_pcrel_branch19:
       return ELF::R_AARCH64_CONDBR19;
     default:
-      llvm_unreachable("Unsupported pc-relative fixup kind");
+      Ctx.reportError(Fixup.getLoc(), "Unsupported pc-relative fixup kind");
+      return ELF::R_AARCH64_NONE;
     }
   } else {
     switch ((unsigned)Fixup.getKind()) {
+    case FK_Data_1:
+      Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
+      return ELF::R_AARCH64_NONE;
     case FK_Data_2:
       return ELF::R_AARCH64_ABS16;
     case FK_Data_4:
@@ -122,8 +132,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
         return ELF::R_AARCH64_ADD_ABS_LO12_NC;
 
-      report_fatal_error("invalid fixup for add (uimm12) instruction");
-      return 0;
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid fixup for add (uimm12) instruction");
+      return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_ldst_imm12_scale1:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
         return ELF::R_AARCH64_LDST8_ABS_LO12_NC;
@@ -136,8 +147,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       if (SymLoc == AArch64MCExpr::VK_TPREL && IsNC)
         return ELF::R_AARCH64_TLSLE_LDST8_TPREL_LO12_NC;
 
-      report_fatal_error("invalid fixup for 8-bit load/store instruction");
-      return 0;
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid fixup for 8-bit load/store instruction");
+      return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_ldst_imm12_scale2:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
         return ELF::R_AARCH64_LDST16_ABS_LO12_NC;
@@ -150,8 +162,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       if (SymLoc == AArch64MCExpr::VK_TPREL && IsNC)
         return ELF::R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC;
 
-      report_fatal_error("invalid fixup for 16-bit load/store instruction");
-      return 0;
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid fixup for 16-bit load/store instruction");
+      return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_ldst_imm12_scale4:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
         return ELF::R_AARCH64_LDST32_ABS_LO12_NC;
@@ -164,8 +177,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       if (SymLoc == AArch64MCExpr::VK_TPREL && IsNC)
         return ELF::R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC;
 
-      report_fatal_error("invalid fixup for 32-bit load/store instruction");
-      return 0;
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid fixup for 32-bit load/store instruction");
+      return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_ldst_imm12_scale8:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
         return ELF::R_AARCH64_LDST64_ABS_LO12_NC;
@@ -184,14 +198,16 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       if (SymLoc == AArch64MCExpr::VK_TLSDESC && IsNC)
         return ELF::R_AARCH64_TLSDESC_LD64_LO12_NC;
 
-      report_fatal_error("invalid fixup for 64-bit load/store instruction");
-      return 0;
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid fixup for 64-bit load/store instruction");
+      return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_ldst_imm12_scale16:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
         return ELF::R_AARCH64_LDST128_ABS_LO12_NC;
 
-      report_fatal_error("invalid fixup for 128-bit load/store instruction");
-      return 0;
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid fixup for 128-bit load/store instruction");
+      return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_movw:
       if (RefKind == AArch64MCExpr::VK_ABS_G3)
         return ELF::R_AARCH64_MOVW_UABS_G3;
@@ -237,12 +253,14 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return ELF::R_AARCH64_TLSIE_MOVW_GOTTPREL_G1;
       if (RefKind == AArch64MCExpr::VK_GOTTPREL_G0_NC)
         return ELF::R_AARCH64_TLSIE_MOVW_GOTTPREL_G0_NC;
-      report_fatal_error("invalid fixup for movz/movk instruction");
-      return 0;
+      Ctx.reportError(Fixup.getLoc(),
+                      "invalid fixup for movz/movk instruction");
+      return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_tlsdesc_call:
       return ELF::R_AARCH64_TLSDESC_CALL;
     default:
-      llvm_unreachable("Unknown ELF relocation type");
+      Ctx.reportError(Fixup.getLoc(), "Unknown ELF relocation type");
+      return ELF::R_AARCH64_NONE;
     }
   }
 

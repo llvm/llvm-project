@@ -452,6 +452,8 @@ public:
   /// If AllowModify is true, then this routine is allowed to modify the basic
   /// block (e.g. delete instructions after the unconditional branch).
   ///
+  /// The CFG information in MBB.Predecessors and MBB.Successors must be valid
+  /// before calling this function.
   virtual bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                              MachineBasicBlock *&FBB,
                              SmallVectorImpl<MachineOperand> &Cond,
@@ -521,6 +523,9 @@ public:
   /// cases where AnalyzeBranch doesn't apply because there was no original
   /// branch to analyze.  At least this much must be implemented, else tail
   /// merging needs to be disabled.
+  ///
+  /// The CFG information in MBB.Predecessors and MBB.Successors must be valid
+  /// before calling this function.
   virtual unsigned InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                                 MachineBasicBlock *FBB,
                                 ArrayRef<MachineOperand> Cond,

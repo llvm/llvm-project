@@ -29,54 +29,54 @@ namespace llvm {
 namespace X86 {
   // X86 specific condition code. These correspond to X86_*_COND in
   // X86InstrInfo.td. They must be kept in synch.
-  enum CondCode {
-    COND_A  = 0,
-    COND_AE = 1,
-    COND_B  = 2,
-    COND_BE = 3,
-    COND_E  = 4,
-    COND_G  = 5,
-    COND_GE = 6,
-    COND_L  = 7,
-    COND_LE = 8,
-    COND_NE = 9,
-    COND_NO = 10,
-    COND_NP = 11,
-    COND_NS = 12,
-    COND_O  = 13,
-    COND_P  = 14,
-    COND_S  = 15,
-    LAST_VALID_COND = COND_S,
+enum CondCode {
+  COND_A = 0,
+  COND_AE = 1,
+  COND_B = 2,
+  COND_BE = 3,
+  COND_E = 4,
+  COND_G = 5,
+  COND_GE = 6,
+  COND_L = 7,
+  COND_LE = 8,
+  COND_NE = 9,
+  COND_NO = 10,
+  COND_NP = 11,
+  COND_NS = 12,
+  COND_O = 13,
+  COND_P = 14,
+  COND_S = 15,
+  LAST_VALID_COND = COND_S,
 
-    // Artificial condition codes. These are used by AnalyzeBranch
-    // to indicate a block terminated with two conditional branches to
-    // the same location. This occurs in code using FCMP_OEQ or FCMP_UNE,
-    // which can't be represented on x86 with a single condition. These
-    // are never used in MachineInstrs.
-    COND_NE_OR_P,
-    COND_NP_OR_E,
+  // Artificial condition codes. These are used by AnalyzeBranch
+  // to indicate a block terminated with two conditional branches that together
+  // form a compound condition. They occur in code using FCMP_OEQ or FCMP_UNE,
+  // which can't be represented on x86 with a single condition. These
+  // are never used in MachineInstrs and are inverses of one another.
+  COND_NE_OR_P,
+  COND_E_AND_NP,
 
-    COND_INVALID
-  };
+  COND_INVALID
+};
 
-  // Turn condition code into conditional branch opcode.
-  unsigned GetCondBranchFromCond(CondCode CC);
+// Turn condition code into conditional branch opcode.
+unsigned GetCondBranchFromCond(CondCode CC);
 
-  /// \brief Return a set opcode for the given condition and whether it has
-  /// a memory operand.
-  unsigned getSETFromCond(CondCode CC, bool HasMemoryOperand = false);
+/// \brief Return a set opcode for the given condition and whether it has
+/// a memory operand.
+unsigned getSETFromCond(CondCode CC, bool HasMemoryOperand = false);
 
-  /// \brief Return a cmov opcode for the given condition, register size in
-  /// bytes, and operand type.
-  unsigned getCMovFromCond(CondCode CC, unsigned RegBytes,
-                           bool HasMemoryOperand = false);
+/// \brief Return a cmov opcode for the given condition, register size in
+/// bytes, and operand type.
+unsigned getCMovFromCond(CondCode CC, unsigned RegBytes,
+                         bool HasMemoryOperand = false);
 
-  // Turn CMov opcode into condition code.
-  CondCode getCondFromCMovOpc(unsigned Opc);
+// Turn CMov opcode into condition code.
+CondCode getCondFromCMovOpc(unsigned Opc);
 
-  /// GetOppositeBranchCondition - Return the inverse of the specified cond,
-  /// e.g. turning COND_E to COND_NE.
-  CondCode GetOppositeBranchCondition(CondCode CC);
+/// GetOppositeBranchCondition - Return the inverse of the specified cond,
+/// e.g. turning COND_E to COND_NE.
+CondCode GetOppositeBranchCondition(CondCode CC);
 }  // end namespace X86;
 
 

@@ -34,7 +34,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/UseListOrder.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -2578,14 +2577,11 @@ static void WriteFunction(
           auto *CalledFunction = CS.getCalledFunction();
           if (CalledFunction && CalledFunction->hasName() &&
               !CalledFunction->isIntrinsic()) {
-            uint64_t ScaledCount = 0;
-            if (HasProfileData)
-              ScaledCount = getBlockProfileCount(
-                  BFI->getBlockFreq(&(*BB)).getFrequency(), BFI->getEntryFreq(),
-                  F.getEntryCount().getValue());
+            auto ScaledCount = BFI ? BFI->getBlockProfileCount(&*BB) : None;
             unsigned CalleeId = VE.getValueID(
                 M->getValueSymbolTable().lookup(CalledFunction->getName()));
-            CallGraphEdges[CalleeId] += ScaledCount;
+            CallGraphEdges[CalleeId] +=
+                (ScaledCount ? ScaledCount.getValue() : 0);
           }
         }
         findRefEdges(&*I, VE, RefEdges, Visited);

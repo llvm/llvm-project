@@ -2664,17 +2664,17 @@ static bool getMaddPatterns(MachineInstr &Root,
   bool Found = false;
 
   if (!isCombineInstrCandidate(Opc))
-    return 0;
+    return false;
   if (isCombineInstrSettingFlag(Opc)) {
     int Cmp_NZCV = Root.findRegisterDefOperandIdx(AArch64::NZCV, true);
     // When NZCV is live bail out.
     if (Cmp_NZCV == -1)
-      return 0;
+      return false;
     unsigned NewOpc = convertFlagSettingOpcode(&Root);
     // When opcode can't change bail out.
     // CHECKME: do we miss any cases for opcode conversion?
     if (NewOpc == Opc)
-      return 0;
+      return false;
     Opc = NewOpc;
   }
 

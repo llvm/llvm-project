@@ -642,3 +642,77 @@ define <64 x i8> @merge_64i8_i8_12u4uuuuuuuuuuzzzzuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
   %res63 = insertelement <64 x i8> %res17, i8     0, i8 63
   ret <64 x i8> %res63
 }
+
+;
+; consecutive loads including any/all volatiles may not be combined
+;
+
+define <8 x double> @merge_8f64_f64_23uuuuu9_volatile(double* %ptr) nounwind uwtable noinline ssp {
+; ALL-LABEL: merge_8f64_f64_23uuuuu9_volatile:
+; ALL:       # BB#0:
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; ALL-NEXT:    vbroadcastsd 72(%rdi), %ymm1
+; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; ALL-NEXT:    retq
+;
+; X32-AVX512F-LABEL: merge_8f64_f64_23uuuuu9_volatile:
+; X32-AVX512F:       # BB#0:
+; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-AVX512F-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; X32-AVX512F-NEXT:    vbroadcastsd 72(%eax), %ymm1
+; X32-AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; X32-AVX512F-NEXT:    retl
+  %ptr0 = getelementptr inbounds double, double* %ptr, i64 2
+  %ptr1 = getelementptr inbounds double, double* %ptr, i64 3
+  %ptr7 = getelementptr inbounds double, double* %ptr, i64 9
+  %val0 = load volatile double, double* %ptr0
+  %val1 = load double, double* %ptr1
+  %val7 = load double, double* %ptr7
+  %res0 = insertelement <8 x double> undef, double %val0, i32 0
+  %res1 = insertelement <8 x double> %res0, double %val1, i32 1
+  %res7 = insertelement <8 x double> %res1, double %val7, i32 7
+  ret <8 x double> %res7
+}
+
+define <16 x i32> @merge_16i32_i32_0uu3uuuuuuuuCuEF_volatile(i32* %ptr) nounwind uwtable noinline ssp {
+; ALL-LABEL: merge_16i32_i32_0uu3uuuuuuuuCuEF_volatile:
+; ALL:       # BB#0:
+; ALL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; ALL-NEXT:    vpinsrd $3, 12(%rdi), %xmm0, %xmm0
+; ALL-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; ALL-NEXT:    vpinsrd $2, 56(%rdi), %xmm1, %xmm1
+; ALL-NEXT:    vpinsrd $3, 60(%rdi), %xmm1, %xmm1
+; ALL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
+; ALL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; ALL-NEXT:    retq
+;
+; X32-AVX512F-LABEL: merge_16i32_i32_0uu3uuuuuuuuCuEF_volatile:
+; X32-AVX512F:       # BB#0:
+; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX512F-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-AVX512F-NEXT:    vpinsrd $3, 12(%eax), %xmm0, %xmm0
+; X32-AVX512F-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-AVX512F-NEXT:    vpinsrd $2, 56(%eax), %xmm1, %xmm1
+; X32-AVX512F-NEXT:    vpinsrd $3, 60(%eax), %xmm1, %xmm1
+; X32-AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
+; X32-AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; X32-AVX512F-NEXT:    retl
+  %ptr0 = getelementptr inbounds i32, i32* %ptr, i64 0
+  %ptr3 = getelementptr inbounds i32, i32* %ptr, i64 3
+  %ptrC = getelementptr inbounds i32, i32* %ptr, i64 12
+  %ptrE = getelementptr inbounds i32, i32* %ptr, i64 14
+  %ptrF = getelementptr inbounds i32, i32* %ptr, i64 15
+  %val0 = load volatile i32, i32* %ptr0
+  %val3 = load volatile i32, i32* %ptr3
+  %valC = load volatile i32, i32* %ptrC
+  %valE = load volatile i32, i32* %ptrE
+  %valF = load volatile i32, i32* %ptrF
+  %res0 = insertelement <16 x i32> undef, i32 %val0, i32 0
+  %res3 = insertelement <16 x i32> %res0, i32 %val3, i32 3
+  %resC = insertelement <16 x i32> %res3, i32 %valC, i32 12
+  %resE = insertelement <16 x i32> %resC, i32 %valE, i32 14
+  %resF = insertelement <16 x i32> %resE, i32 %valF, i32 15
+  ret <16 x i32> %resF
+}

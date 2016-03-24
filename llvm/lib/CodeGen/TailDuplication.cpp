@@ -749,15 +749,15 @@ TailDuplicatePass::duplicateSimpleBB(MachineBasicBlock *TailBB,
 
     TII->RemoveBranch(*PredBB);
 
-    if (PredTBB)
-      TII->InsertBranch(*PredBB, PredTBB, PredFBB, PredCond, DebugLoc());
-
     if (!PredBB->isSuccessor(NewTarget))
       PredBB->replaceSuccessor(TailBB, NewTarget);
     else {
       PredBB->removeSuccessor(TailBB, true);
       assert(PredBB->succ_size() <= 1);
     }
+
+    if (PredTBB)
+      TII->InsertBranch(*PredBB, PredTBB, PredFBB, PredCond, DebugLoc());
 
     TDBBs.push_back(PredBB);
   }

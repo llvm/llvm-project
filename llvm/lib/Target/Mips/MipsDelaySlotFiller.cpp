@@ -562,6 +562,12 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
   bool InMicroMipsMode = STI.inMicroMipsMode();
   const MipsInstrInfo *TII = STI.getInstrInfo();
 
+  if (InMicroMipsMode && STI.hasMips32r6()) {
+    // This is microMIPS32r6 or microMIPS64r6 processor. Delay slot for
+    // branching instructions is not needed.
+    return Changed;
+  }
+
   for (Iter I = MBB.begin(); I != MBB.end(); ++I) {
     if (!hasUnoccupiedSlot(&*I))
       continue;

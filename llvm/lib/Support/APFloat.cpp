@@ -3984,6 +3984,8 @@ APFloat llvm::scalbn(APFloat X, int Exp, APFloat::roundingMode RoundingMode) {
   // Clamp to one past the range ends to let normalize handle overlflow.
   X.exponent += std::min(std::max(Exp, -MaxIncrement - 1), MaxIncrement);
   X.normalize(RoundingMode, lfExactlyZero);
+  if (X.isNaN())
+    X.makeQuiet();
   return X;
 }
 
