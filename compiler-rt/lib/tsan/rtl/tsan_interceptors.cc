@@ -2168,7 +2168,13 @@ TSAN_INTERCEPTOR(int, fork, int fake) {
     return REAL(fork)(fake);
   SCOPED_INTERCEPTOR_RAW(fork, fake);
   ForkBefore(thr, pc);
-  int pid = REAL(fork)(fake);
+  int pid;
+  {
+    // On OS X, REAL(fork) can call intercepted functions (OSSpinLockLock), and
+    // we'll assert in CheckNoLocks() unless we ignore interceptors.
+    ScopedIgnoreInterceptors ignore;
+    pid = REAL(fork)(fake);
+  }
   if (pid == 0) {
     // child
     ForkChildAfter(thr, pc);

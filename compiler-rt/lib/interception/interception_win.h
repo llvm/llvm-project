@@ -34,6 +34,14 @@ bool OverrideFunction(const char *name, uptr new_func, uptr *orig_old_func = 0);
 // Windows-only replacement for GetProcAddress. Useful for some sanitizers.
 uptr InternalGetProcAddress(void *module, const char *func_name);
 
+// Overrides a function only when it is called from a specific DLL. For example,
+// this is used to override calls to HeapAlloc/HeapFree from ucrtbase without
+// affecting other third party libraries.
+bool OverrideImportedFunction(const char *module_to_patch,
+                              const char *imported_module,
+                              const char *function_name, uptr new_function,
+                              uptr *orig_old_func);
+
 }  // namespace __interception
 
 #if defined(INTERCEPTION_DYNAMIC_CRT)
@@ -49,6 +57,11 @@ uptr InternalGetProcAddress(void *module, const char *func_name);
 #endif
 
 #define INTERCEPT_FUNCTION_VER_WIN(func, symver) INTERCEPT_FUNCTION_WIN(func)
+
+#define INTERCEPT_FUNCTION_DLLIMPORT(user_dll, provider_dll, func)       \
+  ::__interception::OverrideImportedFunction(                            \
+      user_dll, provider_dll, #func, (::__interception::uptr)WRAP(func), \
+      (::__interception::uptr *)&REAL(func))
 
 #endif  // INTERCEPTION_WIN_H
 #endif  // _WIN32
