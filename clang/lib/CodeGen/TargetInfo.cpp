@@ -7217,6 +7217,47 @@ void XCoreTargetCodeGenInfo::emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
   }
 }
 
+//===----------------------------------------------------------------------===//
+// SPIR ABI Implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+class SPIRTargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  SPIRTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
+    : TargetCodeGenInfo(new DefaultABIInfo(CGT)) {}
+  void emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
+                    CodeGen::CodeGenModule &M) const override;
+};
+} // End anonymous namespace.
+
+/// Emit SPIR specific metadata: OpenCL and SPIR version.
+void SPIRTargetCodeGenInfo::emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
+                                         CodeGen::CodeGenModule &CGM) const {
+  assert(CGM.getLangOpts().OpenCL && "SPIR is only for OpenCL");
+  llvm::LLVMContext &Ctx = CGM.getModule().getContext();
+  llvm::Type *Int32Ty = llvm::Type::getInt32Ty(Ctx);
+  llvm::Module &M = CGM.getModule();
+  // SPIR v2.0 s2.12 - The SPIR version used by the module is stored in the
+  // opencl.spir.version named metadata.
+  llvm::Metadata *SPIRVerElts[] = {
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 2)),
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 0))};
+  llvm::NamedMDNode *SPIRVerMD =
+      M.getOrInsertNamedMetadata("opencl.spir.version");
+  SPIRVerMD->addOperand(llvm::MDNode::get(Ctx, SPIRVerElts));
+  // SPIR v2.0 s2.13 - The OpenCL version used by the module is stored in the
+  // opencl.ocl.version named metadata node.
+  llvm::Metadata *OCLVerElts[] = {
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+          Int32Ty, CGM.getLangOpts().OpenCLVersion / 100)),
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+          Int32Ty, (CGM.getLangOpts().OpenCLVersion % 100) / 10))};
+  llvm::NamedMDNode *OCLVerMD =
+      M.getOrInsertNamedMetadata("opencl.ocl.version");
+  OCLVerMD->addOperand(llvm::MDNode::get(Ctx, OCLVerElts));
+}
+
 static bool appendType(SmallStringEnc &Enc, QualType QType,
                        const CodeGen::CodeGenModule &CGM,
                        TypeStringCache &TSC);
@@ -7707,5 +7748,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     return *(TheTargetCodeGenInfo = new SparcV9TargetCodeGenInfo(Types));
   case llvm::Triple::xcore:
     return *(TheTargetCodeGenInfo = new XCoreTargetCodeGenInfo(Types));
+  case llvm::Triple::spir:
+  case llvm::Triple::spir64:
+    return *(TheTargetCodeGenInfo = new SPIRTargetCodeGenInfo(Types));
   }
 }

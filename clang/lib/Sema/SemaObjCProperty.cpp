@@ -2308,6 +2308,11 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
       AddInstanceMethodToGlobalPool(GetterMethod);
     if (SetterMethod)
       AddInstanceMethodToGlobalPool(SetterMethod);
+  } else {
+    if (GetterMethod)
+      AddFactoryMethodToGlobalPool(GetterMethod);
+    if (SetterMethod)
+      AddFactoryMethodToGlobalPool(SetterMethod);
   }
 
   ObjCInterfaceDecl *CurrentClass = dyn_cast<ObjCInterfaceDecl>(CD);

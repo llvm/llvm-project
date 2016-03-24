@@ -291,9 +291,10 @@ static AccessResult IsDerivedFromInclusive(const CXXRecordDecl *Derived,
   SmallVector<const CXXRecordDecl*, 8> Queue; // actually a stack
 
   while (true) {
-    if (Derived->isDependentContext() && !Derived->hasDefinition())
+    if (Derived->isDependentContext() && !Derived->hasDefinition() &&
+        !Derived->isLambda())
       return AR_dependent;
-    
+
     for (const auto &I : Derived->bases()) {
       const CXXRecordDecl *RD;
 
@@ -410,14 +411,8 @@ static AccessResult MatchesFriend(Sema &S,
     return AR_accessible;
 
   if (EC.isDependent()) {
-    CanQualType FriendTy
-      = S.Context.getCanonicalType(S.Context.getTypeDeclType(Friend));
-
-    for (EffectiveContext::record_iterator
-           I = EC.Records.begin(), E = EC.Records.end(); I != E; ++I) {
-      CanQualType ContextTy
-        = S.Context.getCanonicalType(S.Context.getTypeDeclType(*I));
-      if (MightInstantiateTo(S, ContextTy, FriendTy))
+    for (const CXXRecordDecl *Context : EC.Records) {
+      if (MightInstantiateTo(Context, Friend))
         return AR_dependent;
     }
   }

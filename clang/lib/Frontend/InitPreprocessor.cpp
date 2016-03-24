@@ -811,7 +811,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     // FIXME: This is target-dependent.
     Builder.defineMacro("__GCC_ATOMIC_TEST_AND_SET_TRUEVAL", "1");
 
-    // Used by libstdc++ to implement ATOMIC_<foo>_LOCK_FREE.
+    // Used by libc++ and libstdc++ to implement ATOMIC_<foo>_LOCK_FREE.
     unsigned InlineWidthBits = TI.getMaxAtomicInlineWidth();
 #define DEFINE_LOCK_FREE_MACRO(TYPE, Type) \
     Builder.defineMacro("__GCC_ATOMIC_" #TYPE "_LOCK_FREE", \
@@ -972,6 +972,10 @@ void clang::InitializePreprocessor(
                          PP.getDiagnostics());
   }
 
+  // Exit the command line and go back to <built-in> (2 is LC_LEAVE).
+  if (!PP.getLangOpts().AsmPreprocessor)
+    Builder.append("# 1 \"<built-in>\" 2");
+
   // If -imacros are specified, include them now.  These are processed before
   // any -include directives.
   for (unsigned i = 0, e = InitOpts.MacroIncludes.size(); i != e; ++i)
@@ -989,10 +993,6 @@ void clang::InitializePreprocessor(
     const std::string &Path = InitOpts.Includes[i];
     AddImplicitInclude(Builder, Path);
   }
-
-  // Exit the command line and go back to <built-in> (2 is LC_LEAVE).
-  if (!PP.getLangOpts().AsmPreprocessor)
-    Builder.append("# 1 \"<built-in>\" 2");
 
   // Instruct the preprocessor to skip the preamble.
   PP.setSkipMainFilePreamble(InitOpts.PrecompiledPreambleBytes.first,

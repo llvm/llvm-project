@@ -178,7 +178,7 @@ public:
                                    FindAddressForAtom findAddress,
                                    FindAddressForAtom findSectionAddress,
                                    uint64_t imageBaseAddress,
-                                   uint8_t *atomContentBuffer) = 0;
+                          llvm::MutableArrayRef<uint8_t> atomContentBuffer) = 0;
 
   /// Used in -r mode to convert a Reference to a mach-o relocation.
   virtual void appendSectionRelocations(const DefinedAtom &atom,

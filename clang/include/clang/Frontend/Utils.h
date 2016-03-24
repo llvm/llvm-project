@@ -142,15 +142,13 @@ public:
 
 /// AttachDependencyGraphGen - Create a dependency graph generator, and attach
 /// it to the given preprocessor.
-  void AttachDependencyGraphGen(Preprocessor &PP, StringRef OutputFile,
-                                StringRef SysRoot);
+void AttachDependencyGraphGen(Preprocessor &PP, StringRef OutputFile,
+                              StringRef SysRoot);
 
 /// AttachHeaderIncludeGen - Create a header include list generator, and attach
 /// it to the given preprocessor.
 ///
-/// \param ExtraHeaders - If not empty, will write the header filenames, just
-/// like they were included during a regular preprocessing. Useful for
-/// implicit include dependencies, like sanitizer blacklists.
+/// \param DepOpts - Options controlling the output.
 /// \param ShowAllHeaders - If true, show all header information instead of just
 /// headers following the predefines buffer. This is useful for making sure
 /// includes mentioned on the command line are also reported, but differs from
@@ -160,7 +158,7 @@ public:
 /// \param ShowDepth - Whether to indent to show the nesting of the includes.
 /// \param MSStyle - Whether to print in cl.exe /showIncludes style.
 void AttachHeaderIncludeGen(Preprocessor &PP,
-                            const std::vector<std::string> &ExtraHeaders,
+                            const DependencyOutputOptions &DepOpts,
                             bool ShowAllHeaders = false,
                             StringRef OutputPath = "",
                             bool ShowDepth = true, bool MSStyle = false);

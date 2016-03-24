@@ -6,6 +6,7 @@
 // generate the correct errors for functions that are only overloaded with VSX
 // (vec_cmpge, vec_cmple). Without this option, there is only one overload so
 // it is selected.
+#include <altivec.h>
 
 void dummy() { }
 signed int si;

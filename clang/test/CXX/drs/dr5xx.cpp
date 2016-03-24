@@ -814,7 +814,7 @@ namespace dr577 { // dr577: yes
   }
 }
 
-namespace dr580 { // dr580: no
+namespace dr580 { // dr580: partial
   class C;
   struct A { static C c; };
   struct B { static C c; };
@@ -822,7 +822,7 @@ namespace dr580 { // dr580: no
     C(); // expected-note {{here}}
     ~C(); // expected-note {{here}}
 
-    typedef int I; // expected-note {{here}}
+    typedef int I; // expected-note 2{{here}}
     template<int> struct X;
     template<int> friend struct Y;
     template<int> void f();
@@ -832,7 +832,20 @@ namespace dr580 { // dr580: no
 
   template<C::I> struct C::X {};
   template<C::I> struct Y {};
-  template<C::I> struct Z {}; // FIXME: should reject, accepted because C befriends A!
+  template<C::I> struct Z {}; // expected-error {{private}}
+
+  struct C2 {
+    class X {
+      struct A;
+      typedef int I;
+      friend struct A;
+    };
+    class Y {
+      template<X::I> struct A {}; // FIXME: We incorrectly accept this
+                                  // because we think C2::Y::A<...> might
+                                  // instantiate to C2::X::A
+    };
+  };
 
   template<C::I> void C::f() {}
   template<C::I> void g() {}

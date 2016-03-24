@@ -237,6 +237,29 @@ struct ScalarBitSetTraits<SectionAttr> {
   }
 };
 
+/// This is a custom formatter for SectionAlignment.  Values are
+/// the power to raise by, ie, the n in 2^n.
+template <> struct ScalarTraits<SectionAlignment> {
+  static void output(const SectionAlignment &value, void *ctxt,
+                     raw_ostream &out) {
+    out << llvm::format("%d", (uint32_t)value);
+  }
+
+  static StringRef input(StringRef scalar, void *ctxt,
+                         SectionAlignment &value) {
+    uint32_t alignment;
+    if (scalar.getAsInteger(0, alignment)) {
+      return "malformed alignment value";
+    }
+    if (!llvm::isPowerOf2_32(alignment))
+      return "alignment must be a power of 2";
+    value = alignment;
+    return StringRef(); // returning empty string means success
+  }
+
+  static bool mustQuote(StringRef) { return false; }
+};
+
 template <>
 struct ScalarEnumerationTraits<NListType> {
   static void enumeration(IO &io, NListType &value) {
@@ -276,7 +299,7 @@ struct MappingTraits<Section> {
     io.mapRequired("section",         sect.sectionName);
     io.mapRequired("type",            sect.type);
     io.mapOptional("attributes",      sect.attributes);
-    io.mapOptional("alignment",       sect.alignment, (uint16_t)1);
+    io.mapOptional("alignment",       sect.alignment, (SectionAlignment)1);
     io.mapRequired("address",         sect.address);
     if (isZeroFillSection(sect.type)) {
       // S_ZEROFILL sections use "size:" instead of "content:"
@@ -311,6 +334,8 @@ struct MappingTraits<Section> {
       NormalizedFile *file = info->_normalizeMachOFile;
       assert(file != nullptr);
       size_t size = _normalizedContent.size();
+      if (!size)
+        return ArrayRef<uint8_t>();
       uint8_t *bytes = file->ownedAllocations.Allocate<uint8_t>(size);
       std::copy(_normalizedContent.begin(), _normalizedContent.end(), bytes);
       return makeArrayRef(bytes, size);

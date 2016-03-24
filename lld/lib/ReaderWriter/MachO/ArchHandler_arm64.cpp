@@ -164,7 +164,7 @@ public:
                            FindAddressForAtom findAddress,
                            FindAddressForAtom findSectionAddress,
                            uint64_t imageBaseAddress,
-                           uint8_t *atomContentBuffer) override;
+                    llvm::MutableArrayRef<uint8_t> atomContentBuffer) override;
 
   void appendSectionRelocations(const DefinedAtom &atom,
                                 uint64_t atomSectionOffset,
@@ -477,7 +477,6 @@ std::error_code ArchHandler_arm64::getPairReferenceInfo(
     FindAtomBySymbolIndex atomFromSymbolIndex, Reference::KindValue *kind,
     const lld::Atom **target, Reference::Addend *addend) {
   const uint8_t *fixupContent = &inAtom->rawContent()[offsetInAtom];
-  const uint32_t *cont32 = reinterpret_cast<const uint32_t *>(fixupContent);
   switch (relocPattern(reloc1) << 16 | relocPattern(reloc2)) {
   case ((ARM64_RELOC_ADDEND                                | rLength4) << 16 |
          ARM64_RELOC_BRANCH26           | rPcRel | rExtern | rLength4):
@@ -496,13 +495,15 @@ std::error_code ArchHandler_arm64::getPairReferenceInfo(
     *addend = reloc1.symbol;
     return std::error_code();
   case ((ARM64_RELOC_ADDEND                                | rLength4) << 16 |
-         ARM64_RELOC_PAGEOFF12                   | rExtern | rLength4):
+         ARM64_RELOC_PAGEOFF12                   | rExtern | rLength4): {
     // ex: ldr w0, [x1, _foo@PAGEOFF]
-    *kind = offset12KindFromInstruction(*cont32);
+    uint32_t cont32 = (int32_t)*(const little32_t *)fixupContent;
+    *kind = offset12KindFromInstruction(cont32);
     if (auto ec = atomFromSymbolIndex(reloc2.symbol, target))
       return ec;
     *addend = reloc1.symbol;
     return std::error_code();
+  }
   case ((ARM64_RELOC_SUBTRACTOR                  | rExtern | rLength8) << 16 |
          ARM64_RELOC_UNSIGNED                    | rExtern | rLength8):
     // ex: .quad _foo - .
@@ -537,9 +538,10 @@ std::error_code ArchHandler_arm64::getPairReferenceInfo(
 void ArchHandler_arm64::generateAtomContent(
     const DefinedAtom &atom, bool relocatable, FindAddressForAtom findAddress,
     FindAddressForAtom findSectionAddress, uint64_t imageBaseAddress,
-    uint8_t *atomContentBuffer) {
+    llvm::MutableArrayRef<uint8_t> atomContentBuffer) {
   // Copy raw bytes.
-  memcpy(atomContentBuffer, atom.rawContent().data(), atom.size());
+  std::copy(atom.rawContent().begin(), atom.rawContent().end(),
+            atomContentBuffer.begin());
   // Apply fix-ups.
 #ifndef NDEBUG
   if (atom.begin() != atom.end()) {

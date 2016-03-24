@@ -819,7 +819,15 @@ void TextDiagnostic::emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
   switch (DiagOpts->getFormat()) {
   case DiagnosticOptions::Clang:
   case DiagnosticOptions::Vi:    OS << ':';    break;
-  case DiagnosticOptions::MSVC:  OS << ") : "; break;
+  case DiagnosticOptions::MSVC:
+    // MSVC2013 and before print 'file(4) : error'. MSVC2015 gets rid of the
+    // space and prints 'file(4): error'.
+    OS << ')';
+    if (LangOpts.MSCompatibilityVersion &&
+        !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2015))
+      OS << ' ';
+    OS << ": ";
+    break;
   }
 
   if (DiagOpts->ShowSourceRanges && !Ranges.empty()) {

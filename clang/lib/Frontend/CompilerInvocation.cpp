@@ -2010,10 +2010,6 @@ static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
   for (const Arg *A : Args.filtered(OPT_chain_include))
     Opts.ChainedIncludes.emplace_back(A->getValue());
 
-  // Include 'altivec.h' if -faltivec option present
-  if (Args.hasArg(OPT_faltivec))
-    Opts.Includes.emplace_back("altivec.h");
-
   for (const Arg *A : Args.filtered(OPT_remap_file)) {
     std::pair<StringRef, StringRef> Split = StringRef(A->getValue()).split(';');
 

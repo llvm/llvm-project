@@ -1,6 +1,7 @@
 // REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -faltivec -target-feature +vsx -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -faltivec -target-feature +vsx -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-LE
+#include <altivec.h>
 
 vector signed char vsc = { -8,  9, -10, 11, -12, 13, -14, 15,
                            -0,  1,  -2,  3,  -4,  5,  -6,  7};

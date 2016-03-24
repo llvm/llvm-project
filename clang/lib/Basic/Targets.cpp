@@ -2585,6 +2585,9 @@ bool X86TargetInfo::initFeatureMap(
   if (getTriple().getArch() == llvm::Triple::x86_64)
     setFeatureEnabledImpl(Features, "sse2", true);
 
+  // Enable X87 for all X86 processors.
+  setFeatureEnabledImpl(Features, "x87", true);
+
   switch (getCPUKind(CPU)) {
   case CK_Generic:
   case CK_i386:

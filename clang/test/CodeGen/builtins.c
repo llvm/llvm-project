@@ -117,9 +117,11 @@ int main() {
   P(bswap32, (N));
   P(bswap64, (N));
 
+  // CHECK: @llvm.bitreverse.i8
   // CHECK: @llvm.bitreverse.i16
   // CHECK: @llvm.bitreverse.i32
   // CHECK: @llvm.bitreverse.i64
+  P(bitreverse8, (N));
   P(bitreverse16, (N));
   P(bitreverse32, (N));
   P(bitreverse64, (N));

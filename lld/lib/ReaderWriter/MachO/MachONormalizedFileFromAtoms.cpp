@@ -669,16 +669,20 @@ void Util::copySectionContent(NormalizedFile &file) {
       continue;
     }
     // Copy content from atoms to content buffer for section.
-    uint8_t *sectionContent = file.ownedAllocations.Allocate<uint8_t>(si->size);
-    normSect->content = llvm::makeArrayRef(sectionContent, si->size);
+    llvm::MutableArrayRef<uint8_t> sectionContent;
+    if (si->size) {
+      uint8_t *sectContent = file.ownedAllocations.Allocate<uint8_t>(si->size);
+      sectionContent = llvm::MutableArrayRef<uint8_t>(sectContent, si->size);
+      normSect->content = sectionContent;
+    }
     for (AtomInfo &ai : si->atomsAndOffsets) {
       if (!ai.atom->size()) {
         assert(ai.atom->begin() == ai.atom->end() &&
                "Cannot have references without content");
         continue;
       }
-      uint8_t *atomContent = reinterpret_cast<uint8_t*>
-                                          (&sectionContent[ai.offsetInSection]);
+      auto atomContent = sectionContent.slice(ai.offsetInSection,
+                                              ai.atom->size());
       _archHandler.generateAtomContent(*ai.atom, r, addrForAtom,
                                        sectionAddrForAtom, _ctx.baseAddress(),
                                        atomContent);
@@ -711,6 +715,11 @@ void Util::updateSectionInfo(NormalizedFile &file) {
 }
 
 void Util::copyEntryPointAddress(NormalizedFile &nFile) {
+  if (!_entryAtom) {
+    nFile.entryAddress = 0;
+    return;
+  }
+
   if (_ctx.outputTypeHasEntry()) {
     if (_archHandler.isThumbFunction(*_entryAtom))
       nFile.entryAddress = (_atomToAddress[_entryAtom] | 1);

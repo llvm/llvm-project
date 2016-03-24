@@ -55,45 +55,24 @@
 
 // Check that -mhwdiv works properly for armv8/thumbv8 (enabled by default).
 
-// RUN: %clang -target armv8 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8 %s
-// ARMV8:#define __ARM_ARCH_EXT_IDIV__ 1
+// RUN: %clang -target armv8 -x c -E -dM %s -o - | FileCheck --check-prefix=V8 %s
+// RUN: %clang -target armv8 -mthumb -x c -E -dM %s -o - | FileCheck --check-prefix=V8 %s
+// RUN: %clang -target armv8-eabi -x c -E -dM %s -o - | FileCheck --check-prefix=V8 %s
+// RUN: %clang -target armv8-eabi -mthumb -x c -E -dM %s -o - | FileCheck --check-prefix=V8 %s
+// V8:#define __ARM_ARCH_EXT_IDIV__ 1
 
-// RUN: %clang -target armv8 -mthumb -x c -E -dM %s -o - | FileCheck --check-prefix=THUMBV8 %s
-// THUMBV8:#define __ARM_ARCH_EXT_IDIV__ 1
+// RUN: %clang -target armv8 -mhwdiv=none -x c -E -dM %s -o - | FileCheck --check-prefix=NOHWDIV-V8 %s
+// RUN: %clang -target armv8 -mthumb -mhwdiv=none -x c -E -dM %s -o - | FileCheck --check-prefix=NOHWDIV-V8 %s
+// RUN: %clang -target armv8 -mhwdiv=thumb -x c -E -dM %s -o - | FileCheck --check-prefix=NOHWDIV-V8 %s
+// RUN: %clang -target armv8 -mthumb -mhwdiv=arm -x c -E -dM %s -o - | FileCheck --check-prefix=NOHWDIV-V8 %s
+// NOHWDIV-V8-NOT:#define __ARM_ARCH_EXT_IDIV__
 
-// RUN: %clang -target armv8-eabi -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8-EABI %s
-// ARMV8-EABI:#define __ARM_ARCH_EXT_IDIV__ 1
-
-// RUN: %clang -target armv8-eabi -mthumb -x c -E -dM %s -o - | FileCheck --check-prefix=THUMBV8-EABI %s
-// THUMBV8-EABI:#define __ARM_ARCH_EXT_IDIV__ 1
-
-// RUN: %clang -target armv8 -mhwdiv=none -x c -E -dM %s -o - | FileCheck --check-prefix=NONEHWDIV-ARMV8 %s
-// NONEHWDIV-ARMV8-NOT:#define __ARM_ARCH_EXT_IDIV__
-
-// RUN: %clang -target armv8 -mthumb -mhwdiv=none -x c -E -dM %s -o - | FileCheck --check-prefix=NONEHWDIV-THUMBV8 %s
-// NONEHWDIV-THUMBV8-NOT:#define __ARM_ARCH_EXT_IDIV__
-
-// RUN: %clang -target armv8 -mhwdiv=thumb -x c -E -dM %s -o - | FileCheck --check-prefix=THUMBHWDIV-ARMV8 %s
-// THUMBHWDIV-ARMV8-NOT:#define __ARM_ARCH_EXT_IDIV__
-
-// RUN: %clang -target armv8 -mthumb -mhwdiv=arm -x c -E -dM %s -o - | FileCheck --check-prefix=ARMHWDIV-THUMBV8 %s
-// ARMHWDIV-THUMBV8-NOT:#define __ARM_ARCH_EXT_IDIV__
-
-// RUN: %clang -target armv8a -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8A %s
-// ARMV8A:#define __ARM_ARCH_EXT_IDIV__ 1
-// ARMV8A: #define __ARM_FP 0xE
-
-// RUN: %clang -target armv8a -mthumb -x c -E -dM %s -o - | FileCheck --check-prefix=THUMBV8A %s
-// THUMBV8A:#define __ARM_ARCH_EXT_IDIV__ 1
-// THUMBV8A: #define __ARM_FP 0xE
-
-// RUN: %clang -target armv8a-eabi -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8A-EABI %s
-// ARMV8A-EABI:#define __ARM_ARCH_EXT_IDIV__ 1
-// ARMV8A-EABI: #define __ARM_FP 0xE
-
-// RUN: %clang -target armv8a-eabi -x c -E -dM %s -o - | FileCheck --check-prefix=THUMBV8A-EABI %s
-// THUMBV8A-EABI:#define __ARM_ARCH_EXT_IDIV__ 1
-// THUMBV8A-EABI: #define __ARM_FP 0xE
+// RUN: %clang -target armv8a -x c -E -dM %s -o - | FileCheck --check-prefix=V8A %s
+// RUN: %clang -target armv8a -mthumb -x c -E -dM %s -o - | FileCheck --check-prefix=V8A %s
+// RUN: %clang -target armv8a-eabi -x c -E -dM %s -o - | FileCheck --check-prefix=V8A %s
+// RUN: %clang -target armv8a-eabi -x c -E -dM %s -o - | FileCheck --check-prefix=V8A %s
+// V8A:#define __ARM_ARCH_EXT_IDIV__ 1
+// V8A:#define __ARM_FP 0xE
 
 // RUN: %clang -target armv8m.base-none-linux-gnu -x c -E -dM %s -o - | FileCheck --check-prefix=V8M_BASELINE %s
 // V8M_BASELINE: __ARM_ARCH 8
@@ -150,29 +129,17 @@
 // CHECK-SHORTENUMS:#define __ARM_SIZEOF_MINIMAL_ENUM 1
 
 // Test that -mhwdiv has the right effect for a target CPU which has hwdiv enabled by default.
-// RUN: %clang -target armv7 -mcpu=cortex-a15 -x c -E -dM %s -o - | FileCheck --check-prefix=DEFAULTHWDIV-ARM %s
-// DEFAULTHWDIV-ARM:#define __ARM_ARCH_EXT_IDIV__ 1
+// RUN: %clang -target armv7 -mcpu=cortex-a15 -x c -E -dM %s -o - | FileCheck --check-prefix=HWDIV %s
+// RUN: %clang -target armv7 -mthumb -mcpu=cortex-a15 -x c -E -dM %s -o - | FileCheck --check-prefix=HWDIV %s
+// RUN: %clang -target armv7 -mcpu=cortex-a15 -mhwdiv=arm -x c -E -dM %s -o - | FileCheck --check-prefix=HWDIV %s
+// RUN: %clang -target armv7 -mthumb -mcpu=cortex-a15 -mhwdiv=thumb -x c -E -dM %s -o - | FileCheck --check-prefix=HWDIV %s
+// HWDIV:#define __ARM_ARCH_EXT_IDIV__ 1
 
-// RUN: %clang -target armv7 -mthumb -mcpu=cortex-a15 -x c -E -dM %s -o - | FileCheck --check-prefix=DEFAULTHWDIV-THUMB %s
-// DEFAULTHWDIV-THUMB:#define __ARM_ARCH_EXT_IDIV__ 1
-
-// RUN: %clang -target armv7 -mcpu=cortex-a15 -mhwdiv=arm -x c -E -dM %s -o - | FileCheck --check-prefix=ARMHWDIV-ARM %s
-// ARMHWDIV-ARM:#define __ARM_ARCH_EXT_IDIV__ 1
-
-// RUN: %clang -target armv7 -mthumb -mcpu=cortex-a15 -mhwdiv=thumb -x c -E -dM %s -o - | FileCheck --check-prefix=THUMBHWDIV-THUMB %s
-// THUMBHWDIV-THUMB:#define __ARM_ARCH_EXT_IDIV__ 1
-
-// RUN: %clang -target arm -mcpu=cortex-a15 -mhwdiv=thumb -x c -E -dM %s -o - | FileCheck --check-prefix=DEFAULTHWDIV-THUMBHWDIV-ARM %s
-// DEFAULTHWDIV-THUMBHWDIV-ARM-NOT:#define __ARM_ARCH_EXT_IDIV__
-
-// RUN: %clang -target arm -mthumb -mcpu=cortex-a15 -mhwdiv=arm -x c -E -dM %s -o - | FileCheck --check-prefix=DEFAULTHWDIV-ARMHWDIV-THUMB %s
-// DEFAULTHWDIV-ARMHWDIV-THUMB-NOT:#define __ARM_ARCH_EXT_IDIV__
-
-// RUN: %clang -target arm -mcpu=cortex-a15 -mhwdiv=none -x c -E -dM %s -o - | FileCheck --check-prefix=DEFAULTHWDIV-NONEHWDIV-ARM %s
-// DEFAULTHWDIV-NONEHWDIV-ARM-NOT:#define __ARM_ARCH_EXT_IDIV__
-
-// RUN: %clang -target arm -mthumb -mcpu=cortex-a15 -mhwdiv=none -x c -E -dM %s -o - | FileCheck --check-prefix=DEFAULTHWDIV-NONEHWDIV-THUMB %s
-// DEFAULTHWDIV-NONEHWDIV-THUMB-NOT:#define __ARM_ARCH_EXT_IDIV__
+// RUN: %clang -target arm -mcpu=cortex-a15 -mhwdiv=thumb -x c -E -dM %s -o - | FileCheck --check-prefix=NOHWDIV %s
+// RUN: %clang -target arm -mthumb -mcpu=cortex-a15 -mhwdiv=arm -x c -E -dM %s -o - | FileCheck --check-prefix=NOHWDIV %s
+// RUN: %clang -target arm -mcpu=cortex-a15 -mhwdiv=none -x c -E -dM %s -o - | FileCheck --check-prefix=NOHWDIV %s
+// RUN: %clang -target arm -mthumb -mcpu=cortex-a15 -mhwdiv=none -x c -E -dM %s -o - | FileCheck --check-prefix=NOHWDIV %s
+// NOHWDIV-NOT:#define __ARM_ARCH_EXT_IDIV__
 
 
 // Check that -mfpu works properly for Cortex-A7 (enabled by default).
@@ -225,24 +192,15 @@
 // A5T-NOT:#define __ARM_FP 0x{{.*}}
 
 // Test whether predefines are as expected when targeting cortex-a5.
-// RUN: %clang -target armv7 -mcpu=cortex-a5 -x c -E -dM %s -o - | FileCheck --check-prefix=A5-ARM %s
-// A5-ARM-NOT:#define __ARM_ARCH_EXT_IDIV__
-// A5-ARM:#define __ARM_FEATURE_DSP
-// A5-ARM:#define __ARM_FP 0xE
-
-// RUN: %clang -target armv7 -mthumb -mcpu=cortex-a5 -x c -E -dM %s -o - | FileCheck --check-prefix=A5-THUMB %s
-// A5-THUMB-NOT:#define __ARM_ARCH_EXT_IDIV__
-// A5-THUMB:#define __ARM_FEATURE_DSP
-// A5-THUMB:#define __ARM_FP 0xE
-
 // RUN: %clang -target armv7 -mcpu=cortex-a5 -x c -E -dM %s -o - | FileCheck --check-prefix=A5 %s
 // RUN: %clang -target armv7 -mthumb -mcpu=cortex-a5 -x c -E -dM %s -o - | FileCheck --check-prefix=A5 %s
 // A5:#define __ARM_ARCH 7
 // A5:#define __ARM_ARCH_7A__ 1
+// A5-NOT:#define __ARM_ARCH_EXT_IDIV__
 // A5:#define __ARM_ARCH_PROFILE 'A'
-// A5-NOT: #define __ARM_FEATURE_NUMERIC_MAXMIN
 // A5-NOT: #define __ARM_FEATURE_DIRECTED_ROUNDING
 // A5:#define __ARM_FEATURE_DSP
+// A5-NOT: #define __ARM_FEATURE_NUMERIC_MAXMIN
 // A5:#define __ARM_FP 0xE
 
 // Test whether predefines are as expected when targeting cortex-a7.
@@ -255,26 +213,18 @@
 // A7:#define __ARM_FP 0xE
 
 // Test whether predefines are as expected when targeting cortex-a8.
-// RUN: %clang -target armv7 -mcpu=cortex-a8 -x c -E -dM %s -o - | FileCheck --check-prefix=A8-ARM %s
-// A8-ARM-NOT:#define __ARM_ARCH_EXT_IDIV__
-// A8-ARM:#define __ARM_FEATURE_DSP
-// A8-ARM:#define __ARM_FP 0xC
-
-// RUN: %clang -target armv7 -mthumb -mcpu=cortex-a8 -x c -E -dM %s -o - | FileCheck --check-prefix=A8-THUMB %s
-// A8-THUMB-NOT:#define __ARM_ARCH_EXT_IDIV__
-// A8-THUMB:#define __ARM_FEATURE_DSP
-// A8-THUMB:#define __ARM_FP 0xC
+// RUN: %clang -target armv7 -mcpu=cortex-a8 -x c -E -dM %s -o - | FileCheck --check-prefix=A8 %s
+// RUN: %clang -target armv7 -mthumb -mcpu=cortex-a8 -x c -E -dM %s -o - | FileCheck --check-prefix=A8 %s
+// A8-NOT:#define __ARM_ARCH_EXT_IDIV__
+// A8:#define __ARM_FEATURE_DSP
+// A8:#define __ARM_FP 0xC
 
 // Test whether predefines are as expected when targeting cortex-a9.
-// RUN: %clang -target armv7 -mcpu=cortex-a9 -x c -E -dM %s -o - | FileCheck --check-prefix=A9-ARM %s
-// A9-ARM-NOT:#define __ARM_ARCH_EXT_IDIV__
-// A9-ARM:#define __ARM_FEATURE_DSP
-// A9-ARM:#define __ARM_FP 0xE
-
-// RUN: %clang -target armv7 -mthumb -mcpu=cortex-a9 -x c -E -dM %s -o - | FileCheck --check-prefix=A9-THUMB %s
-// A9-THUMB-NOT:#define __ARM_ARCH_EXT_IDIV__
-// A9-THUMB:#define __ARM_FEATURE_DSP
-// A9-THUMB:#define __ARM_FP 0xE
+// RUN: %clang -target armv7 -mcpu=cortex-a9 -x c -E -dM %s -o - | FileCheck --check-prefix=A9 %s
+// RUN: %clang -target armv7 -mthumb -mcpu=cortex-a9 -x c -E -dM %s -o - | FileCheck --check-prefix=A9 %s
+// A9-NOT:#define __ARM_ARCH_EXT_IDIV__
+// A9:#define __ARM_FEATURE_DSP
+// A9:#define __ARM_FP 0xE
 
 
 // Check that -mfpu works properly for Cortex-A12 (enabled by default).
@@ -301,15 +251,11 @@
 // A12:#define __ARM_FP 0xE
 
 // Test whether predefines are as expected when targeting cortex-a15.
-// RUN: %clang -target armv7 -mcpu=cortex-a15 -x c -E -dM %s -o - | FileCheck --check-prefix=A15-ARM %s
-// A15-ARM:#define __ARM_ARCH_EXT_IDIV__ 1
-// A15-ARM:#define __ARM_FEATURE_DSP
-// A15-ARM:#define __ARM_FP 0xE
-
-// RUN: %clang -target armv7 -mthumb -mcpu=cortex-a15 -x c -E -dM %s -o - | FileCheck --check-prefix=A15-THUMB %s
-// A15-THUMB:#define __ARM_ARCH_EXT_IDIV__ 1
-// A15-THUMB:#define __ARM_FEATURE_DSP
-// A15-THUMB:#define __ARM_FP 0xE
+// RUN: %clang -target armv7 -mcpu=cortex-a15 -x c -E -dM %s -o - | FileCheck --check-prefix=A15 %s
+// RUN: %clang -target armv7 -mthumb -mcpu=cortex-a15 -x c -E -dM %s -o - | FileCheck --check-prefix=A15 %s
+// A15:#define __ARM_ARCH_EXT_IDIV__ 1
+// A15:#define __ARM_FEATURE_DSP
+// A15:#define __ARM_FP 0xE
 
 // Check that -mfpu works properly for Cortex-A17 (enabled by default).
 // RUN: %clang -target armv7-none-linux-gnueabi -mcpu=cortex-a17 -x c -E -dM %s -o - | FileCheck --check-prefix=DEFAULTFPU-A17 %s
@@ -335,28 +281,20 @@
 // A17:#define __ARM_FP 0xE
 
 // Test whether predefines are as expected when targeting swift.
-// RUN: %clang -target armv7s -mcpu=swift -x c -E -dM %s -o - | FileCheck --check-prefix=SWIFT-ARM %s
-// SWIFT-ARM:#define __ARM_ARCH_EXT_IDIV__ 1
-// SWIFT-ARM:#define __ARM_FEATURE_DSP
-// SWIFT-ARM:#define __ARM_FP 0xE
-
-// RUN: %clang -target armv7s -mthumb -mcpu=swift -x c -E -dM %s -o - | FileCheck --check-prefix=SWIFT-THUMB %s
-// SWIFT-THUMB:#define __ARM_ARCH_EXT_IDIV__ 1
-// SWIFT-THUMB:#define __ARM_FEATURE_DSP
-// SWIFT-THUMB:#define __ARM_FP 0xE
+// RUN: %clang -target armv7s -mcpu=swift -x c -E -dM %s -o - | FileCheck --check-prefix=SWIFT %s
+// RUN: %clang -target armv7s -mthumb -mcpu=swift -x c -E -dM %s -o - | FileCheck --check-prefix=SWIFT %s
+// SWIFT:#define __ARM_ARCH_EXT_IDIV__ 1
+// SWIFT:#define __ARM_FEATURE_DSP
+// SWIFT:#define __ARM_FP 0xE
 
 // Test whether predefines are as expected when targeting ARMv8-A Cortex implementations
-// RUN: %clang -target armv8 -mcpu=cortex-a32 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8-ARM %s
-// RUN: %clang -target armv8 -mcpu=cortex-a53 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8-ARM %s
-// ARMV8-ARM:#define __ARM_ARCH_EXT_IDIV__ 1
-// ARMV8-ARM:#define __ARM_FEATURE_DSP
-// ARMV8-ARM:#define __ARM_FP 0xE
-
-// RUN: %clang -target armv8 -mthumb -mcpu=cortex-a32 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8-THUMB %s
-// RUN: %clang -target armv8 -mthumb -mcpu=cortex-a53 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8-THUMB %s
-// ARMV8-THUMB:#define __ARM_ARCH_EXT_IDIV__ 1
-// ARMV8-THUMB:#define __ARM_FEATURE_DSP
-// ARMV8-THUMB:#define __ARM_FP 0xE
+// RUN: %clang -target armv8 -mcpu=cortex-a32 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8 %s
+// RUN: %clang -target armv8 -mthumb -mcpu=cortex-a32 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8 %s
+// RUN: %clang -target armv8 -mcpu=cortex-a53 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8 %s
+// RUN: %clang -target armv8 -mthumb -mcpu=cortex-a53 -x c -E -dM %s -o - | FileCheck --check-prefix=ARMV8 %s
+// ARMV8:#define __ARM_ARCH_EXT_IDIV__ 1
+// ARMV8:#define __ARM_FEATURE_DSP
+// ARMV8:#define __ARM_FP 0xE
 
 // Test whether predefines are as expected when targeting cortex-r4.
 // RUN: %clang -target armv7 -mcpu=cortex-r4 -x c -E -dM %s -o - | FileCheck --check-prefix=R4-ARM %s
@@ -376,33 +314,25 @@
 // R4F-ARM:#define __ARM_FP 0xC
 
 // RUN: %clang -target armv7 -mthumb -mcpu=cortex-r4f -x c -E -dM %s -o - | FileCheck --check-prefix=R4F-THUMB %s
-// R4F-THUMBT:#define __ARM_ARCH_EXT_IDIV__ 1
+// R4F-THUMB:#define __ARM_ARCH_EXT_IDIV__ 1
 // R4F-THUMB:#define __ARM_FEATURE_DSP
 // R4F-THUMB:#define __ARM_FP 0xC
 
 // Test whether predefines are as expected when targeting cortex-r5.
-// RUN: %clang -target armv7 -mcpu=cortex-r5 -x c -E -dM %s -o - | FileCheck --check-prefix=R5-ARM %s
-// R5-ARM:#define __ARM_ARCH_EXT_IDIV__ 1
-// R5-ARM:#define __ARM_FEATURE_DSP
-// R5-ARM:#define __ARM_FP 0xC
-
-// RUN: %clang -target armv7 -mthumb -mcpu=cortex-r5 -x c -E -dM %s -o - | FileCheck --check-prefix=R5-THUMB %s
-// R5-THUMB:#define __ARM_ARCH_EXT_IDIV__ 1
-// R5-THUMB:#define __ARM_FEATURE_DSP
-// R5-THUMB:#define __ARM_FP 0xC
+// RUN: %clang -target armv7 -mcpu=cortex-r5 -x c -E -dM %s -o - | FileCheck --check-prefix=R5 %s
+// RUN: %clang -target armv7 -mthumb -mcpu=cortex-r5 -x c -E -dM %s -o - | FileCheck --check-prefix=R5 %s
+// R5:#define __ARM_ARCH_EXT_IDIV__ 1
+// R5:#define __ARM_FEATURE_DSP
+// R5:#define __ARM_FP 0xC
 
 // Test whether predefines are as expected when targeting cortex-r7 and cortex-r8.
-// RUN: %clang -target armv7 -mcpu=cortex-r7 -x c -E -dM %s -o - | FileCheck --check-prefix=R7-R8-ARM %s
-// RUN: %clang -target armv7 -mcpu=cortex-r8 -x c -E -dM %s -o - | FileCheck --check-prefix=R7-R8-ARM %s
-// R7-R8-ARM:#define __ARM_ARCH_EXT_IDIV__ 1
-// R7-R8-ARM:#define __ARM_FEATURE_DSP
-// R7-R8-ARM:#define __ARM_FP 0xE
-
-// RUN: %clang -target armv7 -mthumb -mcpu=cortex-r7 -x c -E -dM %s -o - | FileCheck --check-prefix=R7-R8-THUMB %s
-// RUN: %clang -target armv7 -mthumb -mcpu=cortex-r8 -x c -E -dM %s -o - | FileCheck --check-prefix=R7-R8-THUMB %s
-// R7-R8-THUMB:#define __ARM_ARCH_EXT_IDIV__ 1
-// R7-R8-THUMB:#define __ARM_FEATURE_DSP
-// R7-R8-THUMB:#define __ARM_FP 0xE
+// RUN: %clang -target armv7 -mcpu=cortex-r7 -x c -E -dM %s -o - | FileCheck --check-prefix=R7-R8 %s
+// RUN: %clang -target armv7 -mthumb -mcpu=cortex-r7 -x c -E -dM %s -o - | FileCheck --check-prefix=R7-R8 %s
+// RUN: %clang -target armv7 -mcpu=cortex-r8 -x c -E -dM %s -o - | FileCheck --check-prefix=R7-R8 %s
+// RUN: %clang -target armv7 -mthumb -mcpu=cortex-r8 -x c -E -dM %s -o - | FileCheck --check-prefix=R7-R8 %s
+// R7-R8:#define __ARM_ARCH_EXT_IDIV__ 1
+// R7-R8:#define __ARM_FEATURE_DSP
+// R7-R8:#define __ARM_FP 0xE
 
 // Test whether predefines are as expected when targeting cortex-m0.
 // RUN: %clang -target armv7 -mthumb -mcpu=cortex-m0 -x c -E -dM %s -o - | FileCheck --check-prefix=M0-THUMB %s
@@ -433,15 +363,11 @@
 // M7-THUMB:#define __ARM_FP 0xE
 
 // Test whether predefines are as expected when targeting krait.
-// RUN: %clang -target armv7 -mcpu=krait -x c -E -dM %s -o - | FileCheck --check-prefix=KRAIT-ARM %s
-// KRAIT-ARM:#define __ARM_ARCH_EXT_IDIV__ 1
-// KRAIT-ARM:#define __ARM_FEATURE_DSP
-// KRAIT-ARM:#define  __ARM_VFPV4__ 1
-
-// RUN: %clang -target armv7 -mthumb -mcpu=krait -x c -E -dM %s -o - | FileCheck --check-prefix=KRAIT-THUMB %s
-// KRAIT-THUMB:#define __ARM_ARCH_EXT_IDIV__ 1
-// KRAIT-THUMB:#define __ARM_FEATURE_DSP
-// KRAIT-THUMB:#define  __ARM_VFPV4__ 1
+// RUN: %clang -target armv7 -mcpu=krait -x c -E -dM %s -o - | FileCheck --check-prefix=KRAIT %s
+// RUN: %clang -target armv7 -mthumb -mcpu=krait -x c -E -dM %s -o - | FileCheck --check-prefix=KRAIT %s
+// KRAIT:#define __ARM_ARCH_EXT_IDIV__ 1
+// KRAIT:#define __ARM_FEATURE_DSP
+// KRAIT:#define  __ARM_VFPV4__ 1
 
 // RUN: %clang -target armv8.1a-none-none-eabi -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-V81A %s
 // CHECK-V81A: __ARM_ARCH 8

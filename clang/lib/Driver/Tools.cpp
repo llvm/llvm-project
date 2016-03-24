@@ -428,7 +428,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       // FIXME: The code here assumes that /Yc and /Yu refer to the same file.
       // cl.exe seems to support both flags with different values, but that
       // seems strange (which flag does /Fp now refer to?), so don't implement
-      // that until someone needs that.
+      // that until someone needs it.
       int PchIndex = YcIndex != -1 ? YcIndex : YuIndex;
       if (PchIndex != -1) {
         if (isa<PrecompileJobAction>(JA)) {
@@ -438,8 +438,10 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
             continue;
         } else {
           // When using the pch, skip all includes prior to the pch.
-          if (AI < PchIndex)
+          if (AI < PchIndex) {
+            A->claim();
             continue;
+          }
           if (AI == PchIndex) {
             A->claim();
             CmdArgs.push_back("-include-pch");
@@ -3257,6 +3259,7 @@ VersionTuple visualstudio::getMSVCVersion(const Driver *D,
     if (Major || Minor || Micro)
       return VersionTuple(Major, Minor, Micro);
 
+    // FIXME: Consider bumping this to 19 (MSVC2015) soon.
     return VersionTuple(18);
   }
   return VersionTuple();
@@ -5763,7 +5766,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Handle the debug info splitting at object creation time if we're
   // creating an object.
   // TODO: Currently only works on linux with newer objcopy.
-  if (SplitDwarf && !isa<CompileJobAction>(JA) && !isa<BackendJobAction>(JA))
+  if (SplitDwarf && Output.getType() == types::TY_Object)
     SplitDebugInfo(getToolChain(), C, *this, JA, Args, Output, SplitDwarfOut);
 
   if (Arg *A = Args.getLastArg(options::OPT_pg))

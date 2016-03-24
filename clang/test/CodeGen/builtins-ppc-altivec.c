@@ -6,8 +6,11 @@
 // RUN: %clang_cc1 -faltivec -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:            -o - | FileCheck %s -check-prefix=CHECK-LE
 // RUN: not %clang_cc1 -triple powerpc64le-unknown-unknown -emit-llvm %s \
-// RUN:            -ferror-limit 0 -o - 2>&1 \
+// RUN:            -ferror-limit 0 -DNO_ALTIVEC -o - 2>&1 \
 // RUN:            | FileCheck %s -check-prefix=CHECK-NOALTIVEC
+#ifndef NO_ALTIVEC
+#include <altivec.h>
+#endif
 
 vector bool char vbc = { 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0 };
 vector signed char vsc = { 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16 };

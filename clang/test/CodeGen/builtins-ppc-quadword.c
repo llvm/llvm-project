@@ -8,6 +8,7 @@
 
 // RUN: not %clang_cc1 -faltivec -triple powerpc-unknown-unknown \
 // RUN: -emit-llvm %s -o - 2>&1 | FileCheck %s -check-prefix=CHECK-PPC
+#include <altivec.h>
 
 // CHECK-PPC: error: __int128 is not supported on this target
 vector signed __int128 vlll = { -1 };

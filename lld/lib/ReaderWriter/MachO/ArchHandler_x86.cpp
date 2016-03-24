@@ -107,7 +107,7 @@ public:
                            FindAddressForAtom findAddress,
                            FindAddressForAtom findSectionAddress,
                            uint64_t imageBaseAddress,
-                           uint8_t *atomContentBuffer) override;
+                    llvm::MutableArrayRef<uint8_t> atomContentBuffer) override;
 
   void appendSectionRelocations(const DefinedAtom &atom,
                                 uint64_t atomSectionOffset,
@@ -419,9 +419,10 @@ void ArchHandler_x86::generateAtomContent(const DefinedAtom &atom,
                                           FindAddressForAtom findAddress,
                                           FindAddressForAtom findSectionAddress,
                                           uint64_t imageBaseAddress,
-                                          uint8_t *atomContentBuffer) {
+                            llvm::MutableArrayRef<uint8_t> atomContentBuffer) {
   // Copy raw bytes.
-  memcpy(atomContentBuffer, atom.rawContent().data(), atom.size());
+  std::copy(atom.rawContent().begin(), atom.rawContent().end(),
+            atomContentBuffer.begin());
   // Apply fix-ups.
   for (const Reference *ref : atom) {
     uint32_t offset = ref->offsetInAtom();

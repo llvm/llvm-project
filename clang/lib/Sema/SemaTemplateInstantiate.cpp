@@ -729,6 +729,11 @@ namespace {
       }
       
       SemaRef.CurrentInstantiationScope->InstantiatedLocal(Old, New);
+
+      // We recreated a local declaration, but not by instantiating it. There
+      // may be pending dependent diagnostics to produce.
+      if (auto *DC = dyn_cast<DeclContext>(Old))
+        SemaRef.PerformDependentDiagnostics(DC, TemplateArgs);
     }
     
     /// \brief Transform the definition of the given declaration by

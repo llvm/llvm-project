@@ -83,7 +83,7 @@ private:
     bool
     ReadJITDescriptor(bool all_entries);
 
-    template <typename ptr_t, bool packed>
+    template <typename ptr_t>
     bool
     ReadJITDescriptorImpl(bool all_entries);
 
