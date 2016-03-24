@@ -42,3 +42,4 @@ class TypeLookupTestCase(TestBase):
         self.expect('type lookup NSURL', substrs=['NSURL'])
         self.expect('type lookup NSArray', substrs=['NSArray'])
         self.expect('type lookup NSObject', substrs=['NSObject', 'isa'])
+        self.expect('type lookup PleaseDontBeARealTypeThatExists', substrs=["no type was found matching 'PleaseDontBeARealTypeThatExists'"])
