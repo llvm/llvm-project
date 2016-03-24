@@ -3118,10 +3118,25 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         cast<AtomicSDNode>(Node)->getFailureOrdering(),
         cast<AtomicSDNode>(Node)->getSynchScope());
 
-    SDValue Success = DAG.getSetCC(SDLoc(Node), Node->getValueType(1),
-                                   Res, Node->getOperand(2), ISD::SETEQ);
+    SDValue LHS = Res;
+    SDValue RHS = Node->getOperand(1);
 
-    Results.push_back(Res.getValue(0));
+    EVT AtomicType = cast<AtomicSDNode>(Node)->getMemoryVT();
+    EVT OuterType = Node->getValueType(0);
+    if (TLI.hasSignExtendedAtomicOps()) {
+      LHS = DAG.getNode(ISD::AssertSext, dl, OuterType, Res,
+                        DAG.getValueType(AtomicType));
+      RHS = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, OuterType,
+                        Node->getOperand(2), DAG.getValueType(AtomicType));
+    } else {
+      LHS = DAG.getNode(ISD::AssertZext, dl, OuterType, Res, DAG.getValueType(AtomicType));
+      RHS = DAG.getNode(ISD::ZERO_EXTEND, dl, OuterType, Node->getOperand(2));
+    }
+
+    SDValue Success =
+        DAG.getSetCC(dl, Node->getValueType(1), LHS, RHS, ISD::SETEQ);
+
+    Results.push_back(LHS.getValue(0));
     Results.push_back(Success);
     Results.push_back(Res.getValue(1));
     break;

@@ -244,8 +244,7 @@ define void @test7(<8 x i1> %mask)  {
 ; SKX-NEXT:    movb $85, %al
 ; SKX-NEXT:    kmovb %eax, %k1
 ; SKX-NEXT:    korb %k1, %k0, %k0
-; SKX-NEXT:    kmovb %k0, %eax
-; SKX-NEXT:    testb %al, %al
+; SKX-NEXT:    ktestb %k0, %k0
 ; SKX-NEXT:    retq
 allocas:
   %a= or <8 x i1> %mask, <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>
@@ -1680,4 +1679,114 @@ define <64 x i8> @test_build_vec_v64i1(<64 x i8> %x) {
 ; SKX-NEXT:    retq
   %ret = select <64 x i1> <i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false>, <64 x i8> %x, <64 x i8> zeroinitializer
   ret <64 x i8> %ret
+}
+
+define void @ktest_1(<8 x double> %in, double * %base) {
+; KNL-LABEL: ktest_1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vmovupd (%rdi), %zmm1
+; KNL-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
+; KNL-NEXT:    vmovupd 8(%rdi), %zmm1 {%k1} {z}
+; KNL-NEXT:    vcmpltpd %zmm1, %zmm0, %k0 {%k1}
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    testb %al, %al
+; KNL-NEXT:    je LBB38_2
+; KNL-NEXT:  ## BB#1: ## %L1
+; KNL-NEXT:    vmovapd %zmm0, (%rdi)
+; KNL-NEXT:    retq
+; KNL-NEXT:  LBB38_2: ## %L2
+; KNL-NEXT:    vmovapd %zmm0, 8(%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: ktest_1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vmovupd (%rdi), %zmm1
+; SKX-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
+; SKX-NEXT:    vmovupd 8(%rdi), %zmm1 {%k1} {z}
+; SKX-NEXT:    vcmpltpd %zmm1, %zmm0, %k0 {%k1}
+; SKX-NEXT:    ktestb %k0, %k0
+; SKX-NEXT:    je LBB38_2
+; SKX-NEXT:  ## BB#1: ## %L1
+; SKX-NEXT:    vmovapd %zmm0, (%rdi)
+; SKX-NEXT:    retq
+; SKX-NEXT:  LBB38_2: ## %L2
+; SKX-NEXT:    vmovapd %zmm0, 8(%rdi)
+; SKX-NEXT:    retq
+  %addr1 = getelementptr double, double * %base, i64 0
+  %addr2 = getelementptr double, double * %base, i64 1
+
+  %vaddr1 = bitcast double* %addr1 to <8 x double>*
+  %vaddr2 = bitcast double* %addr2 to <8 x double>*
+
+  %val1 = load <8 x double>, <8 x double> *%vaddr1, align 1
+  %val2 = load <8 x double>, <8 x double> *%vaddr2, align 1
+
+  %sel1 = fcmp ogt <8 x double>%in, %val1
+  %val3 = select <8 x i1> %sel1, <8 x double> %val2, <8 x double> zeroinitializer
+  %sel2 = fcmp olt <8 x double> %in, %val3
+  %sel3 = and <8 x i1> %sel1, %sel2
+
+  %int_sel3 = bitcast <8 x i1> %sel3 to i8
+  %res = icmp eq i8 %int_sel3, zeroinitializer
+  br i1 %res, label %L2, label %L1
+L1:
+  store <8 x double> %in, <8 x double>* %vaddr1
+  br label %End
+L2:
+  store <8 x double> %in, <8 x double>* %vaddr2
+  br label %End
+End:
+  ret void
+}
+
+define void @ktest_2(<32 x float> %in, float * %base) {
+;
+; SKX-LABEL: ktest_2:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vmovups 64(%rdi), %zmm2
+; SKX-NEXT:    vmovups (%rdi), %zmm3
+; SKX-NEXT:    vcmpltps %zmm0, %zmm3, %k1
+; SKX-NEXT:    vcmpltps %zmm1, %zmm2, %k2
+; SKX-NEXT:    kunpckwd %k1, %k2, %k0
+; SKX-NEXT:    vmovups 68(%rdi), %zmm2 {%k2} {z}
+; SKX-NEXT:    vmovups 4(%rdi), %zmm3 {%k1} {z}
+; SKX-NEXT:    vcmpltps %zmm3, %zmm0, %k1
+; SKX-NEXT:    vcmpltps %zmm2, %zmm1, %k2
+; SKX-NEXT:    kunpckwd %k1, %k2, %k1
+; SKX-NEXT:    kord %k1, %k0, %k0
+; SKX-NEXT:    ktestd %k0, %k0
+; SKX-NEXT:    je LBB39_2
+; SKX-NEXT:  ## BB#1: ## %L1
+; SKX-NEXT:    vmovaps %zmm0, (%rdi)
+; SKX-NEXT:    vmovaps %zmm1, 64(%rdi)
+; SKX-NEXT:    retq
+; SKX-NEXT:  LBB39_2: ## %L2
+; SKX-NEXT:    vmovaps %zmm0, 4(%rdi)
+; SKX-NEXT:    vmovaps %zmm1, 68(%rdi)
+; SKX-NEXT:    retq
+  %addr1 = getelementptr float, float * %base, i64 0
+  %addr2 = getelementptr float, float * %base, i64 1
+
+  %vaddr1 = bitcast float* %addr1 to <32 x float>*
+  %vaddr2 = bitcast float* %addr2 to <32 x float>*
+
+  %val1 = load <32 x float>, <32 x float> *%vaddr1, align 1
+  %val2 = load <32 x float>, <32 x float> *%vaddr2, align 1
+
+  %sel1 = fcmp ogt <32 x float>%in, %val1
+  %val3 = select <32 x i1> %sel1, <32 x float> %val2, <32 x float> zeroinitializer
+  %sel2 = fcmp olt <32 x float> %in, %val3
+  %sel3 = or <32 x i1> %sel1, %sel2
+
+  %int_sel3 = bitcast <32 x i1> %sel3 to i32
+  %res = icmp eq i32 %int_sel3, zeroinitializer
+  br i1 %res, label %L2, label %L1
+L1:
+  store <32 x float> %in, <32 x float>* %vaddr1
+  br label %End
+L2:
+  store <32 x float> %in, <32 x float>* %vaddr2
+  br label %End
+End:
+  ret void
 }

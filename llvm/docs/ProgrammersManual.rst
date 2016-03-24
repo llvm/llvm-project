@@ -361,11 +361,13 @@ success, enabling the following idiom:
 
 .. code-block:: c++
 
-  if (auto Err = mayFail())
-    return Err;
+  Error mayFail();
 
-  // Success! We can proceed.
-
+  Error foo() {
+    if (auto Err = mayFail())
+      return Err;
+    // Success! We can proceed.
+    ...
 
 For functions that can fail but need to return a value the ``Expected<T>``
 utility can be used. Values of this type can be constructed with either a

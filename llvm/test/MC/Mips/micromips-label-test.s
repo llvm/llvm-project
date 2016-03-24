@@ -26,7 +26,9 @@ j:
 # CHECK:     Name: g
 # CHECK:     Binding: Local
 # CHECK:     Type: None
-# CHECK:     Other: 128
+# CHECK:     Other [ (0x80)
+# CHECK:       STO_MIPS_MICROMIPS
+# CHECK:     ]
 # CHECK:     Section: .text
 # CHECK:   }
 # CHECK:   Symbol {
@@ -40,7 +42,9 @@ j:
 # CHECK:     Name: i
 # CHECK:     Binding: Local
 # CHECK:     Type: None
-# CHECK:     Other: 128
+# CHECK:     Other [ (0x80)
+# CHECK:       STO_MIPS_MICROMIPS
+# CHECK:     ]
 # CHECK:     Section: .text
 # CHECK:   }
 # CHECK:   Symbol {

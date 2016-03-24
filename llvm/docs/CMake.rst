@@ -474,6 +474,12 @@ LLVM-specific variables
             If you want to build LLVM as a shared library, you should use the
             ``LLVM_BUILD_LLVM_DYLIB`` option.
 
+**LLVM_OPTIMIZED_TABLEGEN**:BOOL
+  If enabled and building a debug or asserts build the CMake build system will
+  generate a Release build tree to build a fully optimized tablegen for use
+  during the build. Enabling this option can significantly speed up build times
+  especially when building LLVM in Debug configurations.
+
 CMake Caches
 ============
 

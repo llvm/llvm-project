@@ -12180,8 +12180,12 @@ intrinsic to return directly from the frame of the function it inlined into.
 Lowering:
 """""""""
 
-Lowering for ``@llvm.experimental.deoptimize`` is not yet implemented,
-and is a work in progress.
+Calls to ``@llvm.experimental.deoptimize`` are lowered to calls to the
+symbol ``__llvm_deoptimize`` (it is the frontend's responsibility to
+ensure that this symbol is defined).  The call arguments to
+``@llvm.experimental.deoptimize`` are lowered as if they were formal
+arguments of the specified types, and not as varargs.
+
 
 Stack Map Intrinsics
 --------------------

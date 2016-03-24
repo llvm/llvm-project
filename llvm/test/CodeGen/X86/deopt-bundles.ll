@@ -1,5 +1,5 @@
-; RUN: llc     < %s 2>&1 | FileCheck %s
-; RUN: llc -O3 < %s 2>&1 | FileCheck %s
+; RUN: llc     < %s | FileCheck %s
+; RUN: llc -O3 < %s | FileCheck %s
 ; RUN: llc -O3 -debug-only=stackmaps < %s 2>&1 | FileCheck -check-prefix=STACKMAPS %s
 ; REQUIRES: asserts
 
@@ -20,6 +20,13 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; STACKMAPS-NEXT: Stack Maps: 		Loc 1: Constant 0	[encoding: .byte 4, .byte 8, .short 0, .int 0]
 ; STACKMAPS-NEXT: Stack Maps: 		Loc 2: Constant 1	[encoding: .byte 4, .byte 8, .short 0, .int 1]
 ; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Constant 1	[encoding: .byte 4, .byte 8, .short 0, .int 1]
+; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
+; STACKMAPS-NEXT: Stack Maps: callsite 4243
+; STACKMAPS-NEXT: Stack Maps:   has 4 locations
+; STACKMAPS-NEXT: Stack Maps: 		Loc 0: Constant 0	[encoding: .byte 4, .byte 8, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps: 		Loc 1: Constant 0	[encoding: .byte 4, .byte 8, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps: 		Loc 2: Constant 1	[encoding: .byte 4, .byte 8, .short 0, .int 1]
+; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Constant 16	[encoding: .byte 4, .byte 8, .short 0, .int 16]
 ; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
 ; STACKMAPS-NEXT: Stack Maps: callsite 2882400015
 ; STACKMAPS-NEXT: Stack Maps:   has 4 locations
@@ -46,6 +53,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 declare i32 @callee_0()
 declare i32 @callee_1(i32)
+declare i32 @callee_vararg(...)
 
 define i32 @caller_0() {
 ; CHECK-LABEL: _caller_0
@@ -66,6 +74,15 @@ entry:
 ; CHECK:	callq	_callee_1
 ; CHECK:	popq	%rcx
 ; CHECK:	retq
+}
+
+define i32 @caller_vararg() {
+; CHECK-LABEL: _caller_vararg
+entry:
+; CHECK: movb    $1, %al
+; CHECK: callq   _callee_vararg
+  %v = call i32(...) @callee_vararg(i32 42, double 500.0) "statepoint-id"="4243" [ "deopt"(i32 16) ]
+  ret i32 %v
 }
 
 define i32 @invoker_0() personality i8 0 {

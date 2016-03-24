@@ -2278,6 +2278,7 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(xop_vpcomuq,       INTR_TYPE_3OP, X86ISD::VPCOMU, 0),
   X86_INTRINSIC_DATA(xop_vpcomuw,       INTR_TYPE_3OP, X86ISD::VPCOMU, 0),
   X86_INTRINSIC_DATA(xop_vpcomw,        INTR_TYPE_3OP, X86ISD::VPCOM, 0),
+  X86_INTRINSIC_DATA(xop_vpperm,        INTR_TYPE_3OP, X86ISD::VPPERM, 0),
   X86_INTRINSIC_DATA(xop_vprotb,        INTR_TYPE_2OP, X86ISD::VPROT, 0),
   X86_INTRINSIC_DATA(xop_vprotbi,       INTR_TYPE_2OP, X86ISD::VPROTI, 0),
   X86_INTRINSIC_DATA(xop_vprotd,        INTR_TYPE_2OP, X86ISD::VPROT, 0),

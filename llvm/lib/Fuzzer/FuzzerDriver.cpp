@@ -338,6 +338,7 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
   if (Flags.handle_ill) SetSigIllHandler();
   if (Flags.handle_fpe) SetSigFpeHandler();
   if (Flags.handle_int) SetSigIntHandler();
+  if (Flags.handle_term) SetSigTermHandler();
 
   if (DoPlainRun) {
     Options.SaveArtifacts = false;

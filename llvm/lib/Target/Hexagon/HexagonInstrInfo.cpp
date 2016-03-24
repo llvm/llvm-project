@@ -2354,7 +2354,9 @@ bool HexagonInstrInfo::isPredictedTaken(unsigned Opcode) const {
 
 bool HexagonInstrInfo::isSaveCalleeSavedRegsCall(const MachineInstr *MI) const {
   return MI->getOpcode() == Hexagon::SAVE_REGISTERS_CALL_V4 ||
-         MI->getOpcode() == Hexagon::SAVE_REGISTERS_CALL_V4_EXT;
+         MI->getOpcode() == Hexagon::SAVE_REGISTERS_CALL_V4_EXT ||
+         MI->getOpcode() == Hexagon::SAVE_REGISTERS_CALL_V4_PIC ||
+         MI->getOpcode() == Hexagon::SAVE_REGISTERS_CALL_V4_EXT_PIC;
 }
 
 

@@ -106,6 +106,7 @@ void SetSigAbrtHandler() { SetSigaction(SIGABRT, CrashHandler); }
 void SetSigIllHandler() { SetSigaction(SIGILL, CrashHandler); }
 void SetSigFpeHandler() { SetSigaction(SIGFPE, CrashHandler); }
 void SetSigIntHandler() { SetSigaction(SIGINT, InterruptHandler); }
+void SetSigTermHandler() { SetSigaction(SIGTERM, InterruptHandler); }
 
 int NumberOfCpuCores() {
   FILE *F = popen("nproc", "r");

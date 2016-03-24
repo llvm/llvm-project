@@ -1592,7 +1592,7 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
         if (OpIdx == PtrIdx)
           continue;
 
-        unsigned OpN = OpN = M->getNumOperands();
+        unsigned OpN = M->getNumOperands();
         SDValue NewOps[8];
 
         assert(OpN < array_lengthof(NewOps));

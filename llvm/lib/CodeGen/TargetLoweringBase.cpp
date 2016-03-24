@@ -435,6 +435,8 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
     Names[RTLIB::FPEXT_F16_F32] = "__extendhfsf2";
     Names[RTLIB::FPROUND_F32_F16] = "__truncsfhf2";
   }
+
+  Names[RTLIB::DEOPTIMIZE] = "__llvm_deoptimize";
 }
 
 /// InitLibcallCallingConvs - Set default libcall CallingConvs.

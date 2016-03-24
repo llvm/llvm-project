@@ -124,7 +124,7 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
   // Spill location is known for gc relocates
   if (const auto *Relocate = dyn_cast<GCRelocateInst>(Val)) {
     const auto &SpillMap =
-        Builder.FuncInfo.StatepointRelocatedValues[Relocate->getStatepoint()];
+        Builder.FuncInfo.StatepointSpillMaps[Relocate->getStatepoint()];
 
     auto It = SpillMap.find(Relocate->getDerivedPtr());
     if (It == SpillMap.end())
@@ -246,25 +246,29 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
 /// StackMap section.  It has no effect on the number of spill slots required
 /// or the actual lowering.
 static void
-removeDuplicatesGCPtrs(SmallVectorImpl<const Value *> &Bases,
-                       SmallVectorImpl<const Value *> &Ptrs,
-                       SmallVectorImpl<const GCRelocateInst *> &Relocs,
-                       SelectionDAGBuilder &Builder) {
-
-  // This is horribly inefficient, but I don't care right now
-  SmallSet<SDValue, 32> Seen;
+removeDuplicateGCPtrs(SmallVectorImpl<const Value *> &Bases,
+                      SmallVectorImpl<const Value *> &Ptrs,
+                      SmallVectorImpl<const GCRelocateInst *> &Relocs,
+                      SelectionDAGBuilder &Builder,
+                      FunctionLoweringInfo::StatepointSpillMap &SSM) {
+  DenseMap<SDValue, const Value *> Seen;
 
   SmallVector<const Value *, 64> NewBases, NewPtrs;
   SmallVector<const GCRelocateInst *, 64> NewRelocs;
   for (size_t i = 0, e = Ptrs.size(); i < e; i++) {
     SDValue SD = Builder.getValue(Ptrs[i]);
-    // Only add non-duplicates
-    if (Seen.count(SD) == 0) {
+    auto SeenIt = Seen.find(SD);
+
+    if (SeenIt == Seen.end()) {
+      // Only add non-duplicates
       NewBases.push_back(Bases[i]);
       NewPtrs.push_back(Ptrs[i]);
       NewRelocs.push_back(Relocs[i]);
+      Seen[SD] = Ptrs[i];
+    } else {
+      // Duplicate pointer found, note in SSM and move on:
+      SSM.DuplicateMap[Ptrs[i]] = SeenIt->second;
     }
-    Seen.insert(SD);
   }
   assert(Bases.size() >= NewBases.size());
   assert(Ptrs.size() >= NewPtrs.size());
@@ -499,7 +503,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // This can not be embedded in lowering loops as we need to record *all*
   // values, while previous loops account only values with unique SDValues.
   const Instruction *StatepointInstr = SI.StatepointInstr;
-  auto &SpillMap = Builder.FuncInfo.StatepointRelocatedValues[StatepointInstr];
+  auto &SpillMap = Builder.FuncInfo.StatepointSpillMaps[StatepointInstr];
 
   for (const GCRelocateInst *Relocate : SI.GCRelocates) {
     const Value *V = Relocate->getDerivedPtr();
@@ -507,7 +511,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     SDValue Loc = Builder.StatepointLowering.getLocation(SDV);
 
     if (Loc.getNode()) {
-      SpillMap[V] = cast<FrameIndexSDNode>(Loc)->getIndex();
+      SpillMap.SlotMap[V] = cast<FrameIndexSDNode>(Loc)->getIndex();
     } else {
       // Record value as visited, but not spilled. This is case for allocas
       // and constants. For this values we can avoid emitting spill load while
@@ -515,7 +519,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
       // Actually we do not need to record them in this map at all.
       // We do this only to check that we are not relocating any unvisited
       // value.
-      SpillMap[V] = None;
+      SpillMap.SlotMap[V] = None;
 
       // Default llvm mechanisms for exporting values which are used in
       // different basic blocks does not work for gc relocates.
@@ -540,8 +544,8 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   StatepointLowering.startNewStatepoint(*this);
 
 #ifndef NDEBUG
-  // We schedule gc relocates before removeDuplicatesGCPtrs since we _will_
-  // encounter the duplicate gc relocates we elide in removeDuplicatesGCPtrs.
+  // We schedule gc relocates before removeDuplicateGCPtrs since we _will_
+  // encounter the duplicate gc relocates we elide in removeDuplicateGCPtrs.
   for (auto *Reloc : SI.GCRelocates)
     if (Reloc->getParent() == SI.StatepointInstr->getParent())
       StatepointLowering.scheduleRelocCall(*Reloc);
@@ -551,7 +555,8 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   // input.  Also has the effect of removing duplicates in the original
   // llvm::Value input list as well.  This is a useful optimization for
   // reducing the size of the StackMap section.  It has no other impact.
-  removeDuplicatesGCPtrs(SI.Bases, SI.Ptrs, SI.GCRelocates, *this);
+  removeDuplicateGCPtrs(SI.Bases, SI.Ptrs, SI.GCRelocates, *this,
+                        FuncInfo.StatepointSpillMaps[SI.StatepointInstr]);
   assert(SI.Bases.size() == SI.Ptrs.size() &&
          SI.Ptrs.size() == SI.GCRelocates.size());
 
@@ -822,6 +827,7 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundle(
   unsigned ArgBeginIndex = CS.arg_begin() - CS.getInstruction()->op_begin();
   populateCallLoweringInfo(SI.CLI, CS, ArgBeginIndex, CS.getNumArgOperands(),
                            Callee, CS.getType(), false);
+  SI.CLI.IsVarArg = CS.getFunctionType()->isVarArg();
 
   auto DeoptBundle = *CS.getOperandBundle(LLVMContext::OB_deopt);
 
@@ -886,12 +892,10 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   const Value *DerivedPtr = Relocate.getDerivedPtr();
   SDValue SD = getValue(DerivedPtr);
 
-  FunctionLoweringInfo::StatepointSpilledValueMapTy &SpillMap =
-    FuncInfo.StatepointRelocatedValues[Relocate.getStatepoint()];
-
-  // We should have recorded location for this pointer
-  assert(SpillMap.count(DerivedPtr) && "Relocating not lowered gc value");
-  Optional<int> DerivedPtrLocation = SpillMap[DerivedPtr];
+  auto &SpillMap = FuncInfo.StatepointSpillMaps[Relocate.getStatepoint()];
+  auto SlotIt = SpillMap.find(DerivedPtr);
+  assert(SlotIt != SpillMap.end() && "Relocating not lowered gc value");
+  Optional<int> DerivedPtrLocation = SlotIt->second;
 
   // We didn't need to spill these special cases (constants and allocas).
   // See the handling in spillIncomingValueForStatepoint for detail.
@@ -919,4 +923,38 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
   assert(SpillLoad.getNode());
   setValue(&Relocate, SpillLoad);
+}
+
+void SelectionDAGBuilder::LowerDeoptimizeCall(const CallInst *CI) {
+  const auto &TLI = DAG.getTargetLoweringInfo();
+
+  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(RTLIB::DEOPTIMIZE),
+                                         TLI.getPointerTy(DAG.getDataLayout()));
+  StatepointLoweringInfo SI(DAG);
+  unsigned ArgBeginIndex = CI->arg_begin() - CI->op_begin();
+  populateCallLoweringInfo(SI.CLI, CI, ArgBeginIndex, CI->getNumArgOperands(),
+                           Callee, CI->getType(), false);
+
+  // We don't lower calls to __llvm_deoptimize as varargs, but as a
+  // regular call.
+  assert(!SI.CLI.IsVarArg && "Expected from populateCallLoweringInfo!");
+
+  auto DeoptBundle = *CI->getOperandBundle(LLVMContext::OB_deopt);
+
+  unsigned DefaultID = StatepointDirectives::DeoptBundleStatepointID;
+
+  auto SD = parseStatepointDirectivesFromAttrs(CI->getAttributes());
+  SI.ID = SD.StatepointID.getValueOr(DefaultID);
+  SI.NumPatchBytes = SD.NumPatchBytes.getValueOr(0);
+
+  SI.DeoptState =
+      ArrayRef<const Use>(DeoptBundle.Inputs.begin(), DeoptBundle.Inputs.end());
+  SI.StatepointFlags = static_cast<uint64_t>(StatepointFlags::None);
+
+  // NB! The GC arguments are specifically left empty.
+
+  if (SDValue ReturnVal = LowerAsSTATEPOINT(SI)) {
+    ReturnVal = lowerRangeToAssertZExt(DAG, *CI, ReturnVal);
+    setValue(CI, ReturnVal);
+  }
 }

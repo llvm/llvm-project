@@ -586,12 +586,12 @@ static bool getDarwinConfDir(bool TempDir, SmallVectorImpl<char> &Result) {
 }
 
 static bool getUserCacheDir(SmallVectorImpl<char> &Result) {
-  // First try using XDS_CACHE_HOME env variable,
+  // First try using XDG_CACHE_HOME env variable,
   // as specified in XDG Base Directory Specification at
   // http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
-  if (const char *XdsCacheDir = std::getenv("XDS_CACHE_HOME")) {
+  if (const char *XdgCacheDir = std::getenv("XDG_CACHE_HOME")) {
     Result.clear();
-    Result.append(XdsCacheDir, XdsCacheDir + strlen(XdsCacheDir));
+    Result.append(XdgCacheDir, XdgCacheDir + strlen(XdgCacheDir));
     return true;
   }
 

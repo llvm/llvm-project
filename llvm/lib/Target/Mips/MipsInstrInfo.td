@@ -315,6 +315,10 @@ class ASE_CNMIPS {
   list<Predicate> InsnPredicates = [HasCnMips];
 }
 
+class ASE_MIPS64_CNMIPS {
+  list<Predicate> InsnPredicates = [HasMips64, HasCnMips];
+}
+
 class ASE_MSA {
   list<Predicate> InsnPredicates = [HasMSA];
 }
@@ -461,11 +465,13 @@ def UImm16AsmOperandClass
     : UImmAsmOperandClass<16, [UImm16RelaxedAsmOperandClass]>;
 def ConstantUImm10AsmOperandClass
     : ConstantUImmAsmOperandClass<10, [UImm16AsmOperandClass]>;
+def ConstantSImm10AsmOperandClass
+    : ConstantSImmAsmOperandClass<10, [ConstantUImm10AsmOperandClass]>;
 def ConstantSImm7Lsl2AsmOperandClass : AsmOperandClass {
   let Name = "SImm7Lsl2";
   let RenderMethod = "addImmOperands";
   let PredicateMethod = "isScaledSImm<7, 2>";
-  let SuperClasses = [ConstantUImm10AsmOperandClass];
+  let SuperClasses = [ConstantSImm10AsmOperandClass];
   let DiagnosticType = "SImm7_Lsl2";
 }
 def ConstantUImm8AsmOperandClass
@@ -738,6 +744,19 @@ foreach I = {1, 2, 3, 4, 5, 6, 8} in
 foreach I = {4, 5, 6} in
   def simm # I : Operand<i32> {
     let DecoderMethod = "DecodeSImmWithOffsetAndScale<" # I # ">";
+    let ParserMatchClass =
+        !cast<AsmOperandClass>("ConstantSImm" # I # "AsmOperandClass");
+  }
+
+foreach I = {10} in
+  def simm # I # _64 : Operand<i64> {
+    let DecoderMethod = "DecodeSImmWithOffsetAndScale<" # I # ">";
+    let ParserMatchClass =
+        !cast<AsmOperandClass>("ConstantSImm" # I # "AsmOperandClass");
+  }
+
+foreach I = {5, 10} in
+  def vsplat_simm # I : Operand<vAny> {
     let ParserMatchClass =
         !cast<AsmOperandClass>("ConstantSImm" # I # "AsmOperandClass");
   }

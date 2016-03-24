@@ -1172,6 +1172,11 @@ public:
     return nullptr;
   }
 
+  /// Returns true if the platform's atomic operations are sign extended.
+  virtual bool hasSignExtendedAtomicOps() const {
+    return false;
+  }
+
   /// Returns true if we should normalize
   /// select(N0&N1, X, Y) => select(N0, select(N1, X, Y), Y) and
   /// select(N0|N1, X, Y) => select(N0, select(N1, X, Y, Y)) if it is likely

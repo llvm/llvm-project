@@ -401,6 +401,9 @@ namespace RTLIB {
     // Stack Protector Fail.
     STACKPROTECTOR_CHECK_FAIL,
 
+    // Deoptimization.
+    DEOPTIMIZE,
+
     UNKNOWN_LIBCALL
   };
 
