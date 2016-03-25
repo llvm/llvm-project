@@ -358,24 +358,28 @@ TEST_F(StringMapTest, MoveDtor) {
 
 namespace {
 // Simple class that counts how many moves and copy happens when growing a map
-struct CountCopyAndMove {
+struct CountCtorCopyAndMove {
+  static unsigned Ctor;
   static unsigned Move;
   static unsigned Copy;
-  CountCopyAndMove() {}
+  int Data = 0;
+  CountCtorCopyAndMove(int Data) : Data(Data) { Ctor++; }
+  CountCtorCopyAndMove() { Ctor++; }
 
-  CountCopyAndMove(const CountCopyAndMove &) { Copy++; }
-  CountCopyAndMove &operator=(const CountCopyAndMove &) {
+  CountCtorCopyAndMove(const CountCtorCopyAndMove &) { Copy++; }
+  CountCtorCopyAndMove &operator=(const CountCtorCopyAndMove &) {
     Copy++;
     return *this;
   }
-  CountCopyAndMove(CountCopyAndMove &&) { Move++; }
-  CountCopyAndMove &operator=(const CountCopyAndMove &&) {
+  CountCtorCopyAndMove(CountCtorCopyAndMove &&) { Move++; }
+  CountCtorCopyAndMove &operator=(const CountCtorCopyAndMove &&) {
     Move++;
     return *this;
   }
 };
-unsigned CountCopyAndMove::Copy = 0;
-unsigned CountCopyAndMove::Move = 0;
+unsigned CountCtorCopyAndMove::Copy = 0;
+unsigned CountCtorCopyAndMove::Move = 0;
+unsigned CountCtorCopyAndMove::Ctor = 0;
 
 } // anonymous namespace
 
@@ -385,14 +389,43 @@ TEST(StringMapCustomTest, InitialSizeTest) {
   // 1 is an "edge value", 32 is an arbitrary power of two, and 67 is an
   // arbitrary prime, picked without any good reason.
   for (auto Size : {1, 32, 67}) {
-    StringMap<CountCopyAndMove> Map(Size);
-    CountCopyAndMove::Copy = 0;
-    CountCopyAndMove::Move = 0;
+    StringMap<CountCtorCopyAndMove> Map(Size);
+    CountCtorCopyAndMove::Move = 0;
+    CountCtorCopyAndMove::Copy = 0;
     for (int i = 0; i < Size; ++i)
-      Map.insert(std::make_pair(Twine(i).str(), CountCopyAndMove()));
-    EXPECT_EQ((unsigned)Size * 3, CountCopyAndMove::Move);
-    EXPECT_EQ(0u, CountCopyAndMove::Copy);
+      Map.insert(std::make_pair(Twine(i).str(), CountCtorCopyAndMove()));
+    EXPECT_EQ((unsigned)Size * 3, CountCtorCopyAndMove::Move);
+    EXPECT_EQ(0u, CountCtorCopyAndMove::Copy);
   }
+}
+
+TEST(StringMapCustomTest, BracketOperatorCtor) {
+  StringMap<CountCtorCopyAndMove> Map;
+  CountCtorCopyAndMove::Ctor = 0;
+  Map["abcd"];
+  EXPECT_EQ(1u, CountCtorCopyAndMove::Ctor);
+  // Test that operator[] does not create a value when it is already in the map
+  CountCtorCopyAndMove::Ctor = 0;
+  Map["abcd"];
+  EXPECT_EQ(0u, CountCtorCopyAndMove::Ctor);
+}
+
+namespace {
+struct NonMoveableNonCopyableType {
+  int Data = 0;
+  NonMoveableNonCopyableType() = default;
+  NonMoveableNonCopyableType(int Data) : Data(Data) {}
+  NonMoveableNonCopyableType(const NonMoveableNonCopyableType &) = delete;
+  NonMoveableNonCopyableType(NonMoveableNonCopyableType &&) = delete;
+};
+}
+
+// Test that we can "emplace" an element in the map without involving map/move
+TEST(StringMapCustomTest, EmplaceTest) {
+  StringMap<NonMoveableNonCopyableType> Map;
+  Map.emplace_second("abcd", 42);
+  EXPECT_EQ(1u, Map.count("abcd"));
+  EXPECT_EQ(42, Map["abcd"].Data);
 }
 
 } // end anonymous namespace
