@@ -187,17 +187,17 @@ am__libisl_la_SOURCES_DIST = mp_get_memory_functions.c isl_int_gmp.h \
 	isl_factorization.c isl_factorization.h isl_farkas.c isl_ffs.c \
 	isl_flow.c isl_fold.c isl_hash.c isl_hash_private.h \
 	isl_id_to_ast_expr.c isl_id_to_id.c isl_id_to_pw_aff.c \
-	isl_ilp.c isl_ilp_private.h isl_input.c isl_int.h \
-	isl_local_space_private.h isl_local_space.c isl_lp.c \
-	isl_lp_private.h isl_map.c isl_map_list.c isl_map_simplify.c \
-	isl_map_subtract.c isl_map_private.h isl_map_to_basic_set.c \
-	isl_mat.c isl_mat_private.h isl_morph.c isl_morph.h isl_id.c \
-	isl_id_private.h isl_obj.c isl_options.c isl_options_private.h \
-	isl_output.c isl_output_private.h isl_point_private.h \
-	isl_point.c isl_polynomial_private.h isl_polynomial.c \
-	isl_printer_private.h isl_printer.c print.c isl_range.c \
-	isl_range.h isl_reordering.c isl_reordering.h isl_sample.h \
-	isl_sample.c isl_scan.c isl_scan.h isl_schedule.c \
+	isl_ilp.c isl_ilp_private.h isl_input.c isl_int.h isl_local.h \
+	isl_local.c isl_local_space_private.h isl_local_space.c \
+	isl_lp.c isl_lp_private.h isl_map.c isl_map_list.c \
+	isl_map_simplify.c isl_map_subtract.c isl_map_private.h \
+	isl_map_to_basic_set.c isl_mat.c isl_mat_private.h isl_morph.c \
+	isl_morph.h isl_id.c isl_id_private.h isl_obj.c isl_options.c \
+	isl_options_private.h isl_output.c isl_output_private.h \
+	isl_point_private.h isl_point.c isl_polynomial_private.h \
+	isl_polynomial.c isl_printer_private.h isl_printer.c print.c \
+	isl_range.c isl_range.h isl_reordering.c isl_reordering.h \
+	isl_sample.h isl_sample.c isl_scan.c isl_scan.h isl_schedule.c \
 	isl_schedule_band.c isl_schedule_band.h isl_schedule_node.c \
 	isl_schedule_node_private.h isl_schedule_read.c \
 	isl_schedule_tree.c isl_schedule_tree.h isl_schedule_private.h \
@@ -234,8 +234,8 @@ am_libisl_la_OBJECTS = $(am__objects_4) $(am__objects_5) isl_aff.lo \
 	isl_equalities.lo isl_factorization.lo isl_farkas.lo \
 	isl_ffs.lo isl_flow.lo isl_fold.lo isl_hash.lo \
 	isl_id_to_ast_expr.lo isl_id_to_id.lo isl_id_to_pw_aff.lo \
-	isl_ilp.lo isl_input.lo isl_local_space.lo isl_lp.lo \
-	isl_map.lo isl_map_list.lo isl_map_simplify.lo \
+	isl_ilp.lo isl_input.lo isl_local.lo isl_local_space.lo \
+	isl_lp.lo isl_map.lo isl_map_list.lo isl_map_simplify.lo \
 	isl_map_subtract.lo isl_map_to_basic_set.lo isl_mat.lo \
 	isl_morph.lo isl_id.lo isl_obj.lo isl_options.lo isl_output.lo \
 	isl_point.lo isl_polynomial.lo isl_printer.lo print.lo \
@@ -386,16 +386,19 @@ am__pkginclude_HEADERS_DIST = include/isl/val_gmp.h include/isl/aff.h \
 	include/isl/flow.h include/isl/id.h \
 	include/isl/id_to_ast_expr.h include/isl/id_to_id.h \
 	include/isl/id_to_pw_aff.h include/isl/ilp.h \
-	include/isl/hash.h include/isl/hmap.h include/isl/list.h \
-	include/isl/local_space.h include/isl/lp.h include/isl/mat.h \
-	include/isl/map.h include/isl/map_to_basic_set.h \
-	include/isl/map_type.h include/isl/multi.h include/isl/obj.h \
-	include/isl/options.h include/isl/point.h \
-	include/isl/polynomial.h include/isl/polynomial_type.h \
-	include/isl/printer.h include/isl/printer_type.h \
-	include/isl/schedule.h include/isl/schedule_node.h \
-	include/isl/schedule_type.h include/isl/set.h \
-	include/isl/set_type.h include/isl/space.h \
+	include/isl/hash.h include/isl/hmap.h include/isl/hmap_templ.c \
+	include/isl/list.h include/isl/local_space.h include/isl/lp.h \
+	include/isl/mat.h include/isl/map.h \
+	include/isl/map_to_basic_set.h include/isl/map_type.h \
+	include/isl/maybe.h include/isl/maybe_ast_expr.h \
+	include/isl/maybe_basic_set.h include/isl/maybe_id.h \
+	include/isl/maybe_pw_aff.h include/isl/maybe_templ.h \
+	include/isl/multi.h include/isl/obj.h include/isl/options.h \
+	include/isl/point.h include/isl/polynomial.h \
+	include/isl/polynomial_type.h include/isl/printer.h \
+	include/isl/printer_type.h include/isl/schedule.h \
+	include/isl/schedule_node.h include/isl/schedule_type.h \
+	include/isl/set.h include/isl/set_type.h include/isl/space.h \
 	include/isl/stream.h include/isl/union_map.h \
 	include/isl/union_map_type.h include/isl/union_set.h \
 	include/isl/union_set_type.h include/isl/val.h \
@@ -870,6 +873,8 @@ libisl_la_SOURCES = \
 	isl_ilp_private.h \
 	isl_input.c \
 	isl_int.h \
+	isl_local.h \
+	isl_local.c \
 	isl_local_space_private.h \
 	isl_local_space.c \
 	isl_lp.c \
@@ -1014,6 +1019,7 @@ pkginclude_HEADERS = \
 	include/isl/ilp.h \
 	include/isl/hash.h \
 	include/isl/hmap.h \
+	include/isl/hmap_templ.c \
 	include/isl/list.h \
 	include/isl/local_space.h \
 	include/isl/lp.h \
@@ -1021,6 +1027,12 @@ pkginclude_HEADERS = \
 	include/isl/map.h \
 	include/isl/map_to_basic_set.h \
 	include/isl/map_type.h \
+	include/isl/maybe.h \
+	include/isl/maybe_ast_expr.h \
+	include/isl/maybe_basic_set.h \
+	include/isl/maybe_id.h \
+	include/isl/maybe_pw_aff.h \
+	include/isl/maybe_templ.h \
 	include/isl/multi.h \
 	include/isl/obj.h \
 	include/isl/options.h \
@@ -1076,7 +1088,6 @@ EXTRA_DIST = \
 	LICENSE \
 	isl_config_post.h \
 	basis_reduction_templ.c \
-	isl_hmap_templ.c \
 	isl_list_templ.c \
 	isl_list_templ.h \
 	isl_map_lexopt_templ.c \
@@ -1086,13 +1097,18 @@ EXTRA_DIST = \
 	isl_multi_apply_templ.c \
 	isl_multi_apply_set.c \
 	isl_multi_apply_union_set.c \
+	isl_multi_cmp.c \
 	isl_multi_coalesce.c \
 	isl_multi_floor.c \
 	isl_multi_gist.c \
+	isl_multi_hash.c \
 	isl_multi_intersect.c \
 	print_templ.c \
 	isl_power_templ.c \
+	isl_pw_macro.h \
 	isl_pw_templ.c \
+	isl_pw_hash.c \
+	isl_pw_union_opt.c \
 	isl_union_macro.h \
 	isl_union_templ.c \
 	isl_union_single.c \
@@ -1336,6 +1352,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_imath.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_input.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_int_sioimath.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_local.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_local_space.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_lp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_map.Plo@am__quote@

@@ -1134,7 +1134,8 @@ static int defining_equality(__isl_keep isl_basic_map *eq,
  * data->user is assumed to be an isl_basic_map keeping track of equalities.
  *
  * If the current dimension is defined by these equalities, then print
- * the corresponding expression.  Otherwise, print the name of the dimension.
+ * the corresponding expression, assigned to the name of the dimension
+ * if there is any.  Otherwise, print the name of the dimension.
  */
 static __isl_give isl_printer *print_dim_eq(__isl_take isl_printer *p,
 	struct isl_print_space_data *data, unsigned pos)
@@ -1144,6 +1145,11 @@ static __isl_give isl_printer *print_dim_eq(__isl_take isl_printer *p,
 
 	j = defining_equality(eq, data->space, data->type, pos);
 	if (j >= 0) {
+		if (isl_space_has_dim_name(data->space, data->type, pos)) {
+			p = print_name(data->space, p, data->type, pos,
+					data->latex);
+			p = isl_printer_print_str(p, " = ");
+		}
 		pos += 1 + isl_space_offset(data->space, data->type);
 		p = print_affine_of_len(eq->dim, NULL, p, eq->eq[j], pos);
 	} else {

@@ -46,6 +46,8 @@ class NestedAliasTestCase(TestBase):
         def cleanup():
             self.runCmd('command unalias read', check=False)
             self.runCmd('command unalias rd', check=False)
+            self.runCmd('command unalias fo', check=False)
+            self.runCmd('command unalias foself', check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -58,3 +60,9 @@ class NestedAliasTestCase(TestBase):
 
         self.expect('memory read -f A -c 3 `&my_ptr[0]`', substrs=['deadfeed'], matching=False)
         self.expect('rd `&my_ptr[0]`', substrs=['deadfeed'], matching=False)
+
+        self.runCmd('command alias fo frame variable -O --')
+        self.runCmd('command alias foself fo self')
+        
+        self.expect('help foself', substrs=['--show-all-children', '--raw-output'], matching=False)
+        self.expect('help foself', substrs=['Show frame variables.'], matching=True)

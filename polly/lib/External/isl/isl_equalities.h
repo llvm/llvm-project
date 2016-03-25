@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+__isl_give isl_mat *isl_mat_final_variable_compression(__isl_take isl_mat *B,
+	int first, __isl_give isl_mat **T2);
 __isl_give isl_mat *isl_mat_variable_compression(__isl_take isl_mat *B,
 	__isl_give isl_mat **T2);
 struct isl_mat *isl_mat_parameter_compression(

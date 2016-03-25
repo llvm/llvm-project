@@ -6117,13 +6117,16 @@ __isl_give isl_pw_multi_aff *isl_basic_map_lexmin_pw_multi_aff(
 /* Given a map "map", compute the lexicographically minimal
  * (or maximal) image element for each domain element in dom,
  * in the form of an isl_pw_multi_aff.
- * Set *empty to those elements in dom that do not have an image element.
+ * If "empty" is not NULL, then set *empty to those elements in dom that
+ * do not have an image element.
  *
  * We first compute the lexicographically minimal or maximal element
  * in the first basic map.  This results in a partial solution "res"
  * and a subset "todo" of dom that still need to be handled.
  * We then consider each of the remaining maps in "map" and successively
  * update both "res" and "todo".
+ * If "empty" is NULL, then the todo sets are not needed and therefore
+ * also not computed.
  */
 static __isl_give isl_pw_multi_aff *isl_map_partial_lexopt_aligned_pw_multi_aff(
 	__isl_take isl_map *map, __isl_take isl_set *dom,
@@ -6146,22 +6149,24 @@ static __isl_give isl_pw_multi_aff *isl_map_partial_lexopt_aligned_pw_multi_aff(
 
 	res = basic_map_partial_lexopt_pw_multi_aff(
 					    isl_basic_map_copy(map->p[0]),
-					    isl_set_copy(dom), &todo, max);
+					    isl_set_copy(dom), empty, max);
 
+	if (empty)
+		todo = *empty;
 	for (i = 1; i < map->n; ++i) {
 		isl_pw_multi_aff *res_i;
-		isl_set *todo_i;
 
 		res_i = basic_map_partial_lexopt_pw_multi_aff(
 					    isl_basic_map_copy(map->p[i]),
-					    isl_set_copy(dom), &todo_i, max);
+					    isl_set_copy(dom), empty, max);
 
 		if (max)
 			res = isl_pw_multi_aff_union_lexmax(res, res_i);
 		else
 			res = isl_pw_multi_aff_union_lexmin(res, res_i);
 
-		todo = isl_set_intersect(todo, todo_i);
+		if (empty)
+			todo = isl_set_intersect(todo, *empty);
 	}
 
 	isl_set_free(dom);
@@ -6169,8 +6174,6 @@ static __isl_give isl_pw_multi_aff *isl_map_partial_lexopt_aligned_pw_multi_aff(
 
 	if (empty)
 		*empty = todo;
-	else
-		isl_set_free(todo);
 
 	return res;
 error:
@@ -6567,42 +6570,34 @@ error:
 /* Apply a preimage specified by "mat" on the parameters of "set".
  * set is assumed to have only parameters and divs.
  */
-static struct isl_set *set_parameter_preimage(
-	struct isl_set *set, struct isl_mat *mat)
+static __isl_give isl_set *set_parameter_preimage(__isl_take isl_set *set,
+	__isl_take isl_mat *mat)
 {
-	isl_space *dim = NULL;
+	isl_space *space;
 	unsigned nparam;
 
 	if (!set || !mat)
 		goto error;
 
-	dim = isl_space_copy(set->dim);
-	dim = isl_space_cow(dim);
-	if (!dim)
-		goto error;
-
 	nparam = isl_set_dim(set, isl_dim_param);
 
-	isl_assert(set->ctx, mat->n_row == 1 + nparam, goto error);
+	if (mat->n_row != 1 + nparam)
+		isl_die(isl_set_get_ctx(set), isl_error_internal,
+			"unexpected number of rows", goto error);
 
-	dim->nparam = 0;
-	dim->n_out = nparam;
-	isl_set_reset_space(set, dim);
+	space = isl_set_get_space(set);
+	space = isl_space_move_dims(space, isl_dim_set, 0,
+				    isl_dim_param, 0, nparam);
+	set = isl_set_reset_space(set, space);
 	set = isl_set_preimage(set, mat);
-	if (!set)
-		goto error2;
-	dim = isl_space_copy(set->dim);
-	dim = isl_space_cow(dim);
-	if (!dim)
-		goto error2;
-	dim->nparam = dim->n_out;
-	dim->n_out = 0;
-	isl_set_reset_space(set, dim);
+	nparam = isl_set_dim(set, isl_dim_out);
+	space = isl_set_get_space(set);
+	space = isl_space_move_dims(space, isl_dim_param, 0,
+				    isl_dim_out, 0, nparam);
+	set = isl_set_reset_space(set, space);
 	return set;
 error:
-	isl_space_free(dim);
 	isl_mat_free(mat);
-error2:
 	isl_set_free(set);
 	return NULL;
 }
@@ -6925,7 +6920,7 @@ static struct isl_map *compute_divs(struct isl_basic_map *bmap)
 	unsigned	 nparam;
 	unsigned	 n_in;
 	unsigned	 n_out;
-	unsigned n_known;
+	int n_known;
 	int i;
 
 	bmap = isl_basic_map_sort_divs(bmap);
@@ -6933,9 +6928,9 @@ static struct isl_map *compute_divs(struct isl_basic_map *bmap)
 	if (!bmap)
 		return NULL;
 
-	for (n_known = 0; n_known < bmap->n_div; ++n_known)
-		if (isl_int_is_zero(bmap->div[n_known][0]))
-			break;
+	n_known = isl_basic_map_first_unknown_div(bmap);
+	if (n_known < 0)
+		return isl_map_from_basic_map(isl_basic_map_free(bmap));
 
 	nparam = isl_basic_map_dim(bmap, isl_dim_param);
 	n_in = isl_basic_map_dim(bmap, isl_dim_in);
@@ -6967,6 +6962,27 @@ error:
 	return NULL;
 }
 
+/* Remove the explicit representation of local variable "div",
+ * if there is any.
+ */
+__isl_give isl_basic_map *isl_basic_map_mark_div_unknown(
+	__isl_take isl_basic_map *bmap, int div)
+{
+	isl_bool known;
+
+	known = isl_basic_map_div_is_known(bmap, div);
+	if (known < 0)
+		return isl_basic_map_free(bmap);
+	if (!known)
+		return bmap;
+
+	bmap = isl_basic_map_cow(bmap);
+	if (!bmap)
+		return NULL;
+	isl_int_set_si(bmap->div[div][0], 0);
+	return bmap;
+}
+
 /* Does local variable "div" of "bmap" have an explicit representation?
  */
 isl_bool isl_basic_map_div_is_known(__isl_keep isl_basic_map *bmap, int div)
@@ -6979,24 +6995,37 @@ isl_bool isl_basic_map_div_is_known(__isl_keep isl_basic_map *bmap, int div)
 	return !isl_int_is_zero(bmap->div[div][0]);
 }
 
+/* Return the position of the first local variable that does not
+ * have an explicit representation.
+ * Return the total number of local variables if they all have
+ * an explicit representation.
+ * Return -1 on error.
+ */
+int isl_basic_map_first_unknown_div(__isl_keep isl_basic_map *bmap)
+{
+	int i;
+
+	if (!bmap)
+		return -1;
+
+	for (i = 0; i < bmap->n_div; ++i) {
+		if (!isl_basic_map_div_is_known(bmap, i))
+			return i;
+	}
+	return bmap->n_div;
+}
+
 /* Does "bmap" have an explicit representation for all local variables?
  */
 isl_bool isl_basic_map_divs_known(__isl_keep isl_basic_map *bmap)
 {
-	int i;
-	unsigned off;
+	int first, n;
 
-	if (!bmap)
+	n = isl_basic_map_dim(bmap, isl_dim_div);
+	first = isl_basic_map_first_unknown_div(bmap);
+	if (first < 0)
 		return isl_bool_error;
-
-	off = isl_space_dim(bmap->dim, isl_dim_all);
-	for (i = 0; i < bmap->n_div; ++i) {
-		if (!isl_basic_map_div_is_known(bmap, i))
-			return isl_bool_false;
-		isl_assert(bmap->ctx, isl_int_is_zero(bmap->div[i][1+1+off+i]),
-				return isl_bool_error);
-	}
-	return isl_bool_true;
+	return first == n;
 }
 
 /* Do all basic maps in "map" have an explicit representation
@@ -8184,6 +8213,10 @@ struct isl_basic_map *isl_basic_map_order_divs(struct isl_basic_map *bmap)
 							    bmap->n_div-i);
 		if (pos == -1)
 			continue;
+		if (pos == 0)
+			isl_die(isl_basic_map_get_ctx(bmap), isl_error_internal,
+				"integer division depends on itself",
+				return isl_basic_map_free(bmap));
 		isl_basic_map_swap_div(bmap, i, i + pos);
 		--i;
 	}
@@ -11797,16 +11830,25 @@ __isl_give isl_map *isl_map_uncurry(__isl_take isl_map *map)
 
 /* Construct a basic map mapping the domain of the affine expression
  * to a one-dimensional range prescribed by the affine expression.
+ *
+ * A NaN affine expression cannot be converted to a basic map.
  */
 __isl_give isl_basic_map *isl_basic_map_from_aff(__isl_take isl_aff *aff)
 {
 	int k;
 	int pos;
+	isl_bool is_nan;
 	isl_local_space *ls;
-	isl_basic_map *bmap;
+	isl_basic_map *bmap = NULL;
 
 	if (!aff)
 		return NULL;
+	is_nan = isl_aff_is_nan(aff);
+	if (is_nan < 0)
+		goto error;
+	if (is_nan)
+		isl_die(isl_aff_get_ctx(aff), isl_error_invalid,
+			"cannot convert NaN", goto error);
 
 	ls = isl_aff_get_local_space(aff);
 	bmap = isl_basic_map_from_local_space(ls);

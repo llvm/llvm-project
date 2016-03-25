@@ -356,6 +356,22 @@ isl_ctx *isl_val_get_ctx(__isl_keep isl_val *val)
 	return val ? val->ctx : NULL;
 }
 
+/* Return a hash value that digests "val".
+ */
+uint32_t isl_val_get_hash(__isl_keep isl_val *val)
+{
+	uint32_t hash;
+
+	if (!val)
+		return 0;
+
+	hash = isl_hash_init();
+	hash = isl_int_hash(val->n, hash);
+	hash = isl_int_hash(val->d, hash);
+
+	return hash;
+}
+
 /* Normalize "v".
  *
  * In particular, make sure that the denominator of a rational value

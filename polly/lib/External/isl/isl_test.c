@@ -1383,8 +1383,31 @@ struct {
 	{ "{ [0, 0, q, p] : -5 <= q <= 5 and p >= 0 }",
 	  "{ [a, b, q, p] : b >= 1 + a }",
 	  "{ [a, b, q, p] : false }" },
+	{ "[n] -> { [x] : x = n && x mod 32 = 0 }",
+	  "[n] -> { [x] : x mod 32 = 0 }",
+	  "[n] -> { [x = n] }" },
+	{ "{ [x] : x mod 6 = 0 }", "{ [x] : x mod 3 = 0 }",
+	  "{ [x] : x mod 2 = 0 }" },
+	{ "{ [x] : x mod 3200 = 0 }", "{ [x] : x mod 10000 = 0 }",
+	  "{ [x] : x mod 128 = 0 }" },
+	{ "{ [x] : x mod 3200 = 0 }", "{ [x] : x mod 10 = 0 }",
+	  "{ [x] : x mod 3200 = 0 }" },
+	{ "{ [a, b, c] : a mod 2 = 0 and a = c }",
+	  "{ [a, b, c] : b mod 2 = 0 and b = c }",
+	  "{ [a, b, c = a] }" },
+	{ "{ [a, b, c] : a mod 6 = 0 and a = c }",
+	  "{ [a, b, c] : b mod 2 = 0 and b = c }",
+	  "{ [a, b, c = a] : a mod 3 = 0 }" },
 };
 
+/* Check that isl_set_gist behaves as expected.
+ *
+ * For the test cases in gist_tests, besides checking that the result
+ * is as expected, also check that applying the gist operation does
+ * not modify the input set (an earlier version of isl would do that) and
+ * that the test case is consistent, i.e., that the gist has the same
+ * intersection with the context as the input set.
+ */
 static int test_gist(struct isl_ctx *ctx)
 {
 	int i;
@@ -1394,22 +1417,25 @@ static int test_gist(struct isl_ctx *ctx)
 	int equal;
 
 	for (i = 0; i < ARRAY_SIZE(gist_tests); ++i) {
-		int equal_input;
-		isl_set *set1, *set2, *copy;
+		int equal_input, equal_intersection;
+		isl_set *set1, *set2, *copy, *context;
 
 		set1 = isl_set_read_from_str(ctx, gist_tests[i].set);
-		set2 = isl_set_read_from_str(ctx, gist_tests[i].context);
+		context = isl_set_read_from_str(ctx, gist_tests[i].context);
 		copy = isl_set_copy(set1);
-		set1 = isl_set_gist(set1, set2);
+		set1 = isl_set_gist(set1, isl_set_copy(context));
 		set2 = isl_set_read_from_str(ctx, gist_tests[i].gist);
 		equal = isl_set_is_equal(set1, set2);
 		isl_set_free(set1);
-		isl_set_free(set2);
 		set1 = isl_set_read_from_str(ctx, gist_tests[i].set);
 		equal_input = isl_set_is_equal(set1, copy);
-		isl_set_free(set1);
 		isl_set_free(copy);
-		if (equal < 0 || equal_input < 0)
+		set1 = isl_set_intersect(set1, isl_set_copy(context));
+		set2 = isl_set_intersect(set2, context);
+		equal_intersection = isl_set_is_equal(set1, set2);
+		isl_set_free(set2);
+		isl_set_free(set1);
+		if (equal < 0 || equal_input < 0 || equal_intersection < 0)
 			return -1;
 		if (!equal)
 			isl_die(ctx, isl_error_unknown,
@@ -1417,6 +1443,9 @@ static int test_gist(struct isl_ctx *ctx)
 		if (!equal_input)
 			isl_die(ctx, isl_error_unknown,
 				"gist modified input", return -1);
+		if (!equal_input)
+			isl_die(ctx, isl_error_unknown,
+				"inconsistent gist test case", return -1);
 	}
 
 	test_gist_case(ctx, "gist1");
@@ -5823,7 +5852,7 @@ static int test_multi_pw_aff(isl_ctx *ctx)
  * is empty and would end up in an infinite loop if it didn't test
  * explicitly for empty basic maps in the outer loop.
  */
-static int test_simplify(isl_ctx *ctx)
+static int test_simplify_1(isl_ctx *ctx)
 {
 	const char *str;
 	isl_basic_set *bset;
@@ -5843,6 +5872,39 @@ static int test_simplify(isl_ctx *ctx)
 		isl_die(ctx, isl_error_unknown,
 			"basic set should be empty", return -1);
 
+	return 0;
+}
+
+/* Check that the equality in the set description below
+ * is simplified away.
+ */
+static int test_simplify_2(isl_ctx *ctx)
+{
+	const char *str;
+	isl_basic_set *bset;
+	isl_bool universe;
+
+	str = "{ [a] : exists e0, e1: 32e1 = 31 + 31a + 31e0 }";
+	bset = isl_basic_set_read_from_str(ctx, str);
+	universe = isl_basic_set_plain_is_universe(bset);
+	isl_basic_set_free(bset);
+
+	if (universe < 0)
+		return -1;
+	if (!universe)
+		isl_die(ctx, isl_error_unknown,
+			"equality not simplified away", return -1);
+	return 0;
+}
+
+/* Some simplification tests.
+ */
+static int test_simplify(isl_ctx *ctx)
+{
+	if (test_simplify_1(ctx) < 0)
+		return -1;
+	if (test_simplify_2(ctx) < 0)
+		return -1;
 	return 0;
 }
 

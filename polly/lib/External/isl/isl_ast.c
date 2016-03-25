@@ -733,7 +733,7 @@ __isl_give isl_ast_expr *isl_ast_expr_substitute_ids(
 	__isl_take isl_ast_expr *expr, __isl_take isl_id_to_ast_expr *id2expr)
 {
 	int i;
-	isl_id *id;
+	isl_maybe_isl_ast_expr m;
 
 	if (!expr || !id2expr)
 		goto error;
@@ -742,11 +742,13 @@ __isl_give isl_ast_expr *isl_ast_expr_substitute_ids(
 	case isl_ast_expr_int:
 		break;
 	case isl_ast_expr_id:
-		if (!isl_id_to_ast_expr_has(id2expr, expr->u.id))
+		m = isl_id_to_ast_expr_try_get(id2expr, expr->u.id);
+		if (m.valid < 0)
+			goto error;
+		if (!m.valid)
 			break;
-		id = isl_id_copy(expr->u.id);
 		isl_ast_expr_free(expr);
-		expr = isl_id_to_ast_expr_get(id2expr, id);
+		expr = m.value;
 		break;
 	case isl_ast_expr_op:
 		for (i = 0; i < expr->u.op.n_arg; ++i) {

@@ -108,6 +108,8 @@ __isl_export
 isl_bool isl_union_set_is_strict_subset(__isl_keep isl_union_set *uset1,
 	__isl_keep isl_union_set *uset2);
 
+uint32_t isl_union_set_get_hash(__isl_keep isl_union_set *uset);
+
 int isl_union_set_n_set(__isl_keep isl_union_set *uset);
 __isl_export
 isl_stat isl_union_set_foreach_set(__isl_keep isl_union_set *uset,

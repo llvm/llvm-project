@@ -2033,18 +2033,16 @@ int isl_ast_build_aff_is_nonneg(__isl_keep isl_ast_build *build,
 
 /* Does the dimension at (internal) position "pos" have a non-trivial stride?
  */
-int isl_ast_build_has_stride(__isl_keep isl_ast_build *build, int pos)
+isl_bool isl_ast_build_has_stride(__isl_keep isl_ast_build *build, int pos)
 {
 	isl_val *v;
-	int has_stride;
+	isl_bool has_stride;
 
 	if (!build)
-		return -1;
+		return isl_bool_error;
 
 	v = isl_vec_get_element_val(build->strides, pos);
-	if (!v)
-		return -1;
-	has_stride = !isl_val_is_one(v);
+	has_stride = isl_bool_not(isl_val_is_one(v));
 	isl_val_free(v);
 
 	return has_stride;

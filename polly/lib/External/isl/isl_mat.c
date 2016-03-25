@@ -24,6 +24,29 @@ isl_ctx *isl_mat_get_ctx(__isl_keep isl_mat *mat)
 	return mat ? mat->ctx : NULL;
 }
 
+/* Return a hash value that digests "mat".
+ */
+uint32_t isl_mat_get_hash(__isl_keep isl_mat *mat)
+{
+	int i;
+	uint32_t hash;
+
+	if (!mat)
+		return 0;
+
+	hash = isl_hash_init();
+	isl_hash_byte(hash, mat->n_row & 0xFF);
+	isl_hash_byte(hash, mat->n_col & 0xFF);
+	for (i = 0; i < mat->n_row; ++i) {
+		uint32_t row_hash;
+
+		row_hash = isl_seq_get_hash(mat->row[i], mat->n_col);
+		isl_hash_hash(hash, row_hash);
+	}
+
+	return hash;
+}
+
 struct isl_mat *isl_mat_alloc(struct isl_ctx *ctx,
 	unsigned n_row, unsigned n_col)
 {
@@ -1667,6 +1690,22 @@ __isl_give isl_mat *isl_mat_move_cols(__isl_take isl_mat *mat,
 error:
 	isl_mat_free(mat);
 	return NULL;
+}
+
+/* Return the gcd of the elements in row "row" of "mat" in *gcd.
+ * Return isl_stat_ok on success and isl_stat_error on failure.
+ */
+isl_stat isl_mat_row_gcd(__isl_keep isl_mat *mat, int row, isl_int *gcd)
+{
+	if (!mat)
+		return isl_stat_error;
+
+	if (row < 0 || row >= mat->n_row)
+		isl_die(isl_mat_get_ctx(mat), isl_error_invalid,
+			"row out of range", return isl_stat_error);
+	isl_seq_gcd(mat->row[row], mat->n_col, gcd);
+
+	return isl_stat_ok;
 }
 
 void isl_mat_gcd(__isl_keep isl_mat *mat, isl_int *gcd)

@@ -248,56 +248,6 @@ private:
     std::shared_ptr<clang::TextDiagnosticBuffer> m_passthrough;
 };
 
-class LoggingDiagnosticConsumer : public clang::DiagnosticConsumer
-{
-public:
-    LoggingDiagnosticConsumer ()
-    {
-        m_log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS);
-        m_passthrough.reset(new clang::TextDiagnosticBuffer);
-    }
-    
-    LoggingDiagnosticConsumer (const std::shared_ptr<clang::TextDiagnosticBuffer> &passthrough)
-    {
-        m_log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS);
-        m_passthrough = passthrough;
-    }
-    
-    void HandleDiagnostic (DiagnosticsEngine::Level DiagLevel, const clang::Diagnostic &Info)
-    {
-        if (m_log)
-        {
-            llvm::SmallVector<char, 32> diag_str;
-            Info.FormatDiagnostic(diag_str);
-            diag_str.push_back('\0');
-            const char *data = diag_str.data();
-            m_log->Printf("[clang] COMPILER DIAGNOSTIC: %s", data);
-
-            lldbassert(Info.getID() != clang::diag::err_unsupported_ast_node && "'log enable lldb expr' to investigate.");
-        }
-        
-        m_passthrough->HandleDiagnostic(DiagLevel, Info);
-    }
-    
-    void FlushDiagnostics (DiagnosticsEngine &Diags)
-    {
-        m_passthrough->FlushDiagnostics(Diags);
-    }
-    
-    DiagnosticConsumer *clone (DiagnosticsEngine &Diags) const
-    {
-        return new LoggingDiagnosticConsumer (m_passthrough);
-    }
-    
-    clang::TextDiagnosticBuffer *GetPassthrough()
-    {
-        return m_passthrough.get();
-    }
-private:
-    Log * m_log;
-    std::shared_ptr<clang::TextDiagnosticBuffer> m_passthrough;
-};
-
 //===----------------------------------------------------------------------===//
 // Implementation of ClangExpressionParser
 //===----------------------------------------------------------------------===//
@@ -793,7 +743,7 @@ static bool FindFunctionInModule (ConstString &mangled_name,
     return false;
 }
 
-Error
+lldb_private::Error
 ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
                                             lldb::addr_t &func_end,
                                             lldb::IRExecutionUnitSP &execution_unit_sp,
@@ -805,7 +755,7 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
 	func_end = LLDB_INVALID_ADDRESS;
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
 
-    Error err;
+    lldb_private::Error err;
 
     std::unique_ptr<llvm::Module> llvm_module_ap (m_code_generator->ReleaseModule());
 
@@ -872,7 +822,7 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
 
         if (execution_policy != eExecutionPolicyAlways && execution_policy != eExecutionPolicyTopLevel)
         {
-            Error interpret_error;
+            lldb_private::Error interpret_error;
 
             bool interpret_function_calls = !process ? false : process->CanInterpretFunctionCalls();
             can_interpret =
@@ -957,11 +907,11 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
     return err;
 }
 
-Error
+lldb_private::Error
 ClangExpressionParser::RunStaticInitializers (lldb::IRExecutionUnitSP &execution_unit_sp,
                                               ExecutionContext &exe_ctx)
 {
-    Error err;
+    lldb_private::Error err;
     
     lldbassert(execution_unit_sp.get());
     lldbassert(exe_ctx.HasThreadScope());

@@ -3820,3 +3820,40 @@ __isl_give isl_union_set *isl_union_set_list_union(
 	isl_union_set_list_free(list);
 	return res;
 }
+
+/* Update *hash with the hash value of "map".
+ */
+static isl_stat add_hash(__isl_take isl_map *map, void *user)
+{
+	uint32_t *hash = user;
+	uint32_t map_hash;
+
+	map_hash = isl_map_get_hash(map);
+	isl_hash_hash(*hash, map_hash);
+
+	isl_map_free(map);
+	return isl_stat_ok;
+}
+
+/* Return a hash value that digests "umap".
+ */
+uint32_t isl_union_map_get_hash(__isl_keep isl_union_map *umap)
+{
+	uint32_t hash;
+
+	if (!umap)
+		return 0;
+
+	hash = isl_hash_init();
+	if (isl_union_map_foreach_map(umap, &add_hash, &hash) < 0)
+		return 0;
+
+	return hash;
+}
+
+/* Return a hash value that digests "uset".
+ */
+uint32_t isl_union_set_get_hash(__isl_keep isl_union_set *uset)
+{
+	return isl_union_map_get_hash(uset);
+}

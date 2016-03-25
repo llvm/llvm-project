@@ -15,7 +15,7 @@ Optimizations</span></h2>
   <div class="submenu">
     <label>Information</label>
     <a href="/index.html">About Polly</a>
-    <a href="/documentation.html">Documentation</a>
+    <a href="/docs">Documentation</a>
     <a href="/performance.html">Performance</a>
     <a href="/publications.html">Publications</a>
     <a href="/contributors.html">Contributors</a>
@@ -34,6 +34,7 @@ Optimizations</span></h2>
     <a href="http://lab.llvm.org:8011/console?category=polly">Buildbot</a>
     <a href="http://buildd-clang.debian.net/coverage/">Code Coverage</a>
     <a href="http://buildd-clang.debian.net/scan-build/">Static analysis</a>
+    <a href="/doxygen/">Doxygen</a>
   </div>
 
   <div class="submenu">
