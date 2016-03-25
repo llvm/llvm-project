@@ -368,6 +368,12 @@ Language::GetTypeScavenger ()
     return nullptr;
 }
 
+const char*
+Language::GetLanguageSpecificTypeLookupHelp ()
+{
+    return nullptr;
+}
+
 size_t
 Language::TypeScavenger::Find (ExecutionContextScope *exe_scope,
                                const char *key,

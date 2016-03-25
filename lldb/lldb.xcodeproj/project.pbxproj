@@ -2347,6 +2347,7 @@
 		4C2479BE1BA39843009C9A7B /* ExpressionParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ExpressionParser.h; path = include/lldb/Expression/ExpressionParser.h; sourceTree = "<group>"; };
 		4C29E77D1BA2403F00DFF855 /* ExpressionTypeSystemHelper.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; name = ExpressionTypeSystemHelper.h; path = include/lldb/Expression/ExpressionTypeSystemHelper.h; sourceTree = "<group>"; };
 		4C2FAE2E135E3A70001EDE44 /* SharedCluster.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SharedCluster.h; path = include/lldb/Utility/SharedCluster.h; sourceTree = "<group>"; };
+		4C3DA2301CA0BFB800CEB1D4 /* ClangDiagnostic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClangDiagnostic.h; path = ExpressionParser/Clang/ClangDiagnostic.h; sourceTree = "<group>"; };
 		4C43DEF9110641F300E55CBF /* ThreadPlanShouldStopHere.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ThreadPlanShouldStopHere.h; path = include/lldb/Target/ThreadPlanShouldStopHere.h; sourceTree = "<group>"; };
 		4C43DEFA110641F300E55CBF /* ThreadPlanShouldStopHere.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanShouldStopHere.cpp; path = source/Target/ThreadPlanShouldStopHere.cpp; sourceTree = "<group>"; };
 		4C43DF8511069BFD00E55CBF /* ThreadPlanStepInRange.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ThreadPlanStepInRange.h; path = include/lldb/Target/ThreadPlanStepInRange.h; sourceTree = "<group>"; };
@@ -5288,6 +5289,7 @@
 		4984BA0C1B97620B008658D4 /* Clang */ = {
 			isa = PBXGroup;
 			children = (
+				4C3DA2301CA0BFB800CEB1D4 /* ClangDiagnostic.h */,
 				4C98D3E0118FB98F00E575D0 /* ClangFunctionCaller.h */,
 				4C98D3DA118FB96F00E575D0 /* ClangFunctionCaller.cpp */,
 				26BC7DC010F1B79500F91463 /* ClangExpressionHelper.h */,

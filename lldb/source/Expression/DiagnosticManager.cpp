@@ -52,10 +52,10 @@ DiagnosticManager::GetString(char separator)
 {
     std::string ret;
 
-    for (const Diagnostic &diagnostic : Diagnostics())
+    for (const Diagnostic *diagnostic : Diagnostics())
     {
-        ret.append(StringForSeverity(diagnostic.severity));
-        ret.append(diagnostic.message);
+        ret.append(StringForSeverity(diagnostic->GetSeverity()));
+        ret.append(diagnostic->GetMessage());
         ret.push_back(separator);
     }
 

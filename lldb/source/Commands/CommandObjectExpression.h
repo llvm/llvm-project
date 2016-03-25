@@ -14,13 +14,13 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/lldb-private-enumerations.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Target/ExecutionContext.h"
-
 namespace lldb_private {
 
 class CommandObjectExpression :
@@ -63,6 +63,7 @@ public:
         bool        try_all_threads;
         lldb::LanguageType language;
         LanguageRuntimeDescriptionDisplayVerbosity m_verbosity;
+        LazyBool        auto_apply_fixits;
     };
 
     CommandObjectExpression (CommandInterpreter &interpreter);

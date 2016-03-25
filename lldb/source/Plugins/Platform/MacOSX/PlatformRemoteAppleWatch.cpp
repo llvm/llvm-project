@@ -322,9 +322,14 @@ PlatformRemoteAppleWatch::GetContainedFilesIntoVectorOfStringsCallback (void *ba
 bool
 PlatformRemoteAppleWatch::UpdateSDKDirectoryInfosIfNeeded()
 {
+    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
     if (m_sdk_directory_infos.empty())
     {
         const char *device_support_dir = GetDeviceSupportDirectory();
+        if (log)
+        {
+            log->Printf ("PlatformRemoteAppleWatch::UpdateSDKDirectoryInfosIfNeeded Got DeviceSupport directory %s", device_support_dir);
+        }
         if (device_support_dir)
         {
             const bool find_directories = true;
@@ -349,12 +354,20 @@ PlatformRemoteAppleWatch::UpdateSDKDirectoryInfosIfNeeded()
                 if (sdk_symbols_symlink_fspec.Exists())
                 {
                     m_sdk_directory_infos.push_back(sdk_directory_info);
+                    if (log)
+                    {
+                        log->Printf ("PlatformRemoteAppleWatch::UpdateSDKDirectoryInfosIfNeeded added builtin SDK directory %s", sdk_symbols_symlink_fspec.GetPath().c_str());
+                    }
                 }
                 else
                 {
                     sdk_symbols_symlink_fspec.GetFilename().SetCString("Symbols");
                     if (sdk_symbols_symlink_fspec.Exists())
                         m_sdk_directory_infos.push_back(sdk_directory_info);
+                    if (log)
+                    {
+                        log->Printf ("PlatformRemoteAppleWatch::UpdateSDKDirectoryInfosIfNeeded added builtin SDK directory %s", sdk_symbols_symlink_fspec.GetPath().c_str());
+                    }
                 }
             }
 
@@ -374,6 +387,10 @@ PlatformRemoteAppleWatch::UpdateSDKDirectoryInfosIfNeeded()
             }
             if (local_sdk_cache.Exists())
             {
+                if (log)
+                {
+                    log->Printf ("PlatformRemoteAppleWatch::UpdateSDKDirectoryInfosIfNeeded searching %s for additional SDKs", local_sdk_cache.GetPath().c_str());
+                }
                 char path[PATH_MAX];
                 if (local_sdk_cache.GetPath(path, sizeof(path)))
                 {
@@ -388,6 +405,10 @@ PlatformRemoteAppleWatch::UpdateSDKDirectoryInfosIfNeeded()
                     for (uint32_t i=num_installed; i<num_sdk_infos; ++i)
                     {
                         m_sdk_directory_infos[i].user_cached = true;
+                        if (log)
+                        {
+                            log->Printf ("PlatformRemoteAppleWatch::UpdateSDKDirectoryInfosIfNeeded user SDK directory %s", m_sdk_directory_infos[i].directory.GetPath().c_str());
+                        }
                     }
                 }
             }
@@ -583,6 +604,7 @@ uint32_t
 PlatformRemoteAppleWatch::FindFileInAllSDKs (const char *platform_file_path,
                                       FileSpecList &file_list)
 {
+    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST | LIBLLDB_LOG_VERBOSE);
     if (platform_file_path && platform_file_path[0] && UpdateSDKDirectoryInfosIfNeeded())
     {
         const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
@@ -590,6 +612,10 @@ PlatformRemoteAppleWatch::FindFileInAllSDKs (const char *platform_file_path,
         // First try for an exact match of major, minor and update
         for (uint32_t sdk_idx=0; sdk_idx<num_sdk_infos; ++sdk_idx)
         {
+            if (log)
+            {
+                log->Printf ("Searching for %s in sdk path %s", platform_file_path, m_sdk_directory_infos[sdk_idx].directory.GetPath().c_str());
+            }
             if (GetFileInSDK (platform_file_path,
                               sdk_idx,
                               local_file))
@@ -629,6 +655,7 @@ PlatformRemoteAppleWatch::GetFileInSDKRoot (const char *platform_file_path,
                                      bool symbols_dirs_only,
                                      lldb_private::FileSpec &local_file)
 {
+    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
     if (sdkroot_path && sdkroot_path[0] && platform_file_path && platform_file_path[0])
     {
         char resolved_path[PATH_MAX];
@@ -643,7 +670,13 @@ PlatformRemoteAppleWatch::GetFileInSDKRoot (const char *platform_file_path,
             
             local_file.SetFile(resolved_path, true);
             if (local_file.Exists())
+            {
+                if (log)
+                {
+                    log->Printf ("Found a copy of %s in the SDK dir %s", platform_file_path, sdkroot_path);
+                }
                 return true;
+            }
         }
             
         ::snprintf (resolved_path,
@@ -654,7 +687,13 @@ PlatformRemoteAppleWatch::GetFileInSDKRoot (const char *platform_file_path,
         
         local_file.SetFile(resolved_path, true);
         if (local_file.Exists())
+        {
+            if (log)
+            {
+                log->Printf ("Found a copy of %s in the SDK dir %s/Symbols.Internal", platform_file_path, sdkroot_path);
+            }
             return true;
+        }
         ::snprintf (resolved_path,
                     sizeof(resolved_path), 
                     "%s/Symbols%s", 
@@ -663,7 +702,13 @@ PlatformRemoteAppleWatch::GetFileInSDKRoot (const char *platform_file_path,
         
         local_file.SetFile(resolved_path, true);
         if (local_file.Exists())
+        {
+            if (log)
+            {
+                log->Printf ("Found a copy of %s in the SDK dir %s/Symbols", platform_file_path, sdkroot_path);
+            }
             return true;                
+        }
     }
     return false;
 }
@@ -673,6 +718,7 @@ PlatformRemoteAppleWatch::GetSymbolFile (const FileSpec &platform_file,
                                   const UUID *uuid_ptr,
                                   FileSpec &local_file)
 {
+    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
     Error error;
     char platform_file_path[PATH_MAX];
     if (platform_file.GetPath(platform_file_path, sizeof(platform_file_path)))
@@ -690,7 +736,13 @@ PlatformRemoteAppleWatch::GetSymbolFile (const FileSpec &platform_file,
             
             local_file.SetFile(resolved_path, true);
             if (local_file.Exists())
+            {
+                if (log)
+                {
+                    log->Printf ("Found a copy of %s in the DeviceSupport dir %s", platform_file_path, os_version_dir);
+                }
                 return error;
+            }
 
             ::snprintf (resolved_path, 
                         sizeof(resolved_path), 
@@ -700,7 +752,13 @@ PlatformRemoteAppleWatch::GetSymbolFile (const FileSpec &platform_file,
 
             local_file.SetFile(resolved_path, true);
             if (local_file.Exists())
+            {
+                if (log)
+                {
+                    log->Printf ("Found a copy of %s in the DeviceSupport dir %s/Symbols.Internal", platform_file_path, os_version_dir);
+                }
                 return error;
+            }
             ::snprintf (resolved_path, 
                         sizeof(resolved_path), 
                         "%s/Symbols/%s", 
@@ -709,7 +767,13 @@ PlatformRemoteAppleWatch::GetSymbolFile (const FileSpec &platform_file,
 
             local_file.SetFile(resolved_path, true);
             if (local_file.Exists())
+            {
+                if (log)
+                {
+                    log->Printf ("Found a copy of %s in the DeviceSupport dir %s/Symbols", platform_file_path, os_version_dir);
+                }
                 return error;
+            }
 
         }
         local_file = platform_file;
@@ -740,6 +804,7 @@ PlatformRemoteAppleWatch::GetSharedModule (const ModuleSpec &module_spec,
     // then we attempt to get a shared module for the right architecture
     // with the right UUID.
     const FileSpec &platform_file = module_spec.GetFileSpec();
+    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST | LIBLLDB_LOG_VERBOSE);
 
     Error error;
     char platform_file_path[PATH_MAX];
@@ -757,6 +822,10 @@ PlatformRemoteAppleWatch::GetSharedModule (const ModuleSpec &module_spec,
         const uint32_t connected_sdk_idx = GetConnectedSDKIndex ();
         if (connected_sdk_idx < num_sdk_infos)
         {
+            if (log)
+            {
+                log->Printf ("Searching for %s in sdk path %s", platform_file_path, m_sdk_directory_infos[connected_sdk_idx].directory.GetPath().c_str());
+            }
             if (GetFileInSDK (platform_file_path, connected_sdk_idx, platform_module_spec.GetFileSpec()))
             {
                 module_sp.reset();
@@ -776,6 +845,10 @@ PlatformRemoteAppleWatch::GetSharedModule (const ModuleSpec &module_spec,
         // will tend to be valid in that same SDK.
         if (m_last_module_sdk_idx < num_sdk_infos)
         {
+            if (log)
+            {
+                log->Printf ("Searching for %s in sdk path %s", platform_file_path, m_sdk_directory_infos[m_last_module_sdk_idx].directory.GetPath().c_str());
+            }
             if (GetFileInSDK (platform_file_path, m_last_module_sdk_idx, platform_module_spec.GetFileSpec()))
             {
                 module_sp.reset();
@@ -798,6 +871,10 @@ PlatformRemoteAppleWatch::GetSharedModule (const ModuleSpec &module_spec,
                 // Skip the last module SDK index if we already searched
                 // it above
                 continue;
+            }
+            if (log)
+            {
+                log->Printf ("Searching for %s in sdk path %s", platform_file_path, m_sdk_directory_infos[sdk_idx].directory.GetPath().c_str());
             }
             if (GetFileInSDK (platform_file_path, sdk_idx, platform_module_spec.GetFileSpec()))
             {

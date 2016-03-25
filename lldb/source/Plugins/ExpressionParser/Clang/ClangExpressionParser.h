@@ -73,6 +73,9 @@ public:
     //------------------------------------------------------------------
     unsigned
     Parse(DiagnosticManager &diagnostic_manager) override;
+    
+    bool
+    RewriteExpression(DiagnosticManager &diagnostic_manager) override;
 
     //------------------------------------------------------------------
     /// Ready an already-parsed expression for execution, possibly

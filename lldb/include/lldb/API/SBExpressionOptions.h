@@ -110,6 +110,12 @@ public:
 
     void
     SetPrefix (const char *prefix);
+    
+    void
+    SetAutoApplyFixIts(bool b = true);
+    
+    bool
+    GetAutoApplyFixIts();
 
 protected:
 
