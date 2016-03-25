@@ -25,4 +25,16 @@ define void @test_vec3(<3 x half>* %arr, i32 %i) #0 {
   ret void
 }
 
+; CHECK-LABEL: test_bitcast:
+; CHECK: vcvtb.f16.f32
+; CHECK: vcvtb.f16.f32
+; CHECK: vcvtb.f16.f32
+; CHECK: pkhbt
+; CHECK: uxth
+define void @test_bitcast(<3 x half> %inp, <3 x i16>* %arr) #0 {
+  %bc = bitcast <3 x half> %inp to <3 x i16>
+  store <3 x i16> %bc, <3 x i16>* %arr, align 8
+  ret void
+}
+
 attributes #0 = { nounwind }
