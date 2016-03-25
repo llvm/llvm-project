@@ -46,24 +46,25 @@ public:
   // Pinned metadata names, which always have the same value.  This is a
   // compile-time performance optimization, not a correctness optimization.
   enum {
-    MD_dbg = 0,  // "dbg"
-    MD_tbaa = 1, // "tbaa"
-    MD_prof = 2,  // "prof"
-    MD_fpmath = 3,  // "fpmath"
-    MD_range = 4, // "range"
-    MD_tbaa_struct = 5, // "tbaa.struct"
-    MD_invariant_load = 6, // "invariant.load"
-    MD_alias_scope = 7, // "alias.scope"
-    MD_noalias = 8, // "noalias",
-    MD_nontemporal = 9, // "nontemporal"
+    MD_dbg = 0,                       // "dbg"
+    MD_tbaa = 1,                      // "tbaa"
+    MD_prof = 2,                      // "prof"
+    MD_fpmath = 3,                    // "fpmath"
+    MD_range = 4,                     // "range"
+    MD_tbaa_struct = 5,               // "tbaa.struct"
+    MD_invariant_load = 6,            // "invariant.load"
+    MD_alias_scope = 7,               // "alias.scope"
+    MD_noalias = 8,                   // "noalias",
+    MD_nontemporal = 9,               // "nontemporal"
     MD_mem_parallel_loop_access = 10, // "llvm.mem.parallel_loop_access"
-    MD_nonnull = 11, // "nonnull"
-    MD_dereferenceable = 12, // "dereferenceable"
-    MD_dereferenceable_or_null = 13, // "dereferenceable_or_null"
-    MD_make_implicit = 14, // "make.implicit"
-    MD_unpredictable = 15, // "unpredictable"
-    MD_invariant_group = 16, // "invariant.group"
-    MD_align = 17 // "align"
+    MD_nonnull = 11,                  // "nonnull"
+    MD_dereferenceable = 12,          // "dereferenceable"
+    MD_dereferenceable_or_null = 13,  // "dereferenceable_or_null"
+    MD_make_implicit = 14,            // "make.implicit"
+    MD_unpredictable = 15,            // "unpredictable"
+    MD_invariant_group = 16,          // "invariant.group"
+    MD_align = 17,                    // "align"
+    MD_loop = 18,                     // "llvm.loop"
   };
 
   /// Known operand bundle tag IDs, which always have the same value.  All

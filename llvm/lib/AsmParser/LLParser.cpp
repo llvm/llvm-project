@@ -575,7 +575,6 @@ bool LLParser::parseComdat() {
 bool LLParser::ParseMDString(MDString *&Result) {
   std::string Str;
   if (ParseStringConstant(Str)) return true;
-  llvm::UpgradeMDStringConstant(Str);
   Result = MDString::get(Context, Str);
   return false;
 }

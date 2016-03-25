@@ -151,5 +151,21 @@ entry:
   ret void
 }
 
+@ssp_var = internal thread_local global i8 0, align 1
+
+; CHECK-LABEL: test_ssp
+; CHECK-NOT: pushq %r11
+; CHECK-NOT: pushq %r10
+; CHECK-NOT: pushq %r9
+; CHECK-NOT: pushq %r8
+; CHECK-NOT: pushq %rsi
+; CHECK-NOT: pushq %rdx
+; CHECK-NOT: pushq %rcx
+; CHECK-NOT: pushq %rbx
+; CHECK: callq
+define cxx_fast_tlscc nonnull i8* @test_ssp() #2 {
+  ret i8* @ssp_var
+}
 attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
 attributes #1 = { nounwind }
+attributes #2 = { nounwind sspreq }

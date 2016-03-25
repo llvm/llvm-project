@@ -29,8 +29,9 @@ define double @pow_wrapper_optsize(double %a) optsize {
 define double @pow_wrapper_minsize(double %a) minsize {
 ; CHECK-LABEL: pow_wrapper_minsize:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movl  $15, %edi
-; CHECK-NEXT:    jmp
+; CHECK-NEXT:    pushq $15
+; CHECK:         popq %rdi
+; CHECK:         jmp
   %ret = tail call double @llvm.powi.f64(double %a, i32 15) nounwind ; <double> [#uses=1]
   ret double %ret
 }

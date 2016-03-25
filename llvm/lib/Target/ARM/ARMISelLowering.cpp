@@ -8065,6 +8065,7 @@ ARMTargetLowering::EmitLowered__dbzchk(MachineInstr *MI,
   BuildMI(*MBB, MI, DL, TII->get(ARM::tCBZ))
       .addReg(MI->getOperand(0).getReg())
       .addMBB(TrapBB);
+  AddDefaultPred(BuildMI(*MBB, MI, DL, TII->get(ARM::t2B)).addMBB(ContBB));
   MBB->addSuccessor(ContBB);
 
   MI->eraseFromParent();

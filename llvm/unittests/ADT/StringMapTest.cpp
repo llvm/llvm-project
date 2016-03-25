@@ -231,12 +231,12 @@ TEST_F(StringMapTest, InsertRehashingPairTest) {
   // moved to a different bucket during internal rehashing. This depends on
   // the particular key, and the implementation of StringMap and HashString.
   // Changes to those might result in this test not actually checking that.
-  StringMap<uint32_t> t(1);
-  EXPECT_EQ(1u, t.getNumBuckets());
+  StringMap<uint32_t> t(0);
+  EXPECT_EQ(0u, t.getNumBuckets());
 
   StringMap<uint32_t>::iterator It =
     t.insert(std::make_pair("abcdef", 42)).first;
-  EXPECT_EQ(2u, t.getNumBuckets());
+  EXPECT_EQ(16u, t.getNumBuckets());
   EXPECT_EQ("abcdef", It->first());
   EXPECT_EQ(42u, It->second);
 }
@@ -354,6 +354,78 @@ TEST_F(StringMapTest, MoveDtor) {
   B = StringMap<Countable>();
   ASSERT_EQ(InstanceCount, 0);
   ASSERT_TRUE(B.empty());
+}
+
+namespace {
+// Simple class that counts how many moves and copy happens when growing a map
+struct CountCtorCopyAndMove {
+  static unsigned Ctor;
+  static unsigned Move;
+  static unsigned Copy;
+  int Data = 0;
+  CountCtorCopyAndMove(int Data) : Data(Data) { Ctor++; }
+  CountCtorCopyAndMove() { Ctor++; }
+
+  CountCtorCopyAndMove(const CountCtorCopyAndMove &) { Copy++; }
+  CountCtorCopyAndMove &operator=(const CountCtorCopyAndMove &) {
+    Copy++;
+    return *this;
+  }
+  CountCtorCopyAndMove(CountCtorCopyAndMove &&) { Move++; }
+  CountCtorCopyAndMove &operator=(const CountCtorCopyAndMove &&) {
+    Move++;
+    return *this;
+  }
+};
+unsigned CountCtorCopyAndMove::Copy = 0;
+unsigned CountCtorCopyAndMove::Move = 0;
+unsigned CountCtorCopyAndMove::Ctor = 0;
+
+} // anonymous namespace
+
+// Make sure creating the map with an initial size of N actually gives us enough
+// buckets to insert N items without increasing allocation size.
+TEST(StringMapCustomTest, InitialSizeTest) {
+  // 1 is an "edge value", 32 is an arbitrary power of two, and 67 is an
+  // arbitrary prime, picked without any good reason.
+  for (auto Size : {1, 32, 67}) {
+    StringMap<CountCtorCopyAndMove> Map(Size);
+    CountCtorCopyAndMove::Move = 0;
+    CountCtorCopyAndMove::Copy = 0;
+    for (int i = 0; i < Size; ++i)
+      Map.insert(std::make_pair(Twine(i).str(), CountCtorCopyAndMove()));
+    EXPECT_EQ((unsigned)Size * 3, CountCtorCopyAndMove::Move);
+    EXPECT_EQ(0u, CountCtorCopyAndMove::Copy);
+  }
+}
+
+TEST(StringMapCustomTest, BracketOperatorCtor) {
+  StringMap<CountCtorCopyAndMove> Map;
+  CountCtorCopyAndMove::Ctor = 0;
+  Map["abcd"];
+  EXPECT_EQ(1u, CountCtorCopyAndMove::Ctor);
+  // Test that operator[] does not create a value when it is already in the map
+  CountCtorCopyAndMove::Ctor = 0;
+  Map["abcd"];
+  EXPECT_EQ(0u, CountCtorCopyAndMove::Ctor);
+}
+
+namespace {
+struct NonMoveableNonCopyableType {
+  int Data = 0;
+  NonMoveableNonCopyableType() = default;
+  NonMoveableNonCopyableType(int Data) : Data(Data) {}
+  NonMoveableNonCopyableType(const NonMoveableNonCopyableType &) = delete;
+  NonMoveableNonCopyableType(NonMoveableNonCopyableType &&) = delete;
+};
+}
+
+// Test that we can "emplace" an element in the map without involving map/move
+TEST(StringMapCustomTest, EmplaceTest) {
+  StringMap<NonMoveableNonCopyableType> Map;
+  Map.emplace_second("abcd", 42);
+  EXPECT_EQ(1u, Map.count("abcd"));
+  EXPECT_EQ(42, Map["abcd"].Data);
 }
 
 } // end anonymous namespace

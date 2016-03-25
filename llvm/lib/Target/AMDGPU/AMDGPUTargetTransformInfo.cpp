@@ -29,6 +29,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "AMDGPUtti"
 
+
 void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
                                             TTI::UnrollingPreferences &UP) {
   UP.Threshold = 300; // Twice the default.
@@ -84,6 +85,100 @@ unsigned AMDGPUTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   return 64;
 }
 
+int AMDGPUTTIImpl::getArithmeticInstrCost(
+    unsigned Opcode, Type *Ty, TTI::OperandValueKind Opd1Info,
+    TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueProperties Opd2PropInfo) {
+
+  EVT OrigTy = TLI->getValueType(DL, Ty);
+  if (!OrigTy.isSimple()) {
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
+                                         Opd1PropInfo, Opd2PropInfo);
+  }
+
+  // Legalize the type.
+  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+
+  // Because we don't have any legal vector operations, but the legal types, we
+  // need to account for split vectors.
+  unsigned NElts = LT.second.isVector() ?
+    LT.second.getVectorNumElements() : 1;
+
+  MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+
+  switch (ISD) {
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA: {
+    if (SLT == MVT::i64)
+      return get64BitInstrCost() * LT.first * NElts;
+
+    // i32
+    return getFullRateInstrCost() * LT.first * NElts;
+  }
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR: {
+    if (SLT == MVT::i64){
+      // and, or and xor are typically split into 2 VALU instructions.
+      return 2 * getFullRateInstrCost() * LT.first * NElts;
+    }
+
+    return LT.first * NElts * getFullRateInstrCost();
+  }
+  case ISD::MUL: {
+    const int QuarterRateCost = getQuarterRateInstrCost();
+    if (SLT == MVT::i64) {
+      const int FullRateCost = getFullRateInstrCost();
+      return (4 * QuarterRateCost + (2 * 2) * FullRateCost) * LT.first * NElts;
+    }
+
+    // i32
+    return QuarterRateCost * NElts * LT.first;
+  }
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+    if (SLT == MVT::f64)
+      return LT.first * NElts * get64BitInstrCost();
+
+    if (SLT == MVT::f32 || SLT == MVT::f16)
+      return LT.first * NElts * getFullRateInstrCost();
+    break;
+
+  case ISD::FDIV:
+  case ISD::FREM:
+    // FIXME: frem should be handled separately. The fdiv in it is most of it,
+    // but the current lowering is also not entirely correct.
+    if (SLT == MVT::f64) {
+      int Cost = 4 * get64BitInstrCost() + 7 * getQuarterRateInstrCost();
+
+      // Add cost of workaround.
+      if (ST->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS)
+        Cost += 3 * getFullRateInstrCost();
+
+      return LT.first * Cost * NElts;
+    }
+
+    // Assuming no fp32 denormals lowering.
+    if (SLT == MVT::f32 || SLT == MVT::f16) {
+      assert(!ST->hasFP32Denormals() && "will change when supported");
+      int Cost = 7 * getFullRateInstrCost() + 1 * getQuarterRateInstrCost();
+      return LT.first * NElts * Cost;
+    }
+
+    break;
+  default:
+    break;
+  }
+
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
+                                       Opd1PropInfo, Opd2PropInfo);
+}
+
 unsigned AMDGPUTTIImpl::getCFInstrCost(unsigned Opcode) {
   // XXX - For some reason this isn't called for switch.
   switch (Opcode) {
@@ -99,6 +194,11 @@ int AMDGPUTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                       unsigned Index) {
   switch (Opcode) {
   case Instruction::ExtractElement:
+  case Instruction::InsertElement:
+    // Extracts are just reads of a subregister, so are free. Inserts are
+    // considered free because we don't want to have any cost for scalarizing
+    // operations, and we don't have to copy into a different register class.
+
     // Dynamic indexing isn't free and is best avoided.
     return Index == ~0u ? 2 : 0;
   default:

@@ -103,8 +103,7 @@ enum { BITCODE_CURRENT_EPOCH = 0 };
     // ALIAS: [alias value type, addrspace, aliasee val#, linkage, visibility]
     MODULE_CODE_ALIAS       = 14,
 
-    // METADATA_VALUES: [numvals]
-    MODULE_CODE_METADATA_VALUES = 15,
+    MODULE_CODE_METADATA_VALUES_UNUSED = 15,
 
     // SOURCE_FILENAME: [namechar x N]
     MODULE_CODE_SOURCE_FILENAME = 16,

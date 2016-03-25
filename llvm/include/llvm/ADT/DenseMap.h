@@ -81,15 +81,13 @@ public:
   }
   unsigned size() const { return getNumEntries(); }
 
-  /// Grow the densemap so that it can contain at least Size items before
-  /// resizing again. This means somewhat more than Size buckets because
-  /// densemap resizes upon reaching 3/4 full.
-  void reserve(size_type Size) {
-    // Size *= (4/3), rounding up.
-    Size = (Size * 4 + 2) / 3;
+  /// Grow the densemap so that it can contain at least \p NumEntries items
+  /// before resizing again.
+  void reserve(size_type NumEntries) {
+    auto NumBuckets = getMinBucketToReserveForEntries(NumEntries);
     incrementEpoch();
-    if (Size > getNumBuckets())
-      grow(Size);
+    if (NumBuckets > getNumBuckets())
+      grow(NumBuckets);
   }
 
   void clear() {
@@ -307,6 +305,17 @@ protected:
     const KeyT EmptyKey = getEmptyKey();
     for (BucketT *B = getBuckets(), *E = getBucketsEnd(); B != E; ++B)
       ::new (&B->getFirst()) KeyT(EmptyKey);
+  }
+
+  /// Returns the number of buckets to allocate to ensure that the DenseMap can
+  /// accommodate \p NumEntries without need to grow().
+  unsigned getMinBucketToReserveForEntries(unsigned NumEntries) {
+    // Ensure that "NumEntries * 4 < NumBuckets * 3"
+    if (NumEntries == 0)
+      return 0;
+    // +1 is required because of the strict equality.
+    // For example if NumEntries is 48, we need to return 401.
+    return NextPowerOf2(NumEntries * 4 / 3 + 1);
   }
 
   void moveFromOldBuckets(BucketT *OldBucketsBegin, BucketT *OldBucketsEnd) {
@@ -586,9 +595,9 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   unsigned NumBuckets;
 
 public:
-  explicit DenseMap(unsigned NumInitBuckets = 0) {
-    init(NumInitBuckets);
-  }
+  /// Create a DenseMap wth an optional \p InitialReserve that guarantee that
+  /// this number of elements can be inserted in the map without grow()
+  explicit DenseMap(unsigned InitialReserve = 0) { init(InitialReserve); }
 
   DenseMap(const DenseMap &other) : BaseT() {
     init(0);
@@ -602,7 +611,7 @@ public:
 
   template<typename InputIt>
   DenseMap(const InputIt &I, const InputIt &E) {
-    init(NextPowerOf2(std::distance(I, E)));
+    init(std::distance(I, E));
     this->insert(I, E);
   }
 
@@ -645,7 +654,8 @@ public:
     }
   }
 
-  void init(unsigned InitBuckets) {
+  void init(unsigned InitNumEntries) {
+    auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
     if (allocateBuckets(InitBuckets)) {
       this->BaseT::initEmpty();
     } else {

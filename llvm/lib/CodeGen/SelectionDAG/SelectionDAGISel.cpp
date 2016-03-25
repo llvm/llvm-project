@@ -469,7 +469,6 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   MF->setHasInlineAsm(false);
 
   FuncInfo->SplitCSR = false;
-  SmallVector<MachineBasicBlock*, 4> Returns;
 
   // We split CSR if the target supports it for the given function
   // and the function has only return exits.
@@ -482,12 +481,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
         continue;
 
       const TerminatorInst *Term = BB.getTerminator();
-      if (isa<UnreachableInst>(Term))
+      if (isa<UnreachableInst>(Term) || isa<ReturnInst>(Term))
         continue;
-      if (isa<ReturnInst>(Term)) {
-        Returns.push_back(FuncInfo->MBBMap[&BB]);
-        continue;
-      }
 
       // Bail out if the exit block is not Return nor Unreachable.
       FuncInfo->SplitCSR = false;
@@ -509,8 +504,21 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   RegInfo->EmitLiveInCopies(EntryMBB, TRI, *TII);
 
   // Insert copies in the entry block and the return blocks.
-  if (FuncInfo->SplitCSR)
+  if (FuncInfo->SplitCSR) {
+    SmallVector<MachineBasicBlock*, 4> Returns;
+    // Collect all the return blocks.
+    for (MachineBasicBlock &MBB : mf) {
+      if (!MBB.succ_empty())
+        continue;
+
+      MachineBasicBlock::iterator Term = MBB.getFirstTerminator();
+      if (Term != MBB.end() && Term->isReturn()) {
+        Returns.push_back(&MBB);
+        continue;
+      }
+    }
     TLI->insertCopiesSplitCSR(EntryMBB, Returns);
+  }
 
   DenseMap<unsigned, unsigned> LiveInMap;
   if (!FuncInfo->ArgDbgValues.empty())

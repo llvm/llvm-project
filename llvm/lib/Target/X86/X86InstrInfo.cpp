@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -5391,6 +5392,60 @@ static bool expandMOV32r1(MachineInstrBuilder &MIB, const TargetInstrInfo &TII,
   return true;
 }
 
+bool X86InstrInfo::ExpandMOVImmSExti8(MachineInstrBuilder &MIB) const {
+  MachineBasicBlock &MBB = *MIB->getParent();
+  DebugLoc DL = MIB->getDebugLoc();
+  int64_t Imm = MIB->getOperand(1).getImm();
+  assert(Imm != 0 && "Using push/pop for 0 is not efficient.");
+  MachineBasicBlock::iterator I = MIB.getInstr();
+
+  int StackAdjustment;
+
+  if (Subtarget.is64Bit()) {
+    assert(MIB->getOpcode() == X86::MOV64ImmSExti8 ||
+           MIB->getOpcode() == X86::MOV32ImmSExti8);
+
+    // Can't use push/pop lowering if the function might write to the red zone.
+    X86MachineFunctionInfo *X86FI =
+        MBB.getParent()->getInfo<X86MachineFunctionInfo>();
+    if (X86FI->getUsesRedZone()) {
+      MIB->setDesc(get(MIB->getOpcode() == X86::MOV32ImmSExti8 ? X86::MOV32ri
+                                                               : X86::MOV64ri));
+      return true;
+    }
+
+    // 64-bit mode doesn't have 32-bit push/pop, so use 64-bit operations and
+    // widen the register if necessary.
+    StackAdjustment = 8;
+    BuildMI(MBB, I, DL, get(X86::PUSH64i8)).addImm(Imm);
+    MIB->setDesc(get(X86::POP64r));
+    MIB->getOperand(0)
+        .setReg(getX86SubSuperRegister(MIB->getOperand(0).getReg(), 64));
+  } else {
+    assert(MIB->getOpcode() == X86::MOV32ImmSExti8);
+    StackAdjustment = 4;
+    BuildMI(MBB, I, DL, get(X86::PUSH32i8)).addImm(Imm);
+    MIB->setDesc(get(X86::POP32r));
+  }
+
+  // Build CFI if necessary.
+  MachineFunction &MF = *MBB.getParent();
+  const X86FrameLowering *TFL = Subtarget.getFrameLowering();
+  bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+  bool NeedsDwarfCFI =
+      !IsWin64Prologue &&
+      (MF.getMMI().hasDebugInfo() || MF.getFunction()->needsUnwindTableEntry());
+  bool EmitCFI = !TFL->hasFP(MF) && NeedsDwarfCFI;
+  if (EmitCFI) {
+    TFL->BuildCFI(MBB, I, DL,
+        MCCFIInstruction::createAdjustCfaOffset(nullptr, StackAdjustment));
+    TFL->BuildCFI(MBB, std::next(I), DL,
+        MCCFIInstruction::createAdjustCfaOffset(nullptr, -StackAdjustment));
+  }
+
+  return true;
+}
+
 // LoadStackGuard has so far only been implemented for 64-bit MachO. Different
 // code sequence is needed for other targets.
 static void expandLoadStackGuard(MachineInstrBuilder &MIB,
@@ -5423,6 +5478,9 @@ bool X86InstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
     return expandMOV32r1(MIB, *this, /*MinusOne=*/ false);
   case X86::MOV32r_1:
     return expandMOV32r1(MIB, *this, /*MinusOne=*/ true);
+  case X86::MOV32ImmSExti8:
+  case X86::MOV64ImmSExti8:
+    return ExpandMOVImmSExti8(MIB);
   case X86::SETB_C8r:
     return Expand2AddrUndef(MIB, get(X86::SBB8rr));
   case X86::SETB_C16r:

@@ -15,6 +15,7 @@
 #define LLVM_ADT_STRINGMAP_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
 #include <cstring>
 #include <utility>
@@ -122,9 +123,9 @@ public:
 
   explicit StringMapEntry(unsigned strLen)
     : StringMapEntryBase(strLen), second() {}
-  template <class InitTy>
-  StringMapEntry(unsigned strLen, InitTy &&V)
-      : StringMapEntryBase(strLen), second(std::forward<InitTy>(V)) {}
+  template <typename... InitTy>
+  StringMapEntry(unsigned strLen, InitTy &&... InitVals)
+      : StringMapEntryBase(strLen), second(std::forward<InitTy>(InitVals)...) {}
 
   StringRef getKey() const {
     return StringRef(getKeyData(), getKeyLength());
@@ -142,11 +143,11 @@ public:
 
   StringRef first() const { return StringRef(getKeyData(), getKeyLength()); }
 
-  /// Create - Create a StringMapEntry for the specified key and default
-  /// construct the value.
-  template <typename AllocatorTy, typename InitType>
+  /// Create a StringMapEntry for the specified key construct the value using
+  /// \p InitiVals.
+  template <typename AllocatorTy, typename... InitTy>
   static StringMapEntry *Create(StringRef Key, AllocatorTy &Allocator,
-                                InitType &&InitVal) {
+                                InitTy &&... InitVals) {
     unsigned KeyLength = Key.size();
 
     // Allocate a new item with space for the string at the end and a null
@@ -158,8 +159,8 @@ public:
     StringMapEntry *NewItem =
       static_cast<StringMapEntry*>(Allocator.Allocate(AllocSize,Alignment));
 
-    // Default construct the value.
-    new (NewItem) StringMapEntry(KeyLength, std::forward<InitType>(InitVal));
+    // Construct the value.
+    new (NewItem) StringMapEntry(KeyLength, std::forward<InitTy>(InitVals)...);
 
     // Copy the string information.
     char *StrBuffer = const_cast<char*>(NewItem->getKeyData());
@@ -169,16 +170,11 @@ public:
     return NewItem;
   }
 
-  template<typename AllocatorTy>
-  static StringMapEntry *Create(StringRef Key, AllocatorTy &Allocator) {
-    return Create(Key, Allocator, ValueTy());
-  }
-
   /// Create - Create a StringMapEntry with normal malloc/free.
-  template<typename InitType>
-  static StringMapEntry *Create(StringRef Key, InitType &&InitVal) {
+  template <typename... InitType>
+  static StringMapEntry *Create(StringRef Key, InitType &&... InitVal) {
     MallocAllocator A;
-    return Create(Key, A, std::forward<InitType>(InitVal));
+    return Create(Key, A, std::forward<InitType>(InitVal)...);
   }
 
   static StringMapEntry *Create(StringRef Key) {
@@ -233,7 +229,7 @@ public:
       Allocator(A) {}
 
   StringMap(std::initializer_list<std::pair<StringRef, ValueTy>> List)
-      : StringMapImpl(static_cast<unsigned>(sizeof(MapEntryTy))) {
+      : StringMapImpl(List.size(), static_cast<unsigned>(sizeof(MapEntryTy))) {
     for (const auto &P : List) {
       insert(P);
     }
@@ -295,8 +291,10 @@ public:
     return ValueTy();
   }
 
+  /// Lookup the ValueTy for the \p Key, or create a default constructed value
+  /// if the key is not in the map.
   ValueTy &operator[](StringRef Key) {
-    return insert(std::make_pair(Key, ValueTy())).first->second;
+    return emplace_second(Key).first->second;
   }
 
   /// count - Return 1 if the element is in the map, 0 otherwise.
@@ -328,7 +326,16 @@ public:
   /// if and only if the insertion takes place, and the iterator component of
   /// the pair points to the element with key equivalent to the key of the pair.
   std::pair<iterator, bool> insert(std::pair<StringRef, ValueTy> KV) {
-    unsigned BucketNo = LookupBucketFor(KV.first);
+    return emplace_second(KV.first, std::move(KV.second));
+  }
+
+  /// Emplace a new element for the specified key into the map if the key isn't
+  /// already in the map. The bool component of the returned pair is true
+  /// if and only if the insertion takes place, and the iterator component of
+  /// the pair points to the element with key equivalent to the key of the pair.
+  template <typename... ArgsTy>
+  std::pair<iterator, bool> emplace_second(StringRef Key, ArgsTy &&... Args) {
+    unsigned BucketNo = LookupBucketFor(Key);
     StringMapEntryBase *&Bucket = TheTable[BucketNo];
     if (Bucket && Bucket != getTombstoneVal())
       return std::make_pair(iterator(TheTable + BucketNo, false),
@@ -336,8 +343,7 @@ public:
 
     if (Bucket == getTombstoneVal())
       --NumTombstones;
-    Bucket =
-        MapEntryTy::Create(KV.first, Allocator, std::move(KV.second));
+    Bucket = MapEntryTy::Create(Key, Allocator, std::forward<ArgsTy>(Args)...);
     ++NumItems;
     assert(NumItems + NumTombstones <= NumBuckets);
 

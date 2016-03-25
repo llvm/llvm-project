@@ -140,11 +140,14 @@ class file_status
   #if defined(LLVM_ON_UNIX)
   dev_t fs_st_dev;
   ino_t fs_st_ino;
+  time_t fs_st_atime;
   time_t fs_st_mtime;
   uid_t fs_st_uid;
   gid_t fs_st_gid;
   off_t fs_st_size;
   #elif defined (LLVM_ON_WIN32)
+  uint32_t LastAccessedTimeHigh;
+  uint32_t LastAccessedTimeLow;
   uint32_t LastWriteTimeHigh;
   uint32_t LastWriteTimeLow;
   uint32_t VolumeSerialNumber;
@@ -159,43 +162,51 @@ class file_status
 
 public:
   #if defined(LLVM_ON_UNIX)
-    file_status() : fs_st_dev(0), fs_st_ino(0), fs_st_mtime(0),
+  file_status()
+      : fs_st_dev(0), fs_st_ino(0), fs_st_atime(0), fs_st_mtime(0),
         fs_st_uid(0), fs_st_gid(0), fs_st_size(0),
         Type(file_type::status_error), Perms(perms_not_known) {}
 
-    file_status(file_type Type) : fs_st_dev(0), fs_st_ino(0), fs_st_mtime(0),
+  file_status(file_type Type)
+      : fs_st_dev(0), fs_st_ino(0), fs_st_atime(0), fs_st_mtime(0),
         fs_st_uid(0), fs_st_gid(0), fs_st_size(0), Type(Type),
         Perms(perms_not_known) {}
 
-    file_status(file_type Type, perms Perms, dev_t Dev, ino_t Ino, time_t MTime,
-                uid_t UID, gid_t GID, off_t Size)
-        : fs_st_dev(Dev), fs_st_ino(Ino), fs_st_mtime(MTime), fs_st_uid(UID),
-          fs_st_gid(GID), fs_st_size(Size), Type(Type), Perms(Perms) {}
+  file_status(file_type Type, perms Perms, dev_t Dev, ino_t Ino, time_t ATime,
+              time_t MTime, uid_t UID, gid_t GID, off_t Size)
+      : fs_st_dev(Dev), fs_st_ino(Ino), fs_st_atime(ATime), fs_st_mtime(MTime),
+        fs_st_uid(UID), fs_st_gid(GID), fs_st_size(Size), Type(Type),
+        Perms(Perms) {}
   #elif defined(LLVM_ON_WIN32)
-    file_status() : LastWriteTimeHigh(0), LastWriteTimeLow(0),
-        VolumeSerialNumber(0), FileSizeHigh(0), FileSizeLow(0),
-        FileIndexHigh(0), FileIndexLow(0), Type(file_type::status_error),
+  file_status()
+      : LastAccessedTimeHigh(0), LastAccessedTimeLow(0), LastWriteTimeHigh(0),
+        LastWriteTimeLow(0), VolumeSerialNumber(0), FileSizeHigh(0),
+        FileSizeLow(0), FileIndexHigh(0), FileIndexLow(0),
+        Type(file_type::status_error), Perms(perms_not_known) {}
+
+  file_status(file_type Type)
+      : LastAccessedTimeHigh(0), LastAccessedTimeLow(0), LastWriteTimeHigh(0),
+        LastWriteTimeLow(0), VolumeSerialNumber(0), FileSizeHigh(0),
+        FileSizeLow(0), FileIndexHigh(0), FileIndexLow(0), Type(Type),
         Perms(perms_not_known) {}
 
-    file_status(file_type Type) : LastWriteTimeHigh(0), LastWriteTimeLow(0),
-        VolumeSerialNumber(0), FileSizeHigh(0), FileSizeLow(0),
-        FileIndexHigh(0), FileIndexLow(0), Type(Type),
-        Perms(perms_not_known) {}
-
-    file_status(file_type Type, uint32_t LastWriteTimeHigh,
-                uint32_t LastWriteTimeLow, uint32_t VolumeSerialNumber,
-                uint32_t FileSizeHigh, uint32_t FileSizeLow,
-                uint32_t FileIndexHigh, uint32_t FileIndexLow)
-        : LastWriteTimeHigh(LastWriteTimeHigh),
-          LastWriteTimeLow(LastWriteTimeLow),
-          VolumeSerialNumber(VolumeSerialNumber), FileSizeHigh(FileSizeHigh),
-          FileSizeLow(FileSizeLow), FileIndexHigh(FileIndexHigh),
-          FileIndexLow(FileIndexLow), Type(Type), Perms(perms_not_known) {}
+  file_status(file_type Type, uint32_t LastAccessTimeHigh,
+              uint32_t LastAccessTimeLow, uint32_t LastWriteTimeHigh,
+              uint32_t LastWriteTimeLow, uint32_t VolumeSerialNumber,
+              uint32_t FileSizeHigh, uint32_t FileSizeLow,
+              uint32_t FileIndexHigh, uint32_t FileIndexLow)
+      : LastAccessedTimeHigh(LastAccessTimeHigh), LastAccessedTimeLow(LastAccessTimeLow),
+        LastWriteTimeHigh(LastWriteTimeHigh),
+        LastWriteTimeLow(LastWriteTimeLow),
+        VolumeSerialNumber(VolumeSerialNumber), FileSizeHigh(FileSizeHigh),
+        FileSizeLow(FileSizeLow), FileIndexHigh(FileIndexHigh),
+        FileIndexLow(FileIndexLow), Type(Type), Perms(perms_not_known) {}
   #endif
 
   // getters
   file_type type() const { return Type; }
   perms permissions() const { return Perms; }
+  TimeValue getLastAccessedTime() const;
   TimeValue getLastModificationTime() const;
   UniqueID getUniqueID() const;
 

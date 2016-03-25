@@ -316,9 +316,17 @@ public:
                                          GlobalValue::LinkageTypes Linkage,
                                          StringRef FileName);
 
+  /// Return the modified name for this global value suitable to be
+  /// used as the key for a global lookup (e.g. profile or ThinLTO).
+  std::string getGlobalIdentifier();
+
   /// Return a 64-bit global unique ID constructed from global value name
-  /// (i.e. returned by getGlobalIdentifier).
+  /// (i.e. returned by getGlobalIdentifier()).
   static uint64_t getGUID(StringRef GlobalName) { return MD5Hash(GlobalName); }
+
+  /// Return a 64-bit global unique ID constructed from global value name
+  /// (i.e. returned by getGlobalIdentifier()).
+  uint64_t getGUID() { return getGUID(getGlobalIdentifier()); }
 
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.

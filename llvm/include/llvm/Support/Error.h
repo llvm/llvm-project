@@ -285,14 +285,8 @@ public:
     return ClassID == classID() || ParentErrT::isA(ClassID);
   }
 
-  static const void *classID() { return &ID; }
-
-private:
-  static char ID;
+  static const void *classID() { return &ThisErrT::ID; }
 };
-
-template <typename ThisErrT, typename ParentErrT>
-char ErrorInfo<ThisErrT, ParentErrT>::ID = 0;
 
 /// Special ErrorInfo subclass representing a list of ErrorInfos.
 /// Instances of this class are constructed by joinError.
@@ -316,6 +310,9 @@ public:
   }
 
   std::error_code convertToErrorCode() const override;
+
+  // Used by ErrorInfo::classID.
+  static char ID;
 
 private:
   ErrorList(std::unique_ptr<ErrorInfoBase> Payload1,
@@ -728,6 +725,9 @@ public:
   void setErrorCode(std::error_code EC) { this->EC = EC; }
   std::error_code convertToErrorCode() const override { return EC; }
   void log(raw_ostream &OS) const override { OS << EC.message(); }
+
+  // Used by ErrorInfo::classID.
+  static char ID;
 
 protected:
   std::error_code EC;
