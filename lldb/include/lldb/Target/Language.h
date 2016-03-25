@@ -113,6 +113,9 @@ public:
     virtual std::unique_ptr<TypeScavenger>
     GetTypeScavenger ();
     
+    virtual const char*
+    GetLanguageSpecificTypeLookupHelp ();
+    
     // if an individual data formatter can apply to several types and cross a language boundary
     // it makes sense for individual languages to want to customize the printing of values of that
     // type by appending proper prefix/suffix information in language-specific ways

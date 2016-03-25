@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-redundant-string-cstr %t
+// RUN: %check_clang_tidy %s readability-redundant-string-cstr %t -- -- -target x86_64-unknown -std=c++11
 
 namespace std {
 template <typename T>
