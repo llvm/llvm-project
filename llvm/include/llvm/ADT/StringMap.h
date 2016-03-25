@@ -123,9 +123,9 @@ public:
 
   explicit StringMapEntry(unsigned strLen)
     : StringMapEntryBase(strLen), second() {}
-  template <class InitTy>
-  StringMapEntry(unsigned strLen, InitTy &&V)
-      : StringMapEntryBase(strLen), second(std::forward<InitTy>(V)) {}
+  template <typename... InitTy>
+  StringMapEntry(unsigned strLen, InitTy &&... InitVals)
+      : StringMapEntryBase(strLen), second(std::forward<InitTy>(InitVals)...) {}
 
   StringRef getKey() const {
     return StringRef(getKeyData(), getKeyLength());
@@ -145,9 +145,9 @@ public:
 
   /// Create a StringMapEntry for the specified key construct the value using
   /// \p InitiVals.
-  template <typename AllocatorTy, typename... InitTypes>
+  template <typename AllocatorTy, typename... InitTy>
   static StringMapEntry *Create(StringRef Key, AllocatorTy &Allocator,
-                                InitTypes &&... InitVals) {
+                                InitTy &&... InitVals) {
     unsigned KeyLength = Key.size();
 
     // Allocate a new item with space for the string at the end and a null
@@ -160,8 +160,7 @@ public:
       static_cast<StringMapEntry*>(Allocator.Allocate(AllocSize,Alignment));
 
     // Construct the value.
-    new (NewItem)
-        StringMapEntry(KeyLength, std::forward<InitTypes>(InitVals)...);
+    new (NewItem) StringMapEntry(KeyLength, std::forward<InitTy>(InitVals)...);
 
     // Copy the string information.
     char *StrBuffer = const_cast<char*>(NewItem->getKeyData());
@@ -172,10 +171,10 @@ public:
   }
 
   /// Create - Create a StringMapEntry with normal malloc/free.
-  template<typename InitType>
-  static StringMapEntry *Create(StringRef Key, InitType &&InitVal) {
+  template <typename... InitType>
+  static StringMapEntry *Create(StringRef Key, InitType &&... InitVal) {
     MallocAllocator A;
-    return Create(Key, A, std::forward<InitType>(InitVal));
+    return Create(Key, A, std::forward<InitType>(InitVal)...);
   }
 
   static StringMapEntry *Create(StringRef Key) {
