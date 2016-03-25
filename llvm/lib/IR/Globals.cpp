@@ -123,6 +123,11 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
   return NewName;
 }
 
+std::string GlobalValue::getGlobalIdentifier() {
+  return getGlobalIdentifier(getName(), getLinkage(),
+                             getParent()->getSourceFileName());
+}
+
 const char *GlobalValue::getSection() const {
   if (auto *GA = dyn_cast<GlobalAlias>(this)) {
     // In general we cannot compute this at the IR level, but we try.
