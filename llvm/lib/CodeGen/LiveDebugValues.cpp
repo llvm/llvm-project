@@ -30,6 +30,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <queue>
@@ -208,18 +209,33 @@ void LiveDebugValues::transferDebugValue(MachineInstr &MI,
 /// A definition of a register may mark the end of a range.
 void LiveDebugValues::transferRegisterDef(MachineInstr &MI,
                                           VarLocList &OpenRanges) {
+  MachineFunction *MF = MI.getParent()->getParent();
+  const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
+  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
   for (const MachineOperand &MO : MI.operands()) {
-    if (!(MO.isReg() && MO.isDef() && MO.getReg() &&
-          TRI->isPhysicalRegister(MO.getReg())))
-      continue;
-    // Remove ranges of all aliased registers.
-    for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
+    if (MO.isReg() && MO.isDef() && MO.getReg() &&
+        TRI->isPhysicalRegister(MO.getReg())) {
+      // Remove ranges of all aliased registers.
+      for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
+        OpenRanges.erase(std::remove_if(OpenRanges.begin(), OpenRanges.end(),
+                                        [&](const VarLoc &V) {
+                                          return (*RAI ==
+                                                  isDescribedByReg(*V.MI));
+                                        }),
+                         OpenRanges.end());
+    } else if (MO.isRegMask()) {
+      // Remove ranges of all clobbered registers. Register masks don't usually
+      // list SP as preserved.  While the debug info may be off for an
+      // instruction or two around callee-cleanup calls, transferring the
+      // DEBUG_VALUE across the call is still a better user experience.
       OpenRanges.erase(std::remove_if(OpenRanges.begin(), OpenRanges.end(),
                                       [&](const VarLoc &V) {
-                                        return (*RAI ==
-                                                isDescribedByReg(*V.MI));
+                                        unsigned Reg = isDescribedByReg(*V.MI);
+                                        return Reg && Reg != SP &&
+                                               MO.clobbersPhysReg(Reg);
                                       }),
                        OpenRanges.end());
+    }
   }
 }
 

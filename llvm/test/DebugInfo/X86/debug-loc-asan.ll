@@ -15,7 +15,11 @@
 ; CHECK: #DEBUG_VALUE: bar:y <- [%RDI+0]
 ; CHECK: movq %rdi, [[OFFSET:[0-9]+]](%rsp)
 ; CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]
+; CHECK-NEXT: #DEBUG_VALUE: bar:y <- [complex expression]
 ; This location should be valid until the end of the function.
+
+; CHECK:        movq    %rbp, %rsp
+; CHECK-NEXT: [[END_LABEL:.Ltmp[0-9]+]]:
 
 ; CHECK: .Ldebug_loc{{[0-9]+}}:
 ; We expect two location ranges for the variable.
@@ -27,7 +31,7 @@
 
 ; Then it's addressed via %rsp:
 ; CHECK:      .quad [[START_LABEL]]-.Lfunc_begin0
-; CHECK-NEXT: .Lfunc_end0-.Lfunc_begin0
+; CHECK-NEXT: .quad [[END_LABEL]]-.Lfunc_begin0
 ; CHECK: DW_OP_breg7
 ; CHECK-NEXT: [[OFFSET]]
 ; CHECK: DW_OP_deref
