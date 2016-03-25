@@ -233,7 +233,7 @@ public:
       Allocator(A) {}
 
   StringMap(std::initializer_list<std::pair<StringRef, ValueTy>> List)
-      : StringMapImpl(static_cast<unsigned>(sizeof(MapEntryTy))) {
+      : StringMapImpl(List.size(), static_cast<unsigned>(sizeof(MapEntryTy))) {
     for (const auto &P : List) {
       insert(P);
     }
