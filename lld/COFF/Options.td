@@ -110,6 +110,7 @@ def no_incremental : F<"incremental:no">;
 def nologo : F<"nologo">;
 def throwingnew : F<"throwingnew">;
 def editandcontinue : F<"editandcontinue">;
+def fastfail : F<"fastfail">;
 
 def delay : QF<"delay">;
 def errorreport : QF<"errorreport">;

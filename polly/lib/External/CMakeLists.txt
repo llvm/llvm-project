@@ -209,6 +209,7 @@ set (ISL_FILES
     isl/isl_imath.c
     isl/isl_input.c
     isl/isl_int_sioimath.c
+    isl/isl_local.c
     isl/isl_local_space.c
     isl/isl_lp.c
     isl/isl_map.c

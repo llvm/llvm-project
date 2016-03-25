@@ -114,6 +114,8 @@ libisl_la_SOURCES = \
 	isl_ilp_private.h \
 	isl_input.c \
 	isl_int.h \
+	isl_local.h \
+	isl_local.c \
 	isl_local_space_private.h \
 	isl_local_space.c \
 	isl_lp.c \
@@ -261,6 +263,7 @@ pkginclude_HEADERS = \
 	include/isl/ilp.h \
 	include/isl/hash.h \
 	include/isl/hmap.h \
+	include/isl/hmap_templ.c \
 	include/isl/list.h \
 	include/isl/local_space.h \
 	include/isl/lp.h \
@@ -268,6 +271,12 @@ pkginclude_HEADERS = \
 	include/isl/map.h \
 	include/isl/map_to_basic_set.h \
 	include/isl/map_type.h \
+	include/isl/maybe.h \
+	include/isl/maybe_ast_expr.h \
+	include/isl/maybe_basic_set.h \
+	include/isl/maybe_id.h \
+	include/isl/maybe_pw_aff.h \
+	include/isl/maybe_templ.h \
 	include/isl/multi.h \
 	include/isl/obj.h \
 	include/isl/options.h \
@@ -323,7 +332,6 @@ EXTRA_DIST = \
 	LICENSE \
 	isl_config_post.h \
 	basis_reduction_templ.c \
-	isl_hmap_templ.c \
 	isl_list_templ.c \
 	isl_list_templ.h \
 	isl_map_lexopt_templ.c \
@@ -333,13 +341,18 @@ EXTRA_DIST = \
 	isl_multi_apply_templ.c \
 	isl_multi_apply_set.c \
 	isl_multi_apply_union_set.c \
+	isl_multi_cmp.c \
 	isl_multi_coalesce.c \
 	isl_multi_floor.c \
 	isl_multi_gist.c \
+	isl_multi_hash.c \
 	isl_multi_intersect.c \
 	print_templ.c \
 	isl_power_templ.c \
+	isl_pw_macro.h \
 	isl_pw_templ.c \
+	isl_pw_hash.c \
+	isl_pw_union_opt.c \
 	isl_union_macro.h \
 	isl_union_templ.c \
 	isl_union_single.c \

@@ -165,13 +165,12 @@ configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/include/polly/Config/config.h.cmake
                 ${POLLY_BINARY_DIR}/include/polly/Config/config.h )
 
 # Add target to check formatting of polly files
-file( GLOB_RECURSE files *.h lib/*.cpp lib/*.c)
-file( GLOB_RECURSE wwwfiles www/*)
+file( GLOB_RECURSE files *.h lib/*.cpp lib/*.c tools/*.cpp tools/*.c tools/*.h)
 file( GLOB_RECURSE jsonfiles lib/JSON/*.h lib/JSON/*.cpp)
 file( GLOB_RECURSE islfiles lib/External/isl/*.h lib/External/isl/*.c
                    lib/External/isl/include/isl/*.h lib/External/isl/imath/*.h
                    lib/External/isl/imath/*.c)
-list( REMOVE_ITEM files ${jsonfiles} ${islfiles} ${wwwfiles})
+list( REMOVE_ITEM files ${jsonfiles} ${islfiles})
 
 set(check_format_depends)
 set(update_format_depends)

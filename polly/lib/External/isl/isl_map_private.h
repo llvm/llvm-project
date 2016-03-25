@@ -11,6 +11,7 @@
 #define ISL_MAP_PRIVATE_H
 
 #define isl_basic_set	isl_basic_map
+#define isl_maybe_isl_basic_set	isl_maybe_isl_basic_map
 #define isl_set		isl_map
 #define isl_basic_set_list	isl_basic_map_list
 #define isl_set_list	isl_map_list
@@ -412,7 +413,10 @@ __isl_give isl_basic_map *isl_basic_map_from_local_space(
 __isl_give isl_basic_set *isl_basic_set_expand_divs(
 	__isl_take isl_basic_set *bset, __isl_take isl_mat *div, int *exp);
 
+__isl_give isl_basic_map *isl_basic_map_mark_div_unknown(
+	__isl_take isl_basic_map *bmap, int div);
 isl_bool isl_basic_map_div_is_known(__isl_keep isl_basic_map *bmap, int div);
+int isl_basic_map_first_unknown_div(__isl_keep isl_basic_map *bmap);
 isl_bool isl_basic_map_divs_known(__isl_keep isl_basic_map *bmap);
 isl_bool isl_map_divs_known(__isl_keep isl_map *map);
 __isl_give isl_mat *isl_basic_set_get_divs(__isl_keep isl_basic_set *bset);

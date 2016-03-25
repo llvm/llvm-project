@@ -236,9 +236,20 @@ CommandAlias::IsDashDashCommand ()
                     break;
                 }
             }
+            // if this is a nested alias, it may be adding arguments on top of an already dash-dash alias
+            if ((m_is_dashdash_alias == eLazyBoolNo) && IsNestedAlias())
+                m_is_dashdash_alias = (GetUnderlyingCommand()->IsDashDashCommand() ? eLazyBoolYes : eLazyBoolNo);
         }
     }
     return (m_is_dashdash_alias == eLazyBoolYes);
+}
+
+bool
+CommandAlias::IsNestedAlias ()
+{
+    if (GetUnderlyingCommand())
+        return GetUnderlyingCommand()->IsAlias();
+    return false;
 }
 
 std::pair<lldb::CommandObjectSP, OptionArgVectorSP>

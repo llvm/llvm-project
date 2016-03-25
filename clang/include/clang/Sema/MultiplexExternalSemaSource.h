@@ -211,7 +211,7 @@ public:
   /// \brief Load the set of used but not defined functions or variables with
   /// internal linkage, or used but not defined inline functions.
   void ReadUndefinedButUsed(
-                llvm::DenseMap<NamedDecl*, SourceLocation> &Undefined) override;
+      llvm::MapVector<NamedDecl *, SourceLocation> &Undefined) override;
 
   void ReadMismatchingDeleteExpressions(llvm::MapVector<
       FieldDecl *, llvm::SmallVector<std::pair<SourceLocation, bool>, 4>> &

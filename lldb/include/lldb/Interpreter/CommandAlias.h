@@ -106,6 +106,10 @@ public:
     std::pair<lldb::CommandObjectSP, OptionArgVectorSP>
     Desugar ();
     
+protected:
+    bool
+    IsNestedAlias ();
+    
 private:
     lldb::CommandObjectSP m_underlying_command_sp;
     std::string m_option_string;

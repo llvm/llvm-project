@@ -793,7 +793,7 @@ static bool FindFunctionInModule (ConstString &mangled_name,
     return false;
 }
 
-Error
+lldb_private::Error
 ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
                                             lldb::addr_t &func_end,
                                             lldb::IRExecutionUnitSP &execution_unit_sp,
@@ -805,7 +805,7 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
 	func_end = LLDB_INVALID_ADDRESS;
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
 
-    Error err;
+    lldb_private::Error err;
 
     std::unique_ptr<llvm::Module> llvm_module_ap (m_code_generator->ReleaseModule());
 
@@ -872,7 +872,7 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
 
         if (execution_policy != eExecutionPolicyAlways && execution_policy != eExecutionPolicyTopLevel)
         {
-            Error interpret_error;
+            lldb_private::Error interpret_error;
 
             bool interpret_function_calls = !process ? false : process->CanInterpretFunctionCalls();
             can_interpret =
@@ -957,11 +957,11 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
     return err;
 }
 
-Error
+lldb_private::Error
 ClangExpressionParser::RunStaticInitializers (lldb::IRExecutionUnitSP &execution_unit_sp,
                                               ExecutionContext &exe_ctx)
 {
-    Error err;
+    lldb_private::Error err;
     
     lldbassert(execution_unit_sp.get());
     lldbassert(exe_ctx.HasThreadScope());

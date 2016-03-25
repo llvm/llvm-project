@@ -133,6 +133,7 @@ __isl_give isl_basic_map *isl_basic_map_remove_redundancies(
 	__isl_take isl_basic_map *bmap);
 __isl_give isl_map *isl_map_remove_redundancies(__isl_take isl_map *map);
 __isl_give isl_basic_map *isl_map_simple_hull(__isl_take isl_map *map);
+__isl_export
 __isl_give isl_basic_map *isl_map_unshifted_simple_hull(
 	__isl_take isl_map *map);
 __isl_give isl_basic_map *isl_map_unshifted_simple_hull_from_map_list(

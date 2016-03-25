@@ -7254,7 +7254,7 @@ void ASTReader::ReadKnownNamespaces(
 }
 
 void ASTReader::ReadUndefinedButUsed(
-                        llvm::DenseMap<NamedDecl*, SourceLocation> &Undefined) {
+    llvm::MapVector<NamedDecl *, SourceLocation> &Undefined) {
   for (unsigned Idx = 0, N = UndefinedButUsed.size(); Idx != N;) {
     NamedDecl *D = cast<NamedDecl>(GetDecl(UndefinedButUsed[Idx++]));
     SourceLocation Loc =

@@ -1807,7 +1807,7 @@ public:
                          SmallVectorImpl<NamespaceDecl *> &Namespaces) override;
 
   void ReadUndefinedButUsed(
-               llvm::DenseMap<NamedDecl *, SourceLocation> &Undefined) override;
+      llvm::MapVector<NamedDecl *, SourceLocation> &Undefined) override;
 
   void ReadMismatchingDeleteExpressions(llvm::MapVector<
       FieldDecl *, llvm::SmallVector<std::pair<SourceLocation, bool>, 4>> &

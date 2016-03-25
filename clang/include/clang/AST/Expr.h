@@ -847,10 +847,12 @@ public:
                   ExprObjectKind OK = OK_Ordinary,
                   Expr *SourceExpr = nullptr)
     : Expr(OpaqueValueExprClass, T, VK, OK,
-           T->isDependentType(), 
+           T->isDependentType() ||
+           (SourceExpr && SourceExpr->isTypeDependent()),
            T->isDependentType() || 
            (SourceExpr && SourceExpr->isValueDependent()),
-           T->isInstantiationDependentType(),
+           T->isInstantiationDependentType() ||
+           (SourceExpr && SourceExpr->isInstantiationDependent()),
            false),
       SourceExpr(SourceExpr), Loc(Loc) {
   }

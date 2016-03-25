@@ -15,6 +15,8 @@ struct isl_vec {
 	struct isl_blk block;
 };
 
+uint32_t isl_vec_get_hash(__isl_keep isl_vec *vec);
+
 __isl_give isl_vec *isl_vec_cow(__isl_take isl_vec *vec);
 
 void isl_vec_lcm(struct isl_vec *vec, isl_int *lcm);

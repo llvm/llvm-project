@@ -79,6 +79,8 @@ __isl_give isl_aff *isl_aff_set_coefficient(__isl_take isl_aff *aff,
 	enum isl_dim_type type, int pos, isl_int v);
 __isl_give isl_aff *isl_aff_add_constant(__isl_take isl_aff *aff, isl_int v);
 
+int isl_aff_plain_cmp(__isl_keep isl_aff *aff1, __isl_keep isl_aff *aff2);
+
 __isl_give isl_aff *isl_aff_normalize(__isl_take isl_aff *aff);
 
 __isl_give isl_aff *isl_aff_expand_divs( __isl_take isl_aff *aff,

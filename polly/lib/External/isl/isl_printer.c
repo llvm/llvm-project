@@ -755,6 +755,8 @@ __isl_give isl_printer *isl_printer_yaml_end_mapping(
 __isl_give isl_printer *isl_printer_yaml_start_sequence(
 	__isl_take isl_printer *p)
 {
+	if (!p)
+		return NULL;
 	p = enter_state(p, p->yaml_style == ISL_YAML_STYLE_BLOCK);
 	p = push_state(p, isl_yaml_sequence_first_start);
 	if (!p)

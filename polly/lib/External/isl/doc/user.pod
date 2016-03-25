@@ -590,7 +590,12 @@ In particular, the C<isl_bool> type has three possible values:
 C<isl_bool_true> (a positive integer value), indicating I<true> or I<yes>;
 C<isl_bool_false> (the integer value zero), indicating I<false> or I<no>; and
 C<isl_bool_error> (a negative integer value), indicating that something
-went wrong.
+went wrong.  The following function can be used to negate an C<isl_bool>,
+where the negation of C<isl_bool_error> is C<isl_bool_error> again.
+
+	#include <isl/val.h>
+	isl_bool isl_bool_not(isl_bool b);
+
 The C<isl_stat> type has two possible values:
 C<isl_stat_ok> (the integer value zero), indicating a successful
 operation; and
@@ -2004,7 +2009,8 @@ C<isl_dim_in>, C<isl_dim_out> and C<isl_dim_div> for relations.
 A (basic or union) set or relation can also be constructed from a
 (union) (piecewise) (multiple) affine expression
 or a list of affine expressions
-(See L</"Functions">).
+(See L</"Functions">), provided these affine expressions do not
+involve any NaN.
 
 	__isl_give isl_basic_map *isl_basic_map_from_aff(
 		__isl_take isl_aff *aff);
@@ -6102,7 +6108,13 @@ into the first expression.
 	__isl_give isl_basic_set *isl_aff_le_basic_set(
 		__isl_take isl_aff *aff1,
 		__isl_take isl_aff *aff2);
+	__isl_give isl_set *isl_aff_le_set(
+		__isl_take isl_aff *aff1,
+		__isl_take isl_aff *aff2);
 	__isl_give isl_basic_set *isl_aff_ge_basic_set(
+		__isl_take isl_aff *aff1,
+		__isl_take isl_aff *aff2);
+	__isl_give isl_set *isl_aff_ge_set(
 		__isl_take isl_aff *aff1,
 		__isl_take isl_aff *aff2);
 	__isl_give isl_set *isl_pw_aff_eq_set(
@@ -6127,7 +6139,13 @@ into the first expression.
 	__isl_give isl_set *isl_multi_aff_lex_le_set(
 		__isl_take isl_multi_aff *ma1,
 		__isl_take isl_multi_aff *ma2);
+	__isl_give isl_set *isl_multi_aff_lex_lt_set(
+		__isl_take isl_multi_aff *ma1,
+		__isl_take isl_multi_aff *ma2);
 	__isl_give isl_set *isl_multi_aff_lex_ge_set(
+		__isl_take isl_multi_aff *ma1,
+		__isl_take isl_multi_aff *ma2);
+	__isl_give isl_set *isl_multi_aff_lex_gt_set(
 		__isl_take isl_multi_aff *ma1,
 		__isl_take isl_multi_aff *ma2);
 
@@ -7307,6 +7325,10 @@ The associative array will be grown automatically as needed.
 Associative arrays can be inspected using the following functions.
 
 	#include <isl/id_to_ast_expr.h>
+	__isl_give isl_maybe_isl_ast_expr
+	isl_id_to_ast_expr_try_get(
+		__isl_keep isl_id_to_ast_expr *id2expr,
+		__isl_keep isl_id *key);
 	isl_bool isl_id_to_ast_expr_has(
 		__isl_keep isl_id_to_ast_expr *id2expr,
 		__isl_keep isl_id *key);
@@ -7319,7 +7341,18 @@ Associative arrays can be inspected using the following functions.
 			__isl_take isl_ast_expr *val, void *user),
 		void *user);
 
-They can be modified using the following function.
+The function C<isl_id_to_ast_expr_try_get> returns a structure
+containing two elements, C<valid> and C<value>.
+If there is a value associated to the key, then C<valid>
+is set to C<isl_bool_true> and C<value> contains a copy of
+the associated value.  Otherwise C<value> is C<NULL> and
+C<valid> may be C<isl_bool_error> or C<isl_bool_false> depending
+on whether some error has occurred or there simply is no associated value.
+The function C<isl_id_to_ast_expr_has> returns the C<valid> field
+in the structure and
+the function C<isl_id_to_ast_expr_get> returns the C<value> field.
+
+Associative arrays can be modified using the following functions.
 
 	#include <isl/id_to_ast_expr.h>
 	__isl_give isl_id_to_ast_expr *isl_id_to_ast_expr_set(

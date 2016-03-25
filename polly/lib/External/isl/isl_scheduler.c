@@ -1583,9 +1583,13 @@ static __isl_give isl_basic_set *intra_coefficients(
 	isl_set *delta;
 	isl_map *key;
 	isl_basic_set *coef;
+	isl_maybe_isl_basic_set m;
 
-	if (isl_map_to_basic_set_has(graph->intra_hmap, map))
-		return isl_map_to_basic_set_get(graph->intra_hmap, map);
+	m = isl_map_to_basic_set_try_get(graph->intra_hmap, map);
+	if (m.valid < 0 || m.valid) {
+		isl_map_free(map);
+		return m.value;
+	}
 
 	key = isl_map_copy(map);
 	if (node->compressed) {
@@ -1620,9 +1624,13 @@ static __isl_give isl_basic_set *inter_coefficients(
 	isl_set *set;
 	isl_map *key;
 	isl_basic_set *coef;
+	isl_maybe_isl_basic_set m;
 
-	if (isl_map_to_basic_set_has(graph->inter_hmap, map))
-		return isl_map_to_basic_set_get(graph->inter_hmap, map);
+	m = isl_map_to_basic_set_try_get(graph->inter_hmap, map);
+	if (m.valid < 0 || m.valid) {
+		isl_map_free(map);
+		return m.value;
+	}
 
 	key = isl_map_copy(map);
 	if (edge->src->compressed)

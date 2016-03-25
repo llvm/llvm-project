@@ -1990,8 +1990,8 @@ inline internal::Matcher<NamedDecl> hasName(const std::string &Name) {
 /// \code
 ///     anyOf(hasName(a), hasName(b), hasName(c))
 /// \endcode
-const llvm::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
-                             internal::hasAnyNameFunc>
+const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
+                                 internal::hasAnyNameFunc>
     hasAnyName = {};
 
 /// \brief Matches NamedDecl nodes whose fully qualified names contain

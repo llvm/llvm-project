@@ -79,7 +79,6 @@ public:
     FPM->add(createDeadStoreEliminationPass());
     FPM->add(createLICMPass());
     FPM->add(createLoopRerollPass());
-    FPM->add(createLoadCombinePass());
     FPM->add(createAggressiveDCEPass());
     FPM->add(createCFGSimplificationPass());
     FPM->add(createInstructionCombiningPass());

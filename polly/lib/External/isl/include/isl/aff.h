@@ -25,6 +25,7 @@ __isl_give isl_aff *isl_aff_copy(__isl_keep isl_aff *aff);
 __isl_null isl_aff *isl_aff_free(__isl_take isl_aff *aff);
 
 isl_ctx *isl_aff_get_ctx(__isl_keep isl_aff *aff);
+uint32_t isl_aff_get_hash(__isl_keep isl_aff *aff);
 
 int isl_aff_dim(__isl_keep isl_aff *aff, enum isl_dim_type type);
 isl_bool isl_aff_involves_dims(__isl_keep isl_aff *aff,
@@ -131,7 +132,11 @@ __isl_give isl_basic_set *isl_aff_neg_basic_set(__isl_take isl_aff *aff);
 
 __isl_give isl_basic_set *isl_aff_le_basic_set(__isl_take isl_aff *aff1,
 	__isl_take isl_aff *aff2);
+__isl_give isl_set *isl_aff_le_set(__isl_take isl_aff *aff1,
+	__isl_take isl_aff *aff2);
 __isl_give isl_basic_set *isl_aff_ge_basic_set(__isl_take isl_aff *aff1,
+	__isl_take isl_aff *aff2);
+__isl_give isl_set *isl_aff_ge_set(__isl_take isl_aff *aff1,
 	__isl_take isl_aff *aff2);
 
 __isl_constructor
@@ -141,6 +146,7 @@ __isl_give isl_printer *isl_printer_print_aff(__isl_take isl_printer *p,
 void isl_aff_dump(__isl_keep isl_aff *aff);
 
 isl_ctx *isl_pw_aff_get_ctx(__isl_keep isl_pw_aff *pwaff);
+uint32_t isl_pw_aff_get_hash(__isl_keep isl_pw_aff *pa);
 __isl_give isl_space *isl_pw_aff_get_domain_space(__isl_keep isl_pw_aff *pwaff);
 __isl_give isl_space *isl_pw_aff_get_space(__isl_keep isl_pw_aff *pwaff);
 
@@ -367,7 +373,11 @@ __isl_give isl_multi_aff *isl_multi_aff_move_dims(__isl_take isl_multi_aff *ma,
 	enum isl_dim_type dst_type, unsigned dst_pos,
 	enum isl_dim_type src_type, unsigned src_pos, unsigned n);
 
+__isl_give isl_set *isl_multi_aff_lex_lt_set(__isl_take isl_multi_aff *ma1,
+	__isl_take isl_multi_aff *ma2);
 __isl_give isl_set *isl_multi_aff_lex_le_set(__isl_take isl_multi_aff *ma1,
+	__isl_take isl_multi_aff *ma2);
+__isl_give isl_set *isl_multi_aff_lex_gt_set(__isl_take isl_multi_aff *ma1,
 	__isl_take isl_multi_aff *ma2);
 __isl_give isl_set *isl_multi_aff_lex_ge_set(__isl_take isl_multi_aff *ma1,
 	__isl_take isl_multi_aff *ma2);
@@ -689,6 +699,8 @@ __isl_give isl_union_pw_multi_aff *isl_union_pw_multi_aff_read_from_str(
 void isl_union_pw_multi_aff_dump(__isl_keep isl_union_pw_multi_aff *upma);
 __isl_give char *isl_union_pw_multi_aff_to_str(
 	__isl_keep isl_union_pw_multi_aff *upma);
+
+uint32_t isl_multi_pw_aff_get_hash(__isl_keep isl_multi_pw_aff *mpa);
 
 __isl_give isl_multi_pw_aff *isl_multi_pw_aff_identity(
 	__isl_take isl_space *space);
