@@ -391,14 +391,21 @@ TEST(StringMapCustomTest, InitialSizeTest) {
   for (auto Size : {1, 32, 67}) {
     StringMap<CountCtorCopyAndMove> Map(Size);
     auto NumBuckets = Map.getNumBuckets();
+
+    // Prepare the elts in a vector. We do this as a pre-step to shield us
+    // against the internals of std::pair which can introduce spurious move/copy
+    std::vector<std::pair<std::string, CountCtorCopyAndMove>> Elts;
+    for (int i = 0; i < Size; ++i)
+      Elts.emplace_back(Twine(i).str(), CountCtorCopyAndMove());
+
     CountCtorCopyAndMove::Move = 0;
     CountCtorCopyAndMove::Copy = 0;
     for (int i = 0; i < Size; ++i)
-      Map.insert(std::make_pair(Twine(i).str(), CountCtorCopyAndMove()));
-    //  This relies on move-construction elision, and cannot be reliably tested.
-    //   EXPECT_EQ((unsigned)Size * 3, CountCtorCopyAndMove::Move);
-    // No copy is expected.
-    EXPECT_EQ(0u, CountCtorCopyAndMove::Copy);
+      Map.insert(Elts[i]);
+    // After the inital copy, the map will move the Elts in the Entry.
+    EXPECT_EQ((unsigned)Size, CountCtorCopyAndMove::Move);
+    // We copy once the pair from the Elts vector
+    EXPECT_EQ((unsigned)Size, CountCtorCopyAndMove::Copy);
     // Check that the map didn't grow
     EXPECT_EQ(Map.getNumBuckets(), NumBuckets);
   }
