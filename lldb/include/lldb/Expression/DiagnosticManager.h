@@ -37,15 +37,82 @@ enum DiagnosticSeverity
 
 const uint32_t LLDB_INVALID_COMPILER_ID = UINT32_MAX;
 
-struct Diagnostic
+class Diagnostic
 {
-    std::string message;
-    uint32_t compiler_id; // Compiler-specific diagnostic ID
-    DiagnosticSeverity severity;
-    DiagnosticOrigin origin;
+friend class DiagnosticManager;
+
+public:
+    DiagnosticOrigin getKind() const { return m_origin; }
+    
+    static bool classof(const Diagnostic *diag)
+    {
+        DiagnosticOrigin kind =  diag->getKind();
+        switch (kind)
+        {
+            case eDiagnosticOriginUnknown:
+            case eDiagnosticOriginLLDB:
+            case eDiagnosticOriginGo:
+            case eDiagnosticOriginLLVM:
+                return true;
+            case eDiagnosticOriginClang:
+            case eDiagnosticOriginSwift:
+                return false;
+        }
+    }
+    
+    Diagnostic(const char *message, DiagnosticSeverity severity, DiagnosticOrigin origin, uint32_t compiler_id) :
+            m_message(message),
+            m_severity(severity),
+            m_origin(origin),
+            m_compiler_id(compiler_id)
+    {
+    }
+    
+    Diagnostic(const Diagnostic &rhs) :
+        m_message(rhs.m_message),
+        m_severity(rhs.m_severity),
+        m_origin(rhs.m_origin),
+        m_compiler_id(rhs.m_compiler_id)
+    {
+    }
+    
+    virtual ~Diagnostic() = default;
+    
+    virtual bool HasFixIts () const { return false; }
+    
+    DiagnosticSeverity
+    GetSeverity() const
+    {
+        return m_severity;
+    }
+    
+    uint32_t
+    GetCompilerID() const
+    {
+        return m_compiler_id;
+    }
+    
+    const char *
+    GetMessage() const
+    {
+        return m_message.c_str();
+    }
+    
+    void AppendMessage(const char *message, bool precede_with_newline = true)
+    {
+        if (precede_with_newline)
+            m_message.push_back('\n');
+        m_message.append(message);
+    }
+
+protected:
+    std::string m_message;
+    DiagnosticSeverity m_severity;
+    DiagnosticOrigin m_origin;
+    uint32_t m_compiler_id; // Compiler-specific diagnostic ID
 };
 
-typedef std::vector<Diagnostic> DiagnosticList;
+typedef std::vector<Diagnostic *> DiagnosticList;
 
 class DiagnosticManager
 {
@@ -54,19 +121,47 @@ public:
     Clear()
     {
         m_diagnostics.clear();
+        m_auto_apply_fixits = true;
+        m_fixed_expression.clear();
     }
 
+    // The diagnostic manager holds a list of diagnostics, which are owned by the manager.
     const DiagnosticList &
     Diagnostics()
     {
         return m_diagnostics;
     }
-
+    
+    ~DiagnosticManager()
+    {
+        for (Diagnostic *diag : m_diagnostics)
+        {
+            delete diag;
+        }
+    }
+    
+    bool
+    HasFixIts()
+    {
+        for (Diagnostic *diag : m_diagnostics)
+        {
+            if (diag->HasFixIts())
+                return true;
+        }
+        return false;
+    }
+    
     void
     AddDiagnostic(const char *message, DiagnosticSeverity severity, DiagnosticOrigin origin,
                   uint32_t compiler_id = LLDB_INVALID_COMPILER_ID)
     {
-        m_diagnostics.push_back({std::string(message), compiler_id, severity, origin});
+        m_diagnostics.push_back(new Diagnostic(message, severity, origin, compiler_id));
+    }
+    
+    void
+    AddDiagnostic(Diagnostic *diagnostic)
+    {
+        m_diagnostics.push_back(diagnostic);
     }
 
     size_t
@@ -79,11 +174,10 @@ public:
     {
         if (m_diagnostics.size())
         {
-            m_diagnostics.back().message.push_back('\n');
-            m_diagnostics.back().message.append(cstr);
+            m_diagnostics.back()->AppendMessage(cstr);
         }
     }
-
+    
     // Returns a string containing errors in this format:
     //
     // "error: error text\n
@@ -94,9 +188,36 @@ public:
 
     void
     Dump(Log *log);
+    
+    const std::string &
+    GetFixedExpression()
+    {
+        return m_fixed_expression;
+    }
+    
+    // Moves fixed_expression to the internal storage.
+    void
+    SetFixedExpression(std::string fixed_expression)
+    {
+        m_fixed_expression = std::move(fixed_expression);
+        fixed_expression.clear();
+    }
+    
+    void
+    SetAutoApplyFixIts(bool auto_apply)
+    {
+        m_auto_apply_fixits = auto_apply;
+    }
+    
+    bool ShouldAutoApplyFixIts()
+    {
+        return m_auto_apply_fixits;
+    }
 
-private:
+protected:
     DiagnosticList m_diagnostics;
+    std::string m_fixed_expression;
+    bool m_auto_apply_fixits = true;
 };
 }
 

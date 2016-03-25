@@ -172,6 +172,9 @@ public:
     
     bool
     GetUseAllCompilerFlags() const;
+
+    bool
+    GetEnableAutoApplyFixIts () const;
     
     bool
     GetEnableSyntheticValue () const;
@@ -299,6 +302,7 @@ public:
         m_generate_debug_info (false),
         m_ansi_color_errors (false),
         m_result_is_internal (false),
+        m_auto_apply_fixits (true),
         m_use_dynamic (lldb::eNoDynamicValues),
         m_timeout_usec (default_timeout),
         m_one_thread_timeout_usec (0),
@@ -589,6 +593,18 @@ public:
     {
         return m_result_is_internal;
     }
+    
+    void
+    SetAutoApplyFixIts(bool b)
+    {
+        m_auto_apply_fixits = b;
+    }
+    
+    bool
+    GetAutoApplyFixIts() const
+    {
+        return m_auto_apply_fixits;
+    }
 
 private:
     ExecutionPolicy m_execution_policy;
@@ -607,6 +623,7 @@ private:
     bool m_generate_debug_info;
     bool m_ansi_color_errors;
     bool m_result_is_internal;
+    bool m_auto_apply_fixits;
     lldb::DynamicValueType m_use_dynamic;
     uint32_t m_timeout_usec;
     uint32_t m_one_thread_timeout_usec;

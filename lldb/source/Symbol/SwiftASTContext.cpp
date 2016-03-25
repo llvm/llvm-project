@@ -5004,9 +5004,7 @@ SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
     
         for (const DiagnosticList::value_type &fatal_diagnostic : fatal_diagnostics.Diagnostics())
         {
-            diagnostic_manager.AddDiagnostic(fatal_diagnostic.message.c_str(),
-                                             fatal_diagnostic.severity,
-                                             fatal_diagnostic.origin);
+            diagnostic_manager.AddDiagnostic(fatal_diagnostic);
         }
     }
     else

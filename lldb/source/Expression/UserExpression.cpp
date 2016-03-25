@@ -260,6 +260,7 @@ UserExpression::Evaluate (ExecutionContext &exe_ctx,
     }
 
     DiagnosticManager diagnostic_manager;
+    diagnostic_manager.SetAutoApplyFixIts(options.GetAutoApplyFixIts());
 
     if (!user_expression_sp->Parse(diagnostic_manager, exe_ctx, execution_policy, keep_expression_in_memory,
                                    generate_debug_info, 0))

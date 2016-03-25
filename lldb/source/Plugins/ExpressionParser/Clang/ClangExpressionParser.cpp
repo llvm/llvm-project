@@ -17,10 +17,13 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/Version.h"
+#include "clang/Basic/Version.h" 
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/CodeGen/ModuleBuilder.h"
+#include "clang/Edit/Commit.h"
+#include "clang/Edit/EditsReceiver.h"
+#include "clang/Edit/EditedSource.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -32,6 +35,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/ParseAST.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
+#include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 
@@ -52,6 +56,7 @@
 
 // Project includes
 #include "ClangExpressionParser.h"
+#include "ClangDiagnostic.h"
 
 #include "ClangASTSource.h"
 #include "ClangExpressionHelper.h"
@@ -189,24 +194,48 @@ public:
             diag_str.push_back('\0');
             const char *data = diag_str.data();
 
+            DiagnosticSeverity severity;
+            bool make_new_diagnostic = true;
+            
             switch (DiagLevel)
             {
                 case DiagnosticsEngine::Level::Fatal:
                 case DiagnosticsEngine::Level::Error:
-                    m_manager->AddDiagnostic(data, eDiagnosticSeverityError, eDiagnosticOriginClang, Info.getID());
+                    severity = eDiagnosticSeverityError;
                     break;
                 case DiagnosticsEngine::Level::Warning:
-                    m_manager->AddDiagnostic(data, eDiagnosticSeverityWarning, eDiagnosticOriginClang, Info.getID());
+                    severity = eDiagnosticSeverityWarning;
                     break;
                 case DiagnosticsEngine::Level::Remark:
                 case DiagnosticsEngine::Level::Ignored:
-                    m_manager->AddDiagnostic(data, eDiagnosticSeverityRemark, eDiagnosticOriginClang, Info.getID());
+                    severity = eDiagnosticSeverityRemark;
                     break;
                 case DiagnosticsEngine::Level::Note:
                     m_manager->AppendMessageToDiagnostic(data);
+                    make_new_diagnostic = false;
+            }
+            if (make_new_diagnostic)
+            {
+                ClangDiagnostic *new_diagnostic = new ClangDiagnostic(data, severity, Info.getID());
+                m_manager->AddDiagnostic(new_diagnostic);
+                
+                // Don't store away warning fixits, since the compiler doesn't have enough
+                // context in an expression for the warning to be useful.
+                // FIXME: Should we try to filter out FixIts that apply to our generated
+                // code, and not the user's expression?
+                if (severity == eDiagnosticSeverityError)
+                {
+                    size_t num_fixit_hints = Info.getNumFixItHints();
+                    for (int i = 0; i < num_fixit_hints; i++)
+                    {
+                        const clang::FixItHint &fixit = Info.getFixItHint(i);
+                        if (!fixit.isNull())
+                            new_diagnostic->AddFixitHint(fixit);
+                    }
+                }
             }
         }
-
+        
         m_passthrough->HandleDiagnostic(DiagLevel, Info);
     }
 
@@ -612,6 +641,87 @@ ClangExpressionParser::Parse (DiagnosticManager &diagnostic_manager,
     adapter->ResetManager();
 
     return num_errors;
+}
+
+bool
+ClangExpressionParser::RewriteExpression(DiagnosticManager &diagnostic_manager)
+{
+    clang::SourceManager &source_manager = m_compiler->getSourceManager();
+    clang::edit::EditedSource editor(source_manager, m_compiler->getLangOpts(), nullptr);
+    clang::edit::Commit commit(editor);
+    clang::Rewriter rewriter(source_manager, m_compiler->getLangOpts());
+    
+    class RewritesReceiver : public edit::EditsReceiver {
+      Rewriter &rewrite;
+
+    public:
+      RewritesReceiver(Rewriter &in_rewrite) : rewrite(in_rewrite) { }
+
+      void insert(SourceLocation loc, StringRef text) override {
+        rewrite.InsertText(loc, text);
+      }
+      void replace(CharSourceRange range, StringRef text) override {
+        rewrite.ReplaceText(range.getBegin(), rewrite.getRangeSize(range), text);
+      }
+    };
+    
+    RewritesReceiver rewrites_receiver(rewriter);
+    
+    const DiagnosticList &diagnostics = diagnostic_manager.Diagnostics();
+    size_t num_diags = diagnostics.size();
+    if (num_diags == 0)
+        return false;
+    
+    for (const Diagnostic *diag : diagnostic_manager.Diagnostics())
+    {
+        const ClangDiagnostic *diagnostic = llvm::dyn_cast<ClangDiagnostic>(diag);
+        if (diagnostic && diagnostic->HasFixIts())
+        {
+             for (const FixItHint &fixit : diagnostic->FixIts())
+             {
+                // This is cobbed from clang::Rewrite::FixItRewriter.
+                if (fixit.CodeToInsert.empty())
+                {
+                  if (fixit.InsertFromRange.isValid())
+                  {
+                      commit.insertFromRange(fixit.RemoveRange.getBegin(),
+                                             fixit.InsertFromRange, /*afterToken=*/false,
+                                             fixit.BeforePreviousInsertions);
+                  }
+                  else
+                    commit.remove(fixit.RemoveRange);
+                }
+                else
+                {
+                  if (fixit.RemoveRange.isTokenRange() ||
+                      fixit.RemoveRange.getBegin() != fixit.RemoveRange.getEnd())
+                    commit.replace(fixit.RemoveRange, fixit.CodeToInsert);
+                  else
+                    commit.insert(fixit.RemoveRange.getBegin(), fixit.CodeToInsert,
+                                /*afterToken=*/false, fixit.BeforePreviousInsertions);
+                }
+            }
+        }
+    }
+    
+    // FIXME - do we want to try to propagate specific errors here?
+    if (!commit.isCommitable())
+        return false;
+    else if (!editor.commit(commit))
+        return false;
+    
+    // Now play all the edits, and stash the result in the diagnostic manager.
+    editor.applyRewrites(rewrites_receiver);
+    RewriteBuffer &main_file_buffer = rewriter.getEditBuffer(source_manager.getMainFileID());
+
+    std::string fixed_expression;
+    llvm::raw_string_ostream out_stream(fixed_expression);
+    
+    main_file_buffer.write(out_stream);
+    out_stream.flush();
+    diagnostic_manager.SetFixedExpression(fixed_expression);
+    
+    return true;
 }
 
 static bool FindFunctionInModule (ConstString &mangled_name,

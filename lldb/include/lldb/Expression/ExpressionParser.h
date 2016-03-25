@@ -58,7 +58,7 @@ public:
     /// wrap the expression in anything at all.
     ///
     /// @param[in] diagnostic_manager
-    ///     The stream to print errors to.
+    ///     The diagnostic manager in which to store the errors and warnings.
     ///
     /// @return
     ///     The number of errors encountered during parsing.  0 means
@@ -69,7 +69,24 @@ public:
            uint32_t first_line = 0,
            uint32_t last_line = UINT32_MAX,
            uint32_t line_offset = 0) = 0;
-    
+
+    //------------------------------------------------------------------
+    /// Try to use the FixIts in the diagnostic_manager to rewrite the
+    /// expression.  If successful, the rewritten expression is stored
+    /// in the diagnostic_manager, get it out with GetFixedExpression.
+    ///
+    /// @param[in] diagnostic_manager
+    ///     The diagnostic manager containing fixit's to apply.
+    ///
+    /// @return
+    ///     \b true if the rewrite was successful, \b false otherwise.
+    //------------------------------------------------------------------
+    virtual bool
+    RewriteExpression(DiagnosticManager &diagnostic_manager)
+    {
+        return false;
+    }
+
     //------------------------------------------------------------------
     /// Ready an already-parsed expression for execution, possibly
     /// evaluating it statically.

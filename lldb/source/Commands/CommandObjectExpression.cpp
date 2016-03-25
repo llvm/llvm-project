@@ -71,6 +71,7 @@ CommandObjectExpression::CommandOptions::g_option_table[] =
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "unwind-on-error",    'u', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeBoolean,    "Clean up program state if the expression causes a crash, or raises a signal.  Note, unlike gdb hitting a breakpoint is controlled by another option (-i)."},
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "debug",              'g', OptionParser::eNoArgument      , NULL, NULL, 0, eArgTypeNone,       "When specified, debug the JIT code by setting a breakpoint on the first instruction and forcing breakpoints to not be ignored (-i0) and no unwinding to happen on error (-u0)."},
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "language",           'l', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLanguage,   "Specifies the Language to use when parsing the expression.  If not set the target.language setting is used." },
+    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "apply-fixits",       'X', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLanguage,   "If true, simple FixIt hints will be automatically applied to the expression." },
     { LLDB_OPT_SET_1, false, "description-verbosity", 'v', OptionParser::eOptionalArgument, NULL, g_description_verbosity_type, 0, eArgTypeDescriptionVerbosity,        "How verbose should the output of this expression be, if the object description is asked for."},
 };
 
@@ -160,6 +161,17 @@ CommandObjectExpression::CommandOptions::SetOptionValue (CommandInterpreter &int
         ignore_breakpoints = false;
         break;
 
+    case 'X':
+        {
+            bool success;
+            bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
+            if (success)
+                auto_apply_fixits = tmp_value ? eLazyBoolYes : eLazyBoolNo;
+            else
+                error.SetErrorStringWithFormat("could not convert \"%s\" to a boolean value.", option_arg);
+            break;
+        }
+            
     default:
         error.SetErrorStringWithFormat("invalid short option character '%c'", short_option);
         break;
@@ -191,6 +203,7 @@ CommandObjectExpression::CommandOptions::OptionParsingStarting (CommandInterpret
 #endif
     language = eLanguageTypeUnknown;
     m_verbosity = eLanguageRuntimeDescriptionDisplayVerbosityCompact;
+    auto_apply_fixits = eLazyBoolCalculate;
 }
 
 const OptionDefinition*
@@ -325,6 +338,14 @@ CommandObjectExpression::EvaluateExpression
         // specified, else default to the language for the frame.
         if (m_command_options.language != eLanguageTypeUnknown)
             options.SetLanguage(m_command_options.language);
+        
+        bool auto_apply_fixits;
+        if (m_command_options.auto_apply_fixits == eLazyBoolCalculate)
+            auto_apply_fixits = target->GetEnableAutoApplyFixIts();
+        else
+            auto_apply_fixits = m_command_options.auto_apply_fixits == eLazyBoolYes ? true : false;
+        
+        options.SetAutoApplyFixIts(auto_apply_fixits);
 
         // If there is any chance we are going to stop and want to see
         // what went wrong with our expression, we should generate debug info

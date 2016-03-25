@@ -209,6 +209,18 @@ SBExpressionOptions::SetPrefix (const char *prefix)
     return m_opaque_ap->SetPrefix(prefix);
 }
 
+bool
+SBExpressionOptions::GetAutoApplyFixIts ()
+{
+    return m_opaque_ap->GetAutoApplyFixIts ();
+}
+
+void
+SBExpressionOptions::SetAutoApplyFixIts (bool b)
+{
+    return m_opaque_ap->SetAutoApplyFixIts (b);
+}
+
 EvaluateExpressionOptions *
 SBExpressionOptions::get() const
 {
