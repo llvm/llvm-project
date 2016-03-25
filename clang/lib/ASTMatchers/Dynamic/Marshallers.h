@@ -325,8 +325,9 @@ public:
 
   template <typename ResultT, typename ArgT,
             ResultT (*F)(ArrayRef<const ArgT *>)>
-  VariadicFuncMatcherDescriptor(llvm::VariadicFunction<ResultT, ArgT, F> Func,
-                          StringRef MatcherName)
+  VariadicFuncMatcherDescriptor(
+      ast_matchers::internal::VariadicFunction<ResultT, ArgT, F> Func,
+      StringRef MatcherName)
       : Func(&variadicMatcherDescriptor<ResultT, ArgT, F>),
         MatcherName(MatcherName.str()),
         ArgsKind(ArgTypeTraits<ArgT>::getKind()) {
@@ -655,9 +656,9 @@ MatcherDescriptor *makeMatcherAutoMarshall(ReturnType (*Func)(ArgType1, ArgType2
 /// \brief Variadic overload.
 template <typename ResultT, typename ArgT,
           ResultT (*Func)(ArrayRef<const ArgT *>)>
-MatcherDescriptor *
-makeMatcherAutoMarshall(llvm::VariadicFunction<ResultT, ArgT, Func> VarFunc,
-                        StringRef MatcherName) {
+MatcherDescriptor *makeMatcherAutoMarshall(
+    ast_matchers::internal::VariadicFunction<ResultT, ArgT, Func> VarFunc,
+    StringRef MatcherName) {
   return new VariadicFuncMatcherDescriptor(VarFunc, MatcherName);
 }
 

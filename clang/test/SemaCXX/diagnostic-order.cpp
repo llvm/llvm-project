@@ -1,4 +1,7 @@
-// RUN: not %clang_cc1 %s -fsyntax-only 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -std=c++11 %s -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 %s -fsyntax-only -DWARN 2>&1 | FileCheck %s --check-prefix=CHECK-WARN
+
+#ifndef WARN
 
 // Ensure that the diagnostics we produce for this situation appear in a
 // deterministic order. This requires ADL to provide lookup results in a
@@ -55,3 +58,16 @@ int *p = Oper() + 0;
 // CHECK: in instantiation of template class 'Error<Oper, X *>'
 // CHECK: no type named 'error' in 'Oper'
 // CHECK: in instantiation of template class 'Error<Oper, Y *>'
+
+#endif
+
+template<typename T> struct UndefButUsed {
+  static inline int f();
+  static int g() { return f(); }
+};
+int undef_but_used = UndefButUsed<int>::g() + UndefButUsed<float>::g() + UndefButUsed<char>::g() + UndefButUsed<void>::g();
+
+// CHECK-WARN: inline function 'UndefButUsed<int>::f' is not defined
+// CHECK-WARN: inline function 'UndefButUsed<float>::f' is not defined
+// CHECK-WARN: inline function 'UndefButUsed<char>::f' is not defined
+// CHECK-WARN: inline function 'UndefButUsed<void>::f' is not defined

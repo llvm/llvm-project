@@ -3000,6 +3000,9 @@ TEST(Matcher, HasAnyName) {
   EXPECT_TRUE(notMatches(Code, recordDecl(hasAnyName("::C", "::b::C"))));
   EXPECT_TRUE(
       matches(Code, recordDecl(hasAnyName("::C", "::b::C", "::a::b::C"))));
+
+  std::vector<StringRef> Names = {"::C", "::b::C", "::a::b::C"};
+  EXPECT_TRUE(matches(Code, recordDecl(hasAnyName(Names))));
 }
 
 TEST(Matcher, IsDefinition) {

@@ -46,8 +46,9 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/Type.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/VariadicFunction.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ManagedStatic.h"
 #include <map>
 #include <string>
@@ -59,6 +60,39 @@ namespace ast_matchers {
 class BoundNodes;
 
 namespace internal {
+
+/// \brief Variadic function object.
+///
+/// Most of the functions below that use VariadicFunction could be implemented
+/// using plain C++11 variadic functions, but the function object allows us to
+/// capture it on the dynamic matcher registry.
+template <typename ResultT, typename ArgT,
+          ResultT (*Func)(ArrayRef<const ArgT *>)>
+struct VariadicFunction {
+  ResultT operator()() const { return Func(None); }
+
+  template <typename... ArgsT>
+  ResultT operator()(const ArgT &Arg1, const ArgsT &... Args) const {
+    return Execute(Arg1, static_cast<const ArgT &>(Args)...);
+  }
+
+  // We also allow calls with an already created array, in case the caller
+  // already had it.
+  ResultT operator()(ArrayRef<ArgT> Args) const {
+    SmallVector<const ArgT*, 8> InnerArgs;
+    for (const ArgT &Arg : Args)
+      InnerArgs.push_back(&Arg);
+    return Func(InnerArgs);
+  }
+
+private:
+  // Trampoline function to allow for implicit conversions to take place
+  // before we make the array.
+  template <typename... ArgsT> ResultT Execute(const ArgsT &... Args) const {
+    const ArgT *const ArgsArray[] = {&Args...};
+    return Func(ArrayRef<const ArgT *>(ArgsArray, sizeof...(ArgsT)));
+  }
+};
 
 /// \brief Unifies obtaining the underlying type of a regular node through
 /// `getType` and a TypedefNameDecl node through `getUnderlyingType`.
@@ -1405,9 +1439,8 @@ inline bool ValueEqualsMatcher<FloatingLiteral, llvm::APFloat>::matchesNode(
 /// casted to CXXRecordDecl and all given matchers match.
 template <typename SourceT, typename TargetT>
 class VariadicDynCastAllOfMatcher
-    : public llvm::VariadicFunction<
-        BindableMatcher<SourceT>, Matcher<TargetT>,
-        makeDynCastAllOfComposite<SourceT, TargetT> > {
+    : public VariadicFunction<BindableMatcher<SourceT>, Matcher<TargetT>,
+                              makeDynCastAllOfComposite<SourceT, TargetT>> {
 public:
   VariadicDynCastAllOfMatcher() {}
 };
@@ -1423,9 +1456,9 @@ public:
 /// \c Matcher<NestedNameSpecifier>.
 /// The returned matcher matches if all given matchers match.
 template <typename T>
-class VariadicAllOfMatcher : public llvm::VariadicFunction<
-                               BindableMatcher<T>, Matcher<T>,
-                               makeAllOfComposite<T> > {
+class VariadicAllOfMatcher
+    : public VariadicFunction<BindableMatcher<T>, Matcher<T>,
+                              makeAllOfComposite<T>> {
 public:
   VariadicAllOfMatcher() {}
 };
@@ -1546,8 +1579,8 @@ public:
         new MatcherImpl<OuterT>(InnerMatcher, Getter<OuterT>::value()));
   }
 
-  struct Func : public llvm::VariadicFunction<Self, Matcher<InnerTBase>,
-                                              &Self::create> {
+  struct Func
+      : public VariadicFunction<Self, Matcher<InnerTBase>, &Self::create> {
     Func() {}
   };
 
