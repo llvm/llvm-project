@@ -136,6 +136,12 @@ namespace clang {
     void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
 
+    void AddLocalOffset(uint64_t LocalOffset) {
+      uint64_t Offset = Writer.Stream.GetCurrentBitNo();
+      assert(LocalOffset < Offset && "invalid offset");
+      Record.push_back(LocalOffset ? Offset - LocalOffset : 0);
+    }
+
     /// Add an Objective-C type parameter list to the given record.
     void AddObjCTypeParamList(ObjCTypeParamList *typeParams) {
       // Empty type parameter list.
@@ -1555,8 +1561,8 @@ void ASTDeclWriter::VisitStaticAssertDecl(StaticAssertDecl *D) {
 /// contexts.
 void ASTDeclWriter::VisitDeclContext(DeclContext *DC, uint64_t LexicalOffset,
                                      uint64_t VisibleOffset) {
-  Record.push_back(LexicalOffset);
-  Record.push_back(VisibleOffset);
+  AddLocalOffset(LexicalOffset);
+  AddLocalOffset(VisibleOffset);
 }
 
 const Decl *ASTWriter::getFirstLocalDecl(const Decl *D) {
@@ -1624,8 +1630,9 @@ void ASTDeclWriter::VisitRedeclarable(Redeclarable<T> *D) {
       if (LocalRedecls.empty())
         Record.push_back(0);
       else {
-        Record.push_back(Writer.Stream.GetCurrentBitNo());
+        auto Start = Writer.Stream.GetCurrentBitNo();
         Writer.Stream.EmitRecord(LOCAL_REDECLARATIONS, LocalRedecls);
+        AddLocalOffset(Start);
       }
     } else {
       Record.push_back(0);

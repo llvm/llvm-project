@@ -38,6 +38,7 @@ namespace clang {
   class ASTDeclReader : public DeclVisitor<ASTDeclReader, void> {
     ASTReader &Reader;
     ModuleFile &F;
+    uint64_t Offset;
     const DeclID ThisDeclID;
     const unsigned RawLocation;
     typedef ASTReader::RecordData RecordData;
@@ -51,6 +52,12 @@ namespace clang {
     bool HasPendingBody;
 
     uint64_t GetCurrentCursorOffset();
+
+    uint64_t ReadLocalOffset(const RecordData &R, unsigned &I) {
+      uint64_t LocalOffset = R[I++];
+      assert(LocalOffset < Offset && "offset point after current record");
+      return LocalOffset ? Offset - LocalOffset : 0;
+    }
 
     SourceLocation ReadSourceLocation(const RecordData &R, unsigned &I) {
       return Reader.ReadSourceLocation(F, R, I);
@@ -199,9 +206,10 @@ namespace clang {
     FindExistingResult findExisting(NamedDecl *D);
 
   public:
-    ASTDeclReader(ASTReader &Reader, ModuleFile &F, DeclID thisDeclID,
-                  unsigned RawLocation, const RecordData &Record, unsigned &Idx)
-        : Reader(Reader), F(F), ThisDeclID(thisDeclID),
+    ASTDeclReader(ASTReader &Reader, ASTReader::RecordLocation Loc,
+                  DeclID thisDeclID, unsigned RawLocation,
+                  const RecordData &Record, unsigned &Idx)
+        : Reader(Reader), F(*Loc.F), Offset(Loc.Offset), ThisDeclID(thisDeclID),
           RawLocation(RawLocation), Record(Record), Idx(Idx),
           TypeIDForTypeDecl(0), NamedDeclForTagDecl(0),
           TypedefNameForLinkage(nullptr), HasPendingBody(false) {}
@@ -2187,8 +2195,8 @@ void ASTDeclReader::VisitEmptyDecl(EmptyDecl *D) {
 
 std::pair<uint64_t, uint64_t>
 ASTDeclReader::VisitDeclContext(DeclContext *DC) {
-  uint64_t LexicalOffset = Record[Idx++];
-  uint64_t VisibleOffset = Record[Idx++];
+  uint64_t LexicalOffset = ReadLocalOffset(Record, Idx);
+  uint64_t VisibleOffset = ReadLocalOffset(Record, Idx);
   return std::make_pair(LexicalOffset, VisibleOffset);
 }
 
@@ -2223,7 +2231,7 @@ ASTDeclReader::VisitRedeclarable(Redeclarable<T> *D) {
     for (unsigned I = 0; I != N - 1; ++I)
       MergeWith = ReadDecl(Record, Idx/*, MergeWith*/);
 
-    RedeclOffset = Record[Idx++];
+    RedeclOffset = ReadLocalOffset(Record, Idx);
   } else {
     // This declaration was not the first local declaration. Read the first
     // local declaration now, to trigger the import of other redeclarations.
@@ -3178,7 +3186,7 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   RecordData Record;
   unsigned Code = DeclsCursor.ReadCode();
   unsigned Idx = 0;
-  ASTDeclReader Reader(*this, *Loc.F, ID, RawLocation, Record,Idx);
+  ASTDeclReader Reader(*this, Loc, ID, RawLocation, Record,Idx);
 
   Decl *D = nullptr;
   switch ((DeclCode)DeclsCursor.readRecord(Code, Record)) {
@@ -3471,7 +3479,8 @@ void ASTReader::loadDeclUpdateRecords(serialization::DeclID ID, Decl *D) {
       assert(RecCode == DECL_UPDATES && "Expected DECL_UPDATES record!");
 
       unsigned Idx = 0;
-      ASTDeclReader Reader(*this, *F, ID, 0, Record, Idx);
+      ASTDeclReader Reader(*this, RecordLocation(F, Offset), ID, 0, Record,
+                           Idx);
       Reader.UpdateDecl(D, *F, Record);
 
       // We might have made this declaration interesting. If so, remember that
