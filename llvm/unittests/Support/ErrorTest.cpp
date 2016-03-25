@@ -35,6 +35,9 @@ public:
     llvm_unreachable("CustomError doesn't support ECError conversion");
   }
 
+  // Used by ErrorInfo::classID.
+  static char ID;
+
 protected:
   // This error is subclassed below, but we can't use inheriting constructors
   // yet, so we can't propagate the constructors through ErrorInfo. Instead
@@ -44,6 +47,8 @@ protected:
 
   int Info;
 };
+
+char CustomError::ID = 0;
 
 // Custom error class with a custom base class and some additional random
 // 'info'.
@@ -66,9 +71,14 @@ public:
     llvm_unreachable("CustomSubError doesn't support ECError conversion");
   }
 
+  // Used by ErrorInfo::classID.
+  static char ID;
+
 protected:
   int ExtraInfo;
 };
+
+char CustomSubError::ID = 0;
 
 static Error handleCustomError(const CustomError &CE) { return Error(); }
 
@@ -453,6 +463,3 @@ TEST(Error, ErrorCodeConversions) {
 }
 
 } // end anon namespace
-
-template <> char ErrorInfo<CustomError>::ID = 0;
-template <> char ErrorInfo<CustomSubError, CustomError>::ID = 0;

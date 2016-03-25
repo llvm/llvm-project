@@ -21,9 +21,9 @@
 #include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/Target/TargetLowering.h"
 
 namespace llvm {
+class AMDGPUTargetLowering;
 
 class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
   typedef BasicTTIImplBase<AMDGPUTTIImpl> BaseT;
@@ -35,6 +35,28 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   const AMDGPUSubtarget *getST() const { return ST; }
   const AMDGPUTargetLowering *getTLI() const { return TLI; }
+
+
+  static inline int getFullRateInstrCost() {
+    return TargetTransformInfo::TCC_Basic;
+  }
+
+  static inline int getHalfRateInstrCost() {
+    return 2 * TargetTransformInfo::TCC_Basic;
+  }
+
+  // TODO: The size is usually 8 bytes, but takes 4x as many cycles. Maybe
+  // should be 2 or 4.
+  static inline int getQuarterRateInstrCost() {
+    return 3 * TargetTransformInfo::TCC_Basic;
+  }
+
+   // On some parts, normal fp64 operations are half rate, and others
+   // quarter. This also applies to some integer operations.
+  inline int get64BitInstrCost() const {
+    return ST->hasHalfRate64Ops() ?
+      getHalfRateInstrCost() : getQuarterRateInstrCost();
+  }
 
 public:
   explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const DataLayout &DL)
@@ -60,6 +82,13 @@ public:
   unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector);
   unsigned getMaxInterleaveFactor(unsigned VF);
+
+  int getArithmeticInstrCost(
+    unsigned Opcode, Type *Ty,
+    TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
+    TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
+    TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
+    TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None);
 
   unsigned getCFInstrCost(unsigned Opcode);
 

@@ -96,6 +96,9 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// copies.
   bool IsSplitCSR = false;
 
+  /// True if this function uses the red zone.
+  bool UsesRedZone = false;
+
 private:
   /// ForwardedMustTailRegParms - A list of virtual and physical registers
   /// that must be forwarded to every musttail call.
@@ -167,6 +170,9 @@ public:
 
   bool isSplitCSR() const { return IsSplitCSR; }
   void setIsSplitCSR(bool s) { IsSplitCSR = s; }
+
+  bool getUsesRedZone() const { return UsesRedZone; }
+  void setUsesRedZone(bool V) { UsesRedZone = V; }
 };
 
 } // End llvm namespace

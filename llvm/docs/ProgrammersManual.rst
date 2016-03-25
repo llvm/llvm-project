@@ -342,9 +342,12 @@ that inherits from the ErrorInfo utility:
   public:
     MyError(std::string Msg) : Msg(Msg) {}
     void log(OStream &OS) const override { OS << "MyError - " << Msg; }
+    static char ID;
   private:
     std::string Msg;
   };
+
+  char MyError::ID = 0; // In MyError.cpp
 
   Error bar() {
     if (checkErrorCondition)

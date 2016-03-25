@@ -821,13 +821,15 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
   }
 }
 
-void SelectionDAGBuilder::LowerCallSiteWithDeoptBundle(
-    ImmutableCallSite CS, SDValue Callee, const BasicBlock *EHPadBB) {
+void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
+    ImmutableCallSite CS, SDValue Callee, const BasicBlock *EHPadBB,
+    bool VarArgDisallowed) {
   StatepointLoweringInfo SI(DAG);
   unsigned ArgBeginIndex = CS.arg_begin() - CS.getInstruction()->op_begin();
   populateCallLoweringInfo(SI.CLI, CS, ArgBeginIndex, CS.getNumArgOperands(),
                            Callee, CS.getType(), false);
-  SI.CLI.IsVarArg = CS.getFunctionType()->isVarArg();
+  if (!VarArgDisallowed)
+    SI.CLI.IsVarArg = CS.getFunctionType()->isVarArg();
 
   auto DeoptBundle = *CS.getOperandBundle(LLVMContext::OB_deopt);
 
@@ -842,11 +844,19 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundle(
   SI.StatepointFlags = static_cast<uint64_t>(StatepointFlags::None);
   SI.EHPadBB = EHPadBB;
 
+  // NB! The GC arguments are deliberately left empty.
+
   if (SDValue ReturnVal = LowerAsSTATEPOINT(SI)) {
     const Instruction *Inst = CS.getInstruction();
     ReturnVal = lowerRangeToAssertZExt(DAG, *Inst, ReturnVal);
     setValue(Inst, ReturnVal);
   }
+}
+
+void SelectionDAGBuilder::LowerCallSiteWithDeoptBundle(
+    ImmutableCallSite CS, SDValue Callee, const BasicBlock *EHPadBB) {
+  LowerCallSiteWithDeoptBundleImpl(CS, Callee, EHPadBB,
+                                   /* VarArgDisallowed = */ false);
 }
 
 void SelectionDAGBuilder::visitGCResult(const CallInst &CI) {
@@ -927,34 +937,11 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
 void SelectionDAGBuilder::LowerDeoptimizeCall(const CallInst *CI) {
   const auto &TLI = DAG.getTargetLoweringInfo();
-
   SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(RTLIB::DEOPTIMIZE),
                                          TLI.getPointerTy(DAG.getDataLayout()));
-  StatepointLoweringInfo SI(DAG);
-  unsigned ArgBeginIndex = CI->arg_begin() - CI->op_begin();
-  populateCallLoweringInfo(SI.CLI, CI, ArgBeginIndex, CI->getNumArgOperands(),
-                           Callee, CI->getType(), false);
 
-  // We don't lower calls to __llvm_deoptimize as varargs, but as a
-  // regular call.
-  assert(!SI.CLI.IsVarArg && "Expected from populateCallLoweringInfo!");
-
-  auto DeoptBundle = *CI->getOperandBundle(LLVMContext::OB_deopt);
-
-  unsigned DefaultID = StatepointDirectives::DeoptBundleStatepointID;
-
-  auto SD = parseStatepointDirectivesFromAttrs(CI->getAttributes());
-  SI.ID = SD.StatepointID.getValueOr(DefaultID);
-  SI.NumPatchBytes = SD.NumPatchBytes.getValueOr(0);
-
-  SI.DeoptState =
-      ArrayRef<const Use>(DeoptBundle.Inputs.begin(), DeoptBundle.Inputs.end());
-  SI.StatepointFlags = static_cast<uint64_t>(StatepointFlags::None);
-
-  // NB! The GC arguments are specifically left empty.
-
-  if (SDValue ReturnVal = LowerAsSTATEPOINT(SI)) {
-    ReturnVal = lowerRangeToAssertZExt(DAG, *CI, ReturnVal);
-    setValue(CI, ReturnVal);
-  }
+  // We don't lower calls to __llvm_deoptimize as varargs, but as a regular
+  // call.
+  LowerCallSiteWithDeoptBundleImpl(CI, Callee, /* EHPadBB = */ nullptr,
+                                   /* VarArgDisallowed = */ true);
 }
