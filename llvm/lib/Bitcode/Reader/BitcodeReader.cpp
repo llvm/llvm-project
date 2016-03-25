@@ -165,6 +165,8 @@ class BitcodeReader : public GVMaterializer {
 
   SmallVector<Instruction*, 64> InstsWithTBAATag;
 
+  bool HasSeenOldLoopTags = false;
+
   /// The set of attributes by index.  Index zero in the file is for null, and
   /// is thus not represented here.  As such all indices are off by one.
   std::vector<AttributeSet> MAttributes;
@@ -2409,7 +2411,10 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
     }
     case bitc::METADATA_STRING: {
       std::string String(Record.begin(), Record.end());
-      llvm::UpgradeMDStringConstant(String);
+
+      // Test for upgrading !llvm.loop.
+      HasSeenOldLoopTags |= mayBeOldLoopAttachmentTag(String);
+
       Metadata *MD = MDString::get(Context, String);
       MetadataList.assignValue(MD, NextMetadataNo++);
       break;
@@ -3982,9 +3987,15 @@ std::error_code BitcodeReader::parseMetadataAttachment(Function &F) {
         MDNode *MD = dyn_cast_or_null<MDNode>(Node);
         if (!MD)
           return error("Invalid metadata attachment");
+
+        if (HasSeenOldLoopTags && I->second == LLVMContext::MD_loop)
+          MD = upgradeInstructionLoopAttachment(*MD);
+
         Inst->setMetadata(I->second, MD);
-        if (I->second == LLVMContext::MD_tbaa)
+        if (I->second == LLVMContext::MD_tbaa) {
           InstsWithTBAATag.push_back(Inst);
+          continue;
+        }
       }
       break;
     }
