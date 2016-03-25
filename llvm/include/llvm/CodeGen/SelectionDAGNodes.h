@@ -625,18 +625,32 @@ public:
   /// NOTE: This is an expensive method. Use it carefully.
   bool hasPredecessor(const SDNode *N) const;
 
-  /// Return true if N is a predecessor of this node.
-  /// N is either an operand of this node, or can be reached by recursively
-  /// traversing up the operands.
-  /// In this helper the Visited and worklist sets are held externally to
-  /// cache predecessors over multiple invocations. If you want to test for
-  /// multiple predecessors this method is preferable to multiple calls to
-  /// hasPredecessor. Be sure to clear Visited and Worklist if the DAG
-  /// changes.
-  /// NOTE: This is still very expensive. Use carefully.
-  bool hasPredecessorHelper(const SDNode *N,
-                            SmallPtrSetImpl<const SDNode *> &Visited,
-                            SmallVectorImpl<const SDNode *> &Worklist) const;
+  /// Returns true if N is a predecessor of any node in Worklist. This
+  /// helper keeps Visited and Worklist sets externally to allow unions
+  /// searches to be performed in parallel, caching of results across
+  /// queries and incremental addition to Worklist. Stops early if N is
+  /// found but will resume. Remember to clear Visited and Worklists
+  /// if DAG changes.
+  static bool hasPredecessorHelper(const SDNode *N,
+                                   SmallPtrSetImpl<const SDNode *> &Visited,
+                                   SmallVectorImpl<const SDNode *> &Worklist) {
+    if (Visited.count(N))
+      return true;
+    while (!Worklist.empty()) {
+      const SDNode *M = Worklist.pop_back_val();
+      bool Found = false;
+      for (const SDValue &OpV : M->op_values()) {
+        SDNode *Op = OpV.getNode();
+        if (Visited.insert(Op).second)
+          Worklist.push_back(Op);
+        if (Op == N)
+          Found = true;
+      }
+      if (Found)
+        return true;
+    }
+    return false;
+  }
 
   /// Return the number of values used by this operation.
   unsigned getNumOperands() const { return NumOperands; }
