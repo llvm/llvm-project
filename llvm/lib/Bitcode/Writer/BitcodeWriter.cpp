@@ -808,23 +808,6 @@ static uint64_t WriteModuleInfo(const Module *M, const ValueEnumerator &VE,
     Vals.clear();
   }
 
-  // Write a record indicating the number of module-level metadata IDs
-  // This is needed because the ids of metadata are assigned implicitly
-  // based on their ordering in the bitcode, with the function-level
-  // metadata ids starting after the module-level metadata ids. For
-  // function importing where we lazy load the metadata as a postpass,
-  // we want to avoid parsing the module-level metadata before parsing
-  // the imported functions.
-  {
-    BitCodeAbbrev *Abbv = new BitCodeAbbrev();
-    Abbv->Add(BitCodeAbbrevOp(bitc::MODULE_CODE_METADATA_VALUES));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
-    unsigned MDValsAbbrev = Stream.EmitAbbrev(Abbv);
-    Vals.push_back(VE.numMDs());
-    Stream.EmitRecord(bitc::MODULE_CODE_METADATA_VALUES, Vals, MDValsAbbrev);
-    Vals.clear();
-  }
-
   // Emit the module's source file name.
   {
     StringEncoding Bits = getStringEncoding(M->getSourceFileName().data(),
