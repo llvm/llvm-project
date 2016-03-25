@@ -1126,7 +1126,7 @@ void CXIndexDataConsumer::translateLoc(SourceLocation Loc,
     *offset = FileOffset;
 }
 
-static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K);
+static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage L);
 static CXIdxEntityCXXTemplateKind
 getEntityKindFromSymbolCXXTemplateKind(SymbolCXXTemplateKind K);
 static CXIdxEntityLanguage getEntityLangFromSymbolLang(SymbolLanguage L);
@@ -1143,7 +1143,7 @@ void CXIndexDataConsumer::getEntityInfo(const NamedDecl *D,
   EntityInfo.IndexCtx = this;
 
   SymbolInfo SymInfo = getSymbolInfo(D);
-  EntityInfo.kind = getEntityKindFromSymbolKind(SymInfo.Kind);
+  EntityInfo.kind = getEntityKindFromSymbolKind(SymInfo.Kind, SymInfo.Lang);
   EntityInfo.templateKind =
     getEntityKindFromSymbolCXXTemplateKind(SymInfo.TemplateKind);
   EntityInfo.lang = getEntityLangFromSymbolLang(SymInfo.Lang);
@@ -1236,40 +1236,50 @@ bool CXIndexDataConsumer::isTemplateImplicitInstantiation(const Decl *D) {
   return false;
 }
 
-static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K) {
+static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K, SymbolLanguage Lang) {
   switch (K) {
   case SymbolKind::Unknown:
   case SymbolKind::Module:
   case SymbolKind::Macro:
+  case SymbolKind::ClassProperty:
     return CXIdxEntity_Unexposed;
 
   case SymbolKind::Enum: return CXIdxEntity_Enum;
   case SymbolKind::Struct: return CXIdxEntity_Struct;
   case SymbolKind::Union: return CXIdxEntity_Union;
-  case SymbolKind::Typedef: return CXIdxEntity_Typedef;
+  case SymbolKind::TypeAlias:
+    if (Lang == SymbolLanguage::CXX)
+      return CXIdxEntity_CXXTypeAlias;
+    return CXIdxEntity_Typedef;
   case SymbolKind::Function: return CXIdxEntity_Function;
   case SymbolKind::Variable: return CXIdxEntity_Variable;
-  case SymbolKind::Field: return CXIdxEntity_Field;
+  case SymbolKind::Field:
+    if (Lang == SymbolLanguage::ObjC)
+      return CXIdxEntity_ObjCIvar;
+    return CXIdxEntity_Field;
   case SymbolKind::EnumConstant: return CXIdxEntity_EnumConstant;
-  case SymbolKind::ObjCClass: return CXIdxEntity_ObjCClass;
-  case SymbolKind::ObjCProtocol: return CXIdxEntity_ObjCProtocol;
-  case SymbolKind::ObjCCategory: return CXIdxEntity_ObjCCategory;
-  case SymbolKind::ObjCInstanceMethod: return CXIdxEntity_ObjCInstanceMethod;
-  case SymbolKind::ObjCClassMethod: return CXIdxEntity_ObjCClassMethod;
-  case SymbolKind::ObjCProperty: return CXIdxEntity_ObjCProperty;
-  case SymbolKind::ObjCIvar: return CXIdxEntity_ObjCIvar;
-  case SymbolKind::CXXClass: return CXIdxEntity_CXXClass;
-  case SymbolKind::CXXNamespace: return CXIdxEntity_CXXNamespace;
-  case SymbolKind::CXXNamespaceAlias: return CXIdxEntity_CXXNamespaceAlias;
-  case SymbolKind::CXXStaticVariable: return CXIdxEntity_CXXStaticVariable;
-  case SymbolKind::CXXStaticMethod: return CXIdxEntity_CXXStaticMethod;
-  case SymbolKind::CXXInstanceMethod: return CXIdxEntity_CXXInstanceMethod;
-  case SymbolKind::CXXConstructor: return CXIdxEntity_CXXConstructor;
-  case SymbolKind::CXXDestructor: return CXIdxEntity_CXXDestructor;
-  case SymbolKind::CXXConversionFunction:
-    return CXIdxEntity_CXXConversionFunction;
-  case SymbolKind::CXXTypeAlias: return CXIdxEntity_CXXTypeAlias;
-  case SymbolKind::CXXInterface: return CXIdxEntity_CXXInterface;
+  case SymbolKind::Class:
+    if (Lang == SymbolLanguage::ObjC)
+      return CXIdxEntity_ObjCClass;
+    return CXIdxEntity_CXXClass;
+  case SymbolKind::Protocol:
+    if (Lang == SymbolLanguage::ObjC)
+      return CXIdxEntity_ObjCProtocol;
+    return CXIdxEntity_CXXInterface;
+  case SymbolKind::Extension: return CXIdxEntity_ObjCCategory;
+  case SymbolKind::InstanceMethod:
+    if (Lang == SymbolLanguage::ObjC)
+      return CXIdxEntity_ObjCInstanceMethod;
+    return CXIdxEntity_CXXInstanceMethod;
+  case SymbolKind::ClassMethod: return CXIdxEntity_ObjCClassMethod;
+  case SymbolKind::StaticMethod: return CXIdxEntity_CXXStaticMethod;
+  case SymbolKind::InstanceProperty: return CXIdxEntity_ObjCProperty;
+  case SymbolKind::StaticProperty: return CXIdxEntity_CXXStaticVariable;
+  case SymbolKind::Namespace: return CXIdxEntity_CXXNamespace;
+  case SymbolKind::NamespaceAlias: return CXIdxEntity_CXXNamespaceAlias;
+  case SymbolKind::Constructor: return CXIdxEntity_CXXConstructor;
+  case SymbolKind::Destructor: return CXIdxEntity_CXXDestructor;
+  case SymbolKind::ConversionFunction: return CXIdxEntity_CXXConversionFunction;
   }
   llvm_unreachable("invalid symbol kind");
 }

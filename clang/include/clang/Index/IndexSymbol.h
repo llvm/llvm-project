@@ -24,38 +24,33 @@ enum class SymbolKind : uint8_t {
   Unknown,
 
   Module,
+  Namespace,
+  NamespaceAlias,
   Macro,
 
   Enum,
   Struct,
+  Class,
+  Protocol,
+  Extension,
   Union,
-  Typedef,
+  TypeAlias,
 
   Function,
   Variable,
   Field,
   EnumConstant,
 
-  ObjCClass,
-  ObjCProtocol,
-  ObjCCategory,
+  InstanceMethod,
+  ClassMethod,
+  StaticMethod,
+  InstanceProperty,
+  ClassProperty,
+  StaticProperty,
 
-  ObjCInstanceMethod,
-  ObjCClassMethod,
-  ObjCProperty,
-  ObjCIvar,
-
-  CXXClass,
-  CXXNamespace,
-  CXXNamespaceAlias,
-  CXXStaticVariable,
-  CXXStaticMethod,
-  CXXInstanceMethod,
-  CXXConstructor,
-  CXXDestructor,
-  CXXConversionFunction,
-  CXXTypeAlias,
-  CXXInterface,
+  Constructor,
+  Destructor,
+  ConversionFunction,
 };
 
 enum class SymbolLanguage {
