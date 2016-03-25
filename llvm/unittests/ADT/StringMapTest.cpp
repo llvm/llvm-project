@@ -394,7 +394,9 @@ TEST(StringMapCustomTest, InitialSizeTest) {
     CountCtorCopyAndMove::Copy = 0;
     for (int i = 0; i < Size; ++i)
       Map.insert(std::make_pair(Twine(i).str(), CountCtorCopyAndMove()));
-    EXPECT_EQ((unsigned)Size * 3, CountCtorCopyAndMove::Move);
+    //  This relies on move-construction elision, and cannot be reliably tested.
+    //   EXPECT_EQ((unsigned)Size * 3, CountCtorCopyAndMove::Move);
+    // No copy is expected.
     EXPECT_EQ(0u, CountCtorCopyAndMove::Copy);
   }
 }
