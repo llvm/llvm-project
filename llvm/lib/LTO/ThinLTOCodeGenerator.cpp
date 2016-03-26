@@ -131,12 +131,13 @@ static void promoteModule(Module &TheModule, const ModuleSummaryIndex &Index) {
     report_fatal_error("renameModuleForThinLTO failed");
 }
 
-static void crossImportIntoModule(Module &TheModule,
-                                  const ModuleSummaryIndex &Index,
-                                  StringMap<MemoryBufferRef> &ModuleMap) {
+static void
+crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
+                      StringMap<MemoryBufferRef> &ModuleMap,
+                      const FunctionImporter::ImportMapTy &ImportList) {
   ModuleLoader Loader(TheModule.getContext(), ModuleMap);
   FunctionImporter Importer(Index, Loader);
-  Importer.importFunctions(TheModule);
+  Importer.importFunctions(TheModule, ImportList);
 }
 
 static void optimizeModule(Module &TheModule, TargetMachine &TM) {
@@ -185,6 +186,7 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
 static std::unique_ptr<MemoryBuffer>
 ProcessThinLTOModule(Module &TheModule, const ModuleSummaryIndex &Index,
                      StringMap<MemoryBufferRef> &ModuleMap, TargetMachine &TM,
+                     const FunctionImporter::ImportMapTy &ImportList,
                      ThinLTOCodeGenerator::CachingOptions CacheOptions,
                      StringRef SaveTempsDir, unsigned count) {
 
@@ -200,7 +202,7 @@ ProcessThinLTOModule(Module &TheModule, const ModuleSummaryIndex &Index,
     // Save temps: after promotion.
     saveTempBitcode(TheModule, SaveTempsDir, count, ".2.promoted.bc");
 
-    crossImportIntoModule(TheModule, Index, ModuleMap);
+    crossImportIntoModule(TheModule, Index, ModuleMap, ImportList);
 
     // Save temps: after cross-module import.
     saveTempBitcode(TheModule, SaveTempsDir, count, ".3.imported.bc");
@@ -317,7 +319,15 @@ void ThinLTOCodeGenerator::promote(Module &TheModule,
 void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
                                              ModuleSummaryIndex &Index) {
   auto ModuleMap = generateModuleMap(Modules);
-  crossImportIntoModule(TheModule, Index, ModuleMap);
+
+  // Generate import/export list
+  auto ModuleCount = Index.modulePaths().size();
+  StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
+  ComputeCrossModuleImport(Index, ImportLists, ExportLists);
+  auto &ImportList = ImportLists[TheModule.getModuleIdentifier()];
+
+  crossImportIntoModule(TheModule, Index, ModuleMap, ImportList);
 }
 
 /**
@@ -358,6 +368,13 @@ void ThinLTOCodeGenerator::run() {
 
   // Prepare the module map.
   auto ModuleMap = generateModuleMap(Modules);
+  auto ModuleCount = Modules.size();
+
+  // Collect the import/export lists for all modules from the call-graph in the
+  // combined index.
+  StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
+  ComputeCrossModuleImport(*Index, ImportLists, ExportLists);
 
   // Parallel optimizer + codegen
   {
@@ -376,9 +393,10 @@ void ThinLTOCodeGenerator::run() {
           saveTempBitcode(*TheModule, SaveTempsDir, count, ".0.original.bc");
         }
 
+        auto &ImportList = ImportLists[TheModule->getModuleIdentifier()];
         ProducedBinaries[count] = ProcessThinLTOModule(
-            *TheModule, *Index, ModuleMap, *TMBuilder.create(), CacheOptions,
-            SaveTempsDir, count);
+            *TheModule, *Index, ModuleMap, *TMBuilder.create(), ImportList,
+            CacheOptions, SaveTempsDir, count);
       }, count);
       count++;
     }

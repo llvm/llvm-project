@@ -152,6 +152,22 @@ public:
     using namespace llvm::support;
     endian::Writer<little> LE(Out);
 
+    // Now we're done adding entries, resize the bucket list if it's
+    // significantly too large. (This only happens if the number of
+    // entries is small and we're within our initial allocation of
+    // 64 buckets.) We aim for an occupancy ratio in [3/8, 3/4).
+    //
+    // As a special case, if there are two or fewer entries, just
+    // form a single bucket. A linear scan is fine in that case, and
+    // this is very common in C++ class lookup tables. This also
+    // guarantees we produce at least one bucket for an empty table.
+    //
+    // FIXME: Try computing a perfect hash function at this point.
+    unsigned TargetNumBuckets =
+        NumEntries <= 2 ? 1 : NextPowerOf2(NumEntries * 4 / 3);
+    if (TargetNumBuckets != NumBuckets)
+      resize(TargetNumBuckets);
+
     // Emit the payload of the table.
     for (offset_type I = 0; I < NumBuckets; ++I) {
       Bucket &B = Buckets[I];

@@ -18905,22 +18905,15 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
   SDValue A = Op.getOperand(0);
   SDValue B = Op.getOperand(1);
 
-  // Lower v16i8/v32i8 mul as promotion to v8i16/v16i16 vector
+  // Lower v16i8/v32i8 mul as sign-extension to v8i16/v16i16 vector
   // pairs, multiply and truncate.
   if (VT == MVT::v16i8 || VT == MVT::v32i8) {
     if (Subtarget.hasInt256()) {
-      if (VT == MVT::v32i8) {
-        MVT SubVT = MVT::getVectorVT(MVT::i8, VT.getVectorNumElements() / 2);
-        SDValue Lo = DAG.getIntPtrConstant(0, dl);
-        SDValue Hi = DAG.getIntPtrConstant(VT.getVectorNumElements() / 2, dl);
-        SDValue ALo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, A, Lo);
-        SDValue BLo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, B, Lo);
-        SDValue AHi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, A, Hi);
-        SDValue BHi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, B, Hi);
-        return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT,
-                           DAG.getNode(ISD::MUL, dl, SubVT, ALo, BLo),
-                           DAG.getNode(ISD::MUL, dl, SubVT, AHi, BHi));
-      }
+      // For 256-bit vectors, split into 128-bit vectors to allow the
+      // sign-extension to occur. We don't need this on AVX512BW as we can
+      // safely sign-extend to v32i16.
+      if (VT == MVT::v32i8 && !Subtarget.hasBWI())
+        return Lower256IntArith(Op, DAG);
 
       MVT ExVT = MVT::getVectorVT(MVT::i16, VT.getVectorNumElements());
       return DAG.getNode(

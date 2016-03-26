@@ -132,7 +132,7 @@ public:
   /// InstrEmitter - Construct an InstrEmitter and set it to start inserting
   /// at the given position in the given block.
   InstrEmitter(MachineBasicBlock *mbb, MachineBasicBlock::iterator insertpos);
-  
+
 private:
   void EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
                        DenseMap<SDValue, unsigned> &VRBaseMap);

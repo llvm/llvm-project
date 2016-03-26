@@ -4,10 +4,10 @@
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; Do the import now
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %s -S | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIMDEF
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -S | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIMDEF
 
 ; Test import with smaller instruction limit
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %s -import-instr-limit=5 -S | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIM5
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=5 -S | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIM5
 ; INSTLIM5-NOT: @staticfunc.llvm.2
 
 define i32 @main() #0 {

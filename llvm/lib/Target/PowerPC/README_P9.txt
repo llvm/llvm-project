@@ -35,6 +35,111 @@ Altivec:
     (set v4i32:$vD, (int_ppc_altivec_vinserth v4i32:$vA, imm:$UIMM))
     (set v2i64:$vD, (int_ppc_altivec_vinsertw v2i64:$vA, imm:$UIMM))
 
+- Vector Count Leading/Trailing Zero LSB. Result is placed into GPR[rD]:
+  vclzlsbb vctzlsbb
+  . Use intrinsic:
+    (set i64:$rD, (int_ppc_altivec_vclzlsbb v16i8:$vB))
+    (set i64:$rD, (int_ppc_altivec_vctzlsbb v16i8:$vB))
+
+- Vector Count Trailing Zeros: vctzb vctzh vctzw vctzd
+  . Map to llvm cttz
+    (set v16i8:$vD, (cttz v16i8:$vB))     // vctzb
+    (set v8i16:$vD, (cttz v8i16:$vB))     // vctzh
+    (set v4i32:$vD, (cttz v4i32:$vB))     // vctzw
+    (set v2i64:$vD, (cttz v2i64:$vB))     // vctzd
+
+- Vector Extend Sign: vextsb2w vextsh2w vextsb2d vextsh2d vextsw2d
+  . vextsb2w:
+    (set v4i32:$vD, (sext v4i8:$vB))
+
+    // PowerISA_V3.0:
+    do i = 0 to 3
+       VR[VRT].word[i] ← EXTS32(VR[VRB].word[i].byte[3])
+    end
+
+  . vextsh2w:
+    (set v4i32:$vD, (sext v4i16:$vB))
+
+    // PowerISA_V3.0:
+    do i = 0 to 3
+       VR[VRT].word[i] ← EXTS32(VR[VRB].word[i].hword[1])
+    end
+
+  . vextsb2d
+    (set v2i64:$vD, (sext v2i8:$vB))
+
+    // PowerISA_V3.0:
+    do i = 0 to 1
+       VR[VRT].dword[i] ← EXTS64(VR[VRB].dword[i].byte[7])
+    end
+
+  . vextsh2d
+    (set v2i64:$vD, (sext v2i16:$vB))
+
+    // PowerISA_V3.0:
+    do i = 0 to 1
+       VR[VRT].dword[i] ← EXTS64(VR[VRB].dword[i].hword[3])
+    end
+
+  . vextsw2d
+    (set v2i64:$vD, (sext v2i32:$vB))
+
+    // PowerISA_V3.0:
+    do i = 0 to 1
+       VR[VRT].dword[i] ← EXTS64(VR[VRB].dword[i].word[1])
+    end
+
+- Vector Integer Negate: vnegw vnegd
+  . Map to llvm ineg
+    (set v4i32:$rT, (ineg v4i32:$rA))       // vnegw
+    (set v2i64:$rT, (ineg v2i64:$rA))       // vnegd
+
+- Vector Parity Byte: vprtybw vprtybd vprtybq
+  . Use intrinsic:
+    (set v4i32:$rD, (int_ppc_altivec_vprtybw v4i32:$vB))
+    (set v2i64:$rD, (int_ppc_altivec_vprtybd v2i64:$vB))
+    (set v1i128:$rD, (int_ppc_altivec_vprtybq v1i128:$vB))
+
+- Vector (Bit) Permute (Right-indexed):
+  . vbpermd: Same as "vbpermq", use VX1_Int_Ty2:
+    VX1_Int_Ty2<1484, "vbpermd", int_ppc_altivec_vbpermd, v2i64, v2i64>;
+
+  . vpermr: use VA1a_Int_Ty3
+    VA1a_Int_Ty3<59, "vpermr", int_ppc_altivec_vpermr, v16i8, v16i8, v16i8>;
+
+- Vector Rotate Left Mask/Mask-Insert: vrlwnm vrlwmi vrldnm vrldmi
+  . Use intrinsic:
+    VX1_Int_Ty<389, "vrlwnm", int_ppc_altivec_vrlwnm, v4i32>;
+    VX1_Int_Ty<133, "vrlwmi", int_ppc_altivec_vrlwmi, v4i32>;
+    VX1_Int_Ty<453, "vrldnm", int_ppc_altivec_vrldnm, v2i64>;
+    VX1_Int_Ty<197, "vrldmi", int_ppc_altivec_vrldmi, v2i64>;
+
+- Vector Shift Left/Right: vslv vsrv
+  . Use intrinsic, don't map to llvm shl and lshr, because they have different
+    semantics, e.g. vslv:
+
+      do i = 0 to 15
+         sh ← VR[VRB].byte[i].bit[5:7]
+         VR[VRT].byte[i] ← src.byte[i:i+1].bit[sh:sh+7]
+      end
+
+    VR[VRT].byte[i] is composed of 2 bytes from src.byte[i:i+1]
+
+  . VX1_Int_Ty<1860, "vslv", int_ppc_altivec_vslv, v16i8>;
+    VX1_Int_Ty<1796, "vsrv", int_ppc_altivec_vsrv, v16i8>;
+
+- Vector Multiply-by-10 (& Write Carry) Unsigned Quadword:
+  vmul10uq vmul10cuq
+  . Use intrinsic:
+    VX1_Int_Ty<513, "vmul10uq",   int_ppc_altivec_vmul10uq,  v1i128>;
+    VX1_Int_Ty<  1, "vmul10cuq",  int_ppc_altivec_vmul10cuq, v1i128>;
+
+- Vector Multiply-by-10 Extended (& Write Carry) Unsigned Quadword:
+  vmul10euq vmul10ecuq
+  . Use intrinsic:
+    VX1_Int_Ty<577, "vmul10euq",  int_ppc_altivec_vmul10euq, v1i128>;
+    VX1_Int_Ty< 65, "vmul10ecuq", int_ppc_altivec_vmul10ecuq, v1i128>;
+
 VSX:
 
 - QP Compare Ordered/Unordered: xscmpoqp xscmpuqp
