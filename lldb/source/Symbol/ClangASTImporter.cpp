@@ -729,8 +729,13 @@ ClangASTImporter::Minion::ExecuteDeportWorkQueues ()
         if (TagDecl *tag_decl = dyn_cast<TagDecl>(decl))
         {
             if (TagDecl *original_tag_decl = dyn_cast<TagDecl>(original_decl))
+            {
                 if (original_tag_decl->isCompleteDefinition())
+                {
                     ImportDefinitionTo(tag_decl, original_tag_decl);
+                    tag_decl->setCompleteDefinition(true);
+                }
+            }
             
             tag_decl->setHasExternalLexicalStorage(false);
             tag_decl->setHasExternalVisibleStorage(false);
@@ -753,8 +758,6 @@ ClangASTImporter::Minion::ImportDefinitionTo (clang::Decl *to, clang::Decl *from
 {
     ASTImporter::Imported(from, to);
 
-    ObjCInterfaceDecl *to_objc_interface = dyn_cast<ObjCInterfaceDecl>(to);
-
     /*
     if (to_objc_interface)
         to_objc_interface->startDefinition();
@@ -766,12 +769,20 @@ ClangASTImporter::Minion::ImportDefinitionTo (clang::Decl *to, clang::Decl *from
     */
 
     ImportDefinition(from);
+    
+    if (clang::TagDecl *to_tag = dyn_cast<clang::TagDecl>(to))
+    {
+        if (clang::TagDecl *from_tag = dyn_cast<clang::TagDecl>(from))
+        {
+            to_tag->setCompleteDefinition(from_tag->isCompleteDefinition());
+        }
+    }
      
     // If we're dealing with an Objective-C class, ensure that the inheritance has
     // been set up correctly.  The ASTImporter may not do this correctly if the 
     // class was originally sourced from symbols.
     
-    if (to_objc_interface)
+    if (ObjCInterfaceDecl *to_objc_interface = dyn_cast<ObjCInterfaceDecl>(to))
     {
         do
         {
