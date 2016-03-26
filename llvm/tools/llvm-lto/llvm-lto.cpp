@@ -281,7 +281,7 @@ std::vector<std::unique_ptr<MemoryBuffer>>
 loadAllFilesForIndex(const ModuleSummaryIndex &Index) {
   std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
 
-  for (auto &ModPath : Index.modPathStringEntries()) {
+  for (auto &ModPath : Index.modulePaths()) {
     const auto &Filename = ModPath.first();
     auto CurrentActivity = "loading file '" + Filename + "'";
     auto InputOrErr = MemoryBuffer::getFile(Filename);

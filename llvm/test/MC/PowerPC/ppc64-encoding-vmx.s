@@ -830,3 +830,105 @@
 # CHECK-LE: vinsertd 2, 3, 8                # encoding: [0xcd,0x1b,0x48,0x10]
             vinsertd 2, 3, 8
 
+# Power9 instructions
+
+# Vector Count Trailing Zeros
+# CHECK-BE: vctzb 2, 3                      # encoding: [0x10,0x5c,0x1e,0x02]
+# CHECK-LE: vctzb 2, 3                      # encoding: [0x02,0x1e,0x5c,0x10]
+            vctzb 2, 3
+# CHECK-BE: vctzh 2, 3                      # encoding: [0x10,0x5d,0x1e,0x02]
+# CHECK-LE: vctzh 2, 3                      # encoding: [0x02,0x1e,0x5d,0x10]
+            vctzh 2, 3
+# CHECK-BE: vctzw 2, 3                      # encoding: [0x10,0x5e,0x1e,0x02]
+# CHECK-LE: vctzw 2, 3                      # encoding: [0x02,0x1e,0x5e,0x10]
+            vctzw 2, 3
+# CHECK-BE: vctzd 2, 3                      # encoding: [0x10,0x5f,0x1e,0x02]
+# CHECK-LE: vctzd 2, 3                      # encoding: [0x02,0x1e,0x5f,0x10]
+            vctzd 2, 3
+
+# CHECK-BE: vclzlsbb 2, 3                   # encoding: [0x10,0x40,0x1e,0x02]
+# CHECK-LE: vclzlsbb 2, 3                   # encoding: [0x02,0x1e,0x40,0x10]
+            vclzlsbb 2, 3
+# CHECK-BE: vctzlsbb 2, 3                   # encoding: [0x10,0x41,0x1e,0x02]
+# CHECK-LE: vctzlsbb 2, 3                   # encoding: [0x02,0x1e,0x41,0x10]
+            vctzlsbb 2, 3
+
+# Vector Extend Sign
+# CHECK-BE: vextsb2w 2, 3                   # encoding: [0x10,0x50,0x1e,0x02]
+# CHECK-LE: vextsb2w 2, 3                   # encoding: [0x02,0x1e,0x50,0x10]
+            vextsb2w 2, 3
+# CHECK-BE: vextsh2w 2, 3                   # encoding: [0x10,0x51,0x1e,0x02]
+# CHECK-LE: vextsh2w 2, 3                   # encoding: [0x02,0x1e,0x51,0x10]
+            vextsh2w 2, 3
+# CHECK-BE: vextsb2d 2, 3                   # encoding: [0x10,0x58,0x1e,0x02]
+# CHECK-LE: vextsb2d 2, 3                   # encoding: [0x02,0x1e,0x58,0x10]
+            vextsb2d 2, 3
+# CHECK-BE: vextsh2d 2, 3                   # encoding: [0x10,0x59,0x1e,0x02]
+# CHECK-LE: vextsh2d 2, 3                   # encoding: [0x02,0x1e,0x59,0x10]
+            vextsh2d 2, 3
+# CHECK-BE: vextsw2d 2, 3                   # encoding: [0x10,0x5a,0x1e,0x02]
+# CHECK-LE: vextsw2d 2, 3                   # encoding: [0x02,0x1e,0x5a,0x10]
+            vextsw2d 2, 3
+
+# Vector Integer Negate
+# CHECK-BE: vnegw 2, 3                      # encoding: [0x10,0x46,0x1e,0x02]
+# CHECK-LE: vnegw 2, 3                      # encoding: [0x02,0x1e,0x46,0x10]
+            vnegw 2, 3
+# CHECK-BE: vnegd 2, 3                      # encoding: [0x10,0x47,0x1e,0x02]
+# CHECK-LE: vnegd 2, 3                      # encoding: [0x02,0x1e,0x47,0x10]
+            vnegd 2, 3
+
+# Vector Parity Byte
+# CHECK-BE: vprtybw 2, 3                    # encoding: [0x10,0x48,0x1e,0x02]
+# CHECK-LE: vprtybw 2, 3                    # encoding: [0x02,0x1e,0x48,0x10]
+            vprtybw 2, 3
+# CHECK-BE: vprtybd 2, 3                    # encoding: [0x10,0x49,0x1e,0x02]
+# CHECK-LE: vprtybd 2, 3                    # encoding: [0x02,0x1e,0x49,0x10]
+            vprtybd 2, 3
+# CHECK-BE: vprtybq 2, 3                    # encoding: [0x10,0x4a,0x1e,0x02]
+# CHECK-LE: vprtybq 2, 3                    # encoding: [0x02,0x1e,0x4a,0x10]
+            vprtybq 2, 3
+
+# Vector (Bit) Permute (Right-indexed)
+# CHECK-BE: vbpermd 2, 5, 17                # encoding: [0x10,0x45,0x8d,0xcc]
+# CHECK-LE: vbpermd 2, 5, 17                # encoding: [0xcc,0x8d,0x45,0x10]
+            vbpermd 2, 5, 17
+# CHECK-BE: vpermr 2, 3, 4, 5               # encoding: [0x10,0x43,0x21,0x7b]
+# CHECK-LE: vpermr 2, 3, 4, 5               # encoding: [0x7b,0x21,0x43,0x10]
+            vpermr 2, 3, 4, 5
+
+# Vector Rotate Left Mask/Mask-Insert
+# CHECK-BE: vrlwnm 2, 3, 4                  # encoding: [0x10,0x43,0x21,0x85]
+# CHECK-LE: vrlwnm 2, 3, 4                  # encoding: [0x85,0x21,0x43,0x10]
+            vrlwnm 2, 3, 4
+# CHECK-BE: vrlwmi 2, 3, 4                  # encoding: [0x10,0x43,0x20,0x85]
+# CHECK-LE: vrlwmi 2, 3, 4                  # encoding: [0x85,0x20,0x43,0x10]
+            vrlwmi 2, 3, 4
+# CHECK-BE: vrldnm 2, 3, 4                  # encoding: [0x10,0x43,0x21,0xc5]
+# CHECK-LE: vrldnm 2, 3, 4                  # encoding: [0xc5,0x21,0x43,0x10]
+            vrldnm 2, 3, 4
+# CHECK-BE: vrldmi 2, 3, 4                  # encoding: [0x10,0x43,0x20,0xc5]
+# CHECK-LE: vrldmi 2, 3, 4                  # encoding: [0xc5,0x20,0x43,0x10]
+            vrldmi 2, 3, 4
+
+# Vector Shift Left/Right
+# CHECK-BE: vslv 2, 3, 4                    # encoding: [0x10,0x43,0x27,0x44]
+# CHECK-LE: vslv 2, 3, 4                    # encoding: [0x44,0x27,0x43,0x10]
+            vslv 2, 3, 4
+# CHECK-BE: vsrv 2, 3, 4                    # encoding: [0x10,0x43,0x27,0x04]
+# CHECK-LE: vsrv 2, 3, 4                    # encoding: [0x04,0x27,0x43,0x10]
+            vsrv 2, 3, 4
+
+# Vector Multiply-by-10
+# CHECK-BE: vmul10uq 2, 3                   # encoding: [0x10,0x43,0x02,0x01]
+# CHECK-LE: vmul10uq 2, 3                   # encoding: [0x01,0x02,0x43,0x10]
+            vmul10uq 2, 3
+# CHECK-BE: vmul10cuq 2, 3                  # encoding: [0x10,0x43,0x00,0x01]
+# CHECK-LE: vmul10cuq 2, 3                  # encoding: [0x01,0x00,0x43,0x10]
+            vmul10cuq 2, 3
+# CHECK-BE: vmul10euq 2, 3, 4               # encoding: [0x10,0x43,0x22,0x41]
+# CHECK-LE: vmul10euq 2, 3, 4               # encoding: [0x41,0x22,0x43,0x10]
+            vmul10euq 2, 3, 4
+# CHECK-BE: vmul10ecuq 2, 3, 4              # encoding: [0x10,0x43,0x20,0x41]
+# CHECK-LE: vmul10ecuq 2, 3, 4              # encoding: [0x41,0x20,0x43,0x10]
+            vmul10ecuq 2, 3, 4

@@ -1609,6 +1609,21 @@ class VXForm_5<bits<11> xo, dag OOL, dag IOL, string asmstr,
   let Inst{21-31} = xo;
 }
 
+// e.g. [PO VRT EO VRB XO]
+class VXForm_RD5_XO5_RS5<bits<11> xo, bits<5> eo, dag OOL, dag IOL,
+                         string asmstr, InstrItinClass itin, list<dag> pattern>
+    : I<4, OOL, IOL, asmstr, itin> {
+  bits<5> RD;
+  bits<5> VB;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = RD;
+  let Inst{11-15} = eo;
+  let Inst{16-20} = VB;
+  let Inst{21-31} = xo;
+}
+
 /// VXForm_CR - VX crypto instructions with "VRT, VRA, ST, SIX"
 class VXForm_CR<bits<11> xo, dag OOL, dag IOL, string asmstr,
                InstrItinClass itin, list<dag> pattern>

@@ -291,6 +291,8 @@ bool PPCCTRLoops::mightUseCTR(const Triple &TT, BasicBlock *BB) {
           case Intrinsic::pow:
           case Intrinsic::sin:
           case Intrinsic::cos:
+          case Intrinsic::maxnum:
+          case Intrinsic::minnum:
             return true;
           case Intrinsic::copysign:
             if (CI->getArgOperand(0)->getType()->getScalarType()->
