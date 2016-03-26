@@ -1098,6 +1098,8 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
     bool far_from_bounds = false;
     shadow_val = *shadow_addr;
     int bug_type_score = 0;
+    // For use-after-frees reads are almost as bad as writes.
+    int read_after_free_bonus = 0;
     switch (shadow_val) {
       case kAsanHeapLeftRedzoneMagic:
       case kAsanHeapRightRedzoneMagic:
@@ -1109,6 +1111,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
       case kAsanHeapFreeMagic:
         bug_descr = "heap-use-after-free";
         bug_type_score = 20;
+        if (!is_write) read_after_free_bonus = 18;
         break;
       case kAsanStackLeftRedzoneMagic:
         bug_descr = "stack-buffer-underflow";
@@ -1129,6 +1132,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
       case kAsanStackAfterReturnMagic:
         bug_descr = "stack-use-after-return";
         bug_type_score = 30;
+        if (!is_write) read_after_free_bonus = 18;
         break;
       case kAsanUserPoisonedMemoryMagic:
         bug_descr = "use-after-poison";
@@ -1158,7 +1162,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
         far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
         break;
     }
-    SS.Scare(bug_type_score, bug_descr);
+    SS.Scare(bug_type_score + read_after_free_bonus, bug_descr);
     if (far_from_bounds)
       SS.Scare(10, "far-from-bounds");
   }

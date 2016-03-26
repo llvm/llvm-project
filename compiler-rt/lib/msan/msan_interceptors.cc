@@ -1436,6 +1436,11 @@ int OnExit() {
     *begin = *end = 0;                                                         \
   }
 
+#include "sanitizer_common/sanitizer_platform_interceptors.h"
+// Msan needs custom handling of these:
+#undef SANITIZER_INTERCEPT_MEMSET
+#undef SANITIZER_INTERCEPT_MEMMOVE
+#undef SANITIZER_INTERCEPT_MEMCPY
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 
 #define COMMON_SYSCALL_PRE_READ_RANGE(p, s) CHECK_UNPOISONED(p, s)

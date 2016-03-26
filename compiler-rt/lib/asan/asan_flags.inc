@@ -43,7 +43,7 @@ ASAN_FLAG(
     "If set, uses custom wrappers and replacements for libc string functions "
     "to find more errors.")
 ASAN_FLAG(bool, replace_intrin, true,
-          "If set, uses custom wrappers for memset/memcpy/memmove intinsics.")
+          "If set, uses custom wrappers for memset/memcpy/memmove intrinsics.")
 ASAN_FLAG(bool, detect_stack_use_after_return, false,
           "Enables stack-use-after-return checking at run-time.")
 ASAN_FLAG(int, min_uar_stack_size_log, 16, // We can't do smaller anyway.
