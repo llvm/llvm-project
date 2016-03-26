@@ -2821,6 +2821,19 @@ TEST(APFloatTest, abs) {
 }
 
 TEST(APFloatTest, ilogb) {
+  EXPECT_EQ(-1074, ilogb(APFloat::getSmallest(APFloat::IEEEdouble, false)));
+  EXPECT_EQ(-1074, ilogb(APFloat::getSmallest(APFloat::IEEEdouble, true)));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-1024")));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-1023")));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "-0x1.ffffffffffffep-1023")));
+  EXPECT_EQ(-51, ilogb(APFloat(APFloat::IEEEdouble, "0x1p-51")));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp-1023")));
+  EXPECT_EQ(-2, ilogb(APFloat(APFloat::IEEEdouble, "0x0.ffffp-1")));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "0x1.fffep-1023")));
+  EXPECT_EQ(1023, ilogb(APFloat::getLargest(APFloat::IEEEdouble, false)));
+  EXPECT_EQ(1023, ilogb(APFloat::getLargest(APFloat::IEEEdouble, true)));
+
+
   EXPECT_EQ(0, ilogb(APFloat(APFloat::IEEEsingle, "0x1p+0")));
   EXPECT_EQ(0, ilogb(APFloat(APFloat::IEEEsingle, "-0x1p+0")));
   EXPECT_EQ(42, ilogb(APFloat(APFloat::IEEEsingle, "0x1p+42")));
@@ -2841,8 +2854,9 @@ TEST(APFloatTest, ilogb) {
 
   EXPECT_EQ(127, ilogb(APFloat::getLargest(APFloat::IEEEsingle, false)));
   EXPECT_EQ(127, ilogb(APFloat::getLargest(APFloat::IEEEsingle, true)));
-  EXPECT_EQ(-126, ilogb(APFloat::getSmallest(APFloat::IEEEsingle, false)));
-  EXPECT_EQ(-126, ilogb(APFloat::getSmallest(APFloat::IEEEsingle, true)));
+
+  EXPECT_EQ(-149, ilogb(APFloat::getSmallest(APFloat::IEEEsingle, false)));
+  EXPECT_EQ(-149, ilogb(APFloat::getSmallest(APFloat::IEEEsingle, true)));
   EXPECT_EQ(-126,
             ilogb(APFloat::getSmallestNormalized(APFloat::IEEEsingle, false)));
   EXPECT_EQ(-126,
