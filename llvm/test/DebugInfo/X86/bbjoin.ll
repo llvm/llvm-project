@@ -14,7 +14,7 @@
 ; CHECK:   DBG_VALUE 23, 0, ![[X]],
 ; CHECK:   DBG_VALUE debug-use %rdi, debug-use _, ![[X]]
 ; CHECK: bb.1.if.then:
-; CHECK:   DBG_VALUE debug-use %rdi, debug-use _, ![[X]],
+; CHECK:   DBG_VALUE 43, 0, ![[X]],
 ; CHECK: bb.2.if.end:
 ; CHECK-NOT:  DBG_VALUE 23, 0, ![[X]],
 ; CHECK:   RETQ %eax

@@ -296,7 +296,7 @@ public:
   static ErrorOr<std::unique_ptr<ObjectFile>>
   createELFObjectFile(MemoryBufferRef Object);
 
-  static ErrorOr<std::unique_ptr<MachOObjectFile>>
+  static Expected<std::unique_ptr<MachOObjectFile>>
   createMachOObjectFile(MemoryBufferRef Object);
 
 };

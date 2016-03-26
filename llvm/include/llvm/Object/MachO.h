@@ -193,8 +193,8 @@ public:
   typedef SmallVector<LoadCommandInfo, 4> LoadCommandList;
   typedef LoadCommandList::const_iterator load_command_iterator;
 
-  MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
-                  std::error_code &EC);
+  static Expected<std::unique_ptr<MachOObjectFile>>
+  create(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits);
 
   void moveSymbolNext(DataRefImpl &Symb) const override;
 
@@ -442,6 +442,10 @@ public:
   }
 
 private:
+
+  MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
+                  Error &Err);
+
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
 
   union {

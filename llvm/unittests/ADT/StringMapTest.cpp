@@ -390,12 +390,19 @@ TEST(StringMapCustomTest, InitialSizeTest) {
   // arbitrary prime, picked without any good reason.
   for (auto Size : {1, 32, 67}) {
     StringMap<CountCtorCopyAndMove> Map(Size);
+    auto NumBuckets = Map.getNumBuckets();
     CountCtorCopyAndMove::Move = 0;
     CountCtorCopyAndMove::Copy = 0;
     for (int i = 0; i < Size; ++i)
-      Map.insert(std::make_pair(Twine(i).str(), CountCtorCopyAndMove()));
-    EXPECT_EQ((unsigned)Size * 3, CountCtorCopyAndMove::Move);
+      Map.insert(std::pair<std::string, CountCtorCopyAndMove>(
+          std::piecewise_construct, std::forward_as_tuple(Twine(i).str()),
+          std::forward_as_tuple(i)));
+    // After the inital move, the map will move the Elts in the Entry.
+    EXPECT_EQ((unsigned)Size * 2, CountCtorCopyAndMove::Move);
+    // We copy once the pair from the Elts vector
     EXPECT_EQ(0u, CountCtorCopyAndMove::Copy);
+    // Check that the map didn't grow
+    EXPECT_EQ(Map.getNumBuckets(), NumBuckets);
   }
 }
 

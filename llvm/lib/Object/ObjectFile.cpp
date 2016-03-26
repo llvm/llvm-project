@@ -96,7 +96,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, sys::fs::file_magic Type) {
   case sys::fs::file_magic::macho_dynamically_linked_shared_lib_stub:
   case sys::fs::file_magic::macho_dsym_companion:
   case sys::fs::file_magic::macho_kext_bundle:
-    return createMachOObjectFile(Object);
+    return expectedToErrorOr(createMachOObjectFile(Object));
   case sys::fs::file_magic::coff_object:
   case sys::fs::file_magic::coff_import_library:
   case sys::fs::file_magic::pecoff_executable:

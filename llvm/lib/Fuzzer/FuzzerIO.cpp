@@ -134,6 +134,7 @@ void Printf(const char *Fmt, ...) {
   va_start(ap, Fmt);
   vfprintf(OutputFile, Fmt, ap);
   va_end(ap);
+  fflush(OutputFile);
 }
 
 }  // namespace fuzzer

@@ -15,7 +15,9 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <map>
 using namespace llvm;
@@ -122,26 +124,6 @@ static void clobberRegisterUses(RegDescribedVarsMap &RegVars, unsigned RegNo,
   clobberRegisterUses(RegVars, I, HistMap, ClobberingInstr);
 }
 
-// \brief Collect all registers clobbered by @MI and apply the functor
-// @Func to their RegNo.
-// @Func should be a functor with a void(unsigned) signature. We're
-// not using std::function here for performance reasons. It has a
-// small but measurable impact. By using a functor instead of a
-// std::set& here, we can avoid the overhead of constructing
-// temporaries in calculateDbgValueHistory, which has a significant
-// performance impact.
-template<typename Callable>
-static void applyToClobberedRegisters(const MachineInstr &MI,
-                                      const TargetRegisterInfo *TRI,
-                                      Callable Func) {
-  for (const MachineOperand &MO : MI.operands()) {
-    if (!MO.isReg() || !MO.isDef() || !MO.getReg())
-      continue;
-    for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid(); ++AI)
-      Func(*AI);
-  }
-}
-
 // \brief Returns the first instruction in @MBB which corresponds to
 // the function epilogue, or nullptr if @MBB doesn't contain an epilogue.
 static const MachineInstr *getFirstEpilogueInst(const MachineBasicBlock &MBB) {
@@ -173,10 +155,23 @@ static void collectChangingRegs(const MachineFunction *MF,
     auto FirstEpilogueInst = getFirstEpilogueInst(MBB);
 
     for (const auto &MI : MBB) {
+      // Avoid looking at prologue or epilogue instructions.
       if (&MI == FirstEpilogueInst)
         break;
-      if (!MI.getFlag(MachineInstr::FrameSetup))
-        applyToClobberedRegisters(MI, TRI, [&](unsigned r) { Regs.set(r); });
+      if (MI.getFlag(MachineInstr::FrameSetup))
+        continue;
+
+      // Look for register defs and register masks. Register masks are
+      // typically on calls and they clobber everything not in the mask.
+      for (const MachineOperand &MO : MI.operands()) {
+        if (MO.isReg() && MO.isDef() && MO.getReg()) {
+          for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid();
+               ++AI)
+            Regs.set(*AI);
+        } else if (MO.isRegMask()) {
+          Regs.setBitsNotInMask(MO.getRegMask());
+        }
+      }
     }
   }
 }
@@ -187,16 +182,35 @@ void llvm::calculateDbgValueHistory(const MachineFunction *MF,
   BitVector ChangingRegs(TRI->getNumRegs());
   collectChangingRegs(MF, TRI, ChangingRegs);
 
+  const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
+  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
   RegDescribedVarsMap RegVars;
   for (const auto &MBB : *MF) {
     for (const auto &MI : MBB) {
       if (!MI.isDebugValue()) {
         // Not a DBG_VALUE instruction. It may clobber registers which describe
         // some variables.
-        applyToClobberedRegisters(MI, TRI, [&](unsigned RegNo) {
-          if (ChangingRegs.test(RegNo))
-            clobberRegisterUses(RegVars, RegNo, Result, MI);
-        });
+        for (const MachineOperand &MO : MI.operands()) {
+          if (MO.isReg() && MO.isDef() && MO.getReg()) {
+            // If this is a register def operand, it may end a debug value
+            // range.
+            for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid();
+                 ++AI)
+              if (ChangingRegs.test(*AI))
+                clobberRegisterUses(RegVars, *AI, Result, MI);
+          } else if (MO.isRegMask()) {
+            // If this is a register mask operand, clobber all debug values in
+            // non-CSRs.
+            for (int I = ChangingRegs.find_first(); I != -1;
+                 I = ChangingRegs.find_next(I)) {
+              // Don't consider SP to be clobbered by register masks.
+              if (unsigned(I) != SP && TRI->isPhysicalRegister(I) &&
+                  MO.clobbersPhysReg(I)) {
+                clobberRegisterUses(RegVars, I, Result, MI);
+              }
+            }
+          }
+        }
         continue;
       }
 

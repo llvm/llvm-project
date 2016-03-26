@@ -51,28 +51,3 @@ entry:
 ; CHECK: udf.w #249
 ; CHECK: bl __rt_udiv64
 
-declare arm_aapcs_vfpcc i32 @g(...)
-
-define arm_aapcs_vfpcc i32 @f(i32 %b, i32 %d) #0 {
-entry:
-  %tobool = icmp eq i32 %b, 0
-  br i1 %tobool, label %return, label %if.then
-
-if.then:
-  %call = tail call arm_aapcs_vfpcc i32 bitcast (i32 (...)* @g to i32 ()*)()
-  %rem = urem i32 %call, %d
-  br label %return
-
-return:
-  %retval.0 = phi i32 [ %rem, %if.then ], [ 0, %entry ]
-  ret i32 %retval.0
-}
-
-; CHECK-LABEL: f:
-; CHECK: cbz r0,
-; CHECK: cbz r4,
-; CHECK: b
-; CHECK: udf.w #249
-
-attributes #0 = { optsize }
-

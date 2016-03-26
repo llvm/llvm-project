@@ -33,8 +33,7 @@
 # DBG_VALUE for variable "n" is extended into BB#5 from its predecessors BB#3
 # and BB#4.
 # CHECK:      bb.5.if.end.7:
-# CHECK:      DBG_VALUE debug-use %rsi, debug-use _, !13, !20, debug-location !22
-# CHECK-NEXT: DBG_VALUE debug-use %ebx, debug-use _, !14, !20, debug-location !33
+# CHECK:        DBG_VALUE debug-use %ebx, debug-use _, !14, !20, debug-location !33
 
 
 --- |
