@@ -2146,7 +2146,10 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
 static bool isDivRemLibcallAvailable(SDNode *Node, bool isSigned,
                                      const TargetLowering &TLI) {
   RTLIB::Libcall LC;
-  switch (Node->getSimpleValueType(0).SimpleTy) {
+  EVT NodeType = Node->getValueType(0);
+  if (!NodeType.isSimple())
+    return false;
+  switch (NodeType.getSimpleVT().SimpleTy) {
   default: return false; // No libcall for vector types.
   case MVT::i8:   LC= isSigned ? RTLIB::SDIVREM_I8  : RTLIB::UDIVREM_I8;  break;
   case MVT::i16:  LC= isSigned ? RTLIB::SDIVREM_I16 : RTLIB::UDIVREM_I16; break;
