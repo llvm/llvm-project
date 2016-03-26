@@ -513,8 +513,7 @@ bool AArch64BranchRelaxation::runOnMachineFunction(MachineFunction &mf) {
   return MadeChange;
 }
 
-/// createAArch64BranchRelaxation - returns an instance of the constpool
-/// island pass.
+/// Returns an instance of the AArch64 Branch Relaxation pass.
 FunctionPass *llvm::createAArch64BranchRelaxation() {
   return new AArch64BranchRelaxation();
 }

@@ -265,24 +265,43 @@ std::error_code rename(const Twine &from, const Twine &to) {
 
   std::error_code ec = std::error_code();
 
-  // Retry while we see ERROR_ACCESS_DENIED.
+  // Retry while we see recoverable errors.
   // System scanners (eg. indexer) might open the source file when it is written
   // and closed.
 
-  for (int i = 0; i < 2000; i++) {
-    // Try ReplaceFile first, as it is able to associate a new data stream with
-    // the destination even if the destination file is currently open.
-    if (::ReplaceFileW(wide_to.begin(), wide_from.begin(), NULL, 0, NULL, NULL))
-      return std::error_code();
+  bool TryReplace = true;
 
-    // We get ERROR_FILE_NOT_FOUND if the destination file is missing.
-    // MoveFileEx can handle this case.
-    DWORD ReplaceError = ::GetLastError();
-    ec = mapWindowsError(ReplaceError);
-    if (ReplaceError != ERROR_ACCESS_DENIED &&
-        ReplaceError != ERROR_FILE_NOT_FOUND &&
-        ReplaceError != ERROR_SHARING_VIOLATION)
-      break;
+  for (int i = 0; i < 2000; i++) {
+    if (i > 0)
+      ::Sleep(1);
+
+    if (TryReplace) {
+      // Try ReplaceFile first, as it is able to associate a new data stream
+      // with the destination even if the destination file is currently open.
+      if (::ReplaceFileW(wide_to.data(), wide_from.data(), NULL, 0, NULL, NULL))
+        return std::error_code();
+
+      DWORD ReplaceError = ::GetLastError();
+      ec = mapWindowsError(ReplaceError);
+
+      // If ReplaceFileW returned ERROR_UNABLE_TO_MOVE_REPLACEMENT or
+      // ERROR_UNABLE_TO_MOVE_REPLACEMENT_2, retry but only use MoveFileExW().
+      if (ReplaceError == ERROR_UNABLE_TO_MOVE_REPLACEMENT ||
+          ReplaceError == ERROR_UNABLE_TO_MOVE_REPLACEMENT_2) {
+        TryReplace = false;
+        continue;
+      }
+      // If ReplaceFileW returned ERROR_UNABLE_TO_REMOVE_REPLACED, retry
+      // using ReplaceFileW().
+      if (ReplaceError == ERROR_UNABLE_TO_REMOVE_REPLACED)
+        continue;
+      // We get ERROR_FILE_NOT_FOUND if the destination file is missing.
+      // MoveFileEx can handle this case.
+      if (ReplaceError != ERROR_ACCESS_DENIED &&
+          ReplaceError != ERROR_FILE_NOT_FOUND &&
+          ReplaceError != ERROR_SHARING_VIOLATION)
+        break;
+    }
 
     if (::MoveFileExW(wide_from.begin(), wide_to.begin(),
                       MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING))
@@ -291,8 +310,6 @@ std::error_code rename(const Twine &from, const Twine &to) {
     DWORD MoveError = ::GetLastError();
     ec = mapWindowsError(MoveError);
     if (MoveError != ERROR_ACCESS_DENIED) break;
-
-    ::Sleep(1);
   }
 
   return ec;

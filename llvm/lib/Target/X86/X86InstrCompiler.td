@@ -1001,6 +1001,18 @@ def ACQUIRE_MOV64rm : I<0, Pseudo, (outs GR64:$dst), (ins i64mem:$src),
 // DAG Pattern Matching Rules
 //===----------------------------------------------------------------------===//
 
+// Use AND/OR to store 0/-1 in memory when optimizing for minsize. This saves
+// binary size compared to a regular MOV, but it introduces an unnecessary
+// load, so is not suitable for regular or optsize functions.
+let Predicates = [OptForMinSize] in {
+def : Pat<(store (i16 0), addr:$dst), (AND16mi8 addr:$dst, 0)>;
+def : Pat<(store (i32 0), addr:$dst), (AND32mi8 addr:$dst, 0)>;
+def : Pat<(store (i64 0), addr:$dst), (AND64mi8 addr:$dst, 0)>;
+def : Pat<(store (i16 -1), addr:$dst), (OR16mi8 addr:$dst, -1)>;
+def : Pat<(store (i32 -1), addr:$dst), (OR32mi8 addr:$dst, -1)>;
+def : Pat<(store (i64 -1), addr:$dst), (OR64mi8 addr:$dst, -1)>;
+}
+
 // ConstantPool GlobalAddress, ExternalSymbol, and JumpTable
 def : Pat<(i32 (X86Wrapper tconstpool  :$dst)), (MOV32ri tconstpool  :$dst)>;
 def : Pat<(i32 (X86Wrapper tjumptable  :$dst)), (MOV32ri tjumptable  :$dst)>;

@@ -13,11 +13,15 @@
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectMemory.h"
+#include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Interpreter/CommandObjectMultiword.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -340,12 +344,96 @@ ItaniumABILanguageRuntime::CreateInstance (Process *process, lldb::LanguageType 
         return NULL;
 }
 
+class CommandObjectMultiwordItaniumABI_Demangle : public CommandObjectParsed
+{
+public:
+    CommandObjectMultiwordItaniumABI_Demangle (CommandInterpreter &interpreter) :
+    CommandObjectParsed (interpreter,
+                         "demangle",
+                         "Demangle a C++ mangled name.",
+                         "language cplusplus demangle")
+    {
+        CommandArgumentEntry arg;
+        CommandArgumentData index_arg;
+        
+        // Define the first (and only) variant of this arg.
+        index_arg.arg_type = eArgTypeSymbol;
+        index_arg.arg_repetition = eArgRepeatPlus;
+        
+        // There is only one variant this argument could be; put it into the argument entry.
+        arg.push_back (index_arg);
+        
+        // Push the data for the first argument into the m_arguments vector.
+        m_arguments.push_back (arg);
+    }
+    
+    ~CommandObjectMultiwordItaniumABI_Demangle() override = default;
+    
+protected:
+    bool
+    DoExecute(Args& command, CommandReturnObject &result) override
+    {
+        bool demangled_any = false;
+        bool error_any = false;
+        for (size_t i = 0; i < command.GetArgumentCount(); i++)
+        {
+            auto arg = command.GetArgumentAtIndex(i);
+            if (arg && *arg)
+            {
+                ConstString mangled_cs(arg);
+                
+                // the actual Mangled class should be strict about this, but on the command line
+                // if you're copying mangled names out of 'nm' on Darwin, they will come out with
+                // an extra underscore - be willing to strip this on behalf of the user
+                // This is the moral equivalent of the -_/-n options to c++filt
+                if (mangled_cs.GetStringRef().startswith("__Z"))
+                    mangled_cs.SetCString(arg+1);
+                
+                Mangled mangled(mangled_cs, true);
+                if (mangled.GuessLanguage() == lldb::eLanguageTypeC_plus_plus)
+                {
+                    ConstString demangled(mangled.GetDisplayDemangledName(lldb::eLanguageTypeC_plus_plus));
+                    demangled_any = true;
+                    result.AppendMessageWithFormat("%s ---> %s\n", arg, demangled.GetCString());
+                }
+                else
+                {
+                    error_any = true;
+                    result.AppendErrorWithFormat("%s is not a valid C++ mangled name\n", arg);
+                }
+            }
+        }
+        
+        result.SetStatus(error_any ? lldb::eReturnStatusFailed :
+                         (demangled_any ? lldb::eReturnStatusSuccessFinishResult : lldb::eReturnStatusSuccessFinishNoResult));
+        return result.Succeeded();
+    }
+};
+
+class CommandObjectMultiwordItaniumABI : public CommandObjectMultiword
+{
+public:
+    CommandObjectMultiwordItaniumABI (CommandInterpreter &interpreter) :
+    CommandObjectMultiword (interpreter,
+                            "cplusplus",
+                            "A set of commands for operating on the C++ Language Runtime.",
+                            "cplusplus <subcommand> [<subcommand-options>]")
+    {
+        LoadSubCommand ("demangle",   CommandObjectSP (new CommandObjectMultiwordItaniumABI_Demangle (interpreter)));
+    }
+    
+    ~CommandObjectMultiwordItaniumABI() override = default;
+};
+
 void
 ItaniumABILanguageRuntime::Initialize()
 {
     PluginManager::RegisterPlugin (GetPluginNameStatic(),
                                    "Itanium ABI for the C++ language",
-                                   CreateInstance);    
+                                   CreateInstance,
+                                   [] (CommandInterpreter& interpreter) -> lldb::CommandObjectSP {
+                                       return CommandObjectSP(new CommandObjectMultiwordItaniumABI(interpreter));
+                                   });
 }
 
 void

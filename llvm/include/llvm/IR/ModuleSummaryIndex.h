@@ -162,8 +162,8 @@ public:
   }
 
   /// Return the list of <CalleeGUID, ProfileCount> pairs.
-  std::vector<EdgeTy> &edges() { return CallGraphEdgeList; }
-  const std::vector<EdgeTy> &edges() const { return CallGraphEdgeList; }
+  std::vector<EdgeTy> &calls() { return CallGraphEdgeList; }
+  const std::vector<EdgeTy> &calls() const { return CallGraphEdgeList; }
 };
 
 /// \brief Global variable summary information to aid decisions and

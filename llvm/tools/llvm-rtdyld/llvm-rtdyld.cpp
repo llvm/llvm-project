@@ -254,9 +254,9 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
 
 static const char *ProgramName;
 
-static int Error(const Twine &Msg) {
+static int ErrorAndExit(const Twine &Msg) {
   errs() << ProgramName << ": error: " << Msg << "\n";
-  return 1;
+  exit(1);
 }
 
 static void loadDylibs() {
@@ -290,13 +290,13 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> InputBuffer =
         MemoryBuffer::getFileOrSTDIN(File);
     if (std::error_code EC = InputBuffer.getError())
-      return Error("unable to read input: '" + EC.message() + "'");
+      ErrorAndExit("unable to read input: '" + EC.message() + "'");
 
     ErrorOr<std::unique_ptr<ObjectFile>> MaybeObj(
       ObjectFile::createObjectFile((*InputBuffer)->getMemBufferRef()));
 
     if (std::error_code EC = MaybeObj.getError())
-      return Error("unable to create object file: '" + EC.message() + "'");
+      ErrorAndExit("unable to create object file: '" + EC.message() + "'");
 
     ObjectFile &Obj = **MaybeObj;
 
@@ -309,7 +309,7 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
         Dyld.loadObject(Obj);
 
       if (Dyld.hasError())
-        return Error(Dyld.getErrorString());
+        ErrorAndExit(Dyld.getErrorString());
 
       // Resolve all the relocations we can.
       Dyld.resolveRelocations();
@@ -400,19 +400,19 @@ static int executeInput() {
     ErrorOr<std::unique_ptr<MemoryBuffer>> InputBuffer =
         MemoryBuffer::getFileOrSTDIN(File);
     if (std::error_code EC = InputBuffer.getError())
-      return Error("unable to read input: '" + EC.message() + "'");
+      ErrorAndExit("unable to read input: '" + EC.message() + "'");
     ErrorOr<std::unique_ptr<ObjectFile>> MaybeObj(
       ObjectFile::createObjectFile((*InputBuffer)->getMemBufferRef()));
 
     if (std::error_code EC = MaybeObj.getError())
-      return Error("unable to create object file: '" + EC.message() + "'");
+      ErrorAndExit("unable to create object file: '" + EC.message() + "'");
 
     ObjectFile &Obj = **MaybeObj;
 
     // Load the object file
     Dyld.loadObject(Obj);
     if (Dyld.hasError()) {
-      return Error(Dyld.getErrorString());
+      ErrorAndExit(Dyld.getErrorString());
     }
   }
 
@@ -423,7 +423,7 @@ static int executeInput() {
   // Get the address of the entry point (_main by default).
   void *MainAddress = Dyld.getSymbolLocalAddress(EntryPoint);
   if (!MainAddress)
-    return Error("no definition for '" + EntryPoint + "'");
+    ErrorAndExit("no definition for '" + EntryPoint + "'");
 
   // Invalidate the instruction cache for each loaded function.
   for (auto &FM : MemMgr.FunctionMemory) {
@@ -432,7 +432,7 @@ static int executeInput() {
     // setExecutable will call InvalidateInstructionCache.
     std::string ErrorStr;
     if (!sys::Memory::setExecutable(FM, &ErrorStr))
-      return Error("unable to mark function executable: '" + ErrorStr + "'");
+      ErrorAndExit("unable to mark function executable: '" + ErrorStr + "'");
   }
 
   // Dispatch to _main().
@@ -452,12 +452,12 @@ static int checkAllExpressions(RuntimeDyldChecker &Checker) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> CheckerFileBuf =
         MemoryBuffer::getFileOrSTDIN(CheckerFileName);
     if (std::error_code EC = CheckerFileBuf.getError())
-      return Error("unable to read input '" + CheckerFileName + "': " +
+      ErrorAndExit("unable to read input '" + CheckerFileName + "': " +
                    EC.message());
 
     if (!Checker.checkAllRulesInBuffer("# rtdyld-check:",
                                        CheckerFileBuf.get().get()))
-      return Error("some checks in '" + CheckerFileName + "' failed");
+      ErrorAndExit("some checks in '" + CheckerFileName + "' failed");
   }
   return 0;
 }
@@ -606,7 +606,7 @@ static int linkAndVerify() {
 
   // Check for missing triple.
   if (TripleName == "")
-    return Error("-triple required when running in -verify mode.");
+    ErrorAndExit("-triple required when running in -verify mode.");
 
   // Look up the target and build the disassembler.
   Triple TheTriple(Triple::normalize(TripleName));
@@ -614,29 +614,29 @@ static int linkAndVerify() {
   const Target *TheTarget =
     TargetRegistry::lookupTarget("", TheTriple, ErrorStr);
   if (!TheTarget)
-    return Error("Error accessing target '" + TripleName + "': " + ErrorStr);
+    ErrorAndExit("Error accessing target '" + TripleName + "': " + ErrorStr);
 
   TripleName = TheTriple.getTriple();
 
   std::unique_ptr<MCSubtargetInfo> STI(
     TheTarget->createMCSubtargetInfo(TripleName, MCPU, ""));
   if (!STI)
-    return Error("Unable to create subtarget info!");
+    ErrorAndExit("Unable to create subtarget info!");
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
   if (!MRI)
-    return Error("Unable to create target register info!");
+    ErrorAndExit("Unable to create target register info!");
 
   std::unique_ptr<MCAsmInfo> MAI(TheTarget->createMCAsmInfo(*MRI, TripleName));
   if (!MAI)
-    return Error("Unable to create target asm info!");
+    ErrorAndExit("Unable to create target asm info!");
 
   MCContext Ctx(MAI.get(), MRI.get(), nullptr);
 
   std::unique_ptr<MCDisassembler> Disassembler(
     TheTarget->createMCDisassembler(*STI, Ctx));
   if (!Disassembler)
-    return Error("Unable to create disassembler!");
+    ErrorAndExit("Unable to create disassembler!");
 
   std::unique_ptr<MCInstrInfo> MII(TheTarget->createMCInstrInfo());
 
@@ -663,20 +663,20 @@ static int linkAndVerify() {
         MemoryBuffer::getFileOrSTDIN(Filename);
 
     if (std::error_code EC = InputBuffer.getError())
-      return Error("unable to read input: '" + EC.message() + "'");
+      ErrorAndExit("unable to read input: '" + EC.message() + "'");
 
     ErrorOr<std::unique_ptr<ObjectFile>> MaybeObj(
       ObjectFile::createObjectFile((*InputBuffer)->getMemBufferRef()));
 
     if (std::error_code EC = MaybeObj.getError())
-      return Error("unable to create object file: '" + EC.message() + "'");
+      ErrorAndExit("unable to create object file: '" + EC.message() + "'");
 
     ObjectFile &Obj = **MaybeObj;
 
     // Load the object file
     Dyld.loadObject(Obj);
     if (Dyld.hasError()) {
-      return Error(Dyld.getErrorString());
+      ErrorAndExit(Dyld.getErrorString());
     }
   }
 
@@ -692,7 +692,7 @@ static int linkAndVerify() {
 
   int ErrorCode = checkAllExpressions(Checker);
   if (Dyld.hasError())
-    return Error("RTDyld reported an error applying relocations:\n  " +
+    ErrorAndExit("RTDyld reported an error applying relocations:\n  " +
                  Dyld.getErrorString());
 
   return ErrorCode;

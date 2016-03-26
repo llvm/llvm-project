@@ -176,17 +176,17 @@ be parsed.
 .. code-block:: c++
 
 
-    /// Error* - These are little helper functions for error handling.
-    std::unique_ptr<ExprAST> Error(const char *Str) {
-      fprintf(stderr, "Error: %s\n", Str);
+    /// LogError* - These are little helper functions for error handling.
+    std::unique_ptr<ExprAST> LogError(const char *Str) {
+      fprintf(stderr, "LogError: %s\n", Str);
       return nullptr;
     }
-    std::unique_ptr<PrototypeAST> ErrorP(const char *Str) {
-      Error(Str);
+    std::unique_ptr<PrototypeAST> LogErrorP(const char *Str) {
+      LogError(Str);
       return nullptr;
     }
 
-The ``Error`` routines are simple helper routines that our parser will
+The ``LogError`` routines are simple helper routines that our parser will
 use to handle errors. The error recovery in our parser will not be the
 best and is not particular user-friendly, but it will be enough for our
 tutorial. These routines make it easier to handle errors in routines
@@ -233,7 +233,7 @@ the parenthesis operator is defined like this:
         return nullptr;
 
       if (CurTok != ')')
-        return Error("expected ')'");
+        return LogError("expected ')'");
       getNextToken(); // eat ).
       return V;
     }
@@ -241,7 +241,7 @@ the parenthesis operator is defined like this:
 This function illustrates a number of interesting things about the
 parser:
 
-1) It shows how we use the Error routines. When called, this function
+1) It shows how we use the LogError routines. When called, this function
 expects that the current token is a '(' token, but after parsing the
 subexpression, it is possible that there is no ')' waiting. For example,
 if the user types in "(4 x" instead of "(4)", the parser should emit an
@@ -288,7 +288,7 @@ function calls:
             break;
 
           if (CurTok != ',')
-            return Error("Expected ')' or ',' in argument list");
+            return LogError("Expected ')' or ',' in argument list");
           getNextToken();
         }
       }
@@ -324,7 +324,7 @@ primary expression, we need to determine what sort of expression it is:
     static std::unique_ptr<ExprAST> ParsePrimary() {
       switch (CurTok) {
       default:
-        return Error("unknown token when expecting an expression");
+        return LogError("unknown token when expecting an expression");
       case tok_identifier:
         return ParseIdentifierExpr();
       case tok_number:
@@ -571,20 +571,20 @@ expressions):
     ///   ::= id '(' id* ')'
     static std::unique_ptr<PrototypeAST> ParsePrototype() {
       if (CurTok != tok_identifier)
-        return ErrorP("Expected function name in prototype");
+        return LogErrorP("Expected function name in prototype");
 
       std::string FnName = IdentifierStr;
       getNextToken();
 
       if (CurTok != '(')
-        return ErrorP("Expected '(' in prototype");
+        return LogErrorP("Expected '(' in prototype");
 
       // Read the list of argument names.
       std::vector<std::string> ArgNames;
       while (getNextToken() == tok_identifier)
         ArgNames.push_back(IdentifierStr);
       if (CurTok != ')')
-        return ErrorP("Expected ')' in prototype");
+        return LogErrorP("Expected ')' in prototype");
 
       // success.
       getNextToken();  // eat ')'.

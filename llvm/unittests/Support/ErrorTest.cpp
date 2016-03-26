@@ -105,6 +105,32 @@ TEST(Error, UncheckedSuccess) {
 }
 #endif
 
+// ErrorAsOutParameter tester.
+void errAsOutParamHelper(Error &Err) {
+  ErrorAsOutParameter ErrAsOutParam(Err);
+  // Verify that checked flag is raised - assignment should not crash.
+  Err = Error::success();
+  // Raise the checked bit manually - caller should still have to test the
+  // error.
+  (void)!!Err;
+}
+
+// Test that ErrorAsOutParameter sets the checked flag on construction.
+TEST(Error, ErrorAsOutParameterChecked) {
+  Error E;
+  errAsOutParamHelper(E);
+  (void)!!E;
+}
+
+// Test that ErrorAsOutParameter clears the checked flag on destruction.
+#ifndef NDEBUG
+TEST(Error, ErrorAsOutParameterUnchecked) {
+  EXPECT_DEATH({ Error E; errAsOutParamHelper(E); },
+               "Program aborted due to an unhandled Error:")
+      << "ErrorAsOutParameter did not clear the checked flag on destruction.";
+}
+#endif
+
 // Check that we abort on unhandled failure cases. (Force conversion to bool
 // to make sure that we don't accidentally treat checked errors as handled).
 // Test runs in debug mode only.

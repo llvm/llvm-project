@@ -107,13 +107,15 @@ TargetInstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
   while (!MBB->succ_empty())
     MBB->removeSuccessor(MBB->succ_begin());
 
+  // Save off the debug loc before erasing the instruction.
+  DebugLoc DL = Tail->getDebugLoc();
+
   // Remove all the dead instructions from the end of MBB.
   MBB->erase(Tail, MBB->end());
 
   // If MBB isn't immediately before MBB, insert a branch to it.
   if (++MachineFunction::iterator(MBB) != MachineFunction::iterator(NewDest))
-    InsertBranch(*MBB, NewDest, nullptr, SmallVector<MachineOperand, 0>(),
-                 Tail->getDebugLoc());
+    InsertBranch(*MBB, NewDest, nullptr, SmallVector<MachineOperand, 0>(), DL);
   MBB->addSuccessor(NewDest);
 }
 

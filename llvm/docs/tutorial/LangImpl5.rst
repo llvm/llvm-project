@@ -127,7 +127,7 @@ First we define a new parsing function:
         return nullptr;
 
       if (CurTok != tok_then)
-        return Error("expected then");
+        return LogError("expected then");
       getNextToken();  // eat the then
 
       auto Then = ParseExpression();
@@ -135,7 +135,7 @@ First we define a new parsing function:
         return nullptr;
 
       if (CurTok != tok_else)
-        return Error("expected else");
+        return LogError("expected else");
 
       getNextToken();
 
@@ -154,7 +154,7 @@ Next we hook it up as a primary expression:
     static std::unique_ptr<ExprAST> ParsePrimary() {
       switch (CurTok) {
       default:
-        return Error("unknown token when expecting an expression");
+        return LogError("unknown token when expecting an expression");
       case tok_identifier:
         return ParseIdentifierExpr();
       case tok_number:
@@ -518,13 +518,13 @@ value to null in the AST node:
       getNextToken();  // eat the for.
 
       if (CurTok != tok_identifier)
-        return Error("expected identifier after for");
+        return LogError("expected identifier after for");
 
       std::string IdName = IdentifierStr;
       getNextToken();  // eat identifier.
 
       if (CurTok != '=')
-        return Error("expected '=' after for");
+        return LogError("expected '=' after for");
       getNextToken();  // eat '='.
 
 
@@ -532,7 +532,7 @@ value to null in the AST node:
       if (!Start)
         return nullptr;
       if (CurTok != ',')
-        return Error("expected ',' after for start value");
+        return LogError("expected ',' after for start value");
       getNextToken();
 
       auto End = ParseExpression();
@@ -549,7 +549,7 @@ value to null in the AST node:
       }
 
       if (CurTok != tok_in)
-        return Error("expected 'in' after for");
+        return LogError("expected 'in' after for");
       getNextToken();  // eat 'in'.
 
       auto Body = ParseExpression();

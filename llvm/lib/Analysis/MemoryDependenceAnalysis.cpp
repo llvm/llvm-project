@@ -638,6 +638,15 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     if (isInvariantLoad)
       continue;
 
+    // A release fence requires that all stores complete before it, but does
+    // not prevent the reordering of following loads or stores 'before' the
+    // fence.  As a result, we look past it when finding a dependency for
+    // loads.  DSE uses this to find preceeding stores to delete and thus we
+    // can't bypass the fence if the query instruction is a store.
+    if (FenceInst *FI = dyn_cast<FenceInst>(Inst))
+      if (isLoad && FI->getOrdering() == Release)
+        continue;
+    
     // See if this instruction (e.g. a call or vaarg) mod/ref's the pointer.
     ModRefInfo MR = AA.getModRefInfo(Inst, MemLoc);
     // If necessary, perform additional analysis.

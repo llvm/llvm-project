@@ -32,6 +32,7 @@ set(ADTSources
   PostOrderIteratorTest.cpp
   RangeAdapterTest.cpp
   SCCIteratorTest.cpp
+  SetVectorTest.cpp
   SmallPtrSetTest.cpp
   SmallStringTest.cpp
   SmallVectorTest.cpp

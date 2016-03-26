@@ -76,7 +76,7 @@ MachOUniversalBinary::ObjectForArch::getAsObjectFile() const {
   StringRef ObjectData = ParentData.substr(Header.offset, Header.size);
   StringRef ObjectName = Parent->getFileName();
   MemoryBufferRef ObjBuffer(ObjectData, ObjectName);
-  return ObjectFile::createMachOObjectFile(ObjBuffer);
+  return expectedToErrorOr(ObjectFile::createMachOObjectFile(ObjBuffer));
 }
 
 ErrorOr<std::unique_ptr<Archive>>

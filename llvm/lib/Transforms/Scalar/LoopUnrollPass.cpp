@@ -684,11 +684,6 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   }
 
   if (HasPragma) {
-    if (PragmaCount != 0)
-      // If loop has an unroll count pragma mark loop as unrolled to prevent
-      // unrolling beyond that requested by the pragma.
-      SetLoopAlreadyUnrolled(L);
-
     // Emit optimization remarks if we are unable to unroll the loop
     // as directed by a pragma.
     DebugLoc LoopLoc = L->getStartLoc();
@@ -738,6 +733,10 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                   TripMultiple, LI, SE, &DT, &AC, PreserveLCSSA))
     return false;
 
+  // If loop has an unroll count pragma mark loop as unrolled to prevent
+  // unrolling beyond that requested by the pragma.
+  if (HasPragma && PragmaCount != 0)
+    SetLoopAlreadyUnrolled(L);
   return true;
 }
 

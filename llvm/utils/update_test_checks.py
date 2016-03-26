@@ -31,14 +31,14 @@ SCRUB_KILL_COMMENT_RE = re.compile(r'^ *#+ +kill:.*\n')
 SCRUB_IR_COMMENT_RE = re.compile(r'\s*;.*')
 
 RUN_LINE_RE = re.compile('^\s*;\s*RUN:\s*(.*)$')
-IR_FUNCTION_RE = re.compile('^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
+IR_FUNCTION_RE = re.compile('^\s*define\s+(?:internal\s+)?[^@]*@([\w-]+)\s*\(')
 LLC_FUNCTION_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n[^:]*?'
     r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
     r'^\s*(?:[^:\n]+?:\s*\n\s*\.size|\.cfi_endproc|\.globl|\.comm|\.(?:sub)?section)',
     flags=(re.M | re.S))
 OPT_FUNCTION_RE = re.compile(
-    r'^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>\w+?)\s*\('
+    r'^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>[\w-]+?)\s*\('
     r'(\s+)?[^{]*\{\n(?P<body>.*?)\}',
     flags=(re.M | re.S))
 CHECK_PREFIX_RE = re.compile('--check-prefix=(\S+)')

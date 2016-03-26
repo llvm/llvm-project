@@ -14,7 +14,7 @@
 ; Location of "range" string is spilled from %rdx to stack and is
 ; addressed via %rbp.
 ; CHECK: movq %rdx, {{[-0-9]+}}(%rbp)
-; CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]
+; CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]:
 ; This location should be valid until the end of the function.
 
 ; Verify that we have proper range in debug_loc section:

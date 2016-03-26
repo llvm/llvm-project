@@ -31,7 +31,9 @@
 ; and BB#4.
 ; CHECK:       .LBB0_5:
 ; CHECK-NEXT:  #DEBUG_VALUE: main:n <- %EBX
-; CHECK-NEXT:  #DEBUG_VALUE: main:argv <- %RSI
+;   Other register values have been clobbered.
+; CHECK-NOT:   #DEBUG_VALUE:
+; CHECK:         movl    %ecx, m(%rip)
 
 ; ModuleID = 'LiveDebugValues.c'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

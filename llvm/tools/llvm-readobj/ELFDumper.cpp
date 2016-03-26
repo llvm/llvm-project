@@ -279,6 +279,7 @@ public:
   virtual void printSymbol(const ELFFile<ELFT> *Obj, const Elf_Sym *Symbol,
                            const Elf_Sym *FirstSym, StringRef StrTable,
                            bool IsDynamic) = 0;
+  virtual void printProgramHeaders(const ELFFile<ELFT> *Obj) = 0;
   const ELFDumper<ELFT> *dumper() const { return Dumper; }
 private:
   const ELFDumper<ELFT> *Dumper;
@@ -299,6 +300,7 @@ public:
   void printDynamicRelocations(const ELFO *Obj) override;
   virtual void printSymtabMessage(const ELFO *Obj, StringRef Name,
                                   size_t Offset) override;
+  void printProgramHeaders(const ELFO *Obj) override;
 
 private:
   struct Field {
@@ -329,6 +331,10 @@ private:
                    StringRef StrTable, bool IsDynamic) override;
   std::string getSymbolSectionNdx(const ELFO *Obj, const Elf_Sym *Symbol,
                                   const Elf_Sym *FirstSym);
+  bool checkTLSSections(const Elf_Phdr &Phdr, const Elf_Shdr &Sec);
+  bool checkoffsets(const Elf_Phdr &Phdr, const Elf_Shdr &Sec);
+  bool checkVMA(const Elf_Phdr &Phdr, const Elf_Shdr &Sec);
+  bool checkPTDynamic(const Elf_Phdr &Phdr, const Elf_Shdr &Sec);
 };
 
 template <typename ELFT> class LLVMStyle : public DumpStyle<ELFT> {
@@ -345,6 +351,7 @@ public:
   void printSymbols(const ELFO *Obj) override;
   void printDynamicSymbols(const ELFO *Obj) override;
   void printDynamicRelocations(const ELFO *Obj) override;
+  void printProgramHeaders(const ELFO *Obj) override;
 
 private:
   void printRelocation(const ELFO *Obj, Elf_Rela Rel, const Elf_Shdr *SymTab);
@@ -1076,6 +1083,65 @@ static const char *getElfSegmentType(unsigned Arch, unsigned Type) {
   }
 }
 
+static std::string getElfPtType(unsigned Arch, unsigned Type) {
+  switch (Type) {
+  case ELF::PT_NULL:
+    return "NULL";
+  case ELF::PT_LOAD:
+    return "LOAD";
+  case ELF::PT_DYNAMIC:
+    return "DYNAMIC";
+  case ELF::PT_INTERP:
+    return "INTERP";
+  case ELF::PT_NOTE:
+    return "NOTE";
+  case ELF::PT_SHLIB:
+    return "SHLIB";
+  case ELF::PT_PHDR:
+    return "PHDR";
+  case ELF::PT_TLS:
+    return "TLS";
+  case ELF::PT_GNU_EH_FRAME:
+    return "GNU_EH_FRAME";
+  case ELF::PT_SUNW_UNWIND:
+    return "SUNW_UNWIND";
+  case ELF::PT_GNU_STACK:
+    return "GNU_STACK";
+  case ELF::PT_GNU_RELRO:
+    return "GNU_RELRO";
+  default:
+    // All machine specific PT_* types
+    switch (Arch) {
+    case ELF::EM_AMDGPU:
+      switch (Type) {
+        LLVM_READOBJ_ENUM_CASE(ELF, PT_AMDGPU_HSA_LOAD_GLOBAL_PROGRAM);
+        LLVM_READOBJ_ENUM_CASE(ELF, PT_AMDGPU_HSA_LOAD_GLOBAL_AGENT);
+        LLVM_READOBJ_ENUM_CASE(ELF, PT_AMDGPU_HSA_LOAD_READONLY_AGENT);
+        LLVM_READOBJ_ENUM_CASE(ELF, PT_AMDGPU_HSA_LOAD_CODE_AGENT);
+      }
+      return "";
+    case ELF::EM_ARM:
+      if (Type == ELF::PT_ARM_EXIDX)
+        return "EXIDX";
+      return "";
+    case ELF::EM_MIPS:
+    case ELF::EM_MIPS_RS3_LE:
+      switch (Type) {
+      case PT_MIPS_REGINFO:
+        return "REGINFO";
+      case PT_MIPS_RTPROC:
+        return "RTPROC";
+      case PT_MIPS_OPTIONS:
+        return "OPTIONS";
+      case PT_MIPS_ABIFLAGS:
+        return "ABIFLAGS";
+      }
+      return "";
+    }
+  }
+  return std::string("<unknown>: ") + to_string(format_hex(Type, 1));
+}
+
 static const EnumEntry<unsigned> ElfSegmentFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, PF_X),
   LLVM_READOBJ_ENUM_ENT(ELF, PF_W),
@@ -1313,10 +1379,13 @@ void ELFDumper<ELFT>::printRelocations() {
   ELFDumperStyle->printRelocations(Obj);
 }
 
+template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
+  ELFDumperStyle->printProgramHeaders(Obj);
+}
+
 template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocations() {
   ELFDumperStyle->printDynamicRelocations(Obj);
 }
-
 
 template<class ELFT>
 void ELFDumper<ELFT>::printSymbols() {
@@ -1327,7 +1396,6 @@ template<class ELFT>
 void ELFDumper<ELFT>::printDynamicSymbols() {
   ELFDumperStyle->printDynamicSymbols(Obj);
 }
-
 
 #define LLVM_READOBJ_TYPE_CASE(name) \
   case DT_##name: return #name
@@ -1642,24 +1710,6 @@ void ELFDumper<ELFT>::printNeededLibraries() {
   }
 }
 
-template<class ELFT>
-void ELFDumper<ELFT>::printProgramHeaders() {
-  ListScope L(W, "ProgramHeaders");
-
-  for (const Elf_Phdr &Phdr : Obj->program_headers()) {
-    DictScope P(W, "ProgramHeader");
-    W.printHex("Type",
-               getElfSegmentType(Obj->getHeader()->e_machine, Phdr.p_type),
-               Phdr.p_type);
-    W.printHex("Offset", Phdr.p_offset);
-    W.printHex("VirtualAddress", Phdr.p_vaddr);
-    W.printHex("PhysicalAddress", Phdr.p_paddr);
-    W.printNumber("FileSize", Phdr.p_filesz);
-    W.printNumber("MemSize", Phdr.p_memsz);
-    W.printFlags("Flags", Phdr.p_flags, makeArrayRef(ElfSegmentFlags));
-    W.printNumber("Alignment", Phdr.p_align);
-  }
-}
 
 template <typename ELFT>
 void ELFDumper<ELFT>::printHashTable() {
@@ -2648,6 +2698,143 @@ void GNUStyle<ELFT>::printDynamicSymbols(const ELFO *Obj) {
   this->dumper()->printSymbolsHelper(true);
 }
 
+static inline std::string printPhdrFlags(unsigned Flag) {
+  std::string Str;
+  Str = (Flag & PF_R) ? "R" : " ";
+  Str += (Flag & PF_W) ? "W" : " ";
+  Str += (Flag & PF_X) ? "E" : " ";
+  return Str;
+}
+
+// SHF_TLS sections are only in PT_TLS, PT_LOAD or PT_GNU_RELRO
+// PT_TLS must only have SHF_TLS sections
+template <class ELFT>
+bool GNUStyle<ELFT>::checkTLSSections(const Elf_Phdr &Phdr,
+                                      const Elf_Shdr &Sec) {
+  return (((Sec.sh_flags & ELF::SHF_TLS) &&
+           ((Phdr.p_type == ELF::PT_TLS) || (Phdr.p_type == ELF::PT_LOAD) ||
+            (Phdr.p_type == ELF::PT_GNU_RELRO))) ||
+          (!(Sec.sh_flags & ELF::SHF_TLS) && Phdr.p_type != ELF::PT_TLS));
+}
+
+// Non-SHT_NOBITS must have its offset inside the segment
+// Only non-zero section can be at end of segment
+template <class ELFT>
+bool GNUStyle<ELFT>::checkoffsets(const Elf_Phdr &Phdr, const Elf_Shdr &Sec) {
+  if (Sec.sh_type == ELF::SHT_NOBITS)
+    return true;
+  bool IsSpecial =
+      (Sec.sh_type == ELF::SHT_NOBITS) && ((Sec.sh_flags & ELF::SHF_TLS) != 0);
+  // .tbss is special, it only has memory in PT_TLS and has NOBITS properties
+  auto SectionSize =
+      (IsSpecial && Phdr.p_type != ELF::PT_TLS) ? 0 : Sec.sh_size;
+  if (Sec.sh_offset >= Phdr.p_offset)
+    return ((Sec.sh_offset + SectionSize <= Phdr.p_filesz + Phdr.p_offset)
+            /*only non-zero sized sections at end*/ &&
+            (Sec.sh_offset + 1 <= Phdr.p_offset + Phdr.p_filesz));
+  return false;
+}
+
+// SHF_ALLOC must have VMA inside segment
+// Only non-zero section can be at end of segment
+template <class ELFT>
+bool GNUStyle<ELFT>::checkVMA(const Elf_Phdr &Phdr, const Elf_Shdr &Sec) {
+  if (!(Sec.sh_flags & ELF::SHF_ALLOC))
+    return true;
+  bool IsSpecial =
+      (Sec.sh_type == ELF::SHT_NOBITS) && ((Sec.sh_flags & ELF::SHF_TLS) != 0);
+  // .tbss is special, it only has memory in PT_TLS and has NOBITS properties
+  auto SectionSize =
+      (IsSpecial && Phdr.p_type != ELF::PT_TLS) ? 0 : Sec.sh_size;
+  if (Sec.sh_addr >= Phdr.p_vaddr)
+    return ((Sec.sh_addr + SectionSize <= Phdr.p_vaddr + Phdr.p_memsz) &&
+            (Sec.sh_addr + 1 <= Phdr.p_vaddr + Phdr.p_memsz));
+  return false;
+}
+
+// No section with zero size must be at start or end of PT_DYNAMIC
+template <class ELFT>
+bool GNUStyle<ELFT>::checkPTDynamic(const Elf_Phdr &Phdr, const Elf_Shdr &Sec) {
+  if (Phdr.p_type != ELF::PT_DYNAMIC || Sec.sh_size != 0 || Phdr.p_memsz == 0)
+    return true;
+  // Is section within the phdr both based on offset and VMA ?
+  return ((Sec.sh_type == ELF::SHT_NOBITS) ||
+          (Sec.sh_offset > Phdr.p_offset &&
+           Sec.sh_offset < Phdr.p_offset + Phdr.p_filesz)) &&
+         (!(Sec.sh_flags & ELF::SHF_ALLOC) ||
+          (Sec.sh_addr > Phdr.p_vaddr && Sec.sh_addr < Phdr.p_memsz));
+}
+
+template <class ELFT>
+void GNUStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
+  unsigned Bias = (ELFT::Is64Bits) ? 8 : 0;
+  unsigned Width = (ELFT::Is64Bits) ? 18 : 10;
+  unsigned SizeWidth = (ELFT::Is64Bits) ? 8 : 7;
+  std::string Type, Offset, VMA, LMA, FileSz, MemSz, Flag, Align;
+
+  const Elf_Ehdr *Header = Obj->getHeader();
+  Field Fields[8] = {2,         17,        26,        37 + Bias,
+                     48 + Bias, 56 + Bias, 64 + Bias, 68 + Bias};
+  OS << "\nElf file type is "
+     << printEnum(Header->e_type, makeArrayRef(ElfObjectFileType)) << "\n"
+     << "Entry point " << format_hex(Header->e_entry, 1) << "\n"
+     << "There are " << Header->e_phnum << " program headers,"
+     << " starting at offset " << Header->e_phoff << "\n\n"
+     << "Program Headers:\n";
+  if (ELFT::Is64Bits)
+    OS << "  Type           Offset   VirtAddr           PhysAddr         "
+       << "  FileSiz  MemSiz   Flg Align\n";
+  else
+    OS << "  Type           Offset   VirtAddr   PhysAddr   FileSiz "
+       << "MemSiz  Flg Align\n";
+  for (const auto &Phdr : Obj->program_headers()) {
+    Type = getElfPtType(Header->e_machine, Phdr.p_type);
+    Offset = to_string(format_hex(Phdr.p_offset, 8));
+    VMA = to_string(format_hex(Phdr.p_vaddr, Width));
+    LMA = to_string(format_hex(Phdr.p_paddr, Width));
+    FileSz = to_string(format_hex(Phdr.p_filesz, SizeWidth));
+    MemSz = to_string(format_hex(Phdr.p_memsz, SizeWidth));
+    Flag = printPhdrFlags(Phdr.p_flags);
+    Align = to_string(format_hex(Phdr.p_align, 1));
+    Fields[0].Str = Type;
+    Fields[1].Str = Offset;
+    Fields[2].Str = VMA;
+    Fields[3].Str = LMA;
+    Fields[4].Str = FileSz;
+    Fields[5].Str = MemSz;
+    Fields[6].Str = Flag;
+    Fields[7].Str = Align;
+    for (auto Field : Fields)
+      printField(Field);
+    if (Phdr.p_type == ELF::PT_INTERP) {
+      OS << "\n      [Requesting program interpreter: ";
+      OS << reinterpret_cast<const char *>(Obj->base()) + Phdr.p_offset << "]";
+    }
+    OS << "\n";
+  }
+  OS << "\n Section to Segment mapping:\n  Segment Sections...\n";
+  int Phnum = 0;
+  for (const Elf_Phdr &Phdr : Obj->program_headers()) {
+    std::string Sections;
+    OS << format("   %2.2d     ", Phnum++);
+    for (const Elf_Shdr &Sec : Obj->sections()) {
+      // Check if each section is in a segment and then print mapping.
+      // readelf additionally makes sure it does not print zero sized sections
+      // at end of segments and for PT_DYNAMIC both start and end of section
+      // .tbss must only be shown in PT_TLS section.
+      bool TbssInNonTLS = (Sec.sh_type == ELF::SHT_NOBITS) &&
+                          ((Sec.sh_flags & ELF::SHF_TLS) != 0) &&
+                          Phdr.p_type != ELF::PT_TLS;
+      if (!TbssInNonTLS && checkTLSSections(Phdr, Sec) &&
+          checkoffsets(Phdr, Sec) && checkVMA(Phdr, Sec) &&
+          checkPTDynamic(Phdr, Sec) && (Sec.sh_type != ELF::SHT_NULL))
+        Sections += unwrapOrError(Obj->getSectionName(&Sec)).str() + " ";
+    }
+    OS << Sections << "\n";
+    OS.flush();
+  }
+}
+
 template <class ELFT>
 void GNUStyle<ELFT>::printDynamicRelocations(const ELFO *Obj) {
   OS << "GNU style dynamic relocations not implemented!\n";
@@ -2993,5 +3180,24 @@ void LLVMStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela Rel) {
     OS << W.hex(Rel.r_offset) << " " << RelocName << " "
        << (SymbolName.size() > 0 ? SymbolName : "-") << " "
        << W.hex(Rel.r_addend) << "\n";
+  }
+}
+
+template <class ELFT>
+void LLVMStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
+  ListScope L(W, "ProgramHeaders");
+
+  for (const Elf_Phdr &Phdr : Obj->program_headers()) {
+    DictScope P(W, "ProgramHeader");
+    W.printHex("Type",
+               getElfSegmentType(Obj->getHeader()->e_machine, Phdr.p_type),
+               Phdr.p_type);
+    W.printHex("Offset", Phdr.p_offset);
+    W.printHex("VirtualAddress", Phdr.p_vaddr);
+    W.printHex("PhysicalAddress", Phdr.p_paddr);
+    W.printNumber("FileSize", Phdr.p_filesz);
+    W.printNumber("MemSize", Phdr.p_memsz);
+    W.printFlags("Flags", Phdr.p_flags, makeArrayRef(ElfSegmentFlags));
+    W.printNumber("Alignment", Phdr.p_align);
   }
 }

@@ -176,7 +176,7 @@ user-defined operator, we need to parse it:
 
       switch (CurTok) {
       default:
-        return ErrorP("Expected function name in prototype");
+        return LogErrorP("Expected function name in prototype");
       case tok_identifier:
         FnName = IdentifierStr;
         Kind = 0;
@@ -185,7 +185,7 @@ user-defined operator, we need to parse it:
       case tok_binary:
         getNextToken();
         if (!isascii(CurTok))
-          return ErrorP("Expected binary operator");
+          return LogErrorP("Expected binary operator");
         FnName = "binary";
         FnName += (char)CurTok;
         Kind = 2;
@@ -194,7 +194,7 @@ user-defined operator, we need to parse it:
         // Read the precedence if present.
         if (CurTok == tok_number) {
           if (NumVal < 1 || NumVal > 100)
-            return ErrorP("Invalid precedecnce: must be 1..100");
+            return LogErrorP("Invalid precedecnce: must be 1..100");
           BinaryPrecedence = (unsigned)NumVal;
           getNextToken();
         }
@@ -202,20 +202,20 @@ user-defined operator, we need to parse it:
       }
 
       if (CurTok != '(')
-        return ErrorP("Expected '(' in prototype");
+        return LogErrorP("Expected '(' in prototype");
 
       std::vector<std::string> ArgNames;
       while (getNextToken() == tok_identifier)
         ArgNames.push_back(IdentifierStr);
       if (CurTok != ')')
-        return ErrorP("Expected ')' in prototype");
+        return LogErrorP("Expected ')' in prototype");
 
       // success.
       getNextToken();  // eat ')'.
 
       // Verify right number of names for operator.
       if (Kind && ArgNames.size() != Kind)
-        return ErrorP("Invalid number of operands for operator");
+        return LogErrorP("Invalid number of operands for operator");
 
       return llvm::make_unique<PrototypeAST>(FnName, std::move(ArgNames), Kind != 0,
                                              BinaryPrecedence);
@@ -403,7 +403,7 @@ operator code above with:
 
       switch (CurTok) {
       default:
-        return ErrorP("Expected function name in prototype");
+        return LogErrorP("Expected function name in prototype");
       case tok_identifier:
         FnName = IdentifierStr;
         Kind = 0;
@@ -412,7 +412,7 @@ operator code above with:
       case tok_unary:
         getNextToken();
         if (!isascii(CurTok))
-          return ErrorP("Expected unary operator");
+          return LogErrorP("Expected unary operator");
         FnName = "unary";
         FnName += (char)CurTok;
         Kind = 1;
@@ -435,7 +435,7 @@ unary operators. It looks like this:
 
       Function *F = TheModule->getFunction(std::string("unary")+Opcode);
       if (!F)
-        return ErrorV("Unknown unary operator");
+        return LogErrorV("Unknown unary operator");
 
       return Builder.CreateCall(F, OperandV, "unop");
     }
