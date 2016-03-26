@@ -2849,7 +2849,7 @@ static void WriteModStrings(const ModuleSummaryIndex &I,
   unsigned Abbrev6Bit = Stream.EmitAbbrev(Abbv);
 
   SmallVector<unsigned, 64> NameVals;
-  for (const StringMapEntry<uint64_t> &MPSE : I.modPathStringEntries()) {
+  for (const StringMapEntry<uint64_t> &MPSE : I.modulePaths()) {
     StringEncoding Bits =
         getStringEncoding(MPSE.getKey().data(), MPSE.getKey().size());
     unsigned AbbrevToUse = Abbrev8Bit;
