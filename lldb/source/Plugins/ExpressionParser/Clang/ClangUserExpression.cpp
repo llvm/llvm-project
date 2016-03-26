@@ -583,12 +583,18 @@ ClangUserExpression::Parse (DiagnosticManager &diagnostic_manager,
         {
             register_execution_unit = true;
         }
+        
+        // If there is more than one external function in the execution
+        // unit, it needs to keep living even if it's not top level, because
+        // the result could refer to that function.
+        
+        if (m_execution_unit_sp->GetJittedFunctions().size() > 1)
+        {
+            register_execution_unit = true;
+        }
 
         if (register_execution_unit)
         {
-            // We currently key off there being more than one external function in the execution
-            // unit to determine whether it needs to live in the process.
-
             llvm::cast<PersistentExpressionState>(
                 exe_ctx.GetTargetPtr()->GetPersistentExpressionStateForLanguage(m_language))
                 ->RegisterExecutionUnit(m_execution_unit_sp);
