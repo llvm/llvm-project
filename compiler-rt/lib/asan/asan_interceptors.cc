@@ -196,6 +196,10 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
   } else {                                                                     \
     *begin = *end = 0;                                                         \
   }
+// Asan needs custom handling of these:
+#undef SANITIZER_INTERCEPT_MEMSET
+#undef SANITIZER_INTERCEPT_MEMMOVE
+#undef SANITIZER_INTERCEPT_MEMCPY
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 
 // Syscall interceptors don't have contexts, we don't support suppressions
