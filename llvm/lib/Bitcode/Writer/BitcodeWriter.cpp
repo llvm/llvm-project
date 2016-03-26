@@ -941,11 +941,28 @@ static void WriteDILocation(const DILocation *N, const ValueEnumerator &VE,
   Record.clear();
 }
 
+static unsigned createGenericDINodeAbbrev(BitstreamWriter &Stream) {
+  // Assume the column is usually under 128, and always output the inlined-at
+  // location (it's never more expensive than building an array size 1).
+  BitCodeAbbrev *Abbv = new BitCodeAbbrev();
+  Abbv->Add(BitCodeAbbrevOp(bitc::METADATA_GENERIC_DEBUG));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+  return Stream.EmitAbbrev(Abbv);
+}
+
 static void WriteGenericDINode(const GenericDINode *N,
                                const ValueEnumerator &VE,
                                BitstreamWriter &Stream,
                                SmallVectorImpl<uint64_t> &Record,
-                               unsigned Abbrev) {
+                               unsigned &Abbrev) {
+  if (!Abbrev)
+    Abbrev = createGenericDINodeAbbrev(Stream);
+
   Record.push_back(N->isDistinct());
   Record.push_back(N->getTag());
   Record.push_back(0); // Per-tag version field; unused for now.
@@ -1374,22 +1391,6 @@ static void WriteModuleMetadata(const Module &M,
   // Initialize MDNode abbreviations.
 #define HANDLE_MDNODE_LEAF(CLASS) unsigned CLASS##Abbrev = 0;
 #include "llvm/IR/Metadata.def"
-
-  if (VE.hasGenericDINode()) {
-    // Abbrev for METADATA_GENERIC_DEBUG.
-    //
-    // Assume the column is usually under 128, and always output the inlined-at
-    // location (it's never more expensive than building an array size 1).
-    BitCodeAbbrev *Abbv = new BitCodeAbbrev();
-    Abbv->Add(BitCodeAbbrevOp(bitc::METADATA_GENERIC_DEBUG));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
-    GenericDINodeAbbrev = Stream.EmitAbbrev(Abbv);
-  }
 
   SmallVector<uint64_t, 64> Record;
   for (const Metadata *MD : MDs) {
