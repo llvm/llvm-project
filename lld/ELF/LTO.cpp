@@ -82,22 +82,22 @@ void BitcodeCompiler::add(BitcodeFile &F) {
       Keep.push_back(GV);
       continue;
     }
-    if (!BitcodeFile::shouldSkip(Sym)) {
-      if (SymbolBody *B = Bodies[BodyIndex++])
-        if (&B->repl() == B && isa<DefinedBitcode>(B)) {
-          switch (GV->getLinkage()) {
-          default:
-            break;
-          case llvm::GlobalValue::LinkOnceAnyLinkage:
-            GV->setLinkage(GlobalValue::WeakAnyLinkage);
-            break;
-          case llvm::GlobalValue::LinkOnceODRLinkage:
-            GV->setLinkage(GlobalValue::WeakODRLinkage);
-            break;
-          }
-          Keep.push_back(GV);
-        }
+    if (BitcodeFile::shouldSkip(Sym))
+      continue;
+    SymbolBody *B = Bodies[BodyIndex++];
+    if (!B || &B->repl() != B || !isa<DefinedBitcode>(B))
+      continue;
+    switch (GV->getLinkage()) {
+    default:
+      break;
+    case llvm::GlobalValue::LinkOnceAnyLinkage:
+      GV->setLinkage(GlobalValue::WeakAnyLinkage);
+      break;
+    case llvm::GlobalValue::LinkOnceODRLinkage:
+      GV->setLinkage(GlobalValue::WeakODRLinkage);
+      break;
     }
+    Keep.push_back(GV);
   }
 
   Mover.move(Obj->takeModule(), Keep,

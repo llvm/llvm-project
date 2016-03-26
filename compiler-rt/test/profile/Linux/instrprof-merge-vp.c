@@ -1,7 +1,9 @@
 // RUN: %clang_profgen -mllvm --enable-value-profiling=true -O2 -o %t %s
 // RUN: %run %t %t.profraw
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
-// RUN: llvm-profdata show --all-functions --counts --ic-targets %t.profdata | FileCheck %s
+// RUN: llvm-profdata show --all-functions --counts --ic-targets %t.profdata > %t.profdump
+// RUN: FileCheck --input-file %t.profdump  %s --check-prefix=FOO
+// RUN: FileCheck --input-file %t.profdump  %s --check-prefix=BAR
 
 #include <stdint.h>
 #include <stdio.h>
@@ -95,16 +97,17 @@ int main(int argc, const char *argv[]) {
   return 0;
 }
 
-// CHECK-LABEL:  foo:
-// CHECK:    Indirect Target Results:
-// CHECK-NEXT:	[ 0, callee3, 10 ]
-// CHECK-NEXT:	[ 0, callee2, 6 ]
-// CHECK-NEXT:	[ 0, callee1, 2 ]
-// CHECK-NEXT:	[ 1, callee1, 5 ]
-// CHECK-NEXT:	[ 1, callee2, 3 ]
-// CHECK-NEXT:	[ 1, callee3, 1 ]
+// FOO-LABEL:  foo:
+// FOO:    Indirect Target Results:
+// FOO-NEXT:	[ 0, callee3, 10 ]
+// FOO-NEXT:	[ 0, callee2, 6 ]
+// FOO-NEXT:	[ 0, callee1, 2 ]
+// FOO-NEXT:	[ 1, callee1, 5 ]
+// FOO-NEXT:	[ 1, callee2, 3 ]
+// FOO-NEXT:	[ 1, callee3, 1 ]
 
-// CHECK-LABEL: bar:
-// CHECK:         [ 0, callee1, 0 ]
-// CHECK-NEXT:    [ 0, callee2, 0 ]
-// CHECK-NEXT:    [ 0, callee3, 0 ]
+// BAR-LABEL: bar:
+// BAR:         [ 0, callee1, 0 ]
+// BAR-NEXT:    [ 0, callee2, 0 ]
+// BAR-NEXT:    [ 0, callee3, 0 ]
+
