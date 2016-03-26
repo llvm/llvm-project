@@ -47,9 +47,6 @@ static cl::opt<bool,true>
 VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
                 cl::desc("Verify loop info (time consuming)"));
 
-// Loop identifier metadata name.
-static const char *const LoopMDName = "llvm.loop";
-
 //===----------------------------------------------------------------------===//
 // Loop implementation
 //
@@ -222,7 +219,7 @@ bool Loop::isSafeToClone() const {
 MDNode *Loop::getLoopID() const {
   MDNode *LoopID = nullptr;
   if (isLoopSimplifyForm()) {
-    LoopID = getLoopLatch()->getTerminator()->getMetadata(LoopMDName);
+    LoopID = getLoopLatch()->getTerminator()->getMetadata(LLVMContext::MD_loop);
   } else {
     // Go through each predecessor of the loop header and check the
     // terminator for the metadata.
@@ -234,7 +231,7 @@ MDNode *Loop::getLoopID() const {
       // Check if this terminator branches to the loop header.
       for (BasicBlock *Successor : TI->successors()) {
         if (Successor == H) {
-          MD = TI->getMetadata(LoopMDName);
+          MD = TI->getMetadata(LLVMContext::MD_loop);
           break;
         }
       }
@@ -259,7 +256,7 @@ void Loop::setLoopID(MDNode *LoopID) const {
   assert(LoopID->getOperand(0) == LoopID && "Loop ID should refer to itself");
 
   if (isLoopSimplifyForm()) {
-    getLoopLatch()->getTerminator()->setMetadata(LoopMDName, LoopID);
+    getLoopLatch()->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopID);
     return;
   }
 
@@ -268,7 +265,7 @@ void Loop::setLoopID(MDNode *LoopID) const {
     TerminatorInst *TI = BB->getTerminator();
     for (BasicBlock *Successor : TI->successors()) {
       if (Successor == H)
-        TI->setMetadata(LoopMDName, LoopID);
+        TI->setMetadata(LLVMContext::MD_loop, LoopID);
     }
   }
 }
