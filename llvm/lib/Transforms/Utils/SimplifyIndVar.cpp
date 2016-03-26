@@ -183,9 +183,8 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
     DeadInsts.emplace_back(ICmp);
     DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
   } else if (isa<PHINode>(IVOperand) &&
-             SE->isLoopInvariantPredicate(Pred, S, X, ICmpLoop,
-                                          InvariantPredicate, InvariantLHS,
-                                          InvariantRHS)) {
+             SE->isLoopInvariantPredicate(Pred, S, X, L, InvariantPredicate,
+                                          InvariantLHS, InvariantRHS)) {
 
     // Rewrite the comparison to a loop invariant comparison if it can be done
     // cheaply, where cheaply means "we don't need to emit any new
