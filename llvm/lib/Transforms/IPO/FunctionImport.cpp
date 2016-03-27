@@ -322,14 +322,14 @@ bool FunctionImporter::importFunctions(
         continue;
       auto GUID = GV.getGUID();
       if (ImportGUIDs.count(GUID)) {
-        GV.materialize();
-        GlobalsToImport.insert(&GV);
         // Alias can't point to "available_externally". However when we import
-        // linkOnceODR the linkage does not change. So we import the aliasee
-        // only in this case
+        // linkOnceODR the linkage does not change. So we import the alias
+        // and aliasee only in this case.
         const GlobalObject *GO = GV.getBaseObject();
         if (!GO->hasLinkOnceODRLinkage())
           continue;
+        GV.materialize();
+        GlobalsToImport.insert(&GV);
         GlobalsToImport.insert(GO);
       }
     }
