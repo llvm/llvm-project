@@ -122,9 +122,18 @@ static uint32_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
 
 struct CompileUnitIdentifiers {
   uint64_t Signature = 0;
-  const char *Name = nullptr;
-  const char *DWOName = nullptr;
+  const char *Name = "";
+  const char *DWOName = "";
 };
+
+static const char *getIndexedString(uint32_t StrIndex, StringRef StrOffsets,
+                                    StringRef Str) {
+  DataExtractor StrOffsetsData(StrOffsets, true, 0);
+  uint32_t StrOffsetsOffset = 4 * StrIndex;
+  uint32_t StrOffset = StrOffsetsData.getU32(&StrOffsetsOffset);
+  DataExtractor StrData(Str, true, 0);
+  return StrData.getCStr(&StrOffset);
+}
 
 static CompileUnitIdentifiers getCUIdentifiers(StringRef Abbrev, StringRef Info,
                                                StringRef StrOffsets,
@@ -154,13 +163,12 @@ static CompileUnitIdentifiers getCUIdentifiers(StringRef Abbrev, StringRef Info,
          (Name != 0 || Form != 0)) {
     switch (Name) {
     case dwarf::DW_AT_name: {
-      auto StrIndex = InfoData.getULEB128(&Offset);
-
-      DataExtractor StrOffsetsData(StrOffsets, true, 0);
-      uint32_t StrOffsetsOffset = 4 * StrIndex;
-      uint32_t StrOffset = StrOffsetsData.getU32(&StrOffsetsOffset);
-      DataExtractor StrData(Str, true, 0);
-      ID.Name = StrData.getCStr(&StrOffset);
+      ID.Name = getIndexedString(InfoData.getULEB128(&Offset), StrOffsets, Str);
+      break;
+    }
+    case dwarf::DW_AT_GNU_dwo_name: {
+      ID.DWOName =
+          getIndexedString(InfoData.getULEB128(&Offset), StrOffsets, Str);
       break;
     }
     case dwarf::DW_AT_GNU_dwo_id:
@@ -176,6 +184,7 @@ static CompileUnitIdentifiers getCUIdentifiers(StringRef Abbrev, StringRef Info,
 struct UnitIndexEntry {
   DWARFUnitIndex::Entry::SectionContribution Contributions[8];
   std::string Name;
+  std::string DWOName;
   StringRef DWPName;
 };
 
@@ -331,6 +340,25 @@ static bool consumeCompressedDebugSectionHeader(StringRef &data,
   return true;
 }
 
+void printDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
+                         const CompileUnitIdentifiers &ID, StringRef DWPName) {
+  errs() << "Duplicate DWO ID (" << PrevE.first << ") in '" << PrevE.second.Name
+         << '\'';
+  if (!PrevE.second.DWPName.empty()) {
+    errs() << " (from ";
+    if (!PrevE.second.DWOName.empty())
+      errs() << '\'' << PrevE.second.DWOName << "' in ";
+    errs() << "'" << PrevE.second.DWPName.str() << "')";
+  }
+  errs() << " and '" << ID.Name << '\'';
+  if (!DWPName.empty()) {
+    errs() << " (from ";
+    if (*ID.DWOName)
+      errs() << '\'' << ID.DWOName << "\' in ";
+    errs() << '\'' << DWPName << "')";
+  }
+  errs() << '\n';
+}
 static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   const auto &MCOFI = *Out.getContext().getObjectFileInfo();
   MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
@@ -468,15 +496,12 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
             getSubsection(CurStrOffsetSection, E, DW_SECT_STR_OFFSETS),
             CurStrSection);
         if (!P.second) {
-          auto &PrevE = *P.first;
-          std::cerr << "Duplicate DWO ID (" << PrevE.first << ") in '" << PrevE.second.Name << "' ";
-          if (!PrevE.second.DWPName.empty())
-            std::cerr << "(from '" << PrevE.second.DWPName.str() << "') ";
-          std::cerr << "and '" << ID.Name << "' (from '" << Input << "')\n";
+          printDuplicateError(*P.first, ID, Input);
           return make_error_code(std::errc::invalid_argument);
         }
         auto &NewEntry = P.first->second;
         NewEntry.Name = ID.Name;
+        NewEntry.DWOName = ID.DWOName;
         NewEntry.DWPName = Input;
         for (auto Kind : CUIndex.getColumnKinds()) {
           auto &C = NewEntry.Contributions[Kind - DW_SECT_INFO];
@@ -503,15 +528,11 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
           AbbrevSection, InfoSection, CurStrOffsetSection, CurStrSection);
       auto P = IndexEntries.insert(std::make_pair(ID.Signature, CurEntry));
       if (!P.second) {
-        auto &E = *P.first;
-        std::cerr << "Duplicate DWO ID (" << E.first << ") in '" << ID.Name
-                  << "' ";
-        if (!E.second.DWPName.empty())
-          std::cerr << "(from '" << E.second.DWPName.str() << "') ";
-        std::cerr << "and '" << E.second.Name << "'\n";
+        printDuplicateError(*P.first, ID, "");
         return make_error_code(std::errc::invalid_argument);
       }
       P.first->second.Name = ID.Name;
+      P.first->second.DWOName = ID.DWOName;
       addAllTypes(Out, TypeIndexEntries, TypesSection, CurTypesSection,
                   CurEntry, ContributionOffsets[DW_SECT_TYPES - DW_SECT_INFO]);
     }
