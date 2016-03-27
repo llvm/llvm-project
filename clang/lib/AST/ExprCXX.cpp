@@ -54,77 +54,8 @@ QualType CXXUuidofExpr::getTypeOperand(ASTContext &Context) const {
       Operand.get<TypeSourceInfo *>()->getType().getNonReferenceType(), Quals);
 }
 
-// static
-const UuidAttr *CXXUuidofExpr::GetUuidAttrOfType(QualType QT,
-                                                 bool *RDHasMultipleGUIDsPtr) {
-  // Optionally remove one level of pointer, reference or array indirection.
-  const Type *Ty = QT.getTypePtr();
-  if (QT->isPointerType() || QT->isReferenceType())
-    Ty = QT->getPointeeType().getTypePtr();
-  else if (QT->isArrayType())
-    Ty = Ty->getBaseElementTypeUnsafe();
-
-  const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
-  if (!RD)
-    return nullptr;
-
-  if (const UuidAttr *Uuid = RD->getMostRecentDecl()->getAttr<UuidAttr>())
-    return Uuid;
-
-  // __uuidof can grab UUIDs from template arguments.
-  if (const ClassTemplateSpecializationDecl *CTSD =
-          dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
-    const TemplateArgumentList &TAL = CTSD->getTemplateArgs();
-    const UuidAttr *UuidForRD = nullptr;
-
-    for (const TemplateArgument &TA : TAL.asArray()) {
-      bool SeenMultipleGUIDs = false;
-
-      const UuidAttr *UuidForTA = nullptr;
-      if (TA.getKind() == TemplateArgument::Type)
-        UuidForTA = GetUuidAttrOfType(TA.getAsType(), &SeenMultipleGUIDs);
-      else if (TA.getKind() == TemplateArgument::Declaration)
-        UuidForTA =
-            GetUuidAttrOfType(TA.getAsDecl()->getType(), &SeenMultipleGUIDs);
-
-      // If the template argument has a UUID, there are three cases:
-      //  - This is the first UUID seen for this RecordDecl.
-      //  - This is a different UUID than previously seen for this RecordDecl.
-      //  - This is the same UUID than previously seen for this RecordDecl.
-      if (UuidForTA) {
-        if (!UuidForRD)
-          UuidForRD = UuidForTA;
-        else if (UuidForRD != UuidForTA)
-          SeenMultipleGUIDs = true;
-      }
-
-      // Seeing multiple UUIDs means that we couldn't find a UUID
-      if (SeenMultipleGUIDs) {
-        if (RDHasMultipleGUIDsPtr)
-          *RDHasMultipleGUIDsPtr = true;
-        return nullptr;
-      }
-    }
-
-    return UuidForRD;
-  }
-
-  return nullptr;
-}
-
-StringRef CXXUuidofExpr::getUuidAsStringRef(ASTContext &Context) const {
-  StringRef Uuid;
-  if (isTypeOperand())
-    Uuid = CXXUuidofExpr::GetUuidAttrOfType(getTypeOperand(Context))->getGuid();
-  else {
-    // Special case: __uuidof(0) means an all-zero GUID.
-    Expr *Op = getExprOperand();
-    if (!Op->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull))
-      Uuid = CXXUuidofExpr::GetUuidAttrOfType(Op->getType())->getGuid();
-    else
-      Uuid = "00000000-0000-0000-0000-000000000000";
-  }
-  return Uuid;
+StringRef CXXUuidofExpr::getUuidAsStringRef() const {
+  return UA ? UA->getGuid() : "00000000-0000-0000-0000-000000000000";
 }
 
 // CXXScalarValueInitExpr

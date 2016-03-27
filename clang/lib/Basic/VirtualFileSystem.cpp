@@ -100,6 +100,9 @@ FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
 }
 
 std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
+  if (llvm::sys::path::is_absolute(Path))
+    return std::error_code();
+
   auto WorkingDir = getCurrentWorkingDirectory();
   if (!WorkingDir)
     return WorkingDir.getError();

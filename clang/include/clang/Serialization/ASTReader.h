@@ -469,21 +469,6 @@ private:
   /// declaration that has an exception specification.
   llvm::SmallMapVector<Decl *, FunctionDecl *, 4> PendingExceptionSpecUpdates;
 
-  struct ReplacedDeclInfo {
-    ModuleFile *Mod;
-    uint64_t Offset;
-    unsigned RawLoc;
-
-    ReplacedDeclInfo() : Mod(nullptr), Offset(0), RawLoc(0) {}
-    ReplacedDeclInfo(ModuleFile *Mod, uint64_t Offset, unsigned RawLoc)
-      : Mod(Mod), Offset(Offset), RawLoc(RawLoc) {}
-  };
-
-  typedef llvm::DenseMap<serialization::DeclID, ReplacedDeclInfo>
-      DeclReplacementMap;
-  /// \brief Declarations that have been replaced in a later file in the chain.
-  DeclReplacementMap ReplacedDecls;
-
   /// \brief Declarations that have been imported and have typedef names for
   /// linkage purposes.
   llvm::DenseMap<std::pair<DeclContext*, IdentifierInfo*>, NamedDecl*>
@@ -1190,7 +1175,7 @@ private:
   Decl *getMostRecentExistingDecl(Decl *D);
 
   RecordLocation DeclCursorForID(serialization::DeclID ID,
-                                 unsigned &RawLocation);
+                                 SourceLocation &Location);
   void loadDeclUpdateRecords(serialization::DeclID ID, Decl *D);
   void loadPendingDeclChain(Decl *D, uint64_t LocalOffset);
   void loadObjCCategories(serialization::GlobalDeclID ID, ObjCInterfaceDecl *D,
@@ -1997,7 +1982,15 @@ public:
   /// \brief Read a source location from raw form.
   SourceLocation ReadSourceLocation(ModuleFile &ModuleFile, unsigned Raw) const {
     SourceLocation Loc = SourceLocation::getFromRawEncoding(Raw);
-    assert(ModuleFile.SLocRemap.find(Loc.getOffset()) != ModuleFile.SLocRemap.end() &&
+    return TranslateSourceLocation(ModuleFile, Loc);
+  }
+
+  /// \brief Translate a source location from another module file's source
+  /// location space into ours.
+  SourceLocation TranslateSourceLocation(ModuleFile &ModuleFile,
+                                         SourceLocation Loc) const {
+    assert(ModuleFile.SLocRemap.find(Loc.getOffset()) !=
+               ModuleFile.SLocRemap.end() &&
            "Cannot find offset to remap.");
     int Remap = ModuleFile.SLocRemap.find(Loc.getOffset())->second;
     return Loc.getLocWithOffset(Remap);

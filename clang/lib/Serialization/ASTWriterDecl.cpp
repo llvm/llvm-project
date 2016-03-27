@@ -2158,7 +2158,7 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
     
   ID = IDR;
 
-  bool isReplacingADecl = ID < FirstDeclID;
+  assert(ID >= FirstDeclID && "invalid decl ID");
 
   // If this declaration is also a DeclContext, write blocks for the
   // declarations that lexically stored inside its context and those
@@ -2169,14 +2169,6 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   uint64_t VisibleOffset = 0;
   DeclContext *DC = dyn_cast<DeclContext>(D);
   if (DC) {
-    if (isReplacingADecl) {
-      // It is replacing a decl from a chained PCH; make sure that the
-      // DeclContext is fully loaded.
-      if (DC->hasExternalLexicalStorage())
-        DC->LoadLexicalDeclsFromExternalStorage();
-      if (DC->hasExternalVisibleStorage())
-        Chain->completeVisibleDeclsMap(DC);
-    }
     LexicalOffset = WriteDeclContextLexicalBlock(Context, DC);
     VisibleOffset = WriteDeclContextVisibleBlock(Context, DC);
   }
@@ -2188,27 +2180,21 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   W.Visit(D);
   if (DC) W.VisitDeclContext(DC, LexicalOffset, VisibleOffset);
 
-  if (isReplacingADecl) {
-    // We're replacing a decl in a previous file.
-    ReplacedDecls.push_back(ReplacedDeclInfo(ID, Stream.GetCurrentBitNo(),
-                                             D->getLocation()));
-  } else {
-    unsigned Index = ID - FirstDeclID;
+  unsigned Index = ID - FirstDeclID;
 
-    // Record the offset for this declaration
-    SourceLocation Loc = D->getLocation();
-    if (DeclOffsets.size() == Index)
-      DeclOffsets.push_back(DeclOffset(Loc, Stream.GetCurrentBitNo()));
-    else if (DeclOffsets.size() < Index) {
-      DeclOffsets.resize(Index+1);
-      DeclOffsets[Index].setLocation(Loc);
-      DeclOffsets[Index].BitOffset = Stream.GetCurrentBitNo();
-    }
-
-    SourceManager &SM = Context.getSourceManager();
-    if (Loc.isValid() && SM.isLocalSourceLocation(Loc))
-      associateDeclWithFile(D, ID);
+  // Record the offset for this declaration
+  SourceLocation Loc = D->getLocation();
+  if (DeclOffsets.size() == Index)
+    DeclOffsets.push_back(DeclOffset(Loc, Stream.GetCurrentBitNo()));
+  else if (DeclOffsets.size() < Index) {
+    DeclOffsets.resize(Index+1);
+    DeclOffsets[Index].setLocation(Loc);
+    DeclOffsets[Index].BitOffset = Stream.GetCurrentBitNo();
   }
+
+  SourceManager &SM = Context.getSourceManager();
+  if (Loc.isValid() && SM.isLocalSourceLocation(Loc))
+    associateDeclWithFile(D, ID);
 
   if (!W.Code)
     llvm::report_fatal_error(StringRef("unexpected declaration kind '") +

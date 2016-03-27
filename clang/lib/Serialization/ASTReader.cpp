@@ -3033,17 +3033,6 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
     }
 
-    case DECL_REPLACEMENTS: {
-      if (Record.size() % 3 != 0) {
-        Error("invalid DECL_REPLACEMENTS block in AST file");
-        return Failure;
-      }
-      for (unsigned I = 0, N = Record.size(); I != N; I += 3)
-        ReplacedDecls[getGlobalDeclID(F, Record[I])]
-          = ReplacedDeclInfo(&F, Record[I+1], Record[I+2]);
-      break;
-    }
-
     case OBJC_CATEGORIES_MAP: {
       if (F.LocalNumObjCCategoriesInMap != 0) {
         Error("duplicate OBJC_CATEGORIES_MAP record in AST file");
@@ -4908,8 +4897,8 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
     return nullptr;
 
   // Read the record.
-  SourceRange Range(ReadSourceLocation(M, PPOffs.Begin),
-                    ReadSourceLocation(M, PPOffs.End));
+  SourceRange Range(TranslateSourceLocation(M, PPOffs.getBegin()),
+                    TranslateSourceLocation(M, PPOffs.getEnd()));
   PreprocessingRecord &PPRec = *PP.getPreprocessingRecord();
   StringRef Blob;
   RecordData Record;
@@ -5100,7 +5089,7 @@ Optional<bool> ASTReader::isPreprocessedEntityInFileID(unsigned Index,
   unsigned LocalIndex = PPInfo.second;
   const PPEntityOffset &PPOffs = M.PreprocessedEntityOffsets[LocalIndex];
   
-  SourceLocation Loc = ReadSourceLocation(M, PPOffs.Begin);
+  SourceLocation Loc = TranslateSourceLocation(M, PPOffs.getBegin());
   if (Loc.isInvalid())
     return false;
   
@@ -6437,9 +6426,9 @@ SourceLocation ASTReader::getSourceLocationForDeclID(GlobalDeclID ID) {
   if (Decl *D = DeclsLoaded[Index])
     return D->getLocation();
 
-  unsigned RawLocation = 0;
-  RecordLocation Rec = DeclCursorForID(ID, RawLocation);
-  return ReadSourceLocation(*Rec.F, RawLocation);
+  SourceLocation Loc;
+  DeclCursorForID(ID, Loc);
+  return Loc;
 }
 
 static Decl *getPredefinedDecl(ASTContext &Context, PredefinedDeclIDs ID) {
