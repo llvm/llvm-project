@@ -261,9 +261,7 @@ unsigned BitstreamCursor::readRecord(unsigned AbbrevID,
     }
 
     // Otherwise, inform the streamer that we need these bytes in memory.
-    const char *Ptr =
-        (const char *)getBitStreamReader()->getBitcodeBytes().getPointer(
-            CurBitPos / 8, NumElts);
+    const char *Ptr = (const char *)getPointerToBit(CurBitPos, NumElts);
 
     // If we can return a reference to the data, do so to avoid copying it.
     if (Blob) {

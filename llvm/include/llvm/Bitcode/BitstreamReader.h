@@ -158,6 +158,7 @@ public:
 
   SimpleBitstreamCursor() = default;
 
+  explicit SimpleBitstreamCursor(BitstreamReader &R) : R(&R) {}
   explicit SimpleBitstreamCursor(BitstreamReader *R) : R(R) {}
 
   bool canSkipToPos(size_t pos) const {
@@ -180,6 +181,9 @@ public:
     return NextChar*CHAR_BIT - BitsInCurWord;
   }
 
+  // Return the byte # of the current bit.
+  uint64_t getCurrentByteNo() const { return GetCurrentBitNo() / 8; }
+
   BitstreamReader *getBitStreamReader() { return R; }
   const BitstreamReader *getBitStreamReader() const { return R; }
 
@@ -196,6 +200,37 @@ public:
     // Skip over any bits that are already consumed.
     if (WordBitNo)
       Read(WordBitNo);
+  }
+
+  /// Reset the stream to the bit pointed at by the specified pointer.
+  ///
+  /// The pointer must be a dereferenceable pointer into the bytes in the
+  /// underlying memory object.
+  void jumpToPointer(const uint8_t *Pointer) {
+    auto *Pointer0 = getPointerToByte(0, 1);
+    assert((intptr_t)Pointer0 <= (intptr_t)Pointer &&
+           "Expected pointer into bitstream");
+
+    JumpToBit(8 * (Pointer - Pointer0));
+    assert((intptr_t)getPointerToByte(getCurrentByteNo(), 1) ==
+               (intptr_t)Pointer &&
+           "Expected to reach pointer");
+  }
+  void jumpToPointer(const char *Pointer) {
+    jumpToPointer((const uint8_t *)Pointer);
+  }
+
+  /// Get a pointer into the bitstream at the specified byte offset.
+  const uint8_t *getPointerToByte(uint64_t ByteNo, uint64_t NumBytes) {
+    return R->getBitcodeBytes().getPointer(ByteNo, NumBytes);
+  }
+
+  /// Get a pointer into the bitstream at the specified bit offset.
+  ///
+  /// The bit offset must be on a byte boundary.
+  const uint8_t *getPointerToBit(uint64_t BitNo, uint64_t NumBytes) {
+    assert(!(BitNo % 8) && "Expected bit on byte boundary");
+    return getPointerToByte(BitNo / 8, NumBytes);
   }
 
   void fillCurWord() {
