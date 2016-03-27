@@ -554,9 +554,6 @@ void ValueEnumerator::EnumerateFunctionLocalMetadata(
   MetadataID = MDs.size();
 
   EnumerateValue(Local->getValue());
-
-  // Also, collect all function-local metadata for easy access.
-  FunctionLocalMDs.push_back(Local);
 }
 
 void ValueEnumerator::organizeMetadata() {
@@ -778,7 +775,6 @@ void ValueEnumerator::purgeFunction() {
   Values.resize(NumModuleValues);
   MDs.resize(NumModuleMDs);
   BasicBlocks.clear();
-  FunctionLocalMDs.clear();
 }
 
 static void IncorporateFunctionInfoGlobalBBIDs(const Function *F,
