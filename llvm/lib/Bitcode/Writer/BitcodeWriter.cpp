@@ -1352,31 +1352,65 @@ static void writeNamedMetadata(const Module &M, const ValueEnumerator &VE,
   }
 }
 
+static unsigned createMetadataStringsAbbrev(BitstreamWriter &Stream) {
+  BitCodeAbbrev *Abbv = new BitCodeAbbrev();
+  Abbv->Add(BitCodeAbbrevOp(bitc::METADATA_STRINGS));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // # of strings
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // offset to chars
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+  return Stream.EmitAbbrev(Abbv);
+}
+
+/// Write out a record for MDString.
+///
+/// All the metadata strings in a metadata block are emitted in a single
+/// record.  The sizes and strings themselves are shoved into a blob.
+static void writeMetadataStrings(ArrayRef<const Metadata *> Strings,
+                                 BitstreamWriter &Stream,
+                                 SmallVectorImpl<uint64_t> &Record) {
+  if (Strings.empty())
+    return;
+
+  // Start the record with the number of strings.
+  Record.push_back(bitc::METADATA_STRINGS);
+  Record.push_back(Strings.size());
+
+  // Emit the sizes of the strings in the blob.
+  SmallString<256> Blob;
+  {
+    BitstreamWriter W(Blob);
+    for (const Metadata *MD : Strings)
+      W.EmitVBR(cast<MDString>(MD)->getLength(), 6);
+    W.FlushToWord();
+  }
+
+  // Add the offset to the strings to the record.
+  Record.push_back(Blob.size());
+
+  // Add the strings to the blob.
+  for (const Metadata *MD : Strings)
+    Blob.append(cast<MDString>(MD)->getString());
+
+  // Emit the final record.
+  Stream.EmitRecordWithBlob(createMetadataStringsAbbrev(Stream), Record, Blob);
+  Record.clear();
+}
+
 static void WriteModuleMetadata(const Module &M,
                                 const ValueEnumerator &VE,
                                 BitstreamWriter &Stream) {
-  const auto &MDs = VE.getMDs();
-  if (MDs.empty() && M.named_metadata_empty())
+  if (VE.getMDs().empty() && M.named_metadata_empty())
     return;
 
   Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
-
-  unsigned MDSAbbrev = 0;
-  if (VE.hasMDString()) {
-    // Abbrev for METADATA_STRING.
-    BitCodeAbbrev *Abbv = new BitCodeAbbrev();
-    Abbv->Add(BitCodeAbbrevOp(bitc::METADATA_STRING));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8));
-    MDSAbbrev = Stream.EmitAbbrev(Abbv);
-  }
 
   // Initialize MDNode abbreviations.
 #define HANDLE_MDNODE_LEAF(CLASS) unsigned CLASS##Abbrev = 0;
 #include "llvm/IR/Metadata.def"
 
   SmallVector<uint64_t, 64> Record;
-  for (const Metadata *MD : MDs) {
+  writeMetadataStrings(VE.getMDStrings(), Stream, Record);
+  for (const Metadata *MD : VE.getNonMDStrings()) {
     if (const MDNode *N = dyn_cast<MDNode>(MD)) {
       assert(N->isResolved() && "Expected forward references to be resolved");
 
@@ -1390,17 +1424,7 @@ static void WriteModuleMetadata(const Module &M,
 #include "llvm/IR/Metadata.def"
       }
     }
-    if (const auto *MDC = dyn_cast<ConstantAsMetadata>(MD)) {
-      WriteValueAsMetadata(MDC, VE, Stream, Record);
-      continue;
-    }
-    const MDString *MDS = cast<MDString>(MD);
-    // Code: [strchar x N]
-    Record.append(MDS->bytes_begin(), MDS->bytes_end());
-
-    // Emit the finished record.
-    Stream.EmitRecord(bitc::METADATA_STRING, Record, MDSAbbrev);
-    Record.clear();
+    WriteValueAsMetadata(cast<ConstantAsMetadata>(MD), VE, Stream, Record);
   }
 
   writeNamedMetadata(M, VE, Stream, Record);

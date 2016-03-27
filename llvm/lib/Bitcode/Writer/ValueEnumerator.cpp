@@ -280,8 +280,7 @@ static bool isIntOrIntVectorValue(const std::pair<const Value*, unsigned> &V) {
 
 ValueEnumerator::ValueEnumerator(const Module &M,
                                  bool ShouldPreserveUseListOrder)
-    : HasMDString(false),
-      ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {
+    : ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {
   if (ShouldPreserveUseListOrder)
     UseListOrders = predictUseListOrder(M);
 
@@ -375,6 +374,9 @@ ValueEnumerator::ValueEnumerator(const Module &M,
 
   // Optimize constant ordering.
   OptimizeConstants(FirstConstant, Values.size());
+
+  // Organize metadata ordering.
+  organizeMetadata();
 }
 
 unsigned ValueEnumerator::getInstructionID(const Instruction *Inst) const {
@@ -530,8 +532,8 @@ void ValueEnumerator::EnumerateMetadata(const Metadata *MD) {
     EnumerateMDNodeOperands(N);
   else if (auto *C = dyn_cast<ConstantAsMetadata>(MD))
     EnumerateValue(C->getValue());
-
-  HasMDString |= isa<MDString>(MD);
+  else
+    ++NumMDStrings;
 
   // Replace the dummy ID inserted above with the correct one.  MetadataMap may
   // have changed by inserting operands, so we need a fresh lookup here.
@@ -555,6 +557,19 @@ void ValueEnumerator::EnumerateFunctionLocalMetadata(
 
   // Also, collect all function-local metadata for easy access.
   FunctionLocalMDs.push_back(Local);
+}
+
+void ValueEnumerator::organizeMetadata() {
+  if (!NumMDStrings)
+    return;
+
+  // Put the strings first.
+  std::stable_partition(MDs.begin(), MDs.end(),
+                        [](const Metadata *MD) { return isa<MDString>(MD); });
+
+  // Renumber.
+  for (unsigned I = 0, E = MDs.size(); I != E; ++I)
+    MetadataMap[MDs[I]] = I + 1;
 }
 
 void ValueEnumerator::EnumerateValue(const Value *V) {

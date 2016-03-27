@@ -209,7 +209,7 @@ enum { BITCODE_CURRENT_EPOCH = 0 };
   };
 
   enum MetadataCodes {
-    METADATA_STRING        = 1,   // MDSTRING:      [values]
+    METADATA_STRING_OLD    = 1,   // MDSTRING:      [values]
     METADATA_VALUE         = 2,   // VALUE:         [type num, value num]
     METADATA_NODE          = 3,   // NODE:          [n x md num]
     METADATA_NAME          = 4,   // STRING:        [values]
@@ -243,6 +243,7 @@ enum { BITCODE_CURRENT_EPOCH = 0 };
     METADATA_MODULE        = 32,  // [distinct, scope, name, ...]
     METADATA_MACRO         = 33,  // [distinct, macinfo, line, name, value]
     METADATA_MACRO_FILE    = 34,  // [distinct, macinfo, line, file, ...]
+    METADATA_STRINGS       = 35,  // [count, offset] blob([lengths][chars])
   };
 
   // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
