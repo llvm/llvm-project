@@ -1642,8 +1642,8 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
     Value *FalseV = SpeculatedStoreValue;
     if (Invert)
       std::swap(TrueV, FalseV);
-    Value *S = Builder.CreateSelect(BrCond, TrueV, FalseV, TrueV->getName() +
-                                    "." + FalseV->getName());
+    Value *S = Builder.CreateSelect(
+        BrCond, TrueV, FalseV, TrueV->getName() + "." + FalseV->getName(), BI);
     SpeculatedStore->setOperand(0, S);
   }
 
