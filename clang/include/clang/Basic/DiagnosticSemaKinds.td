@@ -3595,8 +3595,8 @@ def note_template_unnamed_type_here : Note<
   "unnamed type used in template argument was declared here">;
 def err_template_arg_overload_type : Error<
   "template argument is the type of an unresolved overloaded function">;
-def err_template_arg_not_class_template : Error<
-  "template argument does not refer to a class template or template "
+def err_template_arg_not_valid_template : Error<
+  "template argument does not refer to a class or alias template, or template "
   "template parameter">;
 def note_template_arg_refers_here_func : Note<
   "template argument refers to function template %0, here">;

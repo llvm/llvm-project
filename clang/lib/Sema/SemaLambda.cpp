@@ -355,7 +355,8 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
                                            SourceRange IntroducerRange,
                                            TypeSourceInfo *MethodTypeInfo,
                                            SourceLocation EndLoc,
-                                           ArrayRef<ParmVarDecl *> Params) {
+                                           ArrayRef<ParmVarDecl *> Params,
+                                           const bool IsConstexprSpecified) {
   QualType MethodType = MethodTypeInfo->getType();
   TemplateParameterList *TemplateParams = 
             getGenericLambdaTemplateParameterList(getCurLambda(), *this);
@@ -392,7 +393,7 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
                             MethodType, MethodTypeInfo,
                             SC_None,
                             /*isInline=*/true,
-                            /*isConstExpr=*/false,
+                            IsConstexprSpecified,
                             EndLoc);
   Method->setAccess(AS_public);
   
@@ -879,8 +880,9 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   CXXRecordDecl *Class = createLambdaClosureType(Intro.Range, MethodTyInfo,
                                                  KnownDependent, Intro.Default);
 
-  CXXMethodDecl *Method = startLambdaDefinition(Class, Intro.Range,
-                                                MethodTyInfo, EndLoc, Params);
+  CXXMethodDecl *Method =
+      startLambdaDefinition(Class, Intro.Range, MethodTyInfo, EndLoc, Params,
+                            ParamInfo.getDeclSpec().isConstexprSpecified());
   if (ExplicitParams)
     CheckCXXDefaultArguments(Method);
   
@@ -1600,6 +1602,17 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                           CaptureInits, ArrayIndexVars, 
                                           ArrayIndexStarts, EndLoc,
                                           ContainsUnexpandedParameterPack);
+  // If the lambda expression's call operator is not explicitly marked constexpr
+  // and we are not in a dependent context, analyze the call operator to infer
+  // its constexpr-ness, supressing diagnostics while doing so.
+  if (getLangOpts().CPlusPlus1z && !CallOperator->isInvalidDecl() &&
+      !CallOperator->isConstexpr() &&
+      !Class->getDeclContext()->isDependentContext()) {
+    TentativeAnalysisScope DiagnosticScopeGuard(*this);
+    CallOperator->setConstexpr(
+        CheckConstexprFunctionDecl(CallOperator) &&
+        CheckConstexprFunctionBody(CallOperator, CallOperator->getBody()));
+  }
 
   if (!CurContext->isDependentContext()) {
     switch (ExprEvalContexts.back().Context) {

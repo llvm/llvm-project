@@ -175,6 +175,12 @@ namespace clang {
         : Begin(R.getBegin().getRawEncoding()),
           End(R.getEnd().getRawEncoding()),
           BitOffset(BitOffset) { }
+      SourceLocation getBegin() const {
+        return SourceLocation::getFromRawEncoding(Begin);
+      }
+      SourceLocation getEnd() const {
+        return SourceLocation::getFromRawEncoding(End);
+      }
     };
 
     /// \brief Source range/offset of a preprocessed entity.
@@ -190,6 +196,9 @@ namespace clang {
           BitOffset(BitOffset) { }
       void setLocation(SourceLocation L) {
         Loc = L.getRawEncoding();
+      }
+      SourceLocation getLocation() const {
+        return SourceLocation::getFromRawEncoding(Loc);
       }
     };
 
@@ -468,12 +477,7 @@ namespace clang {
       /// \brief Record code for pending implicit instantiations.
       PENDING_IMPLICIT_INSTANTIATIONS = 26,
 
-      /// \brief Record code for a decl replacement block.
-      ///
-      /// If a declaration is modified after having been deserialized, and then
-      /// written to a dependent AST file, its ID and offset must be added to
-      /// the replacement block.
-      DECL_REPLACEMENTS = 27,
+      // ID 27 used to be for a list of replacement decls.
 
       /// \brief Record code for an update to a decl context's lookup table.
       ///

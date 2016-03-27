@@ -508,23 +508,60 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
   return BuildCXXTypeId(TypeInfoType, OpLoc, (Expr*)TyOrExpr, RParenLoc);
 }
 
+/// Grabs __declspec(uuid()) off a type, or returns 0 if we cannot resolve to
+/// a single GUID.
+static void
+getUuidAttrOfType(Sema &SemaRef, QualType QT,
+                  llvm::SmallSetVector<const UuidAttr *, 1> &UuidAttrs) {
+  // Optionally remove one level of pointer, reference or array indirection.
+  const Type *Ty = QT.getTypePtr();
+  if (QT->isPointerType() || QT->isReferenceType())
+    Ty = QT->getPointeeType().getTypePtr();
+  else if (QT->isArrayType())
+    Ty = Ty->getBaseElementTypeUnsafe();
+
+  const auto *RD = Ty->getAsCXXRecordDecl();
+  if (!RD)
+    return;
+
+  if (const auto *Uuid = RD->getMostRecentDecl()->getAttr<UuidAttr>()) {
+    UuidAttrs.insert(Uuid);
+    return;
+  }
+
+  // __uuidof can grab UUIDs from template arguments.
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+    const TemplateArgumentList &TAL = CTSD->getTemplateArgs();
+    for (const TemplateArgument &TA : TAL.asArray()) {
+      const UuidAttr *UuidForTA = nullptr;
+      if (TA.getKind() == TemplateArgument::Type)
+        getUuidAttrOfType(SemaRef, TA.getAsType(), UuidAttrs);
+      else if (TA.getKind() == TemplateArgument::Declaration)
+        getUuidAttrOfType(SemaRef, TA.getAsDecl()->getType(), UuidAttrs);
+
+      if (UuidForTA)
+        UuidAttrs.insert(UuidForTA);
+    }
+  }
+}
+
 /// \brief Build a Microsoft __uuidof expression with a type operand.
 ExprResult Sema::BuildCXXUuidof(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 TypeSourceInfo *Operand,
                                 SourceLocation RParenLoc) {
+  const UuidAttr *UA = nullptr;
   if (!Operand->getType()->isDependentType()) {
-    bool HasMultipleGUIDs = false;
-    if (!CXXUuidofExpr::GetUuidAttrOfType(Operand->getType(),
-                                          &HasMultipleGUIDs)) {
-      if (HasMultipleGUIDs)
-        return ExprError(Diag(TypeidLoc, diag::err_uuidof_with_multiple_guids));
-      else
-        return ExprError(Diag(TypeidLoc, diag::err_uuidof_without_guid));
-    }
+    llvm::SmallSetVector<const UuidAttr *, 1> UuidAttrs;
+    getUuidAttrOfType(*this, Operand->getType(), UuidAttrs);
+    if (UuidAttrs.empty())
+      return ExprError(Diag(TypeidLoc, diag::err_uuidof_without_guid));
+    if (UuidAttrs.size() > 1)
+      return ExprError(Diag(TypeidLoc, diag::err_uuidof_with_multiple_guids));
+    UA = UuidAttrs.back();
   }
 
-  return new (Context) CXXUuidofExpr(TypeInfoType.withConst(), Operand,
+  return new (Context) CXXUuidofExpr(TypeInfoType.withConst(), Operand, UA,
                                      SourceRange(TypeidLoc, RParenLoc));
 }
 
@@ -533,18 +570,20 @@ ExprResult Sema::BuildCXXUuidof(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 Expr *E,
                                 SourceLocation RParenLoc) {
+  const UuidAttr *UA = nullptr;
   if (!E->getType()->isDependentType()) {
-    bool HasMultipleGUIDs = false;
-    if (!CXXUuidofExpr::GetUuidAttrOfType(E->getType(), &HasMultipleGUIDs) &&
-        !E->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull)) {
-      if (HasMultipleGUIDs)
-        return ExprError(Diag(TypeidLoc, diag::err_uuidof_with_multiple_guids));
-      else
+    if (!E->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull)) {
+      llvm::SmallSetVector<const UuidAttr *, 1> UuidAttrs;
+      getUuidAttrOfType(*this, E->getType(), UuidAttrs);
+      if (UuidAttrs.empty())
         return ExprError(Diag(TypeidLoc, diag::err_uuidof_without_guid));
+      if (UuidAttrs.size() > 1)
+        return ExprError(Diag(TypeidLoc, diag::err_uuidof_with_multiple_guids));
+      UA = UuidAttrs.back();
     }
   }
 
-  return new (Context) CXXUuidofExpr(TypeInfoType.withConst(), E,
+  return new (Context) CXXUuidofExpr(TypeInfoType.withConst(), E, UA,
                                      SourceRange(TypeidLoc, RParenLoc));
 }
 

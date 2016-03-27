@@ -937,7 +937,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SEMA_DECL_REFS);
   RECORD(WEAK_UNDECLARED_IDENTIFIERS);
   RECORD(PENDING_IMPLICIT_INSTANTIATIONS);
-  RECORD(DECL_REPLACEMENTS);
   RECORD(UPDATE_VISIBLE);
   RECORD(DECL_UPDATE_OFFSETS);
   RECORD(DECL_UPDATES);
@@ -4621,7 +4620,6 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     }
   }
 
-  WriteDeclReplacementsBlock();
   WriteObjCCategories();
   if(!WritingModule) {
     WriteOptimizePragmaOptions(SemaRef);
@@ -4781,19 +4779,6 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
 
     FlushPendingAfterDecl();
   }
-}
-
-void ASTWriter::WriteDeclReplacementsBlock() {
-  if (ReplacedDecls.empty())
-    return;
-
-  RecordData Record;
-  for (const auto &I : ReplacedDecls) {
-    Record.push_back(I.ID);
-    Record.push_back(I.Offset);
-    Record.push_back(I.Loc);
-  }
-  Stream.EmitRecord(DECL_REPLACEMENTS, Record);
 }
 
 void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {
