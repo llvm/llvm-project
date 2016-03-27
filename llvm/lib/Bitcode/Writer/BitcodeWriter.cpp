@@ -867,7 +867,7 @@ static uint64_t GetOptimizationFlags(const Value *V) {
   return Flags;
 }
 
-static void WriteValueAsMetadata(const ValueAsMetadata *MD,
+static void writeValueAsMetadata(const ValueAsMetadata *MD,
                                  const ValueEnumerator &VE,
                                  BitstreamWriter &Stream,
                                  SmallVectorImpl<uint64_t> &Record) {
@@ -879,7 +879,7 @@ static void WriteValueAsMetadata(const ValueAsMetadata *MD,
   Record.clear();
 }
 
-static void WriteMDTuple(const MDTuple *N, const ValueEnumerator &VE,
+static void writeMDTuple(const MDTuple *N, const ValueEnumerator &VE,
                          BitstreamWriter &Stream,
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
   for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i) {
@@ -907,7 +907,7 @@ static unsigned createDILocationAbbrev(BitstreamWriter &Stream) {
   return Stream.EmitAbbrev(Abbv);
 }
 
-static void WriteDILocation(const DILocation *N, const ValueEnumerator &VE,
+static void writeDILocation(const DILocation *N, const ValueEnumerator &VE,
                             BitstreamWriter &Stream,
                             SmallVectorImpl<uint64_t> &Record,
                             unsigned &Abbrev) {
@@ -938,7 +938,7 @@ static unsigned createGenericDINodeAbbrev(BitstreamWriter &Stream) {
   return Stream.EmitAbbrev(Abbv);
 }
 
-static void WriteGenericDINode(const GenericDINode *N,
+static void writeGenericDINode(const GenericDINode *N,
                                const ValueEnumerator &VE,
                                BitstreamWriter &Stream,
                                SmallVectorImpl<uint64_t> &Record,
@@ -962,7 +962,7 @@ static uint64_t rotateSign(int64_t I) {
   return I < 0 ? ~(U << 1) : U << 1;
 }
 
-static void WriteDISubrange(const DISubrange *N, const ValueEnumerator &,
+static void writeDISubrange(const DISubrange *N, const ValueEnumerator &,
                             BitstreamWriter &Stream,
                             SmallVectorImpl<uint64_t> &Record,
                             unsigned Abbrev) {
@@ -974,7 +974,7 @@ static void WriteDISubrange(const DISubrange *N, const ValueEnumerator &,
   Record.clear();
 }
 
-static void WriteDIEnumerator(const DIEnumerator *N, const ValueEnumerator &VE,
+static void writeDIEnumerator(const DIEnumerator *N, const ValueEnumerator &VE,
                               BitstreamWriter &Stream,
                               SmallVectorImpl<uint64_t> &Record,
                               unsigned Abbrev) {
@@ -986,7 +986,7 @@ static void WriteDIEnumerator(const DIEnumerator *N, const ValueEnumerator &VE,
   Record.clear();
 }
 
-static void WriteDIBasicType(const DIBasicType *N, const ValueEnumerator &VE,
+static void writeDIBasicType(const DIBasicType *N, const ValueEnumerator &VE,
                              BitstreamWriter &Stream,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev) {
@@ -1001,7 +1001,7 @@ static void WriteDIBasicType(const DIBasicType *N, const ValueEnumerator &VE,
   Record.clear();
 }
 
-static void WriteDIDerivedType(const DIDerivedType *N,
+static void writeDIDerivedType(const DIDerivedType *N,
                                const ValueEnumerator &VE,
                                BitstreamWriter &Stream,
                                SmallVectorImpl<uint64_t> &Record,
@@ -1023,7 +1023,7 @@ static void WriteDIDerivedType(const DIDerivedType *N,
   Record.clear();
 }
 
-static void WriteDICompositeType(const DICompositeType *N,
+static void writeDICompositeType(const DICompositeType *N,
                                  const ValueEnumerator &VE,
                                  BitstreamWriter &Stream,
                                  SmallVectorImpl<uint64_t> &Record,
@@ -1049,7 +1049,7 @@ static void WriteDICompositeType(const DICompositeType *N,
   Record.clear();
 }
 
-static void WriteDISubroutineType(const DISubroutineType *N,
+static void writeDISubroutineType(const DISubroutineType *N,
                                   const ValueEnumerator &VE,
                                   BitstreamWriter &Stream,
                                   SmallVectorImpl<uint64_t> &Record,
@@ -1062,7 +1062,7 @@ static void WriteDISubroutineType(const DISubroutineType *N,
   Record.clear();
 }
 
-static void WriteDIFile(const DIFile *N, const ValueEnumerator &VE,
+static void writeDIFile(const DIFile *N, const ValueEnumerator &VE,
                         BitstreamWriter &Stream,
                         SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
   Record.push_back(N->isDistinct());
@@ -1073,7 +1073,7 @@ static void WriteDIFile(const DIFile *N, const ValueEnumerator &VE,
   Record.clear();
 }
 
-static void WriteDICompileUnit(const DICompileUnit *N,
+static void writeDICompileUnit(const DICompileUnit *N,
                                const ValueEnumerator &VE,
                                BitstreamWriter &Stream,
                                SmallVectorImpl<uint64_t> &Record,
@@ -1100,7 +1100,7 @@ static void WriteDICompileUnit(const DICompileUnit *N,
   Record.clear();
 }
 
-static void WriteDISubprogram(const DISubprogram *N, const ValueEnumerator &VE,
+static void writeDISubprogram(const DISubprogram *N, const ValueEnumerator &VE,
                               BitstreamWriter &Stream,
                               SmallVectorImpl<uint64_t> &Record,
                               unsigned Abbrev) {
@@ -1127,7 +1127,7 @@ static void WriteDISubprogram(const DISubprogram *N, const ValueEnumerator &VE,
   Record.clear();
 }
 
-static void WriteDILexicalBlock(const DILexicalBlock *N,
+static void writeDILexicalBlock(const DILexicalBlock *N,
                                 const ValueEnumerator &VE,
                                 BitstreamWriter &Stream,
                                 SmallVectorImpl<uint64_t> &Record,
@@ -1142,7 +1142,7 @@ static void WriteDILexicalBlock(const DILexicalBlock *N,
   Record.clear();
 }
 
-static void WriteDILexicalBlockFile(const DILexicalBlockFile *N,
+static void writeDILexicalBlockFile(const DILexicalBlockFile *N,
                                     const ValueEnumerator &VE,
                                     BitstreamWriter &Stream,
                                     SmallVectorImpl<uint64_t> &Record,
@@ -1156,7 +1156,7 @@ static void WriteDILexicalBlockFile(const DILexicalBlockFile *N,
   Record.clear();
 }
 
-static void WriteDINamespace(const DINamespace *N, const ValueEnumerator &VE,
+static void writeDINamespace(const DINamespace *N, const ValueEnumerator &VE,
                              BitstreamWriter &Stream,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev) {
@@ -1170,7 +1170,7 @@ static void WriteDINamespace(const DINamespace *N, const ValueEnumerator &VE,
   Record.clear();
 }
 
-static void WriteDIMacro(const DIMacro *N, const ValueEnumerator &VE,
+static void writeDIMacro(const DIMacro *N, const ValueEnumerator &VE,
                          BitstreamWriter &Stream,
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
   Record.push_back(N->isDistinct());
@@ -1183,7 +1183,7 @@ static void WriteDIMacro(const DIMacro *N, const ValueEnumerator &VE,
   Record.clear();
 }
 
-static void WriteDIMacroFile(const DIMacroFile *N, const ValueEnumerator &VE,
+static void writeDIMacroFile(const DIMacroFile *N, const ValueEnumerator &VE,
                              BitstreamWriter &Stream,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev) {
@@ -1197,7 +1197,7 @@ static void WriteDIMacroFile(const DIMacroFile *N, const ValueEnumerator &VE,
   Record.clear();
 }
 
-static void WriteDIModule(const DIModule *N, const ValueEnumerator &VE,
+static void writeDIModule(const DIModule *N, const ValueEnumerator &VE,
                           BitstreamWriter &Stream,
                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
   Record.push_back(N->isDistinct());
@@ -1208,7 +1208,7 @@ static void WriteDIModule(const DIModule *N, const ValueEnumerator &VE,
   Record.clear();
 }
 
-static void WriteDITemplateTypeParameter(const DITemplateTypeParameter *N,
+static void writeDITemplateTypeParameter(const DITemplateTypeParameter *N,
                                          const ValueEnumerator &VE,
                                          BitstreamWriter &Stream,
                                          SmallVectorImpl<uint64_t> &Record,
@@ -1221,7 +1221,7 @@ static void WriteDITemplateTypeParameter(const DITemplateTypeParameter *N,
   Record.clear();
 }
 
-static void WriteDITemplateValueParameter(const DITemplateValueParameter *N,
+static void writeDITemplateValueParameter(const DITemplateValueParameter *N,
                                           const ValueEnumerator &VE,
                                           BitstreamWriter &Stream,
                                           SmallVectorImpl<uint64_t> &Record,
@@ -1236,7 +1236,7 @@ static void WriteDITemplateValueParameter(const DITemplateValueParameter *N,
   Record.clear();
 }
 
-static void WriteDIGlobalVariable(const DIGlobalVariable *N,
+static void writeDIGlobalVariable(const DIGlobalVariable *N,
                                   const ValueEnumerator &VE,
                                   BitstreamWriter &Stream,
                                   SmallVectorImpl<uint64_t> &Record,
@@ -1257,7 +1257,7 @@ static void WriteDIGlobalVariable(const DIGlobalVariable *N,
   Record.clear();
 }
 
-static void WriteDILocalVariable(const DILocalVariable *N,
+static void writeDILocalVariable(const DILocalVariable *N,
                                  const ValueEnumerator &VE,
                                  BitstreamWriter &Stream,
                                  SmallVectorImpl<uint64_t> &Record,
@@ -1275,7 +1275,7 @@ static void WriteDILocalVariable(const DILocalVariable *N,
   Record.clear();
 }
 
-static void WriteDIExpression(const DIExpression *N, const ValueEnumerator &,
+static void writeDIExpression(const DIExpression *N, const ValueEnumerator &,
                               BitstreamWriter &Stream,
                               SmallVectorImpl<uint64_t> &Record,
                               unsigned Abbrev) {
@@ -1288,7 +1288,7 @@ static void WriteDIExpression(const DIExpression *N, const ValueEnumerator &,
   Record.clear();
 }
 
-static void WriteDIObjCProperty(const DIObjCProperty *N,
+static void writeDIObjCProperty(const DIObjCProperty *N,
                                 const ValueEnumerator &VE,
                                 BitstreamWriter &Stream,
                                 SmallVectorImpl<uint64_t> &Record,
@@ -1306,7 +1306,7 @@ static void WriteDIObjCProperty(const DIObjCProperty *N,
   Record.clear();
 }
 
-static void WriteDIImportedEntity(const DIImportedEntity *N,
+static void writeDIImportedEntity(const DIImportedEntity *N,
                                   const ValueEnumerator &VE,
                                   BitstreamWriter &Stream,
                                   SmallVectorImpl<uint64_t> &Record,
@@ -1416,16 +1416,16 @@ static void writeMetadataRecords(ArrayRef<const Metadata *> MDs,
         llvm_unreachable("Invalid MDNode subclass");
 #define HANDLE_MDNODE_LEAF(CLASS)                                              \
   case Metadata::CLASS##Kind:                                                  \
-    Write##CLASS(cast<CLASS>(N), VE, Stream, Record, CLASS##Abbrev);           \
+    write##CLASS(cast<CLASS>(N), VE, Stream, Record, CLASS##Abbrev);           \
     continue;
 #include "llvm/IR/Metadata.def"
       }
     }
-    WriteValueAsMetadata(cast<ConstantAsMetadata>(MD), VE, Stream, Record);
+    writeValueAsMetadata(cast<ConstantAsMetadata>(MD), VE, Stream, Record);
   }
 }
 
-static void WriteModuleMetadata(const Module &M,
+static void writeModuleMetadata(const Module &M,
                                 const ValueEnumerator &VE,
                                 BitstreamWriter &Stream) {
   if (VE.getMDs().empty() && M.named_metadata_empty())
@@ -1439,9 +1439,8 @@ static void WriteModuleMetadata(const Module &M,
   Stream.ExitBlock();
 }
 
-static void WriteFunctionLocalMetadata(const Function &F,
-                                       const ValueEnumerator &VE,
-                                       BitstreamWriter &Stream) {
+static void writeFunctionMetadata(const Function &F, const ValueEnumerator &VE,
+                                  BitstreamWriter &Stream) {
   ArrayRef<const Metadata *> MDs = VE.getFunctionMDs();
   if (MDs.empty())
     return;
@@ -1450,7 +1449,7 @@ static void WriteFunctionLocalMetadata(const Function &F,
 
   SmallVector<uint64_t, 64> Record;
   for (const Metadata *MD : VE.getFunctionMDs())
-    WriteValueAsMetadata(cast<LocalAsMetadata>(MD), VE, Stream, Record);
+    writeValueAsMetadata(cast<LocalAsMetadata>(MD), VE, Stream, Record);
 
   Stream.ExitBlock();
 }
@@ -2580,7 +2579,7 @@ static void WriteFunction(
   WriteConstants(CstStart, CstEnd, VE, Stream, false);
 
   // If there is function-local metadata, emit it now.
-  WriteFunctionLocalMetadata(F, VE, Stream);
+  writeFunctionMetadata(F, VE, Stream);
 
   // Keep a running idea of what the instruction ID is.
   unsigned InstID = CstEnd;
@@ -3237,7 +3236,7 @@ static void WriteModule(const Module *M, BitstreamWriter &Stream,
   WriteModuleConstants(VE, Stream);
 
   // Emit metadata.
-  WriteModuleMetadata(*M, VE, Stream);
+  writeModuleMetadata(*M, VE, Stream);
 
   // Emit metadata.
   WriteModuleMetadataStore(M, Stream);
