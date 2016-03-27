@@ -96,4 +96,73 @@ TEST(BitstreamReaderTest, jumpToPointer) {
   }
 }
 
+TEST(BitstreamReaderTest, setArtificialByteLimit) {
+  uint8_t Bytes[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+  BitstreamReader Reader(std::begin(Bytes), std::end(Bytes));
+  SimpleBitstreamCursor Cursor(Reader);
+
+  Cursor.setArtificialByteLimit(8);
+  while (!Cursor.AtEndOfStream())
+    (void)Cursor.Read(1);
+
+  EXPECT_EQ(8u, Cursor.getCurrentByteNo());
+}
+
+TEST(BitstreamReaderTest, setArtificialByteLimitNotWordBoundary) {
+  uint8_t Bytes[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+  BitstreamReader Reader(std::begin(Bytes), std::end(Bytes));
+  SimpleBitstreamCursor Cursor(Reader);
+
+  Cursor.setArtificialByteLimit(5);
+  while (!Cursor.AtEndOfStream())
+    (void)Cursor.Read(1);
+
+  EXPECT_EQ(8u, Cursor.getCurrentByteNo());
+}
+
+TEST(BitstreamReaderTest, setArtificialByteLimitNot4ByteBoundary) {
+  uint8_t Bytes[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+  BitstreamReader Reader(std::begin(Bytes), std::end(Bytes));
+  SimpleBitstreamCursor Cursor(Reader);
+
+  Cursor.setArtificialByteLimit(5);
+  while (!Cursor.AtEndOfStream())
+    (void)Cursor.Read(1);
+
+  EXPECT_EQ(8u, Cursor.getCurrentByteNo());
+}
+
+TEST(BitstreamReaderTest, setArtificialByteLimitPastTheEnd) {
+  uint8_t Bytes[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                     0x08, 0x09, 0x0a, 0x0b};
+  BitstreamReader Reader(std::begin(Bytes), std::end(Bytes));
+  SimpleBitstreamCursor Cursor(Reader);
+
+  // The size of the memory object isn't known yet.  Set it too high and
+  // confirm that we don't read too far.
+  Cursor.setArtificialByteLimit(20);
+  while (!Cursor.AtEndOfStream())
+    (void)Cursor.Read(1);
+
+  EXPECT_EQ(12u, Cursor.getCurrentByteNo());
+}
+
+TEST(BitstreamReaderTest, setArtificialByteLimitPastTheEndKnown) {
+  uint8_t Bytes[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                     0x08, 0x09, 0x0a, 0x0b};
+  BitstreamReader Reader(std::begin(Bytes), std::end(Bytes));
+  SimpleBitstreamCursor Cursor(Reader);
+
+  // Save the size of the memory object in the cursor.
+  while (!Cursor.AtEndOfStream())
+    (void)Cursor.Read(1);
+  EXPECT_EQ(12u, Cursor.getCurrentByteNo());
+
+  Cursor.setArtificialByteLimit(20);
+  EXPECT_TRUE(Cursor.AtEndOfStream());
+}
+
 } // end anonymous namespace

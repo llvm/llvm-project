@@ -171,7 +171,7 @@ public:
     if (BitsInCurWord != 0)
       return false;
     if (Size != 0)
-      return Size == NextChar;
+      return Size <= NextChar;
     fillCurWord();
     return BitsInCurWord == 0;
   }
@@ -351,6 +351,28 @@ public:
 
   /// Skip to the end of the file.
   void skipToEnd() { NextChar = R->getBitcodeBytes().getExtent(); }
+
+  /// Prevent the cursor from reading past a byte boundary.
+  ///
+  /// Prevent the cursor from requesting byte reads past \c Limit.  This is
+  /// useful when working with a cursor on a StreamingMemoryObject, when it's
+  /// desirable to avoid invalidating the result of getPointerToByte().
+  ///
+  /// If \c Limit is on a word boundary, AtEndOfStream() will return true if
+  /// the cursor position reaches or exceeds \c Limit, regardless of the true
+  /// number of available bytes.  Otherwise, AtEndOfStream() returns true when
+  /// it reaches or exceeds the next word boundary.
+  void setArtificialByteLimit(uint64_t Limit) {
+    assert(getCurrentByteNo() < Limit && "Move cursor before lowering limit");
+
+    // Round to word boundary.
+    if (Limit & (sizeof(word_t) - 1))
+      Limit += sizeof(word_t) - Limit & (sizeof(word_t) - 1);
+
+    // Only change size if the new one is lower.
+    if (!Size || Size > Limit)
+      Size = Limit;
+  }
 };
 
 /// When advancing through a bitstream cursor, each advance can discover a few
