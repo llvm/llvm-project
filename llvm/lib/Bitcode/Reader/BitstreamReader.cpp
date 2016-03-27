@@ -260,7 +260,10 @@ unsigned BitstreamCursor::readRecord(unsigned AbbrevID,
       break;
     }
 
-    // Otherwise, inform the streamer that we need these bytes in memory.
+    // Otherwise, inform the streamer that we need these bytes in memory.  Skip
+    // over tail padding first, in case jumping to NewEnd invalidates the Blob
+    // pointer.
+    JumpToBit(NewEnd);
     const char *Ptr = (const char *)getPointerToBit(CurBitPos, NumElts);
 
     // If we can return a reference to the data, do so to avoid copying it.
@@ -271,8 +274,6 @@ unsigned BitstreamCursor::readRecord(unsigned AbbrevID,
       for (; NumElts; --NumElts)
         Vals.push_back((unsigned char)*Ptr++);
     }
-    // Skip over tail padding.
-    JumpToBit(NewEnd);
   }
 
   return Code;
