@@ -9201,6 +9201,22 @@ SwiftASTContext::DumpTypeDescription (void* type,
                     s->Printf("builtin floating-point type of width %u bits\n", builtin_float_type->getBitWidth());
                 break;
             }
+            case swift::TypeKind::ProtocolComposition:
+            {
+                swift::ProtocolCompositionType *protocol_composition_type = swift_can_type->getAs<swift::ProtocolCompositionType>();
+                if (protocol_composition_type)
+                {
+                    std::string buffer;
+                    llvm::raw_string_ostream ostream(buffer);
+                    const swift::PrintOptions& print_options(SwiftASTContext::GetUserVisibleTypePrintingOptions(print_help_if_available));
+                    
+                    protocol_composition_type->print(ostream, print_options);
+                    ostream.flush();
+                    if (buffer.empty() == false)
+                        s->Printf("%s\n",buffer.c_str());
+                }
+                break;
+            }
             default:
             {
                 swift::NominalType* nominal_type = llvm::dyn_cast_or_null<swift::NominalType>(swift_can_type.getPointer());
