@@ -79,7 +79,7 @@ static void truncateCurrentFile(void) {
     return;
 
   /* Create the directory holding the file, if needed. */
-  if (strchr(Filename, '/')) {
+  if (strchr(Filename, '/') || strchr(Filename, '\\')) {
     char *Copy = malloc(strlen(Filename) + 1);
     strcpy(Copy, Filename);
     __llvm_profile_recursive_mkdir(Copy);
