@@ -3,7 +3,7 @@ set(PROFILE_LIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(PROFILE_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 if(NOT COMPILER_RT_STANDALONE_BUILD)
-  list(APPEND PROFILE_TEST_DEPS profile llvm-profdata)
+  list(APPEND PROFILE_TEST_DEPS profile llvm-profdata llvm-cov)
 endif()
 
 configure_lit_site_cfg(
