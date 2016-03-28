@@ -90,6 +90,12 @@ public:
   /// \param info Information about this global function.
   void addGlobalFunction(StringRef name, const GlobalFunctionInfo &info);
 
+  /// Add information about an enumerator.
+  ///
+  /// \param name The name of this enumerator.
+  /// \param info Information about this enumerator.
+  void addEnumConstant(StringRef name, const EnumConstantInfo &info);
+
   /// Add information about a tag (struct/union/enum/C++ class).
   ///
   /// \param name The name of this tag.
