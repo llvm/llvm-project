@@ -15,3 +15,11 @@ Globals:
     Nullability: N
   - Name: unavailable_global_int
     Availability: none
+
+Tags:
+  - Name: unavailable_struct
+    Availability: none
+
+Typedefs:
+  - Name: unavailable_typedef
+    Availability: none
