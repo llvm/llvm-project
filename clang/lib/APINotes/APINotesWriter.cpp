@@ -77,6 +77,11 @@ public:
   /// Indexed by the identifier ID.
   llvm::DenseMap<unsigned, GlobalFunctionInfo> GlobalFunctions;
 
+  /// Information about enumerators.
+  ///
+  /// Indexed by the identifier ID.
+  llvm::DenseMap<unsigned, EnumConstantInfo> EnumConstants;
+
   /// Information about tags.
   ///
   /// Indexed by the identifier ID.
@@ -133,6 +138,7 @@ private:
   void writeObjCSelectorBlock(llvm::BitstreamWriter &writer);
   void writeGlobalVariableBlock(llvm::BitstreamWriter &writer);
   void writeGlobalFunctionBlock(llvm::BitstreamWriter &writer);
+  void writeEnumConstantBlock(llvm::BitstreamWriter &writer);
   void writeTagBlock(llvm::BitstreamWriter &writer);
   void writeTypedefBlock(llvm::BitstreamWriter &writer);
 };
@@ -755,6 +761,68 @@ void APINotesWriter::Implementation::writeGlobalFunctionBlock(
 }
 
 namespace {
+  /// Used to serialize the on-disk global enum constant.
+  class EnumConstantTableInfo {
+  public:
+    using key_type = unsigned; // name ID
+    using key_type_ref = key_type;
+    using data_type = EnumConstantInfo;
+    using data_type_ref = const data_type &;
+    using hash_value_type = size_t;
+    using offset_type = unsigned;
+
+    hash_value_type ComputeHash(key_type_ref key) {
+      return static_cast<size_t>(llvm::hash_value(key));
+    }
+
+    std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &out,
+                                                    key_type_ref key,
+                                                    data_type_ref data) {
+      uint32_t keyLength = sizeof(uint32_t);
+      uint32_t dataLength = getCommonEntityInfoSize(data);
+      endian::Writer<little> writer(out);
+      writer.write<uint16_t>(keyLength);
+      writer.write<uint16_t>(dataLength);
+      return { keyLength, dataLength };
+    }
+
+    void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
+      endian::Writer<little> writer(out);
+      writer.write<uint32_t>(key);
+    }
+
+    void EmitData(raw_ostream &out, key_type_ref key, data_type_ref data,
+                  unsigned len) {
+      emitCommonEntityInfo(out, data);
+    }
+  };
+} // end anonymous namespace
+
+void APINotesWriter::Implementation::writeEnumConstantBlock(
+       llvm::BitstreamWriter &writer) {
+  BCBlockRAII restoreBlock(writer, ENUM_CONSTANT_BLOCK_ID, 3);
+
+  if (EnumConstants.empty())
+    return;  
+
+  llvm::SmallString<4096> hashTableBlob;
+  uint32_t tableOffset;
+  {
+    llvm::OnDiskChainedHashTableGenerator<EnumConstantTableInfo> generator;
+    for (auto &entry : EnumConstants)
+      generator.insert(entry.first, entry.second);
+
+    llvm::raw_svector_ostream blobStream(hashTableBlob);
+    // Make sure that no bucket is at offset 0
+    endian::Writer<little>(blobStream).write<uint32_t>(0);
+    tableOffset = generator.Emit(blobStream);
+  }
+
+  enum_constant_block::EnumConstantDataLayout layout(writer);
+  layout.emit(ScratchRecord, tableOffset, hashTableBlob);
+}
+
+namespace {
   /// Used to serialize the on-disk tag table.
   class TagTableInfo {
   public:
@@ -898,6 +966,7 @@ void APINotesWriter::Implementation::writeToStream(llvm::raw_ostream &os) {
     writeObjCSelectorBlock(writer);
     writeGlobalVariableBlock(writer);
     writeGlobalFunctionBlock(writer);
+    writeEnumConstantBlock(writer);
     writeTagBlock(writer);
     writeTypedefBlock(writer);
   }
@@ -1002,6 +1071,13 @@ void APINotesWriter::addGlobalFunction(llvm::StringRef name,
   IdentifierID nameID = Impl.getIdentifier(name);
   assert(!Impl.GlobalFunctions.count(nameID));
   Impl.GlobalFunctions[nameID] = info;
+}
+
+void APINotesWriter::addEnumConstant(llvm::StringRef name,
+                                     const EnumConstantInfo &info) {
+  IdentifierID enumConstantID = Impl.getIdentifier(name);
+  assert(!Impl.EnumConstants.count(enumConstantID));
+  Impl.EnumConstants[enumConstantID] = info;
 }
 
 void APINotesWriter::addTag(llvm::StringRef name, const TagInfo &info) {

@@ -35,7 +35,7 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 9;
+const uint16_t VERSION_MINOR = 10;  // enum constants
 
 using IdentifierID = Fixnum<31>;
 using IdentifierIDField = BCVBR<16>;
@@ -93,6 +93,10 @@ enum BlockID {
   /// The typedef data block, which maps typedef names to information about
   /// the typedefs.
   TYPEDEF_BLOCK_ID,
+
+  /// The enum constant data block, which maps enumerator names to
+  /// information about the enumerators.
+  ENUM_CONSTANT_BLOCK_ID,
 };
 
 namespace control_block {
@@ -224,6 +228,18 @@ namespace typedef_block {
     BCBlob      // map from name to typedef information
   >;
 };
+
+namespace enum_constant_block {
+  enum {
+    ENUM_CONSTANT_DATA = 1
+  };
+
+  using EnumConstantDataLayout = BCRecordLayout<
+    ENUM_CONSTANT_DATA,  // record ID
+    BCVBR<16>,           // table offset within the blob (see below)
+    BCBlob               // map from name to enumerator information
+  >;
+}
 
 /// A stored Objective-C selector.
 struct StoredObjCSelector {
