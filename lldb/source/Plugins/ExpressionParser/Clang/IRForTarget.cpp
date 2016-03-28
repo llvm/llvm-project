@@ -25,16 +25,17 @@
 
 #include "clang/AST/ASTContext.h"
 
-#include "lldb/Core/dwarf.h"
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/StreamString.h"
+#include "lldb/Core/dwarf.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Host/Endian.h"
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerType.h"
 
 #include <map>
@@ -1235,11 +1236,8 @@ IRForTarget::MaybeHandleVariable (Value *llvm_value_ptr)
         if (log)
         {
             log->Printf("Type of \"%s\" is [clang \"%s\", llvm \"%s\"] [size %" PRIu64 ", align %" PRIu64 "]",
-                        name.c_str(),
-                        lldb_private::ClangASTContext::GetQualType(compiler_type).getAsString().c_str(),
-                        PrintType(value_type).c_str(),
-                        value_size,
-                        value_alignment);
+                        name.c_str(), lldb_private::ClangUtil::GetQualType(compiler_type).getAsString().c_str(),
+                        PrintType(value_type).c_str(), value_size, value_alignment);
         }
 
 

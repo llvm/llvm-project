@@ -10,6 +10,7 @@
 #include "AppleObjCTypeEncodingParser.h"
 
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -155,7 +156,7 @@ AppleObjCTypeEncodingParser::BuildAggregate (clang::ASTContext &ast_ctx, lldb_ut
         }
         ClangASTContext::CompleteTagDeclarationDefinition(union_type);
     }
-    return ClangASTContext::GetQualType(union_type);
+    return ClangUtil::GetQualType(union_type);
 }
 
 clang::QualType
@@ -171,7 +172,7 @@ AppleObjCTypeEncodingParser::BuildArray (clang::ASTContext &ast_ctx, lldb_utilit
     if (!lldb_ctx)
         return clang::QualType();
     CompilerType array_type(lldb_ctx->CreateArrayType(CompilerType(&ast_ctx, element_type), size, false));
-    return ClangASTContext::GetQualType(array_type);
+    return ClangUtil::GetQualType(array_type);
 }
 
 // the runtime can emit these in the form of @"SomeType", giving more specifics
@@ -261,8 +262,8 @@ AppleObjCTypeEncodingParser::BuildObjCObjectPointerType (clang::ASTContext &ast_
         if (!num_types)
             return ast_ctx.getObjCIdType();
 #endif
-        
-        return ClangASTContext::GetQualType(ClangASTContext::GetTypeForDecl(decls[0]).GetPointerType());
+
+        return ClangUtil::GetQualType(ClangASTContext::GetTypeForDecl(decls[0]).GetPointerType());
     }
     else
     {

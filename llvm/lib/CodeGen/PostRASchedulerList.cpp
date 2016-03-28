@@ -96,6 +96,11 @@ namespace {
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
+
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
     bool enablePostRAScheduler(

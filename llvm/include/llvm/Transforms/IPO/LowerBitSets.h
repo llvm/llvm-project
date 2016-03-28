@@ -18,7 +18,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
-#include <stdint.h>
+#include <cstdint>
+#include <cstring>
 #include <limits>
 #include <set>
 #include <vector>
@@ -196,6 +197,6 @@ struct ByteArrayBuilder {
                 uint64_t &AllocByteOffset, uint8_t &AllocMask);
 };
 
-} // namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_IPO_LOWERBITSETS_H

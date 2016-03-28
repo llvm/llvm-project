@@ -6625,6 +6625,54 @@ static SDValue LowerToHorizontalOp(const BuildVectorSDNode *BV,
   return SDValue();
 }
 
+/// If a BUILD_VECTOR's source elements all apply the same bit operation and
+/// one of their operands is constant, lower to a pair of BUILD_VECTOR and
+/// just apply the bit to the vectors.
+/// NOTE: Its not in our interest to start make a general purpose vectorizer
+/// from this, but enough scalar bit operations are created from the later
+/// legalization + scalarization stages to need basic support.
+static SDValue lowerBuildVectorToBitOp(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  unsigned NumElems = VT.getVectorNumElements();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // Check that all elements have the same opcode.
+  // TODO: Should we allow UNDEFS and if so how many?
+  unsigned Opcode = Op.getOperand(0).getOpcode();
+  for (unsigned i = 1; i < NumElems; ++i)
+    if (Opcode != Op.getOperand(i).getOpcode())
+      return SDValue();
+
+  // TODO: We may be able to add support for other Ops (ADD/SUB + shifts).
+  switch (Opcode) {
+  default:
+    return SDValue();
+  case ISD::AND:
+  case ISD::XOR:
+  case ISD::OR:
+    if (!TLI.isOperationLegalOrPromote(Opcode, VT))
+      return SDValue();
+    break;
+  }
+
+  SmallVector<SDValue, 4> LHSElts, RHSElts;
+  for (SDValue Elt : Op->ops()) {
+    SDValue LHS = Elt.getOperand(0);
+    SDValue RHS = Elt.getOperand(1);
+
+    // We expect the canonicalized RHS operand to be the constant.
+    if (!isa<ConstantSDNode>(RHS))
+      return SDValue();
+    LHSElts.push_back(LHS);
+    RHSElts.push_back(RHS);
+  }
+
+  SDValue LHS = DAG.getNode(ISD::BUILD_VECTOR, DL, VT, LHSElts);
+  SDValue RHS = DAG.getNode(ISD::BUILD_VECTOR, DL, VT, RHSElts);
+  return DAG.getNode(Opcode, DL, VT, LHS, RHS);
+}
+
 /// Create a vector constant without a load. SSE/AVX provide the bare minimum
 /// functionality to do this, so it's all zeros, all ones, or some derivation
 /// that is cheap to calculate.
@@ -6679,6 +6727,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return HorizontalOp;
   if (SDValue Broadcast = LowerVectorBroadcast(Op, Subtarget, DAG))
     return Broadcast;
+  if (SDValue BitOp = lowerBuildVectorToBitOp(Op, DAG))
+    return BitOp;
 
   unsigned EVTBits = ExtVT.getSizeInBits();
 

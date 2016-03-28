@@ -142,6 +142,10 @@ N: Krzysztof Parzyszek
 E: kparzysz@codeaurora.org
 D: Hexagon Backend
 
+N: Jacques Pienaar
+E: jpienaar@google.com
+D: Lanai Backend
+
 N: Paul Robinson
 E: paul_robinson@playstation.sony.com
 D: Sony PlayStation®4 support

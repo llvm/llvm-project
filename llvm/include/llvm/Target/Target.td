@@ -773,7 +773,7 @@ class InstrInfo {
 let isCodeGenOnly = 1, isPseudo = 1, hasNoSchedulingInfo = 1,
     Namespace = "TargetOpcode" in {
 def PHI : Instruction {
-  let OutOperandList = (outs);
+  let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins variable_ops);
   let AsmString = "PHINODE";
 }

@@ -55,8 +55,8 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 
-#if __cplusplus >= 201103L && !defined(NDEBUG)
-// We only use this for a debug check in C++11
+#ifndef NDEBUG
+// We only use this for a debug check.
 #include <random>
 #endif
 
@@ -681,7 +681,7 @@ private:
       // langref in a very strict sense. If we ever want to enable
       // SROAStrictInbounds, this code should be factored cleanly into
       // PtrUseVisitor, but it is easier to experiment with SROAStrictInbounds
-      // by writing out the code here where we have tho underlying allocation
+      // by writing out the code here where we have the underlying allocation
       // size readily available.
       APInt GEPOffset = Offset;
       const DataLayout &DL = GEPI.getModule()->getDataLayout();
@@ -1002,7 +1002,7 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
                               }),
                Slices.end());
 
-#if __cplusplus >= 201103L && !defined(NDEBUG)
+#ifndef NDEBUG
   if (SROARandomShuffleSlices) {
     std::mt19937 MT(static_cast<unsigned>(sys::TimeValue::now().msec()));
     std::shuffle(Slices.begin(), Slices.end(), MT);

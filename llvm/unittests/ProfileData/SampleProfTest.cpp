@@ -100,7 +100,7 @@ struct SampleProfTest : ::testing::Test {
       ASSERT_EQ(123603u, Summary.getTotalSamples());
       ASSERT_EQ(6u, Summary.getNumLinesWithSamples());
       ASSERT_EQ(2u, Summary.getNumFunctions());
-      ASSERT_EQ(1437u, Summary.getMaxHeadSamples());
+      ASSERT_EQ(1437u, Summary.getMaxFunctionCount());
       ASSERT_EQ(60351u, Summary.getMaxSamplesPerLine());
 
       uint32_t Cutoff = 800000;

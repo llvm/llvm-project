@@ -62,6 +62,11 @@ public:
   /// information we preserve.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
+
   /// \brief Calculate the liveness information for the given machine function.
   bool runOnMachineFunction(MachineFunction &MF) override;
 

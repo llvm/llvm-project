@@ -26,7 +26,7 @@ frameInfo:
   maxAlignment:    8
 # CHECK-LABEL: stack_local
 # CHECK: stack:
-# CHECK_NEXT: { id:0, name:local_var, offset:0, size:8, alignment:8, local-offset: -8 }
+# CHECK-NEXT: { id: 0, name: local_var, offset: 0, size: 8, alignment: 8, local-offset: -8 }
 stack:
   - { id: 0,name: local_var,offset: 0,size: 8,alignment: 8, local-offset: -8 }
 body: |

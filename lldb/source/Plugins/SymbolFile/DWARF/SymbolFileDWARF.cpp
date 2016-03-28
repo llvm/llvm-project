@@ -35,16 +35,17 @@
 
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangUtil.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
-#include "lldb/Symbol/CompileUnit.h"
-#include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/DebugMacros.h"
+#include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
-#include "lldb/Symbol/TypeMap.h"
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
@@ -54,7 +55,9 @@
 #include "lldb/Utility/TaskPool.h"
 
 #include "DWARFASTParser.h"
+#include "DWARFASTParserClang.h"
 #include "DWARFCompileUnit.h"
+#include "DWARFDIECollection.h"
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
@@ -63,11 +66,10 @@
 #include "DWARFDebugPubnames.h"
 #include "DWARFDebugRanges.h"
 #include "DWARFDeclContext.h"
-#include "DWARFDIECollection.h"
 #include "DWARFFormValue.h"
 #include "LogChannelDWARF.h"
-#include "SymbolFileDWARFDwo.h"
 #include "SymbolFileDWARFDebugMap.h"
+#include "SymbolFileDWARFDwo.h"
 
 #include <map>
 
@@ -1603,19 +1605,18 @@ SymbolFileDWARF::ResolveTypeUID (const DWARFDIE &die, bool assert_not_being_pars
 bool
 SymbolFileDWARF::HasForwardDeclForClangType (const CompilerType &compiler_type)
 {
-    CompilerType compiler_type_no_qualifiers = ClangASTContext::RemoveFastQualifiers(compiler_type);
+    CompilerType compiler_type_no_qualifiers = ClangUtil::RemoveFastQualifiers(compiler_type);
     if (GetForwardDeclClangTypeToDie().count (compiler_type_no_qualifiers.GetOpaqueQualType()))
     {
         return true;
     }
     TypeSystem *type_system = compiler_type.GetTypeSystem();
-    if (type_system)
-    {
-        DWARFASTParser *dwarf_ast = type_system->GetDWARFParser();
-        if (dwarf_ast)
-            return dwarf_ast->CanCompleteType(compiler_type);
-    }
-    return false;
+
+    ClangASTContext *clang_type_system = llvm::dyn_cast_or_null<ClangASTContext>(type_system);
+    if (!clang_type_system)
+        return false;
+    DWARFASTParserClang *ast_parser = static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
+    return ast_parser->GetClangASTImporter().CanImport(compiler_type);
 }
 
 
@@ -1624,16 +1625,16 @@ SymbolFileDWARF::CompleteType (CompilerType &compiler_type)
 {
     lldb_private::Mutex::Locker locker(GetObjectFile()->GetModule()->GetMutex());
 
-    TypeSystem *type_system = compiler_type.GetTypeSystem();
-    if (type_system)
+    ClangASTContext *clang_type_system = llvm::dyn_cast_or_null<ClangASTContext>(compiler_type.GetTypeSystem());
+    if (clang_type_system)
     {
-        DWARFASTParser *dwarf_ast = type_system->GetDWARFParser();
-        if (dwarf_ast && dwarf_ast->CanCompleteType(compiler_type))
-            return dwarf_ast->CompleteType(compiler_type);
+        DWARFASTParserClang *ast_parser = static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
+        if (ast_parser && ast_parser->GetClangASTImporter().CanImport(compiler_type))
+            return ast_parser->GetClangASTImporter().CompleteType(compiler_type);
     }
 
     // We have a struct/union/class/enum that needs to be fully resolved.
-    CompilerType compiler_type_no_qualifiers = ClangASTContext::RemoveFastQualifiers(compiler_type);
+    CompilerType compiler_type_no_qualifiers = ClangUtil::RemoveFastQualifiers(compiler_type);
     auto die_it = GetForwardDeclClangTypeToDie().find (compiler_type_no_qualifiers.GetOpaqueQualType());
     if (die_it == GetForwardDeclClangTypeToDie().end())
     {

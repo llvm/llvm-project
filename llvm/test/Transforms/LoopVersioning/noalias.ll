@@ -7,7 +7,7 @@
 ; reference below in a comment.  For a scope I use the format scope(domain),
 ; e.g. scope 17 in domain 15 is written as 17(15).
 
-; CHECK_LABEL: @f(
+; CHECK-LABEL: @f(
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 

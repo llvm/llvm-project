@@ -31,7 +31,10 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include <stdlib.h>
+#include <algorithm>
+#include <cassert>
+#include <cstdlib>
+#include <cstring>
 
 #if defined(_MSC_VER)
 #include <Windows.h>
@@ -116,11 +119,12 @@ void LLVMSymbolizer::flush() {
   Modules.clear();
 }
 
+namespace {
+
 // For Path="/path/to/foo" and Basename="foo" assume that debug info is in
 // /path/to/foo.dSYM/Contents/Resources/DWARF/foo.
 // For Path="/path/to/bar.dSYM" and Basename="foo" assume that debug info is in
 // /path/to/bar.dSYM/Contents/Resources/DWARF/foo.
-static
 std::string getDarwinDWARFResourceForPath(
     const std::string &Path, const std::string &Basename) {
   SmallString<16> ResourceName = StringRef(Path);
@@ -132,7 +136,7 @@ std::string getDarwinDWARFResourceForPath(
   return ResourceName.str();
 }
 
-static bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
+bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
       MemoryBuffer::getFileOrSTDIN(Path);
   if (!MB)
@@ -140,9 +144,9 @@ static bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
   return !zlib::isAvailable() || CRCHash == zlib::crc32(MB.get()->getBuffer());
 }
 
-static bool findDebugBinary(const std::string &OrigPath,
-                            const std::string &DebuglinkName, uint32_t CRCHash,
-                            std::string &Result) {
+bool findDebugBinary(const std::string &OrigPath,
+                     const std::string &DebuglinkName, uint32_t CRCHash,
+                     std::string &Result) {
   std::string OrigRealPath = OrigPath;
 #if defined(HAVE_REALPATH)
   if (char *RP = realpath(OrigPath.c_str(), nullptr)) {
@@ -177,8 +181,8 @@ static bool findDebugBinary(const std::string &OrigPath,
   return false;
 }
 
-static bool getGNUDebuglinkContents(const ObjectFile *Obj, std::string &DebugName,
-                                    uint32_t &CRCHash) {
+bool getGNUDebuglinkContents(const ObjectFile *Obj, std::string &DebugName,
+                             uint32_t &CRCHash) {
   if (!Obj)
     return false;
   for (const SectionRef &Section : Obj->sections()) {
@@ -205,7 +209,6 @@ static bool getGNUDebuglinkContents(const ObjectFile *Obj, std::string &DebugNam
   return false;
 }
 
-static
 bool darwinDsymMatchesBinary(const MachOObjectFile *DbgObj,
                              const MachOObjectFile *Obj) {
   ArrayRef<uint8_t> dbg_uuid = DbgObj->getUuid();
@@ -214,6 +217,8 @@ bool darwinDsymMatchesBinary(const MachOObjectFile *DbgObj,
     return false;
   return !memcmp(dbg_uuid.data(), bin_uuid.data(), dbg_uuid.size());
 }
+
+} // end anonymous namespace
 
 ObjectFile *LLVMSymbolizer::lookUpDsymFile(const std::string &ExePath,
     const MachOObjectFile *MachExeObj, const std::string &ArchName) {
@@ -383,13 +388,15 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
   return InsertResult.first->second->get();
 }
 
+namespace {
+
 // Undo these various manglings for Win32 extern "C" functions:
 // cdecl       - _foo
 // stdcall     - _foo@12
 // fastcall    - @foo@12
 // vectorcall  - foo@@12
 // These are all different linkage names for 'foo'.
-static StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
+StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
   // Remove any '_' or '@' prefix.
   char Front = SymbolName.empty() ? '\0' : SymbolName[0];
   if (Front == '_' || Front == '@')
@@ -411,6 +418,8 @@ static StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
 
   return SymbolName;
 }
+
+} // end anonymous namespace
 
 #if !defined(_MSC_VER)
 // Assume that __cxa_demangle is provided by libcxxabi (except for Windows).

@@ -196,6 +196,9 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// \brief Keep track of the metadata nodes that have been checked already.
   SmallPtrSet<const Metadata *, 32> MDNodes;
 
+  /// Track all DICompileUnits visited.
+  SmallPtrSet<const Metadata *, 2> CUVisited;
+
   /// \brief Track unresolved string-based type references.
   SmallDenseMap<const MDString *, const MDNode *, 32> UnresolvedTypeRefs;
 
@@ -302,7 +305,9 @@ public:
     visitModuleFlags(M);
     visitModuleIdents(M);
 
-    // Verify type referneces last.
+    verifyCompileUnits();
+
+    // Verify type references last.
     verifyTypeRefs();
 
     return !Broken;
@@ -444,12 +449,15 @@ private:
   void verifyFrameRecoverIndices();
   void verifySiblingFuncletUnwinds();
 
-  // Module-level debug info verification...
+  /// @{
+  /// Module-level debug info verification...
   void verifyTypeRefs();
+  void verifyCompileUnits();
   template <class MapTy>
   void verifyBitPieceExpression(const DbgInfoIntrinsic &I,
                                 const MapTy &TypeRefs);
   void visitUnresolvedTypeRef(const MDString *S, const MDNode *N);
+  /// @}
 };
 } // End anonymous namespace
 
@@ -969,6 +977,7 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
       Assert(Op && isa<DIMacroNode>(Op), "invalid macro ref", &N, Op);
     }
   }
+  CUVisited.insert(&N);
 }
 
 void Verifier::visitDISubprogram(const DISubprogram &N) {
@@ -4276,6 +4285,18 @@ void Verifier::visitUnresolvedTypeRef(const MDString *S, const MDNode *N) {
   // This is in its own function so we get an error for each bad type ref (not
   // just the first).
   Assert(false, "unresolved type ref", S, N);
+}
+
+void Verifier::verifyCompileUnits() {
+  auto *CUs = M->getNamedMetadata("llvm.dbg.cu");
+  SmallPtrSet<const Metadata *, 2> Listed;
+  if (CUs)
+    Listed.insert(CUs->op_begin(), CUs->op_end());
+  Assert(
+      std::all_of(CUVisited.begin(), CUVisited.end(),
+                  [&Listed](const Metadata *CU) { return Listed.count(CU); }),
+      "All DICompileUnits must be listed in llvm.dbg.cu");
+  CUVisited.clear();
 }
 
 void Verifier::verifyTypeRefs() {

@@ -1,9 +1,5 @@
-; RUN: llvm-dwarfdump %p/../Inputs/lanai-processes-relocations.elf 2>&1 | FileCheck %s
-
-; FIXME: Use llc with this file as input instead of binary file.
-; NOTE: this test is currently not using llc, but using a binary input as the
-; rest of the backend is not yet in tree. Once the Lanai backend is in tree,
-; the binary file will be removed and this test will use llc.
+; RUN: llc -filetype=obj -O0 < %s -mtriple lanai-unknown-unknown | \
+; RUN:    llvm-dwarfdump - 2>&1 | FileCheck %s
 
 ; CHECK-NOT: failed to compute relocation
 
@@ -15,5 +11,5 @@
 !1 = !{!"empty.c", !"/a"}
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
-!4 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = !{i32 2, !"Debug Info Version", i32 1}
 !5 = !{!"clang version 3.6.0 "}

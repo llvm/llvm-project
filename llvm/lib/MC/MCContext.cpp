@@ -124,18 +124,8 @@ MCSymbolELF *MCContext::getOrCreateSectionSymbol(const MCSectionELF &Section) {
     return Sym;
 
   StringRef Name = Section.getSectionName();
-
-  MCSymbol *&OldSym = Symbols[Name];
-  if (OldSym && OldSym->isUndefined()) {
-    Sym = cast<MCSymbolELF>(OldSym);
-    return Sym;
-  }
-
-  auto NameIter = UsedNames.insert(std::make_pair(Name, true)).first;
+  auto NameIter = UsedNames.insert(std::make_pair(Name, false)).first;
   Sym = new (&*NameIter, *this) MCSymbolELF(&*NameIter, /*isTemporary*/ false);
-
-  if (!OldSym)
-    OldSym = Sym;
 
   return Sym;
 }
@@ -192,9 +182,12 @@ MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
       raw_svector_ostream(NewName) << NextUniqueID++;
     }
     auto NameEntry = UsedNames.insert(std::make_pair(NewName, true));
-    if (NameEntry.second) {
-      // Ok, we found a name. Have the MCSymbol object itself refer to the copy
-      // of the string that is embedded in the UsedNames entry.
+    if (NameEntry.second || !NameEntry.first->second) {
+      // Ok, we found a name.
+      // Mark it as used for a non-section symbol.
+      NameEntry.first->second = true;
+      // Have the MCSymbol object itself refer to the copy of the string that is
+      // embedded in the UsedNames entry.
       return createSymbolImpl(&*NameEntry.first, IsTemporary);
     }
     assert(IsTemporary && "Cannot rename non-temporary symbols");

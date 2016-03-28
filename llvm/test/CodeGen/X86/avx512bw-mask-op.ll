@@ -12,7 +12,7 @@ define i32 @mask32(i32 %x) {
 ; CHECK: kmovd
 ; CHECK-NEXT: knotd
 ; CHECK-NEXT: kmovd
-; CHECK_NEXT: ret
+; CHECK-NEXT: ret
 }
 
 define i64 @mask64(i64 %x) {
@@ -31,7 +31,7 @@ define i64 @mask64(i64 %x) {
 ; CHECK: kmovq
 ; CHECK-NEXT: knotq
 ; CHECK-NEXT: kmovq
-; CHECK_NEXT: ret
+; CHECK-NEXT: ret
 }
 
 define void @mask32_mem(i32* %ptr) {
@@ -48,7 +48,7 @@ define void @mask32_mem(i32* %ptr) {
 ; CHECK: kmovd ([[ARG1:%rdi|%rcx]]), %k{{[0-7]}}
 ; CHECK-NEXT: knotd
 ; CHECK-NEXT: kmovd %k{{[0-7]}}, ([[ARG1]])
-; CHECK_NEXT: ret
+; CHECK-NEXT: ret
 }
 
 define void @mask64_mem(i64* %ptr) {
@@ -69,7 +69,7 @@ define void @mask64_mem(i64* %ptr) {
 ; CHECK: kmovq ([[ARG1]]), %k{{[0-7]}}
 ; CHECK-NEXT: knotq
 ; CHECK-NEXT: kmovq %k{{[0-7]}}, ([[ARG1]])
-; CHECK_NEXT: ret
+; CHECK-NEXT: ret
 }
 
 define i32 @mand32(i32 %x, i32 %y) {

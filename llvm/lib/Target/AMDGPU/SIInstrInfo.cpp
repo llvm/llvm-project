@@ -295,18 +295,43 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr *LdSt, unsigned &BaseReg,
 bool SIInstrInfo::shouldClusterLoads(MachineInstr *FirstLdSt,
                                      MachineInstr *SecondLdSt,
                                      unsigned NumLoads) const {
-  // TODO: This needs finer tuning
-  if (NumLoads > 4)
+	const MachineOperand *FirstDst = nullptr;
+	const MachineOperand *SecondDst = nullptr;
+
+  if (isDS(*FirstLdSt) && isDS(*SecondLdSt)) {
+    FirstDst = getNamedOperand(*FirstLdSt, AMDGPU::OpName::vdst);
+    SecondDst = getNamedOperand(*SecondLdSt, AMDGPU::OpName::vdst);
+  }
+
+  if (isSMRD(*FirstLdSt) && isSMRD(*FirstLdSt)) {
+    FirstDst = getNamedOperand(*FirstLdSt, AMDGPU::OpName::sdst);
+    SecondDst = getNamedOperand(*SecondLdSt, AMDGPU::OpName::sdst);
+  }
+
+  if ((isMUBUF(*FirstLdSt) && isMUBUF(*SecondLdSt)) ||
+      (isMTBUF(*FirstLdSt) && isMTBUF(*SecondLdSt))) {
+    FirstDst = getNamedOperand(*FirstLdSt, AMDGPU::OpName::vdata);
+    SecondDst = getNamedOperand(*SecondLdSt, AMDGPU::OpName::vdata);
+  }
+
+  if (!FirstDst || !SecondDst)
     return false;
 
-  if (isDS(*FirstLdSt) && isDS(*SecondLdSt))
-    return true;
+  // Try to limit clustering based on the total number of bytes loaded
+  // rather than the number of instructions.  This is done to help reduce
+  // register pressure.  The method used is somewhat inexact, though,
+  // because it assumes that all loads in the cluster will load the
+  // same number of bytes as FirstLdSt.
 
-  if (isSMRD(*FirstLdSt) && isSMRD(*SecondLdSt))
-    return true;
+  // The unit of this value is bytes.
+  // FIXME: This needs finer tuning.
+  unsigned LoadClusterThreshold = 16;
 
-  return (isMUBUF(*FirstLdSt) || isMTBUF(*FirstLdSt)) &&
-    (isMUBUF(*SecondLdSt) || isMTBUF(*SecondLdSt));
+  const MachineRegisterInfo &MRI =
+      FirstLdSt->getParent()->getParent()->getRegInfo();
+  const TargetRegisterClass *DstRC = MRI.getRegClass(FirstDst->getReg());
+
+  return (NumLoads * DstRC->getSize()) <= LoadClusterThreshold;
 }
 
 void

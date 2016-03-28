@@ -115,7 +115,7 @@ if.end:
 attributes #0 = { optsize }
 
 ; CHECK-CFG-DAG: BB#0
-; CHECK-CFG_DAG: t2Bcc <BB#2>
+; CHECK-CFG-DAG: t2Bcc <BB#2>
 ; CHECK-CFG-DAG: t2B <BB#1>
 
 ; CHECK-CFG-DAG: BB#1

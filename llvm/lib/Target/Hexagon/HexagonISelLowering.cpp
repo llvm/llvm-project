@@ -3019,6 +3019,32 @@ bool llvm::isPositiveHalfWord(SDNode *N) {
   }
 }
 
+bool HexagonTargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
+      unsigned AS, unsigned Align, bool *Fast) const {
+  if (Fast)
+    *Fast = false;
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  default:
+    return false;
+  case MVT::v64i8:
+  case MVT::v128i8:
+  case MVT::v256i8:
+  case MVT::v32i16:
+  case MVT::v64i16:
+  case MVT::v128i16:
+  case MVT::v16i32:
+  case MVT::v32i32:
+  case MVT::v64i32:
+  case MVT::v8i64:
+  case MVT::v16i64:
+  case MVT::v32i64:
+    return true;
+  }
+  return false;
+}
+
+
 std::pair<const TargetRegisterClass*, uint8_t>
 HexagonTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
       MVT VT) const {

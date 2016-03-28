@@ -16,7 +16,11 @@
 #ifndef LLVM_C_LTO_H
 #define LLVM_C_LTO_H
 
+#ifdef __cplusplus
+#include <cstddef>
+#else
 #include <stddef.h>
+#endif
 #include <sys/types.h>
 
 #ifndef __cplusplus
@@ -105,7 +109,6 @@ extern "C" {
 extern const char*
 lto_get_version(void);
 
-
 /**
  * Returns the last error string or NULL if last operation was successful.
  *
@@ -122,7 +125,6 @@ lto_get_error_message(void);
 extern lto_bool_t
 lto_module_is_object_file(const char* path);
 
-
 /**
  * Checks if a file is a loadable object compiled for requested target.
  *
@@ -132,7 +134,6 @@ extern lto_bool_t
 lto_module_is_object_file_for_target(const char* path,
                                      const char* target_triple_prefix);
 
-
 /**
  * Checks if a buffer is a loadable object file.
  *
@@ -140,7 +141,6 @@ lto_module_is_object_file_for_target(const char* path,
  */
 extern lto_bool_t
 lto_module_is_object_file_in_memory(const void* mem, size_t length);
-
 
 /**
  * Checks if a buffer is a loadable object compiled for requested target.
@@ -151,7 +151,6 @@ extern lto_bool_t
 lto_module_is_object_file_in_memory_for_target(const void* mem, size_t length,
                                               const char* target_triple_prefix);
 
-
 /**
  * Loads an object file from disk.
  * Returns NULL on error (check lto_get_error_message() for details).
@@ -160,7 +159,6 @@ lto_module_is_object_file_in_memory_for_target(const void* mem, size_t length,
  */
 extern lto_module_t
 lto_module_create(const char* path);
-
 
 /**
  * Loads an object file from memory.
@@ -254,7 +252,6 @@ lto_module_get_target_triple(lto_module_t mod);
 extern void
 lto_module_set_target_triple(lto_module_t mod, const char *triple);
 
-
 /**
  * Returns the number of symbols in the object module.
  *
@@ -262,7 +259,6 @@ lto_module_set_target_triple(lto_module_t mod, const char *triple);
  */
 extern unsigned int
 lto_module_get_num_symbols(lto_module_t mod);
-
 
 /**
  * Returns the name of the ith symbol in the object module.
@@ -272,7 +268,6 @@ lto_module_get_num_symbols(lto_module_t mod);
 extern const char*
 lto_module_get_symbol_name(lto_module_t mod, unsigned int index);
 
-
 /**
  * Returns the attributes of the ith symbol in the object module.
  *
@@ -280,7 +275,6 @@ lto_module_get_symbol_name(lto_module_t mod, unsigned int index);
  */
 extern lto_symbol_attributes
 lto_module_get_symbol_attribute(lto_module_t mod, unsigned int index);
-
 
 /**
  * Returns the module's linker options.
@@ -292,7 +286,6 @@ lto_module_get_symbol_attribute(lto_module_t mod, unsigned int index);
  */
 extern const char*
 lto_module_get_linkeropts(lto_module_t mod);
-
 
 /**
  * Diagnostic severity.
@@ -395,7 +388,6 @@ lto_codegen_set_module(lto_code_gen_t cg, lto_module_t mod);
 extern lto_bool_t
 lto_codegen_set_debug_model(lto_code_gen_t cg, lto_debug_model);
 
-
 /**
  * Sets which PIC code model to generated.
  * Returns true on error (check lto_get_error_message() for details).
@@ -405,7 +397,6 @@ lto_codegen_set_debug_model(lto_code_gen_t cg, lto_debug_model);
 extern lto_bool_t
 lto_codegen_set_pic_model(lto_code_gen_t cg, lto_codegen_model);
 
-
 /**
  * Sets the cpu to generate code for.
  *
@@ -413,7 +404,6 @@ lto_codegen_set_pic_model(lto_code_gen_t cg, lto_codegen_model);
  */
 extern void
 lto_codegen_set_cpu(lto_code_gen_t cg, const char *cpu);
-
 
 /**
  * Sets the location of the assembler tool to run. If not set, libLTO
@@ -773,4 +763,4 @@ extern void thinlto_codegen_add_cross_referenced_symbol(thinlto_code_gen_t cg,
  * @}
  */
 
-#endif
+#endif /* LLVM_C_LTO_H */

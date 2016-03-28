@@ -69,7 +69,7 @@ define void @test_copy_v4i8_x4(<4 x i8> addrspace(1)* %out0, <4 x i8> addrspace(
 ; SI-DAG: buffer_store_byte
 ; SI-DAG: buffer_store_byte
 ; SI-DAG: buffer_store_byte
-; SI_DAG: buffer_store_byte
+; SI-DAG: buffer_store_byte
 
 ; After scalarizing v4i8 loads is fixed.
 ; XSI: buffer_load_dword
@@ -105,11 +105,11 @@ define void @test_copy_v4i8_extra_use(<4 x i8> addrspace(1)* %out0, <4 x i8> add
 ; SI-DAG: buffer_store_byte
 ; SI-DAG: buffer_store_byte
 ; SI-DAG: buffer_store_byte
-; SI_DAG: buffer_store_byte
 ; SI-DAG: buffer_store_byte
 ; SI-DAG: buffer_store_byte
 ; SI-DAG: buffer_store_byte
-; SI_DAG: buffer_store_byte
+; SI-DAG: buffer_store_byte
+; SI-DAG: buffer_store_byte
 
 ; XSI: buffer_load_dword
 ; XSI: BFE

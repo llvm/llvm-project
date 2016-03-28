@@ -27,7 +27,7 @@
 #define LLVM_ADT_STATISTIC_H
 
 #include "llvm/Support/Atomic.h"
-#include "llvm/Support/Valgrind.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -181,6 +181,6 @@ void PrintStatistics();
 /// \brief Print statistics to the given output stream.
 void PrintStatistics(raw_ostream &OS);
 
-} // End llvm namespace
+} // end llvm namespace
 
-#endif
+#endif // LLVM_ADT_STATISTIC_H

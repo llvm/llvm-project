@@ -99,6 +99,11 @@ public:
   /// information we preserve.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
+
   /// Print to ostream with a message.
   void printVarLocInMBB(const VarLocInMBB &V, const char *msg,
                         raw_ostream &Out) const;

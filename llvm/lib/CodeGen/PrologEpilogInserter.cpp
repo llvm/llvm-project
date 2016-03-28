@@ -59,6 +59,11 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
+
   /// runOnMachineFunction - Insert prolog/epilog code and replace abstract
   /// frame indexes with appropriate references.
   ///

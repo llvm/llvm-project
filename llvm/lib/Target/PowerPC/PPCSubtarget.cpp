@@ -105,6 +105,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasHTM = false;
   HasFusion = false;
   HasFloat128 = false;
+  SlowPOPCNTD = false;
 }
 
 void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {

@@ -49,6 +49,11 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
+
   private:
     void ClobberRegister(unsigned Reg);
     void CopyPropagateBlock(MachineBasicBlock &MBB);

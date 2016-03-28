@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -61,6 +62,7 @@ int main(int argc, char **argv) {
       exit(1);
     }
 
+    verifyModule(*MPart);
     WriteBitcodeToFile(MPart.get(), Out->os());
 
     // Declare success.

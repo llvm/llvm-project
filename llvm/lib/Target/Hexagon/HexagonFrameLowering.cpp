@@ -287,6 +287,20 @@ namespace {
         return true;
     return false;
   }
+
+  inline bool isOptNone(const MachineFunction &MF) {
+    return MF.getFunction()->hasFnAttribute(Attribute::OptimizeNone) ||
+           MF.getTarget().getOptLevel() == CodeGenOpt::None;
+  }
+
+  inline bool isOptSize(const MachineFunction &MF) {
+    const Function &F = *MF.getFunction();
+    return F.optForSize() && !F.optForMinSize();
+  }
+
+  inline bool isMinSize(const MachineFunction &MF) {
+    return MF.getFunction()->optForMinSize();
+  }
 }
 
 
@@ -864,9 +878,8 @@ int HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   bool NoOpt = MF.getTarget().getOptLevel() == CodeGenOpt::None;
 
   unsigned SP = HRI.getStackRegister(), FP = HRI.getFrameRegister();
-  unsigned AP = 0;
-  if (const MachineInstr *AI = getAlignaInstr(MF))
-    AP = AI->getOperand(0).getReg();
+  auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
+  unsigned AP = HMFI.getStackAlignBasePhysReg();
   unsigned FrameSize = MFI.getStackSize();
 
   bool UseFP = false, UseAP = false;  // Default: use SP (except at -O0).
@@ -1073,14 +1086,16 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
     return;
 
   unsigned LFS = MFI->getLocalFrameSize();
-  int Offset = -LFS;
   for (int i = 0, e = MFI->getObjectIndexEnd(); i != e; ++i) {
     if (!MFI->isSpillSlotObjectIndex(i) || MFI->isDeadObjectIndex(i))
       continue;
-    int S = MFI->getObjectSize(i);
-    LFS += S;
-    Offset -= S;
-    MFI->mapLocalFrameObject(i, Offset);
+    unsigned S = MFI->getObjectSize(i);
+    // Reduce the alignment to at most 8. This will require unaligned vector
+    // stores if they happen here.
+    unsigned A = std::max(MFI->getObjectAlignment(i), 8U);
+    MFI->setObjectAlignment(i, 8);
+    LFS = alignTo(LFS+S, A);
+    MFI->mapLocalFrameObject(i, -LFS);
   }
 
   MFI->setLocalFrameSize(LFS);
@@ -1089,6 +1104,13 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
   if (A == 0)
     MFI->setLocalFrameMaxAlign(8);
   MFI->setUseLocalStackAllocationBlock(true);
+
+  // Set the physical aligned-stack base address register.
+  unsigned AP = 0;
+  if (const MachineInstr *AI = getAlignaInstr(MF))
+    AP = AI->getOperand(0).getReg();
+  auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
+  HMFI.setStackAlignBasePhysReg(AP);
 }
 
 /// Returns true if there is no caller saved registers available.
@@ -1681,7 +1703,7 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Replace predicate register pseudo spill code.
   SmallVector<unsigned,8> NewRegs;
   expandSpillMacros(MF, NewRegs);
-  if (OptimizeSpillSlots)
+  if (OptimizeSpillSlots && !isOptNone(MF))
     optimizeSpillSlots(MF, NewRegs);
 
   // We need to reserve a a spill slot if scavenging could potentially require
@@ -2146,18 +2168,6 @@ const MachineInstr *HexagonFrameLowering::getAlignaInstr(
 }
 
 
-// FIXME: Use Function::optForSize().
-inline static bool isOptSize(const MachineFunction &MF) {
-  AttributeSet AF = MF.getFunction()->getAttributes();
-  return AF.hasAttribute(AttributeSet::FunctionIndex,
-                         Attribute::OptimizeForSize);
-}
-
-inline static bool isMinSize(const MachineFunction &MF) {
-  return MF.getFunction()->optForMinSize();
-}
-
-
 /// Determine whether the callee-saved register saves and restores should
 /// be generated via inline code. If this function returns "true", inline
 /// code will be generated. If this function returns "false", additional
@@ -2211,7 +2221,18 @@ bool HexagonFrameLowering::useRestoreFunction(MachineFunction &MF,
       const CSIVect &CSI) const {
   if (shouldInlineCSR(MF, CSI))
     return false;
+  // The restore functions do a bit more than just restoring registers.
+  // The non-returning versions will go back directly to the caller's
+  // caller, others will clean up the stack frame in preparation for
+  // a tail call. Using them can still save code size even if only one
+  // register is getting restores. Make the decision based on -Oz:
+  // using -Os will use inline restore for a single register.
+  if (isMinSize(MF))
+    return true;
   unsigned NumCSI = CSI.size();
+  if (NumCSI <= 1)
+    return false;
+
   unsigned Threshold = isOptSize(MF) ? SpillFuncThresholdOs-1
                                      : SpillFuncThreshold;
   return Threshold < NumCSI;

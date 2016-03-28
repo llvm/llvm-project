@@ -101,7 +101,7 @@ define void @madak_inline_imm_f32(float addrspace(1)* noalias %out, float addrsp
 
 ; We can't use an SGPR when forming madak
 ; GCN-LABEL: {{^}}s_v_madak_f32:
-; GCN: s_load_dword [[SB:s[0-9]+]]
+; GCN-DAG: s_load_dword [[SB:s[0-9]+]]
 ; GCN-DAG: v_mov_b32_e32 [[VK:v[0-9]+]], 0x41200000
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]]
 ; GCN-NOT: v_madak_f32

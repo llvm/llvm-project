@@ -19,12 +19,17 @@
 
 // Other libraries and framework includes
 #include "clang/AST/ASTImporter.h"
+#include "clang/AST/CharUnits.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 
 // Project includes
 #include "lldb/lldb-types.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
+
+#include "llvm/ADT/DenseMap.h"
 
 namespace lldb_private {
     
@@ -93,6 +98,16 @@ private:
 class ClangASTImporter 
 {
 public:
+    struct LayoutInfo
+    {
+        LayoutInfo() : bit_size(0), alignment(0), field_offsets(), base_offsets(), vbase_offsets() {}
+        uint64_t bit_size;
+        uint64_t alignment;
+        llvm::DenseMap<const clang::FieldDecl *, uint64_t> field_offsets;
+        llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits> base_offsets;
+        llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits> vbase_offsets;
+    };
+
     ClangASTImporter () :
         m_file_manager(clang::FileSystemOptions())
     {
@@ -126,10 +141,28 @@ public:
     DeportDecl (clang::ASTContext *dst_ctx,
                 clang::ASTContext *src_ctx,
                 clang::Decl *decl);
-    
+
     void
-    CompleteDecl (clang::Decl *decl);
-        
+    InsertRecordDecl(clang::RecordDecl *decl, const LayoutInfo &layout);
+
+    bool
+    LayoutRecordType(const clang::RecordDecl *record_decl, uint64_t &bit_size, uint64_t &alignment,
+                     llvm::DenseMap<const clang::FieldDecl *, uint64_t> &field_offsets,
+                     llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits> &base_offsets,
+                     llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits> &vbase_offsets);
+
+    bool
+    CanImport(const CompilerType &type);
+
+    bool
+    Import(const CompilerType &type);
+
+    bool
+    CompleteType(const CompilerType &compiler_type);
+
+    void
+    CompleteDecl(clang::Decl *decl);
+
     bool
     CompleteTagDecl (clang::TagDecl *decl);
     
@@ -381,6 +414,9 @@ private:
     GetDeclOrigin (const clang::Decl *decl);
         
     clang::FileManager      m_file_manager;
+    typedef llvm::DenseMap<const clang::RecordDecl *, LayoutInfo> RecordDeclToLayoutMap;
+
+    RecordDeclToLayoutMap m_record_decl_to_layout_map;
 };
     
 } // namespace lldb_private

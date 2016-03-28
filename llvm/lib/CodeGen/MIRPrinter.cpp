@@ -171,6 +171,9 @@ void MIRPrinter::print(const MachineFunction &MF) {
   YamlMF.Alignment = MF.getAlignment();
   YamlMF.ExposesReturnsTwice = MF.exposesReturnsTwice();
   YamlMF.HasInlineAsm = MF.hasInlineAsm();
+  YamlMF.AllVRegsAllocated = MF.getProperties().hasProperty(
+      MachineFunctionProperties::Property::AllVRegsAllocated);
+
   convert(YamlMF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
   ModuleSlotTracker MST(MF.getFunction()->getParent());
   MST.incorporateFunction(*MF.getFunction());

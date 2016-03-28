@@ -92,11 +92,15 @@ static const char *const kAsanReportErrorTemplate = "__asan_report_";
 static const char *const kAsanRegisterGlobalsName = "__asan_register_globals";
 static const char *const kAsanUnregisterGlobalsName =
     "__asan_unregister_globals";
+static const char *const kAsanRegisterImageGlobalsName =
+  "__asan_register_image_globals";
+static const char *const kAsanUnregisterImageGlobalsName =
+  "__asan_unregister_image_globals";
 static const char *const kAsanPoisonGlobalsName = "__asan_before_dynamic_init";
 static const char *const kAsanUnpoisonGlobalsName = "__asan_after_dynamic_init";
 static const char *const kAsanInitName = "__asan_init";
 static const char *const kAsanVersionCheckName =
-    "__asan_version_mismatch_check_v7";
+    "__asan_version_mismatch_check_v8";
 static const char *const kAsanPtrCmp = "__sanitizer_ptr_cmp";
 static const char *const kAsanPtrSub = "__sanitizer_ptr_sub";
 static const char *const kAsanHandleNoReturnName = "__asan_handle_no_return";
@@ -110,6 +114,8 @@ static const char *const kAsanPoisonStackMemoryName =
     "__asan_poison_stack_memory";
 static const char *const kAsanUnpoisonStackMemoryName =
     "__asan_unpoison_stack_memory";
+static const char *const kAsanGlobalsRegisteredFlagName =
+    "__asan_globals_registered";
 
 static const char *const kAsanOptionDetectUAR =
     "__asan_option_detect_stack_use_after_return";
@@ -534,6 +540,7 @@ class AddressSanitizerModule : public ModulePass {
 
   bool InstrumentGlobals(IRBuilder<> &IRB, Module &M);
   bool ShouldInstrumentGlobal(GlobalVariable *G);
+  bool ShouldUseMachOGlobalsSection() const;
   void poisonOneInitializer(Function &GlobalInit, GlobalValue *ModuleName);
   void createInitializerPoisonCalls(Module &M, GlobalValue *ModuleName);
   size_t MinRedzoneSizeForGlobal() const {
@@ -551,6 +558,8 @@ class AddressSanitizerModule : public ModulePass {
   Function *AsanUnpoisonGlobals;
   Function *AsanRegisterGlobals;
   Function *AsanUnregisterGlobals;
+  Function *AsanRegisterImageGlobals;
+  Function *AsanUnregisterImageGlobals;
 };
 
 // Stack poisoning does not play well with exception handling.
@@ -1287,8 +1296,26 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
   return true;
 }
 
+// On Mach-O platforms, we emit global metadata in a separate section of the
+// binary in order to allow the linker to properly dead strip. This is only
+// supported on recent versions of ld64.
+bool AddressSanitizerModule::ShouldUseMachOGlobalsSection() const {
+  if (!TargetTriple.isOSBinFormatMachO())
+    return false;
+
+  if (TargetTriple.isMacOSX() && !TargetTriple.isMacOSXVersionLT(10, 11))
+    return true;
+  if (TargetTriple.isiOS() /* or tvOS */ && !TargetTriple.isOSVersionLT(9))
+    return true;  
+  if (TargetTriple.isWatchOS() && !TargetTriple.isOSVersionLT(2))
+    return true;
+
+  return false;
+}
+
 void AddressSanitizerModule::initializeCallbacks(Module &M) {
   IRBuilder<> IRB(*C);
+
   // Declare our poisoning and unpoisoning functions.
   AsanPoisonGlobals = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
       kAsanPoisonGlobalsName, IRB.getVoidTy(), IntptrTy, nullptr));
@@ -1296,6 +1323,7 @@ void AddressSanitizerModule::initializeCallbacks(Module &M) {
   AsanUnpoisonGlobals = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
       kAsanUnpoisonGlobalsName, IRB.getVoidTy(), nullptr));
   AsanUnpoisonGlobals->setLinkage(Function::ExternalLinkage);
+
   // Declare functions that register/unregister globals.
   AsanRegisterGlobals = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
       kAsanRegisterGlobalsName, IRB.getVoidTy(), IntptrTy, IntptrTy, nullptr));
@@ -1304,6 +1332,18 @@ void AddressSanitizerModule::initializeCallbacks(Module &M) {
       M.getOrInsertFunction(kAsanUnregisterGlobalsName, IRB.getVoidTy(),
                             IntptrTy, IntptrTy, nullptr));
   AsanUnregisterGlobals->setLinkage(Function::ExternalLinkage);
+
+  // Declare the functions that find globals in a shared object and then invoke
+  // the (un)register function on them.
+  AsanRegisterImageGlobals = checkSanitizerInterfaceFunction(
+      M.getOrInsertFunction(kAsanRegisterImageGlobalsName,
+      IRB.getVoidTy(), IntptrTy, nullptr));
+  AsanRegisterImageGlobals->setLinkage(Function::ExternalLinkage);
+  
+  AsanUnregisterImageGlobals = checkSanitizerInterfaceFunction(
+      M.getOrInsertFunction(kAsanUnregisterImageGlobalsName,
+      IRB.getVoidTy(), IntptrTy, nullptr));
+  AsanUnregisterImageGlobals->setLinkage(Function::ExternalLinkage);
 }
 
 // This function replaces all global variables with new variables that have
@@ -1442,28 +1482,84 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M) {
     DEBUG(dbgs() << "NEW GLOBAL: " << *NewGlobal << "\n");
   }
 
-  ArrayType *ArrayOfGlobalStructTy = ArrayType::get(GlobalStructTy, n);
-  GlobalVariable *AllGlobals = new GlobalVariable(
-      M, ArrayOfGlobalStructTy, false, GlobalVariable::InternalLinkage,
-      ConstantArray::get(ArrayOfGlobalStructTy, Initializers), "");
+
+  GlobalVariable *AllGlobals = nullptr;
+  GlobalVariable *RegisteredFlag = nullptr;
+
+  // On recent Mach-O platforms, we emit the global metadata in a way that
+  // allows the linker to properly strip dead globals.
+  if (ShouldUseMachOGlobalsSection()) {
+    // RegisteredFlag serves two purposes. First, we can pass it to dladdr()
+    // to look up the loaded image that contains it. Second, we can store in it
+    // whether registration has already occurred, to prevent duplicate
+    // registration.
+    //
+    // Common linkage allows us to coalesce needles defined in each object
+    // file so that there's only one per shared library.
+    RegisteredFlag = new GlobalVariable(
+        M, IntptrTy, false, GlobalVariable::CommonLinkage,
+        ConstantInt::get(IntptrTy, 0), kAsanGlobalsRegisteredFlagName);
+
+    // We also emit a structure which binds the liveness of the global
+    // variable to the metadata struct.
+    StructType *LivenessTy = StructType::get(IntptrTy, IntptrTy, nullptr);
+
+    for (size_t i = 0; i < n; i++) {
+      GlobalVariable *Metadata = new GlobalVariable(
+          M, GlobalStructTy, false, GlobalVariable::InternalLinkage,
+          Initializers[i], "");
+      Metadata->setSection("__DATA,__asan_globals,regular");
+      Metadata->setAlignment(1); // don't leave padding in between
+
+      auto LivenessBinder = ConstantStruct::get(LivenessTy,
+          Initializers[i]->getAggregateElement(0u),
+          ConstantExpr::getPointerCast(Metadata, IntptrTy),
+          nullptr);
+      GlobalVariable *Liveness = new GlobalVariable(
+          M, LivenessTy, false, GlobalVariable::InternalLinkage,
+          LivenessBinder, "");
+      Liveness->setSection("__DATA,__asan_liveness,regular,live_support");
+    }
+  } else {
+    // On all other platfoms, we just emit an array of global metadata
+    // structures.
+    ArrayType *ArrayOfGlobalStructTy = ArrayType::get(GlobalStructTy, n);
+    AllGlobals = new GlobalVariable(
+        M, ArrayOfGlobalStructTy, false, GlobalVariable::InternalLinkage,
+        ConstantArray::get(ArrayOfGlobalStructTy, Initializers), "");
+  }
 
   // Create calls for poisoning before initializers run and unpoisoning after.
   if (HasDynamicallyInitializedGlobals)
     createInitializerPoisonCalls(M, ModuleName);
-  IRB.CreateCall(AsanRegisterGlobals,
-                 {IRB.CreatePointerCast(AllGlobals, IntptrTy),
-                  ConstantInt::get(IntptrTy, n)});
 
-  // We also need to unregister globals at the end, e.g. when a shared library
+  // Create a call to register the globals with the runtime.
+  if (ShouldUseMachOGlobalsSection()) {
+    IRB.CreateCall(AsanRegisterImageGlobals,
+                   {IRB.CreatePointerCast(RegisteredFlag, IntptrTy)});
+  } else {
+    IRB.CreateCall(AsanRegisterGlobals,
+                   {IRB.CreatePointerCast(AllGlobals, IntptrTy),
+                    ConstantInt::get(IntptrTy, n)});
+  }
+
+  // We also need to unregister globals at the end, e.g., when a shared library
   // gets closed.
   Function *AsanDtorFunction =
       Function::Create(FunctionType::get(Type::getVoidTy(*C), false),
                        GlobalValue::InternalLinkage, kAsanModuleDtorName, &M);
   BasicBlock *AsanDtorBB = BasicBlock::Create(*C, "", AsanDtorFunction);
   IRBuilder<> IRB_Dtor(ReturnInst::Create(*C, AsanDtorBB));
-  IRB_Dtor.CreateCall(AsanUnregisterGlobals,
-                      {IRB.CreatePointerCast(AllGlobals, IntptrTy),
-                       ConstantInt::get(IntptrTy, n)});
+
+  if (ShouldUseMachOGlobalsSection()) {
+    IRB_Dtor.CreateCall(AsanUnregisterImageGlobals,
+                        {IRB.CreatePointerCast(RegisteredFlag, IntptrTy)});
+  } else {
+    IRB_Dtor.CreateCall(AsanUnregisterGlobals,
+                        {IRB.CreatePointerCast(AllGlobals, IntptrTy),
+                         ConstantInt::get(IntptrTy, n)});
+  }
+
   appendToGlobalDtors(M, AsanDtorFunction, kAsanCtorAndDtorPriority);
 
   DEBUG(dbgs() << M);

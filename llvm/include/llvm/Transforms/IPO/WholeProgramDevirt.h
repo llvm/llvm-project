@@ -16,11 +16,10 @@
 #define LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMapInfo.h"
+#include <cassert>
+#include <cstdint>
 #include <utility>
 #include <vector>
-#include <assert.h>
-#include <stdint.h>
 
 namespace llvm {
 
@@ -209,7 +208,7 @@ void setAfterReturnValues(MutableArrayRef<VirtualCallTarget> Targets,
                           uint64_t AllocAfter, unsigned BitWidth,
                           int64_t &OffsetByte, uint64_t &OffsetBit);
 
-}
-}
+} // end namespace wholeprogramdevirt
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
