@@ -33,5 +33,5 @@ int main() {
 // CHECK:   #0 memset
 // CHECK:   #1 MemSetThread
 // CHECK:  Previous write
-// CHECK:   #0 memmove
+// CHECK:   #0 {{(memcpy|memmove)}}
 // CHECK:   #1 MemMoveThread

@@ -284,6 +284,25 @@ void StopInitOrderChecking() {
 // ---------------------- Interface ---------------- {{{1
 using namespace __asan;  // NOLINT
 
+
+// Apply __asan_register_globals to all globals found in the same loaded
+// executable or shared library as `flag'. The flag tracks whether globals have
+// already been registered or not for this image.
+void __asan_register_image_globals(uptr *flag) {
+  if (*flag)
+    return;
+  AsanApplyToGlobals(__asan_register_globals, flag);
+  *flag = 1;
+}
+
+// This mirrors __asan_register_image_globals.
+void __asan_unregister_image_globals(uptr *flag) {
+  if (!*flag)
+    return;
+  AsanApplyToGlobals(__asan_unregister_globals, flag);
+  *flag = 0;
+}
+
 // Register an array of globals.
 void __asan_register_globals(__asan_global *globals, uptr n) {
   if (!flags()->report_globals) return;

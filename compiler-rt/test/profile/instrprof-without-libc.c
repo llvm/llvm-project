@@ -52,19 +52,19 @@ int main(int argc, const char *argv[]) {
 }
 // CHECK: ![[PD1]] = !{!"branch_weights", i32 1, i32 2}
 
-// CHECK-SYMBOLS-NOT: ___cxx_global_var_init
-// CHECK-SYMBOLS-NOT: ___llvm_profile_register_write_file_atexit
-// CHECK-SYMBOLS-NOT: ___llvm_profile_set_filename
-// CHECK-SYMBOLS-NOT: ___llvm_profile_write_file
-// CHECK-SYMBOLS-NOT: _fdopen
-// CHECK-SYMBOLS-NOT: _fopen
-// CHECK-SYMBOLS-NOT: _fwrite
-// CHECK-SYMBOLS-NOT: _getenv
-// CHECK-SYMBOLS-NOT: getenv
-// CHECK-SYMBOLS-NOT: _malloc
-// CHECK-SYMBOLS-NOT: malloc
-// CHECK-SYMBOLS-NOT: _calloc
-// CHECK-SYMBOLS-NOT: calloc
-// CHECK-SYMBOLS-NOT: _free
-// CHECK-SYMBOLS-NOT: free
-// CHECK-SYMBOLS-NOT: _open
+// CHECK-SYMBOLS-NOT: {{ }}___cxx_global_var_init
+// CHECK-SYMBOLS-NOT: {{ }}___llvm_profile_register_write_file_atexit
+// CHECK-SYMBOLS-NOT: {{ }}___llvm_profile_set_filename
+// CHECK-SYMBOLS-NOT: {{ }}___llvm_profile_write_file
+// CHECK-SYMBOLS-NOT: {{ }}_fdopen
+// CHECK-SYMBOLS-NOT: {{ }}_fopen
+// CHECK-SYMBOLS-NOT: {{ }}_fwrite
+// CHECK-SYMBOLS-NOT: {{ }}_getenv
+// CHECK-SYMBOLS-NOT: {{ }}getenv
+// CHECK-SYMBOLS-NOT: {{ }}_malloc
+// CHECK-SYMBOLS-NOT: {{ }}malloc
+// CHECK-SYMBOLS-NOT: {{ }}_calloc
+// CHECK-SYMBOLS-NOT: {{ }}calloc
+// CHECK-SYMBOLS-NOT: {{ }}_free
+// CHECK-SYMBOLS-NOT: {{ }}free
+// CHECK-SYMBOLS-NOT: {{ }}_open
