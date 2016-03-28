@@ -72,7 +72,8 @@ CommandObjectExpression::CommandOptions::g_option_table[] =
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "debug",              'g', OptionParser::eNoArgument      , NULL, NULL, 0, eArgTypeNone,       "When specified, debug the JIT code by setting a breakpoint on the first instruction and forcing breakpoints to not be ignored (-i0) and no unwinding to happen on error (-u0)."},
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "language",           'l', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLanguage,   "Specifies the Language to use when parsing the expression.  If not set the target.language setting is used." },
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "apply-fixits",       'X', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLanguage,   "If true, simple FixIt hints will be automatically applied to the expression." },
-    { LLDB_OPT_SET_1, false, "description-verbosity", 'v', OptionParser::eOptionalArgument, NULL, g_description_verbosity_type, 0, eArgTypeDescriptionVerbosity,        "How verbose should the output of this expression be, if the object description is asked for."},
+    { LLDB_OPT_SET_1, false, "description-verbosity", 'v', OptionParser::eOptionalArgument, nullptr, g_description_verbosity_type, 0, eArgTypeDescriptionVerbosity,        "How verbose should the output of this expression be, if the object description is asked for."},
+    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "top-level",          'p', OptionParser::eNoArgument      , NULL, NULL, 0, eArgTypeNone,       "Interpret the expression as top-level definitions rather than code to be immediately executed."}
 };
 
 
@@ -160,6 +161,10 @@ CommandObjectExpression::CommandOptions::SetOptionValue (CommandInterpreter &int
         unwind_on_error = false;
         ignore_breakpoints = false;
         break;
+    
+    case 'p':
+        top_level = true;
+        break;
 
     case 'X':
         {
@@ -204,6 +209,7 @@ CommandObjectExpression::CommandOptions::OptionParsingStarting (CommandInterpret
     language = eLanguageTypeUnknown;
     m_verbosity = eLanguageRuntimeDescriptionDisplayVerbosityCompact;
     auto_apply_fixits = eLazyBoolCalculate;
+    top_level = false;
 }
 
 const OptionDefinition*
@@ -346,6 +352,9 @@ CommandObjectExpression::EvaluateExpression
             auto_apply_fixits = m_command_options.auto_apply_fixits == eLazyBoolYes ? true : false;
         
         options.SetAutoApplyFixIts(auto_apply_fixits);
+        
+        if (m_command_options.top_level)
+            options.SetExecutionPolicy(eExecutionPolicyTopLevel);
 
         // If there is any chance we are going to stop and want to see
         // what went wrong with our expression, we should generate debug info

@@ -54,6 +54,7 @@ public:
         // Options table: Required for subclasses of Options.
 
         static OptionDefinition g_option_table[];
+        bool        top_level;
         bool        unwind_on_error;
         bool        ignore_breakpoints;
         bool        show_types;
