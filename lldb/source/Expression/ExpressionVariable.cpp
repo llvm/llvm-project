@@ -37,6 +37,12 @@ PersistentExpressionState::~PersistentExpressionState ()
 {
 }
 
+void
+PersistentExpressionState::RegisterSymbol (const ConstString &name, lldb::addr_t addr)
+{
+    m_symbol_map[name.GetCString()] = addr;
+}
+
 lldb::addr_t
 PersistentExpressionState::LookupSymbol (const ConstString &name)
 {

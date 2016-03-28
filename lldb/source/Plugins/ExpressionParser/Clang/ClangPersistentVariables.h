@@ -86,14 +86,6 @@ public:
     void
     RemovePersistentVariable (lldb::ExpressionVariableSP variable) override;
     
-    lldb::addr_t
-    LookupSymbol (const ConstString &name) override;
-
-    void
-    RegisterExecutionUnit (lldb::IRExecutionUnitSP &execution_unit_sp);
-    
-    void
-    RegisterSymbol (const ConstString &name, lldb::addr_t addr);
     
     // This just adds this module to the list of hand-loaded modules, it doesn't actually load it.
     void
