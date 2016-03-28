@@ -373,6 +373,9 @@ public:
     if (!Size || Size > Limit)
       Size = Limit;
   }
+
+  /// Return the Size, if known.
+  uint64_t getSizeIfKnown() const { return Size; }
 };
 
 /// When advancing through a bitstream cursor, each advance can discover a few
