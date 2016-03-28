@@ -136,6 +136,9 @@ inline StringRef getInstrProfFileOverriderFuncName() {
   return "__llvm_profile_override_default_filename";
 }
 
+/// Return the marker used to separate PGO names during serialization.
+inline StringRef getInstrProfNameSeparator() { return "\01"; }
+
 /// Return the modified name for function \c F suitable to be
 /// used the key for profile lookup.
 std::string getPGOFuncName(const Function &F,
