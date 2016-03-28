@@ -456,6 +456,12 @@ public:
   GlobalFunctionInfo() : FunctionInfo() { }
 };
 
+/// Describes API notes data for an enumerator.
+class EnumConstantInfo : public CommonEntityInfo {
+public:
+  EnumConstantInfo() : CommonEntityInfo() { }
+};
+
 /// Describes API notes data for a tag.
 class TagInfo : public CommonTypeInfo {
 public:

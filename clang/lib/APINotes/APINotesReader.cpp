@@ -415,6 +415,51 @@ namespace {
     }
   };
 
+  /// Used to deserialize the on-disk enumerator table.
+  class EnumConstantTableInfo {
+  public:
+    using internal_key_type = unsigned; // name ID
+    using external_key_type = internal_key_type;
+    using data_type = EnumConstantInfo;
+    using hash_value_type = size_t;
+    using offset_type = unsigned;
+
+    internal_key_type GetInternalKey(external_key_type key) {
+      return key;
+    }
+
+    external_key_type GetExternalKey(internal_key_type key) {
+      return key;
+    }
+
+    hash_value_type ComputeHash(internal_key_type key) {
+      return static_cast<size_t>(llvm::hash_value(key));
+    }
+    
+    static bool EqualKey(internal_key_type lhs, internal_key_type rhs) {
+      return lhs == rhs;
+    }
+    
+    static std::pair<unsigned, unsigned> 
+    ReadKeyDataLength(const uint8_t *&data) {
+      unsigned keyLength = endian::readNext<uint16_t, little, unaligned>(data);
+      unsigned dataLength = endian::readNext<uint16_t, little, unaligned>(data);
+      return { keyLength, dataLength };
+    }
+    
+    static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
+      auto nameID = endian::readNext<uint32_t, little, unaligned>(data);
+      return nameID;
+    }
+    
+    static data_type ReadData(internal_key_type key, const uint8_t *data,
+                              unsigned length) {
+      EnumConstantInfo info;
+      readCommonEntityInfo(data, info);
+      return info;
+    }
+  };
+
   /// Used to deserialize the on-disk tag table.
   class TagTableInfo {
   public:
@@ -559,6 +604,12 @@ public:
   /// The global function table.
   std::unique_ptr<SerializedGlobalFunctionTable> GlobalFunctionTable;
 
+  using SerializedEnumConstantTable =
+      llvm::OnDiskIterableChainedHashTable<EnumConstantTableInfo>;
+
+  /// The enumerator table.
+  std::unique_ptr<SerializedEnumConstantTable> EnumConstantTable;
+
   using SerializedTagTable =
       llvm::OnDiskIterableChainedHashTable<TagTableInfo>;
 
@@ -595,6 +646,8 @@ public:
                                SmallVectorImpl<uint64_t> &scratch);
   bool readGlobalFunctionBlock(llvm::BitstreamCursor &cursor,
                                SmallVectorImpl<uint64_t> &scratch);
+  bool readEnumConstantBlock(llvm::BitstreamCursor &cursor,
+                             SmallVectorImpl<uint64_t> &scratch);
   bool readTagBlock(llvm::BitstreamCursor &cursor,
                     SmallVectorImpl<uint64_t> &scratch);
   bool readTypedefBlock(llvm::BitstreamCursor &cursor,
@@ -1069,6 +1122,60 @@ bool APINotesReader::Implementation::readGlobalFunctionBlock(
   return false;
 }
 
+bool APINotesReader::Implementation::readEnumConstantBlock(
+       llvm::BitstreamCursor &cursor, 
+       SmallVectorImpl<uint64_t> &scratch) {
+  if (cursor.EnterSubBlock(ENUM_CONSTANT_BLOCK_ID))
+    return true;
+
+  auto next = cursor.advance();
+  while (next.Kind != llvm::BitstreamEntry::EndBlock) {
+    if (next.Kind == llvm::BitstreamEntry::Error)
+      return true;
+
+    if (next.Kind == llvm::BitstreamEntry::SubBlock) {
+      // Unknown sub-block, possibly for use by a future version of the
+      // API notes format.
+      if (cursor.SkipBlock())
+        return true;
+      
+      next = cursor.advance();
+      continue;
+    }
+
+    scratch.clear();
+    StringRef blobData;
+    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    switch (kind) {
+    case enum_constant_block::ENUM_CONSTANT_DATA: {
+      // Already saw enumerator table.
+      if (EnumConstantTable)
+        return true;
+
+      uint32_t tableOffset;
+      enum_constant_block::EnumConstantDataLayout::readRecord(scratch,
+                                                              tableOffset);
+      auto base = reinterpret_cast<const uint8_t *>(blobData.data());
+
+      EnumConstantTable.reset(
+        SerializedEnumConstantTable::Create(base + tableOffset,
+                                            base + sizeof(uint32_t),
+                                            base));
+      break;
+    }
+
+    default:
+      // Unknown record, possibly for use by a future version of the
+      // module format.
+      break;
+    }
+
+    next = cursor.advance();
+  }
+
+  return false;
+}
+
 bool APINotesReader::Implementation::readTagBlock(
        llvm::BitstreamCursor &cursor, 
        SmallVectorImpl<uint64_t> &scratch) {
@@ -1273,6 +1380,14 @@ APINotesReader::APINotesReader(std::unique_ptr<llvm::MemoryBuffer> inputBuffer,
       }
       break;
 
+    case ENUM_CONSTANT_BLOCK_ID:
+      if (!hasValidControlBlock || 
+          Impl.readEnumConstantBlock(cursor, scratch)) {
+        failed = true;
+        return;
+      }
+      break;
+
     case TAG_BLOCK_ID:
       if (!hasValidControlBlock || Impl.readTagBlock(cursor, scratch)) {
         failed = true;
@@ -1428,6 +1543,21 @@ Optional<GlobalFunctionInfo> APINotesReader::lookupGlobalFunction(
   return *known;
 }
 
+Optional<EnumConstantInfo> APINotesReader::lookupEnumConstant(StringRef name) {
+  if (!Impl.EnumConstantTable)
+    return None;
+
+  Optional<IdentifierID> nameID = Impl.getIdentifier(name);
+  if (!nameID)
+    return None;
+
+  auto known = Impl.EnumConstantTable->find(*nameID);
+  if (known == Impl.EnumConstantTable->end())
+    return None;
+
+  return *known;
+}
+
 Optional<TagInfo> APINotesReader::lookupTag(StringRef name) {
   if (!Impl.TagTable)
     return None;
@@ -1484,6 +1614,10 @@ void APINotesReader::Visitor::visitGlobalVariable(
 void APINotesReader::Visitor::visitGlobalFunction(
        StringRef name,
        const GlobalFunctionInfo &info) { }
+
+void APINotesReader::Visitor::visitEnumConstant(
+       StringRef name,
+       const EnumConstantInfo &info) { }
 
 void APINotesReader::Visitor::visitTag(
        StringRef name,
@@ -1577,6 +1711,15 @@ void APINotesReader::visit(Visitor &visitor) {
       auto name = identifiers[key];
       auto info = *Impl.GlobalVariableTable->find(key);
       visitor.visitGlobalVariable(name, info);
+    }
+  }
+
+  // Visit global variables.
+  if (Impl.EnumConstantTable) {
+    for (auto key : Impl.EnumConstantTable->keys()) {
+      auto name = identifiers[key];
+      auto info = *Impl.EnumConstantTable->find(key);
+      visitor.visitEnumConstant(name, info);
     }
   }
 

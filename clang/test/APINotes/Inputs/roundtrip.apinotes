@@ -92,6 +92,11 @@ Globals:
     Availability:    available
     AvailabilityMsg: ''
     SwiftName:       calibratedWhite
+Enumerators:     
+  - Name:            NSColorRed
+    Availability:    available
+    AvailabilityMsg: ''
+    SwiftName:       Red
 Tags:            
   - Name:            NSSomeStruct
     Availability:    available
