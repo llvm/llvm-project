@@ -550,7 +550,7 @@ ExprResult Sema::BuildCXXUuidof(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 TypeSourceInfo *Operand,
                                 SourceLocation RParenLoc) {
-  const UuidAttr *UA = nullptr;
+  StringRef UuidStr;
   if (!Operand->getType()->isDependentType()) {
     llvm::SmallSetVector<const UuidAttr *, 1> UuidAttrs;
     getUuidAttrOfType(*this, Operand->getType(), UuidAttrs);
@@ -558,10 +558,10 @@ ExprResult Sema::BuildCXXUuidof(QualType TypeInfoType,
       return ExprError(Diag(TypeidLoc, diag::err_uuidof_without_guid));
     if (UuidAttrs.size() > 1)
       return ExprError(Diag(TypeidLoc, diag::err_uuidof_with_multiple_guids));
-    UA = UuidAttrs.back();
+    UuidStr = UuidAttrs.back()->getGuid();
   }
 
-  return new (Context) CXXUuidofExpr(TypeInfoType.withConst(), Operand, UA,
+  return new (Context) CXXUuidofExpr(TypeInfoType.withConst(), Operand, UuidStr,
                                      SourceRange(TypeidLoc, RParenLoc));
 }
 
@@ -570,20 +570,22 @@ ExprResult Sema::BuildCXXUuidof(QualType TypeInfoType,
                                 SourceLocation TypeidLoc,
                                 Expr *E,
                                 SourceLocation RParenLoc) {
-  const UuidAttr *UA = nullptr;
+  StringRef UuidStr;
   if (!E->getType()->isDependentType()) {
-    if (!E->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull)) {
+    if (E->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull)) {
+      UuidStr = "00000000-0000-0000-0000-000000000000";
+    } else {
       llvm::SmallSetVector<const UuidAttr *, 1> UuidAttrs;
       getUuidAttrOfType(*this, E->getType(), UuidAttrs);
       if (UuidAttrs.empty())
         return ExprError(Diag(TypeidLoc, diag::err_uuidof_without_guid));
       if (UuidAttrs.size() > 1)
         return ExprError(Diag(TypeidLoc, diag::err_uuidof_with_multiple_guids));
-      UA = UuidAttrs.back();
+      UuidStr = UuidAttrs.back()->getGuid();
     }
   }
 
-  return new (Context) CXXUuidofExpr(TypeInfoType.withConst(), E, UA,
+  return new (Context) CXXUuidofExpr(TypeInfoType.withConst(), E, UuidStr,
                                      SourceRange(TypeidLoc, RParenLoc));
 }
 

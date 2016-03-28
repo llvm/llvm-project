@@ -54,10 +54,6 @@ QualType CXXUuidofExpr::getTypeOperand(ASTContext &Context) const {
       Operand.get<TypeSourceInfo *>()->getType().getNonReferenceType(), Quals);
 }
 
-StringRef CXXUuidofExpr::getUuidAsStringRef() const {
-  return UA ? UA->getGuid() : "00000000-0000-0000-0000-000000000000";
-}
-
 // CXXScalarValueInitExpr
 SourceLocation CXXScalarValueInitExpr::getLocStart() const {
   return TypeInfo ? TypeInfo->getTypeLoc().getBeginLoc() : RParenLoc;

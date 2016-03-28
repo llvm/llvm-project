@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++1z -fsyntax-only -verify %s
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;
@@ -123,5 +125,130 @@ namespace rdar13395022 {
     MoveOnly (&&list4)[1] = {}; // expected-error {{no matching constructor}}
     // expected-note@-1 {{in implicit initialization of array element 0 with omitted initializer}}
     // expected-note@-2 {{in initialization of temporary of type 'rdar13395022::MoveOnly [1]' created to list-initialize this reference}}
+  }
+}
+
+namespace cxx1z_direct_enum_init {
+  enum A {};
+  enum B : char {};
+  enum class C {};
+  enum class D : char {};
+  enum class E : char { k = 5 };
+
+  template<typename T> void good() {
+    (void)T{0};
+    T t1{0};
+    T t2 = T{0};
+
+    struct S { T t; };
+    S s{T{0}};
+
+    struct U { T t{0}; } u; // expected-note 0+{{instantiation of}}
+
+    struct V { T t; V() : t{0} {} }; // expected-note 0+{{instantiation of}}
+
+    void f(T);
+    f(T{0});
+  }
+#if __cplusplus <= 201402L
+  // expected-error@-15 5{{cannot initialize}}
+  // expected-error@-15 5{{cannot initialize}}
+  // expected-error@-15 5{{cannot initialize}}
+  //
+  //
+  // expected-error@-15 5{{cannot initialize}}
+  //
+  // expected-error@-15 5{{cannot initialize}}
+  //
+  // expected-error@-15 5{{cannot initialize}}
+  //
+  //
+  // expected-error@-15 5{{cannot initialize}}
+#else
+  // expected-error@-29 {{cannot initialize}}
+  // expected-error@-29 {{cannot initialize}}
+  // expected-error@-29 {{cannot initialize}}
+  //
+  //
+  // expected-error@-29 {{cannot initialize}}
+  //
+  // expected-error@-29 {{cannot initialize}}
+  //
+  // expected-error@-29 {{cannot initialize}}
+  //
+  //
+  // expected-error@-29 {{cannot initialize}}
+#endif
+
+  template<typename T> void bad() {
+    T t = {0};
+
+    struct S { T t; };
+    S s1{0};
+    S s2{{0}};
+
+    struct U { T t = {0}; } u; // expected-note 0+{{instantiation of}}
+
+    struct V { T t; V() : t({0}) {} }; // expected-note 0+{{instantiation of}}
+
+    void f(T); // expected-note 0+{{passing argument}}
+    f({0});
+  }
+  // expected-error@-13 5{{cannot initialize}}
+  //
+  //
+  // expected-error@-13 5{{cannot initialize}}
+  // expected-error@-13 5{{cannot initialize}}
+  //
+  // expected-error@-13 5{{cannot initialize}}
+  //
+  // expected-error@-13 5{{cannot initialize}}
+  //
+  //
+  // expected-error@-13 5{{cannot initialize}}
+
+  template<typename T> void ugly() {
+    extern char c;
+    T t1{char('0' + c)};
+    T t2{'0' + c};
+    T t3{1234};
+  }
+#if __cplusplus <= 201402L
+  // expected-error@-5 4{{cannot initialize}}
+  // expected-error@-5 4{{cannot initialize}}
+  // expected-error@-5 4{{cannot initialize}}
+#else
+  // expected-error@-8 3{{non-constant-expression cannot be narrowed}}
+  // expected-error@-8 3{{constant expression evaluates to 1234 which cannot be narrowed}} expected-warning@-8 {{changes value}}
+#endif
+
+  void test() {
+    good<A>(); // expected-note 4{{instantiation of}}
+    good<B>();
+    good<C>();
+    good<D>();
+    good<E>();
+#if __cplusplus <= 201402L
+    // expected-note@-5 4{{instantiation of}}
+    // expected-note@-5 4{{instantiation of}}
+    // expected-note@-5 4{{instantiation of}}
+    // expected-note@-5 4{{instantiation of}}
+#endif
+
+    bad<A>(); // expected-note 4{{instantiation of}}
+    bad<B>(); // expected-note 4{{instantiation of}}
+    bad<C>(); // expected-note 4{{instantiation of}}
+    bad<D>(); // expected-note 4{{instantiation of}}
+    bad<E>(); // expected-note 4{{instantiation of}}
+
+    ugly<B>(); // expected-note {{instantiation of}}
+    ugly<C>(); // ok
+    ugly<D>(); // expected-note {{instantiation of}}
+    ugly<E>(); // expected-note {{instantiation of}}
+#if __cplusplus <= 201402L
+    // expected-note@-4 {{instantiation of}}
+#else
+    (void)B{0.0}; // expected-error {{type 'double' cannot be narrowed}}
+#endif
   }
 }

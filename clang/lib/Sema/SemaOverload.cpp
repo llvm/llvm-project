@@ -293,6 +293,13 @@ StandardConversionSequence::getNarrowingKind(ASTContext &Ctx,
   //   A narrowing conversion is an implicit conversion ...
   QualType FromType = getToType(0);
   QualType ToType = getToType(1);
+
+  // A conversion to an enumeration type is narrowing if the conversion to
+  // the underlying type is narrowing. This only arises for expressions of
+  // the form 'Enum{init}'.
+  if (auto *ET = ToType->getAs<EnumType>())
+    ToType = ET->getDecl()->getIntegerType();
+
   switch (Second) {
   // 'bool' is an integral type; dispatch to the right place to handle it.
   case ICK_Boolean_Conversion:

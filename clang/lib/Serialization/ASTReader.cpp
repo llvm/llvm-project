@@ -2341,9 +2341,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         ModuleKind ImportedKind = (ModuleKind)Record[Idx++];
         // The import location will be the local one for now; we will adjust
         // all import locations of module imports after the global source
-        // location info are setup.
+        // location info are setup, in ReadAST.
         SourceLocation ImportLoc =
-            SourceLocation::getFromRawEncoding(Record[Idx++]);
+            ReadUntranslatedSourceLocation(Record[Idx++]);
         off_t StoredSize = (off_t)Record[Idx++];
         time_t StoredModTime = (time_t)Record[Idx++];
         ASTFileSignature StoredSignature = Record[Idx++];
@@ -3601,11 +3601,12 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
 
     // Set the import location.
     F.DirectImportLoc = ImportLoc;
+    // FIXME: We assume that locations from PCH / preamble do not need
+    // any translation.
     if (!M->ImportedBy)
       F.ImportLoc = M->ImportLoc;
     else
-      F.ImportLoc = ReadSourceLocation(*M->ImportedBy,
-                                       M->ImportLoc.getRawEncoding());
+      F.ImportLoc = TranslateSourceLocation(*M->ImportedBy, M->ImportLoc);
   }
 
   if (!Context.getLangOpts().CPlusPlus ||
@@ -4982,7 +4983,6 @@ PreprocessedEntityID ASTReader::findNextPreprocessedEntity(
 
 namespace {
 
-template <unsigned PPEntityOffset::*PPLoc>
 struct PPEntityComp {
   const ASTReader &Reader;
   ModuleFile &M;
@@ -5006,7 +5006,7 @@ struct PPEntityComp {
   }
 
   SourceLocation getLoc(const PPEntityOffset &PPE) const {
-    return Reader.ReadSourceLocation(M, PPE.*PPLoc);
+    return Reader.TranslateSourceLocation(M, PPE.getBegin());
   }
 };
 
@@ -5037,7 +5037,7 @@ PreprocessedEntityID ASTReader::findPreprocessedEntity(SourceLocation Loc,
 
   if (EndsAfter) {
     PPI = std::upper_bound(pp_begin, pp_end, Loc,
-                           PPEntityComp<&PPEntityOffset::Begin>(*this, M));
+                           PPEntityComp(*this, M));
   } else {
     // Do a binary search manually instead of using std::lower_bound because
     // The end locations of entities may be unordered (when a macro expansion
@@ -5047,8 +5047,8 @@ PreprocessedEntityID ASTReader::findPreprocessedEntity(SourceLocation Loc,
       Half = Count / 2;
       PPI = First;
       std::advance(PPI, Half);
-      if (SourceMgr.isBeforeInTranslationUnit(ReadSourceLocation(M, PPI->End),
-                                              Loc)) {
+      if (SourceMgr.isBeforeInTranslationUnit(
+              TranslateSourceLocation(M, PPI->getEnd()), Loc)) {
         First = PPI;
         ++First;
         Count = Count - Half - 1;
