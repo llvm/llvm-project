@@ -778,23 +778,23 @@ public:
 class CXXUuidofExpr : public Expr {
 private:
   llvm::PointerUnion<Stmt *, TypeSourceInfo *> Operand;
-  const UuidAttr *UA;
+  StringRef UuidStr;
   SourceRange Range;
 
 public:
-  CXXUuidofExpr(QualType Ty, TypeSourceInfo *Operand, const UuidAttr *UA,
+  CXXUuidofExpr(QualType Ty, TypeSourceInfo *Operand, StringRef UuidStr,
                 SourceRange R)
       : Expr(CXXUuidofExprClass, Ty, VK_LValue, OK_Ordinary, false,
              Operand->getType()->isDependentType(),
              Operand->getType()->isInstantiationDependentType(),
              Operand->getType()->containsUnexpandedParameterPack()),
-        Operand(Operand), UA(UA), Range(R) {}
+        Operand(Operand), UuidStr(UuidStr), Range(R) {}
 
-  CXXUuidofExpr(QualType Ty, Expr *Operand, const UuidAttr *UA, SourceRange R)
+  CXXUuidofExpr(QualType Ty, Expr *Operand, StringRef UuidStr, SourceRange R)
       : Expr(CXXUuidofExprClass, Ty, VK_LValue, OK_Ordinary, false,
              Operand->isTypeDependent(), Operand->isInstantiationDependent(),
              Operand->containsUnexpandedParameterPack()),
-        Operand(Operand), UA(UA), Range(R) {}
+        Operand(Operand), UuidStr(UuidStr), Range(R) {}
 
   CXXUuidofExpr(EmptyShell Empty, bool isExpr)
     : Expr(CXXUuidofExprClass, Empty) {
@@ -831,7 +831,8 @@ public:
     Operand = E;
   }
 
-  StringRef getUuidAsStringRef() const;
+  void setUuidStr(StringRef US) { UuidStr = US; }
+  StringRef getUuidStr() const { return UuidStr; }
 
   SourceLocation getLocStart() const LLVM_READONLY { return Range.getBegin(); }
   SourceLocation getLocEnd() const LLVM_READONLY { return Range.getEnd(); }

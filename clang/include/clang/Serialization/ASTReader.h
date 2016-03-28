@@ -1979,9 +1979,15 @@ public:
   /// \brief Read the contents of a CXXCtorInitializer array.
   CXXCtorInitializer **GetExternalCXXCtorInitializers(uint64_t Offset) override;
 
+  /// \brief Read a source location from raw form and return it in its
+  /// originating module file's source location space.
+  SourceLocation ReadUntranslatedSourceLocation(uint32_t Raw) const {
+    return SourceLocation::getFromRawEncoding((Raw >> 1) | (Raw << 31));
+  }
+
   /// \brief Read a source location from raw form.
-  SourceLocation ReadSourceLocation(ModuleFile &ModuleFile, unsigned Raw) const {
-    SourceLocation Loc = SourceLocation::getFromRawEncoding(Raw);
+  SourceLocation ReadSourceLocation(ModuleFile &ModuleFile, uint32_t Raw) const {
+    SourceLocation Loc = ReadUntranslatedSourceLocation(Raw);
     return TranslateSourceLocation(ModuleFile, Loc);
   }
 

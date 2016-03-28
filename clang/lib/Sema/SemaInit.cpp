@@ -3862,8 +3862,48 @@ static void TryListInitialization(Sema &S,
   }
 
   if (S.getLangOpts().CPlusPlus && !DestType->isAggregateType() &&
-      InitList->getNumInits() == 1 &&
-      InitList->getInit(0)->getType()->isRecordType()) {
+      InitList->getNumInits() == 1) {
+    Expr *E = InitList->getInit(0);
+
+    //   - Otherwise, if T is an enumeration with a fixed underlying type,
+    //     the initializer-list has a single element v, and the initialization
+    //     is direct-list-initialization, the object is initialized with the
+    //     value T(v); if a narrowing conversion is required to convert v to
+    //     the underlying type of T, the program is ill-formed.
+    auto *ET = DestType->getAs<EnumType>();
+    if (S.getLangOpts().CPlusPlus1z &&
+        Kind.getKind() == InitializationKind::IK_DirectList &&
+        ET && ET->getDecl()->isFixed() &&
+        !S.Context.hasSameUnqualifiedType(E->getType(), DestType) &&
+        (E->getType()->isIntegralOrEnumerationType() ||
+         E->getType()->isFloatingType())) {
+      // There are two ways that T(v) can work when T is an enumeration type.
+      // If there is either an implicit conversion sequence from v to T or
+      // a conversion function that can convert from v to T, then we use that.
+      // Otherwise, if v is of integral, enumeration, or floating-point type,
+      // it is converted to the enumeration type via its underlying type.
+      // There is no overlap possible between these two cases (except when the
+      // source value is already of the destination type), and the first
+      // case is handled by the general case for single-element lists below.
+      ImplicitConversionSequence ICS;
+      ICS.setStandard();
+      ICS.Standard.setAsIdentityConversion();
+      // If E is of a floating-point type, then the conversion is ill-formed
+      // due to narrowing, but go through the motions in order to produce the
+      // right diagnostic.
+      ICS.Standard.Second = E->getType()->isFloatingType()
+                                ? ICK_Floating_Integral
+                                : ICK_Integral_Conversion;
+      ICS.Standard.setFromType(E->getType());
+      ICS.Standard.setToType(0, E->getType());
+      ICS.Standard.setToType(1, DestType);
+      ICS.Standard.setToType(2, DestType);
+      Sequence.AddConversionSequenceStep(ICS, ICS.Standard.getToType(2),
+                                         /*TopLevelOfInitList*/true);
+      Sequence.RewrapReferenceInitList(Entity.getType(), InitList);
+      return;
+    }
+
     //   - Otherwise, if the initializer list has a single element of type E
     //     [...references are handled above...], the object or reference is
     //     initialized from that element (by copy-initialization for
@@ -3877,19 +3917,21 @@ static void TryListInitialization(Sema &S,
     // copy-initialization. This only matters if we might use an 'explicit'
     // conversion operator, so we only need to handle the cases where the source
     // is of record type.
-    InitializationKind SubKind =
-        Kind.getKind() == InitializationKind::IK_DirectList
-            ? InitializationKind::CreateDirect(Kind.getLocation(),
-                                               InitList->getLBraceLoc(),
-                                               InitList->getRBraceLoc())
-            : Kind;
-    Expr *SubInit[1] = { InitList->getInit(0) };
-    Sequence.InitializeFrom(S, Entity, SubKind, SubInit,
-                            /*TopLevelOfInitList*/true,
-                            TreatUnavailableAsInvalid);
-    if (Sequence)
-      Sequence.RewrapReferenceInitList(Entity.getType(), InitList);
-    return;
+    if (InitList->getInit(0)->getType()->isRecordType()) {
+      InitializationKind SubKind =
+          Kind.getKind() == InitializationKind::IK_DirectList
+              ? InitializationKind::CreateDirect(Kind.getLocation(),
+                                                 InitList->getLBraceLoc(),
+                                                 InitList->getRBraceLoc())
+              : Kind;
+      Expr *SubInit[1] = { InitList->getInit(0) };
+      Sequence.InitializeFrom(S, Entity, SubKind, SubInit,
+                              /*TopLevelOfInitList*/true,
+                              TreatUnavailableAsInvalid);
+      if (Sequence)
+        Sequence.RewrapReferenceInitList(Entity.getType(), InitList);
+      return;
+    }
   }
 
   InitListChecker CheckInitList(S, Entity, InitList,

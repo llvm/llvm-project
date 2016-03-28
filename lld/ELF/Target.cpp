@@ -1240,6 +1240,7 @@ bool AArch64TargetInfo::isRelRelative(uint32_t Type) const {
   case R_AARCH64_JUMP26:
   case R_AARCH64_CONDBR19:
   case R_AARCH64_TSTBR14:
+  case R_AARCH64_PREL64:
     return true;
   }
 }

@@ -1680,6 +1680,8 @@ void ASTStmtReader::VisitMSPropertySubscriptExpr(MSPropertySubscriptExpr *E) {
 void ASTStmtReader::VisitCXXUuidofExpr(CXXUuidofExpr *E) {
   VisitExpr(E);
   E->setSourceRange(ReadSourceRange(Record, Idx));
+  std::string UuidStr = ReadString(Record, Idx);
+  E->setUuidStr(StringRef(UuidStr).copy(Reader.getContext()));
   if (E->isTypeOperand()) { // __uuidof(ComType)
     E->setTypeOperandSourceInfo(
         GetTypeSourceInfo(Record, Idx));

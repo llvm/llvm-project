@@ -63,7 +63,10 @@ Improvements to ``clang-tidy``
 explain them more clearly, and provide more accurate fix-its for the issues
 identified.  The improvements since the 3.8 release include:
 
--  ...
+- New ``modernize-raw-string-literal`` check
+
+  This check selectively replaces string literals containing escaped
+  characters with raw string literals.
 
 Improvements to ``modularize``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

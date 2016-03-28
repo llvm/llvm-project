@@ -1186,7 +1186,7 @@ void MicrosoftCXXNameMangler::mangleExpression(const Expr *E) {
 
     // This CXXUuidofExpr is mangled as-if it were actually a VarDecl from
     // const __s_GUID _GUID_{lower case UUID with underscores}
-    StringRef Uuid = UE->getUuidAsStringRef();
+    StringRef Uuid = UE->getUuidStr();
     std::string Name = "_GUID_" + Uuid.lower();
     std::replace(Name.begin(), Name.end(), '-', '_');
 

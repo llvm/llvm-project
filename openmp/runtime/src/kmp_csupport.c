@@ -1174,13 +1174,20 @@ __kmp_map_hint_to_lock(uintptr_t hint)
 #else
 # define KMP_TSX_LOCK(seq) __kmp_user_lock_seq
 #endif
+
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+# define KMP_CPUINFO_RTM (__kmp_cpuinfo.rtm)
+#else
+# define KMP_CPUINFO_RTM 0
+#endif
+
     // Hints that do not require further logic
     if (hint & kmp_lock_hint_hle)
         return KMP_TSX_LOCK(hle);
     if (hint & kmp_lock_hint_rtm)
-        return (__kmp_cpuinfo.rtm)? KMP_TSX_LOCK(rtm): __kmp_user_lock_seq;
+        return KMP_CPUINFO_RTM ? KMP_TSX_LOCK(rtm): __kmp_user_lock_seq;
     if (hint & kmp_lock_hint_adaptive)
-        return (__kmp_cpuinfo.rtm)? KMP_TSX_LOCK(adaptive): __kmp_user_lock_seq;
+        return KMP_CPUINFO_RTM ? KMP_TSX_LOCK(adaptive): __kmp_user_lock_seq;
 
     // Rule out conflicting hints first by returning the default lock
     if ((hint & omp_lock_hint_contended) && (hint & omp_lock_hint_uncontended))

@@ -78,6 +78,7 @@ Clang-Tidy Checks
    modernize-loop-convert
    modernize-make-unique
    modernize-pass-by-value
+   modernize-raw-string-literal
    modernize-redundant-void-arg
    modernize-replace-auto-ptr
    modernize-shrink-to-fit

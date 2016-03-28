@@ -21,6 +21,6 @@
 
 .rodata
 .long .Lfoo - .
-
+.xword .Lfoo - .                    // R_AARCH64_PREL64
 // CHECK:      Relocations [
 // CHECK-NEXT: ]
