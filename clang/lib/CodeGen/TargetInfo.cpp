@@ -6583,6 +6583,78 @@ Address HexagonABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 }
 
 //===----------------------------------------------------------------------===//
+// Lanai ABI Implementation
+//===----------------------------------------------------------------------===//
+
+class LanaiABIInfo : public DefaultABIInfo {
+public:
+  LanaiABIInfo(CodeGen::CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+
+  bool shouldUseInReg(QualType Ty, CCState &State) const;
+
+  void computeInfo(CGFunctionInfo &FI) const override {
+    CCState State(FI.getCallingConvention());
+    // Lanai uses 4 registers to pass arguments unless the function has the
+    // regparm attribute set.
+    if (FI.getHasRegParm()) {
+      State.FreeRegs = FI.getRegParm();
+    } else {
+      State.FreeRegs = 4;
+    }
+
+    if (!getCXXABI().classifyReturnType(FI))
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+    for (auto &I : FI.arguments())
+      I.info = classifyArgumentType(I.type, State);
+  }
+
+  ABIArgInfo classifyArgumentType(QualType RetTy, CCState &State) const;
+};
+
+bool LanaiABIInfo::shouldUseInReg(QualType Ty, CCState &State) const {
+  unsigned Size = getContext().getTypeSize(Ty);
+  unsigned SizeInRegs = llvm::alignTo(Size, 32U) / 32U;
+
+  if (SizeInRegs == 0)
+    return false;
+
+  if (SizeInRegs > State.FreeRegs) {
+    State.FreeRegs = 0;
+    return false;
+  }
+
+  State.FreeRegs -= SizeInRegs;
+
+  return true;
+}
+
+ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
+                                              CCState &State) const {
+  if (isAggregateTypeForABI(Ty))
+    return getNaturalAlignIndirect(Ty);
+
+  // Treat an enum type as its underlying type.
+  if (const auto *EnumTy = Ty->getAs<EnumType>())
+    Ty = EnumTy->getDecl()->getIntegerType();
+
+  if (shouldUseInReg(Ty, State))
+    return ABIArgInfo::getDirectInReg();
+
+  if (Ty->isPromotableIntegerType())
+    return ABIArgInfo::getExtend();
+
+  return ABIArgInfo::getDirect();
+}
+
+namespace {
+class LanaiTargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  LanaiTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
+      : TargetCodeGenInfo(new LanaiABIInfo(CGT)) {}
+};
+}
+
+//===----------------------------------------------------------------------===//
 // AMDGPU ABI Implementation
 //===----------------------------------------------------------------------===//
 
@@ -7740,6 +7812,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   }
   case llvm::Triple::hexagon:
     return *(TheTargetCodeGenInfo = new HexagonTargetCodeGenInfo(Types));
+  case llvm::Triple::lanai:
+    return *(TheTargetCodeGenInfo = new LanaiTargetCodeGenInfo(Types));
   case llvm::Triple::r600:
     return *(TheTargetCodeGenInfo = new AMDGPUTargetCodeGenInfo(Types));
   case llvm::Triple::amdgcn:

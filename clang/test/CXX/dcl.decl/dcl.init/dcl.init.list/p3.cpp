@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++1z -fsyntax-only -verify %s
+// FIXME: Remove the triple when PR27098 is fixed.
+// RUN: %clang_cc1 -std=c++1z -fsyntax-only -verify %s -triple %itanium_abi_triple
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;

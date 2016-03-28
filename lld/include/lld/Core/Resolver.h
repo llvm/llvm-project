@@ -56,7 +56,7 @@ public:
   std::unique_ptr<SimpleFile> resultFile() { return std::move(_result); }
 
 private:
-  typedef std::function<ErrorOr<bool>(StringRef, bool)> UndefCallback;
+  typedef std::function<ErrorOr<bool>(StringRef)> UndefCallback;
 
   bool undefinesAdded(int begin, int end);
   File *getFile(int &index);
@@ -67,8 +67,7 @@ private:
   void deadStripOptimize();
   bool checkUndefines();
   void removeCoalescedAwayAtoms();
-  ErrorOr<bool> forEachUndefines(File &file, bool searchForOverrides,
-                                 UndefCallback callback);
+  ErrorOr<bool> forEachUndefines(File &file, UndefCallback callback);
 
   void markLive(const Atom *atom);
 

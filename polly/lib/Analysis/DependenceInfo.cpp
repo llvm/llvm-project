@@ -73,12 +73,12 @@ static cl::opt<enum AnalysisType> OptAnalysisType(
 static cl::opt<Dependences::AnalyisLevel> OptAnalysisLevel(
     "polly-dependences-analysis-level",
     cl::desc("The level of dependence analysis"),
-    cl::values(clEnumValN(Dependences::AL_Statement, "statement-level",
+    cl::values(clEnumValN(Dependences::AL_Statement, "statement-wise",
                           "Statement-level analysis"),
-               clEnumValN(Dependences::AL_Reference, "reference-level",
+               clEnumValN(Dependences::AL_Reference, "reference-wise",
                           "Memory reference level analysis that distinguish"
                           " accessed references in the same statement"),
-               clEnumValN(Dependences::AL_Access, "access-level",
+               clEnumValN(Dependences::AL_Access, "access-wise",
                           "Memory reference level analysis that distinguish"
                           " access instructions in the same statement"),
                clEnumValEnd),

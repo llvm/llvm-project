@@ -69,28 +69,6 @@ public:
     _deadStripRoots.push_back(symbolName);
   }
 
-  /// Archive files (aka static libraries) are normally lazily loaded.  That is,
-  /// object files within an archive are only loaded and linked in, if the
-  /// object file contains a DefinedAtom which will replace an existing
-  /// UndefinedAtom.  If this method returns true, core linking will also look
-  /// for archive members to replace existing tentative definitions in addition
-  /// to replacing undefines. Note: a "tentative definition" (also called a
-  /// "common" symbols) is a C (but not C++) concept. They are modeled in lld
-  /// as a DefinedAtom with merge() of mergeAsTentative.
-  bool searchArchivesToOverrideTentativeDefinitions() const {
-    return _searchArchivesToOverrideTentativeDefinitions;
-  }
-
-  /// Normally core linking will turn a tentative definition into a real
-  /// definition if not replaced by a real DefinedAtom from some object file.
-  /// If this method returns true, core linking will search all supplied
-  /// dynamic shared libraries for symbol names that match remaining tentative
-  /// definitions.  If any are found, the corresponding tentative definition
-  /// atom is replaced with SharedLibraryAtom.
-  bool searchSharedLibrariesToOverrideTentativeDefinitions() const {
-    return _searchSharedLibrariesToOverrideTentativeDefinitions;
-  }
-
   /// Normally, every UndefinedAtom must be replaced by a DefinedAtom or a
   /// SharedLibraryAtom for the link to be successful.  This method controls
   /// whether core linking prints out a list of remaining UndefinedAtoms.
@@ -139,12 +117,6 @@ public:
 
   void setDeadStripping(bool enable) { _deadStrip = enable; }
   void setGlobalsAreDeadStripRoots(bool v) { _globalsAreDeadStripRoots = v; }
-  void setSearchArchivesToOverrideTentativeDefinitions(bool search) {
-    _searchArchivesToOverrideTentativeDefinitions = search;
-  }
-  void setSearchSharedLibrariesToOverrideTentativeDefinitions(bool search) {
-    _searchSharedLibrariesToOverrideTentativeDefinitions = search;
-  }
   void setPrintRemainingUndefines(bool print) {
     _printRemainingUndefines = print;
   }
@@ -257,12 +229,10 @@ protected:
   StringRef _entrySymbolName;
   bool _deadStrip = false;
   bool _globalsAreDeadStripRoots = false;
-  bool _searchArchivesToOverrideTentativeDefinitions = false;
-  bool _searchSharedLibrariesToOverrideTentativeDefinitions = false;
   bool _printRemainingUndefines = true;
   bool _allowRemainingUndefines = false;
   bool _logInputFiles = false;
-  bool _allowShlibUndefines = true;
+  bool _allowShlibUndefines = false;
   std::vector<StringRef> _deadStripRoots;
   std::vector<const char *> _llvmOptions;
   StringRefVector _initialUndefinedSymbols;

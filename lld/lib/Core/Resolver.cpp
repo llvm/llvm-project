@@ -46,8 +46,7 @@ ErrorOr<bool> Resolver::handleFile(File &file) {
   return undefAdded;
 }
 
-ErrorOr<bool> Resolver::forEachUndefines(File &file, bool searchForOverrides,
-                                         UndefCallback callback) {
+ErrorOr<bool> Resolver::forEachUndefines(File &file, UndefCallback callback) {
   size_t i = _undefineIndex[&file];
   bool undefAdded = false;
   do {
@@ -61,26 +60,10 @@ ErrorOr<bool> Resolver::forEachUndefines(File &file, bool searchForOverrides,
         _undefines[i] = "";
         continue;
       }
-      auto undefAddedOrError = callback(undefName, false);
+      auto undefAddedOrError = callback(undefName);
       if (undefAddedOrError.getError())
         return undefAddedOrError;
       undefAdded |= undefAddedOrError.get();
-    }
-    if (!searchForOverrides)
-      continue;
-    for (StringRef tentDefName : _symbolTable.tentativeDefinitions()) {
-      // Load for previous tentative may also have loaded
-      // something that overrode this tentative, so always check.
-      const Atom *curAtom = _symbolTable.findByName(tentDefName);
-      assert(curAtom != nullptr);
-      if (const DefinedAtom *curDefAtom = dyn_cast<DefinedAtom>(curAtom)) {
-        if (curDefAtom->merge() == DefinedAtom::mergeAsTentative) {
-          auto undefAddedOrError = callback(tentDefName, true);
-          if (undefAddedOrError.getError())
-            return undefAddedOrError;
-          undefAdded |= undefAddedOrError.get();
-        }
-      }
     }
   } while (i < _undefines.size());
   _undefineIndex[&file] = i;
@@ -89,12 +72,8 @@ ErrorOr<bool> Resolver::forEachUndefines(File &file, bool searchForOverrides,
 
 ErrorOr<bool> Resolver::handleArchiveFile(File &file) {
   ArchiveLibraryFile *archiveFile = cast<ArchiveLibraryFile>(&file);
-  bool searchForOverrides =
-      _ctx.searchArchivesToOverrideTentativeDefinitions();
-  return forEachUndefines(file, searchForOverrides,
-                          [&](StringRef undefName,
-                              bool dataSymbolOnly)->ErrorOr<bool> {
-    if (File *member = archiveFile->find(undefName, dataSymbolOnly)) {
+  return forEachUndefines(file, [&](StringRef undefName) -> ErrorOr<bool> {
+    if (File *member = archiveFile->find(undefName)) {
       member->setOrdinal(_ctx.getNextOrdinalAndIncrement());
       return handleFile(*member);
     }
@@ -108,16 +87,13 @@ std::error_code Resolver::handleSharedLibrary(File &file) {
   auto undefAddedOrError = handleFile(*sharedLibrary);
   if (undefAddedOrError.getError())
     return undefAddedOrError.getError();
-  bool searchForOverrides =
-      _ctx.searchSharedLibrariesToOverrideTentativeDefinitions();
-  undefAddedOrError = forEachUndefines(file, searchForOverrides,
-                                       [&](StringRef undefName,
-                                           bool dataSymbolOnly)->ErrorOr<bool> {
-    auto atom = sharedLibrary->exports(undefName, dataSymbolOnly);
-    if (atom.get())
-      doSharedLibraryAtom(std::move(atom));
-    return false;
-  });
+  undefAddedOrError =
+      forEachUndefines(file, [&](StringRef undefName) -> ErrorOr<bool> {
+        auto atom = sharedLibrary->exports(undefName);
+        if (atom.get())
+          doSharedLibraryAtom(std::move(atom));
+        return false;
+      });
 
   if (undefAddedOrError.getError())
     return undefAddedOrError.getError();

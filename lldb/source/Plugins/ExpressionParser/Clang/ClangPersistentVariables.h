@@ -70,9 +70,6 @@ public:
     void
     RemovePersistentVariable (lldb::ExpressionVariableSP variable) override;
     
-    lldb::addr_t
-    LookupSymbol (const ConstString &name) override { return LLDB_INVALID_ADDRESS; }
-
     void
     RegisterPersistentDecl (const ConstString &name,
                             clang::NamedDecl *decl);

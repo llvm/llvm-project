@@ -27,8 +27,7 @@ public:
   /// Check if the shared library exports a symbol with the specified name.
   /// If so, return a SharedLibraryAtom which represents that exported
   /// symbol.  Otherwise return nullptr.
-  virtual OwningAtomPtr<SharedLibraryAtom> exports(StringRef name,
-                                           bool dataSymbolOnly) const = 0;
+  virtual OwningAtomPtr<SharedLibraryAtom> exports(StringRef name) const = 0;
 
   // Returns the install name.
   virtual StringRef getDSOName() const = 0;

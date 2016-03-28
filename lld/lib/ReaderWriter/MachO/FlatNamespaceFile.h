@@ -25,8 +25,7 @@ public:
   FlatNamespaceFile(const MachOLinkingContext &context)
     : SharedLibraryFile("flat namespace") { }
 
-  OwningAtomPtr<SharedLibraryAtom> exports(StringRef name,
-                                   bool dataSymbolOnly) const override {
+  OwningAtomPtr<SharedLibraryAtom> exports(StringRef name) const override {
     return new (allocator()) MachOSharedLibraryAtom(*this, name, getDSOName(),
                                                     false);
   }

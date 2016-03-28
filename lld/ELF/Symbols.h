@@ -120,7 +120,8 @@ protected:
     IsFunc = Type == llvm::ELF::STT_FUNC;
     IsTls = Type == llvm::ELF::STT_TLS;
     IsGnuIFunc = Type == llvm::ELF::STT_GNU_IFUNC;
-    IsUsedInRegularObj = K != SharedKind && K != LazyKind;
+    IsUsedInRegularObj =
+        K != SharedKind && K != LazyKind && K != DefinedBitcodeKind;
   }
 
   const unsigned SymbolKind : 8;

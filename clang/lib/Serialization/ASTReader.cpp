@@ -4541,14 +4541,25 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       
       SubmodulesLoaded[GlobalIndex] = CurrentModule;
 
-      // Clear out data that will be replaced by what is the module file.
+      // Clear out data that will be replaced by what is in the module file.
       CurrentModule->LinkLibraries.clear();
       CurrentModule->ConfigMacros.clear();
       CurrentModule->UnresolvedConflicts.clear();
       CurrentModule->Conflicts.clear();
+
+      // The module is available unless it's missing a requirement; relevant
+      // requirements will be (re-)added by SUBMODULE_REQUIRES records.
+      // Missing headers that were present when the module was built do not
+      // make it unavailable -- if we got this far, this must be an explicitly
+      // imported module file.
+      CurrentModule->Requirements.clear();
+      CurrentModule->MissingHeaders.clear();
+      CurrentModule->IsMissingRequirement =
+          ParentModule && ParentModule->IsMissingRequirement;
+      CurrentModule->IsAvailable = !CurrentModule->IsMissingRequirement;
       break;
     }
-        
+
     case SUBMODULE_UMBRELLA_HEADER: {
       std::string Filename = Blob;
       ResolveImportedPath(F, Filename);

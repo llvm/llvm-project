@@ -97,6 +97,18 @@ void BitcodeCompiler::add(BitcodeFile &F) {
       GV->setLinkage(GlobalValue::WeakODRLinkage);
       break;
     }
+
+    // We collect the set of symbols we want to internalize here
+    // and change the linkage after the IRMover executed, i.e. after
+    // we imported the symbols and satisfied undefined references
+    // to it. We can't just change linkage here because otherwise
+    // the IRMover will just rename the symbol.
+    // Shared libraries need to be handled slightly differently.
+    // For now, let's be conservative and just never internalize
+    // symbols when creating a shared library.
+    if (!Config->Shared && !B->isUsedInRegularObj())
+      InternalizedSyms.insert(GV->getName());
+
     Keep.push_back(GV);
   }
 
@@ -104,10 +116,22 @@ void BitcodeCompiler::add(BitcodeFile &F) {
              [](GlobalValue &, IRMover::ValueAdder) {});
 }
 
+static void internalize(GlobalValue &GV) {
+  assert(!GV.hasLocalLinkage() &&
+      "Trying to internalize a symbol with local linkage!") ;
+  GV.setLinkage(GlobalValue::InternalLinkage);
+}
+
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting ObjectFile.
 template <class ELFT>
 std::unique_ptr<elf::ObjectFile<ELFT>> BitcodeCompiler::compile() {
+  for (const auto &Name : InternalizedSyms) {
+    GlobalValue *GV = Combined.getNamedValue(Name.first());
+    assert(GV);
+    internalize(*GV);
+  }
+
   if (Config->SaveTemps)
     saveBCFile(Combined, ".lto.bc");
 

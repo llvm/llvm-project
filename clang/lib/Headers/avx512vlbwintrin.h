@@ -2952,6 +2952,74 @@ _mm256_maskz_set1_epi8 (__mmask32 __M, char __A)
                  _mm256_setzero_si256 (),
                  __M);
 }
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_loadu_epi16 (__m128i __W, __mmask8 __U, void const *__P)
+{
+  return (__m128i) __builtin_ia32_loaddquhi128_mask ((__v8hi *) __P,
+                 (__v8hi) __W,
+                 (__mmask8) __U);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_maskz_loadu_epi16 (__mmask8 __U, void const *__P)
+{
+  return (__m128i) __builtin_ia32_loaddquhi128_mask ((__v8hi *) __P,
+                 (__v8hi)
+                 _mm_setzero_hi (),
+                 (__mmask8) __U);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_mask_loadu_epi16 (__m256i __W, __mmask16 __U, void const *__P)
+{
+  return (__m256i) __builtin_ia32_loaddquhi256_mask ((__v16hi *) __P,
+                 (__v16hi) __W,
+                 (__mmask16) __U);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_maskz_loadu_epi16 (__mmask16 __U, void const *__P)
+{
+  return (__m256i) __builtin_ia32_loaddquhi256_mask ((__v16hi *) __P,
+                 (__v16hi)
+                 _mm256_setzero_si256 (),
+                 (__mmask16) __U);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_loadu_epi8 (__m128i __W, __mmask16 __U, void const *__P)
+{
+  return (__m128i) __builtin_ia32_loaddquqi128_mask ((__v16qi *) __P,
+                 (__v16qi) __W,
+                 (__mmask16) __U);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_maskz_loadu_epi8 (__mmask16 __U, void const *__P)
+{
+  return (__m128i) __builtin_ia32_loaddquqi128_mask ((__v16qi *) __P,
+                 (__v16qi)
+                 _mm_setzero_si128 (),
+                 (__mmask16) __U);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_mask_loadu_epi8 (__m256i __W, __mmask32 __U, void const *__P)
+{
+  return (__m256i) __builtin_ia32_loaddquqi256_mask ((__v32qi *) __P,
+                 (__v32qi) __W,
+                 (__mmask32) __U);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_maskz_loadu_epi8 (__mmask32 __U, void const *__P)
+{
+  return (__m256i) __builtin_ia32_loaddquqi256_mask ((__v32qi *) __P,
+                 (__v32qi)
+                 _mm256_setzero_si256 (),
+                 (__mmask32) __U);
+}
 #undef __DEFAULT_FN_ATTRS
 
 #endif /* __AVX512VLBWINTRIN_H */

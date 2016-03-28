@@ -3817,7 +3817,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   CS.setAttributes(Attrs);
   CS.setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 
-  // Insert instrumentation or attach profile metadata at indirect call sites
+  // Insert instrumentation or attach profile metadata at indirect call sites.
+  // For more details, see the comment before the definition of
+  // IPVK_IndirectCallTarget in InstrProfData.inc.
   if (!CS.getCalledFunction())
     PGO.valueProfile(Builder, llvm::IPVK_IndirectCallTarget,
                      CS.getInstruction(), Callee);

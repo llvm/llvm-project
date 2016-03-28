@@ -46,6 +46,21 @@ typedef unsigned short __mmask16;
 #define _MM_FROUND_TO_ZERO          0x03
 #define _MM_FROUND_CUR_DIRECTION    0x04
 
+typedef enum
+{
+  _MM_MANT_NORM_1_2,    /* interval [1, 2)      */
+  _MM_MANT_NORM_p5_2,   /* interval [0.5, 2)    */
+  _MM_MANT_NORM_p5_1,   /* interval [0.5, 1)    */
+  _MM_MANT_NORM_p75_1p5   /* interval [0.75, 1.5) */
+} _MM_MANTISSA_NORM_ENUM;
+
+typedef enum
+{
+  _MM_MANT_SIGN_src,    /* sign = sign(SRC)     */
+  _MM_MANT_SIGN_zero,   /* sign = 0             */
+  _MM_MANT_SIGN_nan   /* DEST = NaN if sign(SRC) = 1 */
+} _MM_MANTISSA_SIGN_ENUM;
+
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx512f")))
 
@@ -3693,6 +3708,262 @@ _mm512_maskz_movedup_pd (__mmask8 __U, __m512d __A)
                (__v8df)
                _mm512_setzero_pd (),
                (__mmask8) __U);
+}
+
+#define _mm512_fixupimm_round_pd( __A, __B, __C, __imm, __R) __extension__ ({ \
+__builtin_ia32_fixupimmpd512_mask ((__v8df)( __A),\
+                  (__v8df)( __B),\
+                  (__v8di)( __C),\
+                  (__imm),\
+                  (__mmask8) -1, (__R));\
+})
+
+#define _mm512_mask_fixupimm_round_pd( __A, __U, __B, __C, __imm, __R) __extension__ ({ \
+__builtin_ia32_fixupimmpd512_mask ((__v8df)( __A),\
+                  (__v8df)( __B),\
+                  (__v8di)( __C),\
+                  (__imm),\
+                  (__mmask8)( __U), (__R));\
+})
+
+#define _mm512_fixupimm_pd( __A, __B, __C, __imm) __extension__ ({ \
+__builtin_ia32_fixupimmpd512_mask ((__v8df)( __A),\
+                  (__v8df)( __B),\
+                  (__v8di)( __C),\
+                 ( __imm),\
+                  (__mmask8) -1,\
+                  _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm512_mask_fixupimm_pd( __A, __U, __B, __C, __imm) __extension__ ({ \
+__builtin_ia32_fixupimmpd512_mask ((__v8df)( __A),\
+                  (__v8df)( __B),\
+                  (__v8di)( __C),\
+                 ( __imm),\
+                  (__mmask8)( __U),\
+                  _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm512_maskz_fixupimm_round_pd( __U, __A, __B, __C, __imm, __R) __extension__ ({ \
+__builtin_ia32_fixupimmpd512_maskz ((__v8df)( __A),\
+                   (__v8df)( __B),\
+                   (__v8di)( __C),\
+                   (__imm),\
+                   (__mmask8)( __U), (__R));\
+})
+
+#define _mm512_maskz_fixupimm_pd( __U, __A, __B, __C, __imm) __extension__ ({ \
+__builtin_ia32_fixupimmpd512_maskz ((__v8df)( __A),\
+                   (__v8df)( __B),\
+                   (__v8di)( __C),\
+                  ( __imm),\
+                   (__mmask8)( __U),\
+                   _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm512_fixupimm_round_ps( __A, __B, __C, __imm, __R) __extension__ ({ \
+__builtin_ia32_fixupimmps512_mask ((__v16sf)( __A),\
+                 (__v16sf)( __B),\
+                 (__v16si)( __C),\
+                 (__imm),\
+                 (__mmask16) -1, (__R));\
+})
+
+#define _mm512_mask_fixupimm_round_ps( __A, __U, __B, __C, __imm, __R) __extension__ ({ \
+__builtin_ia32_fixupimmps512_mask ((__v16sf)( __A),\
+                 (__v16sf)( __B),\
+                 (__v16si)( __C),\
+                 (__imm),\
+                 (__mmask16)( __U), (__R));\
+})
+
+#define _mm512_fixupimm_ps( __A, __B, __C, __imm) __extension__ ({ \
+__builtin_ia32_fixupimmps512_mask ((__v16sf)( __A),\
+                 (__v16sf)( __B),\
+                 (__v16si)( __C),\
+                ( __imm),\
+                 (__mmask16) -1,\
+                 _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm512_mask_fixupimm_ps( __A, __U, __B, __C, __imm) __extension__ ({ \
+__builtin_ia32_fixupimmps512_mask ((__v16sf)( __A),\
+                 (__v16sf)( __B),\
+                 (__v16si)( __C),\
+                ( __imm),\
+                 (__mmask16)( __U),\
+                 _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm512_maskz_fixupimm_round_ps( __U, __A, __B, __C, __imm, __R) __extension__ ({ \
+__builtin_ia32_fixupimmps512_maskz ((__v16sf)( __A),\
+                  (__v16sf)( __B),\
+                  (__v16si)( __C),\
+                  (__imm),\
+                  (__mmask16)( __U), (__R));\
+})
+
+#define _mm512_maskz_fixupimm_ps( __U, __A, __B, __C, __imm) __extension__ ({ \
+__builtin_ia32_fixupimmps512_maskz ((__v16sf)( __A),\
+                  (__v16sf)( __B),\
+                  (__v16si)( __C),\
+                 ( __imm),\
+                  (__mmask16)( __U),\
+                  _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm_fixupimm_round_sd( __A, __B, __C, __imm, __R) __extension__ ({ \
+__builtin_ia32_fixupimmsd_mask ((__v2df)( __A),\
+               (__v2df)( __B),\
+               (__v2di)( __C), __imm,\
+               (__mmask8) -1, (__R));\
+})
+
+#define _mm_mask_fixupimm_round_sd( __A, __U, __B, __C, __imm, __R) __extension__ ({ \
+__builtin_ia32_fixupimmsd_mask ((__v2df)( __A),\
+               (__v2df)( __B),\
+               (__v2di)( __C), __imm,\
+               (__mmask8)( __U), (__R));\
+})
+
+#define _mm_fixupimm_sd( __A, __B, __C, __imm) __extension__ ({ \
+__builtin_ia32_fixupimmsd_mask ((__v2df)( __A),\
+               (__v2df)( __B),\
+               (__v2di)( __C),( __imm),\
+               (__mmask8) -1,\
+               _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm_mask_fixupimm_sd( __A, __U, __B, __C, __imm) __extension__ ({ \
+__builtin_ia32_fixupimmsd_mask ((__v2df)( __A),\
+               (__v2df)( __B),\
+               (__v2di)( __C),( __imm),\
+               (__mmask8)( __U),\
+               _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm_maskz_fixupimm_round_sd( __U, __A, __B, __C, __imm, __R) __extension__ ({ \
+__builtin_ia32_fixupimmsd_maskz ((__v2df)( __A),\
+                (__v2df)( __B),\
+                (__v2di)( __C),\
+                __imm,\
+                (__mmask8)( __U), (__R));\
+})
+
+#define _mm_maskz_fixupimm_sd( __U, __A, __B, __C, __imm) __extension__ ({ \
+__builtin_ia32_fixupimmsd_maskz ((__v2df)( __A),\
+                (__v2df)( __B),\
+                (__v2di)( __C),\
+               ( __imm),\
+                (__mmask8)( __U),\
+                _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm_fixupimm_round_ss( __A, __B, __C, __imm, __R) __extension__ ({ \
+__builtin_ia32_fixupimmss_mask ((__v4sf)( __A),\
+              (__v4sf)( __B),\
+              (__v4si)( __C), (__imm),\
+              (__mmask8) -1, (__R));\
+})
+
+#define _mm_mask_fixupimm_round_ss( __A, __U, __B, __C, __imm, __R) __extension__ ({ \
+__builtin_ia32_fixupimmss_mask ((__v4sf)( __A),\
+              (__v4sf)( __B),\
+              (__v4si)( __C), (__imm),\
+              (__mmask8)( __U), (__R));\
+})
+
+#define _mm_fixupimm_ss( __A, __B, __C, __imm) __extension__ ({ \
+__builtin_ia32_fixupimmss_mask ((__v4sf)( __A),\
+              (__v4sf)( __B),\
+              (__v4si)( __C),( __imm),\
+              (__mmask8) -1,\
+              _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm_mask_fixupimm_ss( __A, __U, __B, __C, __imm) __extension__ ({ \
+__builtin_ia32_fixupimmss_mask ((__v4sf)( __A),\
+              (__v4sf)( __B),\
+              (__v4si)( __C),( __imm),\
+              (__mmask8)( __U),\
+              _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm_maskz_fixupimm_round_ss( __U, __A, __B, __C, __imm, __R) __extension__ ({ \
+__builtin_ia32_fixupimmss_maskz ((__v4sf)( __A),\
+               (__v4sf)( __B),\
+               (__v4si)( __C), (__imm),\
+               (__mmask8)( __U), (__R));\
+})
+
+#define _mm_maskz_fixupimm_ss( __U, __A, __B, __C, __imm) __extension__ ({ \
+__builtin_ia32_fixupimmss_maskz ((__v4sf)( __A),\
+               (__v4sf)( __B),\
+               (__v4si)( __C),( __imm),\
+               (__mmask8)( __U),\
+               _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm_getexp_round_sd( __A, __B ,__R) __extension__ ({ \
+__builtin_ia32_getexpsd128_round_mask ((__v2df)(__A),\
+                 (__v2df)( __B), (__v2df) _mm_setzero_pd(), (__mmask8) -1,\
+                 ( __R));\
+})
+
+
+static __inline__ __m128d __DEFAULT_FN_ATTRS
+_mm_getexp_sd (__m128d __A, __m128d __B)
+{
+  return (__m128d) __builtin_ia32_getexpsd128_round_mask ((__v2df) __A,
+                 (__v2df) __B, (__v2df) _mm_setzero_pd(), (__mmask8) -1, _MM_FROUND_CUR_DIRECTION);
+}
+
+#define _mm_getexp_round_ss( __A, __B, __R) __extension__ ({ \
+__builtin_ia32_getexpss128_round_mask ((__v4sf)( __A),\
+                (__v4sf)( __B), (__v4sf)  _mm_setzero_ps(), (__mmask8) -1,\
+                ( __R));\
+})
+
+static __inline__ __m128 __DEFAULT_FN_ATTRS
+_mm_getexp_ss (__m128 __A, __m128 __B)
+{
+  return (__m128) __builtin_ia32_getexpss128_round_mask ((__v4sf) __A,
+                (__v4sf) __B, (__v4sf)  _mm_setzero_ps(), (__mmask8) -1, _MM_FROUND_CUR_DIRECTION);
+}
+
+#define _mm_getmant_round_sd( __A, __B, __C, __D, __R) __extension__ ({ \
+__builtin_ia32_getmantsd_round_mask ((__v2df)( __A),\
+              (__v2df)( __B),\
+              (( __D) << 2) |( __C), (__v2df) _mm_setzero_pd(), (__mmask8) -1,\
+              ( __R));\
+})
+
+#define _mm_getmant_sd( __A,  __B,  __C, __D)  __extension__ ({ \
+__builtin_ia32_getmantsd_round_mask ((__v2df)( __A),\
+              (__v2df)( __B),\
+              (( __D) << 2) |( __C), (__v2df) _mm_setzero_pd(), (__mmask8) -1,\
+              _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm_getmant_round_ss( __A, __B, __C, __D, __R) __extension__ ({ \
+__builtin_ia32_getmantss_round_mask ((__v4sf)( __A),\
+              (__v4sf)( __B),\
+              ((__D) << 2) |( __C), (__v4sf)  _mm_setzero_ps(), (__mmask8) -1,\
+              ( __R));\
+})
+
+#define  _mm_getmant_ss(__A,  __B,  __C, __D) __extension__ ({ \
+__builtin_ia32_getmantss_round_mask ((__v4sf)( __A),\
+              (__v4sf)( __B),\
+              ((__D) << 2) |( __C), (__v4sf)  _mm_setzero_ps(), (__mmask8) -1,\
+              _MM_FROUND_CUR_DIRECTION);\
+})
+
+
+static __inline__ __mmask16 __DEFAULT_FN_ATTRS
+_mm512_kmov (__mmask16 __A)
+{
+  return  __A;
 }
 
 #define _mm_comi_round_sd(__A, __B, __P, __R) __extension__ ({\
