@@ -19,6 +19,7 @@ import re
 
 # RegEx: this is where the magic happens.
 
+SCRUB_LEADING_WHITESPACE_RE = re.compile(r'^(\s+)')
 SCRUB_WHITESPACE_RE = re.compile(r'(?!^(|  \w))[ \t]+', flags=re.M)
 SCRUB_TRAILING_WHITESPACE_RE = re.compile(r'[ \t]+$', flags=re.M)
 SCRUB_X86_SHUFFLES_RE = (
@@ -135,6 +136,8 @@ def genericize_check_lines(lines):
   lines_with_def = []
   vars_seen = []
   for line in lines:
+    # An IR variable named '%.' matches the FileCheck regex string.
+    line = line.replace('%.', '%dot')
     m = IR_VALUE_DEF_RE.match(line)
     if m:
       vars_seen.append(m.group(1))
@@ -321,6 +324,8 @@ def main():
       if is_in_function:
         if should_add_line_to_output(input_line, prefix_set) == True:
           # This input line of the function body will go as-is into the output.
+          # Except make leading whitespace uniform: 2 spaces.
+          input_line = SCRUB_LEADING_WHITESPACE_RE.sub(r'  ', input_line)
           output_lines.append(input_line)
         else:
           continue

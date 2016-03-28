@@ -932,3 +932,50 @@
 # CHECK-BE: vmul10ecuq 2, 3, 4              # encoding: [0x10,0x43,0x20,0x41]
 # CHECK-LE: vmul10ecuq 2, 3, 4              # encoding: [0x41,0x20,0x43,0x10]
             vmul10ecuq 2, 3, 4
+
+# Decimal Convert From/to National/Zoned/Signed-QWord
+# CHECK-BE: bcdcfn. 27, 31, 1                  # encoding: [0x13,0x67,0xff,0x81]
+# CHECK-LE: bcdcfn. 27, 31, 1                  # encoding: [0x81,0xff,0x67,0x13]
+            bcdcfn. 27, 31, 1
+# CHECK-BE: bcdcfz. 27, 31, 1                  # encoding: [0x13,0x66,0xff,0x81]
+# CHECK-LE: bcdcfz. 27, 31, 1                  # encoding: [0x81,0xff,0x66,0x13]
+            bcdcfz. 27, 31, 1
+# CHECK-BE: bcdctn. 27, 31                     # encoding: [0x13,0x65,0xfd,0x81]
+# CHECK-LE: bcdctn. 27, 31                     # encoding: [0x81,0xfd,0x65,0x13]
+            bcdctn. 27, 31
+# CHECK-BE: bcdctz. 27, 31, 1                  # encoding: [0x13,0x64,0xff,0x81]
+# CHECK-LE: bcdctz. 27, 31, 1                  # encoding: [0x81,0xff,0x64,0x13]
+            bcdctz. 27, 31, 1
+# CHECK-BE: bcdcfsq. 27, 31, 1                 # encoding: [0x13,0x62,0xff,0x81]
+# CHECK-LE: bcdcfsq. 27, 31, 1                 # encoding: [0x81,0xff,0x62,0x13]
+            bcdcfsq. 27, 31, 1
+# CHECK-BE: bcdctsq. 27, 31                    # encoding: [0x13,0x60,0xfd,0x81]
+# CHECK-LE: bcdctsq. 27, 31                    # encoding: [0x81,0xfd,0x60,0x13]
+            bcdctsq. 27, 31
+
+# Decimal Copy-Sign/Set-Sign
+# CHECK-BE: bcdcpsgn. 27, 31, 7                # encoding: [0x13,0x7f,0x3b,0x41]
+# CHECK-LE: bcdcpsgn. 27, 31, 7                # encoding: [0x41,0x3b,0x7f,0x13]
+            bcdcpsgn. 27, 31, 7
+# CHECK-BE: bcdsetsgn. 27, 31, 1               # encoding: [0x13,0x7f,0xff,0x81]
+# CHECK-LE: bcdsetsgn. 27, 31, 1               # encoding: [0x81,0xff,0x7f,0x13]
+            bcdsetsgn. 27, 31, 1
+
+# Decimal Shift/Unsigned-Shift/Shift-and-Round
+# CHECK-BE: bcds. 27, 31, 7, 1                 # encoding: [0x13,0x7f,0x3e,0xc1]
+# CHECK-LE: bcds. 27, 31, 7, 1                 # encoding: [0xc1,0x3e,0x7f,0x13]
+            bcds. 27, 31, 7, 1
+# CHECK-BE: bcdus. 27, 31, 7                   # encoding: [0x13,0x7f,0x3c,0x81]
+# CHECK-LE: bcdus. 27, 31, 7                   # encoding: [0x81,0x3c,0x7f,0x13]
+            bcdus. 27, 31, 7
+# CHECK-BE: bcdsr. 27, 31, 7, 1                # encoding: [0x13,0x7f,0x3f,0xc1]
+# CHECK-LE: bcdsr. 27, 31, 7, 1                # encoding: [0xc1,0x3f,0x7f,0x13]
+            bcdsr. 27, 31, 7, 1
+
+# Decimal (Unsigned) Truncate
+# CHECK-BE: bcdtrunc. 27, 31, 7, 1             # encoding: [0x13,0x7f,0x3f,0x01]
+# CHECK-LE: bcdtrunc. 27, 31, 7, 1             # encoding: [0x01,0x3f,0x7f,0x13]
+            bcdtrunc. 27, 31, 7, 1
+# CHECK-BE: bcdutrunc. 27, 31, 7               # encoding: [0x13,0x7f,0x3d,0x41]
+# CHECK-LE: bcdutrunc. 27, 31, 7               # encoding: [0x41,0x3d,0x7f,0x13]
+            bcdutrunc. 27, 31, 7

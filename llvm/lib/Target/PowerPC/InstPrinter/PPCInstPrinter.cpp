@@ -299,6 +299,20 @@ void PPCInstPrinter::printU6ImmOperand(const MCInst *MI, unsigned OpNo,
   O << (unsigned int)Value;
 }
 
+void PPCInstPrinter::printU7ImmOperand(const MCInst *MI, unsigned OpNo,
+                                       raw_ostream &O) {
+  unsigned int Value = MI->getOperand(OpNo).getImm();
+  assert(Value <= 127 && "Invalid u7imm argument!");
+  O << (unsigned int)Value;
+}
+
+void PPCInstPrinter::printU8ImmOperand(const MCInst *MI, unsigned OpNo,
+                                       raw_ostream &O) {
+  unsigned int Value = MI->getOperand(OpNo).getImm();
+  assert(Value <= 255 && "Invalid u8imm argument!");
+  O << (unsigned int)Value;
+}
+
 void PPCInstPrinter::printU10ImmOperand(const MCInst *MI, unsigned OpNo,
                                         raw_ostream &O) {
   unsigned short Value = MI->getOperand(OpNo).getImm();

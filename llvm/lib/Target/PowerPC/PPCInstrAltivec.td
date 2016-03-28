@@ -1338,4 +1338,62 @@ def VMUL10CUQ  : VXForm_BX<  1, (outs vrrc:$vD), (ins vrrc:$vA),
 // Vector Multiply-by-10 Extended (& Write Carry) Unsigned Quadword
 def VMUL10EUQ  : VX1_VT5_VA5_VB5<577, "vmul10euq" , []>;
 def VMUL10ECUQ : VX1_VT5_VA5_VB5< 65, "vmul10ecuq", []>;
+
+// Decimal Integer Format Conversion Instructions
+
+// [PO VRT EO VRB 1 PS XO], "_o" means CR6 is set.
+class VX_VT5_EO5_VB5_PS1_XO9_o<bits<5> eo, bits<9> xo, string opc,
+                               list<dag> pattern>
+  : VX_RD5_EO5_RS5_PS1_XO9<eo, xo, (outs vrrc:$vD), (ins vrrc:$vB, u1imm:$PS),
+                        !strconcat(opc, " $vD, $vB, $PS"), IIC_VecFP, pattern> {
+  let Defs = [CR6];
+}
+
+// [PO VRT EO VRB 1 / XO]
+class VX_VT5_EO5_VB5_XO9_o<bits<5> eo, bits<9> xo, string opc,
+                           list<dag> pattern>
+  : VX_RD5_EO5_RS5_PS1_XO9<eo, xo, (outs vrrc:$vD), (ins vrrc:$vB),
+                           !strconcat(opc, " $vD, $vB"), IIC_VecFP, pattern> {
+  let Defs = [CR6];
+  let PS = 0;
+}
+
+// Decimal Convert From/to National/Zoned/Signed-QWord
+def BCDCFNo  : VX_VT5_EO5_VB5_PS1_XO9_o<7, 385, "bcdcfn." , []>;
+def BCDCFZo  : VX_VT5_EO5_VB5_PS1_XO9_o<6, 385, "bcdcfz." , []>;
+def BCDCTNo  : VX_VT5_EO5_VB5_XO9_o    <5, 385, "bcdctn." , []>;
+def BCDCTZo  : VX_VT5_EO5_VB5_PS1_XO9_o<4, 385, "bcdctz." , []>;
+def BCDCFSQo : VX_VT5_EO5_VB5_PS1_XO9_o<2, 385, "bcdcfsq.", []>;
+def BCDCTSQo : VX_VT5_EO5_VB5_XO9_o    <0, 385, "bcdctsq.", []>;
+
+// Decimal Copy-Sign/Set-Sign
+let Defs = [CR6] in
+def BCDCPSGNo : VX1_VT5_VA5_VB5<833, "bcdcpsgn.", []>;
+
+def BCDSETSGNo : VX_VT5_EO5_VB5_PS1_XO9_o<31, 385, "bcdsetsgn.", []>;
+
+// [PO VRT VRA VRB 1 PS XO], "_o" means CR6 is set.
+class VX_VT5_VA5_VB5_PS1_XO9_o<bits<9> xo, string opc, list<dag> pattern>
+  : VX_RD5_RSp5_PS1_XO9<xo,
+                   (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB, u1imm:$PS),
+                   !strconcat(opc, " $vD, $vA, $vB, $PS"), IIC_VecFP, pattern> {
+  let Defs = [CR6];
+}
+
+// [PO VRT VRA VRB 1 / XO]
+class VX_VT5_VA5_VB5_XO9_o<bits<9> xo, string opc, list<dag> pattern>
+  : VX_RD5_RSp5_PS1_XO9<xo, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
+                        !strconcat(opc, " $vD, $vA, $vB"), IIC_VecFP, pattern> {
+  let Defs = [CR6];
+  let PS = 0;
+}
+
+// Decimal Shift/Unsigned-Shift/Shift-and-Round
+def BCDSo :  VX_VT5_VA5_VB5_PS1_XO9_o<193, "bcds." , []>;
+def BCDUSo : VX_VT5_VA5_VB5_XO9_o    <129, "bcdus.", []>;
+def BCDSRo : VX_VT5_VA5_VB5_PS1_XO9_o<449, "bcdsr.", []>;
+
+// Decimal (Unsigned) Truncate
+def BCDTRUNCo :  VX_VT5_VA5_VB5_PS1_XO9_o<257, "bcdtrunc." , []>;
+def BCDUTRUNCo : VX_VT5_VA5_VB5_XO9_o    <321, "bcdutrunc.", []>;
 } // end HasP9Altivec
