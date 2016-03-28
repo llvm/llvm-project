@@ -189,7 +189,8 @@ StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar);
 
 /// Given a PGO function name, remove the filename prefix and return
 /// the original (static) function name.
-StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName);
+StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName,
+                                   StringRef FileName = "<unknown>");
 
 /// Given a vector of strings (function PGO names) \c NameStrs, the
 /// method generates a combined string \c Result thatis ready to be
