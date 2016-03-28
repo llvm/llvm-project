@@ -338,6 +338,11 @@ UserExpression::Evaluate (ExecutionContext &exe_ctx,
             if (!diagnostic_manager.Diagnostics().size())
                 error.SetExpressionError(lldb::eExpressionSetupError, "expression needed to run but couldn't");
         }
+        else if (execution_policy == eExecutionPolicyTopLevel)
+        {
+            error.SetError(UserExpression::kNoResult, lldb::eErrorTypeGeneric);
+            return lldb::eExpressionCompleted;
+        }
         else
         {
             if (options.InvokeCancelCallback (lldb::eExpressionEvaluationExecution))
