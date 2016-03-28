@@ -5,6 +5,8 @@
 
 ; Do the import now
 ; RUN: opt -function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIMDEF
+; "-stats" requires +Asserts.
+; REQUIRES: asserts
 
 ; Test import with smaller instruction limit
 ; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=5 -S | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIM5
