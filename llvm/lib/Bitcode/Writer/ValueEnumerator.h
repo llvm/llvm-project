@@ -61,7 +61,6 @@ private:
   ComdatSetType Comdats;
 
   std::vector<const Metadata *> MDs;
-  SmallVector<const LocalAsMetadata *, 8> FunctionLocalMDs;
   typedef DenseMap<const Metadata *, unsigned> MetadataMapType;
   MetadataMapType MetadataMap;
   unsigned NumMDStrings = 0;
@@ -159,8 +158,8 @@ public:
   ArrayRef<const Metadata *> getNonMDStrings() const {
     return makeArrayRef(MDs).slice(NumMDStrings);
   }
-  const SmallVectorImpl<const LocalAsMetadata *> &getFunctionLocalMDs() const {
-    return FunctionLocalMDs;
+  ArrayRef<const Metadata *> getFunctionMDs() const {
+    return makeArrayRef(MDs).slice(NumModuleMDs);
   }
 
   const TypeList &getTypes() const { return Types; }

@@ -1436,15 +1436,13 @@ static void WriteFunctionLocalMetadata(const Function &F,
                                        BitstreamWriter &Stream) {
   bool StartedMetadataBlock = false;
   SmallVector<uint64_t, 64> Record;
-  const SmallVectorImpl<const LocalAsMetadata *> &MDs =
-      VE.getFunctionLocalMDs();
-  for (unsigned i = 0, e = MDs.size(); i != e; ++i) {
-    assert(MDs[i] && "Expected valid function-local metadata");
+  for (const Metadata *MD : VE.getFunctionMDs()) {
+    auto *Local = cast<LocalAsMetadata>(MD);
     if (!StartedMetadataBlock) {
       Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
       StartedMetadataBlock = true;
     }
-    WriteValueAsMetadata(MDs[i], VE, Stream, Record);
+    WriteValueAsMetadata(Local, VE, Stream, Record);
   }
 
   if (StartedMetadataBlock)
