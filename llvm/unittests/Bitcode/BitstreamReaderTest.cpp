@@ -215,8 +215,9 @@ TEST(BitstreamReaderTest, readRecordWithBlobWhileStreaming) {
     }
 
     // Stream the buffer into the reader.
-    BitstreamReader R(make_unique<StreamingMemoryObject>(
-        make_unique<BufferStreamer>(StringRef(Buffer.begin(), Buffer.size()))));
+    BitstreamReader R(llvm::make_unique<StreamingMemoryObject>(
+        llvm::make_unique<BufferStreamer>(
+            StringRef(Buffer.begin(), Buffer.size()))));
     BitstreamCursor Stream(R);
 
     // Header.  Included in test so that we can run llvm-bcanalyzer to debug
