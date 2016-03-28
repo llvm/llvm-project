@@ -140,19 +140,6 @@ TEST(BitstreamReaderTest, setArtificialByteLimitNotWordBoundary) {
   EXPECT_EQ(8u, Cursor.getCurrentByteNo());
 }
 
-TEST(BitstreamReaderTest, setArtificialByteLimitNot4ByteBoundary) {
-  uint8_t Bytes[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
-  BitstreamReader Reader(std::begin(Bytes), std::end(Bytes));
-  SimpleBitstreamCursor Cursor(Reader);
-
-  Cursor.setArtificialByteLimit(5);
-  while (!Cursor.AtEndOfStream())
-    (void)Cursor.Read(1);
-
-  EXPECT_EQ(8u, Cursor.getCurrentByteNo());
-}
-
 TEST(BitstreamReaderTest, setArtificialByteLimitPastTheEnd) {
   uint8_t Bytes[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
                      0x08, 0x09, 0x0a, 0x0b};
