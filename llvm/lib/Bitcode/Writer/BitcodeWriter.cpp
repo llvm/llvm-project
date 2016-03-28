@@ -1434,19 +1434,17 @@ static void WriteModuleMetadata(const Module &M,
 static void WriteFunctionLocalMetadata(const Function &F,
                                        const ValueEnumerator &VE,
                                        BitstreamWriter &Stream) {
-  bool StartedMetadataBlock = false;
-  SmallVector<uint64_t, 64> Record;
-  for (const Metadata *MD : VE.getFunctionMDs()) {
-    auto *Local = cast<LocalAsMetadata>(MD);
-    if (!StartedMetadataBlock) {
-      Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
-      StartedMetadataBlock = true;
-    }
-    WriteValueAsMetadata(Local, VE, Stream, Record);
-  }
+  ArrayRef<const Metadata *> MDs = VE.getFunctionMDs();
+  if (MDs.empty())
+    return;
 
-  if (StartedMetadataBlock)
-    Stream.ExitBlock();
+  Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
+
+  SmallVector<uint64_t, 64> Record;
+  for (const Metadata *MD : VE.getFunctionMDs())
+    WriteValueAsMetadata(cast<LocalAsMetadata>(MD), VE, Stream, Record);
+
+  Stream.ExitBlock();
 }
 
 static void WriteMetadataAttachment(const Function &F,
