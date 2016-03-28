@@ -30,13 +30,7 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\023' >> %t
 RUN: printf '\0\0\0\0\0\0\0\067' >> %t
 RUN: printf '\0\0\0\0\0\0\0\101' >> %t
-<<<<<<< HEAD
 RUN: printf 'foobar\0\0' >> %t
-||||||| parent of 76bf991... Reapply (2x) "[PGO] Fix name encoding for ObjC-like functions"
-RUN: printf '\7\0foo bar\0\0\0\0\0\0\0' >> %t
-=======
-RUN: printf '\7\0foo\1bar\0\0\0\0\0\0\0' >> %t
->>>>>>> 76bf991... Reapply (2x) "[PGO] Fix name encoding for ObjC-like functions"
 
 RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s
 
