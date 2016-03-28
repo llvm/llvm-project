@@ -507,6 +507,24 @@ def u6imm   : Operand<i32> {
   let ParserMatchClass = PPCU6ImmAsmOperand;
   let DecoderMethod = "decodeUImmOperand<6>";
 }
+def PPCU7ImmAsmOperand : AsmOperandClass {
+  let Name = "U7Imm"; let PredicateMethod = "isU7Imm";
+  let RenderMethod = "addImmOperands";
+}
+def u7imm   : Operand<i32> {
+  let PrintMethod = "printU7ImmOperand";
+  let ParserMatchClass = PPCU7ImmAsmOperand;
+  let DecoderMethod = "decodeUImmOperand<7>";
+}
+def PPCU8ImmAsmOperand : AsmOperandClass {
+  let Name = "U8Imm"; let PredicateMethod = "isU8Imm";
+  let RenderMethod = "addImmOperands";
+}
+def u8imm   : Operand<i32> {
+  let PrintMethod = "printU8ImmOperand";
+  let ParserMatchClass = PPCU8ImmAsmOperand;
+  let DecoderMethod = "decodeUImmOperand<8>";
+}
 def PPCU10ImmAsmOperand : AsmOperandClass {
   let Name = "U10Imm"; let PredicateMethod = "isU10Imm";
   let RenderMethod = "addImmOperands";

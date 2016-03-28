@@ -15523,11 +15523,15 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
       return SetCC;
     }
   }
-  if ((Op0.getValueType() == MVT::i1) && isOneConstant(Op1) &&
-      (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-
-    ISD::CondCode NewCC = ISD::getSetCCInverse(CC, true);
-    return DAG.getSetCC(dl, VT, Op0, DAG.getConstant(0, dl, MVT::i1), NewCC);
+  if (Op0.getValueType() == MVT::i1 && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
+    if (isOneConstant(Op1)) {
+      ISD::CondCode NewCC = ISD::getSetCCInverse(CC, true);
+      return DAG.getSetCC(dl, VT, Op0, DAG.getConstant(0, dl, MVT::i1), NewCC);
+    }
+    if (!isNullConstant(Op1)) {
+      SDValue Xor = DAG.getNode(ISD::XOR, dl, MVT::i1, Op0, Op1);
+      return DAG.getSetCC(dl, VT, Xor, DAG.getConstant(0, dl, MVT::i1), CC);
+    }
   }
 
   bool isFP = Op1.getSimpleValueType().isFloatingPoint();

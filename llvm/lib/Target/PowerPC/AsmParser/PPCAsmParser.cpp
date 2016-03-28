@@ -458,9 +458,11 @@ public:
   bool isU6ImmX2() const { return Kind == Immediate &&
                                   isUInt<6>(getImm()) &&
                                   (getImm() & 1) == 0; }
+  bool isU7Imm() const { return Kind == Immediate && isUInt<7>(getImm()); }
   bool isU7ImmX4() const { return Kind == Immediate &&
                                   isUInt<7>(getImm()) &&
                                   (getImm() & 3) == 0; }
+  bool isU8Imm() const { return Kind == Immediate && isUInt<8>(getImm()); }
   bool isU8ImmX8() const { return Kind == Immediate &&
                                   isUInt<8>(getImm()) &&
                                   (getImm() & 7) == 0; }

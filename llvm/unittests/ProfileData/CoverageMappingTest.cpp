@@ -304,6 +304,21 @@ TEST_P(MaybeSparseCoverageMappingTest, strip_filename_prefix) {
   ASSERT_EQ("func", Names[0]);
 }
 
+TEST_P(MaybeSparseCoverageMappingTest, strip_unknown_filename_prefix) {
+  InstrProfRecord Record("<unknown>:func", 0x1234, {0});
+  ProfileWriter.addRecord(std::move(Record));
+  readProfCounts();
+
+  addCMR(Counter::getCounter(0), "", 1, 1, 9, 9);
+  loadCoverageMapping("<unknown>:func", 0x1234);
+
+  std::vector<std::string> Names;
+  for (const auto &Func : LoadedCoverage->getCoveredFunctions())
+    Names.push_back(Func.Name);
+  ASSERT_EQ(1U, Names.size());
+  ASSERT_EQ("func", Names[0]);
+}
+
 INSTANTIATE_TEST_CASE_P(MaybeSparse, MaybeSparseCoverageMappingTest,
                         ::testing::Bool());
 

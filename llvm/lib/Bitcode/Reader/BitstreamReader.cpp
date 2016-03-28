@@ -32,7 +32,7 @@ bool BitstreamCursor::EnterSubBlock(unsigned BlockID, unsigned *NumWordsP) {
 
   // Add the abbrevs specific to this block to the CurAbbrevs list.
   if (const BitstreamReader::BlockInfo *Info =
-      BitStream->getBlockInfo(BlockID)) {
+          getBitStreamReader()->getBlockInfo(BlockID)) {
     CurAbbrevs.insert(CurAbbrevs.end(), Info->Abbrevs.begin(),
                       Info->Abbrevs.end());
   }
@@ -164,7 +164,7 @@ void BitstreamCursor::skipRecord(unsigned AbbrevID) {
     // If this would read off the end of the bitcode file, just set the
     // record to empty and return.
     if (!canSkipToPos(NewEnd/8)) {
-      NextChar = BitStream->getBitcodeBytes().getExtent();
+      skipToEnd();
       break;
     }
 
@@ -256,13 +256,15 @@ unsigned BitstreamCursor::readRecord(unsigned AbbrevID,
     // record to empty and return.
     if (!canSkipToPos(NewEnd/8)) {
       Vals.append(NumElts, 0);
-      NextChar = BitStream->getBitcodeBytes().getExtent();
+      skipToEnd();
       break;
     }
 
-    // Otherwise, inform the streamer that we need these bytes in memory.
-    const char *Ptr = (const char*)
-      BitStream->getBitcodeBytes().getPointer(CurBitPos/8, NumElts);
+    // Otherwise, inform the streamer that we need these bytes in memory.  Skip
+    // over tail padding first, in case jumping to NewEnd invalidates the Blob
+    // pointer.
+    JumpToBit(NewEnd);
+    const char *Ptr = (const char *)getPointerToBit(CurBitPos, NumElts);
 
     // If we can return a reference to the data, do so to avoid copying it.
     if (Blob) {
@@ -272,8 +274,6 @@ unsigned BitstreamCursor::readRecord(unsigned AbbrevID,
       for (; NumElts; --NumElts)
         Vals.push_back((unsigned char)*Ptr++);
     }
-    // Skip over tail padding.
-    JumpToBit(NewEnd);
   }
 
   return Code;
@@ -320,7 +320,7 @@ void BitstreamCursor::ReadAbbrevRecord() {
 
 bool BitstreamCursor::ReadBlockInfoBlock() {
   // If this is the second stream to get to the block info block, skip it.
-  if (BitStream->hasBlockInfoRecords())
+  if (getBitStreamReader()->hasBlockInfoRecords())
     return SkipBlock();
 
   if (EnterSubBlock(bitc::BLOCKINFO_BLOCK_ID)) return true;
@@ -361,11 +361,13 @@ bool BitstreamCursor::ReadBlockInfoBlock() {
       default: break;  // Default behavior, ignore unknown content.
       case bitc::BLOCKINFO_CODE_SETBID:
         if (Record.size() < 1) return true;
-        CurBlockInfo = &BitStream->getOrCreateBlockInfo((unsigned)Record[0]);
+        CurBlockInfo =
+            &getBitStreamReader()->getOrCreateBlockInfo((unsigned)Record[0]);
         break;
       case bitc::BLOCKINFO_CODE_BLOCKNAME: {
         if (!CurBlockInfo) return true;
-        if (BitStream->isIgnoringBlockInfoNames()) break;  // Ignore name.
+        if (getBitStreamReader()->isIgnoringBlockInfoNames())
+          break; // Ignore name.
         std::string Name;
         for (unsigned i = 0, e = Record.size(); i != e; ++i)
           Name += (char)Record[i];
@@ -374,7 +376,8 @@ bool BitstreamCursor::ReadBlockInfoBlock() {
       }
       case bitc::BLOCKINFO_CODE_SETRECORDNAME: {
         if (!CurBlockInfo) return true;
-        if (BitStream->isIgnoringBlockInfoNames()) break;  // Ignore name.
+        if (getBitStreamReader()->isIgnoringBlockInfoNames())
+          break; // Ignore name.
         std::string Name;
         for (unsigned i = 1, e = Record.size(); i != e; ++i)
           Name += (char)Record[i];

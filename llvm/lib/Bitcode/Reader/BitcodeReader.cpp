@@ -396,6 +396,9 @@ private:
   std::error_code globalCleanup();
   std::error_code resolveGlobalAndAliasInits();
   std::error_code parseMetadata(bool ModuleLevel = false);
+  std::error_code parseMetadataStrings(ArrayRef<uint64_t> Record,
+                                       StringRef Blob,
+                                       unsigned &NextMetadataNo);
   std::error_code parseMetadataKinds();
   std::error_code parseMetadataKindRecord(SmallVectorImpl<uint64_t> &Record);
   std::error_code parseMetadataAttachment(Function &F);
@@ -1887,6 +1890,47 @@ BitcodeReader::parseMetadataKindRecord(SmallVectorImpl<uint64_t> &Record) {
 
 static int64_t unrotateSign(uint64_t U) { return U & 1 ? ~(U >> 1) : U >> 1; }
 
+std::error_code BitcodeReader::parseMetadataStrings(ArrayRef<uint64_t> Record,
+                                                    StringRef Blob,
+                                                    unsigned &NextMetadataNo) {
+  // All the MDStrings in the block are emitted together in a single
+  // record.  The strings are concatenated and stored in a blob along with
+  // their sizes.
+  if (Record.size() != 2)
+    return error("Invalid record: metadata strings layout");
+
+  unsigned NumStrings = Record[0];
+  unsigned StringsOffset = Record[1];
+  if (!NumStrings)
+    return error("Invalid record: metadata strings with no strings");
+  if (StringsOffset >= Blob.size())
+    return error("Invalid record: metadata strings corrupt offset");
+
+  StringRef Lengths = Blob.slice(0, StringsOffset);
+  SimpleBitstreamCursor R(*StreamFile);
+  R.jumpToPointer(Lengths.begin());
+
+  // Ensure that Blob doesn't get invalidated, even if this is reading from
+  // a StreamingMemoryObject with corrupt data.
+  R.setArtificialByteLimit(R.getCurrentByteNo() + StringsOffset);
+
+  StringRef Strings = Blob.drop_front(StringsOffset);
+  do {
+    if (R.AtEndOfStream())
+      return error("Invalid record: metadata strings bad length");
+
+    unsigned Size = R.ReadVBR(6);
+    if (Strings.size() < Size)
+      return error("Invalid record: metadata strings truncated chars");
+
+    MetadataList.assignValue(MDString::get(Context, Strings.slice(0, Size)),
+                             NextMetadataNo++);
+    Strings = Strings.drop_front(Size);
+  } while (--NumStrings);
+
+  return std::error_code();
+}
+
 /// Parse a METADATA_BLOCK. If ModuleLevel is true then we are parsing
 /// module level metadata.
 std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
@@ -1933,7 +1977,8 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
 
     // Read a record.
     Record.clear();
-    unsigned Code = Stream.readRecord(Entry.ID, Record);
+    StringRef Blob;
+    unsigned Code = Stream.readRecord(Entry.ID, Record, &Blob);
     bool IsDistinct = false;
     switch (Code) {
     default:  // Default behavior: ignore.
@@ -2384,7 +2429,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
           NextMetadataNo++);
       break;
     }
-    case bitc::METADATA_STRING: {
+    case bitc::METADATA_STRING_OLD: {
       std::string String(Record.begin(), Record.end());
 
       // Test for upgrading !llvm.loop.
@@ -2394,6 +2439,11 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       MetadataList.assignValue(MD, NextMetadataNo++);
       break;
     }
+    case bitc::METADATA_STRINGS:
+      if (std::error_code EC =
+              parseMetadataStrings(Record, Blob, NextMetadataNo))
+        return EC;
+      break;
     case bitc::METADATA_KIND: {
       // Support older bitcode files that had METADATA_KIND records in a
       // block with METADATA_BLOCK_ID.

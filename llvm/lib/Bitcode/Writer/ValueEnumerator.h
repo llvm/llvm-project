@@ -63,10 +63,9 @@ private:
   ComdatSetType Comdats;
 
   std::vector<const Metadata *> MDs;
-  SmallVector<const LocalAsMetadata *, 8> FunctionLocalMDs;
   typedef DenseMap<const Metadata *, unsigned> MetadataMapType;
   MetadataMapType MetadataMap;
-  bool HasMDString;
+  unsigned NumMDStrings = 0;
   bool ShouldPreserveUseListOrder;
 
   typedef DenseMap<AttributeSet, unsigned> AttributeGroupMapType;
@@ -121,8 +120,6 @@ public:
   }
   unsigned numMDs() const { return MDs.size(); }
 
-  bool hasMDString() const { return HasMDString; }
-
   bool shouldPreserveUseListOrder() const { return ShouldPreserveUseListOrder; }
 
   unsigned getTypeID(Type *T) const {
@@ -157,9 +154,16 @@ public:
 
   const ValueList &getValues() const { return Values; }
   const std::vector<const Metadata *> &getMDs() const { return MDs; }
-  const SmallVectorImpl<const LocalAsMetadata *> &getFunctionLocalMDs() const {
-    return FunctionLocalMDs;
+  ArrayRef<const Metadata *> getMDStrings() const {
+    return makeArrayRef(MDs).slice(0, NumMDStrings);
   }
+  ArrayRef<const Metadata *> getNonMDStrings() const {
+    return makeArrayRef(MDs).slice(NumMDStrings);
+  }
+  ArrayRef<const Metadata *> getFunctionMDs() const {
+    return makeArrayRef(MDs).slice(NumModuleMDs);
+  }
+
   const TypeList &getTypes() const { return Types; }
   const std::vector<const BasicBlock*> &getBasicBlocks() const {
     return BasicBlocks;
@@ -188,6 +192,10 @@ public:
 
 private:
   void OptimizeConstants(unsigned CstStart, unsigned CstEnd);
+
+  // Reorder the reachable metadata.  This is not just an optimization, but is
+  // mandatory for emitting MDString correctly.
+  void organizeMetadata();
 
   void EnumerateMDNodeOperands(const MDNode *N);
   void EnumerateMetadata(const Metadata *MD);

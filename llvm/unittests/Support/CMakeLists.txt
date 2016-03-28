@@ -36,7 +36,7 @@ add_llvm_unittest(SupportTests
   ScaledNumberTest.cpp
   SourceMgrTest.cpp
   SpecialCaseListTest.cpp
-  StreamingMemoryObject.cpp
+  StreamingMemoryObjectTest.cpp
   StringPool.cpp
   SwapByteOrderTest.cpp
   TargetParserTest.cpp

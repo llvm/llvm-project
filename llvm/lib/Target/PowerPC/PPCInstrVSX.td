@@ -1806,6 +1806,12 @@ let Predicates = [HasP9Vector] in {
     : X_RD5_XO5_RS5<opcode, xo2, xo, (outs vrrc:$vT), (ins vbtype:$vB),
                     !strconcat(opc, " $vT, $vB"), IIC_VecFP, pattern>;
 
+  // [PO T XO B XO BX /]
+  class XX2_RT5_XO5_XB6<bits<6> opcode, bits<5> xo2, bits<9> xo, string opc,
+                        list<dag> pattern>
+    : XX2_RD5_XO5_RS6<opcode, xo2, xo, (outs g8rc:$rT), (ins vsfrc:$XB),
+                      !strconcat(opc, " $rT, $XB"), IIC_VecFP, pattern>;
+
   // [PO T XO B XO BX TX]
   class XX2_XT6_XO5_XB6<bits<6> opcode, bits<5> xo2, bits<9> xo, string opc,
                         RegisterOperand vtype, list<dag> pattern>
@@ -1818,6 +1824,55 @@ let Predicates = [HasP9Vector] in {
                   InstrItinClass itin, list<dag> pattern>
     : XX3Form<opcode, xo, (outs xty:$XT), (ins aty:$XA, bty:$XB),
               !strconcat(opc, " $XT, $XA, $XB"), itin, pattern>;
+
+  // [PO VRT VRA VRB XO /]
+  class X_VT5_VA5_VB5<bits<6> opcode, bits<10> xo, string opc,
+                      list<dag> pattern>
+    : XForm_1<opcode, xo, (outs vrrc:$vT), (ins vrrc:$vA, vrrc:$vB),
+              !strconcat(opc, " $vT, $vA, $vB"), IIC_VecFP, pattern>;
+
+  // [PO VRT VRA VRB XO RO], Round to Odd version of [PO VRT VRA VRB XO /]
+  class X_VT5_VA5_VB5_Ro<bits<6> opcode, bits<10> xo, string opc,
+                         list<dag> pattern>
+    : X_VT5_VA5_VB5<opcode, xo, opc, pattern>, isDOT;
+
+  //===--------------------------------------------------------------------===//
+  // Quad-Precision Scalar Move Instructions:
+
+  // Copy Sign
+  def XSCPSGNQP : X_VT5_VA5_VB5<63, 100, "xscpsgnqp", []>;
+
+  // Absolute/Negative-Absolute/Negate
+  def XSABSQP   : X_VT5_XO5_VB5<63,  0, 804, "xsabsqp" , []>;
+  def XSNABSQP  : X_VT5_XO5_VB5<63,  8, 804, "xsnabsqp", []>;
+  def XSNEGQP   : X_VT5_XO5_VB5<63, 16, 804, "xsnegqp" , []>;
+
+  //===--------------------------------------------------------------------===//
+  // Quad-Precision Scalar Floating-Point Arithmetic Instructions:
+
+  // Add/Divide/Multiply/Subtract
+  def XSADDQP   : X_VT5_VA5_VB5   <63,   4, "xsaddqp" , []>;
+  def XSADDQPO  : X_VT5_VA5_VB5_Ro<63,   4, "xsaddqpo", []>;
+  def XSDIVQP   : X_VT5_VA5_VB5   <63, 548, "xsdivqp" , []>;
+  def XSDIVQPO  : X_VT5_VA5_VB5_Ro<63, 548, "xsdivqpo", []>;
+  def XSMULQP   : X_VT5_VA5_VB5   <63,  36, "xsmulqp" , []>;
+  def XSMULQPO  : X_VT5_VA5_VB5_Ro<63,  36, "xsmulqpo", []>;
+  def XSSUBQP   : X_VT5_VA5_VB5   <63, 516, "xssubqp" , []>;
+  def XSSUBQPO  : X_VT5_VA5_VB5_Ro<63, 516, "xssubqpo", []>;
+
+  // Square-Root
+  def XSSQRTQP  : X_VT5_XO5_VB5   <63, 27, 804, "xssqrtqp" , []>;
+  def XSSQRTQPO : X_VT5_XO5_VB5_Ro<63, 27, 804, "xssqrtqpo", []>;
+
+  // (Negative) Multiply-{Add/Subtract}
+  def XSMADDQP  : X_VT5_VA5_VB5   <63, 388, "xsmaddqp"  , []>;
+  def XSMADDQPO : X_VT5_VA5_VB5_Ro<63, 388, "xsmaddqpo" , []>;
+  def XSMSUBQP  : X_VT5_VA5_VB5   <63, 420, "xsmsubqp"  , []>;
+  def XSMSUBQPO : X_VT5_VA5_VB5_Ro<63, 420, "xsmsubqpo" , []>;
+  def XSNMADDQP : X_VT5_VA5_VB5   <63, 452, "xsnmaddqp" , []>;
+  def XSNMADDQPO: X_VT5_VA5_VB5_Ro<63, 452, "xsnmaddqpo", []>;
+  def XSNMSUBQP : X_VT5_VA5_VB5   <63, 484, "xsnmsubqp" , []>;
+  def XSNMSUBQPO: X_VT5_VA5_VB5_Ro<63, 484, "xsnmsubqpo", []>;
 
   //===--------------------------------------------------------------------===//
   // Quad/Double-Precision Compare Instructions:
@@ -1917,6 +1972,99 @@ let Predicates = [HasP9Vector] in {
 
   // Round Quad-Precision to Double-Extended Precision (fp80)
   def XSRQPXP  : Z23_VT5_R1_VB5_RMC2_EX1<63, 37, 0, "xsrqpxp", []>;
+
+  //===--------------------------------------------------------------------===//
+  // Insert/Extract Instructions
+
+  // Insert Exponent DP/QP
+  // XT NOTE: XT.dword[1] = 0xUUUU_UUUU_UUUU_UUUU
+  def XSIEXPDP : XX1Form <60, 918, (outs vsrc:$XT), (ins g8rc:$rA, g8rc:$rB),
+                          "xsiexpdp $XT, $rA, $rB", IIC_VecFP, []>;
+  // vB NOTE: only vB.dword[0] is used, that's why we don't use
+  //          X_VT5_VA5_VB5 form
+  def XSIEXPQP : XForm_18<63, 868, (outs vrrc:$vT), (ins vrrc:$vA, vsfrc:$vB),
+                          "xsiexpqp $vT, $vA, $vB", IIC_VecFP, []>;
+
+  // Extract Exponent/Significand DP/QP
+  def XSXEXPDP : XX2_RT5_XO5_XB6<60,  0, 347, "xsxexpdp", []>;
+  def XSXSIGDP : XX2_RT5_XO5_XB6<60,  1, 347, "xsxsigdp", []>;
+  def XSXEXPQP : X_VT5_XO5_VB5  <63,  2, 804, "xsxexpqp", []>;
+  def XSXSIGQP : X_VT5_XO5_VB5  <63, 18, 804, "xsxsigqp", []>;
+
+  // Vector Insert Word
+  // XB NOTE: Only XB.dword[1] is used, but we use vsrc on XB.
+  def XXINSERTW   : XX2_RD6_UIM5_RS6<60, 181,
+                                  (outs vsrc:$XT), (ins u4imm:$UIMM, vsrc:$XB),
+                                  "xxinsertw $XT, $XB, $UIMM", IIC_VecFP, []>;
+
+  // Vector Extract Unsigned Word
+  def XXEXTRACTUW : XX2_RD6_UIM5_RS6<60, 165,
+                                  (outs vsrc:$XT), (ins u4imm:$UIMM, vsrc:$XB),
+                                  "xxextractuw $XT, $XB, $UIMM", IIC_VecFP, []>;
+
+  // Vector Insert Exponent DP/SP
+  def XVIEXPDP : XX3_XT5_XA5_XB5<60, 248, "xviexpdp", vsrc, vsrc, vsrc,
+                                 IIC_VecFP, []>;
+  def XVIEXPSP : XX3_XT5_XA5_XB5<60, 216, "xviexpsp", vsrc, vsrc, vsrc,
+                                 IIC_VecFP, []>;
+
+  // Vector Extract Exponent/Significand DP/SP
+  def XVXEXPDP : XX2_XT6_XO5_XB6<60,  0, 475, "xvxexpdp", vsrc, []>;
+  def XVXEXPSP : XX2_XT6_XO5_XB6<60,  8, 475, "xvxexpsp", vsrc, []>;
+  def XVXSIGDP : XX2_XT6_XO5_XB6<60,  1, 475, "xvxsigdp", vsrc, []>;
+  def XVXSIGSP : XX2_XT6_XO5_XB6<60,  9, 475, "xvxsigsp", vsrc, []>;
+
+  //===--------------------------------------------------------------------===//
+
+  // Test Data Class SP/DP/QP
+  def XSTSTDCSP : XX2_BF3_DCMX7_RS6<60, 298,
+                              (outs crrc:$BF), (ins u7imm:$DCMX, vsfrc:$XB),
+                              "xststdcsp $BF, $XB, $DCMX", IIC_VecFP, []>;
+  def XSTSTDCDP : XX2_BF3_DCMX7_RS6<60, 362,
+                              (outs crrc:$BF), (ins u7imm:$DCMX, vsfrc:$XB),
+                              "xststdcdp $BF, $XB, $DCMX", IIC_VecFP, []>;
+  def XSTSTDCQP : X_BF3_DCMX7_RS5  <63, 708,
+                              (outs crrc:$BF), (ins u7imm:$DCMX, vrrc:$vB),
+                              "xststdcqp $BF, $vB, $DCMX", IIC_VecFP, []>;
+
+  // Vector Test Data Class SP/DP
+  def XVTSTDCSP : XX2_RD6_DCMX7_RS6<60, 13, 5,
+                              (outs vsrc:$XT), (ins u7imm:$DCMX, vsrc:$XB),
+                              "xvtstdcsp $XT, $XB, $DCMX", IIC_VecFP, []>;
+  def XVTSTDCDP : XX2_RD6_DCMX7_RS6<60, 15, 5,
+                              (outs vsrc:$XT), (ins u7imm:$DCMX, vsrc:$XB),
+                              "xvtstdcdp $XT, $XB, $DCMX", IIC_VecFP, []>;
+
+  //===--------------------------------------------------------------------===//
+
+  // Maximum/Minimum Type-C/Type-J DP
+  // XT.dword[1] = 0xUUUU_UUUU_UUUU_UUUU, so we use vsrc for XT
+  def XSMAXCDP : XX3_XT5_XA5_XB5<60, 128, "xsmaxcdp", vsrc, vsfrc, vsfrc,
+                                 IIC_VecFP, []>;
+  def XSMAXJDP : XX3_XT5_XA5_XB5<60, 144, "xsmaxjdp", vsrc, vsfrc, vsfrc,
+                                 IIC_VecFP, []>;
+  def XSMINCDP : XX3_XT5_XA5_XB5<60, 136, "xsmincdp", vsrc, vsfrc, vsfrc,
+                                 IIC_VecFP, []>;
+  def XSMINJDP : XX3_XT5_XA5_XB5<60, 152, "xsminjdp", vsrc, vsfrc, vsfrc,
+                                 IIC_VecFP, []>;
+
+  //===--------------------------------------------------------------------===//
+
+  // Vector Byte-Reverse H/W/D/Q Word
+  def XXBRH : XX2_XT6_XO5_XB6<60,  7, 475, "xxbrh", vsrc, []>;
+  def XXBRW : XX2_XT6_XO5_XB6<60, 15, 475, "xxbrw", vsrc, []>;
+  def XXBRD : XX2_XT6_XO5_XB6<60, 23, 475, "xxbrd", vsrc, []>;
+  def XXBRQ : XX2_XT6_XO5_XB6<60, 31, 475, "xxbrq", vsrc, []>;
+
+  // Vector Permute
+  def XXPERM  : XX3_XT5_XA5_XB5<60, 26, "xxperm" , vsrc, vsrc, vsrc,
+                                IIC_VecPerm, []>;
+  def XXPERMR : XX3_XT5_XA5_XB5<60, 58, "xxpermr", vsrc, vsrc, vsrc,
+                                IIC_VecPerm, []>;
+
+  // Vector Splat Immediate Byte
+  def XXSPLTIB : X_RD6_IMM8<60, 360, (outs vsrc:$XT), (ins u8imm:$IMM8),
+                            "xxspltib $XT, $IMM8", IIC_VecPerm, []>;
 
   //===--------------------------------------------------------------------===//
   // Vector/Scalar Load/Store Instructions

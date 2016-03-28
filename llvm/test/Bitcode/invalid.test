@@ -168,11 +168,6 @@ RUN:   FileCheck --check-prefix=INVALID-ARGUMENT-TYPE %s
 
 INVALID-ARGUMENT-TYPE: Invalid function argument type
 
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-fixme-streaming-blob.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=STREAMING-BLOB %s
-
-STREAMING-BLOB: getPointer in streaming memory objects not allowed
-
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-function-comdat-id.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-FCOMDAT-ID %s
 

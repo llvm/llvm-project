@@ -104,6 +104,12 @@ uint64_t StreamingMemoryObject::readBytes(uint8_t *Buf, uint64_t Size,
   return Size;
 }
 
+const uint8_t *StreamingMemoryObject::getPointer(uint64_t Address,
+                                                 uint64_t Size) const {
+  fetchToPos(Address + Size - 1);
+  return &Bytes[Address + BytesSkipped];
+}
+
 bool StreamingMemoryObject::dropLeadingBytes(size_t s) {
   if (BytesRead < s) return true;
   BytesSkipped = s;
