@@ -552,7 +552,9 @@ bool ReduceCrashingNamedMD::TestNamedMDs(std::vector<std::string> &NamedMDs) {
   std::vector<NamedMDNode *> ToDelete;
   ToDelete.reserve(M->named_metadata_size() - Names.size());
   for (auto &NamedMD : M->named_metadata())
-    if (!Names.count(NamedMD.getName()))
+    // Always keep a nonempty llvm.dbg.cu because the Verifier would complain.
+    if (!Names.count(NamedMD.getName()) &&
+        (!(NamedMD.getName() == "llvm.dbg.cu" && NamedMD.getNumOperands() > 0)))
       ToDelete.push_back(&NamedMD);
 
   for (auto *NamedMD : ToDelete)
