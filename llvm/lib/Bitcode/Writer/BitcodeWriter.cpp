@@ -1396,21 +1396,18 @@ static void writeMetadataStrings(ArrayRef<const Metadata *> Strings,
   Record.clear();
 }
 
-static void WriteModuleMetadata(const Module &M,
-                                const ValueEnumerator &VE,
-                                BitstreamWriter &Stream) {
-  if (VE.getMDs().empty() && M.named_metadata_empty())
+static void writeMetadataRecords(ArrayRef<const Metadata *> MDs,
+                                 const ValueEnumerator &VE,
+                                 BitstreamWriter &Stream,
+                                 SmallVectorImpl<uint64_t> &Record) {
+  if (MDs.empty())
     return;
-
-  Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
 
   // Initialize MDNode abbreviations.
 #define HANDLE_MDNODE_LEAF(CLASS) unsigned CLASS##Abbrev = 0;
 #include "llvm/IR/Metadata.def"
 
-  SmallVector<uint64_t, 64> Record;
-  writeMetadataStrings(VE.getMDStrings(), Stream, Record);
-  for (const Metadata *MD : VE.getNonMDStrings()) {
+  for (const Metadata *MD : MDs) {
     if (const MDNode *N = dyn_cast<MDNode>(MD)) {
       assert(N->isResolved() && "Expected forward references to be resolved");
 
@@ -1426,7 +1423,18 @@ static void WriteModuleMetadata(const Module &M,
     }
     WriteValueAsMetadata(cast<ConstantAsMetadata>(MD), VE, Stream, Record);
   }
+}
 
+static void WriteModuleMetadata(const Module &M,
+                                const ValueEnumerator &VE,
+                                BitstreamWriter &Stream) {
+  if (VE.getMDs().empty() && M.named_metadata_empty())
+    return;
+
+  Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
+  SmallVector<uint64_t, 64> Record;
+  writeMetadataStrings(VE.getMDStrings(), Stream, Record);
+  writeMetadataRecords(VE.getNonMDStrings(), VE, Stream, Record);
   writeNamedMetadata(M, VE, Stream, Record);
   Stream.ExitBlock();
 }
