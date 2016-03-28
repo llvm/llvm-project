@@ -1421,7 +1421,7 @@ static void writeMetadataRecords(ArrayRef<const Metadata *> MDs,
 #include "llvm/IR/Metadata.def"
       }
     }
-    writeValueAsMetadata(cast<ConstantAsMetadata>(MD), VE, Stream, Record);
+    writeValueAsMetadata(cast<ValueAsMetadata>(MD), VE, Stream, Record);
   }
 }
 
@@ -1446,11 +1446,8 @@ static void writeFunctionMetadata(const Function &F, const ValueEnumerator &VE,
     return;
 
   Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
-
   SmallVector<uint64_t, 64> Record;
-  for (const Metadata *MD : VE.getFunctionMDs())
-    writeValueAsMetadata(cast<LocalAsMetadata>(MD), VE, Stream, Record);
-
+  writeMetadataRecords(MDs, VE, Stream, Record);
   Stream.ExitBlock();
 }
 
