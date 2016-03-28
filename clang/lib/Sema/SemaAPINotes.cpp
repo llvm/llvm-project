@@ -222,6 +222,15 @@ static void ProcessAPINotes(Sema &S, FunctionDecl *D,
                   static_cast<const api_notes::FunctionInfo &>(Info));
 }
 
+/// Process API notes for an enumerator.
+static void ProcessAPINotes(Sema &S, EnumConstantDecl *D,
+                            const api_notes::EnumConstantInfo &Info) {
+
+  // Handle common information.
+  ProcessAPINotes(S, D,
+                  static_cast<const api_notes::CommonEntityInfo &>(Info));
+}
+
 /// Process API notes for an Objective-C method.
 static void ProcessAPINotes(Sema &S, ObjCMethodDecl *D,
                             const api_notes::ObjCMethodInfo &Info) {
@@ -356,6 +365,20 @@ void Sema::ProcessAPINotes(Decl *D) {
     }
 
     return;
+  }
+
+  // Enumerators.
+  if (D->getDeclContext()->getRedeclContext()->isFileContext()) {
+    if (auto EnumConstant = dyn_cast<EnumConstantDecl>(D)) {
+      if (api_notes::APINotesReader *Reader
+            = APINotes.findAPINotes(D->getLocation())) {
+        if (auto Info = Reader->lookupEnumConstant(EnumConstant->getName())) {
+          ::ProcessAPINotes(*this, EnumConstant, *Info);
+        }
+      }
+
+      return;
+    }
   }
 
   if (auto ObjCContainer = dyn_cast<ObjCContainerDecl>(D->getDeclContext())) {

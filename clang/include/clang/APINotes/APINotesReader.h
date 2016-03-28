@@ -102,6 +102,13 @@ public:
   /// \returns information about the global function, if known.
   Optional<GlobalFunctionInfo> lookupGlobalFunction(StringRef name);
 
+  /// Look for information regarding the given enumerator.
+  ///
+  /// \param name The name of the enumerator.
+  ///
+  /// \returns information about the enumerator, if known.
+  Optional<EnumConstantInfo> lookupEnumConstant(StringRef name);
+
   /// Look for information regarding the given tag
   /// (struct/union/enum/C++ class).
   ///
@@ -146,6 +153,10 @@ public:
     /// Visit a global function.
     virtual void visitGlobalFunction(StringRef name,
                                      const GlobalFunctionInfo &info);
+
+    /// Visit an enumerator.
+    virtual void visitEnumConstant(StringRef name,
+                                   const EnumConstantInfo &info);
 
     /// Visit a tag.
     virtual void visitTag(StringRef name, const TagInfo &info);
