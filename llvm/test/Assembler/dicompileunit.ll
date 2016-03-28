@@ -1,8 +1,11 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 ; RUN: verify-uselistorder %s
 
+; Force a specific numbering.
 ; CHECK: !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9}
 !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9}
+; CHECK: !llvm.dbg.cu = !{!8, !9}
+!llvm.dbg.cu = !{!8, !9}
 
 !0 = distinct !{}
 !1 = !DIFile(filename: "path/to/file", directory: "/path/to/dir")
@@ -24,3 +27,5 @@
 !9 = distinct !DICompileUnit(language: 12, file: !1, producer: "",
                              isOptimized: false, flags: "", runtimeVersion: 0,
                              splitDebugFilename: "", emissionKind: 0)
+!llvm.module.flags = !{!10}
+!10 = !{i32 2, !"Debug Info Version", i32 3}
