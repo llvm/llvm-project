@@ -48,6 +48,17 @@ namespace {
     data += swiftNameLength;
   }
 
+  /// Read serialized CommonTypeInfo.
+  void readCommonTypeInfo(const uint8_t *&data, CommonTypeInfo &info) {
+    readCommonEntityInfo(data, info);
+
+    unsigned swiftBridgeLength =
+        endian::readNext<uint16_t, little, unaligned>(data);
+    info.setSwiftBridge(
+        StringRef(reinterpret_cast<const char *>(data), swiftBridgeLength));
+    data += swiftBridgeLength;
+  }
+
   /// Used to deserialize the on-disk identifier table.
   class IdentifierTableInfo {
   public:
@@ -134,19 +145,12 @@ namespace {
                               unsigned length) {
       data_type result;
       result.first = endian::readNext<StoredContextID, little, unaligned>(data);
-      readCommonEntityInfo(data, result.second);
+      readCommonTypeInfo(data, result.second);
       if (*data++) {
         result.second.setDefaultNullability(static_cast<NullabilityKind>(*data));
       }
       ++data;
       result.second.setHasDesignatedInits(*data++);
-
-      // swift bridge.
-      unsigned swiftBridgeLength =
-        endian::readNext<uint16_t, little, unaligned>(data);
-      result.second.setSwiftBridge(
-        StringRef(reinterpret_cast<const char *>(data), swiftBridgeLength));
-      data += swiftBridgeLength;
                                              
       return result;
     }
@@ -410,6 +414,96 @@ namespace {
       return info;
     }
   };
+
+  /// Used to deserialize the on-disk tag table.
+  class TagTableInfo {
+  public:
+    using internal_key_type = unsigned; // name ID
+    using external_key_type = internal_key_type;
+    using data_type = TagInfo;
+    using hash_value_type = size_t;
+    using offset_type = unsigned;
+
+    internal_key_type GetInternalKey(external_key_type key) {
+      return key;
+    }
+
+    external_key_type GetExternalKey(internal_key_type key) {
+      return key;
+    }
+
+    hash_value_type ComputeHash(internal_key_type key) {
+      return static_cast<size_t>(llvm::hash_value(key));
+    }
+    
+    static bool EqualKey(internal_key_type lhs, internal_key_type rhs) {
+      return lhs == rhs;
+    }
+    
+    static std::pair<unsigned, unsigned> 
+    ReadKeyDataLength(const uint8_t *&data) {
+      unsigned keyLength = endian::readNext<uint16_t, little, unaligned>(data);
+      unsigned dataLength = endian::readNext<uint16_t, little, unaligned>(data);
+      return { keyLength, dataLength };
+    }
+    
+    static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
+      auto nameID = endian::readNext<IdentifierID, little, unaligned>(data);
+      return nameID;
+    }
+    
+    static data_type ReadData(internal_key_type key, const uint8_t *data,
+                              unsigned length) {
+      TagInfo info;
+      readCommonTypeInfo(data, info);
+      return info;
+    }
+  };
+
+  /// Used to deserialize the on-disk typedef table.
+  class TypedefTableInfo {
+  public:
+    using internal_key_type = unsigned; // name ID
+    using external_key_type = internal_key_type;
+    using data_type = TypedefInfo;
+    using hash_value_type = size_t;
+    using offset_type = unsigned;
+
+    internal_key_type GetInternalKey(external_key_type key) {
+      return key;
+    }
+
+    external_key_type GetExternalKey(internal_key_type key) {
+      return key;
+    }
+
+    hash_value_type ComputeHash(internal_key_type key) {
+      return static_cast<size_t>(llvm::hash_value(key));
+    }
+    
+    static bool EqualKey(internal_key_type lhs, internal_key_type rhs) {
+      return lhs == rhs;
+    }
+    
+    static std::pair<unsigned, unsigned> 
+    ReadKeyDataLength(const uint8_t *&data) {
+      unsigned keyLength = endian::readNext<uint16_t, little, unaligned>(data);
+      unsigned dataLength = endian::readNext<uint16_t, little, unaligned>(data);
+      return { keyLength, dataLength };
+    }
+    
+    static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
+      auto nameID = endian::readNext<IdentifierID, little, unaligned>(data);
+      return nameID;
+    }
+    
+    static data_type ReadData(internal_key_type key, const uint8_t *data,
+                              unsigned length) {
+      TypedefInfo info;
+      readCommonTypeInfo(data, info);
+      return info;
+    }
+  };
 } // end anonymous namespace
 
 class APINotesReader::Implementation {
@@ -465,6 +559,18 @@ public:
   /// The global function table.
   std::unique_ptr<SerializedGlobalFunctionTable> GlobalFunctionTable;
 
+  using SerializedTagTable =
+      llvm::OnDiskIterableChainedHashTable<TagTableInfo>;
+
+  /// The tag table.
+  std::unique_ptr<SerializedTagTable> TagTable;
+
+  using SerializedTypedefTable =
+      llvm::OnDiskIterableChainedHashTable<TypedefTableInfo>;
+
+  /// The typedef table.
+  std::unique_ptr<SerializedTypedefTable> TypedefTable;
+
   /// Retrieve the identifier ID for the given string, or an empty
   /// optional if the string is unknown.
   Optional<IdentifierID> getIdentifier(StringRef str);
@@ -489,6 +595,10 @@ public:
                                SmallVectorImpl<uint64_t> &scratch);
   bool readGlobalFunctionBlock(llvm::BitstreamCursor &cursor,
                                SmallVectorImpl<uint64_t> &scratch);
+  bool readTagBlock(llvm::BitstreamCursor &cursor,
+                    SmallVectorImpl<uint64_t> &scratch);
+  bool readTypedefBlock(llvm::BitstreamCursor &cursor,
+                        SmallVectorImpl<uint64_t> &scratch);
 };
 
 Optional<IdentifierID> APINotesReader::Implementation::getIdentifier(
@@ -959,6 +1069,112 @@ bool APINotesReader::Implementation::readGlobalFunctionBlock(
   return false;
 }
 
+bool APINotesReader::Implementation::readTagBlock(
+       llvm::BitstreamCursor &cursor, 
+       SmallVectorImpl<uint64_t> &scratch) {
+  if (cursor.EnterSubBlock(TAG_BLOCK_ID))
+    return true;
+
+  auto next = cursor.advance();
+  while (next.Kind != llvm::BitstreamEntry::EndBlock) {
+    if (next.Kind == llvm::BitstreamEntry::Error)
+      return true;
+
+    if (next.Kind == llvm::BitstreamEntry::SubBlock) {
+      // Unknown sub-block, possibly for use by a future version of the
+      // API notes format.
+      if (cursor.SkipBlock())
+        return true;
+      
+      next = cursor.advance();
+      continue;
+    }
+
+    scratch.clear();
+    StringRef blobData;
+    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    switch (kind) {
+    case tag_block::TAG_DATA: {
+      // Already saw tag table.
+      if (TagTable)
+        return true;
+
+      uint32_t tableOffset;
+      tag_block::TagDataLayout::readRecord(scratch, tableOffset);
+      auto base = reinterpret_cast<const uint8_t *>(blobData.data());
+
+      TagTable.reset(
+        SerializedTagTable::Create(base + tableOffset,
+                                   base + sizeof(uint32_t),
+                                   base));
+      break;
+    }
+
+    default:
+      // Unknown record, possibly for use by a future version of the
+      // module format.
+      break;
+    }
+
+    next = cursor.advance();
+  }
+
+  return false;
+}
+
+bool APINotesReader::Implementation::readTypedefBlock(
+       llvm::BitstreamCursor &cursor, 
+       SmallVectorImpl<uint64_t> &scratch) {
+  if (cursor.EnterSubBlock(TYPEDEF_BLOCK_ID))
+    return true;
+
+  auto next = cursor.advance();
+  while (next.Kind != llvm::BitstreamEntry::EndBlock) {
+    if (next.Kind == llvm::BitstreamEntry::Error)
+      return true;
+
+    if (next.Kind == llvm::BitstreamEntry::SubBlock) {
+      // Unknown sub-block, possibly for use by a future version of the
+      // API notes format.
+      if (cursor.SkipBlock())
+        return true;
+      
+      next = cursor.advance();
+      continue;
+    }
+
+    scratch.clear();
+    StringRef blobData;
+    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    switch (kind) {
+    case typedef_block::TYPEDEF_DATA: {
+      // Already saw typedef table.
+      if (TypedefTable)
+        return true;
+
+      uint32_t tableOffset;
+      typedef_block::TypedefDataLayout::readRecord(scratch, tableOffset);
+      auto base = reinterpret_cast<const uint8_t *>(blobData.data());
+
+      TypedefTable.reset(
+        SerializedTypedefTable::Create(base + tableOffset,
+                                       base + sizeof(uint32_t),
+                                       base));
+      break;
+    }
+
+    default:
+      // Unknown record, possibly for use by a future version of the
+      // module format.
+      break;
+    }
+
+    next = cursor.advance();
+  }
+
+  return false;
+}
+
 APINotesReader::APINotesReader(std::unique_ptr<llvm::MemoryBuffer> inputBuffer, 
                              bool &failed) 
   : Impl(*new Implementation)
@@ -1052,6 +1268,20 @@ APINotesReader::APINotesReader(std::unique_ptr<llvm::MemoryBuffer> inputBuffer,
     case GLOBAL_FUNCTION_BLOCK_ID:
       if (!hasValidControlBlock || 
           Impl.readGlobalFunctionBlock(cursor, scratch)) {
+        failed = true;
+        return;
+      }
+      break;
+
+    case TAG_BLOCK_ID:
+      if (!hasValidControlBlock || Impl.readTagBlock(cursor, scratch)) {
+        failed = true;
+        return;
+      }
+      break;
+
+    case TYPEDEF_BLOCK_ID:
+      if (!hasValidControlBlock || Impl.readTypedefBlock(cursor, scratch)) {
         failed = true;
         return;
       }
@@ -1197,6 +1427,37 @@ Optional<GlobalFunctionInfo> APINotesReader::lookupGlobalFunction(
 
   return *known;
 }
+
+Optional<TagInfo> APINotesReader::lookupTag(StringRef name) {
+  if (!Impl.TagTable)
+    return None;
+
+  Optional<IdentifierID> nameID = Impl.getIdentifier(name);
+  if (!nameID)
+    return None;
+
+  auto known = Impl.TagTable->find(*nameID);
+  if (known == Impl.TagTable->end())
+    return None;
+
+  return *known;
+}
+
+Optional<TypedefInfo> APINotesReader::lookupTypedef(StringRef name) {
+  if (!Impl.TypedefTable)
+    return None;
+
+  Optional<IdentifierID> nameID = Impl.getIdentifier(name);
+  if (!nameID)
+    return None;
+
+  auto known = Impl.TypedefTable->find(*nameID);
+  if (known == Impl.TypedefTable->end())
+    return None;
+
+  return *known;
+}
+
 APINotesReader::Visitor::~Visitor() { }
 
 void APINotesReader::Visitor::visitObjCClass(ContextID contextID,
@@ -1223,6 +1484,14 @@ void APINotesReader::Visitor::visitGlobalVariable(
 void APINotesReader::Visitor::visitGlobalFunction(
        StringRef name,
        const GlobalFunctionInfo &info) { }
+
+void APINotesReader::Visitor::visitTag(
+       StringRef name,
+       const TagInfo &info) { }
+
+void APINotesReader::Visitor::visitTypedef(
+       StringRef name,
+       const TypedefInfo &info) { }
 
 void APINotesReader::visit(Visitor &visitor) {
   // FIXME: All of these iterations would be significantly more efficient if we
@@ -1308,6 +1577,24 @@ void APINotesReader::visit(Visitor &visitor) {
       auto name = identifiers[key];
       auto info = *Impl.GlobalVariableTable->find(key);
       visitor.visitGlobalVariable(name, info);
+    }
+  }
+
+  // Visit tags.
+  if (Impl.TagTable) {
+    for (auto key : Impl.TagTable->keys()) {
+      auto name = identifiers[key];
+      auto info = *Impl.TagTable->find(key);
+      visitor.visitTag(name, info);
+    }
+  }
+
+  // Visit typedefs.
+  if (Impl.TypedefTable) {
+    for (auto key : Impl.TypedefTable->keys()) {
+      auto name = identifiers[key];
+      auto info = *Impl.TypedefTable->find(key);
+      visitor.visitTypedef(name, info);
     }
   }
 }

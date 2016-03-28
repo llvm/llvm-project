@@ -35,7 +35,7 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 8;
+const uint16_t VERSION_MINOR = 9;
 
 using IdentifierID = Fixnum<31>;
 using IdentifierIDField = BCVBR<16>;
@@ -84,7 +84,15 @@ enum BlockID {
 
   /// The (global) functions data block, which maps global function names to
   /// information about the global function.
-  GLOBAL_FUNCTION_BLOCK_ID
+  GLOBAL_FUNCTION_BLOCK_ID,
+
+  /// The tag data block, which maps tag names to information about
+  /// the tags.
+  TAG_BLOCK_ID,
+
+  /// The typedef data block, which maps typedef names to information about
+  /// the typedefs.
+  TYPEDEF_BLOCK_ID,
 };
 
 namespace control_block {
@@ -192,6 +200,30 @@ namespace global_function_block {
     BCBlob  // map from name to global function information
   >;
 }
+
+namespace tag_block {
+  enum {
+    TAG_DATA = 1
+  };
+
+  using TagDataLayout = BCRecordLayout<
+    TAG_DATA,   // record ID
+    BCVBR<16>,  // table offset within the blob (see below)
+    BCBlob      // map from name to tag information
+  >;
+};
+
+namespace typedef_block {
+  enum {
+    TYPEDEF_DATA = 1
+  };
+
+  using TypedefDataLayout = BCRecordLayout<
+    TYPEDEF_DATA,   // record ID
+    BCVBR<16>,  // table offset within the blob (see below)
+    BCBlob      // map from name to typedef information
+  >;
+};
 
 /// A stored Objective-C selector.
 struct StoredObjCSelector {

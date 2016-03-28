@@ -57,6 +57,10 @@
  ...
  Globals:                 # List of globals
  ...
+ Tags:                    # List of tags (struct/union/enum/C++ class)
+ ...
+ Typedefs:                # List of typedef-names and C++11 type aliases
+ ...
 
  Each class and protocol is defined as following:
 
@@ -212,6 +216,22 @@ namespace {
   };
   typedef std::vector<GlobalVariable> GlobalVariablesSeq;
 
+  struct Tag {
+    StringRef Name;
+    AvailabilityItem Availability;
+    StringRef SwiftName;
+    StringRef SwiftBridge;
+  };
+  typedef std::vector<Tag> TagsSeq;
+
+  struct Typedef {
+    StringRef Name;
+    AvailabilityItem Availability;
+    StringRef SwiftName;
+    StringRef SwiftBridge;
+  };
+  typedef std::vector<Typedef> TypedefsSeq;
+
   struct Module {
     StringRef Name;
     AvailabilityItem Availability;
@@ -219,6 +239,8 @@ namespace {
     ClassesSeq Protocols;
     FunctionsSeq Functions;
     GlobalVariablesSeq Globals;
+    TagsSeq Tags;
+    TypedefsSeq Typedefs;
 
     LLVM_ATTRIBUTE_DEPRECATED(
       void dump() LLVM_ATTRIBUTE_USED,
@@ -232,6 +254,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(Property)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Class)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Function)
 LLVM_YAML_IS_SEQUENCE_VECTOR(GlobalVariable)
+LLVM_YAML_IS_SEQUENCE_VECTOR(Tag)
+LLVM_YAML_IS_SEQUENCE_VECTOR(Typedef)
 
 namespace llvm {
   namespace yaml {
@@ -346,6 +370,28 @@ namespace llvm {
     };
 
     template <>
+    struct MappingTraits<Tag> {
+      static void mapping(IO &io, Tag& t) {
+        io.mapRequired("Name",                  t.Name);
+        io.mapOptional("Availability",          t.Availability.Mode);
+        io.mapOptional("AvailabilityMsg",       t.Availability.Msg);
+        io.mapOptional("SwiftName",             t.SwiftName);
+        io.mapOptional("SwiftBridge",           t.SwiftBridge);
+      }
+    };
+
+    template <>
+    struct MappingTraits<Typedef> {
+      static void mapping(IO &io, Typedef& t) {
+        io.mapRequired("Name",                  t.Name);
+        io.mapOptional("Availability",          t.Availability.Mode);
+        io.mapOptional("AvailabilityMsg",       t.Availability.Msg);
+        io.mapOptional("SwiftName",             t.SwiftName);
+        io.mapOptional("SwiftBridge",           t.SwiftBridge);
+      }
+    };
+
+    template <>
     struct MappingTraits<Module> {
       static void mapping(IO &io, Module& m) {
         io.mapRequired("Name",            m.Name);
@@ -355,6 +401,8 @@ namespace llvm {
         io.mapOptional("Protocols",       m.Protocols);
         io.mapOptional("Functions",       m.Functions);
         io.mapOptional("Globals",         m.Globals);
+        io.mapOptional("Tags",            m.Tags);
+        io.mapOptional("Typedefs",        m.Typedefs);
       }
     };
   }
@@ -377,11 +425,7 @@ static bool parseAPINotes(StringRef yamlInput, Module &module,
   return static_cast<bool>(yin.error());
 }
 
-static bool compile(const Module &module,
-                    llvm::raw_ostream &os,
-                    api_notes::OSType targetOS,
-                    llvm::SourceMgr::DiagHandlerTy diagHandler,
-                    void *diagHandlerCtxt){
+namespace {
   using namespace api_notes;
 
   class YAMLConverter {
@@ -431,7 +475,7 @@ static bool compile(const Module &module,
         outInfo.UnavailableMsg = in.Msg;
       } else {
         if (!in.Msg.empty()) {
-          emitError("availability message for available class '" +
+          emitError("availability message for available API '" +
                     apiName + "' will not be used");
         }
       }
@@ -466,16 +510,36 @@ static bool compile(const Module &module,
       }
     }
 
+    /// Convert the common parts of an entity from YAML.
+    template<typename T>
+    bool convertCommon(const T& common, CommonEntityInfo &info,
+                       StringRef apiName) {
+      if (!isAvailable(common.Availability))
+        return true;
+
+      convertAvailability(common.Availability, info, apiName);
+      info.SwiftName = common.SwiftName;
+      return false;
+    }
+    
+    /// Convert the common parts of a type entity from YAML.
+    template<typename T>
+    bool convertCommonType(const T& common, CommonTypeInfo &info,
+                           StringRef apiName) {
+      if (convertCommon(common, info, apiName))
+        return true;
+
+      info.setSwiftBridge(common.SwiftBridge);
+      return false;
+    }
+
     // Translate from Method into ObjCMethodInfo and write it out.
     void convertMethod(const Method &meth,
                        ContextID classID, StringRef className) {
       ObjCMethodInfo mInfo;
 
-      if (!isAvailable(meth.Availability))
+      if (convertCommon(meth, mInfo, meth.Selector))
         return;
-
-      convertAvailability(meth.Availability, mInfo, meth.Selector);
-      mInfo.SwiftName = meth.SwiftName;
 
       // Check if the selector ends with ':' to determine if it takes arguments.
       bool takesArguments = meth.Selector.endswith(":");
@@ -505,26 +569,19 @@ static bool compile(const Module &module,
 
       // Write it.
       Writer->addObjCMethod(classID, selectorRef,
-                           meth.Kind == MethodKind::Instance,
-                           mInfo);
+                            meth.Kind == MethodKind::Instance,
+                            mInfo);
     }
 
     void convertContext(const Class &cl, bool isClass) {
       // Write the class.
       ObjCContextInfo cInfo;
 
-      // First, translate and check availability info.
-      if (!isAvailable(cl.Availability))
+      if (convertCommonType(cl, cInfo, cl.Name))
         return;
-
-      convertAvailability(cl.Availability, cInfo, cl.Name);
-      cInfo.SwiftName = cl.SwiftName;
 
       if (cl.AuditedForNullability)
         cInfo.setDefaultNullability(*DefaultNullability);
-
-      if (isClass)
-        cInfo.setSwiftBridge(cl.SwiftBridge);
 
       ContextID clID = isClass ? Writer->addObjCClass(cl.Name, cInfo) :
                                  Writer->addObjCProtocol(cl.Name, cInfo);
@@ -644,12 +701,52 @@ static bool compile(const Module &module,
         Writer->addGlobalFunction(function.Name, info);
       }
 
+      // Write all tags.
+      llvm::StringSet<> knownTags;
+      for (const auto &t : TheModule.Tags) {
+        // Check for duplicate tag definitions.
+        if (!knownTags.insert(t.Name).second) {
+          emitError("multiple definitions of tag '" + t.Name + "'");
+          continue;
+        }
+
+        TagInfo tagInfo;
+        if (convertCommonType(t, tagInfo, t.Name))
+          continue;
+
+        Writer->addTag(t.Name, tagInfo);
+      }
+
+      // Write all typedefs.
+      llvm::StringSet<> knownTypedefs;
+      for (const auto &t : TheModule.Typedefs) {
+        // Check for duplicate typedef definitions.
+        if (!knownTags.insert(t.Name).second) {
+          emitError("multiple definitions of typedef '" + t.Name + "'");
+          continue;
+        }
+
+        TypedefInfo typedefInfo;
+        if (convertCommonType(t, typedefInfo, t.Name))
+          continue;
+
+        Writer->addTypedef(t.Name, typedefInfo);
+      }
+
       if (!ErrorOccured)
         Writer->writeToStream(OS);
 
       return ErrorOccured;
     }
   };
+}
+
+static bool compile(const Module &module,
+                    llvm::raw_ostream &os,
+                    api_notes::OSType targetOS,
+                    llvm::SourceMgr::DiagHandlerTy diagHandler,
+                    void *diagHandlerCtxt){
+  using namespace api_notes;
 
   YAMLConverter c(module, targetOS, os, diagHandler, diagHandlerCtxt);
   return c.convertModule();
@@ -689,15 +786,7 @@ bool api_notes::compileAPINotes(StringRef yamlInput,
   return compile(module, os, targetOS, diagHandler, diagHandlerCtxt);
 }
 
-bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
-                                  llvm::raw_ostream &os) {
-  // Try to read the file.
-  auto reader = APINotesReader::get(std::move(input));
-  if (!reader) {
-    llvm::errs() << "not a well-formed API notes binary file\n";
-    return true;
-  }
-
+namespace {
   // Deserialize the API notes file into a module.
   class DecompileVisitor : public APINotesReader::Visitor {
     /// Allocator used to clone those strings that need it.
@@ -720,20 +809,28 @@ bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
       return StringRef(reinterpret_cast<const char *>(ptr), string.size());
     }
 
+    template<typename T>
+    void handleCommon(T &record, const CommonEntityInfo &info) {
+      handleAvailability(record.Availability, info);
+      record.SwiftName = copyString(info.SwiftName);
+    }
+
+    template<typename T>
+    void handleCommonType(T &record, const CommonTypeInfo &info) {
+      handleCommon(record, info);
+      record.SwiftBridge = copyString(info.getSwiftBridge());      
+    }
+
     /// Map Objective-C context info.
     void handleObjCContext(Class &record, StringRef name,
                            const ObjCContextInfo &info) {
       record.Name = name;
 
-      // Handle class information.
-      handleAvailability(record.Availability, info);
-      record.SwiftName = copyString(info.SwiftName);
+      handleCommonType(record, info);
 
       if (info.getDefaultNullability()) {
         record.AuditedForNullability = true;
       }
-
-      record.SwiftBridge = copyString(info.getSwiftBridge());
     }
 
     /// Map availability information, if present.
@@ -792,10 +889,9 @@ bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
       method.Selector = copyString(selector);
       method.Kind = isInstanceMethod ? MethodKind::Instance : MethodKind::Class;
 
+      handleCommon(method, info);
       handleNullability(method.Nullability, method.NullabilityOfRet, info,
                         selector.count(':'));
-      handleAvailability(method.Availability, info);
-      method.SwiftName = copyString(info.SwiftName);
       method.FactoryAsInit = info.getFactoryAsInitKind();
       method.DesignatedInit = info.DesignatedInit;
       method.Required = info.Required;
@@ -811,8 +907,7 @@ bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
                                    const ObjCPropertyInfo &info) {
       Property property;
       property.Name = name;
-      handleAvailability(property.Availability, info);
-      property.SwiftName = copyString(info.SwiftName);
+      handleCommon(property, info);
 
       // FIXME: No way to represent "not audited for nullability".
       if (auto nullability = info.getNullability()) {
@@ -830,8 +925,7 @@ bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
                                      const GlobalFunctionInfo &info) {
       Function function;
       function.Name = name;
-      handleAvailability(function.Availability, info);
-      function.SwiftName = copyString(info.SwiftName);
+      handleCommon(function, info);
       if (info.NumAdjustedNullable > 0)
         handleNullability(function.Nullability, function.NullabilityOfRet,
                           info, info.NumAdjustedNullable-1);
@@ -843,8 +937,7 @@ bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
                                      const GlobalVariableInfo &info) {
       GlobalVariable global;
       global.Name = name;
-      handleAvailability(global.Availability, info);
-      global.SwiftName = copyString(info.SwiftName);
+      handleCommon(global, info);
 
       // FIXME: No way to represent "not audited for nullability".
       if (auto nullability = info.getNullability()) {
@@ -854,10 +947,35 @@ bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
       TheModule.Globals.push_back(global);
     }
 
+    virtual void visitTag(StringRef name, const TagInfo &info) {
+      Tag tag;
+      tag.Name = name;
+      handleCommonType(tag, info);
+      TheModule.Tags.push_back(tag);
+    }
+
+    virtual void visitTypedef(StringRef name, const TypedefInfo &info) {
+      Typedef td;
+      td.Name = name;
+      handleCommonType(td, info);
+      TheModule.Typedefs.push_back(td);
+    }
+
     /// Retrieve the module.
     Module &getModule() { return TheModule; }
-  } decompileVisitor;
+  };
+}
 
+bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
+                                  llvm::raw_ostream &os) {
+  // Try to read the file.
+  auto reader = APINotesReader::get(std::move(input));
+  if (!reader) {
+    llvm::errs() << "not a well-formed API notes binary file\n";
+    return true;
+  }
+
+  DecompileVisitor decompileVisitor;
   reader->visit(decompileVisitor);
 
   // Sort the data in the module, because the API notes reader doesn't preserve
@@ -908,6 +1026,18 @@ bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
   // Sort global variables.
   std::sort(module.Globals.begin(), module.Globals.end(),
             [](const GlobalVariable &lhs, const GlobalVariable &rhs) -> bool {
+              return lhs.Name < rhs.Name;
+            });
+
+  // Sort tags.
+  std::sort(module.Tags.begin(), module.Tags.end(),
+            [](const Tag &lhs, const Tag &rhs) -> bool {
+              return lhs.Name < rhs.Name;
+            });
+
+  // Sort typedefs.
+  std::sort(module.Typedefs.begin(), module.Typedefs.end(),
+            [](const Typedef &lhs, const Typedef &rhs) -> bool {
               return lhs.Name < rhs.Name;
             });
 
