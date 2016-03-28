@@ -92,3 +92,15 @@ Globals:
     Availability:    available
     AvailabilityMsg: ''
     SwiftName:       calibratedWhite
+Tags:            
+  - Name:            NSSomeStruct
+    Availability:    available
+    AvailabilityMsg: ''
+    SwiftName:       SomeStruct
+    SwiftBridge:     ''
+Typedefs:        
+  - Name:            NSTypedef
+    Availability:    available
+    AvailabilityMsg: ''
+    SwiftName:       Typedef
+    SwiftBridge:     ''

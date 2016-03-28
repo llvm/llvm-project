@@ -113,11 +113,43 @@ public:
 
     return lhs;
   }
+};
 
+/// Describes API notes for types.
+class CommonTypeInfo : public CommonEntityInfo {
+  /// The Swift type to which a given type is bridged.
+  ///
+  /// Reflects the swift_bridge attribute.
+  std::string SwiftBridge;
+
+public:
+  CommonTypeInfo() : CommonEntityInfo() { }
+
+  const std::string &getSwiftBridge() const { return SwiftBridge; }
+  void setSwiftBridge(const std::string &swiftType) { SwiftBridge = swiftType; }
+
+  friend CommonTypeInfo &operator|=(CommonTypeInfo &lhs,
+                                    const CommonTypeInfo &rhs) {
+    static_cast<CommonEntityInfo &>(lhs) |= rhs;
+    if (lhs.SwiftBridge.empty() && !rhs.SwiftBridge.empty())
+      lhs.SwiftBridge = rhs.SwiftBridge;
+    return lhs;
+  }
+
+  friend bool operator==(const CommonTypeInfo &lhs,
+                         const CommonTypeInfo &rhs) {
+    return static_cast<const CommonEntityInfo &>(lhs) == rhs &&
+      lhs.SwiftBridge == rhs.SwiftBridge;
+  }
+
+  friend bool operator!=(const CommonTypeInfo &lhs,
+                         const CommonTypeInfo &rhs) {
+    return !(lhs == rhs);
+  }
 };
 
 /// Describes API notes data for an Objective-C class or protocol.
-class ObjCContextInfo : public CommonEntityInfo {
+class ObjCContextInfo : public CommonTypeInfo {
   /// Whether this class has a default nullability.
   unsigned HasDefaultNullability : 1;
 
@@ -127,14 +159,9 @@ class ObjCContextInfo : public CommonEntityInfo {
   /// Whether this class has designated initializers recorded.
   unsigned HasDesignatedInits : 1;
 
-  /// The Swift type to which a given Objective-C class is bridged.
-  ///
-  /// Reflects the swift_bridge attribute.
-  std::string SwiftBridge;
-
 public:
   ObjCContextInfo()
-    : CommonEntityInfo(),
+    : CommonTypeInfo(),
       HasDefaultNullability(0),
       DefaultNullability(0),
       HasDesignatedInits(0)
@@ -167,15 +194,11 @@ public:
     DefaultNullability = 0;
   }
 
-  const std::string &getSwiftBridge() const { return SwiftBridge; }
-  void setSwiftBridge(const std::string &swiftType) { SwiftBridge = swiftType; }
-
   friend bool operator==(const ObjCContextInfo &lhs, const ObjCContextInfo &rhs) {
-    return static_cast<const CommonEntityInfo &>(lhs) == rhs &&
+    return static_cast<const CommonTypeInfo &>(lhs) == rhs &&
            lhs.HasDefaultNullability == rhs.HasDefaultNullability &&
            lhs.DefaultNullability == rhs.DefaultNullability &&
-           lhs.HasDesignatedInits == rhs.HasDesignatedInits &&
-           lhs.SwiftBridge == rhs.SwiftBridge;
+           lhs.HasDesignatedInits == rhs.HasDesignatedInits;
   }
 
   friend bool operator!=(const ObjCContextInfo &lhs, const ObjCContextInfo &rhs) {
@@ -185,7 +208,7 @@ public:
   friend ObjCContextInfo &operator|=(ObjCContextInfo &lhs,
                                      const ObjCContextInfo &rhs) {
     // Merge inherited info.
-    static_cast<CommonEntityInfo &>(lhs) |= rhs;
+    static_cast<CommonTypeInfo &>(lhs) |= rhs;
 
     // Merge nullability.
     if (!lhs.getDefaultNullability()) {
@@ -195,9 +218,6 @@ public:
     }
 
     lhs.HasDesignatedInits |= rhs.HasDesignatedInits;
-
-    if (lhs.SwiftBridge.empty() && !rhs.SwiftBridge.empty())
-      lhs.SwiftBridge = rhs.SwiftBridge;
 
     return lhs;
   }
@@ -434,6 +454,18 @@ public:
 class GlobalFunctionInfo : public FunctionInfo {
 public:
   GlobalFunctionInfo() : FunctionInfo() { }
+};
+
+/// Describes API notes data for a tag.
+class TagInfo : public CommonTypeInfo {
+public:
+  TagInfo() : CommonTypeInfo() { }
+};
+
+/// Describes API notes data for a typedef.
+class TypedefInfo : public CommonTypeInfo {
+public:
+  TypedefInfo() : CommonTypeInfo() { }
 };
 
 } // end namespace api_notes
