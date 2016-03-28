@@ -124,6 +124,7 @@ protected:
   bool HasHTM;
   bool HasFusion;
   bool HasFloat128;
+  bool SlowPOPCNTD;
 
   /// When targeting QPX running a stock PPC64 Linux kernel where the stack
   /// alignment has not been changed, we need to keep the 16-byte alignment
@@ -248,6 +249,7 @@ public:
   bool isE500() const { return IsE500; }
   bool isFeatureMFTB() const { return FeatureMFTB; }
   bool isDeprecatedDST() const { return DeprecatedDST; }
+  bool isPOPCNTDSlow() const { return SlowPOPCNTD; }
   bool hasICBT() const { return HasICBT; }
   bool hasInvariantFunctionDescriptors() const {
     return HasInvariantFunctionDescriptors;

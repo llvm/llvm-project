@@ -35,14 +35,22 @@
 #include <math.h>
 #endif
 
+#ifdef __cplusplus
+#include <cinttypes>
+#else
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
+#endif
 
+#ifdef __cplusplus
+#include <cstdint>
+#else
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #else
 #error "Compiler must provide an implementation of stdint.h"
+#endif
 #endif
 
 #ifndef _MSC_VER
@@ -79,14 +87,14 @@ typedef u_int64_t uint64_t;
 #endif
 
 #else /* _MSC_VER */
+#ifdef __cplusplus
+#include <cstdlib>
+#include <cstddef>
+#else
 #include <stdlib.h>
 #include <stddef.h>
-#include <sys/types.h>
-#ifdef __cplusplus
-#include <cmath>
-#else
-#include <math.h>
 #endif
+#include <sys/types.h>
 
 #if defined(_WIN64)
 typedef signed __int64 ssize_t;
@@ -127,4 +135,4 @@ typedef signed int ssize_t;
 #define HUGE_VALF (float)HUGE_VAL
 #endif
 
-#endif  /* SUPPORT_DATATYPES_H */
+#endif /* SUPPORT_DATATYPES_H */

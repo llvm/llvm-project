@@ -83,6 +83,11 @@ public:
   /// RABasic analysis usage.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
+  MachineFunctionProperties getSetProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
+
   void releaseMemory() override;
 
   Spiller &spiller() override { return *SpillerInstance; }

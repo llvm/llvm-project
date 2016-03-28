@@ -60,7 +60,7 @@ define void @v_ctpop_add_chain_i32(i32 addrspace(1)* noalias %out, i32 addrspace
 
 ; FUNC-LABEL: {{^}}v_ctpop_add_sgpr_i32:
 ; GCN: buffer_load_dword [[VAL0:v[0-9]+]],
-; GCN-NEXT: s_waitcnt
+; GCN: s_waitcnt
 ; GCN-NEXT: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL0]], s{{[0-9]+}}
 ; GCN-NEXT: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm

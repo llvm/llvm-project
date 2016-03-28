@@ -22,7 +22,7 @@ define void @rems() {
   ; CHECK-DAG:        lw      $[[J:[0-9]+]], 0($[[J_ADDR]])
   ; CHECK-DAG:        lw      $[[K:[0-9]+]], 0($[[K_ADDR]])
   ; CHECK-DAG:        div     $zero, $[[J]], $[[K]]
-  ; CHECK_DAG:        teq     $[[K]], $zero, 7
+  ; CHECK-DAG:        teq     $[[K]], $zero, 7
   ; CHECK-DAG:        mfhi    $[[RESULT:[0-9]+]]
   ; CHECK:            sw      $[[RESULT]], 0($[[I_ADDR]])
   %1 = load i32, i32* @sj, align 4
@@ -45,7 +45,7 @@ define void @remu() {
   ; CHECK-DAG:        lw      $[[J:[0-9]+]], 0($[[J_ADDR]])
   ; CHECK-DAG:        lw      $[[K:[0-9]+]], 0($[[K_ADDR]])
   ; CHECK-DAG:        divu    $zero, $[[J]], $[[K]]
-  ; CHECK_DAG:        teq     $[[K]], $zero, 7
+  ; CHECK-DAG:        teq     $[[K]], $zero, 7
   ; CHECK-DAG:        mfhi    $[[RESULT:[0-9]+]]
   ; CHECK:            sw      $[[RESULT]], 0($[[I_ADDR]])
   %1 = load i32, i32* @uj, align 4

@@ -684,6 +684,12 @@ ParseDirective(AsmToken DirectiveID)
     Parser.eatToEndOfStatement();
     return false;
   }
+  if (IDVal == ".proc") {
+    // For compatibility, ignore this directive.
+    // (It's supposed to be an "optimization" in the Sun assembler)
+    Parser.eatToEndOfStatement();
+    return false;
+  }
 
   // Let the MC layer to handle other directives.
   return true;

@@ -238,6 +238,9 @@ bool isPositiveHalfWord(SDNode *N);
     /// the immediate into a register.
     bool isLegalICmpImmediate(int64_t Imm) const override;
 
+    bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
+        unsigned Align, bool *Fast) const override;
+
     /// Returns relocation base for the given PIC jumptable.
     SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)
                                      const override;

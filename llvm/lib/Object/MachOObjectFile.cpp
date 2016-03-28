@@ -2426,13 +2426,12 @@ ObjectFile::createMachOObjectFile(MemoryBufferRef Buffer) {
   StringRef Magic = Buffer.getBuffer().slice(0, 4);
   if (Magic == "\xFE\xED\xFA\xCE")
     return MachOObjectFile::create(Buffer, false, false);
-  else if (Magic == "\xCE\xFA\xED\xFE")
+  if (Magic == "\xCE\xFA\xED\xFE")
     return MachOObjectFile::create(Buffer, true, false);
-  else if (Magic == "\xFE\xED\xFA\xCF")
+  if (Magic == "\xFE\xED\xFA\xCF")
     return MachOObjectFile::create(Buffer, false, true);
-  else if (Magic == "\xCF\xFA\xED\xFE")
+  if (Magic == "\xCF\xFA\xED\xFE")
     return MachOObjectFile::create(Buffer, true, true);
-  //else
   return malformedError(Buffer.getBufferIdentifier(),
                         "Unrecognized MachO magic number");
 }

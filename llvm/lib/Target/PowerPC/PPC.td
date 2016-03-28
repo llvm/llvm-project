@@ -155,6 +155,12 @@ def FeatureFloat128 :
 def DeprecatedDST    : SubtargetFeature<"", "DeprecatedDST", "true",
   "Treat vector data stream cache control instructions as deprecated">;
 
+// Note that for the a2/a2q processor models we should not use popcnt[dw] by
+// default. These processors do support the instructions, but they're
+// microcoded, and the software emulation is about twice as fast.
+def SlowPOPCNTD      : SubtargetFeature<"slow-popcntd","SlowPOPCNTD", "true",
+                                        "The popcnt[dw] instructions are slow">;
+
 /*  Since new processors generally contain a superset of features of those that
     came before them, the idea is to make implementations of new processors
     less error prone and easier to read.
@@ -337,16 +343,17 @@ def : ProcessorModel<"a2", PPCA2Model,
                    FeatureFRSQRTE, FeatureFRSQRTES, FeatureRecipPrec,
                    FeatureSTFIWX, FeatureLFIWAX,
                    FeatureFPRND, FeatureFPCVT, FeatureISEL,
-                   FeaturePOPCNTD, FeatureCMPB, FeatureLDBRX, Feature64Bit
-               /*, Feature64BitRegs */, FeatureMFTB]>;
+                   FeaturePOPCNTD, SlowPOPCNTD, FeatureCMPB, FeatureLDBRX,
+                   Feature64Bit /*, Feature64BitRegs */, FeatureMFTB]>;
 def : ProcessorModel<"a2q", PPCA2Model,
                   [DirectiveA2, FeatureICBT, FeatureBookE, FeatureMFOCRF,
                    FeatureFCPSGN, FeatureFSqrt, FeatureFRE, FeatureFRES,
                    FeatureFRSQRTE, FeatureFRSQRTES, FeatureRecipPrec,
                    FeatureSTFIWX, FeatureLFIWAX,
                    FeatureFPRND, FeatureFPCVT, FeatureISEL,
-                   FeaturePOPCNTD, FeatureCMPB, FeatureLDBRX, Feature64Bit
-               /*, Feature64BitRegs */, FeatureQPX, FeatureMFTB]>;
+                   FeaturePOPCNTD, SlowPOPCNTD, FeatureCMPB, FeatureLDBRX,
+                   Feature64Bit /*, Feature64BitRegs */, FeatureQPX,
+                   FeatureMFTB]>;
 def : ProcessorModel<"pwr3", G5Model,
                   [DirectivePwr3, FeatureAltivec,
                    FeatureFRES, FeatureFRSQRTE, FeatureMFOCRF,

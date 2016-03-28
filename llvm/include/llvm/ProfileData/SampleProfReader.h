@@ -134,8 +134,8 @@
 //        Total number of samples in the profile.
 //    MAX_COUNT (uint64_t)
 //        Maximum value of samples on a line.
-//    MAX_HEAD_SAMPLES (uint64_t)
-//        Maximum number of head samples.
+//    MAX_FUNCTION_COUNT (uint64_t)
+//        Maximum number of samples at function entry (head samples).
 //    NUM_COUNTS (uint64_t)
 //        Number of lines with samples.
 //    NUM_FUNCTIONS (uint64_t)

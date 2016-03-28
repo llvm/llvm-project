@@ -459,6 +459,32 @@ static uint64_t sumEdgeCount(const ArrayRef<PGOUseEdge *> Edges) {
 }
 
 class PGOUseFunc {
+public:
+  PGOUseFunc(Function &Func, Module *Modu, BranchProbabilityInfo *BPI = nullptr,
+             BlockFrequencyInfo *BFI = nullptr)
+      : F(Func), M(Modu), FuncInfo(Func, false, BPI, BFI),
+        FreqAttr(FFA_Normal) {}
+
+  // Read counts for the instrumented BB from profile.
+  bool readCounters(IndexedInstrProfReader *PGOReader);
+
+  // Populate the counts for all BBs.
+  void populateCounters();
+
+  // Set the branch weights based on the count values.
+  void setBranchWeights();
+
+  // Annotate the indirect call sites.
+  void annotateIndirectCallSites();
+
+  // The hotness of the function from the profile count.
+  enum FuncFreqAttr { FFA_Normal, FFA_Cold, FFA_Hot };
+
+  // Return the funtion hotness from the profile.
+  FuncFreqAttr getFuncFreqAttr() const {
+    return FreqAttr;
+  }
+
 private:
   Function &F;
   Module *M;
@@ -477,6 +503,9 @@ private:
   // ProfileRecord for this function.
   InstrProfRecord ProfileRecord;
 
+  // Function hotness info derived from profile.
+  FuncFreqAttr FreqAttr;
+
   // Find the Instrumented BB and set the value.
   void setInstrumentedCounts(const std::vector<uint64_t> &CountFromProfile);
 
@@ -490,7 +519,7 @@ private:
   // Set the hot/cold inline hints based on the count values.
   // FIXME: This function should be removed once the functionality in
   // the inliner is implemented.
-  void applyFunctionAttributes(uint64_t EntryCount, uint64_t MaxCount) {
+  void markFunctionAttributes(uint64_t EntryCount, uint64_t MaxCount) {
     if (ProgramMaxCount == 0)
       return;
     // Threshold of the hot functions.
@@ -498,27 +527,10 @@ private:
     // Threshold of the cold functions.
     const BranchProbability ColdFunctionThreshold(2, 10000);
     if (EntryCount >= HotFunctionThreshold.scale(ProgramMaxCount))
-      F.addFnAttr(llvm::Attribute::InlineHint);
+      FreqAttr = FFA_Hot;
     else if (MaxCount <= ColdFunctionThreshold.scale(ProgramMaxCount))
-      F.addFnAttr(llvm::Attribute::Cold);
+      FreqAttr = FFA_Cold;
   }
-
-public:
-  PGOUseFunc(Function &Func, Module *Modu, BranchProbabilityInfo *BPI = nullptr,
-             BlockFrequencyInfo *BFI = nullptr)
-      : F(Func), M(Modu), FuncInfo(Func, false, BPI, BFI) {}
-
-  // Read counts for the instrumented BB from profile.
-  bool readCounters(IndexedInstrProfReader *PGOReader);
-
-  // Populate the counts for all BBs.
-  void populateCounters();
-
-  // Set the branch weights based on the count values.
-  void setBranchWeights();
-
-  // Annotate the indirect call sites.
-  void annotateIndirectCallSites();
 };
 
 // Visit all the edges and assign the count value for the instrumented
@@ -681,7 +693,7 @@ void PGOUseFunc::populateCounters() {
     if (Count > FuncMaxCount)
       FuncMaxCount = Count;
   }
-  applyFunctionAttributes(FuncEntryCount, FuncMaxCount);
+  markFunctionAttributes(FuncEntryCount, FuncMaxCount);
 
   DEBUG(FuncInfo.dumpInfo("after reading profile."));
 }
@@ -827,6 +839,8 @@ bool PGOInstrumentationUse::runOnModule(Module &M) {
     return false;
   }
 
+  std::vector<Function *> HotFunctions;
+  std::vector<Function *> ColdFunctions;
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
@@ -836,6 +850,23 @@ bool PGOInstrumentationUse::runOnModule(Module &M) {
         &(getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI());
     PGOUseFunc Func(F, &M, BPI, BFI);
     setPGOCountOnFunc(Func, PGOReader.get());
+    PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
+    if (FreqAttr == PGOUseFunc::FFA_Cold)
+      ColdFunctions.push_back(&F);
+    else if (FreqAttr == PGOUseFunc::FFA_Hot)
+      HotFunctions.push_back(&F);
   }
+
+  // Set function hotness attribute from the profile.
+  for (auto &F : HotFunctions) {
+    F->addFnAttr(llvm::Attribute::InlineHint);
+    DEBUG(dbgs() << "Set inline attribute to function: " << F->getName()
+                 << "\n");
+  }
+  for (auto &F : ColdFunctions) {
+    F->addFnAttr(llvm::Attribute::Cold);
+    DEBUG(dbgs() << "Set cold attribute to function: " << F->getName() << "\n");
+  }
+
   return true;
 }

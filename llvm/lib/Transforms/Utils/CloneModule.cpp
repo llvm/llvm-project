@@ -126,6 +126,8 @@ std::unique_ptr<Module> llvm::CloneModule(
     if (!ShouldCloneDefinition(&*I)) {
       // Skip after setting the correct linkage for an external reference.
       F->setLinkage(GlobalValue::ExternalLinkage);
+      // Personality function is not valid on a declaration.
+      F->setPersonalityFn(nullptr);
       continue;
     }
     if (!I->isDeclaration()) {

@@ -44,6 +44,10 @@ using namespace ELF;
 #define ENUM_ENT_1(enum) \
   { #enum, #enum, ELF::enum }
 
+#define LLVM_READOBJ_PHDR_ENUM(ns, enum)                                       \
+  case ns::enum:                                                               \
+    return std::string(#enum).substr(3);
+
 #define TYPEDEF_ELF_TYPES(ELFT)                                                \
   typedef ELFFile<ELFT> ELFO;                                                  \
   typedef typename ELFO::Elf_Shdr Elf_Shdr;                                    \
@@ -1085,30 +1089,18 @@ static const char *getElfSegmentType(unsigned Arch, unsigned Type) {
 
 static std::string getElfPtType(unsigned Arch, unsigned Type) {
   switch (Type) {
-  case ELF::PT_NULL:
-    return "NULL";
-  case ELF::PT_LOAD:
-    return "LOAD";
-  case ELF::PT_DYNAMIC:
-    return "DYNAMIC";
-  case ELF::PT_INTERP:
-    return "INTERP";
-  case ELF::PT_NOTE:
-    return "NOTE";
-  case ELF::PT_SHLIB:
-    return "SHLIB";
-  case ELF::PT_PHDR:
-    return "PHDR";
-  case ELF::PT_TLS:
-    return "TLS";
-  case ELF::PT_GNU_EH_FRAME:
-    return "GNU_EH_FRAME";
-  case ELF::PT_SUNW_UNWIND:
-    return "SUNW_UNWIND";
-  case ELF::PT_GNU_STACK:
-    return "GNU_STACK";
-  case ELF::PT_GNU_RELRO:
-    return "GNU_RELRO";
+    LLVM_READOBJ_PHDR_ENUM(ELF, PT_NULL)
+    LLVM_READOBJ_PHDR_ENUM(ELF, PT_LOAD)
+    LLVM_READOBJ_PHDR_ENUM(ELF, PT_DYNAMIC)
+    LLVM_READOBJ_PHDR_ENUM(ELF, PT_INTERP)
+    LLVM_READOBJ_PHDR_ENUM(ELF, PT_NOTE)
+    LLVM_READOBJ_PHDR_ENUM(ELF, PT_SHLIB)
+    LLVM_READOBJ_PHDR_ENUM(ELF, PT_PHDR)
+    LLVM_READOBJ_PHDR_ENUM(ELF, PT_TLS)
+    LLVM_READOBJ_PHDR_ENUM(ELF, PT_GNU_EH_FRAME)
+    LLVM_READOBJ_PHDR_ENUM(ELF, PT_SUNW_UNWIND)
+    LLVM_READOBJ_PHDR_ENUM(ELF, PT_GNU_STACK)
+    LLVM_READOBJ_PHDR_ENUM(ELF, PT_GNU_RELRO)
   default:
     // All machine specific PT_* types
     switch (Arch) {

@@ -1839,6 +1839,24 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilder<> &B) {
     return B.CreateIntCast(Res, CI->getType(), true);
   }
 
+  // printf("%s", "a") --> putchar('a')
+  if (FormatStr == "%s" && CI->getNumArgOperands() > 1) {
+    StringRef ChrStr;
+    if (!getConstantStringInfo(CI->getOperand(1), ChrStr))
+      return nullptr;
+    if (ChrStr.size() != 1)
+      return nullptr;
+    Value *Res = emitPutChar(B.getInt32(ChrStr[0]), B, TLI);
+
+    // FIXME: Here we check that the return value is not used
+    // but ealier we prevent transformations in case it is.
+    // This should probably be an assert.
+    if (CI->use_empty() || !Res)
+      return Res;
+
+    return B.CreateIntCast(Res, CI->getType(), true);
+  }
+
   // printf("foo\n") --> puts("foo")
   if (FormatStr[FormatStr.size() - 1] == '\n' &&
       FormatStr.find('%') == StringRef::npos) { // No format characters.

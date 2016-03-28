@@ -14,7 +14,8 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/Support/Endian.h"
 #include <functional>
-#include <stdint.h>
+#include <cstdint>
+#include <cstring>
 
 namespace llvm {
 
@@ -382,9 +383,11 @@ struct Variant {
     uint64_t UInt64;
     char *String;
   } Value;
+
 #define VARIANT_EQUAL_CASE(Enum)                                               \
   case PDB_VariantType::Enum:                                                  \
     return Value.Enum == Other.Value.Enum;
+
   bool operator==(const Variant &Other) const {
     if (Type != Other.Type)
       return false;
@@ -405,7 +408,9 @@ struct Variant {
       return true;
     }
   }
+
 #undef VARIANT_EQUAL_CASE
+
   bool operator!=(const Variant &Other) const { return !(*this == Other); }
   Variant &operator=(const Variant &Other) {
     if (this == &Other)
@@ -450,9 +455,9 @@ struct SuperBlock {
   // This contains the block # of the block map.
   support::ulittle32_t BlockMapAddr;
 };
-}
+} // end namespace PDB
 
-} // namespace llvm
+} // end namespace llvm
 
 namespace std {
 template <> struct hash<llvm::PDB_SymType> {
@@ -463,7 +468,6 @@ template <> struct hash<llvm::PDB_SymType> {
     return std::hash<int>()(static_cast<int>(Arg));
   }
 };
-}
+} // end namespace std
 
-
-#endif
+#endif // LLVM_DEBUGINFO_PDB_PDBTYPES_H

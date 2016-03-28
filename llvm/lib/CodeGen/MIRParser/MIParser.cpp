@@ -144,6 +144,7 @@ public:
   bool parseGlobalValue(GlobalValue *&GV);
   bool parseGlobalAddressOperand(MachineOperand &Dest);
   bool parseConstantPoolIndexOperand(MachineOperand &Dest);
+  bool parseSubRegisterIndexOperand(MachineOperand &Dest);
   bool parseJumpTableIndexOperand(MachineOperand &Dest);
   bool parseExternalSymbolOperand(MachineOperand &Dest);
   bool parseMDNode(MDNode *&Node);
@@ -1237,6 +1238,17 @@ bool MIParser::parseExternalSymbolOperand(MachineOperand &Dest) {
   return false;
 }
 
+bool MIParser::parseSubRegisterIndexOperand(MachineOperand &Dest) {
+  assert(Token.is(MIToken::SubRegisterIndex));
+  StringRef Name = Token.stringValue();
+  unsigned SubRegIndex = getSubRegIndex(Token.stringValue());
+  if (SubRegIndex == 0)
+    return error(Twine("unknown subregister index '") + Name + "'");
+  lex();
+  Dest = MachineOperand::CreateImm(SubRegIndex);
+  return false;
+}
+
 bool MIParser::parseMDNode(MDNode *&Node) {
   assert(Token.is(MIToken::exclaim));
   auto Loc = Token.location();
@@ -1482,6 +1494,8 @@ bool MIParser::parseMachineOperand(MachineOperand &Dest,
     return parseJumpTableIndexOperand(Dest);
   case MIToken::ExternalSymbol:
     return parseExternalSymbolOperand(Dest);
+  case MIToken::SubRegisterIndex:
+    return parseSubRegisterIndexOperand(Dest);
   case MIToken::exclaim:
     return parseMetadataOperand(Dest);
   case MIToken::kw_cfi_same_value:

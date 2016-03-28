@@ -138,11 +138,11 @@ exit:
 ; SI: BB#4:
 ; SI: buffer_store_dword
 ; SI: v_cmp_ge_i64_e64 [[CMP:s\[[0-9]+:[0-9]+\]]]
-; SI: s_or_b64 [[COND_STATE]], [[CMP]], [[COND_STATE]]
+; SI: s_or_b64 [[TMP:s\[[0-9]+:[0-9]+\]]], [[CMP]], [[COND_STATE]]
 
 ; SI: BB3_5:
 ; SI: s_or_b64 exec, exec, [[ORNEG2]]
-; SI: s_or_b64 [[COND_STATE]], [[ORNEG2]], [[COND_STATE]]
+; SI: s_or_b64 [[COND_STATE]], [[ORNEG2]], [[TMP]]
 ; SI: s_andn2_b64 exec, exec, [[COND_STATE]]
 ; SI: s_cbranch_execnz BB3_3
 

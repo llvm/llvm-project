@@ -96,7 +96,9 @@ namespace llvm {
     DenseMap<std::pair<unsigned, unsigned>, MCSymbol *> LocalSymbols;
 
     /// Keeps tracks of names that were used both for used declared and
-    /// artificial symbols.
+    /// artificial symbols. The value is "true" if the name has been used for a
+    /// non-section symbol (there can be at most one of those, plus an unlimited
+    /// number of section symbols with the same name).
     StringMap<bool, BumpPtrAllocator &> UsedNames;
 
     /// The next ID to dole out to an unnamed assembler temporary symbol with

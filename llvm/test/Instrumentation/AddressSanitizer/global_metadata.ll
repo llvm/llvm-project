@@ -20,7 +20,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: [[FILENAME:@__asan_gen_.[0-9]+]] = private unnamed_addr constant [22 x i8] c"/tmp/asan-globals.cpp\00", align 1
 ; CHECK: [[LOCDESCR:@__asan_gen_.[0-9]+]] = private unnamed_addr constant { [22 x i8]*, i32, i32 } { [22 x i8]* [[FILENAME]], i32 5, i32 5 }
 
-; Check that location decriptors and global names were passed into __asan_register_globals:
+; Check that location descriptors and global names were passed into __asan_register_globals:
 ; CHECK: i64 ptrtoint ([7 x i8]* [[VARNAME]] to i64)
 ; CHECK: i64 ptrtoint ({ [22 x i8]*, i32, i32 }* [[LOCDESCR]] to i64)
 

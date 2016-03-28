@@ -285,6 +285,8 @@ bool MIRParserImpl::initializeMachineFunction(MachineFunction &MF) {
     MF.setAlignment(YamlMF.Alignment);
   MF.setExposesReturnsTwice(YamlMF.ExposesReturnsTwice);
   MF.setHasInlineAsm(YamlMF.HasInlineAsm);
+  if (YamlMF.AllVRegsAllocated)
+    MF.getProperties().set(MachineFunctionProperties::Property::AllVRegsAllocated);
   PerFunctionMIParsingState PFS;
   if (initializeRegisterInfo(MF, YamlMF, PFS))
     return true;

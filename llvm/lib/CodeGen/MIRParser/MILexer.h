@@ -118,7 +118,8 @@ struct MIToken {
     IRBlock,
     NamedIRValue,
     IRValue,
-    QuotedIRValue // `<constant value>`
+    QuotedIRValue, // `<constant value>`
+    SubRegisterIndex
   };
 
 private:

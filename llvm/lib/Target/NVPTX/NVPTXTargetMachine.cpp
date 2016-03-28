@@ -223,6 +223,10 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&PrologEpilogCodeInserterID);
   disablePass(&MachineCopyPropagationID);
   disablePass(&TailDuplicateID);
+  disablePass(&StackMapLivenessID);
+  disablePass(&LiveDebugValuesID);
+  disablePass(&PostRASchedulerID);
+  disablePass(&FuncletLayoutID);
 
   addPass(createNVVMReflectPass());
   if (getOptLevel() != CodeGenOpt::None)

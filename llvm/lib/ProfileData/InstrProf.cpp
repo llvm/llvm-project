@@ -90,7 +90,7 @@ std::string getPGOFuncName(const Function &F, uint64_t Version) {
 
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
   if (FileName.empty())
-    FileName = "<unknown>";
+    return PGOFuncName;
   // Drop the file name including ':'. See also getPGOFuncName.
   if (PGOFuncName.startswith(FileName))
     PGOFuncName = PGOFuncName.drop_front(FileName.size() + 1);
@@ -158,9 +158,15 @@ void InstrProfSymtab::create(const Module &M) {
 
 int collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
                               bool doCompression, std::string &Result) {
+  assert(NameStrs.size() && "No name data to emit");
+
   uint8_t Header[16], *P = Header;
   std::string UncompressedNameStrings =
-      join(NameStrs.begin(), NameStrs.end(), StringRef(" "));
+      join(NameStrs.begin(), NameStrs.end(), getInstrProfNameSeparator());
+
+  assert(StringRef(UncompressedNameStrings)
+                 .count(getInstrProfNameSeparator()) == (NameStrs.size() - 1) &&
+         "PGO name is invalid (contains separator token)");
 
   unsigned EncLen = encodeULEB128(UncompressedNameStrings.length(), P);
   P += EncLen;
@@ -238,7 +244,7 @@ int readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
     }
     // Now parse the name strings.
     SmallVector<StringRef, 0> Names;
-    NameStrings.split(Names, ' ');
+    NameStrings.split(Names, getInstrProfNameSeparator());
     for (StringRef &Name : Names)
       Symtab.addFuncName(Name);
 

@@ -214,7 +214,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Expand);
   setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Expand);
 
-  if (Subtarget.hasPOPCNTD()) {
+  if (Subtarget.hasPOPCNTD() && !Subtarget.isPOPCNTDSlow()) {
     setOperationAction(ISD::CTPOP, MVT::i32  , Legal);
     setOperationAction(ISD::CTPOP, MVT::i64  , Legal);
   } else {

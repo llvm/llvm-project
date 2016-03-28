@@ -189,6 +189,7 @@ public:
 
 private:
   bool isValueExtension(const SDValue &Val, unsigned FromBits, SDValue &Src);
+  bool isAlignedMemNode(const MemSDNode *N) const;
 }; // end HexagonDAGToDAGISel
 }  // end anonymous namespace
 
@@ -414,20 +415,24 @@ SDNode *HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, SDLoc dl) {
   } else if (LoadedVT == MVT::v16i32 || LoadedVT == MVT::v8i64 ||
              LoadedVT == MVT::v32i16 || LoadedVT == MVT::v64i8) {
     HasVecOffset = true;
-    if (HII->isValidAutoIncImm(LoadedVT, Val)) {
-      Opcode = Hexagon::V6_vL32b_pi;
-    }
+    bool Aligned = isAlignedMemNode(LD);
+    if (HII->isValidAutoIncImm(LoadedVT, Val))
+      Opcode = Aligned ? Hexagon::V6_vL32b_pi : Hexagon::V6_vL32Ub_pi;
     else
-      Opcode = Hexagon::V6_vL32b_ai;
+      Opcode = Aligned ? Hexagon::V6_vL32b_ai : Hexagon::V6_vL32Ub_ai;
   // 128B
   } else if (LoadedVT == MVT::v32i32 || LoadedVT == MVT::v16i64 ||
              LoadedVT == MVT::v64i16 || LoadedVT == MVT::v128i8) {
-    HasVecOffset = true;
-    if (HII->isValidAutoIncImm(LoadedVT, Val)) {
-      Opcode = Hexagon::V6_vL32b_pi_128B;
+    if (HST->useHVXOps()) {
+      bool Aligned = isAlignedMemNode(LD);
+      HasVecOffset = true;
+      if (HII->isValidAutoIncImm(LoadedVT, Val))
+        Opcode = Aligned ? Hexagon::V6_vL32b_pi_128B
+                         : Hexagon::V6_vL32Ub_pi_128B;
+      else
+        Opcode = Aligned ? Hexagon::V6_vL32b_ai_128B
+                         : Hexagon::V6_vL32Ub_ai_128B;
     }
-    else
-      Opcode = Hexagon::V6_vL32b_ai_128B;
   } else
     llvm_unreachable("unknown memory type");
 
@@ -687,13 +692,19 @@ SDNode *HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, SDLoc dl) {
     else if (StoredVT == MVT::i8) Opcode = Hexagon::S2_storerb_pi;
     else if (StoredVT == MVT::v16i32 || StoredVT == MVT::v8i64 ||
              StoredVT == MVT::v32i16 || StoredVT == MVT::v64i8) {
-      Opcode = Hexagon::V6_vS32b_pi;
+      if (isAlignedMemNode(ST))
+        Opcode = Hexagon::V6_vS32b_pi;
+      else
+        Opcode = Hexagon::V6_vS32Ub_pi;
     }
     // 128B
     else if (StoredVT == MVT::v32i32 || StoredVT == MVT::v16i64 ||
              StoredVT == MVT::v64i16 || StoredVT == MVT::v128i8) {
-      Opcode = Hexagon::V6_vS32b_pi_128B;
-    } else llvm_unreachable("unknown memory type");
+      if (HST->useHVXOps())
+        Opcode = isAlignedMemNode(ST) ? Hexagon::V6_vS32b_pi_128B
+                                      : Hexagon::V6_vS32Ub_pi_128B;
+    } else
+      llvm_unreachable("unknown memory type");
 
     if (ST->isTruncatingStore() && ValueVT.getSizeInBits() == 64) {
       assert(StoredVT.getSizeInBits() < 64 && "Not a truncating store");
@@ -728,12 +739,20 @@ SDNode *HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, SDLoc dl) {
   else if (StoredVT == MVT::i16) Opcode = Hexagon::S2_storerh_io;
   else if (StoredVT == MVT::i8) Opcode = Hexagon::S2_storerb_io;
   else if (StoredVT == MVT::v16i32 || StoredVT == MVT::v8i64 ||
-           StoredVT == MVT::v32i16 || StoredVT == MVT::v64i8)
-     Opcode = Hexagon::V6_vS32b_ai;
+           StoredVT == MVT::v32i16 || StoredVT == MVT::v64i8) {
+    if (isAlignedMemNode(ST))
+      Opcode = Hexagon::V6_vS32b_ai;
+    else
+      Opcode = Hexagon::V6_vS32Ub_ai;
+  }
   // 128B
   else if (StoredVT == MVT::v32i32 || StoredVT == MVT::v16i64 ||
-           StoredVT == MVT::v64i16 || StoredVT == MVT::v128i8)
-     Opcode = Hexagon::V6_vS32b_ai_128B;
+           StoredVT == MVT::v64i16 || StoredVT == MVT::v128i8) {
+    if (isAlignedMemNode(ST))
+      Opcode = Hexagon::V6_vS32b_ai_128B;
+    else
+      Opcode = Hexagon::V6_vS32Ub_ai_128B;
+  }
   else llvm_unreachable("unknown memory type");
 
   // Build regular store.
@@ -1531,4 +1550,8 @@ bool HexagonDAGToDAGISel::isValueExtension(const SDValue &Val,
     break;
   }
   return false;
+}
+
+bool HexagonDAGToDAGISel::isAlignedMemNode(const MemSDNode *N) const {
+  return N->getAlignment() >= N->getMemoryVT().getStoreSize();
 }

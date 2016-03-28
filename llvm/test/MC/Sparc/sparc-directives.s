@@ -1,6 +1,10 @@
 ! RUN: llvm-mc %s -arch=sparc   -show-encoding | FileCheck %s --check-prefix=SPARC32
 ! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s --check-prefix=SPARC64
 
+        ! '.proc' is documented to do nothing in the binutils assembler.
+        ! so it should do nothing for clang either, i.e. not be an error.
+        .proc 1
+
         ! SPARC32: .byte 24
         ! SPARC64: .byte 24
         .byte 24

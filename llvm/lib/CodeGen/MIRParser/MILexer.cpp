@@ -325,6 +325,15 @@ static Cursor maybeLexConstantPoolItem(Cursor C, MIToken &Token) {
   return maybeLexIndex(C, Token, "%const.", MIToken::ConstantPoolItem);
 }
 
+static Cursor maybeLexSubRegisterIndex(Cursor C, MIToken &Token,
+                                       ErrorCallbackType ErrorCallback) {
+  const StringRef Rule = "%subreg.";
+  if (!C.remaining().startswith(Rule))
+    return None;
+  return lexName(C, Token, MIToken::SubRegisterIndex, Rule.size(),
+                 ErrorCallback);
+}
+
 static Cursor maybeLexIRBlock(Cursor C, MIToken &Token,
                               ErrorCallbackType ErrorCallback) {
   const StringRef Rule = "%ir-block.";
@@ -569,6 +578,8 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
   if (Cursor R = maybeLexFixedStackObject(C, Token))
     return R.remaining();
   if (Cursor R = maybeLexConstantPoolItem(C, Token))
+    return R.remaining();
+  if (Cursor R = maybeLexSubRegisterIndex(C, Token, ErrorCallback))
     return R.remaining();
   if (Cursor R = maybeLexIRBlock(C, Token, ErrorCallback))
     return R.remaining();
