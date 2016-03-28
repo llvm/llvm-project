@@ -1,5 +1,5 @@
 // RUN: %clangxx_profgen -fcoverage-mapping %S/Inputs/instrprof-visibility-helper.cpp -o %t %s
-// RUN: LLVM_PROFILE_FILE=%t.profraw %run %t
+// RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata merge %t.profraw -o %t.profdata
 // RUN: llvm-profdata show --all-functions %t.profraw | FileCheck %s --check-prefix=PROFILE
 // RUN: llvm-cov show %t -instr-profile=%t.profdata | FileCheck %s --check-prefix=COV
