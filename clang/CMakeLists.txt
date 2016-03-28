@@ -817,3 +817,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
     ExternalProject_Add_StepTargets(${NEXT_CLANG_STAGE} ${target})
   endforeach()
 endif()
+
+if (LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION)
+  add_subdirectory(utils/ClangVisualizers)
+endif()

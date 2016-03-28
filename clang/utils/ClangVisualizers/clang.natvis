@@ -2,9 +2,10 @@
 <!--
 Visual Studio Native Debugging Visualizers for LLVM
 
-Put this file into "%USERPROFILE%\Documents\Visual Studio 20xx\Visualizers"
-or create a symbolic link so it updates automatically.
--->
+For Visual Studio 2013 only, put this file into 
+"%USERPROFILE%\Documents\Visual Studio 2013\Visualizers" or create a symbolic link so it updates automatically.
+
+For later versions of Visual Studio, no setup is required-->
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
   <Type Name="clang::Type">

@@ -1770,13 +1770,11 @@ Intentionally unsupported GCC extensions
 Microsoft extensions
 --------------------
 
-clang has some experimental support for extensions from Microsoft Visual
-C++; to enable it, use the ``-fms-extensions`` command-line option. This is
-the default for Windows targets. Note that the support is incomplete.
-Some constructs such as ``dllexport`` on classes are ignored with a warning,
-and others such as `Microsoft IDL annotations
-<http://msdn.microsoft.com/en-us/library/8tesw2eh.aspx>`_ are silently
-ignored.
+clang has support for many extensions from Microsoft Visual C++. To enable these
+extensions, use the ``-fms-extensions`` command-line option. This is the default
+for Windows targets. Clang does not implement every pragma or declspec provided
+by MSVC, but the popular ones, such as ``__declspec(dllexport)`` and ``#pragma
+comment(lib)`` are well supported.
 
 clang has a ``-fms-compatibility`` flag that makes clang accept enough
 invalid C++ to be able to parse most Microsoft headers. For example, it
@@ -1789,23 +1787,14 @@ for Windows targets.
 definitions until the end of a translation unit. This flag is enabled by
 default for Windows targets.
 
--  clang allows setting ``_MSC_VER`` with ``-fmsc-version=``. It defaults to
-   1700 which is the same as Visual C/C++ 2012. Any number is supported
-   and can greatly affect what Windows SDK and c++stdlib headers clang
-   can compile.
--  clang does not support the Microsoft extension where anonymous record
-   members can be declared using user defined typedefs.
--  clang supports the Microsoft ``#pragma pack`` feature for controlling
-   record layout. GCC also contains support for this feature, however
-   where MSVC and GCC are incompatible clang follows the MSVC
-   definition.
--  clang supports the Microsoft ``#pragma comment(lib, "foo.lib")`` feature for
-   automatically linking against the specified library.  Currently this feature
-   only works with the Visual C++ linker.
--  clang supports the Microsoft ``#pragma comment(linker, "/flag:foo")`` feature
-   for adding linker flags to COFF object files.  The user is responsible for
-   ensuring that the linker understands the flags.
--  clang defaults to C++11 for Windows targets.
+For compatibility with existing code that compiles with MSVC, clang defines the
+``_MSC_VER`` and ``_MSC_FULL_VER`` macros. These default to the values of 1800
+and 180000000 respectively, making clang look like an early release of Visual
+C++ 2013. The ``-fms-compatibility-version=`` flag overrides these values.  It
+accepts a dotted version tuple, such as 19.00.23506. Changing the MSVC
+compatibility version makes clang behave more like that version of MSVC. For
+example, ``-fms-compatibility-version=19`` will enable C++14 features and define
+``char16_t`` and ``char32_t`` as builtin types.
 
 .. _cxx:
 

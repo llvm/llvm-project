@@ -1619,6 +1619,13 @@ static std::string getR600TargetGPU(const ArgList &Args) {
   return "";
 }
 
+static std::string getLanaiTargetCPU(const ArgList &Args) {
+  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
+    return A->getValue();
+  }
+  return "";
+}
+
 void Clang::AddSparcTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
   const Driver &D = getToolChain().getDriver();
@@ -1835,6 +1842,9 @@ static std::string getCPUName(const ArgList &Args, const llvm::Triple &T,
   case llvm::Triple::hexagon:
     return "hexagon" +
            toolchains::HexagonToolChain::GetTargetCPUVersion(Args).str();
+
+  case llvm::Triple::lanai:
+    return getLanaiTargetCPU(Args);
 
   case llvm::Triple::systemz:
     return getSystemZTargetCPU(Args);
@@ -2143,6 +2153,29 @@ void Clang::AddHexagonTargetArgs(const ArgList &Args,
   }
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-machine-sink-split=0");
+}
+
+void Clang::AddLanaiTargetArgs(const ArgList &Args,
+                               ArgStringList &CmdArgs) const {
+  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
+    StringRef CPUName = A->getValue();
+
+    CmdArgs.push_back("-target-cpu");
+    CmdArgs.push_back(Args.MakeArgString(CPUName));
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_mregparm_EQ)) {
+    StringRef Value = A->getValue();
+    // Only support mregparm=4 to support old usage. Report error for all other
+    // cases.
+    int Mregparm;
+    if (Value.getAsInteger(10, Mregparm)) {
+      if (Mregparm != 4) {
+        getToolChain().getDriver().Diag(
+            diag::err_drv_unsupported_option_argument)
+            << A->getOption().getName() << Value;
+      }
+    }
+  }
 }
 
 void Clang::AddWebAssemblyTargetArgs(const ArgList &Args,
@@ -4174,6 +4207,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     AddX86TargetArgs(Args, CmdArgs);
+    break;
+
+  case llvm::Triple::lanai:
+    AddLanaiTargetArgs(Args, CmdArgs);
     break;
 
   case llvm::Triple::hexagon:
