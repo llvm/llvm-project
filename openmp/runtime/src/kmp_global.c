@@ -17,7 +17,9 @@
 
 kmp_key_t __kmp_gtid_threadprivate_key;
 
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 kmp_cpuinfo_t   __kmp_cpuinfo = { 0 }; // Not initialized
+#endif
 
 #if KMP_STATS_ENABLED
 #include "kmp_stats.h"

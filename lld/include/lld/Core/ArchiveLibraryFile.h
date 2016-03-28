@@ -32,7 +32,7 @@ public:
 
   /// Check if any member of the archive contains an Atom with the
   /// specified name and return the File object for that member, or nullptr.
-  virtual File *find(StringRef name, bool dataSymbolOnly) = 0;
+  virtual File *find(StringRef name) = 0;
 
   virtual std::error_code
   parseAllMembers(std::vector<std::unique_ptr<File>> &result) = 0;

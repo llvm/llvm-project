@@ -78,6 +78,7 @@ Clang-Tidy Checks
    modernize-loop-convert
    modernize-make-unique
    modernize-pass-by-value
+   modernize-raw-string-literal
    modernize-redundant-void-arg
    modernize-replace-auto-ptr
    modernize-shrink-to-fit
@@ -88,6 +89,7 @@ Clang-Tidy Checks
    performance-faster-string-find
    performance-for-range-copy
    performance-implicit-cast-in-loop
+   performance-unnecessary-copy-initialization
    readability-braces-around-statements
    readability-container-size-empty
    readability-else-after-return

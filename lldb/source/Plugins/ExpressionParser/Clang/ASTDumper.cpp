@@ -11,6 +11,7 @@
 
 #include "lldb/Core/Log.h"
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerType.h"
 
 #include "llvm/Support/raw_ostream.h"
@@ -83,7 +84,7 @@ ASTDumper::ASTDumper (lldb::opaque_compiler_type_t type)
 
 ASTDumper::ASTDumper (const CompilerType &compiler_type)
 {
-    m_dump = ClangASTContext::GetQualType(compiler_type).getAsString();
+    m_dump = ClangUtil::GetQualType(compiler_type).getAsString();
 }
 
 

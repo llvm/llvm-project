@@ -202,7 +202,7 @@ if(${LIBOMP_STATS})
      { unsigned long long t = __builtin_readcyclecounter(); return 0; }"
      LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER)
   if(NOT LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER)
-    if(${IA32} OR ${INTEL64})
+    if(${IA32} OR ${INTEL64} OR ${MIC})
       check_include_file(x86intrin.h LIBOMP_HAVE_X86INTRIN_H)
       libomp_append(CMAKE_REQUIRED_DEFINITIONS -DLIBOMP_HAVE_X86INTRIN_H LIBOMP_HAVE_X86INTRIN_H)
       check_c_source_compiles(

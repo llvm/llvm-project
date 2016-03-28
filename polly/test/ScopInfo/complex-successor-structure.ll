@@ -5,7 +5,7 @@
 ; of following form and check that the domain construction does not take a huge
 ; amount of time.
 ;
-; CHECK: Low number of domain conjuncts assumption: {  : 1 = 0 }
+; CHECK: Low complexity assumption: {  : 1 = 0 }
 
 ;      |
 ;    for.body <--+

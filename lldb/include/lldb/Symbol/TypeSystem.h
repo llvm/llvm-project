@@ -100,7 +100,7 @@ public:
     Finalize() {}
 
     virtual DWARFASTParser *
-    GetDWARFParser ()
+    GetDWARFParser()
     {
         return nullptr;
     }

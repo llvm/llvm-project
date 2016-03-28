@@ -12,12 +12,11 @@
 #include "ASTDumper.h"
 #include "ClangModulesDeclVendor.h"
 
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/RecordLayout.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -25,6 +24,8 @@
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Target.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/RecordLayout.h"
 
 #include <vector>
 
@@ -277,7 +278,7 @@ ClangASTSource::CompleteType (TagDecl *tag_decl)
                     if (!clang_type)
                         continue;
 
-                    const TagType *tag_type = ClangASTContext::GetQualType(clang_type)->getAs<TagType>();
+                    const TagType *tag_type = ClangUtil::GetQualType(clang_type)->getAs<TagType>();
 
                     if (!tag_type)
                         continue;
@@ -317,7 +318,7 @@ ClangASTSource::CompleteType (TagDecl *tag_decl)
                 if (!clang_type)
                     continue;
 
-                const TagType *tag_type = ClangASTContext::GetQualType(clang_type)->getAs<TagType>();
+                const TagType *tag_type = ClangUtil::GetQualType(clang_type)->getAs<TagType>();
 
                 if (!tag_type)
                     continue;
@@ -1905,7 +1906,8 @@ ClangASTSource::GuardedCopyType (const CompilerType &src_type)
 
     SetImportInProgress(true);
 
-    QualType copied_qual_type = m_ast_importer_sp->CopyType (m_ast_context, src_ast->getASTContext(), ClangASTContext::GetQualType(src_type));
+    QualType copied_qual_type =
+        m_ast_importer_sp->CopyType(m_ast_context, src_ast->getASTContext(), ClangUtil::GetQualType(src_type));
 
     SetImportInProgress(false);
 
@@ -1933,14 +1935,8 @@ NameSearchContext::AddVarDecl(const CompilerType &type)
 
     clang::ASTContext *ast = lldb_ast->getASTContext();
 
-    clang::NamedDecl *Decl = VarDecl::Create(*ast,
-                                             const_cast<DeclContext*>(m_decl_context),
-                                             SourceLocation(),
-                                             SourceLocation(),
-                                             ii,
-                                             ClangASTContext::GetQualType(type),
-                                             0,
-                                             SC_Static);
+    clang::NamedDecl *Decl = VarDecl::Create(*ast, const_cast<DeclContext *>(m_decl_context), SourceLocation(),
+                                             SourceLocation(), ii, ClangUtil::GetQualType(type), 0, SC_Static);
     m_decls.push_back(Decl);
 
     return Decl;
@@ -1963,7 +1959,7 @@ NameSearchContext::AddFunDecl (const CompilerType &type, bool extern_c)
 
     m_function_types.insert(type);
 
-    QualType qual_type (ClangASTContext::GetQualType(type));
+    QualType qual_type(ClangUtil::GetQualType(type));
 
     clang::ASTContext *ast = lldb_ast->getASTContext();
 
@@ -2059,7 +2055,7 @@ NameSearchContext::AddTypeDecl(const CompilerType &clang_type)
 {
     if (clang_type)
     {
-        QualType qual_type = ClangASTContext::GetQualType(clang_type);
+        QualType qual_type = ClangUtil::GetQualType(clang_type);
 
         if (const TypedefType *typedef_type = llvm::dyn_cast<TypedefType>(qual_type))
         {

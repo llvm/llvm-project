@@ -260,8 +260,10 @@ class EvaluateExpressionOptions
 {
 public:
     static const uint32_t default_timeout = 500000;
+    static const ExecutionPolicy default_execution_policy = eExecutionPolicyOnlyWhenNeeded;
+    
     EvaluateExpressionOptions() :
-        m_execution_policy(eExecutionPolicyOnlyWhenNeeded),
+        m_execution_policy(default_execution_policy),
         m_language (lldb::eLanguageTypeUnknown),
         m_prefix (), // A prefix specific to this expression that is added after the prefix from the settings (if any)
         m_coerce_to_id (false),

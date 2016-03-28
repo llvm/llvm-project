@@ -76,10 +76,10 @@ enum AssumptionKind {
   INBOUNDS,
   WRAPPING,
   ERRORBLOCK,
+  COMPLEXITY,
   INFINITELOOP,
   INVARIANTLOAD,
   DELINEARIZATION,
-  ERROR_DOMAINCONJUNCTS,
 };
 
 /// @brief Enum to distinguish between assumptions and restrictions.
@@ -1981,6 +1981,11 @@ public:
   /// @param BB An (optional) basic block in which the isl_pw_aff is computed.
   ///           SCEVs known to not reference any loops in the SCoP can be
   ///           passed without a @p BB.
+  ///
+  /// Note that this function will always return a valid isl_pw_aff. However, if
+  /// the translation of @p E was deemed to complex the SCoP is invalidated and
+  /// a dummy value of appropriate dimension is returned. This allows to bail
+  /// for complex cases without "error handling code" needed on the users side.
   __isl_give isl_pw_aff *getPwAff(const SCEV *E, BasicBlock *BB = nullptr);
 
   /// @brief Return the non-loop carried conditions on the domain of @p Stmt.

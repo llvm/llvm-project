@@ -23,6 +23,7 @@
 
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/IRMover.h"
@@ -46,6 +47,7 @@ private:
   llvm::IRMover Mover{Combined};
   SmallString<0> OwningData;
   std::unique_ptr<MemoryBuffer> MB;
+  llvm::StringSet<> InternalizedSyms;
 };
 }
 }

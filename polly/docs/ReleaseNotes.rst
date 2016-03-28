@@ -70,6 +70,17 @@ known only to read memory, read memory accessible through pointer arguments or
 access only memory accessible through pointer arguments. See also the function
 attributes ``readonly`` and ``argmemonly`` for more information.
 
+Fine-grain dependences analysis
+-------------------------------
+
+In addition of the ScopStmt wise dependences analysis, now the "polly-dependence"
+pass provides dependences analysis at memory reference wise and memory access wise.
+The memory reference wise analysis distinguishes the accessed references in the
+same statement, and generates dependences relationships between (statement, reference)
+pairs. The memory access wise analysis distinguishes accesses in the same statement,
+and generates dependences relationships between (statement, access) pairs. These
+fine-grain dependences are enabled by "-polly-dependences-analysis-level=reference-wise"
+and "-polly-dependences-analysis-level=access-wise", respectively.
 
 Update of the isl math library
 ------------------------------

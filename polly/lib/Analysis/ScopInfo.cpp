@@ -2293,7 +2293,7 @@ void Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
         isl_set_free(SuccDomain);
         SuccDomain = Empty;
         HasComplexCFG = true;
-        invalidate(ERROR_DOMAINCONJUNCTS, DebugLoc());
+        invalidate(COMPLEXITY, DebugLoc());
       }
     }
   }
@@ -3213,6 +3213,8 @@ static std::string toString(AssumptionKind Kind) {
     return "Inbounds";
   case WRAPPING:
     return "No-overflows";
+  case COMPLEXITY:
+    return "Low complexity";
   case ERRORBLOCK:
     return "No-error";
   case INFINITELOOP:
@@ -3221,8 +3223,6 @@ static std::string toString(AssumptionKind Kind) {
     return "Invariant load";
   case DELINEARIZATION:
     return "Delinearization";
-  case ERROR_DOMAINCONJUNCTS:
-    return "Low number of domain conjuncts";
   }
   llvm_unreachable("Unknown AssumptionKind!");
 }
@@ -3381,7 +3381,18 @@ void Scop::dump() const { print(dbgs()); }
 isl_ctx *Scop::getIslCtx() const { return IslCtx.get(); }
 
 __isl_give isl_pw_aff *Scop::getPwAff(const SCEV *E, BasicBlock *BB) {
-  return Affinator.getPwAff(E, BB);
+  // First try to use the SCEVAffinator to generate a piecewise defined
+  // affine function from @p E in the context of @p BB. If that tasks becomes to
+  // complex the affinator might return a nullptr. In such a case we invalidate
+  // the SCoP and return a dummy value. This way we do not need to add error
+  // handling cdoe to all users of this function.
+  auto *PWA = Affinator.getPwAff(E, BB);
+  if (PWA)
+    return PWA;
+
+  auto DL = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
+  invalidate(COMPLEXITY, DL);
+  return Affinator.getPwAff(SE->getZero(E->getType()), BB);
 }
 
 __isl_give isl_union_set *Scop::getDomains() const {

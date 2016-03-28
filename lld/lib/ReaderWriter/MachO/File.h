@@ -275,8 +275,7 @@ public:
 
   MachODylibFile(StringRef path) : SharedLibraryFile(path) {}
 
-  OwningAtomPtr<SharedLibraryAtom> exports(StringRef name,
-                                           bool isData) const override {
+  OwningAtomPtr<SharedLibraryAtom> exports(StringRef name) const override {
     // Pass down _installName so that if this requested symbol
     // is re-exported through this dylib, the SharedLibraryAtom's loadName()
     // is this dylib installName and not the implementation dylib's.
