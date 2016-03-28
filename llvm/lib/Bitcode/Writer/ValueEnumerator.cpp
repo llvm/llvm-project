@@ -660,13 +660,7 @@ void ValueEnumerator::EnumerateType(Type *Ty) {
 void ValueEnumerator::EnumerateOperandType(const Value *V) {
   EnumerateType(V->getType());
 
-  if (auto *MD = dyn_cast<MetadataAsValue>(V)) {
-    assert(!isa<LocalAsMetadata>(MD->getMetadata()) &&
-           "Function-local metadata should be left for later");
-
-    EnumerateMetadata(MD->getMetadata());
-    return;
-  }
+  assert(!isa<MetadataAsValue>(V) && "Unexpected metadata operand");
 
   const Constant *C = dyn_cast<Constant>(V);
   if (!C)
