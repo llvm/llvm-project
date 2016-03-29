@@ -64,6 +64,13 @@ class GlobalValue;
 class TargetMachine;
 
 class PPCSubtarget : public PPCGenSubtargetInfo {
+public:
+  enum POPCNTDKind {
+    POPCNTD_Unavailable,
+    POPCNTD_Slow,
+    POPCNTD_Fast
+  };
+
 protected:
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
@@ -103,7 +110,6 @@ protected:
   bool HasFPRND;
   bool HasFPCVT;
   bool HasISEL;
-  bool HasPOPCNTD;
   bool HasBPERMD;
   bool HasExtDiv;
   bool HasCMPB;
@@ -124,7 +130,8 @@ protected:
   bool HasHTM;
   bool HasFusion;
   bool HasFloat128;
-  bool SlowPOPCNTD;
+
+  POPCNTDKind HasPOPCNTD;
 
   /// When targeting QPX running a stock PPC64 Linux kernel where the stack
   /// alignment has not been changed, we need to keep the 16-byte alignment
@@ -237,7 +244,6 @@ public:
   bool hasP9Altivec() const { return HasP9Altivec; }
   bool hasMFOCRF() const { return HasMFOCRF; }
   bool hasISEL() const { return HasISEL; }
-  bool hasPOPCNTD() const { return HasPOPCNTD; }
   bool hasBPERMD() const { return HasBPERMD; }
   bool hasExtDiv() const { return HasExtDiv; }
   bool hasCMPB() const { return HasCMPB; }
@@ -249,7 +255,6 @@ public:
   bool isE500() const { return IsE500; }
   bool isFeatureMFTB() const { return FeatureMFTB; }
   bool isDeprecatedDST() const { return DeprecatedDST; }
-  bool isPOPCNTDSlow() const { return SlowPOPCNTD; }
   bool hasICBT() const { return HasICBT; }
   bool hasInvariantFunctionDescriptors() const {
     return HasInvariantFunctionDescriptors;
@@ -267,6 +272,8 @@ public:
   bool hasHTM() const { return HasHTM; }
   bool hasFusion() const { return HasFusion; }
   bool hasFloat128() const { return HasFloat128; }
+
+  POPCNTDKind hasPOPCNTD() const { return HasPOPCNTD; }
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 

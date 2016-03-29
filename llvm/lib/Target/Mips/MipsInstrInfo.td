@@ -453,8 +453,10 @@ class UImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = []>
 //     uimm5 < uimm5_64, and uimm5 < vsplat_uimm5
 //   This is entirely arbitrary. We need an ordering and what we pick is
 //   unimportant since only one is possible for a given mnemonic.
+def ConstantUImm26AsmOperandClass
+    : ConstantUImmAsmOperandClass<26, []>;
 def ConstantUImm20AsmOperandClass
-    : ConstantUImmAsmOperandClass<20, []>;
+    : ConstantUImmAsmOperandClass<20, [ConstantUImm26AsmOperandClass]>;
 def UImm16RelaxedAsmOperandClass
     : UImmAsmOperandClass<16, [ConstantUImm20AsmOperandClass]> {
   let Name = "UImm16_Relaxed";
@@ -593,7 +595,6 @@ def simm18_lsl3 : Operand<i32> {
   let ParserMatchClass = MipsJumpTargetAsmOperand;
 }
 
-def simm20      : Operand<i32>;
 def simm32      : Operand<i32>;
 
 def simm16_64   : Operand<i64> {
@@ -615,7 +616,7 @@ def uimm_range_2_64 : Operand<i32> {
 }
 
 // Unsigned Operands
-foreach I = {1, 2, 3, 4, 5, 6, 7, 8, 10, 20} in
+foreach I = {1, 2, 3, 4, 5, 6, 7, 8, 10, 20, 26} in
   def uimm # I : Operand<i32> {
     let PrintMethod = "printUImm<" # I # ">";
     let ParserMatchClass =

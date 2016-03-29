@@ -245,10 +245,13 @@ bool JumpThreading::runOnFunction(Function &F) {
       // Can't thread an unconditional jump, but if the block is "almost
       // empty", we can replace uses of it with uses of the successor and make
       // this dead.
+      // We should not eliminate the loop header either, because eliminating
+      // a loop header might later prevent LoopSimplify from transforming nested
+      // loops into simplified form.
       if (BI && BI->isUnconditional() &&
           BB != &BB->getParent()->getEntryBlock() &&
           // If the terminator is the only non-phi instruction, try to nuke it.
-          BB->getFirstNonPHIOrDbg()->isTerminator()) {
+          BB->getFirstNonPHIOrDbg()->isTerminator() && !LoopHeaders.count(BB)) {
         // Since TryToSimplifyUncondBranchFromEmptyBlock may delete the
         // block, we have to make sure it isn't in the LoopHeaders set.  We
         // reinsert afterward if needed.
