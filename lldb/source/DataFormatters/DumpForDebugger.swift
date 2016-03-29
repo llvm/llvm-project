@@ -20,9 +20,9 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
     _ maxDepth: Int,
     _ root: Bool,
     _ childOfCollection: Bool,
-    inout _ refsAlreadySeen : Set<ObjectIdentifier>,
-    inout _ maxItemCounter: Int,
-    inout _ targetStream: StreamType) {
+    _ refsAlreadySeen : inout Set<ObjectIdentifier>,
+    _ maxItemCounter: inout Int,
+    _ targetStream: inout StreamType) {
         
         func idForObject(x: Any) -> ObjectIdentifier? {
             if let ao = x as? AnyObject {
