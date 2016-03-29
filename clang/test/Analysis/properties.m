@@ -247,6 +247,25 @@ void testConsistencyAssign(Person *p) {
 }
 @end
 
+@interface ClassWithSynthesizedPropertyAndGetter
+@property (readonly) int someProp;
+@end
+
+@implementation ClassWithSynthesizedPropertyAndGetter
+@synthesize someProp;
+
+// Make sure that the actual getter is inlined and not a getter created
+// by BodyFarm
+- (void)testBodyFarmGetterNotUsed {
+  int i = self.someProp;
+  clang_analyzer_eval(i == 22); // expected-warning {{TRUE}}
+}
+
+-(int)someProp {
+  return 22;
+}
+@end
+
 //------
 // Setter ivar invalidation.
 //------
