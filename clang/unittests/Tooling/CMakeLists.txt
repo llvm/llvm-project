@@ -30,6 +30,7 @@ target_link_libraries(ToolingTests
   clangAST
   clangASTMatchers
   clangBasic
+  clangFormat
   clangFrontend
   clangLex
   clangRewrite

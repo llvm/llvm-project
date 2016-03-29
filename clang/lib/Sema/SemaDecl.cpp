@@ -5654,10 +5654,9 @@ static bool isIncompleteDeclExternC(Sema &S, const T *D) {
     if (!D->isInExternCContext() || D->template hasAttr<OverloadableAttr>())
       return false;
 
-    // So do CUDA's host/device attributes if overloading is enabled.
-    if (S.getLangOpts().CUDA && S.getLangOpts().CUDATargetOverloads &&
-        (D->template hasAttr<CUDADeviceAttr>() ||
-         D->template hasAttr<CUDAHostAttr>()))
+    // So do CUDA's host/device attributes.
+    if (S.getLangOpts().CUDA && (D->template hasAttr<CUDADeviceAttr>() ||
+                                 D->template hasAttr<CUDAHostAttr>()))
       return false;
   }
   return D->isExternC();
@@ -11674,12 +11673,11 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
       FD->addAttr(NoThrowAttr::CreateImplicit(Context, FD->getLocation()));
     if (Context.BuiltinInfo.isConst(BuiltinID) && !FD->hasAttr<ConstAttr>())
       FD->addAttr(ConstAttr::CreateImplicit(Context, FD->getLocation()));
-    if (getLangOpts().CUDA && getLangOpts().CUDATargetOverloads &&
-        Context.BuiltinInfo.isTSBuiltin(BuiltinID) &&
+    if (getLangOpts().CUDA && Context.BuiltinInfo.isTSBuiltin(BuiltinID) &&
         !FD->hasAttr<CUDADeviceAttr>() && !FD->hasAttr<CUDAHostAttr>()) {
-      // Assign appropriate attribute depending on CUDA compilation
-      // mode and the target builtin belongs to. E.g. during host
-      // compilation, aux builtins are __device__, the rest are __host__.
+      // Add the appropriate attribute, depending on the CUDA compilation mode
+      // and which target the builtin belongs to. For example, during host
+      // compilation, aux builtins are __device__, while the rest are __host__.
       if (getLangOpts().CUDAIsDevice !=
           Context.BuiltinInfo.isAuxBuiltinID(BuiltinID))
         FD->addAttr(CUDADeviceAttr::CreateImplicit(Context, FD->getLocation()));

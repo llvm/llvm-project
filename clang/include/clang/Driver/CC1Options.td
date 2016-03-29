@@ -687,16 +687,8 @@ def cl_denorms_are_zero : Flag<["-"], "cl-denorms-are-zero">,
 
 def fcuda_is_device : Flag<["-"], "fcuda-is-device">,
   HelpText<"Generate code for CUDA device">;
-def fcuda_allow_host_calls_from_host_device : Flag<["-"],
-    "fcuda-allow-host-calls-from-host-device">,
-  HelpText<"Allow host device functions to call host functions">;
-def fcuda_disable_target_call_checks : Flag<["-"],
-    "fcuda-disable-target-call-checks">,
-  HelpText<"Disable all cross-target (host, device, etc.) call checks in CUDA">;
 def fcuda_include_gpubinary : Separate<["-"], "fcuda-include-gpubinary">,
   HelpText<"Incorporate CUDA device-side binary into host object file.">;
-def fcuda_target_overloads : Flag<["-"], "fcuda-target-overloads">,
-  HelpText<"Enable function overloads based on CUDA target attributes.">;
 def fcuda_allow_variadic_functions : Flag<["-"], "fcuda-allow-variadic-functions">,
   HelpText<"Allow variadic functions in CUDA device code.">;
 

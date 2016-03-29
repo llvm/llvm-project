@@ -6899,7 +6899,8 @@ public:
       "$f24", "$f25", "$f26", "$f27", "$f28", "$f29", "$f30", "$f31",
       // Hi/lo and condition register names
       "hi",   "lo",   "",     "$fcc0","$fcc1","$fcc2","$fcc3","$fcc4",
-      "$fcc5","$fcc6","$fcc7",
+      "$fcc5","$fcc6","$fcc7","$ac1hi","$ac1lo","$ac2hi","$ac2lo",
+      "$ac3hi","$ac3lo",
       // MSA register names
       "$w0",  "$w1",  "$w2",  "$w3",  "$w4",  "$w5",  "$w6",  "$w7",
       "$w8",  "$w9",  "$w10", "$w11", "$w12", "$w13", "$w14", "$w15",

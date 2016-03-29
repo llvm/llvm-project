@@ -3628,8 +3628,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     assert(AuxToolChain != nullptr && "No aux toolchain.");
     CmdArgs.push_back("-aux-triple");
     CmdArgs.push_back(Args.MakeArgString(AuxToolChain->getTriple().str()));
-    CmdArgs.push_back("-fcuda-target-overloads");
-    CmdArgs.push_back("-fcuda-disable-target-call-checks");
   }
 
   if (Triple.isOSWindows() && (Triple.getArch() == llvm::Triple::arm ||
@@ -6780,7 +6778,6 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   std::string Linker = getToolChain().GetProgramPath(getShortName());
   ArgStringList CmdArgs;
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs);
-  CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
   C.addCommand(llvm::make_unique<Command>(JA, *this, Args.MakeArgString(Linker),
                                           CmdArgs, Inputs));

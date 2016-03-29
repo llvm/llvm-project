@@ -44,7 +44,7 @@ struct S4 {
 };
 
 __host__ __device__ void foo4(S4& s) {
-  s.method(); // expected-error {{reference to __device__ function 'method' in __host__ __device__ function}}
+  s.method();
 }
 
 //------------------------------------------------------------------------------

@@ -11270,7 +11270,8 @@ TEST_F(ReplacementTest, FormatCodeAfterReplacements) {
 
   format::FormatStyle Style = format::getLLVMStyle();
   Style.ColumnLimit = 20; // Set column limit to 20 to increase readibility.
-  EXPECT_EQ(Expected, applyAllReplacementsAndFormat(Code, Replaces, Style));
+  EXPECT_EQ(Expected, applyAllReplacements(
+                          Code, formatReplacements(Code, Replaces, Style)));
 }
 
 } // end namespace

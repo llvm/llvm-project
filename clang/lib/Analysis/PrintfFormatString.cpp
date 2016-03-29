@@ -312,8 +312,13 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     argIndex++;
 
   if (k == ConversionSpecifier::InvalidSpecifier) {
+    unsigned Len = I - Start;
+    if (ParseUTF8InvalidSpecifier(Start, E, Len)) {
+      CS.setEndScanList(Start + Len);
+      FS.setConversionSpecifier(CS);
+    }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidPrintfConversionSpecifier(FS, Start, I - Start);
+    return !H.HandleInvalidPrintfConversionSpecifier(FS, Start, Len);
   }
   return PrintfSpecifierResult(Start, FS);
 }

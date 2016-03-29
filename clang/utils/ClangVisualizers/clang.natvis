@@ -112,6 +112,10 @@ For later versions of Visual Studio, no setup is required-->
   <Type Name="clang::CXXDestructorDecl">
     <DisplayString>Destructor {{~{Name,view(cpp)}()}}</DisplayString>
   </Type>
+  <Type Name="clang::TemplateTypeParmDecl">
+    <DisplayString Condition="!Typename">class {Name,view(cpp)}</DisplayString>
+    <DisplayString>typename {Name,view(cpp)}</DisplayString>
+  </Type>
   <Type Name="clang::NamedDecl" >
     <DisplayString IncludeView="cpp">{Name,view(cpp)}</DisplayString>
     <DisplayString>{Name}</DisplayString>
@@ -369,6 +373,27 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{($T1 *)Ptr</DisplayString>
     <Expand>
       <ExpandedItem>($T1 *)Ptr</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="clang::TemplateParameterList">
+    <DisplayString IncludeView="parm0" Condition="NumParams==0"></DisplayString>
+    <DisplayString IncludeView="parm0">{*((NamedDecl **)(this+1))[0],view(cpp)}{*this,view(parm1)}</DisplayString>
+    <DisplayString IncludeView="parm1" Condition="NumParams==1"></DisplayString>
+    <DisplayString IncludeView="parm1">, {*((NamedDecl **)(this+1))[1],view(cpp)}{*this,view(parm2)}</DisplayString>
+    <DisplayString IncludeView="parm2" Condition="NumParams==2"></DisplayString>
+    <DisplayString IncludeView="parm2">, {*((NamedDecl **)(this+1))[2],view(cpp)}{*this,view(parm3)}</DisplayString>
+    <DisplayString IncludeView="parm3" Condition="NumParams==3"></DisplayString>
+    <DisplayString IncludeView="parm3">, {*((NamedDecl **)(this+1))[3],view(cpp)}{*this,view(parm4)}</DisplayString>
+    <DisplayString IncludeView="parm4" Condition="NumParams==4"></DisplayString>
+    <DisplayString IncludeView="parm4">, {*((NamedDecl **)(this+1))[4],view(cpp)}{*this,view(parm5)}</DisplayString>
+    <DisplayString IncludeView="parm5" Condition="NumParams==5"></DisplayString>
+    <DisplayString IncludeView="parm5">, /* Expand for more params */</DisplayString>
+    <DisplayString>&lt;{*this,view(parm0)}&gt;</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>NumParams</Size>
+      <ValuePointer>(NamedDecl **)(this+1)</ValuePointer>
+      </ArrayItems>
     </Expand>
   </Type>
 </AutoVisualizer>

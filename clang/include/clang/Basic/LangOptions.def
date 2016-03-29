@@ -170,11 +170,8 @@ LANGOPT(OpenMP            , 1, 0, "OpenMP support")
 LANGOPT(OpenMPUseTLS      , 1, 0, "Use TLS for threadprivates or runtime calls")
 LANGOPT(OpenMPIsDevice    , 1, 0, "Generate code only for OpenMP target device")
 
-LANGOPT(CUDAIsDevice      , 1, 0, "Compiling for CUDA device")
-LANGOPT(CUDAAllowHostCallsFromHostDevice, 1, 0, "Allow host device functions to call host functions")
-LANGOPT(CUDADisableTargetCallChecks, 1, 0, "Disable checks for call targets (host, device, etc.)")
-LANGOPT(CUDATargetOverloads, 1, 0, "Enable function overloads based on CUDA target attributes")
-LANGOPT(CUDAAllowVariadicFunctions, 1, 0, "Allow variadic functions in CUDA device code")
+LANGOPT(CUDAIsDevice      , 1, 0, "compiling for CUDA device")
+LANGOPT(CUDAAllowVariadicFunctions, 1, 0, "allowing variadic functions in CUDA device code")
 
 LANGOPT(AssumeSaneOperatorNew , 1, 1, "implicit __attribute__((malloc)) for C++'s new operators")
 LANGOPT(SizedDeallocation , 1, 0, "enable sized deallocation functions")

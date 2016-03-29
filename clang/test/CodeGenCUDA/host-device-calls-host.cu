@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple nvptx-unknown-unknown -fcuda-allow-host-calls-from-host-device -fcuda-is-device -Wno-cuda-compat -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple nvptx-unknown-unknown -fcuda-is-device -Wno-cuda-compat -emit-llvm -o - | FileCheck %s
 
 #include "Inputs/cuda.h"
 

@@ -268,6 +268,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     }
   }
 
+  // Enable toolchain specific default sanitizers if not explicitly disabled.
+  Kinds |= TC.getDefaultSanitizers() & ~AllRemove;
+
   // We disable the vptr sanitizer if it was enabled by group expansion but RTTI
   // is disabled.
   if ((Kinds & Vptr) &&

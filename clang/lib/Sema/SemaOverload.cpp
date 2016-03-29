@@ -1125,7 +1125,7 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
       return true;
   }
 
-  if (getLangOpts().CUDA && getLangOpts().CUDATargetOverloads) {
+  if (getLangOpts().CUDA) {
     CUDAFunctionTarget NewTarget = IdentifyCUDATarget(New),
                        OldTarget = IdentifyCUDATarget(Old);
     if (NewTarget == CFT_InvalidTarget || NewTarget == CFT_Global)
@@ -8639,8 +8639,7 @@ bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
        Cand2.Function->hasAttr<EnableIfAttr>()))
     return hasBetterEnableIfAttrs(S, Cand1.Function, Cand2.Function);
 
-  if (S.getLangOpts().CUDA && S.getLangOpts().CUDATargetOverloads &&
-      Cand1.Function && Cand2.Function) {
+  if (S.getLangOpts().CUDA && Cand1.Function && Cand2.Function) {
     FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext);
     return S.IdentifyCUDAPreference(Caller, Cand1.Function) >
            S.IdentifyCUDAPreference(Caller, Cand2.Function);
@@ -8745,7 +8744,7 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
   // only on their host/device attributes. Specifically, if one
   // candidate call is WrongSide and the other is SameSide, we ignore
   // the WrongSide candidate.
-  if (S.getLangOpts().CUDA && S.getLangOpts().CUDATargetOverloads) {
+  if (S.getLangOpts().CUDA) {
     const FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext);
     bool ContainsSameSideCandidate =
         llvm::any_of(Candidates, [&](OverloadCandidate *Cand) {
@@ -10299,8 +10298,7 @@ public:
       }
     }
 
-    if (S.getLangOpts().CUDA && S.getLangOpts().CUDATargetOverloads &&
-        Matches.size() > 1)
+    if (S.getLangOpts().CUDA && Matches.size() > 1)
       EliminateSuboptimalCudaMatches();
   }
 

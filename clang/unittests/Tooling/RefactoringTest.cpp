@@ -18,6 +18,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -164,6 +165,39 @@ TEST_F(ReplacementTest, ApplyAllFailsIfOneApplyFails) {
   EXPECT_FALSE(applyAllReplacements(Replaces, Context.Rewrite));
   EXPECT_EQ("a", Context.getRewrittenText(IDa));
   EXPECT_EQ("z", Context.getRewrittenText(IDz));
+}
+
+TEST_F(ReplacementTest, MultipleFilesReplaceAndFormat) {
+  // Column limit is 20.
+  std::string Code1 = "Long *a =\n"
+                      "    new Long();\n"
+                      "long x = 1;";
+  std::string Expected1 = "auto a = new Long();\n"
+                          "long x =\n"
+                          "    12345678901;";
+  std::string Code2 = "int x = 123;\n"
+                      "int y = 0;";
+  std::string Expected2 = "int x =\n"
+                          "    1234567890123;\n"
+                          "int y = 10;";
+  FileID ID1 = Context.createInMemoryFile("format_1.cpp", Code1);
+  FileID ID2 = Context.createInMemoryFile("format_2.cpp", Code2);
+
+  tooling::Replacements Replaces;
+  // Scrambled the order of replacements.
+  Replaces.insert(tooling::Replacement(
+      Context.Sources, Context.getLocation(ID2, 1, 12), 0, "4567890123"));
+  Replaces.insert(tooling::Replacement(
+      Context.Sources, Context.getLocation(ID1, 1, 1), 6, "auto "));
+  Replaces.insert(tooling::Replacement(
+      Context.Sources, Context.getLocation(ID2, 2, 9), 1, "10"));
+  Replaces.insert(tooling::Replacement(
+      Context.Sources, Context.getLocation(ID1, 3, 10), 1, "12345678901"));
+
+  EXPECT_TRUE(formatAndApplyAllReplacements(
+      Replaces, Context.Rewrite, "{BasedOnStyle: LLVM, ColumnLimit: 20}"));
+  EXPECT_EQ(Expected1, Context.getRewrittenText(ID1));
+  EXPECT_EQ(Expected2, Context.getRewrittenText(ID2));
 }
 
 TEST(ShiftedCodePositionTest, FindsNewCodePosition) {
@@ -426,7 +460,7 @@ TEST(Range, CalculateRangesOfReplacements) {
   Replaces.insert(Replacement("foo", 10, 1, "zzzzzz"));
   Replaces.insert(Replacement("foo", 11, 0, "oooooooooooooooo"));
 
-  std::vector<Range> Ranges = calculateChangedRangesInFile(Replaces);
+  std::vector<Range> Ranges = calculateChangedRanges(Replaces);
 
   EXPECT_EQ(3ul, Ranges.size());
   EXPECT_TRUE(Ranges[0].getOffset() == 0);

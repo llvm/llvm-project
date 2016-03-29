@@ -797,6 +797,15 @@ public:
                         IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
   }
 
+  /// \brief Get the FileID for \p SourceFile if it exists. Otherwise, create a
+  /// new FileID for the \p SourceFile.
+  FileID getOrCreateFileID(const FileEntry *SourceFile,
+                           SrcMgr::CharacteristicKind FileCharacter) {
+    FileID ID = translateFile(SourceFile);
+    return ID.isValid() ? ID : createFileID(SourceFile, SourceLocation(),
+                                            FileCharacter);
+  }
+
   /// \brief Return a new SourceLocation that encodes the
   /// fact that a token from SpellingLoc should actually be referenced from
   /// ExpansionLoc, and that it represents the expansion of a macro argument

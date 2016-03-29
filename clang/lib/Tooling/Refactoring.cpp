@@ -14,6 +14,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Format/Format.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Rewrite/Core/Rewriter.h"
@@ -59,6 +60,30 @@ bool RefactoringTool::applyAllReplacements(Rewriter &Rewrite) {
 
 int RefactoringTool::saveRewrittenFiles(Rewriter &Rewrite) {
   return Rewrite.overwriteChangedFiles() ? 1 : 0;
+}
+
+bool formatAndApplyAllReplacements(const Replacements &Replaces,
+                                   Rewriter &Rewrite, StringRef Style) {
+  SourceManager &SM = Rewrite.getSourceMgr();
+  FileManager &Files = SM.getFileManager();
+
+  auto FileToReplaces = groupReplacementsByFile(Replaces);
+
+  bool Result = true;
+  for (auto &FileAndReplaces : FileToReplaces) {
+    const std::string FilePath = FileAndReplaces.first;
+    auto &CurReplaces = FileAndReplaces.second;
+
+    const FileEntry *Entry = Files.getFile(FilePath);
+    FileID ID = SM.getOrCreateFileID(Entry, SrcMgr::C_User);
+    StringRef Code = SM.getBufferData(ID);
+
+    format::FormatStyle CurStyle = format::getStyle(Style, FilePath, "LLVM");
+    Replacements NewReplacements =
+        format::formatReplacements(Code, CurReplaces, CurStyle);
+    Result = applyAllReplacements(NewReplacements, Rewrite) && Result;
+  }
+  return Result;
 }
 
 } // end namespace tooling

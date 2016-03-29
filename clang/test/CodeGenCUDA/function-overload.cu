@@ -4,24 +4,10 @@
 // Make sure we handle target overloads correctly.  Most of this is checked in
 // sema, but special functions like constructors and destructors are here.
 //
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
-// RUN:     -fcuda-target-overloads -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s \
 // RUN:     | FileCheck -check-prefix=CHECK-BOTH -check-prefix=CHECK-HOST %s
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device \
-// RUN:     -fcuda-target-overloads -emit-llvm -o - %s \
-// RUN:     | FileCheck -check-prefix=CHECK-BOTH -check-prefix=CHECK-DEVICE \
-// RUN:       -check-prefix=CHECK-DEVICE-STRICT %s
-
-// Check target overloads handling with disabled call target checks.
-// RUN: %clang_cc1 -DNOCHECKS -triple x86_64-unknown-linux-gnu -emit-llvm \
-// RUN:    -fcuda-disable-target-call-checks -fcuda-target-overloads -o - %s \
-// RUN:     | FileCheck -check-prefix=CHECK-BOTH -check-prefix=CHECK-HOST \
-// RUN:    -check-prefix=CHECK-BOTH-NC -check-prefix=CHECK-HOST-NC %s
-// RUN: %clang_cc1 -DNOCHECKS -triple nvptx64-nvidia-cuda -emit-llvm \
-// RUN:    -fcuda-disable-target-call-checks -fcuda-target-overloads \
-// RUN:    -fcuda-is-device -o - %s \
-// RUN:     | FileCheck -check-prefix=CHECK-BOTH -check-prefix=CHECK-DEVICE \
-// RUN:    -check-prefix=CHECK-BOTH-NC -check-prefix=CHECK-DEVICE-NC %s
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm -o - %s \
+// RUN:     | FileCheck -check-prefix=CHECK-BOTH -check-prefix=CHECK-DEVICE %s
 
 #include "Inputs/cuda.h"
 

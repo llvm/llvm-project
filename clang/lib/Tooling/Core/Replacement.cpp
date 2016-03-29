@@ -58,14 +58,8 @@ bool Replacement::apply(Rewriter &Rewrite) const {
   const FileEntry *Entry = SM.getFileManager().getFile(FilePath);
   if (!Entry)
     return false;
-  FileID ID;
-  // FIXME: Use SM.translateFile directly.
-  SourceLocation Location = SM.translateFileLineCol(Entry, 1, 1);
-  ID = Location.isValid() ?
-    SM.getFileID(Location) :
-    SM.createFileID(Entry, SourceLocation(), SrcMgr::C_User);
-  // FIXME: We cannot check whether Offset + Length is in the file, as
-  // the remapping API is not public in the RewriteBuffer.
+
+  FileID ID = SM.getOrCreateFileID(Entry, SrcMgr::C_User);
   const SourceLocation Start =
     SM.getLocForStartOfFile(ID).
     getLocWithOffset(ReplacementRange.getOffset());
@@ -256,6 +250,8 @@ bool applyAllReplacements(const std::vector<Replacement> &Replaces,
 }
 
 std::string applyAllReplacements(StringRef Code, const Replacements &Replaces) {
+  if (Replaces.empty()) return Code;
+
   IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
       new vfs::InMemoryFileSystem);
   FileManager Files(FileSystemOptions(), InMemoryFileSystem);
@@ -282,7 +278,7 @@ std::string applyAllReplacements(StringRef Code, const Replacements &Replaces) {
   return Result;
 }
 
-std::vector<Range> calculateChangedRangesInFile(const Replacements &Replaces) {
+std::vector<Range> calculateChangedRanges(const Replacements &Replaces) {
   std::vector<Range> ChangedRanges;
   int Shift = 0;
   for (const Replacement &R : Replaces) {
@@ -389,6 +385,15 @@ private:
   std::string Text;
 };
 } // namespace
+
+std::map<std::string, Replacements>
+groupReplacementsByFile(const Replacements &Replaces) {
+  std::map<std::string, Replacements> FileToReplaces;
+  for (const auto &Replace : Replaces) {
+    FileToReplaces[Replace.getFilePath()].insert(Replace);
+  }
+  return FileToReplaces;
+}
 
 Replacements mergeReplacements(const Replacements &First,
                                const Replacements &Second) {

@@ -1,18 +1,8 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
-// Make sure we handle target overloads correctly.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
-// RUN:    -fsyntax-only -fcuda-target-overloads -verify %s
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda \
-// RUN:    -fsyntax-only -fcuda-target-overloads -fcuda-is-device -verify %s
-
-// Check target overloads handling with disabled call target checks.
-// RUN: %clang_cc1 -DNOCHECKS -triple x86_64-unknown-linux-gnu -fsyntax-only \
-// RUN:    -fcuda-disable-target-call-checks -fcuda-target-overloads -verify %s
-// RUN: %clang_cc1 -DNOCHECKS -triple nvptx64-nvidia-cuda -fsyntax-only \
-// RUN:    -fcuda-disable-target-call-checks -fcuda-target-overloads \
-// RUN:    -fcuda-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify %s
 
 #include "Inputs/cuda.h"
 
@@ -180,23 +170,11 @@ __host__ __device__ void hostdevicef() {
   DeviceReturnTy ret_d = d();
   DeviceFnPtr fp_cd = cd;
   DeviceReturnTy ret_cd = cd();
-#if !defined(NOCHECKS) && !defined(__CUDA_ARCH__)
-  // expected-error@-5 {{reference to __device__ function 'd' in __host__ __device__ function}}
-  // expected-error@-5 {{no matching function for call to 'd'}}
-  // expected-error@-5 {{reference to __device__ function 'cd' in __host__ __device__ function}}
-  // expected-error@-5 {{no matching function for call to 'cd'}}
-#endif
 
   HostFnPtr fp_h = h;
   HostReturnTy ret_h = h();
   HostFnPtr fp_ch = ch;
   HostReturnTy ret_ch = ch();
-#if !defined(NOCHECKS) && defined(__CUDA_ARCH__)
-  // expected-error@-5 {{reference to __host__ function 'h' in __host__ __device__ function}}
-  // expected-error@-5 {{no matching function for call to 'h'}}
-  // expected-error@-5 {{reference to __host__ function 'ch' in __host__ __device__ function}}
-  // expected-error@-5 {{no matching function for call to 'ch'}}
-#endif
 
   CurrentFnPtr fp_dh = dh;
   CurrentReturnTy ret_dh = dh();
@@ -372,13 +350,7 @@ __host__ __device__ HostDeviceReturnTy template_vs_hd_function(float arg) {
 
 __host__ __device__ void test_host_device_calls_hd_template() {
   HostDeviceReturnTy ret1 = template_vs_hd_function(1.0f);
-
-#if defined(__CUDA_ARCH__) && !defined(NOCHECKS)
-  typedef HostDeviceReturnTy ExpectedReturnTy;
-#else
-  typedef TemplateReturnTy ExpectedReturnTy;
-#endif
-  ExpectedReturnTy ret2 = template_vs_hd_function(1);
+  TemplateReturnTy ret2 = template_vs_hd_function(1);
 }
 
 __host__ void test_host_calls_hd_template() {
@@ -401,11 +373,9 @@ __device__ DeviceReturnTy2 device_only_function(float arg) { return DeviceReturn
 __host__ HostReturnTy host_only_function(int arg) { return HostReturnTy(); }
 __host__ HostReturnTy2 host_only_function(float arg) { return HostReturnTy2(); }
 
-__host__ __device__ void test_host_device_nochecks_overloading() {
-#ifdef NOCHECKS
+__host__ __device__ void test_host_device_single_side_overloading() {
   DeviceReturnTy ret1 = device_only_function(1);
   DeviceReturnTy2 ret2 = device_only_function(1.0f);
   HostReturnTy ret3 = host_only_function(1);
   HostReturnTy2 ret4 = host_only_function(1.0f);
-#endif
 }
