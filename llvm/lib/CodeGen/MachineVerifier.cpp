@@ -251,6 +251,7 @@ namespace {
     void verifyStackFrame();
 
     void verifySlotIndexes() const;
+    void verifyProperties(const MachineFunction &MF);
   };
 
   struct MachineVerifierPass : public MachineFunctionPass {
@@ -307,6 +308,19 @@ void MachineVerifier::verifySlotIndexes() const {
   }
 }
 
+void MachineVerifier::verifyProperties(const MachineFunction &MF) {
+  // If a pass has introduced virtual registers without clearing the
+  // AllVRegsAllocated property (or set it without allocating the vregs)
+  // then report an error.
+  if (MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::AllVRegsAllocated) &&
+      MRI->getNumVirtRegs()) {
+    report(
+        "Function has AllVRegsAllocated property but there are VReg operands",
+        &MF);
+  }
+}
+
 unsigned MachineVerifier::verify(MachineFunction &MF) {
   foundErrors = 0;
 
@@ -330,6 +344,8 @@ unsigned MachineVerifier::verify(MachineFunction &MF) {
   }
 
   verifySlotIndexes();
+
+  verifyProperties(MF);
 
   visitMachineFunctionBefore();
   for (MachineFunction::const_iterator MFI = MF.begin(), MFE = MF.end();

@@ -26,7 +26,7 @@
 //
 // - Live interval recomputing seems inefficient. This currently only matches
 //   one pair, and recomputes live intervals and moves on to the next pair. It
-//   would be better to compute a list of all merges that need to occur
+//   would be better to compute a list of all merges that need to occur.
 //
 // - With a list of instructions to process, we can also merge more. If a
 //   cluster of loads have offsets that are too large to fit in the 8-bit

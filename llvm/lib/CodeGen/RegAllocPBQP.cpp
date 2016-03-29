@@ -106,11 +106,6 @@ public:
   /// PBQP analysis usage.
   void getAnalysisUsage(AnalysisUsage &au) const override;
 
-  MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::AllVRegsAllocated);
-  }
-
   /// Perform register allocation
   bool runOnMachineFunction(MachineFunction &MF) override;
 

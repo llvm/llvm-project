@@ -115,16 +115,30 @@ template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody &Sym) {
     //
     // See "Global Offset Table" in Chapter 5:
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-    //
-    // FIXME (simon): Now LLD allocates GOT entries for each
-    // "local symbol+addend" pair. That should be fixed to reduce size
-    // of generated GOT.
-    if (Sym.isPreemptible())
-      Sym.MustBeInDynSym = true;
-    else {
+    if (Sym.isLocal()) {
+      // At this point we do not know final symbol value so to reduce number
+      // of allocated GOT entries do the following trick. Save all output
+      // sections referenced by GOT relocations. Then later in the `finalize`
+      // method calculate number of "pages" required to cover all saved output
+      // section and allocate appropriate number of GOT entries.
+      auto *OutSec = cast<DefinedRegular<ELFT>>(&Sym)->Section->OutSec;
+      MipsOutSections.insert(OutSec);
+      return;
+    }
+    if (!Sym.isPreemptible()) {
+      // In case of non-local symbols require an entry in the local part
+      // of MIPS GOT, we set GotIndex to 1 just to accent that this symbol
+      // has the GOT entry and escape creation more redundant GOT entries.
+      // FIXME (simon): We can try to store such symbols in the `Entries`
+      // container. But in that case we have to sort out that container
+      // and update GotIndex assigned to symbols.
+      Sym.GotIndex = 1;
       ++MipsLocalEntries;
       return;
     }
+    // All preemptible symbols with MIPS GOT entries should be represented
+    // in the dynamic symbols table.
+    Sym.MustBeInDynSym = true;
   }
   Sym.GotIndex = Entries.size();
   Entries.push_back(&Sym);
@@ -191,6 +205,14 @@ unsigned GotSection<ELFT>::getMipsLocalEntriesNum() const {
 }
 
 template <class ELFT> void GotSection<ELFT>::finalize() {
+  for (const OutputSectionBase<ELFT> *OutSec : MipsOutSections) {
+    // Calculate an upper bound of MIPS GOT entries required to store page
+    // addresses of local symbols. We assume the worst case - each 64kb
+    // page of the output section has at least one GOT relocation against it.
+    // Add 0x8000 to the section's size because the page address stored
+    // in the GOT entry is calculated as (value + 0x8000) & ~0xffff.
+    MipsLocalEntries += (OutSec->getSize() + 0x8000 + 0xfffe) / 0xffff;
+  }
   this->Header.sh_size =
       (Target->GotHeaderEntriesNum + MipsLocalEntries + Entries.size()) *
       sizeof(uintX_t);
@@ -1348,8 +1370,12 @@ SymbolTableSection<ELFT>::SymbolTableSection(
 // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
 static bool sortMipsSymbols(const std::pair<SymbolBody *, unsigned> &L,
                             const std::pair<SymbolBody *, unsigned> &R) {
-  if (!L.first->isInGot() || !R.first->isInGot())
-    return R.first->isInGot();
+  // Sort entries related to non-local preemptible symbols by GOT indexes.
+  // All other entries go to the first part of GOT in arbitrary order.
+  bool LIsInLocalGot = !L.first->isInGot() || !L.first->isPreemptible();
+  bool RIsInLocalGot = !R.first->isInGot() || !R.first->isPreemptible();
+  if (LIsInLocalGot || RIsInLocalGot)
+    return !RIsInLocalGot;
   return L.first->GotIndex < R.first->GotIndex;
 }
 

@@ -58,6 +58,7 @@ class DWARFDeclContext;
 class DWARFDIECollection;
 class DWARFFormValue;
 class SymbolFileDWARFDebugMap;
+class SymbolFileDWARFDwo;
 
 #define DIE_IS_BEING_PARSED ((lldb_private::Type*)1)
 
@@ -328,6 +329,9 @@ public:
 
     lldb::ModuleSP
     GetDWOModule (lldb_private::ConstString name);
+
+    virtual std::unique_ptr<SymbolFileDWARFDwo>
+    GetDwoSymbolFileForCompileUnit(DWARFCompileUnit &dwarf_cu, const DWARFDebugInfoEntry &cu_die);
 
 protected:
     typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *> DIEToTypePtr;

@@ -176,6 +176,10 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   bool runOnMachineFunction(MachineFunction&) override;
+  MachineFunctionProperties getSetProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
 };
 } // end anonymous namespace
 
@@ -445,4 +449,3 @@ void VirtRegRewriter::rewrite() {
     }
   }
 }
-

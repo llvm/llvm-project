@@ -342,8 +342,7 @@ bool FunctionImporter::importFunctions(
     for (auto &GV : SrcModule->globals()) {
       if (!GV.hasName())
         continue;
-      auto GUID = Function::getGUID(Function::getGlobalIdentifier(
-          GV.getName(), GV.getLinkage(), SrcModule->getModuleIdentifier()));
+      auto GUID = GV.getGUID();
       if (ImportGUIDs.count(GUID)) {
         GV.materialize();
         GlobalsToImport.insert(&GV);

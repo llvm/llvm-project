@@ -82,8 +82,6 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" OR CMAKE_SYSTEM_NAME MATCHES "NetBSD" )
     )
 endif ()
 
-include(../../cmake/LLDBDependencies.cmake)
-
 add_lldb_executable(lldb-mi ${LLDB_MI_SOURCES})
 
 target_link_libraries(lldb-mi liblldb)
@@ -91,8 +89,6 @@ if ( NOT CMAKE_SYSTEM_NAME MATCHES "Windows" )
   target_link_libraries(lldb-mi pthread)
 endif ()
 
-# TODO: why isn't this done by add_lldb_executable?
-target_link_libraries(lldb-mi ${LLDB_USED_LIBS})
 llvm_config(lldb-mi ${LLVM_LINK_COMPONENTS})
 
 set_target_properties(lldb-mi PROPERTIES VERSION ${LLDB_VERSION})

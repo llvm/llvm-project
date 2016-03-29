@@ -39,9 +39,9 @@ namespace {
 /// analyses to determine when to inline.
 class SimpleInliner : public Inliner {
   // This field is populated based on one of the following:
-  //  optimization or size optimization levels,
-  //  --inline-threshold flag,
-  //  user specified value.
+  //  * optimization or size-optimization levels,
+  //  * the --inline-threshold flag, or
+  //  * a user specified value.
   int DefaultThreshold;
 
 public:
@@ -50,7 +50,8 @@ public:
     initializeSimpleInlinerPass(*PassRegistry::getPassRegistry());
   }
 
-  SimpleInliner(int Threshold) : Inliner(ID), DefaultThreshold(Threshold) {
+  explicit SimpleInliner(int Threshold)
+      : Inliner(ID), DefaultThreshold(Threshold) {
     initializeSimpleInlinerPass(*PassRegistry::getPassRegistry());
   }
 

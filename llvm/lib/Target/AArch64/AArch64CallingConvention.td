@@ -128,7 +128,7 @@ def CC_AArch64_DarwinPCS : CallingConv<[
   // slot is 64-bit.
   CCIfByVal<CCPassByVal<8, 8>>,
 
-  // An SwiftSelf is passed in X9.
+  // A SwiftSelf is passed in X9.
   CCIfSwiftSelf<CCIfType<[i64], CCAssignToRegWithShadow<[X9], [W9]>>>,
 
   // A SwiftError is passed in X19.

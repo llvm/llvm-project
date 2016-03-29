@@ -1763,6 +1763,38 @@ SymbolFileDWARF::GetDWOModule (ConstString name)
         return lldb::ModuleSP();
 }
 
+std::unique_ptr<SymbolFileDWARFDwo>
+SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(DWARFCompileUnit &dwarf_cu, const DWARFDebugInfoEntry &cu_die)
+{
+    const char *dwo_name = cu_die.GetAttributeValueAsString(this, &dwarf_cu, DW_AT_GNU_dwo_name, nullptr);
+    if (!dwo_name)
+        return nullptr;
+
+    FileSpec dwo_file(dwo_name, true);
+    if (dwo_file.IsRelative())
+    {
+        const char *comp_dir = cu_die.GetAttributeValueAsString(this, &dwarf_cu, DW_AT_comp_dir, nullptr);
+        if (!comp_dir)
+            return nullptr;
+
+        dwo_file.SetFile(comp_dir, true);
+        dwo_file.AppendPathComponent(dwo_name);
+    }
+
+    if (!dwo_file.Exists())
+        return nullptr;
+
+    const lldb::offset_t file_offset = 0;
+    DataBufferSP dwo_file_data_sp;
+    lldb::offset_t dwo_file_data_offset = 0;
+    ObjectFileSP dwo_obj_file = ObjectFile::FindPlugin(GetObjectFile()->GetModule(), &dwo_file, file_offset,
+                                                       dwo_file.GetByteSize(), dwo_file_data_sp, dwo_file_data_offset);
+    if (dwo_obj_file == nullptr)
+        return nullptr;
+
+    return llvm::make_unique<SymbolFileDWARFDwo>(dwo_obj_file, &dwarf_cu);
+}
+
 void
 SymbolFileDWARF::UpdateExternalModuleListIfNeeded()
 {
