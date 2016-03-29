@@ -305,28 +305,32 @@ void CGOpenMPRuntimeNVPTX::createOffloadEntry(llvm::Constant *ID,
 void CGOpenMPRuntimeNVPTX::emitTargetOutlinedFunction(
     const OMPExecutableDirective &D, StringRef ParentName,
     llvm::Function *&OutlinedFn, llvm::Constant *&OutlinedFnID,
-    bool IsOffloadEntry) {
+    bool IsOffloadEntry, const RegionCodeGenTy &CodeGen) {
   if (!IsOffloadEntry) // Nothing to do.
     return;
 
   assert(!ParentName.empty() && "Invalid target region parent name!");
 
-  const CapturedStmt &CS = *cast<CapturedStmt>(D.getAssociatedStmt());
-
   EntryFunctionState EST;
   WorkerFunctionState WST(CGM);
 
   // Emit target region as a standalone region.
-  auto &&CodeGen = [&EST, &WST, &CS, &D, this](CodeGenFunction &CGF) {
-    CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
-    (void)CGF.EmitOMPFirstprivateClause(D, PrivateScope);
-    CGF.EmitOMPPrivateClause(D, PrivateScope);
-    (void)PrivateScope.Privatize();
+  class NVPTXPrePostActionTy : public PrePostActionTy {
+    CGOpenMPRuntimeNVPTX &RT;
+    CGOpenMPRuntimeNVPTX::EntryFunctionState &EST;
+    CGOpenMPRuntimeNVPTX::WorkerFunctionState &WST;
 
-    emitEntryHeader(CGF, EST, WST);
-    CGF.EmitStmt(CS.getCapturedStmt());
-    emitEntryFooter(CGF, EST);
-  };
+  public:
+    NVPTXPrePostActionTy(CGOpenMPRuntimeNVPTX &RT,
+                         CGOpenMPRuntimeNVPTX::EntryFunctionState &EST,
+                         CGOpenMPRuntimeNVPTX::WorkerFunctionState &WST)
+        : RT(RT), EST(EST), WST(WST) {}
+    void Enter(CodeGenFunction &CGF) override {
+      RT.emitEntryHeader(CGF, EST, WST);
+    }
+    void Exit(CodeGenFunction &CGF) override { RT.emitEntryFooter(CGF, EST); }
+  } Action(*this, EST, WST);
+  CodeGen.setAction(Action);
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
 

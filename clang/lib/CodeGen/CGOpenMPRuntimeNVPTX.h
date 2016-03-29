@@ -24,6 +24,34 @@ namespace clang {
 namespace CodeGen {
 
 class CGOpenMPRuntimeNVPTX : public CGOpenMPRuntime {
+public:
+  class EntryFunctionState {
+  public:
+    llvm::BasicBlock *ExitBB;
+
+    EntryFunctionState() : ExitBB(nullptr){};
+  };
+
+  class WorkerFunctionState {
+  public:
+    llvm::Function *WorkerFn;
+    const CGFunctionInfo *CGFI;
+
+    WorkerFunctionState(CodeGenModule &CGM);
+
+  private:
+    void createWorkerFunction(CodeGenModule &CGM);
+  };
+
+  /// \brief Helper for target entry function. Guide the master and worker
+  /// threads to their respective locations.
+  void emitEntryHeader(CodeGenFunction &CGF, EntryFunctionState &EST,
+                       WorkerFunctionState &WST);
+
+  /// \brief Signal termination of OMP execution.
+  void emitEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
+
+private:
   //
   // NVPTX calls.
   //
@@ -66,24 +94,6 @@ class CGOpenMPRuntimeNVPTX : public CGOpenMPRuntime {
   // Outlined function for the workers to execute.
   llvm::GlobalVariable *WorkID;
 
-  class EntryFunctionState {
-  public:
-    llvm::BasicBlock *ExitBB;
-
-    EntryFunctionState() : ExitBB(nullptr){};
-  };
-
-  class WorkerFunctionState {
-  public:
-    llvm::Function *WorkerFn;
-    const CGFunctionInfo *CGFI;
-
-    WorkerFunctionState(CodeGenModule &CGM);
-
-  private:
-    void createWorkerFunction(CodeGenModule &CGM);
-  };
-
   /// \brief Initialize master-worker control state.
   void initializeEnvironment();
 
@@ -92,14 +102,6 @@ class CGOpenMPRuntimeNVPTX : public CGOpenMPRuntime {
 
   /// \brief Helper for worker function. Emit body of worker loop.
   void emitWorkerLoop(CodeGenFunction &CGF, WorkerFunctionState &WST);
-
-  /// \brief Helper for target entry function. Guide the master and worker
-  /// threads to their respective locations.
-  void emitEntryHeader(CodeGenFunction &CGF, EntryFunctionState &EST,
-                       WorkerFunctionState &WST);
-
-  /// \brief Signal termination of OMP execution.
-  void emitEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
 
   /// \brief Returns specified OpenMP runtime function for the current OpenMP
   /// implementation.  Specialized for the NVPTX device.
@@ -129,7 +131,8 @@ class CGOpenMPRuntimeNVPTX : public CGOpenMPRuntime {
                                   StringRef ParentName,
                                   llvm::Function *&OutlinedFn,
                                   llvm::Constant *&OutlinedFnID,
-                                  bool IsOffloadEntry) override;
+                                  bool IsOffloadEntry,
+                                  const RegionCodeGenTy &CodeGen) override;
 
 public:
   explicit CGOpenMPRuntimeNVPTX(CodeGenModule &CGM);

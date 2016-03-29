@@ -321,7 +321,6 @@ public:
 // CHECK-LABEL: define {{.*void}} @{{.*}}iter_simple{{.*}}
 void iter_simple(IterDouble ia, IterDouble ib, IterDouble ic) {
 //
-// CHECK: store i32 0, i32* [[IT_OMP_IV:%[^,]+]]
 // Calculate number of iterations before the loop body.
 // CHECK: [[DIFF1:%.+]] = invoke {{.*}}i32 @{{.*}}IterDouble{{.*}}
 // CHECK: [[DIFF2:%.+]] = sub nsw i32 [[DIFF1]], 1
@@ -329,6 +328,7 @@ void iter_simple(IterDouble ia, IterDouble ib, IterDouble ic) {
 // CHECK-NEXT: [[DIFF4:%.+]] = sdiv i32 [[DIFF3]], 1
 // CHECK-NEXT: [[DIFF5:%.+]] = sub nsw i32 [[DIFF4]], 1
 // CHECK-NEXT: store i32 [[DIFF5]], i32* [[OMP_LAST_IT:%[^,]+]]{{.+}}
+// CHECK: store i32 0, i32* [[IT_OMP_IV:%[^,]+]]
   #pragma omp simd
 
 // CHECK: [[IV:%.+]] = load i32, i32* [[IT_OMP_IV]]{{.+}} !llvm.mem.parallel_loop_access ![[ITER_LOOP_ID:[0-9]+]]

@@ -224,8 +224,10 @@ void test_precond() {
 // ..many loads of %0..
 // CHECK:  [[A2:%.+]] = load i8*, i8** [[APTRADDR]]
 // CHECK:  [[AVAL0:%.+]] = load i8, i8* [[A2]]
-// CHECK:  [[AVAL1:%.+]] = load i8, i8* [[A2]]
-// CHECK:  [[AVAL2:%.+]] = load i8, i8* [[A2]]
+// CHECK:  store i8 [[AVAL0]], i8* [[CAP_EXPR:%.+]],
+// CHECK:  [[AVAL1:%.+]] = load i8, i8* [[CAP_EXPR]]
+// CHECK:  load i8, i8* [[CAP_EXPR]]
+// CHECK:  [[AVAL2:%.+]] = load i8, i8* [[CAP_EXPR]]
 // CHECK:  [[ACONV:%.+]] = sext i8 [[AVAL2]] to i32
 // CHECK:  [[ACMP:%.+]] = icmp slt i32 [[ACONV]], 10
 // CHECK:  br i1 [[ACMP]], label %[[PRECOND_THEN:.+]], label %[[PRECOND_END:.+]]
