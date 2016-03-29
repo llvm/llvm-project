@@ -761,7 +761,7 @@ namespace {
       llvm::StringSet<> knownTypedefs;
       for (const auto &t : TheModule.Typedefs) {
         // Check for duplicate typedef definitions.
-        if (!knownTags.insert(t.Name).second) {
+        if (!knownTypedefs.insert(t.Name).second) {
           emitError("multiple definitions of typedef '" + t.Name + "'");
           continue;
         }
