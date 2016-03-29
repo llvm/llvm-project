@@ -507,12 +507,9 @@ ClangUserExpression::Parse (DiagnosticManager &diagnostic_manager,
 
     if (num_errors)
     {
-<<<<<<< HEAD
-=======
         diagnostic_manager.Printf(eDiagnosticSeverityError, "%u error%s parsing expression", num_errors,
                                   num_errors == 1 ? "" : "s");
 
->>>>>>> de67aaa9cdd... Add a DiagnosticManager replace error streams in the expression parser.
         ResetDeclMap(); // We are being careful here in the case of breakpoint conditions.
 
         return false;

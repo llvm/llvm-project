@@ -68,15 +68,15 @@ public:
     /// Parse a single expression and convert it to IR using Swift.  Don't
     /// wrap the expression in anything at all.
     ///
-    /// @param[in] stream
-    ///     The stream to print errors to.
+    /// @param[in] diagnostic_manager
+    ///     The diagnostic manager to report errors to.
     ///
     /// @return
     ///     The number of errors encountered during parsing.  0 means
     ///     success.
     //------------------------------------------------------------------
     virtual unsigned
-    Parse (Stream &stream,
+    Parse (DiagnosticManager &diagnostic_manager,
            uint32_t first_line = 0,
            uint32_t last_line = UINT32_MAX,
            uint32_t line_offset = 0);

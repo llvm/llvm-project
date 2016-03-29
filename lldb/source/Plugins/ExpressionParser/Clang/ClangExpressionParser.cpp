@@ -609,11 +609,6 @@ ClangExpressionParser::Parse (DiagnosticManager &diagnostic_manager,
         }
     }
 
-    if (!num_errors)
-    {
-        type_system_helper->CommitPersistentDecls();
-    }
-
     adapter->ResetManager();
 
     return num_errors;

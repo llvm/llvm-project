@@ -20,6 +20,7 @@
 
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionParser.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -351,7 +352,7 @@ SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
 }
 
 bool
-SwiftUserExpression::Parse (Stream &error_stream,
+SwiftUserExpression::Parse (DiagnosticManager &diagnostic_manager,
                             ExecutionContext &exe_ctx,
                             lldb_private::ExecutionPolicy execution_policy,
                             bool keep_result_in_memory,
@@ -373,13 +374,13 @@ SwiftUserExpression::Parse (Stream &error_stream,
         }
         else
         {
-            error_stream.PutCString ("error: couldn't start parsing (no persistent data)");
+            diagnostic_manager.PutCString (eDiagnosticSeverityError, "couldn't start parsing (no persistent data)");
             return false;
         }
     }
     else
     {
-        error_stream.PutCString ("error: couldn't start parsing (no target)");
+        diagnostic_manager.PutCString (eDiagnosticSeverityError, "couldn't start parsing (no target)");
         return false;
     }
 
@@ -387,7 +388,7 @@ SwiftUserExpression::Parse (Stream &error_stream,
 
     if (!err.Success())
     {
-        error_stream.Printf("warning: %s\n", err.AsCString());
+        diagnostic_manager.Printf(eDiagnosticSeverityError, "warning: %s\n", err.AsCString());
     }
 
     StreamString m_transformed_stream;
@@ -416,7 +417,7 @@ SwiftUserExpression::Parse (Stream &error_stream,
                               exe_ctx,
                               first_body_line))
     {
-        error_stream.PutCString ("error: couldn't construct expression body");
+        diagnostic_manager.PutCString (eDiagnosticSeverityError, "couldn't construct expression body");
         return false;
     }
 
@@ -431,7 +432,7 @@ SwiftUserExpression::Parse (Stream &error_stream,
 
     if (!target)
     {
-        error_stream.PutCString ("error: invalid target\n");
+        diagnostic_manager.PutCString (eDiagnosticSeverityError, "invalid target\n");
         return false;
     }
 
@@ -481,7 +482,7 @@ SwiftUserExpression::Parse (Stream &error_stream,
     
     std::unique_ptr<ExpressionParser> parser(new SwiftExpressionParser(exe_scope, *this, m_options));
     
-    unsigned num_errors = parser->Parse (error_stream, first_body_line, first_body_line + source_code->GetNumBodyLines(), line_offset);
+    unsigned num_errors = parser->Parse (diagnostic_manager, first_body_line, first_body_line + source_code->GetNumBodyLines(), line_offset);
     
     if (num_errors)
         return false;
@@ -563,9 +564,9 @@ SwiftUserExpression::Parse (Stream &error_stream,
     {
         const char *error_cstr = jit_error.AsCString();
         if (error_cstr && error_cstr[0])
-            error_stream.Printf ("error: %s\n", error_cstr);
+            diagnostic_manager.PutCString (eDiagnosticSeverityError, error_cstr);
         else
-            error_stream.Printf ("error: expression can't be interpreted or run\n");
+            diagnostic_manager.PutCString (eDiagnosticSeverityError, "expression can't be interpreted or run\n");
         return false;
     }
 }
@@ -574,7 +575,7 @@ bool
 SwiftUserExpression::AddArguments (ExecutionContext &exe_ctx,
                                    std::vector<lldb::addr_t> &args,
                                    lldb::addr_t struct_address,
-                                   Stream &error_stream)
+                                   DiagnosticManager &diagnostic_manager)
 {
     lldb::addr_t object_ptr = LLDB_INVALID_ADDRESS;
     
@@ -592,7 +593,7 @@ SwiftUserExpression::AddArguments (ExecutionContext &exe_ctx,
 
         if (!object_ptr_error.Success())
         {
-            error_stream.Printf("warning: couldn't get required object pointer (substituting NULL): %s\n", object_ptr_error.AsCString());
+            diagnostic_manager.Printf(eDiagnosticSeverityWarning, "couldn't get required object pointer (substituting NULL): %s\n", object_ptr_error.AsCString());
             object_ptr = 0;
         }
 

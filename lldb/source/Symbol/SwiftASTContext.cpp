@@ -76,6 +76,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
@@ -3002,9 +3003,22 @@ namespace lldb_private
             else
                 return 0;
         }
+        
+        static DiagnosticSeverity SeverityForKind(swift::DiagnosticKind kind)
+        {
+            switch (kind)
+            {
+            case swift::DiagnosticKind::Error:
+                return eDiagnosticSeverityError;
+            case swift::DiagnosticKind::Warning:
+                return eDiagnosticSeverityWarning;
+            case swift::DiagnosticKind::Note:
+                return eDiagnosticSeverityRemark;
+            }
+        }
 
         void
-        PrintDiagnostics (Stream &stream,
+        PrintDiagnostics (DiagnosticManager &diagnostic_manager,
                           uint32_t bufferID = UINT32_MAX,
                           uint32_t first_line = 0,
                           uint32_t last_line = UINT32_MAX,
@@ -3019,6 +3033,10 @@ namespace lldb_private
                 // around by adjusting the source location, we must do it manually. We
                 // also want to use the same error formatting as llvm and clang, so we
                 // must muck with the string.
+                
+                const DiagnosticSeverity severity = SeverityForKind(diagnostic.kind);
+                const DiagnosticOrigin origin = eDiagnosticOriginSwift;
+                
                 if (first_line > 0 &&
                     bufferID != UINT32_MAX &&
                     diagnostic.bufferID == bufferID &&
@@ -3052,13 +3070,18 @@ namespace lldb_private
                             if (start_pos < diagnostic.description.size())
                                 fixed_description.GetString().append(diagnostic.description, start_pos, diagnostic.description.size() - start_pos);
                             
-                            stream.Write(fixed_description.GetString().c_str(), fixed_description.GetString().size());
-
+                            diagnostic_manager.AddDiagnostic(fixed_description.GetString().c_str(),
+                                                             severity,
+                                                             origin);
+                            
                             continue;
                         }
                     }
                 }
-                stream.Write(diagnostic.description.c_str(), diagnostic.description.size());
+                
+                diagnostic_manager.AddDiagnostic(diagnostic.description.c_str(),
+                                                 severity,
+                                                 origin);
             }
         }
         
@@ -3455,15 +3478,15 @@ SwiftASTContext::GetModule (const ConstString &module_basename, Error &error)
             
             if (HasErrors())
             {
-                StreamString ss;
-                PrintDiagnostics(ss);
-                error.SetErrorStringWithFormat("failed to get module '%s' from AST context:\n%s", module_basename.GetCString(), ss.GetData());
+                DiagnosticManager diagnostic_manager;
+                PrintDiagnostics(diagnostic_manager);
+                error.SetErrorStringWithFormat("failed to get module '%s' from AST context:\n%s", module_basename.GetCString(), diagnostic_manager.GetString().c_str());
 #ifdef LLDB_CONFIGURATION_DEBUG
                 printf("error in SwiftASTContext::GetModule(%s): '%s'",
-                       module_basename.GetCString(), ss.GetData());
+                       module_basename.GetCString(), diagnostic_manager.GetString().c_str());
 #endif
                 if (log)
-                    log->Printf ("((SwiftASTContext*)%p)->GetModule('%s') -- error: %s", this, module_basename.GetCString(), ss.GetData());
+                    log->Printf ("((SwiftASTContext*)%p)->GetModule('%s') -- error: %s", this, module_basename.GetCString(), diagnostic_manager.GetString().c_str());
             }
             else if (module)
             {
@@ -4953,7 +4976,7 @@ SwiftASTContext::SetColorizeDiagnostics(bool b)
 }
 
 void
-SwiftASTContext::PrintDiagnostics(Stream &stream,
+SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                                   uint32_t bufferID,
                                   uint32_t first_line,
                                   uint32_t last_line,
@@ -4964,26 +4987,32 @@ SwiftASTContext::PrintDiagnostics(Stream &stream,
 
     if (m_ast_context_ap->Diags.hasFatalErrorOccurred() && !m_reported_fatal_error)
     {
-        StreamString strm;
-
+        DiagnosticManager fatal_diagnostics;
+        
         if (m_diagnostic_consumer_ap.get())
-            static_cast<StoringDiagnosticConsumer*>(m_diagnostic_consumer_ap.get())->PrintDiagnostics(strm,
+            static_cast<StoringDiagnosticConsumer*>(m_diagnostic_consumer_ap.get())->PrintDiagnostics(fatal_diagnostics,
                                                                                                       bufferID,
                                                                                                       first_line,
                                                                                                       last_line,
                                                                                                       line_offset);
-        if (strm.GetSize() != 0)
-            m_fatal_errors.SetErrorString(strm.GetData());
+        if (fatal_diagnostics.Diagnostics().size())
+            m_fatal_errors.SetErrorString(fatal_diagnostics.GetString().c_str());
         else
             m_fatal_errors.SetErrorString("Unknown fatal error occurred.");
             
         m_reported_fatal_error = true;
-        stream.PutCString(strm.GetData());
+    
+        for (const DiagnosticList::value_type &fatal_diagnostic : fatal_diagnostics.Diagnostics())
+        {
+            diagnostic_manager.AddDiagnostic(fatal_diagnostic.message.c_str(),
+                                             fatal_diagnostic.severity,
+                                             fatal_diagnostic.origin);
+        }
     }
     else
     {
         if (m_diagnostic_consumer_ap.get())
-            static_cast<StoringDiagnosticConsumer*>(m_diagnostic_consumer_ap.get())->PrintDiagnostics(stream,
+            static_cast<StoringDiagnosticConsumer*>(m_diagnostic_consumer_ap.get())->PrintDiagnostics(diagnostic_manager,
                                                                                                       bufferID,
                                                                                                       first_line,
                                                                                                       last_line,

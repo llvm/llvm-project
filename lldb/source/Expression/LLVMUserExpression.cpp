@@ -312,7 +312,7 @@ LLVMUserExpression::PrepareToExecuteJITExpression(DiagnosticManager &diagnostic_
         
         if (!materialize_error.Success())
         {
-            error_stream.Printf("Couldn't materialize: %s\n", materialize_error.AsCString());
+            diagnostic_manager.Printf(eDiagnosticSeverityError, "Couldn't materialize: %s\n", materialize_error.AsCString());
             return false;
         }
         

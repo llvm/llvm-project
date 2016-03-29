@@ -93,8 +93,8 @@ public:
     //------------------------------------------------------------------
     /// Parse the expression
     ///
-    /// @param[in] error_stream
-    ///     A stream to print parse errors and warnings to.
+    /// @param[in] diagnostic_manager
+    ///     A diagnostic manager to report parse errors and warnings to.
     ///
     /// @param[in] exe_ctx
     ///     The execution context to use when looking up entities that
@@ -112,7 +112,7 @@ public:
     ///     True on success (no errors); false otherwise.
     //------------------------------------------------------------------
     bool
-    Parse (Stream &error_stream,
+    Parse (DiagnosticManager &diagnostic_manager,
            ExecutionContext &exe_ctx,
            lldb_private::ExecutionPolicy execution_policy,
            bool keep_result_in_memory,
@@ -159,7 +159,7 @@ private:
     AddArguments (ExecutionContext &exe_ctx,
                   std::vector<lldb::addr_t> &args,
                   lldb::addr_t struct_address,
-                  Stream &error_stream) override;
+                  DiagnosticManager &diagnostic_manager) override;
         
     SwiftUserExpressionHelper   m_type_system_helper;
     

@@ -103,14 +103,19 @@ public:
     ///
     /// @param[in] S
     ///     The Sema to use.  Because Sema isn't externally visible, this class
-    ///     casts it to an Action for actual use.
-    //----------------------------------------------------------------------
+    ///     casts it to an Action for actual use.    //----------------------------------------------------------------------
     void InitializeSema(clang::Sema &S) override;
     
     //----------------------------------------------------------------------
     /// Reset the Sema to NULL now that transformations are done
     //----------------------------------------------------------------------
     void ForgetSema() override;
+    
+    //----------------------------------------------------------------------
+    /// The parse has succeeded, so record its persistent decls
+    //----------------------------------------------------------------------
+    void
+    CommitPersistentDecls();
 
 private:
     //----------------------------------------------------------------------
@@ -176,6 +181,9 @@ private:
     clang::ASTContext *m_ast_context;           ///< The AST context to use for identifiers and types.
     clang::ASTConsumer *m_passthrough;          ///< The ASTConsumer down the chain, for passthrough.  NULL if it's a SemaConsumer.
     clang::SemaConsumer *m_passthrough_sema;    ///< The SemaConsumer down the chain, for passthrough.  NULL if it's an ASTConsumer.
+    
+    std::vector<clang::NamedDecl *> m_decls; ///< Persistent declarations to register assuming the expression succeeds.
+    
     Target &m_target;                           ///< The target, which contains the persistent variable store and the
     clang::Sema *m_sema;                        ///< The Sema to use.
 };

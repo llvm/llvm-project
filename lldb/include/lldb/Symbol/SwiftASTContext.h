@@ -430,7 +430,7 @@ public:
     SetColorizeDiagnostics(bool b);
     
     void
-    PrintDiagnostics(lldb_private::Stream &stream,
+    PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                      uint32_t bufferID = UINT32_MAX,
                      uint32_t first_line = 0,
                      uint32_t last_line = UINT32_MAX,

@@ -24,6 +24,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -1049,7 +1050,7 @@ protected:
 };
 
 unsigned
-SwiftExpressionParser::Parse (Stream &stream,
+SwiftExpressionParser::Parse (DiagnosticManager &diagnostic_manager,
                               uint32_t first_line,
                               uint32_t last_line,
                               uint32_t line_offset)
@@ -1063,20 +1064,20 @@ SwiftExpressionParser::Parse (Stream &stream,
 
     if (!m_swift_ast_context)
     {
-        stream.PutCString("error: No AST context to parse into.  Please parse with a target.\n");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "No AST context to parse into.  Please parse with a target.\n");
         return 1;
     }
     
     // Lazily get the clang importer if we can to make sure it exists in case we need it
     if (!m_swift_ast_context->GetClangImporter())
     {
-        stream.PutCString("error: Swift expressions require OS X 10.10 / iOS 8 SDKs or later.\n");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "Swift expressions require OS X 10.10 / iOS 8 SDKs or later.\n");
         return 1;
     }
     
     if (m_swift_ast_context->HasFatalErrors())
     {
-        stream.PutCString("error: The AST context is in a fatal error state.");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "The AST context is in a fatal error state.");
         return 1;
     }
     
@@ -1084,13 +1085,13 @@ SwiftExpressionParser::Parse (Stream &stream,
     
     if (!ast_context)
     {
-        stream.PutCString("error: Couldn't initialize the AST context.  Please check your settings.");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "Couldn't initialize the AST context.  Please check your settings.");
         return 1;
     }
     
     if (m_swift_ast_context->HasFatalErrors())
     {
-        stream.PutCString("error: The AST context is in a fatal error state.");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "The AST context is in a fatal error state.");
         return 1;
     }
     
@@ -1108,7 +1109,7 @@ SwiftExpressionParser::Parse (Stream &stream,
     m_swift_ast_context->ClearDiagnostics();
     
     // Make a class that will set/restore the colorize setting in the SwiftASTContext for us
-    SetColorize colorize(m_swift_ast_context, stream.GetFlags().Test(Stream::eANSIColor));
+    // SetColorize colorize(m_swift_ast_context, stream.GetFlags().Test(Stream::eANSIColor));
     
     m_swift_ast_context->GetLanguageOptions().DebuggerSupport = true;
     m_swift_ast_context->GetLanguageOptions().EnableDollarIdentifiers = true;  // No longer part of debugger support, set it separately.
@@ -1227,7 +1228,7 @@ SwiftExpressionParser::Parse (Stream &stream,
 
         if (m_swift_ast_context->HasErrors())
         {
-            m_swift_ast_context->PrintDiagnostics(stream,
+            m_swift_ast_context->PrintDiagnostics(diagnostic_manager,
                                                   buffer_id,
                                                   first_line,
                                                   last_line,
@@ -1250,7 +1251,7 @@ SwiftExpressionParser::Parse (Stream &stream,
     
     if (!done)
     {
-        stream.PutCString("Parse did not consume the whole expression.");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "Parse did not consume the whole expression.");
         return 1;
     }
     
@@ -1266,7 +1267,7 @@ SwiftExpressionParser::Parse (Stream &stream,
     Error auto_import_error;
     if (!PerformAutoImport (*source_file, false, auto_import_error))
     {
-        stream.Printf("Error in auto-import:\n%s", auto_import_error.AsCString());
+        diagnostic_manager.Printf(eDiagnosticSeverityError, "in auto-import:\n%s", auto_import_error.AsCString());
         return 1;
     }
 
@@ -1349,7 +1350,7 @@ SwiftExpressionParser::Parse (Stream &stream,
     
     if (m_swift_ast_context->HasErrors())
     {
-        m_swift_ast_context->PrintDiagnostics(stream,
+        m_swift_ast_context->PrintDiagnostics(diagnostic_manager,
                                               buffer_id,
                                               first_line,
                                               last_line,
@@ -1364,7 +1365,7 @@ SwiftExpressionParser::Parse (Stream &stream,
         Error auto_import_error;
         if (!PerformAutoImport (*source_file, true, auto_import_error))
         {
-            stream.Printf("Error in auto-import:\n%s", auto_import_error.AsCString());
+            diagnostic_manager.Printf(eDiagnosticSeverityError, "in auto-import:\n%s", auto_import_error.AsCString());
             return 1;
         }
     }
@@ -1377,7 +1378,7 @@ SwiftExpressionParser::Parse (Stream &stream,
     
     if (m_swift_ast_context->HasErrors())
     {
-        m_swift_ast_context->PrintDiagnostics(stream,
+        m_swift_ast_context->PrintDiagnostics(diagnostic_manager,
                                               buffer_id,
                                               first_line,
                                               last_line,
@@ -1407,7 +1408,7 @@ SwiftExpressionParser::Parse (Stream &stream,
         
         if (!error.Success())
         {
-            stream.PutCString(error.AsCString());
+            diagnostic_manager.PutCString(eDiagnosticSeverityError, error.AsCString());
             return 1;
         }
     }
@@ -1435,7 +1436,7 @@ SwiftExpressionParser::Parse (Stream &stream,
     {
         if (!code_manipulator->CheckPatternBindings()) // Do this first, so we don't pollute the persistent variable namespace
         {
-            m_swift_ast_context->PrintDiagnostics(stream,
+            m_swift_ast_context->PrintDiagnostics(diagnostic_manager,
                                                   buffer_id,
                                                   first_line,
                                                   last_line,
@@ -1630,7 +1631,7 @@ SwiftExpressionParser::Parse (Stream &stream,
                 
                 if (!error.Success())
                 {
-                    stream.Printf("error: Couldn't add %s variable to struct: %s.\n",
+                    diagnostic_manager.Printf(eDiagnosticSeverityError, "couldn't add %s variable to struct: %s.\n",
                                   is_result ? "result" : "error",
                                   error.AsCString());
                     return 1;
@@ -1651,7 +1652,7 @@ SwiftExpressionParser::Parse (Stream &stream,
             
                 if (!error.Success())
                 {
-                    stream.Printf("error: Couldn't add variable to struct: %s.\n", error.AsCString());
+                    diagnostic_manager.Printf(eDiagnosticSeverityError, "couldn't add variable to struct: %s.\n", error.AsCString());
                     return 1;
                 }
                 
@@ -1670,7 +1671,7 @@ SwiftExpressionParser::Parse (Stream &stream,
                 
                 if (!error.Success())
                 {
-                    stream.Printf("error: Couldn't add variable to struct: %s.\n", error.AsCString());
+                    diagnostic_manager.Printf(eDiagnosticSeverityError, "couldn't add variable to struct: %s.\n", error.AsCString());
                     return 1;
                 }
                 
@@ -1704,7 +1705,7 @@ SwiftExpressionParser::Parse (Stream &stream,
     
     if (m_swift_ast_context->HasErrors())
     {
-        m_swift_ast_context->PrintDiagnostics(stream,
+        m_swift_ast_context->PrintDiagnostics(diagnostic_manager,
                                               buffer_id,
                                               first_line,
                                               last_line,
@@ -1741,7 +1742,7 @@ SwiftExpressionParser::Parse (Stream &stream,
     
     if (m_swift_ast_context->HasErrors())
     {
-        m_swift_ast_context->PrintDiagnostics(stream,
+        m_swift_ast_context->PrintDiagnostics(diagnostic_manager,
                                               buffer_id,
                                               first_line,
                                               last_line,
@@ -1761,7 +1762,7 @@ SwiftExpressionParser::Parse (Stream &stream,
     
     if (m_swift_ast_context->HasErrors())
     {
-        m_swift_ast_context->PrintDiagnostics(stream,
+        m_swift_ast_context->PrintDiagnostics(diagnostic_manager,
                                               buffer_id,
                                               first_line,
                                               last_line,
