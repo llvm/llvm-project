@@ -576,11 +576,11 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
   if (isSymbolList64Bit(Obj)) {
     printBlanks = "                ";
     printDashes = "----------------";
-    printFormat = "%016" PRIx64;
+    printFormat = OutputFormat == posix ? "%" PRIx64 : "%016" PRIx64;
   } else {
     printBlanks = "        ";
     printDashes = "--------";
-    printFormat = "%08" PRIx64;
+    printFormat = OutputFormat == posix ? "%" PRIx64 : "%08" PRIx64;
   }
 
   for (SymbolListT::iterator I = SymbolList.begin(), E = SymbolList.end();
@@ -599,9 +599,13 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     if (PrintFileName) {
       if (!ArchitectureName.empty())
         outs() << "(for architecture " << ArchitectureName << "):";
-      if (!ArchiveName.empty())
-        outs() << ArchiveName << ":";
-      outs() << CurrentFilename << ": ";
+      if (OutputFormat == posix && !ArchiveName.empty())
+        outs() << ArchiveName << "[" << CurrentFilename << "]: ";
+      else {
+        if (!ArchiveName.empty())
+          outs() << ArchiveName << ":";
+        outs() << CurrentFilename << ": ";
+      }
     }
     if ((JustSymbolName || (UndefinedOnly && isa<MachOObjectFile>(Obj) &&
                             OutputFormat != darwin)) && OutputFormat != posix) {
@@ -612,8 +616,13 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     char SymbolAddrStr[18] = "";
     char SymbolSizeStr[18] = "";
 
-    if (OutputFormat == sysv || I->TypeChar == 'U')
-      strcpy(SymbolAddrStr, printBlanks);
+    if (OutputFormat == sysv || I->TypeChar == 'U') {
+      if (OutputFormat == posix)
+        format(printFormat, I->Address)
+          .print(SymbolAddrStr, sizeof(SymbolAddrStr));
+      else
+        strcpy(SymbolAddrStr, printBlanks);
+    }
     if (OutputFormat == sysv)
       strcpy(SymbolSizeStr, printBlanks);
 
@@ -638,7 +647,7 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     } else if (OutputFormat == posix) {
       outs() << I->Name << " " << I->TypeChar << " ";
       if (MachO)
-        outs() << I->Address << " " << "0" /* SymbolSizeStr */ << "\n";
+        outs() << SymbolAddrStr << " " << "0" /* SymbolSizeStr */ << "\n";
       else
         outs() << SymbolAddrStr << SymbolSizeStr << "\n";
     } else if (OutputFormat == bsd || (OutputFormat == darwin && !MachO)) {
