@@ -86,6 +86,19 @@ static cl::opt<bool>
 EnableFMFInDAG("enable-fmf-dag", cl::init(true), cl::Hidden,
                 cl::desc("Enable fast-math-flags for DAG nodes"));
 
+/// Minimum jump table density for normal functions.
+static cl::opt<unsigned>
+JumpTableDensity("jump-table-density", cl::init(10), cl::Hidden,
+                 cl::desc("Minimum density for building a jump table in "
+                          "a normal function"));
+
+/// Minimum jump table density for -Os or -Oz functions.
+static cl::opt<unsigned>
+OptsizeJumpTableDensity("optsize-jump-table-density", cl::init(40), cl::Hidden,
+                        cl::desc("Minimum density for building a jump table in "
+                                 "an optsize function"));
+
+
 // Limit the width of DAG chains. This is important in general to prevent
 // DAG-based analysis from blowing up. For example, alias analysis and
 // load clustering may not complete in reasonable time. It is difficult to
@@ -8109,7 +8122,8 @@ void SelectionDAGBuilder::updateDAGForMaybeTailCall(SDValue MaybeTC) {
 
 bool SelectionDAGBuilder::isDense(const CaseClusterVector &Clusters,
                                   unsigned *TotalCases, unsigned First,
-                                  unsigned Last) {
+                                  unsigned Last,
+                                  unsigned Density) {
   assert(Last >= First);
   assert(TotalCases[Last] >= TotalCases[First]);
 
@@ -8130,7 +8144,7 @@ bool SelectionDAGBuilder::isDense(const CaseClusterVector &Clusters,
   assert(NumCases < UINT64_MAX / 100);
   assert(Range >= NumCases);
 
-  return NumCases * 100 >= Range * MinJumpTableDensity;
+  return NumCases * 100 >= Range * Density;
 }
 
 static inline bool areJTsAllowed(const TargetLowering &TLI) {
@@ -8244,7 +8258,11 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
       TotalCases[i] += TotalCases[i - 1];
   }
 
-  if (N >= MinJumpTableSize && isDense(Clusters, &TotalCases[0], 0, N - 1)) {
+  unsigned MinDensity = JumpTableDensity;
+  if (DefaultMBB->getParent()->getFunction()->optForSize())
+    MinDensity = OptsizeJumpTableDensity;
+  if (N >= MinJumpTableSize
+      && isDense(Clusters, &TotalCases[0], 0, N - 1, MinDensity)) {
     // Cheap case: the whole range might be suitable for jump table.
     CaseCluster JTCluster;
     if (buildJumpTable(Clusters, 0, N - 1, SI, DefaultMBB, JTCluster)) {
@@ -8289,7 +8307,7 @@ void SelectionDAGBuilder::findJumpTables(CaseClusterVector &Clusters,
     // Search for a solution that results in fewer partitions.
     for (int64_t j = N - 1; j > i; j--) {
       // Try building a partition from Clusters[i..j].
-      if (isDense(Clusters, &TotalCases[0], i, j)) {
+      if (isDense(Clusters, &TotalCases[0], i, j, MinDensity)) {
         unsigned NumPartitions = 1 + (j == N - 1 ? 0 : MinPartitions[j + 1]);
         bool IsTable = j - i + 1 >= MinJumpTableSize;
         unsigned Tables = IsTable + (j == N - 1 ? 0 : NumTables[j + 1]);

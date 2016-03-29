@@ -89,6 +89,8 @@ public:
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
 
+  void setUsedInRegularObj() { IsUsedInRegularObj = true; }
+
   template <class ELFT>
   typename ELFT::uint getVA(typename ELFT::uint Addend = 0) const;
 
@@ -319,7 +321,6 @@ public:
   std::unique_ptr<InputFile> getMember();
 
   void setWeak() { IsWeak = true; }
-  void setUsedInRegularObj() { IsUsedInRegularObj = true; }
 
 private:
   ArchiveFile *File;
