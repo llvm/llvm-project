@@ -77,6 +77,9 @@ ExpressionSourceCode::GetNumBodyLines ()
     return m_num_body_lines;
 }
 
+static const char *c_start_marker = "    /*LLDB_BODY_START*/\n    ";
+static const char *c_end_marker   = ";\n    /*LLDB_BODY_END*/\n";
+
 namespace {
 
 class AddMacroState
@@ -416,6 +419,22 @@ ExpressionSourceCode::GetText (std::string &text,
                             m_prefix.c_str());
         }
         
+        // First construct a tagged form of the user expression so we can find it later:
+        std::string tagged_body;
+        switch (wrapping_language)
+        {
+            default:
+                tagged_body = m_body;
+                break;
+            case lldb::eLanguageTypeC:
+            case lldb::eLanguageTypeC_plus_plus:
+            case lldb::eLanguageTypeObjC:
+                tagged_body.append(c_start_marker);
+                tagged_body.append(m_body);
+                tagged_body.append(c_end_marker);
+                break;
+            
+        }
         switch (wrapping_language) 
         {
         default:
@@ -425,23 +444,23 @@ ExpressionSourceCode::GetText (std::string &text,
                                "%s(void *$__lldb_arg)          \n"
                                "{                              \n"
                                "    %s;                        \n"
-                               "    %s;                        \n"
+                               "%s"
                                "}                              \n",
                                m_name.c_str(),
                                lldb_local_var_decls.GetData(),
-                               m_body.c_str());
+                               tagged_body.c_str());
             break;
         case lldb::eLanguageTypeC_plus_plus:
             wrap_stream.Printf("void                                   \n"
                                "$__lldb_class::%s(void *$__lldb_arg) %s\n"
                                "{                                      \n"
                                "    %s;                                \n"
-                               "    %s;                                \n"
+                               "%s"
                                "}                                      \n",
                                m_name.c_str(),
                                (const_object ? "const" : ""),
                                lldb_local_var_decls.GetData(),
-                               m_body.c_str());
+                               tagged_body.c_str());
             break;
         case lldb::eLanguageTypeObjC:
             if (static_method)
@@ -452,12 +471,12 @@ ExpressionSourceCode::GetText (std::string &text,
                                    "@implementation $__lldb_objc_class ($__lldb_category)   \n"
                                    "+(void)%s:(void *)$__lldb_arg                           \n"
                                    "{                                                       \n"
-                                   "%s;                                                     \n"
+                                   "%s"
                                    "}                                                       \n"
                                    "@end                                                    \n",
                                    m_name.c_str(),
                                    m_name.c_str(),
-                                   body);
+                                   tagged_body.c_str());
             }
             else
             {
@@ -467,12 +486,12 @@ ExpressionSourceCode::GetText (std::string &text,
                                    "@implementation $__lldb_objc_class ($__lldb_category)  \n"
                                    "-(void)%s:(void *)$__lldb_arg                          \n"
                                    "{                                                      \n"
-                                   "%s;                                                    \n"
+                                   "%s"
                                    "}                                                      \n"
                                    "@end                                                   \n",
                                    m_name.c_str(),
                                    m_name.c_str(),
-                                   body);
+                                   tagged_body.c_str());
             }
             break;
         case lldb::eLanguageTypeSwift:
@@ -497,3 +516,35 @@ ExpressionSourceCode::GetText (std::string &text,
     
     return true;
 }
+
+bool
+ExpressionSourceCode::GetOriginalBodyBounds(std::string transformed_text,
+                                            lldb::LanguageType wrapping_language,
+                                            size_t &start_loc,
+                                            size_t &end_loc)
+{
+    const char *start_marker;
+    const char *end_marker;
+    
+    switch (wrapping_language)
+    {
+    default:
+        return false;
+    case lldb::eLanguageTypeC:
+    case lldb::eLanguageTypeC_plus_plus:
+    case lldb::eLanguageTypeObjC:
+        start_marker = c_start_marker;
+        end_marker = c_end_marker;
+        break;
+    }
+    
+    start_loc = transformed_text.find(start_marker);
+    if (start_loc == std::string::npos)
+        return false;
+    start_loc += strlen(start_marker);
+    end_loc  = transformed_text.find(end_marker);
+    if (end_loc == std::string::npos)
+        return false;
+    return true;
+}
+

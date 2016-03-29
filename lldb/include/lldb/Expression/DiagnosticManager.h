@@ -121,7 +121,6 @@ public:
     Clear()
     {
         m_diagnostics.clear();
-        m_auto_apply_fixits = true;
         m_fixed_expression.clear();
     }
 
@@ -203,21 +202,9 @@ public:
         fixed_expression.clear();
     }
     
-    void
-    SetAutoApplyFixIts(bool auto_apply)
-    {
-        m_auto_apply_fixits = auto_apply;
-    }
-    
-    bool ShouldAutoApplyFixIts()
-    {
-        return m_auto_apply_fixits;
-    }
-
 protected:
     DiagnosticList m_diagnostics;
     std::string m_fixed_expression;
-    bool m_auto_apply_fixits = true;
 };
 }
 

@@ -358,8 +358,18 @@ CommandObjectExpression::EvaluateExpression
         else
             options.SetTimeoutUsec(0);
 
-        target->EvaluateExpression(expr, exe_ctx.GetFramePtr(),
-                                   result_valobj_sp, options);
+        ExpressionResults success = target->EvaluateExpression(expr, 
+                                                               exe_ctx.GetFramePtr(), 
+                                                               result_valobj_sp,
+                                                               options, 
+                                                               &m_fixed_expression);
+        
+        // We only tell you about the FixIt if we applied it.  The compiler errors will suggest the FixIt if it parsed.
+        if (error_stream && !m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts())
+        {
+            if (success == eExpressionCompleted)
+                error_stream->Printf ("  Fixit applied, fixed expression was: \n    %s\n", m_fixed_expression.c_str());
+        }
 
         if (result_valobj_sp)
         {
@@ -545,6 +555,7 @@ CommandObjectExpression::DoExecute
     CommandReturnObject &result
 )
 {
+    m_fixed_expression.clear();
     m_option_group.NotifyOptionParsingStarting();
 
     const char * expr = NULL;
@@ -669,7 +680,26 @@ CommandObjectExpression::DoExecute
         expr = command;
     
     if (EvaluateExpression (expr, &(result.GetOutputStream()), &(result.GetErrorStream()), &result))
+    {
+        Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
+        if (!m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts())
+        {
+            CommandHistory &history = m_interpreter.GetCommandHistory();
+            // FIXME: Can we figure out what the user actually typed (e.g. some alias for expr???)
+            // If we can it would be nice to show that.
+            std::string fixed_command("expression ");
+            if (expr == command)
+                fixed_command.append(m_fixed_expression);
+            else
+            {
+                // Add in any options that might have been in the original command:
+                fixed_command.append(command, expr - command);
+                fixed_command.append(m_fixed_expression);
+            }
+            history.AppendString(fixed_command);
+        }
         return true;
+    }
 
     result.SetStatus (eReturnStatusFailed);
     return false;

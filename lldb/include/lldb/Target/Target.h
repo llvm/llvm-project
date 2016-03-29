@@ -177,6 +177,9 @@ public:
     GetEnableAutoApplyFixIts () const;
     
     bool
+    GetEnableNotifyAboutFixIts () const;
+    
+    bool
     GetEnableSyntheticValue () const;
     
     uint32_t
@@ -1428,7 +1431,8 @@ public:
     EvaluateExpression (const char *expression,
                         ExecutionContextScope *exe_scope,
                         lldb::ValueObjectSP &result_valobj_sp,
-                        const EvaluateExpressionOptions& options = EvaluateExpressionOptions());
+                        const EvaluateExpressionOptions& options = EvaluateExpressionOptions(),
+                        std::string *fixed_expression = nullptr);
     
     // Look up a symbol by name and type in both the target's symbols and the persistent symbols from the
     // expression parser.  The symbol_type is ignored in that case, for now we don't have symbol types for the
