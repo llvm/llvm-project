@@ -792,6 +792,7 @@ private:
       LVer.setAliasChecks(std::move(Checks));
       LVer.setSCEVChecks(LAI.PSE.getUnionPredicate());
       LVer.versionLoop(DefsUsedOutside);
+      LVer.annotateLoopWithNoAlias();
     }
 
     // Create identical copies of the original loop for each partition and hook
