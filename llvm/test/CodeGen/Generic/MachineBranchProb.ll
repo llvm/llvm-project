@@ -41,11 +41,11 @@ define void @left_leaning_weight_balanced_tree(i32 %x) {
 entry:
   switch i32 %x, label %return [
     i32 0,  label %bb0
-    i32 10, label %bb1
-    i32 20, label %bb2
-    i32 30, label %bb3
-    i32 40, label %bb4
-    i32 50, label %bb5
+    i32 100, label %bb1
+    i32 200, label %bb2
+    i32 300, label %bb3
+    i32 400, label %bb4
+    i32 500, label %bb5
   ], !prof !1
 bb0: tail call void @g(i32 0) br label %return
 bb1: tail call void @g(i32 1) br label %return
@@ -68,7 +68,7 @@ return: ret void
 !1 = !{!"branch_weights",
   ; Default:
   i32 1,
-  ; Case 0, 10, 20:
+  ; Case 0, 100, 200:
   i32 10, i32 1, i32 1,
-  ; Case 30, 40, 50:
+  ; Case 300, 400, 500:
   i32 1, i32 10, i32 10}
