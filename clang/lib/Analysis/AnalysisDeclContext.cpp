@@ -94,19 +94,25 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
   IsAutosynthesized = false;
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     Stmt *Body = FD->getBody();
-    if (!Body && Manager && Manager->synthesizeBodies()) {
-      Body = getBodyFarm(getASTContext(), Manager->Injector.get()).getBody(FD);
-      if (Body)
+    if (Manager && Manager->synthesizeBodies()) {
+      Stmt *SynthesizedBody =
+          getBodyFarm(getASTContext(), Manager->Injector.get()).getBody(FD);
+      if (SynthesizedBody) {
+        Body = SynthesizedBody;
         IsAutosynthesized = true;
+      }
     }
     return Body;
   }
   else if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
     Stmt *Body = MD->getBody();
-    if (!Body && Manager && Manager->synthesizeBodies()) {
-      Body = getBodyFarm(getASTContext(), Manager->Injector.get()).getBody(MD);
-      if (Body)
+    if (Manager && Manager->synthesizeBodies()) {
+      Stmt *SynthesizedBody =
+          getBodyFarm(getASTContext(), Manager->Injector.get()).getBody(MD);
+      if (SynthesizedBody) {
+        Body = SynthesizedBody;
         IsAutosynthesized = true;
+      }
     }
     return Body;
   } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(D))
