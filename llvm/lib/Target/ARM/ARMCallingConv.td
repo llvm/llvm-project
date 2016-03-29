@@ -23,18 +23,12 @@ def CC_ARM_APCS : CallingConv<[
     
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
 
-<<<<<<< HEAD
-  // An SwiftSelf is passed in R9.
-  CCIfSwiftSelf<CCIfType<[i32], CCAssignToReg<[R9]>>>,
-
-  // An SwiftError is passed in R6.
-  CCIfSwiftError<CCIfType<[i32], CCAssignToReg<[R6]>>>,
-
-=======
   // A SwiftSelf is passed in R9.
   CCIfSwiftSelf<CCIfType<[i32], CCAssignToReg<[R9]>>>,
 
->>>>>>> mirror/master
+  // A SwiftError is passed in R6.
+  CCIfSwiftError<CCIfType<[i32], CCAssignToReg<[R6]>>>,
+
   // Handle all vector types as either f64 or v2f64.
   CCIfType<[v1i64, v2i32, v4i16, v8i8, v2f32], CCBitConvertToType<f64>>,
   CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32], CCBitConvertToType<v2f64>>,
@@ -166,18 +160,12 @@ def CC_ARM_AAPCS : CallingConv<[
   CCIfType<[v1i64, v2i32, v4i16, v8i8, v2f32], CCBitConvertToType<f64>>,
   CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32], CCBitConvertToType<v2f64>>,
 
-<<<<<<< HEAD
-  // An SwiftSelf is passed in R9.
-  CCIfSwiftSelf<CCIfType<[i32], CCAssignToReg<[R9]>>>,
-
-  // An SwiftError is passed in R6.
-  CCIfSwiftError<CCIfType<[i32], CCAssignToReg<[R6]>>>,
-
-=======
   // A SwiftSelf is passed in R9.
   CCIfSwiftSelf<CCIfType<[i32], CCAssignToReg<[R9]>>>,
 
->>>>>>> mirror/master
+  // A SwiftError is passed in R6.
+  CCIfSwiftError<CCIfType<[i32], CCAssignToReg<[R6]>>>,
+
   CCIfType<[f64, v2f64], CCCustom<"CC_ARM_AAPCS_Custom_f64">>,
   CCIfType<[f32], CCBitConvertToType<i32>>,
   CCDelegateTo<CC_ARM_AAPCS_Common>
@@ -209,18 +197,12 @@ def CC_ARM_AAPCS_VFP : CallingConv<[
   CCIfType<[v1i64, v2i32, v4i16, v8i8, v2f32], CCBitConvertToType<f64>>,
   CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32], CCBitConvertToType<v2f64>>,
 
-<<<<<<< HEAD
-  // An SwiftSelf is passed in R9.
-  CCIfSwiftSelf<CCIfType<[i32], CCAssignToReg<[R9]>>>,
-
-  // An SwiftError is passed in R6.
-  CCIfSwiftError<CCIfType<[i32], CCAssignToReg<[R6]>>>,
-
-=======
   // A SwiftSelf is passed in R9.
   CCIfSwiftSelf<CCIfType<[i32], CCAssignToReg<[R9]>>>,
 
->>>>>>> mirror/master
+  // A SwiftError is passed in R6.
+  CCIfSwiftError<CCIfType<[i32], CCAssignToReg<[R6]>>>,
+
   // HFAs are passed in a contiguous block of registers, or on the stack
   CCIfConsecutiveRegs<CCCustom<"CC_ARM_AAPCS_Custom_Aggregate">>,
 
