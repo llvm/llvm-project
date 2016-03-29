@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -analyzer-constraints=range -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -analyzer-constraints=range -analyzer-config mode=shallow -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -DTEST_64 -triple x86_64-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -analyzer-constraints=range -verify -Wno-objc-root-class %s
-
+// RUN: %clang_cc1 -DOSATOMIC_USE_INLINED -triple i386-apple-darwin10 -analyze -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -analyzer-constraints=range -verify -Wno-objc-root-class %s
 
 //===----------------------------------------------------------------------===//
 // The following code is reduced using delta-debugging from
@@ -279,9 +279,22 @@ id testSharedClassFromFunction() {
   return [[SharedClass alloc] _init]; // no-warning
 }
 
+#if !(defined(OSATOMIC_USE_INLINED) && OSATOMIC_USE_INLINED)
 // Test OSCompareAndSwap
 _Bool OSAtomicCompareAndSwapPtr( void *__oldValue, void *__newValue, void * volatile *__theValue );
 extern BOOL objc_atomicCompareAndSwapPtr(id predicate, id replacement, volatile id *objectLocation);
+#else
+// Test that the body farm models are still used even when a body is available.
+_Bool opaque_OSAtomicCompareAndSwapPtr( void *__oldValue, void *__newValue, void * volatile *__theValue );
+_Bool OSAtomicCompareAndSwapPtr( void *__oldValue, void *__newValue, void * volatile *__theValue ) {
+  return opaque_OSAtomicCompareAndSwapPtr(__oldValue, __newValue, __theValue);
+}
+
+extern BOOL opaque_objc_atomicCompareAndSwapPtr(id predicate, id replacement, volatile id *objectLocation);
+extern BOOL objc_atomicCompareAndSwapPtr(id predicate, id replacement, volatile id *objectLocation) {
+  return opaque_objc_atomicCompareAndSwapPtr(predicate, replacement, objectLocation);
+}
+#endif
 
 void testOSCompareAndSwap() {
   NSString *old = 0;
