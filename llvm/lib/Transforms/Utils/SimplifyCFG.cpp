@@ -135,6 +135,7 @@ class SimplifyCFGOpt {
   const DataLayout &DL;
   unsigned BonusInstThreshold;
   AssumptionCache *AC;
+  SmallPtrSetImpl<BasicBlock *> *LoopHeaders;
   Value *isValueEqualityComparison(TerminatorInst *TI);
   BasicBlock *GetValueEqualityComparisonCases(TerminatorInst *TI,
                                std::vector<ValueEqualityComparisonCase> &Cases);
@@ -157,8 +158,10 @@ class SimplifyCFGOpt {
 
 public:
   SimplifyCFGOpt(const TargetTransformInfo &TTI, const DataLayout &DL,
-                 unsigned BonusInstThreshold, AssumptionCache *AC)
-      : TTI(TTI), DL(DL), BonusInstThreshold(BonusInstThreshold), AC(AC) {}
+                 unsigned BonusInstThreshold, AssumptionCache *AC,
+                 SmallPtrSetImpl<BasicBlock *> *LoopHeaders)
+      : TTI(TTI), DL(DL), BonusInstThreshold(BonusInstThreshold), AC(AC),
+        LoopHeaders(LoopHeaders) {}
   bool run(BasicBlock *BB);
 };
 }
@@ -3362,6 +3365,7 @@ bool SimplifyCFGOpt::SimplifySingleResume(ResumeInst *RI) {
 
   // The landingpad is now unreachable.  Zap it.
   BB->eraseFromParent();
+  if (LoopHeaders) LoopHeaders->erase(BB);
   return true;
 }
 
@@ -3560,9 +3564,11 @@ bool SimplifyCFGOpt::SimplifyReturn(ReturnInst *RI, IRBuilder<> &Builder) {
     }
 
     // If we eliminated all predecessors of the block, delete the block now.
-    if (pred_empty(BB))
+    if (pred_empty(BB)) {
       // We know there are no successors, so just nuke the block.
       BB->eraseFromParent();
+      if (LoopHeaders) LoopHeaders->erase(BB);
+    }
 
     return true;
   }
@@ -3719,6 +3725,7 @@ bool SimplifyCFGOpt::SimplifyUnreachable(UnreachableInst *UI) {
       BB != &BB->getParent()->getEntryBlock()) {
     // We know there are no successors, so just nuke the block.
     BB->eraseFromParent();
+    if (LoopHeaders) LoopHeaders->erase(BB);
     return true;
   }
 
@@ -5062,8 +5069,14 @@ bool SimplifyCFGOpt::SimplifyUncondBranch(BranchInst *BI, IRBuilder<> &Builder){
     return true;
 
   // If the Terminator is the only non-phi instruction, simplify the block.
+  // if LoopHeader is provided, check if the block is a loop header
+  // (This is for early invocations before loop simplify and vectorization
+  // to keep canonical loop forms for nested loops.
+  // These blocks can be eliminated when the pass is invoked later
+  // in the back-end.)
   BasicBlock::iterator I = BB->getFirstNonPHIOrDbg()->getIterator();
   if (I->isTerminator() && BB != &BB->getParent()->getEntryBlock() &&
+      (!LoopHeaders || (LoopHeaders && !LoopHeaders->count(BB))) &&
       TryToSimplifyUncondBranchFromEmptyBlock(BB))
     return true;
 
@@ -5343,7 +5356,8 @@ bool SimplifyCFGOpt::run(BasicBlock *BB) {
 /// of the CFG.  It returns true if a modification was made.
 ///
 bool llvm::SimplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
-                       unsigned BonusInstThreshold, AssumptionCache *AC) {
+                       unsigned BonusInstThreshold, AssumptionCache *AC,
+                       SmallPtrSetImpl<BasicBlock *> *LoopHeaders) {
   return SimplifyCFGOpt(TTI, BB->getModule()->getDataLayout(),
-                        BonusInstThreshold, AC).run(BB);
+                        BonusInstThreshold, AC, LoopHeaders).run(BB);
 }

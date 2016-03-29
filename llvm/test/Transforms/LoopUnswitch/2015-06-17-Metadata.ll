@@ -16,23 +16,23 @@ for.body:                                         ; preds = %for.inc, %for.body.
   %cmp1 = icmp eq i32 %a, 12345
   br i1 %cmp1, label %if.then, label %if.else, !prof !0
 ; CHECK: %cmp1 = icmp eq i32 %a, 12345
-; CHECK-NEXT: br i1 %cmp1, label %if.then.us, label %if.else, !prof !0
+; CHECK-NEXT: br i1 %cmp1, label %for.body.us, label %for.body, !prof !0
 if.then:                                          ; preds = %for.body
-; CHECK: if.then.us:
+; CHECK: for.body.us:
 ; CHECK: add nsw i32 %{{.*}}, 123
 ; CHECK: %exitcond.us = icmp eq i32 %inc.us, %b
-; CHECK: br i1 %exitcond.us, label %for.cond.cleanup, label %if.then.us
+; CHECK: br i1 %exitcond.us, label %for.cond.cleanup, label %for.body.us
   %add = add nsw i32 %add.i, 123
   br label %for.inc
 
 if.else:                                          ; preds = %for.body
   %mul = mul nsw i32 %mul.i, %b
   br label %for.inc
-; CHECK: if.else:
+; CHECK: for.body:
 ; CHECK: %mul = mul nsw i32 %mul.i, %b
 ; CHECK: %inc = add nuw nsw i32 %inc.i, 1
 ; CHECK: %exitcond = icmp eq i32 %inc, %b
-; CHECK: br i1 %exitcond, label %for.cond.cleanup, label %if.else
+; CHECK: br i1 %exitcond, label %for.cond.cleanup, label %for.body
 for.inc:                                          ; preds = %if.then, %if.else
   %mul.p = phi i32 [ %b, %if.then ], [ %mul, %if.else ]
   %add.p = phi i32 [ %add, %if.then ], [ %a, %if.else ]

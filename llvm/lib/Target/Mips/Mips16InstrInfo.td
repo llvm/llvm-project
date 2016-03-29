@@ -115,7 +115,7 @@ class FEXT_CCRXI16_ins<string asmstr>:
 //
 class FJAL16_ins<bits<1> _X, string asmstr,
                  InstrItinClass itin>:
-  FJAL16<_X, (outs), (ins simm20:$imm),
+  FJAL16<_X, (outs), (ins uimm26:$imm),
          !strconcat(asmstr, "\t$imm\n\tnop"),[],
          itin>  {
   let isCodeGenOnly=1;
@@ -124,7 +124,7 @@ class FJAL16_ins<bits<1> _X, string asmstr,
 
 class FJALB16_ins<bits<1> _X, string asmstr,
                  InstrItinClass itin>:
-  FJAL16<_X, (outs), (ins simm20:$imm),
+  FJAL16<_X, (outs), (ins uimm26:$imm),
          !strconcat(asmstr, "\t$imm\t# branch\n\tnop"),[],
          itin>  {
   let isCodeGenOnly=1;
