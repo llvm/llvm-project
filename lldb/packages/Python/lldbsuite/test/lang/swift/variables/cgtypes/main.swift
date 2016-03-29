@@ -14,7 +14,7 @@ import CoreGraphics
 func main() {
 	var f: CGFloat = CGFloat(1.0)
 	var p: CGPoint = CGPoint(x: 1.0, y: 1.0)
-  var r: CGRect = CGRect()
+	var r: CGRect = CGRect()
 	print("Hello world") // Set breakpoint here
 }
 
