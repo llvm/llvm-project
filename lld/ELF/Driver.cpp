@@ -90,7 +90,8 @@ static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
 // Newly created memory buffers are owned by this driver.
 void LinkerDriver::addFile(StringRef Path) {
   using namespace llvm::sys::fs;
-  log(Path);
+  if (Config->Verbose || Config->Trace)
+    llvm::outs() << Path << "\n";
   auto MBOrErr = MemoryBuffer::getFile(Path);
   if (!MBOrErr) {
     error(MBOrErr, "cannot open " + Path);
@@ -250,6 +251,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Shared = Args.hasArg(OPT_shared);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->Threads = Args.hasArg(OPT_threads);
+  Config->Trace = Args.hasArg(OPT_trace);
   Config->Verbose = Args.hasArg(OPT_verbose);
   Config->WarnCommon = Args.hasArg(OPT_warn_common);
 

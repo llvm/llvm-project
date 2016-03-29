@@ -105,6 +105,7 @@ OMPSimdDirective::Create(const ASTContext &C, SourceLocation StartLoc,
   Dir->setInits(Exprs.Inits);
   Dir->setUpdates(Exprs.Updates);
   Dir->setFinals(Exprs.Finals);
+  Dir->setPreInits(Exprs.PreInits);
   return Dir;
 }
 
@@ -153,6 +154,7 @@ OMPForDirective::Create(const ASTContext &C, SourceLocation StartLoc,
   Dir->setInits(Exprs.Inits);
   Dir->setUpdates(Exprs.Updates);
   Dir->setFinals(Exprs.Finals);
+  Dir->setPreInits(Exprs.PreInits);
   Dir->setHasCancel(HasCancel);
   return Dir;
 }
@@ -202,6 +204,7 @@ OMPForSimdDirective::Create(const ASTContext &C, SourceLocation StartLoc,
   Dir->setInits(Exprs.Inits);
   Dir->setUpdates(Exprs.Updates);
   Dir->setFinals(Exprs.Finals);
+  Dir->setPreInits(Exprs.PreInits);
   return Dir;
 }
 
@@ -367,6 +370,7 @@ OMPParallelForDirective *OMPParallelForDirective::Create(
   Dir->setInits(Exprs.Inits);
   Dir->setUpdates(Exprs.Updates);
   Dir->setFinals(Exprs.Finals);
+  Dir->setPreInits(Exprs.PreInits);
   Dir->setHasCancel(HasCancel);
   return Dir;
 }
@@ -414,6 +418,7 @@ OMPParallelForSimdDirective *OMPParallelForSimdDirective::Create(
   Dir->setInits(Exprs.Inits);
   Dir->setUpdates(Exprs.Updates);
   Dir->setFinals(Exprs.Finals);
+  Dir->setPreInits(Exprs.PreInits);
   return Dir;
 }
 
@@ -750,6 +755,7 @@ OMPTargetParallelForDirective *OMPTargetParallelForDirective::Create(
   Dir->setInits(Exprs.Inits);
   Dir->setUpdates(Exprs.Updates);
   Dir->setFinals(Exprs.Finals);
+  Dir->setPreInits(Exprs.PreInits);
   Dir->setHasCancel(HasCancel);
   return Dir;
 }
@@ -889,6 +895,7 @@ OMPTaskLoopDirective *OMPTaskLoopDirective::Create(
   Dir->setInits(Exprs.Inits);
   Dir->setUpdates(Exprs.Updates);
   Dir->setFinals(Exprs.Finals);
+  Dir->setPreInits(Exprs.PreInits);
   return Dir;
 }
 
@@ -936,6 +943,7 @@ OMPTaskLoopSimdDirective *OMPTaskLoopSimdDirective::Create(
   Dir->setInits(Exprs.Inits);
   Dir->setUpdates(Exprs.Updates);
   Dir->setFinals(Exprs.Finals);
+  Dir->setPreInits(Exprs.PreInits);
   return Dir;
 }
 
@@ -982,6 +990,7 @@ OMPDistributeDirective *OMPDistributeDirective::Create(
   Dir->setInits(Exprs.Inits);
   Dir->setUpdates(Exprs.Updates);
   Dir->setFinals(Exprs.Finals);
+  Dir->setPreInits(Exprs.PreInits);
   return Dir;
 }
 

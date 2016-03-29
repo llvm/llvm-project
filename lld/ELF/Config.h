@@ -79,6 +79,7 @@ struct Configuration {
   bool StripAll;
   bool SysvHash = true;
   bool Threads;
+  bool Trace;
   bool Verbose;
   bool WarnCommon;
   bool ZExecStack;

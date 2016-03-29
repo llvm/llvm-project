@@ -32,6 +32,7 @@ int main() {
   foo();
 // CHECK-NOT:   call {{.*}}void @__kmpc_taskgroup
 // CHECK-NOT:   call {{.*}}void @__kmpc_end_taskgroup
+// CHECK:       ret
   return a;
 }
 

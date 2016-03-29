@@ -110,6 +110,7 @@ public:
 class X86_64TargetInfo final : public TargetInfo {
 public:
   X86_64TargetInfo();
+  uint32_t getDynRel(uint32_t Type) const override;
   uint32_t getTlsGotRel(uint32_t Type) const override;
   bool pointsToLocalDynamicGotEntry(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
@@ -756,6 +757,14 @@ bool X86_64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   if (Type == R_X86_64_GOTTPOFF)
     return !canRelaxTls(Type, &S);
   return refersToGotEntry(Type) || needsPlt(Type, S);
+}
+
+uint32_t X86_64TargetInfo::getDynRel(uint32_t Type) const {
+  if (Type == R_X86_64_PC32 || Type == R_X86_64_32)
+    if (Config->Shared)
+      error(getELFRelocationTypeName(EM_X86_64, Type) +
+            " cannot be a dynamic relocation");
+  return Type;
 }
 
 uint32_t X86_64TargetInfo::getTlsGotRel(uint32_t Type) const {

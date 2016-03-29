@@ -126,6 +126,9 @@ def sysroot : Joined<["--"], "sysroot=">,
 
 def threads : Joined<["--"], "threads">;
 
+def trace: Flag<["--"], "trace">,
+  HelpText<"Print the names of the input files">;
+
 def undefined : Joined<["--"], "undefined=">,
   HelpText<"Force undefined symbol during linking">;
 
@@ -169,6 +172,7 @@ def alias_shared_Bshareable : Flag<["-"], "Bshareable">, Alias<shared>;
 def alias_soname_h : JoinedOrSeparate<["-"], "h">, Alias<soname>;
 def alias_soname_soname : Separate<["-"], "soname">, Alias<soname>;
 def alias_script_T : JoinedOrSeparate<["-"], "T">, Alias<script>;
+def alias_trace : Flag<["-"], "t">, Alias<trace>;
 def alias_strip_all: Flag<["-"], "s">, Alias<strip_all>;
 def alias_undefined_u : JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 def alias_wrap_wrap : Joined<["--", "-"], "wrap=">, Alias<wrap>;

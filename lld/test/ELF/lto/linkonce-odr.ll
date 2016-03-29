@@ -1,6 +1,6 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %p/Inputs/linkonce-odr.ll -o %t1.o
-; RUN: llc %s -o %t2.o -filetype=obj
+; RUN: llc -relocation-model=pic %s -o %t2.o -filetype=obj
 ; RUN: ld.lld %t1.o %t2.o -o %t.so -shared -save-temps
 ; RUN: llvm-dis %t.so.lto.opt.bc -o - | FileCheck %s
 

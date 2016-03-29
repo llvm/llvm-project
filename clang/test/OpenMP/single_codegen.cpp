@@ -111,8 +111,8 @@ int main() {
 // CHECK-NEXT:  invoke void [[FOO]]()
 // CHECK:       to label {{%?}}[[CONT:.+]] unwind
 // CHECK:       [[CONT]]
-// CHECK:       store i32 1, i32* [[DID_IT]]
 // CHECK:       call void @__kmpc_end_single([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
+// CHECK:       store i32 1, i32* [[DID_IT]]
 // CHECK-NEXT:  br label {{%?}}[[EXIT]]
 // CHECK:       [[EXIT]]
 // CHECK:       [[A_PTR_REF:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[COPY_LIST]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
@@ -255,8 +255,8 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK-LABEL: invoke void @_ZZN2SSC1ERiENKUlvE_clEv(
 // CHECK-SAME: [[CAP_TY]]* [[CAP]])
 
-// CHECK: store i32 1, i32* [[DID_IT]],
 // CHECK: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// CHECK: store i32 1, i32* [[DID_IT]],
 // CHECK: br label
 
 // CHECK: call void @__kmpc_end_single(%{{.+}}* @{{.+}}, i32 %{{.+}})
@@ -334,8 +334,8 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK-NEXT: load i32, i32* %
 // CHECK-NEXT: sdiv i32 %{{.+}}, 1
 // CHECK-NEXT: store i32 %
-// CHECK-NEXT: store i32 1, i32* [[DID_IT]],
 // CHECK-NEXT: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// CHECK-NEXT: store i32 1, i32* [[DID_IT]],
 // CHECK-NEXT: br label
 
 // CHECK: getelementptr inbounds [3 x i8*], [3 x i8*]* [[LIST:%.+]], i64 0, i64 0
@@ -376,8 +376,8 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK-NEXT: store double* %
 // CHECK-LABEL: invoke void @_ZZN3SSTIdEC1EvENKUlvE_clEv(
 
-// CHECK: store i32 1, i32* [[DID_IT]],
-// CHECK-NEXT: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// CHECK: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// CHECK-NEXT: store i32 1, i32* [[DID_IT]],
 // CHECK-NEXT: br label
 
 // CHECK: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})

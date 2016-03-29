@@ -312,21 +312,22 @@ class OMPLoopDirective : public OMPExecutableDirective {
     CondOffset = 5,
     InitOffset = 6,
     IncOffset = 7,
+    PreInitsOffset = 8,
     // The '...End' enumerators do not correspond to child expressions - they
     // specify the offset to the end (and start of the following counters/
     // updates/finals arrays).
-    DefaultEnd = 8,
+    DefaultEnd = 9,
     // The following 7 exprs are used by worksharing loops only.
-    IsLastIterVariableOffset = 8,
-    LowerBoundVariableOffset = 9,
-    UpperBoundVariableOffset = 10,
-    StrideVariableOffset = 11,
-    EnsureUpperBoundOffset = 12,
-    NextLowerBoundOffset = 13,
-    NextUpperBoundOffset = 14,
+    IsLastIterVariableOffset = 9,
+    LowerBoundVariableOffset = 10,
+    UpperBoundVariableOffset = 11,
+    StrideVariableOffset = 12,
+    EnsureUpperBoundOffset = 13,
+    NextLowerBoundOffset = 14,
+    NextUpperBoundOffset = 15,
     // Offset to the end (and start of the following counters/updates/finals
     // arrays) for worksharing loop directives.
-    WorksharingEnd = 15,
+    WorksharingEnd = 16,
   };
 
   /// \brief Get the counters storage.
@@ -422,6 +423,9 @@ protected:
   }
   void setInit(Expr *Init) { *std::next(child_begin(), InitOffset) = Init; }
   void setInc(Expr *Inc) { *std::next(child_begin(), IncOffset) = Inc; }
+  void setPreInits(Stmt *PreInits) {
+    *std::next(child_begin(), PreInitsOffset) = PreInits;
+  }
   void setIsLastIterVariable(Expr *IL) {
     assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
             isOpenMPTaskLoopDirective(getDirectiveKind()) ||
@@ -521,6 +525,8 @@ public:
     SmallVector<Expr *, 4> Updates;
     /// \brief Final loop counter values for GodeGen.
     SmallVector<Expr *, 4> Finals;
+    /// Init statement for all captured expressions.
+    Stmt *PreInits;
 
     /// \brief Check if all the expressions are built (does not check the
     /// worksharing ones).
@@ -559,6 +565,7 @@ public:
         Updates[i] = nullptr;
         Finals[i] = nullptr;
       }
+      PreInits = nullptr;
     }
   };
 
@@ -593,6 +600,10 @@ public:
     return const_cast<Expr *>(
         reinterpret_cast<const Expr *>(*std::next(child_begin(), IncOffset)));
   }
+  const Stmt *getPreInits() const {
+    return *std::next(child_begin(), PreInitsOffset);
+  }
+  Stmt *getPreInits() { return *std::next(child_begin(), PreInitsOffset); }
   Expr *getIsLastIterVariable() const {
     assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
             isOpenMPTaskLoopDirective(getDirectiveKind()) ||
