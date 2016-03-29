@@ -38,17 +38,17 @@ struct Struct {
 	init() { ivar = 4567 }
 }
 
-func foo (inout x : Class) {
+func foo (x: inout Class) {
 	print(x.ivar)
 	x.ivar++ // Set breakpoint here for Class access
 }
 
-func foo(inout x : Struct) {
+func foo(x: inout Struct) {
 	print(x.ivar)
 	x.ivar++ // Set breakpoint here for Struct access
 }
 
-func foo (inout x : String) {
+func foo (x: inout String) {
   print(x)
   x = "Set breakpoint here for String access"
 }
