@@ -287,6 +287,12 @@ define void @f49() inaccessiblemem_or_argmemonly {
   ret void
 }
 
+; CHECK: define void @f50(i8* swiftself)
+define void @f50(i8* swiftself)
+{
+  ret void;
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }

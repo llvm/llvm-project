@@ -293,7 +293,7 @@ def CC_X86_64_C : CallingConv<[
   CCIfNest<CCIfSubtarget<"isTarget64BitILP32()", CCAssignToReg<[R10D]>>>,
   CCIfNest<CCAssignToReg<[R10]>>,
 
-  // An SwiftSelf is passed in R10.
+  // A SwiftSelf is passed in R10.
   CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[R10]>>>,
 
   // An SwiftError is passed in R12.
