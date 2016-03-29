@@ -35,9 +35,9 @@ while.body.lr.ph:                                 ; preds = %while.cond.preheade
 while.body:                                       ; preds = %while.body.backedge, %while.body.lr.ph
   switch i32 %.pre, label %while.body.backedge [
     i32 0, label %sw.bb1
-    i32 8, label %sw.bb1
-    i32 6, label %sw.bb1
-    i32 24, label %while.cond.backedge
+    i32 80, label %sw.bb1
+    i32 60, label %sw.bb1
+    i32 240, label %while.cond.backedge
   ]
 
 while.body.backedge:                              ; preds = %while.body, %while.cond.backedge
