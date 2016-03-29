@@ -167,17 +167,15 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
     // Main wait spin loop
     while (flag->notdone_check()) {
         int in_pool;
-
-        /* If the task team is NULL, it means one of things:
-           1) A newly-created thread is first being released by __kmp_fork_barrier(), and
-              its task team has not been set up yet.
-           2) All tasks have been executed to completion, this thread has decremented the task
-              team's ref ct and possibly deallocated it, and should no longer reference it.
-           3) Tasking is off for this region.  This could be because we are in a serialized region
-              (perhaps the outer one), or else tasking was manually disabled (KMP_TASKING=0).  */
         kmp_task_team_t * task_team = NULL;
         if (__kmp_tasking_mode != tskm_immediate_exec) {
             task_team = this_thr->th.th_task_team;
+            /* If the thread's task team pointer is NULL, it means one of 3 things:
+	       1) A newly-created thread is first being released by __kmp_fork_barrier(), and
+	          its task team has not been set up yet.
+	       2) All tasks have been executed to completion.
+	       3) Tasking is off for this region.  This could be because we are in a serialized region
+	          (perhaps the outer one), or else tasking was manually disabled (KMP_TASKING=0).  */
             if (task_team != NULL) {
                 if (TCR_SYNC_4(task_team->tt.tt_active)) {
                     if (KMP_TASKING_ENABLED(task_team))

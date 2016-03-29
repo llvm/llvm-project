@@ -4,8 +4,10 @@
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
 // REQUIRES: x86-registered-target
 // expected-no-diagnostics
-#ifndef HEADER
-#define HEADER
+ #ifndef HEADER
+ #define HEADER
+
+// CHECK: [[SS_TY:%.+]] = type { i32 }
 
 long long get_val() { return 0; }
 double *g_ptr;
@@ -632,5 +634,68 @@ void parallel_simd(float *a) {
     a[i] += bar();
 }
 // TERM_DEBUG: !{{[0-9]+}} = !DILocation(line: [[@LINE-11]],
+
+// CHECK-LABEL: S8
+// CHECK: ptrtoint [[SS_TY]]* %{{.+}} to i64
+// CHECK-NEXT: and i64 %{{.+}}, 15
+// CHECK-NEXT: icmp eq i64 %{{.+}}, 0
+// CHECK-NEXT: call void @llvm.assume(i1
+
+// CHECK: ptrtoint [[SS_TY]]* %{{.+}} to i64
+// CHECK-NEXT: and i64 %{{.+}}, 7
+// CHECK-NEXT: icmp eq i64 %{{.+}}, 0
+// CHECK-NEXT: call void @llvm.assume(i1
+
+// CHECK: ptrtoint [[SS_TY]]* %{{.+}} to i64
+// CHECK-NEXT: and i64 %{{.+}}, 15
+// CHECK-NEXT: icmp eq i64 %{{.+}}, 0
+// CHECK-NEXT: call void @llvm.assume(i1
+
+// CHECK: ptrtoint [[SS_TY]]* %{{.+}} to i64
+// CHECK-NEXT: and i64 %{{.+}}, 3
+// CHECK-NEXT: icmp eq i64 %{{.+}}, 0
+// CHECK-NEXT: call void @llvm.assume(i1
+struct SS {
+  SS(): a(0) {}
+  SS(int v) : a(v) {}
+  int a;
+  typedef int type;
+};
+
+template <typename T>
+class S7 : public T {
+protected:
+  T *a;
+  T b[2];
+  S7() : a(0) {}
+
+public:
+  S7(typename T::type &v) : a((T*)&v) {
+#pragma omp simd aligned(a)
+    for (int k = 0; k < a->a; ++k)
+      ++this->a->a;
+#pragma omp simd aligned(this->b : 8)
+    for (int k = 0; k < a->a; ++k)
+      ++a->a;
+  }
+};
+
+class S8 : private IterDouble, public S7<SS> {
+  S8() {}
+
+public:
+  S8(int v) : S7<SS>(v){
+#pragma omp parallel private(a)
+#pragma omp simd aligned(S7<SS>::a)
+    for (int k = 0; k < a->a; ++k)
+      ++this->a->a;
+#pragma omp parallel shared(b)
+#pragma omp simd aligned(this->b: 4)
+    for (int k = 0; k < a->a; ++k)
+      ++a->a;
+  }
+};
+S8 s8(0);
+
 #endif // HEADER
 

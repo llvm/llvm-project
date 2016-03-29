@@ -79,7 +79,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
                                                 unsigned &argIndex,
                                                 const LangOptions &LO,
                                                 const TargetInfo &Target) {
-  
+  using namespace clang::analyze_format_string;
   using namespace clang::analyze_scanf;
   const char *I = Beg;
   const char *Start = nullptr;
@@ -210,10 +210,15 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   
   // FIXME: '%' and '*' doesn't make sense.  Issue a warning.
   // FIXME: 'ConsumedSoFar' and '*' doesn't make sense.
-  
+
   if (k == ScanfConversionSpecifier::InvalidSpecifier) {
+    unsigned Len = I - Beg;
+    if (ParseUTF8InvalidSpecifier(Beg, E, Len)) {
+      CS.setEndScanList(Beg + Len);
+      FS.setConversionSpecifier(CS);
+    }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, I - Beg);
+    return !H.HandleInvalidScanfConversionSpecifier(FS, Beg, Len);
   }
   return ScanfSpecifierResult(Start, FS);
 }

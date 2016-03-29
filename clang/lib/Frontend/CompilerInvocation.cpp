@@ -1564,15 +1564,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   if (Args.hasArg(OPT_fcuda_is_device))
     Opts.CUDAIsDevice = 1;
 
-  if (Args.hasArg(OPT_fcuda_allow_host_calls_from_host_device))
-    Opts.CUDAAllowHostCallsFromHostDevice = 1;
-
-  if (Args.hasArg(OPT_fcuda_disable_target_call_checks))
-    Opts.CUDADisableTargetCallChecks = 1;
-
-  if (Args.hasArg(OPT_fcuda_target_overloads))
-    Opts.CUDATargetOverloads = 1;
-
   if (Args.hasArg(OPT_fcuda_allow_variadic_functions))
     Opts.CUDAAllowVariadicFunctions = 1;
 

@@ -264,4 +264,3 @@ void testObjCModifierFlags() {
   NSLog(@"%2$[tt]@ %1$[tt]@", @"Foo", @"Bar"); // no-warning
   NSLog(@"%2$[tt]@ %1$[tt]s", @"Foo", @"Bar"); // expected-warning {{object format flags cannot be used with 's' conversion specifier}}
 }
-

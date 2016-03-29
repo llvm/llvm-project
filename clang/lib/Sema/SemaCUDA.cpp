@@ -68,7 +68,7 @@ Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D) {
 // Ph - preference in host mode
 // Pd - preference in device mode
 // H  - handled in (x)
-// Preferences: N:native, HD:host-device, SS:same side, WS:wrong side, --:never.
+// Preferences: N:native, SS:same side, HD:host-device, WS:wrong side, --:never.
 //
 // | F  | T  | Ph  | Pd  |  H  |
 // |----+----+-----+-----+-----+
@@ -92,9 +92,6 @@ Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D) {
 Sema::CUDAFunctionPreference
 Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
                              const FunctionDecl *Callee) {
-  assert(getLangOpts().CUDATargetOverloads &&
-         "Should not be called w/o enabled target overloads.");
-
   assert(Callee && "Callee must be valid.");
   CUDAFunctionTarget CalleeTarget = IdentifyCUDATarget(Callee);
   CUDAFunctionTarget CallerTarget =
@@ -130,13 +127,11 @@ Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
          (CalleeTarget == CFT_Host || CalleeTarget == CFT_Global)))
       return CFP_SameSide;
 
-    // We'll allow calls to non-mode-matching functions if target call
-    // checks are disabled. This is needed to avoid complaining about
-    // HD->H calls when we compile for device side and vice versa.
-    if (getLangOpts().CUDADisableTargetCallChecks)
-      return CFP_WrongSide;
-
-    return CFP_Never;
+    // Calls from HD to non-mode-matching functions (i.e., to host functions
+    // when compiling in device mode or to device functions when compiling in
+    // host mode) are allowed at the sema level, but eventually rejected if
+    // they're ever codegened.  TODO: Reject said calls earlier.
+    return CFP_WrongSide;
   }
 
   // (e) Calling across device/host boundary is not something you should do.
@@ -148,74 +143,10 @@ Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
   llvm_unreachable("All cases should've been handled by now.");
 }
 
-bool Sema::CheckCUDATarget(const FunctionDecl *Caller,
-                           const FunctionDecl *Callee) {
-  // With target overloads enabled, we only disallow calling
-  // combinations with CFP_Never.
-  if (getLangOpts().CUDATargetOverloads)
-    return IdentifyCUDAPreference(Caller,Callee) == CFP_Never;
-
-  // The CUDADisableTargetCallChecks short-circuits this check: we assume all
-  // cross-target calls are valid.
-  if (getLangOpts().CUDADisableTargetCallChecks)
-    return false;
-
-  CUDAFunctionTarget CallerTarget = IdentifyCUDATarget(Caller),
-                     CalleeTarget = IdentifyCUDATarget(Callee);
-
-  // If one of the targets is invalid, the check always fails, no matter what
-  // the other target is.
-  if (CallerTarget == CFT_InvalidTarget || CalleeTarget == CFT_InvalidTarget)
-    return true;
-
-  // CUDA B.1.1 "The __device__ qualifier declares a function that is [...]
-  // Callable from the device only."
-  if (CallerTarget == CFT_Host && CalleeTarget == CFT_Device)
-    return true;
-
-  // CUDA B.1.2 "The __global__ qualifier declares a function that is [...]
-  // Callable from the host only."
-  // CUDA B.1.3 "The __host__ qualifier declares a function that is [...]
-  // Callable from the host only."
-  if ((CallerTarget == CFT_Device || CallerTarget == CFT_Global) &&
-      (CalleeTarget == CFT_Host || CalleeTarget == CFT_Global))
-    return true;
-
-  // CUDA B.1.3 "The __device__ and __host__ qualifiers can be used together
-  // however, in which case the function is compiled for both the host and the
-  // device. The __CUDA_ARCH__ macro [...] can be used to differentiate code
-  // paths between host and device."
-  if (CallerTarget == CFT_HostDevice && CalleeTarget != CFT_HostDevice) {
-    // If the caller is implicit then the check always passes.
-    if (Caller->isImplicit()) return false;
-
-    bool InDeviceMode = getLangOpts().CUDAIsDevice;
-    if (!InDeviceMode && CalleeTarget != CFT_Host)
-        return true;
-    if (InDeviceMode && CalleeTarget != CFT_Device) {
-      // Allow host device functions to call host functions if explicitly
-      // requested.
-      if (CalleeTarget == CFT_Host &&
-          getLangOpts().CUDAAllowHostCallsFromHostDevice) {
-        Diag(Caller->getLocation(),
-             diag::warn_host_calls_from_host_device)
-            << Callee->getNameAsString() << Caller->getNameAsString();
-        return false;
-      }
-
-      return true;
-    }
-  }
-
-  return false;
-}
-
 template <typename T>
 static void EraseUnwantedCUDAMatchesImpl(
     Sema &S, const FunctionDecl *Caller, llvm::SmallVectorImpl<T> &Matches,
     std::function<const FunctionDecl *(const T &)> FetchDecl) {
-  assert(S.getLangOpts().CUDATargetOverloads &&
-         "Should not be called w/o enabled target overloads.");
   if (Matches.size() <= 1)
     return;
 

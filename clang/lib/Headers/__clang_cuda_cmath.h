@@ -194,4 +194,6 @@ using ::trunc;
 
 } // namespace std
 
+#undef __DEVICE__
+
 #endif

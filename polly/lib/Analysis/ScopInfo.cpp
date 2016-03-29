@@ -2179,6 +2179,61 @@ bool Scop::buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
   return true;
 }
 
+static Loop *
+getFirstNonBoxedLoopFor(BasicBlock *BB, LoopInfo &LI,
+                        const ScopDetection::BoxedLoopsSetTy &BoxedLoops) {
+  auto *L = LI.getLoopFor(BB);
+  while (BoxedLoops.count(L))
+    L = L->getParentLoop();
+  return L;
+}
+
+/// @brief Adjust the dimensions of @p Dom that was constructed for @p OldL
+///        to be compatible to domains constructed for loop @p NewL.
+///
+/// This function assumes @p NewL and @p OldL are equal or there is a CFG
+/// edge from @p OldL to @p NewL.
+static __isl_give isl_set *adjustDomainDimensions(Scop &S,
+                                                  __isl_take isl_set *Dom,
+                                                  Loop *OldL, Loop *NewL) {
+
+  // If the loops are the same there is nothing to do.
+  if (NewL == OldL)
+    return Dom;
+
+  int OldDepth = S.getRelativeLoopDepth(OldL);
+  int NewDepth = S.getRelativeLoopDepth(NewL);
+  // If both loops are non-affine loops there is nothing to do.
+  if (OldDepth == -1 && NewDepth == -1)
+    return Dom;
+
+  // Distinguish three cases:
+  //   1) The depth is the same but the loops are not.
+  //      => One loop was left one was entered.
+  //   2) The depth increased from OldL to NewL.
+  //      => One loop was entered, none was left.
+  //   3) The depth decreased from OldL to NewL.
+  //      => Loops were left were difference of the depths defines how many.
+  if (OldDepth == NewDepth) {
+    assert(OldL->getParentLoop() == NewL->getParentLoop());
+    Dom = isl_set_project_out(Dom, isl_dim_set, NewDepth, 1);
+    Dom = isl_set_add_dims(Dom, isl_dim_set, 1);
+    Dom = addDomainDimId(Dom, NewDepth, NewL);
+  } else if (OldDepth < NewDepth) {
+    assert(OldDepth + 1 == NewDepth);
+    assert(NewL->getParentLoop() == OldL);
+    Dom = isl_set_add_dims(Dom, isl_dim_set, 1);
+    Dom = addDomainDimId(Dom, NewDepth, NewL);
+  } else {
+    assert(OldDepth > NewDepth);
+    int Diff = OldDepth - NewDepth;
+    int NumDim = isl_set_n_dim(Dom);
+    assert(NumDim >= Diff);
+    Dom = isl_set_project_out(Dom, isl_dim_set, NumDim - Diff, Diff);
+  }
+
+  return Dom;
+}
 bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
                                              DominatorTree &DT, LoopInfo &LI) {
   auto &BoxedLoops = *SD.getBoxedLoops(&getRegion());
@@ -2222,7 +2277,6 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
       continue;
 
     Loop *BBLoop = getRegionNodeLoop(RN, LI);
-    int BBLoopDepth = getRelativeLoopDepth(BBLoop);
 
     // Build the condition sets for the successor nodes of the current region
     // node. If it is a non-affine subregion we will always execute the single
@@ -2249,34 +2303,8 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
         continue;
       }
 
-      // Do not adjust the number of dimensions if we enter a boxed loop or are
-      // in a non-affine subregion or if the surrounding loop stays the same.
-      Loop *SuccBBLoop = LI.getLoopFor(SuccBB);
-      while (BoxedLoops.count(SuccBBLoop))
-        SuccBBLoop = SuccBBLoop->getParentLoop();
-
-      if (BBLoop != SuccBBLoop) {
-
-        // Check if the edge to SuccBB is a loop entry or exit edge. If so
-        // adjust the dimensionality accordingly. Lastly, if we leave a loop
-        // and enter a new one we need to drop the old constraints.
-        int SuccBBLoopDepth = getRelativeLoopDepth(SuccBBLoop);
-        unsigned LoopDepthDiff = std::abs(BBLoopDepth - SuccBBLoopDepth);
-        if (BBLoopDepth > SuccBBLoopDepth) {
-          CondSet = isl_set_project_out(CondSet, isl_dim_set,
-                                        isl_set_n_dim(CondSet) - LoopDepthDiff,
-                                        LoopDepthDiff);
-        } else if (SuccBBLoopDepth > BBLoopDepth) {
-          assert(LoopDepthDiff == 1);
-          CondSet = isl_set_add_dims(CondSet, isl_dim_set, 1);
-          CondSet = addDomainDimId(CondSet, SuccBBLoopDepth, SuccBBLoop);
-        } else if (BBLoopDepth >= 0) {
-          assert(LoopDepthDiff <= 1);
-          CondSet = isl_set_project_out(CondSet, isl_dim_set, BBLoopDepth, 1);
-          CondSet = isl_set_add_dims(CondSet, isl_dim_set, 1);
-          CondSet = addDomainDimId(CondSet, SuccBBLoopDepth, SuccBBLoop);
-        }
-      }
+      auto *SuccBBLoop = getFirstNonBoxedLoopFor(SuccBB, LI, BoxedLoops);
+      CondSet = adjustDomainDimensions(*this, CondSet, BBLoop, SuccBBLoop);
 
       // Set the domain for the successor or merge it with an existing domain in
       // case there are multiple paths (without loop back edges) to the
@@ -2363,7 +2391,6 @@ void Scop::propagateDomainConstraints(Region *R, ScopDetection &SD,
     }
 
     Loop *BBLoop = getRegionNodeLoop(RN, LI);
-    int BBLoopDepth = getRelativeLoopDepth(BBLoop);
 
     isl_set *PredDom = isl_set_empty(isl_set_get_space(Domain));
     for (auto *PredBB : predecessors(BB)) {
@@ -2379,34 +2406,10 @@ void Scop::propagateDomainConstraints(Region *R, ScopDetection &SD,
         PredBBDom = isl_set_universe(isl_set_get_space(PredDom));
 
       if (!PredBBDom) {
-        // Determine the loop depth of the predecessor and adjust its domain to
-        // the domain of the current block. This can mean we have to:
-        //  o) Drop a dimension if this block is the exit of a loop, not the
-        //     header of a new loop and the predecessor was part of the loop.
-        //  o) Add an unconstrainted new dimension if this block is the header
-        //     of a loop and the predecessor is not part of it.
-        //  o) Drop the information about the innermost loop dimension when the
-        //     predecessor and the current block are surrounded by different
-        //     loops in the same depth.
         PredBBDom = getDomainForBlock(PredBB, DomainMap, *R->getRegionInfo());
-        Loop *PredBBLoop = LI.getLoopFor(PredBB);
-        while (BoxedLoops.count(PredBBLoop))
-          PredBBLoop = PredBBLoop->getParentLoop();
-
-        int PredBBLoopDepth = getRelativeLoopDepth(PredBBLoop);
-        unsigned LoopDepthDiff = std::abs(BBLoopDepth - PredBBLoopDepth);
-        if (BBLoopDepth < PredBBLoopDepth)
-          PredBBDom = isl_set_project_out(
-              PredBBDom, isl_dim_set, isl_set_n_dim(PredBBDom) - LoopDepthDiff,
-              LoopDepthDiff);
-        else if (PredBBLoopDepth < BBLoopDepth) {
-          assert(LoopDepthDiff == 1);
-          PredBBDom = isl_set_add_dims(PredBBDom, isl_dim_set, 1);
-        } else if (BBLoop != PredBBLoop && BBLoopDepth >= 0) {
-          assert(LoopDepthDiff <= 1);
-          PredBBDom = isl_set_drop_constraints_involving_dims(
-              PredBBDom, isl_dim_set, BBLoopDepth, 1);
-        }
+        auto *PredBBLoop = getFirstNonBoxedLoopFor(PredBB, LI, BoxedLoops);
+        PredBBDom =
+            adjustDomainDimensions(*this, PredBBDom, PredBBLoop, BBLoop);
       }
 
       PredDom = isl_set_union(PredDom, PredBBDom);

@@ -270,6 +270,7 @@ def _SLASH_Fp : CLJoined<"Fp">,
 def _SLASH_analyze_ : CLIgnoredFlag<"analyze-">;
 def _SLASH_bigobj : CLIgnoredFlag<"bigobj">;
 def _SLASH_cgthreads : CLIgnoredJoined<"cgthreads">;
+def _SLASH_d2FastFail : CLIgnoredFlag<"d2FastFail">;
 def _SLASH_d2Zi_PLUS : CLIgnoredFlag<"d2Zi+">;
 def _SLASH_errorReport : CLIgnoredJoined<"errorReport">;
 def _SLASH_Fd : CLIgnoredJoined<"Fd">;

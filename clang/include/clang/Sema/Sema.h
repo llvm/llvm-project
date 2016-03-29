@@ -8910,7 +8910,11 @@ public:
   CUDAFunctionPreference IdentifyCUDAPreference(const FunctionDecl *Caller,
                                                 const FunctionDecl *Callee);
 
-  bool CheckCUDATarget(const FunctionDecl *Caller, const FunctionDecl *Callee);
+  /// Determines whether Caller may invoke Callee, based on their CUDA
+  /// host/device attributes.  Returns true if the call is not allowed.
+  bool CheckCUDATarget(const FunctionDecl *Caller, const FunctionDecl *Callee) {
+    return IdentifyCUDAPreference(Caller, Callee) == CFP_Never;
+  }
 
   /// Finds a function in \p Matches with highest calling priority
   /// from \p Caller context and erases all functions with lower

@@ -1998,7 +1998,7 @@ tooling::Replacements formatReplacements(StringRef Code,
 
   std::string NewCode = applyAllReplacements(Code, Replaces);
   std::vector<tooling::Range> ChangedRanges =
-      tooling::calculateChangedRangesInFile(Replaces);
+      tooling::calculateChangedRanges(Replaces);
   StringRef FileName = Replaces.begin()->getFilePath();
   tooling::Replacements FormatReplaces =
       reformat(Style, NewCode, ChangedRanges, FileName);
@@ -2007,16 +2007,6 @@ tooling::Replacements formatReplacements(StringRef Code,
       mergeReplacements(Replaces, FormatReplaces);
 
   return MergedReplacements;
-}
-
-std::string applyAllReplacementsAndFormat(StringRef Code,
-                                          const tooling::Replacements &Replaces,
-                                          const FormatStyle &Style) {
-  tooling::Replacements NewReplacements =
-      formatReplacements(Code, Replaces, Style);
-  if (NewReplacements.empty())
-    return Code; // Exit early to avoid overhead in `applyAllReplacements`.
-  return applyAllReplacements(Code, NewReplacements);
 }
 
 tooling::Replacements reformat(const FormatStyle &Style,

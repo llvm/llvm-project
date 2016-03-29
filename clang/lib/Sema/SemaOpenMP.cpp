@@ -1745,7 +1745,7 @@ static DeclRefExpr *buildCapture(Sema &S, ValueDecl *D, Expr *CaptureExpr,
     CD = buildCaptureDecl(S, D->getIdentifier(), CaptureExpr, WithInit,
                           /*AsExpression=*/false);
   return buildDeclRefExpr(S, CD, CD->getType().getNonReferenceType(),
-                          SourceLocation());
+                          CaptureExpr->getExprLoc());
 }
 
 static ExprResult buildCapture(Sema &S, Expr *CaptureExpr, DeclRefExpr *&Ref) {
@@ -7727,10 +7727,10 @@ OMPClause *Sema::ActOnOpenMPSharedClause(ArrayRef<Expr *> VarList,
     }
 
     DeclRefExpr *Ref = nullptr;
-    if (!VD)
+    if (!VD && IsOpenMPCapturedDecl(D))
       Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/true);
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_shared, Ref);
-    Vars.push_back(VD ? RefExpr->IgnoreParens() : Ref);
+    Vars.push_back((VD || !Ref) ? RefExpr->IgnoreParens() : Ref);
   }
 
   if (Vars.empty())
@@ -8692,53 +8692,55 @@ OMPClause *Sema::ActOnOpenMPAlignedClause(
 
   SmallVector<Expr *, 8> Vars;
   for (auto &RefExpr : VarList) {
-    assert(RefExpr && "NULL expr in OpenMP aligned clause.");
-    if (isa<DependentScopeDeclRefExpr>(RefExpr)) {
+    assert(RefExpr && "NULL expr in OpenMP linear clause.");
+    SourceLocation ELoc;
+    SourceRange ERange;
+    Expr *SimpleRefExpr = RefExpr;
+    auto Res = getPrivateItem(*this, SimpleRefExpr, ELoc, ERange,
+                              /*AllowArraySection=*/false);
+    if (Res.second) {
       // It will be analyzed later.
       Vars.push_back(RefExpr);
-      continue;
     }
-
-    SourceLocation ELoc = RefExpr->getExprLoc();
-    // OpenMP [2.1, C/C++]
-    //  A list item is a variable name.
-    DeclRefExpr *DE = dyn_cast<DeclRefExpr>(RefExpr);
-    if (!DE || !isa<VarDecl>(DE->getDecl())) {
-      Diag(ELoc, diag::err_omp_expected_var_name_member_expr)
-          << 0 << RefExpr->getSourceRange();
+    ValueDecl *D = Res.first;
+    if (!D)
       continue;
-    }
 
-    VarDecl *VD = cast<VarDecl>(DE->getDecl());
+    QualType QType = D->getType();
+    auto *VD = dyn_cast<VarDecl>(D);
 
     // OpenMP  [2.8.1, simd construct, Restrictions]
     // The type of list items appearing in the aligned clause must be
     // array, pointer, reference to array, or reference to pointer.
-    QualType QType = VD->getType();
     QType = QType.getNonReferenceType().getUnqualifiedType().getCanonicalType();
     const Type *Ty = QType.getTypePtrOrNull();
-    if (!Ty || (!Ty->isDependentType() && !Ty->isArrayType() &&
-                !Ty->isPointerType())) {
+    if (!Ty || (!Ty->isArrayType() && !Ty->isPointerType())) {
       Diag(ELoc, diag::err_omp_aligned_expected_array_or_ptr)
-          << QType << getLangOpts().CPlusPlus << RefExpr->getSourceRange();
+          << QType << getLangOpts().CPlusPlus << ERange;
       bool IsDecl =
+          !VD ||
           VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
-      Diag(VD->getLocation(),
+      Diag(D->getLocation(),
            IsDecl ? diag::note_previous_decl : diag::note_defined_here)
-          << VD;
+          << D;
       continue;
     }
 
     // OpenMP  [2.8.1, simd construct, Restrictions]
     // A list-item cannot appear in more than one aligned clause.
-    if (Expr *PrevRef = DSAStack->addUniqueAligned(VD, DE)) {
-      Diag(ELoc, diag::err_omp_aligned_twice) << RefExpr->getSourceRange();
+    if (Expr *PrevRef = DSAStack->addUniqueAligned(D, SimpleRefExpr)) {
+      Diag(ELoc, diag::err_omp_aligned_twice) << ERange;
       Diag(PrevRef->getExprLoc(), diag::note_omp_explicit_dsa)
           << getOpenMPClauseName(OMPC_aligned);
       continue;
     }
 
-    Vars.push_back(DE);
+    DeclRefExpr *Ref = nullptr;
+    if (!VD && IsOpenMPCapturedDecl(D))
+      Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/true);
+    Vars.push_back(DefaultFunctionArrayConversion(
+                       (VD || !Ref) ? RefExpr->IgnoreParens() : Ref)
+                       .get());
   }
 
   // OpenMP [2.8.1, simd construct, Description]

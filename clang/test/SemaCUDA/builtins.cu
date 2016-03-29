@@ -7,10 +7,10 @@
 // REQUIRES: nvptx-registered-target
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown \
 // RUN:     -aux-triple nvptx64-unknown-cuda \
-// RUN:     -fcuda-target-overloads -fsyntax-only -verify %s
+// RUN:     -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple nvptx64-unknown-cuda -fcuda-is-device \
 // RUN:     -aux-triple x86_64-unknown-unknown \
-// RUN:     -fcuda-target-overloads -fsyntax-only -verify %s
+// RUN:     -fsyntax-only -verify %s
 
 #if !(defined(__amd64__) && defined(__PTX__))
 #error "Expected to see preprocessor macros from both sides of compilation."

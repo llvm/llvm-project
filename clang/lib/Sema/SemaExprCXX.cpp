@@ -2397,7 +2397,7 @@ FunctionDecl *Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
            "found an unexpected usual deallocation function");
   }
 
-  if (getLangOpts().CUDA && getLangOpts().CUDATargetOverloads)
+  if (getLangOpts().CUDA)
     EraseUnwantedCUDAMatches(dyn_cast<FunctionDecl>(CurContext), Matches);
 
   assert(Matches.size() == 1 &&
@@ -2431,7 +2431,7 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
       Matches.push_back(F.getPair());
   }
 
-  if (getLangOpts().CUDA && getLangOpts().CUDATargetOverloads)
+  if (getLangOpts().CUDA)
     EraseUnwantedCUDAMatches(dyn_cast<FunctionDecl>(CurContext), Matches);
 
   // There's exactly one suitable operator;  pick it.

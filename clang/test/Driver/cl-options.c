@@ -247,6 +247,7 @@
 // RUN:    /bigobj \
 // RUN:    /cgthreads4 \
 // RUN:    /cgthreads8 \
+// RUN:    /d2FastFail \
 // RUN:    /d2Zi+ \
 // RUN:    /errorReport:foo \
 // RUN:    /FC \

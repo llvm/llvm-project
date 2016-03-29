@@ -36,6 +36,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/Locale.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
@@ -3976,12 +3978,41 @@ CheckFormatHandler::HandleInvalidConversionSpecifier(unsigned argIndex,
     // gibberish when trying to match arguments.
     keepGoing = false;
   }
-  
-  EmitFormatDiagnostic(S.PDiag(diag::warn_format_invalid_conversion)
-                         << StringRef(csStart, csLen),
-                       Loc, /*IsStringLocation*/true,
-                       getSpecifierRange(startSpec, specifierLen));
-  
+
+  StringRef Specifier(csStart, csLen);
+
+  // If the specifier in non-printable, it could be the first byte of a UTF-8
+  // sequence. In that case, print the UTF-8 code point. If not, print the byte
+  // hex value.
+  std::string CodePointStr;
+  if (!llvm::sys::locale::isPrint(*csStart)) {
+    UTF32 CodePoint;
+    const UTF8 **B = reinterpret_cast<const UTF8 **>(&csStart);
+    const UTF8 *E =
+        reinterpret_cast<const UTF8 *>(csStart + csLen);
+    ConversionResult Result =
+        llvm::convertUTF8Sequence(B, E, &CodePoint, strictConversion);
+
+    if (Result != conversionOK) {
+      unsigned char FirstChar = *csStart;
+      CodePoint = (UTF32)FirstChar;
+    }
+
+    llvm::raw_string_ostream OS(CodePointStr);
+    if (CodePoint < 256)
+      OS << "\\x" << llvm::format("%02x", CodePoint);
+    else if (CodePoint <= 0xFFFF)
+      OS << "\\u" << llvm::format("%04x", CodePoint);
+    else
+      OS << "\\U" << llvm::format("%08x", CodePoint);
+    OS.flush();
+    Specifier = CodePointStr;
+  }
+
+  EmitFormatDiagnostic(
+      S.PDiag(diag::warn_format_invalid_conversion) << Specifier, Loc,
+      /*IsStringLocation*/ true, getSpecifierRange(startSpec, specifierLen));
+
   return keepGoing;
 }
 
