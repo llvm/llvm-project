@@ -529,10 +529,8 @@ void LiveVariables::runOnInstr(MachineInstr *MI,
         UseRegs.push_back(MOReg);
     } else {
       assert(MO.isDef());
-      // FIXME: We should not remove any dead flags. Howeve the MIPS RDDSP
-      // instruction needs it at the moment: RDDSP gets its implicit use
-      // operands added too late in the processing so InstrEmitter adds an
-      // incorrect dead flag because the uses are not yet visible.
+      // FIXME: We should not remove any dead flags. However the MIPS RDDSP
+      // instruction needs it at the moment: http://llvm.org/PR27116.
       if (TargetRegisterInfo::isPhysicalRegister(MOReg) &&
           !MRI->isReserved(MOReg))
         MO.setIsDead(false);

@@ -188,9 +188,6 @@ void ReplaceableMetadataImpl::moveRef(void *Ref, void *New,
 }
 
 void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
-  assert(CanReplace &&
-         "Attempted to replace Metadata marked for no replacement");
-
   if (UseMap.empty())
     return;
 
@@ -550,7 +547,7 @@ void MDNode::decrementUnresolvedOperandCount() {
     resolve();
 }
 
-void MDNode::resolveRecursivelyImpl(bool AllowTemps) {
+void MDNode::resolveCycles() {
   if (isResolved())
     return;
 
@@ -563,8 +560,6 @@ void MDNode::resolveRecursivelyImpl(bool AllowTemps) {
     if (!N)
       continue;
 
-    if (N->isTemporary() && AllowTemps)
-      continue;
     assert(!N->isTemporary() &&
            "Expected all forward declarations to be resolved");
     if (!N->isResolved())

@@ -58,6 +58,10 @@ namespace llvm {
   /// This is the common base class for debug info intrinsics.
   class DbgInfoIntrinsic : public IntrinsicInst {
   public:
+    /// Get the location corresponding to the variable referenced by the debug
+    /// info intrinsic.  Depending on the intrinsic, this could be the
+    /// variable's value or its address.
+    Value *getVariableLocation(bool AllowNullOp = true) const;
 
     // Methods for support type inquiry through isa, cast, and dyn_cast:
     static inline bool classof(const IntrinsicInst *I) {
@@ -78,7 +82,7 @@ namespace llvm {
   /// This represents the llvm.dbg.declare instruction.
   class DbgDeclareInst : public DbgInfoIntrinsic {
   public:
-    Value *getAddress() const;
+    Value *getAddress() const { return getVariableLocation(); }
     DILocalVariable *getVariable() const {
       return cast<DILocalVariable>(getRawVariable());
     }
@@ -105,8 +109,9 @@ namespace llvm {
   /// This represents the llvm.dbg.value instruction.
   class DbgValueInst : public DbgInfoIntrinsic {
   public:
-    const Value *getValue() const;
-    Value *getValue();
+    Value *getValue() const {
+      return getVariableLocation(/* AllowNullOp = */ false);
+    }
     uint64_t getOffset() const {
       return cast<ConstantInt>(
                           const_cast<Value*>(getArgOperand(1)))->getZExtValue();

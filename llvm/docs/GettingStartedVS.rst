@@ -45,10 +45,12 @@ approximately 3GB.
 
 Software
 --------
-You will need Visual Studio 2013 or higher.
+You will need Visual Studio 2013 or higher, with the latest Update installed. 
 
 You will also need the `CMake <http://www.cmake.org/>`_ build system since it
-generates the project files you will use to build with.
+generates the project files you will use to build with. CMake 2.8.12.2 is the
+minimum required version for building with Visual Studio, though the latest
+version of CMake is recommended.
 
 If you would like to run the LLVM tests you will need `Python
 <http://www.python.org/>`_. Version 2.7 and newer are known to work. You will

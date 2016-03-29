@@ -187,6 +187,8 @@ namespace llvm {
       return true;
     }
 
+    AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+
     void ReplaceNodeResults(SDNode *N,
                             SmallVectorImpl<SDValue>& Results,
                             SelectionDAG &DAG) const override;

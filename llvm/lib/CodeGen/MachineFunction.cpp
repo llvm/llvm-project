@@ -54,6 +54,28 @@ static cl::opt<unsigned>
 
 void MachineFunctionInitializer::anchor() {}
 
+void MachineFunctionProperties::print(raw_ostream &ROS) const {
+  // Leave this function even in NDEBUG as an out-of-line anchor.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  if (!Properties.any()) {
+    ROS << "(empty)";
+    return;
+  }
+  for (BitVector::size_type i = 0; i < Properties.size(); ++i) {
+    if (Properties[i]) {
+      switch(static_cast<Property>(i)) {
+        case Property::AllVRegsAllocated:
+          ROS << "AllVRegsAllocated ";
+          break;
+        default:
+          // TODO: Implement IsSSA/TracksLiveness when we make them properties.
+          llvm_unreachable("Unexpected value for property enum");
+      }
+    }
+  }
+#endif
+}
+
 //===----------------------------------------------------------------------===//
 // MachineFunction implementation
 //===----------------------------------------------------------------------===//
@@ -370,6 +392,9 @@ StringRef MachineFunction::getName() const {
 
 void MachineFunction::print(raw_ostream &OS, SlotIndexes *Indexes) const {
   OS << "# Machine code for function " << getName() << ": ";
+  OS << "Properties: <";
+  getProperties().print(OS);
+  OS << "> : ";
   if (RegInfo) {
     OS << (RegInfo->isSSA() ? "SSA" : "Post SSA");
     if (!RegInfo->tracksLiveness())
