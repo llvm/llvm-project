@@ -19,7 +19,7 @@ define i32 @main() nounwind readonly !dbg !1 {
   %v2 = ptrtoint %struct.test* %v1 to i64 ; <i64> [#uses=1]
   %v3 = sub i64 %v2, ptrtoint ([10 x %struct.test]* @TestArray to i64) ; <i64> [#uses=1]
   store i64 %v3, i64* %diff1, align 8
-  ret i32 4
+  ret i32 4, !dbg !DILocation(scope: !1)
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
