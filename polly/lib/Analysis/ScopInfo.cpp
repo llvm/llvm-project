@@ -2143,7 +2143,7 @@ void Scop::removeErrorBlockDomains(ScopDetection &SD, DominatorTree &DT,
       removeDomains(BB);
 }
 
-void Scop::buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
+bool Scop::buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
                         LoopInfo &LI) {
 
   bool IsOnlyNonAffineRegion = SD.isNonAffineSubRegion(R, R);
@@ -2160,9 +2160,11 @@ void Scop::buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
   DomainMap[EntryBB] = S;
 
   if (IsOnlyNonAffineRegion)
-    return;
+    return true;
 
-  buildDomainsWithBranchConstraints(R, SD, DT, LI);
+  if (!buildDomainsWithBranchConstraints(R, SD, DT, LI))
+    return false;
+
   propagateDomainConstraints(R, SD, DT, LI);
 
   // Error blocks and blocks dominated by them have been assumed to never be
@@ -2174,9 +2176,10 @@ void Scop::buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
   // instructions in the error block which, if the error block is not modeled,
   // can themselves not be constructed properly.
   removeErrorBlockDomains(SD, DT, LI);
+  return true;
 }
 
-void Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
+bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
                                              DominatorTree &DT, LoopInfo &LI) {
   auto &BoxedLoops = *SD.getBoxedLoops(&getRegion());
 
@@ -2199,7 +2202,8 @@ void Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
     if (RN->isSubRegion()) {
       Region *SubRegion = RN->getNodeAs<Region>();
       if (!SD.isNonAffineSubRegion(SubRegion, &getRegion())) {
-        buildDomainsWithBranchConstraints(SubRegion, SD, DT, LI);
+        if (!buildDomainsWithBranchConstraints(SubRegion, SD, DT, LI))
+          return false;
         continue;
       }
     }
@@ -2279,25 +2283,24 @@ void Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
       // successor block.
       isl_set *&SuccDomain = DomainMap[SuccBB];
 
-      if (HasComplexCFG) {
-        isl_set_free(CondSet);
-        continue;
-      }
       if (!SuccDomain)
         SuccDomain = CondSet;
       else
-        SuccDomain = isl_set_union(SuccDomain, CondSet);
+        SuccDomain = isl_set_coalesce(isl_set_union(SuccDomain, CondSet));
 
-      SuccDomain = isl_set_coalesce(SuccDomain);
-      if (isl_set_n_basic_set(SuccDomain) > MaxConjunctsInDomain) {
-        auto *Empty = isl_set_empty(isl_set_get_space(SuccDomain));
-        isl_set_free(SuccDomain);
-        SuccDomain = Empty;
-        HasComplexCFG = true;
-        invalidate(COMPLEXITY, DebugLoc());
-      }
+      // Check if the maximal number of domain conjuncts was reached.
+      // In case this happens we will clean up and bail.
+      if (isl_set_n_basic_set(SuccDomain) <= MaxConjunctsInDomain)
+        continue;
+
+      invalidate(COMPLEXITY, DebugLoc());
+      while (++u < ConditionSets.size())
+        isl_set_free(ConditionSets[u]);
+      return false;
     }
   }
+
+  return true;
 }
 
 /// @brief Return the domain for @p BB wrt @p DomainMap.
@@ -2771,10 +2774,9 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
            unsigned MaxLoopDepth)
     : SE(&ScalarEvolution), R(R), IsOptimized(false),
       HasSingleExitEdge(R.getExitingBlock()), HasErrorBlock(false),
-      HasComplexCFG(false), MaxLoopDepth(MaxLoopDepth),
-      IslCtx(isl_ctx_alloc(), isl_ctx_free), Context(nullptr),
-      Affinator(this, LI), AssumedContext(nullptr), InvalidContext(nullptr),
-      Schedule(nullptr) {
+      MaxLoopDepth(MaxLoopDepth), IslCtx(isl_ctx_alloc(), isl_ctx_free),
+      Context(nullptr), Affinator(this, LI), AssumedContext(nullptr),
+      InvalidContext(nullptr), Schedule(nullptr) {
   isl_options_set_on_error(getIslCtx(), ISL_ON_ERROR_ABORT);
   buildContext();
 }
@@ -2784,7 +2786,8 @@ void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, ScopDetection &SD,
   addUserAssumptions(AC, DT, LI);
   buildInvariantEquivalenceClasses(SD);
 
-  buildDomains(&R, SD, DT, LI);
+  if (!buildDomains(&R, SD, DT, LI))
+    return;
 
   // Remove empty and ignored statements.
   // Exit early in case there are no executable statements left in this scop.

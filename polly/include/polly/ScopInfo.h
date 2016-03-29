@@ -1287,9 +1287,6 @@ private:
   /// @brief Flag to remember if the SCoP contained an error block or not.
   bool HasErrorBlock;
 
-  /// @brief Flag to indicate if the SCop has a complex control flow.
-  bool HasComplexCFG;
-
   /// Max loop depth.
   unsigned MaxLoopDepth;
 
@@ -1436,7 +1433,9 @@ private:
   /// @param SD The ScopDetection analysis for the current function.
   /// @param DT The DominatorTree for the current function.
   /// @param LI The LoopInfo for the current function.
-  void buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
+  ///
+  /// @returns True if there was no problem and false otherwise.
+  bool buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
                                          DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Propagate the domain constraints through the region @p R.
@@ -1463,7 +1462,9 @@ private:
   /// @param SD The ScopDetection analysis for the current function.
   /// @param DT The DominatorTree for the current function.
   /// @param LI The LoopInfo for the current function.
-  void buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
+  ///
+  /// @returns True if there was no problem and false otherwise.
+  bool buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
                     LoopInfo &LI);
 
   /// @brief Check if a region part should be represented in the SCoP or not.

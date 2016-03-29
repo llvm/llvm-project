@@ -283,19 +283,13 @@ private:
   LLVMContext &Context;
   uint64_t NextIndex;
   SmallDenseMap<void *, std::pair<OwnerTy, uint64_t>, 4> UseMap;
-  /// Flag that can be set to false if this metadata should not be
-  /// RAUW'ed, e.g. if it is used as the key of a map.
-  bool CanReplace;
 
 public:
   ReplaceableMetadataImpl(LLVMContext &Context)
-      : Context(Context), NextIndex(0), CanReplace(true) {}
+      : Context(Context), NextIndex(0) {}
   ~ReplaceableMetadataImpl() {
     assert(UseMap.empty() && "Cannot destroy in-use replaceable metadata");
   }
-
-  /// Set the CanReplace flag to the given value.
-  void setCanReplace(bool Replaceable) { CanReplace = Replaceable; }
 
   LLVMContext &getContext() const { return Context; }
 
@@ -906,29 +900,13 @@ public:
     Context.getReplaceableUses()->replaceAllUsesWith(MD);
   }
 
-  /// Set the CanReplace flag to the given value.
-  void setCanReplace(bool Replaceable) {
-    Context.getReplaceableUses()->setCanReplace(Replaceable);
-  }
-
   /// \brief Resolve cycles.
   ///
   /// Once all forward declarations have been resolved, force cycles to be
-  /// resolved. This interface is used when there are no more temporaries,
-  /// and thus unresolved nodes are part of cycles and no longer need RAUW
-  /// support.
+  /// resolved.
   ///
   /// \pre No operands (or operands' operands, etc.) have \a isTemporary().
-  void resolveCycles() { resolveRecursivelyImpl(/* AllowTemps */ false); }
-
-  /// \brief Resolve cycles while ignoring temporaries.
-  ///
-  /// This drops RAUW support for any temporaries, which can no longer
-  /// be uniqued.
-  ///
-  void resolveNonTemporaries() {
-    resolveRecursivelyImpl(/* AllowTemps */ true);
-  }
+  void resolveCycles();
 
   /// \brief Replace a temporary node with a permanent one.
   ///
@@ -985,11 +963,6 @@ private:
   void resolveAfterOperandChange(Metadata *Old, Metadata *New);
   void decrementUnresolvedOperandCount();
   unsigned countUnresolvedOperands();
-
-  /// Resolve cycles recursively. If \p AllowTemps is true, then any temporary
-  /// metadata is ignored, otherwise it asserts when encountering temporary
-  /// metadata.
-  void resolveRecursivelyImpl(bool AllowTemps);
 
   /// \brief Mutate this to be "uniqued".
   ///

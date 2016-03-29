@@ -2,7 +2,6 @@
 ; allowing dead stripping to be performed, and that the appropriate runtime
 ; routines are invoked.
 
-; REQUIRES: ld64_live_support
 ; RUN: opt < %s -asan -asan-module -S | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

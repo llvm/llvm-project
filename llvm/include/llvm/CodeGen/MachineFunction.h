@@ -143,6 +143,8 @@ public:
     return !V.Properties.test(Properties);
   }
 
+  void print(raw_ostream &ROS) const;
+
 private:
   BitVector Properties =
       BitVector(static_cast<unsigned>(Property::LastProperty));

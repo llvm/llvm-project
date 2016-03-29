@@ -32,7 +32,6 @@
 
 /* these are temporary issues to be dealt with */
 #define KMP_USE_PRCTL 0
-#define KMP_USE_POOLED_ALLOC 0
 
 #if KMP_OS_WINDOWS
 #include <process.h>
@@ -519,35 +518,6 @@ __kmp_print_team_storage_map( const char *header, kmp_team_t *team, int team_id,
                              sizeof(dispatch_shared_info_t) * num_disp_buff, "%s_%d.t_disp_buffer",
                              header, team_id );
 
-    /*
-    __kmp_print_storage_map_gtid( -1, &team->t.t_set_nproc[0], &team->t.t_set_nproc[num_thr],
-                             sizeof(int) * num_thr, "%s_%d.t_set_nproc", header, team_id );
-
-    __kmp_print_storage_map_gtid( -1, &team->t.t_set_dynamic[0], &team->t.t_set_dynamic[num_thr],
-                             sizeof(int) * num_thr, "%s_%d.t_set_dynamic", header, team_id );
-
-    __kmp_print_storage_map_gtid( -1, &team->t.t_set_nested[0], &team->t.t_set_nested[num_thr],
-                             sizeof(int) * num_thr, "%s_%d.t_set_nested", header, team_id );
-
-    __kmp_print_storage_map_gtid( -1, &team->t.t_set_blocktime[0], &team->t.t_set_blocktime[num_thr],
-                             sizeof(int) * num_thr, "%s_%d.t_set_nproc", header, team_id );
-
-    __kmp_print_storage_map_gtid( -1, &team->t.t_set_bt_intervals[0], &team->t.t_set_bt_intervals[num_thr],
-                             sizeof(int) * num_thr, "%s_%d.t_set_dynamic", header, team_id );
-
-    __kmp_print_storage_map_gtid( -1, &team->t.t_set_bt_set[0], &team->t.t_set_bt_set[num_thr],
-                             sizeof(int) * num_thr, "%s_%d.t_set_nested", header, team_id );
-
-    //__kmp_print_storage_map_gtid( -1, &team->t.t_set_max_active_levels[0], &team->t.t_set_max_active_levels[num_thr],
-    //                        sizeof(int) * num_thr, "%s_%d.t_set_max_active_levels", header, team_id );
-
-    __kmp_print_storage_map_gtid( -1, &team->t.t_set_sched[0], &team->t.t_set_sched[num_thr],
-                             sizeof(kmp_r_sched_t) * num_thr, "%s_%d.t_set_sched", header, team_id );
-#if OMP_40_ENABLED
-    __kmp_print_storage_map_gtid( -1, &team->t.t_set_proc_bind[0], &team->t.t_set_proc_bind[num_thr],
-                             sizeof(kmp_proc_bind_t) * num_thr, "%s_%d.t_set_proc_bind", header, team_id );
-#endif
-    */
 
     __kmp_print_storage_map_gtid( -1, &team->t.t_taskq, &team->t.t_copypriv_data,
                              sizeof(kmp_taskq_t), "%s_%d.t_taskq", header, team_id );
@@ -2777,7 +2747,6 @@ __kmp_get_schedule( int gtid, kmp_sched_t * kind, int * chunk )
 
     thread = __kmp_threads[ gtid ];
 
-    //th_type = thread->th.th_team->t.t_set_sched[ thread->th.th_info.ds.ds_tid ].r_sched_type;
     th_type = thread->th.th_current_task->td_icvs.sched.r_sched_type;
 
     switch ( th_type ) {
@@ -2813,7 +2782,6 @@ __kmp_get_schedule( int gtid, kmp_sched_t * kind, int * chunk )
         KMP_FATAL( UnknownSchedulingType, th_type );
     }
 
-    //*chunk = thread->th.th_team->t.t_set_sched[ thread->th.th_info.ds.ds_tid ].chunk;
     *chunk = thread->th.th_current_task->td_icvs.sched.chunk;
 }
 
@@ -3008,41 +2976,11 @@ __kmp_allocate_team_arrays(kmp_team_t *team, int max_nth)
 {
     int i;
     int num_disp_buff = max_nth > 1 ? KMP_MAX_DISP_BUF : 2;
-#if KMP_USE_POOLED_ALLOC
-    // AC: TODO: fix bug here: size of t_disp_buffer should not be multiplied by max_nth!
-    char *ptr = __kmp_allocate(max_nth *
-                            ( sizeof(kmp_info_t*) + sizeof(dispatch_shared_info_t)*num_disp_buf
-                               + sizeof(kmp_disp_t) + sizeof(int)*6
-                               //+ sizeof(int)
-                               + sizeof(kmp_r_sched_t)
-                               + sizeof(kmp_taskdata_t) ) );
-
-    team->t.t_threads          = (kmp_info_t**) ptr; ptr += sizeof(kmp_info_t*) * max_nth;
-    team->t.t_disp_buffer      = (dispatch_shared_info_t*) ptr;
-                                   ptr += sizeof(dispatch_shared_info_t) * num_disp_buff;
-    team->t.t_dispatch         = (kmp_disp_t*) ptr; ptr += sizeof(kmp_disp_t) * max_nth;
-    team->t.t_set_nproc        = (int*) ptr; ptr += sizeof(int) * max_nth;
-    team->t.t_set_dynamic      = (int*) ptr; ptr += sizeof(int) * max_nth;
-    team->t.t_set_nested       = (int*) ptr; ptr += sizeof(int) * max_nth;
-    team->t.t_set_blocktime    = (int*) ptr; ptr += sizeof(int) * max_nth;
-    team->t.t_set_bt_intervals = (int*) ptr; ptr += sizeof(int) * max_nth;
-    team->t.t_set_bt_set       = (int*) ptr;
-    ptr += sizeof(int) * max_nth;
-    //team->t.t_set_max_active_levels = (int*) ptr; ptr += sizeof(int) * max_nth;
-    team->t.t_set_sched        = (kmp_r_sched_t*) ptr;
-    ptr += sizeof(kmp_r_sched_t) * max_nth;
-    team->t.t_implicit_task_taskdata = (kmp_taskdata_t*) ptr;
-    ptr += sizeof(kmp_taskdata_t) * max_nth;
-#else
-
     team->t.t_threads = (kmp_info_t**) __kmp_allocate( sizeof(kmp_info_t*) * max_nth );
     team->t.t_disp_buffer = (dispatch_shared_info_t*)
         __kmp_allocate( sizeof(dispatch_shared_info_t) * num_disp_buff );
     team->t.t_dispatch = (kmp_disp_t*) __kmp_allocate( sizeof(kmp_disp_t) * max_nth );
-    //team->t.t_set_max_active_levels = (int*) __kmp_allocate( sizeof(int) * max_nth );
-    //team->t.t_set_sched = (kmp_r_sched_t*) __kmp_allocate( sizeof(kmp_r_sched_t) * max_nth );
     team->t.t_implicit_task_taskdata = (kmp_taskdata_t*) __kmp_allocate( sizeof(kmp_taskdata_t) * max_nth );
-#endif
     team->t.t_max_nproc = max_nth;
 
     /* setup dispatch buffers */
@@ -3065,18 +3003,12 @@ __kmp_free_team_arrays(kmp_team_t *team) {
         }; // if
     }; // for
     __kmp_free(team->t.t_threads);
-    #if !KMP_USE_POOLED_ALLOC
-        __kmp_free(team->t.t_disp_buffer);
-        __kmp_free(team->t.t_dispatch);
-        //__kmp_free(team->t.t_set_max_active_levels);
-        //__kmp_free(team->t.t_set_sched);
-        __kmp_free(team->t.t_implicit_task_taskdata);
-    #endif
+    __kmp_free(team->t.t_disp_buffer);
+    __kmp_free(team->t.t_dispatch);
+    __kmp_free(team->t.t_implicit_task_taskdata);
     team->t.t_threads     = NULL;
     team->t.t_disp_buffer = NULL;
     team->t.t_dispatch    = NULL;
-    //team->t.t_set_sched   = 0;
-    //team->t.t_set_max_active_levels = 0;
     team->t.t_implicit_task_taskdata = 0;
 }
 
@@ -3084,13 +3016,9 @@ static void
 __kmp_reallocate_team_arrays(kmp_team_t *team, int max_nth) {
     kmp_info_t **oldThreads = team->t.t_threads;
 
-    #if !KMP_USE_POOLED_ALLOC
-        __kmp_free(team->t.t_disp_buffer);
-        __kmp_free(team->t.t_dispatch);
-        //__kmp_free(team->t.t_set_max_active_levels);
-        //__kmp_free(team->t.t_set_sched);
-        __kmp_free(team->t.t_implicit_task_taskdata);
-    #endif
+    __kmp_free(team->t.t_disp_buffer);
+    __kmp_free(team->t.t_dispatch);
+    __kmp_free(team->t.t_implicit_task_taskdata);
     __kmp_allocate_team_arrays(team, max_nth);
 
     KMP_MEMCPY(team->t.t_threads, oldThreads, team->t.t_nproc * sizeof (kmp_info_t*));

@@ -50,7 +50,11 @@ Value *DbgInfoIntrinsic::StripCast(Value *C) {
   return dyn_cast<GlobalVariable>(C);
 }
 
-static Value *getValueImpl(Value *Op) {
+Value *DbgInfoIntrinsic::getVariableLocation(bool AllowNullOp) const {
+  Value *Op = getArgOperand(0);
+  if (AllowNullOp && !Op)
+    return nullptr;
+
   auto *MD = cast<MetadataAsValue>(Op)->getMetadata();
   if (auto *V = dyn_cast<ValueAsMetadata>(MD))
     return V->getValue();
@@ -59,27 +63,6 @@ static Value *getValueImpl(Value *Op) {
   assert(!cast<MDNode>(MD)->getNumOperands() && "Expected an empty MDNode");
   return nullptr;
 }
-
-//===----------------------------------------------------------------------===//
-/// DbgDeclareInst - This represents the llvm.dbg.declare instruction.
-///
-
-Value *DbgDeclareInst::getAddress() const {
-  if (!getArgOperand(0))
-    return nullptr;
-
-  return getValueImpl(getArgOperand(0));
-}
-
-//===----------------------------------------------------------------------===//
-/// DbgValueInst - This represents the llvm.dbg.value instruction.
-///
-
-const Value *DbgValueInst::getValue() const {
-  return const_cast<DbgValueInst *>(this)->getValue();
-}
-
-Value *DbgValueInst::getValue() { return getValueImpl(getArgOperand(0)); }
 
 int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
                                                StringRef Name) {
