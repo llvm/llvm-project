@@ -4674,8 +4674,16 @@ ClangASTContext::GetBitSize (lldb::opaque_compiler_type_t type, ExecutionContext
     if (GetCompleteType (type))
     {
         clang::QualType qual_type(GetCanonicalQualType(type));
-        switch (qual_type->getTypeClass())
+        const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+        switch (type_class)
         {
+            case clang::Type::Record:
+                if (GetCompleteType(type))
+                    return getASTContext()->getTypeSize(qual_type);
+                else
+                    return 0;
+                break;
+
             case clang::Type::ObjCInterface:
             case clang::Type::ObjCObject:
             {

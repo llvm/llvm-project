@@ -25,21 +25,6 @@
 # CHECK-NEXT:     Initial: 0x40008
 #                          ^-- glb1
 # CHECK-NEXT:   }
-# CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address: 0x20014
-# CHECK-NEXT:     Access: -32732
-# CHECK-NEXT:     Initial: 0x0
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address: 0x20018
-# CHECK-NEXT:     Access: -32728
-# CHECK-NEXT:     Initial: 0x0
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address: 0x2001C
-# CHECK-NEXT:     Access: -32724
-# CHECK-NEXT:     Initial: 0x0
-# CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
   .text

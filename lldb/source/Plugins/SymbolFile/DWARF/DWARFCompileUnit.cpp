@@ -311,45 +311,11 @@ DWARFCompileUnit::AddCompileUnitDIE(DWARFDebugInfoEntry& die)
 {
     assert (m_die_array.empty() && "Compile unit DIE already added");
     AddDIE(die);
-    
-    DWARFDebugInfoEntry& cu_die = m_die_array.front();
 
-    const char* dwo_name = cu_die.GetAttributeValueAsString(m_dwarf2Data,
-                                                            this,
-                                                            DW_AT_GNU_dwo_name,
-                                                            nullptr);
-    if (!dwo_name)
+    const DWARFDebugInfoEntry &cu_die = m_die_array.front();
+    std::unique_ptr<SymbolFileDWARFDwo> dwo_symbol_file = m_dwarf2Data->GetDwoSymbolFileForCompileUnit(*this, cu_die);
+    if (!dwo_symbol_file)
         return;
-
-    FileSpec dwo_file(dwo_name, true);
-    if (dwo_file.IsRelative())
-    {
-        const char* comp_dir = cu_die.GetAttributeValueAsString(m_dwarf2Data,
-                                                                this,
-                                                                DW_AT_comp_dir,
-                                                                nullptr);
-        if (!comp_dir)
-            return;
-
-        dwo_file.SetFile(comp_dir, true);
-        dwo_file.AppendPathComponent(dwo_name);
-    }
-
-    if (!dwo_file.Exists())
-        return;
-
-    DataBufferSP dwo_file_data_sp;
-    lldb::offset_t dwo_file_data_offset = 0;
-    ObjectFileSP dwo_obj_file = ObjectFile::FindPlugin(m_dwarf2Data->GetObjectFile()->GetModule(),
-                                                       &dwo_file,
-                                                       0 /* file_offset */,
-                                                       dwo_file.GetByteSize(),
-                                                       dwo_file_data_sp,
-                                                       dwo_file_data_offset);
-    if (dwo_obj_file == nullptr)
-        return;
-
-    std::unique_ptr<SymbolFileDWARFDwo> dwo_symbol_file(new SymbolFileDWARFDwo(dwo_obj_file, this));
 
     DWARFCompileUnit* dwo_cu = dwo_symbol_file->GetCompileUnit();
     if (!dwo_cu)

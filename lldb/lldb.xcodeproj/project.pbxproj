@@ -634,6 +634,8 @@
 		26FFC19914FC072100087D58 /* AuxVector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26FFC19314FC072100087D58 /* AuxVector.cpp */; };
 		26FFC19B14FC072100087D58 /* DYLDRendezvous.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26FFC19514FC072100087D58 /* DYLDRendezvous.cpp */; };
 		26FFC19D14FC072100087D58 /* DynamicLoaderPOSIXDYLD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26FFC19714FC072100087D58 /* DynamicLoaderPOSIXDYLD.cpp */; };
+		304B2E461CAAA57B007829FE /* ClangUtil.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3032B1B61CAAA3D1004BE1AB /* ClangUtil.cpp */; };
+		30B38A001CAAA6D7009524E3 /* ClangUtil.h in Headers */ = {isa = PBXBuildFile; fileRef = 3032B1B91CAAA400004BE1AB /* ClangUtil.h */; };
 		30DED5DE1B4ECB49004CC508 /* MainLoopPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 30DED5DC1B4ECB17004CC508 /* MainLoopPosix.cpp */; };
 		332CCB181AFF41620034D4C4 /* SBLanguageRuntime.h in Headers */ = {isa = PBXBuildFile; fileRef = 3392EBB71AFF402200858B9F /* SBLanguageRuntime.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		33E5E8471A674FB60024ED68 /* StringConvert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33E5E8411A672A240024ED68 /* StringConvert.cpp */; };
@@ -2173,6 +2175,8 @@
 		26FFC19614FC072100087D58 /* DYLDRendezvous.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DYLDRendezvous.h; sourceTree = "<group>"; };
 		26FFC19714FC072100087D58 /* DynamicLoaderPOSIXDYLD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DynamicLoaderPOSIXDYLD.cpp; sourceTree = "<group>"; };
 		26FFC19814FC072100087D58 /* DynamicLoaderPOSIXDYLD.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DynamicLoaderPOSIXDYLD.h; sourceTree = "<group>"; };
+		3032B1B61CAAA3D1004BE1AB /* ClangUtil.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ClangUtil.cpp; path = source/Symbol/ClangUtil.cpp; sourceTree = "<group>"; };
+		3032B1B91CAAA400004BE1AB /* ClangUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ClangUtil.h; path = include/lldb/Symbol/ClangUtil.h; sourceTree = "<group>"; };
 		30DED5DC1B4ECB17004CC508 /* MainLoopPosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MainLoopPosix.cpp; sourceTree = "<group>"; };
 		33064C991A5C7A330033D415 /* UriParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UriParser.cpp; path = source/Utility/UriParser.cpp; sourceTree = "<group>"; };
 		33064C9B1A5C7A490033D415 /* UriParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UriParser.h; path = source/Utility/UriParser.h; sourceTree = "<group>"; };
@@ -4368,6 +4372,8 @@
 		26BC7C4B10F1B6C100F91463 /* Symbol */ = {
 			isa = PBXGroup;
 			children = (
+				3032B1B91CAAA400004BE1AB /* ClangUtil.h */,
+				3032B1B61CAAA3D1004BE1AB /* ClangUtil.cpp */,
 				6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */,
 				6D0F613C1C80AA8900A4ECEE /* DebugMacros.h */,
 				6D0F613D1C80AA8900A4ECEE /* JavaASTContext.h */,
@@ -5949,6 +5955,7 @@
 				AF6335E31C87B21E00F7D554 /* SymbolFilePDB.h in Headers */,
 				4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */,
 				26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */,
+				30B38A001CAAA6D7009524E3 /* ClangUtil.h in Headers */,
 				AF8AD62F1BEC28A400150209 /* PlatformAppleTVSimulator.h in Headers */,
 				AF8AD63A1BEC28C400150209 /* PlatformRemoteAppleWatch.h in Headers */,
 				257906651BD5AFD000178368 /* Acceptor.h in Headers */,
@@ -6646,6 +6653,7 @@
 				2689006B13353E0E00698AC0 /* IRForTarget.cpp in Sources */,
 				AF2BA6EC1A707E3400C5248A /* UriParser.cpp in Sources */,
 				2689006D13353E0E00698AC0 /* IRExecutionUnit.cpp in Sources */,
+				304B2E461CAAA57B007829FE /* ClangUtil.cpp in Sources */,
 				2689006E13353E1A00698AC0 /* File.cpp in Sources */,
 				49724D991AD6ED390033C538 /* RenderScriptRuntime.cpp in Sources */,
 				2689006F13353E1A00698AC0 /* FileSpec.cpp in Sources */,

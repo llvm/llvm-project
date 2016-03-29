@@ -127,6 +127,11 @@ public:
     bool
     GetAutoApplyFixIts();
 
+    bool
+    GetTopLevel();
+
+    void
+    SetTopLevel(bool b = true);
 
 protected:
 

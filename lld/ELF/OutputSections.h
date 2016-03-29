@@ -13,6 +13,7 @@
 #include "Config.h"
 
 #include "lld/Core/LLVM.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELF.h"
 
@@ -124,6 +125,8 @@ private:
   std::vector<const SymbolBody *> Entries;
   uint32_t TlsIndexOff = -1;
   uint32_t MipsLocalEntries = 0;
+  // Output sections referenced by MIPS GOT relocations.
+  llvm::SmallPtrSet<const OutputSectionBase<ELFT> *, 10> MipsOutSections;
   llvm::DenseMap<uintX_t, size_t> MipsLocalGotPos;
 
   uintX_t getMipsLocalEntryAddr(uintX_t EntryValue);

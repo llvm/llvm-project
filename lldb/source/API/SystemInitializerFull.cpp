@@ -42,6 +42,9 @@
 #include "Plugins/ABI/SysV-x86_64/ABISysV_x86_64.h"
 #include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
 #include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
+#include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
+#include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
+#include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
 #include "Plugins/InstrumentationRuntime/AddressSanitizer/AddressSanitizerRuntime.h"
 #include "Plugins/InstrumentationRuntime/ThreadSanitizer/ThreadSanitizerRuntime.h"
@@ -81,6 +84,7 @@
 #include "Plugins/Platform/MacOSX/PlatformAppleWatchSimulator.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteAppleTV.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteAppleWatch.h"
+#include "Plugins/DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernel.h"
 #endif
 
 #if defined(__FreeBSD__)
@@ -345,6 +349,7 @@ SystemInitializerFull::Initialize()
     PlatformAppleWatchSimulator::Initialize();
     PlatformRemoteAppleTV::Initialize();
     PlatformRemoteAppleWatch::Initialize();
+    DynamicLoaderDarwinKernel::Initialize();
 #endif
     //----------------------------------------------------------------------
     // Platform agnostic plugins
@@ -352,7 +357,10 @@ SystemInitializerFull::Initialize()
     platform_gdb_server::PlatformRemoteGDBServer::Initialize();
 
     process_gdb_remote::ProcessGDBRemote::Initialize();
+    DynamicLoaderMacOSXDYLD::Initialize();
+    DynamicLoaderPOSIXDYLD::Initialize();
     DynamicLoaderStatic::Initialize();
+    DynamicLoaderWindowsDYLD::Initialize();
 
     // Scan for any system or user LLDB plug-ins
     PluginManager::Initialize();
@@ -454,6 +462,7 @@ SystemInitializerFull::Terminate()
     ObjCPlusPlusLanguage::Terminate();
 
 #if defined(__APPLE__)
+    DynamicLoaderDarwinKernel::Terminate();
     ProcessMachCore::Terminate();
     ProcessKDP::Terminate();
     SymbolVendorMacOSX::Terminate();
@@ -470,7 +479,10 @@ SystemInitializerFull::Terminate()
 
     platform_gdb_server::PlatformRemoteGDBServer::Terminate();
     process_gdb_remote::ProcessGDBRemote::Terminate();
+    DynamicLoaderMacOSXDYLD::Terminate();
+    DynamicLoaderPOSIXDYLD::Terminate();
     DynamicLoaderStatic::Terminate();
+    DynamicLoaderWindowsDYLD::Terminate();
 
 #ifndef LLDB_DISABLE_PYTHON
     OperatingSystemPython::Terminate();

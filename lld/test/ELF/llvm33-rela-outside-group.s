@@ -8,4 +8,4 @@
 
 	.section	.text._Z3fooIiEvv,"axG",@progbits,_Z3fooIiEvv,comdat
 _Z3fooIiEvv:
-	callq	bar
+	callq	bar@PLT

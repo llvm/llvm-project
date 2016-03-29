@@ -50,6 +50,7 @@ Clang-Tidy Checks
    misc-assert-side-effect
    misc-assign-operator-signature
    misc-bool-pointer-implicit-conversion
+   misc-dangling-handle
    misc-definitions-in-headers
    misc-forward-declaration-namespace
    misc-inaccurate-erase
@@ -89,6 +90,7 @@ Clang-Tidy Checks
    performance-faster-string-find
    performance-for-range-copy
    performance-implicit-cast-in-loop
+   performance-unnecessary-value-param
    performance-unnecessary-copy-initialization
    readability-braces-around-statements
    readability-container-size-empty

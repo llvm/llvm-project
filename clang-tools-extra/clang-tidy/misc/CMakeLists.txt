@@ -5,6 +5,7 @@ add_clang_library(clangTidyMiscModule
   AssertSideEffectCheck.cpp
   AssignOperatorSignatureCheck.cpp
   BoolPointerImplicitConversionCheck.cpp
+  DanglingHandleCheck.cpp
   DefinitionsInHeadersCheck.cpp
   ForwardDeclarationNamespaceCheck.cpp
   InaccurateEraseCheck.cpp
