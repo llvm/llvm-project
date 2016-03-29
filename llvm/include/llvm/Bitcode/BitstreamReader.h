@@ -17,6 +17,7 @@
 
 #include "llvm/Bitcode/BitCodes.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/StreamingMemoryObject.h"
 #include <climits>
 #include <string>
@@ -366,8 +367,7 @@ public:
     assert(getCurrentByteNo() < Limit && "Move cursor before lowering limit");
 
     // Round to word boundary.
-    if (Limit & (sizeof(word_t) - 1))
-      Limit += sizeof(word_t) - Limit & (sizeof(word_t) - 1);
+    Limit = alignTo(Limit, sizeof(word_t));
 
     // Only change size if the new one is lower.
     if (!Size || Size > Limit)
