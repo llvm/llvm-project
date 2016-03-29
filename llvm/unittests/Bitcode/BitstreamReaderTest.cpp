@@ -121,6 +121,7 @@ TEST(BitstreamReaderTest, setArtificialByteLimit) {
   SimpleBitstreamCursor Cursor(Reader);
 
   Cursor.setArtificialByteLimit(8);
+  EXPECT_EQ(8u, Cursor.getSizeIfKnown());
   while (!Cursor.AtEndOfStream())
     (void)Cursor.Read(1);
 
@@ -134,6 +135,7 @@ TEST(BitstreamReaderTest, setArtificialByteLimitNotWordBoundary) {
   SimpleBitstreamCursor Cursor(Reader);
 
   Cursor.setArtificialByteLimit(5);
+  EXPECT_EQ(8u, Cursor.getSizeIfKnown());
   while (!Cursor.AtEndOfStream())
     (void)Cursor.Read(1);
 
@@ -148,11 +150,13 @@ TEST(BitstreamReaderTest, setArtificialByteLimitPastTheEnd) {
 
   // The size of the memory object isn't known yet.  Set it too high and
   // confirm that we don't read too far.
-  Cursor.setArtificialByteLimit(20);
+  Cursor.setArtificialByteLimit(24);
+  EXPECT_EQ(24u, Cursor.getSizeIfKnown());
   while (!Cursor.AtEndOfStream())
     (void)Cursor.Read(1);
 
   EXPECT_EQ(12u, Cursor.getCurrentByteNo());
+  EXPECT_EQ(12u, Cursor.getSizeIfKnown());
 }
 
 TEST(BitstreamReaderTest, setArtificialByteLimitPastTheEndKnown) {
@@ -165,9 +169,11 @@ TEST(BitstreamReaderTest, setArtificialByteLimitPastTheEndKnown) {
   while (!Cursor.AtEndOfStream())
     (void)Cursor.Read(1);
   EXPECT_EQ(12u, Cursor.getCurrentByteNo());
+  EXPECT_EQ(12u, Cursor.getSizeIfKnown());
 
   Cursor.setArtificialByteLimit(20);
   EXPECT_TRUE(Cursor.AtEndOfStream());
+  EXPECT_EQ(12u, Cursor.getSizeIfKnown());
 }
 
 TEST(BitstreamReaderTest, readRecordWithBlobWhileStreaming) {
