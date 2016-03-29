@@ -34,17 +34,17 @@ for.end104:                                       ; preds = %for.cond.backedge
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
 !llvm.module.flags = !{!26}
-!llvm.dbg.sp = !{!0, !6, !9, !10}
+!llvm.dbg.cu = !{!2}
 
 !0 = distinct !DISubprogram(name: "idamax", line: 112, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !25, scope: !1, type: !3)
 !1 = !DIFile(filename: "/Volumes/Lalgate/work/llvm/projects/llvm-test/SingleSource/Benchmarks/CoyoteBench/lpbench.c", directory: "/private/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 127169)", isOptimized: true, emissionKind: 0, file: !25, enums: !8, retainedTypes: !8, subprograms: !8)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 127169)", isOptimized: true, emissionKind: 0, file: !25, subprograms: !8)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !6 = distinct !DISubprogram(name: "dscal", line: 206, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !25, scope: !1, type: !7)
-!7 = !DISubroutineType(types: !8)
-!8 = !{null}
+!7 = !DISubroutineType(types: !{null})
+!8 = !{!0, !6, !9, !10}
 !9 = distinct !DISubprogram(name: "daxpy", line: 230, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !25, scope: !1, type: !7)
 !10 = distinct !DISubprogram(name: "dgefa", line: 267, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !25, scope: !1, type: !7)
 !11 = !DILocation(line: 281, column: 9, scope: !12)

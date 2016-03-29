@@ -13,7 +13,6 @@ declare i32 @printf(i8*, ...)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!10}
-!llvm.dbg.sp = !{!0}
 
 !0 = distinct !DISubprogram(name: "foo", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !8, scope: !1, type: !3)
 !1 = !DIFile(filename: "m.c", directory: "/private/tmp")
