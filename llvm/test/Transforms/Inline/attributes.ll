@@ -241,6 +241,49 @@ define i32 @test_no-implicit-float3(i32 %i) noimplicitfloat {
 ; CHECK-NEXT: ret i32
 }
 
+; Check that no-jump-tables flag propagates from inlined callee to caller 
+
+define i32 @no-use-jump-tables_callee0(i32 %i) {
+  ret i32 %i
+; CHECK: @no-use-jump-tables_callee0(i32 %i) {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @no-use-jump-tables_callee1(i32 %i) "no-jump-tables"="true" {
+  ret i32 %i
+; CHECK: @no-use-jump-tables_callee1(i32 %i) [[NOUSEJUMPTABLES:#[0-9]+]] {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_no-use-jump-tables0(i32 %i) {
+  %1 = call i32 @no-use-jump-tables_callee0(i32 %i)
+  ret i32 %1
+; CHECK: @test_no-use-jump-tables0(i32 %i) {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_no-use-jump-tables1(i32 %i) {
+  %1 = call i32 @no-use-jump-tables_callee1(i32 %i)
+  ret i32 %1
+; CHECK: @test_no-use-jump-tables1(i32 %i) [[NOUSEJUMPTABLES]] {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_no-use-jump-tables2(i32 %i) "no-jump-tables"="true" {
+  %1 = call i32 @no-use-jump-tables_callee0(i32 %i)
+  ret i32 %1
+; CHECK: @test_no-use-jump-tables2(i32 %i) [[NOUSEJUMPTABLES]] {
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_no-use-jump-tables3(i32 %i) "no-jump-tables"="true" {
+  %1 = call i32 @no-use-jump-tables_callee1(i32 %i)
+  ret i32 %1
+; CHECK: @test_no-use-jump-tables3(i32 %i) [[NOUSEJUMPTABLES]] {
+; CHECK-NEXT: ret i32
+}
+
 ; CHECK: attributes [[FPMAD_FALSE]] = { "less-precise-fpmad"="false" }
 ; CHECK: attributes [[FPMAD_TRUE]] = { "less-precise-fpmad"="true" }
 ; CHECK: attributes [[NOIMPLICITFLOAT]] = { noimplicitfloat }
+; CHECK: attributes [[NOUSEJUMPTABLES]] = { "no-jump-tables"="true" }

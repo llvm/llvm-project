@@ -2324,7 +2324,7 @@ void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
   StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*SymTab));
   StringRef TargetName;
   const Elf_Sym *Sym = nullptr;
-  unsigned Width = (ELFT::Is64Bits) ? 16 : 8;
+  unsigned Width = ELFT::Is64Bits ? 16 : 8;
   unsigned Bias = ELFT::Is64Bits ? 8 : 0;
 
   // First two fields are bit width dependent. The rest of them are after are
@@ -2376,7 +2376,7 @@ static inline void printRelocHeader(raw_ostream &OS, bool Is64, bool IsRela) {
     OS << " Offset     Info    Type                Sym. Value  "
        << "Symbol's Name";
   if (IsRela)
-    OS << ((IsRela) ? " + Addend" : "");
+    OS << (IsRela ? " + Addend" : "");
   OS << "\n";
 }
 
@@ -2756,9 +2756,9 @@ bool GNUStyle<ELFT>::checkPTDynamic(const Elf_Phdr &Phdr, const Elf_Shdr &Sec) {
 
 template <class ELFT>
 void GNUStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
-  unsigned Bias = (ELFT::Is64Bits) ? 8 : 0;
-  unsigned Width = (ELFT::Is64Bits) ? 18 : 10;
-  unsigned SizeWidth = (ELFT::Is64Bits) ? 8 : 7;
+  unsigned Bias = ELFT::Is64Bits ? 8 : 0;
+  unsigned Width = ELFT::Is64Bits ? 18 : 10;
+  unsigned SizeWidth = ELFT::Is64Bits ? 8 : 7;
   std::string Type, Offset, VMA, LMA, FileSz, MemSz, Flag, Align;
 
   const Elf_Ehdr *Header = Obj->getHeader();
@@ -2829,7 +2829,7 @@ void GNUStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela R,
                                             bool IsRela) {
   SmallString<32> RelocName;
   StringRef SymbolName;
-  unsigned Width = (ELFT::Is64Bits) ? 16 : 8;
+  unsigned Width = ELFT::Is64Bits ? 16 : 8;
   unsigned Bias = ELFT::Is64Bits ? 8 : 0;
   // First two fields are bit width dependent. The rest of them are after are
   // fixed width.

@@ -90,7 +90,10 @@ void FastISel::ArgListEntry::setAttributes(ImmutableCallSite *CS,
   IsInAlloca = CS->paramHasAttr(AttrIdx, Attribute::InAlloca);
   IsReturned = CS->paramHasAttr(AttrIdx, Attribute::Returned);
   IsSwiftSelf = CS->paramHasAttr(AttrIdx, Attribute::SwiftSelf);
+<<<<<<< HEAD
   IsSwiftError = CS->paramHasAttr(AttrIdx, Attribute::SwiftError);
+=======
+>>>>>>> mirror/master
   Alignment = CS->getParamAlignment(AttrIdx);
 }
 
@@ -961,8 +964,11 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
       Flags.setSRet();
     if (Arg.IsSwiftSelf)
       Flags.setSwiftSelf();
+<<<<<<< HEAD
     if (Arg.IsSwiftError)
       Flags.setSwiftError();
+=======
+>>>>>>> mirror/master
     if (Arg.IsByVal)
       Flags.setByVal();
     if (Arg.IsInAlloca) {
