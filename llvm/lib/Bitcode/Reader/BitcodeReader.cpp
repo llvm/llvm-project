@@ -267,14 +267,6 @@ public:
 
   void setStripDebugInfo() override;
 
-  /// Save the mapping between the metadata values and the corresponding
-  /// value id that were recorded in the MetadataList during parsing. If
-  /// OnlyTempMD is true, then only record those entries that are still
-  /// temporary metadata. This interface is used when metadata linking is
-  /// performed as a postpass, such as during function importing.
-  void saveMetadataList(DenseMap<const Metadata *, unsigned> &MetadataToIDs,
-                        bool OnlyTempMD) override;
-
 private:
   /// Parse the "IDENTIFICATION_BLOCK_ID" block, populate the
   // ProducerIdentification data member, and do some basic enforcement on the
@@ -3148,36 +3140,6 @@ std::error_code BitcodeReader::materializeMetadata() {
 }
 
 void BitcodeReader::setStripDebugInfo() { StripDebugInfo = true; }
-
-void BitcodeReader::saveMetadataList(
-    DenseMap<const Metadata *, unsigned> &MetadataToIDs, bool OnlyTempMD) {
-  for (unsigned ID = 0; ID < MetadataList.size(); ++ID) {
-    Metadata *MD = MetadataList[ID];
-    auto *N = dyn_cast_or_null<MDNode>(MD);
-    assert((!N || (N->isResolved() || N->isTemporary())) &&
-           "Found non-resolved non-temp MDNode while saving metadata");
-    // Save all values if !OnlyTempMD, otherwise just the temporary metadata.
-    // Note that in the !OnlyTempMD case we need to save all Metadata, not
-    // just MDNode, as we may have references to other types of module-level
-    // metadata (e.g. ValueAsMetadata) from instructions.
-    if (!OnlyTempMD || (N && N->isTemporary())) {
-      // Will call this after materializing each function, in order to
-      // handle remapping of the function's instructions/metadata.
-      auto IterBool = MetadataToIDs.insert(std::make_pair(MD, ID));
-      // See if we already have an entry in that case.
-      if (OnlyTempMD && !IterBool.second) {
-        assert(IterBool.first->second == ID &&
-               "Inconsistent metadata value id");
-        continue;
-      }
-      if (N && N->isTemporary())
-        // Ensure that we assert if someone tries to RAUW this temporary
-        // metadata while it is the key of a map. The flag will be set back
-        // to true when the saved metadata list is destroyed.
-        N->setCanReplace(false);
-    }
-  }
-}
 
 /// When we see the block for a function body, remember where it is and then
 /// skip it.  This lets us lazily deserialize the functions.
