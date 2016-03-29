@@ -101,7 +101,8 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
   Lto.reset(new BitcodeCompiler);
   for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles)
     Lto->add(*F);
-  std::unique_ptr<ObjectFile<ELFT>> Obj = Lto->compile<ELFT>();
+  std::unique_ptr<InputFile> IF = Lto->compile();
+  ObjectFile<ELFT> *Obj = cast<ObjectFile<ELFT>>(IF.release());
 
   // Replace bitcode symbols.
   llvm::DenseSet<StringRef> DummyGroups;
@@ -113,7 +114,7 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
       continue;
     Sym->Body = Body;
   }
-  ObjectFiles.push_back(std::move(Obj));
+  ObjectFiles.emplace_back(Obj);
 }
 
 // Add an undefined symbol.

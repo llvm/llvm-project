@@ -50,6 +50,7 @@ Clang-Tidy Checks
    misc-assert-side-effect
    misc-assign-operator-signature
    misc-bool-pointer-implicit-conversion
+   misc-dangling-handle
    misc-definitions-in-headers
    misc-forward-declaration-namespace
    misc-inaccurate-erase

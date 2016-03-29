@@ -32,12 +32,12 @@ namespace lld {
 namespace elf {
 
 class BitcodeFile;
-template <class ELFT> class ObjectFile;
+class InputFile;
 
 class BitcodeCompiler {
 public:
   void add(BitcodeFile &F);
-  template <class ELFT> std::unique_ptr<ObjectFile<ELFT>> compile();
+  std::unique_ptr<InputFile> compile();
 
 private:
   llvm::TargetMachine *getTargetMachine();

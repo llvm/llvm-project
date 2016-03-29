@@ -5,6 +5,7 @@
 // detected after dead stripping has been performed. This proves that the
 // runtime is able to register globals in the __DATA,__asan_globals section.
 
+// REQUIRES: osx-ld64-live_support
 // RUN: %clang_asan -Xlinker -dead_strip -o %t %s
 // RUN: llvm-nm -format=posix %t | FileCheck --check-prefix NM-CHECK %s
 // RUN: not %run %t 2>&1 | FileCheck --check-prefix ASAN-CHECK %s

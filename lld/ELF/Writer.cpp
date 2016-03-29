@@ -432,15 +432,6 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
     }
 
     if (Config->EMachine == EM_MIPS) {
-      if (Type == R_MIPS_LO16)
-        // Ignore R_MIPS_LO16 relocation. If it is a pair for R_MIPS_GOT16 we
-        // already completed all required action (GOT entry allocation) when
-        // handle R_MIPS_GOT16a. If it is a pair for R_MIPS_HI16 against
-        // _gp_disp it does not require dynamic relocation. If its a pair for
-        // R_MIPS_HI16 against a regular symbol it does not require dynamic
-        // relocation too because that case is possible for executable file
-        // linking only.
-        continue;
       if (&Body == Config->MipsGpDisp || &Body == Config->MipsLocalGp)
         // MIPS _gp_disp designates offset between start of function and 'gp'
         // pointer into GOT. __gnu_local_gp is equal to the current value of
