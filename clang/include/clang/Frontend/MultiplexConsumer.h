@@ -36,7 +36,7 @@ public:
   void Initialize(ASTContext &Context) override;
   void HandleCXXStaticMemberVarInstantiation(VarDecl *VD) override;
   bool HandleTopLevelDecl(DeclGroupRef D) override;
-  void HandleInlineMethodDefinition(CXXMethodDecl *D) override;
+  void HandleInlineFunctionDefinition(FunctionDecl *D) override;
   void HandleInterestingDecl(DeclGroupRef D) override;
   void HandleTranslationUnit(ASTContext &Ctx) override;
   void HandleTagDeclDefinition(TagDecl *D) override;

@@ -73,12 +73,12 @@ void DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream* OS,
 /// An interface for collecting the dependencies of a compilation. Users should
 /// use \c attachToPreprocessor and \c attachToASTReader to get all of the
 /// dependencies.
-// FIXME: Migrate DependencyFileGen, DependencyGraphGen, ModuleDepCollectory to
-// use this interface.
+/// FIXME: Migrate DependencyFileGen and DependencyGraphGen to use this
+/// interface.
 class DependencyCollector {
 public:
   void attachToPreprocessor(Preprocessor &PP);
-  void attachToASTReader(ASTReader &R);
+  virtual void attachToASTReader(ASTReader &R);
   llvm::ArrayRef<std::string> getDependencies() const { return Dependencies; }
 
   /// Called when a new file is seen. Return true if \p Filename should be added
@@ -118,25 +118,29 @@ public:
 
 /// Collects the dependencies for imported modules into a directory.  Users
 /// should attach to the AST reader whenever a module is loaded.
-class ModuleDependencyCollector {
+class ModuleDependencyCollector : public DependencyCollector {
   std::string DestDir;
-  bool HasErrors;
+  bool HasErrors = false;
   llvm::StringSet<> Seen;
   vfs::YAMLVFSWriter VFSWriter;
 
+  llvm::StringMap<std::string> SymLinkMap;
+
+  bool getRealPath(StringRef SrcPath, SmallVectorImpl<char> &Result);
+  std::error_code copyToRoot(StringRef Src);
 public:
   StringRef getDest() { return DestDir; }
   bool insertSeen(StringRef Filename) { return Seen.insert(Filename).second; }
-  void setHasErrors() { HasErrors = true; }
+  void addFile(StringRef Filename);
   void addFileMapping(StringRef VPath, StringRef RPath) {
     VFSWriter.addFileMapping(VPath, RPath);
   }
 
-  void attachToASTReader(ASTReader &R);
+  void attachToASTReader(ASTReader &R) override;
+
   void writeFileMap();
   bool hasErrors() { return HasErrors; }
-  ModuleDependencyCollector(std::string DestDir)
-      : DestDir(DestDir), HasErrors(false) {}
+  ModuleDependencyCollector(std::string DestDir) : DestDir(DestDir) {}
   ~ModuleDependencyCollector() { writeFileMap(); }
 };
 

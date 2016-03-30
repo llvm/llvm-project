@@ -55,9 +55,9 @@ public:
   /// \returns true to continue parsing, or false to abort parsing.
   virtual bool HandleTopLevelDecl(DeclGroupRef D);
 
-  /// \brief This callback is invoked each time an inline method definition is
-  /// completed.
-  virtual void HandleInlineMethodDefinition(CXXMethodDecl *D) {}
+  /// \brief This callback is invoked each time an inline (method or friend)
+  /// function definition in a class is completed.
+  virtual void HandleInlineFunctionDefinition(FunctionDecl *D) {}
 
   /// HandleInterestingDecl - Handle the specified interesting declaration. This
   /// is called by the AST reader when deserializing things that might interest

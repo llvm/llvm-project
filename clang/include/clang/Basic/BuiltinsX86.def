@@ -690,10 +690,10 @@ TARGET_BUILTIN(__builtin_ia32_xsaves64, "vv*ULLi", "", "xsaves")
 // ADX
 TARGET_BUILTIN(__builtin_ia32_addcarryx_u32, "UcUcUiUiUi*", "", "adx")
 TARGET_BUILTIN(__builtin_ia32_addcarryx_u64, "UcUcULLiULLiULLi*", "", "adx")
-TARGET_BUILTIN(__builtin_ia32_addcarry_u32, "UcUcUiUiUi*", "", "adx")
-TARGET_BUILTIN(__builtin_ia32_addcarry_u64, "UcUcULLiULLiULLi*", "", "adx")
-TARGET_BUILTIN(__builtin_ia32_subborrow_u32, "UcUcUiUiUi*", "", "adx")
-TARGET_BUILTIN(__builtin_ia32_subborrow_u64, "UcUcULLiULLiULLi*", "", "adx")
+TARGET_BUILTIN(__builtin_ia32_addcarry_u32, "UcUcUiUiUi*", "", "")
+TARGET_BUILTIN(__builtin_ia32_addcarry_u64, "UcUcULLiULLiULLi*", "", "")
+TARGET_BUILTIN(__builtin_ia32_subborrow_u32, "UcUcUiUiUi*", "", "")
+TARGET_BUILTIN(__builtin_ia32_subborrow_u64, "UcUcULLiULLiULLi*", "", "")
 
 // RDSEED
 TARGET_BUILTIN(__builtin_ia32_rdseed16_step, "UiUs*", "", "rdseed")
