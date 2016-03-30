@@ -259,7 +259,7 @@ for (int i = 0; i < t.thread_count; i++) {
     __tsan_get_report_thread(t.report, i, &t.threads[i].tid, &t.threads[i].pid, &t.threads[i].running, &t.threads[i].name, &t.threads[i].parent_tid, t.threads[i].trace, REPORT_TRACE_SIZE);
 }
 
-if (t.unique_tid_count > REPORT_ARRAY_SIZE) t.unique_tid_count = REPORT_ARRAY_SIZE;
+if (t.unique_tid_count > REPORT_ARRAY_SIZE) t.unique_tid_count = REPORT_ARRAY_SIZE;
 for (int i = 0; i < t.unique_tid_count; i++) {
     t.unique_tids[i].idx = i;
     __tsan_get_report_unique_tid(t.report, i, &t.unique_tids[i].tid);
