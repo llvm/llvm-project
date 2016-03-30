@@ -831,6 +831,10 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
     HeaderInfo.MarkFileModuleHeader(Header.Entry, Role,
                                     isCompilingModuleHeader);
   }
+
+  // Notify callbacks that we just added a new header.
+  for (const auto &Cb : Callbacks)
+    Cb->moduleMapAddHeader(*Header.Entry);
 }
 
 void ModuleMap::excludeHeader(Module *Mod, Module::Header Header) {
