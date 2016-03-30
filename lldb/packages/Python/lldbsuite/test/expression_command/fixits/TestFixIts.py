@@ -70,8 +70,12 @@ class ExprCommandWithFixits(TestBase):
 
         # Now turn off the fixits, and the expression should fail:
         options.SetAutoApplyFixIts(False)
-        value = frame.EvaluateExpression("two_error_expression", options)
+        value = frame.EvaluateExpression(two_error_expression, options)
         self.assertTrue(value.IsValid())
         self.assertTrue(value.GetError().Fail())
+        error_string = value.GetError().GetCString()
+        self.assertTrue(error_string.find("fixed expression suggested:") != -1, "Fix was suggested")
+        self.assertTrue(error_string.find("my_pointer->second.a") != -1, "Fix was right")
+
         
 

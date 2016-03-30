@@ -2234,6 +2234,40 @@ static __isl_give isl_set *adjustDomainDimensions(Scop &S,
 
   return Dom;
 }
+
+void Scop::propagateDomainConstraintsToRegionExit(
+    BasicBlock *BB, Loop *BBLoop,
+    SmallPtrSetImpl<BasicBlock *> &FinishedExitBlocks, ScopDetection &SD,
+    LoopInfo &LI) {
+
+  // Check if the block @p BB is the entry of a region. If so we propagate it's
+  // domain to the exit block of the region. Otherwise we are done.
+  auto *RI = R.getRegionInfo();
+  auto *BBReg = RI ? RI->getRegionFor(BB) : nullptr;
+  if (!BBReg || BBReg->getEntry() != BB)
+    return;
+
+  auto *Domain = DomainMap[BB];
+  assert(Domain && "Cannot propagate a nullptr");
+
+  auto *ExitBB = BBReg->getExit();
+  auto &BoxedLoops = *SD.getBoxedLoops(&getRegion());
+  auto *ExitBBLoop = getFirstNonBoxedLoopFor(ExitBB, LI, BoxedLoops);
+
+  // Since the dimensions of @p BB and @p ExitBB might be different we have to
+  // adjust the domain before we can propagate it.
+  auto *AdjustedDomain =
+      adjustDomainDimensions(*this, isl_set_copy(Domain), BBLoop, ExitBBLoop);
+  auto *&ExitDomain = DomainMap[ExitBB];
+
+  // If the exit domain is not yet created we set it otherwise we "add" the
+  // current domain.
+  ExitDomain =
+      ExitDomain ? isl_set_union(AdjustedDomain, ExitDomain) : AdjustedDomain;
+
+  FinishedExitBlocks.insert(ExitBB);
+}
+
 bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
                                              DominatorTree &DT, LoopInfo &LI) {
   auto &BoxedLoops = *SD.getBoxedLoops(&getRegion());
@@ -2249,6 +2283,7 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
   // As we are only interested in non-loop carried constraints here we can
   // simply skip loop back edges.
 
+  SmallPtrSet<BasicBlock *, 8> FinishedExitBlocks;
   ReversePostOrderTraversal<Region *> RTraversal(R);
   for (auto *RN : RTraversal) {
 
@@ -2276,7 +2311,22 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
     if (!Domain)
       continue;
 
-    Loop *BBLoop = getRegionNodeLoop(RN, LI);
+    auto *BBLoop = getRegionNodeLoop(RN, LI);
+    // Propagate the domain from BB directly to blocks that have a superset
+    // domain, at the moment only region exit nodes of regions that start in BB.
+    propagateDomainConstraintsToRegionExit(BB, BBLoop, FinishedExitBlocks, SD,
+                                           LI);
+
+    // If all successors of BB have been set a domain through the propagation
+    // above we do not need to build condition sets but can just skip this
+    // block. However, it is important to note that this is a local property
+    // with regards to the region @p R. To this end FinishedExitBlocks is a
+    // local variable.
+    auto IsFinishedRegionExit = [&FinishedExitBlocks](BasicBlock *SuccBB) {
+      return FinishedExitBlocks.count(SuccBB);
+    };
+    if (std::all_of(succ_begin(BB), succ_end(BB), IsFinishedRegionExit))
+      continue;
 
     // Build the condition sets for the successor nodes of the current region
     // node. If it is a non-affine subregion we will always execute the single
@@ -2296,6 +2346,13 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
     for (unsigned u = 0, e = ConditionSets.size(); u < e; u++) {
       isl_set *CondSet = ConditionSets[u];
       BasicBlock *SuccBB = getRegionNodeSuccessor(RN, TI, u);
+
+      // If we propagate the domain of some block to "SuccBB" we do not have to
+      // adjust the domain.
+      if (FinishedExitBlocks.count(SuccBB)) {
+        isl_set_free(CondSet);
+        continue;
+      }
 
       // Skip back edges.
       if (DT.dominates(SuccBB, BB)) {
@@ -2349,6 +2406,65 @@ getDomainForBlock(BasicBlock *BB, DenseMap<BasicBlock *, isl_set *> &DomainMap,
   return getDomainForBlock(R->getEntry(), DomainMap, RI);
 }
 
+isl_set *Scop::getPredecessorDomainConstraints(BasicBlock *BB, isl_set *Domain,
+                                               ScopDetection &SD,
+                                               DominatorTree &DT,
+                                               LoopInfo &LI) {
+  // If @p BB is the ScopEntry we are done
+  if (R.getEntry() == BB)
+    return isl_set_universe(isl_set_get_space(Domain));
+
+  // The set of boxed loops (loops in non-affine subregions) for this SCoP.
+  auto &BoxedLoops = *SD.getBoxedLoops(&getRegion());
+
+  // The region info of this function.
+  auto &RI = *R.getRegionInfo();
+
+  auto *BBLoop = getFirstNonBoxedLoopFor(BB, LI, BoxedLoops);
+
+  // A domain to collect all predecessor domains, thus all conditions under
+  // which the block is executed. To this end we start with the empty domain.
+  isl_set *PredDom = isl_set_empty(isl_set_get_space(Domain));
+
+  // Set of regions of which the entry block domain has been propagated to BB.
+  // all predecessors inside any of the regions can be skipped.
+  SmallSet<Region *, 8> PropagatedRegions;
+
+  for (auto *PredBB : predecessors(BB)) {
+    // Skip backedges.
+    if (DT.dominates(BB, PredBB))
+      continue;
+
+    // If the predecessor is in a region we used for propagation we can skip it.
+    auto PredBBInRegion = [PredBB](Region *PR) { return PR->contains(PredBB); };
+    if (std::any_of(PropagatedRegions.begin(), PropagatedRegions.end(),
+                    PredBBInRegion)) {
+      continue;
+    }
+
+    // Check if there is a valid region we can use for propagation, thus look
+    // for a region that contains the predecessor and has @p BB as exit block.
+    auto *PredR = RI.getRegionFor(PredBB);
+    while (PredR->getExit() != BB && !PredR->contains(BB))
+      PredR->getParent();
+
+    // If a valid region for propagation was found use the entry of that region
+    // for propagation, otherwise the PredBB directly.
+    if (PredR->getExit() == BB) {
+      PredBB = PredR->getEntry();
+      PropagatedRegions.insert(PredR);
+    }
+
+    auto *PredBBDom = getDomainForBlock(PredBB, DomainMap, RI);
+    auto *PredBBLoop = getFirstNonBoxedLoopFor(PredBB, LI, BoxedLoops);
+    PredBBDom = adjustDomainDimensions(*this, PredBBDom, PredBBLoop, BBLoop);
+
+    PredDom = isl_set_union(PredDom, PredBBDom);
+  }
+
+  return PredDom;
+}
+
 void Scop::propagateDomainConstraints(Region *R, ScopDetection &SD,
                                       DominatorTree &DT, LoopInfo &LI) {
   // Iterate over the region R and propagate the domain constrains from the
@@ -2359,9 +2475,6 @@ void Scop::propagateDomainConstraints(Region *R, ScopDetection &SD,
   // map here. However, we iterate again in reverse post order so we know all
   // predecessors have been visited before a block or non-affine subregion is
   // visited.
-
-  // The set of boxed loops (loops in non-affine subregions) for this SCoP.
-  auto &BoxedLoops = *SD.getBoxedLoops(&getRegion());
 
   ReversePostOrderTraversal<Region *> RTraversal(R);
   for (auto *RN : RTraversal) {
@@ -2390,34 +2503,12 @@ void Scop::propagateDomainConstraints(Region *R, ScopDetection &SD,
       continue;
     }
 
-    Loop *BBLoop = getRegionNodeLoop(RN, LI);
-
-    isl_set *PredDom = isl_set_empty(isl_set_get_space(Domain));
-    for (auto *PredBB : predecessors(BB)) {
-
-      // Skip backedges
-      if (DT.dominates(BB, PredBB))
-        continue;
-
-      isl_set *PredBBDom = nullptr;
-
-      // Handle the SCoP entry block with its outside predecessors.
-      if (!getRegion().contains(PredBB))
-        PredBBDom = isl_set_universe(isl_set_get_space(PredDom));
-
-      if (!PredBBDom) {
-        PredBBDom = getDomainForBlock(PredBB, DomainMap, *R->getRegionInfo());
-        auto *PredBBLoop = getFirstNonBoxedLoopFor(PredBB, LI, BoxedLoops);
-        PredBBDom =
-            adjustDomainDimensions(*this, PredBBDom, PredBBLoop, BBLoop);
-      }
-
-      PredDom = isl_set_union(PredDom, PredBBDom);
-    }
-
     // Under the union of all predecessor conditions we can reach this block.
+    auto *PredDom = getPredecessorDomainConstraints(BB, Domain, SD, DT, LI);
     Domain = isl_set_coalesce(isl_set_intersect(Domain, PredDom));
+    Domain = isl_set_align_params(Domain, getParamSpace());
 
+    Loop *BBLoop = getRegionNodeLoop(RN, LI);
     if (BBLoop && BBLoop->getHeader() == BB && getRegion().contains(BBLoop))
       addLoopBoundsToHeaderDomain(BBLoop, LI);
 

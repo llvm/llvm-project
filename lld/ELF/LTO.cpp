@@ -21,6 +21,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 using namespace llvm;
@@ -76,6 +77,14 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   unsigned BodyIndex = 0;
   ArrayRef<SymbolBody *> Bodies = F.getSymbols();
 
+  Module &M = Obj->getModule();
+
+  // If a symbol appears in @llvm.used, the linker is required
+  // to treat the symbol as there is a reference to the symbol
+  // that it cannot see. Therefore, we can't internalize.
+  SmallPtrSet<GlobalValue *, 8> Used;
+  collectUsedGlobalVariables(M, Used, /* CompilerUsed */ false);
+
   for (const BasicSymbolRef &Sym : Obj->symbols()) {
     GlobalValue *GV = Obj->getSymbolGV(Sym.getRawDataRefImpl());
     assert(GV);
@@ -108,7 +117,8 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // For now, let's be conservative and just never internalize
     // symbols when creating a shared library.
     if (!Config->Shared && !Config->ExportDynamic && !B->isUsedInRegularObj())
-      InternalizedSyms.insert(GV->getName());
+      if (!Used.count(GV))
+        InternalizedSyms.insert(GV->getName());
 
     Keep.push_back(GV);
   }
@@ -119,7 +129,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
 
 static void internalize(GlobalValue &GV) {
   assert(!GV.hasLocalLinkage() &&
-      "Trying to internalize a symbol with local linkage!") ;
+         "Trying to internalize a symbol with local linkage!");
   GV.setLinkage(GlobalValue::InternalLinkage);
 }
 

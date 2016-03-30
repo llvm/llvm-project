@@ -344,7 +344,7 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
 
     for (llvm::Function &function : *m_module)
     {
-        if (function.isDeclaration())
+        if (function.isDeclaration() || function.hasPrivateLinkage())
             continue;
         
         const bool external = function.hasExternalLinkage() || function.hasLinkOnceODRLinkage();

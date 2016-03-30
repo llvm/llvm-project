@@ -1421,6 +1421,53 @@ private:
   void init(AliasAnalysis &AA, AssumptionCache &AC, ScopDetection &SD,
             DominatorTree &DT, LoopInfo &LI);
 
+  /// @brief Propagate domains that are known due to graph properties.
+  ///
+  /// As a CFG is mostly structured we use the graph properties to propagate
+  /// domains without the need to compute all path conditions. In particular, if
+  /// a block A dominates a block B and B post-dominates A we know that the
+  /// domain of B is a superset of the domain of A. As we do not have
+  /// post-dominator information available here we use the less precise region
+  /// information. Given a region R, we know that the exit is always executed if
+  /// the entry was executed, thus the domain of the exit is a superset of the
+  /// domain of the entry. In case the exit can only be reached from within the
+  /// region the domains are in fact equal. This function will use this property
+  /// to avoid the generation of condition constraints that determine when a
+  /// branch is taken. If @p BB is a region entry block we will propagate its
+  /// domain to the region exit block. Additionally, we put the region exit
+  /// block in the @p FinishedExitBlocks set so we can later skip edges from
+  /// within the region to that block.
+  ///
+  /// @param BB The block for which the domain is currently propagated.
+  /// @param BBLoop The innermost affine loop surrounding @p BB.
+  /// @param FinishedExitBlocks Set of region exits the domain was set for.
+  /// @param SD The ScopDetection analysis for the current function.
+  /// @param LI The LoopInfo for the current function.
+  ///
+  void propagateDomainConstraintsToRegionExit(
+      BasicBlock *BB, Loop *BBLoop,
+      SmallPtrSetImpl<BasicBlock *> &FinishedExitBlocks, ScopDetection &SD,
+      LoopInfo &LI);
+
+  /// @brief Compute the union of predecessor domains for @p BB.
+  ///
+  /// To compute the union of all domains of predecessors of @p BB this
+  /// function applies similar reasoning on the CFG structure as described for
+  ///   @see propagateDomainConstraintsToRegionExit
+  ///
+  /// @param BB     The block for which the predecessor domains are collected.
+  /// @param Domain The domain under which BB is executed.
+  /// @param SD     The ScopDetection analysis for the current function.
+  /// @param DT     The DominatorTree for the current function.
+  /// @param LI     The LoopInfo for the current function.
+  ///
+  /// @returns The domain under which @p BB is executed.
+  __isl_give isl_set *getPredecessorDomainConstraints(BasicBlock *BB,
+                                                      isl_set *Domain,
+                                                      ScopDetection &SD,
+                                                      DominatorTree &DT,
+                                                      LoopInfo &LI);
+
   /// @brief Add loop carried constraints to the header block of the loop @p L.
   ///
   /// @param L  The loop to process.

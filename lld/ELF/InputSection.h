@@ -81,8 +81,8 @@ public:
 
 private:
   template <class RelTy>
-  uint8_t *findMipsPairedReloc(uint8_t *Buf, const RelTy *Rel,
-                               const RelTy *End);
+  int32_t findMipsPairedAddend(uint8_t *Buf, uint8_t *BufLoc, SymbolBody &Sym,
+                               const RelTy *Rel, const RelTy *End);
 };
 
 template <class ELFT>

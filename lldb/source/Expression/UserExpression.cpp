@@ -160,6 +160,7 @@ UserExpression::Evaluate (ExecutionContext &exe_ctx,
                                lldb::ValueObjectSP &result_valobj_sp,
                                Error &error,
                                uint32_t line_offset,
+                               std::string *fixed_expression,
                                lldb::ModuleSP *jit_module_sp_ptr)
 {
     Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_STEP));
@@ -253,18 +254,65 @@ UserExpression::Evaluate (ExecutionContext &exe_ctx,
     }
 
     DiagnosticManager diagnostic_manager;
-    diagnostic_manager.SetAutoApplyFixIts(options.GetAutoApplyFixIts());
 
-    if (!user_expression_sp->Parse(diagnostic_manager, exe_ctx, execution_policy, keep_expression_in_memory,
-                                   generate_debug_info))
+    bool parse_success = user_expression_sp->Parse(diagnostic_manager,
+                                                   exe_ctx,
+                                                   execution_policy,
+                                                   keep_expression_in_memory,
+                                                   generate_debug_info);
+    
+    // Calculate the fixed expression always, since we need it for errors.
+    std::string tmp_fixed_expression;
+    if (fixed_expression == nullptr)
+        fixed_expression = &tmp_fixed_expression;
+
+    const char *fixed_text = user_expression_sp->GetFixedText();
+    if (fixed_text != nullptr)
+            fixed_expression->append(fixed_text);
+    
+    // If there is a fixed expression, try to parse it:
+    if (!parse_success)
     {
         execution_results = lldb::eExpressionParseError;
-        if (!diagnostic_manager.Diagnostics().size())
-            error.SetExpressionError(execution_results, "expression failed to parse, unknown error");
-        else
-            error.SetExpressionError(execution_results, diagnostic_manager.GetString().c_str());
+        if (fixed_expression && !fixed_expression->empty() && options.GetAutoApplyFixIts())
+        {
+            lldb::UserExpressionSP fixed_expression_sp(target->GetUserExpressionForLanguage (fixed_expression->c_str(),
+                                                                                             full_prefix,
+                                                                                             language,
+                                                                                             desired_type,
+                                                                                             options,
+                                                                                             error));
+            DiagnosticManager fixed_diagnostic_manager;
+            parse_success = fixed_expression_sp->Parse(fixed_diagnostic_manager,
+                                                       exe_ctx,
+                                                       execution_policy,
+                                                       keep_expression_in_memory,
+                                                       generate_debug_info);
+            if (parse_success)
+            {
+                diagnostic_manager.Clear();
+                user_expression_sp = fixed_expression_sp;
+            }
+        }
+        
+        if (!parse_success)
+        {
+            if (!fixed_expression->empty() && target->GetEnableNotifyAboutFixIts())
+            {
+                error.SetExpressionErrorWithFormat(execution_results, "expression failed to parse, fixed expression suggested:\n  %s",
+                                                   fixed_expression->c_str());
+            }
+            else
+            {
+                if (!diagnostic_manager.Diagnostics().size())
+                    error.SetExpressionError(execution_results, "expression failed to parse, unknown error");
+                else
+                    error.SetExpressionError(execution_results, diagnostic_manager.GetString().c_str());
+            }
+        }
     }
-    else
+    
+    if (parse_success)
     {
         // If a pointer to a lldb::ModuleSP was passed in, return the JIT'ed module if one was created
         if (jit_module_sp_ptr)

@@ -152,6 +152,9 @@ public:
     GetEnableAutoApplyFixIts () const;
     
     bool
+    GetEnableNotifyAboutFixIts () const;
+    
+    bool
     GetEnableSyntheticValue () const;
     
     uint32_t
@@ -1375,7 +1378,8 @@ public:
     EvaluateExpression (const char *expression,
                         ExecutionContextScope *exe_scope,
                         lldb::ValueObjectSP &result_valobj_sp,
-                        const EvaluateExpressionOptions& options = EvaluateExpressionOptions());
+                        const EvaluateExpressionOptions& options = EvaluateExpressionOptions(),
+                        std::string *fixed_expression = nullptr);
 
     lldb::ExpressionVariableSP
     GetPersistentVariable(const ConstString &name);
