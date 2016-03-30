@@ -125,13 +125,13 @@ SwiftASTManipulator::WrapExpression(lldb_private::Stream &wrapped_stream,
 @_silgen_name ("playground_log_scope_entry") func $builtin_log_scope_entry () -> AnyObject
 @_silgen_name ("playground_log_scope_exit") func $builtin_log_scope_exit () -> AnyObject
 @_silgen_name ("playground_print_T") func $builtin_print<T> (object: T) -> AnyObject
-@_silgen_name ("playground_print_T_stream") func $builtin_print<T, TargetStream : OutputStreamType> (object: T, inout _ stream: TargetStream) -> AnyObject
+@_silgen_name ("playground_print_T_stream") func $builtin_print<T, TargetStream : OutputStreamType> (object: T, _ stream: inout TargetStream) -> AnyObject
 @_silgen_name ("playground_print_T_appendNewline") func $builtin_print<T> (object: T, appendNewline: Bool) -> AnyObject
-@_silgen_name ("playground_print_T_stream_appendNewline") func $builtin_print<T, TargetStream : OutputStreamType> (object: T, inout _ stream: TargetStream, appendNewline: Bool) -> AnyObject
+@_silgen_name ("playground_print_T_stream_appendNewline") func $builtin_print<T, TargetStream : OutputStreamType> (object: T, _ stream: inout TargetStream, appendNewline: Bool) -> AnyObject
 @_silgen_name ("playground_debugPrint_T") func $builtin_debugPrint<T> (object: T) -> AnyObject
-@_silgen_name ("playground_debugPrint_T_stream") func $builtin_debugPrint<T, TargetStream : OutputStreamType> (object: T, inout _ stream: TargetStream) -> AnyObject
+@_silgen_name ("playground_debugPrint_T_stream") func $builtin_debugPrint<T, TargetStream : OutputStreamType> (object: T, _ stream: inout TargetStream) -> AnyObject
 @_silgen_name ("playground_debugPrint_T_appendNewline") func $builtin_debugPrint<T> (object: T, appendNewline: Bool) -> AnyObject
-@_silgen_name ("playground_debugPrint_T_stream_appendNewline") func $builtin_debugPrint<T, TargetStream : OutputStreamType> (object: T, inout _ stream: TargetStream, appendNewline: Bool) -> AnyObject
+@_silgen_name ("playground_debugPrint_T_stream_appendNewline") func $builtin_debugPrint<T, TargetStream : OutputStreamType> (object: T, _ stream: inout TargetStream, appendNewline: Bool) -> AnyObject
 @_silgen_name ("playground_log_postprint") func $builtin_postPrint () -> AnyObject
 @_silgen_name ("DVTSendPlaygroundLogDataToHost") func $builtin_send_data (_ :  AnyObject!, _ : Int, _ : Int, _ : Int, _ : Int)
 $builtin_logger_initialize()
