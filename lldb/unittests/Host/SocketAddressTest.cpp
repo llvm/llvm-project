@@ -33,7 +33,8 @@ TEST_F (SocketAddressTest, Set)
     ASSERT_EQ (0, sa.GetPort ());
 
     ASSERT_TRUE (sa.SetToLocalhost (AF_INET6, 1139));
-    ASSERT_STREQ ("::1", sa.GetIPAddress ().c_str ());
+    ASSERT_TRUE(sa.GetIPAddress() == "::1" || sa.GetIPAddress() == "0:0:0:0:0:0:0:1") << "Address was: "
+                                                                                      << sa.GetIPAddress();
     ASSERT_EQ (1139, sa.GetPort ());
 }
 

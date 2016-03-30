@@ -31,6 +31,7 @@ add_lld_library(lldELF
   MC
   Support
   Target
+  TransformUtils
 
   LINK_LIBS
   lldConfig
