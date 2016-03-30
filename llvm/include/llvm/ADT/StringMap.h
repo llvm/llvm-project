@@ -89,7 +89,8 @@ protected:
   /// table, returning it.  If the key is not in the table, this returns null.
   StringMapEntryBase *RemoveKey(StringRef Key);
 
-private:
+  /// Allocate the table with the specified number of buckets and otherwise
+  /// setup the map as empty.
   void init(unsigned Size);
 
 public:
@@ -244,7 +245,39 @@ public:
     return *this;
   }
 
-  // FIXME: Implement copy operations if/when they're needed.
+  StringMap(const StringMap &RHS) :
+    StringMapImpl(static_cast<unsigned>(sizeof(MapEntryTy))),
+    Allocator(RHS.Allocator) {
+    if (RHS.empty())
+      return;
+
+    // Allocate TheTable of the same size as RHS's TheTable, and set the
+    // sentinel appropriately (and NumBuckets).
+    init(RHS.NumBuckets);
+    unsigned *HashTable = (unsigned *)(TheTable + NumBuckets + 1),
+             *RHSHashTable = (unsigned *)(RHS.TheTable + NumBuckets + 1);
+
+    NumItems = RHS.NumItems;
+    NumTombstones = RHS.NumTombstones;
+    for (unsigned I = 0, E = NumBuckets; I != E; ++I) {
+      MapEntryTy *Bucket = ((MapEntryTy**) RHS.TheTable)[I];
+      if (!Bucket || Bucket == getTombstoneVal()) {
+        TheTable[I] = Bucket;
+        continue;
+      }
+
+      TheTable[I] = MapEntryTy::Create(Bucket->getKey(), Allocator,
+                                       Bucket->getValue());
+      HashTable[I] = RHSHashTable[I];
+    }
+
+    // Note that here we've copied everything from the RHS into this object,
+    // tombstones included. We could, instead, have re-probed for each key to
+    // instantiate this new object without any tombstone buckets. The
+    // assumption here is that items are rarely deleted from most StringMaps,
+    // and so tombstones are rare, so the cost of re-probing for all inputs is
+    // not worthwhile.
+  }
 
   AllocatorTy &getAllocator() { return Allocator; }
   const AllocatorTy &getAllocator() const { return Allocator; }
