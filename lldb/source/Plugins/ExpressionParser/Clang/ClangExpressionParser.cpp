@@ -212,7 +212,7 @@ public:
                 if (severity == eDiagnosticSeverityError)
                 {
                     size_t num_fixit_hints = Info.getNumFixItHints();
-                    for (int i = 0; i < num_fixit_hints; i++)
+                    for (size_t i = 0; i < num_fixit_hints; i++)
                     {
                         const clang::FixItHint &fixit = Info.getFixItHint(i);
                         if (!fixit.isNull())
