@@ -6086,7 +6086,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     // Set the AT_producer to the clang version when using the integrated
     // assembler on assembly source files.
     CmdArgs.push_back("-dwarf-debug-producer");
-    CmdArgs.push_back(Args.MakeArgString(getClangFullVersion()));
+    std::string QuotedClangVersion("'" + getClangFullVersion() + "'");
+    CmdArgs.push_back(Args.MakeArgString(QuotedClangVersion));
 
     // And pass along -I options
     Args.AddAllArgs(CmdArgs, options::OPT_I);
