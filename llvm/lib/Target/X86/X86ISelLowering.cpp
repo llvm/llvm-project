@@ -3768,6 +3768,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
 
   // Do not sibcall optimize vararg calls unless all arguments are passed via
   // registers.
+  LLVMContext &C = *DAG.getContext();
   if (isVarArg && !Outs.empty()) {
     // Optimizing for varargs on Win64 is unlikely to be safe without
     // additional testing.
@@ -3775,8 +3776,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
       return false;
 
     SmallVector<CCValAssign, 16> ArgLocs;
-    CCState CCInfo(CalleeCC, isVarArg, DAG.getMachineFunction(), ArgLocs,
-                   *DAG.getContext());
+    CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
 
     CCInfo.AnalyzeCallOperands(Outs, CC_X86);
     for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i)
@@ -3796,8 +3796,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   }
   if (Unused) {
     SmallVector<CCValAssign, 16> RVLocs;
-    CCState CCInfo(CalleeCC, false, DAG.getMachineFunction(), RVLocs,
-                   *DAG.getContext());
+    CCState CCInfo(CalleeCC, false, MF, RVLocs, C);
     CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
     for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
       CCValAssign &VA = RVLocs[i];
@@ -3806,35 +3805,10 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
     }
   }
 
-  // If the calling conventions do not match, then we'd better make sure the
-  // results are returned in the same way as what the caller expects.
-  if (!CCMatch) {
-    SmallVector<CCValAssign, 16> RVLocs1;
-    CCState CCInfo1(CalleeCC, false, DAG.getMachineFunction(), RVLocs1,
-                    *DAG.getContext());
-    CCInfo1.AnalyzeCallResult(Ins, RetCC_X86);
-
-    SmallVector<CCValAssign, 16> RVLocs2;
-    CCState CCInfo2(CallerCC, false, DAG.getMachineFunction(), RVLocs2,
-                    *DAG.getContext());
-    CCInfo2.AnalyzeCallResult(Ins, RetCC_X86);
-
-    if (RVLocs1.size() != RVLocs2.size())
-      return false;
-    for (unsigned i = 0, e = RVLocs1.size(); i != e; ++i) {
-      if (RVLocs1[i].isRegLoc() != RVLocs2[i].isRegLoc())
-        return false;
-      if (RVLocs1[i].getLocInfo() != RVLocs2[i].getLocInfo())
-        return false;
-      if (RVLocs1[i].isRegLoc()) {
-        if (RVLocs1[i].getLocReg() != RVLocs2[i].getLocReg())
-          return false;
-      } else {
-        if (RVLocs1[i].getLocMemOffset() != RVLocs2[i].getLocMemOffset())
-          return false;
-      }
-    }
-  }
+  // Check that the call results are passed in the same way.
+  if (!CCState::resultsCompatible(CalleeCC, CallerCC, MF, C, Ins,
+                                  RetCC_X86, RetCC_X86))
+    return false;
 
   unsigned StackArgsSize = 0;
 
@@ -3844,8 +3818,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
     // Check if stack adjustment is needed. For now, do not do this if any
     // argument is passed on the stack.
     SmallVector<CCValAssign, 16> ArgLocs;
-    CCState CCInfo(CalleeCC, isVarArg, DAG.getMachineFunction(), ArgLocs,
-                   *DAG.getContext());
+    CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
 
     // Allocate shadow area for Win64
     if (IsCalleeWin64)
