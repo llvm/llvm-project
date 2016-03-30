@@ -337,6 +337,8 @@ void Module::print(raw_ostream &OS, unsigned Indent) const {
       OS << " [system]";
     if (IsExternC)
       OS << " [extern_c]";
+    if (IsSwiftInferImportAsMember)
+      OS << " [swift_infer_import_as_member]";
   }
 
   OS << " {\n";
