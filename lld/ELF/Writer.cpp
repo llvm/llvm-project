@@ -511,6 +511,10 @@ static bool shouldKeepInSymtab(const elf::ObjectFile<ELFT> &File,
   if (Sym.getType() == STT_SECTION)
     return Config->Relocatable;
 
+  // No reason to keep local undefined symbol in symtab.
+  if (Sym.st_shndx == SHN_UNDEF)
+    return false;
+
   InputSectionBase<ELFT> *Sec = File.getSection(Sym);
   // If sym references a section in a discarded group, don't keep it.
   if (Sec == InputSection<ELFT>::Discarded)
