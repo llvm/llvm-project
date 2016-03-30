@@ -325,10 +325,12 @@ static bool checkOpenCLPipePacketType(Sema &S, CallExpr *Call, unsigned Idx) {
   const PointerType *ArgTy = ArgIdx->getType()->getAs<PointerType>();
   // The Idx argument should be a pointer and the type of the pointer and
   // the type of pipe element should also be the same.
-  if (!ArgTy || S.Context.hasSameType(EltTy, ArgTy->getPointeeType())) {
+  if (!ArgTy ||
+      !S.Context.hasSameType(
+          EltTy, ArgTy->getPointeeType()->getCanonicalTypeInternal())) {
     S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
         << Call->getDirectCallee() << S.Context.getPointerType(EltTy)
-        << ArgIdx->getSourceRange();
+        << ArgIdx->getType() << ArgIdx->getSourceRange();
     return true;
   }
   return false;
@@ -361,7 +363,7 @@ static bool SemaBuiltinRWPipe(Sema &S, CallExpr *Call) {
     if (!Call->getArg(1)->getType()->isReserveIDT()) {
       S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
           << Call->getDirectCallee() << S.Context.OCLReserveIDTy
-          << Call->getArg(1)->getSourceRange();
+          << Call->getArg(1)->getType() << Call->getArg(1)->getSourceRange();
       return true;
     }
 
@@ -371,7 +373,7 @@ static bool SemaBuiltinRWPipe(Sema &S, CallExpr *Call) {
         !Arg2->getType()->isUnsignedIntegerType()) {
       S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
           << Call->getDirectCallee() << S.Context.UnsignedIntTy
-          << Arg2->getSourceRange();
+          << Arg2->getType() << Arg2->getSourceRange();
       return true;
     }
 
@@ -405,7 +407,7 @@ static bool SemaBuiltinReserveRWPipe(Sema &S, CallExpr *Call) {
       !Call->getArg(1)->getType()->isUnsignedIntegerType()) {
     S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
         << Call->getDirectCallee() << S.Context.UnsignedIntTy
-        << Call->getArg(1)->getSourceRange();
+        << Call->getArg(1)->getType() << Call->getArg(1)->getSourceRange();
     return true;
   }
 
@@ -428,7 +430,7 @@ static bool SemaBuiltinCommitRWPipe(Sema &S, CallExpr *Call) {
   if (!Call->getArg(1)->getType()->isReserveIDT()) {
     S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
         << Call->getDirectCallee() << S.Context.OCLReserveIDTy
-        << Call->getArg(1)->getSourceRange();
+        << Call->getArg(1)->getType() << Call->getArg(1)->getSourceRange();
     return true;
   }
 

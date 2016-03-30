@@ -272,9 +272,9 @@ bool MultiplexConsumer::HandleTopLevelDecl(DeclGroupRef D) {
   return Continue;
 }
 
-void MultiplexConsumer::HandleInlineMethodDefinition(CXXMethodDecl *D) {
+void MultiplexConsumer::HandleInlineFunctionDefinition(FunctionDecl *D) {
   for (auto &Consumer : Consumers)
-    Consumer->HandleInlineMethodDefinition(D);
+    Consumer->HandleInlineFunctionDefinition(D);
 }
 
 void MultiplexConsumer::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {

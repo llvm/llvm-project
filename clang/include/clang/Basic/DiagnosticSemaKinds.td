@@ -7809,7 +7809,7 @@ def err_opencl_builtin_pipe_first_arg : Error<
 def err_opencl_builtin_pipe_arg_num : Error<
   "invalid number of arguments to function: %0">;
 def err_opencl_builtin_pipe_invalid_arg : Error<
-  "invalid argument type to function %0 (expecting %1)">;
+  "invalid argument type to function %0 (expecting %1 having %2)">;
 def err_opencl_builtin_pipe_invalid_access_modifier : Error<
   "invalid pipe access modifier (expecting %0)">;
 
