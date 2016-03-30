@@ -2857,6 +2857,11 @@ public:
   /// \returns MERGE_VALUEs of the scalar loads with their chains.
   SDValue scalarizeVectorLoad(LoadSDNode *LD, SelectionDAG &DAG) const;
 
+  // Turn a store of a vector type into stores of the individual elements.
+  /// \param ST Store with a vector value type
+  /// \returns MERGE_VALUs of the individual store chains.
+  SDValue scalarizeVectorStore(StoreSDNode *ST, SelectionDAG &DAG) const;
+
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks
   //
