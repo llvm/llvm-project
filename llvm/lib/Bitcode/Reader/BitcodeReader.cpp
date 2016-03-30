@@ -78,7 +78,7 @@ public:
   }
 
   Value *back() const { return ValuePtrs.back(); }
-    void pop_back() { ValuePtrs.pop_back(); }
+  void pop_back() { ValuePtrs.pop_back(); }
   bool empty() const { return ValuePtrs.empty(); }
   void shrinkTo(unsigned N) {
     assert(N <= size() && "Invalid shrinkTo request!");

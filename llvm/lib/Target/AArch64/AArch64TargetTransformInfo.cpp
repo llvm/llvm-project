@@ -20,24 +20,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64tti"
 
-static cl::opt<unsigned> CyclonePrefetchDistance(
-    "cyclone-prefetch-distance",
-    cl::desc("Number of instructions to prefetch ahead for Cyclone"),
-    cl::init(280), cl::Hidden);
-
-// The HW prefetcher handles accesses with strides up to 2KB.
-static cl::opt<unsigned> CycloneMinPrefetchStride(
-    "cyclone-min-prefetch-stride",
-    cl::desc("Min stride to add prefetches for Cyclone"),
-    cl::init(2048), cl::Hidden);
-
-// Be conservative for now and don't prefetch ahead too much since the loop
-// may terminate early.
-static cl::opt<unsigned> CycloneMaxPrefetchIterationsAhead(
-    "cyclone-max-prefetch-iters-ahead",
-    cl::desc("Max number of iterations to prefetch ahead on Cyclone"),
-    cl::init(3), cl::Hidden);
-
 /// \brief Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
@@ -600,18 +582,21 @@ unsigned AArch64TTIImpl::getCacheLineSize() {
 
 unsigned AArch64TTIImpl::getPrefetchDistance() {
   if (ST->isCyclone())
-    return CyclonePrefetchDistance;
+    return 280;
   return BaseT::getPrefetchDistance();
 }
 
 unsigned AArch64TTIImpl::getMinPrefetchStride() {
   if (ST->isCyclone())
-    return CycloneMinPrefetchStride;
+    // The HW prefetcher handles accesses with strides up to 2KB.
+    return 2048;
   return BaseT::getMinPrefetchStride();
 }
 
 unsigned AArch64TTIImpl::getMaxPrefetchIterationsAhead() {
   if (ST->isCyclone())
-    return CycloneMaxPrefetchIterationsAhead;
+    // Be conservative for now and don't prefetch ahead too much since the loop
+    // may terminate early.
+    return 3;
   return BaseT::getMaxPrefetchIterationsAhead();
 }

@@ -16,7 +16,7 @@ First, implement a fuzzing target function, like this::
   // fuzz_target.cc
   extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     DoSomethingInterestingWithMyAPI(Data, Size);
-    return 0;
+    return 0;  // Non-zero return values are reserved for future use.
   }
 
 Next, build the Fuzzer library as a static archive. Note that libFuzzer contains the `main()` function::
@@ -56,10 +56,27 @@ potentially much faster as it has no overhead for process start-up.
 It uses LLVM's SanitizerCoverage_ instrumentation to get in-process
 coverage-feedback
 
-The code resides in the LLVM repository, requires the fresh Clang compiler to build
+The code resides in the LLVM repository,
+requires the fresh Clang compiler to build
 and is used to fuzz various parts of LLVM,
 but the Fuzzer itself does not (and should not) depend on any
 part of LLVM and can be used for other projects w/o requiring the rest of LLVM.
+
+Fresh Clang
+-----------
+
+If you don't know where to get the fresh Clang binaries and don't want to build
+it from trunk (why wouldn't you?) you may grab the fresh Clang binaries
+maintained by the Chromium developers::
+
+  mkdir TMP_CLANG
+  cd TMP_CLANG
+  git clone https://chromium.googlesource.com/chromium/src/tools/clang
+  cd ..
+  TMP_CLANG/clang/scripts/update.py
+
+This will install a reasonably fresh and well tested clang binaries as
+`third_party/llvm-build/Release+Asserts/bin/clang`
 
 Usage
 =====
@@ -88,7 +105,7 @@ The most important flags are::
   artifact_prefix                       ""      Write fuzzing artifacts (crash, timeout, or slow inputs) as $(artifact_prefix)file
   exact_artifact_path                   ""      Write the single artifact on failure (crash, timeout) as $(exact_artifact_path). This overrides -artifact_prefix and will not use checksum in the file name. Do not use the same path for several parallel processes.
   print_final_stats                     0       If 1, print statistics at exit.
-  close_fd_mask                         0       If 1, close stdout at startup; if 2, close stderr; if 3, close both.
+  close_fd_mask                         0       If 1, close stdout at startup; if 2, close stderr; if 3, close both. Be careful, this will also close e.g. asan's stderr/stdout.
 
 For the full list of flags run the fuzzer binary with ``-help=1``.
 
@@ -294,7 +311,6 @@ Advanced features
 
 Dictionaries
 ------------
-*EXPERIMENTAL*.
 LibFuzzer supports user-supplied dictionaries with input language keywords
 or other interesting byte sequences (e.g. multi-byte magic values).
 Use ``-dict=DICTIONARY_FILE``. For some input languages using a dictionary
@@ -326,14 +342,15 @@ This mode can be combined with DataFlowSanitizer_ to achieve better sensitivity.
 
 AFL compatibility
 -----------------
-LibFuzzer can be used in parallel with AFL_ on the same test corpus.
+LibFuzzer can be used together with AFL_ on the same test corpus.
 Both fuzzers expect the test corpus to reside in a directory, one file per input.
-You can run both fuzzers on the same corpus in parallel::
+You can run both fuzzers on the same corpus, one after another::
 
-  ./afl-fuzz -i testcase_dir -o findings_dir /path/to/program -r @@
+  ./afl-fuzz -i testcase_dir -o findings_dir /path/to/program @@
   ./llvm-fuzz testcase_dir findings_dir  # Will write new tests to testcase_dir
 
 Periodically restart both fuzzers so that they can use each other's findings.
+Currently, there is no simple way to run both fuzzing engines in parallel while sharing the same corpus dir.
 
 How good is my fuzzer?
 ----------------------
@@ -381,6 +398,22 @@ it will skew the coverage data. Don't do this::
          ...
       }
     }
+
+Leaks
+-----
+
+When running libFuzzer with AddressSanitizer_ the latter will be able to report
+memory leaks, but only when the process exits, so if you suspect memory leaks
+in your target you should run libFuzzer with `-runs=N` or `-max_total_time=N`.
+If a leak is reported at the end, you will not get the reproducer from libFuzzer.
+You will need to re-run the target on every file in the corpus separately to
+find which one causes the leak.
+
+If your target has massive leaks you will eventually run out of RAM.
+To protect your machine from OOM death you may use
+e.g. `ASAN_OPTIONS=hard_rss_limit_mb=2000` (with AddressSanitizer_).
+
+In future libFuzzer may support finding/reporting leaks better than this, stay tuned.
 
 Fuzzing components of LLVM
 ==========================
@@ -521,7 +554,7 @@ Trophies
 * OpenSSL/BoringSSL: `[1] <https://boringssl.googlesource.com/boringssl/+/cb852981cd61733a7a1ae4fd8755b7ff950e857d>`_ `[2] <https://openssl.org/news/secadv/20160301.txt>`_ `[3] <https://boringssl.googlesource.com/boringssl/+/2b07fa4b22198ac02e0cee8f37f3337c3dba91bc>`_ `[4] <https://boringssl.googlesource.com/boringssl/+/6b6e0b20893e2be0e68af605a60ffa2cbb0ffa64>`_
 
 * `Libxml2
-  <https://bugzilla.gnome.org/buglist.cgi?bug_status=__all__&content=libFuzzer&list_id=68957&order=Importance&product=libxml2&query_format=specific>`_
+  <https://bugzilla.gnome.org/buglist.cgi?bug_status=__all__&content=libFuzzer&list_id=68957&order=Importance&product=libxml2&query_format=specific>`_ and `[HT206167] <https://support.apple.com/en-gb/HT206167>`_ (CVE-2015-5312, CVE-2015-7500, CVE-2015-7942)
 
 * `Linux Kernel's BPF verifier <https://github.com/iovisor/bpf-fuzzer>`_
 
@@ -534,6 +567,7 @@ Trophies
 .. _SanitizerCoverage: http://clang.llvm.org/docs/SanitizerCoverage.html
 .. _SanitizerCoverageTraceDataFlow: http://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow
 .. _DataFlowSanitizer: http://clang.llvm.org/docs/DataFlowSanitizer.html
+.. _AddressSanitizer: http://clang.llvm.org/docs/AddressSanitizer.html
 
 .. _Heartbleed: http://en.wikipedia.org/wiki/Heartbleed
 

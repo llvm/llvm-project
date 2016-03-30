@@ -384,7 +384,7 @@ namespace llvm {
     bool isExtended2048BitVector() const LLVM_READONLY;
     EVT getExtendedVectorElementType() const;
     unsigned getExtendedVectorNumElements() const LLVM_READONLY;
-    unsigned getExtendedSizeInBits() const;
+    unsigned getExtendedSizeInBits() const LLVM_READONLY;
   };
 
 } // End llvm namespace

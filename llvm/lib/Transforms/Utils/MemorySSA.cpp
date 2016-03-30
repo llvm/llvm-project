@@ -763,11 +763,11 @@ struct CachingMemorySSAWalker::UpwardsMemoryQuery {
   const Instruction *Inst;
   // Set of visited Instructions for this query.
   DenseSet<MemoryAccessPair> Visited;
-  // Set of visited call accesses for this query. This is separated out because
-  // you can always cache and lookup the result of call queries (IE when IsCall
-  // == true) for every call in the chain. The calls have no AA location
+  // Vector of visited call accesses for this query. This is separated out
+  // because you can always cache and lookup the result of call queries (IE when
+  // IsCall == true) for every call in the chain. The calls have no AA location
   // associated with them with them, and thus, no context dependence.
-  SmallPtrSet<const MemoryAccess *, 32> VisitedCalls;
+  SmallVector<const MemoryAccess *, 32> VisitedCalls;
   // The MemoryAccess we actually got called with, used to test local domination
   const MemoryAccess *OriginalAccess;
   // The Datalayout for the module we started in
@@ -862,7 +862,7 @@ bool CachingMemorySSAWalker::instructionClobbersQuery(
 
   // If this is a call, mark it for caching
   if (ImmutableCallSite(DefMemoryInst))
-    Q.VisitedCalls.insert(MD);
+    Q.VisitedCalls.push_back(MD);
   ModRefInfo I = AA->getModRefInfo(DefMemoryInst, ImmutableCallSite(Q.Inst));
   return I != MRI_NoModRef;
 }
@@ -910,18 +910,22 @@ MemoryAccessPair CachingMemorySSAWalker::UpwardsDFSWalk(
            "Skipping phi's children doesn't end the DFS?");
 #endif
 
+    const MemoryAccessPair PHIPair(CurrAccess, Loc);
+
+    // Don't try to optimize this phi again if we've already tried to do so.
+    if (!Q.Visited.insert(PHIPair).second) {
+      ModifyingAccess = CurrAccess;
+      break;
+    }
+
+    std::size_t InitialVisitedCallSize = Q.VisitedCalls.size();
+
     // Recurse on PHI nodes, since we need to change locations.
     // TODO: Allow graphtraits on pairs, which would turn this whole function
     // into a normal single depth first walk.
     MemoryAccess *FirstDef = nullptr;
-    const MemoryAccessPair PHIPair(CurrAccess, Loc);
-    bool VisitedOnlyOne = true;
     for (auto MPI = upward_defs_begin(PHIPair), MPE = upward_defs_end();
          MPI != MPE; ++MPI) {
-      // Don't follow this path again if we've followed it once
-      if (!Q.Visited.insert(*MPI).second)
-        continue;
-
       bool Backedge =
           !FollowingBackedge &&
           DT->dominates(CurrAccess->getBlock(), MPI.getPhiArgBlock());
@@ -939,26 +943,16 @@ MemoryAccessPair CachingMemorySSAWalker::UpwardsDFSWalk(
 
       if (!FirstDef)
         FirstDef = CurrentPair.first;
-      else
-        VisitedOnlyOne = false;
     }
 
     // If we exited the loop early, go with the result it gave us.
     if (!ModifyingAccess) {
-      // The above loop determines if all arguments of the phi node reach the
-      // same place. However we skip arguments that are cyclically dependent
-      // only on the value of this phi node. This means in some cases, we may
-      // only visit one argument of the phi node, and the above loop will
-      // happily say that all the arguments are the same. However, in that case,
-      // we still can't walk past the phi node, because that argument still
-      // kills the access unless we hit the top of the function when walking
-      // that argument.
-      if (VisitedOnlyOne && !(FirstDef && MSSA->isLiveOnEntryDef(FirstDef))) {
-        ModifyingAccess = CurrAccess;
-      } else {
-        assert(FirstDef && "Visited multiple phis, but FirstDef isn't set?");
-        ModifyingAccess = FirstDef;
-      }
+      assert(FirstDef && "Found a Phi with no upward defs?");
+      ModifyingAccess = FirstDef;
+    } else {
+      // If we can't optimize this Phi, then we can't safely cache any of the
+      // calls we visited when trying to optimize it. Wipe them out now.
+      Q.VisitedCalls.resize(InitialVisitedCallSize);
     }
     break;
   }

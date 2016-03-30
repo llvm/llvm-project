@@ -27,12 +27,6 @@ static cl::opt<unsigned>
 CacheLineSize("ppc-loop-prefetch-cache-line", cl::Hidden, cl::init(64),
               cl::desc("The loop prefetch cache line size"));
 
-// This seems like a reasonable default for the BG/Q (this pass is enabled, by
-// default, only on the BG/Q).
-static cl::opt<unsigned>
-PrefDist("ppc-loop-prefetch-distance", cl::Hidden, cl::init(300),
-         cl::desc("The loop prefetch distance"));
-
 //===----------------------------------------------------------------------===//
 //
 // PPC cost model.
@@ -249,7 +243,11 @@ unsigned PPCTTIImpl::getCacheLineSize() {
   return CacheLineSize;
 }
 
-unsigned PPCTTIImpl::getPrefetchDistance() { return PrefDist; }
+unsigned PPCTTIImpl::getPrefetchDistance() {
+  // This seems like a reasonable default for the BG/Q (this pass is enabled, by
+  // default, only on the BG/Q).
+  return 300;
+}
 
 unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   unsigned Directive = ST->getDarwinDirective();

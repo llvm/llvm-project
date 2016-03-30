@@ -24,3 +24,30 @@ define i32 @foo() {
   %3 = add i32 %2, %1
   ret i32 %3
 }
+
+declare void @readEverything() readonly
+declare void @clobberEverything()
+
+; CHECK-LABEL: define void @bar
+define void @bar() {
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: call void @clobberEverything()
+  call void @clobberEverything()
+  br i1 undef, label %if.end, label %if.then
+
+if.then:
+; CHECK: MemoryUse(1)
+; CHECK-NEXT: call void @readEverything()
+  call void @readEverything()
+; CHECK: 2 = MemoryDef(1)
+; CHECK-NEXT: call void @clobberEverything()
+  call void @clobberEverything()
+  br label %if.end
+
+if.end:
+; CHECK: 3 = MemoryPhi({%0,1},{if.then,2})
+; CHECK: MemoryUse(3)
+; CHECK-NEXT: call void @readEverything()
+  call void @readEverything()
+  ret void
+}

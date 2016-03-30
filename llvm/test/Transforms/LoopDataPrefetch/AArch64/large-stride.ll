@@ -1,4 +1,4 @@
-; RUN: opt -mcpu=cyclone -mtriple=arm64-apple-ios -loop-data-prefetch -cyclone-max-prefetch-iters-ahead=100 -S < %s | FileCheck %s --check-prefix=LARGE_PREFETCH --check-prefix=ALL
+; RUN: opt -mcpu=cyclone -mtriple=arm64-apple-ios -loop-data-prefetch -max-prefetch-iters-ahead=100 -S < %s | FileCheck %s --check-prefix=LARGE_PREFETCH --check-prefix=ALL
 ; RUN: opt -mcpu=cyclone -mtriple=arm64-apple-ios -loop-data-prefetch -S < %s | FileCheck %s --check-prefix=NO_LARGE_PREFETCH --check-prefix=ALL
 ; RUN: opt -mcpu=generic -mtriple=arm64-apple-ios -loop-data-prefetch -S < %s | FileCheck %s --check-prefix=NO_LARGE_PREFETCH --check-prefix=ALL
 

@@ -12,15 +12,12 @@ entry:
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
-!llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!13}
-!llvm.dbg.sp = !{!0}
 !llvm.dbg.lv.foo = !{!5}
-!llvm.dbg.gv = !{!8}
 
 !0 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, file: !12, scope: !1, type: !3)
 !1 = !DIFile(filename: "b.c", directory: "/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 0, file: !12)
+!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 0, file: !12, subprograms: !{!0}, globals: !{!8})
 !3 = !DISubroutineType(types: !4)
 !4 = !{null}
 !5 = !DILocalVariable(name: "y", line: 3, scope: !6, file: !1, type: !7)

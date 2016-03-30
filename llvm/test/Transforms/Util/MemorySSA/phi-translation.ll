@@ -61,8 +61,7 @@ phi.1:
 ; Order matters here; phi.2 needs to come before phi.3, because that's the order
 ; they're visited in.
 ; CHECK: 7 = MemoryPhi({phi.2,4},{phi.3,3})
-; FIXME: This should be MemoryUse(1)
-; CHECK: MemoryUse(7)
+; CHECK: MemoryUse(1)
 ; CHECK-NEXT: load i8, i8* %local
   load i8, i8* %local
   ret void
@@ -106,8 +105,7 @@ d:
 
 e:
 ; 8 = MemoryPhi({c,4},{d,5})
-; FIXME: This should be MemoryUse(1)
-; CHECK: MemoryUse(8)
+; CHECK: MemoryUse(1)
 ; CHECK-NEXT: load i8, i8* %p1
   load i8, i8* %p1
   ret void
@@ -145,3 +143,39 @@ loop.3:
   load i8, i8* %p1
   br i1 undef, label %loop.2, label %loop.1
 }
+
+; CHECK-LABEL: define void @looped_visitedonlyonce
+define void @looped_visitedonlyonce(i8* noalias %p1, i8* noalias %p2) {
+  br label %while.cond
+
+while.cond:
+; CHECK: 5 = MemoryPhi({%0,liveOnEntry},{if.end,3})
+; CHECK-NEXT: br i1 undef, label %if.then, label %if.end
+  br i1 undef, label %if.then, label %if.end
+
+if.then:
+; CHECK: 1 = MemoryDef(5)
+; CHECK-NEXT: store i8 0, i8* %p1
+  store i8 0, i8* %p1
+  br i1 undef, label %if.end, label %if.then2
+
+if.then2:
+; CHECK: 2 = MemoryDef(1)
+; CHECK-NEXT: store i8 1, i8* %p2
+  store i8 1, i8* %p2
+  br label %if.end
+
+if.end:
+; CHECK: 4 = MemoryPhi({while.cond,5},{if.then,1},{if.then2,2})
+; CHECK: MemoryUse(4)
+; CHECK-NEXT: load i8, i8* %p1
+  load i8, i8* %p1
+; CHECK: 3 = MemoryDef(4)
+; CHECK-NEXT: store i8 2, i8* %p2
+  store i8 2, i8* %p2
+; CHECK: MemoryUse(4)
+; CHECK-NEXT: load i8, i8* %p1
+  load i8, i8* %p1
+  br label %while.cond
+}
+

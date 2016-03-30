@@ -53,7 +53,7 @@ How to Compile CUDA C/C++ with LLVM
 ===================================
 
 We assume you have installed the CUDA driver and runtime. Consult the `NVIDIA
-CUDA installation Guide
+CUDA installation guide
 <https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html>`_ if
 you have not.
 
@@ -167,10 +167,9 @@ customizable target-independent optimization pipeline.
   straight-line scalar optimizations <https://goo.gl/4Rb9As>`_.
 
 * **Inferring memory spaces**. `This optimization
-  <http://www.llvm.org/docs/doxygen/html/NVPTXFavorNonGenericAddrSpaces_8cpp_source.html>`_
+  <https://github.com/llvm-mirror/llvm/blob/master/lib/Target/NVPTX/NVPTXInferAddressSpaces.cpp>`_
   infers the memory space of an address so that the backend can emit faster
-  special loads and stores from it. Details can be found in the `design
-  document for memory space inference <https://goo.gl/5wH2Ct>`_.
+  special loads and stores from it.
 
 * **Aggressive loop unrooling and function inlining**. Loop unrolling and
   function inlining need to be more aggressive for GPUs than for CPUs because
@@ -200,6 +199,19 @@ customizable target-independent optimization pipeline.
   32-bit ones on NVIDIA GPUs due to lack of a divide unit. Many of the 64-bit
   divides in our benchmarks have a divisor and dividend which fit in 32-bits at
   runtime. This optimization provides a fast path for this common case.
+
+Publication
+===========
+
+| `gpucc: An Open-Source GPGPU Compiler <http://dl.acm.org/citation.cfm?id=2854041>`_
+| Jingyue Wu, Artem Belevich, Eli Bendersky, Mark Heffernan, Chris Leary, Jacques Pienaar, Bjarke Roune, Rob Springer, Xuetian Weng, Robert Hundt
+| *Proceedings of the 2016 International Symposium on Code Generation and Optimization (CGO 2016)*
+| `Slides for the CGO talk <http://wujingyue.com/docs/gpucc-talk.pdf>`_
+
+Tutorial
+========
+
+`CGO 2016 gpucc tutorial <http://wujingyue.com/docs/gpucc-tutorial.pdf>`_
 
 Obtaining Help
 ==============
