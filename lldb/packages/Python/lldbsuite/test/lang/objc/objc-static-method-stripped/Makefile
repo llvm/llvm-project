@@ -7,9 +7,10 @@ default:        a.out.stripped
 
 a.out.stripped: a.out.dSYM
 	strip -o a.out.stripped a.out
+	ln -sf a.out.dSYM a.out.stripped.dSYM
 
 clean::
 	rm -f a.out.stripped
-	rm -rf a.out.stripped.dSYM
+	rm -rf *.dSYM
 
 include $(LEVEL)/Makefile.rules

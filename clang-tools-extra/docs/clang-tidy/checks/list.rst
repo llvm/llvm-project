@@ -90,8 +90,9 @@ Clang-Tidy Checks
    performance-faster-string-find
    performance-for-range-copy
    performance-implicit-cast-in-loop
-   performance-unnecessary-value-param
    performance-unnecessary-copy-initialization
+   performance-unnecessary-value-param
+   readability-avoid-const-params-in-decls
    readability-braces-around-statements
    readability-container-size-empty
    readability-else-after-return

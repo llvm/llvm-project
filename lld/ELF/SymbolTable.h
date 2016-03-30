@@ -14,10 +14,6 @@
 #include "LTO.h"
 #include "llvm/ADT/MapVector.h"
 
-namespace llvm {
-class Module;
-}
-
 namespace lld {
 namespace elf {
 class Lazy;

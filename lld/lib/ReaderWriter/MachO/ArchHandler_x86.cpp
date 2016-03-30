@@ -82,16 +82,16 @@ public:
     return 0x04000000U;
   }
 
-  std::error_code getReferenceInfo(const normalized::Relocation &reloc,
-                                   const DefinedAtom *inAtom,
-                                   uint32_t offsetInAtom,
-                                   uint64_t fixupAddress, bool swap,
-                                   FindAtomBySectionAndAddress atomFromAddress,
-                                   FindAtomBySymbolIndex atomFromSymbolIndex,
-                                   Reference::KindValue *kind,
-                                   const lld::Atom **target,
-                                   Reference::Addend *addend) override;
-  std::error_code
+  llvm::Error getReferenceInfo(const normalized::Relocation &reloc,
+                               const DefinedAtom *inAtom,
+                               uint32_t offsetInAtom,
+                               uint64_t fixupAddress, bool swap,
+                               FindAtomBySectionAndAddress atomFromAddress,
+                               FindAtomBySymbolIndex atomFromSymbolIndex,
+                               Reference::KindValue *kind,
+                               const lld::Atom **target,
+                               Reference::Addend *addend) override;
+  llvm::Error
       getPairReferenceInfo(const normalized::Relocation &reloc1,
                            const normalized::Relocation &reloc2,
                            const DefinedAtom *inAtom,
@@ -251,7 +251,7 @@ bool ArchHandler_x86::isPairedReloc(const Relocation &reloc) {
          (reloc.type == GENERIC_RELOC_SECTDIFF);
 }
 
-std::error_code
+llvm::Error
 ArchHandler_x86::getReferenceInfo(const Relocation &reloc,
                                   const DefinedAtom *inAtom,
                                   uint32_t offsetInAtom,
@@ -261,7 +261,6 @@ ArchHandler_x86::getReferenceInfo(const Relocation &reloc,
                                   Reference::KindValue *kind,
                                   const lld::Atom **target,
                                   Reference::Addend *addend) {
-  typedef std::error_code E;
   DefinedAtom::ContentPermissions perms;
   const uint8_t *fixupContent = &inAtom->rawContent()[offsetInAtom];
   uint64_t targetAddress;
@@ -269,7 +268,7 @@ ArchHandler_x86::getReferenceInfo(const Relocation &reloc,
   case GENERIC_RELOC_VANILLA | rPcRel | rExtern | rLength4:
     // ex: call _foo (and _foo undefined)
     *kind = branch32;
-    if (E ec = atomFromSymbolIndex(reloc.symbol, target))
+    if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = fixupAddress + 4 + (int32_t)*(const little32_t *)fixupContent;
     break;
@@ -285,14 +284,14 @@ ArchHandler_x86::getReferenceInfo(const Relocation &reloc,
     *kind = branch32;
     targetAddress =
         fixupAddress + 4 + (int32_t) * (const little32_t *)fixupContent;
-    if (E ec = atomFromAddress(0, reloc.value, target, addend))
+    if (auto ec = atomFromAddress(0, reloc.value, target, addend))
       return ec;
     *addend = targetAddress - reloc.value;
     break;
   case GENERIC_RELOC_VANILLA | rPcRel | rExtern | rLength2:
     // ex: callw _foo (and _foo undefined)
     *kind = branch16;
-    if (E ec = atomFromSymbolIndex(reloc.symbol, target))
+    if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = fixupAddress + 2 + (int16_t)*(const little16_t *)fixupContent;
     break;
@@ -308,7 +307,7 @@ ArchHandler_x86::getReferenceInfo(const Relocation &reloc,
     *kind = branch16;
     targetAddress =
         fixupAddress + 2 + (int16_t) * (const little16_t *)fixupContent;
-    if (E ec = atomFromAddress(0, reloc.value, target, addend))
+    if (auto ec = atomFromAddress(0, reloc.value, target, addend))
       return ec;
     *addend = targetAddress - reloc.value;
     break;
@@ -319,7 +318,7 @@ ArchHandler_x86::getReferenceInfo(const Relocation &reloc,
     *kind =
         ((perms & DefinedAtom::permR_X) == DefinedAtom::permR_X) ? abs32
                                                                  : pointer32;
-    if (E ec = atomFromSymbolIndex(reloc.symbol, target))
+    if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = *(const ulittle32_t *)fixupContent;
     break;
@@ -339,17 +338,17 @@ ArchHandler_x86::getReferenceInfo(const Relocation &reloc,
     *kind =
         ((perms & DefinedAtom::permR_X) == DefinedAtom::permR_X) ? abs32
                                                                  : pointer32;
-    if (E ec = atomFromAddress(0, reloc.value, target, addend))
+    if (auto ec = atomFromAddress(0, reloc.value, target, addend))
       return ec;
     *addend = *(const ulittle32_t *)fixupContent - reloc.value;
     break;
   default:
-    return make_dynamic_error_code("unsupported i386 relocation type");
+    return llvm::make_error<GenericError>("unsupported i386 relocation type");
   }
-  return std::error_code();
+  return llvm::Error();
 }
 
-std::error_code
+llvm::Error
 ArchHandler_x86::getPairReferenceInfo(const normalized::Relocation &reloc1,
                                       const normalized::Relocation &reloc2,
                                       const DefinedAtom *inAtom,
@@ -362,7 +361,6 @@ ArchHandler_x86::getPairReferenceInfo(const normalized::Relocation &reloc1,
                                       const lld::Atom **target,
                                       Reference::Addend *addend) {
   const uint8_t *fixupContent = &inAtom->rawContent()[offsetInAtom];
-  std::error_code ec;
   DefinedAtom::ContentPermissions perms = inAtom->permissions();
   uint32_t fromAddress;
   uint32_t toAddress;
@@ -378,15 +376,13 @@ ArchHandler_x86::getPairReferenceInfo(const normalized::Relocation &reloc1,
     toAddress = reloc1.value;
     fromAddress = reloc2.value;
     value = *(const little32_t *)fixupContent;
-    ec = atomFromAddr(0, toAddress, target, &offsetInTo);
-    if (ec)
+    if (auto ec = atomFromAddr(0, toAddress, target, &offsetInTo))
       return ec;
-    ec = atomFromAddr(0, fromAddress, &fromTarget, &offsetInFrom);
-    if (ec)
+    if (auto ec = atomFromAddr(0, fromAddress, &fromTarget, &offsetInFrom))
       return ec;
     if (fromTarget != inAtom) {
       if (*target != inAtom)
-        return make_dynamic_error_code(
+        return llvm::make_error<GenericError>(
             "SECTDIFF relocation where neither target is in atom");
       *kind = negDelta32;
       *addend = toAddress - value - fromAddress;
@@ -407,10 +403,10 @@ ArchHandler_x86::getPairReferenceInfo(const normalized::Relocation &reloc1,
         *addend = fromAddress + value - toAddress;
       }
     }
-    return std::error_code();
+    return llvm::Error();
     break;
   default:
-    return make_dynamic_error_code("unsupported i386 relocation type");
+    return llvm::make_error<GenericError>("unsupported i386 relocation type");
   }
 }
 

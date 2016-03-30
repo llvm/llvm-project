@@ -13,6 +13,7 @@
 #include "lld/Core/Atom.h"
 #include "lld/Core/File.h"
 #include "lld/Core/Reference.h"
+#include "llvm/Support/Error.h"
 #include <vector>
 
 namespace lld {
@@ -33,7 +34,7 @@ public:
   virtual ~Pass() { }
 
   /// Do the actual work of the Pass.
-  virtual std::error_code perform(SimpleFile &mergedFile) = 0;
+  virtual llvm::Error perform(SimpleFile &mergedFile) = 0;
 
 protected:
   // Only subclassess can be instantiated.

@@ -208,7 +208,7 @@ public:
   /// errors for any differences between the context state and a loaded file.
   /// For example, we can error if we try to load a file which is a different
   /// arch from that being linked.
-  virtual std::error_code handleLoadedFile(File &file) = 0;
+  virtual llvm::Error handleLoadedFile(File &file) = 0;
 
   /// @}
 protected:

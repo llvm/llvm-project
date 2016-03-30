@@ -16,17 +16,6 @@
 using namespace lldb_private;
 using namespace std;
 
-bool
-DWARFDIECollection::Insert(const DWARFDIE &die)
-{
-    iterator end_pos = m_dies.end();
-    iterator insert_pos = upper_bound(m_dies.begin(), end_pos, die);
-    if (insert_pos != end_pos && (*insert_pos == die))
-        return false;
-    m_dies.insert(insert_pos, die);
-    return true;
-}
-
 void
 DWARFDIECollection::Append (const DWARFDIE &die)
 {

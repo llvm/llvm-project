@@ -66,7 +66,7 @@ public:
   LayoutPass(const Registry &registry, SortOverride sorter);
 
   /// Sorts atoms in mergedFile by content type then by command line order.
-  std::error_code perform(SimpleFile &mergedFile) override;
+  llvm::Error perform(SimpleFile &mergedFile) override;
 
   ~LayoutPass() override = default;
 

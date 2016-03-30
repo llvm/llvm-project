@@ -281,7 +281,7 @@ public:
   }
 
 private:
-  std::error_code perform(SimpleFile &mergedFile) override {
+  llvm::Error perform(SimpleFile &mergedFile) override {
     DEBUG(llvm::dbgs() << "MachO Compact Unwind pass\n");
 
     std::map<const Atom *, CompactUnwindEntry> unwindLocs;
@@ -298,7 +298,7 @@ private:
 
     // Skip rest of pass if no unwind info.
     if (unwindLocs.empty() && dwarfFrames.empty())
-      return std::error_code();
+      return llvm::Error();
 
     // FIXME: if there are more than 4 personality functions then we need to
     // defer to DWARF info for the ones we don't put in the list. They should
@@ -353,7 +353,7 @@ private:
       return atom->contentType() == DefinedAtom::typeCompactUnwindInfo;
     });
 
-    return std::error_code();
+    return llvm::Error();
   }
 
   void collectCompactUnwindEntries(

@@ -513,23 +513,23 @@ findAtomCoveringAddress(const NormalizedFile &normalizedFile, MachOFile &file,
 
 // Walks all relocations for a section in a normalized .o file and
 // creates corresponding lld::Reference objects.
-std::error_code convertRelocs(const Section &section,
-                              const NormalizedFile &normalizedFile,
-                              bool scatterable,
-                              MachOFile &file,
-                              ArchHandler &handler) {
+llvm::Error convertRelocs(const Section &section,
+                          const NormalizedFile &normalizedFile,
+                          bool scatterable,
+                          MachOFile &file,
+                          ArchHandler &handler) {
   // Utility function for ArchHandler to find atom by its address.
   auto atomByAddr = [&] (uint32_t sectIndex, uint64_t addr,
                          const lld::Atom **atom, Reference::Addend *addend)
-                         -> std::error_code {
+                         -> llvm::Error {
     if (sectIndex > normalizedFile.sections.size())
-      return make_dynamic_error_code(Twine("out of range section "
+      return llvm::make_error<GenericError>(Twine("out of range section "
                                      "index (") + Twine(sectIndex) + ")");
     const Section *sect = nullptr;
     if (sectIndex == 0) {
       sect = findSectionCoveringAddress(normalizedFile, addr);
       if (!sect)
-        return make_dynamic_error_code(Twine("address (" + Twine(addr)
+        return llvm::make_error<GenericError>(Twine("address (" + Twine(addr)
                                        + ") is not in any section"));
     } else {
       sect = &normalizedFile.sections[sectIndex-1];
@@ -538,12 +538,12 @@ std::error_code convertRelocs(const Section &section,
     uint64_t offsetInSect = addr - sect->address;
     *atom = file.findAtomCoveringAddress(*sect, offsetInSect, &offsetInTarget);
     *addend = offsetInTarget;
-    return std::error_code();
+    return llvm::Error();
   };
 
   // Utility function for ArchHandler to find atom by its symbol index.
   auto atomBySymbol = [&] (uint32_t symbolIndex, const lld::Atom **result)
-                           -> std::error_code {
+                           -> llvm::Error {
     // Find symbol from index.
     const Symbol *sym = nullptr;
     uint32_t numLocal  = normalizedFile.localSymbols.size();
@@ -556,13 +556,13 @@ std::error_code convertRelocs(const Section &section,
     } else if (symbolIndex < numLocal+numGlobal+numUndef) {
       sym = &normalizedFile.undefinedSymbols[symbolIndex-numLocal-numGlobal];
     } else {
-      return make_dynamic_error_code(Twine("symbol index (")
+      return llvm::make_error<GenericError>(Twine("symbol index (")
                                      + Twine(symbolIndex) + ") out of range");
     }
     // Find atom from symbol.
     if ((sym->type & N_TYPE) == N_SECT) {
       if (sym->sect > normalizedFile.sections.size())
-        return make_dynamic_error_code(Twine("symbol section index (")
+        return llvm::make_error<GenericError>(Twine("symbol section index (")
                                         + Twine(sym->sect) + ") out of range ");
       const Section &symSection = normalizedFile.sections[sym->sect-1];
       uint64_t targetOffsetInSect = sym->value - symSection.address;
@@ -570,19 +570,19 @@ std::error_code convertRelocs(const Section &section,
                                                             targetOffsetInSect);
       if (target) {
         *result = target;
-        return std::error_code();
+        return llvm::Error();
       }
-      return make_dynamic_error_code("no atom found for defined symbol");
+      return llvm::make_error<GenericError>("no atom found for defined symbol");
     } else if ((sym->type & N_TYPE) == N_UNDF) {
       const lld::Atom *target = file.findUndefAtom(sym->name);
       if (target) {
         *result = target;
-        return std::error_code();
+        return llvm::Error();
       }
-      return make_dynamic_error_code("no undefined atom found for sym");
+      return llvm::make_error<GenericError>("no undefined atom found for sym");
     } else {
       // Search undefs
-      return make_dynamic_error_code("no atom found for symbol");
+      return llvm::make_error<GenericError>("no atom found for symbol");
     }
   };
 
@@ -593,7 +593,8 @@ std::error_code convertRelocs(const Section &section,
     const Relocation &reloc = *it;
     // Find atom this relocation is in.
     if (reloc.offset > section.content.size())
-      return make_dynamic_error_code(Twine("r_address (") + Twine(reloc.offset)
+      return llvm::make_error<GenericError>(
+                                    Twine("r_address (") + Twine(reloc.offset)
                                     + ") is larger than section size ("
                                     + Twine(section.content.size()) + ")");
     uint32_t offsetInAtom;
@@ -606,60 +607,65 @@ std::error_code convertRelocs(const Section &section,
     const lld::Atom *target = nullptr;
     Reference::Addend addend = 0;
     Reference::KindValue kind;
-    std::error_code relocErr;
     if (handler.isPairedReloc(reloc)) {
       // Handle paired relocations together.
       const Relocation &reloc2 = *++it;
-      relocErr = handler.getPairReferenceInfo(
+      auto relocErr = handler.getPairReferenceInfo(
           reloc, reloc2, inAtom, offsetInAtom, fixupAddress, isBig, scatterable,
           atomByAddr, atomBySymbol, &kind, &target, &addend);
       if (relocErr) {
-        return make_dynamic_error_code(
-          Twine("bad relocation (") + relocErr.message()
-           + ") in section "
-           + section.segmentName + "/" + section.sectionName
-           + " (r1_address=" + Twine::utohexstr(reloc.offset)
-           + ", r1_type=" + Twine(reloc.type)
-           + ", r1_extern=" + Twine(reloc.isExtern)
-           + ", r1_length=" + Twine((int)reloc.length)
-           + ", r1_pcrel=" + Twine(reloc.pcRel)
-           + (!reloc.scattered ? (Twine(", r1_symbolnum=")
-                                  + Twine(reloc.symbol))
-                               : (Twine(", r1_scattered=1, r1_value=")
-                                  + Twine(reloc.value)))
-           + ")"
-           + ", (r2_address=" + Twine::utohexstr(reloc2.offset)
-           + ", r2_type=" + Twine(reloc2.type)
-           + ", r2_extern=" + Twine(reloc2.isExtern)
-           + ", r2_length=" + Twine((int)reloc2.length)
-           + ", r2_pcrel=" + Twine(reloc2.pcRel)
-           + (!reloc2.scattered ? (Twine(", r2_symbolnum=")
-                                   + Twine(reloc2.symbol))
-                                : (Twine(", r2_scattered=1, r2_value=")
-                                   + Twine(reloc2.value)))
-           + ")" );
+        return handleErrors(std::move(relocErr),
+                            [&](std::unique_ptr<GenericError> GE) {
+          return llvm::make_error<GenericError>(
+            Twine("bad relocation (") + GE->getMessage()
+             + ") in section "
+             + section.segmentName + "/" + section.sectionName
+             + " (r1_address=" + Twine::utohexstr(reloc.offset)
+             + ", r1_type=" + Twine(reloc.type)
+             + ", r1_extern=" + Twine(reloc.isExtern)
+             + ", r1_length=" + Twine((int)reloc.length)
+             + ", r1_pcrel=" + Twine(reloc.pcRel)
+             + (!reloc.scattered ? (Twine(", r1_symbolnum=")
+                                    + Twine(reloc.symbol))
+                                 : (Twine(", r1_scattered=1, r1_value=")
+                                    + Twine(reloc.value)))
+             + ")"
+             + ", (r2_address=" + Twine::utohexstr(reloc2.offset)
+             + ", r2_type=" + Twine(reloc2.type)
+             + ", r2_extern=" + Twine(reloc2.isExtern)
+             + ", r2_length=" + Twine((int)reloc2.length)
+             + ", r2_pcrel=" + Twine(reloc2.pcRel)
+             + (!reloc2.scattered ? (Twine(", r2_symbolnum=")
+                                     + Twine(reloc2.symbol))
+                                  : (Twine(", r2_scattered=1, r2_value=")
+                                     + Twine(reloc2.value)))
+             + ")" );
+          });
       }
     }
     else {
       // Use ArchHandler to convert relocation record into information
       // needed to instantiate an lld::Reference object.
-      relocErr = handler.getReferenceInfo(
+      auto relocErr = handler.getReferenceInfo(
           reloc, inAtom, offsetInAtom, fixupAddress, isBig, atomByAddr,
           atomBySymbol, &kind, &target, &addend);
       if (relocErr) {
-        return make_dynamic_error_code(
-          Twine("bad relocation (") + relocErr.message()
-           + ") in section "
-           + section.segmentName + "/" + section.sectionName
-           + " (r_address=" + Twine::utohexstr(reloc.offset)
-           + ", r_type=" + Twine(reloc.type)
-           + ", r_extern=" + Twine(reloc.isExtern)
-           + ", r_length=" + Twine((int)reloc.length)
-           + ", r_pcrel=" + Twine(reloc.pcRel)
-           + (!reloc.scattered ? (Twine(", r_symbolnum=") + Twine(reloc.symbol))
-                               : (Twine(", r_scattered=1, r_value=")
-                                  + Twine(reloc.value)))
-           + ")" );
+        return handleErrors(std::move(relocErr),
+                            [&](std::unique_ptr<GenericError> GE) {
+          return llvm::make_error<GenericError>(
+            Twine("bad relocation (") + GE->getMessage()
+             + ") in section "
+             + section.segmentName + "/" + section.sectionName
+             + " (r_address=" + Twine::utohexstr(reloc.offset)
+             + ", r_type=" + Twine(reloc.type)
+             + ", r_extern=" + Twine(reloc.isExtern)
+             + ", r_length=" + Twine((int)reloc.length)
+             + ", r_pcrel=" + Twine(reloc.pcRel)
+             + (!reloc.scattered ? (Twine(", r_symbolnum=") + Twine(reloc.symbol))
+                                 : (Twine(", r_scattered=1, r_value=")
+                                    + Twine(reloc.value)))
+             + ")" );
+          });
       }
     }
     // Instantiate an lld::Reference object and add to its atom.
@@ -668,7 +674,7 @@ std::error_code convertRelocs(const Section &section,
                          kind, offsetInAtom, target, addend);
   }
 
-  return std::error_code();
+  return llvm::Error();
 }
 
 bool isDebugInfoSection(const Section &section) {
@@ -1165,9 +1171,9 @@ normalizedObjectToAtoms(MachOFile *file,
   for (auto &sect : normalizedFile.sections) {
     if (isDebugInfoSection(sect))
       continue;
-    if (std::error_code ec = convertRelocs(sect, normalizedFile, scatterable,
-                                           *file, *handler))
-        return ec;
+    if (llvm::Error ec = convertRelocs(sect, normalizedFile, scatterable,
+                                       *file, *handler))
+      return llvm::errorToErrorCode(std::move(ec));
   }
 
   // Add additional arch-specific References

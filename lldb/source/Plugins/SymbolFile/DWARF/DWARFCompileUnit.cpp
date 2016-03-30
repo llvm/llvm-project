@@ -433,7 +433,7 @@ DWARFCompileUnit::GetID () const
 {
     dw_offset_t local_id = m_base_obj_offset != DW_INVALID_OFFSET ? m_base_obj_offset : m_offset;
     if (m_dwarf2Data)
-        return m_dwarf2Data->MakeUserID(local_id);
+        return DIERef(local_id, local_id).GetUID(m_dwarf2Data);
     else
         return local_id;
 }
@@ -631,7 +631,7 @@ DWARFCompileUnit::GetDIE (dw_offset_t die_offset)
         {
             // Don't specify the compile unit offset as we don't know it because the DIE belongs to
             // a different compile unit in the same symbol file.
-            return m_dwarf2Data->DebugInfo()->GetDIE (DIERef(die_offset));
+            return m_dwarf2Data->DebugInfo()->GetDIEForDIEOffset(die_offset);
         }
     }
     return DWARFDIE(); // Not found

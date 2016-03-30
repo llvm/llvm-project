@@ -71,6 +71,7 @@ private:
   void createPhdrs();
   void assignAddresses();
   void assignAddressesRelocatable();
+  void fixSectionAlignments();
   void fixAbsoluteSymbols();
   bool openFile();
   void writeHeader();
@@ -212,6 +213,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     return;
   if (!Config->Relocatable) {
     createPhdrs();
+    fixSectionAlignments();
     assignAddresses();
   } else {
     assignAddressesRelocatable();
@@ -1304,6 +1306,28 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
     Phdrs.push_back(std::move(Note));
 }
 
+// The first section of each PT_LOAD and the first section after PT_GNU_RELRO
+// have to be page aligned so that the dynamic linker can set the permissions.
+template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
+  for (const Phdr &P : Phdrs)
+    if (P.H.p_type == PT_LOAD)
+      P.First->PageAlign = true;
+
+  for (const Phdr &P : Phdrs) {
+    if (P.H.p_type != PT_GNU_RELRO)
+      continue;
+    // Find the first section after PT_GNU_RELRO. If it is in a PT_LOAD we
+    // have to align it to a page.
+    auto End = OutputSections.end();
+    auto I = std::find(OutputSections.begin(), End, P.Last);
+    if (I == End || (I + 1) == End)
+      continue;
+    OutputSectionBase<ELFT> *Sec = *(I + 1);
+    if (needsPtLoad(Sec))
+      Sec->PageAlign = true;
+  }
+}
+
 // Used for relocatable output (-r). In this case we create only ELF file
 // header, do not create program headers. Also assign of section addresses
 // is very straightforward: we just put all sections sequentually to the file.
@@ -1328,30 +1352,13 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
   size_t PhdrSize = sizeof(Elf_Phdr) * Phdrs.size();
   Out<ELFT>::ProgramHeaders->setSize(PhdrSize);
 
-  // The first section of each PT_LOAD and the first section after PT_GNU_RELRO
-  // have to be page aligned so that the dynamic linker can set the permissions.
-  SmallPtrSet<OutputSectionBase<ELFT> *, 4> PageAlign;
-  for (const Phdr &P : Phdrs) {
-    if (P.H.p_type == PT_GNU_RELRO) {
-      // Find the first section after PT_GNU_RELRO. If it is in a PT_LOAD we
-      // have to align it to a page.
-      auto I = std::find(OutputSections.begin(), OutputSections.end(), P.Last);
-      ++I;
-      if (I != OutputSections.end() && needsPtLoad(*I))
-        PageAlign.insert(*I);
-    }
-
-    if (P.H.p_type == PT_LOAD)
-      PageAlign.insert(P.First);
-  }
-
   uintX_t ThreadBssOffset = 0;
   uintX_t VA = Target->getVAStart();
   uintX_t FileOff = 0;
 
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
     uintX_t Align = Sec->getAlign();
-    if (PageAlign.count(Sec))
+    if (Sec->PageAlign)
       Align = std::max<uintX_t>(Align, Target->PageSize);
 
     if (Sec->getType() != SHT_NOBITS)

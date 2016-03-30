@@ -3468,8 +3468,8 @@ __kmp_get_user_lock_owner(kmp_user_lock_p lck, kmp_uint32 seq)
         case lockseq_nested_queuing:
 #if KMP_USE_ADAPTIVE_LOCKS
         case lockseq_adaptive:
-            return __kmp_get_queuing_lock_owner((kmp_queuing_lock_t *)lck);
 #endif
+            return __kmp_get_queuing_lock_owner((kmp_queuing_lock_t *)lck);
         case lockseq_drdpa:
         case lockseq_nested_drdpa:
             return __kmp_get_drdpa_lock_owner((kmp_drdpa_lock_t *)lck);

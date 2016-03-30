@@ -1040,10 +1040,10 @@ void MachOLinkingContext::finalizeInputFiles() {
   elements.push_back(llvm::make_unique<GroupEnd>(numLibs));
 }
 
-std::error_code MachOLinkingContext::handleLoadedFile(File &file) {
+llvm::Error MachOLinkingContext::handleLoadedFile(File &file) {
   auto *machoFile = dyn_cast<MachOFile>(&file);
   if (!machoFile)
-    return std::error_code();
+    return llvm::Error();
 
   // Check that the arch of the context matches that of the file.
   // Also set the arch of the context if it didn't have one.
@@ -1051,7 +1051,7 @@ std::error_code MachOLinkingContext::handleLoadedFile(File &file) {
     _arch = machoFile->arch();
   } else if (machoFile->arch() != arch_unknown && machoFile->arch() != _arch) {
     // Archs are different.
-    return make_dynamic_error_code(file.path() +
+    return llvm::make_error<GenericError>(file.path() +
                   Twine(" cannot be linked due to incompatible architecture"));
   }
 
@@ -1061,7 +1061,7 @@ std::error_code MachOLinkingContext::handleLoadedFile(File &file) {
     _os = machoFile->OS();
   } else if (machoFile->OS() != OS::unknown && machoFile->OS() != _os) {
     // OSes are different.
-    return make_dynamic_error_code(file.path() +
+    return llvm::make_error<GenericError>(file.path() +
               Twine(" cannot be linked due to incompatible operating systems"));
   }
 
@@ -1078,7 +1078,7 @@ std::error_code MachOLinkingContext::handleLoadedFile(File &file) {
       // The file is built with simulator objc, so make sure that the context
       // is also building with simulator support.
       if (_os != OS::iOS_simulator)
-        return make_dynamic_error_code(file.path() +
+        return llvm::make_error<GenericError>(file.path() +
           Twine(" cannot be linked.  It contains ObjC built for the simulator"
                 " while we are linking a non-simulator target"));
       assert((_objcConstraint == objc_unknown ||
@@ -1090,7 +1090,7 @@ std::error_code MachOLinkingContext::handleLoadedFile(File &file) {
       // The file is built without simulator objc, so make sure that the
       // context is also building without simulator support.
       if (_os == OS::iOS_simulator)
-        return make_dynamic_error_code(file.path() +
+        return llvm::make_error<GenericError>(file.path() +
           Twine(" cannot be linked.  It contains ObjC built for a non-simulator"
                 " target while we are linking a simulator target"));
       assert((_objcConstraint == objc_unknown ||
@@ -1107,10 +1107,10 @@ std::error_code MachOLinkingContext::handleLoadedFile(File &file) {
   } else if (machoFile->swiftVersion() &&
              machoFile->swiftVersion() != _swiftVersion) {
     // Swift versions are different.
-    return make_dynamic_error_code("different swift versions");
+    return llvm::make_error<GenericError>("different swift versions");
   }
 
-  return std::error_code();
+  return llvm::Error();
 }
 
 } // end namespace lld

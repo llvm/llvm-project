@@ -19,6 +19,7 @@
 #include "lld/Core/UndefinedAtom.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -29,9 +30,9 @@
 
 namespace lld {
 
-ErrorOr<bool> Resolver::handleFile(File &file) {
+llvm::Expected<bool> Resolver::handleFile(File &file) {
   if (auto ec = _ctx.handleLoadedFile(file))
-    return ec;
+    return std::move(ec);
   bool undefAdded = false;
   for (auto &atom : file.defined().owning_ptrs())
     doDefinedAtom(std::move(atom));
@@ -46,7 +47,8 @@ ErrorOr<bool> Resolver::handleFile(File &file) {
   return undefAdded;
 }
 
-ErrorOr<bool> Resolver::forEachUndefines(File &file, UndefCallback callback) {
+llvm::Expected<bool> Resolver::forEachUndefines(File &file,
+                                                UndefCallback callback) {
   size_t i = _undefineIndex[&file];
   bool undefAdded = false;
   do {
@@ -61,8 +63,8 @@ ErrorOr<bool> Resolver::forEachUndefines(File &file, UndefCallback callback) {
         continue;
       }
       auto undefAddedOrError = callback(undefName);
-      if (undefAddedOrError.getError())
-        return undefAddedOrError;
+      if (auto ec = undefAddedOrError.takeError())
+        return std::move(ec);
       undefAdded |= undefAddedOrError.get();
     }
   } while (i < _undefines.size());
@@ -70,9 +72,10 @@ ErrorOr<bool> Resolver::forEachUndefines(File &file, UndefCallback callback) {
   return undefAdded;
 }
 
-ErrorOr<bool> Resolver::handleArchiveFile(File &file) {
+llvm::Expected<bool> Resolver::handleArchiveFile(File &file) {
   ArchiveLibraryFile *archiveFile = cast<ArchiveLibraryFile>(&file);
-  return forEachUndefines(file, [&](StringRef undefName) -> ErrorOr<bool> {
+  return forEachUndefines(file,
+                          [&](StringRef undefName) -> llvm::Expected<bool> {
     if (File *member = archiveFile->find(undefName)) {
       member->setOrdinal(_ctx.getNextOrdinalAndIncrement());
       return handleFile(*member);
@@ -81,23 +84,23 @@ ErrorOr<bool> Resolver::handleArchiveFile(File &file) {
   });
 }
 
-std::error_code Resolver::handleSharedLibrary(File &file) {
+llvm::Error Resolver::handleSharedLibrary(File &file) {
   // Add all the atoms from the shared library
   SharedLibraryFile *sharedLibrary = cast<SharedLibraryFile>(&file);
   auto undefAddedOrError = handleFile(*sharedLibrary);
-  if (undefAddedOrError.getError())
-    return undefAddedOrError.getError();
+  if (auto ec = undefAddedOrError.takeError())
+    return std::move(ec);
   undefAddedOrError =
-      forEachUndefines(file, [&](StringRef undefName) -> ErrorOr<bool> {
+      forEachUndefines(file, [&](StringRef undefName) -> llvm::Expected<bool> {
         auto atom = sharedLibrary->exports(undefName);
         if (atom.get())
           doSharedLibraryAtom(std::move(atom));
         return false;
       });
 
-  if (undefAddedOrError.getError())
-    return undefAddedOrError.getError();
-  return std::error_code();
+  if (auto ec = undefAddedOrError.takeError())
+    return std::move(ec);
+  return llvm::Error();
 }
 
 bool Resolver::doUndefinedAtom(OwningAtomPtr<UndefinedAtom> atom) {
@@ -247,9 +250,11 @@ bool Resolver::resolveUndefines() {
       assert(!file->hasOrdinal());
       file->setOrdinal(_ctx.getNextOrdinalAndIncrement());
       auto undefAddedOrError = handleFile(*file);
-      if (undefAddedOrError.getError()) {
-        llvm::errs() << "Error in " + file->path()
-                     << ": " << undefAddedOrError.getError().message() << "\n";
+      if (auto EC = undefAddedOrError.takeError()) {
+        // FIXME: This should be passed to logAllUnhandledErrors but it needs
+        // to be passed a Twine instead of a string.
+        llvm::errs() << "Error in " + file->path() << ": ";
+        logAllUnhandledErrors(std::move(EC), llvm::errs(), std::string());
         return false;
       }
       undefAdded = undefAddedOrError.get();
@@ -259,9 +264,11 @@ bool Resolver::resolveUndefines() {
       if (!file->hasOrdinal())
         file->setOrdinal(_ctx.getNextOrdinalAndIncrement());
       auto undefAddedOrError = handleArchiveFile(*file);
-      if (undefAddedOrError.getError()) {
-        llvm::errs() << "Error in " + file->path()
-                     << ": " << undefAddedOrError.getError().message() << "\n";
+      if (auto EC = undefAddedOrError.takeError()) {
+        // FIXME: This should be passed to logAllUnhandledErrors but it needs
+        // to be passed a Twine instead of a string.
+        llvm::errs() << "Error in " + file->path() << ": ";
+        logAllUnhandledErrors(std::move(EC), llvm::errs(), std::string());
         return false;
       }
       undefAdded = undefAddedOrError.get();
@@ -271,8 +278,10 @@ bool Resolver::resolveUndefines() {
       if (!file->hasOrdinal())
         file->setOrdinal(_ctx.getNextOrdinalAndIncrement());
       if (auto EC = handleSharedLibrary(*file)) {
-        llvm::errs() << "Error in " + file->path()
-                     << ": " << EC.message() << "\n";
+        // FIXME: This should be passed to logAllUnhandledErrors but it needs
+        // to be passed a Twine instead of a string.
+        llvm::errs() << "Error in " + file->path() << ": ";
+        logAllUnhandledErrors(std::move(EC), llvm::errs(), std::string());
         return false;
       }
       break;

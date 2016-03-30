@@ -14,6 +14,7 @@
 #include "File.h"
 #include "MachONormalizedFile.h"
 #include "lld/Core/LLVM.h"
+#include "lld/Core/Error.h"
 #include "lld/Core/Reference.h"
 #include "lld/Core/Simple.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
@@ -116,20 +117,20 @@ public:
 
   /// Prototype for a helper function.  Given a sectionIndex and address,
   /// finds the atom and offset with that atom of that address.
-  typedef std::function<std::error_code (uint32_t sectionIndex, uint64_t addr,
+  typedef std::function<llvm::Error (uint32_t sectionIndex, uint64_t addr,
                         const lld::Atom **, Reference::Addend *)>
                         FindAtomBySectionAndAddress;
 
   /// Prototype for a helper function.  Given a symbolIndex, finds the atom
   /// representing that symbol.
-  typedef std::function<std::error_code (uint32_t symbolIndex,
+  typedef std::function<llvm::Error (uint32_t symbolIndex,
                         const lld::Atom **)> FindAtomBySymbolIndex;
 
   /// Analyzes a relocation from a .o file and returns the info
   /// (kind, target, addend) needed to instantiate a Reference.
   /// Two helper functions are passed as parameters to find the target atom
   /// given a symbol index or address.
-  virtual std::error_code
+  virtual llvm::Error
           getReferenceInfo(const normalized::Relocation &reloc,
                            const DefinedAtom *inAtom,
                            uint32_t offsetInAtom,
@@ -144,7 +145,7 @@ public:
   /// (kind, target, addend) needed to instantiate a Reference.
   /// Two helper functions are passed as parameters to find the target atom
   /// given a symbol index or address.
-  virtual std::error_code
+  virtual llvm::Error
       getPairReferenceInfo(const normalized::Relocation &reloc1,
                            const normalized::Relocation &reloc2,
                            const DefinedAtom *inAtom,

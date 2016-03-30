@@ -98,7 +98,7 @@ public:
   }
 
 private:
-  std::error_code perform(SimpleFile &mergedFile) override {
+  llvm::Error perform(SimpleFile &mergedFile) override {
     // Scan all references in all atoms.
     for (const DefinedAtom *atom : mergedFile.defined()) {
       for (const Reference *ref : *atom) {
@@ -134,7 +134,7 @@ private:
     for (const GOTEntryAtom *slot : entries)
       mergedFile.addAtom(*slot);
 
-    return std::error_code();
+    return llvm::Error();
   }
 
   bool shouldReplaceTargetWithGOTAtom(const Atom *target, bool canBypassGOT) {
