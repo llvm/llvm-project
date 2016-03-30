@@ -83,9 +83,32 @@ std::string getPGOFuncName(StringRef RawFuncName,
   return GlobalValue::getGlobalIdentifier(RawFuncName, Linkage, FileName);
 }
 
-std::string getPGOFuncName(const Function &F, uint64_t Version) {
-  return getPGOFuncName(F.getName(), F.getLinkage(), F.getParent()->getName(),
-                        Version);
+// Return the PGOFuncName. This function has some special handling when called
+// in LTO optimization. The following only applies when calling in LTO passes
+// (when \c InLTO is true): LTO's internalization privatizes many global linkage
+// symbols. This happens after value profile annotation, but those internal
+// linkage functions should not have a source prefix.
+// To differentiate compiler generated internal symbols from original ones,
+// PGOFuncName meta data are created and attached to the original internal
+// symbols in the value profile annotation step
+// (PGOUseFunc::annotateIndirectCallSites). If a symbol does not have the meta
+// data, its original linkage must be non-internal.
+std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
+  if (!InLTO)
+    return getPGOFuncName(F.getName(), F.getLinkage(), F.getParent()->getName(),
+                          Version);
+
+  // InLTO mode. First check if these is a meta data.
+  MDNode *MD = F.getMetadata("PGOFuncName");
+  if (MD != nullptr) {
+    StringRef S = cast<MDString>(MD->getOperand(0))->getString();
+    return S.str();
+  }
+
+  // If there is no meta data, the function must be a global before the value
+  // profile annotation pass. Its current linkage may be internal if it is
+  // internalized in LTO mode.
+  return getPGOFuncName (F.getName(), GlobalValue::ExternalLinkage, "");
 }
 
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
@@ -149,9 +172,16 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName) {
   return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), PGOFuncName);
 }
 
-void InstrProfSymtab::create(const Module &M) {
-  for (const Function &F : M)
-    addFuncName(getPGOFuncName(F));
+void InstrProfSymtab::create(Module &M, bool InLTO) {
+  for (Function &F : M) {
+    // Function may not have a name: like using asm("") to overwrite the name.
+    // Ignore in this case.
+    if (!F.hasName())
+      continue;
+    const std::string &PGOFuncName = getPGOFuncName(F, InLTO);
+    addFuncName(PGOFuncName);
+    MD5FuncMap.push_back(std::make_pair(Function::getGUID(PGOFuncName), &F));
+  }
 
   finalizeSymtab();
 }
