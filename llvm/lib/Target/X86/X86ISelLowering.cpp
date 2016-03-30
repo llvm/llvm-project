@@ -23707,27 +23707,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
     case X86::FP80_TO_INT64_IN_MEM: Opc = X86::IST_Fp64m80; break;
     }
 
-    X86AddressMode AM;
-    MachineOperand &Op = MI->getOperand(0);
-    if (Op.isReg()) {
-      AM.BaseType = X86AddressMode::RegBase;
-      AM.Base.Reg = Op.getReg();
-    } else {
-      AM.BaseType = X86AddressMode::FrameIndexBase;
-      AM.Base.FrameIndex = Op.getIndex();
-    }
-    Op = MI->getOperand(1);
-    if (Op.isImm())
-      AM.Scale = Op.getImm();
-    Op = MI->getOperand(2);
-    if (Op.isImm())
-      AM.IndexReg = Op.getImm();
-    Op = MI->getOperand(3);
-    if (Op.isGlobal()) {
-      AM.GV = Op.getGlobal();
-    } else {
-      AM.Disp = Op.getImm();
-    }
+    X86AddressMode AM = getAddressFromInstr(MI, 0);
     addFullAddress(BuildMI(*BB, MI, DL, TII->get(Opc)), AM)
                       .addReg(MI->getOperand(X86::AddrNumOperands).getReg());
 

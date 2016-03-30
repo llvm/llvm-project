@@ -256,6 +256,18 @@ public:
     return MI->isAsCheapAsAMove();
   }
 
+  /// Return true if the instruction should be sunk by MachineSink.
+  ///
+  /// MachineSink determines on its own whether the instruction is safe to sink;
+  /// this gives the target a hook to override the default behavior with regards
+  /// to which instructions should be sunk.
+  /// The default behavior is to not sink insert_subreg, subreg_to_reg, and
+  /// reg_sequence. These are meant to be close to the source to make it easier
+  /// to coalesce.
+  virtual bool shouldSink(const MachineInstr &MI) const {
+    return !MI.isInsertSubreg() && !MI.isSubregToReg() && !MI.isRegSequence();
+  }
+
   /// Re-issue the specified 'original' instruction at the
   /// specific location targeting a new destination register.
   /// The register in Orig->getOperand(0).getReg() will be substituted by
