@@ -227,10 +227,9 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        const InstrProfRecord &InstrProfR,
                        InstrProfValueKind ValueKind, uint32_t SiteIndx,
                        uint32_t MaxMDCount = 3);
-/// Same as the above interface but using the ValueData array directly, as
-/// well as \p Sum.
+/// Same as the above interface but using an ArrayRef, as well as \p Sum.
 void annotateValueSite(Module &M, Instruction &Inst,
-                       const InstrProfValueData VD[], uint32_t NV,
+                       ArrayRef<InstrProfValueData> VDs,
                        uint64_t Sum, InstrProfValueKind ValueKind,
                        uint32_t MaxMDCount);
 
