@@ -660,7 +660,7 @@ const SCEV *replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 /// If necessary this method will version the stride of the pointer according
 /// to \p PtrToStride and therefore add a new predicate to \p Preds.
 int isStridedPtr(PredicatedScalarEvolution &PSE, Value *Ptr, const Loop *Lp,
-                 const ValueToValueMap &StridesMap);
+                 const ValueToValueMap &StridesMap = ValueToValueMap());
 
 /// \brief This analysis provides dependence information for the memory accesses
 /// of a loop.
