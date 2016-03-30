@@ -33,3 +33,11 @@ int test() {
   A *a = [[A alloc] init];
   return a.x + A.c;
 }
+
+void message_id(id me) {
+  [me y];
+}
+
+void message_class(Class me) {
+  [me c2];
+}
