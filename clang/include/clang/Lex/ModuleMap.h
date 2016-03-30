@@ -176,6 +176,9 @@ private:
 
     /// \brief Whether this is an exhaustive set of configuration macros.
     unsigned IsExhaustive : 1;
+
+    /// \brief Whether this is a module who has its swift_names inferred.
+    unsigned IsSwiftInferImportAsMember : 1;
   };
 
   /// \brief A directory for which framework modules can be inferred.
