@@ -329,14 +329,16 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
 // Visitor class that finds all indirect call sites.
 struct PGOIndirectCallSiteVisitor
     : public InstVisitor<PGOIndirectCallSiteVisitor> {
-  std::vector<CallInst *> IndirectCallInsts;
+  std::vector<Instruction *> IndirectCallInsts;
   PGOIndirectCallSiteVisitor() {}
 
-  void visitCallInst(CallInst &I) {
-    CallSite CS(&I);
-    if (CS.getCalledFunction() || !CS.getCalledValue() || I.isInlineAsm())
+  void visitCallSite(CallSite CS) {
+    Instruction *I = CS.getInstruction();
+    CallInst *CI = dyn_cast<CallInst>(I);
+    if (CS.getCalledFunction() || !CS.getCalledValue() ||
+        (CI && CI->isInlineAsm()))
       return;
-    IndirectCallInsts.push_back(&I);
+    IndirectCallInsts.push_back(I);
   }
 };
 
