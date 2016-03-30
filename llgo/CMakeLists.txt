@@ -247,6 +247,7 @@ install(DIRECTORY ${LLGO_LIBRARY_DIR}/go
 add_custom_target(check-libgo
   COMMAND make -C ${CMAKE_CURRENT_BINARY_DIR}/libgo -j${PROCESSOR_COUNT} check
   DEPENDS libgo
+  ${cmake_3_2_USES_TERMINAL}
   COMMENT "Running libgo tests")
 
 add_custom_target(check-llgo-bootstrap

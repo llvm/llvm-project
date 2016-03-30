@@ -62,8 +62,7 @@ public:
   PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const;
 
   virtual void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                           uint64_t P, uint64_t SA, uint64_t ZA = 0,
-                           uint8_t *PairedLoc = nullptr) const = 0;
+                           uint64_t P, uint64_t SA, uint64_t ZA = 0) const = 0;
   virtual bool isGotRelative(uint32_t Type) const;
   bool canRelaxTls(uint32_t Type, const SymbolBody *S) const;
   template <class ELFT>

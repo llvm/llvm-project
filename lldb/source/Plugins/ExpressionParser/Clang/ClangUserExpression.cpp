@@ -399,6 +399,8 @@ ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager, ExecutionConte
         }
     }
 
+    lldb::LanguageType lang_type = lldb::eLanguageTypeUnknown;
+
     if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel)
     {
         m_transformed_text = m_expr_text;
@@ -407,8 +409,6 @@ ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager, ExecutionConte
     {
         std::unique_ptr<ExpressionSourceCode> source_code(
             ExpressionSourceCode::CreateWrapped(prefix.c_str(), m_expr_text.c_str()));
-
-        lldb::LanguageType lang_type;
 
         if (m_in_cplusplus_method)
             lang_type = lldb::eLanguageTypeC_plus_plus;
@@ -491,37 +491,25 @@ ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager, ExecutionConte
     // We use a shared pointer here so we can use the original parser - if it succeeds
     // or the rewrite parser we might make if it fails.  But the parser_sp will never be empty.
     
-    std::shared_ptr<ClangExpressionParser> parser_sp(new ClangExpressionParser(exe_scope, *this, generate_debug_info));
+    ClangExpressionParser parser(exe_scope, *this, generate_debug_info);
 
-    unsigned num_errors = parser_sp->Parse(diagnostic_manager);
+    unsigned num_errors = parser.Parse(diagnostic_manager);
 
-    // Check here for FixItHints.  If there are any try fixing the source and re-parsing...
-    if (num_errors && diagnostic_manager.HasFixIts() && diagnostic_manager.ShouldAutoApplyFixIts())
-    {
-        if (parser_sp->RewriteExpression(diagnostic_manager))
-        {
-            std::string backup_source = std::move(m_transformed_text);
-            m_transformed_text = diagnostic_manager.GetFixedExpression();
-            // Make a new diagnostic manager and parser, and try again with the rewritten expression:
-            // FIXME: It would be nice to reuse the parser we have but that doesn't seem to be possible.
-            DiagnosticManager rewrite_manager;
-            std::shared_ptr<ClangExpressionParser> rewrite_parser_sp(new ClangExpressionParser(exe_scope, *this, generate_debug_info));
-            unsigned rewrite_errors = rewrite_parser_sp->Parse(rewrite_manager);
-            if (rewrite_errors == 0)
-            {
-                diagnostic_manager.Clear();
-                parser_sp = rewrite_parser_sp;
-                num_errors = 0;
-            }
-            else
-            {
-                m_transformed_text = std::move(backup_source);
-            }
-        }
-    }
-    
+    // Check here for FixItHints.  If there are any try to apply the fixits and set the fixed text in m_fixed_text
+    // before returning an error.
     if (num_errors)
     {
+        if (diagnostic_manager.HasFixIts())
+        {
+            if (parser.RewriteExpression(diagnostic_manager))
+            {
+                size_t fixed_start;
+                size_t fixed_end;
+                const std::string &fixed_expression = diagnostic_manager.GetFixedExpression();
+                if (ExpressionSourceCode::GetOriginalBodyBounds(fixed_expression, lang_type, fixed_start, fixed_end))
+                    m_fixed_text = fixed_expression.substr(fixed_start, fixed_end - fixed_start);
+            }
+        }
         diagnostic_manager.Printf(eDiagnosticSeverityError, "%u error%s parsing expression", num_errors,
                                   num_errors == 1 ? "" : "s");
 
@@ -535,12 +523,12 @@ ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager, ExecutionConte
     //
 
     {
-        Error jit_error = parser_sp->PrepareForExecution(m_jit_start_addr,
-                                                         m_jit_end_addr,
-                                                         m_execution_unit_sp,
-                                                         exe_ctx,
-                                                         m_can_interpret,
-                                                         execution_policy);
+        Error jit_error = parser.PrepareForExecution(m_jit_start_addr,
+                                                     m_jit_end_addr,
+                                                     m_execution_unit_sp,
+                                                     exe_ctx,
+                                                     m_can_interpret,
+                                                     execution_policy);
 
         if (!jit_error.Success())
         {
@@ -555,7 +543,7 @@ ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager, ExecutionConte
 
     if (exe_ctx.GetProcessPtr() && execution_policy == eExecutionPolicyTopLevel)
     {
-        Error static_init_error = parser_sp->RunStaticInitializers(m_execution_unit_sp, exe_ctx);
+        Error static_init_error = parser.RunStaticInitializers(m_execution_unit_sp, exe_ctx);
 
         if (!static_init_error.Success())
         {

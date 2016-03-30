@@ -21,6 +21,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 using namespace llvm;
@@ -49,7 +50,8 @@ static void saveBCFile(Module &M, StringRef Suffix) {
 }
 
 // Run LTO passes.
-// FIXME: Reduce code duplication by sharing this code with the gold plugin.
+// Note that the gold plugin has a similar piece of code, so
+// it is probably better to move this code to a common place.
 static void runLTOPasses(Module &M, TargetMachine &TM) {
   legacy::PassManager LtoPasses;
   LtoPasses.add(createTargetTransformInfoWrapperPass(TM.getTargetIRAnalysis()));
@@ -74,6 +76,14 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   std::vector<GlobalValue *> Keep;
   unsigned BodyIndex = 0;
   ArrayRef<SymbolBody *> Bodies = F.getSymbols();
+
+  Module &M = Obj->getModule();
+
+  // If a symbol appears in @llvm.used, the linker is required
+  // to treat the symbol as there is a reference to the symbol
+  // that it cannot see. Therefore, we can't internalize.
+  SmallPtrSet<GlobalValue *, 8> Used;
+  collectUsedGlobalVariables(M, Used, /* CompilerUsed */ false);
 
   for (const BasicSymbolRef &Sym : Obj->symbols()) {
     GlobalValue *GV = Obj->getSymbolGV(Sym.getRawDataRefImpl());
@@ -107,7 +117,8 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // For now, let's be conservative and just never internalize
     // symbols when creating a shared library.
     if (!Config->Shared && !Config->ExportDynamic && !B->isUsedInRegularObj())
-      InternalizedSyms.insert(GV->getName());
+      if (!Used.count(GV))
+        InternalizedSyms.insert(GV->getName());
 
     Keep.push_back(GV);
   }
@@ -118,14 +129,13 @@ void BitcodeCompiler::add(BitcodeFile &F) {
 
 static void internalize(GlobalValue &GV) {
   assert(!GV.hasLocalLinkage() &&
-      "Trying to internalize a symbol with local linkage!") ;
+         "Trying to internalize a symbol with local linkage!");
   GV.setLinkage(GlobalValue::InternalLinkage);
 }
 
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting ObjectFile.
-template <class ELFT>
-std::unique_ptr<elf::ObjectFile<ELFT>> BitcodeCompiler::compile() {
+std::unique_ptr<InputFile> BitcodeCompiler::compile() {
   for (const auto &Name : InternalizedSyms) {
     GlobalValue *GV = Combined.getNamedValue(Name.first());
     assert(GV);
@@ -148,10 +158,7 @@ std::unique_ptr<elf::ObjectFile<ELFT>> BitcodeCompiler::compile() {
                                   "LLD-INTERNAL-combined-lto-object", false);
   if (Config->SaveTemps)
     saveLtoObjectFile(MB->getBuffer());
-
-  std::unique_ptr<InputFile> IF = createObjectFile(*MB);
-  auto *OF = cast<ObjectFile<ELFT>>(IF.release());
-  return std::unique_ptr<ObjectFile<ELFT>>(OF);
+  return createObjectFile(*MB);
 }
 
 TargetMachine *BitcodeCompiler::getTargetMachine() {
@@ -164,8 +171,3 @@ TargetMachine *BitcodeCompiler::getTargetMachine() {
   Reloc::Model R = Config->Pic ? Reloc::PIC_ : Reloc::Static;
   return T->createTargetMachine(TripleStr, "", "", Options, R);
 }
-
-template std::unique_ptr<elf::ObjectFile<ELF32LE>> BitcodeCompiler::compile();
-template std::unique_ptr<elf::ObjectFile<ELF32BE>> BitcodeCompiler::compile();
-template std::unique_ptr<elf::ObjectFile<ELF64LE>> BitcodeCompiler::compile();
-template std::unique_ptr<elf::ObjectFile<ELF64BE>> BitcodeCompiler::compile();
