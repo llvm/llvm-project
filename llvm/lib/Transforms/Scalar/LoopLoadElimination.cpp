@@ -429,6 +429,11 @@ public:
     unsigned NumForwarding = 0;
     for (const StoreToLoadForwardingCandidate Cand : StoreToLoadDependences) {
       DEBUG(dbgs() << "Candidate " << Cand);
+      // Only progagate value if they are of the same type.
+      if (Cand.Store->getPointerOperand()->getType() !=
+          Cand.Load->getPointerOperand()->getType())
+        continue;
+
       // Make sure that the stored values is available everywhere in the loop in
       // the next iteration.
       if (!doesStoreDominatesAllLatches(Cand.Store->getParent(), L, DT))
