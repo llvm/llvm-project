@@ -2852,6 +2852,11 @@ public:
   /// \returns True, if the expansion was successful, false otherwise
   bool expandFP_TO_SINT(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
 
+  /// Turn load of vector type into a load of the individual elements.
+  /// \param LD load to expand
+  /// \returns MERGE_VALUEs of the scalar loads with their chains.
+  SDValue scalarizeVectorLoad(LoadSDNode *LD, SelectionDAG &DAG) const;
+
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks
   //
