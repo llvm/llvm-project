@@ -183,6 +183,9 @@ public:
   /// \brief Whether this is an inferred submodule (module * { ... }).
   unsigned IsInferred : 1;
 
+  /// \brief Whether this is a module who has its swift_names inferred.
+  unsigned IsSwiftInferImportAsMember : 1;
+
   /// \brief Whether we should infer submodules for this module based on 
   /// the headers.
   ///
