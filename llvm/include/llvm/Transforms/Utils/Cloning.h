@@ -130,11 +130,6 @@ Function *CloneFunction(const Function *F, ValueToValueMapTy &VMap,
                         bool ModuleLevelChanges,
                         ClonedCodeInfo *CodeInfo = nullptr);
 
-/// Clone the module-level debug info associated with OldFunc. The cloned data
-/// will point to NewFunc instead.
-void CloneDebugInfoMetadata(Function *NewFunc, const Function *OldFunc,
-                            ValueToValueMapTy &VMap);
-
 /// Clone OldFunc into NewFunc, transforming the old arguments into references
 /// to VMap values.  Note that if NewFunc already has basic blocks, the ones
 /// cloned into it will be added to the end of the function.  This function
