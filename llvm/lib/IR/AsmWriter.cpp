@@ -2208,6 +2208,22 @@ void AssemblyWriter::writeOperandBundles(ImmutableCallSite CS) {
   Out << " ]";
 }
 
+/// Escape any backslashes in the source file (e.g. Windows paths)
+/// before emitting, so that it is parsed properly by the lexer on input.
+static void EscapeBackslashes(std::string Str,
+                              SmallVectorImpl<char> &Res) {
+  for (auto C : Str) {
+    switch (C) {
+    default:
+      break;
+    case '\\':
+      Res.push_back('\\');
+      break;
+    }
+    Res.push_back(C);
+  }
+}
+
 void AssemblyWriter::printModule(const Module *M) {
   Machine.initialize();
 
@@ -2219,6 +2235,12 @@ void AssemblyWriter::printModule(const Module *M) {
       // require a comment char before it).
       M->getModuleIdentifier().find('\n') == std::string::npos)
     Out << "; ModuleID = '" << M->getModuleIdentifier() << "'\n";
+
+  if (!M->getSourceFileName().empty()) {
+    SmallString<128> EscapedName;
+    EscapeBackslashes(M->getSourceFileName(), EscapedName);
+    Out << "source_filename = \"" << EscapedName << "\"\n";
+  }
 
   const std::string &DL = M->getDataLayoutStr();
   if (!DL.empty())
