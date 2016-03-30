@@ -22943,34 +22943,37 @@ X86TargetLowering::EmitLoweredAtomicFP(MachineInstr *MI,
   unsigned MOp, FOp;
   switch (MI->getOpcode()) {
   default: llvm_unreachable("unexpected instr type for EmitLoweredAtomicFP");
-  case X86::RELEASE_FADD32mr: MOp = X86::MOVSSmr; FOp = X86::ADDSSrm; break;
-  case X86::RELEASE_FADD64mr: MOp = X86::MOVSDmr; FOp = X86::ADDSDrm; break;
+  case X86::RELEASE_FADD32mr:
+    FOp = X86::ADDSSrm;
+    MOp = X86::MOVSSmr;
+    break;
+  case X86::RELEASE_FADD64mr:
+    FOp = X86::ADDSDrm;
+    MOp = X86::MOVSDmr;
+    break;
   }
   const X86InstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI->getDebugLoc();
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-  MachineOperand MSrc = MI->getOperand(0);
-  unsigned VSrc = MI->getOperand(5).getReg();
-  const MachineOperand &Disp = MI->getOperand(3);
-  MachineOperand ZeroDisp = MachineOperand::CreateImm(0);
-  bool hasDisp = Disp.isGlobal() || Disp.isImm();
-  if (hasDisp && MSrc.isReg())
-    MSrc.setIsKill(false);
-  MachineInstrBuilder MIM = BuildMI(*BB, MI, DL, TII->get(MOp))
-                                .addOperand(/*Base=*/MSrc)
-                                .addImm(/*Scale=*/1)
-                                .addReg(/*Index=*/0)
-                                .addDisp(hasDisp ? Disp : ZeroDisp, /*off=*/0)
-                                .addReg(0);
-  MachineInstr *MIO = BuildMI(*BB, (MachineInstr *)MIM, DL, TII->get(FOp),
-                              MRI.createVirtualRegister(MRI.getRegClass(VSrc)))
-                          .addReg(VSrc)
-                          .addOperand(/*Base=*/MSrc)
-                          .addImm(/*Scale=*/1)
-                          .addReg(/*Index=*/0)
-                          .addDisp(hasDisp ? Disp : ZeroDisp, /*off=*/0)
-                          .addReg(/*Segment=*/0);
-  MIM.addReg(MIO->getOperand(0).getReg(), RegState::Kill);
+  unsigned ValOpIdx = X86::AddrNumOperands;
+  unsigned VSrc = MI->getOperand(ValOpIdx).getReg();
+  MachineInstrBuilder MIB =
+      BuildMI(*BB, MI, DL, TII->get(FOp),
+              MRI.createVirtualRegister(MRI.getRegClass(VSrc)))
+          .addReg(VSrc);
+  for (int i = 0; i < X86::AddrNumOperands; ++i) {
+    MachineOperand &Operand = MI->getOperand(i);
+    // Clear any kill flags on register operands as we'll create a second
+    // instruction using the same address operands.
+    if (Operand.isReg())
+      Operand.setIsKill(false);
+    MIB.addOperand(Operand);
+  }
+  MachineInstr *FOpMI = MIB;
+  MIB = BuildMI(*BB, MI, DL, TII->get(MOp));
+  for (int i = 0; i < X86::AddrNumOperands; ++i)
+    MIB.addOperand(MI->getOperand(i));
+  MIB.addReg(FOpMI->getOperand(0).getReg(), RegState::Kill);
   MI->eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
