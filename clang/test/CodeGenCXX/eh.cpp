@@ -448,5 +448,27 @@ namespace test16 {
   }
 }
 
+namespace test17 {
+class BaseException {
+private:
+  int a[4];
+public:
+  BaseException() {};
+};
+
+class DerivedException: public BaseException {
+};
+
+int foo() {
+  throw DerivedException();
+  // The alignment passed to memset is 8, not 16, on Darwin.
+
+  // CHECK: [[T0:%.*]] = call i8* @__cxa_allocate_exception(i64 16)
+  // CHECK-NEXT: [[T1:%.*]] = bitcast i8* [[T0]] to %"class.test17::DerivedException"*
+  // CHECK-NEXT: [[T2:%.*]] = bitcast %"class.test17::DerivedException"* [[T1]] to i8*
+  // CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* [[T2]], i8 0, i64 16, i32 8, i1 false)
+}
+}
+
 // CHECK: attributes [[NUW]] = { nounwind }
 // CHECK: attributes [[NR]] = { noreturn }

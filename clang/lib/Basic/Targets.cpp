@@ -264,6 +264,13 @@ public:
   bool hasProtectedVisibility() const override {
     return false;
   }
+
+  unsigned getExnObjectAlignment() const override {
+    // The alignment of an exception object is 8-bytes for darwin since
+    // libc++abi doesn't declare _Unwind_Exception with __attribute__((aligned))
+    // and therefore doesn't guarantee 16-byte alignment.
+    return  64;
+  }
 };
 
 
