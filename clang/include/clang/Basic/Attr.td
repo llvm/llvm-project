@@ -2312,6 +2312,17 @@ def OMPCaptureNoInit : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def OMPDeclareSimdDecl : Attr {
+  let Spellings = [Pragma<"omp", "declare simd">];
+  let Subjects = SubjectList<[Function]>;
+  let SemaHandler = 0;
+  let HasCustomParsing = 1;
+  let Documentation = [OMPDeclareSimdDocs];
+  let AdditionalMembers = [{
+  void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {}
+  }];
+}
+
 def InternalLinkage : InheritableAttr {
   let Spellings = [GNU<"internal_linkage">, CXX11<"clang", "internal_linkage">];
   let Subjects = SubjectList<[Var, Function, CXXRecord]>;
