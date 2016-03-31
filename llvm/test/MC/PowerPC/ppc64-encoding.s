@@ -197,6 +197,9 @@
 # CHECK-BE: ldux 2, 3, 4                    # encoding: [0x7c,0x43,0x20,0x6a]
 # CHECK-LE: ldux 2, 3, 4                    # encoding: [0x6a,0x20,0x43,0x7c]
             ldux 2, 3, 4
+# CHECK-BE: ldmx 2, 3, 4                    # encoding: [0x7c,0x43,0x22,0x6a]
+# CHECK-LE: ldmx 2, 3, 4                    # encoding: [0x6a,0x22,0x43,0x7c]
+            ldmx 2, 3, 4
 
 # Fixed-point store instructions
 
@@ -833,6 +836,9 @@
 # CHECK-BE: mfocrf 16, 8                    # encoding: [0x7e,0x10,0x80,0x26]
 # CHECK-LE: mfocrf 16, 8                    # encoding: [0x26,0x80,0x10,0x7e]
             mfocrf 16, 8
+# CHECK-BE: mcrxrx 7                        # encoding: [0x7f,0x80,0x04,0x80]
+# CHECK-LE: mcrxrx 7                        # encoding: [0x80,0x04,0x80,0x7f]
+            mcrxrx 7
 
 # Move to/from segment register
 # CHECK-BE: mtsr    12, 10                    # encoding: [0x7d,0x4c,0x01,0xa4]

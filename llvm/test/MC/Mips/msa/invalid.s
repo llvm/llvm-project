@@ -135,6 +135,14 @@
     insve.h $w24[2], $w2[1]  # CHECK: :[[@LINE]]:26: error: expected '0'
     insve.w $w0[2], $w13[1]  # CHECK: :[[@LINE]]:26: error: expected '0'
     insve.d $w3[0], $w18[1]  # CHECK: :[[@LINE]]:26: error: expected '0'
+    ld.b $w0, -513($2)       # CHECK: :[[@LINE]]:15: error: expected memory with 10-bit signed offset
+    ld.b $w0, 512($2)        # CHECK: :[[@LINE]]:15: error: expected memory with 10-bit signed offset
+    ld.h $w0, -1025($2)      # CHECK: :[[@LINE]]:15: error: expected memory with 11-bit signed offset and multiple of 2
+    ld.h $w0, 1024($2)       # CHECK: :[[@LINE]]:15: error: expected memory with 11-bit signed offset and multiple of 2
+    ld.w $w0, -2049($2)      # CHECK: :[[@LINE]]:15: error: expected memory with 12-bit signed offset and multiple of 4
+    ld.w $w0, 2048($2)       # CHECK: :[[@LINE]]:15: error: expected memory with 12-bit signed offset and multiple of 4
+    ld.d $w0, -4097($2)      # CHECK: :[[@LINE]]:15: error: expected memory with 13-bit signed offset and multiple of 8
+    ld.d $w0, 4096($2)       # CHECK: :[[@LINE]]:15: error: expected memory with 13-bit signed offset and multiple of 8
     ldi.b $w1, -1025         # CHECK: :[[@LINE]]:16: error: expected 10-bit signed immediate
     ldi.b $w1, 1024          # CHECK: :[[@LINE]]:16: error: expected 10-bit signed immediate
     ldi.h $w1, -1025         # CHECK: :[[@LINE]]:16: error: expected 10-bit signed immediate
@@ -259,6 +267,14 @@
     srlri.w $w18, $w3, 32    # CHECK: :[[@LINE]]:24: error: expected 5-bit unsigned immediate
     srlri.d $w18, $w3, -1    # CHECK: :[[@LINE]]:24: error: expected 6-bit unsigned immediate
     srlri.d $w18, $w3, 64    # CHECK: :[[@LINE]]:24: error: expected 6-bit unsigned immediate
+    st.b $w0, -513($2)       # CHECK: :[[@LINE]]:15: error: expected memory with 10-bit signed offset
+    st.b $w0, 512($2)        # CHECK: :[[@LINE]]:15: error: expected memory with 10-bit signed offset
+    st.h $w0, -1025($2)      # CHECK: :[[@LINE]]:15: error: expected memory with 11-bit signed offset and multiple of 2
+    st.h $w0, 1024($2)       # CHECK: :[[@LINE]]:15: error: expected memory with 11-bit signed offset and multiple of 2
+    st.w $w0, -2049($2)      # CHECK: :[[@LINE]]:15: error: expected memory with 12-bit signed offset and multiple of 4
+    st.w $w0, 2048($2)       # CHECK: :[[@LINE]]:15: error: expected memory with 12-bit signed offset and multiple of 4
+    st.d $w0, -4097($2)      # CHECK: :[[@LINE]]:15: error: expected memory with 13-bit signed offset and multiple of 8
+    st.d $w0, 4096($2)       # CHECK: :[[@LINE]]:15: error: expected memory with 13-bit signed offset and multiple of 8
     subvi.b $w1, $w2, -1     # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
     subvi.b $w1, $w2, 32     # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
     subvi.h $w1, $w2, -1     # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate

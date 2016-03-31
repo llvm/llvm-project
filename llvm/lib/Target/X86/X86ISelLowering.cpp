@@ -5736,9 +5736,9 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     if (LoadMask[i]) {
       SDValue Elt = peekThroughBitcasts(Elts[i]);
       LoadSDNode *LD = cast<LoadSDNode>(Elt);
-      if (!DAG.isConsecutiveLoad(LD, LDBase,
-                                 Elt.getValueType().getStoreSizeInBits() / 8,
-                                 i - FirstLoadedElt)) {
+      if (!DAG.areNonVolatileConsecutiveLoads(
+              LD, LDBase, Elt.getValueType().getStoreSizeInBits() / 8,
+              i - FirstLoadedElt)) {
         IsConsecutiveLoad = false;
         IsConsecutiveLoadWithZeros = false;
         break;
@@ -5749,10 +5749,10 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   }
 
   auto CreateLoad = [&DAG, &DL](EVT VT, LoadSDNode *LDBase) {
-    SDValue NewLd = DAG.getLoad(VT, DL, LDBase->getChain(),
-                                LDBase->getBasePtr(), LDBase->getPointerInfo(),
-                                LDBase->isVolatile(), LDBase->isNonTemporal(),
-                                LDBase->isInvariant(), LDBase->getAlignment());
+    SDValue NewLd = DAG.getLoad(
+        VT, DL, LDBase->getChain(), LDBase->getBasePtr(),
+        LDBase->getPointerInfo(), false /*LDBase->isVolatile()*/,
+        LDBase->isNonTemporal(), LDBase->isInvariant(), LDBase->getAlignment());
 
     if (LDBase->hasAnyUseOfValue(1)) {
       SDValue NewChain =

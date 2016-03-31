@@ -148,8 +148,8 @@ class CACHEE_DESC_BASE<string instr_asm, Operand MemOpnd> {
   string DecoderMethod = "DecodeCacheeOp_CacheOpR6";
 }
 
-class CACHEE_DESC  : CACHEE_DESC_BASE<"cachee", mem>;
-class PREFE_DESC   : CACHEE_DESC_BASE<"prefe", mem>;
+class CACHEE_DESC  : CACHEE_DESC_BASE<"cachee", mem_simm9>;
+class PREFE_DESC   : CACHEE_DESC_BASE<"prefe", mem_simm9>;
 
 //===----------------------------------------------------------------------===//
 //

@@ -17,15 +17,15 @@
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_node.h"
-#include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/OperandTraits.h"
+#include "llvm/IR/GlobalIndirectSymbol.h"
 
 namespace llvm {
 
 class Module;
 template <typename ValueSubClass> class SymbolTableListTraits;
 
-class GlobalAlias : public GlobalValue, public ilist_node<GlobalAlias> {
+class GlobalAlias : public GlobalIndirectSymbol,
+                    public ilist_node<GlobalAlias> {
   friend class SymbolTableListTraits<GlobalAlias>;
   void operator=(const GlobalAlias &) = delete;
   GlobalAlias(const GlobalAlias &) = delete;
@@ -36,11 +36,6 @@ class GlobalAlias : public GlobalValue, public ilist_node<GlobalAlias> {
               const Twine &Name, Constant *Aliasee, Module *Parent);
 
 public:
-  // allocate space for exactly one operand
-  void *operator new(size_t s) {
-    return User::operator new(s, 1);
-  }
-
   /// If a parent module is specified, the alias is automatically inserted into
   /// the end of the specified module's alias list.
   static GlobalAlias *create(Type *Ty, unsigned AddressSpace,
@@ -64,9 +59,6 @@ public:
   // Linkage, Type, Parent and AddressSpace taken from the Aliasee.
   static GlobalAlias *create(const Twine &Name, GlobalValue *Aliasee);
 
-  /// Provide fast operand accessors
-  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Constant);
-
   /// removeFromParent - This method unlinks 'this' from the containing module,
   /// but does not delete it.
   ///
@@ -77,13 +69,13 @@ public:
   ///
   void eraseFromParent() override;
 
-  /// These methods retrive and set alias target.
+  /// These methods retrieve and set alias target.
   void setAliasee(Constant *Aliasee);
   const Constant *getAliasee() const {
-    return const_cast<GlobalAlias *>(this)->getAliasee();
+    return getIndirectSymbol();
   }
   Constant *getAliasee() {
-    return getOperand(0);
+    return getIndirectSymbol();
   }
 
   const GlobalObject *getBaseObject() const {
@@ -111,13 +103,6 @@ public:
     return V->getValueID() == Value::GlobalAliasVal;
   }
 };
-
-template <>
-struct OperandTraits<GlobalAlias> :
-  public FixedNumOperandTraits<GlobalAlias, 1> {
-};
-
-DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GlobalAlias, Constant)
 
 } // End llvm namespace
 

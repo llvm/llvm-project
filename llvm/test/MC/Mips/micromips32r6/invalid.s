@@ -34,9 +34,10 @@
   ins $2, $3, -1, 31       # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   ins $2, $3, 32, 31       # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   ei $32                   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  swe $33, 8($4)           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  swe $5, 8($34)           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  swe $5, 512($4)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  swe $33, 8($4)           # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+                           # FIXME: This ought to point at the $34 but memory is treated as one operand.
+  swe $5, 8($34)           # CHECK: :[[@LINE]]:11: error: expected memory with $gp and 9-bit signed offset
+  swe $5, 512($4)          # CHECK: :[[@LINE]]:11: error: expected memory with $gp and 9-bit signed offset
   lbu16 $9, 8($16)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   lbu16 $3, -2($16)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
   lbu16 $3, -2($16)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range

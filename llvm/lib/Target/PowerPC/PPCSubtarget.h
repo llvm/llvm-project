@@ -130,6 +130,7 @@ protected:
   bool HasHTM;
   bool HasFusion;
   bool HasFloat128;
+  bool IsISA3_0;
 
   POPCNTDKind HasPOPCNTD;
 
@@ -272,6 +273,7 @@ public:
   bool hasHTM() const { return HasHTM; }
   bool hasFusion() const { return HasFusion; }
   bool hasFloat128() const { return HasFloat128; }
+  bool isISA3_0() const { return IsISA3_0; }
 
   POPCNTDKind hasPOPCNTD() const { return HasPOPCNTD; }
 

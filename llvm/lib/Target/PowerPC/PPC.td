@@ -163,6 +163,10 @@ def FeatureSlowPOPCNTD : SubtargetFeature<"slow-popcntd","HasPOPCNTD",
 def DeprecatedDST    : SubtargetFeature<"", "DeprecatedDST", "true",
   "Treat vector data stream cache control instructions as deprecated">;
 
+def FeatureISA3_0 : SubtargetFeature<"isa-v30-instructions", "IsISA3_0",
+                                     "true",
+                                     "Enable instructions added in ISA 3.0.">;
+
 /*  Since new processors generally contain a superset of features of those that
     came before them, the idea is to make implementations of new processors
     less error prone and easier to read.

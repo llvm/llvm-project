@@ -373,11 +373,6 @@ static DecodeStatus DecodePOOL16BEncodedField(MCInst &Inst,
                                               uint64_t Address,
                                               const void *Decoder);
 
-static DecodeStatus DecodeSimm16(MCInst &Inst,
-                                 unsigned Insn,
-                                 uint64_t Address,
-                                 const void *Decoder);
-
 template <unsigned Bits, int Offset, int Scale>
 static DecodeStatus DecodeUImmWithOffsetAndScale(MCInst &Inst, unsigned Value,
                                                  uint64_t Address,
@@ -1926,14 +1921,6 @@ static DecodeStatus DecodePOOL16BEncodedField(MCInst &Inst,
                                               uint64_t Address,
                                               const void *Decoder) {
   Inst.addOperand(MCOperand::createImm(Value == 0x0 ? 8 : Value));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeSimm16(MCInst &Inst,
-                                 unsigned Insn,
-                                 uint64_t Address,
-                                 const void *Decoder) {
-  Inst.addOperand(MCOperand::createImm(SignExtend32<16>(Insn)));
   return MCDisassembler::Success;
 }
 

@@ -16,6 +16,8 @@
   break16 16          # CHECK: :[[@LINE]]:11: error: expected 4-bit unsigned immediate
   cache -1, 255($7)   # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
   cache 32, 255($7)   # CHECK: :[[@LINE]]:9: error: expected 5-bit unsigned immediate
+  cachee 0, -513($7)  # CHECK: :[[@LINE]]:13: error: expected memory with 9-bit signed offset
+  cachee 0, 512($7)   # CHECK: :[[@LINE]]:13: error: expected memory with 9-bit signed offset
   # FIXME: Check '0 < pos + size <= 32' constraint on ext
   ext $2, $3, -1, 31  # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   ext $2, $3, 32, 31  # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
@@ -23,6 +25,10 @@
   ext $2, $3, 1, 33   # CHECK: :[[@LINE]]:18: error: expected immediate in range 1 .. 32
   ins $2, $3, -1, 31  # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   ins $2, $3, 32, 31  # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+  ins $2, $3, -1, 1   # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+  ins $2, $3, 32, 1   # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+  ins $2, $3, 0, -1   # CHECK: :[[@LINE]]:18: error: expected immediate in range 1 .. 32
+  ins $2, $3, 0, 33   # CHECK: :[[@LINE]]:18: error: expected immediate in range 1 .. 32
   jraddiusp -1        # CHECK: :[[@LINE]]:13: error: expected both 7-bit unsigned immediate and multiple of 4
   jraddiusp -4        # CHECK: :[[@LINE]]:13: error: expected both 7-bit unsigned immediate and multiple of 4
   jraddiusp 125       # CHECK: :[[@LINE]]:13: error: expected both 7-bit unsigned immediate and multiple of 4
@@ -31,6 +37,8 @@
   li16 $4, 127        # CHECK: :[[@LINE]]:12: error: expected immediate in range -1 .. 126
   pref -1, 255($7)    # CHECK: :[[@LINE]]:8: error: expected 5-bit unsigned immediate
   pref 32, 255($7)    # CHECK: :[[@LINE]]:8: error: expected 5-bit unsigned immediate
+  prefe 0, -513($7)   # CHECK: :[[@LINE]]:12: error: expected memory with 9-bit signed offset
+  prefe 0, 512($7)    # CHECK: :[[@LINE]]:12: error: expected memory with 9-bit signed offset
   rotr $2, $3, 32     # CHECK: :[[@LINE]]:16: error: expected 5-bit unsigned immediate
   sdbbp16 -1          # CHECK: :[[@LINE]]:11: error: expected 4-bit unsigned immediate
   sdbbp16 16          # CHECK: :[[@LINE]]:11: error: expected 4-bit unsigned immediate
@@ -40,7 +48,5 @@
   sra $2, $3, 32      # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   srl $2, $3, -1      # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   srl $2, $3, 32      # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
-  ins $2, $3, -1, 1   # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
-  ins $2, $3, 32, 1   # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
-  ins $2, $3, 0, -1   # CHECK: :[[@LINE]]:18: error: expected immediate in range 1 .. 32
-  ins $2, $3, 0, 33   # CHECK: :[[@LINE]]:18: error: expected immediate in range 1 .. 32
+  swe $2, -513($gp)   # CHECK: :[[@LINE]]:11: error: expected memory with $gp and 9-bit signed offset
+  swe $2, 512($gp)    # CHECK: :[[@LINE]]:11: error: expected memory with $gp and 9-bit signed offset

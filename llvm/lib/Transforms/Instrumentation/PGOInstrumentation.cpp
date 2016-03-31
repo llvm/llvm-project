@@ -333,11 +333,13 @@ struct PGOIndirectCallSiteVisitor
   PGOIndirectCallSiteVisitor() {}
 
   void visitCallSite(CallSite CS) {
-    Instruction *I = CS.getInstruction();
-    CallInst *CI = dyn_cast<CallInst>(I);
-    if (CS.getCalledFunction() || !CS.getCalledValue() ||
-        (CI && CI->isInlineAsm()))
+    if (CS.getCalledFunction() || !CS.getCalledValue())
       return;
+    Instruction *I = CS.getInstruction();
+    if (CallInst *CI = dyn_cast<CallInst>(I)) {
+      if (CI->isInlineAsm())
+        return;
+    }
     IndirectCallInsts.push_back(I);
   }
 };

@@ -31,6 +31,7 @@ class ConstantData;
 class DataLayout;
 class Function;
 class GlobalAlias;
+class GlobalIndirectSymbol;
 class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
@@ -742,9 +743,15 @@ template <> struct isa_impl<GlobalAlias, Value> {
   }
 };
 
+template <> struct isa_impl<GlobalIndirectSymbol, Value> {
+  static inline bool doit(const Value &Val) {
+    return isa<GlobalAlias>(Val);
+  }
+};
+
 template <> struct isa_impl<GlobalValue, Value> {
   static inline bool doit(const Value &Val) {
-    return isa<GlobalObject>(Val) || isa<GlobalAlias>(Val);
+    return isa<GlobalObject>(Val) || isa<GlobalIndirectSymbol>(Val);
   }
 };
 

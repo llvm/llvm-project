@@ -777,6 +777,7 @@ def NoNaNsFPMath : Predicate<"TM.Options.NoNaNsFPMath">;
 def NaNsFPMath   : Predicate<"!TM.Options.NoNaNsFPMath">;
 def HasBPERMD : Predicate<"PPCSubTarget->hasBPERMD()">;
 def HasExtDiv : Predicate<"PPCSubTarget->hasExtDiv()">;
+def IsISA3_0 : Predicate<"PPCSubTarget->isISA3_0()">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.
@@ -1574,6 +1575,13 @@ def LHARXL : XForm_1<31,  116, (outs gprc:$rD), (ins memrr:$src),
 
 def LWARXL : XForm_1<31,  20, (outs gprc:$rD), (ins memrr:$src),
                      "lwarx $rD, $src, 1", IIC_LdStLWARX, []>, isDOT;
+
+// The atomic instructions use the destination register as well as the next one
+// or two registers in order (modulo 31).
+let hasExtraSrcRegAllocReq = 1 in
+def LWAT : X_RD5_RS5_IM5<31, 582, (outs gprc:$rD), (ins gprc:$rA, u5imm:$FC),
+                         "lwat $rD, $rA, $FC", IIC_LdStLoad>,
+           Requires<[IsISA3_0]>;
 }
 
 let Defs = [CR0], mayStore = 1, hasSideEffects = 0 in {
@@ -1588,6 +1596,11 @@ def STHCX : XForm_1<31, 726, (outs), (ins gprc:$rS, memrr:$dst),
 def STWCX : XForm_1<31, 150, (outs), (ins gprc:$rS, memrr:$dst),
                     "stwcx. $rS, $dst", IIC_LdStSTWCX, []>, isDOT;
 }
+
+let mayStore = 1, hasSideEffects = 0 in
+def STWAT : X_RD5_RS5_IM5<31, 710, (outs), (ins gprc:$rS, gprc:$rA, u5imm:$FC),
+                          "stwat $rS, $rA, $FC", IIC_LdStStore>,
+            Requires<[IsISA3_0]>;
 
 let isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
 def TRAP  : XForm_24<31, 4, (outs), (ins), "trap", IIC_LdStLoad, [(trap)]>;
@@ -2359,6 +2372,9 @@ def MFCR : XFXForm_3<31, 19, (outs gprc:$rT), (ins),
                      "mfcr $rT", IIC_SprMFCR>,
                      PPC970_MicroCode, PPC970_Unit_CRU;
 } // hasExtraSrcRegAllocReq = 1
+
+def MCRXRX : X_BF3<31, 576, (outs crrc:$BF), (ins),
+                   "mcrxrx $BF", IIC_BrMCRX>, Requires<[IsISA3_0]>;
 } // hasSideEffects = 0
 
 // Pseudo instruction to perform FADD in round-to-zero mode.
