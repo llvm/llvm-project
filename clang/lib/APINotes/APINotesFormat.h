@@ -105,7 +105,8 @@ namespace control_block {
   // VERSION_MAJOR.
   enum {
     METADATA = 1,
-    MODULE_NAME = 2
+    MODULE_NAME = 2,
+    MODULE_OPTIONS = 3
   };
 
   using MetadataLayout = BCRecordLayout<
@@ -117,6 +118,11 @@ namespace control_block {
   using ModuleNameLayout = BCRecordLayout<
     MODULE_NAME,
     BCBlob       // Module name
+  >;
+
+  using ModuleOptionsLayout = BCRecordLayout<
+    MODULE_OPTIONS,
+    BCFixed<1> // SwiftInferImportAsMember
   >;
 }
 

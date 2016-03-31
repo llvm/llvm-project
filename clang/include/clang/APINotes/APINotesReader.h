@@ -50,6 +50,9 @@ public:
   /// notes.
   StringRef getModuleName() const;
 
+  /// Retrieve the module options
+  ModuleOptions getModuleOptions() const;
+
   /// Look for information regarding the given Objective-C class.
   ///
   /// \param name The name of the class we're looking for.

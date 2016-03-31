@@ -474,6 +474,11 @@ public:
   TypedefInfo() : CommonTypeInfo() { }
 };
 
+/// Descripts a series of options for a module
+struct ModuleOptions {
+  bool SwiftInferImportAsMember;
+};
+
 } // end namespace api_notes
 } // end namespace clang
 

@@ -2,6 +2,7 @@
 Name:            AppKit
 Availability:    available
 AvailabilityMsg: ''
+SwiftInferImportAsMember: true
 Classes:         
   - Name:            NSCell
     Availability:    available
