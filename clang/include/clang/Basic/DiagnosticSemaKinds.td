@@ -8072,6 +8072,10 @@ def err_omp_single_copyprivate_with_nowait : Error<
   "the 'copyprivate' clause must not be used with the 'nowait' clause">;
 def note_omp_nowait_clause_here : Note<
   "'nowait' clause is here">;
+def err_omp_single_decl_in_declare_simd : Error<
+  "single declaration is expected after 'declare simd' directive">;
+def err_omp_function_expected : Error<
+  "'#pragma omp declare simd' can only be applied to functions">;
 def err_omp_wrong_cancel_region : Error<
   "one of 'for', 'parallel', 'sections' or 'taskgroup' is expected">;
 def err_omp_parent_cancel_region_nowait : Error<

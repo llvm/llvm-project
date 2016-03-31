@@ -1701,6 +1701,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_target_enter_data:
   case OMPD_target_exit_data:
   case OMPD_declare_reduction:
+  case OMPD_declare_simd:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
     llvm_unreachable("Unknown OpenMP directive");
@@ -3155,6 +3156,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     break;
   case OMPD_threadprivate:
   case OMPD_declare_reduction:
+  case OMPD_declare_simd:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
     llvm_unreachable("Unknown OpenMP directive");
@@ -3173,6 +3175,32 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   if (ErrorFound)
     return StmtError();
   return Res;
+}
+
+Sema::DeclGroupPtrTy
+Sema::ActOnOpenMPDeclareSimdDirective(DeclGroupPtrTy DG,
+                                      SourceLocation StartLoc) {
+  if (!DG || DG.get().isNull())
+    return DeclGroupPtrTy();
+
+  if (!DG.get().isSingleDecl()) {
+    Diag(StartLoc, diag::err_omp_single_decl_in_declare_simd);
+    return DG;
+  }
+  auto *ADecl = DG.get().getSingleDecl();
+  if (auto *FTD = dyn_cast<FunctionTemplateDecl>(ADecl))
+    ADecl = FTD->getTemplatedDecl();
+
+  if (!isa<FunctionDecl>(ADecl)) {
+    Diag(ADecl->getLocation(), diag::err_omp_function_expected)
+        << ADecl->getDeclContext()->isFileContext();
+    return DeclGroupPtrTy();
+  }
+
+  auto *NewAttr = OMPDeclareSimdDeclAttr::CreateImplicit(
+      Context, SourceRange(StartLoc, StartLoc));
+  ADecl->addAttr(NewAttr);
+  return ConvertDeclToDeclGroup(ADecl);
 }
 
 StmtResult Sema::ActOnOpenMPParallelDirective(ArrayRef<OMPClause *> Clauses,

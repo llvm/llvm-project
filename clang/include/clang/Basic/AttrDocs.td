@@ -1888,6 +1888,41 @@ arguments, with arbitrary offsets.
   }];
 }
 
+def OMPDeclareSimdDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "#pragma omp declare simd";
+  let Content = [{
+The `declare simd` construct can be applied to a function to enable the creation
+of one or more versions that can process multiple arguments using SIMD
+instructions from a single invocation in a SIMD loop. The `declare simd`
+directive is a declarative directive. There may be multiple `declare simd`
+directives for a function. The use of a `declare simd` construct on a function
+enables the creation of SIMD versions of the associated function that can be
+used to process multiple arguments from a single invocation from a SIMD loop
+concurrently.
+The syntax of the `declare simd` construct is as follows:
+
+  .. code-block:: c
+
+  #pragma omp declare simd [clause[[,] clause] ...] new-line
+  [#pragma omp declare simd [clause[[,] clause] ...] new-line]
+  [...]
+  function definition or declaration
+
+where clause is one of the following:
+
+  .. code-block:: c
+
+  simdlen(length)
+  linear(argument-list[:constant-linear-step])
+  aligned(argument-list[:alignment])
+  uniform(argument-list)
+  inbranch
+  notinbranch
+
+  }];
+}
+
 def SwiftDocs : DocumentationCategory<"Controlling Swift Import"> {
   let Content = [{
 Clang supports additional attributes for controlling how APIs are imported into Swift.
@@ -1900,7 +1935,6 @@ def NSErrorDomainDocs : Documentation {
 The ``ns_error_domain`` attribute indicates a global constant representing the error domain.
   }];
 }
-
 
 def SwiftBridgeDocs : Documentation {
   let Category = SwiftDocs;
