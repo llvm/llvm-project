@@ -300,7 +300,7 @@ size_t headerAndLoadCommandsSize(const NormalizedFile &file);
 
 
 /// Parses a yaml encoded mach-o file to produce an in-memory normalized view.
-ErrorOr<std::unique_ptr<NormalizedFile>>
+llvm::Expected<std::unique_ptr<NormalizedFile>>
 readYaml(std::unique_ptr<MemoryBuffer> &mb);
 
 /// Writes a yaml encoded mach-o files given an in-memory normalized view.

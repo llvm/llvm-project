@@ -800,7 +800,7 @@ bool MachOYamlIOTaggedDocumentHandler::handledDocTag(llvm::yaml::IO &io,
 namespace normalized {
 
 /// Parses a yaml encoded mach-o file to produce an in-memory normalized view.
-ErrorOr<std::unique_ptr<NormalizedFile>>
+llvm::Expected<std::unique_ptr<NormalizedFile>>
 readYaml(std::unique_ptr<MemoryBuffer> &mb) {
   // Make empty NormalizedFile.
   std::unique_ptr<NormalizedFile> f(new NormalizedFile());
@@ -814,8 +814,9 @@ readYaml(std::unique_ptr<MemoryBuffer> &mb) {
   yin >> *f;
 
   // Return error if there were parsing problems.
-  if (yin.error())
-    return make_error_code(lld::YamlReaderError::illegal_value);
+  if (auto ec = yin.error())
+    return llvm::make_error<GenericError>(Twine("YAML parsing error: ")
+                                          + ec.message());
 
   // Hand ownership of instantiated NormalizedFile to caller.
   return std::move(f);

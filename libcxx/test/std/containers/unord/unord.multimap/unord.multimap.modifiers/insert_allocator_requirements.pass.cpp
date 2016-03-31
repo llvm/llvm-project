@@ -23,17 +23,12 @@
 #include "count_new.hpp"
 #include "container_test_types.h"
 
-#if TEST_STD_VER >= 11
 template <class Arg>
 void PrintInfo(int line, Arg&& arg)
-#else
-template <class Arg>
-void PrintInfo(int line, Arg arg)
-#endif
 {
   std::cout << "In " << __FILE__ << ":" << line << ":\n    " << arg << "\n" << std::endl;
 }
-#define PRINT(...) PrintInfo(__LINE__, __VA_ARGS__)
+#define PRINT(msg) PrintInfo(__LINE__, msg)
 
 template <class Container>
 void testContainerInsert()

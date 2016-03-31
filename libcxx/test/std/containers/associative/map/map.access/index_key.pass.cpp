@@ -16,8 +16,13 @@
 #include <map>
 #include <cassert>
 
+#include "test_macros.h"
+#include "count_new.hpp"
 #include "min_allocator.h"
 #include "private_constructor.hpp"
+#if TEST_STD_VER >= 11
+#include "container_test_types.h"
+#endif
 
 int main()
 {
@@ -46,7 +51,7 @@ int main()
     assert(m[6] == 6.5);
     assert(m.size() == 8);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::pair<const int, double> V;
     V ar[] =
@@ -73,8 +78,42 @@ int main()
     assert(m[6] == 6.5);
     assert(m.size() == 8);
     }
+    {
+        // Use "container_test_types.h" to check what arguments get passed
+        // to the allocator for operator[]
+        using Container = TCT::map<>;
+        using Key = Container::key_type;
+        using MappedType = Container::mapped_type;
+        using ValueTp = Container::value_type;
+        ConstructController* cc = getConstructController();
+        cc->reset();
+        {
+            Container c;
+            const Key k(1);
+            cc->expect<std::piecewise_construct_t const&, std::tuple<Key const&>&&, std::tuple<>&&>();
+            MappedType& mref = c[k];
+            assert(!cc->unchecked());
+            {
+                DisableAllocationGuard g;
+                MappedType& mref2 = c[k];
+                assert(&mref == &mref2);
+            }
+        }
+        {
+            Container c;
+            Key k(1);
+            cc->expect<std::piecewise_construct_t const&, std::tuple<Key const&>&&, std::tuple<>&&>();
+            MappedType& mref = c[k];
+            assert(!cc->unchecked());
+            {
+                DisableAllocationGuard g;
+                MappedType& mref2 = c[k];
+                assert(&mref == &mref2);
+            }
+        }
+    }
 #endif
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     typedef std::pair<const int, double> V;
     V ar[] =

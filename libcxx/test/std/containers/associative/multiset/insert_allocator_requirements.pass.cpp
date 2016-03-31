@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <unordered_set>
+// <set>
 
-// class unordered_multiset
+// class multiset
 
 // insert(...)
 
 // UNSUPPORTED: c++98, c++03
 
-#include <unordered_set>
+#include <set>
 #include <iostream>
 #include <cassert>
 
@@ -28,7 +28,7 @@ void PrintInfo(int line, Arg&& arg)
 {
   std::cout << "In " << __FILE__ << ":" << line << ":\n    " << arg << "\n" << std::endl;
 }
-#define PRINT(msg) PrintInfo(__LINE__, msg)
+#define PRINT(...) PrintInfo(__LINE__, __VA_ARGS__)
 
 template <class Container>
 void testContainerInsert()
@@ -98,5 +98,5 @@ void testContainerInsert()
 
 int main()
 {
-  testContainerInsert<TCT::unordered_multiset<> >();
+  testContainerInsert<TCT::multiset<> >();
 }

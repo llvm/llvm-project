@@ -1422,9 +1422,15 @@ class Base(unittest2.TestCase):
 # Metaclass for TestBase to change the list of test metods when a new TestCase is loaded.
 # We change the test methods to create a new test method for each test for each debug info we are
 # testing. The name of the new test method will be '<original-name>_<debug-info>' and with adding
-# the new test method we remove the old method at the same time.
+# the new test method we remove the old method at the same time. This functionality can be
+# supressed by at test case level setting the class attribute NO_DEBUG_INFO_TESTCASE or at test
+# level by using the decorator @no_debug_info_test.
 class LLDBTestCaseFactory(type):
     def __new__(cls, name, bases, attrs):
+        original_testcase = super(LLDBTestCaseFactory, cls).__new__(cls, name, bases, attrs)
+        if original_testcase.NO_DEBUG_INFO_TESTCASE:
+            return original_testcase
+
         newattrs = {}
         for attrname, attrvalue in attrs.items():
             if attrname.startswith("test") and not getattr(attrvalue, "__no_debug_info_test__", False):
@@ -1525,6 +1531,10 @@ class TestBase(Base):
           should be provided for the sys.platform running the test suite.  The
           Mac OS X implementation is located in plugins/darwin.py.
     """
+
+    # Subclasses can set this to true (if they don't depend on debug info) to avoid running the
+    # test multiple times with various debug info types.
+    NO_DEBUG_INFO_TESTCASE = False
 
     # Maximum allowed attempts when launching the inferior process.
     # Can be overridden by the LLDB_MAX_LAUNCH_COUNT environment variable.

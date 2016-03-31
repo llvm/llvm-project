@@ -7,16 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <unordered_set>
+// <set>
 
-// class unordered_set
+// class set
 
 // insert(...)
-// emplace(...)
 
 // UNSUPPORTED: c++98, c++03
 
-#include <unordered_set>
+#include <set>
 #include <iostream>
 #include <cassert>
 
@@ -79,19 +78,6 @@ void testContainerInsert()
     }
   }
   {
-    PRINT("Testing C::insert(const value_type&&)");
-    Container c;
-    const ValueTp v(42);
-    cc->expect<const ValueTp&>();
-    assert(c.insert(std::move(v)).second);
-    assert(!cc->unchecked());
-    {
-      DisableAllocationGuard g;
-      const ValueTp v2(42);
-      assert(c.insert(std::move(v2)).second == false);
-    }
-  }
-  {
     PRINT("Testing C::insert(std::initializer_list<ValueTp>)");
     Container c;
     std::initializer_list<ValueTp> il = { ValueTp(1), ValueTp(2) };
@@ -145,71 +131,7 @@ void testContainerInsert()
 }
 
 
-template <class Container>
-void testContainerEmplace()
-{
-  typedef typename Container::value_type ValueTp;
-  typedef Container C;
-  typedef std::pair<typename C::iterator, bool> R;
-  ConstructController* cc = getConstructController();
-  cc->reset();
-  {
-    PRINT("Testing C::emplace(const value_type&)");
-    Container c;
-    const ValueTp v(42);
-    cc->expect<const ValueTp&>();
-    assert(c.emplace(v).second);
-    assert(!cc->unchecked());
-    {
-      DisableAllocationGuard g;
-      const ValueTp v2(42);
-      assert(c.emplace(v2).second == false);
-    }
-  }
-  {
-    PRINT("Testing C::emplace(value_type&)");
-    Container c;
-    ValueTp v(42);
-    cc->expect<ValueTp&>();
-    assert(c.emplace(v).second);
-    assert(!cc->unchecked());
-    {
-      DisableAllocationGuard g;
-      ValueTp v2(42);
-      assert(c.emplace(v2).second == false);
-    }
-  }
-  {
-    PRINT("Testing C::emplace(value_type&&)");
-    Container c;
-    ValueTp v(42);
-    cc->expect<ValueTp&&>();
-    assert(c.emplace(std::move(v)).second);
-    assert(!cc->unchecked());
-    {
-      DisableAllocationGuard g;
-      ValueTp v2(42);
-      assert(c.emplace(std::move(v2)).second == false);
-    }
-  }
-  {
-    PRINT("Testing C::emplace(const value_type&&)");
-    Container c;
-    const ValueTp v(42);
-    cc->expect<const ValueTp&&>();
-    assert(c.emplace(std::move(v)).second);
-    assert(!cc->unchecked());
-    {
-      DisableAllocationGuard g;
-      const ValueTp v2(42);
-      assert(c.emplace(std::move(v2)).second == false);
-    }
-  }
-}
-
-
 int main()
 {
-  testContainerInsert<TCT::unordered_set<> >();
-  testContainerEmplace<TCT::unordered_set<> >();
+  testContainerInsert<TCT::set<> >();
 }

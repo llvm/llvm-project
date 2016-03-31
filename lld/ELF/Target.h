@@ -56,7 +56,7 @@ public:
 
   virtual bool isSizeRel(uint32_t Type) const;
   virtual bool needsDynRelative(uint32_t Type) const { return false; }
-  virtual bool needsGot(uint32_t Type, SymbolBody &S) const;
+  virtual bool needsGot(uint32_t Type, const SymbolBody &S) const;
   virtual bool refersToGotEntry(uint32_t Type) const;
 
   enum PltNeed { Plt_No, Plt_Explicit, Plt_Implicit };

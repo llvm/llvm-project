@@ -865,6 +865,7 @@ llvm::Error Util::getSymbolTableRegion(const DefinedAtom* atom,
     }
     break;
   }
+  llvm_unreachable("atom->scope() unknown enum value");
 }
 
 llvm::Error Util::addSymbols(const lld::File &atomFile,
