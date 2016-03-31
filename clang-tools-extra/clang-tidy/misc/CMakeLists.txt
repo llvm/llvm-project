@@ -23,6 +23,7 @@ add_clang_library(clangTidyMiscModule
   SizeofContainerCheck.cpp
   StaticAssertCheck.cpp
   StringIntegerAssignmentCheck.cpp
+  SuspiciousMissingCommaCheck.cpp
   SuspiciousSemicolonCheck.cpp
   SwappedArgumentsCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp

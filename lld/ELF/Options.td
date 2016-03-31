@@ -75,6 +75,9 @@ def init : Separate<["-"], "init">, MetaVarName<"<symbol>">,
 def l : JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
   HelpText<"Root name of library to use">;
 
+def lto_O : Joined<["--"], "lto-O">, MetaVarName<"<opt-level>">,
+  HelpText<"Optimization level for LTO">;
+
 def m : JoinedOrSeparate<["-"], "m">,
   HelpText<"Set target emulation">;
 

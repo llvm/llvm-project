@@ -62,7 +62,7 @@ static void runLTOPasses(Module &M, TargetMachine &TM) {
   PMB.VerifyOutput = true;
   PMB.LoopVectorize = true;
   PMB.SLPVectorize = true;
-  PMB.OptLevel = 2; // FIXME: This should be an option.
+  PMB.OptLevel = Config->LtoO;
   PMB.populateLTOPassManager(LtoPasses);
   LtoPasses.run(M);
 

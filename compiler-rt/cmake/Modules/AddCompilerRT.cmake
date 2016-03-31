@@ -362,6 +362,10 @@ function(rt_externalize_debuginfo name)
     return()
   endif()
 
+  if(NOT COMPILER_RT_EXTERNALIZE_DEBUGINFO_SKIP_STRIP)
+    set(strip_command COMMAND xcrun strip -Sl $<TARGET_FILE:${name}>)
+  endif()
+
   if(APPLE)
     if(CMAKE_CXX_FLAGS MATCHES "-flto"
       OR CMAKE_CXX_FLAGS_${uppercase_CMAKE_BUILD_TYPE} MATCHES "-flto")
@@ -372,7 +376,7 @@ function(rt_externalize_debuginfo name)
     endif()
     add_custom_command(TARGET ${name} POST_BUILD
       COMMAND xcrun dsymutil $<TARGET_FILE:${name}>
-      COMMAND xcrun strip -Sl $<TARGET_FILE:${name}>)
+      ${strip_command})
   else()
     message(FATAL_ERROR "COMPILER_RT_EXTERNALIZE_DEBUGINFO isn't implemented for non-darwin platforms!")
   endif()
