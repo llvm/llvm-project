@@ -346,3 +346,43 @@ void testIt() {
   auto CRef = (NoMatchTy)&foo; // expected-error{{address of overloaded function 'foo' does not match required type 'void ()'}}
 }
 }
+
+namespace PR27122 {
+// (slightly reduced) code that motivated the bug...
+namespace ns {
+void Function(int num)
+  __attribute__((enable_if(num != 0, "")));
+void Function(int num, int a0)
+  __attribute__((enable_if(num != 1, "")));
+}  // namespace ns
+
+using ns::Function; // expected-note 3{{declared here}}
+void Run() {
+  Functioon(0); // expected-error{{use of undeclared identifier}} expected-error{{too few arguments}}
+  Functioon(0, 1); // expected-error{{use of undeclared identifier}}
+  Functioon(0, 1, 2); // expected-error{{use of undeclared identifier}}
+}
+
+// Extra tests
+void regularEnableIf(int a) __attribute__((enable_if(a, ""))); // expected-note 3{{declared here}} expected-note 3{{candidate function not viable}}
+void runRegularEnableIf() {
+  regularEnableIf(0, 2); // expected-error{{no matching function}}
+  regularEnableIf(1, 2); // expected-error{{no matching function}}
+  regularEnableIf(); // expected-error{{no matching function}}
+
+  // Test without getting overload resolution involved
+  ::PR27122::regularEnableIf(0, 2); // expected-error{{too many arguments}}
+  ::PR27122::regularEnableIf(1, 2); // expected-error{{too many arguments}}
+  ::PR27122::regularEnableIf(); // expected-error{{too few arguments}}
+}
+
+struct Foo {
+  void bar(int i) __attribute__((enable_if(i, ""))); // expected-note 2{{declared here}}
+};
+
+void runFoo() {
+  Foo f;
+  f.bar(); // expected-error{{too few arguments}}
+  f.bar(1, 2); // expected-error{{too many arguments}}
+}
+}
