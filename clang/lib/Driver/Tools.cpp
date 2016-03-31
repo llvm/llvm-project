@@ -7064,12 +7064,9 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   const Driver &D = getToolChain().getDriver();
   const toolchains::MachO &MachOTC = getMachOToolChain();
 
-  unsigned Version[3] = {0, 0, 0};
+  unsigned Version[5] = {0, 0, 0, 0, 0};
   if (Arg *A = Args.getLastArg(options::OPT_mlinker_version_EQ)) {
-    bool HadExtra;
-    if (!Driver::GetReleaseVersion(A->getValue(), Version[0], Version[1],
-                                   Version[2], HadExtra) ||
-        HadExtra)
+    if (!Driver::GetReleaseVersion(A->getValue(), Version))
       D.Diag(diag::err_drv_invalid_version_number) << A->getAsString(Args);
   }
 
