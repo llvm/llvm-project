@@ -92,7 +92,7 @@ public:
   }
 
   bool VisitObjCMethodDecl(const ObjCMethodDecl *D) {
-    if (D->getDeclContext() != LexicalDC)
+    if (isa<ObjCImplDecl>(LexicalDC) && !D->isThisDeclarationADefinition())
       DataConsumer.handleSynthesizedObjCMethod(D, DeclLoc, LexicalDC);
     else
       DataConsumer.handleObjCMethod(D);
@@ -191,22 +191,28 @@ bool CXIndexDataConsumer::handleDeclOccurence(const Decl *D,
                                       cast<Decl>(ASTNode.ContainerDC),
                                       getCXTU());
     } else {
-      const NamedDecl *CursorD = dyn_cast_or_null<NamedDecl>(ASTNode.OrigD);
-      if (!CursorD)
-        CursorD = ND;
-      Cursor = getRefCursor(CursorD, Loc);
+      if (ASTNode.OrigD) {
+        if (auto *OrigND = dyn_cast<NamedDecl>(ASTNode.OrigD))
+          Cursor = getRefCursor(OrigND, Loc);
+        else
+          Cursor = MakeCXCursor(ASTNode.OrigD, CXTU);
+      } else {
+        Cursor = getRefCursor(ND, Loc);
+      }
     }
     handleReference(ND, Loc, Cursor,
                     dyn_cast_or_null<NamedDecl>(ASTNode.Parent),
                     ASTNode.ContainerDC, ASTNode.OrigE, Kind);
 
   } else {
-    const DeclContext *DC = nullptr;
-    for (const auto &SymRel : Relations) {
-      if (SymRel.Roles & (unsigned)SymbolRole::RelationChildOf)
-        DC = dyn_cast<DeclContext>(SymRel.RelatedSymbol);
+    const DeclContext *LexicalDC = ASTNode.ContainerDC;
+    if (!LexicalDC) {
+      for (const auto &SymRel : Relations) {
+        if (SymRel.Roles & (unsigned)SymbolRole::RelationChildOf)
+          LexicalDC = dyn_cast<DeclContext>(SymRel.RelatedSymbol);
+      }
     }
-    IndexingDeclVisitor(*this, Loc, DC).Visit(ASTNode.OrigD);
+    IndexingDeclVisitor(*this, Loc, LexicalDC).Visit(ASTNode.OrigD);
   }
 
   return !shouldAbort();
@@ -816,7 +822,7 @@ bool CXIndexDataConsumer::handleSynthesizedObjCMethod(const ObjCMethodDecl *D,
                                                  const DeclContext *LexicalDC) {
   DeclInfo DInfo(/*isRedeclaration=*/true, /*isDefinition=*/true,
                  /*isContainer=*/false);
-  return handleDecl(D, Loc, getCursor(D), DInfo, LexicalDC, LexicalDC);
+  return handleDecl(D, Loc, getCursor(D), DInfo, LexicalDC, D->getDeclContext());
 }
 
 bool CXIndexDataConsumer::handleObjCProperty(const ObjCPropertyDecl *D) {
