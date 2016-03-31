@@ -766,8 +766,7 @@ bool MachOYamlIOTaggedDocumentHandler::handledDocTag(llvm::yaml::IO &io,
   info->_normalizeMachOFile = &nf;
   MappingTraits<NormalizedFile>::mapping(io, nf);
   // Step 2: parse normalized mach-o struct into atoms.
-  ErrorOr<std::unique_ptr<lld::File>> foe = normalizedToAtoms(nf, info->_path,
-                                                              true);
+  auto fileOrError = normalizedToAtoms(nf, info->_path, true);
   if (nf.arch != _arch) {
     io.setError(Twine("file is wrong architecture. Expected ("
                       + MachOLinkingContext::nameFromArch(_arch)
@@ -778,13 +777,20 @@ bool MachOYamlIOTaggedDocumentHandler::handledDocTag(llvm::yaml::IO &io,
   }
   info->_normalizeMachOFile = nullptr;
 
-  if (foe) {
+  if (fileOrError) {
     // Transfer ownership to "out" File parameter.
-    std::unique_ptr<lld::File> f = std::move(foe.get());
+    std::unique_ptr<lld::File> f = std::move(fileOrError.get());
     file = f.release();
     return true;
   } else {
-    io.setError(foe.getError().message());
+    std::string buffer;
+    llvm::raw_string_ostream stream(buffer);
+    handleAllErrors(fileOrError.takeError(),
+                    [&](const llvm::ErrorInfoBase &EI) {
+      EI.log(stream);
+      stream << "\n";
+    });
+    io.setError(stream.str());
     return false;
   }
 }

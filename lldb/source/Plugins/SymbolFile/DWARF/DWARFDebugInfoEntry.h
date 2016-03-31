@@ -115,6 +115,13 @@ public:
                     DWARFAttributes& attrs,
                     uint32_t curr_depth = 0) const; // "curr_depth" for internal use only, don't set this yourself!!!
 
+    dw_offset_t GetAttributeValue(SymbolFileDWARF* dwarf2Data,
+                                  const DWARFCompileUnit* cu,
+                                  const dw_attr_t attr,
+                                  DWARFFormValue& formValue,
+                                  dw_offset_t* end_attr_offset_ptr = nullptr,
+                                  bool check_specification_or_abstract_origin = false) const;
+
     const char* GetAttributeValueAsString(
                     SymbolFileDWARF* dwarf2Data,
                     const DWARFCompileUnit* cu,
@@ -382,12 +389,6 @@ public:
                        DWARFDebugInfoEntry::collection &die_collection);
 
 protected:
-    dw_offset_t GetAttributeValue(SymbolFileDWARF* dwarf2Data,
-                                  const DWARFCompileUnit* cu,
-                                  const dw_attr_t attr,
-                                  DWARFFormValue& formValue,
-                                  dw_offset_t* end_attr_offset_ptr = nullptr,
-                                  bool check_specification_or_abstract_origin = false) const;
 
     dw_offset_t m_offset;           // Offset within the .debug_info of the start of this entry
     uint32_t    m_parent_idx;       // How many to subtract from "this" to get the parent. If zero this die has no parent

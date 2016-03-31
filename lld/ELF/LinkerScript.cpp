@@ -106,7 +106,7 @@ class elf::ScriptParser {
 
 public:
   ScriptParser(BumpPtrAllocator *A, StringRef S, bool B)
-      : Saver(*A), Tokens(tokenize(S)), IsUnderSysroot(B) {}
+      : Saver(*A), Input(S), Tokens(tokenize(S)), IsUnderSysroot(B) {}
 
   void run();
 
@@ -137,9 +137,11 @@ private:
   void readOutputSectionDescription();
   void readSectionPatterns(StringRef OutSec, bool Keep);
 
+  size_t getPos();
   std::vector<uint8_t> parseHex(StringRef S);
 
   StringSaver Saver;
+  StringRef Input;
   std::vector<StringRef> Tokens;
   const static StringMap<Handler> Cmd;
   size_t Pos = 0;
@@ -174,7 +176,7 @@ void ScriptParser::run() {
 void ScriptParser::setError(const Twine &Msg) {
   if (Error)
     return;
-  error(Msg);
+  error("line " + Twine(getPos()) + ": " + Msg);
   Error = true;
 }
 
@@ -410,6 +412,15 @@ void ScriptParser::readSectionPatterns(StringRef OutSec, bool Keep) {
   expect("(");
   while (!Error && !skip(")"))
     Script->Sections.emplace_back(OutSec, next(), Keep);
+}
+
+// Returns the current line number.
+size_t ScriptParser::getPos() {
+  if (Pos == 0)
+    return 1;
+  const char *Begin = Input.data();
+  const char *Tok = Tokens[Pos - 1].data();
+  return StringRef(Begin, Tok - Begin).count('\n') + 1;
 }
 
 std::vector<uint8_t> ScriptParser::parseHex(StringRef S) {

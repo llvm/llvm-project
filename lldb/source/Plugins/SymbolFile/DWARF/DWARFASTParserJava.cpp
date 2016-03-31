@@ -77,7 +77,7 @@ DWARFASTParserJava::ParseArrayTypeFromDIE(const DWARFDIE &die)
     dwarf->m_die_to_type[die.GetDIE()] = DIE_IS_BEING_PARSED;
 
     ConstString linkage_name;
-    lldb::user_id_t type_die_offset = DW_INVALID_OFFSET;
+    DWARFFormValue type_attr_value;
     lldb::addr_t data_offset = LLDB_INVALID_ADDRESS;
     DWARFExpression length_expression(die.GetCU());
 
@@ -95,7 +95,7 @@ DWARFASTParserJava::ParseArrayTypeFromDIE(const DWARFDIE &die)
                     linkage_name.SetCString(form_value.AsCString());
                     break;
                 case DW_AT_type:
-                    type_die_offset = form_value.Reference();
+                    type_attr_value = form_value;
                     break;
                 case DW_AT_data_member_location:
                     data_offset = form_value.Unsigned();
@@ -140,7 +140,8 @@ DWARFASTParserJava::ParseArrayTypeFromDIE(const DWARFDIE &die)
         }
     }
 
-    Type *element_type = dwarf->ResolveTypeUID(type_die_offset);
+    DIERef type_die_ref(type_attr_value);
+    Type *element_type = dwarf->ResolveTypeUID(type_die_ref);
     if (!element_type)
         return nullptr;
 
@@ -150,7 +151,7 @@ DWARFASTParserJava::ParseArrayTypeFromDIE(const DWARFDIE &die)
 
     Declaration decl;
     TypeSP type_sp(new Type(die.GetID(), dwarf, array_compiler_type.GetTypeName(), -1, nullptr,
-                            dwarf->MakeUserID(type_die_offset), Type::eEncodingIsUID, &decl,
+                            type_die_ref.GetUID(dwarf), Type::eEncodingIsUID, &decl,
                             array_compiler_type, Type::eResolveStateFull));
     type_sp->SetEncodingType(element_type);
     return type_sp;
@@ -163,7 +164,7 @@ DWARFASTParserJava::ParseReferenceTypeFromDIE(const DWARFDIE &die)
     dwarf->m_die_to_type[die.GetDIE()] = DIE_IS_BEING_PARSED;
 
     Declaration decl;
-    lldb::user_id_t type_die_offset = DW_INVALID_OFFSET;
+    DWARFFormValue type_attr_value;
 
     DWARFAttributes attributes;
     const size_t num_attributes = die.GetAttributes(attributes);
@@ -176,7 +177,7 @@ DWARFASTParserJava::ParseReferenceTypeFromDIE(const DWARFDIE &die)
             switch (attr)
             {
                 case DW_AT_type:
-                    type_die_offset = form_value.Reference();
+                    type_attr_value = form_value;
                     break;
                 default:
                     assert(false && "Unsupported attribute for DW_TAG_array_type");
@@ -184,14 +185,15 @@ DWARFASTParserJava::ParseReferenceTypeFromDIE(const DWARFDIE &die)
         }
     }
 
-    Type *pointee_type = dwarf->ResolveTypeUID(type_die_offset);
+    DIERef type_die_ref(type_attr_value);
+    Type *pointee_type = dwarf->ResolveTypeUID(type_die_ref);
     if (!pointee_type)
         return nullptr;
 
     CompilerType pointee_compiler_type = pointee_type->GetForwardCompilerType();
     CompilerType reference_compiler_type = m_ast.CreateReferenceType(pointee_compiler_type);
     TypeSP type_sp(new Type(die.GetID(), dwarf, reference_compiler_type.GetTypeName(), -1, nullptr,
-                            dwarf->MakeUserID(type_die_offset), Type::eEncodingIsUID, &decl,
+                            type_die_ref.GetUID(dwarf), Type::eEncodingIsUID, &decl,
                             reference_compiler_type, Type::eResolveStateFull));
     type_sp->SetEncodingType(pointee_type);
     return type_sp;
@@ -463,7 +465,7 @@ DWARFASTParserJava::ParseChildMembers(const DWARFDIE &parent_die, CompilerType &
             case DW_TAG_member:
             {
                 const char *name = nullptr;
-                lldb::user_id_t encoding_uid = LLDB_INVALID_UID;
+                DWARFFormValue encoding_uid;
                 uint32_t member_byte_offset = UINT32_MAX;
                 DWARFExpression member_location_expression(dwarf_cu);
                 bool artificial = true;
@@ -481,7 +483,7 @@ DWARFASTParserJava::ParseChildMembers(const DWARFDIE &parent_die, CompilerType &
                                 name = form_value.AsCString();
                                 break;
                             case DW_AT_type:
-                                encoding_uid = form_value.Reference();
+                                encoding_uid = form_value;
                                 break;
                             case DW_AT_data_member_location:
                                 if (form_value.BlockData())
@@ -508,7 +510,7 @@ DWARFASTParserJava::ParseChildMembers(const DWARFDIE &parent_die, CompilerType &
                     m_ast.SetDynamicTypeId(compiler_type, member_location_expression);
                 else
                 {
-                    if (Type *member_type = die.ResolveTypeUID(encoding_uid))
+                    if (Type *member_type = die.ResolveTypeUID(DIERef(encoding_uid)))
                         m_ast.AddMemberToObject(compiler_type, ConstString(name), member_type->GetFullCompilerType(),
                                                 member_byte_offset);
                 }
@@ -516,7 +518,7 @@ DWARFASTParserJava::ParseChildMembers(const DWARFDIE &parent_die, CompilerType &
             }
             case DW_TAG_inheritance:
             {
-                lldb::user_id_t encoding_uid = LLDB_INVALID_UID;
+                DWARFFormValue encoding_uid;
                 uint32_t member_byte_offset = UINT32_MAX;
 
                 DWARFAttributes attributes;
@@ -529,7 +531,7 @@ DWARFASTParserJava::ParseChildMembers(const DWARFDIE &parent_die, CompilerType &
                         switch (attributes.AttributeAtIndex(i))
                         {
                             case DW_AT_type:
-                                encoding_uid = form_value.Reference();
+                                encoding_uid = form_value;
                                 break;
                             case DW_AT_data_member_location:
                                 member_byte_offset = form_value.Unsigned();
@@ -543,7 +545,7 @@ DWARFASTParserJava::ParseChildMembers(const DWARFDIE &parent_die, CompilerType &
                         }
                     }
                 }
-                if (Type *base_type = die.ResolveTypeUID(encoding_uid))
+                if (Type *base_type = die.ResolveTypeUID(DIERef(encoding_uid)))
                     m_ast.AddBaseClassToObject(compiler_type, base_type->GetFullCompilerType(), member_byte_offset);
                 break;
             }

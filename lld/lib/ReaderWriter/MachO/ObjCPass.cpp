@@ -99,11 +99,11 @@ public:
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
-  std::error_code perform(SimpleFile &mergedFile) override {
+  llvm::Error perform(SimpleFile &mergedFile) override {
     // Add the image info.
     mergedFile.addAtom(*getImageInfo());
 
-    return std::error_code();
+    return llvm::Error();
   }
 
 private:

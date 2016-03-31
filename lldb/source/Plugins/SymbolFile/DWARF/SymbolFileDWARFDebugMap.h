@@ -107,10 +107,11 @@ protected:
         kNumFlags
     };
 
+    friend class DebugMapModule;
+    friend class DIERef;
+    friend class DWARFASTParserClang;
     friend class DWARFCompileUnit;
     friend class SymbolFileDWARF;
-    friend class DebugMapModule;
-    friend class DWARFASTParserClang;
     struct OSOInfo
     {
         lldb::ModuleSP module_sp;

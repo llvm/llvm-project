@@ -338,8 +338,12 @@ AddThreadsForPath(std::string path, ThreadCollectionSP threads, ProcessSP proces
             pcs.push_back(pc->GetAsInteger()->GetValue());
             return true;
         });
+
+        if (pcs.size() == 0)
+            return true;
         
-        tid_t tid = o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
+        StructuredData::ObjectSP thread_id_obj = o->GetObjectForDotSeparatedPath("thread_id");
+        tid_t tid = thread_id_obj ? thread_id_obj->GetIntegerValue() : 0;
         uint32_t stop_id = 0;
         bool stop_id_is_valid = false;
         HistoryThread *history_thread = new HistoryThread(*process_sp, tid, pcs, stop_id, stop_id_is_valid);

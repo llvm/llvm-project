@@ -215,10 +215,10 @@ public:
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
-  std::error_code perform(SimpleFile &mergedFile) override {
+  llvm::Error perform(SimpleFile &mergedFile) override {
     // Skip this pass if output format uses text relocations instead of stubs.
     if (!this->noTextRelocs())
-      return std::error_code();
+      return llvm::Error();
 
     // Scan all references in all atoms.
     for (const DefinedAtom *atom : mergedFile.defined()) {
@@ -245,7 +245,7 @@ public:
 
     // Exit early if no stubs needed.
     if (_targetToUses.empty())
-      return std::error_code();
+      return llvm::Error();
 
     // First add help-common and GOT slots used by lazy binding.
     SimpleDefinedAtom *helperCommonAtom =
@@ -323,7 +323,7 @@ public:
       lazyOffset += target->name().size() + 12;
     }
 
-    return std::error_code();
+    return llvm::Error();
   }
 
 private:

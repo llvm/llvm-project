@@ -33,9 +33,9 @@ std::vector<std::string> parseClasses(StringRef Option) {
   return Result;
 }
 
-ast_matchers::internal::BindableMatcher<Stmt> handleFrom(
-    ast_matchers::internal::Matcher<RecordDecl> IsAHandle,
-    ast_matchers::internal::Matcher<Expr> Arg) {
+ast_matchers::internal::BindableMatcher<Stmt>
+handleFrom(ast_matchers::internal::Matcher<RecordDecl> IsAHandle,
+           ast_matchers::internal::Matcher<Expr> Arg) {
   return cxxConstructExpr(hasDeclaration(cxxMethodDecl(ofClass(IsAHandle))),
                           hasArgument(0, Arg));
 }
@@ -76,7 +76,8 @@ makeContainerMatcher(ast_matchers::internal::Matcher<RecordDecl> IsAHandle) {
   //  - map's insert: This requires detecting that the pair conversion triggers
   //                  the bug. A little more complicated than what we have now.
   return callExpr(
-      hasAnyArgument(handleFromTemporaryValue(IsAHandle)),
+      hasAnyArgument(
+          ignoringParenImpCasts(handleFromTemporaryValue(IsAHandle))),
       anyOf(
           // For sequences: assign, push_back, resize.
           cxxMemberCallExpr(
@@ -91,7 +92,7 @@ makeContainerMatcher(ast_matchers::internal::Matcher<RecordDecl> IsAHandle) {
                               hasOverloadedOperatorName("[]"))));
 }
 
-}  // anonymous namespace
+} // anonymous namespace
 
 DanglingHandleCheck::DanglingHandleCheck(StringRef Name,
                                          ClangTidyContext *Context)
@@ -109,7 +110,7 @@ void DanglingHandleCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                            HandleClassesDelimiter));
 }
 
-void DanglingHandleCheck::registerMatchersForVariables(MatchFinder* Finder) {
+void DanglingHandleCheck::registerMatchersForVariables(MatchFinder *Finder) {
   const auto ConvertedHandle = handleFromTemporaryValue(IsAHandle);
 
   // Find 'Handle foo(ReturnsAValue());'
@@ -138,7 +139,7 @@ void DanglingHandleCheck::registerMatchersForVariables(MatchFinder* Finder) {
   Finder->addMatcher(makeContainerMatcher(IsAHandle).bind("bad_stmt"), this);
 }
 
-void DanglingHandleCheck::registerMatchersForReturn(MatchFinder* Finder) {
+void DanglingHandleCheck::registerMatchersForReturn(MatchFinder *Finder) {
   // Return a local.
   Finder->addMatcher(
       returnStmt(
@@ -168,12 +169,12 @@ void DanglingHandleCheck::registerMatchersForReturn(MatchFinder* Finder) {
       this);
 }
 
-void DanglingHandleCheck::registerMatchers(MatchFinder* Finder) {
+void DanglingHandleCheck::registerMatchers(MatchFinder *Finder) {
   registerMatchersForVariables(Finder);
   registerMatchersForReturn(Finder);
 }
 
-void DanglingHandleCheck::check(const MatchFinder::MatchResult& Result) {
+void DanglingHandleCheck::check(const MatchFinder::MatchResult &Result) {
   auto *Handle = Result.Nodes.getNodeAs<CXXRecordDecl>("handle");
   diag(Result.Nodes.getNodeAs<Stmt>("bad_stmt")->getLocStart(),
        "%0 outlives its value")

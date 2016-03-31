@@ -42,13 +42,13 @@ public:
 
   // Handle files, this adds atoms from the current file thats
   // being processed by the resolver
-  ErrorOr<bool> handleFile(File &);
+  llvm::Expected<bool> handleFile(File &);
 
   // Handle an archive library file.
-  ErrorOr<bool> handleArchiveFile(File &);
+  llvm::Expected<bool> handleArchiveFile(File &);
 
   // Handle a shared library file.
-  std::error_code handleSharedLibrary(File &);
+  llvm::Error handleSharedLibrary(File &);
 
   /// @brief do work of merging and resolving and return list
   bool resolve();
@@ -56,7 +56,7 @@ public:
   std::unique_ptr<SimpleFile> resultFile() { return std::move(_result); }
 
 private:
-  typedef std::function<ErrorOr<bool>(StringRef)> UndefCallback;
+  typedef std::function<llvm::Expected<bool>(StringRef)> UndefCallback;
 
   bool undefinesAdded(int begin, int end);
   File *getFile(int &index);
@@ -67,7 +67,7 @@ private:
   void deadStripOptimize();
   bool checkUndefines();
   void removeCoalescedAwayAtoms();
-  ErrorOr<bool> forEachUndefines(File &file, UndefCallback callback);
+  llvm::Expected<bool> forEachUndefines(File &file, UndefCallback callback);
 
   void markLive(const Atom *atom);
 

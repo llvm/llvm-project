@@ -72,7 +72,7 @@ public:
   }
 
 private:
-  std::error_code perform(SimpleFile &mergedFile) override {
+  llvm::Error perform(SimpleFile &mergedFile) override {
     bool allowTLV = _ctx.minOS("10.7", "1.0");
 
     for (const DefinedAtom *atom : mergedFile.defined()) {
@@ -81,7 +81,7 @@ private:
           continue;
 
         if (!allowTLV)
-          return make_dynamic_error_code(
+          return llvm::make_error<GenericError>(
             "targeted OS version does not support use of thread local "
             "variables in " + atom->name() + " for architecture " +
             _ctx.archName());
@@ -107,7 +107,7 @@ private:
     for (const TLVPEntryAtom *slot : entries)
       mergedFile.addAtom(*slot);
 
-    return std::error_code();
+    return llvm::Error();
   }
 
   const DefinedAtom *makeTLVPEntry(const Atom *target) {

@@ -83,6 +83,10 @@ public:
       Header.sh_addralign = Align;
   }
 
+  // If true, this section will be page aligned on disk.
+  // Typically the first section of each PT_LOAD segment has this flag.
+  bool PageAlign = false;
+
   virtual void finalize() {}
   virtual void writeTo(uint8_t *Buf) {}
   virtual ~OutputSectionBase() = default;

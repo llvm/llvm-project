@@ -101,6 +101,7 @@ public:
     static FixedFormSizes GetFixedFormSizesForAddressSize (uint8_t addr_size, bool is_dwarf64);
     static int          Compare (const DWARFFormValue& a, 
                                  const DWARFFormValue& b);
+    void                Clear();
 protected:
     const DWARFCompileUnit* m_cu; // Compile unit for this form
     dw_form_t   m_form;     // Form for this value

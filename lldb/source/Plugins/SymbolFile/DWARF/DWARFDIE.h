@@ -58,7 +58,7 @@ public:
     //----------------------------------------------------------------------
     // Tests
     //----------------------------------------------------------------------
-    operator bool () const
+    explicit operator bool () const
     {
         return IsValid();
     }
@@ -180,9 +180,11 @@ public:
     lldb_private::Type *
     ResolveType () const;
 
+    //----------------------------------------------------------------------
     // Resolve a type by UID using this DIE's DWARF file
+    //----------------------------------------------------------------------
     lldb_private::Type *
-    ResolveTypeUID (lldb::user_id_t uid) const;
+    ResolveTypeUID (const DIERef &die_ref) const;
 
     //----------------------------------------------------------------------
     // Functions for obtaining DIE relations and references
@@ -245,6 +247,9 @@ public:
     uint64_t
     GetAttributeValueAsReference (const dw_attr_t attr, uint64_t fail_value) const;
 
+    DWARFDIE
+    GetAttributeValueAsReferenceDIE (const dw_attr_t attr) const;
+
     uint64_t
     GetAttributeValueAsAddress (const dw_attr_t attr, uint64_t fail_value) const;
 
@@ -269,6 +274,15 @@ public:
 
     void
     Dump (lldb_private::Stream *s, const uint32_t recurse_depth) const;
+
+    lldb_private::CompilerDecl
+    GetDecl () const;
+
+    lldb_private::CompilerDeclContext
+    GetDeclContext() const;
+
+    lldb_private::CompilerDeclContext
+    GetContainingDeclContext() const;
 
 protected:
     DWARFCompileUnit *m_cu;

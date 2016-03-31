@@ -88,4 +88,12 @@ std::error_code make_dynamic_error_code(const Twine &msg) {
   return std::error_code(categorySingleton.add(msg.str()), categorySingleton);
 }
 
+char GenericError::ID = 0;
+
+GenericError::GenericError(Twine Msg) : Msg(Msg.str()) { }
+
+void GenericError::log(raw_ostream &OS) const {
+  OS << Msg;
+}
+
 } // namespace lld

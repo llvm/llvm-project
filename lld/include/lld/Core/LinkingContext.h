@@ -194,7 +194,7 @@ public:
   /// Calls through to the writeFile() method on the specified Writer.
   ///
   /// \param linkedFile This is the merged/linked graph of all input file Atoms.
-  virtual std::error_code writeFile(const File &linkedFile) const;
+  virtual llvm::Error writeFile(const File &linkedFile) const;
 
   /// Return the next ordinal and Increment it.
   virtual uint64_t getNextOrdinalAndIncrement() const { return _nextOrdinal++; }
@@ -208,7 +208,7 @@ public:
   /// errors for any differences between the context state and a loaded file.
   /// For example, we can error if we try to load a file which is a different
   /// arch from that being linked.
-  virtual std::error_code handleLoadedFile(File &file) = 0;
+  virtual llvm::Error handleLoadedFile(File &file) = 0;
 
   /// @}
 protected:

@@ -23,7 +23,7 @@ bool LinkingContext::validate(raw_ostream &diagnostics) {
   return validateImpl(diagnostics);
 }
 
-std::error_code LinkingContext::writeFile(const File &linkedFile) const {
+llvm::Error LinkingContext::writeFile(const File &linkedFile) const {
   return this->writer().writeFile(linkedFile, _outputPath);
 }
 

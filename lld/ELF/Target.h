@@ -31,6 +31,7 @@ public:
   virtual void writeGotHeader(uint8_t *Buf) const {}
   virtual void writeGotPltHeader(uint8_t *Buf) const {}
   virtual void writeGotPlt(uint8_t *Buf, uint64_t Plt) const {};
+  virtual uint64_t getImplicitAddend(uint8_t *Buf, uint32_t Type) const;
 
   // If lazy binding is supported, the first entry of the PLT has code
   // to call the dynamic linker to resolve PLT entries the first time
@@ -62,7 +63,7 @@ public:
   PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const;
 
   virtual void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                           uint64_t P, uint64_t SA, uint64_t ZA = 0) const = 0;
+                           uint64_t P, uint64_t SA) const = 0;
   virtual bool isGotRelative(uint32_t Type) const;
   bool canRelaxTls(uint32_t Type, const SymbolBody *S) const;
   template <class ELFT>

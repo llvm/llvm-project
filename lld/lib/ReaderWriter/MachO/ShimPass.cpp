@@ -47,7 +47,7 @@ public:
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
-  std::error_code perform(SimpleFile &mergedFile) override {
+  llvm::Error perform(SimpleFile &mergedFile) override {
     // Scan all references in all atoms.
     for (const DefinedAtom *atom : mergedFile.defined()) {
       for (const Reference *ref : *atom) {
@@ -66,7 +66,7 @@ public:
     }
     // Exit early if no shims needed.
     if (_targetToShim.empty())
-      return std::error_code();
+      return llvm::Error();
 
     // Sort shim atoms so the layout order is stable.
     std::vector<const DefinedAtom *> shims;
@@ -83,7 +83,7 @@ public:
     for (const DefinedAtom *shim : shims)
       mergedFile.addAtom(*shim);
 
-    return std::error_code();
+    return llvm::Error();
   }
 
 private:
