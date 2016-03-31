@@ -89,7 +89,7 @@ std::string getPGOFuncName(const Function &F, uint64_t Version) {
 
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
   if (FileName.empty())
-    FileName = "<unknown>";
+    return PGOFuncName;
   // Drop the file name including ':'. See also getPGOFuncName.
   if (PGOFuncName.startswith(FileName))
     PGOFuncName = PGOFuncName.drop_front(FileName.size() + 1);

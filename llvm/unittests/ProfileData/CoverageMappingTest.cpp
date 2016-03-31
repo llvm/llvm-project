@@ -141,13 +141,15 @@ struct CoverageMappingTest : ::testing::Test {
     ProfileReader = std::move(ReaderOrErr.get());
   }
 
-  void loadCoverageMapping(StringRef FuncName, uint64_t Hash) {
+  void loadCoverageMapping(StringRef FuncName, uint64_t Hash,
+                           bool EmitFilenames = true) {
     std::string Regions = writeCoverageRegions();
     readCoverageRegions(Regions);
 
     SmallVector<StringRef, 8> Filenames;
-    for (const auto &E : Files)
-      Filenames.push_back(E.getKey());
+    if (EmitFilenames)
+      for (const auto &E : Files)
+        Filenames.push_back(E.getKey());
     OneFunctionCoverageReader CovReader(FuncName, Hash, Filenames, OutputCMRs);
     auto CoverageOrErr = CoverageMapping::load(CovReader, *ProfileReader);
     ASSERT_TRUE(NoError(CoverageOrErr.getError()));
@@ -310,7 +312,7 @@ TEST_P(MaybeSparseCoverageMappingTest, strip_unknown_filename_prefix) {
   readProfCounts();
 
   addCMR(Counter::getCounter(0), "", 1, 1, 9, 9);
-  loadCoverageMapping("<unknown>:func", 0x1234);
+  loadCoverageMapping("<unknown>:func", 0x1234, /*EmitFilenames=*/false);
 
   std::vector<std::string> Names;
   for (const auto &Func : LoadedCoverage->getCoveredFunctions())
