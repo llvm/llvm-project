@@ -71,12 +71,28 @@ define <4 x i32> @vcntQ32(<4 x i32>* %A) nounwind {
 	ret <4 x i32> %tmp2
 }
 
+define <1 x i64> @vcnt64(<1 x i64>* %A) nounwind {
+; CHECK-LABEL: vcnt64:
+	%tmp1 = load <1 x i64>, <1 x i64>* %A
+	%tmp2 = call <1 x i64> @llvm.ctpop.v1i64(<1 x i64> %tmp1)
+	ret <1 x i64> %tmp2
+}
+
+define <2 x i64> @vcntQ64(<2 x i64>* %A) nounwind {
+; CHECK-LABEL: vcntQ64:
+	%tmp1 = load <2 x i64>, <2 x i64>* %A
+	%tmp2 = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %tmp1)
+	ret <2 x i64> %tmp2
+}
+
 declare <8 x i8>  @llvm.ctpop.v8i8(<8 x i8>) nounwind readnone
 declare <16 x i8> @llvm.ctpop.v16i8(<16 x i8>) nounwind readnone
 declare <4 x i16> @llvm.ctpop.v4i16(<4 x i16>) nounwind readnone
 declare <8 x i16> @llvm.ctpop.v8i16(<8 x i16>) nounwind readnone
 declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>) nounwind readnone
 declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>) nounwind readnone
+declare <1 x i64> @llvm.ctpop.v1i64(<1 x i64>) nounwind readnone
+declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>) nounwind readnone
 
 define <8 x i8> @vclz8(<8 x i8>* %A) nounwind {
 ;CHECK-LABEL: vclz8:
