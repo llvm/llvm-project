@@ -353,8 +353,8 @@ entry:
   ret void
 }
 
-;CHECK-LABEL: Strw_zero
-;CHECK : str xzr
+; CHECK-LABEL: Strw_zero
+; CHECK: str xzr
 define void @Strw_zero(i32* nocapture %P, i32 %n) {
 entry:
   %idxprom = sext i32 %n to i64
@@ -367,8 +367,22 @@ entry:
   ret void
 }
 
-;CHECK-LABEL: Strw_zero_4
-;CHECK : stp xzr
+; CHECK-LABEL: Strw_zero_nonzero
+; CHECK: stp wzr, w1
+define void @Strw_zero_nonzero(i32* nocapture %P, i32 %n)  {
+entry:
+  %idxprom = sext i32 %n to i64
+  %arrayidx = getelementptr inbounds i32, i32* %P, i64 %idxprom
+  store i32 0, i32* %arrayidx
+  %add = add nsw i32 %n, 1
+  %idxprom1 = sext i32 %add to i64
+  %arrayidx2 = getelementptr inbounds i32, i32* %P, i64 %idxprom1
+  store i32 %n, i32* %arrayidx2
+  ret void
+}
+
+; CHECK-LABEL: Strw_zero_4
+; CHECK: stp xzr
 define void @Strw_zero_4(i32* nocapture %P, i32 %n) {
 entry:
   %idxprom = sext i32 %n to i64
@@ -442,8 +456,8 @@ entry:
   ret void
 }
 
-;CHECK-LABEL: Sturw_zero
-;CHECK : stur xzr
+; CHECK-LABEL: Sturw_zero
+; CHECK: stur xzr
 define void @Sturw_zero(i32* nocapture %P, i32 %n) {
 entry:
   %sub = add nsw i32 %n, -3
@@ -457,8 +471,8 @@ entry:
   ret void
 }
 
-;CHECK-LABEL: Sturw_zero_4
-;CHECK : str xzr
+; CHECK-LABEL: Sturw_zero_4
+; CHECK: stp xzr, xzr
 define void @Sturw_zero_4(i32* nocapture %P, i32 %n) {
 entry:
   %sub = add nsw i32 %n, -3

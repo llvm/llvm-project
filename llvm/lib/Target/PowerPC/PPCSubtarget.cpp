@@ -104,6 +104,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasHTM = false;
   HasFusion = false;
   HasFloat128 = false;
+  IsISA3_0 = false;
 
   HasPOPCNTD = POPCNTD_Unavailable;
 }

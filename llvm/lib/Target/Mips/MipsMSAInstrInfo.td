@@ -2297,7 +2297,7 @@ class INSVE_D_DESC : MSA_INSVE_DESC_BASE<"insve.d", insve_v2i64, uimm1, immZExt1
 
 class LD_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                    ValueType TyNode, RegisterOperand ROWD,
-                   Operand MemOpnd = mem_msa, ComplexPattern Addr = addrimm10,
+                   Operand MemOpnd, ComplexPattern Addr = addrimm10,
                    InstrItinClass itin = NoItinerary> {
   dag OutOperandList = (outs ROWD:$wd);
   dag InOperandList = (ins MemOpnd:$addr);
@@ -2307,10 +2307,10 @@ class LD_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
   string DecoderMethod = "DecodeMSA128Mem";
 }
 
-class LD_B_DESC : LD_DESC_BASE<"ld.b", load, v16i8, MSA128BOpnd>;
-class LD_H_DESC : LD_DESC_BASE<"ld.h", load, v8i16, MSA128HOpnd>;
-class LD_W_DESC : LD_DESC_BASE<"ld.w", load, v4i32, MSA128WOpnd>;
-class LD_D_DESC : LD_DESC_BASE<"ld.d", load, v2i64, MSA128DOpnd>;
+class LD_B_DESC : LD_DESC_BASE<"ld.b", load, v16i8, MSA128BOpnd, mem_simm10>;
+class LD_H_DESC : LD_DESC_BASE<"ld.h", load, v8i16, MSA128HOpnd, mem_simm10_lsl1>;
+class LD_W_DESC : LD_DESC_BASE<"ld.w", load, v4i32, MSA128WOpnd, mem_simm10_lsl2>;
+class LD_D_DESC : LD_DESC_BASE<"ld.d", load, v2i64, MSA128DOpnd, mem_simm10_lsl3>;
 
 class LDI_B_DESC : MSA_I10_LDI_DESC_BASE<"ldi.b", MSA128BOpnd>;
 class LDI_H_DESC : MSA_I10_LDI_DESC_BASE<"ldi.h", MSA128HOpnd>;
@@ -2631,7 +2631,7 @@ class SRLRI_D_DESC : MSA_BIT_X_DESC_BASE<"srlri.d", int_mips_srlri_d, uimm6,
 
 class ST_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                    ValueType TyNode, RegisterOperand ROWD,
-                   Operand MemOpnd = mem_msa, ComplexPattern Addr = addrimm10,
+                   Operand MemOpnd, ComplexPattern Addr = addrimm10,
                    InstrItinClass itin = NoItinerary> {
   dag OutOperandList = (outs);
   dag InOperandList = (ins ROWD:$wd, MemOpnd:$addr);
@@ -2641,10 +2641,10 @@ class ST_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
   string DecoderMethod = "DecodeMSA128Mem";
 }
 
-class ST_B_DESC : ST_DESC_BASE<"st.b", store, v16i8, MSA128BOpnd>;
-class ST_H_DESC : ST_DESC_BASE<"st.h", store, v8i16, MSA128HOpnd>;
-class ST_W_DESC : ST_DESC_BASE<"st.w", store, v4i32, MSA128WOpnd>;
-class ST_D_DESC : ST_DESC_BASE<"st.d", store, v2i64, MSA128DOpnd>;
+class ST_B_DESC : ST_DESC_BASE<"st.b", store, v16i8, MSA128BOpnd, mem_simm10>;
+class ST_H_DESC : ST_DESC_BASE<"st.h", store, v8i16, MSA128HOpnd, mem_simm10_lsl1>;
+class ST_W_DESC : ST_DESC_BASE<"st.w", store, v4i32, MSA128WOpnd, mem_simm10_lsl2>;
+class ST_D_DESC : ST_DESC_BASE<"st.d", store, v2i64, MSA128DOpnd, mem_simm10_lsl3>;
 
 class SUBS_S_B_DESC : MSA_3R_DESC_BASE<"subs_s.b", int_mips_subs_s_b,
                                        MSA128BOpnd>;

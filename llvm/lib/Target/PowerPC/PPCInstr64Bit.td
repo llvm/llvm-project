@@ -244,11 +244,21 @@ def LDARX : XForm_1<31,  84, (outs g8rc:$rD), (ins memrr:$ptr),
 // (EH=1 - see Power ISA 2.07 Book II 4.4.2)
 def LDARXL : XForm_1<31,  84, (outs g8rc:$rD), (ins memrr:$ptr),
                      "ldarx $rD, $ptr, 1", IIC_LdStLDARX, []>, isDOT;
+
+let hasExtraDefRegAllocReq = 1 in
+def LDAT : X_RD5_RS5_IM5<31, 614, (outs g8rc:$rD), (ins g8rc:$rA, u5imm:$FC),
+                         "ldat $rD, $rA, $FC", IIC_LdStLoad>, isPPC64,
+           Requires<[IsISA3_0]>;
 }
 
 let Defs = [CR0], mayStore = 1, hasSideEffects = 0 in
 def STDCX : XForm_1<31, 214, (outs), (ins g8rc:$rS, memrr:$dst),
                     "stdcx. $rS, $dst", IIC_LdStSTDCX, []>, isDOT;
+
+let mayStore = 1, hasSideEffects = 0 in
+def STDAT : X_RD5_RS5_IM5<31, 742, (outs), (ins g8rc:$rS, g8rc:$rA, u5imm:$FC),
+                          "stdat $rS, $rA, $FC", IIC_LdStStore>, isPPC64,
+            Requires<[IsISA3_0]>;
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [RM] in
@@ -905,6 +915,10 @@ def LDUX : XForm_1<31, 53, (outs g8rc:$rD, ptr_rc_nor0:$ea_result),
                    "ldux $rD, $addr", IIC_LdStLDUX,
                    []>, RegConstraint<"$addr.ptrreg = $ea_result">,
                    NoEncode<"$ea_result">, isPPC64;
+
+def LDMX : XForm_1<31, 309, (outs g8rc:$rD), (ins memrr:$src),
+                   "ldmx $rD, $src", IIC_LdStLD, []>, isPPC64,
+           Requires<[IsISA3_0]>;
 }
 }
 

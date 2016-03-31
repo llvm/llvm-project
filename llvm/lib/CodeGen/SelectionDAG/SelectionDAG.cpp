@@ -6959,12 +6959,12 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
                  EVT::getVectorVT(*getContext(), EltVT, ResNE), Scalars);
 }
 
-
-/// isConsecutiveLoad - Return true if LD is loading 'Bytes' bytes from a
-/// location that is 'Dist' units away from the location that the 'Base' load
-/// is loading from.
-bool SelectionDAG::isConsecutiveLoad(LoadSDNode *LD, LoadSDNode *Base,
-                                     unsigned Bytes, int Dist) const {
+bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
+                                                  LoadSDNode *Base,
+                                                  unsigned Bytes,
+                                                  int Dist) const {
+  if (LD->isVolatile() || Base->isVolatile())
+    return false;
   if (LD->getChain() != Base->getChain())
     return false;
   EVT VT = LD->getValueType(0);

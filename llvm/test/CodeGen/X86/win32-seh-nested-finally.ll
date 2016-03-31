@@ -61,6 +61,8 @@ attributes #3 = { noinline }
 ; CHECK: addl $12, %ebp
 ; CHECK: pushl $2
 ; CHECK: calll _f
+; CHECK: addl $4, %esp
+; CHECK: addl $4, %esp
 ; CHECK: popl %ebp
 ; CHECK: retl
 
@@ -69,6 +71,7 @@ attributes #3 = { noinline }
 ; CHECK: addl $12, %ebp
 ; CHECK: pushl $3
 ; CHECK: calll _f
+; CHECK: addl $8, %esp
 ; CHECK: popl %ebp
 ; CHECK: retl
 

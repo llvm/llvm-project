@@ -800,6 +800,20 @@ class X_RD6_IMM8<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
   let Inst{31}    = XT{5};
 }
 
+// XForm_base_r3xo for instructions such as P9 atomics where we don't want
+// to specify an SDAG pattern for matching.
+class X_RD5_RS5_IM5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                    string asmstr, InstrItinClass itin>
+  : XForm_base_r3xo<opcode, xo, OOL, IOL, asmstr, itin, []> {
+}
+
+class X_BF3<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+            InstrItinClass itin>
+  : XForm_17<opcode, xo, OOL, IOL, asmstr, itin> {
+  let FRA = 0;
+  let FRB = 0;
+}
+
 // XX*-Form (VSX)
 class XX1Form<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr, 
               InstrItinClass itin, list<dag> pattern>

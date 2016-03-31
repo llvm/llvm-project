@@ -558,3 +558,18 @@ VSX:
 - Load Vector Word & Splat Indexed: lxvwsx
   . Likely needs an intrinsic
   . (set v?:$XT, (int_ppc_vsx_lxvwsx xoaddr:$src))
+
+Atomic operations (l[dw]at, st[dw]at):
+- Provide custom lowering for common atomic operations to use these
+  instructions with the correct Function Code
+- Ensure the operands are in the correct register (i.e. RT+1, RT+2)
+- Provide builtins since not all FC's necessarily have an existing LLVM
+  atomic operation
+
+Load Doubleword Monitored (ldmx):
+- Investigate whether there are any uses for this. It seems to be related to
+  Garbage Collection so it isn't likely to be all that useful for most
+  languages we deal with.
+
+Move to CR from XER Extended (mcrxrx):
+- Is there a use for this in LLVM?

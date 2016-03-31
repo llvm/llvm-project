@@ -621,6 +621,7 @@ public:
   unsigned getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                                  ArrayRef<Type *> Tys) {
     unsigned ISD = 0;
+    unsigned SingleCallCost = 10; // Library call cost. Make it expensive.
     switch (IID) {
     default: {
       // Assume that we need to scalarize this intrinsic.
@@ -725,6 +726,13 @@ public:
     case Intrinsic::masked_load:
       return static_cast<T *>(this)
           ->getMaskedMemoryOpCost(Instruction::Load, RetTy, 0, 0);
+    case Intrinsic::ctpop:
+      ISD = ISD::CTPOP;
+      // In case of legalization use TCC_Expensive. This is cheaper than a
+      // library call but still not a cheap instruction.
+      SingleCallCost = TargetTransformInfo::TCC_Expensive;
+      break;
+    // FIXME: ctlz, cttz, ...
     }
 
     const TargetLoweringBase *TLI = getTLI();
@@ -785,7 +793,7 @@ public:
     }
 
     // This is going to be turned into a library call, make it expensive.
-    return 10;
+    return SingleCallCost;
   }
 
   /// \brief Compute a cost of the given call instruction.

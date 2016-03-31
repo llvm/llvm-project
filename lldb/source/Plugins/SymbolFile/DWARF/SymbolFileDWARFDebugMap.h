@@ -108,7 +108,7 @@ protected:
     };
 
     friend class DebugMapModule;
-    friend class DIERef;
+    friend struct DIERef;
     friend class DWARFASTParserClang;
     friend class DWARFCompileUnit;
     friend class SymbolFileDWARF;

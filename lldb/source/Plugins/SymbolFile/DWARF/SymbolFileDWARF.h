@@ -68,7 +68,7 @@ public:
     friend class SymbolFileDWARFDebugMap;
     friend class SymbolFileDWARFDwo;
     friend class DebugMapModule;
-    friend class DIERef;
+    friend struct DIERef;
     friend class DWARFCompileUnit;
     friend class DWARFDIE;
     friend class DWARFASTParserClang;
@@ -326,7 +326,7 @@ public:
     lldb::ModuleSP
     GetDWOModule (lldb_private::ConstString name);
 
-    DWARFDIE
+    virtual DWARFDIE
     GetDIE(const DIERef &die_ref);
 
     virtual std::unique_ptr<SymbolFileDWARFDwo>

@@ -129,3 +129,10 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language)
 {
     return GetBaseSymbolFile()->GetTypeSystemForLanguage(language);
 }
+
+DWARFDIE
+SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref)
+{
+    assert(m_base_dwarf_cu->GetOffset() == die_ref.cu_offset);
+    return DebugInfo()->GetDIEForDIEOffset(die_ref.die_offset);
+}

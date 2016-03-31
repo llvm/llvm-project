@@ -1705,6 +1705,8 @@ class VOP1_DPP <vop1 op, string opName, VOPProfile p> :
   VOP1_DPPe <op.VI>,
   VOP_DPP <p.OutsDPP, p.InsDPP, opName#p.AsmDPP, [], p.HasModifiers> {
   let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "DPP";
+  let DisableDecoder = DisableVIDecoder;
   let src0_modifiers = !if(p.HasModifiers, ?, 0);
   let src1_modifiers = 0;
 }
@@ -1767,6 +1769,8 @@ class VOP2_DPP <vop2 op, string opName, VOPProfile p> :
   VOP2_DPPe <op.VI>,
   VOP_DPP <p.OutsDPP, p.InsDPP, opName#p.AsmDPP, [], p.HasModifiers> {
   let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "DPP";
+  let DisableDecoder = DisableVIDecoder;
   let src0_modifiers = !if(p.HasModifiers, ?, 0);
   let src1_modifiers = !if(p.HasModifiers, ?, 0);
 }

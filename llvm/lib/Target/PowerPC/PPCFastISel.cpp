@@ -158,7 +158,7 @@ class PPCFastISel final : public FastISel {
                      unsigned FP64LoadOpc = PPC::LFD);
     bool PPCEmitStore(MVT VT, unsigned SrcReg, Address &Addr);
     bool PPCComputeAddress(const Value *Obj, Address &Addr);
-    void PPCSimplifyAddress(Address &Addr, MVT VT, bool &UseOffset,
+    void PPCSimplifyAddress(Address &Addr, bool &UseOffset,
                             unsigned &IndexReg);
     bool PPCEmitIntExt(MVT SrcVT, unsigned SrcReg, MVT DestVT,
                            unsigned DestReg, bool IsZExt);
@@ -428,7 +428,7 @@ bool PPCFastISel::PPCComputeAddress(const Value *Obj, Address &Addr) {
 // Fix up some addresses that can't be used directly.  For example, if
 // an offset won't fit in an instruction field, we may need to move it
 // into an index register.
-void PPCFastISel::PPCSimplifyAddress(Address &Addr, MVT VT, bool &UseOffset,
+void PPCFastISel::PPCSimplifyAddress(Address &Addr, bool &UseOffset,
                                      unsigned &IndexReg) {
 
   // Check whether the offset fits in the instruction field.
@@ -447,8 +447,7 @@ void PPCFastISel::PPCSimplifyAddress(Address &Addr, MVT VT, bool &UseOffset,
   }
 
   if (!UseOffset) {
-    IntegerType *OffsetTy = ((VT == MVT::i32) ? Type::getInt32Ty(*Context)
-                             : Type::getInt64Ty(*Context));
+    IntegerType *OffsetTy = Type::getInt64Ty(*Context);
     const ConstantInt *Offset =
       ConstantInt::getSigned(OffsetTy, (int64_t)(Addr.Offset));
     IndexReg = PPCMaterializeInt(Offset, MVT::i64);
@@ -517,7 +516,7 @@ bool PPCFastISel::PPCEmitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
   // If necessary, materialize the offset into a register and use
   // the indexed form.  Also handle stack pointers with special needs.
   unsigned IndexReg = 0;
-  PPCSimplifyAddress(Addr, VT, UseOffset, IndexReg);
+  PPCSimplifyAddress(Addr, UseOffset, IndexReg);
 
   // If this is a potential VSX load with an offset of 0, a VSX indexed load can
   // be used.
@@ -653,7 +652,7 @@ bool PPCFastISel::PPCEmitStore(MVT VT, unsigned SrcReg, Address &Addr) {
   // If necessary, materialize the offset into a register and use
   // the indexed form.  Also handle stack pointers with special needs.
   unsigned IndexReg = 0;
-  PPCSimplifyAddress(Addr, VT, UseOffset, IndexReg);
+  PPCSimplifyAddress(Addr, UseOffset, IndexReg);
 
   // If this is a potential VSX store with an offset of 0, a VSX indexed store
   // can be used.
@@ -1131,14 +1130,13 @@ bool PPCFastISel::SelectFPToI(const Instruction *I, bool IsSigned) {
     return false;
 
   // Convert f32 to f64 if necessary.  This is just a meaningless copy
-  // to get the register class right.  COPY_TO_REGCLASS is needed since
-  // a COPY from F4RC to F8RC is converted to a F4RC-F4RC copy downstream.
+  // to get the register class right.
   const TargetRegisterClass *InRC = MRI.getRegClass(SrcReg);
   if (InRC == &PPC::F4RCRegClass) {
     unsigned TmpReg = createResultReg(&PPC::F8RCRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-            TII.get(TargetOpcode::COPY_TO_REGCLASS), TmpReg)
-      .addReg(SrcReg).addImm(PPC::F8RCRegClassID);
+            TII.get(TargetOpcode::COPY), TmpReg)
+      .addReg(SrcReg);
     SrcReg = TmpReg;
   }
 

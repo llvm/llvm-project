@@ -38,6 +38,9 @@ public:
     lldb_private::TypeSystem*
     GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
+    DWARFDIE
+    GetDIE(const DIERef &die_ref) override;
+
     std::unique_ptr<SymbolFileDWARFDwo>
     GetDwoSymbolFileForCompileUnit(DWARFCompileUnit &dwarf_cu, const DWARFDebugInfoEntry &cu_die) override
     {
