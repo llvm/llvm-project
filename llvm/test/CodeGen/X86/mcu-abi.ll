@@ -93,14 +93,10 @@ define i32 @test_lib_args(float %a, float %b) #0 {
 }
 
 ; CHECK-LABEL: test_fp128:
-; CHECK: movl    (%eax), %e[[CX:..]]
-; CHECK-NEXT: movl    4(%eax), %e[[DX:..]]
-; CHECK-NEXT: movl    8(%eax), %e[[SI:..]]
-; CHECK-NEXT: movl    12(%eax), %e[[AX:..]]
-; CHECK-NEXT: movl    %e[[AX]], 12(%esp)
-; CHECK-NEXT: movl    %e[[SI]], 8(%esp)
-; CHECK-NEXT: movl    %e[[DX]], 4(%esp)
-; CHECK-NEXT: movl    %e[[CX]], (%esp)
+; CHECK:      pushl   12(%eax)
+; CHECK-NEXT: pushl   8(%eax)
+; CHECK-NEXT: pushl   4(%eax)
+; CHECK-NEXT: pushl   (%eax)
 ; CHECK-NEXT: calll   __fixtfsi
 define i32 @test_fp128(fp128* %ptr) #0 {
   %v = load fp128, fp128* %ptr

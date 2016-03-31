@@ -107,50 +107,54 @@ define void @test_udivrem(i32 addrspace(1)* %out, i32 %x, i32 %y) {
 ; EG-DAG: CNDE_INT
 ; EG-DAG: CNDE_INT
 
-; SI-DAG: v_rcp_iflag_f32_e32 [[FIRST_RCP:v[0-9]+]]
-; SI-DAG: v_mul_hi_u32 [[FIRST_RCP_HI:v[0-9]+]], [[FIRST_RCP]]
-; SI-DAG: v_mul_lo_i32 [[FIRST_RCP_LO:v[0-9]+]], [[FIRST_RCP]]
-; SI-DAG: v_sub_i32_e32 [[FIRST_NEG_RCP_LO:v[0-9]+]], vcc, 0, [[FIRST_RCP_LO]]
+; For SI, we used to have checks for the input and output registers
+; of the instructions, but these are way too fragile.  The division for
+; the two vector elements can be intermixed which makes it impossible to
+; accurately check all the operands.
+; SI-DAG: v_rcp_iflag_f32_e32
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_sub_i32_e32
 ; SI-DAG: v_cndmask_b32_e64
-; SI-DAG: v_mul_hi_u32 [[FIRST_E:v[0-9]+]], {{v[0-9]+}}, [[FIRST_RCP]]
-; SI-DAG: v_add_i32_e32 [[FIRST_RCP_A_E:v[0-9]+]], vcc, [[FIRST_E]], [[FIRST_RCP]]
-; SI-DAG: v_subrev_i32_e32 [[FIRST_RCP_S_E:v[0-9]+]], vcc, [[FIRST_E]], [[FIRST_RCP]]
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_add_i32_e32
+; SI-DAG: v_subrev_i32_e32
 ; SI-DAG: v_cndmask_b32_e64
-; SI-DAG: v_mul_hi_u32 [[FIRST_Quotient:v[0-9]+]]
-; SI-DAG: v_mul_lo_i32 [[FIRST_Num_S_Remainder:v[0-9]+]]
-; SI-DAG: v_subrev_i32_e32 [[FIRST_Remainder:v[0-9]+]], vcc, [[FIRST_Num_S_Remainder]], v{{[0-9]+}}
-; SI-DAG: v_cndmask_b32_e64
-; SI-DAG: v_cndmask_b32_e64
-; SI-DAG: v_and_b32_e32 [[FIRST_Tmp1:v[0-9]+]]
-; SI-DAG: v_add_i32_e32 [[FIRST_Quotient_A_One:v[0-9]+]], {{.*}}, [[FIRST_Quotient]]
-; SI-DAG: v_subrev_i32_e32 [[FIRST_Quotient_S_One:v[0-9]+]],
-; SI-DAG: v_cndmask_b32_e64
-; SI-DAG: v_cndmask_b32_e64
-; SI-DAG: v_add_i32_e32 [[FIRST_Remainder_A_Den:v[0-9]+]],
-; SI-DAG: v_subrev_i32_e32 [[FIRST_Remainder_S_Den:v[0-9]+]],
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_subrev_i32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_cndmask_b32_e64
-; SI-DAG: v_rcp_iflag_f32_e32 [[SECOND_RCP:v[0-9]+]]
-; SI-DAG: v_mul_hi_u32 [[SECOND_RCP_HI:v[0-9]+]], [[SECOND_RCP]]
-; SI-DAG: v_mul_lo_i32 [[SECOND_RCP_LO:v[0-9]+]], [[SECOND_RCP]]
-; SI-DAG: v_sub_i32_e32 [[SECOND_NEG_RCP_LO:v[0-9]+]], vcc, 0, [[SECOND_RCP_LO]]
-; SI-DAG: v_cndmask_b32_e64
-; SI-DAG: v_mul_hi_u32 [[SECOND_E:v[0-9]+]], {{v[0-9]+}}, [[SECOND_RCP]]
-; SI-DAG: v_add_i32_e32 [[SECOND_RCP_A_E:v[0-9]+]], vcc, [[SECOND_E]], [[SECOND_RCP]]
-; SI-DAG: v_subrev_i32_e32 [[SECOND_RCP_S_E:v[0-9]+]], vcc, [[SECOND_E]], [[SECOND_RCP]]
-; SI-DAG: v_cndmask_b32_e64
-; SI-DAG: v_mul_hi_u32 [[SECOND_Quotient:v[0-9]+]]
-; SI-DAG: v_mul_lo_i32 [[SECOND_Num_S_Remainder:v[0-9]+]]
-; SI-DAG: v_subrev_i32_e32 [[SECOND_Remainder:v[0-9]+]], vcc, [[SECOND_Num_S_Remainder]], v{{[0-9]+}}
+; SI-DAG: v_and_b32_e32
+; SI-DAG: v_add_i32_e32
+; SI-DAG: v_subrev_i32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_cndmask_b32_e64
-; SI-DAG: v_and_b32_e32 [[SECOND_Tmp1:v[0-9]+]]
-; SI-DAG: v_add_i32_e32 [[SECOND_Quotient_A_One:v[0-9]+]], {{.*}}, [[SECOND_Quotient]]
-; SI-DAG: v_subrev_i32_e32 [[SECOND_Quotient_S_One:v[0-9]+]],
+; SI-DAG: v_add_i32_e32
+; SI-DAG: v_subrev_i32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_cndmask_b32_e64
-; SI-DAG: v_add_i32_e32 [[SECOND_Remainder_A_Den:v[0-9]+]],
-; SI-DAG: v_subrev_i32_e32 [[SECOND_Remainder_S_Den:v[0-9]+]],
+; SI-DAG: v_rcp_iflag_f32_e32
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_sub_i32_e32
+; SI-DAG: v_cndmask_b32_e64
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_add_i32_e32
+; SI-DAG: v_subrev_i32_e32
+; SI-DAG: v_cndmask_b32_e64
+; SI-DAG: v_mul_hi_u32
+; SI-DAG: v_mul_lo_i32
+; SI-DAG: v_subrev_i32_e32
+; SI-DAG: v_cndmask_b32_e64
+; SI-DAG: v_cndmask_b32_e64
+; SI-DAG: v_and_b32_e32
+; SI-DAG: v_add_i32_e32
+; SI-DAG: v_subrev_i32_e32
+; SI-DAG: v_cndmask_b32_e64
+; SI-DAG: v_cndmask_b32_e64
+; SI-DAG: v_add_i32_e32
+; SI-DAG: v_subrev_i32_e32
 ; SI-DAG: v_cndmask_b32_e64
 ; SI-DAG: v_cndmask_b32_e64
 ; SI: s_endpgm

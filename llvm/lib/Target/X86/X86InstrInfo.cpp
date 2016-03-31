@@ -2653,7 +2653,7 @@ X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   default: llvm_unreachable("Unreachable!");
   case X86::SHL16ri: {
     unsigned ShAmt = MI->getOperand(2).getImm();
-    MIB.addReg(0).addImm(1 << ShAmt)
+    MIB.addReg(0).addImm(1ULL << ShAmt)
        .addReg(leaInReg, RegState::Kill).addImm(0).addReg(0);
     break;
   }
@@ -2768,7 +2768,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
 
     NewMI = BuildMI(MF, MI->getDebugLoc(), get(X86::LEA64r))
       .addOperand(Dest)
-      .addReg(0).addImm(1 << ShAmt).addOperand(Src).addImm(0).addReg(0);
+      .addReg(0).addImm(1ULL << ShAmt).addOperand(Src).addImm(0).addReg(0);
     break;
   }
   case X86::SHL32ri: {
@@ -2788,7 +2788,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
 
     MachineInstrBuilder MIB = BuildMI(MF, MI->getDebugLoc(), get(Opc))
       .addOperand(Dest)
-      .addReg(0).addImm(1 << ShAmt)
+      .addReg(0).addImm(1ULL << ShAmt)
       .addReg(SrcReg, getKillRegState(isKill) | getUndefRegState(isUndef))
       .addImm(0).addReg(0);
     if (ImplicitOp.getReg() != 0)
@@ -2806,7 +2806,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
       return is64Bit ? convertToThreeAddressWithLEA(MIOpc, MFI, MBBI, LV) : nullptr;
     NewMI = BuildMI(MF, MI->getDebugLoc(), get(X86::LEA16r))
       .addOperand(Dest)
-      .addReg(0).addImm(1 << ShAmt).addOperand(Src).addImm(0).addReg(0);
+      .addReg(0).addImm(1ULL << ShAmt).addOperand(Src).addImm(0).addReg(0);
     break;
   }
   case X86::INC64r:

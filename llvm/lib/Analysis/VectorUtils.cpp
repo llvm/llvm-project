@@ -499,6 +499,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
     uint64_t V = DB.getDemandedBits(I).getZExtValue();
     DBits[Leader] |= V;
+    DBits[I] = V;
 
     // Casts, loads and instructions outside of our range terminate a chain
     // successfully.
@@ -549,6 +550,20 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     // Round up to a power of 2
     if (!isPowerOf2_64((uint64_t)MinBW))
       MinBW = NextPowerOf2(MinBW);
+
+    // We don't modify the types of PHIs. Reductions will already have been
+    // truncated if possible, and inductions' sizes will have been chosen by
+    // indvars.
+    // If we are required to shrink a PHI, abandon this entire equivalence class.
+    bool Abort = false;
+    for (auto MI = ECs.member_begin(I), ME = ECs.member_end(); MI != ME; ++MI)
+      if (isa<PHINode>(*MI) && MinBW < (*MI)->getType()->getScalarSizeInBits()) {
+        Abort = true;
+        break;
+      }
+    if (Abort)
+      continue;
+
     for (auto MI = ECs.member_begin(I), ME = ECs.member_end(); MI != ME; ++MI) {
       if (!isa<Instruction>(*MI))
         continue;

@@ -347,6 +347,19 @@ if( MSVC )
   # "Enforce type conversion rules".
   append("/Zc:rvalueCast" CMAKE_CXX_FLAGS)
 
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Find and run MSVC (not clang-cl) and get its version. This will tell
+    # clang-cl what version of MSVC to pretend to be so that the STL works.
+    execute_process(COMMAND "$ENV{VSINSTALLDIR}/VC/bin/cl.exe"
+      OUTPUT_QUIET
+      ERROR_VARIABLE MSVC_COMPAT_VERSION
+      )
+    string(REGEX REPLACE "^.*Compiler Version ([0-9.]+) for .*$" "\\1"
+      MSVC_COMPAT_VERSION "${MSVC_COMPAT_VERSION}")
+    append("-fms-compatibility-version=${MSVC_COMPAT_VERSION}"
+      CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  endif()
+
   if (NOT LLVM_ENABLE_TIMESTAMPS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # clang-cl and cl by default produce non-deterministic binaries because
     # link.exe /incremental requires a timestamp in the .obj file.  clang-cl

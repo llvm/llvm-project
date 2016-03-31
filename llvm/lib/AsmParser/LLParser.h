@@ -261,6 +261,7 @@ namespace llvm {
     bool ValidateEndOfModule();
     bool ParseTargetDefinition();
     bool ParseModuleAsm();
+    bool ParseSourceFileName();
     bool ParseDepLibs();        // FIXME: Remove in 4.0.
     bool ParseUnnamedType();
     bool ParseNamedType();

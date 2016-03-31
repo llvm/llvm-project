@@ -3798,6 +3798,92 @@ ScalarEvolution::proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR) {
   return Result;
 }
 
+namespace {
+/// Represents an abstract binary operation.  This may exist as a
+/// normal instruction or constant expression, or may have been
+/// derived from an expression tree.
+struct BinaryOp {
+  unsigned Opcode;
+  Value *LHS;
+  Value *RHS;
+  bool IsNSW;
+  bool IsNUW;
+
+  /// Op is set if this BinaryOp corresponds to a concrete LLVM instruction or
+  /// constant expression.
+  Operator *Op;
+
+  explicit BinaryOp(Operator *Op)
+      : Opcode(Op->getOpcode()), LHS(Op->getOperand(0)), RHS(Op->getOperand(1)),
+        IsNSW(false), IsNUW(false), Op(Op) {
+    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(Op)) {
+      IsNSW = OBO->hasNoSignedWrap();
+      IsNUW = OBO->hasNoUnsignedWrap();
+    }
+  }
+
+  explicit BinaryOp(unsigned Opcode, Value *LHS, Value *RHS, bool IsNSW = false,
+                    bool IsNUW = false)
+      : Opcode(Opcode), LHS(LHS), RHS(RHS), IsNSW(IsNSW), IsNUW(IsNUW),
+        Op(nullptr) {}
+};
+}
+
+
+/// Try to map \p V into a BinaryOp, and return \c None on failure.
+static Optional<BinaryOp> MatchBinaryOp(Value *V) {
+  auto *Op = dyn_cast<Operator>(V);
+  if (!Op)
+    return None;
+
+  // Implementation detail: all the cleverness here should happen without
+  // creating new SCEV expressions -- our caller knowns tricks to avoid creating
+  // SCEV expressions when possible, and we should not break that.
+
+  switch (Op->getOpcode()) {
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::UDiv:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::AShr:
+  case Instruction::Shl:
+    return BinaryOp(Op);
+
+  case Instruction::Xor:
+    if (auto *RHSC = dyn_cast<ConstantInt>(Op->getOperand(1)))
+      // If the RHS of the xor is a signbit, then this is just an add.
+      // Instcombine turns add of signbit into xor as a strength reduction step.
+      if (RHSC->getValue().isSignBit())
+        return BinaryOp(Instruction::Add, Op->getOperand(0), Op->getOperand(1));
+    return BinaryOp(Op);
+
+  case Instruction::LShr:
+    // Turn logical shift right of a constant into a unsigned divide.
+    if (ConstantInt *SA = dyn_cast<ConstantInt>(Op->getOperand(1))) {
+      uint32_t BitWidth = cast<IntegerType>(Op->getType())->getBitWidth();
+
+      // If the shift count is not less than the bitwidth, the result of
+      // the shift is undefined. Don't try to analyze it, because the
+      // resolution chosen here may differ from the resolution chosen in
+      // other parts of the compiler.
+      if (SA->getValue().ult(BitWidth)) {
+        Constant *X =
+            ConstantInt::get(SA->getContext(),
+                             APInt::getOneBitSet(BitWidth, SA->getZExtValue()));
+        return BinaryOp(Instruction::UDiv, Op->getOperand(0), X);
+      }
+    }
+    return BinaryOp(Op);
+
+  default:
+    break;
+  }
+
+  return None;
+}
+
 const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
   const Loop *L = LI.getLoopFor(PN->getParent());
   if (!L || L->getHeader() != PN->getParent())
@@ -3867,11 +3953,11 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
 
           // If the increment doesn't overflow, then neither the addrec nor
           // the post-increment will overflow.
-          if (const AddOperator *OBO = dyn_cast<AddOperator>(BEValueV)) {
-            if (OBO->getOperand(0) == PN) {
-              if (OBO->hasNoUnsignedWrap())
+          if (auto BO = MatchBinaryOp(BEValueV)) {
+            if (BO->Opcode == Instruction::Add && BO->LHS == PN) {
+              if (BO->IsNUW)
                 Flags = setFlags(Flags, SCEV::FlagNUW);
-              if (OBO->hasNoSignedWrap())
+              if (BO->IsNSW)
                 Flags = setFlags(Flags, SCEV::FlagNSW);
             }
           } else if (GEPOperator *GEP = dyn_cast<GEPOperator>(BEValueV)) {
@@ -4721,83 +4807,6 @@ SCEV::NoWrapFlags ScalarEvolution::getNoWrapFlagsFromUB(const Value *V) {
     }
   }
   return SCEV::FlagAnyWrap;
-}
-
-namespace {
-/// Represents an abstract binary operation.  This may exist as a
-/// normal instruction or constant expression, or may have been
-/// derived from an expression tree.
-struct BinaryOp {
-  unsigned Opcode;
-  Value *LHS;
-  Value *RHS;
-
-  /// Op is set if this BinaryOp corresponds to a concrete LLVM instruction or
-  /// constant expression.
-  Operator *Op;
-
-  explicit BinaryOp(Operator *Op)
-      : Opcode(Op->getOpcode()), LHS(Op->getOperand(0)), RHS(Op->getOperand(1)),
-        Op(Op) {}
-
-  explicit BinaryOp(unsigned Opcode, Value *LHS, Value *RHS)
-      : Opcode(Opcode), LHS(LHS), RHS(RHS), Op(nullptr) {}
-};
-}
-
-
-/// Try to map \p V into a BinaryOp, and return \c None on failure.
-static Optional<BinaryOp> MatchBinaryOp(Value *V) {
-  auto *Op = dyn_cast<Operator>(V);
-  if (!Op)
-    return None;
-
-  // Implementation detail: all the cleverness here should happen without
-  // creating new SCEV expressions -- our caller knowns tricks to avoid creating
-  // SCEV expressions when possible, and we should not break that.
-
-  switch (Op->getOpcode()) {
-  case Instruction::Add:
-  case Instruction::Sub:
-  case Instruction::Mul:
-  case Instruction::UDiv:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::AShr:
-  case Instruction::Shl:
-    return BinaryOp(Op);
-
-  case Instruction::Xor:
-    if (auto *RHSC = dyn_cast<ConstantInt>(Op->getOperand(1)))
-      // If the RHS of the xor is a signbit, then this is just an add.
-      // Instcombine turns add of signbit into xor as a strength reduction step.
-      if (RHSC->getValue().isSignBit())
-        return BinaryOp(Instruction::Add, Op->getOperand(0), Op->getOperand(1));
-    return BinaryOp(Op);
-
-  case Instruction::LShr:
-    // Turn logical shift right of a constant into a unsigned divide.
-    if (ConstantInt *SA = dyn_cast<ConstantInt>(Op->getOperand(1))) {
-      uint32_t BitWidth = cast<IntegerType>(Op->getType())->getBitWidth();
-
-      // If the shift count is not less than the bitwidth, the result of
-      // the shift is undefined. Don't try to analyze it, because the
-      // resolution chosen here may differ from the resolution chosen in
-      // other parts of the compiler.
-      if (SA->getValue().ult(BitWidth)) {
-        Constant *X =
-            ConstantInt::get(SA->getContext(),
-                             APInt::getOneBitSet(BitWidth, SA->getZExtValue()));
-        return BinaryOp(Instruction::UDiv, Op->getOperand(0), X);
-      }
-    }
-    return BinaryOp(Op);
-
-  default:
-    break;
-  }
-
-  return None;
 }
 
 /// createSCEV - We know that there is no SCEV for the specified value.  Analyze

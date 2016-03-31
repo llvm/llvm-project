@@ -502,7 +502,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.LDSSize = MFI->LDSSize + LDSSpillSize;
   ProgInfo.LDSBlocks =
-      alignTo(ProgInfo.LDSSize, 1 << LDSAlignShift) >> LDSAlignShift;
+      alignTo(ProgInfo.LDSSize, 1ULL << LDSAlignShift) >> LDSAlignShift;
 
   // Scratch is allocated in 256 dword blocks.
   unsigned ScratchAlignShift = 10;
@@ -511,7 +511,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // scratch memory used per thread.
   ProgInfo.ScratchBlocks =
       alignTo(ProgInfo.ScratchSize * STM.getWavefrontSize(),
-              1 << ScratchAlignShift) >>
+              1ULL << ScratchAlignShift) >>
       ScratchAlignShift;
 
   ProgInfo.ComputePGMRSrc1 =

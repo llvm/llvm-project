@@ -1846,6 +1846,31 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::amdgcn_frexp_mant:
+  case Intrinsic::amdgcn_frexp_exp: {
+    Value *Src = II->getArgOperand(0);
+    if (const ConstantFP *C = dyn_cast<ConstantFP>(Src)) {
+      int Exp;
+      APFloat Significand = frexp(C->getValueAPF(), Exp,
+                                  APFloat::rmNearestTiesToEven);
+
+      if (II->getIntrinsicID() == Intrinsic::amdgcn_frexp_mant) {
+        return replaceInstUsesWith(CI, ConstantFP::get(II->getContext(),
+                                                       Significand));
+      }
+
+      // Match instruction special case behavior.
+      if (Exp == APFloat::IEK_NaN || Exp == APFloat::IEK_Inf)
+        Exp = 0;
+
+      return replaceInstUsesWith(CI, ConstantInt::get(II->getType(), Exp));
+    }
+
+    if (isa<UndefValue>(Src))
+      return replaceInstUsesWith(CI, UndefValue::get(II->getType()));
+
+    break;
+  }
   case Intrinsic::stackrestore: {
     // If the save is right next to the restore, remove the restore.  This can
     // happen when variable allocas are DCE'd.

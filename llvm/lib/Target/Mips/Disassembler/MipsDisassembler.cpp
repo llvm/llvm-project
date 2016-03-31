@@ -44,6 +44,7 @@ public:
   bool hasMips32r6() const {
     return STI.getFeatureBits()[Mips::FeatureMips32r6];
   }
+  bool isFP64() const { return STI.getFeatureBits()[Mips::FeatureFP64Bit]; }
 
   bool isGP64() const { return STI.getFeatureBits()[Mips::FeatureGP64Bit]; }
 
@@ -919,9 +920,9 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       return Result;
     }
 
-    if (hasMips32r6()) {
-      DEBUG(dbgs() << "Trying MicroMips32r6FPU table (32-bit opcodes):\n");
-      Result = decodeInstruction(DecoderTableMicroMips32r6FPU32, Instr, Insn,
+    if (hasMips32r6() && isFP64()) {
+      DEBUG(dbgs() << "Trying MicroMips32r6FP64 table (32-bit opcodes):\n");
+      Result = decodeInstruction(DecoderTableMicroMips32r6FP6432, Instr, Insn,
                                  Address, this, STI);
       if (Result != MCDisassembler::Fail) {
         Size = 4;

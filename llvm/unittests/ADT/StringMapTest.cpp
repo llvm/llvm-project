@@ -157,6 +157,33 @@ TEST_F(StringMapTest, SmallFullMapTest) {
   EXPECT_EQ(5, Map.lookup("funf"));
 }
 
+TEST_F(StringMapTest, CopyCtorTest) {
+  llvm::StringMap<int> Map;
+
+  Map["eins"] = 1;
+  Map["zwei"] = 2;
+  Map["drei"] = 3;
+  Map.erase("drei");
+  Map.erase("eins");
+  Map["veir"] = 4;
+  Map["funf"] = 5;
+
+  EXPECT_EQ(3u, Map.size());
+  EXPECT_EQ(0, Map.lookup("eins"));
+  EXPECT_EQ(2, Map.lookup("zwei"));
+  EXPECT_EQ(0, Map.lookup("drei"));
+  EXPECT_EQ(4, Map.lookup("veir"));
+  EXPECT_EQ(5, Map.lookup("funf"));
+
+  llvm::StringMap<int> Map2(Map);
+  EXPECT_EQ(3u, Map2.size());
+  EXPECT_EQ(0, Map2.lookup("eins"));
+  EXPECT_EQ(2, Map2.lookup("zwei"));
+  EXPECT_EQ(0, Map2.lookup("drei"));
+  EXPECT_EQ(4, Map2.lookup("veir"));
+  EXPECT_EQ(5, Map2.lookup("funf"));
+}
+
 // A more complex iteration test.
 TEST_F(StringMapTest, IterationTest) {
   bool visited[100];

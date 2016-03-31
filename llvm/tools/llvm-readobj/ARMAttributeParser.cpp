@@ -341,7 +341,7 @@ void ARMAttributeParser::ABI_align_needed(AttrType Tag, const uint8_t *Data,
   if (Value < array_lengthof(Strings))
     Description = std::string(Strings[Value]);
   else if (Value <= 12)
-    Description = std::string("8-byte alignment, ") + utostr(1 << Value)
+    Description = std::string("8-byte alignment, ") + utostr(1ULL << Value)
                 + std::string("-byte extended alignment");
   else
     Description = "Invalid";
@@ -362,8 +362,8 @@ void ARMAttributeParser::ABI_align_preserved(AttrType Tag, const uint8_t *Data,
   if (Value < array_lengthof(Strings))
     Description = std::string(Strings[Value]);
   else if (Value <= 12)
-    Description = std::string("8-byte stack alignment, ") + utostr(1 << Value)
-                + std::string("-byte data alignment");
+    Description = std::string("8-byte stack alignment, ") +
+                  utostr(1ULL << Value) + std::string("-byte data alignment");
   else
     Description = "Invalid";
 

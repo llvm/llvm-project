@@ -24,7 +24,7 @@ define {i32, i32} @test_basic(i32 %hp, i32 %p) {
 
 define cc 11 {i32, i32} @test_basic_hipecc(i32 %hp, i32 %p) {
   ; X32-Linux-LABEL:       test_basic_hipecc:
-  ; X32-Linux:       leal -156(%esp), %ebx
+  ; X32-Linux:       leal -140(%esp), %ebx
   ; X32-Linux-NEXT:  cmpl 76(%ebp), %ebx
   ; X32-Linux-NEXT:  jb .LBB1_1
 

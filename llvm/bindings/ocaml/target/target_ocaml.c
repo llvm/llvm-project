@@ -15,6 +15,7 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
+#include "llvm-c/Core.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
 #include "caml/alloc.h"
@@ -62,13 +63,6 @@ CAMLprim value llvm_datalayout_as_string(value TD) {
   value Copy = copy_string(StringRep);
   LLVMDisposeMessage(StringRep);
   return Copy;
-}
-
-/* [<Llvm.PassManager.any] Llvm.PassManager.t -> DataLayout.t -> unit */
-CAMLprim value llvm_datalayout_add_to_pass_manager(LLVMPassManagerRef PM,
-                                                   value DL) {
-  LLVMAddTargetData(DataLayout_val(DL), PM);
-  return Val_unit;
 }
 
 /* DataLayout.t -> Endian.t */

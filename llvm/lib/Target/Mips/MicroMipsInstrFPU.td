@@ -114,8 +114,6 @@ def MFC1_MM : MMRel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd,
                              II_MFC1, bitconvert>, MFC1_FM_MM<0x80>;
 def MTC1_MM : MMRel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd,
                              II_MTC1, bitconvert>, MFC1_FM_MM<0xa0>;
-def MFHC1_MM : MMRel, MFC1_FT<"mfhc1", GPR32Opnd, AFGR64Opnd, II_MFHC1>,
-               MFC1_FM_MM<0xc0>, ISA_MIPS32R2, FGR_32;
 
 def MADD_S_MM : MMRel, MADDS_FT<"madd.s", FGR32Opnd, II_MADD_S, fadd>,
                 MADDS_FM_MM<0x1>;
@@ -147,4 +145,6 @@ let AdditionalPredicates = [InMicroMips] in {
     fsqrt>, ROUND_W_FM_MM<0, 0x28>;
   def MTHC1_MM : MMRel, MTC1_64_FT<"mthc1", AFGR64Opnd, GPR32Opnd, II_MTHC1>,
              MFC1_FM_MM<0xe0>, ISA_MIPS32R2, FGR_32;
+  def MFHC1_MM : MMRel, MFC1_FT<"mfhc1", GPR32Opnd, AFGR64Opnd, II_MFHC1>,
+                 MFC1_FM_MM<0xc0>, ISA_MIPS32R2, FGR_32;
 }

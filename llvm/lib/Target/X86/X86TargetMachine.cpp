@@ -157,7 +157,6 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   // it as a key for the subtarget since that can be the only difference
   // between two functions.
   bool SoftFloat =
-      F.hasFnAttribute("use-soft-float") &&
       F.getFnAttribute("use-soft-float").getValueAsString() == "true";
   // If the soft float attribute is set on the function turn on the soft float
   // subtarget feature.

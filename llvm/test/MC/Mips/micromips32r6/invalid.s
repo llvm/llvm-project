@@ -114,3 +114,7 @@
   mtc0  $4, $3, 8          # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
   mthc0 $4, $3, -1         # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
   mthc0 $4, $3, 8          # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
+  mfc0  $4, $3, -1         # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
+  mfc0  $4, $3, 8          # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
+  mfhc0 $4, $3, -1         # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
+  mfhc0 $4, $3, 8          # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate

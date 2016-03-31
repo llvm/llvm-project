@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=i686-windows | FileCheck %s -check-prefix=NORMAL
+; RUN: llc < %s -mtriple=i686-windows -no-x86-call-frame-opt | FileCheck %s -check-prefix=NOPUSH
 ; RUN: llc < %s -mtriple=x86_64-windows | FileCheck %s -check-prefix=X64
 ; RUN: llc < %s -mtriple=i686-windows -stackrealign -stack-alignment=32 | FileCheck %s -check-prefix=ALIGNED
 
@@ -12,25 +13,9 @@ declare void @oneparam(i32 %a)
 declare void @eightparams(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h)
 declare void @struct(%struct.s* byval %a, i32 %b, i32 %c, i32 %d)
 
-; Here, we should have a reserved frame, so we don't expect pushes
+; We should get pushes for x86, even though there is a reserved call frame.
+; Make sure we don't touch x86-64, and that turning it off works.
 ; NORMAL-LABEL: test1:
-; NORMAL: subl    $16, %esp
-; NORMAL-NEXT: movl    $4, 12(%esp)
-; NORMAL-NEXT: movl    $3, 8(%esp)
-; NORMAL-NEXT: movl    $2, 4(%esp)
-; NORMAL-NEXT: movl    $1, (%esp)
-; NORMAL-NEXT: call
-; NORMAL-NEXT: addl $16, %esp
-define void @test1() {
-entry:
-  call void @good(i32 1, i32 2, i32 3, i32 4)
-  ret void
-}
-
-; We're optimizing for code size, so we should get pushes for x86,
-; even though there is a reserved call frame.
-; Make sure we don't touch x86-64
-; NORMAL-LABEL: test1b:
 ; NORMAL-NOT: subl {{.*}} %esp
 ; NORMAL: pushl   $4
 ; NORMAL-NEXT: pushl   $3
@@ -38,28 +23,21 @@ entry:
 ; NORMAL-NEXT: pushl   $1
 ; NORMAL-NEXT: call
 ; NORMAL-NEXT: addl $16, %esp
-; X64-LABEL: test1b:
+; X64-LABEL: test1:
 ; X64: movl    $1, %ecx
 ; X64-NEXT: movl    $2, %edx
 ; X64-NEXT: movl    $3, %r8d
 ; X64-NEXT: movl    $4, %r9d
 ; X64-NEXT: callq   good
-define void @test1b() optsize {
-entry:
-  call void @good(i32 1, i32 2, i32 3, i32 4)
-  ret void
-}
-
-; Same as above, but for minsize
-; NORMAL-LABEL: test1c:
-; NORMAL-NOT: subl {{.*}} %esp
-; NORMAL: pushl   $4
-; NORMAL-NEXT: pushl   $3
-; NORMAL-NEXT: pushl   $2
-; NORMAL-NEXT: pushl   $1
-; NORMAL-NEXT: call
-; NORMAL-NEXT: addl $16, %esp
-define void @test1c() minsize {
+; NOPUSH-LABEL: test1:
+; NOPUSH: subl    $16, %esp
+; NOPUSH-NEXT: movl    $4, 12(%esp)
+; NOPUSH-NEXT: movl    $3, 8(%esp)
+; NOPUSH-NEXT: movl    $2, 4(%esp)
+; NOPUSH-NEXT: movl    $1, (%esp)
+; NOPUSH-NEXT: call
+; NOPUSH-NEXT: addl $16, %esp
+define void @test1() {
 entry:
   call void @good(i32 1, i32 2, i32 3, i32 4)
   ret void

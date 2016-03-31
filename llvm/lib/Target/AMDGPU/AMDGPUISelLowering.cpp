@@ -1447,7 +1447,7 @@ void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,
     // Add LHS high bit
     REM = DAG.getNode(ISD::OR, DL, VT, REM, HBit);
 
-    SDValue BIT = DAG.getConstant(1 << bitPos, DL, HalfVT);
+    SDValue BIT = DAG.getConstant(1ULL << bitPos, DL, HalfVT);
     SDValue realBIT = DAG.getSelectCC(DL, REM, RHS, BIT, zero, ISD::SETUGE);
 
     DIV_Lo = DAG.getNode(ISD::OR, DL, HalfVT, DIV_Lo, realBIT);

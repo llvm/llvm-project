@@ -362,7 +362,7 @@ ld_plugin_status onload(ld_plugin_tv *tv) {
     return LDPS_ERR;
   }
   if (!release_input_file) {
-    message(LDPL_ERROR, "relesase_input_file not passed to LLVMgold.");
+    message(LDPL_ERROR, "release_input_file not passed to LLVMgold.");
     return LDPS_ERR;
   }
 

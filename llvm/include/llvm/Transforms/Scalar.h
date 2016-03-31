@@ -374,6 +374,12 @@ Pass *createLowerAtomicPass();
 
 //===----------------------------------------------------------------------===//
 //
+// LowerGuardIntrinsic - Lower guard intrinsics to normal control flow.
+//
+Pass *createLowerGuardIntrinsicPass();
+
+//===----------------------------------------------------------------------===//
+//
 // ValuePropagation - Propagate CFG-derived value information
 //
 Pass *createCorrelatedValuePropagationPass();

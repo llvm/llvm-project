@@ -1068,6 +1068,21 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ROTL,              MVT::v16i16, Custom);
     setOperationAction(ISD::ROTL,              MVT::v8i32, Custom);
     setOperationAction(ISD::ROTL,              MVT::v4i64, Custom);
+
+    // XOP can efficiently perform BITREVERSE with VPPERM.
+    setOperationAction(ISD::BITREVERSE,        MVT::i8, Custom);
+    setOperationAction(ISD::BITREVERSE,        MVT::i16, Custom);
+    setOperationAction(ISD::BITREVERSE,        MVT::i32, Custom);
+    setOperationAction(ISD::BITREVERSE,        MVT::i64, Custom);
+
+    setOperationAction(ISD::BITREVERSE,        MVT::v16i8, Custom);
+    setOperationAction(ISD::BITREVERSE,        MVT::v8i16, Custom);
+    setOperationAction(ISD::BITREVERSE,        MVT::v4i32, Custom);
+    setOperationAction(ISD::BITREVERSE,        MVT::v2i64, Custom);
+    setOperationAction(ISD::BITREVERSE,        MVT::v32i8, Custom);
+    setOperationAction(ISD::BITREVERSE,        MVT::v16i16, Custom);
+    setOperationAction(ISD::BITREVERSE,        MVT::v8i32, Custom);
+    setOperationAction(ISD::BITREVERSE,        MVT::v4i64, Custom);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasFp256()) {
@@ -3814,6 +3829,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
 
   // Do not sibcall optimize vararg calls unless all arguments are passed via
   // registers.
+  LLVMContext &C = *DAG.getContext();
   if (isVarArg && !Outs.empty()) {
     // Optimizing for varargs on Win64 is unlikely to be safe without
     // additional testing.
@@ -3821,8 +3837,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
       return false;
 
     SmallVector<CCValAssign, 16> ArgLocs;
-    CCState CCInfo(CalleeCC, isVarArg, DAG.getMachineFunction(), ArgLocs,
-                   *DAG.getContext());
+    CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
 
     CCInfo.AnalyzeCallOperands(Outs, CC_X86);
     for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i)
@@ -3842,8 +3857,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   }
   if (Unused) {
     SmallVector<CCValAssign, 16> RVLocs;
-    CCState CCInfo(CalleeCC, false, DAG.getMachineFunction(), RVLocs,
-                   *DAG.getContext());
+    CCState CCInfo(CalleeCC, false, MF, RVLocs, C);
     CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
     for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
       CCValAssign &VA = RVLocs[i];
@@ -3852,35 +3866,10 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
     }
   }
 
-  // If the calling conventions do not match, then we'd better make sure the
-  // results are returned in the same way as what the caller expects.
-  if (!CCMatch) {
-    SmallVector<CCValAssign, 16> RVLocs1;
-    CCState CCInfo1(CalleeCC, false, DAG.getMachineFunction(), RVLocs1,
-                    *DAG.getContext());
-    CCInfo1.AnalyzeCallResult(Ins, RetCC_X86);
-
-    SmallVector<CCValAssign, 16> RVLocs2;
-    CCState CCInfo2(CallerCC, false, DAG.getMachineFunction(), RVLocs2,
-                    *DAG.getContext());
-    CCInfo2.AnalyzeCallResult(Ins, RetCC_X86);
-
-    if (RVLocs1.size() != RVLocs2.size())
-      return false;
-    for (unsigned i = 0, e = RVLocs1.size(); i != e; ++i) {
-      if (RVLocs1[i].isRegLoc() != RVLocs2[i].isRegLoc())
-        return false;
-      if (RVLocs1[i].getLocInfo() != RVLocs2[i].getLocInfo())
-        return false;
-      if (RVLocs1[i].isRegLoc()) {
-        if (RVLocs1[i].getLocReg() != RVLocs2[i].getLocReg())
-          return false;
-      } else {
-        if (RVLocs1[i].getLocMemOffset() != RVLocs2[i].getLocMemOffset())
-          return false;
-      }
-    }
-  }
+  // Check that the call results are passed in the same way.
+  if (!CCState::resultsCompatible(CalleeCC, CallerCC, MF, C, Ins,
+                                  RetCC_X86, RetCC_X86))
+    return false;
 
   unsigned StackArgsSize = 0;
 
@@ -3890,8 +3879,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
     // Check if stack adjustment is needed. For now, do not do this if any
     // argument is passed on the stack.
     SmallVector<CCValAssign, 16> ArgLocs;
-    CCState CCInfo(CalleeCC, isVarArg, DAG.getMachineFunction(), ArgLocs,
-                   *DAG.getContext());
+    CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
 
     // Allocate shadow area for Win64
     if (IsCalleeWin64)
@@ -5757,7 +5745,6 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       }
     } else if (ZeroMask[i]) {
       IsConsecutiveLoad = false;
-      break;
     }
   }
 
@@ -6362,8 +6349,8 @@ static SDValue ExpandHorizontalBinOp(const SDValue &V0, const SDValue &V1,
                                      SDLoc DL, SelectionDAG &DAG,
                                      unsigned X86Opcode, bool Mode,
                                      bool isUndefLO, bool isUndefHI) {
-  EVT VT = V0.getValueType();
-  assert(VT.is256BitVector() && VT == V1.getValueType() &&
+  MVT VT = V0.getSimpleValueType();
+  assert(VT.is256BitVector() && VT == V1.getSimpleValueType() &&
          "Invalid nodes in input!");
 
   unsigned NumElts = VT.getVectorNumElements();
@@ -6371,7 +6358,7 @@ static SDValue ExpandHorizontalBinOp(const SDValue &V0, const SDValue &V1,
   SDValue V0_HI = extract128BitVector(V0, NumElts/2, DAG, DL);
   SDValue V1_LO = extract128BitVector(V1, 0, DAG, DL);
   SDValue V1_HI = extract128BitVector(V1, NumElts/2, DAG, DL);
-  EVT NewVT = V0_LO.getValueType();
+  MVT NewVT = V0_LO.getSimpleValueType();
 
   SDValue LO = DAG.getUNDEF(NewVT);
   SDValue HI = DAG.getUNDEF(NewVT);
@@ -20699,6 +20686,59 @@ static SDValue LowerCTPOP(SDValue Op, const X86Subtarget &Subtarget,
   return LowerVectorCTPOP(Op, Subtarget, DAG);
 }
 
+static SDValue LowerBITREVERSE(SDValue Op, SelectionDAG &DAG) {
+  MVT VT = Op.getSimpleValueType();
+  SDValue In = Op.getOperand(0);
+  SDLoc DL(Op);
+
+  // For scalars, its still beneficial to transfer to/from the SIMD unit to
+  // perform the BITREVERSE.
+  if (!VT.isVector()) {
+    MVT VecVT = MVT::getVectorVT(VT, 128 / VT.getSizeInBits());
+    SDValue Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, In);
+    Res = DAG.getNode(ISD::BITREVERSE, DL, VecVT, Res);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Res,
+                       DAG.getIntPtrConstant(0, DL));
+  }
+
+  MVT SVT = VT.getVectorElementType();
+  int NumElts = VT.getVectorNumElements();
+  int ScalarSizeInBytes = VT.getScalarSizeInBits() / 8;
+
+  // Decompose 256-bit ops into smaller 128-bit ops.
+  if (VT.is256BitVector()) {
+    SDValue Lo = extract128BitVector(In, 0, DAG, DL);
+    SDValue Hi = extract128BitVector(In, NumElts / 2, DAG, DL);
+
+    MVT HalfVT = MVT::getVectorVT(SVT, NumElts / 2);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
+                       DAG.getNode(ISD::BITREVERSE, DL, HalfVT, Lo),
+                       DAG.getNode(ISD::BITREVERSE, DL, HalfVT, Hi));
+  }
+
+  assert(VT.is128BitVector() &&
+         "Only 128-bit vector bitreverse lowering supported.");
+
+  // VPPERM reverses the bits of a byte with the permute Op (2 << 5), and we
+  // perform the BSWAP in the shuffle.
+  // Its best to shuffle using the second operand as this will implicitly allow
+  // memory folding for multiple vectors.
+  SmallVector<SDValue, 16> MaskElts;
+  for (int i = 0; i != NumElts; ++i) {
+    for (int j = ScalarSizeInBytes - 1; j >= 0; --j) {
+      int SourceByte = 16 + (i * ScalarSizeInBytes) + j;
+      int PermuteByte = SourceByte | (2 << 5);
+      MaskElts.push_back(DAG.getConstant(PermuteByte, DL, MVT::i8));
+    }
+  }
+
+  SDValue Mask = DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v16i8, MaskElts);
+  SDValue Res = DAG.getBitcast(MVT::v16i8, In);
+  Res = DAG.getNode(X86ISD::VPPERM, DL, MVT::v16i8, DAG.getUNDEF(MVT::v16i8),
+                    Res, Mask);
+  return DAG.getBitcast(VT, Res);
+}
+
 static SDValue lowerAtomicArithWithLOCK(SDValue N, SelectionDAG &DAG) {
   unsigned NewOpc = 0;
   switch (N->getOpcode()) {
@@ -21196,7 +21236,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_LOAD_OR:
   case ISD::ATOMIC_LOAD_XOR:
   case ISD::ATOMIC_LOAD_AND:    return lowerAtomicArith(Op, DAG, Subtarget);
-  case ISD::ATOMIC_STORE:       return LowerATOMIC_STORE(Op,DAG);
+  case ISD::ATOMIC_STORE:       return LowerATOMIC_STORE(Op, DAG);
+  case ISD::BITREVERSE:         return LowerBITREVERSE(Op, DAG);
   case ISD::BUILD_VECTOR:       return LowerBUILD_VECTOR(Op, DAG);
   case ISD::CONCAT_VECTORS:     return LowerCONCAT_VECTORS(Op, Subtarget, DAG);
   case ISD::VECTOR_SHUFFLE:     return lowerVectorShuffle(Op, Subtarget, DAG);

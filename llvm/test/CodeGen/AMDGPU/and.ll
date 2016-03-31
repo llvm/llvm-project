@@ -282,11 +282,11 @@ define void @v_and_multi_use_constant_i64(i64 addrspace(1)* %out, i64 addrspace(
 ; SI: buffer_load_dwordx2 v{{\[}}[[LO1:[0-9]+]]:[[HI1:[0-9]+]]{{\]}}
 ; SI-NOT: and
 ; SI: v_and_b32_e32 v[[RESLO0:[0-9]+]], 63, v[[LO0]]
+; SI-NOT: and
+; SI: buffer_store_dwordx2 v{{\[}}[[RESLO0]]
 ; SI: v_and_b32_e32 v[[RESLO1:[0-9]+]], 63, v[[LO1]]
 ; SI-NOT: and
-; SI: buffer_store_dwordx2
-; SI-NOT: and
-; SI: buffer_store_dwordx2
+; SI: buffer_store_dwordx2 v{{\[}}[[RESLO1]]
 define void @v_and_multi_use_inline_imm_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr) {
   %a = load volatile i64, i64 addrspace(1)* %aptr
   %b = load volatile i64, i64 addrspace(1)* %aptr

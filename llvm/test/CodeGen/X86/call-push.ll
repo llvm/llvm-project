@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -disable-fp-elim | FileCheck %s
+; RUN: llc < %s -mtriple=i386-apple-darwin -disable-fp-elim -no-x86-call-frame-opt | FileCheck %s
 
         %struct.decode_t = type { i8, i8, i8, i8, i16, i8, i8, %struct.range_t** }
         %struct.range_t = type { float, float, i32, i32, i32, [0 x i8] }

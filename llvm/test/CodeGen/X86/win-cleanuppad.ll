@@ -88,11 +88,11 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 }
 
 ; X86-LABEL: _nested_cleanup:
-; X86: movl    $1, (%esp)
+; X86: pushl   $1
 ; X86: calll   _f
-; X86: movl    $2, (%esp)
+; X86: pushl   $2
 ; X86: calll   _f
-; X86: movl    $3, (%esp)
+; X86: pushl   $3
 ; X86: calll   _f
 
 ; X86: "?dtor$[[cleanup_inner:[0-9]+]]@?0?nested_cleanup@4HA":

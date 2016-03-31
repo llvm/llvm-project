@@ -1073,7 +1073,7 @@ Instruction *AddressSanitizer::generateCrashCode(Instruction *InsertBefore,
 Value *AddressSanitizer::createSlowPathCmp(IRBuilder<> &IRB, Value *AddrLong,
                                            Value *ShadowValue,
                                            uint32_t TypeSize) {
-  size_t Granularity = 1 << Mapping.Scale;
+  size_t Granularity = static_cast<size_t>(1) << Mapping.Scale;
   // Addr & (Granularity - 1)
   Value *LastAccessedByte =
       IRB.CreateAnd(AddrLong, ConstantInt::get(IntptrTy, Granularity - 1));
@@ -1116,7 +1116,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
       IRB.CreateLoad(IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy));
 
   Value *Cmp = IRB.CreateICmpNE(ShadowValue, CmpVal);
-  size_t Granularity = 1 << Mapping.Scale;
+  size_t Granularity = 1ULL << Mapping.Scale;
   TerminatorInst *CrashTerm = nullptr;
 
   if (ClAlwaysSlowPath || (TypeSize < 8 * Granularity)) {
@@ -1608,7 +1608,7 @@ void AddressSanitizer::initializeCallbacks(Module &M) {
               IRB.getVoidTy(), IntptrTy, IntptrTy, ExpType, nullptr));
       for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
            AccessSizeIndex++) {
-        const std::string Suffix = TypeStr + itostr(1 << AccessSizeIndex);
+        const std::string Suffix = TypeStr + itostr(1ULL << AccessSizeIndex);
         AsanErrorCallback[AccessIsWrite][Exp][AccessSizeIndex] =
             checkSanitizerInterfaceFunction(M.getOrInsertFunction(
                 kAsanReportErrorTemplate + ExpStr + Suffix + EndingStr,
@@ -2019,7 +2019,7 @@ void FunctionStackPoisoner::poisonStack() {
   // i.e. 32 bytes on 64-bit platforms and 16 bytes in 32-bit platforms.
   size_t MinHeaderSize = ASan.LongSize / 2;
   ASanStackFrameLayout L;
-  ComputeASanStackFrameLayout(SVD, 1UL << Mapping.Scale, MinHeaderSize, &L);
+  ComputeASanStackFrameLayout(SVD, 1ULL << Mapping.Scale, MinHeaderSize, &L);
   DEBUG(dbgs() << L.DescriptionString << " --- " << L.FrameSize << "\n");
   uint64_t LocalStackSize = L.FrameSize;
   bool DoStackMalloc = ClUseAfterReturn && !ASan.CompileKernel &&

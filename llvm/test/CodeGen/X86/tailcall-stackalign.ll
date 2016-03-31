@@ -1,4 +1,4 @@
-; RUN: llc < %s  -mtriple=i686-unknown-linux  -tailcallopt | FileCheck %s
+; RUN: llc < %s  -mtriple=i686-unknown-linux  -tailcallopt -no-x86-call-frame-opt | FileCheck %s
 ; Linux has 8 byte alignment so the params cause stack size 20 when tailcallopt
 ; is enabled, ensure that a normal fastcc call has matching stack size
 

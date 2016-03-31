@@ -15,7 +15,8 @@ declare i32 @func_int(i32, i32)
 
 ; X32-LABEL: testf16_inp
 ; X32: vaddps  {{.*}}, {{%zmm[0-1]}}
-; X32: movl    %eax, (%esp)
+; Push is not deemed profitable if we're realigning the stack.
+; X32: {{pushl|movl}}   %eax
 ; X32: call
 ; X32: ret
 

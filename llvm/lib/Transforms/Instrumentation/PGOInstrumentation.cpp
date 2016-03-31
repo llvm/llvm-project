@@ -750,6 +750,15 @@ void PGOUseFunc::annotateIndirectCallSites() {
   if (DisableValueProfiling)
     return;
 
+  // Write out the PGOFuncName if this is different from it's raw name.
+  // This should only apply to internal linkage functions only.
+  const std::string &FuncName = getPGOFuncName(F);
+  if (FuncName != F.getName()) {
+    LLVMContext &C = F.getContext();
+    MDNode *N = MDNode::get(C, MDString::get(C, FuncName.c_str()));
+    F.setMetadata("PGOFuncName", N);
+  }
+
   unsigned IndirectCallSiteIndex = 0;
   PGOIndirectCallSiteVisitor ICV;
   ICV.visit(F);

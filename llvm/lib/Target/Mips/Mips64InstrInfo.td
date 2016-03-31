@@ -628,10 +628,11 @@ def : MipsInstAlias<"dsrl $rd, $rt, $rs",
                     ISA_MIPS3;
 
 // Two operand (implicit 0 selector) versions:
-def : MipsInstAlias<"dmfc0 $rt, $rd", (DMFC0 GPR64Opnd:$rt, COP0Opnd:$rd, 0), 0>;
 let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsInstAlias<"dmtc0 $rt, $rd",
                       (DMTC0 COP0Opnd:$rd, GPR64Opnd:$rt, 0), 0>;
+  def : MipsInstAlias<"dmfc0 $rt, $rd",
+                      (DMFC0 GPR64Opnd:$rt, COP0Opnd:$rd, 0), 0>;
 }
 def : MipsInstAlias<"dmfc2 $rt, $rd", (DMFC2 GPR64Opnd:$rt, COP2Opnd:$rd, 0), 0>;
 def : MipsInstAlias<"dmtc2 $rt, $rd", (DMTC2 COP2Opnd:$rd, GPR64Opnd:$rt, 0), 0>;

@@ -138,9 +138,11 @@
   swm16 $16-$20, 8($sp)       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   swm16 $16, $17, $ra, 8($fp)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   swm16 $16, $17, $ra, 64($sp) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  mtc0  $4, $3, -1         # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
-  mtc0  $4, $3, 8          # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
-  mthc0 $4, $3, -1         # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
-  mthc0 $4, $3, 8          # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
-  dmtc0  $4, $3, -1        # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
-  dmtc0  $4, $3, 8         # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
+  mtc0  $4, $3, -1             # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
+  mtc0  $4, $3, 8              # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
+  mthc0 $4, $3, -1             # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
+  mthc0 $4, $3, 8              # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
+  dmtc0  $4, $3, -1            # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
+  dmtc0  $4, $3, 8             # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
+  dmfc0  $4, $3, -1            # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
+  dmfc0  $4, $3, 8             # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate

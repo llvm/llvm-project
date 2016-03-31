@@ -85,14 +85,8 @@ define void @simple_read2_v3f32_superreg_align4(float addrspace(1)* %out) #0 {
 }
 
 ; CI-LABEL: {{^}}simple_read2_v4f32_superreg_align8:
-; CI-DAG: ds_read2_b64 v{{\[}}[[REG_W:[0-9]+]]:[[REG_Z:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1{{$}}
-
-; FIXME: These moves shouldn't be necessary, it should be able to
-; store the same register if offset1 was the non-zero offset.
-
-; CI: v_mov_b32
-; CI: v_mov_b32
-; CI: buffer_store_dwordx4
+; CI: ds_read2_b64 [[REG_ZW:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}} offset1:1{{$}}
+; CI: buffer_store_dwordx4 [[REG_ZW]]
 ; CI: s_endpgm
 define void @simple_read2_v4f32_superreg_align8(<4 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -104,10 +98,8 @@ define void @simple_read2_v4f32_superreg_align8(<4 x float> addrspace(1)* %out) 
 }
 
 ; CI-LABEL: {{^}}simple_read2_v4f32_superreg:
-; CI: ds_read2_b64 v{{\[}}[[REG_W:[0-9]+]]:[[REG_Z:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1{{$}}
-; CI: v_mov_b32
-; CI: v_mov_b32
-; CI: buffer_store_dwordx4
+; CI-DAG: ds_read2_b64 [[REG_ZW:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}} offset1:1{{$}}
+; CI: buffer_store_dwordx4 [[REG_ZW]]
 ; CI: s_endpgm
 define void @simple_read2_v4f32_superreg(<4 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -120,14 +112,10 @@ define void @simple_read2_v4f32_superreg(<4 x float> addrspace(1)* %out) #0 {
 
 ; FIXME: Extra moves shuffling superregister
 ; CI-LABEL: {{^}}simple_read2_v8f32_superreg:
-; CI: ds_read2_b64 v{{\[}}[[REG_ELT3:[0-9]+]]:[[REG_ELT7:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1 offset1:3{{$}}
-; CI: v_mov_b32
-; CI: v_mov_b32
-; CI: ds_read2_b64 v{{\[}}[[REG_ELT6:[0-9]+]]:[[REG_ELT5:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:2{{$}}
-; CI: v_mov_b32
-; CI: v_mov_b32
-; CI: buffer_store_dwordx4
-; CI: buffer_store_dwordx4
+; CI-DAG: ds_read2_b64 [[VEC_HI:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}} offset0:2 offset1:3{{$}}
+; CI-DAG: ds_read2_b64 [[VEC_LO:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}} offset1:1{{$}}
+; CI-DAG: buffer_store_dwordx4 [[VEC_HI]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16
+; CI-DAG: buffer_store_dwordx4 [[VEC_LO]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64{{$}}
 ; CI: s_endpgm
 define void @simple_read2_v8f32_superreg(<8 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -140,22 +128,15 @@ define void @simple_read2_v8f32_superreg(<8 x float> addrspace(1)* %out) #0 {
 
 ; FIXME: Extra moves shuffling superregister
 ; CI-LABEL: {{^}}simple_read2_v16f32_superreg:
-; CI: ds_read2_b64 v{{\[}}[[REG_ELT11:[0-9]+]]:[[REG_ELT15:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:1 offset1:3{{$}}
-; CI: v_mov_b32
-; CI: v_mov_b32
-; CI: ds_read2_b64 v{{\[}}[[REG_ELT14:[0-9]+]]:[[REG_ELT13:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:5 offset1:7{{$}}
-; CI: ds_read2_b64 v{{\[}}[[REG_ELT14:[0-9]+]]:[[REG_ELT13:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:6 offset1:4{{$}}
-; CI: v_mov_b32
-; CI: v_mov_b32
-; CI: ds_read2_b64 v{{\[}}[[REG_ELT12:[0-9]+]]:[[REG_ELT10:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:2{{$}}
-; CI: v_mov_b32
-; CI: v_mov_b32
-
+; CI-DAG: ds_read2_b64 [[VEC0_3:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}} offset1:1{{$}}
+; CI-DAG: ds_read2_b64 [[VEC4_7:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}} offset0:2 offset1:3{{$}}
+; CI-DAG: ds_read2_b64 [[VEC8_11:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}} offset0:4 offset1:5{{$}}
+; CI-DAG: ds_read2_b64 [[VEC12_15:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}} offset0:6 offset1:7{{$}}
 ; CI: s_waitcnt lgkmcnt(0)
-; CI: buffer_store_dwordx4
-; CI: buffer_store_dwordx4
-; CI: buffer_store_dwordx4
-; CI: buffer_store_dwordx4
+; CI-DAG: buffer_store_dwordx4 [[VEC0_3]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64{{$}}
+; CI-DAG: buffer_store_dwordx4 [[VEC4_7]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:16
+; CI-DAG: buffer_store_dwordx4 [[VEC8_11]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:32
+; CI-DAG: buffer_store_dwordx4 [[VEC12_15]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0 addr64 offset:48
 ; CI: s_endpgm
 define void @simple_read2_v16f32_superreg(<16 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
