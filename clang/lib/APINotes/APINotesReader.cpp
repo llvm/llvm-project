@@ -562,6 +562,9 @@ public:
   /// The name of the module that we read from the control block.
   std::string ModuleName;
 
+  /// Various options and attributes for the module
+  ModuleOptions moduleOptions;
+
   using SerializedIdentifierTable =
       llvm::OnDiskIterableChainedHashTable<IdentifierTableInfo>;
 
@@ -734,6 +737,9 @@ bool APINotesReader::Implementation::readControlBlock(
     case control_block::MODULE_NAME:
       ModuleName = blobData.str();
       break;
+
+    case control_block::MODULE_OPTIONS:
+      moduleOptions = {(scratch.front() & 1) != 0};
 
     default:
       // Unknown metadata record, possibly for use by a future version of the
@@ -1438,6 +1444,10 @@ APINotesReader::get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer) {
 
 StringRef APINotesReader::getModuleName() const {
   return Impl.ModuleName;
+}
+
+ModuleOptions APINotesReader::getModuleOptions() const {
+  return Impl.moduleOptions;
 }
 
 auto APINotesReader::lookupObjCClass(StringRef name)
