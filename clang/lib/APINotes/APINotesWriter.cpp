@@ -43,6 +43,8 @@ public:
   /// The name of the module
   std::string ModuleName;
 
+  bool SwiftInferImportAsMember = false;
+
   /// Information about Objective-C contexts (classes or protocols).
   ///
   /// Indexed by the identifier ID and a bit indication whether we're looking
@@ -214,6 +216,11 @@ void APINotesWriter::Implementation::writeControlBlock(
 
   control_block::ModuleNameLayout moduleName(writer);
   moduleName.emit(ScratchRecord, ModuleName);
+
+  if (SwiftInferImportAsMember) {
+    control_block::ModuleOptionsLayout moduleOptions(writer);
+    moduleOptions.emit(ScratchRecord, SwiftInferImportAsMember);
+  }
 }
 
 namespace {
@@ -1091,3 +1098,8 @@ void APINotesWriter::addTypedef(llvm::StringRef name, const TypedefInfo &info) {
   assert(!Impl.Typedefs.count(typedefID));
   Impl.Typedefs[typedefID] = info;
 }
+
+void APINotesWriter::addModuleOptions(ModuleOptions opts) {
+  Impl.SwiftInferImportAsMember = opts.SwiftInferImportAsMember;
+}
+
