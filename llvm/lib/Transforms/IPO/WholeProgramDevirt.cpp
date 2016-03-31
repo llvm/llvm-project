@@ -591,7 +591,7 @@ bool DevirtModule::tryVirtualConstProp(
       Value *Addr = B.CreateConstGEP1_64(Call.VTable, OffsetByte);
       if (BitWidth == 1) {
         Value *Bits = B.CreateLoad(Addr);
-        Value *Bit = ConstantInt::get(Int8Ty, 1 << OffsetBit);
+        Value *Bit = ConstantInt::get(Int8Ty, 1ULL << OffsetBit);
         Value *BitsAndBit = B.CreateAnd(Bits, Bit);
         auto IsBitSet = B.CreateICmpNE(BitsAndBit, ConstantInt::get(Int8Ty, 0));
         Call.replaceAndErase(IsBitSet);

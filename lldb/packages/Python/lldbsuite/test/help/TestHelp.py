@@ -198,3 +198,16 @@ class HelpCommandTestCase(TestBase):
             "Try 'help' to see a current list of commands.",
             "Try 'apropos thisisnotadebuggercommand' for a list of related commands.",
             "Try 'type lookup thisisnotadebuggercommand' for information on types, methods, functions, modules, etc."])
+
+    @no_debug_info_test
+    def test_custom_help_alias(self):
+        """Test that aliases pick up custom help text."""
+        def cleanup():
+            self.runCmd('command unalias afriendlyalias', check=False)
+            self.runCmd('command unalias averyfriendlyalias', check=False)
+        
+        self.addTearDownHook(cleanup)
+        self.runCmd('command alias --help "I am a friendly alias" -- afriendlyalias help')
+        self.expect("help afriendlyalias", matching=True, substrs = ['I am a friendly alias'])
+        self.runCmd('command alias --long-help "I am a very friendly alias" -- averyfriendlyalias help')
+        self.expect("help averyfriendlyalias", matching=True, substrs = ['I am a very friendly alias'])

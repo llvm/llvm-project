@@ -4125,6 +4125,14 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
     break;
   }
 
+  case Intrinsic::experimental_guard: {
+    Assert(CS.isCall(), "experimental_guard cannot be invoked", CS);
+    Assert(CS.countOperandBundlesOfType(LLVMContext::OB_deopt) == 1,
+           "experimental_guard must have exactly one "
+           "\"deopt\" operand bundle");
+    break;
+  }
+
   case Intrinsic::experimental_deoptimize: {
     Assert(CS.isCall(), "experimental_deoptimize cannot be invoked", CS);
     Assert(CS.countOperandBundlesOfType(LLVMContext::OB_deopt) == 1,

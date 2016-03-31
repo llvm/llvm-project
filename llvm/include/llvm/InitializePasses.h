@@ -188,6 +188,7 @@ void initializeLoopIdiomRecognizePass(PassRegistry&);
 void initializeLowerAtomicPass(PassRegistry&);
 void initializeLowerBitSetsPass(PassRegistry&);
 void initializeLowerExpectIntrinsicPass(PassRegistry&);
+void initializeLowerGuardIntrinsicPass(PassRegistry&);
 void initializeLowerIntrinsicsPass(PassRegistry&);
 void initializeLowerInvokePass(PassRegistry&);
 void initializeLowerSwitchPass(PassRegistry&);

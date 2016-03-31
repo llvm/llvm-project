@@ -38,9 +38,7 @@ inline std::error_code make_error_code(YamlReaderError e) {
 /// supplied error string.
 /// Note:  Once ErrorOr<> is updated to work with errors other than error_code,
 /// this can be updated to return some other kind of error.
-std::error_code make_dynamic_error_code(const char *msg);
 std::error_code make_dynamic_error_code(StringRef msg);
-std::error_code make_dynamic_error_code(const Twine &msg);
 
 /// Generic error.
 ///
@@ -54,7 +52,7 @@ public:
   void log(llvm::raw_ostream &OS) const override;
 
   std::error_code convertToErrorCode() const override {
-    return make_dynamic_error_code(StringRef(getMessage()));
+    return make_dynamic_error_code(getMessage());
   }
 
 private:

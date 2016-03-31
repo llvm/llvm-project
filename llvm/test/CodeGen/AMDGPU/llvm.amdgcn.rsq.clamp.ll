@@ -24,14 +24,15 @@ define void @rsq_clamp_f32(float addrspace(1)* %out, float %src) #0 {
 ; FUNC-LABEL: {{^}}rsq_clamp_f64:
 ; SI: v_rsq_clamp_f64_e32
 
-; VI: v_rsq_f64_e32 [[RSQ:v\[[0-9]+:[0-9]+\]]], s[2:3]
 ; TODO: this constant should be folded:
-; VI: s_mov_b32 s[[ALLBITS:[0-9+]]], -1
-; VI: s_mov_b32 s[[HIGH1:[0-9+]]], 0x7fefffff
-; VI: s_mov_b32 s[[LOW:[0-9+]]], s[[ALLBITS]]
-; VI: v_min_f64 v[0:1], [[RSQ]], s{{\[}}[[LOW]]:[[HIGH1]]]
-; VI: s_mov_b32 s[[HIGH2:[0-9+]]], 0xffefffff
-; VI: v_max_f64 v[0:1], v[0:1], s{{\[}}[[LOW]]:[[HIGH2]]]
+; VI-DAG: s_mov_b32 s[[ALLBITS:[0-9+]]], -1
+; VI-DAG: s_mov_b32 s[[HIGH1:[0-9+]]], 0x7fefffff
+; VI-DAG: s_mov_b32 s[[HIGH2:[0-9+]]], 0xffefffff
+; VI-DAG: s_mov_b32 s[[LOW1:[0-9+]]], s[[ALLBITS]]
+; VI-DAG: v_rsq_f64_e32 [[RSQ:v\[[0-9]+:[0-9]+\]]], s[{{[0-9]+:[0-9]+}}
+; VI: v_min_f64 v[0:1], [[RSQ]], s{{\[}}[[LOW1]]:[[HIGH1]]]
+; VI: s_mov_b32 s[[LOW2:[0-9+]]], s[[ALLBITS]]
+; VI: v_max_f64 v[0:1], v[0:1], s{{\[}}[[LOW2]]:[[HIGH2]]]
 define void @rsq_clamp_f64(double addrspace(1)* %out, double %src) #0 {
   %rsq_clamp = call double @llvm.amdgcn.rsq.clamp.f64(double %src)
   store double %rsq_clamp, double addrspace(1)* %out

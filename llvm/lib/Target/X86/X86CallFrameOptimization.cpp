@@ -180,10 +180,6 @@ bool X86CallFrameOptimization::isProfitable(MachineFunction &MF,
   if (CannotReserveFrame)
     return true;
 
-  // Don't do this when not optimizing for size.
-  if (!MF.getFunction()->optForSize())
-    return false;
-
   unsigned StackAlign = TFL->getStackAlignment();
 
   int64_t Advantage = 0;

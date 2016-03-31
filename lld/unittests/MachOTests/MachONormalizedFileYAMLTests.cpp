@@ -21,7 +21,7 @@ using lld::mach_o::normalized::Relocation;
 
 static std::unique_ptr<NormalizedFile> fromYAML(StringRef str) {
   std::unique_ptr<MemoryBuffer> mb(MemoryBuffer::getMemBuffer(str));
-  ErrorOr<std::unique_ptr<NormalizedFile>> r
+  llvm::Expected<std::unique_ptr<NormalizedFile>> r
                                     = lld::mach_o::normalized::readYaml(mb);
   EXPECT_FALSE(!r);
   return std::move(*r);

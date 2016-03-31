@@ -216,7 +216,7 @@ define void @cmp_zext_k_i8max(i1 addrspace(1)* %out, i8 %b) nounwind {
 ; GCN: buffer_load_sbyte [[B:v[0-9]+]]
 ; GCN: v_cmp_ne_i32_e32 vcc, -1, [[B]]{{$}}
 ; GCN-NEXT: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
-; GCN-NEXT: buffer_store_byte [[RESULT]]
+; GCN: buffer_store_byte [[RESULT]]
 ; GCN: s_endpgm
 define void @cmp_sext_k_neg1(i1 addrspace(1)* %out, i8 addrspace(1)* %b.ptr) nounwind {
   %b = load i8, i8 addrspace(1)* %b.ptr

@@ -21,9 +21,11 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) {
 ; i386-NEXT: lahf
 ; i386-NEXT: movl %eax, [[FLAGS:%.*]]
 ; i386-NEXT: popl %eax
-; i386-NEXT: movl %edx, 4(%esp)
-; i386-NEXT: movl %eax, (%esp)
+; i386-NEXT: subl $8, %esp
+; i386-NEXT: pushl %edx
+; i386-NEXT: pushl %eax
 ; i386-NEXT: calll bar
+; i386-NEXT: addl $16, %esp
 ; i386-NEXT: movl [[FLAGS]], %eax
 ; i386-NEXT: addb $127, %al
 ; i386-NEXT: sahf

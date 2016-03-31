@@ -669,6 +669,12 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_DEFAULT = default;
 #endif
 
+#ifdef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#define _LIBCPP_EQUAL_DELETE
+#else
+#define _LIBCPP_EQUAL_DELETE = delete
+#endif
+
 #ifdef __GNUC__
 #define _NOALIAS __attribute__((__malloc__))
 #else

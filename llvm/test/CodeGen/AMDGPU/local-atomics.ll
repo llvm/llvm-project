@@ -5,8 +5,8 @@
 
 ; FUNC-LABEL: {{^}}lds_atomic_xchg_ret_i32:
 ; EG: LDS_WRXCHG_RET *
-; GCN: v_mov_b32_e32 [[DATA:v[0-9]+]], 4
 ; GCN: s_load_dword [[SPTR:s[0-9]+]],
+; GCN: v_mov_b32_e32 [[DATA:v[0-9]+]], 4
 ; GCN: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[SPTR]]
 ; GCN: ds_wrxchg_rtn_b32 [[RESULT:v[0-9]+]], [[VPTR]], [[DATA]]
 ; GCN: buffer_store_dword [[RESULT]],
@@ -31,8 +31,8 @@ define void @lds_atomic_xchg_ret_i32_offset(i32 addrspace(1)* %out, i32 addrspac
 ; XXX - Is it really necessary to load 4 into VGPR?
 ; FUNC-LABEL: {{^}}lds_atomic_add_ret_i32:
 ; EG: LDS_ADD_RET *
-; GCN: v_mov_b32_e32 [[DATA:v[0-9]+]], 4
 ; GCN: s_load_dword [[SPTR:s[0-9]+]],
+; GCN: v_mov_b32_e32 [[DATA:v[0-9]+]], 4
 ; GCN: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[SPTR]]
 ; GCN: ds_add_rtn_u32 [[RESULT:v[0-9]+]], [[VPTR]], [[DATA]]
 ; GCN: buffer_store_dword [[RESULT]],

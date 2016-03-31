@@ -57,8 +57,8 @@ try.cont:
 ; X86: movl %esp, -[[sp_offset:[0-9]+]](%ebp)
 ; X86: movl $0, -{{[0-9]+}}(%ebp)
 ; X86: leal -[[local_offs:[0-9]+]](%ebp), %[[addr_reg:[a-z]+]]
-; X86-DAG: movl %[[addr_reg]], 4(%esp)
-; X86-DAG: movl $1, (%esp)
+; X86-DAG: pushl %[[addr_reg]]
+; X86-DAG: pushl $1
 ; X86: calll _f
 ; X86: [[contbb:LBB0_[0-9]+]]: # %try.cont
 ; X86: retl
@@ -83,13 +83,14 @@ try.cont:
 ; X86-DAG: movl -32(%ebp), %[[e_reg:[a-z]+]]
 ; X86-DAG: leal -[[local_offs]](%ebp), %[[addr_reg:[a-z]+]]
 ; X86-DAG: movl $1, -{{[0-9]+}}(%ebp)
-; X86-DAG: movl %[[addr_reg]], 4(%esp)
-; X86-DAG: movl %[[e_reg]], (%esp)
+; X86: pushl %[[addr_reg]]
+; X86: pushl %[[e_reg]]
 ; X86: calll _f
-; X86-NEXT: movl $[[restorebb1]], %eax
-; X86-NEXT: addl $8, %esp
-; X86-NEXT: popl %ebp
-; X86-NEXT: retl
+; X86: addl $8, %esp
+; X86: movl $[[restorebb1]], %eax
+; X86: addl $8, %esp
+; X86: popl %ebp
+; X86: retl
 
 ; X86: "?catch$[[catch2bb:[0-9]+]]@?0?try_catch_catch@4HA":
 ; X86: LBB0_[[catch2bb]]: # %handler2{{$}}
@@ -99,13 +100,14 @@ try.cont:
 ; X86: movl %esp, -[[sp_offset]](%ebp)
 ; X86-DAG: leal -[[local_offs]](%ebp), %[[addr_reg:[a-z]+]]
 ; X86-DAG: movl $1, -{{[0-9]+}}(%ebp)
-; X86-DAG: movl %[[addr_reg]], 4(%esp)
-; X86-DAG: movl $3, (%esp)
+; X86: pushl %[[addr_reg]]
+; X86: pushl $3
 ; X86: calll _f
-; X86-NEXT: movl $[[restorebb2]], %eax
-; X86-NEXT: addl $8, %esp
-; X86-NEXT: popl %ebp
-; X86-NEXT: retl
+; X86: addl $8, %esp
+; X86: movl $[[restorebb2]], %eax
+; X86: addl $8, %esp
+; X86: popl %ebp
+; X86: retl
 
 ; X86: L__ehtable$try_catch_catch:
 ; X86: $handlerMap$0$try_catch_catch:

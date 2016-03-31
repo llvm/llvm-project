@@ -64,9 +64,9 @@ false:
 ; CHECK: cmpl %edx, %eax
 ; CHECK: jge LBB1_2
 ; CHECK: pushl %eax
-; CHECK: movl $4100, %eax
+; CHECK: movl $4092, %eax
 ; CHECK: calll __chkstk
-; CHECK: movl 4100(%esp), %eax
+; CHECK: movl 4092(%esp), %eax
 ; CHECK: calll _doSomething
 ; CHECK: LBB1_2:
 ; CHECK: retl

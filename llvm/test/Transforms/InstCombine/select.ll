@@ -1589,3 +1589,21 @@ define i32 @PR23757(i32 %x) {
   %sel = select i1 %cmp, i32 -2147483648, i32 %add
   ret i32 %sel
 }
+
+
+define i32 @PR27137(i32 %a) {
+; CHECK-LABEL: @PR27137(
+; CHECK-NEXT:  %not_a = xor i32 %a, -1
+; CHECK-NEXT:  %c0 = icmp slt i32 %a, 0
+; CHECK-NEXT:  %s0 = select i1 %c0, i32 %not_a, i32 -1
+; CHECK-NEXT:  %c1 = icmp sgt i32 %s0, -1
+; CHECK-NEXT:  %s1 = select i1 %c1, i32 %s0, i32 -1
+; CHECK-NEXT:  ret i32 %s1
+
+  %not_a = xor i32 %a, -1
+  %c0 = icmp slt i32 %a, 0
+  %s0 = select i1 %c0, i32 %not_a, i32 -1
+  %c1 = icmp sgt i32 %s0, -1
+  %s1 = select i1 %c1, i32 %s0, i32 -1
+  ret i32 %s1
+}

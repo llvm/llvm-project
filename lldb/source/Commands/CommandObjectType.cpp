@@ -1310,9 +1310,10 @@ public:
     ~CommandObjectTypeFormatterList() override = default;
 
 protected:
-    virtual void
+    virtual bool
     FormatterSpecificList (CommandReturnObject &result)
     {
+        return false;
     }
     
     bool
@@ -1346,10 +1347,13 @@ protected:
             }
         }
         
-        auto category_closure = [&result, &formatter_regex] (const lldb::TypeCategoryImplSP& category) -> void {
+        bool any_printed = false;
+        
+        auto category_closure = [&result, &formatter_regex, &any_printed] (const lldb::TypeCategoryImplSP& category) -> void {
             result.GetOutputStream().Printf("-----------------------\nCategory: %s\n-----------------------\n", category->GetName());
+
             TypeCategoryImpl::ForEachCallbacks<FormatterType> foreach;
-            foreach.SetExact([&result, &formatter_regex] (ConstString name, const FormatterSharedPointer& format_sp) -> bool {
+            foreach.SetExact([&result, &formatter_regex, &any_printed] (ConstString name, const FormatterSharedPointer& format_sp) -> bool {
                 if (formatter_regex)
                 {
                     bool escape = true;
@@ -1365,13 +1369,13 @@ protected:
                     if (escape)
                         return true;
                 }
-                
+
+                any_printed = true;
                 result.GetOutputStream().Printf ("%s: %s\n", name.AsCString(), format_sp->GetDescription().c_str());
-                
                 return true;
             });
             
-            foreach.SetWithRegex( [&result, &formatter_regex] (RegularExpressionSP regex_sp, const FormatterSharedPointer& format_sp) -> bool {
+            foreach.SetWithRegex([&result, &formatter_regex, &any_printed] (RegularExpressionSP regex_sp, const FormatterSharedPointer& format_sp) -> bool {
                 if (formatter_regex)
                 {
                     bool escape = true;
@@ -1388,8 +1392,8 @@ protected:
                         return true;
                 }
                 
+                any_printed = true;
                 result.GetOutputStream().Printf ("%s: %s\n", regex_sp->GetText(), format_sp->GetDescription().c_str());
-                
                 return true;
             });
             
@@ -1427,10 +1431,16 @@ protected:
                 return true;
             });
             
-            FormatterSpecificList(result);
+            any_printed = FormatterSpecificList(result) | any_printed;
         }
         
-        result.SetStatus(eReturnStatusSuccessFinishResult);
+        if (any_printed)
+            result.SetStatus(eReturnStatusSuccessFinishResult);
+        else
+        {
+            result.GetOutputStream().PutCString("no matching results found.");
+            result.SetStatus(eReturnStatusSuccessFinishNoResult);
+        }
         return result.Succeeded();
     }
 };
@@ -2028,7 +2038,7 @@ public:
     }
     
 protected:
-    void
+    bool
     FormatterSpecificList (CommandReturnObject &result) override
     {
         if (DataVisualization::NamedSummaryFormats::GetCount() > 0)
@@ -2038,7 +2048,9 @@ protected:
                 result.GetOutputStream().Printf ("%s: %s\n", name.AsCString(), summary_sp->GetDescription().c_str());
                 return true;
             });
+            return true;
         }
+        return false;
     }
 };
 

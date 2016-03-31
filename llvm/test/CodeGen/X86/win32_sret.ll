@@ -135,12 +135,11 @@ entry:
 
 
 ; Load the address of the result and put it onto stack
-; (through %ecx in the -O0 build).
-; WIN32:      leal {{[0-9]+}}(%esp), %e{{[a-d]}}x
-; WIN32:      movl %e{{[a-d]}}x, (%e{{([a-d]x)|(sp)}})
-
 ; The this pointer goes to ECX.
-; WIN32-NEXT: leal {{[0-9]+}}(%esp), %ecx
+; (through %ecx in the -O0 build).
+; WIN32:      leal {{[0-9]*}}(%esp), %e{{[a-d]}}x
+; WIN32:      leal {{[0-9]*}}(%esp), %ecx
+; WIN32:      pushl %e{{[a-d]}}x
 ; WIN32-NEXT: calll "?foo@C5@@QAE?AUS5@@XZ"
 ; WIN32:      retl
   ret void
@@ -155,25 +154,21 @@ define void @test6_f(%struct.test6* %x) nounwind {
 ; LINUX-LABEL: test6_f:
 
 ; The %x argument is moved to %ecx. It will be the this pointer.
-; WIN32: movl    20(%esp), %ecx
+; WIN32: movl    16(%esp), %ecx
 
-; The %x argument is moved to (%esp). It will be the this pointer. With -O0
-; we copy esp to ecx and use (ecx) instead of (esp).
-; MINGW_X86: movl    20(%esp), %eax
-; MINGW_X86: movl    %eax, (%e{{([a-d]x)|(sp)}})
-
-; CYGWIN: movl    20(%esp), %eax
-; CYGWIN: movl    %eax, (%e{{([a-d]x)|(sp)}})
 
 ; The sret pointer is (%esp)
-; WIN32:          leal    4(%esp), %[[REG:e[a-d]x]]
-; WIN32-NEXT:     movl    %[[REG]], (%e{{([a-d]x)|(sp)}})
+; WIN32:          leal    (%esp), %[[REG:e[a-d]x]]
+; WIN32-NEXT:     pushl   %[[REG]]
 
 ; The sret pointer is %ecx
-; MINGW_X86-NEXT: leal    4(%esp), %ecx
+; The %x argument is moved to (%esp). It will be the this pointer.
+; MINGW_X86:      leal    (%esp), %ecx
+; MINGW_X86-NEXT: pushl   16(%esp)
 ; MINGW_X86-NEXT: calll   _test6_g
 
-; CYGWIN-NEXT: leal    4(%esp), %ecx
+; CYGWIN:      leal    (%esp), %ecx
+; CYGWIN-NEXT: pushl   16(%esp)
 ; CYGWIN-NEXT: calll   _test6_g
 
   %tmp = alloca %struct.test6, align 4
@@ -191,17 +186,17 @@ define void @test7_f(%struct.test7* %x) nounwind {
 ; LINUX-LABEL: test7_f:
 
 ; The %x argument is moved to %ecx on all OSs. It will be the this pointer.
-; WIN32:      movl    20(%esp), %ecx
-; MINGW_X86:  movl    20(%esp), %ecx
-; CYGWIN:     movl    20(%esp), %ecx
+; WIN32:      movl    16(%esp), %ecx
+; MINGW_X86:  movl    16(%esp), %ecx
+; CYGWIN:     movl    16(%esp), %ecx
 
 ; The sret pointer is (%esp)
-; WIN32:          leal    4(%esp), %[[REG:e[a-d]x]]
-; WIN32-NEXT:     movl    %[[REG]], (%e{{([a-d]x)|(sp)}})
-; MINGW_X86:      leal    4(%esp), %[[REG:e[a-d]x]]
-; MINGW_X86-NEXT: movl    %[[REG]], (%e{{([a-d]x)|(sp)}})
-; CYGWIN:         leal    4(%esp), %[[REG:e[a-d]x]]
-; CYGWIN-NEXT:    movl    %[[REG]], (%e{{([a-d]x)|(sp)}})
+; WIN32:          leal    (%esp), %[[REG:e[a-d]x]]
+; WIN32-NEXT:     pushl   %[[REG]]
+; MINGW_X86:      leal    (%esp), %[[REG:e[a-d]x]]
+; MINGW_X86-NEXT: pushl   %[[REG]]
+; CYGWIN:         leal    (%esp), %[[REG:e[a-d]x]]
+; CYGWIN-NEXT:    pushl   %[[REG]]
 
   %tmp = alloca %struct.test7, align 4
   call x86_thiscallcc void @test7_g(%struct.test7* %x, %struct.test7* sret %tmp)

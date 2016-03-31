@@ -11,6 +11,7 @@
 #define LLD_CORE_WRITER_H
 
 #include "lld/Core/LLVM.h"
+#include "llvm/Support/Error.h"
 #include <memory>
 #include <vector>
 
@@ -27,7 +28,7 @@ public:
   virtual ~Writer();
 
   /// \brief Write a file from the supplied File object
-  virtual std::error_code writeFile(const File &linkedFile, StringRef path) = 0;
+  virtual llvm::Error writeFile(const File &linkedFile, StringRef path) = 0;
 
   /// \brief This method is called by Core Linking to give the Writer a chance
   /// to add file format specific "files" to set of files to be linked. This is

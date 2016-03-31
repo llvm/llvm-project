@@ -27,7 +27,7 @@ declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!23}
-!0 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "clang", isOptimized: true, emissionKind: 0, file: !1, enums: !{}, retainedTypes: !{})
+!0 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "clang", isOptimized: true, emissionKind: 0, file: !1, enums: !{}, retainedTypes: !{}, subprograms: !{!2})
 !1 = !DIFile(filename: "t.c", directory: "")
 !16 = !DIBasicType(tag: DW_TAG_base_type, name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 !2 = distinct !DISubprogram()

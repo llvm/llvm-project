@@ -1280,12 +1280,12 @@ class Writer : public lld::Writer {
 public:
   Writer(const LinkingContext &context) : _ctx(context) {}
 
-  std::error_code writeFile(const lld::File &file, StringRef outPath) override {
+  llvm::Error writeFile(const lld::File &file, StringRef outPath) override {
     // Create stream to path.
     std::error_code ec;
     llvm::raw_fd_ostream out(outPath, ec, llvm::sys::fs::F_Text);
     if (ec)
-      return ec;
+      return llvm::errorCodeToError(ec);
 
     // Create yaml Output writer, using yaml options for context.
     YamlContext yamlContext;
@@ -1297,7 +1297,7 @@ public:
     const lld::File *fileRef = &file;
     yout << fileRef;
 
-    return std::error_code();
+    return llvm::Error();
   }
 
 private:

@@ -55,8 +55,8 @@ define void @fneg_fabs_fn_free_f64(double addrspace(1)* %out, i64 %in) {
 }
 
 ; FUNC-LABEL: {{^}}fneg_fabs_f64:
-; SI: s_load_dwordx2 s{{\[}}[[LO_X:[0-9]+]]:[[HI_X:[0-9]+]]{{\]}}
 ; SI: s_load_dwordx2
+; SI: s_load_dwordx2 s{{\[}}[[LO_X:[0-9]+]]:[[HI_X:[0-9]+]]{{\]}}
 ; SI: v_bfrev_b32_e32 [[IMMREG:v[0-9]+]], 1{{$}}
 ; SI-DAG: v_or_b32_e32 v[[HI_V:[0-9]+]], s[[HI_X]], [[IMMREG]]
 ; SI-DAG: v_mov_b32_e32 v[[LO_V:[0-9]+]], s[[LO_X]]

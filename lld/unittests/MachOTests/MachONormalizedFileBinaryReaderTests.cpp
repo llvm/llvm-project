@@ -22,7 +22,7 @@ static std::unique_ptr<NormalizedFile>
 fromBinary(const uint8_t bytes[], unsigned length, StringRef archStr) {
   StringRef sr((const char*)bytes, length);
   std::unique_ptr<MemoryBuffer> mb(MemoryBuffer::getMemBuffer(sr, "", false));
-  ErrorOr<std::unique_ptr<NormalizedFile>> r =
+  llvm::Expected<std::unique_ptr<NormalizedFile>> r =
       lld::mach_o::normalized::readBinary(
           mb, lld::MachOLinkingContext::archFromName(archStr));
   EXPECT_FALSE(!r);
@@ -735,5 +735,10 @@ TEST(BinaryReaderTest, hello_obj_ppc) {
   EXPECT_EQ(printfLabel.type, N_UNDF);
   EXPECT_EQ(printfLabel.scope, SymbolScope(N_EXT));
 
-  writeBinary(*f, "/tmp/foo.o");
+  auto ec = writeBinary(*f, "/tmp/foo.o");
+  // FIXME: We want to do EXPECT_FALSE(ec) but that fails on some Windows bots,
+  // probably due to /tmp not being available.
+  // For now just check if an error happens as we need to mark it as checked.
+  bool failed = (bool)ec;
+  (void)failed;
 }

@@ -1,4 +1,9 @@
-; RUN: llc -march=amdgcn -mcpu=SI --misched=si < %s | FileCheck %s
+; FIXME: The si scheduler crashes if when lane mask tracking is enabled, so
+; we need to disable this when the si scheduler is being used.
+; The only way the subtarget knows that the si machine scheduler is being used
+; is to specify -mattr=si-scheduler.  If we just pass --misched=si, the backend
+; won't know what scheduler we are using.
+; RUN: llc -march=amdgcn -mcpu=SI --misched=si -mattr=si-scheduler < %s | FileCheck %s
 
 ; The test checks the "si" machine scheduler pass works correctly.
 

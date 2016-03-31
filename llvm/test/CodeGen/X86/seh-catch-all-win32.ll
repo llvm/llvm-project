@@ -75,8 +75,8 @@ entry:
 ; CHECK: movl -24(%ebp), %esp
 ;       EH state -1
 ; CHECK: movl [[code_offs]](%ebp), %[[code:[a-z]+]]
-; CHECK-DAG: movl %[[code]], 4(%esp)
-; CHECK-DAG: movl $_str, (%esp)
+; CHECK: pushl %[[code]]
+; CHECK: pushl $_str
 ; CHECK: calll _printf
 
 ; CHECK: .section .xdata,"dr"

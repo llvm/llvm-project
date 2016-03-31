@@ -44,7 +44,7 @@ define void @test_basic() #0 {
 ; X32-Linux-NEXT:  ja      .LBB0_2
 
 ; X32-Linux:       pushl $0
-; X32-Linux-NEXT:  pushl $60
+; X32-Linux-NEXT:  pushl $44
 ; X32-Linux-NEXT:  calll __morestack
 ; X32-Linux-NEXT:  ret
 
@@ -105,7 +105,7 @@ define void @test_basic() #0 {
 ; X32-MinGW-NEXT:  ja      LBB0_2
 
 ; X32-MinGW:       pushl $0
-; X32-MinGW-NEXT:  pushl $48
+; X32-MinGW-NEXT:  pushl $40
 ; X32-MinGW-NEXT:  calll ___morestack
 ; X32-MinGW-NEXT:  ret
 
@@ -135,7 +135,7 @@ define void @test_basic() #0 {
 ; X32-DFlyBSD-NEXT:  ja      .LBB0_2
 
 ; X32-DFlyBSD:       pushl $0
-; X32-DFlyBSD-NEXT:  pushl $48
+; X32-DFlyBSD-NEXT:  pushl $40
 ; X32-DFlyBSD-NEXT:  calll __morestack
 ; X32-DFlyBSD-NEXT:  ret
 
@@ -162,7 +162,7 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; X32-Linux-NEXT:  ja      .LBB1_2
 
 ; X32-Linux:       pushl $4
-; X32-Linux-NEXT:  pushl $60
+; X32-Linux-NEXT:  pushl $44
 ; X32-Linux-NEXT:  calll __morestack
 ; X32-Linux-NEXT:  ret
 
@@ -209,7 +209,7 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; X32-MinGW-NEXT:  ja      LBB1_2
 
 ; X32-MinGW:       pushl $4
-; X32-MinGW-NEXT:  pushl $52
+; X32-MinGW-NEXT:  pushl $44
 ; X32-MinGW-NEXT:  calll ___morestack
 ; X32-MinGW-NEXT:  ret
 
@@ -238,7 +238,7 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; X32-DFlyBSD-NEXT:  ja      .LBB1_2
 
 ; X32-DFlyBSD:       pushl $4
-; X32-DFlyBSD-NEXT:  pushl $52
+; X32-DFlyBSD-NEXT:  pushl $44
 ; X32-DFlyBSD-NEXT:  calll __morestack
 ; X32-DFlyBSD-NEXT:  ret
 
@@ -305,12 +305,12 @@ define void @test_large() #0 {
 ; X64-Darwin-NEXT: callq ___morestack
 ; X64-Darwin-NEXT: ret
 
-; X32-MinGW:       leal -40008(%esp), %ecx
+; X32-MinGW:       leal -40000(%esp), %ecx
 ; X32-MinGW-NEXT:  cmpl %fs:20, %ecx
 ; X32-MinGW-NEXT:  ja      LBB2_2
 
 ; X32-MinGW:       pushl $0
-; X32-MinGW-NEXT:  pushl $40008
+; X32-MinGW-NEXT:  pushl $40000
 ; X32-MinGW-NEXT:  calll ___morestack
 ; X32-MinGW-NEXT:  ret
 
@@ -333,12 +333,12 @@ define void @test_large() #0 {
 ; X64-FreeBSD-NEXT:  callq __morestack
 ; X64-FreeBSD-NEXT:  ret
 
-; X32-DFlyBSD:       leal -40008(%esp), %ecx
+; X32-DFlyBSD:       leal -40000(%esp), %ecx
 ; X32-DFlyBSD-NEXT:  cmpl %fs:16, %ecx
 ; X32-DFlyBSD-NEXT:  ja      .LBB2_2
 
 ; X32-DFlyBSD:       pushl $0
-; X32-DFlyBSD-NEXT:  pushl $40008
+; X32-DFlyBSD-NEXT:  pushl $40000
 ; X32-DFlyBSD-NEXT:  calll __morestack
 ; X32-DFlyBSD-NEXT:  ret
 
@@ -364,7 +364,7 @@ define fastcc void @test_fastcc() #0 {
 ; X32-Linux-NEXT:  ja      .LBB3_2
 
 ; X32-Linux:       pushl $0
-; X32-Linux-NEXT:  pushl $60
+; X32-Linux-NEXT:  pushl $44
 ; X32-Linux-NEXT:  calll __morestack
 ; X32-Linux-NEXT:  ret
 
@@ -415,7 +415,7 @@ define fastcc void @test_fastcc() #0 {
 ; X32-MinGW-NEXT:  ja      LBB3_2
 
 ; X32-MinGW:       pushl $0
-; X32-MinGW-NEXT:  pushl $48
+; X32-MinGW-NEXT:  pushl $40
 ; X32-MinGW-NEXT:  calll ___morestack
 ; X32-MinGW-NEXT:  ret
 
@@ -445,7 +445,7 @@ define fastcc void @test_fastcc() #0 {
 ; X32-DFlyBSD-NEXT:  ja      .LBB3_2
 
 ; X32-DFlyBSD:       pushl $0
-; X32-DFlyBSD-NEXT:  pushl $48
+; X32-DFlyBSD-NEXT:  pushl $40
 ; X32-DFlyBSD-NEXT:  calll __morestack
 ; X32-DFlyBSD-NEXT:  ret
 
@@ -524,12 +524,12 @@ define fastcc void @test_fastcc_large() #0 {
 
 ; X32-MinGW-LABEL:       test_fastcc_large:
 
-; X32-MinGW:       leal -40008(%esp), %eax
+; X32-MinGW:       leal -40000(%esp), %eax
 ; X32-MinGW-NEXT:  cmpl %fs:20, %eax
 ; X32-MinGW-NEXT:  ja      LBB4_2
 
 ; X32-MinGW:       pushl $0
-; X32-MinGW-NEXT:  pushl $40008
+; X32-MinGW-NEXT:  pushl $40000
 ; X32-MinGW-NEXT:  calll ___morestack
 ; X32-MinGW-NEXT:  ret
 
@@ -557,12 +557,12 @@ define fastcc void @test_fastcc_large() #0 {
 
 ; X32-DFlyBSD-LABEL:       test_fastcc_large:
 
-; X32-DFlyBSD:       leal -40008(%esp), %eax
+; X32-DFlyBSD:       leal -40000(%esp), %eax
 ; X32-DFlyBSD-NEXT:  cmpl %fs:16, %eax
 ; X32-DFlyBSD-NEXT:  ja      .LBB4_2
 
 ; X32-DFlyBSD:       pushl $0
-; X32-DFlyBSD-NEXT:  pushl $40008
+; X32-DFlyBSD-NEXT:  pushl $40000
 ; X32-DFlyBSD-NEXT:  calll __morestack
 ; X32-DFlyBSD-NEXT:  ret
 

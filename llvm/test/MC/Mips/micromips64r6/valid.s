@@ -171,5 +171,9 @@ a:
         dmtc0 $17, $18, 5        # CHECK: dmtc0 $17, $18, 5       # encoding: [0x5a,0x32,0x2a,0xfc]
         dmtc1 $19, $f20          # CHECK: dmtc1 $19, $f20         # encoding: [0x56,0x74,0x2c,0x3b]
         dmtc2 $21, $22           # CHECK: dmtc2 $21, $22          # encoding: [0x02,0xb6,0x7d,0x3c]
+        dmfc0 $18, $17           # CHECK: dmfc0 $18, $17, 0       # encoding: [0x5a,0x51,0x00,0xfc]
+        dmfc0 $9, $1, 1          # CHECK: dmfc0 $9, $1, 1         # encoding: [0x59,0x21,0x08,0xfc]
+        dmfc1 $9, $f4            # CHECK: dmfc1 $9, $f4           # encoding: [0x55,0x24,0x24,0x3b]
+        dmfc2 $14, $18           # CHECK: dmfc2 $14, $18          # encoding: [0x01,0xd2,0x6d,0x3c]
 
 1:

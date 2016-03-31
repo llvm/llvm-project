@@ -68,19 +68,19 @@ catch.7:
 ; X86: movl $___ehhandler$f, {{.*}}
 ;
 ; X86: movl $0, [[state]](%ebp)
-; X86: movl $1, (%esp)
+; X86: pushl $1
 ; X86: calll _may_throw
 ;
 ; X86: movl $1, [[state]](%ebp)
-; X86: movl $2, (%esp)
+; X86: pushl $2
 ; X86: calll _may_throw
 ;
 ; X86: movl $2, [[state]](%ebp)
-; X86: movl $3, (%esp)
+; X86: pushl $3
 ; X86: calll _may_throw
 ;
 ; X86: movl $3, [[state]](%ebp)
-; X86: movl $4, (%esp)
+; X86: pushl $4
 ; X86: calll _may_throw
 
 
@@ -172,19 +172,19 @@ unreachable:                                      ; preds = %entry
 ; X86: movl $___ehhandler$g, {{.*}}
 ;
 ; X86: movl $1, [[state]](%ebp)
-; X86: movl $-1, (%esp)
+; X86: pushl $-1
 ; X86: calll _may_throw
 ;
 ; X86: movl $2, [[state]](%ebp)
-; X86: movl $0, (%esp)
+; X86: pushl $0
 ; X86: calll _may_throw
 ;
 ; X86: movl $3, [[state]](%ebp)
-; X86: movl $1, (%esp)
+; X86: pushl $1
 ; X86: calll _may_throw
 ;
 ; X86: movl $2, [[state]](%ebp)
-; X86: movl $2, (%esp)
+; X86: pushl $2
 ; X86: calll _may_throw
 
 ; X64-LABEL: g:

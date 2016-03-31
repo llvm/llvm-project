@@ -428,12 +428,14 @@ static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
       continue;
 
     // We do not need to (and in fact, cannot) convert possibly throwing calls
-    // to @llvm.experimental_deoptimize into invokes.  The caller's "segment" of
-    // the deoptimization continuation attached to the newly inlined
-    // @llvm.experimental_deoptimize call should contain the exception handling
-    // logic, if any.
+    // to @llvm.experimental_deoptimize (resp. @llvm.experimental.guard) into
+    // invokes.  The caller's "segment" of the deoptimization continuation
+    // attached to the newly inlined @llvm.experimental_deoptimize
+    // (resp. @llvm.experimental.guard) call should contain the exception
+    // handling logic, if any.
     if (auto *F = CI->getCalledFunction())
-      if (F->getIntrinsicID() == Intrinsic::experimental_deoptimize)
+      if (F->getIntrinsicID() == Intrinsic::experimental_deoptimize ||
+          F->getIntrinsicID() == Intrinsic::experimental_guard)
         continue;
 
     if (auto FuncletBundle = CI->getOperandBundle(LLVMContext::OB_funclet)) {

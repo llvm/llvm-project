@@ -14,7 +14,7 @@ declare <16 x float> @func_float16(<16 x float>, <16 x float>)
 ; WIN64: ret
 
 ; WIN32: testf16_inp
-; WIN32: movl    %eax, (%esp)
+; WIN32: pushl   %eax
 ; WIN32: addps  {{.*}}, {{%xmm[0-3]}}
 ; WIN32: addps  {{.*}}, {{%xmm[0-3]}}
 ; WIN32: addps  {{.*}}, {{%xmm[0-3]}}

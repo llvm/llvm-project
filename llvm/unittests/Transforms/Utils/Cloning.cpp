@@ -464,6 +464,12 @@ TEST_F(CloneModule, Verify) {
   EXPECT_FALSE(verifyModule(*NewM));
 }
 
+TEST_F(CloneModule, OldModuleUnchanged) {
+  DebugInfoFinder Finder;
+  Finder.processModule(*OldM);
+  EXPECT_EQ(1U, Finder.subprogram_count());
+}
+
 TEST_F(CloneModule, Subprogram) {
   Function *NewF = NewM->getFunction("f");
   DISubprogram *SP = NewF->getSubprogram();

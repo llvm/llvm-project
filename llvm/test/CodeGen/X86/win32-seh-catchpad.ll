@@ -32,16 +32,16 @@ invoke.cont:                                      ; preds = %entry
 ; CHECK-LABEL: _try_except:
 ;     Store state #0
 ; CHECK: movl $0, -[[state:[0-9]+]](%ebp)
-; CHECK: movl $1, (%esp)
+; CHECK: pushl $1
 ; CHECK: calll _f
 ; CHECK: movl $-1, -[[state]](%ebp)
-; CHECK: movl $3, (%esp)
+; CHECK: pushl $3
 ; CHECK: calll _f
 ; CHECK: retl
 
 ;   __except
 ; CHECK: movl $-1, -[[state]](%ebp)
-; CHECK: movl $2, (%esp)
+; CHECK: pushl $2
 ; CHECK: calll _f
 
 ; CHECK: .section        .xdata,"dr"
@@ -205,7 +205,7 @@ __except:
 ; CHECK-NEXT:         movl    -24(%ebp), %esp
 ; CHECK-NEXT:         addl    $12, %ebp
 ; CHECK-NEXT:         movl    $-1, -16(%ebp)
-; CHECK-NEXT:         movl    $2, (%esp)
+; CHECK-NEXT:         pushl   $2
 ; CHECK-NEXT:         calll   _f
 
 

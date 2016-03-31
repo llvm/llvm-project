@@ -626,33 +626,29 @@ union __value_type
     value_type __cc;
     __nc_value_type __nc;
 
-    template <class ..._Args>
-    _LIBCPP_INLINE_VISIBILITY
-    __value_type(_Args&& ...__args)
-        : __cc(std::forward<_Args>(__args)...) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __value_type(const __value_type& __v)
-        : __cc(__v.__cc) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __value_type(__value_type& __v)
-        : __cc(__v.__cc) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __value_type(__value_type&& __v)
-        : __nc(std::move(__v.__nc)) {}
-
     _LIBCPP_INLINE_VISIBILITY
     __value_type& operator=(const __value_type& __v)
         {__nc = __v.__cc; return *this;}
 
     _LIBCPP_INLINE_VISIBILITY
     __value_type& operator=(__value_type&& __v)
-        {__nc = std::move(__v.__nc); return *this;}
+        {__nc = _VSTD::move(__v.__nc); return *this;}
 
+    template <class _ValueTp,
+              class = typename enable_if<
+                    __is_same_uncvref<_ValueTp, value_type>::value
+                 >::type
+             >
     _LIBCPP_INLINE_VISIBILITY
-    ~__value_type() {__cc.~value_type();}
+    __value_type& operator=(_ValueTp&& __v) {
+        __nc = _VSTD::forward<_ValueTp>(__v); return *this;
+    }
+
+private:
+    __value_type() _LIBCPP_EQUAL_DELETE;
+    ~__value_type() _LIBCPP_EQUAL_DELETE;
+    __value_type(const __value_type& __v) _LIBCPP_EQUAL_DELETE;
+    __value_type(__value_type&& __v) _LIBCPP_EQUAL_DELETE;
 };
 
 #else
@@ -666,18 +662,11 @@ struct __value_type
 
     value_type __cc;
 
-    _LIBCPP_INLINE_VISIBILITY
-    __value_type() {}
-
-    template <class _A0>
-    _LIBCPP_INLINE_VISIBILITY
-    __value_type(const _A0& __a0)
-        : __cc(__a0) {}
-
-    template <class _A0, class _A1>
-    _LIBCPP_INLINE_VISIBILITY
-    __value_type(const _A0& __a0, const _A1& __a1)
-        : __cc(__a0, __a1) {}
+private:
+   __value_type();
+   __value_type(__value_type const&);
+   __value_type& operator=(__value_type const&);
+   ~__value_type();
 };
 
 #endif
@@ -1037,7 +1026,7 @@ public:
     size_type max_size() const _NOEXCEPT {return __tree_.max_size();}
 
     mapped_type& operator[](const key_type& __k);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     mapped_type& operator[](key_type&& __k);
 #endif
 
@@ -1051,18 +1040,18 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     value_compare  value_comp()    const {return value_compare(__tree_.value_comp().key_comp());}
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
+    template <class ..._Args>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool> emplace(_Args&& ...__args) {
+        return __tree_.__emplace_unique(_VSTD::forward<_Args>(__args)...);
+    }
 
     template <class ..._Args>
-        pair<iterator, bool>
-        emplace(_Args&& ...__args);
-
-    template <class ..._Args>
-        iterator
-        emplace_hint(const_iterator __p, _Args&& ...__args);
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+    _LIBCPP_INLINE_VISIBILITY
+    iterator emplace_hint(const_iterator __p, _Args&& ...__args) {
+        return __tree_.__emplace_hint_unique(__p.__i_, _VSTD::forward<_Args>(__args)...);
+    }
 
     template <class _Pp,
               class = typename enable_if<is_constructible<value_type, _Pp>::value>::type>
@@ -1076,7 +1065,7 @@ public:
         iterator insert(const_iterator __pos, _Pp&& __p)
             {return __tree_.__insert_unique(__pos.__i_, _VSTD::forward<_Pp>(__p));}
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool>
@@ -1088,14 +1077,15 @@ public:
             {return __tree_.__insert_unique(__p.__i_, __v);}
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
+    // TODO(EricWF): These functions are C++17 only but they should probably
+    // be exposed in C++11.
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool>
-        insert(     value_type&& __v) {return __tree_.__insert_unique(_VSTD::forward<value_type>(__v));}
+    insert(value_type&& __v) {return __tree_.__insert_unique(_VSTD::move(__v));}
 
     _LIBCPP_INLINE_VISIBILITY
-    iterator
-        insert(const_iterator __p,       value_type&& __v)
-            {return __tree_.__insert_unique(__p.__i_, _VSTD::forward<value_type>(__v));}
+    iterator insert(const_iterator __p,  value_type&& __v)
+    {return __tree_.__insert_unique(__p.__i_, _VSTD::move(__v));}
 #endif
 
     template <class _InputIterator>
@@ -1115,62 +1105,45 @@ public:
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
 #if _LIBCPP_STD_VER > 14
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         pair<iterator, bool> try_emplace(const key_type& __k, _Args&&... __args)
     {
-        iterator __p = lower_bound(__k);
-        if ( __p != end() && !key_comp()(__k, __p->first))
-            return _VSTD::make_pair(__p, false);
-        else
-            return _VSTD::make_pair(
-                      emplace_hint(__p, 
-                        _VSTD::piecewise_construct, _VSTD::forward_as_tuple(__k), 
-                        _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...)),
-                      true);
+        return __tree_.__emplace_unique_key_args(__k,
+            _VSTD::piecewise_construct,
+            _VSTD::forward_as_tuple(__k),
+            _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
     }
 
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         pair<iterator, bool> try_emplace(key_type&& __k, _Args&&... __args)
     {
-        iterator __p = lower_bound(__k);
-        if ( __p != end() && !key_comp()(__k, __p->first))
-            return _VSTD::make_pair(__p, false);
-        else
-            return _VSTD::make_pair(
-                      emplace_hint(__p, 
-                        _VSTD::piecewise_construct, _VSTD::forward_as_tuple(_VSTD::move(__k)), 
-                        _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...)),
-                      true);
+        return __tree_.__emplace_unique_key_args(__k,
+            _VSTD::piecewise_construct,
+            _VSTD::forward_as_tuple(_VSTD::move(__k)),
+            _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
     }
 
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         iterator try_emplace(const_iterator __h, const key_type& __k, _Args&&... __args)
     {
-        iterator __p = lower_bound(__k);
-        if ( __p != end() && !key_comp()(__k, __p->first))
-            return __p;
-        else
-            return emplace_hint(__p, 
-                      _VSTD::piecewise_construct, _VSTD::forward_as_tuple(__k), 
-                      _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
+        return __tree_.__emplace_hint_unique_key_args(__h.__i_, __k,
+            _VSTD::piecewise_construct,
+            _VSTD::forward_as_tuple(__k),
+            _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
     }
 
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         iterator try_emplace(const_iterator __h, key_type&& __k, _Args&&... __args)
     {
-        iterator __p = lower_bound(__k);
-        if ( __p != end() && !key_comp()(__k, __p->first))
-            return __p;
-        else
-            return emplace_hint(__p, 
-                      _VSTD::piecewise_construct, _VSTD::forward_as_tuple(_VSTD::move(__k)), 
-                      _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
+        return __tree_.__emplace_hint_unique_key_args(__h.__i_, __k,
+            _VSTD::piecewise_construct,
+            _VSTD::forward_as_tuple(_VSTD::move(__k)),
+            _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
     }
 
     template <class _Vp>
@@ -1185,7 +1158,7 @@ public:
         }
         return _VSTD::make_pair(emplace_hint(__p, __k, _VSTD::forward<_Vp>(__v)), true);
     }
-        
+
     template <class _Vp>
         _LIBCPP_INLINE_VISIBILITY
         pair<iterator, bool> insert_or_assign(key_type&& __k, _Vp&& __v)
@@ -1224,8 +1197,7 @@ public:
         }
         return emplace_hint(__h, _VSTD::move(__k), _VSTD::forward<_Vp>(__v));
      }
-#endif
-#endif
+
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1331,17 +1303,9 @@ private:
     typedef __map_node_destructor<__node_allocator> _Dp;
     typedef unique_ptr<__node, _Dp> __node_holder;
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    __node_holder __construct_node();
-    template <class _A0>
-        __node_holder __construct_node(_A0&& __a0);
-    __node_holder __construct_node_with_key(key_type&& __k);
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-    template <class _A0, class _A1, class ..._Args>
-        __node_holder __construct_node(_A0&& __a0, _A1&& __a1, _Args&& ...__args);
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif
+#ifdef _LIBCPP_CXX03_LANG
     __node_holder __construct_node_with_key(const key_type& __k);
+#endif
 
     __node_base_pointer const&
     __find_equal_key(__node_base_pointer& __parent, const key_type& __k) const;
@@ -1401,7 +1365,7 @@ map<_Key, _Tp, _Compare, _Allocator>::__find_equal_key(__node_base_pointer& __pa
     return __parent->__left_;
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 map<_Key, _Tp, _Compare, _Allocator>::map(map&& __m, const allocator_type& __a)
@@ -1412,69 +1376,14 @@ map<_Key, _Tp, _Compare, _Allocator>::map(map&& __m, const allocator_type& __a)
         const_iterator __e = cend();
         while (!__m.empty())
             __tree_.__insert_unique(__e.__i_,
-                    _VSTD::move(__m.__tree_.remove(__m.begin().__i_)->__value_));
+                    _VSTD::move(__m.__tree_.remove(__m.begin().__i_)->__value_.__nc));
     }
 }
 
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-typename map<_Key, _Tp, _Compare, _Allocator>::__node_holder
-map<_Key, _Tp, _Compare, _Allocator>::__construct_node()
-{
-    __node_allocator& __na = __tree_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__cc.first));
-    __h.get_deleter().__first_constructed = true;
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__cc.second));
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
+#endif  // !_LIBCPP_CXX03_LANG
 
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-template <class _A0>
-typename map<_Key, _Tp, _Compare, _Allocator>::__node_holder
-map<_Key, _Tp, _Compare, _Allocator>::__construct_node(_A0&& __a0)
-{
-    __node_allocator& __na = __tree_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_), _VSTD::forward<_A0>(__a0));
-    __h.get_deleter().__first_constructed = true;
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
 
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-typename map<_Key, _Tp, _Compare, _Allocator>::__node_holder
-map<_Key, _Tp, _Compare, _Allocator>::__construct_node_with_key(key_type&& __k)
-{
-    __node_allocator& __na = __tree_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__cc.first), _VSTD::move(__k));
-    __h.get_deleter().__first_constructed = true;
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__cc.second));
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-template <class _A0, class _A1, class ..._Args>
-typename map<_Key, _Tp, _Compare, _Allocator>::__node_holder
-map<_Key, _Tp, _Compare, _Allocator>::__construct_node(_A0&& __a0, _A1&& __a1, _Args&& ...__args)
-{
-    __node_allocator& __na = __tree_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_),
-                             _VSTD::forward<_A0>(__a0), _VSTD::forward<_A1>(__a1),
-                             _VSTD::forward<_Args>(__args)...);
-    __h.get_deleter().__first_constructed = true;
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifdef _LIBCPP_CXX03_LANG
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 typename map<_Key, _Tp, _Compare, _Allocator>::__node_holder
@@ -1505,25 +1414,29 @@ map<_Key, _Tp, _Compare, _Allocator>::operator[](const key_type& __k)
     return __r->__value_.__cc.second;
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#else
+
+template <class _Key, class _Tp, class _Compare, class _Allocator>
+_Tp&
+map<_Key, _Tp, _Compare, _Allocator>::operator[](const key_type& __k)
+{
+    return __tree_.__emplace_unique_key_args(__k,
+        _VSTD::piecewise_construct,
+        _VSTD::forward_as_tuple(__k),
+        _VSTD::forward_as_tuple()).first->__cc.second;
+}
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp&
 map<_Key, _Tp, _Compare, _Allocator>::operator[](key_type&& __k)
 {
-    __node_base_pointer __parent;
-    __node_base_pointer& __child = __find_equal_key(__parent, __k);
-    __node_pointer __r = static_cast<__node_pointer>(__child);
-    if (__child == nullptr)
-    {
-        __node_holder __h = __construct_node_with_key(_VSTD::move(__k));
-        __tree_.__insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
-        __r = __h.release();
-    }
-    return __r->__value_.__cc.second;
+    return __tree_.__emplace_unique_key_args(__k,
+        _VSTD::piecewise_construct,
+        _VSTD::forward_as_tuple(_VSTD::move(__k)),
+        _VSTD::forward_as_tuple()).first->__cc.second;
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // !_LIBCPP_CXX03_LANG
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 _Tp&
@@ -1551,34 +1464,6 @@ map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) const
     return static_cast<__node_pointer>(__child)->__value_.__cc.second;
 }
 
-#if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
-
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-template <class ..._Args>
-pair<typename map<_Key, _Tp, _Compare, _Allocator>::iterator, bool>
-map<_Key, _Tp, _Compare, _Allocator>::emplace(_Args&& ...__args)
-{
-    __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
-    pair<iterator, bool> __r = __tree_.__node_insert_unique(__h.get());
-    if (__r.second)
-        __h.release();
-    return __r;
-}
-
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-template <class ..._Args>
-typename map<_Key, _Tp, _Compare, _Allocator>::iterator
-map<_Key, _Tp, _Compare, _Allocator>::emplace_hint(const_iterator __p,
-                                                   _Args&& ...__args)
-{
-    __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
-    iterator __r = __tree_.__node_insert_unique(__p.__i_, __h.get());
-    if (__r.__i_.__ptr_ == __h.get())
-        __h.release();
-    return __r;
-}
-
-#endif  // !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1876,18 +1761,19 @@ public:
     value_compare  value_comp() const
         {return value_compare(__tree_.value_comp().key_comp());}
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
 
     template <class ..._Args>
-        iterator
-        emplace(_Args&& ...__args);
+    _LIBCPP_INLINE_VISIBILITY
+    iterator emplace(_Args&& ...__args) {
+        return __tree_.__emplace_multi(_VSTD::forward<_Args>(__args)...);
+    }
 
     template <class ..._Args>
-        iterator
-        emplace_hint(const_iterator __p, _Args&& ...__args);
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+    _LIBCPP_INLINE_VISIBILITY
+    iterator emplace_hint(const_iterator __p, _Args&& ...__args) {
+        return __tree_.__emplace_hint_multi(__p.__i_, _VSTD::forward<_Args>(__args)...);
+    }
 
     template <class _Pp,
               class = typename enable_if<is_constructible<value_type, _Pp>::value>::type>
@@ -1901,7 +1787,7 @@ public:
         iterator insert(const_iterator __pos, _Pp&& __p)
             {return __tree_.__insert_multi(__pos.__i_, _VSTD::forward<_Pp>(__p));}
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const value_type& __v) {return __tree_.__insert_multi(__v);}
@@ -1911,12 +1797,15 @@ public:
             {return __tree_.__insert_multi(__p.__i_, __v);}
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
+    // TODO(EricWF): These functions are C++17 only but they should probably
+    // be exposed in C++11.
     _LIBCPP_INLINE_VISIBILITY
-    iterator insert( value_type&& __v) {return __tree_.__insert_multi(_VSTD::forward<value_type>(__v));}
+    iterator insert(value_type&& __v)
+        {return __tree_.__insert_multi(_VSTD::move(__v));}
 
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator __p, value_type&& __v)
-            {return __tree_.__insert_multi(__p.__i_, _VSTD::forward<value_type>(__v));}
+        {return __tree_.__insert_multi(__p.__i_, _VSTD::move(__v));}
 #endif
 
     template <class _InputIterator>
@@ -2035,21 +1924,9 @@ private:
 
     typedef __map_node_destructor<__node_allocator> _Dp;
     typedef unique_ptr<__node, _Dp> __node_holder;
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    __node_holder __construct_node();
-    template <class _A0>
-        __node_holder
-         __construct_node(_A0&& __a0);
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-    template <class _A0, class _A1, class ..._Args>
-        __node_holder __construct_node(_A0&& __a0, _A1&& __a1, _Args&& ...__args);
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 };
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#ifndef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 multimap<_Key, _Tp, _Compare, _Allocator>::multimap(multimap&& __m, const allocator_type& __a)
     : __tree_(_VSTD::move(__m.__tree_), __a)
@@ -2059,82 +1936,10 @@ multimap<_Key, _Tp, _Compare, _Allocator>::multimap(multimap&& __m, const alloca
         const_iterator __e = cend();
         while (!__m.empty())
             __tree_.__insert_multi(__e.__i_,
-                    _VSTD::move(__m.__tree_.remove(__m.begin().__i_)->__value_));
+                    _VSTD::move(__m.__tree_.remove(__m.begin().__i_)->__value_.__nc));
     }
 }
-
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-typename multimap<_Key, _Tp, _Compare, _Allocator>::__node_holder
-multimap<_Key, _Tp, _Compare, _Allocator>::__construct_node()
-{
-    __node_allocator& __na = __tree_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__cc.first));
-    __h.get_deleter().__first_constructed = true;
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__cc.second));
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-template <class _A0>
-typename multimap<_Key, _Tp, _Compare, _Allocator>::__node_holder
-multimap<_Key, _Tp, _Compare, _Allocator>::__construct_node(_A0&& __a0)
-{
-    __node_allocator& __na = __tree_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_), _VSTD::forward<_A0>(__a0));
-    __h.get_deleter().__first_constructed = true;
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-template <class _A0, class _A1, class ..._Args>
-typename multimap<_Key, _Tp, _Compare, _Allocator>::__node_holder
-multimap<_Key, _Tp, _Compare, _Allocator>::__construct_node(_A0&& __a0, _A1&& __a1, _Args&& ...__args)
-{
-    __node_allocator& __na = __tree_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_),
-                             _VSTD::forward<_A0>(__a0), _VSTD::forward<_A1>(__a1),
-                             _VSTD::forward<_Args>(__args)...);
-    __h.get_deleter().__first_constructed = true;
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-#if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
-
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-template <class ..._Args>
-typename multimap<_Key, _Tp, _Compare, _Allocator>::iterator
-multimap<_Key, _Tp, _Compare, _Allocator>::emplace(_Args&& ...__args)
-{
-    __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
-    iterator __r = __tree_.__node_insert_multi(__h.get());
-    __h.release();
-    return __r;
-}
-
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-template <class ..._Args>
-typename multimap<_Key, _Tp, _Compare, _Allocator>::iterator
-multimap<_Key, _Tp, _Compare, _Allocator>::emplace_hint(const_iterator __p,
-                                                        _Args&& ...__args)
-{
-    __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
-    iterator __r = __tree_.__node_insert_multi(__p.__i_, __h.get());
-    __h.release();
-    return __r;
-}
-
-#endif  // !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
+#endif
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY

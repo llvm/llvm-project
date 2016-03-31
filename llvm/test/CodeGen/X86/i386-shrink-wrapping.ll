@@ -1,5 +1,5 @@
-; RUN: llc %s -o - -enable-shrink-wrap=true | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
-; RUN: llc %s -o - -enable-shrink-wrap=false | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
+; RUN: llc %s -o - -enable-shrink-wrap=true -no-x86-call-frame-opt | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
+; RUN: llc %s -o - -enable-shrink-wrap=false -no-x86-call-frame-opt | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386-apple-macosx"
 

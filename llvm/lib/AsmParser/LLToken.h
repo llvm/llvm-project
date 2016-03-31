@@ -59,6 +59,7 @@ namespace lltok {
     kw_notail,
     kw_target,
     kw_triple,
+    kw_source_filename,
     kw_unwind,
     kw_deplibs,                 // FIXME: Remove in 4.0
     kw_datalayout,

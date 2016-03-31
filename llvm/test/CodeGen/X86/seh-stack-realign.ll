@@ -57,19 +57,19 @@ entry:
 ; CHECK: movl %esp, [[reg_offs:[-0-9]+]](%esi)
 ; CHECK: movl $L__ehtable$main,
 ;       EH state 0
-; CHECK: movl $0, 40(%esi)
+; CHECK: movl $0, 32(%esi)
 ; CHECK: calll _crash
 ; CHECK: retl
 ; CHECK: LBB0_[[lpbb:[0-9]+]]: # %__except
 ;       Restore ESP
 ; CHECK: movl -24(%ebp), %esp
 ;       Restore ESI
-; CHECK: leal -44(%ebp), %esi
+; CHECK: leal -36(%ebp), %esi
 ;       Restore EBP
-; CHECK: movl 12(%esi), %ebp
+; CHECK: movl 4(%esi), %ebp
 ; CHECK: movl [[code_offs]](%esi), %[[code:[a-z]+]]
-; CHECK-DAG: movl %[[code]], 4(%esp)
-; CHECK-DAG: movl $_str, (%esp)
+; CHECK: pushl %[[code]]
+; CHECK: pushl $_str
 ; CHECK: calll _printf
 
 ; CHECK: .section .xdata,"dr"

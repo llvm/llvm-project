@@ -155,6 +155,7 @@ class CategoriesDataFormatterTestCase(TestBase):
         self.runCmd("type category enable Category1")
         
         self.runCmd("type summary list -w Category1")
+        self.expect("type summary list -w NoSuchCategoryHere", substrs=['no matching results found'])
         
         self.expect("frame variable r1 r2 r3",
                 substrs = ['r1 = Category1',

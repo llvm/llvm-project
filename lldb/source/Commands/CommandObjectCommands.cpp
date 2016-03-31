@@ -24,6 +24,7 @@
 #include "lldb/Interpreter/CommandObjectRegexCommand.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
+#include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -430,13 +431,94 @@ static const char *g_python_command_instructions =   "Enter your Python command(
 
 class CommandObjectCommandsAlias : public CommandObjectRaw
 {
+protected:
+    class CommandOptions : public OptionGroup
+    {
+    public:
+        CommandOptions () :
+        OptionGroup(),
+        m_help(),
+        m_long_help()
+        {}
+        
+        ~CommandOptions() override = default;
+        
+        uint32_t
+        GetNumDefinitions () override
+        {
+            return 3;
+        }
+        
+        const OptionDefinition*
+        GetDefinitions () override
+        {
+            return g_option_table;
+        }
+        
+        Error
+        SetOptionValue (CommandInterpreter &interpreter,
+                        uint32_t option_idx,
+                        const char *option_value) override
+        {
+            Error error;
+            
+            const int short_option = g_option_table[option_idx].short_option;
+            
+            switch (short_option)
+            {
+                case 'h':
+                    m_help.SetCurrentValue(option_value);
+                    m_help.SetOptionWasSet();
+                    break;
+                    
+                case 'H':
+                    m_long_help.SetCurrentValue(option_value);
+                    m_long_help.SetOptionWasSet();
+                    break;
+                    
+                default:
+                    error.SetErrorStringWithFormat("invalid short option character '%c'", short_option);
+                    break;
+            }
+            
+            return error;
+        }
+        
+        void
+        OptionParsingStarting (CommandInterpreter &interpreter) override
+        {
+            m_help.Clear();
+            m_long_help.Clear();
+        }
+        
+        // Options table: Required for subclasses of Options.
+        
+        static OptionDefinition g_option_table[];
+        OptionValueString m_help;
+        OptionValueString m_long_help;
+    };
+
+    OptionGroupOptions m_option_group;
+    CommandOptions m_command_options;
+    
 public:
+    Options *
+    GetOptions () override
+    {
+        return &m_option_group;
+    }
+
     CommandObjectCommandsAlias (CommandInterpreter &interpreter) :
         CommandObjectRaw(interpreter,
                          "command alias",
                          "Allow users to define their own debugger command abbreviations.",
-                         nullptr)
+                         nullptr),
+        m_option_group(interpreter),
+        m_command_options()
     {
+        m_option_group.Append(&m_command_options);
+        m_option_group.Finalize();
+
         SetHelpLong(
 "'alias' allows the user to create a short-cut or abbreviation for long \
 commands, multi-word commands, and commands that take particular options.  \
@@ -547,8 +629,58 @@ protected:
     bool
     DoExecute (const char *raw_command_line, CommandReturnObject &result) override
     {
-        Args args (raw_command_line);
-        std::string raw_command_string (raw_command_line);
+        if (!raw_command_line || !raw_command_line[0])
+        {
+            result.AppendError ("'alias' requires at least two arguments");
+            return false;
+        }
+        
+        m_option_group.NotifyOptionParsingStarting();
+        
+        const char * remainder = nullptr;
+        
+        if (raw_command_line[0] == '-')
+        {
+            // We have some options and these options MUST end with --.
+            const char *end_options = nullptr;
+            const char *s = raw_command_line;
+            while (s && s[0])
+            {
+                end_options = ::strstr (s, "--");
+                if (end_options)
+                {
+                    end_options += 2; // Get past the "--"
+                    if (::isspace (end_options[0]))
+                    {
+                        remainder = end_options;
+                        while (::isspace (*remainder))
+                            ++remainder;
+                        break;
+                    }
+                }
+                s = end_options;
+            }
+            
+            if (end_options)
+            {
+                Args args (llvm::StringRef(raw_command_line, end_options - raw_command_line));
+                if (!ParseOptions (args, result))
+                    return false;
+                
+                Error error (m_option_group.NotifyOptionParsingFinished());
+                if (error.Fail())
+                {
+                    result.AppendError (error.AsCString());
+                    result.SetStatus (eReturnStatusFailed);
+                    return false;
+                }
+            }
+        }
+        if (nullptr == remainder)
+            remainder = raw_command_line;
+        
+        std::string raw_command_string (remainder);
+        Args args (raw_command_string.c_str());
         
         size_t argc = args.GetArgumentCount();
         
@@ -629,8 +761,12 @@ protected:
                     result.AppendWarningWithFormat ("Overwriting existing definition for '%s'.\n",
                                                     alias_command.c_str());
                 }
-                if (m_interpreter.AddAlias (alias_command.c_str(), cmd_obj_sp, raw_command_string.c_str()))
+                if (CommandAlias *alias = m_interpreter.AddAlias (alias_command.c_str(), cmd_obj_sp, raw_command_string.c_str()))
                 {
+                    if (m_command_options.m_help.OptionWasSet())
+                        alias->SetHelp(m_command_options.m_help.GetCurrentValue());
+                    if (m_command_options.m_long_help.OptionWasSet())
+                        alias->SetHelpLong(m_command_options.m_long_help.GetCurrentValue());
                     result.SetStatus (eReturnStatusSuccessFinishNoResult);
                 }
                 else
@@ -731,10 +867,14 @@ protected:
                                                      alias_command.c_str());
                  }
                  
-                 if (m_interpreter.AddAlias(alias_command.c_str(),
-                                            use_subcommand ? subcommand_obj_sp : command_obj_sp,
-                                            args_string.c_str()))
+                 if (CommandAlias *alias = m_interpreter.AddAlias(alias_command.c_str(),
+                                                                  use_subcommand ? subcommand_obj_sp : command_obj_sp,
+                                                                  args_string.c_str()))
                  {
+                     if (m_command_options.m_help.OptionWasSet())
+                         alias->SetHelp(m_command_options.m_help.GetCurrentValue());
+                     if (m_command_options.m_long_help.OptionWasSet())
+                         alias->SetHelpLong(m_command_options.m_long_help.GetCurrentValue());
                      result.SetStatus (eReturnStatusSuccessFinishNoResult);
                  }
                  else
@@ -754,6 +894,14 @@ protected:
 
         return result.Succeeded();
     }
+};
+
+OptionDefinition
+CommandObjectCommandsAlias::CommandOptions::g_option_table[] =
+{
+    { LLDB_OPT_SET_ALL, false, "help",      'h', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeHelpText,    "Help text for this command"},
+    { LLDB_OPT_SET_ALL, false, "long-help", 'H', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeHelpText,    "Long help text for this command"},
+    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
 };
 
 #pragma mark CommandObjectCommandsUnalias

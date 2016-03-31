@@ -289,40 +289,40 @@ bool sliceFromFatFile(MemoryBufferRef mb, MachOLinkingContext::Arch arch,
                       uint32_t &offset, uint32_t &size);
 
 /// Reads a mach-o file and produces an in-memory normalized view.
-ErrorOr<std::unique_ptr<NormalizedFile>>
+llvm::Expected<std::unique_ptr<NormalizedFile>>
 readBinary(std::unique_ptr<MemoryBuffer> &mb,
            const MachOLinkingContext::Arch arch);
 
 /// Takes in-memory normalized view and writes a mach-o object file.
-std::error_code writeBinary(const NormalizedFile &file, StringRef path);
+llvm::Error writeBinary(const NormalizedFile &file, StringRef path);
 
 size_t headerAndLoadCommandsSize(const NormalizedFile &file);
 
 
 /// Parses a yaml encoded mach-o file to produce an in-memory normalized view.
-ErrorOr<std::unique_ptr<NormalizedFile>>
+llvm::Expected<std::unique_ptr<NormalizedFile>>
 readYaml(std::unique_ptr<MemoryBuffer> &mb);
 
 /// Writes a yaml encoded mach-o files given an in-memory normalized view.
 std::error_code writeYaml(const NormalizedFile &file, raw_ostream &out);
 
-std::error_code
+llvm::Error
 normalizedObjectToAtoms(MachOFile *file,
                         const NormalizedFile &normalizedFile,
                         bool copyRefs);
 
-std::error_code
+llvm::Error
 normalizedDylibToAtoms(MachODylibFile *file,
                        const NormalizedFile &normalizedFile,
                        bool copyRefs);
 
 /// Takes in-memory normalized dylib or object and parses it into lld::File
-ErrorOr<std::unique_ptr<lld::File>>
+llvm::Expected<std::unique_ptr<lld::File>>
 normalizedToAtoms(const NormalizedFile &normalizedFile, StringRef path,
                   bool copyRefs);
 
 /// Takes atoms and generates a normalized macho-o view.
-ErrorOr<std::unique_ptr<NormalizedFile>>
+llvm::Expected<std::unique_ptr<NormalizedFile>>
 normalizedFromAtoms(const lld::File &atomFile, const MachOLinkingContext &ctxt);
 
 

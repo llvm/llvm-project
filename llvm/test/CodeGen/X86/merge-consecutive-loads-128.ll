@@ -742,3 +742,42 @@ define <4 x float> @merge_4f32_f32_2345_volatile(float* %ptr) nounwind uwtable n
   %res3 = insertelement <4 x float> %res2, float %val3, i32 3
   ret <4 x float> %res3
 }
+
+;
+; Non-consecutive test.
+;
+
+define <4 x float> @merge_4f32_f32_X0YY(float* %ptr0, float* %ptr1) nounwind uwtable noinline ssp {
+; SSE-LABEL: merge_4f32_f32_X0YY:
+; SSE:       # BB#0:
+; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: merge_4f32_f32_X0YY:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    retq
+;
+; X32-SSE-LABEL: merge_4f32_f32_X0YY:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; X32-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-SSE-NEXT:    retl
+  %val0 = load float, float* %ptr0, align 4
+  %val1 = load float, float* %ptr1, align 4
+  %res0 = insertelement <4 x float> undef, float %val0, i32 0
+  %res1 = insertelement <4 x float> %res0, float 0.000000e+00, i32 1
+  %res2 = insertelement <4 x float> %res1, float %val1, i32 2
+  %res3 = insertelement <4 x float> %res2, float %val1, i32 3
+  ret <4 x float> %res3
+}

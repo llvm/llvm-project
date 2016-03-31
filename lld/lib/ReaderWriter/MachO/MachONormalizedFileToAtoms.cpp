@@ -269,11 +269,11 @@ void atomFromSymbol(DefinedAtom::ContentType atomType, const Section &section,
   }
 }
 
-std::error_code processSymboledSection(DefinedAtom::ContentType atomType,
-                                       const Section &section,
-                                       const NormalizedFile &normalizedFile,
-                                       MachOFile &file, bool scatterable,
-                                       bool copyRefs) {
+llvm::Error processSymboledSection(DefinedAtom::ContentType atomType,
+                                   const Section &section,
+                                   const NormalizedFile &normalizedFile,
+                                   MachOFile &file, bool scatterable,
+                                   bool copyRefs) {
   // Find section's index.
   uint32_t sectIndex = 1;
   for (auto &sect : normalizedFile.sections) {
@@ -320,7 +320,7 @@ std::error_code processSymboledSection(DefinedAtom::ContentType atomType,
 
   // If section has no symbols and no content, there are no atoms.
   if (symbols.empty() && section.content.empty())
-    return std::error_code();
+    return llvm::Error();
 
   if (symbols.empty()) {
     // Section has no symbols, put all content in one anoymous atom.
@@ -371,15 +371,15 @@ std::error_code processSymboledSection(DefinedAtom::ContentType atomType,
     });
   }
 
-  return std::error_code();
+  return llvm::Error();
 }
 
-std::error_code processSection(DefinedAtom::ContentType atomType,
-                               const Section &section,
-                               bool customSectionName,
-                               const NormalizedFile &normalizedFile,
-                               MachOFile &file, bool scatterable,
-                               bool copyRefs) {
+llvm::Error processSection(DefinedAtom::ContentType atomType,
+                           const Section &section,
+                           bool customSectionName,
+                           const NormalizedFile &normalizedFile,
+                           MachOFile &file, bool scatterable,
+                           bool copyRefs) {
   const bool is64 = MachOLinkingContext::is64Bit(normalizedFile.arch);
   const bool isBig = MachOLinkingContext::isBigEndian(normalizedFile.arch);
 
@@ -392,12 +392,13 @@ std::error_code processSection(DefinedAtom::ContentType atomType,
 
   // Validate section size.
   if ((section.content.size() % sizeMultiple) != 0)
-    return make_dynamic_error_code(Twine("Section ") + section.segmentName
-                                     + "/" + section.sectionName
-                                     + " has size ("
-                                     + Twine(section.content.size())
-                                     + ") which is not a multiple of "
-                                     + Twine(sizeMultiple) );
+    return llvm::make_error<GenericError>(Twine("Section ")
+                                          + section.segmentName
+                                          + "/" + section.sectionName
+                                          + " has size ("
+                                          + Twine(section.content.size())
+                                          + ") which is not a multiple of "
+                                          + Twine(sizeMultiple));
 
   if (atomizeModel == atomizeAtSymbols) {
     // Break section up into atoms each with a fixed size.
@@ -439,13 +440,13 @@ std::error_code processSection(DefinedAtom::ContentType atomType,
         // Break section up into dwarf unwind CFIs (FDE or CIE).
         size = read32(&section.content[offset], isBig) + 4;
         if (offset+size > section.content.size()) {
-          return make_dynamic_error_code(Twine(Twine("Section ")
-                                         + section.segmentName
-                                         + "/" + section.sectionName
-                                         + " is malformed.  Size of CFI "
-                                         "starting at offset ("
-                                         + Twine(offset)
-                                         + ") is past end of section."));
+          return llvm::make_error<GenericError>(Twine("Section ")
+                                                + section.segmentName
+                                                + "/" + section.sectionName
+                                                + " is malformed.  Size of CFI "
+                                                "starting at offset ("
+                                                + Twine(offset)
+                                                + ") is past end of section.");
         }
         break;
       case atomizeCU:
@@ -460,10 +461,11 @@ std::error_code processSection(DefinedAtom::ContentType atomType,
         break;
       }
       if (size == 0) {
-        return make_dynamic_error_code(Twine("Section ") + section.segmentName
-                                     + "/" + section.sectionName
-                                     + " is malformed.  The last atom is "
-                                     "not zero terminated.");
+        return llvm::make_error<GenericError>(Twine("Section ")
+                                              + section.segmentName
+                                              + "/" + section.sectionName
+                                              + " is malformed.  The last atom "
+                                              "is not zero terminated.");
       }
       if (customSectionName) {
         // Mach-O needs a segment and section name.  Concatentate those two
@@ -481,7 +483,7 @@ std::error_code processSection(DefinedAtom::ContentType atomType,
       offset += size;
     }
   }
-  return std::error_code();
+  return llvm::Error();
 }
 
 const Section* findSectionCoveringAddress(const NormalizedFile &normalizedFile,
@@ -704,18 +706,18 @@ struct CIEInfo {
 
 typedef llvm::DenseMap<const MachODefinedAtom*, CIEInfo> CIEInfoMap;
 
-static std::error_code processAugmentationString(const uint8_t *augStr,
-                                                 CIEInfo &cieInfo,
-                                                 unsigned &len) {
+static llvm::Error processAugmentationString(const uint8_t *augStr,
+                                             CIEInfo &cieInfo,
+                                             unsigned &len) {
 
   if (augStr[0] == '\0') {
     len = 1;
-    return std::error_code();
+    return llvm::Error();
   }
 
   if (augStr[0] != 'z')
-    return make_dynamic_error_code("expected 'z' at start of augmentation "
-                                   "string");
+    return llvm::make_error<GenericError>("expected 'z' at start of "
+                                          "augmentation string");
 
   cieInfo._augmentationDataPresent = true;
   uint64_t idx = 1;
@@ -748,7 +750,8 @@ static std::error_code processAugmentationString(const uint8_t *augStr,
     }
     if (augStr[idx] == 'e') {
       if (augStr[idx + 1] != 'h')
-        return make_dynamic_error_code("expected 'eh' in augmentation string");
+        return llvm::make_error<GenericError>("expected 'eh' in "
+                                              "augmentation string");
       cieInfo._mayHaveEH = true;
       idx += 2;
       continue;
@@ -759,16 +762,16 @@ static std::error_code processAugmentationString(const uint8_t *augStr,
   cieInfo._augmentationDataLength = offsetInAugmentationData;
 
   len = idx + 1;
-  return std::error_code();
+  return llvm::Error();
 }
 
-static std::error_code processCIE(const NormalizedFile &normalizedFile,
-                                  MachOFile &file,
-                                  mach_o::ArchHandler &handler,
-                                  const Section *ehFrameSection,
-                                  MachODefinedAtom *atom,
-                                  uint64_t offset,
-                                  CIEInfoMap &cieInfos) {
+static llvm::Error processCIE(const NormalizedFile &normalizedFile,
+                              MachOFile &file,
+                              mach_o::ArchHandler &handler,
+                              const Section *ehFrameSection,
+                              MachODefinedAtom *atom,
+                              uint64_t offset,
+                              CIEInfoMap &cieInfos) {
   const bool isBig = MachOLinkingContext::isBigEndian(normalizedFile.arch);
   const uint8_t *frameData = atom->rawContent().data();
 
@@ -814,7 +817,8 @@ static std::error_code processCIE(const NormalizedFile &normalizedFile,
                           &lengthFieldSize);
 
     if (AugmentationLength != cieInfo._augmentationDataLength)
-      return make_dynamic_error_code("CIE augmentation data length mismatch");
+      return llvm::make_error<GenericError>("CIE augmentation data length "
+                                            "mismatch");
 
     // Get the start address of the augmentation data.
     uint64_t AugmentationDataField = AugmentationLengthField + lengthFieldSize;
@@ -832,10 +836,11 @@ static std::error_code processCIE(const NormalizedFile &normalizedFile,
       // offset as this is where we'd expect it to be applied to.
       DefinedAtom::reference_iterator CurrentRef = atom->begin();
       if (CurrentRef->offsetInAtom() != PersonalityFunctionField)
-        return make_dynamic_error_code("CIE personality reloc at wrong offset");
+        return llvm::make_error<GenericError>("CIE personality reloc at "
+                                              "wrong offset");
 
       if (++CurrentRef != atom->end())
-        return make_dynamic_error_code("CIE contains too many relocs");
+        return llvm::make_error<GenericError>("CIE contains too many relocs");
     } else {
       // Implicitly generate the personality function reloc.  It's assumed to
       // be a delta32 offset to a GOT entry.
@@ -856,22 +861,22 @@ static std::error_code processCIE(const NormalizedFile &normalizedFile,
   } else if (atom->begin() != atom->end()) {
     // Otherwise, we expect there to be no relocations in this atom as the only
     // relocation would have been to the personality function.
-    return make_dynamic_error_code("unexpected relocation in CIE");
+    return llvm::make_error<GenericError>("unexpected relocation in CIE");
   }
 
 
   cieInfos[atom] = std::move(cieInfo);
 
-  return std::error_code();
+  return llvm::Error();
 }
 
-static std::error_code processFDE(const NormalizedFile &normalizedFile,
-                                  MachOFile &file,
-                                  mach_o::ArchHandler &handler,
-                                  const Section *ehFrameSection,
-                                  MachODefinedAtom *atom,
-                                  uint64_t offset,
-                                  const CIEInfoMap &cieInfos) {
+static llvm::Error processFDE(const NormalizedFile &normalizedFile,
+                              MachOFile &file,
+                              mach_o::ArchHandler &handler,
+                              const Section *ehFrameSection,
+                              MachODefinedAtom *atom,
+                              uint64_t offset,
+                              const CIEInfoMap &cieInfos) {
 
   const bool isBig = MachOLinkingContext::isBigEndian(normalizedFile.arch);
   const bool is64 = MachOLinkingContext::is64Bit(normalizedFile.arch);
@@ -1006,12 +1011,12 @@ static std::error_code processFDE(const NormalizedFile &normalizedFile,
     }
   }
 
-  return std::error_code();
+  return llvm::Error();
 }
 
-std::error_code addEHFrameReferences(const NormalizedFile &normalizedFile,
-                                     MachOFile &file,
-                                     mach_o::ArchHandler &handler) {
+llvm::Error addEHFrameReferences(const NormalizedFile &normalizedFile,
+                                 MachOFile &file,
+                                 mach_o::ArchHandler &handler) {
 
   const Section *ehFrameSection = nullptr;
   for (auto &section : normalizedFile.sections)
@@ -1023,9 +1028,9 @@ std::error_code addEHFrameReferences(const NormalizedFile &normalizedFile,
 
   // No __eh_frame so nothing to do.
   if (!ehFrameSection)
-    return std::error_code();
+    return llvm::Error();
 
-  std::error_code ehFrameErr;
+  llvm::Error ehFrameErr;
   CIEInfoMap cieInfos;
 
   file.eachAtomInSection(*ehFrameSection,
@@ -1048,9 +1053,9 @@ std::error_code addEHFrameReferences(const NormalizedFile &normalizedFile,
   return ehFrameErr;
 }
 
-std::error_code parseObjCImageInfo(const Section &sect,
-                                   const NormalizedFile &normalizedFile,
-                                   MachOFile &file) {
+llvm::Error parseObjCImageInfo(const Section &sect,
+                               const NormalizedFile &normalizedFile,
+                               MachOFile &file) {
 
   //	struct objc_image_info  {
   //		uint32_t	version;	// initially 0
@@ -1059,26 +1064,26 @@ std::error_code parseObjCImageInfo(const Section &sect,
 
   ArrayRef<uint8_t> content = sect.content;
   if (content.size() != 8)
-    return make_dynamic_error_code(sect.segmentName + "/" +
-                                   sect.sectionName +
-                                   " in file " + file.path() +
-                                   " should be 8 bytes in size");
+    return llvm::make_error<GenericError>(sect.segmentName + "/" +
+                                          sect.sectionName +
+                                          " in file " + file.path() +
+                                          " should be 8 bytes in size");
 
   const bool isBig = MachOLinkingContext::isBigEndian(normalizedFile.arch);
   uint32_t version = read32(content.data(), isBig);
   if (version)
-    return make_dynamic_error_code(sect.segmentName + "/" +
-                                   sect.sectionName +
-                                   " in file " + file.path() +
-                                   " should have version=0");
+    return llvm::make_error<GenericError>(sect.segmentName + "/" +
+                                          sect.sectionName +
+                                          " in file " + file.path() +
+                                          " should have version=0");
 
   uint32_t flags = read32(content.data() + 4, isBig);
   if (flags & (MachOLinkingContext::objc_supports_gc |
                MachOLinkingContext::objc_gc_only))
-    return make_dynamic_error_code(sect.segmentName + "/" +
-                                   sect.sectionName +
-                                   " in file " + file.path() +
-                                   " uses GC.  This is not supported");
+    return llvm::make_error<GenericError>(sect.segmentName + "/" +
+                                          sect.sectionName +
+                                          " in file " + file.path() +
+                                          " uses GC.  This is not supported");
 
   if (flags & MachOLinkingContext::objc_retainReleaseForSimulator)
     file.setObjcConstraint(MachOLinkingContext::objc_retainReleaseForSimulator);
@@ -1087,27 +1092,27 @@ std::error_code parseObjCImageInfo(const Section &sect,
 
   file.setSwiftVersion((flags >> 8) & 0xFF);
 
-  return std::error_code();
+  return llvm::Error();
 }
 
 
 /// Converts normalized mach-o file into an lld::File and lld::Atoms.
-ErrorOr<std::unique_ptr<lld::File>>
+llvm::Expected<std::unique_ptr<lld::File>>
 objectToAtoms(const NormalizedFile &normalizedFile, StringRef path,
               bool copyRefs) {
   std::unique_ptr<MachOFile> file(new MachOFile(path));
-  if (std::error_code ec = normalizedObjectToAtoms(
-        file.get(), normalizedFile, copyRefs))
-    return ec;
+  if (auto ec = normalizedObjectToAtoms(file.get(), normalizedFile, copyRefs))
+    return std::move(ec);
   return std::unique_ptr<File>(std::move(file));
 }
 
-ErrorOr<std::unique_ptr<lld::File>>
+llvm::Expected<std::unique_ptr<lld::File>>
 dylibToAtoms(const NormalizedFile &normalizedFile, StringRef path,
              bool copyRefs) {
   // Instantiate SharedLibraryFile object.
   std::unique_ptr<MachODylibFile> file(new MachODylibFile(path));
-  normalizedDylibToAtoms(file.get(), normalizedFile, copyRefs);
+  if (auto ec = normalizedDylibToAtoms(file.get(), normalizedFile, copyRefs))
+    return std::move(ec);
   return std::unique_ptr<File>(std::move(file));
 }
 
@@ -1120,7 +1125,7 @@ static bool isObjCImageInfo(const Section &sect) {
     (sect.segmentName == "__DATA" && sect.sectionName == "__objc_imageinfo");
 }
 
-std::error_code
+llvm::Error
 normalizedObjectToAtoms(MachOFile *file,
                         const NormalizedFile &normalizedFile,
                         bool copyRefs) {
@@ -1138,7 +1143,7 @@ normalizedObjectToAtoms(MachOFile *file,
     // If the file contains an objc_image_info struct, then we should parse the
     // ObjC flags and Swift version.
     if (isObjCImageInfo(sect)) {
-      if (std::error_code ec = parseObjCImageInfo(sect, normalizedFile, *file))
+      if (auto ec = parseObjCImageInfo(sect, normalizedFile, *file))
         return ec;
       // We then skip adding atoms for this section as we use the ObjCPass to
       // re-emit this data after it has been aggregated for all files.
@@ -1148,9 +1153,8 @@ normalizedObjectToAtoms(MachOFile *file,
     bool customSectionName;
     DefinedAtom::ContentType atomType = atomTypeFromSection(sect,
                                                             customSectionName);
-    if (std::error_code ec =
-            processSection(atomType, sect, customSectionName, normalizedFile,
-                           *file, scatterable, copyRefs))
+    if (auto ec =  processSection(atomType, sect, customSectionName,
+                                  normalizedFile, *file, scatterable, copyRefs))
       return ec;
   }
   // Create atoms from undefined symbols.
@@ -1173,7 +1177,7 @@ normalizedObjectToAtoms(MachOFile *file,
       continue;
     if (llvm::Error ec = convertRelocs(sect, normalizedFile, scatterable,
                                        *file, *handler))
-      return llvm::errorToErrorCode(std::move(ec));
+      return ec;
   }
 
   // Add additional arch-specific References
@@ -1185,7 +1189,7 @@ normalizedObjectToAtoms(MachOFile *file,
   // providing unwind info for) and itself (FDE -> CIE). These aren't
   // represented in the relocations on some architectures, so we have to add
   // them back in manually there.
-  if (std::error_code ec = addEHFrameReferences(normalizedFile, *file, *handler))
+  if (auto ec = addEHFrameReferences(normalizedFile, *file, *handler))
     return ec;
 
   // Process mach-o data-in-code regions array. That information is encoded in
@@ -1195,20 +1199,21 @@ normalizedObjectToAtoms(MachOFile *file,
     ++nextIndex;
     const Section* s = findSectionCoveringAddress(normalizedFile, entry.offset);
     if (!s) {
-      return make_dynamic_error_code(Twine("LC_DATA_IN_CODE address ("
-                                     + Twine(entry.offset)
-                                     + ") is not in any section"));
+      return llvm::make_error<GenericError>(Twine("LC_DATA_IN_CODE address ("
+                                                  + Twine(entry.offset)
+                                                  + ") is not in any section"));
     }
     uint64_t offsetInSect = entry.offset - s->address;
     uint32_t offsetInAtom;
     MachODefinedAtom *atom = file->findAtomCoveringAddress(*s, offsetInSect,
                                                            &offsetInAtom);
     if (offsetInAtom + entry.length > atom->size()) {
-      return make_dynamic_error_code(Twine("LC_DATA_IN_CODE entry (offset="
-                                     + Twine(entry.offset)
-                                     + ", length="
-                                     + Twine(entry.length)
-                                     + ") crosses atom boundary."));
+      return llvm::make_error<GenericError>(Twine("LC_DATA_IN_CODE entry "
+                                                  "(offset="
+                                                  + Twine(entry.offset)
+                                                  + ", length="
+                                                  + Twine(entry.length)
+                                                  + ") crosses atom boundary."));
     }
     // Add reference that marks start of data-in-code.
     atom->addReference(Reference::KindNamespace::mach_o, handler->kindArch(),
@@ -1243,10 +1248,10 @@ normalizedObjectToAtoms(MachOFile *file,
   for (const DefinedAtom* defAtom : file->defined()) {
     reinterpret_cast<const SimpleDefinedAtom*>(defAtom)->sortReferences();
   }
-  return std::error_code();
+  return llvm::Error();
 }
 
-std::error_code
+llvm::Error
 normalizedDylibToAtoms(MachODylibFile *file,
                        const NormalizedFile &normalizedFile,
                        bool copyRefs) {
@@ -1274,7 +1279,7 @@ normalizedDylibToAtoms(MachODylibFile *file,
     if (dep.kind == llvm::MachO::LC_REEXPORT_DYLIB)
       file->addReExportedDylib(dep.path);
   }
-  return std::error_code();
+  return llvm::Error();
 }
 
 void relocatableSectionInfoForContentType(DefinedAtom::ContentType atomType,
@@ -1305,7 +1310,7 @@ void relocatableSectionInfoForContentType(DefinedAtom::ContentType atomType,
   llvm_unreachable("content type not yet supported");
 }
 
-ErrorOr<std::unique_ptr<lld::File>>
+llvm::Expected<std::unique_ptr<lld::File>>
 normalizedToAtoms(const NormalizedFile &normalizedFile, StringRef path,
                   bool copyRefs) {
   switch (normalizedFile.fileType) {

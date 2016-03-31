@@ -8,9 +8,9 @@ function(llvm_update_compile_flags name)
     set(update_src_props ON)
   endif()
 
-  # LLVM_REQUIRES_EH is an internal flag that individual
-  # targets can use to force EH
-  if((LLVM_REQUIRES_EH OR LLVM_ENABLE_EH) AND NOT CLANG_CL)
+  # LLVM_REQUIRES_EH is an internal flag that individual targets can use to
+  # force EH
+  if(LLVM_REQUIRES_EH OR LLVM_ENABLE_EH)
     if(NOT (LLVM_REQUIRES_RTTI OR LLVM_ENABLE_RTTI))
       message(AUTHOR_WARNING "Exception handling requires RTTI. Enabling RTTI for ${name}")
       set(LLVM_REQUIRES_RTTI ON)

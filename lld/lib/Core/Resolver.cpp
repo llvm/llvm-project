@@ -89,7 +89,7 @@ llvm::Error Resolver::handleSharedLibrary(File &file) {
   SharedLibraryFile *sharedLibrary = cast<SharedLibraryFile>(&file);
   auto undefAddedOrError = handleFile(*sharedLibrary);
   if (auto ec = undefAddedOrError.takeError())
-    return std::move(ec);
+    return ec;
   undefAddedOrError =
       forEachUndefines(file, [&](StringRef undefName) -> llvm::Expected<bool> {
         auto atom = sharedLibrary->exports(undefName);
@@ -99,7 +99,7 @@ llvm::Error Resolver::handleSharedLibrary(File &file) {
       });
 
   if (auto ec = undefAddedOrError.takeError())
-    return std::move(ec);
+    return ec;
   return llvm::Error();
 }
 

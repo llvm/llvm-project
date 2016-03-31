@@ -1,6 +1,6 @@
-; RUN: llc < %s -stack-symbol-ordering=0 -march=x86 -mtriple=i386-apple-darwin9 -mcpu=generic -regalloc=fast -optimize-regalloc=0 | FileCheck %s
-; RUN: llc -O0 < %s -stack-symbol-ordering=0 -march=x86 -mtriple=i386-apple-darwin9 -mcpu=generic -regalloc=fast | FileCheck %s
-; RUN: llc < %s -stack-symbol-ordering=0 -march=x86 -mtriple=i386-apple-darwin9 -mcpu=atom -regalloc=fast -optimize-regalloc=0 | FileCheck -check-prefix=ATOM %s
+; RUN: llc < %s -stack-symbol-ordering=0 -march=x86 -mtriple=i386-apple-darwin9 -mcpu=generic -regalloc=fast -optimize-regalloc=0 -no-x86-call-frame-opt | FileCheck %s
+; RUN: llc -O0 < %s -stack-symbol-ordering=0 -march=x86 -mtriple=i386-apple-darwin9 -mcpu=generic -regalloc=fast -no-x86-call-frame-opt | FileCheck %s
+; RUN: llc < %s -stack-symbol-ordering=0 -march=x86 -mtriple=i386-apple-darwin9 -mcpu=atom -regalloc=fast -optimize-regalloc=0 -no-x86-call-frame-opt | FileCheck -check-prefix=ATOM %s
 ; CHECKed instructions should be the same with or without -O0 except on Intel Atom due to instruction scheduling.
 
 @.str = private constant [12 x i8] c"x + y = %i\0A\00", align 1 ; <[12 x i8]*> [#uses=1]

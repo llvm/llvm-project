@@ -327,6 +327,12 @@ static void ExpandUnalignedStore(StoreSDNode *ST, SelectionDAG &DAG,
       ST->getMemoryVT().isVector()) {
     EVT intVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
     if (TLI.isTypeLegal(intVT)) {
+      if (!TLI.isOperationLegalOrCustom(ISD::STORE, intVT)) {
+        // Scalarize the store and let the individual components be handled.
+        SDValue Result = TLI.scalarizeVectorStore(ST, DAG);
+        DAGLegalize->ReplaceNode(SDValue(ST, 0), Result);
+        return;
+      }
       // Expand to a bitconvert of the value to the integer type of the
       // same size, then a (misaligned) int store.
       // FIXME: Does not handle truncating floating point stores!
@@ -455,6 +461,14 @@ ExpandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG,
   if (VT.isFloatingPoint() || VT.isVector()) {
     EVT intVT = EVT::getIntegerVT(*DAG.getContext(), LoadedVT.getSizeInBits());
     if (TLI.isTypeLegal(intVT) && TLI.isTypeLegal(LoadedVT)) {
+      if (!TLI.isOperationLegalOrCustom(ISD::LOAD, intVT)) {
+        // Scalarize the load and let the individual components be handled.
+        SDValue Scalarized = TLI.scalarizeVectorLoad(LD, DAG);
+        ValResult = Scalarized.getValue(0);
+        ChainResult = Scalarized.getValue(1);
+        return;
+      }
+
       // Expand to a (misaligned) integer load of the same size,
       // then bitconvert to floating point or vector.
       SDValue newLoad = DAG.getLoad(intVT, dl, Chain, Ptr,

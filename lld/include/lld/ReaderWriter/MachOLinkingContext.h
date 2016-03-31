@@ -225,12 +225,12 @@ public:
   /// The -lFoo option is documented to search for libFoo.dylib and libFoo.a in
   /// that order, unless Foo ends in ".o", in which case only the exact file
   /// matches (e.g. -lfoo.o would only find foo.o).
-  ErrorOr<StringRef> searchDirForLibrary(StringRef path,
-                                         StringRef libName) const;
+  llvm::Optional<StringRef> searchDirForLibrary(StringRef path,
+                                                StringRef libName) const;
 
   /// \brief Iterates through all search path entries looking for libName (as
   /// specified by -lFoo).
-  ErrorOr<StringRef> searchLibrary(StringRef libName) const;
+  llvm::Optional<StringRef> searchLibrary(StringRef libName) const;
 
   /// Add a framework search path.  Internally, this method may be prepended
   /// the path with syslibroot.
@@ -238,7 +238,7 @@ public:
 
   /// \brief Iterates through all framework directories looking for
   /// Foo.framework/Foo (when fwName = "Foo").
-  ErrorOr<StringRef> findPathForFramework(StringRef fwName) const;
+  llvm::Optional<StringRef> findPathForFramework(StringRef fwName) const;
 
   /// \brief The dylib's binary compatibility version, in the raw uint32 format.
   ///

@@ -678,6 +678,7 @@ AArch64LoadStoreOpt::mergeNarrowInsns(MachineBasicBlock::iterator I,
             .addOperand(BaseRegOp)
             .addImm(OffsetImm)
             .setMemRefs(I->mergeMemRefsWith(*MergeMI));
+    (void)NewMemMI;
 
     DEBUG(
         dbgs()
@@ -742,6 +743,9 @@ AArch64LoadStoreOpt::mergeNarrowInsns(MachineBasicBlock::iterator I,
               .addImm(LSBHigh)
               .addImm(ImmsHigh);
     }
+    (void)BitExtMI1;
+    (void)BitExtMI2;
+
     DEBUG(dbgs() << "    ");
     DEBUG((BitExtMI1)->print(dbgs()));
     DEBUG(dbgs() << "    ");
@@ -762,7 +766,6 @@ AArch64LoadStoreOpt::mergeNarrowInsns(MachineBasicBlock::iterator I,
             .addOperand(BaseRegOp)
             .addImm(OffsetImm)
             .setMemRefs(I->mergeMemRefsWith(*MergeMI));
-
   (void)MIB;
 
   DEBUG(dbgs() << "Creating wider load/store. Replacing instructions:\n    ");
@@ -996,6 +999,7 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
               .addImm(Imms);
     }
   }
+  (void)BitExtMI;
 
   DEBUG(dbgs() << "Promoting load by replacing :\n    ");
   DEBUG(StoreI->print(dbgs()));

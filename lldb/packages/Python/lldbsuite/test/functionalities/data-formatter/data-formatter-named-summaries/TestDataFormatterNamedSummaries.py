@@ -48,7 +48,9 @@ class NamedSummariesDataFormatterTestCase(TestBase):
         self.runCmd("type summary add --summary-string \"First: x=${var.x} y=${var.y} dummy=${var.dummy}\" First")
         self.runCmd("type summary add --summary-string \"Second: x=${var.x} y=${var.y%hex}\" Second")
         self.runCmd("type summary add --summary-string \"Third: x=${var.x} z=${var.z}\" Third")
-                    
+        
+        self.expect('type summary list', substrs=['AllUseIt'])
+        
         self.expect("frame variable first",
             substrs = ['First: x=12'])
 

@@ -530,7 +530,7 @@ void MachOLinkingContext::addFrameworkSearchDir(StringRef fwPath,
     _frameworkDirs.push_back(fwPath);
 }
 
-ErrorOr<StringRef>
+llvm::Optional<StringRef>
 MachOLinkingContext::searchDirForLibrary(StringRef path,
                                          StringRef libName) const {
   SmallString<256> fullPath;
@@ -540,7 +540,7 @@ MachOLinkingContext::searchDirForLibrary(StringRef path,
     llvm::sys::path::append(fullPath, libName);
     if (fileExists(fullPath))
       return fullPath.str().copy(_allocator);
-    return make_error_code(llvm::errc::no_such_file_or_directory);
+    return llvm::None;
   }
 
   // Search for dynamic library
@@ -555,21 +555,23 @@ MachOLinkingContext::searchDirForLibrary(StringRef path,
   if (fileExists(fullPath))
     return fullPath.str().copy(_allocator);
 
-  return make_error_code(llvm::errc::no_such_file_or_directory);
+  return llvm::None;
 }
 
-ErrorOr<StringRef> MachOLinkingContext::searchLibrary(StringRef libName) const {
+llvm::Optional<StringRef>
+MachOLinkingContext::searchLibrary(StringRef libName) const {
   SmallString<256> path;
   for (StringRef dir : searchDirs()) {
-    ErrorOr<StringRef> ec = searchDirForLibrary(dir, libName);
-    if (ec)
-      return ec;
+    llvm::Optional<StringRef> searchDir = searchDirForLibrary(dir, libName);
+    if (searchDir)
+      return searchDir;
   }
 
-  return make_error_code(llvm::errc::no_such_file_or_directory);
+  return llvm::None;
 }
 
-ErrorOr<StringRef> MachOLinkingContext::findPathForFramework(StringRef fwName) const{
+llvm::Optional<StringRef>
+MachOLinkingContext::findPathForFramework(StringRef fwName) const{
   SmallString<256> fullPath;
   for (StringRef dir : frameworkDirs()) {
     fullPath.assign(dir);
@@ -578,7 +580,7 @@ ErrorOr<StringRef> MachOLinkingContext::findPathForFramework(StringRef fwName) c
       return fullPath.str().copy(_allocator);
   }
 
-  return make_error_code(llvm::errc::no_such_file_or_directory);
+  return llvm::None;
 }
 
 bool MachOLinkingContext::validateImpl(raw_ostream &diagnostics) {
@@ -706,9 +708,8 @@ MachODylibFile* MachOLinkingContext::findIndirectDylib(StringRef path) {
   if (leafName.startswith("lib") && leafName.endswith(".dylib")) {
     // FIXME: Need to enhance searchLibrary() to only look for .dylib
     auto libPath = searchLibrary(leafName);
-    if (!libPath.getError()) {
-      return loadIndirectDylib(libPath.get());
-    }
+    if (libPath)
+      return loadIndirectDylib(libPath.getValue());
   }
 
   // Try full path with sysroot.

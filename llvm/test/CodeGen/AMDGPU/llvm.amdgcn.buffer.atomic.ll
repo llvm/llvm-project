@@ -68,7 +68,6 @@ main_body:
 ; create copies which we don't bother to track here.
 ;
 ;CHECK-LABEL: {{^}}test3:
-;CHECK-DAG: s_movk_i32 [[SOFS:s[0-9]+]], 0x1fff
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 0 glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, v2, s[0:3], 0 idxen glc
@@ -79,6 +78,7 @@ main_body:
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, v3, s[0:3], 0 offen offset:42 glc
 ;CHECK-DAG: s_waitcnt vmcnt(0)
+;CHECK-DAG: s_movk_i32 [[SOFS:s[0-9]+]], 0x1fff
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, s[0:3], [[SOFS]] offset:1 glc
 define float @test3(<4 x i32> inreg %rsrc, i32 %data, i32 %cmp, i32 %vindex, i32 %voffset) #0 {
 main_body:

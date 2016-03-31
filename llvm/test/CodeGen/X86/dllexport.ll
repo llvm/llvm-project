@@ -21,7 +21,7 @@ define dllexport void @f2() unnamed_addr {
 	ret void
 }
 
-declare dllexport void @not_defined()
+declare dllexport void @notDefined()
 
 ; CHECK: .globl _stdfun@0
 define dllexport x86_stdcallcc void @stdfun() nounwind {
@@ -89,7 +89,7 @@ define weak_odr dllexport void @weak1() {
 @weak_alias = weak_odr dllexport alias void(), void()* @f1
 
 ; CHECK: .section .drectve
-; CHECK-CL-NOT: not_exported
+; CHECK-CL-NOT: notExported
 ; CHECK-CL: /EXPORT:_f1
 ; CHECK-CL-SAME: /EXPORT:_f2
 ; CHECK-CL-SAME: /EXPORT:_stdfun@0
@@ -107,8 +107,8 @@ define weak_odr dllexport void @weak1() {
 ; CHECK-CL-SAME: /EXPORT:_alias2
 ; CHECK-CL-SAME: /EXPORT:_alias3
 ; CHECK-CL-SAME: /EXPORT:_weak_alias"
-; CHECK-CL-NOT: not_exported
-; CHECK-GCC-NOT: not_exported
+; CHECK-CL-NOT: notExported
+; CHECK-GCC-NOT: notExported
 ; CHECK-GCC: -export:f1
 ; CHECK-GCC-SAME: -export:f2
 ; CHECK-GCC-SAME: -export:stdfun@0
@@ -126,4 +126,4 @@ define weak_odr dllexport void @weak1() {
 ; CHECK-GCC-SAME: -export:alias2
 ; CHECK-GCC-SAME: -export:alias3
 ; CHECK-GCC-SAME: -export:weak_alias"
-; CHECK-GCC-NOT: not_exported
+; CHECK-GCC-NOT: notExported
