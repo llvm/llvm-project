@@ -75,7 +75,7 @@ declare i8 @test6g(i8*)
 !0 = !{!1, !1, i64 0}
 !1 = !{!"foo"}
 !2 = !{i8 0, i8 2}
-!3 = distinct !DICompileUnit(language: DW_LANG_C99, file: !7, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !4, subprograms: !4, globals: !4)
+!3 = distinct !DICompileUnit(language: DW_LANG_C99, file: !7, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !4, subprograms: !{!6}, globals: !4)
 !4 = !{}
 !5 = !DILocation(line: 23, scope: !6)
 !6 = distinct !DISubprogram(name: "foo", scope: !3, file: !7, line: 1, type: !DISubroutineType(types: !4), isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, variables: !4)
