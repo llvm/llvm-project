@@ -78,9 +78,8 @@ lldb_private::formatters::NSBundleSummaryProvider (ValueObject& valobj, Stream& 
             return true;
         }
     }
-    // this is either an unknown subclass or an NSBundle that comes from [NSBundle mainBundle]
-    // which is encoded differently and needs to be handled by running code
-    return ExtractSummaryFromObjCExpression(valobj, "NSString*", "bundlePath", stream, options.GetLanguage());
+    
+    return false;
 }
 
 bool
@@ -124,7 +123,8 @@ lldb_private::formatters::NSTimeZoneSummaryProvider (ValueObject& valobj, Stream
             return true;
         }
     }
-    return ExtractSummaryFromObjCExpression(valobj, "NSString*", "name", stream, options.GetLanguage());
+    
+    return false;
 }
 
 bool
@@ -168,9 +168,8 @@ lldb_private::formatters::NSNotificationSummaryProvider (ValueObject& valobj, St
             return true;
         }
     }
-    // this is either an unknown subclass or an NSBundle that comes from [NSBundle mainBundle]
-    // which is encoded differently and needs to be handled by running code
-    return ExtractSummaryFromObjCExpression(valobj, "NSString*", "name", stream, options.GetLanguage());
+    
+    return false;
 }
 
 bool
@@ -204,22 +203,19 @@ lldb_private::formatters::NSMachPortSummaryProvider (ValueObject& valobj, Stream
     
     uint64_t port_number = 0;
     
-    do
+    if (!strcmp(class_name,"NSMachPort"))
     {
-        if (!strcmp(class_name,"NSMachPort"))
+        uint64_t offset = (ptr_size == 4 ? 12 : 20);
+        Error error;
+        port_number = process_sp->ReadUnsignedIntegerFromMemory(offset+valobj_addr, 4, 0, error);
+        if (error.Success())
         {
-            uint64_t offset = (ptr_size == 4 ? 12 : 20);
-            Error error;
-            port_number = process_sp->ReadUnsignedIntegerFromMemory(offset+valobj_addr, 4, 0, error);
-            if (error.Success())
-                break;
+            stream.Printf("mach port: %u",(uint32_t)(port_number & 0x00000000FFFFFFFF));
+            return true;
         }
-        if (!ExtractValueFromObjCExpression(valobj, "int", "machPort", port_number))
-            return false;
-    } while (false);
+    }
     
-    stream.Printf("mach port: %u",(uint32_t)(port_number & 0x00000000FFFFFFFF));
-    return true;
+    return false;
 }
 
 bool
@@ -289,10 +285,7 @@ lldb_private::formatters::NSIndexSetSummaryProvider (ValueObject& valobj, Stream
             }
         }
         else
-        {
-            if (!ExtractValueFromObjCExpression(valobj, "unsigned long long int", "count", count))
-                return false;
-        }
+            return false;
     }  while (false);
     stream.Printf("%" PRIu64 " index%s",
                   count,
@@ -562,10 +555,8 @@ lldb_private::formatters::NSNumberSummaryProvider (ValueObject& valobj, Stream& 
             return true;
         }
     }
-    else
-    {
-        return ExtractSummaryFromObjCExpression(valobj, "NSString*", "stringValue", stream, options.GetLanguage());
-    }
+
+    return false;
 }
 
 bool
@@ -626,10 +617,7 @@ lldb_private::formatters::NSURLSummaryProvider (ValueObject& valobj, Stream& str
             return true;
         }
     }
-    else
-    {
-        return ExtractSummaryFromObjCExpression(valobj, "NSString*", "description", stream, options.GetLanguage());
-    }
+
     return false;
 }
 
@@ -660,14 +648,19 @@ lldb_private::formatters::NSDateSummaryProvider (ValueObject& valobj, Stream& st
     uint64_t date_value_bits = 0;
     double date_value = 0.0;
     
-    const char* class_name = descriptor->GetClassName().GetCString();
+    ConstString class_name = descriptor->GetClassName();
     
-    if (!class_name || !*class_name)
+    static const ConstString g_NSDate("NSDate");
+    static const ConstString g___NSDate("__NSDate");
+    static const ConstString g___NSTaggedDate("__NSTaggedDate");
+    static const ConstString g_NSCalendarDate("NSCalendarDate");
+
+    if (class_name.IsEmpty())
         return false;
     
-    if (strcmp(class_name,"NSDate") == 0 ||
-        strcmp(class_name,"__NSDate") == 0 ||
-        strcmp(class_name,"__NSTaggedDate") == 0)
+    if ((class_name == g_NSDate) ||
+        (class_name == g___NSDate) ||
+        (class_name == g___NSTaggedDate))
     {
         uint64_t info_bits=0,value_bits = 0;
         if (descriptor->GetTaggedPointerInfo(&info_bits,&value_bits))
@@ -684,7 +677,7 @@ lldb_private::formatters::NSDateSummaryProvider (ValueObject& valobj, Stream& st
                 return false;
         }
     }
-    else if (!strcmp(class_name,"NSCalendarDate"))
+    else if (class_name == g_NSCalendarDate)
     {
         Error error;
         date_value_bits = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr+2*ptr_size, 8, 0, error);
@@ -693,11 +686,8 @@ lldb_private::formatters::NSDateSummaryProvider (ValueObject& valobj, Stream& st
             return false;
     }
     else
-    {
-        if (!ExtractValueFromObjCExpression(valobj, "NSTimeInterval", "ExtractValueFromObjCExpression", date_value_bits))
-            return false;
-        date_value = *((double*)&date_value_bits);
-    }
+        return false;
+
     if (date_value == -63114076800)
     {
         stream.Printf("0001-12-30 00:00:00 +0000");
@@ -835,11 +825,16 @@ lldb_private::formatters::NSDataSummaryProvider (ValueObject& valobj, Stream& st
         if (error.Fail())
             return false;
     }
-    else
+    else if (!strcmp(class_name, "_NSInlineData"))
     {
-        if (!ExtractValueFromObjCExpression(valobj, "int", "length", value))
+        uint32_t offset = (is_64bit ? 8 : 4);
+        Error error;
+        value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + offset, 2, 0, error);
+        if (error.Fail())
             return false;
     }
+    else
+        return false;
     
     stream.Printf("%s%" PRIu64 " byte%s%s",
                   (needs_at ? "@\"" : ""),

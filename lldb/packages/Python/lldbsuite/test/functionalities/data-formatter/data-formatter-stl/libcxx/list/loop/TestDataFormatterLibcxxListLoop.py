@@ -20,6 +20,7 @@ class LibcxxListDataFormatterTestCase(TestBase):
     @skipIf(compiler="gcc")
     @skipIfWindows # libc++ not ported to Windows yet
     @add_test_categories(["pyapi"])
+    @skipIfDarwin  # rdar://25499635
     def test_with_run_command(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")

@@ -28,6 +28,10 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
+// Usually there are 2 dummies sections: ELF header and program header.
+// Relocatable output does not require program headers to be created.
+unsigned dummySectionsNum() { return Config->Relocatable ? 1 : 2; }
+
 namespace {
 // The writer writes a SymbolTable result to a file.
 template <class ELFT> class Writer {
@@ -58,7 +62,7 @@ private:
 
   void copyLocalSymbols();
   void addReservedSymbols();
-  bool createSections();
+  void createSections();
   void addPredefinedSections();
   bool needsGot();
 
@@ -70,10 +74,11 @@ private:
   void scanRelocs(InputSectionBase<ELFT> &S, const Elf_Shdr &RelSec);
   void createPhdrs();
   void assignAddresses();
-  void assignAddressesRelocatable();
+  void assignFileOffsets();
+  void setPhdrs();
   void fixSectionAlignments();
   void fixAbsoluteSymbols();
-  bool openFile();
+  void openFile();
   void writeHeader();
   void writeSections();
   void writeBuildId();
@@ -106,9 +111,6 @@ private:
   unsigned getNumSections() const {
     return OutputSections.size() + 1 - dummySectionsNum();
   }
-  // Usually there are 2 dummies sections: ELF header and program header.
-  // Relocatable output does not require program headers to be created.
-  unsigned dummySectionsNum() const { return Config->Relocatable ? 1 : 2; }
 
   void addRelIpltSymbols();
   void addStartEndSymbols();
@@ -128,6 +130,7 @@ private:
 
 template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   typedef typename ELFT::uint uintX_t;
+  typedef typename ELFT::Ehdr Elf_Ehdr;
 
   // Create singleton output sections.
   DynamicSection<ELFT> Dynamic(*Symtab);
@@ -141,6 +144,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   SymbolTableSection<ELFT> DynSymTab(*Symtab, DynStrTab);
 
   OutputSectionBase<ELFT> ElfHeader("", 0, SHF_ALLOC);
+  ElfHeader.setSize(sizeof(Elf_Ehdr));
   OutputSectionBase<ELFT> ProgramHeaders("", 0, SHF_ALLOC);
   ProgramHeaders.updateAlign(sizeof(uintX_t));
 
@@ -212,17 +216,23 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (!Config->DiscardAll)
     copyLocalSymbols();
   addReservedSymbols();
-  if (!createSections())
+  createSections();
+  if (HasError)
     return;
-  if (!Config->Relocatable) {
+
+  if (Config->Relocatable) {
+    assignFileOffsets();
+  } else {
     createPhdrs();
     fixSectionAlignments();
     assignAddresses();
-  } else {
-    assignAddressesRelocatable();
+    assignFileOffsets();
+    setPhdrs();
+    fixAbsoluteSymbols();
   }
-  fixAbsoluteSymbols();
-  if (!openFile())
+
+  openFile();
+  if (HasError)
     return;
   writeHeader();
   writeSections();
@@ -293,9 +303,11 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     }
     if (!Body.isPreemptible())
       return 1;
-    Out<ELFT>::Got->addEntry(Body);
-    Out<ELFT>::RelaDyn->addReloc(
-        {Target->TlsGotRel, DynamicReloc<ELFT>::Off_Got, false, &Body});
+    if (!Body.isInGot()) {
+      Out<ELFT>::Got->addEntry(Body);
+      Out<ELFT>::RelaDyn->addReloc(
+          {Target->TlsGotRel, DynamicReloc<ELFT>::Off_Got, false, &Body});
+    }
     return 2;
   }
   return 0;
@@ -380,27 +392,6 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
       }
     }
 
-    // An STT_GNU_IFUNC symbol always uses a PLT entry, and all references
-    // to the symbol go through the PLT. This is true even for a local
-    // symbol, although local symbols normally do not require PLT entries.
-    if (Body.IsGnuIFunc) {
-      if (Body.isInPlt())
-        continue;
-      Out<ELFT>::Plt->addEntry(Body);
-      if (Target->UseLazyBinding) {
-        Out<ELFT>::GotPlt->addEntry(Body);
-        Out<ELFT>::RelaPlt->addReloc(
-            {Preemptible ? Target->PltRel : Target->IRelativeRel,
-             DynamicReloc<ELFT>::Off_GotPlt, !Preemptible, &Body});
-      } else {
-        Out<ELFT>::Got->addEntry(Body);
-        Out<ELFT>::RelaDyn->addReloc(
-            {Preemptible ? Target->PltRel : Target->IRelativeRel,
-             DynamicReloc<ELFT>::Off_Got, !Preemptible, &Body});
-      }
-      continue;
-    }
-
     // If a relocation needs PLT, we create a PLT and a GOT slot
     // for the symbol.
     TargetInfo::PltNeed NeedPlt = Target->needsPlt(Type, Body);
@@ -411,16 +402,22 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
         continue;
       Out<ELFT>::Plt->addEntry(Body);
 
+      uint32_t Rel;
+      if (Body.IsGnuIFunc)
+        Rel = Preemptible ? Target->PltRel : Target->IRelativeRel;
+      else
+        Rel = Target->UseLazyBinding ? Target->PltRel : Target->GotRel;
+
       if (Target->UseLazyBinding) {
         Out<ELFT>::GotPlt->addEntry(Body);
         Out<ELFT>::RelaPlt->addReloc(
-            {Target->PltRel, DynamicReloc<ELFT>::Off_GotPlt, &Body});
+            {Rel, DynamicReloc<ELFT>::Off_GotPlt, !Preemptible, &Body});
       } else {
         if (Body.isInGot())
           continue;
         Out<ELFT>::Got->addEntry(Body);
         Out<ELFT>::RelaDyn->addReloc(
-            {Target->GotRel, DynamicReloc<ELFT>::Off_Got, &Body});
+            {Rel, DynamicReloc<ELFT>::Off_Got, !Preemptible, &Body});
       }
       continue;
     }
@@ -455,23 +452,13 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
       continue;
     }
 
-    if (Config->EMachine == EM_MIPS) {
-      if (Type == R_MIPS_LO16)
-        // Ignore R_MIPS_LO16 relocation. If it is a pair for R_MIPS_GOT16 we
-        // already completed all required action (GOT entry allocation) when
-        // handle R_MIPS_GOT16. If it is a pair for R_MIPS_HI16 against
-        // _gp_disp it does not require dynamic relocation. If its a pair for
-        // R_MIPS_HI16 against a regular symbol it does not require dynamic
-        // relocation too because that case is possible for executable file
-        // linking only.
-        continue;
-      if (&Body == Config->MipsGpDisp || &Body == Config->MipsLocalGp)
-        // MIPS _gp_disp designates offset between start of function and 'gp'
-        // pointer into GOT. __gnu_local_gp is equal to the current value of
-        // the 'gp'. Therefore any relocations against them do not require
-        // dynamic relocation.
-        continue;
-    }
+    // MIPS _gp_disp designates offset between start of function and 'gp'
+    // pointer into GOT. __gnu_local_gp is equal to the current value of
+    // the 'gp'. Therefore any relocations against them do not require
+    // dynamic relocation.
+    if (Config->EMachine == EM_MIPS &&
+        (&Body == Config->MipsGpDisp || &Body == Config->MipsLocalGp))
+      continue;
 
     if (Preemptible) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
@@ -975,7 +962,7 @@ template <class ELFT> static void sortCtorsDtors(OutputSectionBase<ELFT> *S) {
 }
 
 // Create output section objects and add them to OutputSections.
-template <class ELFT> bool Writer<ELFT>::createSections() {
+template <class ELFT> void Writer<ELFT>::createSections() {
   OutputSections.push_back(Out<ELFT>::ElfHeader);
   if (!Config->Relocatable)
     OutputSections.push_back(Out<ELFT>::ProgramHeaders);
@@ -1098,7 +1085,7 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
 
   // Do not proceed if there was an undefined symbol.
   if (HasError)
-    return false;
+    return;
 
   addCommonSymbols(CommonSymbols);
   addCopyRelSymbols(CopyRelSymbols);
@@ -1132,7 +1119,6 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
 
   if (isOutputDynamic())
     Out<ELFT>::Dynamic->finalize();
-  return true;
 }
 
 template <class ELFT> bool Writer<ELFT>::needsGot() {
@@ -1344,6 +1330,8 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
 
   if (Note.First)
     Phdrs.push_back(std::move(Note));
+
+  Out<ELFT>::ProgramHeaders->setSize(sizeof(Elf_Phdr) * Phdrs.size());
 }
 
 // The first section of each PT_LOAD and the first section after PT_GNU_RELRO
@@ -1368,44 +1356,15 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
   }
 }
 
-// Used for relocatable output (-r). In this case we create only ELF file
-// header, do not create program headers. Also assign of section addresses
-// is very straightforward: we just put all sections sequentually to the file.
-template <class ELFT> void Writer<ELFT>::assignAddressesRelocatable() {
-  Out<ELFT>::ElfHeader->setSize(sizeof(Elf_Ehdr));
-  uintX_t FileOff = 0;
-  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
-    if (Sec->getType() != SHT_NOBITS)
-      FileOff = alignTo(FileOff, Sec->getAlign());
-    Sec->setFileOffset(FileOff);
-    if (Sec->getType() != SHT_NOBITS)
-      FileOff += Sec->getSize();
-  }
-  SectionHeaderOff = alignTo(FileOff, sizeof(uintX_t));
-  FileSize = SectionHeaderOff + getNumSections() * sizeof(Elf_Shdr);
-}
-
-// Visits all headers in PhdrTable and assigns the adresses to
-// the output sections. Also creates common and special headers.
+// Assign VAs (addresses at run-time) to output sections.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
-  Out<ELFT>::ElfHeader->setSize(sizeof(Elf_Ehdr));
-  size_t PhdrSize = sizeof(Elf_Phdr) * Phdrs.size();
-  Out<ELFT>::ProgramHeaders->setSize(PhdrSize);
-
   uintX_t ThreadBssOffset = 0;
   uintX_t VA = Target->getVAStart();
-  uintX_t FileOff = 0;
 
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
     uintX_t Align = Sec->getAlign();
     if (Sec->PageAlign)
       Align = std::max<uintX_t>(Align, Target->PageSize);
-
-    if (Sec->getType() != SHT_NOBITS)
-      FileOff = alignTo(FileOff, Align);
-    Sec->setFileOffset(FileOff);
-    if (Sec->getType() != SHT_NOBITS)
-      FileOff += Sec->getSize();
 
     // We only assign VAs to allocated sections.
     if (needsPtLoad<ELFT>(Sec)) {
@@ -1419,15 +1378,30 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
       ThreadBssOffset = TVA - VA + Sec->getSize();
     }
   }
+}
 
-  // Add space for section headers.
-  SectionHeaderOff = alignTo(FileOff, sizeof(uintX_t));
+// Assign file offsets to output sections.
+template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
+  uintX_t Off = 0;
+  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
+    if (Sec->getType() == SHT_NOBITS) {
+      Sec->setFileOffset(Off);
+      continue;
+    }
+    uintX_t Align = Sec->getAlign();
+    if (Sec->PageAlign)
+      Align = std::max<uintX_t>(Align, Target->PageSize);
+    Off = alignTo(Off, Align);
+    Sec->setFileOffset(Off);
+    Off += Sec->getSize();
+  }
+  SectionHeaderOff = alignTo(Off, sizeof(uintX_t));
   FileSize = SectionHeaderOff + getNumSections() * sizeof(Elf_Shdr);
+}
 
-  // Update "_end" and "end" symbols so that they
-  // point to the end of the data segment.
-  ElfSym<ELFT>::End.st_value = VA;
-
+// Finalize the program headers. We call this function after we assign
+// file offsets and VAs to all sections.
+template <class ELFT> void Writer<ELFT>::setPhdrs() {
   for (Phdr &PHdr : Phdrs) {
     Elf_Phdr &H = PHdr.H;
     if (PHdr.First) {
@@ -1503,9 +1477,11 @@ template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
 
   // _etext is the first location after the last read-only loadable segment.
   // _edata is the first location after the last read-write loadable segment.
+  // _end is the first location after the uninitialized data region.
   for (Phdr &PHdr : Phdrs) {
     if (PHdr.H.p_type != PT_LOAD)
       continue;
+    ElfSym<ELFT>::End.st_value = PHdr.H.p_vaddr + PHdr.H.p_memsz;
     uintX_t Val = PHdr.H.p_vaddr + PHdr.H.p_filesz;
     if (PHdr.H.p_flags & PF_W)
       ElfSym<ELFT>::Edata.st_value = Val;
@@ -1556,16 +1532,14 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
     Sec->writeHeaderTo(++SHdrs);
 }
 
-template <class ELFT> bool Writer<ELFT>::openFile() {
+template <class ELFT> void Writer<ELFT>::openFile() {
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Config->OutputFile, FileSize,
                                FileOutputBuffer::F_executable);
-  if (!BufferOrErr) {
+  if (BufferOrErr)
+    Buffer = std::move(*BufferOrErr);
+  else
     error(BufferOrErr, "failed to open " + Config->OutputFile);
-    return false;
-  }
-  Buffer = std::move(*BufferOrErr);
-  return true;
 }
 
 // Write section contents to a mmap'ed file.

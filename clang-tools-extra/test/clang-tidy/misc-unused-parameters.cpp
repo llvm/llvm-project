@@ -127,6 +127,16 @@ void someMoreCallSites() {
   useFunction(&C::h);
 }
 
+class Base {
+  virtual void f(int i);
+};
+
+class Derived : public Base {
+  void f(int i) override {}
+// CHECK-MESSAGES: :[[@LINE-1]]:14: warning
+// CHECK-FIXES: void f(int  /*i*/) override {}
+};
+
 } // end namespace
 
 template <typename T> void someFunctionTemplate(T b, T e) { (void)b; (void)e; }

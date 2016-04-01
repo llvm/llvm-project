@@ -546,6 +546,7 @@ LoadObjCFormatters(TypeCategoryImplSP objc_category_sp)
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSBundleSummaryProvider, "NSBundle summary provider", ConstString("NSBundle"), appkit_flags);
     
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSDataSummaryProvider<false>, "NSData summary provider", ConstString("NSData"), appkit_flags);
+    AddCXXSummary(objc_category_sp, lldb_private::formatters::NSDataSummaryProvider<false>, "NSData summary provider", ConstString("_NSInlineData"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSDataSummaryProvider<false>, "NSData summary provider", ConstString("NSConcreteData"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSDataSummaryProvider<false>, "NSData summary provider", ConstString("NSConcreteMutableData"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSDataSummaryProvider<false>, "NSData summary provider", ConstString("NSMutableData"), appkit_flags);

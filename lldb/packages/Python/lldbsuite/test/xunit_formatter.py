@@ -484,8 +484,8 @@ class XunitFormatter(ResultsFormatter):
         """
 
         # Get elapsed time.
-        test_class = test_event["test_class"]
-        test_name = test_event["test_name"]
+        test_class = test_event.get("test_class", "<no_class>")
+        test_name = test_event.get("test_name", "<no_test_method>")
         event_time = test_event["event_time"]
         time_taken = self.elapsed_time_for_test(
             test_class, test_name, event_time)
