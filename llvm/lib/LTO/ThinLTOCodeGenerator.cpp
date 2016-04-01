@@ -125,7 +125,103 @@ static void saveTempBitcode(const Module &TheModule, StringRef TempDir,
   WriteBitcodeToFile(&TheModule, OS, true, false);
 }
 
+bool IsFirstDefinitionForLinker(const GlobalValueInfoList &GVInfo,
+                                const ModuleSummaryIndex &Index,
+                                StringRef ModulePath) {
+  // Get the first *linker visible* definition for this global in the summary
+  // list.
+  auto FirstDefForLinker = llvm::find_if(
+      GVInfo, [](const std::unique_ptr<GlobalValueInfo> &FuncInfo) {
+        auto Linkage = FuncInfo->summary()->linkage();
+        return !GlobalValue::isAvailableExternallyLinkage(Linkage);
+      });
+  // If \p GV is not the first definition, give up...
+  if ((*FirstDefForLinker)->summary()->modulePath() != ModulePath)
+    return false;
+  // If there is any strong definition anywhere, do not bother emitting this.
+  if (llvm::any_of(
+          GVInfo, [](const std::unique_ptr<GlobalValueInfo> &FuncInfo) {
+            auto Linkage = FuncInfo->summary()->linkage();
+            return !GlobalValue::isAvailableExternallyLinkage(Linkage) &&
+                   !GlobalValue::isWeakForLinker(Linkage);
+          }))
+    return false;
+  return true;
+};
 
+static void ResolveODR(GlobalValue &GV, const ModuleSummaryIndex &Index,
+                             StringRef ModulePath) {
+  if (GV.isDeclaration())
+    return;
+
+  auto HasMultipleCopies =
+      [&](const GlobalValueInfoList &GVInfo) { return GVInfo.size() > 1; };
+
+  auto getGVInfo = [&](GlobalValue &GV) -> const GlobalValueInfoList *{
+    auto GUID = Function::getGlobalIdentifier(GV.getName(), GV.getLinkage(),
+                                              ModulePath);
+    auto It = Index.findGlobalValueInfoList(GV.getName());
+    if (It == Index.end())
+      return nullptr;
+    return &It->second;
+  };
+
+  switch (GV.getLinkage()) {
+  case GlobalValue::ExternalLinkage:
+  case GlobalValue::AvailableExternallyLinkage:
+  case GlobalValue::AppendingLinkage:
+  case GlobalValue::InternalLinkage:
+  case GlobalValue::PrivateLinkage:
+  case GlobalValue::ExternalWeakLinkage:
+  case GlobalValue::CommonLinkage:
+  case GlobalValue::LinkOnceAnyLinkage:
+  case GlobalValue::WeakAnyLinkage:
+    break;
+  case GlobalValue::LinkOnceODRLinkage:
+  case GlobalValue::WeakODRLinkage: {
+    auto *GVInfo = getGVInfo(GV);
+    if (!GVInfo)
+      break;
+    // We need to emit only one of these, the first module will keep
+    // it, but turned into a weak while the others will drop it.
+    if (!HasMultipleCopies(*GVInfo))
+      break;
+    if (IsFirstDefinitionForLinker(*GVInfo, Index, ModulePath))
+      GV.setLinkage(GlobalValue::WeakODRLinkage);
+    else
+      GV.setLinkage(GlobalValue::AvailableExternallyLinkage);
+    break;
+  }
+  }
+}
+
+/// Resolve LinkOnceODR and WeakODR.
+///
+/// We'd like to drop these function if they are no longer referenced in the
+/// current module. However there is a chance that another module is still
+/// referencing them because of the import. We make sure we always emit at least
+/// one copy.
+static void ResolveODR(Module &TheModule,
+                             const ModuleSummaryIndex &Index) {
+  // We won't optimize the globals that are referenced by an alias for now
+  // Ideally we should turn the alias into a global and duplicate the definition
+  // when needed.
+  DenseSet<GlobalValue *> GlobalInvolvedWithAlias;
+  for (auto &GA : TheModule.aliases()) {
+    auto *GO = GA.getBaseObject();
+    if (auto *GV = dyn_cast<GlobalValue>(GO))
+      GlobalInvolvedWithAlias.insert(GV);
+  }
+  // Process functions and global now
+  for (auto &GV : TheModule) {
+    if (!GlobalInvolvedWithAlias.count(&GV))
+      ResolveODR(GV, Index, TheModule.getModuleIdentifier());
+  }
+  for (auto &GV : TheModule.globals()) {
+    if (!GlobalInvolvedWithAlias.count(&GV))
+      ResolveODR(GV, Index, TheModule.getModuleIdentifier());
+  }
+}
 
 static StringMap<MemoryBufferRef>
 generateModuleMap(const std::vector<MemoryBufferRef> &Modules) {
@@ -251,6 +347,11 @@ ProcessThinLTOModule(Module &TheModule, const ModuleSummaryIndex &Index,
 
   if (!SingleModule) {
     promoteModule(TheModule, Index);
+
+    // Resolve the LinkOnce/Weak ODR, trying to turn them into
+    // "available_externally" when possible.
+    // This is a compile-time optimization.
+    ResolveODR(TheModule, Index);
 
     // Save temps: after promotion.
     saveTempBitcode(TheModule, SaveTempsDir, count, ".2.promoted.bc");
@@ -420,6 +521,11 @@ std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
  */
 void ThinLTOCodeGenerator::promote(Module &TheModule,
                                    ModuleSummaryIndex &Index) {
+
+  // Resolve the LinkOnceODR, trying to turn them into "available_externally"
+  // where possible.
+  ResolveODR(TheModule, Index);
+
   promoteModule(TheModule, Index);
 }
 
