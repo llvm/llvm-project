@@ -13,13 +13,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/Host.h"
 #include "llvm/Support/SHA1.h"
 using namespace llvm;
 
 #include <stdint.h>
 #include <string.h>
 
-#ifdef __BIG_ENDIAN__
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
 #define SHA_BIG_ENDIAN
 #endif
 
@@ -113,7 +114,7 @@ void SHA1::update(ArrayRef<uint8_t> Data) {
 }
 
 void SHA1::pad() {
-  // Implement SHA-1 padding (fips180-2 §5.1.1)
+  // Implement SHA-1 padding (fips180-2 5.1.1)
 
   // Pad with 0x80 followed by 0x00 until the end of the block
   addUncounted(0x80);
