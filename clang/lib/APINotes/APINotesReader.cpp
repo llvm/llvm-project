@@ -563,7 +563,7 @@ public:
   std::string ModuleName;
 
   /// Various options and attributes for the module
-  ModuleOptions moduleOptions;
+  ModuleOptions ModuleOpts;
 
   using SerializedIdentifierTable =
       llvm::OnDiskIterableChainedHashTable<IdentifierTableInfo>;
@@ -739,7 +739,8 @@ bool APINotesReader::Implementation::readControlBlock(
       break;
 
     case control_block::MODULE_OPTIONS:
-      moduleOptions = {(scratch.front() & 1) != 0};
+      ModuleOpts.SwiftInferImportAsMember = (scratch.front() & 1) != 0;
+      break;
 
     default:
       // Unknown metadata record, possibly for use by a future version of the
@@ -1447,7 +1448,7 @@ StringRef APINotesReader::getModuleName() const {
 }
 
 ModuleOptions APINotesReader::getModuleOptions() const {
-  return Impl.moduleOptions;
+  return Impl.ModuleOpts;
 }
 
 auto APINotesReader::lookupObjCClass(StringRef name)
