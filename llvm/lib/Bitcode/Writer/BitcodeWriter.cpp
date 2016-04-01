@@ -13,6 +13,7 @@
 
 #include "ValueEnumerator.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -40,6 +41,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/SHA1.h"
 #include <cctype>
 #include <map>
 using namespace llvm;
@@ -2872,8 +2874,18 @@ static void WriteModStrings(const ModuleSummaryIndex &I,
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Char6));
   unsigned Abbrev6Bit = Stream.EmitAbbrev(Abbv);
 
-  SmallVector<unsigned, 64> NameVals;
-  for (const StringMapEntry<uint64_t> &MPSE : I.modulePaths()) {
+  // Module Hash, 160 bits SHA1. Optionally, emitted after each MST_CODE_ENTRY.
+  Abbv = new BitCodeAbbrev();
+  Abbv->Add(BitCodeAbbrevOp(bitc::MST_CODE_HASH));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  unsigned AbbrevHash = Stream.EmitAbbrev(Abbv);
+
+  SmallVector<unsigned, 64> Vals;
+  for (const auto &MPSE : I.modulePaths()) {
     StringEncoding Bits =
         getStringEncoding(MPSE.getKey().data(), MPSE.getKey().size());
     unsigned AbbrevToUse = Abbrev8Bit;
@@ -2882,14 +2894,29 @@ static void WriteModStrings(const ModuleSummaryIndex &I,
     else if (Bits == SE_Fixed7)
       AbbrevToUse = Abbrev7Bit;
 
-    NameVals.push_back(MPSE.getValue());
+    Vals.push_back(MPSE.getValue().first);
 
     for (const auto P : MPSE.getKey())
-      NameVals.push_back((unsigned char)P);
+      Vals.push_back((unsigned char)P);
 
     // Emit the finished record.
-    Stream.EmitRecord(bitc::MST_CODE_ENTRY, NameVals, AbbrevToUse);
-    NameVals.clear();
+    Stream.EmitRecord(bitc::MST_CODE_ENTRY, Vals, AbbrevToUse);
+
+    Vals.clear();
+    // Emit an optional hash for the module now
+    auto &Hash = MPSE.getValue().second;
+    bool AllZero = true; // Detect if the hash is empty, and do not generate it
+    for (auto Val : Hash) {
+      if (Val)
+        AllZero = false;
+      Vals.push_back(Val);
+    }
+    if (!AllZero) {
+      // Emit the hash record.
+      Stream.EmitRecord(bitc::MST_CODE_HASH, Vals, AbbrevHash);
+    }
+
+    Vals.clear();
   }
   Stream.ExitBlock();
 }
@@ -3197,11 +3224,36 @@ static void WriteIdentificationBlock(const Module *M, BitstreamWriter &Stream) {
   Stream.ExitBlock();
 }
 
+static void writeModuleHash(BitstreamWriter &Stream,
+                            SmallVectorImpl<char> &Buffer,
+                            size_t BlockStartPos) {
+  // Emit the module's hash.
+  // MODULE_CODE_HASH: [5*i32]
+  SHA1 Hasher;
+  Hasher.update(ArrayRef<uint8_t>((uint8_t *)&Buffer[BlockStartPos],
+                                  Buffer.size() - BlockStartPos));
+  auto Hash = Hasher.result();
+  SmallVector<uint64_t, 20> Vals;
+  auto LShift = [&](unsigned char Val, unsigned Amount)
+                    -> uint64_t { return ((uint64_t)Val) << Amount; };
+  for (int Pos = 0; Pos < 20; Pos += 4) {
+    uint32_t SubHash = LShift(Hash[Pos + 0], 24);
+    SubHash |= LShift(Hash[Pos + 1], 16) | LShift(Hash[Pos + 2], 8) |
+               (unsigned)(unsigned char)Hash[Pos + 3];
+    Vals.push_back(SubHash);
+  }
+
+  // Emit the finished record.
+  Stream.EmitRecord(bitc::MODULE_CODE_HASH, Vals);
+}
+
 /// WriteModule - Emit the specified module to the bitstream.
 static void WriteModule(const Module *M, BitstreamWriter &Stream,
                         bool ShouldPreserveUseListOrder,
-                        uint64_t BitcodeStartBit, bool EmitSummaryIndex) {
+                        uint64_t BitcodeStartBit, bool EmitSummaryIndex,
+                        bool GenerateHash, SmallVectorImpl<char> &Buffer) {
   Stream.EnterSubblock(bitc::MODULE_BLOCK_ID, 3);
+  size_t BlockStartPos = Buffer.size();
 
   SmallVector<unsigned, 1> Vals;
   unsigned CurVersion = 1;
@@ -3257,6 +3309,10 @@ static void WriteModule(const Module *M, BitstreamWriter &Stream,
 
   WriteValueSymbolTable(M->getValueSymbolTable(), VE, Stream,
                         VSTOffsetPlaceholder, BitcodeStartBit, &FunctionIndex);
+
+  if (GenerateHash) {
+    writeModuleHash(Stream, Buffer, BlockStartPos);
+  }
 
   Stream.ExitBlock();
 }
@@ -3342,7 +3398,7 @@ static void WriteBitcodeHeader(BitstreamWriter &Stream) {
 /// stream.
 void llvm::WriteBitcodeToFile(const Module *M, raw_ostream &Out,
                               bool ShouldPreserveUseListOrder,
-                              bool EmitSummaryIndex) {
+                              bool EmitSummaryIndex, bool GenerateHash) {
   SmallVector<char, 0> Buffer;
   Buffer.reserve(256*1024);
 
@@ -3368,7 +3424,7 @@ void llvm::WriteBitcodeToFile(const Module *M, raw_ostream &Out,
 
     // Emit the module.
     WriteModule(M, Stream, ShouldPreserveUseListOrder, BitcodeStartBit,
-                EmitSummaryIndex);
+                EmitSummaryIndex, GenerateHash, Buffer);
   }
 
   if (TT.isOSDarwin() || TT.isOSBinFormatMachO())

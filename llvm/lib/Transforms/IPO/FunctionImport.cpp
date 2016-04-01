@@ -55,7 +55,7 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
                           /* ShouldLazyLoadMetadata = */ true);
   if (!Result) {
     Err.print("function-import", errs());
-    return nullptr;
+    report_fatal_error("Abort");
   }
 
   return Result;
