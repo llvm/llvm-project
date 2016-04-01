@@ -23828,6 +23828,264 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBExpressionOptions_SetAutoApplyFixIts__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBExpressionOptions *arg1 = (lldb::SBExpressionOptions *) 0 ;
+  bool arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SBExpressionOptions_SetAutoApplyFixIts",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBExpressionOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBExpressionOptions_SetAutoApplyFixIts" "', argument " "1"" of type '" "lldb::SBExpressionOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBExpressionOptions * >(argp1);
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBExpressionOptions_SetAutoApplyFixIts" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->SetAutoApplyFixIts(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBExpressionOptions_SetAutoApplyFixIts__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBExpressionOptions *arg1 = (lldb::SBExpressionOptions *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBExpressionOptions_SetAutoApplyFixIts",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBExpressionOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBExpressionOptions_SetAutoApplyFixIts" "', argument " "1"" of type '" "lldb::SBExpressionOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBExpressionOptions * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->SetAutoApplyFixIts();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBExpressionOptions_SetAutoApplyFixIts(PyObject *self, PyObject *args) {
+  int argc;
+  PyObject *argv[3];
+  int ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = (int)PyObject_Length(args);
+  for (ii = 0; (ii < argc) && (ii < 2); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 1) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBExpressionOptions, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_SBExpressionOptions_SetAutoApplyFixIts__SWIG_1(self, args);
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBExpressionOptions, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      {
+        int res = SWIG_AsVal_bool(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_SBExpressionOptions_SetAutoApplyFixIts__SWIG_0(self, args);
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number of arguments for overloaded function 'SBExpressionOptions_SetAutoApplyFixIts'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    SetAutoApplyFixIts(lldb::SBExpressionOptions *,bool)\n"
+    "    SetAutoApplyFixIts(lldb::SBExpressionOptions *)\n");
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBExpressionOptions_GetAutoApplyFixIts(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBExpressionOptions *arg1 = (lldb::SBExpressionOptions *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBExpressionOptions_GetAutoApplyFixIts",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBExpressionOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBExpressionOptions_GetAutoApplyFixIts" "', argument " "1"" of type '" "lldb::SBExpressionOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBExpressionOptions * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)(arg1)->GetAutoApplyFixIts();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBExpressionOptions_GetTopLevel(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBExpressionOptions *arg1 = (lldb::SBExpressionOptions *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBExpressionOptions_GetTopLevel",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBExpressionOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBExpressionOptions_GetTopLevel" "', argument " "1"" of type '" "lldb::SBExpressionOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBExpressionOptions * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)(arg1)->GetTopLevel();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBExpressionOptions_SetTopLevel__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBExpressionOptions *arg1 = (lldb::SBExpressionOptions *) 0 ;
+  bool arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SBExpressionOptions_SetTopLevel",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBExpressionOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBExpressionOptions_SetTopLevel" "', argument " "1"" of type '" "lldb::SBExpressionOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBExpressionOptions * >(argp1);
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBExpressionOptions_SetTopLevel" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->SetTopLevel(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBExpressionOptions_SetTopLevel__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBExpressionOptions *arg1 = (lldb::SBExpressionOptions *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBExpressionOptions_SetTopLevel",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBExpressionOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBExpressionOptions_SetTopLevel" "', argument " "1"" of type '" "lldb::SBExpressionOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBExpressionOptions * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->SetTopLevel();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBExpressionOptions_SetTopLevel(PyObject *self, PyObject *args) {
+  int argc;
+  PyObject *argv[3];
+  int ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = (int)PyObject_Length(args);
+  for (ii = 0; (ii < argc) && (ii < 2); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 1) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBExpressionOptions, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_SBExpressionOptions_SetTopLevel__SWIG_1(self, args);
+    }
+  }
+  if (argc == 2) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBExpressionOptions, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      {
+        int res = SWIG_AsVal_bool(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_SBExpressionOptions_SetTopLevel__SWIG_0(self, args);
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number of arguments for overloaded function 'SBExpressionOptions_SetTopLevel'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    SetTopLevel(lldb::SBExpressionOptions *,bool)\n"
+    "    SetTopLevel(lldb::SBExpressionOptions *)\n");
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *SBExpressionOptions_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *obj;
   if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
@@ -49821,6 +50079,41 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBThread_GetStopReasonExtendedBacktraces(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBThread *arg1 = (lldb::SBThread *) 0 ;
+  lldb::InstrumentationRuntimeType arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  lldb::SBThreadCollection result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SBThread_GetStopReasonExtendedBacktraces",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBThread, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBThread_GetStopReasonExtendedBacktraces" "', argument " "1"" of type '" "lldb::SBThread *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBThread * >(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBThread_GetStopReasonExtendedBacktraces" "', argument " "2"" of type '" "lldb::InstrumentationRuntimeType""'");
+  } 
+  arg2 = static_cast< lldb::InstrumentationRuntimeType >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->GetStopReasonExtendedBacktraces(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBThreadCollection(static_cast< const lldb::SBThreadCollection& >(result))), SWIGTYPE_p_lldb__SBThreadCollection, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBThread_GetStopDescription(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBThread *arg1 = (lldb::SBThread *) 0 ;
@@ -67605,6 +67898,22 @@ static PyMethodDef SwigMethods[] = {
 		"\n"
 		"Sets the prefix to use for this expression. This prefix gets inserted after the 'target.expr-prefix' prefix contents, but before the wrapped expression function body.\n"
 		""},
+	 { (char *)"SBExpressionOptions_SetAutoApplyFixIts", _wrap_SBExpressionOptions_SetAutoApplyFixIts, METH_VARARGS, (char *)"\n"
+		"SetAutoApplyFixIts(bool b = True)\n"
+		"SBExpressionOptions_SetAutoApplyFixIts(SBExpressionOptions self)\n"
+		"\n"
+		"Sets whether to auto-apply FixIt hints to the expression being evaluated.\n"
+		""},
+	 { (char *)"SBExpressionOptions_GetAutoApplyFixIts", _wrap_SBExpressionOptions_GetAutoApplyFixIts, METH_VARARGS, (char *)"\n"
+		"SBExpressionOptions_GetAutoApplyFixIts(SBExpressionOptions self) -> bool\n"
+		"\n"
+		"Gets whether to auto-apply FixIt hints to an expression.\n"
+		""},
+	 { (char *)"SBExpressionOptions_GetTopLevel", _wrap_SBExpressionOptions_GetTopLevel, METH_VARARGS, (char *)"SBExpressionOptions_GetTopLevel(SBExpressionOptions self) -> bool"},
+	 { (char *)"SBExpressionOptions_SetTopLevel", _wrap_SBExpressionOptions_SetTopLevel, METH_VARARGS, (char *)"\n"
+		"SetTopLevel(bool b = True)\n"
+		"SBExpressionOptions_SetTopLevel(SBExpressionOptions self)\n"
+		""},
 	 { (char *)"SBExpressionOptions_swigregister", SBExpressionOptions_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_SBFileSpec", _wrap_new_SBFileSpec, METH_VARARGS, (char *)"\n"
 		"SBFileSpec()\n"
@@ -69269,6 +69578,12 @@ static PyMethodDef SwigMethods[] = {
 		"Collects a thread's stop reason extended information dictionary and prints it\n"
 		"into the SBStream in a JSON format. The format of this JSON dictionary depends\n"
 		"on the stop reason and is currently used only for instrumentation plugins.\n"
+		"\n"
+		""},
+	 { (char *)"SBThread_GetStopReasonExtendedBacktraces", _wrap_SBThread_GetStopReasonExtendedBacktraces, METH_VARARGS, (char *)"\n"
+		"Returns a collection of historical stack traces that are significant to the\n"
+		"current stop reason. Used by ThreadSanitizer, where we provide various stack\n"
+		"traces that were involved in a data race or other type of detected issue.\n"
 		"\n"
 		""},
 	 { (char *)"SBThread_GetStopDescription", _wrap_SBThread_GetStopDescription, METH_VARARGS, (char *)"\n"
@@ -71886,6 +72201,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eLanguageTypeExtRenderScript",SWIG_From_int(static_cast< int >(lldb::eLanguageTypeExtRenderScript)));
   SWIG_Python_SetConstant(d, "eNumLanguageTypes",SWIG_From_int(static_cast< int >(lldb::eNumLanguageTypes)));
   SWIG_Python_SetConstant(d, "eInstrumentationRuntimeTypeAddressSanitizer",SWIG_From_int(static_cast< int >(lldb::eInstrumentationRuntimeTypeAddressSanitizer)));
+  SWIG_Python_SetConstant(d, "eInstrumentationRuntimeTypeThreadSanitizer",SWIG_From_int(static_cast< int >(lldb::eInstrumentationRuntimeTypeThreadSanitizer)));
   SWIG_Python_SetConstant(d, "eNumInstrumentationRuntimeTypes",SWIG_From_int(static_cast< int >(lldb::eNumInstrumentationRuntimeTypes)));
   SWIG_Python_SetConstant(d, "eNoDynamicValues",SWIG_From_int(static_cast< int >(lldb::eNoDynamicValues)));
   SWIG_Python_SetConstant(d, "eDynamicCanRunTarget",SWIG_From_int(static_cast< int >(lldb::eDynamicCanRunTarget)));
