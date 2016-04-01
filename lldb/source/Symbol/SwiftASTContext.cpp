@@ -5004,7 +5004,10 @@ SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
     
         for (const DiagnosticList::value_type &fatal_diagnostic : fatal_diagnostics.Diagnostics())
         {
-            diagnostic_manager.AddDiagnostic(fatal_diagnostic);
+            diagnostic_manager.AddDiagnostic(fatal_diagnostic->GetMessage(),
+                                             fatal_diagnostic->GetSeverity(),
+                                             fatal_diagnostic->getKind(),
+                                             fatal_diagnostic->GetCompilerID());
         }
     }
     else
