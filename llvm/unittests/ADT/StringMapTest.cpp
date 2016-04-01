@@ -390,6 +390,7 @@ TEST(StringMapCustomTest, InitialSizeTest) {
   // arbitrary prime, picked without any good reason.
   for (auto Size : {1, 32, 67}) {
     StringMap<CountCtorCopyAndMove> Map(Size);
+    auto NumBuckets = Map.getNumBuckets();
     CountCtorCopyAndMove::Move = 0;
     CountCtorCopyAndMove::Copy = 0;
     for (int i = 0; i < Size; ++i)
@@ -398,6 +399,8 @@ TEST(StringMapCustomTest, InitialSizeTest) {
     //   EXPECT_EQ((unsigned)Size * 3, CountCtorCopyAndMove::Move);
     // No copy is expected.
     EXPECT_EQ(0u, CountCtorCopyAndMove::Copy);
+    // Check that the map didn't grow
+    EXPECT_EQ(Map.getNumBuckets(), NumBuckets);
   }
 }
 
