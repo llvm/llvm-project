@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/APINotes/APINotesReader.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -537,10 +538,21 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
                          TUKind, CompletionConsumer));
 
   // If we're building a module, notify the API notes manager.
-  if (!getLangOpts().CurrentModule.empty()) {
+  StringRef currentModuleName = getLangOpts().CurrentModule;
+  if (!currentModuleName.empty()) {
     (void)TheSema->APINotes.loadCurrentModuleAPINotes(
-            getLangOpts().CurrentModule,
+            currentModuleName,
             getAPINotesOpts().ModuleSearchPaths);
+    // Check for any attributes we should add to the module
+    if (auto curReader = TheSema->APINotes.getCurrentModuleReader()) {
+      auto currentModule = getPreprocessor().getCurrentModule();
+      assert(currentModule && "how can we have a reader for it?");
+
+      // swift_infer_import_as_member
+      if (curReader->getModuleOptions().SwiftInferImportAsMember) {
+        currentModule->IsSwiftInferImportAsMember = true;
+      }
+    }
   }
 }
 
