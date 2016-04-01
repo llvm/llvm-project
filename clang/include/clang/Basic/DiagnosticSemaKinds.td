@@ -728,6 +728,12 @@ def err_restricted_superclass_mismatch : Error<
 def warn_objc_root_class_missing : Warning<
   "class %0 defined without specifying a base class">,
   InGroup<ObjCRootClass>;
+def err_objc_runtime_visible_category : Error<
+  "cannot implement a category for class %0 that is only visible via the "
+  "Objective-C runtime">;
+def err_objc_runtime_visible_subclass : Error<
+  "cannot implement subclass %0 of a superclass %1 that is only visible via the "
+  "Objective-C runtime">;
 def note_objc_needs_superclass : Note<
   "add a super class to fix this problem">;
 def warn_dup_category_def : Warning<
