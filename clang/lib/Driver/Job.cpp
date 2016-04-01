@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -195,6 +196,18 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
     printArg(OS, "-ivfsoverlay", Quote);
     OS << ' ';
     printArg(OS, CrashInfo->VFSPath.str().c_str(), Quote);
+
+    // Insert -fmodules-cache-path and use the relative module directory
+    // <name>.cache/vfs/modules where we already dumped the modules.
+    SmallString<128> RelModCacheDir = llvm::sys::path::parent_path(
+        llvm::sys::path::parent_path(CrashInfo->VFSPath));
+    llvm::sys::path::append(RelModCacheDir, "modules");
+
+    std::string ModCachePath = "-fmodules-cache-path=";
+    ModCachePath.append(RelModCacheDir.c_str());
+
+    OS << ' ';
+    printArg(OS, ModCachePath.c_str(), Quote);
   }
 
   if (ResponseFile != nullptr) {
