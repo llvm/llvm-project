@@ -238,11 +238,11 @@ private:
 
   /// Flag to enable/disable CodeGen. When set to true, the process stops after
   /// optimizations and a bitcode is produced.
-  bool DisableCodeGen;
+  bool DisableCodeGen = false;
 
   /// Flag to indicate that only the CodeGen will be performed, no cross-module
   /// importing or optimization.
-  bool CodeGenOnly;
+  bool CodeGenOnly = false;
 };
 }
 #endif

@@ -91,7 +91,7 @@ D: NVPTX Target (lib/Target/NVPTX/*)
 
 N: Lang Hames
 E: lhames@gmail.com
-D: MCJIT, RuntimeDyld and JIT event listeners
+D: MCJIT, RuntimeDyld and JIT event listeners, Orcish Warchief
 
 N: Galina Kistanova
 E: gkistanova@gmail.com

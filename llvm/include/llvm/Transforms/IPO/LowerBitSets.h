@@ -31,6 +31,8 @@ class GlobalObject;
 class Value;
 class raw_ostream;
 
+namespace lowerbitsets {
+
 struct BitSetInfo {
   // The indices of the set bits in the bitset.
   std::set<uint64_t> Bits;
@@ -197,6 +199,7 @@ struct ByteArrayBuilder {
                 uint64_t &AllocByteOffset, uint8_t &AllocMask);
 };
 
+} // end namespace lowerbitsets
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_LOWERBITSETS_H

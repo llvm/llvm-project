@@ -100,7 +100,7 @@ bool AArch64DeadRegisterDefinitions::processMachineBasicBlock(
           continue;
         }
         // Don't change the register if there's an implicit def of a subreg or
-        // supperreg.
+        // superreg.
         if (implicitlyDefinesOverlappingReg(MO.getReg(), MI)) {
           DEBUG(dbgs() << "    Ignoring, implicitly defines overlap reg.\n");
           continue;

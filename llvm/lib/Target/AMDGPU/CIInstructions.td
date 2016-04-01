@@ -308,8 +308,9 @@ def : FlatStorePat <FLAT_STORE_DWORD, flat_store, i32>;
 def : FlatStorePat <FLAT_STORE_DWORDX2, flat_store, v2i32>;
 def : FlatStorePat <FLAT_STORE_DWORDX4, flat_store, v4i32>;
 
-class FlatAtomicPat <FLAT inst, SDPatternOperator node, ValueType vt> : Pat <
-  (vt (node i64:$addr, vt:$data)),
+class FlatAtomicPat <FLAT inst, SDPatternOperator node, ValueType vt,
+                     ValueType data_vt = vt> : Pat <
+  (vt (node i64:$addr, data_vt:$data)),
   (inst $addr, $data, 0, 0)
 >;
 
@@ -322,6 +323,9 @@ def : FlatAtomicPat <FLAT_ATOMIC_SMIN_RTN, atomic_min_global, i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_UMIN_RTN, atomic_umin_global, i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_OR_RTN, atomic_or_global, i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_SWAP_RTN, atomic_swap_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_CMPSWAP_RTN, atomic_cmp_swap_global, i32, v2i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_XOR_RTN, atomic_xor_global, i32>;
+
+def : FlatAtomicPat <FLAT_ATOMIC_CMPSWAP_X2_RTN, atomic_cmp_swap_global, i64, v2i64>;
 
 } // End Predicates = [isCIVI]

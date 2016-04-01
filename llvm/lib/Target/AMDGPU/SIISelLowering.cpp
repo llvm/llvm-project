@@ -257,6 +257,16 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
   setOperationAction(ISD::FDIV, MVT::f32, Custom);
   setOperationAction(ISD::FDIV, MVT::f64, Custom);
 
+  // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling,
+  // and output demarshalling
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, Custom);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i64, Custom);
+
+  // We can't return success/failure, only the old value,
+  // let LLVM add the comparison
+  setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i32, Expand);
+  setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i64, Expand);
+
   setTargetDAGCombine(ISD::FADD);
   setTargetDAGCombine(ISD::FSUB);
   setTargetDAGCombine(ISD::FMINNUM);
@@ -1156,6 +1166,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerTrig(Op, DAG);
   case ISD::SELECT: return LowerSELECT(Op, DAG);
   case ISD::FDIV: return LowerFDIV(Op, DAG);
+  case ISD::ATOMIC_CMP_SWAP: return LowerATOMIC_CMP_SWAP(Op, DAG);
   case ISD::STORE: return LowerSTORE(Op, DAG);
   case ISD::GlobalAddress: {
     MachineFunction &MF = DAG.getMachineFunction();
@@ -2001,6 +2012,34 @@ SDValue SITargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
   default:
     llvm_unreachable("Wrong trig opcode");
   }
+}
+
+SDValue SITargetLowering::LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const {
+  AtomicSDNode *AtomicNode = cast<AtomicSDNode>(Op);
+  assert(AtomicNode->isCompareAndSwap());
+  unsigned AS = AtomicNode->getAddressSpace();
+
+  // No custom lowering required for local address space
+  if (!isFlatGlobalAddrSpace(AS))
+    return Op;
+
+  // Non-local address space requires custom lowering for atomic compare
+  // and swap; cmp and swap should be in a v2i32 or v2i64 in case of _X2
+  SDLoc DL(Op);
+  SDValue ChainIn = Op.getOperand(0);
+  SDValue Addr = Op.getOperand(1);
+  SDValue Old = Op.getOperand(2);
+  SDValue New = Op.getOperand(3);
+  EVT VT = Op.getValueType();
+  MVT SimpleVT = VT.getSimpleVT();
+  MVT VecType = MVT::getVectorVT(SimpleVT, 2);
+
+  SDValue NewOld = DAG.getNode(ISD::BUILD_VECTOR, DL, VecType,
+                               New, Old);
+  SDValue Ops[] = { ChainIn, Addr, NewOld };
+  SDVTList VTList = DAG.getVTList(VT, MVT::Other);
+  return DAG.getMemIntrinsicNode(AMDGPUISD::ATOMIC_CMP_SWAP, DL,
+                                 VTList, Ops, VT, AtomicNode->getMemOperand());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2849,8 +2888,31 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr *MI,
     if (!Node->hasAnyUseOfValue(0)) {
       MI->setDesc(TII->get(NoRetAtomicOp));
       MI->RemoveOperand(0);
+      return;
     }
 
+    // For mubuf_atomic_cmpswap, we need to have tablegen use an extract_subreg
+    // instruction, because the return type of these instructions is a vec2 of
+    // the memory type, so it can be tied to the input operand.
+    // This means these instructions always have a use, so we need to add a
+    // special case to check if the atomic has only one extract_subreg use,
+    // which itself has no uses.
+    if ((Node->hasNUsesOfValue(1, 0) &&
+         Node->use_begin()->getMachineOpcode() == AMDGPU::EXTRACT_SUBREG &&
+         !Node->use_begin()->hasAnyUseOfValue(0))) {
+      unsigned Def = MI->getOperand(0).getReg();
+
+      // Change this into a noret atomic.
+      MI->setDesc(TII->get(NoRetAtomicOp));
+      MI->RemoveOperand(0);
+
+      // If we only remove the def operand from the atomic instruction, the
+      // extract_subreg will be left with a use of a vreg without a def.
+      // So we need to insert an implicit_def to avoid machine verifier
+      // errors.
+      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+              TII->get(AMDGPU::IMPLICIT_DEF), Def);
+    }
     return;
   }
 }

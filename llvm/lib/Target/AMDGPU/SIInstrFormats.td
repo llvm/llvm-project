@@ -369,15 +369,15 @@ class VOP2_MADKe <bits<6> op> : Enc64 {
 
   bits<8>  vdst;
   bits<9>  src0;
-  bits<8>  vsrc1;
-  bits<32> src2;
+  bits<8>  src1;
+  bits<32> imm;
 
   let Inst{8-0} = src0;
-  let Inst{16-9} = vsrc1;
+  let Inst{16-9} = src1;
   let Inst{24-17} = vdst;
   let Inst{30-25} = op;
   let Inst{31} = 0x0; // encoding
-  let Inst{63-32} = src2;
+  let Inst{63-32} = imm;
 }
 
 class VOP3a <bits<9> op> : Enc64 {

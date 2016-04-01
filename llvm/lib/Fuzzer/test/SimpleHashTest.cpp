@@ -1,3 +1,6 @@
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+
 // This test computes a checksum of the data (all but the last 4 bytes),
 // and then compares the last 4 bytes with the computed value.
 // A fuzzer with cmp traces is expected to defeat this check.
