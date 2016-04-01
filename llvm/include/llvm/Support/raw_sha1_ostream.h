@@ -25,7 +25,7 @@ class raw_sha1_ostream : public raw_ostream {
 
   /// See raw_ostream::write_impl.
   void write_impl(const char *Ptr, size_t Size) override {
-    State.update(ArrayRef<uint8_t>((uint8_t *)Ptr, Size));
+    State.update(ArrayRef<uint8_t>((const uint8_t *)Ptr, Size));
   }
 
 public:
