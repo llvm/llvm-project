@@ -14,7 +14,7 @@ define void @f1() {
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11, !13}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: " ", isOptimized: true, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !9, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: " ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !9, imports: !2)
 !1 = !DIFile(filename: "file.c", directory: "")
 !2 = !{}
 !3 = !{!4}

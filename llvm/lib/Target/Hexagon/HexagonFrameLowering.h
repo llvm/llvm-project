@@ -42,8 +42,9 @@ public:
     return true;
   }
 
-  void eliminateCallFramePseudoInstr(MachineFunction &MF,
-      MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const override;
+  MachineBasicBlock::iterator
+  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator I) const override;
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
       RegScavenger *RS = nullptr) const override;
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,

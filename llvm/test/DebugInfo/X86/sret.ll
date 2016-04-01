@@ -263,7 +263,7 @@ attributes #7 = { builtin nounwind }
 !llvm.module.flags = !{!64, !65}
 !llvm.ident = !{!66}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 203283) (llvm/trunk 203307)", isOptimized: false, splitDebugFilename: "sret.dwo", emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !48, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 203283) (llvm/trunk 203307)", isOptimized: false, splitDebugFilename: "sret.dwo", emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !48, globals: !2, imports: !2)
 !1 = !DIFile(filename: "sret.cpp", directory: "/usr/local/google/home/echristo/tmp")
 !2 = !{}
 !3 = !{!4, !37}

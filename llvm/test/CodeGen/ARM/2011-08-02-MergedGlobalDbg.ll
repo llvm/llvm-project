@@ -73,7 +73,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!49}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang", isOptimized: true, emissionKind: 1, file: !47, enums: !48, retainedTypes: !48, subprograms: !40, globals: !41, imports:  !48)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang", isOptimized: true, emissionKind: FullDebug, file: !47, enums: !48, retainedTypes: !48, subprograms: !40, globals: !41, imports:  !48)
 !1 = distinct !DISubprogram(name: "get1", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 5, file: !47, scope: !2, type: !3, variables: !42)
 !2 = !DIFile(filename: "ss3.c", directory: "/private/tmp")
 !3 = !DISubroutineType(types: !4)

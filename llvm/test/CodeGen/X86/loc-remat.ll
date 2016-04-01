@@ -37,7 +37,7 @@ declare void @exit(i32)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (trunk 259383) (llvm/trunk 259385)", isOptimized: true, runtimeVersion: 0, emissionKind: 2, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (trunk 259383) (llvm/trunk 259385)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, subprograms: !3)
 !1 = !DIFile(filename: "t.c", directory: "/home/majnemer/llvm/src")
 !2 = !{}
 !3 = !{!4}

@@ -12,7 +12,7 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!13}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 137954)", isOptimized: true, emissionKind: 0, file: !12, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 137954)", isOptimized: true, emissionKind: FullDebug, file: !12, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2)
 !1 = !{!2}
 !2 = !{}
 !3 = !{!5}

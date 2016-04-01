@@ -13,7 +13,7 @@ entry:
 !llvm.module.flags = !{!10}
 !llvm.gcov = !{!9}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 177323)", isOptimized: false, emissionKind: 0, file: !2, enums: !3, retainedTypes: !3, subprograms: !4, globals: !3, imports:  !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 177323)", isOptimized: false, emissionKind: FullDebug, file: !2, enums: !3, retainedTypes: !3, subprograms: !4, globals: !3, imports:  !3)
 !1 = !DIFile(filename: "hello.cc", directory: "/home/nlewycky")
 !2 = !DIFile(filename: "hello.cc", directory: "/home/nlewycky")
 !3 = !{}

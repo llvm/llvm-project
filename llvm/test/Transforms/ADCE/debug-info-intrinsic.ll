@@ -67,7 +67,7 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!14}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3)
 !1 = !DIFile(filename: "t.c", directory: "/path/to/test/Transforms/ADCE")
 !2 = !{}
 !3 = !{!4, !7, !8, !10}

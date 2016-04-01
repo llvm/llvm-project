@@ -26,7 +26,7 @@ return:
 !1 = distinct !DILexicalBlock(line: 2, column: 0, file: !18, scope: !2)
 !2 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !18, scope: !3, type: !5)
 !3 = !DIFile(filename: "a.c", directory: "/tmp/")
-!4 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: 0, file: !18, enums: !19, retainedTypes: !19, subprograms: !16)
+!4 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: FullDebug, file: !18, enums: !19, retainedTypes: !19, subprograms: !16)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7}
 !7 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -34,7 +34,7 @@ return:
 !9 = distinct !DILexicalBlock(line: 2, column: 0, file: !20, scope: !10)
 !10 = distinct !DISubprogram(name: "bar", linkageName: "bar", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !20, scope: !11, type: !13)
 !11 = !DIFile(filename: "b.c", directory: "/tmp/")
-!12 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: 0, file: !20, enums: !19, retainedTypes: !19, subprograms: !17)
+!12 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: FullDebug, file: !20, enums: !19, retainedTypes: !19, subprograms: !17)
 !13 = !DISubroutineType(types: !14)
 !14 = !{!15}
 !15 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

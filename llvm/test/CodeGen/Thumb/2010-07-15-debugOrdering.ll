@@ -53,7 +53,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !2 = distinct !DILexicalBlock(line: 44, column: 0, file: !101, scope: !3)
 !3 = distinct !DISubprogram(name: "getClosestDiagonal3", linkageName: "_Z19getClosestDiagonal3ii", line: 44, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !101, scope: null, type: !6)
 !4 = !DIFile(filename: "ggEdgeDiscrepancy.cc", directory: "/Volumes/Home/grosbaj/sources/llvm-externals/speccpu2000/benchspec/CINT2000/252.eon/src")
-!5 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 00)", isOptimized: true, emissionKind: 0, file: !101, enums: !102, retainedTypes: !102, subprograms: !103)
+!5 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 00)", isOptimized: true, emissionKind: FullDebug, file: !101, enums: !102, retainedTypes: !102, subprograms: !103)
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !22, !22}
 !8 = !DICompositeType(tag: DW_TAG_structure_type, name: "ggVector3", line: 66, size: 192, align: 32, file: !99, elements: !10)

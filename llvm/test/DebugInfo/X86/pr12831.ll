@@ -78,7 +78,7 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!162}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 ", isOptimized: false, emissionKind: 0, file: !161, enums: !1, retainedTypes: !1, subprograms: !3, globals: !128)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 ", isOptimized: false, emissionKind: FullDebug, file: !161, enums: !1, retainedTypes: !1, subprograms: !3, globals: !128)
 !1 = !{}
 !3 = !{!5, !106, !107, !126, !127}
 !5 = distinct !DISubprogram(name: "writeExpr", linkageName: "_ZN17BPLFunctionWriter9writeExprEv", line: 19, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 19, file: !6, scope: null, type: !7, declaration: !103, variables: !1)

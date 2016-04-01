@@ -212,6 +212,10 @@ public:
   StringRef getSymbolTable() const { return SymbolTable; }
   uint32_t getNumberOfSymbols() const;
 
+  std::vector<std::unique_ptr<MemoryBuffer>> takeThinBuffers() {
+    return std::move(ThinBuffers);
+  }
+
 private:
   StringRef SymbolTable;
   StringRef StringTable;

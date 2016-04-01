@@ -151,6 +151,19 @@ UniqueID file_status::getUniqueID() const {
   return UniqueID(VolumeSerialNumber, FileID);
 }
 
+ErrorOr<space_info> disk_space(const Twine &Path) {
+  ULARGE_INTEGER Avail, Total, Free;
+  if (!::GetDiskFreeSpaceExA(Path.str().c_str(), &Avail, &Total, &Free))
+    return mapWindowsError(::GetLastError());
+  space_info SpaceInfo;
+  SpaceInfo.capacity =
+      (static_cast<uint64_t>(Total.HighPart) << 32) + Total.LowPart;
+  SpaceInfo.free = (static_cast<uint64_t>(Free.HighPart) << 32) + Free.LowPart;
+  SpaceInfo.available =
+      (static_cast<uint64_t>(Avail.HighPart) << 32) + Avail.LowPart;
+  return SpaceInfo;
+}
+
 TimeValue file_status::getLastAccessedTime() const {
   ULARGE_INTEGER UI;
   UI.LowPart = LastAccessedTimeLow;

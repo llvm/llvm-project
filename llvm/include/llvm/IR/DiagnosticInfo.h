@@ -58,6 +58,8 @@ enum DiagnosticKind {
   DK_OptimizationRemarkAnalysisFPCommute,
   DK_OptimizationRemarkAnalysisAliasing,
   DK_OptimizationFailure,
+  DK_FirstRemark = DK_OptimizationRemark,
+  DK_LastRemark = DK_OptimizationFailure,
   DK_MIRParser,
   DK_PGOProfile,
   DK_Unsupported,
@@ -339,6 +341,11 @@ public:
 
   const char *getPassName() const { return PassName; }
   const Twine &getMsg() const { return Msg; }
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() >= DK_FirstRemark &&
+           DI->getKind() <= DK_LastRemark;
+  }
 
 private:
   /// Name of the pass that triggers this report. If this matches the

@@ -60,6 +60,24 @@
 # define PATH_MAX 4096
 #endif
 
+#include <sys/types.h>
+#if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__ANDROID__)
+#include <sys/statvfs.h>
+#define STATVFS statvfs
+#define STATVFS_F_FRSIZE(vfs) vfs.f_frsize
+#else
+#ifdef __OpenBSD__
+#include <sys/param.h>
+#elif defined(__ANDROID__)
+#include <sys/vfs.h>
+#else
+#include <sys/mount.h>
+#endif
+#define STATVFS statfs
+#define STATVFS_F_FRSIZE(vfs) static_cast<uint64_t>(vfs.f_bsize)
+#endif
+
+
 using namespace llvm;
 
 namespace llvm {
@@ -70,7 +88,7 @@ namespace fs {
     defined(__linux__) || defined(__CYGWIN__) || defined(__DragonFly__)
 static int
 test_dir(char ret[PATH_MAX], const char *dir, const char *bin)
-{  
+{
   struct stat sb;
   char fullpath[PATH_MAX];
 
@@ -188,6 +206,18 @@ TimeValue file_status::getLastModificationTime() const {
 
 UniqueID file_status::getUniqueID() const {
   return UniqueID(fs_st_dev, fs_st_ino);
+}
+
+ErrorOr<space_info> disk_space(const Twine &Path) {
+  struct STATVFS Vfs;
+  if (::STATVFS(Path.str().c_str(), &Vfs))
+    return std::error_code(errno, std::generic_category());
+  auto FrSize = STATVFS_F_FRSIZE(Vfs);
+  space_info SpaceInfo;
+  SpaceInfo.capacity = static_cast<uint64_t>(Vfs.f_blocks) * FrSize;
+  SpaceInfo.free = static_cast<uint64_t>(Vfs.f_bfree) * FrSize;
+  SpaceInfo.available = static_cast<uint64_t>(Vfs.f_bavail) * FrSize;
+  return SpaceInfo;
 }
 
 std::error_code current_path(SmallVectorImpl<char> &result) {

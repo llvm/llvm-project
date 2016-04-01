@@ -892,15 +892,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
       InsideCallSequence = (I->getOpcode() == FrameSetupOpcode);
       SPAdj += TII.getSPAdjust(I);
 
-      MachineBasicBlock::iterator PrevI = BB->end();
-      if (I != BB->begin()) PrevI = std::prev(I);
-      TFI->eliminateCallFramePseudoInstr(Fn, *BB, I);
-
-      // Visit the instructions created by eliminateCallFramePseudoInstr().
-      if (PrevI == BB->end())
-        I = BB->begin();     // The replaced instr was the first in the block.
-      else
-        I = std::next(PrevI);
+      I = TFI->eliminateCallFramePseudoInstr(Fn, *BB, I);
       continue;
     }
 

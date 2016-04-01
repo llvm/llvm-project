@@ -92,7 +92,7 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !llvm.module.flags = !{!22, !23}
 !llvm.ident = !{!24}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 ", isOptimized: false, splitDebugFilename: "fission-inline.dwo", emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !9, globals: !2, imports: !18)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 ", isOptimized: false, splitDebugFilename: "fission-inline.dwo", emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !9, globals: !2, imports: !18)
 !1 = !DIFile(filename: "fission-inline.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4}

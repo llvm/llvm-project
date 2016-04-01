@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the machine instruction level if-conversion pass.
+// This file implements the machine instruction level if-conversion pass, which
+// tries to convert conditional branches into predicated instructions.
 //
 //===----------------------------------------------------------------------===//
 

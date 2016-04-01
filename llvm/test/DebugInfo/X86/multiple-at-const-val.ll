@@ -32,7 +32,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!1803}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 174207)", isOptimized: true, emissionKind: 0, file: !1802, enums: !1, retainedTypes: !955, subprograms: !956, globals: !1786, imports:  !955)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 174207)", isOptimized: true, emissionKind: FullDebug, file: !1802, enums: !1, retainedTypes: !955, subprograms: !956, globals: !1786, imports:  !955)
 !1 = !{!26}
 !4 = !DINamespace(name: "std", line: 48, scope: !5)
 !5 = !DIFile(filename: "os_base.h", directory: "/privite/tmp")

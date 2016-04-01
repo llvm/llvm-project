@@ -16,7 +16,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 
 !0 = distinct !DISubprogram(name: "main", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !12, scope: !1, type: !3)
 !1 = !DIFile(filename: "/tmp/x.c", directory: "/Users/manav")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 120996)", isOptimized: false, emissionKind: 0, file: !12, enums: !6, retainedTypes: !6, subprograms: !11)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 120996)", isOptimized: false, emissionKind: FullDebug, file: !12, enums: !6, retainedTypes: !6, subprograms: !11)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

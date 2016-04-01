@@ -61,7 +61,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!23, !24}
 !llvm.ident = !{!25}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 (trunk 199923) (llvm/trunk 199940)", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !13, globals: !21, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 (trunk 199923) (llvm/trunk 199940)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !13, globals: !21, imports: !2)
 !1 = !DIFile(filename: "baz.cpp", directory: "/usr/local/google/home/echristo/tmp")
 !2 = !{}
 !3 = !{!4}

@@ -36,7 +36,7 @@ public:
 
   bool isFPCloseToIncomingSP() const override { return false; }
 
-  void
+  MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF,
                                 MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) const override;

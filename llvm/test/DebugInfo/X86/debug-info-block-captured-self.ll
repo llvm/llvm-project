@@ -80,7 +80,7 @@ define internal void @"__24-[Main initWithContext:]_block_invoke_2"(i8* %.block_
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!108}
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.3 ", isOptimized: false, runtimeVersion: 2, emissionKind: 0, file: !107, enums: !2, retainedTypes: !4, subprograms: !23, globals: !15, imports:  !15)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.3 ", isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, file: !107, enums: !2, retainedTypes: !4, subprograms: !23, globals: !15, imports:  !15)
 !1 = !DIFile(filename: "llvm/tools/clang/test/CodeGenObjC/debug-info-block-captured-self.m", directory: "")
 !2 = !{!3}
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, line: 20, size: 32, align: 32, file: !107, elements: !4)

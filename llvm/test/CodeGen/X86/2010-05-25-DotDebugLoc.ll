@@ -202,7 +202,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !0 = !DILocalVariable(name: "a", line: 1921, arg: 1, scope: !1, file: !2, type: !9)
 !1 = distinct !DISubprogram(name: "__divsc3", linkageName: "__divsc3", line: 1922, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, scopeLine: 1922, file: !45, scope: !2, type: !4, variables: !43)
 !2 = !DIFile(filename: "libgcc2.c", directory: "/Users/yash/clean/LG.D/gcc/../../llvmgcc/gcc")
-!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 1, file: !45, enums: !47, retainedTypes: !47, subprograms: !44, imports:  null)
+!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !45, enums: !47, retainedTypes: !47, subprograms: !44, imports:  null)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !9, !9, !9, !9}
 !6 = !DIDerivedType(tag: DW_TAG_typedef, name: "SCtype", line: 170, file: !46, scope: !7, baseType: !8)

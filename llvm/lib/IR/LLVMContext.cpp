@@ -223,27 +223,9 @@ static bool isDiagnosticEnabled(const DiagnosticInfo &DI) {
   // pattern, passed via one of the -pass-remarks* flags, matches the name of
   // the pass that is emitting the diagnostic. If there is no match, ignore the
   // diagnostic and return.
-  switch (DI.getKind()) {
-  case llvm::DK_OptimizationRemark:
-    if (!cast<DiagnosticInfoOptimizationRemark>(DI).isEnabled())
-      return false;
-    break;
-  case llvm::DK_OptimizationRemarkMissed:
-    if (!cast<DiagnosticInfoOptimizationRemarkMissed>(DI).isEnabled())
-      return false;
-    break;
-  case llvm::DK_OptimizationRemarkAnalysis:
-    if (!cast<DiagnosticInfoOptimizationRemarkAnalysis>(DI).isEnabled())
-      return false;
-    break;
-  case llvm::DK_OptimizationRemarkAnalysisFPCommute:
-    if (!cast<DiagnosticInfoOptimizationRemarkAnalysisFPCommute>(DI)
-             .isEnabled())
-      return false;
-    break;
-  default:
-    break;
-  }
+  if (auto *Remark = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
+    return Remark->isEnabled();
+
   return true;
 }
 

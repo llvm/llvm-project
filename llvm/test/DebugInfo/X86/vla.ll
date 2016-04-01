@@ -75,7 +75,7 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!29}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
 !1 = !DIFile(filename: "vla.c", directory: "")
 !2 = !{}
 !3 = !{!4, !9}

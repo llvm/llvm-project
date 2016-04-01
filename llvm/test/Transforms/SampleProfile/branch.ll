@@ -157,7 +157,7 @@ attributes #4 = { nounwind readonly }
 !llvm.module.flags = !{!13, !14}
 !llvm.ident = !{!15}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 248211) (llvm/trunk 248217)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !3, subprograms: !5)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 248211) (llvm/trunk 248217)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, subprograms: !5)
 !1 = !DIFile(filename: "test.cc", directory: "/ssd/llvm_commit")
 !2 = !{}
 !3 = !{!4}

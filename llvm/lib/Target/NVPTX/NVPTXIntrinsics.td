@@ -1846,54 +1846,61 @@ def : Pat<(int_nvvm_rotate_b32 Int32Regs:$src, Int32Regs:$amt),
           (ROTL32reg_sw Int32Regs:$src, Int32Regs:$amt)>,
       Requires<[noHWROT32]> ;
 
-def GET_LO_INT64
-  : NVPTXInst<(outs Int32Regs:$dst), (ins Int64Regs:$src),
-              !strconcat("{{\n\t",
-              !strconcat(".reg .b32 %dummy;\n\t",
-              !strconcat("mov.b64 \t{$dst,%dummy}, $src;\n\t",
-        !strconcat("}}", "")))),
-        []> ;
+let hasSideEffects = 0 in {
+  def GET_LO_INT64
+    : NVPTXInst<(outs Int32Regs:$dst), (ins Int64Regs:$src),
+                !strconcat("{{\n\t",
+                !strconcat(".reg .b32 %dummy;\n\t",
+                !strconcat("mov.b64 \t{$dst,%dummy}, $src;\n\t",
+          !strconcat("}}", "")))),
+          []> ;
 
-def GET_HI_INT64
-  : NVPTXInst<(outs Int32Regs:$dst), (ins Int64Regs:$src),
-              !strconcat("{{\n\t",
-              !strconcat(".reg .b32 %dummy;\n\t",
-              !strconcat("mov.b64 \t{%dummy,$dst}, $src;\n\t",
-        !strconcat("}}", "")))),
-        []> ;
+  def GET_HI_INT64
+    : NVPTXInst<(outs Int32Regs:$dst), (ins Int64Regs:$src),
+                !strconcat("{{\n\t",
+                !strconcat(".reg .b32 %dummy;\n\t",
+                !strconcat("mov.b64 \t{%dummy,$dst}, $src;\n\t",
+          !strconcat("}}", "")))),
+          []> ;
+}
 
-def PACK_TWO_INT32
-  : NVPTXInst<(outs Int64Regs:$dst), (ins Int32Regs:$lo, Int32Regs:$hi),
-              "mov.b64 \t$dst, {{$lo, $hi}};", []> ;
+let hasSideEffects = 0 in {
+  def PACK_TWO_INT32
+    : NVPTXInst<(outs Int64Regs:$dst), (ins Int32Regs:$lo, Int32Regs:$hi),
+                "mov.b64 \t$dst, {{$lo, $hi}};", []> ;
+}
 
 def : Pat<(int_nvvm_swap_lo_hi_b64 Int64Regs:$src),
           (PACK_TWO_INT32 (GET_HI_INT64 Int64Regs:$src),
                           (GET_LO_INT64 Int64Regs:$src))> ;
 
-// funnel shift, requires >= sm_32
-def SHF_L_WRAP_B32_IMM
-  : NVPTXInst<(outs Int32Regs:$dst),
-              (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
-              "shf.l.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
-    Requires<[hasHWROT32]>;
+// Funnel shift, requires >= sm_32.  Does not trap if amt is out of range, so
+// no side effects.
+let hasSideEffects = 0 in {
+  def SHF_L_WRAP_B32_IMM
+    : NVPTXInst<(outs Int32Regs:$dst),
+                (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
+                "shf.l.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
+      Requires<[hasHWROT32]>;
 
-def SHF_L_WRAP_B32_REG
-  : NVPTXInst<(outs Int32Regs:$dst),
-              (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
-              "shf.l.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
-    Requires<[hasHWROT32]>;
+  def SHF_L_WRAP_B32_REG
+    : NVPTXInst<(outs Int32Regs:$dst),
+                (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
+                "shf.l.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
+      Requires<[hasHWROT32]>;
 
-def SHF_R_WRAP_B32_IMM
-  : NVPTXInst<(outs Int32Regs:$dst),
-              (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
-              "shf.r.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
-    Requires<[hasHWROT32]>;
+  def SHF_R_WRAP_B32_IMM
+    : NVPTXInst<(outs Int32Regs:$dst),
+                (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
+                "shf.r.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
+      Requires<[hasHWROT32]>;
 
-def SHF_R_WRAP_B32_REG
-  : NVPTXInst<(outs Int32Regs:$dst),
-              (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
-              "shf.r.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
-    Requires<[hasHWROT32]>;
+  def SHF_R_WRAP_B32_REG
+    : NVPTXInst<(outs Int32Regs:$dst),
+                (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
+                "shf.r.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
+      Requires<[hasHWROT32]>;
+}
 
 // HW version of rotate 64
 def : Pat<(int_nvvm_rotate_b64 Int64Regs:$src, (i32 imm:$amt)),

@@ -19,7 +19,7 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 !llvm.module.flags = !{!7, !8, !9}
 !llvm.ident = !{!10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (http://llvm.org/git/clang.git 3490ab8630d5643f71f1f04e46984f05b27b8d67) (http://llvm.org/git/llvm.git d2643e2ff955ed234944fe3c6b4ffc1250085843)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (http://llvm.org/git/clang.git 3490ab8630d5643f71f1f04e46984f05b27b8d67) (http://llvm.org/git/llvm.git d2643e2ff955ed234944fe3c6b4ffc1250085843)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3)
 !1 = !DIFile(filename: "test.c", directory: "movpc-test")
 !2 = !{}
 !3 = !{!4}

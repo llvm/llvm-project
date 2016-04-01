@@ -38,7 +38,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!12}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3 (trunk 168918) (llvm/trunk 168920)", isOptimized: true, emissionKind: 0, file: !11, enums: !2, retainedTypes: !2, subprograms: !13, globals: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3 (trunk 168918) (llvm/trunk 168920)", isOptimized: true, emissionKind: FullDebug, file: !11, enums: !2, retainedTypes: !2, subprograms: !13, globals: !2)
 !2 = !{}
 !4 = !DILocalVariable(name: "hg", line: 725, arg: 4, scope: !14, file: !5, type: !6)
 !5 = !DIFile(filename: "MultiSource/Benchmarks/Olden/bh/newbh.c", directory: "MultiSource/Benchmarks/Olden/bh")

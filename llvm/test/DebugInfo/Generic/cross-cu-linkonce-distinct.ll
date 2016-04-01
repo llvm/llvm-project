@@ -68,7 +68,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!19, !20}
 !llvm.ident = !{!21, !21}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !9, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !9, imports: !2)
 !1 = !DIFile(filename: "a.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4}
@@ -80,7 +80,7 @@ attributes #1 = { nounwind readnone }
 !9 = !{!10}
 !10 = !DIGlobalVariable(name: "x", line: 4, isLocal: false, isDefinition: true, scope: null, file: !5, type: !11, variable: i32 (i32)** @x)
 !11 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !6)
-!12 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !13, enums: !2, retainedTypes: !2, subprograms: !14, globals: !17, imports: !2)
+!12 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !13, enums: !2, retainedTypes: !2, subprograms: !14, globals: !17, imports: !2)
 !13 = !DIFile(filename: "b.cpp", directory: "/tmp/dbginfo")
 !14 = !{!15}
 !15 = distinct !DISubprogram(name: "func", linkageName: "_Z4funci", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 1, file: !13, scope: !16, type: !6, variables: !2)

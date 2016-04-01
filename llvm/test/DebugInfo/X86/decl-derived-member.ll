@@ -100,7 +100,7 @@ attributes #4 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !llvm.module.flags = !{!30, !31}
 !llvm.ident = !{!32}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.7.0 (trunk 227104) (llvm/trunk 227103)", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !9, globals: !28, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.7.0 (trunk 227104) (llvm/trunk 227103)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !9, globals: !28, imports: !2)
 !1 = !DIFile(filename: "decl-derived-member.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4, !8}

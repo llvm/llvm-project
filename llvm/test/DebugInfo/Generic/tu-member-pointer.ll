@@ -16,7 +16,7 @@
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!10, !11}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4", isOptimized: false, emissionKind: 0, file: !1, enums: !2, retainedTypes: !3, subprograms: !2, globals: !5, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !2, globals: !5, imports: !2)
 !1 = !DIFile(filename: "foo.cpp", directory: ".")
 !2 = !{}
 !3 = !{!4}

@@ -54,7 +54,7 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!438, !464}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.4 (trunk 190311)", isOptimized: true, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !298, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.4 (trunk 190311)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !298, imports: !2)
 !1 = !DIFile(filename: "bt.c", directory: "/home/hfinkel/src/NPB2.3-omp-C/BT")
 !2 = !{}
 !3 = !{!4, !82, !102, !114, !132, !145, !154, !155, !162, !183, !200, !201, !207, !208, !215, !221, !230, !238, !246, !255, !260, !261, !268, !274, !279, !280, !287, !293}

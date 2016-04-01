@@ -180,7 +180,7 @@ void InstrProfSymtab::create(Module &M, bool InLTO) {
       continue;
     const std::string &PGOFuncName = getPGOFuncName(F, InLTO);
     addFuncName(PGOFuncName);
-    MD5FuncMap.push_back(std::make_pair(Function::getGUID(PGOFuncName), &F));
+    MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
   }
 
   finalizeSymtab();

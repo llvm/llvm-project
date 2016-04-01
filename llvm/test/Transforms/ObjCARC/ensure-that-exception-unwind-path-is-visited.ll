@@ -113,7 +113,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!33, !34, !35, !36, !61}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.3 ", isOptimized: true, runtimeVersion: 2, emissionKind: 0, file: !60, enums: !1, retainedTypes: !1, subprograms: !3, globals: !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.3 ", isOptimized: true, runtimeVersion: 2, emissionKind: FullDebug, file: !60, enums: !1, retainedTypes: !1, subprograms: !3, globals: !1)
 !1 = !{}
 !3 = !{!5, !27}
 !5 = distinct !DISubprogram(name: "main", line: 9, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, scopeLine: 10, file: !60, scope: !6, type: !7, variables: !11)

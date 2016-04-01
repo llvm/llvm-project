@@ -80,7 +80,7 @@ entry:
 
 !0 = distinct !DISubprogram(name: "get1", linkageName: "get1", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 4, file: !47, scope: !1, type: !3, variables: !42)
 !1 = !DIFile(filename: "foo.c", directory: "/tmp/")
-!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 2369.8)", isOptimized: true, emissionKind: 0, file: !47, enums: !48, retainedTypes: !48, subprograms: !40, globals: !41, imports:  !48)
+!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 2369.8)", isOptimized: true, emissionKind: FullDebug, file: !47, enums: !48, retainedTypes: !48, subprograms: !40, globals: !41, imports:  !48)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5, !5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "_Bool", size: 8, align: 8, encoding: DW_ATE_boolean)

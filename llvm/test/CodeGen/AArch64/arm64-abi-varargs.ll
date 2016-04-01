@@ -125,7 +125,7 @@ entry:
 define void @bar(i32 %x, <4 x i32> %y) nounwind {
 entry:
 ; CHECK-LABEL: bar:
-; CHECK: str {{q[0-9]+}}, [sp, #16]
+; CHECK: stp {{q[0-9]+}}, {{q[0-9]+}}, [sp, #16]
 ; CHECK: str {{x[0-9]+}}, [sp]
   %x.addr = alloca i32, align 4
   %y.addr = alloca <4 x i32>, align 16

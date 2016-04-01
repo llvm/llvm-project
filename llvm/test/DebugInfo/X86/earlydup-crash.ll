@@ -48,7 +48,7 @@ declare void @foobar(i32)
 !1 = distinct !DILexicalBlock(line: 515, column: 0, file: !44, scope: !2)
 !2 = distinct !DISubprogram(name: "framework_construct_pathname", line: 515, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !44, scope: null, type: !5)
 !3 = !DIFile(filename: "darwin-c.c", directory: "/Users/espindola/llvm/build-llvm-gcc/gcc/../../llvm-gcc-4.2/gcc/config")
-!4 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 0, file: !44, enums: !46, retainedTypes: !46, subprograms: !45)
+!4 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !44, enums: !46, retainedTypes: !46, subprograms: !45)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !9, !11}
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, file: !44, scope: !3, baseType: !8)

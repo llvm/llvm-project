@@ -27,7 +27,7 @@ attributes #0 = { nounwind }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3 ", isOptimized: false, emissionKind: 0, file: !9, enums: !1, retainedTypes: !1, subprograms: !2, globals: !1, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3 ", isOptimized: false, emissionKind: FullDebug, file: !9, enums: !1, retainedTypes: !1, subprograms: !2, globals: !1, imports:  !1)
 !1 = !{}
 !2 = !{!3}
 !3 = distinct !DISubprogram(name: "main", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scopeLine: 1, file: !9, scope: !4, type: !5, variables: !1)

@@ -70,10 +70,10 @@ void NVPTXFrameLowering::emitEpilogue(MachineFunction &MF,
 
 // This function eliminates ADJCALLSTACKDOWN,
 // ADJCALLSTACKUP pseudo instructions
-void NVPTXFrameLowering::eliminateCallFramePseudoInstr(
+MachineBasicBlock::iterator NVPTXFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
   // Simply discard ADJCALLSTACKDOWN,
   // ADJCALLSTACKUP instructions.
-  MBB.erase(I);
+  return MBB.erase(I);
 }

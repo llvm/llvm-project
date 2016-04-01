@@ -25,7 +25,7 @@ define i32 @unused() !dbg !10 {
 !llvm.module.flags = !{!16, !17}
 !llvm.ident = !{!18}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251407) (llvm/trunk 251401)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3, globals: !13)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251407) (llvm/trunk 251401)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3, globals: !13)
 !1 = !DIFile(filename: "linkused2.c", directory: "/usr/local/google/home/tejohnson/llvm/tmp")
 !2 = !{}
 !3 = !{!4, !10}

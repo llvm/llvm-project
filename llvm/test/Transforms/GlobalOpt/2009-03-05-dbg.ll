@@ -56,7 +56,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.gv = !{!0}
 
 !0 = !DIGlobalVariable(name: "Stop", line: 2, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !2, variable: i32* @Stop)
-!1 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 0, file: !20, enums: !21, retainedTypes: !21)
+!1 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !20, enums: !21, retainedTypes: !21)
 !2 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !3 = !DILocalVariable(name: "i", line: 4, arg: 1, scope: !4, file: !1, type: !2)
 !4 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scope: !1, type: !5)

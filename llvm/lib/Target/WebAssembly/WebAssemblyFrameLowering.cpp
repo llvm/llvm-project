@@ -100,7 +100,8 @@ static void writeSPToMemory(unsigned SrcReg, MachineFunction &MF,
   MF.getInfo<WebAssemblyFunctionInfo>()->stackifyVReg(SPAddr);
 }
 
-void WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
+MachineBasicBlock::iterator
+WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
   assert(!I->getOperand(0).getImm() && hasFP(MF) &&
@@ -111,7 +112,7 @@ void WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
     DebugLoc DL = I->getDebugLoc();
     writeSPToMemory(WebAssembly::SP32, MF, MBB, I, I, DL);
   }
-  MBB.erase(I);
+  return MBB.erase(I);
 }
 
 void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,

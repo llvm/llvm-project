@@ -54,7 +54,7 @@ declare void @uuid_LtoB(i8*, i8*)
 !1 = distinct !DILexicalBlock(line: 807, column: 0, file: !39, scope: !2)
 !2 = distinct !DISubprogram(name: "gpt2gpm", linkageName: "gpt2gpm", line: 807, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !39, scope: null, type: !5)
 !3 = !DIFile(filename: "G.c", directory: "/tmp")
-!4 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "llvm-gcc", isOptimized: true, emissionKind: 0, file: !39, enums: !18, retainedTypes: !18, subprograms: !40)
+!4 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "llvm-gcc", isOptimized: true, emissionKind: FullDebug, file: !39, enums: !18, retainedTypes: !18, subprograms: !40)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
 !7 = !DILocation(line: 810, scope: !1)

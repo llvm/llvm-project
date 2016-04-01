@@ -47,7 +47,7 @@ attributes #0 = { nounwind readnone }
 !llvm.module.flags = !{!3, !4}
 !llvm.ident = !{!5}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, isOptimized: false, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !{!6}, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, subprograms: !{!6}, globals: !2, imports: !2)
 !1 = !DIFile(filename: "test.c", directory: "")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}

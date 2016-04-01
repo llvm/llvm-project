@@ -38,7 +38,7 @@ define void @_ZN1A1gEv(%struct.A* %this) unnamed_addr !dbg !19 {
 !llvm.module.flags = !{!20, !21}
 !llvm.ident = !{!22}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !3, subprograms: !17)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, subprograms: !17)
 !1 = !DIFile(filename: "x", directory: "x")
 !2 = !{}
 !3 = !{!4}

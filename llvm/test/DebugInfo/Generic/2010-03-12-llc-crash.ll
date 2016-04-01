@@ -12,7 +12,7 @@ entry:
 !0 = !DILocalVariable(name: "sy", line: 890, arg: 1, scope: !1, file: !2, type: !7)
 !1 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 892, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !8, scope: !3, type: !4)
 !2 = !DIFile(filename: "qpainter.h", directory: "QtGui")
-!3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang 1.1", isOptimized: true, emissionKind: 0, file: !9, enums: !10, retainedTypes: !10)
+!3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang 1.1", isOptimized: true, emissionKind: FullDebug, file: !9, enums: !10, retainedTypes: !10)
 !4 = !DISubroutineType(types: !6)
 !5 = !DIFile(filename: "splineeditor.cpp", directory: "src")
 !6 = !{null}

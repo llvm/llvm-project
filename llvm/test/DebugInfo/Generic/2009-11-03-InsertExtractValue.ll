@@ -8,7 +8,7 @@
 !2 = !DISubroutineType(types: !3)
 !3 = !{null}
 !4 = !DIFile(filename: "/foo", directory: "bar.cpp")
-!5 = distinct !DICompileUnit(language: DW_LANG_C99, isOptimized: true, emissionKind: 0, file: !4, subprograms: !{!0}, enums: !{}, retainedTypes: !{})
+!5 = distinct !DICompileUnit(language: DW_LANG_C99, isOptimized: true, emissionKind: FullDebug, file: !4, subprograms: !{!0}, enums: !{}, retainedTypes: !{})
 
 define <{i32, i32}> @f1() {
 ; CHECK: !dbgx ![[NUMBER:[0-9]+]]

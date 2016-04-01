@@ -51,7 +51,7 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!38}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 163586) (llvm/trunk 163570)", isOptimized: false, emissionKind: 0, file: !37, enums: !1, retainedTypes: !1, subprograms: !3, globals: !1, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 163586) (llvm/trunk 163570)", isOptimized: false, emissionKind: FullDebug, file: !37, enums: !1, retainedTypes: !1, subprograms: !3, globals: !1, imports:  !1)
 !1 = !{}
 !3 = !{!5, !10, !20}
 !5 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooi", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 7, file: !6, scope: !6, type: !7, variables: !1)

@@ -137,7 +137,7 @@ static DIScope *getNonCompileUnitScope(DIScope *N) {
 DICompileUnit *DIBuilder::createCompileUnit(
     unsigned Lang, StringRef Filename, StringRef Directory, StringRef Producer,
     bool isOptimized, StringRef Flags, unsigned RunTimeVer, StringRef SplitName,
-    DebugEmissionKind Kind, uint64_t DWOId, bool EmitDebugInfo) {
+    DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, bool EmitDebugInfo) {
 
   assert(((Lang <= dwarf::DW_LANG_Fortran08 && Lang >= dwarf::DW_LANG_C89) ||
           (Lang <= dwarf::DW_LANG_hi_user && Lang >= dwarf::DW_LANG_lo_user)) &&

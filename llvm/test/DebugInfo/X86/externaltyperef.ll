@@ -32,7 +32,7 @@ target triple = "x86_64-apple-macosx10.10.0"
 !llvm.module.flags = !{!13, !14, !15}
 !llvm.ident = !{!16}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.7.0 (trunk 242039) (llvm/trunk 242046)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !3, globals: !5, imports: !11)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.7.0 (trunk 242039) (llvm/trunk 242046)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, globals: !5, imports: !11)
 !1 = !DIFile(filename: "test.cpp", directory: "/")
 !2 = !{}
 !3 = !{!4, !9}

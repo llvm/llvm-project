@@ -49,7 +49,7 @@ emitSPUpdate(MachineBasicBlock &MBB,
 }
 
 
-void Thumb1FrameLowering::
+MachineBasicBlock::iterator Thumb1FrameLowering::
 eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator I) const {
   const Thumb1InstrInfo &TII =
@@ -80,7 +80,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
       }
     }
   }
-  MBB.erase(I);
+  return MBB.erase(I);
 }
 
 void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,

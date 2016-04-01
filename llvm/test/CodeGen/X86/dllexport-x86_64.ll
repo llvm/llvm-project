@@ -1,5 +1,7 @@
-; RUN: llc -mtriple x86_64-pc-win32 < %s | FileCheck -check-prefix=CHECK -check-prefix=WIN32 %s
+; RUN: llc -mtriple x86_64-pc-win32   < %s | FileCheck -check-prefix=CHECK -check-prefix=WIN32 %s
 ; RUN: llc -mtriple x86_64-pc-mingw32 < %s | FileCheck -check-prefix=CHECK -check-prefix=MINGW %s
+; RUN: llc -mtriple x86_64-pc-win32   < %s | FileCheck -check-prefix=NOTEXPORTED %s
+; RUN: llc -mtriple x86_64-pc-mingw32 < %s | FileCheck -check-prefix=NOTEXPORTED %s
 
 ; CHECK: .text
 
@@ -69,6 +71,11 @@ define weak_odr dllexport void @weak1() {
 
 @blob = global [6 x i8] c"\B8*\00\00\00\C3", section ".text", align 16
 @blob_alias = dllexport alias i32 (), bitcast ([6 x i8]* @blob to i32 ()*)
+
+; Verify item that should not be exported does not appear in the export table.
+; We use a separate check prefix to avoid confusion between -NOT and -SAME.
+; NOTEXPORTED: .section .drectve
+; NOTEXPORTED-NOT: notExported
 
 ; CHECK: .section .drectve
 ; WIN32: /EXPORT:f1

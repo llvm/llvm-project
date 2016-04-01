@@ -25,7 +25,7 @@ define i32 @main() nounwind readonly !dbg !1 {
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 !7 = !{!1}
-!6 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 131941)", isOptimized: true, emissionKind: 0, file: !8, enums: !9, retainedTypes: !9, subprograms: !7)
+!6 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 131941)", isOptimized: true, emissionKind: FullDebug, file: !8, enums: !9, retainedTypes: !9, subprograms: !7)
 !0 = !DILocalVariable(name: "c", line: 2, scope: !1, file: !2, type: !5)
 !1 = distinct !DISubprogram(name: "main", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 1, file: !8, scope: !2, type: !3)
 !2 = !DIFile(filename: "/d/j/debug-test.c", directory: "/Volumes/Data/b")
