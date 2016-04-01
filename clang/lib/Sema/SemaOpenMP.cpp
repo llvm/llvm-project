@@ -141,7 +141,7 @@ private:
 
   typedef SmallVector<SharingMapTy, 8>::reverse_iterator reverse_iterator;
 
-  DSAVarData getDSA(StackTy::reverse_iterator Iter, ValueDecl *D);
+  DSAVarData getDSA(StackTy::reverse_iterator& Iter, ValueDecl *D);
 
   /// \brief Checks if the variable is a local for OpenMP region.
   bool isOpenMPLocal(VarDecl *D, StackTy::reverse_iterator Iter);
@@ -396,7 +396,7 @@ static ValueDecl *getCanonicalDecl(ValueDecl *D) {
   return D;
 }
 
-DSAStackTy::DSAVarData DSAStackTy::getDSA(StackTy::reverse_iterator Iter,
+DSAStackTy::DSAVarData DSAStackTy::getDSA(StackTy::reverse_iterator& Iter,
                                           ValueDecl *D) {
   D = getCanonicalDecl(D);
   auto *VD = dyn_cast<VarDecl>(D);
@@ -505,7 +505,7 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(StackTy::reverse_iterator Iter,
   //  For constructs other than task, if no default clause is present, these
   //  variables inherit their data-sharing attributes from the enclosing
   //  context.
-  return getDSA(std::next(Iter), D);
+  return getDSA(++Iter, D);
 }
 
 Expr *DSAStackTy::addUniqueAligned(ValueDecl *D, Expr *NewDE) {
@@ -722,7 +722,7 @@ DSAStackTy::DSAVarData DSAStackTy::hasDSA(ValueDecl *D, ClausesPredicate CPred,
                                           bool FromParent) {
   D = getCanonicalDecl(D);
   auto StartI = std::next(Stack.rbegin());
-  auto EndI = std::prev(Stack.rend());
+  auto EndI = Stack.rend();
   if (FromParent && StartI != EndI) {
     StartI = std::next(StartI);
   }
@@ -742,7 +742,7 @@ DSAStackTy::hasInnermostDSA(ValueDecl *D, ClausesPredicate CPred,
                             DirectivesPredicate DPred, bool FromParent) {
   D = getCanonicalDecl(D);
   auto StartI = std::next(Stack.rbegin());
-  auto EndI = std::prev(Stack.rend());
+  auto EndI = Stack.rend();
   if (FromParent && StartI != EndI) {
     StartI = std::next(StartI);
   }
