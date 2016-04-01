@@ -1414,18 +1414,17 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
     // Parse variable
     ExprResult VarExpr =
         Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
-    if (VarExpr.isUsable())
+    if (VarExpr.isUsable()) {
       Vars.push_back(VarExpr.get());
-    else {
+    } else {
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
     }
     // Skip ',' if any
     IsComma = Tok.is(tok::comma);
-    if (IsComma) {
+    if (IsComma)
       ConsumeToken();
-      IsComma = false;
-    } else if (Tok.isNot(tok::r_paren) &&
+    else if (Tok.isNot(tok::r_paren) &&
              Tok.isNot(tok::annot_pragma_openmp_end) &&
              (!MayHaveTail || Tok.isNot(tok::colon)))
       Diag(Tok, diag::err_omp_expected_punc)

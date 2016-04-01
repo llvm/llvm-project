@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
   #pragma omp parallel shared ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel shared () // expected-error {{expected expression}}
   #pragma omp parallel shared (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
-  #pragma omp parallel shared (argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp parallel shared (argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel shared (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   #pragma omp parallel shared (argc)
   #pragma omp parallel shared (S1) // expected-error {{'S1' does not refer to a value}}

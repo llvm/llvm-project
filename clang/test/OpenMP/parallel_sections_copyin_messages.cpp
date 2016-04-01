@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
   {
     foo();
   }
-#pragma omp parallel sections copyin(h, // expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp parallel sections copyin(h, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   {
     foo();
   }

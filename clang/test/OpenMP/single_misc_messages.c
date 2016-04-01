@@ -86,11 +86,11 @@ void test_private() {
   foo();
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 {{expected expression}}
+// expected-error@+1 2 {{expected expression}}
 #pragma omp single private(,
   foo();
 #pragma omp parallel
-// expected-error@+1 {{expected expression}}
+// expected-error@+1 2 {{expected expression}}
 #pragma omp single private(, )
   foo();
 #pragma omp parallel
@@ -128,11 +128,11 @@ void test_firstprivate() {
 
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 {{expected expression}}
+// expected-error@+1 2 {{expected expression}}
 #pragma omp single firstprivate(,
   foo();
 #pragma omp parallel
-// expected-error@+1 {{expected expression}}
+// expected-error@+1 2 {{expected expression}}
 #pragma omp single firstprivate(, )
   foo();
 #pragma omp parallel
