@@ -199,7 +199,7 @@ attributes #3 = { nounwind }
 !llvm.module.flags = !{!28, !29}
 !llvm.ident = !{!30}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 ", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !13, globals: !26, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !13, globals: !26, imports: !2)
 !1 = !DIFile(filename: "<stdin>", directory: "/usr/local/google/home/blaikie/dev/scratch/missing_concrete_variable_on_darwin/reduce")
 !2 = !{}
 !3 = !{!4}

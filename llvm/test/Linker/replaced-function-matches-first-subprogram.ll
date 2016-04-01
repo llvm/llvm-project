@@ -42,7 +42,7 @@ entry:
 ; Extract out the list of subprograms from each compile unit.
 ; CHECK-DAG: ![[CU1]] = distinct !DICompileUnit({{.*}} subprograms: ![[SPs1:[0-9]+]]
 ; CHECK-DAG: ![[CU2]] = distinct !DICompileUnit({{.*}} subprograms: ![[SPs2:[0-9]+]]
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 (trunk 224193) (llvm/trunk 224197)", isOptimized: false, emissionKind: 2, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 (trunk 224193) (llvm/trunk 224197)", isOptimized: false, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
 !1 = !DIFile(filename: "t1.cpp", directory: "/Users/dexonsmith/data/llvm/staging/test/Linker/repro/d1")
 !2 = !{}
 

@@ -396,8 +396,12 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   //
   // FIXME: Having no standard library prevents e.g. many fastmath
   // optimizations, so this situation should be fixed.
-  if (T.isNVPTX())
+  if (T.isNVPTX()) {
     TLI.disableAllFunctions();
+    TLI.setAvailable(LibFunc::nvvm_reflect);
+  } else {
+    TLI.setUnavailable(LibFunc::nvvm_reflect);
+  }
 
   TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary);
 }

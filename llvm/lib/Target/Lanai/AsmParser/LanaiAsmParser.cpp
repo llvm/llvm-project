@@ -195,23 +195,12 @@ public:
       return false;
 
     // Constant case
-    if (const MCConstantExpr *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Value)) {
-      int64_t Value = ConstExpr->getValue();
-      // Check if value fits in 25 bits with 2 least significant bits 0.
-      return isShiftedUInt<23, 2>(static_cast<int32_t>(Value));
-    }
-
-    // Symbolic reference expression
-    if (const LanaiMCExpr *SymbolRefExpr = dyn_cast<LanaiMCExpr>(Imm.Value))
-      return SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_None;
-
-    // Binary expression
-    if (const MCBinaryExpr *BinaryExpr = dyn_cast<MCBinaryExpr>(Imm.Value))
-      if (const LanaiMCExpr *SymbolRefExpr =
-              dyn_cast<LanaiMCExpr>(BinaryExpr->getLHS()))
-        return SymbolRefExpr->getKind() == LanaiMCExpr::VK_Lanai_None;
-
-    return false;
+    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(Imm.Value);
+    if (!MCE)
+      return true;
+    int64_t Value = MCE->getValue();
+    // Check if value fits in 25 bits with 2 least significant bits 0.
+    return isShiftedUInt<23, 2>(static_cast<int32_t>(Value));
   }
 
   bool isBrTarget() { return isBrImm() || isToken(); }

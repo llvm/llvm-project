@@ -104,7 +104,7 @@ attributes #4 = { nounwind }
 !llvm.module.flags = !{!17, !18}
 !llvm.ident = !{!19}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 253049) ", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3, globals: !15)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 253049) ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3, globals: !15)
 !1 = !DIFile(filename: "LiveDebugValues.c", directory: "/home/vt/julia/test/tvvikram")
 !2 = !{}
 !3 = !{!4}

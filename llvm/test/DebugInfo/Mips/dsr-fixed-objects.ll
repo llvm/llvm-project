@@ -98,7 +98,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !llvm.module.flags = !{!23, !24}
 !llvm.ident = !{!25}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251783) (llvm/trunk 251781)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251783) (llvm/trunk 251781)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3)
 !1 = !DIFile(filename: "test.c", directory: "/home/vk/repos/tmp/dwarf")
 !2 = !{}
 !3 = !{!4, !15}

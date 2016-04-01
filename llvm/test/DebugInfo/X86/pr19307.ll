@@ -84,7 +84,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !llvm.module.flags = !{!42, !43}
 !llvm.ident = !{!44}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (209308)", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !12, globals: !2, imports: !21)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (209308)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !12, globals: !2, imports: !21)
 !1 = !DIFile(filename: "pr19307.cc", directory: "/llvm_cmake_gcc")
 !2 = !{}
 !3 = !{!4, !6, !8}

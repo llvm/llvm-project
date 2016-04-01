@@ -245,7 +245,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11, !13}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4", isOptimized: true, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
 !1 = !DIFile(filename: "test.c", directory: "/home/tmp")
 !2 = !{}
 !3 = !{!4}

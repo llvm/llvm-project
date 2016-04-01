@@ -43,6 +43,12 @@ class GoogleTest(TestFormat):
             if not ln.strip():
                 continue
 
+            if 'Running main() from gtest_main.cc' in ln:
+                # Upstream googletest prints this to stdout prior to running
+                # tests. LLVM removed that print statement in r61540, but we
+                # handle it here in case upstream googletest is being used.
+                continue
+
             prefix = ''
             index = 0
             while ln[index*2:index*2+2] == '  ':

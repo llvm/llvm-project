@@ -9,7 +9,7 @@ entry:
 }
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!5}
-!2 = distinct !DICompileUnit(language: DW_LANG_Mips_Assembler, producer: "clang version 3.3 ", isOptimized: false, emissionKind: 1, file: !4, enums: !3, retainedTypes: !3, subprograms: !{!6}, globals: !3, imports:  !3)
+!2 = distinct !DICompileUnit(language: DW_LANG_Mips_Assembler, producer: "clang version 3.3 ", isOptimized: false, emissionKind: FullDebug, file: !4, enums: !3, retainedTypes: !3, subprograms: !{!6}, globals: !3, imports:  !3)
 !3 = !{}
 !0 = !DILocation(line: 662302, column: 26, scope: !1)
 !1 = !DILocalVariable(name: "foo", scope: !6)

@@ -307,6 +307,24 @@ DICompileUnit *DICompileUnit::getImpl(
                    Storage);
 }
 
+Optional<DICompileUnit::DebugEmissionKind>
+DICompileUnit::getEmissionKind(StringRef Str) {
+  return StringSwitch<Optional<DebugEmissionKind>>(Str)
+      .Case("NoDebug", NoDebug)
+      .Case("FullDebug", FullDebug)
+      .Case("LineTablesOnly", LineTablesOnly)
+      .Default(None);
+}
+
+const char *DICompileUnit::EmissionKindString(DebugEmissionKind EK) {
+  switch (EK) {
+  case NoDebug:        return "NoDebug";
+  case FullDebug:      return "FullDebug";
+  case LineTablesOnly: return "LineTablesOnly";
+  }
+  return nullptr;
+}
+
 DISubprogram *DILocalScope::getSubprogram() const {
   if (auto *Block = dyn_cast<DILexicalBlockBase>(this))
     return Block->getScope()->getSubprogram();

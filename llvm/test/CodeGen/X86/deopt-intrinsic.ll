@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 declare i32 @llvm.experimental.deoptimize.i32(...)
 declare i8  @llvm.experimental.deoptimize.i8(...)
-declare webkit_jscc i16  @llvm.experimental.deoptimize.i16(...)
+declare webkit_jscc i64  @llvm.experimental.deoptimize.i64(...)
 
 define i32 @caller_0() {
 ; CHECK-LABEL: _caller_0:
@@ -44,7 +44,7 @@ entry:
   ret i8 %v
 }
 
-define i16 @caller_2() {
+define i64 @caller_2() {
 ; CHECK-LABEL: _caller_2:
 ; CHECK-NEXT: {{.+cfi.+}}
 ; CHECK-NEXT: ##{{.+}}
@@ -59,8 +59,8 @@ define i16 @caller_2() {
 ; CHECK-NEXT: retq
 
 entry:
-  %v = call webkit_jscc i16(...) @llvm.experimental.deoptimize.i16(i32 42, float 500.0) [ "deopt"(i32 3) ]
-  ret i16 %v
+  %v = call webkit_jscc i64(...) @llvm.experimental.deoptimize.i64(i32 42, float 500.0) [ "deopt"(i32 3) ]
+  ret i64 %v
 }
 
 ; STACKMAPS: Stack Maps: callsites:

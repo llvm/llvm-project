@@ -139,11 +139,11 @@ void LanaiFrameLowering::emitPrologue(MachineFunction &MF,
     replaceAdjDynAllocPseudo(MF);
 }
 
-void LanaiFrameLowering::eliminateCallFramePseudoInstr(
+MachineBasicBlock::iterator LanaiFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
   // Discard ADJCALLSTACKDOWN, ADJCALLSTACKUP instructions.
-  MBB.erase(I);
+  return MBB.erase(I);
 }
 
 // The function epilogue should not depend on the current stack pointer!

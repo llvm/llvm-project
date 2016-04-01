@@ -7187,9 +7187,6 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
         SplatIdx -= 4;
       }
 
-      // FIXME: If SplatIdx == 0 and the input came from a load, then there is
-      // nothing to do.
-
       return DAG.getNode(PPCISD::QVESPLATI, dl, VT, V1,
                          DAG.getConstant(SplatIdx, dl, MVT::i32));
     }

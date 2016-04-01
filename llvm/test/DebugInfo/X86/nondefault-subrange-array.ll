@@ -30,7 +30,7 @@
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!21}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 169136)", isOptimized: false, emissionKind: 0, file: !20, enums: !1, retainedTypes: !1, subprograms: !1, globals: !3, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 169136)", isOptimized: false, emissionKind: FullDebug, file: !20, enums: !1, retainedTypes: !1, subprograms: !1, globals: !3, imports:  !1)
 !1 = !{}
 !3 = !{!5}
 !5 = !DIGlobalVariable(name: "a", line: 1, isLocal: false, isDefinition: true, scope: null, file: !6, type: !7, variable: %class.A* @a)

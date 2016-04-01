@@ -105,9 +105,9 @@ public:
   int getFrameIndexReferenceFromSP(const MachineFunction &MF, int FI,
                                    unsigned &FrameReg) const override;
 
-  void eliminateCallFramePseudoInstr(MachineFunction &MF,
-                                 MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MI) const override;
+  MachineBasicBlock::iterator
+  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI) const override;
 
   unsigned getWinEHParentFrameOffset(const MachineFunction &MF) const override;
 

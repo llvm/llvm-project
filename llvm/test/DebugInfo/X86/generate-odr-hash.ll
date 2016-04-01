@@ -219,7 +219,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!43, !44}
 !llvm.ident = !{!45}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, splitDebugFilename: "bar.dwo", emissionKind: 0, file: !1, enums: !2, retainedTypes: !3, subprograms: !21, globals: !38, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, splitDebugFilename: "bar.dwo", emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !21, globals: !38, imports: !2)
 !1 = !DIFile(filename: "bar.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4, !6, !14, !17}

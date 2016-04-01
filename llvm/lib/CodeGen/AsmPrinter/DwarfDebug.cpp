@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instructions.h"
@@ -1139,7 +1138,7 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
 
   // Under -gmlt, skip building the subprogram if there are no inlined
   // subroutines inside it.
-  if (TheCU.getCUNode()->getEmissionKind() == DIBuilder::LineTablesOnly &&
+  if (TheCU.getCUNode()->getEmissionKind() == DICompileUnit::LineTablesOnly &&
       LScopes.getAbstractScopesList().empty() && !IsDarwin) {
     assert(InfoHolder.getScopeVariables().empty());
     assert(DbgValues.empty());

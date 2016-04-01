@@ -1770,7 +1770,7 @@ restoreCRs(bool isPPC64, bool is31,
                .addReg(MoveReg, getKillRegState(true)));
 }
 
-void PPCFrameLowering::
+MachineBasicBlock::iterator PPCFrameLowering::
 eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator I) const {
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
@@ -1807,7 +1807,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     }
   }
   // Simply discard ADJCALLSTACKDOWN, ADJCALLSTACKUP instructions.
-  MBB.erase(I);
+  return MBB.erase(I);
 }
 
 bool

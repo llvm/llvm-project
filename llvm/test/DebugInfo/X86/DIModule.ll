@@ -14,7 +14,7 @@ target triple = "x86_64-apple-macosx"
 !llvm.module.flags = !{!6, !7}
 !llvm.ident = !{!8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, file: !1, producer: "LLVM version 3.7.0", isOptimized: false, runtimeVersion: 2, emissionKind: 1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !2, imports: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, file: !1, producer: "LLVM version 3.7.0", isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, enums: !2, retainedTypes: !2, subprograms: !2, globals: !2, imports: !3)
 !1 = !DIFile(filename: "/llvm/tools/clang/test/Modules/<stdin>", directory: "/")
 !2 = !{}
 !3 = !{!4}

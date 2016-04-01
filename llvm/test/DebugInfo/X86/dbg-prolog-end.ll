@@ -36,7 +36,7 @@ entry:
 !llvm.module.flags = !{!21}
 !18 = !{!1, !6}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 131100)", isOptimized: false, emissionKind: 0, file: !19, enums: !20, retainedTypes: !20, subprograms: !18, imports:  null)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 131100)", isOptimized: false, emissionKind: FullDebug, file: !19, enums: !20, retainedTypes: !20, subprograms: !18, imports:  null)
 !1 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 1, file: !19, scope: !2, type: !3)
 !2 = !DIFile(filename: "/tmp/a.c", directory: "/private/tmp")
 !3 = !DISubroutineType(types: !4)

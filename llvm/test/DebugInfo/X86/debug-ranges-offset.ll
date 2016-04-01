@@ -202,7 +202,7 @@ attributes #4 = { builtin }
 !llvm.module.flags = !{!16, !17}
 !llvm.ident = !{!18}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 207243) (llvm/trunk 207259)", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 207243) (llvm/trunk 207259)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
 !1 = !DIFile(filename: "foo.cpp", directory: "/usr/local/google/home/echristo/tmp")
 !2 = !{}
 !3 = !{!4, !13}

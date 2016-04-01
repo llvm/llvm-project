@@ -20,7 +20,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!18}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.0 (trunk 137954)", isOptimized: true, emissionKind: 0, file: !16, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.0 (trunk 137954)", isOptimized: true, emissionKind: FullDebug, file: !16, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2)
 !1 = !{!2}
 !2 = !{}
 !3 = !{!5}

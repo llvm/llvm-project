@@ -29,7 +29,7 @@
 !llvm.module.flags = !{!12, !13}
 !llvm.ident = !{!14}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: 0, file: !1, enums: !2, retainedTypes: !3, subprograms: !2, globals: !9, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !2, globals: !9, imports: !2)
 !1 = !DIFile(filename: "simple.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4}

@@ -81,7 +81,7 @@ entry:
 
 !llvm.dbg.cu = !{!0, !10}
 !llvm.module.flags = !{!25}
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3", isOptimized: false, emissionKind: 1, file: !23, enums: !1, retainedTypes: !1, subprograms: !3, globals: !1, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3", isOptimized: false, emissionKind: FullDebug, file: !23, enums: !1, retainedTypes: !1, subprograms: !3, globals: !1, imports:  !1)
 !1 = !{}
 !3 = !{!5}
 !5 = distinct !DISubprogram(name: "test", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 3, file: !23, scope: !6, type: !7, variables: !1)
@@ -89,7 +89,7 @@ entry:
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !9}
 !9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!10 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3 (trunk 172862)", isOptimized: false, emissionKind: 1, file: !24, enums: !1, retainedTypes: !1, subprograms: !11, globals: !1, imports:  !1)
+!10 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3 (trunk 172862)", isOptimized: false, emissionKind: FullDebug, file: !24, enums: !1, retainedTypes: !1, subprograms: !11, globals: !1, imports:  !1)
 !11 = !{!13}
 !13 = distinct !DISubprogram(name: "fn", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 1, file: !24, scope: !14, type: !7, variables: !1)
 !14 = !DIFile(filename: "simple2.c", directory: "/private/tmp")

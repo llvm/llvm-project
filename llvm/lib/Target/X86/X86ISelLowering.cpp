@@ -2025,8 +2025,7 @@ X86TargetLowering::getOptimalMemOpType(uint64_t Size,
                                        bool MemcpyStrSrc,
                                        MachineFunction &MF) const {
   const Function *F = MF.getFunction();
-  if ((!IsMemset || ZeroMemset) &&
-      !F->hasFnAttribute(Attribute::NoImplicitFloat)) {
+  if (!F->hasFnAttribute(Attribute::NoImplicitFloat)) {
     if (Size >= 16 &&
         (!Subtarget.isUnalignedMem16Slow() ||
          ((DstAlign == 0 || DstAlign >= 16) &&
@@ -2042,11 +2041,14 @@ X86TargetLowering::getOptimalMemOpType(uint64_t Size,
         return MVT::v4i32;
       if (Subtarget.hasSSE1())
         return MVT::v4f32;
-    } else if (!MemcpyStrSrc && Size >= 8 &&
-               !Subtarget.is64Bit() &&
-               Subtarget.hasSSE2()) {
+    } else if ((!IsMemset || ZeroMemset) && !MemcpyStrSrc && Size >= 8 &&
+               !Subtarget.is64Bit() && Subtarget.hasSSE2()) {
       // Do not use f64 to lower memcpy if source is string constant. It's
       // better to use i32 to avoid the loads.
+      // Also, do not use f64 to lower memset unless this is a memset of zeros.
+      // The gymnastics of splatting a byte value into an XMM register and then
+      // only using 8-byte stores (because this is a CPU with slow unaligned
+      // 16-byte accesses) makes that a loser.
       return MVT::f64;
     }
   }

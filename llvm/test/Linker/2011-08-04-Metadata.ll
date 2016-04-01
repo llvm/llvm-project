@@ -22,7 +22,7 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 ()", isOptimized: true, emissionKind: 0, file: !9, enums: !{}, retainedTypes: !{}, subprograms: !10, globals: !{!5})
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 ()", isOptimized: true, emissionKind: FullDebug, file: !9, enums: !{}, retainedTypes: !{}, subprograms: !10, globals: !{!5})
 !1 = distinct !DISubprogram(name: "foo", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !9, scope: !2, type: !3)
 !2 = !DIFile(filename: "/tmp/one.c", directory: "/Volumes/Lalgate/Slate/D")
 !3 = !DISubroutineType(types: !4)

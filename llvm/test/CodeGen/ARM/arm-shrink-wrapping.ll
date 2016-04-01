@@ -677,7 +677,7 @@ bb13:                                             ; preds = %bb3, %bb
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "LLVM", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "LLVM", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, subprograms: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "a.cpp", directory: "b")
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}

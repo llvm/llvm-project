@@ -42,7 +42,7 @@ declare %0 @llvm.uadd.with.overflow.i64(i64, i64) nounwind readnone
 
 !0 = distinct !DISubprogram(name: "__udivmodti4", line: 879, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 879, file: !29, scope: !1, type: !3)
 !1 = !DIFile(filename: "foobar.c", directory: "/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 0, file: !29, enums: !31, retainedTypes: !31, subprograms: !28, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !29, enums: !31, retainedTypes: !31, subprograms: !28, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5, !5, !5, !8}
 !5 = !DIDerivedType(tag: DW_TAG_typedef, name: "UTItype", line: 166, file: !30, scope: !6, baseType: !7)

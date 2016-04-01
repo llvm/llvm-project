@@ -34,7 +34,7 @@ class WebAssemblyFrameLowering final : public TargetFrameLowering {
                             /*TransientStackAlignment=*/16,
                             /*StackRealignable=*/true) {}
 
-  void eliminateCallFramePseudoInstr(
+  MachineBasicBlock::iterator eliminateCallFramePseudoInstr(
       MachineFunction &MF, MachineBasicBlock &MBB,
       MachineBasicBlock::iterator I) const override;
 

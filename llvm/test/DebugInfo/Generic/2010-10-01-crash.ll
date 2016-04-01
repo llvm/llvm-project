@@ -15,7 +15,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, 
 !llvm.module.flags = !{!27}
 !0 = distinct !DISubprogram(name: "CGRectStandardize", linkageName: "CGRectStandardize", line: 54, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !1, scope: null)
 !1 = !DIFile(filename: "GSFusedSilica.m", directory: "/Volumes/Data/Users/sabre/Desktop")
-!2 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 2.9 (trunk 115292)", isOptimized: true, runtimeVersion: 1, emissionKind: 0, file: !25, enums: !26, retainedTypes: !26, subprograms: !{!0})
+!2 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 2.9 (trunk 115292)", isOptimized: true, runtimeVersion: 1, emissionKind: FullDebug, file: !25, enums: !26, retainedTypes: !26, subprograms: !{!0})
 !5 = !DIDerivedType(tag: DW_TAG_typedef, name: "CGRect", line: 49, file: !25, baseType: null)
 !23 = !DILocalVariable(name: "rect", line: 53, arg: 2, scope: !0, file: !1, type: !5)
 !24 = !DILocation(line: 53, column: 33, scope: !0)

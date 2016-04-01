@@ -87,7 +87,7 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!24, !25, !26, !27, !38}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC_plus_plus, producer: "clang version 3.4 ", isOptimized: false, runtimeVersion: 2, emissionKind: 0, file: !1, enums: !2, retainedTypes: !3, subprograms: !6, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC_plus_plus, producer: "clang version 3.4 ", isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !6, globals: !2, imports: !2)
 !1 = !DIFile(filename: "t.mm", directory: "")
 !2 = !{}
 !3 = !{!4}

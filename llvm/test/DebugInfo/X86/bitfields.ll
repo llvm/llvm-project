@@ -54,7 +54,7 @@ target triple = "x86_64-apple-macosx"
 !llvm.module.flags = !{!13, !14, !15}
 !llvm.ident = !{!16}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (trunk 240548) (llvm/trunk 240554)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !3, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (trunk 240548) (llvm/trunk 240554)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, subprograms: !2, globals: !3, imports: !2)
 !1 = !DIFile(filename: "bitfields.c", directory: "/")
 !2 = !{}
 !3 = !{!4}

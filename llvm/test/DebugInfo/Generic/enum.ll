@@ -53,7 +53,7 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!19, !24}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: false, emissionKind: 0, file: !1, enums: !2, retainedTypes: !11, subprograms: !12, globals: !17, imports: !11)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !11, subprograms: !12, globals: !17, imports: !11)
 !1 = !DIFile(filename: "enum.cpp", directory: "/tmp")
 !2 = !{!3, !8}
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "e1", line: 1, size: 64, align: 64, file: !1, elements: !4)

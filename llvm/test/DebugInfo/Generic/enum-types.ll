@@ -48,7 +48,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!19, !20}
 !llvm.ident = !{!21, !21}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 214102:214133) (llvm/trunk 214102:214132)", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !6, globals: !11, imports: !11)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 214102:214133) (llvm/trunk 214102:214132)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, subprograms: !6, globals: !11, imports: !11)
 !1 = !DIFile(filename: "a.cpp", directory: "")
 !2 = !{!3}
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "EA", line: 1, size: 32, align: 32, file: !1, elements: !4, identifier: "_ZTS2EA")
@@ -60,7 +60,7 @@ attributes #1 = { nounwind readnone }
 !9 = !DISubroutineType(types: !10)
 !10 = !{null, !"_ZTS2EA"}
 !11 = !{}
-!12 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 214102:214133) (llvm/trunk 214102:214132)", isOptimized: false, emissionKind: 1, file: !13, enums: !14, retainedTypes: !14, subprograms: !16, globals: !11, imports: !11)
+!12 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (trunk 214102:214133) (llvm/trunk 214102:214132)", isOptimized: false, emissionKind: FullDebug, file: !13, enums: !14, retainedTypes: !14, subprograms: !16, globals: !11, imports: !11)
 !13 = !DIFile(filename: "b.cpp", directory: "")
 !14 = !{!15}
 !15 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "EA", line: 1, size: 32, align: 32, file: !13, elements: !4, identifier: "_ZTS2EA")

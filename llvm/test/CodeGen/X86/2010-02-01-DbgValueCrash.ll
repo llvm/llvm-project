@@ -18,7 +18,7 @@ entry:
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 declare void @"tart.reflect.ComplexType.create->tart.core.Object"(%tart.reflect.ComplexType*) nounwind readnone
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 0, file: !15, enums: !16, retainedTypes: !16)
+!0 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !15, enums: !16, retainedTypes: !16)
 !1 = !DIDerivedType(tag: DW_TAG_const_type, size: 192, align: 64, file: !15, scope: !0, baseType: !2)
 !2 = !DICompositeType(tag: DW_TAG_structure_type, name: "C", line: 1, size: 192, align: 64, file: !15, scope: !0, elements: !3)
 !3 = !{!4, !6, !7}

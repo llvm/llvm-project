@@ -42,7 +42,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!20}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 131941)", isOptimized: false, emissionKind: 0, file: !18, enums: !19, retainedTypes: !19, subprograms: !17)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 131941)", isOptimized: false, emissionKind: FullDebug, file: !18, enums: !19, retainedTypes: !19, subprograms: !17)
 !1 = distinct !DISubprogram(name: "f", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 1, file: !18, scope: !2, type: !3)
 !2 = !DIFile(filename: "/d/j/debug-test.c", directory: "/Volumes/Data/b")
 !3 = !DISubroutineType(types: !4)

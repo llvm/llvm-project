@@ -1025,52 +1025,49 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
 
         // Map this store to 'UnknownValue'.
         Stores.insert(SU, UnknownValue);
-        continue;
+      } else {
+        // Add precise dependencies against all previously seen memory
+        // accesses mapped to the same Value(s).
+        for (auto &underlObj : Objs) {
+          ValueType V = underlObj.getPointer();
+          bool ThisMayAlias = underlObj.getInt();
+
+          Value2SUsMap &stores_ = (ThisMayAlias ? Stores : NonAliasStores);
+
+          // Add dependencies to previous stores and loads mapped to V.
+          addChainDependencies(SU, stores_, V);
+          addChainDependencies(SU, (ThisMayAlias ? Loads : NonAliasLoads), V);
+
+          // Map this store to V.
+          stores_.insert(SU, V);
+        }
+        // The store may have dependencies to unanalyzable loads and
+        // stores.
+        addChainDependencies(SU, Loads, UnknownValue);
+        addChainDependencies(SU, Stores, UnknownValue);
       }
-
-      // Add precise dependencies against all previously seen memory
-      // accesses mapped to the same Value(s).
-      for (auto &underlObj : Objs) {
-        ValueType V = underlObj.getPointer();
-        bool ThisMayAlias = underlObj.getInt();
-
-        Value2SUsMap &stores_ = (ThisMayAlias ? Stores : NonAliasStores);
-
-        // Add dependencies to previous stores and loads mapped to V.
-        addChainDependencies(SU, stores_, V);
-        addChainDependencies(SU, (ThisMayAlias ? Loads : NonAliasLoads), V);
-
-        // Map this store to V.
-        stores_.insert(SU, V);
-      }
-      // The store may have dependencies to unanalyzable loads and
-      // stores.
-      addChainDependencies(SU, Loads, UnknownValue);
-      addChainDependencies(SU, Stores, UnknownValue);
-    }
-    else { // SU is a load.
+    } else { // SU is a load.
       if (Objs.empty()) {
         // An unknown load depends on all stores.
         addChainDependencies(SU, Stores);
         addChainDependencies(SU, NonAliasStores);
 
         Loads.insert(SU, UnknownValue);
-        continue;
+      } else {
+        for (auto &underlObj : Objs) {
+          ValueType V = underlObj.getPointer();
+          bool ThisMayAlias = underlObj.getInt();
+
+          // Add precise dependencies against all previously seen stores
+          // mapping to the same Value(s).
+          addChainDependencies(SU, (ThisMayAlias ? Stores : NonAliasStores), V);
+
+          // Map this load to V.
+          (ThisMayAlias ? Loads : NonAliasLoads).insert(SU, V);
+        }
+        // The load may have dependencies to unanalyzable stores.
+        addChainDependencies(SU, Stores, UnknownValue);
       }
-
-      for (auto &underlObj : Objs) {
-        ValueType V = underlObj.getPointer();
-        bool ThisMayAlias = underlObj.getInt();
-
-        // Add precise dependencies against all previously seen stores
-        // mapping to the same Value(s).
-        addChainDependencies(SU, (ThisMayAlias ? Stores : NonAliasStores), V);
-
-        // Map this load to V.
-        (ThisMayAlias ? Loads : NonAliasLoads).insert(SU, V);
-      }
-      // The load may have dependencies to unanalyzable stores.
-      addChainDependencies(SU, Stores, UnknownValue);
     }
 
     // Reduce maps if they grow huge.

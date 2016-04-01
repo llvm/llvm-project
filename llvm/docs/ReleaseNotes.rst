@@ -52,6 +52,10 @@ Non-comprehensive list of changes in this release
 * The C API function LLVMGetDataLayout is deprecated
   in favor of LLVMGetDataLayoutStr.
 
+* ``TargetFrameLowering::eliminateCallFramePseudoInstr`` now returns an
+  iterator to the next instruction instead of ``void``. Targets that previously
+  did ``MBB.erase(I); return;`` now probably want ``return MBB.erase(I);``.
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet

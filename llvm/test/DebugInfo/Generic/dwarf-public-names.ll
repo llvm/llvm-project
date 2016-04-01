@@ -90,7 +90,7 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!38}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (http://llvm.org/git/clang.git a09cd8103a6a719cb2628cdf0c91682250a17bd2) (http://llvm.org/git/llvm.git 47d03cec0afca0c01ae42b82916d1d731716cd20)", isOptimized: false, emissionKind: 0, file: !37, enums: !1, retainedTypes: !1, subprograms: !2, globals: !24, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (http://llvm.org/git/clang.git a09cd8103a6a719cb2628cdf0c91682250a17bd2) (http://llvm.org/git/llvm.git 47d03cec0afca0c01ae42b82916d1d731716cd20)", isOptimized: false, emissionKind: FullDebug, file: !37, enums: !1, retainedTypes: !1, subprograms: !2, globals: !24, imports:  !1)
 !1 = !{}
 !2 = !{!3, !18, !19, !20}
 !3 = distinct !DISubprogram(name: "member_function", linkageName: "_ZN1C15member_functionEv", line: 9, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 9, file: !4, scope: null, type: !5, declaration: !12, variables: !1)

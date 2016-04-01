@@ -312,19 +312,22 @@ void AggressiveAntiDepBreaker::HandleLastUse(unsigned Reg, unsigned KillIdx,
     DEBUG(if (header) {
         dbgs() << header << TRI->getName(Reg); header = nullptr; });
     DEBUG(dbgs() << "->g" << State->GetGroup(Reg) << tag);
-  }
-  // Repeat for subregisters.
-  for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs) {
-    unsigned SubregReg = *SubRegs;
-    if (!State->IsLive(SubregReg)) {
-      KillIndices[SubregReg] = KillIdx;
-      DefIndices[SubregReg] = ~0u;
-      RegRefs.erase(SubregReg);
-      State->LeaveGroup(SubregReg);
-      DEBUG(if (header) {
-          dbgs() << header << TRI->getName(Reg); header = nullptr; });
-      DEBUG(dbgs() << " " << TRI->getName(SubregReg) << "->g" <<
-            State->GetGroup(SubregReg) << tag);
+    // Repeat for subregisters. Note that we only do this if the superregister
+    // was not live because otherwise, regardless whether we have an explicit
+    // use of the subregister, the subregister's contents are needed for the
+    // uses of the superregister.
+    for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs) {
+      unsigned SubregReg = *SubRegs;
+      if (!State->IsLive(SubregReg)) {
+        KillIndices[SubregReg] = KillIdx;
+        DefIndices[SubregReg] = ~0u;
+        RegRefs.erase(SubregReg);
+        State->LeaveGroup(SubregReg);
+        DEBUG(if (header) {
+            dbgs() << header << TRI->getName(Reg); header = nullptr; });
+        DEBUG(dbgs() << " " << TRI->getName(SubregReg) << "->g" <<
+              State->GetGroup(SubregReg) << tag);
+      }
     }
   }
 

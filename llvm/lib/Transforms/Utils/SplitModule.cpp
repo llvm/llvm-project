@@ -20,6 +20,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
@@ -55,6 +56,24 @@ static void addNonConstUser(ClusterMapType &GVtoClusterMap,
   }
 }
 
+// Adds all GlobalValue users of V to the same cluster as GV.
+static void addAllGlobalValueUsers(ClusterMapType &GVtoClusterMap,
+                                   const GlobalValue *GV, const Value *V) {
+  for (auto *U : V->users()) {
+    SmallVector<const User *, 4> Worklist;
+    Worklist.push_back(U);
+    while (!Worklist.empty()) {
+      const User *UU = Worklist.pop_back_val();
+      // For each constant that is not a GV (a pure const) recurse.
+      if (isa<Constant>(UU) && !isa<GlobalValue>(UU)) {
+        Worklist.append(UU->user_begin(), UU->user_end());
+        continue;
+      }
+      addNonConstUser(GVtoClusterMap, GV, UU);
+    }
+  }
+}
+
 // Find partitions for module in the way that no locals need to be
 // globalized.
 // Try to balance pack those partitions into N files since this roughly equals
@@ -64,7 +83,6 @@ static void findPartitions(Module *M, ClusterIDMapType &ClusterIDMap,
   // At this point module should have the proper mix of globals and locals.
   // As we attempt to partition this module, we must not change any
   // locals to globals.
-
   DEBUG(dbgs() << "Partition module with (" << M->size() << ")functions\n");
   ClusterMapType GVtoClusterMap;
   ComdatMembersType ComdatMembers;
@@ -95,23 +113,17 @@ static void findPartitions(Module *M, ClusterIDMapType &ClusterIDMap,
         GVtoClusterMap.unionSets(&GV, Base);
     }
 
-    // Further only iterate over local GVs.
-    if (!GV.hasLocalLinkage())
-      return;
-
-    for (auto *U : GV.users()) {
-      SmallVector<const User *, 4> Worklist;
-      Worklist.push_back(U);
-      while (!Worklist.empty()) {
-        const User *UU = Worklist.pop_back_val();
-        // For each constant that is not a GV (a pure const) recurse.
-        if (isa<Constant>(UU) && !isa<GlobalValue>(UU)) {
-          Worklist.append(UU->user_begin(), UU->user_end());
+    if (const Function *F = dyn_cast<Function>(&GV)) {
+      for (const BasicBlock &BB : *F) {
+        BlockAddress *BA = BlockAddress::lookup(&BB);
+        if (!BA || !BA->isConstantUsed())
           continue;
-        }
-        addNonConstUser(GVtoClusterMap, &GV, UU);
+        addAllGlobalValueUsers(GVtoClusterMap, F, BA);
       }
     }
+
+    if (GV.hasLocalLinkage())
+      addAllGlobalValueUsers(GVtoClusterMap, &GV, &GV);
   };
 
   std::for_each(M->begin(), M->end(), recordGVSet);
@@ -225,37 +237,26 @@ void llvm::SplitModule(
       externalize(&GV);
     for (GlobalAlias &GA : M->aliases())
       externalize(&GA);
+  }
 
-    // FIXME: We should be able to reuse M as the last partition instead of
-    // cloning it.
-    for (unsigned I = 0; I != N; ++I) {
-      ValueToValueMapTy VMap;
-      std::unique_ptr<Module> MPart(
-          CloneModule(M.get(), VMap, [=](const GlobalValue *GV) {
+  // This performs splitting without a need for externalization, which might not
+  // always be possible.
+  ClusterIDMapType ClusterIDMap;
+  findPartitions(M.get(), ClusterIDMap, N);
+
+  // FIXME: We should be able to reuse M as the last partition instead of
+  // cloning it.
+  for (unsigned I = 0; I < N; ++I) {
+    ValueToValueMapTy VMap;
+    std::unique_ptr<Module> MPart(
+        CloneModule(M.get(), VMap, [&](const GlobalValue *GV) {
+          if (ClusterIDMap.count(GV))
+            return (ClusterIDMap[GV] == I);
+          else
             return isInPartition(GV, I, N);
-          }));
-      if (I != 0)
-        MPart->setModuleInlineAsm("");
-      ModuleCallback(std::move(MPart));
-    }
-  } else {
-    // This performs splitting without a need for externalization, which might not
-    // always be possible.
-    ClusterIDMapType ClusterIDMap;
-    findPartitions(M.get(), ClusterIDMap, N);
-
-    for (unsigned I = 0; I < N; ++I) {
-      ValueToValueMapTy VMap;
-      std::unique_ptr<Module> MPart(
-          CloneModule(M.get(), VMap, [&](const GlobalValue *GV) {
-             if (ClusterIDMap.count(GV))
-               return (ClusterIDMap[GV] == I);
-             else
-               return isInPartition(GV, I, N);
-          }));
-      if (I != 0)
-        MPart->setModuleInlineAsm("");
-      ModuleCallback(std::move(MPart));
-    }
+        }));
+    if (I != 0)
+      MPart->setModuleInlineAsm("");
+    ModuleCallback(std::move(MPart));
   }
 }

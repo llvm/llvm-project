@@ -89,7 +89,7 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!83}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.1 (trunk 146596)", isOptimized: false, emissionKind: 0, file: !82, enums: !1, retainedTypes: !3, subprograms: !27, globals: !1, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.1 (trunk 146596)", isOptimized: false, emissionKind: FullDebug, file: !82, enums: !1, retainedTypes: !3, subprograms: !27, globals: !1, imports:  !1)
 !1 = !{}
 !3 = !{!5, !9}
 !5 = !DICompositeType(tag: DW_TAG_class_type, name: "bar", line: 9, size: 128, align: 64, file: !82, elements: !7)

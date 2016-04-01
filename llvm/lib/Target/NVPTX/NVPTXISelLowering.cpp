@@ -1620,9 +1620,11 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
         unsigned sz = VTs[i].getSizeInBits();
         unsigned AlignI = GreatestCommonDivisor64(RetAlign, Offsets[i]);
-        bool needTruncate = sz < 8;
-        if (VTs[i].isInteger() && (sz < 8))
+        bool needTruncate = false;
+        if (VTs[i].isInteger() && sz < 8) {
           sz = 8;
+          needTruncate = true;
+        }
 
         SmallVector<EVT, 4> LoadRetVTs;
         EVT TheLoadType = VTs[i];
@@ -1631,10 +1633,16 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           // aggregates.
           LoadRetVTs.push_back(MVT::i32);
           TheLoadType = MVT::i32;
+          needTruncate = true;
         } else if (sz < 16) {
           // If loading i1/i8 result, generate
           //   load i8 (-> i16)
           //   trunc i16 to i1/i8
+
+          // FIXME: Do we need to set needTruncate to true here, too?  We could
+          // not figure out what this branch is for in D17872, so we left it
+          // alone.  The comment above about loading i1/i8 may be wrong, as the
+          // branch above seems to cover integers of size < 32.
           LoadRetVTs.push_back(MVT::i16);
         } else
           LoadRetVTs.push_back(Ins[i].VT);

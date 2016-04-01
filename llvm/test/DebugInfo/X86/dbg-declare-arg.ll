@@ -74,7 +74,7 @@ entry:
 
 !0 = !DISubprogram(name: "~A", line: 2, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !51, scope: !1, type: !11)
 !1 = !DICompositeType(tag: DW_TAG_class_type, name: "A", line: 2, size: 128, align: 32, file: !51, scope: !2, elements: !4)
-!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.0 (trunk 130127)", isOptimized: false, emissionKind: 1, file: !51, enums: !{}, retainedTypes: !{}, subprograms: !50)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.0 (trunk 130127)", isOptimized: false, emissionKind: FullDebug, file: !51, enums: !{}, retainedTypes: !{}, subprograms: !50)
 !3 = !DIFile(filename: "a.cc", directory: "/private/tmp")
 !4 = !{!5, !7, !8, !9, !0, !10, !14}
 !5 = !DIDerivedType(tag: DW_TAG_member, name: "x", line: 2, size: 32, align: 32, file: !51, scope: !3, baseType: !6)

@@ -109,7 +109,7 @@ declare void @_ZdlPv(i8*) nounwind
 !1 = distinct !DILexicalBlock(line: 0, column: 0, file: !44, scope: !2)
 !2 = distinct !DILexicalBlock(line: 0, column: 0, file: !44, scope: !3)
 !3 = distinct !DISubprogram(name: "main", linkageName: "main", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scope: !4, type: !5)
-!4 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 0, file: !44, enums: !45, retainedTypes: !45)
+!4 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !44, enums: !45, retainedTypes: !45)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7}
 !7 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -118,7 +118,7 @@ declare void @_ZdlPv(i8*) nounwind
 !10 = !DIDerivedType(tag: DW_TAG_member, name: "_vptr$test1", line: 1, size: 64, align: 64, file: !44, scope: !8, baseType: !11)
 !11 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, file: !4, baseType: !12)
 !12 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "__vtbl_ptr_type", scope: !4, baseType: !5)
-!13 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: 0, file: !46, enums: !45, retainedTypes: !45)
+!13 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: FullDebug, file: !46, enums: !45, retainedTypes: !45)
 !14 = !DISubprogram(name: "test1", line: 1, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagPrivate, isOptimized: false, scope: !8, type: !15)
 !15 = !DISubroutineType(types: !16)
 !16 = !{null, !17}

@@ -25,7 +25,7 @@ attributes #0 = { sspreq }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!21, !72}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !5, subprograms: !8, globals: !20, imports: !5)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !5, subprograms: !8, globals: !20, imports: !5)
 !1 = !DIFile(filename: "<unknown>", directory: "/Users/matt/ryan_bug")
 !2 = !{!3}
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, line: 20, size: 32, align: 32, file: !1, scope: !4, elements: !6)

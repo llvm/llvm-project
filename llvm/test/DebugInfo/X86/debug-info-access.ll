@@ -106,7 +106,7 @@ attributes #0 = { nounwind ssp uwtable }
 !llvm.module.flags = !{!38, !39}
 !llvm.ident = !{!40}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !29, globals: !34, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !29, globals: !34, imports: !2)
 !1 = !DIFile(filename: "/llvm/tools/clang/test/CodeGenCXX/debug-info-access.cpp", directory: "")
 !2 = !{}
 !3 = !{!4, !12, !22}

@@ -14,7 +14,9 @@
 include "NVPTXInstrFormats.td"
 
 // A NOP instruction
-def NOP : NVPTXInst<(outs), (ins), "", []>;
+let hasSideEffects = 0 in {
+  def NOP : NVPTXInst<(outs), (ins), "", []>;
+}
 
 // List of vector specific properties
 def isVecLD      : VecInstTypeEnum<1>;
@@ -1227,10 +1229,12 @@ multiclass BFE<string TyStr, RegisterClass RC> {
                 !strconcat("bfe.", TyStr, " \t$d, $a, $b, $c;"), []>;
 }
 
-defm BFE_S32 : BFE<"s32", Int32Regs>;
-defm BFE_U32 : BFE<"u32", Int32Regs>;
-defm BFE_S64 : BFE<"s64", Int64Regs>;
-defm BFE_U64 : BFE<"u64", Int64Regs>;
+let hasSideEffects = 0 in {
+  defm BFE_S32 : BFE<"s32", Int32Regs>;
+  defm BFE_U32 : BFE<"u32", Int32Regs>;
+  defm BFE_S64 : BFE<"s64", Int64Regs>;
+  defm BFE_U64 : BFE<"u64", Int64Regs>;
+}
 
 //-----------------------------------
 // Comparison instructions (setp, set)
@@ -1239,19 +1243,21 @@ defm BFE_U64 : BFE<"u64", Int64Regs>;
 // FIXME: This doesn't cover versions of set and setp that combine with a
 // boolean predicate, e.g. setp.eq.and.b16.
 
-multiclass SETP<string TypeStr, RegisterClass RC, Operand ImmCls> {
-  def rr :
-    NVPTXInst<(outs Int1Regs:$dst), (ins RC:$a, RC:$b, CmpMode:$cmp),
-              !strconcat("setp${cmp:base}${cmp:ftz}.", TypeStr,
-                         "\t$dst, $a, $b;"), []>;
-  def ri :
-    NVPTXInst<(outs Int1Regs:$dst), (ins RC:$a, ImmCls:$b, CmpMode:$cmp),
-              !strconcat("setp${cmp:base}${cmp:ftz}.", TypeStr,
-                         "\t$dst, $a, $b;"), []>;
-  def ir :
-    NVPTXInst<(outs Int1Regs:$dst), (ins ImmCls:$a, RC:$b, CmpMode:$cmp),
-              !strconcat("setp${cmp:base}${cmp:ftz}.", TypeStr,
-                         "\t$dst, $a, $b;"), []>;
+let hasSideEffects = 0 in {
+  multiclass SETP<string TypeStr, RegisterClass RC, Operand ImmCls> {
+    def rr :
+      NVPTXInst<(outs Int1Regs:$dst), (ins RC:$a, RC:$b, CmpMode:$cmp),
+                !strconcat("setp${cmp:base}${cmp:ftz}.", TypeStr,
+                           "\t$dst, $a, $b;"), []>;
+    def ri :
+      NVPTXInst<(outs Int1Regs:$dst), (ins RC:$a, ImmCls:$b, CmpMode:$cmp),
+                !strconcat("setp${cmp:base}${cmp:ftz}.", TypeStr,
+                           "\t$dst, $a, $b;"), []>;
+    def ir :
+      NVPTXInst<(outs Int1Regs:$dst), (ins ImmCls:$a, RC:$b, CmpMode:$cmp),
+                !strconcat("setp${cmp:base}${cmp:ftz}.", TypeStr,
+                           "\t$dst, $a, $b;"), []>;
+  }
 }
 
 defm SETP_b16 : SETP<"b16", Int16Regs, i16imm>;
@@ -1270,16 +1276,18 @@ defm SETP_f64 : SETP<"f64", Float64Regs, f64imm>;
 // "set.CmpOp{.ftz}.dtype.stype", where dtype is the type of the destination
 // reg, either u32, s32, or f32.  Anyway these aren't used at the moment.
 
-multiclass SET<string TypeStr, RegisterClass RC, Operand ImmCls> {
-  def rr : NVPTXInst<(outs Int32Regs:$dst),
-                     (ins RC:$a, RC:$b, CmpMode:$cmp),
-                     !strconcat("set$cmp.", TypeStr, "\t$dst, $a, $b;"), []>;
-  def ri : NVPTXInst<(outs Int32Regs:$dst),
-                     (ins RC:$a, ImmCls:$b, CmpMode:$cmp),
-                     !strconcat("set$cmp.", TypeStr, "\t$dst, $a, $b;"), []>;
-  def ir : NVPTXInst<(outs Int32Regs:$dst),
-                     (ins ImmCls:$a, RC:$b, CmpMode:$cmp),
-                     !strconcat("set$cmp.", TypeStr, "\t$dst, $a, $b;"), []>;
+let hasSideEffects = 0 in {
+  multiclass SET<string TypeStr, RegisterClass RC, Operand ImmCls> {
+    def rr : NVPTXInst<(outs Int32Regs:$dst),
+                       (ins RC:$a, RC:$b, CmpMode:$cmp),
+                       !strconcat("set$cmp.", TypeStr, "\t$dst, $a, $b;"), []>;
+    def ri : NVPTXInst<(outs Int32Regs:$dst),
+                       (ins RC:$a, ImmCls:$b, CmpMode:$cmp),
+                       !strconcat("set$cmp.", TypeStr, "\t$dst, $a, $b;"), []>;
+    def ir : NVPTXInst<(outs Int32Regs:$dst),
+                       (ins ImmCls:$a, RC:$b, CmpMode:$cmp),
+                       !strconcat("set$cmp.", TypeStr, "\t$dst, $a, $b;"), []>;
+  }
 }
 
 defm SET_b16 : SET<"b16", Int16Regs, i16imm>;
@@ -1302,43 +1310,45 @@ defm SET_f64 : SET<"f64", Float64Regs, f64imm>;
 
 // selp instructions that don't have any pattern matches; we explicitly use
 // them within this file.
-multiclass SELP<string TypeStr, RegisterClass RC, Operand ImmCls> {
-  def rr : NVPTXInst<(outs RC:$dst),
-                     (ins RC:$a, RC:$b, Int1Regs:$p),
-                     !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"), []>;
-  def ri : NVPTXInst<(outs RC:$dst),
-                     (ins RC:$a, ImmCls:$b, Int1Regs:$p),
-                     !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"), []>;
-  def ir : NVPTXInst<(outs RC:$dst),
-                     (ins ImmCls:$a, RC:$b, Int1Regs:$p),
-                     !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"), []>;
-  def ii : NVPTXInst<(outs RC:$dst),
-                     (ins ImmCls:$a, ImmCls:$b, Int1Regs:$p),
-                     !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"), []>;
-}
+let hasSideEffects = 0 in {
+  multiclass SELP<string TypeStr, RegisterClass RC, Operand ImmCls> {
+    def rr : NVPTXInst<(outs RC:$dst),
+                       (ins RC:$a, RC:$b, Int1Regs:$p),
+                       !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"), []>;
+    def ri : NVPTXInst<(outs RC:$dst),
+                       (ins RC:$a, ImmCls:$b, Int1Regs:$p),
+                       !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"), []>;
+    def ir : NVPTXInst<(outs RC:$dst),
+                       (ins ImmCls:$a, RC:$b, Int1Regs:$p),
+                       !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"), []>;
+    def ii : NVPTXInst<(outs RC:$dst),
+                       (ins ImmCls:$a, ImmCls:$b, Int1Regs:$p),
+                       !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"), []>;
+  }
 
-multiclass SELP_PATTERN<string TypeStr, RegisterClass RC, Operand ImmCls,
-                        SDNode ImmNode> {
-  def rr :
-    NVPTXInst<(outs RC:$dst),
-              (ins RC:$a, RC:$b, Int1Regs:$p),
-              !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"),
-              [(set RC:$dst, (select Int1Regs:$p, RC:$a, RC:$b))]>;
-  def ri :
-    NVPTXInst<(outs RC:$dst),
-              (ins RC:$a, ImmCls:$b, Int1Regs:$p),
-              !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"),
-              [(set RC:$dst, (select Int1Regs:$p, RC:$a, ImmNode:$b))]>;
-  def ir :
-    NVPTXInst<(outs RC:$dst),
-              (ins ImmCls:$a, RC:$b, Int1Regs:$p),
-              !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"),
-              [(set RC:$dst, (select Int1Regs:$p, ImmNode:$a, RC:$b))]>;
-  def ii :
-    NVPTXInst<(outs RC:$dst),
-              (ins ImmCls:$a, ImmCls:$b, Int1Regs:$p),
-              !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"),
-              [(set RC:$dst, (select Int1Regs:$p, ImmNode:$a, ImmNode:$b))]>;
+  multiclass SELP_PATTERN<string TypeStr, RegisterClass RC, Operand ImmCls,
+                          SDNode ImmNode> {
+    def rr :
+      NVPTXInst<(outs RC:$dst),
+                (ins RC:$a, RC:$b, Int1Regs:$p),
+                !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"),
+                [(set RC:$dst, (select Int1Regs:$p, RC:$a, RC:$b))]>;
+    def ri :
+      NVPTXInst<(outs RC:$dst),
+                (ins RC:$a, ImmCls:$b, Int1Regs:$p),
+                !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"),
+                [(set RC:$dst, (select Int1Regs:$p, RC:$a, ImmNode:$b))]>;
+    def ir :
+      NVPTXInst<(outs RC:$dst),
+                (ins ImmCls:$a, RC:$b, Int1Regs:$p),
+                !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"),
+                [(set RC:$dst, (select Int1Regs:$p, ImmNode:$a, RC:$b))]>;
+    def ii :
+      NVPTXInst<(outs RC:$dst),
+                (ins ImmCls:$a, ImmCls:$b, Int1Regs:$p),
+                !strconcat("selp.", TypeStr, "\t$dst, $a, $b, $p;"),
+                [(set RC:$dst, (select Int1Regs:$p, ImmNode:$a, ImmNode:$b))]>;
+  }
 }
 
 // Don't pattern match on selp.{s,u}{16,32,64} -- selp.b{16,32,64} is just as
@@ -1397,14 +1407,16 @@ def MOV_ADDR64 : NVPTXInst<(outs Int64Regs:$dst), (ins imem:$a),
                            [(set Int64Regs:$dst, (Wrapper tglobaladdr:$a))]>;
 
 // Get pointer to local stack.
-def MOV_DEPOT_ADDR :    NVPTXInst<(outs Int32Regs:$d), (ins i32imm:$num),
-                                   "mov.u32 \t$d, __local_depot$num;", []>;
-def MOV_DEPOT_ADDR_64 : NVPTXInst<(outs Int64Regs:$d), (ins i32imm:$num),
-                                  "mov.u64 \t$d, __local_depot$num;", []>;
+let hasSideEffects = 0 in {
+  def MOV_DEPOT_ADDR :    NVPTXInst<(outs Int32Regs:$d), (ins i32imm:$num),
+                                     "mov.u32 \t$d, __local_depot$num;", []>;
+  def MOV_DEPOT_ADDR_64 : NVPTXInst<(outs Int64Regs:$d), (ins i32imm:$num),
+                                    "mov.u64 \t$d, __local_depot$num;", []>;
+}
 
 
 // copyPhysreg is hard-coded in NVPTXInstrInfo.cpp
-let IsSimpleMove=1 in {
+let IsSimpleMove=1, hasSideEffects=0 in {
   def IMOV1rr :  NVPTXInst<(outs Int1Regs:$dst), (ins Int1Regs:$sss),
                            "mov.pred \t$dst, $sss;", []>;
   def IMOV16rr : NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$sss),
@@ -2512,41 +2524,45 @@ def : Pat<(select Int32Regs:$pred, Float64Regs:$a, Float64Regs:$b),
           (SETP_b32ri (ANDb32ri Int32Regs:$pred, 1), 1, CmpEQ))>;
 
 
-// pack a set of smaller int registers to a larger int register
-def V4I16toI64 : NVPTXInst<(outs Int64Regs:$d),
-                           (ins Int16Regs:$s1, Int16Regs:$s2,
-                                Int16Regs:$s3, Int16Regs:$s4),
-                           "mov.b64\t$d, {{$s1, $s2, $s3, $s4}};", []>;
-def V2I16toI32 : NVPTXInst<(outs Int32Regs:$d),
-                           (ins Int16Regs:$s1, Int16Regs:$s2),
-                           "mov.b32\t$d, {{$s1, $s2}};", []>;
-def V2I32toI64 : NVPTXInst<(outs Int64Regs:$d),
-                           (ins Int32Regs:$s1, Int32Regs:$s2),
-                           "mov.b64\t$d, {{$s1, $s2}};", []>;
-def V2F32toF64 : NVPTXInst<(outs Float64Regs:$d),
-                           (ins Float32Regs:$s1, Float32Regs:$s2),
-                           "mov.b64\t$d, {{$s1, $s2}};", []>;
+let hasSideEffects = 0 in {
+  // pack a set of smaller int registers to a larger int register
+  def V4I16toI64 : NVPTXInst<(outs Int64Regs:$d),
+                             (ins Int16Regs:$s1, Int16Regs:$s2,
+                                  Int16Regs:$s3, Int16Regs:$s4),
+                             "mov.b64\t$d, {{$s1, $s2, $s3, $s4}};", []>;
+  def V2I16toI32 : NVPTXInst<(outs Int32Regs:$d),
+                             (ins Int16Regs:$s1, Int16Regs:$s2),
+                             "mov.b32\t$d, {{$s1, $s2}};", []>;
+  def V2I32toI64 : NVPTXInst<(outs Int64Regs:$d),
+                             (ins Int32Regs:$s1, Int32Regs:$s2),
+                             "mov.b64\t$d, {{$s1, $s2}};", []>;
+  def V2F32toF64 : NVPTXInst<(outs Float64Regs:$d),
+                             (ins Float32Regs:$s1, Float32Regs:$s2),
+                             "mov.b64\t$d, {{$s1, $s2}};", []>;
 
-// unpack a larger int register to a set of smaller int registers
-def I64toV4I16 : NVPTXInst<(outs Int16Regs:$d1, Int16Regs:$d2,
-                                 Int16Regs:$d3, Int16Regs:$d4),
-                           (ins Int64Regs:$s),
-                           "mov.b64\t{{$d1, $d2, $d3, $d4}}, $s;", []>;
-def I32toV2I16 : NVPTXInst<(outs Int16Regs:$d1, Int16Regs:$d2),
-                           (ins Int32Regs:$s),
-                           "mov.b32\t{{$d1, $d2}}, $s;", []>;
-def I64toV2I32 : NVPTXInst<(outs Int32Regs:$d1, Int32Regs:$d2),
-                           (ins Int64Regs:$s),
-                           "mov.b64\t{{$d1, $d2}}, $s;", []>;
-def F64toV2F32 : NVPTXInst<(outs Float32Regs:$d1, Float32Regs:$d2),
-                           (ins Float64Regs:$s),
-                           "mov.b64\t{{$d1, $d2}}, $s;", []>;
+  // unpack a larger int register to a set of smaller int registers
+  def I64toV4I16 : NVPTXInst<(outs Int16Regs:$d1, Int16Regs:$d2,
+                                   Int16Regs:$d3, Int16Regs:$d4),
+                             (ins Int64Regs:$s),
+                             "mov.b64\t{{$d1, $d2, $d3, $d4}}, $s;", []>;
+  def I32toV2I16 : NVPTXInst<(outs Int16Regs:$d1, Int16Regs:$d2),
+                             (ins Int32Regs:$s),
+                             "mov.b32\t{{$d1, $d2}}, $s;", []>;
+  def I64toV2I32 : NVPTXInst<(outs Int32Regs:$d1, Int32Regs:$d2),
+                             (ins Int64Regs:$s),
+                             "mov.b64\t{{$d1, $d2}}, $s;", []>;
+  def F64toV2F32 : NVPTXInst<(outs Float32Regs:$d1, Float32Regs:$d2),
+                             (ins Float64Regs:$s),
+                             "mov.b64\t{{$d1, $d2}}, $s;", []>;
+}
 
 // Count leading zeros
-def CLZr32 : NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
-                       "clz.b32\t$d, $a;", []>;
-def CLZr64 : NVPTXInst<(outs Int32Regs:$d), (ins Int64Regs:$a),
-                       "clz.b64\t$d, $a;", []>;
+let hasSideEffects = 0 in {
+  def CLZr32 : NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
+                         "clz.b32\t$d, $a;", []>;
+  def CLZr64 : NVPTXInst<(outs Int32Regs:$d), (ins Int64Regs:$a),
+                         "clz.b64\t$d, $a;", []>;
+}
 
 // 32-bit has a direct PTX instruction
 def : Pat<(ctlz Int32Regs:$a), (CLZr32 Int32Regs:$a)>;
@@ -2572,10 +2588,12 @@ def : Pat<(ctlz_zero_undef Int16Regs:$a),
            CvtNONE), 16)>;
 
 // Population count
-def POPCr32 : NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
-                        "popc.b32\t$d, $a;", []>;
-def POPCr64 : NVPTXInst<(outs Int32Regs:$d), (ins Int64Regs:$a),
-                        "popc.b64\t$d, $a;", []>;
+let hasSideEffects = 0 in {
+  def POPCr32 : NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
+                          "popc.b32\t$d, $a;", []>;
+  def POPCr64 : NVPTXInst<(outs Int32Regs:$d), (ins Int64Regs:$a),
+                          "popc.b64\t$d, $a;", []>;
+}
 
 // 32-bit has a direct PTX instruction
 def : Pat<(ctpop Int32Regs:$a), (POPCr32 Int32Regs:$a)>;

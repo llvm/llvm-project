@@ -72,7 +72,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!17, !18, !19, !20, !21, !22}
 !llvm.ident = !{!23}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, isOptimized: false, runtimeVersion: 2, emissionKind: 0, file: !1, enums: !2, retainedTypes: !3, subprograms: !9, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !9, globals: !2, imports: !2)
 !1 = !DIFile(filename: "-", directory: "")
 !2 = !{}
 !3 = !{!4}

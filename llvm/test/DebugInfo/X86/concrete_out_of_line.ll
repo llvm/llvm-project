@@ -78,7 +78,7 @@ declare void @_Z8moz_freePv(i8*)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!60}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.1 ()", isOptimized: true, emissionKind: 0, file: !59, enums: !1, retainedTypes: !1, subprograms: !3, globals: !47, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.1 ()", isOptimized: true, emissionKind: FullDebug, file: !59, enums: !1, retainedTypes: !1, subprograms: !3, globals: !47, imports:  !1)
 !1 = !{}
 !3 = !{!5, !23, !27, !31}
 !5 = distinct !DISubprogram(name: "Release", linkageName: "_ZN17nsAutoRefCnt7ReleaseEv", line: 14, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 14, file: !6, scope: null, type: !7 , declaration: !12, variables: !20)

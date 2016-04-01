@@ -16,7 +16,7 @@ target triple = "x86_64-apple-macosx"
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, globals: !3, imports: !11)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3, imports: !11)
 !1 = !DIFile(filename: "test.c", directory: "/")
 !2 = !{}
 !3 = !{!4}

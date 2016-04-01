@@ -171,7 +171,7 @@ namespace llvm {
                                        const unsigned char *&BufEnd,
                                        bool VerifyBufferSize) {
     // Must contain the offset and size field!
-    if (BufEnd - BufPtr < BWH_SizeField + 4)
+    if (unsigned(BufEnd - BufPtr) < BWH_SizeField + 4)
       return true;
 
     unsigned Offset = support::endian::read32le(&BufPtr[BWH_OffsetField]);

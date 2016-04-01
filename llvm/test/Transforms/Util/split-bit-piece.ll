@@ -29,7 +29,7 @@ attributes #0 = { nounwind readnone }
 !llvm.module.flags = !{!7}
 !llvm.ident = !{!8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 256979) (llvm/trunk 257107)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, retainedTypes: !2, subprograms: !{!11})
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 256979) (llvm/trunk 257107)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !2, subprograms: !{!11})
 !1 = !DIFile(filename: "tsan_shadow_test.cc", directory: "/tmp")
 !2 = !{!3, !5}
 !3 = !DICompositeType(tag: DW_TAG_class_type, name: "FastState", file: !4, line: 91, size: 64, align: 64, identifier: "_ZTSN6__tsan9FastStateE")

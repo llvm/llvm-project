@@ -81,7 +81,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !0 = !DISubprogram(name: "SVal", line: 11, isLocal: false, isDefinition: false, virtualIndex: 6, isOptimized: false, scopeLine: 11, file: !47, scope: !1, type: !14)
 !1 = !DICompositeType(tag: DW_TAG_structure_type, name: "SVal", line: 1, size: 128, align: 64, file: !47, scope: !2, elements: !4)
 !2 = !DIFile(filename: "small.cc", directory: "/Users/manav/R8248330")
-!3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: 1, file: !47, enums: !48, retainedTypes: !48, subprograms: !46, imports:  null)
+!3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: FullDebug, file: !47, enums: !48, retainedTypes: !48, subprograms: !46, imports:  null)
 !4 = !{!5, !7, !0, !9}
 !5 = !DIDerivedType(tag: DW_TAG_member, name: "Data", line: 7, size: 64, align: 64, file: !47, scope: !1, baseType: !6)
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, file: !47, scope: !2, baseType: null)

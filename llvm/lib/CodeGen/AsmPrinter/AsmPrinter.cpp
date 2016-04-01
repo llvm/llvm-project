@@ -1148,7 +1148,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   }
 
   OutStreamer->AddBlankLine();
-  for (const auto &Alias : M.aliases()) {
+  const auto printAlias = [this, &M](const GlobalAlias &Alias) {
     MCSymbol *Name = getSymbol(&Alias);
 
     if (Alias.hasExternalLinkage() || !MAI->getWeakRefDirective())
@@ -1186,6 +1186,23 @@ bool AsmPrinter::doFinalization(Module &M) {
       OutStreamer->emitELFSize(cast<MCSymbolELF>(Name),
                                MCConstantExpr::create(Size, OutContext));
     }
+  };
+  // Print aliases in topological order, that is, for each alias a = b,
+  // b must be printed before a.
+  // This is because on some targets (e.g. PowerPC) linker expects aliases in
+  // such an order to generate correct TOC information.
+  SmallVector<const GlobalAlias *, 16> AliasStack;
+  SmallPtrSet<const GlobalAlias *, 16> AliasVisited;
+  for (const auto &Alias : M.aliases()) {
+    for (const GlobalAlias *Cur = &Alias; Cur;
+         Cur = dyn_cast<GlobalAlias>(Cur->getAliasee())) {
+      if (!AliasVisited.insert(Cur).second)
+        break;
+      AliasStack.push_back(Cur);
+    }
+    for (const GlobalAlias *AncestorAlias : reverse(AliasStack))
+      printAlias(*AncestorAlias);
+    AliasStack.clear();
   }
 
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();

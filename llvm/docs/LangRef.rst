@@ -3832,7 +3832,7 @@ references to them from instructions).
 
     !0 = !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang",
                         isOptimized: true, flags: "-O2", runtimeVersion: 2,
-                        splitDebugFilename: "abc.debug", emissionKind: 1,
+                        splitDebugFilename: "abc.debug", emissionKind: FullDebug,
                         enums: !2, retainedTypes: !3, subprograms: !4,
                         globals: !5, imports: !6, macros: !7, dwoId: 0x0abcd)
 

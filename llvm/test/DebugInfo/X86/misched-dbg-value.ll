@@ -103,7 +103,7 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!83}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3 (trunk 175015)", isOptimized: true, emissionKind: 1, file: !82, enums: !1, retainedTypes: !10, subprograms: !11, globals: !29, imports:  !10)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.3 (trunk 175015)", isOptimized: true, emissionKind: FullDebug, file: !82, enums: !1, retainedTypes: !10, subprograms: !11, globals: !29, imports:  !10)
 !1 = !{!2}
 !2 = !DICompositeType(tag: DW_TAG_enumeration_type, line: 128, size: 32, align: 32, file: !82, elements: !4)
 !3 = !DIFile(filename: "dry.c", directory: "/Users/manmanren/test-Nov/rdar_13183203/test2")

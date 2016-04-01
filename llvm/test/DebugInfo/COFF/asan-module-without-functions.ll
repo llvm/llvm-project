@@ -45,7 +45,7 @@ define internal void @asan.module_dtor() {
 !llvm.module.flags = !{!3, !4}
 !llvm.ident = !{!5}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 2, file: !1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "asan.c", directory: "D:\5C")
 !2 = !{}
 !3 = !{i32 2, !"CodeView", i32 1}

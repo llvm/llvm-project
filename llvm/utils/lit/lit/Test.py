@@ -102,11 +102,18 @@ class JSONMetricValue(MetricValue):
 def toMetricValue(value):
     if isinstance(value, MetricValue):
         return value
-    elif isinstance(value, int) or isinstance(value, long):
+    elif isinstance(value, int):
         return IntMetricValue(value)
     elif isinstance(value, float):
         return RealMetricValue(value)
     else:
+        # 'long' is only present in python2
+        try:
+            if isinstance(value, long):
+                return IntMetricValue(value)
+        except NameError:
+            pass
+
         # Try to create a JSONMetricValue and let the constructor throw
         # if value is not a valid type.
         return JSONMetricValue(value)

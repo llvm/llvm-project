@@ -148,7 +148,7 @@ target triple = "x86_64-apple-darwin"
 !llvm.module.flags = !{!45, !46}
 !llvm.ident = !{!47}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (trunk 240791) (llvm/trunk 240790)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !3, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (trunk 240791) (llvm/trunk 240790)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, subprograms: !2, globals: !3, imports: !2)
 !1 = !DIFile(filename: "/llvm/tools/clang/test/CodeGen/<stdin>", directory: "/llvm/_build.ninja.release")
 !2 = !{}
 !3 = !{!4, !18, !25, !35}

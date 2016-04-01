@@ -949,3 +949,16 @@
 # CHECK-BE: stxvll 57, 12, 27                  # encoding: [0x7f,0x2c,0xdb,0x5b]
 # CHECK-LE: stxvll 57, 12, 27                  # encoding: [0x5b,0xdb,0x2c,0x7f]
             stxvll 57, 12, 27
+
+# P9 Direct Move Instructions
+# CHECK-BE: mtvsrws 34, 3                      # encoding: [0x7c,0x43,0x03,0x27]
+# CHECK-LE: mtvsrws 34, 3                      # encoding: [0x27,0x03,0x43,0x7c]
+            mtvsrws 34, 3
+
+# CHECK-BE: mtvsrdd 34, 3, 12                  # encoding: [0x7c,0x43,0x63,0x67]
+# CHECK-LE: mtvsrdd 34, 3, 12                  # encoding: [0x67,0x63,0x43,0x7c]
+            mtvsrdd 34, 3, 12
+
+# CHECK-BE: mfvsrld 3, 34                      # encoding: [0x7c,0x43,0x02,0x67]
+# CHECK-LE: mfvsrld 3, 34                      # encoding: [0x67,0x02,0x43,0x7c]
+            mfvsrld 3, 34
