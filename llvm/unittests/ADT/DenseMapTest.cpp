@@ -392,7 +392,8 @@ TEST(DenseMapCustomTest, DefaultMinReservedSizeTest) {
   // Check that we grew
   EXPECT_NE(MemorySize, Map.getMemorySize());
   // Check that move was called the expected number of times
-  EXPECT_EQ(ExpectedMaxInitialEntries + 2, CountCopyAndMove::Move);
+  //  This relies on move-construction elision, and cannot be reliably tested.
+  //   EXPECT_EQ(ExpectedMaxInitialEntries + 2, CountCopyAndMove::Move);
   // Check that no copy occured
   EXPECT_EQ(0, CountCopyAndMove::Copy);
 }
@@ -415,7 +416,8 @@ TEST(DenseMapCustomTest, InitialSizeTest) {
     // Check that we didn't grow
     EXPECT_EQ(MemorySize, Map.getMemorySize());
     // Check that move was called the expected number of times
-    EXPECT_EQ(Size * 2, CountCopyAndMove::Move);
+    //  This relies on move-construction elision, and cannot be reliably tested.
+    //   EXPECT_EQ(Size * 2, CountCopyAndMove::Move);
     // Check that no copy occured
     EXPECT_EQ(0, CountCopyAndMove::Copy);
   }
@@ -457,7 +459,8 @@ TEST(DenseMapCustomTest, ReserveTest) {
     // Check that we didn't grow
     EXPECT_EQ(MemorySize, Map.getMemorySize());
     // Check that move was called the expected number of times
-    EXPECT_EQ(Size * 2, CountCopyAndMove::Move);
+    //  This relies on move-construction elision, and cannot be reliably tested.
+    //   EXPECT_EQ(Size * 2, CountCopyAndMove::Move);
     // Check that no copy occured
     EXPECT_EQ(0, CountCopyAndMove::Copy);
   }
