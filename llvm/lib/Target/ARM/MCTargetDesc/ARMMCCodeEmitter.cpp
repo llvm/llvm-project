@@ -312,12 +312,8 @@ public:
     // Support for fixups (MCFixup)
     if (MO.isExpr()) {
       const MCExpr *Expr = MO.getExpr();
-      // In instruction code this value always encoded as lowest 12 bits,
-      // so we don't have to perform any specific adjustments.
-      // Due to requirements of relocatable records we have to use FK_Data_4.
-      // See ARMELFObjectWriter::ExplicitRelSym and
-      //     ARMELFObjectWriter::GetRelocTypeInner for more details.
-      MCFixupKind Kind = MCFixupKind(FK_Data_4);
+      // Fixups resolve to plain values that need to be encoded.
+      MCFixupKind Kind = MCFixupKind(ARM::fixup_arm_mod_imm);
       Fixups.push_back(MCFixup::create(0, Expr, Kind, MI.getLoc()));
       return 0;
     }
