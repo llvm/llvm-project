@@ -46,13 +46,15 @@ bool elf::link(ArrayRef<const char *> Args, raw_ostream &Error) {
 }
 
 static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
+  if (S.endswith("_fbsd"))
+    S = S.drop_back(5);
   if (S == "elf32btsmip")
     return {ELF32BEKind, EM_MIPS};
   if (S == "elf32ltsmip")
     return {ELF32LEKind, EM_MIPS};
-  if (S == "elf32ppc" || S == "elf32ppc_fbsd")
+  if (S == "elf32ppc")
     return {ELF32BEKind, EM_PPC};
-  if (S == "elf64ppc" || S == "elf64ppc_fbsd")
+  if (S == "elf64ppc")
     return {ELF64BEKind, EM_PPC64};
   if (S == "elf_i386")
     return {ELF32LEKind, EM_386};
@@ -69,7 +71,8 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
 
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
-static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
+std::vector<MemoryBufferRef>
+LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
   std::unique_ptr<Archive> File =
       check(Archive::create(MB), "failed to parse archive");
 
@@ -83,6 +86,11 @@ static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
                   File->getFileName());
     V.push_back(Mb);
   }
+
+  // Take ownership of memory buffers created for members of thin archives.
+  for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())
+    OwningMBs.push_back(std::move(MB));
+
   return V;
 }
 
@@ -166,6 +174,16 @@ getString(opt::InputArgList &Args, unsigned Key, StringRef Default = "") {
   if (auto *Arg = Args.getLastArg(Key))
     return Arg->getValue();
   return Default;
+}
+
+static int getInteger(opt::InputArgList &Args, unsigned Key, int Default) {
+  int V = Default;
+  if (auto *Arg = Args.getLastArg(Key)) {
+    StringRef S = Arg->getValue();
+    if (S.getAsInteger(10, V))
+      error(Arg->getSpelling() + ": number expected, but got " + S);
+  }
+  return V;
 }
 
 static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
@@ -263,6 +281,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SoName = getString(Args, OPT_soname);
   Config->Sysroot = getString(Args, OPT_sysroot);
 
+  Config->Optimize = getInteger(Args, OPT_O, 0);
+  Config->LtoO = getInteger(Args, OPT_lto_O, 2);
+
   Config->ZExecStack = hasZOption(Args, "execstack");
   Config->ZNodelete = hasZOption(Args, "nodelete");
   Config->ZNow = hasZOption(Args, "now");
@@ -273,12 +294,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   if (Config->Relocatable)
     Config->StripAll = false;
-
-  if (auto *Arg = Args.getLastArg(OPT_O)) {
-    StringRef Val = Arg->getValue();
-    if (Val.getAsInteger(10, Config->Optimize))
-      error("invalid optimization level");
-  }
 
   if (auto *Arg = Args.getLastArg(OPT_hash_style)) {
     StringRef S = Arg->getValue();

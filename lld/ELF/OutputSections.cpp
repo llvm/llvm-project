@@ -821,12 +821,6 @@ void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   Sections.push_back(S);
   S->OutSec = this;
   this->updateAlign(S->Align);
-
-  uintX_t Off = this->Header.sh_size;
-  Off = alignTo(Off, S->Align);
-  S->OutSecOff = Off;
-  Off += S->getSize();
-  this->Header.sh_size = Off;
 }
 
 // If an input string is in the form of "foo.N" where N is a number,
@@ -843,8 +837,8 @@ static int getPriority(StringRef S) {
 }
 
 // This function is called after we sort input sections
-// to update their offsets.
-template <class ELFT> void OutputSection<ELFT>::reassignOffsets() {
+// and scan relocations to setup sections' offsets.
+template <class ELFT> void OutputSection<ELFT>::assignOffsets() {
   uintX_t Off = 0;
   for (InputSection<ELFT> *S : Sections) {
     Off = alignTo(Off, S->Align);
@@ -872,7 +866,6 @@ template <class ELFT> void OutputSection<ELFT>::sortInitFini() {
   Sections.clear();
   for (Pair &P : V)
     Sections.push_back(P.second);
-  reassignOffsets();
 }
 
 // Returns true if S matches /Filename.?\.o$/.
@@ -933,7 +926,6 @@ static bool compCtors(const InputSection<ELFT> *A,
 // Read the comment above.
 template <class ELFT> void OutputSection<ELFT>::sortCtorsDtors() {
   std::stable_sort(Sections.begin(), Sections.end(), compCtors<ELFT>);
-  reassignOffsets();
 }
 
 static void fill(uint8_t *Buf, size_t Size, ArrayRef<uint8_t> A) {

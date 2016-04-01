@@ -1048,6 +1048,7 @@ MachProcess::Interrupt()
             if (Signal (m_sent_interrupt_signo))
             {
                 DNBLogThreadedIf(LOG_PROCESS, "MachProcess::Interrupt() - sent %i signal to interrupt process", m_sent_interrupt_signo);
+                return true;
             }
             else
             {

@@ -85,9 +85,11 @@ public:
   uint32_t GotIndex = -1;
   uint32_t GotPltIndex = -1;
   uint32_t PltIndex = -1;
+  uint32_t ThunkIndex = -1;
   bool hasGlobalDynIndex() { return GlobalDynIndex != uint32_t(-1); }
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
+  bool hasThunk() const { return ThunkIndex != -1U; }
 
   void setUsedInRegularObj() { IsUsedInRegularObj = true; }
 
@@ -97,6 +99,7 @@ public:
   template <class ELFT> typename ELFT::uint getGotVA() const;
   template <class ELFT> typename ELFT::uint getGotPltVA() const;
   template <class ELFT> typename ELFT::uint getPltVA() const;
+  template <class ELFT> typename ELFT::uint getThunkVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
 
   // A SymbolBody has a backreference to a Symbol. Originally they are
@@ -248,6 +251,10 @@ public:
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedSyntheticKind;
   }
+
+  // Special value designates that the symbol 'points'
+  // to the end of the section.
+  static const uintX_t SectionEnd = uintX_t(-1);
 
   uintX_t Value;
   const OutputSectionBase<ELFT> &Section;

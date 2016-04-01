@@ -13,4 +13,6 @@ define void @ctor() {
 }
 
 ; The llvm.global_ctors should end up producing constructors.
-; CHECK: Name: .ctors
+; On x86-64 (linux) we should always emit .init_array and never .ctors.
+; CHECK: Name: .init_array
+; CHECK-NOT: Name: .ctors

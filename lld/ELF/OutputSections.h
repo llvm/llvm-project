@@ -87,6 +87,7 @@ public:
   // Typically the first section of each PT_LOAD segment has this flag.
   bool PageAlign = false;
 
+  virtual void assignOffsets() {}
   virtual void finalize() {}
   virtual void writeTo(uint8_t *Buf) {}
   virtual ~OutputSectionBase() = default;
@@ -271,10 +272,10 @@ public:
   void sortInitFini();
   void sortCtorsDtors();
   void writeTo(uint8_t *Buf) override;
+  void assignOffsets() override;
   void finalize() override;
 
 private:
-  void reassignOffsets();
   std::vector<InputSection<ELFT> *> Sections;
 };
 

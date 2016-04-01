@@ -37,6 +37,8 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
   switch (Body.kind()) {
   case SymbolBody::DefinedSyntheticKind: {
     auto &D = cast<DefinedSynthetic<ELFT>>(Body);
+    if (D.Value == DefinedSynthetic<ELFT>::SectionEnd)
+      return D.Section.getVA() + D.Section.getSize();
     return D.Section.getVA() + D.Value;
   }
   case SymbolBody::DefinedRegularKind: {
@@ -131,6 +133,13 @@ template <class ELFT> typename ELFT::uint SymbolBody::getGotPltVA() const {
 template <class ELFT> typename ELFT::uint SymbolBody::getPltVA() const {
   return Out<ELFT>::Plt->getVA() + Target->PltZeroSize +
          PltIndex * Target->PltEntrySize;
+}
+
+template <class ELFT> typename ELFT::uint SymbolBody::getThunkVA() const {
+  auto *D = cast<DefinedRegular<ELFT>>(this);
+  auto *S = cast<InputSection<ELFT>>(D->Section);
+  return S->OutSec->getVA() + S->OutSecOff + S->getThunkOff() +
+         ThunkIndex * Target->ThunkSize;
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
@@ -297,6 +306,11 @@ template uint32_t SymbolBody::template getSize<ELF32LE>() const;
 template uint32_t SymbolBody::template getSize<ELF32BE>() const;
 template uint64_t SymbolBody::template getSize<ELF64LE>() const;
 template uint64_t SymbolBody::template getSize<ELF64BE>() const;
+
+template uint32_t SymbolBody::template getThunkVA<ELF32LE>() const;
+template uint32_t SymbolBody::template getThunkVA<ELF32BE>() const;
+template uint64_t SymbolBody::template getThunkVA<ELF64LE>() const;
+template uint64_t SymbolBody::template getThunkVA<ELF64BE>() const;
 
 template int SymbolBody::compare<ELF32LE>(SymbolBody *Other);
 template int SymbolBody::compare<ELF32BE>(SymbolBody *Other);

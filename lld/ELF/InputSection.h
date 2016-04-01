@@ -56,7 +56,7 @@ public:
   InputSectionBase<ELFT> *Repl;
 
   // Returns the size of this section (even if this is a common or BSS.)
-  size_t getSize() const { return Header->sh_size; }
+  size_t getSize() const;
 
   static InputSectionBase<ELFT> *Discarded;
 
@@ -167,6 +167,17 @@ public:
 
   InputSectionBase<ELFT> *getRelocatedSection();
 
+  // Register thunk related to the symbol. When the section is written
+  // to a mmap'ed file, target is requested to write an actual thunk code.
+  // Now thunks is supported for MIPS target only.
+  void addThunk(SymbolBody &Body);
+
+  // The offset of synthetic thunk code from beginning of this section.
+  uint64_t getThunkOff() const;
+
+  // Size of chunk with thunks code.
+  uint64_t getThunksSize() const;
+
 private:
   template <class RelTy>
   void copyRelocations(uint8_t *Buf, llvm::iterator_range<const RelTy *> Rels);
@@ -176,6 +187,8 @@ private:
 
   // Used by ICF.
   uint64_t GroupId = 0;
+
+  llvm::TinyPtrVector<const SymbolBody *> Thunks;
 };
 
 // MIPS .reginfo section provides information on the registers used by the code

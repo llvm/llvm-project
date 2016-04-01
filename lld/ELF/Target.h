@@ -17,6 +17,7 @@
 
 namespace lld {
 namespace elf {
+class InputFile;
 class SymbolBody;
 
 class TargetInfo {
@@ -62,6 +63,11 @@ public:
   enum PltNeed { Plt_No, Plt_Explicit, Plt_Implicit };
   PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const;
 
+  virtual bool needsThunk(uint32_t Type, const InputFile &File,
+                          const SymbolBody &S) const;
+
+  virtual void writeThunk(uint8_t *Buf, uint64_t S) const {}
+
   virtual void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
                            uint64_t P, uint64_t SA) const = 0;
   virtual bool isGotRelative(uint32_t Type) const;
@@ -94,6 +100,7 @@ public:
   unsigned PltZeroSize = 0;
   unsigned GotHeaderEntriesNum = 0;
   unsigned GotPltHeaderEntriesNum = 3;
+  uint32_t ThunkSize = 0;
   bool UseLazyBinding = false;
 
 private:

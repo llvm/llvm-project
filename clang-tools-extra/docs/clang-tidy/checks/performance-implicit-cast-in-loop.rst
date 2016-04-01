@@ -1,8 +1,9 @@
 performance-implicit-cast-in-loop
 =================================
 
-This warning appears in range-based loop with loop variable of const ref type
-where the type of the variable does not match the one returned by the iterator.
+This warning appears in a range-based loop with a loop variable of const ref
+type where the type of the variable does not match the one returned by the
+iterator.
 This means that an implicit cast has been added, which can for example result in
 expensive deep copies.
 

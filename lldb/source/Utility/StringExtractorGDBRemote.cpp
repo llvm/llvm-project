@@ -14,8 +14,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "Utility/StringExtractorGDBRemote.h"
-
-
+#include "lldb/Utility/LLDBAssert.h"
 
 StringExtractorGDBRemote::ResponseType
 StringExtractorGDBRemote::GetResponseType () const
@@ -390,4 +389,137 @@ StringExtractorGDBRemote::GetEscapedBinaryData (std::string &str)
     }
     return str.size();
 }
+
+static bool
+OKErrorNotSupportedResponseValidator(void *, const StringExtractorGDBRemote &response)
+{
+    switch (response.GetResponseType())
+    {
+        case StringExtractorGDBRemote::eOK:
+        case StringExtractorGDBRemote::eError:
+        case StringExtractorGDBRemote::eUnsupported:
+            return true;
+
+        case StringExtractorGDBRemote::eAck:
+        case StringExtractorGDBRemote::eNack:
+        case StringExtractorGDBRemote::eResponse:
+            break;
+    }
+    lldbassert(!"Packet validatation failed, check why this is happening");
+    return false;
+}
+
+static bool
+JSONResponseValidator(void *, const StringExtractorGDBRemote &response)
+{
+    switch (response.GetResponseType())
+    {
+        case StringExtractorGDBRemote::eUnsupported:
+        case StringExtractorGDBRemote::eError:
+            return true; // Accept unsupported or EXX as valid responses
+
+        case StringExtractorGDBRemote::eOK:
+        case StringExtractorGDBRemote::eAck:
+        case StringExtractorGDBRemote::eNack:
+            break;
+
+        case StringExtractorGDBRemote::eResponse:
+            // JSON that is returned in from JSON query packets is currently always
+            // either a dictionary which starts with a '{', or an array which
+            // starts with a '['. This is a quick validator to just make sure the
+            // response could be valid JSON without having to validate all of the
+            // JSON content.
+            switch (response.GetStringRef()[0])
+            {
+                case '{': return true;
+                case '[': return true;
+                default:
+                    break;
+            }
+            break;
+    }
+    lldbassert(!"Packet validatation failed, check why this is happening");
+    return false;
+}
+
+static bool
+ASCIIHexBytesResponseValidator(void *, const StringExtractorGDBRemote &response)
+{
+    switch (response.GetResponseType())
+    {
+        case StringExtractorGDBRemote::eUnsupported:
+        case StringExtractorGDBRemote::eError:
+            return true; // Accept unsupported or EXX as valid responses
+
+        case StringExtractorGDBRemote::eOK:
+        case StringExtractorGDBRemote::eAck:
+        case StringExtractorGDBRemote::eNack:
+            break;
+
+        case StringExtractorGDBRemote::eResponse:
+            {
+                uint32_t valid_count = 0;
+                for (const char ch : response.GetStringRef())
+                {
+                    if (!isxdigit(ch))
+                    {
+                        lldbassert(!"Packet validatation failed, check why this is happening");
+                        return false;
+                    }
+                    if (++valid_count >= 16)
+                        break; // Don't validate all the characters in case the packet is very large
+                }
+                return true;
+            }
+            break;
+    }
+    lldbassert(!"Packet validatation failed, check why this is happening");
+    return false;
+}
+
+void
+StringExtractorGDBRemote::CopyResponseValidator(const StringExtractorGDBRemote& rhs)
+{
+    m_validator = rhs.m_validator;
+    m_validator_baton = rhs.m_validator_baton;
+}
+
+void
+StringExtractorGDBRemote::SetResponseValidator(ResponseValidatorCallback callback, void *baton)
+{
+    m_validator = callback;
+    m_validator_baton = baton;
+}
+
+void
+StringExtractorGDBRemote::SetResponseValidatorToOKErrorNotSupported()
+{
+    m_validator = OKErrorNotSupportedResponseValidator;
+    m_validator_baton = nullptr;
+}
+
+void
+StringExtractorGDBRemote::SetResponseValidatorToASCIIHexBytes()
+{
+    m_validator = ASCIIHexBytesResponseValidator;
+    m_validator_baton = nullptr;
+}
+
+void
+StringExtractorGDBRemote::SetResponseValidatorToJSON()
+{
+    m_validator = JSONResponseValidator;
+    m_validator_baton = nullptr;
+}
+
+bool
+StringExtractorGDBRemote::ValidateResponse() const
+{
+    // If we have a validator callback, try to validate the callback
+    if (m_validator)
+        return m_validator(m_validator_baton, *this);
+    else
+        return true; // No validator, so response is valid
+}
+
 
