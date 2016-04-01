@@ -1151,23 +1151,26 @@ public:
     clang::VarDecl *
     CreateVariableDeclaration (clang::DeclContext *decl_context, const char *name, clang::QualType type);
 
-protected:
+    static lldb::opaque_compiler_type_t
+    GetOpaqueCompilerType(clang::ASTContext *ast, lldb::BasicType basic_type);
+
     static clang::QualType
-    GetQualType (lldb::opaque_compiler_type_t type)
+    GetQualType(lldb::opaque_compiler_type_t type)
     {
         if (type)
             return clang::QualType::getFromOpaquePtr(type);
         return clang::QualType();
     }
-    
+
     static clang::QualType
-    GetCanonicalQualType (lldb::opaque_compiler_type_t type)
+    GetCanonicalQualType(lldb::opaque_compiler_type_t type)
     {
         if (type)
             return clang::QualType::getFromOpaquePtr(type).getCanonicalType();
         return clang::QualType();
     }
 
+protected:
     //------------------------------------------------------------------
     // Classes that inherit from ClangASTContext can see and modify these
     //------------------------------------------------------------------

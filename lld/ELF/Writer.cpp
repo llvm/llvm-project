@@ -1402,16 +1402,17 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
 // Finalize the program headers. We call this function after we assign
 // file offsets and VAs to all sections.
 template <class ELFT> void Writer<ELFT>::setPhdrs() {
-  for (Phdr &PHdr : Phdrs) {
-    Elf_Phdr &H = PHdr.H;
-    if (PHdr.First) {
-      OutputSectionBase<ELFT> *Last = PHdr.Last;
-      H.p_filesz = Last->getFileOff() - PHdr.First->getFileOff();
+  for (Phdr &P : Phdrs) {
+    Elf_Phdr &H = P.H;
+    OutputSectionBase<ELFT> *First = P.First;
+    OutputSectionBase<ELFT> *Last = P.Last;
+    if (First) {
+      H.p_filesz = Last->getFileOff() - First->getFileOff();
       if (Last->getType() != SHT_NOBITS)
         H.p_filesz += Last->getSize();
-      H.p_memsz = Last->getVA() + Last->getSize() - PHdr.First->getVA();
-      H.p_offset = PHdr.First->getFileOff();
-      H.p_vaddr = PHdr.First->getVA();
+      H.p_memsz = Last->getVA() + Last->getSize() - First->getVA();
+      H.p_offset = First->getFileOff();
+      H.p_vaddr = First->getVA();
     }
     if (H.p_type == PT_LOAD)
       H.p_align = Target->PageSize;
@@ -1478,12 +1479,13 @@ template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
   // _etext is the first location after the last read-only loadable segment.
   // _edata is the first location after the last read-write loadable segment.
   // _end is the first location after the uninitialized data region.
-  for (Phdr &PHdr : Phdrs) {
-    if (PHdr.H.p_type != PT_LOAD)
+  for (Phdr &P : Phdrs) {
+    Elf_Phdr &H = P.H;
+    if (H.p_type != PT_LOAD)
       continue;
-    ElfSym<ELFT>::End.st_value = PHdr.H.p_vaddr + PHdr.H.p_memsz;
-    uintX_t Val = PHdr.H.p_vaddr + PHdr.H.p_filesz;
-    if (PHdr.H.p_flags & PF_W)
+    ElfSym<ELFT>::End.st_value = H.p_vaddr + H.p_memsz;
+    uintX_t Val = H.p_vaddr + H.p_filesz;
+    if (H.p_flags & PF_W)
       ElfSym<ELFT>::Edata.st_value = Val;
     else
       ElfSym<ELFT>::Etext.st_value = Val;
