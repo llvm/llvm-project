@@ -562,6 +562,9 @@ public:
   /// The name of the module that we read from the control block.
   std::string ModuleName;
 
+  /// Various options and attributes for the module
+  ModuleOptions ModuleOpts;
+
   using SerializedIdentifierTable =
       llvm::OnDiskIterableChainedHashTable<IdentifierTableInfo>;
 
@@ -733,6 +736,10 @@ bool APINotesReader::Implementation::readControlBlock(
 
     case control_block::MODULE_NAME:
       ModuleName = blobData.str();
+      break;
+
+    case control_block::MODULE_OPTIONS:
+      ModuleOpts.SwiftInferImportAsMember = (scratch.front() & 1) != 0;
       break;
 
     default:
@@ -1438,6 +1445,10 @@ APINotesReader::get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer) {
 
 StringRef APINotesReader::getModuleName() const {
   return Impl.ModuleName;
+}
+
+ModuleOptions APINotesReader::getModuleOptions() const {
+  return Impl.ModuleOpts;
 }
 
 auto APINotesReader::lookupObjCClass(StringRef name)
