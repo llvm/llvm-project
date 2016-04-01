@@ -958,8 +958,30 @@ RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
           // even if we don't actually have an implementation.
           if (!*Val)
             if (const ObjCMethodDecl *CompileTimeMD = E->getMethodDecl())
-              if (CompileTimeMD->isPropertyAccessor())
-                Val = IDecl->lookupInstanceMethod(Sel);
+              if (CompileTimeMD->isPropertyAccessor()) {
+                if (!CompileTimeMD->getSelfDecl() &&
+                    isa<ObjCCategoryDecl>(CompileTimeMD->getDeclContext())) {
+                  // If the method is an accessor in a category, and it doesn't
+                  // have a self declaration, first
+                  // try to find the method in a class extension. This
+                  // works around a bug in Sema where multiple accessors
+                  // are synthesized for properties in class
+                  // extensions that are redeclared in a category and the
+                  // the implicit parameters are not filled in for
+                  // the method on the category.
+                  // This ensures we find the accessor in the extension, which
+                  // has the implicit parameters filled in.
+                  auto *ID = CompileTimeMD->getClassInterface();
+                  for (auto *CatDecl : ID->visible_extensions()) {
+                    Val = CatDecl->getMethod(Sel,
+                                             CompileTimeMD->isInstanceMethod());
+                    if (*Val)
+                      break;
+                  }
+                }
+                if (!*Val)
+                  Val = IDecl->lookupInstanceMethod(Sel);
+              }
         }
 
         const ObjCMethodDecl *MD = Val.getValue();
