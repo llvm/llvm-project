@@ -377,18 +377,21 @@ TEST(DenseMapCustomTest, DefaultMinReservedSizeTest) {
   CountCopyAndMove::Copy = 0;
   CountCopyAndMove::Move = 0;
   for (int i = 0; i < ExpectedMaxInitialEntries; ++i)
-    Map.insert(std::make_pair(i, CountCopyAndMove()));
+    Map.insert(std::pair<int, CountCopyAndMove>(std::piecewise_construct,
+                                                std::forward_as_tuple(i),
+                                                std::forward_as_tuple()));
   // Check that we didn't grow
   EXPECT_EQ(MemorySize, Map.getMemorySize());
   // Check that move was called the expected number of times
-  EXPECT_EQ(ExpectedMaxInitialEntries * 2, CountCopyAndMove::Move);
+  EXPECT_EQ(ExpectedMaxInitialEntries, CountCopyAndMove::Move);
   // Check that no copy occured
   EXPECT_EQ(0, CountCopyAndMove::Copy);
 
   // Adding one extra element should grow the map
-  CountCopyAndMove::Copy = 0;
-  CountCopyAndMove::Move = 0;
-  Map.insert(std::make_pair(ExpectedMaxInitialEntries, CountCopyAndMove()));
+  Map.insert(std::pair<int, CountCopyAndMove>(
+      std::piecewise_construct,
+      std::forward_as_tuple(ExpectedMaxInitialEntries),
+      std::forward_as_tuple()));
   // Check that we grew
   EXPECT_NE(MemorySize, Map.getMemorySize());
   // Check that move was called the expected number of times
@@ -412,12 +415,13 @@ TEST(DenseMapCustomTest, InitialSizeTest) {
     CountCopyAndMove::Copy = 0;
     CountCopyAndMove::Move = 0;
     for (int i = 0; i < Size; ++i)
-      Map.insert(std::make_pair(i, CountCopyAndMove()));
+      Map.insert(std::pair<int, CountCopyAndMove>(std::piecewise_construct,
+                                                  std::forward_as_tuple(i),
+                                                  std::forward_as_tuple()));
     // Check that we didn't grow
     EXPECT_EQ(MemorySize, Map.getMemorySize());
     // Check that move was called the expected number of times
-    //  This relies on move-construction elision, and cannot be reliably tested.
-    //   EXPECT_EQ(Size * 2, CountCopyAndMove::Move);
+    EXPECT_EQ(Size, CountCopyAndMove::Move);
     // Check that no copy occured
     EXPECT_EQ(0, CountCopyAndMove::Copy);
   }
@@ -455,12 +459,13 @@ TEST(DenseMapCustomTest, ReserveTest) {
     CountCopyAndMove::Copy = 0;
     CountCopyAndMove::Move = 0;
     for (int i = 0; i < Size; ++i)
-      Map.insert(std::make_pair(i, CountCopyAndMove()));
+      Map.insert(std::pair<int, CountCopyAndMove>(std::piecewise_construct,
+                                                  std::forward_as_tuple(i),
+                                                  std::forward_as_tuple()));
     // Check that we didn't grow
     EXPECT_EQ(MemorySize, Map.getMemorySize());
     // Check that move was called the expected number of times
-    //  This relies on move-construction elision, and cannot be reliably tested.
-    //   EXPECT_EQ(Size * 2, CountCopyAndMove::Move);
+    EXPECT_EQ(Size, CountCopyAndMove::Move);
     // Check that no copy occured
     EXPECT_EQ(0, CountCopyAndMove::Copy);
   }
