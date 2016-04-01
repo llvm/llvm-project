@@ -1898,7 +1898,7 @@ std::error_code BitcodeReader::parseMetadataStrings(ArrayRef<uint64_t> Record,
   unsigned StringsOffset = Record[1];
   if (!NumStrings)
     return error("Invalid record: metadata strings with no strings");
-  if (StringsOffset >= Blob.size())
+  if (StringsOffset > Blob.size())
     return error("Invalid record: metadata strings corrupt offset");
 
   StringRef Lengths = Blob.slice(0, StringsOffset);
