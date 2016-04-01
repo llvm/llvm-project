@@ -664,7 +664,7 @@ static bool openBitcodeFile(StringRef Path,
   // If we have a wrapper header, parse it and ignore the non-bc file contents.
   // The magic number is 0x0B17C0DE stored in little endian.
   if (isBitcodeWrapper(BufPtr, EndBufPtr)) {
-    if (EndBufPtr - BufPtr < BWH_HeaderSize)
+    if (MemBuf->getBufferSize() < BWH_HeaderSize)
       return Error("Invalid bitcode wrapper header");
 
     if (Dump) {
