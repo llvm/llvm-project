@@ -612,6 +612,13 @@ can only be placed before an @protocol or @interface declaration:
     }];
 }
 
+def ObjCRuntimeVisibleDocs : Documentation {
+    let Category = DocCatFunction;
+    let Content = [{
+This attribute specifies that the Objective-C class to which it applies is visible to the Objective-C runtime but not to the linker. Classes annotated with this attribute cannot be subclassed and cannot have categories defined for them.
+    }];
+}
+
 def ObjCBoxableDocs : Documentation {
     let Category = DocCatFunction;
     let Content = [{
