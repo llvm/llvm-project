@@ -62,7 +62,7 @@ private:
 
   void copyLocalSymbols();
   void addReservedSymbols();
-  bool createSections();
+  void createSections();
   void addPredefinedSections();
   bool needsGot();
 
@@ -78,7 +78,7 @@ private:
   void setPhdrs();
   void fixSectionAlignments();
   void fixAbsoluteSymbols();
-  bool openFile();
+  void openFile();
   void writeHeader();
   void writeSections();
   void writeBuildId();
@@ -130,6 +130,7 @@ private:
 
 template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   typedef typename ELFT::uint uintX_t;
+  typedef typename ELFT::Ehdr Elf_Ehdr;
 
   // Create singleton output sections.
   DynamicSection<ELFT> Dynamic(*Symtab);
@@ -143,6 +144,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   SymbolTableSection<ELFT> DynSymTab(*Symtab, DynStrTab);
 
   OutputSectionBase<ELFT> ElfHeader("", 0, SHF_ALLOC);
+  ElfHeader.setSize(sizeof(Elf_Ehdr));
   OutputSectionBase<ELFT> ProgramHeaders("", 0, SHF_ALLOC);
   ProgramHeaders.updateAlign(sizeof(uintX_t));
 
@@ -214,7 +216,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (!Config->DiscardAll)
     copyLocalSymbols();
   addReservedSymbols();
-  if (!createSections())
+  createSections();
+  if (HasError)
     return;
 
   if (Config->Relocatable) {
@@ -225,10 +228,11 @@ template <class ELFT> void Writer<ELFT>::run() {
     assignAddresses();
     assignFileOffsets();
     setPhdrs();
+    fixAbsoluteSymbols();
   }
-  fixAbsoluteSymbols();
 
-  if (!openFile())
+  openFile();
+  if (HasError)
     return;
   writeHeader();
   writeSections();
@@ -448,14 +452,13 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
       continue;
     }
 
-    if (Config->EMachine == EM_MIPS) {
-      if (&Body == Config->MipsGpDisp || &Body == Config->MipsLocalGp)
-        // MIPS _gp_disp designates offset between start of function and 'gp'
-        // pointer into GOT. __gnu_local_gp is equal to the current value of
-        // the 'gp'. Therefore any relocations against them do not require
-        // dynamic relocation.
-        continue;
-    }
+    // MIPS _gp_disp designates offset between start of function and 'gp'
+    // pointer into GOT. __gnu_local_gp is equal to the current value of
+    // the 'gp'. Therefore any relocations against them do not require
+    // dynamic relocation.
+    if (Config->EMachine == EM_MIPS &&
+        (&Body == Config->MipsGpDisp || &Body == Config->MipsLocalGp))
+      continue;
 
     if (Preemptible) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
@@ -959,7 +962,7 @@ template <class ELFT> static void sortCtorsDtors(OutputSectionBase<ELFT> *S) {
 }
 
 // Create output section objects and add them to OutputSections.
-template <class ELFT> bool Writer<ELFT>::createSections() {
+template <class ELFT> void Writer<ELFT>::createSections() {
   OutputSections.push_back(Out<ELFT>::ElfHeader);
   if (!Config->Relocatable)
     OutputSections.push_back(Out<ELFT>::ProgramHeaders);
@@ -1082,7 +1085,7 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
 
   // Do not proceed if there was an undefined symbol.
   if (HasError)
-    return false;
+    return;
 
   addCommonSymbols(CommonSymbols);
   addCopyRelSymbols(CopyRelSymbols);
@@ -1116,7 +1119,6 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
 
   if (isOutputDynamic())
     Out<ELFT>::Dynamic->finalize();
-  return true;
 }
 
 template <class ELFT> bool Writer<ELFT>::needsGot() {
@@ -1328,6 +1330,8 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
 
   if (Note.First)
     Phdrs.push_back(std::move(Note));
+
+  Out<ELFT>::ProgramHeaders->setSize(sizeof(Elf_Phdr) * Phdrs.size());
 }
 
 // The first section of each PT_LOAD and the first section after PT_GNU_RELRO
@@ -1352,17 +1356,8 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
   }
 }
 
-template <class ELFT, class uintX_t>
-static uintX_t fixFileOff(uintX_t FileOff, uintX_t Align,
-                          OutputSectionBase<ELFT> *Sec) {
-}
-
 // Assign VAs (addresses at run-time) to output sections.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
-  Out<ELFT>::ElfHeader->setSize(sizeof(Elf_Ehdr));
-  size_t PhdrSize = sizeof(Elf_Phdr) * Phdrs.size();
-  Out<ELFT>::ProgramHeaders->setSize(PhdrSize);
-
   uintX_t ThreadBssOffset = 0;
   uintX_t VA = Target->getVAStart();
 
@@ -1387,7 +1382,6 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 
 // Assign file offsets to output sections.
 template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
-  Out<ELFT>::ElfHeader->setSize(sizeof(Elf_Ehdr));
   uintX_t Off = 0;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
     if (Sec->getType() == SHT_NOBITS) {
@@ -1538,16 +1532,14 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
     Sec->writeHeaderTo(++SHdrs);
 }
 
-template <class ELFT> bool Writer<ELFT>::openFile() {
+template <class ELFT> void Writer<ELFT>::openFile() {
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Config->OutputFile, FileSize,
                                FileOutputBuffer::F_executable);
-  if (!BufferOrErr) {
+  if (BufferOrErr)
+    Buffer = std::move(*BufferOrErr);
+  else
     error(BufferOrErr, "failed to open " + Config->OutputFile);
-    return false;
-  }
-  Buffer = std::move(*BufferOrErr);
-  return true;
 }
 
 // Write section contents to a mmap'ed file.

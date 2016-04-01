@@ -35,6 +35,9 @@ void test_ms_alignof_alias(void) {
 /* Charify extension. */
 #define FOO(x) #@x
 char x = FOO(a);
+#define HASHAT #@
+#define MISSING_ARG(x) #@
+/* expected-error@-1 {{'#@' is not followed by a macro parameter}} */
 
 typedef enum E { e1 };
 

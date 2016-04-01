@@ -1900,7 +1900,7 @@ arguments, with arbitrary offsets.
 }
 
 def OMPDeclareSimdDocs : Documentation {
-  let Category = DocCatStmt;
+  let Category = DocCatFunction;
   let Heading = "#pragma omp declare simd";
   let Content = [{
 The `declare simd` construct can be applied to a function to enable the creation

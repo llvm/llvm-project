@@ -2155,7 +2155,7 @@ void Preprocessor::HandleDefineDirective(Token &DefineTok,
     while (Tok.isNot(tok::eod)) {
       LastTok = Tok;
 
-      if (Tok.isNot(tok::hash) && Tok.isNot(tok::hashhash)) {
+      if (!Tok.isOneOf(tok::hash, tok::hashat, tok::hashhash)) {
         MI->AddTokenToBody(Tok);
 
         // Get the next token of the macro.
@@ -2214,7 +2214,8 @@ void Preprocessor::HandleDefineDirective(Token &DefineTok,
           MI->AddTokenToBody(LastTok);
           continue;
         } else {
-          Diag(Tok, diag::err_pp_stringize_not_parameter);
+          Diag(Tok, diag::err_pp_stringize_not_parameter)
+            << LastTok.is(tok::hashat);
 
           // Disable __VA_ARGS__ again.
           Ident__VA_ARGS__->setIsPoisoned(true);

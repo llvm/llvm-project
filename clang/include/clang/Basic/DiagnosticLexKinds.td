@@ -387,7 +387,7 @@ def err_pp_expected_comma_in_arg_list : Error<
 def err_pp_duplicate_name_in_arg_list : Error<
   "duplicate macro parameter name %0">;
 def err_pp_stringize_not_parameter : Error<
-  "'#' is not followed by a macro parameter">;
+  "'%select{#|#@}0' is not followed by a macro parameter">;
 def err_pp_malformed_ident : Error<"invalid #ident directive">;
 def err_pp_unterminated_conditional : Error<
   "unterminated conditional directive">;
