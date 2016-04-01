@@ -283,6 +283,9 @@ def : Proc<"pentium4",        [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
 def : Proc<"pentium4m",       [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
                                FeatureSSE2, FeatureFXSR, FeatureSlowBTMem]>;
 
+// Intel Quark.
+def : Proc<"lakemont",        []>;
+
 // Intel Core Duo.
 def : ProcessorModel<"yonah", SandyBridgeModel,
                      [FeatureX87, FeatureSlowUAMem16, FeatureMMX, FeatureSSE3,

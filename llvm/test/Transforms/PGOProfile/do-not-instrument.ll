@@ -3,7 +3,8 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
-define i32 @main() {
+define i32 @f1() {
+; CHECK-LABEL: @f1
 entry:
 ; CHECK: call void @llvm.instrprof.increment
 ; CHECK-NOT: ptrtoint void (i8*)* asm sideeffect

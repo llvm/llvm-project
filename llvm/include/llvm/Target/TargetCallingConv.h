@@ -90,7 +90,7 @@ namespace ISD {
     void setSwiftSelf() { Flags |= One << SwiftSelfOffs; }
 
     bool isSwiftError() const { return Flags & SwiftError; }
-    void setSwiftError() { Flags = One << SwiftErrorOffs; }
+    void setSwiftError() { Flags |= One << SwiftErrorOffs; }
 
     bool isNest()      const { return Flags & Nest; }
     void setNest()     { Flags |= One << NestOffs; }

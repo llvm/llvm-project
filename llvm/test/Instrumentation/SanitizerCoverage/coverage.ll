@@ -13,7 +13,7 @@
 ; RUN:      -S | FileCheck %s --check-prefix=CHECK2
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=2 -sanitizer-coverage-block-threshold=1 \
 ; RUN:      -S | FileCheck %s --check-prefix=CHECK_WITH_CHECK
-; RUN: opt < %s -sancov -sanitizer-coverage-level=2 -sanitizer-coverage-prune-blocks=1 -S | FileCheck %s --check-prefix=CHECKPRUNE
+; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-prune-blocks=1 -S | FileCheck %s --check-prefix=CHECKPRUNE
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
@@ -138,8 +138,7 @@ entry:
 
 ; CHECKPRUNE-LABEL: define void @foo
 ; CHECKPRUNE: call void @__sanitizer_cov
-; CHECKPRUNE: call void asm sideeffect "", ""()
 ; CHECKPRUNE: call void @__sanitizer_cov
-; CHECKPRUNE: call void asm sideeffect "", ""()
+; CHECKPRUNE: call void @__sanitizer_cov
 ; CHECKPRUNE-NOT: call void @__sanitizer_cov
 ; CHECKPRUNE: ret void

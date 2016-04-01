@@ -161,6 +161,8 @@ a:
         j       1328             # CHECK: j 1328                 # encoding: [0x08,0x00,0x01,0x4c]
         jal       21100                # CHECK: jal 21100     # encoding: [0x0c,0x00,0x14,0x9b]
         jr.hb   $4               # CHECK: jr.hb $4               # encoding: [0x00,0x80,0x04,0x09]
+        jr      $ra              # CHECK: jr $ra                 # encoding: [0x03,0xe0,0x00,0x09]
+        jr      $25              # CHECK: jr $25                 # encoding: [0x03,0x20,0x00,0x09]
         jalr.hb $4               # CHECK: jalr.hb $4             # encoding: [0x00,0x80,0xfc,0x09]
         jalr.hb $4, $5           # CHECK: jalr.hb $4, $5         # encoding: [0x00,0xa0,0x24,0x09]
         ldc2    $8, -701($at)    # CHECK: ldc2 $8, -701($1)      # encoding: [0x49,0xc8,0x0d,0x43]

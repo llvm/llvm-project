@@ -400,6 +400,13 @@ def atomic_umax_global : global_binary_atomic_op<atomic_load_umax>;
 def atomic_umin_global : global_binary_atomic_op<atomic_load_umin>;
 def atomic_xor_global : global_binary_atomic_op<atomic_load_xor>;
 
+def atomic_cmp_swap_global : global_binary_atomic_op<AMDGPUatomic_cmp_swap>;
+def atomic_cmp_swap_global_nortn : PatFrag<
+  (ops node:$ptr, node:$value),
+  (atomic_cmp_swap_global node:$ptr, node:$value),
+  [{ return SDValue(N, 0).use_empty(); }]
+>;
+
 //===----------------------------------------------------------------------===//
 // Misc Pattern Fragments
 //===----------------------------------------------------------------------===//

@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/ProfileData/InstrProfData.inc"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Endian.h"
@@ -244,6 +245,16 @@ bool getValueProfDataFromInst(const Instruction &Inst,
                               uint32_t MaxNumValueData,
                               InstrProfValueData ValueData[],
                               uint32_t &ActualNumValueData, uint64_t &TotalC);
+
+inline StringRef getPGOFuncNameMetadataName() { return "PGOFuncName"; }
+
+/// Return the PGOFuncName meta data associated with a function.
+MDNode *getPGOFuncNameMetadata(const Function &F);
+
+/// Create the PGOFuncName meta data if PGOFuncName is different from
+/// function's raw name. This should only apply to internal linkage functions
+/// declared by users only.
+void createPGOFuncNameMetadata(Function &F);
 
 const std::error_category &instrprof_category();
 

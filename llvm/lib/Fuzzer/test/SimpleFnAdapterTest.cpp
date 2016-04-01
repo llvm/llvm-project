@@ -1,3 +1,6 @@
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+
 // Simple test for a fuzzer Fn adapter. The fuzzer has to find two non-empty
 // vectors with the same content.
 
