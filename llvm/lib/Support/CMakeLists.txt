@@ -76,6 +76,7 @@ add_llvm_library(LLVMSupport
   RandomNumberGenerator.cpp
   Regex.cpp
   ScaledNumber.cpp
+  SHA1.cpp
   SmallPtrSet.cpp
   SmallVector.cpp
   SourceMgr.cpp
