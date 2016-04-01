@@ -97,7 +97,7 @@ T tmain(T argc) {
   foo();
 #pragma omp parallel reduction(& : argc // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
-#pragma omp parallel reduction(| : argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
+#pragma omp parallel reduction(| : argc, // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
 #pragma omp parallel reduction(|| : argc ? i : argc) // expected-error 2 {{expected variable name, array element or array section}}
   foo();
@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp parallel reduction(foo : argc // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max'}}
   foo();
-#pragma omp parallel reduction(| : argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp parallel reduction(| : argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
   foo();
 #pragma omp parallel reduction(|| : argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name, array element or array section}}
   foo();

@@ -475,6 +475,15 @@ public:
   static bool GetReleaseVersion(const char *Str, unsigned &Major,
                                 unsigned &Minor, unsigned &Micro,
                                 bool &HadExtra);
+
+  /// Parse digits from a string \p Str and fulfill \p Digits with
+  /// the parsed numbers. This method assumes that the max number of
+  /// digits to look for is equal to Digits.size().
+  ///
+  /// \return True if the entire string was parsed and there are
+  /// no extra characters remaining at the end.
+  static bool GetReleaseVersion(const char *Str,
+                                MutableArrayRef<unsigned> Digits);
 };
 
 /// \return True if the last defined optimization level is -Ofast.

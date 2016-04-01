@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/Utils.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator_range.h"
@@ -22,7 +23,7 @@
 using namespace clang;
 
 namespace {
-/// Private implementation for ModuleDependencyCollector
+/// Private implementations for ModuleDependencyCollector
 class ModuleDependencyListener : public ASTReaderListener {
   ModuleDependencyCollector &Collector;
 public:
@@ -36,10 +37,28 @@ public:
     return true;
   }
 };
+
+struct ModuleDependencyMMCallbacks : public ModuleMapCallbacks {
+  ModuleDependencyCollector &Collector;
+  ModuleDependencyMMCallbacks(ModuleDependencyCollector &Collector)
+      : Collector(Collector) {}
+
+  void moduleMapAddHeader(const FileEntry &File) override {
+    StringRef HeaderPath = File.getName();
+    if (llvm::sys::path::is_absolute(HeaderPath))
+      Collector.addFile(HeaderPath);
+  }
+};
+
 }
 
 void ModuleDependencyCollector::attachToASTReader(ASTReader &R) {
   R.addListener(llvm::make_unique<ModuleDependencyListener>(*this));
+}
+
+void ModuleDependencyCollector::attachToPreprocessor(Preprocessor &PP) {
+  PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(
+      llvm::make_unique<ModuleDependencyMMCallbacks>(*this));
 }
 
 void ModuleDependencyCollector::writeFileMap() {

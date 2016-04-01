@@ -3636,11 +3636,6 @@ callExpr(hasAnyArgument(declRefExpr()))
   matches x(1, y, 42)
 with hasAnyArgument(...)
   matching y
-
-FIXME: Currently this will ignore parentheses and implicit casts on
-the argument before applying the inner matcher. We'll want to remove
-this to allow for greater control by the user once ignoreImplicit()
-has been implemented.
 </pre></td></tr>
 
 
@@ -3907,11 +3902,6 @@ callExpr(hasAnyArgument(declRefExpr()))
   matches x(1, y, 42)
 with hasAnyArgument(...)
   matching y
-
-FIXME: Currently this will ignore parentheses and implicit casts on
-the argument before applying the inner matcher. We'll want to remove
-this to allow for greater control by the user once ignoreImplicit()
-has been implemented.
 </pre></td></tr>
 
 

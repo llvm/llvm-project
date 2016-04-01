@@ -1421,6 +1421,43 @@ B<const A<>> b4 = B<>();
 // CHECK-ELIDE-NOTREE: error: no viable conversion from 'B<A<...>>' to 'B<const A<...>>'
 }
 
+namespace TypeAlias {
+
+template <typename T> class vector {};
+
+template <int Dimension> class Point;
+template <int dimension, typename T> using Polygon = vector<Point<dimension>>;
+
+void foo(Polygon<3, float>);
+void bar() { foo(Polygon<2, float>()); }
+
+// CHECK-ELIDE-NOTREE: error: no matching function for call to 'foo'
+// CHECK-ELIDE-NOTREE: note: candidate function not viable: no known conversion from 'Polygon<2, [...]>' to 'Polygon<3, [...]>' for 1st argument
+
+enum class X {
+  X1,
+  X2,
+};
+
+template<X x> struct EnumToType;
+
+template <> struct EnumToType<X::X1> { using type = int; };
+
+template <> struct EnumToType<X::X2> { using type = double; };
+
+
+template <X x> using VectorType = vector<typename EnumToType<x>::type>;
+
+template <X x> void D(const VectorType<x>&);
+
+void run() {
+  D<X::X1>(VectorType<X::X2>());
+}
+// CHECK-ELIDE-NOTREE: error: no matching function for call to 'D'
+// CHECK-ELIDE-NOTREE: note: candidate function [with x = TypeAlias::X::X1] not viable: no known conversion from 'VectorType<X::X2>' to 'const VectorType<(TypeAlias::X)0>' for 1st argument
+
+}
+
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-NOELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-ELIDE-TREE: {{[0-9]*}} errors generated.

@@ -755,6 +755,9 @@ void CodeGenPGO::valueProfile(CGBuilderTy &Builder, uint32_t ValueKind,
   if (!ValuePtr || !ValueSite || !Builder.GetInsertBlock())
     return;
 
+  if (isa<llvm::Constant>(ValuePtr))
+    return;
+
   bool InstrumentValueSites = CGM.getCodeGenOpts().hasProfileClangInstr();
   if (InstrumentValueSites && RegionCounterMap) {
     auto BuilderInsertPoint = Builder.saveIP();

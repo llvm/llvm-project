@@ -78,7 +78,7 @@ int foomain(int argc, char **argv) {
 #pragma omp parallel for firstprivate(argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k)
     ++k;
-#pragma omp parallel for firstprivate(argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp parallel for firstprivate(argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp parallel for firstprivate(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
@@ -163,7 +163,7 @@ int main(int argc, char **argv) {
 #pragma omp parallel for firstprivate(argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i)
     foo();
-#pragma omp parallel for firstprivate(argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp parallel for firstprivate(argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel for firstprivate(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}

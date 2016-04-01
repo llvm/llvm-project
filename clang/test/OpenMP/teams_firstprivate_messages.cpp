@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
 #pragma omp teams firstprivate(argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   foo();
 #pragma omp target
-#pragma omp teams firstprivate(argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp teams firstprivate(argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
   foo();
 #pragma omp target
 #pragma omp teams firstprivate(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}

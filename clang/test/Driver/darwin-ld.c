@@ -303,3 +303,27 @@
 // RUN:   FileCheck --check-prefix=LINK-IFRAMEWORK %s
 // LINK-IFRAMEWORK: {{ld(.exe)?"}}
 // LINK-IFRAMEWORK: "-FBar"
+
+// Check ld64 accepts up to 5 digits with no extra characters
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3 2> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3.0 2>> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3.0.1 2>> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3.0.1.2 2>> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3.0.1.2.6 2>> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3.0.1.a 2>> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN:   -mlinker-version=133.3.0.1a 2>> %t.log
+// RUN: FileCheck -check-prefix=LINK_VERSION_DIGITS %s < %t.log
+// LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3'
+// LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0'
+// LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0.1'
+// LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0.1.2'
+// LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.2.6'
+// LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.a'
+// LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1a'

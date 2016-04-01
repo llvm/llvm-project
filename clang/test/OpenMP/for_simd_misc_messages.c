@@ -388,12 +388,10 @@ void test_linear() {
 #pragma omp for simd linear(
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
 #pragma omp for simd linear(,
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected expression}}
 #pragma omp for simd linear(, )
   for (i = 0; i < 16; ++i)
@@ -493,12 +491,10 @@ void test_aligned() {
 #pragma omp for simd aligned(
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
 #pragma omp for simd aligned(,
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected expression}}
 #pragma omp for simd aligned(, )
   for (i = 0; i < 16; ++i)
@@ -595,12 +591,12 @@ void test_private() {
     ;
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp for simd private(,
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp for simd private(, )
   for (i = 0; i < 16; ++i)
     ;
@@ -647,12 +643,12 @@ void test_lastprivate() {
 
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp for simd lastprivate(,
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp for simd lastprivate(, )
   for (i = 0; i < 16; ++i)
     ;
@@ -698,12 +694,12 @@ void test_firstprivate() {
 
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp for simd firstprivate(,
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp for simd firstprivate(, )
   for (i = 0; i < 16; ++i)
     ;

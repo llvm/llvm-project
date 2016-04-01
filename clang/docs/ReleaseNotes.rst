@@ -120,6 +120,12 @@ this section should help get you past the largest hurdles of upgrading.
 AST Matchers
 ------------
 
+- hasAnyArgument: Matcher no longer ignores parentheses and implicit casts on
+  the argument before applying the inner matcher. The fix was done to allow for
+  greater control by the user. In all existing checkers that use this matcher
+  all instances of code ``hasAnyArgument(<inner matcher>)`` must be changed to
+  ``hasAnyArgument(ignoringParenImpCasts(<inner matcher>))``.
+
 ...
 
 libclang

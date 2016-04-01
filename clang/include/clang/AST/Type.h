@@ -3633,6 +3633,28 @@ public:
   }
 };
 
+/// \brief Internal representation of canonical, dependent
+/// __underlying_type(type) types.
+///
+/// This class is used internally by the ASTContext to manage
+/// canonical, dependent types, only. Clients will only see instances
+/// of this class via UnaryTransformType nodes.
+class DependentUnaryTransformType : public UnaryTransformType,
+                                    public llvm::FoldingSetNode {
+public:
+  DependentUnaryTransformType(const ASTContext &C, QualType BaseType,
+                              UTTKind UKind);
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, getBaseType(), getUTTKind());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType BaseType,
+                      UTTKind UKind) {
+    ID.AddPointer(BaseType.getAsOpaquePtr());
+    ID.AddInteger((unsigned)UKind);
+  }
+};
+
 class TagType : public Type {
   /// Stores the TagDecl associated with this type. The decl may point to any
   /// TagDecl that declares the entity.

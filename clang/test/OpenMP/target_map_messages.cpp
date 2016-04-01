@@ -368,7 +368,7 @@ T tmain(T argc) {
   {}
 #pragma omp target map(to:) // expected-error {{expected expression}}
   {}
-#pragma omp target map(from: argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp target map(from: argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
   {}
 #pragma omp target map(x: y) // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
   {}
@@ -452,7 +452,7 @@ int main(int argc, char **argv) {
 #pragma omp target data map(alloc) // expected-error {{use of undeclared identifier 'alloc'}}
 #pragma omp target data map(to argc // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected ',' or ')' in 'map' clause}}
 #pragma omp target data map(to:) // expected-error {{expected expression}}
-#pragma omp target data map(from: argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp target data map(from: argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target data map(x: y) // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
 #pragma omp target map(x)
   foo();

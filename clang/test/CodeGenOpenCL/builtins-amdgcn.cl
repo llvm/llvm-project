@@ -150,6 +150,34 @@ void test_ldexp_f64(global double* out, double a, int b)
   *out = __builtin_amdgcn_ldexp(a, b);
 }
 
+// CHECK-LABEL: @test_frexp_mant_f32
+// CHECK: call float @llvm.amdgcn.frexp.mant.f32
+void test_frexp_mant_f32(global float* out, float a)
+{
+  *out = __builtin_amdgcn_frexp_mantf(a);
+}
+
+// CHECK-LABEL: @test_frexp_mant_f64
+// CHECK: call double @llvm.amdgcn.frexp.mant.f64
+void test_frexp_mant_f64(global double* out, double a)
+{
+  *out = __builtin_amdgcn_frexp_mant(a);
+}
+
+// CHECK-LABEL: @test_frexp_exp_f32
+// CHECK: call i32 @llvm.amdgcn.frexp.exp.f32
+void test_frexp_exp_f32(global int* out, float a)
+{
+  *out = __builtin_amdgcn_frexp_expf(a);
+}
+
+// CHECK-LABEL: @test_frexp_exp_f64
+// CHECK: call i32 @llvm.amdgcn.frexp.exp.f64
+void test_frexp_exp_f64(global int* out, double a)
+{
+  *out = __builtin_amdgcn_frexp_exp(a);
+}
+
 // CHECK-LABEL: @test_class_f32
 // CHECK: call i1 @llvm.amdgcn.class.f32
 void test_class_f32(global float* out, float a, int b)

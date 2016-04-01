@@ -1633,10 +1633,15 @@ TEST(Matcher, Argument) {
 
 TEST(Matcher, AnyArgument) {
   StatementMatcher CallArgumentY = callExpr(
-      hasAnyArgument(declRefExpr(to(varDecl(hasName("y"))))));
+      hasAnyArgument(
+          ignoringParenImpCasts(declRefExpr(to(varDecl(hasName("y")))))));
   EXPECT_TRUE(matches("void x(int, int) { int y; x(1, y); }", CallArgumentY));
   EXPECT_TRUE(matches("void x(int, int) { int y; x(y, 42); }", CallArgumentY));
   EXPECT_TRUE(notMatches("void x(int, int) { x(1, 2); }", CallArgumentY));
+  
+  StatementMatcher ImplicitCastedArgument = callExpr(
+      hasAnyArgument(implicitCastExpr()));
+  EXPECT_TRUE(matches("void x(long) { int y; x(y); }", ImplicitCastedArgument));
 }
 
 TEST(ForEachArgumentWithParam, ReportsNoFalsePositives) {

@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
 #pragma omp parallel
-#pragma omp for private(argc, b), firstprivate(argv, c), lastprivate(d, f) collapse(2) schedule(auto) ordered nowait linear(g:-1)
+#pragma omp for private(argc, b), firstprivate(argv, c,), lastprivate(d, f,) collapse(2) schedule(auto) ordered nowait linear(g,:-1)
   for (int i = 0; i < 10; ++i)
     for (int j = 0; j < 10; ++j)
       foo();

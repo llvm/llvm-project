@@ -54,7 +54,7 @@ T tmain(T argc, C **argv) {
 #pragma omp parallel
 #pragma omp single copyprivate(k // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp parallel
-#pragma omp single copyprivate(h, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp single copyprivate(h, // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp parallel
 #pragma omp single copyprivate(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
 #pragma omp parallel
@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
 #pragma omp parallel
 #pragma omp single copyprivate(k // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp parallel
-#pragma omp single copyprivate(h, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp single copyprivate(h, // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp parallel
 #pragma omp single copyprivate(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
 #pragma omp parallel

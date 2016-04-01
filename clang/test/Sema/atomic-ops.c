@@ -121,7 +121,10 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __atomic_load(I, *P, memory_order_relaxed, 42); // expected-error {{too many arguments}}
   (int)__atomic_load(I, I, memory_order_seq_cst); // expected-error {{operand of type 'void'}}
   __atomic_load(s1, s2, memory_order_acquire);
-  (void)__atomic_load(I, CI, memory_order_relaxed); // expected-warning {{passing 'const int *' to parameter of type 'int *' discards qualifiers}}
+  __atomic_load(CI, I, memory_order_relaxed);
+  __atomic_load(I, CI, memory_order_relaxed); // expected-warning {{passing 'const int *' to parameter of type 'int *' discards qualifiers}}
+  __atomic_load(CI, CI, memory_order_relaxed); // expected-warning {{passing 'const int *' to parameter of type 'int *' discards qualifiers}}
+
   __c11_atomic_store(i, 1, memory_order_seq_cst);
   __c11_atomic_store(p, 1, memory_order_seq_cst); // expected-warning {{incompatible integer to pointer conversion}}
   (int)__c11_atomic_store(d, 1, memory_order_seq_cst); // expected-error {{operand of type 'void'}}

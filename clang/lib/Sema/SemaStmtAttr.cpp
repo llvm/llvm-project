@@ -221,7 +221,7 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const AttributeList &A,
 
   if (S.getLangOpts().OpenCLVersion < 200) {
     S.Diag(A.getLoc(), diag::err_attribute_requires_opencl_version)
-        << A.getName() << "2.0";
+        << A.getName() << "2.0" << 1;
     return nullptr;
   }
 

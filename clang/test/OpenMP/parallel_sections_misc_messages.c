@@ -115,12 +115,12 @@ void test_private() {
     foo();
   }
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp parallel sections private(,
   {
     foo();
   }
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp parallel sections private(, )
   {
     foo();
@@ -166,12 +166,12 @@ void test_lastprivate() {
   }
 
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp parallel sections lastprivate(,
   {
     foo();
   }
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp parallel sections lastprivate(, )
   {
     foo();
@@ -217,12 +217,12 @@ void test_firstprivate() {
   }
 
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp parallel sections firstprivate(,
   {
     foo();
   }
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp parallel sections firstprivate(, )
   {
     foo();

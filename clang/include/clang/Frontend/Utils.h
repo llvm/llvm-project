@@ -77,7 +77,7 @@ void DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream* OS,
 /// interface.
 class DependencyCollector {
 public:
-  void attachToPreprocessor(Preprocessor &PP);
+  virtual void attachToPreprocessor(Preprocessor &PP);
   virtual void attachToASTReader(ASTReader &R);
   llvm::ArrayRef<std::string> getDependencies() const { return Dependencies; }
 
@@ -136,6 +136,7 @@ public:
     VFSWriter.addFileMapping(VPath, RPath);
   }
 
+  void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
 
   void writeFileMap();
