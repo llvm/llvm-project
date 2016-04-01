@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
   #pragma omp parallel copyin ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel copyin () // expected-error {{expected expression}}
   #pragma omp parallel copyin (k // expected-error {{expected ')'}} expected-note {{to match this '('}}
-  #pragma omp parallel copyin (h, // expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp parallel copyin (h, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp parallel copyin (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   #pragma omp parallel copyin (l) // expected-error {{'operator=' is a private member of 'S4'}}
   #pragma omp parallel copyin (S1) // expected-error {{'S1' does not refer to a value}}

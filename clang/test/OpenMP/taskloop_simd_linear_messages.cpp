@@ -121,7 +121,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp taskloop simd linear (val argc // expected-error {{use of undeclared identifier 'val'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp taskloop simd linear (val(argc, // expected-error 2 {{expected ')'}} expected-note 2 {{to match this '('}}
+  #pragma omp taskloop simd linear (val(argc, // expected-error {{expected expression}} expected-error 2 {{expected ')'}} expected-note 2 {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp taskloop simd linear (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
@@ -210,7 +210,7 @@ int main(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp taskloop simd linear (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp taskloop simd linear (argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp taskloop simd linear (argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp taskloop simd linear (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;

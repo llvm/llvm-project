@@ -99,7 +99,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp simd private (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp simd private (argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp simd private (argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp simd private (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp simd private (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp simd private (argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp simd private (argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp simd private (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;

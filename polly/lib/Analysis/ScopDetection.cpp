@@ -216,7 +216,8 @@ public:
   }
 };
 
-int DiagnosticScopFound::PluginDiagnosticKind = 10;
+int DiagnosticScopFound::PluginDiagnosticKind =
+    getNextAvailablePluginDiagnosticKind();
 
 void DiagnosticScopFound::print(DiagnosticPrinter &DP) const {
   DP << "Polly detected an optimizable loop region (scop) in function '" << F

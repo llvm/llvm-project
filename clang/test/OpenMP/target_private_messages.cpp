@@ -97,7 +97,7 @@ int foomain(I argc, C **argv) {
 {}
 #pragma omp target private(argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
 {}
-#pragma omp target private(argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp target private(argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 {}
 #pragma omp target private(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
 {}
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
 {}
 #pragma omp target private(argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
 {}
-#pragma omp target private(argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp target private(argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 {}
 #pragma omp target private(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
 {}

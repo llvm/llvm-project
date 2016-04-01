@@ -105,7 +105,7 @@ T tmain(T argc) {
 #pragma omp simd reduction(& : argc // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp simd reduction(| : argc, // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
+#pragma omp simd reduction(| : argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp simd reduction(|| : argc ? i : argc) // expected-error 2 {{expected variable name, array element or array section}}
@@ -230,7 +230,7 @@ int main(int argc, char **argv) {
 #pragma omp simd reduction(foo : argc // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max'}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp simd reduction(| : argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp simd reduction(| : argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp simd reduction(|| : argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name, array element or array section}}

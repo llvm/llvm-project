@@ -122,13 +122,13 @@ void test_private() {
   }
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 {{expected expression}}
+// expected-error@+1 2 {{expected expression}}
 #pragma omp sections private(,
   {
     foo();
   }
 #pragma omp parallel
-// expected-error@+1 {{expected expression}}
+// expected-error@+1 2 {{expected expression}}
 #pragma omp sections private(, )
   {
     foo();
@@ -182,13 +182,13 @@ void test_lastprivate() {
 
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 {{expected expression}}
+// expected-error@+1 2 {{expected expression}}
 #pragma omp sections lastprivate(,
   {
     foo();
   }
 #pragma omp parallel
-// expected-error@+1 {{expected expression}}
+// expected-error@+1 2 {{expected expression}}
 #pragma omp sections lastprivate(, )
   {
     foo();
@@ -242,13 +242,13 @@ void test_firstprivate() {
 
 #pragma omp parallel
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 {{expected expression}}
+// expected-error@+1 2 {{expected expression}}
 #pragma omp sections firstprivate(,
   {
     foo();
   }
 #pragma omp parallel
-// expected-error@+1 {{expected expression}}
+// expected-error@+1 2 {{expected expression}}
 #pragma omp sections firstprivate(, )
   {
     foo();

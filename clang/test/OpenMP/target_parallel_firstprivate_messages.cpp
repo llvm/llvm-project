@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
   foo();
   #pragma omp target parallel firstprivate (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   foo();
-  #pragma omp target parallel firstprivate (argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp target parallel firstprivate (argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   foo();
   #pragma omp target parallel firstprivate (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   foo();

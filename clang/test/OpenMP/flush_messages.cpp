@@ -60,7 +60,7 @@ label1 : {
 #pragma omp flush(                              // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp flush()                             // expected-error {{expected expression}}
 #pragma omp flush(argc                          // expected-error {{expected ')'}} expected-note {{to match this '('}}
-#pragma omp flush(argc,                         // expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp flush(argc,                         // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp flush(argc)
 #pragma omp flush(S1) // expected-error {{'S1' does not refer to a value}}
 #pragma omp flush(argc) flush(argc) // expected-warning {{extra tokens at the end of '#pragma omp flush' are ignored}}
@@ -124,7 +124,7 @@ label1 : {
 #pragma omp flush(                              // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp flush()                             // expected-error {{expected expression}}
 #pragma omp flush(argc                          // expected-error {{expected ')'}} expected-note {{to match this '('}}
-#pragma omp flush(argc,                         // expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp flush(argc,                         // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp flush(argc)
 #pragma omp flush(S1) // expected-error {{'S1' does not refer to a value}}
 #pragma omp flush(argc) flush(argc) // expected-warning {{extra tokens at the end of '#pragma omp flush' are ignored}}

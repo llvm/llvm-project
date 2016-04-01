@@ -87,7 +87,7 @@ int foomain(int argc, char **argv) {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections firstprivate(argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp sections firstprivate(argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   {
     foo();
   }
@@ -208,7 +208,7 @@ int main(int argc, char **argv) {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections firstprivate(argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp sections firstprivate(argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   {
     foo();
   }

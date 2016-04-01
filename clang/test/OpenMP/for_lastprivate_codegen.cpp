@@ -37,6 +37,29 @@ struct SS {
 #else
       ++this->a, --b, c /= 1;
 #endif
+#pragma omp for
+    for (a = 0; a < 2; ++a)
+#ifdef LAMBDA
+      [&]() {
+        ++this->a, --b, (this)->c /= 1;
+#pragma omp parallel
+#pragma omp for lastprivate(b)
+        for (b = 0; b < 2; ++b)
+          ++(this)->a, --b, this->c /= 1;
+      }();
+#elif defined(BLOCKS)
+      ^{
+        ++a;
+        --this->b;
+        (this)->c /= 1;
+#pragma omp parallel
+#pragma omp for
+        for (c = 0; c < 2; ++c)
+          ++(this)->a, --b, this->c /= 1;
+      }();
+#else
+      ++this->a, --b, c /= 1;
+#endif
   }
 };
 
@@ -66,6 +89,27 @@ struct SST {
           for (int i = 0; i < 2; ++i)
             ++(this)->a;
         }();
+      }();
+#else
+      ++(this)->a;
+#endif
+#pragma omp for
+    for (a = 0; a < 2; ++a)
+#ifdef LAMBDA
+      [&]() {
+        ++this->a;
+#pragma omp parallel
+#pragma omp for
+        for (a = 0; a < 2; ++(this)->a)
+          ++(this)->a;
+      }();
+#elif defined(BLOCKS)
+      ^{
+        ++a;
+#pragma omp parallel
+#pragma omp for
+        for (this->a = 0; a < 2; ++a)
+          ++(this)->a;
       }();
 #else
       ++(this)->a;
@@ -144,6 +188,11 @@ int main() {
     // LAMBDA: store i8
     // LAMBDA: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 2
     // LAMBDA: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*)* [[SS_MICROTASK:@.+]] to void
+    // LAMBDA: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
+    // LAMBDA: call void @__kmpc_for_static_init_4(
+    // LAMBDA-NOT: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
+    // LAMBDA: call void {{.+}} [[SS_LAMBDA:@[^ ]+]]
+    // LAMBDA: call void @__kmpc_for_static_fini(%
     // LAMBDA: ret
 
     // LAMBDA: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}})
@@ -322,6 +371,11 @@ int main() {
 // BLOCKS: store i8
 // BLOCKS: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 2
 // BLOCKS: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*)* [[SS_MICROTASK:@.+]] to void
+// BLOCKS: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
+// BLOCKS: call void @__kmpc_for_static_init_4(
+// BLOCKS-NOT: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
+// BLOCKS: call void
+// BLOCKS: call void @__kmpc_for_static_fini(%
 // BLOCKS: ret
 
 // BLOCKS: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}})
@@ -596,6 +650,12 @@ int main() {
 // CHECK: store i8
 // CHECK: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 2
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*)* [[SS_MICROTASK:@.+]] to void
+// CHECK: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
+// CHECK: call void @__kmpc_for_static_init_4(
+// CHECK-NOT: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
+// CHECK: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 1
+// CHECK: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 2
+// CHECK: call void @__kmpc_for_static_fini(%
 // CHECK: ret
 
 // CHECK: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}})
