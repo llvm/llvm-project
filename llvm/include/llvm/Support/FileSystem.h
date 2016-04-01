@@ -190,11 +190,12 @@ public:
         FileSizeLow(0), FileIndexHigh(0), FileIndexLow(0), Type(Type),
         Perms(perms_not_known) {}
 
-  file_status(file_type Type, uint32_t LastWriteTimeHigh,
+  file_status(file_type Type, uint32_t LastAccessTimeHigh,
+              uint32_t LastAccessTimeLow, uint32_t LastWriteTimeHigh,
               uint32_t LastWriteTimeLow, uint32_t VolumeSerialNumber,
               uint32_t FileSizeHigh, uint32_t FileSizeLow,
               uint32_t FileIndexHigh, uint32_t FileIndexLow)
-      : LastAccessedTimeHigh(0), LastAccessedTimeLow(0),
+      : LastAccessedTimeHigh(LastAccessTimeHigh), LastAccessedTimeLow(LastAccessTimeLow),
         LastWriteTimeHigh(LastWriteTimeHigh),
         LastWriteTimeLow(LastWriteTimeLow),
         VolumeSerialNumber(VolumeSerialNumber), FileSizeHigh(FileSizeHigh),
