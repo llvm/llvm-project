@@ -25,6 +25,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <array>
+
 namespace llvm {
 
 /// \brief Class to accumulate and hold information about a callee.
@@ -228,6 +230,9 @@ public:
   void setBitcodeIndex(uint64_t Offset) { BitcodeIndex = Offset; }
 };
 
+/// 160 bits SHA1
+typedef std::array<uint32_t, 5> ModuleHash;
+
 /// List of global value info structures for a particular value held
 /// in the GlobalValueMap. Requires a vector in the case of multiple
 /// COMDAT values of the same name.
@@ -245,9 +250,9 @@ typedef GlobalValueInfoMapTy::const_iterator const_globalvalueinfo_iterator;
 typedef GlobalValueInfoMapTy::iterator globalvalueinfo_iterator;
 
 /// String table to hold/own module path strings, which additionally holds the
-/// module ID assigned to each module during the plugin step. The StringMap
-/// makes a copy of and owns inserted strings.
-typedef StringMap<uint64_t> ModulePathStringTableTy;
+/// module ID assigned to each module during the plugin step, as well as a hash
+/// of the module. The StringMap makes a copy of and owns inserted strings.
+typedef StringMap<std::pair<uint64_t, ModuleHash>> ModulePathStringTableTy;
 
 /// Class to hold module path string table and global value map,
 /// and encapsulate methods for operating on them.
@@ -304,17 +309,26 @@ public:
     GlobalValueMap[ValueGUID].push_back(std::move(Info));
   }
 
-  /// Table of modules, containing an id.
-  const StringMap<uint64_t> &modulePaths() const {
+  /// Table of modules, containing module hash and id.
+  const StringMap<std::pair<uint64_t, ModuleHash>> &modulePaths() const {
     return ModulePathStringTable;
   }
 
-  /// Table of modules, containing an id.
-  StringMap<uint64_t> &modulePaths() { return ModulePathStringTable; }
+  /// Table of modules, containing hash and id.
+  StringMap<std::pair<uint64_t, ModuleHash>> &modulePaths() {
+    return ModulePathStringTable;
+  }
 
   /// Get the module ID recorded for the given module path.
   uint64_t getModuleId(const StringRef ModPath) const {
-    return ModulePathStringTable.lookup(ModPath);
+    return ModulePathStringTable.lookup(ModPath).first;
+  }
+
+  /// Get the module SHA1 hash recorded for the given module path.
+  const ModuleHash &getModuleHash(const StringRef ModPath) const {
+    auto It = ModulePathStringTable.find(ModPath);
+    assert(It != ModulePathStringTable.end() && "Module not registered");
+    return It->second.second;
   }
 
   /// Add the given per-module index into this module index/summary,
@@ -333,11 +347,14 @@ public:
     return NewName.str();
   }
 
-  /// Add a new module path, mapped to the given module Id, and return StringRef
-  /// owned by string table map.
-  StringRef addModulePath(StringRef ModPath, uint64_t ModId) {
-    return ModulePathStringTable.insert(std::make_pair(ModPath, ModId))
-        .first->first();
+  /// Add a new module path with the given \p Hash, mapped to the given \p
+  /// ModID, and return an iterator to the entry in the index.
+  ModulePathStringTableTy::iterator
+  addModulePath(StringRef ModPath, uint64_t ModId,
+                ModuleHash Hash = ModuleHash{{0}}) {
+    return ModulePathStringTable.insert(std::make_pair(
+                                            ModPath,
+                                            std::make_pair(ModId, Hash))).first;
   }
 
   /// Check if the given Module has any functions available for exporting

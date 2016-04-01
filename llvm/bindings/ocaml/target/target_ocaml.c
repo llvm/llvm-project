@@ -296,6 +296,12 @@ CAMLprim value llvm_targetmachine_features(value Machine) {
                                 TargetMachine_val(Machine)));
 }
 
+/* TargetMachine.t -> DataLayout.t */
+CAMLprim value llvm_targetmachine_data_layout(value Machine) {
+  return llvm_alloc_data_layout(LLVMCreateTargetDataLayout(
+                                TargetMachine_val(Machine)));
+}
+
 /* bool -> TargetMachine.t -> unit */
 CAMLprim value llvm_targetmachine_set_verbose_asm(value Verb, value Machine) {
   LLVMSetTargetMachineAsmVerbosity(TargetMachine_val(Machine), Bool_val(Verb));
