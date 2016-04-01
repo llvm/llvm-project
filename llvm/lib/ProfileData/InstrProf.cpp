@@ -98,9 +98,8 @@ std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
     return getPGOFuncName(F.getName(), F.getLinkage(), F.getParent()->getName(),
                           Version);
 
-  // InLTO mode. First check if these is a meta data.
-  MDNode *MD = F.getMetadata("PGOFuncName");
-  if (MD != nullptr) {
+  // In LTO mode (when InLTO is true), first check if there is a meta data.
+  if (MDNode *MD = getPGOFuncNameMetadata(F)) {
     StringRef S = cast<MDString>(MD->getOperand(0))->getString();
     return S.str();
   }
@@ -108,7 +107,7 @@ std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   // If there is no meta data, the function must be a global before the value
   // profile annotation pass. Its current linkage may be internal if it is
   // internalized in LTO mode.
-  return getPGOFuncName (F.getName(), GlobalValue::ExternalLinkage, "");
+  return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
 }
 
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
@@ -776,6 +775,16 @@ ProfileSummary::ProfileSummary(const IndexedInstrProf::Summary &S)
     DetailedSummary.emplace_back((uint32_t)Ent.Cutoff, Ent.MinBlockCount,
                                  Ent.NumBlocks);
   }
+}
+
+void createPGOFuncNameMetadata(Function &F) {
+  const std::string &FuncName = getPGOFuncName(F);
+  if (FuncName == F.getName())
+    return;
+
+  LLVMContext &C = F.getContext();
+  MDNode *N = MDNode::get(C, MDString::get(C, FuncName.c_str()));
+  F.setMetadata(getPGOFuncNameMetadataName(), N);
 }
 
 } // end namespace llvm
