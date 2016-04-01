@@ -152,11 +152,11 @@ class AttributeSetNode final
   unsigned NumAttrs; ///< Number of attributes in this node.
   /// Bitset with a bit for each available attribute Attribute::AttrKind.
   uint64_t AvailableAttrs;
-  static_assert(Attribute::EndAttrKinds <= sizeof(AvailableAttrs)*CHAR_BIT,
-                "Too many attributes for AvailableAttrs");
 
   AttributeSetNode(ArrayRef<Attribute> Attrs)
     : NumAttrs(Attrs.size()), AvailableAttrs(0) {
+    static_assert(Attribute::EndAttrKinds <= sizeof(AvailableAttrs) * CHAR_BIT,
+                  "Too many attributes for AvailableAttrs");
     // There's memory after the node where we can store the entries in.
     std::copy(Attrs.begin(), Attrs.end(), getTrailingObjects<Attribute>());
 
@@ -218,9 +218,6 @@ private:
   unsigned NumAttrs; ///< Number of entries in this set.
   /// Bitset with a bit for each available attribute Attribute::AttrKind.
   uint64_t AvailableFunctionAttrs;
-  static_assert(Attribute::EndAttrKinds
-                <= sizeof(AvailableFunctionAttrs)*CHAR_BIT,
-                "Too many attributes");
 
   // Helper fn for TrailingObjects class.
   size_t numTrailingObjects(OverloadToken<IndexAttrPair>) { return NumAttrs; }
@@ -237,6 +234,9 @@ public:
   AttributeSetImpl(LLVMContext &C,
                    ArrayRef<std::pair<unsigned, AttributeSetNode *> > Attrs)
       : Context(C), NumAttrs(Attrs.size()), AvailableFunctionAttrs(0) {
+    static_assert(Attribute::EndAttrKinds <=
+                      sizeof(AvailableFunctionAttrs) * CHAR_BIT,
+                  "Too many attributes");
 
 #ifndef NDEBUG
     if (Attrs.size() >= 2) {
