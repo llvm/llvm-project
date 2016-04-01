@@ -13,6 +13,7 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "llvm-c/BitReader.h"
+#include "llvm-c/Core.h"
 #include "caml/alloc.h"
 #include "caml/fail.h"
 #include "caml/memory.h"
@@ -25,7 +26,7 @@ CAMLprim LLVMModuleRef llvm_get_module(LLVMContextRef C, LLVMMemoryBufferRef Mem
   LLVMModuleRef M;
 
   if (LLVMGetBitcodeModuleInContext2(C, MemBuf, &M))
-    llvm_raise(*caml_named_value("Llvm_bitreader.Error"), "");
+    llvm_raise(*caml_named_value("Llvm_bitreader.Error"), LLVMCreateMessage(""));
 
   return M;
 }
@@ -35,7 +36,7 @@ CAMLprim LLVMModuleRef llvm_parse_bitcode(LLVMContextRef C, LLVMMemoryBufferRef 
   LLVMModuleRef M;
 
   if (LLVMParseBitcodeInContext2(C, MemBuf, &M))
-    llvm_raise(*caml_named_value("Llvm_bitreader.Error"), "");
+    llvm_raise(*caml_named_value("Llvm_bitreader.Error"), LLVMCreateMessage(""));
 
   return M;
 }

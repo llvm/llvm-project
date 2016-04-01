@@ -473,6 +473,16 @@ LTOObjectBuffer thinlto_module_get_object(thinlto_code_gen_t cg,
                          MemBuffer->getBufferSize()};
 }
 
+void thinlto_codegen_disable_codegen(thinlto_code_gen_t cg,
+                                     lto_bool_t disable) {
+  unwrap(cg)->disableCodeGen(disable);
+}
+
+void thinlto_codegen_set_codegen_only(thinlto_code_gen_t cg,
+                                      lto_bool_t CodeGenOnly) {
+  unwrap(cg)->setCodeGenOnly(CodeGenOnly);
+}
+
 void thinlto_debug_options(const char *const *options, int number) {
   // if options were requested, set them
   if (number && options) {
@@ -483,7 +493,7 @@ void thinlto_debug_options(const char *const *options, int number) {
   }
 }
 
-bool lto_module_is_thinlto(lto_module_t mod) {
+lto_bool_t lto_module_is_thinlto(lto_module_t mod) {
   return unwrap(mod)->isThinLTO();
 }
 

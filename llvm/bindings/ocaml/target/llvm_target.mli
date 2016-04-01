@@ -194,6 +194,9 @@ module TargetMachine : sig
       [llvm::TargetMachine::getCPU]. *)
   val cpu : t -> string
 
+  (** Returns the data layout of this target machine. *)
+  val data_layout : t -> DataLayout.t
+
   (** Returns the feature string used while creating this target machine. See
       [llvm::TargetMachine::getFeatureString]. *)
   val features : t -> string

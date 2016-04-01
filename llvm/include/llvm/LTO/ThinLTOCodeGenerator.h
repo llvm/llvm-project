@@ -169,6 +169,13 @@ public:
     TMBuilder.CGOptLevel = CGOptLevel;
   }
 
+  /// Disable CodeGen, only run the stages till codegen and stop. The output
+  /// will be bitcode.
+  void disableCodeGen(bool Disable) { DisableCodeGen = Disable; }
+
+  /// Perform CodeGen only: disable all other stages.
+  void setCodeGenOnly(bool CGOnly) { CodeGenOnly = CGOnly; }
+
   /**@}*/
 
   /**
@@ -228,6 +235,14 @@ private:
 
   /// Path to a directory to save the temporary bitcode files.
   std::string SaveTempsDir;
+
+  /// Flag to enable/disable CodeGen. When set to true, the process stops after
+  /// optimizations and a bitcode is produced.
+  bool DisableCodeGen;
+
+  /// Flag to indicate that only the CodeGen will be performed, no cross-module
+  /// importing or optimization.
+  bool CodeGenOnly;
 };
 }
 #endif

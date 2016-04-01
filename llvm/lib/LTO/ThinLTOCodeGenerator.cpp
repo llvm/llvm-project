@@ -160,7 +160,6 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM) {
 
   // Add optimizations
   PMB.populateThinLTOPassManager(PM);
-  PM.add(createObjCARCContractPass());
 
   PM.run(TheModule);
 }
@@ -173,6 +172,12 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
   {
     raw_svector_ostream OS(OutputBuffer);
     legacy::PassManager PM;
+
+    // If the bitcode files contain ARC code and were compiled with optimization,
+    // the ObjCARCContractPass must be run, so do it unconditionally here.
+    PM.add(createObjCARCContractPass());
+
+    // Setup the codegen now.
     if (TM.addPassesToEmitFile(PM, OS, TargetMachine::CGFT_ObjectFile,
                                /* DisableVerify */ true))
       report_fatal_error("Failed to setup codegen");
@@ -188,7 +193,8 @@ ProcessThinLTOModule(Module &TheModule, const ModuleSummaryIndex &Index,
                      StringMap<MemoryBufferRef> &ModuleMap, TargetMachine &TM,
                      const FunctionImporter::ImportMapTy &ImportList,
                      ThinLTOCodeGenerator::CachingOptions CacheOptions,
-                     StringRef SaveTempsDir, unsigned count) {
+                     bool DisableCodeGen, StringRef SaveTempsDir,
+                     unsigned count) {
 
   // Save temps: after IPO.
   saveTempBitcode(TheModule, SaveTempsDir, count, ".1.IPO.bc");
@@ -211,6 +217,16 @@ ProcessThinLTOModule(Module &TheModule, const ModuleSummaryIndex &Index,
   optimizeModule(TheModule, TM);
 
   saveTempBitcode(TheModule, SaveTempsDir, count, ".3.opt.bc");
+
+  if (DisableCodeGen) {
+    // Configured to stop before CodeGen, serialize the bitcode and return.
+    SmallVector<char, 128> OutputBuffer;
+    {
+      raw_svector_ostream OS(OutputBuffer);
+      WriteBitcodeToFile(&TheModule, OS, true, true);
+    }
+    return make_unique<ObjectMemoryBuffer>(std::move(OutputBuffer));
+  }
 
   return codegenModule(TheModule, TM);
 }
@@ -348,6 +364,28 @@ std::unique_ptr<MemoryBuffer> ThinLTOCodeGenerator::codegen(Module &TheModule) {
 
 // Main entry point for the ThinLTO processing
 void ThinLTOCodeGenerator::run() {
+  if (CodeGenOnly) {
+    // Perform only parallel codegen and return.
+    ThreadPool Pool;
+    assert(ProducedBinaries.empty() && "The generator should not be reused");
+    ProducedBinaries.resize(Modules.size());
+    int count = 0;
+    for (auto &ModuleBuffer : Modules) {
+      Pool.async([&](int count) {
+        LLVMContext Context;
+        Context.setDiscardValueNames(LTODiscardValueNames);
+
+        // Parse module now
+        auto TheModule = loadModuleFromBuffer(ModuleBuffer, Context, false);
+
+        // CodeGen
+        ProducedBinaries[count] = codegen(*TheModule);
+      }, count++);
+    }
+
+    return;
+  }
+
   // Sequential linking phase
   auto Index = linkCombinedIndex();
 
@@ -396,7 +434,7 @@ void ThinLTOCodeGenerator::run() {
         auto &ImportList = ImportLists[TheModule->getModuleIdentifier()];
         ProducedBinaries[count] = ProcessThinLTOModule(
             *TheModule, *Index, ModuleMap, *TMBuilder.create(), ImportList,
-            CacheOptions, SaveTempsDir, count);
+            CacheOptions, DisableCodeGen, SaveTempsDir, count);
       }, count);
       count++;
     }

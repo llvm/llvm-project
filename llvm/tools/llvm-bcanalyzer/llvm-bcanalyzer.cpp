@@ -29,6 +29,7 @@
 
 #include "llvm/Bitcode/BitstreamReader.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/Verifier.h"
@@ -38,8 +39,10 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <map>
 #include <system_error>
@@ -174,6 +177,7 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(MODULE_CODE, VSTOFFSET)
       STRINGIFY_CODE(MODULE_CODE, METADATA_VALUES_UNUSED)
       STRINGIFY_CODE(MODULE_CODE, SOURCE_FILENAME)
+      STRINGIFY_CODE(MODULE_CODE, HASH)
     }
   case bitc::IDENTIFICATION_BLOCK_ID:
     switch (CodeID) {
@@ -292,6 +296,7 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
     default:
       return nullptr;
       STRINGIFY_CODE(MST_CODE, ENTRY)
+      STRINGIFY_CODE(MST_CODE, HASH)
     }
   case bitc::GLOBALVAL_SUMMARY_BLOCK_ID:
     switch (CodeID) {
@@ -481,6 +486,9 @@ static bool ParseBlock(BitstreamCursor &Stream, unsigned BlockID,
   if (Stream.EnterSubBlock(BlockID, &NumWords))
     return Error("Malformed block record");
 
+  // Keep it for later, when we see a MODULE_HASH record
+  uint64_t BlockEntryPos = Stream.getCurrentByteNo();
+
   const char *BlockName = nullptr;
   if (DumpRecords) {
     outs() << Indent << "<";
@@ -552,6 +560,7 @@ static bool ParseBlock(BitstreamCursor &Stream, unsigned BlockID,
     ++BlockStats.NumRecords;
 
     StringRef Blob;
+    unsigned CurrentRecordPos = Stream.getCurrentByteNo();
     unsigned Code = Stream.readRecord(Entry.ID, Record, &Blob);
 
     // Increment the # occurrences of this code.
@@ -585,6 +594,37 @@ static bool ParseBlock(BitstreamCursor &Stream, unsigned BlockID,
 
       for (unsigned i = 0, e = Record.size(); i != e; ++i)
         outs() << " op" << i << "=" << (int64_t)Record[i];
+
+      // If we found a module hash, let's verify that it matches!
+      if (BlockID == bitc::MODULE_BLOCK_ID && Code == bitc::MODULE_CODE_HASH) {
+        if (Record.size() != 5)
+          outs() << " (invalid)";
+        else {
+          // Recompute the hash and compare it to the one in the bitcode
+          SHA1 Hasher;
+          StringRef Hash;
+          {
+            int BlockSize = CurrentRecordPos - BlockEntryPos;
+            auto Ptr = Stream.getPointerToByte(BlockEntryPos, BlockSize);
+            Hasher.update(ArrayRef<uint8_t>(Ptr, BlockSize));
+            Hash = Hasher.result();
+          }
+          SmallString<20> RecordedHash;
+          RecordedHash.resize(20);
+          int Pos = 0;
+          for (auto &Val : Record) {
+            assert(!(Val >> 32) && "Unexpected high bits set");
+            RecordedHash[Pos++] = (Val >> 24) & 0xFF;
+            RecordedHash[Pos++] = (Val >> 16) & 0xFF;
+            RecordedHash[Pos++] = (Val >> 8) & 0xFF;
+            RecordedHash[Pos++] = (Val >> 0) & 0xFF;
+          }
+          if (Hash == RecordedHash)
+            outs() << " (match)";
+          else
+            outs() << " (!mismatch!)";
+        }
+      }
 
       outs() << "/>";
 

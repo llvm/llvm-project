@@ -107,6 +107,9 @@ enum ModuleCodes {
 
   // SOURCE_FILENAME: [namechar x N]
   MODULE_CODE_SOURCE_FILENAME = 16,
+
+  // HASH: [5*i32]
+  MODULE_CODE_HASH = 17,
 };
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.
@@ -183,6 +186,7 @@ enum ValueSymtabCodes {
 // The module path symbol table only has one code (MST_CODE_ENTRY).
 enum ModulePathSymtabCodes {
   MST_CODE_ENTRY = 1, // MST_ENTRY: [modid, namechar x N]
+  MST_CODE_HASH = 2,  // MST_HASH:  [5*i32]
 };
 
 // The summary section uses different codes in the per-module

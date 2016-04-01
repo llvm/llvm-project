@@ -107,7 +107,8 @@ namespace llvm {
   /// for use in ThinLTO optimization).
   void WriteBitcodeToFile(const Module *M, raw_ostream &Out,
                           bool ShouldPreserveUseListOrder = false,
-                          bool EmitSummaryIndex = false);
+                          bool EmitSummaryIndex = false,
+                          bool GenerateHash = false);
 
   /// Write the specified module summary index to the given raw output stream,
   /// where it will be written in a new bitcode block. This is used when

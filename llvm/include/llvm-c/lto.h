@@ -44,7 +44,8 @@ typedef bool lto_bool_t;
  * @{
  */
 
-#define LTO_API_VERSION 18
+#define LTO_API_VERSION 19
+
 /**
  * \since prior to LTO_API_VERSION=3
  */
@@ -716,6 +717,23 @@ extern void thinlto_codegen_set_savetemps_dir(thinlto_code_gen_t cg,
  * \since LTO_API_VERSION=18
  */
 extern void thinlto_codegen_set_cpu(thinlto_code_gen_t cg, const char *cpu);
+
+/**
+ * Disable CodeGen, only run the stages till codegen and stop. The output will
+ * be bitcode.
+ *
+ * \since LTO_API_VERSION=19
+ */
+extern void thinlto_codegen_disable_codegen(thinlto_code_gen_t cg,
+                                            lto_bool_t disable);
+
+/**
+ * Perform CodeGen only: disable all other stages.
+ *
+ * \since LTO_API_VERSION=19
+ */
+extern void thinlto_codegen_set_codegen_only(thinlto_code_gen_t cg,
+                                             lto_bool_t codegen_only);
 
 /**
  * Parse -mllvm style debug options.

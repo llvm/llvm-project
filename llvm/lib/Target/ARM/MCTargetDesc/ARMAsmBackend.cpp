@@ -95,6 +95,7 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_arm_movw_lo16", 0, 20, 0},
       {"fixup_t2_movt_hi16", 0, 20, 0},
       {"fixup_t2_movw_lo16", 0, 20, 0},
+      {"fixup_arm_mod_imm", 0, 12, 0},
   };
   const static MCFixupKindInfo InfosBE[ARM::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
@@ -142,6 +143,7 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_arm_movw_lo16", 12, 20, 0},
       {"fixup_t2_movt_hi16", 12, 20, 0},
       {"fixup_t2_movw_lo16", 12, 20, 0},
+      {"fixup_arm_mod_imm", 20, 12, 0},
   };
 
   if (Kind < FirstTargetFixupKind)
@@ -665,6 +667,13 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 
     return Value;
   }
+  case ARM::fixup_arm_mod_imm:
+    Value = ARM_AM::getSOImmVal(Value);
+    if (Ctx && Value >> 12) {
+      Ctx->reportError(Fixup.getLoc(), "out of range immediate fixup value");
+      return 0;
+    }
+    return Value;
   }
 }
 
@@ -731,6 +740,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case FK_Data_2:
   case ARM::fixup_arm_thumb_br:
   case ARM::fixup_arm_thumb_cb:
+  case ARM::fixup_arm_mod_imm:
     return 2;
 
   case ARM::fixup_arm_pcrel_10_unscaled:
@@ -809,6 +819,7 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
   case ARM::fixup_arm_movw_lo16:
   case ARM::fixup_t2_movt_hi16:
   case ARM::fixup_t2_movw_lo16:
+  case ARM::fixup_arm_mod_imm:
     // Instruction size is 4 bytes.
     return 4;
   }
