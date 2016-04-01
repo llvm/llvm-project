@@ -11,12 +11,14 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/Sema/Sema.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Lookup.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "clang/Sema/Template.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 using namespace clang;
@@ -380,4 +382,51 @@ bool Sema::isEmptyCudaConstructor(SourceLocation Loc, CXXConstructorDecl *CD) {
     return false;
 
   return true;
+}
+
+// With -fcuda-host-device-constexpr, an unattributed constexpr function is
+// treated as implicitly __host__ __device__, unless:
+//  * it is a variadic function (device-side variadic functions are not
+//    allowed), or
+//  * a __device__ function with this signature was already declared, in which
+//    case in which case we output an error, unless the __device__ decl is in a
+//    system header, in which case we leave the constexpr function unattributed.
+void Sema::maybeAddCUDAHostDeviceAttrs(Scope *S, FunctionDecl *NewD,
+                                       const LookupResult &Previous) {
+  assert(getLangOpts().CUDA && "May be called only for CUDA compilations.");
+  if (!getLangOpts().CUDAHostDeviceConstexpr || !NewD->isConstexpr() ||
+      NewD->isVariadic() || NewD->hasAttr<CUDAHostAttr>() ||
+      NewD->hasAttr<CUDADeviceAttr>() || NewD->hasAttr<CUDAGlobalAttr>())
+    return;
+
+  // Is D a __device__ function with the same signature as NewD, ignoring CUDA
+  // attributes?
+  auto IsMatchingDeviceFn = [&](NamedDecl *D) {
+    if (UsingShadowDecl *Using = dyn_cast<UsingShadowDecl>(D))
+      D = Using->getTargetDecl();
+    FunctionDecl *OldD = D->getAsFunction();
+    return OldD && OldD->hasAttr<CUDADeviceAttr>() &&
+           !OldD->hasAttr<CUDAHostAttr>() &&
+           !IsOverload(NewD, OldD, /* UseMemberUsingDeclRules = */ false,
+                       /* ConsiderCudaAttrs = */ false);
+  };
+  auto It = llvm::find_if(Previous, IsMatchingDeviceFn);
+  if (It != Previous.end()) {
+    // We found a __device__ function with the same name and signature as NewD
+    // (ignoring CUDA attrs).  This is an error unless that function is defined
+    // in a system header, in which case we simply return without making NewD
+    // host+device.
+    NamedDecl *Match = *It;
+    if (!getSourceManager().isInSystemHeader(Match->getLocation())) {
+      Diag(NewD->getLocation(),
+           diag::err_cuda_unattributed_constexpr_cannot_overload_device)
+          << NewD->getName();
+      Diag(Match->getLocation(),
+           diag::note_cuda_conflicting_device_function_declared_here);
+    }
+    return;
+  }
+
+  NewD->addAttr(CUDAHostAttr::CreateImplicit(Context));
+  NewD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
 }

@@ -76,7 +76,7 @@ T tmain(T argc) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(to:) // expected-error {{expected expression}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target parallel for map(from: argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp target parallel for map(from: argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(x: y) // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
   for (i = 0; i < argc; ++i) foo();
@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(to:) // expected-error {{expected expression}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target parallel for map(from: argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp target parallel for map(from: argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(x: y) // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
   for (i = 0; i < argc; ++i) foo();

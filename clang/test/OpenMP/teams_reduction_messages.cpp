@@ -106,7 +106,7 @@ T tmain(T argc) {
 #pragma omp teams reduction(& : argc // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
 #pragma omp target
-#pragma omp teams reduction(| : argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
+#pragma omp teams reduction(| : argc, // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
 #pragma omp target
 #pragma omp teams reduction(|| : argc ? i : argc) // expected-error 2 {{expected variable name, array element or array section}}
@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
 #pragma omp teams reduction(foo : argc // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max'}}
   foo();
 #pragma omp target
-#pragma omp teams reduction(| : argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp teams reduction(| : argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
   foo();
 #pragma omp target
 #pragma omp teams reduction(|| : argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name, array element or array section}}

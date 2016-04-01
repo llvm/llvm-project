@@ -113,7 +113,7 @@ T tmain(T argc) {
   {
     foo();
   }
-#pragma omp parallel sections reduction(| : argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
+#pragma omp parallel sections reduction(| : argc, // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
   {
     foo();
   }
@@ -266,7 +266,7 @@ int main(int argc, char **argv) {
   {
     foo();
   }
-#pragma omp parallel sections reduction(| : argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp parallel sections reduction(| : argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
   {
     foo();
   }

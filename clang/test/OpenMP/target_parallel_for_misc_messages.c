@@ -180,11 +180,11 @@ void test_private() {
   for (i = 0; i < 16; ++i)
     ;
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp target parallel for private(,
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp target parallel for private(, )
   for (i = 0; i < 16; ++i)
     ;
@@ -223,11 +223,11 @@ void test_lastprivate() {
     ;
 
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp target parallel for lastprivate(,
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp target parallel for lastprivate(, )
   for (i = 0; i < 16; ++i)
     ;
@@ -265,11 +265,11 @@ void test_firstprivate() {
     ;
 
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp target parallel for firstprivate(,
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp target parallel for firstprivate(, )
   for (i = 0; i < 16; ++i)
     ;

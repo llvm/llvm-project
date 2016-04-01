@@ -8015,6 +8015,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // Handle attributes.
   ProcessDeclAttributes(S, NewFD, D);
 
+  if (getLangOpts().CUDA)
+    maybeAddCUDAHostDeviceAttrs(S, NewFD, Previous);
+
   if (getLangOpts().OpenCL) {
     // OpenCL v1.1 s6.5: Using an address space qualifier in a function return
     // type declaration will generate a compilation error.

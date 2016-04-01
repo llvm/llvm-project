@@ -247,6 +247,55 @@ void testConsistencyAssign(Person *p) {
 }
 @end
 
+// Tests for the analyzer fix that works around a Sema bug
+// where multiple methods are created for properties in class extensions that
+// are redeclared in a category method.
+// The Sema bug is tracked as <rdar://problem/25481164>.
+@interface ClassWithRedeclaredPropertyInExtensionFollowedByCategory
+@end
+
+@interface ClassWithRedeclaredPropertyInExtensionFollowedByCategory ()
+@end
+
+@interface ClassWithRedeclaredPropertyInExtensionFollowedByCategory ()
+@property (readwrite) int someProp;
+@property (readonly) int otherProp;
+@end
+
+@interface ClassWithRedeclaredPropertyInExtensionFollowedByCategory (MyCat)
+@property (readonly) int someProp;
+@property (readonly) int otherProp;
+@end
+
+@implementation ClassWithRedeclaredPropertyInExtensionFollowedByCategory
+- (void)testSynthesisForRedeclaredProperties; {
+  clang_analyzer_eval(self.someProp == self.someProp); // expected-warning{{TRUE}}
+  clang_analyzer_eval([self someProp] == self.someProp); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(self.otherProp == self.otherProp); // expected-warning{{TRUE}}
+  clang_analyzer_eval([self otherProp] == self.otherProp); // expected-warning{{TRUE}}
+}
+@end
+
+// The relative order of the extension and the category matter, so test both.
+@interface ClassWithRedeclaredPropertyInCategoryFollowedByExtension
+@end
+
+@interface ClassWithRedeclaredPropertyInCategoryFollowedByExtension ()
+@property (readwrite) int someProp;
+@end
+
+@interface ClassWithRedeclaredPropertyInCategoryFollowedByExtension (MyCat)
+@property (readonly) int someProp;
+@end
+
+@implementation ClassWithRedeclaredPropertyInCategoryFollowedByExtension
+- (void)testSynthesisForRedeclaredProperties; {
+  clang_analyzer_eval(self.someProp == self.someProp); // expected-warning{{TRUE}}
+  clang_analyzer_eval([self someProp] == self.someProp); // expected-warning{{TRUE}}
+}
+@end
+
 @interface ClassWithSynthesizedPropertyAndGetter
 @property (readonly) int someProp;
 @end

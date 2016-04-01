@@ -2134,25 +2134,6 @@ void print_completion_contexts(unsigned long long contexts, FILE *file) {
   }
 }
 
-int my_stricmp(const char *s1, const char *s2) {
-  while (*s1 && *s2) {
-    int c1 = tolower((unsigned char)*s1), c2 = tolower((unsigned char)*s2);
-    if (c1 < c2)
-      return -1;
-    else if (c1 > c2)
-      return 1;
-    
-    ++s1;
-    ++s2;
-  }
-  
-  if (*s1)
-    return 1;
-  else if (*s2)
-    return -1;
-  return 0;
-}
-
 int perform_code_completion(int argc, const char **argv, int timing_only) {
   const char *input = argv[1];
   char *filename = 0;

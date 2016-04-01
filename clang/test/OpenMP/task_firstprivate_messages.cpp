@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
 #pragma omp task firstprivate(                              // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp task firstprivate()                             // expected-error {{expected expression}}
 #pragma omp task firstprivate(argc                          // expected-error {{expected ')'}} expected-note {{to match this '('}}
-#pragma omp task firstprivate(argc,                         // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp task firstprivate(argc,                         // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp task firstprivate(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
 #pragma omp task firstprivate(argc)
 #pragma omp task firstprivate(S1)            // expected-error {{'S1' does not refer to a value}}

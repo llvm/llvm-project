@@ -4170,6 +4170,7 @@ ProcessGDBRemote::GetExtendedInfoForThread (lldb::tid_t tid)
         packet << (char) (0x7d ^ 0x20);
 
         StringExtractorGDBRemote response;
+        response.SetResponseValidatorToJSON();
         if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetData(), packet.GetSize(), response, false) == GDBRemoteCommunication::PacketResult::Success)
         {
             StringExtractorGDBRemote::ResponseType response_type = response.GetResponseType();
@@ -4211,6 +4212,7 @@ ProcessGDBRemote::GetLoadedDynamicLibrariesInfos (lldb::addr_t image_list_addres
         packet << (char) (0x7d ^ 0x20);
 
         StringExtractorGDBRemote response;
+        response.SetResponseValidatorToJSON();
         if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetData(), packet.GetSize(), response, false) == GDBRemoteCommunication::PacketResult::Success)
         {
             StringExtractorGDBRemote::ResponseType response_type = response.GetResponseType();

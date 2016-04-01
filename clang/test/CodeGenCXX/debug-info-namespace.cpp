@@ -103,7 +103,7 @@ void B::func_fwd() {}
 // CHECK: [[M17]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[CTXT]], entity: [[I]]
 
 // CHECK-GMLT: [[CU:![0-9]+]] = distinct !DICompileUnit(
-// CHECK-GMLT-SAME:                            emissionKind: 2,
+// CHECK-GMLT-SAME:                            emissionKind: LineTablesOnly,
 // CHECK-GMLT-NOT:                             imports:
 
 // CHECK-NOLIMIT: !DICompositeType(tag: DW_TAG_structure_type, name: "bar",{{.*}} line: 6,

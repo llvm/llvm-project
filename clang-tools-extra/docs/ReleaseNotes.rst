@@ -63,14 +63,101 @@ Improvements to clang-tidy
 explain them more clearly, and provide more accurate fix-its for the issues
 identified.  The improvements since the 3.8 release include:
 
-- New ``modernize-raw-string-literal`` check
+- New `cert-env33-c
+  <http://clang.llvm.org/extra/clang-tidy/checks/cert-env33-c.html>`_ check
 
-  selectively replaces string literals containing escaped characters with raw
+  Flags calls to ``system()``, ``popen()``, and ``_popen()``, which execute a
+  command processor.
+
+- New `cert-flp30-c
+  <http://clang.llvm.org/extra/clang-tidy/checks/cert-flp30-c.html>`_ check
+
+  Flags ``for`` loops where the induction expression has a floating-point type.
+
+- New `cppcoreguidelines-pro-type-member-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-type-member-init.html>`_ check
+
+  Flags user-defined constructor definitions that do not initialize all builtin
+  and pointer fields which leaves their memory in an undefined state.
+
+- New `misc-dangling-handle
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-dangling-handle.html>`_ check
+
+  Detects dangling references in value handlers like
+  ``std::experimental::string_view``.
+
+- New `misc-forward-declaration-namespace
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-forward-declaration-namespace.html>`_ check
+
+  Checks if an unused forward declaration is in a wrong namespace.
+
+- New `misc-misplaced-widening-cast
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-misplaced-widening-cast.html>`_ check
+
+  Warns when there is a explicit redundant cast of a calculation result to a
+  bigger type.
+
+- New `misc-suspicious-missing-comma
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-suspicious-missing-comma.html>`_ check
+
+  Warns about 'probably' missing comma in string literals initializer list.
+
+- New `misc-suspicious-semicolon
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-suspicious-semicolon.html>`_ check
+
+  Finds most instances of stray semicolons that unexpectedly alter the meaning
+  of the code.
+
+- New `modernize-deprecated-headers
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-deprecated-headers.html>`_ check
+
+  Replaces C standard library headers with their C++ alternatives.
+
+- New `modernize-raw-string-literal
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-raw-string-literal.html>`_ check
+
+  Selectively replaces string literals containing escaped characters with raw
   string literals.
 
-- New ``readability-avoid-const-params-in-decls`` check
+- New `performance-faster-string-find
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-faster-string-find.html>`_ check
 
-  warns about top-level const parameters in function declarations.
+  Optimize calls to ``std::string::find()`` and friends when the needle passed
+  is a single character string literal.
+
+- New `performance-implicit-cast-in-loop
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-implicit-cast-in-loop.html>`_ check
+
+  Warns about range-based loop with a loop variable of const ref type where the
+  type of the variable does not match the one returned by the iterator.
+
+- New `performance-unnecessary-value-param
+  <http://clang.llvm.org/extra/clang-tidy/checks/performance-unnecessary-value-param.html>`_ check
+
+  Flags value parameter declarations of expensive to copy types that are copied
+  for each invocation but it would suffice to pass them by const reference.
+
+- New `readability-avoid-const-params-in-decls
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-avoid-const-params-in-decls.html>`_ check
+
+  Warns about top-level const parameters in function declarations.
+
+- New `readability-redundant-control-flow
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-control-flow.html>`_ check
+
+  Looks for procedures (functions returning no value) with ``return`` statements
+  at the end of the function.  Such `return` statements are redundant.
+
+- New `readability-redundant-string-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-string-init.html>`_ check
+
+  Finds unnecessary string initializations.
+
+Fixed bugs:
+
+  Crash when running on compile database with relative source files paths.
+
+  Crash when running with the `-fdelayed-template-parsing` flag.
 
 Clang-tidy changes from 3.7 to 3.8
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

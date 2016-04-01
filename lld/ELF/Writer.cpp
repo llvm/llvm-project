@@ -85,6 +85,9 @@ private:
   bool isOutputDynamic() const {
     return !Symtab.getSharedFiles().empty() || Config->Pic;
   }
+  template <class RelTy>
+  void scanRelocsForThunks(const elf::ObjectFile<ELFT> &File,
+                           iterator_range<const RelTy *> Rels);
 
   void ensureBss();
   void addCommonSymbols(std::vector<DefinedCommon *> &Syms);
@@ -298,6 +301,25 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
   return 0;
 }
 
+// Some targets might require creation of thunks for relocations. Now we
+// support only MIPS which requires LA25 thunk to call PIC code from non-PIC
+// one. Scan relocations to find each one requires thunk.
+template <class ELFT>
+template <class RelTy>
+void Writer<ELFT>::scanRelocsForThunks(const elf::ObjectFile<ELFT> &File,
+                                       iterator_range<const RelTy *> Rels) {
+  for (const RelTy &RI : Rels) {
+    uint32_t Type = RI.getType(Config->Mips64EL);
+    uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
+    SymbolBody &Body = File.getSymbolBody(SymIndex).repl();
+    if (Body.hasThunk() || !Target->needsThunk(Type, File, Body))
+      continue;
+    auto *D = cast<DefinedRegular<ELFT>>(&Body);
+    auto *S = cast<InputSection<ELFT>>(D->Section);
+    S->addThunk(Body);
+  }
+}
+
 // The reason we have to do this early scan is as follows
 // * To mmap the output file, we need to know the size
 // * For that, we need to know how many dynamic relocs we will have.
@@ -479,6 +501,10 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
     Out<ELFT>::RelaDyn->addReloc(
         {Target->RelativeRel, &C, RI.r_offset, true, &Body, Addend});
   }
+
+  // Scan relocations for necessary thunks.
+  if (Config->EMachine == EM_MIPS)
+    scanRelocsForThunks(File, Rels);
 }
 
 template <class ELFT> void Writer<ELFT>::scanRelocs(InputSection<ELFT> &C) {
@@ -1042,6 +1068,9 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
     }
   }
 
+  for (OutputSectionBase<ELFT> *Sec : getSections())
+    Sec->assignOffsets();
+
   // Now that we have defined all possible symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.
   std::vector<DefinedCommon *> CommonSymbols;
@@ -1167,7 +1196,8 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
                     OutputSectionBase<ELFT> *OS) {
     if (OS) {
       Symtab.addSynthetic(Start, *OS, 0, STV_DEFAULT);
-      Symtab.addSynthetic(End, *OS, OS->getSize(), STV_DEFAULT);
+      Symtab.addSynthetic(End, *OS, DefinedSynthetic<ELFT>::SectionEnd,
+                          STV_DEFAULT);
     } else {
       Symtab.addIgnored(Start);
       Symtab.addIgnored(End);
@@ -1200,7 +1230,8 @@ void Writer<ELFT>::addStartStopSymbols(OutputSectionBase<ELFT> *Sec) {
       Symtab.addSynthetic(Start, *Sec, 0, STV_DEFAULT);
   if (SymbolBody *B = Symtab.find(Stop))
     if (B->isUndefined())
-      Symtab.addSynthetic(Stop, *Sec, Sec->getSize(), STV_DEFAULT);
+      Symtab.addSynthetic(Stop, *Sec, DefinedSynthetic<ELFT>::SectionEnd,
+                          STV_DEFAULT);
 }
 
 template <class ELFT> static bool needsPtLoad(OutputSectionBase<ELFT> *Sec) {

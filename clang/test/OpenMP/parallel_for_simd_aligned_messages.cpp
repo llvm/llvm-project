@@ -119,7 +119,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
   for (I k = 0; k < argc; ++k) ++k;
   #pragma omp parallel for simd aligned (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (I k = 0; k < argc; ++k) ++k;
-  #pragma omp parallel for simd aligned (argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp parallel for simd aligned (argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (I k = 0; k < argc; ++k) ++k;
   #pragma omp parallel for simd aligned (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (I k = 0; k < argc; ++k) ++k;
@@ -177,7 +177,7 @@ int main(int argc, char **argv) {
   #pragma omp parallel for simd aligned (argv // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
   // expected-error@+1 {{argument of aligned clause should be array, pointer, reference to array or reference to pointer, not 'int'}}
-  #pragma omp parallel for simd aligned (argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp parallel for simd aligned (argc, // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp parallel for simd aligned (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;

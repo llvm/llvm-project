@@ -691,6 +691,8 @@ def fcuda_include_gpubinary : Separate<["-"], "fcuda-include-gpubinary">,
   HelpText<"Incorporate CUDA device-side binary into host object file.">;
 def fcuda_allow_variadic_functions : Flag<["-"], "fcuda-allow-variadic-functions">,
   HelpText<"Allow variadic functions in CUDA device code.">;
+def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr">,
+  HelpText<"Don't treat unattributed constexpr functions as __host__ __device__.">;
 
 //===----------------------------------------------------------------------===//
 // OpenMP Options

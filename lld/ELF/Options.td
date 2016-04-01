@@ -195,8 +195,10 @@ def start_group_paren: Flag<["-"], "(">;
 // just ignore the option on lld side as it's easier. In fact, the linker could
 // be called 'ld' and understanding which linker is used would require parsing of
 // --version output.
-def plugin : Separate<["-"], "plugin">;
-def plugin_opt : Joined<["-"], "plugin-opt=">;
+def plugin : Separate<["--", "-"], "plugin">;
+def plugin_eq : Joined<["--", "-"], "plugin=">;
+def plugin_opt : Separate<["--", "-"], "plugin-opt">;
+def plugin_opt_eq : Joined<["--", "-"], "plugin-opt=">;
 
 // Options listed below are silently ignored for now for compatibility.
 def fatal_warnings : Flag<["--"], "fatal-warnings">;
@@ -205,6 +207,7 @@ def no_fatal_warnings : Flag<["--"], "no-fatal-warnings">;
 def no_warn_common : Flag<["--", "-"], "no-warn-common">;
 def no_warn_mismatch : Flag<["--"], "no-warn-mismatch">;
 def rpath_link : Separate<["--", "-"], "rpath-link">;
+def rpath_link_eq : Joined<["--", "-"], "rpath-link=">;
 def version_script : Separate<["--"], "version-script">;
 def warn_shared_textrel : Flag<["--"], "warn-shared-textrel">;
 def G : Separate<["-"], "G">;

@@ -42,6 +42,9 @@
 
 #if defined(__CUDA__) && defined(__clang__)
 
+// Include some forward declares that must come before cmath.
+#include <__clang_cuda_math_forward_declares.h>
+
 // Include some standard headers to avoid CUDA headers including them
 // while some required macros (like __THROW) are in a weird state.
 #include <cmath>

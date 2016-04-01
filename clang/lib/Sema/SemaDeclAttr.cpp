@@ -5589,6 +5589,15 @@ static void handleInternalLinkageAttr(Sema &S, Decl *D,
     D->addAttr(Internal);
 }
 
+static void handleOpenCLNoSVMAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  if (S.LangOpts.OpenCLVersion != 200)
+    S.Diag(Attr.getLoc(), diag::err_attribute_requires_opencl_version)
+        << Attr.getName() << "2.0" << 0;
+  else
+    S.Diag(Attr.getLoc(), diag::warn_opencl_attr_deprecated_ignored)
+        << Attr.getName() << "2.0";
+}
+
 /// Handles semantic checking for features that are common to all attributes,
 /// such as checking whether a parameter was properly specified, or the correct
 /// number of arguments were passed, etc.
@@ -6092,6 +6101,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_SwiftIndirectResult:
     handleParameterABIAttr(S, D, Attr, ParameterABI::SwiftIndirectResult);
+    break;
+  case AttributeList::AT_OpenCLNoSVM:
+    handleOpenCLNoSVMAttr(S, D, Attr);
     break;
   case AttributeList::AT_InternalLinkage:
     handleInternalLinkageAttr(S, D, Attr);

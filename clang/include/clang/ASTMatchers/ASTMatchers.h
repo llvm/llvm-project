@@ -2989,18 +2989,13 @@ AST_MATCHER(CXXCtorInitializer, isMemberInitializer) {
 ///   matches x(1, y, 42)
 /// with hasAnyArgument(...)
 ///   matching y
-///
-/// FIXME: Currently this will ignore parentheses and implicit casts on
-/// the argument before applying the inner matcher. We'll want to remove
-/// this to allow for greater control by the user once \c ignoreImplicit()
-/// has been implemented.
 AST_POLYMORPHIC_MATCHER_P(hasAnyArgument,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(CallExpr,
                                                           CXXConstructExpr),
                           internal::Matcher<Expr>, InnerMatcher) {
   for (const Expr *Arg : Node.arguments()) {
     BoundNodesTreeBuilder Result(*Builder);
-    if (InnerMatcher.matches(*Arg->IgnoreParenImpCasts(), Finder, &Result)) {
+    if (InnerMatcher.matches(*Arg, Finder, &Result)) {
       *Builder = std::move(Result);
       return true;
     }

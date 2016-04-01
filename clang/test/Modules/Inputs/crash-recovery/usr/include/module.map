@@ -3,4 +3,14 @@ module cstd [system] {
   module stdio {
     header "stdio.h"
   }
+
+  module pthread {
+    header "pthread.h"
+    export *
+
+    module impl {
+      header "pthread_impl.h"
+      export *
+    }
+  }
 }

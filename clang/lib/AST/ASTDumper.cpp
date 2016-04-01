@@ -18,6 +18,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclLookups.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/LocInfoType.h"
 #include "clang/AST/StmtVisitor.h"
@@ -428,6 +429,12 @@ namespace  {
     void VisitImportDecl(const ImportDecl *D);
     void VisitPragmaCommentDecl(const PragmaCommentDecl *D);
     void VisitPragmaDetectMismatchDecl(const PragmaDetectMismatchDecl *D);
+    void VisitCapturedDecl(const CapturedDecl *D);
+
+    // OpenMP decls
+    void VisitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D);
+    void VisitOMPDeclareReductionDecl(const OMPDeclareReductionDecl *D);
+    void VisitOMPCapturedExprDecl(const OMPCapturedExprDecl *D);
 
     // C++ Decls
     void VisitNamespaceDecl(const NamespaceDecl *D);
@@ -489,6 +496,10 @@ namespace  {
     void VisitLabelStmt(const LabelStmt *Node);
     void VisitGotoStmt(const GotoStmt *Node);
     void VisitCXXCatchStmt(const CXXCatchStmt *Node);
+    void VisitCapturedStmt(const CapturedStmt *Node);
+
+    // OpenMP
+    void VisitOMPExecutableDirective(const OMPExecutableDirective *Node);
 
     // Exprs
     void VisitExpr(const Expr *Node);
@@ -1222,6 +1233,35 @@ void ASTDumper::VisitPragmaDetectMismatchDecl(
   OS << " \"" << D->getName() << "\" \"" << D->getValue() << "\"";
 }
 
+void ASTDumper::VisitCapturedDecl(const CapturedDecl *D) {
+  dumpStmt(D->getBody());
+}
+
+//===----------------------------------------------------------------------===//
+// OpenMP Declarations
+//===----------------------------------------------------------------------===//
+
+void ASTDumper::VisitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
+  for (auto *E : D->varlists())
+    dumpStmt(E);
+}
+
+void ASTDumper::VisitOMPDeclareReductionDecl(const OMPDeclareReductionDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+  OS << " combiner";
+  dumpStmt(D->getCombiner());
+  if (auto *Initializer = D->getInitializer()) {
+    OS << " initializer";
+    dumpStmt(Initializer);
+  }
+}
+
+void ASTDumper::VisitOMPCapturedExprDecl(const OMPCapturedExprDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+  dumpStmt(D->getInit());
+}
 
 //===----------------------------------------------------------------------===//
 // C++ Declarations
@@ -1728,6 +1768,41 @@ void ASTDumper::VisitGotoStmt(const GotoStmt *Node) {
 void ASTDumper::VisitCXXCatchStmt(const CXXCatchStmt *Node) {
   VisitStmt(Node);
   dumpDecl(Node->getExceptionDecl());
+}
+
+void ASTDumper::VisitCapturedStmt(const CapturedStmt *Node) {
+  VisitStmt(Node);
+  dumpDecl(Node->getCapturedDecl());
+}
+
+//===----------------------------------------------------------------------===//
+//  OpenMP dumping methods.
+//===----------------------------------------------------------------------===//
+
+void ASTDumper::VisitOMPExecutableDirective(
+    const OMPExecutableDirective *Node) {
+  VisitStmt(Node);
+  for (auto *C : Node->clauses()) {
+    dumpChild([=] {
+      if (!C) {
+        ColorScope Color(*this, NullColor);
+        OS << "<<<NULL>>> OMPClause";
+        return;
+      }
+      {
+        ColorScope Color(*this, AttrColor);
+        StringRef ClauseName(getOpenMPClauseName(C->getClauseKind()));
+        OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
+           << ClauseName.drop_front() << "Clause";
+      }
+      dumpPointer(C);
+      dumpSourceRange(SourceRange(C->getLocStart(), C->getLocEnd()));
+      if (C->isImplicit())
+        OS << " <implicit>";
+      for (auto *S : C->children())
+        dumpStmt(S);
+    });
+  }
 }
 
 //===----------------------------------------------------------------------===//

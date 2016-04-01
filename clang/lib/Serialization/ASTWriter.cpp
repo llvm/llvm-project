@@ -3340,7 +3340,10 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
       auto *II = const_cast<IdentifierInfo *>(IdentIDPair.first);
       IdentID ID = IdentIDPair.second;
       assert(II && "NULL identifier in identifier table");
-      if (!Chain || !II->isFromAST() || II->hasChangedSinceDeserialization() ||
+      // Write out identifiers if either the ID is local or the identifier has
+      // changed since it was loaded.
+      if (ID >= FirstIdentID || !Chain || !II->isFromAST()
+          || II->hasChangedSinceDeserialization() ||
           (Trait.needDecls() &&
            II->hasFETokenInfoChangedSinceDeserialization()))
         Generator.insert(II, ID, Trait);

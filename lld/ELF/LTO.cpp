@@ -15,6 +15,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Support/StringSaver.h"
@@ -167,7 +168,7 @@ TargetMachine *BitcodeCompiler::getTargetMachine() {
   const Target *T = TargetRegistry::lookupTarget(TripleStr, Msg);
   if (!T)
     fatal("target not found: " + Msg);
-  TargetOptions Options;
+  TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
   Reloc::Model R = Config->Pic ? Reloc::PIC_ : Reloc::Static;
   return T->createTargetMachine(TripleStr, "", "", Options, R);
 }

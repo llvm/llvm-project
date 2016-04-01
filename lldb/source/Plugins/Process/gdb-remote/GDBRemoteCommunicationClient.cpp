@@ -623,6 +623,7 @@ GDBRemoteCommunicationClient::GetThreadsInfo()
     if (m_supports_jThreadsInfo)
     {
         StringExtractorGDBRemote response;
+        response.SetResponseValidatorToJSON();
         if (SendPacketAndWaitForResponse("jThreadsInfo", response, false) == PacketResult::Success)
         {
             if (response.IsUnsupportedResponse())
@@ -765,9 +766,29 @@ GDBRemoteCommunicationClient::SendPacketAndWaitForResponseNoLock (const char *pa
                                                                   size_t payload_length,
                                                                   StringExtractorGDBRemote &response)
 {
-    PacketResult packet_result = SendPacketNoLock (payload, payload_length);
+    PacketResult packet_result = SendPacketNoLock(payload, payload_length);
     if (packet_result == PacketResult::Success)
-        packet_result = ReadPacket (response, GetPacketTimeoutInMicroSeconds (), true);
+    {
+        const size_t max_response_retries = 3;
+        for (size_t i=0; i<max_response_retries; ++i)
+        {
+            packet_result = ReadPacket(response, GetPacketTimeoutInMicroSeconds (), true);
+            // Make sure we received a response
+            if (packet_result != PacketResult::Success)
+                return packet_result;
+            // Make sure our response is valid for the payload that was sent
+            if (response.ValidateResponse())
+                return packet_result;
+            // Response says it wasn't valid
+            Log *log = ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS);
+            if (log)
+                log->Printf("error: packet with payload \"%*s\" got invalid response \"%s\": %s",
+                            (int)payload_length,
+                            payload,
+                            response.GetStringRef().c_str(),
+                            (i == (max_response_retries - 1)) ? "using invalid response and giving up" : "ignoring response and waiting for another");
+        }
+    }
     return packet_result;
 }
 
@@ -801,6 +822,7 @@ GDBRemoteCommunicationClient::SendPacketAndWaitForResponse
             {
                 Mutex::Locker async_locker (m_async_mutex);
                 m_async_packet.assign(payload, payload_length);
+                m_async_response.CopyResponseValidator(response);
                 m_async_packet_predicate.SetValue (true, eBroadcastNever);
                 
                 if (log) 
@@ -867,6 +889,9 @@ GDBRemoteCommunicationClient::SendPacketAndWaitForResponse
                     if (log) 
                         log->Printf ("async: failed to interrupt");
                 }
+
+                m_async_response.SetResponseValidator(nullptr, nullptr);
+
             }
             else
             {
@@ -1136,8 +1161,11 @@ GDBRemoteCommunicationClient::SendContinuePacketAndWaitForResponse
                             // which will just re-send a copy of the last stop reply
                             // packet. If we don't do this, then the reply for our
                             // async packet will be the repeat stop reply packet and cause
-                            // a lot of trouble for us!
-                            if (signo != sigint_signo && signo != sigstop_signo)
+                            // a lot of trouble for us! We also have some debugserver
+                            // binaries that would send two stop replies anytime the process
+                            // was interrupted, so we need to also check for an extra
+                            // stop reply packet if we interrupted the process
+                            if (m_interrupt_sent || (signo != sigint_signo && signo != sigstop_signo))
                             {
                                 continue_after_async = false;
 
@@ -3572,6 +3600,8 @@ GDBRemoteCommunicationClient::SendGDBStoppointTypePacket (GDBStoppointType type,
     // Check we haven't overwritten the end of the packet buffer
     assert (packet_len + 1 < (int)sizeof(packet));
     StringExtractorGDBRemote response;
+    // Make sure the response is either "OK", "EXX" where XX are two hex digits, or "" (unsupported)
+    response.SetResponseValidatorToOKErrorNotSupported();
     // Try to send the breakpoint packet, and check that it was correctly sent
     if (SendPacketAndWaitForResponse(packet, packet_len, response, true) == PacketResult::Success)
     {

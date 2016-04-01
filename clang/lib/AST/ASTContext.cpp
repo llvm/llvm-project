@@ -4020,13 +4020,35 @@ QualType ASTContext::getUnaryTransformType(QualType BaseType,
                                            QualType UnderlyingType,
                                            UnaryTransformType::UTTKind Kind)
     const {
-  UnaryTransformType *Ty =
-    new (*this, TypeAlignment) UnaryTransformType (BaseType, UnderlyingType, 
-                                                   Kind,
-                                 UnderlyingType->isDependentType() ?
-                                 QualType() : getCanonicalType(UnderlyingType));
-  Types.push_back(Ty);
-  return QualType(Ty, 0);
+  UnaryTransformType *ut = nullptr;
+
+  if (BaseType->isDependentType()) {
+    // Look in the folding set for an existing type.
+    llvm::FoldingSetNodeID ID;
+    DependentUnaryTransformType::Profile(ID, getCanonicalType(BaseType), Kind);
+
+    void *InsertPos = nullptr;
+    DependentUnaryTransformType *Canon
+      = DependentUnaryTransformTypes.FindNodeOrInsertPos(ID, InsertPos);
+
+    if (!Canon) {
+      // Build a new, canonical __underlying_type(type) type.
+      Canon = new (*this, TypeAlignment)
+             DependentUnaryTransformType(*this, getCanonicalType(BaseType),
+                                         Kind);
+      DependentUnaryTransformTypes.InsertNode(Canon, InsertPos);
+    }
+    ut = new (*this, TypeAlignment) UnaryTransformType (BaseType,
+                                                        QualType(), Kind,
+                                                        QualType(Canon, 0));
+  } else {
+    QualType CanonType = getCanonicalType(UnderlyingType);
+    ut = new (*this, TypeAlignment) UnaryTransformType (BaseType,
+                                                        UnderlyingType, Kind,
+                                                        CanonType);
+  }
+  Types.push_back(ut);
+  return QualType(ut, 0);
 }
 
 /// getAutoType - Return the uniqued reference to the 'auto' type which has been
@@ -6389,6 +6411,7 @@ CreateAAPCSABIBuiltinVaListDecl(const ASTContext *Context) {
 
   // };
   VaListDecl->completeDefinition();
+  Context->VaListTagDecl = VaListDecl;
 
   // typedef struct __va_list __builtin_va_list;
   QualType T = Context->getRecordType(VaListDecl);

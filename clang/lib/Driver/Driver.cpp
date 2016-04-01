@@ -507,16 +507,25 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // The compilation takes ownership of Args.
   Compilation *C = new Compilation(*this, TC, UArgs.release(), TranslatedArgs);
 
-  C->setCudaDeviceToolChain(
-      &getToolChain(C->getArgs(), llvm::Triple(TC.getTriple().isArch64Bit()
-                                                   ? "nvptx64-nvidia-cuda"
-                                                   : "nvptx-nvidia-cuda")));
   if (!HandleImmediateArgs(*C))
     return C;
 
   // Construct the list of inputs.
   InputList Inputs;
   BuildInputs(C->getDefaultToolChain(), *TranslatedArgs, Inputs);
+
+  // Initialize the CUDA device TC only if we have any CUDA Inputs.  This is
+  // necessary so that we don't break compilations that pass flags that are
+  // incompatible with the NVPTX TC (e.g. -mthread-model single).
+  if (llvm::any_of(Inputs, [](const std::pair<types::ID, const Arg *> &I) {
+        return I.first == types::TY_CUDA || I.first == types::TY_PP_CUDA ||
+               I.first == types::TY_CUDA_DEVICE;
+      })) {
+    C->setCudaDeviceToolChain(
+        &getToolChain(C->getArgs(), llvm::Triple(TC.getTriple().isArch64Bit()
+                                                     ? "nvptx64-nvidia-cuda"
+                                                     : "nvptx-nvidia-cuda")));
+  }
 
   // Construct the list of abstract actions to perform for this compilation. On
   // MachO targets this uses the driver-driver and universal actions.
@@ -2534,6 +2543,34 @@ bool Driver::GetReleaseVersion(const char *Str, unsigned &Major,
     return false;
   HadExtra = true;
   return true;
+}
+
+/// Parse digits from a string \p Str and fulfill \p Digits with
+/// the parsed numbers. This method assumes that the max number of
+/// digits to look for is equal to Digits.size().
+///
+/// \return True if the entire string was parsed and there are
+/// no extra characters remaining at the end.
+bool Driver::GetReleaseVersion(const char *Str,
+                               MutableArrayRef<unsigned> Digits) {
+  if (*Str == '\0')
+    return false;
+
+  char *End;
+  unsigned CurDigit = 0;
+  while (CurDigit < Digits.size()) {
+    unsigned Digit = (unsigned)strtol(Str, &End, 10);
+    Digits[CurDigit] = Digit;
+    if (*Str != '\0' && *End == '\0')
+      return true;
+    if (*End != '.' || Str == End)
+      return false;
+    Str = End + 1;
+    CurDigit++;
+  }
+
+  // More digits than requested, bail out...
+  return false;
 }
 
 std::pair<unsigned, unsigned> Driver::getIncludeExcludeOptionFlagMasks() const {

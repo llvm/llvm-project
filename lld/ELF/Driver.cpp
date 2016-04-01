@@ -71,7 +71,8 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
 
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
-static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
+std::vector<MemoryBufferRef>
+LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
   std::unique_ptr<Archive> File =
       check(Archive::create(MB), "failed to parse archive");
 
@@ -85,6 +86,11 @@ static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
                   File->getFileName());
     V.push_back(Mb);
   }
+
+  // Take ownership of memory buffers created for members of thin archives.
+  for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())
+    OwningMBs.push_back(std::move(MB));
+
   return V;
 }
 

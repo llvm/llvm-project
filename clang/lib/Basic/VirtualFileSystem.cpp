@@ -1358,16 +1358,21 @@ RedirectingFileSystem::lookupPath(sys::path::const_iterator Start,
     ++Start;
 #endif
 
-  if (CaseSensitive ? !Start->equals(From->getName())
-                    : !Start->equals_lower(From->getName()))
-    // failure to match
-    return make_error_code(llvm::errc::no_such_file_or_directory);
+  StringRef FromName = From->getName();
 
-  ++Start;
+  // Forward the search to the next component in case this is an empty one.
+  if (!FromName.empty()) {
+    if (CaseSensitive ? !Start->equals(FromName)
+                      : !Start->equals_lower(FromName))
+      // failure to match
+      return make_error_code(llvm::errc::no_such_file_or_directory);
 
-  if (Start == End) {
-    // Match!
-    return From;
+    ++Start;
+
+    if (Start == End) {
+      // Match!
+      return From;
+    }
   }
 
   auto *DE = dyn_cast<RedirectingDirectoryEntry>(From);

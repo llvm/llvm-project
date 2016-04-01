@@ -4433,6 +4433,7 @@ RNBRemote::HandlePacket_stop_process (const char *p)
     {
         // If we failed to interrupt the process, then send a stop
         // reply packet as the process was probably already stopped
+        DNBLogThreaded ("RNBRemote::HandlePacket_stop_process() sending extra stop reply because DNBProcessInterrupt returned false");
         HandlePacket_last_signal (NULL);
     }
     return rnb_success;

@@ -17,6 +17,7 @@
 
 #include "Target.h"
 #include "Error.h"
+#include "InputFiles.h"
 #include "OutputSections.h"
 #include "Symbols.h"
 
@@ -198,9 +199,12 @@ public:
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   void writeGotHeader(uint8_t *Buf) const override;
+  void writeThunk(uint8_t *Buf, uint64_t S) const override;
   bool needsCopyRelImpl(uint32_t Type) const override;
   bool needsGot(uint32_t Type, const SymbolBody &S) const override;
   bool needsPltImpl(uint32_t Type) const override;
+  bool needsThunk(uint32_t Type, const InputFile &File,
+                  const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA) const override;
   bool isHintRel(uint32_t Type) const override;
@@ -329,6 +333,11 @@ TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
       return Plt_Implicit;
 
   return Plt_No;
+}
+
+bool TargetInfo::needsThunk(uint32_t Type, const InputFile &File,
+                            const SymbolBody &S) const {
+  return false;
 }
 
 bool TargetInfo::isTlsInitialExecRel(uint32_t Type) const { return false; }
@@ -1581,6 +1590,7 @@ template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   PageSize = 65536;
   PltEntrySize = 16;
   PltZeroSize = 32;
+  ThunkSize = 16;
   UseLazyBinding = true;
   CopyRel = R_MIPS_COPY;
   PltRel = R_MIPS_JUMP_SLOT;
@@ -1695,6 +1705,20 @@ void MipsTargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 }
 
 template <class ELFT>
+void MipsTargetInfo<ELFT>::writeThunk(uint8_t *Buf, uint64_t S) const {
+  // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
+  // See MipsTargetInfo::writeThunk for details.
+  const endianness E = ELFT::TargetEndianness;
+  write32<E>(Buf, 0x3c190000);      // lui   $25, %hi(func)
+  write32<E>(Buf + 4, 0x08000000);  // j     func
+  write32<E>(Buf + 8, 0x27390000);  // addiu $25, $25, %lo(func)
+  write32<E>(Buf + 12, 0x00000000); // nop
+  writeMipsHi16<E>(Buf, S);
+  write32<E>(Buf + 4, 0x08000000 | (S >> 2));
+  writeMipsLo16<E>(Buf + 8, S);
+}
+
+template <class ELFT>
 bool MipsTargetInfo<ELFT>::needsCopyRelImpl(uint32_t Type) const {
   return !isRelRelative(Type);
 }
@@ -1712,6 +1736,31 @@ bool MipsTargetInfo<ELFT>::refersToGotEntry(uint32_t Type) const {
 template <class ELFT>
 bool MipsTargetInfo<ELFT>::needsPltImpl(uint32_t Type) const {
   return Type == R_MIPS_26;
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::needsThunk(uint32_t Type, const InputFile &File,
+                                      const SymbolBody &S) const {
+  // Any MIPS PIC code function is invoked with its address in register $t9.
+  // So if we have a branch instruction from non-PIC code to the PIC one
+  // we cannot make the jump directly and need to create a small stubs
+  // to save the target function address.
+  // See page 3-38 ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+  if (Type != R_MIPS_26)
+    return false;
+  auto *F = dyn_cast<ELFFileBase<ELFT>>(&File);
+  if (!F)
+    return false;
+  // If current file has PIC code, LA25 stub is not required.
+  if (F->getObj().getHeader()->e_flags & EF_MIPS_PIC)
+    return false;
+  auto *D = dyn_cast<DefinedRegular<ELFT>>(&S);
+  if (!D || !D->Section)
+    return false;
+  // LA25 is required if target file has PIC code
+  // or target symbol is a PIC symbol.
+  return (D->Section->getFile()->getObj().getHeader()->e_flags & EF_MIPS_PIC) ||
+         (D->Sym.st_other & STO_MIPS_MIPS16) == STO_MIPS_PIC;
 }
 
 template <class ELFT>

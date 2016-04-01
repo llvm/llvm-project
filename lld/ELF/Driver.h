@@ -28,6 +28,7 @@ public:
   void addLibrary(StringRef Name);
 
 private:
+  std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB);
   void readConfigs(llvm::opt::InputArgList &Args);
   void createFiles(llvm::opt::InputArgList &Args);
   template <class ELFT> void link(llvm::opt::InputArgList &Args);

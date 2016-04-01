@@ -756,12 +756,6 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   return std::move(Result);
 }
 
-static void BitcodeInlineAsmDiagHandler(const llvm::SMDiagnostic &SM,
-                                         void *Context,
-                                         unsigned LocCookie) {
-  SM.print(nullptr, llvm::errs());
-}
-
 void CodeGenAction::ExecuteAction() {
   // If this is an IR file, we have to treat it specially.
   if (getCurrentFileKind() == IK_LLVM_IR) {
@@ -810,8 +804,6 @@ void CodeGenAction::ExecuteAction() {
       TheModule->setTargetTriple(TargetOpts.Triple);
     }
 
-    LLVMContext &Ctx = TheModule->getContext();
-    Ctx.setInlineAsmDiagnosticHandler(BitcodeInlineAsmDiagHandler);
     EmitBackendOutput(CI.getDiagnostics(), CI.getCodeGenOpts(), TargetOpts,
                       CI.getLangOpts(), CI.getTarget().getDataLayout(),
                       TheModule.get(), BA, OS);

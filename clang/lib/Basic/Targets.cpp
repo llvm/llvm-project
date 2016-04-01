@@ -262,6 +262,13 @@ public:
   bool hasProtectedVisibility() const override {
     return false;
   }
+
+  unsigned getExnObjectAlignment() const override {
+    // The alignment of an exception object is 8-bytes for darwin since
+    // libc++abi doesn't declare _Unwind_Exception with __attribute__((aligned))
+    // and therefore doesn't guarantee 16-byte alignment.
+    return  64;
+  }
 };
 
 
@@ -1747,10 +1754,6 @@ static const char *const DataLayoutStringR600 =
   "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
   "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64";
 
-static const char *const DataLayoutStringR600DoubleOps =
-  "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
-  "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64";
-
 static const char *const DataLayoutStringSI =
   "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:64:64"
   "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
@@ -1934,7 +1937,7 @@ public:
     case GK_R700_DOUBLE_OPS:
     case GK_EVERGREEN_DOUBLE_OPS:
     case GK_CAYMAN:
-      resetDataLayout(DataLayoutStringR600DoubleOps);
+      resetDataLayout(DataLayoutStringR600);
       hasFP64 = true;
       hasFMAF = true;
       hasLDEXPF = false;
@@ -6491,6 +6494,8 @@ public:
 const Builtin::Info SystemZTargetInfo::BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   { #ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr },
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  { #ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE },
 #include "clang/Basic/BuiltinsSystemZ.def"
 };
 

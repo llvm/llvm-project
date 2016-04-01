@@ -71,3 +71,37 @@ typedef int jmp_buf[(18)];
 // CHECK: [[@LINE+2]]:12 | function/C | setjmp | c:@F@setjmp | _setjmp | Decl | rel: 0
 // CHECK: [[@LINE+1]]:19 | type-alias/C | jmp_buf | c:index-source.m@T@jmp_buf | <no-cgname> | Ref | rel: 0
 extern int setjmp(jmp_buf);
+
+@class I1;
+@interface I1
+// CHECK: [[@LINE+1]]:1 | instance-method/ObjC | meth | c:objc(cs)I1(im)meth | -[I1 meth] | Decl,Dyn,RelChild | rel: 1
+-(void)meth;
+@end
+
+@interface I2
+@property (readwrite) id prop;
+@end
+
+// CHECK: [[@LINE+2]]:17 | field/ObjC | _prop | c:objc(cs)I2@_prop | <no-cgname> | Def,Impl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
+@implementation I2
+// CHECK: [[@LINE+5]]:13 | instance-property/ObjC | prop | c:objc(cs)I2(py)prop | <no-cgname> | Ref | rel: 0
+// CHECK: [[@LINE+4]]:13 | instance-method/ObjC | prop | c:objc(cs)I2(im)prop | -[I2 prop] | Def,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
+// CHECK: [[@LINE+2]]:13 | instance-method/ObjC | setProp: | c:objc(cs)I2(im)setProp: | -[I2 setProp:] | Def,RelChild | rel: 1
+// CHECK-NEXT: RelChild | I2 | c:objc(cs)I2
+@synthesize prop = _prop;
+@end
+
+@interface I3
+@property (readwrite) id prop;
+-(id)prop;
+-(void)setProp:(id)p;
+@end
+
+@implementation I3
+// CHECK: [[@LINE+3]]:13 | instance-property/ObjC | prop | c:objc(cs)I3(py)prop | <no-cgname> | Ref | rel: 0
+// CHECK: [[@LINE+2]]:13 | instance-method/ObjC | prop | c:objc(cs)I3(im)prop | -[I3 prop] | Def,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:13 | instance-method/ObjC | setProp: | c:objc(cs)I3(im)setProp: | -[I3 setProp:] | Def,RelChild | rel: 1
+@synthesize prop = _prop;
+@end

@@ -376,12 +376,10 @@ void test_linear() {
 #pragma omp simd linear(
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
 #pragma omp simd linear(,
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected expression}}
 #pragma omp simd linear(, )
   for (i = 0; i < 16; ++i)
@@ -480,12 +478,10 @@ void test_aligned() {
 #pragma omp simd aligned(
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected expression}} expected-error@+1 {{expected ')'}} expected-note@+1 {{to match this '('}}
 #pragma omp simd aligned(,
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+2 {{expected expression}}
 // expected-error@+1 {{expected expression}}
 #pragma omp simd aligned(, )
   for (i = 0; i < 16; ++i)
@@ -579,11 +575,11 @@ void test_private() {
   for (i = 0; i < 16; ++i)
     ;
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp simd private(,
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp simd private(, )
   for (i = 0; i < 16; ++i)
     ;
@@ -632,11 +628,11 @@ void test_lastprivate() {
     ;
 
 // expected-error@+2 {{expected ')'}} expected-note@+2 {{to match this '('}}
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp simd lastprivate(,
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 2 {{expected expression}}
+// expected-error@+1 {{expected expression}}
 #pragma omp simd lastprivate(, )
   for (i = 0; i < 16; ++i)
     ;
