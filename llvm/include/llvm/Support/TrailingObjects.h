@@ -293,10 +293,6 @@ public:
   // Make this (privately inherited) member public.
   using ParentType::OverloadToken;
 
-  /// Disable sized deallocation for all objects with trailing object storage;
-  /// the inferred size will typically not be correct.
-  void operator delete(void *P) { return ::operator delete(P); }
-
   /// Returns a pointer to the trailing object array of the given type
   /// (which must be one of those specified in the class template). The
   /// array may have zero or more elements in it.
