@@ -158,7 +158,7 @@ ErrorOr<space_info> disk_space(const Twine &Path) {
   space_info SpaceInfo;
   SpaceInfo.capacity =
       (static_cast<uint64_t>(Total.HighPart) << 32) + Total.LowPart;
-  SpaceInfo.Free = (static_cast<uint64_t>(Free.HighPart) << 32) + Free.LowPart;
+  SpaceInfo.free = (static_cast<uint64_t>(Free.HighPart) << 32) + Free.LowPart;
   SpaceInfo.available =
       (static_cast<uint64_t>(Avail.HighPart) << 32) + Avail.LowPart;
   return SpaceInfo;
