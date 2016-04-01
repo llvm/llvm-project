@@ -23,7 +23,7 @@
 #include "sanitizer_list.h"
 #include "sanitizer_mutex.h"
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 extern "C" void _ReadWriteBarrier();
 #pragma intrinsic(_ReadWriteBarrier)
 #endif
@@ -753,7 +753,7 @@ void MaybeStartBackgroudThread();
 // compiler from recognising it and turning it into an actual call to
 // memset/memcpy/etc.
 static inline void SanitizerBreakOptimization(void *arg) {
-#if _MSC_VER && !defined(__clang__)
+#if defined(_MSC_VER) && !defined(__clang__)
   _ReadWriteBarrier();
 #else
   __asm__ __volatile__("" : : "r" (arg) : "memory");

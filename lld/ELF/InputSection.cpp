@@ -316,11 +316,11 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     } else if (Target->needsThunk(Type, *this->getFile(), Body)) {
       // Get address of a thunk code related to the symbol.
       SymVA = Body.getThunkVA<ELFT>();
-    } else if (Config->EMachine == EM_MIPS) {
-      SymVA = adjustMipsSymVA<ELFT>(Type, *File, Body, AddrLoc, SymVA);
     } else if (!Target->needsCopyRel<ELFT>(Type, Body) &&
                Body.isPreemptible()) {
       continue;
+    } else if (Config->EMachine == EM_MIPS) {
+      SymVA = adjustMipsSymVA<ELFT>(Type, *File, Body, AddrLoc, SymVA);
     }
     if (Target->isSizeRel(Type))
       SymVA = Body.getSize<ELFT>() + A;

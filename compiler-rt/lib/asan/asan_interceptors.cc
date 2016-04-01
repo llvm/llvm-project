@@ -223,6 +223,7 @@ struct ThreadStartParam {
   atomic_uintptr_t is_registered;
 };
 
+#if ASAN_INTERCEPT_PTHREAD_CREATE
 static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   ThreadStartParam *param = reinterpret_cast<ThreadStartParam *>(arg);
   AsanThread *t = nullptr;
@@ -233,7 +234,6 @@ static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   return t->ThreadStart(GetTid(), &param->is_registered);
 }
 
-#if ASAN_INTERCEPT_PTHREAD_CREATE
 INTERCEPTOR(int, pthread_create, void *thread,
     void *attr, void *(*start_routine)(void*), void *arg) {
   EnsureMainThreadIDIsCorrect();
@@ -669,12 +669,12 @@ INTERCEPTOR(long long, atoll, const char *nptr) {  // NOLINT
 }
 #endif  // ASAN_INTERCEPT_ATOLL_AND_STRTOLL
 
+#if ASAN_INTERCEPT___CXA_ATEXIT
 static void AtCxaAtexit(void *unused) {
   (void)unused;
   StopInitOrderChecking();
 }
 
-#if ASAN_INTERCEPT___CXA_ATEXIT
 INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
             void *dso_handle) {
 #if SANITIZER_MAC

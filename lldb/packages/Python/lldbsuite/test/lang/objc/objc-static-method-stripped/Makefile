@@ -11,6 +11,6 @@ a.out.stripped: a.out.dSYM
 
 clean::
 	rm -f a.out.stripped
-	rm -rf *.dSYM
+	rm -rf $(wildcard *.dSYM)
 
 include $(LEVEL)/Makefile.rules

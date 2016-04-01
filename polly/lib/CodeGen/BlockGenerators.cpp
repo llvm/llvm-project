@@ -1365,11 +1365,14 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, const PHINode *PHI,
 
     Value *Op = PHI->getIncomingValueForBlock(IncomingBB);
 
-    BasicBlock *OldBlock = Builder.GetInsertBlock();
-    auto OldIP = Builder.GetInsertPoint();
-    Builder.SetInsertPoint(BBCopy->getTerminator());
+    // If the current insert block is different from the PHIs incoming block
+    // change it, otherwise do not.
+    auto IP = Builder.GetInsertPoint();
+    if (IP->getParent() != BBCopy)
+      Builder.SetInsertPoint(BBCopy->getTerminator());
     OpCopy = getNewValue(Stmt, Op, BBCopyMap, LTS, getLoopForStmt(Stmt));
-    Builder.SetInsertPoint(OldBlock, OldIP);
+    if (IP->getParent() != BBCopy)
+      Builder.SetInsertPoint(&*IP);
   } else {
 
     if (PHICopy->getBasicBlockIndex(BBCopy) >= 0)

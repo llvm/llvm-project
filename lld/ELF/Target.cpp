@@ -70,7 +70,7 @@ namespace {
 class X86TargetInfo final : public TargetInfo {
 public:
   X86TargetInfo();
-  uint64_t getImplicitAddend(uint8_t *Buf, uint32_t Type) const override;
+  uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   uint32_t getTlsGotRel(uint32_t Type) const override;
@@ -192,7 +192,7 @@ public:
 template <class ELFT> class MipsTargetInfo final : public TargetInfo {
 public:
   MipsTargetInfo();
-  uint64_t getImplicitAddend(uint8_t *Buf, uint32_t Type) const override;
+  uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, uint64_t Plt) const override;
   void writePltZero(uint8_t *Buf) const override;
@@ -242,7 +242,8 @@ TargetInfo *createTarget() {
 
 TargetInfo::~TargetInfo() {}
 
-uint64_t TargetInfo::getImplicitAddend(uint8_t *Buf, uint32_t Type) const {
+uint64_t TargetInfo::getImplicitAddend(const uint8_t *Buf,
+                                       uint32_t Type) const {
   return 0;
 }
 
@@ -521,7 +522,8 @@ bool X86TargetInfo::refersToGotEntry(uint32_t Type) const {
   return Type == R_386_GOT32;
 }
 
-uint64_t X86TargetInfo::getImplicitAddend(uint8_t *Buf, uint32_t Type) const {
+uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
+                                          uint32_t Type) const {
   switch (Type) {
   default:
     return 0;
@@ -1639,7 +1641,7 @@ void MipsTargetInfo<ELFT>::writeGotPlt(uint8_t *Buf, uint64_t Plt) const {
 static uint16_t mipsHigh(uint64_t V) { return (V + 0x8000) >> 16; }
 
 template <endianness E, uint8_t BSIZE, uint8_t SHIFT>
-static int64_t getPcRelocAddend(uint8_t *Loc) {
+static int64_t getPcRelocAddend(const uint8_t *Loc) {
   uint32_t Instr = read32<E>(Loc);
   uint32_t Mask = 0xffffffff >> (32 - BSIZE);
   return SignExtend64<BSIZE + SHIFT>((Instr & Mask) << SHIFT);
@@ -1669,7 +1671,7 @@ static void writeMipsLo16(uint8_t *Loc, uint64_t V) {
   write32<E>(Loc, (Instr & 0xffff0000) | (V & 0xffff));
 }
 
-template <endianness E> static int16_t readSignedLo16(uint8_t *Loc) {
+template <endianness E> static int16_t readSignedLo16(const uint8_t *Loc) {
   return SignExtend32<16>(read32<E>(Loc) & 0xffff);
 }
 
@@ -1720,7 +1722,7 @@ void MipsTargetInfo<ELFT>::writeThunk(uint8_t *Buf, uint64_t S) const {
 
 template <class ELFT>
 bool MipsTargetInfo<ELFT>::needsCopyRelImpl(uint32_t Type) const {
-  return !isRelRelative(Type);
+  return !isRelRelative(Type) || Type == R_MIPS_LO16;
 }
 
 template <class ELFT>
@@ -1764,7 +1766,7 @@ bool MipsTargetInfo<ELFT>::needsThunk(uint32_t Type, const InputFile &File,
 }
 
 template <class ELFT>
-uint64_t MipsTargetInfo<ELFT>::getImplicitAddend(uint8_t *Buf,
+uint64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
                                                  uint32_t Type) const {
   const endianness E = ELFT::TargetEndianness;
   switch (Type) {
@@ -1895,7 +1897,6 @@ bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
   case R_MIPS_32:
   case R_MIPS_64:
   case R_MIPS_HI16:
-  case R_MIPS_LO16:
   case R_MIPS_TLS_DTPREL_HI16:
   case R_MIPS_TLS_DTPREL_LO16:
   case R_MIPS_TLS_TPREL_HI16:

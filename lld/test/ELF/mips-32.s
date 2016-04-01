@@ -32,11 +32,11 @@ v2:
   .word v1   # R_MIPS_32 target v1 addend 0
 
 # BE: Contents of section .data:
-# BE-NEXT: 30000 00000000 00030008 00030000
+# BE-NEXT: 30000 00000000 00000004 00030000
 #                         ^-- v2+4 ^-- v1
 
 # EL: Contents of section .data:
-# EL-NEXT: 30000 00000000 08000300 00000300
+# EL-NEXT: 30000 00000000 04000000 00000300
 #                         ^-- v2+4 ^-- v1
 
 # SYM: SYMBOL TABLE:
