@@ -31,7 +31,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!15, !16, !17}
 !llvm.ident = !{!18}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.7.0 (trunk 227686)", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !6, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.7.0 (trunk 227686)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !6, globals: !2, imports: !2)
 !1 = !DIFile(filename: "foo.c", directory: "")
 !2 = !{}
 !3 = !{!4}

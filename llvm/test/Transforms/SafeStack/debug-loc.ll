@@ -55,7 +55,7 @@ attributes #2 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 !llvm.module.flags = !{!15, !16}
 !llvm.ident = !{!17}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 254019) (llvm/trunk 254036)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !3, subprograms: !11)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 254019) (llvm/trunk 254036)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, subprograms: !11)
 !1 = !DIFile(filename: "../llvm/2.cc", directory: "/code/build-llvm")
 !2 = !{}
 !3 = !{!4}

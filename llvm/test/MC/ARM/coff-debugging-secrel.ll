@@ -24,7 +24,7 @@ entry:
 !4 = !DISubroutineType(types: !5)
 !5 = !{null}
 !6 = !{}
-!7 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0", isOptimized: false, emissionKind: 1, file: !2, enums: !6, retainedTypes: !6, subprograms: !8, globals: !6, imports: !6)
+!7 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0", isOptimized: false, emissionKind: FullDebug, file: !2, enums: !6, retainedTypes: !6, subprograms: !8, globals: !6, imports: !6)
 !8 = !{!1}
 !9 = !{i32 2, !"Dwarf Version", i32 4}
 !10 = !{i32 1, !"Debug Info Version", i32 3}

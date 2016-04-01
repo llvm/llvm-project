@@ -23,7 +23,7 @@ if.end:
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251335) (llvm/trunk 251344)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251335) (llvm/trunk 251344)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3)
 !1 = !DIFile(filename: "nolocinfo.c", directory: ".")
 !2 = !{}
 !3 = !{!4}

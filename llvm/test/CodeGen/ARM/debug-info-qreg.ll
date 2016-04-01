@@ -40,7 +40,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 
 !0 = distinct !DISubprogram(name: "test0001", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 3, file: !54, scope: !1, type: !3, variables: !51)
 !1 = !DIFile(filename: "build2.c", directory: "/private/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 129915)", isOptimized: true, emissionKind: 1, file: !54, enums: !{}, retainedTypes: !{}, subprograms: !50, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 129915)", isOptimized: true, emissionKind: FullDebug, file: !54, enums: !{}, retainedTypes: !{}, subprograms: !50, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIDerivedType(tag: DW_TAG_typedef, name: "v4f32", line: 14, file: !54, scope: !2, baseType: !6)

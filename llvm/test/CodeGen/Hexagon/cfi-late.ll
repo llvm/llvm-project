@@ -41,7 +41,7 @@ attributes #3 = { nounwind }
 !llvm.module.flags = !{!11, !12}
 !llvm.ident = !{!13}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (http://llvm.org/git/clang.git 15506a21305e212c406f980ed9b6b1bac785df56)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (http://llvm.org/git/clang.git 15506a21305e212c406f980ed9b6b1bac785df56)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3)
 !1 = !DIFile(filename: "cfi-late.c", directory: "/test")
 !2 = !{}
 !3 = !{!4}

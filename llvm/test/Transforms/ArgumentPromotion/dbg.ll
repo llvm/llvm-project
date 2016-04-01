@@ -24,6 +24,6 @@ define void @caller(i32** %Y) {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DILocation(line: 8, scope: !2)
 !2 = distinct !DISubprogram(name: "test", line: 3, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 3, scope: null)
-!3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 2, file: !5, subprograms: !4)
+!3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: LineTablesOnly, file: !5, subprograms: !4)
 !4 = !{!2}
 !5 = !DIFile(filename: "test.c", directory: "")

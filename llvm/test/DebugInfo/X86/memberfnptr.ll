@@ -24,7 +24,7 @@ declare void @_ZN1A3fooEv(%struct.A*)
 !llvm.module.flags = !{!14, !15, !16}
 !llvm.ident = !{!17}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !2, globals: !10, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !2, globals: !10, imports: !2)
 !1 = !DIFile(filename: "memberfnptr.cpp", directory: "")
 !2 = !{}
 !3 = !{!4}

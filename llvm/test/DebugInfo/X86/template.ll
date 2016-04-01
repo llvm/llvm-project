@@ -89,7 +89,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !llvm.module.flags = !{!33, !34}
 !llvm.ident = !{!35}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 (trunk 224394) (llvm/trunk 224384)", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !9, globals: !30, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 (trunk 224394) (llvm/trunk 224384)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !9, globals: !30, imports: !2)
 !1 = !DIFile(filename: "template.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4, !8}

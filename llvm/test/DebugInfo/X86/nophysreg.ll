@@ -136,7 +136,7 @@ attributes #3 = { ssp uwtable }
 !llvm.module.flags = !{!29, !30, !31}
 !llvm.ident = !{!32}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.7.0 (trunk 227088) (llvm/trunk 227091)", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !10, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.7.0 (trunk 227088) (llvm/trunk 227091)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !10, globals: !2, imports: !2)
 !1 = !DIFile(filename: "test.cpp", directory: "")
 !2 = !{}
 !3 = !{!4}

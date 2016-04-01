@@ -82,7 +82,7 @@ attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fp
 !llvm.module.flags = !{!7, !8}
 !llvm.ident = !{!9}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 250016)", isOptimized: false, runtimeVersion: 0, emissionKind: 2, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 250016)", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, subprograms: !3)
 !1 = !DIFile(filename: "vectorization-remarks-profitable.c", directory: "")
 !2 = !{}
 !3 = !{!4, !6}
