@@ -55,4 +55,4 @@ TEST(ValueMapperTest, MapMetadataDistinctOperands) {
   EXPECT_EQ(New, D->getOperand(0));
 }
 
-}
+} // end namespace

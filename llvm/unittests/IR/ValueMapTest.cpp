@@ -292,4 +292,4 @@ TYPED_TEST(ValueMapTest, SurvivesModificationByConfig) {
   EXPECT_EQ(0u, VM.count(this->AddV.get()));
 }
 
-}
+} // end namespace
