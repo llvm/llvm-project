@@ -1040,22 +1040,26 @@ void IRLinker::mapUnneededSubprograms() {
   NamedMDNode *CompileUnits = SrcM->getNamedMetadata("llvm.dbg.cu");
   if (!CompileUnits)
     return;
-  for (unsigned I = 0, E = CompileUnits->getNumOperands(); I != E; ++I) {
-    auto *CU = cast<DICompileUnit>(CompileUnits->getOperand(I));
 
-    // Seed the ValueMap with the imported entities, in case they reference new
-    // subprograms.
-    // FIXME: The DISubprogram for functions not linked in but kept due to
-    // being referenced by a DIImportedEntity should also get their
-    // IsDefinition flag is unset.
-    if (MDTuple *IEs = CU->getImportedEntities().get())
+  // Seed the ValueMap with the imported entities, in case they reference new
+  // subprograms.
+  // FIXME: The DISubprogram for functions not linked in but kept due to
+  // being referenced by a DIImportedEntity should also get their
+  // IsDefinition flag is unset.
+  for (unsigned I = 0, E = CompileUnits->getNumOperands(); I != E; ++I) {
+    if (MDTuple *IEs = cast<DICompileUnit>(CompileUnits->getOperand(I))
+                           ->getImportedEntities()
+                           .get())
       (void)MapMetadata(IEs, ValueMap,
                         ValueMapperFlags | RF_NullMapMissingGlobalValues,
                         &TypeMap, &GValMaterializer);
+  }
 
-    // Try to insert nullptr into the map for any SP not already mapped.  If
-    // the insertion succeeds, we don't need this subprogram.
-    for (auto *Op : CU->getSubprograms())
+  // Try to insert nullptr into the map for any SP not already mapped.  If
+  // the insertion succeeds, we don't need this subprogram.
+  for (unsigned I = 0, E = CompileUnits->getNumOperands(); I != E; ++I) {
+    for (auto *Op :
+         cast<DICompileUnit>(CompileUnits->getOperand(I))->getSubprograms())
       if (ValueMap.MD().insert(std::make_pair(Op, TrackingMDRef())).second)
         HasUnneededSPs = true;
   }
