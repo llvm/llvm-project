@@ -324,13 +324,18 @@ public:
   /// used as the key for a global lookup (e.g. profile or ThinLTO).
   std::string getGlobalIdentifier();
 
-  /// Return a 64-bit global unique ID constructed from global value name
-  /// (i.e. returned by getGlobalIdentifier()).
-  static uint64_t getGUID(StringRef GlobalName) { return MD5Hash(GlobalName); }
+  /// Declare a type to represent a global unique identifier for a global value.
+  /// This is a 64 bits hash that is used by PGO and ThinLTO to have a compact
+  /// unique way to identify a symbol.
+  using GUID = uint64_t;
 
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).
-  uint64_t getGUID() { return getGUID(getGlobalIdentifier()); }
+  static GUID getGUID(StringRef GlobalName) { return MD5Hash(GlobalName); }
+
+  /// Return a 64-bit global unique ID constructed from global value name
+  /// (i.e. returned by getGlobalIdentifier()).
+  GUID getGUID() { return getGUID(getGlobalIdentifier()); }
 
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.
