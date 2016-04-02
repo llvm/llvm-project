@@ -155,12 +155,12 @@ public:
   /// Check whether the current block has any metadata to emit.
   bool hasMDs() const { return NumModuleMDs < MDs.size(); }
 
-  // Get the MDString metadata for this block.
+  /// Get the MDString metadata for this block.
   ArrayRef<const Metadata *> getMDStrings() const {
     return makeArrayRef(MDs).slice(NumModuleMDs, NumMDStrings);
   }
 
-  // Get the non-MDString metadata for this block.
+  /// Get the non-MDString metadata for this block.
   ArrayRef<const Metadata *> getNonMDStrings() const {
     return makeArrayRef(MDs).slice(NumModuleMDs).slice(NumMDStrings);
   }
