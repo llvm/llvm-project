@@ -31,7 +31,8 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       IsMissingRequirement(false), HasIncompatibleModuleFile(false),
       IsAvailable(true), IsFromModuleFile(false), IsFramework(IsFramework),
       IsExplicit(IsExplicit), IsSystem(false), IsExternC(false),
-      IsInferred(false), InferSubmodules(false), InferExplicitSubmodules(false),
+      IsInferred(false), IsSwiftInferImportAsMember(false),
+      InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NameVisibility(Hidden) {
   if (Parent) {
