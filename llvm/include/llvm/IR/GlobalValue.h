@@ -322,7 +322,7 @@ public:
 
   /// Return the modified name for this global value suitable to be
   /// used as the key for a global lookup (e.g. profile or ThinLTO).
-  std::string getGlobalIdentifier();
+  std::string getGlobalIdentifier() const;
 
   /// Declare a type to represent a global unique identifier for a global value.
   /// This is a 64 bits hash that is used by PGO and ThinLTO to have a compact
@@ -335,7 +335,7 @@ public:
 
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).
-  GUID getGUID() { return getGUID(getGlobalIdentifier()); }
+  GUID getGUID() const { return getGUID(getGlobalIdentifier()); }
 
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.
