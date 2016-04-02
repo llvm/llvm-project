@@ -305,8 +305,8 @@ static Metadata *MapMetadataImpl(const Metadata *MD,
                                  ValueMapTypeRemapper *TypeMapper,
                                  ValueMaterializer *Materializer) {
   // If the value already exists in the map, use it.
-  if (Metadata *NewMD = VM.MD().lookup(MD).get())
-    return NewMD;
+  if (Optional<Metadata *> NewMD = VM.getMappedMD(MD))
+    return *NewMD;
 
   if (isa<MDString>(MD))
     return mapToSelf(VM, MD);
@@ -380,8 +380,8 @@ Metadata *llvm::MapMetadata(const Metadata *MD, ValueToValueMapTy &VM,
 MDNode *llvm::MapMetadata(const MDNode *MD, ValueToValueMapTy &VM,
                           RemapFlags Flags, ValueMapTypeRemapper *TypeMapper,
                           ValueMaterializer *Materializer) {
-  return cast<MDNode>(MapMetadata(static_cast<const Metadata *>(MD), VM, Flags,
-                                  TypeMapper, Materializer));
+  return cast_or_null<MDNode>(MapMetadata(static_cast<const Metadata *>(MD), VM,
+                                          Flags, TypeMapper, Materializer));
 }
 
 /// RemapInstruction - Convert the instruction operands from referencing the

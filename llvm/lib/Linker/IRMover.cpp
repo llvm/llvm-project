@@ -1091,7 +1091,7 @@ void IRLinker::findNeededSubprograms() {
       // Any needed SPs should have been mapped as they would be reached
       // from the function linked in (either on the function itself for linked
       // function bodies, or from DILocation on inlined instructions).
-      if (!ValueMap.MD()[Op] && !ImportedEntitySPs.count(Op))
+      if (!ValueMap.getMappedMD(Op) && !ImportedEntitySPs.count(Op))
         UnneededSubprograms.insert(Op);
     }
   }
