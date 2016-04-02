@@ -61,8 +61,42 @@ private:
   ComdatSetType Comdats;
 
   std::vector<const Metadata *> MDs;
-  typedef DenseMap<const Metadata *, unsigned> MetadataMapType;
+  std::vector<const Metadata *> FunctionMDs;
+
+  /// Index of information about a piece of metadata.
+  struct MDIndex {
+    unsigned F = 0;  ///< The ID of the function for this metadata, if any.
+    unsigned ID = 0; ///< The implicit ID of this metadata in bitcode.
+
+    MDIndex() = default;
+    explicit MDIndex(unsigned F) : F(F) {}
+
+    /// Check if this has a function tag, and it's different from NewF.
+    bool hasDifferentFunction(unsigned NewF) const { return F && F != NewF; }
+
+    /// Fetch the MD this references out of the given metadata array.
+    const Metadata *get(ArrayRef<const Metadata *> MDs) const {
+      assert(ID && "Expected non-zero ID");
+      assert(ID <= MDs.size() && "Expected valid ID");
+      return MDs[ID - 1];
+    }
+  };
+  typedef DenseMap<const Metadata *, MDIndex> MetadataMapType;
   MetadataMapType MetadataMap;
+
+  /// Range of metadata IDs, as a half-open range.
+  struct MDRange {
+    unsigned First = 0;
+    unsigned Last = 0;
+
+    /// Number of strings in the prefix of the metadata range.
+    unsigned NumStrings = 0;
+
+    MDRange() = default;
+    explicit MDRange(unsigned First) : First(First) {}
+  };
+  SmallDenseMap<unsigned, MDRange, 1> FunctionMDInfo;
+
   bool ShouldPreserveUseListOrder;
 
   typedef DenseMap<AttributeSet, unsigned> AttributeGroupMapType;
@@ -114,7 +148,7 @@ public:
     return ID - 1;
   }
   unsigned getMetadataOrNullID(const Metadata *MD) const {
-    return MetadataMap.lookup(MD);
+    return MetadataMap.lookup(MD).ID;
   }
   unsigned numMDs() const { return MDs.size(); }
 
@@ -194,13 +228,31 @@ public:
 private:
   void OptimizeConstants(unsigned CstStart, unsigned CstEnd);
 
-  // Reorder the reachable metadata.  This is not just an optimization, but is
-  // mandatory for emitting MDString correctly.
+  /// Reorder the reachable metadata.
+  ///
+  /// This is not just an optimization, but is mandatory for emitting MDString
+  /// correctly.
   void organizeMetadata();
 
-  void EnumerateMDNodeOperands(const MDNode *N);
-  void EnumerateMetadata(const Metadata *MD);
-  void EnumerateFunctionLocalMetadata(const LocalAsMetadata *Local);
+  /// Drop the function tag from the transitive operands of the given node.
+  void dropFunctionFromOps(const MDNode &N);
+
+  /// Incorporate the function metadata.
+  ///
+  /// This should be called before enumerating LocalAsMetadata for the
+  /// function.
+  void incorporateFunctionMetadata(const Function &F);
+
+  bool insertMetadata(unsigned F, const Metadata *MD);
+
+  unsigned getMetadataFunctionID(const Function *F) const;
+  void EnumerateMDNodeOperands(const Function *F, const MDNode *N);
+  void EnumerateMDNodeOperands(unsigned F, const MDNode *N);
+  void EnumerateMetadata(const Function *F, const Metadata *MD);
+  void EnumerateMetadata(unsigned F, const Metadata *MD);
+  void EnumerateFunctionLocalMetadata(const Function &F,
+                                      const LocalAsMetadata *Local);
+  void EnumerateFunctionLocalMetadata(unsigned F, const LocalAsMetadata *Local);
   void EnumerateNamedMDNode(const NamedMDNode *NMD);
   void EnumerateValue(const Value *V);
   void EnumerateType(Type *T);
