@@ -103,7 +103,8 @@ selectCallee(const GlobalValueInfoList &CalleeInfoList, unsigned Threshold) {
 
 /// Return the summary for the function \p GUID that fits the \p Threshold, or
 /// null if there's no match.
-static const FunctionSummary *selectCallee(uint64_t GUID, unsigned Threshold,
+static const FunctionSummary *selectCallee(GlobalValue::GUID GUID,
+                                           unsigned Threshold,
                                            const ModuleSummaryIndex &Index) {
   auto CalleeInfoList = Index.findGlobalValueInfoList(GUID);
   if (CalleeInfoList == Index.end()) {
@@ -114,7 +115,8 @@ static const FunctionSummary *selectCallee(uint64_t GUID, unsigned Threshold,
 
 /// Return true if the global \p GUID is exported by module \p ExportModulePath.
 static bool isGlobalExported(const ModuleSummaryIndex &Index,
-                             StringRef ExportModulePath, uint64_t GUID) {
+                             StringRef ExportModulePath,
+                             GlobalValue::GUID GUID) {
   auto CalleeInfoList = Index.findGlobalValueInfoList(GUID);
   if (CalleeInfoList == Index.end())
     // This global does not have a summary, it is not part of the ThinLTO
@@ -138,7 +140,7 @@ using EdgeInfo = std::pair<const FunctionSummary *, unsigned /* Threshold */>;
 static void computeImportForFunction(
     StringRef ModulePath, const FunctionSummary &Summary,
     const ModuleSummaryIndex &Index, unsigned Threshold,
-    const std::map<uint64_t, FunctionSummary *> &DefinedFunctions,
+    const std::map<GlobalValue::GUID, FunctionSummary *> &DefinedFunctions,
     SmallVectorImpl<EdgeInfo> &Worklist,
     FunctionImporter::ImportMapTy &ImportsForModule,
     StringMap<FunctionImporter::ExportSetTy> &ExportLists) {
@@ -198,7 +200,7 @@ static void computeImportForFunction(
 /// another module (that may require promotion).
 static void ComputeImportForModule(
     StringRef ModulePath,
-    const std::map<uint64_t, FunctionSummary *> &DefinedFunctions,
+    const std::map<GlobalValue::GUID, FunctionSummary *> &DefinedFunctions,
     const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportsForModule,
     StringMap<FunctionImporter::ExportSetTy> &ExportLists) {
@@ -242,8 +244,8 @@ void llvm::ComputeCrossModuleImport(
 
   // Collect for each module the list of function it defines.
   // GUID -> Summary
-  StringMap<std::map<uint64_t, FunctionSummary *>> Module2FunctionInfoMap(
-      ModuleCount);
+  StringMap<std::map<GlobalValue::GUID, FunctionSummary *>>
+      Module2FunctionInfoMap(ModuleCount);
 
   for (auto &GlobalList : Index) {
     auto GUID = GlobalList.first;

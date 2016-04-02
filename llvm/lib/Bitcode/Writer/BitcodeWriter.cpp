@@ -2397,11 +2397,10 @@ static void WriteValueSymbolTable(
 
 /// Emit function names and summary offsets for the combined index
 /// used by ThinLTO.
-static void
-WriteCombinedValueSymbolTable(const ModuleSummaryIndex &Index,
-                              BitstreamWriter &Stream,
-                              std::map<uint64_t, unsigned> &GUIDToValueIdMap,
-                              uint64_t VSTOffsetPlaceholder) {
+static void WriteCombinedValueSymbolTable(
+    const ModuleSummaryIndex &Index, BitstreamWriter &Stream,
+    std::map<GlobalValue::GUID, unsigned> &GUIDToValueIdMap,
+    uint64_t VSTOffsetPlaceholder) {
   assert(VSTOffsetPlaceholder > 0 && "Expected non-zero VSTOffsetPlaceholder");
   // Get the offset of the VST we are writing, and backpatch it into
   // the VST forward declaration record.
@@ -2427,7 +2426,7 @@ WriteCombinedValueSymbolTable(const ModuleSummaryIndex &Index,
   SmallVector<uint64_t, 64> NameVals;
 
   for (const auto &FII : Index) {
-    uint64_t FuncGUID = FII.first;
+    GlobalValue::GUID FuncGUID = FII.first;
     const auto &VMI = GUIDToValueIdMap.find(FuncGUID);
     assert(VMI != GUIDToValueIdMap.end());
 
@@ -3052,7 +3051,8 @@ static void WritePerModuleGlobalValueSummary(
 /// Emit the combined summary section into the combined index file.
 static void WriteCombinedGlobalValueSummary(
     const ModuleSummaryIndex &I, BitstreamWriter &Stream,
-    std::map<uint64_t, unsigned> &GUIDToValueIdMap, unsigned GlobalValueId) {
+    std::map<GlobalValue::GUID, unsigned> &GUIDToValueIdMap,
+    unsigned GlobalValueId) {
   Stream.EnterSubblock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID, 3);
 
   // Abbrev for FS_COMBINED.
@@ -3445,7 +3445,7 @@ void llvm::WriteIndexToFile(const ModuleSummaryIndex &Index, raw_ostream &Out) {
   // in writing out the call graph edges. Save the mapping from GUID
   // to the new global value id to use when writing those edges, which
   // are currently saved in the index in terms of GUID.
-  std::map<uint64_t, unsigned> GUIDToValueIdMap;
+  std::map<GlobalValue::GUID, unsigned> GUIDToValueIdMap;
   unsigned GlobalValueId = 0;
   for (auto &II : Index)
     GUIDToValueIdMap[II.first] = ++GlobalValueId;

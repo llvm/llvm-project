@@ -1407,7 +1407,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
           NonLocalDepResult(I.getBB(), I.getResult(), Pointer.getAddr()));
       break;
     }
-    (void)foundBlock;
+    (void)foundBlock; (void)GotWorklistLimit;
     assert((foundBlock || GotWorklistLimit) && "Current block not in cache?");
   }
 

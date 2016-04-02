@@ -46,7 +46,7 @@ bool LLParser::Run() {
   // Prime the lexer.
   Lex.Lex();
 
-  if (Context.discardValueNames())
+  if (Context.shouldDiscardValueNames())
     return Error(
         Lex.getLoc(),
         "Can't read textual IR with a Context that discards named Values");

@@ -49,6 +49,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CFGMST.h"
+#include "IndirectCallSiteVisitor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
@@ -60,7 +61,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
@@ -326,24 +326,6 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   return InstrBB;
 }
 
-// Visitor class that finds all indirect call sites.
-struct PGOIndirectCallSiteVisitor
-    : public InstVisitor<PGOIndirectCallSiteVisitor> {
-  std::vector<Instruction *> IndirectCallInsts;
-  PGOIndirectCallSiteVisitor() {}
-
-  void visitCallSite(CallSite CS) {
-    if (CS.getCalledFunction() || !CS.getCalledValue())
-      return;
-    Instruction *I = CS.getInstruction();
-    if (CallInst *CI = dyn_cast<CallInst>(I)) {
-      if (CI->isInlineAsm())
-        return;
-    }
-    IndirectCallInsts.push_back(I);
-  }
-};
-
 // Visit all edge and instrument the edges not in MST, and do value profiling.
 // Critical edges will be split.
 static void instrumentOneFunc(Function &F, Module *M,
@@ -377,9 +359,7 @@ static void instrumentOneFunc(Function &F, Module *M,
     return;
 
   unsigned NumIndirectCallSites = 0;
-  PGOIndirectCallSiteVisitor ICV;
-  ICV.visit(F);
-  for (auto &I : ICV.IndirectCallInsts) {
+  for (auto &I : findIndirectCallSites(F)) {
     CallSite CS(I);
     Value *Callee = CS.getCalledValue();
     DEBUG(dbgs() << "Instrument one indirect call: CallSite Index = "
@@ -756,11 +736,10 @@ void PGOUseFunc::annotateIndirectCallSites() {
   createPGOFuncNameMetadata(F);
 
   unsigned IndirectCallSiteIndex = 0;
-  PGOIndirectCallSiteVisitor ICV;
-  ICV.visit(F);
+  auto IndirectCallSites = findIndirectCallSites(F);
   unsigned NumValueSites =
       ProfileRecord.getNumValueSites(IPVK_IndirectCallTarget);
-  if (NumValueSites != ICV.IndirectCallInsts.size()) {
+  if (NumValueSites != IndirectCallSites.size()) {
     std::string Msg =
         std::string("Inconsistent number of indirect call sites: ") +
         F.getName().str();
@@ -770,7 +749,7 @@ void PGOUseFunc::annotateIndirectCallSites() {
     return;
   }
 
-  for (auto &I : ICV.IndirectCallInsts) {
+  for (auto &I : IndirectCallSites) {
     DEBUG(dbgs() << "Read one indirect call instrumentation: Index="
                  << IndirectCallSiteIndex << " out of " << NumValueSites
                  << "\n");

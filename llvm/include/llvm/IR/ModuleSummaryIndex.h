@@ -82,7 +82,7 @@ private:
   /// (either by the initializer of a global variable, or referenced
   /// from within a function). This does not include functions called, which
   /// are listed in the derived FunctionSummary object.
-  std::vector<uint64_t> RefEdgeList;
+  std::vector<GlobalValue::GUID> RefEdgeList;
 
 protected:
   /// GlobalValueSummary constructor.
@@ -107,7 +107,7 @@ public:
 
   /// Record a reference from this global value to the global value identified
   /// by \p RefGUID.
-  void addRefEdge(uint64_t RefGUID) { RefEdgeList.push_back(RefGUID); }
+  void addRefEdge(GlobalValue::GUID RefGUID) { RefEdgeList.push_back(RefGUID); }
 
   /// Record a reference from this global value to each global value identified
   /// in \p RefEdges.
@@ -117,8 +117,8 @@ public:
   }
 
   /// Return the list of GUIDs referenced by this global value definition.
-  std::vector<uint64_t> &refs() { return RefEdgeList; }
-  const std::vector<uint64_t> &refs() const { return RefEdgeList; }
+  std::vector<GlobalValue::GUID> &refs() { return RefEdgeList; }
+  const std::vector<GlobalValue::GUID> &refs() const { return RefEdgeList; }
 };
 
 /// \brief Function summary information to aid decisions and implementation of
@@ -126,7 +126,7 @@ public:
 class FunctionSummary : public GlobalValueSummary {
 public:
   /// <CalleeGUID, CalleeInfo> call edge pair.
-  typedef std::pair<uint64_t, CalleeInfo> EdgeTy;
+  typedef std::pair<GlobalValue::GUID, CalleeInfo> EdgeTy;
 
 private:
   /// Number of instructions (ignoring debug instructions, e.g.) computed
@@ -152,7 +152,7 @@ public:
   /// Record a call graph edge from this function to the function identified
   /// by \p CalleeGUID, with \p CalleeInfo including the cumulative profile
   /// count (across all calls from this function) or 0 if no PGO.
-  void addCallGraphEdge(uint64_t CalleeGUID, CalleeInfo Info) {
+  void addCallGraphEdge(GlobalValue::GUID CalleeGUID, CalleeInfo Info) {
     CallGraphEdgeList.push_back(std::make_pair(CalleeGUID, Info));
   }
 
@@ -243,7 +243,7 @@ typedef std::vector<std::unique_ptr<GlobalValueInfo>> GlobalValueInfoList;
 /// less overhead, as the value type is not very small and the size
 /// of the map is unknown, resulting in inefficiencies due to repeated
 /// insertions and resizing.
-typedef std::map<uint64_t, GlobalValueInfoList> GlobalValueInfoMapTy;
+typedef std::map<GlobalValue::GUID, GlobalValueInfoList> GlobalValueInfoMapTy;
 
 /// Type used for iterating through the global value info map.
 typedef GlobalValueInfoMapTy::const_iterator const_globalvalueinfo_iterator;
@@ -293,7 +293,7 @@ public:
 
   /// Get the list of global value info objects for a given value GUID.
   const const_globalvalueinfo_iterator
-  findGlobalValueInfoList(uint64_t ValueGUID) const {
+  findGlobalValueInfoList(GlobalValue::GUID ValueGUID) const {
     return GlobalValueMap.find(ValueGUID);
   }
 
@@ -304,7 +304,7 @@ public:
   }
 
   /// Add a global value info for a value of the given GUID.
-  void addGlobalValueInfo(uint64_t ValueGUID,
+  void addGlobalValueInfo(GlobalValue::GUID ValueGUID,
                           std::unique_ptr<GlobalValueInfo> Info) {
     GlobalValueMap[ValueGUID].push_back(std::move(Info));
   }

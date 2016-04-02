@@ -199,7 +199,7 @@ StringRef Value::getName() const {
 
 void Value::setNameImpl(const Twine &NewName) {
   // Fast-path: LLVMContext can be set to strip out non-GlobalValue names
-  if (getContext().discardValueNames() && !isa<GlobalValue>(this))
+  if (getContext().shouldDiscardValueNames() && !isa<GlobalValue>(this))
     return;
 
   // Fast path for common IRBuilder case of setName("") when there is no name.

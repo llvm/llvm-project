@@ -111,7 +111,9 @@ extern "C" void LLVMInitializeAArch64Target() {
   RegisterTargetMachine<AArch64leTargetMachine> X(TheAArch64leTarget);
   RegisterTargetMachine<AArch64beTargetMachine> Y(TheAArch64beTarget);
   RegisterTargetMachine<AArch64leTargetMachine> Z(TheARM64Target);
-  initializeGlobalISel(*PassRegistry::getPassRegistry());
+  auto PR = PassRegistry::getPassRegistry();
+  initializeGlobalISel(*PR);
+  initializeAArch64ExpandPseudoPass(*PR);
 }
 
 //===----------------------------------------------------------------------===//

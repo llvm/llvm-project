@@ -23,7 +23,7 @@ void ModuleSummaryIndex::mergeFrom(std::unique_ptr<ModuleSummaryIndex> Other,
 
   StringRef ModPath;
   for (auto &OtherGlobalValInfoLists : *Other) {
-    uint64_t ValueGUID = OtherGlobalValInfoLists.first;
+    GlobalValue::GUID ValueGUID = OtherGlobalValInfoLists.first;
     GlobalValueInfoList &List = OtherGlobalValInfoLists.second;
 
     // Assert that the value info list only has one entry, since we shouldn't
