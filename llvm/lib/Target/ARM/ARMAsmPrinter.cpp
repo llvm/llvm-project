@@ -1843,8 +1843,10 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // ldr $scratch, [$src, #4]
     // ldr r7, [$src]
     // bx $scratch
+    const Triple &TT = TM.getTargetTriple();
     unsigned SrcReg = MI->getOperand(0).getReg();
     unsigned ScratchReg = MI->getOperand(1).getReg();
+
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tLDRi)
       .addReg(ScratchReg)
       .addReg(SrcReg)
@@ -1871,7 +1873,7 @@ void ARMAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       .addReg(0));
 
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tLDRi)
-      .addReg(ARM::R7)
+      .addReg(TT.isOSWindows() ? ARM::R11 : ARM::R7)
       .addReg(SrcReg)
       .addImm(0)
       // Predicate.
