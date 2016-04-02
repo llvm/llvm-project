@@ -1430,7 +1430,7 @@ static void writeMetadataRecords(ArrayRef<const Metadata *> MDs,
 static void writeModuleMetadata(const Module &M,
                                 const ValueEnumerator &VE,
                                 BitstreamWriter &Stream) {
-  if (VE.getMDs().empty() && M.named_metadata_empty())
+  if (!VE.hasMDs() && M.named_metadata_empty())
     return;
 
   Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
@@ -1443,13 +1443,14 @@ static void writeModuleMetadata(const Module &M,
 
 static void writeFunctionMetadata(const Function &F, const ValueEnumerator &VE,
                                   BitstreamWriter &Stream) {
-  ArrayRef<const Metadata *> MDs = VE.getFunctionMDs();
-  if (MDs.empty())
+  if (!VE.hasMDs())
     return;
 
   Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
   SmallVector<uint64_t, 64> Record;
-  writeMetadataRecords(MDs, VE, Stream, Record);
+  assert(VE.getMDStrings().empty() &&
+         "Unexpected strings at the function-level");
+  writeMetadataRecords(VE.getNonMDStrings(), VE, Stream, Record);
   Stream.ExitBlock();
 }
 
