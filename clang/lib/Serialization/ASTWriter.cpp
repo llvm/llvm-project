@@ -85,7 +85,7 @@ static StringRef bytes(const SmallVectorImpl<T> &v) {
 namespace {
   class ASTTypeWriter {
     ASTWriter &Writer;
-    ASTWriter::RecordDataImpl &Record;
+    ASTRecordWriter Record;
 
   public:
     /// \brief Type code that corresponds to the record generated.
@@ -94,7 +94,7 @@ namespace {
     unsigned AbbrevToUse;
 
     ASTTypeWriter(ASTWriter &Writer, ASTWriter::RecordDataImpl &Record)
-      : Writer(Writer), Record(Record), Code(TYPE_EXT_QUAL) { }
+      : Writer(Writer), Record(Writer, Record), Code(TYPE_EXT_QUAL) { }
 
     void VisitArrayType(const ArrayType *T);
     void VisitFunctionType(const FunctionType *T);
@@ -111,57 +111,57 @@ void ASTTypeWriter::VisitBuiltinType(const BuiltinType *T) {
 }
 
 void ASTTypeWriter::VisitComplexType(const ComplexType *T) {
-  Writer.AddTypeRef(T->getElementType(), Record);
+  Record.AddTypeRef(T->getElementType());
   Code = TYPE_COMPLEX;
 }
 
 void ASTTypeWriter::VisitPointerType(const PointerType *T) {
-  Writer.AddTypeRef(T->getPointeeType(), Record);
+  Record.AddTypeRef(T->getPointeeType());
   Code = TYPE_POINTER;
 }
 
 void ASTTypeWriter::VisitDecayedType(const DecayedType *T) {
-  Writer.AddTypeRef(T->getOriginalType(), Record);
+  Record.AddTypeRef(T->getOriginalType());
   Code = TYPE_DECAYED;
 }
 
 void ASTTypeWriter::VisitAdjustedType(const AdjustedType *T) {
-  Writer.AddTypeRef(T->getOriginalType(), Record);
-  Writer.AddTypeRef(T->getAdjustedType(), Record);
+  Record.AddTypeRef(T->getOriginalType());
+  Record.AddTypeRef(T->getAdjustedType());
   Code = TYPE_ADJUSTED;
 }
 
 void ASTTypeWriter::VisitBlockPointerType(const BlockPointerType *T) {
-  Writer.AddTypeRef(T->getPointeeType(), Record);
+  Record.AddTypeRef(T->getPointeeType());
   Code = TYPE_BLOCK_POINTER;
 }
 
 void ASTTypeWriter::VisitLValueReferenceType(const LValueReferenceType *T) {
-  Writer.AddTypeRef(T->getPointeeTypeAsWritten(), Record);
+  Record.AddTypeRef(T->getPointeeTypeAsWritten());
   Record.push_back(T->isSpelledAsLValue());
   Code = TYPE_LVALUE_REFERENCE;
 }
 
 void ASTTypeWriter::VisitRValueReferenceType(const RValueReferenceType *T) {
-  Writer.AddTypeRef(T->getPointeeTypeAsWritten(), Record);
+  Record.AddTypeRef(T->getPointeeTypeAsWritten());
   Code = TYPE_RVALUE_REFERENCE;
 }
 
 void ASTTypeWriter::VisitMemberPointerType(const MemberPointerType *T) {
-  Writer.AddTypeRef(T->getPointeeType(), Record);
-  Writer.AddTypeRef(QualType(T->getClass(), 0), Record);
+  Record.AddTypeRef(T->getPointeeType());
+  Record.AddTypeRef(QualType(T->getClass(), 0));
   Code = TYPE_MEMBER_POINTER;
 }
 
 void ASTTypeWriter::VisitArrayType(const ArrayType *T) {
-  Writer.AddTypeRef(T->getElementType(), Record);
+  Record.AddTypeRef(T->getElementType());
   Record.push_back(T->getSizeModifier()); // FIXME: stable values
   Record.push_back(T->getIndexTypeCVRQualifiers()); // FIXME: stable values
 }
 
 void ASTTypeWriter::VisitConstantArrayType(const ConstantArrayType *T) {
   VisitArrayType(T);
-  Writer.AddAPInt(T->getSize(), Record);
+  Record.AddAPInt(T->getSize());
   Code = TYPE_CONSTANT_ARRAY;
 }
 
@@ -172,14 +172,14 @@ void ASTTypeWriter::VisitIncompleteArrayType(const IncompleteArrayType *T) {
 
 void ASTTypeWriter::VisitVariableArrayType(const VariableArrayType *T) {
   VisitArrayType(T);
-  Writer.AddSourceLocation(T->getLBracketLoc(), Record);
-  Writer.AddSourceLocation(T->getRBracketLoc(), Record);
+  Record.AddSourceLocation(T->getLBracketLoc());
+  Record.AddSourceLocation(T->getRBracketLoc());
   Writer.AddStmt(T->getSizeExpr());
   Code = TYPE_VARIABLE_ARRAY;
 }
 
 void ASTTypeWriter::VisitVectorType(const VectorType *T) {
-  Writer.AddTypeRef(T->getElementType(), Record);
+  Record.AddTypeRef(T->getElementType());
   Record.push_back(T->getNumElements());
   Record.push_back(T->getVectorKind());
   Code = TYPE_VECTOR;
@@ -191,7 +191,7 @@ void ASTTypeWriter::VisitExtVectorType(const ExtVectorType *T) {
 }
 
 void ASTTypeWriter::VisitFunctionType(const FunctionType *T) {
-  Writer.AddTypeRef(T->getReturnType(), Record);
+  Record.AddTypeRef(T->getReturnType());
   FunctionType::ExtInfo C = T->getExtInfo();
   Record.push_back(C.getNoReturn());
   Record.push_back(C.getHasRegParm());
@@ -210,19 +210,19 @@ void ASTTypeWriter::VisitFunctionNoProtoType(const FunctionNoProtoType *T) {
 }
 
 static void addExceptionSpec(ASTWriter &Writer, const FunctionProtoType *T,
-                             ASTWriter::RecordDataImpl &Record) {
+                             ASTRecordWriter Record) {
   Record.push_back(T->getExceptionSpecType());
   if (T->getExceptionSpecType() == EST_Dynamic) {
     Record.push_back(T->getNumExceptions());
     for (unsigned I = 0, N = T->getNumExceptions(); I != N; ++I)
-      Writer.AddTypeRef(T->getExceptionType(I), Record);
+      Record.AddTypeRef(T->getExceptionType(I));
   } else if (T->getExceptionSpecType() == EST_ComputedNoexcept) {
     Writer.AddStmt(T->getNoexceptExpr());
   } else if (T->getExceptionSpecType() == EST_Uninstantiated) {
-    Writer.AddDeclRef(T->getExceptionSpecDecl(), Record);
-    Writer.AddDeclRef(T->getExceptionSpecTemplate(), Record);
+    Record.AddDeclRef(T->getExceptionSpecDecl());
+    Record.AddDeclRef(T->getExceptionSpecTemplate());
   } else if (T->getExceptionSpecType() == EST_Unevaluated) {
-    Writer.AddDeclRef(T->getExceptionSpecDecl(), Record);
+    Record.AddDeclRef(T->getExceptionSpecDecl());
   }
 }
 
@@ -237,7 +237,7 @@ void ASTTypeWriter::VisitFunctionProtoType(const FunctionProtoType *T) {
 
   Record.push_back(T->getNumParams());
   for (unsigned I = 0, N = T->getNumParams(); I != N; ++I)
-    Writer.AddTypeRef(T->getParamType(I), Record);
+    Record.AddTypeRef(T->getParamType(I));
 
   if (T->hasExtParameterInfos()) {
     for (unsigned I = 0, N = T->getNumParams(); I != N; ++I)
@@ -253,14 +253,14 @@ void ASTTypeWriter::VisitFunctionProtoType(const FunctionProtoType *T) {
 }
 
 void ASTTypeWriter::VisitUnresolvedUsingType(const UnresolvedUsingType *T) {
-  Writer.AddDeclRef(T->getDecl(), Record);
+  Record.AddDeclRef(T->getDecl());
   Code = TYPE_UNRESOLVED_USING;
 }
 
 void ASTTypeWriter::VisitTypedefType(const TypedefType *T) {
-  Writer.AddDeclRef(T->getDecl(), Record);
+  Record.AddDeclRef(T->getDecl());
   assert(!T->isCanonicalUnqualified() && "Invalid typedef ?");
-  Writer.AddTypeRef(T->getCanonicalTypeInternal(), Record);
+  Record.AddTypeRef(T->getCanonicalTypeInternal());
   Code = TYPE_TYPEDEF;
 }
 
@@ -270,25 +270,25 @@ void ASTTypeWriter::VisitTypeOfExprType(const TypeOfExprType *T) {
 }
 
 void ASTTypeWriter::VisitTypeOfType(const TypeOfType *T) {
-  Writer.AddTypeRef(T->getUnderlyingType(), Record);
+  Record.AddTypeRef(T->getUnderlyingType());
   Code = TYPE_TYPEOF;
 }
 
 void ASTTypeWriter::VisitDecltypeType(const DecltypeType *T) {
-  Writer.AddTypeRef(T->getUnderlyingType(), Record);
+  Record.AddTypeRef(T->getUnderlyingType());
   Writer.AddStmt(T->getUnderlyingExpr());
   Code = TYPE_DECLTYPE;
 }
 
 void ASTTypeWriter::VisitUnaryTransformType(const UnaryTransformType *T) {
-  Writer.AddTypeRef(T->getBaseType(), Record);
-  Writer.AddTypeRef(T->getUnderlyingType(), Record);
+  Record.AddTypeRef(T->getBaseType());
+  Record.AddTypeRef(T->getUnderlyingType());
   Record.push_back(T->getUTTKind());
   Code = TYPE_UNARY_TRANSFORM;
 }
 
 void ASTTypeWriter::VisitAutoType(const AutoType *T) {
-  Writer.AddTypeRef(T->getDeducedType(), Record);
+  Record.AddTypeRef(T->getDeducedType());
   Record.push_back((unsigned)T->getKeyword());
   if (T->getDeducedType().isNull())
     Record.push_back(T->isDependentType());
@@ -297,7 +297,7 @@ void ASTTypeWriter::VisitAutoType(const AutoType *T) {
 
 void ASTTypeWriter::VisitTagType(const TagType *T) {
   Record.push_back(T->isDependentType());
-  Writer.AddDeclRef(T->getDecl()->getCanonicalDecl(), Record);
+  Record.AddDeclRef(T->getDecl()->getCanonicalDecl());
   assert(!T->isBeingDefined() &&
          "Cannot serialize in the middle of a type definition");
 }
@@ -313,8 +313,8 @@ void ASTTypeWriter::VisitEnumType(const EnumType *T) {
 }
 
 void ASTTypeWriter::VisitAttributedType(const AttributedType *T) {
-  Writer.AddTypeRef(T->getModifiedType(), Record);
-  Writer.AddTypeRef(T->getEquivalentType(), Record);
+  Record.AddTypeRef(T->getModifiedType());
+  Record.AddTypeRef(T->getEquivalentType());
   Record.push_back(T->getAttrKind());
   Code = TYPE_ATTRIBUTED;
 }
@@ -322,16 +322,16 @@ void ASTTypeWriter::VisitAttributedType(const AttributedType *T) {
 void
 ASTTypeWriter::VisitSubstTemplateTypeParmType(
                                         const SubstTemplateTypeParmType *T) {
-  Writer.AddTypeRef(QualType(T->getReplacedParameter(), 0), Record);
-  Writer.AddTypeRef(T->getReplacementType(), Record);
+  Record.AddTypeRef(QualType(T->getReplacedParameter(), 0));
+  Record.AddTypeRef(T->getReplacementType());
   Code = TYPE_SUBST_TEMPLATE_TYPE_PARM;
 }
 
 void
 ASTTypeWriter::VisitSubstTemplateTypeParmPackType(
                                       const SubstTemplateTypeParmPackType *T) {
-  Writer.AddTypeRef(QualType(T->getReplacedParameter(), 0), Record);
-  Writer.AddTemplateArgument(T->getArgumentPack(), Record);
+  Record.AddTypeRef(QualType(T->getReplacedParameter(), 0));
+  Record.AddTemplateArgument(T->getArgumentPack());
   Code = TYPE_SUBST_TEMPLATE_TYPE_PARM_PACK;
 }
 
@@ -339,14 +339,14 @@ void
 ASTTypeWriter::VisitTemplateSpecializationType(
                                        const TemplateSpecializationType *T) {
   Record.push_back(T->isDependentType());
-  Writer.AddTemplateName(T->getTemplateName(), Record);
+  Record.AddTemplateName(T->getTemplateName());
   Record.push_back(T->getNumArgs());
   for (const auto &ArgI : *T)
-    Writer.AddTemplateArgument(ArgI, Record);
-  Writer.AddTypeRef(T->isTypeAlias() ? T->getAliasedType() :
-                    T->isCanonicalUnqualified() ? QualType()
-                                                : T->getCanonicalTypeInternal(),
-                    Record);
+    Record.AddTemplateArgument(ArgI);
+  Record.AddTypeRef(T->isTypeAlias() ? T->getAliasedType()
+                                     : T->isCanonicalUnqualified()
+                                           ? QualType()
+                                           : T->getCanonicalTypeInternal());
   Code = TYPE_TEMPLATE_SPECIALIZATION;
 }
 
@@ -354,7 +354,7 @@ void
 ASTTypeWriter::VisitDependentSizedArrayType(const DependentSizedArrayType *T) {
   VisitArrayType(T);
   Writer.AddStmt(T->getSizeExpr());
-  Writer.AddSourceRange(T->getBracketsRange(), Record);
+  Record.AddSourceRange(T->getBracketsRange());
   Code = TYPE_DEPENDENT_SIZED_ARRAY;
 }
 
@@ -370,18 +370,17 @@ ASTTypeWriter::VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
   Record.push_back(T->getDepth());
   Record.push_back(T->getIndex());
   Record.push_back(T->isParameterPack());
-  Writer.AddDeclRef(T->getDecl(), Record);
+  Record.AddDeclRef(T->getDecl());
   Code = TYPE_TEMPLATE_TYPE_PARM;
 }
 
 void
 ASTTypeWriter::VisitDependentNameType(const DependentNameType *T) {
   Record.push_back(T->getKeyword());
-  Writer.AddNestedNameSpecifier(T->getQualifier(), Record);
-  Writer.AddIdentifierRef(T->getIdentifier(), Record);
-  Writer.AddTypeRef(T->isCanonicalUnqualified() ? QualType()
-                                                : T->getCanonicalTypeInternal(),
-                    Record);
+  Record.AddNestedNameSpecifier(T->getQualifier());
+  Record.AddIdentifierRef(T->getIdentifier());
+  Record.AddTypeRef(
+      T->isCanonicalUnqualified() ? QualType() : T->getCanonicalTypeInternal());
   Code = TYPE_DEPENDENT_NAME;
 }
 
@@ -389,16 +388,16 @@ void
 ASTTypeWriter::VisitDependentTemplateSpecializationType(
                                 const DependentTemplateSpecializationType *T) {
   Record.push_back(T->getKeyword());
-  Writer.AddNestedNameSpecifier(T->getQualifier(), Record);
-  Writer.AddIdentifierRef(T->getIdentifier(), Record);
+  Record.AddNestedNameSpecifier(T->getQualifier());
+  Record.AddIdentifierRef(T->getIdentifier());
   Record.push_back(T->getNumArgs());
   for (const auto &I : *T)
-    Writer.AddTemplateArgument(I, Record);
+    Record.AddTemplateArgument(I);
   Code = TYPE_DEPENDENT_TEMPLATE_SPECIALIZATION;
 }
 
 void ASTTypeWriter::VisitPackExpansionType(const PackExpansionType *T) {
-  Writer.AddTypeRef(T->getPattern(), Record);
+  Record.AddTypeRef(T->getPattern());
   if (Optional<unsigned> NumExpansions = T->getNumExpansions())
     Record.push_back(*NumExpansions + 1);
   else
@@ -407,55 +406,55 @@ void ASTTypeWriter::VisitPackExpansionType(const PackExpansionType *T) {
 }
 
 void ASTTypeWriter::VisitParenType(const ParenType *T) {
-  Writer.AddTypeRef(T->getInnerType(), Record);
+  Record.AddTypeRef(T->getInnerType());
   Code = TYPE_PAREN;
 }
 
 void ASTTypeWriter::VisitElaboratedType(const ElaboratedType *T) {
   Record.push_back(T->getKeyword());
-  Writer.AddNestedNameSpecifier(T->getQualifier(), Record);
-  Writer.AddTypeRef(T->getNamedType(), Record);
+  Record.AddNestedNameSpecifier(T->getQualifier());
+  Record.AddTypeRef(T->getNamedType());
   Code = TYPE_ELABORATED;
 }
 
 void ASTTypeWriter::VisitInjectedClassNameType(const InjectedClassNameType *T) {
-  Writer.AddDeclRef(T->getDecl()->getCanonicalDecl(), Record);
-  Writer.AddTypeRef(T->getInjectedSpecializationType(), Record);
+  Record.AddDeclRef(T->getDecl()->getCanonicalDecl());
+  Record.AddTypeRef(T->getInjectedSpecializationType());
   Code = TYPE_INJECTED_CLASS_NAME;
 }
 
 void ASTTypeWriter::VisitObjCInterfaceType(const ObjCInterfaceType *T) {
-  Writer.AddDeclRef(T->getDecl()->getCanonicalDecl(), Record);
+  Record.AddDeclRef(T->getDecl()->getCanonicalDecl());
   Code = TYPE_OBJC_INTERFACE;
 }
 
 void ASTTypeWriter::VisitObjCObjectType(const ObjCObjectType *T) {
-  Writer.AddTypeRef(T->getBaseType(), Record);
+  Record.AddTypeRef(T->getBaseType());
   Record.push_back(T->getTypeArgsAsWritten().size());
   for (auto TypeArg : T->getTypeArgsAsWritten())
-    Writer.AddTypeRef(TypeArg, Record);
+    Record.AddTypeRef(TypeArg);
   Record.push_back(T->getNumProtocols());
   for (const auto *I : T->quals())
-    Writer.AddDeclRef(I, Record);
+    Record.AddDeclRef(I);
   Record.push_back(T->isKindOfTypeAsWritten());
   Code = TYPE_OBJC_OBJECT;
 }
 
 void
 ASTTypeWriter::VisitObjCObjectPointerType(const ObjCObjectPointerType *T) {
-  Writer.AddTypeRef(T->getPointeeType(), Record);
+  Record.AddTypeRef(T->getPointeeType());
   Code = TYPE_OBJC_OBJECT_POINTER;
 }
 
 void
 ASTTypeWriter::VisitAtomicType(const AtomicType *T) {
-  Writer.AddTypeRef(T->getValueType(), Record);
+  Record.AddTypeRef(T->getValueType());
   Code = TYPE_ATOMIC;
 }
 
 void
 ASTTypeWriter::VisitPipeType(const PipeType *T) {
-  Writer.AddTypeRef(T->getElementType(), Record);
+  Record.AddTypeRef(T->getElementType());
   Code = TYPE_PIPE;
 }
 
@@ -463,11 +462,11 @@ namespace {
 
 class TypeLocWriter : public TypeLocVisitor<TypeLocWriter> {
   ASTWriter &Writer;
-  ASTWriter::RecordDataImpl &Record;
+  ASTRecordWriter Record;
 
 public:
   TypeLocWriter(ASTWriter &Writer, ASTWriter::RecordDataImpl &Record)
-    : Writer(Writer), Record(Record) { }
+    : Writer(Writer), Record(Writer, Record) { }
 
 #define ABSTRACT_TYPELOC(CLASS, PARENT)
 #define TYPELOC(CLASS, PARENT) \
@@ -484,7 +483,7 @@ void TypeLocWriter::VisitQualifiedTypeLoc(QualifiedTypeLoc TL) {
   // nothing to do
 }
 void TypeLocWriter::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getBuiltinLoc(), Record);
+  Record.AddSourceLocation(TL.getBuiltinLoc());
   if (TL.needsExtraLocalData()) {
     Record.push_back(TL.getWrittenTypeSpec());
     Record.push_back(TL.getWrittenSignSpec());
@@ -493,10 +492,10 @@ void TypeLocWriter::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
   }
 }
 void TypeLocWriter::VisitComplexTypeLoc(ComplexTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitPointerTypeLoc(PointerTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getStarLoc(), Record);
+  Record.AddSourceLocation(TL.getStarLoc());
 }
 void TypeLocWriter::VisitDecayedTypeLoc(DecayedTypeLoc TL) {
   // nothing to do
@@ -505,21 +504,21 @@ void TypeLocWriter::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
   // nothing to do
 }
 void TypeLocWriter::VisitBlockPointerTypeLoc(BlockPointerTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getCaretLoc(), Record);
+  Record.AddSourceLocation(TL.getCaretLoc());
 }
 void TypeLocWriter::VisitLValueReferenceTypeLoc(LValueReferenceTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getAmpLoc(), Record);
+  Record.AddSourceLocation(TL.getAmpLoc());
 }
 void TypeLocWriter::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getAmpAmpLoc(), Record);
+  Record.AddSourceLocation(TL.getAmpAmpLoc());
 }
 void TypeLocWriter::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getStarLoc(), Record);
-  Writer.AddTypeSourceInfo(TL.getClassTInfo(), Record);
+  Record.AddSourceLocation(TL.getStarLoc());
+  Record.AddTypeSourceInfo(TL.getClassTInfo());
 }
 void TypeLocWriter::VisitArrayTypeLoc(ArrayTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getLBracketLoc(), Record);
-  Writer.AddSourceLocation(TL.getRBracketLoc(), Record);
+  Record.AddSourceLocation(TL.getLBracketLoc());
+  Record.AddSourceLocation(TL.getRBracketLoc());
   Record.push_back(TL.getSizeExpr() ? 1 : 0);
   if (TL.getSizeExpr())
     Writer.AddStmt(TL.getSizeExpr());
@@ -539,21 +538,21 @@ void TypeLocWriter::VisitDependentSizedArrayTypeLoc(
 }
 void TypeLocWriter::VisitDependentSizedExtVectorTypeLoc(
                                         DependentSizedExtVectorTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitVectorTypeLoc(VectorTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitFunctionTypeLoc(FunctionTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getLocalRangeBegin(), Record);
-  Writer.AddSourceLocation(TL.getLParenLoc(), Record);
-  Writer.AddSourceLocation(TL.getRParenLoc(), Record);
-  Writer.AddSourceLocation(TL.getLocalRangeEnd(), Record);
+  Record.AddSourceLocation(TL.getLocalRangeBegin());
+  Record.AddSourceLocation(TL.getLParenLoc());
+  Record.AddSourceLocation(TL.getRParenLoc());
+  Record.AddSourceLocation(TL.getLocalRangeEnd());
   for (unsigned i = 0, e = TL.getNumParams(); i != e; ++i)
-    Writer.AddDeclRef(TL.getParam(i), Record);
+    Record.AddDeclRef(TL.getParam(i));
 }
 void TypeLocWriter::VisitFunctionProtoTypeLoc(FunctionProtoTypeLoc TL) {
   VisitFunctionTypeLoc(TL);
@@ -562,131 +561,131 @@ void TypeLocWriter::VisitFunctionNoProtoTypeLoc(FunctionNoProtoTypeLoc TL) {
   VisitFunctionTypeLoc(TL);
 }
 void TypeLocWriter::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitTypedefTypeLoc(TypedefTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitTypeOfExprTypeLoc(TypeOfExprTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getTypeofLoc(), Record);
-  Writer.AddSourceLocation(TL.getLParenLoc(), Record);
-  Writer.AddSourceLocation(TL.getRParenLoc(), Record);
+  Record.AddSourceLocation(TL.getTypeofLoc());
+  Record.AddSourceLocation(TL.getLParenLoc());
+  Record.AddSourceLocation(TL.getRParenLoc());
 }
 void TypeLocWriter::VisitTypeOfTypeLoc(TypeOfTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getTypeofLoc(), Record);
-  Writer.AddSourceLocation(TL.getLParenLoc(), Record);
-  Writer.AddSourceLocation(TL.getRParenLoc(), Record);
-  Writer.AddTypeSourceInfo(TL.getUnderlyingTInfo(), Record);
+  Record.AddSourceLocation(TL.getTypeofLoc());
+  Record.AddSourceLocation(TL.getLParenLoc());
+  Record.AddSourceLocation(TL.getRParenLoc());
+  Record.AddTypeSourceInfo(TL.getUnderlyingTInfo());
 }
 void TypeLocWriter::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getKWLoc(), Record);
-  Writer.AddSourceLocation(TL.getLParenLoc(), Record);
-  Writer.AddSourceLocation(TL.getRParenLoc(), Record);
-  Writer.AddTypeSourceInfo(TL.getUnderlyingTInfo(), Record);
+  Record.AddSourceLocation(TL.getKWLoc());
+  Record.AddSourceLocation(TL.getLParenLoc());
+  Record.AddSourceLocation(TL.getRParenLoc());
+  Record.AddTypeSourceInfo(TL.getUnderlyingTInfo());
 }
 void TypeLocWriter::VisitAutoTypeLoc(AutoTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitRecordTypeLoc(RecordTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getAttrNameLoc(), Record);
+  Record.AddSourceLocation(TL.getAttrNameLoc());
   if (TL.hasAttrOperand()) {
     SourceRange range = TL.getAttrOperandParensRange();
-    Writer.AddSourceLocation(range.getBegin(), Record);
-    Writer.AddSourceLocation(range.getEnd(), Record);
+    Record.AddSourceLocation(range.getBegin());
+    Record.AddSourceLocation(range.getEnd());
   }
   if (TL.hasAttrExprOperand()) {
     Expr *operand = TL.getAttrExprOperand();
     Record.push_back(operand ? 1 : 0);
     if (operand) Writer.AddStmt(operand);
   } else if (TL.hasAttrEnumOperand()) {
-    Writer.AddSourceLocation(TL.getAttrEnumOperandLoc(), Record);
+    Record.AddSourceLocation(TL.getAttrEnumOperandLoc());
   }
 }
 void TypeLocWriter::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitSubstTemplateTypeParmTypeLoc(
                                             SubstTemplateTypeParmTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitSubstTemplateTypeParmPackTypeLoc(
                                           SubstTemplateTypeParmPackTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitTemplateSpecializationTypeLoc(
                                            TemplateSpecializationTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getTemplateKeywordLoc(), Record);
-  Writer.AddSourceLocation(TL.getTemplateNameLoc(), Record);
-  Writer.AddSourceLocation(TL.getLAngleLoc(), Record);
-  Writer.AddSourceLocation(TL.getRAngleLoc(), Record);
+  Record.AddSourceLocation(TL.getTemplateKeywordLoc());
+  Record.AddSourceLocation(TL.getTemplateNameLoc());
+  Record.AddSourceLocation(TL.getLAngleLoc());
+  Record.AddSourceLocation(TL.getRAngleLoc());
   for (unsigned i = 0, e = TL.getNumArgs(); i != e; ++i)
-    Writer.AddTemplateArgumentLocInfo(TL.getArgLoc(i).getArgument().getKind(),
-                                      TL.getArgLoc(i).getLocInfo(), Record);
+    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(i).getArgument().getKind(),
+                                      TL.getArgLoc(i).getLocInfo());
 }
 void TypeLocWriter::VisitParenTypeLoc(ParenTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getLParenLoc(), Record);
-  Writer.AddSourceLocation(TL.getRParenLoc(), Record);
+  Record.AddSourceLocation(TL.getLParenLoc());
+  Record.AddSourceLocation(TL.getRParenLoc());
 }
 void TypeLocWriter::VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getElaboratedKeywordLoc(), Record);
-  Writer.AddNestedNameSpecifierLoc(TL.getQualifierLoc(), Record);
+  Record.AddSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
 }
 void TypeLocWriter::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getElaboratedKeywordLoc(), Record);
-  Writer.AddNestedNameSpecifierLoc(TL.getQualifierLoc(), Record);
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitDependentTemplateSpecializationTypeLoc(
        DependentTemplateSpecializationTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getElaboratedKeywordLoc(), Record);
-  Writer.AddNestedNameSpecifierLoc(TL.getQualifierLoc(), Record);
-  Writer.AddSourceLocation(TL.getTemplateKeywordLoc(), Record);
-  Writer.AddSourceLocation(TL.getTemplateNameLoc(), Record);
-  Writer.AddSourceLocation(TL.getLAngleLoc(), Record);
-  Writer.AddSourceLocation(TL.getRAngleLoc(), Record);
+  Record.AddSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
+  Record.AddSourceLocation(TL.getTemplateKeywordLoc());
+  Record.AddSourceLocation(TL.getTemplateNameLoc());
+  Record.AddSourceLocation(TL.getLAngleLoc());
+  Record.AddSourceLocation(TL.getRAngleLoc());
   for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I)
-    Writer.AddTemplateArgumentLocInfo(TL.getArgLoc(I).getArgument().getKind(),
-                                      TL.getArgLoc(I).getLocInfo(), Record);
+    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(I).getArgument().getKind(),
+                                      TL.getArgLoc(I).getLocInfo());
 }
 void TypeLocWriter::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getEllipsisLoc(), Record);
+  Record.AddSourceLocation(TL.getEllipsisLoc());
 }
 void TypeLocWriter::VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getNameLoc(), Record);
+  Record.AddSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) {
   Record.push_back(TL.hasBaseTypeAsWritten());
-  Writer.AddSourceLocation(TL.getTypeArgsLAngleLoc(), Record);
-  Writer.AddSourceLocation(TL.getTypeArgsRAngleLoc(), Record);
+  Record.AddSourceLocation(TL.getTypeArgsLAngleLoc());
+  Record.AddSourceLocation(TL.getTypeArgsRAngleLoc());
   for (unsigned i = 0, e = TL.getNumTypeArgs(); i != e; ++i)
-    Writer.AddTypeSourceInfo(TL.getTypeArgTInfo(i), Record);
-  Writer.AddSourceLocation(TL.getProtocolLAngleLoc(), Record);
-  Writer.AddSourceLocation(TL.getProtocolRAngleLoc(), Record);
+    Record.AddTypeSourceInfo(TL.getTypeArgTInfo(i));
+  Record.AddSourceLocation(TL.getProtocolLAngleLoc());
+  Record.AddSourceLocation(TL.getProtocolRAngleLoc());
   for (unsigned i = 0, e = TL.getNumProtocols(); i != e; ++i)
-    Writer.AddSourceLocation(TL.getProtocolLoc(i), Record);
+    Record.AddSourceLocation(TL.getProtocolLoc(i));
 }
 void TypeLocWriter::VisitObjCObjectPointerTypeLoc(ObjCObjectPointerTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getStarLoc(), Record);
+  Record.AddSourceLocation(TL.getStarLoc());
 }
 void TypeLocWriter::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getKWLoc(), Record);
-  Writer.AddSourceLocation(TL.getLParenLoc(), Record);
-  Writer.AddSourceLocation(TL.getRParenLoc(), Record);
+  Record.AddSourceLocation(TL.getKWLoc());
+  Record.AddSourceLocation(TL.getLParenLoc());
+  Record.AddSourceLocation(TL.getRParenLoc());
 }
 void TypeLocWriter::VisitPipeTypeLoc(PipeTypeLoc TL) {
-  Writer.AddSourceLocation(TL.getKWLoc(), Record);
+  Record.AddSourceLocation(TL.getKWLoc());
 }
 
 void ASTWriter::WriteTypeAbbrevs() {
@@ -3989,9 +3988,9 @@ void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
 // General Serialization Routines
 //===----------------------------------------------------------------------===//
 
-/// \brief Write a record containing the given attributes.
-void ASTWriter::WriteAttributes(ArrayRef<const Attr*> Attrs,
-                                RecordDataImpl &Record) {
+/// \brief Emit the list of attributes to the specified record.
+void ASTWriter::AddAttributes(ArrayRef<const Attr *> Attrs,
+                              RecordDataImpl &Record) {
   Record.push_back(Attrs.size());
   for (const auto *A : Attrs) {
     Record.push_back(A->getKind()); // FIXME: stable encoding, target attrs
@@ -4656,11 +4655,18 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
     const Decl *D = DeclUpdate.first;
 
     bool HasUpdatedBody = false;
-    RecordData Record;
+    RecordData RecordData;
+    ASTRecordWriter Record(*this, RecordData);
     for (auto &Update : DeclUpdate.second) {
       DeclUpdateKind Kind = (DeclUpdateKind)Update.getKind();
 
-      Record.push_back(Kind);
+      // An updated body is emitted last, so that the reader doesn't need
+      // to skip over the lazy body to reach statements for other records.
+      if (Kind == UPD_CXX_ADDED_FUNCTION_DEFINITION)
+        HasUpdatedBody = true;
+      else
+        Record.push_back(Kind);
+
       switch (Kind) {
       case UPD_CXX_ADDED_IMPLICIT_MEMBER:
       case UPD_CXX_ADDED_TEMPLATE_SPECIALIZATION:
@@ -4670,14 +4676,10 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         break;
 
       case UPD_CXX_ADDED_FUNCTION_DEFINITION:
-        // An updated body is emitted last, so that the reader doesn't need
-        // to skip over the lazy body to reach statements for other records.
-        Record.pop_back();
-        HasUpdatedBody = true;
         break;
 
       case UPD_CXX_INSTANTIATED_STATIC_DATA_MEMBER:
-        AddSourceLocation(Update.getLoc(), Record);
+        Record.AddSourceLocation(Update.getLoc());
         break;
 
       case UPD_CXX_INSTANTIATED_DEFAULT_ARGUMENT:
@@ -4688,7 +4690,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
       case UPD_CXX_INSTANTIATED_CLASS_DEFINITION: {
         auto *RD = cast<CXXRecordDecl>(D);
         UpdatedDeclContexts.insert(RD->getPrimaryContext());
-        AddCXXDefinitionData(RD, Record);
+        Record.AddCXXDefinitionData(RD);
         Record.push_back(WriteDeclContextLexicalBlock(
             *Context, const_cast<CXXRecordDecl *>(RD)));
 
@@ -4697,11 +4699,11 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         // to it referring to the template definition.
         if (auto *MSInfo = RD->getMemberSpecializationInfo()) {
           Record.push_back(MSInfo->getTemplateSpecializationKind());
-          AddSourceLocation(MSInfo->getPointOfInstantiation(), Record);
+          Record.AddSourceLocation(MSInfo->getPointOfInstantiation());
         } else {
           auto *Spec = cast<ClassTemplateSpecializationDecl>(RD);
           Record.push_back(Spec->getTemplateSpecializationKind());
-          AddSourceLocation(Spec->getPointOfInstantiation(), Record);
+          Record.AddSourceLocation(Spec->getPointOfInstantiation());
 
           // The instantiation might have been resolved to a partial
           // specialization. If so, record which one.
@@ -4709,30 +4711,29 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
           if (auto PartialSpec =
                 From.dyn_cast<ClassTemplatePartialSpecializationDecl*>()) {
             Record.push_back(true);
-            AddDeclRef(PartialSpec, Record);
-            AddTemplateArgumentList(&Spec->getTemplateInstantiationArgs(),
-                                    Record);
+            Record.AddDeclRef(PartialSpec);
+            Record.AddTemplateArgumentList(
+                &Spec->getTemplateInstantiationArgs());
           } else {
             Record.push_back(false);
           }
         }
         Record.push_back(RD->getTagKind());
-        AddSourceLocation(RD->getLocation(), Record);
-        AddSourceLocation(RD->getLocStart(), Record);
-        AddSourceLocation(RD->getRBraceLoc(), Record);
+        Record.AddSourceLocation(RD->getLocation());
+        Record.AddSourceLocation(RD->getLocStart());
+        Record.AddSourceLocation(RD->getRBraceLoc());
 
         // Instantiation may change attributes; write them all out afresh.
         Record.push_back(D->hasAttrs());
-        if (Record.back())
-          WriteAttributes(llvm::makeArrayRef(D->getAttrs().begin(),
-                                             D->getAttrs().size()), Record);
+        if (D->hasAttrs())
+          Record.AddAttributes(D->getAttrs());
 
         // FIXME: Ensure we don't get here for explicit instantiations.
         break;
       }
 
       case UPD_CXX_RESOLVED_DTOR_DELETE:
-        AddDeclRef(Update.getDecl(), Record);
+        Record.AddDeclRef(Update.getDecl());
         break;
 
       case UPD_CXX_RESOLVED_EXCEPTION_SPEC:
@@ -4755,8 +4756,8 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         break;
 
       case UPD_DECL_MARKED_OPENMP_THREADPRIVATE:
-        AddSourceRange(D->getAttr<OMPThreadPrivateDeclAttr>()->getRange(),
-                       Record);
+        Record.AddSourceRange(
+            D->getAttr<OMPThreadPrivateDeclAttr>()->getRange());
         break;
 
       case UPD_DECL_EXPORTED:
@@ -4764,7 +4765,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         break;
 
       case UPD_ADDED_ATTR_TO_RECORD:
-        WriteAttributes(llvm::makeArrayRef(Update.getAttr()), Record);
+        Record.AddAttributes(llvm::makeArrayRef(Update.getAttr()));
         break;
       }
     }
@@ -4773,14 +4774,12 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
       const auto *Def = cast<FunctionDecl>(D);
       Record.push_back(UPD_CXX_ADDED_FUNCTION_DEFINITION);
       Record.push_back(Def->isInlined());
-      AddSourceLocation(Def->getInnerLocStart(), Record);
-      AddFunctionDefinition(Def, Record);
+      Record.AddSourceLocation(Def->getInnerLocStart());
+      AddFunctionDefinition(Def, Record.getRecordData());
     }
 
     OffsetsRecord.push_back(GetDeclRef(D));
-    OffsetsRecord.push_back(Stream.GetCurrentBitNo());
-
-    Stream.EmitRecord(DECL_UPDATES, Record);
+    OffsetsRecord.push_back(Record.Emit(DECL_UPDATES));
 
     FlushPendingAfterDecl();
   }
