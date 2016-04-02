@@ -4,6 +4,9 @@
 // RUN: FileCheck --check-prefix=CHECK3 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK4 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK5 --input-file=%t %s
+// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o - -fcxx-exceptions -fexceptions -O1 -disable-llvm-optzns -std=c++11 > %t2
+// RUN: FileCheck --check-prefix=CHECK6 --input-file=%t2 %s
+// REQUIRES: asserts
 
 struct A {
   int a;
@@ -428,3 +431,64 @@ namespace test10 {
     return true;
   }
 }
+
+#if __cplusplus >= 201103L
+namespace test11 {
+
+// Check that lifetime.end is emitted in the landing pad.
+
+// CHECK6-LABEL: define void @_ZN6test1115testLifetimeEndEi(
+// CHECK6: entry:
+// CHECK6: [[T1:%[a-z0-9]+]] = alloca %"struct.test11::S1"
+// CHECK6: [[T2:%[a-z0-9]+]] = alloca %"struct.test11::S1"
+// CHECK6: [[T3:%[a-z0-9]+]] = alloca %"struct.test11::S1"
+
+// CHECK6: {{^}}invoke.cont
+// CHECK6: call void @_ZN6test112S1D1Ev(%"struct.test11::S1"* [[T1]])
+// CHECK6: [[BC1:%[a-z0-9]+]] = bitcast %"struct.test11::S1"* [[T1]] to i8*
+// CHECK6: call void @llvm.lifetime.end(i64 32, i8* [[BC1]])
+// CHECK6: {{^}}lpad
+// CHECK6: call void @_ZN6test112S1D1Ev(%"struct.test11::S1"* [[T1]])
+// CHECK6: [[BC2:%[a-z0-9]+]] = bitcast %"struct.test11::S1"* [[T1]] to i8*
+// CHECK6: call void @llvm.lifetime.end(i64 32, i8* [[BC2]])
+
+// CHECK6: {{^}}invoke.cont
+// CHECK6: call void @_ZN6test112S1D1Ev(%"struct.test11::S1"* [[T2]])
+// CHECK6: [[BC3:%[a-z0-9]+]] = bitcast %"struct.test11::S1"* [[T2]] to i8*
+// CHECK6: call void @llvm.lifetime.end(i64 32, i8* [[BC3]])
+// CHECK6: {{^}}lpad
+// CHECK6: call void @_ZN6test112S1D1Ev(%"struct.test11::S1"* [[T2]])
+// CHECK6: [[BC4:%[a-z0-9]+]] = bitcast %"struct.test11::S1"* [[T2]] to i8*
+// CHECK6: call void @llvm.lifetime.end(i64 32, i8* [[BC4]])
+
+// CHECK6: {{^}}invoke.cont
+// CHECK6: call void @_ZN6test112S1D1Ev(%"struct.test11::S1"* [[T3]])
+// CHECK6: [[BC5:%[a-z0-9]+]] = bitcast %"struct.test11::S1"* [[T3]] to i8*
+// CHECK6: call void @llvm.lifetime.end(i64 32, i8* [[BC5]])
+// CHECK6: {{^}}lpad
+// CHECK6: call void @_ZN6test112S1D1Ev(%"struct.test11::S1"* [[T3]])
+// CHECK6: [[BC6:%[a-z0-9]+]] = bitcast %"struct.test11::S1"* [[T3]] to i8*
+// CHECK6: call void @llvm.lifetime.end(i64 32, i8* [[BC6]])
+
+  struct S1 {
+    ~S1();
+    int a[8];
+  };
+
+  void func1(S1 &) noexcept(false);
+
+  void testLifetimeEnd(int n) {
+    if (n < 10) {
+      S1 t1;
+      func1(t1);
+    } else if (n < 100) {
+      S1 t2;
+      func1(t2);
+    } else if (n < 1000) {
+      S1 t3;
+      func1(t3);
+    }
+  }
+
+}
+#endif
