@@ -11,7 +11,7 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "", isOptimized: false, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "", isOptimized: false, subprograms: !3, emissionKind: FullDebug)
 !1 = !DIFile(filename: "test.c", directory: "/home/user/clang-llvm/build")
 !2 = !{}
 !3 = !{!4}

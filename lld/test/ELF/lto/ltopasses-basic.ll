@@ -1,7 +1,7 @@
 ; REQUIRES: x86
 ; RUN: rm -f %t.so.lto.bc %t.so.lto.opt.bc %t.so.lto.o
 ; RUN: llvm-as %s -o %t.o
-; RUN: ld.lld -m elf_x86_64 %t.o -o %t.so -save-temps -shared
+; RUN: ld.lld -m elf_x86_64 %t.o -o %t.so -save-temps -mllvm -debug-pass=Arguments -shared 2>&1 | FileCheck %s --check-prefix=MLLVM
 ; RUN: llvm-dis %t.so.lto.opt.bc -o - | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -14,3 +14,5 @@ define void @ctor() {
 
 ; `@ctor` doesn't do anything and so the optimizer should kill it, leaving no ctors
 ; CHECK: @llvm.global_ctors = appending global [0 x { i32, void ()*, i8* }] zeroinitializer
+
+; MLLVM: Pass Arguments:

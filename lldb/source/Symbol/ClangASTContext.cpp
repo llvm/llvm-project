@@ -911,113 +911,12 @@ ClangASTContext::GetBasicType (lldb::BasicType basic_type)
 CompilerType
 ClangASTContext::GetBasicType (ASTContext *ast, lldb::BasicType basic_type)
 {
-    if (ast)
-    {
-        lldb::opaque_compiler_type_t clang_type = nullptr;
-        
-        switch (basic_type)
-        {
-            case eBasicTypeInvalid:
-            case eBasicTypeOther:
-                break;
-            case eBasicTypeVoid:
-                clang_type = ast->VoidTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeChar:
-                clang_type = ast->CharTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeSignedChar:
-                clang_type = ast->SignedCharTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeUnsignedChar:
-                clang_type = ast->UnsignedCharTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeWChar:
-                clang_type = ast->getWCharType().getAsOpaquePtr();
-                break;
-            case eBasicTypeSignedWChar:
-                clang_type = ast->getSignedWCharType().getAsOpaquePtr();
-                break;
-            case eBasicTypeUnsignedWChar:
-                clang_type = ast->getUnsignedWCharType().getAsOpaquePtr();
-                break;
-            case eBasicTypeChar16:
-                clang_type = ast->Char16Ty.getAsOpaquePtr();
-                break;
-            case eBasicTypeChar32:
-                clang_type = ast->Char32Ty.getAsOpaquePtr();
-                break;
-            case eBasicTypeShort:
-                clang_type = ast->ShortTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeUnsignedShort:
-                clang_type = ast->UnsignedShortTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeInt:
-                clang_type = ast->IntTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeUnsignedInt:
-                clang_type = ast->UnsignedIntTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeLong:
-                clang_type = ast->LongTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeUnsignedLong:
-                clang_type = ast->UnsignedLongTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeLongLong:
-                clang_type = ast->LongLongTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeUnsignedLongLong:
-                clang_type = ast->UnsignedLongLongTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeInt128:
-                clang_type = ast->Int128Ty.getAsOpaquePtr();
-                break;
-            case eBasicTypeUnsignedInt128:
-                clang_type = ast->UnsignedInt128Ty.getAsOpaquePtr();
-                break;
-            case eBasicTypeBool:
-                clang_type = ast->BoolTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeHalf:
-                clang_type = ast->HalfTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeFloat:
-                clang_type = ast->FloatTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeDouble:
-                clang_type = ast->DoubleTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeLongDouble:
-                clang_type = ast->LongDoubleTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeFloatComplex:
-                clang_type = ast->FloatComplexTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeDoubleComplex:
-                clang_type = ast->DoubleComplexTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeLongDoubleComplex:
-                clang_type = ast->LongDoubleComplexTy.getAsOpaquePtr();
-                break;
-            case eBasicTypeObjCID:
-                clang_type = ast->getObjCIdType().getAsOpaquePtr();
-                break;
-            case eBasicTypeObjCClass:
-                clang_type = ast->getObjCClassType().getAsOpaquePtr();
-                break;
-            case eBasicTypeObjCSel:
-                clang_type = ast->getObjCSelType().getAsOpaquePtr();
-                break;
-            case eBasicTypeNullPtr:
-                clang_type = ast->NullPtrTy.getAsOpaquePtr();
-                break;
-        }
-        
-        if (clang_type)
-            return CompilerType (GetASTContext(ast), clang_type);
-    }
+    if (!ast)
+        return CompilerType();
+    lldb::opaque_compiler_type_t clang_type = GetOpaqueCompilerType(ast, basic_type);
+
+    if (clang_type)
+        return CompilerType(GetASTContext(ast), clang_type);
     return CompilerType();
 }
 
@@ -1662,25 +1561,14 @@ ClangASTContext::CheckOverloadedOperatorKindParameterCount (uint32_t op_kind, ui
 clang::AccessSpecifier
 ClangASTContext::UnifyAccessSpecifiers (clang::AccessSpecifier lhs, clang::AccessSpecifier rhs)
 {
-    clang::AccessSpecifier ret = lhs;
-    
     // Make the access equal to the stricter of the field and the nested field's access
-    switch (ret)
-    {
-        case clang::AS_none:
-            break;
-        case clang::AS_private:
-            break;
-        case clang::AS_protected:
-            if (rhs == AS_private)
-                ret = AS_private;
-            break;
-        case clang::AS_public:
-            ret = rhs;
-            break;
-    }
-    
-    return ret;
+    if (lhs == AS_none || rhs == AS_none)
+        return AS_none;
+    if (lhs == AS_private || rhs == AS_private)
+        return AS_private;
+    if (lhs == AS_protected || rhs == AS_protected)
+        return AS_protected;
+    return AS_public;
 }
 
 bool
@@ -1996,6 +1884,78 @@ ClangASTContext::CreateVariableDeclaration (clang::DeclContext *decl_context, co
         return var_decl;
     }
     return nullptr;
+}
+
+lldb::opaque_compiler_type_t
+ClangASTContext::GetOpaqueCompilerType(clang::ASTContext *ast, lldb::BasicType basic_type)
+{
+    switch (basic_type)
+    {
+        case eBasicTypeVoid:
+            return ast->VoidTy.getAsOpaquePtr();
+        case eBasicTypeChar:
+            return ast->CharTy.getAsOpaquePtr();
+        case eBasicTypeSignedChar:
+            return ast->SignedCharTy.getAsOpaquePtr();
+        case eBasicTypeUnsignedChar:
+            return ast->UnsignedCharTy.getAsOpaquePtr();
+        case eBasicTypeWChar:
+            return ast->getWCharType().getAsOpaquePtr();
+        case eBasicTypeSignedWChar:
+            return ast->getSignedWCharType().getAsOpaquePtr();
+        case eBasicTypeUnsignedWChar:
+            return ast->getUnsignedWCharType().getAsOpaquePtr();
+        case eBasicTypeChar16:
+            return ast->Char16Ty.getAsOpaquePtr();
+        case eBasicTypeChar32:
+            return ast->Char32Ty.getAsOpaquePtr();
+        case eBasicTypeShort:
+            return ast->ShortTy.getAsOpaquePtr();
+        case eBasicTypeUnsignedShort:
+            return ast->UnsignedShortTy.getAsOpaquePtr();
+        case eBasicTypeInt:
+            return ast->IntTy.getAsOpaquePtr();
+        case eBasicTypeUnsignedInt:
+            return ast->UnsignedIntTy.getAsOpaquePtr();
+        case eBasicTypeLong:
+            return ast->LongTy.getAsOpaquePtr();
+        case eBasicTypeUnsignedLong:
+            return ast->UnsignedLongTy.getAsOpaquePtr();
+        case eBasicTypeLongLong:
+            return ast->LongLongTy.getAsOpaquePtr();
+        case eBasicTypeUnsignedLongLong:
+            return ast->UnsignedLongLongTy.getAsOpaquePtr();
+        case eBasicTypeInt128:
+            return ast->Int128Ty.getAsOpaquePtr();
+        case eBasicTypeUnsignedInt128:
+            return ast->UnsignedInt128Ty.getAsOpaquePtr();
+        case eBasicTypeBool:
+            return ast->BoolTy.getAsOpaquePtr();
+        case eBasicTypeHalf:
+            return ast->HalfTy.getAsOpaquePtr();
+        case eBasicTypeFloat:
+            return ast->FloatTy.getAsOpaquePtr();
+        case eBasicTypeDouble:
+            return ast->DoubleTy.getAsOpaquePtr();
+        case eBasicTypeLongDouble:
+            return ast->LongDoubleTy.getAsOpaquePtr();
+        case eBasicTypeFloatComplex:
+            return ast->FloatComplexTy.getAsOpaquePtr();
+        case eBasicTypeDoubleComplex:
+            return ast->DoubleComplexTy.getAsOpaquePtr();
+        case eBasicTypeLongDoubleComplex:
+            return ast->LongDoubleComplexTy.getAsOpaquePtr();
+        case eBasicTypeObjCID:
+            return ast->getObjCIdType().getAsOpaquePtr();
+        case eBasicTypeObjCClass:
+            return ast->getObjCClassType().getAsOpaquePtr();
+        case eBasicTypeObjCSel:
+            return ast->getObjCSelType().getAsOpaquePtr();
+        case eBasicTypeNullPtr:
+            return ast->NullPtrTy.getAsOpaquePtr();
+        default:
+            return nullptr;
+    }
 }
 
 #pragma mark Function Types
@@ -5824,7 +5784,8 @@ ClangASTContext::GetVirtualBaseClassAtIndex (lldb::opaque_compiler_type_t type,
             return GetVirtualBaseClassAtIndex (llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr(), idx, bit_offset_ptr);
 
         case clang::Type::Paren:
-            return  GetVirtualBaseClassAtIndex (llvm::cast<clang::ParenType>(qual_type)->desugar().getAsOpaquePtr(), idx, bit_offset_ptr);
+            return GetVirtualBaseClassAtIndex(llvm::cast<clang::ParenType>(qual_type)->desugar().getAsOpaquePtr(), idx,
+                                              bit_offset_ptr);
 
         default:
             break;
@@ -9583,7 +9544,7 @@ ClangASTContext::DeclGetFunctionNumArguments(void *opaque_decl)
     if (clang::FunctionDecl *func_decl = llvm::dyn_cast<clang::FunctionDecl>((clang::Decl*)opaque_decl))
         return func_decl->param_size();
     if (clang::ObjCMethodDecl *objc_method = llvm::dyn_cast<clang::ObjCMethodDecl>((clang::Decl*)opaque_decl))
-        return  objc_method->param_size();
+        return objc_method->param_size();
     else
         return 0;
 }
@@ -9597,7 +9558,7 @@ ClangASTContext::DeclGetFunctionArgumentType (void *opaque_decl, size_t idx)
         {
             ParmVarDecl *var_decl = func_decl->getParamDecl(idx);
             if (var_decl)
-                return  CompilerType(this, var_decl->getOriginalType().getAsOpaquePtr());
+                return CompilerType(this, var_decl->getOriginalType().getAsOpaquePtr());
         }
     }
     else if (clang::ObjCMethodDecl *objc_method = llvm::dyn_cast<clang::ObjCMethodDecl>((clang::Decl*)opaque_decl))

@@ -3,8 +3,7 @@
 google-build-using-namespace
 ============================
 
-
-Finds using namespace directives.
+Finds ``using namespace`` directives.
 
 https://google.github.io/styleguide/cppguide.html#Namespaces
 
@@ -18,4 +17,4 @@ The check implements the following rule of the Google C++ Style Guide:
     // Forbidden -- This pollutes the namespace.
     using namespace foo;
 
-Corresponding cpplint.py check name: ``build/namespaces``.
+Corresponding cpplint.py check name: `build/namespaces`.

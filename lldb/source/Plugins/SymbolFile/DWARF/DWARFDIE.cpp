@@ -298,6 +298,7 @@ DWARFDIE::GetDWARFDeclContext (DWARFDeclContext &dwarf_decl_ctx) const
 {
     if (IsValid())
     {
+        dwarf_decl_ctx.SetLanguage(GetLanguage());
         m_die->GetDWARFDeclContext (GetDWARF(), GetCU(), dwarf_decl_ctx);
     }
     else

@@ -308,6 +308,12 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   for (auto *Arg : Args.filtered(OPT_undefined))
     Config->Undefined.push_back(Arg->getValue());
+
+  std::vector<const char *> Argv;
+  Argv.push_back("lld (LLVM option parsing)");
+  for (auto *Arg : Args.filtered(OPT_mllvm))
+    Argv.push_back(Arg->getValue());
+  cl::ParseCommandLineOptions(Argv.size(), Argv.data());
 }
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {

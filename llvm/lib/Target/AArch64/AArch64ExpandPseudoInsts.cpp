@@ -403,8 +403,16 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI,
                                        unsigned BitSize) {
   MachineInstr &MI = *MBBI;
+  unsigned DstReg = MI.getOperand(0).getReg();
   uint64_t Imm = MI.getOperand(1).getImm();
   const unsigned Mask = 0xFFFF;
+
+  if (DstReg == AArch64::XZR || DstReg == AArch64::WZR) {
+    // Useless def, and we don't want to risk creating an invalid ORR (which
+    // would really write to sp).
+    MI.eraseFromParent();
+    return true;
+  }
 
   // Try a MOVI instruction (aka ORR-immediate with the zero register).
   uint64_t UImm = Imm << (64 - BitSize) >> (64 - BitSize);
@@ -531,7 +539,6 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
     LastShift = (TZ / 16) * 16;
   }
   unsigned Imm16 = (Imm >> Shift) & Mask;
-  unsigned DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
   MachineInstrBuilder MIB1 =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(FirstOpc))

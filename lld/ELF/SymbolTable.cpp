@@ -223,6 +223,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
     }
     // Found a definition for something also in an archive.
     // Ignore the archive definition.
+    New->setUsedInRegularObj();
     Sym->Body = New;
     return;
   }

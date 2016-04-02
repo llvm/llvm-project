@@ -540,7 +540,7 @@ void MemorySSA::verifyDomination(Function &F) const {
         continue;
 
       for (User *U : MD->users()) {
-        BasicBlock *UseBlock;
+        BasicBlock *UseBlock; (void)UseBlock;
         // Things are allowed to flow to phi nodes over their predecessor edge.
         if (auto *P = dyn_cast<MemoryPhi>(U)) {
           for (const auto &Arg : P->operands()) {

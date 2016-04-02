@@ -16,5 +16,5 @@ Example:
    // The iterator type is in fact pair<const int, vector<string>>, which means
    // that the compiler added a cast, resulting in a copy of the vectors.
 
-The easiest solution is usually to use "const auto&" instead of writing the type
+The easiest solution is usually to use ``const auto&`` instead of writing the type
 manually.

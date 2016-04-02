@@ -35,7 +35,7 @@ Pass-by-value in constructors
 Replaces the uses of const-references constructor parameters that are copied
 into class fields. The parameter is then moved with `std::move()`.
 
-Since `std::move()` is a library function declared in `<utility>` it may be
+Since ``std::move()`` is a library function declared in `<utility>` it may be
 necessary to add this include. The check will add the include directive when
 necessary.
 

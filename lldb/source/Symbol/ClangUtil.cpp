@@ -53,6 +53,6 @@ ClangUtil::RemoveFastQualifiers(const CompilerType &ct)
         return ct;
 
     QualType qual_type(GetQualType(ct));
-    qual_type.getQualifiers().removeFastQualifiers();
+    qual_type.removeLocalFastQualifiers();
     return CompilerType(ct.GetTypeSystem(), qual_type.getAsOpaquePtr());
 }

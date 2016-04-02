@@ -3698,8 +3698,12 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext (const DWARFDeclContext &
             }
             
             const size_t num_matches = die_offsets.size();
-            
-            
+
+            // Get the type system that we are looking to find a type for. We will use this
+            // to ensure any matches we find are in a language that this type system supports
+            const LanguageType language = dwarf_decl_ctx.GetLanguage();
+            TypeSystem *type_system = (language == eLanguageTypeUnknown) ? nullptr : GetTypeSystemForLanguage(language);
+
             if (num_matches)
             {
                 for (size_t i=0; i<num_matches; ++i)
@@ -3709,6 +3713,11 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext (const DWARFDeclContext &
                     
                     if (type_die)
                     {
+                        // Make sure type_die's langauge matches the type system we are looking for.
+                        // We don't want to find a "Foo" type from Java if we are looking for a "Foo"
+                        // type for C, C++, ObjC, or ObjC++.
+                        if (type_system && !type_system->SupportsLanguage(type_die.GetLanguage()))
+                            continue;
                         bool try_resolving_type = false;
                         
                         // Don't try and resolve the DIE we are looking for with the DIE itself!

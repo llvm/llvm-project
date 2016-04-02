@@ -108,7 +108,7 @@ public:
   /// Return true if the Context runtime configuration is set to discard all
   /// value names. When true, only GlobalValue names will be available in the
   /// IR.
-  bool discardValueNames() const;
+  bool shouldDiscardValueNames() const;
 
   /// Set the Context runtime configuration to discard all value name (but
   /// GlobalValue). Clients can use this flag to save memory and runtime,
