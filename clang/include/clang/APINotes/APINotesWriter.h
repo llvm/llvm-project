@@ -107,6 +107,9 @@ public:
   /// \param name The name of this typedef.
   /// \param info Information about this typedef.
   void addTypedef(StringRef name, const TypedefInfo &info);
+
+  /// Add module options
+  void addModuleOptions(ModuleOptions opts);
 };
 
 } // end namespace api_notes

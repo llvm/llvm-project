@@ -250,6 +250,8 @@ namespace {
     TagsSeq Tags;
     TypedefsSeq Typedefs;
 
+    llvm::Optional<bool> SwiftInferImportAsMember;
+
     LLVM_ATTRIBUTE_DEPRECATED(
       void dump() LLVM_ATTRIBUTE_USED,
       "only for use within the debugger");
@@ -416,6 +418,7 @@ namespace llvm {
         io.mapRequired("Name",            m.Name);
         io.mapOptional("Availability",    m.Availability.Mode);
         io.mapOptional("AvailabilityMsg", m.Availability.Msg);
+        io.mapOptional("SwiftInferImportAsMember", m.SwiftInferImportAsMember);
         io.mapOptional("Classes",         m.Classes);
         io.mapOptional("Protocols",       m.Protocols);
         io.mapOptional("Functions",       m.Functions);
@@ -771,6 +774,9 @@ namespace {
         Writer->addTypedef(t.Name, typedefInfo);
       }
 
+      if (TheModule.SwiftInferImportAsMember) 
+        Writer->addModuleOptions({true});
+
       if (!ErrorOccured)
         Writer->writeToStream(OS);
 
@@ -1031,6 +1037,11 @@ bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
 
   // Set module name.
   module.Name = reader->getModuleName();
+
+  // Set module options
+  auto opts = reader->getModuleOptions();
+  if (opts.SwiftInferImportAsMember)
+    module.SwiftInferImportAsMember = true;
 
   // Sort classes.
   std::sort(module.Classes.begin(), module.Classes.end(),
