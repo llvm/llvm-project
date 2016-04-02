@@ -279,6 +279,8 @@ def IsARM            : Predicate<"!Subtarget->isThumb()">,
 def IsMachO          : Predicate<"Subtarget->isTargetMachO()">;
 def IsNotMachO       : Predicate<"!Subtarget->isTargetMachO()">;
 def IsNaCl           : Predicate<"Subtarget->isTargetNaCl()">;
+def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
+def IsNotWindows     : Predicate<"!Subtarget->isTargetWindows()">;
 def UseNaClTrap      : Predicate<"Subtarget->useNaClTrap()">,
                                  AssemblerPredicate<"FeatureNaClTrap", "NaCl">;
 def DontUseNaClTrap  : Predicate<"!Subtarget->useNaClTrap()">;

@@ -8,6 +8,7 @@ entry:
   unreachable
 }
 
+; CHECK: push.w  {r11, lr}
 ; CHECK: ldr     r[[SP:[0-9]+]], [r0, #8]
 ; CHECK: mov     sp, r[[SP]]
 ; CHECK: ldr     r[[PC:[0-9]+]], [r0, #4]
