@@ -66,8 +66,8 @@ class TestSwiftTypeAliasFormatters(TestBase):
         
         self.addTearDownHook(cleanup)
         
-        #self.expect("frame variable f", substrs=['.Foo) f = 12'])
-        #self.expect("frame variable b", substrs=['.Bar) b = 24'])
+        self.expect("frame variable f", substrs=['.Foo) f = 12'])
+        self.expect("frame variable b", substrs=['.Bar) b = 24'])
         
         #self.runCmd('type summary add a.Foo -v -s "hello"')
         #self.expect("frame variable f", substrs=['.Foo) f = hello'])
