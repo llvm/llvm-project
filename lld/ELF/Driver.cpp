@@ -80,11 +80,11 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
   for (const ErrorOr<Archive::Child> &COrErr : File->children()) {
     Archive::Child C = check(COrErr, "could not get the child of the archive " +
                                          File->getFileName());
-    MemoryBufferRef Mb =
+    MemoryBufferRef MBRef =
         check(C.getMemoryBufferRef(),
               "could not get the buffer for a child of the archive " +
                   File->getFileName());
-    V.push_back(Mb);
+    V.push_back(MBRef);
   }
 
   // Take ownership of memory buffers created for members of thin archives.
@@ -142,6 +142,24 @@ void LinkerDriver::addLibrary(StringRef Name) {
     addFile(Path);
 }
 
+// This function is called on startup. We need this for LTO since
+// LTO calls LLVM functions to compile bitcode files to native code.
+// Technically this can be delayed until we read bitcode files, but
+// we don't bother to do lazily because the initialization is fast.
+static void initLLVM(opt::InputArgList &Args) {
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
+
+  // Parse and evaluate -mllvm options.
+  std::vector<const char *> V;
+  V.push_back("lld (LLVM option parsing)");
+  for (auto *Arg : Args.filtered(OPT_mllvm))
+    V.push_back(Arg->getValue());
+  cl::ParseCommandLineOptions(V.size(), V.data());
+}
+
 // Some command line options or some combinations of them are not allowed.
 // This function checks for such errors.
 static void checkOptions(opt::InputArgList &Args) {
@@ -156,17 +174,16 @@ static void checkOptions(opt::InputArgList &Args) {
   if (Config->Pie && Config->Shared)
     error("-shared and -pie may not be used together");
 
-  if (!Config->Relocatable)
-    return;
-
-  if (Config->Shared)
-    error("-r and -shared may not be used together");
-  if (Config->GcSections)
-    error("-r and --gc-sections may not be used together");
-  if (Config->ICF)
-    error("-r and --icf may not be used together");
-  if (Config->Pie)
-    error("-r and -pie may not be used together");
+  if (Config->Relocatable) {
+    if (Config->Shared)
+      error("-r and -shared may not be used together");
+    if (Config->GcSections)
+      error("-r and --gc-sections may not be used together");
+    if (Config->ICF)
+      error("-r and --icf may not be used together");
+    if (Config->Pie)
+      error("-r and -pie may not be used together");
+  }
 }
 
 static StringRef
@@ -205,6 +222,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     return;
   }
 
+  initLLVM(Args);
   readConfigs(Args);
   createFiles(Args);
   checkOptions(Args);
@@ -283,6 +301,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   Config->Optimize = getInteger(Args, OPT_O, 0);
   Config->LtoO = getInteger(Args, OPT_lto_O, 2);
+  if (Config->LtoO > 3)
+    error("invalid optimization level for LTO: " + getString(Args, OPT_lto_O));
 
   Config->ZExecStack = hasZOption(Args, "execstack");
   Config->ZNodelete = hasZOption(Args, "nodelete");
@@ -308,12 +328,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   for (auto *Arg : Args.filtered(OPT_undefined))
     Config->Undefined.push_back(Arg->getValue());
-
-  std::vector<const char *> Argv;
-  Argv.push_back("lld (LLVM option parsing)");
-  for (auto *Arg : Args.filtered(OPT_mllvm))
-    Argv.push_back(Arg->getValue());
-  cl::ParseCommandLineOptions(Argv.size(), Argv.data());
 }
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {
@@ -360,12 +374,6 @@ template <class ELFT> static void initSymbols() {
 }
 
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
-  // For LTO
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
-  InitializeAllAsmPrinters();
-  InitializeAllAsmParsers();
-
   initSymbols<ELFT>();
 
   SymbolTable<ELFT> Symtab;
@@ -428,13 +436,17 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (StringRef S : Config->Undefined)
     Symtab.addUndefinedOpt(S);
 
+  // -save-temps creates a file based on the output file name so we want
+  // to set it right before LTO. This code can't be moved to option parsing
+  // because linker scripts can override the output filename using the
+  // OUTPUT() directive.
+  if (Config->OutputFile.empty())
+    Config->OutputFile = "a.out";
+
   Symtab.addCombinedLtoObject();
 
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());
-
-  if (Config->OutputFile.empty())
-    Config->OutputFile = "a.out";
 
   // Write the result to the file.
   Symtab.scanShlibUndefined();

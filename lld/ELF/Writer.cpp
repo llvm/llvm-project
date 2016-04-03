@@ -573,9 +573,8 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       StringRef SymName = check(Sym.getName(F->getStringTable()));
       if (!shouldKeepInSymtab<ELFT>(*F, SymName, Sym))
         continue;
-      if (Sym.st_shndx != SHN_ABS)
-        if (!F->getSection(Sym)->Live)
-          continue;
+      if (Sym.st_shndx != SHN_ABS && !F->getSection(Sym)->Live)
+        continue;
       ++Out<ELFT>::SymTab->NumLocals;
       if (Config->Relocatable)
         B->DynsymIndex = Out<ELFT>::SymTab->NumLocals;

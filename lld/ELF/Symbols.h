@@ -51,7 +51,6 @@ public:
     DefinedFirst,
     DefinedRegularKind = DefinedFirst,
     SharedKind,
-    DefinedElfLast = SharedKind,
     DefinedCommonKind,
     DefinedBitcodeKind,
     DefinedSyntheticKind,
@@ -101,6 +100,7 @@ public:
   template <class ELFT> typename ELFT::uint getPltVA() const;
   template <class ELFT> typename ELFT::uint getThunkVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
+  template <class ELFT> const typename ELFT::Sym *getElfSym() const;
 
   // A SymbolBody has a backreference to a Symbol. Originally they are
   // doubly-linked. A backreference will never change. But the pointer
@@ -165,24 +165,7 @@ public:
   static bool classof(const SymbolBody *S) { return S->isDefined(); }
 };
 
-// Any defined symbol from an ELF file.
-template <class ELFT> class DefinedElf : public Defined {
-protected:
-  typedef typename ELFT::Sym Elf_Sym;
-
-public:
-  DefinedElf(Kind K, StringRef N, const Elf_Sym &Sym)
-      : Defined(K, N, Sym.getBinding() == llvm::ELF::STB_WEAK,
-                Sym.getBinding() == llvm::ELF::STB_LOCAL, Sym.getVisibility(),
-                Sym.getType()),
-        Sym(Sym) {}
-
-  const Elf_Sym &Sym;
-  static bool classof(const SymbolBody *S) {
-    return S->kind() <= DefinedElfLast;
-  }
-};
-
+// The defined symbol in LLVM bitcode files.
 class DefinedBitcode : public Defined {
 public:
   DefinedBitcode(StringRef Name, bool IsWeak, uint8_t Visibility);
@@ -209,18 +192,23 @@ public:
 };
 
 // Regular defined symbols read from object file symbol tables.
-template <class ELFT> class DefinedRegular : public DefinedElf<ELFT> {
+template <class ELFT> class DefinedRegular : public Defined {
   typedef typename ELFT::Sym Elf_Sym;
 
 public:
-  DefinedRegular(StringRef N, const Elf_Sym &Sym,
+  DefinedRegular(StringRef Name, const Elf_Sym &Sym,
                  InputSectionBase<ELFT> *Section)
-      : DefinedElf<ELFT>(SymbolBody::DefinedRegularKind, N, Sym),
-        Section(Section ? Section->Repl : NullInputSection) {}
+      : Defined(SymbolBody::DefinedRegularKind, Name,
+                Sym.getBinding() == llvm::ELF::STB_WEAK,
+                Sym.getBinding() == llvm::ELF::STB_LOCAL,
+                Sym.getVisibility(), Sym.getType()),
+        Sym(Sym), Section(Section ? Section->Repl : NullInputSection) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedRegularKind;
   }
+
+  const Elf_Sym &Sym;
 
   // The input section this symbol belongs to. Notice that this is
   // a reference to a pointer. We are using two levels of indirections
@@ -289,7 +277,7 @@ public:
   }
 };
 
-template <class ELFT> class SharedSymbol : public DefinedElf<ELFT> {
+template <class ELFT> class SharedSymbol : public Defined {
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::uint uintX_t;
 
@@ -299,9 +287,14 @@ public:
   }
 
   SharedSymbol(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym)
-      : DefinedElf<ELFT>(SymbolBody::SharedKind, Name, Sym), File(F) {}
+      : Defined(SymbolBody::SharedKind, Name,
+                Sym.getBinding() == llvm::ELF::STB_WEAK,
+                Sym.getBinding() == llvm::ELF::STB_LOCAL,
+                Sym.getVisibility(), Sym.getType()),
+        File(F), Sym(Sym) {}
 
   SharedFile<ELFT> *File;
+  const Elf_Sym &Sym;
 
   // OffsetInBss is significant only when needsCopy() is true.
   uintX_t OffsetInBss = 0;

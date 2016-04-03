@@ -216,7 +216,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
 
   SymbolBody *Existing = Sym->Body;
 
-  if (Lazy *L = dyn_cast<Lazy>(Existing)) {
+  if (auto *L = dyn_cast<Lazy>(Existing)) {
     if (auto *Undef = dyn_cast<Undefined>(New)) {
       addMemberFile(Undef, L);
       return;

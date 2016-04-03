@@ -1997,6 +1997,7 @@ static void print_completion_result(CXCompletionResult *completion_result,
   enum CXCursorKind ParentKind;
   CXString ParentName;
   CXString BriefComment;
+  CXString Annotation;
   const char *BriefCommentCString;
   
   fprintf(file, "%s:", clang_getCString(ks));
@@ -2030,9 +2031,10 @@ static void print_completion_result(CXCompletionResult *completion_result,
     for (i = 0; i < annotationCount; ++i) {
       if (i != 0)
         fprintf(file, ", ");
-      fprintf(file, "\"%s\"",
-              clang_getCString(clang_getCompletionAnnotation(
-                                 completion_result->CompletionString, i)));
+      Annotation =
+          clang_getCompletionAnnotation(completion_result->CompletionString, i);
+      fprintf(file, "\"%s\"", clang_getCString(Annotation));
+      clang_disposeString(Annotation);
     }
     fprintf(file, ")");
   }

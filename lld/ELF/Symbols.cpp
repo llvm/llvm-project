@@ -143,9 +143,19 @@ template <class ELFT> typename ELFT::uint SymbolBody::getThunkVA() const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
-  if (auto *B = dyn_cast<DefinedElf<ELFT>>(this))
-    return B->Sym.st_size;
+  if (const typename ELFT::Sym *Sym = getElfSym<ELFT>())
+    return Sym->st_size;
   return 0;
+}
+
+template <class ELFT> const typename ELFT::Sym *SymbolBody::getElfSym() const {
+  if (auto *S = dyn_cast<DefinedRegular<ELFT>>(this))
+    return &S->Sym;
+  if (auto *S = dyn_cast<SharedSymbol<ELFT>>(this))
+    return &S->Sym;
+  if (auto *S = dyn_cast<UndefinedElf<ELFT>>(this))
+    return &S->Sym;
+  return nullptr;
 }
 
 static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
@@ -306,6 +316,11 @@ template uint32_t SymbolBody::template getSize<ELF32LE>() const;
 template uint32_t SymbolBody::template getSize<ELF32BE>() const;
 template uint64_t SymbolBody::template getSize<ELF64LE>() const;
 template uint64_t SymbolBody::template getSize<ELF64BE>() const;
+
+template const ELF32LE::Sym *SymbolBody::template getElfSym<ELF32LE>() const;
+template const ELF32BE::Sym *SymbolBody::template getElfSym<ELF32BE>() const;
+template const ELF64LE::Sym *SymbolBody::template getElfSym<ELF64LE>() const;
+template const ELF64BE::Sym *SymbolBody::template getElfSym<ELF64BE>() const;
 
 template uint32_t SymbolBody::template getThunkVA<ELF32LE>() const;
 template uint32_t SymbolBody::template getThunkVA<ELF32BE>() const;
