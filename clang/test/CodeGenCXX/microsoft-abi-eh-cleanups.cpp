@@ -225,17 +225,17 @@ void f() {
 // WIN32-LIFETIME: invoke void @"\01?g@lifetime_marker@@YAXXZ"()
 // WIN32-LIFETIME-NEXT: to label %[[cont:[^ ]*]] unwind label %[[lpad0:[^ ]*]]
 //
-// WIN32-LIFETIME: [[cont]]:
+// WIN32-LIFETIME: [[cont]]
 // WIN32-LIFETIME: call x86_thiscallcc void @"\01??1C@lifetime_marker@@QAE@XZ"({{.*}})
 // WIN32-LIFETIME: %[[bc1:.*]] = bitcast %"struct.lifetime_marker::C"* %[[c]] to i8*
 // WIN32-LIFETIME: call void @llvm.lifetime.end(i64 1, i8* %[[bc1]])
 //
-// WIN32-LIFETIME: [[lpad0]]:
+// WIN32-LIFETIME: [[lpad0]]
 // WIN32-LIFETIME-NEXT: cleanuppad
 // WIN32-LIFETIME: call x86_thiscallcc void @"\01??1C@lifetime_marker@@QAE@XZ"({{.*}})
 // WIN32-LIFETIME: cleanupret {{.*}} unwind label %[[lpad1:[^ ]*]]
 //
-// WIN32-LIFETIME: [[lpad1]]:
+// WIN32-LIFETIME: [[lpad1]]
 // WIN32-LIFETIME-NEXT: cleanuppad
 // WIN32-LIFETIME: %[[bc2:.*]] = bitcast %"struct.lifetime_marker::C"* %[[c]] to i8*
 // WIN32-LIFETIME: call void @llvm.lifetime.end(i64 1, i8* %[[bc2]])
