@@ -379,7 +379,11 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
       return mapToSelf(MD);
 
   if (const auto *VMD = dyn_cast<ValueAsMetadata>(MD)) {
+    // Disallow recursion into metadata mapping through mapValue.
+    VM.disableMapMetadata();
     Value *MappedV = mapValue(VMD->getValue());
+    VM.enableMapMetadata();
+
     if (VMD->getValue() == MappedV ||
         (!MappedV && (Flags & RF_IgnoreMissingEntries)))
       return mapToSelf(MD);
@@ -406,6 +410,7 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
 }
 
 Metadata *Mapper::mapMetadataImpl(const Metadata *MD) {
+  assert(VM.mayMapMetadata() && "Unexpected co-recursion through mapValue");
   if (Optional<Metadata *> NewMD = mapSimpleMetadata(MD))
     return *NewMD;
 
