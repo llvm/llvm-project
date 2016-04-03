@@ -43,6 +43,16 @@ struct DelayedGlobalValueInit {
 struct DelayedBasicBlock {
   BasicBlock *OldBB;
   std::unique_ptr<BasicBlock> TempBB;
+
+  // Explicit move for MSVC.
+  DelayedBasicBlock(DelayedBasicBlock &&X)
+      : OldBB(std::move(X.OldBB)), TempBB(std::move(X.TempBB)) {}
+  DelayedBasicBlock &operator=(DelayedBasicBlock &&X) {
+    OldBB = std::move(X.OldBB);
+    TempBB = std::move(X.TempBB);
+    return *this;
+  }
+
   DelayedBasicBlock(const BlockAddress &Old)
       : OldBB(Old.getBasicBlock()),
         TempBB(BasicBlock::Create(Old.getContext())) {}
