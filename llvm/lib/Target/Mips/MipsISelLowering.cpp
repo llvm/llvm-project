@@ -908,7 +908,7 @@ addLiveIn(MachineFunction &MF, unsigned PReg, const TargetRegisterClass *RC)
 static MachineBasicBlock *insertDivByZeroTrap(MachineInstr *MI,
                                               MachineBasicBlock &MBB,
                                               const TargetInstrInfo &TII,
-                                              bool Is64Bit, bool IsMicroMips) {
+                                              bool Is64Bit) {
   if (NoZeroDivCheck)
     return &MBB;
 
@@ -916,8 +916,7 @@ static MachineBasicBlock *insertDivByZeroTrap(MachineInstr *MI,
   MachineBasicBlock::iterator I(MI);
   MachineInstrBuilder MIB;
   MachineOperand &Divisor = MI->getOperand(2);
-  MIB = BuildMI(MBB, std::next(I), MI->getDebugLoc(),
-                TII.get(IsMicroMips ? Mips::TEQ_MM : Mips::TEQ))
+  MIB = BuildMI(MBB, std::next(I), MI->getDebugLoc(), TII.get(Mips::TEQ))
     .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
     .addReg(Mips::ZERO).addImm(7);
 
@@ -1017,29 +1016,14 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   case Mips::DIVU:
   case Mips::MOD:
   case Mips::MODU:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false,
-                               false);
-  case Mips::SDIV_MM_Pseudo:
-  case Mips::UDIV_MM_Pseudo:
-  case Mips::SDIV_MM:
-  case Mips::UDIV_MM:
-  case Mips::DIV_MMR6:
-  case Mips::DIVU_MMR6:
-  case Mips::MOD_MMR6:
-  case Mips::MODU_MMR6:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false, true);
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false);
   case Mips::PseudoDSDIV:
   case Mips::PseudoDUDIV:
   case Mips::DDIV:
   case Mips::DDIVU:
   case Mips::DMOD:
   case Mips::DMODU:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true, false);
-  case Mips::DDIV_MM64R6:
-  case Mips::DDIVU_MM64R6:
-  case Mips::DMOD_MM64R6:
-  case Mips::DMODU_MM64R6:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true, true);
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true);
   case Mips::SEL_D:
     return emitSEL_D(MI, BB);
 

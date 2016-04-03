@@ -29,18 +29,17 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "LanaiGenAsmWriter.inc"
 
-void LanaiInstPrinter::printRegName(raw_ostream &Ostream,
-                                    unsigned RegNo) const {
-  Ostream << StringRef(getRegisterName(RegNo)).lower();
+void LanaiInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
+  OS << StringRef(getRegisterName(RegNo)).lower();
 }
 
-bool LanaiInstPrinter::printInst(const MCInst *MI, raw_ostream &Ostream,
+bool LanaiInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
                                  StringRef Alias, unsigned OpNo0,
                                  unsigned OpNo1) {
-  Ostream << "\t" << Alias << " ";
-  printOperand(MI, OpNo0, Ostream);
-  Ostream << ", ";
-  printOperand(MI, OpNo1, Ostream);
+  OS << "\t" << Alias << " ";
+  printOperand(MI, OpNo0, OS);
+  OS << ", ";
+  printOperand(MI, OpNo1, OS);
   return true;
 }
 
@@ -68,191 +67,169 @@ static StringRef decIncOperator(const MCInst *MI) {
 }
 
 bool LanaiInstPrinter::printMemoryLoadIncrement(const MCInst *MI,
-                                                raw_ostream &Ostream,
+                                                raw_ostream &OS,
                                                 StringRef Opcode,
                                                 int AddOffset) {
   if (isPreIncrementForm(MI, AddOffset)) {
-    Ostream << "\t" << Opcode << "\t[" << decIncOperator(MI) << "%"
-            << getRegisterName(MI->getOperand(1).getReg()) << "], %"
-            << getRegisterName(MI->getOperand(0).getReg());
+    OS << "\t" << Opcode << "\t[" << decIncOperator(MI) << "%"
+       << getRegisterName(MI->getOperand(1).getReg()) << "], %"
+       << getRegisterName(MI->getOperand(0).getReg());
     return true;
   }
   if (isPostIncrementForm(MI, AddOffset)) {
-    Ostream << "\t" << Opcode << "\t[%"
-            << getRegisterName(MI->getOperand(1).getReg()) << decIncOperator(MI)
-            << "], %" << getRegisterName(MI->getOperand(0).getReg());
+    OS << "\t" << Opcode << "\t[%"
+       << getRegisterName(MI->getOperand(1).getReg()) << decIncOperator(MI)
+       << "], %" << getRegisterName(MI->getOperand(0).getReg());
     return true;
   }
   return false;
 }
 
 bool LanaiInstPrinter::printMemoryStoreIncrement(const MCInst *MI,
-                                                 raw_ostream &Ostream,
+                                                 raw_ostream &OS,
                                                  StringRef Opcode,
                                                  int AddOffset) {
   if (isPreIncrementForm(MI, AddOffset)) {
-    Ostream << "\t" << Opcode << "\t%"
-            << getRegisterName(MI->getOperand(0).getReg()) << ", ["
-            << decIncOperator(MI) << "%"
-            << getRegisterName(MI->getOperand(1).getReg()) << "]";
+    OS << "\t" << Opcode << "\t%" << getRegisterName(MI->getOperand(0).getReg())
+       << ", [" << decIncOperator(MI) << "%"
+       << getRegisterName(MI->getOperand(1).getReg()) << "]";
     return true;
   }
   if (isPostIncrementForm(MI, AddOffset)) {
-    Ostream << "\t" << Opcode << "\t%"
-            << getRegisterName(MI->getOperand(0).getReg()) << ", [%"
-            << getRegisterName(MI->getOperand(1).getReg()) << decIncOperator(MI)
-            << "]";
+    OS << "\t" << Opcode << "\t%" << getRegisterName(MI->getOperand(0).getReg())
+       << ", [%" << getRegisterName(MI->getOperand(1).getReg())
+       << decIncOperator(MI) << "]";
     return true;
   }
   return false;
 }
 
-bool LanaiInstPrinter::printAlias(const MCInst *MI, raw_ostream &Ostream) {
+bool LanaiInstPrinter::printAlias(const MCInst *MI, raw_ostream &OS) {
   switch (MI->getOpcode()) {
   case Lanai::LDW_RI:
     // ld 4[*%rN], %rX => ld [++imm], %rX
     // ld -4[*%rN], %rX => ld [--imm], %rX
     // ld 4[%rN*], %rX => ld [imm++], %rX
     // ld -4[%rN*], %rX => ld [imm--], %rX
-    return printMemoryLoadIncrement(MI, Ostream, "ld", 4);
+    return printMemoryLoadIncrement(MI, OS, "ld", 4);
   case Lanai::LDHs_RI:
-    return printMemoryLoadIncrement(MI, Ostream, "ld.h", 2);
+    return printMemoryLoadIncrement(MI, OS, "ld.h", 2);
   case Lanai::LDHz_RI:
-    return printMemoryLoadIncrement(MI, Ostream, "uld.h", 2);
+    return printMemoryLoadIncrement(MI, OS, "uld.h", 2);
   case Lanai::LDBs_RI:
-    return printMemoryLoadIncrement(MI, Ostream, "ld.b", 1);
+    return printMemoryLoadIncrement(MI, OS, "ld.b", 1);
   case Lanai::LDBz_RI:
-    return printMemoryLoadIncrement(MI, Ostream, "uld.b", 1);
+    return printMemoryLoadIncrement(MI, OS, "uld.b", 1);
   case Lanai::SW_RI:
     // st %rX, 4[*%rN] => st %rX, [++imm]
     // st %rX, -4[*%rN] => st %rX, [--imm]
     // st %rX, 4[%rN*] => st %rX, [imm++]
     // st %rX, -4[%rN*] => st %rX, [imm--]
-    return printMemoryStoreIncrement(MI, Ostream, "st", 4);
+    return printMemoryStoreIncrement(MI, OS, "st", 4);
   case Lanai::STH_RI:
-    return printMemoryStoreIncrement(MI, Ostream, "st.h", 2);
+    return printMemoryStoreIncrement(MI, OS, "st.h", 2);
   case Lanai::STB_RI:
-    return printMemoryStoreIncrement(MI, Ostream, "st.b", 1);
+    return printMemoryStoreIncrement(MI, OS, "st.b", 1);
   default:
     return false;
   }
 }
 
-void LanaiInstPrinter::printInst(const MCInst *MI, raw_ostream &Ostream,
+void LanaiInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
                                  StringRef Annotation,
                                  const MCSubtargetInfo &STI) {
-  if (!printAlias(MI, Ostream) && !printAliasInstr(MI, Ostream))
-    printInstruction(MI, Ostream);
-  printAnnotation(Ostream, Annotation);
-}
-
-static void printExpr(const MCAsmInfo &MAI, const MCExpr &Expr,
-                      raw_ostream &Ostream) {
-  const MCExpr *SRE;
-
-  if (const MCBinaryExpr *BE = dyn_cast<MCBinaryExpr>(&Expr))
-    SRE = dyn_cast<LanaiMCExpr>(BE->getLHS());
-  else if (isa<LanaiMCExpr>(&Expr)) {
-    SRE = dyn_cast<LanaiMCExpr>(&Expr);
-  } else {
-    SRE = dyn_cast<MCSymbolRefExpr>(&Expr);
-  }
-  assert(SRE && "Unexpected MCExpr type.");
-
-  SRE->print(Ostream, &MAI);
+  if (!printAlias(MI, OS) && !printAliasInstr(MI, OS)) printInstruction(MI, OS);
+  printAnnotation(OS, Annotation);
 }
 
 void LanaiInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                    raw_ostream &Ostream,
-                                    const char *Modifier) {
+                                    raw_ostream &OS, const char *Modifier) {
   assert((Modifier == 0 || Modifier[0] == 0) && "No modifiers supported");
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg())
-    Ostream << "%" << getRegisterName(Op.getReg());
+    OS << "%" << getRegisterName(Op.getReg());
   else if (Op.isImm())
-    Ostream << formatHex(Op.getImm());
+    OS << formatHex(Op.getImm());
   else {
     assert(Op.isExpr() && "Expected an expression");
-    printExpr(MAI, *Op.getExpr(), Ostream);
+    Op.getExpr()->print(OS, &MAI);
   }
 }
 
 void LanaiInstPrinter::printMemImmOperand(const MCInst *MI, unsigned OpNo,
-                                          raw_ostream &Ostream) {
+                                          raw_ostream &OS) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm()) {
-    Ostream << '[' << formatHex(Op.getImm()) << ']';
+    OS << '[' << formatHex(Op.getImm()) << ']';
   } else {
     // Symbolic operand will be lowered to immediate value by linker
     assert(Op.isExpr() && "Expected an expression");
-    Ostream << '[';
-    printExpr(MAI, *Op.getExpr(), Ostream);
-    Ostream << ']';
+    OS << '[';
+    Op.getExpr()->print(OS, &MAI);
+    OS << ']';
   }
 }
 
 void LanaiInstPrinter::printHi16ImmOperand(const MCInst *MI, unsigned OpNo,
-                                           raw_ostream &Ostream) {
+                                           raw_ostream &OS) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm()) {
-    Ostream << formatHex(Op.getImm() << 16);
+    OS << formatHex(Op.getImm() << 16);
   } else {
     // Symbolic operand will be lowered to immediate value by linker
     assert(Op.isExpr() && "Expected an expression");
-    printExpr(MAI, *Op.getExpr(), Ostream);
+    Op.getExpr()->print(OS, &MAI);
   }
 }
 
 void LanaiInstPrinter::printHi16AndImmOperand(const MCInst *MI, unsigned OpNo,
-                                              raw_ostream &Ostream) {
+                                              raw_ostream &OS) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm()) {
-    Ostream << formatHex((Op.getImm() << 16) | 0xffff);
+    OS << formatHex((Op.getImm() << 16) | 0xffff);
   } else {
     // Symbolic operand will be lowered to immediate value by linker
     assert(Op.isExpr() && "Expected an expression");
-    printExpr(MAI, *Op.getExpr(), Ostream);
+    Op.getExpr()->print(OS, &MAI);
   }
 }
 
 void LanaiInstPrinter::printLo16AndImmOperand(const MCInst *MI, unsigned OpNo,
-                                              raw_ostream &Ostream) {
+                                              raw_ostream &OS) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm()) {
-    Ostream << formatHex(0xffff0000 | Op.getImm());
+    OS << formatHex(0xffff0000 | Op.getImm());
   } else {
     // Symbolic operand will be lowered to immediate value by linker
     assert(Op.isExpr() && "Expected an expression");
-    printExpr(MAI, *Op.getExpr(), Ostream);
+    Op.getExpr()->print(OS, &MAI);
   }
 }
 
-static void printMemoryBaseRegister(raw_ostream &Ostream, const unsigned AluCode,
-                             const MCOperand &RegOp) {
+static void printMemoryBaseRegister(raw_ostream &OS, const unsigned AluCode,
+                                    const MCOperand &RegOp) {
   assert(RegOp.isReg() && "Register operand expected");
-  Ostream << "[";
-  if (LPAC::isPreOp(AluCode))
-    Ostream << "*";
-  Ostream << "%" << LanaiInstPrinter::getRegisterName(RegOp.getReg());
-  if (LPAC::isPostOp(AluCode))
-    Ostream << "*";
-  Ostream << "]";
+  OS << "[";
+  if (LPAC::isPreOp(AluCode)) OS << "*";
+  OS << "%" << LanaiInstPrinter::getRegisterName(RegOp.getReg());
+  if (LPAC::isPostOp(AluCode)) OS << "*";
+  OS << "]";
 }
 
 template <unsigned SizeInBits>
 static void printMemoryImmediateOffset(const MCAsmInfo &MAI,
                                        const MCOperand &OffsetOp,
-                                       raw_ostream &Ostream) {
+                                       raw_ostream &OS) {
   assert((OffsetOp.isImm() || OffsetOp.isExpr()) && "Immediate expected");
   if (OffsetOp.isImm()) {
     assert(isInt<SizeInBits>(OffsetOp.getImm()) && "Constant value truncated");
-    Ostream << OffsetOp.getImm();
+    OS << OffsetOp.getImm();
   } else
-    printExpr(MAI, *OffsetOp.getExpr(), Ostream);
+    OffsetOp.getExpr()->print(OS, &MAI);
 }
 
 void LanaiInstPrinter::printMemRiOperand(const MCInst *MI, int OpNo,
-                                         raw_ostream &Ostream,
+                                         raw_ostream &OS,
                                          const char *Modifier) {
   const MCOperand &RegOp = MI->getOperand(OpNo);
   const MCOperand &OffsetOp = MI->getOperand(OpNo + 1);
@@ -260,14 +237,14 @@ void LanaiInstPrinter::printMemRiOperand(const MCInst *MI, int OpNo,
   const unsigned AluCode = AluOp.getImm();
 
   // Offset
-  printMemoryImmediateOffset<16>(MAI, OffsetOp, Ostream);
+  printMemoryImmediateOffset<16>(MAI, OffsetOp, OS);
 
   // Register
-  printMemoryBaseRegister(Ostream, AluCode, RegOp);
+  printMemoryBaseRegister(OS, AluCode, RegOp);
 }
 
 void LanaiInstPrinter::printMemRrOperand(const MCInst *MI, int OpNo,
-                                         raw_ostream &Ostream,
+                                         raw_ostream &OS,
                                          const char *Modifier) {
   const MCOperand &RegOp = MI->getOperand(OpNo);
   const MCOperand &OffsetOp = MI->getOperand(OpNo + 1);
@@ -276,19 +253,17 @@ void LanaiInstPrinter::printMemRrOperand(const MCInst *MI, int OpNo,
   assert(OffsetOp.isReg() && RegOp.isReg() && "Registers expected.");
 
   // [ Base OP Offset ]
-  Ostream << "[";
-  if (LPAC::isPreOp(AluCode))
-    Ostream << "*";
-  Ostream << "%" << getRegisterName(RegOp.getReg());
-  if (LPAC::isPostOp(AluCode))
-    Ostream << "*";
-  Ostream << " " << LPAC::lanaiAluCodeToString(AluCode) << " ";
-  Ostream << "%" << getRegisterName(OffsetOp.getReg());
-  Ostream << "]";
+  OS << "[";
+  if (LPAC::isPreOp(AluCode)) OS << "*";
+  OS << "%" << getRegisterName(RegOp.getReg());
+  if (LPAC::isPostOp(AluCode)) OS << "*";
+  OS << " " << LPAC::lanaiAluCodeToString(AluCode) << " ";
+  OS << "%" << getRegisterName(OffsetOp.getReg());
+  OS << "]";
 }
 
 void LanaiInstPrinter::printMemSplsOperand(const MCInst *MI, int OpNo,
-                                           raw_ostream &Ostream,
+                                           raw_ostream &OS,
                                            const char *Modifier) {
   const MCOperand &RegOp = MI->getOperand(OpNo);
   const MCOperand &OffsetOp = MI->getOperand(OpNo + 1);
@@ -296,14 +271,14 @@ void LanaiInstPrinter::printMemSplsOperand(const MCInst *MI, int OpNo,
   const unsigned AluCode = AluOp.getImm();
 
   // Offset
-  printMemoryImmediateOffset<10>(MAI, OffsetOp, Ostream);
+  printMemoryImmediateOffset<10>(MAI, OffsetOp, OS);
 
   // Register
-  printMemoryBaseRegister(Ostream, AluCode, RegOp);
+  printMemoryBaseRegister(OS, AluCode, RegOp);
 }
 
 void LanaiInstPrinter::printCCOperand(const MCInst *MI, int OpNo,
-                                      raw_ostream &Ostream) {
+                                      raw_ostream &OS) {
   const int CC = static_cast<const int>(MI->getOperand(OpNo).getImm());
-  Ostream << lanaiCondCodeToString(static_cast<LPCC::CondCode>(CC));
+  OS << lanaiCondCodeToString(static_cast<LPCC::CondCode>(CC));
 }

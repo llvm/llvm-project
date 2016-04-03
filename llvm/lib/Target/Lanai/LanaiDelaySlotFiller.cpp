@@ -238,6 +238,13 @@ void Filler::insertDefsUses(MachineBasicBlock::instr_iterator MI,
     else if (MO.isUse())
       RegUses.insert(Reg);
   }
+
+  // Call & return instructions defines SP implicitly. Implicit defines are not
+  // included in the RegDefs set of calls but instructions modifying SP cannot
+  // be inserted in the delay slot of a call/return as these instructions are
+  // expanded to multiple instructions with SP modified before the branch that
+  // has the delay slot.
+  if (MI->isCall() || MI->isReturn()) RegDefs.insert(Lanai::SP);
 }
 
 // Returns true if the Reg or its alias is in the RegSet.

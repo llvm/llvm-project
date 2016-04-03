@@ -83,11 +83,12 @@ MCOperand LanaiMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
     llvm_unreachable("Unknown target flag on GV operand");
   }
 
-  const MCSymbolRefExpr *Symbol = MCSymbolRefExpr::create(Sym, Ctx);
-  const MCExpr *Expr = LanaiMCExpr::create(Kind, Symbol, Ctx);
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
+  Expr = LanaiMCExpr::create(Kind, Expr, Ctx);
   return MCOperand::createExpr(Expr);
 }
 

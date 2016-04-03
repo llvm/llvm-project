@@ -217,5 +217,6 @@ def G : Separate<["-"], "G">;
 def alias_version_script_version_script : Joined<["--"], "version-script=">, Alias<version_script>;
 
 // Debugging/developer options
+def disable_verify : Flag<["-"], "disable-verify">;
 def save_temps : Flag<["-"], "save-temps">;
 def mllvm : Separate<["-"], "mllvm">;

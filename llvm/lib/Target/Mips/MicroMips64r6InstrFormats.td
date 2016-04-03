@@ -71,16 +71,16 @@ class POOL32S_DALIGN_FM_MMR6 {
 
 class POOL32A_DIVMOD_FM_MMR6<string instr_asm, bits<9> funct>
     : MMR6Arch<instr_asm> {
-  bits<5> rt;
-  bits<5> rs;
   bits<5> rd;
+  bits<5> rs;
+  bits<5> rt;
 
   bits<32> Inst;
 
   let Inst{31-26} = 0b010110;
-  let Inst{25-21} = rt;
+  let Inst{25-21} = rd;
   let Inst{20-16} = rs;
-  let Inst{15-11} = rd;
+  let Inst{15-11} = rt;
   let Inst{10-9}  = 0b00;
   let Inst{8-0}  = funct;
 }

@@ -1,8 +1,5 @@
 ; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=+micromips \
 ; RUN:   -relocation-model=pic -O3 < %s | FileCheck %s
-; For microMIPS64, also check 32 to 64 bit registers and 64 to 32 bit register copies
-; RUN: llc -march=mips -mcpu=mips64r6 -mattr=+micromips \
-; RUN:   -relocation-model=pic -O3 < %s | FileCheck %s
 
 @x = global i32 65504, align 4
 @y = global i32 60929, align 4

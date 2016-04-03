@@ -1429,7 +1429,7 @@ static void writeMetadataRecords(ArrayRef<const Metadata *> MDs,
 static void writeModuleMetadata(const Module &M,
                                 const ValueEnumerator &VE,
                                 BitstreamWriter &Stream) {
-  if (VE.getMDs().empty() && M.named_metadata_empty())
+  if (!VE.hasMDs() && M.named_metadata_empty())
     return;
 
   Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
@@ -1442,13 +1442,13 @@ static void writeModuleMetadata(const Module &M,
 
 static void writeFunctionMetadata(const Function &F, const ValueEnumerator &VE,
                                   BitstreamWriter &Stream) {
-  ArrayRef<const Metadata *> MDs = VE.getFunctionMDs();
-  if (MDs.empty())
+  if (!VE.hasMDs())
     return;
 
   Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
   SmallVector<uint64_t, 64> Record;
-  writeMetadataRecords(MDs, VE, Stream, Record);
+  writeMetadataStrings(VE.getMDStrings(), Stream, Record);
+  writeMetadataRecords(VE.getNonMDStrings(), VE, Stream, Record);
   Stream.ExitBlock();
 }
 
@@ -2271,8 +2271,8 @@ static void WriteValueSymbolTable(
     const ValueSymbolTable &VST, const ValueEnumerator &VE,
     BitstreamWriter &Stream, uint64_t VSTOffsetPlaceholder = 0,
     uint64_t BitcodeStartBit = 0,
-    DenseMap<const Function *, std::unique_ptr<GlobalValueInfo>>
-        *FunctionIndex = nullptr) {
+    DenseMap<const Function *, std::unique_ptr<GlobalValueInfo>> *
+        GlobalValueIndex = nullptr) {
   if (VST.empty()) {
     // WriteValueSymbolTableForwardDecl should have returned early as
     // well. Ensure this handling remains in sync by asserting that
@@ -2361,13 +2361,13 @@ static void WriteValueSymbolTable(
       // Must be the module-level VST, where we pass in the Index and
       // have a VSTOffsetPlaceholder. The function-level VST should not
       // contain any Function symbols.
-      assert(FunctionIndex);
+      assert(GlobalValueIndex);
       assert(VSTOffsetPlaceholder > 0);
 
       // Save the word offset of the function (from the start of the
       // actual bitcode written to the stream).
       uint64_t BitcodeIndex =
-          (*FunctionIndex)[F]->bitcodeIndex() - BitcodeStartBit;
+          (*GlobalValueIndex)[F]->bitcodeIndex() - BitcodeStartBit;
       assert((BitcodeIndex & 31) == 0 && "function block not 32-bit aligned");
       NameVals.push_back(BitcodeIndex / 32);
 
@@ -2526,11 +2526,12 @@ static void findRefEdges(const User *CurUser, const ValueEnumerator &VE,
 }
 
 /// Emit a function body to the module stream.
-static void WriteFunction(
-    const Function &F, const Module *M, ValueEnumerator &VE,
-    BitstreamWriter &Stream,
-    DenseMap<const Function *, std::unique_ptr<GlobalValueInfo>> &FunctionIndex,
-    bool EmitSummaryIndex) {
+static void
+WriteFunction(const Function &F, const Module *M, ValueEnumerator &VE,
+              BitstreamWriter &Stream,
+              DenseMap<const Function *, std::unique_ptr<GlobalValueInfo>> &
+                  GlobalValueIndex,
+              bool EmitSummaryIndex) {
   // Save the bitcode index of the start of this function block for recording
   // in the VST.
   uint64_t BitcodeIndex = Stream.GetCurrentBitNo();
@@ -2633,7 +2634,7 @@ static void WriteFunction(
     FuncSummary->addCallGraphEdges(CallGraphEdges);
     FuncSummary->addRefEdges(RefEdges);
   }
-  FunctionIndex[&F] =
+  GlobalValueIndex[&F] =
       llvm::make_unique<GlobalValueInfo>(BitcodeIndex, std::move(FuncSummary));
 
   // Emit names for all the instructions etc.
@@ -2959,7 +2960,8 @@ static void WriteModuleLevelReferences(const GlobalVariable &V,
 /// Emit the per-module summary section alongside the rest of
 /// the module's bitcode.
 static void WritePerModuleGlobalValueSummary(
-    DenseMap<const Function *, std::unique_ptr<GlobalValueInfo>> &FunctionIndex,
+    DenseMap<const Function *, std::unique_ptr<GlobalValueInfo>> &
+        GlobalValueIndex,
     const Module *M, const ValueEnumerator &VE, BitstreamWriter &Stream) {
   if (M->empty())
     return;
@@ -3000,7 +3002,7 @@ static void WritePerModuleGlobalValueSummary(
   unsigned FSModRefsAbbrev = Stream.EmitAbbrev(Abbv);
 
   SmallVector<uint64_t, 64> NameVals;
-  // Iterate over the list of functions instead of the FunctionIndex map to
+  // Iterate over the list of functions instead of the GlobalValueIndex map to
   // ensure the ordering is stable.
   for (const Function &F : *M) {
     if (F.isDeclaration())
@@ -3010,10 +3012,10 @@ static void WritePerModuleGlobalValueSummary(
     if (!F.hasName())
       continue;
 
-    assert(FunctionIndex.count(&F) == 1);
+    assert(GlobalValueIndex.count(&F) == 1);
 
     WritePerModuleFunctionSummaryRecord(
-        NameVals, cast<FunctionSummary>(FunctionIndex[&F]->summary()),
+        NameVals, cast<FunctionSummary>(GlobalValueIndex[&F]->summary()),
         VE.getValueID(M->getValueSymbolTable().lookup(F.getName())),
         FSCallsAbbrev, FSCallsProfileAbbrev, Stream, F);
   }
@@ -3025,9 +3027,8 @@ static void WritePerModuleGlobalValueSummary(
     if (!F || F->isDeclaration())
       continue;
 
-    assert(FunctionIndex.count(F) == 1);
-    FunctionSummary *FS =
-        cast<FunctionSummary>(FunctionIndex[F]->summary());
+    assert(GlobalValueIndex.count(F) == 1);
+    FunctionSummary *FS = cast<FunctionSummary>(GlobalValueIndex[F]->summary());
     // Add the alias to the reference list of aliasee function.
     FS->addRefEdge(
         VE.getValueID(M->getValueSymbolTable().lookup(A.getName())));
@@ -3278,18 +3279,19 @@ static void WriteModule(const Module *M, BitstreamWriter &Stream,
   WriteOperandBundleTags(M, Stream);
 
   // Emit function bodies.
-  DenseMap<const Function *, std::unique_ptr<GlobalValueInfo>> FunctionIndex;
+  DenseMap<const Function *, std::unique_ptr<GlobalValueInfo>> GlobalValueIndex;
   for (Module::const_iterator F = M->begin(), E = M->end(); F != E; ++F)
     if (!F->isDeclaration())
-      WriteFunction(*F, M, VE, Stream, FunctionIndex, EmitSummaryIndex);
+      WriteFunction(*F, M, VE, Stream, GlobalValueIndex, EmitSummaryIndex);
 
   // Need to write after the above call to WriteFunction which populates
   // the summary information in the index.
   if (EmitSummaryIndex)
-    WritePerModuleGlobalValueSummary(FunctionIndex, M, VE, Stream);
+    WritePerModuleGlobalValueSummary(GlobalValueIndex, M, VE, Stream);
 
   WriteValueSymbolTable(M->getValueSymbolTable(), VE, Stream,
-                        VSTOffsetPlaceholder, BitcodeStartBit, &FunctionIndex);
+                        VSTOffsetPlaceholder, BitcodeStartBit,
+                        &GlobalValueIndex);
 
   if (GenerateHash) {
     writeModuleHash(Stream, Buffer, BlockStartPos);
