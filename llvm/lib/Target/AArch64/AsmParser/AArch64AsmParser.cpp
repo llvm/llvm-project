@@ -70,6 +70,7 @@ private:
   bool Error(SMLoc L, const Twine &Msg) { return getParser().Error(L, Msg); }
   bool showMatchError(SMLoc Loc, unsigned ErrCode);
 
+  bool parseDirectiveCPU(SMLoc L);
   bool parseDirectiveWord(unsigned Size, SMLoc L);
   bool parseDirectiveInst(SMLoc L);
 
@@ -4195,6 +4196,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
 
   StringRef IDVal = DirectiveID.getIdentifier();
   SMLoc Loc = DirectiveID.getLoc();
+  if (IDVal == ".cpu")
+    return parseDirectiveCPU(Loc);
   if (IDVal == ".hword")
     return parseDirectiveWord(2, Loc);
   if (IDVal == ".word")
@@ -4214,6 +4217,75 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
   }
 
   return parseDirectiveLOH(IDVal, Loc);
+}
+
+static const struct {
+  const char *Name;
+  const FeatureBitset Features;
+} ExtensionMap[] = {
+  { "crc", {AArch64::FeatureCRC} },
+  { "crypto", {AArch64::FeatureCrypto} },
+  { "fp", {AArch64::FeatureFPARMv8} },
+  { "simd", {AArch64::FeatureNEON} },
+
+  // FIXME: Unsupported extensions
+  { "lse", {} },
+  { "pan", {} },
+  { "lor", {} },
+  { "rdma", {} },
+  { "profile", {} },
+};
+
+/// parseDirectiveCPU
+///   ::= .cpu id
+bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
+  SMLoc CPULoc = getLoc();
+
+  StringRef CPU, ExtensionString;
+  std::tie(CPU, ExtensionString) =
+      getParser().parseStringToEndOfStatement().trim().split('+');
+
+  SmallVector<StringRef, 4> RequestedExtensions;
+  if (!ExtensionString.empty())
+    ExtensionString.split(RequestedExtensions, '+');
+
+  // FIXME This is using tablegen data, but should be moved to ARMTargetParser
+  // once that is tablegen'ed
+  if (!getSTI().isCPUStringValid(CPU)) {
+    Error(CPULoc, "unknown CPU name");
+    return false;
+  }
+
+  MCSubtargetInfo &STI = copySTI();
+  STI.setDefaultFeatures(CPU, "");
+
+  FeatureBitset Features = STI.getFeatureBits();
+  for (auto Name : RequestedExtensions) {
+    bool EnableFeature = true;
+
+    if (Name.startswith_lower("no")) {
+      EnableFeature = false;
+      Name = Name.substr(2);
+    }
+
+    for (const auto &Extension : ExtensionMap) {
+      if (Extension.Name != Name)
+        continue;
+
+      if (Extension.Features.none())
+        report_fatal_error("unsupported architectural extension: " + Name);
+
+      FeatureBitset ToggleFeatures = EnableFeature
+                                         ? (~Features & Extension.Features)
+                                         : ( Features & Extension.Features);
+      uint64_t Features =
+          ComputeAvailableFeatures(STI.ToggleFeature(ToggleFeatures));
+      setAvailableFeatures(Features);
+
+      break;
+    }
+  }
+  return false;
 }
 
 /// parseDirectiveWord

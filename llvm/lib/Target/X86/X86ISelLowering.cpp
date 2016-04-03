@@ -1384,8 +1384,17 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::LOAD,               MVT::v8f64, Legal);
     setOperationAction(ISD::LOAD,               MVT::v8i64, Legal);
     setOperationAction(ISD::LOAD,               MVT::v16i32, Legal);
-    setOperationAction(ISD::LOAD,               MVT::v16i1, Legal);
+    setOperationAction(ISD::LOAD,               MVT::v16i1,  Legal);
+    setOperationAction(ISD::LOAD,               MVT::v8i1,   Legal);
 
+    for (MVT VT : {MVT::v2i64, MVT::v4i32, MVT::v8i32, MVT::v4i64, MVT::v8i16,
+                   MVT::v16i8, MVT::v16i16, MVT::v32i8, MVT::v16i32,
+                   MVT::v8i64, MVT::v32i16, MVT::v64i8}) {
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+      setLoadExtAction(ISD::SEXTLOAD, VT, MaskVT, Custom);
+      setLoadExtAction(ISD::ZEXTLOAD, VT, MaskVT, Custom);
+      setLoadExtAction(ISD::EXTLOAD,  VT, MaskVT, Custom);
+    }
     setOperationAction(ISD::FADD,               MVT::v16f32, Legal);
     setOperationAction(ISD::FSUB,               MVT::v16f32, Legal);
     setOperationAction(ISD::FMUL,               MVT::v16f32, Legal);
@@ -1661,6 +1670,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v32i1,  &X86::VK32RegClass);
     addRegisterClass(MVT::v64i1,  &X86::VK64RegClass);
 
+    setOperationAction(ISD::LOAD,               MVT::v32i1, Legal);
+    setOperationAction(ISD::LOAD,               MVT::v64i1, Legal);
     setOperationAction(ISD::LOAD,               MVT::v32i16, Legal);
     setOperationAction(ISD::LOAD,               MVT::v64i8, Legal);
     setOperationAction(ISD::SETCC,              MVT::v32i1, Custom);
@@ -1757,6 +1768,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v4i1,   &X86::VK4RegClass);
     addRegisterClass(MVT::v2i1,   &X86::VK2RegClass);
 
+    setOperationAction(ISD::LOAD,               MVT::v2i1, Legal);
+    setOperationAction(ISD::LOAD,               MVT::v4i1, Legal);
     setOperationAction(ISD::TRUNCATE,           MVT::v2i1, Custom);
     setOperationAction(ISD::TRUNCATE,           MVT::v4i1, Custom);
     setOperationAction(ISD::SETCC,              MVT::v4i1, Custom);
@@ -16093,6 +16106,98 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, OpLo, OpHi);
 }
 
+static SDValue LowerExtended1BitVectorLoad(SDValue Op,
+                                           const X86Subtarget &Subtarget,
+                                           SelectionDAG &DAG) {
+
+  LoadSDNode *Ld = cast<LoadSDNode>(Op.getNode());
+  SDLoc dl(Ld);
+  EVT MemVT = Ld->getMemoryVT();
+  assert(MemVT.isVector() && MemVT.getScalarType() == MVT::i1 &&
+         "Expected i1 vector load");
+  unsigned ExtOpcode = Ld->getExtensionType() == ISD::ZEXTLOAD ?
+    ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+  MVT VT = Op.getValueType().getSimpleVT();
+  unsigned NumElts = VT.getVectorNumElements();
+
+  if ((Subtarget.hasVLX() && Subtarget.hasBWI() && Subtarget.hasDQI()) ||
+      NumElts == 16) {
+    // Load and extend - everything is legal
+    if (NumElts < 8) {
+      SDValue Load = DAG.getLoad(MVT::v8i1, dl, Ld->getChain(),
+                                 Ld->getBasePtr(),
+                                 Ld->getMemOperand());
+      // Replace chain users with the new chain.
+      assert(Load->getNumValues() == 2 && "Loads must carry a chain!");
+      DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), Load.getValue(1));
+      MVT ExtVT = MVT::getVectorVT(VT.getScalarType(), 8);
+      SDValue ExtVec = DAG.getNode(ExtOpcode, dl, ExtVT, Load);
+
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, ExtVec,
+                                   DAG.getIntPtrConstant(0, dl));
+    }
+    SDValue Load = DAG.getLoad(MemVT, dl, Ld->getChain(),
+                               Ld->getBasePtr(),
+                               Ld->getMemOperand());
+    // Replace chain users with the new chain.
+    assert(Load->getNumValues() == 2 && "Loads must carry a chain!");
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), Load.getValue(1));
+
+    // Finally, do a normal sign-extend to the desired register.
+    return DAG.getNode(ExtOpcode, dl, Op.getValueType(), Load);
+  }
+
+  if (NumElts <= 8) {
+    // A subset, assume that we have only AVX-512F
+    unsigned NumBitsToLoad = NumElts < 8 ? 8 : NumElts;
+    MVT TypeToLoad = MVT::getIntegerVT(NumBitsToLoad);
+    SDValue Load = DAG.getLoad(TypeToLoad, dl, Ld->getChain(),
+                              Ld->getBasePtr(),
+                              Ld->getMemOperand());
+    // Replace chain users with the new chain.
+    assert(Load->getNumValues() == 2 && "Loads must carry a chain!");
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), Load.getValue(1));
+
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumBitsToLoad);
+    SDValue BitVec = DAG.getBitcast(MaskVT, Load);
+
+    if (NumElts == 8)
+      return DAG.getNode(ExtOpcode, dl, VT, BitVec);
+
+      // we should take care to v4i1 and v2i1
+
+    MVT ExtVT = MVT::getVectorVT(VT.getScalarType(), 8);
+    SDValue ExtVec = DAG.getNode(ExtOpcode, dl, ExtVT, BitVec);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, ExtVec,
+                        DAG.getIntPtrConstant(0, dl));
+  }
+
+  assert(VT == MVT::v32i8 && "Unexpected extload type");
+
+  SmallVector<SDValue, 2> Chains;
+
+  SDValue BasePtr = Ld->getBasePtr();
+  SDValue LoadLo = DAG.getLoad(MVT::v16i1, dl, Ld->getChain(),
+                               Ld->getBasePtr(),
+                               Ld->getMemOperand());
+  Chains.push_back(LoadLo.getValue(1));
+
+  SDValue BasePtrHi =
+    DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
+                DAG.getConstant(2, dl, BasePtr.getValueType()));
+
+  SDValue LoadHi = DAG.getLoad(MVT::v16i1, dl, Ld->getChain(),
+                               BasePtrHi,
+                               Ld->getMemOperand());
+  Chains.push_back(LoadHi.getValue(1));
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
+  DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), NewChain);
+
+  SDValue Lo = DAG.getNode(ExtOpcode, dl, MVT::v16i8, LoadLo);
+  SDValue Hi = DAG.getNode(ExtOpcode, dl, MVT::v16i8, LoadHi);
+  return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v32i8, Lo, Hi);
+}
+
 // Lower vector extended loads using a shuffle. If SSSE3 is not available we
 // may emit an illegal shuffle but the expansion is still better than scalar
 // code. We generate X86ISD::VSEXT for SEXTLOADs if it's available, otherwise
@@ -16113,6 +16218,9 @@ static SDValue LowerExtendedLoad(SDValue Op, const X86Subtarget &Subtarget,
   LoadSDNode *Ld = cast<LoadSDNode>(Op.getNode());
   SDLoc dl(Ld);
   EVT MemVT = Ld->getMemoryVT();
+  if (MemVT.getScalarType() == MVT::i1)
+    return LowerExtended1BitVectorLoad(Op, Subtarget, DAG);
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   unsigned RegSz = RegVT.getSizeInBits();
 

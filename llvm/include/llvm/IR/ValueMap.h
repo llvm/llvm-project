@@ -27,6 +27,7 @@
 #define LLVM_IR_VALUEMAP_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Mutex.h"
@@ -104,6 +105,16 @@ public:
     if (!MDMap)
       MDMap.reset(new MDMapT);
     return *MDMap;
+  }
+
+  /// Get the mapped metadata, if it's in the map.
+  Optional<Metadata *> getMappedMD(const Metadata *MD) const {
+    if (!MDMap)
+      return None;
+    auto Where = MDMap->find(MD);
+    if (Where == MDMap->end())
+      return None;
+    return Where->second.get();
   }
 
   typedef ValueMapIterator<MapT, KeyT> iterator;

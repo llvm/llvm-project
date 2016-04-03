@@ -351,7 +351,6 @@ public:
   GlobalValueMaterializer(IRLinker &TheIRLinker) : TheIRLinker(TheIRLinker) {}
   Value *materializeDeclFor(Value *V) override;
   void materializeInitFor(GlobalValue *New, GlobalValue *Old) override;
-  bool isMetadataNeeded(Metadata *MD) override;
 };
 
 class LocalValueMaterializer final : public ValueMaterializer {
@@ -361,7 +360,6 @@ public:
   LocalValueMaterializer(IRLinker &TheIRLinker) : TheIRLinker(TheIRLinker) {}
   Value *materializeDeclFor(Value *V) override;
   void materializeInitFor(GlobalValue *New, GlobalValue *Old) override;
-  bool isMetadataNeeded(Metadata *MD) override;
 };
 
 /// This is responsible for keeping track of the state used for moving data
@@ -405,7 +403,7 @@ class IRLinker {
   /// Set of subprogram metadata that does not need to be linked into the
   /// destination module, because the functions were not imported directly
   /// or via an inlined body in an imported function.
-  SmallPtrSet<const Metadata *, 16> UnneededSubprograms;
+  bool HasUnneededSPs = false;
 
   /// Handles cloning of a global values from the source module into
   /// the destination module, including setting the attributes and visibility.
@@ -472,15 +470,13 @@ class IRLinker {
 
   void linkNamedMDNodes();
 
-  /// Populate the UnneededSubprograms set with the DISubprogram metadata
-  /// from the source module that we don't need to link into the dest module,
-  /// because the functions were not imported directly or via an inlined body
-  /// in an imported function.
-  void findNeededSubprograms();
+  /// Look for subprograms referenced from !llvm.dbg.cu that we don't want to
+  /// link in and map it to nullptr.
+  ///
+  /// \post HasUnneededSPs is true iff any unneeded subprograms were found.
+  void mapUnneededSubprograms();
 
-  /// The value mapper leaves nulls in the list of subprograms for any
-  /// in the UnneededSubprograms map. Strip those out of the mapped
-  /// compile unit.
+  /// Remove null subprograms from !llvm.dbg.cu.
   void stripNullSubprograms(DICompileUnit *CU);
 
 public:
@@ -496,11 +492,6 @@ public:
   bool run();
   Value *materializeDeclFor(Value *V, bool ForAlias);
   void materializeInitFor(GlobalValue *New, GlobalValue *Old, bool ForAlias);
-
-  /// Indicates whether we need to map the given metadata into the destination
-  /// module. Used to prevent linking of metadata only needed by functions not
-  /// linked into the dest module.
-  bool isMetadataNeeded(Metadata *MD);
 };
 }
 
@@ -534,10 +525,6 @@ void GlobalValueMaterializer::materializeInitFor(GlobalValue *New,
   TheIRLinker.materializeInitFor(New, Old, false);
 }
 
-bool GlobalValueMaterializer::isMetadataNeeded(Metadata *MD) {
-  return TheIRLinker.isMetadataNeeded(MD);
-}
-
 Value *LocalValueMaterializer::materializeDeclFor(Value *V) {
   return TheIRLinker.materializeDeclFor(V, true);
 }
@@ -545,10 +532,6 @@ Value *LocalValueMaterializer::materializeDeclFor(Value *V) {
 void LocalValueMaterializer::materializeInitFor(GlobalValue *New,
                                                 GlobalValue *Old) {
   TheIRLinker.materializeInitFor(New, Old, true);
-}
-
-bool LocalValueMaterializer::isMetadataNeeded(Metadata *MD) {
-  return TheIRLinker.isMetadataNeeded(MD);
 }
 
 Value *IRLinker::materializeDeclFor(Value *V, bool ForAlias) {
@@ -576,19 +559,6 @@ void IRLinker::materializeInitFor(GlobalValue *New, GlobalValue *Old,
 
   if (ForAlias || shouldLink(New, *Old))
     linkGlobalValueBody(*New, *Old);
-}
-
-bool IRLinker::isMetadataNeeded(Metadata *MD) {
-  // Currently only DISubprogram metadata is marked as being unneeded.
-  if (UnneededSubprograms.empty())
-    return true;
-  MDNode *Node = dyn_cast<MDNode>(MD);
-  if (!Node)
-    return true;
-  DISubprogram *SP = getDISubprogram(Node);
-  if (!SP)
-    return true;
-  return !UnneededSubprograms.count(SP);
 }
 
 /// Loop through the global variables in the src module and merge them into the
@@ -1064,36 +1034,34 @@ bool IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
   return false;
 }
 
-void IRLinker::findNeededSubprograms() {
+void IRLinker::mapUnneededSubprograms() {
   // Track unneeded nodes to make it simpler to handle the case
   // where we are checking if an already-mapped SP is needed.
   NamedMDNode *CompileUnits = SrcM->getNamedMetadata("llvm.dbg.cu");
   if (!CompileUnits)
     return;
+
+  // Seed the ValueMap with the imported entities, in case they reference new
+  // subprograms.
+  // FIXME: The DISubprogram for functions not linked in but kept due to
+  // being referenced by a DIImportedEntity should also get their
+  // IsDefinition flag is unset.
   for (unsigned I = 0, E = CompileUnits->getNumOperands(); I != E; ++I) {
-    auto *CU = cast<DICompileUnit>(CompileUnits->getOperand(I));
-    assert(CU && "Expected valid compile unit");
-    // Ensure that we don't remove subprograms referenced by DIImportedEntity.
-    // It is not legal to have a DIImportedEntity with a null entity or scope.
-    // Using getDISubprogram handles the case where the subprogram is reached
-    // via an intervening DILexicalBlock.
-    // FIXME: The DISubprogram for functions not linked in but kept due to
-    // being referenced by a DIImportedEntity should also get their
-    // IsDefinition flag is unset.
-    SmallPtrSet<DISubprogram *, 8> ImportedEntitySPs;
-    for (auto *IE : CU->getImportedEntities()) {
-      if (auto *SP = getDISubprogram(dyn_cast<MDNode>(IE->getEntity())))
-        ImportedEntitySPs.insert(SP);
-      if (auto *SP = getDISubprogram(dyn_cast<MDNode>(IE->getScope())))
-        ImportedEntitySPs.insert(SP);
-    }
-    for (auto *Op : CU->getSubprograms()) {
-      // Any needed SPs should have been mapped as they would be reached
-      // from the function linked in (either on the function itself for linked
-      // function bodies, or from DILocation on inlined instructions).
-      if (!ValueMap.MD()[Op] && !ImportedEntitySPs.count(Op))
-        UnneededSubprograms.insert(Op);
-    }
+    if (MDTuple *IEs = cast<DICompileUnit>(CompileUnits->getOperand(I))
+                           ->getImportedEntities()
+                           .get())
+      (void)MapMetadata(IEs, ValueMap,
+                        ValueMapperFlags | RF_NullMapMissingGlobalValues,
+                        &TypeMap, &GValMaterializer);
+  }
+
+  // Try to insert nullptr into the map for any SP not already mapped.  If
+  // the insertion succeeds, we don't need this subprogram.
+  for (unsigned I = 0, E = CompileUnits->getNumOperands(); I != E; ++I) {
+    for (auto *Op :
+         cast<DICompileUnit>(CompileUnits->getOperand(I))->getSubprograms())
+      if (ValueMap.MD().insert(std::make_pair(Op, TrackingMDRef())).second)
+        HasUnneededSPs = true;
   }
 }
 
@@ -1101,7 +1069,7 @@ void IRLinker::findNeededSubprograms() {
 void IRLinker::stripNullSubprograms(DICompileUnit *CU) {
   // There won't be any nulls if we didn't have any subprograms marked
   // as unneeded.
-  if (UnneededSubprograms.empty())
+  if (!HasUnneededSPs)
     return;
   SmallVector<Metadata *, 16> NewSPs;
   NewSPs.reserve(CU->getSubprograms().size());
@@ -1119,7 +1087,7 @@ void IRLinker::stripNullSubprograms(DICompileUnit *CU) {
 
 /// Insert all of the named MDNodes in Src into the Dest module.
 void IRLinker::linkNamedMDNodes() {
-  findNeededSubprograms();
+  mapUnneededSubprograms();
   const NamedMDNode *SrcModFlags = SrcM->getModuleFlagsMetadata();
   for (const NamedMDNode &NMD : SrcM->named_metadata()) {
     // Don't link module flags here. Do them separately.
@@ -1132,7 +1100,7 @@ void IRLinker::linkNamedMDNodes() {
           op, ValueMap, ValueMapperFlags | RF_NullMapMissingGlobalValues,
           &TypeMap, &GValMaterializer);
       // For each newly mapped compile unit remove any null subprograms,
-      // which occur when findNeededSubprograms identified any as unneeded
+      // which occur when mapUnneededSubprograms identified any as unneeded
       // in the dest module.
       if (auto *CU = dyn_cast<DICompileUnit>(DestMD))
         stripNullSubprograms(CU);

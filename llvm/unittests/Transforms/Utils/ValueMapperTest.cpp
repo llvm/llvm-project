@@ -55,4 +55,30 @@ TEST(ValueMapperTest, MapMetadataDistinctOperands) {
   EXPECT_EQ(New, D->getOperand(0));
 }
 
+TEST(ValueMapperTest, MapMetadataSeeded) {
+  LLVMContext Context;
+  auto *D = MDTuple::getDistinct(Context, None);
+
+  // The node should be moved.
+  ValueToValueMapTy VM;
+  EXPECT_EQ(None, VM.getMappedMD(D));
+
+  VM.MD().insert(std::make_pair(D, TrackingMDRef(D)));
+  EXPECT_EQ(D, *VM.getMappedMD(D));
+  EXPECT_EQ(D, MapMetadata(D, VM, RF_None));
 }
+
+TEST(ValueMapperTest, MapMetadataSeededWithNull) {
+  LLVMContext Context;
+  auto *D = MDTuple::getDistinct(Context, None);
+
+  // The node should be moved.
+  ValueToValueMapTy VM;
+  EXPECT_EQ(None, VM.getMappedMD(D));
+
+  VM.MD().insert(std::make_pair(D, TrackingMDRef()));
+  EXPECT_EQ(nullptr, *VM.getMappedMD(D));
+  EXPECT_EQ(nullptr, MapMetadata(D, VM, RF_None));
+}
+
+} // end namespace

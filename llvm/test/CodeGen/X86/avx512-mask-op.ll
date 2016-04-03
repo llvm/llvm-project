@@ -53,9 +53,11 @@ define void @mask16_mem(i16* %ptr) {
 define void @mask8_mem(i8* %ptr) {
 ; KNL-LABEL: mask8_mem:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    kmovw (%rdi), %k0
+; KNL-NEXT:    movb (%rdi), %al
+; KNL-NEXT:    kmovw %eax, %k0
 ; KNL-NEXT:    knotw %k0, %k0
-; KNL-NEXT:    kmovw %k0, (%rdi)
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    movb %al, (%rdi)
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: mask8_mem:
@@ -417,444 +419,6 @@ define <16 x i1> @test15(i32 %x, i32 %y)  {
 }
 
 define <64 x i8> @test16(i64 %x) {
-; KNL-LABEL: test16:
-; KNL:       ## BB#0:
-; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Ltmp0:
-; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Ltmp1:
-; KNL-NEXT:    .cfi_offset %rbp, -16
-; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Ltmp2:
-; KNL-NEXT:    .cfi_def_cfa_register %rbp
-; KNL-NEXT:    pushq %r15
-; KNL-NEXT:    pushq %r14
-; KNL-NEXT:    pushq %r13
-; KNL-NEXT:    pushq %r12
-; KNL-NEXT:    pushq %rbx
-; KNL-NEXT:    andq $-32, %rsp
-; KNL-NEXT:    subq $128, %rsp
-; KNL-NEXT:  Ltmp3:
-; KNL-NEXT:    .cfi_offset %rbx, -56
-; KNL-NEXT:  Ltmp4:
-; KNL-NEXT:    .cfi_offset %r12, -48
-; KNL-NEXT:  Ltmp5:
-; KNL-NEXT:    .cfi_offset %r13, -40
-; KNL-NEXT:  Ltmp6:
-; KNL-NEXT:    .cfi_offset %r14, -32
-; KNL-NEXT:  Ltmp7:
-; KNL-NEXT:    .cfi_offset %r15, -24
-; KNL-NEXT:    movq %rdi, %rax
-; KNL-NEXT:    shrq $32, %rax
-; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
-; KNL-NEXT:    movl $271, %eax ## imm = 0x10F
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    movl %edi, %ecx
-; KNL-NEXT:    andl $1, %ecx
-; KNL-NEXT:    vmovd %ecx, %xmm0
-; KNL-NEXT:    movl $257, %ecx ## imm = 0x101
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $258, %ecx ## imm = 0x102
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $2, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $259, %ecx ## imm = 0x103
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $3, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $260, %ecx ## imm = 0x104
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $4, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $261, %ecx ## imm = 0x105
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $5, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $262, %ecx ## imm = 0x106
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $263, %ecx ## imm = 0x107
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $7, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $264, %ecx ## imm = 0x108
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $8, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $265, %ecx ## imm = 0x109
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $9, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $266, %ecx ## imm = 0x10A
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $10, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $267, %ecx ## imm = 0x10B
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $11, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $268, %ecx ## imm = 0x10C
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $12, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $269, %ecx ## imm = 0x10D
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $13, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    movl $270, %ecx ## imm = 0x10E
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
-; KNL-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm1
-; KNL-NEXT:    movl $1, %eax
-; KNL-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm0
-; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %r15d
-; KNL-NEXT:    movq %r15, %rdx
-; KNL-NEXT:    shrq $17, %rdx
-; KNL-NEXT:    andb $1, %dl
-; KNL-NEXT:    je LBB22_2
-; KNL-NEXT:  ## BB#1:
-; KNL-NEXT:    movb $-1, %dl
-; KNL-NEXT:  LBB22_2:
-; KNL-NEXT:    movq %r15, %r11
-; KNL-NEXT:    shrq $16, %r11
-; KNL-NEXT:    andb $1, %r11b
-; KNL-NEXT:    je LBB22_4
-; KNL-NEXT:  ## BB#3:
-; KNL-NEXT:    movb $-1, %r11b
-; KNL-NEXT:  LBB22_4:
-; KNL-NEXT:    movq %r15, %r10
-; KNL-NEXT:    shrq $18, %r10
-; KNL-NEXT:    andb $1, %r10b
-; KNL-NEXT:    je LBB22_6
-; KNL-NEXT:  ## BB#5:
-; KNL-NEXT:    movb $-1, %r10b
-; KNL-NEXT:  LBB22_6:
-; KNL-NEXT:    movq %r15, %r9
-; KNL-NEXT:    shrq $19, %r9
-; KNL-NEXT:    andb $1, %r9b
-; KNL-NEXT:    je LBB22_8
-; KNL-NEXT:  ## BB#7:
-; KNL-NEXT:    movb $-1, %r9b
-; KNL-NEXT:  LBB22_8:
-; KNL-NEXT:    movq %r15, %rbx
-; KNL-NEXT:    shrq $20, %rbx
-; KNL-NEXT:    andb $1, %bl
-; KNL-NEXT:    je LBB22_10
-; KNL-NEXT:  ## BB#9:
-; KNL-NEXT:    movb $-1, %bl
-; KNL-NEXT:  LBB22_10:
-; KNL-NEXT:    movq %r15, %r12
-; KNL-NEXT:    shrq $21, %r12
-; KNL-NEXT:    andb $1, %r12b
-; KNL-NEXT:    je LBB22_12
-; KNL-NEXT:  ## BB#11:
-; KNL-NEXT:    movb $-1, %r12b
-; KNL-NEXT:  LBB22_12:
-; KNL-NEXT:    movq %r15, %r14
-; KNL-NEXT:    shrq $22, %r14
-; KNL-NEXT:    andb $1, %r14b
-; KNL-NEXT:    je LBB22_14
-; KNL-NEXT:  ## BB#13:
-; KNL-NEXT:    movb $-1, %r14b
-; KNL-NEXT:  LBB22_14:
-; KNL-NEXT:    movq %r15, %r8
-; KNL-NEXT:    shrq $23, %r8
-; KNL-NEXT:    andb $1, %r8b
-; KNL-NEXT:    je LBB22_16
-; KNL-NEXT:  ## BB#15:
-; KNL-NEXT:    movb $-1, %r8b
-; KNL-NEXT:  LBB22_16:
-; KNL-NEXT:    movq %r15, %r13
-; KNL-NEXT:    shrq $24, %r13
-; KNL-NEXT:    andb $1, %r13b
-; KNL-NEXT:    je LBB22_18
-; KNL-NEXT:  ## BB#17:
-; KNL-NEXT:    movb $-1, %r13b
-; KNL-NEXT:  LBB22_18:
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $25, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_20
-; KNL-NEXT:  ## BB#19:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_20:
-; KNL-NEXT:    movq %rax, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $26, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_22
-; KNL-NEXT:  ## BB#21:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_22:
-; KNL-NEXT:    movq %rax, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    movl $272, %esi ## imm = 0x110
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $27, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_24
-; KNL-NEXT:  ## BB#23:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_24:
-; KNL-NEXT:    movq %rax, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    movl $273, %eax ## imm = 0x111
-; KNL-NEXT:    bextrl %esi, %edi, %esi
-; KNL-NEXT:    movq %r15, %rcx
-; KNL-NEXT:    shrq $28, %rcx
-; KNL-NEXT:    andb $1, %cl
-; KNL-NEXT:    je LBB22_26
-; KNL-NEXT:  ## BB#25:
-; KNL-NEXT:    movb $-1, %cl
-; KNL-NEXT:  LBB22_26:
-; KNL-NEXT:    movq %rcx, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vmovd %esi, %xmm2
-; KNL-NEXT:    movl $274, %esi ## imm = 0x112
-; KNL-NEXT:    movq %r15, %rcx
-; KNL-NEXT:    shrq $29, %rcx
-; KNL-NEXT:    andb $1, %cl
-; KNL-NEXT:    je LBB22_28
-; KNL-NEXT:  ## BB#27:
-; KNL-NEXT:    movb $-1, %cl
-; KNL-NEXT:  LBB22_28:
-; KNL-NEXT:    movq %rcx, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %esi, %edi, %eax
-; KNL-NEXT:    movzbl %r11b, %esi
-; KNL-NEXT:    movq %r15, %rcx
-; KNL-NEXT:    shrq $30, %rcx
-; KNL-NEXT:    andb $1, %cl
-; KNL-NEXT:    je LBB22_30
-; KNL-NEXT:  ## BB#29:
-; KNL-NEXT:    movb $-1, %cl
-; KNL-NEXT:  LBB22_30:
-; KNL-NEXT:    vpinsrb $2, %eax, %xmm2, %xmm2
-; KNL-NEXT:    movl $275, %eax ## imm = 0x113
-; KNL-NEXT:    bextrl %eax, %edi, %r11d
-; KNL-NEXT:    movzbl %dl, %edx
-; KNL-NEXT:    vmovd %esi, %xmm3
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $31, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_32
-; KNL-NEXT:  ## BB#31:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_32:
-; KNL-NEXT:    movq %rax, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    movq %rcx, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    vpinsrb $3, %r11d, %xmm2, %xmm2
-; KNL-NEXT:    movl $276, %eax ## imm = 0x114
-; KNL-NEXT:    bextrl %eax, %edi, %esi
-; KNL-NEXT:    movl $277, %r11d ## imm = 0x115
-; KNL-NEXT:    vpinsrb $1, %edx, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %r10b, %r10d
-; KNL-NEXT:    movb %r15b, %al
-; KNL-NEXT:    shrb %al
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_34
-; KNL-NEXT:  ## BB#33:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_34:
-; KNL-NEXT:    vpinsrb $4, %esi, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %r11d, %edi, %edx
-; KNL-NEXT:    movl $278, %r11d ## imm = 0x116
-; KNL-NEXT:    vpinsrb $2, %r10d, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %r9b, %esi
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    movq %r15, %rcx
-; KNL-NEXT:    shlq $63, %rcx
-; KNL-NEXT:    sarq $63, %rcx
-; KNL-NEXT:    vmovd %ecx, %xmm4
-; KNL-NEXT:    vpinsrb $1, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movb %r15b, %al
-; KNL-NEXT:    shrb $2, %al
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_36
-; KNL-NEXT:  ## BB#35:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_36:
-; KNL-NEXT:    vpinsrb $5, %edx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %r11d, %edi, %edx
-; KNL-NEXT:    movl $279, %r9d ## imm = 0x117
-; KNL-NEXT:    vpinsrb $3, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %bl, %ebx
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $2, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movb %r15b, %al
-; KNL-NEXT:    shrb $3, %al
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_38
-; KNL-NEXT:  ## BB#37:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_38:
-; KNL-NEXT:    vpinsrb $6, %edx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %r9d, %edi, %edx
-; KNL-NEXT:    movl $280, %esi ## imm = 0x118
-; KNL-NEXT:    vpinsrb $4, %ebx, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %r12b, %ebx
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $3, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movb %r15b, %al
-; KNL-NEXT:    shrb $4, %al
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_40
-; KNL-NEXT:  ## BB#39:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_40:
-; KNL-NEXT:    vpinsrb $7, %edx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %esi, %edi, %ecx
-; KNL-NEXT:    movl $281, %edx ## imm = 0x119
-; KNL-NEXT:    vpinsrb $5, %ebx, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %r14b, %esi
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $4, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movb %r15b, %al
-; KNL-NEXT:    shrb $5, %al
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_42
-; KNL-NEXT:  ## BB#41:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_42:
-; KNL-NEXT:    vpinsrb $8, %ecx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %edx, %edi, %ecx
-; KNL-NEXT:    movl $282, %edx ## imm = 0x11A
-; KNL-NEXT:    vpinsrb $6, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %r8b, %esi
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $5, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movb %r15b, %bl
-; KNL-NEXT:    shrb $6, %bl
-; KNL-NEXT:    andb $1, %bl
-; KNL-NEXT:    je LBB22_44
-; KNL-NEXT:  ## BB#43:
-; KNL-NEXT:    movb $-1, %bl
-; KNL-NEXT:  LBB22_44:
-; KNL-NEXT:    vpinsrb $9, %ecx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %edx, %edi, %eax
-; KNL-NEXT:    movl $283, %ecx ## imm = 0x11B
-; KNL-NEXT:    vpinsrb $7, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %r13b, %esi
-; KNL-NEXT:    movzbl %bl, %edx
-; KNL-NEXT:    vpinsrb $6, %edx, %xmm4, %xmm4
-; KNL-NEXT:    movb %r15b, %bl
-; KNL-NEXT:    shrb $7, %bl
-; KNL-NEXT:    je LBB22_46
-; KNL-NEXT:  ## BB#45:
-; KNL-NEXT:    movb $-1, %bl
-; KNL-NEXT:  LBB22_46:
-; KNL-NEXT:    vpinsrb $10, %eax, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    movl $284, %edx ## imm = 0x11C
-; KNL-NEXT:    vpinsrb $8, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rax ## 8-byte Reload
-; KNL-NEXT:    movzbl %al, %esi
-; KNL-NEXT:    movzbl %bl, %eax
-; KNL-NEXT:    vpinsrb $7, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $8, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_48
-; KNL-NEXT:  ## BB#47:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_48:
-; KNL-NEXT:    vpinsrb $11, %ecx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %edx, %edi, %ecx
-; KNL-NEXT:    movl $285, %edx ## imm = 0x11D
-; KNL-NEXT:    vpinsrb $9, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rsi ## 8-byte Reload
-; KNL-NEXT:    movzbl %sil, %esi
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $8, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $9, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_50
-; KNL-NEXT:  ## BB#49:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_50:
-; KNL-NEXT:    vpinsrb $12, %ecx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %edx, %edi, %ecx
-; KNL-NEXT:    movl $286, %edx ## imm = 0x11E
-; KNL-NEXT:    vpinsrb $10, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rsi ## 8-byte Reload
-; KNL-NEXT:    movzbl %sil, %esi
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $9, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $10, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_52
-; KNL-NEXT:  ## BB#51:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_52:
-; KNL-NEXT:    vpinsrb $13, %ecx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %edx, %edi, %edx
-; KNL-NEXT:    vpinsrb $11, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rcx ## 8-byte Reload
-; KNL-NEXT:    movzbl %cl, %ecx
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $10, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $11, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_54
-; KNL-NEXT:  ## BB#53:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_54:
-; KNL-NEXT:    vpinsrb $14, %edx, %xmm2, %xmm2
-; KNL-NEXT:    shrl $31, %edi
-; KNL-NEXT:    vpinsrb $12, %ecx, %xmm3, %xmm3
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rcx ## 8-byte Reload
-; KNL-NEXT:    movzbl %cl, %ecx
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $11, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $12, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_56
-; KNL-NEXT:  ## BB#55:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_56:
-; KNL-NEXT:    vpinsrb $15, %edi, %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $13, %ecx, %xmm3, %xmm3
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rcx ## 8-byte Reload
-; KNL-NEXT:    movzbl %cl, %ecx
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $12, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $13, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_58
-; KNL-NEXT:  ## BB#57:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_58:
-; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; KNL-NEXT:    vpinsrb $14, %ecx, %xmm3, %xmm2
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rcx ## 8-byte Reload
-; KNL-NEXT:    movzbl %cl, %ecx
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $13, %eax, %xmm4, %xmm3
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $14, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB22_60
-; KNL-NEXT:  ## BB#59:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB22_60:
-; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; KNL-NEXT:    vpinsrb $15, %ecx, %xmm2, %xmm1
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $14, %eax, %xmm3, %xmm2
-; KNL-NEXT:    shrq $15, %r15
-; KNL-NEXT:    andb $1, %r15b
-; KNL-NEXT:    je LBB22_62
-; KNL-NEXT:  ## BB#61:
-; KNL-NEXT:    movb $-1, %r15b
-; KNL-NEXT:  LBB22_62:
-; KNL-NEXT:    movzbl %r15b, %eax
-; KNL-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
-; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; KNL-NEXT:    vpsllw $7, %ymm0, %ymm0
-; KNL-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vpxor %ymm2, %ymm2, %ymm2
-; KNL-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm0
-; KNL-NEXT:    leaq -40(%rbp), %rsp
-; KNL-NEXT:    popq %rbx
-; KNL-NEXT:    popq %r12
-; KNL-NEXT:    popq %r13
-; KNL-NEXT:    popq %r14
-; KNL-NEXT:    popq %r15
-; KNL-NEXT:    popq %rbp
-; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test16:
 ; SKX:       ## BB#0:
@@ -872,446 +436,6 @@ define <64 x i8> @test16(i64 %x) {
 }
 
 define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
-; KNL-LABEL: test17:
-; KNL:       ## BB#0:
-; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:  Ltmp8:
-; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:  Ltmp9:
-; KNL-NEXT:    .cfi_offset %rbp, -16
-; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:  Ltmp10:
-; KNL-NEXT:    .cfi_def_cfa_register %rbp
-; KNL-NEXT:    pushq %r15
-; KNL-NEXT:    pushq %r14
-; KNL-NEXT:    pushq %r13
-; KNL-NEXT:    pushq %r12
-; KNL-NEXT:    pushq %rbx
-; KNL-NEXT:    andq $-32, %rsp
-; KNL-NEXT:    subq $128, %rsp
-; KNL-NEXT:  Ltmp11:
-; KNL-NEXT:    .cfi_offset %rbx, -56
-; KNL-NEXT:  Ltmp12:
-; KNL-NEXT:    .cfi_offset %r12, -48
-; KNL-NEXT:  Ltmp13:
-; KNL-NEXT:    .cfi_offset %r13, -40
-; KNL-NEXT:  Ltmp14:
-; KNL-NEXT:    .cfi_offset %r14, -32
-; KNL-NEXT:  Ltmp15:
-; KNL-NEXT:    .cfi_offset %r15, -24
-; KNL-NEXT:    movq %rdi, %rax
-; KNL-NEXT:    shrq $32, %rax
-; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
-; KNL-NEXT:    movl %edi, %eax
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    vmovd %eax, %xmm0
-; KNL-NEXT:    movl $257, %eax ## imm = 0x101
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $258, %eax ## imm = 0x102
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $259, %eax ## imm = 0x103
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $260, %eax ## imm = 0x104
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $261, %eax ## imm = 0x105
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $262, %eax ## imm = 0x106
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $263, %eax ## imm = 0x107
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $264, %eax ## imm = 0x108
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $265, %eax ## imm = 0x109
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $9, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $266, %eax ## imm = 0x10A
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $267, %eax ## imm = 0x10B
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $268, %eax ## imm = 0x10C
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $269, %eax ## imm = 0x10D
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $13, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $270, %eax ## imm = 0x10E
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
-; KNL-NEXT:    movl $271, %eax ## imm = 0x10F
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm1
-; KNL-NEXT:    cmpl %edx, %esi
-; KNL-NEXT:    setg %al
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm0
-; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %r15d
-; KNL-NEXT:    movq %r15, %rdx
-; KNL-NEXT:    shrq $17, %rdx
-; KNL-NEXT:    andb $1, %dl
-; KNL-NEXT:    je LBB23_2
-; KNL-NEXT:  ## BB#1:
-; KNL-NEXT:    movb $-1, %dl
-; KNL-NEXT:  LBB23_2:
-; KNL-NEXT:    movq %r15, %r11
-; KNL-NEXT:    shrq $16, %r11
-; KNL-NEXT:    andb $1, %r11b
-; KNL-NEXT:    je LBB23_4
-; KNL-NEXT:  ## BB#3:
-; KNL-NEXT:    movb $-1, %r11b
-; KNL-NEXT:  LBB23_4:
-; KNL-NEXT:    movq %r15, %r10
-; KNL-NEXT:    shrq $18, %r10
-; KNL-NEXT:    andb $1, %r10b
-; KNL-NEXT:    je LBB23_6
-; KNL-NEXT:  ## BB#5:
-; KNL-NEXT:    movb $-1, %r10b
-; KNL-NEXT:  LBB23_6:
-; KNL-NEXT:    movq %r15, %r9
-; KNL-NEXT:    shrq $19, %r9
-; KNL-NEXT:    andb $1, %r9b
-; KNL-NEXT:    je LBB23_8
-; KNL-NEXT:  ## BB#7:
-; KNL-NEXT:    movb $-1, %r9b
-; KNL-NEXT:  LBB23_8:
-; KNL-NEXT:    movq %r15, %rbx
-; KNL-NEXT:    shrq $20, %rbx
-; KNL-NEXT:    andb $1, %bl
-; KNL-NEXT:    je LBB23_10
-; KNL-NEXT:  ## BB#9:
-; KNL-NEXT:    movb $-1, %bl
-; KNL-NEXT:  LBB23_10:
-; KNL-NEXT:    movq %r15, %r12
-; KNL-NEXT:    shrq $21, %r12
-; KNL-NEXT:    andb $1, %r12b
-; KNL-NEXT:    je LBB23_12
-; KNL-NEXT:  ## BB#11:
-; KNL-NEXT:    movb $-1, %r12b
-; KNL-NEXT:  LBB23_12:
-; KNL-NEXT:    movq %r15, %r14
-; KNL-NEXT:    shrq $22, %r14
-; KNL-NEXT:    andb $1, %r14b
-; KNL-NEXT:    je LBB23_14
-; KNL-NEXT:  ## BB#13:
-; KNL-NEXT:    movb $-1, %r14b
-; KNL-NEXT:  LBB23_14:
-; KNL-NEXT:    movq %r15, %r8
-; KNL-NEXT:    shrq $23, %r8
-; KNL-NEXT:    andb $1, %r8b
-; KNL-NEXT:    je LBB23_16
-; KNL-NEXT:  ## BB#15:
-; KNL-NEXT:    movb $-1, %r8b
-; KNL-NEXT:  LBB23_16:
-; KNL-NEXT:    movq %r15, %r13
-; KNL-NEXT:    shrq $24, %r13
-; KNL-NEXT:    andb $1, %r13b
-; KNL-NEXT:    je LBB23_18
-; KNL-NEXT:  ## BB#17:
-; KNL-NEXT:    movb $-1, %r13b
-; KNL-NEXT:  LBB23_18:
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $25, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_20
-; KNL-NEXT:  ## BB#19:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_20:
-; KNL-NEXT:    movq %rax, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $26, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_22
-; KNL-NEXT:  ## BB#21:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_22:
-; KNL-NEXT:    movq %rax, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    movl $272, %esi ## imm = 0x110
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $27, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_24
-; KNL-NEXT:  ## BB#23:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_24:
-; KNL-NEXT:    movq %rax, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    movl $273, %eax ## imm = 0x111
-; KNL-NEXT:    bextrl %esi, %edi, %esi
-; KNL-NEXT:    movq %r15, %rcx
-; KNL-NEXT:    shrq $28, %rcx
-; KNL-NEXT:    andb $1, %cl
-; KNL-NEXT:    je LBB23_26
-; KNL-NEXT:  ## BB#25:
-; KNL-NEXT:    movb $-1, %cl
-; KNL-NEXT:  LBB23_26:
-; KNL-NEXT:    movq %rcx, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    bextrl %eax, %edi, %eax
-; KNL-NEXT:    vmovd %esi, %xmm2
-; KNL-NEXT:    movl $274, %esi ## imm = 0x112
-; KNL-NEXT:    movq %r15, %rcx
-; KNL-NEXT:    shrq $29, %rcx
-; KNL-NEXT:    andb $1, %cl
-; KNL-NEXT:    je LBB23_28
-; KNL-NEXT:  ## BB#27:
-; KNL-NEXT:    movb $-1, %cl
-; KNL-NEXT:  LBB23_28:
-; KNL-NEXT:    movq %rcx, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %esi, %edi, %eax
-; KNL-NEXT:    movzbl %r11b, %esi
-; KNL-NEXT:    movq %r15, %rcx
-; KNL-NEXT:    shrq $30, %rcx
-; KNL-NEXT:    andb $1, %cl
-; KNL-NEXT:    je LBB23_30
-; KNL-NEXT:  ## BB#29:
-; KNL-NEXT:    movb $-1, %cl
-; KNL-NEXT:  LBB23_30:
-; KNL-NEXT:    vpinsrb $2, %eax, %xmm2, %xmm2
-; KNL-NEXT:    movl $275, %eax ## imm = 0x113
-; KNL-NEXT:    bextrl %eax, %edi, %r11d
-; KNL-NEXT:    movzbl %dl, %edx
-; KNL-NEXT:    vmovd %esi, %xmm3
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $31, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_32
-; KNL-NEXT:  ## BB#31:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_32:
-; KNL-NEXT:    movq %rax, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    movq %rcx, {{[0-9]+}}(%rsp) ## 8-byte Spill
-; KNL-NEXT:    vpinsrb $3, %r11d, %xmm2, %xmm2
-; KNL-NEXT:    movl $276, %eax ## imm = 0x114
-; KNL-NEXT:    bextrl %eax, %edi, %esi
-; KNL-NEXT:    movl $277, %r11d ## imm = 0x115
-; KNL-NEXT:    vpinsrb $1, %edx, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %r10b, %r10d
-; KNL-NEXT:    movb %r15b, %al
-; KNL-NEXT:    shrb %al
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_34
-; KNL-NEXT:  ## BB#33:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_34:
-; KNL-NEXT:    vpinsrb $4, %esi, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %r11d, %edi, %edx
-; KNL-NEXT:    movl $278, %r11d ## imm = 0x116
-; KNL-NEXT:    vpinsrb $2, %r10d, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %r9b, %esi
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    movq %r15, %rcx
-; KNL-NEXT:    shlq $63, %rcx
-; KNL-NEXT:    sarq $63, %rcx
-; KNL-NEXT:    vmovd %ecx, %xmm4
-; KNL-NEXT:    vpinsrb $1, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movb %r15b, %al
-; KNL-NEXT:    shrb $2, %al
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_36
-; KNL-NEXT:  ## BB#35:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_36:
-; KNL-NEXT:    vpinsrb $5, %edx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %r11d, %edi, %edx
-; KNL-NEXT:    movl $279, %r9d ## imm = 0x117
-; KNL-NEXT:    vpinsrb $3, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %bl, %ebx
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $2, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movb %r15b, %al
-; KNL-NEXT:    shrb $3, %al
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_38
-; KNL-NEXT:  ## BB#37:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_38:
-; KNL-NEXT:    vpinsrb $6, %edx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %r9d, %edi, %edx
-; KNL-NEXT:    movl $280, %esi ## imm = 0x118
-; KNL-NEXT:    vpinsrb $4, %ebx, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %r12b, %ebx
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $3, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movb %r15b, %al
-; KNL-NEXT:    shrb $4, %al
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_40
-; KNL-NEXT:  ## BB#39:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_40:
-; KNL-NEXT:    vpinsrb $7, %edx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %esi, %edi, %ecx
-; KNL-NEXT:    movl $281, %edx ## imm = 0x119
-; KNL-NEXT:    vpinsrb $5, %ebx, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %r14b, %esi
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $4, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movb %r15b, %al
-; KNL-NEXT:    shrb $5, %al
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_42
-; KNL-NEXT:  ## BB#41:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_42:
-; KNL-NEXT:    vpinsrb $8, %ecx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %edx, %edi, %ecx
-; KNL-NEXT:    movl $282, %edx ## imm = 0x11A
-; KNL-NEXT:    vpinsrb $6, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %r8b, %esi
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $5, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movb %r15b, %bl
-; KNL-NEXT:    shrb $6, %bl
-; KNL-NEXT:    andb $1, %bl
-; KNL-NEXT:    je LBB23_44
-; KNL-NEXT:  ## BB#43:
-; KNL-NEXT:    movb $-1, %bl
-; KNL-NEXT:  LBB23_44:
-; KNL-NEXT:    vpinsrb $9, %ecx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %edx, %edi, %eax
-; KNL-NEXT:    movl $283, %ecx ## imm = 0x11B
-; KNL-NEXT:    vpinsrb $7, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movzbl %r13b, %esi
-; KNL-NEXT:    movzbl %bl, %edx
-; KNL-NEXT:    vpinsrb $6, %edx, %xmm4, %xmm4
-; KNL-NEXT:    movb %r15b, %bl
-; KNL-NEXT:    shrb $7, %bl
-; KNL-NEXT:    je LBB23_46
-; KNL-NEXT:  ## BB#45:
-; KNL-NEXT:    movb $-1, %bl
-; KNL-NEXT:  LBB23_46:
-; KNL-NEXT:    vpinsrb $10, %eax, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %ecx, %edi, %ecx
-; KNL-NEXT:    movl $284, %edx ## imm = 0x11C
-; KNL-NEXT:    vpinsrb $8, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rax ## 8-byte Reload
-; KNL-NEXT:    movzbl %al, %esi
-; KNL-NEXT:    movzbl %bl, %eax
-; KNL-NEXT:    vpinsrb $7, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $8, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_48
-; KNL-NEXT:  ## BB#47:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_48:
-; KNL-NEXT:    vpinsrb $11, %ecx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %edx, %edi, %ecx
-; KNL-NEXT:    movl $285, %edx ## imm = 0x11D
-; KNL-NEXT:    vpinsrb $9, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rsi ## 8-byte Reload
-; KNL-NEXT:    movzbl %sil, %esi
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $8, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $9, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_50
-; KNL-NEXT:  ## BB#49:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_50:
-; KNL-NEXT:    vpinsrb $12, %ecx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %edx, %edi, %ecx
-; KNL-NEXT:    movl $286, %edx ## imm = 0x11E
-; KNL-NEXT:    vpinsrb $10, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rsi ## 8-byte Reload
-; KNL-NEXT:    movzbl %sil, %esi
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $9, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $10, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_52
-; KNL-NEXT:  ## BB#51:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_52:
-; KNL-NEXT:    vpinsrb $13, %ecx, %xmm2, %xmm2
-; KNL-NEXT:    bextrl %edx, %edi, %edx
-; KNL-NEXT:    vpinsrb $11, %esi, %xmm3, %xmm3
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rcx ## 8-byte Reload
-; KNL-NEXT:    movzbl %cl, %ecx
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $10, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $11, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_54
-; KNL-NEXT:  ## BB#53:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_54:
-; KNL-NEXT:    vpinsrb $14, %edx, %xmm2, %xmm2
-; KNL-NEXT:    shrl $31, %edi
-; KNL-NEXT:    vpinsrb $12, %ecx, %xmm3, %xmm3
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rcx ## 8-byte Reload
-; KNL-NEXT:    movzbl %cl, %ecx
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $11, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $12, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_56
-; KNL-NEXT:  ## BB#55:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_56:
-; KNL-NEXT:    vpinsrb $15, %edi, %xmm2, %xmm2
-; KNL-NEXT:    vpinsrb $13, %ecx, %xmm3, %xmm3
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rcx ## 8-byte Reload
-; KNL-NEXT:    movzbl %cl, %ecx
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $12, %eax, %xmm4, %xmm4
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $13, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_58
-; KNL-NEXT:  ## BB#57:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_58:
-; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; KNL-NEXT:    vpinsrb $14, %ecx, %xmm3, %xmm2
-; KNL-NEXT:    movq {{[0-9]+}}(%rsp), %rcx ## 8-byte Reload
-; KNL-NEXT:    movzbl %cl, %ecx
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $13, %eax, %xmm4, %xmm3
-; KNL-NEXT:    movq %r15, %rax
-; KNL-NEXT:    shrq $14, %rax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    je LBB23_60
-; KNL-NEXT:  ## BB#59:
-; KNL-NEXT:    movb $-1, %al
-; KNL-NEXT:  LBB23_60:
-; KNL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; KNL-NEXT:    vpinsrb $15, %ecx, %xmm2, %xmm1
-; KNL-NEXT:    movzbl %al, %eax
-; KNL-NEXT:    vpinsrb $14, %eax, %xmm3, %xmm2
-; KNL-NEXT:    shrq $15, %r15
-; KNL-NEXT:    andb $1, %r15b
-; KNL-NEXT:    je LBB23_62
-; KNL-NEXT:  ## BB#61:
-; KNL-NEXT:    movb $-1, %r15b
-; KNL-NEXT:  LBB23_62:
-; KNL-NEXT:    movzbl %r15b, %eax
-; KNL-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
-; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; KNL-NEXT:    vpsllw $7, %ymm0, %ymm0
-; KNL-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vpxor %ymm2, %ymm2, %ymm2
-; KNL-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm0
-; KNL-NEXT:    leaq -40(%rbp), %rsp
-; KNL-NEXT:    popq %rbx
-; KNL-NEXT:    popq %r12
-; KNL-NEXT:    popq %r13
-; KNL-NEXT:    popq %r14
-; KNL-NEXT:    popq %r15
-; KNL-NEXT:    popq %rbp
-; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test17:
 ; SKX:       ## BB#0:
@@ -1789,4 +913,128 @@ L2:
   br label %End
 End:
   ret void
+}
+
+define <8 x i64> @load_8i1(<8 x i1>* %a) {
+; KNL-LABEL: load_8i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    movzbw (%rdi), %ax
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: load_8i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovb (%rdi), %k0
+; SKX-NEXT:    vpmovm2q %k0, %zmm0
+; SKX-NEXT:    retq
+  %b = load <8 x i1>, <8 x i1>* %a
+  %c = sext <8 x i1> %b to <8 x i64>
+  ret <8 x i64> %c
+}
+
+define <16 x i32> @load_16i1(<16 x i1>* %a) {
+; KNL-LABEL: load_16i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw (%rdi), %k1
+; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: load_16i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovw (%rdi), %k0
+; SKX-NEXT:    vpmovm2d %k0, %zmm0
+; SKX-NEXT:    retq
+  %b = load <16 x i1>, <16 x i1>* %a
+  %c = sext <16 x i1> %b to <16 x i32>
+  ret <16 x i32> %c
+}
+
+define <2 x i16> @load_2i1(<2 x i1>* %a) {
+; KNL-LABEL: load_2i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    movb (%rdi), %al
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: load_2i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovb (%rdi), %k0
+; SKX-NEXT:    vpmovm2q %k0, %xmm0
+; SKX-NEXT:    retq
+  %b = load <2 x i1>, <2 x i1>* %a
+  %c = sext <2 x i1> %b to <2 x i16>
+  ret <2 x i16> %c
+}
+
+define <4 x i16> @load_4i1(<4 x i1>* %a) {
+; KNL-LABEL: load_4i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    movb (%rdi), %al
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; KNL-NEXT:    vpmovqd %zmm0, %ymm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: load_4i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovb (%rdi), %k0
+; SKX-NEXT:    vpmovm2d %k0, %xmm0
+; SKX-NEXT:    retq
+  %b = load <4 x i1>, <4 x i1>* %a
+  %c = sext <4 x i1> %b to <4 x i16>
+  ret <4 x i16> %c
+}
+
+define <32 x i16> @load_32i1(<32 x i1>* %a) {
+; KNL-LABEL: load_32i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw (%rdi), %k1
+; KNL-NEXT:    movl {{.*}}(%rip), %eax
+; KNL-NEXT:    vpbroadcastd %eax, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpmovdw %zmm0, %ymm0
+; KNL-NEXT:    kmovw 2(%rdi), %k1
+; KNL-NEXT:    vpbroadcastd %eax, %zmm1 {%k1} {z}
+; KNL-NEXT:    vpmovdw %zmm1, %ymm1
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: load_32i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovd (%rdi), %k0
+; SKX-NEXT:    vpmovm2w %k0, %zmm0
+; SKX-NEXT:    retq
+  %b = load <32 x i1>, <32 x i1>* %a
+  %c = sext <32 x i1> %b to <32 x i16>
+  ret <32 x i16> %c
+}
+
+define <64 x i8> @load_64i1(<64 x i1>* %a) {
+; KNL-LABEL: load_64i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    kmovw (%rdi), %k1
+; KNL-NEXT:    movl {{.*}}(%rip), %eax
+; KNL-NEXT:    vpbroadcastd %eax, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpmovdb %zmm0, %xmm0
+; KNL-NEXT:    kmovw 2(%rdi), %k1
+; KNL-NEXT:    vpbroadcastd %eax, %zmm1 {%k1} {z}
+; KNL-NEXT:    vpmovdb %zmm1, %xmm1
+; KNL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; KNL-NEXT:    kmovw 4(%rdi), %k1
+; KNL-NEXT:    vpbroadcastd %eax, %zmm1 {%k1} {z}
+; KNL-NEXT:    vpmovdb %zmm1, %xmm1
+; KNL-NEXT:    kmovw 6(%rdi), %k1
+; KNL-NEXT:    vpbroadcastd %eax, %zmm2 {%k1} {z}
+; KNL-NEXT:    vpmovdb %zmm2, %xmm2
+; KNL-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: load_64i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    kmovq (%rdi), %k0
+; SKX-NEXT:    vpmovm2b %k0, %zmm0
+; SKX-NEXT:    retq
+  %b = load <64 x i1>, <64 x i1>* %a
+  %c = sext <64 x i1> %b to <64 x i8>
+  ret <64 x i8> %c
 }

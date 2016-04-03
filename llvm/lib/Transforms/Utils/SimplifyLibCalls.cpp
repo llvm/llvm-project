@@ -1832,12 +1832,8 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilder<> &B) {
     return nullptr;
 
   // printf("x") -> putchar('x'), even for '%'.
-  if (FormatStr.size() == 1) {
-    Value *Res = emitPutChar(B.getInt32(FormatStr[0]), B, TLI);
-    if (CI->use_empty() || !Res)
-      return Res;
-    return B.CreateIntCast(Res, CI->getType(), true);
-  }
+  if (FormatStr.size() == 1)
+    return emitPutChar(B.getInt32(FormatStr[0]), B, TLI);
 
   // printf("%s", "a") --> putchar('a')
   if (FormatStr == "%s" && CI->getNumArgOperands() > 1) {
@@ -1846,15 +1842,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilder<> &B) {
       return nullptr;
     if (ChrStr.size() != 1)
       return nullptr;
-    Value *Res = emitPutChar(B.getInt32(ChrStr[0]), B, TLI);
-
-    // FIXME: Here we check that the return value is not used
-    // but ealier we prevent transformations in case it is.
-    // This should probably be an assert.
-    if (CI->use_empty() || !Res)
-      return Res;
-
-    return B.CreateIntCast(Res, CI->getType(), true);
+    return emitPutChar(B.getInt32(ChrStr[0]), B, TLI);
   }
 
   // printf("foo\n") --> puts("foo")
@@ -1864,28 +1852,19 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilder<> &B) {
     // pass to be run after this pass, to merge duplicate strings.
     FormatStr = FormatStr.drop_back();
     Value *GV = B.CreateGlobalString(FormatStr, "str");
-    Value *NewCI = emitPutS(GV, B, TLI);
-    return (CI->use_empty() || !NewCI)
-               ? NewCI
-               : ConstantInt::get(CI->getType(), FormatStr.size() + 1);
+    return emitPutS(GV, B, TLI);
   }
 
   // Optimize specific format strings.
   // printf("%c", chr) --> putchar(chr)
   if (FormatStr == "%c" && CI->getNumArgOperands() > 1 &&
-      CI->getArgOperand(1)->getType()->isIntegerTy()) {
-    Value *Res = emitPutChar(CI->getArgOperand(1), B, TLI);
-
-    if (CI->use_empty() || !Res)
-      return Res;
-    return B.CreateIntCast(Res, CI->getType(), true);
-  }
+      CI->getArgOperand(1)->getType()->isIntegerTy())
+    return emitPutChar(CI->getArgOperand(1), B, TLI);
 
   // printf("%s\n", str) --> puts(str)
   if (FormatStr == "%s\n" && CI->getNumArgOperands() > 1 &&
-      CI->getArgOperand(1)->getType()->isPointerTy()) {
+      CI->getArgOperand(1)->getType()->isPointerTy())
     return emitPutS(CI->getArgOperand(1), B, TLI);
-  }
   return nullptr;
 }
 

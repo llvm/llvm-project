@@ -123,6 +123,7 @@ public:
 
   void shrinkTo(unsigned N) {
     assert(N <= size() && "Invalid shrinkTo request!");
+    assert(!AnyFwdRefs && "Unexpected forward refs");
     MetadataPtrs.resize(N);
   }
 
@@ -130,6 +131,7 @@ public:
   MDNode *getMDNodeFwdRefOrNull(unsigned Idx);
   void assignValue(Metadata *MD, unsigned Idx);
   void tryToResolveCycles();
+  bool hasFwdRefs() const { return AnyFwdRefs; }
 };
 
 class BitcodeReader : public GVMaterializer {
@@ -1928,6 +1930,9 @@ std::error_code BitcodeReader::parseMetadataStrings(ArrayRef<uint64_t> Record,
 std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
   IsMetadataMaterialized = true;
   unsigned NextMetadataNo = MetadataList.size();
+
+  if (!ModuleLevel && MetadataList.hasFwdRefs())
+    return error("Invalid metadata: fwd refs into function blocks");
 
   if (Stream.EnterSubBlock(bitc::METADATA_BLOCK_ID))
     return error("Invalid record");
@@ -3985,6 +3990,10 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
   if (Stream.EnterSubBlock(bitc::FUNCTION_BLOCK_ID))
     return error("Invalid record");
 
+  // Unexpected unresolved metadata when parsing function.
+  if (MetadataList.hasFwdRefs())
+    return error("Invalid function metadata: incoming forward references");
+
   InstructionList.clear();
   unsigned ModuleValueListSize = ValueList.size();
   unsigned ModuleMetadataListSize = MetadataList.size();
@@ -5244,8 +5253,9 @@ OutOfRecordLoop:
     }
   }
 
-  // FIXME: Check for unresolved forward-declared metadata references
-  // and clean up leaks.
+  // Unexpected unresolved metadata about to be dropped.
+  if (MetadataList.hasFwdRefs())
+    return error("Invalid function metadata: outgoing forward refs");
 
   // Trim the value list down to the size it was before we parsed this function.
   ValueList.shrinkTo(ModuleValueListSize);
