@@ -30,12 +30,32 @@ void ValueMaterializer::materializeInitFor(GlobalValue *New, GlobalValue *Old) {
 
 namespace {
 
+/// A GlobalValue whose initializer needs to be materialized.
+struct DelayedGlobalValueInit {
+  GlobalValue *Old;
+  GlobalValue *New;
+  DelayedGlobalValueInit(const GlobalValue *Old, GlobalValue *New)
+      : Old(const_cast<GlobalValue *>(Old)), New(New) {}
+};
+
+/// A basic block used in a BlockAddress whose function body is not yet
+/// materialized.
+struct DelayedBasicBlock {
+  BasicBlock *OldBB;
+  std::unique_ptr<BasicBlock> TempBB;
+  DelayedBasicBlock(const BlockAddress &Old)
+      : OldBB(Old.getBasicBlock()),
+        TempBB(BasicBlock::Create(Old.getContext())) {}
+};
+
 class Mapper {
   ValueToValueMapTy &VM;
   RemapFlags Flags;
   ValueMapTypeRemapper *TypeMapper;
   ValueMaterializer *Materializer;
 
+  SmallVector<DelayedGlobalValueInit, 8> DelayedInits;
+  SmallVector<DelayedBasicBlock, 1> DelayedBBs;
   SmallVector<MDNode *, 8> DistinctWorklist;
 
 public:
@@ -55,6 +75,8 @@ public:
   Metadata *mapMetadata(const Metadata *MD);
 
 private:
+  Value *mapBlockAddress(const BlockAddress &BA);
+
   /// Map metadata helper.
   ///
   /// Co-recursively finds the mapping for MD.  If this returns an MDNode, it's
@@ -110,8 +132,8 @@ Value *Mapper::mapValue(const Value *V) {
             Materializer->materializeDeclFor(const_cast<Value *>(V))) {
       VM[V] = NewV;
       if (auto *NewGV = dyn_cast<GlobalValue>(NewV))
-        Materializer->materializeInitFor(
-            NewGV, const_cast<GlobalValue *>(cast<GlobalValue>(V)));
+        DelayedInits.push_back(
+            DelayedGlobalValueInit(cast<GlobalValue>(V), NewGV));
       return NewV;
     }
   }
@@ -167,13 +189,10 @@ Value *Mapper::mapValue(const Value *V) {
   Constant *C = const_cast<Constant*>(dyn_cast<Constant>(V));
   if (!C)
     return nullptr;
-  
-  if (BlockAddress *BA = dyn_cast<BlockAddress>(C)) {
-    Function *F = cast<Function>(mapValue(BA->getFunction()));
-    BasicBlock *BB = cast_or_null<BasicBlock>(mapValue(BA->getBasicBlock()));
-    return VM[V] = BlockAddress::get(F, BB ? BB : BA->getBasicBlock());
-  }
-  
+
+  if (BlockAddress *BA = dyn_cast<BlockAddress>(C))
+    return mapBlockAddress(*BA);
+
   // Otherwise, we have some other constant to remap.  Start by checking to see
   // if all operands have an identity remapping.
   unsigned OpNo = 0, NumOperands = C->getNumOperands();
@@ -229,6 +248,23 @@ Value *Mapper::mapValue(const Value *V) {
     return VM[V] = ConstantAggregateZero::get(NewTy);
   assert(isa<ConstantPointerNull>(C));
   return VM[V] = ConstantPointerNull::get(cast<PointerType>(NewTy));
+}
+
+Value *Mapper::mapBlockAddress(const BlockAddress &BA) {
+  Function *F = cast<Function>(mapValue(BA.getFunction()));
+
+  // F may not have materialized its initializer.  In that case, create a
+  // dummy basic block for now, and replace it once we've materialized all
+  // the initializers.
+  BasicBlock *BB;
+  if (F->isDeclaration()) {
+    BB = cast_or_null<BasicBlock>(mapValue(BA.getBasicBlock()));
+  } else {
+    DelayedBBs.push_back(DelayedBasicBlock(BA));
+    BB = DelayedBBs.back().TempBB.get();
+  }
+
+  return VM[&BA] = BlockAddress::get(F, BB ? BB : BA.getBasicBlock());
 }
 
 Metadata *Mapper::mapToMetadata(const Metadata *Key, Metadata *Val) {
@@ -395,8 +431,27 @@ Metadata *Mapper::mapMetadata(const Metadata *MD) {
 }
 
 Mapper::~Mapper() {
+  // Remap the operands of distinct MDNodes.
   while (!DistinctWorklist.empty())
     remapOperands(*DistinctWorklist.pop_back_val());
+
+  // Materialize global initializers.
+  while (!DelayedInits.empty()) {
+    auto Init = DelayedInits.pop_back_val();
+    Materializer->materializeInitFor(Init.New, Init.Old);
+  }
+
+  // Process block addresses delayed until global inits.
+  while (!DelayedBBs.empty()) {
+    DelayedBasicBlock DBB = DelayedBBs.pop_back_val();
+    BasicBlock *BB = cast_or_null<BasicBlock>(mapValue(DBB.OldBB));
+    DBB.TempBB->replaceAllUsesWith(BB ? BB : DBB.OldBB);
+  }
+
+  // We don't expect any of these to grow after clearing.
+  assert(DistinctWorklist.empty());
+  assert(DelayedInits.empty());
+  assert(DelayedBBs.empty());
 }
 
 MDNode *llvm::MapMetadata(const MDNode *MD, ValueToValueMapTy &VM,
