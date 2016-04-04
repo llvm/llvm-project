@@ -62,6 +62,9 @@ private:
   Metadata *mapMetadataImpl(const Metadata *MD);
   Metadata *mapMetadataOp(Metadata *Op);
 
+  /// Map metadata that doesn't require visiting operands.
+  Optional<Metadata *> mapSimpleMetadata(const Metadata *MD);
+
   /// Remap the operands of an MDNode.
   ///
   /// If \c Node is temporary, uniquing cycles are ignored.  If \c Node is
@@ -317,7 +320,7 @@ Metadata *Mapper::mapUniquedNode(const MDNode *Node) {
   return MDNode::replaceWithUniqued(std::move(ClonedMD));
 }
 
-Metadata *Mapper::mapMetadataImpl(const Metadata *MD) {
+Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
   // If the value already exists in the map, use it.
   if (Optional<Metadata *> NewMD = VM.getMappedMD(MD))
     return *NewMD;
@@ -346,16 +349,22 @@ Metadata *Mapper::mapMetadataImpl(const Metadata *MD) {
     return nullptr;
   }
 
-  // Note: this cast precedes the Flags check so we always get its associated
-  // assertion.
-  const MDNode *Node = cast<MDNode>(MD);
+  assert(isa<MDNode>(MD) && "Expected a metadata node");
 
   // If this is a module-level metadata and we know that nothing at the
   // module level is changing, then use an identity mapping.
   if (Flags & RF_NoModuleLevelChanges)
     return mapToSelf(MD);
 
+  return None;
+}
+
+Metadata *Mapper::mapMetadataImpl(const Metadata *MD) {
+  if (Optional<Metadata *> NewMD = mapSimpleMetadata(MD))
+    return *NewMD;
+
   // Require resolved nodes whenever metadata might be remapped.
+  auto *Node = cast<MDNode>(MD);
   assert(Node->isResolved() && "Unexpected unresolved node");
 
   if (Node->isDistinct())
