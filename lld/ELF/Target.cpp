@@ -1762,7 +1762,7 @@ bool MipsTargetInfo<ELFT>::needsThunk(uint32_t Type, const InputFile &File,
   // LA25 is required if target file has PIC code
   // or target symbol is a PIC symbol.
   return (D->Section->getFile()->getObj().getHeader()->e_flags & EF_MIPS_PIC) ||
-         (D->Other & STO_MIPS_MIPS16) == STO_MIPS_PIC;
+         (D->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC;
 }
 
 template <class ELFT>

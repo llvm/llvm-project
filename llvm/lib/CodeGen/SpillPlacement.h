@@ -29,7 +29,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/SparseSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/BlockFrequency.h"
 
@@ -66,9 +65,6 @@ class SpillPlacement : public MachineFunctionPass {
   /// Decision threshold. A node gets the output value 0 if the weighted sum of
   /// its inputs falls in the open interval (-Threshold;Threshold).
   BlockFrequency Threshold;
-
-  /// List of nodes that need to be updated in ::iterate.
-  SparseSet<unsigned> TodoList;
 
 public:
   static char ID; // Pass identification, replacement for typeid.
@@ -161,8 +157,6 @@ private:
 
   void activate(unsigned);
   void setThreshold(const BlockFrequency &Entry);
-
-  bool update(unsigned);
 };
 
 } // end namespace llvm

@@ -81,6 +81,10 @@ namespace {
       return "Hexagon Packetizer";
     }
     bool runOnMachineFunction(MachineFunction &Fn) override;
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
 
   private:
     const HexagonInstrInfo *HII;
@@ -1597,4 +1601,3 @@ bool HexagonPacketizerList::producesStall(const MachineInstr *I) {
 FunctionPass *llvm::createHexagonPacketizer() {
   return new HexagonPacketizer();
 }
-

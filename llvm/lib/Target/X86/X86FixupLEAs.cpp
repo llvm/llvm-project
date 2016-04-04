@@ -92,6 +92,12 @@ public:
   /// if needed and when possible.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  // This pass runs after regalloc and doesn't support VReg operands.
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
+
 private:
   MachineFunction *MF;
   const X86InstrInfo *TII; // Machine instruction info.

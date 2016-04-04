@@ -126,5 +126,27 @@ entry:
   ret void
 }
 
+declare void @somefunc()
+define cxx_fast_tlscc void @test_ccmismatch_notail() {
+; A tail call is not possible here because somefunc does not preserve enough
+; registers.
+; CHECK-LABEL: test_ccmismatch_notail:
+; CHECK-NOT: b _somefunc
+; CHECK: bl _somefunc
+  tail call void @somefunc()
+  ret void
+}
+
+declare cxx_fast_tlscc void @some_fast_tls_func()
+define void @test_ccmismatch_tail() {
+; We can perform a tail call here because some_fast_tls_func preserves all
+; necessary registers (and more).
+; CHECK-LABEL: test_ccmismatch_tail:
+; CHECK-NOT: bl _some_fast_tls_func
+; CHECK: b _some_fast_tls_func
+  tail call cxx_fast_tlscc void @some_fast_tls_func()
+  ret void
+}
+
 attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
 attributes #1 = { nounwind }

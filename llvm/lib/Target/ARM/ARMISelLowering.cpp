@@ -2102,14 +2102,6 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
   MachineFunction &MF = DAG.getMachineFunction();
   const Function *CallerF = MF.getFunction();
   CallingConv::ID CallerCC = CallerF->getCallingConv();
-  bool CCMatch = CallerCC == CalleeCC;
-
-  // Disable tailcall for CXX_FAST_TLS when callee and caller have different
-  // calling conventions, given that CXX_FAST_TLS has a bigger CSR set.
-  if (!CCMatch &&
-      (CallerCC == CallingConv::CXX_FAST_TLS ||
-       CalleeCC == CallingConv::CXX_FAST_TLS))
-    return false;
 
   assert(Subtarget->supportsTailCall());
 
@@ -2153,6 +2145,13 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
                                   CCAssignFnForNode(CalleeCC, true, isVarArg),
                                   CCAssignFnForNode(CallerCC, true, isVarArg)))
     return false;
+  // The callee has to preserve all registers the caller needs to preserve.
+  if (CalleeCC != CallerCC) {
+    const ARMBaseRegisterInfo *TRI = Subtarget->getRegisterInfo();
+    if (!TRI->regmaskSubsetEqual(TRI->getCallPreservedMask(MF, CallerCC),
+                                 TRI->getCallPreservedMask(MF, CalleeCC)))
+      return false;
+  }
 
   // If Caller's vararg or byval argument has been split between registers and
   // stack, do not perform tail call, since part of the argument is in caller's

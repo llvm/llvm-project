@@ -112,6 +112,11 @@ public:
   /// where performance or code size can be improved.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
+
 private:
   MachineFunction *MF;
 

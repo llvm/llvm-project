@@ -170,6 +170,10 @@ namespace {
       initializeHexagonCallFrameInformationPass(PR);
     }
     bool runOnMachineFunction(MachineFunction &MF) override;
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
   };
 
   char HexagonCallFrameInformation::ID = 0;

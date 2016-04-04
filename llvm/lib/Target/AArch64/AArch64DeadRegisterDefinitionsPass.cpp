@@ -48,6 +48,11 @@ public:
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
+
   const char *getPassName() const override { return AARCH64_DEAD_REG_DEF_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

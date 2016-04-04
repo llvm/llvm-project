@@ -3818,13 +3818,6 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   if (IsCalleeWin64 != IsCallerWin64)
     return false;
 
-  // Disable tailcall for CXX_FAST_TLS when callee and caller have different
-  // calling conventions, given that CXX_FAST_TLS has a bigger CSR set.
-  if (!CCMatch &&
-      (CallerCC == CallingConv::CXX_FAST_TLS ||
-       CalleeCC == CallingConv::CXX_FAST_TLS))
-    return false;
-
   if (DAG.getTarget().Options.GuaranteedTailCallOpt) {
     if (canGuaranteeTCO(CalleeCC) && CCMatch)
       return true;
@@ -3888,6 +3881,13 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   if (!CCState::resultsCompatible(CalleeCC, CallerCC, MF, C, Ins,
                                   RetCC_X86, RetCC_X86))
     return false;
+  // The callee has to preserve all registers the caller needs to preserve.
+  if (!CCMatch) {
+    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
+    if (!TRI->regmaskSubsetEqual(TRI->getCallPreservedMask(MF, CallerCC),
+                                 TRI->getCallPreservedMask(MF, CalleeCC)))
+      return false;
+  }
 
   unsigned StackArgsSize = 0;
 

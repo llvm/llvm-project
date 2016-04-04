@@ -146,6 +146,9 @@ enum NodeType : unsigned {
   // Perform a serialization operation.  (BCR 15,0 or BCR 14,0.)
   SERIALIZE,
 
+  // Compiler barrier only; generate a no-op.
+  MEMBARRIER,
+
   // Transaction begin.  The first operand is the chain, the second
   // the TDB pointer, and the third the immediate control field.
   // Returns chain and glue.
@@ -467,6 +470,8 @@ private:
                             SelectionDAG &DAG) const;
   SDValue lowerJumpTable(JumpTableSDNode *JT, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(ConstantPoolSDNode *CP, SelectionDAG &DAG) const;
+  SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVACOPY(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
@@ -477,6 +482,7 @@ private:
   SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LOAD_OP(SDValue Op, SelectionDAG &DAG,

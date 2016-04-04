@@ -110,6 +110,30 @@ multiclass CompareBranches<Operand ccmask, string pos1, string pos2> {
     def LGIJ : InstRIEc<0xEC7D, (outs), (ins GR64:$R1, imm64zx8:$I2, ccmask:$M3,
                                              brtarget16:$RI4),
                         "clgij"##pos1##"\t$R1, $I2, "##pos2##"$RI4", []>;
+    def RB  : InstRRS<0xECF6, (outs), (ins GR32:$R1, GR32:$R2, ccmask:$M3,
+                                           bdaddr12only:$BD4),
+                      "crb"##pos1##"\t$R1, $R2, "##pos2##"$BD4", []>;
+    def GRB : InstRRS<0xECE4, (outs), (ins GR64:$R1, GR64:$R2, ccmask:$M3,
+                                           bdaddr12only:$BD4),
+                      "cgrb"##pos1##"\t$R1, $R2, "##pos2##"$BD4", []>;
+    def IB  : InstRIS<0xECFE, (outs), (ins GR32:$R1, imm32sx8:$I2, ccmask:$M3,
+                                           bdaddr12only:$BD4),
+                      "cib"##pos1##"\t$R1, $I2, "##pos2##"$BD4", []>;
+    def GIB : InstRIS<0xECFC, (outs), (ins GR64:$R1, imm64sx8:$I2, ccmask:$M3,
+                                           bdaddr12only:$BD4),
+                      "cgib"##pos1##"\t$R1, $I2, "##pos2##"$BD4", []>;
+    def LRB  : InstRRS<0xECF7, (outs), (ins GR32:$R1, GR32:$R2, ccmask:$M3,
+                                            bdaddr12only:$BD4),
+                       "clrb"##pos1##"\t$R1, $R2, "##pos2##"$BD4", []>;
+    def LGRB : InstRRS<0xECE5, (outs), (ins GR64:$R1, GR64:$R2, ccmask:$M3,
+                                            bdaddr12only:$BD4),
+                       "clgrb"##pos1##"\t$R1, $R2, "##pos2##"$BD4", []>;
+    def LIB  : InstRIS<0xECFF, (outs), (ins GR32:$R1, imm32zx8:$I2, ccmask:$M3,
+                                            bdaddr12only:$BD4),
+                       "clib"##pos1##"\t$R1, $I2, "##pos2##"$BD4", []>;
+    def LGIB : InstRIS<0xECFD, (outs), (ins GR64:$R1, imm64zx8:$I2, ccmask:$M3,
+                                            bdaddr12only:$BD4),
+                       "clgib"##pos1##"\t$R1, $I2, "##pos2##"$BD4", []>;
   }
 }
 let isCodeGenOnly = 1 in
@@ -157,30 +181,54 @@ defm AsmNO  : CondExtendedMnemonic<14, "no">;
 // we need the custom parsing routines to select the correct register class.
 multiclass IntCondExtendedMnemonicA<bits<4> ccmask, string name> {
   let isBranch = 1, isTerminator = 1, M3 = ccmask in {
-    def CR  : InstRIEb<0xEC76, (outs), (ins GR32:$R1, GR32:$R2,
-                                            brtarget16:$RI4),
-                       "crj"##name##"\t$R1, $R2, $RI4", []>;
-    def CGR : InstRIEb<0xEC64, (outs), (ins GR64:$R1, GR64:$R2,
-                                            brtarget16:$RI4),
-                       "cgrj"##name##"\t$R1, $R2, $RI4", []>;
-    def CI  : InstRIEc<0xEC7E, (outs), (ins GR32:$R1, imm32sx8:$I2,
-                                            brtarget16:$RI4),
-                       "cij"##name##"\t$R1, $I2, $RI4", []>;
-    def CGI : InstRIEc<0xEC7C, (outs), (ins GR64:$R1, imm64sx8:$I2,
-                                            brtarget16:$RI4),
-                       "cgij"##name##"\t$R1, $I2, $RI4", []>;
-    def CLR  : InstRIEb<0xEC77, (outs), (ins GR32:$R1, GR32:$R2,
-                                            brtarget16:$RI4),
-                        "clrj"##name##"\t$R1, $R2, $RI4", []>;
-    def CLGR : InstRIEb<0xEC65, (outs), (ins GR64:$R1, GR64:$R2,
+    def CRJ  : InstRIEb<0xEC76, (outs), (ins GR32:$R1, GR32:$R2,
                                              brtarget16:$RI4),
-                        "clgrj"##name##"\t$R1, $R2, $RI4", []>;
-    def CLI  : InstRIEc<0xEC7F, (outs), (ins GR32:$R1, imm32zx8:$I2,
+                        "crj"##name##"\t$R1, $R2, $RI4", []>;
+    def CGRJ : InstRIEb<0xEC64, (outs), (ins GR64:$R1, GR64:$R2,
                                              brtarget16:$RI4),
-                        "clij"##name##"\t$R1, $I2, $RI4", []>;
-    def CLGI : InstRIEc<0xEC7D, (outs), (ins GR64:$R1, imm64zx8:$I2,
+                        "cgrj"##name##"\t$R1, $R2, $RI4", []>;
+    def CIJ  : InstRIEc<0xEC7E, (outs), (ins GR32:$R1, imm32sx8:$I2,
                                              brtarget16:$RI4),
-                        "clgij"##name##"\t$R1, $I2, $RI4", []>;
+                        "cij"##name##"\t$R1, $I2, $RI4", []>;
+    def CGIJ : InstRIEc<0xEC7C, (outs), (ins GR64:$R1, imm64sx8:$I2,
+                                             brtarget16:$RI4),
+                        "cgij"##name##"\t$R1, $I2, $RI4", []>;
+    def CLRJ  : InstRIEb<0xEC77, (outs), (ins GR32:$R1, GR32:$R2,
+                                             brtarget16:$RI4),
+                         "clrj"##name##"\t$R1, $R2, $RI4", []>;
+    def CLGRJ : InstRIEb<0xEC65, (outs), (ins GR64:$R1, GR64:$R2,
+                                              brtarget16:$RI4),
+                         "clgrj"##name##"\t$R1, $R2, $RI4", []>;
+    def CLIJ  : InstRIEc<0xEC7F, (outs), (ins GR32:$R1, imm32zx8:$I2,
+                                              brtarget16:$RI4),
+                         "clij"##name##"\t$R1, $I2, $RI4", []>;
+    def CLGIJ : InstRIEc<0xEC7D, (outs), (ins GR64:$R1, imm64zx8:$I2,
+                                              brtarget16:$RI4),
+                         "clgij"##name##"\t$R1, $I2, $RI4", []>;
+    def CRB  : InstRRS<0xECF6, (outs), (ins GR32:$R1, GR32:$R2,
+                                            bdaddr12only:$BD4),
+                       "crb"##name##"\t$R1, $R2, $BD4", []>;
+    def CGRB : InstRRS<0xECE4, (outs), (ins GR64:$R1, GR64:$R2,
+                                            bdaddr12only:$BD4),
+                       "cgrb"##name##"\t$R1, $R2, $BD4", []>;
+    def CIB  : InstRIS<0xECFE, (outs), (ins GR32:$R1, imm32sx8:$I2,
+                                            bdaddr12only:$BD4),
+                       "cib"##name##"\t$R1, $I2, $BD4", []>;
+    def CGIB : InstRIS<0xECFC, (outs), (ins GR64:$R1, imm64sx8:$I2,
+                                            bdaddr12only:$BD4),
+                       "cgib"##name##"\t$R1, $I2, $BD4", []>;
+    def CLRB  : InstRRS<0xECF7, (outs), (ins GR32:$R1, GR32:$R2,
+                                            bdaddr12only:$BD4),
+                        "clrb"##name##"\t$R1, $R2, $BD4", []>;
+    def CLGRB : InstRRS<0xECE5, (outs), (ins GR64:$R1, GR64:$R2,
+                                             bdaddr12only:$BD4),
+                        "clgrb"##name##"\t$R1, $R2, $BD4", []>;
+    def CLIB  : InstRIS<0xECFF, (outs), (ins GR32:$R1, imm32zx8:$I2,
+                                             bdaddr12only:$BD4),
+                        "clib"##name##"\t$R1, $I2, $BD4", []>;
+    def CLGIB : InstRIS<0xECFD, (outs), (ins GR64:$R1, imm64zx8:$I2,
+                                             bdaddr12only:$BD4),
+                        "clgib"##name##"\t$R1, $I2, $BD4", []>;
   }
 }
 multiclass IntCondExtendedMnemonic<bits<4> ccmask, string name1, string name2>
@@ -1230,6 +1278,10 @@ def PFDRL : PrefetchRILPC<"pfdrl", 0xC62, z_prefetch>;
 // accesses, which expands to "bcr 14, 0".
 let hasSideEffects = 1 in
 def Serialize : Alias<2, (outs), (ins), [(z_serialize)]>;
+
+// A pseudo instruction that serves as a compiler barrier.
+let hasSideEffects = 1 in
+def MemBarrier : Pseudo<(outs), (ins), [(z_membarrier)]>;
 
 let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
   def LAA   : LoadAndOpRSY<"laa",   0xEBF8, atomic_load_add_32, GR32>;

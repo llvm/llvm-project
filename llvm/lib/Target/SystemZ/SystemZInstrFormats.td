@@ -260,6 +260,24 @@ class InstRIL<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{31-0}  = I2;
 }
 
+class InstRIS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<4> R1;
+  bits<8> I2;
+  bits<4> M3;
+  bits<16> BD4;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = R1;
+  let Inst{35-32} = M3;
+  let Inst{31-16} = BD4;
+  let Inst{15-8}  = I2;
+  let Inst{7-0}   = op{7-0};
+}
+
 class InstRR<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<2, outs, ins, asmstr, pattern> {
   field bits<16> Inst;
@@ -318,6 +336,25 @@ class InstRRF<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11-8}  = R4;
   let Inst{7-4}   = R1;
   let Inst{3-0}   = R2;
+}
+
+class InstRRS<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<4> R1;
+  bits<4> R2;
+  bits<4> M3;
+  bits<16> BD4;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = R1;
+  let Inst{35-32} = R2;
+  let Inst{31-16} = BD4;
+  let Inst{15-12} = M3;
+  let Inst{11-8}  = 0;
+  let Inst{7-0}   = op{7-0};
 }
 
 class InstRX<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>

@@ -14,4 +14,14 @@ entry:
   ret i32 0
 }
 
+define i32 @f2() {
+entry:
+; CHECK: call void @llvm.instrprof.increment
+; CHECK-NOT: call void @llvm.instrprof.value.profile
+  call void (i32, ...) bitcast (void (...)* @foo to void (i32, ...)*)(i32 21)
+  ret i32 0
+}
+
+declare void @foo(...) #0
+
 attributes #0 = { nounwind }

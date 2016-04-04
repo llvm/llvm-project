@@ -84,7 +84,7 @@ public:
     return NameOffset;
   }
 
-  uint8_t getVisibility() const { return Other & 0x3; }
+  uint8_t getVisibility() const { return StOther & 0x3; }
 
   unsigned DynsymIndex = 0;
   uint32_t GlobalDynIndex = -1;
@@ -124,17 +124,17 @@ public:
   template <class ELFT> int compare(SymbolBody *Other);
 
 protected:
-  SymbolBody(Kind K, StringRef Name, uint8_t Binding, uint8_t Other,
+  SymbolBody(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,
              uint8_t Type)
       : SymbolKind(K), MustBeInDynSym(false), NeedsCopyOrPltAddr(false),
-        Type(Type), Binding(Binding), Other(Other),
+        Type(Type), Binding(Binding), StOther(StOther),
         Name({Name.data(), Name.size()}) {
     assert(!isLocal());
     IsUsedInRegularObj =
         K != SharedKind && K != LazyKind && K != DefinedBitcodeKind;
   }
 
-  SymbolBody(Kind K, uint32_t NameOffset, uint8_t Other, uint8_t Type);
+  SymbolBody(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type);
 
   const unsigned SymbolKind : 8;
 
@@ -155,7 +155,7 @@ public:
   // The following fields have the same meaning as the ELF symbol attributes.
   uint8_t Type;    // symbol type
   uint8_t Binding; // symbol binding
-  uint8_t Other;   // st_other field value
+  uint8_t StOther; // st_other field value
 
   bool isSection() const { return Type == llvm::ELF::STT_SECTION; }
   bool isTls() const { return Type == llvm::ELF::STT_TLS; }
@@ -163,7 +163,7 @@ public:
   bool isGnuIFunc() const { return Type == llvm::ELF::STT_GNU_IFUNC; }
   bool isObject() const { return Type == llvm::ELF::STT_OBJECT; }
   bool isFile() const { return Type == llvm::ELF::STT_FILE; }
-  void setVisibility(uint8_t V) { Other = (Other & ~0x3) | V; }
+  void setVisibility(uint8_t V) { StOther = (StOther & ~0x3) | V; }
 
 protected:
   struct Str {
@@ -180,22 +180,23 @@ protected:
 // The base class for any defined symbols.
 class Defined : public SymbolBody {
 public:
-  Defined(Kind K, StringRef Name, uint8_t Binding, uint8_t Other, uint8_t Type);
-  Defined(Kind K, uint32_t NameOffset, uint8_t Other, uint8_t Type);
+  Defined(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,
+          uint8_t Type);
+  Defined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type);
   static bool classof(const SymbolBody *S) { return S->isDefined(); }
 };
 
 // The defined symbol in LLVM bitcode files.
 class DefinedBitcode : public Defined {
 public:
-  DefinedBitcode(StringRef Name, bool IsWeak, uint8_t Other);
+  DefinedBitcode(StringRef Name, bool IsWeak, uint8_t StOther);
   static bool classof(const SymbolBody *S);
 };
 
 class DefinedCommon : public Defined {
 public:
   DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment, uint8_t Binding,
-                uint8_t Other, uint8_t Type);
+                uint8_t StOther, uint8_t Type);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedCommonKind;
@@ -233,8 +234,8 @@ public:
     assert(isLocal());
   }
 
-  DefinedRegular(StringRef Name, uint8_t Binding, uint8_t Other)
-      : Defined(SymbolBody::DefinedRegularKind, Name, Binding, Other,
+  DefinedRegular(StringRef Name, uint8_t Binding, uint8_t StOther)
+      : Defined(SymbolBody::DefinedRegularKind, Name, Binding, StOther,
                 llvm::ELF::STT_NOTYPE),
         Value(0), Size(0), Section(NullInputSection) {}
 
@@ -268,7 +269,7 @@ template <class ELFT> class DefinedSynthetic : public Defined {
 public:
   typedef typename ELFT::uint uintX_t;
   DefinedSynthetic(StringRef N, uintX_t Value, OutputSectionBase<ELFT> &Section,
-                   uint8_t Other);
+                   uint8_t StOther);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedSyntheticKind;
@@ -288,11 +289,12 @@ class Undefined : public SymbolBody {
   bool CanKeepUndefined;
 
 protected:
-  Undefined(Kind K, StringRef N, uint8_t Binding, uint8_t Other, uint8_t Type);
-  Undefined(Kind K, uint32_t NameOffset, uint8_t Other, uint8_t Type);
+  Undefined(Kind K, StringRef N, uint8_t Binding, uint8_t StOther,
+            uint8_t Type);
+  Undefined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type);
 
 public:
-  Undefined(StringRef N, bool IsWeak, uint8_t Other, bool CanKeepUndefined);
+  Undefined(StringRef N, bool IsWeak, uint8_t StOther, bool CanKeepUndefined);
 
   static bool classof(const SymbolBody *S) { return S->isUndefined(); }
 

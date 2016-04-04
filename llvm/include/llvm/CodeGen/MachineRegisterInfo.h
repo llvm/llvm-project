@@ -40,12 +40,8 @@ public:
   };
 
 private:
-  const MachineFunction *MF;
+  MachineFunction *MF;
   Delegate *TheDelegate;
-
-  /// IsSSA - True when the machine function is in SSA form and virtual
-  /// registers have a single def.
-  bool IsSSA;
 
   /// TracksLiveness - True while register liveness is being tracked accurately.
   /// Basic block live-in lists, kill flags, and implicit defs may not be
@@ -126,7 +122,7 @@ private:
   MachineRegisterInfo(const MachineRegisterInfo&) = delete;
   void operator=(const MachineRegisterInfo&) = delete;
 public:
-  explicit MachineRegisterInfo(const MachineFunction *MF);
+  explicit MachineRegisterInfo(MachineFunction *MF);
 
   const TargetRegisterInfo *getTargetRegisterInfo() const {
     return MF->getSubtarget().getRegisterInfo();
@@ -160,10 +156,15 @@ public:
   // The TwoAddressInstructionPass and PHIElimination passes take the machine
   // function out of SSA form when they introduce multiple defs per virtual
   // register.
-  bool isSSA() const { return IsSSA; }
+  bool isSSA() const {
+    return MF->getProperties().hasProperty(
+        MachineFunctionProperties::Property::IsSSA);
+  }
 
   // leaveSSA - Indicates that the machine function is no longer in SSA form.
-  void leaveSSA() { IsSSA = false; }
+  void leaveSSA() {
+    MF->getProperties().clear(MachineFunctionProperties::Property::IsSSA);
+  }
 
   /// tracksLiveness - Returns true when tracking register liveness accurately.
   ///

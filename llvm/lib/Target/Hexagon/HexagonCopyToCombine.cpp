@@ -86,6 +86,11 @@ public:
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
+
 private:
   MachineInstr *findPairable(MachineInstr *I1, bool &DoInsertAtI1,
                              bool AllowC64);

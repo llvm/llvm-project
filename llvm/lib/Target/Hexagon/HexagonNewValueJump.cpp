@@ -87,6 +87,10 @@ namespace {
     }
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
 
   private:
     /// \brief A handle to the branch probability pass.

@@ -375,6 +375,11 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &F) override;
 
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
+
     void doInitialPlacement(std::vector<MachineInstr*> &CPEMIs);
     CPEntry *findConstPoolEntry(unsigned CPI, const MachineInstr *CPEMI);
     unsigned getCPELogAlign(const MachineInstr *CPEMI);
@@ -1710,4 +1715,3 @@ void MipsConstantIslands::prescanForConstants() {
     }
   }
 }
-

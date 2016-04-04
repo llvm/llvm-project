@@ -87,9 +87,10 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
   llvm_unreachable("invalid symbol kind");
 }
 
-SymbolBody::SymbolBody(Kind K, uint32_t NameOffset, uint8_t Other, uint8_t Type)
+SymbolBody::SymbolBody(Kind K, uint32_t NameOffset, uint8_t StOther,
+                       uint8_t Type)
     : SymbolKind(K), MustBeInDynSym(false), NeedsCopyOrPltAddr(false),
-      Type(Type), Binding(STB_LOCAL), Other(Other), NameOffset(NameOffset) {
+      Type(Type), Binding(STB_LOCAL), StOther(StOther), NameOffset(NameOffset) {
   IsUsedInRegularObj =
       K != SharedKind && K != LazyKind && K != DefinedBitcodeKind;
 }

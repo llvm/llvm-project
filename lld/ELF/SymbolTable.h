@@ -64,12 +64,12 @@ public:
   SymbolBody *find(StringRef Name);
   void wrap(StringRef Name);
   InputFile *findFile(SymbolBody *B);
-  void resolve(SymbolBody *Body);
 
 private:
   Symbol *insert(SymbolBody *New);
   void addLazy(Lazy *New);
   void addMemberFile(Undefined *Undef, Lazy *L);
+  void resolve(SymbolBody *Body);
   std::string conflictMsg(SymbolBody *Old, SymbolBody *New);
 
   // The order the global symbols are in is not defined. We can use an arbitrary
