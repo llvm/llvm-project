@@ -63,7 +63,6 @@ private:
   std::vector<const Metadata *> MDs;
   typedef DenseMap<const Metadata *, unsigned> MetadataMapType;
   MetadataMapType MetadataMap;
-  unsigned NumMDStrings = 0;
   bool ShouldPreserveUseListOrder;
 
   typedef DenseMap<AttributeSet, unsigned> AttributeGroupMapType;
@@ -92,7 +91,8 @@ private:
 
   /// When a function is incorporated, this is the size of the Metadatas list
   /// before incorporation.
-  unsigned NumModuleMDs;
+  unsigned NumModuleMDs = 0;
+  unsigned NumMDStrings = 0;
 
   unsigned FirstFuncConstantID;
   unsigned FirstInstID;
@@ -151,15 +151,18 @@ public:
   }
 
   const ValueList &getValues() const { return Values; }
-  const std::vector<const Metadata *> &getMDs() const { return MDs; }
+
+  /// Check whether the current block has any metadata to emit.
+  bool hasMDs() const { return NumModuleMDs < MDs.size(); }
+
+  // Get the MDString metadata for this block.
   ArrayRef<const Metadata *> getMDStrings() const {
-    return makeArrayRef(MDs).slice(0, NumMDStrings);
+    return makeArrayRef(MDs).slice(NumModuleMDs, NumMDStrings);
   }
+
+  // Get the non-MDString metadata for this block.
   ArrayRef<const Metadata *> getNonMDStrings() const {
-    return makeArrayRef(MDs).slice(NumMDStrings);
-  }
-  ArrayRef<const Metadata *> getFunctionMDs() const {
-    return makeArrayRef(MDs).slice(NumModuleMDs);
+    return makeArrayRef(MDs).slice(NumModuleMDs).slice(NumMDStrings);
   }
 
   const TypeList &getTypes() const { return Types; }

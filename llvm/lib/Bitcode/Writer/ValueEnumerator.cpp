@@ -709,6 +709,7 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
   InstructionCount = 0;
   NumModuleValues = Values.size();
   NumModuleMDs = MDs.size();
+  NumMDStrings = 0;
 
   // Adding function arguments to the value table.
   for (const auto &I : F.args())
