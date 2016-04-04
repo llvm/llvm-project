@@ -51,3 +51,10 @@ define void @_Z3foov() !dbg !9 {
 
 !12 = !{i32 1, !"Debug Info Version", i32 3}
 !llvm.module.flags = !{!12}
+!llvm.dbg.cu = !{!13}
+
+!13 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
+                             file: !2,
+                             isOptimized: true, flags: "-O2",
+                             splitDebugFilename: "abc.debug", emissionKind: 2,
+                             subprograms: !{!7, !9, !10, !11})
