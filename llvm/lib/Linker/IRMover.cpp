@@ -1042,7 +1042,6 @@ void IRLinker::mapUnneededSubprograms() {
     return;
   for (unsigned I = 0, E = CompileUnits->getNumOperands(); I != E; ++I) {
     auto *CU = cast<DICompileUnit>(CompileUnits->getOperand(I));
-    assert(CU && "Expected valid compile unit");
 
     // Seed the ValueMap with the imported entities, in case they reference new
     // subprograms.
