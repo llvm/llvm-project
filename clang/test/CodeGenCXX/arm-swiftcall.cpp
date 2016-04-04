@@ -77,7 +77,7 @@ TEST(struct_1);
 // CHECK:   ret void
 // CHECK-LABEL: define void @test_struct_1()
 // CHECK:   [[TMP:%.*]] = alloca [[REC]], align 4
-// CHECK:   [[CALL:%.*]] = call [[SWIFTCC:cc16]] [[UAGG]] @return_struct_1()
+// CHECK:   [[CALL:%.*]] = call [[SWIFTCC:swiftcc]] [[UAGG]] @return_struct_1()
 // CHECK:   [[CAST_TMP:%.*]] = bitcast [[REC]]* [[TMP]] to [[AGG]]*
 // CHECK:   [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[CAST_TMP]], i32 0, i32 0
 // CHECK:   [[T1:%.*]] = extractvalue [[UAGG]] [[CALL]], 0
