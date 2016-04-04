@@ -55,11 +55,6 @@ namespace llvm {
     /// It is called after the mapping is recorded, so it doesn't need to worry
     /// about recursion.
     virtual void materializeInitFor(GlobalValue *New, GlobalValue *Old);
-
-    /// The client should implement this method if some metadata need
-    /// not be mapped, for example DISubprogram metadata for functions not
-    /// linked into the destination module.
-    virtual bool isMetadataNeeded(Metadata *MD) { return true; }
   };
 
   /// RemapFlags - These are flags that the value mapping APIs allow.
