@@ -32,6 +32,8 @@ private:
   const unsigned SizeThreshold;
   // Maximal threshold ratio of suspicious string literals to be considered.
   const double RatioThreshold;
+  // Maximal number of concatenated tokens.
+  const unsigned MaxConcatenatedTokens;
 };
 
 } // namespace misc

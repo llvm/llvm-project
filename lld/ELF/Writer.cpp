@@ -287,7 +287,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     return 1;
   }
 
-  if (!Body.IsTls)
+  if (!Body.isTls())
     return 0;
 
   if (Target->isTlsGlobalDynamicRel(Type)) {
@@ -403,7 +403,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
       Out<ELFT>::Plt->addEntry(Body);
 
       uint32_t Rel;
-      if (Body.IsGnuIFunc)
+      if (Body.isGnuIFunc())
         Rel = Preemptible ? Target->PltRel : Target->IRelativeRel;
       else
         Rel = Target->UseLazyBinding ? Target->PltRel : Target->GotRel;
@@ -440,7 +440,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
                     !Target->isSizeRel(Type);
       if (Preemptible || Dynrel) {
         uint32_t DynType;
-        if (Body.IsTls)
+        if (Body.isTls())
           DynType = Target->TlsGotRel;
         else if (Preemptible)
           DynType = Target->GotRel;
@@ -525,23 +525,17 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
 }
 
 template <class ELFT>
-static bool shouldKeepInSymtab(const elf::ObjectFile<ELFT> &File,
-                               StringRef SymName,
-                               const typename ELFT::Sym &Sym) {
-  if (Sym.getType() == STT_FILE)
+static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
+                               const SymbolBody &B) {
+  if (B.isFile())
     return false;
 
   // We keep sections in symtab for relocatable output.
-  if (Sym.getType() == STT_SECTION)
+  if (B.isSection())
     return Config->Relocatable;
 
-  // No reason to keep local undefined symbol in symtab.
-  if (Sym.st_shndx == SHN_UNDEF)
-    return false;
-
-  InputSectionBase<ELFT> *Sec = File.getSection(Sym);
   // If sym references a section in a discarded group, don't keep it.
-  if (Sec == InputSection<ELFT>::Discarded)
+  if (Sec == &InputSection<ELFT>::Discarded)
     return false;
 
   if (Config->DiscardNone)
@@ -568,18 +562,23 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
     return;
   for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
        Symtab.getObjectFiles()) {
+    const char *StrTab = F->getStringTable().data();
     for (SymbolBody *B : F->getLocalSymbols()) {
-      const Elf_Sym &Sym = cast<DefinedRegular<ELFT>>(B)->Sym;
-      StringRef SymName = check(Sym.getName(F->getStringTable()));
-      if (!shouldKeepInSymtab<ELFT>(*F, SymName, Sym))
+      auto *DR = dyn_cast<DefinedRegular<ELFT>>(B);
+      // No reason to keep local undefined symbol in symtab.
+      if (!DR)
         continue;
-      if (Sym.st_shndx != SHN_ABS && !F->getSection(Sym)->Live)
+      StringRef SymName(StrTab + B->getNameOffset());
+      InputSectionBase<ELFT> *Sec = DR->Section;
+      if (!shouldKeepInSymtab<ELFT>(Sec, SymName, *B))
+        continue;
+      if (Sec && !Sec->Live)
         continue;
       ++Out<ELFT>::SymTab->NumLocals;
       if (Config->Relocatable)
         B->DynsymIndex = Out<ELFT>::SymTab->NumLocals;
-      F->KeptLocalSyms.push_back(std::make_pair(
-          &Sym, Out<ELFT>::SymTab->StrTabSec.addString(SymName)));
+      F->KeptLocalSyms.push_back(
+          std::make_pair(DR, Out<ELFT>::SymTab->StrTabSec.addString(SymName)));
     }
   }
 }
@@ -754,7 +753,7 @@ void Writer<ELFT>::addCopyRelSymbols(std::vector<SharedSymbol<ELFT> *> &Syms) {
     uintX_t Align = getAlignment(SS);
     Off = alignTo(Off, Align);
     SS->OffsetInBss = Off;
-    Off += SS->Sym.st_size;
+    Off += SS->template getSize<ELFT>();
     MaxAlign = std::max(MaxAlign, Align);
   }
   Out<ELFT>::Bss->setSize(Off);
@@ -787,7 +786,7 @@ void reportDiscarded(InputSectionBase<ELFT> *IS,
 
 template <class ELFT>
 bool Writer<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) const {
-  return !S || S == InputSection<ELFT>::Discarded || !S->Live ||
+  return !S || S == &InputSection<ELFT>::Discarded || !S->Live ||
          Script->isDiscarded(S);
 }
 
@@ -802,12 +801,10 @@ void Writer<ELFT>::addRelIpltSymbols() {
   if (isOutputDynamic() || !Out<ELFT>::RelaPlt)
     return;
   StringRef S = Config->Rela ? "__rela_iplt_start" : "__rel_iplt_start";
-  if (Symtab.find(S))
-    Symtab.addAbsolute(S, ElfSym<ELFT>::RelaIpltStart);
+  ElfSym<ELFT>::RelaIpltStart = Symtab.addIgnored(S);
 
   S = Config->Rela ? "__rela_iplt_end" : "__rel_iplt_end";
-  if (Symtab.find(S))
-    Symtab.addAbsolute(S, ElfSym<ELFT>::RelaIpltEnd);
+  ElfSym<ELFT>::RelaIpltEnd = Symtab.addIgnored(S);
 }
 
 template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
@@ -815,9 +812,6 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
     return false;
 
   if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B)) {
-    // Don't include synthetic symbols like __init_array_start in every output.
-    if (&D->Sym == &ElfSym<ELFT>::Ignored)
-      return false;
     // Exclude symbols pointing to garbage-collected sections.
     if (D->Section && !D->Section->Live)
       return false;
@@ -922,6 +916,32 @@ OutputSectionFactory<ELFT>::createKey(InputSectionBase<ELFT> *C,
 // The linker is expected to define some symbols depending on
 // the linking result. This function defines such symbols.
 template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
+  if (Config->EMachine == EM_MIPS) {
+    // On MIPS O32 ABI, _gp_disp is a magic symbol designates offset between
+    // start of function and 'gp' pointer into GOT.
+    Config->MipsGpDisp = Symtab.addIgnored("_gp_disp");
+    // The __gnu_local_gp is a magic symbol equal to the current value of 'gp'
+    // pointer. This symbol is used in the code generated by .cpload pseudo-op
+    // in case of using -mno-shared option.
+    // https://sourceware.org/ml/binutils/2004-12/msg00094.html
+    Config->MipsLocalGp = Symtab.addIgnored("__gnu_local_gp");
+  }
+
+  // In the assembly for 32 bit x86 the _GLOBAL_OFFSET_TABLE_ symbol
+  // is magical and is used to produce a R_386_GOTPC relocation.
+  // The R_386_GOTPC relocation value doesn't actually depend on the
+  // symbol value, so it could use an index of STN_UNDEF which, according
+  // to the spec, means the symbol value is 0.
+  // Unfortunately both gas and MC keep the _GLOBAL_OFFSET_TABLE_ symbol in
+  // the object file.
+  // The situation is even stranger on x86_64 where the assembly doesn't
+  // need the magical symbol, but gas still puts _GLOBAL_OFFSET_TABLE_ as
+  // an undefined symbol in the .o files.
+  // Given that the symbol is effectively unused, we just create a dummy
+  // hidden one to avoid the undefined symbol error.
+  if (!Config->Relocatable)
+    Symtab.addIgnored("_GLOBAL_OFFSET_TABLE_");
+
   // __tls_get_addr is defined by the dynamic linker for dynamic ELFs. For
   // static linking the linker is required to optimize away any references to
   // __tls_get_addr, so it's not defined anywhere. Create a hidden definition
@@ -929,9 +949,9 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (!isOutputDynamic())
     Symtab.addIgnored("__tls_get_addr");
 
-  auto Define = [this](StringRef S, Elf_Sym &Sym) {
-    if (Symtab.find(S))
-      Symtab.addAbsolute(S, Sym);
+  auto Define = [this](StringRef S, DefinedRegular<ELFT> *&Sym,
+                       DefinedRegular<ELFT> *&Sym2) {
+    Sym = Symtab.addIgnored(S, STV_DEFAULT);
 
     // The name without the underscore is not a reserved name,
     // so it is defined only when there is a reference against it.
@@ -939,12 +959,12 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     S = S.substr(1);
     if (SymbolBody *B = Symtab.find(S))
       if (B->isUndefined())
-        Symtab.addAbsolute(S, Sym);
+        Sym2 = Symtab.addAbsolute(S, STV_DEFAULT);
   };
 
-  Define("_end", ElfSym<ELFT>::End);
-  Define("_etext", ElfSym<ELFT>::Etext);
-  Define("_edata", ElfSym<ELFT>::Edata);
+  Define("_end", ElfSym<ELFT>::End, ElfSym<ELFT>::End2);
+  Define("_etext", ElfSym<ELFT>::Etext, ElfSym<ELFT>::Etext2);
+  Define("_edata", ElfSym<ELFT>::Edata, ElfSym<ELFT>::Edata2);
 }
 
 // Sort input sections by section name suffixes for
@@ -1467,13 +1487,15 @@ template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
   // to beginning or ending of .rela.plt section, respectively.
   if (Out<ELFT>::RelaPlt) {
     uintX_t Start = Out<ELFT>::RelaPlt->getVA();
-    ElfSym<ELFT>::RelaIpltStart.st_value = Start;
-    ElfSym<ELFT>::RelaIpltEnd.st_value = Start + Out<ELFT>::RelaPlt->getSize();
+    if (ElfSym<ELFT>::RelaIpltStart)
+      ElfSym<ELFT>::RelaIpltStart->Value = Start;
+    if (ElfSym<ELFT>::RelaIpltEnd)
+      ElfSym<ELFT>::RelaIpltEnd->Value = Start + Out<ELFT>::RelaPlt->getSize();
   }
 
   // Update MIPS _gp absolute symbol so that it points to the static data.
   if (Config->EMachine == EM_MIPS)
-    ElfSym<ELFT>::MipsGp.st_value = getMipsGpAddr<ELFT>();
+    ElfSym<ELFT>::MipsGp->Value = getMipsGpAddr<ELFT>();
 
   // _etext is the first location after the last read-only loadable segment.
   // _edata is the first location after the last read-write loadable segment.
@@ -1482,12 +1504,24 @@ template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
     Elf_Phdr &H = P.H;
     if (H.p_type != PT_LOAD)
       continue;
-    ElfSym<ELFT>::End.st_value = H.p_vaddr + H.p_memsz;
-    uintX_t Val = H.p_vaddr + H.p_filesz;
-    if (H.p_flags & PF_W)
-      ElfSym<ELFT>::Edata.st_value = Val;
-    else
-      ElfSym<ELFT>::Etext.st_value = Val;
+    uintX_t Val = H.p_vaddr + H.p_memsz;
+    if (ElfSym<ELFT>::End)
+      ElfSym<ELFT>::End->Value = Val;
+    if (ElfSym<ELFT>::End2)
+      ElfSym<ELFT>::End2->Value = Val;
+
+    Val = H.p_vaddr + H.p_filesz;
+    if (H.p_flags & PF_W) {
+      if (ElfSym<ELFT>::Edata)
+        ElfSym<ELFT>::Edata->Value = Val;
+      if (ElfSym<ELFT>::Edata2)
+        ElfSym<ELFT>::Edata2->Value = Val;
+    } else {
+      if (ElfSym<ELFT>::Etext)
+        ElfSym<ELFT>::Etext->Value = Val;
+      if (ElfSym<ELFT>::Etext2)
+        ElfSym<ELFT>::Etext2->Value = Val;
+    }
   }
 }
 

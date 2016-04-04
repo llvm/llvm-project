@@ -175,18 +175,18 @@ void elf::ObjectFile<ELFT>::initializeSections(
   const ELFFile<ELFT> &Obj = this->ELFObj;
   for (const Elf_Shdr &Sec : Obj.sections()) {
     ++I;
-    if (Sections[I] == InputSection<ELFT>::Discarded)
+    if (Sections[I] == &InputSection<ELFT>::Discarded)
       continue;
 
     switch (Sec.sh_type) {
     case SHT_GROUP:
-      Sections[I] = InputSection<ELFT>::Discarded;
+      Sections[I] = &InputSection<ELFT>::Discarded;
       if (ComdatGroups.insert(getShtGroupSignature(Sec)).second)
         continue;
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
         if (SecIndex >= Size)
           fatal("invalid section index in group");
-        Sections[SecIndex] = InputSection<ELFT>::Discarded;
+        Sections[SecIndex] = &InputSection<ELFT>::Discarded;
       }
       break;
     case SHT_SYMTAB:
@@ -242,7 +242,7 @@ elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
   // Strictly speaking, a relocation section must be included in the
   // group of the section it relocates. However, LLVM 3.3 and earlier
   // would fail to do so, so we gracefully handle that case.
-  if (Target == InputSection<ELFT>::Discarded)
+  if (Target == &InputSection<ELFT>::Discarded)
     return nullptr;
 
   if (!Target)
@@ -260,7 +260,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // is controlled only by the command line option (-z execstack) in LLD,
   // .note.GNU-stack is ignored.
   if (Name == ".note.GNU-stack")
-    return InputSection<ELFT>::Discarded;
+    return &InputSection<ELFT>::Discarded;
 
   if (Name == ".note.GNU-split-stack")
     error("objects using splitstacks are not supported");
@@ -299,19 +299,20 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   if (Index >= Sections.size() || !Sections[Index])
     fatal("invalid section index");
   InputSectionBase<ELFT> *S = Sections[Index];
-  if (S == InputSectionBase<ELFT>::Discarded)
+  if (S == &InputSectionBase<ELFT>::Discarded)
     return S;
   return S->Repl;
 }
 
 template <class ELFT>
 SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
+  uint32_t NameOffset = Sym->st_name;
   unsigned char Binding = Sym->getBinding();
   InputSectionBase<ELFT> *Sec = getSection(*Sym);
   if (Binding == STB_LOCAL) {
-    if (Sec == InputSection<ELFT>::Discarded)
-      Sec = nullptr;
-    return new (Alloc) DefinedRegular<ELFT>("", *Sym, Sec);
+    if (Sym->st_shndx == SHN_UNDEF)
+      return new (Alloc) UndefinedElf<ELFT>(NameOffset, *Sym);
+    return new (Alloc) DefinedRegular<ELFT>(NameOffset, *Sym, Sec);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable));
@@ -320,9 +321,8 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case SHN_UNDEF:
     return new (Alloc) UndefinedElf<ELFT>(Name, *Sym);
   case SHN_COMMON:
-    return new (Alloc) DefinedCommon(Name, Sym->st_size, Sym->st_value,
-                                     Sym->getBinding() == llvm::ELF::STB_WEAK,
-                                     Sym->getVisibility());
+    return new (Alloc) DefinedCommon(Name, Sym->st_size, Sym->st_value, Binding,
+                                     Sym->st_other, Sym->getType());
   }
 
   switch (Binding) {
@@ -331,7 +331,7 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case STB_GLOBAL:
   case STB_WEAK:
   case STB_GNU_UNIQUE:
-    if (Sec == InputSection<ELFT>::Discarded)
+    if (Sec == &InputSection<ELFT>::Discarded)
       return new (Alloc) UndefinedElf<ELFT>(Name, *Sym);
     return new (Alloc) DefinedRegular<ELFT>(Name, *Sym, Sec);
   }
@@ -479,11 +479,13 @@ BitcodeFile::createSymbolBody(const DenseSet<const Comdat *> &KeptComdats,
     const DataLayout &DL = M.getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     Body = new (Alloc)
-        DefinedCommon(NameRef, Size, GV->getAlignment(), IsWeak, Visibility);
+        DefinedCommon(NameRef, Size, GV->getAlignment(),
+                      IsWeak ? STB_WEAK : STB_GLOBAL, Visibility, /*Type*/ 0);
   } else {
     Body = new (Alloc) DefinedBitcode(NameRef, IsWeak, Visibility);
   }
-  Body->IsTls = GV->isThreadLocal();
+  if (GV->isThreadLocal())
+    Body->Type = STT_TLS;
   return Body;
 }
 

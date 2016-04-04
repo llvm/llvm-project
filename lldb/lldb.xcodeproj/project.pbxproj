@@ -5971,7 +5971,7 @@
 /* Begin PBXLegacyTarget section */
 		2387551E1C24974600CCE8C3 /* lldb-python-test-suite */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb --results-formatter lldbsuite.test.xunit_formatter.XunitFormatter --results-file $(BUILD_DIR)/test-results.xml --rerun-all-issues --env TERM=vt100 -O--xpass=ignore";
+			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb -C $(LLDB_PYTHON_TESTSUITE_CC) --results-formatter lldbsuite.test.xunit_formatter.XunitFormatter --results-file $(BUILD_DIR)/test-results.xml --rerun-all-issues --env TERM=vt100 -O--xpass=ignore";
 			buildConfigurationList = 238755241C24974600CCE8C3 /* Build configuration list for PBXLegacyTarget "lldb-python-test-suite" */;
 			buildPhases = (
 			);
@@ -7472,6 +7472,7 @@
 				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				LLDB_PYTHON_TESTSUITE_CC = "$(LLVM_BUILD_DIR)/x86_64/bin/clang";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -7500,6 +7501,7 @@
 				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				LLDB_PYTHON_TESTSUITE_CC = "$(LLVM_BUILD_DIR)/x86_64/bin/clang";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -7520,6 +7522,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				LLDB_PYTHON_TESTSUITE_CC = "$(LLVM_BUILD_DIR)/x86_64/bin/clang";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -7540,6 +7543,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				LLDB_PYTHON_TESTSUITE_CC = "$(LLVM_BUILD_DIR)/x86_64/bin/clang";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";

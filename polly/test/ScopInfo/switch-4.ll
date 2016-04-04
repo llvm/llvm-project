@@ -33,7 +33,7 @@
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:     Stmt_sw_bb_1
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] : 4*floor((-1 + i0)/4) = -1 + i0 and 0 < i0 < N };
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] : 4*floor((-1 + i0)/4) = -1 + i0 and 0 <= i0 < N };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] -> [i0, 2] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
@@ -42,7 +42,7 @@
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb_1[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:     Stmt_sw_bb_5
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_sw_bb_5[i0] : 4*floor((-2 + i0)/4) = -2 + i0 and 2 <= i0 < N };
+; CHECK-NEXT:             [N] -> { Stmt_sw_bb_5[i0] : 4*floor((-2 + i0)/4) = -2 + i0 and 0 <= i0 < N };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_sw_bb_5[i0] -> [i0, 1] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
@@ -62,23 +62,17 @@
 
 ; AST:      if (1)
 ;
-; AST:          {
-; AST-NEXT:       for (int c0 = 0; c0 < N - 3; c0 += 4) {
-; AST-NEXT:         Stmt_sw_bb(c0);
-; AST-NEXT:         Stmt_sw_bb_1(c0 + 1);
-; AST-NEXT:         Stmt_sw_bb_5(c0 + 2);
-; AST-NEXT:         Stmt_sw_bb_9(c0 + 3);
-; AST-NEXT:       }
-; AST-NEXT:       if (N >= 1)
-; AST-NEXT:         if (N % 4 >= 1) {
-; AST-NEXT:           Stmt_sw_bb(-(N % 4) + N);
-; AST-NEXT:           if (N % 4 >= 2) {
-; AST-NEXT:             Stmt_sw_bb_1(-(N % 4) + N + 1);
-; AST-NEXT:             if ((N - 3) % 4 == 0)
-; AST-NEXT:               Stmt_sw_bb_5(N - 1);
-; AST-NEXT:           }
-; AST-NEXT:         }
-; AST-NEXT:     }
+; AST:        for (int c0 = 0; c0 < N; c0 += 4) {
+; AST-NEXT:      Stmt_sw_bb(c0);
+; AST-NEXT:      if (N >= c0 + 2) {
+; AST-NEXT:        Stmt_sw_bb_1(c0 + 1);
+; AST-NEXT:        if (N >= c0 + 3) {
+; AST-NEXT:          Stmt_sw_bb_5(c0 + 2);
+; AST-NEXT:          if (N >= c0 + 4)
+; AST-NEXT:            Stmt_sw_bb_9(c0 + 3);
+; AST-NEXT:        }
+; AST-NEXT:      }
+; AST-NEXT:    }
 ;
 ; AST:      else
 ; AST-NEXT:     {  /* original code */ }

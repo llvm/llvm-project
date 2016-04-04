@@ -738,7 +738,6 @@ TEST(BinaryReaderTest, hello_obj_ppc) {
   auto ec = writeBinary(*f, "/tmp/foo.o");
   // FIXME: We want to do EXPECT_FALSE(ec) but that fails on some Windows bots,
   // probably due to /tmp not being available.
-  // For now just check if an error happens as we need to mark it as checked.
-  bool failed = (bool)ec;
-  (void)failed;
+  // For now just consume the error without checking it.
+  consumeError(std::move(ec));
 }

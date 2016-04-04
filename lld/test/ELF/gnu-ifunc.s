@@ -42,7 +42,9 @@
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Local
 // CHECK-NEXT:    Type: None
-// CHECK-NEXT:    Other: 0
+// CHECK-NEXT:    Other [
+// CHECK-NEXT:      STV_HIDDEN
+// CHECK-NEXT:    ]
 // CHECK-NEXT:    Section: Absolute
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
@@ -51,7 +53,9 @@
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Local
 // CHECK-NEXT:    Type: None
-// CHECK-NEXT:    Other: 0
+// CHECK-NEXT:    Other [
+// CHECK-NEXT:      STV_HIDDEN
+// CHECK-NEXT:    ]
 // CHECK-NEXT:    Section: Absolute
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {

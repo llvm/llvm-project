@@ -135,9 +135,10 @@ SymbolBody *SymbolTable<ELFT>::addUndefinedOpt(StringRef Name) {
 }
 
 template <class ELFT>
-SymbolBody *SymbolTable<ELFT>::addAbsolute(StringRef Name, Elf_Sym &ESym) {
+DefinedRegular<ELFT> *SymbolTable<ELFT>::addAbsolute(StringRef Name,
+                                                     uint8_t Visibility) {
   // Pass nullptr because absolute symbols have no corresponding input sections.
-  auto *Sym = new (Alloc) DefinedRegular<ELFT>(Name, ESym, nullptr);
+  auto *Sym = new (Alloc) DefinedRegular<ELFT>(Name, STB_GLOBAL, Visibility);
   resolve(Sym);
   return Sym;
 }
@@ -152,11 +153,13 @@ SymbolBody *SymbolTable<ELFT>::addSynthetic(StringRef Name,
 }
 
 // Add Name as an "ignored" symbol. An ignored symbol is a regular
-// linker-synthesized defined symbol, but it is not recorded to the output
-// file's symbol table. Such symbols are useful for some linker-defined symbols.
+// linker-synthesized defined symbol, but is only defined if needed.
 template <class ELFT>
-SymbolBody *SymbolTable<ELFT>::addIgnored(StringRef Name) {
-  return addAbsolute(Name, ElfSym<ELFT>::Ignored);
+DefinedRegular<ELFT> *SymbolTable<ELFT>::addIgnored(StringRef Name,
+                                                    uint8_t Visibility) {
+  if (!find(Name))
+    return nullptr;
+  return addAbsolute(Name, Visibility);
 }
 
 // Rename SYM as __wrap_SYM. The original symbol is preserved as __real_SYM.
@@ -228,7 +231,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
     return;
   }
 
-  if (New->IsTls != Existing->IsTls) {
+  if (New->isTls() != Existing->isTls()) {
     error("TLS attribute mismatch for symbol: " + conflictMsg(Existing, New));
     return;
   }
@@ -286,10 +289,10 @@ void SymbolTable<ELFT>::addMemberFile(Undefined *Undef, Lazy *L) {
   // symbols and copy information to reduce how many special cases are needed.
   if (Undef->isWeak()) {
     L->setUsedInRegularObj();
-    L->setWeak();
+    L->Binding = Undef->Binding;
+    L->Type = Undef->Type;
 
     // FIXME: Do we need to copy more?
-    L->IsTls |= Undef->IsTls;
     return;
   }
 

@@ -53,21 +53,23 @@ public:
 
   SymbolBody *addUndefined(StringRef Name);
   SymbolBody *addUndefinedOpt(StringRef Name);
-  SymbolBody *addAbsolute(StringRef Name, Elf_Sym &ESym);
+  DefinedRegular<ELFT> *addAbsolute(StringRef Name,
+                                    uint8_t Visibility = llvm::ELF::STV_HIDDEN);
   SymbolBody *addSynthetic(StringRef Name, OutputSectionBase<ELFT> &Section,
                            uintX_t Value, uint8_t Visibility);
-  SymbolBody *addIgnored(StringRef Name);
+  DefinedRegular<ELFT> *addIgnored(StringRef Name,
+                                   uint8_t Visibility = llvm::ELF::STV_HIDDEN);
 
   void scanShlibUndefined();
   SymbolBody *find(StringRef Name);
   void wrap(StringRef Name);
   InputFile *findFile(SymbolBody *B);
+  void resolve(SymbolBody *Body);
 
 private:
   Symbol *insert(SymbolBody *New);
   void addLazy(Lazy *New);
   void addMemberFile(Undefined *Undef, Lazy *L);
-  void resolve(SymbolBody *Body);
   std::string conflictMsg(SymbolBody *Old, SymbolBody *New);
 
   // The order the global symbols are in is not defined. We can use an arbitrary

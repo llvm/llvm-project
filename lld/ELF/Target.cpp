@@ -248,7 +248,7 @@ uint64_t TargetInfo::getImplicitAddend(const uint8_t *Buf,
 }
 
 bool TargetInfo::canRelaxTls(uint32_t Type, const SymbolBody *S) const {
-  if (Config->Shared || (S && !S->IsTls))
+  if (Config->Shared || (S && !S->isTls()))
     return false;
 
   // We know we are producing an executable.
@@ -280,7 +280,7 @@ template <typename ELFT> static bool mayNeedCopy(const SymbolBody &S) {
   auto *SS = dyn_cast<SharedSymbol<ELFT>>(&S);
   if (!SS)
     return false;
-  return SS->Sym.getType() == STT_OBJECT;
+  return SS->isObject();
 }
 
 template <class ELFT>
@@ -303,7 +303,7 @@ bool TargetInfo::refersToGotEntry(uint32_t Type) const { return false; }
 
 TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
                                          const SymbolBody &S) const {
-  if (S.IsGnuIFunc)
+  if (S.isGnuIFunc())
     return Plt_Explicit;
   if (S.isPreemptible() && needsPltImpl(Type))
     return Plt_Explicit;
@@ -330,7 +330,7 @@ TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
   // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
   // R_386_JMP_SLOT, etc).
   if (S.isShared())
-    if (!Config->Pic && S.IsFunc && !refersToGotEntry(Type))
+    if (!Config->Pic && S.isFunc() && !refersToGotEntry(Type))
       return Plt_Implicit;
 
   return Plt_No;
@@ -500,7 +500,7 @@ bool X86TargetInfo::needsCopyRelImpl(uint32_t Type) const {
 }
 
 bool X86TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
-  if (S.IsTls && Type == R_386_TLS_GD)
+  if (S.isTls() && Type == R_386_TLS_GD)
     return Target->canRelaxTls(Type, &S) && S.isPreemptible();
   if (Type == R_386_TLS_GOTIE || Type == R_386_TLS_IE)
     return !canRelaxTls(Type, &S);
@@ -1762,7 +1762,7 @@ bool MipsTargetInfo<ELFT>::needsThunk(uint32_t Type, const InputFile &File,
   // LA25 is required if target file has PIC code
   // or target symbol is a PIC symbol.
   return (D->Section->getFile()->getObj().getHeader()->e_flags & EF_MIPS_PIC) ||
-         (D->Sym.st_other & STO_MIPS_MIPS16) == STO_MIPS_PIC;
+         (D->Other & STO_MIPS_MIPS16) == STO_MIPS_PIC;
 }
 
 template <class ELFT>

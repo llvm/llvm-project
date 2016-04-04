@@ -3,4 +3,7 @@
 // RUN: llvm-readobj -t %t2 | FileCheck %s
 .long _GLOBAL_OFFSET_TABLE_
 
-// CHECK-NOT: Name: _GLOBAL_OFFSET_TABLE_
+// CHECK:      Name: _GLOBAL_OFFSET_TABLE_
+// CHECK-NEXT: Value:
+// CHECK-NEXT: Size: 0
+// CHECK-NEXT: Binding: Local

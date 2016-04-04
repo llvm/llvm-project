@@ -155,9 +155,12 @@ identified.  The improvements since the 3.8 release include:
 
 Fixed bugs:
 
-  Crash when running on compile database with relative source files paths.
+- Crash when running on compile database with relative source files paths.
 
-  Crash when running with the `-fdelayed-template-parsing` flag.
+- Crash when running with the `-fdelayed-template-parsing` flag.
+
+- The ``modernize-use-override`` check: incorrect fix-its placement around
+  ``__declspec`` and other attributes.
 
 Clang-tidy changes from 3.7 to 3.8
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
