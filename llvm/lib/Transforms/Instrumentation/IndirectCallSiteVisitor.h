@@ -28,6 +28,8 @@ struct PGOIndirectCallSiteVisitor
       if (CI->isInlineAsm())
         return;
     }
+    if (isa<Constant>(CS.getCalledValue()))
+      return;
     IndirectCallInsts.push_back(I);
   }
 };

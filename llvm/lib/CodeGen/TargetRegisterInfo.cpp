@@ -388,6 +388,15 @@ bool TargetRegisterInfo::needsStackRealignment(
   return false;
 }
 
+bool TargetRegisterInfo::regmaskSubsetEqual(const uint32_t *mask0,
+                                            const uint32_t *mask1) const {
+  unsigned N = (getNumRegs()+31) / 32;
+  for (unsigned I = 0; I < N; ++I)
+    if ((mask0[I] & mask1[I]) != mask0[I])
+      return false;
+  return true;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void
 TargetRegisterInfo::dumpReg(unsigned Reg, unsigned SubRegIndex,

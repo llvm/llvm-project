@@ -460,6 +460,10 @@ public:
     llvm_unreachable("target does not provide no preserved mask");
   }
 
+  /// Return true if all bits that are set in mask \p mask0 are also set in
+  /// \p mask1.
+  bool regmaskSubsetEqual(const uint32_t *mask0, const uint32_t *mask1) const;
+
   /// Return all the call-preserved register masks defined for this target.
   virtual ArrayRef<const uint32_t *> getRegMasks() const = 0;
   virtual ArrayRef<const char *> getRegMaskNames() const = 0;

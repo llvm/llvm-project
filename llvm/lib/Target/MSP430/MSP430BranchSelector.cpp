@@ -39,6 +39,11 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
+
     const char *getPassName() const override {
       return "MSP430 Branch Selector";
     }

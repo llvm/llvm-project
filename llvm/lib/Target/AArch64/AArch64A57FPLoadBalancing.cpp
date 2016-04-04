@@ -125,6 +125,11 @@ public:
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
+
   const char *getPassName() const override {
     return "A57 FP Anti-dependency breaker";
   }

@@ -260,6 +260,11 @@ void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
         .addImm(15).addReg(SystemZ::R0D);
     break;
 
+  // Emit nothing here but a comment if we can.
+  case SystemZ::MemBarrier:
+    OutStreamer->emitRawComment("MEMBARRIER");
+    return;
+
   default:
     Lower.lower(MI, LoweredMI);
     break;

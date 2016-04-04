@@ -53,6 +53,10 @@ public:
   AArch64RedundantCopyElimination() : MachineFunctionPass(ID) {}
   bool optimizeCopy(MachineBasicBlock *MBB);
   bool runOnMachineFunction(MachineFunction &MF) override;
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
   const char *getPassName() const override {
     return "AArch64 Redundant Copy Elimination";
   }

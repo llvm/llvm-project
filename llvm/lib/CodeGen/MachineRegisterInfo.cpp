@@ -24,8 +24,8 @@ using namespace llvm;
 // Pin the vtable to this file.
 void MachineRegisterInfo::Delegate::anchor() {}
 
-MachineRegisterInfo::MachineRegisterInfo(const MachineFunction *MF)
-  : MF(MF), TheDelegate(nullptr), IsSSA(true), TracksLiveness(true),
+MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
+  : MF(MF), TheDelegate(nullptr), TracksLiveness(true),
     TracksSubRegLiveness(false) {
   unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);

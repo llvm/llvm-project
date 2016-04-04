@@ -58,6 +58,11 @@ struct Filler : public MachineFunctionPass {
     return Changed;
   }
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
+
   void insertDefsUses(MachineBasicBlock::instr_iterator MI,
                       SmallSet<unsigned, 32> &RegDefs,
                       SmallSet<unsigned, 32> &RegUses);

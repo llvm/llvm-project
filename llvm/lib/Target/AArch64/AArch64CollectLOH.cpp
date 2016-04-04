@@ -179,6 +179,11 @@ struct AArch64CollectLOH : public MachineFunctionPass {
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
+
   const char *getPassName() const override {
     return AARCH64_COLLECT_LOH_NAME;
   }

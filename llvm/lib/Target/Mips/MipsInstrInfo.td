@@ -462,8 +462,16 @@ class UImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = []>
 //     uimm5 < uimm5_64, and uimm5 < vsplat_uimm5
 //   This is entirely arbitrary. We need an ordering and what we pick is
 //   unimportant since only one is possible for a given mnemonic.
+def SImm32RelaxedAsmOperandClass
+    : SImmAsmOperandClass<32, []> {
+  let Name = "SImm32_Relaxed";
+  let PredicateMethod = "isAnyImm<32>";
+  let DiagnosticType = "SImm32_Relaxed";
+}
+def SImm32AsmOperandClass
+    : SImmAsmOperandClass<32, [SImm32RelaxedAsmOperandClass]>;
 def ConstantUImm26AsmOperandClass
-    : ConstantUImmAsmOperandClass<26, []>;
+    : ConstantUImmAsmOperandClass<26, [SImm32AsmOperandClass]>;
 def ConstantUImm20AsmOperandClass
     : ConstantUImmAsmOperandClass<20, [ConstantUImm26AsmOperandClass]>;
 def UImm16RelaxedAsmOperandClass
@@ -628,8 +636,6 @@ def simm18_lsl3 : Operand<i32> {
   let DecoderMethod = "DecodeSimm18Lsl3";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
 }
-
-def simm32      : Operand<i32>;
 
 // Zero
 def uimmz       : Operand<i32> {
@@ -805,10 +811,11 @@ def simm7_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = ConstantSImm7Lsl2AsmOperandClass;
 }
 
-def simm16 : Operand<i32> {
-  let DecoderMethod = "DecodeSImmWithOffsetAndScale<16>";
-  let ParserMatchClass = !cast<AsmOperandClass>("SImm16AsmOperandClass");
-}
+foreach I = {16, 32} in
+  def simm # I : Operand<i32> {
+    let DecoderMethod = "DecodeSImmWithOffsetAndScale<" # I # ">";
+    let ParserMatchClass = !cast<AsmOperandClass>("SImm" # I # "AsmOperandClass");
+  }
 
 // Like simm16 but coerces uimm16 to simm16.
 def simm16_relaxed : Operand<i32> {
@@ -819,6 +826,12 @@ def simm16_relaxed : Operand<i32> {
 def simm16_64 : Operand<i64> {
   let DecoderMethod = "DecodeSImmWithOffsetAndScale<16>";
   let ParserMatchClass = !cast<AsmOperandClass>("SImm16AsmOperandClass");
+}
+
+// Like simm32 but coerces uimm32 to simm32.
+def simm32_relaxed : Operand<i32> {
+  let DecoderMethod = "DecodeSImmWithOffsetAndScale<32>";
+  let ParserMatchClass = !cast<AsmOperandClass>("SImm32RelaxedAsmOperandClass");
 }
 
 // This is almost the same as a uimm7 but 0x7f is interpreted as -1.
@@ -2139,20 +2152,26 @@ def : MipsInstAlias<"move $dst, $src",
 }
 def : MipsInstAlias<"bal $offset", (BGEZAL ZERO, brtarget:$offset), 0>,
       ISA_MIPS1_NOT_32R6_64R6;
-def : MipsInstAlias<"addu $rs, $rt, $imm",
-                    (ADDiu GPR32Opnd:$rs, GPR32Opnd:$rt, simm32:$imm), 0>;
-def : MipsInstAlias<"addu $rs, $imm",
-                    (ADDiu GPR32Opnd:$rs, GPR32Opnd:$rs, simm32:$imm), 0>;
-def : MipsInstAlias<"add $rs, $rt, $imm",
-                    (ADDi GPR32Opnd:$rs, GPR32Opnd:$rt, simm32:$imm), 0>,
-                    ISA_MIPS1_NOT_32R6_64R6;
-def : MipsInstAlias<"add $rs, $imm",
-                    (ADDi GPR32Opnd:$rs, GPR32Opnd:$rs, simm32:$imm), 0>,
-                    ISA_MIPS1_NOT_32R6_64R6;
-def : MipsInstAlias<"and $rs, $rt, $imm",
-                    (ANDi GPR32Opnd:$rs, GPR32Opnd:$rt, simm32:$imm), 0>;
-def : MipsInstAlias<"and $rs, $imm",
-                    (ANDi GPR32Opnd:$rs, GPR32Opnd:$rs, simm32:$imm), 0>;
+def : MipsInstAlias<
+          "addu $rs, $rt, $imm",
+          (ADDiu GPR32Opnd:$rs, GPR32Opnd:$rt, simm32_relaxed:$imm), 0>;
+def : MipsInstAlias<
+          "addu $rs, $imm",
+          (ADDiu GPR32Opnd:$rs, GPR32Opnd:$rs, simm32_relaxed:$imm), 0>;
+def : MipsInstAlias<
+          "add $rs, $rt, $imm",
+          (ADDi GPR32Opnd:$rs, GPR32Opnd:$rt, simm32_relaxed:$imm), 0>,
+          ISA_MIPS1_NOT_32R6_64R6;
+def : MipsInstAlias<
+          "add $rs, $imm",
+          (ADDi GPR32Opnd:$rs, GPR32Opnd:$rs, simm32_relaxed:$imm), 0>,
+          ISA_MIPS1_NOT_32R6_64R6;
+def : MipsInstAlias<
+          "and $rs, $rt, $imm",
+          (ANDi GPR32Opnd:$rs, GPR32Opnd:$rt, simm32_relaxed:$imm), 0>;
+def : MipsInstAlias<
+          "and $rs, $imm",
+          (ANDi GPR32Opnd:$rs, GPR32Opnd:$rs, simm32_relaxed:$imm), 0>;
 def : MipsInstAlias<"j $rs", (JR GPR32Opnd:$rs), 0>;
 let Predicates = [NotInMicroMips] in {
 def : MipsInstAlias<"jalr $rs", (JALR RA, GPR32Opnd:$rs), 0>;
@@ -2166,18 +2185,24 @@ def : MipsInstAlias<"negu $rt",
                     (SUBu GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 0>;
 def : MipsInstAlias<"negu $rt, $rs",
                     (SUBu GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>;
-def : MipsInstAlias<"slt $rs, $rt, $imm",
-                    (SLTi GPR32Opnd:$rs, GPR32Opnd:$rt, simm32:$imm), 0>;
-def : MipsInstAlias<"sltu $rt, $rs, $imm",
-                    (SLTiu GPR32Opnd:$rt, GPR32Opnd:$rs, simm32:$imm), 0>;
-def : MipsInstAlias<"xor $rs, $rt, $imm",
-                    (XORi GPR32Opnd:$rs, GPR32Opnd:$rt, simm32:$imm), 0>;
-def : MipsInstAlias<"xor $rs, $imm",
-                    (XORi GPR32Opnd:$rs, GPR32Opnd:$rs, simm32:$imm), 0>;
-def : MipsInstAlias<"or $rs, $rt, $imm",
-                    (ORi GPR32Opnd:$rs, GPR32Opnd:$rt, simm32:$imm), 0>;
-def : MipsInstAlias<"or $rs, $imm",
-                    (ORi GPR32Opnd:$rs, GPR32Opnd:$rs, simm32:$imm), 0>;
+def : MipsInstAlias<
+          "slt $rs, $rt, $imm",
+          (SLTi GPR32Opnd:$rs, GPR32Opnd:$rt, simm32_relaxed:$imm), 0>;
+def : MipsInstAlias<
+          "sltu $rt, $rs, $imm",
+          (SLTiu GPR32Opnd:$rt, GPR32Opnd:$rs, simm32_relaxed:$imm), 0>;
+def : MipsInstAlias<
+          "xor $rs, $rt, $imm",
+          (XORi GPR32Opnd:$rs, GPR32Opnd:$rt, simm32_relaxed:$imm), 0>;
+def : MipsInstAlias<
+          "xor $rs, $imm",
+          (XORi GPR32Opnd:$rs, GPR32Opnd:$rs, simm32_relaxed:$imm), 0>;
+def : MipsInstAlias<
+          "or $rs, $rt, $imm",
+          (ORi GPR32Opnd:$rs, GPR32Opnd:$rt, simm32_relaxed:$imm), 0>;
+def : MipsInstAlias<
+          "or $rs, $imm",
+          (ORi GPR32Opnd:$rs, GPR32Opnd:$rs, simm32_relaxed:$imm), 0>;
 let AdditionalPredicates = [NotInMicroMips] in {
 def : MipsInstAlias<"nop", (SLL ZERO, ZERO, 0), 1>;
 }
@@ -2242,10 +2267,11 @@ def : MipsInstAlias<"sync",
 // Assembler Pseudo Instructions
 //===----------------------------------------------------------------------===//
 
+// We use i32imm on li/la to defer range checking to the assembler.
 class LoadImmediate32<string instr_asm, Operand Od, RegisterOperand RO> :
   MipsAsmPseudoInst<(outs RO:$rt), (ins Od:$imm32),
                      !strconcat(instr_asm, "\t$rt, $imm32")> ;
-def LoadImm32 : LoadImmediate32<"li", simm32, GPR32Opnd>;
+def LoadImm32 : LoadImmediate32<"li", i32imm, GPR32Opnd>;
 
 class LoadAddressFromReg32<string instr_asm, Operand MemOpnd,
                            RegisterOperand RO> :
@@ -2256,7 +2282,7 @@ def LoadAddrReg32 : LoadAddressFromReg32<"la", mem, GPR32Opnd>;
 class LoadAddressFromImm32<string instr_asm, Operand Od, RegisterOperand RO> :
   MipsAsmPseudoInst<(outs RO:$rt), (ins Od:$imm32),
                      !strconcat(instr_asm, "\t$rt, $imm32")> ;
-def LoadAddrImm32 : LoadAddressFromImm32<"la", simm32, GPR32Opnd>;
+def LoadAddrImm32 : LoadAddressFromImm32<"la", i32imm, GPR32Opnd>;
 
 def JalTwoReg : MipsAsmPseudoInst<(outs GPR32Opnd:$rd), (ins GPR32Opnd:$rs),
                       "jal\t$rd, $rs"> ;

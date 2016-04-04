@@ -61,6 +61,10 @@ class HexagonSplitConst32AndConst64 : public MachineFunctionPass {
       return "Hexagon Split Const32s and Const64s";
     }
     bool runOnMachineFunction(MachineFunction &Fn) override;
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
 };
 
 

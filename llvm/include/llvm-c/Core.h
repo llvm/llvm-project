@@ -2057,7 +2057,7 @@ LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count);
  * Obtain the underlying string from a MDString value.
  *
  * @param V Instance to obtain string from.
- * @param Len Memory address which will hold length of returned string.
+ * @param Length Memory address which will hold length of returned string.
  * @return String data in MDString.
  */
 const char *LLVMGetMDString(LLVMValueRef V, unsigned *Length);

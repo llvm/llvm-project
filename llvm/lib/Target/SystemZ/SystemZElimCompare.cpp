@@ -65,6 +65,10 @@ public:
 
   bool processBlock(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &F) override;
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
 
 private:
   Reference getRegReferences(MachineInstr *MI, unsigned Reg);

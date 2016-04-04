@@ -320,7 +320,14 @@ bool FunctionImporter::importFunctions(
     // Find the globals to import
     DenseSet<const GlobalValue *> GlobalsToImport;
     for (auto &GV : *SrcModule) {
-      if (GV.hasName() && ImportGUIDs.count(GV.getGUID())) {
+      if (!GV.hasName())
+        continue;
+      auto GUID = GV.getGUID();
+      auto Import = ImportGUIDs.count(GUID);
+      DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing " << GUID << " "
+                   << GV.getName() << " from " << SrcModule->getSourceFileName()
+                   << "\n");
+      if (Import) {
         GV.materialize();
         GlobalsToImport.insert(&GV);
       }
@@ -329,7 +336,11 @@ bool FunctionImporter::importFunctions(
       if (!GV.hasName())
         continue;
       auto GUID = GV.getGUID();
-      if (ImportGUIDs.count(GUID)) {
+      auto Import = ImportGUIDs.count(GUID);
+      DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing " << GUID << " "
+                   << GV.getName() << " from " << SrcModule->getSourceFileName()
+                   << "\n");
+      if (Import) {
         // Alias can't point to "available_externally". However when we import
         // linkOnceODR the linkage does not change. So we import the alias
         // and aliasee only in this case.
@@ -345,7 +356,11 @@ bool FunctionImporter::importFunctions(
       if (!GV.hasName())
         continue;
       auto GUID = GV.getGUID();
-      if (ImportGUIDs.count(GUID)) {
+      auto Import = ImportGUIDs.count(GUID);
+      DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing " << GUID << " "
+                   << GV.getName() << " from " << SrcModule->getSourceFileName()
+                   << "\n");
+      if (Import) {
         GV.materialize();
         GlobalsToImport.insert(&GV);
       }

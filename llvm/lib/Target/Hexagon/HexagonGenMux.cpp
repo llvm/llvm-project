@@ -49,6 +49,10 @@ namespace {
       MachineFunctionPass::getAnalysisUsage(AU);
     }
     bool runOnMachineFunction(MachineFunction &MF) override;
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
 
   private:
     const HexagonInstrInfo *HII;
@@ -316,4 +320,3 @@ bool HexagonGenMux::runOnMachineFunction(MachineFunction &MF) {
 FunctionPass *llvm::createHexagonGenMux() {
   return new HexagonGenMux();
 }
-

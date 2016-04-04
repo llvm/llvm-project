@@ -192,6 +192,11 @@ public:
       return Changed;
     }
 
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
+
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -204,4 +209,3 @@ INITIALIZE_PASS(PPCEarlyReturn, DEBUG_TYPE,
 char PPCEarlyReturn::ID = 0;
 FunctionPass*
 llvm::createPPCEarlyReturnPass() { return new PPCEarlyReturn(); }
-

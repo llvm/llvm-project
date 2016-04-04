@@ -52,10 +52,18 @@ define weak_odr dllexport void @weak1() {
 ; CHECK: .globl WeakVar2
 @WeakVar2 = weak_odr dllexport unnamed_addr constant i32 1
 
+; CHECK: .bss
+; CHECK: .globl WeakVar3
+@WeakVar3 = weak_odr dllexport global i32 0, align 4
+
 
 ; CHECK: .globl alias
 ; CHECK: alias = notExported
 @alias = dllexport alias void(), void()* @notExported
+
+; CHECK: .globl aliasNotExported
+; CHECK: aliasNotExported = f1
+@aliasNotExported = alias void(), void()* @f1
 
 ; CHECK: .globl alias2
 ; CHECK: alias2 = f1
@@ -72,10 +80,22 @@ define weak_odr dllexport void @weak1() {
 @blob = global [6 x i8] c"\B8*\00\00\00\C3", section ".text", align 16
 @blob_alias = dllexport alias i32 (), bitcast ([6 x i8]* @blob to i32 ()*)
 
-; Verify item that should not be exported does not appear in the export table.
+@exportedButNotDefinedVariable = external dllexport global i32
+declare dllexport void @exportedButNotDefinedFunction()
+define void @foo() {
+entry:
+  store i32 4, i32* @exportedButNotDefinedVariable, align 4
+  call void @exportedButNotDefinedFunction()
+  ret void
+}
+
+; Verify items that should not be exported do not appear in the export table.
 ; We use a separate check prefix to avoid confusion between -NOT and -SAME.
 ; NOTEXPORTED: .section .drectve
 ; NOTEXPORTED-NOT: notExported
+; NOTEXPORTED-NOT: aliasNotExported
+; NOTEXPORTED-NOT: exportedButNotDefinedVariable
+; NOTEXPORTED-NOT: exportedButNotDefinedFunction
 
 ; CHECK: .section .drectve
 ; WIN32: /EXPORT:f1
@@ -88,6 +108,7 @@ define weak_odr dllexport void @weak1() {
 ; WIN32-SAME: /EXPORT:Var3,DATA
 ; WIN32-SAME: /EXPORT:WeakVar1,DATA
 ; WIN32-SAME: /EXPORT:WeakVar2,DATA
+; WIN32-SAME: /EXPORT:WeakVar3,DATA
 ; WIN32-SAME: /EXPORT:alias
 ; WIN32-SAME: /EXPORT:alias2
 ; WIN32-SAME: /EXPORT:alias3
@@ -103,6 +124,7 @@ define weak_odr dllexport void @weak1() {
 ; MINGW-SAME: -export:Var3,data
 ; MINGW-SAME: -export:WeakVar1,data
 ; MINGW-SAME: -export:WeakVar2,data
+; MINGW-SAME: -export:WeakVar3,data
 ; MINGW-SAME: -export:alias
 ; MINGW-SAME: -export:alias2
 ; MINGW-SAME: -export:alias3

@@ -105,8 +105,8 @@ public:
   // that the property hold, but not that it does not hold.
 
   // Property descriptions:
-  // IsSSA (currently unused, intended to eventually replace
-  // MachineRegisterInfo::isSSA())
+  // IsSSA: True when the machine function is in SSA form and virtual registers
+  // have a single def.
   // TracksLiveness: (currently unsued, intended to eventually replace
   // MachineRegisterInfo::tracksLiveness())
   // AllVRegsAllocated: All virtual registers have been allocated; i.e. all

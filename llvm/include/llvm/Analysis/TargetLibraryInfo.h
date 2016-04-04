@@ -20,7 +20,7 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-/// VecDesc - Describes a possible vectorization of a function.
+/// Describes a possible vectorization of a function.
 /// Function 'VectorFnName' is equivalent to 'ScalarFnName' vectorized
 /// by a factor 'VectorizationFactor'.
 struct VecDesc {
@@ -38,7 +38,7 @@ struct VecDesc {
     };
   }
 
-/// \brief Implementation of the target library information.
+/// Implementation of the target library information.
 ///
 /// This class constructs tables that hold the target library information and
 /// make it available. However, it is somewhat expensive to compute and only
@@ -71,7 +71,7 @@ class TargetLibraryInfoImpl {
   std::vector<VecDesc> ScalarDescs;
 
 public:
-  /// \brief  List of known vector-functions libraries.
+  /// List of known vector-functions libraries.
   ///
   /// The vector-functions library defines, which functions are vectorizable
   /// and with which factor. The library can be specified by either frontend,
@@ -92,24 +92,24 @@ public:
   TargetLibraryInfoImpl &operator=(const TargetLibraryInfoImpl &TLI);
   TargetLibraryInfoImpl &operator=(TargetLibraryInfoImpl &&TLI);
 
-  /// \brief Searches for a particular function name.
+  /// Searches for a particular function name.
   ///
   /// If it is one of the known library functions, return true and set F to the
   /// corresponding value.
   bool getLibFunc(StringRef funcName, LibFunc::Func &F) const;
 
-  /// \brief Forces a function to be marked as unavailable.
+  /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc::Func F) {
     setState(F, Unavailable);
   }
 
-  /// \brief Forces a function to be marked as available.
+  /// Forces a function to be marked as available.
   void setAvailable(LibFunc::Func F) {
     setState(F, StandardName);
   }
 
-  /// \brief Forces a function to be marked as available and provide an
-  /// alternate name that must be used.
+  /// Forces a function to be marked as available and provide an alternate name
+  /// that must be used.
   void setAvailableWithName(LibFunc::Func F, StringRef Name) {
     if (StandardNames[F] != Name) {
       setState(F, CustomName);
@@ -120,48 +120,47 @@ public:
     }
   }
 
-  /// \brief Disables all builtins.
+  /// Disables all builtins.
   ///
   /// This can be used for options like -fno-builtin.
   void disableAllFunctions();
 
-  /// addVectorizableFunctions - Add a set of scalar -> vector mappings,
-  /// queryable via getVectorizedFunction and getScalarizedFunction.
+  /// Add a set of scalar -> vector mappings, queryable via
+  /// getVectorizedFunction and getScalarizedFunction.
   void addVectorizableFunctions(ArrayRef<VecDesc> Fns);
 
   /// Calls addVectorizableFunctions with a known preset of functions for the
   /// given vector library.
   void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib);
 
-  /// isFunctionVectorizable - Return true if the function F has a
-  /// vector equivalent with vectorization factor VF.
+  /// Return true if the function F has a vector equivalent with vectorization
+  /// factor VF.
   bool isFunctionVectorizable(StringRef F, unsigned VF) const {
     return !getVectorizedFunction(F, VF).empty();
   }
 
-  /// isFunctionVectorizable - Return true if the function F has a
-  /// vector equivalent with any vectorization factor.
+  /// Return true if the function F has a vector equivalent with any
+  /// vectorization factor.
   bool isFunctionVectorizable(StringRef F) const;
 
-  /// getVectorizedFunction - Return the name of the equivalent of
-  /// F, vectorized with factor VF. If no such mapping exists,
-  /// return the empty string.
+  /// Return the name of the equivalent of F, vectorized with factor VF. If no
+  /// such mapping exists, return the empty string.
   StringRef getVectorizedFunction(StringRef F, unsigned VF) const;
 
-  /// isFunctionScalarizable - Return true if the function F has a
-  /// scalar equivalent, and set VF to be the vectorization factor.
+  /// Return true if the function F has a scalar equivalent, and set VF to be
+  /// the vectorization factor.
   bool isFunctionScalarizable(StringRef F, unsigned &VF) const {
     return !getScalarizedFunction(F, VF).empty();
   }
 
-  /// getScalarizedFunction - Return the name of the equivalent of
-  /// F, scalarized. If no such mapping exists, return the empty string.
+  /// Return the name of the equivalent of F, scalarized. If no such mapping
+  /// exists, return the empty string.
   ///
   /// Set VF to the vectorization factor.
   StringRef getScalarizedFunction(StringRef F, unsigned &VF) const;
 };
 
-/// \brief Provides information about what library functions are available for
+/// Provides information about what library functions are available for
 /// the current target.
 ///
 /// This both allows optimizations to handle them specially and frontends to
@@ -187,7 +186,7 @@ public:
     return *this;
   }
 
-  /// \brief Searches for a particular function name.
+  /// Searches for a particular function name.
   ///
   /// If it is one of the known library functions, return true and set F to the
   /// corresponding value.
@@ -195,7 +194,7 @@ public:
     return Impl->getLibFunc(funcName, F);
   }
 
-  /// \brief Tests whether a library function is available.
+  /// Tests whether a library function is available.
   bool has(LibFunc::Func F) const {
     return Impl->getState(F) != TargetLibraryInfoImpl::Unavailable;
   }
@@ -209,8 +208,8 @@ public:
     return Impl->getVectorizedFunction(F, VF);
   }
 
-  /// \brief Tests if the function is both available and a candidate for
-  /// optimized code generation.
+  /// Tests if the function is both available and a candidate for optimized code
+  /// generation.
   bool hasOptimizedCodeGen(LibFunc::Func F) const {
     if (Impl->getState(F) == TargetLibraryInfoImpl::Unavailable)
       return false;
@@ -251,14 +250,14 @@ public:
     return Impl->CustomNames.find(F)->second;
   }
 
-  /// \brief Handle invalidation from the pass manager.
+  /// Handle invalidation from the pass manager.
   ///
   /// If we try to invalidate this info, just return false. It cannot become
   /// invalid even if the module changes.
   bool invalidate(Module &, const PreservedAnalyses &) { return false; }
 };
 
-/// \brief Analysis pass providing the \c TargetLibraryInfo.
+/// Analysis pass providing the \c TargetLibraryInfo.
 ///
 /// Note that this pass's result cannot be invalidated, it is immutable for the
 /// life of the module.
@@ -266,13 +265,13 @@ class TargetLibraryAnalysis : public AnalysisInfoMixin<TargetLibraryAnalysis> {
 public:
   typedef TargetLibraryInfo Result;
 
-  /// \brief Default construct the library analysis.
+  /// Default construct the library analysis.
   ///
   /// This will use the module's triple to construct the library info for that
   /// module.
   TargetLibraryAnalysis() {}
 
-  /// \brief Construct a library analysis with preset info.
+  /// Construct a library analysis with preset info.
   ///
   /// This will directly copy the preset info into the result without
   /// consulting the module's triple.

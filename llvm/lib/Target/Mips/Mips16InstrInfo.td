@@ -483,13 +483,11 @@ class SelT<string op1, string op2>:
 //
 // 32 bit constant
 //
-def imm32: Operand<i32>;
-
 def Constant32:
-  MipsPseudo16<(outs), (ins imm32:$imm), "\t.word $imm", []>;
+  MipsPseudo16<(outs), (ins simm32:$imm), "\t.word $imm", []>;
 
 def LwConstant32:
-  MipsPseudo16<(outs CPU16Regs:$rx), (ins imm32:$imm, imm32:$constid),
+  MipsPseudo16<(outs CPU16Regs:$rx), (ins simm32:$imm, simm32:$constid),
     "lw\t$rx, 1f\n\tb\t2f\n\t.align\t2\n1: \t.word\t$imm\n2:", []>;
 
 
