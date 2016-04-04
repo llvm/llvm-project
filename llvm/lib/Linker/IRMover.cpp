@@ -1043,28 +1043,22 @@ void IRLinker::mapUnneededSubprograms() {
   for (unsigned I = 0, E = CompileUnits->getNumOperands(); I != E; ++I) {
     auto *CU = cast<DICompileUnit>(CompileUnits->getOperand(I));
     assert(CU && "Expected valid compile unit");
-    // Ensure that we don't remove subprograms referenced by DIImportedEntity.
-    // It is not legal to have a DIImportedEntity with a null entity or scope.
-    // Using getDISubprogram handles the case where the subprogram is reached
-    // via an intervening DILexicalBlock.
+
+    // Seed the ValueMap with the imported entities, in case they reference new
+    // subprograms.
     // FIXME: The DISubprogram for functions not linked in but kept due to
     // being referenced by a DIImportedEntity should also get their
     // IsDefinition flag is unset.
-    SmallPtrSet<DISubprogram *, 8> ImportedEntitySPs;
-    for (auto *IE : CU->getImportedEntities()) {
-      if (auto *SP = getDISubprogram(dyn_cast<MDNode>(IE->getEntity())))
-        ImportedEntitySPs.insert(SP);
-      if (auto *SP = getDISubprogram(dyn_cast<MDNode>(IE->getScope())))
-        ImportedEntitySPs.insert(SP);
-    }
+    if (MDTuple *IEs = CU->getImportedEntities().get())
+      (void)MapMetadata(IEs, ValueMap,
+                        ValueMapperFlags | RF_NullMapMissingGlobalValues,
+                        &TypeMap, &GValMaterializer);
 
-    // Try to insert nullptr into the map for any SP not referenced from
-    // functions and not in the imported entities.  If the insertino succeeded,
-    // set HasUnneededSPs.
+    // Try to insert nullptr into the map for any SP not already mapped.  If
+    // the insertion succeeds, we don't need this subprogram.
     for (auto *Op : CU->getSubprograms())
-      if (!ImportedEntitySPs.count(Op))
-        if (ValueMap.MD().insert(std::make_pair(Op, TrackingMDRef())).second)
-          HasUnneededSPs = true;
+      if (ValueMap.MD().insert(std::make_pair(Op, TrackingMDRef())).second)
+        HasUnneededSPs = true;
   }
 }
 
