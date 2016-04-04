@@ -357,11 +357,10 @@ public:
     Params.push_back(
       Ctx.getCanonicalType(Ctx.getPointerType(Ctx.CharTy.withConst())));
     llvm::FunctionType *FTy =
-        Types.GetFunctionType(Types.arrangeLLVMFunctionInfo(
+        Types.GetFunctionType(
+          Types.arrangeBuiltinFunctionDeclaration(
                                 Ctx.getCanonicalType(Ctx.getObjCClassType()),
-				false, false, Params,
-				FunctionType::ExtInfo(),
-				RequiredArgs::All));
+                                Params));
     return CGM.CreateRuntimeFunction(FTy, "objc_lookUpClass");
   }
 

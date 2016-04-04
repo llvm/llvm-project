@@ -218,10 +218,6 @@ public:
   /// gets assigned to a class.
   void RefreshTypeCacheForClass(const CXXRecordDecl *RD);
 
-  /// getNullaryFunctionInfo - Get the function info for a void()
-  /// function with standard CC.
-  const CGFunctionInfo &arrangeNullaryFunction();
-
   // The arrangement methods are split into three families:
   //   - those meant to drive the signature and prologue/epilogue
   //     of a function declaration or definition,
