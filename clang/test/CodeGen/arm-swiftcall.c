@@ -47,7 +47,7 @@ void test_context_error_1() {
 // CHECK:       [[TEMP:%.*]] = alloca swifterror float*, align 4
 // CHECK:       [[T0:%.*]] = load float*, float** [[ERROR]], align 4
 // CHECK:       store float* [[T0]], float** [[TEMP]], align 4
-// CHECK:       call [[SWIFTCC:cc16]] void @context_error_1(i32* swiftself [[X]], float** swifterror [[TEMP]])
+// CHECK:       call [[SWIFTCC:swiftcc]] void @context_error_1(i32* swiftself [[X]], float** swifterror [[TEMP]])
 // CHECK:       [[T0:%.*]] = load float*, float** [[TEMP]], align 4
 // CHECK:       store float* [[T0]], float** [[ERROR]], align 4
 
