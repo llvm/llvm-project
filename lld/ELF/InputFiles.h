@@ -129,7 +129,7 @@ public:
 
   // The number is the offset in the string table. It will be used as the
   // st_name of the symbol.
-  std::vector<std::pair<const Elf_Sym *, unsigned>> KeptLocalSyms;
+  std::vector<std::pair<const DefinedRegular<ELFT> *, unsigned>> KeptLocalSyms;
 
 private:
   void initializeSections(llvm::DenseSet<StringRef> &ComdatGroups);

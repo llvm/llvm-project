@@ -43,15 +43,13 @@ uint32_t
 access_pool (bool flag = false)
 {
     static std::mutex g_access_mutex;
-    if (!flag)
-        g_access_mutex.lock();
+    g_access_mutex.lock();
 
     char old_val = *g_char_ptr;
     if (flag)
         do_bad_thing_with_location(g_char_ptr, old_val + 1);
 
-    if (!flag)
-        g_access_mutex.unlock();
+    g_access_mutex.unlock();
     return *g_char_ptr;
 }
 

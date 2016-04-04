@@ -25,8 +25,8 @@ __start:
 #                                                  ^-- %lo(0x37ff0-0x20004+4)
 
 # EXE: SYMBOL TABLE:
-# EXE: 00037ff0     *ABS*   00000000 _gp
 # EXE: 00020000     .text   00000000 __start
+# EXE: 00037ff0     *ABS*   00000000 _gp
 # EXE: 00020010     .text   00000000 _foo
 
 # SO:      Disassembly of section .text:

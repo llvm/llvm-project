@@ -72,8 +72,9 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) {
 }
 
 template <class ELFT>
-typename ELFT::uint InputSectionBase<ELFT>::getOffset(const Elf_Sym &Sym) {
-  return getOffset(Sym.st_value);
+typename ELFT::uint
+InputSectionBase<ELFT>::getOffset(const DefinedRegular<ELFT> &Sym) {
+  return getOffset(Sym.Value);
 }
 
 // Returns a section that Rel relocation is pointing to.
@@ -305,7 +306,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
         SymVA = getMipsGotVA<ELFT>(Body, SymVA, BufLoc);
       else
         SymVA = Body.getGotVA<ELFT>() + A;
-      if (Body.IsTls)
+      if (Body.isTls())
         Type = Target->getTlsGotRel(Type);
     } else if (Target->isSizeRel(Type) && Body.isPreemptible()) {
       // A SIZE relocation is supposed to set a symbol size, but if a symbol

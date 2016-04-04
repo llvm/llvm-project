@@ -3,12 +3,11 @@
 readability-identifier-naming
 =============================
 
-
 Checks for identifiers naming style mismatch.
 
 This check will try to enforce coding guidelines on the identifiers naming.
-It supports ``lower_case``, ``UPPER_CASE``, ``camelBack`` and ``CamelCase`` casing
-and tries to convert from one to another if a mismatch is detected.
+It supports `lower_case`, `UPPER_CASE`, `camelBack` and `CamelCase` casing and
+tries to convert from one to another if a mismatch is detected.
 
 It also supports a fixed prefix and suffix that will be prepended or
 appended to the identifiers, regardless of the casing.

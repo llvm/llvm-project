@@ -11,10 +11,13 @@
 
 # REQUIRES: mips
 
-# INT-SO-NOT:  Name: _gp_disp
+# INT-SO:      Name: _gp_disp
+# INT-SO-NEXT: Value:
+# INT-SO-NEXT: Size:
+# INT-SO-NEXT: Binding: Local
 
 # EXT-SO:      Name: _gp_disp
-# EXT-SO-NEXT: Value: 0x20010
+# EXT-SO-NEXT: Value: 0x20000
 
 # DIS:      Disassembly of section .text:
 # DIS-NEXT: __start:

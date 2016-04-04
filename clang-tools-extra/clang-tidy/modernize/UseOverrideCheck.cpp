@@ -95,9 +95,9 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
                    : "'override' is";
     StringRef Correct = HasFinal ? "'final'" : "'override'";
 
-    Message =
-        (llvm::Twine(Redundant) +
-         " redundant since the function is already declared " + Correct).str();
+    Message = (llvm::Twine(Redundant) +
+               " redundant since the function is already declared " + Correct)
+                  .str();
   }
 
   DiagnosticBuilder Diag = diag(Method->getLocation(), Message);
@@ -118,9 +118,11 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   if (!HasFinal && !HasOverride) {
     SourceLocation InsertLoc;
     StringRef ReplacementText = "override ";
+    SourceLocation MethodLoc = Method->getLocation();
 
     for (Token T : Tokens) {
-      if (T.is(tok::kw___attribute)) {
+      if (T.is(tok::kw___attribute) &&
+          !Sources.isBeforeInTranslationUnit(T.getLocation(), MethodLoc)) {
         InsertLoc = T.getLocation();
         break;
       }
@@ -128,11 +130,12 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
 
     if (Method->hasAttrs()) {
       for (const clang::Attr *A : Method->getAttrs()) {
-        if (!A->isImplicit()) {
+        if (!A->isImplicit() && !A->isInherited()) {
           SourceLocation Loc =
               Sources.getExpansionLoc(A->getRange().getBegin());
-          if (!InsertLoc.isValid() ||
-              Sources.isBeforeInTranslationUnit(Loc, InsertLoc))
+          if ((!InsertLoc.isValid() ||
+               Sources.isBeforeInTranslationUnit(Loc, InsertLoc)) &&
+              !Sources.isBeforeInTranslationUnit(Loc, MethodLoc))
             InsertLoc = Loc;
         }
       }
@@ -163,6 +166,9 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
                                 Tokens.back().is(tok::kw_delete)) &&
           GetText(Tokens[Tokens.size() - 2], Sources) == "=") {
         InsertLoc = Tokens[Tokens.size() - 2].getLocation();
+        // Check if we need to insert a space.
+        if ((Tokens[Tokens.size() - 2].getFlags() & Token::LeadingSpace) == 0)
+          ReplacementText = " override ";
       } else if (GetText(Tokens.back(), Sources) == "ABSTRACT") {
         InsertLoc = Tokens.back().getLocation();
       }

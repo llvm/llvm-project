@@ -56,6 +56,7 @@ struct Configuration {
   bool BsymbolicFunctions;
   bool BuildId;
   bool Demangle = true;
+  bool DisableVerify;
   bool DiscardAll;
   bool DiscardLocals;
   bool DiscardNone;

@@ -1,9 +1,12 @@
 ; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops \
 ; RUN:     < %s 2>&1 | FileCheck %s
 
-; We build scops from a region of for.body->B13 having successor nodes
-; of following form and check that the domain construction does not take a huge
-; amount of time.
+; We build a scop from the region for.body->B13. The CFG is of the
+; following form. The test checks that the condition construction does not take
+; a huge amount of time. While we can propagate the domain constraints from
+; B(X) to B(X+1) the conditions in B(X+1) will exponentially grow the number
+; of needed constraints (it is basically the condition of B(X) + one smax),
+; thus we should bail out at some point.
 ;
 ; CHECK: Low complexity assumption: {  : 1 = 0 }
 

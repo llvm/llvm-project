@@ -132,7 +132,7 @@ template <class ELFT> uint64_t ICF<ELFT>::getHash(InputSection<ELFT> *S) {
 
 // Returns true if Sec is subject of ICF.
 template <class ELFT> bool ICF<ELFT>::isEligible(InputSectionBase<ELFT> *Sec) {
-  if (!Sec || Sec == InputSection<ELFT>::Discarded || !Sec->Live)
+  if (!Sec || Sec == &InputSection<ELFT>::Discarded || !Sec->Live)
     return false;
   auto *S = dyn_cast<InputSection<ELFT>>(Sec);
   if (!S)
@@ -270,7 +270,7 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A,
     auto *DB = dyn_cast<DefinedRegular<ELFT>>(&SB);
     if (!DA || !DB)
       return false;
-    if (DA->Sym.st_value != DB->Sym.st_value)
+    if (DA->Value != DB->Value)
       return false;
     InputSection<ELFT> *X = dyn_cast<InputSection<ELFT>>(DA->Section);
     InputSection<ELFT> *Y = dyn_cast<InputSection<ELFT>>(DB->Section);

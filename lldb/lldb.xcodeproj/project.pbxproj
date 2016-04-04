@@ -5971,7 +5971,7 @@
 /* Begin PBXLegacyTarget section */
 		2387551E1C24974600CCE8C3 /* lldb-python-test-suite */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb --results-formatter lldbsuite.test.xunit_formatter.XunitFormatter --results-file $(BUILD_DIR)/test-results.xml --rerun-all-issues --env TERM=vt100 -O--xpass=ignore";
+			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb -C $(LLDB_PYTHON_TESTSUITE_CC) --results-formatter lldbsuite.test.xunit_formatter.XunitFormatter --results-file $(BUILD_DIR)/test-results.xml --rerun-all-issues --env TERM=vt100 -O--xpass=ignore";
 			buildConfigurationList = 238755241C24974600CCE8C3 /* Build configuration list for PBXLegacyTarget "lldb-python-test-suite" */;
 			buildPhases = (
 			);
@@ -6007,6 +6007,7 @@
 				239504D01BDD451400963CEA /* Sources */,
 				239504D11BDD451400963CEA /* Frameworks */,
 				239504D21BDD451400963CEA /* CopyFiles */,
+				23B9815E1CB2E2F90059938A /* Run gtests */,
 			);
 			buildRules = (
 			);
@@ -6239,6 +6240,20 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		23B9815E1CB2E2F90059938A /* Run gtests */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Run gtests";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Run the just-built gtest executable\n\n# Uncomment this to see the steps in action\n# set -x\n\n# We need to hide the lldb.py that goes into BUILT_PRODUCTS\n# because it will conflict with finding the lldb module later,\n# which causes the python exception tests to fail.\nif [ -f \"${BUILT_PRODUCTS_DIR}/lldb.py\" ]; then\n    mv -f \"${BUILT_PRODUCTS_DIR}/lldb.py\" \"${BUILT_PRODUCTS_DIR}/park.lldb.py\"\nfi\n\n# Tell lldb-gtest where to find the lldb package\nexport PYTHONPATH=${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources/Python\n\n# We must redirect stdin to /dev/null: without this, xcodebuild\n# will wait forever for input when we run the TestExceptionStateChecking\n# test.\n${BUILT_PRODUCTS_DIR}/lldb-gtest < /dev/null\nRETCODE=$?\n\nif [ -f \"${BUILT_PRODUCTS_DIR}/park.lldb.py\" ]; then\nmv -f \"${BUILT_PRODUCTS_DIR}/park.lldb.py\" \"${BUILT_PRODUCTS_DIR}/lldb.py\"\nfi\n\nexit ${RETCODE}";
+		};
 		261B5A7511C3FA6F00AABD0A /* Fixup Framework Headers */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -7472,6 +7487,7 @@
 				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				LLDB_PYTHON_TESTSUITE_CC = "$(LLVM_BUILD_DIR)/x86_64/bin/clang";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -7500,6 +7516,7 @@
 				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				LLDB_PYTHON_TESTSUITE_CC = "$(LLVM_BUILD_DIR)/x86_64/bin/clang";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -7520,6 +7537,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				LLDB_PYTHON_TESTSUITE_CC = "$(LLVM_BUILD_DIR)/x86_64/bin/clang";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -7540,6 +7558,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				LLDB_PYTHON_TESTSUITE_CC = "$(LLVM_BUILD_DIR)/x86_64/bin/clang";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";

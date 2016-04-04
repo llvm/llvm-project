@@ -203,6 +203,7 @@ def plugin_opt_eq : Joined<["--", "-"], "plugin-opt=">;
 // Options listed below are silently ignored for now for compatibility.
 def fatal_warnings : Flag<["--"], "fatal-warnings">;
 def no_add_needed : Flag<["--"], "no-add-needed">;
+def no_dynamic_linker : Flag<["--"], "no-dynamic-linker">;
 def no_fatal_warnings : Flag<["--"], "no-fatal-warnings">;
 def no_warn_common : Flag<["--", "-"], "no-warn-common">;
 def no_warn_mismatch : Flag<["--"], "no-warn-mismatch">;
@@ -215,5 +216,7 @@ def G : Separate<["-"], "G">;
 // Aliases for ignored options
 def alias_version_script_version_script : Joined<["--"], "version-script=">, Alias<version_script>;
 
-// Debugging options
+// Debugging/developer options
+def disable_verify : Flag<["-"], "disable-verify">;
+def mllvm : Separate<["-"], "mllvm">;
 def save_temps : Flag<["-"], "save-temps">;

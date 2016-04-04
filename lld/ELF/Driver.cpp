@@ -80,11 +80,11 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
   for (const ErrorOr<Archive::Child> &COrErr : File->children()) {
     Archive::Child C = check(COrErr, "could not get the child of the archive " +
                                          File->getFileName());
-    MemoryBufferRef Mb =
+    MemoryBufferRef MBRef =
         check(C.getMemoryBufferRef(),
               "could not get the buffer for a child of the archive " +
                   File->getFileName());
-    V.push_back(Mb);
+    V.push_back(MBRef);
   }
 
   // Take ownership of memory buffers created for members of thin archives.
@@ -142,6 +142,24 @@ void LinkerDriver::addLibrary(StringRef Name) {
     addFile(Path);
 }
 
+// This function is called on startup. We need this for LTO since
+// LTO calls LLVM functions to compile bitcode files to native code.
+// Technically this can be delayed until we read bitcode files, but
+// we don't bother to do lazily because the initialization is fast.
+static void initLLVM(opt::InputArgList &Args) {
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
+
+  // Parse and evaluate -mllvm options.
+  std::vector<const char *> V;
+  V.push_back("lld (LLVM option parsing)");
+  for (auto *Arg : Args.filtered(OPT_mllvm))
+    V.push_back(Arg->getValue());
+  cl::ParseCommandLineOptions(V.size(), V.data());
+}
+
 // Some command line options or some combinations of them are not allowed.
 // This function checks for such errors.
 static void checkOptions(opt::InputArgList &Args) {
@@ -156,17 +174,16 @@ static void checkOptions(opt::InputArgList &Args) {
   if (Config->Pie && Config->Shared)
     error("-shared and -pie may not be used together");
 
-  if (!Config->Relocatable)
-    return;
-
-  if (Config->Shared)
-    error("-r and -shared may not be used together");
-  if (Config->GcSections)
-    error("-r and --gc-sections may not be used together");
-  if (Config->ICF)
-    error("-r and --icf may not be used together");
-  if (Config->Pie)
-    error("-r and -pie may not be used together");
+  if (Config->Relocatable) {
+    if (Config->Shared)
+      error("-r and -shared may not be used together");
+    if (Config->GcSections)
+      error("-r and --gc-sections may not be used together");
+    if (Config->ICF)
+      error("-r and --icf may not be used together");
+    if (Config->Pie)
+      error("-r and -pie may not be used together");
+  }
 }
 
 static StringRef
@@ -205,6 +222,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     return;
   }
 
+  initLLVM(Args);
   readConfigs(Args);
   createFiles(Args);
   checkOptions(Args);
@@ -252,6 +270,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
   Config->BuildId = Args.hasArg(OPT_build_id);
   Config->Demangle = !Args.hasArg(OPT_no_demangle);
+  Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->DiscardAll = Args.hasArg(OPT_discard_all);
   Config->DiscardLocals = Args.hasArg(OPT_discard_locals);
   Config->DiscardNone = Args.hasArg(OPT_discard_none);
@@ -283,6 +302,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   Config->Optimize = getInteger(Args, OPT_O, 0);
   Config->LtoO = getInteger(Args, OPT_lto_O, 2);
+  if (Config->LtoO > 3)
+    error("invalid optimization level for LTO: " + getString(Args, OPT_lto_O));
 
   Config->ZExecStack = hasZOption(Args, "execstack");
   Config->ZNodelete = hasZOption(Args, "nodelete");
@@ -345,23 +366,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     error("no input files.");
 }
 
-template <class ELFT> static void initSymbols() {
-  ElfSym<ELFT>::Etext.setBinding(STB_GLOBAL);
-  ElfSym<ELFT>::Edata.setBinding(STB_GLOBAL);
-  ElfSym<ELFT>::End.setBinding(STB_GLOBAL);
-  ElfSym<ELFT>::Ignored.setBinding(STB_WEAK);
-  ElfSym<ELFT>::Ignored.setVisibility(STV_HIDDEN);
-}
-
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
-  // For LTO
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
-  InitializeAllAsmPrinters();
-  InitializeAllAsmParsers();
-
-  initSymbols<ELFT>();
-
   SymbolTable<ELFT> Symtab;
   std::unique_ptr<TargetInfo> TI(createTarget());
   Target = TI.get();
@@ -375,21 +380,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
       Config->EMachine != EM_AMDGPU)
     Config->Entry = Config->EMachine == EM_MIPS ? "__start" : "_start";
 
-  // In the assembly for 32 bit x86 the _GLOBAL_OFFSET_TABLE_ symbol
-  // is magical and is used to produce a R_386_GOTPC relocation.
-  // The R_386_GOTPC relocation value doesn't actually depend on the
-  // symbol value, so it could use an index of STN_UNDEF which, according
-  // to the spec, means the symbol value is 0.
-  // Unfortunately both gas and MC keep the _GLOBAL_OFFSET_TABLE_ symbol in
-  // the object file.
-  // The situation is even stranger on x86_64 where the assembly doesn't
-  // need the magical symbol, but gas still puts _GLOBAL_OFFSET_TABLE_ as
-  // an undefined symbol in the .o files.
-  // Given that the symbol is effectively unused, we just create a dummy
-  // hidden one to avoid the undefined symbol error.
-  if (!Config->Relocatable)
-    Symtab.addIgnored("_GLOBAL_OFFSET_TABLE_");
-
   if (!Config->Entry.empty()) {
     // Set either EntryAddr (if S is a number) or EntrySym (otherwise).
     StringRef S = Config->Entry;
@@ -398,20 +388,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   }
 
   if (Config->EMachine == EM_MIPS) {
-    // On MIPS O32 ABI, _gp_disp is a magic symbol designates offset between
-    // start of function and 'gp' pointer into GOT.
-    Config->MipsGpDisp = Symtab.addIgnored("_gp_disp");
-    // The __gnu_local_gp is a magic symbol equal to the current value of 'gp'
-    // pointer. This symbol is used in the code generated by .cpload pseudo-op
-    // in case of using -mno-shared option.
-    // https://sourceware.org/ml/binutils/2004-12/msg00094.html
-    Config->MipsLocalGp = Symtab.addIgnored("__gnu_local_gp");
-
     // Define _gp for MIPS. st_value of _gp symbol will be updated by Writer
     // so that it points to an absolute address which is relative to GOT.
     // See "Global Data Symbols" in Chapter 6 in the following document:
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-    Symtab.addAbsolute("_gp", ElfSym<ELFT>::MipsGp);
+    ElfSym<ELFT>::MipsGp = Symtab.addAbsolute("_gp", STV_DEFAULT);
   }
 
   for (std::unique_ptr<InputFile> &F : Files)
@@ -422,13 +403,17 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (StringRef S : Config->Undefined)
     Symtab.addUndefinedOpt(S);
 
+  // -save-temps creates a file based on the output file name so we want
+  // to set it right before LTO. This code can't be moved to option parsing
+  // because linker scripts can override the output filename using the
+  // OUTPUT() directive.
+  if (Config->OutputFile.empty())
+    Config->OutputFile = "a.out";
+
   Symtab.addCombinedLtoObject();
 
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());
-
-  if (Config->OutputFile.empty())
-    Config->OutputFile = "a.out";
 
   // Write the result to the file.
   Symtab.scanShlibUndefined();

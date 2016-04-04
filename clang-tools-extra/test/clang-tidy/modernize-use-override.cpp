@@ -21,6 +21,7 @@ struct Base {
   virtual void d2();
   virtual void e() = 0;
   virtual void f() = 0;
+  virtual void f2() const = 0;
   virtual void g() = 0;
 
   virtual void j() const;
@@ -74,7 +75,11 @@ public:
 
   virtual void f()=0;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
-  // CHECK-FIXES: {{^}}  void f()override =0;
+  // CHECK-FIXES: {{^}}  void f() override =0;
+
+  virtual void f2() const=0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
+  // CHECK-FIXES: {{^}}  void f2() const override =0;
 
   virtual void g() ABSTRACT;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using

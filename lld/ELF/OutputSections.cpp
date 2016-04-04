@@ -1426,37 +1426,26 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
   // Iterate over all input object files to copy their local symbols
   // to the output symbol table pointed by Buf.
   for (const std::unique_ptr<ObjectFile<ELFT>> &File : Table.getObjectFiles()) {
-    for (const std::pair<const Elf_Sym *, size_t> &P : File->KeptLocalSyms) {
-      const Elf_Sym *Sym = P.first;
-
+    for (const std::pair<const DefinedRegular<ELFT> *, size_t> &P :
+         File->KeptLocalSyms) {
+      const DefinedRegular<ELFT> &Body = *P.first;
+      InputSectionBase<ELFT> *Section = Body.Section;
       auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
-      uintX_t VA = 0;
-      if (Sym->st_shndx == SHN_ABS) {
+
+      if (!Section) {
         ESym->st_shndx = SHN_ABS;
-        VA = Sym->st_value;
+        ESym->st_value = Body.Value;
       } else {
-        InputSectionBase<ELFT> *Section = File->getSection(*Sym);
         const OutputSectionBase<ELFT> *OutSec = Section->OutSec;
         ESym->st_shndx = OutSec->SectionIndex;
-        VA = Section->getOffset(*Sym);
-        VA += OutSec->getVA();
+        ESym->st_value = OutSec->getVA() + Section->getOffset(Body);
       }
       ESym->st_name = P.second;
-      ESym->st_size = Sym->st_size;
-      ESym->setBindingAndType(Sym->getBinding(), Sym->getType());
-      ESym->st_value = VA;
+      ESym->st_size = Body.template getSize<ELFT>();
+      ESym->setBindingAndType(Body.Binding, Body.Type);
       Buf += sizeof(*ESym);
     }
   }
-}
-
-template <class ELFT>
-static const typename ELFT::Sym *getElfSym(SymbolBody &Body) {
-  if (auto *EBody = dyn_cast<DefinedElf<ELFT>>(&Body))
-    return &EBody->Sym;
-  if (auto *EBody = dyn_cast<UndefinedElf<ELFT>>(&Body))
-    return &EBody->Sym;
-  return nullptr;
 }
 
 template <class ELFT>
@@ -1468,15 +1457,8 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     SymbolBody *Body = P.first;
     size_t StrOff = P.second;
 
-    uint8_t Type = STT_NOTYPE;
-    uintX_t Size = 0;
-    if (const Elf_Sym *InputSym = getElfSym<ELFT>(*Body)) {
-      Type = InputSym->getType();
-      Size = InputSym->st_size;
-    } else if (auto *C = dyn_cast<DefinedCommon>(Body)) {
-      Type = STT_OBJECT;
-      Size = C->Size;
-    }
+    uint8_t Type = Body->Type;
+    uintX_t Size = Body->getSize<ELFT>();
 
     ESym->setBindingAndType(getSymbolBinding(Body), Type);
     ESym->st_size = Size;
@@ -1533,11 +1515,9 @@ uint8_t SymbolTableSection<ELFT>::getSymbolBinding(SymbolBody *Body) {
   uint8_t Visibility = Body->getVisibility();
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
-  if (const Elf_Sym *ESym = getElfSym<ELFT>(*Body))
-    return ESym->getBinding();
   if (isa<DefinedSynthetic<ELFT>>(Body))
     return STB_LOCAL;
-  return Body->isWeak() ? STB_WEAK : STB_GLOBAL;
+  return Body->Binding;
 }
 
 template <class ELFT>

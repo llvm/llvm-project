@@ -15,7 +15,7 @@
 ; CHECK:      Invariant Accesses: {
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [N] -> { Stmt_for_j[i0, i1] -> MemRef_init_ptr[0] };
-; CHECK-NEXT:         Execution Context: [N] -> {  : N < 0 or N > 0 }
+; CHECK-NEXT:         Execution Context: [N] -> {  :  N > 0 }
 ; CHECK-NEXT: }
 ;
 ; CHECK:      Statements {

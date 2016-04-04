@@ -411,9 +411,17 @@ ProcessWinMiniDump::Impl::DetermineArchitecture()
         switch (system_info_ptr->ProcessorArchitecture)
         {
         case PROCESSOR_ARCHITECTURE_INTEL:
-            return ArchSpec(eArchTypeCOFF, IMAGE_FILE_MACHINE_I386, LLDB_INVALID_CPUTYPE);
+            if (system_info_ptr->ProcessorLevel == 6)
+            {
+                return ArchSpec("i686-pc-windows");
+            }
+            else
+            {
+                return ArchSpec("i386-pc-windows");
+            }
+            break;
         case PROCESSOR_ARCHITECTURE_AMD64:
-            return ArchSpec(eArchTypeCOFF, IMAGE_FILE_MACHINE_AMD64, LLDB_INVALID_CPUTYPE);
+            return ArchSpec("x86_64-pc-windows");
         default:
             break;
         }
