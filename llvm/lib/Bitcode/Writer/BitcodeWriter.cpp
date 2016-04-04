@@ -1448,8 +1448,7 @@ static void writeFunctionMetadata(const Function &F, const ValueEnumerator &VE,
 
   Stream.EnterSubblock(bitc::METADATA_BLOCK_ID, 3);
   SmallVector<uint64_t, 64> Record;
-  assert(VE.getMDStrings().empty() &&
-         "Unexpected strings at the function-level");
+  writeMetadataStrings(VE.getMDStrings(), Stream, Record);
   writeMetadataRecords(VE.getNonMDStrings(), VE, Stream, Record);
   Stream.ExitBlock();
 }
