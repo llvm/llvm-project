@@ -31,7 +31,6 @@ class StructType;
 }
 
 namespace clang {
-class ABIInfo;
 class ASTContext;
 template <typename> class CanQual;
 class CXXConstructorDecl;
@@ -51,6 +50,7 @@ class Type;
 typedef CanQual<Type> CanQualType;
 
 namespace CodeGen {
+class ABIInfo;
 class CGCXXABI;
 class CGRecordLayout;
 class CodeGenModule;
