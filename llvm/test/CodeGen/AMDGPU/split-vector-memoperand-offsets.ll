@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN %s
+; XFAIL: *
 
 @sPrivateStorage = external addrspace(3) global [256 x [8 x <4 x i64>]]
 
