@@ -157,6 +157,7 @@ AtosSymbolizer::AtosSymbolizer(const char *path, LowLevelAllocator *allocator)
 
 bool AtosSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   if (!process_) return false;
+  if (addr == 0) return false;
   char command[32];
   internal_snprintf(command, sizeof(command), "0x%zx\n", addr);
   const char *buf = process_->SendCommand(command);
