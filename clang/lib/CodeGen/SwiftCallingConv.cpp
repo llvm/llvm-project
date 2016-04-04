@@ -239,7 +239,7 @@ void SwiftAggLowering::addLegalTypedData(llvm::Type *type,
       auto eltSize = (end - begin) / numElts;
       assert(eltSize == getTypeStoreSize(CGM, eltTy));
       for (size_t i = 0, e = numElts; i != e; ++i) {
-        addLegalTypedData(type, begin, begin + eltSize);
+        addLegalTypedData(eltTy, begin, begin + eltSize);
         begin += eltSize;
       }
       assert(begin == end);
