@@ -185,12 +185,6 @@ Value *Mapper::mapValue(const Value *V) {
     if (MD == MappedMD || (!MappedMD && (Flags & RF_IgnoreMissingEntries)))
       return VM[V] = const_cast<Value *>(V);
 
-    // FIXME: This assert crashes during bootstrap, but I think it should be
-    // correct.  For now, just match behaviour from before the metadata/value
-    // split.
-    //
-    //    assert((MappedMD || (Flags & RF_NullMapMissingGlobalValues)) &&
-    //           "Referenced metadata value not in value map");
     return VM[V] = MetadataAsValue::get(V->getContext(), MappedMD);
   }
 
@@ -296,12 +290,6 @@ Metadata *Mapper::mapMetadataOp(Metadata *Op) {
   if (Flags & RF_IgnoreMissingEntries)
     return Op;
 
-  // FIXME: This assert crashes during bootstrap, but I think it should be
-  // correct.  For now, just match behaviour from before the metadata/value
-  // split.
-  //
-  //    assert((Flags & RF_NullMapMissingGlobalValues) &&
-  //           "Referenced metadata not in value map!");
   return nullptr;
 }
 
@@ -388,15 +376,7 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
         (!MappedV && (Flags & RF_IgnoreMissingEntries)))
       return mapToSelf(MD);
 
-    // FIXME: This assert crashes during bootstrap, but I think it should be
-    // correct.  For now, just match behaviour from before the metadata/value
-    // split.
-    //
-    //    assert((MappedV || (Flags & RF_NullMapMissingGlobalValues)) &&
-    //           "Referenced metadata not in value map!");
-    if (MappedV)
-      return mapToMetadata(MD, ValueAsMetadata::get(MappedV));
-    return nullptr;
+    return mapToMetadata(MD, MappedV ? ValueAsMetadata::get(MappedV) : nullptr);
   }
 
   assert(isa<MDNode>(MD) && "Expected a metadata node");
