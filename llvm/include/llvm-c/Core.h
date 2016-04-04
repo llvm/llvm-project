@@ -1527,7 +1527,7 @@ LLVMBool LLVMIsConstantString(LLVMValueRef c);
  *
  * @see ConstantDataSequential::getAsString()
  */
-const char *LLVMGetAsString(LLVMValueRef c, size_t* out);
+const char *LLVMGetAsString(LLVMValueRef c, size_t *Length);
 
 /**
  * Create an anonymous ConstantStruct with the specified values.
@@ -2060,7 +2060,7 @@ LLVMValueRef LLVMMDNode(LLVMValueRef *Vals, unsigned Count);
  * @param Len Memory address which will hold length of returned string.
  * @return String data in MDString.
  */
-const char  *LLVMGetMDString(LLVMValueRef V, unsigned* Len);
+const char *LLVMGetMDString(LLVMValueRef V, unsigned *Length);
 
 /**
  * Obtain the number of operands from an MDNode value.

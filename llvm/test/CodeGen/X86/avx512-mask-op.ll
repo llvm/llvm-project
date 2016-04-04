@@ -521,17 +521,9 @@ define <32 x i16> @test21(<32 x i16> %x , <32 x i1> %mask) nounwind readnone {
 define void @test22(<4 x i1> %a, <4 x i1>* %addr) {
 ; KNL-LABEL: test22:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    vpextrd $3, %xmm0, %eax
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    movb %al, (%rdi)
-; KNL-NEXT:    vpextrd $2, %xmm0, %eax
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    movb %al, (%rdi)
-; KNL-NEXT:    vpextrd $1, %xmm0, %eax
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    movb %al, (%rdi)
-; KNL-NEXT:    vmovd %xmm0, %eax
-; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    vpslld $31, %ymm0, %ymm0
+; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    movb %al, (%rdi)
 ; KNL-NEXT:    retq
 ;
@@ -548,11 +540,9 @@ define void @test22(<4 x i1> %a, <4 x i1>* %addr) {
 define void @test23(<2 x i1> %a, <2 x i1>* %addr) {
 ; KNL-LABEL: test23:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    vpextrq $1, %xmm0, %rax
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    movb %al, (%rdi)
-; KNL-NEXT:    vmovq %xmm0, %rax
-; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
+; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    movb %al, (%rdi)
 ; KNL-NEXT:    retq
 ;
@@ -596,11 +586,9 @@ define void @store_v2i1(<2 x i1> %c , <2 x i1>* %ptr) {
 ; KNL-LABEL: store_v2i1:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
-; KNL-NEXT:    vpextrq $1, %xmm0, %rax
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    movb %al, (%rdi)
-; KNL-NEXT:    vmovq %xmm0, %rax
-; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
+; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    movb %al, (%rdi)
 ; KNL-NEXT:    retq
 ;
@@ -621,17 +609,9 @@ define void @store_v4i1(<4 x i1> %c , <4 x i1>* %ptr) {
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
 ; KNL-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    vpextrd $3, %xmm0, %eax
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    movb %al, (%rdi)
-; KNL-NEXT:    vpextrd $2, %xmm0, %eax
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    movb %al, (%rdi)
-; KNL-NEXT:    vpextrd $1, %xmm0, %eax
-; KNL-NEXT:    andl $1, %eax
-; KNL-NEXT:    movb %al, (%rdi)
-; KNL-NEXT:    vmovd %xmm0, %eax
-; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    vpslld $31, %ymm0, %ymm0
+; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    movb %al, (%rdi)
 ; KNL-NEXT:    retq
 ;
@@ -1037,4 +1017,129 @@ define <64 x i8> @load_64i1(<64 x i1>* %a) {
   %b = load <64 x i1>, <64 x i1>* %a
   %c = sext <64 x i1> %b to <64 x i8>
   ret <64 x i8> %c
+}
+
+define void @store_8i1(<8 x i1>* %a, <8 x i1> %v) {
+; KNL-LABEL: store_8i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
+; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
+; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    movb %al, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: store_8i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
+; SKX-NEXT:    vpmovw2m %xmm0, %k0
+; SKX-NEXT:    kmovb %k0, (%rdi)
+; SKX-NEXT:    retq
+  store <8 x i1> %v, <8 x i1>* %a
+  ret void
+}
+
+define void @store_8i1_1(<8 x i1>* %a, <8 x i16> %v) {
+; KNL-LABEL: store_8i1_1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
+; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
+; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    movb %al, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: store_8i1_1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
+; SKX-NEXT:    vpmovw2m %xmm0, %k0
+; SKX-NEXT:    kmovb %k0, (%rdi)
+; SKX-NEXT:    retq
+  %v1 = trunc <8 x i16> %v to <8 x i1>
+  store <8 x i1> %v1, <8 x i1>* %a
+  ret void
+}
+
+define void @store_16i1(<16 x i1>* %a, <16 x i1> %v) {
+; KNL-LABEL: store_16i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
+; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
+; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: store_16i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
+; SKX-NEXT:    vpmovb2m %xmm0, %k0
+; SKX-NEXT:    kmovw %k0, (%rdi)
+; SKX-NEXT:    retq
+  store <16 x i1> %v, <16 x i1>* %a
+  ret void
+}
+
+define void @store_32i1(<32 x i1>* %a, <32 x i1> %v) {
+; KNL-LABEL: store_32i1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; KNL-NEXT:    vpmovsxbd %xmm1, %zmm1
+; KNL-NEXT:    vpslld $31, %zmm1, %zmm1
+; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; KNL-NEXT:    kmovw %k0, 2(%rdi)
+; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
+; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
+; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: store_32i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpsllw $7, %ymm0, %ymm0
+; SKX-NEXT:    vpmovb2m %ymm0, %k0
+; SKX-NEXT:    kmovd %k0, (%rdi)
+; SKX-NEXT:    retq
+  store <32 x i1> %v, <32 x i1>* %a
+  ret void
+}
+
+define void @store_32i1_1(<32 x i1>* %a, <32 x i16> %v) {
+; KNL-LABEL: store_32i1_1:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovdb %zmm0, %xmm0
+; KNL-NEXT:    vpmovsxwd %ymm1, %zmm1
+; KNL-NEXT:    vpmovdb %zmm1, %xmm1
+; KNL-NEXT:    vpmovsxbd %xmm1, %zmm1
+; KNL-NEXT:    vpslld $31, %zmm1, %zmm1
+; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; KNL-NEXT:    kmovw %k0, 2(%rdi)
+; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
+; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
+; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: store_32i1_1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpsllw $15, %zmm0, %zmm0
+; SKX-NEXT:    vpmovw2m %zmm0, %k0
+; SKX-NEXT:    kmovd %k0, (%rdi)
+; SKX-NEXT:    retq
+  %v1 = trunc <32 x i16> %v to <32 x i1>
+  store <32 x i1> %v1, <32 x i1>* %a
+  ret void
+}
+
+
+define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
+;
+; SKX-LABEL: store_64i1:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpsllw $7, %zmm0, %zmm0
+; SKX-NEXT:    vpmovb2m %zmm0, %k0
+; SKX-NEXT:    kmovq %k0, (%rdi)
+; SKX-NEXT:    retq
+  store <64 x i1> %v, <64 x i1>* %a
+  ret void
 }

@@ -2989,17 +2989,29 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
       case Intrinsic::umul_with_overflow:
       case Intrinsic::usub_with_overflow:
         return true;
-      // Sqrt should be OK, since the llvm sqrt intrinsic isn't defined to set
-      // errno like libm sqrt would.
+      // These intrinsics are defined to have the same behavior as libm
+      // functions except for setting errno.
       case Intrinsic::sqrt:
       case Intrinsic::fma:
       case Intrinsic::fmuladd:
+        return true;
+      // These intrinsics are defined to have the same behavior as libm
+      // functions, and the corresponding libm functions never set errno.
+      case Intrinsic::trunc:
+      case Intrinsic::copysign:
       case Intrinsic::fabs:
       case Intrinsic::minnum:
       case Intrinsic::maxnum:
         return true;
-      // TODO: some fp intrinsics are marked as having the same error handling
-      // as libm. They're safe to speculate when they won't error.
+      // These intrinsics are defined to have the same behavior as libm
+      // functions, which never overflow when operating on the IEEE754 types
+      // that we support, and never set errno otherwise.
+      case Intrinsic::ceil:
+      case Intrinsic::floor:
+      case Intrinsic::nearbyint:
+      case Intrinsic::rint:
+      case Intrinsic::round:
+        return true;
       // TODO: are convert_{from,to}_fp16 safe?
       // TODO: can we list target-specific intrinsics here?
       default: break;

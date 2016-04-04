@@ -3680,7 +3680,7 @@ void Scop::buildSchedule(Region *R, LoopStackTy &LoopStack, ScopDetection &SD,
 
     Loop *LastLoop = LoopStack.back().L;
     if (LastLoop != L) {
-      if (!LastLoop->contains(L)) {
+      if (LastLoop && !LastLoop->contains(L)) {
         LastRNWaiting = true;
         DelayList.push_back(RN);
         continue;
@@ -4315,9 +4315,13 @@ void ScopInfo::ensureValueRead(Value *V, BasicBlock *UserBB) {
   if (UserStmt->lookupValueReadOf(V))
     return;
 
+  // For exit PHIs use the MK_ExitPHI MemoryKind not MK_Value.
+  ScopArrayInfo::MemoryKind Kind = ScopArrayInfo::MK_Value;
+  if (!ValueStmt && isa<PHINode>(V))
+    Kind = ScopArrayInfo::MK_ExitPHI;
+
   addMemoryAccess(UserBB, nullptr, MemoryAccess::READ, V, V->getType(), true, V,
-                  ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(),
-                  ScopArrayInfo::MK_Value);
+                  ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(), Kind);
   if (ValueInst)
     ensureValueWrite(ValueInst);
 }

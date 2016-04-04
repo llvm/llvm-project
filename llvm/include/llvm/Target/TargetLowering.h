@@ -637,6 +637,14 @@ public:
       getTruncStoreAction(ValVT.getSimpleVT(), MemVT.getSimpleVT()) == Legal;
   }
 
+  /// Return true if the specified store with truncation has solution on this
+  /// target.
+  bool isTruncStoreLegalOrCustom(EVT ValVT, EVT MemVT) const {
+    return isTypeLegal(ValVT) && MemVT.isSimple() &&
+      (getTruncStoreAction(ValVT.getSimpleVT(), MemVT.getSimpleVT()) == Legal ||
+       getTruncStoreAction(ValVT.getSimpleVT(), MemVT.getSimpleVT()) == Custom);
+  }
+
   /// Return how the indexed load should be treated: either it is legal, needs
   /// to be promoted to a larger size, needs to be expanded to some other code
   /// sequence, or the target has a custom expander for it.

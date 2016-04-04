@@ -75,7 +75,7 @@ namespace llvm {
       ///
       CALL,
 
-      /// This operation implements the lowering for readcyclecounter
+      /// This operation implements the lowering for readcyclecounter.
       RDTSC_DAG,
 
       /// X86 Read Time-Stamp Counter and Processor ID.
@@ -211,30 +211,30 @@ namespace llvm {
       FMIN_RND,
       FSQRT_RND,
 
-      // FP vector get exponent 
+      // FP vector get exponent.
       FGETEXP_RND,
-      // Extract Normalized Mantissas
+      // Extract Normalized Mantissas.
       VGETMANT,
-      // FP Scale
+      // FP Scale.
       SCALEF,
+
       // Integer add/sub with unsigned saturation.
       ADDUS,
       SUBUS,
+
       // Integer add/sub with signed saturation.
       ADDS,
       SUBS,
-      // Unsigned Integer average 
-      AVG,
-      /// Integer horizontal add.
-      HADD,
 
-      /// Integer horizontal sub.
+      // Unsigned Integer average.
+      AVG,
+
+      /// Integer horizontal add/sub.
+      HADD,
       HSUB,
 
-      /// Floating point horizontal add.
+      /// Floating point horizontal add/sub.
       FHADD,
-
-      /// Floating point horizontal sub.
       FHSUB,
 
       // Integer absolute value
@@ -283,7 +283,6 @@ namespace llvm {
 
       // Vector integer zero-extend.
       VZEXT,
-
       // Vector integer signed-extend.
       VSEXT,
 
@@ -337,11 +336,13 @@ namespace llvm {
       ADD, SUB, ADC, SBB, SMUL,
       INC, DEC, OR, XOR, AND,
 
-      BEXTR,  // Bit field extract
+      // Bit field extract.
+      BEXTR,
 
-      UMUL, // LOW, HI, FLAGS = umul LHS, RHS
+      // LOW, HI, FLAGS = umul LHS, RHS.
+      UMUL,
 
-      // 8-bit SMUL/UMUL - AX, FLAGS = smul8/umul8 AL, RHS
+      // 8-bit SMUL/UMUL - AX, FLAGS = smul8/umul8 AL, RHS.
       SMUL8, UMUL8,
 
       // 8-bit divrem that zero-extend the high result (AH).
@@ -350,6 +351,9 @@ namespace llvm {
 
       // X86-specific multiply by immediate.
       MUL_IMM,
+
+      // Vector sign bit extraction.
+      MOVMSK,
 
       // Vector bitwise comparisons.
       PTEST,
@@ -361,22 +365,23 @@ namespace llvm {
       TESTM,
       TESTNM,
 
-      // OR/AND test for masks
+      // OR/AND test for masks.
       KORTEST,
       KTEST,
 
       // Several flavors of instructions with vector shuffle behaviors.
+      // Saturated signed/unnsigned packing.
       PACKSS,
       PACKUS,
-      // Intra-lane alignr
+      // Intra-lane alignr.
       PALIGNR,
-      // AVX512 inter-lane alignr
+      // AVX512 inter-lane alignr.
       VALIGN,
       PSHUFD,
       PSHUFHW,
       PSHUFLW,
       SHUFP,
-      //Shuffle Packed Values at 128-bit granularity
+      //Shuffle Packed Values at 128-bit granularity.
       SHUF128,
       MOVDDUP,
       MOVSHDUP,
@@ -395,72 +400,77 @@ namespace llvm {
       VPERMI,
       VPERM2X128,
 
-      // Variable Permute (VPERM)
+      // Variable Permute (VPERM).
       // Res = VPERMV MaskV, V0
       VPERMV,
 
-      // 3-op Variable Permute (VPERMT2)
+      // 3-op Variable Permute (VPERMT2).
       // Res = VPERMV3 V0, MaskV, V1
       VPERMV3,
 
-      // 3-op Variable Permute overwriting the index (VPERMI2)
+      // 3-op Variable Permute overwriting the index (VPERMI2).
       // Res = VPERMIV3 V0, MaskV, V1
       VPERMIV3,
 
-      // Bitwise ternary logic
+      // Bitwise ternary logic.
       VPTERNLOG,
-      // Fix Up Special Packed Float32/64 values
+      // Fix Up Special Packed Float32/64 values.
       VFIXUPIMM,
       VFIXUPIMMS,
-      // Range Restriction Calculation For Packed Pairs of Float32/64 values
+      // Range Restriction Calculation For Packed Pairs of Float32/64 values.
       VRANGE,
-      // Reduce - Perform Reduction Transformation on scalar\packed FP
+      // Reduce - Perform Reduction Transformation on scalar\packed FP.
       VREDUCE,
-      // RndScale - Round FP Values To Include A Given Number Of Fraction Bits
+      // RndScale - Round FP Values To Include A Given Number Of Fraction Bits.
       VRNDSCALE,
-      // VFPCLASS - Tests Types Of a FP Values for packed types.
-      VFPCLASS, 
-      // VFPCLASSS - Tests Types Of a FP Values for scalar types.
-      VFPCLASSS, 
-      // Broadcast scalar to vector
+      // Tests Types Of a FP Values for packed types.
+      VFPCLASS,
+      // Tests Types Of a FP Values for scalar types.
+      VFPCLASSS,
+
+      // Broadcast scalar to vector.
       VBROADCAST,
-      // Broadcast mask to vector
+      // Broadcast mask to vector.
       VBROADCASTM,
-      // Broadcast subvector to vector
+      // Broadcast subvector to vector.
       SUBV_BROADCAST,
-      // Insert/Extract vector element
+
+      // Insert/Extract vector element.
       VINSERT,
       VEXTRACT,
 
       /// SSE4A Extraction and Insertion.
       EXTRQI, INSERTQI,
 
-      // XOP variable/immediate rotations
+      // XOP variable/immediate rotations.
       VPROT, VPROTI,
-      // XOP arithmetic/logical shifts
+      // XOP arithmetic/logical shifts.
       VPSHA, VPSHL,
-      // XOP signed/unsigned integer comparisons
+      // XOP signed/unsigned integer comparisons.
       VPCOM, VPCOMU,
-      // XOP packed permute bytes
+      // XOP packed permute bytes.
       VPPERM,
 
-      // Vector multiply packed unsigned doubleword integers
+      // Vector multiply packed unsigned doubleword integers.
       PMULUDQ,
-      // Vector multiply packed signed doubleword integers
+      // Vector multiply packed signed doubleword integers.
       PMULDQ,
-      // Vector Multiply Packed UnsignedIntegers with Round and Scale
+      // Vector Multiply Packed UnsignedIntegers with Round and Scale.
       MULHRS,
-      // Multiply and Add Packed Integers
+
+      // Multiply and Add Packed Integers.
       VPMADDUBSW, VPMADDWD,
       VPMADD52L, VPMADD52H,
-      // FMA nodes
+
+      // FMA nodes.
       FMADD,
       FNMADD,
       FMSUB,
       FNMSUB,
       FMADDSUB,
       FMSUBADD,
-      // FMA with rounding mode
+
+      // FMA with rounding mode.
       FMADD_RND,
       FNMADD_RND,
       FMSUB_RND,
@@ -468,12 +478,12 @@ namespace llvm {
       FMADDSUB_RND,
       FMSUBADD_RND,
 
-      // Compress and expand
+      // Compress and expand.
       COMPRESS,
       EXPAND,
 
-      //Convert Unsigned/Integer to Scalar Floating-Point Value
-      //with rounding mode
+      // Convert Unsigned/Integer to Scalar Floating-Point Value
+      // with rounding mode.
       SINT_TO_FP_RND,
       UINT_TO_FP_RND,
 
@@ -481,6 +491,7 @@ namespace llvm {
       FP_TO_SINT_RND, FP_TO_UINT_RND,
       // Scalar float/double to signed/unsigned integer.
       SCALAR_FP_TO_SINT_RND, SCALAR_FP_TO_UINT_RND,
+
       // Save xmm argument registers to the stack, according to %al. An operator
       // is needed so that this can be expanded with control flow.
       VASTART_SAVE_XMM_REGS,
@@ -493,7 +504,7 @@ namespace llvm {
       // falls back to heap allocation if not.
       SEG_ALLOCA,
 
-      // Memory barrier
+      // Memory barriers.
       MEMBARRIER,
       MFENCE,
       SFENCE,
@@ -512,13 +523,14 @@ namespace llvm {
       // indicate whether it is valid in CF.
       RDSEED,
 
+      // SSE42 string comparisons.
       PCMPISTRI,
       PCMPESTRI,
 
       // Test if in transactional execution.
       XTEST,
 
-      // ERI instructions
+      // ERI instructions.
       RSQRT28, RCP28, EXP2,
 
       // Compare and swap.
