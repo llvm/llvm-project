@@ -57,8 +57,8 @@ For later versions of Visual Studio, no setup is required-->
   <Type Name="clang::PointerType">
     <DisplayString>{PointeeType, view(poly)} *</DisplayString>
     <Expand>
-      <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
       <Item Name="PointeeType">PointeeType</Item>
+      <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
     </Expand>
   </Type>
   <!-- We visualize all inner types for clang reference types. So a rvalue reference to an lvalue reference
@@ -191,7 +191,8 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::TemplateTypeParmType">
-    <DisplayString>typename {*TTPDecl,view(cpp)}</DisplayString>
+    <DisplayString IncludeView="cpp">{*TTPDecl,view(cpp)}</DisplayString>
+    <DisplayString>{*TTPDecl}</DisplayString>
   </Type>
   <Type Name="clang::InjectedClassNameType">
     <DisplayString>{*Decl,view(cpp)}</DisplayString>

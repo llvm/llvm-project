@@ -2333,8 +2333,14 @@ def OMPDeclareSimdDecl : Attr {
   let SemaHandler = 0;
   let HasCustomParsing = 1;
   let Documentation = [OMPDeclareSimdDocs];
+  let Args = [EnumArgument<"BranchState", "BranchStateTy",
+                           ["", "inbranch", "notinbranch"],
+                           ["BS_Undefined", "BS_Inbranch", "BS_Notinbranch"]>];
   let AdditionalMembers = [{
-  void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {}
+    void printPrettyPragma(raw_ostream & OS, const PrintingPolicy &Policy)
+        const {
+      OS << ' ' << ConvertBranchStateTyToStr(getBranchState());
+    }
   }];
 }
 

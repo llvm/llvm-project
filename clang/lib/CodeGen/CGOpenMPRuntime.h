@@ -912,11 +912,10 @@ public:
   /// \brief Emits call to void __kmpc_push_num_teams(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_teams, kmp_int32 thread_limit) to generate code
   /// for num_teams clause.
-  /// \param NumTeams An integer value of teams.
-  /// \param ThreadLimit An integer value of threads.
-  virtual void emitNumTeamsClause(CodeGenFunction &CGF, llvm::Value *NumTeams,
-                                  llvm::Value *ThreadLimit, SourceLocation Loc);
-
+  /// \param NumTeams An integer expression of teams.
+  /// \param ThreadLimit An integer expression of threads.
+  virtual void emitNumTeamsClause(CodeGenFunction &CGF, const Expr *NumTeams,
+                                  const Expr *ThreadLimit, SourceLocation Loc);
 };
 
 } // namespace CodeGen

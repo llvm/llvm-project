@@ -59,10 +59,10 @@ struct S {
 // CHECK-NEXT: |       | | |   `-DeclRefExpr {{.+}} <<invalid sloc>> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'
 
 #pragma omp declare simd
-#pragma omp declare simd
+#pragma omp declare simd inbranch
 void foo();
 
 // CHECK:      `-FunctionDecl {{.+}} <line:63:1, col:10> col:6 foo 'void (void)'
-// CHECK-NEXT:   |-OMPDeclareSimdDeclAttr {{.+}} <line:62:9> Implicit
-// CHECK-NEXT:   `-OMPDeclareSimdDeclAttr {{.+}} <line:61:9> Implicit
+// CHECK-NEXT:   |-OMPDeclareSimdDeclAttr {{.+}} <line:62:9, col:34> Implicit BS_Inbranch
+// CHECK-NEXT:   `-OMPDeclareSimdDeclAttr {{.+}} <line:61:9, col:25> Implicit BS_Undefined
 

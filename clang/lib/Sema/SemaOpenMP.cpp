@@ -3183,12 +3183,13 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
 
 Sema::DeclGroupPtrTy
 Sema::ActOnOpenMPDeclareSimdDirective(DeclGroupPtrTy DG,
-                                      SourceLocation StartLoc) {
+                                      OMPDeclareSimdDeclAttr::BranchStateTy BS,
+                                      SourceRange SR) {
   if (!DG || DG.get().isNull())
     return DeclGroupPtrTy();
 
   if (!DG.get().isSingleDecl()) {
-    Diag(StartLoc, diag::err_omp_single_decl_in_declare_simd);
+    Diag(SR.getBegin(), diag::err_omp_single_decl_in_declare_simd);
     return DG;
   }
   auto *ADecl = DG.get().getSingleDecl();
@@ -3201,8 +3202,7 @@ Sema::ActOnOpenMPDeclareSimdDirective(DeclGroupPtrTy DG,
     return DeclGroupPtrTy();
   }
 
-  auto *NewAttr = OMPDeclareSimdDeclAttr::CreateImplicit(
-      Context, SourceRange(StartLoc, StartLoc));
+  auto *NewAttr = OMPDeclareSimdDeclAttr::CreateImplicit(Context, BS, SR);
   ADecl->addAttr(NewAttr);
   return ConvertDeclToDeclGroup(ADecl);
 }
