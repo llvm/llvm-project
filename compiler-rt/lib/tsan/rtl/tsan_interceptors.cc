@@ -1887,6 +1887,7 @@ static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
   int ignore_sync = thr->ignore_sync;
   if (!ctx->after_multithreaded_fork) {
     thr->ignore_reads_and_writes = 0;
+    thr->fast_state.ClearIgnoreBit();
     thr->ignore_interceptors = 0;
     thr->ignore_sync = 0;
   }
@@ -1907,6 +1908,8 @@ static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
   }
   if (!ctx->after_multithreaded_fork) {
     thr->ignore_reads_and_writes = ignore_reads_and_writes;
+    if (ignore_reads_and_writes)
+      thr->fast_state.SetIgnoreBit();
     thr->ignore_interceptors = ignore_interceptors;
     thr->ignore_sync = ignore_sync;
   }
