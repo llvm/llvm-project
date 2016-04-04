@@ -639,7 +639,7 @@ bool ReduceCrashingNamedMDOps::TestNamedMDOps(
     // module, and that they don't include any deleted blocks.
     NamedMDOps.clear();
     for (const MDNode *Node : OldMDNodeOps)
-      NamedMDOps.push_back(cast<MDNode>(VMap.MD()[Node].get()));
+      NamedMDOps.push_back(cast<MDNode>(*VMap.getMappedMD(Node)));
 
     BD.setNewProgram(M); // It crashed, keep the trimmed version...
     return true;
