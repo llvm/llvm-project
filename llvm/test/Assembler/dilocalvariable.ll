@@ -6,6 +6,9 @@
 ; CHECK: !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8}
 !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8}
 
+!llvm.module.flags = !{!10}
+!llvm.dbg.cu = !{!9}
+
 !0 = distinct !DISubprogram()
 !1 = distinct !{}
 !2 = !DIFile(filename: "path/to/file", directory: "/path/to/dir")
@@ -24,3 +27,10 @@
 ; CHECK: !8 = !DILocalVariable(scope: !0)
 !7 = !DILocalVariable(scope: !0, arg: 1)
 !8 = !DILocalVariable(scope: !0)
+
+!9 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
+                             file: !2,
+                             isOptimized: true, flags: "-O2",
+                             splitDebugFilename: "abc.debug", emissionKind: 2,
+                             subprograms: !{!0})
+!10 = !{i32 2, !"Debug Info Version", i32 3}
