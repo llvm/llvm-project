@@ -2640,6 +2640,57 @@ SDValue SystemZTargetLowering::lowerConstantPool(ConstantPoolSDNode *CP,
   return DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Result);
 }
 
+SDValue SystemZTargetLowering::lowerFRAMEADDR(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MFI->setFrameAddressIsTaken(true);
+
+  SDLoc DL(Op);
+  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+
+  // If the back chain frame index has not been allocated yet, do so.
+  SystemZMachineFunctionInfo *FI = MF.getInfo<SystemZMachineFunctionInfo>();
+  int BackChainIdx = FI->getFramePointerSaveIndex();
+  if (!BackChainIdx) {
+    // By definition, the frame address is the address of the back chain.
+    BackChainIdx = MFI->CreateFixedObject(8, -SystemZMC::CallFrameSize, false);
+    FI->setFramePointerSaveIndex(BackChainIdx);
+  }
+  SDValue BackChain = DAG.getFrameIndex(BackChainIdx, PtrVT);
+
+  // FIXME The frontend should detect this case.
+  if (Depth > 0) {
+    report_fatal_error("Unsupported stack frame traversal count");
+  }
+
+  return BackChain;
+}
+
+SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MFI->setReturnAddressIsTaken(true);
+
+  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
+    return SDValue();
+
+  SDLoc DL(Op);
+  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+
+  // FIXME The frontend should detect this case.
+  if (Depth > 0) {
+    report_fatal_error("Unsupported stack frame traversal count");
+  }
+
+  // Return R14D, which has the return address. Mark it an implicit live-in.
+  unsigned LinkReg = MF.addLiveIn(SystemZ::R14D, &SystemZ::GR64BitRegClass);
+  return DAG.getCopyFromReg(DAG.getEntryNode(), DL, LinkReg, PtrVT);
+}
+
 SDValue SystemZTargetLowering::lowerBITCAST(SDValue Op,
                                             SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -4312,6 +4363,10 @@ SDValue SystemZTargetLowering::lowerShift(SDValue Op, SelectionDAG &DAG,
 SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
+  case ISD::FRAMEADDR:
+    return lowerFRAMEADDR(Op, DAG);
+  case ISD::RETURNADDR:
+    return lowerRETURNADDR(Op, DAG);
   case ISD::BR_CC:
     return lowerBR_CC(Op, DAG);
   case ISD::SELECT_CC:

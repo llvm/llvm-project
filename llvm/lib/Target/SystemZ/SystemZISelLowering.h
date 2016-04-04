@@ -467,6 +467,8 @@ private:
                             SelectionDAG &DAG) const;
   SDValue lowerJumpTable(JumpTableSDNode *JT, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(ConstantPoolSDNode *CP, SelectionDAG &DAG) const;
+  SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVACOPY(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
