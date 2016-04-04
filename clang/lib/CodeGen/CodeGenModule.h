@@ -48,7 +48,6 @@ class IndexedInstrProfReader;
 }
 
 namespace clang {
-class TargetCodeGenInfo;
 class ASTContext;
 class AtomicType;
 class FunctionDecl;
@@ -92,6 +91,7 @@ class CGCUDARuntime;
 class BlockFieldFlags;
 class FunctionArgList;
 class CoverageMappingModuleGen;
+class TargetCodeGenInfo;
 
 struct OrderGlobalInits {
   unsigned int priority;
