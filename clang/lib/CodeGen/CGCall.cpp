@@ -26,6 +26,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "clang/CodeGen/SwiftCallingConv.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Attributes.h"
@@ -59,6 +60,7 @@ static unsigned ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_SpirKernel: return llvm::CallingConv::SPIR_KERNEL;
   case CC_PreserveMost: return llvm::CallingConv::PreserveMost;
   case CC_PreserveAll: return llvm::CallingConv::PreserveAll;
+  case CC_Swift: return llvm::CallingConv::Swift;
   }
 }
 
@@ -109,7 +111,7 @@ static void appendParameterTypes(const CodeGenTypes &CGT,
     auto protoParamInfos = FPT->getExtParameterInfos();
     paramInfos.reserve(prefix.size() + protoParamInfos.size());
     paramInfos.resize(prefix.size());
-    paramInfos.append(paramInfos.begin(), paramInfos.end());
+    paramInfos.append(protoParamInfos.begin(), protoParamInfos.end());
   }
 
   // Fast path: unknown target.
@@ -590,7 +592,6 @@ CodeGenTypes::arrangeBuiltinFunctionDeclaration(CanQualType resultType,
       argTypes, FunctionType::ExtInfo(), {}, RequiredArgs::All);
 }
 
-
 /// Arrange a call to a C++ method, passing the given arguments.
 const CGFunctionInfo &
 CodeGenTypes::arrangeCXXMethodCall(const CallArgList &args,
@@ -679,7 +680,11 @@ CodeGenTypes::arrangeLLVMFunctionInfo(CanQualType resultType,
   assert(inserted && "Recursively being processed?");
   
   // Compute ABI information.
-  getABIInfo().computeInfo(*FI);
+  if (info.getCC() != CC_Swift) {
+    getABIInfo().computeInfo(*FI);
+  } else {
+    swiftcall::computeABIInfo(CGM, *FI);
+  }
 
   // Loop over all of the computed argument and return value info.  If any of
   // them are direct or extend without a specified coerce type, specify the
@@ -918,7 +923,7 @@ static void forConstantArrayExpansion(CodeGenFunction &CGF,
 }
 
 void CodeGenFunction::ExpandTypeFromArgs(
-    QualType Ty, LValue LV, SmallVectorImpl<llvm::Argument *>::iterator &AI) {
+    QualType Ty, LValue LV, SmallVectorImpl<llvm::Value *>::iterator &AI) {
   assert(LV.isSimple() &&
          "Unexpected non-simple lvalue during struct expansion.");
 
@@ -1813,10 +1818,13 @@ void CodeGenModule::ConstructAttributeList(
         getLLVMContext(), llvm::AttributeSet::ReturnIndex, RetAttrs));
   }
 
+  bool hasUsedSRet = false;
+
   // Attach attributes to sret.
   if (IRFunctionArgs.hasSRetArg()) {
     llvm::AttrBuilder SRETAttrs;
     SRETAttrs.addAttribute(llvm::Attribute::StructRet);
+    hasUsedSRet = true;
     if (RetAI.getInReg())
       SRETAttrs.addAttribute(llvm::Attribute::InReg);
     PAL.push_back(llvm::AttributeSet::get(
@@ -1920,6 +1928,41 @@ void CodeGenModule::ConstructAttributeList(
         Attrs.addAttribute(llvm::Attribute::NonNull);
     }
 
+    switch (FI.getExtParameterInfo(ArgNo).getABI()) {
+    case ParameterABI::Ordinary:
+      break;
+
+    case ParameterABI::SwiftIndirectResult: {
+      // Add 'sret' if we haven't already used it for something, but
+      // only if the result is void.
+      if (!hasUsedSRet && RetTy->isVoidType()) {
+        Attrs.addAttribute(llvm::Attribute::StructRet);
+        hasUsedSRet = true;
+      }
+
+      // Add 'noalias' in either case.
+      Attrs.addAttribute(llvm::Attribute::NoAlias);
+
+      // Add 'dereferenceable' and 'alignment'.
+      auto PTy = ParamType->getPointeeType();
+      if (!PTy->isIncompleteType() && PTy->isConstantSizeType()) {
+        auto info = getContext().getTypeInfoInChars(PTy);
+        Attrs.addDereferenceableAttr(info.first.getQuantity());
+        Attrs.addAttribute(llvm::Attribute::getWithAlignment(getLLVMContext(),
+                                                 info.second.getQuantity()));
+      }
+      break;
+    }
+
+    case ParameterABI::SwiftErrorResult:
+      Attrs.addAttribute(llvm::Attribute::SwiftError);
+      break;
+
+    case ParameterABI::SwiftContext:
+      Attrs.addAttribute(llvm::Attribute::SwiftSelf);
+      break;
+    }
+
     if (Attrs.hasAttributes()) {
       unsigned FirstIRArg, NumIRArgs;
       std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
@@ -1985,6 +2028,18 @@ static const NonNullAttr *getNonNullAttr(const Decl *FD, const ParmVarDecl *PVD,
   return nullptr;
 }
 
+namespace {
+  struct CopyBackSwiftError final : EHScopeStack::Cleanup {
+    Address Temp;
+    Address Arg;
+    CopyBackSwiftError(Address temp, Address arg) : Temp(temp), Arg(arg) {}
+    void Emit(CodeGenFunction &CGF, Flags flags) override {
+      llvm::Value *errorValue = CGF.Builder.CreateLoad(Temp);
+      CGF.Builder.CreateStore(errorValue, Arg);
+    }
+  };
+}
+
 void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
                                          llvm::Function *Fn,
                                          const FunctionArgList &Args) {
@@ -2010,7 +2065,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
 
   ClangToLLVMArgMapping IRFunctionArgs(CGM.getContext(), FI);
   // Flattened function arguments.
-  SmallVector<llvm::Argument *, 16> FnArgs;
+  SmallVector<llvm::Value *, 16> FnArgs;
   FnArgs.reserve(IRFunctionArgs.totalIRArgs());
   for (auto &Arg : Fn->args()) {
     FnArgs.push_back(&Arg);
@@ -2031,7 +2086,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
 
   // Name the struct return parameter.
   if (IRFunctionArgs.hasSRetArg()) {
-    auto AI = FnArgs[IRFunctionArgs.getSRetArgNo()];
+    auto AI = cast<llvm::Argument>(FnArgs[IRFunctionArgs.getSRetArgNo()]);
     AI->setName("agg.result");
     AI->addAttr(llvm::AttributeSet::get(getLLVMContext(), AI->getArgNo() + 1,
                                         llvm::Attribute::NoAlias));
@@ -2119,8 +2174,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           ArgI.getCoerceToType() == ConvertType(Ty) &&
           ArgI.getDirectOffset() == 0) {
         assert(NumIRArgs == 1);
-        auto AI = FnArgs[FirstIRArg];
-        llvm::Value *V = AI;
+        llvm::Value *V = FnArgs[FirstIRArg];
+        auto AI = cast<llvm::Argument>(V);
 
         if (const ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(Arg)) {
           if (getNonNullAttr(CurCodeDecl, PVD, PVD->getType(),
@@ -2188,6 +2243,25 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           AI->addAttr(llvm::AttributeSet::get(getLLVMContext(),
                                               AI->getArgNo() + 1,
                                               llvm::Attribute::NoAlias));
+
+        // LLVM expects swifterror parameters to be used in very restricted
+        // ways.  Copy the value into a less-restricted temporary.
+        if (FI.getExtParameterInfo(ArgNo).getABI()
+              == ParameterABI::SwiftErrorResult) {
+          QualType pointeeTy = Ty->getPointeeType();
+          assert(pointeeTy->isPointerType());
+          Address temp =
+            CreateMemTemp(pointeeTy, getPointerAlign(), "swifterror.temp");
+          Address arg = Address(V, getContext().getTypeAlignInChars(pointeeTy));
+          llvm::Value *incomingErrorValue = Builder.CreateLoad(arg);
+          Builder.CreateStore(incomingErrorValue, temp);
+          V = temp.getPointer();
+
+          // Push a cleanup to copy the value back at the end of the function.
+          // The convention does not guarantee that the value will be written
+          // back if the function exits with an unwind exception.
+          EHStack.pushCleanup<CopyBackSwiftError>(NormalCleanup, temp, arg);
+        }
 
         // Ensure the argument is the correct type.
         if (V->getType() != ArgI.getCoerceToType())
@@ -3481,6 +3555,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     }
   }
 
+  Address swiftErrorTemp = Address::invalid();
+  Address swiftErrorArg = Address::invalid();
+
   assert(CallInfo.arg_size() == CallArgs.size() &&
          "Mismatch between function signature & arguments.");
   unsigned ArgNo = 0;
@@ -3587,6 +3664,25 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         else
           V = Builder.CreateLoad(RV.getAggregateAddress());
 
+        // Implement swifterror by copying into a new swifterror argument.
+        // We'll write back in the normal path out of the call.
+        if (CallInfo.getExtParameterInfo(ArgNo).getABI()
+              == ParameterABI::SwiftErrorResult) {
+          assert(!swiftErrorTemp.isValid() && "multiple swifterror args");
+
+          QualType pointeeTy = I->Ty->getPointeeType();
+          swiftErrorArg =
+            Address(V, getContext().getTypeAlignInChars(pointeeTy));
+
+          swiftErrorTemp =
+            CreateMemTemp(pointeeTy, getPointerAlign(), "swifterror.temp");
+          V = swiftErrorTemp.getPointer();
+          cast<llvm::AllocaInst>(V)->setSwiftError(true);
+
+          llvm::Value *errorValue = Builder.CreateLoad(swiftErrorArg);
+          Builder.CreateStore(errorValue, swiftErrorTemp);
+        }
+
         // We might have to widen integers, but we should never truncate.
         if (ArgInfo.getCoerceToType() != V->getType() &&
             V->getType()->isIntegerTy())
@@ -3597,6 +3693,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         if (FirstIRArg < IRFuncTy->getNumParams() &&
             V->getType() != IRFuncTy->getParamType(FirstIRArg))
           V = Builder.CreateBitCast(V, IRFuncTy->getParamType(FirstIRArg));
+
         IRCallArgs[FirstIRArg] = V;
         break;
       }
@@ -3656,13 +3753,31 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     }
 
     case ABIArgInfo::CoerceAndExpand: {
-      assert(RV.isAggregate() &&
-             "CoerceAndExpand does not support non-aggregate types yet");
-
       auto coercionType = ArgInfo.getCoerceAndExpandType();
       auto layout = CGM.getDataLayout().getStructLayout(coercionType);
 
-      Address addr = RV.getAggregateAddress();
+      llvm::Value *tempSize = nullptr;
+      Address addr = Address::invalid();
+      if (RV.isAggregate()) {
+        addr = RV.getAggregateAddress();
+      } else {
+        assert(RV.isScalar()); // complex should always just be direct
+
+        llvm::Type *scalarType = RV.getScalarVal()->getType();
+        auto scalarSize = CGM.getDataLayout().getTypeAllocSize(scalarType);
+        auto scalarAlign = CGM.getDataLayout().getPrefTypeAlignment(scalarType);
+
+        tempSize = llvm::ConstantInt::get(CGM.Int64Ty, scalarSize);
+
+        // Materialize to a temporary.
+        addr = CreateTempAlloca(RV.getScalarVal()->getType(),
+                 CharUnits::fromQuantity(std::max(layout->getAlignment(),
+                                                  scalarAlign)));
+        EmitLifetimeStart(scalarSize, addr.getPointer());
+
+        Builder.CreateStore(RV.getScalarVal(), addr);
+      }
+
       addr = Builder.CreateElementBitCast(addr, coercionType);
 
       unsigned IRArgPos = FirstIRArg;
@@ -3674,6 +3789,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         IRCallArgs[IRArgPos++] = elt;
       }
       assert(IRArgPos == FirstIRArg + NumIRArgs);
+
+      if (tempSize) {
+        EmitLifetimeEnd(tempSize, addr.getPointer());
+      }
 
       break;
     }
@@ -3853,6 +3972,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (!CI->getType()->isVoidTy())
     CI->setName("call");
 
+  // Perform the swifterror writeback.
+  if (swiftErrorTemp.isValid()) {
+    llvm::Value *errorResult = Builder.CreateLoad(swiftErrorTemp);
+    Builder.CreateStore(errorResult, swiftErrorArg);
+  }
+
   // Emit any writebacks immediately.  Arguably this should happen
   // after any return-value munging.
   if (CallArgs.hasWritebacks())
@@ -3870,15 +3995,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   RValue Ret = [&] {
     switch (RetAI.getKind()) {
-    case ABIArgInfo::InAlloca:
-    case ABIArgInfo::Indirect: {
-      RValue ret = convertTempToRValue(SRetPtr, RetTy, SourceLocation());
-      if (UnusedReturnSize)
-        EmitLifetimeEnd(llvm::ConstantInt::get(Int64Ty, UnusedReturnSize),
-                        SRetPtr.getPointer());
-      return ret;
-    }
-
     case ABIArgInfo::CoerceAndExpand: {
       auto coercionType = RetAI.getCoerceAndExpandType();
       auto layout = CGM.getDataLayout().getStructLayout(coercionType);
@@ -3886,15 +4002,31 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       Address addr = SRetPtr;
       addr = Builder.CreateElementBitCast(addr, coercionType);
 
+      assert(CI->getType() == RetAI.getUnpaddedCoerceAndExpandType());
+      bool requiresExtract = isa<llvm::StructType>(CI->getType());
+
       unsigned unpaddedIndex = 0;
       for (unsigned i = 0, e = coercionType->getNumElements(); i != e; ++i) {
         llvm::Type *eltType = coercionType->getElementType(i);
         if (ABIArgInfo::isPaddingForCoerceAndExpand(eltType)) continue;
         Address eltAddr = Builder.CreateStructGEP(addr, i, layout);
-        llvm::Value *elt = Builder.CreateExtractValue(CI, unpaddedIndex++);
+        llvm::Value *elt = CI;
+        if (requiresExtract)
+          elt = Builder.CreateExtractValue(elt, unpaddedIndex++);
+        else
+          assert(unpaddedIndex == 0);
         Builder.CreateStore(elt, eltAddr);
       }
-      break;
+      // FALLTHROUGH
+    }
+
+    case ABIArgInfo::InAlloca:
+    case ABIArgInfo::Indirect: {
+      RValue ret = convertTempToRValue(SRetPtr, RetTy, SourceLocation());
+      if (UnusedReturnSize)
+        EmitLifetimeEnd(llvm::ConstantInt::get(Int64Ty, UnusedReturnSize),
+                        SRetPtr.getPointer());
+      return ret;
     }
 
     case ABIArgInfo::Ignore:

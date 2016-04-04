@@ -7,9 +7,13 @@
 #define HEADER
 
 #pragma omp declare simd
+#pragma omp declare simd inbranch
+#pragma omp declare simd notinbranch
 void add_1(float *d) __attribute__((cold));
 
-// CHECK: #pragma omp declare simd
+// CHECK: #pragma omp declare simd notinbranch
+// CHECK-NEXT: #pragma omp declare simd inbranch
+// CHECK-NEXT: #pragma omp declare simd
 // CHECK-NEXT: void add_1(float *d) __attribute__((cold));
 //
 

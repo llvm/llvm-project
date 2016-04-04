@@ -3098,18 +3098,11 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
   const OMPNumTeamsClause *NT = TD.getSingleClause<OMPNumTeamsClause>();
   const OMPThreadLimitClause *TL = TD.getSingleClause<OMPThreadLimitClause>();
   if (NT || TL) {
-    llvm::Value *NumTeamsVal = (NT) ? CGF.Builder.CreateIntCast(
-        CGF.EmitScalarExpr(NT->getNumTeams()), CGF.CGM.Int32Ty,
-        /* isSigned = */ true) :
-        CGF.Builder.getInt32(0);
+    Expr *NumTeams = (NT) ? NT->getNumTeams() : nullptr;
+    Expr *ThreadLimit = (TL) ? TL->getThreadLimit() : nullptr;
 
-    llvm::Value *ThreadLimitVal = (TL) ? CGF.Builder.CreateIntCast(
-        CGF.EmitScalarExpr(TL->getThreadLimit()), CGF.CGM.Int32Ty,
-        /* isSigned = */ true) :
-        CGF.Builder.getInt32(0);
-
-    CGF.CGM.getOpenMPRuntime().emitNumTeamsClause(CGF, NumTeamsVal,
-        ThreadLimitVal, S.getLocStart());
+    CGF.CGM.getOpenMPRuntime().emitNumTeamsClause(CGF, NumTeams, ThreadLimit,
+                                                  S.getLocStart());
   }
 
   OMPLexicalScope Scope(CGF, S);

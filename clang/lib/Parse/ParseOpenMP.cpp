@@ -323,6 +323,37 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
                                                          IsCorrect);
 }
 
+/// Parses clauses for 'declare simd' directive.
+///    clause:
+///      'inbranch' | 'notinbranch'
+static void parseDeclareSimdClauses(Parser &P,
+                                    OMPDeclareSimdDeclAttr::BranchStateTy &BS) {
+  SourceRange BSRange;
+  const Token &Tok = P.getCurToken();
+  while (Tok.isNot(tok::annot_pragma_openmp_end)) {
+    if (Tok.isNot(tok::identifier))
+      break;
+    OMPDeclareSimdDeclAttr::BranchStateTy Out;
+    StringRef TokName = Tok.getIdentifierInfo()->getName();
+    // Parse 'inranch|notinbranch' clauses.
+    if (OMPDeclareSimdDeclAttr::ConvertStrToBranchStateTy(TokName, Out)) {
+      if (BS != OMPDeclareSimdDeclAttr::BS_Undefined && BS != Out) {
+        P.Diag(Tok, diag::err_omp_declare_simd_inbranch_notinbranch)
+            << TokName << OMPDeclareSimdDeclAttr::ConvertBranchStateTyToStr(BS)
+            << BSRange;
+      }
+      BS = Out;
+      BSRange = SourceRange(Tok.getLocation(), Tok.getEndLoc());
+    } else
+      // TODO: add parsing of other clauses.
+      break;
+    P.ConsumeToken();
+    // Skip ',' if any.
+    if (Tok.is(tok::comma))
+      P.ConsumeToken();
+  }
+}
+
 /// \brief Parsing of declarative OpenMP directives.
 ///
 ///       threadprivate-directive:
@@ -387,8 +418,11 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     //
 
     ConsumeToken();
-    // The last seen token is annot_pragma_openmp_end - need to check for
-    // extra tokens.
+    OMPDeclareSimdDeclAttr::BranchStateTy BS =
+        OMPDeclareSimdDeclAttr::BS_Undefined;
+    parseDeclareSimdClauses(*this, BS);
+
+    // Need to check for extra tokens.
     if (Tok.isNot(tok::annot_pragma_openmp_end)) {
       Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
           << getOpenMPDirectiveName(OMPD_declare_simd);
@@ -396,12 +430,12 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
         ConsumeAnyToken();
     }
     // Skip the last annot_pragma_openmp_end.
-    ConsumeToken();
+    SourceLocation EndLoc = ConsumeToken();
 
     DeclGroupPtrTy Ptr;
-    if (Tok.is(tok::annot_pragma_openmp)) {
+    if (Tok.is(tok::annot_pragma_openmp))
       Ptr = ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs, TagType, Tag);
-    } else if (Tok.isNot(tok::r_brace) && !isEofOrEom()) {
+    else if (Tok.isNot(tok::r_brace) && !isEofOrEom()) {
       // Here we expect to see some function declaration.
       if (AS == AS_none) {
         assert(TagType == DeclSpec::TST_unspecified);
@@ -419,7 +453,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       return DeclGroupPtrTy();
     }
 
-    return Actions.ActOnOpenMPDeclareSimdDirective(Ptr, Loc);
+    return Actions.ActOnOpenMPDeclareSimdDirective(Ptr, BS,
+                                                   SourceRange(Loc, EndLoc));
   }
   case OMPD_unknown:
     Diag(Tok, diag::err_omp_unknown_directive);

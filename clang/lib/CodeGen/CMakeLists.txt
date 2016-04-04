@@ -76,6 +76,7 @@ add_clang_library(clangCodeGen
   ModuleBuilder.cpp
   ObjectFilePCHContainerOperations.cpp
   SanitizerMetadata.cpp
+  SwiftCallingConv.cpp
   TargetInfo.cpp
 
   DEPENDS

@@ -1490,6 +1490,13 @@ void Preprocessor::RegisterBuiltinPragmas() {
     AddPragmaHandler(new PragmaRegionHandler("region"));
     AddPragmaHandler(new PragmaRegionHandler("endregion"));
   }
+
+  // Pragmas added by plugins
+  for (PragmaHandlerRegistry::iterator it = PragmaHandlerRegistry::begin(),
+                                       ie = PragmaHandlerRegistry::end();
+       it != ie; ++it) {
+    AddPragmaHandler(it->instantiate().release());
+  }
 }
 
 /// Ignore all pragmas, useful for modes such as -Eonly which would otherwise

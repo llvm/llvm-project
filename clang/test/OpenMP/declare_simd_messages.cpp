@@ -46,6 +46,12 @@ void h(int *hp, int *hp2, int *hq, int *lin) {
   h((float *)hp, (float *)hp2, (float *)hq, (float *)lin);
 }
 
+#pragma omp declare simd inbranch inbranch
+#pragma omp declare simd notinbranch notinbranch
+#pragma omp declare simd inbranch inbranch notinbranch // expected-error {{unexpected 'notinbranch' clause, 'inbranch' is specified already}}
+#pragma omp declare simd notinbranch notinbranch inbranch // expected-error {{unexpected 'inbranch' clause, 'notinbranch' is specified already}}
+void foo();
+
 template <class T>
 struct St {
 // expected-error@+2 {{function declaration is expected after 'declare simd' directive}}

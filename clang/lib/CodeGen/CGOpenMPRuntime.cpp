@@ -4832,17 +4832,29 @@ void CGOpenMPRuntime::emitTeamsCall(CodeGenFunction &CGF,
 }
 
 void CGOpenMPRuntime::emitNumTeamsClause(CodeGenFunction &CGF,
-                                         llvm::Value *NumTeams,
-                                         llvm::Value *ThreadLimit,
+                                         const Expr *NumTeams,
+                                         const Expr *ThreadLimit,
                                          SourceLocation Loc) {
   if (!CGF.HaveInsertPoint())
     return;
 
   auto *RTLoc = emitUpdateLocation(CGF, Loc);
 
+  llvm::Value *NumTeamsVal =
+      (NumTeams)
+          ? CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(NumTeams),
+                                      CGF.CGM.Int32Ty, /* isSigned = */ true)
+          : CGF.Builder.getInt32(0);
+
+  llvm::Value *ThreadLimitVal =
+      (ThreadLimit)
+          ? CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(ThreadLimit),
+                                      CGF.CGM.Int32Ty, /* isSigned = */ true)
+          : CGF.Builder.getInt32(0);
+
   // Build call __kmpc_push_num_teamss(&loc, global_tid, num_teams, thread_limit)
-  llvm::Value *PushNumTeamsArgs[] = {
-      RTLoc, getThreadID(CGF, Loc), NumTeams, ThreadLimit};
+  llvm::Value *PushNumTeamsArgs[] = {RTLoc, getThreadID(CGF, Loc), NumTeamsVal,
+                                     ThreadLimitVal};
   CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_push_num_teams),
                       PushNumTeamsArgs);
 }

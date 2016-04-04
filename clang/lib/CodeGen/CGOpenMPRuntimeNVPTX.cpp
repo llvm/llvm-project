@@ -14,6 +14,8 @@
 
 #include "CGOpenMPRuntimeNVPTX.h"
 #include "clang/AST/DeclOpenMP.h"
+#include "CodeGenFunction.h"
+#include "clang/AST/StmtOpenMP.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -349,4 +351,46 @@ CGOpenMPRuntimeNVPTX::CGOpenMPRuntimeNVPTX(CodeGenModule &CGM)
 
   // Called once per module during initialization.
   initializeEnvironment();
+}
+
+void CGOpenMPRuntimeNVPTX::emitNumTeamsClause(CodeGenFunction &CGF,
+                                              const Expr *NumTeams,
+                                              const Expr *ThreadLimit,
+                                              SourceLocation Loc) {}
+
+llvm::Value *CGOpenMPRuntimeNVPTX::emitParallelOrTeamsOutlinedFunction(
+    const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
+    OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
+
+  llvm::Function *OutlinedFun = nullptr;
+  if (isa<OMPTeamsDirective>(D)) {
+    llvm::Value *OutlinedFunVal =
+        CGOpenMPRuntime::emitParallelOrTeamsOutlinedFunction(
+            D, ThreadIDVar, InnermostKind, CodeGen);
+    OutlinedFun = cast<llvm::Function>(OutlinedFunVal);
+    OutlinedFun->addFnAttr(llvm::Attribute::AlwaysInline);
+  } else
+    llvm_unreachable("parallel directive is not yet supported for nvptx "
+                     "backend.");
+
+  return OutlinedFun;
+}
+
+void CGOpenMPRuntimeNVPTX::emitTeamsCall(CodeGenFunction &CGF,
+                                         const OMPExecutableDirective &D,
+                                         SourceLocation Loc,
+                                         llvm::Value *OutlinedFn,
+                                         ArrayRef<llvm::Value *> CapturedVars) {
+  if (!CGF.HaveInsertPoint())
+    return;
+
+  Address ZeroAddr =
+      CGF.CreateTempAlloca(CGF.Int32Ty, CharUnits::fromQuantity(4),
+                           /*Name*/ ".zero.addr");
+  CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
+  llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
+  OutlinedFnArgs.push_back(ZeroAddr.getPointer());
+  OutlinedFnArgs.push_back(ZeroAddr.getPointer());
+  OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
+  CGF.EmitCallOrInvoke(OutlinedFn, OutlinedFnArgs);
 }

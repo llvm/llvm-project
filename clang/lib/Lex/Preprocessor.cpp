@@ -53,6 +53,8 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
+template class llvm::Registry<clang::PragmaHandler>;
+
 //===----------------------------------------------------------------------===//
 ExternalPreprocessorSource::~ExternalPreprocessorSource() { }
 

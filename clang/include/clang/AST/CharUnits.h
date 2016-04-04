@@ -142,8 +142,16 @@ namespace clang {
       CharUnits operator* (QuantityType N) const {
         return CharUnits(Quantity * N);
       }
+      CharUnits &operator*= (QuantityType N) {
+        Quantity *= N;
+        return *this;
+      }
       CharUnits operator/ (QuantityType N) const {
         return CharUnits(Quantity / N);
+      }
+      CharUnits &operator/= (QuantityType N) {
+        Quantity /= N;
+        return *this;
       }
       QuantityType operator/ (const CharUnits &Other) const {
         return Quantity / Other.Quantity;
