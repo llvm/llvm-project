@@ -821,9 +821,9 @@ class MDNode : public Metadata {
   unsigned NumOperands;
   unsigned NumUnresolved;
 
-protected:
   ContextAndReplaceableUses Context;
 
+protected:
   void *operator new(size_t Size, unsigned NumOps);
   void operator delete(void *Mem);
 
