@@ -2151,6 +2151,11 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_C:
     return "";
 
+  case CC_PreserveMost:
+    return "perservemost";
+  case CC_PreserveAll:
+    return "perserveall";
+
   case CC_X86StdCall:
   case CC_X86FastCall:
   case CC_X86ThisCall:
