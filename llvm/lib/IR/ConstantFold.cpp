@@ -40,9 +40,9 @@ using namespace llvm::PatternMatch;
 //                ConstantFold*Instruction Implementations
 //===----------------------------------------------------------------------===//
 
-/// BitCastConstantVector - Convert the specified vector Constant node to the
-/// specified vector type.  At this point, we know that the elements of the
-/// input vector constant are all simple integer or FP values.
+/// Convert the specified vector Constant node to the specified vector type.
+/// At this point, we know that the elements of the input vector constant are
+/// all simple integer or FP values.
 static Constant *BitCastConstantVector(Constant *CV, VectorType *DstTy) {
 
   if (CV->isAllOnesValue()) return Constant::getAllOnesValue(DstTy);
@@ -203,15 +203,14 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
 }
 
 
-/// ExtractConstantBytes - V is an integer constant which only has a subset of
-/// its bytes used.  The bytes used are indicated by ByteStart (which is the
-/// first byte used, counting from the least significant byte) and ByteSize,
-/// which is the number of bytes used.
+/// V is an integer constant which only has a subset of its bytes used.
+/// The bytes used are indicated by ByteStart (which is the first byte used,
+/// counting from the least significant byte) and ByteSize, which is the number
+/// of bytes used.
 ///
 /// This function analyzes the specified constant to see if the specified byte
 /// range can be returned as a simplified constant.  If so, the constant is
 /// returned, otherwise null is returned.
-///
 static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
                                       unsigned ByteSize) {
   assert(C->getType()->isIntegerTy() &&
@@ -347,11 +346,10 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
   }
 }
 
-/// getFoldedSizeOf - Return a ConstantExpr with type DestTy for sizeof
-/// on Ty, with any known factors factored out. If Folded is false,
-/// return null if no factoring was possible, to avoid endlessly
-/// bouncing an unfoldable expression back into the top-level folder.
-///
+/// Return a ConstantExpr with type DestTy for sizeof on Ty, with any known
+/// factors factored out. If Folded is false, return null if no factoring was
+/// possible, to avoid endlessly bouncing an unfoldable expression back into the
+/// top-level folder.
 static Constant *getFoldedSizeOf(Type *Ty, Type *DestTy,
                                  bool Folded) {
   if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
@@ -404,11 +402,10 @@ static Constant *getFoldedSizeOf(Type *Ty, Type *DestTy,
   return C;
 }
 
-/// getFoldedAlignOf - Return a ConstantExpr with type DestTy for alignof
-/// on Ty, with any known factors factored out. If Folded is false,
-/// return null if no factoring was possible, to avoid endlessly
-/// bouncing an unfoldable expression back into the top-level folder.
-///
+/// Return a ConstantExpr with type DestTy for alignof on Ty, with any known
+/// factors factored out. If Folded is false, return null if no factoring was
+/// possible, to avoid endlessly bouncing an unfoldable expression back into the
+/// top-level folder.
 static Constant *getFoldedAlignOf(Type *Ty, Type *DestTy,
                                   bool Folded) {
   // The alignment of an array is equal to the alignment of the
@@ -470,11 +467,10 @@ static Constant *getFoldedAlignOf(Type *Ty, Type *DestTy,
   return C;
 }
 
-/// getFoldedOffsetOf - Return a ConstantExpr with type DestTy for offsetof
-/// on Ty and FieldNo, with any known factors factored out. If Folded is false,
-/// return null if no factoring was possible, to avoid endlessly
-/// bouncing an unfoldable expression back into the top-level folder.
-///
+/// Return a ConstantExpr with type DestTy for offsetof on Ty and FieldNo, with
+/// any known factors factored out. If Folded is false, return null if no
+/// factoring was possible, to avoid endlessly bouncing an unfoldable expression
+/// back into the top-level folder.
 static Constant *getFoldedOffsetOf(Type *Ty, Constant *FieldNo,
                                    Type *DestTy,
                                    bool Folded) {
@@ -1277,8 +1273,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
   return nullptr;
 }
 
-/// isZeroSizedType - This type is zero sized if its an array or structure of
-/// zero sized types.  The only leaf zero sized type is an empty structure.
+/// This type is zero-sized if it's an array or structure of zero-sized types.
+/// The only leaf zero-sized type is an empty structure.
 static bool isMaybeZeroSizedType(Type *Ty) {
   if (StructType *STy = dyn_cast<StructType>(Ty)) {
     if (STy->isOpaque()) return true;  // Can't say.
@@ -1294,8 +1290,8 @@ static bool isMaybeZeroSizedType(Type *Ty) {
   return false;
 }
 
-/// IdxCompare - Compare the two constants as though they were getelementptr
-/// indices.  This allows coercion of the types to be the same thing.
+/// Compare the two constants as though they were getelementptr indices.
+/// This allows coercion of the types to be the same thing.
 ///
 /// If the two constants are the "same" (after coercion), return 0.  If the
 /// first is less than the second, return -1, if the second is less than the
@@ -1334,9 +1330,9 @@ static int IdxCompare(Constant *C1, Constant *C2, Type *ElTy) {
     return 1;
 }
 
-/// evaluateFCmpRelation - This function determines if there is anything we can
-/// decide about the two constants provided.  This doesn't need to handle simple
-/// things like ConstantFP comparisons, but should instead handle ConstantExprs.
+/// This function determines if there is anything we can decide about the two
+/// constants provided. This doesn't need to handle simple things like
+/// ConstantFP comparisons, but should instead handle ConstantExprs.
 /// If we can determine that the two constants have a particular relation to
 /// each other, we should return the corresponding FCmpInst predicate,
 /// otherwise return FCmpInst::BAD_FCMP_PREDICATE. This is used below in
@@ -1421,12 +1417,12 @@ static ICmpInst::Predicate areGlobalsPotentiallyEqual(const GlobalValue *GV1,
   return ICmpInst::BAD_ICMP_PREDICATE;
 }
 
-/// evaluateICmpRelation - This function determines if there is anything we can
-/// decide about the two constants provided.  This doesn't need to handle simple
-/// things like integer comparisons, but should instead handle ConstantExprs
-/// and GlobalValues.  If we can determine that the two constants have a
-/// particular relation to each other, we should return the corresponding ICmp
-/// predicate, otherwise return ICmpInst::BAD_ICMP_PREDICATE.
+/// This function determines if there is anything we can decide about the two
+/// constants provided. This doesn't need to handle simple things like integer
+/// comparisons, but should instead handle ConstantExprs and GlobalValues.
+/// If we can determine that the two constants have a particular relation to
+/// each other, we should return the corresponding ICmp predicate, otherwise
+/// return ICmpInst::BAD_ICMP_PREDICATE.
 ///
 /// To simplify this code we canonicalize the relation so that the first
 /// operand is always the most "complex" of the two.  We consider simple
@@ -1997,8 +1993,7 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
   return nullptr;
 }
 
-/// isInBoundsIndices - Test whether the given sequence of *normalized* indices
-/// is "inbounds".
+/// Test whether the given sequence of *normalized* indices is "inbounds".
 template<typename IndexTy>
 static bool isInBoundsIndices(ArrayRef<IndexTy> Idxs) {
   // No indices means nothing that could be out of bounds.
@@ -2017,7 +2012,7 @@ static bool isInBoundsIndices(ArrayRef<IndexTy> Idxs) {
   return true;
 }
 
-/// \brief Test whether a given ConstantInt is in-range for a SequentialType.
+/// Test whether a given ConstantInt is in-range for a SequentialType.
 static bool isIndexInRangeOfSequentialType(SequentialType *STy,
                                            const ConstantInt *CI) {
   // And indices are valid when indexing along a pointer
