@@ -274,7 +274,7 @@ ClangASTSource::CompleteType (TagDecl *tag_decl)
 
                     CompilerType clang_type (type->GetFullCompilerType ());
 
-                    if (!clang_type)
+                    if (!ClangUtil::IsClangType(clang_type))
                         continue;
 
                     const TagType *tag_type = ClangASTContext::GetQualType(clang_type)->getAs<TagType>();
@@ -314,7 +314,7 @@ ClangASTSource::CompleteType (TagDecl *tag_decl)
 
                 CompilerType clang_type (type->GetFullCompilerType ());
 
-                if (!clang_type)
+                if (!ClangUtil::IsClangType(clang_type))
                     continue;
 
                 const TagType *tag_type = ClangASTContext::GetQualType(clang_type)->getAs<TagType>();
@@ -2060,7 +2060,7 @@ NameSearchContext::AddGenericFunDecl()
 clang::NamedDecl *
 NameSearchContext::AddTypeDecl(const CompilerType &clang_type)
 {
-    if (clang_type)
+    if (ClangUtil::IsClangType(clang_type))
     {
         QualType qual_type = ClangASTContext::GetQualType(clang_type);
 
