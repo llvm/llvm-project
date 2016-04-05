@@ -24,6 +24,7 @@ BE2:    ; preds = %n br label %Loop
 }
 
 !llvm.module.flags = !{!0, !1}
+!llvm.dbg.cu = !{!12}
 !0 = !{i32 2, !"Dwarf Version", i32 4}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 
@@ -37,3 +38,8 @@ BE2:    ; preds = %n br label %Loop
 !9 = !DILocation(line: 103, column: 1, scope: !5)
 !10 = !DILocation(line: 104, column: 1, scope: !5)
 !11 = !DILocation(line: 105, column: 1, scope: !5)
+!12 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
+                             file: !4,
+                             isOptimized: true, flags: "-O2",
+                             splitDebugFilename: "abc.debug", emissionKind: 2,
+                             subprograms: !{!5})

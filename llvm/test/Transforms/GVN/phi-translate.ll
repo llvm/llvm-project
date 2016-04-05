@@ -37,6 +37,7 @@ end:
 }
 
 !llvm.module.flags = !{!0, !1, !2}
+!llvm.dbg.cu = !{!12}
 !0 = !{i32 2, !"Dwarf Version", i32 4}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 !2 = !{i32 1, !"PIC Level", i32 2}
@@ -50,3 +51,8 @@ end:
 !9 = !DILocation(line: 45, column: 1, scope: !6)
 !10 = !DILocation(line: 46, column: 1, scope: !6)
 !11 = !DILocation(line: 47, column: 1, scope: !6)
+!12 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
+                             file: !5,
+                             isOptimized: true, flags: "-O2",
+                             splitDebugFilename: "abc.debug", emissionKind: 2,
+                             subprograms: !{!6})
