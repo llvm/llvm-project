@@ -374,14 +374,17 @@ def c : Flag<["-"], "c">, Flags<[DriverOption]>,
   HelpText<"Only run preprocess, compile, and assemble steps">;
 def cuda_device_only : Flag<["--"], "cuda-device-only">,
   HelpText<"Do device-side CUDA compilation only">;
-def cuda_gpu_arch_EQ : Joined<["--"], "cuda-gpu-arch=">,
-  Flags<[DriverOption, HelpHidden]>, HelpText<"CUDA GPU architecture">;
+def cuda_gpu_arch_EQ : Joined<["--"], "cuda-gpu-arch=">, Flags<[DriverOption]>,
+  HelpText<"CUDA GPU architecture (e.g. sm_35).  May be specified more than once.">;
 def cuda_host_only : Flag<["--"], "cuda-host-only">,
   HelpText<"Do host-side CUDA compilation only">;
 def cuda_noopt_device_debug : Flag<["--"], "cuda-noopt-device-debug">,
   HelpText<"Enable device-side debug info generation. Disables ptxas optimizations.">;
 def cuda_path_EQ : Joined<["--"], "cuda-path=">, Group<i_Group>,
   HelpText<"CUDA installation path">;
+def fcuda_flush_denormals_to_zero : Flag<["-"], "fcuda-flush-denormals-to-zero">,
+  Flags<[CC1Option]>, HelpText<"Flush denormal floating point values to zero in CUDA device mode.">;
+def fno_cuda_flush_denormals_to_zero : Flag<["-"], "fno-cuda-flush-denormals-to-zero">;
 def dA : Flag<["-"], "dA">, Group<d_Group>;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
   HelpText<"Print macro definitions in -E mode in addition to normal output">;
@@ -594,6 +597,9 @@ def fno_math_errno : Flag<["-"], "fno-math-errno">, Group<f_Group>;
 def fbracket_depth_EQ : Joined<["-"], "fbracket-depth=">, Group<f_Group>;
 def fsignaling_math : Flag<["-"], "fsignaling-math">, Group<f_Group>;
 def fno_signaling_math : Flag<["-"], "fno-signaling-math">, Group<f_Group>;
+def fjump_tables : Flag<["-"], "fjump-tables">, Group<f_Group>;
+def fno_jump_tables : Flag<["-"], "fno-jump-tables">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Do not use jump tables for lowering switches">;
 def fsanitize_EQ : CommaJoined<["-"], "fsanitize=">, Group<f_clang_Group>,
                    Flags<[CC1Option, CoreOption]>, MetaVarName<"<check>">,
                    HelpText<"Turn on runtime checks for various forms of undefined "

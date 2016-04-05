@@ -472,6 +472,14 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Override, "Cross-DSO CFI", 1);
   }
 
+  if (LangOpts.CUDAIsDevice && getTarget().getTriple().isNVPTX()) {
+    // Indicate whether __nvvm_reflect should be configured to flush denormal
+    // floating point values to 0.  (This corresponds to its "__CUDA_FTZ"
+    // property.)
+    getModule().addModuleFlag(llvm::Module::Override, "nvvm-reflect-ftz",
+                              LangOpts.CUDADeviceFlushDenormalsToZero ? 1 : 0);
+  }
+
   if (uint32_t PLevel = Context.getLangOpts().PICLevel) {
     llvm::PICLevel::Level PL = llvm::PICLevel::Default;
     switch (PLevel) {

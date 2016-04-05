@@ -1172,9 +1172,9 @@ private:
     if (!LeftOfParens)
       return false;
 
-    // If the following token is an identifier, this is a cast. All cases where
-    // this can be something else are handled above.
-    if (Tok.Next->is(tok::identifier))
+    // If the following token is an identifier or 'this', this is a cast. All
+    // cases where this can be something else are handled above.
+    if (Tok.Next->isOneOf(tok::identifier, tok::kw_this))
       return true;
 
     if (!Tok.Next->Next)
