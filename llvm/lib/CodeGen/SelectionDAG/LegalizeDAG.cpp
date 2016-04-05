@@ -328,6 +328,12 @@ static void ExpandUnalignedStore(StoreSDNode *ST, SelectionDAG &DAG,
       ST->getMemoryVT().isVector()) {
     EVT intVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
     if (TLI.isTypeLegal(intVT)) {
+      if (!TLI.isOperationLegalOrCustom(ISD::STORE, intVT)) {
+        // Scalarize the store and let the individual components be handled.
+        SDValue Result = TLI.scalarizeVectorStore(ST, DAG);
+        DAGLegalize->ReplaceNode(SDValue(ST, 0), Result);
+        return;
+      }
       // Expand to a bitconvert of the value to the integer type of the
       // same size, then a (misaligned) int store.
       // FIXME: Does not handle truncating floating point stores!

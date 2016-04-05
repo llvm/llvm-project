@@ -3133,6 +3133,60 @@ SDValue TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
   return DAG.getMergeValues({ Value, NewChain }, SL);
 }
 
+// FIXME: This relies on each element having a byte size, otherwise the stride
+// is 0 and just overwrites the same location. ExpandStore currently expects
+// this broken behavior.
+SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
+                                             SelectionDAG &DAG) const {
+  SDLoc SL(ST);
+
+  SDValue Chain = ST->getChain();
+  SDValue BasePtr = ST->getBasePtr();
+  SDValue Value = ST->getValue();
+  EVT StVT = ST->getMemoryVT();
+
+  unsigned Alignment = ST->getAlignment();
+  bool isVolatile = ST->isVolatile();
+  bool isNonTemporal = ST->isNonTemporal();
+  AAMDNodes AAInfo = ST->getAAInfo();
+
+  // The type of the data we want to save
+  EVT RegVT = Value.getValueType();
+  EVT RegSclVT = RegVT.getScalarType();
+
+  // The type of data as saved in memory.
+  EVT MemSclVT = StVT.getScalarType();
+
+  EVT PtrVT = BasePtr.getValueType();
+
+  // Store Stride in bytes
+  unsigned Stride = MemSclVT.getSizeInBits() / 8;
+  EVT IdxVT = getVectorIdxTy(DAG.getDataLayout());
+  unsigned NumElem = StVT.getVectorNumElements();
+
+  // Extract each of the elements from the original vector and save them into
+  // memory individually.
+  SmallVector<SDValue, 8> Stores;
+  for (unsigned Idx = 0; Idx < NumElem; ++Idx) {
+    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, RegSclVT, Value,
+                              DAG.getConstant(Idx, SL, IdxVT));
+
+    SDValue Ptr = DAG.getNode(ISD::ADD, SL, PtrVT, BasePtr,
+                              DAG.getConstant(Idx * Stride, SL, PtrVT));
+
+    // This scalar TruncStore may be illegal, but we legalize it later.
+    SDValue Store = DAG.getTruncStore(
+      Chain, SL, Elt, Ptr,
+      ST->getPointerInfo().getWithOffset(Idx * Stride), MemSclVT,
+      isVolatile, isNonTemporal, MinAlign(Alignment, Idx * Stride),
+      AAInfo);
+
+    Stores.push_back(Store);
+  }
+
+  return DAG.getNode(ISD::TokenFactor, SL, MVT::Other, Stores);
+}
+
 //===----------------------------------------------------------------------===//
 // Implementation of Emulated TLS Model
 //===----------------------------------------------------------------------===//

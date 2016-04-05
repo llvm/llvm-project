@@ -637,54 +637,40 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
 }
 
 SDValue VectorLegalizer::ExpandStore(SDValue Op) {
-  SDLoc dl(Op);
   StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
-  SDValue Chain = ST->getChain();
-  SDValue BasePTR = ST->getBasePtr();
-  SDValue Value = ST->getValue();
+
   EVT StVT = ST->getMemoryVT();
-
-  unsigned Alignment = ST->getAlignment();
-  bool isVolatile = ST->isVolatile();
-  bool isNonTemporal = ST->isNonTemporal();
-  AAMDNodes AAInfo = ST->getAAInfo();
-
-  unsigned NumElem = StVT.getVectorNumElements();
-  // The type of the data we want to save
-  EVT RegVT = Value.getValueType();
-  EVT RegSclVT = RegVT.getScalarType();
-  // The type of data as saved in memory.
   EVT MemSclVT = StVT.getScalarType();
-
-  // Cast floats into integers
   unsigned ScalarSize = MemSclVT.getSizeInBits();
 
   // Round odd types to the next pow of two.
-  if (!isPowerOf2_32(ScalarSize))
-    ScalarSize = NextPowerOf2(ScalarSize);
+  if (!isPowerOf2_32(ScalarSize)) {
+    // FIXME: This is completely broken and inconsistent with ExpandLoad
+    // handling.
 
-  // Store Stride in bytes
-  unsigned Stride = ScalarSize/8;
-  // Extract each of the elements from the original vector
-  // and save them into memory individually.
-  SmallVector<SDValue, 8> Stores;
-  for (unsigned Idx = 0; Idx < NumElem; Idx++) {
-    SDValue Ex = DAG.getNode(
-        ISD::EXTRACT_VECTOR_ELT, dl, RegSclVT, Value,
-        DAG.getConstant(Idx, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
+    // For sub-byte element sizes, this ends up with 0 stride between elements,
+    // so the same element just gets re-written to the same location. There seem
+    // to be tests explicitly testing for this broken behavior though.  tests
+    // for this broken behavior.
 
-    // This scalar TruncStore may be illegal, but we legalize it later.
-    SDValue Store = DAG.getTruncStore(Chain, dl, Ex, BasePTR,
-               ST->getPointerInfo().getWithOffset(Idx*Stride), MemSclVT,
-               isVolatile, isNonTemporal, MinAlign(Alignment, Idx*Stride),
-               AAInfo);
+    LLVMContext &Ctx = *DAG.getContext();
 
-    BasePTR = DAG.getNode(ISD::ADD, dl, BasePTR.getValueType(), BasePTR,
-                          DAG.getConstant(Stride, dl, BasePTR.getValueType()));
+    EVT NewMemVT
+      = EVT::getVectorVT(Ctx,
+                         MemSclVT.getIntegerVT(Ctx, NextPowerOf2(ScalarSize)),
+                         StVT.getVectorNumElements());
 
-    Stores.push_back(Store);
+    SDValue NewVectorStore
+      = DAG.getTruncStore(ST->getChain(), SDLoc(Op), ST->getValue(),
+                          ST->getBasePtr(),
+                          ST->getPointerInfo(), NewMemVT,
+                          ST->isVolatile(), ST->isNonTemporal(),
+                          ST->getAlignment(),
+                          ST->getAAInfo());
+    ST = cast<StoreSDNode>(NewVectorStore.getNode());
   }
-  SDValue TF =  DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Stores);
+
+  SDValue TF = TLI.scalarizeVectorStore(ST, DAG);
   AddLegalizedOperand(Op, TF);
   return TF;
 }
