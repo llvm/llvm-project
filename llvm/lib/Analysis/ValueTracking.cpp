@@ -3987,7 +3987,8 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     
     // Y >s C ? ~Y : ~C == ~Y <s ~C ? ~Y : ~C = SMIN(~Y, ~C)
     if (const auto *C2 = dyn_cast<ConstantInt>(FalseVal)) {
-      if (C1->getType() == C2->getType() && ~C1->getValue() == C2->getValue() &&
+      if (Pred == ICmpInst::ICMP_SGT && C1->getType() == C2->getType() &&
+          ~C1->getValue() == C2->getValue() &&
           (match(TrueVal, m_Not(m_Specific(CmpLHS))) ||
            match(CmpLHS, m_Not(m_Specific(TrueVal))))) {
         LHS = TrueVal;
