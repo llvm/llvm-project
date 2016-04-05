@@ -254,7 +254,7 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
 
 static const char *ProgramName;
 
-static int ErrorAndExit(const Twine &Msg) {
+static void ErrorAndExit(const Twine &Msg) {
   errs() << ProgramName << ": error: " << Msg << "\n";
   exit(1);
 }

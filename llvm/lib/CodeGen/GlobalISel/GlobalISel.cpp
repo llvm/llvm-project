@@ -25,5 +25,6 @@ void llvm::initializeGlobalISel(PassRegistry &Registry) {
 
 void llvm::initializeGlobalISel(PassRegistry &Registry) {
   initializeIRTranslatorPass(Registry);
+  initializeRegBankSelectPass(Registry);
 }
 #endif // LLVM_BUILD_GLOBAL_ISEL

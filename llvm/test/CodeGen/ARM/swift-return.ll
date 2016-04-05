@@ -4,7 +4,8 @@
 ; RUN: llc -mtriple=armv7-apple-ios -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=armv7-apple-ios -verify-machineinstrs < %s -O0 | FileCheck --check-prefix=CHECK-O0 %s
 
-; Test how llvm handles return type of {i16, i8}. The return value will be passed in %r0 and %r1.
+; Test how llvm handles return type of {i16, i8}. The return value will be
+; passed in %r0 and %r1.
 ; CHECK-LABEL: test:
 ; CHECK: bl {{.*}}gen
 ; CHECK: sxth {{.*}}, r0
@@ -31,7 +32,8 @@ entry:
 
 declare swiftcc { i16, i8 } @gen(i32)
 
-; We can't pass every return value in register, instead, pass everything in memroy.
+; We can't pass every return value in register, instead, pass everything in
+; memroy.
 ; The caller provides space for the return value and passes the address in %r0.
 ; The first input argument will be in %r1.
 ; CHECK-LABEL: test2:
@@ -98,7 +100,8 @@ define swiftcc { i32, i32, i32, i32, i32 } @gen2(i32 %key) {
   ret { i32, i32, i32, i32, i32 } %Z4
 }
 
-; The return value {i32, i32, i32, i32} will be returned via registers %r0, %r1, %r2, %r3.
+; The return value {i32, i32, i32, i32} will be returned via registers %r0, %r1,
+; %r2, %r3.
 ; CHECK-LABEL: test3:
 ; CHECK: bl {{.*}}gen3
 ; CHECK: add r0, r0, r1

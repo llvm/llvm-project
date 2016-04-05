@@ -1171,7 +1171,7 @@ int X86TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
     int64_t Val = Tmp.getSExtValue();
     Cost += getIntImmCost(Val);
   }
-  // We need at least one instruction to materialze the constant.
+  // We need at least one instruction to materialize the constant.
   return std::max(1, Cost);
 }
 

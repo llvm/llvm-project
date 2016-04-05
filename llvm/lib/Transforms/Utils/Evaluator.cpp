@@ -56,8 +56,7 @@ isSimpleEnoughValueToCommitHelper(Constant *C,
     return true;
 
   // Aggregate values are safe if all their elements are.
-  if (isa<ConstantArray>(C) || isa<ConstantStruct>(C) ||
-      isa<ConstantVector>(C)) {
+  if (isa<ConstantAggregate>(C)) {
     for (Value *Op : C->operands())
       if (!isSimpleEnoughValueToCommit(cast<Constant>(Op), SimpleConstants, DL))
         return false;

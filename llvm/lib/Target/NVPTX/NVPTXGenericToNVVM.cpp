@@ -230,8 +230,7 @@ Value *GenericToNVVM::remapConstant(Module *M, Function *F, Constant *C,
     if (I != GVMap.end()) {
       NewValue = getOrInsertCVTA(M, F, I->second, Builder);
     }
-  } else if (isa<ConstantVector>(C) || isa<ConstantArray>(C) ||
-             isa<ConstantStruct>(C)) {
+  } else if (isa<ConstantAggregate>(C)) {
     // If any element in the constant vector or aggregate C is or uses a global
     // variable in GVMap, the constant C needs to be reconstructed, using a set
     // of instructions.

@@ -126,8 +126,13 @@ struct CompileUnitIdentifiers {
   const char *DWOName = "";
 };
 
-static const char *getIndexedString(uint32_t StrIndex, StringRef StrOffsets,
+static const char *getIndexedString(uint32_t Form, DataExtractor InfoData,
+                                    uint32_t &InfoOffset, StringRef StrOffsets,
                                     StringRef Str) {
+  if (Form == dwarf::DW_FORM_string)
+    return InfoData.getCStr(&InfoOffset);
+  assert(Form == dwarf::DW_FORM_GNU_str_index);
+  auto StrIndex = InfoData.getULEB128(&InfoOffset);
   DataExtractor StrOffsetsData(StrOffsets, true, 0);
   uint32_t StrOffsetsOffset = 4 * StrIndex;
   uint32_t StrOffset = StrOffsetsData.getU32(&StrOffsetsOffset);
@@ -163,12 +168,11 @@ static CompileUnitIdentifiers getCUIdentifiers(StringRef Abbrev, StringRef Info,
          (Name != 0 || Form != 0)) {
     switch (Name) {
     case dwarf::DW_AT_name: {
-      ID.Name = getIndexedString(InfoData.getULEB128(&Offset), StrOffsets, Str);
+      ID.Name = getIndexedString(Form, InfoData, Offset, StrOffsets, Str);
       break;
     }
     case dwarf::DW_AT_GNU_dwo_name: {
-      ID.DWOName =
-          getIndexedString(InfoData.getULEB128(&Offset), StrOffsets, Str);
+      ID.DWOName = getIndexedString(Form, InfoData, Offset, StrOffsets, Str);
       break;
     }
     case dwarf::DW_AT_GNU_dwo_id:
@@ -227,36 +231,36 @@ static void addAllTypesFromDWP(
 
 static void addAllTypes(MCStreamer &Out,
                         MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
-                        MCSection *OutputTypes, StringRef Types,
+                        MCSection *OutputTypes,
+                        const std::vector<StringRef> &TypesSections,
                         const UnitIndexEntry &CUEntry, uint32_t &TypesOffset) {
-  if (Types.empty())
-    return;
+  for (StringRef Types : TypesSections) {
+    Out.SwitchSection(OutputTypes);
+    uint32_t Offset = 0;
+    DataExtractor Data(Types, true, 0);
+    while (Data.isValidOffset(Offset)) {
+      UnitIndexEntry Entry = CUEntry;
+      // Zero out the debug_info contribution
+      Entry.Contributions[0] = {};
+      auto &C = Entry.Contributions[DW_SECT_TYPES - DW_SECT_INFO];
+      C.Offset = TypesOffset;
+      auto PrevOffset = Offset;
+      // Length of the unit, including the 4 byte length field.
+      C.Length = Data.getU32(&Offset) + 4;
 
-  Out.SwitchSection(OutputTypes);
-  uint32_t Offset = 0;
-  DataExtractor Data(Types, true, 0);
-  while (Data.isValidOffset(Offset)) {
-    UnitIndexEntry Entry = CUEntry;
-    // Zero out the debug_info contribution
-    Entry.Contributions[0] = {};
-    auto &C = Entry.Contributions[DW_SECT_TYPES - DW_SECT_INFO];
-    C.Offset = TypesOffset;
-    auto PrevOffset = Offset;
-    // Length of the unit, including the 4 byte length field.
-    C.Length = Data.getU32(&Offset) + 4;
+      Data.getU16(&Offset); // Version
+      Data.getU32(&Offset); // Abbrev offset
+      Data.getU8(&Offset);  // Address size
+      auto Signature = Data.getU64(&Offset);
+      Offset = PrevOffset + C.Length;
 
-    Data.getU16(&Offset); // Version
-    Data.getU32(&Offset); // Abbrev offset
-    Data.getU8(&Offset);  // Address size
-    auto Signature = Data.getU64(&Offset);
-    Offset = PrevOffset + C.Length;
+      auto P = TypeIndexEntries.insert(std::make_pair(Signature, Entry));
+      if (!P.second)
+        continue;
 
-    auto P = TypeIndexEntries.insert(std::make_pair(Signature, Entry));
-    if (!P.second)
-      continue;
-
-    Out.EmitBytes(Types.substr(PrevOffset, C.Length));
-    TypesOffset += C.Length;
+      Out.EmitBytes(Types.substr(PrevOffset, C.Length));
+      TypesOffset += C.Length;
+    }
   }
 }
 
@@ -395,7 +399,7 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
 
     StringRef CurStrSection;
     StringRef CurStrOffsetSection;
-    StringRef CurTypesSection;
+    std::vector<StringRef> CurTypesSection;
     StringRef InfoSection;
     StringRef AbbrevSection;
     StringRef CurCUIndexSection;
@@ -464,7 +468,7 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       else if (OutSection == StrSection)
         CurStrSection = Contents;
       else if (OutSection == TypesSection)
-        CurTypesSection = Contents;
+        CurTypesSection.push_back(Contents);
       else if (OutSection == CUIndexSection)
         CurCUIndexSection = Contents;
       else if (OutSection == TUIndexSection)
@@ -513,6 +517,7 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       }
 
       if (!CurTypesSection.empty()) {
+        assert(CurTypesSection.size() == 1);
         if (CurTUIndexSection.empty())
           return make_error_code(std::errc::invalid_argument);
         DWARFUnitIndex TUIndex(DW_SECT_TYPES);
@@ -521,7 +526,7 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
         if (!TUIndex.parse(TUIndexData))
           return make_error_code(std::errc::invalid_argument);
         addAllTypesFromDWP(Out, TypeIndexEntries, TUIndex, TypesSection,
-                           CurTypesSection, CurEntry,
+                           CurTypesSection.front(), CurEntry,
                            ContributionOffsets[DW_SECT_TYPES - DW_SECT_INFO]);
       }
     } else {

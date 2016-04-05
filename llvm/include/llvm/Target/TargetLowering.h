@@ -1011,12 +1011,10 @@ public:
     return PrefLoopAlignment;
   }
 
-  /// Return true if the target stores stack protector cookies at a fixed offset
-  /// in some non-standard address space, and populates the address space and
-  /// offset as appropriate.
-  virtual bool getStackCookieLocation(unsigned &/*AddressSpace*/,
-                                      unsigned &/*Offset*/) const {
-    return false;
+  /// If the target has a standard location for the stack protector cookie,
+  /// returns the address of that location. Otherwise, returns nullptr.
+  virtual Value *getStackCookieLocation(IRBuilder<> &IRB) const {
+    return nullptr;
   }
 
   /// If the target has a standard location for the unsafe stack pointer,
