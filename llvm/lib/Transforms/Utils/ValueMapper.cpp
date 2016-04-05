@@ -194,6 +194,10 @@ class MDNodeMapper {
     bool HasChangedAddress = false;
     unsigned ID = ~0u;
     TempMDNode Placeholder;
+
+    Data() = default;
+    Data(Data &&) = default;
+    Data &operator=(Data &&) = default;
   };
 
   SmallDenseMap<const Metadata *, Data, 32> Info;
