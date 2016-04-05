@@ -316,7 +316,7 @@ static void writeModuleToFile(Module &TheModule, StringRef Filename) {
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC, sys::fs::OpenFlags::F_None);
   error(EC, "error opening the file '" + Filename + "'");
-  WriteBitcodeToFile(&TheModule, OS, true, false);
+  WriteBitcodeToFile(&TheModule, OS, /* ShouldPreserveUseListOrder */ true);
 }
 
 class ThinLTOProcessing {

@@ -1628,8 +1628,8 @@ SDValue DAGCombiner::visitMERGE_VALUES(SDNode *N) {
   return SDValue(N, 0);   // Return N so it doesn't get rechecked!
 }
 
-/// If \p N is a ContantSDNode with isOpaque() == false return it casted to a
-/// ContantSDNode pointer else nullptr.
+/// If \p N is a ConstantSDNode with isOpaque() == false return it casted to a
+/// ConstantSDNode pointer else nullptr.
 static ConstantSDNode *getAsNonOpaqueConstant(SDValue N) {
   ConstantSDNode *Const = dyn_cast<ConstantSDNode>(N);
   return Const != nullptr && !Const->isOpaque() ? Const : nullptr;

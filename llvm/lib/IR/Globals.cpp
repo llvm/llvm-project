@@ -159,8 +159,8 @@ bool GlobalValue::isDeclaration() const {
   if (const Function *F = dyn_cast<Function>(this))
     return F->empty() && !F->isMaterializable();
 
-  // Aliases are always definitions.
-  assert(isa<GlobalAlias>(this));
+  // Aliases and ifuncs are always definitions.
+  assert(isa<GlobalIndirectSymbol>(this));
   return false;
 }
 

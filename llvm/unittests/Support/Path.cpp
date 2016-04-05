@@ -725,7 +725,7 @@ const char coff_bigobj[] = "\x00\x00\xff\xff\x00\x02......"
 const char coff_import_library[] = "\x00\x00\xff\xff....";
 const char elf_relocatable[] = { 0x7f, 'E', 'L', 'F', 1, 2, 1, 0, 0,
                                  0,    0,   0,   0,   0, 0, 0, 0, 1 };
-const char macho_universal_binary[] = "\xca\xfe\xba\xbe...\0x00";
+const char macho_universal_binary[] = "\xca\xfe\xba\xbe...\x00";
 const char macho_object[] =
     "\xfe\xed\xfa\xce........\x00\x00\x00\x01............";
 const char macho_executable[] =

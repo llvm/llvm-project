@@ -191,6 +191,10 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
     if (FP->getType()->isPPC_FP128Ty())
       return nullptr;
 
+    // Make sure dest type is compatible with the folded integer constant.
+    if (!DestTy->isIntegerTy())
+      return nullptr;
+
     return ConstantInt::get(FP->getContext(),
                             FP->getValueAPF().bitcastToAPInt());
   }

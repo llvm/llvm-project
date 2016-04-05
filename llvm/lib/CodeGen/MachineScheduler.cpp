@@ -1580,12 +1580,14 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
   MachineInstr *Copy = CopySU->getInstr();
 
   // Check for pure vreg copies.
-  unsigned SrcReg = Copy->getOperand(1).getReg();
-  if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
+  const MachineOperand &SrcOp = Copy->getOperand(1);
+  unsigned SrcReg = SrcOp.getReg();
+  if (!TargetRegisterInfo::isVirtualRegister(SrcReg) || !SrcOp.readsReg())
     return;
 
-  unsigned DstReg = Copy->getOperand(0).getReg();
-  if (!TargetRegisterInfo::isVirtualRegister(DstReg))
+  const MachineOperand &DstOp = Copy->getOperand(0);
+  unsigned DstReg = DstOp.getReg();
+  if (!TargetRegisterInfo::isVirtualRegister(DstReg) || DstOp.isDead())
     return;
 
   // Check if either the dest or source is local. If it's live across a back

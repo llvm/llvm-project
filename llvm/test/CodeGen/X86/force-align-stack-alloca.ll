@@ -32,15 +32,21 @@ define i64 @g(i32 %i) nounwind {
 ; CHECK:      movl   %{{...}}, %esp
 ; CHECK-NOT:         {{[^ ,]*}}, %esp
 ;
-; Next we set up the memset call, and then undo it.
+; Next we set up the memset call.
 ; CHECK:      subl   $20, %esp
 ; CHECK-NOT:         {{[^ ,]*}}, %esp
+; CHECK:      pushl
+; CHECK:      pushl
+; CHECK:      pushl
 ; CHECK:      calll  memset
-; CHECK-NEXT: addl   $32, %esp
+;
+; Deallocating 32 bytes of outgoing call frame for memset and
+; allocating 28 bytes for calling f yields a 4-byte adjustment:
+; CHECK-NEXT: addl   $4, %esp
 ; CHECK-NOT:         {{[^ ,]*}}, %esp
 ;
-; Next we set up the call to 'f'.
-; CHECK:      subl   $28, %esp
+; And move on to call 'f', and then restore the stack.
+; CHECK:      pushl
 ; CHECK-NOT:         {{[^ ,]*}}, %esp
 ; CHECK:      calll  f
 ; CHECK-NEXT: addl   $32, %esp

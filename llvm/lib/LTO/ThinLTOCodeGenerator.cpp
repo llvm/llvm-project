@@ -91,7 +91,7 @@ static void saveTempBitcode(const Module &TheModule, StringRef TempDir,
   if (EC)
     report_fatal_error(Twine("Failed to open ") + SaveTempPath +
                        " to save optimized bitcode\n");
-  WriteBitcodeToFile(&TheModule, OS, true, false);
+  WriteBitcodeToFile(&TheModule, OS, /* ShouldPreserveUseListOrder */ true);
 }
 
 bool IsFirstDefinitionForLinker(const GlobalValueInfoList &GVInfo,

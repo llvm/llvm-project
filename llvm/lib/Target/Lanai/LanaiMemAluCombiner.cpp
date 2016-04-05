@@ -90,7 +90,7 @@ private:
 char LanaiMemAluCombiner::ID = 0;
 
 INITIALIZE_PASS(LanaiMemAluCombiner, DEBUG_TYPE,
-                "Lanai memory ALU combiner pass", false, false);
+                "Lanai memory ALU combiner pass", false, false)
 
 namespace {
 bool isSpls(uint16_t Opcode) { return Lanai::splsIdempotent(Opcode) == Opcode; }

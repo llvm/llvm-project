@@ -163,7 +163,7 @@ class BitcodeReader : public GVMaterializer {
   SmallVector<Instruction *, 64> InstructionList;
 
   std::vector<std::pair<GlobalVariable*, unsigned> > GlobalInits;
-  std::vector<std::pair<GlobalAlias*, unsigned> > AliasInits;
+  std::vector<std::pair<GlobalIndirectSymbol*, unsigned> > IndirectSymbolInits;
   std::vector<std::pair<Function*, unsigned> > FunctionPrefixes;
   std::vector<std::pair<Function*, unsigned> > FunctionPrologues;
   std::vector<std::pair<Function*, unsigned> > FunctionPersonalityFns;
@@ -395,7 +395,7 @@ private:
   std::error_code rememberAndSkipMetadata();
   std::error_code parseFunctionBody(Function *F);
   std::error_code globalCleanup();
-  std::error_code resolveGlobalAndAliasInits();
+  std::error_code resolveGlobalAndIndirectSymbolInits();
   std::error_code parseMetadata(bool ModuleLevel = false);
   std::error_code parseMetadataStrings(ArrayRef<uint64_t> Record,
                                        StringRef Blob,
@@ -2509,15 +2509,16 @@ uint64_t BitcodeReader::decodeSignRotatedValue(uint64_t V) {
 }
 
 /// Resolve all of the initializers for global values and aliases that we can.
-std::error_code BitcodeReader::resolveGlobalAndAliasInits() {
+std::error_code BitcodeReader::resolveGlobalAndIndirectSymbolInits() {
   std::vector<std::pair<GlobalVariable*, unsigned> > GlobalInitWorklist;
-  std::vector<std::pair<GlobalAlias*, unsigned> > AliasInitWorklist;
+  std::vector<std::pair<GlobalIndirectSymbol*, unsigned> >
+      IndirectSymbolInitWorklist;
   std::vector<std::pair<Function*, unsigned> > FunctionPrefixWorklist;
   std::vector<std::pair<Function*, unsigned> > FunctionPrologueWorklist;
   std::vector<std::pair<Function*, unsigned> > FunctionPersonalityFnWorklist;
 
   GlobalInitWorklist.swap(GlobalInits);
-  AliasInitWorklist.swap(AliasInits);
+  IndirectSymbolInitWorklist.swap(IndirectSymbolInits);
   FunctionPrefixWorklist.swap(FunctionPrefixes);
   FunctionPrologueWorklist.swap(FunctionPrologues);
   FunctionPersonalityFnWorklist.swap(FunctionPersonalityFns);
@@ -2536,20 +2537,20 @@ std::error_code BitcodeReader::resolveGlobalAndAliasInits() {
     GlobalInitWorklist.pop_back();
   }
 
-  while (!AliasInitWorklist.empty()) {
-    unsigned ValID = AliasInitWorklist.back().second;
+  while (!IndirectSymbolInitWorklist.empty()) {
+    unsigned ValID = IndirectSymbolInitWorklist.back().second;
     if (ValID >= ValueList.size()) {
-      AliasInits.push_back(AliasInitWorklist.back());
+      IndirectSymbolInits.push_back(IndirectSymbolInitWorklist.back());
     } else {
       Constant *C = dyn_cast_or_null<Constant>(ValueList[ValID]);
       if (!C)
         return error("Expected a constant");
-      GlobalAlias *Alias = AliasInitWorklist.back().first;
-      if (C->getType() != Alias->getType())
+      GlobalIndirectSymbol *GIS = IndirectSymbolInitWorklist.back().first;
+      if (isa<GlobalAlias>(GIS) && C->getType() != GIS->getType())
         return error("Alias and aliasee types don't match");
-      Alias->setAliasee(C);
+      GIS->setIndirectSymbol(C);
     }
-    AliasInitWorklist.pop_back();
+    IndirectSymbolInitWorklist.pop_back();
   }
 
   while (!FunctionPrefixWorklist.empty()) {
@@ -3174,8 +3175,8 @@ std::error_code BitcodeReader::rememberAndSkipFunctionBody() {
 
 std::error_code BitcodeReader::globalCleanup() {
   // Patch the initializers for globals and aliases up.
-  resolveGlobalAndAliasInits();
-  if (!GlobalInits.empty() || !AliasInits.empty())
+  resolveGlobalAndIndirectSymbolInits();
+  if (!GlobalInits.empty() || !IndirectSymbolInits.empty())
     return error("Malformed global initializer set");
 
   // Look for intrinsic functions which need to be upgraded at some point
@@ -3192,7 +3193,8 @@ std::error_code BitcodeReader::globalCleanup() {
   // Force deallocation of memory for these vectors to favor the client that
   // want lazy deserialization.
   std::vector<std::pair<GlobalVariable*, unsigned> >().swap(GlobalInits);
-  std::vector<std::pair<GlobalAlias*, unsigned> >().swap(AliasInits);
+  std::vector<std::pair<GlobalIndirectSymbol*, unsigned> >().swap(
+      IndirectSymbolInits);
   return std::error_code();
 }
 
@@ -3342,7 +3344,7 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
       case bitc::CONSTANTS_BLOCK_ID:
         if (std::error_code EC = parseConstants())
           return EC;
-        if (std::error_code EC = resolveGlobalAndAliasInits())
+        if (std::error_code EC = resolveGlobalAndIndirectSymbolInits())
           return EC;
         break;
       case bitc::METADATA_BLOCK_ID:
@@ -3675,7 +3677,7 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
     // ALIAS: [alias type, addrspace, aliasee val#, linkage, visibility, dllstorageclass]
     case bitc::MODULE_CODE_ALIAS:
     case bitc::MODULE_CODE_ALIAS_OLD: {
-      bool NewRecord = BitCode == bitc::MODULE_CODE_ALIAS;
+      bool NewRecord = BitCode != bitc::MODULE_CODE_ALIAS_OLD;
       if (Record.size() < (3 + (unsigned)NewRecord))
         return error("Invalid record");
       unsigned OpNum = 0;
@@ -3696,8 +3698,13 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
 
       auto Val = Record[OpNum++];
       auto Linkage = Record[OpNum++];
-      auto *NewGA = GlobalAlias::create(
+      GlobalIndirectSymbol *NewGA;
+      if (BitCode == bitc::MODULE_CODE_ALIAS ||
+          BitCode == bitc::MODULE_CODE_ALIAS_OLD)
+        NewGA = GlobalAlias::create(
           Ty, AddrSpace, getDecodedLinkage(Linkage), "", TheModule);
+      else
+        llvm_unreachable("Not an alias!");
       // Old bitcode files didn't have visibility field.
       // Local linkage must have default visibility.
       if (OpNum != Record.size()) {
@@ -3715,7 +3722,7 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
       if (OpNum != Record.size())
         NewGA->setUnnamedAddr(Record[OpNum++]);
       ValueList.push_back(NewGA);
-      AliasInits.push_back(std::make_pair(NewGA, Val));
+      IndirectSymbolInits.push_back(std::make_pair(NewGA, Val));
       break;
     }
     /// MODULE_CODE_PURGEVALS: [numvals]
@@ -5841,12 +5848,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
                              CalleeInfo(CallsiteCount, ProfileCount));
       }
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID);
-      auto InfoList = TheIndex->findGlobalValueInfoList(GUID);
-      assert(InfoList != TheIndex->end() &&
-             "Expected VST parse to create GlobalValueInfo entry");
-      assert(InfoList->second.size() == 1 &&
-             "Expected a single GlobalValueInfo per GUID in module");
-      auto &Info = InfoList->second[0];
+      auto *Info = TheIndex->getGlobalValueInfo(GUID);
       assert(!Info->summary() && "Expected a single summary per VST entry");
       Info->setSummary(std::move(FS));
       break;
@@ -5865,12 +5867,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
         FS->addRefEdge(RefGUID);
       }
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID);
-      auto InfoList = TheIndex->findGlobalValueInfoList(GUID);
-      assert(InfoList != TheIndex->end() &&
-             "Expected VST parse to create GlobalValueInfo entry");
-      assert(InfoList->second.size() == 1 &&
-             "Expected a single GlobalValueInfo per GUID in module");
-      auto &Info = InfoList->second[0];
+      auto *Info = TheIndex->getGlobalValueInfo(GUID);
       assert(!Info->summary() && "Expected a single summary per VST entry");
       Info->setSummary(std::move(FS));
       break;

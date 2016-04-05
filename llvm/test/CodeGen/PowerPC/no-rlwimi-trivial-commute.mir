@@ -1,4 +1,4 @@
-# RUN: llc -start-after=dead-mi-elimination -stop-after=twoaddressinstruction -o /dev/null %s | FileCheck %s
+# RUN: llc -start-after=dead-mi-elimination -stop-after=twoaddressinstruction -o /dev/null %s 2>&1 | FileCheck %s
 
 --- |
   target datalayout = "E-m:e-i64:64-n32:64"

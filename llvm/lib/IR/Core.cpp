@@ -100,12 +100,12 @@ void LLVMContextDispose(LLVMContextRef C) {
   delete unwrap(C);
 }
 
-unsigned LLVMGetMDKindIDInContext(LLVMContextRef C, const char* Name,
+unsigned LLVMGetMDKindIDInContext(LLVMContextRef C, const char *Name,
                                   unsigned SLen) {
   return unwrap(C)->getMDKindID(StringRef(Name, SLen));
 }
 
-unsigned LLVMGetMDKindID(const char* Name, unsigned SLen) {
+unsigned LLVMGetMDKindID(const char *Name, unsigned SLen) {
   return LLVMGetMDKindIDInContext(LLVMGetGlobalContext(), Name, SLen);
 }
 

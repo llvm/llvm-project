@@ -378,11 +378,16 @@ int X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
   if ((Opc == X86::ADD64ri32 || Opc == X86::ADD64ri8 ||
        Opc == X86::ADD32ri || Opc == X86::ADD32ri8) &&
       PI->getOperand(0).getReg() == StackPtr){
+    assert(PI->getOperand(1).getReg() == StackPtr);
     Offset += PI->getOperand(2).getImm();
     MBB.erase(PI);
     if (!doMergeWithPrevious) MBBI = NI;
   } else if ((Opc == X86::LEA32r || Opc == X86::LEA64_32r) &&
-             PI->getOperand(0).getReg() == StackPtr) {
+             PI->getOperand(0).getReg() == StackPtr &&
+             PI->getOperand(1).getReg() == StackPtr &&
+             PI->getOperand(2).getImm() == 1 &&
+             PI->getOperand(3).getReg() == X86::NoRegister &&
+             PI->getOperand(5).getReg() == X86::NoRegister) {
     // For LEAs we have: def = lea SP, FI, noreg, Offset, noreg.
     Offset += PI->getOperand(4).getImm();
     MBB.erase(PI);
@@ -390,6 +395,7 @@ int X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
   } else if ((Opc == X86::SUB64ri32 || Opc == X86::SUB64ri8 ||
               Opc == X86::SUB32ri || Opc == X86::SUB32ri8) &&
              PI->getOperand(0).getReg() == StackPtr) {
+    assert(PI->getOperand(1).getReg() == StackPtr);
     Offset -= PI->getOperand(2).getImm();
     MBB.erase(PI);
     if (!doMergeWithPrevious) MBBI = NI;
@@ -2534,13 +2540,22 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
       BuildCFI(MBB, I, DL, 
                MCCFIInstruction::createAdjustCfaOffset(nullptr, -InternalAmt));
 
-    if (Amount) {
-      // Add Amount to SP to destroy a frame, and subtract to setup.
-      int Offset = isDestroy ? Amount : -Amount;
+    // Add Amount to SP to destroy a frame, or subtract to setup.
+    int64_t StackAdjustment = isDestroy ? Amount : -Amount;
 
-      if (!(Fn->optForMinSize() && 
-            adjustStackWithPops(MBB, I, DL, Offset)))
-        BuildStackAdjustment(MBB, I, DL, Offset, /*InEpilogue=*/false);
+    if (StackAdjustment) {
+      // Merge with any previous or following adjustment instruction.
+      StackAdjustment += mergeSPUpdates(MBB, I, true);
+      StackAdjustment += mergeSPUpdates(MBB, I, false);
+
+      if (!StackAdjustment) {
+        // This and the merged instruction canceled out each other.
+        return I;
+      }
+
+      if (!(Fn->optForMinSize() &&
+            adjustStackWithPops(MBB, I, DL, StackAdjustment)))
+        BuildStackAdjustment(MBB, I, DL, StackAdjustment, /*InEpilogue=*/false);
     }
 
     if (DwarfCFI && !hasFP(MF)) {
@@ -2550,14 +2565,12 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
       // CFI only for EH purposes or for debugging. EH only requires the CFA
       // offset to be correct at each call site, while for debugging we want
       // it to be more precise.
-      int CFAOffset = Amount;
+
       // TODO: When not using precise CFA, we also need to adjust for the
       // InternalAmt here.
-
-      if (CFAOffset) {
-        CFAOffset = isDestroy ? -CFAOffset : CFAOffset;
-        BuildCFI(MBB, I, DL, 
-                 MCCFIInstruction::createAdjustCfaOffset(nullptr, CFAOffset));
+      if (StackAdjustment) {
+        BuildCFI(MBB, I, DL, MCCFIInstruction::createAdjustCfaOffset(
+                                 nullptr, -StackAdjustment));
       }
     }
 
