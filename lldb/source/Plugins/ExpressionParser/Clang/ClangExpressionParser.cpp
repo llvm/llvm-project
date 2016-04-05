@@ -574,7 +574,7 @@ static bool FindFunctionInModule (ConstString &mangled_name,
     return false;
 }
 
-Error
+lldb_private::Error
 ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
                                             lldb::addr_t &func_end,
                                             lldb::IRExecutionUnitSP &execution_unit_sp,
