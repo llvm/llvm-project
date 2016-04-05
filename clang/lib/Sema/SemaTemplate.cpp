@@ -7270,14 +7270,20 @@ Sema::ActOnExplicitInstantiation(Scope *S,
   assert(Kind != TTK_Enum &&
          "Invalid enum tag in class template explicit instantiation!");
 
-  if (isa<TypeAliasTemplateDecl>(TD)) {
-      Diag(KWLoc, diag::err_tag_reference_non_tag) << Kind;
-      Diag(TD->getTemplatedDecl()->getLocation(),
-           diag::note_previous_use);
+  ClassTemplateDecl *ClassTemplate = dyn_cast<ClassTemplateDecl>(TD);
+
+  if (!ClassTemplate) {
+    unsigned ErrorKind = 0;
+    if (isa<TypeAliasTemplateDecl>(TD)) {
+      ErrorKind = 4;
+    } else if (isa<TemplateTemplateParmDecl>(TD)) {
+      ErrorKind = 5;
+    }
+
+    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag) << ErrorKind;
+    Diag(TD->getLocation(), diag::note_previous_use);
     return true;
   }
-
-  ClassTemplateDecl *ClassTemplate = cast<ClassTemplateDecl>(TD);
 
   if (!isAcceptableTagRedeclaration(ClassTemplate->getTemplatedDecl(),
                                     Kind, /*isDefinition*/false, KWLoc,
