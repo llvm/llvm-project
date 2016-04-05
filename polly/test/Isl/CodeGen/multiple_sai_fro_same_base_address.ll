@@ -34,8 +34,8 @@ sw.bb1.i30:                                       ; preds = %cond.end.i28
 }
 
 ; SCOP:      Arrays {
-; SCOP-NEXT:     i16 MemRef_next_0[*];
 ; SCOP-NEXT:     %struct.obj.2.290.322.338.354.482.546.594.626.818.898.914.962* MemRef_next_0;
+; SCOP-NEXT:     i16 MemRef_next_0[*];
 ; SCOP-NEXT: }
 
 ; IR:      polly.merge_new_and_old:

@@ -894,9 +894,9 @@ public:
                             "watchpoint set variable",
                             "Set a watchpoint on a variable. "
                             "Use the '-w' option to specify the type of watchpoint and "
-                            "the '-x' option to specify the byte size to watch for. "
+                            "the '-s' option to specify the byte size to watch for. "
                             "If no '-w' option is specified, it defaults to write. "
-                            "If no '-x' option is specified, it defaults to the variable's "
+                            "If no '-s' option is specified, it defaults to the variable's "
                             "byte size. "
                             "Note that there are limited hardware resources for watchpoints. "
                             "If watchpoint setting fails, consider disable/delete existing ones "
@@ -932,7 +932,7 @@ corresponding to the byte size of the data type."
         // Push the data for the only argument into the m_arguments vector.
         m_arguments.push_back (arg);
 
-        // Absorb the '-w' and '-x' options into our option group.
+        // Absorb the '-w' and '-s' options into our option group.
         m_option_group.Append (&m_option_watchpoint, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
         m_option_group.Finalize();
     }
@@ -1103,9 +1103,9 @@ public:
                          "watchpoint set expression",
                          "Set a watchpoint on an address by supplying an expression. "
                          "Use the '-w' option to specify the type of watchpoint and "
-                         "the '-x' option to specify the byte size to watch for. "
+                         "the '-s' option to specify the byte size to watch for. "
                          "If no '-w' option is specified, it defaults to write. "
-                         "If no '-x' option is specified, it defaults to the target's "
+                         "If no '-s' option is specified, it defaults to the target's "
                          "pointer byte size. "
                          "Note that there are limited hardware resources for watchpoints. "
                          "If watchpoint setting fails, consider disable/delete existing ones "
@@ -1122,7 +1122,7 @@ public:
 R"(
 Examples:
 
-(lldb) watchpoint set expression -w write -x 1 -- foo + 32
+(lldb) watchpoint set expression -w write -s 1 -- foo + 32
 
     Watches write access for the 1-byte region pointed to by the address 'foo + 32')"
         );
@@ -1140,7 +1140,7 @@ Examples:
         // Push the data for the only argument into the m_arguments vector.
         m_arguments.push_back (arg);
 
-        // Absorb the '-w' and '-x' options into our option group.
+        // Absorb the '-w' and '-s' options into our option group.
         m_option_group.Append (&m_option_watchpoint, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
         m_option_group.Finalize();
     }

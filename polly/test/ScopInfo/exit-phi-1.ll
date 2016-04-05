@@ -6,8 +6,8 @@
 ; CHECK: Region: %for.body
 ;
 ; CHECK:         Arrays {
-; CHECK-NEXT:        i32* MemRef_A[*]; // Element size 8
 ; CHECK-NEXT:        double MemRef_up_3_ph; // Element size 8
+; CHECK-NEXT:        i32* MemRef_A[*]; // Element size 8
 ; CHECK-NEXT:    }
 ;
 ; ModuleID = 'bugpoint-reduced-simplified.bc'

@@ -1301,7 +1301,7 @@ Target::SetArchitecture (const ArchSpec &arch_spec)
                                               os_ver_changed,
                                               env_changed);
                 
-                if (!arch_changed && !vendor_changed && !os_changed)
+                if (!arch_changed && !vendor_changed && !os_changed && !env_changed)
                     replace_local_arch = false;
             }
         }

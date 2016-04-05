@@ -111,6 +111,9 @@ public:
     const lldb::DataBufferSP
     GetAuxvData() override;
 
+    bool
+    GetProcessInfo(lldb_private::ProcessInstanceInfo &info) override;
+
 protected:
     void
     Clear ( );

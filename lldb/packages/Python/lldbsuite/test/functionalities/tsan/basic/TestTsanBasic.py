@@ -17,7 +17,6 @@ class TsanBasicTestCase(TestBase):
     @skipIfFreeBSD # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessCompilerRt
-    @skipIfDarwin  # rdar://25534884  TSAN tests failing on Green Dragon OS X CI (not not locally)
     def test (self):
         self.build ()
         self.tsan_tests ()
@@ -34,6 +33,11 @@ class TsanBasicTestCase(TestBase):
         self.expect("file " + exe, patterns = [ "Current executable set to .*a.out" ])
 
         self.runCmd("run")
+
+        stop_reason = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        if stop_reason == lldb.eStopReasonExec:
+            # On OS X 10.10 and older, we need to re-exec to enable interceptors.
+            self.runCmd("continue")
 
         # the stop reason of the thread should be breakpoint.
         self.expect("thread list", "A data race should be detected",

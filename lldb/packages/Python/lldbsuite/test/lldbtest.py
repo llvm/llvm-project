@@ -1946,6 +1946,12 @@ class TestBase(Base):
         else:
             self.fail("Can't build for debug info: %s" % self.debug_info)
 
+    def run_platform_command(self, cmd):
+        platform = self.dbg.GetSelectedPlatform()
+        shell_command = lldb.SBPlatformShellCommand(cmd)
+        err = platform.Run(shell_command)
+        return (err, shell_command.GetStatus(), shell_command.GetOutput())
+
     # =================================================
     # Misc. helper methods for debugging test execution
     # =================================================

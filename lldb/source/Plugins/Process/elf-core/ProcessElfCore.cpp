@@ -637,3 +637,18 @@ ProcessElfCore::GetAuxvData()
     lldb::DataBufferSP buffer(new lldb_private::DataBufferHeap(start, len));
     return buffer;
 }
+
+bool
+ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info)
+{
+    info.Clear();
+    info.SetProcessID(GetID());
+    info.SetArchitecture(GetArchitecture());
+    lldb::ModuleSP module_sp = GetTarget().GetExecutableModule();
+    if (module_sp)
+    {
+        const bool add_exe_file_as_first_arg = false;
+        info.SetExecutableFile(GetTarget().GetExecutableModule()->GetFileSpec(), add_exe_file_as_first_arg);
+    }
+    return true;
+}

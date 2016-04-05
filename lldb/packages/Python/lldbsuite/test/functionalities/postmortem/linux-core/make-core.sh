@@ -2,6 +2,14 @@
 
 set -e -x
 
+file=$1
+if [ -z "$file" ]; then
+    cat <<EOF
+Please supply the main source file as the first argument.
+EOF
+    exit 1
+fi
+
 if grep -q '^|' </proc/sys/kernel/core_pattern; then
     cat <<EOF
 Your system uses a crash report tool ($(cat /proc/sys/kernel/core_pattern)). Core files
@@ -21,7 +29,7 @@ privileges.
 EOF
 fi
 
-${CC:-cc} -nostdlib -static -g $CFLAGS main.c -o a.out
+${CC:-cc} -nostdlib -static -g $CFLAGS "$file" -o a.out
 
 cat <<EOF
 Executable file is in a.out.

@@ -1029,3 +1029,20 @@ def skip_if_library_missing(test, target, library):
     def find_library_callable(test):
         return find_library(target, library)
     return skip_if_callable(test, find_library_callable, "could not find library matching '%s' in target %s" % (library, target))
+
+def wait_for_file_on_target(testcase, file_path, max_attempts = 6):
+    for i in range(max_attempts):
+        err, retcode, msg = testcase.run_platform_command("ls %s" % file_path)
+        if err.Success() and retcode == 0:
+            break
+        if i < max_attempts:
+            # Exponential backoff!
+            time.sleep(pow(2, i) * 0.25)
+    else:
+        testcase.fail("File %s not found even after %d attempts." % (file_path, max_attempts))
+
+    err, retcode, data = testcase.run_platform_command("cat %s" % (file_path))
+
+    testcase.assertTrue(err.Success() and retcode == 0,
+            "Failed to read file %s: %s, retcode: %d" % (file_path, err.GetCString(), retcode))
+    return data

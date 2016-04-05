@@ -79,8 +79,7 @@ public:
   InputSectionBase<ELFT> *getRelocTarget(const Elf_Rela &Rel) const;
 
   template <class RelTy>
-  void relocate(uint8_t *Buf, uint8_t *BufEnd,
-                llvm::iterator_range<const RelTy *> Rels);
+  void relocate(uint8_t *Buf, uint8_t *BufEnd, llvm::ArrayRef<RelTy> Rels);
 
 private:
   template <class RelTy>
@@ -181,7 +180,7 @@ public:
 
 private:
   template <class RelTy>
-  void copyRelocations(uint8_t *Buf, llvm::iterator_range<const RelTy *> Rels);
+  void copyRelocations(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);
 
   // Called by ICF to merge two input sections.
   void replace(InputSection<ELFT> *Other);

@@ -323,8 +323,7 @@ public:
   void writeTo(uint8_t *Buf) override;
 
   template <class RelTy>
-  void addSectionAux(EHInputSection<ELFT> *S,
-                     llvm::iterator_range<const RelTy *> Rels);
+  void addSectionAux(EHInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
 
   void addSection(InputSectionBase<ELFT> *S) override;
 
