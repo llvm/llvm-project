@@ -254,8 +254,8 @@ void SwiftAggLowering::addLegalTypedData(llvm::Type *type,
 
 void SwiftAggLowering::addEntry(llvm::Type *type,
                                 CharUnits begin, CharUnits end) {
-  assert(!type ||
-         (!isa<llvm::StructType>(type) && !isa<llvm::ArrayType>(type)) &&
+  assert((!type ||
+          (!isa<llvm::StructType>(type) && !isa<llvm::ArrayType>(type))) &&
          "cannot add aggregate-typed data");
   assert(!type || begin.isMultipleOf(getNaturalAlignment(CGM, type)));
 

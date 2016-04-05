@@ -3985,6 +3985,14 @@ bool ScopInfo::buildAccessMultiDimFixed(
   std::tie(Subscripts, Sizes) = getIndexExpressionsFromGEP(GEP, *SE);
   auto *BasePtr = GEP->getOperand(0);
 
+  if (auto *BasePtrCast = dyn_cast<BitCastInst>(BasePtr))
+    BasePtr = BasePtrCast->getOperand(0);
+
+  // Check for identical base pointers to ensure that we do not miss index
+  // offsets that have been added before this GEP is applied.
+  if (BasePtr != BasePointer->getValue())
+    return false;
+
   std::vector<const SCEV *> SizesSCEV;
 
   for (auto *Subscript : Subscripts) {

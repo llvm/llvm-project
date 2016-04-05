@@ -3354,6 +3354,7 @@ static bool EvaluateCond(EvalInfo &Info, const VarDecl *CondDecl,
   return EvaluateAsBooleanCondition(Cond, Result, Info);
 }
 
+namespace {
 /// \brief A location where the result (returned value) of evaluating a
 /// statement should be stored.
 struct StmtResult {
@@ -3362,6 +3363,7 @@ struct StmtResult {
   /// The location containing the result, if any (used to support RVO).
   const LValue *Slot;
 };
+}
 
 static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
                                    const Stmt *S,

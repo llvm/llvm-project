@@ -1362,6 +1362,7 @@ static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args) {
 }
 
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
+                                         const llvm::Triple &T,
                                          LangStandard::Kind LangStd) {
   // Set some properties which depend solely on the input kind; it would be nice
   // to move these to the language standard, and have the driver resolve the
@@ -1394,7 +1395,11 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     case IK_PreprocessedC:
     case IK_ObjC:
     case IK_PreprocessedObjC:
-      LangStd = LangStandard::lang_gnu11;
+      // The PS4 uses C99 as the default C standard.
+      if (T.isPS4())
+        LangStd = LangStandard::lang_gnu99;
+      else
+        LangStd = LangStandard::lang_gnu11;
       break;
     case IK_CXX:
     case IK_PreprocessedCXX:
@@ -1548,7 +1553,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       LangStd = OpenCLLangStd;
   }
 
-  CompilerInvocation::setLangDefaults(Opts, IK, LangStd);
+  llvm::Triple T(TargetOpts.Triple);
+  CompilerInvocation::setLangDefaults(Opts, IK, T, LangStd);
 
   // We abuse '-f[no-]gnu-keywords' to force overriding all GNU-extension
   // keywords. This behavior is provided by GCC's poorly named '-fasm' flag,
@@ -1869,7 +1875,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   // Provide diagnostic when a given target is not expected to be an OpenMP
   // device or host.
   if (Opts.OpenMP && !Opts.OpenMPIsDevice) {
-    llvm::Triple T(TargetOpts.Triple);
     switch (T.getArch()) {
     default:
       break;

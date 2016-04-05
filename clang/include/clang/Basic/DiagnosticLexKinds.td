@@ -401,6 +401,7 @@ def err_pp_expected_rparen : Error<"expected ')' in preprocessor expression">;
 def err_pp_expected_eol : Error<
   "expected end of line in preprocessor expression">;
 def err_pp_expected_after : Error<"missing %1 after %0">;
+def err_pp_nested_paren : Error<"nested parentheses not permitted in %0">;
 def err_pp_colon_without_question : Error<"':' without preceding '?'">;
 def err_pp_division_by_zero : Error<
   "division by zero in preprocessor expression">;
