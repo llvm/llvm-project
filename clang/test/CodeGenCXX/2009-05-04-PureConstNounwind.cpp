@@ -12,10 +12,11 @@ int f(void) {
 
 // CHECK: declare i32 @_Z1cv() [[NUW_RN:#[0-9]+]]
 // CHECK: declare i32 @_Z1pv() [[NUW_RO:#[0-9]+]]
-// CHECK: declare i32 @_Z1tv() [[TF]]
+// CHECK: declare i32 @_Z1tv() [[TF2:#[0-9]+]]
 
 // CHECK: attributes [[TF]] = { {{.*}} }
 // CHECK: attributes [[NUW_RN]] = { nounwind readnone{{.*}} }
 // CHECK: attributes [[NUW_RO]] = { nounwind readonly{{.*}} }
+// CHECK: attributes [[TF2]] = { {{.*}} }
 // CHECK: attributes [[NUW_RN_CALL]] = { nounwind readnone }
 // CHECK: attributes [[NUW_RO_CALL]] = { nounwind readonly }
