@@ -36,6 +36,9 @@
 #include <string.h>
 #include <stdarg.h>
 #include <sys/mman.h>
+#if SANITIZER_LINUX
+#include <sys/personality.h>
+#endif
 #include <sys/syscall.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -291,6 +294,20 @@ void InitializePlatform() {
       SetAddressSpaceUnlimited();
       reexec = true;
     }
+#if SANITIZER_LINUX && defined(__aarch64__)
+    // After patch "arm64: mm: support ARCH_MMAP_RND_BITS." is introduced in
+    // linux kernel, the random gap between stack and mapped area is increased
+    // from 128M to 36G on 39-bit aarch64. As it is almost impossible to cover
+    // this big range, we should disable randomized virtual space on aarch64.
+    int old_personality = personality(0xffffffff);
+    if (old_personality != -1 && (old_personality & ADDR_NO_RANDOMIZE) == 0) {
+      VReport(1, "WARNING: Program is run with randomized virtual address "
+              "space, which wouldn't work with ThreadSanitizer.\n"
+              "Re-execing with fixed virtual address space.\n");
+      CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
+      reexec = true;
+    }
+#endif
     if (reexec)
       ReExec();
   }
