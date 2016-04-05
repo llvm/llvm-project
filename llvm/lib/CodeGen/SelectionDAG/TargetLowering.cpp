@@ -3091,6 +3091,48 @@ bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
   return true;
 }
 
+SDValue TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
+                                            SelectionDAG &DAG) const {
+  SDLoc SL(LD);
+  SDValue Chain = LD->getChain();
+  SDValue BasePTR = LD->getBasePtr();
+  EVT SrcVT = LD->getMemoryVT();
+  ISD::LoadExtType ExtType = LD->getExtensionType();
+
+  unsigned NumElem = SrcVT.getVectorNumElements();
+
+  EVT SrcEltVT = SrcVT.getScalarType();
+  EVT DstEltVT = LD->getValueType(0).getScalarType();
+
+  unsigned Stride = SrcEltVT.getSizeInBits() / 8;
+  assert(SrcEltVT.isByteSized());
+
+  EVT PtrVT = BasePTR.getValueType();
+
+  SmallVector<SDValue, 8> Vals;
+  SmallVector<SDValue, 8> LoadChains;
+
+  for (unsigned Idx = 0; Idx < NumElem; ++Idx) {
+    SDValue ScalarLoad = DAG.getExtLoad(
+      ExtType, SL, DstEltVT,
+      Chain, BasePTR, LD->getPointerInfo().getWithOffset(Idx * Stride),
+      SrcEltVT,
+      LD->isVolatile(), LD->isNonTemporal(), LD->isInvariant(),
+      MinAlign(LD->getAlignment(), Idx * Stride), LD->getAAInfo());
+
+    BasePTR = DAG.getNode(ISD::ADD, SL, PtrVT, BasePTR,
+                          DAG.getConstant(Stride, SL, PtrVT));
+
+    Vals.push_back(ScalarLoad.getValue(0));
+    LoadChains.push_back(ScalarLoad.getValue(1));
+  }
+
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, SL, MVT::Other, LoadChains);
+  SDValue Value = DAG.getNode(ISD::BUILD_VECTOR, SL, LD->getValueType(0), Vals);
+
+  return DAG.getMergeValues({ Value, NewChain }, SL);
+}
+
 //===----------------------------------------------------------------------===//
 // Implementation of Emulated TLS Model
 //===----------------------------------------------------------------------===//

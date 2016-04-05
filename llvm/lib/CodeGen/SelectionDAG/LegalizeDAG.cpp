@@ -452,6 +452,14 @@ ExpandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG,
   if (VT.isFloatingPoint() || VT.isVector()) {
     EVT intVT = EVT::getIntegerVT(*DAG.getContext(), LoadedVT.getSizeInBits());
     if (TLI.isTypeLegal(intVT) && TLI.isTypeLegal(LoadedVT)) {
+      if (!TLI.isOperationLegalOrCustom(ISD::LOAD, intVT)) {
+        // Scalarize the load and let the individual components be handled.
+        SDValue Scalarized = TLI.scalarizeVectorLoad(LD, DAG);
+        ValResult = Scalarized.getValue(0);
+        ChainResult = Scalarized.getValue(1);
+        return;
+      }
+
       // Expand to a (misaligned) integer load of the same size,
       // then bitconvert to floating point or vector.
       SDValue newLoad = DAG.getLoad(intVT, dl, Chain, Ptr,
