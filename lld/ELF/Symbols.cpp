@@ -184,7 +184,7 @@ static int compareCommons(DefinedCommon *A, DefinedCommon *B) {
 
 // Returns 1, 0 or -1 if this symbol should take precedence
 // over the Other, tie or lose, respectively.
-template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
+int SymbolBody::compare(SymbolBody *Other) {
   assert(!isLazy() && !Other->isLazy());
   std::tuple<bool, bool, bool> L(isDefined(), !isShared(), !isWeak());
   std::tuple<bool, bool, bool> R(Other->isDefined(), !Other->isShared(),
@@ -192,7 +192,7 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
 
   // Normalize
   if (L > R)
-    return -Other->compare<ELFT>(this);
+    return -Other->compare(this);
 
   uint8_t V = getMinVisibility(getVisibility(), Other->getVisibility());
   setVisibility(V);
@@ -205,8 +205,10 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
   // and in DSOs, so that the symbols in the executable can interrupt
   // symbols in the DSO at runtime.
   if (isShared() != Other->isShared())
-    if (isa<DefinedRegular<ELFT>>(isShared() ? Other : this))
+    if (isa<Defined>(isShared() ? Other : this)) {
+      IsUsedInRegularObj = Other->IsUsedInRegularObj = true;
       MustBeInDynSym = Other->MustBeInDynSym = true;
+    }
 
   if (L != R)
     return -1;
@@ -344,11 +346,6 @@ template uint32_t SymbolBody::template getThunkVA<ELF32LE>() const;
 template uint32_t SymbolBody::template getThunkVA<ELF32BE>() const;
 template uint64_t SymbolBody::template getThunkVA<ELF64LE>() const;
 template uint64_t SymbolBody::template getThunkVA<ELF64BE>() const;
-
-template int SymbolBody::compare<ELF32LE>(SymbolBody *Other);
-template int SymbolBody::compare<ELF32BE>(SymbolBody *Other);
-template int SymbolBody::compare<ELF64LE>(SymbolBody *Other);
-template int SymbolBody::compare<ELF64BE>(SymbolBody *Other);
 
 template class elf::UndefinedElf<ELF32LE>;
 template class elf::UndefinedElf<ELF32BE>;

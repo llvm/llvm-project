@@ -145,7 +145,7 @@ public:
     GetShellExpandArguments ();
     
     void
-    SetShellExpandArguments (bool glob);
+    SetShellExpandArguments (bool expand);
     
     uint32_t
     GetResumeCount ();

@@ -112,6 +112,8 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
     Sym->Body->setUsedInRegularObj();
     if (!Sym->Body->isUndefined() && Body->isUndefined())
       continue;
+    if (Sym->Body->MustBeInDynSym)
+      Body->MustBeInDynSym = true;
     Sym->Body = Body;
   }
   ObjectFiles.emplace_back(Obj);
@@ -226,7 +228,8 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
     }
     // Found a definition for something also in an archive.
     // Ignore the archive definition.
-    New->setUsedInRegularObj();
+    if (L->isUsedInRegularObj())
+      New->setUsedInRegularObj();
     Sym->Body = New;
     return;
   }
@@ -238,7 +241,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
 
   // compare() returns -1, 0, or 1 if the lhs symbol is less preferable,
   // equivalent (conflicting), or more preferable, respectively.
-  int Comp = Existing->compare<ELFT>(New);
+  int Comp = Existing->compare(New);
   if (Comp == 0) {
     std::string S = "duplicate symbol: " + conflictMsg(Existing, New);
     if (Config->AllowMultipleDefinition)
@@ -280,6 +283,8 @@ template <class ELFT> void SymbolTable<ELFT>::addLazy(Lazy *L) {
 
 template <class ELFT>
 void SymbolTable<ELFT>::addMemberFile(Undefined *Undef, Lazy *L) {
+  if (Undef->isUsedInRegularObj())
+    L->setUsedInRegularObj();
   // Weak undefined symbols should not fetch members from archives.
   // If we were to keep old symbol we would not know that an archive member was
   // available if a strong undefined symbol shows up afterwards in the link.

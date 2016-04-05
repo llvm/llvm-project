@@ -839,7 +839,7 @@ static int getPriority(StringRef S) {
 // This function is called after we sort input sections
 // and scan relocations to setup sections' offsets.
 template <class ELFT> void OutputSection<ELFT>::assignOffsets() {
-  uintX_t Off = 0;
+  uintX_t Off = this->Header.sh_size;
   for (InputSection<ELFT> *S : Sections) {
     Off = alignTo(Off, S->Align);
     S->OutSecOff = Off;

@@ -898,6 +898,17 @@ ArchSpec::MergeFrom(const ArchSpec &other)
         if (other.TripleVendorWasSpecified())
             GetTriple().setEnvironment(other.GetTriple().getEnvironment());
     }
+    // If this and other are both arm ArchSpecs and this ArchSpec is a generic "some kind of arm"
+    // spec but the other ArchSpec is a specific arm core, adopt the specific arm core.
+    if (GetTriple().getArch() == llvm::Triple::arm
+        && other.GetTriple().getArch() == llvm::Triple::arm
+        && IsCompatibleMatch (other)
+        && GetCore() == ArchSpec::eCore_arm_generic
+        && other.GetCore() != ArchSpec::eCore_arm_generic)
+    {
+        m_core = other.GetCore();
+        CoreUpdated (true);
+    }
 }
 
 bool
@@ -1520,6 +1531,31 @@ ArchSpec::PiecewiseTripleCompare (const ArchSpec &other,
     os_version_different = (me.getOSMajorVersion() != them.getOSMajorVersion());
     
     env_different = (me.getEnvironment() != them.getEnvironment());
+}
+
+bool
+ArchSpec::IsAlwaysThumbInstructions () const
+{
+    std::string Error;
+    if (GetTriple().getArch() == llvm::Triple::arm || GetTriple().getArch() == llvm::Triple::thumb)
+    {
+        // v. https://en.wikipedia.org/wiki/ARM_Cortex-M
+        //
+        // Cortex-M0 through Cortex-M7 are ARM processor cores which can only
+        // execute thumb instructions.  We map the cores to arch names like this:
+        //
+        // Cortex-M0, Cortex-M0+, Cortex-M1:  armv6m
+        // Cortex-M3: armv7m
+        // Cortex-M4, Cortex-M7: armv7em
+
+        if (GetCore() == ArchSpec::Core::eCore_arm_armv7m
+            || GetCore() == ArchSpec::Core::eCore_arm_armv7em
+            || GetCore() == ArchSpec::Core::eCore_arm_armv6m)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 void

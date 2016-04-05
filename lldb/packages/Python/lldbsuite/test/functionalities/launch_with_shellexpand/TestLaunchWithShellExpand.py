@@ -30,7 +30,7 @@ class LaunchWithShellExpandTestCase(TestBase):
         breakpoint = target.BreakpointCreateBySourceRegex ('break here', lldb.SBFileSpec ("main.cpp", False))
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
-        self.runCmd("process launch -X true -w %s -- fi*.tx?" % (os.getcwd()))
+        self.runCmd("process launch -X true -w %s -- fi*.tx? () > <" % (os.getcwd()))
 
         process = self.process()
 
@@ -51,7 +51,11 @@ class LaunchWithShellExpandTestCase(TestBase):
         self.expect("frame variable argv[2]", substrs=['file2.txt'])
         self.expect("frame variable argv[3]", substrs=['file3.txt'])
         self.expect("frame variable argv[4]", substrs=['file4.txy'])
+        self.expect("frame variable argv[5]", substrs=['()'])
+        self.expect("frame variable argv[6]", substrs=['>'])
+        self.expect("frame variable argv[7]", substrs=['<'])
         self.expect("frame variable argv[5]", substrs=['file5.tyx'], matching=False)
+        self.expect("frame variable argv[8]", substrs=['file5.tyx'], matching=False)
 
         self.runCmd("process kill")
 

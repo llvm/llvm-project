@@ -503,7 +503,9 @@ ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell (Error &error,
             {
                 for (size_t i=0; argv[i] != nullptr; ++i)
                 {
-                    const char *arg = Args::GetShellSafeArgument (argv[i], safe_arg);
+                    const char *arg = Args::GetShellSafeArgument (m_shell,
+                                                                  argv[i],
+                                                                  safe_arg);
                     shell_command.Printf(" %s", arg);
                 }
             }

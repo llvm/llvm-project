@@ -622,6 +622,22 @@ public:
                             bool &os_version_different,
                             bool &env_different);
     
+    //------------------------------------------------------------------
+    /// Detect whether this architecture uses thumb code exclusively
+    ///
+    /// Some embedded ARM chips (e.g. the ARM Cortex M0-7 line) can
+    /// only execute the Thumb instructions, never Arm.  We should normally
+    /// pick up arm/thumbness from their the processor status bits (cpsr/xpsr)
+    /// or hints on each function - but when doing bare-boards low level
+    /// debugging (especially common with these embedded processors), we may
+    /// not have those things easily accessible.
+    ///
+    /// @return true if this is an arm ArchSpec which can only execute Thumb
+    ///         instructions
+    //------------------------------------------------------------------
+    bool
+    IsAlwaysThumbInstructions () const;
+
     uint32_t
     GetFlags () const
     {

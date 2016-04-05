@@ -96,7 +96,7 @@ private:
 
   void ensureBss();
   void addCommonSymbols(std::vector<DefinedCommon *> &Syms);
-  void addCopyRelSymbols(std::vector<SharedSymbol<ELFT> *> &Syms);
+  void addCopyRelSymbol(SharedSymbol<ELFT> *Sym);
 
   std::unique_ptr<llvm::FileOutputBuffer> Buffer;
 
@@ -385,9 +385,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
       if (B->needsCopy())
         continue;
       if (Target->needsCopyRel<ELFT>(Type, *B)) {
-        B->NeedsCopyOrPltAddr = true;
-        Out<ELFT>::RelaDyn->addReloc(
-            {Target->CopyRel, DynamicReloc<ELFT>::Off_Bss, B});
+        addCopyRelSymbol(B);
         continue;
       }
     }
@@ -741,23 +739,30 @@ template <class ELFT> static uint32_t getAlignment(SharedSymbol<ELFT> *SS) {
   return 1 << TrailingZeros;
 }
 
-// Reserve space in .bss for copy relocations.
+// Reserve space in .bss for copy relocation.
 template <class ELFT>
-void Writer<ELFT>::addCopyRelSymbols(std::vector<SharedSymbol<ELFT> *> &Syms) {
-  if (Syms.empty())
-    return;
+void Writer<ELFT>::addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   ensureBss();
   uintX_t Off = Out<ELFT>::Bss->getSize();
-  uintX_t MaxAlign = Out<ELFT>::Bss->getAlign();
-  for (SharedSymbol<ELFT> *SS : Syms) {
-    uintX_t Align = getAlignment(SS);
-    Off = alignTo(Off, Align);
-    SS->OffsetInBss = Off;
-    Off += SS->template getSize<ELFT>();
-    MaxAlign = std::max(MaxAlign, Align);
+  uintX_t Align = getAlignment(SS);
+  Off = alignTo(Off, Align);
+  Out<ELFT>::Bss->setSize(Off + SS->template getSize<ELFT>());
+  Out<ELFT>::Bss->updateAlign(Align);
+  Out<ELFT>::RelaDyn->addReloc(
+      {Target->CopyRel, DynamicReloc<ELFT>::Off_Bss, SS});
+  uintX_t Shndx = SS->Sym.st_shndx;
+  uintX_t Value = SS->Sym.st_value;
+  // Look through the DSO's dynamic symbol for aliases and create a dynamic
+  // symbol for each one. This causes the copy relocation to correctly interpose
+  // any aliases.
+  for (SharedSymbol<ELFT> &S : SS->File->getSharedSymbols()) {
+    if (S.Sym.st_shndx != Shndx || S.Sym.st_value != Value)
+      continue;
+    S.OffsetInBss = Off;
+    S.NeedsCopyOrPltAddr = true;
+    S.setUsedInRegularObj();
+    S.MustBeInDynSym = true;
   }
-  Out<ELFT>::Bss->setSize(Off);
-  Out<ELFT>::Bss->updateAlign(MaxAlign);
 }
 
 template <class ELFT>
@@ -1080,7 +1085,6 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   // Now that we have defined all possible symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.
   std::vector<DefinedCommon *> CommonSymbols;
-  std::vector<SharedSymbol<ELFT> *> CopyRelSymbols;
   for (auto &P : Symtab.getSymbols()) {
     SymbolBody *Body = P.second->Body;
     if (auto *U = dyn_cast<Undefined>(Body))
@@ -1089,9 +1093,6 @@ template <class ELFT> void Writer<ELFT>::createSections() {
 
     if (auto *C = dyn_cast<DefinedCommon>(Body))
       CommonSymbols.push_back(C);
-    if (auto *SC = dyn_cast<SharedSymbol<ELFT>>(Body))
-      if (SC->needsCopy())
-        CopyRelSymbols.push_back(SC);
 
     if (!includeInSymtab<ELFT>(*Body))
       continue;
@@ -1107,7 +1108,6 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     return;
 
   addCommonSymbols(CommonSymbols);
-  addCopyRelSymbols(CopyRelSymbols);
 
   // So far we have added sections from input object files.
   // This function adds linker-created Out<ELFT>::* sections.
