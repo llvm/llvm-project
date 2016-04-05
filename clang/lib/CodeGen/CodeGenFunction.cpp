@@ -711,6 +711,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
       Fn->addFnAttr(llvm::Attribute::NoInline);
   }
 
+  // Add no-jump-tables value.
+  Fn->addFnAttr("no-jump-tables",
+                llvm::toStringRef(CGM.getCodeGenOpts().NoUseJumpTables));
+
   if (getLangOpts().OpenCL) {
     // Add metadata for a kernel function.
     if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))

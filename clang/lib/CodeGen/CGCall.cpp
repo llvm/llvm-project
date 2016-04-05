@@ -1768,6 +1768,10 @@ void CodeGenModule::ConstructAttributeList(
     // __syncthreads(), and so can't have certain optimizations applied around
     // them).  LLVM will remove this attribute where it safely can.
     FuncAttrs.addAttribute(llvm::Attribute::Convergent);
+
+    // Respect -fcuda-flush-denormals-to-zero.
+    if (getLangOpts().CUDADeviceFlushDenormalsToZero)
+      FuncAttrs.addAttribute("nvptx-f32ftz", "true");
   }
 
   ClangToLLVMArgMapping IRFunctionArgs(getContext(), FI);

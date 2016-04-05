@@ -4208,6 +4208,10 @@ CudaToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
   Linux::addClangTargetOptions(DriverArgs, CC1Args);
   CC1Args.push_back("-fcuda-is-device");
 
+  if (DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
+                         options::OPT_fno_cuda_flush_denormals_to_zero, false))
+    CC1Args.push_back("-fcuda-flush-denormals-to-zero");
+
   if (DriverArgs.hasArg(options::OPT_nocudalib))
     return;
 
