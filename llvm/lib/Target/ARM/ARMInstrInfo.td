@@ -4006,28 +4006,28 @@ def SMMLSR : AMul2Ia <0b0111010, 0b1111, (outs GPR:$Rd),
                IIC_iMAC32, "smmlsr", "\t$Rd, $Rn, $Rm, $Ra", []>,
             Requires<[IsARM, HasV6]>;
 
-multiclass AI_smul<string opc, SDNode opnode> {
+multiclass AI_smul<string opc> {
   def BB : AMulxyI<0b0001011, 0b00, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
               IIC_iMUL16, !strconcat(opc, "bb"), "\t$Rd, $Rn, $Rm",
-              [(set GPR:$Rd, (opnode (sext_inreg GPR:$Rn, i16),
+              [(set GPR:$Rd, (mul (sext_inreg GPR:$Rn, i16),
                                       (sext_inreg GPR:$Rm, i16)))]>,
            Requires<[IsARM, HasV5TE]>;
 
   def BT : AMulxyI<0b0001011, 0b10, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
               IIC_iMUL16, !strconcat(opc, "bt"), "\t$Rd, $Rn, $Rm",
-              [(set GPR:$Rd, (opnode (sext_inreg GPR:$Rn, i16),
+              [(set GPR:$Rd, (mul (sext_inreg GPR:$Rn, i16),
                                       (sra GPR:$Rm, (i32 16))))]>,
            Requires<[IsARM, HasV5TE]>;
 
   def TB : AMulxyI<0b0001011, 0b01, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
               IIC_iMUL16, !strconcat(opc, "tb"), "\t$Rd, $Rn, $Rm",
-              [(set GPR:$Rd, (opnode (sra GPR:$Rn, (i32 16)),
+              [(set GPR:$Rd, (mul (sra GPR:$Rn, (i32 16)),
                                       (sext_inreg GPR:$Rm, i16)))]>,
            Requires<[IsARM, HasV5TE]>;
 
   def TT : AMulxyI<0b0001011, 0b11, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
               IIC_iMUL16, !strconcat(opc, "tt"), "\t$Rd, $Rn, $Rm",
-              [(set GPR:$Rd, (opnode (sra GPR:$Rn, (i32 16)),
+              [(set GPR:$Rd, (mul (sra GPR:$Rn, (i32 16)),
                                       (sra GPR:$Rm, (i32 16))))]>,
             Requires<[IsARM, HasV5TE]>;
 
@@ -4043,13 +4043,13 @@ multiclass AI_smul<string opc, SDNode opnode> {
 }
 
 
-multiclass AI_smla<string opc, SDNode opnode> {
+multiclass AI_smla<string opc> {
   let DecoderMethod = "DecodeSMLAInstruction" in {
   def BB : AMulxyIa<0b0001000, 0b00, (outs GPRnopc:$Rd),
               (ins GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
               IIC_iMAC16, !strconcat(opc, "bb"), "\t$Rd, $Rn, $Rm, $Ra",
               [(set GPRnopc:$Rd, (add GPR:$Ra,
-                               (opnode (sext_inreg GPRnopc:$Rn, i16),
+                               (mul (sext_inreg GPRnopc:$Rn, i16),
                                        (sext_inreg GPRnopc:$Rm, i16))))]>,
            Requires<[IsARM, HasV5TE, UseMulOps]>;
 
@@ -4057,7 +4057,7 @@ multiclass AI_smla<string opc, SDNode opnode> {
               (ins GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
               IIC_iMAC16, !strconcat(opc, "bt"), "\t$Rd, $Rn, $Rm, $Ra",
               [(set GPRnopc:$Rd,
-                    (add GPR:$Ra, (opnode (sext_inreg GPRnopc:$Rn, i16),
+                    (add GPR:$Ra, (mul (sext_inreg GPRnopc:$Rn, i16),
                                           (sra GPRnopc:$Rm, (i32 16)))))]>,
            Requires<[IsARM, HasV5TE, UseMulOps]>;
 
@@ -4065,7 +4065,7 @@ multiclass AI_smla<string opc, SDNode opnode> {
               (ins GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
               IIC_iMAC16, !strconcat(opc, "tb"), "\t$Rd, $Rn, $Rm, $Ra",
               [(set GPRnopc:$Rd,
-                    (add GPR:$Ra, (opnode (sra GPRnopc:$Rn, (i32 16)),
+                    (add GPR:$Ra, (mul (sra GPRnopc:$Rn, (i32 16)),
                                           (sext_inreg GPRnopc:$Rm, i16))))]>,
            Requires<[IsARM, HasV5TE, UseMulOps]>;
 
@@ -4073,7 +4073,7 @@ multiclass AI_smla<string opc, SDNode opnode> {
               (ins GPRnopc:$Rn, GPRnopc:$Rm, GPR:$Ra),
               IIC_iMAC16, !strconcat(opc, "tt"), "\t$Rd, $Rn, $Rm, $Ra",
              [(set GPRnopc:$Rd,
-                   (add GPR:$Ra, (opnode (sra GPRnopc:$Rn, (i32 16)),
+                   (add GPR:$Ra, (mul (sra GPRnopc:$Rn, (i32 16)),
                                          (sra GPRnopc:$Rm, (i32 16)))))]>,
             Requires<[IsARM, HasV5TE, UseMulOps]>;
 
@@ -4091,8 +4091,8 @@ multiclass AI_smla<string opc, SDNode opnode> {
   }
 }
 
-defm SMUL : AI_smul<"smul", mul>;
-defm SMLA : AI_smla<"smla", mul>;
+defm SMUL : AI_smul<"smul">;
+defm SMLA : AI_smla<"smla">;
 
 // Halfword multiply accumulate long: SMLAL<x><y>.
 def SMLALBB : AMulxyI64<0b0001010, 0b00, (outs GPRnopc:$RdLo, GPRnopc:$RdHi),

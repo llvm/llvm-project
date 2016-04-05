@@ -3,56 +3,53 @@
 
 define i32 @func1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @func1(
-; CHECK:         [[TMP0:%.*]] = and i32 %a, 1
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP0]], %b
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %a, 1
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP1]], %b
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
-entry:
-	%0 = or i32 %b, %a
-	%1 = and i32 %0, 1
-	%2 = and i32 %b, -2
-	%3 = or i32 %1, %2
-	ret i32 %3
+  %tmp = or i32 %b, %a
+  %tmp1 = and i32 %tmp, 1
+  %tmp2 = and i32 %b, -2
+  %tmp3 = or i32 %tmp1, %tmp2
+  ret i32 %tmp3
 }
 
 define i32 @func2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @func2(
-; CHECK:         [[TMP0:%.*]] = and i32 %a, 1
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP0]], %b
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %a, 1
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP1]], %b
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
-entry:
-	%0 = or i32 %a, %b
-	%1 = and i32 1, %0
-	%2 = and i32 -2, %b
-	%3 = or i32 %1, %2
-	ret i32 %3
+  %tmp = or i32 %a, %b
+  %tmp1 = and i32 1, %tmp
+  %tmp2 = and i32 -2, %b
+  %tmp3 = or i32 %tmp1, %tmp2
+  ret i32 %tmp3
 }
 
 define i32 @func3(i32 %a, i32 %b) {
 ; CHECK-LABEL: @func3(
-; CHECK:         [[TMP0:%.*]] = and i32 %a, 1
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP0]], %b
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %a, 1
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP1]], %b
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
-entry:
-	%0 = or i32 %b, %a
-	%1 = and i32 %0, 1
-	%2 = and i32 %b, -2
-	%3 = or i32 %2, %1
-	ret i32 %3
+  %tmp = or i32 %b, %a
+  %tmp1 = and i32 %tmp, 1
+  %tmp2 = and i32 %b, -2
+  %tmp3 = or i32 %tmp2, %tmp1
+  ret i32 %tmp3
 }
 
 define i32 @func4(i32 %a, i32 %b) {
 ; CHECK-LABEL: @func4(
-; CHECK:         [[TMP0:%.*]] = and i32 %a, 1
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP0]], %b
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %a, 1
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP1]], %b
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
-entry:
-	%0 = or i32 %a, %b
-	%1 = and i32 1, %0
-	%2 = and i32 -2, %b
-	%3 = or i32 %2, %1
-	ret i32 %3
+  %tmp = or i32 %a, %b
+  %tmp1 = and i32 1, %tmp
+  %tmp2 = and i32 -2, %b
+  %tmp3 = or i32 %tmp2, %tmp1
+  ret i32 %tmp3
 }
+

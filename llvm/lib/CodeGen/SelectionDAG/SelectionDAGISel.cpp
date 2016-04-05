@@ -1249,6 +1249,8 @@ static void mergeIncomingSwiftErrors(FunctionLoweringInfo *FuncInfo,
         !FuncInfo->SwiftErrorWorklist.count(PredMBB)) {
       for (unsigned I = 0, E = FuncInfo->SwiftErrorVals.size(); I < E; I++) {
         unsigned VReg = FuncInfo->MF->getRegInfo().createVirtualRegister(RC);
+        // When we actually visit the basic block PredMBB, we will materialize
+        // the virtual register assignment in copySwiftErrorsToFinalVRegs.
         FuncInfo->SwiftErrorWorklist[PredMBB].push_back(VReg);
       }
     }

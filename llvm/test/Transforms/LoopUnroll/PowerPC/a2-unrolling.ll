@@ -1,4 +1,5 @@
-; RUN: opt < %s -S -mtriple=powerpc64-unknown-linux-gnu -mcpu=a2 -loop-unroll | FileCheck %s
+; RUN: opt < %s -S -mtriple=powerpc64-unknown-linux-gnu -mcpu=a2 -loop-unroll | FileCheck %s -check-prefix=EPILOG
+; RUN: opt < %s -S -mtriple=powerpc64-unknown-linux-gnu -mcpu=a2 -loop-unroll -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 define void @unroll_opt_for_size() nounwind optsize {
 entry:
   br label %loop
@@ -13,11 +14,17 @@ exit:
   ret void
 }
 
-; CHECK-LABEL: @unroll_opt_for_size
-; CHECK:      add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK: icmp
+; EPILOG-LABEL: @unroll_opt_for_size
+; EPILOG:      add
+; EPILOG-NEXT: add
+; EPILOG-NEXT: add
+; EPILOG: icmp
+
+; PROLOG-LABEL: @unroll_opt_for_size
+; PROLOG:      add
+; PROLOG-NEXT: add
+; PROLOG-NEXT: add
+; PROLOG: icmp
 
 define i32 @test(i32* nocapture %a, i32 %n) nounwind uwtable readonly {
 entry:
@@ -40,8 +47,13 @@ for.end:                                          ; preds = %for.body, %entry
   ret i32 %sum.0.lcssa
 }
 
-; CHECK-LABEL: @test
-; CHECK: for.body.prol{{.*}}:
-; CHECK: for.body:
-; CHECK: br i1 %exitcond.7, label %for.end.loopexit{{.*}}, label %for.body
+; EPILOG-LABEL: @test
+; EPILOG: for.body:
+; EPILOG: br i1 %niter.ncmp.7, label %for.end.loopexit{{.*}}, label %for.body
+; EPILOG: for.body.epil{{.*}}:
+
+; PROLOG-LABEL: @test
+; PROLOG: for.body.prol{{.*}}:
+; PROLOG: for.body:
+; PROLOG: br i1 %exitcond.7, label %for.end.loopexit{{.*}}, label %for.body
 

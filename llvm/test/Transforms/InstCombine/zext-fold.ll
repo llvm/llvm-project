@@ -5,11 +5,10 @@
 
 define i32 @test2(float %X, float %Y) {
 ; CHECK-LABEL: @test2(
-; CHECK:         [[TMP3:%.*]] = fcmp ord float %X, %Y
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ord float %X, %Y
 ; CHECK-NEXT:    [[TOBOOLNOT5:%.*]] = zext i1 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[TOBOOLNOT5]]
 ;
-entry:
   %tmp3 = fcmp uno float %X, %Y
   %tmp34 = zext i1 %tmp3 to i8
   %tmp = xor i8 %tmp34, 1

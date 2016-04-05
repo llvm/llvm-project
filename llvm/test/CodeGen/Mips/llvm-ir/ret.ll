@@ -11,19 +11,27 @@
 ; RUN: llc -march=mips   -mcpu=mips32r2 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR32 -check-prefix=MTHC1 -check-prefix=NOT-R6
 ; RUN: llc -march=mips   -mcpu=mips32r3 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR32 -check-prefix=MTHC1 -check-prefix=NOT-R6
 ; RUN: llc -march=mips   -mcpu=mips32r5 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR32 -check-prefix=MTHC1 -check-prefix=NOT-R6
-; RUN: llc -march=mips   -mcpu=mips32r6 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR32 -check-prefix=MTHC1 -check-prefix=R6
+; RUN: llc -march=mips   -mcpu=mips32r6 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR32 -check-prefix=MTHC1 -check-prefix=R6C
 ; RUN: llc -march=mips64 -mcpu=mips4    -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR64 -check-prefix=DMTC1 -check-prefix=NOT-R6
 ; RUN: llc -march=mips64 -mcpu=mips64   -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR64 -check-prefix=DMTC1 -check-prefix=NOT-R6
 ; RUN: llc -march=mips64 -mcpu=mips64r2 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR64 -check-prefix=DMTC1 -check-prefix=NOT-R6
 ; RUN: llc -march=mips64 -mcpu=mips64r3 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR64 -check-prefix=DMTC1 -check-prefix=NOT-R6
 ; RUN: llc -march=mips64 -mcpu=mips64r5 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR64 -check-prefix=DMTC1 -check-prefix=NOT-R6
-; RUN: llc -march=mips64 -mcpu=mips64r6 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR64 -check-prefix=DMTC1 -check-prefix=R6
+
+; FIXME: for the test ret_double_0x0, the delay slot of jr cannot be filled
+;        as mthc1 has unmodeled side effects. This is an artifact of our backend.
+;        Force the delay slot filler off to check that the sequence jr $ra; nop is
+;        turned into jic 0, $ra.
+
+; RUN: llc -march=mips64 -mcpu=mips64r6 -asm-show-inst -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR64 -check-prefix=DMTC1 \
+; RUN:     -check-prefix=R6C
 
 define void @ret_void() {
 ; ALL-LABEL: ret_void:
 
 ; NOT-R6-DAG:    jr $ra # <MCInst #{{[0-9]+}} JR
 ; R6-DAG:        jr $ra # <MCInst #{{[0-9]+}} JALR
+; R6C-DAG:       jic $ra, 0 # <MCInst #{{[0-9]+}} JIC
 
   ret void
 }
@@ -173,6 +181,7 @@ define float @ret_float_0x3() {
 
 ; NOT-R6-DAG:    jr $ra # <MCInst #{{[0-9]+}} JR
 ; R6-DAG:        jr $ra # <MCInst #{{[0-9]+}} JALR
+; R6C-DAG:       jic $ra, 0 # <MCInst #{{[0-9]+}} JIC
 
 ; float constants are written as double constants
   ret float 0x36b8000000000000
@@ -191,6 +200,7 @@ define double @ret_double_0x0() {
 
 ; NOT-R6-DAG:    jr $ra # <MCInst #{{[0-9]+}} JR
 ; R6-DAG:        jr $ra # <MCInst #{{[0-9]+}} JALR
+; R6C-DAG:       jic $ra, 0 # <MCInst #{{[0-9]+}} JIC
 
   ret double 0x0000000000000000
 }
@@ -204,6 +214,7 @@ define double @ret_double_0x3() {
 
 ; NOT-R6-DAG:    jr $ra # <MCInst #{{[0-9]+}} JR
 ; R6-DAG:        jr $ra # <MCInst #{{[0-9]+}} JALR
+; R6C-DAG:       jic $ra, 0 # <MCInst #{{[0-9]+}} JIC
 
   ret double 0x0000000000000003
 }

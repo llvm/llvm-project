@@ -33,7 +33,7 @@ entry:
 
 define void @pr26232(i64 %a) {
 ; KNL-32-LABEL: pr26232:
-; KNL-32:       # BB#0: # %for_test11.preheader
+; KNL-32:       # BB#0: # %for_loop599.preheader
 ; KNL-32-NEXT:    pushl %esi
 ; KNL-32-NEXT:  .Ltmp0:
 ; KNL-32-NEXT:    .cfi_def_cfa_offset 8

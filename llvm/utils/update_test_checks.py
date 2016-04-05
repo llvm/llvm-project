@@ -1,10 +1,32 @@
 #!/usr/bin/env python2.7
 
-"""A test case update script.
+"""A script to generate FileCheck statements for regression tests.
 
 This script is a utility to update LLVM opt or llc test cases with new
 FileCheck patterns. It can either update all of the tests in the file or
 a single test function.
+
+Example usage:
+$ update_test_checks.py --tool=../bin/opt test/foo.ll
+
+Workflow:
+1. Make a compiler patch that requires updating some number of FileCheck lines
+   in regression test files.
+2. Save the patch and revert it from your local work area.
+3. Update the RUN-lines in the affected regression tests to look canonical.
+   Example: "; RUN: opt < %s -instcombine -S | FileCheck %s"
+4. Refresh the FileCheck lines for either the entire file or select functions by
+   running this script.
+5. Commit the fresh baseline of checks.
+6. Apply your patch from step 1 and rebuild your local binaries.
+7. Re-run this script on affected regression tests.
+8. Check the diffs to ensure the script has done something reasonable.
+9. Submit a patch including the regression test diffs for review.
+
+A common pattern is to have the script insert complete checking of every
+instruction. Then, edit it down to only check the relevant instructions.
+The script is designed to make adding checks to a test case fast, it is *not*
+designed to be authoratitive about what constitutes a good test!
 """
 
 import argparse
@@ -186,15 +208,25 @@ def add_checks(output_lines, prefix_list, func_dict, func_name, tool_basename):
       if tool_basename == "opt":
         func_body = genericize_check_lines(func_body)
 
+      # This could be selectively enabled with an optional invocation argument.
+      # Disabled for now: better to check everything. Be safe rather than sorry.
+
       # Handle the first line of the function body as a special case because
       # it's often just noise (a useless asm comment or entry label).
-      if func_body[0].startswith("#") or func_body[0].startswith("entry:"):
-        is_blank_line = True
-      else:
-        output_lines.append('; %s:       %s' % (checkprefix, func_body[0]))
-        is_blank_line = False
+      #if func_body[0].startswith("#") or func_body[0].startswith("entry:"):
+      #  is_blank_line = True
+      #else:
+      #  output_lines.append('; %s:       %s' % (checkprefix, func_body[0]))
+      #  is_blank_line = False
 
-      for func_line in func_body[1:]:
+      # For llc tests, there may be asm directives between the label and the
+      # first checked line (most likely that first checked line is "# BB#0").
+      if tool_basename == "opt":
+        is_blank_line = False
+      else:
+        is_blank_line = True;
+
+      for func_line in func_body:
         if func_line.strip() == '':
           is_blank_line = True
           continue
@@ -232,7 +264,8 @@ def should_add_line_to_output(input_line, prefix_set):
 
 
 def main():
-  parser = argparse.ArgumentParser(description=__doc__)
+  from argparse import RawTextHelpFormatter
+  parser = argparse.ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
   parser.add_argument('-v', '--verbose', action='store_true',
                       help='Show verbose output')
   parser.add_argument('--tool-binary', default='llc',

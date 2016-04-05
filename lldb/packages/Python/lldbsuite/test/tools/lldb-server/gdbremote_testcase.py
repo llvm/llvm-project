@@ -214,30 +214,21 @@ class GdbRemoteTestCaseBase(TestBase):
 
         return stub_port
 
-    def run_shell_cmd(self, cmd):
-        platform = self.dbg.GetSelectedPlatform()
-        shell_cmd = lldb.SBPlatformShellCommand(cmd)
-        err = platform.Run(shell_cmd)
-        if err.Fail() or shell_cmd.GetStatus():
-            m = "remote_platform.RunShellCommand('%s') failed:\n" % cmd
-            m += ">>> return code: %d\n" % shell_cmd.GetStatus()
-            if err.Fail():
-                m += ">>> %s\n" % str(err).strip()
-            m += ">>> %s\n" % (shell_cmd.GetOutput() or
-                               "Command generated no output.")
-            raise Exception(m)
-        return shell_cmd.GetOutput().strip()
-
     def init_llgs_test(self, use_named_pipe=True):
         if lldb.remote_platform:
             # Remote platforms don't support named pipe based port negotiation
             use_named_pipe = False
 
             # Grab the ppid from /proc/[shell pid]/stat
-            shell_stat = self.run_shell_cmd("cat /proc/$$/stat")
+            err, retcode, shell_stat = self.run_platform_command("cat /proc/$$/stat")
+            self.assertTrue(err.Success() and retcode == 0,
+                    "Failed to read file /proc/$$/stat: %s, retcode: %d" % (err.GetCString(), retcode))
+
             # [pid] ([executable]) [state] [*ppid*]
             pid = re.match(r"^\d+ \(.+\) . (\d+)", shell_stat).group(1)
-            ls_output = self.run_shell_cmd("ls -l /proc/%s/exe" % pid)
+            err, retcode, ls_output = self.run_platform_command("ls -l /proc/%s/exe" % pid)
+            self.assertTrue(err.Success() and retcode == 0,
+                    "Failed to read file /proc/%s/exe: %s, retcode: %d" % (pid, err.GetCString(), retcode))
             exe = ls_output.split()[-1]
 
             # If the binary has been deleted, the link name has " (deleted)" appended.
@@ -345,12 +336,6 @@ class GdbRemoteTestCaseBase(TestBase):
         if self.named_pipe_path:
             commandline_args += ["--named-pipe", self.named_pipe_path]
         return commandline_args
-
-    def run_platform_command(self, cmd):
-        platform = self.dbg.GetSelectedPlatform()
-        shell_command = lldb.SBPlatformShellCommand(cmd)
-        err = platform.Run(shell_command)
-        return (err, shell_command.GetOutput())
 
     def launch_debug_monitor(self, attach_pid=None, logfile=None):
         # Create the command line.

@@ -225,9 +225,8 @@ public:
         Value(Sym.st_value), Size(Sym.st_size),
         Section(Section ? Section->Repl : NullInputSection) {}
 
-  DefinedRegular(uint32_t NameOffset, const Elf_Sym &Sym,
-                 InputSectionBase<ELFT> *Section)
-      : Defined(SymbolBody::DefinedRegularKind, NameOffset, Sym.st_other,
+  DefinedRegular(const Elf_Sym &Sym, InputSectionBase<ELFT> *Section)
+      : Defined(SymbolBody::DefinedRegularKind, Sym.st_name, Sym.st_other,
                 Sym.getType()),
         Value(Sym.st_value), Size(Sym.st_size),
         Section(Section ? Section->Repl : NullInputSection) {
@@ -307,7 +306,7 @@ template <class ELFT> class UndefinedElf : public Undefined {
 
 public:
   UndefinedElf(StringRef N, const Elf_Sym &Sym);
-  UndefinedElf(uint32_t NameOffset, const Elf_Sym &Sym);
+  UndefinedElf(const Elf_Sym &Sym);
 
   uintX_t Size;
 

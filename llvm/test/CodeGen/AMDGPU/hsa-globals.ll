@@ -1,10 +1,14 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=ASM %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri | llvm-readobj -symbols -s | FileCheck %s --check-prefix=ELF
 
+@linkonce_odr_global_program = linkonce_odr addrspace(1) global i32 0
+@linkonce_global_program = linkonce addrspace(1) global i32 0
 @internal_global_program = internal addrspace(1) global i32 0
 @common_global_program = common addrspace(1) global i32 0
 @external_global_program = addrspace(1) global i32 0
 
+@linkonce_odr_global_agent = linkonce_odr addrspace(1) global i32 0, section ".hsadata_global_agent"
+@linkonce_global_agent = linkonce addrspace(1) global i32 0, section ".hsadata_global_agent"
 @internal_global_agent = internal addrspace(1) global i32 0, section ".hsadata_global_agent"
 @common_global_agent = common addrspace(1) global i32 0, section ".hsadata_global_agent"
 @external_global_agent = addrspace(1) global i32 0, section ".hsadata_global_agent"
@@ -15,6 +19,18 @@
 define void @test() {
   ret void
 }
+
+; ASM: .amdgpu_hsa_module_global linkonce_odr_global
+; ASM: .size linkonce_odr_global_program, 4
+; ASM: .hsadata_global_program
+; ASM: linkonce_odr_global_program:
+; ASM: .long 0
+
+; ASM: .amdgpu_hsa_module_global linkonce_global
+; ASM: .size linkonce_global_program, 4
+; ASM: .hsadata_global_program
+; ASM: linkonce_global_program:
+; ASM: .long 0
 
 ; ASM: .amdgpu_hsa_module_global internal_global
 ; ASM: .size internal_global_program, 4
@@ -32,6 +48,18 @@ define void @test() {
 ; ASM: .size external_global_program, 4
 ; ASM: .hsadata_global_program
 ; ASM: external_global_program:
+; ASM: .long 0
+
+; ASM: .amdgpu_hsa_module_global linkonce_odr_global
+; ASM: .size linkonce_odr_global_agent, 4
+; ASM: .hsadata_global_agent
+; ASM: linkonce_odr_global_agent:
+; ASM: .long 0
+
+; ASM: .amdgpu_hsa_module_global linkonce_global
+; ASM: .size linkonce_global_agent, 4
+; ASM: .hsadata_global_agent
+; ASM: linkonce_global_agent:
 ; ASM: .long 0
 
 ; ASM: .amdgpu_hsa_module_global internal_global
@@ -121,6 +149,34 @@ define void @test() {
 ; ELF: Binding: Local
 ; ELF: Type: Object
 ; ELF: Section: .hsatext
+; ELF: }
+
+; ELF: Symbol {
+; ELF: Name: linkonce_global_agent
+; ELF: Size: 4
+; ELF: Binding: Local
+; ELF: Section: .hsadata_global_agent
+; ELF: }
+
+; ELF: Symbol {
+; ELF: Name: linkonce_global_program
+; ELF: Size: 4
+; ELF: Binding: Local
+; ELF: Section: .hsadata_global_program
+; ELF: }
+
+; ELF: Symbol {
+; ELF: Name: linkonce_odr_global_agent
+; ELF: Size: 4
+; ELF: Binding: Local
+; ELF: Section: .hsadata_global_agent
+; ELF: }
+
+; ELF: Symbol {
+; ELF: Name: linkonce_odr_global_program
+; ELF: Size: 4
+; ELF: Binding: Local
+; ELF: Section: .hsadata_global_program
 ; ELF: }
 
 ; ELF: Symbol {

@@ -3,7 +3,7 @@
 
 define i32 @foo(i32 %x, i32 %y) {
 ; CHECK-LABEL: @foo(
-; CHECK:         [[A:%.*]] = and i32 %x, 7
+; CHECK-NEXT:    [[A:%.*]] = and i32 %x, 7
 ; CHECK-NEXT:    [[B:%.*]] = and i32 %y, 7
 ; CHECK-NEXT:    [[C:%.*]] = mul nuw nsw i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[D:%.*]] = shl nuw i32 [[C]], 26

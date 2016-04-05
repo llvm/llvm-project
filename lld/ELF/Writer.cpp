@@ -67,8 +67,7 @@ private:
   bool needsGot();
 
   template <class RelTy>
-  void scanRelocs(InputSectionBase<ELFT> &C,
-                  iterator_range<const RelTy *> Rels);
+  void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels);
 
   void scanRelocs(InputSection<ELFT> &C);
   void scanRelocs(InputSectionBase<ELFT> &S, const Elf_Shdr &RelSec);
@@ -92,7 +91,7 @@ private:
   }
   template <class RelTy>
   void scanRelocsForThunks(const elf::ObjectFile<ELFT> &File,
-                           iterator_range<const RelTy *> Rels);
+                           ArrayRef<RelTy> Rels);
 
   void ensureBss();
   void addCommonSymbols(std::vector<DefinedCommon *> &Syms);
@@ -319,7 +318,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
 template <class ELFT>
 template <class RelTy>
 void Writer<ELFT>::scanRelocsForThunks(const elf::ObjectFile<ELFT> &File,
-                                       iterator_range<const RelTy *> Rels) {
+                                       ArrayRef<RelTy> Rels) {
   for (const RelTy &RI : Rels) {
     uint32_t Type = RI.getType(Config->Mips64EL);
     uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
@@ -347,8 +346,7 @@ void Writer<ELFT>::scanRelocsForThunks(const elf::ObjectFile<ELFT> &File,
 // space for the extra PT_LOAD even if we end up not using it.
 template <class ELFT>
 template <class RelTy>
-void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
-                              iterator_range<const RelTy *> Rels) {
+void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
   const elf::ObjectFile<ELFT> &File = *C.getFile();
   for (auto I = Rels.begin(), E = Rels.end(); I != E; ++I) {
     const RelTy &RI = *I;

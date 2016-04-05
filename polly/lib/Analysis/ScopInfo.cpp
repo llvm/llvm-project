@@ -2512,19 +2512,9 @@ void Scop::propagateDomainConstraints(Region *R, ScopDetection &SD,
       }
     }
 
-    // Get the domain for the current block and check if it was initialized or
-    // not. The only way it was not is if this block is only reachable via error
-    // blocks, thus will not be executed under the assumptions we make. Such
-    // blocks have to be skipped as their predecessors might not have domains
-    // either. It would not benefit us to compute the domain anyway, only the
-    // domains of the error blocks that are reachable from non-error blocks
-    // are needed to generate assumptions.
     BasicBlock *BB = getRegionNodeBasicBlock(RN);
     isl_set *&Domain = DomainMap[BB];
-    if (!Domain) {
-      DomainMap.erase(BB);
-      continue;
-    }
+    assert(Domain);
 
     // Under the union of all predecessor conditions we can reach this block.
     auto *PredDom = getPredecessorDomainConstraints(BB, Domain, SD, DT, LI);
@@ -4448,6 +4438,13 @@ void ScopInfo::ensureValueRead(Value *V, BasicBlock *UserBB) {
 
 void ScopInfo::ensurePHIWrite(PHINode *PHI, BasicBlock *IncomingBlock,
                               Value *IncomingValue, bool IsExitBlock) {
+  // As the incoming block might turn out to be an error statement ensure we
+  // will create an exit PHI SAI object. It is needed during code generation
+  // and would be created later anyway.
+  if (IsExitBlock)
+    scop->getOrCreateScopArrayInfo(PHI, PHI->getType(), {},
+                                   ScopArrayInfo::MK_ExitPHI);
+
   ScopStmt *IncomingStmt = scop->getStmtFor(IncomingBlock);
   if (!IncomingStmt)
     return;

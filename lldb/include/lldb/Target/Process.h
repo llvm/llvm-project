@@ -1961,6 +1961,9 @@ public:
     void
     PrintWarningOptimization (const SymbolContext &sc);
 
+    virtual bool
+    GetProcessInfo(ProcessInstanceInfo &info);
+
 public:
     //------------------------------------------------------------------
     /// Get the exit status for a process.

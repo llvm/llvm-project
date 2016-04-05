@@ -3422,7 +3422,7 @@ Process::CompleteAttach ()
         else if (!process_arch.IsValid())
         {
             ProcessInstanceInfo process_info;
-            platform_sp->GetProcessInfo (GetID(), process_info);
+            GetProcessInfo(process_info);
             const ArchSpec &process_arch = process_info.GetArchitecture();
             if (process_arch.IsValid() && !GetTarget().GetArchitecture().IsExactMatch(process_arch))
             {
@@ -6479,6 +6479,18 @@ Process::PrintWarningOptimization (const SymbolContext &sc)
     {
         PrintWarning (Process::Warnings::eWarningsOptimization, sc.module_sp.get(), "%s was compiled with optimization - stepping may behave oddly; variables may not be available.\n", sc.module_sp->GetFileSpec().GetFilename().GetCString());
     }
+}
+
+bool
+Process::GetProcessInfo(ProcessInstanceInfo &info)
+{
+    info.Clear();
+
+    PlatformSP platform_sp = GetTarget().GetPlatform();
+    if (! platform_sp)
+        return false;
+
+    return platform_sp->GetProcessInfo(GetID(), info);
 }
 
 ThreadCollectionSP

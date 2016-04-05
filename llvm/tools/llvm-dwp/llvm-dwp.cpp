@@ -288,10 +288,11 @@ writeIndex(MCStreamer &Out, MCSection *Section,
   for (const auto &P : IndexEntries) {
     auto S = P.first;
     auto H = S & Mask;
+    auto HP = ((S >> 32) & Mask) | 1;
     while (Buckets[H]) {
       assert(S != IndexEntries.begin()[Buckets[H] - 1].first &&
              "Duplicate unit");
-      H = (H + (((S >> 32) & Mask) | 1)) % Buckets.size();
+      H = (H + HP) & Mask;
     }
     Buckets[H] = i + 1;
     ++i;

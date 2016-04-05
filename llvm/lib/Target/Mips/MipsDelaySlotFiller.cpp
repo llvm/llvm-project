@@ -205,9 +205,6 @@ namespace {
     Iter replaceWithCompactBranch(MachineBasicBlock &MBB,
                                   Iter Branch, DebugLoc DL);
 
-    Iter replaceWithCompactJump(MachineBasicBlock &MBB,
-                                Iter Jump, DebugLoc DL);
-
     /// This function checks if it is valid to move Candidate to the delay slot
     /// and returns true if it isn't. It also updates memory and register
     /// dependence information.
@@ -522,24 +519,6 @@ Iter Filler::replaceWithCompactBranch(MachineBasicBlock &MBB,
   return Branch;
 }
 
-// Replace Jumps with the compact jump instruction.
-Iter Filler::replaceWithCompactJump(MachineBasicBlock &MBB,
-                                    Iter Jump, DebugLoc DL) {
-  const MipsInstrInfo *TII =
-      MBB.getParent()->getSubtarget<MipsSubtarget>().getInstrInfo();
-
-  const MCInstrDesc &NewDesc = TII->get(Mips::JRC16_MM);
-  MachineInstrBuilder MIB = BuildMI(MBB, Jump, DL, NewDesc);
-
-  MIB.addReg(Jump->getOperand(0).getReg());
-
-  Iter tmpIter = Jump;
-  Jump = std::prev(Jump);
-  MBB.erase(tmpIter);
-
-  return Jump;
-}
-
 // For given opcode returns opcode of corresponding instruction with short
 // delay slot.
 static int getEquivalentCallShort(int Opcode) {
@@ -604,31 +583,21 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
           // corresponding instruction with short delay slot.
           DSI->setDesc(TII->get(getEquivalentCallShort(DSI->getOpcode())));
         }
-
         continue;
       }
     }
 
-    // If instruction is BEQ or BNE with one ZERO register, then instead of
-    // adding NOP replace this instruction with the corresponding compact
-    // branch instruction, i.e. BEQZC or BNEZC.
-    if (InMicroMipsMode) {
-      if (TII->getEquivalentCompactForm(I)) {
-        I = replaceWithCompactBranch(MBB, I, I->getDebugLoc());
-        continue;
-      }
-
-      if (I->isIndirectBranch() || I->isReturn()) {
-        // For microMIPS the PseudoReturn and PseudoIndirectBranch are always
-        // expanded to JR_MM, so they can be replaced with JRC16_MM.
-        I = replaceWithCompactJump(MBB, I, I->getDebugLoc());
-        continue;
-      }
-    }
+    // For microMIPS if instruction is BEQ or BNE with one ZERO register, then
+    // instead of adding NOP replace this instruction with the corresponding
+    // compact branch instruction, i.e. BEQZC or BNEZC. Additionally
+    // PseudoReturn and PseudoIndirectBranch are expanded to JR_MM, so they can
+    // be replaced with JRC16_MM.
 
     // For MIPSR6 attempt to produce the corresponding compact (no delay slot)
-    // form of the branch. This should save putting in a NOP.
-    if ((STI.hasMips32r6()) && TII->getEquivalentCompactForm(I)) {
+    // form of the CTI. For indirect jumps this will not require inserting a
+    // NOP and for branches will hopefully avoid requiring a NOP.
+    if ((InMicroMipsMode || STI.hasMips32r6()) &&
+         TII->getEquivalentCompactForm(I)) {
       I = replaceWithCompactBranch(MBB, I, I->getDebugLoc());
       continue;
     }

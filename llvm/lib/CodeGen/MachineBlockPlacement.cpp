@@ -811,7 +811,6 @@ MachineBlockPlacement::findBestLoopExit(MachineFunction &F, MachineLoop &L,
       // Restore the old exiting state, no viable looping successor was found.
       ExitingBB = OldExitingBB;
       BestExitEdgeFreq = OldBestExitEdgeFreq;
-      continue;
     }
   }
   // Without a candidate exiting block or with only a single block in the

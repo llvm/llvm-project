@@ -102,14 +102,12 @@ private:
   void forEachGroup(std::vector<InputSection<ELFT> *> &V, Comparator Eq);
 
   template <class RelTy>
-  static bool relocationEq(iterator_range<const RelTy *> RA,
-                           iterator_range<const RelTy *> RB);
+  static bool relocationEq(ArrayRef<RelTy> RA, ArrayRef<RelTy> RB);
 
   template <class RelTy>
   static bool variableEq(const InputSection<ELFT> *A,
-                         const InputSection<ELFT> *B,
-                         iterator_range<const RelTy *> RA,
-                         iterator_range<const RelTy *> RB);
+                         const InputSection<ELFT> *B, ArrayRef<RelTy> RA,
+                         ArrayRef<RelTy> RB);
 
   static bool equalsConstant(const InputSection<ELFT> *A,
                              const InputSection<ELFT> *B);
@@ -206,8 +204,7 @@ void ICF<ELFT>::forEachGroup(std::vector<InputSection<ELFT> *> &V,
 // Compare two lists of relocations.
 template <class ELFT>
 template <class RelTy>
-bool ICF<ELFT>::relocationEq(iterator_range<const RelTy *> RelsA,
-                             iterator_range<const RelTy *> RelsB) {
+bool ICF<ELFT>::relocationEq(ArrayRef<RelTy> RelsA, ArrayRef<RelTy> RelsB) {
   const RelTy *IA = RelsA.begin();
   const RelTy *EA = RelsA.end();
   const RelTy *IB = RelsB.begin();
@@ -252,9 +249,8 @@ bool ICF<ELFT>::equalsConstant(const InputSection<ELFT> *A,
 template <class ELFT>
 template <class RelTy>
 bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A,
-                           const InputSection<ELFT> *B,
-                           iterator_range<const RelTy *> RelsA,
-                           iterator_range<const RelTy *> RelsB) {
+                           const InputSection<ELFT> *B, ArrayRef<RelTy> RelsA,
+                           ArrayRef<RelTy> RelsB) {
   const RelTy *IA = RelsA.begin();
   const RelTy *EA = RelsA.end();
   const RelTy *IB = RelsB.begin();

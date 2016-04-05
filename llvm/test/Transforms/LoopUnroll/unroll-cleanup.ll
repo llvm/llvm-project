@@ -4,14 +4,14 @@
 ; RUN: opt < %s -O2 -S | FileCheck %s
 
 ; After loop unroll:
-;       %dec18 = add nsw i32 %dec18.in, -1
+;       %niter.nsub = add nsw i32 %niter, -1
 ;       ...
-;       %dec18.1 = add nsw i32 %dec18, -1
+;       %niter.nsub.1 = add nsw i32 %niter.nsub, -1
 ; should be merged to:
-;       %dec18.1 = add nsw i32 %dec18.in, -2
+;       %dec18.1 = add nsw i32 %niter, -2
 ;
 ; CHECK-LABEL: @_Z3fn1v(
-; CHECK: %dec18.1 = add nsw i32 %dec18.in, -2
+; CHECK: %niter.nsub.1 = add i32 %niter, -2
 
 ; ModuleID = '<stdin>'
 target triple = "x86_64-unknown-linux-gnu"

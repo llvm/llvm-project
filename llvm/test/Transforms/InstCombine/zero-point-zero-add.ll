@@ -5,7 +5,7 @@ declare double @abs(double)
 
 define double @test(double %X) {
 ; CHECK-LABEL: @test(
-; CHECK:         [[Y:%.*]] = fadd double %X, 0.000000e+00
+; CHECK-NEXT:    [[Y:%.*]] = fadd double %X, 0.000000e+00
 ; CHECK-NEXT:    ret double [[Y]]
 ;
   %Y = fadd double %X, 0.0          ;; Should be a single add x, 0.0
@@ -15,7 +15,7 @@ define double @test(double %X) {
 
 define double @test1(double %X) {
 ; CHECK-LABEL: @test1(
-; CHECK:         [[Y:%.*]] = call double @abs(double %X)
+; CHECK-NEXT:    [[Y:%.*]] = call double @abs(double %X)
 ; CHECK-NEXT:    ret double [[Y]]
 ;
   %Y = call double @abs(double %X)

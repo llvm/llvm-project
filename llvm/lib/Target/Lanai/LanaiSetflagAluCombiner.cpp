@@ -233,20 +233,22 @@ static bool isSuitableSetflag(MbbIterator Instruction, MbbIterator End) {
     MbbIterator SCCUserIter = Instruction;
     while (SCCUserIter != End) {
       ++SCCUserIter;
-      // Early exit when encountering flag setting instruction.
-      if (isFlagSettingInstruction(SCCUserIter->getOpcode()))
-        break;
+      // Early exit when encountering flag setting or return instruction.
+      if (isFlagSettingInstruction(SCCUserIter->getOpcode()) ||
+          SCCUserIter->isReturn())
+        // Only return true if flags are set post the flag setting instruction
+        // tested or a return is executed.
+        return true;
       int CCIndex = getCCOperandPosition(SCCUserIter->getOpcode());
       if (CCIndex != -1) {
         LPCC::CondCode CC = static_cast<LPCC::CondCode>(
             SCCUserIter->getOperand(CCIndex).getImm());
+        // Return false if the flag is used outside of a EQ, NE, PL and MI.
         if (CC != LPCC::ICC_EQ && CC != LPCC::ICC_NE && CC != LPCC::ICC_PL &&
             CC != LPCC::ICC_MI)
           return false;
       }
     }
-
-    return true;
   }
 
   return false;

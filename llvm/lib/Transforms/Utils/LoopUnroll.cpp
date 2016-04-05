@@ -44,6 +44,11 @@ using namespace llvm;
 STATISTIC(NumCompletelyUnrolled, "Number of loops completely unrolled");
 STATISTIC(NumUnrolled, "Number of loops unrolled (completely or otherwise)");
 
+static cl::opt<bool>
+UnrollRuntimeEpilog("unroll-runtime-epilog", cl::init(true), cl::Hidden,
+                    cl::desc("Allow runtime unrolled loops to be unrolled "
+                             "with epilog instead of prolog."));
+
 /// Convert the instruction operands from referencing the current values into
 /// those specified by VMap.
 static inline void remapInstruction(Instruction *I,
@@ -288,12 +293,13 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
                "convergent "
                "operation.");
       });
-  // Don't output the runtime loop prolog if Count is a multiple of
-  // TripMultiple.  Such a prolog is never needed, and is unsafe if the loop
+  // Don't output the runtime loop remainder if Count is a multiple of
+  // TripMultiple.  Such a remainder is never needed, and is unsafe if the loop
   // contains a convergent instruction.
   if (RuntimeTripCount && TripMultiple % Count != 0 &&
-      !UnrollRuntimeLoopProlog(L, Count, AllowExpensiveTripCount, LI, SE, DT,
-                               PreserveLCSSA))
+      !UnrollRuntimeLoopRemainder(L, Count, AllowExpensiveTripCount,
+                                  UnrollRuntimeEpilog, LI, SE, DT, 
+                                  PreserveLCSSA))
     return false;
 
   // Notify ScalarEvolution that the loop will be substantially changed,

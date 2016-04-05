@@ -1100,7 +1100,7 @@ static typename ELFT::uint readEntryLength(ArrayRef<uint8_t> D) {
 template <class ELFT>
 template <class RelTy>
 void EHOutputSection<ELFT>::addSectionAux(EHInputSection<ELFT> *S,
-                                          iterator_range<const RelTy *> Rels) {
+                                          ArrayRef<RelTy> Rels) {
   const endianness E = ELFT::TargetEndianness;
 
   S->OutSec = this;
@@ -1175,7 +1175,7 @@ void EHOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *S = cast<EHInputSection<ELFT>>(C);
   const Elf_Shdr *RelSec = S->RelocSection;
   if (!RelSec) {
-    addSectionAux(S, make_range<const Elf_Rela *>(nullptr, nullptr));
+    addSectionAux(S, makeArrayRef<Elf_Rela>(nullptr, nullptr));
     return;
   }
   ELFFile<ELFT> &Obj = S->getFile()->getObj();

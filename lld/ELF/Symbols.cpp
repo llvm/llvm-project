@@ -261,7 +261,7 @@ UndefinedElf<ELFT>::UndefinedElf(StringRef N, const Elf_Sym &Sym)
       Size(Sym.st_size) {}
 
 template <typename ELFT>
-UndefinedElf<ELFT>::UndefinedElf(uint32_t NameOffset, const Elf_Sym &Sym)
+UndefinedElf<ELFT>::UndefinedElf(const Elf_Sym &Sym)
     : Undefined(SymbolBody::UndefinedElfKind, NameOffset, Sym.st_other,
                 Sym.getType()),
       Size(Sym.st_size) {
