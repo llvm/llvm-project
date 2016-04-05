@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-windows -no-x86-call-frame-opt | FileCheck %s -check-prefix=NOPUSH
 ; RUN: llc < %s -mtriple=x86_64-windows | FileCheck %s -check-prefix=X64
 ; RUN: llc < %s -mtriple=i686-windows -stackrealign -stack-alignment=32 | FileCheck %s -check-prefix=ALIGNED
+; RUN: llc < %s -mtriple=i686-pc-linux | FileCheck %s -check-prefix=LINUX
 
 %class.Class = type { i32 }
 %struct.s = type { i64 }
@@ -12,6 +13,10 @@ declare x86_thiscallcc void @thiscall(%class.Class* %class, i32 %a, i32 %b, i32 
 declare void @oneparam(i32 %a)
 declare void @eightparams(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h)
 declare void @struct(%struct.s* byval %a, i32 %b, i32 %c, i32 %d)
+declare void @inalloca(<{ %struct.s }>* inalloca)
+
+declare i8* @llvm.stacksave()
+declare void @llvm.stackrestore(i8*)
 
 ; We should get pushes for x86, even though there is a reserved call frame.
 ; Make sure we don't touch x86-64, and that turning it off works.
@@ -223,8 +228,7 @@ entry:
 ; NORMAL-NEXT: pushl $2
 ; NORMAL-NEXT: pushl $1
 ; NORMAL-NEXT: call
-; NORMAL-NEXT: addl $16, %esp
-; NORMAL-NEXT: subl $20, %esp
+; NORMAL-NEXT: subl $4, %esp
 ; NORMAL-NEXT: movl 20(%esp), [[E1:%e..]]
 ; NORMAL-NEXT: movl 24(%esp), [[E2:%e..]]
 ; NORMAL-NEXT: movl    [[E2]], 4(%esp)
@@ -261,7 +265,7 @@ entry:
 ; NORMAL-NEXT: pushl $2
 ; NORMAL-NEXT: pushl $1
 ; NORMAL-NEXT: calll *16(%esp)
-; NORMAL-NEXT: addl $16, %esp
+; NORMAL-NEXT: addl $24, %esp
 define void @test10() optsize {
   %stack_fptr = alloca void (i32, i32, i32, i32)*
   store void (i32, i32, i32, i32)* @good, void (i32, i32, i32, i32)** %stack_fptr
@@ -314,8 +318,7 @@ entry:
 ; NORMAL-NEXT: pushl    $2
 ; NORMAL-NEXT: pushl    $1
 ; NORMAL-NEXT: calll _good
-; NORMAL-NEXT: addl    $16, %esp
-; NORMAL-NEXT: subl    $20, %esp
+; NORMAL-NEXT: subl    $4, %esp
 ; NORMAL: movl    $8, 16(%esp)
 ; NORMAL-NEXT: movl    $7, 12(%esp)
 ; NORMAL-NEXT: movl    $6, 8(%esp)
@@ -357,4 +360,55 @@ entry:
   %add = add i32 %val1, %val2
   call void @good(i32 %val1, i32 %val2, i32 %val3, i32 %add)
   ret i32* %ptr3
+}
+
+; Make sure to fold adjacent stack adjustments.
+; LINUX-LABEL: pr27140:
+; LINUX: subl    $12, %esp
+; LINUX: .cfi_def_cfa_offset 16
+; LINUX-NOT: sub
+; LINUX: pushl   $4
+; LINUX: .cfi_adjust_cfa_offset 4
+; LINUX: pushl   $3
+; LINUX: .cfi_adjust_cfa_offset 4
+; LINUX: pushl   $2
+; LINUX: .cfi_adjust_cfa_offset 4
+; LINUX: pushl   $1
+; LINUX: .cfi_adjust_cfa_offset 4
+; LINUX: calll   good
+; LINUX: addl    $28, %esp
+; LINUX: .cfi_adjust_cfa_offset -28
+; LINUX-NOT: add
+; LINUX: retl
+define void @pr27140() optsize {
+entry:
+  tail call void @good(i32 1, i32 2, i32 3, i32 4)
+  ret void
+}
+
+; Check that a stack restore (leal -4(%ebp), %esp) doesn't get merged with a
+; stack adjustment (addl $12, %esp). Just because it's a lea doesn't mean it's
+; simply decreasing the stack pointer.
+; NORMAL-LABEL: test14:
+; NORMAL: calll _B_func
+; NORMAL: leal -4(%ebp), %esp
+; NORMAL-NOT: %esp
+; NORMAL: retl
+%struct.A = type { i32, i32 }
+%struct.B = type { i8 }
+declare x86_thiscallcc %struct.B* @B_ctor(%struct.B* returned, %struct.A* byval)
+declare void @B_func(%struct.B* sret, %struct.B*, i32)
+define void @test14(%struct.A* %a) {
+entry:
+  %ref.tmp = alloca %struct.B, align 1
+  %agg.tmp = alloca i64, align 4
+  %tmpcast = bitcast i64* %agg.tmp to %struct.A*
+  %tmp = alloca %struct.B, align 1
+  %0 = bitcast %struct.A* %a to i64*
+  %1 = load i64, i64* %0, align 4
+  store i64 %1, i64* %agg.tmp, align 4
+  %call = call x86_thiscallcc %struct.B* @B_ctor(%struct.B* %ref.tmp, %struct.A* byval %tmpcast)
+  %2 = getelementptr inbounds %struct.B, %struct.B* %tmp, i32 0, i32 0
+  call void @B_func(%struct.B* sret %tmp, %struct.B* %ref.tmp, i32 1)
+  ret void
 }

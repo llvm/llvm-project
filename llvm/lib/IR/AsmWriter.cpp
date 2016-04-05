@@ -2048,7 +2048,7 @@ public:
 
   void printTypeIdentities();
   void printGlobal(const GlobalVariable *GV);
-  void printAlias(const GlobalAlias *GV);
+  void printIndirectSymbol(const GlobalIndirectSymbol *GIS);
   void printComdat(const Comdat *C);
   void printFunction(const Function *F);
   void printArgument(const Argument *FA, AttributeSet Attrs, unsigned Idx);
@@ -2271,7 +2271,7 @@ void AssemblyWriter::printModule(const Module *M) {
   // Output all aliases.
   if (!M->alias_empty()) Out << "\n";
   for (const GlobalAlias &GA : M->aliases())
-    printAlias(&GA);
+    printIndirectSymbol(&GA);
 
   // Output global use-lists.
   printUseLists(nullptr);
@@ -2452,36 +2452,39 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   printInfoComment(*GV);
 }
 
-void AssemblyWriter::printAlias(const GlobalAlias *GA) {
-  if (GA->isMaterializable())
+void AssemblyWriter::printIndirectSymbol(const GlobalIndirectSymbol *GIS) {
+  if (GIS->isMaterializable())
     Out << "; Materializable\n";
 
-  WriteAsOperandInternal(Out, GA, &TypePrinter, &Machine, GA->getParent());
+  WriteAsOperandInternal(Out, GIS, &TypePrinter, &Machine, GIS->getParent());
   Out << " = ";
 
-  PrintLinkage(GA->getLinkage(), Out);
-  PrintVisibility(GA->getVisibility(), Out);
-  PrintDLLStorageClass(GA->getDLLStorageClass(), Out);
-  PrintThreadLocalModel(GA->getThreadLocalMode(), Out);
-  if (GA->hasUnnamedAddr())
+  PrintLinkage(GIS->getLinkage(), Out);
+  PrintVisibility(GIS->getVisibility(), Out);
+  PrintDLLStorageClass(GIS->getDLLStorageClass(), Out);
+  PrintThreadLocalModel(GIS->getThreadLocalMode(), Out);
+  if (GIS->hasUnnamedAddr())
     Out << "unnamed_addr ";
 
-  Out << "alias ";
+  if (isa<GlobalAlias>(GIS))
+    Out << "alias ";
+  else
+    llvm_unreachable("Not an alias!");
 
-  TypePrinter.print(GA->getValueType(), Out);
+  TypePrinter.print(GIS->getValueType(), Out);
 
   Out << ", ";
 
-  const Constant *Aliasee = GA->getAliasee();
+  const Constant *IS = GIS->getIndirectSymbol();
 
-  if (!Aliasee) {
-    TypePrinter.print(GA->getType(), Out);
+  if (!IS) {
+    TypePrinter.print(GIS->getType(), Out);
     Out << " <<NULL ALIASEE>>";
   } else {
-    writeOperand(Aliasee, !isa<ConstantExpr>(Aliasee));
+    writeOperand(IS, !isa<ConstantExpr>(IS));
   }
 
-  printInfoComment(*GA);
+  printInfoComment(*GIS);
   Out << '\n';
 }
 
@@ -3349,7 +3352,7 @@ void Value::print(raw_ostream &ROS, ModuleSlotTracker &MST,
     else if (const Function *F = dyn_cast<Function>(GV))
       W.printFunction(F);
     else
-      W.printAlias(cast<GlobalAlias>(GV));
+      W.printIndirectSymbol(cast<GlobalIndirectSymbol>(GV));
   } else if (const MetadataAsValue *V = dyn_cast<MetadataAsValue>(this)) {
     V->getMetadata()->print(ROS, MST, getModuleFromVal(V));
   } else if (const Constant *C = dyn_cast<Constant>(this)) {

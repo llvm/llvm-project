@@ -430,9 +430,9 @@ char *LLVMGetDiagInfoDescription(LLVMDiagnosticInfoRef DI);
  */
 LLVMDiagnosticSeverity LLVMGetDiagInfoSeverity(LLVMDiagnosticInfoRef DI);
 
-unsigned LLVMGetMDKindIDInContext(LLVMContextRef C, const char* Name,
+unsigned LLVMGetMDKindIDInContext(LLVMContextRef C, const char *Name,
                                   unsigned SLen);
-unsigned LLVMGetMDKindID(const char* Name, unsigned SLen);
+unsigned LLVMGetMDKindID(const char *Name, unsigned SLen);
 
 /**
  * @}

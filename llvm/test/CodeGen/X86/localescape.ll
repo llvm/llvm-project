@@ -137,6 +137,5 @@ define void @alloc_func_no_frameaddr() {
 ; X86: movl $13, (%esp)
 ; X86: pushl $0
 ; X86: calll _print_framealloc_from_fp
-; X86: addl    $4, %esp
-; X86: addl    $8, %esp
+; X86: addl    $12, %esp
 ; X86: retl

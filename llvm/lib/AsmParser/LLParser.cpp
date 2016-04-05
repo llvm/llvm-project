@@ -503,8 +503,9 @@ bool LLParser::ParseUnnamedGlobal() {
   if (Lex.getKind() != lltok::kw_alias)
     return ParseGlobal(Name, NameLoc, Linkage, HasLinkage, Visibility,
                        DLLStorageClass, TLM, UnnamedAddr);
-  return ParseAlias(Name, NameLoc, Linkage, Visibility, DLLStorageClass, TLM,
-                    UnnamedAddr);
+
+  return parseIndirectSymbol(Name, NameLoc, Linkage, Visibility,
+                             DLLStorageClass, TLM, UnnamedAddr);
 }
 
 /// ParseNamedGlobal:
@@ -533,8 +534,8 @@ bool LLParser::ParseNamedGlobal() {
     return ParseGlobal(Name, NameLoc, Linkage, HasLinkage, Visibility,
                        DLLStorageClass, TLM, UnnamedAddr);
 
-  return ParseAlias(Name, NameLoc, Linkage, Visibility, DLLStorageClass, TLM,
-                    UnnamedAddr);
+  return parseIndirectSymbol(Name, NameLoc, Linkage, Visibility,
+                             DLLStorageClass, TLM, UnnamedAddr);
 }
 
 bool LLParser::parseComdat() {
@@ -690,26 +691,31 @@ static bool isValidVisibilityForLinkage(unsigned V, unsigned L) {
          (GlobalValue::VisibilityTypes)V == GlobalValue::DefaultVisibility;
 }
 
-/// ParseAlias:
+/// parseIndirectSymbol:
 ///   ::= GlobalVar '=' OptionalLinkage OptionalVisibility
 ///                     OptionalDLLStorageClass OptionalThreadLocal
-///                     OptionalUnnamedAddr 'alias' Aliasee
+///                     OptionalUnnamedAddr 'alias' IndirectSymbol
 ///
-/// Aliasee
+/// IndirectSymbol
 ///   ::= TypeAndValue
 ///
 /// Everything through OptionalUnnamedAddr has already been parsed.
 ///
-bool LLParser::ParseAlias(const std::string &Name, LocTy NameLoc, unsigned L,
-                          unsigned Visibility, unsigned DLLStorageClass,
-                          GlobalVariable::ThreadLocalMode TLM,
-                          bool UnnamedAddr) {
-  assert(Lex.getKind() == lltok::kw_alias);
+bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
+                                   unsigned L, unsigned Visibility,
+                                   unsigned DLLStorageClass,
+                                   GlobalVariable::ThreadLocalMode TLM,
+                                   bool UnnamedAddr) {
+  bool IsAlias;
+  if (Lex.getKind() == lltok::kw_alias)
+    IsAlias = true;
+  else
+    llvm_unreachable("Not an alias!");
   Lex.Lex();
 
   GlobalValue::LinkageTypes Linkage = (GlobalValue::LinkageTypes) L;
 
-  if(!GlobalAlias::isValidLinkage(Linkage))
+  if(IsAlias && !GlobalAlias::isValidLinkage(Linkage))
     return Error(NameLoc, "invalid linkage type for alias");
 
   if (!isValidVisibilityForLinkage(Visibility, L))
@@ -746,10 +752,15 @@ bool LLParser::ParseAlias(const std::string &Name, LocTy NameLoc, unsigned L,
     return Error(AliaseeLoc, "An alias must have pointer type");
   unsigned AddrSpace = PTy->getAddressSpace();
 
-  if (Ty != PTy->getElementType())
+  if (IsAlias && Ty != PTy->getElementType())
     return Error(
         ExplicitTypeLoc,
         "explicit pointee type doesn't match operand's pointee type");
+
+  if (!IsAlias && !PTy->getElementType()->isFunctionTy())
+    return Error(
+        ExplicitTypeLoc,
+        "explicit pointee type should be a function type");
 
   GlobalValue *GVal = nullptr;
 
@@ -770,9 +781,13 @@ bool LLParser::ParseAlias(const std::string &Name, LocTy NameLoc, unsigned L,
   }
 
   // Okay, create the alias but do not insert it into the module yet.
-  std::unique_ptr<GlobalAlias> GA(
-      GlobalAlias::create(Ty, AddrSpace, (GlobalValue::LinkageTypes)Linkage,
-                          Name, Aliasee, /*Parent*/ nullptr));
+  std::unique_ptr<GlobalIndirectSymbol> GA;
+  if (IsAlias)
+    GA.reset(GlobalAlias::create(Ty, AddrSpace,
+                                 (GlobalValue::LinkageTypes)Linkage, Name,
+                                 Aliasee, /*Parent*/ nullptr));
+  else
+    llvm_unreachable("Not an alias!");
   GA->setThreadLocalMode(TLM);
   GA->setVisibility((GlobalValue::VisibilityTypes)Visibility);
   GA->setDLLStorageClass((GlobalValue::DLLStorageClassTypes)DLLStorageClass);
@@ -795,7 +810,10 @@ bool LLParser::ParseAlias(const std::string &Name, LocTy NameLoc, unsigned L,
   }
 
   // Insert into the module, we know its name won't collide now.
-  M->getAliasList().push_back(GA.get());
+  if (IsAlias)
+    M->getAliasList().push_back(cast<GlobalAlias>(GA.get()));
+  else
+    llvm_unreachable("Not an alias!");
   assert(GA->getName() == Name && "Should not be a name conflict!");
 
   // The module owns this now

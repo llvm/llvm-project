@@ -133,7 +133,7 @@ def i32neg16 : Operand<i32>, PatLeaf<(i32 imm), [{
 def i32lo16s : Operand<i32>, PatLeaf<(i32 imm), [{
     // i32lo16 predicate - true if the 32-bit immediate has only rightmost 16
     // bits set.
-    return ((N->getSExtValue() & 0xFFFFUL) == N->getSExtValue());}], LO16> {
+    return ((int64_t)(N->getSExtValue() & 0xFFFFUL) == N->getSExtValue());}], LO16> {
   let ParserMatchClass = LoImm16AsmOperand;
 }
 

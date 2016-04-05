@@ -34,6 +34,7 @@ class ConstantArray;
 class DIE;
 class DIEAbbrev;
 class GCMetadataPrinter;
+class GlobalIndirectSymbol;
 class GlobalValue;
 class GlobalVariable;
 class MachineBasicBlock;
@@ -546,6 +547,9 @@ private:
   void EmitXXStructorList(const DataLayout &DL, const Constant *List,
                           bool isCtor);
   GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &C);
+  /// Emit GlobalAlias or GlobalIFunc.
+  void emitGlobalIndirectSymbol(Module &M,
+                                const GlobalIndirectSymbol& GIS);
 };
 }
 

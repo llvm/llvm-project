@@ -8,17 +8,13 @@ LLVM Atomic Instructions and Concurrency Guide
 Introduction
 ============
 
-Historically, LLVM has not had very strong support for concurrency; some minimal
-intrinsics were provided, and ``volatile`` was used in some cases to achieve
-rough semantics in the presence of concurrency.  However, this is changing;
-there are now new instructions which are well-defined in the presence of threads
-and asynchronous signals, and the model for existing instructions has been
-clarified in the IR.
+LLVM supports instructions which are well-defined in the presence of threads and
+asynchronous signals.
 
 The atomic instructions are designed specifically to provide readable IR and
 optimized code generation for the following:
 
-* The new C++11 ``<atomic>`` header.  (`C++11 draft available here
+* The C++11 ``<atomic>`` header.  (`C++11 draft available here
   <http://www.open-std.org/jtc1/sc22/wg21/>`_.) (`C11 draft available here
   <http://www.open-std.org/jtc1/sc22/wg14/>`_.)
 

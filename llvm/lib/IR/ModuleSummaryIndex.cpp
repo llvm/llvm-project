@@ -68,3 +68,14 @@ void ModuleSummaryIndex::removeEmptySummaryEntries() {
       ++MI;
   }
 }
+
+GlobalValueInfo *
+ModuleSummaryIndex::getGlobalValueInfo(uint64_t ValueGUID,
+                                       bool PerModuleIndex) const {
+  auto InfoList = findGlobalValueInfoList(ValueGUID);
+  assert(InfoList != end() && "GlobalValue not found in index");
+  assert((!PerModuleIndex || InfoList->second.size() == 1) &&
+         "Expected a single entry per global value in per-module index");
+  auto &Info = InfoList->second[0];
+  return Info.get();
+}

@@ -64,7 +64,7 @@ private:
 char LanaiSetflagAluCombiner::ID = 0;
 
 INITIALIZE_PASS(LanaiSetflagAluCombiner, DEBUG_TYPE,
-                "Lanai SET_FLAG ALU combiner pass", false, false);
+                "Lanai SET_FLAG ALU combiner pass", false, false)
 
 namespace {
 
