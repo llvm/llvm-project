@@ -121,7 +121,7 @@ public:
   // Decides which symbol should "win" in the symbol table, this or
   // the Other. Returns 1 if this wins, -1 if the Other wins, or 0 if
   // they are duplicate (conflicting) symbols.
-  template <class ELFT> int compare(SymbolBody *Other);
+  int compare(SymbolBody *Other);
 
 protected:
   SymbolBody(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,

@@ -5754,34 +5754,6 @@ prev_permutation(_BidirectionalIterator __first, _BidirectionalIterator __last)
                                   __less<typename iterator_traits<_BidirectionalIterator>::value_type>());
 }
 
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value,
-    _Tp
->::type
-__rotate_left(_Tp __t, _Tp __n = 1)
-{
-    const unsigned __bits = static_cast<unsigned>(sizeof(_Tp) * __CHAR_BIT__ - 1);
-    __n &= __bits;
-    return static_cast<_Tp>((__t << __n) | (static_cast<typename make_unsigned<_Tp>::type>(__t) >> (__bits - __n)));
-}
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value,
-    _Tp
->::type
-__rotate_right(_Tp __t, _Tp __n = 1)
-{
-    const unsigned __bits = static_cast<unsigned>(sizeof(_Tp) * __CHAR_BIT__ - 1);
-    __n &= __bits;
-    return static_cast<_Tp>((__t << (__bits - __n)) | (static_cast<typename make_unsigned<_Tp>::type>(__t) >> __n));
-}
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif  // _LIBCPP_ALGORITHM

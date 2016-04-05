@@ -647,18 +647,8 @@ DisassemblerLLVMC::DisassemblerLLVMC (const ArchSpec &arch, const char *flavor_s
 
     const char *triple_str = triple.getTriple().c_str();
 
-    // v. https://en.wikipedia.org/wiki/ARM_Cortex-M#Silicon_customization
-    // 
-    // Cortex-M3 devices (e.g. armv7m) can only execute thumb (T2) instructions,
-    // so hardcode the primary disassembler to thumb mode.  Same for Cortex-M4 (armv7em).
-    //
-    // Handle the Cortex-M0 (armv6m) the same; the ISA is a subset of the T and T32
-    // instructions defined in ARMv7-A.
-
-    if ((triple.getArch() == llvm::Triple::arm || triple.getArch() == llvm::Triple::thumb)
-        && (arch.GetCore() == ArchSpec::Core::eCore_arm_armv7m
-            || arch.GetCore() == ArchSpec::Core::eCore_arm_armv7em
-            || arch.GetCore() == ArchSpec::Core::eCore_arm_armv6m))
+    // ARM Cortex M0-M7 devices only execute thumb instructions
+    if (arch.IsAlwaysThumbInstructions ())
     {
         triple_str = thumb_arch.GetTriple().getTriple().c_str();
     }

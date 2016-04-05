@@ -1544,6 +1544,35 @@ DumpBasename (Stream &strm, const FileSpec *file_spec_ptr, uint32_t width)
         strm.Printf("%-*s", width, "");
 }
 
+static size_t
+DumpModuleObjfileHeaders(Stream &strm, ModuleList &module_list)
+{
+    size_t num_dumped = 0;
+    Mutex::Locker modules_locker(module_list.GetMutex());
+    const size_t num_modules = module_list.GetSize();
+    if (num_modules > 0)
+    {
+        strm.Printf("Dumping headers for %" PRIu64 " module(s).\n", static_cast<uint64_t>(num_modules));
+        strm.IndentMore();
+        for (size_t image_idx = 0; image_idx < num_modules; ++image_idx)
+        {
+            Module *module = module_list.GetModulePointerAtIndexUnlocked(image_idx);
+            if (module)
+            {
+                if (num_dumped++ > 0)
+                {
+                    strm.EOL();
+                    strm.EOL();
+                }
+                ObjectFile *objfile = module->GetObjectFile();
+                objfile->Dump(&strm);
+            }
+        }
+        strm.IndentLess();
+    }
+    return num_dumped;
+}
+
 static void
 DumpModuleSymtab (CommandInterpreter &interpreter, Stream &strm, Module *module, SortOrder sort_order)
 {
@@ -1941,7 +1970,6 @@ FindModulesByName (Target *target,
                    ModuleList &module_list, 
                    bool check_global_list)
 {
-// Dump specified images (by basename or fullpath)
     FileSpec module_file_spec(module_name, false);
     ModuleSpec module_spec (module_file_spec);
 
@@ -2105,6 +2133,77 @@ public:
                                                             word_complete,
                                                             matches);
         return matches.GetSize();
+    }
+};
+
+#pragma mark CommandObjectTargetModulesDumpObjfile
+
+class CommandObjectTargetModulesDumpObjfile : public CommandObjectTargetModulesModuleAutoComplete
+{
+public:
+    CommandObjectTargetModulesDumpObjfile(CommandInterpreter &interpreter)
+        : CommandObjectTargetModulesModuleAutoComplete(interpreter, "target modules dump objfile",
+                                                       "Dump the object file headers from one or more target modules.",
+                                                       nullptr)
+    {
+    }
+
+    ~CommandObjectTargetModulesDumpObjfile() override = default;
+
+protected:
+    bool
+    DoExecute(Args &command, CommandReturnObject &result) override
+    {
+        Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+        if (target == nullptr)
+        {
+            result.AppendError("invalid target, create a debug target using the 'target create' command");
+            result.SetStatus(eReturnStatusFailed);
+            return false;
+        }
+
+        uint32_t addr_byte_size = target->GetArchitecture().GetAddressByteSize();
+        result.GetOutputStream().SetAddressByteSize(addr_byte_size);
+        result.GetErrorStream().SetAddressByteSize(addr_byte_size);
+
+        size_t num_dumped = 0;
+        if (command.GetArgumentCount() == 0)
+        {
+            // Dump all headers for all modules images
+            num_dumped = DumpModuleObjfileHeaders(result.GetOutputStream(), target->GetImages());
+            if (num_dumped == 0)
+            {
+                result.AppendError("the target has no associated executable images");
+                result.SetStatus(eReturnStatusFailed);
+            }
+        }
+        else
+        {
+            // Find the modules that match the basename or full path.
+            ModuleList module_list;
+            const char *arg_cstr;
+            for (int arg_idx = 0; (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != nullptr; ++arg_idx)
+            {
+                size_t num_matched = FindModulesByName(target, arg_cstr, module_list, true);
+                if (num_matched == 0)
+                {
+                    result.AppendWarningWithFormat("Unable to find an image that matches '%s'.\n", arg_cstr);
+                }
+            }
+            // Dump all the modules we found.
+            num_dumped = DumpModuleObjfileHeaders(result.GetOutputStream(), module_list);
+        }
+
+        if (num_dumped > 0)
+        {
+            result.SetStatus(eReturnStatusSuccessFinishResult);
+        }
+        else
+        {
+            result.AppendError("no matching executable images found");
+            result.SetStatus(eReturnStatusFailed);
+        }
+        return result.Succeeded();
     }
 };
 
@@ -2579,12 +2678,13 @@ public:
     //------------------------------------------------------------------
     // Constructors and Destructors
     //------------------------------------------------------------------
-    CommandObjectTargetModulesDump(CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter, 
-                            "target modules dump",
-                            "A set of commands for dumping information about one or more target modules.",
-                            "target modules dump [symtab|sections|symfile|line-table] [<file1> <file2> ...]")
+    CommandObjectTargetModulesDump(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(
+              interpreter, "target modules dump",
+              "A set of commands for dumping information about one or more target modules.",
+              "target modules dump [headers|symtab|sections|symfile|line-table] [<file1> <file2> ...]")
     {
+        LoadSubCommand("objfile", CommandObjectSP(new CommandObjectTargetModulesDumpObjfile(interpreter)));
         LoadSubCommand ("symtab",      CommandObjectSP (new CommandObjectTargetModulesDumpSymtab (interpreter)));
         LoadSubCommand ("sections",    CommandObjectSP (new CommandObjectTargetModulesDumpSections (interpreter)));
         LoadSubCommand ("symfile",     CommandObjectSP (new CommandObjectTargetModulesDumpSymfile (interpreter)));

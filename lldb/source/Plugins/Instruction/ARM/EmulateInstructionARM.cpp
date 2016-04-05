@@ -13004,7 +13004,7 @@ EmulateInstructionARM::SetInstruction (const Opcode &insn_opcode, const Address 
 {
     if (EmulateInstruction::SetInstruction (insn_opcode, inst_addr, target))
     {
-        if (m_arch.GetTriple().getArch() == llvm::Triple::thumb)
+        if (m_arch.GetTriple().getArch() == llvm::Triple::thumb || m_arch.IsAlwaysThumbInstructions ())
             m_opcode_mode = eModeThumb;
         else
         {
@@ -13017,7 +13017,7 @@ EmulateInstructionARM::SetInstruction (const Opcode &insn_opcode, const Address 
             else
                 return false;
         }
-        if (m_opcode_mode == eModeThumb)
+        if (m_opcode_mode == eModeThumb || m_arch.IsAlwaysThumbInstructions ())
             m_opcode_cpsr = CPSR_MODE_USR | MASK_CPSR_T;
         else
             m_opcode_cpsr = CPSR_MODE_USR;
@@ -13040,7 +13040,7 @@ EmulateInstructionARM::ReadInstruction ()
             read_inst_context.type = eContextReadOpcode;
             read_inst_context.SetNoArgs ();
                   
-            if (m_opcode_cpsr & MASK_CPSR_T)
+            if ((m_opcode_cpsr & MASK_CPSR_T) || m_arch.IsAlwaysThumbInstructions ())
             {
                 m_opcode_mode = eModeThumb;
                 uint32_t thumb_opcode = MemARead(read_inst_context, pc, 2, 0, &success);
@@ -13678,19 +13678,19 @@ EmulateInstructionARM::TestEmulation (Stream *out_stream, ArchSpec &arch, Option
     }
     test_opcode = value_sp->GetUInt64Value ();
 
-    if (arch.GetTriple().getArch() == llvm::Triple::arm)
-    {
-        m_opcode_mode = eModeARM;
-        m_opcode.SetOpcode32 (test_opcode, GetByteOrder());
-    }
-    else if (arch.GetTriple().getArch() == llvm::Triple::thumb)
+
+    if (arch.GetTriple().getArch() == llvm::Triple::thumb || arch.IsAlwaysThumbInstructions ())
     {
         m_opcode_mode = eModeThumb;
         if (test_opcode < 0x10000)
             m_opcode.SetOpcode16 (test_opcode, GetByteOrder());
         else
             m_opcode.SetOpcode32 (test_opcode, GetByteOrder());
-
+    }
+    else if (arch.GetTriple().getArch() == llvm::Triple::arm)
+    {
+        m_opcode_mode = eModeARM;
+        m_opcode.SetOpcode32 (test_opcode, GetByteOrder());
     }
     else
     {

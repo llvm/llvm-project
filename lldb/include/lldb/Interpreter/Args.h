@@ -403,7 +403,7 @@ public:
     StringToVersion (const char *s, uint32_t &major, uint32_t &minor, uint32_t &update);
 
     static const char *
-    GetShellSafeArgument (const char *unsafe_arg, std::string &safe_arg);
+    GetShellSafeArgument (const FileSpec& shell, const char *unsafe_arg, std::string &safe_arg);
 
     // EncodeEscapeSequences will change the textual representation of common
     // escape sequences like "\n" (two characters) into a single '\n'. It does

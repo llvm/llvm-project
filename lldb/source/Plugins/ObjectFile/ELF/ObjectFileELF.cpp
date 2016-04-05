@@ -2996,6 +2996,22 @@ ObjectFileELF::IsStripped ()
 void
 ObjectFileELF::Dump(Stream *s)
 {
+    ModuleSP module_sp(GetModule());
+    if (!module_sp)
+    {
+        return;
+    }
+
+    lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+    s->Printf("%p: ", static_cast<void *>(this));
+    s->Indent();
+    s->PutCString("ObjectFileELF");
+
+    ArchSpec header_arch;
+    GetArchitecture(header_arch);
+
+    *s << ", file = '" << m_file << "', arch = " << header_arch.GetArchitectureName() << "\n";
+
     DumpELFHeader(s, m_header);
     s->EOL();
     DumpELFProgramHeaders(s);

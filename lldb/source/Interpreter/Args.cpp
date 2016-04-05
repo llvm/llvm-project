@@ -887,14 +887,43 @@ Args::StringToVersion (const char *s, uint32_t &major, uint32_t &minor, uint32_t
 }
 
 const char *
-Args::GetShellSafeArgument (const char *unsafe_arg, std::string &safe_arg)
+Args::GetShellSafeArgument (const FileSpec& shell,
+                            const char *unsafe_arg,
+                            std::string &safe_arg)
 {
+    struct ShellDescriptor
+    {
+        ConstString m_basename;
+        const char* m_escapables;
+    };
+    
+    static ShellDescriptor g_Shells[] = {
+        {ConstString("bash")," '\"<>()&"},
+        {ConstString("tcsh")," '\"<>()&$"},
+        {ConstString("sh")," '\"<>()&"}
+    };
+    
+    // safe minimal set
+    const char* escapables = " '\"";
+    
+    if (auto basename = shell.GetFilename())
+    {
+        for (const auto& Shell : g_Shells)
+        {
+            if (Shell.m_basename == basename)
+            {
+                escapables = Shell.m_escapables;
+                break;
+            }
+        }
+    }
+
     safe_arg.assign (unsafe_arg);
     size_t prev_pos = 0;
     while (prev_pos < safe_arg.size())
     {
         // Escape spaces and quotes
-        size_t pos = safe_arg.find_first_of(" '\"", prev_pos);
+        size_t pos = safe_arg.find_first_of(escapables, prev_pos);
         if (pos != std::string::npos)
         {
             safe_arg.insert (pos, 1, '\\');
@@ -905,7 +934,6 @@ Args::GetShellSafeArgument (const char *unsafe_arg, std::string &safe_arg)
     }
     return safe_arg.c_str();
 }
-
 
 int64_t
 Args::StringToOptionEnum (const char *s, OptionEnumValueElement *enum_values, int32_t fail_value, Error &error)
