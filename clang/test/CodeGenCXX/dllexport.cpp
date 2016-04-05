@@ -486,7 +486,7 @@ struct S {
 
 struct CtorWithClosure {
   __declspec(dllexport) CtorWithClosure(...) {}
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FCtorWithClosure@@QAEXXZ"({{.*}}) comdat
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FCtorWithClosure@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
 // M32-DAG:   %[[this_addr:.*]] = alloca %struct.CtorWithClosure*, align 4
 // M32-DAG:   store %struct.CtorWithClosure* %this, %struct.CtorWithClosure** %[[this_addr]], align 4
 // M32-DAG:   %[[this:.*]] = load %struct.CtorWithClosure*, %struct.CtorWithClosure** %[[this_addr]]
@@ -503,7 +503,7 @@ struct CtorWithClosure {
 struct __declspec(dllexport) ClassWithClosure {
   DELETE_IMPLICIT_MEMBERS(ClassWithClosure);
   ClassWithClosure(...) {}
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FClassWithClosure@@QAEXXZ"({{.*}}) comdat
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FClassWithClosure@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
 // M32-DAG:   %[[this_addr:.*]] = alloca %struct.ClassWithClosure*, align 4
 // M32-DAG:   store %struct.ClassWithClosure* %this, %struct.ClassWithClosure** %[[this_addr]], align 4
 // M32-DAG:   %[[this:.*]] = load %struct.ClassWithClosure*, %struct.ClassWithClosure** %[[this_addr]]
@@ -520,8 +520,8 @@ struct __declspec(dllexport) NestedOuter {
   };
 };
 
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FNestedOuter@@QAEXXZ"({{.*}}) comdat
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FNestedInner@NestedOuter@@QAEXXZ"({{.*}}) comdat
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FNestedOuter@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FNestedInner@NestedOuter@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
 
 template <typename T>
 struct SomeTemplate {
@@ -530,7 +530,7 @@ struct SomeTemplate {
 };
 struct __declspec(dllexport) InheritFromTemplate : SomeTemplate<int> {};
 
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_F?$SomeTemplate@H@@QAEXXZ"({{.*}}) comdat
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_F?$SomeTemplate@H@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
 
 namespace PR23801 {
 template <typename>
@@ -547,7 +547,7 @@ struct __declspec(dllexport) B {
 
 }
 //
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FB@PR23801@@QAEXXZ"({{.*}}) comdat
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FB@PR23801@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
 
 struct __declspec(dllexport) T {
   // Copy assignment operator:
