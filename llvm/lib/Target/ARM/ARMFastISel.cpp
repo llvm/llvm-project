@@ -1861,7 +1861,6 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   default:
     llvm_unreachable("Unsupported calling convention");
   case CallingConv::Fast:
-  case CallingConv::Swift:
     if (Subtarget->hasVFP2() && !isVarArg) {
       if (!Subtarget->isAAPCS_ABI())
         return (Return ? RetFastCC_ARM_APCS : FastCC_ARM_APCS);
