@@ -2266,7 +2266,8 @@ public:
     return false;
   }
 
-  /// Return true if the target supports swifterror attribute.
+  /// Return true if the target supports swifterror attribute. It optimizes
+  /// loads and stores to reading and writing a specific register.
   virtual bool supportSwiftError() const {
     return false;
   }
