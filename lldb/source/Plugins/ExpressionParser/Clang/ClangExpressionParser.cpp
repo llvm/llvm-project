@@ -971,7 +971,7 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
     return err;
 }
 
-Error
+lldb_private::Error
 ClangExpressionParser::RunStaticInitializers (lldb::IRExecutionUnitSP &execution_unit_sp,
                                               ExecutionContext &exe_ctx)
 {
