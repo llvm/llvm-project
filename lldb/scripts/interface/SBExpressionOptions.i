@@ -124,6 +124,20 @@ public:
     %feature("docstring", "Sets the prefix to use for this expression. This prefix gets inserted after the 'target.expr-prefix' prefix contents, but before the wrapped expression function body.") SetPrefix;
     void
     SetPrefix (const char *prefix);
+    
+    %feature("docstring", "Sets whether to auto-apply FixIt hints to the expression being evaluated.") SetAutoApplyFixIts;
+    void
+    SetAutoApplyFixIts(bool b = true);
+    
+    %feature("docstring", "Gets whether to auto-apply FixIt hints to an expression.") GetAutoApplyFixIts;
+    bool
+    GetAutoApplyFixIts();
+
+    bool
+    GetTopLevel();
+
+    void
+    SetTopLevel(bool b = true);
 
 protected:
 

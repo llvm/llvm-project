@@ -127,76 +127,27 @@ ClangPersistentVariables::GetNextPersistentVariableName (bool is_error)
 }
 
 void
-ClangPersistentVariables::RegisterClangPersistentType (clang::TypeDecl *type_decl)
+ClangPersistentVariables::RegisterPersistentDecl (const ConstString &name,
+                                                  clang::NamedDecl *decl)
 {
-    ConstString name(type_decl->getName().str().c_str());
-    m_clang_persistent_types.insert(std::make_pair(name.GetCString(), type_decl));
+    m_persistent_decls.insert(std::pair<const char*, clang::NamedDecl*>(name.GetCString(), decl));
+    
+    if (clang::EnumDecl *enum_decl = llvm::dyn_cast<clang::EnumDecl>(decl))
+    {
+        for (clang::EnumConstantDecl *enumerator_decl : enum_decl->enumerators())
+        {
+            m_persistent_decls.insert(std::pair<const char*, clang::NamedDecl*>(ConstString(enumerator_decl->getNameAsString()).GetCString(), enumerator_decl));
+        }
+    }
 }
 
-clang::TypeDecl *
-ClangPersistentVariables::GetClangPersistentType (const ConstString &name)
+clang::NamedDecl *
+ClangPersistentVariables::GetPersistentDecl (const ConstString &name)
 {
-    ClangPersistentTypeMap::const_iterator i = m_clang_persistent_types.find(name.GetCString());
+    PersistentDeclMap::const_iterator i = m_persistent_decls.find(name.GetCString());
     
-    if (i == m_clang_persistent_types.end())
+    if (i == m_persistent_decls.end())
         return NULL;
     else
         return i->second;
-}
-
-
-void
-ClangPersistentVariables::RegisterExecutionUnit (lldb::IRExecutionUnitSP &execution_unit_sp)
-{
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
-
-    m_execution_units.insert(execution_unit_sp);
-    
-    if (log)
-        log->Printf ("Registering JITted Functions:\n");
-    
-    for (const IRExecutionUnit::JittedFunction &jitted_function : execution_unit_sp->GetJittedFunctions())
-    {
-        if (jitted_function.m_name != execution_unit_sp->GetFunctionName() &&
-            jitted_function.m_remote_addr != LLDB_INVALID_ADDRESS)
-        {
-            m_symbol_map[jitted_function.m_name.GetCString()] = jitted_function.m_remote_addr;
-            if (log)
-                log->Printf ("  Function: %s at 0x%" PRIx64 ".", jitted_function.m_name.GetCString(), jitted_function.m_remote_addr);
-        }
-    }
-    
-    if (log)
-        log->Printf ("Registering JIIted Symbols:\n");
-    
-    for (const IRExecutionUnit::JittedGlobalVariable &global_var : execution_unit_sp->GetJittedGlobalVariables())
-    {
-        if (global_var.m_remote_addr != LLDB_INVALID_ADDRESS)
-        {
-            // Demangle the name before inserting it, so that lookups by the ConstStr of the demangled name
-            // will find the mangled one (needed for looking up metadata pointers.)
-            Mangled mangler(global_var.m_name);
-            mangler.GetDemangledName(lldb::eLanguageTypeUnknown);
-            m_symbol_map[global_var.m_name.GetCString()] = global_var.m_remote_addr;
-            if (log)
-                log->Printf ("  Symbol: %s at 0x%" PRIx64 ".", global_var.m_name.GetCString(), global_var.m_remote_addr);
-        }
-    }
-}
-
-void
-ClangPersistentVariables::RegisterSymbol (const ConstString &name, lldb::addr_t addr)
-{
-    m_symbol_map[name.GetCString()] = addr;
-}
-
-lldb::addr_t
-ClangPersistentVariables::LookupSymbol (const ConstString &name)
-{
-    SymbolMap::iterator si = m_symbol_map.find(name.GetCString());
-    
-    if (si != m_symbol_map.end())
-        return si->second;
-    else
-        return LLDB_INVALID_ADDRESS;    
 }

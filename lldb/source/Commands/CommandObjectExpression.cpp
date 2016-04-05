@@ -71,7 +71,9 @@ CommandObjectExpression::CommandOptions::g_option_table[] =
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "unwind-on-error",    'u', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeBoolean,    "Clean up program state if the expression causes a crash, or raises a signal.  Note, unlike gdb hitting a breakpoint is controlled by another option (-i)."},
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "debug",              'g', OptionParser::eNoArgument      , NULL, NULL, 0, eArgTypeNone,       "When specified, debug the JIT code by setting a breakpoint on the first instruction and forcing breakpoints to not be ignored (-i0) and no unwinding to happen on error (-u0)."},
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "language",           'l', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLanguage,   "Specifies the Language to use when parsing the expression.  If not set the target.language setting is used." },
-    { LLDB_OPT_SET_1, false, "description-verbosity", 'v', OptionParser::eOptionalArgument, NULL, g_description_verbosity_type, 0, eArgTypeDescriptionVerbosity,        "How verbose should the output of this expression be, if the object description is asked for."},
+    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "apply-fixits",       'X', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLanguage,   "If true, simple FixIt hints will be automatically applied to the expression." },
+    { LLDB_OPT_SET_1, false, "description-verbosity", 'v', OptionParser::eOptionalArgument, nullptr, g_description_verbosity_type, 0, eArgTypeDescriptionVerbosity,        "How verbose should the output of this expression be, if the object description is asked for."},
+    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "top-level",          'p', OptionParser::eNoArgument      , NULL, NULL, 0, eArgTypeNone,       "Interpret the expression as top-level definitions rather than code to be immediately executed."}
 };
 
 
@@ -159,7 +161,22 @@ CommandObjectExpression::CommandOptions::SetOptionValue (CommandInterpreter &int
         unwind_on_error = false;
         ignore_breakpoints = false;
         break;
+    
+    case 'p':
+        top_level = true;
+        break;
 
+    case 'X':
+        {
+            bool success;
+            bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
+            if (success)
+                auto_apply_fixits = tmp_value ? eLazyBoolYes : eLazyBoolNo;
+            else
+                error.SetErrorStringWithFormat("could not convert \"%s\" to a boolean value.", option_arg);
+            break;
+        }
+            
     default:
         error.SetErrorStringWithFormat("invalid short option character '%c'", short_option);
         break;
@@ -191,6 +208,8 @@ CommandObjectExpression::CommandOptions::OptionParsingStarting (CommandInterpret
 #endif
     language = eLanguageTypeUnknown;
     m_verbosity = eLanguageRuntimeDescriptionDisplayVerbosityCompact;
+    auto_apply_fixits = eLazyBoolCalculate;
+    top_level = false;
 }
 
 const OptionDefinition*
@@ -325,6 +344,17 @@ CommandObjectExpression::EvaluateExpression
         // specified, else default to the language for the frame.
         if (m_command_options.language != eLanguageTypeUnknown)
             options.SetLanguage(m_command_options.language);
+        
+        bool auto_apply_fixits;
+        if (m_command_options.auto_apply_fixits == eLazyBoolCalculate)
+            auto_apply_fixits = target->GetEnableAutoApplyFixIts();
+        else
+            auto_apply_fixits = m_command_options.auto_apply_fixits == eLazyBoolYes ? true : false;
+        
+        options.SetAutoApplyFixIts(auto_apply_fixits);
+        
+        if (m_command_options.top_level)
+            options.SetExecutionPolicy(eExecutionPolicyTopLevel);
 
         // If there is any chance we are going to stop and want to see
         // what went wrong with our expression, we should generate debug info
@@ -337,8 +367,18 @@ CommandObjectExpression::EvaluateExpression
         else
             options.SetTimeoutUsec(0);
 
-        target->EvaluateExpression(expr, exe_ctx.GetFramePtr(),
-                                   result_valobj_sp, options);
+        ExpressionResults success = target->EvaluateExpression(expr, 
+                                                               exe_ctx.GetFramePtr(), 
+                                                               result_valobj_sp,
+                                                               options, 
+                                                               &m_fixed_expression);
+        
+        // We only tell you about the FixIt if we applied it.  The compiler errors will suggest the FixIt if it parsed.
+        if (error_stream && !m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts())
+        {
+            if (success == eExpressionCompleted)
+                error_stream->Printf ("  Fixit applied, fixed expression was: \n    %s\n", m_fixed_expression.c_str());
+        }
 
         if (result_valobj_sp)
         {
@@ -524,6 +564,7 @@ CommandObjectExpression::DoExecute
     CommandReturnObject &result
 )
 {
+    m_fixed_expression.clear();
     m_option_group.NotifyOptionParsingStarting();
 
     const char * expr = NULL;
@@ -648,7 +689,26 @@ CommandObjectExpression::DoExecute
         expr = command;
     
     if (EvaluateExpression (expr, &(result.GetOutputStream()), &(result.GetErrorStream()), &result))
+    {
+        Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
+        if (!m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts())
+        {
+            CommandHistory &history = m_interpreter.GetCommandHistory();
+            // FIXME: Can we figure out what the user actually typed (e.g. some alias for expr???)
+            // If we can it would be nice to show that.
+            std::string fixed_command("expression ");
+            if (expr == command)
+                fixed_command.append(m_fixed_expression);
+            else
+            {
+                // Add in any options that might have been in the original command:
+                fixed_command.append(command, expr - command);
+                fixed_command.append(m_fixed_expression);
+            }
+            history.AppendString(fixed_command);
+        }
         return true;
+    }
 
     result.SetStatus (eReturnStatusFailed);
     return false;

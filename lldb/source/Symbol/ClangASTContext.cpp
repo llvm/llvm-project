@@ -709,8 +709,9 @@ public:
     {
         m_log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS);
     }
-    
-    void HandleDiagnostic (DiagnosticsEngine::Level DiagLevel, const Diagnostic &info)
+
+    void
+    HandleDiagnostic(DiagnosticsEngine::Level DiagLevel, const clang::Diagnostic &info)
     {
         if (m_log)
         {

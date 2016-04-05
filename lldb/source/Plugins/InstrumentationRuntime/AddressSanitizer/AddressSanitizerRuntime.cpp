@@ -186,9 +186,14 @@ AddressSanitizerRuntime::RetrieveReportData()
     options.SetIgnoreBreakpoints(true);
     options.SetTimeoutUsec(RETRIEVE_REPORT_DATA_FUNCTION_TIMEOUT_USEC);
     options.SetPrefix(address_sanitizer_retrieve_report_data_prefix);
+    options.SetAutoApplyFixIts(false);
     
     ValueObjectSP return_value_sp;
-    if (process_sp->GetTarget().EvaluateExpression(address_sanitizer_retrieve_report_data_command, frame_sp.get(), return_value_sp, options) != eExpressionCompleted)
+    std::string fixed_expression;
+    if (process_sp->GetTarget().EvaluateExpression(address_sanitizer_retrieve_report_data_command,
+                                                   frame_sp.get(),
+                                                   return_value_sp,
+                                                   options) != eExpressionCompleted)
         return StructuredData::ObjectSP();
     
     int present = return_value_sp->GetValueForExpressionPath(".present")->GetValueAsUnsigned(0);

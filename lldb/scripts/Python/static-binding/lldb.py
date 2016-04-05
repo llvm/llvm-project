@@ -378,6 +378,7 @@ eLanguageTypeMipsAssembler = _lldb.eLanguageTypeMipsAssembler
 eLanguageTypeExtRenderScript = _lldb.eLanguageTypeExtRenderScript
 eNumLanguageTypes = _lldb.eNumLanguageTypes
 eInstrumentationRuntimeTypeAddressSanitizer = _lldb.eInstrumentationRuntimeTypeAddressSanitizer
+eInstrumentationRuntimeTypeThreadSanitizer = _lldb.eInstrumentationRuntimeTypeThreadSanitizer
 eNumInstrumentationRuntimeTypes = _lldb.eNumInstrumentationRuntimeTypes
 eNoDynamicValues = _lldb.eNoDynamicValues
 eDynamicCanRunTarget = _lldb.eDynamicCanRunTarget
@@ -4163,6 +4164,34 @@ class SBExpressionOptions(_object):
         Sets the prefix to use for this expression. This prefix gets inserted after the 'target.expr-prefix' prefix contents, but before the wrapped expression function body.
         """
         return _lldb.SBExpressionOptions_SetPrefix(self, *args)
+
+    def SetAutoApplyFixIts(self, b = True):
+        """
+        SetAutoApplyFixIts(self, bool b = True)
+        SetAutoApplyFixIts(self)
+
+        Sets whether to auto-apply FixIt hints to the expression being evaluated.
+        """
+        return _lldb.SBExpressionOptions_SetAutoApplyFixIts(self, b)
+
+    def GetAutoApplyFixIts(self):
+        """
+        GetAutoApplyFixIts(self) -> bool
+
+        Gets whether to auto-apply FixIt hints to an expression.
+        """
+        return _lldb.SBExpressionOptions_GetAutoApplyFixIts(self)
+
+    def GetTopLevel(self):
+        """GetTopLevel(self) -> bool"""
+        return _lldb.SBExpressionOptions_GetTopLevel(self)
+
+    def SetTopLevel(self, b = True):
+        """
+        SetTopLevel(self, bool b = True)
+        SetTopLevel(self)
+        """
+        return _lldb.SBExpressionOptions_SetTopLevel(self, b)
 
 SBExpressionOptions_swigregister = _lldb.SBExpressionOptions_swigregister
 SBExpressionOptions_swigregister(SBExpressionOptions)
@@ -9255,6 +9284,14 @@ class SBThread(_object):
         on the stop reason and is currently used only for instrumentation plugins.
         """
         return _lldb.SBThread_GetStopReasonExtendedInfoAsJSON(self, *args)
+
+    def GetStopReasonExtendedBacktraces(self, *args):
+        """
+        Returns a collection of historical stack traces that are significant to the
+        current stop reason. Used by ThreadSanitizer, where we provide various stack
+        traces that were involved in a data race or other type of detected issue.
+        """
+        return _lldb.SBThread_GetStopReasonExtendedBacktraces(self, *args)
 
     def GetStopDescription(self, *args):
         """

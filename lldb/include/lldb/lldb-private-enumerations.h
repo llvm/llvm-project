@@ -164,11 +164,12 @@ typedef enum FormatCategoryItem
 
 //------------------------------------------------------------------
 /// Expression execution policies
-//------------------------------------------------------------------  
+//------------------------------------------------------------------
 typedef enum {
     eExecutionPolicyOnlyWhenNeeded,
     eExecutionPolicyNever,
-    eExecutionPolicyAlways
+    eExecutionPolicyAlways,
+    eExecutionPolicyTopLevel // used for top-level code
 } ExecutionPolicy;
 
 //----------------------------------------------------------------------

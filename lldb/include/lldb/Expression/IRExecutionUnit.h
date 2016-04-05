@@ -84,7 +84,7 @@ public:
     {
         return m_name;
     }
-        
+    
     llvm::Module *
     GetModule()
     {
@@ -136,10 +136,6 @@ public:
     bool
     GetArchitecture(lldb_private::ArchSpec &arch) override;
     
-    //------------------------------------------------------------------
-    // Accessor that should only be used to get the module if it has
-    // beencreated, might return empty shared pointer.
-    //------------------------------------------------------------------
     lldb::ModuleSP
     GetJITModule ();
     
@@ -148,6 +144,18 @@ public:
                      const FileSpec *limit_file_ptr = NULL,
                      uint32_t limit_start_line = 0,
                      uint32_t limit_end_line = 0);
+    
+    //------------------------------------------------------------------
+    /// Accessor for the mutex that guards LLVM::getGlobalContext()
+    //------------------------------------------------------------------
+    static Mutex &
+    GetLLVMGlobalContextMutex ();
+
+    lldb::addr_t
+    FindSymbol(const ConstString &name);
+    
+    void
+    GetStaticInitializers(std::vector <lldb::addr_t> &static_initializers);
     
     //----------------------------------------------------------------------
     /// @class JittedFunction IRExecutionUnit.h "lldb/Expression/IRExecutionUnit.h"
@@ -179,30 +187,33 @@ public:
         ///     if it is not present in the target's memory.
         //------------------------------------------------------------------
         JittedEntity (const char *name,
-                        lldb::addr_t local_addr = LLDB_INVALID_ADDRESS,
-                        lldb::addr_t remote_addr = LLDB_INVALID_ADDRESS) :
-            m_name (name),
-            m_local_addr (local_addr),
-            m_remote_addr (remote_addr)
+                      lldb::addr_t local_addr = LLDB_INVALID_ADDRESS,
+                      lldb::addr_t remote_addr = LLDB_INVALID_ADDRESS) :
+        m_name (name),
+        m_local_addr (local_addr),
+        m_remote_addr (remote_addr)
         {
         }
     };
     
     struct JittedFunction : JittedEntity
     {
+        bool m_external;
         JittedFunction (const char *name,
+                        bool external,
                         lldb::addr_t local_addr = LLDB_INVALID_ADDRESS,
                         lldb::addr_t remote_addr = LLDB_INVALID_ADDRESS) :
-            JittedEntity (name, local_addr, remote_addr)
+        JittedEntity (name, local_addr, remote_addr),
+        m_external(external)
         {}
     };
     
     struct JittedGlobalVariable : JittedEntity
     {
         JittedGlobalVariable (const char *name,
-                        lldb::addr_t local_addr = LLDB_INVALID_ADDRESS,
-                        lldb::addr_t remote_addr = LLDB_INVALID_ADDRESS) :
-            JittedEntity (name, local_addr, remote_addr)
+                              lldb::addr_t local_addr = LLDB_INVALID_ADDRESS,
+                              lldb::addr_t remote_addr = LLDB_INVALID_ADDRESS) :
+        JittedEntity (name, local_addr, remote_addr)
         {}
     };
     
@@ -215,15 +226,6 @@ public:
     {
         return m_jitted_global_variables;
     }
-    
-    //------------------------------------------------------------------
-    /// Accessor for the mutex that guards LLVM::getGlobalContext()
-    //------------------------------------------------------------------
-    static Mutex &
-    GetLLVMGlobalContextMutex ();
-    
-    lldb::addr_t
-    FindSymbol(const ConstString &name);
 
 private:
     //------------------------------------------------------------------
@@ -316,7 +318,7 @@ private:
     lldb::addr_t
     FindInUserDefinedSymbols(const std::vector<SearchSpec> &specs,
                              const lldb_private::SymbolContext &sc);
-
+    
     void
     ReportSymbolLookupError(const ConstString &name);
 
@@ -340,9 +342,6 @@ private:
         /// @param[in] SectionID
         ///     A unique identifier for the section.
         ///
-        /// @param[in] SectionName
-        ///     The name of the section.
-        ///
         /// @return
         ///     Allocated space.
         //------------------------------------------------------------------
@@ -361,9 +360,6 @@ private:
         ///
         /// @param[in] SectionID
         ///     A unique identifier for the section.
-        ///
-        /// @param[in] SectionName
-        ///     The name of the section.
         ///
         /// @param[in] IsReadOnly
         ///     Flag indicating the section is read-only.
@@ -410,7 +406,7 @@ private:
         std::unique_ptr<SectionMemoryManager>    m_default_mm_ap;    ///< The memory allocator to use in actually creating space.  All calls are passed through to it.
         IRExecutionUnit                    &m_parent;           ///< The execution unit this is a proxy for.
     };
-        
+    
     static const unsigned eSectionIDInvalid = (unsigned)-1;
     
     //----------------------------------------------------------------------
@@ -461,12 +457,15 @@ private:
         void dump (Log *log);
     };
     
+    bool
+    CommitOneAllocation (lldb::ProcessSP &process_sp, Error &error, AllocationRecord &record);
+    
     typedef std::vector<AllocationRecord>   RecordVector;
     RecordVector                            m_records;
 
-    std::unique_ptr<llvm::LLVMContext>      m_context_ap;
-    std::unique_ptr<llvm::ExecutionEngine>  m_execution_engine_ap;
-    std::unique_ptr<llvm::Module>           m_module_ap;            ///< Holder for the module until it's been handed off
+    std::unique_ptr<llvm::LLVMContext>       m_context_ap;
+    std::unique_ptr<llvm::ExecutionEngine>   m_execution_engine_ap;
+    std::unique_ptr<llvm::Module>            m_module_ap;            ///< Holder for the module until it's been handed off
     lldb::ModuleWP                          m_jit_module_wp;
     llvm::Module                           *m_module;               ///< Owned by the execution engine
     std::vector<std::string>                m_cpu_features;
@@ -482,6 +481,12 @@ private:
     lldb::addr_t                            m_function_end_load_addr;
     
     bool                                    m_strip_underscore;     ///< True for platforms where global symbols have a _ prefix
+    bool                                    m_reported_allocations; ///< True after allocations have been reported.  It is possible that
+                                                                    ///< sections will be allocated when this is true, in which case they weren't
+                                                                    ///< depended on by any function.  (Top-level code defining a variable, but
+                                                                    ///< defining no functions using that variable, would do this.)  If this
+                                                                    ///< is true, any allocations need to be committed immediately -- no
+                                                                    ///< opportunity for relocation.
 };
 
 } // namespace lldb_private

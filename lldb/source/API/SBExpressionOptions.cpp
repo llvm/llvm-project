@@ -209,6 +209,30 @@ SBExpressionOptions::SetPrefix (const char *prefix)
     return m_opaque_ap->SetPrefix(prefix);
 }
 
+bool
+SBExpressionOptions::GetAutoApplyFixIts ()
+{
+    return m_opaque_ap->GetAutoApplyFixIts ();
+}
+
+void
+SBExpressionOptions::SetAutoApplyFixIts (bool b)
+{
+    return m_opaque_ap->SetAutoApplyFixIts (b);
+}
+
+bool
+SBExpressionOptions::GetTopLevel ()
+{
+    return m_opaque_ap->GetExecutionPolicy() == eExecutionPolicyTopLevel;
+}
+
+void
+SBExpressionOptions::SetTopLevel (bool b)
+{
+    m_opaque_ap->SetExecutionPolicy(b ? eExecutionPolicyTopLevel : m_opaque_ap->default_execution_policy);
+}
+
 EvaluateExpressionOptions *
 SBExpressionOptions::get() const
 {

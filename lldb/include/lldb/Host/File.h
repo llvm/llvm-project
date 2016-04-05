@@ -76,8 +76,6 @@ public:
     {
     }
 
-    File (const File &rhs);
-    
     //------------------------------------------------------------------
     /// Constructor with path.
     ///
@@ -140,9 +138,6 @@ public:
     /// The destructor is virtual in case this class is subclassed.
     //------------------------------------------------------------------
     ~File() override;
-
-    File &
-    operator= (const File &rhs);
 
     bool
     IsValid() const override
@@ -229,9 +224,6 @@ public:
     void
     Clear ();
     
-    Error
-    Duplicate (const File &rhs);
-
     int
     GetDescriptor() const;
 
@@ -561,6 +553,9 @@ protected:
     LazyBool m_is_interactive;
     LazyBool m_is_real_terminal;
     LazyBool m_supports_colors;
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(File);
 };
 
 } // namespace lldb_private

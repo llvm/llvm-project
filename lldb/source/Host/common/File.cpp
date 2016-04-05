@@ -110,29 +110,6 @@ File::File (const FileSpec& filespec,
     }
 }
 
-File::File (const File &rhs) :
-    IOObject(eFDTypeFile, false),
-    m_descriptor (kInvalidDescriptor),
-    m_stream (kInvalidStream),
-    m_options (0),
-    m_own_stream (false),
-    m_own_descriptor (false),
-    m_is_interactive (eLazyBoolCalculate),
-    m_is_real_terminal (eLazyBoolCalculate),
-    m_supports_colors (eLazyBoolCalculate)
-{
-    Duplicate (rhs);
-}
-    
-
-File &
-File::operator = (const File &rhs)
-{
-    if (this != &rhs)
-        Duplicate (rhs);        
-    return *this;
-}
-
 File::~File()
 {
     Close ();
@@ -218,7 +195,6 @@ File::GetStream ()
     return m_stream;
 }
 
-
 void
 File::SetStream (FILE *fh, bool transfer_ownership)
 {
@@ -226,35 +202,6 @@ File::SetStream (FILE *fh, bool transfer_ownership)
         Close();
     m_stream = fh;
     m_own_stream = transfer_ownership;
-}
-
-Error
-File::Duplicate (const File &rhs)
-{
-    Error error;
-    if (IsValid ())
-        Close();
-
-    if (rhs.DescriptorIsValid())
-    {
-#ifdef _WIN32
-        m_descriptor = ::_dup(rhs.GetDescriptor());
-#else
-        m_descriptor = dup(rhs.GetDescriptor());
-#endif
-        if (!DescriptorIsValid())
-            error.SetErrorToErrno();
-        else
-        {
-            m_options = rhs.m_options;
-            m_should_close_fd = true;
-        }
-    }
-    else
-    {
-        error.SetErrorString ("invalid file to duplicate");
-    }
-    return error;
 }
 
 Error

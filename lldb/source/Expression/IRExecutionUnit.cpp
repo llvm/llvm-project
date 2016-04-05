@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
@@ -20,18 +21,15 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
-#include "llvm/ExecutionEngine/MCJIT.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Expression/IRExecutionUnit.h"
-#include "lldb/Symbol/Symbol.h"
-#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 #include "lldb/../../source/Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 
@@ -53,7 +51,8 @@ IRExecutionUnit::IRExecutionUnit (std::unique_ptr<llvm::LLVMContext> &context_ap
     m_sym_ctx(sym_ctx),
     m_did_jit(false),
     m_function_load_addr(LLDB_INVALID_ADDRESS),
-    m_function_end_load_addr(LLDB_INVALID_ADDRESS)
+    m_function_end_load_addr(LLDB_INVALID_ADDRESS),
+    m_reported_allocations(false)
 {
 }
 
@@ -74,7 +73,6 @@ IRExecutionUnit::~IRExecutionUnit ()
             target->GetImages().Remove(jit_module_sp);
     }
 }
-
 
 lldb::addr_t
 IRExecutionUnit::WriteNow (const uint8_t *bytes,
@@ -146,7 +144,7 @@ IRExecutionUnit::DisassembleFunction (Stream &stream,
 
     for (JittedFunction &function : m_jitted_functions)
     {
-        if (strstr(function.m_name.AsCString(), m_name.AsCString()))
+        if (function.m_name.AsCString() != m_name.AsCString())
         {
             func_local_addr = function.m_local_addr;
             func_remote_addr = function.m_remote_addr;
@@ -237,7 +235,7 @@ IRExecutionUnit::DisassembleFunction (Stream &stream,
 
     InstructionList &instruction_list = disassembler_sp->GetInstructionList();
     instruction_list.Dump(&stream, true, true, &exe_ctx);
-    
+
     // FIXME: The DisassemblerLLVMC has a reference cycle and won't go away if it has any active instructions.
     // I'll fix that but for now, just clear the list and it will go away nicely.
     disassembler_sp->GetInstructionList().Clear();
@@ -269,7 +267,7 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
     lldb::ProcessSP process_sp(GetProcessWP().lock());
 
     Mutex::Locker global_context_locker(IRExecutionUnit::GetLLVMGlobalContextMutex());
-    
+
     func_addr = LLDB_INVALID_ADDRESS;
     func_end = LLDB_INVALID_ADDRESS;
 
@@ -287,7 +285,7 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
 
         return;
     };
-    
+
     m_did_jit = true;
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
@@ -307,7 +305,6 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
     }
 
     llvm::Triple triple(m_module->getTargetTriple());
-    //llvm::Function *function = m_module->getFunction (m_name.AsCString());
     llvm::Reloc::Model relocModel;
     llvm::CodeModel::Model codeModel;
 
@@ -319,7 +316,7 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
     {
         relocModel = llvm::Reloc::PIC_;
     }
-    
+
     // This will be small for 32-bit and large for 64-bit.
     codeModel = llvm::CodeModel::JITDefault;
 
@@ -332,7 +329,7 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
     .setRelocationModel(relocModel)
     .setMCJITMemoryManager(std::unique_ptr<MemoryManager>(new MemoryManager(*this)))
     .setCodeModel(codeModel)
-    .setOptLevel(llvm::CodeGenOpt::None);
+    .setOptLevel(llvm::CodeGenOpt::Less);
 
     llvm::StringRef mArch;
     llvm::StringRef mCPU;
@@ -347,7 +344,7 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
                                                                mAttrs);
 
     m_execution_engine_ap.reset(builder.create(target_machine));
-    
+
     m_strip_underscore = (m_execution_engine_ap->getDataLayout().getGlobalPrefix() == '_');
 
     if (!m_execution_engine_ap.get())
@@ -361,11 +358,13 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
     m_execution_engine_ap->setProcessAllSections(true);
 
     m_execution_engine_ap->DisableLazyCompilation();
-    
+
     for (llvm::Function &function : *m_module)
     {
-        if (function.isDeclaration() || !(function.hasExternalLinkage() || function.hasLinkOnceODRLinkage()) )
+        if (function.isDeclaration() || function.hasPrivateLinkage())
             continue;
+        
+        const bool external = function.hasExternalLinkage() || function.hasLinkOnceODRLinkage();
         
         void *fun_ptr = m_execution_engine_ap->getPointerToFunction(&function);
         
@@ -381,12 +380,12 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
             error.SetErrorStringWithFormat("'%s' was in the JITted module but wasn't lowered", function.getName().str().c_str());
             return;
         }
-        m_jitted_functions.push_back (JittedFunction(function.getName().str().c_str(), (lldb::addr_t)fun_ptr));
+        m_jitted_functions.push_back (JittedFunction(function.getName().str().c_str(), external, (lldb::addr_t)fun_ptr));
     }
 
     CommitAllocations(process_sp);
     ReportAllocations(*m_execution_engine_ap);
-
+    
     // We have to do this after calling ReportAllocations because for the MCJIT, getGlobalValueAddress
     // will cause the JIT to perform all relocations.  That can only be done once, and has to happen
     // after we do the remapping from local -> remote.
@@ -397,8 +396,19 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
         if (val.hasExternalLinkage() && !val.isDeclaration())
         {
             uint64_t var_ptr_addr = m_execution_engine_ap->getGlobalValueAddress(val.getName().str());
+            
+            lldb::addr_t remote_addr = GetRemoteAddressForLocal(var_ptr_addr);
+            
+            // This is a really unfortunae API that sometimes returns local addresses and sometimes returns remote addresses, based on whether
+            // the variable was relocated during ReportAllocations or not.
+            
+            if (remote_addr == LLDB_INVALID_ADDRESS)
+            {
+                remote_addr = var_ptr_addr;
+            }
+                
             if (var_ptr_addr != 0)
-                m_jitted_global_variables.push_back (JittedGlobalVariable (val.getName().str().c_str(), LLDB_INVALID_ADDRESS, (lldb::addr_t) var_ptr_addr));
+                m_jitted_global_variables.push_back (JittedGlobalVariable (val.getName().str().c_str(), LLDB_INVALID_ADDRESS, remote_addr));
         }
     };
     
@@ -411,17 +421,17 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
     {
         RegisterOneValue(global_alias);
     }
-    
+
     WriteData(process_sp);
-    
+
     if (m_failed_lookups.size())
     {
         StreamString ss;
-        
+
         ss.PutCString("Couldn't lookup symbols:\n");
-        
+
         bool emitNewLine = false;
-        
+
         for (const ConstString &failed_lookup : m_failed_lookups)
         {
             if (emitNewLine)
@@ -430,36 +440,29 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
             ss.PutCString("  ");
             ss.PutCString(Mangled(failed_lookup).GetDemangledName(lldb::eLanguageTypeObjC_plus_plus).AsCString());
         }
-        
+
         m_failed_lookups.clear();
-        
+
         error.SetErrorString(ss.GetData());
-        
+
         return;
     }
-    
+
     m_function_load_addr = LLDB_INVALID_ADDRESS;
     m_function_end_load_addr = LLDB_INVALID_ADDRESS;
 
     for (JittedFunction &jitted_function : m_jitted_functions)
     {
         jitted_function.m_remote_addr = GetRemoteAddressForLocal (jitted_function.m_local_addr);
-        
-        if (jitted_function.m_name == m_name)
+
+        if (!m_name.IsEmpty() && jitted_function.m_name == m_name)
         {
-            AddrRange func_range = GetRemoteRangeForLocal (jitted_function.m_local_addr);
+            AddrRange func_range = GetRemoteRangeForLocal(jitted_function.m_local_addr);
             m_function_end_load_addr = func_range.first + func_range.second;
             m_function_load_addr = jitted_function.m_remote_addr;
         }
     }
-    
-    if (m_function_load_addr == LLDB_INVALID_ADDRESS)
-    {
-        error.SetErrorToGenericError();
-        error.SetErrorStringWithFormat("Couldn't find '%s' in the JITted module", m_name.AsCString());
-        return;
-    }
-    
+
     if (log)
     {
         log->Printf("Code can be run in the target.");
@@ -497,7 +500,7 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
             else
             {
                 record.dump(log);
-                
+
                 DataExtractor my_extractor ((const void*)record.m_host_address, record.m_size, lldb::eByteOrderBig, 8);
                 my_extractor.PutToLog(log, 0, record.m_size, record.m_host_address, 16, DataExtractor::TypeUInt8);
             }
@@ -656,6 +659,14 @@ IRExecutionUnit::MemoryManager::allocateCodeSection(uintptr_t Size,
         log->Printf("IRExecutionUnit::allocateCodeSection(Size=0x%" PRIx64 ", Alignment=%u, SectionID=%u) = %p",
                     (uint64_t)Size, Alignment, SectionID, (void *)return_value);
     }
+    
+    if (m_parent.m_reported_allocations)
+    {
+        Error err;
+        lldb::ProcessSP process_sp = m_parent.GetBestExecutionContextScope()->CalculateProcess();
+        
+        m_parent.CommitOneAllocation(process_sp, err, m_parent.m_records.back());
+    }
 
     return return_value;
 }
@@ -685,6 +696,14 @@ IRExecutionUnit::MemoryManager::allocateDataSection(uintptr_t Size,
     {
         log->Printf("IRExecutionUnit::allocateDataSection(Size=0x%" PRIx64 ", Alignment=%u, SectionID=%u) = %p",
                     (uint64_t)Size, Alignment, SectionID, (void *)return_value);
+    }
+    
+    if (m_parent.m_reported_allocations)
+    {
+        Error err;
+        lldb::ProcessSP process_sp = m_parent.GetBestExecutionContextScope()->CalculateProcess();
+        
+        m_parent.CommitOneAllocation(process_sp, err, m_parent.m_records.back());
     }
 
     return return_value;
@@ -775,20 +794,20 @@ IRExecutionUnit::CollectCandidateCPlusPlusNames(std::vector<IRExecutionUnit::Sea
         {
             Mangled mangled(name, true);
             ConstString demangled = mangled.GetDemangledName(lldb::eLanguageTypeC_plus_plus);
-            
+
             if (demangled)
             {
                 ConstString best_alternate_mangled_name = FindBestAlternateMangledName(demangled, lldb::eLanguageTypeC_plus_plus, sc);
-                
+
                 if (best_alternate_mangled_name)
                 {
                     CPP_specs.push_back(best_alternate_mangled_name);
                 }
-                
+
                 CPP_specs.push_back(SearchSpec(demangled, lldb::eFunctionNameTypeFull));
             }
         }
-        
+
         // Maybe we're looking for a const symbol but the debug info told us it was const...
         if (!strncmp(name.GetCString(), "_ZN", 3) &&
             strncmp(name.GetCString(), "_ZNK", 4))
@@ -797,7 +816,7 @@ IRExecutionUnit::CollectCandidateCPlusPlusNames(std::vector<IRExecutionUnit::Sea
             fixed_scratch.append(name.GetCString() + 3);
             CPP_specs.push_back(ConstString(fixed_scratch.c_str()));
         }
-        
+
         // Maybe we're looking for a static symbol but we thought it was global...
         if (!strncmp(name.GetCString(), "_Z", 2) &&
             strncmp(name.GetCString(), "_ZL", 3))
@@ -842,34 +861,44 @@ IRExecutionUnit::FindInSymbols(const std::vector<IRExecutionUnit::SearchSpec> &s
 
                 const bool is_external = (candidate_sc.function) ||
                                          (candidate_sc.symbol && candidate_sc.symbol->IsExternal());
-
-                AddressRange range;
-
-                if (candidate_sc.GetAddressRange(lldb::eSymbolContextFunction | lldb::eSymbolContextSymbol,
-                                                 0,
-                                                 false,
-                                                 range))
+                if (candidate_sc.symbol)
                 {
-                    load_address = range.GetBaseAddress().GetCallableLoadAddress(target);
+                    load_address = candidate_sc.symbol->ResolveCallableAddress(*target);
 
-                    if (load_address != LLDB_INVALID_ADDRESS)
+                    if (load_address == LLDB_INVALID_ADDRESS)
                     {
-                        if (is_external)
-                        {
-                            return true;
-                        }
-                        else if (best_internal_load_address == LLDB_INVALID_ADDRESS)
-                        {
-                            best_internal_load_address = load_address;
-                            load_address = LLDB_INVALID_ADDRESS;
-                        }
+                        if (target->GetProcessSP())
+                            load_address = candidate_sc.symbol->GetAddress().GetLoadAddress(target);
+                        else
+                            load_address = candidate_sc.symbol->GetAddress().GetFileAddress();
+                    }
+                }
+
+                if (load_address == LLDB_INVALID_ADDRESS && candidate_sc.function)
+                {
+                        if (target->GetProcessSP())
+                            load_address = candidate_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(target);
+                        else
+                            load_address = candidate_sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+                }
+
+                if (load_address != LLDB_INVALID_ADDRESS)
+                {
+                    if (is_external)
+                    {
+                        return true;
+                    }
+                    else if (best_internal_load_address == LLDB_INVALID_ADDRESS)
+                    {
+                        best_internal_load_address = load_address;
+                        load_address = LLDB_INVALID_ADDRESS;
                     }
                 }
             }
 
             return false;
         };
-        
+
         if (sc.module_sp)
         {
             sc.module_sp->FindFunctions(spec.name,
@@ -891,7 +920,7 @@ IRExecutionUnit::FindInSymbols(const std::vector<IRExecutionUnit::SearchSpec> &s
         {
             sc_list.Clear();
         }
-    
+
         if (sc_list.GetSize() == 0 && sc.target_sp)
         {
             sc.target_sp->GetImages().FindFunctions(spec.name,
@@ -935,14 +964,14 @@ lldb::addr_t
 IRExecutionUnit::FindInRuntimes(const std::vector<SearchSpec> &specs, const lldb_private::SymbolContext &sc)
 {
     lldb::TargetSP target_sp = sc.target_sp;
-    
+
     if (!target_sp)
     {
         return LLDB_INVALID_ADDRESS;
     }
-    
+
     lldb::ProcessSP process_sp = sc.target_sp->GetProcessSP();
-    
+
     if (!process_sp)
     {
         return LLDB_INVALID_ADDRESS;
@@ -955,7 +984,7 @@ IRExecutionUnit::FindInRuntimes(const std::vector<SearchSpec> &specs, const lldb
         for (const SearchSpec &spec : specs)
         {
             lldb::addr_t symbol_load_addr = runtime->LookupRuntimeSymbol(spec.name);
-            
+
             if (symbol_load_addr != LLDB_INVALID_ADDRESS)
                 return symbol_load_addr;
         }
@@ -968,15 +997,15 @@ lldb::addr_t
 IRExecutionUnit::FindInUserDefinedSymbols(const std::vector<SearchSpec> &specs, const lldb_private::SymbolContext &sc)
 {
     lldb::TargetSP target_sp = sc.target_sp;
-
+    
     for (const SearchSpec &spec : specs)
     {
         lldb::addr_t symbol_load_addr = target_sp->GetPersistentSymbol(spec.name);
-
+        
         if (symbol_load_addr != LLDB_INVALID_ADDRESS)
             return symbol_load_addr;
     }
-
+    
     return LLDB_INVALID_ADDRESS;
 }
 
@@ -985,7 +1014,7 @@ IRExecutionUnit::FindSymbol(const lldb_private::ConstString &name)
 {
     std::vector<SearchSpec> candidate_C_names;
     std::vector<SearchSpec> candidate_CPlusPlus_names;
-    
+
     CollectCandidateCNames(candidate_C_names, name);
 
     lldb::addr_t ret = FindInSymbols(candidate_C_names, m_sym_ctx);
@@ -1004,15 +1033,51 @@ IRExecutionUnit::FindSymbol(const lldb_private::ConstString &name)
     return ret;
 }
 
+void
+IRExecutionUnit::GetStaticInitializers(std::vector <lldb::addr_t> &static_initializers)
+{
+    if (llvm::GlobalVariable *global_ctors = m_module->getNamedGlobal("llvm.global_ctors"))
+    {
+        if (llvm::ConstantArray *ctor_array = llvm::dyn_cast<llvm::ConstantArray>(global_ctors->getInitializer()))
+        {
+            for (llvm::Use &ctor_use : ctor_array->operands())
+            {
+                if (llvm::ConstantStruct *ctor_struct = llvm::dyn_cast<llvm::ConstantStruct>(ctor_use))
+                {
+                    lldbassert(ctor_struct->getNumOperands() == 3); // this is standardized
+                    if (llvm::Function *ctor_function = llvm::dyn_cast<llvm::Function>(ctor_struct->getOperand(1)))
+                    {
+                        ctor_function->dump();
+
+                        ConstString ctor_function_name_cs(ctor_function->getName().str());
+                        
+                        for (JittedFunction &jitted_function : m_jitted_functions)
+                        {
+                            if (ctor_function_name_cs == jitted_function.m_name)
+                            {
+                                if (jitted_function.m_remote_addr != LLDB_INVALID_ADDRESS)
+                                {
+                                    static_initializers.push_back(jitted_function.m_remote_addr);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 uint64_t
 IRExecutionUnit::MemoryManager::getSymbolAddress(const std::string &Name)
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
 
     ConstString name_cs(Name.c_str());
-    
+
     lldb::addr_t ret = m_parent.FindSymbol(name_cs);
-    
+
     if (ret == LLDB_INVALID_ADDRESS)
     {
         if (log)
@@ -1036,7 +1101,7 @@ void *
 IRExecutionUnit::MemoryManager::getPointerToNamedFunction(const std::string &Name,
                                                           bool AbortOnFailure) {
     assert (sizeof(void *) == 8);
-    
+
     return (void*)getSymbolAddress(Name);
 }
 
@@ -1092,19 +1157,17 @@ IRExecutionUnit::GetRemoteRangeForLocal (lldb::addr_t local_address)
 }
 
 bool
-IRExecutionUnit::CommitAllocations (lldb::ProcessSP &process_sp)
+IRExecutionUnit::CommitOneAllocation (lldb::ProcessSP &process_sp,
+                                      Error &error,
+                                      AllocationRecord &record)
 {
-    bool ret = true;
-
-    lldb_private::Error err;
-
-    for (AllocationRecord &record : m_records)
+    if (record.m_process_address != LLDB_INVALID_ADDRESS)
     {
-        if (record.m_process_address != LLDB_INVALID_ADDRESS)
-            continue;
-
-        switch (record.m_sect_type)
-        {
+        return true;
+    }
+    
+    switch (record.m_sect_type)
+    {
         case lldb::eSectionTypeInvalid:
         case lldb::eSectionTypeDWARFDebugAbbrev:
         case lldb::eSectionTypeDWARFDebugAddr:
@@ -1123,7 +1186,7 @@ IRExecutionUnit::CommitAllocations (lldb::ProcessSP &process_sp)
         case lldb::eSectionTypeDWARFAppleTypes:
         case lldb::eSectionTypeDWARFAppleNamespaces:
         case lldb::eSectionTypeDWARFAppleObjC:
-            err.Clear();
+            error.Clear();
             break;
         default:
             const bool zero_memory = false;
@@ -1132,13 +1195,26 @@ IRExecutionUnit::CommitAllocations (lldb::ProcessSP &process_sp)
                                                record.m_permissions,
                                                eAllocationPolicyProcessOnly,
                                                zero_memory,
-                                               err);
+                                               error);
             break;
-        }
+    }
+    
+    return error.Success();
+}
 
-        if (!err.Success())
+bool
+IRExecutionUnit::CommitAllocations (lldb::ProcessSP &process_sp)
+{
+    bool ret = true;
+
+    lldb_private::Error err;
+
+    for (AllocationRecord &record : m_records)
+    {
+        ret = CommitOneAllocation(process_sp, err, record);
+        
+        if (!ret)
         {
-            ret = false;
             break;
         }
     }
@@ -1161,8 +1237,8 @@ IRExecutionUnit::CommitAllocations (lldb::ProcessSP &process_sp)
 void
 IRExecutionUnit::ReportAllocations (llvm::ExecutionEngine &engine)
 {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
-
+    m_reported_allocations = true;
+    
     for (AllocationRecord &record : m_records)
     {
         if (record.m_process_address == LLDB_INVALID_ADDRESS)
@@ -1172,12 +1248,6 @@ IRExecutionUnit::ReportAllocations (llvm::ExecutionEngine &engine)
             continue;
 
         engine.mapSectionAddress((void*)record.m_host_address, record.m_process_address);
-        if (log)
-            log->Printf("IRExecutionUnit::ReportAllocations() called mapSectionAddress(): [0x%" PRIx64 "..0x%" PRIx64 "] -> [0x%" PRIx64 "..0x%" PRIx64 "].",
-                 (uint64_t)record.m_host_address,
-                 (uint64_t)record.m_host_address + (uint64_t)record.m_size,
-                 record.m_process_address,
-                 record.m_process_address + record.m_size);
     }
 
     // Trigger re-application of relocations.
@@ -1352,7 +1422,6 @@ IRExecutionUnit::GetJITModule ()
     return m_jit_module_wp.lock();
 }
 
-
 lldb::ModuleSP
 IRExecutionUnit::CreateJITModule (const char *name,
                                   const FileSpec *limit_file_ptr,
@@ -1376,7 +1445,7 @@ IRExecutionUnit::CreateJITModule (const char *name,
                 m_jit_module_wp = jit_module_sp;
                 bool changed = false;
                 jit_module_sp->SetLoadAddress(*target, 0, true, changed);
-
+                
                 jit_module_sp->SetTypeSystemMap(target->GetTypeSystemMap());
                 
                 ConstString const_name(name);
@@ -1390,7 +1459,7 @@ IRExecutionUnit::CreateJITModule (const char *name,
                     if (symbol_vendor)
                         symbol_vendor->SetLimitSourceFileRange (*limit_file_ptr, limit_start_line, limit_end_line);
                 }
-
+                
                 target->GetImages().Append(jit_module_sp);
             }
             return jit_module_sp;
@@ -1406,4 +1475,3 @@ IRExecutionUnit::GetLLVMGlobalContextMutex ()
     
     return s_llvm_context_mutex;
 }
-

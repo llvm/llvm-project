@@ -581,6 +581,9 @@ protected:
     bool
     GetEmbeddedInterpreterModuleObjects ();
 
+    bool
+    SetStdHandle(File &file, const char *py_name, PythonFile &save_file, const char *mode);
+
     PythonFile m_saved_stdin;
     PythonFile m_saved_stdout;
     PythonFile m_saved_stderr;

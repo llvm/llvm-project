@@ -363,6 +363,7 @@ REPL::IOHandlerInputComplete (IOHandler &io_handler, std::string &code)
                                                                                   result_valobj_sp,
                                                                                   error,
                                                                                   0, // Line offset
+                                                                                  nullptr, // Fixed Expression
                                                                                   &jit_module_sp);
             
             //CommandInterpreter &ci = debugger.GetCommandInterpreter();

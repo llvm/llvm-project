@@ -54,8 +54,8 @@ public:
     //------------------------------------------------------------------
     /// Install the utility function into a process
     ///
-    /// @param[in] error_stream
-    ///     A stream to print parse errors and warnings to.
+    /// @param[in] diagnostic_manager
+    ///     A diagnostic manager to print parse errors and warnings to.
     ///
     /// @param[in] exe_ctx
     ///     The execution context to install the utility function to.
@@ -64,8 +64,8 @@ public:
     ///     True on success (no errors); false otherwise.
     //------------------------------------------------------------------
     virtual bool
-    Install (Stream &error_stream, ExecutionContext &exe_ctx) = 0;
-    
+    Install(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) = 0;
+
     //------------------------------------------------------------------
     /// Check whether the given PC is inside the function
     ///

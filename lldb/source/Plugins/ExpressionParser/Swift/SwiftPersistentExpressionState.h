@@ -96,9 +96,6 @@ public:
     void
     RemovePersistentVariable (lldb::ExpressionVariableSP variable) override;
     
-    lldb::addr_t
-    LookupSymbol (const ConstString &name) override;
-    
     void
     RegisterSwiftPersistentDecl (swift::ValueDecl *value_decl);
     
@@ -110,12 +107,6 @@ public:
     
     bool
     GetSwiftPersistentDecls (const ConstString &name, std::vector<swift::ValueDecl *> &matches);
-    
-    void
-    RegisterExecutionUnit (lldb::IRExecutionUnitSP &execution_unit_sp);
-    
-    void
-    RegisterSymbol (const ConstString &name, lldb::addr_t addr);
     
     // This just adds this module to the list of hand-loaded modules, it doesn't actually load it.
     void
@@ -143,14 +134,9 @@ private:
     
     SwiftDeclMap                                            m_swift_persistent_decls;       ///< The persistent functions declared by the user.
     
-    typedef std::set<lldb::IRExecutionUnitSP>               ExecutionUnitSet;
-    ExecutionUnitSet                                        m_execution_units;              ///< The execution units that contain valuable symbols.
-    
     typedef std::set<lldb_private::ConstString>             HandLoadedModuleSet;
     HandLoadedModuleSet                                     m_hand_loaded_modules;          ///< These are the names of modules that we have loaded by
                                                                                             ///< hand into the Contexts we make for parsing.
-    typedef llvm::DenseMap<const char *, lldb::addr_t>      SymbolMap;
-    SymbolMap                                               m_symbol_map;                   ///< The addresses of the symbols in m_execution_units.
 };
 
 }

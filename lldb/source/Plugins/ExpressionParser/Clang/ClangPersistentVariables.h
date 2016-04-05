@@ -86,20 +86,6 @@ public:
     void
     RemovePersistentVariable (lldb::ExpressionVariableSP variable) override;
     
-    lldb::addr_t
-    LookupSymbol (const ConstString &name) override;
-
-    void
-    RegisterClangPersistentType (clang::TypeDecl *type_decl);
-    
-    clang::TypeDecl *
-    GetClangPersistentType (const ConstString &name);
-    
-    void
-    RegisterExecutionUnit (lldb::IRExecutionUnitSP &execution_unit_sp);
-    
-    void
-    RegisterSymbol (const ConstString &name, lldb::addr_t addr);
     
     // This just adds this module to the list of hand-loaded modules, it doesn't actually load it.
     void
@@ -120,6 +106,13 @@ public:
         }
         return true;
     }
+
+    void
+    RegisterPersistentDecl (const ConstString &name,
+                            clang::NamedDecl *decl);
+    
+    clang::NamedDecl *
+    GetPersistentDecl (const ConstString &name);
     
     void
     AddHandLoadedClangModule(ClangModulesDeclVendor::ModuleID module)
@@ -148,6 +141,9 @@ private:
     
     typedef llvm::DenseMap<const char *, lldb::addr_t>      SymbolMap;
     SymbolMap                                               m_symbol_map;                   ///< The addresses of the symbols in m_execution_units.
+
+    typedef llvm::DenseMap<const char *, clang::NamedDecl *>    PersistentDeclMap;
+    PersistentDeclMap                                           m_persistent_decls;         ///< Persistent entities declared by the user.
     
     ClangModulesDeclVendor::ModuleVector                    m_hand_loaded_clang_modules;    ///< These are Clang modules we hand-loaded; these are the highest-
                                                                                             ///< priority source for macros.

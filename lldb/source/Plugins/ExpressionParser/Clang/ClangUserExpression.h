@@ -52,13 +52,10 @@ public:
     class ClangUserExpressionHelper : public ClangExpressionHelper
     {
     public:
-        ClangUserExpressionHelper (Target &target) :
-            m_target(target)
-        {
-        }
-        
+        ClangUserExpressionHelper(Target &target, bool top_level) : m_target(target), m_top_level(top_level) {}
+
         ~ClangUserExpressionHelper() override = default;
-        
+
         //------------------------------------------------------------------
         /// Return the object that the parser should use when resolving external
         /// values.  May be NULL if everything should be self-contained.
@@ -89,11 +86,16 @@ public:
         clang::ASTConsumer *
         ASTTransformer(clang::ASTConsumer *passthrough) override;
 
+        void
+        CommitPersistentDecls() override;
+
     private:
-        Target                                  &m_target;
+        Target &m_target;
         std::unique_ptr<ClangExpressionDeclMap> m_expr_decl_map_up;
-        std::unique_ptr<ASTStructExtractor> m_struct_extractor_up;         ///< The class that generates the argument struct layout.
+        std::unique_ptr<ASTStructExtractor>
+            m_struct_extractor_up; ///< The class that generates the argument struct layout.
         std::unique_ptr<ASTResultSynthesizer> m_result_synthesizer_up;
+        bool m_top_level;
     };
 
     //------------------------------------------------------------------
@@ -130,8 +132,8 @@ public:
     //------------------------------------------------------------------
     /// Parse the expression
     ///
-    /// @param[in] error_stream
-    ///     A stream to print parse errors and warnings to.
+    /// @param[in] diagnostic_manager
+    ///     A diagnostic manager to report parse errors and warnings to.
     ///
     /// @param[in] exe_ctx
     ///     The execution context to use when looking up entities that
@@ -149,7 +151,7 @@ public:
     ///     True on success (no errors); false otherwise.
     //------------------------------------------------------------------
     bool
-    Parse (Stream &error_stream,
+    Parse (DiagnosticManager &diagnostic_manager,
            ExecutionContext &exe_ctx,
            lldb_private::ExecutionPolicy execution_policy,
            bool keep_result_in_memory,
@@ -193,13 +195,11 @@ private:
                  lldb_private::Error &err) override;
 
     bool
-    AddArguments (ExecutionContext &exe_ctx,
-                  std::vector<lldb::addr_t> &args,
-                  lldb::addr_t struct_address,
-                  Stream &error_stream) override;
-    
-    ClangUserExpressionHelper   m_type_system_helper;
-    
+    AddArguments(ExecutionContext &exe_ctx, std::vector<lldb::addr_t> &args, lldb::addr_t struct_address,
+                 DiagnosticManager &diagnostic_manager) override;
+
+    ClangUserExpressionHelper m_type_system_helper;
+
     class ResultDelegate : public Materializer::PersistentVariableDelegate
     {
     public:

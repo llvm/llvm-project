@@ -79,8 +79,8 @@ public:
     //------------------------------------------------------------------
     /// Parse the expression
     ///
-    /// @param[in] error_stream
-    ///     A stream to print parse errors and warnings to.
+    /// @param[in] diagnostic_manager
+    ///     A diagnostic manager to report parse errors and warnings to.
     ///
     /// @param[in] exe_ctx
     ///     The execution context to use when looking up entities that
@@ -98,7 +98,7 @@ public:
     ///     True on success (no errors); false otherwise.
     //------------------------------------------------------------------
     virtual bool
-    Parse (Stream &error_stream,
+    Parse (DiagnosticManager &diagnostic_manager,
            ExecutionContext &exe_ctx,
            lldb_private::ExecutionPolicy execution_policy,
            bool keep_result_in_memory,
@@ -113,8 +113,8 @@ public:
     //------------------------------------------------------------------
     /// Execute the parsed expression
     ///
-    /// @param[in] error_stream
-    ///     A stream to print errors to.
+    /// @param[in] diagnostic_manager
+    ///     A diagnostic manager to report errors to.
     ///
     /// @param[in] exe_ctx
     ///     The execution context to use when looking up entities that
@@ -137,16 +137,15 @@ public:
     /// @return
     ///     A Process::Execution results value.
     //------------------------------------------------------------------
-    virtual lldb::ExpressionResults Execute(Stream &error_stream, ExecutionContext &exe_ctx,
-                                            const EvaluateExpressionOptions &options,
-                                            lldb::UserExpressionSP &shared_ptr_to_me,
-                                            lldb::ExpressionVariableSP &result) = 0;
+    virtual lldb::ExpressionResults
+    Execute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
+            lldb::UserExpressionSP &shared_ptr_to_me, lldb::ExpressionVariableSP &result) = 0;
 
     //------------------------------------------------------------------
     /// Apply the side effects of the function to program state.
     ///
-    /// @param[in] error_stream
-    ///     A stream to print errors to.
+    /// @param[in] diagnostic_manager
+    ///     A diagnostic manager to report errors to.
     ///
     /// @param[in] exe_ctx
     ///     The execution context to use when looking up entities that
@@ -165,10 +164,10 @@ public:
     /// @return
     ///     A Process::Execution results value.
     //------------------------------------------------------------------
-    virtual bool FinalizeJITExecution(Stream &error_stream, ExecutionContext &exe_ctx,
-                                      lldb::ExpressionVariableSP &result,
-                                      lldb::addr_t function_stack_bottom = LLDB_INVALID_ADDRESS,
-                                      lldb::addr_t function_stack_top = LLDB_INVALID_ADDRESS) = 0;
+    virtual bool
+    FinalizeJITExecution(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+                         lldb::ExpressionVariableSP &result, lldb::addr_t function_stack_bottom = LLDB_INVALID_ADDRESS,
+                         lldb::addr_t function_stack_top = LLDB_INVALID_ADDRESS) = 0;
 
     //------------------------------------------------------------------
     /// Return the string that the parser should parse.
@@ -287,6 +286,9 @@ public:
     /// @param[in] line_offset
     ///     The offset of the first line of the expression from the "beginning" of a virtual source file used for error reporting and debug info.
     ///
+    /// @param[out] fixed_expression
+    ///     If non-nullptr, the fixed expression is copied into the provided string.
+    ///
     /// @param[out] jit_module_sp_ptr
     ///     If non-nullptr, used to persist the generated IR module.
     ///
@@ -301,9 +303,18 @@ public:
              lldb::ValueObjectSP &result_valobj_sp,
              Error &error,
              uint32_t line_offset = 0,
+             std::string *fixed_expression = nullptr,
              lldb::ModuleSP *jit_module_sp_ptr = nullptr);
 
     static const Error::ValueType kNoResult = 0x1001; ///< ValueObject::GetError() returns this if there is no result from the expression.
+    
+    const char *
+    GetFixedText()
+    {
+        if (m_fixed_text.empty())
+            return nullptr;
+        return m_fixed_text.c_str();
+    }
 
 protected:
     static lldb::addr_t
@@ -327,6 +338,7 @@ protected:
     Address                                     m_address;              ///< The address the process is stopped in.
     std::string                                 m_expr_text;            ///< The text of the expression, as typed by the user
     std::string                                 m_expr_prefix;          ///< The text of the translation-level definitions, as provided by the user
+    std::string                                 m_fixed_text;           ///< The text of the expression with fixits applied - this won't be set if the fixed text doesn't parse.
     lldb::LanguageType                          m_language;             ///< The language to use when parsing (eLanguageTypeUnknown means use defaults)
     ResultType                                  m_desired_type;         ///< The type to coerce the expression's result to.  If eResultTypeAny, inferred from the expression.
     EvaluateExpressionOptions                   m_options;              ///< Additional options provided by the user.
