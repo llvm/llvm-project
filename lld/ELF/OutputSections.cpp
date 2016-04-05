@@ -1515,8 +1515,6 @@ uint8_t SymbolTableSection<ELFT>::getSymbolBinding(SymbolBody *Body) {
   uint8_t Visibility = Body->getVisibility();
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
-  if (isa<DefinedSynthetic<ELFT>>(Body))
-    return STB_LOCAL;
   return Body->Binding;
 }
 

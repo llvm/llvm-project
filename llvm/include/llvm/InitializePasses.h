@@ -249,6 +249,7 @@ void initializeProcessImplicitDefsPass(PassRegistry&);
 void initializePromotePassPass(PassRegistry&);
 void initializePruneEHPass(PassRegistry&);
 void initializeReassociatePass(PassRegistry&);
+void initializeRegBankSelectPass(PassRegistry &);
 void initializeRegToMemPass(PassRegistry&);
 void initializeRegionInfoPassPass(PassRegistry&);
 void initializeRegionOnlyPrinterPass(PassRegistry&);

@@ -894,13 +894,12 @@ static bool canSkipAddingToSets(Value *Val) {
   // we should filter out the (potentially shared) instance to
   // i32* null.
   if (isa<Constant>(Val)) {
-    bool Container = isa<ConstantVector>(Val) || isa<ConstantArray>(Val) ||
-                     isa<ConstantStruct>(Val);
     // TODO: Because all of these things are constant, we can determine whether
     // the data is *actually* mutable at graph building time. This will probably
     // come for free/cheap with offset awareness.
-    bool CanStoreMutableData =
-        isa<GlobalValue>(Val) || isa<ConstantExpr>(Val) || Container;
+    bool CanStoreMutableData = isa<GlobalValue>(Val) ||
+                               isa<ConstantExpr>(Val) ||
+                               isa<ConstantAggregate>(Val);
     return !CanStoreMutableData;
   }
 
@@ -942,6 +941,10 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
       if (canSkipAddingToSets(CurValue))
         continue;
 
+      Optional<StratifiedAttr> MaybeCurIndex = valueToAttrIndex(CurValue);
+      if (MaybeCurIndex)
+        Builder.noteAttributes(CurValue, *MaybeCurIndex);
+
       for (const auto &EdgeTuple : Graph.edgesFor(Node)) {
         auto Weight = std::get<0>(EdgeTuple);
         auto Label = Weight.first;
@@ -965,7 +968,7 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
         }
 
         auto Aliasing = Weight.second;
-        if (auto MaybeCurIndex = valueToAttrIndex(CurValue))
+        if (MaybeCurIndex)
           Aliasing.set(*MaybeCurIndex);
         if (auto MaybeOtherIndex = valueToAttrIndex(OtherValue))
           Aliasing.set(*MaybeOtherIndex);

@@ -2139,7 +2139,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         return getTrue(ITy);
       break;
     case ICmpInst::ICMP_SGE:
-      /// For signed comparison, the values for an i1 are 0 and -1 
+      /// For signed comparison, the values for an i1 are 0 and -1
       /// respectively. This maps into a truth table of:
       /// LHS | RHS | LHS >=s RHS   | LHS implies RHS
       ///  0  |  0  |  1 (0 >= 0)   |  1
@@ -2546,7 +2546,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     return Pred == ICmpInst::ICMP_NE ?
       ConstantInt::getTrue(Ctx) : ConstantInt::getFalse(Ctx);
   }
-  
+
   // Special logic for binary operators.
   BinaryOperator *LBO = dyn_cast<BinaryOperator>(LHS);
   BinaryOperator *RBO = dyn_cast<BinaryOperator>(RHS);

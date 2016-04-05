@@ -818,6 +818,8 @@ bool X86_64TargetInfo::isRelRelative(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
+  case R_X86_64_GOTTPOFF:
+  case R_X86_64_TPOFF32:
   case R_X86_64_DTPOFF32:
   case R_X86_64_DTPOFF64:
   case R_X86_64_PC8:

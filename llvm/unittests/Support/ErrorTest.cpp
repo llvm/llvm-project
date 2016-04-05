@@ -401,12 +401,46 @@ TEST(Error, ExitOnError) {
       << "exitOnError returned an unexpected error result";
 }
 
-// Test Expected<T> in success mode.
-TEST(Error, ExpectedInSuccessMode) {
+// Test Checked Expected<T> in success mode.
+TEST(Error, CheckedExpectedInSuccessMode) {
   Expected<int> A = 7;
   EXPECT_TRUE(!!A) << "Expected with non-error value doesn't convert to 'true'";
+  // Access is safe in second test, since we checked the error in the first.
   EXPECT_EQ(*A, 7) << "Incorrect Expected non-error value";
 }
+
+// Test Unchecked Expected<T> in success mode.
+// We expect this to blow up the same way Error would.
+// Test runs in debug mode only.
+#ifndef NDEBUG
+TEST(Error, UncheckedExpectedInSuccessModeDestruction) {
+  EXPECT_DEATH({ Expected<int> A = 7; },
+               "Expected<T> must be checked before access or destruction.")
+    << "Unchecekd Expected<T> success value did not cause an abort().";
+}
+#endif
+
+// Test Unchecked Expected<T> in success mode.
+// We expect this to blow up the same way Error would.
+// Test runs in debug mode only.
+#ifndef NDEBUG
+TEST(Error, UncheckedExpectedInSuccessModeAccess) {
+  EXPECT_DEATH({ Expected<int> A = 7; *A; },
+               "Expected<T> must be checked before access or destruction.")
+    << "Unchecekd Expected<T> success value did not cause an abort().";
+}
+#endif
+
+// Test Unchecked Expected<T> in success mode.
+// We expect this to blow up the same way Error would.
+// Test runs in debug mode only.
+#ifndef NDEBUG
+TEST(Error, UncheckedExpectedInSuccessModeAssignment) {
+  EXPECT_DEATH({ Expected<int> A = 7; A = 7; },
+               "Expected<T> must be checked before access or destruction.")
+    << "Unchecekd Expected<T> success value did not cause an abort().";
+}
+#endif
 
 // Test Expected<T> in failure mode.
 TEST(Error, ExpectedInFailureMode) {
@@ -423,7 +457,7 @@ TEST(Error, ExpectedInFailureMode) {
 #ifndef NDEBUG
 TEST(Error, AccessExpectedInFailureMode) {
   Expected<int> A = make_error<CustomError>(42);
-  EXPECT_DEATH(*A, "!HasError && \"Cannot get value when an error exists!\"")
+  EXPECT_DEATH(*A, "Expected<T> must be checked before access or destruction.")
       << "Incorrect Expected error value";
   consumeError(A.takeError());
 }
@@ -435,7 +469,7 @@ TEST(Error, AccessExpectedInFailureMode) {
 #ifndef NDEBUG
 TEST(Error, UnhandledExpectedInFailureMode) {
   EXPECT_DEATH({ Expected<int> A = make_error<CustomError>(42); },
-               "Program aborted due to an unhandled Error:")
+               "Expected<T> must be checked before access or destruction.")
       << "Unchecked Expected<T> failure value did not cause an abort()";
 }
 #endif
@@ -446,10 +480,18 @@ TEST(Error, ExpectedCovariance) {
   class D : public B {};
 
   Expected<B *> A1(Expected<D *>(nullptr));
+  // Check A1 by converting to bool before assigning to it.
+  (void)!!A1;
   A1 = Expected<D *>(nullptr);
+  // Check A1 again before destruction.
+  (void)!!A1;
 
   Expected<std::unique_ptr<B>> A2(Expected<std::unique_ptr<D>>(nullptr));
+  // Check A2 by converting to bool before assigning to it.
+  (void)!!A2;
   A2 = Expected<std::unique_ptr<D>>(nullptr);
+  // Check A2 again before destruction.
+  (void)!!A2;
 }
 
 TEST(Error, ErrorCodeConversions) {

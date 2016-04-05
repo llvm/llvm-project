@@ -63,6 +63,8 @@ HANDLE_GLOBAL_VALUE(GlobalAlias)
 HANDLE_GLOBAL_VALUE(GlobalVariable)
 HANDLE_CONSTANT(BlockAddress)
 HANDLE_CONSTANT(ConstantExpr)
+
+// ConstantAggregate.
 HANDLE_CONSTANT(ConstantArray)
 HANDLE_CONSTANT(ConstantStruct)
 HANDLE_CONSTANT(ConstantVector)
@@ -88,6 +90,8 @@ HANDLE_CONSTANT_MARKER(ConstantFirstVal, Function)
 HANDLE_CONSTANT_MARKER(ConstantLastVal, ConstantTokenNone)
 HANDLE_CONSTANT_MARKER(ConstantDataFirstVal, UndefValue)
 HANDLE_CONSTANT_MARKER(ConstantDataLastVal, ConstantTokenNone)
+HANDLE_CONSTANT_MARKER(ConstantAggregateFirstVal, ConstantArray)
+HANDLE_CONSTANT_MARKER(ConstantAggregateLastVal, ConstantVector)
 
 #undef HANDLE_GLOBAL_VALUE
 #undef HANDLE_CONSTANT
