@@ -319,6 +319,16 @@ let hasSideEffects = 0 in {
   // takes a CvtMode immediate that defines the conversion mode to use.  It can
   // be CvtNONE to omit a conversion mode.
   multiclass CVT_FROM_ALL<string FromName, RegisterClass RC> {
+    def _s8 :
+      NVPTXInst<(outs RC:$dst),
+                (ins Int16Regs:$src, CvtMode:$mode),
+                !strconcat("cvt${mode:base}${mode:ftz}${mode:sat}.",
+                FromName, ".s8\t$dst, $src;"), []>;
+    def _u8 :
+      NVPTXInst<(outs RC:$dst),
+                (ins Int16Regs:$src, CvtMode:$mode),
+                !strconcat("cvt${mode:base}${mode:ftz}${mode:sat}.",
+                FromName, ".u8\t$dst, $src;"), []>;
     def _s16 :
       NVPTXInst<(outs RC:$dst),
                 (ins Int16Regs:$src, CvtMode:$mode),

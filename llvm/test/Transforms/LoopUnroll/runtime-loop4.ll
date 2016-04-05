@@ -1,13 +1,21 @@
-; RUN: opt < %s -S -O2 -unroll-runtime=true | FileCheck %s
+; RUN: opt < %s -S -O2 -unroll-runtime=true | FileCheck %s -check-prefix=EPILOG
+; RUN: opt < %s -S -O2 -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefix=PROLOG
 
 ; Check runtime unrolling prologue can be promoted by LICM pass.
 
-; CHECK: entry:
-; CHECK: %xtraiter
-; CHECK: %lcmp.mod
-; CHECK: loop1:
-; CHECK: br i1 %lcmp.mod
-; CHECK: loop2.prol:
+; EPILOG: entry:
+; EPILOG: %xtraiter
+; EPILOG: %lcmp.mod
+; EPILOG: loop1:
+; EPILOG: br i1 %lcmp.mod
+; EPILOG: loop2.epil:
+
+; PROLOG: entry:
+; PROLOG: %xtraiter
+; PROLOG: %lcmp.mod
+; PROLOG: loop1:
+; PROLOG: br i1 %lcmp.mod
+; PROLOG: loop2.prol:
 
 define void @unroll(i32 %iter, i32* %addr1, i32* %addr2) nounwind {
 entry:

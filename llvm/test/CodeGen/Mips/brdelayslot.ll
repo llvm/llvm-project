@@ -5,19 +5,19 @@
 ; RUN: llc -march=mipsel -disable-mips-df-forward-search=false \
 ; RUN: -relocation-model=static < %s | FileCheck %s -check-prefix=FORWARD
 ; RUN: llc -march=mipsel -disable-mips-df-backward-search \
-; RUN: -disable-mips-df-succbb-search=false < %s | \
+; RUN: -disable-mips-df-succbb-search=false -disable-preheader-prot=true < %s | \
 ; RUN: FileCheck %s -check-prefix=SUCCBB
 
 define void @foo1() nounwind {
 entry:
-; Default:     jalr 
-; Default-NOT: nop 
-; Default:     jr 
+; Default:     jalr
+; Default-NOT: nop
+; Default:     jr
 ; Default-NOT: nop
 ; Default:     .end
-; None: jalr 
-; None: nop 
-; None: jr 
+; None: jalr
+; None: nop
+; None: jr
 ; None: nop
 ; None: .end
 

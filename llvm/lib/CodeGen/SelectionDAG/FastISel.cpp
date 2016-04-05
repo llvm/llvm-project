@@ -1357,6 +1357,8 @@ bool FastISel::selectInstruction(const Instruction *I) {
   // Just before the terminator instruction, insert instructions to
   // feed PHI nodes in successor blocks.
   if (isa<TerminatorInst>(I)) {
+    // If we need to materialize any vreg from worklist, we bail out of
+    // FastISel.
     if (shouldCopySwiftErrorsToFinalVRegs(TLI, FuncInfo))
       return false;
     if (!handlePHINodesInSuccessorBlocks(I->getParent())) {

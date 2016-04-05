@@ -157,6 +157,17 @@ void LLVMDisposeModule(LLVMModuleRef M) {
   delete unwrap(M);
 }
 
+const char *LLVMGetModuleIdentifier(LLVMModuleRef M, size_t *Len) {
+  auto &Str = unwrap(M)->getModuleIdentifier();
+  *Len = Str.length();
+  return Str.c_str();
+}
+
+void LLVMSetModuleIdentifier(LLVMModuleRef M, const char *Ident, size_t Len) {
+  unwrap(M)->setModuleIdentifier(StringRef(Ident, Len));
+}
+
+
 /*--.. Data layout .........................................................--*/
 const char *LLVMGetDataLayoutStr(LLVMModuleRef M) {
   return unwrap(M)->getDataLayoutStr().c_str();

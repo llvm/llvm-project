@@ -412,10 +412,11 @@ class JMP_IDX_COMPACT_DESC_BASE<string opstr, DAGOperand opnd,
   dag InOperandList = (ins GPROpnd:$rt, opnd:$offset);
   string AsmString = !strconcat(opstr, "\t$rt, $offset");
   list<dag> Pattern = [];
-  bit isTerminator = 1;
   bit hasDelaySlot = 0;
   InstrItinClass Itinerary = itin;
   bit isCTI = 1;
+  bit isBranch = 1;
+  bit isIndirectBranch = 1;
 }
 
 class JIALC_DESC : JMP_IDX_COMPACT_DESC_BASE<"jialc", calloffset16,
@@ -427,6 +428,7 @@ class JIALC_DESC : JMP_IDX_COMPACT_DESC_BASE<"jialc", calloffset16,
 class JIC_DESC : JMP_IDX_COMPACT_DESC_BASE<"jic", jmpoffset16,
                                            GPR32Opnd, II_JIALC> {
   bit isBarrier = 1;
+  bit isTerminator = 1;
   list<Register> Defs = [AT];
 }
 

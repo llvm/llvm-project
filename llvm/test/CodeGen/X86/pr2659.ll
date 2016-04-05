@@ -21,7 +21,7 @@ forcond.preheader:              ; preds = %entry
 ; CHECK: je
 
 ; There should be no moves required in the for loop body.
-; CHECK: %forbody
+; CHECK: %forbody{{$}}
 ; CHECK-NOT: mov
 ; CHECK: jbe
 

@@ -134,6 +134,8 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
 
 static bool isModuleLinkage(const GlobalValue *GV) {
   switch (GV->getLinkage()) {
+  case GlobalValue::LinkOnceODRLinkage:
+  case GlobalValue::LinkOnceAnyLinkage:
   case GlobalValue::InternalLinkage:
   case GlobalValue::CommonLinkage:
    return true;

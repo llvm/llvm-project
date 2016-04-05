@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -111,6 +112,10 @@ static cl::opt<bool> StressExtLdPromotion(
     cl::desc("Stress test ext(promotable(ld)) -> promoted(ext(ld)) "
              "optimization in CodeGenPrepare"));
 
+static cl::opt<bool> DisablePreheaderProtect(
+    "disable-preheader-prot", cl::Hidden, cl::init(false),
+    cl::desc("Disable protection against removing loop preheaders"));
+
 namespace {
 typedef SmallPtrSet<Instruction *, 16> SetOfInstrs;
 typedef PointerIntPair<Type *, 1, bool> TypeIsSExt;
@@ -122,6 +127,7 @@ class TypePromotionTransaction;
     const TargetLowering *TLI;
     const TargetTransformInfo *TTI;
     const TargetLibraryInfo *TLInfo;
+    const LoopInfo *LI;
 
     /// As we scan instructions optimizing them, this is the next instruction
     /// to optimize. Transforms that can invalidate this should update it.
@@ -161,6 +167,7 @@ class TypePromotionTransaction;
       // FIXME: When we can selectively preserve passes, preserve the domtree.
       AU.addRequired<TargetLibraryInfoWrapperPass>();
       AU.addRequired<TargetTransformInfoWrapperPass>();
+      AU.addRequired<LoopInfoWrapperPass>();
     }
 
   private:
@@ -218,6 +225,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     TLI = TM->getSubtargetImpl(F)->getTargetLowering();
   TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   OptSize = F.optForSize();
 
   /// This optimization identifies DIV instructions that can be
@@ -359,6 +367,15 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F) {
 /// edges in ways that are non-optimal for isel. Start by eliminating these
 /// blocks so we can split them the way we want them.
 bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
+  SmallPtrSet<BasicBlock *, 16> Preheaders;
+  SmallVector<Loop *, 16> LoopList(LI->begin(), LI->end());
+  while (!LoopList.empty()) {
+    Loop *L = LoopList.pop_back_val();
+    LoopList.insert(LoopList.end(), L->begin(), L->end());
+    if (BasicBlock *Preheader = L->getLoopPreheader())
+      Preheaders.insert(Preheader);
+  }
+
   bool MadeChange = false;
   // Note that this intentionally skips the entry block.
   for (Function::iterator I = std::next(F.begin()), E = F.end(); I != E;) {
@@ -390,6 +407,14 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
 
     if (!canMergeBlocks(BB, DestBB))
       continue;
+
+    // Do not delete loop preheaders if doing so would create a critical edge.
+    // Loop preheaders can be good locations to spill registers. If the
+    // preheader is deleted and we create a critical edge, registers may be
+    // spilled in the loop body instead.
+    if (!DisablePreheaderProtect && Preheaders.count(BB) &&
+        !(BB->getSinglePredecessor() && BB->getSinglePredecessor()->getSingleSuccessor()))
+     continue;
 
     eliminateMostlyEmptyBlock(BB);
     MadeChange = true;

@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=mips64el-unknown-unknown -mcpu=mips4 -mattr=+soft-float -O1 \
-; RUN:     -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=ALL -check-prefix=C_CC_FMT
+; RUN:     -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=ALL -check-prefix=C_CC_FMT -check-prefix=PRER6
 ; RUN: llc -mtriple=mips64el-unknown-unknown -mcpu=mips64 -mattr=+soft-float -O1 \
-; RUN:     -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=ALL -check-prefix=C_CC_FMT
+; RUN:     -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=ALL -check-prefix=C_CC_FMT -check-prefix=PRER6
 ; RUN: llc -mtriple=mips64el-unknown-unknown -mcpu=mips64r2 -mattr=+soft-float -O1 \
-; RUN:     -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=ALL -check-prefix=C_CC_FMT
+; RUN:     -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=ALL -check-prefix=C_CC_FMT -check-prefix=PRER6
 ; RUN: llc -mtriple=mips64el-unknown-unknown -mcpu=mips64r6 -mattr=+soft-float -O1 \
-; RUN:     -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=ALL -check-prefix=CMP_CC_FMT
+; RUN:     -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=ALL -check-prefix=CMP_CC_FMT -check-prefix=R6
 
 @gld0 = external global fp128
 @gld1 = external global fp128
@@ -544,10 +544,11 @@ entry:
 }
 
 ; ALL-LABEL: load_LD_float:
-; ALL: ld   $[[R0:[0-9]+]], %got_disp(gf1)
-; ALL: lw   $4, 0($[[R0]])
-; ALL: ld   $25, %call16(__extendsftf2)
-; ALL: jalr $25
+; ALL:   ld   $[[R0:[0-9]+]], %got_disp(gf1)
+; ALL:   lw   $4, 0($[[R0]])
+; ALL:   ld   $25, %call16(__extendsftf2)
+; PRER6: jalr $25
+; R6:    jialc $25, 0
 
 define fp128 @load_LD_float() {
 entry:
@@ -557,10 +558,11 @@ entry:
 }
 
 ; ALL-LABEL: load_LD_double:
-; ALL: ld   $[[R0:[0-9]+]], %got_disp(gd1)
-; ALL: ld   $4, 0($[[R0]])
-; ALL: ld   $25, %call16(__extenddftf2)
-; ALL: jalr $25
+; ALL:   ld   $[[R0:[0-9]+]], %got_disp(gd1)
+; ALL:   ld   $4, 0($[[R0]])
+; ALL:   ld   $25, %call16(__extenddftf2)
+; PRER6: jalr $25
+; R6:    jialc $25, 0
 
 define fp128 @load_LD_double() {
 entry:
@@ -585,13 +587,14 @@ entry:
 }
 
 ; ALL-LABEL: store_LD_float:
-; ALL: ld   $[[R0:[0-9]+]], %got_disp(gld1)
-; ALL: ld   $4, 0($[[R0]])
-; ALL: ld   $5, 8($[[R0]])
-; ALL: ld   $25, %call16(__trunctfsf2)
-; ALL: jalr $25
-; ALL: ld   $[[R1:[0-9]+]], %got_disp(gf1)
-; ALL: sw   $2, 0($[[R1]])
+; ALL:   ld   $[[R0:[0-9]+]], %got_disp(gld1)
+; ALL:   ld   $4, 0($[[R0]])
+; ALL:   ld   $5, 8($[[R0]])
+; ALL:   ld   $25, %call16(__trunctfsf2)
+; PRER6: jalr $25
+; R6:    jialc $25, 0
+; ALL:   ld   $[[R1:[0-9]+]], %got_disp(gf1)
+; ALL:   sw   $2, 0($[[R1]])
 
 define void @store_LD_float() {
 entry:
@@ -602,13 +605,14 @@ entry:
 }
 
 ; ALL-LABEL: store_LD_double:
-; ALL: ld   $[[R0:[0-9]+]], %got_disp(gld1)
-; ALL: ld   $4, 0($[[R0]])
-; ALL: ld   $5, 8($[[R0]])
-; ALL: ld   $25, %call16(__trunctfdf2)
-; ALL: jalr $25
-; ALL: ld   $[[R1:[0-9]+]], %got_disp(gd1)
-; ALL: sd   $2, 0($[[R1]])
+; ALL:   ld   $[[R0:[0-9]+]], %got_disp(gld1)
+; ALL:   ld   $4, 0($[[R0]])
+; ALL:   ld   $5, 8($[[R0]])
+; ALL:   ld   $25, %call16(__trunctfdf2)
+; PRER6: jalr $25
+; R6:    jialc $25, 0
+; ALL:   ld   $[[R1:[0-9]+]], %got_disp(gd1)
+; ALL:   sd   $2, 0($[[R1]])
 
 define void @store_LD_double() {
 entry:
@@ -648,7 +652,8 @@ entry:
 ; ALL:           move $[[R2:[0-9]+]], $9
 ; ALL:           move $[[R3:[0-9]+]], $8
 ; ALL:           ld   $25, %call16(__gttf2)($gp)
-; ALL:           jalr $25
+; PRER6:         jalr $25
+; R6:            jialc $25, 0
 
 ; C_CC_FMT:      slti $[[CC:[0-9]+]], $2, 1
 ; C_CC_FMT:      movz $[[R1]], $[[R3]], $[[CC]]

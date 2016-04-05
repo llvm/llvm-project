@@ -603,10 +603,8 @@ define void @test_unnatural_cfg_backwards_inner_loop() {
 ;
 ; CHECK: test_unnatural_cfg_backwards_inner_loop
 ; CHECK: %entry
-; CHECK: [[BODY:# BB#[0-9]+]]:
 ; CHECK: %loop2b
 ; CHECK: %loop1
-; CHECK: %loop2a
 
 entry:
   br i1 undef, label %loop2a, label %body

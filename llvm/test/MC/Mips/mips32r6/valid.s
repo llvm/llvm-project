@@ -165,6 +165,8 @@ a:
         jr      $25              # CHECK: jr $25                 # encoding: [0x03,0x20,0x00,0x09]
         jalr.hb $4               # CHECK: jalr.hb $4             # encoding: [0x00,0x80,0xfc,0x09]
         jalr.hb $4, $5           # CHECK: jalr.hb $4, $5         # encoding: [0x00,0xa0,0x24,0x09]
+        jialc   $15, 16161       # CHECK: jialc $15, 16161       # encoding: [0xf8,0x0f,0x3f,0x21]
+        jic     $12, -3920       # CHECK: jic $12, -3920         # encoding: [0xd8,0x0c,0xf0,0xb0]
         ldc2    $8, -701($at)    # CHECK: ldc2 $8, -701($1)      # encoding: [0x49,0xc8,0x0d,0x43]
         lwc2    $18,-841($a2)    # CHECK: lwc2 $18, -841($6)     # encoding: [0x49,0x52,0x34,0xb7]
         sdc2    $20,629($s2)     # CHECK: sdc2 $20, 629($18)     # encoding: [0x49,0xf4,0x92,0x75]

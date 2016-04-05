@@ -13,7 +13,7 @@ forcond.preheader:		; preds = %entry
 
 ifthen:		; preds = %entry
 	ret i32 0
-; CHECK: forbody
+; CHECK: forbody{{$}}
 ; CHECK-NOT: mov
 forbody:		; preds = %forbody, %forcond.preheader
 	%indvar = phi i32 [ 0, %forcond.preheader ], [ %divisor.02, %forbody ]		; <i32> [#uses=3]

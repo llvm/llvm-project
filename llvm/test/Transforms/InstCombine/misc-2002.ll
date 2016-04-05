@@ -3,7 +3,7 @@
 
 define void @hang_2002-03-11(i32 %X) {
 ; CHECK-LABEL: @hang_2002-03-11(
-; CHECK:         ret void
+; CHECK-NEXT:    ret void
 ;
   %reg117 = add i32 %X, 0
   ret void
@@ -14,7 +14,7 @@ define void @hang_2002-03-11(i32 %X) {
 
 define i32 @sub_failure_2002-05-14(i32 %i, i32 %j) {
 ; CHECK-LABEL: @sub_failure_2002-05-14(
-; CHECK:         [[A:%.*]] = mul i32 %i, %j
+; CHECK-NEXT:    [[A:%.*]] = mul i32 %i, %j
 ; CHECK-NEXT:    [[B:%.*]] = sub i32 2, [[A]]
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
@@ -28,7 +28,7 @@ define i32 @sub_failure_2002-05-14(i32 %i, i32 %j) {
 
 define i64 @cast_test_2002-08-02(i64 %A) {
 ; CHECK-LABEL: @cast_test_2002-08-02(
-; CHECK:         [[C2:%.*]] = and i64 %A, 255
+; CHECK-NEXT:    [[C2:%.*]] = and i64 %A, 255
 ; CHECK-NEXT:    ret i64 [[C2]]
 ;
   %c1 = trunc i64 %A to i8
@@ -38,7 +38,7 @@ define i64 @cast_test_2002-08-02(i64 %A) {
 
 define i32 @missed_const_prop_2002-12-05(i32 %A) {
 ; CHECK-LABEL: @missed_const_prop_2002-12-05(
-; CHECK:         ret i32 0
+; CHECK-NEXT:    ret i32 0
 ;
   %A.neg = sub i32 0, %A
   %.neg = sub i32 0, 1

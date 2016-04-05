@@ -13,13 +13,13 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: entry:
 ; CHECK-NEXT: %0 = add i32 %N, 1
 ; CHECK-NEXT: %xtraiter = and i32 %0, 1
-; CHECK-NEXT: %lcmp.mod = icmp ne i32 %xtraiter, 0
-; CHECK-NEXT: br i1 %lcmp.mod, label %while.body.prol, label %entry.split
+; CHECK-NEXT: %lcmp.mod = icmp ne i32 %xtraiter, %0
+; CHECK-NEXT: br i1 %lcmp.mod, label %entry.new, label %while.end.unr-lcssa
 
-; CHECK: while.body.prol:
-; CHECK: br label %entry.split
+; CHECK: while.body.epil:
+; CHECK: br label %while.end.epilog-lcssa
 
-; CHECK: entry.split:
+; CHECK: while.end.epilog-lcssa:
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define i32 @foo(i32 %N) {

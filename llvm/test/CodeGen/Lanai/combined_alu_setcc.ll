@@ -121,6 +121,50 @@ return:                                           ; preds = %if.end6, %if.end, %
   ret i32 %retval.0
 }
 ; CHECK-LABEL: test4
-; CHECK: and.f
-; CHECK: and.f
-; CHECK: and.f
+; TODO: Re-enable test. This test is disabled post making the combiner more
+; conservative.
+; DISABLED_CHECK: and.f
+
+; Test to avoid incorrect fusing that spans across basic blocks
+@a = global i32 -1, align 4
+@b = global i32 0, align 4
+
+; Function Attrs: nounwind
+define void @testBB() {
+entry:
+  %0 = load i32, i32* @a, align 4, !tbaa !1
+  %1 = load i32, i32* @b, align 4, !tbaa !1
+  %sub.i = sub i32 %1, %0
+  %tobool = icmp sgt i32 %sub.i, -1
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  %call1 = tail call i32 bitcast (i32 (...)* @g to i32 ()*)()
+  br label %while.body
+
+while.body:                                       ; preds = %if.then, %while.body
+  br label %while.body
+
+if.end:                                           ; preds = %entry
+  %cmp.i = icmp slt i32 %sub.i, 1
+  br i1 %cmp.i, label %if.then4, label %if.end7
+
+if.then4:                                         ; preds = %if.end
+  %call5 = tail call i32 bitcast (i32 (...)* @g to i32 ()*)()
+  br label %while.body6
+
+while.body6:                                      ; preds = %if.then4, %while.body6
+  br label %while.body6
+
+if.end7:                                          ; preds = %if.end
+  ret void
+}
+
+declare i32 @g(...)
+; CHECK-LABEL: testBB
+; CHECK: sub.f {{.*}}, %r0
+
+!1 = !{!2, !2, i64 0}
+!2 = !{!"int", !3, i64 0}
+!3 = !{!"omnipotent char", !4, i64 0}
+!4 = !{!"Simple C/C++ TBAA"}

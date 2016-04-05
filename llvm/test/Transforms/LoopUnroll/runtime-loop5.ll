@@ -11,9 +11,6 @@ entry:
   %cmp1 = icmp eq i3 %n, 0
   br i1 %cmp1, label %for.end, label %for.body
 
-; UNROLL-16-NOT: for.body.prol:
-; UNROLL-4: for.body.prol:
-
 for.body:                                         ; preds = %for.body, %entry
 ; UNROLL-16-LABEL: for.body:
 ; UNROLL-4-LABEL: for.body:
@@ -39,6 +36,10 @@ for.body:                                         ; preds = %for.body, %entry
 
 ; UNROLL-16-LABEL: for.end
 ; UNROLL-4-LABEL: for.end
+
+; UNROLL-16-NOT: for.body.epil:
+; UNROLL-4: for.body.epil:
+
 for.end:                                          ; preds = %for.body, %entry
   %sum.0.lcssa = phi i3 [ 0, %entry ], [ %add, %for.body ]
   ret i3 %sum.0.lcssa

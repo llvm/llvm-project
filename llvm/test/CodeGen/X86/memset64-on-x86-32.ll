@@ -5,7 +5,8 @@
 
 define void @bork() nounwind {
 ; FAST-LABEL: bork:
-; FAST:         xorps %xmm0, %xmm0
+; FAST:       # BB#0:
+; FAST-NEXT:    xorps %xmm0, %xmm0
 ; FAST-NEXT:    movups %xmm0, 64
 ; FAST-NEXT:    movups %xmm0, 48
 ; FAST-NEXT:    movups %xmm0, 32
@@ -14,7 +15,8 @@ define void @bork() nounwind {
 ; FAST-NEXT:    retl
 ;
 ; SLOW_32-LABEL: bork:
-; SLOW_32:         movl $0, 4
+; SLOW_32:       # BB#0:
+; SLOW_32-NEXT:    movl $0, 4
 ; SLOW_32-NEXT:    movl $0, 0
 ; SLOW_32-NEXT:    movl $0, 12
 ; SLOW_32-NEXT:    movl $0, 8
@@ -37,7 +39,8 @@ define void @bork() nounwind {
 ; SLOW_32-NEXT:    retl
 ;
 ; SLOW_64-LABEL: bork:
-; SLOW_64:         movq $0, 72
+; SLOW_64:       # BB#0:
+; SLOW_64-NEXT:    movq $0, 72
 ; SLOW_64-NEXT:    movq $0, 64
 ; SLOW_64-NEXT:    movq $0, 56
 ; SLOW_64-NEXT:    movq $0, 48

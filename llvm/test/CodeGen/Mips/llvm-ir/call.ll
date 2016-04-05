@@ -1,18 +1,18 @@
 ; Test the 'call' instruction and the tailcall variant.
 
 ; FIXME: We should remove the need for -enable-mips-tail-calls
-; RUN: llc -march=mips   -mcpu=mips32   -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=O32
-; RUN: llc -march=mips   -mcpu=mips32r2 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=O32
-; RUN: llc -march=mips   -mcpu=mips32r3 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=O32
-; RUN: llc -march=mips   -mcpu=mips32r5 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=O32
-; RUN: llc -march=mips   -mcpu=mips32r6 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=O32
-; RUN: llc -march=mips   -mcpu=mips32r6 -mattr=+fp64,+nooddspreg -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=O32
-; RUN: llc -march=mips64 -mcpu=mips4    -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=N64
-; RUN: llc -march=mips64 -mcpu=mips64   -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=N64
-; RUN: llc -march=mips64 -mcpu=mips64r2 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=N64
-; RUN: llc -march=mips64 -mcpu=mips64r3 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=N64
-; RUN: llc -march=mips64 -mcpu=mips64r5 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=N64
-; RUN: llc -march=mips64 -mcpu=mips64r6 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=N64
+; RUN: llc -march=mips   -mcpu=mips32 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=O32 -check-prefix=NOT-R6C
+; RUN: llc -march=mips   -mcpu=mips32r2 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=O32 -check-prefix=NOT-R6C
+; RUN: llc -march=mips   -mcpu=mips32r3 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=O32 -check-prefix=NOT-R6C
+; RUN: llc -march=mips   -mcpu=mips32r5 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=O32 -check-prefix=NOT-R6C
+; RUN: llc -march=mips   -mcpu=mips32r6 -disable-mips-delay-filler -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=O32 -check-prefix=R6C
+; RUN: llc -march=mips   -mcpu=mips32r6 -mattr=+fp64,+nooddspreg -disable-mips-delay-filler -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=O32 -check-prefix=R6C
+; RUN: llc -march=mips64 -mcpu=mips4    -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=N64 -check-prefix=NOT-R6C
+; RUN: llc -march=mips64 -mcpu=mips64   -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=N64 -check-prefix=NOT-R6C
+; RUN: llc -march=mips64 -mcpu=mips64r2 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=N64 -check-prefix=NOT-R6C
+; RUN: llc -march=mips64 -mcpu=mips64r3 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=N64 -check-prefix=NOT-R6C
+; RUN: llc -march=mips64 -mcpu=mips64r5 -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=N64 -check-prefix=NOT-R6C
+; RUN: llc -march=mips64 -mcpu=mips64r6 -disable-mips-delay-filler -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=ALL -check-prefix=N64 -check-prefix=R6C
 
 declare void @extern_void_void()
 declare i32 @extern_i32_void()
@@ -25,7 +25,8 @@ define i32 @call_void_void() {
 
 ; N64:           ld $[[TGT:[0-9]+]], %call16(extern_void_void)($gp)
 
-; ALL:           jalr $[[TGT]]
+; NOT-R6C:       jalr $[[TGT]]
+; R6C:           jialc $[[TGT]], 0
 
   call void @extern_void_void()
   ret i32 0
@@ -38,7 +39,8 @@ define i32 @call_i32_void() {
 
 ; N64:           ld $[[TGT:[0-9]+]], %call16(extern_i32_void)($gp)
 
-; ALL:           jalr $[[TGT]]
+; NOT-R6C:       jalr $[[TGT]]
+; R6C:           jialc $[[TGT]], 0
 
   %1 = call i32 @extern_i32_void()
   %2 = add i32 %1, 1
@@ -55,9 +57,9 @@ define float @call_float_void() {
 
 ; N64:           ld $[[TGT:[0-9]+]], %call16(extern_float_void)($gp)
 
-; ALL:           jalr $[[TGT]]
+; NOT-R6C:       jalr $[[TGT]]
+; R6C:           jialc $[[TGT]], 0
 
-; O32:           move $gp, $[[GP]]
 
   %1 = call float @extern_float_void()
   %2 = fadd float %1, 1.0
@@ -71,8 +73,7 @@ define void @musttail_call_void_void() {
 
 ; N64:           ld $[[TGT:[0-9]+]], %call16(extern_void_void)($gp)
 
-; NOT-R6:        jr $[[TGT]]
-; R6:            r6.jr $[[TGT]]
+; ALL:           jr $[[TGT]]
 
   musttail call void @extern_void_void()
   ret void
@@ -85,8 +86,7 @@ define i32 @musttail_call_i32_void() {
 
 ; N64:           ld $[[TGT:[0-9]+]], %call16(extern_i32_void)($gp)
 
-; NOT-R6:        jr $[[TGT]]
-; R6:            r6.jr $[[TGT]]
+; ALL:           jr $[[TGT]]
 
   %1 = musttail call i32 @extern_i32_void()
   ret i32 %1
@@ -99,8 +99,7 @@ define float @musttail_call_float_void() {
 
 ; N64:           ld $[[TGT:[0-9]+]], %call16(extern_float_void)($gp)
 
-; NOT-R6:        jr $[[TGT]]
-; R6:            r6.jr $[[TGT]]
+; ALL:           jr $[[TGT]]
 
   %1 = musttail call float @extern_float_void()
   ret float %1
@@ -110,7 +109,9 @@ define i32 @indirect_call_void_void(void ()* %addr) {
 ; ALL-LABEL: indirect_call_void_void:
 
 ; ALL:           move $25, $4
-; ALL:           jalr $25
+; NOT-R6C:       jalr $25
+; R6C:           jialc $25, 0
+
 
   call void %addr()
   ret i32 0
@@ -120,7 +121,9 @@ define i32 @indirect_call_i32_void(i32 ()* %addr) {
 ; ALL-LABEL: indirect_call_i32_void:
 
 ; ALL:           move $25, $4
-; ALL:           jalr $25
+; NOT-R6C:       jalr $25
+; R6C:           jialc $25, 0
+
 
   %1 = call i32 %addr()
   %2 = add i32 %1, 1
@@ -131,7 +134,9 @@ define float @indirect_call_float_void(float ()* %addr) {
 ; ALL-LABEL: indirect_call_float_void:
 
 ; ALL:           move $25, $4
-; ALL:           jalr $25
+; NOT-R6C:       jalr $25
+; R6C:           jialc $25, 0
+
 
   %1 = call float %addr()
   %2 = fadd float %1, 1.0
@@ -178,7 +183,8 @@ define hidden void @thunk_undef_double(i32 %this, double %volume) unnamed_addr a
 ; ALL-LABEL: thunk_undef_double:
 ; O32: # implicit-def: %A2
 ; O32: # implicit-def: %A3
-; ALL: jr $25
+; ALL:        jr $25
+
   tail call void @undef_double(i32 undef, double undef) #8
   ret void
 }
@@ -190,7 +196,8 @@ define i32 @jal_only_allows_symbols() {
 ; ALL-NOT:       {{jal }}
 ; ALL:           addiu $[[TGT:[0-9]+]], $zero, 1234
 ; ALL-NOT:       {{jal }}
-; ALL:           jalr $[[TGT]]
+; NOT-R6C:       jalr $[[TGT]]
+; R6C:           jialc $[[TGT]], 0
 ; ALL-NOT:       {{jal }}
 
   call void () inttoptr (i32 1234 to void ()*)()

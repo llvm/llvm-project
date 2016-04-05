@@ -34,7 +34,7 @@ define i32 @test2(i64* %loc, i64 %conv7) {
 ; CHECK: udiv
 ; CHECK: udiv
 ; CHECK-NOT: udiv
-; CHECK-LABEL: for.body.prol
+; CHECK-LABEL: for.body
 entry:
   %rem0 = load i64, i64* %loc, align 8
   %ExpensiveComputation = udiv i64 %rem0, 42 ; <<< Extra computations are added to the trip-count expression

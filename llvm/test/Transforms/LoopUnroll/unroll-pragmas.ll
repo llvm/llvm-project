@@ -171,14 +171,14 @@ for.end:                                          ; preds = %for.body, %entry
 ; should be duplicated (original and 4x unrolled).
 ;
 ; CHECK-LABEL: @runtime_loop_with_count4(
-; CHECK: for.body.prol:
-; CHECK: store
-; CHECK-NOT: store
-; CHECK: br i1
 ; CHECK: for.body
 ; CHECK: store
 ; CHECK: store
 ; CHECK: store
+; CHECK: store
+; CHECK-NOT: store
+; CHECK: br i1
+; CHECK: for.body.epil:
 ; CHECK: store
 ; CHECK-NOT: store
 ; CHECK: br i1
@@ -287,10 +287,6 @@ for.end:                                          ; preds = %for.body
 ; (original and 8x).
 ;
 ; CHECK-LABEL: @runtime_loop_with_enable(
-; CHECK: for.body.prol:
-; CHECK: store
-; CHECK-NOT: store
-; CHECK: br i1
 ; CHECK: for.body:
 ; CHECK: store i32
 ; CHECK: store i32
@@ -301,6 +297,10 @@ for.end:                                          ; preds = %for.body
 ; CHECK: store i32
 ; CHECK: store i32
 ; CHECK-NOT: store i32
+; CHECK: br i1
+; CHECK: for.body.epil:
+; CHECK: store
+; CHECK-NOT: store
 ; CHECK: br i1
 define void @runtime_loop_with_enable(i32* nocapture %a, i32 %b) {
 entry:
@@ -328,13 +328,13 @@ for.end:                                          ; preds = %for.body, %entry
 ; should be duplicated (original and 3x unrolled).
 ;
 ; CHECK-LABEL: @runtime_loop_with_count3(
-; CHECK: for.body.prol:
-; CHECK: store
-; CHECK-NOT: store
-; CHECK: br i1
 ; CHECK: for.body
 ; CHECK: store
 ; CHECK: store
+; CHECK: store
+; CHECK-NOT: store
+; CHECK: br i1
+; CHECK: for.body.epil:
 ; CHECK: store
 ; CHECK-NOT: store
 ; CHECK: br i1

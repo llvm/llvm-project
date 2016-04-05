@@ -82,7 +82,7 @@ struct DynRegionInfo {
   /// \brief Size of each entity in the region.
   uint64_t EntSize;
 
-  template <typename Type> iterator_range<const Type *> getAsRange() const {
+  template <typename Type> ArrayRef<Type> getAsArrayRef() const {
     const Type *Start = reinterpret_cast<const Type *>(Addr);
     if (!Start)
       return {Start, Start};
@@ -215,11 +215,11 @@ private:
 
 public:
   Elf_Dyn_Range dynamic_table() const {
-    return DynamicTable.getAsRange<Elf_Dyn>();
+    return DynamicTable.getAsArrayRef<Elf_Dyn>();
   }
 
   Elf_Sym_Range dynamic_symbols() const {
-    return DynSymRegion.getAsRange<Elf_Sym>();
+    return DynSymRegion.getAsArrayRef<Elf_Sym>();
   }
 
   Elf_Rel_Range dyn_rels() const;
@@ -1349,12 +1349,12 @@ void ELFDumper<ELFT>::parseDynamicTable(
 
 template <typename ELFT>
 typename ELFDumper<ELFT>::Elf_Rel_Range ELFDumper<ELFT>::dyn_rels() const {
-  return DynRelRegion.getAsRange<Elf_Rel>();
+  return DynRelRegion.getAsArrayRef<Elf_Rel>();
 }
 
 template <typename ELFT>
 typename ELFDumper<ELFT>::Elf_Rela_Range ELFDumper<ELFT>::dyn_relas() const {
-  return DynRelaRegion.getAsRange<Elf_Rela>();
+  return DynRelaRegion.getAsArrayRef<Elf_Rela>();
 }
 
 template<class ELFT>
@@ -2906,11 +2906,11 @@ void GNUStyle<ELFT>::printDynamicRelocations(const ELFO *Obj) {
   }
   if (DynPLTRelRegion.EntSize == sizeof(Elf_Rela)) {
     printRelocHeader(OS, ELFT::Is64Bits, true);
-    for (const Elf_Rela &Rela : DynPLTRelRegion.getAsRange<Elf_Rela>())
+    for (const Elf_Rela &Rela : DynPLTRelRegion.getAsArrayRef<Elf_Rela>())
       printDynamicRelocation(Obj, Rela, true);
   } else {
     printRelocHeader(OS, ELFT::Is64Bits, false);
-    for (const Elf_Rel &Rel : DynPLTRelRegion.getAsRange<Elf_Rel>()) {
+    for (const Elf_Rel &Rel : DynPLTRelRegion.getAsArrayRef<Elf_Rel>()) {
       Elf_Rela Rela;
       Rela.r_offset = Rel.r_offset;
       Rela.r_info = Rel.r_info;
@@ -3226,10 +3226,10 @@ void LLVMStyle<ELFT>::printDynamicRelocations(const ELFO *Obj) {
       printDynamicRelocation(Obj, Rela);
     }
   if (DynPLTRelRegion.EntSize == sizeof(Elf_Rela))
-    for (const Elf_Rela &Rela : DynPLTRelRegion.getAsRange<Elf_Rela>())
+    for (const Elf_Rela &Rela : DynPLTRelRegion.getAsArrayRef<Elf_Rela>())
       printDynamicRelocation(Obj, Rela);
   else
-    for (const Elf_Rel &Rel : DynPLTRelRegion.getAsRange<Elf_Rel>()) {
+    for (const Elf_Rel &Rel : DynPLTRelRegion.getAsArrayRef<Elf_Rel>()) {
       Elf_Rela Rela;
       Rela.r_offset = Rel.r_offset;
       Rela.r_info = Rel.r_info;

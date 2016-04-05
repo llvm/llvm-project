@@ -865,9 +865,18 @@ int llvm_echo(void) {
   LLVMEnablePrettyStackTrace();
 
   LLVMModuleRef Src = llvm_load_module(false, true);
-
+  size_t Len;
+  const char *ModuleName = LLVMGetModuleIdentifier(Src, &Len);
   LLVMContextRef Ctx = LLVMContextCreate();
-  LLVMModuleRef M = LLVMModuleCreateWithNameInContext("<stdin>", Ctx);
+  LLVMModuleRef M = LLVMModuleCreateWithNameInContext(ModuleName, Ctx);
+
+  // This whole switcharound is done because the C API has no way to
+  // set the source_filename
+  LLVMSetModuleIdentifier(M, "", 0);
+  LLVMGetModuleIdentifier(M, &Len);
+  if (Len != 0)
+      report_fatal_error("LLVM{Set,Get}ModuleIdentifier failed");
+  LLVMSetModuleIdentifier(M, ModuleName, strlen(ModuleName));
 
   LLVMSetTarget(M, LLVMGetTarget(Src));
   LLVMSetModuleDataLayout(M, LLVMGetModuleDataLayout(Src));
