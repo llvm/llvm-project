@@ -3689,8 +3689,12 @@ SwiftNameAttr *Sema::mergeSwiftNameAttr(Decl *D, SourceRange Range,
       // FIXME: Warn about an incompatible override.
       return nullptr;
     }
-    Diag(Inline->getLocation(), diag::warn_attribute_ignored) << Inline;
-    Diag(Range.getBegin(), diag::note_conflicting_attribute);
+
+    if (Inline->getName() != Name && !Inline->isImplicit()) {
+      Diag(Inline->getLocation(), diag::warn_attribute_ignored) << Inline;
+      Diag(Range.getBegin(), diag::note_conflicting_attribute);
+    }
+
     D->dropAttr<SwiftNameAttr>();
   }
 
