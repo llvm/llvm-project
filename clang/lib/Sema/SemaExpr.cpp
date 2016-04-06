@@ -13814,6 +13814,9 @@ void Sema::MarkVariableReferenced(SourceLocation Loc, VarDecl *Var) {
 
 static void MarkExprReferenced(Sema &SemaRef, SourceLocation Loc,
                                Decl *D, Expr *E, bool MightBeOdrUse) {
+  if (SemaRef.isInOpenMPDeclareTargetContext())
+    SemaRef.checkDeclIsAllowedInOpenMPTarget(E, D);
+
   if (VarDecl *Var = dyn_cast<VarDecl>(D)) {
     DoMarkVarDeclReferenced(SemaRef, Loc, Var, E);
     return;

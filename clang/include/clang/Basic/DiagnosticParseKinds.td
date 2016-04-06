@@ -963,6 +963,8 @@ def err_omp_map_type_missing : Error<
   "missing map type">;
 def err_omp_declare_simd_inbranch_notinbranch : Error<
   "unexpected '%0' clause, '%1' is specified already">;
+def err_expected_end_declare_target : Error<
+  "expected '#pragma omp end declare target'">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

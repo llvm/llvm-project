@@ -617,7 +617,7 @@ public:
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
 
-  bool isPIEDefault() const override { return false; }
+  bool isPIEDefault() const override { return true; }
 
   SanitizerMask getSupportedSanitizers() const override;
   SanitizerMask getDefaultSanitizers() const override;

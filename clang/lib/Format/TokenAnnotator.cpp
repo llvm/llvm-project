@@ -1002,7 +1002,8 @@ private:
         Current.Type = TT_CastRParen;
       if (Current.MatchingParen && Current.Next &&
           !Current.Next->isBinaryOperator() &&
-          !Current.Next->isOneOf(tok::semi, tok::colon, tok::l_brace))
+          !Current.Next->isOneOf(tok::semi, tok::colon, tok::l_brace,
+                                 tok::period, tok::arrow, tok::coloncolon))
         if (FormatToken *BeforeParen = Current.MatchingParen->Previous)
           if (BeforeParen->is(tok::identifier) &&
               BeforeParen->TokenText == BeforeParen->TokenText.upper() &&

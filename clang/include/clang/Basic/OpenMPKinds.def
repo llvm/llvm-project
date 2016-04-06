@@ -160,6 +160,8 @@ OPENMP_DIRECTIVE_EXT(declare_simd, "declare simd")
 OPENMP_DIRECTIVE(taskloop)
 OPENMP_DIRECTIVE_EXT(taskloop_simd, "taskloop simd")
 OPENMP_DIRECTIVE(distribute)
+OPENMP_DIRECTIVE_EXT(declare_target, "declare target")
+OPENMP_DIRECTIVE_EXT(end_declare_target, "end declare target")
 
 // OpenMP clauses.
 OPENMP_CLAUSE(if, OMPIfClause)

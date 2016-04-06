@@ -4761,6 +4761,11 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
             D->getAttr<OMPThreadPrivateDeclAttr>()->getRange());
         break;
 
+      case UPD_DECL_MARKED_OPENMP_DECLARETARGET:
+        Record.AddSourceRange(
+            D->getAttr<OMPDeclareTargetDeclAttr>()->getRange());
+        break;
+
       case UPD_DECL_EXPORTED:
         Record.push_back(getSubmoduleID(Update.getModule()));
         break;
@@ -5886,6 +5891,14 @@ void ASTWriter::DeclarationMarkedOpenMPThreadPrivate(const Decl *D) {
     return;
 
   DeclUpdates[D].push_back(DeclUpdate(UPD_DECL_MARKED_OPENMP_THREADPRIVATE));
+}
+
+void ASTWriter::DeclarationMarkedOpenMPDeclareTarget(const Decl *D) {
+  assert(!WritingAST && "Already writing the AST!");
+  if (!D->isFromASTFile())
+    return;
+
+  DeclUpdates[D].push_back(DeclUpdate(UPD_DECL_MARKED_OPENMP_DECLARETARGET));
 }
 
 void ASTWriter::RedefinedHiddenDefinition(const NamedDecl *D, Module *M) {

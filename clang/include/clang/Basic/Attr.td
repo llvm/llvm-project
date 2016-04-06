@@ -2344,6 +2344,15 @@ def OMPDeclareSimdDecl : Attr {
   }];
 }
 
+def OMPDeclareTargetDecl : Attr {
+  let Spellings = [Pragma<"omp", "declare target">];
+  let SemaHandler = 0;
+  let Documentation = [OMPDeclareTargetDocs];
+  let AdditionalMembers = [{
+    void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {}
+  }];
+}
+
 def InternalLinkage : InheritableAttr {
   let Spellings = [GNU<"internal_linkage">, CXX11<"clang", "internal_linkage">];
   let Subjects = SubjectList<[Var, Function, CXXRecord]>;

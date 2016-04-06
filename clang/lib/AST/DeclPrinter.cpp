@@ -358,6 +358,11 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     if (Terminator)
       Out << Terminator;
     Out << "\n";
+
+    // Declare target attribute is special one, natural spelling for the pragma
+    // assumes "ending" construct so print it here.
+    if (D->hasAttr<OMPDeclareTargetDeclAttr>())
+      Out << "#pragma omp end declare target\n";
   }
 
   if (!Decls.empty())

@@ -1010,6 +1010,7 @@ void UnwrappedLineParser::parseStructuralElement() {
           // not labels.
           Style.Language != FormatStyle::LK_JavaScript) {
         if (FormatTok->Tok.is(tok::colon) && !Line->MustBeDeclaration) {
+          Line->Tokens.begin()->Tok->MustBreakBefore = true;
           parseLabel();
           return;
         }
@@ -1572,6 +1573,8 @@ void UnwrappedLineParser::parseLabel() {
     addUnwrappedLine();
   }
   Line->Level = OldLineLevel;
+  if (FormatTok->isNot(tok::l_brace))
+    parseStructuralElement();
 }
 
 void UnwrappedLineParser::parseCaseLabel() {
