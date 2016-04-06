@@ -57,7 +57,7 @@ void LivePhysRegs::stepBackward(const MachineInstr &MI) {
 
   // Add uses to the set.
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    if (!O->isReg() || !O->readsReg() || O->isUndef())
+    if (!O->isReg() || !O->readsReg())
       continue;
     unsigned Reg = O->getReg();
     if (Reg == 0)

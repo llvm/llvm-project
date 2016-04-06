@@ -9,6 +9,29 @@ The AMDGPU back-end provides ISA code generation for AMD GPUs, starting with
 the R600 family up until the current Volcanic Islands (GCN Gen 3).
 
 
+Conventions
+===========
+
+Address Spaces
+--------------
+
+The AMDGPU back-end uses the following address space mapping:
+
+   ============= ============================================
+   Address Space Memory Space
+   ============= ============================================
+   0             Private
+   1             Global
+   2             Constant
+   3             Local
+   4             Generic (Flat)
+   5             Region
+   ============= ============================================
+
+The terminology in the table, aside from the region memory space, is from the
+OpenCL standard.
+
+
 Assembler
 =========
 

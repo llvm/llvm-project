@@ -816,7 +816,7 @@ TailDuplicatePass::TailDuplicate(MachineBasicBlock *TailBB,
 
     if (RS && !TailBB->livein_empty()) {
       // Update PredBB livein.
-      RS->enterBasicBlock(PredBB);
+      RS->enterBasicBlock(*PredBB);
       if (!PredBB->empty())
         RS->forward(std::prev(PredBB->end()));
       for (const auto &LI : TailBB->liveins()) {

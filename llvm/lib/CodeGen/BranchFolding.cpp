@@ -397,7 +397,7 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
 void BranchFolder::MaintainLiveIns(MachineBasicBlock *CurMBB,
                                    MachineBasicBlock *NewMBB) {
   if (RS) {
-    RS->enterBasicBlock(CurMBB);
+    RS->enterBasicBlock(*CurMBB);
     if (!CurMBB->empty())
       RS->forward(std::prev(CurMBB->end()));
     for (unsigned int i = 1, e = TRI->getNumRegs(); i != e; i++)

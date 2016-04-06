@@ -204,7 +204,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
       // If -r is given, we do not interpret or apply relocation
       // but just copy relocation sections to output.
       if (Config->Relocatable) {
-        Sections[I] = new (Alloc) InputSection<ELFT>(this, &Sec);
+        Sections[I] = new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec);
         break;
       }
 
@@ -268,8 +268,8 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // A MIPS object file has a special section that contains register
   // usage info, which needs to be handled by the linker specially.
   if (Config->EMachine == EM_MIPS && Name == ".reginfo") {
-    MipsReginfo = new (Alloc) MipsReginfoInputSection<ELFT>(this, &Sec);
-    return MipsReginfo;
+    MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec));
+    return MipsReginfo.get();
   }
 
   // We dont need special handling of .eh_frame sections if relocatable
@@ -278,7 +278,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     return new (EHAlloc.Allocate()) EHInputSection<ELFT>(this, &Sec);
   if (shouldMerge<ELFT>(Sec))
     return new (MAlloc.Allocate()) MergeInputSection<ELFT>(this, &Sec);
-  return new (Alloc) InputSection<ELFT>(this, &Sec);
+  return new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec);
 }
 
 template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {

@@ -823,11 +823,13 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
 
 void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
     ImmutableCallSite CS, SDValue Callee, const BasicBlock *EHPadBB,
-    bool VarArgDisallowed) {
+    bool VarArgDisallowed, bool ForceVoidReturnTy) {
   StatepointLoweringInfo SI(DAG);
   unsigned ArgBeginIndex = CS.arg_begin() - CS.getInstruction()->op_begin();
-  populateCallLoweringInfo(SI.CLI, CS, ArgBeginIndex, CS.getNumArgOperands(),
-                           Callee, CS.getType(), false);
+  populateCallLoweringInfo(
+      SI.CLI, CS, ArgBeginIndex, CS.getNumArgOperands(), Callee,
+      ForceVoidReturnTy ? Type::getVoidTy(*DAG.getContext()) : CS.getType(),
+      false);
   if (!VarArgDisallowed)
     SI.CLI.IsVarArg = CS.getFunctionType()->isVarArg();
 
@@ -856,7 +858,8 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
 void SelectionDAGBuilder::LowerCallSiteWithDeoptBundle(
     ImmutableCallSite CS, SDValue Callee, const BasicBlock *EHPadBB) {
   LowerCallSiteWithDeoptBundleImpl(CS, Callee, EHPadBB,
-                                   /* VarArgDisallowed = */ false);
+                                   /* VarArgDisallowed = */ false,
+                                   /* ForceVoidReturnTy  = */ false);
 }
 
 void SelectionDAGBuilder::visitGCResult(const CallInst &CI) {
@@ -941,7 +944,18 @@ void SelectionDAGBuilder::LowerDeoptimizeCall(const CallInst *CI) {
                                          TLI.getPointerTy(DAG.getDataLayout()));
 
   // We don't lower calls to __llvm_deoptimize as varargs, but as a regular
-  // call.
+  // call.  We also do not lower the return value to any virtual register, and
+  // change the immediately following return to a trap instruction.
   LowerCallSiteWithDeoptBundleImpl(CI, Callee, /* EHPadBB = */ nullptr,
-                                   /* VarArgDisallowed = */ true);
+                                   /* VarArgDisallowed = */ true,
+                                   /* ForceVoidReturnTy = */ true);
+}
+
+void SelectionDAGBuilder::LowerDeoptimizingReturn() {
+  // We do not lower the return value from llvm.deoptimize to any virtual
+  // register, and change the immediately following return to a trap
+  // instruction.
+  if (DAG.getTarget().Options.TrapUnreachable)
+    DAG.setRoot(
+        DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, DAG.getRoot()));
 }

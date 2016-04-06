@@ -779,10 +779,12 @@ public:
                                     const BasicBlock *EHPadBB);
 
   void LowerDeoptimizeCall(const CallInst *CI);
+  void LowerDeoptimizingReturn();
 
   void LowerCallSiteWithDeoptBundleImpl(ImmutableCallSite CS, SDValue Callee,
                                         const BasicBlock *EHPadBB,
-                                        bool VarArgDisallowed);
+                                        bool VarArgDisallowed,
+                                        bool ForceVoidReturnTy);
 
 private:
   // Terminator instructions.

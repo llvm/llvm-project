@@ -14,7 +14,8 @@ define weak void @foo_weak() nounwind {
 define void @test_direct() nounwind readnone {
 ; CHECK-LABEL: test_direct:
   tail call void @foo() nounwind
-; CHECK: bl foo
+; Because of tail call optimization, it can be 'b' instruction.
+; CHECK: [[BR:b[l]?]] foo
 ; CHECK-NOT: nop
   ret void
 }

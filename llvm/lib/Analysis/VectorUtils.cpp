@@ -220,6 +220,10 @@ Intrinsic::ID llvm::getIntrinsicIDForCall(CallInst *CI,
   case LibFunc::powf:
   case LibFunc::powl:
     return checkBinaryFloatSignature(*CI, Intrinsic::pow);
+  case LibFunc::sqrt:
+  case LibFunc::sqrtf:
+  case LibFunc::sqrtl:
+    return checkUnaryFloatSignature(*CI, Intrinsic::sqrt);
   }
 
   return Intrinsic::not_intrinsic;

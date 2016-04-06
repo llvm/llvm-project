@@ -245,7 +245,7 @@ static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
     return AArch64::X9;
 
   RegScavenger RS;
-  RS.enterBasicBlock(MBB);
+  RS.enterBasicBlock(*MBB);
 
   // Prefer X9 since it was historically used for the prologue scratch reg.
   if (!RS.isRegUsed(AArch64::X9))

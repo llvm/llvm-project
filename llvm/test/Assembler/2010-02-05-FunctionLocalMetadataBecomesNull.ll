@@ -22,6 +22,8 @@ define i32 @main() nounwind readonly !dbg !1 {
   ret i32 4, !dbg !DILocation(scope: !1)
 }
 
+!llvm.dbg.cu = !{!6}
+
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 !7 = !{!1}
@@ -33,7 +35,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !8 = !DIFile(filename: "/d/j/debug-test.c", directory: "/Volumes/Data/b")
-!9 = !{i32 0}
+!9 = !{}
 
 !llvm.module.flags = !{!10}
 !10 = !{i32 1, !"Debug Info Version", i32 3}

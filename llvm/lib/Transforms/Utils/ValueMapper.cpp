@@ -383,11 +383,11 @@ Value *Mapper::mapBlockAddress(const BlockAddress &BA) {
   // dummy basic block for now, and replace it once we've materialized all
   // the initializers.
   BasicBlock *BB;
-  if (F->isDeclaration()) {
-    BB = cast_or_null<BasicBlock>(mapValue(BA.getBasicBlock()));
-  } else {
+  if (F->empty()) {
     DelayedBBs.push_back(DelayedBasicBlock(BA));
     BB = DelayedBBs.back().TempBB.get();
+  } else {
+    BB = cast_or_null<BasicBlock>(mapValue(BA.getBasicBlock()));
   }
 
   return VM[&BA] = BlockAddress::get(F, BB ? BB : BA.getBasicBlock());
