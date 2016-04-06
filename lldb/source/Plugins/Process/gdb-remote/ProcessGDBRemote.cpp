@@ -2009,40 +2009,15 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
                     {
                         if (reason.compare("trace") == 0)
                         {
-                            addr_t pc = thread_sp->GetRegisterContext()->GetPC();
-                            lldb::BreakpointSiteSP bp_site_sp = thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
-
-                            // If the current pc is a breakpoint site then the StopInfo should be set to Breakpoint
-                            // Otherwise, it will be set to Trace.
-                            if (bp_site_sp && bp_site_sp->ValidForThisThread(thread_sp.get()))
-                            {
-                                thread_sp->SetStopInfo(
-                                    StopInfo::CreateStopReasonWithBreakpointSiteID(*thread_sp, bp_site_sp->GetID()));
-                            }
-                            else
-                              thread_sp->SetStopInfo (StopInfo::CreateStopReasonToTrace (*thread_sp));
+                            if (!SetThreadStopReasonIfAtBreakpoint(*thread_sp))
+                                thread_sp->SetStopInfo(StopInfo::CreateStopReasonToTrace(*thread_sp));
                             handled = true;
                         }
                         else if (reason.compare("breakpoint") == 0)
                         {
-                            addr_t pc = thread_sp->GetRegisterContext()->GetPC();
-                            lldb::BreakpointSiteSP bp_site_sp = thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
-                            if (bp_site_sp)
-                            {
-                                // If the breakpoint is for this thread, then we'll report the hit, but if it is for another thread,
-                                // we can just report no reason.  We don't need to worry about stepping over the breakpoint here, that
-                                // will be taken care of when the thread resumes and notices that there's a breakpoint under the pc.
-                                handled = true;
-                                if (bp_site_sp->ValidForThisThread (thread_sp.get()))
-                                {
-                                    thread_sp->SetStopInfo (StopInfo::CreateStopReasonWithBreakpointSiteID (*thread_sp, bp_site_sp->GetID()));
-                                }
-                                else
-                                {
-                                    StopInfoSP invalid_stop_info_sp;
-                                    thread_sp->SetStopInfo (invalid_stop_info_sp);
-                                }
-                            }
+                            if (!SetThreadStopReasonIfAtBreakpoint(*thread_sp))
+                                thread_sp->SetStopInfo(StopInfoSP());
+                            handled = true;
                         }
                         else if (reason.compare("trap") == 0)
                         {
@@ -2091,20 +2066,12 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
                     }
                     else if (!signo)
                     {
-                        addr_t pc = thread_sp->GetRegisterContext()->GetPC();
-                        lldb::BreakpointSiteSP bp_site_sp =
-                            thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
-
                         // If the current pc is a breakpoint site then the StopInfo should be set to Breakpoint
                         // even though the remote stub did not set it as such. This can happen when
                         // the thread is involuntarily interrupted (e.g. due to stops on other
                         // threads) just as it is about to execute the breakpoint instruction.
-                        if (bp_site_sp && bp_site_sp->ValidForThisThread(thread_sp.get()))
-                        {
-                            thread_sp->SetStopInfo(
-                                StopInfo::CreateStopReasonWithBreakpointSiteID(*thread_sp, bp_site_sp->GetID()));
+                        if (SetThreadStopReasonIfAtBreakpoint(*thread_sp))
                             handled = true;
-                        }
                     }
 
                     if (!handled && signo && did_exec == false)
@@ -4964,6 +4931,17 @@ ProcessGDBRemote::ModulesDidLoad (ModuleList &module_list)
     m_gdb_comm.ServeSymbolLookups(this);
 }
 
+bool
+ProcessGDBRemote::SetThreadStopReasonIfAtBreakpoint(Thread &thread)
+{
+    const addr_t pc = thread.GetRegisterContext()->GetPC();
+    lldb::BreakpointSiteSP bp_site_sp = thread.GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+    if (!bp_site_sp || !bp_site_sp->ValidForThisThread(&thread))
+        return false;
+
+    thread.SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSiteID(thread, bp_site_sp->GetID()));
+    return true;
+}
 
 class CommandObjectProcessGDBRemoteSpeedTest: public CommandObjectParsed
 {

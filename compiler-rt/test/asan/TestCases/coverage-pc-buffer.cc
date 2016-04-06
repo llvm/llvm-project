@@ -37,7 +37,7 @@ int main() {
   uintptr_t sz2 = __sanitizer_get_coverage_pc_buffer(&buf2);
   assertNotZeroPcs(buf2, sz2);
   assert(buf2 == buf);
-  assert(sz2 > sz1);
+  assert(sz2 == sz1);
 
   __sanitizer_reset_coverage();
   uintptr_t *buf3 = NULL;

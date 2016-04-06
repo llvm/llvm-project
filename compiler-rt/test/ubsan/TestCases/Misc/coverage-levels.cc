@@ -37,5 +37,5 @@ int main(int argc, char **argv) {
 // FIXME: Currently, ubsan with -fno-sanitize-recover and w/o asan will fail
 // to dump coverage.
 // CHECK1:  1 PCs written
-// CHECK2:  3 PCs written
-// CHECK3:  3 PCs written
+// CHECK2:  2 PCs written
+// CHECK3:  2 PCs written
