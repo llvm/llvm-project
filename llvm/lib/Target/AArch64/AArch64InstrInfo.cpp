@@ -22,6 +22,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
+#include <algorithm>
 
 using namespace llvm;
 
@@ -790,11 +791,20 @@ static unsigned convertFlagSettingOpcode(const MachineInstr *MI) {
   }
 }
 
-/// True when condition code could be modified on the instruction
-/// trace starting at from and ending at to.
-static bool modifiesConditionCode(MachineInstr *From, MachineInstr *To,
-                                  const bool CheckOnlyCCWrites,
-                                  const TargetRegisterInfo *TRI) {
+enum AccessKind {
+  AK_Write = 0x01,
+  AK_Read  = 0x10,
+  AK_All   = 0x11
+};
+
+/// True when condition flags are accessed (either by writing or reading)
+/// on the instruction trace starting at From and ending at To.
+///
+/// Note: If From and To are from different blocks it's assumed CC are accessed
+///       on the path.
+static bool areCFlagsAccessedBetweenInstrs(MachineInstr *From, MachineInstr *To,
+                                const TargetRegisterInfo *TRI,
+                                const AccessKind AccessToCheck = AK_All) {
   // We iterate backward starting \p To until we hit \p From
   MachineBasicBlock::iterator I = To, E = From, B = To->getParent()->begin();
 
@@ -802,36 +812,47 @@ static bool modifiesConditionCode(MachineInstr *From, MachineInstr *To,
   if (I == B)
     return true;
 
-  // Check whether the definition of SrcReg is in the same basic block as
-  // Compare. If not, assume the condition code gets modified on some path.
+  // Check whether the instructions are in the same basic block
+  // If not, assume the condition flags might get modified somewhere.
   if (To->getParent() != From->getParent())
     return true;
 
-  // Check that NZCV isn't set on the trace.
+  // From must be above To.
+  assert(std::find_if(MachineBasicBlock::reverse_iterator(To),
+                   To->getParent()->rend(),
+                   [From](MachineInstr &MI) {
+                     return &MI == From;
+                   }) != To->getParent()->rend());
+
   for (--I; I != E; --I) {
     const MachineInstr &Instr = *I;
 
-    if (Instr.modifiesRegister(AArch64::NZCV, TRI) ||
-        (!CheckOnlyCCWrites && Instr.readsRegister(AArch64::NZCV, TRI)))
-      // This instruction modifies or uses NZCV after the one we want to
-      // change.
-      return true;
-    if (I == B)
-      // We currently don't allow the instruction trace to cross basic
-      // block boundaries
+    if ( ((AccessToCheck & AK_Write) && Instr.modifiesRegister(AArch64::NZCV, TRI)) ||
+         ((AccessToCheck & AK_Read)  && Instr.readsRegister(AArch64::NZCV, TRI)))
       return true;
   }
   return false;
 }
-/// optimizeCompareInstr - Convert the instruction supplying the argument to the
-/// comparison into one that sets the zero bit in the flags register.
+
+/// Try to optimize a compare instruction. A compare instruction is an
+/// instruction which produces AArch64::NZCV. It can be truly compare instruction
+/// when there are no uses of its destination register.
+///
+/// The following steps are tried in order:
+/// 1. Convert CmpInstr into an unconditional version.
+/// 2. Remove CmpInstr if above there is an instruction producing a needed
+///    condition code or an instruction which can be converted into such an instruction.
+///    Only comparison with zero is supported.
 bool AArch64InstrInfo::optimizeCompareInstr(
     MachineInstr *CmpInstr, unsigned SrcReg, unsigned SrcReg2, int CmpMask,
     int CmpValue, const MachineRegisterInfo *MRI) const {
+  assert(CmpInstr);
+  assert(CmpInstr->getParent());
+  assert(MRI);
 
   // Replace SUBSWrr with SUBWrr if NZCV is not used.
-  int Cmp_NZCV = CmpInstr->findRegisterDefOperandIdx(AArch64::NZCV, true);
-  if (Cmp_NZCV != -1) {
+  int DeadNZCVIdx = CmpInstr->findRegisterDefOperandIdx(AArch64::NZCV, true);
+  if (DeadNZCVIdx != -1) {
     if (CmpInstr->definesRegister(AArch64::WZR) ||
         CmpInstr->definesRegister(AArch64::XZR)) {
       CmpInstr->eraseFromParent();
@@ -843,7 +864,7 @@ bool AArch64InstrInfo::optimizeCompareInstr(
       return false;
     const MCInstrDesc &MCID = get(NewOpc);
     CmpInstr->setDesc(MCID);
-    CmpInstr->RemoveOperand(Cmp_NZCV);
+    CmpInstr->RemoveOperand(DeadNZCVIdx);
     bool succeeded = UpdateOperandRegClass(CmpInstr);
     (void)succeeded;
     assert(succeeded && "Some operands reg class are incompatible!");
@@ -861,20 +882,18 @@ bool AArch64InstrInfo::optimizeCompareInstr(
   if (!MRI->use_nodbg_empty(CmpInstr->getOperand(0).getReg()))
     return false;
 
-  // Get the unique definition of SrcReg.
-  MachineInstr *MI = MRI->getUniqueVRegDef(SrcReg);
-  if (!MI)
-    return false;
+  return substituteCmpInstr(CmpInstr, SrcReg, MRI);
+}
 
-  bool CheckOnlyCCWrites = false;
-  const TargetRegisterInfo *TRI = &getRegisterInfo();
-  if (modifiesConditionCode(MI, CmpInstr, CheckOnlyCCWrites, TRI))
-    return false;
-
-  unsigned NewOpc = MI->getOpcode();
-  switch (MI->getOpcode()) {
+/// Get opcode of S version of Instr.
+/// If Instr is S version its opcode is returned.
+/// AArch64::INSTRUCTION_LIST_END is returned if Instr does not have S version
+/// or we are not interested in it.
+static unsigned sForm(MachineInstr &Instr) {
+  switch (Instr.getOpcode()) {
   default:
-    return false;
+    return AArch64::INSTRUCTION_LIST_END;
+
   case AArch64::ADDSWrr:
   case AArch64::ADDSWri:
   case AArch64::ADDSXrr:
@@ -883,22 +902,50 @@ bool AArch64InstrInfo::optimizeCompareInstr(
   case AArch64::SUBSWri:
   case AArch64::SUBSXrr:
   case AArch64::SUBSXri:
-    break;
-  case AArch64::ADDWrr:    NewOpc = AArch64::ADDSWrr; break;
-  case AArch64::ADDWri:    NewOpc = AArch64::ADDSWri; break;
-  case AArch64::ADDXrr:    NewOpc = AArch64::ADDSXrr; break;
-  case AArch64::ADDXri:    NewOpc = AArch64::ADDSXri; break;
-  case AArch64::ADCWr:     NewOpc = AArch64::ADCSWr; break;
-  case AArch64::ADCXr:     NewOpc = AArch64::ADCSXr; break;
-  case AArch64::SUBWrr:    NewOpc = AArch64::SUBSWrr; break;
-  case AArch64::SUBWri:    NewOpc = AArch64::SUBSWri; break;
-  case AArch64::SUBXrr:    NewOpc = AArch64::SUBSXrr; break;
-  case AArch64::SUBXri:    NewOpc = AArch64::SUBSXri; break;
-  case AArch64::SBCWr:     NewOpc = AArch64::SBCSWr; break;
-  case AArch64::SBCXr:     NewOpc = AArch64::SBCSXr; break;
-  case AArch64::ANDWri:    NewOpc = AArch64::ANDSWri; break;
-  case AArch64::ANDXri:    NewOpc = AArch64::ANDSXri; break;
+    return Instr.getOpcode();;
+
+  case AArch64::ADDWrr:    return AArch64::ADDSWrr;
+  case AArch64::ADDWri:    return AArch64::ADDSWri;
+  case AArch64::ADDXrr:    return AArch64::ADDSXrr;
+  case AArch64::ADDXri:    return AArch64::ADDSXri;
+  case AArch64::ADCWr:     return AArch64::ADCSWr;
+  case AArch64::ADCXr:     return AArch64::ADCSXr;
+  case AArch64::SUBWrr:    return AArch64::SUBSWrr;
+  case AArch64::SUBWri:    return AArch64::SUBSWri;
+  case AArch64::SUBXrr:    return AArch64::SUBSXrr;
+  case AArch64::SUBXri:    return AArch64::SUBSXri;
+  case AArch64::SBCWr:     return AArch64::SBCSWr;
+  case AArch64::SBCXr:     return AArch64::SBCSXr;
+  case AArch64::ANDWri:    return AArch64::ANDSWri;
+  case AArch64::ANDXri:    return AArch64::ANDSXri;
   }
+}
+
+/// Check if AArch64::NZCV should be alive in successors of MBB.
+static bool areCFlagsAliveInSuccessors(MachineBasicBlock *MBB) {
+  for (auto *BB : MBB->successors())
+    if (BB->isLiveIn(AArch64::NZCV))
+      return true;
+  return false;
+}
+
+/// Substitute CmpInstr with another instruction which produces a needed
+/// condition code.
+/// Return true on success.
+bool AArch64InstrInfo::substituteCmpInstr(MachineInstr *CmpInstr,
+    unsigned SrcReg, const MachineRegisterInfo *MRI) const {
+  // Get the unique definition of SrcReg.
+  MachineInstr *MI = MRI->getUniqueVRegDef(SrcReg);
+  if (!MI)
+    return false;
+
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  if (areCFlagsAccessedBetweenInstrs(MI, CmpInstr, TRI))
+    return false;
+
+  unsigned NewOpc = sForm(*MI);
+  if (NewOpc == AArch64::INSTRUCTION_LIST_END)
+    return false;
 
   // Scan forward for the use of NZCV.
   // When checking against MI: if it's a conditional code requires
@@ -966,12 +1013,8 @@ bool AArch64InstrInfo::optimizeCompareInstr(
 
   // If NZCV is not killed nor re-defined, we should check whether it is
   // live-out. If it is live-out, do not optimize.
-  if (!IsSafe) {
-    MachineBasicBlock *ParentBlock = CmpInstr->getParent();
-    for (auto *MBB : ParentBlock->successors())
-      if (MBB->isLiveIn(AArch64::NZCV))
-        return false;
-  }
+  if (!IsSafe && areCFlagsAliveInSuccessors(CmpInstr->getParent()))
+    return false;
 
   // Update the instruction to set NZCV.
   MI->setDesc(get(NewOpc));
@@ -3201,11 +3244,10 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr *MI) const {
       return false;
 
     AArch64CC::CondCode CC = (AArch64CC::CondCode)DefMI->getOperand(3).getImm();
-    bool CheckOnlyCCWrites = true;
     // Convert only when the condition code is not modified between
     // the CSINC and the branch. The CC may be used by other
     // instructions in between.
-    if (modifiesConditionCode(DefMI, MI, CheckOnlyCCWrites, &getRegisterInfo()))
+    if (areCFlagsAccessedBetweenInstrs(DefMI, MI, &getRegisterInfo(), AK_Write))
       return false;
     MachineBasicBlock &RefToMBB = *MBB;
     MachineBasicBlock *TBB = MI->getOperand(TargetBBInMI).getMBB();

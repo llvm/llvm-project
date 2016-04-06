@@ -1,29 +1,67 @@
-// RUN: %check_clang_tidy %s misc-misplaced-widening-cast %t
+// RUN: %check_clang_tidy %s misc-misplaced-widening-cast %t -- -config="{CheckOptions: [{key: misc-misplaced-widening-cast.CheckImplicitCasts, value: 1}]}" --
+
+void func(long arg) {}
 
 void assign(int a, int b) {
   long l;
 
   l = a * b;
-  l = (long)(a * b);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: either cast from 'int' to 'long' is ineffective, or there is loss of precision before the conversion [misc-misplaced-widening-cast]
+  l = (long)(a * b);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: either cast from 'int' to 'long'
   l = (long)a * b;
 
+  l = a << 8;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: either cast from 'int' to 'long'
   l = (long)(a << 8);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: either cast from 'int' to 'long'
   l = (long)b << 8;
 
   l = static_cast<long>(a * b);
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: either cast from 'int' to 'long' is ineffective, or there is loss of precision before the conversion [misc-misplaced-widening-cast]
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: either cast from 'int' to 'long'
+}
+
+void compare(int a, int b, long c) {
+  bool l;
+
+  l = a * b == c;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: either cast from 'int' to 'long'
+  l = c == a * b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: either cast from 'int' to 'long'
+  l = (long)(a * b) == c;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: either cast from 'int' to 'long'
+  l = c == (long)(a * b);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: either cast from 'int' to 'long'
+  l = (long)a * b == c;
+  l = c == (long)a * b;
 }
 
 void init(unsigned int n) {
-  long l = (long)(n << 8);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: either cast from 'unsigned int'
+  long l1 = n << 8;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: either cast from 'unsigned int' to 'long'
+  long l2 = (long)(n << 8);
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: either cast from 'unsigned int' to 'long'
+  long l3 = (long)n << 8;
+}
+
+void call(unsigned int n) {
+  func(n << 8);
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: either cast from 'unsigned int' to 'long'
+  func((long)(n << 8));
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: either cast from 'unsigned int' to 'long'
+  func((long)n << 8);
 }
 
 long ret(int a) {
-  return (long)(a * 1000);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: either cast from 'int' to 'long'
+  if (a < 0) {
+    return a * 1000;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: either cast from 'int' to 'long'
+  } else if (a > 0) {
+    return (long)(a * 1000);
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: either cast from 'int' to 'long'
+  } else {
+    return (long)a * 1000;
+  }
 }
 
 void dontwarn1(unsigned char a, int i, unsigned char *p) {
@@ -33,9 +71,9 @@ void dontwarn1(unsigned char a, int i, unsigned char *p) {
   // The result is a 12 bit value, there is no truncation in the implicit cast.
   l = (long)(a << 4);
   // The result is a 3 bit value, there is no truncation in the implicit cast.
-  l = (long)((i%5)+1);
+  l = (long)((i % 5) + 1);
   // The result is a 16 bit value, there is no truncation in the implicit cast.
-  l = (long)(((*p)<<8) + *(p+1));
+  l = (long)(((*p) << 8) + *(p + 1));
 }
 
 template <class T> struct DontWarn2 {

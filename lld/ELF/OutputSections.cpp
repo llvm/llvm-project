@@ -1501,7 +1501,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
       return Out<ELFT>::Bss;
     break;
   case SymbolBody::UndefinedElfKind:
-  case SymbolBody::UndefinedKind:
+  case SymbolBody::UndefinedBitcodeKind:
   case SymbolBody::LazyKind:
     break;
   case SymbolBody::DefinedBitcodeKind:
