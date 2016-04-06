@@ -425,9 +425,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, unsigned LiveMaskReg,
 }
 
 bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
-  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-
-  if (MFI->getShaderType() != ShaderType::PIXEL)
+  if (MF.getFunction()->getCallingConv() != CallingConv::AMDGPU_PS)
     return false;
 
   Instructions.clear();

@@ -12,7 +12,7 @@ target triple = "amdgcn--"
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 target triple = "amdgcn--"
 
-define <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main([9 x <16 x i8>] addrspace(2)* byval, [17 x <16 x i8>] addrspace(2)* byval, [17 x <8 x i32>] addrspace(2)* byval, i32 addrspace(2)* byval, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, i32, i32, float, i32) #0 {
+define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main([9 x <16 x i8>] addrspace(2)* byval, [17 x <16 x i8>] addrspace(2)* byval, [17 x <8 x i32>] addrspace(2)* byval, i32 addrspace(2)* byval, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, i32, i32, float, i32) #0 {
 main_body:
   %p83 = call float @llvm.SI.fs.interp(i32 1, i32 0, i32 %5, <2 x i32> %7)
   %p87 = fmul float undef, %p83
@@ -53,5 +53,5 @@ declare float @llvm.sqrt.f32(float) #1
 ; Function Attrs: nounwind readnone
 declare float @llvm.floor.f32(float) #1
 
-attributes #0 = { "InitialPSInputAddr"="36983" "ShaderType"="0" }
+attributes #0 = { "InitialPSInputAddr"="36983" }
 attributes #1 = { nounwind readnone }

@@ -6,7 +6,7 @@
 ;GCN: s_mov_b32 m0, s{{[0-9]+}}
 ;GCN: v_interp_p1_f32
 ;GCN: v_interp_p2_f32
-define void @v_interp(<16 x i8> addrspace(2)* inreg, <16 x i8> addrspace(2)* inreg, <32 x i8> addrspace(2)* inreg, i32 inreg, <2 x i32>) #0 {
+define amdgpu_ps void @v_interp(<16 x i8> addrspace(2)* inreg, <16 x i8> addrspace(2)* inreg, <32 x i8> addrspace(2)* inreg, i32 inreg, <2 x i32>) {
 main_body:
   %i = extractelement <2 x i32> %4, i32 0
   %j = extractelement <2 x i32> %4, i32 1
@@ -19,12 +19,11 @@ main_body:
 }
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.amdgcn.interp.p1(i32, i32, i32, i32) #1
+declare float @llvm.amdgcn.interp.p1(i32, i32, i32, i32) #0
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.amdgcn.interp.p2(float, i32, i32, i32, i32) #1
+declare float @llvm.amdgcn.interp.p2(float, i32, i32, i32, i32) #0
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { "ShaderType"="0" }
-attributes #1 = { nounwind readnone }
+attributes #0 = { nounwind readnone }

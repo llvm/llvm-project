@@ -62,7 +62,7 @@ bool SITypeRewriter::doInitialization(Module &M) {
 }
 
 bool SITypeRewriter::runOnFunction(Function &F) {
-  if (AMDGPU::getShaderType(F) == ShaderType::COMPUTE)
+  if (!AMDGPU::isShader(F.getCallingConv()))
     return false;
 
   visit(F);

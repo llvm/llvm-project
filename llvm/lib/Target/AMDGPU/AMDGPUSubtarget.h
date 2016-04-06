@@ -305,7 +305,7 @@ public:
   bool isAmdHsaOS() const {
     return TargetTriple.getOS() == Triple::AMDHSA;
   }
-  bool isVGPRSpillingEnabled(const SIMachineFunctionInfo *MFI) const;
+  bool isVGPRSpillingEnabled(const Function& F) const;
 
   bool isXNACKEnabled() const {
     return EnableXNACK;

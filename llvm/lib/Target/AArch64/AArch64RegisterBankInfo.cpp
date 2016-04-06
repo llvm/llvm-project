@@ -21,16 +21,9 @@
 using namespace llvm;
 
 #ifndef LLVM_BUILD_GLOBAL_ISEL
-AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
-    : RegisterBankInfo(0) {
-  llvm_unreachable("This API shouldn't be useful outside of GlobalISel");
-}
+#error "You shouldn't build this"
+#endif
 
-unsigned AArch64RegisterBankInfo::copyCost(const RegisterBank &A,
-                                           const RegisterBank &B) const {
-  return 0;
-}
-#else
 AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
     : RegisterBankInfo(AArch64::NumRegisterBanks) {
   // Initialize the GPR bank.
@@ -70,4 +63,3 @@ unsigned AArch64RegisterBankInfo::copyCost(const RegisterBank &A,
   // * build_sequence cost.
   return 0;
 }
-#endif

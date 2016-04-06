@@ -1503,7 +1503,7 @@ static bool tryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
   // into multiple malloc'd arrays, one for each field.  This is basically
   // SRoA for malloc'd memory.
 
-  if (Ordering != NotAtomic)
+  if (Ordering != AtomicOrdering::NotAtomic)
     return false;
 
   // If this is an allocation of a fixed size array of structs, analyze as a
@@ -1982,7 +1982,7 @@ bool GlobalOpt::processInternalGlobal(GlobalVariable *GV,
     // Otherwise, if the global was not a boolean, we can shrink it to be a
     // boolean.
     if (Constant *SOVConstant = dyn_cast<Constant>(GS.StoredOnceValue)) {
-      if (GS.Ordering == NotAtomic) {
+      if (GS.Ordering == AtomicOrdering::NotAtomic) {
         if (TryToShrinkGlobalToBoolean(GV, SOVConstant)) {
           ++NumShrunkToBool;
           return true;
@@ -2581,4 +2581,3 @@ bool GlobalOpt::runOnModule(Module &M) {
 
   return Changed;
 }
-

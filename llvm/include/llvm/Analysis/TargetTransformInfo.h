@@ -260,6 +260,10 @@ public:
     // (set to UINT_MAX to disable). This does not apply in cases where the
     // loop is being fully unrolled.
     unsigned MaxCount;
+    /// Set the maximum unrolling factor for full unrolling. Like MaxCount, but
+    /// applies even if full unrolling is selected. This allows a target to fall
+    /// back to Partial unrolling if full unrolling is above FullUnrollMaxCount.
+    unsigned FullUnrollMaxCount;
     /// Allow partial unrolling (unrolling of loops to expand the size of the
     /// loop body, not only to eliminate small constant-trip-count loops).
     bool Partial;

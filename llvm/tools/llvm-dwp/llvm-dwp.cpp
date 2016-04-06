@@ -393,7 +393,7 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   for (const auto &Input : Inputs) {
     auto ErrOrObj = object::ObjectFile::createObjectFile(Input);
     if (!ErrOrObj)
-      return ErrOrObj.getError();
+      return errorToErrorCode(ErrOrObj.takeError());
 
     UnitIndexEntry CurEntry = {};
 

@@ -5,7 +5,7 @@
 ;SI: v_mbcnt_hi_u32_b32_e32
 ;VI: v_mbcnt_hi_u32_b32_e64
 
-define void @main(<16 x i8> addrspace(2)* inreg, <16 x i8> addrspace(2)* inreg, <32 x i8> addrspace(2)* inreg, i32 inreg) "ShaderType"="0" {
+define amdgpu_ps void @main(<16 x i8> addrspace(2)* inreg, <16 x i8> addrspace(2)* inreg, <32 x i8> addrspace(2)* inreg, i32 inreg) {
 main_body:
   %4 = call i32 @llvm.SI.tid()
   %5 = bitcast i32 %4 to float

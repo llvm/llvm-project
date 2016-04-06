@@ -1497,9 +1497,9 @@ void llvm::ParseInputMachO(StringRef Filename) {
   }
 
   // Attempt to open the binary.
-  ErrorOr<OwningBinary<Binary>> BinaryOrErr = createBinary(Filename);
-  if (std::error_code EC = BinaryOrErr.getError())
-    report_error(Filename, EC);
+  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(Filename);
+  if (!BinaryOrErr)
+    report_error(Filename, BinaryOrErr.takeError());
   Binary &Bin = *BinaryOrErr.get().getBinary();
 
   if (Archive *A = dyn_cast<Archive>(&Bin)) {

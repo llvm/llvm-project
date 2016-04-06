@@ -124,10 +124,13 @@ private:
     if (!ObjBuffer)
       return object::OwningBinary<object::ObjectFile>();
 
-    ErrorOr<std::unique_ptr<object::ObjectFile>> Obj =
+    Expected<std::unique_ptr<object::ObjectFile>> Obj =
         object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef());
-    if (!Obj)
+    if (!Obj) {
+      // TODO: Actually report errors helpfully.
+      consumeError(Obj.takeError());
       return object::OwningBinary<object::ObjectFile>();
+    }
 
     return object::OwningBinary<object::ObjectFile>(std::move(*Obj),
                                                     std::move(ObjBuffer));

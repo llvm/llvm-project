@@ -56,7 +56,7 @@ entry:
 ; CHECK_WITH_CHECK: ret void
 ; CHECK_WITH_CHECK-LABEL: define internal void @sancov.module_ctor
 ; CHECK_WITH_CHECK-NOT: ret
-; CHECK_WITH_CHECK: call void @__sanitizer_cov_module_init({{.*}}, i64 4,
+; CHECK_WITH_CHECK: call void @__sanitizer_cov_module_init({{.*}}, i64 3,
 ; CHECK_WITH_CHECK: ret
 
 ; CHECK2-LABEL: define void @foo
@@ -64,18 +64,16 @@ entry:
 ; CHECK2: call void asm sideeffect "", ""()
 ; CHECK2: call void @__sanitizer_cov
 ; CHECK2: call void asm sideeffect "", ""()
-; CHECK2: call void @__sanitizer_cov
 ; CHECK2: call void asm sideeffect "", ""()
 ; CHECK2-NOT: call void @__sanitizer_cov
 ; CHECK2: ret void
 
 ; CHECK2-LABEL: define internal void @sancov.module_ctor
 ; CHECK2-NOT: ret
-; CHECK2: call void @__sanitizer_cov_module_init({{.*}}, i64 4,
+; CHECK2: call void @__sanitizer_cov_module_init({{.*}}, i64 3,
 ; CHECK2: ret
 
 ; CHECK3-LABEL: define void @foo
-; CHECK3: call void @__sanitizer_cov
 ; CHECK3: call void @__sanitizer_cov
 ; CHECK3: call void @__sanitizer_cov
 ; CHECK3-NOT: ret void

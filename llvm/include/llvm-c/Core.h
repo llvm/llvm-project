@@ -248,6 +248,37 @@ typedef enum {
 } LLVMCallConv;
 
 typedef enum {
+  LLVMArgumentValueKind,
+  LLVMBasicBlockValueKind,
+  LLVMMemoryUseValueKind,
+  LLVMMemoryDefValueKind,
+  LLVMMemoryPhiValueKind,
+
+  LLVMFunctionValueKind,
+  LLVMGlobalAliasValueKind,
+  LLVMGlobalVariableValueKind,
+  LLVMBlockAddressValueKind,
+  LLVMConstantExprValueKind,
+  LLVMConstantArrayValueKind,
+  LLVMConstantStructValueKind,
+  LLVMConstantVectorValueKind,
+
+  LLVMUndefValueValueKind,
+  LLVMConstantAggregateZeroValueKind,
+  LLVMConstantDataArrayValueKind,
+  LLVMConstantDataVectorValueKind,
+  LLVMConstantIntValueKind,
+  LLVMConstantFPValueKind,
+  LLVMConstantPointerNullValueKind,
+  LLVMConstantTokenNoneValueKind,
+
+  LLVMMetadataAsValueValueKind,
+  LLVMInlineAsmValueKind,
+
+  LLVMInstructionValueKind,
+} LLVMValueKind;
+
+typedef enum {
   LLVMIntEQ = 32, /**< equal */
   LLVMIntNE,      /**< not equal */
   LLVMIntUGT,     /**< unsigned greater than */
@@ -1189,6 +1220,13 @@ LLVMTypeRef LLVMX86MMXType(void);
  * @see llvm::Value::getType()
  */
 LLVMTypeRef LLVMTypeOf(LLVMValueRef Val);
+
+/**
+ * Obtain the enumerated type of a Value instance.
+ *
+ * @see llvm::Value::getValueID()
+ */
+LLVMValueKind LLVMGetValueKind(LLVMValueRef Val);
 
 /**
  * Obtain the string name of a value.

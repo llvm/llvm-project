@@ -1,2 +1,2 @@
 RUN: not llvm-objdump -macho -s %p/Inputs/malformed-macho.bin 2>&1 | FileCheck %s -check-prefix=MALFORMED
-MALFORMED: '{{.*}}': The file was not recognized as a valid object file
+MALFORMED: The file was not recognized as a valid object file

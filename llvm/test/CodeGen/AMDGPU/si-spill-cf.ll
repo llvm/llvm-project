@@ -6,7 +6,7 @@
 
 ; SI: s_or_b64 exec, exec, [[SAVED:s\[[0-9]+:[0-9]+\]|[a-z]+]]
 ; SI-NOT: v_readlane_b32 [[SAVED]]
-define void @main() #1 {
+define amdgpu_ps void @main() {
 main_body:
   %0 = call float @llvm.SI.load.const(<16 x i8> undef, i32 16)
   %1 = call float @llvm.SI.load.const(<16 x i8> undef, i32 32)
@@ -510,5 +510,5 @@ declare float @llvm.maxnum.f32(float, float) #2
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
 attributes #0 = { alwaysinline nounwind readnone }
-attributes #1 = { "ShaderType"="0" "enable-no-nans-fp-math"="true" }
+attributes #1 = { "enable-no-nans-fp-math"="true" }
 attributes #2 = { nounwind readnone }

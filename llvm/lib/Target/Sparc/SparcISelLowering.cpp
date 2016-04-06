@@ -2929,12 +2929,12 @@ static SDValue LowerUMULO_SMULO(SDValue Op, SelectionDAG &DAG,
 }
 
 static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
-  // Monotonic load/stores are legal.
-  if (cast<AtomicSDNode>(Op)->getOrdering() <= Monotonic)
-    return Op;
-
-  // Otherwise, expand with a fence.
+  if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getOrdering()))
+  // Expand with a fence.
   return SDValue();
+
+  // Monotonic load/stores are legal.
+  return Op;
 }
 
 SDValue SparcTargetLowering::

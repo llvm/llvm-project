@@ -5,7 +5,7 @@
 ;CHECK-LABEL: {{^}}test1:
 ;CHECK: s_cbranch_execz
 ;CHECK: %loop_body
-define void @test1(<8 x i32> inreg %rsrc, <2 x i32> %addr.base, i32 %y, i32 %p) #0 {
+define amdgpu_ps void @test1(<8 x i32> inreg %rsrc, <2 x i32> %addr.base, i32 %y, i32 %p) {
 main_body:
   %cc = icmp eq i32 %p, 0
   br i1 %cc, label %out, label %loop_body
@@ -58,5 +58,4 @@ done1:
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
-attributes #0 = { "ShaderType"="0" }
 attributes #1 = { nounwind readonly }

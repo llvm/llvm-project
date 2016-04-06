@@ -169,8 +169,7 @@ void SILowerControlFlow::SkipIfDead(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
 
-  if (MBB.getParent()->getInfo<SIMachineFunctionInfo>()->getShaderType() !=
-      ShaderType::PIXEL ||
+  if (MBB.getParent()->getFunction()->getCallingConv() != CallingConv::AMDGPU_PS ||
       !shouldSkip(&MBB, &MBB.getParent()->back()))
     return;
 
@@ -328,11 +327,10 @@ void SILowerControlFlow::Kill(MachineInstr &MI) {
   const MachineOperand &Op = MI.getOperand(0);
 
 #ifndef NDEBUG
-  const SIMachineFunctionInfo *MFI
-    = MBB.getParent()->getInfo<SIMachineFunctionInfo>();
+  CallingConv::ID CallConv = MBB.getParent()->getFunction()->getCallingConv();
   // Kill is only allowed in pixel / geometry shaders.
-  assert(MFI->getShaderType() == ShaderType::PIXEL ||
-         MFI->getShaderType() == ShaderType::GEOMETRY);
+  assert(CallConv == CallingConv::AMDGPU_PS ||
+         CallConv == CallingConv::AMDGPU_GS);
 #endif
 
   // Clear this thread from the exec mask if the operand is negative

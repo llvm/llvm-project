@@ -7,7 +7,7 @@ declare void @llvm.AMDGPU.barrier.local() nounwind convergent
 
 
 ; SI-LABEL: {{^}}main(
-define void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) #0 {
+define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0
   %1 = extractelement <4 x float> %reg1, i32 2
@@ -159,5 +159,3 @@ ENDIF19:                                          ; preds = %ENDIF16
   %115 = fadd float %temp4.0, 1.000000e+00
   br label %Flow1
 }
-
-attributes #0 = { "ShaderType"="1" }

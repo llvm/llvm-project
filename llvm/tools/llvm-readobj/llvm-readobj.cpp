@@ -429,9 +429,9 @@ static void dumpMachOUniversalBinary(const MachOUniversalBinary *UBinary) {
 static void dumpInput(StringRef File) {
 
   // Attempt to open the binary.
-  ErrorOr<OwningBinary<Binary>> BinaryOrErr = createBinary(File);
-  if (std::error_code EC = BinaryOrErr.getError())
-    reportError(File, EC);
+  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(File);
+  if (!BinaryOrErr)
+    reportError(File, errorToErrorCode(BinaryOrErr.takeError()));
   Binary &Binary = *BinaryOrErr.get().getBinary();
 
   if (Archive *Arc = dyn_cast<Archive>(&Binary))

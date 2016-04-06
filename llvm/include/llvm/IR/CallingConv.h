@@ -178,6 +178,18 @@ namespace CallingConv {
     /// which have an "optimized" convention to preserve registers.
     AVR_BUILTIN = 86,
 
+    /// Calling convention used for Mesa vertex shaders.
+    AMDGPU_VS = 87,
+
+    /// Calling convention used for Mesa geometry shaders.
+    AMDGPU_GS = 88,
+
+    /// Calling convention used for Mesa pixel shaders.
+    AMDGPU_PS = 89,
+
+    /// Calling convention used for Mesa compute shaders.
+    AMDGPU_CS = 90,
+
     /// The highest possible calling convention ID. Must be some 2^k - 1.
     MaxID = 1023
   };

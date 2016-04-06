@@ -1091,13 +1091,14 @@ std::string CppWriter::getOpName(const Value* V) {
 
 static StringRef ConvertAtomicOrdering(AtomicOrdering Ordering) {
   switch (Ordering) {
-    case NotAtomic: return "NotAtomic";
-    case Unordered: return "Unordered";
-    case Monotonic: return "Monotonic";
-    case Acquire: return "Acquire";
-    case Release: return "Release";
-    case AcquireRelease: return "AcquireRelease";
-    case SequentiallyConsistent: return "SequentiallyConsistent";
+    case AtomicOrdering::NotAtomic: return "NotAtomic";
+    case AtomicOrdering::Unordered: return "Unordered";
+    case AtomicOrdering::Monotonic: return "Monotonic";
+    case AtomicOrdering::Acquire: return "Acquire";
+    case AtomicOrdering::Release: return "Release";
+    case AtomicOrdering::AcquireRelease: return "AcquireRelease";
+    case AtomicOrdering::SequentiallyConsistent:
+      return "SequentiallyConsistent";
   }
   llvm_unreachable("Unknown ordering");
 }

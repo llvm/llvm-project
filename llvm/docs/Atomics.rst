@@ -367,7 +367,7 @@ Predicates for optimizer writers to query:
   that they return true for any operation which is volatile or at least
   Monotonic.
 
-* ``isAtLeastAcquire()``/``isAtLeastRelease()``: These are predicates on
+* ``isStrongerThan`` / ``isAtLeastOrStrongerThan``: These are predicates on
   orderings. They can be useful for passes that are aware of atomics, for
   example to do DSE across a single atomic access, but not across a
   release-acquire pair (see MemoryDependencyAnalysis for an example of this)

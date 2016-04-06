@@ -19,11 +19,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-LABEL:_Z3fooPi
 ; CHECK: call void @__sanitizer_cov(i32*{{.*}}), !dbg [[A:!.*]]
 ; CHECK: call void @__sanitizer_cov(i32*{{.*}}), !dbg [[B:!.*]]
-; CHECK: call void @__sanitizer_cov(i32*{{.*}}), !dbg [[C:!.*]]
 ; CHECK: ret void
 ; CHECK: [[A]] = !DILocation(line: 1, scope: !{{.*}})
 ; CHECK: [[B]] = !DILocation(line: 3, column: 5, scope: !{{.*}})
-; CHECK: [[C]] = !DILocation(line: 4, column: 1, scope: !{{.*}})
 
 define void @_Z3fooPi(i32* %a) #0 !dbg !4 {
 entry:

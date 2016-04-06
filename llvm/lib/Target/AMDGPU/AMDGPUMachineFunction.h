@@ -17,7 +17,6 @@ namespace llvm {
 
 class AMDGPUMachineFunction : public MachineFunctionInfo {
   virtual void anchor();
-  unsigned ShaderType;
 
 public:
   AMDGPUMachineFunction(const MachineFunction &MF);
@@ -29,10 +28,6 @@ public:
 
   /// Start of implicit kernel args
   unsigned ABIArgOffset;
-
-  unsigned getShaderType() const {
-    return ShaderType;
-  }
 
   bool isKernel() const {
     // FIXME: Assume everything is a kernel until function calls are supported.

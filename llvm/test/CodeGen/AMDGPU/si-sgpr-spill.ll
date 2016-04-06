@@ -22,7 +22,7 @@
 ; Writing to M0 from an SMRD instruction will hang the GPU.
 ; CHECK-NOT: s_buffer_load_dword m0
 ; CHECK: s_endpgm
-define void @main([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <8 x i32>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
+define amdgpu_ps void @main([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <8 x i32>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) {
 main_body:
   %tmp = getelementptr [17 x <16 x i8>], [17 x <16 x i8>] addrspace(2)* %arg, i64 0, i32 0
   %tmp21 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp, !tbaa !0
@@ -668,7 +668,7 @@ ENDIF66:                                          ; preds = %LOOP65
 
 ; CHECK-LABEL: {{^}}main1:
 ; CHECK: s_endpgm
-define void @main1([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <8 x i32>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
+define amdgpu_ps void @main1([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <8 x i32>] addrspace(2)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) {
 main_body:
   %tmp = getelementptr [17 x <16 x i8>], [17 x <16 x i8>] addrspace(2)* %arg, i64 0, i32 0
   %tmp21 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp, !tbaa !0
@@ -1610,7 +1610,6 @@ declare i32 @llvm.SI.packf16(float, float) #2
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { "ShaderType"="0" }
 attributes #1 = { readnone }
 attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind readonly }

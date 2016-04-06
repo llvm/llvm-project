@@ -16,7 +16,7 @@
 ; CHECK: s_waitcnt vmcnt(0)
 ; CHECK: exp
 ; CHECK: s_endpgm
-define void @main([6 x <16 x i8>] addrspace(2)* byval %arg, [17 x <16 x i8>] addrspace(2)* byval %arg1, [17 x <4 x i32>] addrspace(2)* byval %arg2, [34 x <8 x i32>] addrspace(2)* byval %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) #0 {
+define amdgpu_ps void @main([6 x <16 x i8>] addrspace(2)* byval %arg, [17 x <16 x i8>] addrspace(2)* byval %arg1, [17 x <4 x i32>] addrspace(2)* byval %arg2, [34 x <8 x i32>] addrspace(2)* byval %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) #0 {
 main_body:
   %tmp = bitcast [34 x <8 x i32>] addrspace(2)* %arg3 to <32 x i8> addrspace(2)*
   %tmp22 = load <32 x i8>, <32 x i8> addrspace(2)* %tmp, align 32, !tbaa !0
@@ -54,7 +54,6 @@ declare i32 @llvm.SI.packf16(float, float) #1
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { "ShaderType"="0" "enable-no-nans-fp-math"="true" }
 attributes #1 = { nounwind readnone }
 
 !0 = !{!1, !1, i64 0, i32 1}

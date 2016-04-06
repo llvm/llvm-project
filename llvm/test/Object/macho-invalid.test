@@ -5,9 +5,9 @@ RUN: llvm-objdump -private-headers %p/Inputs/macho-invalid-zero-ncmds -macho \
 RUN:      | FileCheck -check-prefix ZERO-NCMDS %s
 ZERO-NCMDS: MH_MAGIC_64 0 0 0x00 OBJECT 0 0 0x00000000
 
-RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-incomplete-load-command 2>&1 \
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-incomplete-load-command 2>&1 \
 RUN:      | FileCheck -check-prefix INCOMPLETE-LOADC %s
-INCOMPLETE-LOADC: Invalid data was encountered while parsing the file.
+INCOMPLETE-LOADC: truncated or malformed object (load command 0 extends past the end all load commands in the file)
 
 RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-too-small-load-command 2>&1 \
 RUN:      | FileCheck -check-prefix SMALL-LOADC-SIZE %s

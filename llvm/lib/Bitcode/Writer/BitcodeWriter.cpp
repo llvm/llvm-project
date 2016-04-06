@@ -133,13 +133,13 @@ static unsigned GetEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
 
 static unsigned GetEncodedOrdering(AtomicOrdering Ordering) {
   switch (Ordering) {
-  case NotAtomic: return bitc::ORDERING_NOTATOMIC;
-  case Unordered: return bitc::ORDERING_UNORDERED;
-  case Monotonic: return bitc::ORDERING_MONOTONIC;
-  case Acquire: return bitc::ORDERING_ACQUIRE;
-  case Release: return bitc::ORDERING_RELEASE;
-  case AcquireRelease: return bitc::ORDERING_ACQREL;
-  case SequentiallyConsistent: return bitc::ORDERING_SEQCST;
+  case AtomicOrdering::NotAtomic: return bitc::ORDERING_NOTATOMIC;
+  case AtomicOrdering::Unordered: return bitc::ORDERING_UNORDERED;
+  case AtomicOrdering::Monotonic: return bitc::ORDERING_MONOTONIC;
+  case AtomicOrdering::Acquire: return bitc::ORDERING_ACQUIRE;
+  case AtomicOrdering::Release: return bitc::ORDERING_RELEASE;
+  case AtomicOrdering::AcquireRelease: return bitc::ORDERING_ACQREL;
+  case AtomicOrdering::SequentiallyConsistent: return bitc::ORDERING_SEQCST;
   }
   llvm_unreachable("Invalid ordering");
 }

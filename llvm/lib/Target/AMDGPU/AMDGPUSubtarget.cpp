@@ -136,9 +136,8 @@ AMDGPU::IsaVersion AMDGPUSubtarget::getIsaVersion() const {
   return AMDGPU::getIsaVersion(getFeatureBits());
 }
 
-bool AMDGPUSubtarget::isVGPRSpillingEnabled(
-                                       const SIMachineFunctionInfo *MFI) const {
-  return MFI->getShaderType() == ShaderType::COMPUTE || EnableVGPRSpilling;
+bool AMDGPUSubtarget::isVGPRSpillingEnabled(const Function& F) const {
+  return !AMDGPU::isShader(F.getCallingConv()) || EnableVGPRSpilling;
 }
 
 void AMDGPUSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,

@@ -10,8 +10,6 @@
 ; R600:CALL_FS ; encoding: [0x00,0x00,0x00,0x00,0x00,0x00,0x80,0x89]
 
 
-define void @call_fs() #0 {
+define amdgpu_vs void @call_fs() {
   ret void
 }
-
-attributes #0 = { "ShaderType"="1" } ; Vertex Shader

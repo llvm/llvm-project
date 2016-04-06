@@ -88,5 +88,3 @@ define void @sin_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %vx) #1 {
 
 declare float @llvm.sin.f32(float) readnone
 declare <4 x float> @llvm.sin.v4f32(<4 x float>) readnone
-
-attributes #0 = { "ShaderType"="0" }

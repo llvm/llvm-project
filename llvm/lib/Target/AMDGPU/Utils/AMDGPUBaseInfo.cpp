@@ -124,12 +124,24 @@ static unsigned getIntegerAttribute(const Function &F, const char *Name,
   return Result;
 }
 
-unsigned getShaderType(const Function &F) {
-  return getIntegerAttribute(F, "ShaderType", ShaderType::COMPUTE);
-}
-
 unsigned getInitialPSInputAddr(const Function &F) {
   return getIntegerAttribute(F, "InitialPSInputAddr", 0);
+}
+
+bool isShader(CallingConv::ID cc) {
+  switch(cc) {
+    case CallingConv::AMDGPU_VS:
+    case CallingConv::AMDGPU_GS:
+    case CallingConv::AMDGPU_PS:
+    case CallingConv::AMDGPU_CS:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool isCompute(CallingConv::ID cc) {
+  return !isShader(cc) || cc == CallingConv::AMDGPU_CS;
 }
 
 bool isSI(const MCSubtargetInfo &STI) {

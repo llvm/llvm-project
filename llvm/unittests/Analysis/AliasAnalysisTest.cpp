@@ -179,12 +179,12 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   auto *Load1 = new LoadInst(Addr, "load", BB);
   auto *Add1 = BinaryOperator::CreateAdd(Value, Value, "add", BB);
   auto *VAArg1 = new VAArgInst(Addr, PtrType, "vaarg", BB);
-  auto *CmpXChg1 = new AtomicCmpXchgInst(Addr, ConstantInt::get(IntType, 0),
-                                         ConstantInt::get(IntType, 1),
-                                         Monotonic, Monotonic, CrossThread, BB);
+  auto *CmpXChg1 = new AtomicCmpXchgInst(
+      Addr, ConstantInt::get(IntType, 0), ConstantInt::get(IntType, 1),
+      AtomicOrdering::Monotonic, AtomicOrdering::Monotonic, CrossThread, BB);
   auto *AtomicRMW =
       new AtomicRMWInst(AtomicRMWInst::Xchg, Addr, ConstantInt::get(IntType, 1),
-                        Monotonic, CrossThread, BB);
+                        AtomicOrdering::Monotonic, CrossThread, BB);
 
   ReturnInst::Create(C, nullptr, BB);
 

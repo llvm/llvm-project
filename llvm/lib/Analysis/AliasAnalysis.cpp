@@ -389,7 +389,7 @@ ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
 ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
                                     const MemoryLocation &Loc) {
   // Acquire/Release cmpxchg has properties that matter for arbitrary addresses.
-  if (CX->getSuccessOrdering() > Monotonic)
+  if (isStrongerThanMonotonic(CX->getSuccessOrdering()))
     return MRI_ModRef;
 
   // If the cmpxchg address does not alias the location, it does not access it.
@@ -402,7 +402,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
 ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
                                     const MemoryLocation &Loc) {
   // Acquire/Release atomicrmw has properties that matter for arbitrary addresses.
-  if (RMW->getOrdering() > Monotonic)
+  if (isStrongerThanMonotonic(RMW->getOrdering()))
     return MRI_ModRef;
 
   // If the atomicrmw address does not alias the location, it does not access it.

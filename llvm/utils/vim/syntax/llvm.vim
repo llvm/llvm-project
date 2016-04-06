@@ -52,8 +52,8 @@ syn keyword llvmKeyword noredzone noreturn nounwind optnone optsize personality
 syn keyword llvmKeyword private protected ptx_device ptx_kernel readnone
 syn keyword llvmKeyword readonly release returns_twice sanitize_thread
 syn keyword llvmKeyword sanitize_memory section seq_cst sideeffect signext
-syn keyword llvmKeyword singlethread spir_func spir_kernel sret ssp sspreq
-syn keyword llvmKeyword sspstrong tail target thread_local to triple
+syn keyword llvmKeyword singlethread source_filename spir_func spir_kernel sret
+syn keyword llvmKeyword ssp sspreq sspstrong tail target thread_local to triple
 syn keyword llvmKeyword unnamed_addr unordered uwtable volatile weak weak_odr
 syn keyword llvmKeyword x86_fastcallcc x86_stdcallcc x86_thiscallcc
 syn keyword llvmKeyword x86_64_sysvcc x86_64_win64cc zeroext uselistorder

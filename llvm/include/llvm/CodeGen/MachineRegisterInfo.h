@@ -600,11 +600,11 @@ public:
   ///
   unsigned createVirtualRegister(const TargetRegisterClass *RegClass);
 
-  /// Get the size of \p VReg or 0 if VReg is not a generic
+  /// Get the size in bits of \p VReg or 0 if VReg is not a generic
   /// (target independent) virtual register.
   unsigned getSize(unsigned VReg) const;
 
-  /// Set the size of \p VReg to \p Size.
+  /// Set the size in bits of \p VReg to \p Size.
   /// Although the size should be set at build time, mir infrastructure
   /// is not yet able to do it.
   void setSize(unsigned VReg, unsigned Size);

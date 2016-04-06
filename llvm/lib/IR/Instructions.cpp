@@ -1209,13 +1209,13 @@ LoadInst::LoadInst(Value *Ptr, const Twine &Name, bool isVolatile,
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    unsigned Align, Instruction *InsertBef)
-    : LoadInst(Ty, Ptr, Name, isVolatile, Align, NotAtomic, CrossThread,
-               InsertBef) {}
+    : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
+               CrossThread, InsertBef) {}
 
 LoadInst::LoadInst(Value *Ptr, const Twine &Name, bool isVolatile,
                    unsigned Align, BasicBlock *InsertAE)
-    : LoadInst(Ptr, Name, isVolatile, Align, NotAtomic, CrossThread, InsertAE) {
-}
+    : LoadInst(Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
+               CrossThread, InsertAE) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    unsigned Align, AtomicOrdering Order,
@@ -1247,7 +1247,7 @@ LoadInst::LoadInst(Value *Ptr, const char *Name, Instruction *InsertBef)
                      Load, Ptr, InsertBef) {
   setVolatile(false);
   setAlignment(0);
-  setAtomic(NotAtomic);
+  setAtomic(AtomicOrdering::NotAtomic);
   AssertOK();
   if (Name && Name[0]) setName(Name);
 }
@@ -1257,7 +1257,7 @@ LoadInst::LoadInst(Value *Ptr, const char *Name, BasicBlock *InsertAE)
                      Load, Ptr, InsertAE) {
   setVolatile(false);
   setAlignment(0);
-  setAtomic(NotAtomic);
+  setAtomic(AtomicOrdering::NotAtomic);
   AssertOK();
   if (Name && Name[0]) setName(Name);
 }
@@ -1268,7 +1268,7 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const char *Name, bool isVolatile,
   assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
   setVolatile(isVolatile);
   setAlignment(0);
-  setAtomic(NotAtomic);
+  setAtomic(AtomicOrdering::NotAtomic);
   AssertOK();
   if (Name && Name[0]) setName(Name);
 }
@@ -1279,7 +1279,7 @@ LoadInst::LoadInst(Value *Ptr, const char *Name, bool isVolatile,
                      Load, Ptr, InsertAE) {
   setVolatile(isVolatile);
   setAlignment(0);
-  setAtomic(NotAtomic);
+  setAtomic(AtomicOrdering::NotAtomic);
   AssertOK();
   if (Name && Name[0]) setName(Name);
 }
@@ -1324,13 +1324,13 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, unsigned Align,
                      Instruction *InsertBefore)
-    : StoreInst(val, addr, isVolatile, Align, NotAtomic, CrossThread,
-                InsertBefore) {}
+    : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
+                CrossThread, InsertBefore) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, unsigned Align,
                      BasicBlock *InsertAtEnd)
-    : StoreInst(val, addr, isVolatile, Align, NotAtomic, CrossThread,
-                InsertAtEnd) {}
+    : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
+                CrossThread, InsertAtEnd) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
                      unsigned Align, AtomicOrdering Order,
@@ -1398,13 +1398,15 @@ void AtomicCmpXchgInst::Init(Value *Ptr, Value *Cmp, Value *NewVal,
   assert(getOperand(2)->getType() ==
                  cast<PointerType>(getOperand(0)->getType())->getElementType()
          && "Ptr must be a pointer to NewVal type!");
-  assert(SuccessOrdering != NotAtomic &&
+  assert(SuccessOrdering != AtomicOrdering::NotAtomic &&
          "AtomicCmpXchg instructions must be atomic!");
-  assert(FailureOrdering != NotAtomic &&
+  assert(FailureOrdering != AtomicOrdering::NotAtomic &&
          "AtomicCmpXchg instructions must be atomic!");
-  assert(SuccessOrdering >= FailureOrdering &&
-         "AtomicCmpXchg success ordering must be at least as strong as fail");
-  assert(FailureOrdering != Release && FailureOrdering != AcquireRelease &&
+  assert(!isStrongerThan(FailureOrdering, SuccessOrdering) &&
+         "AtomicCmpXchg failure argument shall be no stronger than the success "
+         "argument");
+  assert(FailureOrdering != AtomicOrdering::Release &&
+         FailureOrdering != AtomicOrdering::AcquireRelease &&
          "AtomicCmpXchg failure ordering cannot include release semantics");
 }
 
@@ -1454,7 +1456,7 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
   assert(getOperand(1)->getType() ==
          cast<PointerType>(getOperand(0)->getType())->getElementType()
          && "Ptr must be a pointer to Val type!");
-  assert(Ordering != NotAtomic &&
+  assert(Ordering != AtomicOrdering::NotAtomic &&
          "AtomicRMW instructions must be atomic!");
 }
 

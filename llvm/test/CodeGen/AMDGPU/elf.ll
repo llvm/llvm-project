@@ -24,7 +24,7 @@
 ; TONGA-NEXT: .long   576
 ; CONFIG: .p2align 8
 ; CONFIG: test:
-define void @test(i32 %p) #0 {
+define amdgpu_ps void @test(i32 %p) {
    %i = add i32 %p, 2
    %r = bitcast i32 %i to float
    call void @llvm.SI.export(i32 15, i32 0, i32 1, i32 12, i32 0, float %r, float %r, float %r, float %r)
@@ -32,5 +32,3 @@ define void @test(i32 %p) #0 {
 }
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
-
-attributes #0 = { "ShaderType"="0" } ; Pixel Shader

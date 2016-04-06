@@ -808,14 +808,14 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
 
 static AtomicOrdering getDecodedOrdering(unsigned Val) {
   switch (Val) {
-  case bitc::ORDERING_NOTATOMIC: return NotAtomic;
-  case bitc::ORDERING_UNORDERED: return Unordered;
-  case bitc::ORDERING_MONOTONIC: return Monotonic;
-  case bitc::ORDERING_ACQUIRE: return Acquire;
-  case bitc::ORDERING_RELEASE: return Release;
-  case bitc::ORDERING_ACQREL: return AcquireRelease;
+  case bitc::ORDERING_NOTATOMIC: return AtomicOrdering::NotAtomic;
+  case bitc::ORDERING_UNORDERED: return AtomicOrdering::Unordered;
+  case bitc::ORDERING_MONOTONIC: return AtomicOrdering::Monotonic;
+  case bitc::ORDERING_ACQUIRE: return AtomicOrdering::Acquire;
+  case bitc::ORDERING_RELEASE: return AtomicOrdering::Release;
+  case bitc::ORDERING_ACQREL: return AtomicOrdering::AcquireRelease;
   default: // Map unknown orderings to sequentially-consistent.
-  case bitc::ORDERING_SEQCST: return SequentiallyConsistent;
+  case bitc::ORDERING_SEQCST: return AtomicOrdering::SequentiallyConsistent;
   }
 }
 
@@ -4953,10 +4953,11 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
         Ty = cast<PointerType>(Op->getType())->getElementType();
 
       AtomicOrdering Ordering = getDecodedOrdering(Record[OpNum + 2]);
-      if (Ordering == NotAtomic || Ordering == Release ||
-          Ordering == AcquireRelease)
+      if (Ordering == AtomicOrdering::NotAtomic ||
+          Ordering == AtomicOrdering::Release ||
+          Ordering == AtomicOrdering::AcquireRelease)
         return error("Invalid record");
-      if (Ordering != NotAtomic && Record[OpNum] == 0)
+      if (Ordering != AtomicOrdering::NotAtomic && Record[OpNum] == 0)
         return error("Invalid record");
       SynchronizationScope SynchScope = getDecodedSynchScope(Record[OpNum + 3]);
 
@@ -5009,11 +5010,12 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
               typeCheckLoadStoreInst(Val->getType(), Ptr->getType()))
         return EC;
       AtomicOrdering Ordering = getDecodedOrdering(Record[OpNum + 2]);
-      if (Ordering == NotAtomic || Ordering == Acquire ||
-          Ordering == AcquireRelease)
+      if (Ordering == AtomicOrdering::NotAtomic ||
+          Ordering == AtomicOrdering::Acquire ||
+          Ordering == AtomicOrdering::AcquireRelease)
         return error("Invalid record");
       SynchronizationScope SynchScope = getDecodedSynchScope(Record[OpNum + 3]);
-      if (Ordering != NotAtomic && Record[OpNum] == 0)
+      if (Ordering != AtomicOrdering::NotAtomic && Record[OpNum] == 0)
         return error("Invalid record");
 
       unsigned Align;
@@ -5039,7 +5041,8 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
           Record.size() < OpNum + 3 || Record.size() > OpNum + 5)
         return error("Invalid record");
       AtomicOrdering SuccessOrdering = getDecodedOrdering(Record[OpNum + 1]);
-      if (SuccessOrdering == NotAtomic || SuccessOrdering == Unordered)
+      if (SuccessOrdering == AtomicOrdering::NotAtomic ||
+          SuccessOrdering == AtomicOrdering::Unordered)
         return error("Invalid record");
       SynchronizationScope SynchScope = getDecodedSynchScope(Record[OpNum + 2]);
 
@@ -5084,7 +5087,8 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
           Operation > AtomicRMWInst::LAST_BINOP)
         return error("Invalid record");
       AtomicOrdering Ordering = getDecodedOrdering(Record[OpNum + 2]);
-      if (Ordering == NotAtomic || Ordering == Unordered)
+      if (Ordering == AtomicOrdering::NotAtomic ||
+          Ordering == AtomicOrdering::Unordered)
         return error("Invalid record");
       SynchronizationScope SynchScope = getDecodedSynchScope(Record[OpNum + 3]);
       I = new AtomicRMWInst(Operation, Ptr, Val, Ordering, SynchScope);
@@ -5096,8 +5100,9 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
       if (2 != Record.size())
         return error("Invalid record");
       AtomicOrdering Ordering = getDecodedOrdering(Record[0]);
-      if (Ordering == NotAtomic || Ordering == Unordered ||
-          Ordering == Monotonic)
+      if (Ordering == AtomicOrdering::NotAtomic ||
+          Ordering == AtomicOrdering::Unordered ||
+          Ordering == AtomicOrdering::Monotonic)
         return error("Invalid record");
       SynchronizationScope SynchScope = getDecodedSynchScope(Record[1]);
       I = new FenceInst(Context, Ordering, SynchScope);

@@ -80,7 +80,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
   const MachineFrameInfo *FrameInfo = MF.getFrameInfo();
 
-  if (getShaderType() == ShaderType::COMPUTE)
+  if (!AMDGPU::isShader(F->getCallingConv()))
     KernargSegmentPtr = true;
 
   if (F->hasFnAttribute("amdgpu-work-group-id-y"))
@@ -100,7 +100,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   if (WorkItemIDZ)
     WorkItemIDY = true;
 
-  bool MaySpill = ST.isVGPRSpillingEnabled(this);
+  bool MaySpill = ST.isVGPRSpillingEnabled(*F);
   bool HasStackObjects = FrameInfo->hasStackObjects();
 
   if (HasStackObjects || MaySpill)
@@ -202,5 +202,7 @@ unsigned SIMachineFunctionInfo::getMaximumWorkGroupSize(
   const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
   // FIXME: We should get this information from kernel attributes if it
   // is available.
-  return getShaderType() == ShaderType::COMPUTE ? 256 : ST.getWavefrontSize();
+  if (AMDGPU::isCompute(MF.getFunction()->getCallingConv()))
+    return 256;
+  return ST.getWavefrontSize();
 }

@@ -1108,7 +1108,7 @@ public:
   virtual Instruction *emitLeadingFence(IRBuilder<> &Builder,
                                         AtomicOrdering Ord, bool IsStore,
                                         bool IsLoad) const {
-    if (isAtLeastRelease(Ord) && IsStore)
+    if (isReleaseOrStronger(Ord) && IsStore)
       return Builder.CreateFence(Ord);
     else
       return nullptr;
@@ -1117,7 +1117,7 @@ public:
   virtual Instruction *emitTrailingFence(IRBuilder<> &Builder,
                                          AtomicOrdering Ord, bool IsStore,
                                          bool IsLoad) const {
-    if (isAtLeastAcquire(Ord))
+    if (isAcquireOrStronger(Ord))
       return Builder.CreateFence(Ord);
     else
       return nullptr;

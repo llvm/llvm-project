@@ -10,7 +10,7 @@
 ;CHECK: EXPORT T{{[0-9]}}.0000
 
 
-define void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) #0 {
+define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0
   %1 = extractelement <4 x float> %reg1, i32 1
@@ -138,5 +138,3 @@ main_body:
 }
 
 declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
-
-attributes #0 = { "ShaderType"="1" }

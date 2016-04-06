@@ -422,9 +422,10 @@ visitObjectFiles(const object::Archive &A,
 static void
 visitObjectFiles(std::string FileName,
                  std::function<void(const object::ObjectFile &)> Fn) {
-  ErrorOr<object::OwningBinary<object::Binary>> BinaryOrErr =
+  Expected<object::OwningBinary<object::Binary>> BinaryOrErr =
       object::createBinary(FileName);
-  FailIfError(BinaryOrErr);
+  if (!BinaryOrErr)
+    FailIfError(errorToErrorCode(BinaryOrErr.takeError()));
 
   object::Binary &Binary = *BinaryOrErr.get().getBinary();
   if (object::Archive *A = dyn_cast<object::Archive>(&Binary))

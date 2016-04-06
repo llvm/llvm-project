@@ -292,11 +292,16 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
     if (std::error_code EC = InputBuffer.getError())
       ErrorAndExit("unable to read input: '" + EC.message() + "'");
 
-    ErrorOr<std::unique_ptr<ObjectFile>> MaybeObj(
+    Expected<std::unique_ptr<ObjectFile>> MaybeObj(
       ObjectFile::createObjectFile((*InputBuffer)->getMemBufferRef()));
 
-    if (std::error_code EC = MaybeObj.getError())
-      ErrorAndExit("unable to create object file: '" + EC.message() + "'");
+    if (!MaybeObj) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(MaybeObj.takeError(), OS, "");
+      OS.flush();
+      ErrorAndExit("unable to create object file: '" + Buf + "'");
+    }
 
     ObjectFile &Obj = **MaybeObj;
 
@@ -401,11 +406,16 @@ static int executeInput() {
         MemoryBuffer::getFileOrSTDIN(File);
     if (std::error_code EC = InputBuffer.getError())
       ErrorAndExit("unable to read input: '" + EC.message() + "'");
-    ErrorOr<std::unique_ptr<ObjectFile>> MaybeObj(
+    Expected<std::unique_ptr<ObjectFile>> MaybeObj(
       ObjectFile::createObjectFile((*InputBuffer)->getMemBufferRef()));
 
-    if (std::error_code EC = MaybeObj.getError())
-      ErrorAndExit("unable to create object file: '" + EC.message() + "'");
+    if (!MaybeObj) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(MaybeObj.takeError(), OS, "");
+      OS.flush();
+      ErrorAndExit("unable to create object file: '" + Buf + "'");
+    }
 
     ObjectFile &Obj = **MaybeObj;
 
@@ -665,11 +675,16 @@ static int linkAndVerify() {
     if (std::error_code EC = InputBuffer.getError())
       ErrorAndExit("unable to read input: '" + EC.message() + "'");
 
-    ErrorOr<std::unique_ptr<ObjectFile>> MaybeObj(
+    Expected<std::unique_ptr<ObjectFile>> MaybeObj(
       ObjectFile::createObjectFile((*InputBuffer)->getMemBufferRef()));
 
-    if (std::error_code EC = MaybeObj.getError())
-      ErrorAndExit("unable to create object file: '" + EC.message() + "'");
+    if (!MaybeObj) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(MaybeObj.takeError(), OS, "");
+      OS.flush();
+      ErrorAndExit("unable to create object file: '" + Buf + "'");
+    }
 
     ObjectFile &Obj = **MaybeObj;
 

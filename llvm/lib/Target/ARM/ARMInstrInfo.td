@@ -4761,7 +4761,7 @@ def : ARMPat<(stlex_2 (and GPR:$Rt, 0xffff), addr_offset_none:$addr),
 class acquiring_load<PatFrag base>
   : PatFrag<(ops node:$ptr), (base node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  return isAtLeastAcquire(Ordering);
+  return isAcquireOrStronger(Ordering);
 }]>;
 
 def atomic_load_acquire_8  : acquiring_load<atomic_load_8>;
@@ -4771,7 +4771,7 @@ def atomic_load_acquire_32 : acquiring_load<atomic_load_32>;
 class releasing_store<PatFrag base>
   : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  return isAtLeastRelease(Ordering);
+  return isReleaseOrStronger(Ordering);
 }]>;
 
 def atomic_store_release_8  : releasing_store<atomic_store_8>;

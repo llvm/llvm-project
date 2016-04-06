@@ -4,7 +4,7 @@
 ; GCN-LABEL: {{^}}main:
 ; SI: v_lshl_b32_e32 v{{[0-9]+}}, 1, v{{[0-9]+}}
 ; VI: v_lshlrev_b32_e64 v{{[0-9]+}}, v{{[0-9]+}}, 1
-define void @main() #0 {
+define amdgpu_ps void @main() #0 {
 bb:
   %tmp = fptosi float undef to i32
   %tmp1 = call <4 x float> @llvm.SI.image.load.v4i32(<4 x i32> undef, <8 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
@@ -25,5 +25,5 @@ declare <4 x float> @llvm.SI.image.load.v4i32(<4 x i32>, <8 x i32>, i32, i32, i3
 declare i32 @llvm.SI.packf16(float, float) #1
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { "ShaderType"="0" "enable-no-nans-fp-math"="true" }
+attributes #0 = { "enable-no-nans-fp-math"="true" }
 attributes #1 = { nounwind readnone }

@@ -303,21 +303,21 @@ void AMDGPUAsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   unsigned RsrcReg;
   if (STM.getGeneration() >= AMDGPUSubtarget::EVERGREEN) {
     // Evergreen / Northern Islands
-    switch (MFI->getShaderType()) {
+    switch (MF.getFunction()->getCallingConv()) {
     default: // Fall through
-    case ShaderType::COMPUTE:  RsrcReg = R_0288D4_SQ_PGM_RESOURCES_LS; break;
-    case ShaderType::GEOMETRY: RsrcReg = R_028878_SQ_PGM_RESOURCES_GS; break;
-    case ShaderType::PIXEL:    RsrcReg = R_028844_SQ_PGM_RESOURCES_PS; break;
-    case ShaderType::VERTEX:   RsrcReg = R_028860_SQ_PGM_RESOURCES_VS; break;
+    case CallingConv::AMDGPU_CS: RsrcReg = R_0288D4_SQ_PGM_RESOURCES_LS; break;
+    case CallingConv::AMDGPU_GS: RsrcReg = R_028878_SQ_PGM_RESOURCES_GS; break;
+    case CallingConv::AMDGPU_PS: RsrcReg = R_028844_SQ_PGM_RESOURCES_PS; break;
+    case CallingConv::AMDGPU_VS: RsrcReg = R_028860_SQ_PGM_RESOURCES_VS; break;
     }
   } else {
     // R600 / R700
-    switch (MFI->getShaderType()) {
+    switch (MF.getFunction()->getCallingConv()) {
     default: // Fall through
-    case ShaderType::GEOMETRY: // Fall through
-    case ShaderType::COMPUTE:  // Fall through
-    case ShaderType::VERTEX:   RsrcReg = R_028868_SQ_PGM_RESOURCES_VS; break;
-    case ShaderType::PIXEL:    RsrcReg = R_028850_SQ_PGM_RESOURCES_PS; break;
+    case CallingConv::AMDGPU_GS: // Fall through
+    case CallingConv::AMDGPU_CS: // Fall through
+    case CallingConv::AMDGPU_VS: RsrcReg = R_028868_SQ_PGM_RESOURCES_VS; break;
+    case CallingConv::AMDGPU_PS: RsrcReg = R_028850_SQ_PGM_RESOURCES_PS; break;
     }
   }
 
@@ -327,7 +327,7 @@ void AMDGPUAsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   OutStreamer->EmitIntValue(R_02880C_DB_SHADER_CONTROL, 4);
   OutStreamer->EmitIntValue(S_02880C_KILL_ENABLE(killPixel), 4);
 
-  if (MFI->getShaderType() == ShaderType::COMPUTE) {
+  if (AMDGPU::isCompute(MF.getFunction()->getCallingConv())) {
     OutStreamer->EmitIntValue(R_0288E8_SQ_LDS_ALLOC, 4);
     OutStreamer->EmitIntValue(alignTo(MFI->LDSSize, 4) >> 2, 4);
   }
@@ -546,13 +546,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       S_00B84C_EXCP_EN(0);
 }
 
-static unsigned getRsrcReg(unsigned ShaderType) {
-  switch (ShaderType) {
+static unsigned getRsrcReg(CallingConv::ID CallConv) {
+  switch (CallConv) {
   default: // Fall through
-  case ShaderType::COMPUTE:  return R_00B848_COMPUTE_PGM_RSRC1;
-  case ShaderType::GEOMETRY: return R_00B228_SPI_SHADER_PGM_RSRC1_GS;
-  case ShaderType::PIXEL:    return R_00B028_SPI_SHADER_PGM_RSRC1_PS;
-  case ShaderType::VERTEX:   return R_00B128_SPI_SHADER_PGM_RSRC1_VS;
+  case CallingConv::AMDGPU_CS: return R_00B848_COMPUTE_PGM_RSRC1;
+  case CallingConv::AMDGPU_GS: return R_00B228_SPI_SHADER_PGM_RSRC1_GS;
+  case CallingConv::AMDGPU_PS: return R_00B028_SPI_SHADER_PGM_RSRC1_PS;
+  case CallingConv::AMDGPU_VS: return R_00B128_SPI_SHADER_PGM_RSRC1_VS;
   }
 }
 
@@ -560,9 +560,9 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
                                          const SIProgramInfo &KernelInfo) {
   const AMDGPUSubtarget &STM = MF.getSubtarget<AMDGPUSubtarget>();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned RsrcReg = getRsrcReg(MFI->getShaderType());
+  unsigned RsrcReg = getRsrcReg(MF.getFunction()->getCallingConv());
 
-  if (MFI->getShaderType() == ShaderType::COMPUTE) {
+  if (AMDGPU::isCompute(MF.getFunction()->getCallingConv())) {
     OutStreamer->EmitIntValue(R_00B848_COMPUTE_PGM_RSRC1, 4);
 
     OutStreamer->EmitIntValue(KernelInfo.ComputePGMRSrc1, 4);
@@ -579,13 +579,13 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
     OutStreamer->EmitIntValue(RsrcReg, 4);
     OutStreamer->EmitIntValue(S_00B028_VGPRS(KernelInfo.VGPRBlocks) |
                               S_00B028_SGPRS(KernelInfo.SGPRBlocks), 4);
-    if (STM.isVGPRSpillingEnabled(MFI)) {
+    if (STM.isVGPRSpillingEnabled(*MF.getFunction())) {
       OutStreamer->EmitIntValue(R_0286E8_SPI_TMPRING_SIZE, 4);
       OutStreamer->EmitIntValue(S_0286E8_WAVESIZE(KernelInfo.ScratchBlocks), 4);
     }
   }
 
-  if (MFI->getShaderType() == ShaderType::PIXEL) {
+  if (MF.getFunction()->getCallingConv() == CallingConv::AMDGPU_PS) {
     OutStreamer->EmitIntValue(R_00B02C_SPI_SHADER_PGM_RSRC2_PS, 4);
     OutStreamer->EmitIntValue(S_00B02C_EXTRA_LDS_SIZE(KernelInfo.LDSBlocks), 4);
     OutStreamer->EmitIntValue(R_0286CC_SPI_PS_INPUT_ENA, 4);

@@ -480,14 +480,16 @@ bool ThreadSanitizer::instrumentLoadOrStore(Instruction *I,
 static ConstantInt *createOrdering(IRBuilder<> *IRB, AtomicOrdering ord) {
   uint32_t v = 0;
   switch (ord) {
-    case NotAtomic: llvm_unreachable("unexpected atomic ordering!");
-    case Unordered:              // Fall-through.
-    case Monotonic:              v = 0; break;
-    // case Consume:                v = 1; break;  // Not specified yet.
-    case Acquire:                v = 2; break;
-    case Release:                v = 3; break;
-    case AcquireRelease:         v = 4; break;
-    case SequentiallyConsistent: v = 5; break;
+    case AtomicOrdering::NotAtomic:
+      llvm_unreachable("unexpected atomic ordering!");
+    case AtomicOrdering::Unordered:              // Fall-through.
+    case AtomicOrdering::Monotonic:              v = 0; break;
+    // Not specified yet:
+    // case AtomicOrdering::Consume:                v = 1; break;
+    case AtomicOrdering::Acquire:                v = 2; break;
+    case AtomicOrdering::Release:                v = 3; break;
+    case AtomicOrdering::AcquireRelease:         v = 4; break;
+    case AtomicOrdering::SequentiallyConsistent: v = 5; break;
   }
   return IRB->getInt32(v);
 }

@@ -44,7 +44,7 @@ for.inc.1:                                        ; preds = %do.body.1562.prehea
 
 ; SI-LABEL: {{^}}foo:
 ; SI: s_endpgm
-define void @foo() #0 {
+define amdgpu_ps void @foo() #0 {
 bb:
   br i1 undef, label %bb2, label %bb1
 
@@ -105,5 +105,5 @@ declare i32 @llvm.SI.packf16(float, float) #1
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { "ShaderType"="0" "enable-no-nans-fp-math"="true" "unsafe-fp-math"="true" }
+attributes #0 = { "enable-no-nans-fp-math"="true" "unsafe-fp-math"="true" }
 attributes #1 = { nounwind readnone }

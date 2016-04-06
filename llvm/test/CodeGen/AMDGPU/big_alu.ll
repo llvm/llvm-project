@@ -3,7 +3,7 @@
 ; This test ensures that R600 backend can handle ifcvt properly
 ; and do not generate ALU clauses with more than 128 instructions.
 
-define void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3, <4 x float> inreg %reg4, <4 x float> inreg %reg5, <4 x float> inreg %reg6, <4 x float> inreg %reg7, <4 x float> inreg %reg8, <4 x float> inreg %reg9) #1 {
+define amdgpu_ps void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3, <4 x float> inreg %reg4, <4 x float> inreg %reg5, <4 x float> inreg %reg6, <4 x float> inreg %reg7, <4 x float> inreg %reg8, <4 x float> inreg %reg9) {
 main_body:
   %0 = extractelement <4 x float> %reg0, i32 0
   %1 = extractelement <4 x float> %reg0, i32 1
@@ -1297,7 +1297,6 @@ declare float @llvm.AMDGPU.clamp.f32(float, float, float) #2
 declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
 
 attributes #0 = { alwaysinline nounwind readnone }
-attributes #1 = { "ShaderType"="0" }
 attributes #2 = { readnone }
 attributes #3 = { nounwind readnone }
 attributes #4 = { readonly }

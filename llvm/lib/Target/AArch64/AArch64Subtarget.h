@@ -14,8 +14,8 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64SUBTARGET_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64SUBTARGET_H
 
-#include "AArch64CallLowering.h"
 #include "AArch64FrameLowering.h"
+#include "AArch64GISelAccessor.h"
 #include "AArch64ISelLowering.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64RegisterInfo.h"
@@ -82,7 +82,10 @@ protected:
   AArch64InstrInfo InstrInfo;
   AArch64SelectionDAGInfo TSInfo;
   AArch64TargetLowering TLInfo;
-  mutable std::unique_ptr<AArch64CallLowering> CallLoweringInfo;
+  /// Gather the accessor points to GlobalISel-related APIs.
+  /// This is used to avoid ifndefs spreading around while GISel is
+  /// an optional library.
+  std::unique_ptr<AArch64GISelAccessor> GISelAccessor;
 
 private:
   /// initializeSubtargetDependencies - Initializes using CPUString and the
@@ -96,6 +99,11 @@ public:
   AArch64Subtarget(const Triple &TT, const std::string &CPU,
                    const std::string &FS, const TargetMachine &TM,
                    bool LittleEndian);
+
+  /// This object will take onwership of \p GISelAccessor.
+  void setGISelAccessor(AArch64GISelAccessor &GISelAccessor) {
+    this->GISelAccessor.reset(&GISelAccessor);
+  }
 
   const AArch64SelectionDAGInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
@@ -111,6 +119,7 @@ public:
     return &getInstrInfo()->getRegisterInfo();
   }
   const CallLowering *getCallLowering() const override;
+  const RegisterBankInfo *getRegBankInfo() const override;
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override {

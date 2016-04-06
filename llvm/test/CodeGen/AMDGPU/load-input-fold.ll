@@ -1,6 +1,6 @@
 ;RUN: llc < %s -march=r600 -mcpu=cayman
 
-define void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3) #0 {
+define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3) {
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0
   %1 = extractelement <4 x float> %reg1, i32 1
@@ -111,7 +111,6 @@ declare float @llvm.pow.f32(float, float) #3
 
 declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
 
-attributes #0 = { "ShaderType"="1" }
 attributes #1 = { readnone }
 attributes #2 = { readonly }
 attributes #3 = { nounwind readonly }

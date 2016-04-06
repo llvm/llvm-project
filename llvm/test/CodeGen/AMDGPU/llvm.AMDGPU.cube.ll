@@ -5,7 +5,7 @@
 ; CHECK: CUBE T{{[0-9]}}.Y
 ; CHECK: CUBE T{{[0-9]}}.Z
 ; CHECK: CUBE * T{{[0-9]}}.W
-define void @cube() #0 {
+define amdgpu_ps void @cube() {
 main_body:
   %0 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 9)
   %1 = extractelement <4 x float> %0, i32 3
@@ -43,16 +43,15 @@ main_body:
 }
 
 ; Function Attrs: readnone
-declare <4 x float> @llvm.AMDGPU.cube(<4 x float>) #1
+declare <4 x float> @llvm.AMDGPU.cube(<4 x float>) #0
 
 ; Function Attrs: readnone
-declare float @fabs(float) #1
+declare float @fabs(float) #0
 
 ; Function Attrs: readnone
-declare <4 x float> @llvm.AMDGPU.tex(<4 x float>, i32, i32, i32) #1
+declare <4 x float> @llvm.AMDGPU.tex(<4 x float>, i32, i32, i32) #0
 
 declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
 
-attributes #0 = { "ShaderType"="0" }
-attributes #1 = { readnone }
+attributes #0 = { readnone }
 
