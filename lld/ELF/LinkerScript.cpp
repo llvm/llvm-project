@@ -138,6 +138,7 @@ private:
   void readSectionPatterns(StringRef OutSec, bool Keep);
 
   size_t getPos();
+  void printErrorPos();
   std::vector<uint8_t> parseHex(StringRef S);
 
   StringSaver Saver;
@@ -172,11 +173,31 @@ void ScriptParser::run() {
   }
 }
 
+// Returns the line that the character S[Pos] is in.
+static StringRef getLine(StringRef S, size_t Pos) {
+  size_t Begin = S.rfind('\n', Pos);
+  size_t End = S.find('\n', Pos);
+  Begin = (Begin == StringRef::npos) ? 0 : Begin + 1;
+  if (End == StringRef::npos)
+    End = S.size();
+  // rtrim for DOS-style newlines.
+  return S.substr(Begin, End - Begin).rtrim();
+}
+
+void ScriptParser::printErrorPos() {
+  StringRef Tok = Tokens[Pos == 0 ? 0 : Pos - 1];
+  StringRef Line = getLine(Input, Tok.data() - Input.data());
+  size_t Col = Tok.data() - Line.data();
+  error(Line);
+  error(std::string(Col, ' ') + "^");
+}
+
 // We don't want to record cascading errors. Keep only the first one.
 void ScriptParser::setError(const Twine &Msg) {
   if (Error)
     return;
   error("line " + Twine(getPos()) + ": " + Msg);
+  printErrorPos();
   Error = true;
 }
 

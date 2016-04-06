@@ -268,8 +268,8 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // A MIPS object file has a special section that contains register
   // usage info, which needs to be handled by the linker specially.
   if (Config->EMachine == EM_MIPS && Name == ".reginfo") {
-    MipsReginfo = new (Alloc) MipsReginfoInputSection<ELFT>(this, &Sec);
-    return MipsReginfo;
+    MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec));
+    return MipsReginfo.get();
   }
 
   // We dont need special handling of .eh_frame sections if relocatable

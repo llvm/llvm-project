@@ -42,3 +42,25 @@
 # RUN: echo ".temp + { *(.temp) } }" >> %t.script
 # RUN: not ld.lld -shared %t -o %t1 --script %t.script 2>&1 | FileCheck -check-prefix=ERR5 %s
 # ERR5: line 6:
+
+## Check that text of lines and pointer to 'bad' token are working ok.
+# RUN: echo "UNKNOWN_TAG {" > %t.script
+# RUN: echo ".text : { *(.text) }" >> %t.script
+# RUN: echo ".keep : { *(.keep) }" >> %t.script
+# RUN: echo ".temp : { *(.temp) } }" >> %t.script
+# RUN: not ld.lld -shared %t -o %t1 --script %t.script > %t.log 2>&1
+# RUN: FileCheck -check-prefix=ERR6 %s < %t.log
+# ERR6:      line 1:
+# ERR6-NEXT: UNKNOWN_TAG {
+# RUN: grep '^^' %t.log
+
+## One more check that text of lines and pointer to 'bad' token are working ok.
+# RUN: echo "SECTIONS {" > %t.script
+# RUN: echo ".text : { *(.text) }" >> %t.script
+# RUN: echo ".keep : { *(.keep) }" >> %t.script
+# RUN: echo "boom .temp : { *(.temp) } }" >> %t.script
+# RUN: not ld.lld -shared %t -o %t1 --script %t.script > %t.log 2>&1
+# RUN: FileCheck -check-prefix=ERR7 %s < %t.log
+# ERR7:      line 4: : expected, but got .temp
+# ERR7-NEXT: boom .temp : { *(.temp) } }
+# RUN: grep '^     ^' %t.log
