@@ -90,7 +90,7 @@ class RegisterVariableTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-
+    @expectedFailureAll(oslist=["macosx"], bugnumber="rdar://25587104")
     @expectedFailureAll(compiler="clang", compiler_version=['<', '3.5'])
     @expectedFailureAll(compiler="gcc", compiler_version=['=', '4.8.2'])
     def test_and_run_command(self):
