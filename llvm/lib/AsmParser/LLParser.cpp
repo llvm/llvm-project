@@ -83,9 +83,6 @@ void LLParser::restoreParsingState(const SlotMapping *Slots) {
 /// ValidateEndOfModule - Do final validity and sanity checks at the end of the
 /// module.
 bool LLParser::ValidateEndOfModule() {
-  for (unsigned I = 0, E = InstsWithTBAATag.size(); I < E; I++)
-    UpgradeInstWithTBAATag(InstsWithTBAATag[I]);
-
   // Handle any function attribute group forward references.
   for (std::map<Value*, std::vector<unsigned> >::iterator
          I = ForwardRefAttrGroups.begin(), E = ForwardRefAttrGroups.end();
@@ -187,6 +184,9 @@ bool LLParser::ValidateEndOfModule() {
     if (N.second && !N.second->isResolved())
       N.second->resolveCycles();
   }
+
+  for (unsigned I = 0, E = InstsWithTBAATag.size(); I < E; I++)
+    UpgradeInstWithTBAATag(InstsWithTBAATag[I]);
 
   // Look for intrinsic functions and CallInst that need to be upgraded
   for (Module::iterator FI = M->begin(), FE = M->end(); FI != FE; )
@@ -566,6 +566,7 @@ bool LLParser::ParseMDString(MDString *&Result) {
 //   ::= '!' MDNodeNumber
 bool LLParser::ParseMDNodeID(MDNode *&Result) {
   // !{ ..., !42, ... }
+  LocTy IDLoc = Lex.getLoc();
   unsigned MID = 0;
   if (ParseUInt32(MID))
     return true;
@@ -578,7 +579,7 @@ bool LLParser::ParseMDNodeID(MDNode *&Result) {
 
   // Otherwise, create MDNode forward reference.
   auto &FwdRef = ForwardRefMDNodes[MID];
-  FwdRef = std::make_pair(MDTuple::getTemporary(Context, None), Lex.getLoc());
+  FwdRef = std::make_pair(MDTuple::getTemporary(Context, None), IDLoc);
 
   Result = FwdRef.first.get();
   NumberedMetadata[MID].reset(Result);
