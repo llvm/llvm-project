@@ -1069,9 +1069,11 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   std::vector<DefinedCommon *> CommonSymbols;
   for (auto &P : Symtab.getSymbols()) {
     SymbolBody *Body = P.second->Body;
-    if (auto *U = dyn_cast<Undefined>(Body))
-      if (!U->isWeak() && !U->canKeepUndefined())
+    if (Body->isUndefined() && !Body->isWeak()) {
+      auto *U = dyn_cast<UndefinedElf<ELFT>>(Body);
+      if (!U || !U->canKeepUndefined())
         reportUndefined<ELFT>(Symtab, Body);
+    }
 
     if (auto *C = dyn_cast<DefinedCommon>(Body))
       CommonSymbols.push_back(C);

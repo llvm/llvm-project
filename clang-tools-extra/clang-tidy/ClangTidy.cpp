@@ -107,9 +107,7 @@ public:
     DiagPrinter->BeginSourceFile(LangOpts);
   }
 
-  SourceManager& getSourceManager() {
-    return SourceMgr;
-  }
+  SourceManager &getSourceManager() { return SourceMgr; }
 
   void reportDiagnostic(const ClangTidyError &Error) {
     const ClangTidyMessage &Message = Error.Message;
@@ -141,7 +139,7 @@ public:
           Range = SourceRange(FixLoc, FixEndLoc);
           Diag << FixItHint::CreateReplacement(Range, Fix.getReplacementText());
         }
-              
+
         ++TotalFixes;
         if (ApplyFixes) {
           bool Success = Fix.isApplicable() && Fix.apply(Rewrite);
@@ -417,19 +415,39 @@ runClangTidy(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
              std::vector<ClangTidyError> *Errors, ProfileData *Profile) {
   ClangTool Tool(Compilations, InputFiles);
   clang::tidy::ClangTidyContext Context(std::move(OptionsProvider));
-  ArgumentsAdjuster PerFileExtraArgumentsInserter = [&Context](
-      const CommandLineArguments &Args, StringRef Filename) {
-    ClangTidyOptions Opts = Context.getOptionsForFile(Filename);
-    CommandLineArguments AdjustedArgs;
-    if (Opts.ExtraArgsBefore)
-      AdjustedArgs = *Opts.ExtraArgsBefore;
-    AdjustedArgs.insert(AdjustedArgs.begin(), Args.begin(), Args.end());
-    if (Opts.ExtraArgs)
-      AdjustedArgs.insert(AdjustedArgs.end(), Opts.ExtraArgs->begin(),
-                          Opts.ExtraArgs->end());
-    return AdjustedArgs;
-  };
+
+  // Add extra arguments passed by the clang-tidy command-line.
+  ArgumentsAdjuster PerFileExtraArgumentsInserter =
+      [&Context](const CommandLineArguments &Args, StringRef Filename) {
+        ClangTidyOptions Opts = Context.getOptionsForFile(Filename);
+        CommandLineArguments AdjustedArgs;
+        if (Opts.ExtraArgsBefore)
+          AdjustedArgs = *Opts.ExtraArgsBefore;
+        AdjustedArgs.insert(AdjustedArgs.begin(), Args.begin(), Args.end());
+        if (Opts.ExtraArgs)
+          AdjustedArgs.insert(AdjustedArgs.end(), Opts.ExtraArgs->begin(),
+                              Opts.ExtraArgs->end());
+        return AdjustedArgs;
+      };
+
+  // Remove plugins arguments.
+  ArgumentsAdjuster PluginArgumentsRemover =
+      [&Context](const CommandLineArguments &Args, StringRef Filename) {
+        CommandLineArguments AdjustedArgs;
+        for (size_t I = 0, E = Args.size(); I < E; ++I) {
+          if (I + 4 < Args.size() && Args[I] == "-Xclang" &&
+              (Args[I + 1] == "-load" || Args[I + 1] == "-add-plugin" ||
+               StringRef(Args[I + 1]).startswith("-plugin-arg-")) &&
+              Args[I + 2] == "-Xclang") {
+            I += 3;
+          } else
+            AdjustedArgs.push_back(Args[I]);
+        }
+        return AdjustedArgs;
+      };
+
   Tool.appendArgumentsAdjuster(PerFileExtraArgumentsInserter);
+  Tool.appendArgumentsAdjuster(PluginArgumentsRemover);
   if (Profile)
     Context.setCheckProfileData(Profile);
 
