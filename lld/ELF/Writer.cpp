@@ -28,10 +28,6 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
-// Usually there are 2 dummies sections: ELF header and program header.
-// Relocatable output does not require program headers to be created.
-static unsigned dummySectionsNum() { return Config->Relocatable ? 1 : 2; }
-
 namespace {
 // The writer writes a SymbolTable result to a file.
 template <class ELFT> class Writer {
@@ -75,6 +71,7 @@ private:
   void assignAddresses();
   void assignFileOffsets();
   void setPhdrs();
+  void fixHeaders();
   void fixSectionAlignments();
   void fixAbsoluteSymbols();
   void openFile();
@@ -102,14 +99,6 @@ private:
   BumpPtrAllocator Alloc;
   std::vector<OutputSectionBase<ELFT> *> OutputSections;
   std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> OwningSections;
-
-  // We create a section for the ELF header and one for the program headers.
-  ArrayRef<OutputSectionBase<ELFT> *> getSections() const {
-    return makeArrayRef(OutputSections).slice(dummySectionsNum());
-  }
-  unsigned getNumSections() const {
-    return OutputSections.size() + 1 - dummySectionsNum();
-  }
 
   void addRelIpltSymbols();
   void addStartEndSymbols();
@@ -223,6 +212,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     assignFileOffsets();
   } else {
     createPhdrs();
+    fixHeaders();
     fixSectionAlignments();
     assignAddresses();
     assignFileOffsets();
@@ -983,10 +973,6 @@ template <class ELFT> static void sortCtorsDtors(OutputSectionBase<ELFT> *S) {
 
 // Create output section objects and add them to OutputSections.
 template <class ELFT> void Writer<ELFT>::createSections() {
-  OutputSections.push_back(Out<ELFT>::ElfHeader);
-  if (!Config->Relocatable)
-    OutputSections.push_back(Out<ELFT>::ProgramHeaders);
-
   // Add .interp first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
   if (needsInterpSection())
@@ -1075,7 +1061,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     }
   }
 
-  for (OutputSectionBase<ELFT> *Sec : getSections())
+  for (OutputSectionBase<ELFT> *Sec : OutputSections)
     Sec->assignOffsets();
 
   // Now that we have defined all possible symbols including linker-
@@ -1112,11 +1098,11 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   std::stable_sort(OutputSections.begin(), OutputSections.end(),
                    compareSections<ELFT>);
 
-  for (unsigned I = dummySectionsNum(), N = OutputSections.size(); I < N; ++I)
-    OutputSections[I]->SectionIndex = I + 1 - dummySectionsNum();
-
-  for (OutputSectionBase<ELFT> *Sec : getSections())
+  unsigned I = 1;
+  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
+    Sec->SectionIndex = I++;
     Sec->setSHName(Out<ELFT>::ShStrTab->addString(Sec->getName()));
+  }
 
   // Finalizers fix each section's size.
   // .dynsym is finalized early since that may fill up .gnu.hash.
@@ -1284,6 +1270,7 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
   uintX_t Flags = PF_R;
   Phdr *Load = AddHdr(PT_LOAD, Flags);
   AddSec(*Load, Out<ELFT>::ElfHeader);
+  AddSec(*Load, Out<ELFT>::ProgramHeaders);
 
   Phdr TlsHdr(PT_TLS, PF_R);
   Phdr RelRo(PT_GNU_RELRO, PF_R);
@@ -1371,11 +1358,23 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
   }
 }
 
+// We should set file offsets and VAs for elf header and program headers
+// sections. These are special, we do not include them into output sections
+// list, but have them to simplify the code.
+template <class ELFT> void Writer<ELFT>::fixHeaders() {
+  Out<ELFT>::ElfHeader->setVA(Target->getVAStart());
+  Out<ELFT>::ElfHeader->setFileOffset(0);
+  uintX_t Off = Out<ELFT>::ElfHeader->getSize();
+  Out<ELFT>::ProgramHeaders->setVA(Off + Target->getVAStart());
+  Out<ELFT>::ProgramHeaders->setFileOffset(Off);
+}
+
 // Assign VAs (addresses at run-time) to output sections.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
-  uintX_t ThreadBssOffset = 0;
-  uintX_t VA = Target->getVAStart();
+  uintX_t VA = Target->getVAStart() + Out<ELFT>::ElfHeader->getSize() +
+               Out<ELFT>::ProgramHeaders->getSize();
 
+  uintX_t ThreadBssOffset = 0;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
     uintX_t Align = Sec->getAlign();
     if (Sec->PageAlign)
@@ -1397,7 +1396,9 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 
 // Assign file offsets to output sections.
 template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
-  uintX_t Off = 0;
+  uintX_t Off =
+      Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
     if (Sec->getType() == SHT_NOBITS) {
       Sec->setFileOffset(Off);
@@ -1411,7 +1412,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
     Off += Sec->getSize();
   }
   SectionHeaderOff = alignTo(Off, sizeof(uintX_t));
-  FileSize = SectionHeaderOff + getNumSections() * sizeof(Elf_Shdr);
+  FileSize = SectionHeaderOff + (OutputSections.size() + 1) * sizeof(Elf_Shdr);
 }
 
 // Finalize the program headers. We call this function after we assign
@@ -1541,7 +1542,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_ehsize = sizeof(Elf_Ehdr);
   EHdr->e_phnum = Phdrs.size();
   EHdr->e_shentsize = sizeof(Elf_Shdr);
-  EHdr->e_shnum = getNumSections();
+  EHdr->e_shnum = OutputSections.size() + 1;
   EHdr->e_shstrndx = Out<ELFT>::ShStrTab->SectionIndex;
 
   if (Config->EMachine == EM_MIPS)
@@ -1559,7 +1560,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 
   // Write the section header table. Note that the first table entry is null.
   auto *SHdrs = reinterpret_cast<Elf_Shdr *>(Buf + EHdr->e_shoff);
-  for (OutputSectionBase<ELFT> *Sec : getSections())
+  for (OutputSectionBase<ELFT> *Sec : OutputSections)
     Sec->writeHeaderTo(++SHdrs);
 }
 
