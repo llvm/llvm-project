@@ -790,10 +790,7 @@ bool MachOYamlIOTaggedDocumentHandler::handledDocTag(llvm::yaml::IO &io,
     return false;
   }
   info->_normalizeMachOFile = nullptr;
-
-  // Transfer ownership to "out" File parameter.
-  std::unique_ptr<lld::File> f = std::move(*fileOrError);
-  file = f.release();
+  file = fileOrError->release();
   return true;
 }
 

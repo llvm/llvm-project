@@ -133,7 +133,7 @@ VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
 #else
 #define INSTR_PROF_DATA_DEFINED
 #endif
-/* For indirect function call value profiling, the address of the target
+/* For indirect function call value profiling, the addresses of the target
  * functions are profiled by the instrumented code. The target addresses are
  * written in the raw profile data and converted to target function name's MD5
  * hash by the profile reader during deserialization.  Typically, this happens

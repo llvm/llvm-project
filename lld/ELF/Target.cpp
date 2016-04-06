@@ -818,15 +818,15 @@ bool X86_64TargetInfo::isRelRelative(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
-  case R_X86_64_GOTTPOFF:
-  case R_X86_64_TPOFF32:
   case R_X86_64_DTPOFF32:
   case R_X86_64_DTPOFF64:
+  case R_X86_64_GOTTPOFF:
   case R_X86_64_PC8:
   case R_X86_64_PC16:
   case R_X86_64_PC32:
   case R_X86_64_PC64:
   case R_X86_64_PLT32:
+  case R_X86_64_TPOFF32:
     return true;
   }
 }
@@ -1253,21 +1253,25 @@ bool AArch64TargetInfo::isRelRelative(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
-  case R_AARCH64_PREL32:
+  case R_AARCH64_ADD_ABS_LO12_NC:
+  case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_ADR_PREL_LO21:
   case R_AARCH64_ADR_PREL_PG_HI21:
-  case R_AARCH64_ADR_GOT_PAGE:
+  case R_AARCH64_CALL26:
+  case R_AARCH64_CONDBR19:
+  case R_AARCH64_JUMP26:
   case R_AARCH64_LDST8_ABS_LO12_NC:
   case R_AARCH64_LDST16_ABS_LO12_NC:
   case R_AARCH64_LDST32_ABS_LO12_NC:
   case R_AARCH64_LDST64_ABS_LO12_NC:
   case R_AARCH64_LDST128_ABS_LO12_NC:
-  case R_AARCH64_ADD_ABS_LO12_NC:
-  case R_AARCH64_CALL26:
-  case R_AARCH64_JUMP26:
-  case R_AARCH64_CONDBR19:
-  case R_AARCH64_TSTBR14:
+  case R_AARCH64_PREL32:
   case R_AARCH64_PREL64:
+  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+  case R_AARCH64_TLSLE_ADD_TPREL_HI12:
+  case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+  case R_AARCH64_TSTBR14:
     return true;
   }
 }

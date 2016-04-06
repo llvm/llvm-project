@@ -24,5 +24,5 @@ int main(int argc, char **argv) {
 // CHECK_WARN: WARNING: MemorySanitizer: use-of-uninitialized-value
 // CHECK_NOWARN-NOT: ERROR
 // CHECK1:  1 PCs written
-// CHECK2:  2 PCs written
-// CHECK3:  3 PCs written
+// CHECK2:  1 PCs written
+// CHECK3:  2 PCs written
