@@ -1714,6 +1714,7 @@ public:
 
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+  friend class ASTRecordWriter;
   friend class ASTReader;
   friend class ASTWriter;
 };
