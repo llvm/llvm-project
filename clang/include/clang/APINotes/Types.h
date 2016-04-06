@@ -476,7 +476,7 @@ public:
 
 /// Descripts a series of options for a module
 struct ModuleOptions {
-  bool SwiftInferImportAsMember;
+  bool SwiftInferImportAsMember = false;
 };
 
 } // end namespace api_notes
