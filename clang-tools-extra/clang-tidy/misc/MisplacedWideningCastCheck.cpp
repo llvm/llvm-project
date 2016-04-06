@@ -10,12 +10,23 @@
 #include "MisplacedWideningCastCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "llvm/ADT/DenseMap.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
 namespace misc {
+
+MisplacedWideningCastCheck::MisplacedWideningCastCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      CheckImplicitCasts(Options.get("CheckImplicitCasts", true)) {}
+
+void MisplacedWideningCastCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "CheckImplicitCasts", CheckImplicitCasts);
+}
 
 void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
   auto Calc = expr(anyOf(binaryOperator(anyOf(
@@ -25,14 +36,22 @@ void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
                    hasType(isInteger()))
                   .bind("Calc");
 
-  auto Cast = explicitCastExpr(anyOf(cStyleCastExpr(), cxxStaticCastExpr(),
-                                     cxxReinterpretCastExpr()),
-                               hasDestinationType(isInteger()), has(Calc))
-                  .bind("Cast");
+  auto ExplicitCast =
+      explicitCastExpr(hasDestinationType(isInteger()), has(Calc));
+  auto ImplicitCast =
+      implicitCastExpr(hasImplicitDestinationType(isInteger()), has(Calc));
+  auto Cast = expr(anyOf(ExplicitCast, ImplicitCast)).bind("Cast");
 
-  Finder->addMatcher(varDecl(has(Cast)), this);
-  Finder->addMatcher(returnStmt(has(Cast)), this);
+  Finder->addMatcher(varDecl(hasInitializer(Cast)), this);
+  Finder->addMatcher(returnStmt(hasReturnValue(Cast)), this);
+  Finder->addMatcher(callExpr(hasAnyArgument(Cast)), this);
   Finder->addMatcher(binaryOperator(hasOperatorName("="), hasRHS(Cast)), this);
+  Finder->addMatcher(
+      binaryOperator(anyOf(hasOperatorName("=="), hasOperatorName("!="),
+                           hasOperatorName("<"), hasOperatorName("<="),
+                           hasOperatorName(">"), hasOperatorName(">=")),
+                     anyOf(hasLHS(Cast), hasRHS(Cast))),
+      this);
 }
 
 static unsigned getMaxCalculationWidth(ASTContext &Context, const Expr *E) {
@@ -75,8 +94,72 @@ static unsigned getMaxCalculationWidth(ASTContext &Context, const Expr *E) {
   return Context.getIntWidth(E->getType());
 }
 
+static llvm::SmallDenseMap<int, int> createRelativeIntSizesMap() {
+  llvm::SmallDenseMap<int, int> Result(14);
+  Result[BuiltinType::UChar] = 1;
+  Result[BuiltinType::SChar] = 1;
+  Result[BuiltinType::Char_U] = 1;
+  Result[BuiltinType::Char_S] = 1;
+  Result[BuiltinType::UShort] = 2;
+  Result[BuiltinType::Short] = 2;
+  Result[BuiltinType::UInt] = 3;
+  Result[BuiltinType::Int] = 3;
+  Result[BuiltinType::ULong] = 4;
+  Result[BuiltinType::Long] = 4;
+  Result[BuiltinType::ULongLong] = 5;
+  Result[BuiltinType::LongLong] = 5;
+  Result[BuiltinType::UInt128] = 6;
+  Result[BuiltinType::Int128] = 6;
+  return Result;
+}
+
+static llvm::SmallDenseMap<int, int> createRelativeCharSizesMap() {
+  llvm::SmallDenseMap<int, int> Result(6);
+  Result[BuiltinType::UChar] = 1;
+  Result[BuiltinType::SChar] = 1;
+  Result[BuiltinType::Char_U] = 1;
+  Result[BuiltinType::Char_S] = 1;
+  Result[BuiltinType::Char16] = 2;
+  Result[BuiltinType::Char32] = 3;
+  return Result;
+}
+
+static llvm::SmallDenseMap<int, int> createRelativeCharSizesWMap() {
+  llvm::SmallDenseMap<int, int> Result(6);
+  Result[BuiltinType::UChar] = 1;
+  Result[BuiltinType::SChar] = 1;
+  Result[BuiltinType::Char_U] = 1;
+  Result[BuiltinType::Char_S] = 1;
+  Result[BuiltinType::WChar_U] = 2;
+  Result[BuiltinType::WChar_S] = 2;
+  return Result;
+}
+
+static bool isFirstWider(BuiltinType::Kind First, BuiltinType::Kind Second) {
+  static const llvm::SmallDenseMap<int, int> RelativeIntSizes(
+      createRelativeIntSizesMap());
+  static const llvm::SmallDenseMap<int, int> RelativeCharSizes(
+      createRelativeCharSizesMap());
+  static const llvm::SmallDenseMap<int, int> RelativeCharSizesW(
+      createRelativeCharSizesWMap());
+
+  int FirstSize, SecondSize;
+  if ((FirstSize = RelativeIntSizes.lookup(First)) &&
+      (SecondSize = RelativeIntSizes.lookup(Second)))
+    return FirstSize > SecondSize;
+  if ((FirstSize = RelativeCharSizes.lookup(First)) &&
+      (SecondSize = RelativeCharSizes.lookup(Second)))
+    return FirstSize > SecondSize;
+  if ((FirstSize = RelativeCharSizesW.lookup(First)) &&
+      (SecondSize = RelativeCharSizesW.lookup(Second)))
+    return FirstSize > SecondSize;
+  return false;
+}
+
 void MisplacedWideningCastCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *Cast = Result.Nodes.getNodeAs<ExplicitCastExpr>("Cast");
+  const auto *Cast = Result.Nodes.getNodeAs<CastExpr>("Cast");
+  if (!CheckImplicitCasts && isa<ImplicitCastExpr>(Cast))
+    return;
   if (Cast->getLocStart().isMacroID())
     return;
 
@@ -95,24 +178,15 @@ void MisplacedWideningCastCheck::check(const MatchFinder::MatchResult &Result) {
 
   // If CalcType and CastType have same size then there is no real danger, but
   // there can be a portability problem.
+
   if (Context.getIntWidth(CastType) == Context.getIntWidth(CalcType)) {
-    if (CalcType->isSpecificBuiltinType(BuiltinType::Int) ||
-        CalcType->isSpecificBuiltinType(BuiltinType::UInt)) {
-      // There should be a warning when casting from int to long or long long.
-      if (!CastType->isSpecificBuiltinType(BuiltinType::Long) &&
-          !CastType->isSpecificBuiltinType(BuiltinType::ULong) &&
-          !CastType->isSpecificBuiltinType(BuiltinType::LongLong) &&
-          !CastType->isSpecificBuiltinType(BuiltinType::ULongLong))
-        return;
-    } else if (CalcType->isSpecificBuiltinType(BuiltinType::Long) ||
-               CalcType->isSpecificBuiltinType(BuiltinType::ULong)) {
-      // There should be a warning when casting from long to long long.
-      if (!CastType->isSpecificBuiltinType(BuiltinType::LongLong) &&
-          !CastType->isSpecificBuiltinType(BuiltinType::ULongLong))
-        return;
-    } else {
+    const auto *CastBuiltinType =
+        dyn_cast<BuiltinType>(CastType->getUnqualifiedDesugaredType());
+    const auto *CalcBuiltinType =
+        dyn_cast<BuiltinType>(CalcType->getUnqualifiedDesugaredType());
+    if (CastBuiltinType && CalcBuiltinType &&
+        !isFirstWider(CastBuiltinType->getKind(), CalcBuiltinType->getKind()))
       return;
-    }
   }
 
   // Don't write a warning if we can easily see that the result is not

@@ -473,7 +473,7 @@ BitcodeFile::createSymbolBody(const DenseSet<const Comdat *> &KeptComdats,
   uint32_t Flags = Sym.getFlags();
   bool IsWeak = Flags & BasicSymbolRef::SF_Weak;
   if (Flags & BasicSymbolRef::SF_Undefined) {
-    Body = new (Alloc) Undefined(NameRef, IsWeak, Visibility, false);
+    Body = new (Alloc) UndefinedBitcode(NameRef, IsWeak, Visibility);
   } else if (Flags & BasicSymbolRef::SF_Common) {
     const DataLayout &DL = M.getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());

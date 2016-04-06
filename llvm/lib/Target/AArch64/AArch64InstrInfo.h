@@ -204,6 +204,8 @@ private:
   void instantiateCondBranch(MachineBasicBlock &MBB, DebugLoc DL,
                              MachineBasicBlock *TBB,
                              ArrayRef<MachineOperand> Cond) const;
+  bool substituteCmpInstr(MachineInstr *CmpInstr,
+                          unsigned SrcReg, const MachineRegisterInfo *MRI) const;
 };
 
 /// emitFrameOffset - Emit instructions as needed to set DestReg to SrcReg

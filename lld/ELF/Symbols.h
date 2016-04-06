@@ -46,6 +46,8 @@ struct Symbol {
 
 // The base class for real symbol classes.
 class SymbolBody {
+  void init();
+
 public:
   enum Kind {
     DefinedFirst,
@@ -56,7 +58,7 @@ public:
     DefinedSyntheticKind,
     DefinedLast = DefinedSyntheticKind,
     UndefinedElfKind,
-    UndefinedKind,
+    UndefinedBitcodeKind,
     LazyKind
   };
 
@@ -64,7 +66,7 @@ public:
 
   bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
   bool isUndefined() const {
-    return SymbolKind == UndefinedKind || SymbolKind == UndefinedElfKind;
+    return SymbolKind == UndefinedBitcodeKind || SymbolKind == UndefinedElfKind;
   }
   bool isDefined() const { return SymbolKind <= DefinedLast; }
   bool isCommon() const { return SymbolKind == DefinedCommonKind; }
@@ -125,14 +127,7 @@ public:
 
 protected:
   SymbolBody(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,
-             uint8_t Type)
-      : SymbolKind(K), MustBeInDynSym(false), NeedsCopyOrPltAddr(false),
-        Type(Type), Binding(Binding), StOther(StOther),
-        Name({Name.data(), Name.size()}) {
-    assert(!isLocal());
-    IsUsedInRegularObj =
-        K != SharedKind && K != LazyKind && K != DefinedBitcodeKind;
-  }
+             uint8_t Type);
 
   SymbolBody(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type);
 
@@ -282,31 +277,27 @@ public:
   const OutputSectionBase<ELFT> &Section;
 };
 
-// Undefined symbol.
-class Undefined : public SymbolBody {
-  typedef SymbolBody::Kind Kind;
-  bool CanKeepUndefined;
-
-protected:
-  Undefined(Kind K, StringRef N, uint8_t Binding, uint8_t StOther,
-            uint8_t Type);
-  Undefined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type);
-
+class UndefinedBitcode : public SymbolBody {
 public:
-  Undefined(StringRef N, bool IsWeak, uint8_t StOther, bool CanKeepUndefined);
+  UndefinedBitcode(StringRef N, bool IsWeak, uint8_t StOther);
 
-  static bool classof(const SymbolBody *S) { return S->isUndefined(); }
-
-  bool canKeepUndefined() const { return CanKeepUndefined; }
+  static bool classof(const SymbolBody *S) {
+    return S->kind() == UndefinedBitcodeKind;
+  }
 };
 
-template <class ELFT> class UndefinedElf : public Undefined {
+template <class ELFT> class UndefinedElf : public SymbolBody {
   typedef typename ELFT::uint uintX_t;
   typedef typename ELFT::Sym Elf_Sym;
+  bool CanKeepUndefined = false;
 
 public:
   UndefinedElf(StringRef N, const Elf_Sym &Sym);
   UndefinedElf(const Elf_Sym &Sym);
+  UndefinedElf(StringRef Name, uint8_t Binding, uint8_t StOther, uint8_t Type,
+               bool CanKeepUndefined);
+
+  bool canKeepUndefined() const { return CanKeepUndefined; }
 
   uintX_t Size;
 
