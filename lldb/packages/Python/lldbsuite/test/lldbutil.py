@@ -12,6 +12,7 @@ import collections
 import os
 import re
 import sys
+import time
 
 # Third-party modules
 from six import StringIO as SixStringIO
