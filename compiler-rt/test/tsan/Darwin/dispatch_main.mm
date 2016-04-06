@@ -7,23 +7,23 @@
 #import <Foundation/Foundation.h>
 
 int main() {
-  NSLog(@"Hello world");
+  fprintf(stderr,"Hello world");
 
   dispatch_queue_t q = dispatch_queue_create("my.queue", DISPATCH_QUEUE_SERIAL);
 
   dispatch_async(q, ^{
-    NSLog(@"1");
+    fprintf(stderr,"1");
   });
 
   dispatch_async(q, ^{
-    NSLog(@"2");
+    fprintf(stderr,"2");
   });
 
   dispatch_async(q, ^{
-    NSLog(@"3");
+    fprintf(stderr,"3");
 
     dispatch_async(dispatch_get_main_queue(), ^{
-      NSLog(@"Done.");
+      fprintf(stderr,"Done.");
       sleep(1);
       exit(0);
     });
