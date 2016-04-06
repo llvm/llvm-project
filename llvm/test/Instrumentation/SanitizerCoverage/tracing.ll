@@ -21,7 +21,6 @@ entry:
 ; CHECK1-LABEL: define void @foo
 ; CHECK1: call void @__sanitizer_cov_trace_func_enter
 ; CHECK1: call void @__sanitizer_cov_trace_basic_block
-; CHECK1: call void @__sanitizer_cov_trace_basic_block
 ; CHECK1-NOT: call void @__sanitizer_cov_trace_basic_block
 ; CHECK1: ret void
 
@@ -29,12 +28,10 @@ entry:
 ; CHECK3: call void @__sanitizer_cov_trace_func_enter
 ; CHECK3: call void @__sanitizer_cov_trace_basic_block
 ; CHECK3: call void @__sanitizer_cov_trace_basic_block
-; CHECK3: call void @__sanitizer_cov_trace_basic_block
 ; CHECK3-NOT: call void @__sanitizer_cov_trace_basic_block
 ; CHECK3: ret void
 
 ; CHECK_PC-LABEL: define void @foo
-; CHECK_PC: call void @__sanitizer_cov_trace_pc
 ; CHECK_PC: call void @__sanitizer_cov_trace_pc
 ; CHECK_PC: call void @__sanitizer_cov_trace_pc
 ; CHECK_PC: call void @__sanitizer_cov_trace_pc

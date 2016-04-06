@@ -61,11 +61,14 @@ wrap(const relocation_iterator *SI) {
 // ObjectFile creation
 LLVMObjectFileRef LLVMCreateObjectFile(LLVMMemoryBufferRef MemBuf) {
   std::unique_ptr<MemoryBuffer> Buf(unwrap(MemBuf));
-  ErrorOr<std::unique_ptr<ObjectFile>> ObjOrErr(
+  Expected<std::unique_ptr<ObjectFile>> ObjOrErr(
       ObjectFile::createObjectFile(Buf->getMemBufferRef()));
   std::unique_ptr<ObjectFile> Obj;
-  if (!ObjOrErr)
+  if (!ObjOrErr) {
+    // TODO: Actually report errors helpfully.
+    consumeError(ObjOrErr.takeError());
     return nullptr;
+  }
 
   auto *Ret = new OwningBinary<ObjectFile>(std::move(ObjOrErr.get()), std::move(Buf));
   return wrap(Ret);

@@ -506,8 +506,8 @@ loadBinaryFormat(MemoryBufferRef ObjectBuffer, InstrProfSymtab &ProfileNames,
                  StringRef &CoverageMapping, uint8_t &BytesInAddress,
                  support::endianness &Endian, StringRef Arch) {
   auto BinOrErr = object::createBinary(ObjectBuffer);
-  if (std::error_code EC = BinOrErr.getError())
-    return EC;
+  if (!BinOrErr)
+    return errorToErrorCode(BinOrErr.takeError());
   auto Bin = std::move(BinOrErr.get());
   std::unique_ptr<ObjectFile> OF;
   if (auto *Universal = dyn_cast<object::MachOUniversalBinary>(Bin.get())) {

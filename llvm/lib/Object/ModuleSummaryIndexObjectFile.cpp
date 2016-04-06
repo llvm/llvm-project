@@ -56,10 +56,10 @@ ModuleSummaryIndexObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Object) {
   case sys::fs::file_magic::elf_relocatable:
   case sys::fs::file_magic::macho_object:
   case sys::fs::file_magic::coff_object: {
-    ErrorOr<std::unique_ptr<ObjectFile>> ObjFile =
+    Expected<std::unique_ptr<ObjectFile>> ObjFile =
         ObjectFile::createObjectFile(Object, Type);
     if (!ObjFile)
-      return ObjFile.getError();
+      return errorToErrorCode(ObjFile.takeError());
     return findBitcodeInObject(*ObjFile->get());
   }
   default:

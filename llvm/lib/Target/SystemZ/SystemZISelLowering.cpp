@@ -3130,9 +3130,11 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
 
   // The only fence that needs an instruction is a sequentially-consistent
   // cross-thread fence.
-  if (FenceOrdering == SequentiallyConsistent && FenceScope == CrossThread) {
+  if (FenceOrdering == AtomicOrdering::SequentiallyConsistent &&
+      FenceScope == CrossThread) {
     return SDValue(DAG.getMachineNode(SystemZ::Serialize, DL, MVT::Other,
-                                      Op.getOperand(0)), 0);
+                                      Op.getOperand(0)),
+                   0);
   }
 
   // MEMBARRIER is a compiler barrier; it codegens to a no-op.

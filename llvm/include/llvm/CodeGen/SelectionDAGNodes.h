@@ -1127,13 +1127,15 @@ class AtomicSDNode : public MemSDNode {
                   AtomicOrdering FailureOrdering,
                   SynchronizationScope SynchScope) {
     // This must match encodeMemSDNodeFlags() in SelectionDAG.cpp.
-    assert((SuccessOrdering & 15) == SuccessOrdering &&
+    assert((AtomicOrdering)((unsigned)SuccessOrdering & 15) ==
+               SuccessOrdering &&
            "Ordering may not require more than 4 bits!");
-    assert((FailureOrdering & 15) == FailureOrdering &&
+    assert((AtomicOrdering)((unsigned)FailureOrdering & 15) ==
+               FailureOrdering &&
            "Ordering may not require more than 4 bits!");
     assert((SynchScope & 1) == SynchScope &&
            "SynchScope may not require more than 1 bit!");
-    SubclassData |= SuccessOrdering << 8;
+    SubclassData |= (unsigned)SuccessOrdering << 8;
     SubclassData |= SynchScope << 12;
     this->FailureOrdering = FailureOrdering;
     assert(getSuccessOrdering() == SuccessOrdering &&

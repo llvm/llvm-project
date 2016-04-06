@@ -262,6 +262,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   bool CompletelyUnroll = Count == TripCount;
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
+  std::vector<BasicBlock*> OriginalLoopBlocks = L->getBlocks();
 
   // Go through all exits of L and see if there are any phi-nodes there. We just
   // conservatively assume that they're inserted to preserve LCSSA form, which
@@ -551,20 +552,24 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
       Term->eraseFromParent();
     }
   }
-  // Update dominators of loop exit blocks.
-  // Immediate dominator of an exit block might change, because we add more
+  // Update dominators of blocks we might reach through exits.
+  // Immediate dominator of such block might change, because we add more
   // routes which can lead to the exit: we can now reach it from the copied
-  // iterations too. Thus, the new idom of the exit block will be the nearest
+  // iterations too. Thus, the new idom of the block will be the nearest
   // common dominator of the previous idom and common dominator of all copies of
-  // the exiting block. This is equivalent to the nearest common dominator of
+  // the previous idom. This is equivalent to the nearest common dominator of
   // the previous idom and the first latch, which dominates all copies of the
-  // exiting block.
+  // previous idom.
   if (DT && Count > 1) {
-    for (auto Exit : ExitBlocks) {
-      BasicBlock *PrevIDom = DT->getNode(Exit)->getIDom()->getBlock();
-      BasicBlock *NewIDom =
-          DT->findNearestCommonDominator(PrevIDom, Latches[0]);
-      DT->changeImmediateDominator(Exit, NewIDom);
+    for (auto *BB : OriginalLoopBlocks) {
+      auto *BBDomNode = DT->getNode(BB);
+      for (auto *ChildDomNode : BBDomNode->getChildren()) {
+        auto *ChildBB = ChildDomNode->getBlock();
+        if (L->contains(ChildBB))
+          continue;
+        BasicBlock *NewIDom = DT->findNearestCommonDominator(BB, Latches[0]);
+        DT->changeImmediateDominator(ChildBB, NewIDom);
+      }
     }
   }
 

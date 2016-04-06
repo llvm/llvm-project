@@ -123,15 +123,6 @@ enum TargetIndex {
 
 } // End namespace llvm
 
-namespace ShaderType {
-  enum Type {
-    PIXEL = 0,
-    VERTEX = 1,
-    GEOMETRY = 2,
-    COMPUTE = 3
-  };
-}
-
 /// OpenCL uses address spaces to differentiate between
 /// various memory regions on the hardware. On the CPU
 /// all of the address spaces point to the same memory,

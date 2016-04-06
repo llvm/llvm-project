@@ -192,6 +192,10 @@ static Expected<MachOObjectFile::LoadCommandInfo>
 getFirstLoadCommandInfo(const MachOObjectFile *Obj) {
   unsigned HeaderSize = Obj->is64Bit() ? sizeof(MachO::mach_header_64)
                                        : sizeof(MachO::mach_header);
+  if (sizeof(MachOObjectFile::LoadCommandInfo) > Obj->getHeader().sizeofcmds)
+    return malformedError(*Obj, "truncated or malformed object (load command "
+                          "0 extends past the end all load commands in the "
+                          "file)");
   return getLoadCommandInfo(Obj, getPtr(Obj, HeaderSize));
 }
 

@@ -4,7 +4,9 @@
 define i8 @test_add_1_setcc_ne(i64* %p) #0 {
 ; CHECK-LABEL: test_add_1_setcc_ne:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    lock incq (%rdi)
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    lock xaddq %rax, (%rdi)
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
 entry:
@@ -17,7 +19,9 @@ entry:
 define i8 @test_sub_1_setcc_eq(i64* %p) #0 {
 ; CHECK-LABEL: test_sub_1_setcc_eq:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    movq $-1, %rax
+; CHECK-NEXT:    lock xaddq %rax, (%rdi)
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
 entry:
@@ -45,7 +49,9 @@ entry:
 define i8 @test_sub_10_setcc_sge(i64* %p) #0 {
 ; CHECK-LABEL: test_sub_10_setcc_sge:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    lock addq $-10, (%rdi)
+; CHECK-NEXT:    movq $-10, %rax
+; CHECK-NEXT:    lock xaddq %rax, (%rdi)
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    setns %al
 ; CHECK-NEXT:    retq
 entry:
@@ -60,7 +66,9 @@ entry:
 define i32 @test_add_10_brcond_sge(i64* %p, i32 %a0, i32 %a1) #0 {
 ; CHECK-LABEL: test_add_10_brcond_sge:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    lock addq $10, (%rdi)
+; CHECK-NEXT:    movl $10, %eax
+; CHECK-NEXT:    lock xaddq %rax, (%rdi)
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    js .LBB4_2
 ; CHECK-NEXT:  # BB#1: # %t
 ; CHECK-NEXT:    movl %esi, %eax
@@ -81,7 +89,9 @@ f:
 define i32 @test_sub_1_cmov_slt(i64* %p, i32 %a0, i32 %a1) #0 {
 ; CHECK-LABEL: test_sub_1_cmov_slt:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    movq $-1, %rax
+; CHECK-NEXT:    lock xaddq %rax, (%rdi)
+; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    cmovnsl %edx, %esi
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq

@@ -2,7 +2,7 @@
 
 ;CHECK: MIN * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-define void @test(<4 x float> inreg %reg0) #0 {
+define amdgpu_ps void @test(<4 x float> inreg %reg0) {
    %r0 = extractelement <4 x float> %reg0, i32 0
    %r1 = extractelement <4 x float> %reg0, i32 1
    %r2 = fcmp uge float %r0, %r1
@@ -13,5 +13,3 @@ define void @test(<4 x float> inreg %reg0) #0 {
 }
 
 declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
-
-attributes #0 = { "ShaderType"="0" }

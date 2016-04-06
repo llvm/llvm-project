@@ -5,7 +5,7 @@
 ;
 ;CHECK-LABEL: {{^}}test1:
 ;CHECK-NOT: s_wqm
-define <4 x float> @test1(<8 x i32> inreg %rsrc, <4 x i32> %c) #0 {
+define amdgpu_ps <4 x float> @test1(<8 x i32> inreg %rsrc, <4 x i32> %c) {
 main_body:
   %tex = call <4 x float> @llvm.amdgcn.image.load.v4i32(<4 x i32> %c, <8 x i32> %rsrc, i32 15, i1 0, i1 0, i1 0, i1 0)
   call void @llvm.amdgcn.image.store.v4i32(<4 x float> %tex, <4 x i32> %c, <8 x i32> %rsrc, i32 15, i1 0, i1 0, i1 0, i1 0)
@@ -20,7 +20,7 @@ main_body:
 ;CHECK: image_sample
 ;CHECK-NOT: exec
 ;CHECK: _load_dword v0,
-define float @test2(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <4 x i32> %c) #0 {
+define amdgpu_ps float @test2(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <4 x i32> %c) {
 main_body:
   %c.1 = call <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32> %c, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %c.2 = bitcast <4 x float> %c.1 to <4 x i32>
@@ -40,7 +40,7 @@ main_body:
 ;CHECK: s_and_b64 exec, exec, [[ORIG]]
 ;CHECK: store
 ;CHECK-NOT: exec
-define <4 x float> @test3(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <4 x i32> %c) #0 {
+define amdgpu_ps <4 x float> @test3(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <4 x i32> %c) {
 main_body:
   %tex = call <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32> %c, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tex.1 = bitcast <4 x float> %tex to <4 x i32>
@@ -62,7 +62,7 @@ main_body:
 ;CHECK: store
 ;CHECK: s_wqm_b64 exec, exec
 ;CHECK: image_sample v[0:3], [[MUL]], s[0:7], s[8:11] dmask:0xf
-define <4 x float> @test4(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, i32 %c, i32 %d, float %data) #0 {
+define amdgpu_ps <4 x float> @test4(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, i32 %c, i32 %d, float %data) {
 main_body:
   %c.1 = mul i32 %c, %d
   %gep = getelementptr float, float addrspace(1)* %ptr, i32 %c.1
@@ -88,7 +88,7 @@ main_body:
 ;CHECK: s_mov_b64 exec, [[SAVED]]
 ;CHECK: %IF
 ;CHECK: image_sample
-define float @test_control_flow_0(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, i32 %c, i32 %z, float %data) #0 {
+define amdgpu_ps float @test_control_flow_0(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, i32 %c, i32 %z, float %data) {
 main_body:
   %cmp = icmp eq i32 %z, 0
   br i1 %cmp, label %IF, label %ELSE
@@ -124,7 +124,7 @@ END:
 ;CHECK-NEXT: %ELSE
 ;CHECK: store
 ;CHECK: %END
-define float @test_control_flow_1(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, i32 %c, i32 %z, float %data) #0 {
+define amdgpu_ps float @test_control_flow_1(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, i32 %c, i32 %z, float %data) {
 main_body:
   %cmp = icmp eq i32 %z, 0
   br i1 %cmp, label %ELSE, label %IF
@@ -158,7 +158,7 @@ END:
 ;CHECK: store
 ;CHECK: s_wqm_b64 exec, exec
 ;CHECK: v_cmp
-define <4 x float> @test_control_flow_2(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <3 x i32> %idx, <2 x float> %data, i32 %coord) #0 {
+define amdgpu_ps <4 x float> @test_control_flow_2(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <3 x i32> %idx, <2 x float> %data, i32 %coord) {
 main_body:
   %idx.1 = extractelement <3 x i32> %idx, i32 0
   %gep.1 = getelementptr float, float addrspace(1)* %ptr, i32 %idx.1
@@ -205,7 +205,7 @@ END:
 ;CHECK: load
 ;CHECK: store
 ;CHECK: v_cmp
-define float @test_control_flow_3(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <3 x i32> %idx, <2 x float> %data, i32 %coord) #0 {
+define amdgpu_ps float @test_control_flow_3(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <3 x i32> %idx, <2 x float> %data, i32 %coord) {
 main_body:
   %tex = call <4 x float> @llvm.SI.image.sample.i32(i32 %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tex.1 = extractelement <4 x float> %tex, i32 0
@@ -253,7 +253,7 @@ END:
 ;CHECK: s_mov_b64 exec, [[SAVE]]
 ;CHECK: %END
 ;CHECK: image_sample
-define <4 x float> @test_control_flow_4(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, i32 %coord, i32 %y, float %z) #0 {
+define amdgpu_ps <4 x float> @test_control_flow_4(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, i32 %coord, i32 %y, float %z) {
 main_body:
   %cond = icmp eq i32 %y, 0
   br i1 %cond, label %IF, label %END
@@ -286,7 +286,7 @@ END:
 ;VI: flat_store_dword
 ;CHECK: s_mov_b64 exec, [[SAVE]]
 ;CHECK: image_sample
-define <4 x float> @test_kill_0(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <2 x i32> %idx, <2 x float> %data, i32 %coord, i32 %coord2, float %z) #0 {
+define amdgpu_ps <4 x float> @test_kill_0(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, <2 x i32> %idx, <2 x float> %data, i32 %coord, i32 %coord2, float %z) {
 main_body:
   %tex = call <4 x float> @llvm.SI.image.sample.i32(i32 %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
 
@@ -320,7 +320,7 @@ main_body:
 ;VI: flat_store_dword
 ;CHECK-NOT: wqm
 ;CHECK: v_cmpx_
-define <4 x float> @test_kill_1(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, i32 %idx, float %data, i32 %coord, i32 %coord2, float %z) #0 {
+define amdgpu_ps <4 x float> @test_kill_1(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, i32 %idx, float %data, i32 %coord, i32 %coord2, float %z) {
 main_body:
   %tex = call <4 x float> @llvm.SI.image.sample.i32(i32 %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
 
@@ -342,7 +342,6 @@ declare <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32>, <8 x i32>, <4 x i32>,
 declare void @llvm.AMDGPU.kill(float)
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { "ShaderType"="0" }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readonly }
 attributes #3 = { nounwind readnone }

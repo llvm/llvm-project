@@ -3,7 +3,7 @@
 ;CHECK: TEX
 ;CHECK-NEXT: ALU
 
-define void @test(<4 x float> inreg %reg0) #0 {
+define amdgpu_vs void @test(<4 x float> inreg %reg0) {
   %1 = extractelement <4 x float> %reg0, i32 0
   %2 = extractelement <4 x float> %reg0, i32 1
   %3 = extractelement <4 x float> %reg0, i32 2
@@ -21,5 +21,3 @@ define void @test(<4 x float> inreg %reg0) #0 {
 
 declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) readnone
 declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
-
-attributes #0 = { "ShaderType"="1" }

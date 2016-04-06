@@ -37,5 +37,3 @@ define void @testv(<4 x float> addrspace(1)* %out, <4 x float> inreg %vx) #1 {
 
 declare float @llvm.cos.f32(float) readnone
 declare <4 x float> @llvm.cos.v4f32(<4 x float>) readnone
-
-attributes #0 = { "ShaderType"="0" }

@@ -296,8 +296,9 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
   const auto &I = BinaryForPath.find(Path);
   Binary *Bin = nullptr;
   if (I == BinaryForPath.end()) {
-    ErrorOr<OwningBinary<Binary>> BinOrErr = createBinary(Path);
-    if (auto EC = BinOrErr.getError()) {
+    Expected<OwningBinary<Binary>> BinOrErr = createBinary(Path);
+    if (!BinOrErr) {
+      auto EC = errorToErrorCode(BinOrErr.takeError());
       BinaryForPath.insert(std::make_pair(Path, EC));
       return EC;
     }

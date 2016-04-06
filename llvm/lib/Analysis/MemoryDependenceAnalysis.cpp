@@ -93,7 +93,7 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
       Loc = MemoryLocation::get(LI);
       return MRI_Ref;
     }
-    if (LI->getOrdering() == Monotonic) {
+    if (LI->getOrdering() == AtomicOrdering::Monotonic) {
       Loc = MemoryLocation::get(LI);
       return MRI_ModRef;
     }
@@ -106,7 +106,7 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
       Loc = MemoryLocation::get(SI);
       return MRI_Mod;
     }
-    if (SI->getOrdering() == Monotonic) {
+    if (SI->getOrdering() == AtomicOrdering::Monotonic) {
       Loc = MemoryLocation::get(SI);
       return MRI_ModRef;
     }
@@ -518,11 +518,11 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       // A Monotonic (or higher) load is OK if the query inst is itself not
       // atomic.
       // FIXME: This is overly conservative.
-      if (LI->isAtomic() && LI->getOrdering() > Unordered) {
+      if (LI->isAtomic() && isStrongerThanUnordered(LI->getOrdering())) {
         if (!QueryInst || isNonSimpleLoadOrStore(QueryInst) ||
             isOtherMemAccess(QueryInst))
           return MemDepResult::getClobber(LI);
-        if (LI->getOrdering() != Monotonic)
+        if (LI->getOrdering() != AtomicOrdering::Monotonic)
           return MemDepResult::getClobber(LI);
       }
 
@@ -588,7 +588,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         if (!QueryInst || isNonSimpleLoadOrStore(QueryInst) ||
             isOtherMemAccess(QueryInst))
           return MemDepResult::getClobber(SI);
-        if (SI->getOrdering() != Monotonic)
+        if (SI->getOrdering() != AtomicOrdering::Monotonic)
           return MemDepResult::getClobber(SI);
       }
 
@@ -644,9 +644,9 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     // loads.  DSE uses this to find preceeding stores to delete and thus we
     // can't bypass the fence if the query instruction is a store.
     if (FenceInst *FI = dyn_cast<FenceInst>(Inst))
-      if (isLoad && FI->getOrdering() == Release)
+      if (isLoad && FI->getOrdering() == AtomicOrdering::Release)
         continue;
-    
+
     // See if this instruction (e.g. a call or vaarg) mod/ref's the pointer.
     ModRefInfo MR = AA.getModRefInfo(Inst, MemLoc);
     // If necessary, perform additional analysis.
@@ -1708,4 +1708,3 @@ bool MemoryDependenceWrapperPass::runOnFunction(Function &F) {
   MemDep.emplace(AA, AC, TLI, DT);
   return false;
 }
-

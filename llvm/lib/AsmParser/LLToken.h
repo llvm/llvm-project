@@ -106,6 +106,10 @@ namespace lltok {
     kw_x86_intrcc,
     kw_hhvmcc, kw_hhvm_ccc,
     kw_cxx_fast_tlscc,
+    kw_amdgpu_vs,
+    kw_amdgpu_gs,
+    kw_amdgpu_ps,
+    kw_amdgpu_cs,
 
     // Attributes:
     kw_attributes,

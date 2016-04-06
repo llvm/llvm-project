@@ -1222,34 +1222,34 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   AtomicOrdering addReleaseOrdering(AtomicOrdering a) {
     switch (a) {
-      case NotAtomic:
-        return NotAtomic;
-      case Unordered:
-      case Monotonic:
-      case Release:
-        return Release;
-      case Acquire:
-      case AcquireRelease:
-        return AcquireRelease;
-      case SequentiallyConsistent:
-        return SequentiallyConsistent;
+      case AtomicOrdering::NotAtomic:
+        return AtomicOrdering::NotAtomic;
+      case AtomicOrdering::Unordered:
+      case AtomicOrdering::Monotonic:
+      case AtomicOrdering::Release:
+        return AtomicOrdering::Release;
+      case AtomicOrdering::Acquire:
+      case AtomicOrdering::AcquireRelease:
+        return AtomicOrdering::AcquireRelease;
+      case AtomicOrdering::SequentiallyConsistent:
+        return AtomicOrdering::SequentiallyConsistent;
     }
     llvm_unreachable("Unknown ordering");
   }
 
   AtomicOrdering addAcquireOrdering(AtomicOrdering a) {
     switch (a) {
-      case NotAtomic:
-        return NotAtomic;
-      case Unordered:
-      case Monotonic:
-      case Acquire:
-        return Acquire;
-      case Release:
-      case AcquireRelease:
-        return AcquireRelease;
-      case SequentiallyConsistent:
-        return SequentiallyConsistent;
+      case AtomicOrdering::NotAtomic:
+        return AtomicOrdering::NotAtomic;
+      case AtomicOrdering::Unordered:
+      case AtomicOrdering::Monotonic:
+      case AtomicOrdering::Acquire:
+        return AtomicOrdering::Acquire;
+      case AtomicOrdering::Release:
+      case AtomicOrdering::AcquireRelease:
+        return AtomicOrdering::AcquireRelease;
+      case AtomicOrdering::SequentiallyConsistent:
+        return AtomicOrdering::SequentiallyConsistent;
     }
     llvm_unreachable("Unknown ordering");
   }

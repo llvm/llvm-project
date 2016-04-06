@@ -3903,7 +3903,7 @@ void SelectionDAGBuilder::visitFence(const FenceInst &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue Ops[3];
   Ops[0] = getRoot();
-  Ops[1] = DAG.getConstant(I.getOrdering(), dl,
+  Ops[1] = DAG.getConstant((unsigned)I.getOrdering(), dl,
                            TLI.getPointerTy(DAG.getDataLayout()));
   Ops[2] = DAG.getConstant(I.getSynchScope(), dl,
                            TLI.getPointerTy(DAG.getDataLayout()));

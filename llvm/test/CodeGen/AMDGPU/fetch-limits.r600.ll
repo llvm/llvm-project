@@ -7,7 +7,7 @@
 ; CHECK: Fetch clause
 ; CHECK: Fetch clause
 
-define void @fetch_limits_r600() #0 {
+define amdgpu_ps void @fetch_limits_r600() {
 entry:
   %0 = load <4 x float>, <4 x float> addrspace(8)* null
   %1 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 1)
@@ -41,8 +41,6 @@ entry:
   call void @llvm.R600.store.swizzle(<4 x float> %bcde, i32 0, i32 1)
   ret void
 }
-
-attributes #0 = { "ShaderType"="0" } ; Pixel Shader
 
 declare <4 x float> @llvm.AMDGPU.tex(<4 x float>, i32, i32, i32) readnone
 declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)

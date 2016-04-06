@@ -265,10 +265,9 @@ static bool isIntrinsicSourceOfDivergence(const TargetIntrinsicInfo *TII,
 
 static bool isArgPassedInSGPR(const Argument *A) {
   const Function *F = A->getParent();
-  unsigned ShaderType = AMDGPU::getShaderType(*F);
 
   // Arguments to compute shaders are never a source of divergence.
-  if (ShaderType == ShaderType::COMPUTE)
+  if (!AMDGPU::isShader(F->getCallingConv()))
     return true;
 
   // For non-compute shaders, SGPR inputs are marked with either inreg or byval.

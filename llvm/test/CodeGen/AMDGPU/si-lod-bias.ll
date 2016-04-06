@@ -6,7 +6,7 @@
 
 ; CHECK: {{^}}main:
 ; CHECK: image_sample_b v{{\[[0-9]:[0-9]\]}}, v{{\[[0-9]:[0-9]\]}}, s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0xf
-define void @main(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <8 x i32> addrspace(2)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
+define amdgpu_ps void @main(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <8 x i32> addrspace(2)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) {
 main_body:
   %tmp = getelementptr <16 x i8>, <16 x i8> addrspace(2)* %arg, i32 0
   %tmp20 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp, !tbaa !0
@@ -45,7 +45,7 @@ declare <4 x float> @llvm.SI.image.sample.b.v4i32(<4 x i32>, <8 x i32>, <4 x i32
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { "ShaderType"="0" }
+
 attributes #1 = { nounwind readnone }
 
 !0 = !{!1, !1, i64 0, i32 1}

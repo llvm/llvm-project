@@ -4,7 +4,7 @@
 ; CHECK: EXPORT
 ; CHECK-NOT: EXPORT
 
-define void @main() #0 {
+define amdgpu_ps void @main() {
 main_body:
   %0 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 1)
   %1 = extractelement <4 x float> %0, i32 0
@@ -48,5 +48,3 @@ IF13:                                             ; preds = %ELSE
 }
 
 declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
-
-attributes #0 = { "ShaderType"="0" }

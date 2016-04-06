@@ -275,12 +275,12 @@ public:
   /// @param ObjectPath The path to the object file. ObjectPath.isObject must
   ///        return true.
   /// @brief Create ObjectFile from path.
-  static ErrorOr<OwningBinary<ObjectFile>>
+  static Expected<OwningBinary<ObjectFile>>
   createObjectFile(StringRef ObjectPath);
 
-  static ErrorOr<std::unique_ptr<ObjectFile>>
+  static Expected<std::unique_ptr<ObjectFile>>
   createObjectFile(MemoryBufferRef Object, sys::fs::file_magic Type);
-  static ErrorOr<std::unique_ptr<ObjectFile>>
+  static Expected<std::unique_ptr<ObjectFile>>
   createObjectFile(MemoryBufferRef Object) {
     return createObjectFile(Object, sys::fs::file_magic::unknown);
   }

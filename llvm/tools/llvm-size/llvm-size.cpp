@@ -463,9 +463,11 @@ static bool checkMachOAndArchFlags(ObjectFile *o, StringRef file) {
 static void printFileSectionSizes(StringRef file) {
 
   // Attempt to open the binary.
-  ErrorOr<OwningBinary<Binary>> BinaryOrErr = createBinary(file);
-  if (error(BinaryOrErr.getError()))
+  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(file);
+  if (!BinaryOrErr) {
+    error(errorToErrorCode(BinaryOrErr.takeError()));
     return;
+  }
   Binary &Bin = *BinaryOrErr.get().getBinary();
 
   if (Archive *a = dyn_cast<Archive>(&Bin)) {

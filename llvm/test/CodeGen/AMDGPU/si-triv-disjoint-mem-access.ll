@@ -2,7 +2,7 @@
 
 declare void @llvm.SI.tbuffer.store.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
 declare void @llvm.SI.tbuffer.store.v4i32(<16 x i8>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
-declare void @llvm.amdgcn.s.barrier() #2
+declare void @llvm.amdgcn.s.barrier() #1
 
 
 @stored_lds_ptr = addrspace(3) global i32 addrspace(3)* undef, align 4
@@ -61,7 +61,7 @@ define void @no_reorder_barrier_local_load_global_store_local_load(i32 addrspace
 
   %tmp1 = load i32, i32 addrspace(3)* %ptr1, align 4
   store i32 99, i32 addrspace(1)* %gptr, align 4
-  call void @llvm.amdgcn.s.barrier() #2
+  call void @llvm.amdgcn.s.barrier() #1
   %tmp2 = load i32, i32 addrspace(3)* %ptr2, align 4
 
   %add = add nsw i32 %tmp1, %tmp2
@@ -214,7 +214,7 @@ define void @reorder_global_offsets(i32 addrspace(1)* nocapture %out, i32 addrsp
 ; XCI: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}}, 0x4
 ; XCI: TBUFFER_STORE_FORMAT
 ; XCI: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}}, 0x8
-; define void @reorder_local_load_tbuffer_store_local_load(i32 addrspace(1)* %out, i32 %a1, i32 %vaddr) #1 {
+; define amdgpu_vs void @reorder_local_load_tbuffer_store_local_load(i32 addrspace(1)* %out, i32 %a1, i32 %vaddr) #0 {
 ;   %ptr0 = load i32 addrspace(3)*, i32 addrspace(3)* addrspace(3)* @stored_lds_ptr, align 4
 
 ;   %ptr1 = getelementptr inbounds i32, i32 addrspace(3)* %ptr0, i32 1
@@ -236,5 +236,4 @@ define void @reorder_global_offsets(i32 addrspace(1)* nocapture %out, i32 addrsp
 ; }
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
-attributes #1 = { "ShaderType"="1" nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
-attributes #2 = { nounwind convergent }
+attributes #1 = { nounwind convergent }

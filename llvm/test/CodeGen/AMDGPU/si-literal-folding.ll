@@ -4,7 +4,7 @@
 ; CHECK-LABEL: {{^}}main:
 ; CHECK-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0xbf4353f8
 
-define void @main(float) #0 {
+define amdgpu_vs void @main(float) {
 main_body:
   %1 = fmul float %0, 0x3FE86A7F00000000
   %2 = fmul float %0, 0xBFE86A7F00000000
@@ -13,5 +13,3 @@ main_body:
 }
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
-
-attributes #0 = { "ShaderType"="1" }

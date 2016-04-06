@@ -65,6 +65,15 @@ UnrollCount("unroll-count", cl::Hidden,
   cl::desc("Use this unroll count for all loops including those with "
            "unroll_count pragma values, for testing purposes"));
 
+static cl::opt<unsigned>
+UnrollMaxCount("unroll-max-count", cl::Hidden,
+  cl::desc("Set the max unroll count for partial and runtime unrolling, for"
+           "testing purposes"));
+
+static cl::opt<unsigned>
+UnrollFullMaxCount("unroll-full-max-count", cl::Hidden,
+  cl::desc("Set the max unroll count for full unrolling, for testing purposes"));
+
 static cl::opt<bool>
 UnrollAllowPartial("unroll-allow-partial", cl::Hidden,
   cl::desc("Allows loops to be partially unrolled until "
@@ -107,6 +116,7 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
   UP.PartialOptSizeThreshold = UP.OptSizeThreshold;
   UP.Count = 0;
   UP.MaxCount = UINT_MAX;
+  UP.FullUnrollMaxCount = UINT_MAX;
   UP.Partial = false;
   UP.Runtime = false;
   UP.AllowExpensiveTripCount = false;
@@ -138,6 +148,10 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     UP.DynamicCostSavingsDiscount = UnrollDynamicCostSavingsDiscount;
   if (UnrollCount.getNumOccurrences() > 0)
     UP.Count = UnrollCount;
+  if (UnrollMaxCount.getNumOccurrences() > 0)
+    UP.MaxCount = UnrollMaxCount;
+  if (UnrollFullMaxCount.getNumOccurrences() > 0)
+    UP.FullUnrollMaxCount = UnrollFullMaxCount;
   if (UnrollAllowPartial.getNumOccurrences() > 0)
     UP.Partial = UnrollAllowPartial;
   if (UnrollRuntime.getNumOccurrences() > 0)
@@ -566,6 +580,7 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     Count = TripCount == 0 ? DefaultUnrollRuntimeCount : TripCount;
   if (TripCount && Count > TripCount)
     Count = TripCount;
+  Count = std::min(Count, UP.FullUnrollMaxCount);
 
   unsigned NumInlineCandidates;
   bool NotDuplicatable;
@@ -633,16 +648,20 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                    << "-unroll-allow-partial not given\n");
       return false;
     }
-    if (UP.PartialThreshold != NoThreshold &&
-        UnrolledSize > UP.PartialThreshold) {
+    if (UP.PartialThreshold != NoThreshold && Count > 1) {
       // Reduce unroll count to be modulo of TripCount for partial unrolling.
-      Count = (std::max(UP.PartialThreshold, 3u) - 2) / (LoopSize - 2);
+      if (UnrolledSize > UP.PartialThreshold)
+        Count = (std::max(UP.PartialThreshold, 3u) - 2) / (LoopSize - 2);
+      if (Count > UP.MaxCount)
+        Count = UP.MaxCount;
       while (Count != 0 && TripCount % Count != 0)
         Count--;
-      if (Count <= 1) {
+      if (AllowRuntime && Count <= 1) {
         // If there is no Count that is modulo of TripCount, set Count to
         // largest power-of-two factor that satisfies the threshold limit.
-        Count = (std::max(UP.PartialThreshold, 3u) - 2) / (LoopSize - 2);
+        // As we'll create fixup loop, do the type of unrolling only if
+        // runtime unrolling is allowed.
+        Count = DefaultUnrollRuntimeCount;
         UnrolledSize = (LoopSize - 2) * Count + 2;
         while (Count != 0 && UnrolledSize > UP.PartialThreshold) {
           Count >>= 1;

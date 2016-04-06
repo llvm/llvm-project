@@ -85,6 +85,7 @@ void PrintSectionHeaders(const object::ObjectFile *o);
 void PrintSectionContents(const object::ObjectFile *o);
 void PrintSymbolTable(const object::ObjectFile *o);
 LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, std::error_code EC);
+LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, llvm::Error E);
 
 } // end namespace llvm
 

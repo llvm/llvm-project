@@ -39,22 +39,25 @@ static void codegen(Module *M, llvm::raw_pwrite_stream &OS,
   CodeGenPasses.run(*M);
 }
 
-std::unique_ptr<Module>
-llvm::splitCodeGen(std::unique_ptr<Module> M,
-                   ArrayRef<llvm::raw_pwrite_stream *> OSs, StringRef CPU,
-                   StringRef Features, const TargetOptions &Options,
-                   Reloc::Model RM, CodeModel::Model CM, CodeGenOpt::Level OL,
-                   TargetMachine::CodeGenFileType FileType,
-                   bool PreserveLocals) {
+std::unique_ptr<Module> llvm::splitCodeGen(
+    std::unique_ptr<Module> M, ArrayRef<llvm::raw_pwrite_stream *> OSs,
+    ArrayRef<llvm::raw_pwrite_stream *> BCOSs, StringRef CPU,
+    StringRef Features, const TargetOptions &Options, Reloc::Model RM,
+    CodeModel::Model CM, CodeGenOpt::Level OL,
+    TargetMachine::CodeGenFileType FileType, bool PreserveLocals) {
   StringRef TripleStr = M->getTargetTriple();
   std::string ErrMsg;
   const Target *TheTarget = TargetRegistry::lookupTarget(TripleStr, ErrMsg);
   if (!TheTarget)
     report_fatal_error(Twine("Target not found: ") + ErrMsg);
 
+  assert(BCOSs.empty() || BCOSs.size() == OSs.size());
+
   if (OSs.size() == 1) {
-    codegen(M.get(), *OSs[0], TheTarget, CPU, Features, Options, RM, CM,
-            OL, FileType);
+    if (!BCOSs.empty())
+      WriteBitcodeToFile(M.get(), *BCOSs[0]);
+    codegen(M.get(), *OSs[0], TheTarget, CPU, Features, Options, RM, CM, OL,
+            FileType);
     return M;
   }
 
@@ -76,6 +79,11 @@ llvm::splitCodeGen(std::unique_ptr<Module> M,
           SmallVector<char, 0> BC;
           raw_svector_ostream BCOS(BC);
           WriteBitcodeToFile(MPart.get(), BCOS);
+
+          if (!BCOSs.empty()) {
+            BCOSs[ThreadCount]->write(BC.begin(), BC.size());
+            BCOSs[ThreadCount]->flush();
+          }
 
           llvm::raw_pwrite_stream *ThreadOS = OSs[ThreadCount++];
           // Enqueue the task

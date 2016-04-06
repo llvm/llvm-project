@@ -1,7 +1,7 @@
 ;RUN: llc < %s -march=r600 -mcpu=cayman -stress-sched -verify-misched -verify-machineinstrs
 ;REQUIRES: asserts
 
-define void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) #1 {
+define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0
   %1 = extractelement <4 x float> %reg1, i32 1
@@ -79,4 +79,3 @@ declare float @llvm.AMDGPU.clamp.f32(float, float, float) #0
 declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
 
 attributes #0 = { readnone }
-attributes #1 = { "ShaderType"="1" }

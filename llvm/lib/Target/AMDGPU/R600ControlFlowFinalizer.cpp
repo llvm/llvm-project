@@ -46,9 +46,9 @@ struct CFStack {
   unsigned CurrentEntries;
   unsigned CurrentSubEntries;
 
-  CFStack(const AMDGPUSubtarget *st, unsigned ShaderType) : ST(st),
+  CFStack(const AMDGPUSubtarget *st, CallingConv::ID cc) : ST(st),
       // We need to reserve a stack entry for CALL_FS in vertex shaders.
-      MaxStackSize(ShaderType == ShaderType::VERTEX ? 1 : 0),
+      MaxStackSize(cc == CallingConv::AMDGPU_VS ? 1 : 0),
       CurrentEntries(0), CurrentSubEntries(0) { }
 
   unsigned getLoopDepth();
@@ -478,14 +478,14 @@ public:
     TRI = static_cast<const R600RegisterInfo *>(ST->getRegisterInfo());
     R600MachineFunctionInfo *MFI = MF.getInfo<R600MachineFunctionInfo>();
 
-    CFStack CFStack(ST, MFI->getShaderType());
+    CFStack CFStack(ST, MF.getFunction()->getCallingConv());
     for (MachineFunction::iterator MB = MF.begin(), ME = MF.end(); MB != ME;
         ++MB) {
       MachineBasicBlock &MBB = *MB;
       unsigned CfCount = 0;
       std::vector<std::pair<unsigned, std::set<MachineInstr *> > > LoopStack;
       std::vector<MachineInstr * > IfThenElseStack;
-      if (MFI->getShaderType() == ShaderType::VERTEX) {
+      if (MF.getFunction()->getCallingConv() == CallingConv::AMDGPU_VS) {
         BuildMI(MBB, MBB.begin(), MBB.findDebugLoc(MBB.begin()),
             getHWInstrDesc(CF_CALL_FS));
         CfCount++;

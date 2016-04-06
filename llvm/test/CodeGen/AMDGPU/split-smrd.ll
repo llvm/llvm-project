@@ -6,7 +6,7 @@
 ; CHECK-LABEL: {{^}}split_smrd_add_worklist:
 ; CHECK: image_sample v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0x1
 
-define void @split_smrd_add_worklist([34 x <8 x i32>] addrspace(2)* byval %arg) #0 {
+define amdgpu_ps void @split_smrd_add_worklist([34 x <8 x i32>] addrspace(2)* byval %arg) #0 {
 bb:
   %tmp = call float @llvm.SI.load.const(<16 x i8> undef, i32 96)
   %tmp1 = bitcast float %tmp to i32
@@ -38,7 +38,7 @@ declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>,
 
 declare i32 @llvm.SI.packf16(float, float) #1
 
-attributes #0 = { "ShaderType"="0" "unsafe-fp-math"="true" }
+attributes #0 = { "unsafe-fp-math"="true" }
 attributes #1 = { nounwind readnone }
 
 !0 = !{!1, !1, i64 0, i32 1}

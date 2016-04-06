@@ -7,7 +7,7 @@ declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float
 
 ; FUNC-LABEL: {{^}}v32i8_to_v8i32:
 ; SI: s_endpgm
-define void @v32i8_to_v8i32(<32 x i8> addrspace(2)* inreg) #0 {
+define amdgpu_ps void @v32i8_to_v8i32(<32 x i8> addrspace(2)* inreg) #0 {
 entry:
   %1 = load <32 x i8>, <32 x i8> addrspace(2)* %0
   %2 = bitcast <32 x i8> %1 to <8 x i32>
@@ -75,5 +75,3 @@ define void @bitcast_f64_to_v2i32(<2 x i32> addrspace(1)* %out, double addrspace
   store <2 x i32> %bc, <2 x i32> addrspace(1)* %out, align 8
   ret void
 }
-
-attributes #0 = { "ShaderType"="0" }

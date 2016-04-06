@@ -153,15 +153,15 @@ public:
   }
 
   // construction aux.
-  static ErrorOr<std::unique_ptr<SymbolicFile>>
+  static Expected<std::unique_ptr<SymbolicFile>>
   createSymbolicFile(MemoryBufferRef Object, sys::fs::file_magic Type,
                      LLVMContext *Context);
 
-  static ErrorOr<std::unique_ptr<SymbolicFile>>
+  static Expected<std::unique_ptr<SymbolicFile>>
   createSymbolicFile(MemoryBufferRef Object) {
     return createSymbolicFile(Object, sys::fs::file_magic::unknown, nullptr);
   }
-  static ErrorOr<OwningBinary<SymbolicFile>>
+  static Expected<OwningBinary<SymbolicFile>>
   createSymbolicFile(StringRef ObjectPath);
 
   static inline bool classof(const Binary *v) {

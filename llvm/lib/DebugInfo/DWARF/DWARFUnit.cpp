@@ -268,8 +268,11 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 DWARFUnit::DWOHolder::DWOHolder(StringRef DWOPath)
     : DWOFile(), DWOContext(), DWOU(nullptr) {
   auto Obj = object::ObjectFile::createObjectFile(DWOPath);
-  if (!Obj)
+  if (!Obj) {
+    // TODO: Actually report errors helpfully.
+    consumeError(Obj.takeError());
     return;
+  }
   DWOFile = std::move(Obj.get());
   DWOContext.reset(
       cast<DWARFContext>(new DWARFContextInMemory(*DWOFile.getBinary())));

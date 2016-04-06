@@ -6,7 +6,7 @@
 ;EG: EXPORT T{{[0-9]+}}.XXWX
 ;EG: EXPORT T{{[0-9]+}}.XXXW
 
-define void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) #0 {
+define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0
   %1 = extractelement <4 x float> %reg1, i32 1
@@ -96,7 +96,7 @@ main_body:
 ; EG: T{{[0-9]+}}.XY__
 ; EG: T{{[0-9]+}}.ZXY0
 
-define void @main2(<4 x float> inreg %reg0, <4 x float> inreg %reg1) #0 {
+define amdgpu_vs void @main2(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0
   %1 = extractelement <4 x float> %reg1, i32 1
@@ -125,5 +125,4 @@ declare float @llvm.cos.f32(float) #1
 
 declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
 
-attributes #0 = { "ShaderType"="1" }
 attributes #1 = { nounwind readonly }

@@ -10,11 +10,8 @@ void AMDGPUMachineFunction::anchor() {}
 
 AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
   MachineFunctionInfo(),
-  ShaderType(ShaderType::COMPUTE),
   LDSSize(0),
   ABIArgOffset(0),
   ScratchSize(0),
   IsKernel(true) {
-
-  ShaderType = AMDGPU::getShaderType(*MF.getFunction());
 }

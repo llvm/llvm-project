@@ -29,10 +29,14 @@ class raw_pwrite_stream;
 /// files if linked together are intended to be equivalent to the single output
 /// file that would have been code generated from M.
 ///
+/// Writes bitcode for individual partitions into output streams in BCOSs, if
+/// BCOSs is not empty.
+///
 /// \returns M if OSs.size() == 1, otherwise returns std::unique_ptr<Module>().
 std::unique_ptr<Module>
 splitCodeGen(std::unique_ptr<Module> M, ArrayRef<raw_pwrite_stream *> OSs,
-             StringRef CPU, StringRef Features, const TargetOptions &Options,
+             ArrayRef<llvm::raw_pwrite_stream *> BCOSs, StringRef CPU,
+             StringRef Features, const TargetOptions &Options,
              Reloc::Model RM = Reloc::Default,
              CodeModel::Model CM = CodeModel::Default,
              CodeGenOpt::Level OL = CodeGenOpt::Default,

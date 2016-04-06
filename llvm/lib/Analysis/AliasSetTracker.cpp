@@ -300,7 +300,7 @@ bool AliasSetTracker::add(Value *Ptr, uint64_t Size, const AAMDNodes &AAInfo) {
 
 
 bool AliasSetTracker::add(LoadInst *LI) {
-  if (LI->getOrdering() > Monotonic) return addUnknown(LI);
+  if (isStrongerThanMonotonic(LI->getOrdering())) return addUnknown(LI);
 
   AAMDNodes AAInfo;
   LI->getAAMetadata(AAInfo);
@@ -316,7 +316,7 @@ bool AliasSetTracker::add(LoadInst *LI) {
 }
 
 bool AliasSetTracker::add(StoreInst *SI) {
-  if (SI->getOrdering() > Monotonic) return addUnknown(SI);
+  if (isStrongerThanMonotonic(SI->getOrdering())) return addUnknown(SI);
 
   AAMDNodes AAInfo;
   SI->getAAMetadata(AAInfo);

@@ -16,7 +16,7 @@
 ;CHECK: buffer_atomic_swap v0, s[0:3], [[SOFS]] offset:1 glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_swap v0, s[0:3], 0{{$}}
-define float @test1(<4 x i32> inreg %rsrc, i32 %data, i32 %vindex, i32 %voffset) #0 {
+define amdgpu_ps float @test1(<4 x i32> inreg %rsrc, i32 %data, i32 %vindex, i32 %voffset) {
 main_body:
   %o1 = call i32 @llvm.amdgcn.buffer.atomic.swap(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i1 0)
   %o2 = call i32 @llvm.amdgcn.buffer.atomic.swap(i32 %o1, <4 x i32> %rsrc, i32 %vindex, i32 0, i1 0)
@@ -48,7 +48,7 @@ main_body:
 ;CHECK: buffer_atomic_or v0, v1, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_xor v0, v1, s[0:3], 0 idxen glc
-define float @test2(<4 x i32> inreg %rsrc, i32 %data, i32 %vindex) #0 {
+define amdgpu_ps float @test2(<4 x i32> inreg %rsrc, i32 %data, i32 %vindex) {
 main_body:
   %t1 = call i32 @llvm.amdgcn.buffer.atomic.add(i32 %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i1 0)
   %t2 = call i32 @llvm.amdgcn.buffer.atomic.sub(i32 %t1, <4 x i32> %rsrc, i32 %vindex, i32 0, i1 0)
@@ -80,7 +80,7 @@ main_body:
 ;CHECK-DAG: s_waitcnt vmcnt(0)
 ;CHECK-DAG: s_movk_i32 [[SOFS:s[0-9]+]], 0x1fff
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, s[0:3], [[SOFS]] offset:1 glc
-define float @test3(<4 x i32> inreg %rsrc, i32 %data, i32 %cmp, i32 %vindex, i32 %voffset) #0 {
+define amdgpu_ps float @test3(<4 x i32> inreg %rsrc, i32 %data, i32 %cmp, i32 %vindex, i32 %voffset) {
 main_body:
   %o1 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %data, i32 %cmp, <4 x i32> %rsrc, i32 0, i32 0, i1 0)
   %o2 = call i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32 %o1, i32 %cmp, <4 x i32> %rsrc, i32 %vindex, i32 0, i1 0)
@@ -100,17 +100,16 @@ main_body:
   ret float %out
 }
 
-declare i32 @llvm.amdgcn.buffer.atomic.swap(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.add(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.smin(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.umin(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.smax(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.umax(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.and(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.or(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.xor(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32, i32, <4 x i32>, i32, i32, i1) #1
+declare i32 @llvm.amdgcn.buffer.atomic.swap(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.add(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.smin(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.umin(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.smax(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.umax(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.and(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.or(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.xor(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32, i32, <4 x i32>, i32, i32, i1) #0
 
-attributes #0 = { "ShaderType"="0" }
-attributes #1 = { nounwind }
+attributes #0 = { nounwind }

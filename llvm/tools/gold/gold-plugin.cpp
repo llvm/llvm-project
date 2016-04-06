@@ -888,7 +888,9 @@ private:
 
   /// Sets up output files necessary to perform optional multi-threaded
   /// split code generation, and invokes the code generation implementation.
-  void runSplitCodeGen();
+  /// If BCFileName is not empty, saves bitcode for module partitions into
+  /// {BCFileName}0 .. {BCFileName}N.
+  void runSplitCodeGen(const SmallString<128> &BCFilename);
 };
 }
 
@@ -987,7 +989,7 @@ void CodeGen::runCodegenPasses() {
   CodeGenPasses.run(*M);
 }
 
-void CodeGen::runSplitCodeGen() {
+void CodeGen::runSplitCodeGen(const SmallString<128> &BCFilename) {
   const std::string &TripleStr = M->getTargetTriple();
   Triple TheTriple(TripleStr);
 
@@ -1010,6 +1012,7 @@ void CodeGen::runSplitCodeGen() {
   unsigned int MaxThreads = options::Parallelism ? options::Parallelism : 1;
 
   std::vector<SmallString<128>> Filenames(MaxThreads);
+  std::vector<SmallString<128>> BCFilenames(MaxThreads);
   bool TempOutFile = Filename.empty();
   {
     // Open a file descriptor for each backend task. This is done in a block
@@ -1024,8 +1027,18 @@ void CodeGen::runSplitCodeGen() {
       OSPtrs[I] = &OSs.back();
     }
 
+    std::list<llvm::raw_fd_ostream> BCOSs;
+    std::vector<llvm::raw_pwrite_stream *> BCOSPtrs;
+    if (!BCFilename.empty() && MaxThreads > 1) {
+      for (unsigned I = 0; I != MaxThreads; ++I) {
+        int FD = openOutputFile(BCFilename, false, BCFilenames[I], I);
+        BCOSs.emplace_back(FD, true);
+        BCOSPtrs.push_back(&BCOSs.back());
+      }
+    }
+
     // Run backend tasks.
-    splitCodeGen(std::move(M), OSPtrs, options::mcpu, Features.getString(),
+    splitCodeGen(std::move(M), OSPtrs, BCOSPtrs, options::mcpu, Features.getString(),
                  Options, RelocationModel, CodeModel::Default, CGOptLevel);
   }
 
@@ -1036,14 +1049,16 @@ void CodeGen::runSplitCodeGen() {
 void CodeGen::runAll() {
   runLTOPasses();
 
+  SmallString<128> OptFilename;
   if (options::TheOutputType == options::OT_SAVE_TEMPS) {
-    std::string OptFilename = output_name;
+    OptFilename = output_name;
     // If the CodeGen client provided a filename, use it. Always expect
     // a provided filename if we are in a task (i.e. ThinLTO backend).
     assert(!SaveTempsFilename.empty() || TaskID == -1);
     if (!SaveTempsFilename.empty())
       OptFilename = SaveTempsFilename;
-    saveBCFile(OptFilename + ".opt.bc", *M);
+    OptFilename += ".opt.bc";
+    saveBCFile(OptFilename, *M);
   }
 
   // If we are already in a thread (i.e. ThinLTO), just perform
@@ -1052,7 +1067,7 @@ void CodeGen::runAll() {
     runCodegenPasses();
   // Otherwise attempt split code gen.
   else
-    runSplitCodeGen();
+    runSplitCodeGen(OptFilename);
 }
 
 /// Links the module in \p View from file \p F into the combined module

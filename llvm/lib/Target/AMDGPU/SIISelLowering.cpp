@@ -606,15 +606,13 @@ SDValue SITargetLowering::LowerFormalArguments(
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
 
-  if (Subtarget->isAmdHsaOS() && Info->getShaderType() != ShaderType::COMPUTE) {
+  if (Subtarget->isAmdHsaOS() && AMDGPU::isShader(CallConv)) {
     const Function *Fn = MF.getFunction();
     DiagnosticInfoUnsupported NoGraphicsHSA(
         *Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc());
     DAG.getContext()->diagnose(NoGraphicsHSA);
     return SDValue();
   }
-
-  // FIXME: We currently assume all calling conventions are kernels.
 
   SmallVector<ISD::InputArg, 16> Splits;
   BitVector Skipped(Ins.size());
@@ -623,7 +621,7 @@ SDValue SITargetLowering::LowerFormalArguments(
     const ISD::InputArg &Arg = Ins[i];
 
     // First check if it's a PS input addr
-    if (Info->getShaderType() == ShaderType::PIXEL && !Arg.Flags.isInReg() &&
+    if (CallConv == CallingConv::AMDGPU_PS && !Arg.Flags.isInReg() &&
         !Arg.Flags.isByVal() && PSInputNum <= 15) {
 
       if (!Arg.Used && !Info->isPSInputAllocated(PSInputNum)) {
@@ -641,7 +639,8 @@ SDValue SITargetLowering::LowerFormalArguments(
     }
 
     // Second split vertices into their elements
-    if (Info->getShaderType() != ShaderType::COMPUTE && Arg.VT.isVector()) {
+    if (AMDGPU::isShader(CallConv) &&
+        Arg.VT.isVector()) {
       ISD::InputArg NewArg = Arg;
       NewArg.Flags.setSplit();
       NewArg.VT = Arg.VT.getVectorElementType();
@@ -657,7 +656,7 @@ SDValue SITargetLowering::LowerFormalArguments(
         NewArg.PartOffset += NewArg.VT.getStoreSize();
       }
 
-    } else if (Info->getShaderType() != ShaderType::COMPUTE) {
+    } else if (AMDGPU::isShader(CallConv)) {
       Splits.push_back(Arg);
     }
   }
@@ -678,7 +677,7 @@ SDValue SITargetLowering::LowerFormalArguments(
   // - At least one of PERSP_* (0xF) or LINEAR_* (0x70) must be enabled.
   // - If POS_W_FLOAT (11) is enabled, at least one of PERSP_* must be
   //   enabled too.
-  if (Info->getShaderType() == ShaderType::PIXEL &&
+  if (CallConv == CallingConv::AMDGPU_PS &&
       ((Info->getPSInputAddr() & 0x7F) == 0 ||
        ((Info->getPSInputAddr() & 0xF) == 0 &&
 	Info->isPSInputAllocated(11)))) {
@@ -688,7 +687,7 @@ SDValue SITargetLowering::LowerFormalArguments(
     Info->PSInputEna |= 1;
   }
 
-  if (Info->getShaderType() == ShaderType::COMPUTE) {
+  if (!AMDGPU::isShader(CallConv)) {
     getOriginalFunctionArgs(DAG, DAG.getMachineFunction().getFunction(), Ins,
                             Splits);
   }
@@ -932,7 +931,7 @@ SDValue SITargetLowering::LowerReturn(SDValue Chain,
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
-  if (Info->getShaderType() == ShaderType::COMPUTE)
+  if (!AMDGPU::isShader(CallConv))
     return AMDGPUTargetLowering::LowerReturn(Chain, CallConv, isVarArg, Outs,
                                              OutVals, DL, DAG);
 
