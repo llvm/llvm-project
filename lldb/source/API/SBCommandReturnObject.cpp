@@ -258,15 +258,27 @@ SBCommandReturnObject::GetDescription (SBStream &description)
 void
 SBCommandReturnObject::SetImmediateOutputFile(FILE *fh)
 {
-    if (m_opaque_ap)
-        m_opaque_ap->SetImmediateOutputFile(fh);
+    SetImmediateOutputFile(fh, false);
 }
 
 void
 SBCommandReturnObject::SetImmediateErrorFile(FILE *fh)
 {
+    SetImmediateErrorFile(fh, false);
+}
+
+void
+SBCommandReturnObject::SetImmediateOutputFile(FILE *fh, bool transfer_ownership)
+{
     if (m_opaque_ap)
-        m_opaque_ap->SetImmediateErrorFile(fh);
+        m_opaque_ap->SetImmediateOutputFile(fh, transfer_ownership);
+}
+
+void
+SBCommandReturnObject::SetImmediateErrorFile(FILE *fh, bool transfer_ownership)
+{
+    if (m_opaque_ap)
+        m_opaque_ap->SetImmediateErrorFile(fh, transfer_ownership);
 }
 
 void

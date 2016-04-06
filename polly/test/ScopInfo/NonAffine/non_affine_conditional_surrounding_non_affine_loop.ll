@@ -33,8 +33,8 @@
 ; ALL-NEXT: {  :  }
 ; ALL-NEXT: Assumed Context:
 ; ALL-NEXT: {  :  }
-; ALL-NEXT: Boundary Context:
-; ALL-NEXT: {  :  }
+; ALL-NEXT: Invalid Context:
+; ALL-NEXT: {  : 1 = 0 }
 ; ALL-NEXT: Arrays {
 ; ALL-NEXT:     i32 MemRef_A[*]; // Element size 4
 ; ALL-NEXT: }

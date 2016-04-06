@@ -33,8 +33,9 @@ BreakpointResolverName::BreakpointResolverName (Breakpoint *bkpt,
                                                 uint32_t name_type_mask,
                                                 LanguageType language,
                                                 Breakpoint::MatchType type,
+                                                lldb::addr_t offset,
                                                 bool skip_prologue) :
-    BreakpointResolver (bkpt, BreakpointResolver::NameResolver),
+    BreakpointResolver (bkpt, BreakpointResolver::NameResolver, offset),
     m_class_name (),
     m_regex (),
     m_match_type (type),
@@ -62,8 +63,9 @@ BreakpointResolverName::BreakpointResolverName (Breakpoint *bkpt,
                                                 size_t num_names,
                                                 uint32_t name_type_mask,
                                                 LanguageType language,
+                                                lldb::addr_t offset,
                                                 bool skip_prologue) :
-    BreakpointResolver (bkpt, BreakpointResolver::NameResolver),
+    BreakpointResolver (bkpt, BreakpointResolver::NameResolver, offset),
     m_match_type (Breakpoint::Exact),
     m_language (language),
     m_skip_prologue (skip_prologue)
@@ -78,8 +80,9 @@ BreakpointResolverName::BreakpointResolverName (Breakpoint *bkpt,
                                                 std::vector<std::string> names,
                                                 uint32_t name_type_mask,
                                                 LanguageType language,
+                                                lldb::addr_t offset,
                                                 bool skip_prologue) :
-    BreakpointResolver (bkpt, BreakpointResolver::NameResolver),
+    BreakpointResolver (bkpt, BreakpointResolver::NameResolver, offset),
     m_match_type (Breakpoint::Exact),
     m_language (language),
     m_skip_prologue (skip_prologue)
@@ -93,8 +96,9 @@ BreakpointResolverName::BreakpointResolverName (Breakpoint *bkpt,
 BreakpointResolverName::BreakpointResolverName (Breakpoint *bkpt,
                                                 RegularExpression &func_regex,
                                                 lldb::LanguageType language,
+                                                lldb::addr_t offset,
                                                 bool skip_prologue) :
-    BreakpointResolver (bkpt, BreakpointResolver::NameResolver),
+    BreakpointResolver (bkpt, BreakpointResolver::NameResolver, offset),
     m_class_name (nullptr),
     m_regex (func_regex),
     m_match_type (Breakpoint::Regexp),
@@ -103,12 +107,16 @@ BreakpointResolverName::BreakpointResolverName (Breakpoint *bkpt,
 {
 }
 
-BreakpointResolverName::BreakpointResolverName(Breakpoint *bkpt,
-                                               const char *class_name,
-                                               const char *method,
-                                               Breakpoint::MatchType type,
-                                               bool skip_prologue ) :
-    BreakpointResolver (bkpt, BreakpointResolver::NameResolver),
+BreakpointResolverName::BreakpointResolverName
+(
+    Breakpoint *bkpt,
+    const char *class_name,
+    const char *method,
+    Breakpoint::MatchType type,
+    lldb::addr_t offset,
+    bool skip_prologue
+) :
+    BreakpointResolver (bkpt, BreakpointResolver::NameResolver, offset),
     m_class_name (class_name),
     m_regex (),
     m_match_type (type),
@@ -126,7 +134,7 @@ BreakpointResolverName::BreakpointResolverName(Breakpoint *bkpt,
 BreakpointResolverName::~BreakpointResolverName() = default;
 
 BreakpointResolverName::BreakpointResolverName(const BreakpointResolverName &rhs) :
-    BreakpointResolver(rhs.m_breakpoint, BreakpointResolver::NameResolver),
+    BreakpointResolver(rhs.m_breakpoint, BreakpointResolver::NameResolver, rhs.m_offset),
     m_lookups(rhs.m_lookups),
     m_class_name(rhs.m_class_name),
     m_regex(rhs.m_regex),
@@ -364,7 +372,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
                 {
                     if (filter.AddressPasses(break_addr))
                     {
-                        BreakpointLocationSP bp_loc_sp (m_breakpoint->AddLocation(break_addr, &new_location));
+                        BreakpointLocationSP bp_loc_sp (AddLocation(break_addr, &new_location));
                         bp_loc_sp->SetIsReExported(is_reexported);
                         if (bp_loc_sp && new_location && !m_breakpoint->IsInternal())
                         {

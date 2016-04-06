@@ -625,7 +625,7 @@ SBTarget::ConnectRemote
     {
         Mutex::Locker api_locker (target_sp->GetAPIMutex());
         if (listener.IsValid())
-            process_sp = target_sp->CreateProcess (listener.ref(), plugin_name, NULL);
+            process_sp = target_sp->CreateProcess (listener.m_opaque_sp, plugin_name, NULL);
         else
             process_sp = target_sp->CreateProcess (target_sp->GetDebugger().GetListener(), plugin_name, NULL);
 
@@ -801,6 +801,14 @@ SBBreakpoint
 SBTarget::BreakpointCreateByLocation (const SBFileSpec &sb_file_spec,
                                       uint32_t line)
 {
+    return BreakpointCreateByLocation(sb_file_spec, line, 0);
+}
+
+SBBreakpoint
+SBTarget::BreakpointCreateByLocation (const SBFileSpec &sb_file_spec,
+                                      uint32_t line,
+                                      lldb::addr_t offset)
+{
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
 
     SBBreakpoint sb_bp;
@@ -814,7 +822,15 @@ SBTarget::BreakpointCreateByLocation (const SBFileSpec &sb_file_spec,
         const bool internal = false;
         const bool hardware = false;
         const LazyBool move_to_nearest_code = eLazyBoolCalculate;
-        *sb_bp = target_sp->CreateBreakpoint (NULL, *sb_file_spec, line, check_inlines, skip_prologue, internal, hardware, move_to_nearest_code);
+        *sb_bp = target_sp->CreateBreakpoint (NULL,
+                                              *sb_file_spec,
+                                              line,
+                                              offset,
+                                              check_inlines,
+                                              skip_prologue,
+                                              internal,
+                                              hardware,
+                                              move_to_nearest_code);
     }
 
     if (log)
@@ -846,15 +862,16 @@ SBTarget::BreakpointCreateByName (const char *symbol_name,
         const bool internal = false;
         const bool hardware = false;
         const LazyBool skip_prologue = eLazyBoolCalculate;
+        const lldb::addr_t offset = 0;
         if (module_name && module_name[0])
         {
             FileSpecList module_spec_list;
             module_spec_list.Append (FileSpec (module_name, false));
-            *sb_bp = target_sp->CreateBreakpoint (&module_spec_list, NULL, symbol_name, eFunctionNameTypeAuto, eLanguageTypeUnknown, skip_prologue, internal, hardware);
+            *sb_bp = target_sp->CreateBreakpoint (&module_spec_list, NULL, symbol_name, eFunctionNameTypeAuto, eLanguageTypeUnknown, offset, skip_prologue, internal, hardware);
         }
         else
         {
-            *sb_bp = target_sp->CreateBreakpoint (NULL, NULL, symbol_name, eFunctionNameTypeAuto, eLanguageTypeUnknown, skip_prologue, internal, hardware);
+            *sb_bp = target_sp->CreateBreakpoint (NULL, NULL, symbol_name, eFunctionNameTypeAuto, eLanguageTypeUnknown, offset, skip_prologue, internal, hardware);
         }
     }
 
@@ -906,6 +923,7 @@ SBTarget::BreakpointCreateByName (const char *symbol_name,
                                               symbol_name,
                                               name_type_mask,
                                               symbol_language,
+                                              0,
                                               skip_prologue,
                                               internal,
                                               hardware);
@@ -937,6 +955,18 @@ SBTarget::BreakpointCreateByNames (const char *symbol_names[],
                                    const SBFileSpecList &module_list,
                                    const SBFileSpecList &comp_unit_list)
 {
+    return BreakpointCreateByNames(symbol_names, num_names, name_type_mask, eLanguageTypeUnknown, 0, module_list, comp_unit_list);
+}
+
+lldb::SBBreakpoint
+SBTarget::BreakpointCreateByNames (const char *symbol_names[],
+                                   uint32_t num_names,
+                                   uint32_t name_type_mask,
+                                   LanguageType symbol_language,
+                                   lldb::addr_t offset,
+                                   const SBFileSpecList &module_list,
+                                   const SBFileSpecList &comp_unit_list)
+{
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
 
     SBBreakpoint sb_bp;
@@ -951,8 +981,9 @@ SBTarget::BreakpointCreateByNames (const char *symbol_names[],
                                               comp_unit_list.get(), 
                                               symbol_names,
                                               num_names,
-                                              name_type_mask, 
+                                              name_type_mask,
                                               symbol_language,
+                                              offset,
                                               skip_prologue,
                                               internal,
                                               hardware);

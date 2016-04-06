@@ -26,11 +26,11 @@ bool cast:
 
 This code is the result of unsuccessful refactoring, where type of ``m_foo``
 changed from ``bool`` to ``int``. The programmer forgot to change all
-occurences of ``bool``, and the remaining code is no longer correct, yet it
+occurrences of ``bool``, and the remaining code is no longer correct, yet it
 still compiles without any visible warnings.
 
 In addition to issuing warnings, FixIt hints are provided to help solve
-the reported issues. This can be used for improving readabilty of code, for example:
+the reported issues. This can be used for improving readability of code, for example:
 
 .. code:: c++
 
@@ -95,5 +95,5 @@ Some additional accommodations are made for pre-C++11 dialects:
  - ``false`` literal cast to pointer is detected,
  - instead of ``nullptr`` literal, ``0`` is proposed as replacement.
 
-Occurences of implicit casts inside macros and template instantiations are
+Occurrences of implicit casts inside macros and template instantiations are
 deliberately ignored, as it is not clear how to deal with such cases.

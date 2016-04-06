@@ -1,7 +1,0 @@
-# Tests that a weak reference remains a weak reference,
-# even if a shared library defines the symbol weak as well.
-
-RUN: lld -flavor old-gnu  -target x86_64 -shared %p/Inputs/weaksym.o -L%p/Inputs -lweaksym -o %t1
-RUN: llvm-nm -n %t1 | FileCheck -check-prefix CHECKSYMS %s
-
-CHECKSYMS: w weaksym

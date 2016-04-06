@@ -1,8 +1,0 @@
-defined-atoms:
-  - name:  f1
-    merge: as-weak
-    scope: global
-    references:
-      - kind:            associate
-        target:          f2
-  - name:  f2

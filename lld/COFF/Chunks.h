@@ -138,6 +138,7 @@ public:
   SectionChunk(ObjectFile *File, const coff_section *Header);
   static bool classof(const Chunk *C) { return C->kind() == SectionKind; }
   size_t getSize() const override { return Header->SizeOfRawData; }
+  ArrayRef<uint8_t> getContents() const;
   void writeTo(uint8_t *Buf) const override;
   bool hasData() const override;
   uint32_t getPermissions() const override;
@@ -186,8 +187,6 @@ public:
   uint32_t Checksum = 0;
 
 private:
-  ArrayRef<uint8_t> getContents() const;
-
   // A file this chunk was created from.
   ObjectFile *File;
 

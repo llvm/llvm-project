@@ -151,6 +151,11 @@ def process_args(args):
         help=(
             "Specifies the build dir where the language binding "
             "should be placed"))
+    parser.add_argument(
+        "--target-platform",
+        help=(
+              "Specifies the platform we are building for."
+              "Should be the same as what platform.system() returns."))
 
     group = parser.add_argument_group("static binding usage")
     group.add_argument(

@@ -8,7 +8,7 @@
 ; CHECK:                [indvar] -> { Stmt_loop3[i0] -> [0, 0] : indvar >= 101 or indvar <= 99 };
 ; CHECK:    Stmt_loop2__TO__loop
 ; CHECK:            Domain :=
-; CHECK:                [indvar] -> { Stmt_loop2__TO__loop[] : indvar <= 99 or indvar >= 101 };
+; CHECK:                [indvar] -> { Stmt_loop2__TO__loop[] : indvar >= 101 or indvar <= 99 };
 ; CHECK:            Schedule :=
 ; CHECK:                [indvar] -> { Stmt_loop2__TO__loop[] -> [1, 0] : indvar >= 101 or indvar <= 99 };
 ;

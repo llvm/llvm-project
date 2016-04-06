@@ -32,12 +32,7 @@ RegisterContext::RegisterContext (Thread &thread, uint32_t concrete_frame_idx) :
 {
 }
 
-//----------------------------------------------------------------------
-// Destructor
-//----------------------------------------------------------------------
-RegisterContext::~RegisterContext()
-{
-}
+RegisterContext::~RegisterContext() = default;
 
 void
 RegisterContext::InvalidateIfNeeded (bool force)
@@ -61,7 +56,6 @@ RegisterContext::InvalidateIfNeeded (bool force)
     }
 }
 
-
 const RegisterInfo *
 RegisterContext::GetRegisterInfoByName (const char *reg_name, uint32_t start_idx)
 {
@@ -72,14 +66,14 @@ RegisterContext::GetRegisterInfoByName (const char *reg_name, uint32_t start_idx
         {
             const RegisterInfo * reg_info = GetRegisterInfoAtIndex(reg);
 
-            if ((reg_info->name != NULL && ::strcasecmp (reg_info->name, reg_name) == 0) ||
-                (reg_info->alt_name != NULL && ::strcasecmp (reg_info->alt_name, reg_name) == 0))
+            if ((reg_info->name != nullptr && ::strcasecmp (reg_info->name, reg_name) == 0) ||
+                (reg_info->alt_name != nullptr && ::strcasecmp (reg_info->alt_name, reg_name) == 0))
             {
                 return reg_info;
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 const RegisterInfo *
@@ -87,7 +81,7 @@ RegisterContext::GetRegisterInfo (lldb::RegisterKind kind, uint32_t num)
 {
     const uint32_t reg_num = ConvertRegisterKindToRegisterNumber(kind, num);
     if (reg_num == LLDB_INVALID_REGNUM)
-        return NULL;
+        return nullptr;
     return GetRegisterInfoAtIndex (reg_num);
 }
 
@@ -97,7 +91,7 @@ RegisterContext::GetRegisterName (uint32_t reg)
     const RegisterInfo * reg_info = GetRegisterInfoAtIndex(reg);
     if (reg_info)
         return reg_info->name;
-    return NULL;
+    return nullptr;
 }
 
 uint64_t
@@ -190,7 +184,6 @@ RegisterContext::GetFlags (uint64_t fail_value)
     uint32_t reg = ConvertRegisterKindToRegisterNumber (eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
     return ReadRegisterAsUnsigned (reg, fail_value);
 }
-
 
 uint64_t
 RegisterContext::ReadRegisterAsUnsigned (uint32_t reg, uint64_t fail_value)
@@ -297,7 +290,6 @@ RegisterContext::ClearHardwareBreakpoint (uint32_t hw_idx)
     return false;
 }
 
-
 uint32_t
 RegisterContext::NumSupportedHardwareWatchpoints ()
 {
@@ -329,13 +321,12 @@ RegisterContext::ReadRegisterValueFromMemory (const RegisterInfo *reg_info,
                                               RegisterValue &reg_value)
 {
     Error error;
-    if (reg_info == NULL)
+    if (reg_info == nullptr)
     {
         error.SetErrorString ("invalid register info argument.");
         return error;
     }
 
-    
     // Moving from addr into a register
     //
     // Case 1: src_len == dst_len
@@ -408,7 +399,6 @@ RegisterContext::WriteRegisterValueToMemory (const RegisterInfo *reg_info,
                                              uint32_t dst_len, 
                                              const RegisterValue &reg_value)
 {
-    
     uint8_t dst[RegisterValue::kMaxRegisterByteSize];
 
     Error error;
@@ -451,7 +441,6 @@ RegisterContext::WriteRegisterValueToMemory (const RegisterInfo *reg_info,
         error.SetErrorString("invalid process");
 
     return error;
-
 }
 
 bool
@@ -471,7 +460,6 @@ RegisterContext::CalculateTarget ()
 {
     return m_thread.CalculateTarget();
 }
-
 
 ProcessSP
 RegisterContext::CalculateProcess ()
@@ -500,7 +488,6 @@ RegisterContext::CalculateExecutionContext (ExecutionContext &exe_ctx)
     m_thread.CalculateExecutionContext (exe_ctx);
 }
 
-
 bool
 RegisterContext::ConvertBetweenRegisterKinds (lldb::RegisterKind source_rk, uint32_t source_regnum, lldb::RegisterKind target_rk, uint32_t& target_regnum)
 {
@@ -512,14 +499,7 @@ RegisterContext::ConvertBetweenRegisterKinds (lldb::RegisterKind source_rk, uint
         if (reg_info->kinds[source_rk] == source_regnum)
         {
             target_regnum = reg_info->kinds[target_rk];
-            if (target_regnum == LLDB_INVALID_REGNUM)
-            {
-                return false;
-            }
-            else
-            {
-                return true;
-            }
+            return (target_regnum != LLDB_INVALID_REGNUM);
         } 
     }
     return false;

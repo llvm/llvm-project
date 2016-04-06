@@ -11,7 +11,7 @@ See also:
 
    The list of clang-tidy checks <checks/list>
 
-:program:`clang-tidy` is a clang-based C++ linter tool. Its purpose is to
+:program:`clang-tidy` is a clang-based C++ "linter" tool. Its purpose is to
 provide an extensible framework for diagnosing and fixing typical programming
 errors, like style violations, interface misuse, or bugs that can be deduced via
 static analysis. :program:`clang-tidy` is modular and provides a convenient
@@ -328,10 +328,38 @@ Writing a clang-tidy Check
 
 So you have an idea of a useful check for :program:`clang-tidy`.
 
-You need to decide which module the check belongs to. If the check verifies
-conformance of the code to a certain coding style, it probably deserves a
-separate module and a directory in ``clang-tidy/`` (there are LLVM and Google
-modules already).
+First, if you're not familiar with LLVM development, read through the `Getting
+Started with LLVM`_ document for instructions on setting up your workflow and
+the `LLVM Coding Standards`_ document to familiarize yourself with the coding
+style used in the project. For code reviews we mostly use `LLVM Phabricator`_.
+
+.. _Getting Started with LLVM: http://llvm.org/docs/GettingStarted.html
+.. _LLVM Coding Standards: http://llvm.org/docs/CodingStandards.html
+.. _LLVM Phabricator: http://llvm.org/docs/Phabricator.html
+
+
+Next, you need to decide which module the check belongs to. If the check
+verifies conformance of the code to a certain coding style, it probably deserves
+a separate module and a directory in ``clang-tidy/``. There are already modules
+implementing checks related to:
+
+* `C++ Core Guidelines
+  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/cppcoreguidelines/>`_
+* `CERT Secure Coding Standards
+  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/cert/>`_
+* `Google Style Guide
+  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/google/>`_
+* `LLVM Style
+  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/llvm/>`_
+* `modernizing C/C++ code
+  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/modernize/>`_
+* potential `performance problems
+  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/performance/>`_
+* various `readability issues
+  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/readability/>`_
+* and `miscellaneous checks
+  <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/misc/>`_
+  that we couldn't find a better category for.
 
 After choosing the module, you need to create a class for your check:
 
@@ -341,12 +369,20 @@ After choosing the module, you need to create a class for your check:
 
   namespace clang {
   namespace tidy {
+  namespace some_module {
 
   class MyCheck : public ClangTidyCheck {
+  public:
+    MyCheck(StringRef Name, ClangTidyContext *Context)
+        : ClangTidyCheck(Name, Context) {}
   };
 
+  } // namespace some_module
   } // namespace tidy
   } // namespace clang
+
+Constructor of the check receives the ``Name`` and ``Context`` parameters, and
+must forward them to the ``ClangTidyCheck`` constructor.
 
 Next, you need to decide whether it should operate on the preprocessor level or
 on the AST level. Let's imagine that we need to work with the AST in our check.
@@ -363,9 +399,6 @@ In this case we need to override two methods:
     void check(ast_matchers::MatchFinder::MatchResult &Result) override;
   };
 
-Constructor of the check receives the ``Name`` and ``Context`` parameters, and
-must forward them to the ``ClangTidyCheck`` constructor.
-
 In the ``registerMatchers`` method we create an AST Matcher (see `AST Matchers`_
 for more information) that will find the pattern in the AST that we want to
 inspect. The results of the matching are passed to the ``check`` method, which
@@ -380,8 +413,7 @@ can further inspect them and report diagnostics.
   }
 
   void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
-    const CXXConstructorDecl *Ctor =
-        Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
+    const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
     // Do not be confused: isExplicit means 'explicit' keyword is present,
     // isImplicit means that it's a compiler-generated constructor.
     if (Ctor->isOutOfLine() || Ctor->isExplicit() || Ctor->isImplicit())
@@ -394,7 +426,10 @@ can further inspect them and report diagnostics.
   }
 
 (The full code for this check resides in
-``clang-tidy/google/ExplicitConstructorCheck.{h,cpp}``).
+`clang-tidy/google/ExplicitConstructorCheck.h
+<http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/google/ExplicitConstructorCheck.h>`_
+and `clang-tidy/google/ExplicitConstructorCheck.cpp
+<http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/google/ExplicitConstructorCheck.cpp>`_).
 
 
 Registering your Check
@@ -511,11 +546,12 @@ It's advised to make the checks as specific as possible to avoid checks matching
 to incorrect parts of the input. Use ``[[@LINE+X]]``/``[[@LINE-X]]``
 substitutions and distinct function and variable names in the test code.
 
-Here's an example of a test using the ``check_clang_tidy.py`` script:
+Here's an example of a test using the ``check_clang_tidy.py`` script (the full
+source code is at `test/clang-tidy/google-readability-casting.cpp`_):
 
 .. code-block:: bash
 
-  // RUN: %python %S/check_clang_tidy.py %s google-readability-casting %t
+  // RUN: %check_clang_tidy %s google-readability-casting %t
 
   void f(int a) {
     int b = (int)a;
@@ -523,15 +559,32 @@ Here's an example of a test using the ``check_clang_tidy.py`` script:
     // CHECK-FIXES: int b = a;
   }
 
+There are many dark corners in the C++ language, and it may be difficult to make
+your check work perfectly in all cases, especially if it issues fixit hints. The
+most frequent pitfalls are macros and templates:
+
+1. code written in a macro body/template definition may have a different meaning
+   depending on the macro expansion/template instantiation;
+2. multiple macro expansions/template instantiations may result in the same code
+   being inspected by the check multiple times (possibly, with different
+   meanings, see 1), and the same warning (or a slightly different one) may be
+   issued by the check multipe times; clang-tidy will deduplicate _identical_
+   warnings, but if the warnings are slightly different, all of them will be
+   shown to the user (and used for applying fixes, if any);
+3. making replacements to a macro body/template definition may be fine for some
+   macro expansions/template instantiations, but easily break some other
+   expansions/instantiations.
+
 .. _lit: http://llvm.org/docs/CommandGuide/lit.html
 .. _FileCheck: http://llvm.org/docs/CommandGuide/FileCheck.html
+.. _test/clang-tidy/google-readability-casting.cpp: http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/test/clang-tidy/google-readability-casting.cpp
 
 
 Running clang-tidy on LLVM
 --------------------------
 
 To test a check it's best to try it out on a larger code base. LLVM and Clang
-are the natural targets as you already have the source around. The most
+are the natural targets as you already have the source code around. The most
 convenient way to run :program:`clang-tidy` is with a compile command database;
 CMake can automatically generate one, for a description of how to enable it see
 `How To Setup Tooling For LLVM`_. Once ``compile_commands.json`` is in place and

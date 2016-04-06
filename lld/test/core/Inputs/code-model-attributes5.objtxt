@@ -1,4 +1,0 @@
----
-defined-atoms:
-    - name:         _mips_16
-      code-model:   mips-16

@@ -8,10 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 // C Includes
-#include <limits.h>
-#include <string.h>
-
 // C++ Includes
+#include <climits>
+#include <cstring>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Error.h"
@@ -26,10 +26,10 @@ using namespace lldb_private;
 // PathMappingList constructor
 //----------------------------------------------------------------------
 PathMappingList::PathMappingList () :
-    m_pairs (),
-    m_callback (NULL),
-    m_callback_baton (NULL),
-    m_mod_id (0)
+    m_pairs(),
+    m_callback(nullptr),
+    m_callback_baton(nullptr),
+    m_mod_id(0)
 {
 }
 
@@ -42,14 +42,12 @@ PathMappingList::PathMappingList (ChangedCallback callback,
 {
 }
 
-
 PathMappingList::PathMappingList (const PathMappingList &rhs) :
-    m_pairs (rhs.m_pairs),
-    m_callback (NULL),
-    m_callback_baton (NULL),
-    m_mod_id (0)
+    m_pairs(rhs.m_pairs),
+    m_callback(nullptr),
+    m_callback_baton(nullptr),
+    m_mod_id(0)
 {
-    
 }
 
 const PathMappingList &
@@ -58,20 +56,14 @@ PathMappingList::operator =(const PathMappingList &rhs)
     if (this != &rhs)
     {
         m_pairs = rhs.m_pairs;
-        m_callback = NULL;
-        m_callback_baton = NULL;
+        m_callback = nullptr;
+        m_callback_baton = nullptr;
         m_mod_id = rhs.m_mod_id;
     }
     return *this;
 }
 
-
-//----------------------------------------------------------------------
-// Destructor
-//----------------------------------------------------------------------
-PathMappingList::~PathMappingList ()
-{
-}
+PathMappingList::~PathMappingList() = default;
 
 void
 PathMappingList::Append (const ConstString &path,
@@ -204,7 +196,7 @@ PathMappingList::RemapPath (const ConstString &path, ConstString &new_path) cons
 bool
 PathMappingList::RemapPath (const char *path, std::string &new_path) const
 {
-    if (m_pairs.empty() || path == NULL || path[0] == '\0')
+    if (m_pairs.empty() || path == nullptr || path[0] == '\0')
         return false;
 
     const_iterator pos, end = m_pairs.end();
@@ -216,6 +208,27 @@ PathMappingList::RemapPath (const char *path, std::string &new_path) const
         {
             new_path = pos->second.GetCString();
             new_path.append(path + prefix_len);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool
+PathMappingList::ReverseRemapPath (const ConstString &path, ConstString &new_path) const
+{
+    const char *path_cstr = path.GetCString();
+    if (!path_cstr)
+        return false;
+
+    for (const auto& it : m_pairs)
+    {
+        const size_t prefixLen = it.second.GetLength();
+        if (::strncmp (it.second.GetCString(), path_cstr, prefixLen) == 0)
+        {
+            std::string new_path_str (it.first.GetCString());
+            new_path_str.append(path.GetCString() + prefixLen);
+            new_path.SetCString(new_path_str.c_str());
             return true;
         }
     }
@@ -329,8 +342,6 @@ PathMappingList::GetPathsAtIndex (uint32_t idx, ConstString &path, ConstString &
     return false;
 }
 
-
-
 uint32_t
 PathMappingList::FindIndexForPath (const ConstString &path) const
 {
@@ -345,4 +356,3 @@ PathMappingList::FindIndexForPath (const ConstString &path) const
     }
     return UINT32_MAX;
 }
-

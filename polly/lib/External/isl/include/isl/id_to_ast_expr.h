@@ -3,11 +3,16 @@
 
 #include <isl/id.h>
 #include <isl/ast_type.h>
+#include <isl/maybe_ast_expr.h>
 
-#define ISL_KEY_BASE	id
-#define ISL_VAL_BASE	ast_expr
+#define ISL_KEY		isl_id
+#define ISL_VAL		isl_ast_expr
+#define ISL_HMAP_SUFFIX	id_to_ast_expr
+#define ISL_HMAP	isl_id_to_ast_expr
 #include <isl/hmap.h>
-#undef ISL_KEY_BASE
-#undef ISL_VAL_BASE
+#undef ISL_KEY
+#undef ISL_VAL
+#undef ISL_HMAP_SUFFIX
+#undef ISL_HMAP
 
 #endif

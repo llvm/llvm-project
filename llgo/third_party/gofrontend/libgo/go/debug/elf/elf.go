@@ -312,7 +312,7 @@ const (
 	SHN_HIOS      SectionIndex = 0xff3f /* Last operating system-specific. */
 	SHN_ABS       SectionIndex = 0xfff1 /* Absolute values. */
 	SHN_COMMON    SectionIndex = 0xfff2 /* Common data. */
-	SHN_XINDEX    SectionIndex = 0xffff /* Escape -- index stored elsewhere. */
+	SHN_XINDEX    SectionIndex = 0xffff /* Escape; index stored elsewhere. */
 	SHN_HIRESERVE SectionIndex = 0xffff /* Last of reserved range. */
 )
 
@@ -1414,7 +1414,7 @@ var rppcStrings = []intName{
 func (i R_PPC) String() string   { return stringName(uint32(i), rppcStrings, false) }
 func (i R_PPC) GoString() string { return stringName(uint32(i), rppcStrings, true) }
 
-// Relocation types for PowerPC 64.
+// Relocation types for 64-bit PowerPC or Power Architecture processors.
 type R_PPC64 int
 
 const (

@@ -1,7 +1,0 @@
-RUN: lld -flavor old-gnu -target hexagon %p/Inputs/dynobj.o \
-RUN:   -o %t --noinhibit-exec -shared
-RUN: llvm-nm -n -M %t > %t1
-RUN: FileCheck -check-prefix=CHECKSYMS %s < %t1
-
-CHECKSYMS: 0000025c A _DYNAMIC
-CHECKSYMS: 00001008 A _GLOBAL_OFFSET_TABLE_

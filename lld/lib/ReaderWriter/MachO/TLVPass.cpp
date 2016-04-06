@@ -30,6 +30,8 @@ public:
   TLVPEntryAtom(const File &file, bool is64, StringRef name)
       : SimpleDefinedAtom(file), _is64(is64), _name(name) {}
 
+  ~TLVPEntryAtom() override = default;
+
   ContentType contentType() const override {
     return DefinedAtom::typeTLVInitializerPtr;
   }
@@ -65,12 +67,12 @@ class TLVPass : public Pass {
 public:
   TLVPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _file("<mach-o TLV Pass>") {
+        _file(*_ctx.make_file<MachOFile>("<mach-o TLV pass>")) {
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
 private:
-  std::error_code perform(SimpleFile &mergedFile) override {
+  llvm::Error perform(SimpleFile &mergedFile) override {
     bool allowTLV = _ctx.minOS("10.7", "1.0");
 
     for (const DefinedAtom *atom : mergedFile.defined()) {
@@ -79,7 +81,7 @@ private:
           continue;
 
         if (!allowTLV)
-          return make_dynamic_error_code(
+          return llvm::make_error<GenericError>(
             "targeted OS version does not support use of thread local "
             "variables in " + atom->name() + " for architecture " +
             _ctx.archName());
@@ -105,7 +107,7 @@ private:
     for (const TLVPEntryAtom *slot : entries)
       mergedFile.addAtom(*slot);
 
-    return std::error_code();
+    return llvm::Error();
   }
 
   const DefinedAtom *makeTLVPEntry(const Atom *target) {
@@ -126,7 +128,7 @@ private:
 
   const MachOLinkingContext &_ctx;
   mach_o::ArchHandler &_archHandler;
-  MachOFile _file;
+  MachOFile           &_file;
   llvm::DenseMap<const Atom*, const TLVPEntryAtom*> _targetToTLVP;
 };
 

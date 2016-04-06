@@ -9,7 +9,9 @@ package pprof_test
 import (
 	"bytes"
 	"fmt"
+	"internal/testenv"
 	"math/big"
+	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
@@ -121,15 +123,19 @@ func parseProfile(t *testing.T, bytes []byte, f func(uintptr, []uintptr)) {
 func testCPUProfile(t *testing.T, need []string, f func()) {
 	switch runtime.GOOS {
 	case "darwin":
-		out, err := exec.Command("uname", "-a").CombinedOutput()
-		if err != nil {
-			t.Fatal(err)
+		switch runtime.GOARCH {
+		case "arm", "arm64":
+			// nothing
+		default:
+			out, err := exec.Command("uname", "-a").CombinedOutput()
+			if err != nil {
+				t.Fatal(err)
+			}
+			vers := string(out)
+			t.Logf("uname -a: %v", vers)
 		}
-		vers := string(out)
-		t.Logf("uname -a: %v", vers)
 	case "plan9":
-		// unimplemented
-		return
+		t.Skip("skipping on plan9")
 	}
 
 	var prof bytes.Buffer
@@ -141,7 +147,9 @@ func testCPUProfile(t *testing.T, need []string, f func()) {
 
 	// Check that profile is well formed and contains need.
 	have := make([]uintptr, len(need))
+	var samples uintptr
 	parseProfile(t, prof.Bytes(), func(count uintptr, stk []uintptr) {
+		samples += count
 		for _, pc := range stk {
 			f := runtime.FuncForPC(pc)
 			if f == nil {
@@ -155,6 +163,14 @@ func testCPUProfile(t *testing.T, need []string, f func()) {
 			}
 		}
 	})
+	t.Logf("total %d CPU profile samples collected", samples)
+
+	if samples < 10 && runtime.GOOS == "windows" {
+		// On some windows machines we end up with
+		// not enough samples due to coarse timer
+		// resolution. Let it go.
+		t.Skip("too few samples on Windows (golang.org/issue/10842)")
+	}
 
 	if len(need) == 0 {
 		return
@@ -187,14 +203,28 @@ func testCPUProfile(t *testing.T, need []string, f func()) {
 			t.Skipf("ignoring failure on %s; see golang.org/issue/6047", runtime.GOOS)
 			return
 		}
+		// Ignore the failure if the tests are running in a QEMU-based emulator,
+		// QEMU is not perfect at emulating everything.
+		// IN_QEMU environmental variable is set by some of the Go builders.
+		// IN_QEMU=1 indicates that the tests are running in QEMU. See issue 9605.
+		if os.Getenv("IN_QEMU") == "1" {
+			t.Skip("ignore the failure in QEMU; see golang.org/issue/9605")
+			return
+		}
 		t.FailNow()
 	}
 }
 
+// Fork can hang if preempted with signals frequently enough (see issue 5517).
+// Ensure that we do not do this.
 func TestCPUProfileWithFork(t *testing.T) {
-	// Fork can hang if preempted with signals frequently enough (see issue 5517).
-	// Ensure that we do not do this.
+	testenv.MustHaveExec(t)
+
 	heap := 1 << 30
+	if runtime.GOOS == "android" {
+		// Use smaller size for Android to avoid crash.
+		heap = 100 << 20
+	}
 	if testing.Short() {
 		heap = 100 << 20
 	}
@@ -217,7 +247,7 @@ func TestCPUProfileWithFork(t *testing.T) {
 	defer StopCPUProfile()
 
 	for i := 0; i < 10; i++ {
-		exec.Command("go").CombinedOutput()
+		exec.Command(os.Args[0], "-h").CombinedOutput()
 	}
 }
 
@@ -250,7 +280,7 @@ func TestGoroutineSwitch(t *testing.T) {
 			// exists to record a PC without a traceback. Those are okay.
 			if len(stk) == 2 {
 				f := runtime.FuncForPC(stk[1])
-				if f != nil && (f.Name() == "System" || f.Name() == "ExternalCode" || f.Name() == "GC") {
+				if f != nil && (f.Name() == "runtime._System" || f.Name() == "runtime._ExternalCode" || f.Name() == "runtime._GC") {
 					return
 				}
 			}
@@ -368,7 +398,7 @@ func TestBlockProfile(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if !regexp.MustCompile(test.re).MatchString(prof) {
+		if !regexp.MustCompile(strings.Replace(test.re, "\t", "\t+", -1)).MatchString(prof) {
 			t.Fatalf("Bad %v entry, expect:\n%v\ngot:\n%v", test.name, test.re, prof)
 		}
 	}

@@ -24,7 +24,7 @@ sections:
     section:         __data
     type:            S_REGULAR
     attributes:      [  ]
-    alignment:       3
+    alignment:       8
     address:         0x000000000001C348
     content:         [ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                        0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,

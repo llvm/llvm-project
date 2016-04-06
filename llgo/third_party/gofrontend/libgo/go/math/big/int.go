@@ -7,7 +7,6 @@
 package big
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -184,6 +183,10 @@ func (z *Int) MulRange(a, b int64) *Int {
 
 // Binomial sets z to the binomial coefficient of (n, k) and returns z.
 func (z *Int) Binomial(n, k int64) *Int {
+	// reduce the number of multiplications by reducing k
+	if n/2 < k && k <= n {
+		k = n - k // Binomial(n, k) == Binomial(n, n-k)
+	}
 	var a, b Int
 	a.MulRange(n-k+1, n)
 	b.MulRange(1, k)
@@ -321,195 +324,6 @@ func (x *Int) Cmp(y *Int) (r int) {
 	return
 }
 
-func (x *Int) String() string {
-	switch {
-	case x == nil:
-		return "<nil>"
-	case x.neg:
-		return "-" + x.abs.decimalString()
-	}
-	return x.abs.decimalString()
-}
-
-func charset(ch rune) string {
-	switch ch {
-	case 'b':
-		return lowercaseDigits[0:2]
-	case 'o':
-		return lowercaseDigits[0:8]
-	case 'd', 's', 'v':
-		return lowercaseDigits[0:10]
-	case 'x':
-		return lowercaseDigits[0:16]
-	case 'X':
-		return uppercaseDigits[0:16]
-	}
-	return "" // unknown format
-}
-
-// write count copies of text to s
-func writeMultiple(s fmt.State, text string, count int) {
-	if len(text) > 0 {
-		b := []byte(text)
-		for ; count > 0; count-- {
-			s.Write(b)
-		}
-	}
-}
-
-// Format is a support routine for fmt.Formatter. It accepts
-// the formats 'b' (binary), 'o' (octal), 'd' (decimal), 'x'
-// (lowercase hexadecimal), and 'X' (uppercase hexadecimal).
-// Also supported are the full suite of package fmt's format
-// verbs for integral types, including '+', '-', and ' '
-// for sign control, '#' for leading zero in octal and for
-// hexadecimal, a leading "0x" or "0X" for "%#x" and "%#X"
-// respectively, specification of minimum digits precision,
-// output field width, space or zero padding, and left or
-// right justification.
-//
-func (x *Int) Format(s fmt.State, ch rune) {
-	cs := charset(ch)
-
-	// special cases
-	switch {
-	case cs == "":
-		// unknown format
-		fmt.Fprintf(s, "%%!%c(big.Int=%s)", ch, x.String())
-		return
-	case x == nil:
-		fmt.Fprint(s, "<nil>")
-		return
-	}
-
-	// determine sign character
-	sign := ""
-	switch {
-	case x.neg:
-		sign = "-"
-	case s.Flag('+'): // supersedes ' ' when both specified
-		sign = "+"
-	case s.Flag(' '):
-		sign = " "
-	}
-
-	// determine prefix characters for indicating output base
-	prefix := ""
-	if s.Flag('#') {
-		switch ch {
-		case 'o': // octal
-			prefix = "0"
-		case 'x': // hexadecimal
-			prefix = "0x"
-		case 'X':
-			prefix = "0X"
-		}
-	}
-
-	// determine digits with base set by len(cs) and digit characters from cs
-	digits := x.abs.string(cs)
-
-	// number of characters for the three classes of number padding
-	var left int   // space characters to left of digits for right justification ("%8d")
-	var zeroes int // zero characters (actually cs[0]) as left-most digits ("%.8d")
-	var right int  // space characters to right of digits for left justification ("%-8d")
-
-	// determine number padding from precision: the least number of digits to output
-	precision, precisionSet := s.Precision()
-	if precisionSet {
-		switch {
-		case len(digits) < precision:
-			zeroes = precision - len(digits) // count of zero padding
-		case digits == "0" && precision == 0:
-			return // print nothing if zero value (x == 0) and zero precision ("." or ".0")
-		}
-	}
-
-	// determine field pad from width: the least number of characters to output
-	length := len(sign) + len(prefix) + zeroes + len(digits)
-	if width, widthSet := s.Width(); widthSet && length < width { // pad as specified
-		switch d := width - length; {
-		case s.Flag('-'):
-			// pad on the right with spaces; supersedes '0' when both specified
-			right = d
-		case s.Flag('0') && !precisionSet:
-			// pad with zeroes unless precision also specified
-			zeroes = d
-		default:
-			// pad on the left with spaces
-			left = d
-		}
-	}
-
-	// print number as [left pad][sign][prefix][zero pad][digits][right pad]
-	writeMultiple(s, " ", left)
-	writeMultiple(s, sign, 1)
-	writeMultiple(s, prefix, 1)
-	writeMultiple(s, "0", zeroes)
-	writeMultiple(s, digits, 1)
-	writeMultiple(s, " ", right)
-}
-
-// scan sets z to the integer value corresponding to the longest possible prefix
-// read from r representing a signed integer number in a given conversion base.
-// It returns z, the actual conversion base used, and an error, if any. In the
-// error case, the value of z is undefined but the returned value is nil. The
-// syntax follows the syntax of integer literals in Go.
-//
-// The base argument must be 0 or a value from 2 through MaxBase. If the base
-// is 0, the string prefix determines the actual conversion base. A prefix of
-// ``0x'' or ``0X'' selects base 16; the ``0'' prefix selects base 8, and a
-// ``0b'' or ``0B'' prefix selects base 2. Otherwise the selected base is 10.
-//
-func (z *Int) scan(r io.RuneScanner, base int) (*Int, int, error) {
-	// determine sign
-	ch, _, err := r.ReadRune()
-	if err != nil {
-		return nil, 0, err
-	}
-	neg := false
-	switch ch {
-	case '-':
-		neg = true
-	case '+': // nothing to do
-	default:
-		r.UnreadRune()
-	}
-
-	// determine mantissa
-	z.abs, base, err = z.abs.scan(r, base)
-	if err != nil {
-		return nil, base, err
-	}
-	z.neg = len(z.abs) > 0 && neg // 0 has no sign
-
-	return z, base, nil
-}
-
-// Scan is a support routine for fmt.Scanner; it sets z to the value of
-// the scanned number. It accepts the formats 'b' (binary), 'o' (octal),
-// 'd' (decimal), 'x' (lowercase hexadecimal), and 'X' (uppercase hexadecimal).
-func (z *Int) Scan(s fmt.ScanState, ch rune) error {
-	s.SkipSpace() // skip leading space characters
-	base := 0
-	switch ch {
-	case 'b':
-		base = 2
-	case 'o':
-		base = 8
-	case 'd':
-		base = 10
-	case 'x', 'X':
-		base = 16
-	case 's', 'v':
-		// let scan determine the base
-	default:
-		return errors.New("Int.Scan: invalid verb")
-	}
-	_, _, err := z.scan(s, base)
-	return err
-}
-
 // low32 returns the least significant 32 bits of z.
 func low32(z nat) uint32 {
 	if len(z) == 0 {
@@ -550,7 +364,7 @@ func (x *Int) Uint64() uint64 {
 // and returns z and a boolean indicating success. If SetString fails,
 // the value of z is undefined but the returned value is nil.
 //
-// The base argument must be 0 or a value from 2 through MaxBase. If the base
+// The base argument must be 0 or a value between 2 and MaxBase. If the base
 // is 0, the string prefix determines the actual conversion base. A prefix of
 // ``0x'' or ``0X'' selects base 16; the ``0'' prefix selects base 8, and a
 // ``0b'' or ``0B'' prefix selects base 2. Otherwise the selected base is 10.
@@ -561,7 +375,7 @@ func (z *Int) SetString(s string, base int) (*Int, bool) {
 	if err != nil {
 		return nil, false
 	}
-	_, _, err = r.ReadRune()
+	_, err = r.ReadByte()
 	if err != io.EOF {
 		return nil, false
 	}
@@ -686,15 +500,17 @@ func (z *Int) binaryGCD(a, b *Int) *Int {
 	// use one Euclidean iteration to ensure that u and v are approx. the same size
 	switch {
 	case len(a.abs) > len(b.abs):
-		u.Set(b)
+		// must set v before u since u may be alias for a or b (was issue #11284)
 		v.Rem(a, b)
+		u.Set(b)
 	case len(a.abs) < len(b.abs):
-		u.Set(a)
 		v.Rem(b, a)
-	default:
 		u.Set(a)
+	default:
 		v.Set(b)
+		u.Set(a)
 	}
+	// a, b must not be used anymore (may be aliases with u)
 
 	// v might be 0 now
 	if len(v.abs) == 0 {
@@ -736,8 +552,11 @@ func (z *Int) binaryGCD(a, b *Int) *Int {
 
 // ProbablyPrime performs n Miller-Rabin tests to check whether x is prime.
 // If it returns true, x is prime with probability 1 - 1/4^n.
-// If it returns false, x is not prime.
+// If it returns false, x is not prime. n must be > 0.
 func (x *Int) ProbablyPrime(n int) bool {
+	if n <= 0 {
+		panic("non-positive n for ProbablyPrime")
+	}
 	return !x.neg && x.abs.probablyPrime(n)
 }
 
@@ -764,6 +583,124 @@ func (z *Int) ModInverse(g, n *Int) *Int {
 		z.Add(z, n)
 	}
 	return z
+}
+
+// Jacobi returns the Jacobi symbol (x/y), either +1, -1, or 0.
+// The y argument must be an odd integer.
+func Jacobi(x, y *Int) int {
+	if len(y.abs) == 0 || y.abs[0]&1 == 0 {
+		panic(fmt.Sprintf("big: invalid 2nd argument to Int.Jacobi: need odd integer but got %s", y))
+	}
+
+	// We use the formulation described in chapter 2, section 2.4,
+	// "The Yacas Book of Algorithms":
+	// http://yacas.sourceforge.net/Algo.book.pdf
+
+	var a, b, c Int
+	a.Set(x)
+	b.Set(y)
+	j := 1
+
+	if b.neg {
+		if a.neg {
+			j = -1
+		}
+		b.neg = false
+	}
+
+	for {
+		if b.Cmp(intOne) == 0 {
+			return j
+		}
+		if len(a.abs) == 0 {
+			return 0
+		}
+		a.Mod(&a, &b)
+		if len(a.abs) == 0 {
+			return 0
+		}
+		// a > 0
+
+		// handle factors of 2 in 'a'
+		s := a.abs.trailingZeroBits()
+		if s&1 != 0 {
+			bmod8 := b.abs[0] & 7
+			if bmod8 == 3 || bmod8 == 5 {
+				j = -j
+			}
+		}
+		c.Rsh(&a, s) // a = 2^s*c
+
+		// swap numerator and denominator
+		if b.abs[0]&3 == 3 && c.abs[0]&3 == 3 {
+			j = -j
+		}
+		a.Set(&b)
+		b.Set(&c)
+	}
+}
+
+// ModSqrt sets z to a square root of x mod p if such a square root exists, and
+// returns z. The modulus p must be an odd prime. If x is not a square mod p,
+// ModSqrt leaves z unchanged and returns nil. This function panics if p is
+// not an odd integer.
+func (z *Int) ModSqrt(x, p *Int) *Int {
+	switch Jacobi(x, p) {
+	case -1:
+		return nil // x is not a square mod p
+	case 0:
+		return z.SetInt64(0) // sqrt(0) mod p = 0
+	case 1:
+		break
+	}
+	if x.neg || x.Cmp(p) >= 0 { // ensure 0 <= x < p
+		x = new(Int).Mod(x, p)
+	}
+
+	// Break p-1 into s*2^e such that s is odd.
+	var s Int
+	s.Sub(p, intOne)
+	e := s.abs.trailingZeroBits()
+	s.Rsh(&s, e)
+
+	// find some non-square n
+	var n Int
+	n.SetInt64(2)
+	for Jacobi(&n, p) != -1 {
+		n.Add(&n, intOne)
+	}
+
+	// Core of the Tonelli-Shanks algorithm. Follows the description in
+	// section 6 of "Square roots from 1; 24, 51, 10 to Dan Shanks" by Ezra
+	// Brown:
+	// https://www.maa.org/sites/default/files/pdf/upload_library/22/Polya/07468342.di020786.02p0470a.pdf
+	var y, b, g, t Int
+	y.Add(&s, intOne)
+	y.Rsh(&y, 1)
+	y.Exp(x, &y, p)  // y = x^((s+1)/2)
+	b.Exp(x, &s, p)  // b = x^s
+	g.Exp(&n, &s, p) // g = n^s
+	r := e
+	for {
+		// find the least m such that ord_p(b) = 2^m
+		var m uint
+		t.Set(&b)
+		for t.Cmp(intOne) != 0 {
+			t.Mul(&t, &t).Mod(&t, p)
+			m++
+		}
+
+		if m == 0 {
+			return z.Set(&y)
+		}
+
+		t.SetInt64(0).SetBit(&t, int(r-m-1), 1).Exp(&g, &t, p)
+		// t = g^(2^(r-m-1)) mod p
+		g.Mul(&t, &t).Mod(&g, p) // g = g^(2^(r-m)) mod p
+		y.Mul(&y, &t).Mod(&y, p)
+		b.Mul(&b, &g).Mod(&b, p)
+		r = m
+	}
 }
 
 // Lsh sets z = x << n and returns z.
@@ -995,7 +932,7 @@ func (z *Int) GobDecode(buf []byte) error {
 	}
 	b := buf[0]
 	if b>>1 != intGobVersion {
-		return errors.New(fmt.Sprintf("Int.GobDecode: encoding version %d not supported", b>>1))
+		return fmt.Errorf("Int.GobDecode: encoding version %d not supported", b>>1)
 	}
 	z.neg = b&1 != 0
 	z.abs = z.abs.setBytes(buf[1:])

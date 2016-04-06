@@ -53,8 +53,8 @@ static CuMemAllocFcnTy *CuMemAllocFcnPtr;
 typedef CUresult CUDAAPI CuFuncSetBlockShapeFcnTy(CUfunction, int, int, int);
 static CuFuncSetBlockShapeFcnTy *CuFuncSetBlockShapeFcnPtr;
 
-typedef CUresult CUDAAPI
-CuParamSetvFcnTy(CUfunction, int, void *, unsigned int);
+typedef CUresult CUDAAPI CuParamSetvFcnTy(CUfunction, int, void *,
+                                          unsigned int);
 static CuParamSetvFcnTy *CuParamSetvFcnPtr;
 
 typedef CUresult CUDAAPI CuParamSetSizeFcnTy(CUfunction, unsigned int);
@@ -90,12 +90,13 @@ static CuCtxCreateFcnTy *CuCtxCreateFcnPtr;
 typedef CUresult CUDAAPI CuDeviceGetFcnTy(CUdevice *, int);
 static CuDeviceGetFcnTy *CuDeviceGetFcnPtr;
 
-typedef CUresult CUDAAPI CuModuleLoadDataExFcnTy(
-    CUmodule *, const void *, unsigned int, CUjit_option *, void **);
+typedef CUresult CUDAAPI CuModuleLoadDataExFcnTy(CUmodule *, const void *,
+                                                 unsigned int, CUjit_option *,
+                                                 void **);
 static CuModuleLoadDataExFcnTy *CuModuleLoadDataExFcnPtr;
 
-typedef CUresult CUDAAPI
-CuModuleGetFunctionFcnTy(CUfunction *, CUmodule, const char *);
+typedef CUresult CUDAAPI CuModuleGetFunctionFcnTy(CUfunction *, CUmodule,
+                                                  const char *);
 static CuModuleGetFunctionFcnTy *CuModuleGetFunctionFcnPtr;
 
 typedef CUresult CUDAAPI CuDeviceComputeCapabilityFcnTy(int *, int *, CUdevice);
@@ -114,8 +115,8 @@ static CudaEventRecordFcnTy *CudaEventRecordFcnPtr;
 typedef cudaError_t CUDARTAPI CudaEventSynchronizeFcnTy(cudaEvent_t);
 static CudaEventSynchronizeFcnTy *CudaEventSynchronizeFcnPtr;
 
-typedef cudaError_t CUDARTAPI
-CudaEventElapsedTimeFcnTy(float *, cudaEvent_t, cudaEvent_t);
+typedef cudaError_t CUDARTAPI CudaEventElapsedTimeFcnTy(float *, cudaEvent_t,
+                                                        cudaEvent_t);
 static CudaEventElapsedTimeFcnTy *CudaEventElapsedTimeFcnPtr;
 
 typedef cudaError_t CUDARTAPI CudaEventDestroyFcnTy(cudaEvent_t);
@@ -292,7 +293,7 @@ void polly_getPTXModule(void *PTXBuffer, PollyGPUModule **Module) {
   }
 
   if (CuModuleLoadDataExFcnPtr(&((*Module)->Cuda), PTXBuffer, 0, 0, 0) !=
-          CUDA_SUCCESS) {
+      CUDA_SUCCESS) {
     fprintf(stdout, "Loading ptx assembly text failed.\n");
     exit(-1);
   }
@@ -308,7 +309,7 @@ void polly_getPTXKernelEntry(const char *KernelName, PollyGPUModule *Module,
 
   /* Locate the kernel entry point. */
   if (CuModuleGetFunctionFcnPtr(&((*Kernel)->Cuda), Module->Cuda, KernelName) !=
-          CUDA_SUCCESS) {
+      CUDA_SUCCESS) {
     fprintf(stdout, "Loading kernel function failed.\n");
     exit(-1);
   }
@@ -348,8 +349,9 @@ void polly_stopTimerByCudaEvent(PollyGPUEvent *Start, PollyGPUEvent *Stop,
   free(Stop);
 }
 
-void polly_allocateMemoryForHostAndDevice(
-    void **HostData, PollyGPUDevicePtr **DevData, int MemSize) {
+void polly_allocateMemoryForHostAndDevice(void **HostData,
+                                          PollyGPUDevicePtr **DevData,
+                                          int MemSize) {
   if ((*HostData = (int *)malloc(MemSize)) == 0) {
     fprintf(stdout, "Could not allocate host memory.\n");
     exit(-1);
@@ -398,9 +400,10 @@ void polly_launchKernel(PollyGPUFunction *Kernel, int GridWidth,
   fprintf(stdout, "CUDA kernel launched.\n");
 }
 
-void polly_cleanupGPGPUResources(
-    void *HostData, PollyGPUDevicePtr *DevData, PollyGPUModule *Module,
-    PollyGPUContext *Context, PollyGPUFunction *Kernel) {
+void polly_cleanupGPGPUResources(void *HostData, PollyGPUDevicePtr *DevData,
+                                 PollyGPUModule *Module,
+                                 PollyGPUContext *Context,
+                                 PollyGPUFunction *Kernel) {
   if (HostData) {
     free(HostData);
     HostData = 0;

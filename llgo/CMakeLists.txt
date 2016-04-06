@@ -63,6 +63,7 @@ set(LLGO_GO_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/http.go
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/list.go
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/main.go
+  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/note.go
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/pkg.go
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/run.go
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/signal.go
@@ -78,6 +79,7 @@ set(LLGO_GO_SOURCES
 
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/bin/llgo-go${CMAKE_EXECUTABLE_SUFFIX}
   COMMAND ${CMAKE_BINARY_DIR}/bin/llgo -static-libgo
+          -I ${CMAKE_CURRENT_BINARY_DIR}/libgo
           -o ${CMAKE_BINARY_DIR}/bin/llgo-go${CMAKE_EXECUTABLE_SUFFIX}
           ${LLGO_GO_SOURCES}
           ${CMAKE_CURRENT_BINARY_DIR}/libgo/zstdpkglist.go
@@ -234,8 +236,8 @@ set(LLGO_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 
 install(FILES ${LLGO_LIBRARY_DIR}/libgo-llgo.a
               ${LLGO_LIBRARY_DIR}/libgo-llgo.so
-              ${LLGO_LIBRARY_DIR}/libgo-llgo.so.7
-              ${LLGO_LIBRARY_DIR}/libgo-llgo.so.7.0.0
+              ${LLGO_LIBRARY_DIR}/libgo-llgo.so.8
+              ${LLGO_LIBRARY_DIR}/libgo-llgo.so.8.0.0
               ${LLGO_LIBRARY_DIR}/libgobegin-llgo.a
         DESTINATION lib${LLVM_LIBDIR_SUFFIX})
 
@@ -245,6 +247,7 @@ install(DIRECTORY ${LLGO_LIBRARY_DIR}/go
 add_custom_target(check-libgo
   COMMAND make -C ${CMAKE_CURRENT_BINARY_DIR}/libgo -j${PROCESSOR_COUNT} check
   DEPENDS libgo
+  ${cmake_3_2_USES_TERMINAL}
   COMMENT "Running libgo tests")
 
 add_custom_target(check-llgo-bootstrap

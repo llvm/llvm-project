@@ -10,9 +10,9 @@
 #include "CommandObjectTarget.h"
 
 // C Includes
-#include <errno.h>
-
 // C++ Includes
+#include <cerrno>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Interpreter/Args.h"
@@ -57,8 +57,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-
 
 static void
 DumpTargetInfo (uint32_t target_idx, Target *target, const char *prefix_cstr, bool show_stopped_process_status, Stream &strm)
@@ -128,7 +126,7 @@ DumpTargetList (TargetList &target_list, bool show_stopped_process_status, Strea
     {
         TargetSP selected_target_sp (target_list.GetSelectedTarget());
         strm.PutCString ("Current targets:\n");
-        for (uint32_t i=0; i<num_targets; ++i)
+        for (uint32_t i = 0; i < num_targets; ++i)
         {
             TargetSP target_sp (target_list.GetTargetAtIndex (i));
             if (target_sp)
@@ -144,6 +142,7 @@ DumpTargetList (TargetList &target_list, bool show_stopped_process_status, Strea
     }
     return num_targets;
 }
+
 #pragma mark CommandObjectTargetCreate
 
 //-------------------------------------------------------------------------
@@ -154,10 +153,10 @@ class CommandObjectTargetCreate : public CommandObjectParsed
 {
 public:
     CommandObjectTargetCreate(CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "target create",
-                             "Create a target using the argument as the main executable.",
-                             NULL),
+        CommandObjectParsed(interpreter,
+                            "target create",
+                            "Create a target using the argument as the main executable.",
+                            nullptr),
         m_option_group (interpreter),
         m_arch_option (),
         m_core_file (LLDB_OPT_SET_1, false, "core", 'c', 0, eArgTypeFilename, "Fullpath to a core file to use for this target."),
@@ -188,9 +187,7 @@ public:
         m_option_group.Finalize();
     }
 
-    ~CommandObjectTargetCreate () override
-    {
-    }
+    ~CommandObjectTargetCreate() override = default;
 
     Options *
     GetOptions () override
@@ -211,14 +208,14 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
 
-        CommandCompletions::InvokeCommonCompletionCallbacks (m_interpreter, 
-                                                             CommandCompletions::eDiskFileCompletion,
-                                                             completion_str.c_str(),
-                                                             match_start_point,
-                                                             max_return_elements,
-                                                             NULL,
-                                                             word_complete,
-                                                             matches);
+        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+                                                            CommandCompletions::eDiskFileCompletion,
+                                                            completion_str.c_str(),
+                                                            match_start_point,
+                                                            max_return_elements,
+                                                            nullptr,
+                                                            word_complete,
+                                                            matches);
         return matches.GetSize();
     }
 
@@ -285,12 +282,12 @@ protected:
             TargetSP target_sp;
             const char *arch_cstr = m_arch_option.GetArchitectureName();
             const bool get_dependent_files = m_add_dependents.GetOptionValue().GetCurrentValue();
-            Error error (debugger.GetTargetList().CreateTarget (debugger,
-                                                                file_path,
-                                                                arch_cstr,
-                                                                get_dependent_files,
-                                                                NULL,
-                                                                target_sp));
+            Error error(debugger.GetTargetList().CreateTarget(debugger,
+                                                              file_path,
+                                                              arch_cstr,
+                                                              get_dependent_files,
+                                                              nullptr,
+                                                              target_sp));
 
             if (target_sp)
             {
@@ -398,7 +395,7 @@ protected:
                         core_file_dir.GetDirectory() = core_file.GetDirectory();
                         target_sp->GetExecutableSearchPaths ().Append (core_file_dir);
 
-                        ProcessSP process_sp (target_sp->CreateProcess (m_interpreter.GetDebugger().GetListener(), NULL, &core_file));
+                        ProcessSP process_sp(target_sp->CreateProcess(m_interpreter.GetDebugger().GetListener(), nullptr, &core_file));
 
                         if (process_sp)
                         {
@@ -470,17 +467,14 @@ class CommandObjectTargetList : public CommandObjectParsed
 {
 public:
     CommandObjectTargetList (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "target list",
-                             "List all current targets in the current debug session.",
-                             NULL,
-                             0)
+        CommandObjectParsed(interpreter,
+                            "target list",
+                            "List all current targets in the current debug session.",
+                            nullptr)
     {
     }
 
-    ~CommandObjectTargetList () override
-    {
-    }
+    ~CommandObjectTargetList() override = default;
 
 protected:
     bool
@@ -506,7 +500,6 @@ protected:
     }
 };
 
-
 #pragma mark CommandObjectTargetSelect
 
 //----------------------------------------------------------------------
@@ -517,17 +510,14 @@ class CommandObjectTargetSelect : public CommandObjectParsed
 {
 public:
     CommandObjectTargetSelect (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "target select",
-                             "Select a target as the current target by target index.",
-                             NULL,
-                             0)
+        CommandObjectParsed(interpreter,
+                            "target select",
+                            "Select a target as the current target by target index.",
+                            nullptr)
     {
     }
 
-    ~CommandObjectTargetSelect () override
-    {
-    }
+    ~CommandObjectTargetSelect() override = default;
 
 protected:
     bool
@@ -566,7 +556,8 @@ protected:
                         result.AppendErrorWithFormat ("index %u is out of range, valid target indexes are 0 - %u\n",
                                                       target_idx,
                                                       num_targets - 1);
-                    } else
+                    }
+                    else
                     {
                         result.AppendErrorWithFormat ("index %u is out of range since there are no active targets\n",
                                                       target_idx);
@@ -599,11 +590,10 @@ class CommandObjectTargetDelete : public CommandObjectParsed
 {
 public:
     CommandObjectTargetDelete (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "target delete",
-                             "Delete one or more targets by target index.",
-                             NULL,
-                             0),
+        CommandObjectParsed(interpreter,
+                            "target delete",
+                            "Delete one or more targets by target index.",
+                            nullptr),
         m_option_group(interpreter),
         m_all_option(LLDB_OPT_SET_1, false, "all", 'a', "Delete all targets.", false, true),
         m_cleanup_option(
@@ -621,9 +611,7 @@ public:
         m_option_group.Finalize();
     }
 
-    ~CommandObjectTargetDelete () override
-    {
-    }
+    ~CommandObjectTargetDelete() override = default;
 
     Options *
     GetOptions () override
@@ -724,7 +712,6 @@ protected:
     OptionGroupBoolean m_cleanup_option;
 };
 
-
 #pragma mark CommandObjectTargetVariable
 
 //----------------------------------------------------------------------
@@ -738,11 +725,11 @@ class CommandObjectTargetVariable : public CommandObjectParsed
 
 public:
     CommandObjectTargetVariable (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "target variable",
-                             "Read global variable(s) prior to, or while running your binary.",
-                             NULL,
-                             eCommandRequiresTarget),
+        CommandObjectParsed(interpreter,
+                            "target variable",
+                            "Read global variable(s) prior to, or while running your binary.",
+                            nullptr,
+                            eCommandRequiresTarget),
         m_option_group (interpreter),
         m_option_variable (false), // Don't include frame options
         m_option_format (eFormatDefault),
@@ -775,17 +762,15 @@ public:
         m_option_group.Finalize();
     }
 
-    ~CommandObjectTargetVariable () override
-    {
-    }
+    ~CommandObjectTargetVariable() override = default;
 
     void
     DumpValueObject (Stream &s, VariableSP &var_sp, ValueObjectSP &valobj_sp, const char *root_name)
     {
         DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions());
 
-        if (false == valobj_sp->GetTargetSP()->GetDisplayRuntimeSupportValues() &&
-            true == valobj_sp->IsRuntimeSupportValue())
+        if (!valobj_sp->GetTargetSP()->GetDisplayRuntimeSupportValues() &&
+            valobj_sp->IsRuntimeSupportValue())
             return;
         
         switch (var_sp->GetScope())
@@ -879,7 +864,7 @@ protected:
                           sc.comp_unit->GetPath().c_str());
             }
 
-            for (uint32_t i=0; i<count; ++i)
+            for (uint32_t i = 0; i < count; ++i)
             {
                 VariableSP var_sp (variable_list.GetVariableAtIndex(i));
                 if (var_sp)
@@ -891,8 +876,8 @@ protected:
                 }
             }
         }
-
     }
+
     bool
     DoExecute (Args& args, CommandReturnObject &result) override
     {
@@ -972,7 +957,7 @@ protected:
             {
                 bool success = false;
                 StackFrame *frame = m_exe_ctx.GetFramePtr();
-                CompileUnit *comp_unit = NULL;
+                CompileUnit *comp_unit = nullptr;
                 if (frame)
                 {
                     SymbolContext sc = frame->GetSymbolContext (eSymbolContextCompUnit);
@@ -1093,21 +1078,18 @@ protected:
     OptionGroupFileList m_option_compile_units;
     OptionGroupFileList m_option_shared_libraries;
     OptionGroupValueObjectDisplay m_varobj_options;
-
 };
-
 
 #pragma mark CommandObjectTargetModulesSearchPathsAdd
 
 class CommandObjectTargetModulesSearchPathsAdd : public CommandObjectParsed
 {
 public:
-
     CommandObjectTargetModulesSearchPathsAdd (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "target modules search-paths add",
-                             "Add new image search paths substitution pairs to the current target.",
-                             NULL)
+        CommandObjectParsed(interpreter,
+                            "target modules search-paths add",
+                            "Add new image search paths substitution pairs to the current target.",
+                            nullptr)
     {
         CommandArgumentEntry arg;
         CommandArgumentData old_prefix_arg;
@@ -1131,9 +1113,7 @@ public:
         m_arguments.push_back (arg);
     }
 
-    ~CommandObjectTargetModulesSearchPathsAdd () override
-    {
-    }
+    ~CommandObjectTargetModulesSearchPathsAdd() override = default;
 
 protected:
     bool
@@ -1150,7 +1130,7 @@ protected:
             }
             else
             {
-                for (size_t i=0; i<argc; i+=2)
+                for (size_t i = 0; i < argc; i+=2)
                 {
                     const char *from = command.GetArgumentAtIndex(i);
                     const char *to = command.GetArgumentAtIndex(i+1);
@@ -1194,7 +1174,6 @@ protected:
 class CommandObjectTargetModulesSearchPathsClear : public CommandObjectParsed
 {
 public:
-
     CommandObjectTargetModulesSearchPathsClear (CommandInterpreter &interpreter) :
         CommandObjectParsed (interpreter,
                              "target modules search-paths clear",
@@ -1203,9 +1182,7 @@ public:
     {
     }
 
-    ~CommandObjectTargetModulesSearchPathsClear () override
-    {
-    }
+    ~CommandObjectTargetModulesSearchPathsClear() override = default;
 
 protected:
     bool
@@ -1232,12 +1209,11 @@ protected:
 class CommandObjectTargetModulesSearchPathsInsert : public CommandObjectParsed
 {
 public:
-
     CommandObjectTargetModulesSearchPathsInsert (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "target modules search-paths insert",
-                             "Insert a new image search path substitution pair into the current target at the specified index.",
-                             NULL)
+        CommandObjectParsed(interpreter,
+                            "target modules search-paths insert",
+                            "Insert a new image search path substitution pair into the current target at the specified index.",
+                            nullptr)
     {
         CommandArgumentEntry arg1;
         CommandArgumentEntry arg2;
@@ -1272,9 +1248,7 @@ public:
         m_arguments.push_back (arg2);
     }
 
-    ~CommandObjectTargetModulesSearchPathsInsert () override
-    {
-    }
+    ~CommandObjectTargetModulesSearchPathsInsert() override = default;
 
 protected:
     bool
@@ -1302,7 +1276,7 @@ protected:
                 command.Shift();
                 argc = command.GetArgumentCount();
 
-                for (uint32_t i=0; i<argc; i+=2, ++insert_idx)
+                for (uint32_t i = 0; i < argc; i += 2, ++insert_idx)
                 {
                     const char *from = command.GetArgumentAtIndex(i);
                     const char *to = command.GetArgumentAtIndex(i+1);
@@ -1344,14 +1318,11 @@ protected:
     }
 };
 
-
 #pragma mark CommandObjectTargetModulesSearchPathsList
-
 
 class CommandObjectTargetModulesSearchPathsList : public CommandObjectParsed
 {
 public:
-
     CommandObjectTargetModulesSearchPathsList (CommandInterpreter &interpreter) :
         CommandObjectParsed (interpreter,
                              "target modules search-paths list",
@@ -1360,9 +1331,7 @@ public:
     {
     }
 
-    ~CommandObjectTargetModulesSearchPathsList () override
-    {
-    }
+    ~CommandObjectTargetModulesSearchPathsList() override = default;
 
 protected:
     bool
@@ -1395,12 +1364,11 @@ protected:
 class CommandObjectTargetModulesSearchPathsQuery : public CommandObjectParsed
 {
 public:
-
     CommandObjectTargetModulesSearchPathsQuery (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "target modules search-paths query",
-                             "Transform a path using the first applicable image search path.",
-                             NULL)
+        CommandObjectParsed(interpreter,
+                            "target modules search-paths query",
+                            "Transform a path using the first applicable image search path.",
+                            nullptr)
     {
         CommandArgumentEntry arg;
         CommandArgumentData path_arg;
@@ -1416,9 +1384,7 @@ public:
         m_arguments.push_back (arg);
     }
 
-    ~CommandObjectTargetModulesSearchPathsQuery () override
-    {
-    }
+    ~CommandObjectTargetModulesSearchPathsQuery() override = default;
 
 protected:
     bool
@@ -1501,7 +1467,7 @@ DumpCompileUnitLineTable (CommandInterpreter &interpreter,
                                                                 eSymbolContextCompUnit,
                                                                 sc_list);
 
-        for (uint32_t i=0; i<num_matches; ++i)
+        for (uint32_t i = 0; i < num_matches; ++i)
         {
             SymbolContext sc;
             if (sc_list.GetContextAtIndex(i, sc))
@@ -1578,6 +1544,34 @@ DumpBasename (Stream &strm, const FileSpec *file_spec_ptr, uint32_t width)
         strm.Printf("%-*s", width, "");
 }
 
+static size_t
+DumpModuleObjfileHeaders(Stream &strm, ModuleList &module_list)
+{
+    size_t num_dumped = 0;
+    Mutex::Locker modules_locker(module_list.GetMutex());
+    const size_t num_modules = module_list.GetSize();
+    if (num_modules > 0)
+    {
+        strm.Printf("Dumping headers for %" PRIu64 " module(s).\n", static_cast<uint64_t>(num_modules));
+        strm.IndentMore();
+        for (size_t image_idx = 0; image_idx < num_modules; ++image_idx)
+        {
+            Module *module = module_list.GetModulePointerAtIndexUnlocked(image_idx);
+            if (module)
+            {
+                if (num_dumped++ > 0)
+                {
+                    strm.EOL();
+                    strm.EOL();
+                }
+                ObjectFile *objfile = module->GetObjectFile();
+                objfile->Dump(&strm);
+            }
+        }
+        strm.IndentLess();
+    }
+    return num_dumped;
+}
 
 static void
 DumpModuleSymtab (CommandInterpreter &interpreter, Stream &strm, Module *module, SortOrder sort_order, Mangled::NamePreference name_preference)
@@ -1717,7 +1711,6 @@ LookupSymbolInModule (CommandInterpreter &interpreter, Stream &strm, Module *mod
             Symtab *symtab = sym_vendor->GetSymtab();
             if (symtab)
             {
-                uint32_t i;
                 std::vector<uint32_t> match_indexes;
                 ConstString symbol_name (name);
                 uint32_t num_matches = 0;
@@ -1741,7 +1734,7 @@ LookupSymbolInModule (CommandInterpreter &interpreter, Stream &strm, Module *mod
                     DumpFullpath (strm, &module->GetFileSpec(), 0);
                     strm.PutCString(":\n");
                     strm.IndentMore ();
-                    for (i=0; i < num_matches; ++i)
+                    for (uint32_t i = 0; i < num_matches; ++i)
                     {
                         Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
                         if (symbol && symbol->ValueIsAddress())
@@ -1761,15 +1754,14 @@ LookupSymbolInModule (CommandInterpreter &interpreter, Stream &strm, Module *mod
     return 0;
 }
 
-
 static void
 DumpSymbolContextList (ExecutionContextScope *exe_scope, Stream &strm, SymbolContextList &sc_list, bool verbose)
 {
     strm.IndentMore ();
-    uint32_t i;
+
     const uint32_t num_matches = sc_list.GetSize();
 
-    for (i=0; i<num_matches; ++i)
+    for (uint32_t i = 0; i < num_matches; ++i)
     {
         SymbolContext sc;
         if (sc_list.GetContextAtIndex(i, sc))
@@ -1814,13 +1806,13 @@ LookupFunctionInModule (CommandInterpreter &interpreter,
         else
         {
             ConstString function_name (name);
-            num_matches = module->FindFunctions (function_name,
-                                                 NULL,
-                                                 eFunctionNameTypeAuto,
-                                                 include_symbols,
-                                                 include_inlines, 
-                                                 append, 
-                                                 sc_list);
+            num_matches = module->FindFunctions(function_name,
+                                                nullptr,
+                                                eFunctionNameTypeAuto,
+                                                include_symbols,
+                                                include_inlines,
+                                                append, 
+                                                sc_list);
         }
 
         if (num_matches)
@@ -1972,14 +1964,12 @@ LookupFileAndLineInModule (CommandInterpreter &interpreter,
     return 0;
 }
 
-
 static size_t
 FindModulesByName (Target *target, 
                    const char *module_name, 
                    ModuleList &module_list, 
                    bool check_global_list)
 {
-// Dump specified images (by basename or fullpath)
     FileSpec module_file_spec(module_name, false);
     ModuleSpec module_spec (module_file_spec);
 
@@ -2059,9 +2049,7 @@ public:
         m_arguments.push_back (arg);
     }
 
-    ~CommandObjectTargetModulesModuleAutoComplete () override
-    {
-    }
+    ~CommandObjectTargetModulesModuleAutoComplete() override = default;
 
     int
     HandleArgumentCompletion (Args &input,
@@ -2077,14 +2065,14 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
 
-        CommandCompletions::InvokeCommonCompletionCallbacks (m_interpreter,
-                                                             CommandCompletions::eModuleCompletion,
-                                                             completion_str.c_str(),
-                                                             match_start_point,
-                                                             max_return_elements,
-                                                             NULL,
-                                                             word_complete,
-                                                             matches);
+        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+                                                            CommandCompletions::eModuleCompletion,
+                                                            completion_str.c_str(),
+                                                            match_start_point,
+                                                            max_return_elements,
+                                                            nullptr,
+                                                            word_complete,
+                                                            matches);
         return matches.GetSize();
     }
 };
@@ -2120,9 +2108,7 @@ public:
         m_arguments.push_back (arg);
     }
 
-    ~CommandObjectTargetModulesSourceFileAutoComplete () override
-    {
-    }
+    ~CommandObjectTargetModulesSourceFileAutoComplete() override = default;
 
     int
     HandleArgumentCompletion (Args &input,
@@ -2138,37 +2124,104 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
 
-        CommandCompletions::InvokeCommonCompletionCallbacks (m_interpreter, 
-                                                             CommandCompletions::eSourceFileCompletion,
-                                                             completion_str.c_str(),
-                                                             match_start_point,
-                                                             max_return_elements,
-                                                             NULL,
-                                                             word_complete,
-                                                             matches);
+        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+                                                            CommandCompletions::eSourceFileCompletion,
+                                                            completion_str.c_str(),
+                                                            match_start_point,
+                                                            max_return_elements,
+                                                            nullptr,
+                                                            word_complete,
+                                                            matches);
         return matches.GetSize();
     }
 };
 
+#pragma mark CommandObjectTargetModulesDumpObjfile
+
+class CommandObjectTargetModulesDumpObjfile : public CommandObjectTargetModulesModuleAutoComplete
+{
+public:
+    CommandObjectTargetModulesDumpObjfile(CommandInterpreter &interpreter)
+        : CommandObjectTargetModulesModuleAutoComplete(interpreter, "target modules dump objfile",
+                                                       "Dump the object file headers from one or more target modules.",
+                                                       nullptr)
+    {
+    }
+
+    ~CommandObjectTargetModulesDumpObjfile() override = default;
+
+protected:
+    bool
+    DoExecute(Args &command, CommandReturnObject &result) override
+    {
+        Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+        if (target == nullptr)
+        {
+            result.AppendError("invalid target, create a debug target using the 'target create' command");
+            result.SetStatus(eReturnStatusFailed);
+            return false;
+        }
+
+        uint32_t addr_byte_size = target->GetArchitecture().GetAddressByteSize();
+        result.GetOutputStream().SetAddressByteSize(addr_byte_size);
+        result.GetErrorStream().SetAddressByteSize(addr_byte_size);
+
+        size_t num_dumped = 0;
+        if (command.GetArgumentCount() == 0)
+        {
+            // Dump all headers for all modules images
+            num_dumped = DumpModuleObjfileHeaders(result.GetOutputStream(), target->GetImages());
+            if (num_dumped == 0)
+            {
+                result.AppendError("the target has no associated executable images");
+                result.SetStatus(eReturnStatusFailed);
+            }
+        }
+        else
+        {
+            // Find the modules that match the basename or full path.
+            ModuleList module_list;
+            const char *arg_cstr;
+            for (int arg_idx = 0; (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != nullptr; ++arg_idx)
+            {
+                size_t num_matched = FindModulesByName(target, arg_cstr, module_list, true);
+                if (num_matched == 0)
+                {
+                    result.AppendWarningWithFormat("Unable to find an image that matches '%s'.\n", arg_cstr);
+                }
+            }
+            // Dump all the modules we found.
+            num_dumped = DumpModuleObjfileHeaders(result.GetOutputStream(), module_list);
+        }
+
+        if (num_dumped > 0)
+        {
+            result.SetStatus(eReturnStatusSuccessFinishResult);
+        }
+        else
+        {
+            result.AppendError("no matching executable images found");
+            result.SetStatus(eReturnStatusFailed);
+        }
+        return result.Succeeded();
+    }
+};
 
 #pragma mark CommandObjectTargetModulesDumpSymtab
-
 
 class CommandObjectTargetModulesDumpSymtab : public CommandObjectTargetModulesModuleAutoComplete
 {
 public:
     CommandObjectTargetModulesDumpSymtab (CommandInterpreter &interpreter) :
-    CommandObjectTargetModulesModuleAutoComplete (interpreter,
-                                      "target modules dump symtab",
-                                      "Dump the symbol table from one or more target modules.",
-                                      NULL),
-    m_options (interpreter)
+        CommandObjectTargetModulesModuleAutoComplete(interpreter,
+                                                     "target modules dump symtab",
+                                                     "Dump the symbol table from one or more target modules.",
+                                                     nullptr),
+        m_options(interpreter)
     {
     }
 
-    ~CommandObjectTargetModulesDumpSymtab () override
-    {
-    }
+    ~CommandObjectTargetModulesDumpSymtab() override = default;
 
     Options *
     GetOptions () override
@@ -2186,9 +2239,7 @@ public:
         {
         }
 
-        ~CommandOptions () override
-        {
-        }
+        ~CommandOptions() override = default;
 
         Error
         SetOptionValue (uint32_t option_idx, const char *option_arg) override
@@ -2213,7 +2264,6 @@ public:
                 default:
                     error.SetErrorStringWithFormat("invalid short option character '%c'", short_option);
                     break;
-
             }
             return error;
         }
@@ -2243,7 +2293,7 @@ protected:
     DoExecute (Args& command, CommandReturnObject &result) override
     {
         Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
-        if (target == NULL)
+        if (target == nullptr)
         {
             result.AppendError ("invalid target, create a debug target using the 'target create' command");
             result.SetStatus (eReturnStatusFailed);
@@ -2293,13 +2343,13 @@ protected:
             {
                 // Dump specified images (by basename or fullpath)
                 const char *arg_cstr;
-                for (int arg_idx = 0; (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != NULL; ++arg_idx)
+                for (int arg_idx = 0; (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != nullptr; ++arg_idx)
                 {
                     ModuleList module_list;
                     const size_t num_matches = FindModulesByName (target, arg_cstr, module_list, true);
                     if (num_matches > 0)
                     {
-                        for (size_t i=0; i<num_matches; ++i)
+                        for (size_t i = 0; i < num_matches; ++i)
                         {
                             Module *module = module_list.GetModulePointerAtIndex(i);
                             if (module)
@@ -2339,16 +2389,15 @@ g_sort_option_enumeration[4] =
     { eSortOrderNone,       "none",     "No sorting, use the original symbol table order."},
     { eSortOrderByAddress,  "address",  "Sort output by symbol address."},
     { eSortOrderByName,     "name",     "Sort output by symbol name."},
-    { 0,                    NULL,       NULL }
+    { 0,                    nullptr,    nullptr }
 };
-
 
 OptionDefinition
 CommandObjectTargetModulesDumpSymtab::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_1, false, "sort", 's', OptionParser::eRequiredArgument, NULL, g_sort_option_enumeration, 0, eArgTypeSortOrder, "Supply a sort order when dumping the symbol table."},
-    { LLDB_OPT_SET_1, false, "show-mangled-names", 'm', OptionParser::eNoArgument, NULL, NULL, 0, eArgTypeNone,    "Do not demangle symbol names before showing them."},
-    { 0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL }
+    { LLDB_OPT_SET_1, false, "sort", 's', OptionParser::eRequiredArgument, nullptr, g_sort_option_enumeration, 0, eArgTypeSortOrder, "Supply a sort order when dumping the symbol table."},
+    { LLDB_OPT_SET_1, false, "show-mangled-names", 'm', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Do not demangle symbol names before showing them."},
+    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
 };
 
 #pragma mark CommandObjectTargetModulesDumpSections
@@ -2361,24 +2410,22 @@ class CommandObjectTargetModulesDumpSections : public CommandObjectTargetModules
 {
 public:
     CommandObjectTargetModulesDumpSections (CommandInterpreter &interpreter) :
-    CommandObjectTargetModulesModuleAutoComplete (interpreter,
-                                      "target modules dump sections",
-                                      "Dump the sections from one or more target modules.",
-                                      //"target modules dump sections [<file1> ...]")
-                                      NULL)
+        CommandObjectTargetModulesModuleAutoComplete(interpreter,
+                                                     "target modules dump sections",
+                                                     "Dump the sections from one or more target modules.",
+                                                     //"target modules dump sections [<file1> ...]")
+                                                     nullptr)
     {
     }
 
-    ~CommandObjectTargetModulesDumpSections () override
-    {
-    }
+    ~CommandObjectTargetModulesDumpSections() override = default;
 
 protected:
     bool
     DoExecute (Args& command, CommandReturnObject &result) override
     {
         Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
-        if (target == NULL)
+        if (target == nullptr)
         {
             result.AppendError ("invalid target, create a debug target using the 'target create' command");
             result.SetStatus (eReturnStatusFailed);
@@ -2416,13 +2463,13 @@ protected:
             {
                 // Dump specified images (by basename or fullpath)
                 const char *arg_cstr;
-                for (int arg_idx = 0; (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != NULL; ++arg_idx)
+                for (int arg_idx = 0; (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != nullptr; ++arg_idx)
                 {
                     ModuleList module_list;
                     const size_t num_matches = FindModulesByName (target, arg_cstr, module_list, true);
                     if (num_matches > 0)
                     {
-                        for (size_t i=0; i<num_matches; ++i)
+                        for (size_t i = 0; i < num_matches; ++i)
                         {
                             Module *module = module_list.GetModulePointerAtIndex(i);
                             if (module)
@@ -2454,7 +2501,6 @@ protected:
     }
 };
 
-
 #pragma mark CommandObjectTargetModulesDumpSymfile
 
 //----------------------------------------------------------------------
@@ -2465,24 +2511,22 @@ class CommandObjectTargetModulesDumpSymfile : public CommandObjectTargetModulesM
 {
 public:
     CommandObjectTargetModulesDumpSymfile (CommandInterpreter &interpreter) :
-    CommandObjectTargetModulesModuleAutoComplete (interpreter,
-                                      "target modules dump symfile",
-                                      "Dump the debug symbol file for one or more target modules.",
-                                      //"target modules dump symfile [<file1> ...]")
-                                      NULL)
+        CommandObjectTargetModulesModuleAutoComplete(interpreter,
+                                                     "target modules dump symfile",
+                                                     "Dump the debug symbol file for one or more target modules.",
+                                                     //"target modules dump symfile [<file1> ...]")
+                                                     nullptr)
     {
     }
 
-    ~CommandObjectTargetModulesDumpSymfile () override
-    {
-    }
+    ~CommandObjectTargetModulesDumpSymfile() override = default;
 
 protected:
     bool
     DoExecute (Args& command, CommandReturnObject &result) override
     {
         Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
-        if (target == NULL)
+        if (target == nullptr)
         {
             result.AppendError ("invalid target, create a debug target using the 'target create' command");
             result.SetStatus (eReturnStatusFailed);
@@ -2522,13 +2566,13 @@ protected:
             {
                 // Dump specified images (by basename or fullpath)
                 const char *arg_cstr;
-                for (int arg_idx = 0; (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != NULL; ++arg_idx)
+                for (int arg_idx = 0; (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != nullptr; ++arg_idx)
                 {
                     ModuleList module_list;
                     const size_t num_matches = FindModulesByName (target, arg_cstr, module_list, true);
                     if (num_matches > 0)
                     {
-                        for (size_t i=0; i<num_matches; ++i)
+                        for (size_t i = 0; i < num_matches; ++i)
                         {
                             Module *module = module_list.GetModulePointerAtIndex(i);
                             if (module)
@@ -2555,7 +2599,6 @@ protected:
     }
 };
 
-
 #pragma mark CommandObjectTargetModulesDumpLineTable
 
 //----------------------------------------------------------------------
@@ -2566,17 +2609,15 @@ class CommandObjectTargetModulesDumpLineTable : public CommandObjectTargetModule
 {
 public:
     CommandObjectTargetModulesDumpLineTable (CommandInterpreter &interpreter) :
-    CommandObjectTargetModulesSourceFileAutoComplete (interpreter,
-                                                      "target modules dump line-table",
-                                                      "Dump the line table for one or more compilation units.",
-                                                      NULL,
-                                                      eCommandRequiresTarget)
+        CommandObjectTargetModulesSourceFileAutoComplete(interpreter,
+                                                         "target modules dump line-table",
+                                                         "Dump the line table for one or more compilation units.",
+                                                         nullptr,
+                                                         eCommandRequiresTarget)
     {
     }
 
-    ~CommandObjectTargetModulesDumpLineTable () override
-    {
-    }
+    ~CommandObjectTargetModulesDumpLineTable() override = default;
 
 protected:
     bool
@@ -2599,7 +2640,7 @@ protected:
         {
             // Dump specified images (by basename or fullpath)
             const char *arg_cstr;
-            for (int arg_idx = 0; (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != NULL; ++arg_idx)
+            for (int arg_idx = 0; (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != nullptr; ++arg_idx)
             {
                 FileSpec file_spec(arg_cstr, false);
 
@@ -2637,7 +2678,6 @@ protected:
     }
 };
 
-
 #pragma mark CommandObjectTargetModulesDump
 
 //----------------------------------------------------------------------
@@ -2650,21 +2690,20 @@ public:
     //------------------------------------------------------------------
     // Constructors and Destructors
     //------------------------------------------------------------------
-    CommandObjectTargetModulesDump(CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter, 
-                            "target modules dump",
-                            "A set of commands for dumping information about one or more target modules.",
-                            "target modules dump [symtab|sections|symfile|line-table] [<file1> <file2> ...]")
+    CommandObjectTargetModulesDump(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(
+              interpreter, "target modules dump",
+              "A set of commands for dumping information about one or more target modules.",
+              "target modules dump [headers|symtab|sections|symfile|line-table] [<file1> <file2> ...]")
     {
+        LoadSubCommand("objfile", CommandObjectSP(new CommandObjectTargetModulesDumpObjfile(interpreter)));
         LoadSubCommand ("symtab",      CommandObjectSP (new CommandObjectTargetModulesDumpSymtab (interpreter)));
         LoadSubCommand ("sections",    CommandObjectSP (new CommandObjectTargetModulesDumpSections (interpreter)));
         LoadSubCommand ("symfile",     CommandObjectSP (new CommandObjectTargetModulesDumpSymfile (interpreter)));
         LoadSubCommand ("line-table",  CommandObjectSP (new CommandObjectTargetModulesDumpLineTable (interpreter)));
     }
 
-    ~CommandObjectTargetModulesDump() override
-    {
-    }
+    ~CommandObjectTargetModulesDump() override = default;
 };
 
 class CommandObjectTargetModulesAdd : public CommandObjectParsed
@@ -2683,9 +2722,7 @@ public:
         m_option_group.Finalize();
     }
 
-    ~CommandObjectTargetModulesAdd () override
-    {
-    }
+    ~CommandObjectTargetModulesAdd() override = default;
 
     Options *
     GetOptions () override
@@ -2706,14 +2743,14 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
 
-        CommandCompletions::InvokeCommonCompletionCallbacks (m_interpreter, 
-                                                             CommandCompletions::eDiskFileCompletion,
-                                                             completion_str.c_str(),
-                                                             match_start_point,
-                                                             max_return_elements,
-                                                             NULL,
-                                                             word_complete,
-                                                             matches);
+        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+                                                            CommandCompletions::eDiskFileCompletion,
+                                                            completion_str.c_str(),
+                                                            match_start_point,
+                                                            max_return_elements,
+                                                            nullptr,
+                                                            word_complete,
+                                                            matches);
         return matches.GetSize();
     }
 
@@ -2726,7 +2763,7 @@ protected:
     DoExecute (Args& args, CommandReturnObject &result) override
     {
         Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
-        if (target == NULL)
+        if (target == nullptr)
         {
             result.AppendError ("invalid target, create a debug target using the 'target create' command");
             result.SetStatus (eReturnStatusFailed);
@@ -2801,7 +2838,7 @@ protected:
             }
             else
             {
-                for (size_t i=0; i<argc; ++i)
+                for (size_t i = 0; i < argc; ++i)
                 {
                     const char *path = args.GetArgumentAtIndex(i);
                     if (path)
@@ -2863,7 +2900,6 @@ protected:
 
         return result.Succeeded();
     }
-
 };
 
 class CommandObjectTargetModulesLoad : public CommandObjectTargetModulesModuleAutoComplete
@@ -2884,9 +2920,7 @@ public:
         m_option_group.Finalize();
     }
 
-    ~CommandObjectTargetModulesLoad () override
-    {
-    }
+    ~CommandObjectTargetModulesLoad() override = default;
 
     Options *
     GetOptions () override
@@ -2899,7 +2933,7 @@ protected:
     DoExecute (Args& args, CommandReturnObject &result) override
     {
         Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
-        if (target == NULL)
+        if (target == nullptr)
         {
             result.AppendError ("invalid target, create a debug target using the 'target create' command");
             result.SetStatus (eReturnStatusFailed);
@@ -2983,7 +3017,7 @@ protected:
                                         return false;
                                     }
 
-                                    for (size_t i=0; i<argc; i += 2)
+                                    for (size_t i = 0; i < argc; i += 2)
                                     {
                                         const char *sect_name = args.GetArgumentAtIndex(i);
                                         const char *load_addr_cstr = args.GetArgumentAtIndex(i+1);
@@ -3089,7 +3123,7 @@ protected:
                                                       path,
                                                       !uuid_str.empty() ? " uuid=" : "", 
                                                       uuid_str.c_str());
-                        for (size_t i=0; i<num_matches; ++i)
+                        for (size_t i = 0; i < num_matches; ++i)
                         {
                             if (matching_modules.GetModulePointerAtIndex(i)->GetFileSpec().GetPath (path, sizeof(path)))
                                 result.AppendMessageWithFormat("%s\n", path);
@@ -3139,9 +3173,7 @@ public:
         {
         }
 
-        ~CommandOptions () override
-        {
-        }
+        ~CommandOptions() override = default;
 
         Error
         SetOptionValue (uint32_t option_idx, const char *option_arg) override
@@ -3162,7 +3194,7 @@ public:
             {
                 unsigned long width = 0;
                 if (option_arg)
-                    width = strtoul (option_arg, NULL, 0);
+                    width = strtoul(option_arg, nullptr, 0);
                 m_format_array.push_back(std::make_pair(short_option, width));
             }
             return error;
@@ -3202,9 +3234,7 @@ public:
     {
     }
 
-    ~CommandObjectTargetModulesList () override
-    {
-    }
+    ~CommandObjectTargetModulesList() override = default;
 
     Options *
     GetOptions () override
@@ -3222,7 +3252,7 @@ protected:
         // object which might lock its contents below (through the "module_list_ptr"
         // variable).
         ModuleList module_list;
-        if (target == NULL && use_global_module_list == false)
+        if (target == nullptr && !use_global_module_list)
         {
             result.AppendError ("invalid target, create a debug target using the 'target create' command");
             result.SetStatus (eReturnStatusFailed);
@@ -3273,10 +3303,10 @@ protected:
             }
 
             size_t num_modules = 0;
-            Mutex::Locker locker;      // This locker will be locked on the mutex in module_list_ptr if it is non-NULL.
+            Mutex::Locker locker;      // This locker will be locked on the mutex in module_list_ptr if it is non-nullptr.
                                        // Otherwise it will lock the AllocationModuleCollectionMutex when accessing
                                        // the global module list directly.
-            const ModuleList *module_list_ptr = NULL;
+            const ModuleList *module_list_ptr = nullptr;
             const size_t argc = command.GetArgumentCount();
             if (argc == 0)
             {
@@ -3292,7 +3322,7 @@ protected:
             }
             else
             {
-                for (size_t i=0; i<argc; ++i)
+                for (size_t i = 0; i < argc; ++i)
                 {
                     // Dump specified images (by basename or fullpath)
                     const char *arg_cstr = command.GetArgumentAtIndex(i);
@@ -3311,7 +3341,7 @@ protected:
                 module_list_ptr = &module_list;
             }
 
-            if (module_list_ptr != NULL)
+            if (module_list_ptr != nullptr)
             {
                 locker.Lock(module_list_ptr->GetMutex());
                 num_modules = module_list_ptr->GetSize();
@@ -3366,8 +3396,7 @@ protected:
     void
     PrintModule (Target *target, Module *module, int indent, Stream &strm)
     {
-
-        if (module == NULL)
+        if (module == nullptr)
         {
             strm.PutCString("Null module");
             return;
@@ -3383,7 +3412,7 @@ protected:
         }
         const size_t num_entries = m_options.m_format_array.size();
         bool print_space = false;
-        for (size_t i=0; i<num_entries; ++i)
+        for (size_t i = 0; i < num_entries; ++i)
         {
             if (print_space)
                 strm.PutChar(' ');
@@ -3456,6 +3485,7 @@ protected:
                         strm.Printf ("%*s", addr_nibble_width + 2, "");
                     }
                     break;
+
                 case 'r':
                     {
                         size_t ref_count = 0;
@@ -3513,7 +3543,6 @@ protected:
                 default:
                     break;
             }
-
         }
         if (dump_object_name)
         {
@@ -3530,22 +3559,22 @@ protected:
 OptionDefinition
 CommandObjectTargetModulesList::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_1, false, "address",    'a', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeAddressOrExpression, "Display the image at this address."},
-    { LLDB_OPT_SET_1, false, "arch",       'A', OptionParser::eOptionalArgument, NULL, NULL, 0, eArgTypeWidth,   "Display the architecture when listing images."},
-    { LLDB_OPT_SET_1, false, "triple",     't', OptionParser::eOptionalArgument, NULL, NULL, 0, eArgTypeWidth,   "Display the triple when listing images."},
-    { LLDB_OPT_SET_1, false, "header",     'h', OptionParser::eNoArgument,       NULL, NULL, 0, eArgTypeNone,    "Display the image header address as a load address if debugging, a file address otherwise."},
-    { LLDB_OPT_SET_1, false, "offset",     'o', OptionParser::eNoArgument,       NULL, NULL, 0, eArgTypeNone,    "Display the image header address offset from the header file address (the slide amount)."},
-    { LLDB_OPT_SET_1, false, "uuid",       'u', OptionParser::eNoArgument,       NULL, NULL, 0, eArgTypeNone,    "Display the UUID when listing images."},
-    { LLDB_OPT_SET_1, false, "fullpath",   'f', OptionParser::eOptionalArgument, NULL, NULL, 0, eArgTypeWidth,   "Display the fullpath to the image object file."},
-    { LLDB_OPT_SET_1, false, "directory",  'd', OptionParser::eOptionalArgument, NULL, NULL, 0, eArgTypeWidth,   "Display the directory with optional width for the image object file."},
-    { LLDB_OPT_SET_1, false, "basename",   'b', OptionParser::eOptionalArgument, NULL, NULL, 0, eArgTypeWidth,   "Display the basename with optional width for the image object file."},
-    { LLDB_OPT_SET_1, false, "symfile",    's', OptionParser::eOptionalArgument, NULL, NULL, 0, eArgTypeWidth,   "Display the fullpath to the image symbol file with optional width."},
-    { LLDB_OPT_SET_1, false, "symfile-unique", 'S', OptionParser::eOptionalArgument, NULL, NULL, 0, eArgTypeWidth,   "Display the symbol file with optional width only if it is different from the executable object file."},
-    { LLDB_OPT_SET_1, false, "mod-time",   'm', OptionParser::eOptionalArgument, NULL, NULL, 0, eArgTypeWidth,   "Display the modification time with optional width of the module."},
-    { LLDB_OPT_SET_1, false, "ref-count",  'r', OptionParser::eOptionalArgument, NULL, NULL, 0, eArgTypeWidth,   "Display the reference count if the module is still in the shared module cache."},
-    { LLDB_OPT_SET_1, false, "pointer",    'p', OptionParser::eOptionalArgument, NULL, NULL, 0, eArgTypeNone,    "Display the module pointer."},
-    { LLDB_OPT_SET_1, false, "global",     'g', OptionParser::eNoArgument,       NULL, NULL, 0, eArgTypeNone,    "Display the modules from the global module list, not just the current target."},
-    { 0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL }
+    { LLDB_OPT_SET_1, false, "address",    'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddressOrExpression, "Display the image at this address."},
+    { LLDB_OPT_SET_1, false, "arch",       'A', OptionParser::eOptionalArgument, nullptr, nullptr, 0, eArgTypeWidth,   "Display the architecture when listing images."},
+    { LLDB_OPT_SET_1, false, "triple",     't', OptionParser::eOptionalArgument, nullptr, nullptr, 0, eArgTypeWidth,   "Display the triple when listing images."},
+    { LLDB_OPT_SET_1, false, "header",     'h', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,    "Display the image header address as a load address if debugging, a file address otherwise."},
+    { LLDB_OPT_SET_1, false, "offset",     'o', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,    "Display the image header address offset from the header file address (the slide amount)."},
+    { LLDB_OPT_SET_1, false, "uuid",       'u', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,    "Display the UUID when listing images."},
+    { LLDB_OPT_SET_1, false, "fullpath",   'f', OptionParser::eOptionalArgument, nullptr, nullptr, 0, eArgTypeWidth,   "Display the fullpath to the image object file."},
+    { LLDB_OPT_SET_1, false, "directory",  'd', OptionParser::eOptionalArgument, nullptr, nullptr, 0, eArgTypeWidth,   "Display the directory with optional width for the image object file."},
+    { LLDB_OPT_SET_1, false, "basename",   'b', OptionParser::eOptionalArgument, nullptr, nullptr, 0, eArgTypeWidth,   "Display the basename with optional width for the image object file."},
+    { LLDB_OPT_SET_1, false, "symfile",    's', OptionParser::eOptionalArgument, nullptr, nullptr, 0, eArgTypeWidth,   "Display the fullpath to the image symbol file with optional width."},
+    { LLDB_OPT_SET_1, false, "symfile-unique", 'S', OptionParser::eOptionalArgument, nullptr, nullptr, 0, eArgTypeWidth,   "Display the symbol file with optional width only if it is different from the executable object file."},
+    { LLDB_OPT_SET_1, false, "mod-time",   'm', OptionParser::eOptionalArgument, nullptr, nullptr, 0, eArgTypeWidth,   "Display the modification time with optional width of the module."},
+    { LLDB_OPT_SET_1, false, "ref-count",  'r', OptionParser::eOptionalArgument, nullptr, nullptr, 0, eArgTypeWidth,   "Display the reference count if the module is still in the shared module cache."},
+    { LLDB_OPT_SET_1, false, "pointer",    'p', OptionParser::eOptionalArgument, nullptr, nullptr, 0, eArgTypeNone,    "Display the module pointer."},
+    { LLDB_OPT_SET_1, false, "global",     'g', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,    "Display the modules from the global module list, not just the current target."},
+    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
 };
 
 #pragma mark CommandObjectTargetModulesShowUnwind
@@ -3557,7 +3586,6 @@ CommandObjectTargetModulesList::CommandOptions::g_option_table[] =
 class CommandObjectTargetModulesShowUnwind : public CommandObjectParsed
 {
 public:
-
     enum
     {
         eLookupTypeInvalid = -1,
@@ -3571,7 +3599,6 @@ public:
     class CommandOptions : public Options
     {
     public:
-
         CommandOptions (CommandInterpreter &interpreter) :
             Options(interpreter),
             m_type(eLookupTypeInvalid),
@@ -3580,9 +3607,7 @@ public:
         {
         }
 
-        ~CommandOptions () override
-        {
-        }
+        ~CommandOptions() override = default;
 
         Error
         SetOptionValue (uint32_t option_idx, const char *option_arg) override
@@ -3605,11 +3630,9 @@ public:
                 }
 
                 case 'n':
-                {
                     m_str = option_arg;
                     m_type = eLookupTypeFunctionOrSymbol;
                     break;
-                }
 
                 default:
                     error.SetErrorStringWithFormat ("unrecognized option %c.", short_option);
@@ -3645,21 +3668,19 @@ public:
     };
 
     CommandObjectTargetModulesShowUnwind (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "target modules show-unwind",
-                             "Show synthesized unwind instructions for a function.",
-                             NULL,
-                             eCommandRequiresTarget        |
-                             eCommandRequiresProcess       |
-                             eCommandProcessMustBeLaunched |
-                             eCommandProcessMustBePaused   ),
+        CommandObjectParsed(interpreter,
+                            "target modules show-unwind",
+                            "Show synthesized unwind instructions for a function.",
+                            nullptr,
+                            eCommandRequiresTarget        |
+                            eCommandRequiresProcess       |
+                            eCommandProcessMustBeLaunched |
+                            eCommandProcessMustBePaused   ),
         m_options (interpreter)
     {
     }
 
-    ~CommandObjectTargetModulesShowUnwind () override
-    {
-    }
+    ~CommandObjectTargetModulesShowUnwind() override = default;
 
     Options *
     GetOptions () override
@@ -3673,11 +3694,11 @@ protected:
     {
         Target *target = m_exe_ctx.GetTargetPtr();
         Process *process = m_exe_ctx.GetProcessPtr();
-        ABI *abi = NULL;
+        ABI *abi = nullptr;
         if (process)
           abi = process->GetABI().get();
 
-        if (process == NULL)
+        if (process == nullptr)
         {
             result.AppendError ("You must have a process running to use this command.");
             result.SetStatus (eReturnStatusFailed);
@@ -3693,7 +3714,7 @@ protected:
         }
 
         ThreadSP thread(threads.GetThreadAtIndex(0));
-        if (thread.get() == NULL)
+        if (!thread)
         {
             result.AppendError ("The process must be paused to use this command.");
             result.SetStatus (eReturnStatusFailed);
@@ -3740,9 +3761,9 @@ protected:
         {
             SymbolContext sc;
             sc_list.GetContextAtIndex(idx, sc);
-            if (sc.symbol == NULL && sc.function == NULL)
+            if (sc.symbol == nullptr && sc.function == nullptr)
                 continue;
-            if (sc.module_sp.get() == NULL || sc.module_sp->GetObjectFile() == NULL)
+            if (!sc.module_sp || sc.module_sp->GetObjectFile() == nullptr)
                 continue;
             AddressRange range;
             if (!sc.GetAddressRange (eSymbolContextFunction | eSymbolContextSymbol, 0, false, range))
@@ -3757,37 +3778,36 @@ protected:
                 start_addr = abi->FixCodeAddress(start_addr);
 
             FuncUnwindersSP func_unwinders_sp (sc.module_sp->GetObjectFile()->GetUnwindTable().GetUncachedFuncUnwindersContainingAddress(start_addr, sc));
-            if (func_unwinders_sp.get() == NULL)
+            if (!func_unwinders_sp)
                 continue;
 
             result.GetOutputStream().Printf("UNWIND PLANS for %s`%s (start addr 0x%" PRIx64 ")\n\n", sc.module_sp->GetPlatformFileSpec().GetFilename().AsCString(), funcname.AsCString(), start_addr);
 
-            UnwindPlanSP non_callsite_unwind_plan = func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread.get(), -1);
-            if (non_callsite_unwind_plan.get())
+            UnwindPlanSP non_callsite_unwind_plan = func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread, -1);
+            if (non_callsite_unwind_plan)
             {
                 result.GetOutputStream().Printf("Asynchronous (not restricted to call-sites) UnwindPlan is '%s'\n", non_callsite_unwind_plan->GetSourceName().AsCString());
             }
             UnwindPlanSP callsite_unwind_plan = func_unwinders_sp->GetUnwindPlanAtCallSite(*target, -1);
-            if (callsite_unwind_plan.get())
+            if (callsite_unwind_plan)
             {
                 result.GetOutputStream().Printf("Synchronous (restricted to call-sites) UnwindPlan is '%s'\n", callsite_unwind_plan->GetSourceName().AsCString());
             }
-            UnwindPlanSP fast_unwind_plan = func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread.get());
-            if (fast_unwind_plan.get())
+            UnwindPlanSP fast_unwind_plan = func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread);
+            if (fast_unwind_plan)
             {
                 result.GetOutputStream().Printf("Fast UnwindPlan is '%s'\n", fast_unwind_plan->GetSourceName().AsCString());
             }
 
             result.GetOutputStream().Printf("\n");
 
-            UnwindPlanSP assembly_sp = func_unwinders_sp->GetAssemblyUnwindPlan(*target, *thread.get(), 0);
+            UnwindPlanSP assembly_sp = func_unwinders_sp->GetAssemblyUnwindPlan(*target, *thread, 0);
             if (assembly_sp)
             {
                 result.GetOutputStream().Printf("Assembly language inspection UnwindPlan:\n");
                 assembly_sp->Dump(result.GetOutputStream(), thread.get(), LLDB_INVALID_ADDRESS);
                 result.GetOutputStream().Printf("\n");
             }
-            
 
             UnwindPlanSP ehframe_sp = func_unwinders_sp->GetEHFrameUnwindPlan(*target, 0);
             if (ehframe_sp)
@@ -3797,7 +3817,7 @@ protected:
                 result.GetOutputStream().Printf("\n");
             }
 
-            UnwindPlanSP ehframe_augmented_sp = func_unwinders_sp->GetEHFrameAugmentedUnwindPlan(*target, *thread.get(), 0);
+            UnwindPlanSP ehframe_augmented_sp = func_unwinders_sp->GetEHFrameAugmentedUnwindPlan(*target, *thread, 0);
             if (ehframe_augmented_sp)
             {
                 result.GetOutputStream().Printf("eh_frame augmented UnwindPlan:\n");
@@ -3859,9 +3879,9 @@ protected:
 OptionDefinition
 CommandObjectTargetModulesShowUnwind::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_1,   false,  "name",       'n', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeFunctionName, "Show unwind instructions for a function or symbol name."},
-    { LLDB_OPT_SET_2,   false,  "address",    'a', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeAddressOrExpression, "Show unwind instructions for a function or symbol containing an address"},
-    { 0,                false, NULL,           0, 0,                 NULL, NULL, 0, eArgTypeNone, NULL }
+    { LLDB_OPT_SET_1,   false,  "name",       'n', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeFunctionName, "Show unwind instructions for a function or symbol name."},
+    { LLDB_OPT_SET_2,   false,  "address",    'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddressOrExpression, "Show unwind instructions for a function or symbol containing an address"},
+    { 0,                false, nullptr,           0, 0,                 nullptr, nullptr, 0, eArgTypeNone, nullptr }
 };
 
 //----------------------------------------------------------------------
@@ -3891,9 +3911,7 @@ public:
             OptionParsingStarting();
         }
 
-        ~CommandOptions () override
-        {
-        }
+        ~CommandOptions() override = default;
 
         Error
         SetOptionValue (uint32_t option_idx, const char *option_arg) override
@@ -4009,11 +4027,11 @@ public:
     };
 
     CommandObjectTargetModulesLookup (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "target modules lookup",
-                             "Look up information within executable and dependent shared library images.",
-                             NULL,
-                             eCommandRequiresTarget),
+        CommandObjectParsed(interpreter,
+                            "target modules lookup",
+                            "Look up information within executable and dependent shared library images.",
+                            nullptr,
+                            eCommandRequiresTarget),
         m_options (interpreter)
     {
         CommandArgumentEntry arg;
@@ -4030,9 +4048,7 @@ public:
         m_arguments.push_back (arg);
     }
 
-    ~CommandObjectTargetModulesLookup () override
-    {
-    }
+    ~CommandObjectTargetModulesLookup() override = default;
 
     Options *
     GetOptions () override
@@ -4193,7 +4209,7 @@ protected:
     DoExecute (Args& command, CommandReturnObject &result) override
     {
         Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
-        if (target == NULL)
+        if (target == nullptr)
         {
             result.AppendError ("invalid target, create a debug target using the 'target create' command");
             result.SetStatus (eReturnStatusFailed);
@@ -4234,7 +4250,7 @@ protected:
                 const size_t num_modules = target_modules.GetSize();
                 if (num_modules > 0)
                 {
-                    for (i = 0; i<num_modules && syntax_error == false; ++i)
+                    for (i = 0; i < num_modules && !syntax_error; ++i)
                     {
                         Module *module_pointer = target_modules.GetModulePointerAtIndexUnlocked(i);
 
@@ -4257,7 +4273,7 @@ protected:
             {
                 // Dump specified images (by basename or fullpath)
                 const char *arg_cstr;
-                for (i = 0; (arg_cstr = command.GetArgumentAtIndex(i)) != NULL && syntax_error == false; ++i)
+                for (i = 0; (arg_cstr = command.GetArgumentAtIndex(i)) != nullptr && !syntax_error; ++i)
                 {
                     ModuleList module_list;
                     const size_t num_matches = FindModulesByName (target, arg_cstr, module_list, false);
@@ -4295,24 +4311,23 @@ protected:
 OptionDefinition
 CommandObjectTargetModulesLookup::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_1,   true,  "address",    'a', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeAddressOrExpression, "Lookup an address in one or more target modules."},
-    { LLDB_OPT_SET_1,   false, "offset",     'o', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeOffset,           "When looking up an address subtract <offset> from any addresses before doing the lookup."},
+    { LLDB_OPT_SET_1,   true,  "address",    'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddressOrExpression, "Lookup an address in one or more target modules."},
+    { LLDB_OPT_SET_1,   false, "offset",     'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset,           "When looking up an address subtract <offset> from any addresses before doing the lookup."},
     { LLDB_OPT_SET_2| LLDB_OPT_SET_4 | LLDB_OPT_SET_5
       /* FIXME: re-enable this for types when the LookupTypeInModule actually uses the regex option: | LLDB_OPT_SET_6 */ ,
-                        false, "regex",      'r', OptionParser::eNoArgument,       NULL, NULL, 0, eArgTypeNone,             "The <name> argument for name lookups are regular expressions."},
-    { LLDB_OPT_SET_2,   true,  "symbol",     's', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeSymbol,           "Lookup a symbol by name in the symbol tables in one or more target modules."},
-    { LLDB_OPT_SET_3,   true,  "file",       'f', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeFilename,         "Lookup a file by fullpath or basename in one or more target modules."},
-    { LLDB_OPT_SET_3,   false, "line",       'l', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLineNum,          "Lookup a line number in a file (must be used in conjunction with --file)."},
+                        false, "regex",      'r', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,             "The <name> argument for name lookups are regular expressions."},
+    { LLDB_OPT_SET_2,   true,  "symbol",     's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeSymbol,           "Lookup a symbol by name in the symbol tables in one or more target modules."},
+    { LLDB_OPT_SET_3,   true,  "file",       'f', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeFilename,         "Lookup a file by fullpath or basename in one or more target modules."},
+    { LLDB_OPT_SET_3,   false, "line",       'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLineNum,          "Lookup a line number in a file (must be used in conjunction with --file)."},
     { LLDB_OPT_SET_FROM_TO(3,5),
-                        false, "no-inlines", 'i', OptionParser::eNoArgument,       NULL, NULL, 0, eArgTypeNone,             "Ignore inline entries (must be used in conjunction with --file or --function)."},
-    { LLDB_OPT_SET_4,   true,  "function",   'F', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeFunctionName,     "Lookup a function by name in the debug symbols in one or more target modules."},
-    { LLDB_OPT_SET_5,   true,  "name",       'n', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeFunctionOrSymbol, "Lookup a function or symbol by name in one or more target modules."},
-    { LLDB_OPT_SET_6,   true,  "type",       't', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeName,             "Lookup a type by name in the debug symbols in one or more target modules."},
-    { LLDB_OPT_SET_ALL, false, "verbose",    'v', OptionParser::eNoArgument,       NULL, NULL, 0, eArgTypeNone,             "Enable verbose lookup information."},
-    { LLDB_OPT_SET_ALL, false, "all",        'A', OptionParser::eNoArgument,       NULL, NULL, 0, eArgTypeNone,             "Print all matches, not just the best match, if a best match is available."},
-    { 0,                false, NULL,           0, 0,                 NULL, NULL, 0, eArgTypeNone,             NULL }
+                        false, "no-inlines", 'i', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,             "Ignore inline entries (must be used in conjunction with --file or --function)."},
+    { LLDB_OPT_SET_4,   true,  "function",   'F', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeFunctionName,     "Lookup a function by name in the debug symbols in one or more target modules."},
+    { LLDB_OPT_SET_5,   true,  "name",       'n', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeFunctionOrSymbol, "Lookup a function or symbol by name in one or more target modules."},
+    { LLDB_OPT_SET_6,   true,  "type",       't', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeName,             "Lookup a type by name in the debug symbols in one or more target modules."},
+    { LLDB_OPT_SET_ALL, false, "verbose",    'v', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,             "Enable verbose lookup information."},
+    { LLDB_OPT_SET_ALL, false, "all",        'A', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,             "Print all matches, not just the best match, if a best match is available."},
+    { 0,                false, nullptr,           0, 0,                 nullptr, nullptr, 0, eArgTypeNone,             nullptr }
 };
-
 
 #pragma mark CommandObjectMultiwordImageSearchPaths
 
@@ -4336,12 +4351,8 @@ public:
         LoadSubCommand ("query",   CommandObjectSP (new CommandObjectTargetModulesSearchPathsQuery (interpreter)));
     }
 
-    ~CommandObjectTargetModulesImageSearchPaths() override
-    {
-    }
+    ~CommandObjectTargetModulesImageSearchPaths() override = default;
 };
-
-
 
 #pragma mark CommandObjectTargetModules
 
@@ -4371,9 +4382,7 @@ public:
 
     }
 
-    ~CommandObjectTargetModules() override
-    {
-    }
+    ~CommandObjectTargetModules() override = default;
 
 private:
     //------------------------------------------------------------------
@@ -4381,8 +4390,6 @@ private:
     //------------------------------------------------------------------
     DISALLOW_COPY_AND_ASSIGN (CommandObjectTargetModules);
 };
-
-
 
 class CommandObjectTargetSymbolsAdd : public CommandObjectParsed
 {
@@ -4403,9 +4410,7 @@ public:
         m_option_group.Finalize();
     }
 
-    ~CommandObjectTargetSymbolsAdd () override
-    {
-    }
+    ~CommandObjectTargetSymbolsAdd() override = default;
 
     int
     HandleArgumentCompletion (Args &input,
@@ -4420,14 +4425,14 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
 
-        CommandCompletions::InvokeCommonCompletionCallbacks (m_interpreter, 
-                                                             CommandCompletions::eDiskFileCompletion,
-                                                             completion_str.c_str(),
-                                                             match_start_point,
-                                                             max_return_elements,
-                                                             NULL,
-                                                             word_complete,
-                                                             matches);
+        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+                                                            CommandCompletions::eDiskFileCompletion,
+                                                            completion_str.c_str(),
+                                                            match_start_point,
+                                                            max_return_elements,
+                                                            nullptr,
+                                                            word_complete,
+                                                            matches);
         return matches.GetSize();
     }
 
@@ -4487,7 +4492,7 @@ protected:
                     // No matches yet, iterate through the module specs to find a UUID value that
                     // we can match up to an image in our target
                     const size_t num_symfile_module_specs = symfile_module_specs.GetSize();
-                    for (size_t i=0; i<num_symfile_module_specs && num_matches == 0; ++i)
+                    for (size_t i = 0; i < num_symfile_module_specs && num_matches == 0; ++i)
                     {
                         if (symfile_module_specs.GetModuleSpecAtIndex(i, symfile_module_spec))
                         {
@@ -4620,8 +4625,8 @@ protected:
         const bool uuid_option_set = m_uuid_option_group.GetOptionValue().OptionWasSet();
         const bool file_option_set = m_file_option.GetOptionValue().OptionWasSet();
         const bool frame_option_set = m_current_frame_option.GetOptionValue().OptionWasSet();
-
         const size_t argc = args.GetArgumentCount();
+
         if (argc == 0)
         {
             if (uuid_option_set || file_option_set || frame_option_set)
@@ -4696,7 +4701,7 @@ protected:
                         {
                             module_spec.GetArchitecture() = target->GetArchitecture();
                         }
-                        success |= module_spec.GetFileSpec().Exists();
+                        success |= module_spec.GetUUID().IsValid() || module_spec.GetFileSpec().Exists();
                     }
                 }
 
@@ -4752,7 +4757,7 @@ protected:
             {
                 PlatformSP platform_sp (target->GetPlatform());
 
-                for (size_t i=0; i<argc; ++i)
+                for (size_t i = 0; i < argc; ++i)
                 {
                     const char *symfile_path = args.GetArgumentAtIndex(i);
                     if (symfile_path)
@@ -4807,7 +4812,6 @@ protected:
     OptionGroupBoolean m_current_frame_option;
 };
 
-
 #pragma mark CommandObjectTargetSymbols
 
 //-------------------------------------------------------------------------
@@ -4827,12 +4831,9 @@ public:
                             "target symbols <sub-command> ...")
     {
         LoadSubCommand ("add", CommandObjectSP (new CommandObjectTargetSymbolsAdd (interpreter)));
-
     }
 
-    ~CommandObjectTargetSymbols() override
-    {
-    }
+    ~CommandObjectTargetSymbols() override = default;
 
 private:
     //------------------------------------------------------------------
@@ -4840,7 +4841,6 @@ private:
     //------------------------------------------------------------------
     DISALLOW_COPY_AND_ASSIGN (CommandObjectTargetSymbols);
 };
-
 
 #pragma mark CommandObjectTargetStopHookAdd
 
@@ -4853,7 +4853,6 @@ class CommandObjectTargetStopHookAdd :
     public IOHandlerDelegateMultiline
 {
 public:
-
     class CommandOptions : public Options
     {
     public:
@@ -4869,7 +4868,7 @@ public:
         {
         }
 
-        ~CommandOptions () override {}
+        ~CommandOptions() override = default;
 
         const OptionDefinition*
         GetDefinitions () override
@@ -4889,7 +4888,7 @@ public:
                 case 'c':
                     m_class_name = option_arg;
                     m_sym_ctx_specified = true;
-                break;
+                    break;
 
                 case 'e':
                     m_line_end = StringConvert::ToUInt32 (option_arg, UINT_MAX, 0, &success);
@@ -4899,7 +4898,7 @@ public:
                         break;
                     }
                     m_sym_ctx_specified = true;
-                break;
+                    break;
 
                 case 'l':
                     m_line_start = StringConvert::ToUInt32 (option_arg, 0, 0, &success);
@@ -4909,57 +4908,60 @@ public:
                         break;
                     }
                     m_sym_ctx_specified = true;
-                break;
+                    break;
 
                 case 'i':
                     m_no_inlines = true;
-                break;
+                    break;
 
                 case 'n':
                     m_function_name = option_arg;
                     m_func_name_type_mask |= eFunctionNameTypeAuto;
                     m_sym_ctx_specified = true;
-                break;
+                    break;
 
                 case 'f':
                     m_file_name = option_arg;
                     m_sym_ctx_specified = true;
-                break;
+                    break;
+
                 case 's':
                     m_module_name = option_arg;
                     m_sym_ctx_specified = true;
-                break;
+                    break;
+
                 case 't' :
-                {
                     m_thread_id = StringConvert::ToUInt64(option_arg, LLDB_INVALID_THREAD_ID, 0);
                     if (m_thread_id == LLDB_INVALID_THREAD_ID)
                        error.SetErrorStringWithFormat ("invalid thread id string '%s'", option_arg);
                     m_thread_specified = true;
-                }
-                break;
+                    break;
+
                 case 'T':
                     m_thread_name = option_arg;
                     m_thread_specified = true;
-                break;
+                    break;
+
                 case 'q':
                     m_queue_name = option_arg;
                     m_thread_specified = true;
                     break;
+
                 case 'x':
-                {
                     m_thread_index = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0);
                     if (m_thread_id == UINT32_MAX)
                        error.SetErrorStringWithFormat ("invalid thread index string '%s'", option_arg);
                     m_thread_specified = true;
-                }
-                break;
+                    break;
+
                 case 'o':
                     m_use_one_liner = true;
                     m_one_liner = option_arg;
-                break;
+                    break;
+
                 default:
                     error.SetErrorStringWithFormat ("unrecognized option %c.", short_option);
-                break;
+                    break;
             }
             return error;
         }
@@ -4987,7 +4989,6 @@ public:
             m_one_liner.clear();
         }
 
-
         static OptionDefinition g_option_table[];
 
         std::string m_class_name;
@@ -5009,12 +5010,6 @@ public:
         std::string m_one_liner;
     };
 
-    Options *
-    GetOptions () override
-    {
-        return &m_options;
-    }
-
     CommandObjectTargetStopHookAdd (CommandInterpreter &interpreter) :
         CommandObjectParsed (interpreter,
                              "target stop-hook add",
@@ -5025,8 +5020,12 @@ public:
     {
     }
 
-    ~CommandObjectTargetStopHookAdd () override
+    ~CommandObjectTargetStopHookAdd() override = default;
+
+    Options *
+    GetOptions () override
     {
+        return &m_options;
     }
 
 protected:
@@ -5120,7 +5119,7 @@ protected:
                 }
             }
 
-            if (specifier_ap.get())
+            if (specifier_ap)
                 new_hook_sp->SetSpecifier (specifier_ap.release());
 
             // Next see if any of the thread options have been entered:
@@ -5155,10 +5154,10 @@ protected:
             else
             {
                 m_stop_hook_sp = new_hook_sp;
-                m_interpreter.GetLLDBCommandsFromIOHandler ("> ",   // Prompt
-                                                            *this,  // IOHandlerDelegate
-                                                            true,   // Run IOHandler in async mode
-                                                            NULL);  // Baton for the "io_handler" that will be passed back into our IOHandlerDelegate functions
+                m_interpreter.GetLLDBCommandsFromIOHandler("> ",   // Prompt
+                                                           *this,  // IOHandlerDelegate
+                                                           true,   // Run IOHandler in async mode
+                                                           nullptr);  // Baton for the "io_handler" that will be passed back into our IOHandlerDelegate functions
 
             }
             result.SetStatus (eReturnStatusSuccessFinishNoResult);
@@ -5171,6 +5170,7 @@ protected:
 
         return result.Succeeded();
     }
+
 private:
     CommandOptions m_options;
     Target::StopHookSP m_stop_hook_sp;
@@ -5179,29 +5179,29 @@ private:
 OptionDefinition
 CommandObjectTargetStopHookAdd::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_ALL, false, "one-liner", 'o', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeOneLiner,
+    { LLDB_OPT_SET_ALL, false, "one-liner", 'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOneLiner,
         "Specify a one-line breakpoint command inline. Be sure to surround it with quotes." },
-    { LLDB_OPT_SET_ALL, false, "shlib", 's', OptionParser::eRequiredArgument, NULL, NULL, CommandCompletions::eModuleCompletion, eArgTypeShlibName,
+    { LLDB_OPT_SET_ALL, false, "shlib", 's', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eModuleCompletion, eArgTypeShlibName,
         "Set the module within which the stop-hook is to be run."},
-    { LLDB_OPT_SET_ALL, false, "thread-index", 'x', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeThreadIndex,
+    { LLDB_OPT_SET_ALL, false, "thread-index", 'x', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeThreadIndex,
         "The stop hook is run only for the thread whose index matches this argument."},
-    { LLDB_OPT_SET_ALL, false, "thread-id", 't', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeThreadID,
+    { LLDB_OPT_SET_ALL, false, "thread-id", 't', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeThreadID,
         "The stop hook is run only for the thread whose TID matches this argument."},
-    { LLDB_OPT_SET_ALL, false, "thread-name", 'T', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeThreadName,
+    { LLDB_OPT_SET_ALL, false, "thread-name", 'T', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeThreadName,
         "The stop hook is run only for the thread whose thread name matches this argument."},
-    { LLDB_OPT_SET_ALL, false, "queue-name", 'q', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeQueueName,
+    { LLDB_OPT_SET_ALL, false, "queue-name", 'q', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeQueueName,
         "The stop hook is run only for threads in the queue whose name is given by this argument."},
-    { LLDB_OPT_SET_1, false, "file", 'f', OptionParser::eRequiredArgument, NULL, NULL, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,
+    { LLDB_OPT_SET_1, false, "file", 'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,
         "Specify the source file within which the stop-hook is to be run." },
-    { LLDB_OPT_SET_1, false, "start-line", 'l', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLineNum,
+    { LLDB_OPT_SET_1, false, "start-line", 'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLineNum,
         "Set the start of the line range for which the stop-hook is to be run."},
-    { LLDB_OPT_SET_1, false, "end-line", 'e', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLineNum,
+    { LLDB_OPT_SET_1, false, "end-line", 'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLineNum,
         "Set the end of the line range for which the stop-hook is to be run."},
-    { LLDB_OPT_SET_2, false, "classname", 'c', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeClassName,
+    { LLDB_OPT_SET_2, false, "classname", 'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeClassName,
         "Specify the class within which the stop-hook is to be run." },
-    { LLDB_OPT_SET_3, false, "name", 'n', OptionParser::eRequiredArgument, NULL, NULL, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,
+    { LLDB_OPT_SET_3, false, "name", 'n', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,
         "Set the function name within which the stop hook will be run." },
-    { 0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL }
+    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
 };
 
 #pragma mark CommandObjectTargetStopHookDelete
@@ -5213,7 +5213,6 @@ CommandObjectTargetStopHookAdd::CommandOptions::g_option_table[] =
 class CommandObjectTargetStopHookDelete : public CommandObjectParsed
 {
 public:
-
     CommandObjectTargetStopHookDelete (CommandInterpreter &interpreter) :
         CommandObjectParsed (interpreter,
                              "target stop-hook delete",
@@ -5222,9 +5221,7 @@ public:
     {
     }
 
-    ~CommandObjectTargetStopHookDelete () override
-    {
-    }
+    ~CommandObjectTargetStopHookDelete() override = default;
 
 protected:
     bool
@@ -5279,6 +5276,7 @@ protected:
         return result.Succeeded();
     }
 };
+
 #pragma mark CommandObjectTargetStopHookEnableDisable
 
 //-------------------------------------------------------------------------
@@ -5288,7 +5286,6 @@ protected:
 class CommandObjectTargetStopHookEnableDisable : public CommandObjectParsed
 {
 public:
-
     CommandObjectTargetStopHookEnableDisable (CommandInterpreter &interpreter, bool enable, const char *name, const char *help, const char *syntax) :
         CommandObjectParsed (interpreter,
                              name,
@@ -5298,9 +5295,7 @@ public:
     {
     }
 
-    ~CommandObjectTargetStopHookEnableDisable () override
-    {
-    }
+    ~CommandObjectTargetStopHookEnableDisable() override = default;
 
 protected:
     bool
@@ -5359,7 +5354,6 @@ private:
 class CommandObjectTargetStopHookList : public CommandObjectParsed
 {
 public:
-
     CommandObjectTargetStopHookList (CommandInterpreter &interpreter) :
         CommandObjectParsed (interpreter,
                              "target stop-hook list",
@@ -5368,9 +5362,7 @@ public:
     {
     }
 
-    ~CommandObjectTargetStopHookList () override
-    {
-    }
+    ~CommandObjectTargetStopHookList() override = default;
 
 protected:
     bool
@@ -5405,6 +5397,7 @@ protected:
 };
 
 #pragma mark CommandObjectMultiwordTargetStopHooks
+
 //-------------------------------------------------------------------------
 // CommandObjectMultiwordTargetStopHooks
 //-------------------------------------------------------------------------
@@ -5412,7 +5405,6 @@ protected:
 class CommandObjectMultiwordTargetStopHooks : public CommandObjectMultiword
 {
 public:
-
     CommandObjectMultiwordTargetStopHooks (CommandInterpreter &interpreter) :
         CommandObjectMultiword (interpreter, 
                                 "target stop-hook",
@@ -5434,12 +5426,8 @@ public:
         LoadSubCommand ("list",     CommandObjectSP (new CommandObjectTargetStopHookList (interpreter)));
     }
 
-    ~CommandObjectMultiwordTargetStopHooks() override
-    {
-    }
+    ~CommandObjectMultiwordTargetStopHooks() override = default;
 };
-
-
 
 #pragma mark CommandObjectMultiwordTarget
 
@@ -5453,7 +5441,6 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget (CommandInterpreter &
                             "A set of commands for operating on debugger targets.",
                             "target <subcommand> [<subcommand-options>]")
 {
-
     LoadSubCommand ("create",    CommandObjectSP (new CommandObjectTargetCreate (interpreter)));
     LoadSubCommand ("delete",    CommandObjectSP (new CommandObjectTargetDelete (interpreter)));
     LoadSubCommand ("list",      CommandObjectSP (new CommandObjectTargetList   (interpreter)));
@@ -5464,8 +5451,4 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget (CommandInterpreter &
     LoadSubCommand ("variable",  CommandObjectSP (new CommandObjectTargetVariable (interpreter)));
 }
 
-CommandObjectMultiwordTarget::~CommandObjectMultiwordTarget ()
-{
-}
-
-
+CommandObjectMultiwordTarget::~CommandObjectMultiwordTarget() = default;

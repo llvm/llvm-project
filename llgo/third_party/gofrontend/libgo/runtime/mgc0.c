@@ -1368,6 +1368,8 @@ markroot(ParFor *desc, uint32 i)
 		scanblock(wbuf, false);
 }
 
+static const FuncVal markroot_funcval = { (void *) markroot };
+
 // Get an empty work buffer off the work.empty list,
 // allocating new buffers as needed.
 static Workbuf*
@@ -2102,14 +2104,16 @@ static void mgc(G *gp);
 static int32
 readgogc(void)
 {
+	String s;
 	const byte *p;
 
-	p = runtime_getenv("GOGC");
-	if(p == nil || p[0] == '\0')
+	s = runtime_getenv("GOGC");
+	if(s.len == 0)
 		return 100;
-	if(runtime_strcmp((const char *)p, "off") == 0)
+	p = s.str;
+	if(s.len == 3 && runtime_strcmp((const char *)p, "off") == 0)
 		return -1;
-	return runtime_atoi(p);
+	return runtime_atoi(p, s.len);
 }
 
 // force = 1 - do GC regardless of current heap usage
@@ -2252,7 +2256,7 @@ gc(struct gc_args *args)
 	work.nwait = 0;
 	work.ndone = 0;
 	work.nproc = runtime_gcprocs();
-	runtime_parforsetup(work.markfor, work.nproc, RootCount + runtime_allglen, nil, false, markroot);
+	runtime_parforsetup(work.markfor, work.nproc, RootCount + runtime_allglen, false, &markroot_funcval);
 	if(work.nproc > 1) {
 		runtime_noteclear(&work.alldone);
 		runtime_helpgc(work.nproc);
@@ -2280,11 +2284,12 @@ gc(struct gc_args *args)
 	heap0 = mstats.next_gc*100/(gcpercent+100);
 	// conservatively set next_gc to high value assuming that everything is live
 	// concurrent/lazy sweep will reduce this number while discovering new garbage
-	mstats.next_gc = mstats.heap_alloc+mstats.heap_alloc*gcpercent/100;
+	mstats.next_gc = mstats.heap_alloc+(mstats.heap_alloc-runtime_stacks_sys)*gcpercent/100;
 
 	t4 = runtime_nanotime();
 	mstats.last_gc = runtime_unixnanotime();  // must be Unix time to make sense to user
 	mstats.pause_ns[mstats.numgc%nelem(mstats.pause_ns)] = t4 - t0;
+	mstats.pause_end[mstats.numgc%nelem(mstats.pause_end)] = mstats.last_gc;
 	mstats.pause_total_ns += t4 - t0;
 	mstats.numgc++;
 	if(mstats.debuggc)
@@ -2748,4 +2753,39 @@ runtime_MHeap_MapBits(MHeap *h)
 
 	runtime_SysMap(h->arena_start - n, n - h->bitmap_mapped, h->arena_reserved, &mstats.gc_sys);
 	h->bitmap_mapped = n;
+}
+
+// typedmemmove copies a value of type t to dst from src.
+
+extern void typedmemmove(const Type* td, void *dst, const void *src)
+  __asm__ (GOSYM_PREFIX "reflect.typedmemmove");
+
+void
+typedmemmove(const Type* td, void *dst, const void *src)
+{
+	runtime_memmove(dst, src, td->__size);
+}
+
+// typedslicecopy copies a slice of elemType values from src to dst,
+// returning the number of elements copied.
+
+extern intgo typedslicecopy(const Type* elem, Slice dst, Slice src)
+  __asm__ (GOSYM_PREFIX "reflect.typedslicecopy");
+
+intgo
+typedslicecopy(const Type* elem, Slice dst, Slice src)
+{
+	intgo n;
+	void *dstp;
+	void *srcp;
+
+	n = dst.__count;
+	if (n > src.__count)
+		n = src.__count;
+	if (n == 0)
+		return 0;
+	dstp = dst.__values;
+	srcp = src.__values;
+	memmove(dstp, srcp, (uintptr_t)n * elem->__size);
+	return n;
 }

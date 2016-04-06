@@ -19,12 +19,6 @@ class AttachDeniedTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def run_platform_command(self, cmd):
-        platform = self.dbg.GetSelectedPlatform()
-        shell_command = lldb.SBPlatformShellCommand(cmd)
-        err = platform.Run(shell_command)
-        return (err, shell_command.GetStatus(), shell_command.GetOutput())
-
     @skipIfWindows
     @skipIfiOSSimulator
     def test_attach_to_process_by_id_denied(self):
@@ -41,21 +35,7 @@ class AttachDeniedTestCase(TestBase):
         popen = self.spawnSubprocess(exe, [pid_file_path])
         self.addTearDownHook(self.cleanupSubprocesses)
 
-        max_attempts = 5
-        for i in range(max_attempts):
-            err, retcode, msg = self.run_platform_command("ls %s" % pid_file_path)
-            if err.Success() and retcode == 0:
-                break
-            else:
-                print(msg)
-            if i < max_attempts:
-                # Exponential backoff!
-                time.sleep(pow(2, i) * 0.25)
-        else:
-            self.fail("Child PID file %s not found even after %d attempts." % (pid_file_path, max_attempts))
-        err, retcode, pid = self.run_platform_command("cat %s" % (pid_file_path))
-        self.assertTrue(err.Success() and retcode == 0,
-                        "Failed to read file %s: %s, retcode: %d" % (pid_file_path, err.GetCString(), retcode))
+        pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
 
         self.expect('process attach -p ' + pid,
                     startstr = 'error: attach failed:',

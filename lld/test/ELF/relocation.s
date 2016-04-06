@@ -14,7 +14,7 @@
 // SEC-NEXT: ]
 // SEC-NEXT: Address: 0x11030
 // SEC-NEXT: Offset: 0x1030
-// SEC-NEXT: Size: 32
+// SEC-NEXT: Size: 48
 
 // SEC:         Name: .got
 // SEC-NEXT:   Type: SHT_PROGBITS
@@ -39,7 +39,7 @@
 // SEC-NEXT:   ]
 // SEC-NEXT:   Address: 0x13000
 // SEC-NEXT:   Offset: 0x3000
-// SEC-NEXT:   Size: 32
+// SEC-NEXT:   Size: 40
 // SEC-NEXT:   Link: 0
 // SEC-NEXT:   Info: 0
 // SEC-NEXT:   AddressAlignment: 8
@@ -97,6 +97,15 @@ R_X86_64_PC32:
 // CHECK-NEXT: R_X86_64_PC32:
 // CHECK-NEXT:  11017:   {{.*}}  callq  36
 // CHECK-NEXT:  1101c:   {{.*}}  movl $69696, %eax
+
+.section .R_X86_64_32S_2,"ax",@progbits
+.global R_X86_64_32S_2
+R_X86_64_32S_2:
+  mov bar2, %eax
+// plt is  at 0x11030. The second plt entry is at 0x11050 == 69712
+// CHECK:      Disassembly of section .R_X86_64_32S_2:
+// CHECK-NEXT: R_X86_64_32S_2:
+// CHECK-NEXT: 11021: {{.*}}  movl    69712, %eax
 
 .section .R_X86_64_64,"a",@progbits
 .global R_X86_64_64

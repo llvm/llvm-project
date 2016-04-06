@@ -19,7 +19,7 @@ class ThreadSpecificBreakPlusConditionTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfFreeBSD # test frequently times out or hangs
-    @expectedFailureFreeBSD('llvm.org/pr18522') # hits break in another thread in testrun
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr18522') # hits break in another thread in testrun
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux # this test fails 6/100 dosep runs
     def test_python(self):

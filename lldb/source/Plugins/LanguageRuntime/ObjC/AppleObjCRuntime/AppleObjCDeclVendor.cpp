@@ -9,10 +9,11 @@
 
 #include "AppleObjCDeclVendor.h"
 
+#include "Plugins/ExpressionParser/Clang/ASTDumper.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
-#include "Plugins/ExpressionParser/Clang/ASTDumper.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
+#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -356,9 +357,10 @@ public:
         }
         
         clang::Selector sel = ast_ctx.Selectors.getSelector(is_zero_argument ? 0 : selector_components.size(), selector_components.data());
-        
-        clang::QualType ret_type = ClangASTContext::GetQualType(type_realizer_sp->RealizeType(interface_decl->getASTContext(), m_type_vector[0].c_str(), for_expression));
-        
+
+        clang::QualType ret_type = ClangUtil::GetQualType(
+            type_realizer_sp->RealizeType(interface_decl->getASTContext(), m_type_vector[0].c_str(), for_expression));
+
         if (ret_type.isNull())
             return NULL;
         
@@ -384,8 +386,9 @@ public:
              ++ai)
         {
             const bool for_expression = true;
-            clang::QualType arg_type = ClangASTContext::GetQualType(type_realizer_sp->RealizeType(ast_ctx, m_type_vector[ai].c_str(), for_expression));
-            
+            clang::QualType arg_type = ClangUtil::GetQualType(
+                type_realizer_sp->RealizeType(ast_ctx, m_type_vector[ai].c_str(), for_expression));
+
             if (arg_type.isNull())
                 return NULL; // well, we just wasted a bunch of time.  Wish we could delete the stuff we'd just made!
 
@@ -502,17 +505,12 @@ AppleObjCDeclVendor::FinishDecl(clang::ObjCInterfaceDecl *interface_decl)
         {
             clang::TypeSourceInfo * const type_source_info = nullptr;
             const bool is_synthesized = false;
-            clang::ObjCIvarDecl *ivar_decl = clang::ObjCIvarDecl::Create (*m_ast_ctx.getASTContext(),
-                                                                          interface_decl,
-                                                                          clang::SourceLocation(),
-                                                                          clang::SourceLocation(),
-                                                                          &m_ast_ctx.getASTContext()->Idents.get(name),
-                                                                          ClangASTContext::GetQualType(ivar_type),
-                                                                          type_source_info,                      // TypeSourceInfo *
-                                                                          clang::ObjCIvarDecl::Public,
-                                                                          0,
-                                                                          is_synthesized);
-            
+            clang::ObjCIvarDecl *ivar_decl = clang::ObjCIvarDecl::Create(
+                *m_ast_ctx.getASTContext(), interface_decl, clang::SourceLocation(), clang::SourceLocation(),
+                &m_ast_ctx.getASTContext()->Idents.get(name), ClangUtil::GetQualType(ivar_type),
+                type_source_info, // TypeSourceInfo *
+                clang::ObjCIvarDecl::Public, 0, is_synthesized);
+
             if (ivar_decl)
             {
                 interface_decl->addDecl(ivar_decl);

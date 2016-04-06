@@ -799,13 +799,13 @@ PlatformPOSIX::Attach (ProcessAttachInfo &attach_info,
 
             if (process_sp)
             {
-                auto listener_sp = attach_info.GetHijackListener();
+                ListenerSP listener_sp = attach_info.GetHijackListener();
                 if (listener_sp == nullptr)
                 {
-                    listener_sp.reset(new Listener("lldb.PlatformPOSIX.attach.hijack"));
+                    listener_sp = Listener::MakeListener("lldb.PlatformPOSIX.attach.hijack");
                     attach_info.SetHijackListener(listener_sp);
                 }
-                process_sp->HijackProcessEvents(listener_sp.get());
+                process_sp->HijackProcessEvents(listener_sp);
                 error = process_sp->Attach (attach_info);
             }
         }
@@ -867,7 +867,7 @@ PlatformPOSIX::EvaluateLibdlExpression(lldb_private::Process* process,
             return error;
     }
 
-    ThreadSP thread_sp(process->GetThreadList().GetSelectedThread());
+    ThreadSP thread_sp(process->GetThreadList().GetExpressionExecutionThread());
     if (!thread_sp)
         return Error("Selected thread isn't valid");
 

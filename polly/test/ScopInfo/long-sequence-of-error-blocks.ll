@@ -5,15 +5,14 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %struct.hoge = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [8 x [2 x i32]], [8 x [2 x i32]], [4 x [4 x i32]], i32, i32, i32, i32, [256 x i8], [256 x i8], [256 x i8], [256 x i8], [256 x i8], i32, i32, i32, i32, i32, i32, [500 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [256 x i8], [256 x i8], [256 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [1024 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, double, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [256 x i8], [256 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [256 x i8], i32, i32, i32*, i32*, i8*, i32*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, double, double, double, [5 x double], i32, [8 x i32], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [6 x double], [6 x double], [256 x i8], i32, i32, i32, i32, [2 x [5 x i32]], [2 x [5 x i32]], i32, i32, i32, i32, i32, i32, i32, i32, i32, [3 x i32], i32 }
 
-; The assumed context of this test case is still very large and should be
-; reduced.
-
 ; This test case contains a long sequence of branch instructions together with
 ; function calls that are considered 'error blocks'. We verify that the
 ; iteration spaces are not overly complicated.
 
 ; CHECK:      Assumed Context:
-; CHECK-NEXT: [tmp17, tmp21, tmp27, tmp31] -> {  : (tmp17 = 0 and tmp27 >= 4) or (tmp17 = 0 and tmp27 <= 2) or (tmp21 = 0 and tmp17 < 0 and tmp27 >= 4) or (tmp21 = 0 and tmp17 < 0 and tmp27 <= 2) or (tmp21 = 0 and tmp17 > 0 and tmp27 >= 4) or (tmp21 = 0 and tmp17 > 0 and tmp27 <= 2) or (tmp17 = 0 and tmp27 = 3 and tmp31 >= 144) or (tmp21 = 0 and tmp27 = 3 and tmp17 < 0 and tmp31 >= 144) or (tmp21 = 0 and tmp27 = 3 and tmp17 > 0 and tmp31 >= 144) }
+; CHECK-NEXT: [tmp17, tmp21, tmp27, tmp31] -> {  :  }
+; CHECK:      Invalid Context:
+; CHECK-NEXT: [tmp17, tmp21, tmp27, tmp31] -> {  : (tmp17 < 0 and tmp21 < 0) or (tmp17 < 0 and tmp21 > 0) or (tmp17 > 0 and tmp21 < 0) or (tmp17 > 0 and tmp21 > 0) or (tmp27 = 3 and tmp31 <= 143) }
 ;
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_bb15

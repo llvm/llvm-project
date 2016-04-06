@@ -51,6 +51,10 @@ public:
     return invalid;
   }
 
+  Reference::KindValue unwindRefToPersonalityFunctionKind() override {
+    return invalid;
+  }
+
   Reference::KindValue unwindRefToCIEKind() override {
     return invalid;
   }
@@ -72,16 +76,16 @@ public:
     return -1;
   }
 
-  std::error_code getReferenceInfo(const normalized::Relocation &reloc,
-                                   const DefinedAtom *inAtom,
-                                   uint32_t offsetInAtom,
-                                   uint64_t fixupAddress, bool swap,
-                                   FindAtomBySectionAndAddress atomFromAddress,
-                                   FindAtomBySymbolIndex atomFromSymbolIndex,
-                                   Reference::KindValue *kind,
-                                   const lld::Atom **target,
-                                   Reference::Addend *addend) override;
-  std::error_code
+  llvm::Error getReferenceInfo(const normalized::Relocation &reloc,
+                               const DefinedAtom *inAtom,
+                               uint32_t offsetInAtom,
+                               uint64_t fixupAddress, bool swap,
+                               FindAtomBySectionAndAddress atomFromAddress,
+                               FindAtomBySymbolIndex atomFromSymbolIndex,
+                               Reference::KindValue *kind,
+                               const lld::Atom **target,
+                               Reference::Addend *addend) override;
+  llvm::Error
       getPairReferenceInfo(const normalized::Relocation &reloc1,
                            const normalized::Relocation &reloc2,
                            const DefinedAtom *inAtom,
@@ -97,7 +101,7 @@ public:
                            FindAddressForAtom findAddress,
                            FindAddressForAtom findSectionAddress,
                            uint64_t imageBaseAddress,
-                           uint8_t *atomContentBuffer) override;
+                           llvm::MutableArrayRef<uint8_t> atomContentBuffer) override;
 
   void appendSectionRelocations(const DefinedAtom &atom,
                                 uint64_t atomSectionOffset,
@@ -514,13 +518,12 @@ uint32_t ArchHandler_arm::clearThumbBit(uint32_t value, const Atom *target) {
   return value;
 }
 
-std::error_code ArchHandler_arm::getReferenceInfo(
+llvm::Error ArchHandler_arm::getReferenceInfo(
     const Relocation &reloc, const DefinedAtom *inAtom, uint32_t offsetInAtom,
     uint64_t fixupAddress, bool isBig,
     FindAtomBySectionAndAddress atomFromAddress,
     FindAtomBySymbolIndex atomFromSymbolIndex, Reference::KindValue *kind,
     const lld::Atom **target, Reference::Addend *addend) {
-  typedef std::error_code E;
   const uint8_t *fixupContent = &inAtom->rawContent()[offsetInAtom];
   uint64_t targetAddress;
   uint32_t instruction = *(const ulittle32_t *)fixupContent;
@@ -532,12 +535,12 @@ std::error_code ArchHandler_arm::getReferenceInfo(
       *kind = thumb_b22;
     else
       *kind = thumb_bl22;
-    if (E ec = atomFromSymbolIndex(reloc.symbol, target))
+    if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     // Instruction contains branch to addend.
     displacement = getDisplacementFromThumbBranch(instruction, fixupAddress);
     *addend = fixupAddress + 4 + displacement;
-    return std::error_code();
+    return llvm::Error();
   case ARM_THUMB_RELOC_BR22 | rPcRel | rLength4:
     // ex: bl _foo (and _foo is defined)
     if ((instruction & 0xD000F800) == 0x9000F000)
@@ -555,12 +558,12 @@ std::error_code ArchHandler_arm::getReferenceInfo(
       *kind = thumb_bl22;
     displacement = getDisplacementFromThumbBranch(instruction, fixupAddress);
     targetAddress = fixupAddress + 4 + displacement;
-    if (E ec = atomFromAddress(0, reloc.value, target, addend))
+    if (auto ec = atomFromAddress(0, reloc.value, target, addend))
       return ec;
     // reloc.value is target atom's address.  Instruction contains branch
     // to atom+addend.
     *addend += (targetAddress - reloc.value);
-    return std::error_code();
+    return llvm::Error();
   case ARM_RELOC_BR24 | rPcRel | rExtern | rLength4:
     // ex: bl _foo (and _foo is undefined)
     if (((instruction & 0x0F000000) == 0x0A000000)
@@ -568,12 +571,12 @@ std::error_code ArchHandler_arm::getReferenceInfo(
       *kind = arm_b24;
     else
       *kind = arm_bl24;
-    if (E ec = atomFromSymbolIndex(reloc.symbol, target))
+    if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     // Instruction contains branch to addend.
     displacement = getDisplacementFromArmBranch(instruction);
     *addend = fixupAddress + 8 + displacement;
-    return std::error_code();
+    return llvm::Error();
   case ARM_RELOC_BR24 | rPcRel | rLength4:
     // ex: bl _foo (and _foo is defined)
     if (((instruction & 0x0F000000) == 0x0A000000)
@@ -593,40 +596,40 @@ std::error_code ArchHandler_arm::getReferenceInfo(
       *kind = arm_bl24;
     displacement = getDisplacementFromArmBranch(instruction);
     targetAddress = fixupAddress + 8 + displacement;
-    if (E ec = atomFromAddress(0, reloc.value, target, addend))
+    if (auto ec = atomFromAddress(0, reloc.value, target, addend))
       return ec;
     // reloc.value is target atom's address.  Instruction contains branch
     // to atom+addend.
     *addend += (targetAddress - reloc.value);
-    return std::error_code();
+    return llvm::Error();
   case ARM_RELOC_VANILLA | rExtern | rLength4:
     // ex: .long _foo (and _foo is undefined)
     *kind = pointer32;
-    if (E ec = atomFromSymbolIndex(reloc.symbol, target))
+    if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = instruction;
-    return std::error_code();
+    return llvm::Error();
   case ARM_RELOC_VANILLA | rLength4:
     // ex: .long _foo (and _foo is defined)
     *kind = pointer32;
-    if (E ec = atomFromAddress(reloc.symbol, instruction, target, addend))
+    if (auto ec = atomFromAddress(reloc.symbol, instruction, target, addend))
       return ec;
     *addend = clearThumbBit((uint32_t) * addend, *target);
-    return std::error_code();
+    return llvm::Error();
   case ARM_RELOC_VANILLA | rScattered | rLength4:
     // ex: .long _foo+a (and _foo is defined)
     *kind = pointer32;
-    if (E ec = atomFromAddress(0, reloc.value, target, addend))
+    if (auto ec = atomFromAddress(0, reloc.value, target, addend))
       return ec;
     *addend += (clearThumbBit(instruction, *target) - reloc.value);
-    return std::error_code();
+    return llvm::Error();
   default:
-    return make_dynamic_error_code("unsupported arm relocation type");
+    return llvm::make_error<GenericError>("unsupported arm relocation type");
   }
-  return std::error_code();
+  return llvm::Error();
 }
 
-std::error_code
+llvm::Error
 ArchHandler_arm::getPairReferenceInfo(const normalized::Relocation &reloc1,
                                      const normalized::Relocation &reloc2,
                                      const DefinedAtom *inAtom,
@@ -779,10 +782,9 @@ ArchHandler_arm::getPairReferenceInfo(const normalized::Relocation &reloc1,
     pointerDiff = true;
     break;
   default:
-    return make_dynamic_error_code("unsupported arm relocation pair");
+    return llvm::make_error<GenericError>("unsupported arm relocation pair");
   }
   const uint8_t *fixupContent = &inAtom->rawContent()[offsetInAtom];
-  std::error_code ec;
   uint32_t instruction = *(const ulittle32_t *)fixupContent;
   uint32_t value;
   uint32_t fromAddress;
@@ -795,14 +797,12 @@ ArchHandler_arm::getPairReferenceInfo(const normalized::Relocation &reloc1,
   if (pointerDiff) {
     toAddress = reloc1.value;
     fromAddress = reloc2.value;
-    ec = atomFromAddr(0, toAddress, target, &offsetInTo);
-    if (ec)
+    if (auto ec = atomFromAddr(0, toAddress, target, &offsetInTo))
       return ec;
-    ec = atomFromAddr(0, fromAddress, &fromTarget, &offsetInFrom);
-    if (ec)
+    if (auto ec = atomFromAddr(0, fromAddress, &fromTarget, &offsetInFrom))
       return ec;
     if (scatterable && (fromTarget != inAtom))
-      return make_dynamic_error_code(
+      return llvm::make_error<GenericError>(
           "SECTDIFF relocation where subtrahend label is not in atom");
     *kind = delta32;
     value = clearThumbBit(instruction, *target);
@@ -810,35 +810,33 @@ ArchHandler_arm::getPairReferenceInfo(const normalized::Relocation &reloc1,
   } else if (funcRel) {
     toAddress = reloc1.value;
     fromAddress = reloc2.value;
-    ec = atomFromAddr(0, toAddress, target, &offsetInTo);
-    if (ec)
+    if (auto ec = atomFromAddr(0, toAddress, target, &offsetInTo))
       return ec;
-    ec = atomFromAddr(0, fromAddress, &fromTarget, &offsetInFrom);
-    if (ec)
+    if (auto ec = atomFromAddr(0, fromAddress, &fromTarget, &offsetInFrom))
       return ec;
     if (fromTarget != inAtom)
-      return make_dynamic_error_code("ARM_RELOC_HALF_SECTDIFF relocation "
-                                     "where subtrahend label is not in atom");
+      return llvm::make_error<GenericError>("ARM_RELOC_HALF_SECTDIFF relocation"
+                                     " where subtrahend label is not in atom");
     other16 = (reloc2.offset & 0xFFFF);
     if (thumbReloc) {
       if (top) {
         if (!isThumbMovt(instruction))
-          return make_dynamic_error_code("expected movt instruction");
+          return llvm::make_error<GenericError>("expected movt instruction");
       }
       else {
         if (!isThumbMovw(instruction))
-          return make_dynamic_error_code("expected movw instruction");
+          return llvm::make_error<GenericError>("expected movw instruction");
       }
       instruction16 = getWordFromThumbMov(instruction);
     }
     else {
       if (top) {
         if (!isArmMovt(instruction))
-          return make_dynamic_error_code("expected movt instruction");
+          return llvm::make_error<GenericError>("expected movt instruction");
       }
       else {
         if (!isArmMovw(instruction))
-          return make_dynamic_error_code("expected movw instruction");
+          return llvm::make_error<GenericError>("expected movw instruction");
       }
       instruction16 = getWordFromArmMov(instruction);
     }
@@ -849,28 +847,28 @@ ArchHandler_arm::getPairReferenceInfo(const normalized::Relocation &reloc1,
     value = clearThumbBit(value, *target);
     int64_t ta = (int64_t) value - (toAddress - fromAddress);
     *addend = ta - offsetInFrom;
-    return std::error_code();
+    return llvm::Error();
   } else {
     uint32_t sectIndex;
     if (thumbReloc) {
       if (top) {
         if (!isThumbMovt(instruction))
-          return make_dynamic_error_code("expected movt instruction");
+          return llvm::make_error<GenericError>("expected movt instruction");
       }
       else {
         if (!isThumbMovw(instruction))
-          return make_dynamic_error_code("expected movw instruction");
+          return llvm::make_error<GenericError>("expected movw instruction");
       }
       instruction16 = getWordFromThumbMov(instruction);
     }
     else {
       if (top) {
         if (!isArmMovt(instruction))
-          return make_dynamic_error_code("expected movt instruction");
+          return llvm::make_error<GenericError>("expected movt instruction");
       }
       else {
         if (!isArmMovw(instruction))
-          return make_dynamic_error_code("expected movw instruction");
+          return llvm::make_error<GenericError>("expected movw instruction");
       }
       instruction16 = getWordFromArmMov(instruction);
     }
@@ -880,8 +878,7 @@ ArchHandler_arm::getPairReferenceInfo(const normalized::Relocation &reloc1,
     else
       value = (other16 << 16) | instruction16;
     if (reloc1.isExtern) {
-      ec = atomFromSymbolIndex(reloc1.symbol, target);
-      if (ec)
+      if (auto ec = atomFromSymbolIndex(reloc1.symbol, target))
         return ec;
       *addend = value;
     } else {
@@ -892,14 +889,13 @@ ArchHandler_arm::getPairReferenceInfo(const normalized::Relocation &reloc1,
         toAddress = value;
         sectIndex = reloc1.symbol;
       }
-      ec = atomFromAddr(sectIndex, toAddress, target, &offsetInTo);
-      if (ec)
+      if (auto ec = atomFromAddr(sectIndex, toAddress, target, &offsetInTo))
         return ec;
       *addend = value - toAddress;
     }
   }
 
-  return std::error_code();
+  return llvm::Error();
 }
 
 void ArchHandler_arm::applyFixupFinal(const Reference &ref, uint8_t *loc,
@@ -1015,9 +1011,10 @@ void ArchHandler_arm::generateAtomContent(const DefinedAtom &atom,
                                           FindAddressForAtom findAddress,
                                           FindAddressForAtom findSectionAddress,
                                           uint64_t imageBaseAddress,
-                                          uint8_t *atomContentBuffer) {
+                            llvm::MutableArrayRef<uint8_t> atomContentBuffer) {
   // Copy raw bytes.
-  memcpy(atomContentBuffer, atom.rawContent().data(), atom.size());
+  std::copy(atom.rawContent().begin(), atom.rawContent().end(),
+            atomContentBuffer.begin());
   // Apply fix-ups.
   bool thumbMode = false;
   for (const Reference *ref : atom) {
@@ -1425,6 +1422,8 @@ public:
     _name = tmp.copy(file.allocator());
   }
 
+  ~Thumb2ToArmShimAtom() override = default;
+
   StringRef name() const override {
     return _name;
   }
@@ -1467,6 +1466,8 @@ public:
     StringRef tmp(name);
     _name = tmp.copy(file.allocator());
   }
+
+  ~ArmToThumbShimAtom() override = default;
 
   StringRef name() const override {
     return _name;

@@ -86,7 +86,7 @@ public:
     void
     RemovePersistentVariable (lldb::ExpressionVariableSP variable) override;
     
-    
+
     // This just adds this module to the list of hand-loaded modules, it doesn't actually load it.
     void
     AddHandLoadedModule(const ConstString &module_name)

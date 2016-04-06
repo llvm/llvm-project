@@ -194,6 +194,11 @@ template <class _CharT,             // for <stdexcept>
 typedef basic_string<char, char_traits<char>, allocator<char> > string;
 typedef basic_string<wchar_t, char_traits<wchar_t>, allocator<wchar_t> > wstring;
 
+
+// Include other forward declarations here
+template <class _Tp, class _Alloc = allocator<_Tp> >
+class _LIBCPP_TYPE_VIS_ONLY vector;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif  // _LIBCPP_IOSFWD

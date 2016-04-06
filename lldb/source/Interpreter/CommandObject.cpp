@@ -53,7 +53,6 @@ CommandObject::CommandObject
     m_cmd_help_short (),
     m_cmd_help_long (),
     m_cmd_syntax (),
-    m_is_alias (false),
     m_flags (flags),
     m_arguments(),
     m_deprecated_command_override_callback (nullptr),
@@ -89,12 +88,12 @@ CommandObject::GetSyntax ()
     {
         StreamString syntax_str;
         syntax_str.Printf ("%s", GetCommandName());
-        if (GetOptions() != nullptr)
+        if (!IsDashDashCommand() && GetOptions() != nullptr)
             syntax_str.Printf (" <cmd-options>");
         if (m_arguments.size() > 0)
         {
             syntax_str.Printf (" ");
-            if (WantsRawCommandString() && GetOptions() && GetOptions()->NumCommandOptions())
+            if (!IsDashDashCommand() && WantsRawCommandString() && GetOptions() && GetOptions()->NumCommandOptions())
                 syntax_str.Printf("-- ");
             GetFormattedCommandArguments (syntax_str);
         }
@@ -119,25 +118,19 @@ CommandObject::SetCommandName (const char *name)
 void
 CommandObject::SetHelp (const char *cstr)
 {
-    m_cmd_help_short = cstr;
-}
-
-void
-CommandObject::SetHelp (std::string str)
-{
-    m_cmd_help_short = str;
+    if (cstr)
+        m_cmd_help_short = cstr;
+    else
+        m_cmd_help_short.assign("");
 }
 
 void
 CommandObject::SetHelpLong (const char *cstr)
 {
-    m_cmd_help_long = cstr;
-}
-
-void
-CommandObject::SetHelpLong (std::string str)
-{
-    m_cmd_help_long = str;
+    if (cstr)
+        m_cmd_help_long = cstr;
+    else
+        m_cmd_help_long.assign("");
 }
 
 void
@@ -346,45 +339,6 @@ CommandObject::Cleanup ()
     m_api_locker.Unlock();
 }
 
-
-class CommandDictCommandPartialMatch
-{
-    public:
-        CommandDictCommandPartialMatch (const char *match_str)
-        {
-            m_match_str = match_str;
-        }
-        bool operator() (const std::pair<std::string, lldb::CommandObjectSP> map_element) const
-        {
-            // A NULL or empty string matches everything.
-            if (m_match_str == nullptr || *m_match_str == '\0')
-                return true;
-
-            return map_element.first.find (m_match_str, 0) == 0;
-        }
-
-    private:
-        const char *m_match_str;
-};
-
-int
-CommandObject::AddNamesMatchingPartialString (CommandObject::CommandMap &in_map, const char *cmd_str,
-                                              StringList &matches)
-{
-    int number_added = 0;
-    CommandDictCommandPartialMatch matcher(cmd_str);
-
-    CommandObject::CommandMap::iterator matching_cmds = std::find_if (in_map.begin(), in_map.end(), matcher);
-
-    while (matching_cmds != in_map.end())
-    {
-        ++number_added;
-        matches.AppendString((*matching_cmds).first.c_str());
-        matching_cmds = std::find_if (++matching_cmds, in_map.end(), matcher);;
-    }
-    return number_added;
-}
-
 int
 CommandObject::HandleCompletion
 (
@@ -457,7 +411,11 @@ CommandObject::HandleCompletion
 }
 
 bool
-CommandObject::HelpTextContainsWord (const char *search_word)
+CommandObject::HelpTextContainsWord (const char *search_word,
+                                     bool search_short_help,
+                                     bool search_long_help,
+                                     bool search_syntax,
+                                     bool search_options)
 {
     std::string options_usage_help;
 
@@ -467,14 +425,15 @@ CommandObject::HelpTextContainsWord (const char *search_word)
     const char *long_help = GetHelpLong();
     const char *syntax_help = GetSyntax();
     
-    if (short_help && strcasestr (short_help, search_word))
+    if (search_short_help && short_help && strcasestr (short_help, search_word))
         found_word = true;
-    else if (long_help && strcasestr (long_help, search_word))
+    else if (search_long_help && long_help && strcasestr (long_help, search_word))
         found_word = true;
-    else if (syntax_help && strcasestr (syntax_help, search_word))
+    else if (search_syntax && syntax_help && strcasestr (syntax_help, search_word))
         found_word = true;
 
     if (!found_word
+        && search_options
         && GetOptions() != nullptr)
     {
         StreamString usage_help;
@@ -972,23 +931,26 @@ CommandObject::GenerateHelpText (Stream &output_strm)
         if ((long_help != nullptr)
             && (strlen (long_help) > 0))
             FormatLongHelpText (output_strm, long_help);
-        if (WantsRawCommandString() && !WantsCompletion())
+        if (!IsDashDashCommand())
         {
-            // Emit the message about using ' -- ' between the end of the command options and the raw input
-            // conditionally, i.e., only if the command object does not want completion.
-            interpreter.OutputFormattedHelpText (output_strm, "", "",
-                                                 "\nIMPORTANT NOTE:  Because this command takes 'raw' input, if you use any command options"
-                                                 " you must use ' -- ' between the end of the command options and the beginning of the raw input.", 1);
-        }
-        else if (GetNumArgumentEntries() > 0
-                 && GetOptions()
-                 && GetOptions()->NumCommandOptions() > 0)
-        {
-            // Also emit a warning about using "--" in case you are using a command that takes options and arguments.
-            interpreter.OutputFormattedHelpText (output_strm, "", "",
-                                                 "\nThis command takes options and free-form arguments.  If your arguments resemble"
-                                                 " option specifiers (i.e., they start with a - or --), you must use ' -- ' between"
-                                                 " the end of the command options and the beginning of the arguments.", 1);
+            if (WantsRawCommandString() && !WantsCompletion())
+            {
+                // Emit the message about using ' -- ' between the end of the command options and the raw input
+                // conditionally, i.e., only if the command object does not want completion.
+                interpreter.OutputFormattedHelpText (output_strm, "", "",
+                                                     "\nIMPORTANT NOTE:  Because this command takes 'raw' input, if you use any command options"
+                                                     " you must use ' -- ' between the end of the command options and the beginning of the raw input.", 1);
+            }
+            else if (GetNumArgumentEntries() > 0
+                     && GetOptions()
+                     && GetOptions()->NumCommandOptions() > 0)
+            {
+                // Also emit a warning about using "--" in case you are using a command that takes options and arguments.
+                interpreter.OutputFormattedHelpText (output_strm, "", "",
+                                                     "\nThis command takes options and free-form arguments.  If your arguments resemble"
+                                                     " option specifiers (i.e., they start with a - or --), you must use ' -- ' between"
+                                                     " the end of the command options and the beginning of the arguments.", 1);
+            }
         }
     }
     else if (IsMultiwordObject())
@@ -1065,6 +1027,31 @@ Target *
 CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy)
 {
     return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
+}
+
+Thread *
+CommandObject::GetDefaultThread()
+{
+    Thread *thread_to_use = m_exe_ctx.GetThreadPtr();
+    if (thread_to_use)
+        return thread_to_use;
+    
+    Process *process = m_exe_ctx.GetProcessPtr();
+    if (!process)
+    {
+        Target *target = m_exe_ctx.GetTargetPtr();
+        if (!target)
+        {
+            target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+        }
+        if (target)
+            process = target->GetProcessSP().get();
+    }
+
+    if (process)
+        return process->GetThreadList().GetSelectedThread().get();
+    else
+        return nullptr;
 }
 
 bool

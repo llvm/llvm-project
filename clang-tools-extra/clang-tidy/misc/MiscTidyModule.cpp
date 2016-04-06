@@ -14,7 +14,9 @@
 #include "AssertSideEffectCheck.h"
 #include "AssignOperatorSignatureCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
+#include "DanglingHandleCheck.h"
 #include "DefinitionsInHeadersCheck.h"
+#include "ForwardDeclarationNamespaceCheck.h"
 #include "InaccurateEraseCheck.h"
 #include "IncorrectRoundings.h"
 #include "InefficientAlgorithmCheck.h"
@@ -29,6 +31,7 @@
 #include "SizeofContainerCheck.h"
 #include "StaticAssertCheck.h"
 #include "StringIntegerAssignmentCheck.h"
+#include "SuspiciousMissingCommaCheck.h"
 #include "SuspiciousSemicolonCheck.h"
 #include "SwappedArgumentsCheck.h"
 #include "ThrowByValueCatchByReferenceCheck.h"
@@ -53,8 +56,12 @@ public:
         "misc-assign-operator-signature");
     CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
         "misc-bool-pointer-implicit-conversion");
+    CheckFactories.registerCheck<DanglingHandleCheck>(
+        "misc-dangling-handle");
     CheckFactories.registerCheck<DefinitionsInHeadersCheck>(
         "misc-definitions-in-headers");
+    CheckFactories.registerCheck<ForwardDeclarationNamespaceCheck>(
+        "misc-forward-declaration-namespace");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
         "misc-inaccurate-erase");
     CheckFactories.registerCheck<IncorrectRoundings>(
@@ -82,6 +89,8 @@ public:
         "misc-static-assert");
     CheckFactories.registerCheck<StringIntegerAssignmentCheck>(
         "misc-string-integer-assignment");
+    CheckFactories.registerCheck<SuspiciousMissingCommaCheck>(
+        "misc-suspicious-missing-comma");
     CheckFactories.registerCheck<SuspiciousSemicolonCheck>(
         "misc-suspicious-semicolon");
     CheckFactories.registerCheck<SwappedArgumentsCheck>(

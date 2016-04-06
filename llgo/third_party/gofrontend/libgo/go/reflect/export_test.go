@@ -6,22 +6,38 @@ package reflect
 
 // MakeRO returns a copy of v with the read-only flag set.
 func MakeRO(v Value) Value {
-	v.flag |= flagRO
+	v.flag |= flagStickyRO
 	return v
 }
 
 // IsRO reports whether v's read-only flag is set.
 func IsRO(v Value) bool {
-	return v.flag&flagRO != 0
+	return v.flag&flagStickyRO != 0
 }
 
-var ArrayOf = arrayOf
 var CallGC = &callGC
 
 const PtrSize = ptrSize
-const BitsPointer = bitsPointer
-const BitsScalar = bitsScalar
 
-func FuncLayout(t Type, rcvr Type) (frametype Type, argSize, retOffset uintptr, stack []byte) {
+func FuncLayout(t Type, rcvr Type) (frametype Type, argSize, retOffset uintptr, stack []byte, gc []byte, ptrs bool) {
 	return
+}
+
+func TypeLinks() []string {
+	return nil
+}
+
+var GCBits = gcbits
+
+// Will be provided by runtime eventually.
+func gcbits(interface{}) []byte {
+	return nil
+}
+
+func MapBucketOf(x, y Type) Type {
+	return nil
+}
+
+func CachedBucketOf(m Type) Type {
+	return nil
 }

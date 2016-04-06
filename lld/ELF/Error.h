@@ -12,41 +12,40 @@
 
 #include "lld/Core/LLVM.h"
 
-namespace llvm {
-class raw_ostream;
-}
-
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 extern bool HasError;
 extern llvm::raw_ostream *ErrorOS;
 
+void log(const Twine &Msg);
 void warning(const Twine &Msg);
 
 void error(const Twine &Msg);
-bool error(std::error_code EC, const Twine &Prefix);
-bool error(std::error_code EC);
+void error(std::error_code EC, const Twine &Prefix);
 
-template <typename T> bool error(const ErrorOr<T> &V, const Twine &Prefix) {
-  return error(V.getError(), Prefix);
-}
-
-template <typename T> bool error(const ErrorOr<T> &V) {
-  return error(V.getError());
+template <typename T> void error(const ErrorOr<T> &V, const Twine &Prefix) {
+  error(V.getError(), Prefix);
 }
 
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
-void fatal(std::error_code EC, const Twine &Prefix);
-void fatal(std::error_code EC);
+LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg, const Twine &Prefix);
 
-template <typename T> void fatal(const ErrorOr<T> &V, const Twine &Prefix) {
-  fatal(V.getError(), Prefix);
+void check(std::error_code EC);
+
+template <class T> T check(ErrorOr<T> EO) {
+  if (EO)
+    return std::move(*EO);
+  fatal(EO.getError().message());
 }
 
-template <typename T> void fatal(const ErrorOr<T> &V) { fatal(V.getError()); }
+template <class T> T check(ErrorOr<T> EO, const Twine &Prefix) {
+  if (EO)
+    return std::move(*EO);
+  fatal(EO.getError().message(), Prefix);
+}
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

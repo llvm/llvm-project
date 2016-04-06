@@ -135,6 +135,8 @@ runtime_netpoll(bool block)
 	byte b;
 	struct stat st;
 
+	allocatedfds = false;
+
  retry:
 	runtime_lock(&selectlock);
 
@@ -146,11 +148,13 @@ runtime_netpoll(bool block)
 	}
 
 	if(inuse) {
-		prfds = runtime_SysAlloc(4 * sizeof fds, &mstats.other_sys);
-		pwfds = prfds + 1;
-		pefds = pwfds + 1;
-		ptfds = pefds + 1;
-		allocatedfds = true;
+		if(!allocatedfds) {
+			prfds = runtime_SysAlloc(4 * sizeof fds, &mstats.other_sys);
+			pwfds = prfds + 1;
+			pefds = pwfds + 1;
+			ptfds = pefds + 1;
+			allocatedfds = true;
+		}
 	} else {
 		prfds = &grfds;
 		pwfds = &gwfds;
@@ -216,7 +220,7 @@ runtime_netpoll(bool block)
 			mode = 'r' + 'w';
 			--c;
 		}
-		if(i == rdwake) {
+		if(i == rdwake && mode != 0) {
 			while(read(rdwake, &b, sizeof b) > 0)
 				;
 			continue;

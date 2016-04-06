@@ -654,8 +654,10 @@ __kmpc_flush(ident_t *loc)
             if ( ! __kmp_cpuinfo.sse2 ) {
                 // CPU cannot execute SSE2 instructions.
             } else {
-                #if KMP_COMPILER_ICC || KMP_COMPILER_MSVC
+                #if KMP_COMPILER_ICC 
                 _mm_mfence();
+                #elif KMP_COMPILER_MSVC
+                MemoryBarrier();
                 #else
                 __sync_synchronize();
                 #endif // KMP_COMPILER_ICC
@@ -732,7 +734,6 @@ __kmpc_barrier(ident_t *loc, kmp_int32 global_tid)
 kmp_int32
 __kmpc_master(ident_t *loc, kmp_int32 global_tid)
 {
-    KMP_COUNT_BLOCK(OMP_MASTER);
     int status = 0;
 
     KC_TRACE( 10, ("__kmpc_master: called T#%d\n", global_tid ) );
@@ -741,6 +742,7 @@ __kmpc_master(ident_t *loc, kmp_int32 global_tid)
         __kmp_parallel_initialize();
 
     if( KMP_MASTER_GTID( global_tid )) {
+        KMP_COUNT_BLOCK(OMP_MASTER);
         KMP_START_EXPLICIT_TIMER(OMP_master);
         status = 1;
     }
@@ -1114,6 +1116,7 @@ __kmpc_critical( ident_t * loc, kmp_int32 global_tid, kmp_critical_name * crit )
     __kmpc_critical_with_hint(loc, global_tid, crit, omp_lock_hint_none);
 #else
     KMP_COUNT_BLOCK(OMP_CRITICAL);
+    KMP_TIME_BLOCK(OMP_critical_wait);        /* Time spent waiting to enter the critical section */
     kmp_user_lock_p lck;
 
     KC_TRACE( 10, ("__kmpc_critical: called T#%d\n", global_tid ) );
@@ -1155,6 +1158,7 @@ __kmpc_critical( ident_t * loc, kmp_int32 global_tid, kmp_critical_name * crit )
     __kmp_itt_critical_acquired( lck );
 #endif /* USE_ITT_BUILD */
 
+    KMP_START_EXPLICIT_TIMER(OMP_critical);
     KA_TRACE( 15, ("__kmpc_critical: done T#%d\n", global_tid ));
 #endif // KMP_USE_DYNAMIC_LOCK
 }
@@ -1170,13 +1174,20 @@ __kmp_map_hint_to_lock(uintptr_t hint)
 #else
 # define KMP_TSX_LOCK(seq) __kmp_user_lock_seq
 #endif
+
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+# define KMP_CPUINFO_RTM (__kmp_cpuinfo.rtm)
+#else
+# define KMP_CPUINFO_RTM 0
+#endif
+
     // Hints that do not require further logic
     if (hint & kmp_lock_hint_hle)
         return KMP_TSX_LOCK(hle);
     if (hint & kmp_lock_hint_rtm)
-        return (__kmp_cpuinfo.rtm)? KMP_TSX_LOCK(rtm): __kmp_user_lock_seq;
+        return KMP_CPUINFO_RTM ? KMP_TSX_LOCK(rtm): __kmp_user_lock_seq;
     if (hint & kmp_lock_hint_adaptive)
-        return (__kmp_cpuinfo.rtm)? KMP_TSX_LOCK(adaptive): __kmp_user_lock_seq;
+        return KMP_CPUINFO_RTM ? KMP_TSX_LOCK(adaptive): __kmp_user_lock_seq;
 
     // Rule out conflicting hints first by returning the default lock
     if ((hint & omp_lock_hint_contended) && (hint & omp_lock_hint_uncontended))
@@ -1359,7 +1370,7 @@ __kmpc_end_critical(ident_t *loc, kmp_int32 global_tid, kmp_critical_name *crit)
 #endif
 
 #endif // KMP_USE_DYNAMIC_LOCK
-
+    KMP_STOP_EXPLICIT_TIMER(OMP_critical);
     KA_TRACE( 15, ("__kmpc_end_critical: done T#%d\n", global_tid ));
 }
 
@@ -1476,9 +1487,11 @@ introduce an explicit barrier if it is required.
 kmp_int32
 __kmpc_single(ident_t *loc, kmp_int32 global_tid)
 {
-    KMP_COUNT_BLOCK(OMP_SINGLE);
     kmp_int32 rc = __kmp_enter_single( global_tid, loc, TRUE );
-    if(rc == TRUE) {
+
+    if (rc) {
+        // We are going to execute the single statement, so we should count it.
+        KMP_COUNT_BLOCK(OMP_SINGLE);
         KMP_START_EXPLICIT_TIMER(OMP_single);
     }
 
@@ -1553,13 +1566,10 @@ __kmpc_for_static_fini( ident_t *loc, kmp_int32 global_tid )
 #if OMPT_SUPPORT && OMPT_TRACE
     if (ompt_enabled &&
         ompt_callbacks.ompt_callback(ompt_event_loop_end)) {
-        kmp_info_t *this_thr = __kmp_threads[ global_tid ];
-        kmp_team_t *team     = this_thr -> th.th_team;
-        int tid = __kmp_tid_from_gtid( global_tid );
-
+        ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
+        ompt_task_info_t *task_info = __ompt_get_taskinfo(0);
         ompt_callbacks.ompt_callback(ompt_event_loop_end)(
-            team->t.ompt_team_info.parallel_id,
-            team->t.t_implicit_task_taskdata[tid].ompt_task_info.task_id);
+            team_info->parallel_id, task_info->task_id);
     }
 #endif
 
@@ -3048,6 +3058,295 @@ void __kmpc_place_threads(int nS, int sO, int nC, int cO, int nT)
     __kmp_place_core_offset = cO;
     __kmp_place_num_threads_per_core = nT;
 }
+
+#if OMP_41_ENABLED
+/*!
+@ingroup WORK_SHARING
+@param loc  source location information.
+@param gtid  global thread number.
+@param num_dims  number of associated doacross loops.
+@param dims  info on loops bounds.
+
+Initialize doacross loop information.
+Expect compiler send us inclusive bounds,
+e.g. for(i=2;i<9;i+=2) lo=2, up=8, st=2.
+*/
+void
+__kmpc_doacross_init(ident_t *loc, int gtid, int num_dims, struct kmp_dim * dims)
+{
+    int j, idx;
+    kmp_int64 last, trace_count;
+    kmp_info_t *th = __kmp_threads[gtid];
+    kmp_team_t *team = th->th.th_team;
+    kmp_uint32 *flags;
+    kmp_disp_t *pr_buf = th->th.th_dispatch;
+    dispatch_shared_info_t *sh_buf;
+
+    KA_TRACE(20,("__kmpc_doacross_init() enter: called T#%d, num dims %d, active %d\n",
+                 gtid, num_dims, !team->t.t_serialized));
+    KMP_DEBUG_ASSERT(dims != NULL);
+    KMP_DEBUG_ASSERT(num_dims > 0);
+
+    if( team->t.t_serialized ) {
+        KA_TRACE(20,("__kmpc_doacross_init() exit: serialized team\n"));
+        return; // no dependencies if team is serialized
+    }
+    KMP_DEBUG_ASSERT(team->t.t_nproc > 1);
+    idx = pr_buf->th_doacross_buf_idx++; // Increment index of shared buffer for the next loop
+    sh_buf = &team->t.t_disp_buffer[idx % KMP_MAX_DISP_BUF];
+
+    // Save bounds info into allocated private buffer
+    KMP_DEBUG_ASSERT(pr_buf->th_doacross_info == NULL);
+    pr_buf->th_doacross_info =
+        (kmp_int64*)__kmp_thread_malloc(th, sizeof(kmp_int64)*(4 * num_dims + 1));
+    KMP_DEBUG_ASSERT(pr_buf->th_doacross_info != NULL);
+    pr_buf->th_doacross_info[0] = (kmp_int64)num_dims; // first element is number of dimensions
+    // Save also address of num_done in order to access it later without knowing the buffer index
+    pr_buf->th_doacross_info[1] = (kmp_int64)&sh_buf->doacross_num_done;
+    pr_buf->th_doacross_info[2] = dims[0].lo;
+    pr_buf->th_doacross_info[3] = dims[0].up;
+    pr_buf->th_doacross_info[4] = dims[0].st;
+    last = 5;
+    for( j = 1; j < num_dims; ++j ) {
+        kmp_int64 range_length; // To keep ranges of all dimensions but the first dims[0]
+        if( dims[j].st == 1 ) { // most common case
+            // AC: should we care of ranges bigger than LLONG_MAX? (not for now)
+            range_length = dims[j].up - dims[j].lo + 1;
+        } else {
+            if( dims[j].st > 0 ) {
+                KMP_DEBUG_ASSERT(dims[j].up > dims[j].lo);
+                range_length = (kmp_uint64)(dims[j].up - dims[j].lo) / dims[j].st + 1;
+            } else {            // negative increment
+                KMP_DEBUG_ASSERT(dims[j].lo > dims[j].up);
+                range_length = (kmp_uint64)(dims[j].lo - dims[j].up) / (-dims[j].st) + 1;
+            }
+        }
+        pr_buf->th_doacross_info[last++] = range_length;
+        pr_buf->th_doacross_info[last++] = dims[j].lo;
+        pr_buf->th_doacross_info[last++] = dims[j].up;
+        pr_buf->th_doacross_info[last++] = dims[j].st;
+    }
+
+    // Compute total trip count.
+    // Start with range of dims[0] which we don't need to keep in the buffer.
+    if( dims[0].st == 1 ) { // most common case
+        trace_count = dims[0].up - dims[0].lo + 1;
+    } else if( dims[0].st > 0 ) {
+        KMP_DEBUG_ASSERT(dims[0].up > dims[0].lo);
+        trace_count = (kmp_uint64)(dims[0].up - dims[0].lo) / dims[0].st + 1;
+    } else {   // negative increment
+        KMP_DEBUG_ASSERT(dims[0].lo > dims[0].up);
+        trace_count = (kmp_uint64)(dims[0].lo - dims[0].up) / (-dims[0].st) + 1;
+    }
+    for( j = 1; j < num_dims; ++j ) {
+        trace_count *= pr_buf->th_doacross_info[4 * j + 1]; // use kept ranges
+    }
+    KMP_DEBUG_ASSERT(trace_count > 0);
+
+    // Check if shared buffer is not occupied by other loop (idx - KMP_MAX_DISP_BUF)
+    if( idx != sh_buf->doacross_buf_idx ) {
+        // Shared buffer is occupied, wait for it to be free
+        __kmp_wait_yield_4( (kmp_uint32*)&sh_buf->doacross_buf_idx, idx, __kmp_eq_4, NULL );
+    }
+    // Check if we are the first thread. After the CAS the first thread gets 0,
+    // others get 1 if initialization is in progress, allocated pointer otherwise.
+    flags = (kmp_uint32*)KMP_COMPARE_AND_STORE_RET64(
+        (kmp_int64*)&sh_buf->doacross_flags,NULL,(kmp_int64)1);
+    if( flags == NULL ) {
+        // we are the first thread, allocate the array of flags
+        kmp_int64 size = trace_count / 8 + 8; // in bytes, use single bit per iteration
+        sh_buf->doacross_flags = (kmp_uint32*)__kmp_thread_calloc(th, size, 1);
+    } else if( (kmp_int64)flags == 1 ) {
+        // initialization is still in progress, need to wait
+        while( (volatile kmp_int64)sh_buf->doacross_flags == 1 ) {
+            KMP_YIELD(TRUE);
+        }
+    }
+    KMP_DEBUG_ASSERT((kmp_int64)sh_buf->doacross_flags > 1); // check value of pointer
+    pr_buf->th_doacross_flags = sh_buf->doacross_flags;      // save private copy in order to not
+                                                             // touch shared buffer on each iteration
+    KA_TRACE(20,("__kmpc_doacross_init() exit: T#%d\n", gtid));
+}
+
+void
+__kmpc_doacross_wait(ident_t *loc, int gtid, long long *vec)
+{
+    kmp_int32 shft, num_dims, i;
+    kmp_uint32 flag;
+    kmp_int64 iter_number; // iteration number of "collapsed" loop nest
+    kmp_info_t *th = __kmp_threads[gtid];
+    kmp_team_t *team = th->th.th_team;
+    kmp_disp_t *pr_buf;
+    kmp_int64 lo, up, st;
+
+    KA_TRACE(20,("__kmpc_doacross_wait() enter: called T#%d\n", gtid));
+    if( team->t.t_serialized ) {
+        KA_TRACE(20,("__kmpc_doacross_wait() exit: serialized team\n"));
+        return; // no dependencies if team is serialized
+    }
+
+    // calculate sequential iteration number and check out-of-bounds condition
+    pr_buf = th->th.th_dispatch;
+    KMP_DEBUG_ASSERT(pr_buf->th_doacross_info != NULL);
+    num_dims = pr_buf->th_doacross_info[0];
+    lo = pr_buf->th_doacross_info[2];
+    up = pr_buf->th_doacross_info[3];
+    st = pr_buf->th_doacross_info[4];
+    if( st == 1 ) { // most common case
+        if( vec[0] < lo || vec[0] > up ) {
+            KA_TRACE(20,(
+                "__kmpc_doacross_wait() exit: T#%d iter %lld is out of bounds [%lld,%lld]\n",
+                gtid, vec[0], lo, up));
+            return;
+        }
+        iter_number = vec[0] - lo;
+    } else if( st > 0 ) {
+        if( vec[0] < lo || vec[0] > up ) {
+            KA_TRACE(20,(
+                "__kmpc_doacross_wait() exit: T#%d iter %lld is out of bounds [%lld,%lld]\n",
+                gtid, vec[0], lo, up));
+            return;
+        }
+        iter_number = (kmp_uint64)(vec[0] - lo) / st;
+    } else {        // negative increment
+        if( vec[0] > lo || vec[0] < up ) {
+            KA_TRACE(20,(
+                "__kmpc_doacross_wait() exit: T#%d iter %lld is out of bounds [%lld,%lld]\n",
+                gtid, vec[0], lo, up));
+            return;
+        }
+        iter_number = (kmp_uint64)(lo - vec[0]) / (-st);
+    }
+    for( i = 1; i < num_dims; ++i ) {
+        kmp_int64 iter, ln;
+        kmp_int32 j = i * 4;
+        ln = pr_buf->th_doacross_info[j + 1];
+        lo = pr_buf->th_doacross_info[j + 2];
+        up = pr_buf->th_doacross_info[j + 3];
+        st = pr_buf->th_doacross_info[j + 4];
+        if( st == 1 ) {
+            if( vec[i] < lo || vec[i] > up ) {
+                KA_TRACE(20,(
+                    "__kmpc_doacross_wait() exit: T#%d iter %lld is out of bounds [%lld,%lld]\n",
+                    gtid, vec[i], lo, up));
+                return;
+            }
+            iter = vec[i] - lo;
+        } else if( st > 0 ) {
+            if( vec[i] < lo || vec[i] > up ) {
+                KA_TRACE(20,(
+                    "__kmpc_doacross_wait() exit: T#%d iter %lld is out of bounds [%lld,%lld]\n",
+                    gtid, vec[i], lo, up));
+                return;
+            }
+            iter = (kmp_uint64)(vec[i] - lo) / st;
+        } else {   // st < 0
+            if( vec[i] > lo || vec[i] < up ) {
+                KA_TRACE(20,(
+                    "__kmpc_doacross_wait() exit: T#%d iter %lld is out of bounds [%lld,%lld]\n",
+                    gtid, vec[i], lo, up));
+                return;
+            }
+            iter = (kmp_uint64)(lo - vec[i]) / (-st);
+        }
+        iter_number = iter + ln * iter_number;
+    }
+    shft = iter_number % 32; // use 32-bit granularity
+    iter_number >>= 5;       // divided by 32
+    flag = 1 << shft;
+    while( (flag & pr_buf->th_doacross_flags[iter_number]) == 0 ) {
+        KMP_YIELD(TRUE);
+    }
+    KA_TRACE(20,("__kmpc_doacross_wait() exit: T#%d wait for iter %lld completed\n",
+                 gtid, (iter_number<<5)+shft));
+}
+
+void
+__kmpc_doacross_post(ident_t *loc, int gtid, long long *vec)
+{
+    kmp_int32 shft, num_dims, i;
+    kmp_uint32 flag;
+    kmp_int64 iter_number; // iteration number of "collapsed" loop nest
+    kmp_info_t *th = __kmp_threads[gtid];
+    kmp_team_t *team = th->th.th_team;
+    kmp_disp_t *pr_buf;
+    kmp_int64 lo, st;
+
+    KA_TRACE(20,("__kmpc_doacross_post() enter: called T#%d\n", gtid));
+    if( team->t.t_serialized ) {
+        KA_TRACE(20,("__kmpc_doacross_post() exit: serialized team\n"));
+        return; // no dependencies if team is serialized
+    }
+
+    // calculate sequential iteration number (same as in "wait" but no out-of-bounds checks)
+    pr_buf = th->th.th_dispatch;
+    KMP_DEBUG_ASSERT(pr_buf->th_doacross_info != NULL);
+    num_dims = pr_buf->th_doacross_info[0];
+    lo = pr_buf->th_doacross_info[2];
+    st = pr_buf->th_doacross_info[4];
+    if( st == 1 ) { // most common case
+        iter_number = vec[0] - lo;
+    } else if( st > 0 ) {
+        iter_number = (kmp_uint64)(vec[0] - lo) / st;
+    } else {        // negative increment
+        iter_number = (kmp_uint64)(lo - vec[0]) / (-st);
+    }
+    for( i = 1; i < num_dims; ++i ) {
+        kmp_int64 iter, ln;
+        kmp_int32 j = i * 4;
+        ln = pr_buf->th_doacross_info[j + 1];
+        lo = pr_buf->th_doacross_info[j + 2];
+        st = pr_buf->th_doacross_info[j + 4];
+        if( st == 1 ) {
+            iter = vec[i] - lo;
+        } else if( st > 0 ) {
+            iter = (kmp_uint64)(vec[i] - lo) / st;
+        } else {   // st < 0
+            iter = (kmp_uint64)(lo - vec[i]) / (-st);
+        }
+        iter_number = iter + ln * iter_number;
+    }
+    shft = iter_number % 32; // use 32-bit granularity
+    iter_number >>= 5;       // divided by 32
+    flag = 1 << shft;
+    if( (flag & pr_buf->th_doacross_flags[iter_number]) == 0 )
+        KMP_TEST_THEN_OR32( (kmp_int32*)&pr_buf->th_doacross_flags[iter_number], (kmp_int32)flag );
+    KA_TRACE(20,("__kmpc_doacross_post() exit: T#%d iter %lld posted\n",
+                 gtid, (iter_number<<5)+shft));
+}
+
+void
+__kmpc_doacross_fini(ident_t *loc, int gtid)
+{
+    kmp_int64 num_done;
+    kmp_info_t *th = __kmp_threads[gtid];
+    kmp_team_t *team = th->th.th_team;
+    kmp_disp_t *pr_buf = th->th.th_dispatch;
+
+    KA_TRACE(20,("__kmpc_doacross_fini() enter: called T#%d\n", gtid));
+    if( team->t.t_serialized ) {
+        KA_TRACE(20,("__kmpc_doacross_fini() exit: serialized team %p\n", team));
+        return; // nothing to do
+    }
+    num_done = KMP_TEST_THEN_INC64((kmp_int64*)pr_buf->th_doacross_info[1]) + 1;
+    if( num_done == th->th.th_team_nproc ) {
+        // we are the last thread, need to free shared resources
+        int idx = pr_buf->th_doacross_buf_idx - 1;
+        dispatch_shared_info_t *sh_buf = &team->t.t_disp_buffer[idx % KMP_MAX_DISP_BUF];
+        KMP_DEBUG_ASSERT(pr_buf->th_doacross_info[1] == (kmp_int64)&sh_buf->doacross_num_done);
+        KMP_DEBUG_ASSERT(num_done == (kmp_int64)sh_buf->doacross_num_done);
+        KMP_DEBUG_ASSERT(idx == sh_buf->doacross_buf_idx);
+        __kmp_thread_free(th, (void*)sh_buf->doacross_flags);
+        sh_buf->doacross_flags = NULL;
+        sh_buf->doacross_num_done = 0;
+        sh_buf->doacross_buf_idx += KMP_MAX_DISP_BUF; // free buffer for future re-use
+    }
+    // free private resources (need to keep buffer index forever)
+    __kmp_thread_free(th, (void*)pr_buf->th_doacross_info);
+    pr_buf->th_doacross_info = NULL;
+    KA_TRACE(20,("__kmpc_doacross_fini() exit: T#%d\n", gtid));
+}
+#endif
 
 // end of file //
 

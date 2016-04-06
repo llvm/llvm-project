@@ -94,7 +94,6 @@ public:
 class SearchFilter
 {
 public:
-
     //------------------------------------------------------------------
     /// The basic constructor takes a Target, which gives the space to search.
     ///
@@ -108,7 +107,7 @@ public:
     virtual
     ~SearchFilter ();
 
-    const SearchFilter&
+    SearchFilter&
     operator=(const SearchFilter& rhs);
 
     //------------------------------------------------------------------
@@ -294,7 +293,6 @@ class SearchFilterByModule :
     public SearchFilter
 {
 public:
-
     //------------------------------------------------------------------
     /// The basic constructor takes a Target, which gives the space to search,
     /// and the module to restrict the search to.
@@ -312,7 +310,7 @@ public:
 
     ~SearchFilterByModule() override;
 
-    const SearchFilterByModule&
+    SearchFilterByModule&
     operator=(const SearchFilterByModule& rhs);
 
     bool
@@ -354,7 +352,6 @@ class SearchFilterByModuleList :
     public SearchFilter
 {
 public:
-
     //------------------------------------------------------------------
     /// The basic constructor takes a Target, which gives the space to search,
     /// and the module list to restrict the search to.
@@ -372,7 +369,7 @@ public:
 
     ~SearchFilterByModuleList() override;
 
-    const SearchFilterByModuleList&
+    SearchFilterByModuleList&
     operator=(const SearchFilterByModuleList& rhs);
 
     bool
@@ -414,7 +411,6 @@ class SearchFilterByModuleListAndCU :
     public SearchFilterByModuleList
 {
 public:
-
     //------------------------------------------------------------------
     /// The basic constructor takes a Target, which gives the space to search,
     /// and the module list to restrict the search to.
@@ -433,7 +429,7 @@ public:
 
     ~SearchFilterByModuleListAndCU() override;
 
-    const SearchFilterByModuleListAndCU&
+    SearchFilterByModuleListAndCU&
     operator=(const SearchFilterByModuleListAndCU& rhs);
 
     bool

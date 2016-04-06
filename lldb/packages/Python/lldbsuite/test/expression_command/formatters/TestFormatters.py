@@ -23,8 +23,7 @@ class ExprFormattersTestCase(TestBase):
                                 '// Stop here')
 
     @skipIfFreeBSD # llvm.org/pr24691 skipping to avoid crashing the test runner
-    @expectedFailureFreeBSD('llvm.org/pr19011') # Newer Clang omits C1 complete object constructor
-    @expectedFailureFreeBSD('llvm.org/pr24691') # we hit an assertion in clang
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr19011 Newer Clang omits C1 complete object constructor')
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     @skipIfTargetAndroid() # skipping to avoid crashing the test runner
     @expectedFailureAndroid('llvm.org/pr24691') # we hit an assertion in clang

@@ -27,6 +27,11 @@ class TsanThreadLeakTestCase(TestBase):
 
         self.runCmd("run")
 
+        stop_reason = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        if stop_reason == lldb.eStopReasonExec:
+            # On OS X 10.10 and older, we need to re-exec to enable interceptors.
+            self.runCmd("continue")
+
         # the stop reason of the thread should be breakpoint.
         self.expect("thread list", "A thread leak should be detected",
             substrs = ['stopped', 'stop reason = Thread leak detected'])

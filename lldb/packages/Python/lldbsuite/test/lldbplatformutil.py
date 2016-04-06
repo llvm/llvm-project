@@ -4,11 +4,13 @@ architecture and/or the platform dependent nature of the tests. """
 from __future__ import absolute_import
 
 # System modules
+import itertools
 import re
 import subprocess
 import sys
 
 # Third-party modules
+import six
 from six.moves.urllib import parse as urlparse
 
 # LLDB modules

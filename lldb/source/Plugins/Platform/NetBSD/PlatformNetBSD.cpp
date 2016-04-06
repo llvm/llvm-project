@@ -585,34 +585,6 @@ PlatformNetBSD::GetStatus (Stream &strm)
     Platform::GetStatus(strm);
 }
 
-size_t
-PlatformNetBSD::GetSoftwareBreakpointTrapOpcode (Target &target, BreakpointSite *bp_site)
-{
-    ArchSpec arch = target.GetArchitecture();
-    const uint8_t *trap_opcode = NULL;
-    size_t trap_opcode_size = 0;
-
-    switch (arch.GetMachine())
-    {
-    default:
-        assert(false && "Unhandled architecture in PlatformNetBSD::GetSoftwareBreakpointTrapOpcode()");
-        break;
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-        {
-            static const uint8_t g_i386_opcode[] = { 0xCC };
-            trap_opcode = g_i386_opcode;
-            trap_opcode_size = sizeof(g_i386_opcode);
-        }
-        break;
-    }
-
-    if (bp_site->SetTrapOpcode(trap_opcode, trap_opcode_size))
-        return trap_opcode_size;
-    return 0;
-}
-
-
 void
 PlatformNetBSD::CalculateTrapHandlerSymbolNames ()
 {

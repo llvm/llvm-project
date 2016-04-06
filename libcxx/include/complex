@@ -1399,7 +1399,7 @@ acos(const complex<_Tp>& __x)
     }
     if (isinf(__x.imag()))
         return complex<_Tp>(__pi/_Tp(2), -__x.imag());
-    if (__x.real() == 0)
+    if (__x.real() == 0 && (__x.imag() == 0 || isnan(__x.imag())))
         return complex<_Tp>(__pi/_Tp(2), -__x.imag());
     complex<_Tp> __z = log(__x + sqrt(pow(__x, _Tp(2)) - _Tp(1)));
     if (signbit(__x.imag()))

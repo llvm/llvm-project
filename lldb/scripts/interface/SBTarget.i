@@ -586,6 +586,9 @@ public:
     BreakpointCreateByLocation (const lldb::SBFileSpec &file_spec, uint32_t line);
 
     lldb::SBBreakpoint
+    BreakpointCreateByLocation (const lldb::SBFileSpec &file_spec, uint32_t line, lldb::addr_t offset);
+
+    lldb::SBBreakpoint
     BreakpointCreateByName (const char *symbol_name, const char *module_name = NULL);
 
     lldb::SBBreakpoint
@@ -601,18 +604,59 @@ public:
                             const SBFileSpecList &module_list, 
                             const SBFileSpecList &comp_unit_list);
 
+%typemap(in) (const char **symbol_name, uint32_t num_names) {
+  using namespace lldb_private;
+  /* Check if is a list  */
+  if (PythonList::Check($input)) {
+    PythonList list(PyRefType::Borrowed, $input);
+    $2 = list.GetSize();
+    int i = 0;
+    $1 = (char**)malloc(($2+1)*sizeof(char*));
+    for (i = 0; i < $2; i++) {
+      PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
+      if (!py_str.IsAllocated()) {
+        PyErr_SetString(PyExc_TypeError,"list must contain strings and blubby");
+        free($1);
+        return nullptr;
+      }
+
+      $1[i] = const_cast<char*>(py_str.GetString().data());
+    }
+    $1[i] = 0;
+  } else if ($input == Py_None) {
+    $1 =  NULL;
+  } else {
+    PyErr_SetString(PyExc_TypeError,"not a list");
+    return NULL;
+  }
+}
+
+//%typecheck(SWIG_TYPECHECK_STRING_ARRAY) (const char *symbol_name[], uint32_t num_names) {
+//    $1 = 1;
+//    $2 = 1;
+//}
+
     lldb::SBBreakpoint
-    BreakpointCreateByNames (const char *symbol_name[],
+    BreakpointCreateByNames (const char **symbol_name,
                              uint32_t num_names,
                              uint32_t name_type_mask,           // Logical OR one or more FunctionNameType enum bits
                              const SBFileSpecList &module_list,
                              const SBFileSpecList &comp_unit_list);
 
     lldb::SBBreakpoint
-    BreakpointCreateByNames (const char *symbol_name[],
+    BreakpointCreateByNames (const char **symbol_name,
                              uint32_t num_names,
                              uint32_t name_type_mask,           // Logical OR one or more FunctionNameType enum bits
                              lldb::LanguageType symbol_language,
+                             const SBFileSpecList &module_list,
+                             const SBFileSpecList &comp_unit_list);
+
+    lldb::SBBreakpoint
+    BreakpointCreateByNames (const char **symbol_name,
+                             uint32_t num_names,
+                             uint32_t name_type_mask,           // Logical OR one or more FunctionNameType enum bits
+                             lldb::LanguageType symbol_language,
+                             lldb::addr_t offset,
                              const SBFileSpecList &module_list,
                              const SBFileSpecList &comp_unit_list);
 

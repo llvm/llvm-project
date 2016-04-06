@@ -30,6 +30,7 @@
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Event.h"
+#include "lldb/Core/Listener.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Core/PluginInterface.h"
@@ -400,7 +401,7 @@ public:
         m_listener_sp = listener_sp;
     }
 
-    Listener &
+    lldb::ListenerSP
     GetListenerForProcess (Debugger &debugger);
 
 protected:
@@ -940,13 +941,13 @@ public:
     /// Construct with a shared pointer to a target, and the Process listener.
     /// Uses the Host UnixSignalsSP by default.
     //------------------------------------------------------------------
-    Process(lldb::TargetSP target_sp, Listener &listener);
+    Process(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
 
     //------------------------------------------------------------------
     /// Construct with a shared pointer to a target, the Process listener,
     /// and the appropriate UnixSignalsSP for the process.
     //------------------------------------------------------------------
-    Process(lldb::TargetSP target_sp, Listener &listener, const lldb::UnixSignalsSP &unix_signals_sp);
+    Process(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp, const lldb::UnixSignalsSP &unix_signals_sp);
 
     //------------------------------------------------------------------
     /// Destructor.
@@ -986,7 +987,7 @@ public:
     static lldb::ProcessSP
     FindPlugin (lldb::TargetSP target_sp,
                 const char *plugin_name, 
-                Listener &listener, 
+                lldb::ListenerSP listener_sp,
                 const FileSpec *crash_file_path);
 
     //------------------------------------------------------------------
@@ -1974,6 +1975,9 @@ public:
     void
     PrintWarningCantLoadSwift (const Module &module);
 
+    virtual bool
+    GetProcessInfo(ProcessInstanceInfo &info);
+
 public:
     //------------------------------------------------------------------
     /// Get the exit status for a process.
@@ -2863,7 +2867,7 @@ public:
     WaitForProcessToStop(const TimeValue *timeout,
                          lldb::EventSP *event_sp_ptr = nullptr,
                          bool wait_always = true,
-                         Listener *hijack_listener = nullptr,
+                         lldb::ListenerSP hijack_listener = lldb::ListenerSP(),
                          Stream *stream = nullptr,
                          bool use_run_lock = true);
 
@@ -2889,7 +2893,7 @@ public:
     lldb::StateType
     WaitForStateChangedEvents(const TimeValue *timeout,
                               lldb::EventSP &event_sp,
-                              Listener *hijack_listener); // Pass nullptr to use builtin listener
+                              lldb::ListenerSP hijack_listener); // Pass an empty ListenerSP to use builtin listener
 
     //--------------------------------------------------------------------------------------
     /// Centralize the code that handles and prints descriptions for process state changes.
@@ -2925,10 +2929,10 @@ public:
     ProcessEventHijacker
     {
     public:
-        ProcessEventHijacker (Process &process, Listener *listener) :
+        ProcessEventHijacker (Process &process, lldb::ListenerSP listener_sp) :
             m_process (process)
         {
-            m_process.HijackProcessEvents (listener);
+            m_process.HijackProcessEvents (listener_sp);
         }
 
         ~ProcessEventHijacker ()
@@ -2957,7 +2961,7 @@ public:
     ///     \b false otherwise.
     //------------------------------------------------------------------
     bool
-    HijackProcessEvents (Listener *listener);
+    HijackProcessEvents (lldb::ListenerSP listener_sp);
     
     //------------------------------------------------------------------
     /// Restores the process event broadcasting to its normal state.
@@ -3363,7 +3367,7 @@ protected:
     ThreadSafeValue<lldb::StateType>  m_private_state; // The actual state of our process
     Broadcaster                 m_private_state_broadcaster;  // This broadcaster feeds state changed events into the private state thread's listener.
     Broadcaster                 m_private_state_control_broadcaster; // This is the control broadcaster, used to pause, resume & stop the private state thread.
-    Listener                    m_private_state_listener;     // This is the listener for the private state thread.
+    lldb::ListenerSP            m_private_state_listener_sp;     // This is the listener for the private state thread.
     Predicate<bool>             m_private_state_control_wait; /// This Predicate is used to signal that a control operation is complete.
     HostThread                  m_private_state_thread; ///< Thread ID for the thread that watches internal state events
     ProcessModID                m_mod_id;               ///< Tracks the state of the process over stops and other alterations.
@@ -3383,7 +3387,7 @@ protected:
     uint32_t                    m_queue_list_stop_id;   ///< The natural stop id when queue list was last fetched
     std::vector<Notifications>  m_notifications;        ///< The list of notifications that this process can deliver.
     std::vector<lldb::addr_t>   m_image_tokens;
-    Listener                    &m_listener;
+    lldb::ListenerSP            m_listener_sp;          ///< Shared pointer to the listener used for public events.  Can not be empty.
     BreakpointSiteList          m_breakpoint_site_list; ///< This is the list of breakpoint locations we intend to insert in the target.
     lldb::DynamicLoaderUP       m_dyld_ap;
     lldb::JITLoaderListUP       m_jit_loaders_ap;

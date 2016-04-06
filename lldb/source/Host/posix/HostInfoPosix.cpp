@@ -285,3 +285,13 @@ HostInfoPosix::ComputeSwiftDirectory(FileSpec &file_spec)
     return true;
 }
 
+bool
+HostInfoPosix::GetEnvironmentVar(const std::string &var_name, std::string &var)
+{
+    if (const char *pvar = ::getenv(var_name.c_str()))
+    {
+        var = std::string(pvar);
+        return true;
+    }
+    return false;
+}

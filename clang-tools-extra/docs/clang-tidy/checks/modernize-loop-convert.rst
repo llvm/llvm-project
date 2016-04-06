@@ -23,7 +23,7 @@ reference to a declared expression (a variable, function, enum, etc.),
 and some part of it appears elsewhere in the loop, we lower our confidence
 in the transformation due to the increased risk of changing semantics.
 Transformations for these loops are marked as `risky`, and thus will only
-be converted if the minimum required confidence level is set to ``risky``.
+be converted if the minimum required confidence level is set to `risky`.
 
 .. code-block:: c++
 
@@ -46,7 +46,7 @@ reasonable (Default)
 
 If a loop calls ``.end()`` or ``.size()`` after each iteration, the
 transformation for that loop is marked as `reasonable`, and thus will
-be converted if the required confidence level is set to ``reasonable``
+be converted if the required confidence level is set to `reasonable`
 (default) or lower.
 
 .. code-block:: c++
@@ -60,7 +60,7 @@ safe
 
 Any other loops that do not match the above criteria to be marked as
 `risky` or `reasonable` are marked `safe`, and thus will be converted
-if the required confidence level is set to ``safe`` or lower.
+if the required confidence level is set to `safe` or lower.
 
 .. code-block:: c++
 
@@ -95,7 +95,7 @@ Original:
   for (int i = 0; i < v.size(); ++i)
     cout << v[i];
 
-After applying the check with minimum confidence level set to ``reasonable`` (default):
+After applying the check with minimum confidence level set to `reasonable` (default):
 
 .. code-block:: c++
 
@@ -231,11 +231,11 @@ circumvent the analysis by accessing and modifying the container through a
 pointer or reference.
 
 If the container were directly used instead of using the pointer or reference
-the following transformation would have only been applied at the ``risky``
+the following transformation would have only been applied at the `risky`
 level since calling a member function of the container is considered `risky`.
 The check cannot identify expressions associated with the container that are
 different than the one used in the loop header, therefore the transformation
-below ends up being performed at the ``safe`` level.
+below ends up being performed at the `safe` level.
 
 .. code-block:: c++
 

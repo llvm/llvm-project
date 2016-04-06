@@ -1,8 +1,0 @@
----
-defined-atoms:
-    - name:              myfunc
-      scope:             global
-      type:              code
-
-undefined-atoms:
-    - name:              free

@@ -16,12 +16,12 @@
 ;       sizeof(long) == 8
 ;
 ; CHECK:      Function: wrap
-; CHECK:      Boundary Context:
-; CHECK:      [N] -> {  : N <= 1152921504606846975 }
+; CHECK:      Invalid Context:
+; CHECK-NEXT: [N] -> {  : N >= 1152921504606846976 }
 ;
 ; CHECK:      Function: nowrap
-; CHECK:      Boundary Context:
-; CHECK:      [N] -> {  :  }
+; CHECK:      Invalid Context:
+; CHECK-NEXT: [N] -> {  : 1 = 0 }
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

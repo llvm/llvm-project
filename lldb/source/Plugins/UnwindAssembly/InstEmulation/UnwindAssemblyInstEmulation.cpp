@@ -554,7 +554,6 @@ UnwindAssemblyInstEmulation::WriteRegister (EmulateInstruction *instruction,
         case EmulateInstruction::eContextTableBranchReadMemory:
         case EmulateInstruction::eContextWriteRegisterRandomBits:
         case EmulateInstruction::eContextWriteMemoryRandomBits:
-        case EmulateInstruction::eContextArithmetic:
         case EmulateInstruction::eContextAdvancePC:    
         case EmulateInstruction::eContextReturnFromException:
         case EmulateInstruction::eContextPushRegisterOnStack:
@@ -571,6 +570,22 @@ UnwindAssemblyInstEmulation::WriteRegister (EmulateInstruction *instruction,
 //                    m_curr_row_modified = true;
 //                }
 //            }
+            break;
+
+        case EmulateInstruction::eContextArithmetic:
+            {
+                // If we adjusted the current frame pointer by a constant then adjust the CFA offset
+                // with the same amount.
+                lldb::RegisterKind kind = m_unwind_plan_ptr->GetRegisterKind();
+                if (m_fp_is_cfa && reg_info->kinds[kind] == m_cfa_reg_info.kinds[kind] &&
+                    context.info_type == EmulateInstruction::eInfoTypeRegisterPlusOffset &&
+                    context.info.RegisterPlusOffset.reg.kinds[kind] == m_cfa_reg_info.kinds[kind])
+                {
+                    const int64_t offset = context.info.RegisterPlusOffset.signed_offset;
+                    m_curr_row->GetCFAValue().IncOffset(-1 * offset);
+                    m_curr_row_modified = true;
+                }
+            }
             break;
 
         case EmulateInstruction::eContextAbsoluteBranchRegister:

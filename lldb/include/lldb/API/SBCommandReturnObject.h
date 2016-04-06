@@ -83,12 +83,20 @@ public:
     
     bool
     GetDescription (lldb::SBStream &description);
-    
+   
+    // deprecated, these two functions do not take
+    // ownership of file handle
     void
     SetImmediateOutputFile (FILE *fh);
     
     void
     SetImmediateErrorFile (FILE *fh);
+    
+    void
+    SetImmediateOutputFile (FILE *fh, bool transfer_ownership);
+    
+    void
+    SetImmediateErrorFile (FILE *fh, bool transfer_ownership);
     
     void
     PutCString(const char* string, int len = -1);

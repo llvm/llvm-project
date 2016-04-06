@@ -237,6 +237,29 @@ struct ScalarBitSetTraits<SectionAttr> {
   }
 };
 
+/// This is a custom formatter for SectionAlignment.  Values are
+/// the power to raise by, ie, the n in 2^n.
+template <> struct ScalarTraits<SectionAlignment> {
+  static void output(const SectionAlignment &value, void *ctxt,
+                     raw_ostream &out) {
+    out << llvm::format("%d", (uint32_t)value);
+  }
+
+  static StringRef input(StringRef scalar, void *ctxt,
+                         SectionAlignment &value) {
+    uint32_t alignment;
+    if (scalar.getAsInteger(0, alignment)) {
+      return "malformed alignment value";
+    }
+    if (!llvm::isPowerOf2_32(alignment))
+      return "alignment must be a power of 2";
+    value = alignment;
+    return StringRef(); // returning empty string means success
+  }
+
+  static bool mustQuote(StringRef) { return false; }
+};
+
 template <>
 struct ScalarEnumerationTraits<NListType> {
   static void enumeration(IO &io, NListType &value) {
@@ -276,7 +299,7 @@ struct MappingTraits<Section> {
     io.mapRequired("section",         sect.sectionName);
     io.mapRequired("type",            sect.type);
     io.mapOptional("attributes",      sect.attributes);
-    io.mapOptional("alignment",       sect.alignment, (uint16_t)1);
+    io.mapOptional("alignment",       sect.alignment, (SectionAlignment)1);
     io.mapRequired("address",         sect.address);
     if (isZeroFillSection(sect.type)) {
       // S_ZEROFILL sections use "size:" instead of "content:"
@@ -311,6 +334,8 @@ struct MappingTraits<Section> {
       NormalizedFile *file = info->_normalizeMachOFile;
       assert(file != nullptr);
       size_t size = _normalizedContent.size();
+      if (!size)
+        return None;
       uint8_t *bytes = file->ownedAllocations.Allocate<uint8_t>(size);
       std::copy(_normalizedContent.begin(), _normalizedContent.end(), bytes);
       return makeArrayRef(bytes, size);
@@ -741,8 +766,7 @@ bool MachOYamlIOTaggedDocumentHandler::handledDocTag(llvm::yaml::IO &io,
   info->_normalizeMachOFile = &nf;
   MappingTraits<NormalizedFile>::mapping(io, nf);
   // Step 2: parse normalized mach-o struct into atoms.
-  ErrorOr<std::unique_ptr<lld::File>> foe = normalizedToAtoms(nf, info->_path,
-                                                              true);
+  auto fileOrError = normalizedToAtoms(nf, info->_path, true);
   if (nf.arch != _arch) {
     io.setError(Twine("file is wrong architecture. Expected ("
                       + MachOLinkingContext::nameFromArch(_arch)
@@ -753,13 +777,20 @@ bool MachOYamlIOTaggedDocumentHandler::handledDocTag(llvm::yaml::IO &io,
   }
   info->_normalizeMachOFile = nullptr;
 
-  if (foe) {
+  if (fileOrError) {
     // Transfer ownership to "out" File parameter.
-    std::unique_ptr<lld::File> f = std::move(foe.get());
+    std::unique_ptr<lld::File> f = std::move(fileOrError.get());
     file = f.release();
     return true;
   } else {
-    io.setError(foe.getError().message());
+    std::string buffer;
+    llvm::raw_string_ostream stream(buffer);
+    handleAllErrors(fileOrError.takeError(),
+                    [&](const llvm::ErrorInfoBase &EI) {
+      EI.log(stream);
+      stream << "\n";
+    });
+    io.setError(stream.str());
     return false;
   }
 }
@@ -769,7 +800,7 @@ bool MachOYamlIOTaggedDocumentHandler::handledDocTag(llvm::yaml::IO &io,
 namespace normalized {
 
 /// Parses a yaml encoded mach-o file to produce an in-memory normalized view.
-ErrorOr<std::unique_ptr<NormalizedFile>>
+llvm::Expected<std::unique_ptr<NormalizedFile>>
 readYaml(std::unique_ptr<MemoryBuffer> &mb) {
   // Make empty NormalizedFile.
   std::unique_ptr<NormalizedFile> f(new NormalizedFile());
@@ -783,8 +814,9 @@ readYaml(std::unique_ptr<MemoryBuffer> &mb) {
   yin >> *f;
 
   // Return error if there were parsing problems.
-  if (yin.error())
-    return make_error_code(lld::YamlReaderError::illegal_value);
+  if (auto ec = yin.error())
+    return llvm::make_error<GenericError>(Twine("YAML parsing error: ")
+                                          + ec.message());
 
   // Hand ownership of instantiated NormalizedFile to caller.
   return std::move(f);

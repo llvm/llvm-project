@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ConvertUTF.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -138,7 +139,15 @@ ConnectionGenericFile::Connect(const char *s, Error *error_ptr)
     // Open the file for overlapped access.  If it does not exist, create it.  We open it overlapped
     // so that we can issue asynchronous reads and then use WaitForMultipleObjects to allow the read
     // to be interrupted by an event object.
-    m_file = ::CreateFile(path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_FLAG_OVERLAPPED, NULL);
+    std::wstring wpath;
+    if (!llvm::ConvertUTF8toWide(path, wpath))
+    {
+        if (error_ptr)
+            error_ptr->SetError(1, eErrorTypeGeneric);
+        return eConnectionStatusError;
+    }
+    m_file = ::CreateFileW(wpath.c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_ALWAYS,
+                           FILE_FLAG_OVERLAPPED, NULL);
     if (m_file == INVALID_HANDLE_VALUE)
     {
         if (error_ptr)

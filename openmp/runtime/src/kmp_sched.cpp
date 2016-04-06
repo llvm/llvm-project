@@ -164,6 +164,9 @@ __kmp_for_static_init(
     }
 
     #if OMP_40_ENABLED
+    // Although there are schedule enumerations above kmp_ord_upper which are not schedules for "distribute",
+    // the only ones which are useful are dynamic, so cannot be seen here, since this codepath is only executed
+    // for static schedules.
     if ( schedtype > kmp_ord_upper ) {
         // we are in DISTRIBUTE construct
         schedtype += kmp_sch_static - kmp_distribute_static;      // AC: convert to usual schedule type

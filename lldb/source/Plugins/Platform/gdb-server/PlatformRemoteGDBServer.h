@@ -224,6 +224,9 @@ public:
                     lldb_private::Target *target,
                     lldb_private::Error &error) override;
 
+    size_t
+    ConnectToWaitingProcesses(lldb_private::Debugger& debugger, lldb_private::Error& error) override;
+
     virtual size_t
     GetPendingGdbServerList(std::vector<std::string>& connection_urls);
 

@@ -293,7 +293,7 @@ __isl_give isl_union_map *isl_ast_build_substitute_values_union_map_domain(
 int isl_ast_build_aff_is_nonneg(__isl_keep isl_ast_build *build,
 	__isl_keep isl_aff *aff);
 
-int isl_ast_build_has_stride(__isl_keep isl_ast_build *build, int pos);
+isl_bool isl_ast_build_has_stride(__isl_keep isl_ast_build *build, int pos);
 __isl_give isl_aff *isl_ast_build_get_offset(__isl_keep isl_ast_build *build,
 	int pos);
 __isl_give isl_val *isl_ast_build_get_stride(__isl_keep isl_ast_build *build,

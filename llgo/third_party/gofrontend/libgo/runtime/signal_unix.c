@@ -93,6 +93,29 @@ runtime_sigdisable(uint32 sig)
 }
 
 void
+runtime_sigignore(uint32 sig)
+{
+	int32 i;
+	SigTab *t;
+
+	t = nil;
+	for(i = 0; runtime_sigtab[i].sig != -1; i++) {
+		if(runtime_sigtab[i].sig == (int32)sig) {
+			t = &runtime_sigtab[i];
+			break;
+		}
+	}
+
+	if(t == nil)
+		return;
+
+	if((t->flags & SigNotify) != 0) {
+		t->flags &= ~SigHandling;
+		runtime_setsig(i, GO_SIG_IGN, true);
+	}
+}
+
+void
 runtime_resetcpuprofiler(int32 hz)
 {
 	struct itimerval it;

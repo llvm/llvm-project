@@ -47,6 +47,7 @@
 #include "ProcessWindowsLive.h"
 #include "TargetThreadWindowsLive.h"
 
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -61,17 +62,19 @@ namespace
 std::string
 GetProcessExecutableName(HANDLE process_handle)
 {
-    std::vector<char> file_name;
+    std::vector<wchar_t> file_name;
     DWORD file_name_size = MAX_PATH;  // first guess, not an absolute limit
     DWORD copied = 0;
     do
     {
         file_name_size *= 2;
         file_name.resize(file_name_size);
-        copied = ::GetModuleFileNameEx(process_handle, NULL, file_name.data(), file_name_size);
+        copied = ::GetModuleFileNameExW(process_handle, NULL, file_name.data(), file_name_size);
     } while (copied >= file_name_size);
     file_name.resize(copied);
-    return std::string(file_name.begin(), file_name.end());
+    std::string result;
+    llvm::convertWideToUTF8(file_name.data(), result);
+    return result;
 }
 
 std::string
@@ -121,9 +124,9 @@ class ProcessWindowsData
 // Static functions.
 
 ProcessSP
-ProcessWindowsLive::CreateInstance(lldb::TargetSP target_sp, Listener &listener, const FileSpec *)
+ProcessWindowsLive::CreateInstance(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp, const FileSpec *)
 {
-    return ProcessSP(new ProcessWindowsLive(target_sp, listener));
+    return ProcessSP(new ProcessWindowsLive(target_sp, listener_sp));
 }
 
 void
@@ -142,8 +145,8 @@ ProcessWindowsLive::Initialize()
 //------------------------------------------------------------------------------
 // Constructors and destructors.
 
-ProcessWindowsLive::ProcessWindowsLive(lldb::TargetSP target_sp, Listener &listener)
-    : lldb_private::ProcessWindows(target_sp, listener)
+ProcessWindowsLive::ProcessWindowsLive(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
+    : lldb_private::ProcessWindows(target_sp, listener_sp)
 {
 }
 

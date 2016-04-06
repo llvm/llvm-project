@@ -1,8 +1,6 @@
 ; RUN: opt %loadPolly -basicaa -loop-rotate -indvars       -polly-prepare -polly-scops -analyze < %s | FileCheck %s
 ; RUN: opt %loadPolly -basicaa -loop-rotate -indvars -licm -polly-prepare -polly-scops -analyze < %s | FileCheck %s
 ;
-; XFAIL: *
-;
 ;    void foo(int n, float A[static const restrict n],
 ;             float B[static const restrict n], int j) {
 ;      for (int i = 0; i < n; i++)
@@ -39,11 +37,14 @@ for.end:                                          ; preds = %for.cond
   ret void
 }
 
-
+; CHECK:      Invariant Accesses: {
+; CHECK-NEXT:   ReadAccess := [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:       [n, j] -> { Stmt_{{[a-zA-Z_]*}}[{{[i0]*}}] -> MemRef_B[j] };
+; CHECK-NEXT:       Execution Context: [n, j] -> {  : n > 0 }
+; CHECK-NEXT: }
+;
 ; CHECK: Statements {
 ; CHECK:      Stmt_for_body
-; CHECK-DAG:     ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:        [n, j] -> { Stmt_for_body[i0] -> MemRef_B[j] };
-; CHECK=DAG:     MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
+; CHECK-DAG:     MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:        [n, j] -> { Stmt_for_body[i0] -> MemRef_A[i0] };
 ; CHECK:     }

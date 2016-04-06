@@ -34,10 +34,10 @@ public:
     ExceptionSearchFilter (const lldb::TargetSP &target_sp,
                            lldb::LanguageType language,
                            bool update_module_list = true) :
-        SearchFilter (target_sp),
-        m_language (language),
-        m_language_runtime (NULL),
-        m_filter_sp ()
+        SearchFilter(target_sp),
+        m_language(language),
+        m_language_runtime(nullptr),
+        m_filter_sp()
     {
         if (update_module_list)
             UpdateModuleListIfNeeded ();
@@ -97,7 +97,7 @@ protected:
         if (process_sp)
         {
             bool refreash_filter = !m_filter_sp;
-            if (m_language_runtime == NULL)
+            if (m_language_runtime == nullptr)
             {
                 m_language_runtime = process_sp->GetLanguageRuntime(m_language);
                 refreash_filter = true;
@@ -120,7 +120,7 @@ protected:
         else
         {
             m_filter_sp.reset();
-            m_language_runtime = NULL;
+            m_language_runtime = nullptr;
         }
     }
 };
@@ -133,11 +133,11 @@ public:
     ExceptionBreakpointResolver (lldb::LanguageType language,
                                  bool catch_bp,
                                  bool throw_bp) :
-        BreakpointResolver (NULL, BreakpointResolver::ExceptionResolver),
-        m_language (language),
-        m_language_runtime (NULL),
-        m_catch_bp (catch_bp),
-        m_throw_bp (throw_bp)
+        BreakpointResolver(nullptr, BreakpointResolver::ExceptionResolver),
+        m_language(language),
+        m_language_runtime(nullptr),
+        m_catch_bp(catch_bp),
+        m_throw_bp(throw_bp)
     {
     }
 
@@ -212,7 +212,7 @@ protected:
             if (process_sp)
             {
                 bool refreash_resolver = !m_actual_resolver_sp;
-                if (m_language_runtime == NULL)
+                if (m_language_runtime == nullptr)
                 {
                     m_language_runtime = process_sp->GetLanguageRuntime(m_language);
                     refreash_resolver = true;
@@ -235,16 +235,17 @@ protected:
             else
             {
                 m_actual_resolver_sp.reset();
-                m_language_runtime = NULL;
+                m_language_runtime = nullptr;
             }
         }
         else
         {
             m_actual_resolver_sp.reset();
-            m_language_runtime = NULL;
+            m_language_runtime = nullptr;
         }
         return (bool)m_actual_resolver_sp;
     }
+
     lldb::BreakpointResolverSP m_actual_resolver_sp;
     lldb::LanguageType m_language;
     LanguageRuntime *m_language_runtime;
@@ -260,16 +261,16 @@ LanguageRuntime::FindPlugin (Process *process, lldb::LanguageType language)
     LanguageRuntimeCreateInstance create_callback;
 
     for (uint32_t idx = 0;
-         (create_callback = PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(idx)) != NULL;
+         (create_callback = PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(idx)) != nullptr;
          ++idx)
     {
         language_runtime_ap.reset (create_callback(process, language));
 
-        if (language_runtime_ap.get())
+        if (language_runtime_ap)
             return language_runtime_ap.release();
     }
 
-    return NULL;
+    return nullptr;
 }
 
 LanguageRuntime::LanguageRuntime(Process *process) :
@@ -359,7 +360,7 @@ LanguageRuntime::InitializeCommands (CommandObject* parent)
 lldb::SearchFilterSP
 LanguageRuntime::CreateExceptionSearchFilter ()
 {
-    return m_process->GetTarget().GetSearchFilterForModule(NULL);
+    return m_process->GetTarget().GetSearchFilterForModule(nullptr);
 }
 
 lldb::LanguageType

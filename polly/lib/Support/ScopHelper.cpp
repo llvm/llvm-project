@@ -249,10 +249,15 @@ private:
   const SCEV *visitUnknown(const SCEVUnknown *E) {
 
     // If a value mapping was given try if the underlying value is remapped.
-    if (VMap)
-      if (Value *NewVal = VMap->lookup(E->getValue()))
-        if (NewVal != E->getValue())
-          return visit(SE.getSCEV(NewVal));
+    Value *NewVal = VMap ? VMap->lookup(E->getValue()) : nullptr;
+    if (NewVal) {
+      auto *NewE = SE.getSCEV(NewVal);
+
+      // While the mapped value might be different the SCEV representation might
+      // not be. To this end we will check before we go into recursion here.
+      if (E != NewE)
+        return visit(NewE);
+    }
 
     Instruction *Inst = dyn_cast<Instruction>(E->getValue());
     if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
@@ -431,13 +436,13 @@ bool polly::isIgnoredIntrinsic(const Value *V) {
 }
 
 bool polly::canSynthesize(const Value *V, const llvm::LoopInfo *LI,
-                          ScalarEvolution *SE, const Region *R) {
+                          ScalarEvolution *SE, const Region *R, Loop *Scope) {
   if (!V || !SE->isSCEVable(V->getType()))
     return false;
 
-  if (const SCEV *Scev = SE->getSCEV(const_cast<Value *>(V)))
+  if (const SCEV *Scev = SE->getSCEVAtScope(const_cast<Value *>(V), Scope))
     if (!isa<SCEVCouldNotCompute>(Scev))
-      if (!hasScalarDepsInsideRegion(Scev, R))
+      if (!hasScalarDepsInsideRegion(Scev, R, Scope, false))
         return true;
 
   return false;

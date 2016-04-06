@@ -28,6 +28,9 @@ __go_type_hash_string (const void *vkey,
   return ret;
 }
 
+const FuncVal __go_type_hash_string_descriptor =
+  { (void *) __go_type_hash_string };
+
 /* A string equality function for a map.  */
 
 _Bool
@@ -41,3 +44,6 @@ __go_type_equal_string (const void *vk1, const void *vk2,
   k2 = (const String *) vk2;
   return __go_ptr_strings_equal (k1, k2);
 }
+
+const FuncVal __go_type_equal_string_descriptor =
+  { (void *) __go_type_equal_string };

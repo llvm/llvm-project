@@ -11,6 +11,9 @@
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/ConvertUTF.h"
+
 #include <string>
 #include <vector>
 
@@ -25,20 +28,18 @@ CreateEnvironmentBuffer(const Args &env, std::vector<char> &buffer)
     if (env.GetArgumentCount() == 0)
         return;
 
-    int bytes = 0;
-    for (int i = 0; i < env.GetArgumentCount(); ++i)
-        bytes += strlen(env.GetArgumentAtIndex(i)) + sizeof(char);
-    bytes += sizeof(char);
-    buffer.resize(bytes);
-    char *cur_entry = &buffer[0];
+    // Environment buffer is a null terminated list of null terminated strings
     for (int i = 0; i < env.GetArgumentCount(); ++i)
     {
-        ::strcpy(cur_entry, env.GetArgumentAtIndex(i));
-        cur_entry += strlen(cur_entry) + sizeof(char);
+        std::wstring warg;
+        if (llvm::ConvertUTF8toWide(env.GetArgumentAtIndex(i), warg))
+        {
+            buffer.insert(buffer.end(), (char *)warg.c_str(), (char *)(warg.c_str() + warg.size() + 1));
+        }
     }
-    // Environment buffer is a null terminated list of null terminated
-    // strings, so it is terminated by two null bytes.
-    buffer.back() = 0;
+    // One null wchar_t (to end the block) is two null bytes
+    buffer.push_back(0);
+    buffer.push_back(0);
 }
 }
 
@@ -70,7 +71,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info, Erro
         startupinfo.wShowWindow = SW_HIDE;
     }
 
-    DWORD flags = CREATE_NEW_CONSOLE;
+    DWORD flags = CREATE_NEW_CONSOLE | CREATE_UNICODE_ENVIRONMENT;
     if (launch_info.GetFlags().Test(eLaunchFlagDebug))
         flags |= DEBUG_ONLY_THIS_PROCESS;
 
@@ -82,8 +83,15 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info, Erro
 
     executable = launch_info.GetExecutableFile().GetPath();
     launch_info.GetArguments().GetQuotedCommandString(commandLine);
-    BOOL result = ::CreateProcessA(executable.c_str(), const_cast<char *>(commandLine.c_str()), NULL, NULL, TRUE, flags,
-                                   env_block, launch_info.GetWorkingDirectory().GetCString(), &startupinfo, &pi);
+
+    std::wstring wexecutable, wcommandLine, wworkingDirectory;
+    llvm::ConvertUTF8toWide(executable, wexecutable);
+    llvm::ConvertUTF8toWide(commandLine, wcommandLine);
+    llvm::ConvertUTF8toWide(launch_info.GetWorkingDirectory().GetCString(), wworkingDirectory);
+
+    wcommandLine.resize(PATH_MAX); // Needs to be over-allocated because CreateProcessW can modify it
+    BOOL result = ::CreateProcessW(wexecutable.c_str(), &wcommandLine[0], NULL, NULL, TRUE, flags, env_block,
+                                   wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(), &startupinfo, &pi);
     if (result)
     {
         // Do not call CloseHandle on pi.hProcess, since we want to pass that back through the HostProcess.
@@ -131,6 +139,8 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info, int
             flags = FILE_FLAG_WRITE_THROUGH;
     }
 
-    HANDLE result = ::CreateFile(path, access, share, &secattr, create, flags, NULL);
+    std::wstring wpath;
+    llvm::ConvertUTF8toWide(path, wpath);
+    HANDLE result = ::CreateFileW(wpath.c_str(), access, share, &secattr, create, flags, NULL);
     return (result == INVALID_HANDLE_VALUE) ? NULL : result;
 }

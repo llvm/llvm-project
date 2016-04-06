@@ -40,7 +40,7 @@ public:
     //------------------------------------------------------------------
     static lldb::ProcessSP
     CreateInstance (lldb::TargetSP target_sp,
-                    lldb_private::Listener &listener,
+                    lldb::ListenerSP listener_sp,
                     const lldb_private::FileSpec *crash_file_path);
     
     static void
@@ -61,7 +61,7 @@ public:
     //------------------------------------------------------------------
     // Constructors and Destructors
     //------------------------------------------------------------------
-    ProcessKDP(lldb::TargetSP target_sp, lldb_private::Listener &listener);
+    ProcessKDP(lldb::TargetSP target_sp, lldb::ListenerSP listener);
     
     virtual
     ~ProcessKDP();

@@ -3,9 +3,8 @@
 misc-bool-pointer-implicit-conversion
 =====================================
 
-
-Checks for conditions based on implicit conversion from a bool pointer to
-bool.
+Checks for conditions based on implicit conversion from a ``bool`` pointer to
+``bool``.
 
 Example:
 

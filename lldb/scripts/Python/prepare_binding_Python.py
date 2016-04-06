@@ -16,7 +16,7 @@ import re
 import shutil
 import subprocess
 import sys
-
+import platform
 
 class SwigSettings(object):
     """Provides a single object to represent swig files and settings."""
@@ -205,6 +205,8 @@ def do_swig_rebuild(options, dependency_file, config_build_dir, settings):
         "-I\"%s\"" % os.path.normcase("./."),
         "-D__STDC_LIMIT_MACROS",
         "-D__STDC_CONSTANT_MACROS"]
+    if options.target_platform == "Darwin":
+        command.append("-D__APPLE__")
     if options.generate_dependency_file:
         command.append("-MMD -MF \"%s\"" % temp_dep_file_path)
     command.extend([

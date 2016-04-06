@@ -839,7 +839,11 @@ CountLocals (SymbolContext &sc,
             constexpr bool get_parent_variables = false;
             constexpr bool stop_if_block_is_inlined_function = true;
             
-            block->AppendVariables(can_create, get_parent_variables, stop_if_block_is_inlined_function, &variables);
+            block->AppendVariables(can_create,
+                                   get_parent_variables,
+                                   stop_if_block_is_inlined_function,
+                                   [](Variable*) { return true; },
+                                   &variables);
         }
         else
         {

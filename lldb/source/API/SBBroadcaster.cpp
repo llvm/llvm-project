@@ -117,14 +117,14 @@ SBBroadcaster::AddInitialEventsToListener (const SBListener &listener, uint32_t 
                      static_cast<void*>(m_opaque_ptr),
                      static_cast<void*>(listener.get()), requested_events);
     if (m_opaque_ptr)
-        m_opaque_ptr->AddInitialEventsToListener (listener.get(), requested_events);
+        m_opaque_ptr->AddInitialEventsToListener (listener.m_opaque_sp, requested_events);
 }
 
 uint32_t
 SBBroadcaster::AddListener (const SBListener &listener, uint32_t event_mask)
 {
     if (m_opaque_ptr)
-        return m_opaque_ptr->AddListener (listener.get(), event_mask);
+        return m_opaque_ptr->AddListener (listener.m_opaque_sp, event_mask);
     return 0;
 }
 
@@ -148,7 +148,7 @@ bool
 SBBroadcaster::RemoveListener (const SBListener &listener, uint32_t event_mask)
 {
     if (m_opaque_ptr)
-        return m_opaque_ptr->RemoveListener (listener.get(), event_mask);
+        return m_opaque_ptr->RemoveListener (listener.m_opaque_sp, event_mask);
     return false;
 }
 

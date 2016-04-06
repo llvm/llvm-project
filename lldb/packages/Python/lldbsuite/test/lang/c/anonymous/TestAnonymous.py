@@ -112,6 +112,17 @@ class AnonymousTestCase(TestBase):
         if not error.Success() or value != 0:
             self.fail ("failed to get the correct value for element a in n")
 
+    def test_nest_flat(self):
+        self.build()
+        self.common_setup(self.line2)
+
+        # These should display correctly.
+        self.expect('frame variable n --flat',
+                    substrs = ['n.a = 0',
+                               'n.b = 2',
+                               'n.foo.c = 0',
+                               'n.foo.d = 4'])
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

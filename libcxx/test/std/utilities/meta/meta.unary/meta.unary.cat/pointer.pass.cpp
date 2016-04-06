@@ -12,12 +12,14 @@
 // pointer
 
 #include <type_traits>
+#include "test_macros.h"
+
 
 template <class T>
 void test_pointer_imp()
 {
     static_assert(!std::is_void<T>::value, "");
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     static_assert(!std::is_null_pointer<T>::value, "");
 #endif
     static_assert(!std::is_integral<T>::value, "");
@@ -43,10 +45,15 @@ void test_pointer()
     test_pointer_imp<const volatile T>();
 }
 
+struct incomplete_type;
+
 int main()
 {
     test_pointer<void*>();
     test_pointer<int*>();
     test_pointer<const int*>();
     test_pointer<void (*)(int)>();
+
+//  LWG#2581
+    static_assert(!std::is_pointer<incomplete_type>::value, "");
 }

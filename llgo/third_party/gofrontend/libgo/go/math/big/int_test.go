@@ -219,334 +219,42 @@ func TestMulRangeZ(t *testing.T) {
 	}
 }
 
-var stringTests = []struct {
-	in   string
-	out  string
-	base int
-	val  int64
-	ok   bool
-}{
-	{in: "", ok: false},
-	{in: "a", ok: false},
-	{in: "z", ok: false},
-	{in: "+", ok: false},
-	{in: "-", ok: false},
-	{in: "0b", ok: false},
-	{in: "0x", ok: false},
-	{in: "2", base: 2, ok: false},
-	{in: "0b2", base: 0, ok: false},
-	{in: "08", ok: false},
-	{in: "8", base: 8, ok: false},
-	{in: "0xg", base: 0, ok: false},
-	{in: "g", base: 16, ok: false},
-	{"0", "0", 0, 0, true},
-	{"0", "0", 10, 0, true},
-	{"0", "0", 16, 0, true},
-	{"+0", "0", 0, 0, true},
-	{"-0", "0", 0, 0, true},
-	{"10", "10", 0, 10, true},
-	{"10", "10", 10, 10, true},
-	{"10", "10", 16, 16, true},
-	{"-10", "-10", 16, -16, true},
-	{"+10", "10", 16, 16, true},
-	{"0x10", "16", 0, 16, true},
-	{in: "0x10", base: 16, ok: false},
-	{"-0x10", "-16", 0, -16, true},
-	{"+0x10", "16", 0, 16, true},
-	{"00", "0", 0, 0, true},
-	{"0", "0", 8, 0, true},
-	{"07", "7", 0, 7, true},
-	{"7", "7", 8, 7, true},
-	{"023", "19", 0, 19, true},
-	{"23", "23", 8, 19, true},
-	{"cafebabe", "cafebabe", 16, 0xcafebabe, true},
-	{"0b0", "0", 0, 0, true},
-	{"-111", "-111", 2, -7, true},
-	{"-0b111", "-7", 0, -7, true},
-	{"0b1001010111", "599", 0, 0x257, true},
-	{"1001010111", "1001010111", 2, 0x257, true},
-}
-
-func format(base int) string {
-	switch base {
-	case 2:
-		return "%b"
-	case 8:
-		return "%o"
-	case 16:
-		return "%x"
-	}
-	return "%d"
-}
-
-func TestGetString(t *testing.T) {
-	z := new(Int)
-	for i, test := range stringTests {
-		if !test.ok {
-			continue
-		}
-		z.SetInt64(test.val)
-
-		if test.base == 10 {
-			s := z.String()
-			if s != test.out {
-				t.Errorf("#%da got %s; want %s", i, s, test.out)
-			}
-		}
-
-		s := fmt.Sprintf(format(test.base), z)
-		if s != test.out {
-			t.Errorf("#%db got %s; want %s", i, s, test.out)
+func TestBinomial(t *testing.T) {
+	var z Int
+	for _, test := range []struct {
+		n, k int64
+		want string
+	}{
+		{0, 0, "1"},
+		{0, 1, "0"},
+		{1, 0, "1"},
+		{1, 1, "1"},
+		{1, 10, "0"},
+		{4, 0, "1"},
+		{4, 1, "4"},
+		{4, 2, "6"},
+		{4, 3, "4"},
+		{4, 4, "1"},
+		{10, 1, "10"},
+		{10, 9, "10"},
+		{10, 5, "252"},
+		{11, 5, "462"},
+		{11, 6, "462"},
+		{100, 10, "17310309456440"},
+		{100, 90, "17310309456440"},
+		{1000, 10, "263409560461970212832400"},
+		{1000, 990, "263409560461970212832400"},
+	} {
+		if got := z.Binomial(test.n, test.k).String(); got != test.want {
+			t.Errorf("Binomial(%d, %d) = %s; want %s", test.n, test.k, got, test.want)
 		}
 	}
 }
 
-func TestSetString(t *testing.T) {
-	tmp := new(Int)
-	for i, test := range stringTests {
-		// initialize to a non-zero value so that issues with parsing
-		// 0 are detected
-		tmp.SetInt64(1234567890)
-		n1, ok1 := new(Int).SetString(test.in, test.base)
-		n2, ok2 := tmp.SetString(test.in, test.base)
-		expected := NewInt(test.val)
-		if ok1 != test.ok || ok2 != test.ok {
-			t.Errorf("#%d (input '%s') ok incorrect (should be %t)", i, test.in, test.ok)
-			continue
-		}
-		if !ok1 {
-			if n1 != nil {
-				t.Errorf("#%d (input '%s') n1 != nil", i, test.in)
-			}
-			continue
-		}
-		if !ok2 {
-			if n2 != nil {
-				t.Errorf("#%d (input '%s') n2 != nil", i, test.in)
-			}
-			continue
-		}
-
-		if ok1 && !isNormalized(n1) {
-			t.Errorf("#%d (input '%s'): %v is not normalized", i, test.in, *n1)
-		}
-		if ok2 && !isNormalized(n2) {
-			t.Errorf("#%d (input '%s'): %v is not normalized", i, test.in, *n2)
-		}
-
-		if n1.Cmp(expected) != 0 {
-			t.Errorf("#%d (input '%s') got: %s want: %d", i, test.in, n1, test.val)
-		}
-		if n2.Cmp(expected) != 0 {
-			t.Errorf("#%d (input '%s') got: %s want: %d", i, test.in, n2, test.val)
-		}
-	}
-}
-
-var formatTests = []struct {
-	input  string
-	format string
-	output string
-}{
-	{"<nil>", "%x", "<nil>"},
-	{"<nil>", "%#x", "<nil>"},
-	{"<nil>", "%#y", "%!y(big.Int=<nil>)"},
-
-	{"10", "%b", "1010"},
-	{"10", "%o", "12"},
-	{"10", "%d", "10"},
-	{"10", "%v", "10"},
-	{"10", "%x", "a"},
-	{"10", "%X", "A"},
-	{"-10", "%X", "-A"},
-	{"10", "%y", "%!y(big.Int=10)"},
-	{"-10", "%y", "%!y(big.Int=-10)"},
-
-	{"10", "%#b", "1010"},
-	{"10", "%#o", "012"},
-	{"10", "%#d", "10"},
-	{"10", "%#v", "10"},
-	{"10", "%#x", "0xa"},
-	{"10", "%#X", "0XA"},
-	{"-10", "%#X", "-0XA"},
-	{"10", "%#y", "%!y(big.Int=10)"},
-	{"-10", "%#y", "%!y(big.Int=-10)"},
-
-	{"1234", "%d", "1234"},
-	{"1234", "%3d", "1234"},
-	{"1234", "%4d", "1234"},
-	{"-1234", "%d", "-1234"},
-	{"1234", "% 5d", " 1234"},
-	{"1234", "%+5d", "+1234"},
-	{"1234", "%-5d", "1234 "},
-	{"1234", "%x", "4d2"},
-	{"1234", "%X", "4D2"},
-	{"-1234", "%3x", "-4d2"},
-	{"-1234", "%4x", "-4d2"},
-	{"-1234", "%5x", " -4d2"},
-	{"-1234", "%-5x", "-4d2 "},
-	{"1234", "%03d", "1234"},
-	{"1234", "%04d", "1234"},
-	{"1234", "%05d", "01234"},
-	{"1234", "%06d", "001234"},
-	{"-1234", "%06d", "-01234"},
-	{"1234", "%+06d", "+01234"},
-	{"1234", "% 06d", " 01234"},
-	{"1234", "%-6d", "1234  "},
-	{"1234", "%-06d", "1234  "},
-	{"-1234", "%-06d", "-1234 "},
-
-	{"1234", "%.3d", "1234"},
-	{"1234", "%.4d", "1234"},
-	{"1234", "%.5d", "01234"},
-	{"1234", "%.6d", "001234"},
-	{"-1234", "%.3d", "-1234"},
-	{"-1234", "%.4d", "-1234"},
-	{"-1234", "%.5d", "-01234"},
-	{"-1234", "%.6d", "-001234"},
-
-	{"1234", "%8.3d", "    1234"},
-	{"1234", "%8.4d", "    1234"},
-	{"1234", "%8.5d", "   01234"},
-	{"1234", "%8.6d", "  001234"},
-	{"-1234", "%8.3d", "   -1234"},
-	{"-1234", "%8.4d", "   -1234"},
-	{"-1234", "%8.5d", "  -01234"},
-	{"-1234", "%8.6d", " -001234"},
-
-	{"1234", "%+8.3d", "   +1234"},
-	{"1234", "%+8.4d", "   +1234"},
-	{"1234", "%+8.5d", "  +01234"},
-	{"1234", "%+8.6d", " +001234"},
-	{"-1234", "%+8.3d", "   -1234"},
-	{"-1234", "%+8.4d", "   -1234"},
-	{"-1234", "%+8.5d", "  -01234"},
-	{"-1234", "%+8.6d", " -001234"},
-
-	{"1234", "% 8.3d", "    1234"},
-	{"1234", "% 8.4d", "    1234"},
-	{"1234", "% 8.5d", "   01234"},
-	{"1234", "% 8.6d", "  001234"},
-	{"-1234", "% 8.3d", "   -1234"},
-	{"-1234", "% 8.4d", "   -1234"},
-	{"-1234", "% 8.5d", "  -01234"},
-	{"-1234", "% 8.6d", " -001234"},
-
-	{"1234", "%.3x", "4d2"},
-	{"1234", "%.4x", "04d2"},
-	{"1234", "%.5x", "004d2"},
-	{"1234", "%.6x", "0004d2"},
-	{"-1234", "%.3x", "-4d2"},
-	{"-1234", "%.4x", "-04d2"},
-	{"-1234", "%.5x", "-004d2"},
-	{"-1234", "%.6x", "-0004d2"},
-
-	{"1234", "%8.3x", "     4d2"},
-	{"1234", "%8.4x", "    04d2"},
-	{"1234", "%8.5x", "   004d2"},
-	{"1234", "%8.6x", "  0004d2"},
-	{"-1234", "%8.3x", "    -4d2"},
-	{"-1234", "%8.4x", "   -04d2"},
-	{"-1234", "%8.5x", "  -004d2"},
-	{"-1234", "%8.6x", " -0004d2"},
-
-	{"1234", "%+8.3x", "    +4d2"},
-	{"1234", "%+8.4x", "   +04d2"},
-	{"1234", "%+8.5x", "  +004d2"},
-	{"1234", "%+8.6x", " +0004d2"},
-	{"-1234", "%+8.3x", "    -4d2"},
-	{"-1234", "%+8.4x", "   -04d2"},
-	{"-1234", "%+8.5x", "  -004d2"},
-	{"-1234", "%+8.6x", " -0004d2"},
-
-	{"1234", "% 8.3x", "     4d2"},
-	{"1234", "% 8.4x", "    04d2"},
-	{"1234", "% 8.5x", "   004d2"},
-	{"1234", "% 8.6x", "  0004d2"},
-	{"1234", "% 8.7x", " 00004d2"},
-	{"1234", "% 8.8x", " 000004d2"},
-	{"-1234", "% 8.3x", "    -4d2"},
-	{"-1234", "% 8.4x", "   -04d2"},
-	{"-1234", "% 8.5x", "  -004d2"},
-	{"-1234", "% 8.6x", " -0004d2"},
-	{"-1234", "% 8.7x", "-00004d2"},
-	{"-1234", "% 8.8x", "-000004d2"},
-
-	{"1234", "%-8.3d", "1234    "},
-	{"1234", "%-8.4d", "1234    "},
-	{"1234", "%-8.5d", "01234   "},
-	{"1234", "%-8.6d", "001234  "},
-	{"1234", "%-8.7d", "0001234 "},
-	{"1234", "%-8.8d", "00001234"},
-	{"-1234", "%-8.3d", "-1234   "},
-	{"-1234", "%-8.4d", "-1234   "},
-	{"-1234", "%-8.5d", "-01234  "},
-	{"-1234", "%-8.6d", "-001234 "},
-	{"-1234", "%-8.7d", "-0001234"},
-	{"-1234", "%-8.8d", "-00001234"},
-
-	{"16777215", "%b", "111111111111111111111111"}, // 2**24 - 1
-
-	{"0", "%.d", ""},
-	{"0", "%.0d", ""},
-	{"0", "%3.d", ""},
-}
-
-func TestFormat(t *testing.T) {
-	for i, test := range formatTests {
-		var x *Int
-		if test.input != "<nil>" {
-			var ok bool
-			x, ok = new(Int).SetString(test.input, 0)
-			if !ok {
-				t.Errorf("#%d failed reading input %s", i, test.input)
-			}
-		}
-		output := fmt.Sprintf(test.format, x)
-		if output != test.output {
-			t.Errorf("#%d got %q; want %q, {%q, %q, %q}", i, output, test.output, test.input, test.format, test.output)
-		}
-	}
-}
-
-var scanTests = []struct {
-	input     string
-	format    string
-	output    string
-	remaining int
-}{
-	{"1010", "%b", "10", 0},
-	{"0b1010", "%v", "10", 0},
-	{"12", "%o", "10", 0},
-	{"012", "%v", "10", 0},
-	{"10", "%d", "10", 0},
-	{"10", "%v", "10", 0},
-	{"a", "%x", "10", 0},
-	{"0xa", "%v", "10", 0},
-	{"A", "%X", "10", 0},
-	{"-A", "%X", "-10", 0},
-	{"+0b1011001", "%v", "89", 0},
-	{"0xA", "%v", "10", 0},
-	{"0 ", "%v", "0", 1},
-	{"2+3", "%v", "2", 2},
-	{"0XABC 12", "%v", "2748", 3},
-}
-
-func TestScan(t *testing.T) {
-	var buf bytes.Buffer
-	for i, test := range scanTests {
-		x := new(Int)
-		buf.Reset()
-		buf.WriteString(test.input)
-		if _, err := fmt.Fscanf(&buf, test.format, x); err != nil {
-			t.Errorf("#%d error: %s", i, err)
-		}
-		if x.String() != test.output {
-			t.Errorf("#%d got %s; want %s", i, x.String(), test.output)
-		}
-		if buf.Len() != test.remaining {
-			t.Errorf("#%d got %d bytes remaining; want %d", i, buf.Len(), test.remaining)
-		}
+func BenchmarkBinomial(b *testing.B) {
+	var z Int
+	for i := b.N - 1; i >= 0; i-- {
+		z.Binomial(1000, 990)
 	}
 }
 
@@ -621,6 +329,42 @@ func TestDivisionSigns(t *testing.T) {
 	}
 }
 
+func norm(x nat) nat {
+	i := len(x)
+	for i > 0 && x[i-1] == 0 {
+		i--
+	}
+	return x[:i]
+}
+
+func TestBits(t *testing.T) {
+	for _, test := range []nat{
+		nil,
+		{0},
+		{1},
+		{0, 1, 2, 3, 4},
+		{4, 3, 2, 1, 0},
+		{4, 3, 2, 1, 0, 0, 0, 0},
+	} {
+		var z Int
+		z.neg = true
+		got := z.SetBits(test)
+		want := norm(test)
+		if got.abs.cmp(want) != 0 {
+			t.Errorf("SetBits(%v) = %v; want %v", test, got.abs, want)
+		}
+
+		if got.neg {
+			t.Errorf("SetBits(%v): got negative result", test)
+		}
+
+		bits := nat(z.Bits())
+		if bits.cmp(want) != 0 {
+			t.Errorf("%v.Bits() = %v; want %v", z.abs, bits, want)
+		}
+	}
+}
+
 func checkSetBytes(b []byte) bool {
 	hex1 := hex.EncodeToString(new(Int).SetBytes(b).Bytes())
 	hex2 := hex.EncodeToString(b)
@@ -648,7 +392,7 @@ func checkBytes(b []byte) bool {
 }
 
 func TestBytes(t *testing.T) {
-	if err := quick.Check(checkSetBytes, nil); err != nil {
+	if err := quick.Check(checkBytes, nil); err != nil {
 		t.Error(err)
 	}
 }
@@ -781,6 +525,7 @@ var expTests = []struct {
 	{"1234", "-1", "1", "0"},
 
 	// misc
+	{"5", "1", "3", "2"},
 	{"5", "-7", "", "1"},
 	{"-5", "-7", "", "1"},
 	{"5", "0", "", "1"},
@@ -917,6 +662,21 @@ func testGcd(t *testing.T, d, x, y, a, b *Int) {
 	if D.Cmp(d) != 0 {
 		t.Errorf("binaryGcd(%s, %s): got d = %s, want %s", a, b, D, d)
 	}
+
+	// check results in presence of aliasing (issue #11284)
+	a2 := new(Int).Set(a)
+	b2 := new(Int).Set(b)
+	a2.binaryGCD(a2, b2) // result is same as 1st argument
+	if a2.Cmp(d) != 0 {
+		t.Errorf("binaryGcd(%s, %s): got d = %s, want %s", a, b, a2, d)
+	}
+
+	a2 = new(Int).Set(a)
+	b2 = new(Int).Set(b)
+	b2.binaryGCD(a2, b2) // result is same as 2nd argument
+	if b2.Cmp(d) != 0 {
+		t.Errorf("binaryGcd(%s, %s): got d = %s, want %s", a, b, b2, d)
+	}
 }
 
 func TestGcd(t *testing.T) {
@@ -948,7 +708,7 @@ var primes = []string{
 	"10953742525620032441",
 	"17908251027575790097",
 
-	// http://code.google.com/p/go/issues/detail?id=638
+	// https://golang.org/issue/638
 	"18699199384836356663",
 
 	"98920366548084643601728869055592650835572950932266967461790948584315647051443",
@@ -959,9 +719,18 @@ var primes = []string{
 	"230975859993204150666423538988557839555560243929065415434980904258310530753006723857139742334640122533598517597674807096648905501653461687601339782814316124971547968912893214002992086353183070342498989426570593",
 	"5521712099665906221540423207019333379125265462121169655563495403888449493493629943498064604536961775110765377745550377067893607246020694972959780839151452457728855382113555867743022746090187341871655890805971735385789993",
 	"203956878356401977405765866929034577280193993314348263094772646453283062722701277632936616063144088173312372882677123879538709400158306567338328279154499698366071906766440037074217117805690872792848149112022286332144876183376326512083574821647933992961249917319836219304274280243803104015000563790123",
+
+	// ECC primes: http://tools.ietf.org/html/draft-ladd-safecurves-02
+	"3618502788666131106986593281521497120414687020801267626233049500247285301239",                                                                                  // Curve1174: 2^251-9
+	"57896044618658097711785492504343953926634992332820282019728792003956564819949",                                                                                 // Curve25519: 2^255-19
+	"9850501549098619803069760025035903451269934817616361666987073351061430442874302652853566563721228910201656997576599",                                           // E-382: 2^382-105
+	"42307582002575910332922579714097346549017899709713998034217522897561970639123926132812109468141778230245837569601494931472367",                                 // Curve41417: 2^414-17
+	"6864797660130609714981900799081393217269435300143305409394463459185543183397656052122559640661454554977296311391480858037121987999716643812574028291115057151", // E-521: 2^521-1
 }
 
 var composites = []string{
+	"0",
+	"1",
 	"21284175091214687912771199898307297748211672914763848041968395774954376176754",
 	"6084766654921918907427900243509372380954290099172559290432744450051395395951",
 	"84594350493221918389213352992032324280367711247940675652888030554255915464401",
@@ -988,6 +757,21 @@ func TestProbablyPrime(t *testing.T) {
 		if testing.Short() {
 			break
 		}
+	}
+
+	// check that ProbablyPrime panics if n <= 0
+	c := NewInt(11) // a prime
+	for _, n := range []int{-1, 0, 1} {
+		func() {
+			defer func() {
+				if n <= 0 && recover() == nil {
+					t.Fatalf("expected panic from ProbablyPrime(%d)", n)
+				}
+			}()
+			if !c.ProbablyPrime(n) {
+				t.Fatalf("%v should be a prime", c)
+			}
+		}()
 	}
 }
 
@@ -1485,6 +1269,136 @@ func TestModInverse(t *testing.T) {
 			}
 		}
 	}
+}
+
+// testModSqrt is a helper for TestModSqrt,
+// which checks that ModSqrt can compute a square-root of elt^2.
+func testModSqrt(t *testing.T, elt, mod, sq, sqrt *Int) bool {
+	var sqChk, sqrtChk, sqrtsq Int
+	sq.Mul(elt, elt)
+	sq.Mod(sq, mod)
+	z := sqrt.ModSqrt(sq, mod)
+	if z != sqrt {
+		t.Errorf("ModSqrt returned wrong value %s", z)
+	}
+
+	// test ModSqrt arguments outside the range [0,mod)
+	sqChk.Add(sq, mod)
+	z = sqrtChk.ModSqrt(&sqChk, mod)
+	if z != &sqrtChk || z.Cmp(sqrt) != 0 {
+		t.Errorf("ModSqrt returned inconsistent value %s", z)
+	}
+	sqChk.Sub(sq, mod)
+	z = sqrtChk.ModSqrt(&sqChk, mod)
+	if z != &sqrtChk || z.Cmp(sqrt) != 0 {
+		t.Errorf("ModSqrt returned inconsistent value %s", z)
+	}
+
+	// make sure we actually got a square root
+	if sqrt.Cmp(elt) == 0 {
+		return true // we found the "desired" square root
+	}
+	sqrtsq.Mul(sqrt, sqrt) // make sure we found the "other" one
+	sqrtsq.Mod(&sqrtsq, mod)
+	return sq.Cmp(&sqrtsq) == 0
+}
+
+func TestModSqrt(t *testing.T) {
+	var elt, mod, modx4, sq, sqrt Int
+	r := rand.New(rand.NewSource(9))
+	for i, s := range primes[1:] { // skip 2, use only odd primes
+		mod.SetString(s, 10)
+		modx4.Lsh(&mod, 2)
+
+		// test a few random elements per prime
+		for x := 1; x < 5; x++ {
+			elt.Rand(r, &modx4)
+			elt.Sub(&elt, &mod) // test range [-mod, 3*mod)
+			if !testModSqrt(t, &elt, &mod, &sq, &sqrt) {
+				t.Errorf("#%d: failed (sqrt(e) = %s)", i, &sqrt)
+			}
+		}
+	}
+
+	// exhaustive test for small values
+	for n := 3; n < 100; n++ {
+		mod.SetInt64(int64(n))
+		if !mod.ProbablyPrime(10) {
+			continue
+		}
+		isSquare := make([]bool, n)
+
+		// test all the squares
+		for x := 1; x < n; x++ {
+			elt.SetInt64(int64(x))
+			if !testModSqrt(t, &elt, &mod, &sq, &sqrt) {
+				t.Errorf("#%d: failed (sqrt(%d,%d) = %s)", x, &elt, &mod, &sqrt)
+			}
+			isSquare[sq.Uint64()] = true
+		}
+
+		// test all non-squares
+		for x := 1; x < n; x++ {
+			sq.SetInt64(int64(x))
+			z := sqrt.ModSqrt(&sq, &mod)
+			if !isSquare[x] && z != nil {
+				t.Errorf("#%d: failed (sqrt(%d,%d) = nil)", x, &sqrt, &mod)
+			}
+		}
+	}
+}
+
+func TestJacobi(t *testing.T) {
+	testCases := []struct {
+		x, y   int64
+		result int
+	}{
+		{0, 1, 1},
+		{0, -1, 1},
+		{1, 1, 1},
+		{1, -1, 1},
+		{0, 5, 0},
+		{1, 5, 1},
+		{2, 5, -1},
+		{-2, 5, -1},
+		{2, -5, -1},
+		{-2, -5, 1},
+		{3, 5, -1},
+		{5, 5, 0},
+		{-5, 5, 0},
+		{6, 5, 1},
+		{6, -5, 1},
+		{-6, 5, 1},
+		{-6, -5, -1},
+	}
+
+	var x, y Int
+
+	for i, test := range testCases {
+		x.SetInt64(test.x)
+		y.SetInt64(test.y)
+		expected := test.result
+		actual := Jacobi(&x, &y)
+		if actual != expected {
+			t.Errorf("#%d: Jacobi(%d, %d) = %d, but expected %d", i, test.x, test.y, actual, expected)
+		}
+	}
+}
+
+func TestJacobiPanic(t *testing.T) {
+	const failureMsg = "test failure"
+	defer func() {
+		msg := recover()
+		if msg == nil || msg == failureMsg {
+			panic(msg)
+		}
+		t.Log(msg)
+	}()
+	x := NewInt(1)
+	y := NewInt(2)
+	// Jacobi should panic when the second argument is even.
+	Jacobi(x, y)
+	panic(failureMsg)
 }
 
 var encodingTests = []string{

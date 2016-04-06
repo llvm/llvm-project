@@ -37,6 +37,8 @@ public:
   LazyPointerAtom(const File &file, bool is64)
     : SimpleDefinedAtom(file), _is64(is64) { }
 
+  ~LazyPointerAtom() override = default;
+
   ContentType contentType() const override {
     return DefinedAtom::typeLazyPointer;
   }
@@ -70,6 +72,8 @@ class NonLazyPointerAtom : public SimpleDefinedAtom {
 public:
   NonLazyPointerAtom(const File &file, bool is64, ContentType contentType)
     : SimpleDefinedAtom(file), _is64(is64), _contentType(contentType) { }
+
+  ~NonLazyPointerAtom() override = default;
 
   ContentType contentType() const override {
     return _contentType;
@@ -106,6 +110,8 @@ public:
   StubAtom(const File &file, const ArchHandler::StubInfo &stubInfo)
       : SimpleDefinedAtom(file), _stubInfo(stubInfo){ }
 
+  ~StubAtom() override = default;
+
   ContentType contentType() const override {
     return DefinedAtom::typeStub;
   }
@@ -137,6 +143,8 @@ class StubHelperAtom : public SimpleDefinedAtom {
 public:
   StubHelperAtom(const File &file, const ArchHandler::StubInfo &stubInfo)
       : SimpleDefinedAtom(file), _stubInfo(stubInfo) { }
+
+  ~StubHelperAtom() override = default;
 
   ContentType contentType() const override {
     return DefinedAtom::typeStubHelper;
@@ -171,6 +179,8 @@ public:
   StubHelperCommonAtom(const File &file, const ArchHandler::StubInfo &stubInfo)
       : SimpleDefinedAtom(file), _stubInfo(stubInfo) { }
 
+  ~StubHelperCommonAtom() override = default;
+
   ContentType contentType() const override {
     return DefinedAtom::typeStubHelper;
   }
@@ -200,14 +210,15 @@ class StubsPass : public Pass {
 public:
   StubsPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _stubInfo(_archHandler.stubInfo()), _file("<mach-o Stubs pass>") {
+        _stubInfo(_archHandler.stubInfo()),
+        _file(*_ctx.make_file<MachOFile>("<mach-o Stubs pass>")) {
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
-  std::error_code perform(SimpleFile &mergedFile) override {
+  llvm::Error perform(SimpleFile &mergedFile) override {
     // Skip this pass if output format uses text relocations instead of stubs.
     if (!this->noTextRelocs())
-      return std::error_code();
+      return llvm::Error();
 
     // Scan all references in all atoms.
     for (const DefinedAtom *atom : mergedFile.defined()) {
@@ -234,7 +245,7 @@ public:
 
     // Exit early if no stubs needed.
     if (_targetToUses.empty())
-      return std::error_code();
+      return llvm::Error();
 
     // First add help-common and GOT slots used by lazy binding.
     SimpleDefinedAtom *helperCommonAtom =
@@ -312,7 +323,7 @@ public:
       lazyOffset += target->name().size() + 12;
     }
 
-    return std::error_code();
+    return llvm::Error();
   }
 
 private:
@@ -356,7 +367,7 @@ private:
   const MachOLinkingContext &_ctx;
   mach_o::ArchHandler                            &_archHandler;
   const ArchHandler::StubInfo                    &_stubInfo;
-  MachOFile                                       _file;
+  MachOFile                                      &_file;
   TargetToUses                                    _targetToUses;
 };
 

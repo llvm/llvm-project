@@ -8,6 +8,9 @@
 #include "go-alloc.h"
 #include "interface.h"
 #include "go-panic.h"
+#include "go-type.h"
+
+extern void __go_receive (ChanType *, Hchan *, byte *);
 
 /* Prepare to call from code written in Go to code written in C or
    C++.  This takes the current goroutine out of the Go scheduler, as
@@ -85,6 +88,15 @@ syscall_cgocallback ()
     }
 
   runtime_exitsyscall ();
+
+  if (runtime_g ()->ncgo == 0)
+    {
+      /* The C call to Go came from a thread not currently running any
+	 Go.  In the case of -buildmode=c-archive or c-shared, this
+	 call may be coming in before package initialization is
+	 complete.  Wait until it is.  */
+      __go_receive (NULL, runtime_main_init_done, NULL);
+    }
 
   mp = runtime_m ();
   if (mp->needextram)
@@ -177,3 +189,65 @@ _cgo_panic (const char *p)
 
   __go_panic (e);
 }
+
+/* Used for _cgo_wait_runtime_init_done.  This is based on code in
+   runtime/cgo/gcc_libinit.c in the master library.  */
+
+static pthread_cond_t runtime_init_cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t runtime_init_mu = PTHREAD_MUTEX_INITIALIZER;
+static _Bool runtime_init_done;
+
+/* This is called by exported cgo functions to ensure that the runtime
+   has been initialized before we enter the function.  This is needed
+   when building with -buildmode=c-archive or similar.  */
+
+void
+_cgo_wait_runtime_init_done (void)
+{
+  int err;
+
+  if (__atomic_load_n (&runtime_init_done, __ATOMIC_ACQUIRE))
+    return;
+
+  err = pthread_mutex_lock (&runtime_init_mu);
+  if (err != 0)
+    abort ();
+  while (!__atomic_load_n (&runtime_init_done, __ATOMIC_ACQUIRE))
+    {
+      err = pthread_cond_wait (&runtime_init_cond, &runtime_init_mu);
+      if (err != 0)
+	abort ();
+    }
+  err = pthread_mutex_unlock (&runtime_init_mu);
+  if (err != 0)
+    abort ();
+}
+
+/* This is called by runtime_main after the Go runtime is
+   initialized.  */
+
+void
+_cgo_notify_runtime_init_done (void)
+{
+  int err;
+
+  err = pthread_mutex_lock (&runtime_init_mu);
+  if (err != 0)
+    abort ();
+  __atomic_store_n (&runtime_init_done, 1, __ATOMIC_RELEASE);
+  err = pthread_cond_broadcast (&runtime_init_cond);
+  if (err != 0)
+    abort ();
+  err = pthread_mutex_unlock (&runtime_init_mu);
+  if (err != 0)
+    abort ();
+}
+
+// runtime_iscgo is set to true if some cgo code is linked in.
+// This is done by a constructor in the cgo generated code.
+_Bool runtime_iscgo;
+
+// runtime_cgoHasExtraM is set on startup when an extra M is created
+// for cgo.  The extra M must be created before any C/C++ code calls
+// cgocallback.
+_Bool runtime_cgoHasExtraM;

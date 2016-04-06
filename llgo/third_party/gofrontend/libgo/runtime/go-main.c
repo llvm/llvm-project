@@ -35,6 +35,12 @@ extern char **environ;
 int
 main (int argc, char **argv)
 {
+  runtime_isarchive = false;
+
+  if (runtime_isstarted)
+    return 0;
+  runtime_isstarted = true;
+
   runtime_check ();
   runtime_args (argc, (byte **) argv);
   runtime_osinit ();

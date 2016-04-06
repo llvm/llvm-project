@@ -20,7 +20,9 @@
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 2
+// CHECK-NEXT:     Other [ (0x2)
+// CHECK-NEXT:       STV_HIDDEN
+// CHECK-NEXT:     ]
 // CHECK-NEXT:     Section: .text
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
@@ -29,7 +31,9 @@
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 1
+// CHECK-NEXT:     Other [ (0x1)
+// CHECK-NEXT:       STV_INTERNAL
+// CHECK-NEXT:     ]
 // CHECK-NEXT:     Section: .text
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
@@ -38,8 +42,21 @@
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
 // CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 2
+// CHECK-NEXT:     Other [ (0x2)
+// CHECK-NEXT:       STV_HIDDEN
+// CHECK-NEXT:     ]
 // CHECK-NEXT:     Section: .text
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Symbol {
+// CHECK-NEXT:     Name: _DYNAMIC
+// CHECK-NEXT:     Value: 0x2000
+// CHECK-NEXT:     Size: 0
+// CHECK-NEXT:     Binding: Local
+// CHECK-NEXT:     Type: None
+// CHECK-NEXT:     Other [ (0x2)
+// CHECK-NEXT:       STV_HIDDEN
+// CHECK-NEXT:     ]
+// CHECK-NEXT:     Section: .dynamic
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: default
@@ -56,7 +73,9 @@
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 3
+// CHECK-NEXT:     Other [ (0x3)
+// CHECK-NEXT:       STV_PROTECTED
+// CHECK-NEXT:     ]
 // CHECK-NEXT:     Section: .text
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
@@ -86,7 +105,9 @@
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 3
+// CHECK-NEXT:     Other [ (0x3)
+// CHECK-NEXT:       STV_PROTECTED
+// CHECK-NEXT:     ]
 // CHECK-NEXT:     Section: .text
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]

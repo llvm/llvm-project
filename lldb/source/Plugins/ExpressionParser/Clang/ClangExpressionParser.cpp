@@ -45,7 +45,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wglobal-constructors"
 #include "llvm/ExecutionEngine/MCJIT.h"
+#pragma clang diagnostic pop
+
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -76,7 +80,6 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
-#include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRDynamicChecks.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
@@ -100,21 +103,6 @@ using namespace lldb_private;
 // Utility Methods for Clang
 //===----------------------------------------------------------------------===//
 
-std::string GetBuiltinIncludePath(const char *Argv0) {
-    SmallString<128> P(llvm::sys::fs::getMainExecutable(
-        Argv0, (void *)(intptr_t) GetBuiltinIncludePath));
-
-    if (!P.empty()) {
-        llvm::sys::path::remove_filename(P); // Remove /clang from foo/bin/clang
-        llvm::sys::path::remove_filename(P); // Remove /bin   from foo/bin
-
-        // Get foo/lib/clang/<version>/include
-        llvm::sys::path::append(P, "lib", "clang", CLANG_VERSION_STRING,
-                                "include");
-    }
-
-    return P.str();
-}
 
 class ClangExpressionParser::LLDBPreprocessorCallbacks : public PPCallbacks
 {
@@ -227,7 +215,7 @@ public:
                 if (severity == eDiagnosticSeverityError)
                 {
                     size_t num_fixit_hints = Info.getNumFixItHints();
-                    for (int i = 0; i < num_fixit_hints; i++)
+                    for (size_t i = 0; i < num_fixit_hints; i++)
                     {
                         const clang::FixItHint &fixit = Info.getFixItHint(i);
                         if (!fixit.isNull())
@@ -346,6 +334,12 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     if (exe_scope)
         target_sp = exe_scope->CalculateTarget();
 
+    ArchSpec target_arch;
+    if (target_sp)
+        target_arch = target_sp->GetArchitecture();
+
+    const auto target_machine = target_arch.GetMachine();
+
     // If the expression is being evaluated in the context of an existing
     // stack frame, we introspect to see if the language runtime is available.
     auto frame = exe_scope->CalculateStackFrame();
@@ -364,9 +358,9 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
 
     // 2. Configure the compiler with a set of default options that are appropriate
     // for most situations.
-    if (target_sp && target_sp->GetArchitecture().IsValid())
+    if (target_sp && target_arch.IsValid())
     {
-        std::string triple = target_sp->GetArchitecture().GetTriple().str();
+        std::string triple = target_arch.GetTriple().str();
         m_compiler->getTargetOpts().Triple = triple;
         if (log)
             log->Printf("Using %s as the target triple", m_compiler->getTargetOpts().Triple.c_str());
@@ -394,12 +388,16 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
         m_compiler->getTargetOpts().ABI = "apcs-gnu";
     }
     // Supported subsets of x86
-    if (target_sp->GetArchitecture().GetMachine() == llvm::Triple::x86 ||
-        target_sp->GetArchitecture().GetMachine() == llvm::Triple::x86_64)
+    if (target_machine == llvm::Triple::x86 ||
+        target_machine == llvm::Triple::x86_64)
     {
         m_compiler->getTargetOpts().Features.push_back("+sse");
         m_compiler->getTargetOpts().Features.push_back("+sse2");
     }
+
+    // Set the target CPU to generate code for.
+    // This will be empty for any CPU that doesn't really need to make a special CPU string.
+    m_compiler->getTargetOpts().CPU = target_arch.GetClangTargetCPU();
 
     // 3. Now allow the runtime to provide custom configuration options for the target.
     // In this case, a specialized language runtime is available and we can query it for extra options.
@@ -784,13 +782,12 @@ static bool FindFunctionInModule (ConstString &mangled_name,
                                   llvm::Module *module,
                                   const char *orig_name)
 {
-    for (llvm::Module::iterator fi = module->getFunctionList().begin(), fe = module->getFunctionList().end();
-         fi != fe;
-         ++fi)
+    for (const auto &func : module->getFunctionList())
     {
-        if (fi->getName().str().find(orig_name) != std::string::npos)
+        const StringRef &name = func.getName();
+        if (name.find(orig_name) != StringRef::npos)
         {
-            mangled_name.SetCString(fi->getName().str().c_str());
+            mangled_name.SetString(name);
             return true;
         }
     }
@@ -810,7 +807,7 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
 	func_end = LLDB_INVALID_ADDRESS;
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
 
-    Error err;
+    lldb_private::Error err;
 
     std::unique_ptr<llvm::Module> llvm_module_ap (m_code_generator->ReleaseModule());
 
@@ -820,7 +817,7 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
         err.SetErrorString("IR doesn't contain a module");
         return err;
     }
-    
+
     for (llvm::Function &function : *llvm_module_ap.get()) {
         llvm::AttributeSet attributes = function.getAttributes();
         llvm::AttrBuilder attributes_to_remove;
@@ -886,7 +883,7 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
 
         if (execution_policy != eExecutionPolicyAlways && execution_policy != eExecutionPolicyTopLevel)
         {
-            Error interpret_error;
+            lldb_private::Error interpret_error;
 
             bool interpret_function_calls = !process ? false : process->CanInterpretFunctionCalls();
             can_interpret =
@@ -975,7 +972,7 @@ lldb_private::Error
 ClangExpressionParser::RunStaticInitializers (lldb::IRExecutionUnitSP &execution_unit_sp,
                                               ExecutionContext &exe_ctx)
 {
-    Error err;
+    lldb_private::Error err;
     
     lldbassert(execution_unit_sp.get());
     lldbassert(exe_ctx.HasThreadScope());

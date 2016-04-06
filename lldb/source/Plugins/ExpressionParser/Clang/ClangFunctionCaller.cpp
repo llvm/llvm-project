@@ -74,11 +74,16 @@ ClangFunctionCaller::~ClangFunctionCaller()
 }
 
 unsigned
-ClangFunctionCaller::CompileFunction(DiagnosticManager &diagnostic_manager)
+
+ClangFunctionCaller::CompileFunction (lldb::ThreadSP thread_to_use_sp, 
+                                      DiagnosticManager &diagnostic_manager)
 {
     if (m_compiled)
         return 0;
 
+    // Compilation might call code, make sure to keep on the thread the caller indicated.
+    ThreadList::ExpressionExecutionThreadPusher execution_thread_pusher(thread_to_use_sp);
+    
     // FIXME: How does clang tell us there's no return value?  We need to handle that case.
     unsigned num_errors = 0;
     

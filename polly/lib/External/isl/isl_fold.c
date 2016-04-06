@@ -1022,6 +1022,37 @@ __isl_give isl_pw_qpolynomial_fold *isl_pw_qpolynomial_fold_add(
 	return isl_pw_qpolynomial_fold_union_add_(pwf1, pwf2);
 }
 
+/* Compare two quasi-polynomial reductions.
+ *
+ * Return -1 if "fold1" is "smaller" than "fold2", 1 if "fold1" is "greater"
+ * than "fold2" and 0 if they are equal.
+ */
+int isl_qpolynomial_fold_plain_cmp(__isl_keep isl_qpolynomial_fold *fold1,
+	__isl_keep isl_qpolynomial_fold *fold2)
+{
+	int i;
+
+	if (fold1 == fold2)
+		return 0;
+	if (!fold1)
+		return -1;
+	if (!fold2)
+		return 1;
+
+	if (fold1->n != fold2->n)
+		return fold1->n - fold2->n;
+
+	for (i = 0; i < fold1->n; ++i) {
+		int cmp;
+
+		cmp = isl_qpolynomial_plain_cmp(fold1->qp[i], fold2->qp[i]);
+		if (cmp != 0)
+			return cmp;
+	}
+
+	return 0;
+}
+
 int isl_qpolynomial_fold_plain_is_equal(__isl_keep isl_qpolynomial_fold *fold1,
 	__isl_keep isl_qpolynomial_fold *fold2)
 {

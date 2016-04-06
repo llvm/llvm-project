@@ -213,20 +213,20 @@ struct A13
     A13* getA13() {return this;}
 };
 
+A3 a3;
+A4 a4;
+A5 a5;
+A6 a6;
+A7 a7;
+A8 a8;
+A9 a9;
+A10 a10;
+A11 a11;
+A12 a12;
+A13 a13;
+
 void test()
 {
-    A3 a3;
-    A4 a4;
-    A5 a5;
-    A6 a6;
-    A7 a7;
-    A8 a8;
-    A9 a9;
-    A10 a10;
-    A11 a11;
-    A12 a12;
-    A13 a13;
-
     assert(dynamic_cast<A3*>(a3.getA1_3()) == a3.getA3());
     assert(dynamic_cast<A3*>(a3.getA2()) == a3.getA3());
 
@@ -934,20 +934,20 @@ struct A13
     A13* getA13() {return this;}
 };
 
+A3 a3;
+A4 a4;
+A5 a5;
+A6 a6;
+A7 a7;
+A8 a8;
+A9 a9;
+A10 a10;
+A11 a11;
+A12 a12;
+A13 a13;
+
 void test()
 {
-    A3 a3;
-    A4 a4;
-    A5 a5;
-    A6 a6;
-    A7 a7;
-    A8 a8;
-    A9 a9;
-    A10 a10;
-    A11 a11;
-    A12 a12;
-    A13 a13;
-
     assert(dynamic_cast<A3*>(a3.getA1_3()) == 0);
     assert(dynamic_cast<A3*>(a3.getA2()) == a3.getA3());
 
@@ -1655,20 +1655,20 @@ struct A13
     A13* getA13() {return this;}
 };
 
+A3 a3;
+A4 a4;
+A5 a5;
+A6 a6;
+A7 a7;
+A8 a8;
+A9 a9;
+A10 a10;
+A11 a11;
+A12 a12;
+A13 a13;
+
 void test()
 {
-    A3 a3;
-    A4 a4;
-    A5 a5;
-    A6 a6;
-    A7 a7;
-    A8 a8;
-    A9 a9;
-    A10 a10;
-    A11 a11;
-    A12 a12;
-    A13 a13;
-
     assert(dynamic_cast<A3*>(a3.getA1_3()) == a3.getA3());
     assert(dynamic_cast<A3*>(a3.getA2()) == 0);
 

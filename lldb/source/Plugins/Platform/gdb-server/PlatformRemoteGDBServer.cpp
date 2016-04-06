@@ -714,9 +714,9 @@ PlatformRemoteGDBServer::Attach (ProcessAttachInfo &attach_info,
                         error = process_sp->ConnectRemote(nullptr, connect_url.c_str());
                         if (error.Success())
                         {
-                            auto listener = attach_info.GetHijackListener();
-                            if (listener != nullptr)
-                                process_sp->HijackProcessEvents(listener.get());
+                            ListenerSP listener_sp = attach_info.GetHijackListener();
+                            if (listener_sp)
+                                process_sp->HijackProcessEvents(listener_sp);
                             error = process_sp->Attach(attach_info);
                         }
 
@@ -999,6 +999,22 @@ PlatformRemoteGDBServer::ConnectProcess(const char* connect_url,
         return nullptr;
     }
     return Platform::ConnectProcess(connect_url, plugin_name, debugger, target, error);
+}
+
+size_t
+PlatformRemoteGDBServer::ConnectToWaitingProcesses(Debugger& debugger, Error& error)
+{
+    std::vector<std::string> connection_urls;
+    GetPendingGdbServerList(connection_urls);
+
+    for (size_t i = 0; i < connection_urls.size(); ++i)
+    {
+        ConnectProcess(connection_urls[i].c_str(), nullptr, debugger, nullptr, error);
+        if (error.Fail())
+            return i; // We already connected to i process succsessfully
+    }
+    return connection_urls.size();
+
 }
 
 size_t

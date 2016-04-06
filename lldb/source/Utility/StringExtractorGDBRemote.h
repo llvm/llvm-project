@@ -20,24 +20,47 @@
 class StringExtractorGDBRemote : public StringExtractor
 {
 public:
+    typedef bool (*ResponseValidatorCallback)(void * baton, const StringExtractorGDBRemote &response);
 
     StringExtractorGDBRemote() :
-        StringExtractor ()
+        StringExtractor(),
+        m_validator(nullptr)
     {
     }
 
     StringExtractorGDBRemote(const char *cstr) :
-        StringExtractor (cstr)
+        StringExtractor(cstr),
+        m_validator(nullptr)
     {
     }
+
     StringExtractorGDBRemote(const StringExtractorGDBRemote& rhs) :
-        StringExtractor (rhs)
+        StringExtractor(rhs),
+        m_validator(rhs.m_validator)
     {
     }
 
     virtual ~StringExtractorGDBRemote()
     {
     }
+
+    bool
+    ValidateResponse() const;
+
+    void
+    CopyResponseValidator(const StringExtractorGDBRemote& rhs);
+
+    void
+    SetResponseValidator(ResponseValidatorCallback callback, void *baton);
+
+    void
+    SetResponseValidatorToOKErrorNotSupported();
+
+    void
+    SetResponseValidatorToASCIIHexBytes();
+
+    void
+    SetResponseValidatorToJSON();
 
     enum ServerPacketType
     {
@@ -192,6 +215,9 @@ public:
     size_t
     GetEscapedBinaryData (std::string &str);
 
+protected:
+    ResponseValidatorCallback m_validator;
+    void *m_validator_baton;
 };
 
 #endif  // utility_StringExtractorGDBRemote_h_

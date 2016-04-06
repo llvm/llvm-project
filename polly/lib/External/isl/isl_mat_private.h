@@ -20,6 +20,8 @@ struct isl_mat {
 	struct isl_blk block;
 };
 
+uint32_t isl_mat_get_hash(__isl_keep isl_mat *mat);
+
 __isl_give isl_mat *isl_mat_sub_alloc(__isl_keep isl_mat *mat,
 	unsigned first_row, unsigned n_row, unsigned first_col, unsigned n_col);
 __isl_give isl_mat *isl_mat_sub_alloc6(isl_ctx *ctx, isl_int **row,
@@ -36,6 +38,8 @@ __isl_give isl_mat *isl_mat_scale_down_row(__isl_take isl_mat *mat, int row,
 __isl_give isl_vec *isl_mat_get_row(__isl_keep isl_mat *mat, unsigned row);
 
 int isl_mat_is_scaled_identity(__isl_keep isl_mat *mat);
+
+isl_stat isl_mat_row_gcd(__isl_keep isl_mat *mat, int row, isl_int *gcd);
 
 void isl_mat_col_mul(struct isl_mat *mat, int dst_col, isl_int f, int src_col);
 void isl_mat_col_submul(struct isl_mat *mat,

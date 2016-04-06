@@ -31,14 +31,16 @@ void AssignOperatorSignatureCheck::registerMatchers(
   const auto IsSelf = qualType(
       anyOf(hasDeclaration(equalsBoundNode("class")),
             referenceType(pointee(hasDeclaration(equalsBoundNode("class"))))));
-  const auto IsSelfAssign =
+  const auto IsAssign =
       cxxMethodDecl(unless(anyOf(isDeleted(), isPrivate(), isImplicit())),
-                    hasName("operator="), ofClass(recordDecl().bind("class")),
-                    hasParameter(0, parmVarDecl(hasType(IsSelf))))
+                    hasName("operator="), ofClass(recordDecl().bind("class")))
+          .bind("method");
+  const auto IsSelfAssign =
+      cxxMethodDecl(IsAssign, hasParameter(0, parmVarDecl(hasType(IsSelf))))
           .bind("method");
 
   Finder->addMatcher(
-      cxxMethodDecl(IsSelfAssign, unless(HasGoodReturnType)).bind("ReturnType"),
+      cxxMethodDecl(IsAssign, unless(HasGoodReturnType)).bind("ReturnType"),
       this);
 
   const auto BadSelf = referenceType(
@@ -58,14 +60,13 @@ void AssignOperatorSignatureCheck::registerMatchers(
 
 void AssignOperatorSignatureCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto* Method = Result.Nodes.getNodeAs<CXXMethodDecl>("method");
+  const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("method");
   std::string Name = Method->getParent()->getName();
 
   static const char *const Messages[][2] = {
       {"ReturnType", "operator=() should return '%0&'"},
       {"ArgumentType", "operator=() should take '%0 const&', '%0&&' or '%0'"},
-      {"cv", "operator=() should not be marked '%1'"}
-  };
+      {"cv", "operator=() should not be marked '%1'"}};
 
   for (const auto &Message : Messages) {
     if (Result.Nodes.getNodeAs<Decl>(Message[0]))

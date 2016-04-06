@@ -9,26 +9,39 @@
 
 #include "UnnecessaryCopyInitialization.h"
 
-#include "../utils/LexerUtils.h"
+#include "../utils/DeclRefExprUtils.h"
+#include "../utils/FixItHintUtils.h"
 #include "../utils/Matchers.h"
 
 namespace clang {
 namespace tidy {
 namespace performance {
-
-using namespace ::clang::ast_matchers;
-
 namespace {
-AST_MATCHER(QualType, isPointerType) { return Node->isPointerType(); }
+
+void recordFixes(const VarDecl &Var, ASTContext &Context,
+                 DiagnosticBuilder &Diagnostic) {
+  // Do not propose fixes in macros since we cannot place them correctly.
+  if (Var.getLocation().isMacroID())
+    return;
+
+  Diagnostic << utils::create_fix_it::changeVarDeclToReference(Var, Context);
+  if (!Var.getType().isLocalConstQualified())
+    Diagnostic << utils::create_fix_it::changeVarDeclToConst(Var);
+}
+
 } // namespace
 
-void UnnecessaryCopyInitialization::registerMatchers(
-    ast_matchers::MatchFinder *Finder) {
+
+using namespace ::clang::ast_matchers;
+using decl_ref_expr_utils::isOnlyUsedAsConst;
+
+void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
   auto ConstReference = referenceType(pointee(qualType(isConstQualified())));
   auto ConstOrConstReference =
       allOf(anyOf(ConstReference, isConstQualified()),
-            unless(allOf(isPointerType(), unless(pointerType(pointee(qualType(
-                                              isConstQualified())))))));
+            unless(allOf(pointerType(), unless(pointerType(pointee(
+                                            qualType(isConstQualified())))))));
+
   // Match method call expressions where the this argument is a const
   // type or const reference. This returned const reference is highly likely to
   // outlive the local const reference of the variable being declared.
@@ -40,31 +53,82 @@ void UnnecessaryCopyInitialization::registerMatchers(
   auto ConstRefReturningFunctionCall =
       callExpr(callee(functionDecl(returns(ConstReference))),
                unless(callee(cxxMethodDecl())));
+
+  auto localVarCopiedFrom = [](const internal::Matcher<Expr> &CopyCtorArg) {
+    return compoundStmt(
+               forEachDescendant(
+                   varDecl(hasLocalStorage(),
+                           hasType(matchers::isExpensiveToCopy()),
+                           hasInitializer(cxxConstructExpr(
+                                              hasDeclaration(cxxConstructorDecl(
+                                                  isCopyConstructor())),
+                                              hasArgument(0, CopyCtorArg))
+                                              .bind("ctorCall")))
+                       .bind("newVarDecl")))
+        .bind("blockStmt");
+  };
+
   Finder->addMatcher(
-      varDecl(
-          hasLocalStorage(), hasType(isConstQualified()),
-          hasType(matchers::isExpensiveToCopy()),
-          hasInitializer(cxxConstructExpr(
-              hasDeclaration(cxxConstructorDecl(isCopyConstructor())),
-              hasArgument(0, anyOf(ConstRefReturningFunctionCall,
-                                   ConstRefReturningMethodCallOfConstParam)))))
-          .bind("varDecl"),
+      localVarCopiedFrom(anyOf(ConstRefReturningFunctionCall,
+                               ConstRefReturningMethodCallOfConstParam)),
       this);
+
+  Finder->addMatcher(localVarCopiedFrom(declRefExpr(
+                         to(varDecl(hasLocalStorage()).bind("oldVarDecl")))),
+                     this);
 }
 
 void UnnecessaryCopyInitialization::check(
-    const ast_matchers::MatchFinder::MatchResult &Result) {
-  const auto *Var = Result.Nodes.getNodeAs<VarDecl>("varDecl");
-  SourceLocation AmpLocation = Var->getLocation();
-  auto Token = lexer_utils::getPreviousNonCommentToken(*Result.Context,
-                                                       Var->getLocation());
-  if (!Token.is(tok::unknown)) {
-    AmpLocation = Token.getLocation().getLocWithOffset(Token.getLength());
+    const MatchFinder::MatchResult &Result) {
+  const auto *NewVar = Result.Nodes.getNodeAs<VarDecl>("newVarDecl");
+  const auto *OldVar = Result.Nodes.getNodeAs<VarDecl>("oldVarDecl");
+  const auto *BlockStmt = Result.Nodes.getNodeAs<Stmt>("blockStmt");
+  const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctorCall");
+
+  // A constructor that looks like T(const T& t, bool arg = false) counts as a
+  // copy only when it is called with default arguments for the arguments after
+  // the first.
+  for (unsigned int i = 1; i < CtorCall->getNumArgs(); ++i)
+    if (!CtorCall->getArg(i)->isDefaultArgument())
+      return;
+
+  if (OldVar == nullptr) {
+    handleCopyFromMethodReturn(*NewVar, *BlockStmt, *Result.Context);
+  } else {
+    handleCopyFromLocalVar(*NewVar, *OldVar, *BlockStmt, *Result.Context);
   }
-  diag(Var->getLocation(),
-       "the const qualified variable '%0' is copy-constructed from a "
-       "const reference; consider making it a const reference")
-      << Var->getName() << FixItHint::CreateInsertion(AmpLocation, "&");
+}
+
+void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
+    const VarDecl &Var, const Stmt &BlockStmt, ASTContext &Context) {
+  bool IsConstQualified = Var.getType().isConstQualified();
+  if (!IsConstQualified && !isOnlyUsedAsConst(Var, BlockStmt, Context))
+    return;
+
+  auto Diagnostic =
+      diag(Var.getLocation(),
+           IsConstQualified ? "the const qualified variable %0 is "
+                              "copy-constructed from a const reference; "
+                              "consider making it a const reference"
+                            : "the variable %0 is copy-constructed from a "
+                              "const reference but is only used as const "
+                              "reference; consider making it a const reference")
+      << &Var;
+  recordFixes(Var, Context, Diagnostic);
+}
+
+void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
+    const VarDecl &NewVar, const VarDecl &OldVar, const Stmt &BlockStmt,
+    ASTContext &Context) {
+  if (!isOnlyUsedAsConst(NewVar, BlockStmt, Context) ||
+      !isOnlyUsedAsConst(OldVar, BlockStmt, Context))
+    return;
+
+  auto Diagnostic = diag(NewVar.getLocation(),
+                         "local copy %0 of the variable %1 is never modified; "
+                         "consider avoiding the copy")
+                    << &NewVar << &OldVar;
+  recordFixes(NewVar, Context, Diagnostic);
 }
 
 } // namespace performance

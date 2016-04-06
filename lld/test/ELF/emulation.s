@@ -60,6 +60,37 @@
 # X86-NEXT:   StringTableSectionIndex:
 # X86-NEXT: }
 
+# RUN: llvm-mc -filetype=obj -triple=i686-unknown-freebsd %s -o %tx86fbsd
+# RUN: ld.lld -m elf_i386_fbsd %tx86fbsd -o %t2x86_fbsd
+# RUN: llvm-readobj -file-headers %t2x86_fbsd | FileCheck --check-prefix=X86FBSD %s
+# RUN: ld.lld %tx86fbsd -o %t3x86fbsd
+# RUN: llvm-readobj -file-headers %t3x86fbsd | FileCheck --check-prefix=X86FBSD %s
+# X86FBSD:      ElfHeader {
+# X86FBSD-NEXT:   Ident {
+# X86FBSD-NEXT:     Magic: (7F 45 4C 46)
+# X86FBSD-NEXT:     Class: 32-bit (0x1)
+# X86FBSD-NEXT:     DataEncoding: LittleEndian (0x1)
+# X86FBSD-NEXT:     FileVersion: 1
+# X86FBSD-NEXT:     OS/ABI: FreeBSD (0x9)
+# X86FBSD-NEXT:     ABIVersion: 0
+# X86FBSD-NEXT:     Unused: (00 00 00 00 00 00 00)
+# X86FBSD-NEXT:   }
+# X86FBSD-NEXT:   Type: Executable (0x2)
+# X86FBSD-NEXT:   Machine: EM_386 (0x3)
+# X86FBSD-NEXT:   Version: 1
+# X86FBSD-NEXT:   Entry:
+# X86FBSD-NEXT:   ProgramHeaderOffset: 0x34
+# X86FBSD-NEXT:   SectionHeaderOffset:
+# X86FBSD-NEXT:   Flags [ (0x0)
+# X86FBSD-NEXT:   ]
+# X86FBSD-NEXT:   HeaderSize: 52
+# X86FBSD-NEXT:   ProgramHeaderEntrySize: 32
+# X86FBSD-NEXT:   ProgramHeaderCount:
+# X86FBSD-NEXT:   SectionHeaderEntrySize: 40
+# X86FBSD-NEXT:   SectionHeaderCount:
+# X86FBSD-NEXT:   StringTableSectionIndex:
+# X86FBSD-NEXT: }
+
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %tppc64
 # RUN: ld.lld -m elf64ppc %tppc64 -o %t2ppc64
 # RUN: llvm-readobj -file-headers %t2ppc64 | FileCheck --check-prefix=PPC64 %s

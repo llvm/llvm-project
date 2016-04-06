@@ -223,11 +223,11 @@ ProcessGDBRemote::Terminate()
 
 
 lldb::ProcessSP
-ProcessGDBRemote::CreateInstance (lldb::TargetSP target_sp, Listener &listener, const FileSpec *crash_file_path)
+ProcessGDBRemote::CreateInstance (lldb::TargetSP target_sp, ListenerSP listener_sp, const FileSpec *crash_file_path)
 {
     lldb::ProcessSP process_sp;
     if (crash_file_path == NULL)
-        process_sp.reset (new ProcessGDBRemote (target_sp, listener));
+        process_sp.reset (new ProcessGDBRemote (target_sp, listener_sp));
     return process_sp;
 }
 
@@ -267,15 +267,15 @@ ProcessGDBRemote::CanDebug (lldb::TargetSP target_sp, bool plugin_specified_by_n
 //----------------------------------------------------------------------
 // ProcessGDBRemote constructor
 //----------------------------------------------------------------------
-ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, Listener &listener) :
-    Process (target_sp, listener),
+ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, ListenerSP listener_sp) :
+    Process (target_sp, listener_sp),
     m_flags (0),
     m_gdb_comm (),
     m_debugserver_pid (LLDB_INVALID_PROCESS_ID),
     m_last_stop_packet_mutex (Mutex::eMutexTypeRecursive),
     m_register_info (),
     m_async_broadcaster (NULL, "lldb.process.gdb-remote.async-broadcaster"),
-    m_async_listener("lldb.process.gdb-remote.async-listener"),
+    m_async_listener_sp(Listener::MakeListener("lldb.process.gdb-remote.async-listener")),
     m_async_thread_state_mutex(Mutex::eMutexTypeRecursive),
     m_thread_ids (),
     m_thread_pcs (),
@@ -303,7 +303,7 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, Listener &listener)
 
     const uint32_t async_event_mask = eBroadcastBitAsyncContinue | eBroadcastBitAsyncThreadShouldExit;
 
-    if (m_async_listener.StartListeningForEvents(&m_async_broadcaster, async_event_mask) != async_event_mask)
+    if (m_async_listener_sp->StartListeningForEvents(&m_async_broadcaster, async_event_mask) != async_event_mask)
     {
         if (log)
             log->Printf("ProcessGDBRemote::%s failed to listen for m_async_broadcaster events", __FUNCTION__);
@@ -311,7 +311,7 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, Listener &listener)
 
     const uint32_t gdb_event_mask = Communication::eBroadcastBitReadThreadDidExit |
                                     GDBRemoteCommunication::eBroadcastBitGdbReadThreadGotNotify;
-    if (m_async_listener.StartListeningForEvents(&m_gdb_comm, gdb_event_mask) != gdb_event_mask)
+    if (m_async_listener_sp->StartListeningForEvents(&m_gdb_comm, gdb_event_mask) != gdb_event_mask)
     {
         if (log)
             log->Printf("ProcessGDBRemote::%s failed to listen for m_gdb_comm events", __FUNCTION__);
@@ -1368,10 +1368,10 @@ ProcessGDBRemote::DoResume ()
     if (log)
         log->Printf ("ProcessGDBRemote::Resume()");
 
-    Listener listener ("gdb-remote.resume-packet-sent");
-    if (listener.StartListeningForEvents (&m_gdb_comm, GDBRemoteCommunication::eBroadcastBitRunPacketSent))
+    ListenerSP listener_sp (Listener::MakeListener("gdb-remote.resume-packet-sent"));
+    if (listener_sp->StartListeningForEvents (&m_gdb_comm, GDBRemoteCommunication::eBroadcastBitRunPacketSent))
     {
-        listener.StartListeningForEvents (&m_async_broadcaster, ProcessGDBRemote::eBroadcastBitAsyncThreadDidExit);
+        listener_sp->StartListeningForEvents (&m_async_broadcaster, ProcessGDBRemote::eBroadcastBitAsyncThreadDidExit);
 
         const size_t num_threads = GetThreadList().GetSize();
 
@@ -1603,7 +1603,7 @@ ProcessGDBRemote::DoResume ()
 
             m_async_broadcaster.BroadcastEvent (eBroadcastBitAsyncContinue, new EventDataBytes (continue_packet.GetData(), continue_packet.GetSize()));
 
-            if (listener.WaitForEvent (&timeout, event_sp) == false)
+            if (listener_sp->WaitForEvent (&timeout, event_sp) == false)
             {
                 error.SetErrorString("Resume timed out.");
                 if (log)
@@ -3138,35 +3138,33 @@ ProcessGDBRemote::DoAllocateMemory (size_t size, uint32_t permissions, Error &er
     Log *log (GetLogIfAnyCategoriesSet (LIBLLDB_LOG_PROCESS|LIBLLDB_LOG_EXPRESSIONS));
     addr_t allocated_addr = LLDB_INVALID_ADDRESS;
 
-    LazyBool supported = m_gdb_comm.SupportsAllocDeallocMemory();
-    switch (supported)
+    if (m_gdb_comm.SupportsAllocDeallocMemory() != eLazyBoolNo)
     {
-        case eLazyBoolCalculate:
-        case eLazyBoolYes:
-            allocated_addr = m_gdb_comm.AllocateMemory (size, permissions);
-            if (allocated_addr != LLDB_INVALID_ADDRESS || supported == eLazyBoolYes)
-                return allocated_addr;
+        allocated_addr = m_gdb_comm.AllocateMemory (size, permissions);
+        if (allocated_addr != LLDB_INVALID_ADDRESS || m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolYes)
+            return allocated_addr;
+    }
 
-        case eLazyBoolNo:
-            // Call mmap() to create memory in the inferior..
-            unsigned prot = 0;
-            if (permissions & lldb::ePermissionsReadable)
-                prot |= eMmapProtRead;
-            if (permissions & lldb::ePermissionsWritable)
-                prot |= eMmapProtWrite;
-            if (permissions & lldb::ePermissionsExecutable)
-                prot |= eMmapProtExec;
+    if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolNo)
+    {
+        // Call mmap() to create memory in the inferior..
+        unsigned prot = 0;
+        if (permissions & lldb::ePermissionsReadable)
+            prot |= eMmapProtRead;
+        if (permissions & lldb::ePermissionsWritable)
+            prot |= eMmapProtWrite;
+        if (permissions & lldb::ePermissionsExecutable)
+            prot |= eMmapProtExec;
 
-            if (InferiorCallMmap(this, allocated_addr, 0, size, prot,
-                                 eMmapFlagsAnon | eMmapFlagsPrivate, -1, 0))
-                m_addr_to_mmap_size[allocated_addr] = size;
-            else
-            {
-                allocated_addr = LLDB_INVALID_ADDRESS;
-                if (log)
-                    log->Printf ("ProcessGDBRemote::%s no direct stub support for memory allocation, and InferiorCallMmap also failed - is stub missing register context save/restore capability?", __FUNCTION__);
-            }
-            break;
+        if (InferiorCallMmap(this, allocated_addr, 0, size, prot,
+                             eMmapFlagsAnon | eMmapFlagsPrivate, -1, 0))
+            m_addr_to_mmap_size[allocated_addr] = size;
+        else
+        {
+            allocated_addr = LLDB_INVALID_ADDRESS;
+            if (log)
+                log->Printf ("ProcessGDBRemote::%s no direct stub support for memory allocation, and InferiorCallMmap also failed - is stub missing register context save/restore capability?", __FUNCTION__);
+        }
     }
 
     if (allocated_addr == LLDB_INVALID_ADDRESS)
@@ -3857,7 +3855,7 @@ ProcessGDBRemote::AsyncThread (void *arg)
     {
         if (log)
             log->Printf ("ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64 ") listener.WaitForEvent (NULL, event_sp)...", __FUNCTION__, arg, process->GetID());
-        if (process->m_async_listener.WaitForEvent (NULL, event_sp))
+        if (process->m_async_listener_sp->WaitForEvent (NULL, event_sp))
         {
             const uint32_t event_type = event_sp->GetType();
             if (event_sp->BroadcasterIs (&process->m_async_broadcaster))
@@ -4172,6 +4170,7 @@ ProcessGDBRemote::GetExtendedInfoForThread (lldb::tid_t tid)
         packet << (char) (0x7d ^ 0x20);
 
         StringExtractorGDBRemote response;
+        response.SetResponseValidatorToJSON();
         if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetData(), packet.GetSize(), response, false) == GDBRemoteCommunication::PacketResult::Success)
         {
             StringExtractorGDBRemote::ResponseType response_type = response.GetResponseType();
@@ -4213,6 +4212,7 @@ ProcessGDBRemote::GetLoadedDynamicLibrariesInfos (lldb::addr_t image_list_addres
         packet << (char) (0x7d ^ 0x20);
 
         StringExtractorGDBRemote response;
+        response.SetResponseValidatorToJSON();
         if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetData(), packet.GetSize(), response, false) == GDBRemoteCommunication::PacketResult::Success)
         {
             StringExtractorGDBRemote::ResponseType response_type = response.GetResponseType();
@@ -4806,25 +4806,14 @@ ProcessGDBRemote::GetLoadedModuleList (LoadedModuleInfoList & list)
 }
 
 lldb::ModuleSP
-ProcessGDBRemote::LoadModuleAtAddress (const FileSpec &file, lldb::addr_t base_addr, bool value_is_offset)
+ProcessGDBRemote::LoadModuleAtAddress (const FileSpec &file, lldb::addr_t link_map,
+                                       lldb::addr_t base_addr, bool value_is_offset)
 {
-    Target &target = m_process->GetTarget();
-    ModuleList &modules = target.GetImages();
-    ModuleSP module_sp;
+    DynamicLoader *loader = GetDynamicLoader();
+    if (!loader)
+        return nullptr;
 
-    bool changed = false;
-
-    ModuleSpec module_spec (file, target.GetArchitecture());
-    if ((module_sp = modules.FindFirstModule (module_spec)))
-    {
-        module_sp->SetLoadAddress (target, base_addr, value_is_offset, changed);
-    }
-    else if ((module_sp = target.GetSharedModule (module_spec)))
-    {
-        module_sp->SetLoadAddress (target, base_addr, value_is_offset, changed);
-    }
-
-    return module_sp;
+    return loader->LoadModuleAtAddress(file, link_map, base_addr, value_is_offset);
 }
 
 size_t
@@ -4843,6 +4832,7 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
     {
         std::string  mod_name;
         lldb::addr_t mod_base;
+        lldb::addr_t link_map;
         bool         mod_base_is_offset;
 
         bool valid = true;
@@ -4852,6 +4842,9 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
         if (!valid)
             continue;
 
+        if (!modInfo.get_link_map (link_map))
+            link_map = LLDB_INVALID_ADDRESS;
+
         // hack (cleaner way to get file name only?) (win/unix compat?)
         size_t marker = mod_name.rfind ('/');
         if (marker == std::string::npos)
@@ -4860,7 +4853,8 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
             marker += 1;
 
         FileSpec file (mod_name.c_str()+marker, true);
-        lldb::ModuleSP module_sp = LoadModuleAtAddress (file, mod_base, mod_base_is_offset);
+        lldb::ModuleSP module_sp = LoadModuleAtAddress (file, link_map, mod_base,
+                                                        mod_base_is_offset);
 
         if (module_sp.get())
             new_modules.Append (module_sp);

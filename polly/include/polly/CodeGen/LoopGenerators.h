@@ -106,8 +106,10 @@ public:
             Type::getIntNTy(Builder.getContext(), DL.getPointerSizeInBits())),
         M(Builder.GetInsertBlock()->getParent()->getParent()) {}
 
-  /// @brief Create a parallel loop
+  /// @brief Create a parallel loop.
   ///
+  /// This function is the main function to automatically generate a parallel
+  /// loop with all its components.
   ///
   /// @param LB        The lower bound for the loop we parallelize.
   /// @param UB        The upper bound for the loop we parallelize.
@@ -146,6 +148,11 @@ private:
 
   /// @brief The current module
   Module *M;
+
+public:
+  /// The functions below can be used if one does not want to generate a
+  /// specific OpenMP parallel loop, but generate individual parts of it
+  /// (e.g., the subfunction definition).
 
   /// @brief Create a runtime library call to spawn the worker threads.
   ///

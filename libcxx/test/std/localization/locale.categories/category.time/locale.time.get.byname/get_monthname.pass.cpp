@@ -9,14 +9,7 @@
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
-// REQUIRES: locale.ru_RU.UTF-8
 // REQUIRES: locale.zh_CN.UTF-8
-
-// NOTE: debian and opensuse use old locale data for ru_RU.UTF-8 abbreviated
-// months. This locale data was changed in glibc 2.14.
-// Debian uses glibc 2.13 as of 20/11/2014
-// OpenSuse uses glibc 2.19 with old locale data as of 20/11/2014
-// XFAIL: debian, opensuse
 
 // <locale>
 
@@ -62,16 +55,6 @@ int main()
     {
         const my_facet f(LOCALE_fr_FR_UTF_8, 1);
         const char in[] = "juin";
-        err = std::ios_base::goodbit;
-        t = std::tm();
-        I i = f.get_monthname(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);
-        assert(i.base() == in+sizeof(in)/sizeof(in[0])-1);
-        assert(t.tm_mon == 5);
-        assert(err == std::ios_base::eofbit);
-    }
-    {
-        const my_facet f(LOCALE_ru_RU_UTF_8, 1);
-        const char in[] = "\xD0\xB8\xD1\x8E\xD0\xBD\xD1\x8F";
         err = std::ios_base::goodbit;
         t = std::tm();
         I i = f.get_monthname(I(in), I(in+sizeof(in)/sizeof(in[0])-1), ios, err, &t);

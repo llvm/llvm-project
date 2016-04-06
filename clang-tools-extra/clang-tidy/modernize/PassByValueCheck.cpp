@@ -208,11 +208,12 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
        << FixItHint::CreateInsertion(
               Initializer->getLParenLoc().getLocWithOffset(1), "std::move(");
 
-  auto Insertion =
-      Inserter->CreateIncludeInsertion(SM.getMainFileID(), "utility",
-                                       /*IsAngled=*/true);
-  if (Insertion.hasValue())
-    Diag << Insertion.getValue();
+  if (auto IncludeFixit = Inserter->CreateIncludeInsertion(
+          Result.SourceManager->getFileID(Initializer->getSourceLocation()),
+          "utility",
+          /*IsAngled=*/true)) {
+    Diag << *IncludeFixit;
+  }
 }
 
 } // namespace modernize

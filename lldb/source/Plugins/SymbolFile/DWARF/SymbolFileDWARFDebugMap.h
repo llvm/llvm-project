@@ -111,11 +111,12 @@ protected:
         kNumFlags
     };
 
-    friend class DWARFCompileUnit;
-    friend class SymbolFileDWARF;
     friend class DebugMapModule;
+    friend struct DIERef;
     friend class DWARFASTParserClang;
     friend class DWARFASTParserSwift;
+    friend class DWARFCompileUnit;
+    friend class SymbolFileDWARF;
     struct OSOInfo
     {
         lldb::ModuleSP module_sp;

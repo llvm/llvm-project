@@ -1,4 +1,4 @@
-//===-- ABISysV_hexagon.cpp --------------------------------------*- C++ -*-===//
+//===-- ABISysV_hexagon.cpp -------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,6 +9,13 @@
 
 #include "ABISysV_hexagon.h"
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+#include "llvm/ADT/Triple.h"
+#include "llvm/IR/DerivedTypes.h"
+
+// Project includes
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Error.h"
@@ -27,111 +34,107 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 
-#include "llvm/ADT/Triple.h"
-
-#include "llvm/IR/DerivedTypes.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
 static RegisterInfo g_register_infos[] = 
 {
     // hexagon-core.xml
-    { "r00"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  0,  0, LLDB_INVALID_REGNUM,     0,  0 }, NULL, NULL },
-    { "r01"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  1,  1, LLDB_INVALID_REGNUM,     1,  1 }, NULL, NULL },
-    { "r02"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  2,  2, LLDB_INVALID_REGNUM,     2,  2 }, NULL, NULL },
-    { "r03"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  3,  3, LLDB_INVALID_REGNUM,     3,  3 }, NULL, NULL },
-    { "r04"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  4,  4, LLDB_INVALID_REGNUM,     4,  4 }, NULL, NULL },
-    { "r05"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  5,  5, LLDB_INVALID_REGNUM,     5,  5 }, NULL, NULL },
-    { "r06"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  6,  6, LLDB_INVALID_REGNUM,     6,  6 }, NULL, NULL },
-    { "r07"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  7,  7, LLDB_INVALID_REGNUM,     7,  7 }, NULL, NULL },
-    { "r08"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  8,  8, LLDB_INVALID_REGNUM,     8,  8 }, NULL, NULL },
-    { "r09"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  9,  9, LLDB_INVALID_REGNUM,     9,  9 }, NULL, NULL },
-    { "r10"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 10, 10, LLDB_INVALID_REGNUM,    10, 10 }, NULL, NULL },
-    { "r11"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 11, 11, LLDB_INVALID_REGNUM,    11, 11 }, NULL, NULL },
-    { "r12"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 12, 12, LLDB_INVALID_REGNUM,    12, 12 }, NULL, NULL },
-    { "r13"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 13, 13, LLDB_INVALID_REGNUM,    13, 13 }, NULL, NULL },
-    { "r14"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 14, 14, LLDB_INVALID_REGNUM,    14, 14 }, NULL, NULL },
-    { "r15"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 15, 15, LLDB_INVALID_REGNUM,    15, 15 }, NULL, NULL },
-    { "r16"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 16, 16, LLDB_INVALID_REGNUM,    16, 16 }, NULL, NULL },
-    { "r17"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 17, 17, LLDB_INVALID_REGNUM,    17, 17 }, NULL, NULL },
-    { "r18"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 18, 18, LLDB_INVALID_REGNUM,    18, 18 }, NULL, NULL },
-    { "r19"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 19, 19, LLDB_INVALID_REGNUM,    19, 19 }, NULL, NULL },
-    { "r20"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 20, 20, LLDB_INVALID_REGNUM,    20, 20 }, NULL, NULL },
-    { "r21"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 21, 21, LLDB_INVALID_REGNUM,    21, 21 }, NULL, NULL },
-    { "r22"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 22, 22, LLDB_INVALID_REGNUM,    22, 22 }, NULL, NULL },
-    { "r23"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 23, 23, LLDB_INVALID_REGNUM,    23, 23 }, NULL, NULL },
-    { "r24"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 24, 24, LLDB_INVALID_REGNUM,    24, 24 }, NULL, NULL },
-    { "r25"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 25, 25, LLDB_INVALID_REGNUM,    25, 25 }, NULL, NULL },
-    { "r26"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 26, 26, LLDB_INVALID_REGNUM,    26, 26 }, NULL, NULL },
-    { "r27"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 27, 27, LLDB_INVALID_REGNUM,    27, 27 }, NULL, NULL },
-    { "r28"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 28, 28, LLDB_INVALID_REGNUM,    28, 28 }, NULL, NULL },
-    { "sp"  ,"r29", 4, 0, eEncodingUint, eFormatAddressInfo, { 29, 29, LLDB_REGNUM_GENERIC_SP, 29, 29 }, NULL, NULL },
-    { "fp"  ,"r30", 4, 0, eEncodingUint, eFormatAddressInfo, { 30, 30, LLDB_REGNUM_GENERIC_FP, 30, 30 }, NULL, NULL },
-    { "lr"  ,"r31", 4, 0, eEncodingUint, eFormatAddressInfo, { 31, 31, LLDB_REGNUM_GENERIC_RA, 31, 31 }, NULL, NULL },
-    { "sa0"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 32, 32, LLDB_INVALID_REGNUM,    32, 32 }, NULL, NULL },
-    { "lc0"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 33, 33, LLDB_INVALID_REGNUM,    33, 33 }, NULL, NULL },
-    { "sa1"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 34, 34, LLDB_INVALID_REGNUM,    34, 34 }, NULL, NULL },
-    { "lc1"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 35, 35, LLDB_INVALID_REGNUM,    35, 35 }, NULL, NULL },
+    { "r00"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  0,  0, LLDB_INVALID_REGNUM,     0,  0 }, nullptr, nullptr },
+    { "r01"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  1,  1, LLDB_INVALID_REGNUM,     1,  1 }, nullptr, nullptr },
+    { "r02"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  2,  2, LLDB_INVALID_REGNUM,     2,  2 }, nullptr, nullptr },
+    { "r03"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  3,  3, LLDB_INVALID_REGNUM,     3,  3 }, nullptr, nullptr },
+    { "r04"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  4,  4, LLDB_INVALID_REGNUM,     4,  4 }, nullptr, nullptr },
+    { "r05"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  5,  5, LLDB_INVALID_REGNUM,     5,  5 }, nullptr, nullptr },
+    { "r06"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  6,  6, LLDB_INVALID_REGNUM,     6,  6 }, nullptr, nullptr },
+    { "r07"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  7,  7, LLDB_INVALID_REGNUM,     7,  7 }, nullptr, nullptr },
+    { "r08"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  8,  8, LLDB_INVALID_REGNUM,     8,  8 }, nullptr, nullptr },
+    { "r09"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, {  9,  9, LLDB_INVALID_REGNUM,     9,  9 }, nullptr, nullptr },
+    { "r10"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 10, 10, LLDB_INVALID_REGNUM,    10, 10 }, nullptr, nullptr },
+    { "r11"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 11, 11, LLDB_INVALID_REGNUM,    11, 11 }, nullptr, nullptr },
+    { "r12"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 12, 12, LLDB_INVALID_REGNUM,    12, 12 }, nullptr, nullptr },
+    { "r13"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 13, 13, LLDB_INVALID_REGNUM,    13, 13 }, nullptr, nullptr },
+    { "r14"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 14, 14, LLDB_INVALID_REGNUM,    14, 14 }, nullptr, nullptr },
+    { "r15"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 15, 15, LLDB_INVALID_REGNUM,    15, 15 }, nullptr, nullptr },
+    { "r16"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 16, 16, LLDB_INVALID_REGNUM,    16, 16 }, nullptr, nullptr },
+    { "r17"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 17, 17, LLDB_INVALID_REGNUM,    17, 17 }, nullptr, nullptr },
+    { "r18"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 18, 18, LLDB_INVALID_REGNUM,    18, 18 }, nullptr, nullptr },
+    { "r19"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 19, 19, LLDB_INVALID_REGNUM,    19, 19 }, nullptr, nullptr },
+    { "r20"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 20, 20, LLDB_INVALID_REGNUM,    20, 20 }, nullptr, nullptr },
+    { "r21"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 21, 21, LLDB_INVALID_REGNUM,    21, 21 }, nullptr, nullptr },
+    { "r22"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 22, 22, LLDB_INVALID_REGNUM,    22, 22 }, nullptr, nullptr },
+    { "r23"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 23, 23, LLDB_INVALID_REGNUM,    23, 23 }, nullptr, nullptr },
+    { "r24"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 24, 24, LLDB_INVALID_REGNUM,    24, 24 }, nullptr, nullptr },
+    { "r25"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 25, 25, LLDB_INVALID_REGNUM,    25, 25 }, nullptr, nullptr },
+    { "r26"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 26, 26, LLDB_INVALID_REGNUM,    26, 26 }, nullptr, nullptr },
+    { "r27"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 27, 27, LLDB_INVALID_REGNUM,    27, 27 }, nullptr, nullptr },
+    { "r28"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 28, 28, LLDB_INVALID_REGNUM,    28, 28 }, nullptr, nullptr },
+    { "sp"  ,"r29", 4, 0, eEncodingUint, eFormatAddressInfo, { 29, 29, LLDB_REGNUM_GENERIC_SP, 29, 29 }, nullptr, nullptr },
+    { "fp"  ,"r30", 4, 0, eEncodingUint, eFormatAddressInfo, { 30, 30, LLDB_REGNUM_GENERIC_FP, 30, 30 }, nullptr, nullptr },
+    { "lr"  ,"r31", 4, 0, eEncodingUint, eFormatAddressInfo, { 31, 31, LLDB_REGNUM_GENERIC_RA, 31, 31 }, nullptr, nullptr },
+    { "sa0"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 32, 32, LLDB_INVALID_REGNUM,    32, 32 }, nullptr, nullptr },
+    { "lc0"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 33, 33, LLDB_INVALID_REGNUM,    33, 33 }, nullptr, nullptr },
+    { "sa1"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 34, 34, LLDB_INVALID_REGNUM,    34, 34 }, nullptr, nullptr },
+    { "lc1"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 35, 35, LLDB_INVALID_REGNUM,    35, 35 }, nullptr, nullptr },
     // --> hexagon-v4/5/55/56-sim.xml
-    { "p3_0"  , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 36, 36, LLDB_INVALID_REGNUM,    36, 36 }, NULL, NULL },
+    { "p3_0"  , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 36, 36, LLDB_INVALID_REGNUM,    36, 36 }, nullptr, nullptr },
 // PADDING {
-    { "p00"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 37, 37, LLDB_INVALID_REGNUM,    37, 37 }, NULL, NULL },
+    { "p00"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 37, 37, LLDB_INVALID_REGNUM,    37, 37 }, nullptr, nullptr },
 // }
-    { "m0"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 38, 38, LLDB_INVALID_REGNUM,    38, 38 }, NULL, NULL },
-    { "m1"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 39, 39, LLDB_INVALID_REGNUM,    39, 39 }, NULL, NULL },
-    { "usr"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 40, 40, LLDB_INVALID_REGNUM,    40, 40 }, NULL, NULL },
-    { "pc"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 41, 41, LLDB_REGNUM_GENERIC_PC, 41, 41 }, NULL, NULL },
-    { "ugp"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 42, 42, LLDB_INVALID_REGNUM,    42, 42 }, NULL, NULL },
-    { "gp"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 43, 43, LLDB_INVALID_REGNUM,    43, 43 }, NULL, NULL },
-    { "cs0"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 44, 44, LLDB_INVALID_REGNUM,    44, 44 }, NULL, NULL },
-    { "cs1"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 45, 45, LLDB_INVALID_REGNUM,    45, 45 }, NULL, NULL },
+    { "m0"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 38, 38, LLDB_INVALID_REGNUM,    38, 38 }, nullptr, nullptr },
+    { "m1"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 39, 39, LLDB_INVALID_REGNUM,    39, 39 }, nullptr, nullptr },
+    { "usr"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 40, 40, LLDB_INVALID_REGNUM,    40, 40 }, nullptr, nullptr },
+    { "pc"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 41, 41, LLDB_REGNUM_GENERIC_PC, 41, 41 }, nullptr, nullptr },
+    { "ugp"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 42, 42, LLDB_INVALID_REGNUM,    42, 42 }, nullptr, nullptr },
+    { "gp"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 43, 43, LLDB_INVALID_REGNUM,    43, 43 }, nullptr, nullptr },
+    { "cs0"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 44, 44, LLDB_INVALID_REGNUM,    44, 44 }, nullptr, nullptr },
+    { "cs1"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 45, 45, LLDB_INVALID_REGNUM,    45, 45 }, nullptr, nullptr },
 // PADDING {
-    { "p01"   , "", 4, 0, eEncodingInvalid, eFormatInvalid,     { 46, 46, LLDB_INVALID_REGNUM,    46, 46 }, NULL, NULL },
-    { "p02"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 47, 47, LLDB_INVALID_REGNUM,    47, 47 }, NULL, NULL },
-    { "p03"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 48, 48, LLDB_INVALID_REGNUM,    48, 48 }, NULL, NULL },
-    { "p04"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 49, 49, LLDB_INVALID_REGNUM,    49, 49 }, NULL, NULL },
-    { "p05"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 50, 50, LLDB_INVALID_REGNUM,    50, 50 }, NULL, NULL },
-    { "p06"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 51, 51, LLDB_INVALID_REGNUM,    51, 51 }, NULL, NULL },
-    { "p07"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 52, 52, LLDB_INVALID_REGNUM,    52, 52 }, NULL, NULL },
-    { "p08"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 53, 53, LLDB_INVALID_REGNUM,    53, 53 }, NULL, NULL },
-    { "p09"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 54, 54, LLDB_INVALID_REGNUM,    54, 54 }, NULL, NULL },
-    { "p10"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 55, 55, LLDB_INVALID_REGNUM,    55, 55 }, NULL, NULL },
-    { "p11"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 56, 56, LLDB_INVALID_REGNUM,    56, 56 }, NULL, NULL },
-    { "p12"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 57, 57, LLDB_INVALID_REGNUM,    57, 57 }, NULL, NULL },
-    { "p13"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 58, 58, LLDB_INVALID_REGNUM,    58, 58 }, NULL, NULL },
-    { "p14"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 59, 59, LLDB_INVALID_REGNUM,    59, 59 }, NULL, NULL },
-    { "p15"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 60, 60, LLDB_INVALID_REGNUM,    60, 60 }, NULL, NULL },
-    { "p16"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 61, 61, LLDB_INVALID_REGNUM,    61, 61 }, NULL, NULL },
-    { "p17"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 62, 62, LLDB_INVALID_REGNUM,    62, 62 }, NULL, NULL },
-    { "p18"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 63, 63, LLDB_INVALID_REGNUM,    63, 63 }, NULL, NULL },
+    { "p01"   , "", 4, 0, eEncodingInvalid, eFormatInvalid,     { 46, 46, LLDB_INVALID_REGNUM,    46, 46 }, nullptr, nullptr },
+    { "p02"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 47, 47, LLDB_INVALID_REGNUM,    47, 47 }, nullptr, nullptr },
+    { "p03"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 48, 48, LLDB_INVALID_REGNUM,    48, 48 }, nullptr, nullptr },
+    { "p04"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 49, 49, LLDB_INVALID_REGNUM,    49, 49 }, nullptr, nullptr },
+    { "p05"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 50, 50, LLDB_INVALID_REGNUM,    50, 50 }, nullptr, nullptr },
+    { "p06"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 51, 51, LLDB_INVALID_REGNUM,    51, 51 }, nullptr, nullptr },
+    { "p07"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 52, 52, LLDB_INVALID_REGNUM,    52, 52 }, nullptr, nullptr },
+    { "p08"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 53, 53, LLDB_INVALID_REGNUM,    53, 53 }, nullptr, nullptr },
+    { "p09"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 54, 54, LLDB_INVALID_REGNUM,    54, 54 }, nullptr, nullptr },
+    { "p10"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 55, 55, LLDB_INVALID_REGNUM,    55, 55 }, nullptr, nullptr },
+    { "p11"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 56, 56, LLDB_INVALID_REGNUM,    56, 56 }, nullptr, nullptr },
+    { "p12"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 57, 57, LLDB_INVALID_REGNUM,    57, 57 }, nullptr, nullptr },
+    { "p13"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 58, 58, LLDB_INVALID_REGNUM,    58, 58 }, nullptr, nullptr },
+    { "p14"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 59, 59, LLDB_INVALID_REGNUM,    59, 59 }, nullptr, nullptr },
+    { "p15"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 60, 60, LLDB_INVALID_REGNUM,    60, 60 }, nullptr, nullptr },
+    { "p16"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 61, 61, LLDB_INVALID_REGNUM,    61, 61 }, nullptr, nullptr },
+    { "p17"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 62, 62, LLDB_INVALID_REGNUM,    62, 62 }, nullptr, nullptr },
+    { "p18"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 63, 63, LLDB_INVALID_REGNUM,    63, 63 }, nullptr, nullptr },
 // }
-    { "sgp0"  , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 64, 64, LLDB_INVALID_REGNUM,    64, 64 }, NULL, NULL },
+    { "sgp0"  , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 64, 64, LLDB_INVALID_REGNUM,    64, 64 }, nullptr, nullptr },
 // PADDING {
-    { "p19"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 65, 65, LLDB_INVALID_REGNUM,    65, 65 }, NULL, NULL },
+    { "p19"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 65, 65, LLDB_INVALID_REGNUM,    65, 65 }, nullptr, nullptr },
 // }
-    { "stid"  , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 66, 66, LLDB_INVALID_REGNUM,    66, 66 }, NULL, NULL },
-    { "elr"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 67, 67, LLDB_INVALID_REGNUM,    67, 67 }, NULL, NULL },
-    { "badva0", "", 4, 0, eEncodingUint, eFormatAddressInfo, { 68, 68, LLDB_INVALID_REGNUM,    68, 68 }, NULL, NULL },
-    { "badva1", "", 4, 0, eEncodingUint, eFormatAddressInfo, { 69, 69, LLDB_INVALID_REGNUM,    69, 69 }, NULL, NULL },
-    { "ssr"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 70, 70, LLDB_INVALID_REGNUM,    70, 70 }, NULL, NULL },
-    { "ccr"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 71, 71, LLDB_INVALID_REGNUM,    71, 71 }, NULL, NULL },
-    { "htid"  , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 72, 72, LLDB_INVALID_REGNUM,    72, 72 }, NULL, NULL },
+    { "stid"  , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 66, 66, LLDB_INVALID_REGNUM,    66, 66 }, nullptr, nullptr },
+    { "elr"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 67, 67, LLDB_INVALID_REGNUM,    67, 67 }, nullptr, nullptr },
+    { "badva0", "", 4, 0, eEncodingUint, eFormatAddressInfo, { 68, 68, LLDB_INVALID_REGNUM,    68, 68 }, nullptr, nullptr },
+    { "badva1", "", 4, 0, eEncodingUint, eFormatAddressInfo, { 69, 69, LLDB_INVALID_REGNUM,    69, 69 }, nullptr, nullptr },
+    { "ssr"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 70, 70, LLDB_INVALID_REGNUM,    70, 70 }, nullptr, nullptr },
+    { "ccr"   , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 71, 71, LLDB_INVALID_REGNUM,    71, 71 }, nullptr, nullptr },
+    { "htid"  , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 72, 72, LLDB_INVALID_REGNUM,    72, 72 }, nullptr, nullptr },
 // PADDING {
-    { "p20"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 73, 73, LLDB_INVALID_REGNUM,    73, 73 }, NULL, NULL },
+    { "p20"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 73, 73, LLDB_INVALID_REGNUM,    73, 73 }, nullptr, nullptr },
 // }
-    { "imask" , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 74, 74, LLDB_INVALID_REGNUM,    74, 74 }, NULL, NULL },
+    { "imask" , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 74, 74, LLDB_INVALID_REGNUM,    74, 74 }, nullptr, nullptr },
 // PADDING {
-    { "p21"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 75, 75, LLDB_INVALID_REGNUM,    75, 75 }, NULL, NULL },
-    { "p22"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 76, 76, LLDB_INVALID_REGNUM,    76, 76 }, NULL, NULL },
-    { "p23"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 77, 77, LLDB_INVALID_REGNUM,    77, 77 }, NULL, NULL },
-    { "p24"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 78, 78, LLDB_INVALID_REGNUM,    78, 78 }, NULL, NULL },
-    { "p25"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 79, 79, LLDB_INVALID_REGNUM,    79, 79 }, NULL, NULL },
+    { "p21"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 75, 75, LLDB_INVALID_REGNUM,    75, 75 }, nullptr, nullptr },
+    { "p22"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 76, 76, LLDB_INVALID_REGNUM,    76, 76 }, nullptr, nullptr },
+    { "p23"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 77, 77, LLDB_INVALID_REGNUM,    77, 77 }, nullptr, nullptr },
+    { "p24"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 78, 78, LLDB_INVALID_REGNUM,    78, 78 }, nullptr, nullptr },
+    { "p25"   , "", 4, 0, eEncodingInvalid, eFormatInvalid, { 79, 79, LLDB_INVALID_REGNUM,    79, 79 }, nullptr, nullptr },
  // }
-    { "g0"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 80, 80, LLDB_INVALID_REGNUM,    80, 80 }, NULL, NULL },
-    { "g1"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 81, 81, LLDB_INVALID_REGNUM,    81, 81 }, NULL, NULL },
-    { "g2"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 82, 82, LLDB_INVALID_REGNUM,    82, 82 }, NULL, NULL },
-    { "g3"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 83, 83, LLDB_INVALID_REGNUM,    83, 83 }, NULL, NULL }
+    { "g0"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 80, 80, LLDB_INVALID_REGNUM,    80, 80 }, nullptr, nullptr },
+    { "g1"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 81, 81, LLDB_INVALID_REGNUM,    81, 81 }, nullptr, nullptr },
+    { "g2"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 82, 82, LLDB_INVALID_REGNUM,    82, 82 }, nullptr, nullptr },
+    { "g3"    , "", 4, 0, eEncodingUint, eFormatAddressInfo, { 83, 83, LLDB_INVALID_REGNUM,    83, 83 }, nullptr, nullptr }
 };
 
 static const uint32_t k_num_register_infos = sizeof(g_register_infos)/sizeof(RegisterInfo);
@@ -176,6 +179,7 @@ ABISysV_hexagon::GetRedZoneSize () const
 //------------------------------------------------------------------
 // Static Functions
 //------------------------------------------------------------------
+
 ABISP
 ABISysV_hexagon::CreateInstance ( const ArchSpec &arch )
 {
@@ -273,7 +277,7 @@ ABISysV_hexagon::PrepareTrivialCall ( Thread &thread,
         sp -= argSize;
 
         // write this argument onto the stack of the host process
-        proc.get( )->WriteMemory( sp, arg.data_ap.get(), arg.size, error );
+        proc->WriteMemory( sp, arg.data_ap.get(), arg.size, error );
         if ( error.Fail( ) )
             return false;
 
@@ -463,7 +467,7 @@ ABISysV_hexagon::RegisterIsCalleeSaved ( const RegisterInfo *reg_info )
 }
 
 void
-ABISysV_hexagon::Initialize( void )
+ABISysV_hexagon::Initialize()
 {
     PluginManager::RegisterPlugin
     (
@@ -474,7 +478,7 @@ ABISysV_hexagon::Initialize( void )
 }
 
 void
-ABISysV_hexagon::Terminate( void )
+ABISysV_hexagon::Terminate()
 {
     PluginManager::UnregisterPlugin( CreateInstance );
 }
@@ -489,14 +493,15 @@ ABISysV_hexagon::GetPluginNameStatic()
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------
+
 lldb_private::ConstString
-ABISysV_hexagon::GetPluginName( void )
+ABISysV_hexagon::GetPluginName()
 {
     return GetPluginNameStatic();
 }
 
 uint32_t
-ABISysV_hexagon::GetPluginVersion( void )
+ABISysV_hexagon::GetPluginVersion()
 {
     return 1;
 }

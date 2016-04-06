@@ -35,4 +35,18 @@ int main()
         C c = {};
         assert(c.size() == 0);
     }
+
+    {
+        typedef double T;
+        typedef std::array<T, 3> C;
+        C c = {1};
+        assert(c.size() == 3.0);
+        assert(c[0] == 1);
+    }
+    {
+        typedef int T;
+        typedef std::array<T, 1> C;
+        C c = {};
+        assert(c.size() == 1);
+    }
 }

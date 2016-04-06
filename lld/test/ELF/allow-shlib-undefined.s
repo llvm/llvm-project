@@ -22,4 +22,4 @@
 
 .globl _start
 _start:
-  call _shared
+  callq _shared@PLT

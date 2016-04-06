@@ -14,7 +14,7 @@ __start:
 _label:
   nop
 
-# WARN: Can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16
+# WARN: can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16
 
 # CHECK:      Disassembly of section .text:
 # CHECK-NEXT: __start:

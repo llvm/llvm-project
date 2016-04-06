@@ -472,8 +472,8 @@ func (f *File) Section(name string) *Section {
 // DWARF returns the DWARF debug information for the Mach-O file.
 func (f *File) DWARF() (*dwarf.Data, error) {
 	// There are many other DWARF sections, but these
-	// are the required ones, and the debug/dwarf package
-	// does not use the others, so don't bother loading them.
+	// are the ones the debug/dwarf package uses.
+	// Don't bother loading others.
 	var names = [...]string{"abbrev", "info", "line", "str"}
 	var dat [len(names)][]byte
 	for i, name := range names {

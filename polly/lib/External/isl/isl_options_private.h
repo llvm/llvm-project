@@ -52,9 +52,11 @@ struct isl_options {
 
 	char			*ast_iterator_type;
 	int			ast_always_print_block;
+	int			ast_print_macro_once;
 
 	int			ast_build_atomic_upper_bound;
 	int			ast_build_prefer_pdiv;
+	int			ast_build_detect_min_max;
 	int			ast_build_exploit_nested_bounds;
 	int			ast_build_group_coscheduled;
 	int			ast_build_separation_bounds;

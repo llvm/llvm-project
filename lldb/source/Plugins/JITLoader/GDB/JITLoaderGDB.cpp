@@ -9,7 +9,10 @@
 
 // C Includes
 
+#include "llvm/Support/MathExtras.h"
+
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
@@ -22,11 +25,40 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 #include "JITLoaderGDB.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+//------------------------------------------------------------------
+// Debug Interface Structures
+//------------------------------------------------------------------
+typedef enum
+{
+    JIT_NOACTION = 0,
+    JIT_REGISTER_FN,
+    JIT_UNREGISTER_FN
+} jit_actions_t;
+
+template <typename ptr_t>
+struct jit_code_entry
+{
+    ptr_t    next_entry; // pointer
+    ptr_t    prev_entry; // pointer
+    ptr_t    symfile_addr; // pointer
+    uint64_t symfile_size;
+};
+
+template <typename ptr_t>
+struct jit_descriptor
+{
+    uint32_t version;
+    uint32_t action_flag; // Values are jit_action_t
+    ptr_t    relevant_entry; // pointer
+    ptr_t    first_entry; // pointer
+};
 
 namespace {
 
@@ -78,34 +110,34 @@ namespace {
         return g_settings_sp;
     }
 
+    template <typename ptr_t>
+    bool ReadJITEntry(const addr_t from_addr, Process *process, jit_code_entry<ptr_t> *entry)
+    {
+        lldbassert(from_addr % sizeof(ptr_t) == 0);
+
+        ArchSpec::Core core = process->GetTarget().GetArchitecture().GetCore();
+        bool i386_target = ArchSpec::kCore_x86_32_first <= core && core <= ArchSpec::kCore_x86_32_last;
+        uint8_t uint64_align_bytes =  i386_target ? 4 : 8;
+        const size_t data_byte_size = llvm::alignTo(sizeof(ptr_t) * 3, uint64_align_bytes) + sizeof(uint64_t);
+
+        Error error;
+        DataBufferHeap data(data_byte_size, 0);
+        size_t bytes_read = process->ReadMemory(from_addr, data.GetBytes(), data.GetByteSize(), error);
+        if (bytes_read != data_byte_size || !error.Success())
+            return false;
+
+        DataExtractor extractor (data.GetBytes(), data.GetByteSize(), process->GetByteOrder(), sizeof(ptr_t));
+        lldb::offset_t offset = 0;
+        entry->next_entry = extractor.GetPointer(&offset);
+        entry->prev_entry = extractor.GetPointer(&offset);
+        entry->symfile_addr = extractor.GetPointer(&offset);
+        offset = llvm::alignTo(offset, uint64_align_bytes);
+        entry->symfile_size = extractor.GetU64(&offset);
+
+        return true;
+    }
+
 }  // anonymous namespace end
-
-//------------------------------------------------------------------
-// Debug Interface Structures
-//------------------------------------------------------------------
-typedef enum
-{
-    JIT_NOACTION = 0,
-    JIT_REGISTER_FN,
-    JIT_UNREGISTER_FN
-} jit_actions_t;
-
-template <typename ptr_t>
-struct jit_code_entry
-{
-    ptr_t    next_entry; // pointer
-    ptr_t    prev_entry; // pointer
-    ptr_t    symfile_addr; // pointer
-    uint64_t symfile_size;
-};
-template <typename ptr_t>
-struct jit_descriptor
-{
-    uint32_t version;
-    uint32_t action_flag; // Values are jit_action_t
-    ptr_t    relevant_entry; // pointer
-    ptr_t    first_entry; // pointer
-};
 
 JITLoaderGDB::JITLoaderGDB (lldb_private::Process *process) :
     JITLoader(process),
@@ -268,8 +300,7 @@ static void updateSectionLoadAddress(const SectionList &section_list,
 bool
 JITLoaderGDB::ReadJITDescriptor(bool all_entries)
 {
-    Target &target = m_process->GetTarget();
-    if (target.GetArchitecture().GetAddressByteSize() == 8)
+    if (m_process->GetTarget().GetArchitecture().GetAddressByteSize() == 8)
         return ReadJITDescriptorImpl<uint64_t>(all_entries);
     else
         return ReadJITDescriptorImpl<uint32_t>(all_entries);
@@ -310,9 +341,7 @@ JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries)
     while (jit_relevant_entry != 0)
     {
         jit_code_entry<ptr_t> jit_entry;
-        const size_t jit_entry_size = sizeof(jit_entry);
-        bytes_read = m_process->DoReadMemory(jit_relevant_entry, &jit_entry, jit_entry_size, error);
-        if (bytes_read != jit_entry_size || !error.Success())
+        if (!ReadJITEntry(jit_relevant_entry, m_process, &jit_entry))
         {
             if (log)
                 log->Printf(
@@ -340,7 +369,9 @@ JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries)
 
             if (module_sp && module_sp->GetObjectFile())
             {
-                bool changed;
+                // load the symbol table right away
+                module_sp->GetObjectFile()->GetSymtab();
+
                 m_jit_objects.insert(std::make_pair(symbolfile_addr, module_sp));
                 if (module_sp->GetObjectFile()->GetPluginName() == ConstString("mach-o"))
                 {
@@ -360,11 +391,9 @@ JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries)
                 }
                 else
                 {
+                    bool changed = false;
                     module_sp->SetLoadAddress(target, 0, true, changed);
                 }
-
-                // load the symbol table right away
-                module_sp->GetObjectFile()->GetSymtab();
 
                 module_list.AppendIfNeeded(module_sp);
 

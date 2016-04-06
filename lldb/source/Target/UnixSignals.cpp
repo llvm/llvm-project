@@ -7,15 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/UnixSignals.h"
 
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Target/UnixSignals.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Host/StringConvert.h"
-
 #include "Plugins/Process/Utility/FreeBSDSignals.h"
 #include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/Utility/MipsLinuxSignals.h"
@@ -23,15 +22,12 @@
 
 using namespace lldb_private;
 
-UnixSignals::Signal::Signal
-(
-    const char *name,
-    bool default_suppress,
-    bool default_stop,
-    bool default_notify,
-    const char *description,
-    const char *alias
-) :
+UnixSignals::Signal::Signal(const char *name,
+                            bool default_suppress,
+                            bool default_stop,
+                            bool default_notify,
+                            const char *description,
+                            const char *alias) :
     m_name (name),
     m_alias (alias),
     m_description (),
@@ -85,12 +81,7 @@ UnixSignals::UnixSignals(const UnixSignals &rhs)
 {
 }
 
-//----------------------------------------------------------------------
-// Destructor
-//----------------------------------------------------------------------
-UnixSignals::~UnixSignals ()
-{
-}
+UnixSignals::~UnixSignals() = default;
 
 void
 UnixSignals::Reset ()
@@ -135,16 +126,13 @@ UnixSignals::Reset ()
 }
 
 void
-UnixSignals::AddSignal 
-(
-    int signo,
-    const char *name,
-    bool default_suppress,
-    bool default_stop,
-    bool default_notify,
-    const char *description,
-    const char *alias
-)
+UnixSignals::AddSignal(int signo,
+                       const char *name,
+                       bool default_suppress,
+                       bool default_stop,
+                       bool default_notify,
+                       const char *description,
+                       const char *alias)
 {
     Signal new_signal (name, default_suppress, default_stop, default_notify, description, alias);
     m_signals.insert (std::make_pair(signo, new_signal));
@@ -163,11 +151,10 @@ UnixSignals::GetSignalAsCString (int signo) const
 {
     collection::const_iterator pos = m_signals.find (signo);
     if (pos == m_signals.end())
-        return NULL;
+        return nullptr;
     else
         return pos->second.m_name.GetCString ();
 }
-
 
 bool
 UnixSignals::SignalIsValid (int32_t signo) const
@@ -232,17 +219,14 @@ UnixSignals::GetNextSignalNumber (int32_t current_signal) const
 }
 
 const char *
-UnixSignals::GetSignalInfo
-(
-    int32_t signo,
-    bool &should_suppress,
-    bool &should_stop,
-    bool &should_notify
-) const
+UnixSignals::GetSignalInfo(int32_t signo,
+                           bool &should_suppress,
+                           bool &should_stop,
+                           bool &should_notify) const
 {
     collection::const_iterator pos = m_signals.find (signo);
     if (pos == m_signals.end())
-        return NULL;
+        return nullptr;
     else
     {
         const Signal &signal = pos->second;

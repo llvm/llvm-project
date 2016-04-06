@@ -72,10 +72,6 @@ public:
         return GetPluginDescriptionStatic(IsHost());
     }
 
-    size_t
-    GetSoftwareBreakpointTrapOpcode(lldb_private::Target &target,
-                                    lldb_private::BreakpointSite *bp_site) override;
-
     bool
     GetRemoteOSVersion() override;
 

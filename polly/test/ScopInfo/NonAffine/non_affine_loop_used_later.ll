@@ -18,8 +18,8 @@
 ; CHECK-NEXT: [N] -> {  : -2147483648 <= N <= 2147483647 }
 ; CHECK-NEXT: Assumed Context:
 ; CHECK-NEXT: [N] -> {  :  }
-; CHECK-NEXT: Boundary Context:
-; CHECK-NEXT: [N] -> {  :  }
+; CHECK-NEXT: Invalid Context:
+; CHECK-NEXT: [N] -> {  : 1 = 0 }
 ; CHECK-NEXT: p0: %N
 ; CHECK-NEXT: Arrays {
 ; CHECK-NEXT:     i32 MemRef_j_0__phi; // Element size 4

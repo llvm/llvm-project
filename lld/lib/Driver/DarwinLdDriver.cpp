@@ -13,8 +13,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "lld/Core/File.h"
 #include "lld/Core/ArchiveLibraryFile.h"
+#include "lld/Core/File.h"
+#include "lld/Core/Instrumentation.h"
+#include "lld/Core/PassManager.h"
+#include "lld/Core/Resolver.h"
 #include "lld/Core/SharedLibraryFile.h"
 #include "lld/Driver/Driver.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
@@ -25,17 +28,10 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/MachO.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 using namespace lld;
 
@@ -71,6 +67,25 @@ class DarwinLdOptTable : public llvm::opt::OptTable {
 public:
   DarwinLdOptTable() : OptTable(infoTable) {}
 };
+
+static std::vector<std::unique_ptr<File>>
+makeErrorFile(StringRef path, std::error_code ec) {
+  std::vector<std::unique_ptr<File>> result;
+  result.push_back(llvm::make_unique<ErrorFile>(path, ec));
+  return result;
+}
+
+static std::vector<std::unique_ptr<File>>
+parseMemberFiles(std::unique_ptr<File> file) {
+  std::vector<std::unique_ptr<File>> members;
+  if (auto *archive = dyn_cast<ArchiveLibraryFile>(file.get())) {
+    if (std::error_code ec = archive->parseAllMembers(members))
+      return makeErrorFile(file->path(), ec);
+  } else {
+    members.push_back(std::move(file));
+  }
+  return members;
+}
 
 std::vector<std::unique_ptr<File>>
 loadFile(MachOLinkingContext &ctx, StringRef path,
@@ -215,9 +230,9 @@ static std::error_code parseOrderFile(StringRef orderFilePath,
 // In this variant, the path is to a text file which contains a partial path
 // per line. The <dir> prefix is prepended to each partial path.
 //
-static std::error_code loadFileList(StringRef fileListPath,
-                                    MachOLinkingContext &ctx, bool forceLoad,
-                                    raw_ostream &diagnostics) {
+static llvm::Error loadFileList(StringRef fileListPath,
+                                MachOLinkingContext &ctx, bool forceLoad,
+                                raw_ostream &diagnostics) {
   // If there is a comma, split off <dir>.
   std::pair<StringRef, StringRef> opt = fileListPath.split(',');
   StringRef filePath = opt.first;
@@ -227,7 +242,7 @@ static std::error_code loadFileList(StringRef fileListPath,
   ErrorOr<std::unique_ptr<MemoryBuffer>> mb =
                                         MemoryBuffer::getFileOrSTDIN(filePath);
   if (std::error_code ec = mb.getError())
-    return ec;
+    return llvm::errorCodeToError(ec);
   StringRef buffer = mb->get()->getBuffer();
   while (!buffer.empty()) {
     // Split off each line in the file.
@@ -245,9 +260,9 @@ static std::error_code loadFileList(StringRef fileListPath,
       path = ctx.copy(line);
     }
     if (!ctx.pathExists(path)) {
-      return make_dynamic_error_code(Twine("File not found '")
-                                     + path
-                                     + "'");
+      return llvm::make_error<GenericError>(Twine("File not found '")
+                                            + path
+                                            + "'");
     }
     if (ctx.testingFileUsage()) {
       diagnostics << "Found filelist entry " << canonicalizePath(path) << '\n';
@@ -255,7 +270,7 @@ static std::error_code loadFileList(StringRef fileListPath,
     addFile(path, ctx, forceLoad, false, diagnostics);
     buffer = lineAndRest.second;
   }
-  return std::error_code();
+  return llvm::Error();
 }
 
 /// Parse number assuming it is base 16, but allow 0x prefix.
@@ -265,20 +280,24 @@ static bool parseNumberBase16(StringRef numStr, uint64_t &baseAddress) {
   return numStr.getAsInteger(16, baseAddress);
 }
 
-namespace lld {
-
-bool DarwinLdDriver::linkMachO(llvm::ArrayRef<const char *> args,
-                               raw_ostream &diagnostics) {
-  MachOLinkingContext ctx;
-  if (!parse(args, ctx, diagnostics))
-    return false;
-  if (ctx.doNothing())
-    return true;
-  return link(ctx, diagnostics);
+static void parseLLVMOptions(const LinkingContext &ctx) {
+  // Honor -mllvm
+  if (!ctx.llvmOptions().empty()) {
+    unsigned numArgs = ctx.llvmOptions().size();
+    auto **args = new const char *[numArgs + 2];
+    args[0] = "lld (LLVM option parsing)";
+    for (unsigned i = 0; i != numArgs; ++i)
+      args[i + 1] = ctx.llvmOptions()[i];
+    args[numArgs + 1] = nullptr;
+    llvm::cl::ParseCommandLineOptions(numArgs + 1, args);
+  }
 }
 
-bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
-                           MachOLinkingContext &ctx, raw_ostream &diagnostics) {
+namespace lld {
+namespace mach_o {
+
+bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx,
+           raw_ostream &diagnostics) {
   // Parse command line options using DarwinLdOptions.td
   DarwinLdOptTable table;
   unsigned missingIndex;
@@ -1034,7 +1053,7 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
   // Handle input files and sectcreate.
   for (auto &arg : parsedArgs) {
     bool upward;
-    ErrorOr<StringRef> resolvedPath = StringRef();
+    llvm::Optional<StringRef> resolvedPath;
     switch (arg->getOption().getID()) {
     default:
       continue;
@@ -1057,9 +1076,10 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
         return false;
       } else if (ctx.testingFileUsage()) {
         diagnostics << "Found " << (upward ? "upward " : " ") << "library "
-                   << canonicalizePath(resolvedPath.get()) << '\n';
+                   << canonicalizePath(resolvedPath.getValue()) << '\n';
       }
-      addFile(resolvedPath.get(), ctx, globalWholeArchive, upward, diagnostics);
+      addFile(resolvedPath.getValue(), ctx, globalWholeArchive,
+              upward, diagnostics);
       break;
     case OPT_framework:
     case OPT_upward_framework:
@@ -1071,17 +1091,20 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
         return false;
       } else if (ctx.testingFileUsage()) {
         diagnostics << "Found " << (upward ? "upward " : " ") << "framework "
-                    << canonicalizePath(resolvedPath.get()) << '\n';
+                    << canonicalizePath(resolvedPath.getValue()) << '\n';
       }
-      addFile(resolvedPath.get(), ctx, globalWholeArchive, upward, diagnostics);
+      addFile(resolvedPath.getValue(), ctx, globalWholeArchive,
+              upward, diagnostics);
       break;
     case OPT_filelist:
-      if (std::error_code ec = loadFileList(arg->getValue(),
-                                            ctx, globalWholeArchive,
-                                            diagnostics)) {
-        diagnostics << "error: " << ec.message()
-                    << ", processing '-filelist " << arg->getValue()
-                    << "'\n";
+      if (auto ec = loadFileList(arg->getValue(),
+                                 ctx, globalWholeArchive,
+                                 diagnostics)) {
+        handleAllErrors(std::move(ec), [&](const llvm::ErrorInfoBase &EI) {
+          diagnostics << "error: ";
+          EI.log(diagnostics);
+          diagnostics << ", processing '-filelist " << arg->getValue() << "'\n";
+        });
         return false;
       }
       break;
@@ -1113,5 +1136,80 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
   return ctx.validate(diagnostics);
 }
 
+/// This is where the link is actually performed.
+bool link(llvm::ArrayRef<const char *> args, raw_ostream &diagnostics) {
+  MachOLinkingContext ctx;
+  if (!parse(args, ctx, diagnostics))
+    return false;
+  if (ctx.doNothing())
+    return true;
+  if (ctx.getNodes().empty())
+    return false;
 
+  for (std::unique_ptr<Node> &ie : ctx.getNodes())
+    if (FileNode *node = dyn_cast<FileNode>(ie.get()))
+      node->getFile()->parse();
+
+  std::vector<std::unique_ptr<File>> internalFiles;
+  ctx.createInternalFiles(internalFiles);
+  for (auto i = internalFiles.rbegin(), e = internalFiles.rend(); i != e; ++i) {
+    auto &members = ctx.getNodes();
+    members.insert(members.begin(), llvm::make_unique<FileNode>(std::move(*i)));
+  }
+
+  // Give target a chance to add files.
+  std::vector<std::unique_ptr<File>> implicitFiles;
+  ctx.createImplicitFiles(implicitFiles);
+  for (auto i = implicitFiles.rbegin(), e = implicitFiles.rend(); i != e; ++i) {
+    auto &members = ctx.getNodes();
+    members.insert(members.begin(), llvm::make_unique<FileNode>(std::move(*i)));
+  }
+
+  // Give target a chance to postprocess input files.
+  // Mach-O uses this chance to move all object files before library files.
+  ctx.finalizeInputFiles();
+
+  // Do core linking.
+  ScopedTask resolveTask(getDefaultDomain(), "Resolve");
+  Resolver resolver(ctx);
+  if (!resolver.resolve())
+    return false;
+  SimpleFile *merged = nullptr;
+  {
+    std::unique_ptr<SimpleFile> mergedFile = resolver.resultFile();
+    merged = mergedFile.get();
+    auto &members = ctx.getNodes();
+    members.insert(members.begin(),
+                   llvm::make_unique<FileNode>(std::move(mergedFile)));
+  }
+  resolveTask.end();
+
+  // Run passes on linked atoms.
+  ScopedTask passTask(getDefaultDomain(), "Passes");
+  PassManager pm;
+  ctx.addPasses(pm);
+  if (auto ec = pm.runOnFile(*merged)) {
+    // FIXME: This should be passed to logAllUnhandledErrors but it needs
+    // to be passed a Twine instead of a string.
+    diagnostics << "Failed to run passes on file '" << ctx.outputPath()
+                << "': ";
+    logAllUnhandledErrors(std::move(ec), diagnostics, std::string());
+    return false;
+  }
+
+  passTask.end();
+
+  // Give linked atoms to Writer to generate output file.
+  ScopedTask writeTask(getDefaultDomain(), "Write");
+  if (auto ec = ctx.writeFile(*merged)) {
+    // FIXME: This should be passed to logAllUnhandledErrors but it needs
+    // to be passed a Twine instead of a string.
+    diagnostics << "Failed to write file '" << ctx.outputPath() << "': ";
+    logAllUnhandledErrors(std::move(ec), diagnostics, std::string());
+    return false;
+  }
+
+  return true;
+}
+} // namespace mach_o
 } // namespace lld

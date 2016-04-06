@@ -628,6 +628,7 @@ namespace lldb {
         eSectionTypeARMextab,
         eSectionTypeCompactUnwind,        // compact unwind section in Mach-O, __TEXT,__unwind_info
         eSectionTypeGoSymtab,
+        eSectionTypeAbsoluteAddress,      // Dummy section for symbols with absolute address
         eSectionTypeOther
     };
 

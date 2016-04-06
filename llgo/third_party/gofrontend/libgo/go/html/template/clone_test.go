@@ -142,7 +142,7 @@ func TestTemplates(t *testing.T) {
 	}
 }
 
-// This used to crash; http://golang.org/issue/3281
+// This used to crash; https://golang.org/issue/3281
 func TestCloneCrash(t *testing.T) {
 	t1 := New("all")
 	Must(t1.New("t1").Parse(`{{define "foo"}}foo{{end}}`))
@@ -166,7 +166,7 @@ func TestCloneThenParse(t *testing.T) {
 	}
 }
 
-// https://code.google.com/p/go/issues/detail?id=5980
+// https://golang.org/issue/5980
 func TestFuncMapWorksAfterClone(t *testing.T) {
 	funcs := FuncMap{"customFunc": func() (string, error) {
 		return "", errors.New("issue5980")

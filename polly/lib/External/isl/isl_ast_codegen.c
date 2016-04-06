@@ -1107,16 +1107,15 @@ static __isl_give isl_ast_graft *set_for_node_expressions(
 	node->u.f.init = reduce_list(isl_ast_op_max, lower, build);
 	node->u.f.inc = for_inc(build);
 
+	if (!node->u.f.init || !node->u.f.inc)
+		graft = isl_ast_graft_free(graft);
+
 	if (use_list)
 		graft = set_for_cond_from_list(graft, upper_list, build);
 	else
 		graft = set_for_cond_from_set(graft, upper_set, build);
 
 	isl_ast_build_free(build);
-
-	if (!node->u.f.iterator || !node->u.f.init ||
-	    !node->u.f.cond || !node->u.f.inc)
-		return isl_ast_graft_free(graft);
 
 	return graft;
 }

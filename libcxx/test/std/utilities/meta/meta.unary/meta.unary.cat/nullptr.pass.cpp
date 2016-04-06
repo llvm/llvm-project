@@ -14,8 +14,9 @@
 
 #include <type_traits>
 #include <cstddef>        // for std::nullptr_t
+#include "test_macros.h"
 
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
 template <class T>
 void test_nullptr_imp()
 {
@@ -44,9 +45,14 @@ void test_nullptr()
     test_nullptr_imp<const volatile T>();
 }
 
+struct incomplete_type;
+
 int main()
 {
     test_nullptr<std::nullptr_t>();
+
+//  LWG#2581
+    static_assert(!std::is_null_pointer<incomplete_type>::value, "");
 }
 #else
 int main() {}

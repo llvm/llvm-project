@@ -146,7 +146,7 @@ static void printDefinedAtoms(const SimpleFile::DefinedAtomRange &atomRange) {
 
 /// Verify that the followon chain is sane. Should not be called in
 /// release binary.
-void LayoutPass::checkFollowonChain(SimpleFile::DefinedAtomRange &range) {
+void LayoutPass::checkFollowonChain(const SimpleFile::DefinedAtomRange &range) {
   ScopedTask task(getDefaultDomain(), "LayoutPass::checkFollowonChain");
 
   // Verify that there's no cycle in follow-on chain.
@@ -176,8 +176,8 @@ static bool compareAtomsSub(const LayoutPass::SortKey &lc,
                             const LayoutPass::SortKey &rc,
                             LayoutPass::SortOverride customSorter,
                             std::string &reason) {
-  const DefinedAtom *left = lc._atom;
-  const DefinedAtom *right = rc._atom;
+  const DefinedAtom *left = lc._atom.get();
+  const DefinedAtom *right = rc._atom.get();
   if (left == right) {
     reason = "same";
     return false;
@@ -252,8 +252,9 @@ static bool compareAtoms(const LayoutPass::SortKey &lc,
   bool result = compareAtomsSub(lc, rc, customSorter, reason);
   DEBUG({
     StringRef comp = result ? "<" : ">=";
-    llvm::dbgs() << "Layout: '" << lc._atom->name() << "' " << comp << " '"
-                 << rc._atom->name() << "' (" << reason << ")\n";
+    llvm::dbgs() << "Layout: '" << lc._atom.get()->name()
+                 << "' " << comp << " '"
+                 << rc._atom.get()->name() << "' (" << reason << ")\n";
   });
   return result;
 }
@@ -329,12 +330,12 @@ void LayoutPass::setChainRoot(const DefinedAtom *targetAtom,
 /// d) If the targetAtom is part of a different chain and the root of the
 ///    targetAtom until the targetAtom has all atoms of size 0, then chain the
 ///    targetAtoms and its tree to the current chain
-void LayoutPass::buildFollowOnTable(SimpleFile::DefinedAtomRange &range) {
+void LayoutPass::buildFollowOnTable(const SimpleFile::DefinedAtomRange &range) {
   ScopedTask task(getDefaultDomain(), "LayoutPass::buildFollowOnTable");
   // Set the initial size of the followon and the followonNext hash to the
   // number of atoms that we have.
-  _followOnRoots.resize(range.size());
-  _followOnNexts.resize(range.size());
+  _followOnRoots.reserve(range.size());
+  _followOnNexts.reserve(range.size());
   for (const DefinedAtom *ai : range) {
     for (const Reference *r : *ai) {
       if (r->kindNamespace() != lld::Reference::KindNamespace::all ||
@@ -397,7 +398,8 @@ void LayoutPass::buildFollowOnTable(SimpleFile::DefinedAtomRange &range) {
 /// assigning ordinals to each atom, if the atoms have their ordinals
 /// already assigned skip the atom and move to the next. This is the
 /// main map thats used to sort the atoms while comparing two atoms together
-void LayoutPass::buildOrdinalOverrideMap(SimpleFile::DefinedAtomRange &range) {
+void
+LayoutPass::buildOrdinalOverrideMap(const SimpleFile::DefinedAtomRange &range) {
   ScopedTask task(getDefaultDomain(), "LayoutPass::buildOrdinalOverrideMap");
   uint64_t index = 0;
   for (const DefinedAtom *ai : range) {
@@ -419,12 +421,12 @@ void LayoutPass::buildOrdinalOverrideMap(SimpleFile::DefinedAtomRange &range) {
 std::vector<LayoutPass::SortKey>
 LayoutPass::decorate(SimpleFile::DefinedAtomRange &atomRange) const {
   std::vector<SortKey> ret;
-  for (const DefinedAtom *atom : atomRange) {
-    auto ri = _followOnRoots.find(atom);
-    auto oi = _ordinalOverrideMap.find(atom);
-    const DefinedAtom *root = (ri == _followOnRoots.end()) ? atom : ri->second;
+  for (OwningAtomPtr<DefinedAtom> &atom : atomRange.owning_ptrs()) {
+    auto ri = _followOnRoots.find(atom.get());
+    auto oi = _ordinalOverrideMap.find(atom.get());
+    const auto *root = (ri == _followOnRoots.end()) ? atom.get() : ri->second;
     uint64_t override = (oi == _ordinalOverrideMap.end()) ? 0 : oi->second;
-    ret.push_back(SortKey(atom, root, override));
+    ret.push_back(SortKey(std::move(atom), root, override));
   }
   return ret;
 }
@@ -433,11 +435,11 @@ void LayoutPass::undecorate(SimpleFile::DefinedAtomRange &atomRange,
                             std::vector<SortKey> &keys) const {
   size_t i = 0;
   for (SortKey &k : keys)
-    atomRange[i++] = k._atom;
+    atomRange[i++] = std::move(k._atom);
 }
 
 /// Perform the actual pass
-std::error_code LayoutPass::perform(SimpleFile &mergedFile) {
+llvm::Error LayoutPass::perform(SimpleFile &mergedFile) {
   DEBUG(llvm::dbgs() << "******** Laying out atoms:\n");
   // sort the atoms
   ScopedTask task(getDefaultDomain(), "LayoutPass");
@@ -471,7 +473,7 @@ std::error_code LayoutPass::perform(SimpleFile &mergedFile) {
   });
 
   DEBUG(llvm::dbgs() << "******** Finished laying out atoms\n");
-  return std::error_code();
+  return llvm::Error();
 }
 
 void addLayoutPass(PassManager &pm, const MachOLinkingContext &ctx) {

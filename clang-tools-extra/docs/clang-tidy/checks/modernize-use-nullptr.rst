@@ -42,7 +42,7 @@ User defined macros
 
 By default this check will only replace the ``NULL`` macro and will skip any
 user-defined macros that behaves like ``NULL``. The user can use the
-:option:``UserNullMacros`` option to specify a comma-separated list of macro
+:option:`UserNullMacros` option to specify a comma-separated list of macro
 names that will be transformed along with ``NULL``.
 
 Example
@@ -64,4 +64,4 @@ transforms to:
     int *p = nullptr;
   }
 
-if the ``UserNullMacros`` option is set to ``MY_NULL``.
+if the :option:`UserNullMacros` option is set to ``MY_NULL``.

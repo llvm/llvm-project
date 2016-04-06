@@ -17,6 +17,9 @@ __go_type_hash_error (const void *val __attribute__ ((unused)),
   runtime_panicstring ("hash of unhashable type");
 }
 
+const FuncVal __go_type_hash_error_descriptor =
+  { (void *) __go_type_hash_error };
+
 /* An equality function for an interface.  */
 
 _Bool
@@ -26,3 +29,6 @@ __go_type_equal_error (const void *v1 __attribute__ ((unused)),
 {
   runtime_panicstring ("comparing uncomparable types");
 }
+
+const FuncVal __go_type_equal_error_descriptor =
+  { (void *) __go_type_equal_error };

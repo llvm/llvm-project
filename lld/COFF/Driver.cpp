@@ -14,6 +14,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
+#include "lld/Driver/Driver.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/LibDriver/LibDriver.h"
 #include "llvm/Option/Arg.h"
@@ -40,12 +41,13 @@ namespace coff {
 Configuration *Config;
 LinkerDriver *Driver;
 
-void link(llvm::ArrayRef<const char *> Args) {
+bool link(llvm::ArrayRef<const char *> Args) {
   Configuration C;
   LinkerDriver D;
   Config = &C;
   Driver = &D;
-  return Driver->link(Args);
+  Driver->link(Args);
+  return true;
 }
 
 // Drop directory components and replace extension with ".exe".
@@ -117,6 +119,7 @@ void LinkerDriver::parseDirectives(StringRef S) {
       Config->NoDefaultLibs.insert(doFindLib(Arg->getValue()));
       break;
     case OPT_editandcontinue:
+    case OPT_fastfail:
     case OPT_guardsym:
     case OPT_throwingnew:
       break;

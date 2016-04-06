@@ -35,7 +35,9 @@
 ;
 ; CHECK:    Region: %entry.split---%if.end.20
 ; CHECK:    Assumed Context:
-; CHECK-NEXT:    [timeit, N] -> { : timeit = 0 }
+; CHECK-NEXT:    [timeit, N] -> { : }
+; CHECK:    Invalid Context:
+; CHECK-NEXT:    [timeit, N] -> { : timeit < 0 or timeit > 0 }
 ; CHECK:    Statements {
 ; CHECK-NOT:      Stmt_if_then_split
 ; CHECK:      Stmt_for_body

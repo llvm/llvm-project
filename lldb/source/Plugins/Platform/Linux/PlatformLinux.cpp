@@ -522,96 +522,6 @@ PlatformLinux::GetStatus (Stream &strm)
 #endif
 }
 
-size_t
-PlatformLinux::GetSoftwareBreakpointTrapOpcode (Target &target,
-                                                BreakpointSite *bp_site)
-{
-    ArchSpec arch = target.GetArchitecture();
-    const uint8_t *trap_opcode = NULL;
-    size_t trap_opcode_size = 0;
-
-    switch (arch.GetMachine())
-    {
-    default:
-        assert(false && "CPU type not supported!");
-        break;
-
-    case llvm::Triple::aarch64:
-        {
-            static const uint8_t g_aarch64_opcode[] = { 0x00, 0x00, 0x20, 0xd4 };
-            trap_opcode = g_aarch64_opcode;
-            trap_opcode_size = sizeof(g_aarch64_opcode);
-        }
-        break;
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-        {
-            static const uint8_t g_i386_breakpoint_opcode[] = { 0xCC };
-            trap_opcode = g_i386_breakpoint_opcode;
-            trap_opcode_size = sizeof(g_i386_breakpoint_opcode);
-        }
-        break;
-    case llvm::Triple::hexagon:
-        {
-            static const uint8_t g_hex_opcode[] = { 0x0c, 0xdb, 0x00, 0x54 };
-            trap_opcode = g_hex_opcode;
-            trap_opcode_size = sizeof(g_hex_opcode);
-        }
-        break;
-    case llvm::Triple::arm:
-        {
-            static const uint8_t g_arm_breakpoint_opcode[] = { 0x70, 0xbe, 0x20, 0xe1 };
-            static const uint8_t g_thumb_breakpoint_opcode[] = { 0x70, 0xbe };
-
-            lldb::BreakpointLocationSP bp_loc_sp (bp_site->GetOwnerAtIndex (0));
-            AddressClass addr_class = eAddressClassUnknown;
-
-            if (bp_loc_sp)
-            {
-                addr_class = bp_loc_sp->GetAddress ().GetAddressClass ();
-
-                if (addr_class == eAddressClassUnknown &&
-                    (bp_loc_sp->GetAddress ().GetFileAddress () & 1))
-                {
-                    addr_class = eAddressClassCodeAlternateISA;
-                }
-            }
-
-            if (addr_class == eAddressClassCodeAlternateISA)
-            {
-                trap_opcode = g_thumb_breakpoint_opcode;
-                trap_opcode_size = sizeof(g_thumb_breakpoint_opcode);
-            }
-            else
-            {
-                trap_opcode = g_arm_breakpoint_opcode;
-                trap_opcode_size = sizeof(g_arm_breakpoint_opcode);
-            }
-        }
-        break;
-    case llvm::Triple::mips:
-    case llvm::Triple::mips64:
-        {
-            static const uint8_t g_hex_opcode[] = { 0x00, 0x00, 0x00, 0x0d };
-            trap_opcode = g_hex_opcode;
-            trap_opcode_size = sizeof(g_hex_opcode);
-        }
-        break;
-    case llvm::Triple::mipsel:
-    case llvm::Triple::mips64el:
-        {
-            static const uint8_t g_hex_opcode[] = { 0x0d, 0x00, 0x00, 0x00 };
-            trap_opcode = g_hex_opcode;
-            trap_opcode_size = sizeof(g_hex_opcode);
-        }
-        break;
-    }
-
-    if (bp_site->SetTrapOpcode(trap_opcode, trap_opcode_size))
-        return trap_opcode_size;
-    return 0;
-}
-
 int32_t
 PlatformLinux::GetResumeCountForLaunchInfo (ProcessLaunchInfo &launch_info)
 {
@@ -760,9 +670,9 @@ PlatformLinux::DebugProcess (ProcessLaunchInfo &launch_info,
         if (log)
             log->Printf ("PlatformLinux::%s setting up hijacker", __FUNCTION__);
 
-        listener_sp.reset (new Listener("lldb.PlatformLinux.DebugProcess.hijack"));
+        listener_sp = Listener::MakeListener("lldb.PlatformLinux.DebugProcess.hijack");
         launch_info.SetHijackListener (listener_sp);
-        process_sp->HijackProcessEvents (listener_sp.get ());
+        process_sp->HijackProcessEvents (listener_sp);
     }
 
     // Log file actions.
@@ -788,7 +698,7 @@ PlatformLinux::DebugProcess (ProcessLaunchInfo &launch_info,
         // Handle the hijacking of process events.
         if (listener_sp)
         {
-            const StateType state = process_sp->WaitForProcessToStop (NULL, NULL, false, listener_sp.get());
+            const StateType state = process_sp->WaitForProcessToStop (NULL, NULL, false, listener_sp);
 
             if (state == eStateStopped)
             {

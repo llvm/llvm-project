@@ -547,4 +547,3 @@ ExpressionSourceCode::GetOriginalBodyBounds(std::string transformed_text,
         return false;
     return true;
 }
-

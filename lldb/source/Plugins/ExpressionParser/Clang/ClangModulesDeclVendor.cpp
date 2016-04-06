@@ -586,6 +586,7 @@ ClangModulesDeclVendorImpl::ForEachMacro(const ClangModulesDeclVendor::ModuleVec
                                 break;
                             case clang::tok::TokenKind::raw_identifier:
                                 macro_expansion.append(ti->getRawIdentifier().str());
+                                break;
                             default:
                                 macro_expansion.append(ti->getName());
                                 break;

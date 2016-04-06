@@ -10,6 +10,7 @@ import os, time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
 
 class AsanTestCase(TestBase):
@@ -20,7 +21,7 @@ class AsanTestCase(TestBase):
     @skipIfFreeBSD # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessCompilerRt
-    @expectedFailureDarwin
+    @expectedFailureAll(oslist=lldbplatform.darwin_all)
     def test (self):
         self.build ()
         self.asan_tests ()
@@ -46,11 +47,10 @@ class AsanTestCase(TestBase):
 
         self.runCmd("run")
 
-        # ASan will relaunch the process to insert its library.
-        self.expect("thread list", "Process should be stopped due to exec.",
-            substrs = ['stopped', 'stop reason = '])
-
-        self.runCmd("continue")
+        stop_reason = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        if stop_reason == lldb.eStopReasonExec:
+            # On OS X 10.10 and older, we need to re-exec to enable interceptors.
+            self.runCmd("continue")
 
         # the stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
@@ -88,15 +88,12 @@ class AsanTestCase(TestBase):
         self.assertTrue(history_thread.num_frames >= 2)
         self.assertEqual(history_thread.frames[1].GetLineEntry().GetFileSpec().GetFilename(), "main.c")
         self.assertEqual(history_thread.frames[1].GetLineEntry().GetLine(), self.line_malloc)
-
-        # now let's break when an ASan report occurs and try the API then
-        self.runCmd("breakpoint set -n __asan_report_error")
-
+        
+        # ASan will break when a report occurs and we'll try the API then
         self.runCmd("continue")
 
-        # the stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped', 'stop reason = breakpoint'])
+        self.expect("thread list", "Process should be stopped due to ASan report",
+            substrs = ['stopped', 'stop reason = Use of deallocated memory detected'])
 
         # make sure the 'memory history' command still works even when we're generating a report now
         self.expect("memory history 'another_pointer'",

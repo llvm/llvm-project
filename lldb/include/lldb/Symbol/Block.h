@@ -310,8 +310,9 @@ public:
     AppendBlockVariables (bool can_create,
                           bool get_child_block_variables,
                           bool stop_if_child_block_is_inlined_function,
+                          const std::function<bool(Variable*)>& filter,
                           VariableList *variable_list);
-                          
+
     //------------------------------------------------------------------
     /// Appends the variables from this block, and optionally from all
     /// parent blocks, to \a variable_list.
@@ -341,9 +342,10 @@ public:
     ///     variable_list.
     //------------------------------------------------------------------
     uint32_t
-    AppendVariables (bool can_create, 
-                     bool get_parent_variables, 
+    AppendVariables (bool can_create,
+                     bool get_parent_variables,
                      bool stop_if_block_is_inlined_function,
+                     const std::function<bool(Variable*)>& filter,
                      VariableList *variable_list);
 
     //------------------------------------------------------------------

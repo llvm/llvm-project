@@ -187,4 +187,22 @@ class RegisterVariableTestCase(TestBase):
         self.assertTrue(register_variables_count > 0, "expected to verify at least one variable in a register")
         # print("executed {} expressions with values in registers".format(register_variables_count))
 
+        #####################
+        # Third breakpoint
+
+        self.runCmd("continue")
+
+        # The stop reason of the thread should be breakpoint.
+        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+            substrs = ['stopped',
+                       'stop reason = breakpoint'])
+
+        # The breakpoint should have a hit count of 1.
+        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
+            substrs = [' resolved, hit count = 1'])
+
+        # Try some variables that should be visible
+        self.expect("expr f", VARIABLES_DISPLAYED_CORRECTLY,
+            substrs = ['(float) $4 = 3.1'])
+
         self.runCmd("kill")

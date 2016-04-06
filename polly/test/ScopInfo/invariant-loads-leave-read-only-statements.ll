@@ -8,8 +8,6 @@
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [p_0, p_1, p_2] -> { Stmt_top_split[] -> [0, 0, 0, 0] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [p_0, p_1, p_2] -> { Stmt_top_split[] -> MemRef_26[] };
-; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [p_0, p_1, p_2] -> { Stmt_top_split[] -> MemRef_25[] };
 ; CHECK-NEXT:     Stmt_L_4
 ; CHECK-NEXT:         Domain :=

@@ -221,7 +221,7 @@ bool
 FunctionCaller::InsertFunction(ExecutionContext &exe_ctx, lldb::addr_t &args_addr_ref,
                                DiagnosticManager &diagnostic_manager)
 {
-    if (CompileFunction(diagnostic_manager) != 0)
+    if (CompileFunction(exe_ctx.GetThreadSP(), diagnostic_manager) != 0)
         return false;
     if (!WriteFunctionWrapper(exe_ctx, diagnostic_manager))
         return false;
@@ -335,7 +335,7 @@ FunctionCaller::ExecuteFunction(ExecutionContext &exe_ctx, lldb::addr_t *args_ad
     else
         args_addr = LLDB_INVALID_ADDRESS;
 
-    if (CompileFunction(diagnostic_manager) != 0)
+    if (CompileFunction(exe_ctx.GetThreadSP(), diagnostic_manager) != 0)
         return lldb::eExpressionSetupError;
 
     if (args_addr == LLDB_INVALID_ADDRESS)

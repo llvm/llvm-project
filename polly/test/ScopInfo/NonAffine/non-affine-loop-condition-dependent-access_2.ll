@@ -24,8 +24,8 @@
 ; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  : 0 <= p_0 <= 1048576 and 0 <= p_1 <= 1024 and 0 <= p_2 <= 1024 }
 ; INNERMOST-NEXT: Assumed Context:
 ; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  :  }
-; INNERMOST-NEXT: Boundary Context:
-; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  :  }
+; INNERMOST-NEXT: Invalid Context:
+; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  : 1 = 0 }
 ; INNERMOST-NEXT: p0: {0,+,{0,+,1}<nuw><nsw><%bb11>}<nuw><nsw><%bb13>
 ; INNERMOST-NEXT: p1: {0,+,1}<nuw><nsw><%bb11>
 ; INNERMOST-NEXT: p2: {0,+,1}<nuw><nsw><%bb13>
@@ -75,8 +75,8 @@
 ; ALL-NEXT: {  :  }
 ; ALL-NEXT: Assumed Context:
 ; ALL-NEXT: {  :  }
-; ALL-NEXT: Boundary Context:
-; ALL-NEXT: {  :  }
+; ALL-NEXT: Invalid Context:
+; ALL-NEXT: {  : 1 = 0 }
 ; ALL-NEXT: Arrays {
 ; ALL-NEXT:     i32 MemRef_A[*]; // Element size 4
 ; ALL-NEXT: }

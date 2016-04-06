@@ -311,45 +311,11 @@ DWARFCompileUnit::AddCompileUnitDIE(DWARFDebugInfoEntry& die)
 {
     assert (m_die_array.empty() && "Compile unit DIE already added");
     AddDIE(die);
-    
-    DWARFDebugInfoEntry& cu_die = m_die_array.front();
 
-    const char* dwo_name = cu_die.GetAttributeValueAsString(m_dwarf2Data,
-                                                            this,
-                                                            DW_AT_GNU_dwo_name,
-                                                            nullptr);
-    if (!dwo_name)
+    const DWARFDebugInfoEntry &cu_die = m_die_array.front();
+    std::unique_ptr<SymbolFileDWARFDwo> dwo_symbol_file = m_dwarf2Data->GetDwoSymbolFileForCompileUnit(*this, cu_die);
+    if (!dwo_symbol_file)
         return;
-
-    FileSpec dwo_file(dwo_name, true);
-    if (dwo_file.IsRelative())
-    {
-        const char* comp_dir = cu_die.GetAttributeValueAsString(m_dwarf2Data,
-                                                                this,
-                                                                DW_AT_comp_dir,
-                                                                nullptr);
-        if (!comp_dir)
-            return;
-
-        dwo_file.SetFile(comp_dir, true);
-        dwo_file.AppendPathComponent(dwo_name);
-    }
-
-    if (!dwo_file.Exists())
-        return;
-
-    DataBufferSP dwo_file_data_sp;
-    lldb::offset_t dwo_file_data_offset = 0;
-    ObjectFileSP dwo_obj_file = ObjectFile::FindPlugin(m_dwarf2Data->GetObjectFile()->GetModule(),
-                                                       &dwo_file,
-                                                       0 /* file_offset */,
-                                                       dwo_file.GetByteSize(),
-                                                       dwo_file_data_sp,
-                                                       dwo_file_data_offset);
-    if (dwo_obj_file == nullptr)
-        return;
-
-    std::unique_ptr<SymbolFileDWARFDwo> dwo_symbol_file(new SymbolFileDWARFDwo(dwo_obj_file, this));
 
     DWARFCompileUnit* dwo_cu = dwo_symbol_file->GetCompileUnit();
     if (!dwo_cu)
@@ -467,7 +433,7 @@ DWARFCompileUnit::GetID () const
 {
     dw_offset_t local_id = m_base_obj_offset != DW_INVALID_OFFSET ? m_base_obj_offset : m_offset;
     if (m_dwarf2Data)
-        return m_dwarf2Data->MakeUserID(local_id);
+        return DIERef(local_id, local_id).GetUID(m_dwarf2Data);
     else
         return local_id;
 }
@@ -665,7 +631,7 @@ DWARFCompileUnit::GetDIE (dw_offset_t die_offset)
         {
             // Don't specify the compile unit offset as we don't know it because the DIE belongs to
             // a different compile unit in the same symbol file.
-            return m_dwarf2Data->DebugInfo()->GetDIE (DIERef(die_offset));
+            return m_dwarf2Data->DebugInfo()->GetDIEForDIEOffset(die_offset);
         }
     }
     return DWARFDIE(); // Not found
@@ -1047,7 +1013,7 @@ DWARFCompileUnit::IndexPrivate (DWARFCompileUnit* dwarf_cu,
         case DW_TAG_union_type:
         case DW_TAG_typedef:
         case DW_TAG_unspecified_type:
-            if (name && is_declaration == false)
+            if (name && !is_declaration)
             {
                 if (cu_language == eLanguageTypeGo)
                 {
@@ -1066,6 +1032,8 @@ DWARFCompileUnit::IndexPrivate (DWARFCompileUnit* dwarf_cu,
                 // Add a type mapping for the name just as it appeared.
                 types.Insert (ConstString(name), DIERef(cu_offset, die.GetOffset()));
             }
+            if (mangled_cstr && !is_declaration)
+                types.Insert (ConstString(mangled_cstr), DIERef(cu_offset, die.GetOffset()));
             break;
 
         case DW_TAG_namespace:
@@ -1302,4 +1270,10 @@ DWARFCompileUnit::SetAddrBase(dw_addr_t addr_base, dw_offset_t base_obj_offset)
 {
     m_addr_base = addr_base;
     m_base_obj_offset = base_obj_offset;
+}
+
+lldb::ByteOrder
+DWARFCompileUnit::GetByteOrder() const
+{
+    return m_dwarf2Data->GetObjectFile()->GetByteOrder();
 }

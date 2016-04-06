@@ -13,13 +13,11 @@
 
 # CHECK:      Disassembly of section .text:
 # CHECK-NEXT: bar:
-# CHECK-NEXT:   20000:       0c 00 80 06     jal     131096
-#                                                    ^-- 0x20018 loc
+# CHECK-NEXT:   20000:       0c 00 80 06     jal     131096 <loc>
 # CHECK-NEXT:   20004:       00 00 00 00     nop
 #
 # CHECK:      __start:
-# CHECK-NEXT:   20008:       0c 00 80 00     jal     131072
-#                                                    ^-- 0x20000 bar
+# CHECK-NEXT:   20008:       0c 00 80 00     jal     131072 <bar>
 # CHECK-NEXT:   2000c:       00 00 00 00     nop
 # CHECK-NEXT:   20010:       0c 00 80 10     jal     131136
 #                                                    ^-- 0x20040 gotplt[foo0]

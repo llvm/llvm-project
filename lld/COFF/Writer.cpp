@@ -596,13 +596,26 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   if (Symbol *Sym = Symtab->findUnderscore("_tls_used")) {
     if (Defined *B = dyn_cast<Defined>(Sym->Body)) {
       Dir[TLS_TABLE].RelativeVirtualAddress = B->getRVA();
-      Dir[TLS_TABLE].Size = 40;
+      Dir[TLS_TABLE].Size = Config->is64()
+                                ? sizeof(object::coff_tls_directory64)
+                                : sizeof(object::coff_tls_directory32);
     }
   }
   if (Symbol *Sym = Symtab->findUnderscore("_load_config_used")) {
-    if (Defined *B = dyn_cast<Defined>(Sym->Body)) {
+    if (auto *B = dyn_cast<DefinedRegular>(Sym->Body)) {
+      SectionChunk *SC = B->getChunk();
+      assert(B->getRVA() >= SC->getRVA());
+      uint64_t OffsetInChunk = B->getRVA() - SC->getRVA();
+      if (!SC->hasData() || OffsetInChunk + 4 > SC->getSize())
+        error("_load_config_used is malformed");
+
+      ArrayRef<uint8_t> SecContents = SC->getContents();
+      uint32_t LoadConfigSize =
+          *reinterpret_cast<const ulittle32_t *>(&SecContents[OffsetInChunk]);
+      if (OffsetInChunk + LoadConfigSize > SC->getSize())
+        error("_load_config_used is too large");
       Dir[LOAD_CONFIG_TABLE].RelativeVirtualAddress = B->getRVA();
-      Dir[LOAD_CONFIG_TABLE].Size = Config->is64() ? 112 : 64;
+      Dir[LOAD_CONFIG_TABLE].Size = LoadConfigSize;
     }
   }
 
@@ -626,7 +639,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   // The first 4 bytes is length including itself.
   Buf = reinterpret_cast<uint8_t *>(&SymbolTable[NumberOfSymbols]);
   write32le(Buf, Strtab.size() + 4);
-  memcpy(Buf + 4, Strtab.data(), Strtab.size());
+  if (!Strtab.empty())
+    memcpy(Buf + 4, Strtab.data(), Strtab.size());
 }
 
 void Writer::openFile(StringRef Path) {

@@ -27,7 +27,6 @@
 
 #include <string>
 
-#include <thread>
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
@@ -37,11 +36,15 @@
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/API/SBListener.h"
+#include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
-#include "lldb/API/SBProcess.h"
+#if defined(_WIN32)
+#include "llvm/Support/ConvertUTF.h"
+#endif
+#include <thread>
 
 #if !defined(__APPLE__)
 #include "llvm/Support/DataTypes.h"
@@ -1300,7 +1303,11 @@ sigcont_handler (int signo)
 }
 
 int
-main (int argc, char const *argv[], const char *envp[])
+#ifdef WIN32
+wmain(int argc, wchar_t const *wargv[])
+#else
+main(int argc, char const *argv[])
+#endif
 {
 #ifdef _MSC_VER
 	// disable buffering on windows
@@ -1308,35 +1315,49 @@ main (int argc, char const *argv[], const char *envp[])
 	setvbuf(stdin , NULL, _IONBF, 0);
 #endif
 
-    SBDebugger::Initialize();
-    
-    SBHostOS::ThreadCreated ("<lldb.driver.main-thread>");
-
-    signal (SIGPIPE, SIG_IGN);
-    signal (SIGWINCH, sigwinch_handler);
-    signal (SIGINT, sigint_handler);
-    signal (SIGTSTP, sigtstp_handler);
-    signal (SIGCONT, sigcont_handler);
-
-    // Create a scope for driver so that the driver object will destroy itself
-    // before SBDebugger::Terminate() is called.
-    {
-        Driver driver;
-
-        bool exiting = false;
-        SBError error (driver.ParseArgs (argc, argv, stdout, exiting));
-        if (error.Fail())
+#ifdef _WIN32
+        // Convert wide arguments to UTF-8
+        std::vector<std::string> argvStrings(argc);
+        std::vector<const char *> argvPointers(argc);
+        for (int i = 0; i != argc; ++i)
         {
-            const char *error_cstr = error.GetCString ();
-            if (error_cstr)
-                ::fprintf (stderr, "error: %s\n", error_cstr);
+            llvm::convertWideToUTF8(wargv[i], argvStrings[i]);
+            argvPointers[i] = argvStrings[i].c_str();
         }
-        else if (!exiting)
-        {
-            driver.MainLoop ();
-        }
-    }
+        const char **argv = argvPointers.data();
+#endif
 
-    SBDebugger::Terminate();
-    return 0;
+        SBDebugger::Initialize();
+
+        SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
+
+        signal(SIGINT, sigint_handler);
+#if !defined(_MSC_VER)
+        signal(SIGPIPE, SIG_IGN);
+        signal(SIGWINCH, sigwinch_handler);
+        signal(SIGTSTP, sigtstp_handler);
+        signal(SIGCONT, sigcont_handler);
+#endif
+
+        // Create a scope for driver so that the driver object will destroy itself
+        // before SBDebugger::Terminate() is called.
+        {
+            Driver driver;
+
+            bool exiting = false;
+            SBError error(driver.ParseArgs(argc, argv, stdout, exiting));
+            if (error.Fail())
+            {
+                const char *error_cstr = error.GetCString();
+                if (error_cstr)
+                    ::fprintf(stderr, "error: %s\n", error_cstr);
+            }
+            else if (!exiting)
+            {
+                driver.MainLoop();
+            }
+        }
+
+        SBDebugger::Terminate();
+        return 0;
 }

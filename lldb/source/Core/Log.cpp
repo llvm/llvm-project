@@ -8,15 +8,18 @@
 //===----------------------------------------------------------------------===//
 
 // C Includes
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
-
 // C++ Includes
+#include <cstdio>
+#include <cstdarg>
+#include <cstdlib>
 #include <map>
 #include <string>
 
 // Other libraries and framework includes
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Signals.h"
+
 // Project includes
 #include "lldb/Core/Log.h"
 #include "lldb/Core/PluginManager.h"
@@ -29,9 +32,6 @@
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Utility/NameMatches.h"
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/Signals.h"
 using namespace lldb;
 using namespace lldb_private;
 
@@ -49,9 +49,7 @@ Log::Log (const StreamSP &stream_sp) :
 {
 }
 
-Log::~Log ()
-{
-}
+Log::~Log() = default;
 
 Flags &
 Log::GetOptions()
@@ -178,7 +176,6 @@ Log::Debug(const char *format, ...)
     va_end(args);
 }
 
-
 //----------------------------------------------------------------------
 // Print debug strings if and only if the global debug option is set to
 // a non-zero value.
@@ -194,7 +191,6 @@ Log::DebugVerbose(const char *format, ...)
     VAPrintf(format, args);
     va_end(args);
 }
-
 
 //----------------------------------------------------------------------
 // Log only if all of the bits are set
@@ -223,7 +219,6 @@ Log::Error(const char *format, ...)
     va_end(args);
 }
 
-
 void
 Log::VAError(const char *format, va_list args)
 {
@@ -236,7 +231,6 @@ Log::VAError(const char *format, va_list args)
     Printf("error: %s", arg_msg);
     free(arg_msg);
 }
-
 
 //----------------------------------------------------------------------
 // Printing of errors that ARE fatal. Exit with ERR exit code
@@ -258,7 +252,6 @@ Log::FatalError(int err, const char *format, ...)
     }
     ::exit(err);
 }
-
 
 //----------------------------------------------------------------------
 // Printing of warnings that are not fatal only if verbose mode is
@@ -298,6 +291,7 @@ Log::WarningVerbose(const char *format, ...)
     Printf("warning: %s", arg_msg);
     free(arg_msg);
 }
+
 //----------------------------------------------------------------------
 // Printing of warnings that are not fatal.
 //----------------------------------------------------------------------
@@ -322,7 +316,6 @@ typedef CallbackMap::iterator CallbackMapIter;
 
 typedef std::map <ConstString, LogChannelSP> LogChannelMap;
 typedef LogChannelMap::iterator LogChannelMapIter;
-
 
 // Surround our callback map with a singleton function so we don't have any
 // global initializers.
@@ -401,13 +394,10 @@ Log::EnableLogChannel(lldb::StreamSP &log_stream_sp,
 }
 
 void
-Log::EnableAllLogChannels
-(
-    StreamSP &log_stream_sp,
-    uint32_t log_options,
-    const char **categories,
-    Stream *feedback_strm
-)
+Log::EnableAllLogChannels(StreamSP &log_stream_sp,
+                          uint32_t log_options,
+                          const char **categories,
+                          Stream *feedback_strm)
 {
     CallbackMap &callback_map = GetCallbackMap ();
     CallbackMapIter pos, end = callback_map.end();
@@ -421,7 +411,6 @@ Log::EnableAllLogChannels
     {
         channel_pos->second->Enable (log_stream_sp, log_options, feedback_strm, categories);
     }
-
 }
 
 void
@@ -441,7 +430,6 @@ Log::AutoCompleteChannelName (const char *channel_name, StringList &matches)
         }
         else
             matches.AppendString(pos_channel_name);
-
     }
 }
 
@@ -471,7 +459,7 @@ Log::Initialize()
 void
 Log::Terminate ()
 {
-    DisableAllLogChannels (NULL);
+    DisableAllLogChannels(nullptr);
 }
 
 void
@@ -492,7 +480,7 @@ Log::ListAllLogChannels (Stream *strm)
 
     uint32_t idx = 0;
     const char *name;
-    for (idx = 0; (name = PluginManager::GetLogChannelCreateNameAtIndex (idx)) != NULL; ++idx)
+    for (idx = 0; (name = PluginManager::GetLogChannelCreateNameAtIndex (idx)) != nullptr; ++idx)
     {
         LogChannelSP log_channel_sp(LogChannel::FindPlugin (name));
         if (log_channel_sp)
@@ -528,7 +516,6 @@ Log::GetDebug() const
         return stream_sp->GetDebug();
     return false;
 }
-
 
 LogChannelSP
 LogChannel::FindPlugin (const char *plugin_name)
@@ -566,8 +553,4 @@ LogChannel::LogChannel () :
 {
 }
 
-LogChannel::~LogChannel ()
-{
-}
-
-
+LogChannel::~LogChannel() = default;

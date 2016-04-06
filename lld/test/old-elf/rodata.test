@@ -1,5 +1,0 @@
-RUN: lld -flavor old-gnu -target x86_64-linux -o %t %p/Inputs/constdata.x86-64 \
-RUN:   -static -e _start
-RUN: llvm-objdump -s %t | FileCheck %s
-
-CHECK: Hellooooooooo

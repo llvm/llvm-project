@@ -38,20 +38,6 @@
 # RUN: llvm-objdump -section-headers %t3 | \
 # RUN:   FileCheck -check-prefix=SEC-ORDER %s
 
-# The same test as above but with wildcard patterns.
-# RUN: echo "SECTIONS { \
-# RUN:          .bss : { *(.bss) } \
-# RUN:          other : { *(o*er) } \
-# RUN:          .shstrtab : { *(.shstrt*) } \
-# RUN:          .symtab : { *(.symtab) } \
-# RUN:          .strtab : { *(.strtab) } \
-# RUN:          .data : { *(*data) } \
-# RUN:          .text : { *(.text) } }" > %t.script
-# RUN: cp %t %t.abc
-# RUN: ld.lld -o %t3 --script %t.script %t.abc
-# RUN: llvm-objdump -section-headers %t3 | \
-# RUN:   FileCheck -check-prefix=SEC-ORDER %s
-
 #           Idx Name          Size
 # SEC-ORDER: 1 .bss          00000002 {{[0-9a-f]*}} BSS
 # SEC-ORDER: 2 other         00000003 {{[0-9a-f]*}} DATA

@@ -9,6 +9,7 @@
 
 #include "DWARFDIE.h"
 
+#include "DWARFASTParser.h"
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDebugAranges.h"
@@ -127,6 +128,21 @@ DWARFDIE::GetAttributeValueAsSigned (const dw_attr_t attr, int64_t fail_value) c
         return fail_value;
 }
 
+DWARFDIE
+DWARFDIE::GetAttributeValueAsReferenceDIE (const dw_attr_t attr) const
+{
+    if (IsValid())
+    {
+        DWARFCompileUnit *cu = GetCU();
+        SymbolFileDWARF *dwarf = cu->GetSymbolFileDWARF();
+        const bool check_specification_or_abstract_origin = true;
+        DWARFFormValue form_value;
+        if (m_die->GetAttributeValue(dwarf, cu, attr, form_value, nullptr, check_specification_or_abstract_origin))
+            return dwarf->GetDIE(DIERef(form_value));
+    }
+    return DWARFDIE();
+}
+
 uint64_t
 DWARFDIE::GetAttributeValueAsReference (const dw_attr_t attr, uint64_t fail_value) const
 {
@@ -166,7 +182,7 @@ DWARFDIE::LookupDeepestBlock (lldb::addr_t file_addr) const
                 if (cu->ContainsDIEOffset(block_die->GetOffset()))
                     return DWARFDIE(cu, block_die);
                 else
-                    return DWARFDIE(dwarf->DebugInfo()->GetCompileUnitContainingDIE(DIERef(cu->GetOffset(), block_die->GetOffset())), block_die);
+                    return DWARFDIE(dwarf->DebugInfo()->GetCompileUnit(DIERef(cu->GetOffset(), block_die->GetOffset())), block_die);
             }
         }
     }
@@ -176,27 +192,7 @@ DWARFDIE::LookupDeepestBlock (lldb::addr_t file_addr) const
 lldb::user_id_t
 DWARFDIE::GetID () const
 {
-    const dw_offset_t die_offset = GetOffset();
-    if (die_offset != DW_INVALID_OFFSET)
-    {
-        lldb::user_id_t id = 0;
-        SymbolFileDWARF *dwarf = GetDWARF();
-        if (dwarf)
-            id = dwarf->MakeUserID(die_offset);
-        else
-            id = die_offset;
-
-        if (m_cu)
-        {
-            lldb::user_id_t cu_id = m_cu->GetID()&0xffffffff00000000ull;
-            assert ((id&0xffffffff00000000ull) == 0 ||
-                    (cu_id&0xffffffff00000000ll) == 0 ||
-                    (id&0xffffffff00000000ull) == (cu_id&0xffffffff00000000ll));
-            id |= cu_id;
-        }
-        return id;
-    }
-    return LLDB_INVALID_UID;
+    return GetDIERef().GetUID(GetDWARF());
 }
 
 const char *
@@ -274,11 +270,11 @@ DWARFDIE::ResolveType () const
 }
 
 lldb_private::Type *
-DWARFDIE::ResolveTypeUID (lldb::user_id_t uid) const
+DWARFDIE::ResolveTypeUID (const DIERef &die_ref) const
 {
     SymbolFileDWARF *dwarf = GetDWARF();
     if (dwarf)
-        return dwarf->ResolveTypeUID(uid);
+        return dwarf->ResolveTypeUID(dwarf->GetDIE(die_ref), true);
     else
         return nullptr;
 }
@@ -302,6 +298,7 @@ DWARFDIE::GetDWARFDeclContext (DWARFDeclContext &dwarf_decl_ctx) const
 {
     if (IsValid())
     {
+        dwarf_decl_ctx.SetLanguage(GetLanguage());
         m_die->GetDWARFDeclContext (GetDWARF(), GetCU(), dwarf_decl_ctx);
     }
     else
@@ -529,6 +526,36 @@ DWARFDIE::Dump (lldb_private::Stream *s, const uint32_t recurse_depth) const
         m_die->Dump (GetDWARF(), GetCU(), *s, recurse_depth);
 }
 
+
+CompilerDecl
+DWARFDIE::GetDecl () const
+{
+    DWARFASTParser *dwarf_ast = GetDWARFParser();
+    if (dwarf_ast)
+        return dwarf_ast->GetDeclForUIDFromDWARF(*this);
+    else
+        return CompilerDecl();
+}
+
+CompilerDeclContext
+DWARFDIE::GetDeclContext () const
+{
+    DWARFASTParser *dwarf_ast = GetDWARFParser();
+    if (dwarf_ast)
+        return dwarf_ast->GetDeclContextForUIDFromDWARF(*this);
+    else
+        return CompilerDeclContext();
+}
+
+CompilerDeclContext
+DWARFDIE::GetContainingDeclContext () const
+{
+    DWARFASTParser *dwarf_ast = GetDWARFParser();
+    if (dwarf_ast)
+        return dwarf_ast->GetDeclContextContainingUIDFromDWARF(*this);
+    else
+        return CompilerDeclContext();
+}
 
 bool operator == (const DWARFDIE &lhs, const DWARFDIE &rhs)
 {
