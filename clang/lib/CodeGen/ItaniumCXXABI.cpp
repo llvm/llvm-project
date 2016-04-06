@@ -1999,7 +1999,7 @@ void ItaniumCXXABI::EmitGuardedInit(CodeGenFunction &CGF,
   //
   // In LLVM, we do this by marking the load Acquire.
   if (threadsafe)
-    LI->setAtomic(llvm::Acquire);
+    LI->setAtomic(llvm::AtomicOrdering::Acquire);
 
   // For ARM, we should only check the first bit, rather than the entire byte:
   //

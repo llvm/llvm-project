@@ -2483,8 +2483,10 @@ public:
 
   std::pair<RValue, llvm::Value *> EmitAtomicCompareExchange(
       LValue Obj, RValue Expected, RValue Desired, SourceLocation Loc,
-      llvm::AtomicOrdering Success = llvm::SequentiallyConsistent,
-      llvm::AtomicOrdering Failure = llvm::SequentiallyConsistent,
+      llvm::AtomicOrdering Success =
+          llvm::AtomicOrdering::SequentiallyConsistent,
+      llvm::AtomicOrdering Failure =
+          llvm::AtomicOrdering::SequentiallyConsistent,
       bool IsWeak = false, AggValueSlot Slot = AggValueSlot::ignored());
 
   void EmitAtomicUpdate(LValue LVal, llvm::AtomicOrdering AO,

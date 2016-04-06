@@ -8588,6 +8588,10 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S,
     }
     TemplateParameterList *TemplateParams = TemplateParamLists[0];
 
+    // Check that we can declare a template here.
+    if (CheckTemplateDeclScope(S, TemplateParams))
+      return nullptr;
+
     // Only consider previous declarations in the same scope.
     FilterLookupForScope(Previous, CurContext, S, /*ConsiderLinkage*/false,
                          /*ExplicitInstantiationOrSpecialization*/false);

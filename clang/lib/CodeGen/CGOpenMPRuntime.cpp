@@ -3960,7 +3960,8 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
           if (EExpr)
             E = CGF.EmitAnyExpr(EExpr);
           CGF.EmitOMPAtomicSimpleUpdateExpr(
-              X, E, BO, /*IsXLHSInRHSPart=*/true, llvm::Monotonic, Loc,
+              X, E, BO, /*IsXLHSInRHSPart=*/true,
+              llvm::AtomicOrdering::Monotonic, Loc,
               [&CGF, UpExpr, VD, IPriv, Loc](RValue XRValue) {
                 CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
                 PrivateScope.addPrivate(

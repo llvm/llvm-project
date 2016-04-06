@@ -2601,8 +2601,9 @@ static void emitSimpleAtomicStore(CodeGenFunction &CGF, bool IsSeqCst,
   if (LVal.isGlobalReg()) {
     CGF.EmitStoreThroughGlobalRegLValue(RVal, LVal);
   } else {
-    CGF.EmitAtomicStore(RVal, LVal, IsSeqCst ? llvm::SequentiallyConsistent
-                                             : llvm::Monotonic,
+    CGF.EmitAtomicStore(RVal, LVal,
+                        IsSeqCst ? llvm::AtomicOrdering::SequentiallyConsistent
+                                 : llvm::AtomicOrdering::Monotonic,
                         LVal.isVolatile(), /*IsInit=*/false);
   }
 }
@@ -2635,10 +2636,11 @@ static void EmitOMPAtomicReadExpr(CodeGenFunction &CGF, bool IsSeqCst,
   LValue VLValue = CGF.EmitLValue(V);
   RValue Res = XLValue.isGlobalReg()
                    ? CGF.EmitLoadOfLValue(XLValue, Loc)
-                   : CGF.EmitAtomicLoad(XLValue, Loc,
-                                        IsSeqCst ? llvm::SequentiallyConsistent
-                                                 : llvm::Monotonic,
-                                        XLValue.isVolatile());
+                   : CGF.EmitAtomicLoad(
+                         XLValue, Loc,
+                         IsSeqCst ? llvm::AtomicOrdering::SequentiallyConsistent
+                                  : llvm::AtomicOrdering::Monotonic,
+                         XLValue.isVolatile());
   // OpenMP, 2.12.6, atomic Construct
   // Any atomic construct with a seq_cst clause forces the atomically
   // performed operation to include an implicit flush operation without a
@@ -2794,7 +2796,8 @@ static void EmitOMPAtomicUpdateExpr(CodeGenFunction &CGF, bool IsSeqCst,
   assert(X->isLValue() && "X of 'omp atomic update' is not lvalue");
   LValue XLValue = CGF.EmitLValue(X);
   RValue ExprRValue = CGF.EmitAnyExpr(E);
-  auto AO = IsSeqCst ? llvm::SequentiallyConsistent : llvm::Monotonic;
+  auto AO = IsSeqCst ? llvm::AtomicOrdering::SequentiallyConsistent
+                     : llvm::AtomicOrdering::Monotonic;
   auto *LHS = cast<OpaqueValueExpr>(BOUE->getLHS()->IgnoreImpCasts());
   auto *RHS = cast<OpaqueValueExpr>(BOUE->getRHS()->IgnoreImpCasts());
   auto *XRValExpr = IsXLHSInRHSPart ? LHS : RHS;
@@ -2843,7 +2846,8 @@ static void EmitOMPAtomicCaptureExpr(CodeGenFunction &CGF, bool IsSeqCst,
   LValue VLValue = CGF.EmitLValue(V);
   LValue XLValue = CGF.EmitLValue(X);
   RValue ExprRValue = CGF.EmitAnyExpr(E);
-  auto AO = IsSeqCst ? llvm::SequentiallyConsistent : llvm::Monotonic;
+  auto AO = IsSeqCst ? llvm::AtomicOrdering::SequentiallyConsistent
+                     : llvm::AtomicOrdering::Monotonic;
   QualType NewVValType;
   if (UE) {
     // 'x' is updated with some additional value.
@@ -3206,4 +3210,3 @@ void CodeGenFunction::EmitOMPTaskLoopSimdDirective(
             cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
       });
 }
-
