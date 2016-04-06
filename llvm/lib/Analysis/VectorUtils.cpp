@@ -223,7 +223,9 @@ Intrinsic::ID llvm::getIntrinsicIDForCall(CallInst *CI,
   case LibFunc::sqrt:
   case LibFunc::sqrtf:
   case LibFunc::sqrtl:
-    return checkUnaryFloatSignature(*CI, Intrinsic::sqrt);
+    if (CI->hasNoNaNs())
+      return checkUnaryFloatSignature(*CI, Intrinsic::sqrt);
+    return Intrinsic::not_intrinsic;
   }
 
   return Intrinsic::not_intrinsic;

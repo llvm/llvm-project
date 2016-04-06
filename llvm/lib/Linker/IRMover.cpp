@@ -980,16 +980,6 @@ bool IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
                                   ValueMapperFlags, &TypeMap,
                                   &GValMaterializer));
 
-  // Go through and convert function arguments over, remembering the mapping.
-  Function::arg_iterator DI = Dst.arg_begin();
-  for (Argument &Arg : Src.args()) {
-    DI->setName(Arg.getName()); // Copy the name over.
-
-    // Add a mapping to our mapping.
-    ValueMap[&Arg] = &*DI;
-    ++DI;
-  }
-
   // Copy over the metadata attachments.
   SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
   Src.getAllMetadata(MDs);
@@ -997,21 +987,18 @@ bool IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
     Dst.setMetadata(I.first, MapMetadata(I.second, ValueMap, ValueMapperFlags,
                                          &TypeMap, &GValMaterializer));
 
-  // Splice the body of the source function into the dest function.
+  // Steal arguments and splice the body of Src into Dst.
+  Dst.stealArgumentListFrom(Src);
   Dst.getBasicBlockList().splice(Dst.end(), Src.getBasicBlockList());
 
-  // At this point, all of the instructions and values of the function are now
-  // copied over.  The only problem is that they are still referencing values in
-  // the Source function as operands.  Loop through all of the operands of the
-  // functions and patch them up to point to the local versions.
+  // At this point, everything has been moved over, but the types and non-local
+  // operands will be wrong.  Loop through everything and patch it up.
+  for (Argument &A : Dst.args())
+    A.mutateType(TypeMap.get(A.getType()));
   for (BasicBlock &BB : Dst)
     for (Instruction &I : BB)
       RemapInstruction(&I, ValueMap, RF_IgnoreMissingEntries | ValueMapperFlags,
                        &TypeMap, &GValMaterializer);
-
-  // There is no need to map the arguments anymore.
-  for (Argument &Arg : Src.args())
-    ValueMap.erase(&Arg);
 
   return false;
 }
