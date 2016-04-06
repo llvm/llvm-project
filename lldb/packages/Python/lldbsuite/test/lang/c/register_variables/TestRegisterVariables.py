@@ -51,15 +51,34 @@ def is_variable_in_register(frame, var_name):
         # print("var {} is in a register (we don't have an address for it)".format(var_name))
         return True
 
-def is_struct_pointer_in_register(frame, pointer_varname):
-    # Right now we don't have a good way to do this without
-    # some nasty screen scraping.  So, for now, since this
-    # seems to always be in a register at O1, this test will
-    # assume it is.  I'm looking at having a way added to
-    # tell us if a frame var is in a register.  Then this
-    # and the method above can disappear and we can turn
-    # it into a direct check.
-    return True
+
+def is_struct_pointer_in_register(frame, var_name):
+    # Ensure we can lookup the variable.
+    var = frame.FindVariable(var_name)
+    # print("\nchecking {}...".format(var_name))
+    if var is None or not var.IsValid():
+        # print("{} cannot be found".format(var_name))
+        return False
+
+    # Check that we can get its value.  If not, this
+    # may be a variable that is just out of scope at this point.
+    value = var.GetValue()
+    # print("checking value...")
+    if value is None:
+        # print("value is invalid")
+        return False
+    # else:
+    #     print("value is {}".format(value))
+
+    var_loc = var.GetLocation()
+    # print("checking location: {}".format(var_loc))
+    if var_loc is None or var_loc.startswith("0x"):
+        # The frame var is not in a register but rather a memory location.
+        # print("frame var {} is not in a register".format(var_name))
+        return False
+    else:
+        # print("frame var {} is in a register".format(var_name))
+        return True
 
 
 def re_expr_equals(val_type, val):
@@ -166,5 +185,6 @@ class RegisterVariableTestCase(TestBase):
 
         # Validate that we verified at least one register variable
         self.assertTrue(register_variables_count > 0, "expected to verify at least one variable in a register")
+        # print("executed {} expressions with values in registers".format(register_variables_count))
 
         self.runCmd("kill")
