@@ -250,7 +250,7 @@ namespace {
     TagsSeq Tags;
     TypedefsSeq Typedefs;
 
-    llvm::Optional<bool> SwiftInferImportAsMember;
+    llvm::Optional<bool> SwiftInferImportAsMember = {llvm::None};
 
     LLVM_ATTRIBUTE_DEPRECATED(
       void dump() LLVM_ATTRIBUTE_USED,
@@ -774,8 +774,11 @@ namespace {
         Writer->addTypedef(t.Name, typedefInfo);
       }
 
-      if (TheModule.SwiftInferImportAsMember) 
-        Writer->addModuleOptions({true});
+      if (TheModule.SwiftInferImportAsMember) {
+        ModuleOptions opts;
+        opts.SwiftInferImportAsMember = true;
+        Writer->addModuleOptions(opts);
+      }
 
       if (!ErrorOccured)
         Writer->writeToStream(OS);
