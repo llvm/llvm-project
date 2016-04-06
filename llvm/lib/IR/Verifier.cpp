@@ -988,8 +988,6 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
 void Verifier::visitDISubprogram(const DISubprogram &N) {
   Assert(N.getTag() == dwarf::DW_TAG_subprogram, "invalid tag", &N);
   Assert(isScopeRef(N, N.getRawScope()), "invalid scope", &N, N.getRawScope());
-  Assert(N.getRawFile() && isa<DIFile>(N.getRawFile()), "invalid file", &N,
-         N.getRawFile());
   if (auto *T = N.getRawType())
     Assert(isa<DISubroutineType>(T), "invalid subroutine type", &N, T);
   Assert(isTypeRef(N, N.getRawContainingType()), "invalid containing type", &N,

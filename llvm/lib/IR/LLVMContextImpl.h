@@ -931,7 +931,7 @@ public:
   FoldingSet<AttributeSetImpl> AttrsLists;
   FoldingSet<AttributeSetNode> AttrsSetNodes;
 
-  StringMap<MDString> MDStringCache;
+  StringMap<MDString, BumpPtrAllocator> MDStringCache;
   DenseMap<Value *, ValueAsMetadata *> ValuesAsMetadata;
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
 

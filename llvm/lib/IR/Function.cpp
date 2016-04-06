@@ -302,6 +302,28 @@ void Function::BuildLazyArguments() const {
   const_cast<Function*>(this)->setValueSubclassData(SDC &= ~(1<<0));
 }
 
+void Function::stealArgumentListFrom(Function &Src) {
+  assert(isDeclaration() && "Expected no references to current arguments");
+
+  // Drop the current arguments, if any, and set the lazy argument bit.
+  if (!hasLazyArguments()) {
+    assert(llvm::all_of(ArgumentList,
+                        [](const Argument &A) { return A.use_empty(); }) &&
+           "Expected arguments to be unused in declaration");
+    ArgumentList.clear();
+    setValueSubclassData(getSubclassDataFromValue() | (1 << 0));
+  }
+
+  // Nothing to steal if Src has lazy arguments.
+  if (Src.hasLazyArguments())
+    return;
+
+  // Steal arguments from Src, and fix the lazy argument bits.
+  ArgumentList.splice(ArgumentList.end(), Src.ArgumentList);
+  setValueSubclassData(getSubclassDataFromValue() & ~(1 << 0));
+  Src.setValueSubclassData(Src.getSubclassDataFromValue() | (1 << 0));
+}
+
 size_t Function::arg_size() const {
   return getFunctionType()->getNumParams();
 }
