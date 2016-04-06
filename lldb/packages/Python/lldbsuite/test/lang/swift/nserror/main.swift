@@ -12,7 +12,7 @@
 
 import Foundation
 
-func someAPI(x : Int, _ y : Int) -> (String, NSError) {
+func someAPI(_ x : Int, _ y : Int) -> (String, NSError) {
   if (x == 0 && y == 0) {
     return (" ",NSError(domain: "lldbrocks",code: 0xBABEFEED, userInfo: ["x":x,"y":y]))
   } else {

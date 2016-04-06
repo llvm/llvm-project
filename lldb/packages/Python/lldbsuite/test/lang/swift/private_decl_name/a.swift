@@ -22,6 +22,6 @@ extension S {
   }
 }
 
-public func f(x: S) -> Int {
+public func f(_ x: S) -> Int {
   return 1 + x.fA()
 }

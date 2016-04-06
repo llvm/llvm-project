@@ -13,7 +13,7 @@
 import Swift
 
 func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
-    x_opt: Any?,
+    _ x_opt: Any?,
     _ mirror: Mirror,
     _ name: String?,
     _ indent: Int,
@@ -24,7 +24,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
     _ maxItemCounter: inout Int,
     _ targetStream: inout StreamType) {
         
-        func idForObject(x: Any) -> ObjectIdentifier? {
+        func idForObject(_ x: Any) -> ObjectIdentifier? {
             if let ao = x as? AnyObject {
                 return ObjectIdentifier(ao)
             } else {
@@ -32,7 +32,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
             }
         }
         
-        func asNumericValue(x: Any) -> Int {
+        func asNumericValue(_ x: Any) -> Int {
             if let ao = x as? AnyObject {
                 return unsafeBitCast(ao, to: Int.self)
             } else {
@@ -40,7 +40,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
             }
         }
         
-        func isCollectionMirror(x_mirror: Mirror) -> Bool {
+        func isCollectionMirror(_ x_mirror: Mirror) -> Bool {
             let ds = x_mirror.displayStyle ?? .`struct`
             switch ds {
             case .optional:
@@ -56,7 +56,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
             }
         }
 
-        func stringForObject(x_opt: Any?,
+        func stringForObject(_ x_opt: Any?,
                              _ x_mirror: Mirror,
                              _ x_mirror_count: Int) -> String? {
             let ds = x_mirror.displayStyle ?? .`struct`
@@ -114,7 +114,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
             return nil
         }
 
-        func ivarCount(x: Mirror) -> Int {
+        func ivarCount(_ x: Mirror) -> Int {
             let count = Int(x.children.count)
             if let sc = x.superclassMirror {
                 return ivarCount(sc) + count
@@ -123,7 +123,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
             }
         }
 
-        func shouldPrint(root: Bool,
+        func shouldPrint(_ root: Bool,
                          _ isChildOfCollection: Bool,
                          _ x: Mirror) -> Bool {
             if root || isChildOfCollection { return true }
@@ -237,7 +237,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
         }
 }
 
-func $__lldb__DumpForDebugger(x: Any) -> String {
+func $__lldb__DumpForDebugger(_ x: Any) -> String {
     class Output : OutputStream {
         var data = ""
         func _lock() {
@@ -246,7 +246,7 @@ func $__lldb__DumpForDebugger(x: Any) -> String {
         func _unlock() {
         }
         
-        func write(string: String) {
+        func write(_ string: String) {
             data += string
         }
     }

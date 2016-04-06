@@ -32,19 +32,19 @@ class ADerivedClass : AParentClass {
 class AnotherDerivedClass : AParentClass {
 }
 
-func foo (x : AClass) {
+func foo (_ x : AClass) {
 	print("foo") // Set breakpoint here
 }
-func foo<T: AProtocol> (x : T) {
+func foo<T: AProtocol> (_ x : T) {
 	print("foo") // Set breakpoint here
 }
-func bar <T,U> (x : T, _ y : U) {
+func bar <T,U> (_ x : T, _ y : U) {
 	print("bar") // Set breakpoint here
 }
-func baz <T : AProtocol> (x : T) {
+func baz <T : AProtocol> (_ x : T) {
 	print("baz") // Set breakpoint here
 }
-func bat (x : AParentClass) {
+func bat (_ x : AParentClass) {
 	print("bat") // Set breakpoint here
 }
 

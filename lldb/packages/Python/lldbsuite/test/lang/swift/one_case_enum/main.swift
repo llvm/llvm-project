@@ -17,7 +17,7 @@ enum SillyEvent : Event {
     case Goofus
 }
 
-func doStuff<T>(event: T) -> T {
+func doStuff<T>(_ event: T) -> T {
     return event // Set breakpoint here
 }
 

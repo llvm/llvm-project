@@ -55,7 +55,7 @@ func getOptionalString() -> String?
     return opt_str // Set breakpoint here
 }
 
-func throwAnError(should_throw : Bool) throws -> Int
+func throwAnError(_ should_throw : Bool) throws -> Int
 {
     if should_throw  // Set breakpoint here
     {

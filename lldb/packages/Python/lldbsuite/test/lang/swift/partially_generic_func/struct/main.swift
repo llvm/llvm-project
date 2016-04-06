@@ -14,7 +14,7 @@ struct Generic<T> {
   let b = 12
 }
 
-func foo<T0>(x: Generic<T0>) {
+func foo<T0>(_ x: Generic<T0>) {
   print(x) //% self.expect('frame variable -d run -- x', substrs=['"Hello world"', '12'])
   //% self.expect('expression -d run -- x', substrs=['"Hello world"', '12'])
 }

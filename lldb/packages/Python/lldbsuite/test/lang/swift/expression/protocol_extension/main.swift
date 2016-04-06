@@ -11,12 +11,12 @@
 // -----------------------------------------------------------------------------
 public protocol Foo
 {
-    func foo(x: Int) -> Int
+    func foo(_ x: Int) -> Int
 }
 
 struct FooishStruct : Foo
 {
-    func foo(x: Int) -> Int
+    func foo(_ x: Int) -> Int
     {
         return x + FooishStruct.cvar
     }
@@ -29,7 +29,7 @@ struct FooishStruct : Foo
 
 class FooishClass : Foo
 {
-    func foo(x: Int) -> Int
+    func foo(_ x: Int) -> Int
     {
         return x + FooishStruct.cvar
     }
@@ -48,7 +48,7 @@ enum FooishEnum : Int, Foo
     var x : Int {return 10}
     var y : String { return "Hello world"}
 
-    func foo(x: Int) -> Int
+    func foo(_ x: Int) -> Int
     {
         return x + FooishEnum.cvar
     }

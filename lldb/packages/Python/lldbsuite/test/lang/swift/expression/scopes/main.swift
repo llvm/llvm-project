@@ -30,7 +30,7 @@ class A
         }
     }
 
-    class func static_method (input : Int)
+    class func static_method (_ input : Int)
     {
         print("Got input: \(input) and ten: \(self.return_ten())") // In class function
     }
@@ -85,13 +85,13 @@ class A
         print ("In deinit.")
     }
 
-    func shadow_a (input : Int) -> Void
+    func shadow_a (_ input : Int) -> Void
     {
         var in_class_a = 10.0
         print("Got input: \(input) shadower: \(in_class_a) shadowed: \(self.in_class_a) and also_in_a: \(also_in_a) and through self: \(self.also_in_a)") // Shadowed in A
     }
 
-    func DefinesClosure (a_string : String) -> () -> String
+    func DefinesClosure (_ a_string : String) -> () -> String
     {
         return { [unowned self] in
                   var tmp_string = a_string 

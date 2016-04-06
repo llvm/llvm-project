@@ -14,12 +14,12 @@ struct S {
   var b : String = "Hello world"
 }
 
-func getSome<T> (x : T) -> T?
+func getSome<T> (_ x : T) -> T?
 {
   return x
 }
 
-func getUncheckedSome<T>(x : T) -> T!
+func getUncheckedSome<T>(_ x : T) -> T!
 {
   return x
 }

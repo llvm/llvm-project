@@ -9,12 +9,12 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-func foo <U> (myOptionalU : U?)
+func foo <U> (_ myOptionalU : U?)
 {
     var myU = myOptionalU! // Set first breakpoint here.
 }
 
-func log<T>(value : T) -> T {
+func log<T>(_ value : T) -> T {
     return value // Set second breakpoint here.
 }
 
