@@ -301,6 +301,12 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatement) {
                "  // comment\n"
                "  f();",
                AllowsMergedIf);
+  verifyFormat("{\n"
+               "  if (a)\n"
+               "  label:\n"
+               "    f();\n"
+               "}",
+               AllowsMergedIf);
   verifyFormat("if (a)\n"
                "  ;",
                AllowsMergedIf);
@@ -3997,6 +4003,12 @@ TEST_F(FormatTest, FunctionAnnotations) {
                "                << bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
   verifyFormat("TEST_F(ThisIsATestFixtureeeeeeeeeeeee,\n"
                "       ThisIsATestWithAReallyReallyReallyReallyLongName) {}");
+  verifyFormat("MACRO(abc).function() // wrap\n"
+               "    << abc;");
+  verifyFormat("MACRO(abc)->function() // wrap\n"
+               "    << abc;");
+  verifyFormat("MACRO(abc)::function() // wrap\n"
+               "    << abc;");
 }
 
 TEST_F(FormatTest, BreaksDesireably) {

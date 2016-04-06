@@ -2133,8 +2133,10 @@ static bool isRequiredDecl(const Decl *D, ASTContext &Context,
   // An ObjCMethodDecl is never considered as "required" because its
   // implementation container always is.
 
-  // File scoped assembly or obj-c implementation must be seen.
-  if (isa<FileScopeAsmDecl>(D) || isa<ObjCImplDecl>(D))
+  // File scoped assembly or obj-c or OMP declare target implementation must be
+  // seen.
+  if (isa<FileScopeAsmDecl>(D) || isa<ObjCImplDecl>(D) ||
+      D->hasAttr<OMPDeclareTargetDeclAttr>())
     return true;
 
   // ImportDecl is used by codegen to determine the set of imported modules to

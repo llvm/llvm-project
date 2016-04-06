@@ -7846,6 +7846,8 @@ public:
   //
 private:
   void *VarDataSharingAttributesStack;
+  /// Set to true inside '#pragma omp declare target' region.
+  bool IsInOpenMPDeclareTargetContext = false;
   /// \brief Initialization of data-sharing attributes stack.
   void InitDataSharingAttributesStack();
   void DestroyDataSharingAttributesStack();
@@ -7930,6 +7932,17 @@ public:
   /// \brief Called at the end of '#pragma omp declare reduction'.
   DeclGroupPtrTy ActOnOpenMPDeclareReductionDirectiveEnd(
       Scope *S, DeclGroupPtrTy DeclReductions, bool IsValid);
+
+  /// Called on the start of target region i.e. '#pragma omp declare target'.
+  bool ActOnStartOpenMPDeclareTargetDirective(SourceLocation Loc);
+  /// Called at the end of target region i.e. '#pragme omp end declare target'.
+  void ActOnFinishOpenMPDeclareTargetDirective();
+  /// Check declaration inside target region.
+  void checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D);
+  /// Return true inside OpenMP target region.
+  bool isInOpenMPDeclareTargetContext() const {
+    return IsInOpenMPDeclareTargetContext;
+  }
 
   /// \brief Initialization of captured region for OpenMP region.
   void ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope);

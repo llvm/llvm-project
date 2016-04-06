@@ -1982,6 +1982,23 @@ All of these conventions except ``none`` require the function to have an error p
 }];
 }
 
+def OMPDeclareTargetDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "#pragma omp declare target";
+  let Content = [{
+The `declare target` directive specifies that variables and functions are mapped
+to a device for OpenMP offload mechanism.
+
+The syntax of the declare target directive is as follows:
+
+  .. code-block:: c
+
+  #pragma omp declare target new-line
+  declarations-definition-seq
+  #pragma omp end declare target new-line
+  }];
+}
+
 def NotTailCalledDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

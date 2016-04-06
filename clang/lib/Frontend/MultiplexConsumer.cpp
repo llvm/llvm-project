@@ -125,6 +125,7 @@ public:
   void FunctionDefinitionInstantiated(const FunctionDecl *D) override;
   void DeclarationMarkedUsed(const Decl *D) override;
   void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) override;
+  void DeclarationMarkedOpenMPDeclareTarget(const Decl *D) override;
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr, 
                               const RecordDecl *Record) override;
@@ -218,6 +219,11 @@ void MultiplexASTMutationListener::DeclarationMarkedOpenMPThreadPrivate(
     const Decl *D) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
     Listeners[i]->DeclarationMarkedOpenMPThreadPrivate(D);
+}
+void MultiplexASTMutationListener::DeclarationMarkedOpenMPDeclareTarget(
+    const Decl *D) {
+  for (auto *L : Listeners)
+    L->DeclarationMarkedOpenMPDeclareTarget(D);
 }
 void MultiplexASTMutationListener::RedefinedHiddenDefinition(const NamedDecl *D,
                                                              Module *M) {

@@ -89,15 +89,14 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
 
 SymbolBody::SymbolBody(Kind K, uint32_t NameOffset, uint8_t StOther,
                        uint8_t Type)
-    : SymbolKind(K), MustBeInDynSym(false), NeedsCopyOrPltAddr(false),
-      Type(Type), Binding(STB_LOCAL), StOther(StOther), NameOffset(NameOffset) {
+    : SymbolKind(K), Type(Type), Binding(STB_LOCAL), StOther(StOther),
+      NameOffset(NameOffset) {
   init();
 }
 
 SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,
                        uint8_t Type)
-    : SymbolKind(K), MustBeInDynSym(false), NeedsCopyOrPltAddr(false),
-      Type(Type), Binding(Binding), StOther(StOther),
+    : SymbolKind(K), Type(Type), Binding(Binding), StOther(StOther),
       Name({Name.data(), Name.size()}) {
   assert(!isLocal());
   init();
@@ -107,6 +106,9 @@ void SymbolBody::init() {
   Kind K = kind();
   IsUsedInRegularObj = K == DefinedRegularKind || K == DefinedCommonKind ||
                        K == DefinedSyntheticKind || K == UndefinedElfKind;
+  CanKeepUndefined = false;
+  MustBeInDynSym = false;
+  NeedsCopyOrPltAddr = false;
 }
 
 // Returns true if a symbol can be replaced at load-time by a symbol
@@ -267,8 +269,9 @@ template <typename ELFT>
 UndefinedElf<ELFT>::UndefinedElf(StringRef Name, uint8_t Binding,
                                  uint8_t StOther, uint8_t Type,
                                  bool CanKeepUndefined)
-    : SymbolBody(SymbolBody::UndefinedElfKind, Name, Binding, StOther, Type),
-      CanKeepUndefined(CanKeepUndefined) {}
+    : SymbolBody(SymbolBody::UndefinedElfKind, Name, Binding, StOther, Type) {
+  this->CanKeepUndefined = CanKeepUndefined;
+}
 
 template <typename ELFT>
 UndefinedElf<ELFT>::UndefinedElf(const Elf_Sym &Sym)

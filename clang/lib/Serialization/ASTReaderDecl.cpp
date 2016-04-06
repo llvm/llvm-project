@@ -3879,6 +3879,11 @@ void ASTDeclReader::UpdateDecl(Decl *D, ModuleFile &ModuleFile,
           Reader.Context, ReadSourceRange(Record, Idx)));
       break;
 
+    case UPD_DECL_MARKED_OPENMP_DECLARETARGET:
+      D->addAttr(OMPDeclareTargetDeclAttr::CreateImplicit(
+          Reader.Context, ReadSourceRange(Record, Idx)));
+      break;
+
     case UPD_DECL_EXPORTED: {
       unsigned SubmoduleID = readSubmoduleID(Record, Idx);
       auto *Exported = cast<NamedDecl>(D);

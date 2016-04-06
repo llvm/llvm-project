@@ -107,6 +107,12 @@ public:
   /// \param D the declaration marked OpenMP threadprivate.
   virtual void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) {}
 
+  /// \brief A declaration is marked as OpenMP declaretarget which was not
+  /// previously marked as declaretarget.
+  ///
+  /// \param D the declaration marked OpenMP declaretarget.
+  virtual void DeclarationMarkedOpenMPDeclareTarget(const Decl *D) {}
+
   /// \brief A definition has been made visible by being redefined locally.
   ///
   /// \param D The definition that was previously not visible.

@@ -95,7 +95,7 @@ static unsigned getMaxCalculationWidth(ASTContext &Context, const Expr *E) {
 }
 
 static llvm::SmallDenseMap<int, int> createRelativeIntSizesMap() {
-  llvm::SmallDenseMap<int, int> Result(14);
+  llvm::SmallDenseMap<int, int> Result;
   Result[BuiltinType::UChar] = 1;
   Result[BuiltinType::SChar] = 1;
   Result[BuiltinType::Char_U] = 1;
@@ -114,7 +114,7 @@ static llvm::SmallDenseMap<int, int> createRelativeIntSizesMap() {
 }
 
 static llvm::SmallDenseMap<int, int> createRelativeCharSizesMap() {
-  llvm::SmallDenseMap<int, int> Result(6);
+  llvm::SmallDenseMap<int, int> Result;
   Result[BuiltinType::UChar] = 1;
   Result[BuiltinType::SChar] = 1;
   Result[BuiltinType::Char_U] = 1;
@@ -125,7 +125,7 @@ static llvm::SmallDenseMap<int, int> createRelativeCharSizesMap() {
 }
 
 static llvm::SmallDenseMap<int, int> createRelativeCharSizesWMap() {
-  llvm::SmallDenseMap<int, int> Result(6);
+  llvm::SmallDenseMap<int, int> Result;
   Result[BuiltinType::UChar] = 1;
   Result[BuiltinType::SChar] = 1;
   Result[BuiltinType::Char_U] = 1;
