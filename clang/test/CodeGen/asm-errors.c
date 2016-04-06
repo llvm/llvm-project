@@ -8,6 +8,7 @@
 // RUN:   FileCheck --check-prefix=CRASH-REPORT %s
 // CRASH-REPORT: <inline asm>:
 // CRASH-REPORT: error: invalid instruction mnemonic 'abc'
+// CRASH-REPORT: error: cannot compile inline asm
 // CRASH-REPORT-NOT: note: diagnostic msg:
 
 int test1(int X) {
