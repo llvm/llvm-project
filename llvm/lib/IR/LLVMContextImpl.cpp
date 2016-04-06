@@ -158,9 +158,6 @@ LLVMContextImpl::~LLVMContextImpl() {
   // Destroy ValuesAsMetadata.
   for (auto &Pair : ValuesAsMetadata)
     delete Pair.second;
-
-  // Destroy MDStrings.
-  MDStringCache.clear();
 }
 
 void LLVMContextImpl::dropTriviallyDeadConstantArrays() {
