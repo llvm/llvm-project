@@ -73,6 +73,7 @@ eh.resume:                                        ; preds = %catch
 ; CHECK-DAG: [[LPAD_PREHEADER_LOC]] = !DILocation(line: 85, column: 1, scope: !{{[0-9]+}})
 
 !llvm.module.flags = !{!0, !1, !2}
+!llvm.dbg.cu = !{!14}
 !0 = !{i32 2, !"Dwarf Version", i32 4}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 !2 = !{i32 1, !"PIC Level", i32 2}
@@ -88,3 +89,8 @@ eh.resume:                                        ; preds = %catch
 !11 = !DILocation(line: 73, column: 46, scope: !6)
 !12 = !DILocation(line: 75, column: 9, scope: !6)
 !13 = !DILocation(line: 85, column: 1, scope: !6)
+!14 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
+                             file: !5,
+                             isOptimized: true, flags: "-O2",
+                             splitDebugFilename: "abc.debug", emissionKind: 2,
+                             subprograms: !{!6})

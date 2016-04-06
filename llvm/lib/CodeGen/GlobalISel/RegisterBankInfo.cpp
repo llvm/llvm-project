@@ -49,8 +49,7 @@ void RegisterBankInfo::createRegisterBank(unsigned ID, const char *Name) {
   RegBank.Name = Name;
 }
 
-void RegisterBankInfo::addRegBankCoverage(unsigned ID,
-                                          const TargetRegisterClass &RC,
+void RegisterBankInfo::addRegBankCoverage(unsigned ID, unsigned RCId,
                                           const TargetRegisterInfo &TRI) {
   RegisterBank &RB = getRegBank(ID);
   unsigned NbOfRegClasses = TRI.getNumRegClasses();
@@ -60,7 +59,7 @@ void RegisterBankInfo::addRegBankCoverage(unsigned ID,
   // Check if RB is underconstruction.
   if (!RB.isValid())
     RB.ContainedRegClasses.resize(NbOfRegClasses);
-  else if (RB.contains(RC))
+  else if (RB.contains(*TRI.getRegClass(RCId)))
     // If RB already contains this register class, there is nothing
     // to do.
     return;
@@ -68,8 +67,8 @@ void RegisterBankInfo::addRegBankCoverage(unsigned ID,
   BitVector &Covered = RB.ContainedRegClasses;
   SmallVector<unsigned, 8> WorkList;
 
-  WorkList.push_back(RC.getID());
-  Covered.set(RC.getID());
+  WorkList.push_back(RCId);
+  Covered.set(RCId);
 
   unsigned &MaxSize = RB.Size;
   do {

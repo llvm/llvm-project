@@ -713,6 +713,16 @@ namespace llvm {
                                       const SmallVectorImpl<ISD::InputArg> &Ins,
                                       SelectionDAG& DAG) const;
 
+    bool
+    IsEligibleForTailCallOptimization_64SVR4(
+                                    SDValue Callee,
+                                    CallingConv::ID CalleeCC,
+                                    ImmutableCallSite *CS,
+                                    bool isVarArg,
+                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                    const SmallVectorImpl<ISD::InputArg> &Ins,
+                                    SelectionDAG& DAG) const;
+
     SDValue EmitTailCallLoadFPAndRetAddr(SelectionDAG & DAG,
                                          int SPDiff,
                                          SDValue Chain,

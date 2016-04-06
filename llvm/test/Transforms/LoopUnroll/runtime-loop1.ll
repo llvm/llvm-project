@@ -53,6 +53,7 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 !llvm.module.flags = !{!0, !1, !2}
+!llvm.dbg.cu = !{!11}
 !0 = !{i32 2, !"Dwarf Version", i32 4}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 !2 = !{i32 1, !"PIC Level", i32 2}
@@ -65,3 +66,8 @@ for.end:                                          ; preds = %for.body, %entry
 !8 = !DILocation(line: 101, column: 1, scope: !6)
 !9 = !DILocation(line: 102, column: 1, scope: !6)
 !10 = !DILocation(line: 103, column: 1, scope: !6)
+!11 =  distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
+                             file: !5,
+                             isOptimized: true, flags: "-O2",
+                             splitDebugFilename: "abc.debug", emissionKind: 2, 
+                             subprograms: !{!6}) 

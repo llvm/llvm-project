@@ -423,6 +423,12 @@ def PPCRegF4RCAsmOperand : AsmOperandClass {
 def f4rc : RegisterOperand<F4RC> {
   let ParserMatchClass = PPCRegF4RCAsmOperand;
 }
+def PPCRegD8RCAsmOperand : AsmOperandClass {
+  let Name = "RegD8RC"; let PredicateMethod = "isD8RCRegNumber";
+}
+def d8rc : RegisterOperand<D8RC> {
+  let ParserMatchClass = PPCRegD8RCAsmOperand;
+}
 def PPCRegVRRCAsmOperand : AsmOperandClass {
   let Name = "RegVRRC"; let PredicateMethod = "isRegNumber";
 }
@@ -4185,3 +4191,44 @@ def : Pat<(atomic_store_32 iaddr:$ptr, i32:$val), (STW  gprc:$val, memri:$ptr)>;
 def : Pat<(atomic_store_8  xaddr:$ptr, i32:$val), (STBX gprc:$val, memrr:$ptr)>;
 def : Pat<(atomic_store_16 xaddr:$ptr, i32:$val), (STHX gprc:$val, memrr:$ptr)>;
 def : Pat<(atomic_store_32 xaddr:$ptr, i32:$val), (STWX gprc:$val, memrr:$ptr)>;
+
+let Predicates = [IsISA3_0] in {
+
+// Add PC Immediate Shifted
+def ADDPCIS : DX_RD5_IM16<19, 2, (outs gprc:$rD), (ins s16imm:$IMM),
+                          "addpcis $rD, $IMM", IIC_IntSimple, []>;
+// Extended Mnemonics of ADDPCIS
+def SUBPCIS : PPCAsmPseudo<"subpcis $rD, $IMM", (ins gprc:$rD, s16imm:$IMM)>;
+def LNIA    : PPCAsmPseudo<"lnia $rD",          (ins gprc:$rD)>;
+
+// Modulo {Signed/Unsigned}-Word
+def MODSW : X_RT5_RA5_RB5<779, "modsw", gprc, IIC_IntDivW, []>;
+def MODUW : X_RT5_RA5_RB5<267, "moduw", gprc, IIC_IntDivW, []>;
+
+// Copy-Paste Facility
+// We prefix 'CP' to COPY due to name conflict in Target.td. We also prefix to
+// PASTE for naming consistency.
+let mayLoad = 1 in
+def CP_COPY   : X_L1_RA5_RB5<31, 774, "copy"  , gprc, IIC_LdStCOPY, []>;
+
+let mayStore = 1 in
+def CP_PASTE  : X_L1_RA5_RB5<31, 902, "paste" , gprc, IIC_LdStPASTE, []>;
+
+let mayStore = 1, Defs = [CR0] in
+def CP_PASTEo : X_L1_RA5_RB5<31, 902, "paste.", gprc, IIC_LdStPASTE, []>, isDOT;
+
+def CP_COPYx  : PPCAsmPseudo<"copy $rA, $rB" , (ins gprc:$rA, gprc:$rB)>;
+def CP_PASTEx : PPCAsmPseudo<"paste $rA, $rB", (ins gprc:$rA, gprc:$rB)>;
+def CP_COPY_FIRST : PPCAsmPseudo<"copy_first $rA, $rB",
+                                  (ins gprc:$rA, gprc:$rB)>;
+def CP_PASTE_LAST : PPCAsmPseudo<"paste_last $rA, $rB",
+                                  (ins gprc:$rA, gprc:$rB)>;
+def CP_ABORT : XForm_0<31, 838, (outs), (ins), "cp_abort", IIC_SprABORT, []>;
+
+// Message Synchronize
+def MSGSYNC : XForm_0<31, 886, (outs), (ins), "msgsync", IIC_SprMSGSYNC, []>;
+
+// Power-Saving Mode Instruction:
+def STOP : XForm_0<19, 370, (outs), (ins), "stop", IIC_SprSTOP, []>;
+
+} // IsISA3_0

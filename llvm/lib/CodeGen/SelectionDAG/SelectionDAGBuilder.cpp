@@ -1377,6 +1377,18 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
   SmallVector<ISD::OutputArg, 8> Outs;
   SmallVector<SDValue, 8> OutVals;
 
+  // Calls to @llvm.experimental.deoptimize don't generate a return value, so
+  // lower
+  //
+  //   %val = call <ty> @llvm.experimental.deoptimize()
+  //   ret <ty> %val
+  //
+  // differently.
+  if (I.getParent()->getTerminatingDeoptimizeCall()) {
+    LowerDeoptimizingReturn();
+    return;
+  }
+
   if (!FuncInfo.CanLowerReturn) {
     unsigned DemoteReg = FuncInfo.DemoteRegister;
     const Function *F = I.getParent()->getParent();

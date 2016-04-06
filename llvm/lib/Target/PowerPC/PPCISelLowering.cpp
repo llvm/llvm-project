@@ -19,6 +19,7 @@
 #include "PPCTargetMachine.h"
 #include "PPCTargetObjectFile.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -36,11 +37,14 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "ppc-lowering"
 
 static cl::opt<bool> DisablePPCPreinc("disable-ppc-preinc",
 cl::desc("disable preincrement load/store generation on PPC"), cl::Hidden);
@@ -50,6 +54,12 @@ cl::desc("disable setting the node scheduling preference to ILP on PPC"), cl::Hi
 
 static cl::opt<bool> DisablePPCUnaligned("disable-ppc-unaligned",
 cl::desc("disable unaligned load/store generation on PPC"), cl::Hidden);
+
+static cl::opt<bool> DisableSCO("disable-ppc-sco",
+cl::desc("disable sibling call optimization on ppc"), cl::Hidden);
+
+STATISTIC(NumTailCalls, "Number of tail calls");
+STATISTIC(NumSiblingCalls, "Number of sibling calls");
 
 // FIXME: Remove this once the bug has been fixed!
 extern cl::opt<bool> ANDIGlueBug;
@@ -3842,6 +3852,176 @@ static int CalculateTailCallSPDiff(SelectionDAG& DAG, bool isTailCall,
   return SPDiff;
 }
 
+static bool isFunctionGlobalAddress(SDValue Callee);
+
+static bool
+resideInSameModule(SDValue Callee, Reloc::Model RelMod) {
+  // If !G, Callee can be an external symbol.
+  GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
+  if (!G) return false;
+
+  const GlobalValue *GV = G->getGlobal();
+
+  if (GV->isDeclaration()) return false;
+
+  switch(GV->getLinkage()) {
+  default: llvm_unreachable("unknow linkage type");
+  case GlobalValue::AvailableExternallyLinkage:
+  case GlobalValue::ExternalWeakLinkage:
+    return false;
+
+  // Callee with weak linkage is allowed if it has hidden or protected
+  // visibility
+  case GlobalValue::LinkOnceAnyLinkage:
+  case GlobalValue::LinkOnceODRLinkage: // e.g. c++ inline functions
+  case GlobalValue::WeakAnyLinkage:
+  case GlobalValue::WeakODRLinkage:     // e.g. c++ template instantiation
+    if (GV->hasDefaultVisibility())
+      return false;
+
+  case GlobalValue::ExternalLinkage:
+  case GlobalValue::InternalLinkage:
+  case GlobalValue::PrivateLinkage:
+    break;
+  }
+
+  // With '-fPIC', calling default visiblity function need insert 'nop' after
+  // function call, no matter that function resides in same module or not, so
+  // we treat it as in different module.
+  if (RelMod == Reloc::PIC_ && GV->hasDefaultVisibility())
+    return false;
+
+  return true;
+}
+
+static bool
+needStackSlotPassParameters(const PPCSubtarget &Subtarget,
+                            const SmallVectorImpl<ISD::OutputArg> &Outs) {
+  assert(Subtarget.isSVR4ABI() && Subtarget.isPPC64());
+
+  const unsigned PtrByteSize = 8;
+  const unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
+
+  static const MCPhysReg GPR[] = {
+    PPC::X3, PPC::X4, PPC::X5, PPC::X6,
+    PPC::X7, PPC::X8, PPC::X9, PPC::X10,
+  };
+  static const MCPhysReg VR[] = {
+    PPC::V2, PPC::V3, PPC::V4, PPC::V5, PPC::V6, PPC::V7, PPC::V8,
+    PPC::V9, PPC::V10, PPC::V11, PPC::V12, PPC::V13
+  };
+
+  const unsigned NumGPRs = array_lengthof(GPR);
+  const unsigned NumFPRs = 13;
+  const unsigned NumVRs = array_lengthof(VR);
+  const unsigned ParamAreaSize = NumGPRs * PtrByteSize;
+
+  unsigned NumBytes = LinkageSize;
+  unsigned AvailableFPRs = NumFPRs;
+  unsigned AvailableVRs = NumVRs;
+
+  for (const ISD::OutputArg& Param : Outs) {
+    if (Param.Flags.isNest()) continue;
+
+    if (CalculateStackSlotUsed(Param.VT, Param.ArgVT, Param.Flags,
+                               PtrByteSize, LinkageSize, ParamAreaSize,
+                               NumBytes, AvailableFPRs, AvailableVRs,
+                               Subtarget.hasQPX()))
+      return true;
+  }
+  return false;
+}
+
+static bool
+hasSameArgumentList(const Function *CallerFn, ImmutableCallSite *CS) {
+  if (CS->arg_size() != CallerFn->getArgumentList().size())
+    return false;
+
+  ImmutableCallSite::arg_iterator CalleeArgIter = CS->arg_begin();
+  ImmutableCallSite::arg_iterator CalleeArgEnd = CS->arg_end();
+  Function::const_arg_iterator CallerArgIter = CallerFn->arg_begin();
+
+  for (; CalleeArgIter != CalleeArgEnd; ++CalleeArgIter, ++CallerArgIter) {
+    const Value* CalleeArg = *CalleeArgIter;
+    const Value* CallerArg = &(*CallerArgIter);
+    if (CalleeArg == CallerArg)
+      continue;
+
+    // e.g. @caller([4 x i64] %a, [4 x i64] %b) {
+    //        tail call @callee([4 x i64] undef, [4 x i64] %b)
+    //      }
+    // 1st argument of callee is undef and has the same type as caller.
+    if (CalleeArg->getType() == CallerArg->getType() &&
+        isa<UndefValue>(CalleeArg))
+      continue;
+
+    return false;
+  }
+
+  return true;
+}
+
+bool
+PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
+                                    SDValue Callee,
+                                    CallingConv::ID CalleeCC,
+                                    ImmutableCallSite *CS,
+                                    bool isVarArg,
+                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                    const SmallVectorImpl<ISD::InputArg> &Ins,
+                                    SelectionDAG& DAG) const {
+  bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
+
+  if (DisableSCO && !TailCallOpt) return false;
+
+  // Variadic argument functions are not supported.
+  if (isVarArg) return false;
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  CallingConv::ID CallerCC = MF.getFunction()->getCallingConv();
+
+  // Tail or Sibling call optimization (TCO/SCO) needs callee and caller has
+  // the same calling convention
+  if (CallerCC != CalleeCC) return false;
+
+  // SCO support C calling convention
+  if (CalleeCC != CallingConv::Fast && CalleeCC != CallingConv::C)
+    return false;
+
+  // Functions containing by val parameters are not supported.
+  if (std::any_of(Ins.begin(), Ins.end(),
+                  [](const ISD::InputArg& IA) { return IA.Flags.isByVal(); }))
+    return false;
+
+  // No TCO/SCO on indirect call because Caller have to restore its TOC
+  if (!isFunctionGlobalAddress(Callee) &&
+      !isa<ExternalSymbolSDNode>(Callee))
+    return false;
+
+  // Check if Callee resides in the same module, because for now, PPC64 SVR4 ABI
+  // (ELFv1/ELFv2) doesn't allow tail calls to a symbol resides in another
+  // module.
+  // ref: https://bugzilla.mozilla.org/show_bug.cgi?id=973977
+  if (!resideInSameModule(Callee, getTargetMachine().getRelocationModel()))
+    return false;
+
+  // TCO allows altering callee ABI, so we don't have to check further.
+  if (CalleeCC == CallingConv::Fast && TailCallOpt)
+    return true;
+
+  if (DisableSCO) return false;
+
+  // If callee use the same argument list that caller is using, then we can
+  // apply SCO on this case. If it is not, then we need to check if callee needs
+  // stack for passing arguments.
+  if (!hasSameArgumentList(MF.getFunction(), CS) &&
+      needStackSlotPassParameters(Subtarget, Outs)) {
+    return false;
+  }
+
+  return true;
+}
+
 /// IsEligibleForTailCallOptimization - Check whether the call is eligible
 /// for tail call optimization. Targets which want to do tail call
 /// optimization should implement this function.
@@ -4479,9 +4659,32 @@ PPCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsPatchPoint                     = CLI.IsPatchPoint;
   ImmutableCallSite *CS                 = CLI.CS;
 
-  if (isTailCall)
-    isTailCall = IsEligibleForTailCallOptimization(Callee, CallConv, isVarArg,
-                                                   Ins, DAG);
+  if (isTailCall) {
+    if (Subtarget.isSVR4ABI() && Subtarget.isPPC64())
+      isTailCall =
+        IsEligibleForTailCallOptimization_64SVR4(Callee, CallConv, CS,
+                                                 isVarArg, Outs, Ins, DAG);
+    else
+      isTailCall = IsEligibleForTailCallOptimization(Callee, CallConv, isVarArg,
+                                                     Ins, DAG);
+    if (isTailCall) {
+      ++NumTailCalls;
+      if (!getTargetMachine().Options.GuaranteedTailCallOpt)
+        ++NumSiblingCalls;
+
+      assert(isa<GlobalAddressSDNode>(Callee) &&
+             "Callee should be an llvm::Function object.");
+      DEBUG(
+        const GlobalValue *GV = cast<GlobalAddressSDNode>(Callee)->getGlobal();
+        const unsigned Width = 80 - strlen("TCO caller: ")
+                                  - strlen(", callee linkage: 0, 0");
+        dbgs() << "TCO caller: "
+               << left_justify(DAG.getMachineFunction().getName(), Width)
+               << ", callee linkage: "
+               << GV->getVisibility() << ", " << GV->getLinkage() << "\n"
+      );
+    }
+  }
 
   if (!isTailCall && CS && CS->isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
@@ -4760,11 +4963,15 @@ PPCTargetLowering::LowerCall_64SVR4(SDValue Chain, SDValue Callee,
   bool isLittleEndian = Subtarget.isLittleEndian();
   unsigned NumOps = Outs.size();
   bool hasNest = false;
+  bool IsSibCall = false;
 
   EVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
   unsigned PtrByteSize = 8;
 
   MachineFunction &MF = DAG.getMachineFunction();
+
+  if (isTailCall && !getTargetMachine().Options.GuaranteedTailCallOpt)
+    IsSibCall = true;
 
   // Mark this function as potentially containing a function that contains a
   // tail call. As a consequence the frame pointer will be used for dynamicalloc
@@ -4885,9 +5092,12 @@ PPCTargetLowering::LowerCall_64SVR4(SDValue Chain, SDValue Callee,
       CallConv == CallingConv::Fast)
     NumBytes = EnsureStackAlignment(Subtarget.getFrameLowering(), NumBytes);
 
+  int SPDiff = 0;
+
   // Calculate by how many bytes the stack has to be adjusted in case of tail
   // call optimization.
-  int SPDiff = CalculateTailCallSPDiff(DAG, isTailCall, NumBytes);
+  if (!IsSibCall)
+    SPDiff = CalculateTailCallSPDiff(DAG, isTailCall, NumBytes);
 
   // To protect arguments on the stack from being clobbered in a tail call,
   // force all the loads to happen before doing any other lowering.
@@ -4896,8 +5106,9 @@ PPCTargetLowering::LowerCall_64SVR4(SDValue Chain, SDValue Callee,
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
-  Chain = DAG.getCALLSEQ_START(Chain, DAG.getIntPtrConstant(NumBytes, dl, true),
-                               dl);
+  if (!IsSibCall)
+    Chain = DAG.getCALLSEQ_START(Chain,
+                                 DAG.getIntPtrConstant(NumBytes, dl, true), dl);
   SDValue CallSeqStart = Chain;
 
   // Load the return address and frame pointer so it can be move somewhere else
@@ -5366,7 +5577,7 @@ PPCTargetLowering::LowerCall_64SVR4(SDValue Chain, SDValue Callee,
     InFlag = Chain.getValue(1);
   }
 
-  if (isTailCall)
+  if (isTailCall && !IsSibCall)
     PrepareTailCall(DAG, InFlag, Chain, dl, true, SPDiff, NumBytes, LROp,
                     FPOp, true, TailCallArguments);
 

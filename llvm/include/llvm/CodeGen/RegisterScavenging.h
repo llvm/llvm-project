@@ -71,8 +71,8 @@ public:
   RegScavenger()
     : MBB(nullptr), NumRegUnits(0), Tracking(false) {}
 
-  /// Start tracking liveness from the begin of the specific basic block.
-  void enterBasicBlock(MachineBasicBlock *mbb);
+  /// Start tracking liveness from the begin of basic block \p MBB.
+  void enterBasicBlock(MachineBasicBlock &MBB);
 
   /// Move the internal MBB iterator and update register states.
   void forward();

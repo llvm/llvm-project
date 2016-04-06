@@ -146,9 +146,10 @@ private:
   std::vector<SymbolBody *> SymbolBodies;
 
   // MIPS .reginfo section defined by this file.
-  MipsReginfoInputSection<ELFT> *MipsReginfo = nullptr;
+  std::unique_ptr<MipsReginfoInputSection<ELFT>> MipsReginfo;
 
   llvm::BumpPtrAllocator Alloc;
+  llvm::SpecificBumpPtrAllocator<InputSection<ELFT>> IAlloc;
   llvm::SpecificBumpPtrAllocator<MergeInputSection<ELFT>> MAlloc;
   llvm::SpecificBumpPtrAllocator<EHInputSection<ELFT>> EHAlloc;
 };

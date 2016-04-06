@@ -15,10 +15,12 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_REGBANKINFO_H
 #define LLVM_CODEGEN_GLOBALISEL_REGBANKINFO_H
 
+#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
+
+#include <cassert>
 #include <memory> // For unique_ptr.
 
 namespace llvm {
-class RegisterBank;
 class TargetRegisterInfo;
 
 /// Holds all the information related to register banks.
@@ -45,23 +47,23 @@ protected:
   /// \pre \p ID < NumRegBanks.
   void createRegisterBank(unsigned ID, const char *Name);
 
-  /// Add \p RC to the set of register class that the register bank
+  /// Add \p RCId to the set of register class that the register bank
   /// identified \p ID covers.
   /// This method transitively adds all the sub classes and the subreg-classes
-  /// of \p RC to the set of covered register classes.
+  /// of \p RCId to the set of covered register classes.
   /// It also adjusts the size of the register bank to reflect the maximal
   /// size of a value that can be hold into that register bank.
   ///
-  /// \note This method does *not* add the super classes of \p RC.
-  /// The rationale is if \p ID covers the registers of \p RC, that
+  /// \note This method does *not* add the super classes of \p RCId.
+  /// The rationale is if \p ID covers the registers of \p RCId, that
   /// does not necessarily mean that \p ID covers the set of registers
-  /// of RC's superclasses.
+  /// of RCId's superclasses.
   /// This method does *not* add the superreg classes as well for consistents.
   /// The expected use is to add the coverage top-down with respect to the
   /// register hierarchy.
   ///
   /// \todo TableGen should just generate the BitSet vector for us.
-  void addRegBankCoverage(unsigned ID, const TargetRegisterClass &RC,
+  void addRegBankCoverage(unsigned ID, unsigned RCId,
                           const TargetRegisterInfo &TRI);
 
   /// Get the register bank identified by \p ID.

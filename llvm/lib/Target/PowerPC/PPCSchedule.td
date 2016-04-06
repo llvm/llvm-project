@@ -70,6 +70,8 @@ def IIC_LdStSTFDU    : InstrItinClass;
 def IIC_LdStSTVEBX   : InstrItinClass;
 def IIC_LdStSTWCX    : InstrItinClass;
 def IIC_LdStSync     : InstrItinClass;
+def IIC_LdStCOPY     : InstrItinClass;
+def IIC_LdStPASTE    : InstrItinClass;
 def IIC_SprISYNC     : InstrItinClass;
 def IIC_SprMFSR      : InstrItinClass;
 def IIC_SprMTMSR     : InstrItinClass;
@@ -104,12 +106,17 @@ def IIC_VecVSR       : InstrItinClass;
 def IIC_SprMTMSRD    : InstrItinClass;
 def IIC_SprSLIE      : InstrItinClass;
 def IIC_SprSLBIE     : InstrItinClass;
+def IIC_SprSLBIEG    : InstrItinClass;
 def IIC_SprSLBMTE    : InstrItinClass;
 def IIC_SprSLBMFEE   : InstrItinClass;
 def IIC_SprSLBIA     : InstrItinClass;
+def IIC_SprSLBSYNC   : InstrItinClass;
 def IIC_SprTLBIA     : InstrItinClass;
 def IIC_SprTLBIEL    : InstrItinClass;
 def IIC_SprTLBIE     : InstrItinClass;
+def IIC_SprABORT     : InstrItinClass;
+def IIC_SprMSGSYNC   : InstrItinClass;
+def IIC_SprSTOP      : InstrItinClass;
 
 //===----------------------------------------------------------------------===//
 // Processor instruction itineraries.

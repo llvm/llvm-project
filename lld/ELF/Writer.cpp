@@ -30,7 +30,7 @@ using namespace lld::elf;
 
 // Usually there are 2 dummies sections: ELF header and program header.
 // Relocatable output does not require program headers to be created.
-unsigned dummySectionsNum() { return Config->Relocatable ? 1 : 2; }
+static unsigned dummySectionsNum() { return Config->Relocatable ? 1 : 2; }
 
 namespace {
 // The writer writes a SymbolTable result to a file.

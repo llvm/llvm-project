@@ -596,7 +596,7 @@ PPCFrameLowering::findScratchRegister(MachineBasicBlock *MBB,
       (!UseAtEnd && (&MBB->getParent()->front() == MBB)))
     return true;
 
-  RS.enterBasicBlock(MBB);
+  RS.enterBasicBlock(*MBB);
 
   if (UseAtEnd && !MBB->empty()) {
     // The scratch register will be used at the end of the block, so must
