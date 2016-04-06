@@ -67,7 +67,9 @@ _start:
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Local
 // CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other: 0
+// CHECK-NEXT:   Other [
+// CHECK-NEXT:     STV_HIDDEN
+// CHECK-NEXT:   ]
 // CHECK-NEXT:   Section: .fini_array
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
@@ -76,7 +78,9 @@ _start:
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Local
 // CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other: 0
+// CHECK-NEXT:   Other [
+// CHECK-NEXT:     STV_HIDDEN
+// CHECK-NEXT:   ]
 // CHECK-NEXT:   Section: .fini_array
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
@@ -85,7 +89,9 @@ _start:
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Local
 // CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other: 0
+// CHECK-NEXT:   Other [
+// CHECK-NEXT:     STV_HIDDEN
+// CHECK-NEXT:   ]
 // CHECK-NEXT:   Section: .init_array
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
@@ -94,7 +100,9 @@ _start:
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Local
 // CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other: 0
+// CHECK-NEXT:   Other [
+// CHECK-NEXT:     STV_HIDDEN
+// CHECK-NEXT:   ]
 // CHECK-NEXT:   Section: .init_array
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
@@ -103,7 +111,9 @@ _start:
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Local
 // CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other: 0
+// CHECK-NEXT:   Other [
+// CHECK-NEXT:     STV_HIDDEN
+// CHECK-NEXT:   ]
 // CHECK-NEXT:   Section: .preinit_array
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
@@ -112,7 +122,9 @@ _start:
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Local
 // CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other: 0
+// CHECK-NEXT:   Other [
+// CHECK-NEXT:     STV_HIDDEN
+// CHECK-NEXT:   ]
 // CHECK-NEXT:   Section: .preinit_array
 // CHECK-NEXT: }
 

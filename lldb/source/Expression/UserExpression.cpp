@@ -293,6 +293,11 @@ UserExpression::Evaluate (ExecutionContext &exe_ctx,
                 diagnostic_manager.Clear();
                 user_expression_sp = fixed_expression_sp;
             }
+            else
+            {
+                // If the fixed expression failed to parse, don't tell the user about, that won't help.
+                fixed_expression->clear();
+            }
         }
         
         if (!parse_success)

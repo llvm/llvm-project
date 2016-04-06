@@ -149,6 +149,7 @@ private:
   MipsReginfoInputSection<ELFT> *MipsReginfo = nullptr;
 
   llvm::BumpPtrAllocator Alloc;
+  llvm::SpecificBumpPtrAllocator<InputSection<ELFT>> IAlloc;
   llvm::SpecificBumpPtrAllocator<MergeInputSection<ELFT>> MAlloc;
   llvm::SpecificBumpPtrAllocator<EHInputSection<ELFT>> EHAlloc;
 };

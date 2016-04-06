@@ -176,7 +176,7 @@ enum stats_flags_e {
     macro (USER_launch_thread_loop, stats_flags_e::logEvent, arg)       \
     macro (KMP_allocate_team, 0, arg)                                   \
     macro (KMP_setup_icv_copy, 0, arg)                                  \
-    macro (USER_icv_copy, 0, arg)                                       
+    macro (USER_icv_copy, 0, arg)
 #else
 # define KMP_FOREACH_DEVELOPER_TIMER(macro, arg)
 #endif
@@ -210,7 +210,7 @@ enum stats_flags_e {
 # define KMP_FOREACH_EXPLICIT_DEVELOPER_TIMER(macro, arg)               \
     macro(USER_launch_thread_loop, stats_flags_e::logEvent, arg)
 #else
-# define KMP_FOREACH_EXPLICIT_DEVELOPER_TIMER(macro, arg)               
+# define KMP_FOREACH_EXPLICIT_DEVELOPER_TIMER(macro, arg)
 #endif
 
 #define ENUMERATE(name,ignore,prefix) prefix##name,

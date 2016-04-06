@@ -54,14 +54,14 @@ double tsc_tick_count::tick_time()
         char * start = &brand[0];
         for (;*start == ' '; start++)
             ;
-    
+
         char * end = brand + KMP_STRLEN(brand) - 3;
         uint64_t multiplier;
 
         if (*end == 'M') multiplier = 1000LL*1000LL;
         else if (*end == 'G') multiplier = 1000LL*1000LL*1000LL;
         else if (*end == 'T') multiplier = 1000LL*1000LL*1000LL*1000LL;
-        else 
+        else
         {
             cout << "Error determining multiplier '" << *end << "'\n";
             exit (-1);
@@ -69,9 +69,9 @@ double tsc_tick_count::tick_time()
         *end = 0;
         while (*end != ' ') end--;
         end++;
-    
+
         double freq = strtod(end, &start);
-        if (freq == 0.0) 
+        if (freq == 0.0)
         {
             cout << "Error calculating frequency " <<  end << "\n";
             exit (-1);
@@ -95,7 +95,7 @@ std::string formatSI(double interval, int width, char unit)
     if (useSI)
     {
         // Preserve accuracy for small numbers, since we only multiply and the positive powers
-        // of ten are precisely representable. 
+        // of ten are precisely representable.
         static struct { double scale; char prefix; } ranges[] = {
             {1.e12,'f'},
             {1.e9, 'p'},
@@ -112,7 +112,7 @@ std::string formatSI(double interval, int width, char unit)
             {1.e-24,'Z'},
             {1.e-27,'Y'}
         };
-        
+
         if (interval == 0.0)
         {
             os << std::setw(width-3) << std::right << "0.00" << std::setw(3) << unit;
@@ -125,13 +125,13 @@ std::string formatSI(double interval, int width, char unit)
             negative = true;
             interval = -interval;
         }
-        
+
         for (int i=0; i<(int)(sizeof(ranges)/sizeof(ranges[0])); i++)
         {
             if (interval*ranges[i].scale < 1.e0)
             {
                 interval = interval * 1000.e0 * ranges[i].scale;
-                os << std::fixed << std::setprecision(2) << std::setw(width-3) << std::right << 
+                os << std::fixed << std::setprecision(2) << std::setw(width-3) << std::right <<
                     (negative ? -interval : interval) << std::setw(2) << ranges[i].prefix << std::setw(1) << unit;
 
                 return os.str();

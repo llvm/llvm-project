@@ -204,7 +204,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
       // If -r is given, we do not interpret or apply relocation
       // but just copy relocation sections to output.
       if (Config->Relocatable) {
-        Sections[I] = new (Alloc) InputSection<ELFT>(this, &Sec);
+        Sections[I] = new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec);
         break;
       }
 
@@ -278,7 +278,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     return new (EHAlloc.Allocate()) EHInputSection<ELFT>(this, &Sec);
   if (shouldMerge<ELFT>(Sec))
     return new (MAlloc.Allocate()) MergeInputSection<ELFT>(this, &Sec);
-  return new (Alloc) InputSection<ELFT>(this, &Sec);
+  return new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec);
 }
 
 template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
@@ -306,7 +306,7 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
 
 template <class ELFT>
 SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
-   unsigned char Binding = Sym->getBinding();
+  unsigned char Binding = Sym->getBinding();
   InputSectionBase<ELFT> *Sec = getSection(*Sym);
   if (Binding == STB_LOCAL) {
     if (Sym->st_shndx == SHN_UNDEF)
