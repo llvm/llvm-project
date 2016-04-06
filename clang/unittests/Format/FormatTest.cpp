@@ -296,6 +296,7 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatement) {
   verifyFormat("if (a)\n  if (b) {\n    f();\n  }\ng();");
 
   FormatStyle AllowsMergedIf = getLLVMStyle();
+  AllowsMergedIf.AlignEscapedNewlinesLeft = true;
   AllowsMergedIf.AllowShortIfStatementsOnASingleLine = true;
   verifyFormat("if (a)\n"
                "  // comment\n"
@@ -306,6 +307,11 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatement) {
                "  label:\n"
                "    f();\n"
                "}",
+               AllowsMergedIf);
+  verifyFormat("#define A \\\n"
+               "  if (a)  \\\n"
+               "  label:  \\\n"
+               "    f()",
                AllowsMergedIf);
   verifyFormat("if (a)\n"
                "  ;",

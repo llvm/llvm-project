@@ -221,11 +221,13 @@ namespace {
     /// \param IsWeak true if atomic operation is weak, false otherwise.
     /// \returns Pair of values: previous value from storage (value type) and
     /// boolean flag (i1 type) with true if success and false otherwise.
-    std::pair<RValue, llvm::Value *> EmitAtomicCompareExchange(
-        RValue Expected, RValue Desired,
-        llvm::AtomicOrdering Success = llvm::SequentiallyConsistent,
-        llvm::AtomicOrdering Failure = llvm::SequentiallyConsistent,
-        bool IsWeak = false);
+    std::pair<RValue, llvm::Value *>
+    EmitAtomicCompareExchange(RValue Expected, RValue Desired,
+                              llvm::AtomicOrdering Success =
+                                  llvm::AtomicOrdering::SequentiallyConsistent,
+                              llvm::AtomicOrdering Failure =
+                                  llvm::AtomicOrdering::SequentiallyConsistent,
+                              bool IsWeak = false);
 
     /// \brief Emits atomic update.
     /// \param AO Atomic ordering.
@@ -260,13 +262,17 @@ namespace {
     /// \brief Emits atomic compare-and-exchange op as a libcall.
     llvm::Value *EmitAtomicCompareExchangeLibcall(
         llvm::Value *ExpectedAddr, llvm::Value *DesiredAddr,
-        llvm::AtomicOrdering Success = llvm::SequentiallyConsistent,
-        llvm::AtomicOrdering Failure = llvm::SequentiallyConsistent);
+        llvm::AtomicOrdering Success =
+            llvm::AtomicOrdering::SequentiallyConsistent,
+        llvm::AtomicOrdering Failure =
+            llvm::AtomicOrdering::SequentiallyConsistent);
     /// \brief Emits atomic compare-and-exchange op as LLVM instruction.
     std::pair<llvm::Value *, llvm::Value *> EmitAtomicCompareExchangeOp(
         llvm::Value *ExpectedVal, llvm::Value *DesiredVal,
-        llvm::AtomicOrdering Success = llvm::SequentiallyConsistent,
-        llvm::AtomicOrdering Failure = llvm::SequentiallyConsistent,
+        llvm::AtomicOrdering Success =
+            llvm::AtomicOrdering::SequentiallyConsistent,
+        llvm::AtomicOrdering Failure =
+            llvm::AtomicOrdering::SequentiallyConsistent,
         bool IsWeak = false);
     /// \brief Emit atomic update as libcalls.
     void
@@ -289,17 +295,17 @@ namespace {
 AtomicExpr::AtomicOrderingKind
 AtomicInfo::translateAtomicOrdering(const llvm::AtomicOrdering AO) {
   switch (AO) {
-  case llvm::Unordered:
-  case llvm::NotAtomic:
-  case llvm::Monotonic:
+  case llvm::AtomicOrdering::Unordered:
+  case llvm::AtomicOrdering::NotAtomic:
+  case llvm::AtomicOrdering::Monotonic:
     return AtomicExpr::AO_ABI_memory_order_relaxed;
-  case llvm::Acquire:
+  case llvm::AtomicOrdering::Acquire:
     return AtomicExpr::AO_ABI_memory_order_acquire;
-  case llvm::Release:
+  case llvm::AtomicOrdering::Release:
     return AtomicExpr::AO_ABI_memory_order_release;
-  case llvm::AcquireRelease:
+  case llvm::AtomicOrdering::AcquireRelease:
     return AtomicExpr::AO_ABI_memory_order_acq_rel;
-  case llvm::SequentiallyConsistent:
+  case llvm::AtomicOrdering::SequentiallyConsistent:
     return AtomicExpr::AO_ABI_memory_order_seq_cst;
   }
   llvm_unreachable("Unhandled AtomicOrdering");
@@ -431,14 +437,14 @@ static void emitAtomicCmpXchgFailureSet(CodeGenFunction &CGF, AtomicExpr *E,
   if (llvm::ConstantInt *FO = dyn_cast<llvm::ConstantInt>(FailureOrderVal)) {
     switch (FO->getSExtValue()) {
     default:
-      FailureOrder = llvm::Monotonic;
+      FailureOrder = llvm::AtomicOrdering::Monotonic;
       break;
     case AtomicExpr::AO_ABI_memory_order_consume:
     case AtomicExpr::AO_ABI_memory_order_acquire:
-      FailureOrder = llvm::Acquire;
+      FailureOrder = llvm::AtomicOrdering::Acquire;
       break;
     case AtomicExpr::AO_ABI_memory_order_seq_cst:
-      FailureOrder = llvm::SequentiallyConsistent;
+      FailureOrder = llvm::AtomicOrdering::SequentiallyConsistent;
       break;
     }
     if (FailureOrder >= SuccessOrder) {
@@ -455,9 +461,10 @@ static void emitAtomicCmpXchgFailureSet(CodeGenFunction &CGF, AtomicExpr *E,
   llvm::BasicBlock *MonotonicBB = nullptr, *AcquireBB = nullptr,
                    *SeqCstBB = nullptr;
   MonotonicBB = CGF.createBasicBlock("monotonic_fail", CGF.CurFn);
-  if (SuccessOrder != llvm::Monotonic && SuccessOrder != llvm::Release)
+  if (SuccessOrder != llvm::AtomicOrdering::Monotonic &&
+      SuccessOrder != llvm::AtomicOrdering::Release)
     AcquireBB = CGF.createBasicBlock("acquire_fail", CGF.CurFn);
-  if (SuccessOrder == llvm::SequentiallyConsistent)
+  if (SuccessOrder == llvm::AtomicOrdering::SequentiallyConsistent)
     SeqCstBB = CGF.createBasicBlock("seqcst_fail", CGF.CurFn);
 
   llvm::BasicBlock *ContBB = CGF.createBasicBlock("atomic.continue", CGF.CurFn);
@@ -471,13 +478,13 @@ static void emitAtomicCmpXchgFailureSet(CodeGenFunction &CGF, AtomicExpr *E,
   // doesn't fold to a constant for the ordering.
   CGF.Builder.SetInsertPoint(MonotonicBB);
   emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2,
-                    Size, SuccessOrder, llvm::Monotonic);
+                    Size, SuccessOrder, llvm::AtomicOrdering::Monotonic);
   CGF.Builder.CreateBr(ContBB);
 
   if (AcquireBB) {
     CGF.Builder.SetInsertPoint(AcquireBB);
     emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2,
-                      Size, SuccessOrder, llvm::Acquire);
+                      Size, SuccessOrder, llvm::AtomicOrdering::Acquire);
     CGF.Builder.CreateBr(ContBB);
     SI->addCase(CGF.Builder.getInt32(AtomicExpr::AO_ABI_memory_order_consume),
                 AcquireBB);
@@ -486,8 +493,8 @@ static void emitAtomicCmpXchgFailureSet(CodeGenFunction &CGF, AtomicExpr *E,
   }
   if (SeqCstBB) {
     CGF.Builder.SetInsertPoint(SeqCstBB);
-    emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2,
-                      Size, SuccessOrder, llvm::SequentiallyConsistent);
+    emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size, SuccessOrder,
+                      llvm::AtomicOrdering::SequentiallyConsistent);
     CGF.Builder.CreateBr(ContBB);
     SI->addCase(CGF.Builder.getInt32(AtomicExpr::AO_ABI_memory_order_seq_cst),
                 SeqCstBB);
@@ -1040,30 +1047,30 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     switch (ord) {
     case AtomicExpr::AO_ABI_memory_order_relaxed:
       EmitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                   Size, llvm::Monotonic);
+                   Size, llvm::AtomicOrdering::Monotonic);
       break;
     case AtomicExpr::AO_ABI_memory_order_consume:
     case AtomicExpr::AO_ABI_memory_order_acquire:
       if (IsStore)
         break; // Avoid crashing on code with undefined behavior
       EmitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                   Size, llvm::Acquire);
+                   Size, llvm::AtomicOrdering::Acquire);
       break;
     case AtomicExpr::AO_ABI_memory_order_release:
       if (IsLoad)
         break; // Avoid crashing on code with undefined behavior
       EmitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                   Size, llvm::Release);
+                   Size, llvm::AtomicOrdering::Release);
       break;
     case AtomicExpr::AO_ABI_memory_order_acq_rel:
       if (IsLoad || IsStore)
         break; // Avoid crashing on code with undefined behavior
       EmitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                   Size, llvm::AcquireRelease);
+                   Size, llvm::AtomicOrdering::AcquireRelease);
       break;
     case AtomicExpr::AO_ABI_memory_order_seq_cst:
       EmitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                   Size, llvm::SequentiallyConsistent);
+                   Size, llvm::AtomicOrdering::SequentiallyConsistent);
       break;
     default: // invalid order
       // We should not ever get here normally, but it's hard to
@@ -1104,12 +1111,12 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   // Emit all the different atomics
   Builder.SetInsertPoint(MonotonicBB);
   EmitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-               Size, llvm::Monotonic);
+               Size, llvm::AtomicOrdering::Monotonic);
   Builder.CreateBr(ContBB);
   if (!IsStore) {
     Builder.SetInsertPoint(AcquireBB);
     EmitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                 Size, llvm::Acquire);
+                 Size, llvm::AtomicOrdering::Acquire);
     Builder.CreateBr(ContBB);
     SI->addCase(Builder.getInt32(AtomicExpr::AO_ABI_memory_order_consume),
                 AcquireBB);
@@ -1119,7 +1126,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   if (!IsLoad) {
     Builder.SetInsertPoint(ReleaseBB);
     EmitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                 Size, llvm::Release);
+                 Size, llvm::AtomicOrdering::Release);
     Builder.CreateBr(ContBB);
     SI->addCase(Builder.getInt32(AtomicExpr::AO_ABI_memory_order_release),
                 ReleaseBB);
@@ -1127,14 +1134,14 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   if (!IsLoad && !IsStore) {
     Builder.SetInsertPoint(AcqRelBB);
     EmitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-                 Size, llvm::AcquireRelease);
+                 Size, llvm::AtomicOrdering::AcquireRelease);
     Builder.CreateBr(ContBB);
     SI->addCase(Builder.getInt32(AtomicExpr::AO_ABI_memory_order_acq_rel),
                 AcqRelBB);
   }
   Builder.SetInsertPoint(SeqCstBB);
   EmitAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
-               Size, llvm::SequentiallyConsistent);
+               Size, llvm::AtomicOrdering::SequentiallyConsistent);
   Builder.CreateBr(ContBB);
   SI->addCase(Builder.getInt32(AtomicExpr::AO_ABI_memory_order_seq_cst),
               SeqCstBB);
@@ -1318,9 +1325,9 @@ RValue CodeGenFunction::EmitAtomicLoad(LValue LV, SourceLocation SL,
   llvm::AtomicOrdering AO;
   bool IsVolatile = LV.isVolatileQualified();
   if (LV.getType()->isAtomicType()) {
-    AO = llvm::SequentiallyConsistent;
+    AO = llvm::AtomicOrdering::SequentiallyConsistent;
   } else {
-    AO = llvm::Acquire;
+    AO = llvm::AtomicOrdering::Acquire;
     IsVolatile = true;
   }
   return EmitAtomicLoad(LV, SL, AO, IsVolatile, Slot);
@@ -1739,9 +1746,9 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue lvalue,
   bool IsVolatile = lvalue.isVolatileQualified();
   llvm::AtomicOrdering AO;
   if (lvalue.getType()->isAtomicType()) {
-    AO = llvm::SequentiallyConsistent;
+    AO = llvm::AtomicOrdering::SequentiallyConsistent;
   } else {
-    AO = llvm::Release;
+    AO = llvm::AtomicOrdering::Release;
     IsVolatile = true;
   }
   return EmitAtomicStore(rvalue, lvalue, AO, IsVolatile, isInit);

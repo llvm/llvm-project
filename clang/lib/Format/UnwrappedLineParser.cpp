@@ -1573,8 +1573,10 @@ void UnwrappedLineParser::parseLabel() {
     addUnwrappedLine();
   }
   Line->Level = OldLineLevel;
-  if (FormatTok->isNot(tok::l_brace))
+  if (FormatTok->isNot(tok::l_brace)) {
     parseStructuralElement();
+    addUnwrappedLine();
+  }
 }
 
 void UnwrappedLineParser::parseCaseLabel() {
