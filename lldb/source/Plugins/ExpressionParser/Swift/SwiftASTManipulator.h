@@ -176,6 +176,8 @@ public:
     static const char *GetArgumentName() { return "$__lldb_arg"; }
     static const char *GetResultName() { return "$__lldb_result"; }
     static const char *GetErrorName()  { return "$__lldb_error_result"; }
+    static const char *GetUserCodeStartMarker() { return "/*__LLDB_USER_START__*/\n"; }
+    static const char *GetUserCodeEndMarker()   { return "\n/*__LLDB_USER_END__*/";  }
 
 private:
     uint32_t    m_tmpname_idx = 0;

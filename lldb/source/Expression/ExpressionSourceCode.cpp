@@ -73,7 +73,8 @@ uint32_t
 ExpressionSourceCode::GetNumBodyLines ()
 {
     if (m_num_body_lines == 0)
-        m_num_body_lines = 1 + std::count(m_body.begin(), m_body.end(), '\n');
+        // 2 = <one for zero indexing> + <one for the body start marker>
+        m_num_body_lines = 2 + std::count(m_body.begin(), m_body.end(), '\n');
     return m_num_body_lines;
 }
 
@@ -530,6 +531,10 @@ ExpressionSourceCode::GetOriginalBodyBounds(std::string transformed_text,
     {
     default:
         return false;
+    case lldb::eLanguageTypeSwift:
+        start_marker = SwiftASTManipulator::GetUserCodeStartMarker();
+        end_marker = SwiftASTManipulator::GetUserCodeEndMarker();
+        break;
     case lldb::eLanguageTypeC:
     case lldb::eLanguageTypeC_plus_plus:
     case lldb::eLanguageTypeObjC:

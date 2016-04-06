@@ -75,11 +75,11 @@ public:
     ///     The number of errors encountered during parsing.  0 means
     ///     success.
     //------------------------------------------------------------------
-    virtual unsigned
+    unsigned
     Parse (DiagnosticManager &diagnostic_manager,
            uint32_t first_line = 0,
            uint32_t last_line = UINT32_MAX,
-           uint32_t line_offset = 0);
+           uint32_t line_offset = 0) override;
     
     //------------------------------------------------------------------
     /// Ready an already-parsed expression for execution, possibly
@@ -118,19 +118,22 @@ public:
     ///     An error code indicating the success or failure of the operation.
     ///     Test with Success().
     //------------------------------------------------------------------
-    virtual Error
+    Error
     PrepareForExecution (lldb::addr_t &func_addr,
                          lldb::addr_t &func_end,
                          lldb::IRExecutionUnitSP &execution_unit_ap,
                          ExecutionContext &exe_ctx,
                          bool &can_interpret,
-                         lldb_private::ExecutionPolicy execution_policy);
+                         lldb_private::ExecutionPolicy execution_policy) override;
     
     const EvaluateExpressionOptions &
     GetOptions () const
     {
         return m_options;
     }
+    
+    bool
+    RewriteExpression (DiagnosticManager &diagnostic_manager) override;
     
     //------------------------------------------------------------------
     /// Information about each variable provided to the expression, so

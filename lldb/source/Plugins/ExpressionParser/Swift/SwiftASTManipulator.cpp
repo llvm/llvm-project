@@ -187,12 +187,12 @@ $builtin_logger_initialize()
     StreamString wrapped_expr_text;
     wrapped_expr_text.Printf ("do\n"
                               "{\n"
-                              "%s\n" // Don't indent the code so error columns match up with errors from compiler
+                              "%s%s%s\n" // Don't indent the code so error columns match up with errors from compiler
                               "}\n"
                               "catch (let __lldb_tmp_error)\n"
                               "{\n"
                               "    var %s = __lldb_tmp_error\n"
-                              "}\n", text, GetErrorName());
+                              "}\n", GetUserCodeStartMarker(), text, GetUserCodeEndMarker(), GetErrorName());
 
     if (instance_method || static_method)
     {
