@@ -389,6 +389,40 @@ TSAN_INTERCEPTOR(void, dispatch_source_set_registration_handler_f,
   WRAP(dispatch_source_set_registration_handler)(source, block);
 }
 
+TSAN_INTERCEPTOR(void, dispatch_apply, size_t iterations,
+                 dispatch_queue_t queue, void (^block)(size_t)) {
+  SCOPED_TSAN_INTERCEPTOR(dispatch_apply, iterations, queue, block);
+
+  void *parent_to_child_sync = nullptr;
+  uptr parent_to_child_sync_uptr = (uptr)&parent_to_child_sync;
+  void *child_to_parent_sync = nullptr;
+  uptr child_to_parent_sync_uptr = (uptr)&child_to_parent_sync;
+
+  Release(thr, pc, parent_to_child_sync_uptr);
+  void (^new_block)(size_t) = ^(size_t iteration) {
+    SCOPED_INTERCEPTOR_RAW(dispatch_apply);
+    Acquire(thr, pc, parent_to_child_sync_uptr);
+    SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
+    block(iteration);
+    SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
+    Release(thr, pc, child_to_parent_sync_uptr);
+  };
+  SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
+  REAL(dispatch_apply)(iterations, queue, new_block);
+  SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
+  Acquire(thr, pc, child_to_parent_sync_uptr);
+}
+
+TSAN_INTERCEPTOR(void, dispatch_apply_f, size_t iterations,
+                 dispatch_queue_t queue, void *context,
+                 void (*work)(void *, size_t)) {
+  SCOPED_TSAN_INTERCEPTOR(dispatch_apply_f, iterations, queue, context, work);
+  void (^new_block)(size_t) = ^(size_t iteration) {
+    work(context, iteration);
+  };
+  WRAP(dispatch_apply)(iterations, queue, new_block);
+}
+
 }  // namespace __tsan
 
 #endif  // SANITIZER_MAC
