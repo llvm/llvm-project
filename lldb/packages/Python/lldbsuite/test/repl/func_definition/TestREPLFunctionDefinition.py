@@ -21,5 +21,5 @@ class REPLFuncDefinitionTestCase (REPLTest):
     mydir = REPLTest.compute_mydir(__file__)
 
     def doTest(self):
-        self.command('func greet(name: String) -> String {\nlet greeting = "Hello, " + name + "!"\nreturn greeting\n}')
+        self.command('func greet(_ name: String) -> String {\nlet greeting = "Hello, " + name + "!"\nreturn greeting\n}')
         self.command('greet("Enrico")', patterns=['\\$R0: String = "Hello, Enrico!"'])
