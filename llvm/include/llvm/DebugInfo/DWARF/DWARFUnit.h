@@ -59,13 +59,9 @@ const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
 template<typename UnitType>
 class DWARFUnitSection final : public SmallVector<std::unique_ptr<UnitType>, 1>,
                                public DWARFUnitSectionBase {
-  bool Parsed;
+  bool Parsed = false;
 
 public:
-  DWARFUnitSection() : Parsed(false) {}
-  DWARFUnitSection(DWARFUnitSection &&DUS) :
-    SmallVector<std::unique_ptr<UnitType>, 1>(std::move(DUS)), Parsed(DUS.Parsed) {}
-
   typedef llvm::SmallVectorImpl<std::unique_ptr<UnitType>> UnitVector;
   typedef typename UnitVector::iterator iterator;
   typedef llvm::iterator_range<typename UnitVector::iterator> iterator_range;
