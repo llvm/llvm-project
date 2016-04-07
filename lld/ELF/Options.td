@@ -48,6 +48,9 @@ def eh_frame_hdr : Flag<["--"], "eh-frame-hdr">,
 def enable_new_dtags : Flag<["--"], "enable-new-dtags">,
   HelpText<"Enable new dynamic tags">;
 
+def end_lib : Flag<["--"], "end-lib">,
+  HelpText<"End a library">;
+
 def entry : Separate<["--", "-"], "entry">, MetaVarName<"<entry>">,
   HelpText<"Name of entry point symbol">;
 
@@ -120,6 +123,9 @@ def shared : Flag<["-"], "shared">,
 
 def soname : Joined<["-"], "soname=">,
   HelpText<"Set DT_SONAME">;
+
+def start_lib : Flag<["--"], "start-lib">,
+  HelpText<"Start a library">;
 
 def strip_all : Flag<["--"], "strip-all">,
   HelpText<"Strip all symbols">;

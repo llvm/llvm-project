@@ -98,8 +98,10 @@ public:
     basic_string(const basic_string& str);
     basic_string(basic_string&& str)
         noexcept(is_nothrow_move_constructible<allocator_type>::value);
-    basic_string(const basic_string& str, size_type pos, size_type n = npos,
+    basic_string(const basic_string& str, size_type pos,
                  const allocator_type& a = allocator_type());
+    basic_string(const basic_string& str, size_type pos, size_type n,
+                 const Allocator& a = Allocator());             
     basic_string(const value_type* s, const allocator_type& a = allocator_type());
     basic_string(const value_type* s, size_type n, const allocator_type& a = allocator_type());
     basic_string(size_type n, value_type c, const allocator_type& a = allocator_type());
@@ -1397,7 +1399,10 @@ public:
     basic_string(size_type __n, value_type __c);
     _LIBCPP_INLINE_VISIBILITY
     basic_string(size_type __n, value_type __c, const allocator_type& __a);
-    basic_string(const basic_string& __str, size_type __pos, size_type __n = npos,
+    basic_string(const basic_string& __str, size_type __pos, size_type __n,
+                 const allocator_type& __a = allocator_type());
+    _LIBCPP_INLINE_VISIBILITY
+    basic_string(const basic_string& __str, size_type __pos,
                  const allocator_type& __a = allocator_type());
     template<class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY
@@ -2217,6 +2222,21 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __st
     if (__pos > __str_sz)
         this->__throw_out_of_range();
     __init(__str.data() + __pos, _VSTD::min(__n, __str_sz - __pos));
+#if _LIBCPP_DEBUG_LEVEL >= 2
+    __get_db()->__insert_c(this);
+#endif
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+inline _LIBCPP_INLINE_VISIBILITY
+basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __str, size_type __pos,
+                                                        const allocator_type& __a)
+    : __r_(__a)
+{
+    size_type __str_sz = __str.size();
+    if (__pos > __str_sz)
+        this->__throw_out_of_range();
+    __init(__str.data() + __pos, __str_sz - __pos);
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
 #endif

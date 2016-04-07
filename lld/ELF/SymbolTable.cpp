@@ -75,7 +75,7 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
     return;
   }
 
-  // LLVM bitcode file.
+  // LLVM bitcode file
   if (auto *F = dyn_cast<BitcodeFile>(FileP)) {
     BitcodeFiles.emplace_back(cast<BitcodeFile>(File.release()));
     F->parse(ComdatGroups);
@@ -85,7 +85,16 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
     return;
   }
 
-  // .o file
+  // Lazy object file
+  if (auto *F = dyn_cast<LazyObjectFile>(FileP)) {
+    LazyObjectFiles.emplace_back(cast<LazyObjectFile>(File.release()));
+    F->parse();
+    for (Lazy &Sym : F->getLazySymbols())
+      addLazy(&Sym);
+    return;
+  }
+
+  // Regular object file
   auto *F = cast<ObjectFile<ELFT>>(FileP);
   ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(File.release()));
   F->parse(ComdatGroups);
@@ -306,7 +315,7 @@ void SymbolTable<ELFT>::addMemberFile(SymbolBody *Undef, Lazy *L) {
 
   // Fetch a member file that has the definition for L.
   // getMember returns nullptr if the member was already read from the library.
-  if (std::unique_ptr<InputFile> File = L->getMember())
+  if (std::unique_ptr<InputFile> File = L->getFile())
     addFile(std::move(File));
 }
 

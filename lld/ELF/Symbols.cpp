@@ -78,7 +78,8 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
   case SymbolBody::UndefinedElfKind:
   case SymbolBody::UndefinedBitcodeKind:
     return 0;
-  case SymbolBody::LazyKind:
+  case SymbolBody::LazyArchiveKind:
+  case SymbolBody::LazyObjectKind:
     assert(Body.isUsedInRegularObj() && "lazy symbol reached writer");
     return 0;
   case SymbolBody::DefinedBitcodeKind:
@@ -301,7 +302,13 @@ DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
     : Defined(SymbolBody::DefinedCommonKind, N, Binding, StOther, Type),
       Alignment(Alignment), Size(Size) {}
 
-std::unique_ptr<InputFile> Lazy::getMember() {
+std::unique_ptr<InputFile> Lazy::getFile() {
+  if (auto *S = dyn_cast<LazyArchive>(this))
+    return S->getFile();
+  return cast<LazyObject>(this)->getFile();
+}
+
+std::unique_ptr<InputFile> LazyArchive::getFile() {
   MemoryBufferRef MBRef = File->getMember(&Sym);
 
   // getMember returns an empty buffer if the member was already
@@ -309,6 +316,10 @@ std::unique_ptr<InputFile> Lazy::getMember() {
   if (MBRef.getBuffer().empty())
     return std::unique_ptr<InputFile>(nullptr);
   return createObjectFile(MBRef, File->getName());
+}
+
+std::unique_ptr<InputFile> LazyObject::getFile() {
+  return createObjectFile(MBRef);
 }
 
 // Returns the demangled C++ symbol name for Name.

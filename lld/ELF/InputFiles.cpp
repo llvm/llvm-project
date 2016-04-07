@@ -564,6 +564,66 @@ std::unique_ptr<InputFile> elf::createSharedFile(MemoryBufferRef MB) {
   return createELFFile<SharedFile>(MB);
 }
 
+void LazyObjectFile::parse() {
+  for (StringRef Sym : getSymbols())
+    LazySymbols.emplace_back(Sym, this->MB);
+}
+
+template <class ELFT> std::vector<StringRef> LazyObjectFile::getElfSymbols() {
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::SymRange Elf_Sym_Range;
+
+  const ELFFile<ELFT> Obj = createELFObj<ELFT>(this->MB);
+  for (const Elf_Shdr &Sec : Obj.sections()) {
+    if (Sec.sh_type != SHT_SYMTAB)
+      continue;
+    Elf_Sym_Range Syms = Obj.symbols(&Sec);
+    uint32_t FirstNonLocal = Sec.sh_info;
+    StringRef StringTable = check(Obj.getStringTableForSymtab(Sec));
+    std::vector<StringRef> V;
+    for (const Elf_Sym &Sym : Syms.slice(FirstNonLocal))
+      V.push_back(check(Sym.getName(StringTable)));
+    return V;
+  }
+  return {};
+}
+
+std::vector<StringRef> LazyObjectFile::getBitcodeSymbols() {
+  LLVMContext Context;
+  std::unique_ptr<IRObjectFile> Obj =
+      check(IRObjectFile::create(this->MB, Context));
+  std::vector<StringRef> V;
+  for (const BasicSymbolRef &Sym : Obj->symbols()) {
+    if (BitcodeFile::shouldSkip(Sym))
+      continue;
+    SmallString<64> Name;
+    raw_svector_ostream OS(Name);
+    Sym.printName(OS);
+    V.push_back(Saver.save(StringRef(Name)));
+  }
+  return V;
+}
+
+// Returns a vector of globally-visible symbol names.
+std::vector<StringRef> LazyObjectFile::getSymbols() {
+  using namespace sys::fs;
+
+  StringRef Buf = this->MB.getBuffer();
+  if (identify_magic(Buf) == file_magic::bitcode)
+    return getBitcodeSymbols();
+
+  std::pair<unsigned char, unsigned char> Type = getElfArchType(Buf);
+  if (Type.first == ELF::ELFCLASS32) {
+    if (Type.second == ELF::ELFDATA2LSB)
+      return getElfSymbols<ELF32LE>();
+    return getElfSymbols<ELF32BE>();
+  }
+  if (Type.second == ELF::ELFDATA2LSB)
+    return getElfSymbols<ELF64LE>();
+  return getElfSymbols<ELF64BE>();
+}
+
 template class elf::ELFFileBase<ELF32LE>;
 template class elf::ELFFileBase<ELF32BE>;
 template class elf::ELFFileBase<ELF64LE>;
