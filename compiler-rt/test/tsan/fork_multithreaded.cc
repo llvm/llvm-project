@@ -6,7 +6,7 @@
 #include <sys/wait.h>
 
 static void *sleeper(void *p) {
-  sleep(10);  // not intended to exit during test
+  sleep(1000);  // not intended to exit during test
   return 0;
 }
 
