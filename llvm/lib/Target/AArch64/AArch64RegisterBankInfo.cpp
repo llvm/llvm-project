@@ -33,7 +33,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   addRegBankCoverage(AArch64::GPRRegBankID, AArch64::GPR64allRegClassID, TRI);
   const RegisterBank &RBGPR = getRegBank(AArch64::GPRRegBankID);
   (void)RBGPR;
-  assert(RBGPR.contains(*TRI.getRegClass(AArch64::GPR32RegClassID)) &&
+  assert(RBGPR.covers(*TRI.getRegClass(AArch64::GPR32RegClassID)) &&
          "Subclass not added?");
   assert(RBGPR.getSize() == 64 && "GPRs should hold up to 64-bit");
 
@@ -44,9 +44,9 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   addRegBankCoverage(AArch64::FPRRegBankID, AArch64::QQQQRegClassID, TRI);
   const RegisterBank &RBFPR = getRegBank(AArch64::FPRRegBankID);
   (void)RBFPR;
-  assert(RBFPR.contains(*TRI.getRegClass(AArch64::QQRegClassID)) &&
+  assert(RBFPR.covers(*TRI.getRegClass(AArch64::QQRegClassID)) &&
          "Subclass not added?");
-  assert(RBFPR.contains(*TRI.getRegClass(AArch64::FPR64RegClassID)) &&
+  assert(RBFPR.covers(*TRI.getRegClass(AArch64::FPR64RegClassID)) &&
          "Subclass not added?");
   assert(RBFPR.getSize() == 512 &&
          "FPRs should hold up to 512-bit via QQQQ sequence");
@@ -56,7 +56,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
   addRegBankCoverage(AArch64::CCRRegBankID, AArch64::CCRRegClassID, TRI);
   const RegisterBank &RBCCR = getRegBank(AArch64::CCRRegBankID);
   (void)RBCCR;
-  assert(RBCCR.contains(*TRI.getRegClass(AArch64::CCRRegClassID)) &&
+  assert(RBCCR.covers(*TRI.getRegClass(AArch64::CCRRegClassID)) &&
          "Class not added?");
   assert(RBCCR.getSize() == 32 && "CCR should hold up to 32-bit");
 

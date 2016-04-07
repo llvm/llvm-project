@@ -6,7 +6,7 @@
 define double @f1(double %a, double %b, i16 *%ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: clhhsi 0(%r2), 1
-; CHECK-NEXT: jh
+; CHECK-NEXT: bhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %val = load i16 , i16 *%ptr
@@ -19,7 +19,7 @@ define double @f1(double %a, double %b, i16 *%ptr) {
 define double @f2(double %a, double %b, i16 *%ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: clhhsi 0(%r2), 65534
-; CHECK-NEXT: jl
+; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %val = load i16 , i16 *%ptr
@@ -32,7 +32,7 @@ define double @f2(double %a, double %b, i16 *%ptr) {
 define double @f3(double %a, double %b, i16 %i1, i16 *%base) {
 ; CHECK-LABEL: f3:
 ; CHECK: clhhsi 4094(%r3), 1
-; CHECK-NEXT: jh
+; CHECK-NEXT: bhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%base, i64 2047
@@ -47,7 +47,7 @@ define double @f4(double %a, double %b, i16 *%base) {
 ; CHECK-LABEL: f4:
 ; CHECK: aghi %r2, 4096
 ; CHECK: clhhsi 0(%r2), 1
-; CHECK-NEXT: jh
+; CHECK-NEXT: bhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%base, i64 2048
@@ -62,7 +62,7 @@ define double @f5(double %a, double %b, i16 *%base) {
 ; CHECK-LABEL: f5:
 ; CHECK: aghi %r2, -2
 ; CHECK: clhhsi 0(%r2), 1
-; CHECK-NEXT: jh
+; CHECK-NEXT: bhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%base, i64 -1
@@ -77,7 +77,7 @@ define double @f6(double %a, double %b, i64 %base, i64 %index) {
 ; CHECK-LABEL: f6:
 ; CHECK: agr {{%r2, %r3|%r3, %r2}}
 ; CHECK: clhhsi 0({{%r[23]}}), 1
-; CHECK-NEXT: jh
+; CHECK-NEXT: bhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %add = add i64 %base, %index

@@ -8,10 +8,10 @@ declare void @init() nounwind
 
 declare void @clock() nounwind
 
-; CHECK: %entry
+; CHECK: mflr 0
 ; CHECK: fmr 31, 1
 ; CHECK: bl init
-define void @s332(double %t) nounwind {
+define double @s332(double %t) nounwind {
 entry:
   tail call void @init()
   tail call void @clock() nounwind
@@ -29,5 +29,7 @@ for.body4:                                        ; preds = %for.cond2
 
 L20:                                              ; preds = %for.body4, %for.cond2
   %index.0 = phi i32 [ -2, %for.cond2 ], [ %i.0, %for.body4 ]
-  unreachable
+  %index.d = sitofp i32 %index.0 to double
+  %retval = fadd double %t, %index.d
+  ret double %retval
 }

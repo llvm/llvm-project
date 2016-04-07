@@ -467,10 +467,10 @@ bool LLParser::ParseGlobalType(bool &IsConstant) {
 }
 
 /// ParseUnnamedGlobal:
-///   OptionalVisibility ALIAS ...
+///   OptionalVisibility (ALIAS | IFUNC) ...
 ///   OptionalLinkage OptionalVisibility OptionalDLLStorageClass
 ///                                                     ...   -> global variable
-///   GlobalID '=' OptionalVisibility ALIAS ...
+///   GlobalID '=' OptionalVisibility (ALIAS | IFUNC) ...
 ///   GlobalID '=' OptionalLinkage OptionalVisibility OptionalDLLStorageClass
 ///                                                     ...   -> global variable
 bool LLParser::ParseUnnamedGlobal() {
@@ -500,7 +500,7 @@ bool LLParser::ParseUnnamedGlobal() {
       parseOptionalUnnamedAddr(UnnamedAddr))
     return true;
 
-  if (Lex.getKind() != lltok::kw_alias)
+  if (Lex.getKind() != lltok::kw_alias && Lex.getKind() != lltok::kw_ifunc)
     return ParseGlobal(Name, NameLoc, Linkage, HasLinkage, Visibility,
                        DLLStorageClass, TLM, UnnamedAddr);
 
@@ -509,7 +509,7 @@ bool LLParser::ParseUnnamedGlobal() {
 }
 
 /// ParseNamedGlobal:
-///   GlobalVar '=' OptionalVisibility ALIAS ...
+///   GlobalVar '=' OptionalVisibility (ALIAS | IFUNC) ...
 ///   GlobalVar '=' OptionalLinkage OptionalVisibility OptionalDLLStorageClass
 ///                                                     ...   -> global variable
 bool LLParser::ParseNamedGlobal() {
@@ -530,7 +530,7 @@ bool LLParser::ParseNamedGlobal() {
       parseOptionalUnnamedAddr(UnnamedAddr))
     return true;
 
-  if (Lex.getKind() != lltok::kw_alias)
+  if (Lex.getKind() != lltok::kw_alias && Lex.getKind() != lltok::kw_ifunc)
     return ParseGlobal(Name, NameLoc, Linkage, HasLinkage, Visibility,
                        DLLStorageClass, TLM, UnnamedAddr);
 
@@ -695,7 +695,7 @@ static bool isValidVisibilityForLinkage(unsigned V, unsigned L) {
 /// parseIndirectSymbol:
 ///   ::= GlobalVar '=' OptionalLinkage OptionalVisibility
 ///                     OptionalDLLStorageClass OptionalThreadLocal
-///                     OptionalUnnamedAddr 'alias' IndirectSymbol
+///                     OptionalUnnamedAddr 'alias|ifunc' IndirectSymbol
 ///
 /// IndirectSymbol
 ///   ::= TypeAndValue
@@ -710,8 +710,10 @@ bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
   bool IsAlias;
   if (Lex.getKind() == lltok::kw_alias)
     IsAlias = true;
+  else if (Lex.getKind() == lltok::kw_ifunc)
+    IsAlias = false;
   else
-    llvm_unreachable("Not an alias!");
+    llvm_unreachable("Not an alias or ifunc!");
   Lex.Lex();
 
   GlobalValue::LinkageTypes Linkage = (GlobalValue::LinkageTypes) L;
@@ -726,7 +728,7 @@ bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
   Type *Ty;
   LocTy ExplicitTypeLoc = Lex.getLoc();
   if (ParseType(Ty) ||
-      ParseToken(lltok::comma, "expected comma after alias's type"))
+      ParseToken(lltok::comma, "expected comma after alias or ifunc's type"))
     return true;
 
   Constant *Aliasee;
@@ -750,7 +752,7 @@ bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
   Type *AliaseeType = Aliasee->getType();
   auto *PTy = dyn_cast<PointerType>(AliaseeType);
   if (!PTy)
-    return Error(AliaseeLoc, "An alias must have pointer type");
+    return Error(AliaseeLoc, "An alias or ifunc must have pointer type");
   unsigned AddrSpace = PTy->getAddressSpace();
 
   if (IsAlias && Ty != PTy->getElementType())
@@ -788,7 +790,9 @@ bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
                                  (GlobalValue::LinkageTypes)Linkage, Name,
                                  Aliasee, /*Parent*/ nullptr));
   else
-    llvm_unreachable("Not an alias!");
+    GA.reset(GlobalIFunc::create(Ty, AddrSpace,
+                                 (GlobalValue::LinkageTypes)Linkage, Name,
+                                 Aliasee, /*Parent*/ nullptr));
   GA->setThreadLocalMode(TLM);
   GA->setVisibility((GlobalValue::VisibilityTypes)Visibility);
   GA->setDLLStorageClass((GlobalValue::DLLStorageClassTypes)DLLStorageClass);
@@ -814,7 +818,7 @@ bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
   if (IsAlias)
     M->getAliasList().push_back(cast<GlobalAlias>(GA.get()));
   else
-    llvm_unreachable("Not an alias!");
+    M->getIFuncList().push_back(cast<GlobalIFunc>(GA.get()));
   assert(GA->getName() == Name && "Should not be a name conflict!");
 
   // The module owns this now

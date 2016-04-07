@@ -49,21 +49,19 @@ static StringRef get_amd_kernel_code_t_FieldName(int index) {
 
 // Field printing
 
-raw_ostream& printName(raw_ostream& OS, StringRef Name) {
+static raw_ostream &printName(raw_ostream &OS, StringRef Name) {
   return OS << Name << " = ";
 }
 
 template <typename T, T amd_kernel_code_t::*ptr>
-void printField(StringRef Name,
-                const amd_kernel_code_t& C,
-                raw_ostream& OS) {
+static void printField(StringRef Name, const amd_kernel_code_t &C,
+                       raw_ostream &OS) {
   printName(OS, Name) << (int)(C.*ptr);
 }
 
-template <typename T, T amd_kernel_code_t::*ptr, int shift, int width=1>
-void printBitField(StringRef Name,
-                   const amd_kernel_code_t& c,
-                   raw_ostream& OS) {
+template <typename T, T amd_kernel_code_t::*ptr, int shift, int width = 1>
+static void printBitField(StringRef Name, const amd_kernel_code_t &c,
+                          raw_ostream &OS) {
   const auto Mask = (static_cast<T>(1) << width) - 1;
   printName(OS, Name) << (int)((c.*ptr >> shift) & Mask);
 }
@@ -117,9 +115,8 @@ static bool expectEqualInt(MCAsmLexer& Lexer, raw_ostream& Err) {
 }
 
 template <typename T, T amd_kernel_code_t::*ptr>
-bool parseField(amd_kernel_code_t& C,
-                MCAsmLexer& Lexer,
-                raw_ostream& Err) {
+static bool parseField(amd_kernel_code_t &C, MCAsmLexer &Lexer,
+                       raw_ostream &Err) {
   if (!expectEqualInt(Lexer, Err))
     return false;
   C.*ptr = (T)Lexer.getTok().getIntVal();
@@ -127,9 +124,8 @@ bool parseField(amd_kernel_code_t& C,
 }
 
 template <typename T, T amd_kernel_code_t::*ptr, int shift, int width = 1>
-bool parseBitField(amd_kernel_code_t& C,
-                   MCAsmLexer& Lexer,
-                   raw_ostream& Err) {
+static bool parseBitField(amd_kernel_code_t &C, MCAsmLexer &Lexer,
+                          raw_ostream &Err) {
   if (!expectEqualInt(Lexer, Err))
     return false;
   const uint64_t Mask = ((UINT64_C(1)  << width) - 1) << shift;

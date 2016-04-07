@@ -246,7 +246,7 @@ static bool isVtableAccess(Instruction *I) {
 
 // Do not instrument known races/"benign races" that come from compiler
 // instrumentatin. The user has no way of suppressing them.
-bool shouldInstrumentReadWriteFromAddress(Value *Addr) {
+static bool shouldInstrumentReadWriteFromAddress(Value *Addr) {
   // Peel off GEPs and BitCasts.
   Addr = Addr->stripInBoundsOffsets();
 

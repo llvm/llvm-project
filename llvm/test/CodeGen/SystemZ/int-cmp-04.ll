@@ -110,7 +110,7 @@ define void @f7(i64 %lhs, i64 %base, i64 %index, i64 *%dst) {
 define double @f8(double %a, double %b, i64 %rhs, i16 *%src) {
 ; CHECK-LABEL: f8:
 ; CHECK: cgh %r2, 0(%r3)
-; CHECK-NEXT: jh {{\.L.*}}
+; CHECK-NEXT: bhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %half = load i16 , i16 *%src

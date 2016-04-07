@@ -560,6 +560,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(addrspace);
   KEYWORD(section);
   KEYWORD(alias);
+  KEYWORD(ifunc);
   KEYWORD(module);
   KEYWORD(asm);
   KEYWORD(sideeffect);

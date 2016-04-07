@@ -86,6 +86,9 @@ static OrderMap orderModule(const Module &M) {
   for (const GlobalAlias &A : M.aliases())
     if (!isa<GlobalValue>(A.getAliasee()))
       orderValue(A.getAliasee(), OM);
+  for (const GlobalIFunc &I : M.ifuncs())
+    if (!isa<GlobalValue>(I.getResolver()))
+      orderValue(I.getResolver(), OM);
   for (const Function &F : M) {
     for (const Use &U : F.operands())
       if (!isa<GlobalValue>(U.get()))
@@ -105,6 +108,8 @@ static OrderMap orderModule(const Module &M) {
     orderValue(&F, OM);
   for (const GlobalAlias &A : M.aliases())
     orderValue(&A, OM);
+  for (const GlobalIFunc &I : M.ifuncs())
+    orderValue(&I, OM);
   for (const GlobalVariable &G : M.globals())
     orderValue(&G, OM);
   OM.LastGlobalValueID = OM.size();
@@ -261,11 +266,15 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
     predictValueUseListOrder(&F, nullptr, OM, Stack);
   for (const GlobalAlias &A : M.aliases())
     predictValueUseListOrder(&A, nullptr, OM, Stack);
+  for (const GlobalIFunc &I : M.ifuncs())
+    predictValueUseListOrder(&I, nullptr, OM, Stack);
   for (const GlobalVariable &G : M.globals())
     if (G.hasInitializer())
       predictValueUseListOrder(G.getInitializer(), nullptr, OM, Stack);
   for (const GlobalAlias &A : M.aliases())
     predictValueUseListOrder(A.getAliasee(), nullptr, OM, Stack);
+  for (const GlobalIFunc &I : M.ifuncs())
+    predictValueUseListOrder(I.getResolver(), nullptr, OM, Stack);
   for (const Function &F : M) {
     for (const Use &U : F.operands())
       predictValueUseListOrder(U.get(), nullptr, OM, Stack);
@@ -298,6 +307,10 @@ ValueEnumerator::ValueEnumerator(const Module &M,
   for (const GlobalAlias &GA : M.aliases())
     EnumerateValue(&GA);
 
+  // Enumerate the ifuncs.
+  for (const GlobalIFunc &GIF : M.ifuncs())
+    EnumerateValue(&GIF);
+
   // Remember what is the cutoff between globalvalue's and other constants.
   unsigned FirstConstant = Values.size();
 
@@ -309,6 +322,10 @@ ValueEnumerator::ValueEnumerator(const Module &M,
   // Enumerate the aliasees.
   for (const GlobalAlias &GA : M.aliases())
     EnumerateValue(GA.getAliasee());
+
+  // Enumerate the ifunc resolvers.
+  for (const GlobalIFunc &GIF : M.ifuncs())
+    EnumerateValue(GIF.getResolver());
 
   // Enumerate any optional Function data.
   for (const Function &F : M)

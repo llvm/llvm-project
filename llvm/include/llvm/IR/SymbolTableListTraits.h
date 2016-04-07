@@ -49,6 +49,7 @@ class Function;
 class Instruction;
 class GlobalVariable;
 class GlobalAlias;
+class GlobalIFunc;
 class Module;
 #define DEFINE_SYMBOL_TABLE_PARENT_TYPE(NODE, PARENT)                          \
   template <> struct SymbolTableListParentType<NODE> { typedef PARENT type; };
@@ -58,6 +59,7 @@ DEFINE_SYMBOL_TABLE_PARENT_TYPE(Argument, Function)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(Function, Module)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(GlobalVariable, Module)
 DEFINE_SYMBOL_TABLE_PARENT_TYPE(GlobalAlias, Module)
+DEFINE_SYMBOL_TABLE_PARENT_TYPE(GlobalIFunc, Module)
 #undef DEFINE_SYMBOL_TABLE_PARENT_TYPE
 
 template <typename NodeTy> class SymbolTableList;

@@ -37,7 +37,8 @@ for.body:                                         ; preds = %for.body.for.body_c
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body.for.body_crit_edge ]
   %tt = getelementptr inbounds %struct.lua_TValue.17.692, %struct.lua_TValue.17.692* %0, i64 %indvars.iv, i32 1
   %1 = load i32, i32* %tt, align 4
-  store i32 %1, i32* undef, align 4
+  %2 = add i32 %1, %1
+  store i32 %2, i32* %tt, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n

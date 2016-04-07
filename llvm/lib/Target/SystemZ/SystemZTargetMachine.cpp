@@ -125,8 +125,7 @@ bool SystemZPassConfig::addInstSelector() {
 }
 
 void SystemZPassConfig::addPreSched2() {
-  if (getOptLevel() != CodeGenOpt::None &&
-      getSystemZTargetMachine().getSubtargetImpl()->hasLoadStoreOnCond())
+  if (getOptLevel() != CodeGenOpt::None)
     addPass(&IfConverterID);
 }
 

@@ -97,7 +97,7 @@ Changes to the MIPS Target
 Changes to the PowerPC Target
 -----------------------------
 
- During this release ...
+ Moved some optimizations from O3 to O2 (D18562)
 
 
 Changes to the X86 Target

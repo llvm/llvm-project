@@ -9,7 +9,7 @@
 define void @f1(i64 %a) {
 ; CHECK-LABEL: f1:
 ; CHECK: tmll %r2, 1
-; CHECK: je {{\.L.*}}
+; CHECK: ber %r14
 ; CHECK: br %r14
 entry:
   %and = and i64 %a, 1
@@ -28,7 +28,7 @@ exit:
 define void @f2(i64 %a) {
 ; CHECK-LABEL: f2:
 ; CHECK: tmll %r2, 65535
-; CHECK: jne {{\.L.*}}
+; CHECK: bner %r14
 ; CHECK: br %r14
 entry:
   %and = and i64 %a, 65535
@@ -47,7 +47,7 @@ exit:
 define void @f3(i64 %a) {
 ; CHECK-LABEL: f3:
 ; CHECK: tmlh %r2, 1
-; CHECK: jne {{\.L.*}}
+; CHECK: bner %r14
 ; CHECK: br %r14
 entry:
   %and = and i64 %a, 65536
@@ -84,7 +84,7 @@ exit:
 define void @f5(i64 %a) {
 ; CHECK-LABEL: f5:
 ; CHECK: tmlh %r2, 65535
-; CHECK: je {{\.L.*}}
+; CHECK: ber %r14
 ; CHECK: br %r14
 entry:
   %and = and i64 %a, 4294901760
@@ -103,7 +103,7 @@ exit:
 define void @f6(i64 %a) {
 ; CHECK-LABEL: f6:
 ; CHECK: tmhl %r2, 1
-; CHECK: je {{\.L.*}}
+; CHECK: ber %r14
 ; CHECK: br %r14
 entry:
   %and = and i64 %a, 4294967296
@@ -140,7 +140,7 @@ exit:
 define void @f8(i64 %a) {
 ; CHECK-LABEL: f8:
 ; CHECK: tmhl %r2, 65535
-; CHECK: jne {{\.L.*}}
+; CHECK: bner %r14
 ; CHECK: br %r14
 entry:
   %and = and i64 %a, 281470681743360
@@ -159,7 +159,7 @@ exit:
 define void @f9(i64 %a) {
 ; CHECK-LABEL: f9:
 ; CHECK: tmhh %r2, 1
-; CHECK: jne {{\.L.*}}
+; CHECK: bner %r14
 ; CHECK: br %r14
 entry:
   %and = and i64 %a, 281474976710656
@@ -178,7 +178,7 @@ exit:
 define void @f10(i64 %a) {
 ; CHECK-LABEL: f10:
 ; CHECK: tmhh %r2, 65535
-; CHECK: je {{\.L.*}}
+; CHECK: ber %r14
 ; CHECK: br %r14
 entry:
   %and = and i64 %a, 18446462598732840960
@@ -197,7 +197,7 @@ exit:
 define void @f11(i64 %a) {
 ; CHECK-LABEL: f11:
 ; CHECK: tmhl %r2, 32768
-; CHECK: jne {{\.L.*}}
+; CHECK: bner %r14
 ; CHECK: br %r14
 entry:
   %shl = shl i64 %a, 1
@@ -217,7 +217,7 @@ exit:
 define void @f12(i64 %a) {
 ; CHECK-LABEL: f12:
 ; CHECK: tmhh %r2, 256
-; CHECK: jne {{\.L.*}}
+; CHECK: bner %r14
 ; CHECK: br %r14
 entry:
   %shr = lshr i64 %a, 56
@@ -237,7 +237,7 @@ exit:
 define void @f13(i64 %a) {
 ; CHECK-LABEL: f13:
 ; CHECK: tmhh %r2, 49152
-; CHECK: jno {{\.L.*}}
+; CHECK: bnor %r14
 ; CHECK: br %r14
 entry:
   %cmp = icmp ult i64 %a, 13835058055282163712
@@ -255,7 +255,7 @@ exit:
 define void @f14(i64 %a) {
 ; CHECK-LABEL: f14:
 ; CHECK: tmhh %r2, 49152
-; CHECK: jno {{\.L.*}}
+; CHECK: bnor %r14
 ; CHECK: br %r14
 entry:
   %cmp = icmp ule i64 %a, 13835058055282163711
@@ -273,7 +273,7 @@ exit:
 define void @f15(i64 %a) {
 ; CHECK-LABEL: f15:
 ; CHECK: tmhh %r2, 49152
-; CHECK: jo {{\.L.*}}
+; CHECK: bor %r14
 ; CHECK: br %r14
 entry:
   %cmp = icmp ugt i64 %a, 13835058055282163711
@@ -291,7 +291,7 @@ exit:
 define void @f16(i64 %a) {
 ; CHECK-LABEL: f16:
 ; CHECK: tmhh %r2, 49152
-; CHECK: jo {{\.L.*}}
+; CHECK: bor %r14
 ; CHECK: br %r14
 entry:
   %cmp = icmp uge i64 %a, 13835058055282163712
@@ -329,7 +329,7 @@ exit:
 define void @f18(i64 %a) {
 ; CHECK-LABEL: f18:
 ; CHECK-NOT: tmhh
-; CHECK: cgijhe %r2, 0,
+; CHECK: cgibhe %r2, 0, 0(%r14)
 ; CHECK: br %r14
 entry:
   %cmp = icmp ult i64 %a, 9223372036854775808

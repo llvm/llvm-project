@@ -764,6 +764,25 @@ some can only be checked when producing an object file:
 * No global value in the expression can be a declaration, since that
   would require a relocation, which is not possible.
 
+.. _langref_ifunc:
+
+IFuncs
+-------
+
+IFuncs, like as aliases, don't create any new data or func. They are just a new
+symbol that dynamic linker resolves at runtime by calling a resolver function.
+
+IFuncs have a name and a resolver that is a function called by dynamic linker
+that returns address of another function associated with the name.
+
+IFunc may have an optional :ref:`linkage type <linkage>` and an optional
+:ref:`visibility style <visibility>`.
+
+Syntax::
+
+    @<Name> = [Linkage] [Visibility] ifunc <IFuncTy>, <ResolverTy>* @<Resolver>
+
+
 .. _langref_comdats:
 
 Comdats

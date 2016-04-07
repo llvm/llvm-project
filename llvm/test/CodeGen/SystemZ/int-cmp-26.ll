@@ -7,7 +7,7 @@
 define double @f1(double %a, double %b, i16 *%ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: clhhsi 0(%r2), 0
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
   %val = load i16 , i16 *%ptr
   %ext = zext i16 %val to i32
@@ -20,7 +20,7 @@ define double @f1(double %a, double %b, i16 *%ptr) {
 define double @f2(double %a, double %b, i16 *%ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: clhhsi 0(%r2), 65535
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
   %val = load i16 , i16 *%ptr
   %ext = zext i16 %val to i32
@@ -58,7 +58,7 @@ define double @f4(double %a, double %b, i16 *%ptr) {
 define double @f5(double %a, double %b, i16 *%ptr) {
 ; CHECK-LABEL: f5:
 ; CHECK: clhhsi 0(%r2), 0
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
   %val = load i16 , i16 *%ptr
   %ext = sext i16 %val to i32
@@ -71,7 +71,7 @@ define double @f5(double %a, double %b, i16 *%ptr) {
 define double @f6(double %a, double %b, i16 *%ptr) {
 ; CHECK-LABEL: f6:
 ; CHECK: clhhsi 0(%r2), 32767
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
   %val = load i16 , i16 *%ptr
   %ext = sext i16 %val to i32
@@ -97,7 +97,7 @@ define double @f7(double %a, double %b, i16 *%ptr) {
 define double @f8(double %a, double %b, i16 *%ptr) {
 ; CHECK-LABEL: f8:
 ; CHECK: clhhsi 0(%r2), 65535
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
   %val = load i16 , i16 *%ptr
   %ext = sext i16 %val to i32
@@ -110,7 +110,7 @@ define double @f8(double %a, double %b, i16 *%ptr) {
 define double @f9(double %a, double %b, i16 *%ptr) {
 ; CHECK-LABEL: f9:
 ; CHECK: clhhsi 0(%r2), 32768
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
   %val = load i16 , i16 *%ptr
   %ext = sext i16 %val to i32

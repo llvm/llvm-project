@@ -801,7 +801,8 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(MachineBasicBlock &MBB,
   return TmpReg;
 }
 
-void SIInstrInfo::insertWaitStates(MachineBasicBlock::iterator MI,
+void SIInstrInfo::insertWaitStates(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MI,
                                    int Count) const {
   while (Count > 0) {
     int Arg;
@@ -810,7 +811,7 @@ void SIInstrInfo::insertWaitStates(MachineBasicBlock::iterator MI,
     else
       Arg = Count - 1;
     Count -= 8;
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), get(AMDGPU::S_NOP))
+    BuildMI(MBB, MI, MI->getDebugLoc(), get(AMDGPU::S_NOP))
             .addImm(Arg);
   }
 }

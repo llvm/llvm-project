@@ -1,5 +1,5 @@
 ; RUN: llc < %s | FileCheck %s
-; CHECK: .long   .Ltmp6-.Ltmp12          #   Call between .Ltmp12 and .Ltmp6
+; CHECK: .long   .Ltmp9-.Ltmp8         #   Call between .Ltmp8 and .Ltmp9
 
 ; We used to crash in filetype=obj when computing a negative value.
 ; RUN: llc -filetype=obj < %s

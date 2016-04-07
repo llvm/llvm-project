@@ -414,7 +414,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       case AMDGPUSubtarget::SOUTHERN_ISLANDS:
         // "VALU writes SGPR" -> "SMRD reads that SGPR" needs 4 wait states
         // ("S_NOP 3") on SI
-        TII->insertWaitStates(MI, 4);
+        TII->insertWaitStates(*MBB, MI, 4);
         break;
       case AMDGPUSubtarget::SEA_ISLANDS:
         break;
@@ -422,7 +422,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         // "VALU writes SGPR -> VMEM reads that SGPR" needs 5 wait states
         // ("S_NOP 4") on VI and later. This also applies to VALUs which write
         // VCC, but we're unlikely to see VMEM use VCC.
-        TII->insertWaitStates(MI, 5);
+        TII->insertWaitStates(*MBB, MI, 5);
       }
 
       MI->eraseFromParent();

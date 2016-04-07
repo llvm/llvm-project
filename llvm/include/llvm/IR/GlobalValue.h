@@ -388,7 +388,8 @@ public:
   static bool classof(const Value *V) {
     return V->getValueID() == Value::FunctionVal ||
            V->getValueID() == Value::GlobalVariableVal ||
-           V->getValueID() == Value::GlobalAliasVal;
+           V->getValueID() == Value::GlobalAliasVal ||
+           V->getValueID() == Value::GlobalIFuncVal;
   }
 };
 

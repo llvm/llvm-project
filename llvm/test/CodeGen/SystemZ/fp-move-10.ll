@@ -31,7 +31,7 @@ define void @f2(float %val, i8 *%ptr) {
 ; Like f2, but with a conditional store.
 define void @f3(float %val, i8 *%ptr, i32 %which) {
 ; CHECK-LABEL: f3:
-; CHECK-DAG: cijlh %r3, 0,
+; CHECK-DAG: ciblh %r3, 0, 0(%r14)
 ; CHECK-DAG: vlgvf [[REG:%r[0-5]]], %v0, 0
 ; CHECK: stc [[REG]], 0(%r2)
 ; CHECK: br %r14
@@ -47,7 +47,7 @@ define void @f3(float %val, i8 *%ptr, i32 %which) {
 ; ...and again with 16-bit memory.
 define void @f4(float %val, i16 *%ptr, i32 %which) {
 ; CHECK-LABEL: f4:
-; CHECK-DAG: cijlh %r3, 0,
+; CHECK-DAG: ciblh %r3, 0, 0(%r14)
 ; CHECK-DAG: vlgvf [[REG:%r[0-5]]], %v0, 0
 ; CHECK: sth [[REG]], 0(%r2)
 ; CHECK: br %r14

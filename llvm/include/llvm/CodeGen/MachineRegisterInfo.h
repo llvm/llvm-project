@@ -16,7 +16,10 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/IndexedMap.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/iterator_range.h"
+// PointerUnion needs to have access to the full RegisterBank type.
+#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/Target/TargetRegisterInfo.h"
@@ -25,6 +28,10 @@
 
 namespace llvm {
 class PSetIterator;
+
+/// Convenient type to represent either a register class or a register bank.
+typedef PointerUnion<const TargetRegisterClass *, const RegisterBank *>
+    RegClassOrRegBank;
 
 /// MachineRegisterInfo - Keep track of information for virtual and physical
 /// registers, including vreg register classes, use/def chains for registers,
@@ -55,8 +62,9 @@ private:
   ///
   /// Each element in this list contains the register class of the vreg and the
   /// start of the use/def list for the register.
-  IndexedMap<std::pair<const TargetRegisterClass*, MachineOperand*>,
-             VirtReg2IndexFunctor> VRegInfo;
+  IndexedMap<std::pair<RegClassOrRegBank, MachineOperand *>,
+             VirtReg2IndexFunctor>
+      VRegInfo;
 
   /// RegAllocHints - This vector records register allocation hints for virtual
   /// registers. For each virtual register, it keeps a register and hint type
@@ -564,15 +572,61 @@ public:
   // Virtual Register Info
   //===--------------------------------------------------------------------===//
 
-  /// getRegClass - Return the register class of the specified virtual register.
+  /// Return the register class of the specified virtual register.
+  /// This shouldn't be used directly unless \p Reg has a register class.
+  /// \see getRegClassOrNull when this might happen.
   ///
   const TargetRegisterClass *getRegClass(unsigned Reg) const {
+    assert(VRegInfo[Reg].first.is<const TargetRegisterClass *>() &&
+           "Register class not set, wrong accessor");
+    return VRegInfo[Reg].first.get<const TargetRegisterClass *>();
+  }
+
+  /// Return the register class of \p Reg, or null if Reg has not been assigned
+  /// a register class yet.
+  ///
+  /// \note A null register class can only happen when these two
+  /// conditions are met:
+  /// 1. Generic virtual registers are created.
+  /// 2. The machine function has not completely been through the
+  ///    instruction selection process.
+  /// None of this condition is possible without GlobalISel for now.
+  /// In other words, if GlobalISel is not used or if the query happens after
+  /// the select pass, using getRegClass is safe.
+  const TargetRegisterClass *getRegClassOrNull(unsigned Reg) const {
+    const RegClassOrRegBank &Val = VRegInfo[Reg].first;
+    if (Val.is<const TargetRegisterClass *>())
+      return Val.get<const TargetRegisterClass *>();
+    return nullptr;
+  }
+
+  /// Return the register bank of \p Reg, or null if Reg has not been assigned
+  /// a register bank or has been assigned a register class.
+  /// \note It is possible to get the register bank from the register class via
+  /// RegisterBankInfo::getRegBankFromRegClass.
+  ///
+  const RegisterBank *getRegBankOrNull(unsigned Reg) const {
+    const RegClassOrRegBank &Val = VRegInfo[Reg].first;
+    if (Val.is<const RegisterBank *>())
+      return Val.get<const RegisterBank *>();
+    return nullptr;
+  }
+
+  /// Return the register bank or register class of \p Reg.
+  /// \note Before the register bank gets assigned (i.e., before the
+  /// RegBankSelect pass) \p Reg may not have either.
+  ///
+  const RegClassOrRegBank &getRegClassOrRegBank(unsigned Reg) const {
     return VRegInfo[Reg].first;
   }
 
   /// setRegClass - Set the register class of the specified virtual register.
   ///
   void setRegClass(unsigned Reg, const TargetRegisterClass *RC);
+
+  /// Set the register bank to \p RegBank for \p Reg.
+  ///
+  void setRegBank(unsigned Reg, const RegisterBank &RegBank);
 
   /// constrainRegClass - Constrain the register class of the specified virtual
   /// register to be a common subclass of RC and the current register class,

@@ -42,6 +42,11 @@ MachineRegisterInfo::setRegClass(unsigned Reg, const TargetRegisterClass *RC) {
   VRegInfo[Reg].first = RC;
 }
 
+void MachineRegisterInfo::setRegBank(unsigned Reg,
+                                     const RegisterBank &RegBank) {
+  VRegInfo[Reg].first = &RegBank;
+}
+
 const TargetRegisterClass *
 MachineRegisterInfo::constrainRegClass(unsigned Reg,
                                        const TargetRegisterClass *RC,
@@ -121,7 +126,7 @@ MachineRegisterInfo::createGenericVirtualRegister(unsigned Size) {
   unsigned Reg = TargetRegisterInfo::index2VirtReg(getNumVirtRegs());
   VRegInfo.grow(Reg);
   // FIXME: Should we use a dummy register class?
-  VRegInfo[Reg].first = nullptr;
+  VRegInfo[Reg].first = static_cast<TargetRegisterClass *>(nullptr);
   getVRegToSize()[Reg] = Size;
   RegAllocHints.grow(Reg);
   if (TheDelegate)

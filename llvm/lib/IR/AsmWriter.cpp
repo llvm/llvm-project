@@ -102,6 +102,11 @@ static OrderMap orderModule(const Module *M) {
       orderValue(A.getAliasee(), OM);
     orderValue(&A, OM);
   }
+  for (const GlobalIFunc &I : M->ifuncs()) {
+    if (!isa<GlobalValue>(I.getResolver()))
+      orderValue(I.getResolver(), OM);
+    orderValue(&I, OM);
+  }
   for (const Function &F : *M) {
     for (const Use &U : F.operands())
       if (!isa<GlobalValue>(U.get()))
@@ -249,11 +254,15 @@ static UseListOrderStack predictUseListOrder(const Module *M) {
     predictValueUseListOrder(&F, nullptr, OM, Stack);
   for (const GlobalAlias &A : M->aliases())
     predictValueUseListOrder(&A, nullptr, OM, Stack);
+  for (const GlobalIFunc &I : M->ifuncs())
+    predictValueUseListOrder(&I, nullptr, OM, Stack);
   for (const GlobalVariable &G : M->globals())
     if (G.hasInitializer())
       predictValueUseListOrder(G.getInitializer(), nullptr, OM, Stack);
   for (const GlobalAlias &A : M->aliases())
     predictValueUseListOrder(A.getAliasee(), nullptr, OM, Stack);
+  for (const GlobalIFunc &I : M->ifuncs())
+    predictValueUseListOrder(I.getResolver(), nullptr, OM, Stack);
   for (const Function &F : *M)
     for (const Use &U : F.operands())
       predictValueUseListOrder(U.get(), nullptr, OM, Stack);
@@ -729,6 +738,9 @@ static SlotTracker *createSlotTracker(const Value *V) {
   if (const GlobalAlias *GA = dyn_cast<GlobalAlias>(V))
     return new SlotTracker(GA->getParent());
 
+  if (const GlobalIFunc *GIF = dyn_cast<GlobalIFunc>(V))
+    return new SlotTracker(GIF->getParent());
+
   if (const Function *Func = dyn_cast<Function>(V))
     return new SlotTracker(Func);
 
@@ -780,6 +792,11 @@ void SlotTracker::processModule() {
   for (const GlobalAlias &A : TheModule->aliases()) {
     if (!A.hasName())
       CreateModuleSlot(&A);
+  }
+
+  for (const GlobalIFunc &I : TheModule->ifuncs()) {
+    if (!I.hasName())
+      CreateModuleSlot(&I);
   }
 
   // Add metadata used by named metadata.
@@ -945,10 +962,11 @@ void SlotTracker::CreateModuleSlot(const GlobalValue *V) {
 
   ST_DEBUG("  Inserting value [" << V->getType() << "] = " << V << " slot=" <<
            DestSlot << " [");
-  // G = Global, F = Function, A = Alias, o = other
+  // G = Global, F = Function, A = Alias, I = IFunc, o = other
   ST_DEBUG((isa<GlobalVariable>(V) ? 'G' :
             (isa<Function>(V) ? 'F' :
-             (isa<GlobalAlias>(V) ? 'A' : 'o'))) << "]\n");
+             (isa<GlobalAlias>(V) ? 'A' :
+              (isa<GlobalIFunc>(V) ? 'I' : 'o')))) << "]\n");
 }
 
 /// CreateSlot - Create a new slot for the specified value if it has no name.
@@ -2253,6 +2271,11 @@ void AssemblyWriter::printModule(const Module *M) {
   for (const GlobalAlias &GA : M->aliases())
     printIndirectSymbol(&GA);
 
+  // Output all ifuncs.
+  if (!M->ifunc_empty()) Out << "\n";
+  for (const GlobalIFunc &GI : M->ifuncs())
+    printIndirectSymbol(&GI);
+
   // Output global use-lists.
   printUseLists(nullptr);
 
@@ -2448,8 +2471,10 @@ void AssemblyWriter::printIndirectSymbol(const GlobalIndirectSymbol *GIS) {
 
   if (isa<GlobalAlias>(GIS))
     Out << "alias ";
+  else if (isa<GlobalIFunc>(GIS))
+    Out << "ifunc ";
   else
-    llvm_unreachable("Not an alias!");
+    llvm_unreachable("Not an alias or ifunc!");
 
   TypePrinter.print(GIS->getValueType(), Out);
 

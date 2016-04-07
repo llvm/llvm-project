@@ -63,11 +63,11 @@ public:
   /// if it has been properly constructed.
   void verify(const TargetRegisterInfo &TRI) const;
 
-  /// Check whether this register bank contains \p RC.
+  /// Check whether this register bank covers \p RC.
   /// In other words, check if this register bank fully covers
   /// the registers that \p RC contains.
   /// \pre isValid()
-  bool contains(const TargetRegisterClass &RC) const;
+  bool covers(const TargetRegisterClass &RC) const;
 
   /// Check whether \p OtherRB is the same as this.
   bool operator==(const RegisterBank &OtherRB) const;
