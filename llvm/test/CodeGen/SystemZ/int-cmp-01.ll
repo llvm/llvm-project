@@ -154,7 +154,7 @@ define void @f10(i32 %lhs, i64 %base, i64 %index, i32 *%dst) {
 define double @f11(double %a, double %b, i32 %rhs, i16 *%src) {
 ; CHECK-LABEL: f11:
 ; CHECK: ch %r2, 0(%r3)
-; CHECK-NEXT: jh {{\.L.*}}
+; CHECK-NEXT: bhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %half = load i16 , i16 *%src

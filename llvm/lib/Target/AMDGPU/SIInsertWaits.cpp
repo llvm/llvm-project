@@ -519,7 +519,7 @@ void SIInsertWaits::insertDPPWaitStates(MachineBasicBlock::iterator DPP,
         continue;
 
       if (DPP->readsRegister(Op.getReg(), TRI)) {
-        TII->insertWaitStates(DPP, WaitStates);
+        TII->insertWaitStates(*DPP->getParent(), DPP, WaitStates);
         return;
       }
     }

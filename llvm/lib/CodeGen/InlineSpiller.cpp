@@ -1132,7 +1132,7 @@ void HoistSpillHelper::rmRedundantSpills(
 /// Redundant spills will be found and put into \p SpillsToRm at the same
 /// time. \p SpillBBToSpill will be populated as part of the process and
 /// maps a basic block to the first store occurring in the basic block.
-/// \post SpillsToRm.union(Spills@post) == Spills@pre
+/// \post SpillsToRm.union(Spills\@post) == Spills\@pre
 ///
 void HoistSpillHelper::getVisitOrders(
     MachineBasicBlock *Root, SmallPtrSet<MachineInstr *, 16> &Spills,

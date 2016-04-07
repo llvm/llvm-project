@@ -145,6 +145,9 @@ Comdat *GlobalValue::getComdat() {
       return const_cast<GlobalObject *>(GO)->getComdat();
     return nullptr;
   }
+  // ifunc and its resolver are separate things so don't use resolver comdat.
+  if (isa<GlobalIFunc>(this))
+    return nullptr;
   return cast<GlobalObject>(this)->getComdat();
 }
 
@@ -363,4 +366,35 @@ void GlobalAlias::setAliasee(Constant *Aliasee) {
   assert((!Aliasee || Aliasee->getType() == getType()) &&
          "Alias and aliasee types should match!");
   setIndirectSymbol(Aliasee);
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalIFunc Implementation
+//===----------------------------------------------------------------------===//
+
+GlobalIFunc::GlobalIFunc(Type *Ty, unsigned AddressSpace, LinkageTypes Link,
+                         const Twine &Name, Constant *Resolver,
+                         Module *ParentModule)
+    : GlobalIndirectSymbol(Ty, Value::GlobalIFuncVal, AddressSpace, Link, Name,
+                           Resolver) {
+  if (ParentModule)
+    ParentModule->getIFuncList().push_back(this);
+}
+
+GlobalIFunc *GlobalIFunc::create(Type *Ty, unsigned AddressSpace,
+                                 LinkageTypes Link, const Twine &Name,
+                                 Constant *Resolver, Module *ParentModule) {
+  return new GlobalIFunc(Ty, AddressSpace, Link, Name, Resolver, ParentModule);
+}
+
+void GlobalIFunc::setParent(Module *parent) {
+  Parent = parent;
+}
+
+void GlobalIFunc::removeFromParent() {
+  getParent()->getIFuncList().remove(getIterator());
+}
+
+void GlobalIFunc::eraseFromParent() {
+  getParent()->getIFuncList().erase(getIterator());
 }

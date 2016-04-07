@@ -3675,6 +3675,8 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
     }
     // ALIAS: [alias type, addrspace, aliasee val#, linkage]
     // ALIAS: [alias type, addrspace, aliasee val#, linkage, visibility, dllstorageclass]
+    // IFUNC: [alias type, addrspace, aliasee val#, linkage, visibility, dllstorageclass]
+    case bitc::MODULE_CODE_IFUNC:
     case bitc::MODULE_CODE_ALIAS:
     case bitc::MODULE_CODE_ALIAS_OLD: {
       bool NewRecord = BitCode != bitc::MODULE_CODE_ALIAS_OLD;
@@ -3701,10 +3703,11 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
       GlobalIndirectSymbol *NewGA;
       if (BitCode == bitc::MODULE_CODE_ALIAS ||
           BitCode == bitc::MODULE_CODE_ALIAS_OLD)
-        NewGA = GlobalAlias::create(
-          Ty, AddrSpace, getDecodedLinkage(Linkage), "", TheModule);
+        NewGA = GlobalAlias::create(Ty, AddrSpace, getDecodedLinkage(Linkage),
+                                    "", TheModule);
       else
-        llvm_unreachable("Not an alias!");
+        NewGA = GlobalIFunc::create(Ty, AddrSpace, getDecodedLinkage(Linkage),
+                                    "", nullptr, TheModule);
       // Old bitcode files didn't have visibility field.
       // Local linkage must have default visibility.
       if (OpNum != Record.size()) {

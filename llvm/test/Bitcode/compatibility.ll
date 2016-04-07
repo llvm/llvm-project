@@ -249,6 +249,31 @@ declare void @g.f1()
 @a.unnamed_addr = unnamed_addr alias i32, i32* @g.unnamed_addr
 ; CHECK: @a.unnamed_addr = unnamed_addr alias i32, i32* @g.unnamed_addr
 
+;; IFunc
+; Format @<Name> = [Linkage] [Visibility] ifunc <IFuncTy>,
+;                  <ResolverTy>* @<Resolver>
+
+; IFunc -- Linkage
+@ifunc.external = external ifunc void (), i8* ()* @ifunc_resolver
+; CHECK: @ifunc.external = ifunc void (), i8* ()* @ifunc_resolver
+@ifunc.private = private ifunc void (), i8* ()* @ifunc_resolver
+; CHECK: @ifunc.private = private ifunc void (), i8* ()* @ifunc_resolver
+@ifunc.internal = internal ifunc void (), i8* ()* @ifunc_resolver
+; CHECK: @ifunc.internal = internal ifunc void (), i8* ()* @ifunc_resolver
+
+; IFunc -- Visibility
+@ifunc.default = default ifunc void (), i8* ()* @ifunc_resolver
+; CHECK: @ifunc.default = ifunc void (), i8* ()* @ifunc_resolver
+@ifunc.hidden = hidden ifunc void (), i8* ()* @ifunc_resolver
+; CHECK: @ifunc.hidden = hidden ifunc void (), i8* ()* @ifunc_resolver
+@ifunc.protected = protected ifunc void (), i8* ()* @ifunc_resolver
+; CHECK: @ifunc.protected = protected ifunc void (), i8* ()* @ifunc_resolver
+
+define i8* @ifunc_resolver() {
+entry:
+  ret i8* null
+}
+
 ;; Functions
 ; Format: define [linkage] [visibility] [DLLStorageClass]
 ;         [cconv] [ret attrs]

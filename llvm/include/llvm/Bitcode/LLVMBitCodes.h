@@ -110,6 +110,9 @@ enum ModuleCodes {
 
   // HASH: [5*i32]
   MODULE_CODE_HASH = 17,
+
+  // IFUNC: [ifunc value type, addrspace, resolver val#, linkage, visibility]
+  MODULE_CODE_IFUNC = 18,
 };
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.

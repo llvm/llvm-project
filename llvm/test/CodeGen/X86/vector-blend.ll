@@ -1010,7 +1010,8 @@ define <4 x i32> @blend_neg_logic_v4i32_2(<4 x i32> %v, <4 x i32> %c) {
 ; SSE2-NEXT:    pslld $31, %xmm1
 ; SSE2-NEXT:    psrad $31, %xmm1
 ; SSE2-NEXT:    pxor %xmm1, %xmm0
-; SSE2-NEXT:    psubd %xmm1, %xmm0
+; SSE2-NEXT:    psubd %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: blend_neg_logic_v4i32_2:
@@ -1019,7 +1020,8 @@ define <4 x i32> @blend_neg_logic_v4i32_2(<4 x i32> %v, <4 x i32> %c) {
 ; SSSE3-NEXT:    pslld $31, %xmm1
 ; SSSE3-NEXT:    psrad $31, %xmm1
 ; SSSE3-NEXT:    pxor %xmm1, %xmm0
-; SSSE3-NEXT:    psubd %xmm1, %xmm0
+; SSSE3-NEXT:    psubd %xmm0, %xmm1
+; SSSE3-NEXT:    movdqa %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: blend_neg_logic_v4i32_2:

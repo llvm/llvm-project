@@ -29,14 +29,14 @@ void RegisterBank::verify(const TargetRegisterInfo &TRI) const {
   for (unsigned RCId = 0, End = TRI.getNumRegClasses(); RCId != End; ++RCId) {
     const TargetRegisterClass &RC = *TRI.getRegClass(RCId);
 
-    if (!contains(RC))
+    if (!covers(RC))
       continue;
     // Verify that the register bank covers all the sub classes of the
     // classes it covers.
 
     // Use a different (slow in that case) method than
     // RegisterBankInfo to find the subclasses of RC, to make sure
-    // both agree on the contains.
+    // both agree on the covers.
     for (unsigned SubRCId = 0; SubRCId != End; ++SubRCId) {
       const TargetRegisterClass &SubRC = *TRI.getRegClass(RCId);
 
@@ -47,12 +47,12 @@ void RegisterBank::verify(const TargetRegisterInfo &TRI) const {
       // all the register classes it covers.
       assert((getSize() >= SubRC.getSize() * 8) &&
              "Size is not big enough for all the subclasses!");
-      assert(contains(SubRC) && "Not all subclasses are covered");
+      assert(covers(SubRC) && "Not all subclasses are covered");
     }
   }
 }
 
-bool RegisterBank::contains(const TargetRegisterClass &RC) const {
+bool RegisterBank::covers(const TargetRegisterClass &RC) const {
   assert(isValid() && "RB hasn't been initialized yet");
   return ContainedRegClasses.test(RC.getID());
 }
@@ -96,7 +96,7 @@ void RegisterBank::print(raw_ostream &OS, bool IsForDebug,
   for (unsigned RCId = 0, End = TRI->getNumRegClasses(); RCId != End; ++RCId) {
     const TargetRegisterClass &RC = *TRI->getRegClass(RCId);
 
-    if (!contains(RC))
+    if (!covers(RC))
       continue;
 
     if (!IsFirst)

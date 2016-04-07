@@ -39,6 +39,7 @@ class ValueSymbolTable {
   friend class SymbolTableListTraits<Function>;
   friend class SymbolTableListTraits<GlobalVariable>;
   friend class SymbolTableListTraits<GlobalAlias>;
+  friend class SymbolTableListTraits<GlobalIFunc>;
 /// @name Types
 /// @{
 public:

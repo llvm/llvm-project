@@ -318,7 +318,7 @@ void PPCPassConfig::addIRPasses() {
   if (UsePrefetching)
     addPass(createLoopDataPrefetchPass());
 
-  if (TM->getOptLevel() == CodeGenOpt::Aggressive && EnableGEPOpt) {
+  if (TM->getOptLevel() >= CodeGenOpt::Default && EnableGEPOpt) {
     // Call SeparateConstOffsetFromGEP pass to extract constants within indices
     // and lower a GEP with multiple indices to either arithmetic operations or
     // multiple GEPs with single index.

@@ -760,9 +760,7 @@ void Verifier::visitMetadataAsValue(const MetadataAsValue &MDV, Function *F) {
 
 bool Verifier::isValidUUID(const MDNode &N, const Metadata *MD) {
   auto *S = dyn_cast<MDString>(MD);
-  if (!S)
-    return false;
-  if (S->getString().empty())
+  if (!S || S->getString().empty())
     return false;
 
   // Keep track of names of types referenced via UUID so we can check that they

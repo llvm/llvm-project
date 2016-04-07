@@ -21,6 +21,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/CBindingWrapping.h"
@@ -75,6 +76,8 @@ public:
   typedef SymbolTableList<Function> FunctionListType;
   /// The type for the list of aliases.
   typedef SymbolTableList<GlobalAlias> AliasListType;
+  /// The type for the list of ifuncs.
+  typedef SymbolTableList<GlobalIFunc> IFuncListType;
   /// The type for the list of named metadata.
   typedef ilist<NamedMDNode> NamedMDListType;
   /// The type of the comdat "symbol" table.
@@ -99,6 +102,11 @@ public:
   typedef AliasListType::iterator                        alias_iterator;
   /// The Global Alias constant iterator
   typedef AliasListType::const_iterator            const_alias_iterator;
+
+  /// The Global IFunc iterators.
+  typedef IFuncListType::iterator                        ifunc_iterator;
+  /// The Global IFunc constant iterator
+  typedef IFuncListType::const_iterator            const_ifunc_iterator;
 
   /// The named metadata iterators.
   typedef NamedMDListType::iterator             named_metadata_iterator;
@@ -163,6 +171,7 @@ private:
   GlobalListType GlobalList;      ///< The Global Variables in the module
   FunctionListType FunctionList;  ///< The Functions in the module
   AliasListType AliasList;        ///< The Aliases in the module
+  IFuncListType IFuncList;        ///< The IFuncs in the module
   NamedMDListType NamedMDList;    ///< The named metadata in the module
   std::string GlobalScopeAsm;     ///< Inline Asm at global scope.
   ValueSymbolTable *ValSymTab;    ///< Symbol table for values
@@ -384,6 +393,15 @@ public:
   GlobalAlias *getNamedAlias(StringRef Name) const;
 
 /// @}
+/// @name Global IFunc Accessors
+/// @{
+
+  /// Return the global ifunc in the module with the specified name, of
+  /// arbitrary type. This method returns null if a global with the specified
+  /// name is not found.
+  GlobalIFunc *getNamedIFunc(StringRef Name) const;
+
+/// @}
 /// @name Named Metadata Accessors
 /// @{
 
@@ -486,6 +504,13 @@ public:
   static AliasListType Module::*getSublistAccess(GlobalAlias*) {
     return &Module::AliasList;
   }
+  /// Get the Module's list of ifuncs (constant).
+  const IFuncListType    &getIFuncList() const        { return IFuncList; }
+  /// Get the Module's list of ifuncs.
+  IFuncListType          &getIFuncList()              { return IFuncList; }
+  static IFuncListType Module::*getSublistAccess(GlobalIFunc*) {
+    return &Module::IFuncList;
+  }
   /// Get the Module's list of named metadata (constant).
   const NamedMDListType  &getNamedMDList() const      { return NamedMDList; }
   /// Get the Module's list of named metadata.
@@ -557,6 +582,24 @@ public:
   }
   iterator_range<const_alias_iterator> aliases() const {
     return make_range(alias_begin(), alias_end());
+  }
+
+/// @}
+/// @name IFunc Iteration
+/// @{
+
+  ifunc_iterator       ifunc_begin()            { return IFuncList.begin(); }
+  const_ifunc_iterator ifunc_begin() const      { return IFuncList.begin(); }
+  ifunc_iterator       ifunc_end  ()            { return IFuncList.end();   }
+  const_ifunc_iterator ifunc_end  () const      { return IFuncList.end();   }
+  size_t               ifunc_size () const      { return IFuncList.size();  }
+  bool                 ifunc_empty() const      { return IFuncList.empty(); }
+
+  iterator_range<ifunc_iterator> ifuncs() {
+    return make_range(ifunc_begin(), ifunc_end());
+  }
+  iterator_range<const_ifunc_iterator> ifuncs() const {
+    return make_range(ifunc_begin(), ifunc_end());
   }
 
 /// @}

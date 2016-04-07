@@ -256,6 +256,7 @@ typedef enum {
 
   LLVMFunctionValueKind,
   LLVMGlobalAliasValueKind,
+  LLVMGlobalIFuncValueKind,
   LLVMGlobalVariableValueKind,
   LLVMBlockAddressValueKind,
   LLVMConstantExprValueKind,

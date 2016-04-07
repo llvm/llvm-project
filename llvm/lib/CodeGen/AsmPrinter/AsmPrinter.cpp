@@ -1069,12 +1069,15 @@ void AsmPrinter::emitGlobalIndirectSymbol(Module &M,
   else if (GIS.hasWeakLinkage() || GIS.hasLinkOnceLinkage())
     OutStreamer->EmitSymbolAttribute(Name, MCSA_WeakReference);
   else
-    assert(GIS.hasLocalLinkage() && "Invalid alias linkage");
+    assert(GIS.hasLocalLinkage() && "Invalid alias or ifunc linkage");
 
   // Set the symbol type to function if the alias has a function type.
   // This affects codegen when the aliasee is not a function.
-  if (GIS.getType()->getPointerElementType()->isFunctionTy())
+  if (GIS.getType()->getPointerElementType()->isFunctionTy()) {
     OutStreamer->EmitSymbolAttribute(Name, MCSA_ELF_TypeFunction);
+    if (isa<GlobalIFunc>(GIS))
+      OutStreamer->EmitSymbolAttribute(Name, MCSA_ELF_TypeIndFunction);
+  }
 
   EmitVisibility(Name, GIS.getVisibility());
 
@@ -1209,6 +1212,8 @@ bool AsmPrinter::doFinalization(Module &M) {
       emitGlobalIndirectSymbol(M, *AncestorAlias);
     AliasStack.clear();
   }
+  for (const auto &IFunc : M.ifuncs())
+    emitGlobalIndirectSymbol(M, IFunc);
 
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
   assert(MI && "AsmPrinter didn't require GCModuleInfo?");

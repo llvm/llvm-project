@@ -8,7 +8,7 @@ declare i64 @foo()
 define double @f1(double %a, double %b, i64 %i1, i32 %unext) {
 ; CHECK-LABEL: f1:
 ; CHECK: cgfr %r2, %r3
-; CHECK-NEXT: jl
+; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %i2 = sext i32 %unext to i64
@@ -32,7 +32,7 @@ define double @f2(double %a, double %b, i64 %i1, i32 %unext) {
 define double @f3(double %a, double %b, i64 %i1, i32 %unext) {
 ; CHECK-LABEL: f3:
 ; CHECK: cgfr %r2, %r3
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %i2 = sext i32 %unext to i64
@@ -45,7 +45,7 @@ define double @f3(double %a, double %b, i64 %i1, i32 %unext) {
 define double @f4(double %a, double %b, i64 %i1, i32 %unext) {
 ; CHECK-LABEL: f4:
 ; CHECK: cgfr %r2, %r3
-; CHECK-NEXT: jlh
+; CHECK-NEXT: blhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %i2 = sext i32 %unext to i64
@@ -58,7 +58,7 @@ define double @f4(double %a, double %b, i64 %i1, i32 %unext) {
 define double @f5(double %a, double %b, i64 %i1, i32 *%ptr) {
 ; CHECK-LABEL: f5:
 ; CHECK: cgf %r2, 0(%r3)
-; CHECK-NEXT: jl
+; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %unext = load i32 , i32 *%ptr
@@ -84,7 +84,7 @@ define double @f6(double %a, double %b, i64 %i1, i32 *%ptr) {
 define double @f7(double %a, double %b, i64 %i1, i32 *%ptr) {
 ; CHECK-LABEL: f7:
 ; CHECK: cgf %r2, 0(%r3)
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %unext = load i32 , i32 *%ptr
@@ -98,7 +98,7 @@ define double @f7(double %a, double %b, i64 %i1, i32 *%ptr) {
 define double @f8(double %a, double %b, i64 %i1, i32 *%ptr) {
 ; CHECK-LABEL: f8:
 ; CHECK: cgf %r2, 0(%r3)
-; CHECK-NEXT: jlh
+; CHECK-NEXT: blhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %unext = load i32 , i32 *%ptr
@@ -112,7 +112,7 @@ define double @f8(double %a, double %b, i64 %i1, i32 *%ptr) {
 define double @f9(double %a, double %b, i64 %i1, i32 *%base) {
 ; CHECK-LABEL: f9:
 ; CHECK: cgf %r2, 524284(%r3)
-; CHECK-NEXT: jl
+; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%base, i64 131071
@@ -129,7 +129,7 @@ define double @f10(double %a, double %b, i64 %i1, i32 *%base) {
 ; CHECK-LABEL: f10:
 ; CHECK: agfi %r3, 524288
 ; CHECK: cgf %r2, 0(%r3)
-; CHECK-NEXT: jl
+; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%base, i64 131072
@@ -144,7 +144,7 @@ define double @f10(double %a, double %b, i64 %i1, i32 *%base) {
 define double @f11(double %a, double %b, i64 %i1, i32 *%base) {
 ; CHECK-LABEL: f11:
 ; CHECK: cgf %r2, -4(%r3)
-; CHECK-NEXT: jl
+; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%base, i64 -1
@@ -159,7 +159,7 @@ define double @f11(double %a, double %b, i64 %i1, i32 *%base) {
 define double @f12(double %a, double %b, i64 %i1, i32 *%base) {
 ; CHECK-LABEL: f12:
 ; CHECK: cgf %r2, -524288(%r3)
-; CHECK-NEXT: jl
+; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%base, i64 -131072
@@ -176,7 +176,7 @@ define double @f13(double %a, double %b, i64 %i1, i32 *%base) {
 ; CHECK-LABEL: f13:
 ; CHECK: agfi %r3, -524292
 ; CHECK: cgf %r2, 0(%r3)
-; CHECK-NEXT: jl
+; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%base, i64 -131073
@@ -191,7 +191,7 @@ define double @f13(double %a, double %b, i64 %i1, i32 *%base) {
 define double @f14(double %a, double %b, i64 %i1, i64 %base, i64 %index) {
 ; CHECK-LABEL: f14:
 ; CHECK: cgf %r2, 524284({{%r4,%r3|%r3,%r4}})
-; CHECK-NEXT: jl
+; CHECK-NEXT: blr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %add1 = add i64 %base, %index
@@ -295,7 +295,7 @@ define i64 @f15(i32 *%ptr0) {
 define double @f16(double %a, double %b, i64 %i1, i32 %unext) {
 ; CHECK-LABEL: f16:
 ; CHECK: cgfr %r2, %r3
-; CHECK-NEXT: jh
+; CHECK-NEXT: bhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %i2 = sext i32 %unext to i64
@@ -308,7 +308,7 @@ define double @f16(double %a, double %b, i64 %i1, i32 %unext) {
 define double @f17(double %a, double %b, i64 %i2, i32 *%ptr) {
 ; CHECK-LABEL: f17:
 ; CHECK: cgf %r2, 0(%r3)
-; CHECK-NEXT: jh {{\.L.*}}
+; CHECK-NEXT: bhr %r14
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %unext = load i32 , i32 *%ptr

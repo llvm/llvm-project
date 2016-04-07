@@ -53,6 +53,11 @@ enum class AtomicOrdering {
   SequentiallyConsistent = 7
 };
 
+bool operator<(AtomicOrdering, AtomicOrdering) = delete;
+bool operator>(AtomicOrdering, AtomicOrdering) = delete;
+bool operator<=(AtomicOrdering, AtomicOrdering) = delete;
+bool operator>=(AtomicOrdering, AtomicOrdering) = delete;
+
 /// String used by LLVM IR to represent atomic ordering.
 static inline const char *toIRString(AtomicOrdering ao) {
   static const char *names[8] = {"not_atomic", "unordered", "monotonic",

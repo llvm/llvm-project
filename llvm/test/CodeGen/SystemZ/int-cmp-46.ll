@@ -8,7 +8,7 @@
 define void @f1(i32 %a) {
 ; CHECK-LABEL: f1:
 ; CHECK: tmll %r2, 1
-; CHECK: je {{\.L.*}}
+; CHECK: ber %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 1
@@ -27,7 +27,7 @@ exit:
 define void @f2(i32 %a) {
 ; CHECK-LABEL: f2:
 ; CHECK: tmll %r2, 65535
-; CHECK: jne {{\.L.*}}
+; CHECK: bner %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 65535
@@ -46,7 +46,7 @@ exit:
 define void @f3(i32 %a) {
 ; CHECK-LABEL: f3:
 ; CHECK: tmlh %r2, 1
-; CHECK: jne {{\.L.*}}
+; CHECK: bner %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 65536
@@ -83,7 +83,7 @@ exit:
 define void @f5(i32 %a) {
 ; CHECK-LABEL: f5:
 ; CHECK: tmlh %r2, 65535
-; CHECK: je {{\.L.*}}
+; CHECK: ber %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 4294901760
@@ -103,7 +103,7 @@ exit:
 define void @f6(i32 %a) {
 ; CHECK-LABEL: f6:
 ; CHECK: tmll %r2, 240
-; CHECK: je {{\.L.*}}
+; CHECK: ber %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 240
@@ -122,7 +122,7 @@ exit:
 define void @f7(i32 %a) {
 ; CHECK-LABEL: f7:
 ; CHECK: tmll %r2, 240
-; CHECK: je {{\.L.*}}
+; CHECK: ber %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 240
@@ -142,7 +142,7 @@ exit:
 define void @f8(i32 %a) {
 ; CHECK-LABEL: f8:
 ; CHECK: tmll %r2, 240
-; CHECK: jne {{\.L.*}}
+; CHECK: bner %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 240
@@ -161,7 +161,7 @@ exit:
 define void @f9(i32 %a) {
 ; CHECK-LABEL: f9:
 ; CHECK: tmll %r2, 240
-; CHECK: jne {{\.L.*}}
+; CHECK: bner %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 240
@@ -181,7 +181,7 @@ exit:
 define void @f10(i32 %a) {
 ; CHECK-LABEL: f10:
 ; CHECK: tmll %r2, 35
-; CHECK: jle {{\.L.*}}
+; CHECK: bler %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 35
@@ -200,7 +200,7 @@ exit:
 define void @f11(i32 %a) {
 ; CHECK-LABEL: f11:
 ; CHECK: tmll %r2, 35
-; CHECK: jle {{\.L.*}}
+; CHECK: bler %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 35
@@ -220,7 +220,7 @@ exit:
 define void @f12(i32 %a) {
 ; CHECK-LABEL: f12:
 ; CHECK: tmll %r2, 140
-; CHECK: jnle {{\.L.*}}
+; CHECK: bnler %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 140
@@ -239,7 +239,7 @@ exit:
 define void @f13(i32 %a) {
 ; CHECK-LABEL: f13:
 ; CHECK: tmll %r2, 140
-; CHECK: jnle {{\.L.*}}
+; CHECK: bnler %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 140
@@ -258,7 +258,7 @@ exit:
 define void @f14(i32 %a) {
 ; CHECK-LABEL: f14:
 ; CHECK: tmll %r2, 101
-; CHECK: jo {{\.L.*}}
+; CHECK: bor %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 101
@@ -277,7 +277,7 @@ exit:
 define void @f15(i32 %a) {
 ; CHECK-LABEL: f15:
 ; CHECK: tmll %r2, 65519
-; CHECK: jno {{\.L.*}}
+; CHECK: bnor %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 65519
@@ -297,7 +297,7 @@ exit:
 define void @f16(i32 %a) {
 ; CHECK-LABEL: f16:
 ; CHECK: tmll %r2, 130
-; CHECK: jno {{\.L.*}}
+; CHECK: bnor %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 130
@@ -316,7 +316,7 @@ exit:
 define void @f17(i32 %a) {
 ; CHECK-LABEL: f17:
 ; CHECK: tmll %r2, 130
-; CHECK: jno {{\.L.*}}
+; CHECK: bnor %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 130
@@ -336,7 +336,7 @@ exit:
 define void @f18(i32 %a) {
 ; CHECK-LABEL: f18:
 ; CHECK: tmll %r2, 194
-; CHECK: jo {{\.L.*}}
+; CHECK: bor %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 194
@@ -355,7 +355,7 @@ exit:
 define void @f19(i32 %a) {
 ; CHECK-LABEL: f19:
 ; CHECK: tmll %r2, 194
-; CHECK: jo {{\.L.*}}
+; CHECK: bor %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 194
@@ -375,7 +375,7 @@ exit:
 define void @f20(i32 %a) {
 ; CHECK-LABEL: f20:
 ; CHECK: tmll %r2, 20
-; CHECK: jl {{\.L.*}}
+; CHECK: blr %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 20
@@ -395,7 +395,7 @@ exit:
 define void @f21(i32 %a) {
 ; CHECK-LABEL: f21:
 ; CHECK: tmll %r2, 20
-; CHECK: jnl {{\.L.*}}
+; CHECK: bnlr %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 20
@@ -415,7 +415,7 @@ exit:
 define void @f22(i32 %a) {
 ; CHECK-LABEL: f22:
 ; CHECK: tmll %r2, 20
-; CHECK: jh {{\.L.*}}
+; CHECK: bhr %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 20
@@ -435,7 +435,7 @@ exit:
 define void @f23(i32 %a) {
 ; CHECK-LABEL: f23:
 ; CHECK: tmll %r2, 20
-; CHECK: jnh {{\.L.*}}
+; CHECK: bnhr %r14
 ; CHECK: br %r14
 entry:
   %and = and i32 %a, 20
@@ -454,7 +454,7 @@ exit:
 define void @f24(i32 %a) {
 ; CHECK-LABEL: f24:
 ; CHECK: tmll %r2, 255
-; CHECK: jne {{\.L.*}}
+; CHECK: bner %r14
 ; CHECK: br %r14
 entry:
   %shl = shl i32 %a, 12
@@ -474,7 +474,7 @@ exit:
 define void @f25(i32 %a) {
 ; CHECK-LABEL: f25:
 ; CHECK: tmlh %r2, 512
-; CHECK: jne {{\.L.*}}
+; CHECK: bner %r14
 ; CHECK: br %r14
 entry:
   %shr = lshr i32 %a, 25

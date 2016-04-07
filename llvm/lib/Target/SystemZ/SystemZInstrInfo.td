@@ -36,6 +36,22 @@ let hasSideEffects = 0 in {
 let isReturn = 1, isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
   def Return : Alias<2, (outs), (ins), [(z_retflag)]>;
 
+// A conditional return instruction (bcr <cond>, %r14).
+let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, CCMaskFirst = 1, Uses = [CC] in
+  def CondReturn : Alias<2, (outs), (ins cond4:$valid, cond4:$R1), []>;
+
+// Fused compare and conditional returns.
+let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, Uses = [CC] in {
+  def CRBReturn : Alias<6, (outs), (ins GR32:$R1, GR32:$R2, cond4:$M3), []>;
+  def CGRBReturn : Alias<6, (outs), (ins GR64:$R1, GR64:$R2, cond4:$M3), []>;
+  def CIBReturn : Alias<6, (outs), (ins GR32:$R1, imm32sx8:$I2, cond4:$M3), []>;
+  def CGIBReturn : Alias<6, (outs), (ins GR64:$R1, imm64sx8:$I2, cond4:$M3), []>;
+  def CLRBReturn : Alias<6, (outs), (ins GR32:$R1, GR32:$R2, cond4:$M3), []>;
+  def CLGRBReturn : Alias<6, (outs), (ins GR64:$R1, GR64:$R2, cond4:$M3), []>;
+  def CLIBReturn : Alias<6, (outs), (ins GR32:$R1, imm32zx8:$I2, cond4:$M3), []>;
+  def CLGIBReturn : Alias<6, (outs), (ins GR64:$R1, imm64zx8:$I2, cond4:$M3), []>;
+}
+
 // Unconditional branches.  R1 is the condition-code mask (all 1s).
 let isBranch = 1, isTerminator = 1, isBarrier = 1, R1 = 15 in {
   let isIndirectBranch = 1 in
@@ -62,15 +78,20 @@ let isBranch = 1, isTerminator = 1, Uses = [CC] in {
                      [(z_br_ccmask cond4:$valid, cond4:$R1, bb:$I2)]>;
     def BRCL : InstRIL<0xC04, (outs), (ins cond4:$valid, cond4:$R1,
                                            brtarget32:$I2), "jg$R1\t$I2", []>;
+    let isIndirectBranch = 1 in
+      def BCR : InstRR<0x07, (outs), (ins cond4:$valid, cond4:$R1, GR64:$R2),
+                       "b${R1}r\t$R2", []>;
   }
   def AsmBRC : InstRI<0xA74, (outs), (ins imm32zx4:$R1, brtarget16:$I2),
                       "brc\t$R1, $I2", []>;
   def AsmBRCL : InstRIL<0xC04, (outs), (ins imm32zx4:$R1, brtarget32:$I2),
                         "brcl\t$R1, $I2", []>;
-  def AsmBC : InstRX<0x47, (outs), (ins imm32zx4:$R1, bdxaddr12only:$XBD2),
-                     "bc\t$R1, $XBD2", []>;
-  def AsmBCR : InstRR<0x07, (outs), (ins imm32zx4:$R1, GR64:$R2),
-                      "bcr\t$R1, $R2", []>;
+  let isIndirectBranch = 1 in {
+    def AsmBC : InstRX<0x47, (outs), (ins imm32zx4:$R1, bdxaddr12only:$XBD2),
+                       "bc\t$R1, $XBD2", []>;
+    def AsmBCR : InstRR<0x07, (outs), (ins imm32zx4:$R1, GR64:$R2),
+                        "bcr\t$R1, $R2", []>;
+  }
 }
 
 def AsmNop  : InstAlias<"nop\t$XBD", (AsmBC 0, bdxaddr12only:$XBD), 0>;
@@ -110,30 +131,32 @@ multiclass CompareBranches<Operand ccmask, string pos1, string pos2> {
     def LGIJ : InstRIEc<0xEC7D, (outs), (ins GR64:$R1, imm64zx8:$I2, ccmask:$M3,
                                              brtarget16:$RI4),
                         "clgij"##pos1##"\t$R1, $I2, "##pos2##"$RI4", []>;
-    def RB  : InstRRS<0xECF6, (outs), (ins GR32:$R1, GR32:$R2, ccmask:$M3,
-                                           bdaddr12only:$BD4),
-                      "crb"##pos1##"\t$R1, $R2, "##pos2##"$BD4", []>;
-    def GRB : InstRRS<0xECE4, (outs), (ins GR64:$R1, GR64:$R2, ccmask:$M3,
-                                           bdaddr12only:$BD4),
-                      "cgrb"##pos1##"\t$R1, $R2, "##pos2##"$BD4", []>;
-    def IB  : InstRIS<0xECFE, (outs), (ins GR32:$R1, imm32sx8:$I2, ccmask:$M3,
-                                           bdaddr12only:$BD4),
-                      "cib"##pos1##"\t$R1, $I2, "##pos2##"$BD4", []>;
-    def GIB : InstRIS<0xECFC, (outs), (ins GR64:$R1, imm64sx8:$I2, ccmask:$M3,
-                                           bdaddr12only:$BD4),
-                      "cgib"##pos1##"\t$R1, $I2, "##pos2##"$BD4", []>;
-    def LRB  : InstRRS<0xECF7, (outs), (ins GR32:$R1, GR32:$R2, ccmask:$M3,
-                                            bdaddr12only:$BD4),
-                       "clrb"##pos1##"\t$R1, $R2, "##pos2##"$BD4", []>;
-    def LGRB : InstRRS<0xECE5, (outs), (ins GR64:$R1, GR64:$R2, ccmask:$M3,
-                                            bdaddr12only:$BD4),
-                       "clgrb"##pos1##"\t$R1, $R2, "##pos2##"$BD4", []>;
-    def LIB  : InstRIS<0xECFF, (outs), (ins GR32:$R1, imm32zx8:$I2, ccmask:$M3,
-                                            bdaddr12only:$BD4),
-                       "clib"##pos1##"\t$R1, $I2, "##pos2##"$BD4", []>;
-    def LGIB : InstRIS<0xECFD, (outs), (ins GR64:$R1, imm64zx8:$I2, ccmask:$M3,
-                                            bdaddr12only:$BD4),
-                       "clgib"##pos1##"\t$R1, $I2, "##pos2##"$BD4", []>;
+    let isIndirectBranch = 1 in {
+      def RB  : InstRRS<0xECF6, (outs), (ins GR32:$R1, GR32:$R2, ccmask:$M3,
+                                             bdaddr12only:$BD4),
+                        "crb"##pos1##"\t$R1, $R2, "##pos2##"$BD4", []>;
+      def GRB : InstRRS<0xECE4, (outs), (ins GR64:$R1, GR64:$R2, ccmask:$M3,
+                                             bdaddr12only:$BD4),
+                        "cgrb"##pos1##"\t$R1, $R2, "##pos2##"$BD4", []>;
+      def IB  : InstRIS<0xECFE, (outs), (ins GR32:$R1, imm32sx8:$I2, ccmask:$M3,
+                                             bdaddr12only:$BD4),
+                        "cib"##pos1##"\t$R1, $I2, "##pos2##"$BD4", []>;
+      def GIB : InstRIS<0xECFC, (outs), (ins GR64:$R1, imm64sx8:$I2, ccmask:$M3,
+                                             bdaddr12only:$BD4),
+                        "cgib"##pos1##"\t$R1, $I2, "##pos2##"$BD4", []>;
+      def LRB  : InstRRS<0xECF7, (outs), (ins GR32:$R1, GR32:$R2, ccmask:$M3,
+                                              bdaddr12only:$BD4),
+                         "clrb"##pos1##"\t$R1, $R2, "##pos2##"$BD4", []>;
+      def LGRB : InstRRS<0xECE5, (outs), (ins GR64:$R1, GR64:$R2, ccmask:$M3,
+                                              bdaddr12only:$BD4),
+                         "clgrb"##pos1##"\t$R1, $R2, "##pos2##"$BD4", []>;
+      def LIB  : InstRIS<0xECFF, (outs), (ins GR32:$R1, imm32zx8:$I2, ccmask:$M3,
+                                              bdaddr12only:$BD4),
+                         "clib"##pos1##"\t$R1, $I2, "##pos2##"$BD4", []>;
+      def LGIB : InstRIS<0xECFD, (outs), (ins GR64:$R1, imm64zx8:$I2, ccmask:$M3,
+                                              bdaddr12only:$BD4),
+                         "clgib"##pos1##"\t$R1, $I2, "##pos2##"$BD4", []>;
+    }
   }
 }
 let isCodeGenOnly = 1 in
@@ -205,30 +228,32 @@ multiclass IntCondExtendedMnemonicA<bits<4> ccmask, string name> {
     def CLGIJ : InstRIEc<0xEC7D, (outs), (ins GR64:$R1, imm64zx8:$I2,
                                               brtarget16:$RI4),
                          "clgij"##name##"\t$R1, $I2, $RI4", []>;
-    def CRB  : InstRRS<0xECF6, (outs), (ins GR32:$R1, GR32:$R2,
-                                            bdaddr12only:$BD4),
-                       "crb"##name##"\t$R1, $R2, $BD4", []>;
-    def CGRB : InstRRS<0xECE4, (outs), (ins GR64:$R1, GR64:$R2,
-                                            bdaddr12only:$BD4),
-                       "cgrb"##name##"\t$R1, $R2, $BD4", []>;
-    def CIB  : InstRIS<0xECFE, (outs), (ins GR32:$R1, imm32sx8:$I2,
-                                            bdaddr12only:$BD4),
-                       "cib"##name##"\t$R1, $I2, $BD4", []>;
-    def CGIB : InstRIS<0xECFC, (outs), (ins GR64:$R1, imm64sx8:$I2,
-                                            bdaddr12only:$BD4),
-                       "cgib"##name##"\t$R1, $I2, $BD4", []>;
-    def CLRB  : InstRRS<0xECF7, (outs), (ins GR32:$R1, GR32:$R2,
-                                            bdaddr12only:$BD4),
-                        "clrb"##name##"\t$R1, $R2, $BD4", []>;
-    def CLGRB : InstRRS<0xECE5, (outs), (ins GR64:$R1, GR64:$R2,
-                                             bdaddr12only:$BD4),
-                        "clgrb"##name##"\t$R1, $R2, $BD4", []>;
-    def CLIB  : InstRIS<0xECFF, (outs), (ins GR32:$R1, imm32zx8:$I2,
-                                             bdaddr12only:$BD4),
-                        "clib"##name##"\t$R1, $I2, $BD4", []>;
-    def CLGIB : InstRIS<0xECFD, (outs), (ins GR64:$R1, imm64zx8:$I2,
-                                             bdaddr12only:$BD4),
-                        "clgib"##name##"\t$R1, $I2, $BD4", []>;
+    let isIndirectBranch = 1 in {
+      def CRB  : InstRRS<0xECF6, (outs), (ins GR32:$R1, GR32:$R2,
+                                              bdaddr12only:$BD4),
+                         "crb"##name##"\t$R1, $R2, $BD4", []>;
+      def CGRB : InstRRS<0xECE4, (outs), (ins GR64:$R1, GR64:$R2,
+                                              bdaddr12only:$BD4),
+                         "cgrb"##name##"\t$R1, $R2, $BD4", []>;
+      def CIB  : InstRIS<0xECFE, (outs), (ins GR32:$R1, imm32sx8:$I2,
+                                              bdaddr12only:$BD4),
+                         "cib"##name##"\t$R1, $I2, $BD4", []>;
+      def CGIB : InstRIS<0xECFC, (outs), (ins GR64:$R1, imm64sx8:$I2,
+                                              bdaddr12only:$BD4),
+                         "cgib"##name##"\t$R1, $I2, $BD4", []>;
+      def CLRB  : InstRRS<0xECF7, (outs), (ins GR32:$R1, GR32:$R2,
+                                              bdaddr12only:$BD4),
+                          "clrb"##name##"\t$R1, $R2, $BD4", []>;
+      def CLGRB : InstRRS<0xECE5, (outs), (ins GR64:$R1, GR64:$R2,
+                                               bdaddr12only:$BD4),
+                          "clgrb"##name##"\t$R1, $R2, $BD4", []>;
+      def CLIB  : InstRIS<0xECFF, (outs), (ins GR32:$R1, imm32zx8:$I2,
+                                               bdaddr12only:$BD4),
+                          "clib"##name##"\t$R1, $I2, $BD4", []>;
+      def CLGIB : InstRIS<0xECFD, (outs), (ins GR64:$R1, imm64zx8:$I2,
+                                               bdaddr12only:$BD4),
+                          "clgib"##name##"\t$R1, $I2, $BD4", []>;
+    }
   }
 }
 multiclass IntCondExtendedMnemonic<bits<4> ccmask, string name1, string name2>

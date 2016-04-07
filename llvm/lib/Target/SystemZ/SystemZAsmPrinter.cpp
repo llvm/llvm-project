@@ -109,6 +109,85 @@ void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R14D);
     break;
 
+  case SystemZ::CondReturn:
+    LoweredMI = MCInstBuilder(SystemZ::BCR)
+      .addImm(MI->getOperand(0).getImm())
+      .addImm(MI->getOperand(1).getImm())
+      .addReg(SystemZ::R14D);
+    break;
+
+  case SystemZ::CRBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CRB)
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CGRBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CGRB)
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CIBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CIB)
+      .addReg(MI->getOperand(0).getReg())
+      .addImm(MI->getOperand(1).getImm())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CGIBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CGIB)
+      .addReg(MI->getOperand(0).getReg())
+      .addImm(MI->getOperand(1).getImm())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CLRBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CLRB)
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CLGRBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CLGRB)
+      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI->getOperand(1).getReg())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CLIBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CLIB)
+      .addReg(MI->getOperand(0).getReg())
+      .addImm(MI->getOperand(1).getImm())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
+  case SystemZ::CLGIBReturn:
+    LoweredMI = MCInstBuilder(SystemZ::CLGIB)
+      .addReg(MI->getOperand(0).getReg())
+      .addImm(MI->getOperand(1).getImm())
+      .addImm(MI->getOperand(2).getImm())
+      .addReg(SystemZ::R14D)
+      .addImm(0);
+    break;
+
   case SystemZ::CallBRASL:
     LoweredMI = MCInstBuilder(SystemZ::BRASL)
       .addReg(SystemZ::R14D)

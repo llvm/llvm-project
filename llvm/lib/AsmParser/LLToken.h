@@ -80,6 +80,7 @@ namespace lltok {
     kw_addrspace,
     kw_section,
     kw_alias,
+    kw_ifunc,
     kw_module,
     kw_asm,
     kw_sideeffect,

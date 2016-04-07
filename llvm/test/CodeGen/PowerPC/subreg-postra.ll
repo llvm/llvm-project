@@ -3,7 +3,10 @@ target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind
-define void @jbd2_journal_commit_transaction(i32* %journal) #0 {
+define void @jbd2_journal_commit_transaction(i32* %journal, i64 %inp1, i32 %inp2,
+                                             i32* %inp3, i32** %inp4,
+                                             i32** %inp5, i1 %inp6,
+                                             i1 %inp7, i1 %inp8) #0 {
 entry:
   br i1 undef, label %do.body, label %if.then5
 
@@ -104,17 +107,17 @@ do.body277:                                       ; preds = %if.then260, %if.end
   br label %while.body318
 
 while.body318:                                    ; preds = %wait_on_buffer.exit, %do.body277
-  %tobool.i1295 = icmp eq i64 undef, 0
+  %tobool.i1295 = icmp eq i64 %inp1, 0
   br i1 %tobool.i1295, label %wait_on_buffer.exit, label %if.then.i1296
 
 if.then.i1296:                                    ; preds = %while.body318
   unreachable
 
 wait_on_buffer.exit:                              ; preds = %while.body318
-  br i1 undef, label %do.body378, label %while.body318
+  br i1 %inp6, label %do.body378, label %while.body318
 
 do.body378:                                       ; preds = %wait_on_buffer.exit
-  br i1 undef, label %while.end418, label %while.body392.lr.ph
+  br i1 %inp7, label %while.end418, label %while.body392.lr.ph
 
 while.body392.lr.ph:                              ; preds = %do.body378
   br label %while.body392
@@ -123,7 +126,7 @@ while.body392:                                    ; preds = %wait_on_buffer.exit
   %0 = load i8*, i8** undef, align 8
   %add.ptr399 = getelementptr inbounds i8, i8* %0, i64 -72
   %b_state.i.i1314 = bitcast i8* %add.ptr399 to i64*
-  %tobool.i1316 = icmp eq i64 undef, 0
+  %tobool.i1316 = icmp eq i64 %inp1, 0
   br i1 %tobool.i1316, label %wait_on_buffer.exit1319, label %if.then.i1317
 
 if.then.i1317:                                    ; preds = %while.body392
@@ -133,23 +136,23 @@ wait_on_buffer.exit1319:                          ; preds = %while.body392
   %1 = load volatile i64, i64* %b_state.i.i1314, align 8
   %conv.i.i1322 = and i64 %1, 1
   %lnot404 = icmp eq i64 %conv.i.i1322, 0
-  %.err.4 = select i1 %lnot404, i32 -5, i32 undef
+  %.err.4 = select i1 %lnot404, i32 -5, i32 %inp2
   %2 = call i64 asm sideeffect "1:.long 0x7c0000a8 $| ((($0) & 0x1f) << 21) $| (((0) & 0x1f) << 16) $| ((($3) & 0x1f) << 11) $| (((0) & 0x1) << 0) \0Aandc $0,$0,$2\0Astdcx. $0,0,$3\0Abne- 1b\0A", "=&r,=*m,r,r,*m,~{cc},~{memory}"(i64* %b_state.i.i1314, i64 262144, i64* %b_state.i.i1314, i64* %b_state.i.i1314) #1
   %prev.i.i.i1325 = getelementptr inbounds i8, i8* %0, i64 8
-  %3 = load i32*, i32** null, align 8
-  store i32* %3, i32** undef, align 8
-  call void @__brelse(i32* undef) #1
-  br i1 undef, label %while.end418, label %while.body392
+  %3 = load i32*, i32** %inp4, align 8
+  store i32* %3, i32** %inp5, align 8
+  call void @__brelse(i32* %3) #1
+  br i1 %inp8, label %while.end418, label %while.body392
 
 ; CHECK-LABEL: @jbd2_journal_commit_transaction
 ; CHECK: andi.
-; CHECK: crmove [[REG:[0-9]+]], 1
+; CHECK: crmove
 ; CHECK: stdcx.
-; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, [[REG]]
+; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}},
 
 while.end418:                                     ; preds = %wait_on_buffer.exit1319, %do.body378
-  %err.4.lcssa = phi i32 [ undef, %do.body378 ], [ %.err.4, %wait_on_buffer.exit1319 ]
-  br i1 undef, label %if.end421, label %if.then420
+  %err.4.lcssa = phi i32 [ %inp2, %do.body378 ], [ %.err.4, %wait_on_buffer.exit1319 ]
+  br i1 %inp7, label %if.end421, label %if.then420
 
 if.then420:                                       ; preds = %while.end418
   call void @jbd2_journal_abort(i32* %journal, i32 signext %err.4.lcssa) #1

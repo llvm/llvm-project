@@ -6,7 +6,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 @uc = external global [1024 x i32], align 4
 
 ; Function Attrs: noinline nounwind
-define void @_Z8example9Pj() #0 {
+define <4 x i32> @_Z8example9Pj(<4 x i32>* %addr1, i64 %input1, i64 %input2) #0 {
 entry:
   br label %vector.body
 
@@ -31,7 +31,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %0 = getelementptr [1024 x i32], [1024 x i32]* @ub, i64 0, i64 %.sum82
   %1 = bitcast i32* %0 to <4 x i32>*
   %wide.load36 = load <4 x i32>, <4 x i32>* %1, align 4
-  %wide.load37 = load <4 x i32>, <4 x i32>* undef, align 4
+  %wide.load37 = load <4 x i32>, <4 x i32>* %addr1, align 4
   %.sum84 = add i64 %index, 32
   %2 = getelementptr [1024 x i32], [1024 x i32]* @ub, i64 0, i64 %.sum84
   %3 = bitcast i32* %2 to <4 x i32>*
@@ -40,7 +40,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %4 = getelementptr [1024 x i32], [1024 x i32]* @ub, i64 0, i64 %.sum85
   %5 = bitcast i32* %4 to <4 x i32>*
   %wide.load39 = load <4 x i32>, <4 x i32>* %5, align 4
-  %6 = getelementptr [1024 x i32], [1024 x i32]* @ub, i64 0, i64 undef
+  %6 = getelementptr [1024 x i32], [1024 x i32]* @ub, i64 0, i64 %input1
   %7 = bitcast i32* %6 to <4 x i32>*
   %wide.load40 = load <4 x i32>, <4 x i32>* %7, align 4
   %.sum87 = add i64 %index, 44
@@ -66,7 +66,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %18 = getelementptr [1024 x i32], [1024 x i32]* @uc, i64 0, i64 %.sum95
   %19 = bitcast i32* %18 to <4 x i32>*
   %wide.load47 = load <4 x i32>, <4 x i32>* %19, align 4
-  %20 = getelementptr [1024 x i32], [1024 x i32]* @uc, i64 0, i64 undef
+  %20 = getelementptr [1024 x i32], [1024 x i32]* @uc, i64 0, i64 %input2
   %21 = bitcast i32* %20 to <4 x i32>*
   %wide.load48 = load <4 x i32>, <4 x i32>* %21, align 4
   %.sum97 = add i64 %index, 28
@@ -126,7 +126,16 @@ middle.block:                                     ; preds = %vector.body
   %.lcssa103 = phi <4 x i32> [ %45, %vector.body ]
   %.lcssa102 = phi <4 x i32> [ %44, %vector.body ]
   %.lcssa = phi <4 x i32> [ %43, %vector.body ]
-  ret void
+  %54 = add <4 x i32> %.lcssa112, %.lcssa111
+  %55 = add <4 x i32> %.lcssa110, %54
+  %56 = add <4 x i32> %.lcssa109, %55
+  %57 = add <4 x i32> %.lcssa108, %56
+  %58 = add <4 x i32> %.lcssa107, %57
+  %59 = add <4 x i32> %.lcssa106, %58
+  %60 = add <4 x i32> %.lcssa105, %59
+  %61 = add <4 x i32> %.lcssa103, %60
+  %62 = add <4 x i32> %.lcssa102, %61
+  ret <4 x i32> %62
 }
 
 attributes #0 = { noinline nounwind }
