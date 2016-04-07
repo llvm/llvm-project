@@ -636,7 +636,7 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   for (BasicBlock *BB : NewBlocks) {
     for (Instruction &I : *BB) {
       RemapInstruction(&I, VMap,
-                       RF_NoModuleLevelChanges | RF_IgnoreMissingEntries);
+                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }
   }
 

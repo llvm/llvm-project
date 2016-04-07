@@ -694,7 +694,7 @@ void llvm::remapInstructionsInBlocks(
   for (auto *BB : Blocks)
     for (auto &Inst : *BB)
       RemapInstruction(&Inst, VMap,
-                       RF_NoModuleLevelChanges | RF_IgnoreMissingEntries);
+                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 }
 
 /// \brief Clones a loop \p OrigLoop.  Returns the loop and the blocks in \p

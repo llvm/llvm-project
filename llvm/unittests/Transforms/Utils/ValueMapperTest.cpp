@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -124,6 +125,18 @@ TEST(ValueMapperTest, MapMetadataSeededWithNull) {
   VM.MD().insert(std::make_pair(D, TrackingMDRef()));
   EXPECT_EQ(nullptr, *VM.getMappedMD(D));
   EXPECT_EQ(nullptr, MapMetadata(D, VM, RF_None));
+}
+
+TEST(ValueMapperTest, MapMetadataNullMapGlobalWithIgnoreMissingLocals) {
+  LLVMContext C;
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
+  std::unique_ptr<Function> F(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F"));
+
+  ValueToValueMapTy VM;
+  RemapFlags Flags = RF_IgnoreMissingLocals | RF_NullMapMissingGlobalValues;
+  EXPECT_EQ(nullptr, MapValue(F.get(), VM, Flags));
 }
 
 } // end namespace

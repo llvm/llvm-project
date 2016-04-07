@@ -212,8 +212,20 @@ static ValueMap clone_params(LLVMValueRef Src, LLVMValueRef Dst) {
   return VMap;
 }
 
-LLVMValueRef clone_constant(LLVMValueRef Cst, LLVMModuleRef M) {
-  LLVMValueRef Ret;
+static void check_value_kind(LLVMValueRef V, LLVMValueKind K) {
+  if (LLVMGetValueKind(V) != K)
+    report_fatal_error("LLVMGetValueKind returned incorrect type");
+}
+
+static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M);
+
+static LLVMValueRef clone_constant(LLVMValueRef Cst, LLVMModuleRef M) {
+  LLVMValueRef Ret = clone_constant_impl(Cst, M);
+  check_value_kind(Ret, LLVMGetValueKind(Cst));
+  return Ret;
+}
+
+static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
   if (!LLVMIsAConstant(Cst))
     report_fatal_error("Expected a constant");
 
@@ -223,97 +235,103 @@ LLVMValueRef clone_constant(LLVMValueRef Cst, LLVMModuleRef M) {
 
     // Try function
     if (LLVMIsAFunction(Cst)) {
-      if (LLVMGetValueKind(Cst) != LLVMFunctionValueKind)
-        report_fatal_error("LLVMGetValueKind returned incorrect type");
-      Ret = LLVMGetNamedFunction(M, Name);
-      if (!Ret)
-        report_fatal_error("Could not find function");
-    // Try global variable
-    } else if (LLVMIsAGlobalVariable(Cst)) {
-      if (LLVMGetValueKind(Cst) != LLVMGlobalVariableValueKind)
-        report_fatal_error("LLVMGetValueKind returned incorrect type");
-      Ret = LLVMGetNamedGlobal(M, Name);
-      if (!Ret)
-        report_fatal_error("Could not find function");
-    } else {
-      fprintf(stderr, "Could not find @%s\n", Name);
-      exit(-1);
+      check_value_kind(Cst, LLVMFunctionValueKind);
+      LLVMValueRef Dst = LLVMGetNamedFunction(M, Name);
+      if (Dst)
+        return Dst;
+      report_fatal_error("Could not find function");
     }
+
+    // Try global variable
+    if (LLVMIsAGlobalVariable(Cst)) {
+      check_value_kind(Cst, LLVMGlobalVariableValueKind);
+      LLVMValueRef Dst  = LLVMGetNamedGlobal(M, Name);
+      if (Dst)
+        return Dst;
+      report_fatal_error("Could not find function");
+    }
+
+    fprintf(stderr, "Could not find @%s\n", Name);
+    exit(-1);
+  }
+
   // Try integer literal
-  } else if (LLVMIsAConstantInt(Cst)) {
-    if (LLVMGetValueKind(Cst) != LLVMConstantIntValueKind)
-      report_fatal_error("LLVMGetValueKind returned incorrect type");
-    Ret = LLVMConstInt(TypeCloner(M).Clone(Cst), LLVMConstIntGetZExtValue(Cst),
-                       false);
+  if (LLVMIsAConstantInt(Cst)) {
+    check_value_kind(Cst, LLVMConstantIntValueKind);
+    return LLVMConstInt(TypeCloner(M).Clone(Cst),
+                        LLVMConstIntGetZExtValue(Cst), false);
+  }
+
   // Try zeroinitializer
-  } else if (LLVMIsAConstantAggregateZero(Cst)) {
-    if (LLVMGetValueKind(Cst) != LLVMConstantAggregateZeroValueKind)
-      report_fatal_error("LLVMGetValueKind returned incorrect type");
-    Ret = LLVMConstNull(TypeCloner(M).Clone(Cst));
+  if (LLVMIsAConstantAggregateZero(Cst)) {
+    check_value_kind(Cst, LLVMConstantAggregateZeroValueKind);
+    return LLVMConstNull(TypeCloner(M).Clone(Cst));
+  }
+
   // Try constant array
-  } else if (LLVMIsAConstantArray(Cst)) {
-    if (LLVMGetValueKind(Cst) != LLVMConstantArrayValueKind)
-      report_fatal_error("LLVMGetValueKind returned incorrect type");
+  if (LLVMIsAConstantArray(Cst)) {
+    check_value_kind(Cst, LLVMConstantArrayValueKind);
     LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
     unsigned EltCount = LLVMGetArrayLength(Ty);
     SmallVector<LLVMValueRef, 8> Elts;
     for (unsigned i = 0; i < EltCount; i++)
       Elts.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
-    Ret = LLVMConstArray(LLVMGetElementType(Ty), Elts.data(), EltCount);
+    return LLVMConstArray(LLVMGetElementType(Ty), Elts.data(), EltCount);
+  }
+
   // Try contant data array
-  } else if (LLVMIsAConstantDataArray(Cst)) {
-    if (LLVMGetValueKind(Cst) != LLVMConstantDataArrayValueKind)
-      report_fatal_error("LLVMGetValueKind returned incorrect type");
+  if (LLVMIsAConstantDataArray(Cst)) {
+    check_value_kind(Cst, LLVMConstantDataArrayValueKind);
     LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
     unsigned EltCount = LLVMGetArrayLength(Ty);
     SmallVector<LLVMValueRef, 8> Elts;
     for (unsigned i = 0; i < EltCount; i++)
       Elts.push_back(clone_constant(LLVMGetElementAsConstant(Cst, i), M));
-    Ret = LLVMConstArray(LLVMGetElementType(Ty), Elts.data(), EltCount);
+    return LLVMConstArray(LLVMGetElementType(Ty), Elts.data(), EltCount);
+  }
+
   // Try constant struct
-  } else if (LLVMIsAConstantStruct(Cst)) {
-    if (LLVMGetValueKind(Cst) != LLVMConstantStructValueKind)
-      report_fatal_error("LLVMGetValueKind returned incorrect type");
+  if (LLVMIsAConstantStruct(Cst)) {
+    check_value_kind(Cst, LLVMConstantStructValueKind);
     LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
     unsigned EltCount = LLVMCountStructElementTypes(Ty);
     SmallVector<LLVMValueRef, 8> Elts;
     for (unsigned i = 0; i < EltCount; i++)
       Elts.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
     if (LLVMGetStructName(Ty))
-      Ret = LLVMConstNamedStruct(Ty, Elts.data(), EltCount);
-    else
-      Ret = LLVMConstStructInContext(LLVMGetModuleContext(M), Elts.data(),
-                                     EltCount, LLVMIsPackedStruct(Ty));
+      return LLVMConstNamedStruct(Ty, Elts.data(), EltCount);
+    return LLVMConstStructInContext(LLVMGetModuleContext(M), Elts.data(),
+                                    EltCount, LLVMIsPackedStruct(Ty));
+  }
+
   // Try undef
-  } else if (LLVMIsUndef(Cst)) {
-    if (LLVMGetValueKind(Cst) != LLVMUndefValueValueKind)
-      report_fatal_error("LLVMGetValueKind returned incorrect type");
-    Ret = LLVMGetUndef(TypeCloner(M).Clone(Cst));
+  if (LLVMIsUndef(Cst)) {
+    check_value_kind(Cst, LLVMUndefValueValueKind);
+    return LLVMGetUndef(TypeCloner(M).Clone(Cst));
+  }
+
   // Try float literal
-  } else if (LLVMIsAConstantFP(Cst)) {
-    if (LLVMGetValueKind(Cst) != LLVMConstantFPValueKind)
-      report_fatal_error("LLVMGetValueKind returned incorrect type");
+  if (LLVMIsAConstantFP(Cst)) {
+    check_value_kind(Cst, LLVMConstantFPValueKind);
     report_fatal_error("ConstantFP is not supported");
+  }
+
   // This kind of constant is not supported
-  } else if (!LLVMIsAConstantExpr(Cst)) {
+  if (!LLVMIsAConstantExpr(Cst))
     report_fatal_error("Expected a constant expression");
-  // At this point, it must be a constant expression, and thus, an opcode
-  } else {
-    LLVMOpcode Op = LLVMGetConstOpcode(Cst);
-    switch(Op) {
-      case LLVMBitCast:
-        return LLVMConstBitCast(clone_constant(LLVMGetOperand(Cst, 0), M),
-                                TypeCloner(M).Clone(Cst));
-      default:
-        fprintf(stderr, "%d is not a supported opcode\n", Op);
-        exit(-1);
-    }
+
+  // At this point, it must be a constant expression
+  check_value_kind(Cst, LLVMConstantExprValueKind);
+
+  LLVMOpcode Op = LLVMGetConstOpcode(Cst);
+  switch(Op) {
+    case LLVMBitCast:
+      return LLVMConstBitCast(clone_constant(LLVMGetOperand(Cst, 0), M),
+                              TypeCloner(M).Clone(Cst));
+    default:
+      fprintf(stderr, "%d is not a supported opcode\n", Op);
+      exit(-1);
   }
-  if (LLVMGetValueKind(Ret) != LLVMGetValueKind(Cst)) {
-    report_fatal_error(
-        "The ValueKind of Ret is not equal to the ValueKind of Cst");
-  }
-  return Ret;
 }
 
 struct FunCloner {
@@ -348,9 +366,6 @@ struct FunCloner {
     if (!LLVMIsAInstruction(Src))
       report_fatal_error("Expected an instruction");
 
-    if (LLVMGetValueKind(Src) != LLVMInstructionValueKind)
-      report_fatal_error("LLVMGetValueKind returned incorrect type");
-
     auto Ctx = LLVMGetModuleContext(M);
     auto Builder = LLVMCreateBuilderInContext(Ctx);
     auto BB = DeclareBB(LLVMGetInstructionParent(Src));
@@ -361,12 +376,11 @@ struct FunCloner {
   }
 
   LLVMValueRef CloneInstruction(LLVMValueRef Src, LLVMBuilderRef Builder) {
-    const char *Name = LLVMGetValueName(Src);
+    check_value_kind(Src, LLVMInstructionValueKind);
     if (!LLVMIsAInstruction(Src))
       report_fatal_error("Expected an instruction");
 
-    if (LLVMGetValueKind(Src) != LLVMInstructionValueKind)
-      report_fatal_error("LLVMGetValueKind returned incorrect type");
+    const char *Name = LLVMGetValueName(Src);
 
     // Check if this is something we already computed.
     {
@@ -626,6 +640,7 @@ struct FunCloner {
       exit(-1);
     }
 
+    check_value_kind(Dst, LLVMInstructionValueKind);
     return VMap[Src] = Dst;
   }
 

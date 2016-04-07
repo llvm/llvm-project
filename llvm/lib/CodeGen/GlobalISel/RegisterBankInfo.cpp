@@ -19,8 +19,10 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetOpcodes.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 
 #include <algorithm> // For std::max.
 
@@ -30,6 +32,37 @@ using namespace llvm;
 
 const unsigned RegisterBankInfo::DefaultMappingID = UINT_MAX;
 
+/// Get the size in bits of the \p OpIdx-th operand of \p MI.
+///
+/// \pre \p MI is part of a basic block and this basic block is part
+/// of a function.
+static unsigned getSizeInBits(const MachineInstr &MI, unsigned OpIdx) {
+  unsigned Reg = MI.getOperand(OpIdx).getReg();
+  const TargetRegisterClass *RC = nullptr;
+  if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+    const TargetSubtargetInfo &STI =
+        MI.getParent()->getParent()->getSubtarget();
+    const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+    // The size is not directly available for physical registers.
+    // Instead, we need to access a register class that contains Reg and
+    // get the size of that register class.
+    RC = TRI.getMinimalPhysRegClass(Reg);
+  } else {
+    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+    unsigned RegSize = MRI.getSize(Reg);
+    // If Reg is not a generic register, query the register class to
+    // get its size.
+    if (RegSize)
+      return RegSize;
+    RC = MRI.getRegClass(Reg);
+  }
+  assert(RC && "Unable to deduce the register class");
+  return RC->getSize() * 8;
+}
+
+//------------------------------------------------------------------------------
+// RegisterBankInfo implementation.
+//------------------------------------------------------------------------------
 RegisterBankInfo::RegisterBankInfo(unsigned NumRegBanks)
     : NumRegBanks(NumRegBanks) {
   RegBanks.reset(new RegisterBank[NumRegBanks]);
@@ -182,7 +215,45 @@ void RegisterBankInfo::addRegBankCoverage(unsigned ID, unsigned RCId,
 RegisterBankInfo::InstructionMapping
 RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   if (MI.getOpcode() > TargetOpcode::GENERIC_OP_END) {
-    // TODO.
+    // This is a target specific opcode:
+    // The mapping of the registers is already available via the
+    // register class.
+    // Just map the register class to a register bank.
+    RegisterBankInfo::InstructionMapping Mapping(DefaultMappingID, /*Cost*/ 1,
+                                                 MI.getNumOperands());
+    const TargetSubtargetInfo &STI =
+        MI.getParent()->getParent()->getSubtarget();
+    const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+    const TargetInstrInfo &TII = *STI.getInstrInfo();
+
+    for (unsigned OpIdx = 0, End = MI.getNumOperands(); OpIdx != End; ++OpIdx) {
+      const MachineOperand &MO = MI.getOperand(OpIdx);
+      if (!MO.getReg())
+        continue;
+      // Since this is a target instruction, the operand must have a register
+      // class constraint.
+      const TargetRegisterClass *RC =
+          MI.getRegClassConstraint(OpIdx, &TII, &TRI);
+      // Note: This cannot be a "dynamic" constraint like inline asm,
+      //       since inlineasm opcode is a generic opcode.
+      assert(RC && "Invalid encoding constraints for target instruction?");
+
+      // Build the value mapping.
+      const RegisterBank &RegBank = getRegBankFromRegClass(*RC);
+      unsigned RegSize = getSizeInBits(MI, OpIdx);
+      assert(RegSize <= RegBank.getSize() && "Register bank too small");
+      // Assume the value is mapped in one register that lives in the
+      // register bank that covers RC.
+      APInt Mask(RegSize, 0);
+      // The value is represented by all the bits.
+      Mask.flipAllBits();
+
+      // Create the mapping object.
+      ValueMapping ValMapping;
+      ValMapping.BreakDown.push_back(PartialMapping(Mask, RegBank));
+      Mapping.setOperandMapping(OpIdx, ValMapping);
+    }
+    return Mapping;
   }
   llvm_unreachable("The target must implement this");
 }
@@ -267,7 +338,6 @@ void RegisterBankInfo::ValueMapping::verify(unsigned ExpectedBitWidth) const {
 void RegisterBankInfo::InstructionMapping::verify(
     const MachineInstr &MI) const {
   // Check that all the register operands are properly mapped.
-  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   // Check the constructor invariant.
   assert(NumOperands == MI.getNumOperands() &&
          "NumOperands must match, see constructor");
@@ -279,14 +349,9 @@ void RegisterBankInfo::InstructionMapping::verify(
              "We should not care about non-reg mapping");
       continue;
     }
-    unsigned Reg = MO.getReg();
     // Register size in bits.
-    // This size must match what the mapping expect.
-    unsigned RegSize = MRI.getSize(Reg);
-    // If Reg is not a generic register, query the register class to
-    // get its size.
-    if (!RegSize)
-      RegSize = MRI.getRegClass(Reg)->getSize() * 8;
+    // This size must match what the mapping expects.
+    unsigned RegSize = getSizeInBits(MI, Idx);
     MOMapping.verify(RegSize);
   }
 }

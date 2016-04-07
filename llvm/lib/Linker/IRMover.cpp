@@ -997,7 +997,7 @@ bool IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
     A.mutateType(TypeMap.get(A.getType()));
   for (BasicBlock &BB : Dst)
     for (Instruction &I : BB)
-      RemapInstruction(&I, ValueMap, RF_IgnoreMissingEntries | ValueMapperFlags,
+      RemapInstruction(&I, ValueMap, RF_IgnoreMissingLocals | ValueMapperFlags,
                        &TypeMap, &GValMaterializer);
 
   return false;
