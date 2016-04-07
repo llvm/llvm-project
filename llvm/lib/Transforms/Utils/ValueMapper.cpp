@@ -263,14 +263,8 @@ Value *Mapper::mapValue(const Value *V) {
   // Global values do not need to be seeded into the VM if they
   // are using the identity mapping.
   if (isa<GlobalValue>(V)) {
-    if (Flags & RF_NullMapMissingGlobalValues) {
-      // FIXME: Remove this assertion.  RF_IgnoreMissingLocals is unrelated to
-      // RF_NullMapMissingGlobalValues.
-      assert(!(Flags & RF_IgnoreMissingLocals) &&
-             "Illegal to specify both RF_NullMapMissingGlobalValues and "
-             "RF_IgnoreMissingLocals");
+    if (Flags & RF_NullMapMissingGlobalValues)
       return nullptr;
-    }
     return VM[V] = const_cast<Value*>(V);
   }
 

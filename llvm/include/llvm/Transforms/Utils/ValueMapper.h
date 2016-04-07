@@ -128,7 +128,8 @@ inline Constant *MapValue(const Constant *V, ValueToValueMapTy &VM,
                           RemapFlags Flags = RF_None,
                           ValueMapTypeRemapper *TypeMapper = nullptr,
                           ValueMaterializer *Materializer = nullptr) {
-  return cast<Constant>(
+  // This can be null for RF_NullMapMissingGlobalValues.
+  return cast_or_null<Constant>(
       MapValue((const Value *)V, VM, Flags, TypeMapper, Materializer));
 }
 
