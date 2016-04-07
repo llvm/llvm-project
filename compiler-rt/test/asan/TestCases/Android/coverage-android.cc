@@ -140,4 +140,4 @@ int main(int argc, char **argv) {
 
 // CHECK1: 2 PCs total
 // CHECK2: 4 PCs total
-// CHECK3: 8 PCs total
+// CHECK3: 5 PCs total

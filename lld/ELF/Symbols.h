@@ -59,7 +59,8 @@ public:
     DefinedLast = DefinedSyntheticKind,
     UndefinedElfKind,
     UndefinedBitcodeKind,
-    LazyKind
+    LazyArchiveKind,
+    LazyObjectKind,
   };
 
   Kind kind() const { return static_cast<Kind>(SymbolKind); }
@@ -70,7 +71,9 @@ public:
   }
   bool isDefined() const { return SymbolKind <= DefinedLast; }
   bool isCommon() const { return SymbolKind == DefinedCommonKind; }
-  bool isLazy() const { return SymbolKind == LazyKind; }
+  bool isLazy() const {
+    return SymbolKind == LazyArchiveKind || SymbolKind == LazyObjectKind;
+  }
   bool isShared() const { return SymbolKind == SharedKind; }
   bool isLocal() const { return Binding == llvm::ELF::STB_LOCAL; }
   bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
@@ -339,20 +342,49 @@ public:
 // the same name, it will ask the Lazy to load a file.
 class Lazy : public SymbolBody {
 public:
-  Lazy(ArchiveFile *F, const llvm::object::Archive::Symbol S)
-      : SymbolBody(LazyKind, S.getName(), llvm::ELF::STB_GLOBAL,
-                   llvm::ELF::STV_DEFAULT, /* Type */ 0),
-        File(F), Sym(S) {}
+  Lazy(SymbolBody::Kind K, StringRef Name)
+      : SymbolBody(K, Name, llvm::ELF::STB_GLOBAL, llvm::ELF::STV_DEFAULT,
+                   /* Type */ 0) {}
 
-  static bool classof(const SymbolBody *S) { return S->kind() == LazyKind; }
+  static bool classof(const SymbolBody *S) { return S->isLazy(); }
 
   // Returns an object file for this symbol, or a nullptr if the file
   // was already returned.
-  std::unique_ptr<InputFile> getMember();
+  std::unique_ptr<InputFile> getFile();
+};
+
+// LazyArchive symbols represents symbols in archive files.
+class LazyArchive : public Lazy {
+public:
+  LazyArchive(ArchiveFile *F, const llvm::object::Archive::Symbol S)
+      : Lazy(LazyArchiveKind, S.getName()), File(F), Sym(S) {}
+
+  static bool classof(const SymbolBody *S) {
+    return S->kind() == LazyArchiveKind;
+  }
+
+  std::unique_ptr<InputFile> getFile();
 
 private:
   ArchiveFile *File;
   const llvm::object::Archive::Symbol Sym;
+};
+
+// LazyObject symbols represents symbols in object files between
+// --start-lib and --end-lib options.
+class LazyObject : public Lazy {
+public:
+  LazyObject(StringRef Name, MemoryBufferRef M)
+      : Lazy(LazyObjectKind, Name), MBRef(M) {}
+
+  static bool classof(const SymbolBody *S) {
+    return S->kind() == LazyObjectKind;
+  }
+
+  std::unique_ptr<InputFile> getFile();
+
+private:
+  MemoryBufferRef MBRef;
 };
 
 // Some linker-generated symbols need to be created as

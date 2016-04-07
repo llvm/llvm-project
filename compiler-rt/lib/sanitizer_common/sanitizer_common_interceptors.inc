@@ -206,6 +206,12 @@ UNUSED static void DeleteInterceptorMetadata(void *addr) {
 
 #if SANITIZER_INTERCEPT_STRLEN
 INTERCEPTOR(SIZE_T, strlen, const char *s) {
+  // Sometimes strlen is called prior to InitializeCommonInterceptors,
+  // in which case the REAL(strlen) typically used in
+  // COMMON_INTERCEPTOR_ENTER will fail.  We use internal_strlen here
+  // to handle that.
+  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
+    return internal_strlen(s);
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, strlen, s);
   SIZE_T result = REAL(strlen)(s);
