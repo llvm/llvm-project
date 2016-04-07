@@ -481,9 +481,6 @@ private:
                          lldb::user_id_t break_id,
                          lldb::user_id_t break_loc_id);
 
-    bool
-    SetThreadStopReasonIfAtBreakpoint(Thread &thread);
-
     DISALLOW_COPY_AND_ASSIGN (ProcessGDBRemote);
 };
 

@@ -210,6 +210,7 @@ def no_warn_mismatch : Flag<["--"], "no-warn-mismatch">;
 def rpath_link : Separate<["--", "-"], "rpath-link">;
 def rpath_link_eq : Joined<["--", "-"], "rpath-link=">;
 def version_script : Separate<["--"], "version-script">;
+def warn_execstack : Flag<["--"], "warn-execstack">;
 def warn_shared_textrel : Flag<["--"], "warn-shared-textrel">;
 def G : Separate<["-"], "G">;
 

@@ -17,6 +17,7 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputSection.h"
+#include "ScriptParser.h"
 #include "SymbolTable.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -101,25 +102,16 @@ template <class ELFT> bool SectionRule::match(InputSectionBase<ELFT> *S) {
   return matchStr(SectionPattern, S->getSectionName());
 }
 
-class elf::ScriptParser {
+class elf::ScriptParser final : public elf::ScriptParserBase {
   typedef void (ScriptParser::*Handler)();
 
 public:
   ScriptParser(BumpPtrAllocator *A, StringRef S, bool B)
-      : Saver(*A), Input(S), Tokens(tokenize(S)), IsUnderSysroot(B) {}
+      : ScriptParserBase(S), Saver(*A), IsUnderSysroot(B) {}
 
-  void run();
+  void run() override;
 
 private:
-  void setError(const Twine &Msg);
-  static std::vector<StringRef> tokenize(StringRef S);
-  static StringRef skipSpace(StringRef S);
-  bool atEOF();
-  StringRef next();
-  StringRef peek();
-  bool skip(StringRef Tok);
-  void expect(StringRef Expect);
-
   void addFile(StringRef Path);
 
   void readAsNeeded();
@@ -137,17 +129,9 @@ private:
   void readOutputSectionDescription();
   void readSectionPatterns(StringRef OutSec, bool Keep);
 
-  size_t getPos();
-  void printErrorPos();
-  std::vector<uint8_t> parseHex(StringRef S);
-
   StringSaver Saver;
-  StringRef Input;
-  std::vector<StringRef> Tokens;
   const static StringMap<Handler> Cmd;
-  size_t Pos = 0;
   bool IsUnderSysroot;
-  bool Error = false;
 };
 
 const StringMap<elf::ScriptParser::Handler> elf::ScriptParser::Cmd = {
@@ -171,128 +155,6 @@ void ScriptParser::run() {
     else
       setError("unknown directive: " + Tok);
   }
-}
-
-// Returns the line that the character S[Pos] is in.
-static StringRef getLine(StringRef S, size_t Pos) {
-  size_t Begin = S.rfind('\n', Pos);
-  size_t End = S.find('\n', Pos);
-  Begin = (Begin == StringRef::npos) ? 0 : Begin + 1;
-  if (End == StringRef::npos)
-    End = S.size();
-  // rtrim for DOS-style newlines.
-  return S.substr(Begin, End - Begin).rtrim();
-}
-
-void ScriptParser::printErrorPos() {
-  StringRef Tok = Tokens[Pos == 0 ? 0 : Pos - 1];
-  StringRef Line = getLine(Input, Tok.data() - Input.data());
-  size_t Col = Tok.data() - Line.data();
-  error(Line);
-  error(std::string(Col, ' ') + "^");
-}
-
-// We don't want to record cascading errors. Keep only the first one.
-void ScriptParser::setError(const Twine &Msg) {
-  if (Error)
-    return;
-  error("line " + Twine(getPos()) + ": " + Msg);
-  printErrorPos();
-  Error = true;
-}
-
-// Split S into linker script tokens.
-std::vector<StringRef> ScriptParser::tokenize(StringRef S) {
-  std::vector<StringRef> Ret;
-  for (;;) {
-    S = skipSpace(S);
-    if (S.empty())
-      return Ret;
-
-    // Quoted token
-    if (S.startswith("\"")) {
-      size_t E = S.find("\"", 1);
-      if (E == StringRef::npos) {
-        error("unclosed quote");
-        return {};
-      }
-      Ret.push_back(S.substr(1, E - 1));
-      S = S.substr(E + 1);
-      continue;
-    }
-
-    // Unquoted token
-    size_t Pos = S.find_first_not_of(
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-        "0123456789_.$/\\~=+[]*?-:");
-    // A character that cannot start a word (which is usually a
-    // punctuation) forms a single character token.
-    if (Pos == 0)
-      Pos = 1;
-    Ret.push_back(S.substr(0, Pos));
-    S = S.substr(Pos);
-  }
-}
-
-// Skip leading whitespace characters or /**/-style comments.
-StringRef ScriptParser::skipSpace(StringRef S) {
-  for (;;) {
-    if (S.startswith("/*")) {
-      size_t E = S.find("*/", 2);
-      if (E == StringRef::npos) {
-        error("unclosed comment in a linker script");
-        return "";
-      }
-      S = S.substr(E + 2);
-      continue;
-    }
-    size_t Size = S.size();
-    S = S.ltrim();
-    if (S.size() == Size)
-      return S;
-  }
-}
-
-// An errneous token is handled as if it were the last token before EOF.
-bool ScriptParser::atEOF() { return Error || Tokens.size() == Pos; }
-
-StringRef ScriptParser::next() {
-  if (Error)
-    return "";
-  if (atEOF()) {
-    setError("unexpected EOF");
-    return "";
-  }
-  return Tokens[Pos++];
-}
-
-StringRef ScriptParser::peek() {
-  StringRef Tok = next();
-  if (Error)
-    return "";
-  --Pos;
-  return Tok;
-}
-
-bool ScriptParser::skip(StringRef Tok) {
-  if (Error)
-    return false;
-  if (atEOF()) {
-    setError("unexpected EOF");
-    return false;
-  }
-  if (Tok != Tokens[Pos])
-    return false;
-  ++Pos;
-  return true;
-}
-
-void ScriptParser::expect(StringRef Expect) {
-  if (Error)
-    return;
-  StringRef Tok = next();
-  if (Tok != Expect)
-    setError(Expect + " expected, but got " + Tok);
 }
 
 void ScriptParser::addFile(StringRef S) {
@@ -433,30 +295,6 @@ void ScriptParser::readSectionPatterns(StringRef OutSec, bool Keep) {
   expect("(");
   while (!Error && !skip(")"))
     Script->Sections.emplace_back(OutSec, next(), Keep);
-}
-
-// Returns the current line number.
-size_t ScriptParser::getPos() {
-  if (Pos == 0)
-    return 1;
-  const char *Begin = Input.data();
-  const char *Tok = Tokens[Pos - 1].data();
-  return StringRef(Begin, Tok - Begin).count('\n') + 1;
-}
-
-std::vector<uint8_t> ScriptParser::parseHex(StringRef S) {
-  std::vector<uint8_t> Hex;
-  while (!S.empty()) {
-    StringRef B = S.substr(0, 2);
-    S = S.substr(2);
-    uint8_t H;
-    if (B.getAsInteger(16, H)) {
-      setError("not a hexadecimal value: " + B);
-      return {};
-    }
-    Hex.push_back(H);
-  }
-  return Hex;
 }
 
 void ScriptParser::readOutputSectionDescription() {
