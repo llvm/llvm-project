@@ -12,6 +12,5 @@ add_clang_unittest(BasicTests
 
 target_link_libraries(BasicTests
   clangBasic
-  clangFrontend
   clangLex
   )

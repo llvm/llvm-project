@@ -59,6 +59,7 @@ add_clang_library(clangBasic
   Attributes.cpp
   Builtins.cpp
   CharInfo.cpp
+  CodeGenOptions.cpp
   Diagnostic.cpp
   DiagnosticIDs.cpp
   DiagnosticOptions.cpp

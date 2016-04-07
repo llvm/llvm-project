@@ -12,7 +12,6 @@ add_clang_unittest(LexTests
 target_link_libraries(LexTests
   clangAST
   clangBasic
-  clangFrontend
   clangLex
   clangAPINotes
   clangParse
