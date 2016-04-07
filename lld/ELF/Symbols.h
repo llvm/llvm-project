@@ -104,7 +104,9 @@ public:
   template <class ELFT>
   typename ELFT::uint getVA(typename ELFT::uint Addend = 0) const;
 
+  template <class ELFT> typename ELFT::uint getGotOffset() const;
   template <class ELFT> typename ELFT::uint getGotVA() const;
+  template <class ELFT> typename ELFT::uint getGotPltOffset() const;
   template <class ELFT> typename ELFT::uint getGotPltVA() const;
   template <class ELFT> typename ELFT::uint getPltVA() const;
   template <class ELFT> typename ELFT::uint getThunkVA() const;

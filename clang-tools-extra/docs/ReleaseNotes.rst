@@ -97,6 +97,12 @@ identified.  The improvements since the 3.8 release include:
   Warns when there is a explicit redundant cast of a calculation result to a
   bigger type.
 
+- New `misc-string-literal-with-embedded-nul
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-string-literal-with-embedded-nul.html>`_ check
+
+  Warns about suspicious NUL character in string literals which may lead to
+  truncation or invalid character escaping.
+
 - New `misc-suspicious-missing-comma
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-suspicious-missing-comma.html>`_ check
 

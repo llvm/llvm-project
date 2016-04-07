@@ -53,9 +53,8 @@ void UnusedAliasDeclsCheck::onEndOfTranslationUnit() {
   for (const auto &FoundDecl : FoundDecls) {
     if (!FoundDecl.second.isValid())
       continue;
-    diag(FoundDecl.first->getLocation(), "namespace alias decl '%0' is unused")
-        << FoundDecl.first->getName()
-        << FixItHint::CreateRemoval(FoundDecl.second);
+    diag(FoundDecl.first->getLocation(), "namespace alias decl %0 is unused")
+        << FoundDecl.first << FixItHint::CreateRemoval(FoundDecl.second);
   }
 }
 

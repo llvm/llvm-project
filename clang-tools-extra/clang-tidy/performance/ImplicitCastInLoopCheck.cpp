@@ -85,16 +85,12 @@ void ImplicitCastInLoopCheck::ReportAndFix(
   QualType ConstType = OperatorCall->getType().withConst();
   QualType ConstRefType = Context->getLValueReferenceType(ConstType);
   const char Message[] =
-      "the type of the loop variable '%0' is different from the one returned "
+      "the type of the loop variable %0 is different from the one returned "
       "by the iterator and generates an implicit cast; you can either "
-      "change the type to the correct one ('%1' but 'const auto&' is always a "
+      "change the type to the correct one (%1 but 'const auto&' is always a "
       "valid option) or remove the reference to make it explicit that you are "
       "creating a new value";
-  PrintingPolicy Policy(Context->getLangOpts());
-  Policy.SuppressTagKeyword = true;
-
-  diag(VD->getLocStart(), Message) << VD->getName()
-                                   << ConstRefType.getAsString(Policy);
+  diag(VD->getLocStart(), Message) << VD << ConstRefType;
 }
 
 } // namespace performance

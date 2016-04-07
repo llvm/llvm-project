@@ -65,9 +65,9 @@ void MacroRepeatedPPCallbacks::MacroExpands(const Token &MacroNameTok,
     if (hasSideEffects(ResultArgToks) &&
         countArgumentExpansions(MI, Arg) >= 2) {
       Check.diag(ResultArgToks->getLocation(),
-                 "side effects in the %ordinal0 macro argument '%1' are "
+                 "side effects in the %ordinal0 macro argument %1 are "
                  "repeated in macro expansion")
-          << (ArgNo + 1) << Arg->getName();
+          << (ArgNo + 1) << Arg;
       Check.diag(MI->getDefinitionLoc(), "macro %0 defined here",
                  DiagnosticIDs::Note)
           << MacroNameTok.getIdentifierInfo();

@@ -131,3 +131,10 @@ void k() {
 
   std::string d = "u", e = "u", f = "u";
 }
+
+// These cases should not generate warnings.
+extern void Param1(std::string param = "");
+extern void Param2(const std::string& param = "");
+void Param3(std::string param = "") {}
+void Param4(STRING param = "") {}
+

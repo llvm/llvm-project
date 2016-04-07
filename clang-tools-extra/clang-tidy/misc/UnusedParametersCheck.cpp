@@ -67,8 +67,7 @@ void UnusedParametersCheck::warnOnUnusedParameter(
     const MatchFinder::MatchResult &Result, const FunctionDecl *Function,
     unsigned ParamIndex) {
   const auto *Param = Function->getParamDecl(ParamIndex);
-  auto MyDiag = diag(Param->getLocation(), "parameter '%0' is unused")
-                << Param->getName();
+  auto MyDiag = diag(Param->getLocation(), "parameter %0 is unused") << Param;
 
   auto DeclRefExpr =
       declRefExpr(to(equalsNode(Function)),
