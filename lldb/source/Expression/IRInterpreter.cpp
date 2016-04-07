@@ -313,7 +313,7 @@ public:
                         SmallVector <Value *, 8> indices (op_cursor, op_end);
 
                         Type *src_elem_ty = cast<GEPOperator>(constant_expr)->getSourceElementType();
-                        uint64_t offset = m_target_data.getIndexedOffsetInType(src_elem_ty, indices);
+                        uint64_t offset = m_target_data.getIndexedOffset(src_elem_ty, indices);
 
                         const bool is_signed = true;
                         value += APInt(value.getBitWidth(), offset, is_signed);
@@ -1115,7 +1115,7 @@ IRInterpreter::Interpret (llvm::Module &module,
                     const_indices.push_back(constant_index);
                 }
 
-                uint64_t offset = data_layout.getIndexedOffsetInType(src_elem_ty, const_indices);
+                uint64_t offset = data_layout.getIndexedOffset(src_elem_ty, const_indices);
 
                 lldb_private::Scalar Poffset = P + offset;
 

@@ -427,7 +427,7 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     if (log)
     {
         log->Printf("Using SIMD alignment: %d", target_info->getSimdDefaultAlign());
-        log->Printf("Target datalayout string: '%s'", target_info->getDataLayout().getStringRepresentation().c_str());
+        log->Printf("Target datalayout string: '%s'", target_info->getDataLayoutString());
         log->Printf("Target ABI: '%s'", target_info->getABI().str().c_str());
         log->Printf("Target vector alignment: %d", target_info->getMaxVectorAlign());
     }
@@ -526,9 +526,9 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     m_compiler->getCodeGenOpts().DisableFPElim = true;
     m_compiler->getCodeGenOpts().OmitLeafFramePointer = false;
     if (generate_debug_info)
-        m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
+        m_compiler->getCodeGenOpts().setDebugInfo(CodeGenOptions::FullDebugInfo);
     else
-        m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::NoDebugInfo);
+        m_compiler->getCodeGenOpts().setDebugInfo(CodeGenOptions::NoDebugInfo);
 
     // Disable some warnings.
     m_compiler->getDiagnostics().setSeverityForGroup(clang::diag::Flavor::WarningOrError,
@@ -625,7 +625,7 @@ ClangExpressionParser::Parse (DiagnosticManager &diagnostic_manager,
 
     clang::SourceManager &SourceMgr = m_compiler->getSourceManager();
     bool created_main_file = false;
-    if (m_expr.GetOptions() && m_expr.GetOptions()->GetPoundLineFilePath() == NULL && m_compiler->getCodeGenOpts().getDebugInfo() == codegenoptions::FullDebugInfo)
+    if (m_expr.GetOptions() && m_expr.GetOptions()->GetPoundLineFilePath() == NULL && m_compiler->getCodeGenOpts().getDebugInfo() == CodeGenOptions::FullDebugInfo)
     {
         std::string temp_source_path;
         if (ExpressionSourceCode::SaveExpressionTextToTempFile(expr_text, *m_expr.GetOptions(), temp_source_path))

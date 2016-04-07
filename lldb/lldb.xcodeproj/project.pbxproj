@@ -965,7 +965,6 @@
 		AF46419D1BEC2D98002FC614 /* PlatformAppleSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF46419C1BEC2D98002FC614 /* PlatformAppleSimulator.cpp */; };
 		AF46AE6A19A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF46AE6819A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp */; };
 		AF62AAE61BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF62AAE51BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp */; };
-		AF6335E21C87B21E00F7D554 /* SymbolFilePDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */; };
 		AF6335E31C87B21E00F7D554 /* SymbolFilePDB.h in Headers */ = {isa = PBXBuildFile; fileRef = AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */; };
 		AF63C3A61A9FCFDD00D6A6B5 /* repl_swift in Copy Files */ = {isa = PBXBuildFile; fileRef = 26F8EA1718F6096400EFD6B1 /* repl_swift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		AF77E08F1A033C700096C0EA /* ABISysV_ppc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF77E08D1A033C700096C0EA /* ABISysV_ppc.cpp */; };
@@ -7555,7 +7554,6 @@
 				94CB257116B0A4270059775D /* TypeSummary.cpp in Sources */,
 				94CB257216B0A4270059775D /* TypeSynthetic.cpp in Sources */,
 				94CB257416B1D3880059775D /* FormatCache.cpp in Sources */,
-				AF6335E21C87B21E00F7D554 /* SymbolFilePDB.cpp in Sources */,
 				A36FF33C17D8E94600244D40 /* OptionParser.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
