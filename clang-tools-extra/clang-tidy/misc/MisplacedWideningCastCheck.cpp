@@ -10,7 +10,6 @@
 #include "MisplacedWideningCastCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/DenseMap.h"
 
 using namespace clang::ast_matchers;
 
@@ -29,18 +28,19 @@ void MisplacedWideningCastCheck::storeOptions(
 }
 
 void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
-  auto Calc = expr(anyOf(binaryOperator(anyOf(
-                             hasOperatorName("+"), hasOperatorName("-"),
-                             hasOperatorName("*"), hasOperatorName("<<"))),
-                         unaryOperator(hasOperatorName("~"))),
-                   hasType(isInteger()))
-                  .bind("Calc");
+  const auto Calc =
+      expr(anyOf(binaryOperator(
+                     anyOf(hasOperatorName("+"), hasOperatorName("-"),
+                           hasOperatorName("*"), hasOperatorName("<<"))),
+                 unaryOperator(hasOperatorName("~"))),
+           hasType(isInteger()))
+          .bind("Calc");
 
-  auto ExplicitCast =
+  const auto ExplicitCast =
       explicitCastExpr(hasDestinationType(isInteger()), has(Calc));
-  auto ImplicitCast =
+  const auto ImplicitCast =
       implicitCastExpr(hasImplicitDestinationType(isInteger()), has(Calc));
-  auto Cast = expr(anyOf(ExplicitCast, ImplicitCast)).bind("Cast");
+  const auto Cast = expr(anyOf(ExplicitCast, ImplicitCast)).bind("Cast");
 
   Finder->addMatcher(varDecl(hasInitializer(Cast)), this);
   Finder->addMatcher(returnStmt(hasReturnValue(Cast)), this);
@@ -50,11 +50,12 @@ void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(anyOf(hasOperatorName("=="), hasOperatorName("!="),
                            hasOperatorName("<"), hasOperatorName("<="),
                            hasOperatorName(">"), hasOperatorName(">=")),
-                     anyOf(hasLHS(Cast), hasRHS(Cast))),
+                     hasEitherOperand(Cast)),
       this);
 }
 
-static unsigned getMaxCalculationWidth(ASTContext &Context, const Expr *E) {
+static unsigned getMaxCalculationWidth(const ASTContext &Context,
+                                       const Expr *E) {
   E = E->IgnoreParenImpCasts();
 
   if (const auto *Bop = dyn_cast<BinaryOperator>(E)) {
@@ -94,64 +95,89 @@ static unsigned getMaxCalculationWidth(ASTContext &Context, const Expr *E) {
   return Context.getIntWidth(E->getType());
 }
 
-static llvm::SmallDenseMap<int, int> createRelativeIntSizesMap() {
-  llvm::SmallDenseMap<int, int> Result;
-  Result[BuiltinType::UChar] = 1;
-  Result[BuiltinType::SChar] = 1;
-  Result[BuiltinType::Char_U] = 1;
-  Result[BuiltinType::Char_S] = 1;
-  Result[BuiltinType::UShort] = 2;
-  Result[BuiltinType::Short] = 2;
-  Result[BuiltinType::UInt] = 3;
-  Result[BuiltinType::Int] = 3;
-  Result[BuiltinType::ULong] = 4;
-  Result[BuiltinType::Long] = 4;
-  Result[BuiltinType::ULongLong] = 5;
-  Result[BuiltinType::LongLong] = 5;
-  Result[BuiltinType::UInt128] = 6;
-  Result[BuiltinType::Int128] = 6;
-  return Result;
+static int relativeIntSizes(BuiltinType::Kind Kind) {
+  switch (Kind) {
+  case BuiltinType::UChar:
+    return 1;
+  case BuiltinType::SChar:
+    return 1;
+  case BuiltinType::Char_U:
+    return 1;
+  case BuiltinType::Char_S:
+    return 1;
+  case BuiltinType::UShort:
+    return 2;
+  case BuiltinType::Short:
+    return 2;
+  case BuiltinType::UInt:
+    return 3;
+  case BuiltinType::Int:
+    return 3;
+  case BuiltinType::ULong:
+    return 4;
+  case BuiltinType::Long:
+    return 4;
+  case BuiltinType::ULongLong:
+    return 5;
+  case BuiltinType::LongLong:
+    return 5;
+  case BuiltinType::UInt128:
+    return 6;
+  case BuiltinType::Int128:
+    return 6;
+  default:
+    return 0;
+  }
 }
 
-static llvm::SmallDenseMap<int, int> createRelativeCharSizesMap() {
-  llvm::SmallDenseMap<int, int> Result;
-  Result[BuiltinType::UChar] = 1;
-  Result[BuiltinType::SChar] = 1;
-  Result[BuiltinType::Char_U] = 1;
-  Result[BuiltinType::Char_S] = 1;
-  Result[BuiltinType::Char16] = 2;
-  Result[BuiltinType::Char32] = 3;
-  return Result;
+static int relativeCharSizes(BuiltinType::Kind Kind) {
+  switch (Kind) {
+  case BuiltinType::UChar:
+    return 1;
+  case BuiltinType::SChar:
+    return 1;
+  case BuiltinType::Char_U:
+    return 1;
+  case BuiltinType::Char_S:
+    return 1;
+  case BuiltinType::Char16:
+    return 2;
+  case BuiltinType::Char32:
+    return 3;
+  default:
+    return 0;
+  }
 }
 
-static llvm::SmallDenseMap<int, int> createRelativeCharSizesWMap() {
-  llvm::SmallDenseMap<int, int> Result;
-  Result[BuiltinType::UChar] = 1;
-  Result[BuiltinType::SChar] = 1;
-  Result[BuiltinType::Char_U] = 1;
-  Result[BuiltinType::Char_S] = 1;
-  Result[BuiltinType::WChar_U] = 2;
-  Result[BuiltinType::WChar_S] = 2;
-  return Result;
+static int relativeCharSizesW(BuiltinType::Kind Kind) {
+  switch (Kind) {
+  case BuiltinType::UChar:
+    return 1;
+  case BuiltinType::SChar:
+    return 1;
+  case BuiltinType::Char_U:
+    return 1;
+  case BuiltinType::Char_S:
+    return 1;
+  case BuiltinType::WChar_U:
+    return 2;
+  case BuiltinType::WChar_S:
+    return 2;
+  default:
+    return 0;
+  }
 }
 
 static bool isFirstWider(BuiltinType::Kind First, BuiltinType::Kind Second) {
-  static const llvm::SmallDenseMap<int, int> RelativeIntSizes(
-      createRelativeIntSizesMap());
-  static const llvm::SmallDenseMap<int, int> RelativeCharSizes(
-      createRelativeCharSizesMap());
-  static const llvm::SmallDenseMap<int, int> RelativeCharSizesW(
-      createRelativeCharSizesWMap());
-
   int FirstSize, SecondSize;
-  if ((FirstSize = RelativeIntSizes.lookup(First)) &&
-      (SecondSize = RelativeIntSizes.lookup(Second)))
+  if ((FirstSize = relativeIntSizes(First)) != 0 &&
+      (SecondSize = relativeIntSizes(Second)) != 0)
     return FirstSize > SecondSize;
-  if ((FirstSize = RelativeCharSizes.lookup(First)) &&
-      (SecondSize = RelativeCharSizes.lookup(Second)))
+  if ((FirstSize = relativeCharSizes(First)) != 0 &&
+      (SecondSize = relativeCharSizes(Second)) != 0)
     return FirstSize > SecondSize;
-  if ((FirstSize = RelativeCharSizesW.lookup(First)) &&
-      (SecondSize = RelativeCharSizesW.lookup(Second)))
+  if ((FirstSize = relativeCharSizesW(First)) != 0 &&
+      (SecondSize = relativeCharSizesW(Second)) != 0)
     return FirstSize > SecondSize;
   return false;
 }

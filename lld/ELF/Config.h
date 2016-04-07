@@ -30,6 +30,12 @@ enum ELFKind {
   ELF64BEKind
 };
 
+enum class BuildIdKind {
+  None,
+  Fnv1,
+  Md5,
+};
+
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options
 // and such fields have the same name as the corresponding options.
@@ -54,7 +60,6 @@ struct Configuration {
   bool AsNeeded = false;
   bool Bsymbolic;
   bool BsymbolicFunctions;
-  bool BuildId;
   bool Demangle = true;
   bool DisableVerify;
   bool DiscardAll;
@@ -67,6 +72,7 @@ struct Configuration {
   bool GnuHash = false;
   bool ICF;
   bool Mips64EL = false;
+  bool NoGnuUnique;
   bool NoUndefined;
   bool NoinhibitExec;
   bool Pic;
@@ -78,6 +84,7 @@ struct Configuration {
   bool Shared;
   bool Static = false;
   bool StripAll;
+  bool StripDebug;
   bool SysvHash = true;
   bool Threads;
   bool Trace;
@@ -88,6 +95,7 @@ struct Configuration {
   bool ZNow;
   bool ZOrigin;
   bool ZRelro;
+  BuildIdKind BuildId = BuildIdKind::None;
   ELFKind EKind = ELFNoneKind;
   uint16_t EMachine = llvm::ELF::EM_NONE;
   uint64_t EntryAddr = -1;

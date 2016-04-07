@@ -81,14 +81,14 @@ void NonCopyableObjectsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<Expr>("expr");
 
   if (D && BD)
-    diag(D->getLocation(), "'%0' declared as type '%1', which is unsafe to copy"
-         "; did you mean '%1 *'?")
-    << D->getName() << BD->getName();
+    diag(D->getLocation(), "%0 declared as type '%1', which is unsafe to copy"
+                           "; did you mean '%1 *'?")
+        << D << BD->getName();
   else if (E)
     diag(E->getExprLoc(),
-         "expression has opaque data structure type '%0'; type should only be "
+         "expression has opaque data structure type %0; type should only be "
          "used as a pointer and not dereferenced")
-        << BD->getName();
+        << BD;
 }
 
 } // namespace tidy

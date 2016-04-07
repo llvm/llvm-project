@@ -97,6 +97,12 @@ identified.  The improvements since the 3.8 release include:
   Warns when there is a explicit redundant cast of a calculation result to a
   bigger type.
 
+- New `misc-string-literal-with-embedded-nul
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-string-literal-with-embedded-nul.html>`_ check
+
+  Warns about suspicious NUL character in string literals which may lead to
+  truncation or invalid character escaping.
+
 - New `misc-suspicious-missing-comma
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-suspicious-missing-comma.html>`_ check
 
@@ -153,13 +159,18 @@ identified.  The improvements since the 3.8 release include:
 
   Finds unnecessary string initializations.
 
+- New `readability-static-definition-in-anonymous-namespace
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-definition-in-anonymous-namespace.html>`_ check
+
+  Finds static function and variable definitions in anonymous namespace.
+
 Fixed bugs:
 
 - Crash when running on compile database with relative source files paths.
 
 - Crash when running with the `-fdelayed-template-parsing` flag.
 
-- The ``modernize-use-override`` check: incorrect fix-its placement around
+- The `modernize-use-override` check: incorrect fix-its placement around
   ``__declspec`` and other attributes.
 
 Clang-tidy changes from 3.7 to 3.8

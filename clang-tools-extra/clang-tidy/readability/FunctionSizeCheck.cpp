@@ -74,8 +74,8 @@ void FunctionSizeCheck::onEndOfTranslationUnit() {
     if (FI.Lines > LineThreshold || FI.Statements > StatementThreshold ||
         FI.Branches > BranchThreshold) {
       diag(P.first->getLocation(),
-           "function '%0' exceeds recommended size/complexity thresholds")
-          << P.first->getNameAsString();
+           "function %0 exceeds recommended size/complexity thresholds")
+          << P.first;
     }
 
     if (FI.Lines > LineThreshold) {

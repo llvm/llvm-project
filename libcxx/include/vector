@@ -2363,6 +2363,7 @@ public:
         _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || 
                     __is_nothrow_swappable<allocator_type>::value);
 #endif
+    static void swap(reference __x, reference __y) _NOEXCEPT { _VSTD::swap(__x, __y); }
 
     void resize(size_type __sz, value_type __x = false);
     void flip() _NOEXCEPT;
