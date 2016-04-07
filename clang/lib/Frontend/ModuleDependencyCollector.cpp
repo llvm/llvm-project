@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/CharInfo.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
@@ -52,35 +53,6 @@ struct ModuleDependencyMMCallbacks : public ModuleMapCallbacks {
 
 }
 
-void ModuleDependencyCollector::attachToASTReader(ASTReader &R) {
-  R.addListener(llvm::make_unique<ModuleDependencyListener>(*this));
-}
-
-void ModuleDependencyCollector::attachToPreprocessor(Preprocessor &PP) {
-  PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(
-      llvm::make_unique<ModuleDependencyMMCallbacks>(*this));
-}
-
-void ModuleDependencyCollector::writeFileMap() {
-  if (Seen.empty())
-    return;
-
-  SmallString<256> Dest = getDest();
-  llvm::sys::path::append(Dest, "vfs.yaml");
-
-  // Default to use relative overlay directories in the VFS yaml file. This
-  // allows crash reproducer scripts to work across machines.
-  VFSWriter.setOverlayDir(getDest());
-
-  std::error_code EC;
-  llvm::raw_fd_ostream OS(Dest, EC, llvm::sys::fs::F_Text);
-  if (EC) {
-    HasErrors = true;
-    return;
-  }
-  VFSWriter.write(OS);
-}
-
 // TODO: move this to Support/Path.h and check for HAVE_REALPATH?
 static bool real_path(StringRef SrcPath, SmallVectorImpl<char> &RealPath) {
 #ifdef LLVM_ON_UNIX
@@ -97,6 +69,58 @@ static bool real_path(StringRef SrcPath, SmallVectorImpl<char> &RealPath) {
   // FIXME: Add support for systems without realpath.
   return false;
 #endif
+}
+
+void ModuleDependencyCollector::attachToASTReader(ASTReader &R) {
+  R.addListener(llvm::make_unique<ModuleDependencyListener>(*this));
+}
+
+void ModuleDependencyCollector::attachToPreprocessor(Preprocessor &PP) {
+  PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(
+      llvm::make_unique<ModuleDependencyMMCallbacks>(*this));
+}
+
+static bool isCaseSensitivePath(StringRef Path) {
+  SmallString<256> TmpDest = Path, UpperDest, RealDest;
+  // Remove component traversals, links, etc.
+  if (!real_path(Path, TmpDest))
+    return true; // Current default value in vfs.yaml
+  Path = TmpDest;
+
+  // Change path to all upper case and ask for its real path, if the latter
+  // exists and is equal to Path, it's not case sensitive. Default to case
+  // sensitive in the absense of realpath, since this is what the VFSWriter
+  // already expects when sensitivity isn't setup.
+  for (auto &C : Path)
+    UpperDest.push_back(toUppercase(C));
+  if (real_path(UpperDest, RealDest) && Path.equals(RealDest))
+    return false;
+  return true;
+}
+
+void ModuleDependencyCollector::writeFileMap() {
+  if (Seen.empty())
+    return;
+
+  StringRef VFSDir = getDest();
+
+  // Default to use relative overlay directories in the VFS yaml file. This
+  // allows crash reproducer scripts to work across machines.
+  VFSWriter.setOverlayDir(VFSDir);
+
+  // Explicitly set case sensitivity for the YAML writer. For that, find out
+  // the sensitivity at the path where the headers all collected to.
+  VFSWriter.setCaseSensitivity(isCaseSensitivePath(VFSDir));
+
+  std::error_code EC;
+  SmallString<256> YAMLPath = VFSDir;
+  llvm::sys::path::append(YAMLPath, "vfs.yaml");
+  llvm::raw_fd_ostream OS(YAMLPath, EC, llvm::sys::fs::F_Text);
+  if (EC) {
+    HasErrors = true;
+    return;
+  }
+  VFSWriter.write(OS);
 }
 
 bool ModuleDependencyCollector::getRealPath(StringRef SrcPath,

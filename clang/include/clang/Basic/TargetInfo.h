@@ -21,6 +21,7 @@
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/VersionTuple.h"
+#include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallSet.h"
@@ -107,7 +108,8 @@ public:
   /// what the backend expects.
   static TargetInfo *
   CreateTargetInfo(DiagnosticsEngine &Diags,
-                   const std::shared_ptr<TargetOptions> &Opts);
+                   const std::shared_ptr<TargetOptions> &Opts,
+                   const CodeGenOptions &CGOpts = CodeGenOptions());
 
   virtual ~TargetInfo();
 

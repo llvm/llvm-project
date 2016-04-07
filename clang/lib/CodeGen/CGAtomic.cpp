@@ -447,8 +447,9 @@ static void emitAtomicCmpXchgFailureSet(CodeGenFunction &CGF, AtomicExpr *E,
       FailureOrder = llvm::AtomicOrdering::SequentiallyConsistent;
       break;
     }
-    if (FailureOrder >= SuccessOrder) {
-      // Don't assert on undefined behaviour.
+    if (isStrongerThan(FailureOrder, SuccessOrder)) {
+      // Don't assert on undefined behavior "failure argument shall be no
+      // stronger than the success argument".
       FailureOrder =
         llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(SuccessOrder);
     }
@@ -1496,8 +1497,9 @@ AtomicInfo::EmitAtomicCompareExchangeLibcall(llvm::Value *ExpectedAddr,
 std::pair<RValue, llvm::Value *> AtomicInfo::EmitAtomicCompareExchange(
     RValue Expected, RValue Desired, llvm::AtomicOrdering Success,
     llvm::AtomicOrdering Failure, bool IsWeak) {
-  if (Failure >= Success)
-    // Don't assert on undefined behavior.
+  if (isStrongerThan(Failure, Success))
+    // Don't assert on undefined behavior "failure argument shall be no stronger
+    // than the success argument".
     Failure = llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(Success);
 
   // Check whether we should use a library call.
