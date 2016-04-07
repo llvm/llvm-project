@@ -16,12 +16,12 @@
 #define LLVM_CLANG_BASIC_TARGETINFO_H
 
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/VersionTuple.h"
-#include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallSet.h"
@@ -31,6 +31,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/DataTypes.h"
+
 #include <cassert>
 #include <string>
 #include <vector>

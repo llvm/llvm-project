@@ -11,13 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_FRONTEND_CODEGENOPTIONS_H
-#define LLVM_CLANG_FRONTEND_CODEGENOPTIONS_H
+#ifndef LLVM_CLANG_BASIC_CODEGENOPTIONS_H
+#define LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 
 #include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
+
 #include <map>
 #include <memory>
 #include <string>
@@ -31,12 +32,12 @@ class CodeGenOptionsBase {
 public:
 #define CODEGENOPT(Name, Bits, Default) unsigned Name : Bits;
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default)
-#include "clang/Frontend/CodeGenOptions.def"
+#include "clang/Basic/CodeGenOptions.def"
 
 protected:
 #define CODEGENOPT(Name, Bits, Default)
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default) unsigned Name : Bits;
-#include "clang/Frontend/CodeGenOptions.def"
+#include "clang/Basic/CodeGenOptions.def"
 };
 
 /// CodeGenOptions - Track various options which control how the code
@@ -211,7 +212,7 @@ public:
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default) \
   Type get##Name() const { return static_cast<Type>(Name); } \
   void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
-#include "clang/Frontend/CodeGenOptions.def"
+#include "clang/Basic/CodeGenOptions.def"
 
   CodeGenOptions();
 
