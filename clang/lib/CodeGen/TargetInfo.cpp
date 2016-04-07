@@ -6657,6 +6657,7 @@ Address HexagonABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 // Lanai ABI Implementation
 //===----------------------------------------------------------------------===//
 
+namespace {
 class LanaiABIInfo : public DefaultABIInfo {
 public:
   LanaiABIInfo(CodeGen::CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
@@ -6681,6 +6682,7 @@ public:
 
   ABIArgInfo classifyArgumentType(QualType RetTy, CCState &State) const;
 };
+} // end anonymous namespace
 
 bool LanaiABIInfo::shouldUseInReg(QualType Ty, CCState &State) const {
   unsigned Size = getContext().getTypeSize(Ty);

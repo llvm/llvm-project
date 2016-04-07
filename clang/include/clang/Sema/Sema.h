@@ -8125,7 +8125,7 @@ public:
   DeclGroupPtrTy
   ActOnOpenMPDeclareSimdDirective(DeclGroupPtrTy DG,
                                   OMPDeclareSimdDeclAttr::BranchStateTy BS,
-                                  SourceRange SR);
+                                  Expr *Simdlen, SourceRange SR);
 
   OMPClause *ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
                                          Expr *Expr,

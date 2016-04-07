@@ -235,6 +235,22 @@ instantiateDependentModeAttr(Sema &S,
                 Attr.getSpellingListIndex(), /*InInstantiation=*/true);
 }
 
+/// Instantiation of 'declare simd' attribute and its arguments.
+static void instantiateOMPDeclareSimdDeclAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const OMPDeclareSimdDeclAttr &Attr, Decl *New) {
+  ExprResult Simdlen;
+  if (auto *E = Attr.getSimdlen()) {
+    Simdlen = S.SubstExpr(E, TemplateArgs);
+    if (Simdlen.isInvalid())
+      return;
+  }
+
+  (void)S.ActOnOpenMPDeclareSimdDirective(S.ConvertDeclToDeclGroup(New),
+                                          Attr.getBranchState(), Simdlen.get(),
+                                          Attr.getRange());
+}
+
 void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                             const Decl *Tmpl, Decl *New,
                             LateInstantiatedAttrVec *LateAttrs,
@@ -275,6 +291,11 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
     if (const ModeAttr *Mode = dyn_cast<ModeAttr>(TmplAttr)) {
       instantiateDependentModeAttr(*this, TemplateArgs, *Mode, New);
+      continue;
+    }
+
+    if (const auto *OMPAttr = dyn_cast<OMPDeclareSimdDeclAttr>(TmplAttr)) {
+      instantiateOMPDeclareSimdDeclAttr(*this, TemplateArgs, *OMPAttr, New);
       continue;
     }
 

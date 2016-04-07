@@ -3193,7 +3193,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
 Sema::DeclGroupPtrTy
 Sema::ActOnOpenMPDeclareSimdDirective(DeclGroupPtrTy DG,
                                       OMPDeclareSimdDeclAttr::BranchStateTy BS,
-                                      SourceRange SR) {
+                                      Expr *Simdlen, SourceRange SR) {
   if (!DG || DG.get().isNull())
     return DeclGroupPtrTy();
 
@@ -3211,7 +3211,17 @@ Sema::ActOnOpenMPDeclareSimdDirective(DeclGroupPtrTy DG,
     return DeclGroupPtrTy();
   }
 
-  auto *NewAttr = OMPDeclareSimdDeclAttr::CreateImplicit(Context, BS, SR);
+  // OpenMP [2.8.2, declare simd construct, Description]
+  // The parameter of the simdlen clause must be a constant positive integer
+  // expression.
+  ExprResult SL;
+  if (Simdlen) {
+    SL = VerifyPositiveIntegerConstantInClause(Simdlen, OMPC_simdlen);
+    if (SL.isInvalid())
+      return DG;
+  }
+  auto *NewAttr =
+      OMPDeclareSimdDeclAttr::CreateImplicit(Context, BS, SL.get(), SR);
   ADecl->addAttr(NewAttr);
   return ConvertDeclToDeclGroup(ADecl);
 }

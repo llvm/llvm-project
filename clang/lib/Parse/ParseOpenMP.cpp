@@ -332,32 +332,134 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
 /// Parses clauses for 'declare simd' directive.
 ///    clause:
 ///      'inbranch' | 'notinbranch'
-static void parseDeclareSimdClauses(Parser &P,
-                                    OMPDeclareSimdDeclAttr::BranchStateTy &BS) {
+///      'simdlen' '('<expr> ')'
+static bool parseDeclareSimdClauses(Parser &P,
+                                    OMPDeclareSimdDeclAttr::BranchStateTy &BS,
+                                    ExprResult &SimdLen) {
   SourceRange BSRange;
   const Token &Tok = P.getCurToken();
+  bool IsError = false;
   while (Tok.isNot(tok::annot_pragma_openmp_end)) {
     if (Tok.isNot(tok::identifier))
       break;
     OMPDeclareSimdDeclAttr::BranchStateTy Out;
-    StringRef TokName = Tok.getIdentifierInfo()->getName();
+    IdentifierInfo *II = Tok.getIdentifierInfo();
+    StringRef ClauseName = II->getName();
     // Parse 'inranch|notinbranch' clauses.
-    if (OMPDeclareSimdDeclAttr::ConvertStrToBranchStateTy(TokName, Out)) {
+    if (OMPDeclareSimdDeclAttr::ConvertStrToBranchStateTy(ClauseName, Out)) {
       if (BS != OMPDeclareSimdDeclAttr::BS_Undefined && BS != Out) {
         P.Diag(Tok, diag::err_omp_declare_simd_inbranch_notinbranch)
-            << TokName << OMPDeclareSimdDeclAttr::ConvertBranchStateTyToStr(BS)
-            << BSRange;
+            << ClauseName
+            << OMPDeclareSimdDeclAttr::ConvertBranchStateTyToStr(BS) << BSRange;
+        IsError = true;
       }
       BS = Out;
       BSRange = SourceRange(Tok.getLocation(), Tok.getEndLoc());
+      P.ConsumeToken();
+    } else if (ClauseName.equals("simdlen")) {
+      if (SimdLen.isUsable()) {
+        P.Diag(Tok, diag::err_omp_more_one_clause)
+            << getOpenMPDirectiveName(OMPD_declare_simd) << ClauseName << 0;
+        IsError = true;
+      }
+      P.ConsumeToken();
+      SourceLocation RLoc;
+      SimdLen = P.ParseOpenMPParensExpr(ClauseName, RLoc);
+      if (SimdLen.isInvalid())
+        IsError = true;
     } else
       // TODO: add parsing of other clauses.
       break;
-    P.ConsumeToken();
     // Skip ',' if any.
     if (Tok.is(tok::comma))
       P.ConsumeToken();
   }
+  return IsError;
+}
+
+namespace {
+/// RAII that recreates function context for correct parsing of clauses of
+/// 'declare simd' construct.
+/// OpenMP, 2.8.2 declare simd Construct
+/// The expressions appearing in the clauses of this directive are evaluated in
+/// the scope of the arguments of the function declaration or definition.
+class FNContextRAII final {
+  Parser &P;
+  Sema::CXXThisScopeRAII *ThisScope;
+  Parser::ParseScope *TempScope;
+  Parser::ParseScope *FnScope;
+  bool HasTemplateScope = false;
+  bool HasFunScope = false;
+  FNContextRAII() = delete;
+  FNContextRAII(const FNContextRAII &) = delete;
+  FNContextRAII &operator=(const FNContextRAII &) = delete;
+
+public:
+  FNContextRAII(Parser &P, Parser::DeclGroupPtrTy Ptr) : P(P) {
+    Decl *D = *Ptr.get().begin();
+    NamedDecl *ND = dyn_cast<NamedDecl>(D);
+    RecordDecl *RD = dyn_cast_or_null<RecordDecl>(D->getDeclContext());
+    Sema &Actions = P.getActions();
+
+    // Allow 'this' within late-parsed attributes.
+    ThisScope = new Sema::CXXThisScopeRAII(Actions, RD, /*TypeQuals=*/0,
+                                           ND && ND->isCXXInstanceMember());
+
+    // If the Decl is templatized, add template parameters to scope.
+    HasTemplateScope = D->isTemplateDecl();
+    TempScope =
+        new Parser::ParseScope(&P, Scope::TemplateParamScope, HasTemplateScope);
+    if (HasTemplateScope)
+      Actions.ActOnReenterTemplateScope(Actions.getCurScope(), D);
+
+    // If the Decl is on a function, add function parameters to the scope.
+    HasFunScope = D->isFunctionOrFunctionTemplate();
+    FnScope = new Parser::ParseScope(&P, Scope::FnScope | Scope::DeclScope,
+                                     HasFunScope);
+    if (HasFunScope)
+      Actions.ActOnReenterFunctionContext(Actions.getCurScope(), D);
+  }
+  ~FNContextRAII() {
+    if (HasFunScope) {
+      P.getActions().ActOnExitFunctionContext();
+      FnScope->Exit(); // Pop scope, and remove Decls from IdResolver
+    }
+    if (HasTemplateScope)
+      TempScope->Exit();
+    delete FnScope;
+    delete TempScope;
+    delete ThisScope;
+  }
+};
+} // namespace
+
+/// Parse clauses for '#pragma omp declare simd'.
+Parser::DeclGroupPtrTy
+Parser::ParseOMPDeclareSimdClauses(Parser::DeclGroupPtrTy Ptr,
+                                   CachedTokens &Toks, SourceLocation Loc) {
+  PP.EnterToken(Tok);
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
+  // Consume the previously pushed token.
+  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
+
+  FNContextRAII FnContext(*this, Ptr);
+  OMPDeclareSimdDeclAttr::BranchStateTy BS =
+      OMPDeclareSimdDeclAttr::BS_Undefined;
+  ExprResult Simdlen;
+  bool IsError = parseDeclareSimdClauses(*this, BS, Simdlen);
+  // Need to check for extra tokens.
+  if (Tok.isNot(tok::annot_pragma_openmp_end)) {
+    Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
+        << getOpenMPDirectiveName(OMPD_declare_simd);
+    while (Tok.isNot(tok::annot_pragma_openmp_end))
+      ConsumeAnyToken();
+  }
+  // Skip the last annot_pragma_openmp_end.
+  SourceLocation EndLoc = ConsumeToken();
+  if (!IsError)
+    return Actions.ActOnOpenMPDeclareSimdDirective(Ptr, BS, Simdlen.get(),
+                                                   SourceRange(Loc, EndLoc));
+  return Ptr;
 }
 
 /// \brief Parsing of declarative OpenMP directives.
@@ -382,7 +484,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
   SourceLocation Loc = ConsumeToken();
-  SmallVector<Expr *, 5> Identifiers;
+  SmallVector<Expr *, 4> Identifiers;
   auto DKind = ParseOpenMPDirectiveKind(*this);
 
   switch (DKind) {
@@ -422,21 +524,10 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     // { #pragma omp declare simd }
     // <function-declaration-or-definition>
     //
-
     ConsumeToken();
-    OMPDeclareSimdDeclAttr::BranchStateTy BS =
-        OMPDeclareSimdDeclAttr::BS_Undefined;
-    parseDeclareSimdClauses(*this, BS);
-
-    // Need to check for extra tokens.
-    if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-      Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-          << getOpenMPDirectiveName(OMPD_declare_simd);
-      while (Tok.isNot(tok::annot_pragma_openmp_end))
-        ConsumeAnyToken();
-    }
-    // Skip the last annot_pragma_openmp_end.
-    SourceLocation EndLoc = ConsumeToken();
+    CachedTokens Toks;
+    ConsumeAndStoreUntil(tok::annot_pragma_openmp_end, Toks,
+                         /*StopAtSemi=*/false, /*ConsumeFinalToken=*/true);
 
     DeclGroupPtrTy Ptr;
     if (Tok.is(tok::annot_pragma_openmp))
@@ -458,9 +549,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       Diag(Loc, diag::err_omp_decl_in_declare_simd);
       return DeclGroupPtrTy();
     }
-
-    return Actions.ActOnOpenMPDeclareSimdDirective(Ptr, BS,
-                                                   SourceRange(Loc, EndLoc));
+    return ParseOMPDeclareSimdClauses(Ptr, Toks, Loc);
   }
   case OMPD_declare_target: {
     SourceLocation DTLoc = ConsumeAnyToken();
@@ -1000,6 +1089,28 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   return ErrorFound ? nullptr : Clause;
 }
 
+/// Parses simple expression in parens for single-expression clauses of OpenMP
+/// constructs.
+/// \param RLoc Returned location of right paren.
+ExprResult Parser::ParseOpenMPParensExpr(StringRef ClauseName,
+                                         SourceLocation &RLoc) {
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.expectAndConsume(diag::err_expected_lparen_after, ClauseName.data()))
+    return ExprError();
+
+  SourceLocation ELoc = Tok.getLocation();
+  ExprResult LHS(ParseCastExpression(
+      /*isUnaryExpression=*/false, /*isAddressOfOperand=*/false, NotTypeCast));
+  ExprResult Val(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
+  Val = Actions.ActOnFinishFullExpr(Val.get(), ELoc);
+
+  // Parse ')'.
+  T.consumeClose();
+
+  RLoc = T.getCloseLocation();
+  return Val;
+}
+
 /// \brief Parsing of OpenMP clauses with single expressions like 'final',
 /// 'collapse', 'safelen', 'num_threads', 'simdlen', 'num_teams',
 /// 'thread_limit', 'simdlen', 'priority', 'grainsize', 'num_tasks' or 'hint'.
@@ -1033,25 +1144,15 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
 ///
 OMPClause *Parser::ParseOpenMPSingleExprClause(OpenMPClauseKind Kind) {
   SourceLocation Loc = ConsumeToken();
+  SourceLocation LLoc = Tok.getLocation();
+  SourceLocation RLoc;
 
-  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
-  if (T.expectAndConsume(diag::err_expected_lparen_after,
-                         getOpenMPClauseName(Kind)))
-    return nullptr;
-
-  SourceLocation ELoc = Tok.getLocation();
-  ExprResult LHS(ParseCastExpression(false, false, NotTypeCast));
-  ExprResult Val(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
-  Val = Actions.ActOnFinishFullExpr(Val.get(), ELoc);
-
-  // Parse ')'.
-  T.consumeClose();
+  ExprResult Val = ParseOpenMPParensExpr(getOpenMPClauseName(Kind), RLoc);
 
   if (Val.isInvalid())
     return nullptr;
 
-  return Actions.ActOnOpenMPSingleExprClause(
-      Kind, Val.get(), Loc, T.getOpenLocation(), T.getCloseLocation());
+  return Actions.ActOnOpenMPSingleExprClause(Kind, Val.get(), Loc, LLoc, RLoc);
 }
 
 /// \brief Parsing of simple OpenMP clauses like 'default' or 'proc_bind'.
