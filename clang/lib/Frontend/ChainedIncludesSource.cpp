@@ -152,7 +152,8 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
     Clang->setInvocation(CInvok.release());
     Clang->setDiagnostics(Diags.get());
     Clang->setTarget(TargetInfo::CreateTargetInfo(
-        Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));
+        Clang->getDiagnostics(), Clang->getInvocation().TargetOpts,
+        Clang->getCodeGenOpts()));
     Clang->createFileManager();
     Clang->createSourceManager(Clang->getFileManager());
     Clang->createPreprocessor(TU_Prefix);

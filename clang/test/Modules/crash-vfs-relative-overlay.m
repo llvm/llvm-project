@@ -36,6 +36,8 @@
 // CHECKSH: "-ivfsoverlay" "crash-vfs-{{[^ ]*}}.cache/vfs/vfs.yaml"
 // CHECKSH: "-fmodules-cache-path=crash-vfs-{{[^ ]*}}.cache/modules"
 
+// CHECKYAML: 'case-sensitive':
+// CHECKYAML-NEXT: 'overlay-relative': 'true',
 // CHECKYAML: 'type': 'directory'
 // CHECKYAML: 'name': "/[[PATH:.*]]/Inputs/crash-recovery/usr/include",
 // CHECKYAML-NEXT: 'contents': [
