@@ -77,6 +77,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Expression/DiagnosticManager.h"
+#include "Plugins/ExpressionParser/Swift/SwiftDiagnostic.h"
 #include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Host.h"
@@ -2938,12 +2939,14 @@ namespace lldb_private
             {
                 ANSIColorStringStream os(m_colorize);
 
-                // Determine what kind of diagnostic we're emitting.
+                // Determine what kind of diagnostic we're emitting, and whether we want to use its fixits:
+                bool use_fixits = false;
                 llvm::SourceMgr::DiagKind source_mgr_kind;
                 switch (kind) {
                     default:
                     case swift::DiagnosticKind::Error:
                         source_mgr_kind = llvm::SourceMgr::DK_Error;
+                        use_fixits = true;
                         break;
                     case swift::DiagnosticKind::Warning:
                         source_mgr_kind = llvm::SourceMgr::DK_Warning;
@@ -2974,13 +2977,21 @@ namespace lldb_private
                 std::string &message_ref = os.str();
 
                 if (message_ref.empty())
-                    m_diagnostics.push_back({ text.str(), kind, bufferName, bufferID, line_col.first, line_col.second });
+                    m_diagnostics.push_back(RawDiagnostic(text.str(), kind, bufferName, bufferID,
+                                                          line_col.first, line_col.second,
+                                                          use_fixits ? info.FixIts
+                                                                     : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
                 else
-                    m_diagnostics.push_back({ message_ref, kind, bufferName, bufferID, line_col.first, line_col.second  });
+                    m_diagnostics.push_back(RawDiagnostic(message_ref, kind, bufferName, bufferID,
+                                                         line_col.first, line_col.second,
+                                                         use_fixits ? info.FixIts
+                                                                    : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
             }
             else
             {
-                m_diagnostics.push_back({ text.str(), kind, bufferName, bufferID, line_col.first, line_col.second  });
+                m_diagnostics.push_back(RawDiagnostic(text.str(), kind, bufferName, bufferID,
+                                                      line_col.first, line_col.second,
+                                                      llvm::ArrayRef<swift::Diagnostic::FixIt>()));
             }
             
             if (kind == swift::DiagnosticKind::Error)
@@ -3024,7 +3035,7 @@ namespace lldb_private
                           uint32_t last_line = UINT32_MAX,
                           uint32_t line_offset = 0)
         {
-            for (const Diagnostic &diagnostic : m_diagnostics)
+            for (const RawDiagnostic &diagnostic : m_diagnostics)
             {
                 // We often make expressions and wrap them in some code.
                 // When we see errors we want the line numbers to be correct so
@@ -3070,9 +3081,14 @@ namespace lldb_private
                             if (start_pos < diagnostic.description.size())
                                 fixed_description.GetString().append(diagnostic.description, start_pos, diagnostic.description.size() - start_pos);
                             
-                            diagnostic_manager.AddDiagnostic(fixed_description.GetString().c_str(),
-                                                             severity,
-                                                             origin);
+                            SwiftDiagnostic *new_diagnostic = new SwiftDiagnostic(fixed_description.GetString().c_str(),
+                                                                                  severity,
+                                                                                  origin,
+                                                                                  bufferID);
+                            for (auto fixit : diagnostic.fixits)
+                                new_diagnostic->AddFixIt(fixit);
+
+                            diagnostic_manager.AddDiagnostic(new_diagnostic);
                             
                             continue;
                         }
@@ -3100,18 +3116,36 @@ namespace lldb_private
         }
 
     private:
-        struct Diagnostic {
+        // We don't currently use lldb_private::Diagostic or any of the lldb DiagnosticManager
+        // machinery to store diagnostics as they occur.  Instead, we store them in raw
+        // form using this struct, then transcode them to SwiftDiagnostics in PrintDiagnostic.
+        struct RawDiagnostic {
+            RawDiagnostic(std::string in_desc, swift::DiagnosticKind in_kind, const char *in_bufferName, unsigned in_bufferID,
+                          uint32_t in_line, uint32_t  in_column, llvm::ArrayRef<swift::Diagnostic::FixIt> in_fixits) :
+                description(in_desc),
+                kind(in_kind),
+                bufferName(in_bufferName),
+                bufferID(in_bufferID),
+                line(in_line),
+                column(in_column)
+            {
+                for (auto fixit : in_fixits)
+                {
+                    fixits.push_back(fixit);
+                }
+            }
             std::string description;
             swift::DiagnosticKind kind;
             const char *bufferName;
             unsigned bufferID;
             uint32_t line;
             uint32_t column;
+            std::vector<swift::DiagnosticInfo::FixIt> fixits;
         };
-        typedef std::vector<Diagnostic> DiagnosticBuffer;
+        typedef std::vector<RawDiagnostic> RawDiagnosticBuffer;
         
         SwiftASTContext    &m_ast_context;
-        DiagnosticBuffer    m_diagnostics;
+        RawDiagnosticBuffer m_diagnostics;
         unsigned            m_num_errors = 0;
         bool                m_colorize;
     };
@@ -5004,6 +5038,7 @@ SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
     
         for (const DiagnosticList::value_type &fatal_diagnostic : fatal_diagnostics.Diagnostics())
         {
+            // FIXME: need to add a CopyDiagnostic operation for copying diagnostics from one manager to another.
             diagnostic_manager.AddDiagnostic(fatal_diagnostic->GetMessage(),
                                              fatal_diagnostic->GetSeverity(),
                                              fatal_diagnostic->getKind(),

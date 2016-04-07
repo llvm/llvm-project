@@ -35,7 +35,7 @@ struct S<T> : HasSomething
     }
 }
 
-func a (i : Int)
+func a (_ i : Int)
 {
   var x = i // breakpoint 1
 }
@@ -53,7 +53,7 @@ class B
       m_s = S<Int>(in_t: 2)
   }
 
-  func b (i : Int)
+  func b (_ i : Int)
   {
     var x = i // breakpoint 2
     m_t = i
@@ -73,7 +73,7 @@ class C<T>
     m_s = S<T>(in_t: input)
   }
 
-  func c (i : T)
+  func c (_ i : T)
   {
     var x = i // breakpoint 3
     m_t = i
@@ -82,7 +82,7 @@ class C<T>
 
 // Generic function
 
-func d<U> (i : U)
+func d<U> (_ i : U)
 {
   var x = i // breakpoint 4
 }
@@ -100,7 +100,7 @@ class E
     m_s = S<Int>(in_t : 5)
   }
 
-  func e<U> (i : U)
+  func e<U> (_ i : U)
   {
     var x = i // breakpoint 5
     m_t = 6
@@ -120,7 +120,7 @@ class F<T>
     m_s = S<T>(in_t: input)
   }
 
-  func f<U> (i : T, _ j : U)
+  func f<U> (_ i : T, _ j : U)
   {
     var x = i
     var y = j // breakpoint 6

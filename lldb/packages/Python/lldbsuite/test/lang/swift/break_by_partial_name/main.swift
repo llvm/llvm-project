@@ -17,14 +17,14 @@ class Accumulator {
 		_total = 0
 	}
 	
-	func incr (x : Int) -> (Int, Int) {
+	func incr (_ x : Int) -> (Int, Int) {
 		var ret = (_total,0)
 		_total += x
 		ret.1 = _total
 		return ret
 	}
 	
-	func decr (x : Int) -> (Int, Int) {
+	func decr (_ x : Int) -> (Int, Int) {
 		return incr(-x)
 	}
 	

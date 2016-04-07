@@ -28,6 +28,7 @@
 #include "lldb/Expression/Expression.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
+#include "Plugins/ExpressionParser/Swift/SwiftDiagnostic.h"
 #include "Plugins/ExpressionParser/Swift/SwiftExpressionVariable.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolVendor.h"
@@ -50,6 +51,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "clang/Basic/Module.h"
+#include "clang/Rewrite/Core/RewriteBuffer.h"
 
 #include "swift/Subsystems.h"
 #include "swift/AST/ASTContext.h"
@@ -1917,3 +1919,49 @@ SwiftExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
     
     return err;
 }
+
+bool
+SwiftExpressionParser::RewriteExpression(DiagnosticManager &diagnostic_manager)
+{
+    // There isn't a Swift equivalent to clang::Rewriter, so we'll just use that...
+    if (!m_swift_ast_context)
+        return false;
+    
+    swift::SourceManager &source_manager = m_swift_ast_context->GetSourceManager();
+                                                                              
+    
+    const DiagnosticList &diagnostics = diagnostic_manager.Diagnostics();
+    size_t num_diags = diagnostics.size();
+    if (num_diags == 0)
+        return false;
+    
+    clang::RewriteBuffer rewrite_buf;
+    llvm::StringRef text_ref(m_expr.Text());
+    rewrite_buf.Initialize(text_ref);
+    
+    for (const Diagnostic *diag : diagnostic_manager.Diagnostics())
+    {
+        const SwiftDiagnostic *diagnostic = llvm::dyn_cast<SwiftDiagnostic>(diag);
+        if (diagnostic && diagnostic->HasFixIts())
+        {
+            const SwiftDiagnostic::FixItList &fixits = diagnostic->FixIts();
+            for (const swift::DiagnosticInfo::FixIt &fixit : fixits)
+            {
+                const swift::CharSourceRange &range = fixit.getRange();
+                unsigned offset = source_manager.getLocOffsetInBuffer(range.getStart(),
+                                                                      diagnostic->GetBufferID());
+                rewrite_buf.ReplaceText(offset, range.getByteLength(), fixit.getText());
+            }
+        }
+    }
+    
+    std::string fixed_expression;
+    llvm::raw_string_ostream out_stream(fixed_expression);
+    
+    rewrite_buf.write(out_stream);
+    out_stream.flush();
+    diagnostic_manager.SetFixedExpression(fixed_expression);
+    
+    return true;
+}
+

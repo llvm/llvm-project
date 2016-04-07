@@ -73,7 +73,8 @@ uint32_t
 ExpressionSourceCode::GetNumBodyLines ()
 {
     if (m_num_body_lines == 0)
-        m_num_body_lines = 1 + std::count(m_body.begin(), m_body.end(), '\n');
+        // 2 = <one for zero indexing> + <one for the body start marker>
+        m_num_body_lines = 2 + std::count(m_body.begin(), m_body.end(), '\n');
     return m_num_body_lines;
 }
 
@@ -204,7 +205,7 @@ AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp, StreamString &str
         lldb::VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
 
         ConstString var_name = var_sp->GetName();
-        if (var_name == ConstString("this") || var_name == ConstString(".block_descriptor"))
+        if (!var_name || var_name == ConstString("this") || var_name == ConstString(".block_descriptor"))
             continue;
 
         stream.Printf("using $__lldb_local_vars::%s;\n", var_name.AsCString());
@@ -530,6 +531,10 @@ ExpressionSourceCode::GetOriginalBodyBounds(std::string transformed_text,
     {
     default:
         return false;
+    case lldb::eLanguageTypeSwift:
+        start_marker = SwiftASTManipulator::GetUserCodeStartMarker();
+        end_marker = SwiftASTManipulator::GetUserCodeEndMarker();
+        break;
     case lldb::eLanguageTypeC:
     case lldb::eLanguageTypeC_plus_plus:
     case lldb::eLanguageTypeObjC:

@@ -485,7 +485,21 @@ SwiftUserExpression::Parse (DiagnosticManager &diagnostic_manager,
     unsigned num_errors = parser->Parse (diagnostic_manager, first_body_line, first_body_line + source_code->GetNumBodyLines(), line_offset);
     
     if (num_errors)
+    {
+        // Calculate the fixed expression string at this point:
+        if (diagnostic_manager.HasFixIts())
+        {
+            if (parser->RewriteExpression (diagnostic_manager))
+            {
+                size_t fixed_start;
+                size_t fixed_end;
+                const std::string &fixed_expression = diagnostic_manager.GetFixedExpression();
+                if (ExpressionSourceCode::GetOriginalBodyBounds(fixed_expression, lang_type, fixed_start, fixed_end))
+                    m_fixed_text = fixed_expression.substr(fixed_start, fixed_end - fixed_start);
+            }
+        }
         return false;
+    }
     
     //////////////////////////////////////////////////////////////////////////////////////////
     // Prepare the output of the parser for execution, evaluating it statically if possible

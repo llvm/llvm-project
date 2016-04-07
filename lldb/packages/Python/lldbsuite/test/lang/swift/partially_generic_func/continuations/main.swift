@@ -32,7 +32,7 @@ public struct Continuation<A> {
 
 public typealias ContinuationU = Continuation<()>
 
-public func sequence_<A>(xs: [Continuation<A>]) -> ContinuationU {
+public func sequence_<A>(_ xs: [Continuation<A>]) -> ContinuationU {
    return ContinuationU(f: nil, failable: {
        for x in xs {
            if x.run() != nil { //% self.expect('frame variable -d run -- x', substrs=['magicToken = "Hello World"', 'f = nil', 'failable = nil', 'perfMetric = nil'])

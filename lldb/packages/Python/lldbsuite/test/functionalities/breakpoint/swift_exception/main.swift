@@ -25,13 +25,13 @@ class ClassError : ErrorProtocol
     {
         m_message = message
     }
-    func SomeMethod (input : Int) 
+    func SomeMethod (_ input : Int) 
     {
         print (m_message)  // Set a breakpoint here to test method contexts
     }
 }
 
-func IThrowEnumOver10(input : Int) throws -> Int
+func IThrowEnumOver10(_ input : Int) throws -> Int
 {
     if input > 100
     {
@@ -47,7 +47,7 @@ func IThrowEnumOver10(input : Int) throws -> Int
     }
 }
 
-func IThrowObjectOver10(input : Int) throws -> Int
+func IThrowObjectOver10(_ input : Int) throws -> Int
 {
     if input > 100
     {

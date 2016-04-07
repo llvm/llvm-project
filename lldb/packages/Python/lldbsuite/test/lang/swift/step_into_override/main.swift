@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 class Base {
-  func foo (a: Int!) {
+  func foo (_ a: Int!) {
     print(a)
   }
 }
 
 class Sub : Base {
-  func foo (a: Int) {
+  func foo (_ a: Int) {
     print(a+1)
   }
 }

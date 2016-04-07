@@ -9,7 +9,7 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-func foo(arg1: Int, _ arg2: String) -> Int {
+func foo(_ arg1: Int, _ arg2: String) -> Int {
   return 12 // break here
 }
 

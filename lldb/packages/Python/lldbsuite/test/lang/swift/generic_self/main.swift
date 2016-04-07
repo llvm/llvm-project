@@ -25,12 +25,12 @@ class BlubbyUbby<T>
     //% self.expect('expr -d run -- self', substrs=['3735928559'])
     //% self.expect('fr var -d run -- self', substrs=['3735928559'])
 
-    func change_string (in_string : String)
+    func change_string (_ in_string : String)
     {
         my_string = in_string
     }
 
-    func change_t (in_t : T)
+    func change_t (_ in_t : T)
     {
         my_t = in_t
     }

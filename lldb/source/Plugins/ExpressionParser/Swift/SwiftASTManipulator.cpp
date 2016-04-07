@@ -120,18 +120,18 @@ SwiftASTManipulator::WrapExpression(lldb_private::Stream &wrapped_stream,
     {
         const char *playground_prefix = R"(
 @_silgen_name ("playground_logger_initialize") func $builtin_logger_initialize ()
-@_silgen_name ("playground_log") func $builtin_log<T> (object : T, _ name : String) -> AnyObject
-@_silgen_name ("playground_log_hidden") func $builtin_log_with_id<T> (object : T, _ name : String, _ id : Int) -> AnyObject
+@_silgen_name ("playground_log") func $builtin_log<T> (_ object : T, _ name : String) -> AnyObject
+@_silgen_name ("playground_log_hidden") func $builtin_log_with_id<T> (_ object : T, _ name : String, _ id : Int) -> AnyObject
 @_silgen_name ("playground_log_scope_entry") func $builtin_log_scope_entry () -> AnyObject
 @_silgen_name ("playground_log_scope_exit") func $builtin_log_scope_exit () -> AnyObject
-@_silgen_name ("playground_print_T") func $builtin_print<T> (object: T) -> AnyObject
-@_silgen_name ("playground_print_T_stream") func $builtin_print<T, TargetStream : OutputStreamType> (object: T, _ stream: inout TargetStream) -> AnyObject
-@_silgen_name ("playground_print_T_appendNewline") func $builtin_print<T> (object: T, appendNewline: Bool) -> AnyObject
-@_silgen_name ("playground_print_T_stream_appendNewline") func $builtin_print<T, TargetStream : OutputStreamType> (object: T, _ stream: inout TargetStream, appendNewline: Bool) -> AnyObject
-@_silgen_name ("playground_debugPrint_T") func $builtin_debugPrint<T> (object: T) -> AnyObject
-@_silgen_name ("playground_debugPrint_T_stream") func $builtin_debugPrint<T, TargetStream : OutputStreamType> (object: T, _ stream: inout TargetStream) -> AnyObject
-@_silgen_name ("playground_debugPrint_T_appendNewline") func $builtin_debugPrint<T> (object: T, appendNewline: Bool) -> AnyObject
-@_silgen_name ("playground_debugPrint_T_stream_appendNewline") func $builtin_debugPrint<T, TargetStream : OutputStreamType> (object: T, _ stream: inout TargetStream, appendNewline: Bool) -> AnyObject
+@_silgen_name ("playground_print_T") func $builtin_print<T> (_ object: T) -> AnyObject
+@_silgen_name ("playground_print_T_stream") func $builtin_print<T, TargetStream : OutputStream> (_ object: T, inout _ stream: TargetStream) -> AnyObject
+@_silgen_name ("playground_print_T_appendNewline") func $builtin_print<T> (_ object: T, appendNewline: Bool) -> AnyObject
+@_silgen_name ("playground_print_T_stream_appendNewline") func $builtin_print<T, TargetStream : OutputStream> (_ object: T, inout _ stream: TargetStream, appendNewline: Bool) -> AnyObject
+@_silgen_name ("playground_debugPrint_T") func $builtin_debugPrint<T> (_ object: T) -> AnyObject
+@_silgen_name ("playground_debugPrint_T_stream") func $builtin_debugPrint<T, TargetStream : OutputStream> (_ object: T, inout _ stream: TargetStream) -> AnyObject
+@_silgen_name ("playground_debugPrint_T_appendNewline") func $builtin_debugPrint<T> (_ object: T, appendNewline: Bool) -> AnyObject
+@_silgen_name ("playground_debugPrint_T_stream_appendNewline") func $builtin_debugPrint<T, TargetStream : OutputStream> (_ object: T, inout _ stream: TargetStream, appendNewline: Bool) -> AnyObject
 @_silgen_name ("playground_log_postprint") func $builtin_postPrint () -> AnyObject
 @_silgen_name ("DVTSendPlaygroundLogDataToHost") func $builtin_send_data (_ :  AnyObject!, _ : Int, _ : Int, _ : Int, _ : Int)
 $builtin_logger_initialize()
@@ -187,12 +187,12 @@ $builtin_logger_initialize()
     StreamString wrapped_expr_text;
     wrapped_expr_text.Printf ("do\n"
                               "{\n"
-                              "%s\n" // Don't indent the code so error columns match up with errors from compiler
+                              "%s%s%s\n" // Don't indent the code so error columns match up with errors from compiler
                               "}\n"
                               "catch (let __lldb_tmp_error)\n"
                               "{\n"
                               "    var %s = __lldb_tmp_error\n"
-                              "}\n", text, GetErrorName());
+                              "}\n", GetUserCodeStartMarker(), text, GetUserCodeEndMarker(), GetErrorName());
 
     if (instance_method || static_method)
     {
@@ -223,13 +223,13 @@ $builtin_logger_initialize()
                                       func_decorator,
                                       current_counter);
                 DumpGenericNames(wrapped_stream, generic_info.function_bindings);
-                wrapped_stream.Printf("($__lldb_arg : UnsafeMutablePointer<Any>");
+                wrapped_stream.Printf("(_ $__lldb_arg : UnsafeMutablePointer<Any>");
                 DumpPlaceholderArguments(wrapped_stream, generic_info.function_bindings);
                 wrapped_stream.Printf(                                                     ") {\n"
                                       "%s" // This is the expression text.  It has all the newlines it needs.
                                       "  }                                                    \n"
                                       "}                                                      \n"
-                                      "func $__lldb_expr($__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
+                                      "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
                                       "  if (1==1) {                                          \n"
                                       "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(     \n"
                                       "      $__lldb_arg                                        ",
@@ -247,11 +247,11 @@ $builtin_logger_initialize()
             {
                 wrapped_stream.Printf("extension $__lldb_context {                            \n"
                                       "  @LLDBDebuggerFunction                                \n"
-                                      "  %s func $__lldb_wrapped_expr_%u($__lldb_arg : UnsafeMutablePointer<Any>) {\n"
+                                      "  %s func $__lldb_wrapped_expr_%u(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
                                       "%s" // This is the expression text.  It has all the newlines it needs.
                                       "  }                                                    \n"
                                       "}                                                      \n"
-                                      "func $__lldb_expr($__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
+                                      "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
                                       "  if (1==1) {                                          \n"
                                       "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(     \n"
                                       "      $__lldb_arg                                      \n"
@@ -276,13 +276,13 @@ $builtin_logger_initialize()
                                       func_decorator,
                                       current_counter);
                 DumpGenericNames(wrapped_stream, generic_info.function_bindings);
-                wrapped_stream.Printf(                         "($__lldb_arg : UnsafeMutablePointer<Any>");
+                wrapped_stream.Printf(                         "(_ $__lldb_arg : UnsafeMutablePointer<Any>");
                 DumpPlaceholderArguments(wrapped_stream, generic_info.function_bindings);
                 wrapped_stream.Printf(                                                     ") {\n"
                                       "%s" // This is the expression text.  It has all the newlines it needs.
                                       "  }                                                    \n"
                                       "}                                                      \n"
-                                      "func $__lldb_expr($__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
+                                      "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
                                       "  if (1==1) {                                          \n"
                                       "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(     \n"
                                       "      $__lldb_arg                                        ",
@@ -301,11 +301,11 @@ $builtin_logger_initialize()
             {
                 wrapped_stream.Printf("extension $__lldb_context {                            \n"
                                       "@LLDBDebuggerFunction                                  \n"
-                                      "  %s func $__lldb_wrapped_expr_%u($__lldb_arg : UnsafeMutablePointer<Any>) {\n"
+                                      "  %s func $__lldb_wrapped_expr_%u(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
                                       "%s" // This is the expression text.  It has all the newlines it needs.
                                       "  }                                                    \n"
                                       "}                                                      \n"
-                                      "func $__lldb_expr($__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
+                                      "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
                                       "  if (1==1) {                                          \n"
                                       "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(     \n"
                                       "      $__lldb_arg                                      \n"
@@ -329,12 +329,12 @@ $builtin_logger_initialize()
                                   "func $__lldb_wrapped_expr_%u",
                                   current_counter);
             DumpGenericNames(wrapped_stream, generic_info.function_bindings);
-            wrapped_stream.Printf(                       "($__lldb_arg : UnsafeMutablePointer<Any>");
+            wrapped_stream.Printf(                       "(_ $__lldb_arg : UnsafeMutablePointer<Any>");
             DumpPlaceholderArguments(wrapped_stream, generic_info.function_bindings);
             wrapped_stream.Printf(                                                   ") { \n"
                                   "%s" // This is the expression text.  It has all the newlines it needs.
                                   "}                                                      \n"
-                                  "func $__lldb_expr($__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
+                                  "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
                                   "  if (1==1) {                                          \n"
                                   "    $__lldb_wrapped_expr_%u(                           \n"
                                   "      $__lldb_arg",
@@ -350,7 +350,7 @@ $builtin_logger_initialize()
         else
         {
             wrapped_stream.Printf("@LLDBDebuggerFunction                                  \n"
-                                  "func $__lldb_expr($__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
+                                  "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
                                   "%s" // This is the expression text.  It has all the newlines it needs.
                                   "}                                                      \n",
                                   wrapped_expr_text.GetData());

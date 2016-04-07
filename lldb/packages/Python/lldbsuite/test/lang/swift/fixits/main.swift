@@ -9,21 +9,38 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-protocol Event {
-    
+
+class HasOptional
+{
+    var could_be : Int?
+    init (input: Int)
+    {
+        could_be = input
+    }
+
+    init ()
+    {
+    }
+
+    func returnIt () -> Int
+    {
+        if let value = could_be
+        {
+            return value
+        }
+        else
+        {
+            return 0
+        }
+    }
 }
 
-enum SillyEvent : Event {
-    case Goofus
-}
+func main() -> Int 
+{
+    let does_have = HasOptional(input: 100)
 
-func doStuff<T>(_ event: T) -> T {
-    return event // Set breakpoint here
-}
-
-func main() {
-  var event: Event = SillyEvent.Goofus
-  doStuff(event) // Set breakpoint here
+    print ("\(does_have.returnIt()): break here to test fixits.")
+    return 0
 }
 
 main()

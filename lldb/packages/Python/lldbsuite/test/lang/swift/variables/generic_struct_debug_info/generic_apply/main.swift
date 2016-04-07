@@ -9,9 +9,9 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-func apply<Type>(T : Type, fn: (Type) -> Type) -> Type { return fn(T) }
+func apply<Type>(_ T : Type, fn: (Type) -> Type) -> Type { return fn(T) }
 
-public func f<Type>(value : Type)
+public func f<Type>(_ value : Type)
 {
   apply(value) { arg in
     return arg //% self.expect('po arg', substrs=['3735928559'])

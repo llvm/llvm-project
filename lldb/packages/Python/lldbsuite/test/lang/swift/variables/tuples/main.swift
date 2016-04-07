@@ -41,7 +41,7 @@ extension String : Printable {
 	func print() { Swift.print(self) }
 }
 
-func getGenericTuple <X : Printable,Y> (x : X, _ y : Y) -> (Y,X)
+func getGenericTuple <X : Printable,Y> (_ x : X, _ y : Y) -> (Y,X)
 {
 	var tuple = (y,x)
 	tuple.1.print()   // Set breakpoint here
@@ -65,7 +65,7 @@ func getTuplePoints() -> (p1 : Point, p2 : Point)
     return t
 }
 
-func main_function(t: (Int, Int, Int)) -> Int
+func main_function(_ t: (Int, Int, Int)) -> Int
 {
 	var tuple1 = getTuple() // Set breakpoint here
 	var tuple2 = getTuple2()

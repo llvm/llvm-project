@@ -9,7 +9,7 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-func foo<T>(x: T) -> Int {
+func foo<T>(_ x: T) -> Int {
   print(x)
   return 42 // break here
 }
