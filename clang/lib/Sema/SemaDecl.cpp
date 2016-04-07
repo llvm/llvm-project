@@ -14159,6 +14159,8 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
   // Process attributes.
   if (Attr) ProcessDeclAttributeList(S, New, Attr);
 
+  ProcessAPINotes(New);
+
   // Register this decl in the current scope stack.
   New->setAccess(TheEnumDecl->getAccess());
   PushOnScopeChains(New, S);
