@@ -7,12 +7,12 @@
 #define HEADER
 
 #pragma omp declare simd
-#pragma omp declare simd inbranch
+#pragma omp declare simd inbranch simdlen(32)
 #pragma omp declare simd notinbranch
 void add_1(float *d) __attribute__((cold));
 
 // CHECK: #pragma omp declare simd notinbranch
-// CHECK-NEXT: #pragma omp declare simd inbranch
+// CHECK-NEXT: #pragma omp declare simd inbranch simdlen(32)
 // CHECK-NEXT: #pragma omp declare simd
 // CHECK-NEXT: void add_1(float *d) __attribute__((cold));
 //
@@ -92,10 +92,10 @@ template <int X>
 class TVV {
 public:
 // CHECK: template <int X> class TVV {
-  #pragma omp declare simd
+  #pragma omp declare simd simdlen(X)
   int tadd(int a, int b) { return a + b; }
 
-// CHECK: #pragma omp declare simd
+// CHECK: #pragma omp declare simd simdlen(X)
 // CHECK-NEXT: int tadd(int a, int b) {
 // CHECK-NEXT: return a + b;
 // CHECK-NEXT: }
@@ -123,6 +123,14 @@ private:
 };
 // CHECK: };
 
+// CHECK: #pragma omp declare simd simdlen(64)
+// CHECK: template <int N = 64> void foo(int (&)[64])
+// CHECK: #pragma omp declare simd simdlen(N)
+// CHECK: template <int N> void foo(int (&)[N])
+#pragma omp declare simd simdlen(N)
+template <int N>
+void foo(int (&)[N]);
+
 // CHECK: TVV<16> t16;
 TVV<16> t16;
 
@@ -130,6 +138,8 @@ void f() {
   float a = 1.0f, b = 2.0f;
   float r = t16.taddpf(&a, &b);
   int res = t16.tadd(b);
+  int c[64];
+  foo(c);
 }
 
 #endif

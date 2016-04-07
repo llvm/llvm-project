@@ -5548,14 +5548,6 @@ _mm256_maskz_sllv_epi32 (__mmask8 __U, __m256i __X, __m256i __Y)
              (__mmask8) __U);
 }
 
-#define _mm256_maskz_sllv_epi32( __U, __X, __Y) __extension__ ({ \
-__builtin_ia32_psllv8si_mask ((__v8si)( __X),\
-             (__v8si)( __Y),\
-             (__v8si)\
-             _mm256_setzero_si256 (),\
-             (__mmask8)( __U));\
-})
-
 
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
