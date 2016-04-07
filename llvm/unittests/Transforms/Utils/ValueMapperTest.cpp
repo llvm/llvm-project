@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -166,6 +167,88 @@ TEST(ValueMapperTest, MapMetadataSeededWithNull) {
   VM.MD().insert(std::make_pair(D, TrackingMDRef()));
   EXPECT_EQ(nullptr, *VM.getMappedMD(D));
   EXPECT_EQ(nullptr, MapMetadata(D, VM, RF_None));
+}
+
+TEST(ValueMapperTest, MapMetadataLocalAsMetadata) {
+  LLVMContext C;
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
+  std::unique_ptr<Function> F(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F"));
+  Argument &A = *F->arg_begin();
+
+  auto *LAM = LocalAsMetadata::get(&A);
+  ValueToValueMapTy VM;
+  EXPECT_EQ(nullptr, MapMetadata(LAM, VM));
+  EXPECT_EQ(nullptr, MapMetadata(LAM, VM, RF_IgnoreMissingLocals));
+  EXPECT_EQ(None, VM.getMappedMD(LAM));
+
+  VM.MD()[LAM].reset(LAM);
+  EXPECT_EQ(LAM, MapMetadata(LAM, VM));
+  EXPECT_EQ(LAM, MapMetadata(LAM, VM, RF_IgnoreMissingLocals));
+
+  auto *N = MDNode::get(C, None);
+  VM.MD()[LAM].reset(N);
+  EXPECT_EQ(N, MapMetadata(LAM, VM));
+  EXPECT_EQ(N, MapMetadata(LAM, VM, RF_IgnoreMissingLocals));
+}
+
+TEST(ValueMapperTest, MapMetadataConstantAsMetadata) {
+  LLVMContext C;
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
+  std::unique_ptr<Function> F(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F"));
+
+  auto *CAM = ConstantAsMetadata::get(F.get());
+  {
+    ValueToValueMapTy VM;
+    EXPECT_EQ(CAM, MapMetadata(CAM, VM));
+    EXPECT_TRUE(VM.MD().count(CAM));
+    VM.MD().erase(CAM);
+    EXPECT_EQ(CAM, MapMetadata(CAM, VM, RF_IgnoreMissingLocals));
+    EXPECT_TRUE(VM.MD().count(CAM));
+
+    auto *N = MDNode::get(C, None);
+    VM.MD()[CAM].reset(N);
+    EXPECT_EQ(N, MapMetadata(CAM, VM));
+    EXPECT_EQ(N, MapMetadata(CAM, VM, RF_IgnoreMissingLocals));
+  }
+
+  std::unique_ptr<Function> F2(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F2"));
+  ValueToValueMapTy VM;
+  VM[F.get()] = F2.get();
+  auto *F2MD = MapMetadata(CAM, VM);
+  EXPECT_TRUE(VM.MD().count(CAM));
+  EXPECT_TRUE(F2MD);
+  EXPECT_EQ(F2.get(), cast<ConstantAsMetadata>(F2MD)->getValue());
+}
+
+TEST(ValueMapperTest, MapValueLocalAsMetadata) {
+  LLVMContext C;
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
+  std::unique_ptr<Function> F(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F"));
+  Argument &A = *F->arg_begin();
+
+  auto *LAM = LocalAsMetadata::get(&A);
+  auto *MAV = MetadataAsValue::get(C, LAM);
+
+  ValueToValueMapTy VM;
+  EXPECT_EQ(nullptr, MapValue(MAV, VM));
+  EXPECT_EQ(nullptr, MapValue(MAV, VM, RF_IgnoreMissingLocals));
+  EXPECT_FALSE(VM.count(MAV));
+  EXPECT_FALSE(VM.count(&A));
+
+  VM[MAV] = MAV;
+  EXPECT_EQ(MAV, MapValue(MAV, VM));
+  EXPECT_EQ(MAV, MapValue(MAV, VM, RF_IgnoreMissingLocals));
+
+  VM[MAV] = &A;
+  EXPECT_EQ(&A, MapValue(MAV, VM));
+  EXPECT_EQ(&A, MapValue(MAV, VM, RF_IgnoreMissingLocals));
 }
 
 } // end namespace
