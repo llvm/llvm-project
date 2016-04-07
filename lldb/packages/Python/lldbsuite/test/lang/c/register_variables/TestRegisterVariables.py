@@ -90,7 +90,6 @@ class RegisterVariableTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["linux", "macosx"], bugnumber="rdar://25587104")
     @expectedFailureAll(compiler="clang", compiler_version=['<', '3.5'])
     @expectedFailureAll(compiler="gcc", compiler_version=['=', '4.8.2'])
     def test_and_run_command(self):
@@ -186,23 +185,5 @@ class RegisterVariableTestCase(TestBase):
         # Validate that we verified at least one register variable
         self.assertTrue(register_variables_count > 0, "expected to verify at least one variable in a register")
         # print("executed {} expressions with values in registers".format(register_variables_count))
-
-        #####################
-        # Third breakpoint
-
-        self.runCmd("continue")
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
-
-        # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-            substrs = [' resolved, hit count = 1'])
-
-        # Try some variables that should be visible
-        self.expect("expr f", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['(float) $4 = 3.1'])
 
         self.runCmd("kill")
