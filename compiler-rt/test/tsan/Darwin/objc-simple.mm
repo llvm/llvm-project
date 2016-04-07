@@ -1,7 +1,7 @@
 // Test that a simple Obj-C program runs and exits without any warnings.
 
 // RUN: %clang_tsan %s -o %t -framework Foundation
-// RUN: %run %t 2>&1
+// RUN: %run %t 2>&1 | FileCheck %s
 
 #import <Foundation/Foundation.h>
 

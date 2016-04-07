@@ -28,7 +28,7 @@ void CA::f2() { }
 
 template <>
 int CA::f3() {
-// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: function 'f3' defined in a header file;
+// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: function 'f3<int>' defined in a header file;
   int a = 1;
   return a;
 }
@@ -90,7 +90,7 @@ T f3() {
 }
 
 template <>
-// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: function 'f3' defined in a header file;
+// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: function 'f3<int>' defined in a header file;
 int f3() {
   int a = 1;
   return a;

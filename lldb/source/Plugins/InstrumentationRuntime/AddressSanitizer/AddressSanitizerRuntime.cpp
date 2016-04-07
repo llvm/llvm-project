@@ -19,6 +19,7 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/UserExpression.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -189,12 +190,19 @@ AddressSanitizerRuntime::RetrieveReportData()
     options.SetAutoApplyFixIts(false);
     
     ValueObjectSP return_value_sp;
-    std::string fixed_expression;
-    if (process_sp->GetTarget().EvaluateExpression(address_sanitizer_retrieve_report_data_command,
-                                                   frame_sp.get(),
-                                                   return_value_sp,
-                                                   options) != eExpressionCompleted)
+    ExecutionContext exe_ctx;
+    Error eval_error;
+    frame_sp->CalculateExecutionContext(exe_ctx);
+    ExpressionResults result = UserExpression::Evaluate (exe_ctx,
+                              options,
+                              address_sanitizer_retrieve_report_data_command,
+                              "",
+                              return_value_sp,
+                              eval_error);
+    if (result != eExpressionCompleted) {
+        process_sp->GetTarget().GetDebugger().GetAsyncOutputStream()->Printf("Warning: Cannot evaluate AddressSanitizer expression:\n%s\n", eval_error.AsCString());
         return StructuredData::ObjectSP();
+    }
     
     int present = return_value_sp->GetValueForExpressionPath(".present")->GetValueAsUnsigned(0);
     if (present != 1)

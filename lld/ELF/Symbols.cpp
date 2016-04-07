@@ -150,13 +150,20 @@ typename ELFT::uint SymbolBody::getVA(typename ELFT::uint Addend) const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotVA() const {
-  return Out<ELFT>::Got->getVA() +
-         (Out<ELFT>::Got->getMipsLocalEntriesNum() + GotIndex) *
-             sizeof(typename ELFT::uint);
+  return Out<ELFT>::Got->getVA() + getGotOffset<ELFT>();
+}
+
+template <class ELFT> typename ELFT::uint SymbolBody::getGotOffset() const {
+  return (Out<ELFT>::Got->getMipsLocalEntriesNum() + GotIndex) *
+         sizeof(typename ELFT::uint);
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotPltVA() const {
-  return Out<ELFT>::GotPlt->getVA() + GotPltIndex * sizeof(typename ELFT::uint);
+  return Out<ELFT>::GotPlt->getVA() + getGotPltOffset<ELFT>();
+}
+
+template <class ELFT> typename ELFT::uint SymbolBody::getGotPltOffset() const {
+  return GotPltIndex * sizeof(typename ELFT::uint);
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getPltVA() const {
@@ -340,10 +347,20 @@ template uint32_t SymbolBody::template getGotVA<ELF32BE>() const;
 template uint64_t SymbolBody::template getGotVA<ELF64LE>() const;
 template uint64_t SymbolBody::template getGotVA<ELF64BE>() const;
 
+template uint32_t SymbolBody::template getGotOffset<ELF32LE>() const;
+template uint32_t SymbolBody::template getGotOffset<ELF32BE>() const;
+template uint64_t SymbolBody::template getGotOffset<ELF64LE>() const;
+template uint64_t SymbolBody::template getGotOffset<ELF64BE>() const;
+
 template uint32_t SymbolBody::template getGotPltVA<ELF32LE>() const;
 template uint32_t SymbolBody::template getGotPltVA<ELF32BE>() const;
 template uint64_t SymbolBody::template getGotPltVA<ELF64LE>() const;
 template uint64_t SymbolBody::template getGotPltVA<ELF64BE>() const;
+
+template uint32_t SymbolBody::template getGotPltOffset<ELF32LE>() const;
+template uint32_t SymbolBody::template getGotPltOffset<ELF32BE>() const;
+template uint64_t SymbolBody::template getGotPltOffset<ELF64LE>() const;
+template uint64_t SymbolBody::template getGotPltOffset<ELF64BE>() const;
 
 template uint32_t SymbolBody::template getPltVA<ELF32LE>() const;
 template uint32_t SymbolBody::template getPltVA<ELF32BE>() const;

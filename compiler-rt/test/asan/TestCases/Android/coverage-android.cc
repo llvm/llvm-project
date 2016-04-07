@@ -139,5 +139,5 @@ int main(int argc, char **argv) {
 #endif
 
 // CHECK1: 2 PCs total
-// CHECK2: 7 PCs total
+// CHECK2: 4 PCs total
 // CHECK3: 8 PCs total

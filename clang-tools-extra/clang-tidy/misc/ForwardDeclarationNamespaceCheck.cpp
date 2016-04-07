@@ -139,12 +139,12 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
         if (!CurDecl->hasDefinition() &&
             !haveSameNamespaceOrTranslationUnit(CurDecl, Decl)) {
           diag(CurDecl->getLocation(),
-               "declaration '%0' is never referenced, but a declaration with "
+               "declaration %0 is never referenced, but a declaration with "
                "the same name found in another namespace '%1'")
-              << CurDecl->getName() << getNameOfNamespace(Decl);
-          diag(Decl->getLocation(), "a declaration of '%0' is found here",
+              << CurDecl << getNameOfNamespace(Decl);
+          diag(Decl->getLocation(), "a declaration of %0 is found here",
                DiagnosticIDs::Note)
-              << Decl->getName();
+              << Decl;
           break; // FIXME: We only generate one warning for each declaration.
         }
       }
@@ -158,12 +158,12 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
       const auto &Definitions = DeclNameToDefinitions[DeclName];
       for (const auto *Def : Definitions) {
         diag(CurDecl->getLocation(),
-             "no definition found for '%0', but a definition with "
-             "the same name '%1' found in another namespace '%2'")
-            << CurDecl->getName() << Def->getName() << getNameOfNamespace(Def);
-        diag(Def->getLocation(), "a definition of '%0' is found here",
+             "no definition found for %0, but a definition with "
+             "the same name %1 found in another namespace '%2'")
+            << CurDecl << Def << getNameOfNamespace(Def);
+        diag(Def->getLocation(), "a definition of %0 is found here",
              DiagnosticIDs::Note)
-            << Def->getName();
+            << Def;
       }
     }
   }

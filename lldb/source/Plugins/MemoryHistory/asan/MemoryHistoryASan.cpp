@@ -12,8 +12,10 @@
 #include "lldb/Target/MemoryHistory.h"
 
 #include "lldb/lldb-private.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Expression/UserExpression.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
@@ -80,8 +82,14 @@ MemoryHistoryASan::MemoryHistoryASan(const ProcessSP &process_sp)
 }
 
 const char *
-memory_history_asan_command_format = R"(
-    struct t {
+memory_history_asan_command_prefix = R"(
+    extern "C"
+    {
+        size_t __asan_get_alloc_stack(void *addr, void **trace, size_t size, int *thread_id);
+        size_t __asan_get_free_stack(void *addr, void **trace, size_t size, int *thread_id);
+    }
+
+    struct data {
         void *alloc_trace[256];
         size_t alloc_count;
         int alloc_tid;
@@ -89,10 +97,15 @@ memory_history_asan_command_format = R"(
         void *free_trace[256];
         size_t free_count;
         int free_tid;
-    } t;
+    };
+)";
 
-    t.alloc_count = ((size_t (*) (void *, void **, size_t, int *))__asan_get_alloc_stack)((void *)0x%)" PRIx64 R"(, t.alloc_trace, 256, &t.alloc_tid);
-    t.free_count = ((size_t (*) (void *, void **, size_t, int *))__asan_get_free_stack)((void *)0x%)" PRIx64 R"(, t.free_trace, 256, &t.free_tid);
+const char *
+memory_history_asan_command_format = R"(
+    data t;
+
+    t.alloc_count = __asan_get_alloc_stack((void *)0x%)" PRIx64 R"(, t.alloc_trace, 256, &t.alloc_tid);
+    t.free_count = __asan_get_free_stack((void *)0x%)" PRIx64 R"(, t.free_trace, 256, &t.free_tid);
 
     t;
 )";
@@ -146,38 +159,47 @@ MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address)
     HistoryThreads result;
 
     ProcessSP process_sp = m_process_wp.lock();
-    if (process_sp)
-    {
-        ThreadSP thread_sp = process_sp->GetThreadList().GetExpressionExecutionThread();
+    if (! process_sp)
+        return result;
+    
+    ThreadSP thread_sp = process_sp->GetThreadList().GetExpressionExecutionThread();
+    if (!thread_sp)
+        return result;
 
-        if (thread_sp)
-        {
-            StackFrameSP frame_sp = thread_sp->GetSelectedFrame();
+    StackFrameSP frame_sp = thread_sp->GetSelectedFrame();
+    if (!frame_sp)
+        return result;
+    
+    ExecutionContext exe_ctx (frame_sp);
+    ValueObjectSP return_value_sp;
+    StreamString expr;
+    Error eval_error;
+    expr.Printf(memory_history_asan_command_format, address, address);
+    
+    EvaluateExpressionOptions options;
+    options.SetUnwindOnError(true);
+    options.SetTryAllThreads(true);
+    options.SetStopOthers(true);
+    options.SetIgnoreBreakpoints(true);
+    options.SetTimeoutUsec(GET_STACK_FUNCTION_TIMEOUT_USEC);
+    options.SetPrefix(memory_history_asan_command_prefix);
 
-            if (frame_sp)
-            {
-                ExecutionContext exe_ctx (frame_sp);
-                ValueObjectSP return_value_sp;
-                StreamString expr;
-                expr.Printf(memory_history_asan_command_format, address, address);
-                
-                EvaluateExpressionOptions options;
-                options.SetUnwindOnError(true);
-                options.SetTryAllThreads(true);
-                options.SetStopOthers(true);
-                options.SetIgnoreBreakpoints(true);
-                options.SetTimeoutUsec(GET_STACK_FUNCTION_TIMEOUT_USEC);
-
-                if (process_sp->GetTarget().EvaluateExpression(expr.GetData(), frame_sp.get(), return_value_sp, options) == eExpressionCompleted)
-                {
-                    if (return_value_sp)
-                    {
-                        CreateHistoryThreadFromValueObject(process_sp, return_value_sp, "free", "Memory deallocated at", result);
-                        CreateHistoryThreadFromValueObject(process_sp, return_value_sp, "alloc", "Memory allocated at", result);
-                    }
-                }
-            }
-        }
+    ExpressionResults expr_result = UserExpression::Evaluate (exe_ctx,
+                                      options,
+                                      expr.GetData(),
+                                      "",
+                                      return_value_sp,
+                                      eval_error);
+    if (expr_result != eExpressionCompleted) {
+        process_sp->GetTarget().GetDebugger().GetAsyncOutputStream()->Printf("Warning: Cannot evaluate AddressSanitizer expression:\n%s\n", eval_error.AsCString());
+        return result;
     }
+
+    if (!return_value_sp)
+        return result;
+    
+    CreateHistoryThreadFromValueObject(process_sp, return_value_sp, "free", "Memory deallocated at", result);
+    CreateHistoryThreadFromValueObject(process_sp, return_value_sp, "alloc", "Memory allocated at", result);
+    
     return result;
 }

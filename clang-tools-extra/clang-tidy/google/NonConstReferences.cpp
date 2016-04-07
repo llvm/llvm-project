@@ -115,8 +115,8 @@ void NonConstReferences::check(const MatchFinder::MatchResult &Result) {
         << Parameter->getFunctionScopeIndex();
   } else {
     diag(Parameter->getLocation(),
-         "non-const reference parameter '%0', make it const or use a pointer")
-        << Parameter->getName();
+         "non-const reference parameter %0, make it const or use a pointer")
+        << Parameter;
   }
 }
 
