@@ -32,17 +32,10 @@ int main() {
   assert(buf1 == buf);
   assert(sz1 > sz);
 
-  bar();
-  uintptr_t *buf2 = NULL;
-  uintptr_t sz2 = __sanitizer_get_coverage_pc_buffer(&buf2);
-  assertNotZeroPcs(buf2, sz2);
-  assert(buf2 == buf);
-  assert(sz2 == sz1);
-
   __sanitizer_reset_coverage();
   uintptr_t *buf3 = NULL;
   uintptr_t sz3 = __sanitizer_get_coverage_pc_buffer(&buf3);
   assertNotZeroPcs(buf3, sz3);
   assert(buf3 == buf);
-  assert(sz3 < sz2);
+  assert(sz3 < sz1);
 }
