@@ -14,7 +14,7 @@
 
 class B
 {
-  class func b (i : Int)
+  class func b (_ i : Int)
   {
     var x = i // breakpoint 1
   }
@@ -24,7 +24,7 @@ class B
 
 class C<T>
 {
-  class func c (i : T)
+  class func c (_ i : T)
   {
     var x = i // breakpoint 2
   }
@@ -34,7 +34,7 @@ class C<T>
 
 class E
 {
-  class func e<U> (i : U)
+  class func e<U> (_ i : U)
   {
     var x = i // breakpoint 3
   }
@@ -44,7 +44,7 @@ class E
 
 class F<T>
 {
-  class func f<U> (i : T, _ j : U)
+  class func f<U> (_ i : T, _ j : U)
   {
     var x = i
     var y = j // breakpoint 4
@@ -53,7 +53,7 @@ class F<T>
 
 struct G
 {
-  static func g(i : Int)
+  static func g(_ i : Int)
   {
     var x = i // breakpoint 5    
   }
@@ -61,7 +61,7 @@ struct G
 
 struct H<T>
 {
-  static func h(i : T)
+  static func h(_ i : T)
   {
     var x = i // breakpoint 6
   } 
@@ -69,7 +69,7 @@ struct H<T>
 
 struct K<T>
 {
-  static func k<U> (i: T, _ j : U)
+  static func k<U> (_ i: T, _ j : U)
   {
     var x = i
     var y = j  // breakpoint 7 

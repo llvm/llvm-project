@@ -25,7 +25,7 @@ class A
         y = float
     }
 
-    func do_something (input: Int64) -> Int64
+    func do_something (_ input: Int64) -> Int64
     {
         return x * input;
     }

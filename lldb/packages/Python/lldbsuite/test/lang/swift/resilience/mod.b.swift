@@ -17,6 +17,6 @@ public struct S {
   public init() {}
 }
 
-public func fA(x: S) -> Int {
+public func fA(_ x: S) -> Int {
   return x.b - 1
 }

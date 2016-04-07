@@ -15,7 +15,7 @@ enum Generic<T> {
   case Case3
 }
 
-func foo<T0>(x: Generic<T0>) {
+func foo<T0>(_ x: Generic<T0>) {
   print(x) //% self.expect('frame variable -d run -- x', substrs=['Case1'])
   //% self.expect('frame variable -d run -- x', substrs=['Case2'], matching=False)
   //% self.expect('frame variable -d run -- x', substrs=['Case3'], matching=False)

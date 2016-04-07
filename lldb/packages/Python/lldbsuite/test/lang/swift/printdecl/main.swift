@@ -18,7 +18,7 @@ struct Str1 {
 
 class Cla1 {
   func baz() {}
-  func bat(x: Int, y : Str1) -> Int { return 1 }
+  func bat(_ x: Int, y : Str1) -> Int { return 1 }
   var x = Str1()
   var y = Dictionary<Int,String>()
 }
@@ -38,10 +38,10 @@ class Toplevel {
 }
 
 class Generic<T> {
-	func foo(x: T) {}
+	func foo(_ x: T) {}
 }
 
-func foo(x: Int, y: Int) -> Int { return x + 1 }
+func foo(_ x: Int, y: Int) -> Int { return x + 1 }
 func foo() -> Double { return 3.1415 }
 
 main()

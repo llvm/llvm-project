@@ -25,7 +25,7 @@ class ClassA
         y = input
     }
 
-    func do_something (input: Int) -> Int
+    func do_something (_ input: Int) -> Int
     {
         if (input > 0)   // A.do_something - step in should stop here
         {
@@ -45,7 +45,7 @@ class ClassB : ClassA
         super.init (input)  // In the B constructor about to call super.
     }
 
-    override func do_something (input: Int) -> Int
+    override func do_something (_ input: Int) -> Int
     {
         var decider : Bool
         decider = input % 2 == 0
@@ -60,7 +60,7 @@ class ClassB : ClassA
     }
 }
 
-func call_overridden (class_a_object : ClassA, _ int_arg : Int) -> Int  // call_overridden func def
+func call_overridden (_ class_a_object : ClassA, _ int_arg : Int) -> Int  // call_overridden func def
 {
     return class_a_object.do_something(int_arg)
 }
@@ -124,7 +124,7 @@ extension SomeValues
 
 protocol P 
 { 
-    func protocol_func(arg : Int) -> Int
+    func protocol_func(_ arg : Int) -> Int
 }
 
 class ConformsDirectly : P 
@@ -141,7 +141,7 @@ class ConformsDirectly : P
         m_value = value
     }
 
-    func protocol_func(actual_arg : Int) -> Int  // We stopped at the protocol_func declaration instead.
+    func protocol_func(_ actual_arg : Int) -> Int  // We stopped at the protocol_func declaration instead.
     { 
         print("protocol_func(Int) from A: \(actual_arg).") // This is where we will stop in the protocol dispatch
         return m_value + actual_arg
@@ -175,7 +175,7 @@ func main () -> Void
     var do_something_result = call_overridden (b_object, 30) // Stop here to step into call_overridden.
 
     var point = (1, -1)  // At point initializer.
-    func return_same (input : Int) -> Int
+    func return_same (_ input : Int) -> Int
     {
         return input; // return_same gets called in both where statements
     }
@@ -210,7 +210,7 @@ func main () -> Void
             return ConformsDirectly(arg) // Step into should stop here in closure.
     }
 
-    func doSomethingWithFunction<Result : P> ( f: (arg : Int)->Result, _ other_value : Int) -> Result // Stopped in doSomethingWithFunctionResult decl. 
+    func doSomethingWithFunction<Result : P> (_ f: (arg : Int)->Result, _ other_value : Int) -> Result // Stopped in doSomethingWithFunctionResult decl. 
     {
         print("Calling doSomethingWithFunction with value \(other_value)")
         let result = f(arg: other_value)

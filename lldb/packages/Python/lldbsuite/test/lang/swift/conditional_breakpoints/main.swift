@@ -11,7 +11,7 @@
 // -----------------------------------------------------------------------------
 
 
-func foo(x: Int, _ y: Int) -> Int {
+func foo(_ x: Int, _ y: Int) -> Int {
   return x - y + 1 // Set breakpoint here
 }
 

@@ -11,7 +11,7 @@
 // -----------------------------------------------------------------------------
 import Foundation
 
-func main<T>(x: T) {
+func main<T>(_ x: T) {
   var k = NSString.self
   print("Set breakpoint here")
 }
