@@ -12,7 +12,7 @@
 public struct Q<T> {
   let x: T
 }
-public func foo<T>(arg: [Q<T>]) {
+public func foo<T>(_ arg: [Q<T>]) {
   print(arg) //% self.expect('po arg', substrs=['x : 3735928559'])
   //% self.expect('expr -d run -- arg', substrs=['x = 3735928559'])
   //% self.expect('frame var -d run -- arg', substrs=['x = 3735928559'])
