@@ -6,8 +6,7 @@ declare void @llvm.memset.i32(i8*, i8, i32, i32) nounwind
 define fastcc void @t1() nounwind {
 ; CHECK-LABEL: t1:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    subl $12, %esp
-; CHECK-NEXT:    subl $4, %esp
+; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    pushl $188
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    pushl $0

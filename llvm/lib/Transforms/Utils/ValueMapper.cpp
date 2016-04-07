@@ -273,12 +273,8 @@ Value *Mapper::mapValue(const Value *V) {
   // Global values do not need to be seeded into the VM if they
   // are using the identity mapping.
   if (isa<GlobalValue>(V)) {
-    if (Flags & RF_NullMapMissingGlobalValues) {
-      assert(!(Flags & RF_IgnoreMissingEntries) &&
-             "Illegal to specify both RF_NullMapMissingGlobalValues and "
-             "RF_IgnoreMissingEntries");
+    if (Flags & RF_NullMapMissingGlobalValues)
       return nullptr;
-    }
     return VM[V] = const_cast<Value*>(V);
   }
 
@@ -303,8 +299,11 @@ Value *Mapper::mapValue(const Value *V) {
     if (!isa<LocalAsMetadata>(MD) && (Flags & RF_NoModuleLevelChanges))
       return VM[V] = const_cast<Value *>(V);
 
+    // FIXME: be consistent with function-local values for LocalAsMetadata by
+    // returning nullptr when LocalAsMetadata is missing.  Adding a mapping is
+    // expensive.
     auto *MappedMD = mapMetadata(MD);
-    if (MD == MappedMD || (!MappedMD && (Flags & RF_IgnoreMissingEntries)))
+    if (MD == MappedMD || (!MappedMD && (Flags & RF_IgnoreMissingLocals)))
       return VM[V] = const_cast<Value *>(V);
 
     return VM[V] = MetadataAsValue::get(V->getContext(), MappedMD);
@@ -628,14 +627,17 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
     if ((Flags & RF_NoModuleLevelChanges))
       return mapToSelf(MD);
 
+  // FIXME: Assert that this is not LocalAsMetadata.  It should be handled
+  // elsewhere.
   if (const auto *VMD = dyn_cast<ValueAsMetadata>(MD)) {
     // Disallow recursion into metadata mapping through mapValue.
     VM.disableMapMetadata();
     Value *MappedV = mapValue(VMD->getValue());
     VM.enableMapMetadata();
 
+    // FIXME: Always use "ignore" behaviour.  There should only be globals here.
     if (VMD->getValue() == MappedV ||
-        (!MappedV && (Flags & RF_IgnoreMissingEntries)))
+        (!MappedV && (Flags & RF_IgnoreMissingLocals)))
       return mapToSelf(MD);
 
     return mapToMetadata(MD, MappedV ? ValueAsMetadata::get(MappedV) : nullptr);
@@ -658,6 +660,8 @@ Metadata *llvm::MapMetadata(const Metadata *MD, ValueToValueMapTy &VM,
 }
 
 Metadata *Mapper::mapMetadata(const Metadata *MD) {
+  // FIXME: First check for and deal with LocalAsMetadata, so that
+  // mapSimpleMetadata() doesn't need to deal with it.
   if (Optional<Metadata *> NewMD = mapSimpleMetadata(MD))
     return *NewMD;
 
@@ -703,7 +707,7 @@ void llvm::RemapInstruction(Instruction *I, ValueToValueMapTy &VMap,
     if (V)
       *op = V;
     else
-      assert((Flags & RF_IgnoreMissingEntries) &&
+      assert((Flags & RF_IgnoreMissingLocals) &&
              "Referenced value not in value map!");
   }
 
@@ -715,7 +719,7 @@ void llvm::RemapInstruction(Instruction *I, ValueToValueMapTy &VMap,
       if (V)
         PN->setIncomingBlock(i, cast<BasicBlock>(V));
       else
-        assert((Flags & RF_IgnoreMissingEntries) &&
+        assert((Flags & RF_IgnoreMissingLocals) &&
                "Referenced block not in value map!");
     }
   }

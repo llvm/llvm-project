@@ -563,13 +563,15 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   if (DT && Count > 1) {
     for (auto *BB : OriginalLoopBlocks) {
       auto *BBDomNode = DT->getNode(BB);
+      SmallVector<BasicBlock *, 16> ChildrenToUpdate;
       for (auto *ChildDomNode : BBDomNode->getChildren()) {
         auto *ChildBB = ChildDomNode->getBlock();
-        if (L->contains(ChildBB))
-          continue;
-        BasicBlock *NewIDom = DT->findNearestCommonDominator(BB, Latches[0]);
-        DT->changeImmediateDominator(ChildBB, NewIDom);
+        if (!L->contains(ChildBB))
+          ChildrenToUpdate.push_back(ChildBB);
       }
+      BasicBlock *NewIDom = DT->findNearestCommonDominator(BB, Latches[0]);
+      for (auto *ChildBB : ChildrenToUpdate)
+        DT->changeImmediateDominator(ChildBB, NewIDom);
     }
   }
 

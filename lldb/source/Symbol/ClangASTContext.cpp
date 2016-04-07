@@ -717,11 +717,11 @@ ClangASTContext::getDiagnosticConsumer()
     return m_diagnostic_consumer_ap.get();
 }
 
-std::shared_ptr<TargetOptions> &
+std::shared_ptr<clang::TargetOptions> &
 ClangASTContext::getTargetOptions() {
     if (m_target_options_rp.get() == nullptr && !m_target_triple.empty())
     {
-        m_target_options_rp = std::make_shared<TargetOptions>();
+        m_target_options_rp = std::make_shared<clang::TargetOptions>();
         if (m_target_options_rp.get() != nullptr)
             m_target_options_rp->Triple = m_target_triple;
     }

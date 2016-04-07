@@ -1272,10 +1272,17 @@ void HoistSpillHelper::runHoistSpills(
     unsigned NumChildren = Children.size();
     for (unsigned i = 0; i != NumChildren; ++i) {
       MachineDomTreeNode *Child = Children[i];
+      if (SpillsInSubTreeMap.find(Child) == SpillsInSubTreeMap.end())
+        continue;
+      // SpillsInSubTreeMap[*RIt].second += SpillsInSubTreeMap[Child].second
+      // should be placed before getting the begin and end iterators of
+      // SpillsInSubTreeMap[Child].first, or else the iterators may be
+      // invalidated when SpillsInSubTreeMap[*RIt] is seen the first time
+      // and the map grows and then the original buckets in the map are moved.
+      SpillsInSubTreeMap[*RIt].second += SpillsInSubTreeMap[Child].second;
       auto BI = SpillsInSubTreeMap[Child].first.begin();
       auto EI = SpillsInSubTreeMap[Child].first.end();
       SpillsInSubTreeMap[*RIt].first.insert(BI, EI);
-      SpillsInSubTreeMap[*RIt].second += SpillsInSubTreeMap[Child].second;
       SpillsInSubTreeMap.erase(Child);
     }
 
