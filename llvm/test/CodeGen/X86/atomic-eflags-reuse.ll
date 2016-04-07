@@ -4,10 +4,8 @@
 define i32 @test_add_1_cmov_slt(i64* %p, i32 %a0, i32 %a1) #0 {
 ; CHECK-LABEL: test_add_1_cmov_slt:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    lock xaddq %rax, (%rdi)
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    cmovnsl %edx, %esi
+; CHECK-NEXT:    lock incq (%rdi)
+; CHECK-NEXT:    cmovgl %edx, %esi
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -20,10 +18,8 @@ entry:
 define i32 @test_add_1_cmov_sge(i64* %p, i32 %a0, i32 %a1) #0 {
 ; CHECK-LABEL: test_add_1_cmov_sge:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    lock xaddq %rax, (%rdi)
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    cmovsl %edx, %esi
+; CHECK-NEXT:    lock incq (%rdi)
+; CHECK-NEXT:    cmovlel %edx, %esi
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -36,10 +32,8 @@ entry:
 define i32 @test_sub_1_cmov_sle(i64* %p, i32 %a0, i32 %a1) #0 {
 ; CHECK-LABEL: test_sub_1_cmov_sle:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movq $-1, %rax
-; CHECK-NEXT:    lock xaddq %rax, (%rdi)
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    cmovgl %edx, %esi
+; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    cmovgel %edx, %esi
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -52,10 +46,8 @@ entry:
 define i32 @test_sub_1_cmov_sgt(i64* %p, i32 %a0, i32 %a1) #0 {
 ; CHECK-LABEL: test_sub_1_cmov_sgt:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movq $-1, %rax
-; CHECK-NEXT:    lock xaddq %rax, (%rdi)
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    cmovlel %edx, %esi
+; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    cmovll %edx, %esi
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -83,10 +75,8 @@ entry:
 define i8 @test_sub_1_setcc_sgt(i64* %p) #0 {
 ; CHECK-LABEL: test_sub_1_setcc_sgt:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movq $-1, %rax
-; CHECK-NEXT:    lock xaddq %rax, (%rdi)
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    lock decq (%rdi)
+; CHECK-NEXT:    setge %al
 ; CHECK-NEXT:    retq
 entry:
   %tmp0 = atomicrmw sub i64* %p, i64 1 seq_cst
@@ -98,10 +88,8 @@ entry:
 define i32 @test_add_1_brcond_sge(i64* %p, i32 %a0, i32 %a1) #0 {
 ; CHECK-LABEL: test_add_1_brcond_sge:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    lock xaddq %rax, (%rdi)
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    js .LBB6_2
+; CHECK-NEXT:    lock incq (%rdi)
+; CHECK-NEXT:    jle .LBB6_2
 ; CHECK-NEXT:  # BB#1: # %t
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
