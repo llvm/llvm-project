@@ -3287,25 +3287,57 @@ static bool isAcceptableMethodMismatch(ObjCMethodDecl *chosen,
   return (chosen->getReturnType()->isIntegerType());
 }
 
+/// We first select the type of the method: Instance or Factory, then collect
+/// all methods with that type.
 bool Sema::CollectMultipleMethodsInGlobalPool(
-    Selector Sel, SmallVectorImpl<ObjCMethodDecl *> &Methods, bool instance) {
+    Selector Sel, SmallVectorImpl<ObjCMethodDecl *> &Methods,
+    bool InstanceFirst, bool CheckTheOther) {
   if (ExternalSource)
     ReadMethodPool(Sel);
 
   GlobalMethodPool::iterator Pos = MethodPool.find(Sel);
   if (Pos == MethodPool.end())
     return false;
+
   // Gather the non-hidden methods.
-  ObjCMethodList &MethList = instance ? Pos->second.first : Pos->second.second;
+  ObjCMethodList &MethList = InstanceFirst ? Pos->second.first :
+                             Pos->second.second;
   for (ObjCMethodList *M = &MethList; M; M = M->getNext())
     if (M->getMethod() && !M->getMethod()->isHidden())
       Methods.push_back(M->getMethod());
+
+  // Return if we find any method with the desired kind.
+  if (!Methods.empty())
+    return Methods.size() > 1;
+
+  if (!CheckTheOther)
+    return false;
+
+  // Gather the other kind.
+  ObjCMethodList &MethList2 = InstanceFirst ? Pos->second.second :
+                              Pos->second.first;
+  for (ObjCMethodList *M = &MethList2; M; M = M->getNext())
+    if (M->getMethod() && !M->getMethod()->isHidden())
+      Methods.push_back(M->getMethod());
+
   return Methods.size() > 1;
 }
 
-bool Sema::AreMultipleMethodsInGlobalPool(Selector Sel, ObjCMethodDecl *BestMethod,
-                                          SourceRange R,
-                                          bool receiverIdOrClass) {
+bool Sema::AreMultipleMethodsInGlobalPool(
+    Selector Sel, ObjCMethodDecl *BestMethod, SourceRange R,
+    bool receiverIdOrClass, SmallVectorImpl<ObjCMethodDecl *> &Methods) {
+  // Diagnose finding more than one method in global pool.
+  SmallVector<ObjCMethodDecl *, 4> FilteredMethods;
+  FilteredMethods.push_back(BestMethod);
+
+  for (auto *M : Methods)
+    if (M != BestMethod && !M->hasAttr<UnavailableAttr>())
+      FilteredMethods.push_back(M);
+
+  if (FilteredMethods.size() > 1)
+    DiagnoseMultipleMethodInGlobalPool(FilteredMethods, Sel, R,
+                                       receiverIdOrClass);
+
   GlobalMethodPool::iterator Pos = MethodPool.find(Sel);
   // Test for no method in the pool which should not trigger any warning by
   // caller.
@@ -3313,17 +3345,6 @@ bool Sema::AreMultipleMethodsInGlobalPool(Selector Sel, ObjCMethodDecl *BestMeth
     return true;
   ObjCMethodList &MethList =
     BestMethod->isInstanceMethod() ? Pos->second.first : Pos->second.second;
-  
-  // Diagnose finding more than one method in global pool
-  SmallVector<ObjCMethodDecl *, 4> Methods;
-  Methods.push_back(BestMethod);
-  for (ObjCMethodList *ML = &MethList; ML; ML = ML->getNext())
-    if (ObjCMethodDecl *M = ML->getMethod())
-      if (!M->isHidden() && M != BestMethod && !M->hasAttr<UnavailableAttr>())
-        Methods.push_back(M);
-  if (Methods.size() > 1)
-    DiagnoseMultipleMethodInGlobalPool(Methods, Sel, R, receiverIdOrClass);
-
   return MethList.hasMoreThanOneDecl();
 }
 

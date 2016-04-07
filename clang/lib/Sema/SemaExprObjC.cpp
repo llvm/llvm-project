@@ -2631,22 +2631,22 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
                                                                      typeBound);
     if (receiverIsIdLike || ReceiverType->isBlockPointerType() ||
         (Receiver && Context.isObjCNSObjectType(Receiver->getType()))) {
-      Method = LookupInstanceMethodInGlobalPool(Sel, 
-                                                SourceRange(LBracLoc, RBracLoc),
-                                                receiverIsIdLike);
-      if (!Method)
-        Method = LookupFactoryMethodInGlobalPool(Sel, 
-                                                 SourceRange(LBracLoc,RBracLoc),
-                                                 receiverIsIdLike);
-      if (Method) {
+      SmallVector<ObjCMethodDecl*, 4> Methods;
+      CollectMultipleMethodsInGlobalPool(Sel, Methods, true/*InstanceFirst*/,
+                                         true/*CheckTheOther*/);
+      if (!Methods.empty()) {
+        // We chose the first method as the initial condidate, then try to
+        // select a better one.
+        Method = Methods[0];
+
         if (ObjCMethodDecl *BestMethod =
-              SelectBestMethod(Sel, ArgsIn, Method->isInstanceMethod()))
+            SelectBestMethod(Sel, ArgsIn, Method->isInstanceMethod(), Methods))
           Method = BestMethod;
+
         if (!AreMultipleMethodsInGlobalPool(Sel, Method,
                                             SourceRange(LBracLoc, RBracLoc),
-                                            receiverIsIdLike)) {
-          DiagnoseUseOfDecl(Method, SelLoc);
-        }
+                                            receiverIsIdLike, Methods))
+           DiagnoseUseOfDecl(Method, SelLoc);
       }
     } else if (ReceiverType->isObjCClassOrClassKindOfType() ||
                ReceiverType->isObjCQualifiedClassType()) {
@@ -2684,25 +2684,32 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
         if (!Method) {
           // If not messaging 'self', look for any factory method named 'Sel'.
           if (!Receiver || !isSelfExpr(Receiver)) {
-            Method = LookupFactoryMethodInGlobalPool(Sel, 
-                                                SourceRange(LBracLoc, RBracLoc));
-            if (!Method) {
-              // If no class (factory) method was found, check if an _instance_
-              // method of the same name exists in the root class only.
-              Method = LookupInstanceMethodInGlobalPool(Sel,
-                                               SourceRange(LBracLoc, RBracLoc));
-              if (Method)
-                  if (const ObjCInterfaceDecl *ID =
-                      dyn_cast<ObjCInterfaceDecl>(Method->getDeclContext())) {
-                    if (ID->getSuperClass())
-                      Diag(SelLoc, diag::warn_root_inst_method_not_found)
-                      << Sel << SourceRange(LBracLoc, RBracLoc);
-                  }
+            // If no class (factory) method was found, check if an _instance_
+            // method of the same name exists in the root class only.
+            SmallVector<ObjCMethodDecl*, 4> Methods;
+            CollectMultipleMethodsInGlobalPool(Sel, Methods,
+                                               false/*InstanceFirst*/,
+                                               true/*CheckTheOther*/);
+            if (!Methods.empty()) {
+              // We chose the first method as the initial condidate, then try
+              // to select a better one.
+              Method = Methods[0];
+
+              // If we find an instance method, emit waring.
+              if (Method->isInstanceMethod()) {
+                if (const ObjCInterfaceDecl *ID =
+                    dyn_cast<ObjCInterfaceDecl>(Method->getDeclContext())) {
+                  if (ID->getSuperClass())
+                    Diag(SelLoc, diag::warn_root_inst_method_not_found)
+                        << Sel << SourceRange(LBracLoc, RBracLoc);
+                }
+              }
+
+             if (ObjCMethodDecl *BestMethod =
+                 SelectBestMethod(Sel, ArgsIn, Method->isInstanceMethod(),
+                                  Methods))
+               Method = BestMethod;
             }
-            if (Method)
-              if (ObjCMethodDecl *BestMethod =
-                  SelectBestMethod(Sel, ArgsIn, Method->isInstanceMethod()))
-                Method = BestMethod;
           }
         }
       }
@@ -2767,15 +2774,24 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
             // behavior isn't very desirable, however we need it for GCC
             // compatibility. FIXME: should we deviate??
             if (OCIType->qual_empty()) {
-              Method = LookupInstanceMethodInGlobalPool(Sel,
-                                              SourceRange(LBracLoc, RBracLoc));
-              if (Method) {
-                if (auto BestMethod =
-                      SelectBestMethod(Sel, ArgsIn, Method->isInstanceMethod()))
+              SmallVector<ObjCMethodDecl*, 4> Methods;
+              CollectMultipleMethodsInGlobalPool(Sel, Methods,
+                                                 true/*InstanceFirst*/,
+                                                 false/*CheckTheOther*/);
+              if (!Methods.empty()) {
+                // We chose the first method as the initial condidate, then try
+                // to select a better one.
+                Method = Methods[0];
+
+                if (ObjCMethodDecl *BestMethod =
+                    SelectBestMethod(Sel, ArgsIn, Method->isInstanceMethod(),
+                                     Methods))
                   Method = BestMethod;
+
                 AreMultipleMethodsInGlobalPool(Sel, Method,
                                                SourceRange(LBracLoc, RBracLoc),
-                                               true);
+                                               true/*receiverIdOrClass*/,
+                                               Methods);
               }
               if (Method && !forwardClass)
                 Diag(SelLoc, diag::warn_maynot_respond)
