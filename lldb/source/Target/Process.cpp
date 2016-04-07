@@ -3527,7 +3527,7 @@ Process::Attach (ProcessAttachInfo &attach_info)
 void
 Process::CompleteAttach ()
 {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TARGET));
     if (log)
         log->Printf ("Process::%s()", __FUNCTION__);
 

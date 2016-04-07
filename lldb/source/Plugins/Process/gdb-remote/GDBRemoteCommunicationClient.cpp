@@ -2143,20 +2143,6 @@ GDBRemoteCommunicationClient::GetHostInfo (bool force)
                                 assert (byte_order == m_host_arch.GetByteOrder());
                             }
 
-                            if (!os_name.empty() && vendor_name.compare("apple") == 0 && os_name.find("darwin") == 0)
-                            {
-                                switch (m_host_arch.GetMachine())
-                                {
-                                case llvm::Triple::aarch64:
-                                case llvm::Triple::arm:
-                                case llvm::Triple::thumb:
-                                    os_name = "ios";
-                                    break;
-                                default:
-                                    os_name = "macosx";
-                                    break;
-                                }
-                            }
                             if (!vendor_name.empty())
                                 m_host_arch.GetTriple().setVendorName (llvm::StringRef (vendor_name));
                             if (!os_name.empty())
