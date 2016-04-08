@@ -80,6 +80,7 @@ public:
 
   Value *mapValue(const Value *V);
   void remapInstruction(Instruction *I);
+  void remapFunction(Function &F);
 
   /// Map metadata.
   ///
@@ -789,4 +790,33 @@ void Mapper::remapInstruction(Instruction *I) {
         TypeMapper->remapType(GEP->getResultElementType()));
   }
   I->mutateType(TypeMapper->remapType(I->getType()));
+}
+
+void llvm::RemapFunction(Function &F, ValueToValueMapTy &VM, RemapFlags Flags,
+                         ValueMapTypeRemapper *TypeMapper,
+                         ValueMaterializer *Materializer) {
+  Mapper(VM, Flags, TypeMapper, Materializer).remapFunction(F);
+}
+
+void Mapper::remapFunction(Function &F) {
+  // Remap the operands.
+  for (Use &Op : F.operands())
+    if (Op)
+      Op = mapValue(Op);
+
+  // Remap the metadata attachments.
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
+  F.getAllMetadata(MDs);
+  for (const auto &I : MDs)
+    F.setMetadata(I.first, cast_or_null<MDNode>(mapMetadata(I.second)));
+
+  // Remap the argument types.
+  if (TypeMapper)
+    for (Argument &A : F.args())
+      A.mutateType(TypeMapper->remapType(A.getType()));
+
+  // Remap the instructions.
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      remapInstruction(&I);
 }

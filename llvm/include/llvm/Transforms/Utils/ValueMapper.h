@@ -159,6 +159,17 @@ void RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
                       ValueMapTypeRemapper *TypeMapper = nullptr,
                       ValueMaterializer *Materializer = nullptr);
 
+/// Remap the operands, metadata, arguments, and instructions of a function.
+///
+/// Calls \a MapValue() on prefix data, prologue data, and personality
+/// function; calls \a MapMetadata() on each attached MDNode; remaps the
+/// argument types using the provided \c TypeMapper; and calls \a
+/// RemapInstruction() on every instruction.
+void RemapFunction(Function &F, ValueToValueMapTy &VM,
+                   RemapFlags Flags = RF_None,
+                   ValueMapTypeRemapper *TypeMapper = nullptr,
+                   ValueMaterializer *Materializer = nullptr);
+
 /// Version of MapValue with type safety for Constant.
 inline Constant *MapValue(const Constant *V, ValueToValueMapTy &VM,
                           RemapFlags Flags = RF_None,
