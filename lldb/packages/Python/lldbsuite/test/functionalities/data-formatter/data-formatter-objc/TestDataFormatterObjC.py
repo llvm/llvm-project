@@ -215,11 +215,9 @@ class ObjCDataFormatterTestCase(TestBase):
         self.expect('frame variable iset1 iset2 imset',
                     substrs = ['4 indexes','512 indexes','10 indexes'])
 
-        self.expect('frame variable mutable_bag_ref cfbag_ref binheap_ref',
-                    substrs = ['(CFMutableBagRef) mutable_bag_ref = ','@"17 values"',
-                    '(CFBagRef) cfbag_ref = ','@"15 values"',
-                    '(CFBinaryHeapRef) binheap_ref = ','@"21 items"'])
-                    
+        self.expect('frame variable binheap_ref',
+                    substrs = ['(CFBinaryHeapRef) binheap_ref = ','@"21 items"'])
+
         self.expect('expression -d run -- [NSArray new]', substrs=['@"0 elements"'])
 
     def nsdata_data_formatter_commands(self):

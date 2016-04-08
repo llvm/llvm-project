@@ -433,31 +433,6 @@ int main (int argc, const char * argv[])
 	    CFArraySetValueAtIndex(mutable_array_ref, 9, str11);
 	    CFArraySetValueAtIndex(mutable_array_ref, 10, str12);
 
-	    CFMutableBagRef mutable_bag_ref = CFBagCreateMutable(NULL, 15, NULL);
-
-	    CFBagSetValue(mutable_bag_ref, strB10);
-	    CFBagSetValue(mutable_bag_ref, str1);
-	    CFBagSetValue(mutable_bag_ref, str2);
-	    CFBagSetValue(mutable_bag_ref, str3);
-	    CFBagSetValue(mutable_bag_ref, str4);
-	    CFBagSetValue(mutable_bag_ref, str5);
-	    CFBagSetValue(mutable_bag_ref, str6);
-	    CFBagSetValue(mutable_bag_ref, str7);
-	    CFBagSetValue(mutable_bag_ref, str8);
-	    CFBagSetValue(mutable_bag_ref, str9);
-	    CFBagSetValue(mutable_bag_ref, str10);
-	    CFBagSetValue(mutable_bag_ref, str11);
-	    CFBagSetValue(mutable_bag_ref, str12);
-	    CFBagSetValue(mutable_bag_ref, strA1);
-	    CFBagSetValue(mutable_bag_ref, strA2);
-	    CFBagSetValue(mutable_bag_ref, strA3);
-
-	    CFBagRef cfbag_ref = CFBagCreateCopy(NULL, mutable_bag_ref);
-
-	    CFBagSetValue(mutable_bag_ref, strB8);
-	    CFBagSetValue(mutable_bag_ref, strC4);
-
-
 	    CFBinaryHeapRef binheap_ref = CFBinaryHeapCreate(NULL, 15, &kCFStringBinaryHeapCallBacks, NULL);
 	    CFBinaryHeapAddValue(binheap_ref, str1);
 	    CFBinaryHeapAddValue(binheap_ref, str2);

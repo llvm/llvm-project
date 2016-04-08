@@ -73,37 +73,28 @@ lldb_private::formatters::CFBagSummaryProvider (ValueObject& valobj, Stream& str
     if (descriptor->IsCFType())
     {
         ConstString type_name(valobj.GetTypeName());
-        if (type_name == ConstString("__CFBag") || type_name == ConstString("const struct __CFBag"))
+        
+        static ConstString g___CFBag("__CFBag");
+        static ConstString g_conststruct__CFBag("const struct __CFBag");
+        
+        if (type_name == g___CFBag ||
+            type_name == g_conststruct__CFBag)
         {
             if (valobj.IsPointerType())
                 is_type_ok = true;
         }
     }
     
-    if (is_type_ok == false)
+    if (is_type_ok)
     {
-        StackFrameSP frame_sp(valobj.GetFrameSP());
-        if (!frame_sp)
-            return false;
-        ValueObjectSP count_sp;
-        StreamString expr;
-        expr.Printf("(int)CFBagGetCount((void*)0x%" PRIx64 ")",valobj.GetPointerValue());
-        EvaluateExpressionOptions options;
-        options.SetResultIsInternal(true);
-        if (process_sp->GetTarget().EvaluateExpression(expr.GetData(), frame_sp.get(), count_sp, options) != eExpressionCompleted)
-            return false;
-        if (!count_sp)
-            return false;
-        count = count_sp->GetValueAsUnsigned(0);
-    }
-    else
-    {
-        uint32_t offset = 2*ptr_size+4 + valobj_addr;
+        lldb::addr_t offset = 2*ptr_size+4 + valobj_addr;
         Error error;
         count = process_sp->ReadUnsignedIntegerFromMemory(offset, 4, 0, error);
         if (error.Fail())
             return false;
     }
+    else
+        return false;
     
     std::string prefix,suffix;
     if (Language* language = Language::FindPlugin(options.GetLanguage()))
@@ -284,37 +275,30 @@ lldb_private::formatters::CFBinaryHeapSummaryProvider (ValueObject& valobj, Stre
     if (descriptor->IsCFType())
     {
         ConstString type_name(valobj.GetTypeName());
-        if (type_name == ConstString("__CFBinaryHeap") || type_name == ConstString("const struct __CFBinaryHeap"))
+        
+        static ConstString g___CFBinaryHeap("__CFBinaryHeap");
+        static ConstString g_conststruct__CFBinaryHeap("const struct __CFBinaryHeap");
+        static ConstString g_CFBinaryHeapRef("CFBinaryHeapRef");
+
+        if (type_name == g___CFBinaryHeap ||
+            type_name == g_conststruct__CFBinaryHeap ||
+            type_name == g_CFBinaryHeapRef)
         {
             if (valobj.IsPointerType())
                 is_type_ok = true;
         }
     }
     
-    if (is_type_ok == false)
+    if (is_type_ok)
     {
-        StackFrameSP frame_sp(valobj.GetFrameSP());
-        if (!frame_sp)
-            return false;
-        ValueObjectSP count_sp;
-        StreamString expr;
-        expr.Printf("(int)CFBinaryHeapGetCount((void*)0x%" PRIx64 ")",valobj.GetPointerValue());
-        EvaluateExpressionOptions options;
-        options.SetResultIsInternal(true);
-        if (process_sp->GetTarget().EvaluateExpression(expr.GetData(), frame_sp.get(), count_sp, options) != eExpressionCompleted)
-            return false;
-        if (!count_sp)
-            return false;
-        count = count_sp->GetValueAsUnsigned(0);
-    }
-    else
-    {
-        uint32_t offset = 2*ptr_size;
+        lldb::addr_t offset = 2*ptr_size + valobj_addr;
         Error error;
         count = process_sp->ReadUnsignedIntegerFromMemory(offset, 4, 0, error);
         if (error.Fail())
             return false;
     }
+    else
+        return false;
     
     std::string prefix,suffix;
     if (Language* language = Language::FindPlugin(options.GetLanguage()))
