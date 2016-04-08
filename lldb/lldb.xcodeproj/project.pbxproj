@@ -14,7 +14,6 @@
 				AF90106415AB7D2900FF120D /* Copy Files */,
 			);
 			dependencies = (
-				26B391F11A6DCCBE00456239 /* PBXTargetDependency */,
 				26CEF3B014FD591F007286B2 /* PBXTargetDependency */,
 				2687EACD1508115900DD8C2E /* PBXTargetDependency */,
 			);
@@ -30,7 +29,6 @@
 			);
 			dependencies = (
 				26CEF3BB14FD595B007286B2 /* PBXTargetDependency */,
-				26B391EF1A6DCCAF00456239 /* PBXTargetDependency */,
 				2687EACB1508115000DD8C2E /* PBXTargetDependency */,
 				AF5DFFDF1A9C2A2E00983E81 /* PBXTargetDependency */,
 			);
@@ -61,7 +59,6 @@
 			);
 			dependencies = (
 				49753FAA1BEAB2BB00019E45 /* PBXTargetDependency */,
-				49753FAC1BEAB2BB00019E45 /* PBXTargetDependency */,
 				49753FAE1BEAB2BB00019E45 /* PBXTargetDependency */,
 				49753FB01BEAB2BB00019E45 /* PBXTargetDependency */,
 			);
@@ -1072,20 +1069,6 @@
 			remoteGlobalIDString = 2689FFC913353D7A00698AC0;
 			remoteInfo = "lldb-core";
 		};
-		26B391EE1A6DCCAF00456239 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 2690CD161A6DC0D000E717C8;
-			remoteInfo = "lldb-mi";
-		};
-		26B391F01A6DCCBE00456239 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 2690CD161A6DC0D000E717C8;
-			remoteInfo = "lldb-mi";
-		};
 		26CE059F115C31E50022F371 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 265E9BE1115C2BAA00D0DCCB /* debugserver.xcodeproj */;
@@ -1134,13 +1117,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 26F5C26910F3D9A4009D5894;
 			remoteInfo = "lldb-tool";
-		};
-		49753FAD1BEAB2BB00019E45 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 2690CD161A6DC0D000E717C8;
-			remoteInfo = "lldb-mi";
 		};
 		49753FAF1BEAB2BB00019E45 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -7718,16 +7694,6 @@
 			target = 2689FFC913353D7A00698AC0 /* lldb-core */;
 			targetProxy = 2689011413353E9B00698AC0 /* PBXContainerItemProxy */;
 		};
-		26B391EF1A6DCCAF00456239 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 2690CD161A6DC0D000E717C8 /* lldb-mi */;
-			targetProxy = 26B391EE1A6DCCAF00456239 /* PBXContainerItemProxy */;
-		};
-		26B391F11A6DCCBE00456239 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 2690CD161A6DC0D000E717C8 /* lldb-mi */;
-			targetProxy = 26B391F01A6DCCBE00456239 /* PBXContainerItemProxy */;
-		};
 		26CEF3B014FD591F007286B2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 26F5C26910F3D9A4009D5894 /* lldb-tool */;
@@ -7757,11 +7723,6 @@
 			isa = PBXTargetDependency;
 			target = 26F5C26910F3D9A4009D5894 /* lldb-tool */;
 			targetProxy = 49753FAB1BEAB2BB00019E45 /* PBXContainerItemProxy */;
-		};
-		49753FAC1BEAB2BB00019E45 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 2690CD161A6DC0D000E717C8 /* lldb-mi */;
-			targetProxy = 49753FAD1BEAB2BB00019E45 /* PBXContainerItemProxy */;
 		};
 		49753FAE1BEAB2BB00019E45 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
