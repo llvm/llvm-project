@@ -16,7 +16,6 @@
 #define LLVM_CLANG_BASIC_TARGETINFO_H
 
 #include "clang/Basic/AddressSpaces.h"
-#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
@@ -31,7 +30,6 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/DataTypes.h"
-
 #include <cassert>
 #include <string>
 #include <vector>
@@ -109,8 +107,7 @@ public:
   /// what the backend expects.
   static TargetInfo *
   CreateTargetInfo(DiagnosticsEngine &Diags,
-                   const std::shared_ptr<TargetOptions> &Opts,
-                   const CodeGenOptions &CGOpts = CodeGenOptions());
+                   const std::shared_ptr<TargetOptions> &Opts);
 
   virtual ~TargetInfo();
 
