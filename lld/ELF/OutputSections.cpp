@@ -14,7 +14,9 @@
 #include "Target.h"
 #include "lld/Core/Parallel.h"
 #include "llvm/Support/Dwarf.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SHA1.h"
 #include <map>
 
 using namespace llvm;
@@ -1515,27 +1517,30 @@ uint8_t SymbolTableSection<ELFT>::getSymbolBinding(SymbolBody *Body) {
   uint8_t Visibility = Body->getVisibility();
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
+  if (Config->NoGnuUnique && Body->Binding == STB_GNU_UNIQUE)
+    return STB_GLOBAL;
   return Body->Binding;
 }
 
 template <class ELFT>
-BuildIdSection<ELFT>::BuildIdSection()
-    : OutputSectionBase<ELFT>(".note.gnu.build-id", SHT_NOTE, SHF_ALLOC) {
-  // 16 bytes for the note section header and 8 bytes for FNV1 hash.
-  this->Header.sh_size = 24;
+BuildIdSection<ELFT>::BuildIdSection(size_t HashSize)
+    : OutputSectionBase<ELFT>(".note.gnu.build-id", SHT_NOTE, SHF_ALLOC),
+      HashSize(HashSize) {
+  // 16 bytes for the note section header.
+  this->Header.sh_size = 16 + HashSize;
 }
 
 template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
   const endianness E = ELFT::TargetEndianness;
   write32<E>(Buf, 4);                   // Name size
-  write32<E>(Buf + 4, sizeof(Hash));    // Content size
+  write32<E>(Buf + 4, HashSize);        // Content size
   write32<E>(Buf + 8, NT_GNU_BUILD_ID); // Type
   memcpy(Buf + 12, "GNU", 4);           // Name string
   HashBuf = Buf + 16;
 }
 
-template <class ELFT> void BuildIdSection<ELFT>::update(ArrayRef<uint8_t> Buf) {
-  // 64-bit FNV1 hash
+template <class ELFT> void BuildIdFnv1<ELFT>::update(ArrayRef<uint8_t> Buf) {
+  // 64-bit FNV-1 hash
   const uint64_t Prime = 0x100000001b3;
   for (uint8_t B : Buf) {
     Hash *= Prime;
@@ -1543,9 +1548,27 @@ template <class ELFT> void BuildIdSection<ELFT>::update(ArrayRef<uint8_t> Buf) {
   }
 }
 
-template <class ELFT> void BuildIdSection<ELFT>::writeBuildId() {
+template <class ELFT> void BuildIdFnv1<ELFT>::writeBuildId() {
   const endianness E = ELFT::TargetEndianness;
-  write64<E>(HashBuf, Hash);
+  write64<E>(this->HashBuf, Hash);
+}
+
+template <class ELFT> void BuildIdMd5<ELFT>::update(ArrayRef<uint8_t> Buf) {
+  Hash.update(Buf);
+}
+
+template <class ELFT> void BuildIdMd5<ELFT>::writeBuildId() {
+  MD5::MD5Result Res;
+  Hash.final(Res);
+  memcpy(this->HashBuf, Res, 16);
+}
+
+template <class ELFT> void BuildIdSha1<ELFT>::update(ArrayRef<uint8_t> Buf) {
+  Hash.update(Buf);
+}
+
+template <class ELFT> void BuildIdSha1<ELFT>::writeBuildId() {
+  memcpy(this->HashBuf, Hash.final().data(), 20);
 }
 
 template <class ELFT>
@@ -1656,5 +1679,20 @@ template class BuildIdSection<ELF32LE>;
 template class BuildIdSection<ELF32BE>;
 template class BuildIdSection<ELF64LE>;
 template class BuildIdSection<ELF64BE>;
+
+template class BuildIdFnv1<ELF32LE>;
+template class BuildIdFnv1<ELF32BE>;
+template class BuildIdFnv1<ELF64LE>;
+template class BuildIdFnv1<ELF64BE>;
+
+template class BuildIdMd5<ELF32LE>;
+template class BuildIdMd5<ELF32BE>;
+template class BuildIdMd5<ELF64LE>;
+template class BuildIdMd5<ELF64BE>;
+
+template class BuildIdSha1<ELF32LE>;
+template class BuildIdSha1<ELF32BE>;
+template class BuildIdSha1<ELF64LE>;
+template class BuildIdSha1<ELF64BE>;
 }
 }

@@ -66,7 +66,7 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
     error("Windows targets are not supported on the ELF frontend: " + S);
   else
     error("unknown emulation: " + S);
-  return {ELFNoneKind, 0};
+  return {ELFNoneKind, EM_NONE};
 }
 
 // Returns slices of MB by parsing MB as an archive file.
@@ -271,7 +271,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
-  Config->BuildId = Args.hasArg(OPT_build_id);
   Config->Demangle = !Args.hasArg(OPT_no_demangle);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->DiscardAll = Args.hasArg(OPT_discard_all);
@@ -282,6 +281,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ExportDynamic = Args.hasArg(OPT_export_dynamic);
   Config->GcSections = Args.hasArg(OPT_gc_sections);
   Config->ICF = Args.hasArg(OPT_icf);
+  Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
   Config->NoUndefined = Args.hasArg(OPT_no_undefined);
   Config->NoinhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->Pie = Args.hasArg(OPT_pie);
@@ -290,6 +290,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
   Config->Shared = Args.hasArg(OPT_shared);
   Config->StripAll = Args.hasArg(OPT_strip_all);
+  Config->StripDebug = Args.hasArg(OPT_strip_debug);
   Config->Threads = Args.hasArg(OPT_threads);
   Config->Trace = Args.hasArg(OPT_trace);
   Config->Verbose = Args.hasArg(OPT_verbose);
@@ -314,10 +315,15 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
 
-  Config->Pic = Config->Pie || Config->Shared;
-
   if (Config->Relocatable)
     Config->StripAll = false;
+
+  // --strip-all implies --strip-debug.
+  if (Config->StripAll)
+    Config->StripDebug = true;
+
+  // Config->Pic is true if we are generating position-independent code.
+  Config->Pic = Config->Pie || Config->Shared;
 
   if (auto *Arg = Args.getLastArg(OPT_hash_style)) {
     StringRef S = Arg->getValue();
@@ -328,6 +334,19 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->GnuHash = true;
     } else if (S != "sysv")
       error("unknown hash style: " + S);
+  }
+
+  // Parse --build-id or --build-id=<style>.
+  if (Args.hasArg(OPT_build_id))
+    Config->BuildId = BuildIdKind::Fnv1;
+  if (auto *Arg = Args.getLastArg(OPT_build_id_eq)) {
+    StringRef S = Arg->getValue();
+    if (S == "md5") {
+      Config->BuildId = BuildIdKind::Md5;
+    } else if (S == "sha1") {
+      Config->BuildId = BuildIdKind::Sha1;
+    } else
+      error("unknown --build-id style: " + S);
   }
 
   for (auto *Arg : Args.filtered(OPT_undefined))

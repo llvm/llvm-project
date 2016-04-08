@@ -24,7 +24,7 @@ __attribute__((objc_root_class))
 - (NSObject *)retain;
 @end
 
-@interface NSString : NSObject <NSCopying>
+@interface NSString : NSObject <NSCopying> // expected-note{{receiver is instance of class declared here}}
 - (NSString *)stringByAppendingString:(NSString *)string;
 + (instancetype)string;
 @end
@@ -246,7 +246,7 @@ void message_kindof_object(__kindof NSString *kindof_NSString) {
   [kindof_NSString retain]; // in superclass
   [kindof_NSString stringByAppendingString:0]; // in class
   [kindof_NSString appendString:0]; // in subclass
-  [kindof_NSString numberByAddingNumber: 0]; // FIXME: in unrelated class
+  [kindof_NSString numberByAddingNumber: 0]; // expected-warning{{instance method '-numberByAddingNumber:' not found (return type defaults to 'id')}}
   [kindof_NSString randomMethod]; // in protocol
 }
 
@@ -261,6 +261,18 @@ void message_kindof_qualified_class(
   [kindof_NSCopying classCopy]; // in protocol
   [kindof_NSCopying string]; // in some class
   [kindof_NSCopying randomClassMethod]; // in unrelated protocol
+}
+
+// Make sure we don't emit warning about multiple methods found.
+typedef int NSInteger;
+@interface Foo : NSObject
+- (NSString*)test;
+@end
+@interface Bar : NSObject
+- (NSInteger)test;
+@end
+void test(__kindof Bar *kBar) {
+    [kBar test];
 }
 
 // ---------------------------------------------------------------------------

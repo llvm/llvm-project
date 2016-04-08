@@ -12,32 +12,32 @@ void test_new(id invalue) {
   // OPT-NEXT: [[T0:%.*]] = call i8* @objc_retain(i8* [[INVALUE:%.*]])
   // OPT-NEXT: store i8* [[T0]], i8** [[INVALUEADDR]]
 
-  // CHECK: call noalias i8* @_Znwm
+  // CHECK: call i8* @_Znwm
   // CHECK-NEXT: {{bitcast i8\*.*to i8\*\*}}
   // CHECK-NEXT: store i8* null, i8**
   new strong_id;
-  // CHECK: call noalias i8* @_Znwm
+  // CHECK: call i8* @_Znwm
   // CHECK-NEXT: {{bitcast i8\*.*to i8\*\*}}
   // UNOPT-NEXT: store i8* null, i8**
   // OPT-NEXT: call i8* @objc_initWeak(i8** {{.*}}, i8* null)
   new weak_id;
 
-  // CHECK: call noalias i8* @_Znwm
+  // CHECK: call i8* @_Znwm
   // CHECK-NEXT: {{bitcast i8\*.*to i8\*\*}}
   // CHECK-NEXT: store i8* null, i8**
   new __strong id;
-  // CHECK: call noalias i8* @_Znwm
+  // CHECK: call i8* @_Znwm
   // CHECK-NEXT: {{bitcast i8\*.*to i8\*\*}}
   // UNOPT-NEXT: store i8* null, i8**
   // OPT-NEXT: call i8* @objc_initWeak(i8** {{.*}}, i8* null)
   new __weak id;
 
-  // CHECK: call noalias i8* @_Znwm
+  // CHECK: call i8* @_Znwm
   // CHECK: call i8* @objc_retain
   // CHECK: store i8*
   new __strong id(invalue);
 
-  // CHECK: call noalias i8* @_Znwm
+  // CHECK: call i8* @_Znwm
   // CHECK: call i8* @objc_initWeak
   new __weak id(invalue);
 
@@ -48,12 +48,12 @@ void test_new(id invalue) {
 
 // CHECK-LABEL: define void @_Z14test_array_new
 void test_array_new() {
-  // CHECK: call noalias i8* @_Znam
+  // CHECK: call i8* @_Znam
   // CHECK: store i64 17, i64*
   // CHECK: call void @llvm.memset.p0i8.i64
   new strong_id[17];
 
-  // CHECK: call noalias i8* @_Znam
+  // CHECK: call i8* @_Znam
   // CHECK: store i64 17, i64*
   // CHECK: call void @llvm.memset.p0i8.i64
   new weak_id[17];

@@ -189,8 +189,21 @@ static inline __device__ void __brkpt(int __c) { __brkpt(); }
 // we have to include it and it will in turn include .hpp
 #include "sm_30_intrinsics.h"
 #include "sm_32_intrinsics.hpp"
+
 #undef __MATH_FUNCTIONS_HPP__
+
+// math_functions.hpp defines ::signbit as a __host__ __device__ function.  This
+// conflicts with libstdc++'s constexpr ::signbit, so we have to rename
+// math_function.hpp's ::signbit.  It's guarded by #undef signbit, but that's
+// conditional on __GNUC__.  :)
+#pragma push_macro("signbit")
+#pragma push_macro("__GNUC__")
+#undef __GNUC__
+#define signbit __ignored_cuda_signbit
 #include "math_functions.hpp"
+#pragma pop_macro("__GNUC__")
+#pragma pop_macro("signbit")
+
 #pragma pop_macro("__host__")
 
 #include "texture_indirect_functions.h"

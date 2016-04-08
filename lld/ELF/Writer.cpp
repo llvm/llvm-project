@@ -146,8 +146,13 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   std::unique_ptr<SymbolTableSection<ELFT>> SymTabSec;
   std::unique_ptr<OutputSection<ELFT>> MipsRldMap;
 
-  if (Config->BuildId)
-    BuildId.reset(new BuildIdSection<ELFT>);
+  if (Config->BuildId == BuildIdKind::Fnv1)
+    BuildId.reset(new BuildIdFnv1<ELFT>);
+  else if (Config->BuildId == BuildIdKind::Md5)
+    BuildId.reset(new BuildIdMd5<ELFT>);
+  else if (Config->BuildId == BuildIdKind::Sha1)
+    BuildId.reset(new BuildIdSha1<ELFT>);
+
   if (Config->GnuHash)
     GnuHashTab.reset(new GnuHashTableSection<ELFT>);
   if (Config->SysvHash)

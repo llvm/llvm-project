@@ -7,7 +7,7 @@ struct ClassWithoutDtor {
 void check_array_no_cookies() {
 // CHECK: define void @"\01?check_array_no_cookies@@YAXXZ"() [[NUW:#[0-9]+]]
 
-// CHECK: call noalias i8* @"\01??_U@YAPAXI@Z"(i32 42)
+// CHECK: call i8* @"\01??_U@YAPAXI@Z"(i32 42)
   ClassWithoutDtor *array = new ClassWithoutDtor[42];
 
 // CHECK: call void @"\01??_V@YAXPAX@Z"(
@@ -24,7 +24,7 @@ void check_array_cookies_simple() {
 // CHECK: define {{.*}} @"\01?check_array_cookies_simple@@YAXXZ"()
 
   ClassWithDtor *array = new ClassWithDtor[42];
-// CHECK: [[ALLOCATED:%.*]] = call noalias i8* @"\01??_U@YAPAXI@Z"(i32 46)
+// CHECK: [[ALLOCATED:%.*]] = call i8* @"\01??_U@YAPAXI@Z"(i32 46)
 // 46 = 42 + size of cookie (4)
 // CHECK: [[COOKIE:%.*]] = bitcast i8* [[ALLOCATED]] to i32*
 // CHECK: store i32 42, i32* [[COOKIE]]
@@ -46,7 +46,7 @@ struct __attribute__((aligned(8))) ClassWithAlignment {
 void check_array_cookies_aligned() {
 // CHECK: define {{.*}} @"\01?check_array_cookies_aligned@@YAXXZ"()
   ClassWithAlignment *array = new ClassWithAlignment[42];
-// CHECK: [[ALLOCATED:%.*]] = call noalias i8* @"\01??_U@YAPAXI@Z"(i32 344)
+// CHECK: [[ALLOCATED:%.*]] = call i8* @"\01??_U@YAPAXI@Z"(i32 344)
 //   344 = 42*8 + size of cookie (8, due to alignment)
 // CHECK: [[COOKIE:%.*]] = bitcast i8* [[ALLOCATED]] to i32*
 // CHECK: store i32 42, i32* [[COOKIE]]

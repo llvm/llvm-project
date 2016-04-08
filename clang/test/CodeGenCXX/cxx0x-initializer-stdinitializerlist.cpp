@@ -249,7 +249,7 @@ haslist2::haslist2()
 void fn10(int i) {
   // CHECK-LABEL: define void @_Z4fn10i
   // CHECK: alloca [3 x i32]
-  // CHECK: call noalias i8* @_Znw{{[jm]}}
+  // CHECK: call i8* @_Znw{{[jm]}}
   // CHECK: store i32 %
   // CHECK: store i32 2
   // CHECK: store i32 3
