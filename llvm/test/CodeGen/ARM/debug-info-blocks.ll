@@ -111,7 +111,7 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!162}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "Apple clang version 2.1", isOptimized: false, runtimeVersion: 2, emissionKind: 1, file: !153, enums: !147, retainedTypes: !{}, subprograms: !148)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "Apple clang version 2.1", isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, file: !153, enums: !147, retainedTypes: !{}, subprograms: !148)
 !1 = !DICompositeType(tag: DW_TAG_enumeration_type, line: 248, size: 32, align: 32, file: !160, scope: !0, elements: !3)
 !2 = !DIFile(filename: "header.h", directory: "/Volumes/Sandbox/llvm")
 !3 = !{!4}

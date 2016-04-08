@@ -124,7 +124,7 @@ attributes #4 = { nounwind }
 !llvm.module.flags = !{!43, !44}
 !llvm.ident = !{!45}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 255993) (llvm/trunk 256074)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !3, subprograms: !23)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 255993) (llvm/trunk 256074)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, subprograms: !23)
 !1 = !DIFile(filename: "test.cpp", directory: "/mnt/extra")
 !2 = !{}
 !3 = !{!4}

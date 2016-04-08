@@ -300,7 +300,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!48, !49}
 !llvm.ident = !{!50}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.7.0 (trunk 234897) (llvm/trunk 234911)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !3, subprograms: !19, globals: !31, imports: !44)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.7.0 (trunk 234897) (llvm/trunk 234911)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, subprograms: !19, globals: !31, imports: !44)
 !1 = !DIFile(filename: "gnu-public-names.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4, !15}

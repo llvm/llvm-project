@@ -40,7 +40,7 @@
 !llvm.module.flags = !{!13, !14}
 !llvm.ident = !{!15}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !2, imports: !2, macros: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !2, imports: !2, macros: !3)
 !1 = !DIFile(filename: "debug-macro.cpp", directory: "/")
 !2 = !{}
 !3 = !{!4, !5}
@@ -58,10 +58,10 @@
 !14 = !{i32 1, !"Debug Info Version", i32 3}
 !15 = !{!"clang version 3.5.0 "}
 
-!16 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !17, enums: !2, retainedTypes: !2, subprograms: !2, globals: !2, imports: !2, macros: !18)
+!16 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !17, enums: !2, retainedTypes: !2, subprograms: !2, globals: !2, imports: !2, macros: !18)
 !17 = !DIFile(filename: "debug-macro1.cpp", directory: "/")
 !18 = !{!19}
 !19 = !DIMacroFile(line: 0, file: !17, nodes: !2)
 
-!20 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !21, enums: !2, retainedTypes: !2, subprograms: !2, globals: !2, imports: !2)
+!20 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !21, enums: !2, retainedTypes: !2, subprograms: !2, globals: !2, imports: !2)
 !21 = !DIFile(filename: "debug-macro2.cpp", directory: "/")

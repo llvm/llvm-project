@@ -67,7 +67,7 @@ attributes #3 = { nounwind }
 !llvm.module.flags = !{!18, !19}
 !llvm.ident = !{!20}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 245562) (llvm/trunk 245569)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3, globals: !15)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 245562) (llvm/trunk 245569)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3, globals: !15)
 !1 = !DIFile(filename: "test.c", directory: "/")
 !2 = !{}
 !3 = !{!4, !12}

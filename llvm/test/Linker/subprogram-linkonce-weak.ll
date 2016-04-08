@@ -80,7 +80,7 @@ entry:
 ; WL: ![[BARIA]] = !DILocation(line: 12, scope: ![[BARSP]])
 ; WL: ![[BARRET]] = !DILocation(line: 13, scope: ![[BARSP]])
 
-!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, subprograms: !{!3, !4}, emissionKind: 1)
+!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, subprograms: !{!3, !4}, emissionKind: FullDebug)
 !2 = !DIFile(filename: "bar.c", directory: "/path/to/dir")
 !3 = distinct !DISubprogram(file: !2, scope: !2, line: 11, name: "bar", type: !5)
 !4 = distinct !DISubprogram(file: !2, scope: !2, line: 1, name: "foo", type: !5)

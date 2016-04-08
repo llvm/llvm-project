@@ -71,7 +71,7 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!21, !22}
 !llvm.ident = !{!23}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !{}, retainedTypes: !{}, subprograms: !3, globals: !{}, imports: !{})
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !{}, retainedTypes: !{}, subprograms: !3, globals: !{}, imports: !{})
 !1 = !DIFile(filename: "sroasplit-2.c", directory: "")
 !2 = !DIExpression()
 !3 = !{!4}

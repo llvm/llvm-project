@@ -28,7 +28,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 !0 = !{i32 2, !"Dwarf Version", i32 2}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
-!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !4, retainedTypes: !5, subprograms: !11, globals: !4, imports: !4)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !5, subprograms: !11, globals: !4, imports: !4)
 !3 = !DIFile(filename: "foo.cpp", directory: "/path/to/dir")
 !4 = !{}
 !5 = !{!6}

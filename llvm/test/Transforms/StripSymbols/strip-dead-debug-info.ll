@@ -30,7 +30,7 @@ attributes #2 = { nounwind readonly ssp }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!25}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 1, file: !1, enums: !{}, retainedTypes: !{}, subprograms: !23, globals: !24)
+!0 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !{}, retainedTypes: !{}, subprograms: !23, globals: !24)
 !1 = !DIFile(filename: "g.c", directory: "/tmp/")
 !2 = !{null}
 !3 = distinct !DISubprogram(name: "bar", line: 5, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: true, file: !1, scope: null, type: !4)

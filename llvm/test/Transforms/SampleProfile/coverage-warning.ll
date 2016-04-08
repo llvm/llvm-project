@@ -30,7 +30,7 @@ return:                                           ; preds = %if.end, %if.then
 !llvm.module.flags = !{!6, !7}
 !llvm.ident = !{!8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251524) (llvm/trunk 251531)", isOptimized: false, runtimeVersion: 0, emissionKind: 2, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251524) (llvm/trunk 251531)", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, subprograms: !3)
 !1 = !DIFile(filename: "coverage-warning.c", directory: ".")
 !2 = !{}
 !3 = !{!4}

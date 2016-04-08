@@ -80,7 +80,7 @@ declare i32 @puts(i8* nocapture) nounwind
 
 !0 = distinct !DISubprogram(name: "gcd", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !31, scope: !1, type: !3, variables: !29)
 !1 = !DIFile(filename: "rem_small.c", directory: "/private/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 124117)", isOptimized: true, emissionKind: 1, file: !31, enums: !32, retainedTypes: !32, subprograms: !28, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 124117)", isOptimized: true, emissionKind: FullDebug, file: !31, enums: !32, retainedTypes: !32, subprograms: !28, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "long int", size: 64, align: 64, encoding: DW_ATE_signed)

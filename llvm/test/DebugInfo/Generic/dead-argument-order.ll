@@ -57,7 +57,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!16, !17}
 !llvm.ident = !{!18}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !8, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !8, globals: !2, imports: !2)
 !1 = !DIFile(filename: "dead-argument-order.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4}

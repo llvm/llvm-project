@@ -28,7 +28,7 @@ entry:
 !0 = !DILocalVariable(name: "y", line: 2, arg: 1, scope: !1, file: !2, type: !6)
 !1 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, scopeLine: 2, file: !18, scope: !2, type: !4, variables: !15)
 !2 = !DIFile(filename: "f.c", directory: "/tmp")
-!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 1, file: !18, enums: !19, retainedTypes: !19, subprograms: !17, imports:  null)
+!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !18, enums: !19, retainedTypes: !19, subprograms: !17, imports:  null)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !6}
 !6 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
