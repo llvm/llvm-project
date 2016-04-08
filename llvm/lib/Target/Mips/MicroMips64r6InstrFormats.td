@@ -101,3 +101,32 @@ class POOL32S_DMFTC0_FM_MMR6<string instr_asm, bits<5> funct>
   let Inst{10-6}  = funct;
   let Inst{5-0}   = 0b111100;
 }
+
+class POOL32S_ARITH_FM_MMR6<string opstr, bits<9> funct>
+    : MMR6Arch<opstr> {
+  bits<5> rt;
+  bits<5> rs;
+  bits<5> rd;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010110;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rs;
+  let Inst{15-11} = rd;
+  let Inst{10-9}  = 0b00;
+  let Inst{8-0}   = funct;
+}
+
+class DADDIU_FM_MMR6<string opstr> : MMR6Arch<opstr> {
+  bits<5> rt;
+  bits<5> rs;
+  bits<16> imm16;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010111;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rs;
+  let Inst{15-0}  = imm16;
+}

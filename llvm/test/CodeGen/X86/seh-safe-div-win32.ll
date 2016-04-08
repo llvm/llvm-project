@@ -65,13 +65,13 @@ __try.cont:
 
 ; Landing pad code
 
-; CHECK: [[handler0:LBB0_[0-9]+]]: # %handler0
+; CHECK: [[handler1:LBB0_[0-9]+]]: # %handler1
 ; 	Restore SP
 ; CHECK: movl {{.*}}(%ebp), %esp
 ; CHECK: calll _puts
 ; CHECK: jmp [[cont_bb]]
 
-; CHECK: [[handler1:LBB0_[0-9]+]]: # %handler1
+; CHECK: [[handler0:LBB0_[0-9]+]]: # %handler0
 ; 	Restore SP
 ; CHECK: movl {{.*}}(%ebp), %esp
 ; CHECK: calll _puts

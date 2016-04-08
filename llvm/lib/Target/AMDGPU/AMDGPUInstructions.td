@@ -192,6 +192,11 @@ def global_store : PatFrag<(ops node:$val, node:$ptr),
         return isGlobalStore(dyn_cast<StoreSDNode>(N));
 }]>;
 
+def global_store_atomic : PatFrag<(ops node:$val, node:$ptr),
+    (atomic_store node:$val, node:$ptr), [{
+        return isGlobalStore(dyn_cast<MemSDNode>(N));
+}]>;
+
 // Global address space loads
 def global_load : PatFrag<(ops node:$ptr), (load node:$ptr), [{
     return isGlobalLoad(dyn_cast<LoadSDNode>(N));

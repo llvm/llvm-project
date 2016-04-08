@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -137,6 +138,123 @@ TEST(ValueMapperTest, MapMetadataNullMapGlobalWithIgnoreMissingLocals) {
   ValueToValueMapTy VM;
   RemapFlags Flags = RF_IgnoreMissingLocals | RF_NullMapMissingGlobalValues;
   EXPECT_EQ(nullptr, MapValue(F.get(), VM, Flags));
+}
+
+TEST(ValueMapperTest, MapMetadataConstantAsMetadata) {
+  LLVMContext C;
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
+  std::unique_ptr<Function> F(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F"));
+
+  auto *CAM = ConstantAsMetadata::get(F.get());
+  {
+    ValueToValueMapTy VM;
+    EXPECT_EQ(CAM, MapMetadata(CAM, VM));
+    EXPECT_TRUE(VM.MD().count(CAM));
+    VM.MD().erase(CAM);
+    EXPECT_EQ(CAM, MapMetadata(CAM, VM, RF_IgnoreMissingLocals));
+    EXPECT_TRUE(VM.MD().count(CAM));
+
+    auto *N = MDTuple::get(C, None);
+    VM.MD()[CAM].reset(N);
+    EXPECT_EQ(N, MapMetadata(CAM, VM));
+    EXPECT_EQ(N, MapMetadata(CAM, VM, RF_IgnoreMissingLocals));
+  }
+
+  std::unique_ptr<Function> F2(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F2"));
+  ValueToValueMapTy VM;
+  VM[F.get()] = F2.get();
+  auto *F2MD = MapMetadata(CAM, VM);
+  EXPECT_TRUE(VM.MD().count(CAM));
+  EXPECT_TRUE(F2MD);
+  EXPECT_EQ(F2.get(), cast<ConstantAsMetadata>(F2MD)->getValue());
+}
+
+#ifdef GTEST_HAS_DEATH_TEST
+#ifndef NDEBUG
+TEST(ValueMapperTest, MapMetadataLocalAsMetadata) {
+  LLVMContext C;
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
+  std::unique_ptr<Function> F(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F"));
+  Argument &A = *F->arg_begin();
+
+  // MapMetadata doesn't support LocalAsMetadata.  The only valid container for
+  // LocalAsMetadata is a MetadataAsValue instance, so use it directly.
+  auto *LAM = LocalAsMetadata::get(&A);
+  ValueToValueMapTy VM;
+  EXPECT_DEATH(MapMetadata(LAM, VM), "Unexpected local metadata");
+  EXPECT_DEATH(MapMetadata(LAM, VM, RF_IgnoreMissingLocals),
+               "Unexpected local metadata");
+}
+#endif
+#endif
+
+TEST(ValueMapperTest, MapValueLocalAsMetadata) {
+  LLVMContext C;
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
+  std::unique_ptr<Function> F(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F"));
+  Argument &A = *F->arg_begin();
+
+  auto *LAM = LocalAsMetadata::get(&A);
+  auto *MAV = MetadataAsValue::get(C, LAM);
+
+  // The principled answer to a LocalAsMetadata of an unmapped SSA value would
+  // be to return nullptr (regardless of RF_IgnoreMissingLocals).
+  //
+  // However, algorithms that use RemapInstruction assume that each instruction
+  // only references SSA values from previous instructions.  Arguments of
+  // such as "metadata i32 %x" don't currently successfully maintain that
+  // property.  To keep RemapInstruction from crashing we need a non-null
+  // return here, but we also shouldn't reference the unmapped local.  Use
+  // "metadata !{}".
+  auto *N0 = MDTuple::get(C, None);
+  auto *N0AV = MetadataAsValue::get(C, N0);
+  ValueToValueMapTy VM;
+  EXPECT_EQ(N0AV, MapValue(MAV, VM));
+  EXPECT_EQ(nullptr, MapValue(MAV, VM, RF_IgnoreMissingLocals));
+  EXPECT_FALSE(VM.count(MAV));
+  EXPECT_FALSE(VM.count(&A));
+  EXPECT_EQ(None, VM.getMappedMD(LAM));
+
+  VM[MAV] = MAV;
+  EXPECT_EQ(MAV, MapValue(MAV, VM));
+  EXPECT_EQ(MAV, MapValue(MAV, VM, RF_IgnoreMissingLocals));
+  EXPECT_TRUE(VM.count(MAV));
+  EXPECT_FALSE(VM.count(&A));
+
+  VM[MAV] = &A;
+  EXPECT_EQ(&A, MapValue(MAV, VM));
+  EXPECT_EQ(&A, MapValue(MAV, VM, RF_IgnoreMissingLocals));
+  EXPECT_TRUE(VM.count(MAV));
+  EXPECT_FALSE(VM.count(&A));
+}
+
+TEST(ValueMapperTest, MapValueLocalAsMetadataToConstant) {
+  LLVMContext Context;
+  auto *Int8 = Type::getInt8Ty(Context);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), Int8, false);
+  std::unique_ptr<Function> F(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F"));
+
+  // Map a local value to a constant.
+  Argument &A = *F->arg_begin();
+  Constant &C = *ConstantInt::get(Int8, 42);
+  ValueToValueMapTy VM;
+  VM[&A] = &C;
+
+  // Look up the metadata-as-value wrapper.  Don't crash.
+  auto *MDA = MetadataAsValue::get(Context, ValueAsMetadata::get(&A));
+  auto *MDC = MetadataAsValue::get(Context, ValueAsMetadata::get(&C));
+  EXPECT_TRUE(isa<LocalAsMetadata>(MDA->getMetadata()));
+  EXPECT_TRUE(isa<ConstantAsMetadata>(MDC->getMetadata()));
+  EXPECT_EQ(&C, MapValue(&A, VM));
+  EXPECT_EQ(MDC, MapValue(MDA, VM));
 }
 
 } // end namespace

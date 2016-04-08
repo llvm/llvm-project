@@ -1689,12 +1689,9 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     unsigned Reg = getOperand(StartOp).getReg();
     if (TargetRegisterInfo::isVirtualRegister(Reg)) {
       VirtRegs.push_back(Reg);
-#ifdef LLVM_BUILD_GLOBAL_ISEL
       unsigned Size;
-      if (MRI && (Size = MRI->getSize(Reg))) {
+      if (MRI && (Size = MRI->getSize(Reg)))
         OS << '(' << Size << ')';
-      }
-#endif
     }
   }
 
@@ -1873,16 +1870,18 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       HaveSemi = true;
     }
     for (unsigned i = 0; i != VirtRegs.size(); ++i) {
-      const TargetRegisterClass *RC = MRI->getRegClass(VirtRegs[i]);
-#ifdef LLVM_BUILD_GLOBAL_ISEL
-      // Generic virtual registers do not have register classes.
+      const RegClassOrRegBank &RC = MRI->getRegClassOrRegBank(VirtRegs[i]);
       if (!RC)
         continue;
-#endif
-      OS << " " << TRI->getRegClassName(RC)
-         << ':' << PrintReg(VirtRegs[i]);
+      // Generic virtual registers do not have register classes.
+      if (RC.is<const RegisterBank *>())
+        OS << " " << RC.get<const RegisterBank *>()->getName();
+      else
+        OS << " "
+           << TRI->getRegClassName(RC.get<const TargetRegisterClass *>());
+      OS << ':' << PrintReg(VirtRegs[i]);
       for (unsigned j = i+1; j != VirtRegs.size();) {
-        if (MRI->getRegClass(VirtRegs[j]) != RC) {
+        if (MRI->getRegClassOrRegBank(VirtRegs[j]) != RC) {
           ++j;
           continue;
         }

@@ -1125,7 +1125,7 @@ ConstantInt *CallAnalyzer::stripAndComputeInBoundsConstantOffsets(Value *&V) {
     } else if (Operator::getOpcode(V) == Instruction::BitCast) {
       V = cast<Operator>(V)->getOperand(0);
     } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
-      if (GA->mayBeOverridden())
+      if (GA->isInterposable())
         break;
       V = GA->getAliasee();
     } else {
@@ -1477,10 +1477,11 @@ InlineCost llvm::getInlineCost(CallSite CS, Function *Callee,
   if (CS.getCaller()->hasFnAttribute(Attribute::OptimizeNone))
     return llvm::InlineCost::getNever();
 
-  // Don't inline functions which can be redefined at link-time to mean
-  // something else.  Don't inline functions marked noinline or call sites
-  // marked noinline.
-  if (Callee->mayBeOverridden() ||
+  // Don't inline functions which can be interposed at link-time.  Don't inline
+  // functions marked noinline or call sites marked noinline.
+  // Note: inlining non-exact non-interposable fucntions is fine, since we know
+  // we have *a* correct implementation of the source level function.
+  if (Callee->isInterposable() ||
       Callee->hasFnAttribute(Attribute::NoInline) || CS.isNoInline())
     return llvm::InlineCost::getNever();
 

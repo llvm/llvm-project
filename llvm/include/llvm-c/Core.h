@@ -432,6 +432,16 @@ void LLVMContextSetDiagnosticHandler(LLVMContextRef C,
                                      void *DiagnosticContext);
 
 /**
+ * Get the diagnostic handler of this context.
+ */
+LLVMDiagnosticHandler LLVMContextGetDiagnosticHandler(LLVMContextRef C);
+
+/**
+ * Get the diagnostic context of this context.
+ */
+void *LLVMContextGetDiagnosticContext(LLVMContextRef C);
+
+/**
  * Set the yield callback function for this context.
  *
  * @see LLVMContext::setYieldCallback()

@@ -16,6 +16,7 @@ add_public_tablegen_target(AArch64CommonTableGen)
 
 # List of all GlobalISel files.
 set(GLOBAL_ISEL_FILES
+      AArch64CallLowering.cpp
       AArch64RegisterBankInfo.cpp
       )
 
@@ -34,7 +35,6 @@ add_llvm_target(AArch64CodeGen
   AArch64AdvSIMDScalarPass.cpp
   AArch64AsmPrinter.cpp
   AArch64BranchRelaxation.cpp
-  AArch64CallLowering.cpp
   AArch64CleanupLocalDynamicTLSPass.cpp
   AArch64CollectLOH.cpp
   AArch64ConditionalCompares.cpp

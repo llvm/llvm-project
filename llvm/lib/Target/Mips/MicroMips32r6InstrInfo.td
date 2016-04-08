@@ -266,7 +266,7 @@ class CVT_S_L_MMR6_ENC : POOL32F_CVT_DS_FM<"cvt.s.l", 2, 0b1101101>;
 //===----------------------------------------------------------------------===//
 
 class ADD_MMR6_DESC : ArithLogicR<"add", GPR32Opnd>;
-class ADDIU_MMR6_DESC : ArithLogicI<"addiu", simm16, GPR32Opnd>;
+class ADDIU_MMR6_DESC : ArithLogicI<"addiu", simm16, GPR32Opnd, II_ADDIU, immSExt16, add>;
 class ADDU_MMR6_DESC : ArithLogicR<"addu", GPR32Opnd>;
 class MUL_MMR6_DESC : ArithLogicR<"mul", GPR32Opnd>;
 class MUH_MMR6_DESC : ArithLogicR<"muh", GPR32Opnd>;

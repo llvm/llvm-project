@@ -329,7 +329,7 @@ bool DAE::RemoveDeadArgumentsFromCallers(Function &Fn)
   //   %v = load i32 %p
   //   ret void
   // }
-  if (!Fn.isStrongDefinitionForLinker())
+  if (!Fn.hasExactDefinition())
     return false;
 
   // Functions with local linkage should already have been handled, except the

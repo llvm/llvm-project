@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the --echo commands in llvm-c-test.
+// This file implements the --echo command in llvm-c-test.
 //
 // This command uses the C API to read a module and output an exact copy of it
 // as output. It is used to check that the resulting module matches the input

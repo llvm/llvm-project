@@ -143,6 +143,14 @@ addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
   if (LLVM_UNLIKELY(EnableGlobalISel)) {
     if (PassConfig->addIRTranslator())
       return nullptr;
+
+    // Before running the register bank selector, ask the target if it
+    // wants to run some passes.
+    PassConfig->addPreRegBankSelect();
+
+    if (PassConfig->addRegBankSelect())
+      return nullptr;
+
   } else if (PassConfig->addInstSelector())
     return nullptr;
 

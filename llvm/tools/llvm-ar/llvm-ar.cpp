@@ -760,7 +760,7 @@ static int ar_main() {
 
 static int ranlib_main() {
   if (RestOfArgs.size() != 1)
-    fail(ToolName + "takes just one archive as argument");
+    fail(ToolName + " takes just one archive as an argument");
   ArchiveName = RestOfArgs[0];
   return performOperation(CreateSymTab, nullptr);
 }

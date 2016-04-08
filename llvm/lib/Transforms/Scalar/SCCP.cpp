@@ -1724,9 +1724,9 @@ bool IPSCCP::runOnModule(Module &M) {
     if (F->isDeclaration())
       continue;
 
-    // If this is a strong or ODR definition of this function, then we can
-    // propagate information about its result into callsites of it.
-    if (!F->mayBeOverridden())
+    // If this is an exact definition of this function, then we can propagate
+    // information about its result into callsites of it.
+    if (F->hasExactDefinition())
       Solver.AddTrackedFunction(&*F);
 
     // If this function only has direct calls that we can see, we can track its

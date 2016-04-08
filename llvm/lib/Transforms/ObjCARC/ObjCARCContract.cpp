@@ -605,7 +605,7 @@ bool ObjCARCContract::runOnFunction(Function &F) {
                cast<GEPOperator>(Arg)->hasAllZeroIndices())
         Arg = cast<GEPOperator>(Arg)->getPointerOperand();
       else if (isa<GlobalAlias>(Arg) &&
-               !cast<GlobalAlias>(Arg)->mayBeOverridden())
+               !cast<GlobalAlias>(Arg)->isInterposable())
         Arg = cast<GlobalAlias>(Arg)->getAliasee();
       else
         break;

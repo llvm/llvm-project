@@ -69,9 +69,10 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, AAResults &AAR,
     // Already perfect!
     return MAK_ReadNone;
 
-  // Definitions with weak linkage may be overridden at linktime with
-  // something that writes memory, so treat them like declarations.
-  if (F.isDeclaration() || F.mayBeOverridden()) {
+  // Non-exact function definitions may not be selected at link time, and an
+  // alternative version that writes to memory may be selected.  See the comment
+  // on GlobalValue::isDefinitionExact for more details.
+  if (!F.hasExactDefinition()) {
     if (AliasAnalysis::onlyReadsMemory(MRB))
       return MAK_ReadOnly;
 
@@ -284,8 +285,7 @@ struct ArgumentUsesTracker : public CaptureTracker {
     }
 
     Function *F = CS.getCalledFunction();
-    if (!F || F->isDeclaration() || F->mayBeOverridden() ||
-        !SCCNodes.count(F)) {
+    if (!F || !F->hasExactDefinition() || !SCCNodes.count(F)) {
       Captured = true;
       return true;
     }
@@ -490,9 +490,10 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
   // Check each function in turn, determining which pointer arguments are not
   // captured.
   for (Function *F : SCCNodes) {
-    // Definitions with weak linkage may be overridden at linktime with
-    // something that captures pointers, so treat them like declarations.
-    if (F->isDeclaration() || F->mayBeOverridden())
+    // We can infer and propagate function attributes only when we know that the
+    // definition we'll get at link time is *exactly* the definition we see now.
+    // For more details, see GlobalValue::mayBeDerefined.
+    if (!F->hasExactDefinition())
       continue;
 
     // Functions that are readonly (or readnone) and nounwind and don't return
@@ -745,9 +746,10 @@ static bool addNoAliasAttrs(const SCCNodeSet &SCCNodes) {
     if (F->doesNotAlias(0))
       continue;
 
-    // Definitions with weak linkage may be overridden at linktime, so
-    // treat them like declarations.
-    if (F->isDeclaration() || F->mayBeOverridden())
+    // We can infer and propagate function attributes only when we know that the
+    // definition we'll get at link time is *exactly* the definition we see now.
+    // For more details, see GlobalValue::mayBeDerefined.
+    if (!F->hasExactDefinition())
       return false;
 
     // We annotate noalias return values, which are only applicable to
@@ -859,9 +861,10 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes,
                                         Attribute::NonNull))
       continue;
 
-    // Definitions with weak linkage may be overridden at linktime, so
-    // treat them like declarations.
-    if (F->isDeclaration() || F->mayBeOverridden())
+    // We can infer and propagate function attributes only when we know that the
+    // definition we'll get at link time is *exactly* the definition we see now.
+    // For more details, see GlobalValue::mayBeDerefined.
+    if (!F->hasExactDefinition())
       return false;
 
     // We annotate nonnull return values, which are only applicable to

@@ -626,7 +626,7 @@ void Verifier::visitAliaseeSubExpr(SmallPtrSetImpl<const GlobalAlias*> &Visited,
     if (const auto *GA2 = dyn_cast<GlobalAlias>(GV)) {
       Assert(Visited.insert(GA2).second, "Aliases cannot form a cycle", &GA);
 
-      Assert(!GA2->mayBeOverridden(), "Alias cannot point to a weak alias",
+      Assert(!GA2->isInterposable(), "Alias cannot point to an interposable alias",
              &GA);
     } else {
       // Only continue verifying subexpressions of GlobalAliases.
@@ -3502,6 +3502,10 @@ void Verifier::verifyDominatesUse(Instruction &I, unsigned i) {
   // Quick check whether the def has already been encountered in the same block.
   // PHI nodes are not checked to prevent accepting preceeding PHIs, because PHI
   // uses are defined to happen on the incoming edge, not at the instruction.
+  //
+  // FIXME: If this operand is a MetadataAsValue (wrapping a LocalAsMetadata)
+  // wrapping an SSA value, assert that we've already encountered it.  See
+  // related FIXME in Mapper::mapLocalAsMetadata in ValueMapper.cpp.
   if (!isa<PHINode>(I) && InstsInThisBlock.count(Op))
     return;
 
@@ -4380,14 +4384,20 @@ void Verifier::verifyTypeRefs() {
 
   // Visit all the compile units again to map the type references.
   SmallDenseMap<const MDString *, const DIType *, 32> TypeRefs;
-  for (auto *MD : CUs->operands())
-    if (auto *CU = dyn_cast<DICompileUnit>(MD))
-      for (DIType *Op : CU->getRetainedTypes())
-        if (auto *T = dyn_cast_or_null<DICompositeType>(Op))
-          if (auto *S = T->getRawIdentifier()) {
-            UnresolvedTypeRefs.erase(S);
-            TypeRefs.insert(std::make_pair(S, T));
-          }
+  for (auto *MD : CUs->operands()) {
+    auto *CU = dyn_cast<DICompileUnit>(MD);
+    if (!CU)
+      continue;
+    auto *Array = CU->getRawRetainedTypes();
+    if (!Array || !isa<MDTuple>(Array))
+      continue;
+    for (DIType *Op : CU->getRetainedTypes())
+      if (auto *T = dyn_cast_or_null<DICompositeType>(Op))
+        if (auto *S = T->getRawIdentifier()) {
+          UnresolvedTypeRefs.erase(S);
+          TypeRefs.insert(std::make_pair(S, T));
+        }
+  }
 
   // Verify debug info intrinsic bit piece expressions.  This needs a second
   // pass through the intructions, since we haven't built TypeRefs yet when

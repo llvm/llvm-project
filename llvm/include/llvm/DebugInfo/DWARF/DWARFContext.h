@@ -40,7 +40,7 @@ typedef DenseMap<uint64_t, std::pair<uint8_t, int64_t> > RelocAddrMap;
 class DWARFContext : public DIContext {
 
   DWARFUnitSection<DWARFCompileUnit> CUs;
-  std::vector<DWARFUnitSection<DWARFTypeUnit>> TUs;
+  std::deque<DWARFUnitSection<DWARFTypeUnit>> TUs;
   std::unique_ptr<DWARFUnitIndex> CUIndex;
   std::unique_ptr<DWARFUnitIndex> TUIndex;
   std::unique_ptr<DWARFDebugAbbrev> Abbrev;
@@ -52,7 +52,7 @@ class DWARFContext : public DIContext {
   std::unique_ptr<DWARFDebugMacro> Macro;
 
   DWARFUnitSection<DWARFCompileUnit> DWOCUs;
-  std::vector<DWARFUnitSection<DWARFTypeUnit>> DWOTUs;
+  std::deque<DWARFUnitSection<DWARFTypeUnit>> DWOTUs;
   std::unique_ptr<DWARFDebugAbbrev> AbbrevDWO;
   std::unique_ptr<DWARFDebugLocDWO> LocDWO;
 
@@ -87,7 +87,7 @@ public:
 
   typedef DWARFUnitSection<DWARFCompileUnit>::iterator_range cu_iterator_range;
   typedef DWARFUnitSection<DWARFTypeUnit>::iterator_range tu_iterator_range;
-  typedef iterator_range<std::vector<DWARFUnitSection<DWARFTypeUnit>>::iterator> tu_section_iterator_range;
+  typedef iterator_range<decltype(TUs)::iterator> tu_section_iterator_range;
 
   /// Get compile units in this context.
   cu_iterator_range compile_units() {

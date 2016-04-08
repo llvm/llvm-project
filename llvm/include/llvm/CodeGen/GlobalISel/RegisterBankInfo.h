@@ -18,7 +18,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
-#include "llvm/CodeGen/GlobalISel/Types.h"
+#include "llvm/CodeGen/MachineValueType.h" // For SimpleValueType.
 #include "llvm/Support/ErrorHandling.h"
 
 #include <cassert>
@@ -26,6 +26,8 @@
 
 namespace llvm {
 class MachineInstr;
+class MachineRegisterInfo;
+class TargetInstrInfo;
 class TargetRegisterInfo;
 class raw_ostream;
 
@@ -66,8 +68,15 @@ public:
   struct ValueMapping {
     /// How the value is broken down between the different register banks.
     SmallVector<PartialMapping, 2> BreakDown;
+
     /// Verify that this mapping makes sense for a value of \p ExpectedBitWidth.
     void verify(unsigned ExpectedBitWidth) const;
+
+    /// Print this on dbgs() stream.
+    void dump() const;
+
+    /// Print this on \p OS;
+    void print(raw_ostream &OS) const;
   };
 
   /// Helper class that represents how the value of an instruction may be
@@ -132,9 +141,22 @@ public:
     /// This is a lightweight check for obvious wrong instance.
     bool isValid() const { return getID() != InvalidMappingID; }
 
+    /// Set the operand mapping for the \p OpIdx-th operand.
+    /// The mapping will consist of only one element in the break down list.
+    /// This element will map to \p RegBank and fully define a mask, whose
+    /// bitwidth matches the size of \p MaskSize.
+    void setOperandMapping(unsigned OpIdx, unsigned MaskSize,
+                           const RegisterBank &RegBank);
+
     /// Verifiy that this mapping makes sense for \p MI.
     /// \pre \p MI must be connected to a MachineFunction.
     void verify(const MachineInstr &MI) const;
+
+    /// Print this on dbgs() stream.
+    void dump() const;
+
+    /// Print this on \p OS;
+    void print(raw_ostream &OS) const;
   };
 
   /// Convenient type to represent the alternatives for mapping an
@@ -147,6 +169,9 @@ protected:
   std::unique_ptr<RegisterBank[]> RegBanks;
   /// Total number of register banks.
   unsigned NumRegBanks;
+
+  /// Mapping from MVT::SimpleValueType to register banks.
+  std::unique_ptr<const RegisterBank *[]> VTToRegBank;
 
   /// Create a RegisterBankInfo that can accomodate up to \p NumRegBanks
   /// RegisterBank instances.
@@ -172,12 +197,20 @@ protected:
   /// \pre \p ID < NumRegBanks.
   void createRegisterBank(unsigned ID, const char *Name);
 
-  /// Add \p RCId to the set of register class that the register bank
-  /// identified \p ID covers.
+  /// Add \p RCId to the set of register class that the register bank,
+  /// identified \p ID, covers.
   /// This method transitively adds all the sub classes and the subreg-classes
   /// of \p RCId to the set of covered register classes.
   /// It also adjusts the size of the register bank to reflect the maximal
   /// size of a value that can be hold into that register bank.
+  ///
+  /// If \p AddTypeMapping is true, this method also records what types can
+  /// be mapped to \p ID. Although this done by default, targets may want to
+  /// disable it, espicially if a given type may be mapped on different
+  /// register bank. Indeed, in such case, this method only records the
+  /// first register bank where the type matches.
+  /// This information is only used to provide default mapping
+  /// (see getInstrMappingImpl).
   ///
   /// \note This method does *not* add the super classes of \p RCId.
   /// The rationale is if \p ID covers the registers of \p RCId, that
@@ -189,13 +222,71 @@ protected:
   ///
   /// \todo TableGen should just generate the BitSet vector for us.
   void addRegBankCoverage(unsigned ID, unsigned RCId,
-                          const TargetRegisterInfo &TRI);
+                          const TargetRegisterInfo &TRI,
+                          bool AddTypeMapping = true);
 
   /// Get the register bank identified by \p ID.
   RegisterBank &getRegBank(unsigned ID) {
     assert(ID < getNumRegBanks() && "Accessing an unknown register bank");
     return RegBanks[ID];
   }
+
+  /// Get the register bank that has been recorded to cover \p SVT.
+  const RegisterBank *getRegBankForType(MVT::SimpleValueType SVT) const {
+    if (!VTToRegBank)
+      return nullptr;
+    assert(SVT < MVT::SimpleValueType::LAST_VALUETYPE && "Out-of-bound access");
+    return VTToRegBank.get()[SVT];
+  }
+
+  /// Record \p RegBank as the register bank that covers \p SVT.
+  /// If a record was already set for \p SVT, the mapping is not
+  /// updated, unless \p Force == true
+  ///
+  /// \post if getRegBankForType(SVT)\@pre == nullptr then
+  ///                       getRegBankForType(SVT) == &RegBank
+  /// \post if Force == true then getRegBankForType(SVT) == &RegBank
+  void recordRegBankForType(const RegisterBank &RegBank,
+                            MVT::SimpleValueType SVT, bool Force = false) {
+    if (!VTToRegBank)
+      VTToRegBank.reset(
+          new const RegisterBank *[MVT::SimpleValueType::LAST_VALUETYPE]);
+    assert(SVT < MVT::SimpleValueType::LAST_VALUETYPE && "Out-of-bound access");
+    // If we want to override the mapping or the mapping does not exits yet,
+    // set the register bank for SVT.
+    if (Force || !getRegBankForType(SVT))
+      VTToRegBank.get()[SVT] = &RegBank;
+  }
+
+  /// Try to get the mapping of \p MI.
+  /// See getInstrMapping for more details on what a mapping represents.
+  ///
+  /// Unlike getInstrMapping the returned InstructionMapping may be invalid
+  /// (isValid() == false).
+  /// This means that the target independent code is not smart enough
+  /// to get the mapping of \p MI and thus, the target has to provide the
+  /// information for \p MI.
+  ///
+  /// This implementation is able to get the mapping of:
+  /// - Target specific instructions by looking at the encoding constraints.
+  /// - Any instruction if all the register operands are already been assigned
+  ///   a register, a register class, or a register bank.
+  /// - Copies and phis if at least one of the operand has been assigned a
+  ///   register, a register class, or a register bank.
+  /// In other words, this method will likely fail to find a mapping for
+  /// any generic opcode that has not been lowered by target specific code.
+  InstructionMapping getInstrMappingImpl(const MachineInstr &MI) const;
+
+  /// Get the register bank for the \p OpIdx-th operand of \p MI form
+  /// the encoding constraints, if any.
+  ///
+  /// \return A register bank that covers the register class of the
+  /// related encoding constraints or nullptr if \p MI did not provide
+  /// enough information to deduce it.
+  const RegisterBank *
+  getRegBankFromConstraints(const MachineInstr &MI, unsigned OpIdx,
+                            const TargetInstrInfo &TII,
+                            const TargetRegisterInfo &TRI) const;
 
 public:
   virtual ~RegisterBankInfo() {}
@@ -204,6 +295,14 @@ public:
   const RegisterBank &getRegBank(unsigned ID) const {
     return const_cast<RegisterBankInfo *>(this)->getRegBank(ID);
   }
+
+  /// Get the register bank of \p Reg.
+  /// If Reg has not been assigned a register, a register class,
+  /// or a register bank, then this returns nullptr.
+  ///
+  /// \pre Reg != 0 (NoRegister)
+  const RegisterBank *getRegBank(unsigned Reg, const MachineRegisterInfo &MRI,
+                                 const TargetRegisterInfo &TRI) const;
 
   /// Get the total number of register banks.
   unsigned getNumRegBanks() const { return NumRegBanks; }
@@ -245,6 +344,11 @@ public:
   /// Get the mapping of the different operands of \p MI
   /// on the register bank.
   /// This mapping should be the direct translation of \p MI.
+  /// In other words, when \p MI is mapped with the returned mapping,
+  /// only the register banks of the operands of \p MI need to be updated.
+  /// In particular, neither the opcode or the type of \p MI needs to be
+  /// updated for this direct mapping.
+  ///
   /// The target independent implementation gives a mapping based on
   /// the register classes for the target specific opcode.
   /// It uses the ID RegisterBankInfo::DefaultMappingID for that mapping.
@@ -291,6 +395,19 @@ inline raw_ostream &
 operator<<(raw_ostream &OS,
            const RegisterBankInfo::PartialMapping &PartMapping) {
   PartMapping.print(OS);
+  return OS;
+}
+
+inline raw_ostream &
+operator<<(raw_ostream &OS, const RegisterBankInfo::ValueMapping &ValMapping) {
+  ValMapping.print(OS);
+  return OS;
+}
+
+inline raw_ostream &
+operator<<(raw_ostream &OS,
+           const RegisterBankInfo::InstructionMapping &InstrMapping) {
+  InstrMapping.print(OS);
   return OS;
 }
 } // End namespace llvm.

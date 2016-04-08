@@ -299,9 +299,9 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, unsigned Align,
     BaseAlign = AI->getAlignment();
   } else if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Base)) {
     // Global variables are not necessarily safe to load from if they are
-    // overridden. Their size may change or they may be weak and require a test
-    // to determine if they were in fact provided.
-    if (!GV->mayBeOverridden()) {
+    // interposed arbitrarily. Their size may change or they may be weak and
+    // require a test to determine if they were in fact provided.
+    if (!GV->isInterposable()) {
       BaseType = GV->getType()->getElementType();
       BaseAlign = GV->getAlignment();
     }

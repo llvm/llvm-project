@@ -337,6 +337,10 @@ class ISA_MICROMIPS_NOT_32R6_64R6 : PredicateControl {
   let InsnPredicates = [InMicroMips, NotMips32r6, NotMips64r6];
 }
 
+class ASE_NOT_DSP {
+  list<Predicate> InsnPredicates = [NotDSP];
+}
+
 //===----------------------------------------------------------------------===//
 
 class MipsPat<dag pattern, dag result> : Pat<pattern, result>, PredicateControl {
@@ -2401,12 +2405,10 @@ def : MipsPat<(i32 imm:$imm),
 // Carry MipsPatterns
 def : MipsPat<(subc GPR32:$lhs, GPR32:$rhs),
               (SUBu GPR32:$lhs, GPR32:$rhs)>;
-let AdditionalPredicates = [NotDSP] in {
-  def : MipsPat<(addc GPR32:$lhs, GPR32:$rhs),
-                (ADDu GPR32:$lhs, GPR32:$rhs)>;
-  def : MipsPat<(addc  GPR32:$src, immSExt16:$imm),
-                (ADDiu GPR32:$src, imm:$imm)>;
-}
+def : MipsPat<(addc GPR32:$lhs, GPR32:$rhs),
+              (ADDu GPR32:$lhs, GPR32:$rhs)>, ASE_NOT_DSP;
+def : MipsPat<(addc  GPR32:$src, immSExt16:$imm),
+              (ADDiu GPR32:$src, imm:$imm)>, ASE_NOT_DSP;
 
 // Support multiplication for pre-Mips32 targets that don't have
 // the MUL instruction.

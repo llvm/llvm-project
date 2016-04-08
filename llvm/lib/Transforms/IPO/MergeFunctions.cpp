@@ -1572,7 +1572,7 @@ bool MergeFunctions::runOnModule(Module &M) {
       if (!*I) continue;
       Function *F = cast<Function>(*I);
       if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage() &&
-          !F->mayBeOverridden()) {
+          !F->isInterposable()) {
         Changed |= insert(F);
       }
     }
@@ -1586,7 +1586,7 @@ bool MergeFunctions::runOnModule(Module &M) {
       if (!*I) continue;
       Function *F = cast<Function>(*I);
       if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage() &&
-          F->mayBeOverridden()) {
+          F->isInterposable()) {
         Changed |= insert(F);
       }
     }
@@ -1683,7 +1683,7 @@ static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
 // Replace G with a simple tail call to bitcast(F). Also replace direct uses
 // of G with bitcast(F). Deletes G.
 void MergeFunctions::writeThunk(Function *F, Function *G) {
-  if (!G->mayBeOverridden()) {
+  if (!G->isInterposable()) {
     // Redirect direct callers of G to F.
     replaceDirectCallers(G, F);
   }
@@ -1744,8 +1744,8 @@ void MergeFunctions::writeAlias(Function *F, Function *G) {
 
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
-  if (F->mayBeOverridden()) {
-    assert(G->mayBeOverridden());
+  if (F->isInterposable()) {
+    assert(G->isInterposable());
 
     // Make them both thunks to the same internal function.
     Function *H = Function::Create(F->getFunctionType(), F->getLinkage(), "",
@@ -1828,8 +1828,8 @@ bool MergeFunctions::insert(Function *NewFunction) {
   //
   // When one function is weak and the other is strong there is an order imposed
   // already. We process strong functions before weak functions.
-  if ((OldF.getFunc()->mayBeOverridden() && NewFunction->mayBeOverridden()) ||
-      (!OldF.getFunc()->mayBeOverridden() && !NewFunction->mayBeOverridden()))
+  if ((OldF.getFunc()->isInterposable() && NewFunction->isInterposable()) ||
+      (!OldF.getFunc()->isInterposable() && !NewFunction->isInterposable()))
     if (OldF.getFunc()->getName() > NewFunction->getName()) {
       // Swap the two functions.
       Function *F = OldF.getFunc();
@@ -1839,7 +1839,7 @@ bool MergeFunctions::insert(Function *NewFunction) {
     }
 
   // Never thunk a strong function to a weak function.
-  assert(!OldF.getFunc()->mayBeOverridden() || NewFunction->mayBeOverridden());
+  assert(!OldF.getFunc()->isInterposable() || NewFunction->isInterposable());
 
   DEBUG(dbgs() << "  " << OldF.getFunc()->getName()
                << " == " << NewFunction->getName() << '\n');

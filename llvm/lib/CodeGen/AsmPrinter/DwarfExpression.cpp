@@ -159,29 +159,37 @@ bool DwarfExpression::AddMachineRegPiece(unsigned MachineReg,
   return CurPos > PieceOffsetInBits;
 }
 
+void DwarfExpression::AddStackValue() {
+  if (DwarfVersion >= 4)
+    EmitOp(dwarf::DW_OP_stack_value);
+}
+
 void DwarfExpression::AddSignedConstant(int Value) {
   EmitOp(dwarf::DW_OP_consts);
   EmitSigned(Value);
-  // The proper way to describe a constant value is
-  // DW_OP_constu <const>, DW_OP_stack_value.
-  // Unfortunately, DW_OP_stack_value was not available until DWARF-4,
-  // so we will continue to generate DW_OP_constu <const> for DWARF-2
-  // and DWARF-3. Technically, this is incorrect since DW_OP_const <const>
-  // actually describes a value at a constant addess, not a constant value.
-  // However, in the past there was no better way  to describe a constant
-  // value, so the producers and consumers started to rely on heuristics
-  // to disambiguate the value vs. location status of the expression.
-  // See PR21176 for more details.
-  if (DwarfVersion >= 4)
-    EmitOp(dwarf::DW_OP_stack_value);
+  AddStackValue();
 }
 
 void DwarfExpression::AddUnsignedConstant(unsigned Value) {
   EmitOp(dwarf::DW_OP_constu);
   EmitUnsigned(Value);
-  // cf. comment in DwarfExpression::AddSignedConstant().
-  if (DwarfVersion >= 4)
-    EmitOp(dwarf::DW_OP_stack_value);
+  AddStackValue();
+}
+
+void DwarfExpression::AddUnsignedConstant(APInt Value) {
+  unsigned Size = Value.getBitWidth();
+  const uint64_t *Data = Value.getRawData();
+
+  // Chop it up into 64-bit pieces, because that's the maximum that
+  // AddUnsignedConstant takes.
+  unsigned Offset = 0;
+  while (Offset < Size) {
+    AddUnsignedConstant(*Data++);
+    if (Offset == 0 && Size <= 64)
+      break;
+    AddOpPiece(std::min(Size-Offset, 64u), Offset);
+    Offset += 64;
+  }
 }
 
 static unsigned getOffsetOrZero(unsigned OffsetInBits,

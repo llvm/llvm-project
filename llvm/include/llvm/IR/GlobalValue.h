@@ -96,6 +96,56 @@ private:
   void destroyConstantImpl();
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
+  /// Returns true if the definition of this global may be replaced by a
+  /// differently optimized variant of the same source level function at link
+  /// time.
+  bool mayBeDerefined() const {
+    switch (getLinkage()) {
+    case WeakODRLinkage:
+    case LinkOnceODRLinkage:
+    case AvailableExternallyLinkage:
+      return true;
+
+    case WeakAnyLinkage:
+    case LinkOnceAnyLinkage:
+    case CommonLinkage:
+    case ExternalWeakLinkage:
+    case ExternalLinkage:
+    case AppendingLinkage:
+    case InternalLinkage:
+    case PrivateLinkage:
+      return mayBeOverridden();
+    }
+
+    llvm_unreachable("Fully covered switch above!");
+  }
+
+  /// Whether the definition of this global may be replaced by something
+  /// non-equivalent at link time. For example, if a function has weak linkage
+  /// then the code defining it may be replaced by different code.
+  bool mayBeOverridden() const {
+    switch (getLinkage()) {
+    case WeakAnyLinkage:
+    case LinkOnceAnyLinkage:
+    case CommonLinkage:
+    case ExternalWeakLinkage:
+      return true;
+
+    case AvailableExternallyLinkage:
+    case LinkOnceODRLinkage:
+    case WeakODRLinkage:
+      // The above three cannot be overridden but can be de-refined.
+
+    case ExternalLinkage:
+    case AppendingLinkage:
+    case InternalLinkage:
+    case PrivateLinkage:
+      return false;
+    }
+
+    llvm_unreachable("Fully covered switch above!");
+  }
+
 protected:
   /// \brief The intrinsic ID for this subclass (which must be a Function).
   ///
@@ -242,14 +292,6 @@ public:
            isAvailableExternallyLinkage(Linkage);
   }
 
-  /// Whether the definition of this global may be replaced by something
-  /// non-equivalent at link time. For example, if a function has weak linkage
-  /// then the code defining it may be replaced by different code.
-  static bool mayBeOverridden(LinkageTypes Linkage) {
-    return Linkage == WeakAnyLinkage || Linkage == LinkOnceAnyLinkage ||
-           Linkage == CommonLinkage || Linkage == ExternalWeakLinkage;
-  }
-
   /// Whether the definition of this global may be replaced at link time.  NB:
   /// Using this method outside of the code generators is almost always a
   /// mistake: when working at the IR level use mayBeOverridden instead as it
@@ -259,6 +301,52 @@ public:
            Linkage == LinkOnceAnyLinkage || Linkage == LinkOnceODRLinkage ||
            Linkage == CommonLinkage || Linkage == ExternalWeakLinkage;
   }
+
+  /// Return true if the currently visible definition of this global (if any) is
+  /// exactly the definition we will see at runtime.
+  ///
+  /// Non-exact linkage types inhibits most non-inlining IPO, since a
+  /// differently optimized variant of the same function can have different
+  /// observable or undefined behavior than in the variant currently visible.
+  /// For instance, we could have started with
+  ///
+  ///   void foo(int *v) {
+  ///     int t = 5 / v[0];
+  ///     (void) t;
+  ///   }
+  ///
+  /// and "refined" it to
+  ///
+  ///   void foo(int *v) { }
+  ///
+  /// However, we cannot infer readnone for `foo`, since that would justify
+  /// DSE'ing a store to `v[0]` across a call to `foo`, which can cause
+  /// undefined behavior if the linker replaces the actual call destination with
+  /// the unoptimized `foo`.
+  ///
+  /// Inlining is okay across non-exact linkage types as long as they're not
+  /// interposable (see \c isInterposable), since in such cases the currently
+  /// visible variant is *a* correct implementation of the original source
+  /// function; it just isn't the *only* correct implementation.
+  bool isDefinitionExact() const {
+    return !mayBeDerefined();
+  }
+
+  /// Return true if this global has an exact defintion.
+  bool hasExactDefinition() const {
+    // While this computes exactly the same thing as
+    // isStrongDefinitionForLinker, the intended uses are different.  This
+    // function is intended to help decide if specific inter-procedural
+    // transforms are correct, while isStrongDefinitionForLinker's intended use
+    // is in low level code generation.
+    return !isDeclaration() && isDefinitionExact();
+  }
+
+  /// Return true if this global's definition can be substituted with an
+  /// *arbitrary* definition at link time.  We cannot do any IPO or inlinining
+  /// across interposable call edges, since the callee can be replaced with
+  /// something arbitrary at link time.
+  bool isInterposable() const { return mayBeOverridden(); }
 
   bool hasExternalLinkage() const { return isExternalLinkage(getLinkage()); }
   bool hasAvailableExternallyLinkage() const {
@@ -290,8 +378,6 @@ public:
   bool isDiscardableIfUnused() const {
     return isDiscardableIfUnused(getLinkage());
   }
-
-  bool mayBeOverridden() const { return mayBeOverridden(getLinkage()); }
 
   bool isWeakForLinker() const { return isWeakForLinker(getLinkage()); }
 
@@ -365,6 +451,10 @@ public:
 
   /// Returns true if this global's definition will be the one chosen by the
   /// linker.
+  ///
+  /// NB! Ideally this should not be used at the IR level at all.  If you're
+  /// interested in optimization constraints implied by the linker's ability to
+  /// choose an implementation, prefer using \c hasExactDefinition.
   bool isStrongDefinitionForLinker() const {
     return !(isDeclarationForLinker() || isWeakForLinker());
   }

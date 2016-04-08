@@ -93,7 +93,10 @@ bool PruneEH::runOnSCC(CallGraphSCC &SCC) {
     if (!F) {
       SCCMightUnwind = true;
       SCCMightReturn = true;
-    } else if (F->isDeclaration() || F->mayBeOverridden()) {
+    } else if (F->isDeclaration() || F->isInterposable()) {
+      // Note: isInterposable (as opposed to hasExactDefinition) is fine above,
+      // since we're not inferring new attributes here, but only using existing,
+      // assumed to be correct, function attributes.
       SCCMightUnwind |= !F->doesNotThrow();
       SCCMightReturn |= !F->doesNotReturn();
     } else {

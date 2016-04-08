@@ -13,10 +13,12 @@
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
@@ -86,7 +88,8 @@ void RegisterBankInfo::createRegisterBank(unsigned ID, const char *Name) {
 }
 
 void RegisterBankInfo::addRegBankCoverage(unsigned ID, unsigned RCId,
-                                          const TargetRegisterInfo &TRI) {
+                                          const TargetRegisterInfo &TRI,
+                                          bool AddTypeMapping) {
   RegisterBank &RB = getRegBank(ID);
   unsigned NbOfRegClasses = TRI.getNumRegClasses();
 
@@ -118,36 +121,26 @@ void RegisterBankInfo::addRegBankCoverage(unsigned ID, unsigned RCId,
     // Remember the biggest size in bits.
     MaxSize = std::max(MaxSize, CurRC.getSize() * 8);
 
+    // If we have been asked to record the type supported by this
+    // register bank, do it now.
+    if (AddTypeMapping)
+      for (MVT::SimpleValueType SVT :
+           make_range(CurRC.vt_begin(), CurRC.vt_end()))
+        recordRegBankForType(getRegBank(ID), SVT);
+
     // Walk through all sub register classes and push them into the worklist.
-    const uint32_t *SubClassMask = CurRC.getSubClassMask();
-    // The subclasses mask is broken down into chunks of uint32_t, but it still
-    // represents all register classes.
     bool First = true;
-    for (unsigned Base = 0; Base < NbOfRegClasses; Base += 32) {
-      unsigned Idx = Base;
-      for (uint32_t Mask = *SubClassMask++; Mask; Mask >>= 1, ++Idx) {
-        unsigned Offset = countTrailingZeros(Mask);
-        unsigned SubRCId = Idx + Offset;
-        if (!Covered.test(SubRCId)) {
-          if (First)
-            DEBUG(dbgs() << "  Enqueue sub-class: ");
-          DEBUG(dbgs() << TRI.getRegClassName(TRI.getRegClass(SubRCId))
-                       << ", ");
-          WorkList.push_back(SubRCId);
-          // Remember that we saw the sub class.
-          Covered.set(SubRCId);
-          First = false;
-        }
-
-        // Move the cursor to the next sub class.
-        // I.e., eat up the zeros then move to the next bit.
-        // This last part is done as part of the loop increment.
-
-        // By construction, Offset must be less than 32.
-        // Otherwise, than means Mask was zero. I.e., no UB.
-        Mask >>= Offset;
-        // Remember that we shifted the base offset.
-        Idx += Offset;
+    for (BitMaskClassIterator It(CurRC.getSubClassMask(), TRI); It.isValid();
+         ++It) {
+      unsigned SubRCId = It.getID();
+      if (!Covered.test(SubRCId)) {
+        if (First)
+          DEBUG(dbgs() << "  Enqueue sub-class: ");
+        DEBUG(dbgs() << TRI.getRegClassName(TRI.getRegClass(SubRCId)) << ", ");
+        WorkList.push_back(SubRCId);
+        // Remember that we saw the sub class.
+        Covered.set(SubRCId);
+        First = false;
       }
     }
     if (!First)
@@ -173,33 +166,19 @@ void RegisterBankInfo::addRegBankCoverage(unsigned ID, unsigned RCId,
            ++SuperRCIt) {
         if (Pushed)
           break;
-        const uint32_t *SuperRCMask = SuperRCIt.getMask();
-        for (unsigned Base = 0; Base < NbOfRegClasses; Base += 32) {
-          unsigned Idx = Base;
-          for (uint32_t Mask = *SuperRCMask++; Mask; Mask >>= 1, ++Idx) {
-            unsigned Offset = countTrailingZeros(Mask);
-            unsigned SuperRCId = Idx + Offset;
-            if (SuperRCId == RCId) {
-              if (First)
-                DEBUG(dbgs() << "  Enqueue subreg-class: ");
-              DEBUG(dbgs() << TRI.getRegClassName(SubRC) << ", ");
-              WorkList.push_back(SubRCId);
-              // Remember that we saw the sub class.
-              Covered.set(SubRCId);
-              Pushed = true;
-              First = false;
-              break;
-            }
-
-            // Move the cursor to the next sub class.
-            // I.e., eat up the zeros then move to the next bit.
-            // This last part is done as part of the loop increment.
-
-            // By construction, Offset must be less than 32.
-            // Otherwise, than means Mask was zero. I.e., no UB.
-            Mask >>= Offset;
-            // Remember that we shifted the base offset.
-            Idx += Offset;
+        for (BitMaskClassIterator It(SuperRCIt.getMask(), TRI); It.isValid();
+             ++It) {
+          unsigned SuperRCId = It.getID();
+          if (SuperRCId == RCId) {
+            if (First)
+              DEBUG(dbgs() << "  Enqueue subreg-class: ");
+            DEBUG(dbgs() << TRI.getRegClassName(SubRC) << ", ");
+            WorkList.push_back(SubRCId);
+            // Remember that we saw the sub class.
+            Covered.set(SubRCId);
+            Pushed = true;
+            First = false;
+            break;
           }
         }
       }
@@ -209,53 +188,128 @@ void RegisterBankInfo::addRegBankCoverage(unsigned ID, unsigned RCId,
   } while (!WorkList.empty());
 }
 
+const RegisterBank *
+RegisterBankInfo::getRegBank(unsigned Reg, const MachineRegisterInfo &MRI,
+                             const TargetRegisterInfo &TRI) const {
+  if (TargetRegisterInfo::isPhysicalRegister(Reg))
+    return &getRegBankFromRegClass(*TRI.getMinimalPhysRegClass(Reg));
+
+  assert(Reg && "NoRegister does not have a register bank");
+  const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
+  if (RegClassOrBank.is<const RegisterBank *>())
+    return RegClassOrBank.get<const RegisterBank *>();
+  const TargetRegisterClass *RC =
+      RegClassOrBank.get<const TargetRegisterClass *>();
+  if (RC)
+    return &getRegBankFromRegClass(*RC);
+  return nullptr;
+}
+
+const RegisterBank *RegisterBankInfo::getRegBankFromConstraints(
+    const MachineInstr &MI, unsigned OpIdx, const TargetInstrInfo &TII,
+    const TargetRegisterInfo &TRI) const {
+  // The mapping of the registers may be available via the
+  // register class constraints.
+  const TargetRegisterClass *RC = MI.getRegClassConstraint(OpIdx, &TII, &TRI);
+
+  if (!RC)
+    return nullptr;
+
+  const RegisterBank &RegBank = getRegBankFromRegClass(*RC);
+  // Sanity check that the target properly implemented getRegBankFromRegClass.
+  assert(RegBank.covers(*RC) &&
+         "The mapping of the register bank does not make sense");
+  return &RegBank;
+}
+
+RegisterBankInfo::InstructionMapping
+RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
+  RegisterBankInfo::InstructionMapping Mapping(DefaultMappingID, /*Cost*/ 1,
+                                               MI.getNumOperands());
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  // We may need to query the instruction encoding to guess the mapping.
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
+
+  // Before doing anything complicated check if the mapping is not
+  // directly available.
+  bool CompleteMapping = true;
+  // For copies we want to walk over the operands and try to find one
+  // that has a register bank.
+  bool isCopyLike = MI.isCopy() || MI.isPHI();
+  // Remember the register bank for reuse for copy-like instructions.
+  const RegisterBank *RegBank = nullptr;
+  // Remember the size of the register for reuse for copy-like instructions.
+  unsigned RegSize = 0;
+  for (unsigned OpIdx = 0, End = MI.getNumOperands(); OpIdx != End; ++OpIdx) {
+    const MachineOperand &MO = MI.getOperand(OpIdx);
+    if (!MO.isReg())
+      continue;
+    unsigned Reg = MO.getReg();
+    if (!Reg)
+      continue;
+    const RegisterBank *CurRegBank = getRegBank(Reg, MRI, TRI);
+    if (!CurRegBank) {
+      // If this is a target specific instruction, we can deduce
+      // the register bank from the encoding constraints.
+      CurRegBank = getRegBankFromConstraints(MI, OpIdx, TII, TRI);
+      if (!CurRegBank) {
+        // Check if we can deduce the register bank from the type of
+        // the instruction.
+        Type *MITy = MI.getType();
+        if (MITy)
+          CurRegBank = getRegBankForType(
+              MVT::getVT(MITy, /*HandleUnknown*/ true).SimpleTy);
+        if (!CurRegBank) {
+          // All our attempts failed, give up.
+          CompleteMapping = false;
+
+          if (!isCopyLike)
+            // MI does not carry enough information to guess the mapping.
+            return InstructionMapping();
+
+          // For copies, we want to keep interating to find a register
+          // bank for the other operands if we did not find one yet.
+          if (RegBank)
+            break;
+          continue;
+        }
+      }
+    }
+    RegBank = CurRegBank;
+    RegSize = getSizeInBits(Reg, MRI, TRI);
+    Mapping.setOperandMapping(OpIdx, RegSize, *CurRegBank);
+  }
+
+  if (CompleteMapping)
+    return Mapping;
+
+  assert(isCopyLike && "We should have bailed on non-copies at this point");
+  // For copy like instruction, if none of the operand has a register
+  // bank avialable, there is nothing we can propagate.
+  if (!RegBank)
+    return InstructionMapping();
+
+  // This is a copy-like instruction.
+  // Propagate RegBank to all operands that do not have a
+  // mapping yet.
+  for (unsigned OpIdx = 0, End = MI.getNumOperands(); OpIdx != End; ++OpIdx) {
+    if (!static_cast<const InstructionMapping *>(&Mapping)
+             ->getOperandMapping(OpIdx)
+             .BreakDown.empty())
+      continue;
+    Mapping.setOperandMapping(OpIdx, RegSize, *RegBank);
+  }
+  return Mapping;
+}
+
 RegisterBankInfo::InstructionMapping
 RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
-  if (MI.getOpcode() > TargetOpcode::GENERIC_OP_END) {
-    // This is a target specific opcode:
-    // The mapping of the registers is already available via the
-    // register class.
-    // Just map the register class to a register bank.
-    RegisterBankInfo::InstructionMapping Mapping(DefaultMappingID, /*Cost*/ 1,
-                                                 MI.getNumOperands());
-    const MachineFunction &MF = *MI.getParent()->getParent();
-    const TargetSubtargetInfo &STI = MF.getSubtarget();
-    const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-    const TargetInstrInfo &TII = *STI.getInstrInfo();
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
-
-    for (unsigned OpIdx = 0, End = MI.getNumOperands(); OpIdx != End; ++OpIdx) {
-      const MachineOperand &MO = MI.getOperand(OpIdx);
-      if (!MO.isReg())
-        continue;
-      unsigned Reg = MO.getReg();
-      if (!Reg)
-        continue;
-      // Since this is a target instruction, the operand must have a register
-      // class constraint.
-      const TargetRegisterClass *RC =
-          MI.getRegClassConstraint(OpIdx, &TII, &TRI);
-      // Note: This cannot be a "dynamic" constraint like inline asm,
-      //       since inlineasm opcode is a generic opcode.
-      assert(RC && "Invalid encoding constraints for target instruction?");
-
-      // Build the value mapping.
-      const RegisterBank &RegBank = getRegBankFromRegClass(*RC);
-      unsigned RegSize = getSizeInBits(Reg, MRI, TRI);
-      assert(RegSize <= RegBank.getSize() && "Register bank too small");
-      // Assume the value is mapped in one register that lives in the
-      // register bank that covers RC.
-      APInt Mask(RegSize, 0);
-      // The value is represented by all the bits.
-      Mask.flipAllBits();
-
-      // Create the mapping object.
-      ValueMapping ValMapping;
-      ValMapping.BreakDown.push_back(PartialMapping(Mask, RegBank));
-      Mapping.setOperandMapping(OpIdx, ValMapping);
-    }
-    return Mapping;
-  }
+    RegisterBankInfo::InstructionMapping Mapping = getInstrMappingImpl(MI);
+    if (Mapping.isValid())
+      return Mapping;
   llvm_unreachable("The target must implement this");
 }
 
@@ -310,7 +364,7 @@ void RegisterBankInfo::PartialMapping::verify() const {
 
 void RegisterBankInfo::PartialMapping::print(raw_ostream &OS) const {
   SmallString<128> MaskStr;
-  Mask.toString(MaskStr, /*Radix*/ 2, /*Signed*/ 0, /*formatAsCLiteral*/ true);
+  Mask.toString(MaskStr, /*Radix*/ 16, /*Signed*/ 0, /*formatAsCLiteral*/ true);
   OS << "Mask(" << Mask.getBitWidth() << ") = " << MaskStr << ", RegBank = ";
   if (RegBank)
     OS << *RegBank;
@@ -334,6 +388,34 @@ void RegisterBankInfo::ValueMapping::verify(unsigned ExpectedBitWidth) const {
     PartMap.verify();
   }
   assert(ValueMask.isAllOnesValue() && "Value is not fully mapped");
+}
+
+void RegisterBankInfo::ValueMapping::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
+}
+
+void RegisterBankInfo::ValueMapping::print(raw_ostream &OS) const {
+  OS << "#BreakDown: " << BreakDown.size() << " ";
+  bool IsFirst = true;
+  for (const PartialMapping &PartMap : BreakDown) {
+    if (!IsFirst)
+      OS << ", ";
+    OS << '[' << PartMap << ']';
+    IsFirst = false;
+  }
+}
+
+void RegisterBankInfo::InstructionMapping::setOperandMapping(
+    unsigned OpIdx, unsigned MaskSize, const RegisterBank &RegBank) {
+  // Build the value mapping.
+  assert(MaskSize <= RegBank.getSize() && "Register bank is too small");
+  APInt Mask(MaskSize, 0);
+  // The value is represented by all the bits.
+  Mask.flipAllBits();
+
+  // Create the mapping object.
+  getOperandMapping(OpIdx).BreakDown.push_back(PartialMapping(Mask, RegBank));
 }
 
 void RegisterBankInfo::InstructionMapping::verify(
@@ -363,5 +445,21 @@ void RegisterBankInfo::InstructionMapping::verify(
     // This size must match what the mapping expects.
     unsigned RegSize = getSizeInBits(Reg, MRI, TRI);
     MOMapping.verify(RegSize);
+  }
+}
+
+void RegisterBankInfo::InstructionMapping::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
+}
+
+void RegisterBankInfo::InstructionMapping::print(raw_ostream &OS) const {
+  OS << "ID: " << getID() << " Cost: " << getCost() << " Mapping: ";
+
+  for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
+    const ValueMapping &ValMapping = getOperandMapping(OpIdx);
+    if (OpIdx)
+      OS << ", ";
+    OS << "{ Idx: " << OpIdx << " Map: " << ValMapping << '}';
   }
 }
