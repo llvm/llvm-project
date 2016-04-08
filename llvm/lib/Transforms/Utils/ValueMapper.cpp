@@ -647,7 +647,7 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
   // This is a module-level metadata.  If nothing at the module level is
   // changing, use an identity mapping.
   if ((Flags & RF_NoModuleLevelChanges))
-    return mapToSelf(MD);
+    return const_cast<Metadata *>(MD);
 
   if (auto *CMD = dyn_cast<ConstantAsMetadata>(MD)) {
     // Disallow recursion into metadata mapping through mapValue.
