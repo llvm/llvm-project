@@ -944,7 +944,7 @@ DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
     DEBUG({
       dbgs() << CurEntry->getValues().size() << " Values:\n";
       for (auto &Value : CurEntry->getValues())
-        Value.getExpression()->dump();
+        Value.dump();
       dbgs() << "-----\n";
     });
 
