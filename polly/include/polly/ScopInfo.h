@@ -1317,6 +1317,14 @@ private:
   /// @brief A map from basic blocks to their domains.
   DenseMap<BasicBlock *, isl_set *> DomainMap;
 
+  /// @brief A map from basic blocks to the error context reaching them.
+  ///
+  /// The error context describes all parameter configurations under which
+  /// the block would be executed but the control would pass an error block.
+  /// This information is not contained in the domain and only implicit in the
+  /// AssumedContext/InvalidContext.
+  DenseMap<BasicBlock *, isl_set *> ErrorDomainCtxMap;
+
   /// Constraints on parameters.
   isl_set *Context;
 
@@ -1494,14 +1502,20 @@ private:
   void propagateDomainConstraints(Region *R, ScopDetection &SD,
                                   DominatorTree &DT, LoopInfo &LI);
 
-  /// @brief Remove domains of error blocks/regions (and blocks dominated by
-  ///        them).
+  /// @brief Propagate of error block domain contexts through @p R.
   ///
+  /// This method will propagate error block domain contexts through @p R
+  /// and thereby fill the ErrorDomainCtxMap map. Additionally, the domains
+  /// of error statements and those only reachable via error statements will
+  /// be replaced by an empty set. Later those will be removed completely from
+  /// the SCoP.
+  ///
+  /// @param R  The currently traversed region.
   /// @param SD The ScopDetection analysis for the current function.
   /// @param DT The DominatorTree for the current function.
   /// @param LI The LoopInfo for the current function.
-  void removeErrorBlockDomains(ScopDetection &SD, DominatorTree &DT,
-                               LoopInfo &LI);
+  void propagateErrorConstraints(Region *R, ScopDetection &SD,
+                                 DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Compute the domain for each basic block in @p R.
   ///
@@ -1536,6 +1550,9 @@ private:
   /// @param RemoveIgnoredStmts If true, also removed ignored statments.
   /// @see isIgnored()
   void simplifySCoP(bool RemoveIgnoredStmts, DominatorTree &DT, LoopInfo &LI);
+
+  /// @brief Return the error context under which @p Stmt is reached.
+  __isl_give isl_set *getErrorCtxReachingStmt(ScopStmt &Stmt);
 
   /// @brief Create equivalence classes for required invariant accesses.
   ///
@@ -2036,12 +2053,12 @@ public:
   /// for complex cases without "error handling code" needed on the users side.
   __isl_give isl_pw_aff *getPwAff(const SCEV *E, BasicBlock *BB = nullptr);
 
-  /// @brief Return the non-loop carried conditions on the domain of @p Stmt.
+  /// @brief Return the domain of @p Stmt.
   ///
   /// @param Stmt The statement for which the conditions should be returned.
   __isl_give isl_set *getDomainConditions(ScopStmt *Stmt);
 
-  /// @brief Return the non-loop carried conditions on the domain of @p BB.
+  /// @brief Return the domain of @p BB.
   ///
   /// @param BB The block for which the conditions should be returned.
   __isl_give isl_set *getDomainConditions(BasicBlock *BB);

@@ -536,28 +536,34 @@ static std::unique_ptr<InputFile> createELFFileAux(MemoryBufferRef MB) {
 
 template <template <class> class T>
 static std::unique_ptr<InputFile> createELFFile(MemoryBufferRef MB) {
-  std::pair<unsigned char, unsigned char> Type = getElfArchType(MB.getBuffer());
-  if (Type.second != ELF::ELFDATA2LSB && Type.second != ELF::ELFDATA2MSB)
+  unsigned char Size;
+  unsigned char Endian;
+  std::tie(Size, Endian) = getElfArchType(MB.getBuffer());
+  if (Endian != ELFDATA2LSB && Endian != ELFDATA2MSB)
     fatal("invalid data encoding: " + MB.getBufferIdentifier());
 
-  if (Type.first == ELF::ELFCLASS32) {
-    if (Type.second == ELF::ELFDATA2LSB)
+  if (Size == ELFCLASS32) {
+    if (Endian == ELFDATA2LSB)
       return createELFFileAux<T<ELF32LE>>(MB);
     return createELFFileAux<T<ELF32BE>>(MB);
   }
-  if (Type.first == ELF::ELFCLASS64) {
-    if (Type.second == ELF::ELFDATA2LSB)
+  if (Size == ELFCLASS64) {
+    if (Endian == ELFDATA2LSB)
       return createELFFileAux<T<ELF64LE>>(MB);
     return createELFFileAux<T<ELF64BE>>(MB);
   }
   fatal("invalid file class: " + MB.getBufferIdentifier());
 }
 
+static bool isBitcode(MemoryBufferRef MB) {
+  using namespace sys::fs;
+  return identify_magic(MB.getBuffer()) == file_magic::bitcode;
+}
+
 std::unique_ptr<InputFile> elf::createObjectFile(MemoryBufferRef MB,
                                                  StringRef ArchiveName) {
-  using namespace sys::fs;
   std::unique_ptr<InputFile> F;
-  if (identify_magic(MB.getBuffer()) == file_magic::bitcode)
+  if (isBitcode(MB))
     F.reset(new BitcodeFile(MB));
   else
     F = createELFFile<ObjectFile>(MB);
@@ -612,19 +618,18 @@ std::vector<StringRef> LazyObjectFile::getBitcodeSymbols() {
 
 // Returns a vector of globally-visible symbol names.
 std::vector<StringRef> LazyObjectFile::getSymbols() {
-  using namespace sys::fs;
-
-  StringRef Buf = this->MB.getBuffer();
-  if (identify_magic(Buf) == file_magic::bitcode)
+  if (isBitcode(this->MB))
     return getBitcodeSymbols();
 
-  std::pair<unsigned char, unsigned char> Type = getElfArchType(Buf);
-  if (Type.first == ELF::ELFCLASS32) {
-    if (Type.second == ELF::ELFDATA2LSB)
+  unsigned char Size;
+  unsigned char Endian;
+  std::tie(Size, Endian) = getElfArchType(this->MB.getBuffer());
+  if (Size == ELFCLASS32) {
+    if (Endian == ELFDATA2LSB)
       return getElfSymbols<ELF32LE>();
     return getElfSymbols<ELF32BE>();
   }
-  if (Type.second == ELF::ELFDATA2LSB)
+  if (Endian == ELFDATA2LSB)
     return getElfSymbols<ELF64LE>();
   return getElfSymbols<ELF64BE>();
 }

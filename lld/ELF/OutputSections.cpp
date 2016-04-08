@@ -16,6 +16,7 @@
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SHA1.h"
 #include <map>
 
 using namespace llvm;
@@ -1371,6 +1372,15 @@ static bool sortMipsSymbols(const std::pair<SymbolBody *, unsigned> &L,
   return L.first->GotIndex < R.first->GotIndex;
 }
 
+static uint8_t getSymbolBinding(SymbolBody *Body) {
+  uint8_t Visibility = Body->getVisibility();
+  if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
+    return STB_LOCAL;
+  if (Config->NoGnuUnique && Body->Binding == STB_GNU_UNIQUE)
+    return STB_GLOBAL;
+  return Body->Binding;
+}
+
 template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
   if (this->Header.sh_size)
     return; // Already finalized.
@@ -1448,6 +1458,12 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
   }
 }
 
+static uint8_t getSymbolVisibility(SymbolBody *Body) {
+  if (Body->isShared())
+    return STV_DEFAULT;
+  return Body->getVisibility();
+}
+
 template <class ELFT>
 void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
   // Write the internal symbol table contents to the output symbol table
@@ -1463,7 +1479,7 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     ESym->setBindingAndType(getSymbolBinding(Body), Type);
     ESym->st_size = Size;
     ESym->st_name = StrOff;
-    ESym->setVisibility(Body->getVisibility());
+    ESym->setVisibility(getSymbolVisibility(Body));
     ESym->st_value = Body->getVA<ELFT>();
 
     if (const OutputSectionBase<ELFT> *OutSec = getOutputSection(Body))
@@ -1512,16 +1528,6 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
 }
 
 template <class ELFT>
-uint8_t SymbolTableSection<ELFT>::getSymbolBinding(SymbolBody *Body) {
-  uint8_t Visibility = Body->getVisibility();
-  if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
-    return STB_LOCAL;
-  if (Config->NoGnuUnique && Body->Binding == STB_GNU_UNIQUE)
-    return STB_GLOBAL;
-  return Body->Binding;
-}
-
-template <class ELFT>
 BuildIdSection<ELFT>::BuildIdSection(size_t HashSize)
     : OutputSectionBase<ELFT>(".note.gnu.build-id", SHT_NOTE, SHF_ALLOC),
       HashSize(HashSize) {
@@ -1560,6 +1566,14 @@ template <class ELFT> void BuildIdMd5<ELFT>::writeBuildId() {
   MD5::MD5Result Res;
   Hash.final(Res);
   memcpy(this->HashBuf, Res, 16);
+}
+
+template <class ELFT> void BuildIdSha1<ELFT>::update(ArrayRef<uint8_t> Buf) {
+  Hash.update(Buf);
+}
+
+template <class ELFT> void BuildIdSha1<ELFT>::writeBuildId() {
+  memcpy(this->HashBuf, Hash.final().data(), 20);
 }
 
 template <class ELFT>
@@ -1680,5 +1694,10 @@ template class BuildIdMd5<ELF32LE>;
 template class BuildIdMd5<ELF32BE>;
 template class BuildIdMd5<ELF64LE>;
 template class BuildIdMd5<ELF64BE>;
+
+template class BuildIdSha1<ELF32LE>;
+template class BuildIdSha1<ELF32BE>;
+template class BuildIdSha1<ELF64LE>;
+template class BuildIdSha1<ELF64BE>;
 }
 }

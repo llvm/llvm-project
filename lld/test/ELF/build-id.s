@@ -5,6 +5,8 @@
 # RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=DEFAULT %s
 # RUN: ld.lld --build-id=md5 %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=MD5 %s
+# RUN: ld.lld --build-id=sha1 %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=SHA1 %s
 # RUN: ld.lld %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=NONE %s
 
@@ -21,5 +23,8 @@ _start:
 
 # MD5:      Contents of section .note.gnu.build-id:
 # MD5-NEXT: 04000000 10000000 03000000 474e5500  ............GNU.
+
+# SHA1:      Contents of section .note.gnu.build-id:
+# SHA1-NEXT: 04000000 14000000 03000000 474e5500  ............GNU.
 
 # NONE-NOT: Contents of section .note.gnu.build-id:

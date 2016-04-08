@@ -4776,18 +4776,42 @@ ClangASTContext::GetEncoding (lldb::opaque_compiler_type_t type, uint64_t &count
             case clang::BuiltinType::Kind::Dependent:
             case clang::BuiltinType::Kind::OCLClkEvent:
             case clang::BuiltinType::Kind::OCLEvent:
-            case clang::BuiltinType::Kind::OCLImage1d:
-            case clang::BuiltinType::Kind::OCLImage1dArray:
-            case clang::BuiltinType::Kind::OCLImage1dBuffer:
-            case clang::BuiltinType::Kind::OCLImage2d:
-            case clang::BuiltinType::Kind::OCLImage2dArray:
-            case clang::BuiltinType::Kind::OCLImage2dArrayDepth:
-            case clang::BuiltinType::Kind::OCLImage2dArrayMSAA:
-            case clang::BuiltinType::Kind::OCLImage2dArrayMSAADepth:
-            case clang::BuiltinType::Kind::OCLImage2dDepth:
-            case clang::BuiltinType::Kind::OCLImage2dMSAA:
-            case clang::BuiltinType::Kind::OCLImage2dMSAADepth:
-            case clang::BuiltinType::Kind::OCLImage3d:
+            case clang::BuiltinType::Kind::OCLImage1dRO:
+            case clang::BuiltinType::Kind::OCLImage1dWO:
+            case clang::BuiltinType::Kind::OCLImage1dRW:
+            case clang::BuiltinType::Kind::OCLImage1dArrayRO:
+            case clang::BuiltinType::Kind::OCLImage1dArrayWO:
+            case clang::BuiltinType::Kind::OCLImage1dArrayRW:
+            case clang::BuiltinType::Kind::OCLImage1dBufferRO:
+            case clang::BuiltinType::Kind::OCLImage1dBufferWO:
+            case clang::BuiltinType::Kind::OCLImage1dBufferRW:
+            case clang::BuiltinType::Kind::OCLImage2dRO:
+            case clang::BuiltinType::Kind::OCLImage2dWO:
+            case clang::BuiltinType::Kind::OCLImage2dRW:
+            case clang::BuiltinType::Kind::OCLImage2dArrayRO:
+            case clang::BuiltinType::Kind::OCLImage2dArrayWO:
+            case clang::BuiltinType::Kind::OCLImage2dArrayRW:
+            case clang::BuiltinType::Kind::OCLImage2dArrayDepthRO:
+            case clang::BuiltinType::Kind::OCLImage2dArrayDepthWO:
+            case clang::BuiltinType::Kind::OCLImage2dArrayDepthRW:
+            case clang::BuiltinType::Kind::OCLImage2dArrayMSAARO:
+            case clang::BuiltinType::Kind::OCLImage2dArrayMSAAWO:
+            case clang::BuiltinType::Kind::OCLImage2dArrayMSAARW:
+            case clang::BuiltinType::Kind::OCLImage2dArrayMSAADepthRO:
+            case clang::BuiltinType::Kind::OCLImage2dArrayMSAADepthWO:
+            case clang::BuiltinType::Kind::OCLImage2dArrayMSAADepthRW:
+            case clang::BuiltinType::Kind::OCLImage2dDepthRO:
+            case clang::BuiltinType::Kind::OCLImage2dDepthWO:
+            case clang::BuiltinType::Kind::OCLImage2dDepthRW:
+            case clang::BuiltinType::Kind::OCLImage2dMSAARO:
+            case clang::BuiltinType::Kind::OCLImage2dMSAAWO:
+            case clang::BuiltinType::Kind::OCLImage2dMSAARW:
+            case clang::BuiltinType::Kind::OCLImage2dMSAADepthRO:
+            case clang::BuiltinType::Kind::OCLImage2dMSAADepthWO:
+            case clang::BuiltinType::Kind::OCLImage2dMSAADepthRW:
+            case clang::BuiltinType::Kind::OCLImage3dRO:
+            case clang::BuiltinType::Kind::OCLImage3dWO:
+            case clang::BuiltinType::Kind::OCLImage3dRW:
             case clang::BuiltinType::Kind::OCLQueue:
             case clang::BuiltinType::Kind::OCLNDRange:
             case clang::BuiltinType::Kind::OCLReserveID:
@@ -5816,12 +5840,24 @@ ClangASTContext::GetNumPointeeChildren (clang::QualType type)
             case clang::BuiltinType::Void:
             case clang::BuiltinType::NullPtr:
             case clang::BuiltinType::OCLEvent:
-            case clang::BuiltinType::OCLImage1d:
-            case clang::BuiltinType::OCLImage1dArray:
-            case clang::BuiltinType::OCLImage1dBuffer:
-            case clang::BuiltinType::OCLImage2d:
-            case clang::BuiltinType::OCLImage2dArray:
-            case clang::BuiltinType::OCLImage3d:
+            case clang::BuiltinType::OCLImage1dRO:
+            case clang::BuiltinType::OCLImage1dWO:
+            case clang::BuiltinType::OCLImage1dRW:
+            case clang::BuiltinType::OCLImage1dArrayRO:
+            case clang::BuiltinType::OCLImage1dArrayWO:
+            case clang::BuiltinType::OCLImage1dArrayRW:
+            case clang::BuiltinType::OCLImage1dBufferRO:
+            case clang::BuiltinType::OCLImage1dBufferWO:
+            case clang::BuiltinType::OCLImage1dBufferRW:
+            case clang::BuiltinType::OCLImage2dRO:
+            case clang::BuiltinType::OCLImage2dWO:
+            case clang::BuiltinType::OCLImage2dRW:
+            case clang::BuiltinType::OCLImage2dArrayRO:
+            case clang::BuiltinType::OCLImage2dArrayWO:
+            case clang::BuiltinType::OCLImage2dArrayRW:
+            case clang::BuiltinType::OCLImage3dRO:
+            case clang::BuiltinType::OCLImage3dWO:
+            case clang::BuiltinType::OCLImage3dRW:
             case clang::BuiltinType::OCLSampler:
                 return 0;
             case clang::BuiltinType::Bool:

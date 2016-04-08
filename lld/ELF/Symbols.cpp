@@ -218,9 +218,11 @@ int SymbolBody::compare(SymbolBody *Other) {
   if (L > R)
     return -Other->compare(this);
 
-  uint8_t V = getMinVisibility(getVisibility(), Other->getVisibility());
-  setVisibility(V);
-  Other->setVisibility(V);
+  if (!isShared() && !Other->isShared()) {
+    uint8_t V = getMinVisibility(getVisibility(), Other->getVisibility());
+    setVisibility(V);
+    Other->setVisibility(V);
+  }
 
   if (IsUsedInRegularObj || Other->IsUsedInRegularObj)
     IsUsedInRegularObj = Other->IsUsedInRegularObj = true;

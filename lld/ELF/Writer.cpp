@@ -150,6 +150,8 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
     BuildId.reset(new BuildIdFnv1<ELFT>);
   else if (Config->BuildId == BuildIdKind::Md5)
     BuildId.reset(new BuildIdMd5<ELFT>);
+  else if (Config->BuildId == BuildIdKind::Sha1)
+    BuildId.reset(new BuildIdSha1<ELFT>);
 
   if (Config->GnuHash)
     GnuHashTab.reset(new GnuHashTableSection<ELFT>);

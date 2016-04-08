@@ -17,6 +17,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/SHA1.h"
 
 namespace lld {
 namespace elf {
@@ -216,7 +217,6 @@ private:
   void writeGlobalSymbols(uint8_t *Buf);
 
   const OutputSectionBase<ELFT> *getOutputSection(SymbolBody *Sym);
-  static uint8_t getSymbolBinding(SymbolBody *Body);
 
   SymbolTable<ELFT> &Table;
 
@@ -526,6 +526,16 @@ public:
 
 private:
   llvm::MD5 Hash;
+};
+
+template <class ELFT> class BuildIdSha1 final : public BuildIdSection<ELFT> {
+public:
+  BuildIdSha1() : BuildIdSection<ELFT>(20) {}
+  void update(ArrayRef<uint8_t> Buf) override;
+  void writeBuildId() override;
+
+private:
+  llvm::SHA1 Hash;
 };
 
 // All output sections that are hadnled by the linker specially are

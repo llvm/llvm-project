@@ -216,6 +216,7 @@ def plugin_opt : Separate<["--", "-"], "plugin-opt">;
 def plugin_opt_eq : Joined<["--", "-"], "plugin-opt=">;
 
 // Options listed below are silently ignored for now for compatibility.
+def detect_odr_violations : Flag<["--"], "detect-odr-violations">;
 def fatal_warnings : Flag<["--"], "fatal-warnings">;
 def no_add_needed : Flag<["--"], "no-add-needed">;
 def no_dynamic_linker : Flag<["--"], "no-dynamic-linker">;

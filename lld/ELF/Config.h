@@ -30,11 +30,7 @@ enum ELFKind {
   ELF64BEKind
 };
 
-enum class BuildIdKind {
-  None,
-  Fnv1,
-  Md5,
-};
+enum class BuildIdKind { None, Fnv1, Md5, Sha1 };
 
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options

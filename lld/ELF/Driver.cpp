@@ -66,7 +66,7 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
     error("Windows targets are not supported on the ELF frontend: " + S);
   else
     error("unknown emulation: " + S);
-  return {ELFNoneKind, 0};
+  return {ELFNoneKind, EM_NONE};
 }
 
 // Returns slices of MB by parsing MB as an archive file.
@@ -343,6 +343,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     StringRef S = Arg->getValue();
     if (S == "md5") {
       Config->BuildId = BuildIdKind::Md5;
+    } else if (S == "sha1") {
+      Config->BuildId = BuildIdKind::Sha1;
     } else
       error("unknown --build-id style: " + S);
   }
