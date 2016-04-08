@@ -619,6 +619,9 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
     // Various types which are non-trivial to correct.
     return false;
 
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+  case BuiltinType::Id:
+#include "clang/AST/OpenCLImageTypes.def"
 #define SIGNED_TYPE(Id, SingletonId)
 #define UNSIGNED_TYPE(Id, SingletonId)
 #define FLOATING_TYPE(Id, SingletonId)

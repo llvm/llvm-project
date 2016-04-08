@@ -784,44 +784,24 @@ namespace clang {
       PREDEF_TYPE_PSEUDO_OBJECT = 35,
       /// \brief The placeholder type for builtin functions.
       PREDEF_TYPE_BUILTIN_FN = 36,
-      /// \brief OpenCL 1d image type.
-      PREDEF_TYPE_IMAGE1D_ID    = 37,
-      /// \brief OpenCL 1d image array type.
-      PREDEF_TYPE_IMAGE1D_ARR_ID = 38,
-      /// \brief OpenCL 1d image buffer type.
-      PREDEF_TYPE_IMAGE1D_BUFF_ID = 39,
-      /// \brief OpenCL 2d image type.
-      PREDEF_TYPE_IMAGE2D_ID    = 40,
-      /// \brief OpenCL 2d image array type.
-      PREDEF_TYPE_IMAGE2D_ARR_ID = 41,
-      /// \brief OpenCL 2d image depth type.
-      PREDEF_TYPE_IMAGE2D_DEP_ID = 42,
-      /// \brief OpenCL 2d image array depth type.
-      PREDEF_TYPE_IMAGE2D_ARR_DEP_ID = 43,
-      /// \brief OpenCL 2d image MSAA type.
-      PREDEF_TYPE_IMAGE2D_MSAA_ID = 44,
-      /// \brief OpenCL 2d image array MSAA type.
-      PREDEF_TYPE_IMAGE2D_ARR_MSAA_ID = 45,
-      /// \brief OpenCL 2d image MSAA depth type.
-      PREDEF_TYPE_IMAGE2D_MSAA_DEP_ID = 46,
-      /// \brief OpenCL 2d image array MSAA depth type.
-      PREDEF_TYPE_IMAGE2D_ARR_MSAA_DEPTH_ID = 47,
-      /// \brief OpenCL 3d image type.
-      PREDEF_TYPE_IMAGE3D_ID    = 48,
       /// \brief OpenCL event type.
-      PREDEF_TYPE_EVENT_ID      = 49,
+      PREDEF_TYPE_EVENT_ID      = 37,
       /// \brief OpenCL clk event type.
-      PREDEF_TYPE_CLK_EVENT_ID  = 50,
+      PREDEF_TYPE_CLK_EVENT_ID  = 38,
       /// \brief OpenCL sampler type.
-      PREDEF_TYPE_SAMPLER_ID    = 51,
+      PREDEF_TYPE_SAMPLER_ID    = 39,
       /// \brief OpenCL queue type.
-      PREDEF_TYPE_QUEUE_ID      = 52,
+      PREDEF_TYPE_QUEUE_ID      = 40,
       /// \brief OpenCL ndrange type.
-      PREDEF_TYPE_NDRANGE_ID    = 53,
+      PREDEF_TYPE_NDRANGE_ID    = 41,
       /// \brief OpenCL reserve_id type.
-      PREDEF_TYPE_RESERVE_ID_ID = 54,
+      PREDEF_TYPE_RESERVE_ID_ID = 42,
       /// \brief The placeholder type for OpenMP array section.
-      PREDEF_TYPE_OMP_ARRAY_SECTION = 55
+      PREDEF_TYPE_OMP_ARRAY_SECTION = 43,
+      /// \brief OpenCL image types with auto numeration
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+      PREDEF_TYPE_##Id##_ID,
+#include "clang/AST/OpenCLImageTypes.def"
     };
 
     /// \brief The number of predefined type IDs that are reserved for

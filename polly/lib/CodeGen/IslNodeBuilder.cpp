@@ -304,7 +304,7 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
   addReferencesFromStmtUnionSet(Schedule, References);
 
   for (const SCEV *Expr : SCEVs) {
-    findValues(Expr, Values);
+    findValues(Expr, SE, Values);
     findLoops(Expr, Loops);
   }
 
@@ -852,7 +852,7 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
     // check if any value refered to in ParamSCEV is an invariant load
     // and if so make sure its equivalence class is preloaded.
     SetVector<Value *> Values;
-    findValues(ParamSCEV, Values);
+    findValues(ParamSCEV, SE, Values);
     for (auto *Val : Values) {
 
       // Check if the value is an instruction in a dead block within the SCoP

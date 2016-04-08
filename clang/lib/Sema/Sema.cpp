@@ -209,23 +209,9 @@ void Sema::Initialize() {
 
   // Initialize predefined OpenCL types.
   if (getLangOpts().OpenCL) {
-    addImplicitTypedef("image1d_t", Context.OCLImage1dTy);
-    addImplicitTypedef("image1d_array_t", Context.OCLImage1dArrayTy);
-    addImplicitTypedef("image1d_buffer_t", Context.OCLImage1dBufferTy);
-    addImplicitTypedef("image2d_t", Context.OCLImage2dTy);
-    addImplicitTypedef("image2d_array_t", Context.OCLImage2dArrayTy);
-    addImplicitTypedef("image3d_t", Context.OCLImage3dTy);
     addImplicitTypedef("sampler_t", Context.OCLSamplerTy);
     addImplicitTypedef("event_t", Context.OCLEventTy);
     if (getLangOpts().OpenCLVersion >= 200) {
-      addImplicitTypedef("image2d_depth_t", Context.OCLImage2dDepthTy);
-      addImplicitTypedef("image2d_array_depth_t",
-                         Context.OCLImage2dArrayDepthTy);
-      addImplicitTypedef("image2d_msaa_t", Context.OCLImage2dMSAATy);
-      addImplicitTypedef("image2d_array_msaa_t", Context.OCLImage2dArrayMSAATy);
-      addImplicitTypedef("image2d_msaa_depth_t", Context.OCLImage2dMSAADepthTy);
-      addImplicitTypedef("image2d_array_msaa_depth_t",
-                         Context.OCLImage2dArrayMSAADepthTy);
       addImplicitTypedef("clk_event_t", Context.OCLClkEventTy);
       addImplicitTypedef("queue_t", Context.OCLQueueTy);
       addImplicitTypedef("ndrange_t", Context.OCLNDRangeTy);

@@ -2581,30 +2581,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "Class";
   case ObjCSel:
     return "SEL";
-  case OCLImage1d:
-    return "image1d_t";
-  case OCLImage1dArray:
-    return "image1d_array_t";
-  case OCLImage1dBuffer:
-    return "image1d_buffer_t";
-  case OCLImage2d:
-    return "image2d_t";
-  case OCLImage2dArray:
-    return "image2d_array_t";
-  case OCLImage2dDepth:
-    return "image2d_depth_t";
-  case OCLImage2dArrayDepth:
-    return "image2d_array_depth_t";
-  case OCLImage2dMSAA:
-    return "image2d_msaa_t";
-  case OCLImage2dArrayMSAA:
-    return "image2d_array_msaa_t";
-  case OCLImage2dMSAADepth:
-    return "image2d_msaa_depth_t";
-  case OCLImage2dArrayMSAADepth:
-    return "image2d_array_msaa_depth_t";
-  case OCLImage3d:
-    return "image3d_t";
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+  case Id: \
+    return "__" #Access " " #ImgType "_t";
+#include "clang/AST/OpenCLImageTypes.def"
   case OCLSampler:
     return "sampler_t";
   case OCLEvent:
@@ -3578,18 +3558,9 @@ bool Type::canHaveNullability() const {
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
     case BuiltinType::ObjCSel:
-    case BuiltinType::OCLImage1d:
-    case BuiltinType::OCLImage1dArray:
-    case BuiltinType::OCLImage1dBuffer:
-    case BuiltinType::OCLImage2d:
-    case BuiltinType::OCLImage2dArray:
-    case BuiltinType::OCLImage2dDepth:
-    case BuiltinType::OCLImage2dArrayDepth:
-    case BuiltinType::OCLImage2dMSAA:
-    case BuiltinType::OCLImage2dArrayMSAA:
-    case BuiltinType::OCLImage2dMSAADepth:
-    case BuiltinType::OCLImage2dArrayMSAADepth:
-    case BuiltinType::OCLImage3d:
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+    case BuiltinType::Id:
+#include "clang/AST/OpenCLImageTypes.def"
     case BuiltinType::OCLSampler:
     case BuiltinType::OCLEvent:
     case BuiltinType::OCLClkEvent:

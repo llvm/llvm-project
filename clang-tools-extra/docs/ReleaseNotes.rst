@@ -164,6 +164,13 @@ identified.  The improvements since the 3.8 release include:
 
   Finds static function and variable definitions in anonymous namespace.
 
+- New `cppcoreguidelines-interfaces-global-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-interfaces-global-init.html>`_ check
+
+  Flags initializers of globals that access extern objects, and therefore can
+  lead to order-of-initialization problems.
+
+
 Fixed bugs:
 
 - Crash when running on compile database with relative source files paths.

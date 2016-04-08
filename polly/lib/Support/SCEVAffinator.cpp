@@ -268,7 +268,16 @@ __isl_give isl_pw_aff *SCEVAffinator::visitAddExpr(const SCEVAddExpr *Expr) {
 }
 
 __isl_give isl_pw_aff *SCEVAffinator::visitMulExpr(const SCEVMulExpr *Expr) {
-  llvm_unreachable("SCEVMulExpr should not be reached");
+  isl_pw_aff *Prod = visit(Expr->getOperand(0));
+
+  for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
+    isl_pw_aff *NextFactor = visit(Expr->getOperand(i));
+    Prod = isl_pw_aff_mul(Prod, NextFactor);
+    if (isToComplex(Prod))
+      return nullptr;
+  }
+
+  return Prod;
 }
 
 __isl_give isl_pw_aff *SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {

@@ -560,21 +560,45 @@ void findLoops(const SCEV *Expr, SetVector<const Loop *> &Loops) {
 
 /// Find all values referenced in SCEVUnknowns.
 class SCEVFindValues {
+  ScalarEvolution &SE;
   SetVector<Value *> &Values;
 
 public:
-  SCEVFindValues(SetVector<Value *> &Values) : Values(Values) {}
+  SCEVFindValues(ScalarEvolution &SE, SetVector<Value *> &Values)
+      : SE(SE), Values(Values) {}
 
   bool follow(const SCEV *S) {
-    if (const SCEVUnknown *Unknown = dyn_cast<SCEVUnknown>(S))
+    const SCEVUnknown *Unknown = dyn_cast<SCEVUnknown>(S);
+    if (!Unknown)
+      return true;
+
+    Instruction *Inst = dyn_cast<Instruction>(Unknown->getValue());
+    if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
+                  Inst->getOpcode() != Instruction::SDiv)) {
       Values.insert(Unknown->getValue());
-    return true;
+      return false;
+    }
+
+    auto *Dividend = SE.getSCEV(Inst->getOperand(1));
+    if (!isa<SCEVConstant>(Dividend)) {
+      Values.insert(Unknown->getValue());
+      return false;
+    }
+
+    auto *Divisor = SE.getSCEV(Inst->getOperand(0));
+    SCEVFindValues FindValues(SE, Values);
+    SCEVTraversal<SCEVFindValues> ST(FindValues);
+    ST.visitAll(Dividend);
+    ST.visitAll(Divisor);
+
+    return false;
   }
   bool isDone() { return false; }
 };
 
-void findValues(const SCEV *Expr, SetVector<Value *> &Values) {
-  SCEVFindValues FindValues(Values);
+void findValues(const SCEV *Expr, ScalarEvolution &SE,
+                SetVector<Value *> &Values) {
+  SCEVFindValues FindValues(SE, Values);
   SCEVTraversal<SCEVFindValues> ST(FindValues);
   ST.visitAll(Expr);
 }
