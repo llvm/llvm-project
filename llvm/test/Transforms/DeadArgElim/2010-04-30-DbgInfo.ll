@@ -48,7 +48,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !0 = !DILocalVariable(name: "name", line: 8, arg: 1, scope: !1, file: !2, type: !6)
 !1 = distinct !DISubprogram(name: "vfs_addname", linkageName: "vfs_addname", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !28, scope: !2, type: !4)
 !2 = !DIFile(filename: "tail.c", directory: "/Users/echeng/LLVM/radars/r7927803/")
-!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 9999)", isOptimized: true, emissionKind: 0, file: !28, enums: !29, retainedTypes: !29)
+!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 9999)", isOptimized: true, emissionKind: 0, file: !28, enums: !29, retainedTypes: !29, subprograms: !{!1, !16})
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !6, !9, !9, !9}
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, file: !28, scope: !2, baseType: !7)
