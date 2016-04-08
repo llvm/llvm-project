@@ -31,7 +31,8 @@
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3}
 
-  !0 = distinct !DICompileUnit(language: DW_LANG_C89, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C89, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2,
+                               subprograms: !{!5})
   !1 = !DIFile(filename: "t.c", directory: "")
   !2 = !{}
   !3 = !{i32 1, !"Debug Info Version", i32 3}
@@ -52,8 +53,8 @@ frameInfo:
   maxAlignment:    16
 # CHECK-LABEL: foo
 # CHECK: stack:
-# CHECK:  - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16, di-variable: '!4',
-# CHECK-NEXT: di-expression: '!10', di-location: '!11' }
+# CHECK:  - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16, di-variable: '!6',
+# CHECK-NEXT: di-expression: '!11', di-location: '!12' }
 stack:
   - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16, di-variable: '!4',
       di-expression: '!7', di-location: '!8' }

@@ -71,6 +71,7 @@ for.body:                                         ; preds = %for.body.preheader,
 
 attributes #0 = { nounwind }
 
+!llvm.dbg.cu = !{!28}
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}
 
@@ -102,3 +103,8 @@ attributes #0 = { nounwind }
 !25 = !DILocation(line: 17, column: 11, scope: !20)
 !26 = distinct !{!26, !27, !18}
 !27 = !{!"llvm.loop.vectorize.enable", i1 true}
+!28 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
+                             file: !5,
+                             isOptimized: true, flags: "-O2",
+                             splitDebugFilename: "abc.debug", emissionKind: 2, 
+                             subprograms: !{!4, !20})
