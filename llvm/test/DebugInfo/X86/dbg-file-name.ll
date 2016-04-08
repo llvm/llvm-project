@@ -1,6 +1,7 @@
 ; RUN: llc -enable-dwarf-directory -mtriple x86_64-apple-darwin10.0.0  < %s | FileCheck %s
 
-; Radar 8884898
+; Verify that the file name is relative to the directory.
+; rdar://problem/8884898
 ; CHECK: file	1 "simple.c"
 
 declare i32 @printf(i8*, ...) nounwind
