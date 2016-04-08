@@ -1438,7 +1438,7 @@ protected:
             result.SetStatus(eReturnStatusSuccessFinishResult);
         else
         {
-            result.GetOutputStream().PutCString("no matching results found.");
+            result.GetOutputStream().PutCString("no matching results found.\n");
             result.SetStatus(eReturnStatusSuccessFinishNoResult);
         }
         return result.Succeeded();
