@@ -15,17 +15,19 @@
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "MIParser.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/SlotMapping.h"
+#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
+#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
@@ -33,9 +35,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <memory>
 
@@ -53,6 +55,8 @@ class MIRParserImpl {
   SlotMapping IRSlots;
   /// Maps from register class names to register classes.
   StringMap<const TargetRegisterClass *> Names2RegClasses;
+  /// Maps from register bank names to register banks.
+  StringMap<const RegisterBank *> Names2RegBanks;
 
 public:
   MIRParserImpl(std::unique_ptr<MemoryBuffer> Contents, StringRef Filename,
@@ -149,12 +153,18 @@ private:
   void createDummyFunction(StringRef Name, Module &M);
 
   void initNames2RegClasses(const MachineFunction &MF);
+  void initNames2RegBanks(const MachineFunction &MF);
 
   /// Check if the given identifier is a name of a register class.
   ///
   /// Return null if the name isn't a register class.
   const TargetRegisterClass *getRegClass(const MachineFunction &MF,
                                          StringRef Name);
+
+  /// Check if the given identifier is a name of a register bank.
+  ///
+  /// Return null if the name isn't a register bank.
+  const RegisterBank *getRegBank(const MachineFunction &MF, StringRef Name);
 };
 
 } // end namespace llvm
@@ -356,11 +366,18 @@ bool MIRParserImpl::initializeRegisterInfo(MachineFunction &MF,
       Reg = RegInfo.createGenericVirtualRegister(/*Size*/ 1);
     } else {
       const auto *RC = getRegClass(MF, VReg.Class.Value);
-      if (!RC)
-        return error(VReg.Class.SourceRange.Start,
-                     Twine("use of undefined register class '") +
-                         VReg.Class.Value + "'");
-      Reg = RegInfo.createVirtualRegister(RC);
+      if (RC) {
+        Reg = RegInfo.createVirtualRegister(RC);
+      } else {
+        const auto *RegBank = getRegBank(MF, VReg.Class.Value);
+        if (!RegBank)
+          return error(
+              VReg.Class.SourceRange.Start,
+              Twine("use of undefined register class or register bank '") +
+                  VReg.Class.Value + "'");
+        Reg = RegInfo.createGenericVirtualRegister(/*Size*/ 1);
+        RegInfo.setRegBank(Reg, *RegBank);
+      }
     }
     if (!PFS.VirtualRegisterSlots.insert(std::make_pair(VReg.ID.Value, Reg))
              .second)
@@ -707,6 +724,21 @@ void MIRParserImpl::initNames2RegClasses(const MachineFunction &MF) {
   }
 }
 
+void MIRParserImpl::initNames2RegBanks(const MachineFunction &MF) {
+  if (!Names2RegBanks.empty())
+    return;
+  const RegisterBankInfo *RBI = MF.getSubtarget().getRegBankInfo();
+  // If the target does not support GlobalISel, we may not have a
+  // register bank info.
+  if (!RBI)
+    return;
+  for (unsigned I = 0, E = RBI->getNumRegBanks(); I < E; ++I) {
+    const auto &RegBank = RBI->getRegBank(I);
+    Names2RegBanks.insert(
+        std::make_pair(StringRef(RegBank.getName()).lower(), &RegBank));
+  }
+}
+
 const TargetRegisterClass *MIRParserImpl::getRegClass(const MachineFunction &MF,
                                                       StringRef Name) {
   initNames2RegClasses(MF);
@@ -714,6 +746,15 @@ const TargetRegisterClass *MIRParserImpl::getRegClass(const MachineFunction &MF,
   if (RegClassInfo == Names2RegClasses.end())
     return nullptr;
   return RegClassInfo->getValue();
+}
+
+const RegisterBank *MIRParserImpl::getRegBank(const MachineFunction &MF,
+                                              StringRef Name) {
+  initNames2RegBanks(MF);
+  auto RegBankInfo = Names2RegBanks.find(Name);
+  if (RegBankInfo == Names2RegBanks.end())
+    return nullptr;
+  return RegBankInfo->getValue();
 }
 
 MIRParser::MIRParser(std::unique_ptr<MIRParserImpl> Impl)

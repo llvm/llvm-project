@@ -54,8 +54,9 @@ for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv, !dbg !16
   %0 = trunc i64 %indvars.iv to i32, !dbg !16
+  %ld = load i32, i32* %arrayidx, align 4
   store i32 %0, i32* %arrayidx, align 4, !dbg !16, !tbaa !18
-  %cmp3 = icmp sle i32 %0, %Length, !dbg !22
+  %cmp3 = icmp sle i32 %ld, %Length, !dbg !22
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !12
   %1 = trunc i64 %indvars.iv.next to i32
   %cmp = icmp slt i32 %1, %Length, !dbg !12

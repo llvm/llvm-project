@@ -1372,6 +1372,15 @@ static bool sortMipsSymbols(const std::pair<SymbolBody *, unsigned> &L,
   return L.first->GotIndex < R.first->GotIndex;
 }
 
+static uint8_t getSymbolBinding(SymbolBody *Body) {
+  uint8_t Visibility = Body->getVisibility();
+  if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
+    return STB_LOCAL;
+  if (Config->NoGnuUnique && Body->Binding == STB_GNU_UNIQUE)
+    return STB_GLOBAL;
+  return Body->Binding;
+}
+
 template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
   if (this->Header.sh_size)
     return; // Already finalized.
@@ -1449,6 +1458,12 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
   }
 }
 
+static uint8_t getSymbolVisibility(SymbolBody *Body) {
+  if (Body->isShared())
+    return STV_DEFAULT;
+  return Body->getVisibility();
+}
+
 template <class ELFT>
 void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
   // Write the internal symbol table contents to the output symbol table
@@ -1464,7 +1479,7 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     ESym->setBindingAndType(getSymbolBinding(Body), Type);
     ESym->st_size = Size;
     ESym->st_name = StrOff;
-    ESym->setVisibility(Body->getVisibility());
+    ESym->setVisibility(getSymbolVisibility(Body));
     ESym->st_value = Body->getVA<ELFT>();
 
     if (const OutputSectionBase<ELFT> *OutSec = getOutputSection(Body))
@@ -1510,16 +1525,6 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
     llvm_unreachable("should have been replaced");
   }
   return nullptr;
-}
-
-template <class ELFT>
-uint8_t SymbolTableSection<ELFT>::getSymbolBinding(SymbolBody *Body) {
-  uint8_t Visibility = Body->getVisibility();
-  if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
-    return STB_LOCAL;
-  if (Config->NoGnuUnique && Body->Binding == STB_GNU_UNIQUE)
-    return STB_GLOBAL;
-  return Body->Binding;
 }
 
 template <class ELFT>

@@ -984,7 +984,30 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         }
       } else {
         // Virtual register.
-        const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+        const TargetRegisterClass *RC = MRI->getRegClassOrNull(Reg);
+        if (!RC) {
+          // This is a generic virtual register.
+          // It must have a size and it must not have a SubIdx.
+          unsigned Size = MRI->getSize(Reg);
+          if (!Size) {
+            report("Generic virtual register must have a size", MO, MONum);
+            return;
+          }
+          // Make sure the register fits into its register bank if any.
+          const RegisterBank *RegBank = MRI->getRegBankOrNull(Reg);
+          if (RegBank && RegBank->getSize() < Size) {
+            report("Register bank is too small for virtual register", MO,
+                   MONum);
+            errs() << "Register bank " << RegBank->getName() << " too small("
+                   << RegBank->getSize() << ") to fit " << Size << "-bits\n";
+            return;
+          }
+          if (SubIdx)  {
+            report("Generic virtual register does not subregister index", MO, MONum);
+            return;
+          }
+          break;
+        }
         if (SubIdx) {
           const TargetRegisterClass *SRC =
             TRI->getSubClassWithSubReg(RC, SubIdx);

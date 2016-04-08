@@ -3985,14 +3985,16 @@ bool ScopInfo::buildAccessMultiDimFixed(
   const SCEV *AccessFunction = SE->getSCEVAtScope(Address, L);
   const SCEVUnknown *BasePointer =
       dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFunction));
-  enum MemoryAccess::AccessType Type =
+  enum MemoryAccess::AccessType AccType =
       isa<LoadInst>(Inst) ? MemoryAccess::READ : MemoryAccess::MUST_WRITE;
 
   if (auto *BitCast = dyn_cast<BitCastInst>(Address)) {
     auto *Src = BitCast->getOperand(0);
     auto *SrcTy = Src->getType();
     auto *DstTy = BitCast->getType();
-    if (SrcTy->getPrimitiveSizeInBits() == DstTy->getPrimitiveSizeInBits())
+    if (SrcTy->isPointerTy() && DstTy->isPointerTy() &&
+        DL->getTypeAllocSize(SrcTy->getPointerElementType()) ==
+            DL->getTypeAllocSize(DstTy->getPointerElementType()))
       Address = Src;
   }
 
@@ -4032,7 +4034,7 @@ bool ScopInfo::buildAccessMultiDimFixed(
     SizesSCEV.push_back(SE->getSCEV(
         ConstantInt::get(IntegerType::getInt64Ty(BasePtr->getContext()), V)));
 
-  addArrayAccess(Inst, Type, BasePointer->getValue(), ElementType, true,
+  addArrayAccess(Inst, AccType, BasePointer->getValue(), ElementType, true,
                  Subscripts, SizesSCEV, Val);
   return true;
 }
@@ -4048,7 +4050,7 @@ bool ScopInfo::buildAccessMultiDimParam(
   Value *Val = Inst.getValueOperand();
   Type *ElementType = Val->getType();
   unsigned ElementSize = DL->getTypeAllocSize(ElementType);
-  enum MemoryAccess::AccessType Type =
+  enum MemoryAccess::AccessType AccType =
       isa<LoadInst>(Inst) ? MemoryAccess::READ : MemoryAccess::MUST_WRITE;
 
   const SCEV *AccessFunction = SE->getSCEVAtScope(Address, L);
@@ -4077,7 +4079,7 @@ bool ScopInfo::buildAccessMultiDimParam(
   if (ElementSize != DelinearizedSize)
     scop->invalidate(DELINEARIZATION, Inst->getDebugLoc());
 
-  addArrayAccess(Inst, Type, BasePointer->getValue(), ElementType, true,
+  addArrayAccess(Inst, AccType, BasePointer->getValue(), ElementType, true,
                  AccItr->second.DelinearizedSubscripts, Sizes, Val);
   return true;
 }
@@ -4200,7 +4202,7 @@ void ScopInfo::buildAccessSingleDim(
   Value *Address = Inst.getPointerOperand();
   Value *Val = Inst.getValueOperand();
   Type *ElementType = Val->getType();
-  enum MemoryAccess::AccessType Type =
+  enum MemoryAccess::AccessType AccType =
       isa<LoadInst>(Inst) ? MemoryAccess::READ : MemoryAccess::MUST_WRITE;
 
   const SCEV *AccessFunction = SE->getSCEVAtScope(Address, L);
@@ -4229,10 +4231,10 @@ void ScopInfo::buildAccessSingleDim(
     if (!ScopRIL.count(LInst))
       IsAffine = false;
 
-  if (!IsAffine && Type == MemoryAccess::MUST_WRITE)
-    Type = MemoryAccess::MAY_WRITE;
+  if (!IsAffine && AccType == MemoryAccess::MUST_WRITE)
+    AccType = MemoryAccess::MAY_WRITE;
 
-  addArrayAccess(Inst, Type, BasePointer->getValue(), ElementType, IsAffine,
+  addArrayAccess(Inst, AccType, BasePointer->getValue(), ElementType, IsAffine,
                  {AccessFunction}, {}, Val);
 }
 

@@ -68,6 +68,7 @@
 #else
 #ifdef __OpenBSD__
 #include <sys/param.h>
+#include <sys/mount.h>
 #elif defined(__ANDROID__)
 #include <sys/vfs.h>
 #else
