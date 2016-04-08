@@ -15,6 +15,8 @@ set( LLDB_USED_LIBS
   # Plugins
   lldbPluginDisassemblerLLVM
   lldbPluginSymbolFileDWARF
+  # TODO add this back in once LLVM catches up to SymbolFilePDB requirements
+  # lldbPluginSymbolFilePDB
   lldbPluginSymbolFileSymtab
   lldbPluginDynamicLoaderStatic
   lldbPluginDynamicLoaderPosixDYLD
@@ -23,6 +25,7 @@ set( LLDB_USED_LIBS
   
   lldbPluginCPlusPlusLanguage
   lldbPluginGoLanguage
+  lldbPluginJavaLanguage
   lldbPluginObjCLanguage
   lldbPluginObjCPlusPlusLanguage
   lldbPluginSwiftLanguage
@@ -51,6 +54,7 @@ set( LLDB_USED_LIBS
   lldbPluginAppleObjCRuntime
   lldbPluginRenderScriptRuntime
   lldbPluginLanguageRuntimeGo
+  lldbPluginLanguageRuntimeJava
   lldbPluginCXXItaniumABI
   lldbPluginABIMacOSX_arm
   lldbPluginABIMacOSX_arm64
@@ -185,7 +189,7 @@ endif()
 # this needs to be linked statially
 list(APPEND LLDB_SYSTEM_LIBS ${PATH_TO_CMARK_BUILD}/src/libcmark.a)
 
-set( LLVM_LINK_COMPONENTS
+set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   interpreter
   asmparser

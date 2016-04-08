@@ -27,6 +27,7 @@
 #include "Plugins/Process/Windows/Common/ProcessWindowsLog.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace lldb;
@@ -484,13 +485,15 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info, DWORD thread
         return DBG_CONTINUE;
     }
 
-    std::vector<char> buffer(1);
-    DWORD required_size = GetFinalPathNameByHandle(info.hFile, &buffer[0], 0, VOLUME_NAME_DOS);
+    std::vector<wchar_t> buffer(1);
+    DWORD required_size = GetFinalPathNameByHandleW(info.hFile, &buffer[0], 0, VOLUME_NAME_DOS);
     if (required_size > 0)
     {
         buffer.resize(required_size + 1);
-        required_size = GetFinalPathNameByHandle(info.hFile, &buffer[0], required_size + 1, VOLUME_NAME_DOS);
-        llvm::StringRef path_str(&buffer[0]);
+        required_size = GetFinalPathNameByHandleW(info.hFile, &buffer[0], required_size, VOLUME_NAME_DOS);
+        std::string path_str_utf8;
+        llvm::convertWideToUTF8(buffer.data(), path_str_utf8);
+        llvm::StringRef path_str = path_str_utf8;
         const char *path = path_str.data();
         if (path_str.startswith("\\\\?\\"))
             path += 4;

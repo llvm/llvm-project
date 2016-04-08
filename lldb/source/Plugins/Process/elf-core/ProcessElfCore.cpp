@@ -57,7 +57,7 @@ ProcessElfCore::Terminate()
 
 
 lldb::ProcessSP
-ProcessElfCore::CreateInstance (lldb::TargetSP target_sp, Listener &listener, const FileSpec *crash_file)
+ProcessElfCore::CreateInstance (lldb::TargetSP target_sp, lldb::ListenerSP listener_sp, const FileSpec *crash_file)
 {
     lldb::ProcessSP process_sp;
     if (crash_file)
@@ -75,7 +75,7 @@ ProcessElfCore::CreateInstance (lldb::TargetSP target_sp, Listener &listener, co
             if (elf_header.Parse(data, &data_offset))
             {
                 if (elf_header.e_type == llvm::ELF::ET_CORE)
-                    process_sp.reset(new ProcessElfCore (target_sp, listener, *crash_file));
+                    process_sp.reset(new ProcessElfCore (target_sp, listener_sp, *crash_file));
             }
         }
     }
@@ -104,9 +104,9 @@ ProcessElfCore::CanDebug(lldb::TargetSP target_sp, bool plugin_specified_by_name
 //----------------------------------------------------------------------
 // ProcessElfCore constructor
 //----------------------------------------------------------------------
-ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp, Listener &listener,
+ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                                const FileSpec &core_file) :
-    Process (target_sp, listener),
+    Process (target_sp, listener_sp),
     m_core_module_sp (),
     m_core_file (core_file),
     m_dyld_plugin_name (),
@@ -559,11 +559,10 @@ ProcessElfCore::ParseThreadContextsFromNoteSegment(const elf::ELFProgramHeader *
                     have_prstatus = true;
                     prstatus.Parse(note_data, arch);
                     thread_data->signo = prstatus.pr_cursig;
+                    thread_data->tid = prstatus.pr_pid;
                     header_size = ELFLinuxPrStatus::GetSize(arch);
                     len = note_data.GetByteSize() - header_size;
                     thread_data->gpregset = DataExtractor(note_data, header_size, len);
-                    // FIXME: Obtain actual tid on Linux
-                    thread_data->tid = m_thread_data.size();
                     break;
                 case NT_FPREGSET:
                     thread_data->fpregset = note_data;
@@ -572,6 +571,7 @@ ProcessElfCore::ParseThreadContextsFromNoteSegment(const elf::ELFProgramHeader *
                     have_prpsinfo = true;
                     prpsinfo.Parse(note_data, arch);
                     thread_data->name = prpsinfo.pr_fname;
+                    SetID(prpsinfo.pr_pid);
                     break;
                 case NT_AUXV:
                     m_auxv = DataExtractor(note_data);
@@ -636,4 +636,19 @@ ProcessElfCore::GetAuxvData()
     size_t len = m_auxv.GetByteSize();
     lldb::DataBufferSP buffer(new lldb_private::DataBufferHeap(start, len));
     return buffer;
+}
+
+bool
+ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info)
+{
+    info.Clear();
+    info.SetProcessID(GetID());
+    info.SetArchitecture(GetArchitecture());
+    lldb::ModuleSP module_sp = GetTarget().GetExecutableModule();
+    if (module_sp)
+    {
+        const bool add_exe_file_as_first_arg = false;
+        info.SetExecutableFile(GetTarget().GetExecutableModule()->GetFileSpec(), add_exe_file_as_first_arg);
+    }
+    return true;
 }

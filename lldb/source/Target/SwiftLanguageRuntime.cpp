@@ -4315,6 +4315,7 @@ SwiftLanguageRuntime::CreateExceptionResolver (Breakpoint *bkpt, bool catch_bp, 
                                                        eFunctionNameTypeBase,
                                                        eLanguageTypeUnknown,
                                                        Breakpoint::Exact,
+                                                       0,
                                                        eLazyBoolNo));
     // FIXME: We don't do catch breakpoints for ObjC yet.
     // Should there be some way for the runtime to specify what it can do in this regard?

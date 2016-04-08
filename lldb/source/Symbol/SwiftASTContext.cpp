@@ -6789,7 +6789,7 @@ SwiftASTContext::GetTypedefedType (void* type)
 }
 
 CompilerType
-SwiftASTContext::GetUnboundType (void* type)
+SwiftASTContext::GetUnboundType (lldb::opaque_compiler_type_t type)
 {
     if (type)
     {
@@ -6930,7 +6930,7 @@ SwiftASTContext::StripRedundantParentheses (void* type)
 }
 
 uint64_t
-SwiftASTContext::GetBitSize (void* type, ExecutionContextScope *exe_scope)
+SwiftASTContext::GetBitSize (lldb::opaque_compiler_type_t type, ExecutionContextScope *exe_scope)
 {
     if (type)
     {
@@ -6956,7 +6956,7 @@ SwiftASTContext::GetBitSize (void* type, ExecutionContextScope *exe_scope)
 }
 
 uint64_t
-SwiftASTContext::GetByteStride (void* type)
+SwiftASTContext::GetByteStride (lldb::opaque_compiler_type_t type)
 {
     if (type)
     {

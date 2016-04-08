@@ -11,7 +11,7 @@ AC_INIT(package-unused, version-unused,, libgo)
 AC_CONFIG_SRCDIR(Makefile.am)
 AC_CONFIG_HEADER(config.h)
 
-libtool_VERSION=7:0:0
+libtool_VERSION=8:0:0
 AC_SUBST(libtool_VERSION)
 
 AM_ENABLE_MULTILIB(, ..)
@@ -374,7 +374,29 @@ AC_COMPILE_IFELSE([[int i;]],
 [libgo_cv_c_split_stack_supported=yes],
 [libgo_cv_c_split_stack_supported=no])
 CFLAGS=$CFLAGS_hold])
-if test "$libgo_cv_c_split_stack_supported" = yes; then
+
+dnl Make sure the linker permits -fsplit-stack.  Old versions of gold will
+dnl reject split-stack code calling non-split-stack code on targets
+dnl they don't support.
+AC_CACHE_CHECK([whether linker supports split/non-split linked together],
+[libgo_cv_c_linker_split_non_split],
+[cat > conftest1.c << EOF
+extern void f();
+int main() { f(); return 0; }
+EOF
+cat > conftest2.c << EOF
+void f() {}
+EOF
+$CC -c -fsplit-stack $CFLAGS $CPPFLAGS conftest1.c
+$CC -c $CFLAGS $CPPFLAGS conftest2.c
+if $CC -o conftest conftest1.$ac_objext conftest2.$ac_objext; then
+  libgo_cv_c_linker_split_non_split=yes
+else
+  libgo_cv_c_linker_split_non_split=no
+fi
+rm -f conftest1.* conftest2.* conftest])
+
+if test "$libgo_cv_c_split_stack_supported" = yes -a "$libgo_cv_c_linker_split_non_split" = yes; then
   SPLIT_STACK=-fsplit-stack
   AC_DEFINE(USING_SPLIT_STACK, 1,
 		[Define if the compiler supports -fsplit-stack])
@@ -383,13 +405,24 @@ else
 fi
 AC_SUBST(SPLIT_STACK)
 AM_CONDITIONAL(USING_SPLIT_STACK,
-	test "$libgo_cv_c_split_stack_supported" = yes)
+	test "$libgo_cv_c_split_stack_supported" = yes -a "$libgo_cv_c_linker_split_non_split" = yes)
+
+dnl If the compiler supports split-stack but the linker does not, then
+dnl we need to explicitly disable split-stack for Go.
+if test "$libgo_cv_c_split_stack_supported" = yes -a "$libgo_cv_c_linker_split_non_split" = no; then
+  GO_SPLIT_STACK=-fno-split-stack
+else
+  GO_SPLIT_STACK=
+fi
+AC_SUBST(GO_SPLIT_STACK)
 
 dnl Check whether the linker does stack munging when calling from
 dnl split-stack into non-split-stack code.  We check this by looking
 dnl at the --help output.  FIXME: This is only half right: it's
 dnl possible for the linker to support this for some targets but not
 dnl others.
+dnl This is slightly different from the above check, which is whether
+dnl the linker permits the call at all.
 AC_CACHE_CHECK([whether linker supports split stack],
 [libgo_cv_c_linker_supports_split_stack],
 [libgo_cv_c_linker_supports_split_stack=no
@@ -440,6 +473,9 @@ AC_CACHE_CHECK([for socket libraries], libgo_cv_lib_sockets,
 		 [AC_CHECK_LIB(nsl, main,
 		 	[libgo_cv_lib_sockets="$libgo_cv_lib_sockets -lnsl"])])
    unset ac_cv_func_gethostbyname
+   AC_CHECK_FUNC(sendfile, ,
+		 [AC_CHECK_LIB(sendfile, main,
+		 	[libgo_cv_lib_sockets="$libgo_cv_lib_sockets -lsendfile"])])
    LIBS=$libgo_old_libs
 ])
 NET_LIBS="$libgo_cv_lib_sockets"
@@ -465,63 +501,14 @@ PTHREAD_LIBS=
 AC_CHECK_LIB([pthread], [pthread_create], PTHREAD_LIBS=-lpthread)
 AC_SUBST(PTHREAD_LIBS)
 
-dnl Test if -lrt is required for sched_yield and/or nanosleep.
+dnl Test if -lrt is required for sched_yield or nanosleep or clock_gettime.
 AC_SEARCH_LIBS([sched_yield], [rt])
 AC_SEARCH_LIBS([nanosleep], [rt])
+AC_SEARCH_LIBS([clock_gettime], [rt])
 
 AC_C_BIGENDIAN
 
 GCC_CHECK_UNWIND_GETIPINFO
-
-AC_ARG_ENABLE(sjlj-exceptions,
-  AC_HELP_STRING([--enable-sjlj-exceptions],
-		 [force use of builtin_setjmp for exceptions]),
-  [case "$enableval" in
-   yes|no|auto) ;;
-   *) AC_MSG_ERROR([unknown argument to --enable-sjlj-exceptions]) ;;
-   esac],
-  [enable_sjlj_exceptions=auto])
-
-AC_CACHE_CHECK([whether to use setjmp/longjmp exceptions],
-[libgo_cv_lib_sjlj_exceptions],
-[AC_LANG_CONFTEST(
-  [AC_LANG_SOURCE([
-void bar ();
-void clean (int *);
-void foo ()
-{
-  int i __attribute__ ((cleanup (clean)));
-  bar();
-}
-])])
-CFLAGS_hold=$CFLAGS
-CFLAGS="--save-temps -fexceptions"
-libgo_cv_lib_sjlj_exceptions=unknown
-AS_IF([ac_fn_c_try_compile],
-  [if grep _Unwind_SjLj_Resume conftest.s >/dev/null 2>&1; then
-    libgo_cv_lib_sjlj_exceptions=yes
-  elif grep _Unwind_Resume conftest.s >/dev/null 2>&1; then
-    libgo_cv_lib_sjlj_exceptions=no
-  fi])
-CFLAGS=$CFLAGS_hold
-rm -f conftest*
-])
-
-if test "$enable_sjlj_exceptions" = "auto"; then
-  enable_sjlj_exceptions=$libgo_cv_lib_sjlj_exceptions
-fi
-
-case $enable_sjlj_exceptions in
-yes)
-  AC_DEFINE(LIBGO_SJLJ_EXCEPTIONS, 1,
-	[Define if the C++ compiler is configured for setjmp/longjmp exceptions.])
-  ;;
-no)
-  ;;
-*)
-  AC_MSG_ERROR([unable to detect exception model])
-  ;;
-esac
 
 AC_CHECK_HEADERS(sched.h sys/file.h sys/mman.h syscall.h sys/epoll.h sys/inotify.h sys/ptrace.h sys/syscall.h sys/user.h sys/utsname.h sys/select.h sys/socket.h net/if.h net/if_arp.h net/route.h netpacket/packet.h sys/prctl.h sys/mount.h sys/vfs.h sys/statfs.h sys/timex.h sys/sysinfo.h utime.h linux/ether.h linux/fs.h linux/reboot.h netinet/icmp6.h netinet/in_syst.h netinet/ip.h netinet/ip_mroute.h netinet/if_ether.h)
 
@@ -694,6 +681,12 @@ AC_CACHE_CHECK([epoll_event data.fd offset],
 [libgo_cv_c_epoll_event_fd_offset=0])])
 STRUCT_EPOLL_EVENT_FD_OFFSET=${libgo_cv_c_epoll_event_fd_offset}
 AC_SUBST(STRUCT_EPOLL_EVENT_FD_OFFSET)
+
+dnl Check if <sys/stat.h> uses timespec_t for st_?tim members.  Introduced
+dnl in Solaris 12 for XPG7 compatibility.
+AC_EGREP_HEADER([timespec_t.*st_atim], [sys/stat.h],
+		[have_stat_timespec=yes], [have_stat_timespec=no])
+AM_CONDITIONAL(HAVE_STAT_TIMESPEC, test $have_stat_timespec = yes)
 
 dnl See if struct exception is defined in <math.h>.
 AC_CHECK_TYPE([struct exception],

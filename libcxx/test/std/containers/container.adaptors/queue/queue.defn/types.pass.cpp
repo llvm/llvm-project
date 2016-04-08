@@ -46,13 +46,13 @@ struct C
 
 int main()
 {
-    static_assert((std::is_same<std::queue<int>::container_type, std::deque<int> >::value), "");
-    static_assert((std::is_same<std::queue<double, std::vector<int> >::container_type, std::vector<int> >::value), "");
-    static_assert((std::is_same<std::queue<double, std::vector<int> >::value_type, int>::value), "");
-    static_assert((std::is_same<std::queue<int>::reference, std::deque<int>::reference>::value), "");
-    static_assert((std::is_same<std::queue<int>::const_reference, std::deque<int>::const_reference>::value), "");
-    static_assert((std::is_same<std::queue<int>::size_type, std::deque<int>::size_type>::value), "");
-    static_assert((std::uses_allocator<std::queue<int>, std::allocator<int> >::value), "");
+    static_assert(( std::is_same<std::queue<int>::container_type, std::deque<int> >::value), "");
+    static_assert(( std::is_same<std::queue<int, std::vector<int> >::container_type, std::vector<int> >::value), "");
+    static_assert(( std::is_same<std::queue<int, std::vector<int> >::value_type, int>::value), "");
+    static_assert(( std::is_same<std::queue<int>::reference, std::deque<int>::reference>::value), "");
+    static_assert(( std::is_same<std::queue<int>::const_reference, std::deque<int>::const_reference>::value), "");
+    static_assert(( std::is_same<std::queue<int>::size_type, std::deque<int>::size_type>::value), "");
+    static_assert(( std::uses_allocator<std::queue<int>, std::allocator<int> >::value), "");
     static_assert((!std::uses_allocator<std::queue<int, C>, std::allocator<int> >::value), "");
     test t;
 }

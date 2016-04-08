@@ -25,14 +25,16 @@
 ;        timer_stop();
 ;    }
 ;
-; CHECK:    Region: %for.cond---%if.end.20
-; CHECK:    Assumed Context:
-; CHECK:    [N, timeit] -> {  : timeit = 0 }
-; CHECK:    Statements {
-; CHECK:      Stmt
-; CHECK:      Stmt
-; CHECK-NOT   Stmt
-; CHECK:    }
+; CHECK:      Region: %for.cond---%if.end.20
+; CHECK:      Assumed Context:
+; CHECK-NEXT: [N, timeit] -> {  :  }
+; CHECK:      Invalid Context:
+; CHECK-NEXT: [N, timeit] -> {  : timeit < 0 or timeit > 0 }
+; CHECK:      Statements {
+; CHECK:        Stmt
+; CHECK:        Stmt
+; CHECK-NOT:    Stmt
+; CHECK:      }
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

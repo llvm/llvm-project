@@ -74,6 +74,7 @@ public:
         eKindClang,
         eKindSwift,
         eKindGo,
+        eKindJava,
         kNumKinds
     };
 
@@ -98,7 +99,7 @@ public:
     Finalize() {}
 
     virtual DWARFASTParser *
-    GetDWARFParser ()
+    GetDWARFParser()
     {
         return nullptr;
     }
@@ -349,7 +350,7 @@ public:
     GetBitSize (lldb::opaque_compiler_type_t type, ExecutionContextScope *exe_scope) = 0;
     
     virtual uint64_t
-    GetByteStride (void* type) = 0;
+    GetByteStride (lldb::opaque_compiler_type_t type) = 0;
     
     virtual lldb::Encoding
     GetEncoding (lldb::opaque_compiler_type_t type, uint64_t &count) = 0;
@@ -544,7 +545,7 @@ public:
     GetTypedefedType (lldb::opaque_compiler_type_t type) = 0;
 
     virtual CompilerType
-    GetUnboundType (void* type) = 0;
+    GetUnboundType (lldb::opaque_compiler_type_t type) = 0;
     
     virtual bool
     IsVectorType (lldb::opaque_compiler_type_t type,
@@ -653,6 +654,8 @@ protected:
         RemoveTypeSystemsForLanguage (lldb::LanguageType language);
 
     protected:
+        // This function does not take the map mutex, and should only be called from
+        // functions that do take the mutex.
         void
         AddToMap (lldb::LanguageType language, lldb::TypeSystemSP const &type_system_sp);
 

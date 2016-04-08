@@ -20,6 +20,16 @@ isl_ctx *isl_vec_get_ctx(__isl_keep isl_vec *vec)
 	return vec ? vec->ctx : NULL;
 }
 
+/* Return a hash value that digests "vec".
+ */
+uint32_t isl_vec_get_hash(__isl_keep isl_vec *vec)
+{
+	if (!vec)
+		return 0;
+
+	return isl_seq_get_hash(vec->el, vec->size);
+}
+
 struct isl_vec *isl_vec_alloc(struct isl_ctx *ctx, unsigned size)
 {
 	struct isl_vec *vec;

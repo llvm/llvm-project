@@ -28,6 +28,8 @@ add_lld_library(lldCOFF
   Target
   Option
   Support
+
+  LINK_LIBS ${PTHREAD_LIB}
   )
 
 add_dependencies(lldCOFF COFFOptionsTableGen)

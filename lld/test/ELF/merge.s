@@ -29,7 +29,7 @@ zed:
 // CHECK-NEXT:    Link: 0
 // CHECK-NEXT:    Info: 0
 // CHECK-NEXT:    AddressAlignment: 4
-// CHECK-NEXT:    EntrySize: 0
+// CHECK-NEXT:    EntrySize: 4
 // CHECK-NEXT:    SectionData (
 // CHECK-NEXT:      0000: 10000000 42000000
 // CHECK-NEXT:    )
@@ -61,7 +61,9 @@ zed:
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Local
 // CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other: 2
+// CHECK-NEXT:   Other [ (0x2)
+// CHECK-NEXT:     STV_HIDDEN
+// CHECK-NEXT:   ]
 // CHECK-NEXT:   Section: .mysec
 
  // CHECK: ]

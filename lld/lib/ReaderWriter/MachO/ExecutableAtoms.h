@@ -122,19 +122,26 @@ public:
           ArrayRef<uint8_t>(), DefinedAtom::Alignment(1)));
   }
 
-  const AtomVector<DefinedAtom> &defined() const override {
+  const AtomRange<DefinedAtom> defined() const override {
     return _definedAtoms;
   }
-  const AtomVector<UndefinedAtom> &undefined() const override {
+  const AtomRange<UndefinedAtom> undefined() const override {
     return _noUndefinedAtoms;
   }
 
-  const AtomVector<SharedLibraryAtom> &sharedLibrary() const override {
+  const AtomRange<SharedLibraryAtom> sharedLibrary() const override {
     return _noSharedLibraryAtoms;
   }
 
-  const AtomVector<AbsoluteAtom> &absolute() const override {
+  const AtomRange<AbsoluteAtom> absolute() const override {
     return _noAbsoluteAtoms;
+  }
+
+  void clearAtoms() override {
+    _definedAtoms.clear();
+    _noUndefinedAtoms.clear();
+    _noSharedLibraryAtoms.clear();
+    _noAbsoluteAtoms.clear();
   }
 
 

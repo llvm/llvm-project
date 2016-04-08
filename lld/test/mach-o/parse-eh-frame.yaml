@@ -22,7 +22,7 @@ sections:
     section:         __eh_frame
     type:            S_COALESCED
     attributes:      [  ]
-    alignment:       3
+    alignment:       8
     address:         0x0000000000000058
     content:         [ 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                        0x01, 0x7A, 0x52, 0x00, 0x01, 0x78, 0x10, 0x01,

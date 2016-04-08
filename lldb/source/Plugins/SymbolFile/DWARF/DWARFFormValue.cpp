@@ -167,6 +167,14 @@ DWARFFormValue::DWARFFormValue(const DWARFCompileUnit* cu, dw_form_t form) :
 {
 }
 
+void
+DWARFFormValue::Clear()
+{
+    m_cu = nullptr;
+    m_form = 0;
+    memset(&m_value, 0, sizeof(m_value));
+}
+
 bool
 DWARFFormValue::ExtractValue(const DWARFDataExtractor& data, lldb::offset_t* offset_ptr)
 {
@@ -678,9 +686,3 @@ DWARFFormValue::Compare (const DWARFFormValue& a_value,
     return -1;
 }
 
-void
-DWARFFormValue::Clear ()
-{
-    m_cu = NULL;
-    m_form = 0;
-}

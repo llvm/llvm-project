@@ -15,26 +15,10 @@
 extern "C" unsigned short  __declspec(dllimport) _ctype[];
 
 #include "support/win32/support.h"
+#include "support/win32/locale_mgmt_win32.h"
 #include <stdio.h>
 #include <memory>
-#include <xlocinfo.h> // _locale_t
-#define locale_t _locale_t
-#define LC_COLLATE_MASK _M_COLLATE
-#define LC_CTYPE_MASK _M_CTYPE
-#define LC_MONETARY_MASK _M_MONETARY
-#define LC_NUMERIC_MASK _M_NUMERIC
-#define LC_TIME_MASK _M_TIME
-#define LC_MESSAGES_MASK _M_MESSAGES
-#define LC_ALL_MASK (  LC_COLLATE_MASK \
-                     | LC_CTYPE_MASK \
-                     | LC_MESSAGES_MASK \
-                     | LC_MONETARY_MASK \
-                     | LC_NUMERIC_MASK \
-                     | LC_TIME_MASK )
-#define freelocale _free_locale
-// FIXME: base currently unused. Needs manual work to construct the new locale
-locale_t newlocale( int mask, const char * locale, locale_t base );
-locale_t uselocale( locale_t newloc );
+
 lconv *localeconv_l( locale_t loc );
 size_t mbrlen_l( const char *__restrict s, size_t n,
                  mbstate_t *__restrict ps, locale_t loc);

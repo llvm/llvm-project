@@ -5,4 +5,4 @@
 	.section	.rodata.str1.1,"aMS",@progbits,1
 	.ascii	"abc"
 
-// CHECK: String is not null terminated
+// CHECK: string is not null terminated

@@ -1,3 +1,0 @@
-# Check that a file that cannot be found results in a proper error message
-RUN: not lld -flavor old-gnu -target x86_64 %p/Inputs/nofile.o 2>&1 | FileCheck %s
-#CHECK: lld: cannot find file {{.+[\\/]}}nofile.o

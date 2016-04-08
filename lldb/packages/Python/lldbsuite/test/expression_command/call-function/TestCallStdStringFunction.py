@@ -23,7 +23,7 @@ class ExprCommandCallFunctionTestCase(TestBase):
                                 '// Please test these expressions while stopped at this line:')
 
     @expectedFailureAll(compiler="icc", bugnumber="llvm.org/pr14437, fails with ICC 13.1")
-    @expectedFailureFreeBSD('llvm.org/pr17807') # Fails on FreeBSD buildbot
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr17807 Fails on FreeBSD buildbot')
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_with(self):
         """Test calling std::String member function."""

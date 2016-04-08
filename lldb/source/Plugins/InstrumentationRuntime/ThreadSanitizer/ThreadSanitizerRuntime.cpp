@@ -287,7 +287,7 @@ ConvertToStructuredArray(ValueObjectSP return_value_sp, std::string items_name, 
     StructuredData::Array *array = new StructuredData::Array();
     unsigned int count = return_value_sp->GetValueForExpressionPath(count_name.c_str())->GetValueAsUnsigned(0);
     ValueObjectSP objects = return_value_sp->GetValueForExpressionPath(items_name.c_str());
-    for (int i = 0; i < count; i++) {
+    for (unsigned int i = 0; i < count; i++) {
         ValueObjectSP o = objects->GetChildAtIndex(i, true);
         StructuredData::Dictionary *dict = new StructuredData::Dictionary();
         

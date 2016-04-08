@@ -65,7 +65,7 @@ ProcessMachCore::Terminate()
 
 
 lldb::ProcessSP
-ProcessMachCore::CreateInstance (lldb::TargetSP target_sp, Listener &listener, const FileSpec *crash_file)
+ProcessMachCore::CreateInstance (lldb::TargetSP target_sp, ListenerSP listener_sp, const FileSpec *crash_file)
 {
     lldb::ProcessSP process_sp;
     if (crash_file)
@@ -81,7 +81,7 @@ ProcessMachCore::CreateInstance (lldb::TargetSP target_sp, Listener &listener, c
             if (ObjectFileMachO::ParseHeader(data, &data_offset, mach_header))
             {
                 if (mach_header.filetype == llvm::MachO::MH_CORE)
-                    process_sp.reset(new ProcessMachCore (target_sp, listener, *crash_file));
+                    process_sp.reset(new ProcessMachCore (target_sp, listener_sp, *crash_file));
             }
         }
         
@@ -122,8 +122,8 @@ ProcessMachCore::CanDebug(lldb::TargetSP target_sp, bool plugin_specified_by_nam
 //----------------------------------------------------------------------
 // ProcessMachCore constructor
 //----------------------------------------------------------------------
-ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp, Listener &listener, const FileSpec &core_file) :
-    Process (target_sp, listener),
+ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp, ListenerSP listener_sp, const FileSpec &core_file) :
+    Process (target_sp, listener_sp),
     m_core_aranges (),
     m_core_module_sp (),
     m_core_file (core_file),

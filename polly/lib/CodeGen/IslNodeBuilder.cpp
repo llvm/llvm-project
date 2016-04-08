@@ -48,6 +48,12 @@
 using namespace polly;
 using namespace llvm;
 
+// The maximal number of basic sets we allow during invariant load construction.
+// More complex access ranges will result in very high compile time and are also
+// unlikely to result in good code. This value is very high and should only
+// trigger for corner cases (e.g., the "dct_luma" function in h264, SPEC2006).
+static int const MaxConjunctsInAccessRange = 80;
+
 __isl_give isl_ast_expr *
 IslNodeBuilder::getUpperBound(__isl_keep isl_ast_node *For,
                               ICmpInst::Predicate &Predicate) {
@@ -185,14 +191,15 @@ struct SubtreeReferences {
 static int findReferencesInBlock(struct SubtreeReferences &References,
                                  const ScopStmt *Stmt, const BasicBlock *BB) {
   for (const Instruction &Inst : *BB)
-    for (Value *SrcVal : Inst.operands())
-      if (canSynthesize(SrcVal, &References.LI, &References.SE,
-                        &References.R)) {
-        References.SCEVs.insert(
-            References.SE.getSCEVAtScope(SrcVal, References.LI.getLoopFor(BB)));
+    for (Value *SrcVal : Inst.operands()) {
+      auto *Scope = References.LI.getLoopFor(BB);
+      if (canSynthesize(SrcVal, &References.LI, &References.SE, &References.R,
+                        Scope)) {
+        References.SCEVs.insert(References.SE.getSCEVAtScope(SrcVal, Scope));
         continue;
       } else if (Value *NewVal = References.GlobalMap.lookup(SrcVal))
         References.Values.insert(NewVal);
+    }
   return 0;
 }
 
@@ -352,9 +359,24 @@ void IslNodeBuilder::createUserVector(__isl_take isl_ast_node *User,
 }
 
 void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
+  auto *Id = isl_ast_node_mark_get_id(Node);
   auto Child = isl_ast_node_mark_get_node(Node);
-  create(Child);
   isl_ast_node_free(Node);
+  // If a child node of a 'SIMD mark' is a loop that has a single iteration,
+  // it will be optimized away and we should skip it.
+  if (!strcmp(isl_id_get_name(Id), "SIMD") &&
+      isl_ast_node_get_type(Child) == isl_ast_node_for) {
+    bool Vector = PollyVectorizerChoice == VECTORIZER_POLLY;
+    int VectorWidth = getNumberOfIterations(Child);
+    if (Vector && 1 < VectorWidth && VectorWidth <= 16)
+      createForVector(Child, VectorWidth);
+    else
+      createForSequential(Child, true);
+    isl_id_free(Id);
+    return;
+  }
+  create(Child);
+  isl_id_free(Id);
 }
 
 void IslNodeBuilder::createForVector(__isl_take isl_ast_node *For,
@@ -417,7 +439,8 @@ void IslNodeBuilder::createForVector(__isl_take isl_ast_node *For,
   isl_ast_expr_free(Iterator);
 }
 
-void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For) {
+void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For,
+                                         bool KnownParallel) {
   isl_ast_node *Body;
   isl_ast_expr *Init, *Inc, *Iterator, *UB;
   isl_id *IteratorID;
@@ -428,8 +451,8 @@ void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For) {
   CmpInst::Predicate Predicate;
   bool Parallel;
 
-  Parallel =
-      IslAstInfo::isParallel(For) && !IslAstInfo::isReductionParallel(For);
+  Parallel = KnownParallel || (IslAstInfo::isParallel(For) &&
+                               !IslAstInfo::isReductionParallel(For));
 
   Body = isl_ast_node_for_get_body(For);
 
@@ -647,7 +670,7 @@ void IslNodeBuilder::createFor(__isl_take isl_ast_node *For) {
     createForParallel(For);
     return;
   }
-  createForSequential(For);
+  createForSequential(For, false);
 }
 
 void IslNodeBuilder::createIf(__isl_take isl_ast_node *If) {
@@ -702,12 +725,15 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
                                   __isl_keep isl_ast_node *Node) {
   isl_id_to_ast_expr *NewAccesses =
       isl_id_to_ast_expr_alloc(Stmt->getParent()->getIslCtx(), 0);
+
+  auto *Build = IslAstInfo::getBuild(Node);
+  assert(Build && "Could not obtain isl_ast_build from user node");
+  Stmt->setAstBuild(Build);
+
   for (auto *MA : *Stmt) {
     if (!MA->hasNewAccessRelation())
       continue;
 
-    auto Build = IslAstInfo::getBuild(Node);
-    assert(Build && "Could not obtain isl_ast_build from user node");
     auto Schedule = isl_ast_build_get_schedule(Build);
     auto PWAccRel = MA->applyScheduleToAccessRelation(Schedule);
 
@@ -844,7 +870,7 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
           if (Address &&
               SE.getUnknown(UndefValue::get(Address->getType())) ==
                   SE.getPointerBase(SE.getSCEV(Address))) {
-          } else if (S.getStmtForBasicBlock(Inst->getParent())) {
+          } else if (S.getStmtFor(Inst)) {
             IsDead = false;
           } else {
             auto *Domain = S.getDomainConditions(Inst->getParent());
@@ -896,6 +922,11 @@ bool IslNodeBuilder::materializeParameters(isl_set *Set, bool All) {
 Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
                                               isl_ast_build *Build,
                                               Instruction *AccInst) {
+  if (isl_set_n_basic_set(AccessRange) > MaxConjunctsInAccessRange) {
+    isl_set_free(AccessRange);
+    return nullptr;
+  }
+
   isl_pw_multi_aff *PWAccRel = isl_pw_multi_aff_from_set(AccessRange);
   PWAccRel = isl_pw_multi_aff_gist_params(PWAccRel, S.getContext());
   isl_ast_expr *Access =
@@ -986,9 +1017,15 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   Builder.SetInsertPoint(MergeBB->getTerminator());
   auto *MergePHI = Builder.CreatePHI(
       AccInstTy, 2, "polly.preload." + AccInst->getName() + ".merge");
+  PreloadVal = MergePHI;
+
+  if (!PreAccInst) {
+    PreloadVal = nullptr;
+    PreAccInst = UndefValue::get(AccInstTy);
+  }
+
   MergePHI->addIncoming(PreAccInst, ExecBB);
   MergePHI->addIncoming(Constant::getNullValue(AccInstTy), CondBB);
-  PreloadVal = MergePHI;
 
   isl_ast_build_free(Build);
   return PreloadVal;

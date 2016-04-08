@@ -14,6 +14,7 @@
 // class unordered_map
 
 // mapped_type& operator[](const key_type& k);
+// mapped_type& operator[](key_type&& k);
 
 #include <unordered_map>
 #include <string>
@@ -23,7 +24,10 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 #include "count_new.hpp"
+
+#if TEST_STD_VER >= 11
 #include "container_test_types.h"
+#endif
 
 int main()
 {

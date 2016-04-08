@@ -18,8 +18,8 @@ package ssa
 // Software Practice and Experience 2001, 4:1-10.
 // http://www.hipersoft.rice.edu/grads/publications/dom14.pdf
 //
-// Daniel Berlin, llvm-dev mailing list, 2012.
-// http://lists.llvm.org/pipermail/llvm-dev/2012-January/046638.html
+// Daniel Berlin, llvmdev mailing list, 2012.
+// http://lists.cs.uiuc.edu/pipermail/llvmdev/2012-January/046638.html
 // (Be sure to expand the whole thread.)
 
 // TODO(adonovan): opt: there are many optimizations worth evaluating, and

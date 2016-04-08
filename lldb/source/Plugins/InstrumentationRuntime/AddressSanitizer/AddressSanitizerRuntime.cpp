@@ -173,7 +173,7 @@ AddressSanitizerRuntime::RetrieveReportData()
     if (!process_sp)
         return StructuredData::ObjectSP();
 
-    ThreadSP thread_sp = process_sp->GetThreadList().GetSelectedThread();
+    ThreadSP thread_sp = process_sp->GetThreadList().GetExpressionExecutionThread();
     StackFrameSP frame_sp = thread_sp->GetSelectedFrame();
     
     if (!frame_sp)

@@ -80,6 +80,6 @@ loc:
 gd:
   .word 0
 ld:
-  .word data1+8-.          # R_MIPS_PC32 requires COPY rel for DSO defined data.
-  .word foo1+8-.           # R_MIPS_PC32 requires JUMP_SLOT/PLT entry
-                           # for DSO defined func.
+  .word data1+8            # R_MIPS_32 requires REL32 dnamic relocation
+                           # for DSO defined data. For now we generate COPY one.
+  .word foo1+8             # R_MIPS_32 requires PLT entry for DSO defined func.

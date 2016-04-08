@@ -1383,8 +1383,31 @@ struct {
 	{ "{ [0, 0, q, p] : -5 <= q <= 5 and p >= 0 }",
 	  "{ [a, b, q, p] : b >= 1 + a }",
 	  "{ [a, b, q, p] : false }" },
+	{ "[n] -> { [x] : x = n && x mod 32 = 0 }",
+	  "[n] -> { [x] : x mod 32 = 0 }",
+	  "[n] -> { [x = n] }" },
+	{ "{ [x] : x mod 6 = 0 }", "{ [x] : x mod 3 = 0 }",
+	  "{ [x] : x mod 2 = 0 }" },
+	{ "{ [x] : x mod 3200 = 0 }", "{ [x] : x mod 10000 = 0 }",
+	  "{ [x] : x mod 128 = 0 }" },
+	{ "{ [x] : x mod 3200 = 0 }", "{ [x] : x mod 10 = 0 }",
+	  "{ [x] : x mod 3200 = 0 }" },
+	{ "{ [a, b, c] : a mod 2 = 0 and a = c }",
+	  "{ [a, b, c] : b mod 2 = 0 and b = c }",
+	  "{ [a, b, c = a] }" },
+	{ "{ [a, b, c] : a mod 6 = 0 and a = c }",
+	  "{ [a, b, c] : b mod 2 = 0 and b = c }",
+	  "{ [a, b, c = a] : a mod 3 = 0 }" },
 };
 
+/* Check that isl_set_gist behaves as expected.
+ *
+ * For the test cases in gist_tests, besides checking that the result
+ * is as expected, also check that applying the gist operation does
+ * not modify the input set (an earlier version of isl would do that) and
+ * that the test case is consistent, i.e., that the gist has the same
+ * intersection with the context as the input set.
+ */
 static int test_gist(struct isl_ctx *ctx)
 {
 	int i;
@@ -1394,22 +1417,25 @@ static int test_gist(struct isl_ctx *ctx)
 	int equal;
 
 	for (i = 0; i < ARRAY_SIZE(gist_tests); ++i) {
-		int equal_input;
-		isl_set *set1, *set2, *copy;
+		int equal_input, equal_intersection;
+		isl_set *set1, *set2, *copy, *context;
 
 		set1 = isl_set_read_from_str(ctx, gist_tests[i].set);
-		set2 = isl_set_read_from_str(ctx, gist_tests[i].context);
+		context = isl_set_read_from_str(ctx, gist_tests[i].context);
 		copy = isl_set_copy(set1);
-		set1 = isl_set_gist(set1, set2);
+		set1 = isl_set_gist(set1, isl_set_copy(context));
 		set2 = isl_set_read_from_str(ctx, gist_tests[i].gist);
 		equal = isl_set_is_equal(set1, set2);
 		isl_set_free(set1);
-		isl_set_free(set2);
 		set1 = isl_set_read_from_str(ctx, gist_tests[i].set);
 		equal_input = isl_set_is_equal(set1, copy);
-		isl_set_free(set1);
 		isl_set_free(copy);
-		if (equal < 0 || equal_input < 0)
+		set1 = isl_set_intersect(set1, isl_set_copy(context));
+		set2 = isl_set_intersect(set2, context);
+		equal_intersection = isl_set_is_equal(set1, set2);
+		isl_set_free(set2);
+		isl_set_free(set1);
+		if (equal < 0 || equal_input < 0 || equal_intersection < 0)
 			return -1;
 		if (!equal)
 			isl_die(ctx, isl_error_unknown,
@@ -1417,6 +1443,9 @@ static int test_gist(struct isl_ctx *ctx)
 		if (!equal_input)
 			isl_die(ctx, isl_error_unknown,
 				"gist modified input", return -1);
+		if (!equal_input)
+			isl_die(ctx, isl_error_unknown,
+				"inconsistent gist test case", return -1);
 	}
 
 	test_gist_case(ctx, "gist1");
@@ -2219,35 +2248,49 @@ static int test_lexmin(struct isl_ctx *ctx)
 	return 0;
 }
 
-/* Check that isl_set_min_val and isl_set_max_val compute the correct
- * result on non-convex inputs.
+struct {
+	const char *set;
+	const char *obj;
+	__isl_give isl_val *(*fn)(__isl_keep isl_set *set,
+		__isl_keep isl_aff *obj);
+	const char *res;
+} opt_tests[] = {
+	{ "{ [-1]; [1] }", "{ [x] -> [x] }", &isl_set_min_val, "-1" },
+	{ "{ [-1]; [1] }", "{ [x] -> [x] }", &isl_set_max_val, "1" },
+	{ "{ [a, b] : 0 <= a, b <= 100 and b mod 2 = 0}",
+	  "{ [a, b] -> [floor((b - 2*floor((-a)/4))/5)] }",
+	  &isl_set_max_val, "30" },
+
+};
+
+/* Perform basic isl_set_min_val and isl_set_max_val tests.
+ * In particular, check the results on non-convex inputs.
  */
 static int test_min(struct isl_ctx *ctx)
 {
+	int i;
 	isl_set *set;
-	isl_aff *aff;
-	isl_val *val;
-	int min_ok, max_ok;
+	isl_aff *obj;
+	isl_val *val, *res;
+	isl_bool ok;
 
-	set = isl_set_read_from_str(ctx, "{ [-1]; [1] }");
-	aff = isl_aff_read_from_str(ctx, "{ [x] -> [x] }");
-	val = isl_set_min_val(set, aff);
-	min_ok = isl_val_is_negone(val);
-	isl_val_free(val);
-	val = isl_set_max_val(set, aff);
-	max_ok = isl_val_is_one(val);
-	isl_val_free(val);
-	isl_aff_free(aff);
-	isl_set_free(set);
+	for (i = 0; i < ARRAY_SIZE(opt_tests); ++i) {
+		set = isl_set_read_from_str(ctx, opt_tests[i].set);
+		obj = isl_aff_read_from_str(ctx, opt_tests[i].obj);
+		res = isl_val_read_from_str(ctx, opt_tests[i].res);
+		val = opt_tests[i].fn(set, obj);
+		ok = isl_val_eq(res, val);
+		isl_val_free(res);
+		isl_val_free(val);
+		isl_aff_free(obj);
+		isl_set_free(set);
 
-	if (min_ok < 0 || max_ok < 0)
-		return -1;
-	if (!min_ok)
-		isl_die(ctx, isl_error_unknown,
-			"unexpected minimum", return -1);
-	if (!max_ok)
-		isl_die(ctx, isl_error_unknown,
-			"unexpected maximum", return -1);
+		if (ok < 0)
+			return -1;
+		if (!ok)
+			isl_die(ctx, isl_error_unknown,
+				"unexpected optimum", return -1);
+	}
 
 	return 0;
 }
@@ -5181,6 +5224,8 @@ struct {
 	    "B[i] -> D[i] : exists a : i = 2 a + 1 }",
 	  "{ A[i] -> B[2i] }",
 	  "{ A[i] -> C[2i] }" },
+	{ "{ A[i] -> B[i] }", "{ C[i] -> A[(i + floor(i/3))/2] }",
+	  "{ C[i] -> B[j] : 2j = i + floor(i/3) }" },
 };
 
 static int test_preimage_union_map(isl_ctx *ctx)
@@ -5807,7 +5852,7 @@ static int test_multi_pw_aff(isl_ctx *ctx)
  * is empty and would end up in an infinite loop if it didn't test
  * explicitly for empty basic maps in the outer loop.
  */
-static int test_simplify(isl_ctx *ctx)
+static int test_simplify_1(isl_ctx *ctx)
 {
 	const char *str;
 	isl_basic_set *bset;
@@ -5827,6 +5872,39 @@ static int test_simplify(isl_ctx *ctx)
 		isl_die(ctx, isl_error_unknown,
 			"basic set should be empty", return -1);
 
+	return 0;
+}
+
+/* Check that the equality in the set description below
+ * is simplified away.
+ */
+static int test_simplify_2(isl_ctx *ctx)
+{
+	const char *str;
+	isl_basic_set *bset;
+	isl_bool universe;
+
+	str = "{ [a] : exists e0, e1: 32e1 = 31 + 31a + 31e0 }";
+	bset = isl_basic_set_read_from_str(ctx, str);
+	universe = isl_basic_set_plain_is_universe(bset);
+	isl_basic_set_free(bset);
+
+	if (universe < 0)
+		return -1;
+	if (!universe)
+		isl_die(ctx, isl_error_unknown,
+			"equality not simplified away", return -1);
+	return 0;
+}
+
+/* Some simplification tests.
+ */
+static int test_simplify(isl_ctx *ctx)
+{
+	if (test_simplify_1(ctx) < 0)
+		return -1;
+	if (test_simplify_2(ctx) < 0)
+		return -1;
 	return 0;
 }
 
@@ -6246,10 +6324,34 @@ static int test_domain_hash(isl_ctx *ctx)
 	return 0;
 }
 
+/* Check that a universe basic set that is not obviously equal to the universe
+ * is still recognized as being equal to the universe.
+ */
+static int test_universe(isl_ctx *ctx)
+{
+	const char *s;
+	isl_basic_set *bset;
+	isl_bool is_univ;
+
+	s = "{ [] : exists x, y : 3y <= 2x and y >= -3 + 2x and 2y >= 2 - x }";
+	bset = isl_basic_set_read_from_str(ctx, s);
+	is_univ = isl_basic_set_is_universe(bset);
+	isl_basic_set_free(bset);
+
+	if (is_univ < 0)
+		return -1;
+	if (!is_univ)
+		isl_die(ctx, isl_error_unknown,
+			"not recognized as universe set", return -1);
+
+	return 0;
+}
+
 struct {
 	const char *name;
 	int (*fn)(isl_ctx *ctx);
 } tests [] = {
+	{ "universe", &test_universe },
 	{ "domain hash", &test_domain_hash },
 	{ "dual", &test_dual },
 	{ "dependence analysis", &test_flow },

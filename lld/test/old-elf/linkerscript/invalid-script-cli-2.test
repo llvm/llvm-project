@@ -1,6 +1,0 @@
-# Check that linker script are *not* picked up with -lscript.ls.
-
-RUN: not lld -flavor old-gnu -target x86_64 -L%p/Inputs/ -lvalid.ls 2> %t.err
-RUN: FileCheck %s < %t.err
-
-CHECK: {{.*}}: Unable to find library -lvalid.ls

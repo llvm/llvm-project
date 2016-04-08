@@ -22,7 +22,7 @@ sections:
     section:         __data
     type:            S_REGULAR
     attributes:      [  ]
-    alignment:       3
+    alignment:       8
     address:         0x0000000000000000
     content:         [ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                        0x11, 0x12, 0x13, 0x14, 0x21, 0x22, 0x23, 0x24,
@@ -31,7 +31,7 @@ sections:
     section:         __custom
     type:            S_REGULAR
     attributes:      [  ]
-    alignment:       3
+    alignment:       8
     address:         0x0000000000000018
     content:         [ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 ]
   - segment:         __DATA

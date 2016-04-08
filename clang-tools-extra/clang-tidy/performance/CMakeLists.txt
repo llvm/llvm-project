@@ -6,6 +6,7 @@ add_clang_library(clangTidyPerformanceModule
   ImplicitCastInLoopCheck.cpp
   PerformanceTidyModule.cpp
   UnnecessaryCopyInitialization.cpp
+  UnnecessaryValueParamCheck.cpp
 
   LINK_LIBS
   clangAST

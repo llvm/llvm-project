@@ -1,7 +1,0 @@
-# This tests verifies that TLS variables have correct offsets
-# and that TBSS doesn't occupy memory
-RUN: lld -flavor old-gnu -target x86_64-linux %p/Inputs/tlsAddr.x86-64 -static  \
-RUN: -o %t --noinhibit-exec
-RUN: llvm-objdump -section-headers %t | FileCheck -check-prefix=CHECKADDR %s
-
-CHECKADDR:   {{[0-9]+}} .data         00000000 0000000000401008 DATA

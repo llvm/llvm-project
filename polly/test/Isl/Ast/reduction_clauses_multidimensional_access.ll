@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-delinearize -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
 ;
 ; CHECK: #pragma known-parallel reduction (^ : sum)
 ;        void f(int N, int M, int P, int sum[P][M]) {

@@ -183,10 +183,11 @@ if(WIN32)
   add_dependencies(omp libomp-needed-windows-files)
   # z_Windows_NT-586_asm.asm requires definitions to be sent via command line
   # It only needs the architecutre macro and OMPT_SUPPORT=0|1
-  libomp_append(LIBOMP_MASM_DEFINITIONS "_M_IA32" IF_TRUE IA32)
-  libomp_append(LIBOMP_MASM_DEFINITIONS "_M_AMD64" IF_TRUE INTEL64)
-  libomp_append(LIBOMP_MASM_DEFINITIONS "OMPT_SUPPORT" IF_TRUE_1_0 LIBOMP_OMPT_SUPPORT)
-  set_source_files_properties(z_Windows_NT-586_asm.asm PROPERTIES COMPILE_DEFINITIONS "${LIBOMP_MASM_DEFINITIONS}")
+  libomp_append(LIBOMP_MASM_DEFINITIONS "-D_M_IA32" IF_TRUE IA32)
+  libomp_append(LIBOMP_MASM_DEFINITIONS "-D_M_AMD64" IF_TRUE INTEL64)
+  libomp_append(LIBOMP_MASM_DEFINITIONS "-DOMPT_SUPPORT" IF_TRUE_1_0 LIBOMP_OMPT_SUPPORT)
+  libomp_list_to_string("${LIBOMP_MASM_DEFINITIONS}" LIBOMP_MASM_DEFINITIONS)
+  set_property(SOURCE z_Windows_NT-586_asm.asm APPEND_STRING PROPERTY COMPILE_FLAGS " ${LIBOMP_MASM_DEFINITIONS}")
   set_source_files_properties(thirdparty/ittnotify/ittnotify_static.c PROPERTIES COMPILE_DEFINITIONS "UNICODE")
 
   # Create Windows import library

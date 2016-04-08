@@ -27,11 +27,6 @@ time_t timegm(struct tm* t)
     return (time_t) timegm64(t);
 }
 
-int signalfd (int fd, const sigset_t *mask, int flags)
-{
-    return syscall(__NR_signalfd4, fd, mask, _NSIG / 8, flags);
-}
-
 int posix_openpt(int flags)
 {
     return open("/dev/ptmx", flags);

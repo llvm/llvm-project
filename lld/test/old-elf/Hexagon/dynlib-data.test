@@ -1,9 +1,0 @@
-RUN: lld -flavor old-gnu -target hexagon %p/Inputs/dynobj-data.o \
-RUN:    -o %t --noinhibit-exec -shared
-RUN: llvm-objdump -s %t > %t1
-RUN: FileCheck -check-prefix=CHECKRELOCS %s < %t1
-
-CHECKRELOCS: Contents of section .text:
-CHECKRELOCS: 00f8 01c09da0 01d89da1 3c400000 18c4496a  ........<@....Ij
-CHECKRELOCS: 0108 ff7fff0f 00ff9897 00c08091 38c09d91  ............8...
-CHECKRELOCS: 0118 1ec01e96                             ....

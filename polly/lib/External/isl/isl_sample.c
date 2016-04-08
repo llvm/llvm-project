@@ -1214,6 +1214,8 @@ __isl_give isl_basic_map *isl_basic_map_sample(__isl_take isl_basic_map *bmap)
 		isl_vec_free(sample_vec);
 		return isl_basic_map_set_to_empty(bmap);
 	}
+	isl_vec_free(bmap->sample);
+	bmap->sample = isl_vec_copy(sample_vec);
 	bset = isl_basic_set_from_vec(sample_vec);
 	return isl_basic_map_overlying_set(bset, bmap);
 error:

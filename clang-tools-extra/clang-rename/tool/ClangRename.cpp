@@ -35,12 +35,8 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/Host.h"
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <string>
-#include <time.h>
-#include <vector>
 
 using namespace llvm;
 

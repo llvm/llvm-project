@@ -1,4 +1,4 @@
-//===-- ConnectionSharedMemory.cpp ----------------------------*- C++ -*-===//
+//===-- ConnectionSharedMemory.cpp ------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,13 +6,12 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef __ANDROID_NDK__
 
 #include "lldb/Core/ConnectionSharedMemory.h"
 
 // C Includes
-#include <errno.h>
-#include <stdlib.h>
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"
 #else
@@ -23,11 +22,17 @@
 #endif
 
 // C++ Includes
+#include <cerrno>
+#include <cstdlib>
+
 // Other libraries and framework includes
-// Project includes
 #include "llvm/Support/MathExtras.h"
+
+// Project includes
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Log.h"
+
+#include "llvm/Support/ConvertUTF.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -42,7 +47,7 @@ ConnectionSharedMemory::ConnectionSharedMemory () :
 
 ConnectionSharedMemory::~ConnectionSharedMemory ()
 {
-    Disconnect (NULL);
+    Disconnect(nullptr);
 }
 
 bool
@@ -132,18 +137,18 @@ ConnectionSharedMemory::Open (bool create, const char *name, size_t size, Error 
     m_name.assign (name);
 
 #ifdef _WIN32
-    HANDLE handle;
-    if (create) {
-        handle = CreateFileMapping(
-            INVALID_HANDLE_VALUE,
-            NULL,
-            PAGE_READWRITE,
-            llvm::Hi_32(size),
-            llvm::Lo_32(size),
-            name);
+    HANDLE handle = INVALID_HANDLE_VALUE;
+    std::wstring wname;
+    if (llvm::ConvertUTF8toWide(name, wname))
+    {
+        if (create)
+        {
+            handle = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, llvm::Hi_32(size),
+                                        llvm::Lo_32(size), wname.c_str());
+        }
+        else
+            handle = OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, wname.c_str());
     }
-    else
-        handle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, name);
 
     m_fd = _open_osfhandle((intptr_t)handle, 0);
 #else
@@ -159,7 +164,7 @@ ConnectionSharedMemory::Open (bool create, const char *name, size_t size, Error 
     if (m_mmap.MemoryMapFromFileDescriptor(m_fd, 0, size, true, false) == size)
         return eConnectionStatusSuccess;
 
-    Disconnect(NULL);
+    Disconnect(nullptr);
     return eConnectionStatusError;
 }
 

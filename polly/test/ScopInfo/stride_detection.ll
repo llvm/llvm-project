@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-dir=%S  -polly-vectorizer=polly -polly-codegen < %s -S | FileCheck %s
+; RUN: opt %loadPolly -polly-opt-isl -polly-vectorizer=polly -polly-codegen < %s -S | FileCheck %s
 
 ; #pragma known-parallel
 ;   for (int c0 = 0; c0 <= 31; c0 += 1)

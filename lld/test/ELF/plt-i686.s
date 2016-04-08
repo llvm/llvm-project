@@ -7,7 +7,8 @@
 // RUN: ld.lld -shared %t.o %t2.so -o %t
 // RUN: llvm-readobj -s -r %t | FileCheck --check-prefix=CHECKSHARED %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASMSHARED %s
-
+// RUN: ld.lld -pie %t.o %t2.so -o %t
+// RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASMPIE %s
 // REQUIRES: x86
 
 // CHECK:      Name: .plt
@@ -146,6 +147,21 @@
 // DISASMSHARED-NEXT:  1040: ff a3 10 00 00 00  jmpl *16(%ebx)
 // DISASMSHARED-NEXT:  1046: 68 08 00 00 00     pushl $8
 // DISASMSHARED-NEXT:  104b: e9 d0 ff ff ff     jmp -48 <.plt>
+
+// DISASMPIE:      Disassembly of section .plt:
+// DISASMPIE-NEXT: .plt:
+// DISASMPIE-NEXT:   1020:	ff b3 04 00 00 00 pushl 4(%ebx)
+// DISASMPIE-NEXT:   1026:	ff a3 08 00 00 00 jmpl *8(%ebx)
+// DISASMPIE-NEXT:   102c:	90 nop
+// DISASMPIE-NEXT:   102d:	90 nop
+// DISASMPIE-NEXT:   102e:	90 nop
+// DISASMPIE-NEXT:   102f:	90 nop
+// DISASMPIE-NEXT:   1030:	ff a3 0c 30 00 00 jmpl *12300(%ebx)
+// DISASMPIE-NEXT:   1036:	68 00 00 00 00 pushl $0
+// DISASMPIE-NEXT:   103b:	e9 e0 ff ff ff jmp -32 <.plt>
+// DISASMPIE-NEXT:   1040:	ff a3 10 30 00 00 jmpl *12304(%ebx)
+// DISASMPIE-NEXT:   1046:	68 08 00 00 00 pushl $8
+// DISASMPIE-NEXT:   104b:	e9 d0 ff ff ff jmp -48 <.plt>
 
 local:
 .long 0

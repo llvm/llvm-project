@@ -102,13 +102,11 @@ void RedundantVoidArgCheck::check(const MatchFinder::MatchResult &Result) {
 
 void RedundantVoidArgCheck::processFunctionDecl(
     const MatchFinder::MatchResult &Result, const FunctionDecl *Function) {
-  SourceLocation Start = Function->getLocStart();
   if (Function->isThisDeclarationADefinition()) {
-    SourceLocation End;
-    if (Function->hasBody())
-      End = Function->getBody()->getLocStart().getLocWithOffset(-1);
-    else
-      End = Function->getLocEnd();
+    const Stmt *Body = Function->getBody();
+    SourceLocation Start = Function->getLocStart();
+    SourceLocation End = Body ? Body->getLocStart().getLocWithOffset(-1) :
+                                Function->getLocEnd();
     removeVoidArgumentTokens(Result, SourceRange(Start, End),
                              "function definition");
   } else {

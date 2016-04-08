@@ -735,10 +735,10 @@ public:
     //----------------------------------------------------------------------
     
     uint64_t
-    GetBitSize (void * type, ExecutionContextScope *exe_scope) override;
+    GetBitSize (lldb::opaque_compiler_type_t type, ExecutionContextScope *exe_scope) override;
     
     uint64_t
-    GetByteStride (void* type) override;
+    GetByteStride (lldb::opaque_compiler_type_t type) override;
     
     lldb::Encoding
     GetEncoding (void * type, uint64_t &count) override;
@@ -940,7 +940,7 @@ public:
     GetTypedefedType (void * type) override;
     
     CompilerType
-    GetUnboundType (void* type) override;
+    GetUnboundType (lldb::opaque_compiler_type_t type) override;
     
     bool
     IsVectorType (void * type,

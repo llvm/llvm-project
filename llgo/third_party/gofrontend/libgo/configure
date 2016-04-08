@@ -602,6 +602,8 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+HAVE_STAT_TIMESPEC_FALSE
+HAVE_STAT_TIMESPEC_TRUE
 STRUCT_EPOLL_EVENT_FD_OFFSET
 SIZEOF_STRUCT_EPOLL_EVENT
 MATH_FLAG
@@ -618,6 +620,7 @@ NET_LIBS
 MATH_LIBS
 GOC_IS_LLGO_FALSE
 GOC_IS_LLGO_TRUE
+GO_SPLIT_STACK
 USING_SPLIT_STACK_FALSE
 USING_SPLIT_STACK_TRUE
 SPLIT_STACK
@@ -723,6 +726,7 @@ GOC
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
 CCDEPMODE
+am__nodep
 AMDEPBACKSLASH
 AMDEP_FALSE
 AMDEP_TRUE
@@ -828,7 +832,6 @@ enable_version_specific_runtime_libs
 with_libffi
 with_libatomic
 with_system_libunwind
-enable_sjlj_exceptions
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1469,8 +1472,6 @@ Optional Features:
   --enable-version-specific-runtime-libs
                           Specify that runtime libraries should be installed
                           in a compiler-specific directory
-  --enable-sjlj-exceptions
-                          force use of builtin_setjmp for exceptions
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -2511,7 +2512,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 ac_config_headers="$ac_config_headers config.h"
 
 
-libtool_VERSION=7:0:0
+libtool_VERSION=8:0:0
 
 
 # Default to --enable-multilib
@@ -3147,11 +3148,11 @@ MAKEINFO=${MAKEINFO-"${am_missing_run}makeinfo"}
 
 # We need awk for the "check" target.  The system "awk" is bad on
 # some platforms.
-# Always define AMTAR for backward compatibility.
+# Always define AMTAR for backward compatibility.  Yes, it's still used
+# in the wild :-(  We should find a proper way to deprecate it ...
+AMTAR='$${TAR-tar}'
 
-AMTAR=${AMTAR-"${am_missing_run}tar"}
-
-am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
+am__tar='$${TAR-tar} chof - "$$tardir"' am__untar='$${TAR-tar} xf -'
 
 
 
@@ -3978,6 +3979,7 @@ fi
 if test "x$enable_dependency_tracking" != xno; then
   am_depcomp="$ac_aux_dir/depcomp"
   AMDEPBACKSLASH='\'
+  am__nodep='_no'
 fi
  if test "x$enable_dependency_tracking" != xno; then
   AMDEP_TRUE=
@@ -4002,6 +4004,7 @@ else
   # instance it was reported that on HP-UX the gcc test will end up
   # making a dummy file named `D' -- because `-MD' means `put the output
   # in D'.
+  rm -rf conftest.dir
   mkdir conftest.dir
   # Copy depcomp to subdir because otherwise we won't find it if we're
   # using a relative directory.
@@ -4061,7 +4064,7 @@ else
 	break
       fi
       ;;
-    msvisualcpp | msvcmsys)
+    msvc7 | msvc7msys | msvisualcpp | msvcmsys)
       # This compiler won't grok `-c -o', but also, the minuso test has
       # not run yet.  These depmodes are late enough in the game, and
       # so weak that their functioning should not be impacted.
@@ -11121,7 +11124,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11124 "configure"
+#line 11127 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11227,7 +11230,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11230 "configure"
+#line 11233 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -14005,7 +14008,32 @@ CFLAGS=$CFLAGS_hold
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $libgo_cv_c_split_stack_supported" >&5
 $as_echo "$libgo_cv_c_split_stack_supported" >&6; }
-if test "$libgo_cv_c_split_stack_supported" = yes; then
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether linker supports split/non-split linked together" >&5
+$as_echo_n "checking whether linker supports split/non-split linked together... " >&6; }
+if test "${libgo_cv_c_linker_split_non_split+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat > conftest1.c << EOF
+extern void f();
+int main() { f(); return 0; }
+EOF
+cat > conftest2.c << EOF
+void f() {}
+EOF
+$CC -c -fsplit-stack $CFLAGS $CPPFLAGS conftest1.c
+$CC -c $CFLAGS $CPPFLAGS conftest2.c
+if $CC -o conftest conftest1.$ac_objext conftest2.$ac_objext; then
+  libgo_cv_c_linker_split_non_split=yes
+else
+  libgo_cv_c_linker_split_non_split=no
+fi
+rm -f conftest1.* conftest2.* conftest
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libgo_cv_c_linker_split_non_split" >&5
+$as_echo "$libgo_cv_c_linker_split_non_split" >&6; }
+
+if test "$libgo_cv_c_split_stack_supported" = yes -a "$libgo_cv_c_linker_split_non_split" = yes; then
   SPLIT_STACK=-fsplit-stack
 
 $as_echo "#define USING_SPLIT_STACK 1" >>confdefs.h
@@ -14014,12 +14042,19 @@ else
   SPLIT_STACK=
 fi
 
- if test "$libgo_cv_c_split_stack_supported" = yes; then
+ if test "$libgo_cv_c_split_stack_supported" = yes -a "$libgo_cv_c_linker_split_non_split" = yes; then
   USING_SPLIT_STACK_TRUE=
   USING_SPLIT_STACK_FALSE='#'
 else
   USING_SPLIT_STACK_TRUE='#'
   USING_SPLIT_STACK_FALSE=
+fi
+
+
+if test "$libgo_cv_c_split_stack_supported" = yes -a "$libgo_cv_c_linker_split_non_split" = no; then
+  GO_SPLIT_STACK=-fno-split-stack
+else
+  GO_SPLIT_STACK=
 fi
 
 
@@ -14214,6 +14249,46 @@ fi
 fi
 
    unset ac_cv_func_gethostbyname
+   ac_fn_c_check_func "$LINENO" "sendfile" "ac_cv_func_sendfile"
+if test "x$ac_cv_func_sendfile" = x""yes; then :
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lsendfile" >&5
+$as_echo_n "checking for main in -lsendfile... " >&6; }
+if test "${ac_cv_lib_sendfile_main+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lsendfile  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_sendfile_main=yes
+else
+  ac_cv_lib_sendfile_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_sendfile_main" >&5
+$as_echo "$ac_cv_lib_sendfile_main" >&6; }
+if test "x$ac_cv_lib_sendfile_main" = x""yes; then :
+  libgo_cv_lib_sockets="$libgo_cv_lib_sockets -lsendfile"
+fi
+
+fi
+
    LIBS=$libgo_old_libs
 
 fi
@@ -14399,6 +14474,62 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_nanosleep" >&5
 $as_echo "$ac_cv_search_nanosleep" >&6; }
 ac_res=$ac_cv_search_nanosleep
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing clock_gettime" >&5
+$as_echo_n "checking for library containing clock_gettime... " >&6; }
+if test "${ac_cv_search_clock_gettime+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char clock_gettime ();
+int
+main ()
+{
+return clock_gettime ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' rt; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_clock_gettime=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if test "${ac_cv_search_clock_gettime+set}" = set; then :
+  break
+fi
+done
+if test "${ac_cv_search_clock_gettime+set}" = set; then :
+
+else
+  ac_cv_search_clock_gettime=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_clock_gettime" >&5
+$as_echo "$ac_cv_search_clock_gettime" >&6; }
+ac_res=$ac_cv_search_clock_gettime
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
@@ -14666,68 +14797,6 @@ $as_echo "#define HAVE_GETIPINFO 1" >>confdefs.h
 
   fi
 
-
-# Check whether --enable-sjlj-exceptions was given.
-if test "${enable_sjlj_exceptions+set}" = set; then :
-  enableval=$enable_sjlj_exceptions; case "$enableval" in
-   yes|no|auto) ;;
-   *) as_fn_error "unknown argument to --enable-sjlj-exceptions" "$LINENO" 5 ;;
-   esac
-else
-  enable_sjlj_exceptions=auto
-fi
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to use setjmp/longjmp exceptions" >&5
-$as_echo_n "checking whether to use setjmp/longjmp exceptions... " >&6; }
-if test "${libgo_cv_lib_sjlj_exceptions+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-void bar ();
-void clean (int *);
-void foo ()
-{
-  int i __attribute__ ((cleanup (clean)));
-  bar();
-}
-
-_ACEOF
-CFLAGS_hold=$CFLAGS
-CFLAGS="--save-temps -fexceptions"
-libgo_cv_lib_sjlj_exceptions=unknown
-if ac_fn_c_try_compile; then :
-  if grep _Unwind_SjLj_Resume conftest.s >/dev/null 2>&1; then
-    libgo_cv_lib_sjlj_exceptions=yes
-  elif grep _Unwind_Resume conftest.s >/dev/null 2>&1; then
-    libgo_cv_lib_sjlj_exceptions=no
-  fi
-fi
-CFLAGS=$CFLAGS_hold
-rm -f conftest*
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libgo_cv_lib_sjlj_exceptions" >&5
-$as_echo "$libgo_cv_lib_sjlj_exceptions" >&6; }
-
-if test "$enable_sjlj_exceptions" = "auto"; then
-  enable_sjlj_exceptions=$libgo_cv_lib_sjlj_exceptions
-fi
-
-case $enable_sjlj_exceptions in
-yes)
-
-$as_echo "#define LIBGO_SJLJ_EXCEPTIONS 1" >>confdefs.h
-
-  ;;
-no)
-  ;;
-*)
-  as_fn_error "unable to detect exception model" "$LINENO" 5
-  ;;
-esac
 
 for ac_header in sched.h sys/file.h sys/mman.h syscall.h sys/epoll.h sys/inotify.h sys/ptrace.h sys/syscall.h sys/user.h sys/utsname.h sys/select.h sys/socket.h net/if.h net/if_arp.h net/route.h netpacket/packet.h sys/prctl.h sys/mount.h sys/vfs.h sys/statfs.h sys/timex.h sys/sysinfo.h utime.h linux/ether.h linux/fs.h linux/reboot.h netinet/icmp6.h netinet/in_syst.h netinet/ip.h netinet/ip_mroute.h netinet/if_ether.h
 do :
@@ -15139,6 +15208,28 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $libgo_cv_c_epoll_event_fd_offset" >&5
 $as_echo "$libgo_cv_c_epoll_event_fd_offset" >&6; }
 STRUCT_EPOLL_EVENT_FD_OFFSET=${libgo_cv_c_epoll_event_fd_offset}
+
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <sys/stat.h>
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "timespec_t.*st_atim" >/dev/null 2>&1; then :
+  have_stat_timespec=yes
+else
+  have_stat_timespec=no
+fi
+rm -f conftest*
+
+ if test $have_stat_timespec = yes; then
+  HAVE_STAT_TIMESPEC_TRUE=
+  HAVE_STAT_TIMESPEC_FALSE='#'
+else
+  HAVE_STAT_TIMESPEC_TRUE='#'
+  HAVE_STAT_TIMESPEC_FALSE=
+fi
 
 
 ac_fn_c_check_type "$LINENO" "struct exception" "ac_cv_type_struct_exception" "#include <math.h>
@@ -15759,6 +15850,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_WAIT4_TRUE}" && test -z "${HAVE_WAIT4_FALSE}"; then
   as_fn_error "conditional \"HAVE_WAIT4\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_STAT_TIMESPEC_TRUE}" && test -z "${HAVE_STAT_TIMESPEC_FALSE}"; then
+  as_fn_error "conditional \"HAVE_STAT_TIMESPEC\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

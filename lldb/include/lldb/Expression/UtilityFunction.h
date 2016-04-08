@@ -139,8 +139,10 @@ public:
     }
     
     // This makes the function caller function.
+    // Pass in the ThreadSP if you have one available, compilation can end up calling code (e.g. to look up indirect
+    // functions) and we don't want this to wander onto another thread.
     FunctionCaller *
-    MakeFunctionCaller(const CompilerType &return_type, const ValueList &arg_value_list, Error &error);
+    MakeFunctionCaller(const CompilerType &return_type, const ValueList &arg_value_list, lldb::ThreadSP compilation_thread, Error &error);
     
     // This one retrieves the function caller that is already made.  If you haven't made it yet, this returns nullptr
     FunctionCaller *

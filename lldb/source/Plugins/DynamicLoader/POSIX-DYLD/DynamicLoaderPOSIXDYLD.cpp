@@ -656,7 +656,7 @@ DynamicLoaderPOSIXDYLD::ResolveExecutableModule (lldb::ModuleSP &module_sp)
     const auto platform_sp = target.GetPlatform ();
 
     ProcessInstanceInfo process_info;
-    if (!platform_sp->GetProcessInfo (m_process->GetID (), process_info))
+    if (!m_process->GetProcessInfo(process_info))
     {
         if (log)
             log->Printf ("DynamicLoaderPOSIXDYLD::%s - failed to get process info for pid %" PRIu64,

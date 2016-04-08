@@ -34,6 +34,38 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
+static lldb::addr_t
+DerefToNSErrorPointer (ValueObject& valobj)
+{
+    CompilerType valobj_type(valobj.GetCompilerType());
+    Flags type_flags(valobj_type.GetTypeInfo());
+    if (type_flags.AllClear(eTypeHasValue))
+    {
+        if (valobj.IsBaseClass() && valobj.GetParent())
+            return valobj.GetParent()->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    }
+    else
+    {
+        lldb::addr_t ptr_value = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+        if (type_flags.AllSet(eTypeIsPointer))
+        {
+            CompilerType pointee_type(valobj_type.GetPointeeType());
+            Flags pointee_flags(pointee_type.GetTypeInfo());
+            if (pointee_flags.AllSet(eTypeIsPointer))
+            {
+                if (ProcessSP process_sp = valobj.GetProcessSP())
+                {
+                    Error error;
+                    ptr_value = process_sp->ReadPointerFromMemory(ptr_value, error);
+                }
+            }
+        }
+        return ptr_value;
+    }
+    
+    return LLDB_INVALID_ADDRESS;
+}
+
 bool
 lldb_private::formatters::NSError_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
 {
@@ -41,20 +73,10 @@ lldb_private::formatters::NSError_SummaryProvider (ValueObject& valobj, Stream& 
     if (!process_sp)
         return false;
     
-    lldb::addr_t ptr_value = LLDB_INVALID_ADDRESS;
-    
-    CompilerType valobj_type(valobj.GetCompilerType());
-    Flags type_flags(valobj_type.GetTypeInfo());
-    if (type_flags.AllClear(eTypeHasValue))
-    {
-        if (valobj.IsBaseClass() && valobj.GetParent())
-            ptr_value = valobj.GetParent()->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-    }
-    else
-        ptr_value = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-
+    lldb::addr_t ptr_value = DerefToNSErrorPointer(valobj);
     if (ptr_value == LLDB_INVALID_ADDRESS)
         return false;
+
     size_t ptr_size = process_sp->GetAddressByteSize();
     lldb::addr_t code_location = ptr_value + 2 * ptr_size;
     lldb::addr_t domain_location = ptr_value + 3 * ptr_size;
@@ -135,18 +157,7 @@ public:
         if (!process_sp)
             return false;
         
-        lldb::addr_t userinfo_location = LLDB_INVALID_ADDRESS;
-        
-        CompilerType valobj_type(m_backend.GetCompilerType());
-        Flags type_flags(valobj_type.GetTypeInfo());
-        if (type_flags.AllClear(eTypeHasValue))
-        {
-            if (m_backend.IsBaseClass() && m_backend.GetParent())
-                userinfo_location = m_backend.GetParent()->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-        }
-        else
-            userinfo_location = m_backend.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-
+        lldb::addr_t userinfo_location = DerefToNSErrorPointer(m_backend);
         if (userinfo_location == LLDB_INVALID_ADDRESS)
             return false;
         

@@ -42,11 +42,12 @@ class ShimPass : public Pass {
 public:
   ShimPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _stubInfo(_archHandler.stubInfo()), _file("<mach-o shim pass>") {
+        _stubInfo(_archHandler.stubInfo()),
+        _file(*_ctx.make_file<MachOFile>("<mach-o shim pass>")) {
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
-  std::error_code perform(SimpleFile &mergedFile) override {
+  llvm::Error perform(SimpleFile &mergedFile) override {
     // Scan all references in all atoms.
     for (const DefinedAtom *atom : mergedFile.defined()) {
       for (const Reference *ref : *atom) {
@@ -65,7 +66,7 @@ public:
     }
     // Exit early if no shims needed.
     if (_targetToShim.empty())
-      return std::error_code();
+      return llvm::Error();
 
     // Sort shim atoms so the layout order is stable.
     std::vector<const DefinedAtom *> shims;
@@ -82,7 +83,7 @@ public:
     for (const DefinedAtom *shim : shims)
       mergedFile.addAtom(*shim);
 
-    return std::error_code();
+    return llvm::Error();
   }
 
 private:
@@ -114,7 +115,7 @@ private:
   const MachOLinkingContext &_ctx;
   mach_o::ArchHandler                            &_archHandler;
   const ArchHandler::StubInfo                    &_stubInfo;
-  MachOFile                                       _file;
+  MachOFile                                      &_file;
   llvm::DenseMap<const Atom*, const DefinedAtom*> _targetToShim;
 };
 

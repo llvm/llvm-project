@@ -51,6 +51,7 @@ class ObjCDataFormatterTestCase(TestBase):
 
 
     @skipUnlessDarwin
+    @expectedFailureAll(bugnumber="rdar://25587546")
     def test_nserror_with_run_command(self):
         """Test formatters for NSError."""
         self.appkit_tester_impl(self.nserror_data_formatter_commands)
@@ -192,7 +193,7 @@ class ObjCDataFormatterTestCase(TestBase):
     
     def nsnumber_data_formatter_commands(self):
         # Now enable AppKit and check we are displaying Cocoa classes correctly
-        self.expect('frame variable num1 num2 num3 num4 num5 num6 num7 num8_Y num8_N num9',
+        self.expect('frame variable num1 num2 num3 num4 num5 num6 num7 num9',
                     substrs = ['(NSNumber *) num1 = ',' (int)5',
                     '(NSNumber *) num2 = ',' (float)3.1',
                     '(NSNumber *) num3 = ',' (double)3.14',
@@ -200,12 +201,7 @@ class ObjCDataFormatterTestCase(TestBase):
                     '(NSNumber *) num5 = ',' (char)65',
                     '(NSNumber *) num6 = ',' (long)255',
                     '(NSNumber *) num7 = ','2000000',
-                    '(NSNumber *) num8_Y = ',' @"1"',
-                    '(NSNumber *) num8_N = ',' @"0"',
                     '(NSNumber *) num9 = ',' (short)-31616'])
-
-        self.expect('frame variable decimal_one',
-                    substrs = ['(NSDecimalNumber *) decimal_one = 0x','1'])
 
         self.expect('frame variable num_at1 num_at2 num_at3 num_at4',
                     substrs = ['(NSNumber *) num_at1 = ',' (int)12',
@@ -255,6 +251,9 @@ class ObjCDataFormatterTestCase(TestBase):
                     substrs = ['domain: @"Foobar" - code: 12'])
 
         self.expect('frame variable  -d run-target nserror->_userInfo',
+                    substrs = ['2 key/value pairs'])
+
+        self.expect('frame variable nserror->_userInfo',
                     substrs = ['2 key/value pairs'])
 
         self.expect('frame variable nserror->_userInfo --ptr-depth 1 -d run-target',

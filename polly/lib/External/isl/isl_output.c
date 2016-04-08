@@ -780,7 +780,7 @@ static __isl_give isl_printer *print_optional_disjunct(
 	__isl_keep isl_basic_map *bmap, __isl_keep isl_space *space,
 	__isl_take isl_printer *p, int latex)
 {
-	if (isl_basic_map_is_universe(bmap))
+	if (isl_basic_map_plain_is_universe(bmap))
 		return p;
 
 	p = isl_printer_print_str(p, ": ");
@@ -937,7 +937,7 @@ static __isl_give isl_printer *print_disjuncts(__isl_keep isl_map *map,
 		isl_bool is_universe;
 
 		hull = isl_map_plain_unshifted_simple_hull(isl_map_copy(map));
-		is_universe = isl_basic_map_is_universe(hull);
+		is_universe = isl_basic_map_plain_is_universe(hull);
 		if (is_universe < 0)
 			p = isl_printer_free(p);
 		else if (!is_universe)
@@ -1134,7 +1134,8 @@ static int defining_equality(__isl_keep isl_basic_map *eq,
  * data->user is assumed to be an isl_basic_map keeping track of equalities.
  *
  * If the current dimension is defined by these equalities, then print
- * the corresponding expression.  Otherwise, print the name of the dimension.
+ * the corresponding expression, assigned to the name of the dimension
+ * if there is any.  Otherwise, print the name of the dimension.
  */
 static __isl_give isl_printer *print_dim_eq(__isl_take isl_printer *p,
 	struct isl_print_space_data *data, unsigned pos)
@@ -1144,6 +1145,11 @@ static __isl_give isl_printer *print_dim_eq(__isl_take isl_printer *p,
 
 	j = defining_equality(eq, data->space, data->type, pos);
 	if (j >= 0) {
+		if (isl_space_has_dim_name(data->space, data->type, pos)) {
+			p = print_name(data->space, p, data->type, pos,
+					data->latex);
+			p = isl_printer_print_str(p, " = ");
+		}
 		pos += 1 + isl_space_offset(data->space, data->type);
 		p = print_affine_of_len(eq->dim, NULL, p, eq->eq[j], pos);
 	} else {

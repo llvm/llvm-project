@@ -17,6 +17,10 @@
 namespace std
 {
 
+// feature test macro
+
+#define __cpp_lib_atomic_is_always_lock_free // as specified by SG10
+
 // order and consistency
 
 typedef enum memory_order
@@ -89,6 +93,7 @@ void
 template <class T>
 struct atomic
 {
+    static constexpr bool is_always_lock_free;
     bool is_lock_free() const volatile noexcept;
     bool is_lock_free() const noexcept;
     void store(T desr, memory_order m = memory_order_seq_cst) volatile noexcept;
@@ -127,6 +132,7 @@ struct atomic
 template <>
 struct atomic<integral>
 {
+    static constexpr bool is_always_lock_free;
     bool is_lock_free() const volatile noexcept;
     bool is_lock_free() const noexcept;
     void store(integral desr, memory_order m = memory_order_seq_cst) volatile noexcept;
@@ -202,6 +208,7 @@ struct atomic<integral>
 template <class T>
 struct atomic<T*>
 {
+    static constexpr bool is_always_lock_free;
     bool is_lock_free() const volatile noexcept;
     bool is_lock_free() const noexcept;
     void store(T* desr, memory_order m = memory_order_seq_cst) volatile noexcept;
@@ -540,6 +547,11 @@ void atomic_signal_fence(memory_order m) noexcept;
 #error <atomic> is not implemented
 #endif
 
+#if _LIBCPP_STD_VER > 14
+// FIXME: use the right feature test macro value as chose by SG10.
+# define __cpp_lib_atomic_is_always_lock_free 201603L
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 typedef enum memory_order
@@ -825,12 +837,27 @@ kill_dependency(_Tp __y) _NOEXCEPT
     return __y;
 }
 
+#define ATOMIC_BOOL_LOCK_FREE      __GCC_ATOMIC_BOOL_LOCK_FREE
+#define ATOMIC_CHAR_LOCK_FREE      __GCC_ATOMIC_CHAR_LOCK_FREE
+#define ATOMIC_CHAR16_T_LOCK_FREE  __GCC_ATOMIC_CHAR16_T_LOCK_FREE
+#define ATOMIC_CHAR32_T_LOCK_FREE  __GCC_ATOMIC_CHAR32_T_LOCK_FREE
+#define ATOMIC_WCHAR_T_LOCK_FREE   __GCC_ATOMIC_WCHAR_T_LOCK_FREE
+#define ATOMIC_SHORT_LOCK_FREE     __GCC_ATOMIC_SHORT_LOCK_FREE
+#define ATOMIC_INT_LOCK_FREE       __GCC_ATOMIC_INT_LOCK_FREE
+#define ATOMIC_LONG_LOCK_FREE      __GCC_ATOMIC_LONG_LOCK_FREE
+#define ATOMIC_LLONG_LOCK_FREE     __GCC_ATOMIC_LLONG_LOCK_FREE
+#define ATOMIC_POINTER_LOCK_FREE   __GCC_ATOMIC_POINTER_LOCK_FREE
+
 // general atomic<T>
 
 template <class _Tp, bool = is_integral<_Tp>::value && !is_same<_Tp, bool>::value>
 struct __atomic_base  // false
 {
     mutable _Atomic(_Tp) __a_;
+
+#if defined(__cpp_lib_atomic_is_always_lock_free)
+  static _LIBCPP_CONSTEXPR bool is_always_lock_free = __atomic_always_lock_free(sizeof(__a_), 0);
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     bool is_lock_free() const volatile _NOEXCEPT
@@ -919,6 +946,11 @@ private:
     __atomic_base& operator=(const __atomic_base&) volatile;
 #endif  // _LIBCPP_HAS_NO_DELETED_FUNCTIONS
 };
+
+#if defined(__cpp_lib_atomic_is_always_lock_free)
+template <class _Tp, bool __b>
+_LIBCPP_CONSTEXPR bool __atomic_base<_Tp, __b>::is_always_lock_free;
+#endif
 
 // atomic<Integral>
 
@@ -1788,17 +1820,6 @@ typedef atomic<uintmax_t> atomic_uintmax_t;
 
 #define ATOMIC_FLAG_INIT {false}
 #define ATOMIC_VAR_INIT(__v) {__v}
-
-#define ATOMIC_BOOL_LOCK_FREE      __GCC_ATOMIC_BOOL_LOCK_FREE
-#define ATOMIC_CHAR_LOCK_FREE      __GCC_ATOMIC_CHAR_LOCK_FREE
-#define ATOMIC_CHAR16_T_LOCK_FREE  __GCC_ATOMIC_CHAR16_T_LOCK_FREE
-#define ATOMIC_CHAR32_T_LOCK_FREE  __GCC_ATOMIC_CHAR32_T_LOCK_FREE
-#define ATOMIC_WCHAR_T_LOCK_FREE   __GCC_ATOMIC_WCHAR_T_LOCK_FREE
-#define ATOMIC_SHORT_LOCK_FREE     __GCC_ATOMIC_SHORT_LOCK_FREE
-#define ATOMIC_INT_LOCK_FREE       __GCC_ATOMIC_INT_LOCK_FREE
-#define ATOMIC_LONG_LOCK_FREE      __GCC_ATOMIC_LONG_LOCK_FREE
-#define ATOMIC_LLONG_LOCK_FREE     __GCC_ATOMIC_LLONG_LOCK_FREE
-#define ATOMIC_POINTER_LOCK_FREE   __GCC_ATOMIC_POINTER_LOCK_FREE
 
 _LIBCPP_END_NAMESPACE_STD
 

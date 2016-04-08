@@ -84,11 +84,17 @@ public:
     bool
     GetDescription (lldb::SBStream &description);
     
-    void
-    SetImmediateOutputFile (FILE *fh);
-    
-    void
-    SetImmediateErrorFile (FILE *fh);
+
+    // wrapping here so that lldb takes ownership of the 
+    // new FILE* created inside of the swig interface
+    %extend {
+        void SetImmediateOutputFile(FILE *fh) {
+            self->SetImmediateOutputFile(fh, true);
+        }
+        void SetImmediateErrorFile(FILE *fh) {
+            self->SetImmediateErrorFile(fh, true);
+        }
+    }
 
 	void
 	PutCString(const char* string, int len);

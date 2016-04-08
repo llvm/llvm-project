@@ -203,11 +203,13 @@ set (ISL_FILES
     isl/isl_hash.c
     isl/isl_id.c
     isl/isl_id_to_ast_expr.c
+    isl/isl_id_to_id.c
     isl/isl_id_to_pw_aff.c
     isl/isl_ilp.c
     isl/isl_imath.c
     isl/isl_input.c
     isl/isl_int_sioimath.c
+    isl/isl_local.c
     isl/isl_local_space.c
     isl/isl_lp.c
     isl/isl_map.c

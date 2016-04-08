@@ -141,6 +141,8 @@ GetArgsX86(const GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
 {
     Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
 
+    Error error;
+
     // get the current stack pointer
     uint64_t sp = ctx.reg_ctx->GetSP();
 
@@ -183,6 +185,8 @@ GetArgsX86_64(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
         8, // eLong,
         4, // eBool,
     }};
+
+    Error error;
 
     // get the current stack pointer
     uint64_t sp = ctx.reg_ctx->GetSP();
@@ -227,7 +231,6 @@ GetArgsX86_64(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
             // read the argument from memory
             arg.value = 0;
             // note: due to little endian layout reading 4 or 8 bytes will give the correct value.
-            Error error;
             size_t read = ctx.process->ReadMemory(sp, &arg.value, size, error);
             success = (error.Success() && read==size);
             // advance past this argument
@@ -237,7 +240,8 @@ GetArgsX86_64(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
         if (!success)
         {
             if (log)
-                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__, uint64_t(i));
+                log->Printf("%s - error reading argument: %" PRIu64", reason: %s",
+                            __FUNCTION__, uint64_t(i), error.AsCString("n/a"));
             return false;
         }
     }
@@ -251,6 +255,8 @@ GetArgsArm(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
     static const uint32_t c_args_in_reg = 4;
 
     Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    Error error;
 
     // get the current stack pointer
     uint64_t sp = ctx.reg_ctx->GetSP();
@@ -275,7 +281,6 @@ GetArgsArm(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
             // clear all 64bits
             arg.value = 0;
             // read this argument from memory
-            Error error;
             size_t bytes_read = ctx.process->ReadMemory(sp, &arg.value, arg_size, error);
             success = (error.Success() && bytes_read == arg_size);
             // advance the stack pointer
@@ -285,7 +290,8 @@ GetArgsArm(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
         if (!success)
         {
             if (log)
-                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__, uint64_t(i));
+                log->Printf("%s - error reading argument: %" PRIu64", reason: %s",
+                            __FUNCTION__, uint64_t(i), error.AsCString("n/a"));
             return false;
         }
     }
@@ -340,6 +346,11 @@ GetArgsMipsel(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
 
     Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
 
+    Error error;
+
+    // find offset to arguments on the stack (+16 to skip over a0-a3 shadow space)
+    uint64_t sp = ctx.reg_ctx->GetSP() + 16;
+
     for (size_t i = 0; i < num_args; ++i)
     {
         bool success = false;
@@ -355,14 +366,19 @@ GetArgsMipsel(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
         // arguments passed on the stack
         else
         {
-            if (log)
-                log->Printf("%s - reading arguments spilled to stack not implemented.", __FUNCTION__);
+            const size_t arg_size = sizeof(uint32_t);
+            arg.value = 0;
+            size_t bytes_read = ctx.process->ReadMemory(sp, &arg.value, arg_size, error);
+            success = (error.Success() && bytes_read == arg_size);
+            // advance the stack pointer
+            sp += arg_size;
         }
         // fail if we couldn't read this argument
         if (!success)
         {
             if (log)
-                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__, uint64_t(i));
+                log->Printf("%s - error reading argument: %" PRIu64", reason: %s",
+                            __FUNCTION__, uint64_t(i), error.AsCString("n/a"));
             return false;
         }
     }
@@ -378,6 +394,8 @@ GetArgsMips64el(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
     static const uint32_t c_reg_offset = 4;
 
     Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    Error error;
 
     // get the current stack pointer
     uint64_t sp = ctx.reg_ctx->GetSP();
@@ -402,7 +420,6 @@ GetArgsMips64el(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
             // clear all 64bits
             arg.value = 0;
             // read this argument from memory
-            Error error;
             size_t bytes_read = ctx.process->ReadMemory(sp, &arg.value, arg_size, error);
             success = (error.Success() && bytes_read == arg_size);
             // advance the stack pointer
@@ -412,7 +429,8 @@ GetArgsMips64el(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
         if (!success)
         {
             if (log)
-                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__, uint64_t(i));
+                log->Printf("%s - error reading argument: %" PRIu64", reason: %s",
+                            __FUNCTION__, uint64_t(i), error.AsCString("n/a"));
             return false;
         }
     }
@@ -739,8 +757,6 @@ const uint32_t RenderScriptRuntime::AllocationDetails::RSTypeToFormat[][3] = {
     {eFormatVectorOfFloat32, eFormatVectorOfFloat32, sizeof(float) * 4}   // RS_TYPE_MATRIX_2X2
 };
 
-const std::string RenderScriptRuntime::s_runtimeExpandSuffix(".expand");
-const std::array<const char *, 3> RenderScriptRuntime::s_runtimeCoordVars{{"rsIndex", "p->current.y", "p->current.z"}};
 //------------------------------------------------------------------
 // Static Functions
 //------------------------------------------------------------------
@@ -1457,8 +1473,10 @@ RenderScriptRuntime::EvalRSExpression(const char *expression, StackFrame *frame_
         log->Printf("%s(%s)", __FUNCTION__, expression);
 
     ValueObjectSP expr_result;
+    EvaluateExpressionOptions options;
+    options.SetLanguage(lldb::eLanguageTypeC_plus_plus);
     // Perform the actual expression evaluation
-    GetProcess()->GetTarget().EvaluateExpression(expression, frame_ptr, expr_result);
+    GetProcess()->GetTarget().EvaluateExpression(expression, frame_ptr, expr_result, options);
 
     if (!expr_result)
     {
@@ -1531,38 +1549,42 @@ JITTemplate(ExpressionStrings e)
     // Format strings containing the expressions we may need to evaluate.
     static std::array<const char*, _eExprLast> runtimeExpressions = {{
      // Mangled GetOffsetPointer(Allocation*, xoff, yoff, zoff, lod, cubemap)
-     "(int*)_Z12GetOffsetPtrPKN7android12renderscript10AllocationEjjjj23RsAllocationCubemapFace(0x%lx, %u, %u, %u, 0, 0)",
+     "(int*)_Z12GetOffsetPtrPKN7android12renderscript10AllocationEjjjj23RsAllocationCubemapFace"
+     "(0x%" PRIx64 ", %" PRIu32 ", %" PRIu32 ", %" PRIu32 ", 0, 0)",
 
      // Type* rsaAllocationGetType(Context*, Allocation*)
-     "(void*)rsaAllocationGetType(0x%lx, 0x%lx)",
+     "(void*)rsaAllocationGetType(0x%" PRIx64 ", 0x%" PRIx64 ")",
 
      // rsaTypeGetNativeData(Context*, Type*, void* typeData, size)
      // Pack the data in the following way mHal.state.dimX; mHal.state.dimY; mHal.state.dimZ;
      // mHal.state.lodCount; mHal.state.faces; mElement; into typeData
      // Need to specify 32 or 64 bit for uint_t since this differs between devices
-     "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[0]", // X dim
-     "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[1]", // Y dim
-     "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[2]", // Z dim
-     "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[5]", // Element ptr
+     "uint%" PRIu32 "_t data[6]; (void*)rsaTypeGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 6); data[0]", // X dim
+     "uint%" PRIu32 "_t data[6]; (void*)rsaTypeGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 6); data[1]", // Y dim
+     "uint%" PRIu32 "_t data[6]; (void*)rsaTypeGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 6); data[2]", // Z dim
+     "uint%" PRIu32 "_t data[6]; (void*)rsaTypeGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 6); data[5]", // Element ptr
 
      // rsaElementGetNativeData(Context*, Element*, uint32_t* elemData,size)
      // Pack mType; mKind; mNormalized; mVectorSize; NumSubElements into elemData
-     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[0]", // Type
-     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[1]", // Kind
-     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[3]", // Vector Size
-     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[4]", // Field Count
+     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 5); data[0]", // Type
+     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 5); data[1]", // Kind
+     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 5); data[3]", // Vector Size
+     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 5); data[4]", // Field Count
 
-      // rsaElementGetSubElements(RsContext con, RsElement elem, uintptr_t *ids, const char **names,
-      // size_t *arraySizes, uint32_t dataSize)
-      // Needed for Allocations of structs to gather details about fields/Subelements
-     "void *ids[%u]; const char *names[%u]; size_t arr_size[%u];"
-     "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); ids[%u]",     // Element* of field
+     // rsaElementGetSubElements(RsContext con, RsElement elem, uintptr_t *ids, const char **names,
+     // size_t *arraySizes, uint32_t dataSize)
+     // Needed for Allocations of structs to gather details about fields/Subelements
+     // Element* of field
+     "void* ids[%" PRIu32 "]; const char* names[%" PRIu32 "]; size_t arr_size[%" PRIu32 "];"
+     "(void*)rsaElementGetSubElements(0x%" PRIx64 ", 0x%" PRIx64 ", ids, names, arr_size, %" PRIu32 "); ids[%" PRIu32 "]",
 
-     "void *ids[%u]; const char *names[%u]; size_t arr_size[%u];"
-     "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); names[%u]",   // Name of field
+     // Name of field
+     "void* ids[%" PRIu32 "]; const char* names[%" PRIu32 "]; size_t arr_size[%" PRIu32 "];"
+     "(void*)rsaElementGetSubElements(0x%" PRIx64 ", 0x%" PRIx64 ", ids, names, arr_size, %" PRIu32 "); names[%" PRIu32 "]",
 
-     "void *ids[%u]; const char *names[%u]; size_t arr_size[%u];"
-     "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); arr_size[%u]" // Array size of field
+     // Array size of field
+     "void* ids[%" PRIu32 "]; const char* names[%" PRIu32 "]; size_t arr_size[%" PRIu32 "];"
+     "(void*)rsaElementGetSubElements(0x%" PRIx64 ", 0x%" PRIx64 ", ids, names, arr_size, %" PRIu32 "); arr_size[%" PRIu32 "]"
     }};
 
     return runtimeExpressions[e];
@@ -2482,7 +2504,7 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
     // Write the file header
     size_t num_bytes = sizeof(AllocationDetails::FileHeader);
     if (log)
-        log->Printf("%s - writing File Header, 0x%" PRIx64 " bytes", __FUNCTION__, num_bytes);
+        log->Printf("%s - writing File Header, 0x%" PRIx64 " bytes", __FUNCTION__, (uint64_t)num_bytes);
 
     Error err = file.Write(&head, num_bytes);
     if (!err.Success())
@@ -2496,7 +2518,7 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
     std::shared_ptr<uint8_t> element_header_buffer(new uint8_t[element_header_size]);
     if (element_header_buffer == nullptr)
     {
-        strm.Printf("Internal Error: Couldn't allocate %" PRIu64 " bytes on the heap", element_header_size);
+        strm.Printf("Internal Error: Couldn't allocate %" PRIu64 " bytes on the heap", (uint64_t)element_header_size);
         strm.EOL();
         return false;
     }
@@ -2506,7 +2528,7 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
     // Write headers for allocation element type to file
     num_bytes = element_header_size;
     if (log)
-        log->Printf("%s - writing element headers, 0x%" PRIx64 " bytes.", __FUNCTION__, num_bytes);
+        log->Printf("%s - writing element headers, 0x%" PRIx64 " bytes.", __FUNCTION__, (uint64_t)num_bytes);
 
     err = file.Write(element_header_buffer.get(), num_bytes);
     if (!err.Success())
@@ -2519,7 +2541,7 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
     // Write allocation data to file
     num_bytes = static_cast<size_t>(*alloc->size.get());
     if (log)
-        log->Printf("%s - writing 0x%" PRIx64 " bytes", __FUNCTION__, num_bytes);
+        log->Printf("%s - writing 0x%" PRIx64 " bytes", __FUNCTION__, (uint64_t)num_bytes);
 
     err = file.Write(buffer.get(), num_bytes);
     if (!err.Success())
@@ -2644,84 +2666,98 @@ RenderScriptRuntime::Update()
 
 // The maximum line length of an .rs.info packet
 #define MAXLINE 500
+#define STRINGIFY(x) #x
+#define MAXLINESTR_(x) "%" STRINGIFY(x) "s"
+#define MAXLINESTR MAXLINESTR_(MAXLINE)
 
 // The .rs.info symbol in renderscript modules contains a string which needs to be parsed.
 // The string is basic and is parsed on a line by line basis.
 bool
 RSModuleDescriptor::ParseRSInfo()
 {
+    assert(m_module);
     const Symbol *info_sym = m_module->FindFirstSymbolWithNameAndType(ConstString(".rs.info"), eSymbolTypeData);
-    if (info_sym)
+    if (!info_sym)
+        return false;
+
+    const addr_t addr = info_sym->GetAddressRef().GetFileAddress();
+    if (addr == LLDB_INVALID_ADDRESS)
+        return false;
+
+    const addr_t size = info_sym->GetByteSize();
+    const FileSpec fs = m_module->GetFileSpec();
+
+    const DataBufferSP buffer = fs.ReadFileContents(addr, size);
+    if (!buffer)
+        return false;
+
+    // split rs.info. contents into lines
+    std::vector<std::string> info_lines;
     {
-        const addr_t addr = info_sym->GetAddressRef().GetFileAddress();
-        const addr_t size = info_sym->GetByteSize();
-        const FileSpec fs = m_module->GetFileSpec();
-
-        DataBufferSP buffer = fs.ReadFileContents(addr, size);
-
-        if (!buffer)
-            return false;
-
-        std::string info((const char *)buffer->GetBytes());
-
-        std::vector<std::string> info_lines;
-        size_t lpos = info.find('\n');
-        while (lpos != std::string::npos)
+        const std::string info((const char *)buffer->GetBytes());
+        for (size_t tail = 0; tail < info.size();)
         {
-            info_lines.push_back(info.substr(0, lpos));
-            info = info.substr(lpos + 1);
-            lpos = info.find('\n');
+            // find next new line or end of string
+            size_t head = info.find('\n', tail);
+            head = (head == std::string::npos) ? info.size() : head;
+            std::string line = info.substr(tail, head - tail);
+            // add to line list
+            info_lines.push_back(line);
+            tail = head + 1;
         }
-        size_t offset = 0;
-        while (offset < info_lines.size())
-        {
-            std::string line = info_lines[offset];
-            // Parse directives
-            uint32_t numDefns = 0;
-            if (sscanf(line.c_str(), "exportVarCount: %" PRIu32 "", &numDefns) == 1)
-            {
-                while (numDefns--)
-                    m_globals.push_back(RSGlobalDescriptor(this, info_lines[++offset].c_str()));
-            }
-            else if (sscanf(line.c_str(), "exportFuncCount: %" PRIu32 "", &numDefns) == 1)
-            {
-            }
-            else if (sscanf(line.c_str(), "exportForEachCount: %" PRIu32 "", &numDefns) == 1)
-            {
-                char name[MAXLINE];
-                while (numDefns--)
-                {
-                    uint32_t slot = 0;
-                    name[0] = '\0';
-                    if (sscanf(info_lines[++offset].c_str(), "%" PRIu32 " - %s", &slot, &name[0]) == 2)
-                    {
-                        m_kernels.push_back(RSKernelDescriptor(this, name, slot));
-                    }
-                }
-            }
-            else if (sscanf(line.c_str(), "pragmaCount: %" PRIu32 "", &numDefns) == 1)
-            {
-                char name[MAXLINE];
-                char value[MAXLINE];
-                while (numDefns--)
-                {
-                    name[0] = '\0';
-                    value[0] = '\0';
-                    if (sscanf(info_lines[++offset].c_str(), "%s - %s", &name[0], &value[0]) != 0 && (name[0] != '\0'))
-                    {
-                        m_pragmas[std::string(name)] = value;
-                    }
-                }
-            }
-            else if (sscanf(line.c_str(), "objectSlotCount: %" PRIu32 "", &numDefns) == 1)
-            {
-            }
-
-            offset++;
-        }
-        return m_kernels.size() > 0;
     }
-    return false;
+
+    std::array<char, MAXLINE> name{{'\0'}};
+    std::array<char, MAXLINE> value{{'\0'}};
+
+    // parse all text lines of .rs.info
+    for (auto line = info_lines.begin(); line != info_lines.end(); ++line)
+    {
+        uint32_t numDefns = 0;
+        if (sscanf(line->c_str(), "exportVarCount: %" PRIu32 "", &numDefns) == 1)
+        {
+            while (numDefns--)
+                m_globals.push_back(RSGlobalDescriptor(this, (++line)->c_str()));
+        }
+        else if (sscanf(line->c_str(), "exportForEachCount: %" PRIu32 "", &numDefns) == 1)
+        {
+            while (numDefns--)
+            {
+                uint32_t slot = 0;
+                name[0] = '\0';
+                static const char *fmt_s = "%" PRIu32 " - " MAXLINESTR;
+                if (sscanf((++line)->c_str(), fmt_s, &slot, name.data()) == 2)
+                {
+                    if (name[0] != '\0')
+                        m_kernels.push_back(RSKernelDescriptor(this, name.data(), slot));
+                }
+            }
+        }
+        else if (sscanf(line->c_str(), "pragmaCount: %" PRIu32 "", &numDefns) == 1)
+        {
+            while (numDefns--)
+            {
+                name[0] = value[0] = '\0';
+                static const char *fmt_s = MAXLINESTR " - " MAXLINESTR;
+                if (sscanf((++line)->c_str(), fmt_s, name.data(), value.data()) != 0)
+                {
+                    if (name[0] != '\0')
+                        m_pragmas[std::string(name.data())] = value.data();
+                }
+            }
+        }
+        else
+        {
+            Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+            if (log)
+            {
+                log->Printf("%s - skipping .rs.info field '%s'", __FUNCTION__, line->c_str());
+            }
+        }
+    }
+
+    // 'root' kernel should always be present
+    return m_kernels.size() > 0;
 }
 
 void
@@ -3229,6 +3265,9 @@ RenderScriptRuntime::GetFrameVarAsUnsigned(const StackFrameSP frame_sp, const ch
 bool
 RenderScriptRuntime::GetKernelCoordinate(RSCoordinate &coord, Thread *thread_ptr)
 {
+    static const std::string s_runtimeExpandSuffix(".expand");
+    static const std::array<const char *, 3> s_runtimeCoordVars{{"rsIndex", "p->current.y", "p->current.z"}};
+
     Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE));
 
     if (!thread_ptr)
@@ -3261,13 +3300,13 @@ RenderScriptRuntime::GetKernelCoordinate(RSCoordinate &coord, Thread *thread_ptr
 
         // Check if function name has .expand suffix
         std::string func_name(func_name_cstr);
-        const int length_difference = func_name.length() - RenderScriptRuntime::s_runtimeExpandSuffix.length();
+        const int length_difference = func_name.length() - s_runtimeExpandSuffix.length();
         if (length_difference <= 0)
             continue;
 
         const int32_t has_expand_suffix = func_name.compare(length_difference,
-                                                            RenderScriptRuntime::s_runtimeExpandSuffix.length(),
-                                                            RenderScriptRuntime::s_runtimeExpandSuffix);
+                                                            s_runtimeExpandSuffix.length(),
+                                                            s_runtimeExpandSuffix);
 
         if (has_expand_suffix != 0)
             continue;
@@ -3277,12 +3316,12 @@ RenderScriptRuntime::GetKernelCoordinate(RSCoordinate &coord, Thread *thread_ptr
 
         // Get values for variables in .expand frame that tell us the current kernel invocation
         bool found_coord_variables = true;
-        assert(RenderScriptRuntime::s_runtimeCoordVars.size() == coord.size());
+        assert(s_runtimeCoordVars.size() == coord.size());
 
         for (uint32_t i = 0; i < coord.size(); ++i)
         {
             uint64_t value = 0;
-            if (!GetFrameVarAsUnsigned(frame_sp, RenderScriptRuntime::s_runtimeCoordVars[i], value))
+            if (!GetFrameVarAsUnsigned(frame_sp, s_runtimeCoordVars[i], value))
             {
                 found_coord_variables = false;
                 break;

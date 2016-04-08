@@ -19,7 +19,10 @@
 
 #include "lldb/Core/Stream.h"
 #include "lldb/Host/File.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+
+#include "llvm/Support/ConvertUTF.h"
 
 #include <stdio.h>
 
@@ -1162,9 +1165,7 @@ PythonFile::PythonFile(File &file, const char *mode)
 
 PythonFile::PythonFile(const char *path, const char *mode)
 {
-    FILE *fp = nullptr;
-    fp = fopen(path, mode);
-    lldb_private::File file(fp, true);
+    lldb_private::File file(path, GetOptionsFromMode(mode));
     Reset(file, mode);
 }
 
@@ -1252,10 +1253,10 @@ PythonFile::GetOptionsFromMode(llvm::StringRef mode)
     return llvm::StringSwitch<uint32_t>(mode.str().c_str())
     .Case("r",   File::eOpenOptionRead)
     .Case("w",   File::eOpenOptionWrite)
-    .Case("a",   File::eOpenOptionAppend|File::eOpenOptionCanCreate)
+    .Case("a",   File::eOpenOptionWrite|File::eOpenOptionAppend|File::eOpenOptionCanCreate)
     .Case("r+",  File::eOpenOptionRead|File::eOpenOptionWrite)
     .Case("w+",  File::eOpenOptionRead|File::eOpenOptionWrite|File::eOpenOptionCanCreate|File::eOpenOptionTruncate)
-    .Case("a+",  File::eOpenOptionRead|File::eOpenOptionWrite|File::eOpenOptionCanCreate)
+    .Case("a+",  File::eOpenOptionRead|File::eOpenOptionWrite|File::eOpenOptionAppend|File::eOpenOptionCanCreate)
     .Default(0);
 }
 

@@ -10,8 +10,6 @@
 #include "gtest/gtest.h"
 #include "../../lib/ReaderWriter/MachO/MachONormalizedFile.h"
 #include "llvm/Support/MachO.h"
-#include <assert.h>
-#include <vector>
 
 using llvm::StringRef;
 using llvm::MemoryBuffer;
@@ -24,7 +22,7 @@ static std::unique_ptr<NormalizedFile>
 fromBinary(const uint8_t bytes[], unsigned length, StringRef archStr) {
   StringRef sr((const char*)bytes, length);
   std::unique_ptr<MemoryBuffer> mb(MemoryBuffer::getMemBuffer(sr, "", false));
-  ErrorOr<std::unique_ptr<NormalizedFile>> r =
+  llvm::Expected<std::unique_ptr<NormalizedFile>> r =
       lld::mach_o::normalized::readBinary(
           mb, lld::MachOLinkingContext::archFromName(archStr));
   EXPECT_FALSE(!r);
@@ -75,7 +73,6 @@ TEST(BinaryReaderTest, empty_obj_x86_64) {
   EXPECT_TRUE(f->undefinedSymbols.empty());
 }
 
-
 TEST(BinaryReaderTest, empty_obj_x86) {
   FILEBYTES = {
       0xce, 0xfa, 0xed, 0xfe, 0x07, 0x00, 0x00, 0x00,
@@ -107,7 +104,6 @@ TEST(BinaryReaderTest, empty_obj_x86) {
   EXPECT_TRUE(f->undefinedSymbols.empty());
 }
 
-
 TEST(BinaryReaderTest, empty_obj_ppc) {
   FILEBYTES = {
       0xfe, 0xed, 0xfa, 0xce, 0x00, 0x00, 0x00, 0x12,
@@ -138,7 +134,6 @@ TEST(BinaryReaderTest, empty_obj_ppc) {
   EXPECT_TRUE(f->globalSymbols.empty());
   EXPECT_TRUE(f->undefinedSymbols.empty());
 }
-
 
 TEST(BinaryReaderTest, empty_obj_armv7) {
   FILEBYTES = {
@@ -326,7 +321,6 @@ TEST(BinaryReaderTest, hello_obj_x86_64) {
   EXPECT_EQ(printfLabel.scope, SymbolScope(N_EXT));
 }
 
-
 TEST(BinaryReaderTest, hello_obj_x86) {
   FILEBYTES = {
     0xCE, 0xFA, 0xED, 0xFE, 0x07, 0x00, 0x00, 0x00,
@@ -457,7 +451,6 @@ TEST(BinaryReaderTest, hello_obj_x86) {
   EXPECT_EQ(printfLabel.type, N_UNDF);
   EXPECT_EQ(printfLabel.scope, SymbolScope(N_EXT));
 }
-
 
 TEST(BinaryReaderTest, hello_obj_armv7) {
   FILEBYTES = {
@@ -599,7 +592,6 @@ TEST(BinaryReaderTest, hello_obj_armv7) {
   EXPECT_EQ(printfLabel.type, N_UNDF);
   EXPECT_EQ(printfLabel.scope, SymbolScope(N_EXT));
 }
-
 
 TEST(BinaryReaderTest, hello_obj_ppc) {
   FILEBYTES = {
@@ -743,6 +735,9 @@ TEST(BinaryReaderTest, hello_obj_ppc) {
   EXPECT_EQ(printfLabel.type, N_UNDF);
   EXPECT_EQ(printfLabel.scope, SymbolScope(N_EXT));
 
-  writeBinary(*f, "/tmp/foo.o");
-
+  auto ec = writeBinary(*f, "/tmp/foo.o");
+  // FIXME: We want to do EXPECT_FALSE(ec) but that fails on some Windows bots,
+  // probably due to /tmp not being available.
+  // For now just consume the error without checking it.
+  consumeError(std::move(ec));
 }

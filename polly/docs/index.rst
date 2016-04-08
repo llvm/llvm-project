@@ -7,20 +7,29 @@
 .. toctree::
    :maxdepth: 1
 
+Upcoming Release
+================
+
+.. toctree::
+   :maxdepth: 2
+
    ReleaseNotes
 
 Using Polly
 ===========
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
+   Architecture
    UsingPollyWithClang
+
+* `How to manually use the individual pieces of Polly <http://polly.llvm.org/example_manual_matmul.html>`_
+* `A list of Polly passes <http://polly.llvm.org/documentation/passes.html>`_
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
 

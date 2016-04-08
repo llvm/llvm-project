@@ -58,9 +58,6 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
                        'stop reason = breakpoint'])
 
         # Now let's set a write-type watchpoint for variable 'g_val'.
-        # The main.cpp, by design, misbehaves by not following the agreed upon
-        # protocol of using a mutex while accessing the global pool and by not
-        # writing to the variable.
         self.expect("watchpoint set variable -w write g_val", WATCHPOINT_CREATED,
             substrs = ['Watchpoint created', 'size = 4', 'type = w'])
 
@@ -102,9 +99,6 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
                        'stop reason = breakpoint'])
 
         # Now let's set a write-type watchpoint for variable 'g_val'.
-        # The main.cpp, by design, misbehaves by not following the agreed upon
-        # protocol of using a mutex while accessing the global pool and by not
-        # writing to the variable.
         self.expect("watchpoint set variable -w write g_val", WATCHPOINT_CREATED,
             substrs = ['Watchpoint created', 'size = 4', 'type = w'])
 

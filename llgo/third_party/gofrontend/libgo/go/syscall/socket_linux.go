@@ -136,11 +136,6 @@ type RawSockaddrNetlink struct {
 	Groups uint32
 }
 
-type RawSockaddr struct {
-	Family uint16
-	Data   [14]int8
-}
-
 // BindToDevice binds the socket associated with fd to device.
 func BindToDevice(fd int, device string) (err error) {
 	return SetsockoptString(fd, SOL_SOCKET, SO_BINDTODEVICE, device)

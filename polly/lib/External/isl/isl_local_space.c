@@ -18,10 +18,29 @@
 #include <isl_aff_private.h>
 #include <isl_vec_private.h>
 #include <isl_seq.h>
+#include <isl_local.h>
 
 isl_ctx *isl_local_space_get_ctx(__isl_keep isl_local_space *ls)
 {
 	return ls ? ls->dim->ctx : NULL;
+}
+
+/* Return a hash value that digests "ls".
+ */
+uint32_t isl_local_space_get_hash(__isl_keep isl_local_space *ls)
+{
+	uint32_t hash, space_hash, div_hash;
+
+	if (!ls)
+		return 0;
+
+	hash = isl_hash_init();
+	space_hash = isl_space_get_hash(ls->dim);
+	isl_hash_hash(hash, space_hash);
+	div_hash = isl_mat_get_hash(ls->div);
+	isl_hash_hash(hash, div_hash);
+
+	return hash;
 }
 
 __isl_give isl_local_space *isl_local_space_alloc_div(__isl_take isl_space *dim,
@@ -162,19 +181,11 @@ isl_bool isl_local_space_is_equal(__isl_keep isl_local_space *ls1,
  *
  * Return -1 if "ls1" is "smaller" than "ls2", 1 if "ls1" is "greater"
  * than "ls2" and 0 if they are equal.
- *
- * The order is fairly arbitrary.  We do "prefer" divs that only involve
- * earlier dimensions in the sense that we consider local spaces where
- * the first differing div involves earlier dimensions to be smaller.
  */
 int isl_local_space_cmp(__isl_keep isl_local_space *ls1,
 	__isl_keep isl_local_space *ls2)
 {
-	int i;
 	int cmp;
-	int known1, known2;
-	int last1, last2;
-	int n_col;
 
 	if (ls1 == ls2)
 		return 0;
@@ -187,29 +198,7 @@ int isl_local_space_cmp(__isl_keep isl_local_space *ls1,
 	if (cmp != 0)
 		return cmp;
 
-	if (ls1->div->n_row != ls2->div->n_row)
-		return ls1->div->n_row - ls2->div->n_row;
-
-	n_col = isl_mat_cols(ls1->div);
-	for (i = 0; i < ls1->div->n_row; ++i) {
-		known1 = isl_local_space_div_is_known(ls1, i);
-		known2 = isl_local_space_div_is_known(ls2, i);
-		if (!known1 && !known2)
-			continue;
-		if (!known1)
-			return 1;
-		if (!known2)
-			return -1;
-		last1 = isl_seq_last_non_zero(ls1->div->row[i] + 1, n_col - 1);
-		last2 = isl_seq_last_non_zero(ls2->div->row[i] + 1, n_col - 1);
-		if (last1 != last2)
-			return last1 - last2;
-		cmp = isl_seq_cmp(ls1->div->row[i], ls2->div->row[i], n_col);
-		if (cmp != 0)
-			return cmp;
-	}
-
-	return 0;
+	return isl_local_cmp(ls1->div, ls2->div);
 }
 
 int isl_local_space_dim(__isl_keep isl_local_space *ls,
@@ -730,14 +719,11 @@ error:
 
 /* Does "ls" have an explicit representation for div "div"?
  */
-int isl_local_space_div_is_known(__isl_keep isl_local_space *ls, int div)
+isl_bool isl_local_space_div_is_known(__isl_keep isl_local_space *ls, int div)
 {
 	if (!ls)
-		return -1;
-	if (div < 0 || div >= ls->div->n_row)
-		isl_die(isl_local_space_get_ctx(ls), isl_error_invalid,
-			"position out of bounds", return -1);
-	return !isl_int_is_zero(ls->div->row[div][0]);
+		return isl_bool_error;
+	return isl_local_div_is_known(ls->div, div);
 }
 
 /* Does "ls" have an explicit representation for all local variables?
@@ -749,9 +735,11 @@ isl_bool isl_local_space_divs_known(__isl_keep isl_local_space *ls)
 	if (!ls)
 		return isl_bool_error;
 
-	for (i = 0; i < ls->div->n_row; ++i)
-		if (isl_int_is_zero(ls->div->row[i][0]))
-			return isl_bool_false;
+	for (i = 0; i < ls->div->n_row; ++i) {
+		isl_bool known = isl_local_space_div_is_known(ls, i);
+		if (known < 0 || !known)
+			return known;
+	}
 
 	return isl_bool_true;
 }

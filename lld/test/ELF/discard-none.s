@@ -21,7 +21,7 @@
 // CHECK-NEXT:     EntrySize:
 // CHECK-NEXT:     SectionData (
 // CHECK-NEXT:       0000: 002E4C6D 796F7468 65727661 72002E4C  |..Lmyothervar..L|
-// CHECK-NEXT:       0010: 6D797661 7200                        |myvar.|
+// CHECK-NEXT:       0010: 6D797661 72005F44 594E414D 494300    |myvar._DYNAMIC.|
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }
 

@@ -9,11 +9,17 @@
 
 #include "lldb/Core/PluginManager.h"
 
-#include <limits.h>
-
+// C Includes
+// C++ Includes
+#include <climits>
 #include <string>
 #include <vector>
 
+// Other libraries and framework includes
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DynamicLibrary.h"
+
+// Project includes
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Host/FileSpec.h"
@@ -21,9 +27,6 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Mutex.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
-
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DynamicLibrary.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -35,9 +38,8 @@ enum PluginAction
     ePluginGetInstanceAtIndex
 };
 
-
-typedef bool (*PluginInitCallback) (void);
-typedef void (*PluginTermCallback) (void);
+typedef bool (*PluginInitCallback)();
+typedef void (*PluginTermCallback)();
 
 struct PluginInfo
 {
@@ -92,12 +94,9 @@ CastToFPtr (void *VPtr)
 }
 
 static FileSpec::EnumerateDirectoryResult 
-LoadPluginCallback 
-(
-    void *baton,
-    FileSpec::FileType file_type,
-    const FileSpec &file_spec
-)
+LoadPluginCallback(void *baton,
+                   FileSpec::FileType file_type,
+                   const FileSpec &file_spec)
 {
 //    PluginManager *plugin_manager = (PluginManager *)baton;
     Error error;
@@ -134,7 +133,7 @@ LoadPluginCallback
 
                 if (success)
                 {
-                    // It is ok for the "LLDBPluginTerminate" symbol to be NULL
+                    // It is ok for the "LLDBPluginTerminate" symbol to be nullptr
                     plugin_info.plugin_term_callback =
                         CastToFPtr<PluginTermCallback>(plugin_info.library.getAddressOfSymbol("LLDBPluginTerminate"));
                 }
@@ -170,7 +169,6 @@ LoadPluginCallback
     return FileSpec::eEnumerateDirectoryResultNext;
 }
 
-
 void
 PluginManager::Initialize ()
 {
@@ -184,12 +182,12 @@ PluginManager::Initialize ()
     {
         if (dir_spec.Exists() && dir_spec.GetPath(dir_path, sizeof(dir_path)))
         {
-            FileSpec::EnumerateDirectory (dir_path, 
-                                          find_directories,
-                                          find_files,
-                                          find_other,
-                                          LoadPluginCallback,
-                                          NULL);
+            FileSpec::EnumerateDirectory(dir_path,
+                                         find_directories,
+                                         find_files,
+                                         find_other,
+                                         LoadPluginCallback,
+                                         nullptr);
         }
     }
 
@@ -197,12 +195,12 @@ PluginManager::Initialize ()
     {
         if (dir_spec.Exists() && dir_spec.GetPath(dir_path, sizeof(dir_path)))
         {
-            FileSpec::EnumerateDirectory (dir_path, 
-                                          find_directories,
-                                          find_files,
-                                          find_other,
-                                          LoadPluginCallback,
-                                          NULL);
+            FileSpec::EnumerateDirectory(dir_path,
+                                         find_directories,
+                                         find_files,
+                                         find_other,
+                                         LoadPluginCallback,
+                                         nullptr);
         }
     }
 #endif
@@ -218,7 +216,7 @@ PluginManager::Terminate ()
     for (pos = plugin_map.begin(); pos != end; ++pos)
     {
         // Call the plug-in "void LLDBPluginTerminate (void)" function if there
-        // is one (if the symbol was not NULL).
+        // is one (if the symbol was not nullptr).
         if (pos->second.library.isValid())
         {
             if (pos->second.plugin_term_callback)
@@ -228,16 +226,14 @@ PluginManager::Terminate ()
     plugin_map.clear();
 }
 
-
 #pragma mark ABI
-
 
 struct ABIInstance
 {
     ABIInstance() :
         name(),
         description(),
-        create_callback(NULL)
+        create_callback(nullptr)
     {
     }
 
@@ -263,12 +259,9 @@ GetABIInstances ()
 }
 
 bool
-PluginManager::RegisterPlugin
-(
-    const ConstString &name,
-    const char *description,
-    ABICreateInstance create_callback
-)
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              ABICreateInstance create_callback)
 {
     if (create_callback)
     {
@@ -313,7 +306,7 @@ PluginManager::GetABICreateCallbackAtIndex (uint32_t idx)
     ABIInstances &instances = GetABIInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 ABICreateInstance
@@ -331,19 +324,17 @@ PluginManager::GetABICreateCallbackForPluginName (const ConstString &name)
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
-
 #pragma mark Disassembler
-
 
 struct DisassemblerInstance
 {
     DisassemblerInstance() :
         name(),
         description(),
-        create_callback(NULL)
+        create_callback(nullptr)
     {
     }
 
@@ -369,12 +360,9 @@ GetDisassemblerInstances ()
 }
 
 bool
-PluginManager::RegisterPlugin
-(
-    const ConstString &name,
-    const char *description,
-    DisassemblerCreateInstance create_callback
-)
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              DisassemblerCreateInstance create_callback)
 {
     if (create_callback)
     {
@@ -419,7 +407,7 @@ PluginManager::GetDisassemblerCreateCallbackAtIndex (uint32_t idx)
     DisassemblerInstances &instances = GetDisassemblerInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 DisassemblerCreateInstance
@@ -437,21 +425,18 @@ PluginManager::GetDisassemblerCreateCallbackForPluginName (const ConstString &na
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
-
-
 #pragma mark DynamicLoader
-
 
 struct DynamicLoaderInstance
 {
     DynamicLoaderInstance() :
         name(),
         description(),
-        create_callback(NULL),
-        debugger_init_callback (NULL)
+        create_callback(nullptr),
+        debugger_init_callback(nullptr)
     {
     }
 
@@ -462,7 +447,6 @@ struct DynamicLoaderInstance
 };
 
 typedef std::vector<DynamicLoaderInstance> DynamicLoaderInstances;
-
 
 static Mutex &
 GetDynamicLoaderMutex ()
@@ -478,15 +462,11 @@ GetDynamicLoaderInstances ()
     return g_instances;
 }
 
-
 bool
-PluginManager::RegisterPlugin
-(
-    const ConstString &name,
-    const char *description,
-    DynamicLoaderCreateInstance create_callback,
-    DebuggerInitializeCallback debugger_init_callback
-)
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              DynamicLoaderCreateInstance create_callback,
+                              DebuggerInitializeCallback debugger_init_callback)
 {
     if (create_callback)
     {
@@ -531,7 +511,7 @@ PluginManager::GetDynamicLoaderCreateCallbackAtIndex (uint32_t idx)
     DynamicLoaderInstances &instances = GetDynamicLoaderInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 DynamicLoaderCreateInstance
@@ -549,19 +529,18 @@ PluginManager::GetDynamicLoaderCreateCallbackForPluginName (const ConstString &n
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 #pragma mark JITLoader
-
 
 struct JITLoaderInstance
 {
     JITLoaderInstance() :
         name(),
         description(),
-        create_callback(NULL),
-        debugger_init_callback (NULL)
+        create_callback(nullptr),
+        debugger_init_callback(nullptr)
     {
     }
 
@@ -572,7 +551,6 @@ struct JITLoaderInstance
 };
 
 typedef std::vector<JITLoaderInstance> JITLoaderInstances;
-
 
 static Mutex &
 GetJITLoaderMutex ()
@@ -588,15 +566,11 @@ GetJITLoaderInstances ()
     return g_instances;
 }
 
-
 bool
-PluginManager::RegisterPlugin
-(
-    const ConstString &name,
-    const char *description,
-    JITLoaderCreateInstance create_callback,
-    DebuggerInitializeCallback debugger_init_callback
-)
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              JITLoaderCreateInstance create_callback,
+                              DebuggerInitializeCallback debugger_init_callback)
 {
     if (create_callback)
     {
@@ -641,7 +615,7 @@ PluginManager::GetJITLoaderCreateCallbackAtIndex (uint32_t idx)
     JITLoaderInstances &instances = GetJITLoaderInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 JITLoaderCreateInstance
@@ -659,18 +633,17 @@ PluginManager::GetJITLoaderCreateCallbackForPluginName (const ConstString &name)
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 #pragma mark EmulateInstruction
 
-
 struct EmulateInstructionInstance
 {
     EmulateInstructionInstance() :
-    name(),
-    description(),
-    create_callback(NULL)
+        name(),
+        description(),
+        create_callback(nullptr)
     {
     }
     
@@ -695,14 +668,10 @@ GetEmulateInstructionInstances ()
     return g_instances;
 }
 
-
 bool
-PluginManager::RegisterPlugin
-(
-    const ConstString &name,
-    const char *description,
-    EmulateInstructionCreateInstance create_callback
-)
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              EmulateInstructionCreateInstance create_callback)
 {
     if (create_callback)
     {
@@ -746,7 +715,7 @@ PluginManager::GetEmulateInstructionCreateCallbackAtIndex (uint32_t idx)
     EmulateInstructionInstances &instances = GetEmulateInstructionInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 EmulateInstructionCreateInstance
@@ -764,10 +733,10 @@ PluginManager::GetEmulateInstructionCreateCallbackForPluginName (const ConstStri
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
-#pragma mark OperatingSystem
 
+#pragma mark OperatingSystem
 
 struct OperatingSystemInstance
 {
@@ -849,7 +818,7 @@ PluginManager::GetOperatingSystemCreateCallbackAtIndex (uint32_t idx)
     OperatingSystemInstances &instances = GetOperatingSystemInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 OperatingSystemCreateInstance
@@ -867,19 +836,17 @@ PluginManager::GetOperatingSystemCreateCallbackForPluginName (const ConstString 
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
-
 #pragma mark Language
-
 
 struct LanguageInstance
 {
     LanguageInstance() :
         name(),
         description(),
-        create_callback(NULL)
+        create_callback(nullptr)
     {
     }
     
@@ -905,12 +872,9 @@ GetLanguageInstances ()
 }
 
 bool
-PluginManager::RegisterPlugin
-(
- const ConstString &name,
- const char *description,
- LanguageCreateInstance create_callback
- )
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              LanguageCreateInstance create_callback)
 {
     if (create_callback)
     {
@@ -954,7 +918,7 @@ PluginManager::GetLanguageCreateCallbackAtIndex (uint32_t idx)
     LanguageInstances &instances = GetLanguageInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 LanguageCreateInstance
@@ -972,19 +936,17 @@ PluginManager::GetLanguageCreateCallbackForPluginName (const ConstString &name)
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
-
 #pragma mark LanguageRuntime
-
 
 struct LanguageRuntimeInstance
 {
     LanguageRuntimeInstance() :
         name(),
         description(),
-        create_callback(NULL)
+        create_callback(nullptr)
     {
     }
 
@@ -1011,13 +973,10 @@ GetLanguageRuntimeInstances ()
 }
 
 bool
-PluginManager::RegisterPlugin
-(
-    const ConstString &name,
-    const char *description,
-    LanguageRuntimeCreateInstance create_callback,
-    LanguageRuntimeGetCommandObject command_callback
-)
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              LanguageRuntimeCreateInstance create_callback,
+                              LanguageRuntimeGetCommandObject command_callback)
 {
     if (create_callback)
     {
@@ -1062,7 +1021,7 @@ PluginManager::GetLanguageRuntimeCreateCallbackAtIndex (uint32_t idx)
     LanguageRuntimeInstances &instances = GetLanguageRuntimeInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 LanguageRuntimeGetCommandObject
@@ -1072,7 +1031,7 @@ PluginManager::GetLanguageRuntimeGetCommandObjectAtIndex (uint32_t idx)
     LanguageRuntimeInstances &instances = GetLanguageRuntimeInstances ();
     if (idx < instances.size())
         return instances[idx].command_callback;
-    return NULL;
+    return nullptr;
 }
 
 LanguageRuntimeCreateInstance
@@ -1090,18 +1049,17 @@ PluginManager::GetLanguageRuntimeCreateCallbackForPluginName (const ConstString 
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 #pragma mark SystemRuntime
-
 
 struct SystemRuntimeInstance
 {
     SystemRuntimeInstance() :
         name(),
         description(),
-        create_callback(NULL)
+        create_callback(nullptr)
     {
     }
 
@@ -1127,12 +1085,9 @@ GetSystemRuntimeInstances ()
 }
 
 bool
-PluginManager::RegisterPlugin
-(
-    const ConstString &name,
-    const char *description,
-    SystemRuntimeCreateInstance create_callback
-)
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              SystemRuntimeCreateInstance create_callback)
 {
     if (create_callback)
     {
@@ -1176,7 +1131,7 @@ PluginManager::GetSystemRuntimeCreateCallbackAtIndex (uint32_t idx)
     SystemRuntimeInstances &instances = GetSystemRuntimeInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 SystemRuntimeCreateInstance
@@ -1194,9 +1149,8 @@ PluginManager::GetSystemRuntimeCreateCallbackForPluginName (const ConstString &n
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
-
 
 #pragma mark ObjectFile
 
@@ -1205,10 +1159,10 @@ struct ObjectFileInstance
     ObjectFileInstance() :
         name(),
         description(),
-        create_callback(NULL),
-        create_memory_callback (NULL),
-        get_module_specifications (NULL),
-        save_core (NULL)
+        create_callback(nullptr),
+        create_memory_callback(nullptr),
+        get_module_specifications(nullptr),
+        save_core(nullptr)
     {
     }
 
@@ -1235,7 +1189,6 @@ GetObjectFileInstances ()
     static ObjectFileInstances g_instances;
     return g_instances;
 }
-
 
 bool
 PluginManager::RegisterPlugin (const ConstString &name,
@@ -1290,9 +1243,8 @@ PluginManager::GetObjectFileCreateCallbackAtIndex (uint32_t idx)
     ObjectFileInstances &instances = GetObjectFileInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
-
 
 ObjectFileCreateMemoryInstance
 PluginManager::GetObjectFileCreateMemoryCallbackAtIndex (uint32_t idx)
@@ -1301,7 +1253,7 @@ PluginManager::GetObjectFileCreateMemoryCallbackAtIndex (uint32_t idx)
     ObjectFileInstances &instances = GetObjectFileInstances ();
     if (idx < instances.size())
         return instances[idx].create_memory_callback;
-    return NULL;
+    return nullptr;
 }
 
 ObjectFileGetModuleSpecifications
@@ -1311,7 +1263,7 @@ PluginManager::GetObjectFileGetModuleSpecificationsCallbackAtIndex (uint32_t idx
     ObjectFileInstances &instances = GetObjectFileInstances ();
     if (idx < instances.size())
         return instances[idx].get_module_specifications;
-    return NULL;
+    return nullptr;
 }
 
 ObjectFileCreateInstance
@@ -1329,9 +1281,8 @@ PluginManager::GetObjectFileCreateCallbackForPluginName (const ConstString &name
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
-
 
 ObjectFileCreateMemoryInstance
 PluginManager::GetObjectFileCreateMemoryCallbackForPluginName (const ConstString &name)
@@ -1348,7 +1299,7 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName (const ConstString
                 return pos->create_memory_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 Error
@@ -1375,8 +1326,8 @@ struct ObjectContainerInstance
     ObjectContainerInstance() :
         name(),
         description(),
-        create_callback (NULL),
-        get_module_specifications (NULL)
+        create_callback(nullptr),
+        get_module_specifications(nullptr)
     {
     }
 
@@ -1384,7 +1335,6 @@ struct ObjectContainerInstance
     std::string description;
     ObjectContainerCreateInstance create_callback;
     ObjectFileGetModuleSpecifications get_module_specifications;
-
 };
 
 typedef std::vector<ObjectContainerInstance> ObjectContainerInstances;
@@ -1452,7 +1402,7 @@ PluginManager::GetObjectContainerCreateCallbackAtIndex (uint32_t idx)
     ObjectContainerInstances &instances = GetObjectContainerInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 ObjectContainerCreateInstance
@@ -1470,7 +1420,7 @@ PluginManager::GetObjectContainerCreateCallbackForPluginName (const ConstString 
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 ObjectFileGetModuleSpecifications
@@ -1480,7 +1430,7 @@ PluginManager::GetObjectContainerGetModuleSpecificationsCallbackAtIndex (uint32_
     ObjectContainerInstances &instances = GetObjectContainerInstances ();
     if (idx < instances.size())
         return instances[idx].get_module_specifications;
-    return NULL;
+    return nullptr;
 }
 
 #pragma mark LogChannel
@@ -1490,7 +1440,7 @@ struct LogInstance
     LogInstance() :
         name(),
         description(),
-        create_callback(NULL)
+        create_callback(nullptr)
     {
     }
 
@@ -1515,15 +1465,10 @@ GetLogInstances ()
     return g_instances;
 }
 
-
-
 bool
-PluginManager::RegisterPlugin
-(
-    const ConstString &name,
-    const char *description,
-    LogChannelCreateInstance create_callback
-)
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              LogChannelCreateInstance create_callback)
 {
     if (create_callback)
     {
@@ -1567,9 +1512,8 @@ PluginManager::GetLogChannelCreateNameAtIndex (uint32_t idx)
     LogInstances &instances = GetLogInstances ();
     if (idx < instances.size())
         return instances[idx].name.GetCString();
-    return NULL;
+    return nullptr;
 }
-
 
 LogChannelCreateInstance
 PluginManager::GetLogChannelCreateCallbackAtIndex (uint32_t idx)
@@ -1578,7 +1522,7 @@ PluginManager::GetLogChannelCreateCallbackAtIndex (uint32_t idx)
     LogInstances &instances = GetLogInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 LogChannelCreateInstance
@@ -1596,7 +1540,7 @@ PluginManager::GetLogChannelCreateCallbackForPluginName (const ConstString &name
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 #pragma mark Platform
@@ -1606,8 +1550,8 @@ struct PlatformInstance
     PlatformInstance() :
         name(),
         description(),
-        create_callback(NULL),
-        debugger_init_callback (NULL)
+        create_callback(nullptr),
+        debugger_init_callback(nullptr)
     {
     }
     
@@ -1633,7 +1577,6 @@ GetPlatformInstances ()
     return g_platform_instances;
 }
 
-
 bool
 PluginManager::RegisterPlugin (const ConstString &name,
                                const char *description,
@@ -1657,7 +1600,6 @@ PluginManager::RegisterPlugin (const ConstString &name,
     return false;
 }
 
-
 const char *
 PluginManager::GetPlatformPluginNameAtIndex (uint32_t idx)
 {
@@ -1665,7 +1607,7 @@ PluginManager::GetPlatformPluginNameAtIndex (uint32_t idx)
     PlatformInstances &instances = GetPlatformInstances ();
     if (idx < instances.size())
         return instances[idx].name.GetCString();
-    return NULL;
+    return nullptr;
 }
 
 const char *
@@ -1675,7 +1617,7 @@ PluginManager::GetPlatformPluginDescriptionAtIndex (uint32_t idx)
     PlatformInstances &instances = GetPlatformInstances ();
     if (idx < instances.size())
         return instances[idx].description.c_str();
-    return NULL;
+    return nullptr;
 }
 
 bool
@@ -1706,7 +1648,7 @@ PluginManager::GetPlatformCreateCallbackAtIndex (uint32_t idx)
     PlatformInstances &instances = GetPlatformInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 PlatformCreateInstance
@@ -1724,7 +1666,7 @@ PluginManager::GetPlatformCreateCallbackForPluginName (const ConstString &name)
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 size_t
@@ -1746,6 +1688,7 @@ PluginManager::AutoCompletePlatformName (const char *name, StringList &matches)
     }
     return matches.GetSize();
 }
+
 #pragma mark Process
 
 struct ProcessInstance
@@ -1753,8 +1696,8 @@ struct ProcessInstance
     ProcessInstance() :
         name(),
         description(),
-        create_callback(NULL),
-        debugger_init_callback(NULL)
+        create_callback(nullptr),
+        debugger_init_callback(nullptr)
     {
     }
     
@@ -1779,7 +1722,6 @@ GetProcessInstances ()
     static ProcessInstances g_instances;
     return g_instances;
 }
-
 
 bool
 PluginManager::RegisterPlugin (const ConstString &name,
@@ -1809,7 +1751,7 @@ PluginManager::GetProcessPluginNameAtIndex (uint32_t idx)
     ProcessInstances &instances = GetProcessInstances ();
     if (idx < instances.size())
         return instances[idx].name.GetCString();
-    return NULL;
+    return nullptr;
 }
 
 const char *
@@ -1819,7 +1761,7 @@ PluginManager::GetProcessPluginDescriptionAtIndex (uint32_t idx)
     ProcessInstances &instances = GetProcessInstances ();
     if (idx < instances.size())
         return instances[idx].description.c_str();
-    return NULL;
+    return nullptr;
 }
 
 bool
@@ -1850,9 +1792,8 @@ PluginManager::GetProcessCreateCallbackAtIndex (uint32_t idx)
     ProcessInstances &instances = GetProcessInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
-
 
 ProcessCreateInstance
 PluginManager::GetProcessCreateCallbackForPluginName (const ConstString &name)
@@ -1869,7 +1810,7 @@ PluginManager::GetProcessCreateCallbackForPluginName (const ConstString &name)
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 #pragma mark ScriptInterpreter
@@ -1880,7 +1821,7 @@ struct ScriptInterpreterInstance
         : name()
         , language(lldb::eScriptLanguageNone)
         , description()
-        , create_callback(NULL)
+        , create_callback(nullptr)
     {
     }
 
@@ -2010,15 +1951,11 @@ GetSymbolFileInstances ()
     return g_instances;
 }
 
-
 bool
-PluginManager::RegisterPlugin
-(
-    const ConstString &name,
-    const char *description,
-    SymbolFileCreateInstance create_callback,
-    DebuggerInitializeCallback debugger_init_callback
-)
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              SymbolFileCreateInstance create_callback,
+                              DebuggerInitializeCallback debugger_init_callback)
 {
     if (create_callback)
     {
@@ -2063,7 +2000,7 @@ PluginManager::GetSymbolFileCreateCallbackAtIndex (uint32_t idx)
     SymbolFileInstances &instances = GetSymbolFileInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 SymbolFileCreateInstance
@@ -2081,10 +2018,8 @@ PluginManager::GetSymbolFileCreateCallbackForPluginName (const ConstString &name
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
-
-
 
 #pragma mark SymbolVendor
 
@@ -2093,7 +2028,7 @@ struct SymbolVendorInstance
     SymbolVendorInstance() :
         name(),
         description(),
-        create_callback(NULL)
+        create_callback(nullptr)
     {
     }
 
@@ -2119,12 +2054,9 @@ GetSymbolVendorInstances ()
 }
 
 bool
-PluginManager::RegisterPlugin
-(
-    const ConstString &name,
-    const char *description,
-    SymbolVendorCreateInstance create_callback
-)
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              SymbolVendorCreateInstance create_callback)
 {
     if (create_callback)
     {
@@ -2168,9 +2100,8 @@ PluginManager::GetSymbolVendorCreateCallbackAtIndex (uint32_t idx)
     SymbolVendorInstances &instances = GetSymbolVendorInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
-
 
 SymbolVendorCreateInstance
 PluginManager::GetSymbolVendorCreateCallbackForPluginName (const ConstString &name)
@@ -2187,9 +2118,8 @@ PluginManager::GetSymbolVendorCreateCallbackForPluginName (const ConstString &na
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
-
 
 #pragma mark UnwindAssembly
 
@@ -2198,7 +2128,7 @@ struct UnwindAssemblyInstance
     UnwindAssemblyInstance() :
         name(),
         description(),
-        create_callback(NULL)
+        create_callback(nullptr)
     {
     }
 
@@ -2224,12 +2154,9 @@ GetUnwindAssemblyInstances ()
 }
 
 bool
-PluginManager::RegisterPlugin
-(
-    const ConstString &name,
-    const char *description,
-    UnwindAssemblyCreateInstance create_callback
-)
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              UnwindAssemblyCreateInstance create_callback)
 {
     if (create_callback)
     {
@@ -2273,9 +2200,8 @@ PluginManager::GetUnwindAssemblyCreateCallbackAtIndex (uint32_t idx)
     UnwindAssemblyInstances &instances = GetUnwindAssemblyInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
-
 
 UnwindAssemblyCreateInstance
 PluginManager::GetUnwindAssemblyCreateCallbackForPluginName (const ConstString &name)
@@ -2292,7 +2218,7 @@ PluginManager::GetUnwindAssemblyCreateCallbackForPluginName (const ConstString &
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 #pragma mark MemoryHistory
@@ -2300,9 +2226,9 @@ PluginManager::GetUnwindAssemblyCreateCallbackForPluginName (const ConstString &
 struct MemoryHistoryInstance
 {
     MemoryHistoryInstance() :
-    name(),
-    description(),
-    create_callback(NULL)
+        name(),
+        description(),
+        create_callback(nullptr)
     {
     }
     
@@ -2328,12 +2254,9 @@ GetMemoryHistoryInstances ()
 }
 
 bool
-PluginManager::RegisterPlugin
-(
- const ConstString &name,
- const char *description,
- MemoryHistoryCreateInstance create_callback
- )
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              MemoryHistoryCreateInstance create_callback)
 {
     if (create_callback)
     {
@@ -2377,9 +2300,8 @@ PluginManager::GetMemoryHistoryCreateCallbackAtIndex (uint32_t idx)
     MemoryHistoryInstances &instances = GetMemoryHistoryInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
-
 
 MemoryHistoryCreateInstance
 PluginManager::GetMemoryHistoryCreateCallbackForPluginName (const ConstString &name)
@@ -2396,7 +2318,7 @@ PluginManager::GetMemoryHistoryCreateCallbackForPluginName (const ConstString &n
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 #pragma mark InstrumentationRuntime
@@ -2404,9 +2326,9 @@ PluginManager::GetMemoryHistoryCreateCallbackForPluginName (const ConstString &n
 struct InstrumentationRuntimeInstance
 {
     InstrumentationRuntimeInstance() :
-    name(),
-    description(),
-    create_callback(NULL)
+        name(),
+        description(),
+        create_callback(nullptr)
     {
     }
     
@@ -2433,13 +2355,10 @@ GetInstrumentationRuntimeInstances ()
 }
 
 bool
-PluginManager::RegisterPlugin
-(
- const ConstString &name,
- const char *description,
- InstrumentationRuntimeCreateInstance create_callback,
- InstrumentationRuntimeGetType get_type_callback
- )
+PluginManager::RegisterPlugin(const ConstString &name,
+                              const char *description,
+                              InstrumentationRuntimeCreateInstance create_callback,
+                              InstrumentationRuntimeGetType get_type_callback)
 {
     if (create_callback)
     {
@@ -2484,7 +2403,7 @@ PluginManager::GetInstrumentationRuntimeGetTypeCallbackAtIndex (uint32_t idx)
     InstrumentationRuntimeInstances &instances = GetInstrumentationRuntimeInstances ();
     if (idx < instances.size())
         return instances[idx].get_type_callback;
-    return NULL;
+    return nullptr;
 }
 
 InstrumentationRuntimeCreateInstance
@@ -2494,9 +2413,8 @@ PluginManager::GetInstrumentationRuntimeCreateCallbackAtIndex (uint32_t idx)
     InstrumentationRuntimeInstances &instances = GetInstrumentationRuntimeInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
-
 
 InstrumentationRuntimeCreateInstance
 PluginManager::GetInstrumentationRuntimeCreateCallbackForPluginName (const ConstString &name)
@@ -2513,18 +2431,17 @@ PluginManager::GetInstrumentationRuntimeCreateCallbackForPluginName (const Const
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 #pragma mark TypeSystem
 
-
 struct TypeSystemInstance
 {
     TypeSystemInstance() :
-    name(),
-    description(),
-    create_callback(NULL)
+        name(),
+        description(),
+        create_callback(nullptr)
     {
     }
 
@@ -2599,7 +2516,7 @@ PluginManager::GetTypeSystemCreateCallbackAtIndex (uint32_t idx)
     TypeSystemInstances &instances = GetTypeSystemInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 TypeSystemCreateInstance
@@ -2617,7 +2534,7 @@ PluginManager::GetTypeSystemCreateCallbackForPluginName (const ConstString &name
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 TypeSystemEnumerateSupportedLanguages
@@ -2627,7 +2544,7 @@ PluginManager::GetTypeSystemEnumerateSupportedLanguagesCallbackAtIndex (uint32_t
     TypeSystemInstances &instances = GetTypeSystemInstances ();
     if (idx < instances.size())
         return instances[idx].enumerate_callback;
-    return NULL;
+    return nullptr;
 }
 
 TypeSystemEnumerateSupportedLanguages
@@ -2645,7 +2562,7 @@ PluginManager::GetTypeSystemEnumerateSupportedLanguagesCallbackForPluginName (co
                 return pos->enumerate_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 #pragma mark REPL
@@ -2653,9 +2570,9 @@ PluginManager::GetTypeSystemEnumerateSupportedLanguagesCallbackForPluginName (co
 struct REPLInstance
 {
     REPLInstance() :
-    name(),
-    description(),
-    create_callback(NULL)
+        name(),
+        description(),
+        create_callback(nullptr)
     {
     }
     
@@ -2730,7 +2647,7 @@ PluginManager::GetREPLCreateCallbackAtIndex (uint32_t idx)
     REPLInstances &instances = GetREPLInstances ();
     if (idx < instances.size())
         return instances[idx].create_callback;
-    return NULL;
+    return nullptr;
 }
 
 REPLCreateInstance
@@ -2748,7 +2665,7 @@ PluginManager::GetREPLCreateCallbackForPluginName (const ConstString &name)
                 return pos->create_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 REPLEnumerateSupportedLanguages
@@ -2758,9 +2675,8 @@ PluginManager::GetREPLEnumerateSupportedLanguagesCallbackAtIndex (uint32_t idx)
     REPLInstances &instances = GetREPLInstances ();
     if (idx < instances.size())
         return instances[idx].enumerate_languages_callback;
-    return NULL;
+    return nullptr;
 }
-
 
 REPLEnumerateSupportedLanguages
 PluginManager::GetREPLSystemEnumerateSupportedLanguagesCallbackForPluginName (const ConstString &name)
@@ -2777,7 +2693,7 @@ PluginManager::GetREPLSystemEnumerateSupportedLanguagesCallbackForPluginName (co
                 return pos->enumerate_languages_callback;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 #pragma mark PluginManager
@@ -2871,7 +2787,7 @@ GetDebuggerPropertyForPlugins (Debugger &debugger,
     {
         static ConstString g_property_name("plugin");
         
-        OptionValuePropertiesSP plugin_properties_sp = parent_properties_sp->GetSubProperty (NULL, g_property_name);
+        OptionValuePropertiesSP plugin_properties_sp = parent_properties_sp->GetSubProperty(nullptr, g_property_name);
         if (!plugin_properties_sp && can_create)
         {
             plugin_properties_sp.reset (new OptionValueProperties (g_property_name));
@@ -2883,7 +2799,7 @@ GetDebuggerPropertyForPlugins (Debugger &debugger,
         
         if (plugin_properties_sp)
         {
-            lldb::OptionValuePropertiesSP plugin_type_properties_sp = plugin_properties_sp->GetSubProperty (NULL, plugin_type_name);
+            lldb::OptionValuePropertiesSP plugin_type_properties_sp = plugin_properties_sp->GetSubProperty(nullptr, plugin_type_name);
             if (!plugin_type_properties_sp && can_create)
             {
                 plugin_type_properties_sp.reset (new OptionValueProperties (plugin_type_name));
@@ -2911,7 +2827,7 @@ GetDebuggerPropertyForPluginsOldStyle (Debugger &debugger,
     lldb::OptionValuePropertiesSP parent_properties_sp (debugger.GetValueProperties());
     if (parent_properties_sp)
     {
-        OptionValuePropertiesSP plugin_properties_sp = parent_properties_sp->GetSubProperty (NULL, plugin_type_name);
+        OptionValuePropertiesSP plugin_properties_sp = parent_properties_sp->GetSubProperty(nullptr, plugin_type_name);
         if (!plugin_properties_sp && can_create)
         {
             plugin_properties_sp.reset (new OptionValueProperties (plugin_type_name));
@@ -2923,7 +2839,7 @@ GetDebuggerPropertyForPluginsOldStyle (Debugger &debugger,
         
         if (plugin_properties_sp)
         {
-            lldb::OptionValuePropertiesSP plugin_type_properties_sp = plugin_properties_sp->GetSubProperty (NULL, g_property_name);
+            lldb::OptionValuePropertiesSP plugin_type_properties_sp = plugin_properties_sp->GetSubProperty(nullptr, g_property_name);
             if (!plugin_type_properties_sp && can_create)
             {
                 plugin_type_properties_sp.reset (new OptionValueProperties (g_property_name));
@@ -2990,7 +2906,7 @@ const char* kProcessPluginName("process");
 const char* kSymbolFilePluginName("symbol-file");
 const char* kJITLoaderPluginName("jit-loader");
 
-}
+} // anonymous namespace
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForDynamicLoaderPlugin (Debugger &debugger,
@@ -3012,7 +2928,6 @@ PluginManager::CreateSettingForDynamicLoaderPlugin (Debugger &debugger,
                                   description,
                                   is_global_property);
 }
-
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForPlatformPlugin (Debugger &debugger, const ConstString &setting_name)
@@ -3037,7 +2952,6 @@ PluginManager::CreateSettingForPlatformPlugin (Debugger &debugger,
                                   is_global_property,
                                   GetDebuggerPropertyForPluginsOldStyle);
 }
-
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForProcessPlugin (Debugger &debugger, const ConstString &setting_name)

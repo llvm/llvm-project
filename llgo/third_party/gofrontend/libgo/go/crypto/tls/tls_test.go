@@ -7,6 +7,7 @@ package tls
 import (
 	"bytes"
 	"fmt"
+	"internal/testenv"
 	"io"
 	"net"
 	"strings"
@@ -40,7 +41,7 @@ D2lWusoe2/nEqfDVVWGWlyJ7yOmqaVm/iNUN9B2N2g==
 `
 
 // keyPEM is the same as rsaKeyPEM, but declares itself as just
-// "PRIVATE KEY", not "RSA PRIVATE KEY".  http://golang.org/issue/4477
+// "PRIVATE KEY", not "RSA PRIVATE KEY".  https://golang.org/issue/4477
 var keyPEM = `-----BEGIN PRIVATE KEY-----
 MIIBOwIBAAJBANLJhPHhITqQbPklG3ibCVxwGMRfp/v4XqhfdQHdcVfHap6NQ5Wo
 k/4xIA+ui35/MmNartNuC+BdZ1tMuVCPFZcCAwEAAQJAEJ2N+zsR0Xn8/Q6twa4G
@@ -278,5 +279,56 @@ func TestTLSUniqueMatches(t *testing.T) {
 	}
 	if !bytes.Equal(conn.ConnectionState().TLSUnique, <-serverTLSUniques) {
 		t.Error("client and server channel bindings differ when session resumption is used")
+	}
+}
+
+func TestVerifyHostname(t *testing.T) {
+	testenv.MustHaveExternalNetwork(t)
+
+	c, err := Dial("tcp", "www.google.com:https", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.VerifyHostname("www.google.com"); err != nil {
+		t.Fatalf("verify www.google.com: %v", err)
+	}
+	if err := c.VerifyHostname("www.yahoo.com"); err == nil {
+		t.Fatalf("verify www.yahoo.com succeeded")
+	}
+
+	c, err = Dial("tcp", "www.google.com:https", &Config{InsecureSkipVerify: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.VerifyHostname("www.google.com"); err == nil {
+		t.Fatalf("verify www.google.com succeeded with InsecureSkipVerify=true")
+	}
+	if err := c.VerifyHostname("www.yahoo.com"); err == nil {
+		t.Fatalf("verify www.google.com succeeded with InsecureSkipVerify=true")
+	}
+}
+
+func TestVerifyHostnameResumed(t *testing.T) {
+	testenv.MustHaveExternalNetwork(t)
+
+	config := &Config{
+		ClientSessionCache: NewLRUClientSessionCache(32),
+	}
+	for i := 0; i < 2; i++ {
+		c, err := Dial("tcp", "www.google.com:https", config)
+		if err != nil {
+			t.Fatalf("Dial #%d: %v", i, err)
+		}
+		cs := c.ConnectionState()
+		if i > 0 && !cs.DidResume {
+			t.Fatalf("Subsequent connection unexpectedly didn't resume")
+		}
+		if cs.VerifiedChains == nil {
+			t.Fatalf("Dial #%d: cs.VerifiedChains == nil", i)
+		}
+		if err := c.VerifyHostname("www.google.com"); err != nil {
+			t.Fatalf("verify www.google.com #%d: %v", i, err)
+		}
+		c.Close()
 	}
 }

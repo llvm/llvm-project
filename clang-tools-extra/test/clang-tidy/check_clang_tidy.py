@@ -21,7 +21,7 @@ Usage:
     -- [optional clang-tidy arguments]
 
 Example:
-  // RUN: %check_clang_tidy %s llvm-include-order %t -- -isystem $(dirname %s)/Inputs/Headers
+  // RUN: %check_clang_tidy %s llvm-include-order %t -- -- -isystem %S/Inputs
 """
 
 import argparse

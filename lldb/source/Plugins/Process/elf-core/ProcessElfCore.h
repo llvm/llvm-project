@@ -40,7 +40,7 @@ public:
     //------------------------------------------------------------------
     static lldb::ProcessSP
     CreateInstance (lldb::TargetSP target_sp,
-                    lldb_private::Listener &listener,
+                    lldb::ListenerSP listener_sp,
                     const lldb_private::FileSpec *crash_file_path);
 
     static void
@@ -59,7 +59,7 @@ public:
     // Constructors and Destructors
     //------------------------------------------------------------------
     ProcessElfCore(lldb::TargetSP target_sp,
-                   lldb_private::Listener &listener,
+                   lldb::ListenerSP listener_sp,
                    const lldb_private::FileSpec &core_file);
 
     ~ProcessElfCore() override;
@@ -110,6 +110,9 @@ public:
     // Returns AUXV structure found in the core file
     const lldb::DataBufferSP
     GetAuxvData() override;
+
+    bool
+    GetProcessInfo(lldb_private::ProcessInstanceInfo &info) override;
 
 protected:
     void

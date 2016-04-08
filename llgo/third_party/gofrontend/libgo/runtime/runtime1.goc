@@ -27,8 +27,8 @@ func newParFor(nthrmax uint32) (desc *ParFor) {
 	desc = runtime_parforalloc(nthrmax);
 }
 
-func parForSetup(desc *ParFor, nthr uint32, n uint32, ctx *byte, wait bool, body *byte) {
-	runtime_parforsetup(desc, nthr, n, ctx, wait, *(void(**)(ParFor*, uint32))body);
+func parForSetup(desc *ParFor, nthr uint32, n uint32, wait bool, body *byte) {
+	runtime_parforsetup(desc, nthr, n, wait, (const FuncVal*) body);
 }
 
 func parForDo(desc *ParFor) {
@@ -52,10 +52,7 @@ func NumGoroutine() (ret int) {
 }
 
 func getgoroot() (out String) {
-	const byte *p;
-
-	p = runtime_getenv("GOROOT");
-	out = runtime_gostringnocopy(p);
+	out = runtime_getenv("GOROOT");
 }
 
 func runtime_pprof.runtime_cyclesPerSecond() (res int64) {
@@ -86,4 +83,14 @@ func sync_atomic.runtime_procPin() (p int) {
 
 func sync_atomic.runtime_procUnpin() {
 	runtime_m()->locks--;
+}
+
+extern Slice envs;
+
+func envs() (s Slice) {
+	s = envs;
+}
+
+func setenvs(e Slice) {
+	envs = e;
 }

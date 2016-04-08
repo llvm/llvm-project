@@ -94,12 +94,29 @@ func TestEmptyFolderImport(t *testing.T) {
 
 func TestMultiplePackageImport(t *testing.T) {
 	_, err := Import(".", "testdata/multi", 0)
-	if _, ok := err.(*MultiplePackageError); !ok {
+	mpe, ok := err.(*MultiplePackageError)
+	if !ok {
 		t.Fatal(`Import("testdata/multi") did not return MultiplePackageError.`)
+	}
+	want := &MultiplePackageError{
+		Dir:      filepath.FromSlash("testdata/multi"),
+		Packages: []string{"main", "test_package"},
+		Files:    []string{"file.go", "file_appengine.go"},
+	}
+	if !reflect.DeepEqual(mpe, want) {
+		t.Errorf("got %#v; want %#v", mpe, want)
 	}
 }
 
 func TestLocalDirectory(t *testing.T) {
+	t.Skip("does not work with gccgo")
+	if runtime.GOOS == "darwin" {
+		switch runtime.GOARCH {
+		case "arm", "arm64":
+			t.Skipf("skipping on %s/%s, no valid GOROOT", runtime.GOOS, runtime.GOARCH)
+		}
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -214,11 +231,49 @@ func TestMatchFile(t *testing.T) {
 }
 
 func TestImportCmd(t *testing.T) {
+	t.Skip("does not work with gccgo")
+	if runtime.GOOS == "darwin" {
+		switch runtime.GOARCH {
+		case "arm", "arm64":
+			t.Skipf("skipping on %s/%s, no valid GOROOT", runtime.GOOS, runtime.GOARCH)
+		}
+	}
+
 	p, err := Import("cmd/internal/objfile", "", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.HasSuffix(filepath.ToSlash(p.Dir), "src/cmd/internal/objfile") {
 		t.Fatalf("Import cmd/internal/objfile returned Dir=%q, want %q", filepath.ToSlash(p.Dir), ".../src/cmd/internal/objfile")
+	}
+}
+
+var (
+	expandSrcDirPath = filepath.Join(string(filepath.Separator)+"projects", "src", "add")
+)
+
+var expandSrcDirTests = []struct {
+	input, expected string
+}{
+	{"-L ${SRCDIR}/libs -ladd", "-L /projects/src/add/libs -ladd"},
+	{"${SRCDIR}/add_linux_386.a -pthread -lstdc++", "/projects/src/add/add_linux_386.a -pthread -lstdc++"},
+	{"Nothing to expand here!", "Nothing to expand here!"},
+	{"$", "$"},
+	{"$$", "$$"},
+	{"${", "${"},
+	{"$}", "$}"},
+	{"$FOO ${BAR}", "$FOO ${BAR}"},
+	{"Find me the $SRCDIRECTORY.", "Find me the $SRCDIRECTORY."},
+	{"$SRCDIR is missing braces", "$SRCDIR is missing braces"},
+}
+
+func TestExpandSrcDir(t *testing.T) {
+	for _, test := range expandSrcDirTests {
+		output := expandSrcDir(test.input, expandSrcDirPath)
+		if output != test.expected {
+			t.Errorf("%q expands to %q with SRCDIR=%q when %q is expected", test.input, output, expandSrcDirPath, test.expected)
+		} else {
+			t.Logf("%q expands to %q with SRCDIR=%q", test.input, output, expandSrcDirPath)
+		}
 	}
 }

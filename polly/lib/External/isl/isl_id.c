@@ -180,7 +180,7 @@ uint32_t isl_hash_id(uint32_t hash, __isl_keep isl_id *id)
 /* Replace the free_user callback by "free_user".
  */
 __isl_give isl_id *isl_id_set_free_user(__isl_take isl_id *id,
-	__isl_give void (*free_user)(void *user))
+	void (*free_user)(void *user))
 {
 	if (!id)
 		return NULL;

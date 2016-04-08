@@ -1395,7 +1395,7 @@ static struct isl_basic_set *convex_hull_pair(struct isl_basic_set *bset1,
 				      isl_basic_set_copy(bset2));
 	if (!lin)
 		goto error;
-	if (isl_basic_set_is_universe(lin)) {
+	if (isl_basic_set_plain_is_universe(lin)) {
 		isl_basic_set_free(bset1);
 		isl_basic_set_free(bset2);
 		return lin;
@@ -1517,7 +1517,7 @@ static struct isl_basic_set *uset_convex_hull_unbounded(struct isl_set *set)
 		t = isl_basic_set_lineality_space(isl_basic_set_copy(convex_hull));
 		if (!t)
 			goto error;
-		if (isl_basic_set_is_universe(t)) {
+		if (isl_basic_set_plain_is_universe(t)) {
 			isl_basic_set_free(convex_hull);
 			convex_hull = t;
 			break;
@@ -1833,7 +1833,7 @@ static struct isl_basic_set *uset_convex_hull(struct isl_set *set)
 	lin = uset_combined_lineality_space(isl_set_copy(set));
 	if (!lin)
 		goto error;
-	if (isl_basic_set_is_universe(lin)) {
+	if (isl_basic_set_plain_is_universe(lin)) {
 		isl_set_free(set);
 		return lin;
 	}

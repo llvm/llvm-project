@@ -35,6 +35,11 @@
 // DISASM-NEXT: 1109a: 48 8d 80 f8 ff ff ff                leaq -8(%rax), %rax
 // DISASM-NEXT: 110a1: 64 48 8b 04 25 00 00 00 00          movq %fs:0, %rax
 // DISASM-NEXT: 110aa: 48 8d 80 fc ff ff ff                leaq -4(%rax), %rax
+// LD to LE (2):
+// DISASM:      _DTPOFF64_1:
+// DISASM-NEXT: 110b1: f8
+// DISASM:      _DTPOFF64_2:
+// DISASM-NEXT: 110ba: fc
 
 .type tls0,@object
 .section .tbss,"awT",@nobits
@@ -91,3 +96,12 @@ _start:
  .word 0x6666
  rex64
  call __tls_get_addr@plt
+ 
+ //LD to LE (2):
+_DTPOFF64_1:
+ .quad tls0@DTPOFF
+ nop
+
+_DTPOFF64_2:
+ .quad tls1@DTPOFF
+ nop

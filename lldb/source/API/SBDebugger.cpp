@@ -432,8 +432,8 @@ SBDebugger::HandleCommand (const char *command)
             if (process_sp)
             {
                 EventSP event_sp;
-                Listener &lldb_listener = m_opaque_sp->GetListener();
-                while (lldb_listener.GetNextEventForBroadcaster (process_sp.get(), event_sp))
+                ListenerSP lldb_listener_sp = m_opaque_sp->GetListener();
+                while (lldb_listener_sp->GetNextEventForBroadcaster (process_sp.get(), event_sp))
                 {
                     SBEvent event(event_sp);
                     HandleProcessEvent (process, event, GetOutputFileHandle(), GetErrorFileHandle());
@@ -450,7 +450,7 @@ SBDebugger::GetListener ()
 
     SBListener sb_listener;
     if (m_opaque_sp)
-        sb_listener.reset(&m_opaque_sp->GetListener(), false);
+        sb_listener.reset(m_opaque_sp->GetListener());
 
     if (log)
         log->Printf ("SBDebugger(%p)::GetListener () => SBListener(%p)",

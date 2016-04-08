@@ -34,8 +34,13 @@ void test_lvalue_ref()
     static_assert(!std::is_function<T>::value, "");
 }
 
+struct incomplete_type;
+
 int main()
 {
     test_lvalue_ref<int&>();
     test_lvalue_ref<const int&>();
+
+//  LWG#2581
+    static_assert(!std::is_lvalue_reference<incomplete_type>::value, "");
 }

@@ -752,6 +752,7 @@ AppleObjCRuntimeV2::CreateExceptionResolver (Breakpoint *bkpt, bool catch_bp, bo
                                                        eFunctionNameTypeBase,
                                                        eLanguageTypeUnknown,
                                                        Breakpoint::Exact,
+                                                       0,
                                                        eLazyBoolNo));
     // FIXME: We don't do catch breakpoints for ObjC yet.
     // Should there be some way for the runtime to specify what it can do in this regard?
@@ -1250,7 +1251,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
     
     ExecutionContext exe_ctx;
     
-    ThreadSP thread_sp = process->GetThreadList().GetSelectedThread();
+    ThreadSP thread_sp = process->GetThreadList().GetExpressionExecutionThread();
     
     if (!thread_sp)
         return false;
@@ -1328,6 +1329,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
         
         get_class_info_function = m_get_class_info_code->MakeFunctionCaller(clang_uint32_t_type,
                                                                             arguments,
+                                                                            thread_sp,
                                                                             error);
         
         if (error.Fail())
@@ -1502,7 +1504,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
     
     ExecutionContext exe_ctx;
     
-    ThreadSP thread_sp = process->GetThreadList().GetSelectedThread();
+    ThreadSP thread_sp = process->GetThreadList().GetExpressionExecutionThread();
     
     if (!thread_sp)
         return DescriptorMapUpdateResult::Fail();
@@ -1588,6 +1590,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
         
         get_shared_cache_class_info_function = m_get_shared_cache_class_info_code->MakeFunctionCaller(clang_uint32_t_type,
                                                                                                       arguments,
+                                                                                                      thread_sp,
                                                                                                       error);
         
         if (get_shared_cache_class_info_function == nullptr)

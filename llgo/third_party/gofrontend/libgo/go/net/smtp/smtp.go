@@ -41,7 +41,7 @@ type Client struct {
 }
 
 // Dial returns a new Client connected to an SMTP server at addr.
-// The addr must include a port number.
+// The addr must include a port, as in "mail.example.com:smtp".
 func Dial(addr string) (*Client, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
@@ -157,6 +157,17 @@ func (c *Client) StartTLS(config *tls.Config) error {
 	return c.ehlo()
 }
 
+// TLSConnectionState returns the client's TLS connection state.
+// The return values are their zero values if StartTLS did
+// not succeed.
+func (c *Client) TLSConnectionState() (state tls.ConnectionState, ok bool) {
+	tc, ok := c.conn.(*tls.Conn)
+	if !ok {
+		return
+	}
+	return tc.ConnectionState(), true
+}
+
 // Verify checks the validity of an email address on the server.
 // If Verify returns nil, the address is valid. A non-nil return
 // does not necessarily indicate an invalid address. Many servers
@@ -253,9 +264,9 @@ func (d *dataCloser) Close() error {
 }
 
 // Data issues a DATA command to the server and returns a writer that
-// can be used to write the data. The caller should close the writer
-// before calling any more methods on c.
-// A call to Data must be preceded by one or more calls to Rcpt.
+// can be used to write the mail headers and body. The caller should
+// close the writer before calling any more methods on c.  A call to
+// Data must be preceded by one or more calls to Rcpt.
 func (c *Client) Data() (io.WriteCloser, error) {
 	_, _, err := c.cmd(354, "DATA")
 	if err != nil {
@@ -270,6 +281,22 @@ var testHookStartTLS func(*tls.Config) // nil, except for tests
 // possible, authenticates with the optional mechanism a if possible,
 // and then sends an email from address from, to addresses to, with
 // message msg.
+// The addr must include a port, as in "mail.example.com:smtp".
+//
+// The addresses in the to parameter are the SMTP RCPT addresses.
+//
+// The msg parameter should be an RFC 822-style email with headers
+// first, a blank line, and then the message body. The lines of msg
+// should be CRLF terminated.  The msg headers should usually include
+// fields such as "From", "To", "Subject", and "Cc".  Sending "Bcc"
+// messages is accomplished by including an email address in the to
+// parameter but not including it in the msg headers.
+//
+// The SendMail function and the the net/smtp package are low-level
+// mechanisms and provide no support for DKIM signing, MIME
+// attachments (see the mime/multipart package), or other mail
+// functionality. Higher-level packages exist outside of the standard
+// library.
 func SendMail(addr string, a Auth, from string, to []string, msg []byte) error {
 	c, err := Dial(addr)
 	if err != nil {

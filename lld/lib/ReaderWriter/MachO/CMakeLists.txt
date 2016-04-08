@@ -23,6 +23,7 @@ add_lld_library(lldMachO
     lldYAML
     LLVMObject
     LLVMSupport
+    ${PTHREAD_LIB}
   )
 
 include_directories(.)

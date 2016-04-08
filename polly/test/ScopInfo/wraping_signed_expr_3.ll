@@ -8,8 +8,8 @@
 ; Note: 2147483648 == 2 ^ 31
 ;
 ; CHECK:      Function: wrap
-; CHECK:      Boundary Context:
-; CHECK:      [N, p] -> {  : p <= 2147483648 - N }
+; CHECK:      Invalid Context:
+; CHECK:      [N, p] -> {  : p >= 2147483649 - N }
 ;
 target datalayout = "e-m:e-i32:64-f80:128-n8:16:32:64-S128"
 

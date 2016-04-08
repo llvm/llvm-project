@@ -5,6 +5,7 @@ add_lldb_library(lldbSymbol
   ClangASTImporter.cpp
   ClangExternalASTSourceCallbacks.cpp
   ClangExternalASTSourceCommon.cpp
+  ClangUtil.cpp
   CompilerDecl.cpp
   CompilerDeclContext.cpp
   CompilerType.cpp
@@ -16,6 +17,7 @@ add_lldb_library(lldbSymbol
   Function.cpp
   FuncUnwinders.cpp
   GoASTContext.cpp
+  JavaASTContext.cpp
   LineEntry.cpp
   LineTable.cpp
   ObjectFile.cpp

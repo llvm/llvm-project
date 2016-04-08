@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/shared.s -o %t2.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/dynamic-reloc-weak.s -o %t2.o
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld %t.o %t2.so -o %t
 // RUN: llvm-readobj -r  %t | FileCheck %s
@@ -19,9 +19,12 @@ _start:
         .weak sym3
         .quad sym3
 
-// Both gold and bfd ld will produce a relocation for sym1 and sym2 only. That
-// That seems odd.  If the dynamic linker must get a chance to resolve sym1
-// and sym2, that should also be the case for sym3.
+        .type sym4,@function
+        .weak sym4
+        .quad sym4
+
+// Test that we produce dynamic relocation for every weak undefined symbol
+// we found.
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
@@ -29,5 +32,6 @@ _start:
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section ({{.*}}) .rela.plt {
 // CHECK-NEXT:     0x{{.*}} R_X86_64_JUMP_SLOT sym2 0x0
+// CHECK-NEXT:     0x{{.*}} R_X86_64_JUMP_SLOT sym3 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]

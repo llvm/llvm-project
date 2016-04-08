@@ -170,3 +170,21 @@ class SourceManagerTestCase(TestBase):
         # Display the source code again.  We should see the updated line.
         self.expect("source list -f main.c -l %d" % self.line, SOURCE_DISPLAYED_CORRECTLY,
             substrs = ['Hello lldb'])
+
+    def test_set_breakpoint_with_absloute_path(self):
+        self.build()
+        self.runCmd("settings set target.source-map %s %s" % (os.getcwd(), os.path.join(os.getcwd(), "hidden")))
+
+        exe = os.path.join(os.getcwd(), "a.out")
+        main = os.path.join(os.getcwd(), "hidden", "main.c")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        lldbutil.run_break_set_by_file_and_line (self, main, self.line, num_expected_locations=1, loc_exact=False)
+        
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        # The stop reason of the thread should be breakpoint.
+        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+            substrs = ['stopped',
+                       'main.c:%d' % self.line,
+                       'stop reason = breakpoint'])

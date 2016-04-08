@@ -12,6 +12,7 @@
 
 #include "lld/Core/LLVM.h"
 #include "lld/Core/Pass.h"
+#include "llvm/Support/Error.h"
 #include <memory>
 #include <vector>
 
@@ -31,11 +32,11 @@ public:
     _passes.push_back(std::move(pass));
   }
 
-  std::error_code runOnFile(SimpleFile &file) {
+  llvm::Error runOnFile(SimpleFile &file) {
     for (std::unique_ptr<Pass> &pass : _passes)
-      if (std::error_code EC = pass->perform(file))
+      if (llvm::Error EC = pass->perform(file))
         return EC;
-    return std::error_code();
+    return llvm::Error();
   }
 
 private:

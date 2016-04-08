@@ -288,6 +288,16 @@ public:
     GetArchitectureName () const;
 
     //------------------------------------------------------------------
+    /// Returns a string representing current architecture as a target CPU
+    /// for tools like compiler, disassembler etc.
+    ///
+    /// @return A string representing target CPU for the current
+    ///         architecture.
+    //------------------------------------------------------------------
+    std::string
+    GetClangTargetCPU ();
+
+    //------------------------------------------------------------------
     /// Clears the object state.
     ///
     /// Clears the object state back to a default invalid state.
@@ -612,6 +622,22 @@ public:
                             bool &os_version_different,
                             bool &env_different);
     
+    //------------------------------------------------------------------
+    /// Detect whether this architecture uses thumb code exclusively
+    ///
+    /// Some embedded ARM chips (e.g. the ARM Cortex M0-7 line) can
+    /// only execute the Thumb instructions, never Arm.  We should normally
+    /// pick up arm/thumbness from their the processor status bits (cpsr/xpsr)
+    /// or hints on each function - but when doing bare-boards low level
+    /// debugging (especially common with these embedded processors), we may
+    /// not have those things easily accessible.
+    ///
+    /// @return true if this is an arm ArchSpec which can only execute Thumb
+    ///         instructions
+    //------------------------------------------------------------------
+    bool
+    IsAlwaysThumbInstructions () const;
+
     uint32_t
     GetFlags () const
     {

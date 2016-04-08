@@ -13,9 +13,7 @@
 #include "lld/Core/Error.h"
 #include "lld/Core/LLVM.h"
 #include "lld/Core/Node.h"
-#include "lld/Core/Parallel.h"
 #include "lld/Core/Reference.h"
-#include "lld/Core/range.h"
 #include "lld/Core/Reader.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,16 +31,9 @@ class SharedLibraryFile;
 ///
 /// The base class LinkingContext contains the options needed by core linking.
 /// Subclasses of LinkingContext have additional options needed by specific
-/// Writers. For example, ELFLinkingContext has methods that supplies
-/// options to the ELF Writer and ELF Passes.
+/// Writers.
 class LinkingContext {
 public:
-  /// \brief The types of output file that the linker creates.
-  enum class OutputFileType : uint8_t {
-    Default, // The default output type for this target
-    YAML,    // The output type is set to YAML
-  };
-
   virtual ~LinkingContext();
 
   /// \name Methods needed by core linking
@@ -78,28 +69,6 @@ public:
     _deadStripRoots.push_back(symbolName);
   }
 
-  /// Archive files (aka static libraries) are normally lazily loaded.  That is,
-  /// object files within an archive are only loaded and linked in, if the
-  /// object file contains a DefinedAtom which will replace an existing
-  /// UndefinedAtom.  If this method returns true, core linking will also look
-  /// for archive members to replace existing tentative definitions in addition
-  /// to replacing undefines. Note: a "tentative definition" (also called a
-  /// "common" symbols) is a C (but not C++) concept. They are modeled in lld
-  /// as a DefinedAtom with merge() of mergeAsTentative.
-  bool searchArchivesToOverrideTentativeDefinitions() const {
-    return _searchArchivesToOverrideTentativeDefinitions;
-  }
-
-  /// Normally core linking will turn a tentative definition into a real
-  /// definition if not replaced by a real DefinedAtom from some object file.
-  /// If this method returns true, core linking will search all supplied
-  /// dynamic shared libraries for symbol names that match remaining tentative
-  /// definitions.  If any are found, the corresponding tentative definition
-  /// atom is replaced with SharedLibraryAtom.
-  bool searchSharedLibrariesToOverrideTentativeDefinitions() const {
-    return _searchSharedLibrariesToOverrideTentativeDefinitions;
-  }
-
   /// Normally, every UndefinedAtom must be replaced by a DefinedAtom or a
   /// SharedLibraryAtom for the link to be successful.  This method controls
   /// whether core linking prints out a list of remaining UndefinedAtoms.
@@ -113,35 +82,6 @@ public:
   /// SharedLibraryAtom for the link to be successful.  This method controls
   /// whether core linking considers remaining undefines to be an error.
   bool allowRemainingUndefines() const { return _allowRemainingUndefines; }
-
-  /// In the lld model, a SharedLibraryAtom is a proxy atom for something
-  /// that will be found in a dynamic shared library when the program runs.
-  /// A SharedLibraryAtom optionally contains the name of the shared library
-  /// in which to find the symbol name at runtime.  Core linking may merge
-  /// two SharedLibraryAtom with the same name.  If this method returns true,
-  /// when merging core linking will also verify that they both have the same
-  /// loadName() and if not print a warning.
-  ///
-  /// \todo This should be a method core linking calls so that drivers can
-  /// format the warning as needed.
-  bool warnIfCoalesableAtomsHaveDifferentLoadName() const {
-    return _warnIfCoalesableAtomsHaveDifferentLoadName;
-  }
-
-  /// In C/C++ you can mark a function's prototype with
-  /// __attribute__((weak_import)) or __attribute__((weak)) to say the function
-  /// may not be available at runtime and/or build time and in which case its
-  /// address will evaluate to NULL. In lld this is modeled using the
-  /// UndefinedAtom::canBeNull() method.  During core linking, UndefinedAtom
-  /// with the same name are automatically merged.  If this method returns
-  /// true, core link also verfies that the canBeNull() value for merged
-  /// UndefinedAtoms are the same and warns if not.
-  ///
-  /// \todo This should be a method core linking calls so that drivers can
-  /// format the warning as needed.
-  bool warnIfCoalesableAtomsHaveDifferentCanBeNull() const {
-    return _warnIfCoalesableAtomsHaveDifferentCanBeNull;
-  }
 
   /// Normally, every UndefinedAtom must be replaced by a DefinedAtom or a
   /// SharedLibraryAtom for the link to be successful.  This method controls
@@ -176,20 +116,7 @@ public:
   }
 
   void setDeadStripping(bool enable) { _deadStrip = enable; }
-  void setAllowDuplicates(bool enable) { _allowDuplicates = enable; }
   void setGlobalsAreDeadStripRoots(bool v) { _globalsAreDeadStripRoots = v; }
-  void setSearchArchivesToOverrideTentativeDefinitions(bool search) {
-    _searchArchivesToOverrideTentativeDefinitions = search;
-  }
-  void setSearchSharedLibrariesToOverrideTentativeDefinitions(bool search) {
-    _searchSharedLibrariesToOverrideTentativeDefinitions = search;
-  }
-  void setWarnIfCoalesableAtomsHaveDifferentCanBeNull(bool warn) {
-    _warnIfCoalesableAtomsHaveDifferentCanBeNull = warn;
-  }
-  void setWarnIfCoalesableAtomsHaveDifferentLoadName(bool warn) {
-    _warnIfCoalesableAtomsHaveDifferentLoadName = warn;
-  }
   void setPrintRemainingUndefines(bool print) {
     _printRemainingUndefines = print;
   }
@@ -199,26 +126,10 @@ public:
   void setAllowShlibUndefines(bool allow) { _allowShlibUndefines = allow; }
   void setLogInputFiles(bool log) { _logInputFiles = log; }
 
-  // Returns true if multiple definitions should not be treated as a
-  // fatal error.
-  bool getAllowDuplicates() const { return _allowDuplicates; }
-
   void appendLLVMOption(const char *opt) { _llvmOptions.push_back(opt); }
-
-  void addAlias(StringRef from, StringRef to) { _aliasSymbols[from] = to; }
-  const std::map<std::string, std::string> &getAliases() const {
-    return _aliasSymbols;
-  }
 
   std::vector<std::unique_ptr<Node>> &getNodes() { return _nodes; }
   const std::vector<std::unique_ptr<Node>> &getNodes() const { return _nodes; }
-
-  /// Notify the LinkingContext when the symbol table found a name collision.
-  /// The useNew parameter specifies which the symbol table plans to keep,
-  /// but that can be changed by the LinkingContext.  This is also an
-  /// opportunity for flavor specific processing.
-  virtual void notifySymbolTableCoalesce(const Atom *existingAtom,
-                                         const Atom *newAtom, bool &useNew) {}
 
   /// This method adds undefined symbols specified by the -u option to the to
   /// the list of undefined symbols known to the linker. This option essentially
@@ -242,7 +153,7 @@ public:
 
   /// Return the list of undefined symbols that are specified in the
   /// linker command line, using the -u option.
-  range<const StringRef *> initialUndefinedSymbols() const {
+  ArrayRef<StringRef> initialUndefinedSymbols() const {
     return _initialUndefinedSymbols;
   }
 
@@ -255,9 +166,7 @@ public:
   bool validate(raw_ostream &diagnostics);
 
   /// Formats symbol name for use in error messages.
-  virtual std::string demangle(StringRef symbolName) const {
-    return symbolName;
-  }
+  virtual std::string demangle(StringRef symbolName) const = 0;
 
   /// @}
   /// \name Methods used by Driver::link()
@@ -269,19 +178,6 @@ public:
   /// the linker to write to an in-memory buffer.
   StringRef outputPath() const { return _outputPath; }
 
-  /// Set the various output file types that the linker would
-  /// create
-  bool setOutputFileType(StringRef outputFileType) {
-    if (outputFileType.equals_lower("yaml")) {
-      _outputFileType = OutputFileType::YAML;
-      return true;
-    }
-    return false;
-  }
-
-  /// Returns the output file type that that the linker needs to create.
-  OutputFileType outputFileType() const { return _outputFileType; }
-
   /// Accessor for Register object embedded in LinkingContext.
   const Registry &registry() const { return _registry; }
   Registry &registry() { return _registry; }
@@ -289,34 +185,30 @@ public:
   /// This method is called by core linking to give the Writer a chance
   /// to add file format specific "files" to set of files to be linked. This is
   /// how file format specific atoms can be added to the link.
-  virtual void createImplicitFiles(std::vector<std::unique_ptr<File>> &);
+  virtual void createImplicitFiles(std::vector<std::unique_ptr<File>> &) = 0;
 
   /// This method is called by core linking to build the list of Passes to be
   /// run on the merged/linked graph of all input files.
-  virtual void addPasses(PassManager &pm);
+  virtual void addPasses(PassManager &pm) = 0;
 
   /// Calls through to the writeFile() method on the specified Writer.
   ///
   /// \param linkedFile This is the merged/linked graph of all input file Atoms.
-  virtual std::error_code writeFile(const File &linkedFile) const;
+  virtual llvm::Error writeFile(const File &linkedFile) const;
 
   /// Return the next ordinal and Increment it.
   virtual uint64_t getNextOrdinalAndIncrement() const { return _nextOrdinal++; }
 
   // This function is called just before the Resolver kicks in.
   // Derived classes may use it to change the list of input files.
-  virtual void finalizeInputFiles() {}
+  virtual void finalizeInputFiles() = 0;
 
   /// Callback invoked for each file the Resolver decides we are going to load.
   /// This can be used to update context state based on the file, and emit
   /// errors for any differences between the context state and a loaded file.
   /// For example, we can error if we try to load a file which is a different
   /// arch from that being linked.
-  virtual std::error_code handleLoadedFile(File &file) {
-    return std::error_code();
-  }
-
-  TaskGroup &getTaskGroup() { return _taskGroup; }
+  virtual llvm::Error handleLoadedFile(File &file) = 0;
 
   /// @}
 protected:
@@ -333,36 +225,25 @@ protected:
   virtual std::unique_ptr<File> createUndefinedSymbolFile() const;
   std::unique_ptr<File> createUndefinedSymbolFile(StringRef filename) const;
 
-  /// Method to create an internal file for alias symbols
-  std::unique_ptr<File> createAliasSymbolFile() const;
-
   StringRef _outputPath;
   StringRef _entrySymbolName;
-  bool _deadStrip;
-  bool _allowDuplicates;
-  bool _globalsAreDeadStripRoots;
-  bool _searchArchivesToOverrideTentativeDefinitions;
-  bool _searchSharedLibrariesToOverrideTentativeDefinitions;
-  bool _warnIfCoalesableAtomsHaveDifferentCanBeNull;
-  bool _warnIfCoalesableAtomsHaveDifferentLoadName;
-  bool _printRemainingUndefines;
-  bool _allowRemainingUndefines;
-  bool _logInputFiles;
-  bool _allowShlibUndefines;
-  OutputFileType _outputFileType;
+  bool _deadStrip = false;
+  bool _globalsAreDeadStripRoots = false;
+  bool _printRemainingUndefines = true;
+  bool _allowRemainingUndefines = false;
+  bool _logInputFiles = false;
+  bool _allowShlibUndefines = false;
   std::vector<StringRef> _deadStripRoots;
-  std::map<std::string, std::string> _aliasSymbols;
   std::vector<const char *> _llvmOptions;
   StringRefVector _initialUndefinedSymbols;
   std::vector<std::unique_ptr<Node>> _nodes;
   mutable llvm::BumpPtrAllocator _allocator;
-  mutable uint64_t _nextOrdinal;
+  mutable uint64_t _nextOrdinal = 0;
   Registry _registry;
 
 private:
   /// Validate the subclass bits. Only called by validate.
   virtual bool validateImpl(raw_ostream &diagnostics) = 0;
-  TaskGroup _taskGroup;
 };
 
 } // end namespace lld

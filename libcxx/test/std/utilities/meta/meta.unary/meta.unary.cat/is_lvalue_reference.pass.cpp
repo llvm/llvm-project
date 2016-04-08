@@ -69,6 +69,7 @@ class Abstract
 };
 
 enum Enum {zero, one};
+struct incomplete_type;
 
 typedef void (*FunctionPtr)();
 
@@ -92,4 +93,5 @@ int main()
     test_is_not_lvalue_reference<bit_zero>();
     test_is_not_lvalue_reference<NotEmpty>();
     test_is_not_lvalue_reference<Abstract>();
+    test_is_not_lvalue_reference<incomplete_type>();
 }

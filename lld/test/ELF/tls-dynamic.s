@@ -14,13 +14,13 @@
   leaq  c@tlsgd(%rip), %rdi
   rex64
   callq __tls_get_addr@PLT
-  leaq  c@dtpoff(%rax), %rcx
+  leaq  a@dtpoff(%rax), %rcx
   // Initial Exec Model Code Sequence, II
   movq c@gottpoff(%rip),%rax
   movq %fs:(%rax),%rax
   movabs $a@dtpoff, %rax
   movabs $b@dtpoff, %rax
-  movabs $c@dtpoff, %rax
+  movabs $a@dtpoff, %rax
 
   .global a
   .hidden a
@@ -79,9 +79,9 @@ c:
 // DIS-NEXT:     102c: 00 00
 // DIS-NEXT:     102e: {{.+}} leaq    4267(%rip), %rdi
 // DIS-NEXT:     1035: {{.+}} callq
-// DIS-NEXT:     103b: {{.+}} leaq    8(%rax), %rcx
+// DIS-NEXT:     103b: {{.+}} leaq    (%rax), %rcx
 // DIS-NEXT:     1042: {{.+}} movq    4263(%rip), %rax
 // DIS-NEXT:     1049: {{.+}} movq    %fs:(%rax), %rax
 // DIS-NEXT:     104d: {{.+}} movabsq $0, %rax
 // DIS-NEXT:     1057: {{.+}} movabsq $4, %rax
-// DIS-NEXT:     1061: {{.+}} movabsq $8, %rax
+// DIS-NEXT:     1061: {{.+}} movabsq $0, %rax

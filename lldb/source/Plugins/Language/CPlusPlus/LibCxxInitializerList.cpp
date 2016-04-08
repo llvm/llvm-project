@@ -56,12 +56,12 @@ namespace lldb_private {
 } // namespace lldb_private
 
 lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::LibcxxInitializerListSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
-SyntheticChildrenFrontEnd(*valobj_sp.get()),
-m_start(NULL),
-m_element_type(),
-m_element_size(0),
-m_num_elements(0),
-m_children()
+    SyntheticChildrenFrontEnd(*valobj_sp),
+    m_start(nullptr),
+    m_element_type(),
+    m_element_size(0),
+    m_num_elements(0),
+    m_children()
 {
     if (valobj_sp)
         Update();
@@ -113,7 +113,7 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::Update()
     m_children.clear();
     lldb::TemplateArgumentKind kind;
     m_element_type = m_backend.GetCompilerType().GetTemplateArgument(0, kind);
-    if (kind != lldb::eTemplateArgumentKindType || false == m_element_type.IsValid())
+    if (kind != lldb::eTemplateArgumentKindType || !m_element_type.IsValid())
         return false;
     
     m_element_size = m_element_type.GetByteSize(nullptr);
@@ -141,7 +141,5 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::GetIndexOfChil
 lldb_private::SyntheticChildrenFrontEnd*
 lldb_private::formatters::LibcxxInitializerListSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
 {
-    if (!valobj_sp)
-        return NULL;
-    return (new LibcxxInitializerListSyntheticFrontEnd(valobj_sp));
+    return (valobj_sp ? new LibcxxInitializerListSyntheticFrontEnd(valobj_sp) : nullptr);
 }

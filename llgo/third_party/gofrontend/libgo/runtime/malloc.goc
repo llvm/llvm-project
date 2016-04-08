@@ -64,7 +64,7 @@ extern volatile intgo runtime_MemProfileRate
   __asm__ (GOSYM_PREFIX "runtime.MemProfileRate");
 
 static MSpan* largealloc(uint32, uintptr*);
-static void profilealloc(void *v, uintptr size);
+static void runtime_profilealloc(void *v, uintptr size);
 static void settype(MSpan *s, void *v, uintptr typ);
 
 // Allocate an object of at least size bytes.
@@ -250,7 +250,7 @@ runtime_mallocgc(uintptr size, uintptr typ, uint32 flag)
 		if(size < (uintptr)rate && size < (uintptr)(uint32)c->next_sample)
 			c->next_sample -= size;
 		else
-			profilealloc(v, size);
+			runtime_profilealloc(v, size);
 	}
 
 	m->locks--;
@@ -290,7 +290,7 @@ largealloc(uint32 flag, uintptr *sizep)
 }
 
 static void
-profilealloc(void *v, uintptr size)
+runtime_profilealloc(void *v, uintptr size)
 {
 	uintptr rate;
 	int32 next;

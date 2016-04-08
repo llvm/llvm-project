@@ -23,8 +23,7 @@ uint32_t
 access_pool (bool flag = false)
 {
     static std::mutex g_access_mutex;
-    if (!flag)
-        g_access_mutex.lock();
+    g_access_mutex.lock();
 
     uint32_t old_val = g_val;
     if (flag)
@@ -33,17 +32,14 @@ access_pool (bool flag = false)
         g_val = old_val + 1;
     }
 
-    if (!flag)
-        g_access_mutex.unlock();
+    g_access_mutex.unlock();
     return g_val;
 }
 
 void
 thread_func (uint32_t thread_index)
 {
-    // Break here in order to allow the thread
-    // to inherit the global watchpoint state.
-    printf ("%s (thread index = %u) startng...\n", __FUNCTION__, thread_index);
+    printf ("%s (thread index = %u) starting...\n", __FUNCTION__, thread_index);
 
     uint32_t count = 0;
     uint32_t val;

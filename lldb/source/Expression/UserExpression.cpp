@@ -195,6 +195,11 @@ UserExpression::Evaluate (ExecutionContext &exe_ctx,
 
     if (process == NULL || !process->CanJIT())
         execution_policy = eExecutionPolicyNever;
+    
+    // We need to set the expression execution thread here, turns out parse can call functions in the process of
+    // looking up symbols, which will escape the context set by exe_ctx passed to Execute.
+    lldb::ThreadSP thread_sp = exe_ctx.GetThreadSP();
+    ThreadList::ExpressionExecutionThreadPusher execution_thread_pusher(thread_sp);
 
     const char *full_prefix = NULL;
     const char *option_prefix = options.GetPrefix();
@@ -268,7 +273,7 @@ UserExpression::Evaluate (ExecutionContext &exe_ctx,
                                                    keep_expression_in_memory,
                                                    generate_debug_info,
                                                    0);
-    
+
     // Calculate the fixed expression always, since we need it for errors.
     std::string tmp_fixed_expression;
     if (fixed_expression == nullptr)

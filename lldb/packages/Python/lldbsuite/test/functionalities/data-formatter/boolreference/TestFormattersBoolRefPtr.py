@@ -57,6 +57,8 @@ class DataFormatterBoolRefPtr(TestBase):
                     substrs = ['YES'])
         self.expect('frame variable no_ref',
                     substrs = ['NO'])
+        self.expect('frame variable unset_ref',
+                    substrs = ['12'])
 
 
         # Now check that we use the right summary for BOOL*
@@ -64,6 +66,8 @@ class DataFormatterBoolRefPtr(TestBase):
                     substrs = ['YES'])
         self.expect('frame variable no_ptr',
                     substrs = ['NO'])
+        self.expect('frame variable unset_ptr',
+                    substrs = ['12'])
 
 
         # Now check that we use the right summary for BOOL
@@ -71,3 +75,5 @@ class DataFormatterBoolRefPtr(TestBase):
                     substrs = ['YES'])
         self.expect('frame variable no',
                     substrs = ['NO'])
+        self.expect('frame variable unset',
+                    substrs = ['12'])

@@ -7,14 +7,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
+// C Includes
+// C++ Includes
+#include <climits>
 
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Log.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Target/FileAction.h"
+#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Target.h"
+
+#include "llvm/Support/ConvertUTF.h"
 
 #if !defined(_WIN32)
 #include <limits.h>
@@ -27,19 +35,19 @@ using namespace lldb_private;
 // ProcessLaunchInfo member functions
 //----------------------------------------------------------------------------
 
-ProcessLaunchInfo::ProcessLaunchInfo () :
+ProcessLaunchInfo::ProcessLaunchInfo() :
     ProcessInfo(),
-    m_working_dir (),
-    m_plugin_name (),
-    m_flags (0),
-    m_file_actions (),
-    m_pty (new lldb_utility::PseudoTerminal),
-    m_resume_count (0),
-    m_monitor_callback (NULL),
-    m_monitor_callback_baton (NULL),
-    m_monitor_signals (false),
-    m_listener_sp (),
-    m_hijack_listener_sp ()
+    m_working_dir(),
+    m_plugin_name(),
+    m_flags(0),
+    m_file_actions(),
+    m_pty(new lldb_utility::PseudoTerminal),
+    m_resume_count(0),
+    m_monitor_callback(nullptr),
+    m_monitor_callback_baton(nullptr),
+    m_monitor_signals(false),
+    m_listener_sp(),
+    m_hijack_listener_sp()
 {
 }
 
@@ -55,8 +63,8 @@ ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
     m_file_actions(),
     m_pty(new lldb_utility::PseudoTerminal),
     m_resume_count(0),
-    m_monitor_callback(NULL),
-    m_monitor_callback_baton(NULL),
+    m_monitor_callback(nullptr),
+    m_monitor_callback_baton(nullptr),
     m_monitor_signals(false),
     m_listener_sp (),
     m_hijack_listener_sp()
@@ -143,7 +151,7 @@ ProcessLaunchInfo::GetFileActionAtIndex(size_t idx) const
 {
     if (idx < m_file_actions.size())
         return &m_file_actions[idx];
-    return NULL;
+    return nullptr;
 }
 
 const FileAction *
@@ -154,7 +162,7 @@ ProcessLaunchInfo::GetFileActionForFD(int fd) const
         if (m_file_actions[idx].GetFD () == fd)
             return &m_file_actions[idx];
     }
-    return NULL;
+    return nullptr;
 }
 
 const FileSpec &
@@ -172,9 +180,7 @@ ProcessLaunchInfo::SetWorkingDirectory(const FileSpec &working_dir)
 const char *
 ProcessLaunchInfo::GetProcessPluginName () const
 {
-    if (m_plugin_name.empty())
-        return NULL;
-    return m_plugin_name.c_str();
+    return (m_plugin_name.empty() ? nullptr : m_plugin_name.c_str());
 }
 
 void
@@ -277,9 +283,9 @@ ProcessLaunchInfo::FinalizeFileActions (Target *target, bool default_to_use_pty)
 
     // If nothing for stdin or stdout or stderr was specified, then check the process for any default
     // settings that were set with "settings set"
-    if (GetFileActionForFD(STDIN_FILENO) == NULL ||
-        GetFileActionForFD(STDOUT_FILENO) == NULL ||
-        GetFileActionForFD(STDERR_FILENO) == NULL)
+    if (GetFileActionForFD(STDIN_FILENO) == nullptr ||
+        GetFileActionForFD(STDOUT_FILENO) == nullptr ||
+        GetFileActionForFD(STDERR_FILENO) == nullptr)
     {
         if (log)
             log->Printf ("ProcessLaunchInfo::%s at least one of stdin/stdout/stderr was not set, evaluating default handling",
@@ -314,11 +320,11 @@ ProcessLaunchInfo::FinalizeFileActions (Target *target, bool default_to_use_pty)
             {
                 // Only override with the target settings if we don't already have
                 // an action for in, out or error
-                if (GetFileActionForFD(STDIN_FILENO) == NULL)
+                if (GetFileActionForFD(STDIN_FILENO) == nullptr)
                     in_file_spec = target->GetStandardInputPath();
-                if (GetFileActionForFD(STDOUT_FILENO) == NULL)
+                if (GetFileActionForFD(STDOUT_FILENO) == nullptr)
                     out_file_spec = target->GetStandardOutputPath();
-                if (GetFileActionForFD(STDERR_FILENO) == NULL)
+                if (GetFileActionForFD(STDERR_FILENO) == nullptr)
                     err_file_spec = target->GetStandardErrorPath();
             }
 
@@ -366,27 +372,27 @@ ProcessLaunchInfo::FinalizeFileActions (Target *target, bool default_to_use_pty)
                 // this will have to do for now.
                 open_flags |= O_CLOEXEC;
 #endif
-                if (m_pty->OpenFirstAvailableMaster(open_flags, NULL, 0))
+                if (m_pty->OpenFirstAvailableMaster(open_flags, nullptr, 0))
                 {
-                    const FileSpec slave_file_spec{m_pty->GetSlaveName(NULL, 0), false};
+                    const FileSpec slave_file_spec{m_pty->GetSlaveName(nullptr, 0), false};
 
                     // Only use the slave tty if we don't have anything specified for
                     // input and don't have an action for stdin
-                    if (!in_file_spec && GetFileActionForFD(STDIN_FILENO) == NULL)
+                    if (!in_file_spec && GetFileActionForFD(STDIN_FILENO) == nullptr)
                     {
                         AppendOpenFileAction(STDIN_FILENO, slave_file_spec, true, false);
                     }
 
                     // Only use the slave tty if we don't have anything specified for
                     // output and don't have an action for stdout
-                    if (!out_file_spec && GetFileActionForFD(STDOUT_FILENO) == NULL)
+                    if (!out_file_spec && GetFileActionForFD(STDOUT_FILENO) == nullptr)
                     {
                         AppendOpenFileAction(STDOUT_FILENO, slave_file_spec, false, true);
                     }
 
                     // Only use the slave tty if we don't have anything specified for
                     // error and don't have an action for stderr
-                    if (!err_file_spec && GetFileActionForFD(STDERR_FILENO) == NULL)
+                    if (!err_file_spec && GetFileActionForFD(STDERR_FILENO) == nullptr)
                     {
                         AppendOpenFileAction(STDERR_FILENO, slave_file_spec, false, true);
                     }
@@ -395,7 +401,6 @@ ProcessLaunchInfo::FinalizeFileActions (Target *target, bool default_to_use_pty)
         }
     }
 }
-
 
 bool
 ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell (Error &error,
@@ -413,7 +418,7 @@ ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell (Error &error,
             std::string shell_executable = m_shell.GetPath();
 
             const char **argv = GetArguments().GetConstArgumentVector ();
-            if (argv == NULL || argv[0] == NULL)
+            if (argv == nullptr || argv[0] == nullptr)
                 return false;
             Args shell_arguments;
             std::string safe_arg;
@@ -451,8 +456,8 @@ ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell (Error &error,
                         if (cwd && cwd[0])
                             new_path += cwd;
                     }
-                    const char *curr_path = getenv("PATH");
-                    if (curr_path)
+                    std::string curr_path;
+                    if (HostInfo::GetEnvironmentVar("PATH", curr_path))
                     {
                         if (new_path.size() > empty_path_len)
                             new_path += ':';
@@ -496,9 +501,11 @@ ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell (Error &error,
             }
             else
             {
-                for (size_t i=0; argv[i] != NULL; ++i)
+                for (size_t i=0; argv[i] != nullptr; ++i)
                 {
-                    const char *arg = Args::GetShellSafeArgument (argv[i], safe_arg);
+                    const char *arg = Args::GetShellSafeArgument (m_shell,
+                                                                  argv[i],
+                                                                  safe_arg);
                     shell_command.Printf(" %s", arg);
                 }
             }
@@ -519,11 +526,11 @@ ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell (Error &error,
     return false;
 }
 
-Listener &
+ListenerSP
 ProcessLaunchInfo::GetListenerForProcess (Debugger &debugger)
 {
     if (m_listener_sp)
-        return *m_listener_sp;
+        return m_listener_sp;
     else
         return debugger.GetListener();
 }

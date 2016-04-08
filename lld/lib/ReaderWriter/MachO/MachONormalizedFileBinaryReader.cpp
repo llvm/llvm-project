@@ -53,7 +53,7 @@ namespace mach_o {
 namespace normalized {
 
 // Utility to call a lambda expression on each load command.
-static std::error_code forEachLoadCommand(
+static llvm::Error forEachLoadCommand(
     StringRef lcRange, unsigned lcCount, bool isBig, bool is64,
     std::function<bool(uint32_t cmd, uint32_t size, const char *lc)> func) {
   const char* p = lcRange.begin();
@@ -67,15 +67,15 @@ static std::error_code forEachLoadCommand(
       slc = &lcCopy;
     }
     if ( (p + slc->cmdsize) > lcRange.end() )
-      return make_error_code(llvm::errc::executable_format_error);
+      return llvm::make_error<GenericError>("Load command exceeds range");
 
     if (func(slc->cmd, slc->cmdsize, p))
-      return std::error_code();
+      return llvm::Error();
 
     p += slc->cmdsize;
   }
 
-  return std::error_code();
+  return llvm::Error();
 }
 
 static std::error_code appendRelocations(Relocations &relocs, StringRef buffer,
@@ -199,7 +199,7 @@ bool sliceFromFatFile(MemoryBufferRef mb, MachOLinkingContext::Arch arch,
 }
 
 /// Reads a mach-o file and produces an in-memory normalized view.
-ErrorOr<std::unique_ptr<NormalizedFile>>
+llvm::Expected<std::unique_ptr<NormalizedFile>>
 readBinary(std::unique_ptr<MemoryBuffer> &mb,
            const MachOLinkingContext::Arch arch) {
   // Make empty NormalizedFile.
@@ -220,7 +220,7 @@ readBinary(std::unique_ptr<MemoryBuffer> &mb,
   // Determine endianness and pointer size for mach-o file.
   bool is64, isBig;
   if (!isMachOHeader(mh, is64, isBig))
-    return make_error_code(llvm::errc::executable_format_error);
+    return llvm::make_error<GenericError>("File is not a mach-o");
 
   // Endian swap header, if needed.
   mach_header headerCopy;
@@ -237,12 +237,13 @@ readBinary(std::unique_ptr<MemoryBuffer> &mb,
       start + (is64 ? sizeof(mach_header_64) : sizeof(mach_header));
   StringRef lcRange(lcStart, smh->sizeofcmds);
   if (lcRange.end() > (start + objSize))
-    return make_error_code(llvm::errc::executable_format_error);
+    return llvm::make_error<GenericError>("Load commands exceed file size");
 
   // Get architecture from mach_header.
   f->arch = MachOLinkingContext::archFromCpuType(smh->cputype, smh->cpusubtype);
   if (f->arch != arch) {
-    return make_dynamic_error_code(Twine("file is wrong architecture. Expected "
+    return llvm::make_error<GenericError>(
+                                  Twine("file is wrong architecture. Expected "
                                   "(" + MachOLinkingContext::nameFromArch(arch)
                                   + ") found ("
                                   + MachOLinkingContext::nameFromArch(f->arch)
@@ -256,9 +257,9 @@ readBinary(std::unique_ptr<MemoryBuffer> &mb,
   // Pre-scan load commands looking for indirect symbol table.
   uint32_t indirectSymbolTableOffset = 0;
   uint32_t indirectSymbolTableCount = 0;
-  std::error_code ec = forEachLoadCommand(lcRange, lcCount, isBig, is64,
-                                          [&](uint32_t cmd, uint32_t size,
-                                              const char *lc) -> bool {
+  auto ec = forEachLoadCommand(lcRange, lcCount, isBig, is64,
+                               [&](uint32_t cmd, uint32_t size,
+                                   const char *lc) -> bool {
     if (cmd == LC_DYSYMTAB) {
       const dysymtab_command *d = reinterpret_cast<const dysymtab_command*>(lc);
       indirectSymbolTableOffset = read32(&d->indirectsymoff, isBig);
@@ -268,7 +269,7 @@ readBinary(std::unique_ptr<MemoryBuffer> &mb,
     return false;
   });
   if (ec)
-    return ec;
+    return std::move(ec);
 
   // Walk load commands looking for segments/sections and the symbol table.
   const data_in_code_entry *dataInCode = nullptr;
@@ -380,11 +381,11 @@ readBinary(std::unique_ptr<MemoryBuffer> &mb,
             reinterpret_cast<const nlist_64 *>(start + symOffset);
         // Convert each nlist_64 to a lld::mach_o::normalized::Symbol.
         for(uint32_t i=0; i < symCount; ++i) {
-          const nlist_64 *sin = &symbols[i];
           nlist_64 tempSym;
-          if (isBig != llvm::sys::IsBigEndianHost) {
-            tempSym = *sin; swapStruct(tempSym); sin = &tempSym;
-          }
+          memcpy(&tempSym, &symbols[i], sizeof(nlist_64));
+          const nlist_64 *sin = &tempSym;
+          if (isBig != llvm::sys::IsBigEndianHost)
+            swapStruct(tempSym);
           Symbol sout;
           if (sin->n_strx > strSize)
             return true;
@@ -484,7 +485,7 @@ readBinary(std::unique_ptr<MemoryBuffer> &mb,
     return false;
   });
   if (ec)
-    return ec;
+    return std::move(ec);
 
   if (dataInCode) {
     // Convert on-disk data_in_code_entry array to DataInCode vector.

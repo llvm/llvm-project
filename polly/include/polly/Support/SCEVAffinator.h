@@ -46,7 +46,7 @@ class ScopStmt;
 /// Translate a SCEV to an isl_pw_aff.
 struct SCEVAffinator : public llvm::SCEVVisitor<SCEVAffinator, isl_pw_aff *> {
 public:
-  SCEVAffinator(Scop *S);
+  SCEVAffinator(Scop *S, llvm::LoopInfo &LI);
   ~SCEVAffinator();
 
   /// @brief Translate a SCEV to an isl_pw_aff.
@@ -81,6 +81,7 @@ private:
   unsigned NumIterators;
   const llvm::Region &R;
   llvm::ScalarEvolution &SE;
+  llvm::LoopInfo &LI;
   llvm::BasicBlock *BB;
 
   /// @brief Target data for element size computing.

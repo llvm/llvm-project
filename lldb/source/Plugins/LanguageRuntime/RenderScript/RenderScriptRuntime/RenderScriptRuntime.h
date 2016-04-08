@@ -321,8 +321,6 @@ protected:
     bool m_breakAllKernels;
     static const HookDefn s_runtimeHookDefns[];
     static const size_t s_runtimeHookCount;
-    static const std::string s_runtimeExpandSuffix;
-    static const std::array<const char *, 3> s_runtimeCoordVars;
 
 private:
     RenderScriptRuntime(Process *process); // Call CreateInstance instead.

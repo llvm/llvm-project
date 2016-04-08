@@ -10,12 +10,10 @@
 
 #if defined(_MSC_VER)
 
-// this will stop signal.h being included
-#define _INC_SIGNAL
-
 #include <io.h>
 #include <eh.h>
 #include <inttypes.h>
+#include <signal.h>
 #include <lldb/Host/windows/Windows.h>
 #include <lldb/Host/HostGetOpt.h>
 
@@ -60,7 +58,7 @@ struct termios
 typedef long pid_t;
 
 #define STDIN_FILENO 0
-#define PATH_MAX MAX_PATH
+#define PATH_MAX 32768
 #define snprintf _snprintf
 
 extern int ioctl(int d, int request, ...);
@@ -73,7 +71,6 @@ typedef void (*sighandler_t)(int);
 
 // CODETAG_IOR_SIGNALS
 // signal.h
-#define SIGINT 2                   // Terminal interrupt signal
 #define SIGQUIT 3                  // Terminal quit signal
 #define SIGKILL 9                  // Kill (cannot be caught or ignored)
 #define SIGPIPE 13                 // Write on a pipe with no one to read it
@@ -81,10 +78,6 @@ typedef void (*sighandler_t)(int);
 #define SIGTSTP 20                 // Terminal stop signal
 #define SIGSTOP 23                 // Stop executing (cannot be caught or ignored)
 #define SIGWINCH 28                // (== SIGVTALRM)
-#define SIG_DFL ((sighandler_t)-1) // Default handler
-#define SIG_IGN ((sighandler_t)-2) // Ignored
-
-extern sighandler_t signal(int sig, sighandler_t);
 
 #else
 

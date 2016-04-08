@@ -486,7 +486,7 @@ SystemRuntimeMacOSX::GetExtendedBacktraceThread (ThreadSP real_thread, ConstStri
         }
         else
         {
-            ThreadSP cur_thread_sp (m_process->GetThreadList().GetSelectedThread());
+            ThreadSP cur_thread_sp (m_process->GetThreadList().GetExpressionExecutionThread());
             AppleGetThreadItemInfoHandler::GetThreadItemInfoReturnInfo ret = m_get_thread_item_info_handler.GetThreadItemInfo (*cur_thread_sp.get(), real_thread->GetID(), m_page_to_free, m_page_to_free_size, error);
             m_page_to_free = LLDB_INVALID_ADDRESS;
             m_page_to_free_size = 0;
@@ -524,7 +524,7 @@ SystemRuntimeMacOSX::GetExtendedBacktraceFromItemRef (lldb::addr_t item_ref)
     ThreadSP return_thread_sp;
 
     AppleGetItemInfoHandler::GetItemInfoReturnInfo ret;
-    ThreadSP cur_thread_sp (m_process->GetThreadList().GetSelectedThread());
+    ThreadSP cur_thread_sp (m_process->GetThreadList().GetExpressionExecutionThread());
     Error error;
     ret = m_get_item_info_handler.GetItemInfo (*cur_thread_sp.get(), item_ref, m_page_to_free, m_page_to_free_size, error);
     m_page_to_free = LLDB_INVALID_ADDRESS;
@@ -696,7 +696,7 @@ SystemRuntimeMacOSX::PopulateQueueList (lldb_private::QueueList &queue_list)
     if (BacktraceRecordingHeadersInitialized())
     {
         AppleGetQueuesHandler::GetQueuesReturnInfo queue_info_pointer;
-        ThreadSP cur_thread_sp (m_process->GetThreadList().GetSelectedThread());
+        ThreadSP cur_thread_sp (m_process->GetThreadList().GetExpressionExecutionThread());
         if (cur_thread_sp)
         { 
             Error error;
@@ -760,7 +760,7 @@ SystemRuntimeMacOSX::GetPendingItemRefsForQueue (lldb::addr_t queue)
 {
     PendingItemsForQueue pending_item_refs;
     AppleGetPendingItemsHandler::GetPendingItemsReturnInfo pending_items_pointer;
-    ThreadSP cur_thread_sp (m_process->GetThreadList().GetSelectedThread());
+    ThreadSP cur_thread_sp (m_process->GetThreadList().GetExpressionExecutionThread());
     if (cur_thread_sp)
     { 
         Error error;
@@ -859,7 +859,7 @@ SystemRuntimeMacOSX::CompleteQueueItem (QueueItem *queue_item, addr_t item_ref)
 {
     AppleGetItemInfoHandler::GetItemInfoReturnInfo ret;
 
-    ThreadSP cur_thread_sp (m_process->GetThreadList().GetSelectedThread());
+    ThreadSP cur_thread_sp (m_process->GetThreadList().GetExpressionExecutionThread());
     Error error;
     ret = m_get_item_info_handler.GetItemInfo (*cur_thread_sp.get(), item_ref, m_page_to_free, m_page_to_free_size, error);
     m_page_to_free = LLDB_INVALID_ADDRESS;

@@ -14,6 +14,7 @@
 #include "lldb/Host/windows/HostProcessWindows.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/ConvertUTF.h"
 
 #include <Psapi.h>
 
@@ -70,9 +71,15 @@ Error HostProcessWindows::GetMainModule(FileSpec &file_spec) const
     if (m_process == nullptr)
         error.SetError(ERROR_INVALID_HANDLE, lldb::eErrorTypeWin32);
 
-    char path[MAX_PATH] = { 0 };
-    if (::GetProcessImageFileName(m_process, path, llvm::array_lengthof(path)))
-        file_spec.SetFile(path, false);
+    std::vector<wchar_t> wpath(PATH_MAX);
+    if (::GetProcessImageFileNameW(m_process, wpath.data(), wpath.size()))
+    {
+        std::string path;
+        if (llvm::convertWideToUTF8(wpath.data(), path))
+            file_spec.SetFile(path, false);
+        else
+            error.SetErrorString("Error converting path to UTF-8");
+    }
     else
         error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
 

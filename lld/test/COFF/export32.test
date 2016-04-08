@@ -85,7 +85,7 @@ sections:
     SectionData:     B800000000506800000000680000000050E80000000050E800000000
   - Name:            .drectve
     Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
-    Alignment:       2147483648
+    Alignment:       1
     SectionData:     2f6578706f72743a5f6578706f7274666e3300  # /export:_exportfn3
 symbols:
   - Name:            .text

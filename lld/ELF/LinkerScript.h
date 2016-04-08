@@ -17,7 +17,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 class ScriptParser;
 template <class ELFT> class InputSectionBase;
@@ -25,12 +25,16 @@ template <class ELFT> class InputSectionBase;
 // This class represents each rule in SECTIONS command.
 class SectionRule {
 public:
-  SectionRule(StringRef D, StringRef S) : Dest(D), SectionPattern(S) {}
+  SectionRule(StringRef D, StringRef S, bool Keep)
+      : Dest(D), Keep(Keep), SectionPattern(S) {}
 
   // Returns true if S should be in Dest section.
   template <class ELFT> bool match(InputSectionBase<ELFT> *S);
 
   StringRef Dest;
+
+  // KEEP command saves unused sections even if --gc-sections is specified.
+  bool Keep = false;
 
 private:
   StringRef SectionPattern;
@@ -46,22 +50,29 @@ public:
   void read(MemoryBufferRef MB);
 
   template <class ELFT> StringRef getOutputSection(InputSectionBase<ELFT> *S);
+  ArrayRef<uint8_t> getFiller(StringRef Name);
   template <class ELFT> bool isDiscarded(InputSectionBase<ELFT> *S);
+  template <class ELFT> bool shouldKeep(InputSectionBase<ELFT> *S);
   int compareSections(StringRef A, StringRef B);
 
 private:
+  template <class ELFT> SectionRule *find(InputSectionBase<ELFT> *S);
+
   // SECTIONS commands.
   std::vector<SectionRule> Sections;
 
   // Output sections are sorted by this order.
   std::vector<StringRef> SectionOrder;
 
+  // Section fill attribute for each section.
+  llvm::StringMap<std::vector<uint8_t>> Filler;
+
   llvm::BumpPtrAllocator Alloc;
 };
 
 extern LinkerScript *Script;
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

@@ -11,17 +11,17 @@
 
 // C Includes
 // C++ Includes
+#include <cstring>
 #include <atomic>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/StreamFile.h"
-#include <string.h>
 
 using namespace lldb;
 using namespace lldb_private;
-
 
 // We want to avoid global constructors where code needs to be run so here we
 // control access to our static g_log_sp by hiding it in a singleton function
@@ -29,12 +29,13 @@ using namespace lldb_private;
 // called.
 
 static std::atomic<bool> g_log_enabled {false};
-static Log * g_log = NULL;
+static Log * g_log = nullptr;
+
 static Log *
 GetLog ()
 {
     if (!g_log_enabled)
-        return NULL;
+        return nullptr;
     return g_log;
 }
 
@@ -62,7 +63,7 @@ lldb_private::GetLogIfAllCategoriesSet (uint32_t mask)
     {
         uint32_t log_mask = log->GetMask().Get();
         if ((log_mask & mask) != mask)
-            return NULL;
+            return nullptr;
     }
     return log;
 }
@@ -84,7 +85,7 @@ void
 lldb_private::LogIfAnyCategoriesSet (uint32_t mask, const char *format, ...)
 {
     Log *log(GetLogIfAnyCategoriesSet (mask));
-    if (log)
+    if (log != nullptr)
     {
         va_list args;
         va_start (args, format);
@@ -97,9 +98,9 @@ Log *
 lldb_private::GetLogIfAnyCategoriesSet (uint32_t mask)
 {
     Log *log(GetLog ());
-    if (log && mask && (mask & log->GetMask().Get()))
+    if (log != nullptr && mask && (mask & log->GetMask().Get()))
         return log;
-    return NULL;
+    return nullptr;
 }
 
 void
@@ -107,13 +108,13 @@ lldb_private::DisableLog (const char **categories, Stream *feedback_strm)
 {
     Log *log(GetLog ());
 
-    if (log)
+    if (log != nullptr)
     {
         uint32_t flag_bits = 0;
-        if (categories[0] != NULL)
+        if (categories[0] != nullptr)
         {
             flag_bits = log->GetMask().Get();
-            for (size_t i = 0; categories[i] != NULL; ++i)
+            for (size_t i = 0; categories[i] != nullptr; ++i)
             {
                 const char *arg = categories[i];
 
@@ -164,8 +165,6 @@ lldb_private::DisableLog (const char **categories, Stream *feedback_strm)
             g_log_enabled = false;
         }
     }
-
-    return;
 }
 
 Log *
@@ -174,7 +173,7 @@ lldb_private::EnableLog (StreamSP &log_stream_sp, uint32_t log_options, const ch
     // Try see if there already is a log - that way we can reuse its settings.
     // We could reuse the log in toto, but we don't know that the stream is the same.
     uint32_t flag_bits;
-    if (g_log)
+    if (g_log != nullptr)
         flag_bits = g_log->GetMask().Get();
     else
         flag_bits = 0;
@@ -182,15 +181,15 @@ lldb_private::EnableLog (StreamSP &log_stream_sp, uint32_t log_options, const ch
     // Now make a new log with this stream if one was provided
     if (log_stream_sp)
     {
-        if (g_log)
+        if (g_log != nullptr)
             g_log->SetStream(log_stream_sp);
         else
             g_log = new Log(log_stream_sp);
     }
 
-    if (g_log)
+    if (g_log != nullptr)
     {
-        for (size_t i=0; categories[i] != NULL; ++i)
+        for (size_t i = 0; categories[i] != nullptr; ++i)
         {
             const char *arg = categories[i];
 
@@ -240,7 +239,6 @@ lldb_private::EnableLog (StreamSP &log_stream_sp, uint32_t log_options, const ch
     g_log_enabled = true;
     return g_log;
 }
-
 
 void
 lldb_private::ListLogCategories (Stream *strm)

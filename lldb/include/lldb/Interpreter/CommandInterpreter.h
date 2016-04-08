@@ -20,6 +20,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Log.h"
+#include "lldb/Interpreter/CommandAlias.h"
 #include "lldb/Interpreter/CommandHistory.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -200,8 +201,6 @@ class CommandInterpreter :
     public IOHandlerDelegate
 {
 public:
-    typedef std::map<std::string, OptionArgVectorSP> OptionArgMap;
-
     enum
     {
         eBroadcastBitThreadShouldExit       = (1 << 0),
@@ -277,10 +276,11 @@ public:
     bool
     UserCommandExists (const char *cmd);
 
-    void
-    AddAlias (const char *alias_name, 
-              lldb::CommandObjectSP& command_obj_sp);
-
+    CommandAlias*
+    AddAlias (const char *alias_name,
+              lldb::CommandObjectSP& command_obj_sp,
+              const char *args_string = nullptr);
+    
     // Remove a command if it is removable (python or regex command)
     bool
     RemoveCommand (const char *cmd);
@@ -300,20 +300,8 @@ public:
         m_user_dict.clear();
     }
 
-    OptionArgVectorSP
-    GetAliasOptions (const char *alias_name);
-
-    bool
-    ProcessAliasOptionsArgs (lldb::CommandObjectSP &cmd_obj_sp, 
-                             const char *options_args,
-                             OptionArgVectorSP &option_arg_vector_sp);
-
-    void
-    RemoveAliasOptions (const char *alias_name);
-
-    void
-    AddOrReplaceAliasOptions (const char *alias_name, 
-                              OptionArgVectorSP &option_arg_vector_sp);
+    CommandAlias*
+    GetAlias (const char *alias_name);
 
     CommandObject *
     BuildAliasResult (const char *alias_name, 
@@ -422,7 +410,6 @@ public:
 
     void
     GetAliasHelp (const char *alias_name, 
-                  const char *command_name, 
                   StreamString &help_string);
 
     void
@@ -533,15 +520,13 @@ public:
     bool
     GetSynchronous ();
     
-    size_t
-    FindLongestCommandWord (CommandObject::CommandMap &dict);
-
     void
     FindCommandsForApropos (const char *word, 
                             StringList &commands_found, 
                             StringList &commands_help,
                             bool search_builtin_commands,
-                            bool search_user_commands);
+                            bool search_user_commands,
+                            bool search_alias_commands);
                            
     bool
     GetBatchCommandMode () { return m_batch_command_mode; }
@@ -694,6 +679,12 @@ private:
     CommandObject *
     ResolveCommandImpl(std::string &command_line, CommandReturnObject &result);
 
+    void
+    FindCommandsForApropos (const char *word,
+                            StringList &commands_found,
+                            StringList &commands_help,
+                            CommandObject::CommandMap &command_map);
+    
     Debugger &m_debugger;                       // The debugger session that this interpreter is associated with
     ExecutionContextRef m_exe_ctx_ref;          // The current execution context to use when handling commands
     bool m_synchronous_execution;
@@ -702,7 +693,6 @@ private:
     CommandObject::CommandMap m_command_dict;   // Stores basic built-in commands (they cannot be deleted, removed or overwritten).
     CommandObject::CommandMap m_alias_dict;     // Stores user aliases/abbreviations for commands
     CommandObject::CommandMap m_user_dict;      // Stores user-defined commands
-    OptionArgMap m_alias_options;               // Stores any options (with or without arguments) that go with any alias.
     CommandHistory m_command_history;
     std::string m_repeat_command;               // Stores the command that will be executed for an empty command string.
     lldb::ScriptInterpreterSP m_script_interpreter_sp;

@@ -75,20 +75,19 @@ func heapSort(data Interface, a, b int) {
 // Quicksort, following Bentley and McIlroy,
 // ``Engineering a Sort Function,'' SP&E November 1993.
 
-// medianOfThree moves the median of the three values data[a], data[b], data[c] into data[a].
-func medianOfThree(data Interface, a, b, c int) {
-	m0 := b
-	m1 := a
-	m2 := c
-	// bubble sort on 3 elements
+// medianOfThree moves the median of the three values data[m0], data[m1], data[m2] into data[m1].
+func medianOfThree(data Interface, m1, m0, m2 int) {
+	// sort 3 elements
 	if data.Less(m1, m0) {
 		data.Swap(m1, m0)
 	}
+	// data[m0] <= data[m1]
 	if data.Less(m2, m1) {
 		data.Swap(m2, m1)
-	}
-	if data.Less(m1, m0) {
-		data.Swap(m1, m0)
+		// data[m0] <= data[m2] && data[m1] < data[m2]
+		if data.Less(m1, m0) {
+			data.Swap(m1, m0)
+		}
 	}
 	// now data[m0] <= data[m1] <= data[m2]
 }
@@ -297,11 +296,11 @@ func StringsAreSorted(a []string) bool { return IsSorted(StringSlice(a)) }
 //    and Jukka Teuhola; Nordic Journal of Computing 3,1 (1996), 27-40:
 //    The given algorithms are in-place, number of Swap and Assignments
 //    grow as n log n but the algorithm is not stable.
-//  - "Fast Stable In-Plcae Sorting with O(n) Data Moves" J.I. Munro and
+//  - "Fast Stable In-Place Sorting with O(n) Data Moves" J.I. Munro and
 //    V. Raman in Algorithmica (1996) 16, 115-160:
 //    This algorithm either needs additional 2n bits or works only if there
 //    are enough different elements available to encode some permutations
-//    which have to be undone later (so not stable an any input).
+//    which have to be undone later (so not stable on any input).
 //  - All the optimal in-place sorting/merging algorithms I found are either
 //    unstable or rely on enough different elements in each step to encode the
 //    performed block rearrangements. See also "In-Place Merging Algorithms",
@@ -316,7 +315,7 @@ func StringsAreSorted(a []string) bool { return IsSorted(StringSlice(a)) }
 // data.Less and O(n*log(n)*log(n)) calls to data.Swap.
 func Stable(data Interface) {
 	n := data.Len()
-	blockSize := 20
+	blockSize := 20 // must be > 0
 	a, b := 0, blockSize
 	for b <= n {
 		insertionSort(data, a, b)
@@ -332,7 +331,9 @@ func Stable(data Interface) {
 			a = b
 			b += 2 * blockSize
 		}
-		symMerge(data, a, a+blockSize, n)
+		if m := a + blockSize; m < n {
+			symMerge(data, a, m, n)
+		}
 		blockSize *= 2
 	}
 }
@@ -352,72 +353,111 @@ func Stable(data Interface) {
 // rotation algorithm which uses O(M+N+gcd(M+N)) assignments. The argumentation
 // in the paper carries through for Swap operations, especially as the block
 // swapping rotate uses only O(M+N) Swaps.
+//
+// symMerge assumes non-degenerate arguments: a < m && m < b.
+// Having the caller check this condition eliminates many leaf recursion calls,
+// which improves performance.
 func symMerge(data Interface, a, m, b int) {
-	if a >= m || m >= b {
+	// Avoid unnecessary recursions of symMerge
+	// by direct insertion of data[a] into data[m:b]
+	// if data[a:m] only contains one element.
+	if m-a == 1 {
+		// Use binary search to find the lowest index i
+		// such that data[i] >= data[a] for m <= i < b.
+		// Exit the search loop with i == b in case no such index exists.
+		i := m
+		j := b
+		for i < j {
+			h := i + (j-i)/2
+			if data.Less(h, a) {
+				i = h + 1
+			} else {
+				j = h
+			}
+		}
+		// Swap values until data[a] reaches the position before i.
+		for k := a; k < i-1; k++ {
+			data.Swap(k, k+1)
+		}
+		return
+	}
+
+	// Avoid unnecessary recursions of symMerge
+	// by direct insertion of data[m] into data[a:m]
+	// if data[m:b] only contains one element.
+	if b-m == 1 {
+		// Use binary search to find the lowest index i
+		// such that data[i] > data[m] for a <= i < m.
+		// Exit the search loop with i == m in case no such index exists.
+		i := a
+		j := m
+		for i < j {
+			h := i + (j-i)/2
+			if !data.Less(m, h) {
+				i = h + 1
+			} else {
+				j = h
+			}
+		}
+		// Swap values until data[m] reaches the position i.
+		for k := m; k > i; k-- {
+			data.Swap(k, k-1)
+		}
 		return
 	}
 
 	mid := a + (b-a)/2
 	n := mid + m
-	start := 0
+	var start, r int
 	if m > mid {
 		start = n - b
-		r, p := mid, n-1
-		for start < r {
-			c := start + (r-start)/2
-			if !data.Less(p-c, c) {
-				start = c + 1
-			} else {
-				r = c
-			}
-		}
+		r = mid
 	} else {
 		start = a
-		r, p := m, n-1
-		for start < r {
-			c := start + (r-start)/2
-			if !data.Less(p-c, c) {
-				start = c + 1
-			} else {
-				r = c
-			}
+		r = m
+	}
+	p := n - 1
+
+	for start < r {
+		c := start + (r-start)/2
+		if !data.Less(p-c, c) {
+			start = c + 1
+		} else {
+			r = c
 		}
 	}
+
 	end := n - start
-	rotate(data, start, m, end)
-	symMerge(data, a, start, mid)
-	symMerge(data, mid, end, b)
+	if start < m && m < end {
+		rotate(data, start, m, end)
+	}
+	if a < start && start < mid {
+		symMerge(data, a, start, mid)
+	}
+	if mid < end && end < b {
+		symMerge(data, mid, end, b)
+	}
 }
 
 // Rotate two consecutives blocks u = data[a:m] and v = data[m:b] in data:
 // Data of the form 'x u v y' is changed to 'x v u y'.
 // Rotate performs at most b-a many calls to data.Swap.
+// Rotate assumes non-degenerate arguments: a < m && m < b.
 func rotate(data Interface, a, m, b int) {
 	i := m - a
-	if i == 0 {
-		return
-	}
 	j := b - m
-	if j == 0 {
-		return
-	}
 
-	if i == j {
-		swapRange(data, a, m, i)
-		return
-	}
-
-	p := a + i
 	for i != j {
 		if i > j {
-			swapRange(data, p-i, p, j)
+			swapRange(data, m-i, m, j)
 			i -= j
 		} else {
-			swapRange(data, p-i, p+j-i, i)
+			swapRange(data, m-i, m+j-i, i)
 			j -= i
 		}
 	}
-	swapRange(data, p-i, p, i)
+	// i == j
+	swapRange(data, m-i, m, i)
 }
 
 /*

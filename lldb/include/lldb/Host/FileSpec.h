@@ -117,6 +117,12 @@ public:
     //------------------------------------------------------------------
     ~FileSpec ();
 
+    bool
+    DirectoryEquals(const FileSpec &other) const;
+
+    bool
+    FileEquals(const FileSpec &other) const;
+
     //------------------------------------------------------------------
     /// Assignment operator.
     ///
@@ -259,6 +265,19 @@ public:
 
     static bool
     Equal (const FileSpec& a, const FileSpec& b, bool full, bool remove_backups = false);
+
+    //------------------------------------------------------------------
+    /// Case sensitivity of path.
+    ///
+    /// @return
+    ///     \b true if the file path is case sensitive (POSIX), false
+    ///		if case insensitive (Windows).
+    //------------------------------------------------------------------
+    bool
+    IsCaseSensitive() const
+    {
+        return m_syntax != ePathSyntaxWindows;
+    }
 
     //------------------------------------------------------------------
     /// Dump this object to a Stream.

@@ -228,7 +228,7 @@ public:
                         break;
                     }
                 }
-                return all_internal == false;
+                return !all_internal;
             }
         }
         return true;
@@ -254,7 +254,7 @@ public:
                         for (size_t idx = 0; idx < num_owners; idx++)
                         {
                             const char *kind = bp_site_sp->GetOwnerAtIndex(idx)->GetBreakpoint().GetBreakpointKind();
-                            if (kind != NULL)
+                            if (kind != nullptr)
                             {
                                 m_description.assign (kind);
                                 return kind;
@@ -371,6 +371,10 @@ protected:
                     // running all the callbacks.
 
                     m_should_stop = false;
+                    
+                    // We don't select threads as we go through them testing breakpoint conditions and running commands.
+                    // So we need to set the thread for expression evaluation here:
+                    ThreadList::ExpressionExecutionThreadPusher thread_pusher(thread_sp);
 
                     ExecutionContext exe_ctx (thread_sp->GetStackFrameAtIndex(0));
                     Process *process  = exe_ctx.GetProcessPtr();
@@ -467,7 +471,7 @@ protected:
                         // Next run the condition for the breakpoint.  If that says we should stop, then we'll run
                         // the callback for the breakpoint.  If the callback says we shouldn't stop that will win.                    
 
-                        if (bp_loc_sp->GetConditionText() != NULL)
+                        if (bp_loc_sp->GetConditionText() != nullptr)
                         {
                             Error condition_error;
                             bool condition_says_stop = bp_loc_sp->ConditionSaysStop(exe_ctx, condition_error);
@@ -544,7 +548,6 @@ protected:
                 }
                 // We've figured out what this stop wants to do, so mark it as valid so we don't compute it again.
                 m_should_stop_is_valid = true;
-
             }
             else
             {
@@ -733,7 +736,7 @@ protected:
                                 new_plan_sp->SetOkayToDiscard (false);
                                 new_plan_sp->SetPrivate (true);
                                 process->GetThreadList().SetSelectedThreadByID (thread_sp->GetID());
-                                process->ResumeSynchronous(NULL);
+                                process->ResumeSynchronous(nullptr);
                                 process->GetThreadList().SetSelectedThreadByID (thread_sp->GetID());
                                 thread_sp->SetStopInfo(stored_stop_info_sp);
                             }
@@ -769,7 +772,7 @@ protected:
                 if (wp_sp->GetHitCount() <= wp_sp->GetIgnoreCount())
                     m_should_stop = false;
 
-                if (m_should_stop && wp_sp->GetConditionText() != NULL)
+                if (m_should_stop && wp_sp->GetConditionText() != nullptr)
                 {
                     // We need to make sure the user sees any parse errors in their condition, so we'll hook the
                     // constructor errors up to the debugger's Async I/O.
@@ -779,12 +782,12 @@ protected:
                     expr_options.SetIgnoreBreakpoints(true);
                     ValueObjectSP result_value_sp;
                     Error error;
-                    result_code = UserExpression::Evaluate (exe_ctx,
-                                                            expr_options,
-                                                            wp_sp->GetConditionText(),
-                                                            NULL,
-                                                            result_value_sp,
-                                                            error);
+                    result_code = UserExpression::Evaluate(exe_ctx,
+                                                           expr_options,
+                                                           wp_sp->GetConditionText(),
+                                                           nullptr,
+                                                           result_value_sp,
+                                                           error);
                                                             
                     if (result_code == eExpressionCompleted)
                     {
@@ -951,7 +954,7 @@ public:
         ThreadSP thread_sp (m_thread_wp.lock());
         if (thread_sp)
         {
-            if (thread_sp->GetProcess()->GetUnixSignals()->GetShouldSuppress(m_value) == false)
+            if (!thread_sp->GetProcess()->GetUnixSignals()->GetShouldSuppress(m_value))
                 thread_sp->SetResumeSignal(m_value);
         }
     }

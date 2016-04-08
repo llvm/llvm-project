@@ -163,7 +163,7 @@ struct dispatch_shared_infoXX_template {
     volatile UT     iteration;
     volatile UT     num_done;
     volatile UT     ordered_iteration;
-    UT   ordered_dummy[KMP_MAX_ORDERED-1]; // to retain the structure size making ordered_iteration scalar
+    UT   ordered_dummy[KMP_MAX_ORDERED-3]; // to retain the structure size making ordered_iteration scalar
 };
 
 // replaces dispatch_shared_info structure and dispatch_shared_info_t type
@@ -175,6 +175,11 @@ struct dispatch_shared_info_template {
         dispatch_shared_info64_t               s64;
     } u;
     volatile kmp_uint32     buffer_index;
+#if OMP_41_ENABLED
+    volatile kmp_int32      doacross_buf_idx;  // teamwise index
+    kmp_uint32             *doacross_flags;    // array of iteration flags (0/1)
+    kmp_int32               doacross_num_done; // count finished threads
+#endif
 };
 
 /* ------------------------------------------------------------------------ */
@@ -655,6 +660,14 @@ __kmp_dispatch_init(
         sh = reinterpret_cast< dispatch_shared_info_template< UT > volatile * >
             ( &team -> t.t_disp_buffer[ my_buffer_index % KMP_MAX_DISP_BUF ] );
     }
+
+    /* Currently just ignore the monotonic and non-monotonic modifiers (the compiler isn't producing them
+     * yet anyway).
+     * When it is we'll want to look at them somewhere here and use that information to add to our
+     * schedule choice. We shouldn't need to pass them on, they merely affect which schedule we can
+     * legally choose for various dynamic cases. (In paritcular, whether or not a stealing scheme is legal).
+     */
+    schedule = SCHEDULE_WITHOUT_MODIFIERS(schedule);
 
     /* Pick up the nomerge/ordered bits from the scheduling type */
     if ( (schedule >= kmp_nm_lower) && (schedule < kmp_nm_upper) ) {

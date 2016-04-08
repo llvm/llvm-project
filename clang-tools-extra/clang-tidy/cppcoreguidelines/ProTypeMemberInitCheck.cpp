@@ -179,6 +179,11 @@ void ProTypeMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
   const auto &MemberFields = Ctor->getParent()->fields();
 
+  // Skip declarations delayed by late template parsing without a body.
+  const Stmt *Body = Ctor->getBody();
+  if (!Body)
+    return;
+
   SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
   fieldsRequiringInit(MemberFields, FieldsToInit);
   if (FieldsToInit.empty())
@@ -193,8 +198,8 @@ void ProTypeMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
       continue;
     FieldsToInit.erase(Init->getMember());
   }
-  removeFieldsInitializedInBody(*Ctor->getBody(), *Result.Context,
-                                FieldsToInit);
+  removeFieldsInitializedInBody(*Body, *Result.Context, FieldsToInit);
+
   if (FieldsToInit.empty())
     return;
 

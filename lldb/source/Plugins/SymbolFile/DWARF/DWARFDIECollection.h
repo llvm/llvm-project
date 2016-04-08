@@ -33,9 +33,6 @@ public:
     DWARFDIE
     GetDIEAtIndex (uint32_t idx) const;
 
-    bool
-    Insert(const DWARFDIE &die);
-
     size_t
     Size() const;
 

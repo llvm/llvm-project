@@ -25,34 +25,34 @@ public:
   FlatNamespaceFile(const MachOLinkingContext &context)
     : SharedLibraryFile("flat namespace") { }
 
-  const SharedLibraryAtom *exports(StringRef name,
-                                   bool dataSymbolOnly) const override {
-    _sharedLibraryAtoms.push_back(
-      new (allocator()) MachOSharedLibraryAtom(*this, name, getDSOName(),
-                                               false));
-
-    return _sharedLibraryAtoms.back();
+  OwningAtomPtr<SharedLibraryAtom> exports(StringRef name) const override {
+    return new (allocator()) MachOSharedLibraryAtom(*this, name, getDSOName(),
+                                                    false);
   }
 
   StringRef getDSOName() const override { return "flat-namespace"; }
 
-  const AtomVector<DefinedAtom> &defined() const override {
+  const AtomRange<DefinedAtom> defined() const override {
     return _noDefinedAtoms;
   }
-  const AtomVector<UndefinedAtom> &undefined() const override {
+  const AtomRange<UndefinedAtom> undefined() const override {
     return _noUndefinedAtoms;
   }
 
-  const AtomVector<SharedLibraryAtom> &sharedLibrary() const override {
-    return _sharedLibraryAtoms;
+  const AtomRange<SharedLibraryAtom> sharedLibrary() const override {
+    return _noSharedLibraryAtoms;
   }
 
-  const AtomVector<AbsoluteAtom> &absolute() const override {
+  const AtomRange<AbsoluteAtom> absolute() const override {
     return _noAbsoluteAtoms;
   }
 
-private:
-  mutable AtomVector<SharedLibraryAtom> _sharedLibraryAtoms;
+  void clearAtoms() override {
+    _noDefinedAtoms.clear();
+    _noUndefinedAtoms.clear();
+    _noSharedLibraryAtoms.clear();
+    _noAbsoluteAtoms.clear();
+  }
 };
 
 } // namespace mach_o

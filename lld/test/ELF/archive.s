@@ -6,6 +6,10 @@
 # RUN: llvm-ar rcs %tar %t2 %t3 %t4
 # RUN: ld.lld %t %tar %t5 -o %tout
 # RUN: llvm-nm %tout | FileCheck %s
+# RUN: rm -f %tarthin
+# RUN: llvm-ar --format=gnu rcsT %tarthin %t2 %t3 %t4
+# RUN: ld.lld %t %tarthin %t5 -o %tout
+# RUN: llvm-nm %tout | FileCheck %s
 # REQUIRES: x86
 
 # Nothing here. Just needed for the linker to create a undefined _start symbol.

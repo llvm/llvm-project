@@ -32,8 +32,9 @@ using namespace lldb;
 //----------------------------------------------------------------------
 // BreakpointResolver:
 //----------------------------------------------------------------------
-BreakpointResolver::BreakpointResolver (Breakpoint *bkpt, const unsigned char resolverTy) :
+BreakpointResolver::BreakpointResolver (Breakpoint *bkpt, const unsigned char resolverTy, lldb::addr_t offset) :
     m_breakpoint (bkpt),
+    m_offset(offset),
     SubclassID (resolverTy)
 {
 }
@@ -176,7 +177,7 @@ BreakpointResolver::SetSCMatchesByLine (SearchFilter &filter, SymbolContextList 
                             }
                         }
                     
-                        BreakpointLocationSP bp_loc_sp (m_breakpoint->AddLocation(line_start));
+                        BreakpointLocationSP bp_loc_sp (AddLocation(line_start));
                         if (log && bp_loc_sp && !m_breakpoint->IsInternal())
                         {
                             StreamString s;
@@ -202,3 +203,22 @@ BreakpointResolver::SetSCMatchesByLine (SearchFilter &filter, SymbolContextList 
         }
     }
 }
+
+BreakpointLocationSP
+BreakpointResolver::AddLocation(Address loc_addr, bool *new_location)
+{
+    loc_addr.Slide(m_offset);
+    return m_breakpoint->AddLocation(loc_addr, new_location);
+}
+    
+
+void
+BreakpointResolver::SetOffset (lldb::addr_t offset)
+{
+    // There may already be an offset, so we are actually adjusting location addresses by the difference.
+    // lldb::addr_t slide = offset - m_offset;
+    // FIXME: We should go fix up all the already set locations for the new slide.
+
+    m_offset = offset;
+}
+

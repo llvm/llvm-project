@@ -1,19 +1,49 @@
 # REQUIRES: x86
 
-# RUN: not ld.lld -unknown1 -unknown2 -m foo /no/such/file -lnosuchlib \
-# RUN:   2>&1 | FileCheck %s
+# RUN: not ld.lld --unknown1 --unknown2 -m foo /no/such/file -lnosuchlib \
+# RUN:   2>&1 | FileCheck -check-prefix=UNKNOWN %s
 
-# CHECK: warning: unknown argument: -unknown1
-# CHECK: warning: unknown argument: -unknown2
-# CHECK: unknown argument(s) found
-# CHECK: Unknown emulation: foo
-# CHECK: cannot open /no/such/file
-# CHECK: Unable to find library -lnosuchlib
+# UNKNOWN: warning: unknown argument: --unknown1
+# UNKNOWN: warning: unknown argument: --unknown2
+# UNKNOWN: unknown argument(s) found
+# UNKNOWN: unknown emulation: foo
+# UNKNOWN: cannot open /no/such/file
+# UNKNOWN: unable to find library -lnosuchlib
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: not ld.lld %t -o /no/such/file 2>&1 | FileCheck -check-prefix=CHECK2 %s
+# RUN: not ld.lld %t -o /no/such/file 2>&1 | FileCheck -check-prefix=MISSING %s
+# MISSING: failed to open /no/such/file
 
-# CHECK2: failed to open /no/such/file
+# RUN: ld.lld --help 2>&1 | FileCheck -check-prefix=HELP %s
+# HELP: USAGE:
+
+# RUN: ld.lld --version 2>&1 | FileCheck -check-prefix=VERSION %s
+# VERSION: LLD
+
+## Attempt to link DSO with -r
+# RUN: ld.lld -shared %t -o %t.so
+# RUN: not ld.lld -r %t.so %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR %s
+# ERR: attempted static link of dynamic object
+
+## Attempt to use -r and -shared together
+# RUN: not ld.lld -r -shared %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR2 %s
+# ERR2: -r and -shared may not be used together
+
+## Attempt to use -r and --gc-sections together
+# RUN: not ld.lld -r --gc-sections %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR3 %s
+# ERR3: -r and --gc-sections may not be used together
+
+## Attempt to use -r and --icf together
+# RUN: not ld.lld -r --icf=all %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR4 %s
+# ERR4: -r and --icf may not be used together
+
+## Attempt to use -r and -pie together
+# RUN: not ld.lld -r -pie %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR5 %s
+# ERR5: -r and -pie may not be used together
+
+## Attempt to use -shared and -pie together
+# RUN: not ld.lld -shared -pie %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR6 %s
+# ERR6: -shared and -pie may not be used together
 
 .globl _start
 _start:

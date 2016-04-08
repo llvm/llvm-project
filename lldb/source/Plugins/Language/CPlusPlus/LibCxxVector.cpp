@@ -56,12 +56,12 @@ namespace lldb_private {
 } // namespace lldb_private
 
 lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::LibcxxStdVectorSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
-SyntheticChildrenFrontEnd(*valobj_sp.get()),
-m_start(NULL),
-m_finish(NULL),
-m_element_type(),
-m_element_size(0),
-m_children()
+    SyntheticChildrenFrontEnd(*valobj_sp),
+    m_start(nullptr),
+    m_finish(nullptr),
+    m_element_type(),
+    m_element_size(0),
+    m_children()
 {
     if (valobj_sp)
         Update();
@@ -116,7 +116,7 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::GetChildAtIndex (siz
 bool
 lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update()
 {
-    m_start = m_finish = NULL;
+    m_start = m_finish = nullptr;
     m_children.clear();
     ValueObjectSP data_type_finder_sp(m_backend.GetChildMemberWithName(ConstString("__end_cap_"),true));
     if (!data_type_finder_sp)
@@ -153,7 +153,5 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::GetIndexOfChildWithN
 lldb_private::SyntheticChildrenFrontEnd*
 lldb_private::formatters::LibcxxStdVectorSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
 {
-    if (!valobj_sp)
-        return NULL;
-    return (new LibcxxStdVectorSyntheticFrontEnd(valobj_sp));
+    return (valobj_sp ? new LibcxxStdVectorSyntheticFrontEnd(valobj_sp) : nullptr);
 }

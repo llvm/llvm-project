@@ -8,92 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "ForRangeCopyCheck.h"
-#include "../utils/LexerUtils.h"
+#include "../utils/DeclRefExprUtils.h"
+#include "../utils/FixItHintUtils.h"
 #include "../utils/TypeTraits.h"
-#include "clang/Lex/Lexer.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 namespace clang {
 namespace tidy {
 namespace performance {
 
 using namespace ::clang::ast_matchers;
-using llvm::SmallPtrSet;
-
-namespace {
-
-template <typename S> bool isSetDifferenceEmpty(const S &S1, const S &S2) {
-  for (const auto &E : S1)
-    if (S2.count(E) == 0)
-      return false;
-  return true;
-}
-
-// Extracts all Nodes keyed by ID from Matches and inserts them into Nodes.
-template <typename Node>
-void extractNodesByIdTo(ArrayRef<BoundNodes> Matches, StringRef ID,
-                        SmallPtrSet<const Node *, 16> &Nodes) {
-  for (const auto &Match : Matches)
-    Nodes.insert(Match.getNodeAs<Node>(ID));
-}
-
-// Finds all DeclRefExprs to VarDecl in Stmt.
-SmallPtrSet<const DeclRefExpr *, 16>
-declRefExprs(const VarDecl &VarDecl, const Stmt &Stmt, ASTContext &Context) {
-  auto Matches = match(
-      findAll(declRefExpr(to(varDecl(equalsNode(&VarDecl)))).bind("declRef")),
-      Stmt, Context);
-  SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
-  extractNodesByIdTo(Matches, "declRef", DeclRefs);
-  return DeclRefs;
-}
-
-// Finds all DeclRefExprs where a const method is called on VarDecl or VarDecl
-// is the a const reference or value argument to a CallExpr or CXXConstructExpr.
-SmallPtrSet<const DeclRefExpr *, 16>
-constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
-                           ASTContext &Context) {
-  auto DeclRefToVar =
-      declRefExpr(to(varDecl(equalsNode(&VarDecl)))).bind("declRef");
-  auto ConstMethodCallee = callee(cxxMethodDecl(isConst()));
-  // Match method call expressions where the variable is referenced as the this
-  // implicit object argument and opertor call expression for member operators
-  // where the variable is the 0-th argument.
-  auto Matches = match(
-      findAll(expr(anyOf(cxxMemberCallExpr(ConstMethodCallee, on(DeclRefToVar)),
-                         cxxOperatorCallExpr(ConstMethodCallee,
-                                             hasArgument(0, DeclRefToVar))))),
-      Stmt, Context);
-  SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
-  extractNodesByIdTo(Matches, "declRef", DeclRefs);
-  auto ConstReferenceOrValue =
-      qualType(anyOf(referenceType(pointee(qualType(isConstQualified()))),
-                     unless(anyOf(referenceType(), pointerType()))));
-  auto UsedAsConstRefOrValueArg = forEachArgumentWithParam(
-      DeclRefToVar, parmVarDecl(hasType(ConstReferenceOrValue)));
-  Matches = match(findAll(callExpr(UsedAsConstRefOrValueArg)), Stmt, Context);
-  extractNodesByIdTo(Matches, "declRef", DeclRefs);
-  Matches =
-      match(findAll(cxxConstructExpr(UsedAsConstRefOrValueArg)), Stmt, Context);
-  extractNodesByIdTo(Matches, "declRef", DeclRefs);
-  return DeclRefs;
-}
-
-// Modifies VarDecl to be a reference.
-FixItHint createAmpersandFix(const VarDecl &VarDecl, ASTContext &Context) {
-  SourceLocation AmpLocation = VarDecl.getLocation();
-  auto Token = lexer_utils::getPreviousNonCommentToken(Context, AmpLocation);
-  if (!Token.is(tok::unknown))
-    AmpLocation = Token.getLocation().getLocWithOffset(Token.getLength());
-  return FixItHint::CreateInsertion(AmpLocation, "&");
-}
-
-// Modifies VarDecl to be const.
-FixItHint createConstFix(const VarDecl &VarDecl) {
-  return FixItHint::CreateInsertion(VarDecl.getTypeSpecStartLoc(), "const ");
-}
-
-} // namespace
 
 ForRangeCopyCheck::ForRangeCopyCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -143,9 +66,9 @@ bool ForRangeCopyCheck::handleConstValueCopy(const VarDecl &LoopVar,
       diag(LoopVar.getLocation(),
            "the loop variable's type is not a reference type; this creates a "
            "copy in each iteration; consider making this a reference")
-      << createAmpersandFix(LoopVar, Context);
+      << utils::create_fix_it::changeVarDeclToReference(LoopVar, Context);
   if (!LoopVar.getType().isConstQualified())
-    Diagnostic << createConstFix(LoopVar);
+    Diagnostic << utils::create_fix_it::changeVarDeclToConst(LoopVar);
   return true;
 }
 
@@ -154,24 +77,15 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
     ASTContext &Context) {
   llvm::Optional<bool> Expensive =
       type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
-  if (LoopVar.getType().isConstQualified() || !Expensive || !*Expensive) {
+  if (LoopVar.getType().isConstQualified() || !Expensive || !*Expensive)
     return false;
-  }
-  // Collect all DeclRefExprs to the loop variable and all CallExprs and
-  // CXXConstructExprs where the loop variable is used as argument to a const
-  // reference parameter.
-  // If the difference is empty it is safe for the loop variable to be a const
-  // reference.
-  auto AllDeclRefs = declRefExprs(LoopVar, *ForRange.getBody(), Context);
-  auto ConstReferenceDeclRefs =
-      constReferenceDeclRefExprs(LoopVar, *ForRange.getBody(), Context);
-  if (AllDeclRefs.empty() ||
-      !isSetDifferenceEmpty(AllDeclRefs, ConstReferenceDeclRefs))
+  if (!decl_ref_expr_utils::isOnlyUsedAsConst(LoopVar, *ForRange.getBody(), Context))
     return false;
   diag(LoopVar.getLocation(),
        "loop variable is copied but only used as const reference; consider "
        "making it a const reference")
-      << createConstFix(LoopVar) << createAmpersandFix(LoopVar, Context);
+      << utils::create_fix_it::changeVarDeclToConst(LoopVar)
+      << utils::create_fix_it::changeVarDeclToReference(LoopVar, Context);
   return true;
 }
 

@@ -46,20 +46,25 @@ void findValues(const llvm::SCEV *Expr, llvm::SetVector<llvm::Value *> &Values);
 ///
 /// @param S The SCEV to analyze.
 /// @param R The region in which we look for dependences.
-bool hasScalarDepsInsideRegion(const llvm::SCEV *S, const llvm::Region *R);
-bool isAffineExpr(const llvm::Region *R, const llvm::SCEV *Expression,
-                  llvm::ScalarEvolution &SE, const llvm::Value *BaseAddress = 0,
+/// @param Scope Location where the value is needed.
+/// @param AllowLoops Whether loop recurrences outside the loop that are in the
+///                   region count as dependence.
+bool hasScalarDepsInsideRegion(const llvm::SCEV *S, const llvm::Region *R,
+                               llvm::Loop *Scope, bool AllowLoops);
+bool isAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
+                  const llvm::SCEV *Expression, llvm::ScalarEvolution &SE,
+                  const llvm::Value *BaseAddress = 0,
                   InvariantLoadsSetTy *ILS = nullptr);
 
 /// @brief Check if @p V describes an affine parameter constraint in @p R.
 bool isAffineParamConstraint(llvm::Value *V, const llvm::Region *R,
-                             llvm::ScalarEvolution &SE,
+                             llvm::Loop *Scope, llvm::ScalarEvolution &SE,
                              std::vector<const llvm::SCEV *> &Params,
                              bool OrExpr = false);
 
 std::vector<const llvm::SCEV *>
-getParamsInAffineExpr(const llvm::Region *R, const llvm::SCEV *Expression,
-                      llvm::ScalarEvolution &SE,
+getParamsInAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
+                      const llvm::SCEV *Expression, llvm::ScalarEvolution &SE,
                       const llvm::Value *BaseAddress = 0);
 
 /// @brief Extract the constant factors from the multiplication @p M.

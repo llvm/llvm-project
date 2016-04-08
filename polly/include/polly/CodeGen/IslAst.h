@@ -41,6 +41,39 @@ namespace polly {
 class Scop;
 class IslAst;
 class MemoryAccess;
+struct Dependences;
+
+class IslAst {
+public:
+  static IslAst *create(Scop *Scop, const Dependences &D);
+  ~IslAst();
+
+  /// Print a source code representation of the program.
+  void pprint(llvm::raw_ostream &OS);
+
+  __isl_give isl_ast_node *getAst();
+
+  /// @brief Get the run-time conditions for the Scop.
+  __isl_give isl_ast_expr *getRunCondition();
+
+  /// @brief Build run-time condition for scop.
+  ///
+  /// @param S     The scop to build the condition for.
+  /// @param Build The isl_build object to use to build the condition.
+  ///
+  /// @returns An ast expression that describes the necessary run-time check.
+  static isl_ast_expr *buildRunCondition(Scop *S,
+                                         __isl_keep isl_ast_build *Build);
+
+private:
+  Scop *S;
+  isl_ast_node *Root;
+  isl_ast_expr *RunCondition;
+  std::shared_ptr<isl_ctx> Ctx;
+
+  IslAst(Scop *Scop);
+  void init(const Dependences &D);
+};
 
 class IslAstInfo : public ScopPass {
 public:

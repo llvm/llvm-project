@@ -17,7 +17,6 @@
 #ifndef _MSC_VER
 #include <libgen.h>
 #endif
-#include <sys/stat.h>
 #include <set>
 #include <string.h>
 #include <fstream>
@@ -40,6 +39,7 @@
 #include "lldb/Utility/CleanUp.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -57,10 +57,22 @@ PathSyntaxIsPosix(FileSpec::PathSyntax syntax)
              FileSystem::GetNativePathSyntax() == FileSpec::ePathSyntaxPosix));
 }
 
-char
-GetPathSeparator(FileSpec::PathSyntax syntax)
+const char *
+GetPathSeparators(FileSpec::PathSyntax syntax)
 {
-    return PathSyntaxIsPosix(syntax) ? '/' : '\\';
+    return PathSyntaxIsPosix(syntax) ? "/" : "\\/";
+}
+
+char
+GetPrefferedPathSeparator(FileSpec::PathSyntax syntax)
+{
+    return GetPathSeparators(syntax)[0];
+}
+
+bool
+IsPathSeparator(char value, FileSpec::PathSyntax syntax)
+{
+    return value == '/' || (!PathSyntaxIsPosix(syntax) && value == '\\');
 }
 
 void
@@ -90,11 +102,72 @@ GetFileStats (const FileSpec *file_spec, struct stat *stats_ptr)
 {
     char resolved_path[PATH_MAX];
     if (file_spec->GetPath (resolved_path, sizeof(resolved_path)))
-        return ::stat (resolved_path, stats_ptr) == 0;
+        return FileSystem::Stat(resolved_path, stats_ptr) == 0;
     return false;
 }
 
+size_t
+FilenamePos(llvm::StringRef str, FileSpec::PathSyntax syntax)
+{
+    if (str.size() == 2 && IsPathSeparator(str[0], syntax) && str[0] == str[1])
+        return 0;
+
+    if (str.size() > 0 && IsPathSeparator(str.back(), syntax))
+        return str.size() - 1;
+
+    size_t pos = str.find_last_of(GetPathSeparators(syntax), str.size() - 1);
+
+    if (!PathSyntaxIsPosix(syntax) && pos == llvm::StringRef::npos)
+        pos = str.find_last_of(':', str.size() - 2);
+
+    if (pos == llvm::StringRef::npos || (pos == 1 && IsPathSeparator(str[0], syntax)))
+        return 0;
+
+    return pos + 1;
 }
+
+size_t
+RootDirStart(llvm::StringRef str, FileSpec::PathSyntax syntax)
+{
+    // case "c:/"
+    if (!PathSyntaxIsPosix(syntax) && (str.size() > 2 && str[1] == ':' && IsPathSeparator(str[2], syntax)))
+        return 2;
+
+    // case "//"
+    if (str.size() == 2 && IsPathSeparator(str[0], syntax) && str[0] == str[1])
+        return llvm::StringRef::npos;
+
+    // case "//net"
+    if (str.size() > 3 && IsPathSeparator(str[0], syntax) && str[0] == str[1] && !IsPathSeparator(str[2], syntax))
+        return str.find_first_of(GetPathSeparators(syntax), 2);
+
+    // case "/"
+    if (str.size() > 0 && IsPathSeparator(str[0], syntax))
+        return 0;
+
+    return llvm::StringRef::npos;
+}
+
+size_t
+ParentPathEnd(llvm::StringRef path, FileSpec::PathSyntax syntax)
+{
+    size_t end_pos = FilenamePos(path, syntax);
+
+    bool filename_was_sep = path.size() > 0 && IsPathSeparator(path[end_pos], syntax);
+
+    // Skip separators except for root dir.
+    size_t root_dir_pos = RootDirStart(path.substr(0, end_pos), syntax);
+
+    while (end_pos > 0 && (end_pos - 1) != root_dir_pos && IsPathSeparator(path[end_pos - 1], syntax))
+        --end_pos;
+
+    if (end_pos == 1 && root_dir_pos == 0 && filename_was_sep)
+        return llvm::StringRef::npos;
+
+    return end_pos;
+}
+
+} // end anonymous namespace
 
 // Resolves the username part of a path of the form ~user/other/directories, and
 // writes the result into dst_path.  This will also resolve "~" to the current user.
@@ -206,15 +279,10 @@ FileSpec::Resolve (llvm::SmallVectorImpl<char> &path)
 #endif // #ifdef LLDB_CONFIG_TILDE_RESOLVES_TO_USER
 
     // Save a copy of the original path that's passed in
-    llvm::SmallString<PATH_MAX> original_path(path.begin(), path.end());
+    llvm::SmallString<128> original_path(path.begin(), path.end());
 
     llvm::sys::fs::make_absolute(path);
-
-    
-    path.push_back(0);  // Be sure we have a nul terminated string
-    path.pop_back();
-    struct stat file_stats;
-    if (::stat (path.data(), &file_stats) != 0)
+    if (!llvm::sys::fs::exists(path))
     {
         path.clear();
         path.append(original_path.begin(), original_path.end());
@@ -318,30 +386,32 @@ FileSpec::SetFile (const char *pathname, bool resolve, PathSyntax syntax)
     if (pathname == NULL || pathname[0] == '\0')
         return;
 
-    llvm::SmallString<64> normalized(pathname);
+    llvm::SmallString<64> resolved(pathname);
 
     if (resolve)
     {
-        FileSpec::Resolve (normalized);
+        FileSpec::Resolve (resolved);
         m_is_resolved = true;
     }
 
-    // Only normalize after resolving the path.  Resolution will modify the path
-    // string, potentially adding wrong kinds of slashes to the path, that need
-    // to be re-normalized.
-    Normalize(normalized, syntax);
-
-    llvm::StringRef resolve_path_ref(normalized.c_str());
-    llvm::StringRef filename_ref = llvm::sys::path::filename(resolve_path_ref);
-    if (!filename_ref.empty())
+    llvm::StringRef resolve_path_ref(resolved.c_str());
+    size_t dir_end = ParentPathEnd(resolve_path_ref, syntax);
+    if (dir_end == 0)
     {
-        m_filename.SetString (filename_ref);
-        llvm::StringRef directory_ref = llvm::sys::path::parent_path(resolve_path_ref);
-        if (!directory_ref.empty())
-            m_directory.SetString(directory_ref);
+        m_filename.SetString(resolve_path_ref);
+        return;
     }
-    else
-        m_directory.SetCString(normalized.c_str());
+
+    m_directory.SetString(resolve_path_ref.substr(0, dir_end));
+
+    size_t filename_begin = dir_end;
+    size_t root_dir_start = RootDirStart(resolve_path_ref, syntax);
+    while (filename_begin != llvm::StringRef::npos && filename_begin < resolve_path_ref.size() &&
+           filename_begin != root_dir_start && IsPathSeparator(resolve_path_ref[filename_begin], syntax))
+        ++filename_begin;
+    m_filename.SetString((filename_begin == llvm::StringRef::npos || filename_begin >= resolve_path_ref.size())
+                             ? "."
+                             : resolve_path_ref.substr(filename_begin));
 }
 
 void
@@ -390,66 +460,78 @@ FileSpec::operator!() const
     return !m_directory && !m_filename;
 }
 
+bool
+FileSpec::DirectoryEquals(const FileSpec &rhs) const
+{
+    const bool case_sensitive = IsCaseSensitive() || rhs.IsCaseSensitive();
+    return ConstString::Equals(m_directory, rhs.m_directory, case_sensitive);
+}
+
+bool
+FileSpec::FileEquals(const FileSpec &rhs) const
+{
+    const bool case_sensitive = IsCaseSensitive() || rhs.IsCaseSensitive();
+    return ConstString::Equals(m_filename, rhs.m_filename, case_sensitive);
+}
+
 //------------------------------------------------------------------
 // Equal to operator
 //------------------------------------------------------------------
 bool
 FileSpec::operator== (const FileSpec& rhs) const
 {
-    if (m_filename == rhs.m_filename)
+    if (!FileEquals(rhs))
+        return false;
+    if (DirectoryEquals(rhs))
+        return true;
+
+    // TODO: determine if we want to keep this code in here.
+    // The code below was added to handle a case where we were
+    // trying to set a file and line breakpoint and one path
+    // was resolved, and the other not and the directory was
+    // in a mount point that resolved to a more complete path:
+    // "/tmp/a.c" == "/private/tmp/a.c". I might end up pulling
+    // this out...
+    if (IsResolved() && rhs.IsResolved())
     {
-        if (m_directory == rhs.m_directory)
-            return true;
-        
-        // TODO: determine if we want to keep this code in here.
-        // The code below was added to handle a case where we were
-        // trying to set a file and line breakpoint and one path
-        // was resolved, and the other not and the directory was
-        // in a mount point that resolved to a more complete path:
-        // "/tmp/a.c" == "/private/tmp/a.c". I might end up pulling
-        // this out...
-        if (IsResolved() && rhs.IsResolved())
-        {
-            // Both paths are resolved, no need to look further...
-            return false;
-        }
-        
-        FileSpec resolved_lhs(*this);
-
-        // If "this" isn't resolved, resolve it
-        if (!IsResolved())
-        {
-            if (resolved_lhs.ResolvePath())
-            {
-                // This path wasn't resolved but now it is. Check if the resolved
-                // directory is the same as our unresolved directory, and if so, 
-                // we can mark this object as resolved to avoid more future resolves
-                m_is_resolved = (m_directory == resolved_lhs.m_directory);
-            }
-            else
-                return false;
-        }
-        
-        FileSpec resolved_rhs(rhs);
-        if (!rhs.IsResolved())
-        {
-            if (resolved_rhs.ResolvePath())
-            {
-                // rhs's path wasn't resolved but now it is. Check if the resolved
-                // directory is the same as rhs's unresolved directory, and if so, 
-                // we can mark this object as resolved to avoid more future resolves
-                rhs.m_is_resolved = (rhs.m_directory == resolved_rhs.m_directory);
-            }
-            else
-                return false;
-        }
-
-        // If we reach this point in the code we were able to resolve both paths
-        // and since we only resolve the paths if the basenames are equal, then
-        // we can just check if both directories are equal...
-        return resolved_lhs.GetDirectory() == resolved_rhs.GetDirectory();
+        // Both paths are resolved, no need to look further...
+        return false;
     }
-    return false;
+
+    FileSpec resolved_lhs(*this);
+
+    // If "this" isn't resolved, resolve it
+    if (!IsResolved())
+    {
+        if (resolved_lhs.ResolvePath())
+        {
+            // This path wasn't resolved but now it is. Check if the resolved
+            // directory is the same as our unresolved directory, and if so,
+            // we can mark this object as resolved to avoid more future resolves
+            m_is_resolved = (m_directory == resolved_lhs.m_directory);
+        }
+        else
+            return false;
+    }
+
+    FileSpec resolved_rhs(rhs);
+    if (!rhs.IsResolved())
+    {
+        if (resolved_rhs.ResolvePath())
+        {
+            // rhs's path wasn't resolved but now it is. Check if the resolved
+            // directory is the same as rhs's unresolved directory, and if so,
+            // we can mark this object as resolved to avoid more future resolves
+            rhs.m_is_resolved = (rhs.m_directory == resolved_rhs.m_directory);
+        }
+        else
+            return false;
+    }
+
+    // If we reach this point in the code we were able to resolve both paths
+    // and since we only resolve the paths if the basenames are equal, then
+    // we can just check if both directories are equal...
+    return DirectoryEquals(rhs);
 }
 
 //------------------------------------------------------------------
@@ -507,6 +589,9 @@ FileSpec::Compare(const FileSpec& a, const FileSpec& b, bool full)
 {
     int result = 0;
 
+    // case sensitivity of compare
+    const bool case_sensitive = a.IsCaseSensitive() || b.IsCaseSensitive();
+
     // If full is true, then we must compare both the directory and filename.
 
     // If full is false, then if either directory is empty, then we match on
@@ -516,32 +601,35 @@ FileSpec::Compare(const FileSpec& a, const FileSpec& b, bool full)
 
     if (full || (a.m_directory && b.m_directory))
     {
-        result = ConstString::Compare(a.m_directory, b.m_directory);
+        result = ConstString::Compare(a.m_directory, b.m_directory, case_sensitive);
         if (result)
             return result;
     }
-    return ConstString::Compare (a.m_filename, b.m_filename);
+    return ConstString::Compare(a.m_filename, b.m_filename, case_sensitive);
 }
 
 bool
 FileSpec::Equal (const FileSpec& a, const FileSpec& b, bool full, bool remove_backups)
 {
+    // case sensitivity of equality test
+    const bool case_sensitive = a.IsCaseSensitive() || b.IsCaseSensitive();
+
     if (!full && (a.GetDirectory().IsEmpty() || b.GetDirectory().IsEmpty()))
-        return a.m_filename == b.m_filename;
+        return ConstString::Equals(a.m_filename, b.m_filename, case_sensitive);
     else if (remove_backups == false)
         return a == b;
     else
     {
-        if (a.m_filename != b.m_filename)
+        if (!ConstString::Equals(a.m_filename, b.m_filename, case_sensitive))
             return false;
-        if (a.m_directory == b.m_directory)
+        if (ConstString::Equals(a.m_directory, b.m_directory, case_sensitive))
             return true;
         ConstString a_without_dots;
         ConstString b_without_dots;
 
         RemoveBackupDots (a.m_directory, a_without_dots);
         RemoveBackupDots (b.m_directory, b_without_dots);
-        return a_without_dots == b_without_dots;
+        return ConstString::Equals(a_without_dots, b_without_dots, case_sensitive);
     }
 }
 
@@ -670,7 +758,7 @@ FileSpec::Dump(Stream *s) const
     {
         std::string path{GetPath(true)};
         s->PutCString(path.c_str());
-        char path_separator = GetPathSeparator(m_syntax);
+        char path_separator = GetPrefferedPathSeparator(m_syntax);
         if (!m_filename && !path.empty() && path.back() != path_separator)
             s->PutChar(path_separator);
     }
@@ -797,7 +885,10 @@ FileSpec::IsSymbolicLink () const
         return false;
 
 #ifdef _WIN32
-    auto attrs = ::GetFileAttributes (resolved_path);
+    std::wstring wpath;
+    if (!llvm::ConvertUTF8toWide(resolved_path, wpath))
+        return false;
+    auto attrs = ::GetFileAttributesW(wpath.c_str());
     if (attrs == INVALID_FILE_ATTRIBUTES)
         return false;
 
@@ -900,11 +991,10 @@ void
 FileSpec::GetPath(llvm::SmallVectorImpl<char> &path, bool denormalize) const
 {
     path.append(m_directory.GetStringRef().begin(), m_directory.GetStringRef().end());
-    if (m_directory)
-        path.insert(path.end(), '/');
+    if (m_directory && m_filename && !IsPathSeparator(m_directory.GetStringRef().back(), m_syntax))
+        path.insert(path.end(), GetPrefferedPathSeparator(m_syntax));
     path.append(m_filename.GetStringRef().begin(), m_filename.GetStringRef().end());
     Normalize(path, m_syntax);
-    if (path.size() > 1 && path.back() == '/') path.pop_back();
     if (denormalize && !path.empty())
         Denormalize(path, m_syntax);
 }
@@ -1096,12 +1186,18 @@ FileSpec::ForEachItemInDirectory (const char *dir_path, DirectoryCallback const 
 {
     if (dir_path && dir_path[0])
     {
-#if _WIN32
+#ifdef _WIN32
         std::string szDir(dir_path);
         szDir += "\\*";
 
-        WIN32_FIND_DATA ffd;
-        HANDLE hFind = FindFirstFile(szDir.c_str(), &ffd);
+        std::wstring wszDir;
+        if (!llvm::ConvertUTF8toWide(szDir, wszDir))
+        {
+            return eEnumerateDirectoryResultNext;
+        }
+
+        WIN32_FIND_DATAW ffd;
+        HANDLE hFind = FindFirstFileW(wszDir.c_str(), &ffd);
 
         if (hFind == INVALID_HANDLE_VALUE)
         {
@@ -1113,12 +1209,12 @@ FileSpec::ForEachItemInDirectory (const char *dir_path, DirectoryCallback const 
             FileSpec::FileType file_type = eFileTypeUnknown;
             if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             {
-                size_t len = strlen(ffd.cFileName);
+                size_t len = wcslen(ffd.cFileName);
 
-                if (len == 1 && ffd.cFileName[0] == '.')
+                if (len == 1 && ffd.cFileName[0] == L'.')
                     continue;
 
-                if (len == 2 && ffd.cFileName[0] == '.' && ffd.cFileName[1] == '.')
+                if (len == 2 && ffd.cFileName[0] == L'.' && ffd.cFileName[1] == L'.')
                     continue;
 
                 file_type = eFileTypeDirectory;
@@ -1132,12 +1228,19 @@ FileSpec::ForEachItemInDirectory (const char *dir_path, DirectoryCallback const 
                 file_type = eFileTypeRegular;
             }
 
-            char child_path[MAX_PATH];
-            const int child_path_len = ::snprintf (child_path, sizeof(child_path), "%s\\%s", dir_path, ffd.cFileName);
-            if (child_path_len < (int)(sizeof(child_path) - 1))
+            std::string fileName;
+            if (!llvm::convertWideToUTF8(ffd.cFileName, fileName))
+            {
+                continue;
+            }
+
+            std::vector<char> child_path(PATH_MAX);
+            const int child_path_len =
+                ::snprintf(child_path.data(), child_path.size(), "%s\\%s", dir_path, fileName.c_str());
+            if (child_path_len < (int)(child_path.size() - 1))
             {
                 // Don't resolve the file type or path
-                FileSpec child_path_spec (child_path, false);
+                FileSpec child_path_spec(child_path.data(), false);
 
                 EnumerateDirectoryResult result = callback (file_type, child_path_spec);
 
@@ -1150,7 +1253,8 @@ FileSpec::ForEachItemInDirectory (const char *dir_path, DirectoryCallback const 
                         break;
 
                     case eEnumerateDirectoryResultEnter: // Recurse into the current entry if it is a directory or symlink, or next if not
-                        if (FileSpec::ForEachItemInDirectory(child_path, callback) == eEnumerateDirectoryResultQuit)
+                        if (FileSpec::ForEachItemInDirectory(child_path.data(), callback) ==
+                            eEnumerateDirectoryResultQuit)
                         {
                             // The subdirectory returned Quit, which means to
                             // stop all directory enumerations at all levels.
@@ -1167,7 +1271,7 @@ FileSpec::ForEachItemInDirectory (const char *dir_path, DirectoryCallback const 
                         return eEnumerateDirectoryResultQuit;
                 }
             }
-        } while (FindNextFile(hFind, &ffd) != 0);
+        } while (FindNextFileW(hFind, &ffd) != 0);
 
         FindClose(hFind);
 #else
@@ -1313,17 +1417,9 @@ FileSpec::EnumerateDirectory
 FileSpec
 FileSpec::CopyByAppendingPathComponent (const char *new_path)  const
 {
-    const bool resolve = false;
-    if (m_filename.IsEmpty() && m_directory.IsEmpty())
-        return FileSpec(new_path,resolve);
-    StreamString stream;
-    if (m_filename.IsEmpty())
-        stream.Printf("%s/%s",m_directory.GetCString(),new_path);
-    else if (m_directory.IsEmpty())
-        stream.Printf("%s/%s",m_filename.GetCString(),new_path);
-    else
-        stream.Printf("%s/%s/%s",m_directory.GetCString(), m_filename.GetCString(),new_path);
-    return FileSpec(stream.GetData(),resolve);
+    FileSpec ret = *this;
+    ret.AppendPathComponent(new_path);
+    return ret;
 }
 
 FileSpec
@@ -1424,20 +1520,26 @@ void
 FileSpec::AppendPathComponent(const char *new_path)
 {
     if (!new_path) return;
-    const bool resolve = false;
-    if (m_filename.IsEmpty() && m_directory.IsEmpty())
-    {
-        SetFile(new_path, resolve);
-        return;
-    }
+
     StreamString stream;
-    if (m_filename.IsEmpty() || (m_filename.GetLength() == 1 && m_filename.GetCString()[0] == '.'))
-        stream.Printf("%s/%s", m_directory.GetCString(), new_path);
-    else if (m_directory.IsEmpty())
-        stream.Printf("%s/%s", m_filename.GetCString(), new_path);
-    else
-        stream.Printf("%s/%s/%s", m_directory.GetCString(), m_filename.GetCString(), new_path);
-    SetFile(stream.GetData(), resolve);
+    if (!m_directory.IsEmpty())
+    {
+        stream.PutCString(m_directory.GetCString());
+        if (!IsPathSeparator(m_directory.GetStringRef().back(), m_syntax))
+            stream.PutChar(GetPrefferedPathSeparator(m_syntax));
+    }
+
+    if (!m_filename.IsEmpty())
+    {
+        stream.PutCString(m_filename.GetCString());
+        if (!IsPathSeparator(m_filename.GetStringRef().back(), m_syntax))
+            stream.PutChar(GetPrefferedPathSeparator(m_syntax));
+    }
+
+    stream.PutCString(new_path);
+
+    const bool resolve = false;
+    SetFile(stream.GetData(), resolve, m_syntax);
 }
 
 void

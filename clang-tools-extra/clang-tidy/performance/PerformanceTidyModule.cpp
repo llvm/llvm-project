@@ -15,6 +15,7 @@
 #include "ForRangeCopyCheck.h"
 #include "ImplicitCastInLoopCheck.h"
 #include "UnnecessaryCopyInitialization.h"
+#include "UnnecessaryValueParamCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -31,6 +32,8 @@ public:
         "performance-implicit-cast-in-loop");
     CheckFactories.registerCheck<UnnecessaryCopyInitialization>(
         "performance-unnecessary-copy-initialization");
+    CheckFactories.registerCheck<UnnecessaryValueParamCheck>(
+        "performance-unnecessary-value-param");
   }
 };
 

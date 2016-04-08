@@ -1,11 +1,13 @@
 set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyModernizeModule
+  DeprecatedHeadersCheck.cpp
   LoopConvertCheck.cpp
   LoopConvertUtils.cpp
   MakeUniqueCheck.cpp
   ModernizeTidyModule.cpp
   PassByValueCheck.cpp
+  RawStringLiteralCheck.cpp
   RedundantVoidArgCheck.cpp
   ReplaceAutoPtrCheck.cpp
   ShrinkToFitCheck.cpp

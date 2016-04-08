@@ -1726,7 +1726,15 @@ public:
     _LIBCPP_INLINE_VISIBILITY const_pointer address(const_reference __x) const _NOEXCEPT
         {return _VSTD::addressof(__x);}
     _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
-        {return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));}
+        {
+        if (__n > max_size())
+#ifndef _LIBCPP_NO_EXCEPTIONS
+            throw bad_alloc();
+#else
+            assert(!"allocator<T>::allocate::bad_alloc");
+#endif
+        return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
+        }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
         {_VSTD::__deallocate((void*)__p);}
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const _NOEXCEPT
@@ -1817,7 +1825,15 @@ public:
     _LIBCPP_INLINE_VISIBILITY const_pointer address(const_reference __x) const _NOEXCEPT
         {return _VSTD::addressof(__x);}
     _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
-        {return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));}
+    {
+        if (__n > max_size())
+#ifndef _LIBCPP_NO_EXCEPTIONS
+            throw bad_alloc();
+#else
+            assert(!"allocator<const T>::allocate::bad_alloc");
+#endif
+        return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
+        }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
         {_VSTD::__deallocate((void*)__p);}
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const _NOEXCEPT
@@ -2548,7 +2564,7 @@ public:
                          typename enable_if<__same_or_less_cv_qualified<_Up*, _Tp*>::value>::type* = 0) const _NOEXCEPT
         {
             static_assert(sizeof(_Tp) > 0, "default_delete can not delete incomplete type");
-            static_assert(!is_void<_Tp>::value, "default_delete can not delete incomplete type");
+            static_assert(!is_void<_Tp>::value, "default_delete can not delete void type");
             delete [] __ptr;
         }
 };
@@ -2918,7 +2934,6 @@ public:
         return __t;
     }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     template <class _Pp>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__same_or_less_cv_qualified<_Pp, pointer>::value, void>::type
@@ -2929,29 +2944,13 @@ public:
         if (__tmp)
             __ptr_.second()(__tmp);
     }
-    _LIBCPP_INLINE_VISIBILITY void reset(nullptr_t) _NOEXCEPT
+    _LIBCPP_INLINE_VISIBILITY void reset(nullptr_t = nullptr) _NOEXCEPT
     {
         pointer __tmp = __ptr_.first();
         __ptr_.first() = nullptr;
         if (__tmp)
             __ptr_.second()(__tmp);
     }
-    _LIBCPP_INLINE_VISIBILITY void reset() _NOEXCEPT
-    {
-        pointer __tmp = __ptr_.first();
-        __ptr_.first() = nullptr;
-        if (__tmp)
-            __ptr_.second()(__tmp);
-    }
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    _LIBCPP_INLINE_VISIBILITY void reset(pointer __p = pointer())
-    {
-        pointer __tmp = __ptr_.first();
-        __ptr_.first() = __p;
-        if (__tmp)
-            __ptr_.second()(__tmp);
-    }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
     _LIBCPP_INLINE_VISIBILITY void swap(unique_ptr& __u) {__ptr_.swap(__u.__ptr_);}
 private:

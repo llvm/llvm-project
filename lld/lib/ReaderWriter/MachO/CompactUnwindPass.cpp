@@ -88,6 +88,8 @@ public:
     addSecondLevelPages(pages);
   }
 
+  ~UnwindInfoAtom() override = default;
+
   ContentType contentType() const override {
     return DefinedAtom::typeProcessedUnwindInfo;
   }
@@ -273,13 +275,13 @@ class CompactUnwindPass : public Pass {
 public:
   CompactUnwindPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _file("<mach-o Compact Unwind Pass>"),
+        _file(*_ctx.make_file<MachOFile>("<mach-o Compact Unwind Pass>")),
         _isBig(MachOLinkingContext::isBigEndian(_ctx.arch())) {
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
 private:
-  std::error_code perform(SimpleFile &mergedFile) override {
+  llvm::Error perform(SimpleFile &mergedFile) override {
     DEBUG(llvm::dbgs() << "MachO Compact Unwind pass\n");
 
     std::map<const Atom *, CompactUnwindEntry> unwindLocs;
@@ -296,7 +298,7 @@ private:
 
     // Skip rest of pass if no unwind info.
     if (unwindLocs.empty() && dwarfFrames.empty())
-      return std::error_code();
+      return llvm::Error();
 
     // FIXME: if there are more than 4 personality functions then we need to
     // defer to DWARF info for the ones we don't put in the list. They should
@@ -351,7 +353,7 @@ private:
       return atom->contentType() == DefinedAtom::typeCompactUnwindInfo;
     });
 
-    return std::error_code();
+    return llvm::Error();
   }
 
   void collectCompactUnwindEntries(
@@ -567,7 +569,7 @@ private:
 
   const MachOLinkingContext &_ctx;
   mach_o::ArchHandler &_archHandler;
-  MachOFile _file;
+  MachOFile &_file;
   bool _isBig;
 };
 

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -verify-dom-info -polly-codegen -S < %s | FileCheck %s
 ;
 ; This caused an infinite recursion during invariant load hoisting at some
 ; point. Check it does not and we add a "false" runtime check.

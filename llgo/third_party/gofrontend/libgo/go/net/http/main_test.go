@@ -56,17 +56,21 @@ func goroutineLeaked() bool {
 		// not counting goroutines for leakage in -short mode
 		return false
 	}
-	gs := interestingGoroutines()
 
-	n := 0
-	stackCount := make(map[string]int)
-	for _, g := range gs {
-		stackCount[g]++
-		n++
-	}
-
-	if n == 0 {
-		return false
+	var stackCount map[string]int
+	for i := 0; i < 5; i++ {
+		n := 0
+		stackCount = make(map[string]int)
+		gs := interestingGoroutines()
+		for _, g := range gs {
+			stackCount[g]++
+			n++
+		}
+		if n == 0 {
+			return false
+		}
+		// Wait for goroutines to schedule and die off:
+		time.Sleep(100 * time.Millisecond)
 	}
 	fmt.Fprintf(os.Stderr, "Too many goroutines running after net/http test(s).\n")
 	for stack, count := range stackCount {
@@ -75,7 +79,7 @@ func goroutineLeaked() bool {
 	return true
 }
 
-func afterTest(t *testing.T) {
+func afterTest(t testing.TB) {
 	http.DefaultTransport.(*http.Transport).CloseIdleConnections()
 	if testing.Short() {
 		return

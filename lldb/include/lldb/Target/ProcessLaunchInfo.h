@@ -196,7 +196,7 @@ namespace lldb_private
             m_listener_sp = listener_sp;
         }
 
-        Listener &
+        lldb::ListenerSP
         GetListenerForProcess (Debugger &debugger);
 
         lldb::ListenerSP

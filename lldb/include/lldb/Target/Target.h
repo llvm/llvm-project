@@ -791,7 +791,7 @@ public:
     Dump (Stream *s, lldb::DescriptionLevel description_level);
 
     const lldb::ProcessSP &
-    CreateProcess (Listener &listener, 
+    CreateProcess (lldb::ListenerSP listener,
                    const char *plugin_name,
                    const FileSpec *crash_file);
 
@@ -839,6 +839,7 @@ public:
     CreateBreakpoint (const FileSpecList *containingModules,
                       const FileSpec &file,
                       uint32_t line_no,
+                      lldb::addr_t offset,
                       LazyBool check_inlines,
                       LazyBool skip_prologue,
                       bool internal,
@@ -895,6 +896,7 @@ public:
                       const char *func_name,
                       uint32_t func_name_type_mask, 
                       lldb::LanguageType language,
+                      lldb::addr_t offset,
                       LazyBool skip_prologue,
                       bool internal,
                       bool request_hardware);
@@ -916,8 +918,9 @@ public:
                       const FileSpecList *containingSourceFiles,
                       const char *func_names[],
                       size_t num_names, 
-                      uint32_t func_name_type_mask, 
+                      uint32_t func_name_type_mask,
                       lldb::LanguageType language,
+                      lldb::addr_t offset,
                       LazyBool skip_prologue,
                       bool internal,
                       bool request_hardware);
@@ -928,6 +931,7 @@ public:
                       const std::vector<std::string> &func_names,
                       uint32_t func_name_type_mask,
                       lldb::LanguageType language,
+                      lldb::addr_t m_offset,
                       LazyBool skip_prologue,
                       bool internal,
                       bool request_hardware);
@@ -1435,7 +1439,7 @@ public:
                         lldb::ValueObjectSP &result_valobj_sp,
                         const EvaluateExpressionOptions& options = EvaluateExpressionOptions(),
                         std::string *fixed_expression = nullptr);
-    
+
     // Look up a symbol by name and type in both the target's symbols and the persistent symbols from the
     // expression parser.  The symbol_type is ignored in that case, for now we don't have symbol types for the
     // persistent variables.

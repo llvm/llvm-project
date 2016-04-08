@@ -20,7 +20,7 @@
 //
 // NOTE: This package is locked down. Code outside the standard
 // Go repository should be migrated to use the corresponding
-// package in the go.sys subrepository. That is also where updates
+// package in the golang.org/x/sys repository. That is also where updates
 // required by new systems or versions should be applied.
 // See https://golang.org/s/go1.4-syscall for more information.
 //
@@ -28,9 +28,11 @@ package syscall
 
 import "unsafe"
 
-// StringByteSlice is deprecated. Use ByteSliceFromString instead.
+// StringByteSlice converts a string to a NUL-terminated []byte,
 // If s contains a NUL byte this function panics instead of
 // returning an error.
+//
+// Deprecated: Use ByteSliceFromString instead.
 func StringByteSlice(s string) []byte {
 	a, err := ByteSliceFromString(s)
 	if err != nil {
@@ -53,9 +55,11 @@ func ByteSliceFromString(s string) ([]byte, error) {
 	return a, nil
 }
 
-// StringBytePtr is deprecated. Use BytePtrFromString instead.
-// If s contains a NUL byte this function panics instead of
-// returning an error.
+// StringBytePtr returns a pointer to a NUL-terminated array of bytes.
+// If s contains a NUL byte this function panics instead of returning
+// an error.
+//
+// Deprecated: Use BytePtrFromString instead.
 func StringBytePtr(s string) *byte { return &StringByteSlice(s)[0] }
 
 // BytePtrFromString returns a pointer to a NUL-terminated array of

@@ -109,12 +109,12 @@ __kmp_parse_frequency(        // R: Frequency in Hz.
 
     double       value  = 0.0;
     char const * unit   = NULL;
-    kmp_uint64   result = ~ 0;
+    kmp_uint64   result = 0;                    /* Zero is a better unknown value than all ones. */
 
     if ( frequency == NULL ) {
         return result;
     }; // if
-    value = strtod( frequency, (char * *) & unit ); // strtod() does not like "char conts *".
+    value = strtod( frequency, (char * *) & unit ); // strtod() does not like "char const *".
     if ( 0 < value && value <= DBL_MAX ) {          // Good value (not overflow, underflow, etc).
         if ( strcmp( unit, "MHz" ) == 0 ) {
             value = value * 1.0E+6;
@@ -279,26 +279,19 @@ __kmp_query_cpuid( kmp_cpuinfo_t *p )
 #endif
     }; // if
 
-    { // Parse CPU brand string for frequency.
-
-        union kmp_cpu_brand_string {
-            struct kmp_cpuid buf[ 3 ];
-            char             string[ sizeof( struct kmp_cpuid ) * 3 + 1 ];
-        }; // union kmp_cpu_brand_string
-        union kmp_cpu_brand_string brand;
+    { // Parse CPU brand string for frequency, saving the string for later.
         int i;
-
-        p->frequency = 0;
+        kmp_cpuid_t * base = (kmp_cpuid_t *)&p->name[0];
 
         // Get CPU brand string.
         for ( i = 0; i < 3; ++ i ) {
-            __kmp_x86_cpuid( 0x80000002 + i, 0, &brand.buf[ i ] );
+            __kmp_x86_cpuid( 0x80000002 + i, 0, base+i );
         }; // for
-        brand.string[ sizeof( brand.string ) - 1 ] = 0; // Just in case. ;-)
-        KA_TRACE( trace_level, ( "cpu brand string: \"%s\"\n", brand.string ) );
+        p->name[ sizeof(p->name) - 1 ] = 0; // Just in case. ;-)
+        KA_TRACE( trace_level, ( "cpu brand string: \"%s\"\n", &p->name[0] ) );
 
         // Parse frequency.
-        p->frequency = __kmp_parse_frequency( strrchr( brand.string, ' ' ) );
+        p->frequency = __kmp_parse_frequency( strrchr( &p->name[0], ' ' ) );
         KA_TRACE( trace_level, ( "cpu frequency from brand string: %" KMP_UINT64_SPEC "\n", p->frequency ) );
     }
 }

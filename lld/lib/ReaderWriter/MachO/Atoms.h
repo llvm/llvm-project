@@ -32,6 +32,8 @@ public:
         _contentType(type), _scope(scope), _merge(mergeNo), _thumb(false),
         _noDeadStrip(noDeadStrip) {}
 
+  ~MachODefinedAtom() override = default;
+
   uint64_t size() const override { return _content.size(); }
 
   ContentType contentType() const override { return _contentType; }
@@ -83,6 +85,8 @@ public:
                          content, align),
         _sectionName(sectionName) {}
 
+  ~MachODefinedCustomSectionAtom() override = default;
+
   SectionChoice sectionChoice() const override {
     return DefinedAtom::sectionCustomRequired;
   }
@@ -100,6 +104,8 @@ public:
                         uint64_t size, DefinedAtom::Alignment align)
       : SimpleDefinedAtom(f), _name(name), _scope(scope), _size(size),
         _align(align) {}
+
+  ~MachOTentativeDefAtom() override = default;
 
   uint64_t size() const override { return _size; }
 

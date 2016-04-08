@@ -24,8 +24,7 @@ class STLTestCase(TestBase):
         self.source = 'main.cpp'
         self.line = line_number(self.source, '// Set break point at this line.')
 
-    # rdar://problem/10400981
-    @unittest2.expectedFailure
+    @expectedFailureAll(bugnumber="rdar://problem/10400981")
     def test(self):
         """Test some expressions involving STL data types."""
         self.build()

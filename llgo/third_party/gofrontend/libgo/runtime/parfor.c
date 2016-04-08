@@ -34,7 +34,7 @@ runtime_parforalloc(uint32 nthrmax)
 }
 
 void
-runtime_parforsetup(ParFor *desc, uint32 nthr, uint32 n, void *ctx, bool wait, void (*body)(ParFor*, uint32))
+runtime_parforsetup(ParFor *desc, uint32 nthr, uint32 n, bool wait, const FuncVal *body)
 {
 	uint32 i, begin, end;
 	uint64 *pos;
@@ -49,7 +49,6 @@ runtime_parforsetup(ParFor *desc, uint32 nthr, uint32 n, void *ctx, bool wait, v
 	desc->nthr = nthr;
 	desc->thrseq = 0;
 	desc->cnt = n;
-	desc->ctx = ctx;
 	desc->wait = wait;
 	desc->nsteal = 0;
 	desc->nstealcnt = 0;
@@ -72,7 +71,8 @@ runtime_parfordo(ParFor *desc)
 	ParForThread *me;
 	uint32 tid, begin, end, begin2, try, victim, i;
 	uint64 *mypos, *victimpos, pos, newpos;
-	void (*body)(ParFor*, uint32);
+	const FuncVal *body;
+	void (*bodyfn)(ParFor*, uint32);
 	bool idle;
 
 	// Obtain 0-based thread index.
@@ -82,14 +82,16 @@ runtime_parfordo(ParFor *desc)
 		runtime_throw("parfor: invalid tid");
 	}
 
+	body = desc->body;
+	bodyfn = (void (*)(ParFor*, uint32))(void*)body->fn;
+
 	// If single-threaded, just execute the for serially.
 	if(desc->nthr==1) {
 		for(i=0; i<desc->cnt; i++)
-			desc->body(desc, i);
+		  __builtin_call_with_static_chain (bodyfn(desc, i), body);
 		return;
 	}
 
-	body = desc->body;
 	me = &desc->thr[tid];
 	mypos = &me->pos;
 	for(;;) {
@@ -100,7 +102,7 @@ runtime_parfordo(ParFor *desc)
 			begin = (uint32)pos-1;
 			end = (uint32)(pos>>32);
 			if(begin < end) {
-				body(desc, begin);
+				__builtin_call_with_static_chain(bodyfn(desc, begin), body);
 				continue;
 			}
 			break;

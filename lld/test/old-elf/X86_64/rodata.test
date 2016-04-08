@@ -1,9 +1,0 @@
-# This tests that the ordinals for all merge atoms and defined atoms have been
-# set properly
-
-RUN: lld -flavor old-gnu -target x86_64 %p/Inputs/rodata.o --noinhibit-exec \
-RUN: --merge-strings -static -o %t1
-RUN: llvm-nm -n %t1 | FileCheck %s
-
-CHECK: {{[0-9a-f]+}} R _nl_default_default_domain
-CHECK: {{[0-9a-f]+}} R _nl_default_default_dirname
