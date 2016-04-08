@@ -1305,7 +1305,7 @@ TEST_F(DICompileUnitTest, get) {
   StringRef Flags = "flag after flag";
   unsigned RuntimeVersion = 2;
   StringRef SplitDebugFilename = "another/file";
-  unsigned EmissionKind = 3;
+  auto EmissionKind = DICompileUnit::FullDebug;
   MDTuple *EnumTypes = getTuple();
   MDTuple *RetainedTypes = getTuple();
   MDTuple *Subprograms = getTuple();
@@ -1368,7 +1368,7 @@ TEST_F(DICompileUnitTest, replaceArrays) {
   StringRef Flags = "flag after flag";
   unsigned RuntimeVersion = 2;
   StringRef SplitDebugFilename = "another/file";
-  unsigned EmissionKind = 3;
+  auto EmissionKind = DICompileUnit::FullDebug;
   MDTuple *EnumTypes = MDTuple::getDistinct(Context, None);
   MDTuple *RetainedTypes = MDTuple::getDistinct(Context, None);
   MDTuple *ImportedEntities = MDTuple::getDistinct(Context, None);

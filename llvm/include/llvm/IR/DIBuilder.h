@@ -68,7 +68,6 @@ namespace llvm {
     /// If \c AllowUnresolved, collect unresolved nodes attached to the module
     /// in order to resolve cycles during \a finalize().
     explicit DIBuilder(Module &M, bool AllowUnresolved = true);
-    enum DebugEmissionKind { FullDebug=1, LineTablesOnly };
 
     /// Construct any deferred debug info descriptors.
     void finalize();
@@ -107,8 +106,9 @@ namespace llvm {
     createCompileUnit(unsigned Lang, StringRef File, StringRef Dir,
                       StringRef Producer, bool isOptimized, StringRef Flags,
                       unsigned RV, StringRef SplitName = StringRef(),
-                      DebugEmissionKind Kind = FullDebug, uint64_t DWOId = 0,
-                      bool EmitDebugInfo = true);
+                      DICompileUnit::DebugEmissionKind Kind =
+                          DICompileUnit::DebugEmissionKind::FullDebug,
+                      uint64_t DWOId = 0, bool EmitDebugInfo = true);
 
     /// Create a file descriptor to hold debugging information
     /// for a file.

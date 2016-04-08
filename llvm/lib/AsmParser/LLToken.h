@@ -221,6 +221,7 @@ namespace lltok {
     DwarfAttEncoding,  // DW_ATE_foo
     DwarfVirtuality,   // DW_VIRTUALITY_foo
     DwarfLang,         // DW_LANG_foo
+    EmissionKind,      // lineTablesOnly
     DwarfOp,           // DW_OP_foo
     DIFlag,            // DIFlagFoo
     DwarfMacinfo,      // DW_MACINFO_foo
