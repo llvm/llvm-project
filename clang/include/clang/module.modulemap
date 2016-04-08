@@ -38,7 +38,6 @@ module Clang_Basic {
   textual header "Basic/BuiltinsWebAssembly.def"
   textual header "Basic/BuiltinsX86.def"
   textual header "Basic/BuiltinsXCore.def"
-  textual header "Basic/CodeGenOptions.def"
   textual header "Basic/DiagnosticOptions.def"
   textual header "Basic/LangOptions.def"
   textual header "Basic/OpenCLExtensions.def"
@@ -87,6 +86,7 @@ module Clang_Frontend {
   requires cplusplus
   umbrella "Frontend"
 
+  textual header "Frontend/CodeGenOptions.def"
   textual header "Frontend/LangStandards.def"
 
   module * { export * }
