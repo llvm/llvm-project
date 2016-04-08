@@ -24,8 +24,13 @@
 ;
 ; CHECK: .debug_loc
 ; CHECK: [[LOC1]]: Beginning address offset: 0x0000000000000000
-; CHECK:              Ending address offset: 0x0000000000000008
+; CHECK-NEXT:         Ending address offset: 0x0000000000000004
 ;             rdi, piece 0x00000008, piece 0x00000004, rsi, piece 0x00000004
+; CHECK-NEXT: Location description: 55 93 08 93 04 54 93 04
+; This location is split into two ranges with identical locations
+; because it comes from a DBG_VALUE %RSI followed by a DBG_VALUE %ESI.
+; CHECK:           Beginning address offset: 0x0000000000000004
+; CHECK-NEXT:         Ending address offset: 0x0000000000000008
 ; CHECK-NEXT: Location description: 55 93 08 93 04 54 93 04
 ; CHECK: [[LOC2]]: Beginning address offset: 0x0000000000000004
 ; CHECK-NEXT:         Ending address offset: 0x0000000000000008
