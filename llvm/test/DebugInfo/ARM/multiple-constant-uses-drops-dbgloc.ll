@@ -32,7 +32,7 @@ attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"=
 !llvm.module.flags = !{!12, !13, !14, !15}
 !llvm.ident = !{!16}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "", isOptimized: false, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "", isOptimized: false, subprograms: !3, emissionKind: FullDebug)
 !1 = !DIFile(filename: "test.c", directory: "/home/user/clang/build")
 !2 = !{}
 !3 = !{!4}

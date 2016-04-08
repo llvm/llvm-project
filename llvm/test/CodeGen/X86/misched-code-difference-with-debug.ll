@@ -62,7 +62,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!22, !23}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, enums: !2, retainedTypes: !3, subprograms: !12, globals: !20, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, enums: !2, retainedTypes: !3, subprograms: !12, globals: !20, imports: !2, emissionKind: FullDebug)
 !1 = !DIFile(filename: "test.cpp", directory: "")
 !2 = !{}
 !3 = !{!4}
