@@ -140,12 +140,13 @@ def SIconstdata_ptr : SDNode<
 
 class flat_ld <SDPatternOperator ld> : PatFrag<(ops node:$ptr),
                                                (ld node:$ptr), [{
-  return isFlatLoad(dyn_cast<LoadSDNode>(N)) ||
-         isGlobalLoad(dyn_cast<LoadSDNode>(N)) ||
-         isConstantLoad(cast<LoadSDNode>(N), -1);
+  return isFlatLoad(dyn_cast<MemSDNode>(N)) ||
+         isGlobalLoad(dyn_cast<MemSDNode>(N)) ||
+         isConstantLoad(cast<MemSDNode>(N), -1);
 }]>;
 
 def flat_load : flat_ld <load>;
+def atomic_flat_load : flat_ld<atomic_load>;
 def flat_az_extloadi8 : flat_ld <az_extloadi8>;
 def flat_sextloadi8 : flat_ld <sextloadi8>;
 def flat_az_extloadi16 : flat_ld <az_extloadi16>;
@@ -153,11 +154,12 @@ def flat_sextloadi16 : flat_ld <sextloadi16>;
 
 class flat_st <SDPatternOperator st> : PatFrag<(ops node:$val, node:$ptr),
                                                (st node:$val, node:$ptr), [{
-  return isFlatStore(dyn_cast<StoreSDNode>(N)) ||
-         isGlobalStore(dyn_cast<StoreSDNode>(N));
+  return isFlatStore(dyn_cast<MemSDNode>(N)) ||
+         isGlobalStore(dyn_cast<MemSDNode>(N));
 }]>;
 
 def flat_store: flat_st <store>;
+def atomic_flat_store: flat_st <atomic_store>;
 def flat_truncstorei8 : flat_st <truncstorei8>;
 def flat_truncstorei16 : flat_st <truncstorei16>;
 
@@ -166,6 +168,12 @@ def mubuf_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
 	return isGlobalLoad(cast<LoadSDNode>(N)) ||
          isConstantLoad(cast<LoadSDNode>(N), -1);
 }]>;
+
+def mubuf_load_atomic : PatFrag <(ops node:$ptr), (atomic_load node:$ptr), [{
+	return isGlobalLoad(cast<MemSDNode>(N)) ||
+         isConstantLoad(cast<MemSDNode>(N), -1);
+}]>;
+
 
 def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
   return isConstantLoad(cast<LoadSDNode>(N), -1) &&
@@ -721,6 +729,7 @@ def MUBUFAddr64 : ComplexPattern<i64, 7, "SelectMUBUFAddr64">;
 def MUBUFAddr64Atomic : ComplexPattern<i64, 5, "SelectMUBUFAddr64">;
 def MUBUFScratch : ComplexPattern<i64, 4, "SelectMUBUFScratch">;
 def MUBUFOffset : ComplexPattern<i64, 6, "SelectMUBUFOffset">;
+def MUBUFOffsetNoGLC : ComplexPattern<i64, 3, "SelectMUBUFOffset">;
 def MUBUFOffsetAtomic : ComplexPattern<i64, 4, "SelectMUBUFOffset">;
 def MUBUFIntrinsicOffset : ComplexPattern<i32, 2, "SelectMUBUFIntrinsicOffset">;
 def MUBUFIntrinsicVOffset : ComplexPattern<i32, 3, "SelectMUBUFIntrinsicVOffset">;
@@ -796,6 +805,7 @@ class EXPCommon : InstSI<
 
   let EXP_CNT = 1;
   let Uses = [EXEC];
+  let SchedRW = [WriteExport];
 }
 
 multiclass EXP_m {

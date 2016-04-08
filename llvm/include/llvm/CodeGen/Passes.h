@@ -220,6 +220,15 @@ public:
   /// LLVM code to machine instructions with possibly generic opcodes.
   virtual bool addIRTranslator() { return true; }
 
+  /// This method may be implemented by targets that want to run passes
+  /// immediately before the register bank selection.
+  virtual void addPreRegBankSelect() {}
+
+  /// This method should install a register bank selector pass, which
+  /// assigns register banks to virtual registers without a register
+  /// class or register banks.
+  virtual bool addRegBankSelect() { return true; }
+
   /// Add the complete, standard set of LLVM CodeGen passes.
   /// Fully developed targets will not generally override this.
   virtual void addMachinePasses();

@@ -21,20 +21,20 @@ static void print_usage(void) {
   fprintf(stderr, "llvm-c-test command\n\n");
   fprintf(stderr, " Commands:\n");
   fprintf(stderr, "  * --module-dump\n");
-  fprintf(stderr, "    Read bytecode from stdin - print disassembly\n\n");
+  fprintf(stderr, "    Read bitcode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --lazy-module-dump\n");
   fprintf(stderr,
-          "    Lazily read bytecode from stdin - print disassembly\n\n");
+          "    Lazily read bitcode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --new-module-dump\n");
-  fprintf(stderr, "    Read bytecode from stdin - print disassembly\n\n");
+  fprintf(stderr, "    Read bitcode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --lazy-new-module-dump\n");
   fprintf(stderr,
-          "    Lazily read bytecode from stdin - print disassembly\n\n");
+          "    Lazily read bitcode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --module-list-functions\n");
   fprintf(stderr,
-          "    Read bytecode from stdin - list summary of functions\n\n");
+          "    Read bitcode from stdin - list summary of functions\n\n");
   fprintf(stderr, "  * --module-list-globals\n");
-  fprintf(stderr, "    Read bytecode from stdin - list summary of globals\n\n");
+  fprintf(stderr, "    Read bitcode from stdin - list summary of globals\n\n");
   fprintf(stderr, "  * --targets-list\n");
   fprintf(stderr, "    List available targets\n\n");
   fprintf(stderr, "  * --object-list-sections\n");
@@ -46,12 +46,15 @@ static void print_usage(void) {
   fprintf(stderr, "    Read lines of triple, hex ascii machine code from stdin "
                   "- print disassembly\n\n");
   fprintf(stderr, "  * --calc\n");
-  fprintf(stderr, "  * --echo\n");
-  fprintf(stderr,
-          "    Read object file form stdin - and print it back out\n\n");
   fprintf(
       stderr,
       "    Read lines of name, rpn from stdin - print generated module\n\n");
+  fprintf(stderr, "  * --echo\n");
+  fprintf(stderr,
+          "    Read bitcode file form stdin - print it back out\n\n");
+  fprintf(stderr, "  * --test-diagnostic-handler\n");
+  fprintf(stderr,
+          "    Read bitcode file form stdin with a diagnostic handler set\n\n");
 }
 
 int main(int argc, char **argv) {
@@ -87,6 +90,8 @@ int main(int argc, char **argv) {
     return llvm_set_metadata();
   } else if (argc == 2 && !strcmp(argv[1], "--echo")) {
     return llvm_echo();
+  } else if (argc == 2 && !strcmp(argv[1], "--test-diagnostic-handler")) {
+    return llvm_test_diagnostic_handler();
   } else {
     print_usage();
   }

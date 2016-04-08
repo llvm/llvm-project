@@ -70,7 +70,7 @@ void ObjCARCAPElim::getAnalysisUsage(AnalysisUsage &AU) const {
 /// possibly produce autoreleases.
 bool ObjCARCAPElim::MayAutorelease(ImmutableCallSite CS, unsigned Depth) {
   if (const Function *Callee = CS.getCalledFunction()) {
-    if (Callee->isDeclaration() || Callee->mayBeOverridden())
+    if (!Callee->hasExactDefinition())
       return true;
     for (const BasicBlock &BB : *Callee) {
       for (const Instruction &I : BB)

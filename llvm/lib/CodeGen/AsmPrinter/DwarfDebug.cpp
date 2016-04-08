@@ -1438,10 +1438,10 @@ static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
         DwarfExpr.AddMachineRegExpression(Expr, Loc.getReg(),
                                           PieceOffsetInBits);
     }
+  } else if (Value.isConstantFP()) {
+    APInt RawBytes = Value.getConstantFP()->getValueAPF().bitcastToAPInt();
+    DwarfExpr.AddUnsignedConstant(RawBytes);
   }
-  // else ... ignore constant fp. There is not any good way to
-  // to represent them here in dwarf.
-  // FIXME: ^
 }
 
 void DebugLocEntry::finalize(const AsmPrinter &AP,

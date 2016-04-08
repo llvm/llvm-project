@@ -943,8 +943,9 @@ public:
   /// Returns the current sub-register index.
   unsigned getSubReg() const { return SubReg; }
 
-  /// Returns the bit mask if register classes that getSubReg() projects into
+  /// Returns the bit mask of register classes that getSubReg() projects into
   /// RC.
+  /// See TargetRegisterClass::getSubClassMask() for how to use it.
   const uint32_t *getMask() const { return Mask; }
 
   /// Advance iterator to the next entry.
@@ -954,6 +955,97 @@ public:
     SubReg = *Idx++;
     if (!SubReg)
       Idx = nullptr;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+//                           BitMaskClassIterator
+//===----------------------------------------------------------------------===//
+/// This class encapuslates the logic to iterate over bitmask returned by
+/// the various RegClass related APIs.
+/// E.g., this class can be used to iterate over the subclasses provided by
+/// TargetRegisterClass::getSubClassMask or SuperRegClassIterator::getMask.
+class BitMaskClassIterator {
+  /// Total number of register classes.
+  const unsigned NumRegClasses;
+  /// Base index of CurrentChunk.
+  /// In other words, the number of bit we read to get at the
+  /// beginning of that chunck.
+  unsigned Base;
+  /// Adjust base index of CurrentChunk.
+  /// Base index + how many bit we read within CurrentChunk.
+  unsigned Idx;
+  /// Current register class ID.
+  unsigned ID;
+  /// Mask we are iterating over.
+  const uint32_t *Mask;
+  /// Current chunk of the Mask we are traversing.
+  uint32_t CurrentChunk;
+
+  /// Move ID to the next set bit.
+  void moveToNextID() {
+    // If the current chunk of memory is empty, move to the next one,
+    // while making sure we do not go pass the number of register
+    // classes.
+    while (!CurrentChunk) {
+      // Move to the next chunk.
+      Base += 32;
+      if (Base >= NumRegClasses) {
+        ID = NumRegClasses;
+        return;
+      }
+      CurrentChunk = *++Mask;
+      Idx = Base;
+    }
+    // Otherwise look for the first bit set from the right
+    // (representation of the class ID is big endian).
+    // See getSubClassMask for more details on the representation.
+    unsigned Offset = countTrailingZeros(CurrentChunk);
+    // Add the Offset to the adjusted base number of this chunk: Idx.
+    // This is the ID of the register class.
+    ID = Idx + Offset;
+
+    // Consume the zeros, if any, and the bit we just read
+    // so that we are at the right spot for the next call.
+    // Do not do Offset + 1 because Offset may be 31 and 32
+    // will be UB for the shift, though in that case we could
+    // have make the chunk being equal to 0, but that would
+    // have introduced a if statement.
+    moveNBits(Offset);
+    moveNBits(1);
+  }
+
+  /// Move \p NumBits Bits forward in CurrentChunk.
+  void moveNBits(unsigned NumBits) {
+    assert(NumBits < 32 && "Undefined behavior spotted!");
+    // Consume the bit we read for the next call.
+    CurrentChunk >>= NumBits;
+    // Adjust the base for the chunk.
+    Idx += NumBits;
+  }
+
+public:
+  /// Create a BitMaskClassIterator that visits all the register classes
+  /// represented by \p Mask.
+  ///
+  /// \pre \p Mask != nullptr
+  BitMaskClassIterator(const uint32_t *Mask, const TargetRegisterInfo &TRI)
+      : NumRegClasses(TRI.getNumRegClasses()), Base(0), Idx(0), ID(0),
+        Mask(Mask), CurrentChunk(*Mask) {
+    // Move to the first ID.
+    moveToNextID();
+  }
+
+  /// Returns true if this iterator is still pointing at a valid entry.
+  bool isValid() const { return getID() != NumRegClasses; }
+
+  /// Returns the current register class ID.
+  unsigned getID() const { return ID; }
+
+  /// Advance iterator to the next entry.
+  void operator++() {
+    assert(isValid() && "Cannot move iterator past end.");
+    moveToNextID();
   }
 };
 

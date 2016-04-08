@@ -21,22 +21,14 @@
 
 using namespace llvm;
 
+#ifndef LLVM_BUILD_GLOBAL_ISEL
+#error "This shouldn't be built without GISel"
+#endif
+
 AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {
 }
 
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-bool AArch64CallLowering::LowerReturn(MachineIRBuilder &MIRBuilder,
-                                      const Value *Val, unsigned VReg) const {
-  return false;
-}
-
-bool AArch64CallLowering::LowerFormalArguments(
-    MachineIRBuilder &MIRBuilder, const Function::ArgumentListType &Args,
-    const SmallVectorImpl<unsigned> &VRegs) const {
-  return false;
-}
-#else
 bool AArch64CallLowering::LowerReturn(MachineIRBuilder &MIRBuilder,
                                         const Value *Val, unsigned VReg) const {
   MachineInstr *Return = MIRBuilder.buildInstr(AArch64::RET_ReallyLR);
@@ -110,4 +102,3 @@ bool AArch64CallLowering::LowerFormalArguments(
   }
   return true;
 }
-#endif

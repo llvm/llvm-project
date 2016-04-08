@@ -529,7 +529,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitGEPOperator(GEPOperator &GEP) {
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitGlobalAlias(GlobalAlias &GA) {
-  if (GA.mayBeOverridden())
+  if (GA.isInterposable())
     return unknown();
   return compute(GA.getAliasee());
 }

@@ -2366,7 +2366,7 @@ bool GlobalOpt::OptimizeGlobalAliases(Module &M) {
     }
 
     // If the aliasee may change at link time, nothing can be done - bail out.
-    if (J->mayBeOverridden())
+    if (J->isInterposable())
       continue;
 
     Constant *Aliasee = J->getAliasee();

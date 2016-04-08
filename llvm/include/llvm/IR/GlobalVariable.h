@@ -94,9 +94,9 @@ public:
   /// unique.
   inline bool hasDefinitiveInitializer() const {
     return hasInitializer() &&
-      // The initializer of a global variable with weak linkage may change at
-      // link time.
-      !mayBeOverridden() &&
+      // The initializer of a global variable may change to something arbitrary
+      // at link time.
+      !isInterposable() &&
       // The initializer of a global variable with the externally_initialized
       // marker may change at runtime before C++ initializers are evaluated.
       !isExternallyInitialized();

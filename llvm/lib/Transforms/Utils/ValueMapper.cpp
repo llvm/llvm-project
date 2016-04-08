@@ -86,6 +86,20 @@ public:
   /// (not an MDNode, or MDNode::isResolved() returns true).
   Metadata *mapMetadata(const Metadata *MD);
 
+  // Map LocalAsMetadata, which never gets memoized.
+  //
+  // If the referenced local is not mapped, the principled return is nullptr.
+  // However, optimization passes sometimes move metadata operands *before* the
+  // SSA values they reference.  To prevent crashes in \a RemapInstruction(),
+  // return "!{}" when RF_IgnoreMissingLocals is not set.
+  //
+  // \note Adding a mapping for LocalAsMetadata is unsupported.  Add a mapping
+  // to the value map for the SSA value in question instead.
+  //
+  // FIXME: Once we have a verifier check for forward references to SSA values
+  // through metadata operands, always return nullptr on unmapped locals.
+  Metadata *mapLocalAsMetadata(const LocalAsMetadata &LAM);
+
 private:
   Value *mapBlockAddress(const BlockAddress &BA);
 
@@ -294,18 +308,32 @@ Value *Mapper::mapValue(const Value *V) {
 
   if (const auto *MDV = dyn_cast<MetadataAsValue>(V)) {
     const Metadata *MD = MDV->getMetadata();
+
+    if (auto *LAM = dyn_cast<LocalAsMetadata>(MD)) {
+      // Look through to grab the local value.
+      if (Value *LV = mapValue(LAM->getValue())) {
+        if (V == LAM->getValue())
+          return const_cast<Value *>(V);
+        return MetadataAsValue::get(V->getContext(), ValueAsMetadata::get(LV));
+      }
+
+      // FIXME: always return nullptr once Verifier::verifyDominatesUse()
+      // ensures metadata operands only reference defined SSA values.
+      return (Flags & RF_IgnoreMissingLocals)
+                 ? nullptr
+                 : MetadataAsValue::get(V->getContext(),
+                                        MDTuple::get(V->getContext(), None));
+    }
+
     // If this is a module-level metadata and we know that nothing at the module
     // level is changing, then use an identity mapping.
-    if (!isa<LocalAsMetadata>(MD) && (Flags & RF_NoModuleLevelChanges))
+    if (Flags & RF_NoModuleLevelChanges)
       return VM[V] = const_cast<Value *>(V);
 
-    // FIXME: be consistent with function-local values for LocalAsMetadata by
-    // returning nullptr when LocalAsMetadata is missing.  Adding a mapping is
-    // expensive.
+    // Map the metadata and turn it into a value.
     auto *MappedMD = mapMetadata(MD);
-    if (MD == MappedMD || (!MappedMD && (Flags & RF_IgnoreMissingLocals)))
+    if (MD == MappedMD)
       return VM[V] = const_cast<Value *>(V);
-
     return VM[V] = MetadataAsValue::get(V->getContext(), MappedMD);
   }
 
@@ -623,32 +651,24 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
   if (isa<MDString>(MD))
     return mapToSelf(MD);
 
-  if (isa<ConstantAsMetadata>(MD))
-    if ((Flags & RF_NoModuleLevelChanges))
-      return mapToSelf(MD);
+  // This is a module-level metadata.  If nothing at the module level is
+  // changing, use an identity mapping.
+  if ((Flags & RF_NoModuleLevelChanges))
+    return mapToSelf(MD);
 
-  // FIXME: Assert that this is not LocalAsMetadata.  It should be handled
-  // elsewhere.
-  if (const auto *VMD = dyn_cast<ValueAsMetadata>(MD)) {
+  if (auto *CMD = dyn_cast<ConstantAsMetadata>(MD)) {
     // Disallow recursion into metadata mapping through mapValue.
     VM.disableMapMetadata();
-    Value *MappedV = mapValue(VMD->getValue());
+    Value *MappedV = mapValue(CMD->getValue());
     VM.enableMapMetadata();
 
-    // FIXME: Always use "ignore" behaviour.  There should only be globals here.
-    if (VMD->getValue() == MappedV ||
-        (!MappedV && (Flags & RF_IgnoreMissingLocals)))
+    if (CMD->getValue() == MappedV)
       return mapToSelf(MD);
 
     return mapToMetadata(MD, MappedV ? ValueAsMetadata::get(MappedV) : nullptr);
   }
 
   assert(isa<MDNode>(MD) && "Expected a metadata node");
-
-  // If this is a module-level metadata and we know that nothing at the
-  // module level is changing, then use an identity mapping.
-  if (Flags & RF_NoModuleLevelChanges)
-    return mapToSelf(MD);
 
   return None;
 }
@@ -659,9 +679,26 @@ Metadata *llvm::MapMetadata(const Metadata *MD, ValueToValueMapTy &VM,
   return Mapper(VM, Flags, TypeMapper, Materializer).mapMetadata(MD);
 }
 
+Metadata *Mapper::mapLocalAsMetadata(const LocalAsMetadata &LAM) {
+  // Lookup the mapping for the value itself, and return the appropriate
+  // metadata.
+  if (Value *V = mapValue(LAM.getValue())) {
+    if (V == LAM.getValue())
+      return const_cast<LocalAsMetadata *>(&LAM);
+    return ValueAsMetadata::get(V);
+  }
+
+  // FIXME: always return nullptr once Verifier::verifyDominatesUse() ensures
+  // metadata operands only reference defined SSA values.
+  return (Flags & RF_IgnoreMissingLocals)
+             ? nullptr
+             : MDTuple::get(LAM.getContext(), None);
+}
+
 Metadata *Mapper::mapMetadata(const Metadata *MD) {
-  // FIXME: First check for and deal with LocalAsMetadata, so that
-  // mapSimpleMetadata() doesn't need to deal with it.
+  assert(MD && "Expected valid metadata");
+  assert(!isa<LocalAsMetadata>(MD) && "Unexpected local metadata");
+
   if (Optional<Metadata *> NewMD = mapSimpleMetadata(MD))
     return *NewMD;
 

@@ -49,6 +49,9 @@ int llvm_targets_list(void);
 // echo.c
 int llvm_echo(void);
 
+// diagnostic.c
+int llvm_test_diagnostic_handler(void);
+
 #ifdef __cplusplus
 }
 #endif /* !defined(__cplusplus) */

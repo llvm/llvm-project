@@ -790,8 +790,9 @@ void TargetLoweringBase::initActions() {
   memset(TruncStoreActions, 0, sizeof(TruncStoreActions));
   memset(IndexedModeActions, 0, sizeof(IndexedModeActions));
   memset(CondCodeActions, 0, sizeof(CondCodeActions));
-  memset(RegClassForVT, 0,MVT::LAST_VALUETYPE*sizeof(TargetRegisterClass*));
-  memset(TargetDAGCombineArray, 0, array_lengthof(TargetDAGCombineArray));
+  std::fill(std::begin(RegClassForVT), std::end(RegClassForVT), nullptr);
+  std::fill(std::begin(TargetDAGCombineArray),
+            std::end(TargetDAGCombineArray), 0);
 
   // Set default actions for various operations.
   for (MVT VT : MVT::all_valuetypes()) {

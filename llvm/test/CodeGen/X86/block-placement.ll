@@ -1083,3 +1083,96 @@ exit:
   %ret = phi i32 [ %val1, %then ], [ %val2, %else ]
   ret i32 %ret
 }
+
+; Make sure we put landingpads out of the way.
+declare i32 @pers(...)
+
+declare i32 @foo();
+
+declare i32 @bar();
+
+define i32 @test_lp(i32 %a) personality i32 (...)* @pers {
+; CHECK-LABEL: test_lp:
+; CHECK: %entry
+; CHECK: %hot
+; CHECK: %then
+; CHECK: %cold
+; CHECK: %coldlp
+; CHECK: %hotlp
+; CHECK: %lpret
+entry:
+  %0 = icmp sgt i32 %a, 1
+  br i1 %0, label %hot, label %cold, !prof !4
+
+hot:
+  %1 = invoke i32 @foo()
+          to label %then unwind label %hotlp
+
+cold:
+  %2 = invoke i32 @bar()
+          to label %then unwind label %coldlp
+
+then:
+  %3 = phi i32 [ %1, %hot ], [ %2, %cold ]
+  ret i32 %3
+
+hotlp:
+  %4 = landingpad { i8*, i32 }
+          cleanup
+  br label %lpret
+
+coldlp:
+  %5 = landingpad { i8*, i32 }
+          cleanup
+  br label %lpret
+
+lpret:
+  %6 = phi i32 [-1, %hotlp], [-2, %coldlp]
+  %7 = add i32 %6, 42
+  ret i32 %7
+}
+
+!4 = !{!"branch_weights", i32 65536, i32 0}
+
+; Make sure that ehpad are scheduled from the least probable one
+; to the most probable one. See selectBestCandidateBlock as to why.
+declare void @clean();
+
+define void @test_flow_unwind() personality i32 (...)* @pers {
+; CHECK-LABEL: test_flow_unwind:
+; CHECK: %entry
+; CHECK: %then
+; CHECK: %exit
+; CHECK: %innerlp
+; CHECK: %outerlp
+; CHECK: %outercleanup
+entry:
+  %0 = invoke i32 @foo()
+          to label %then unwind label %outerlp
+
+then:
+  %1 = invoke i32 @bar()
+          to label %exit unwind label %innerlp
+
+exit:
+  ret void
+
+innerlp:
+  %2 = landingpad { i8*, i32 }
+          cleanup
+  br label %innercleanup
+
+outerlp:
+  %3 = landingpad { i8*, i32 }
+          cleanup
+  br label %outercleanup
+
+outercleanup:
+  %4 = phi { i8*, i32 } [%2, %innercleanup], [%3, %outerlp]
+  call void @clean()
+  resume { i8*, i32 } %4
+
+innercleanup:
+  call void @clean()
+  br label %outercleanup
+}

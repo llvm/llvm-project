@@ -112,8 +112,8 @@ static const uint32_t IH_NONTAKEN_WEIGHT = 1;
 ///
 /// Predict that a successor which leads necessarily to an
 /// unreachable-terminated block as extremely unlikely.
-bool BranchProbabilityInfo::calcUnreachableHeuristics(BasicBlock *BB) {
-  TerminatorInst *TI = BB->getTerminator();
+bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
+  const TerminatorInst *TI = BB->getTerminator();
   if (TI->getNumSuccessors() == 0) {
     if (isa<UnreachableInst>(TI))
       PostDominatedByUnreachable.insert(BB);
@@ -123,7 +123,7 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(BasicBlock *BB) {
   SmallVector<unsigned, 4> UnreachableEdges;
   SmallVector<unsigned, 4> ReachableEdges;
 
-  for (succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
+  for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
     if (PostDominatedByUnreachable.count(*I))
       UnreachableEdges.push_back(I.getSuccessorIndex());
     else
@@ -174,8 +174,8 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(BasicBlock *BB) {
 
 // Propagate existing explicit probabilities from either profile data or
 // 'expect' intrinsic processing.
-bool BranchProbabilityInfo::calcMetadataWeights(BasicBlock *BB) {
-  TerminatorInst *TI = BB->getTerminator();
+bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
+  const TerminatorInst *TI = BB->getTerminator();
   if (TI->getNumSuccessors() == 1)
     return false;
   if (!isa<BranchInst>(TI) && !isa<SwitchInst>(TI))
@@ -244,15 +244,15 @@ bool BranchProbabilityInfo::calcMetadataWeights(BasicBlock *BB) {
 ///
 /// Return true if we could compute the weights for cold edges.
 /// Return false, otherwise.
-bool BranchProbabilityInfo::calcColdCallHeuristics(BasicBlock *BB) {
-  TerminatorInst *TI = BB->getTerminator();
+bool BranchProbabilityInfo::calcColdCallHeuristics(const BasicBlock *BB) {
+  const TerminatorInst *TI = BB->getTerminator();
   if (TI->getNumSuccessors() == 0)
     return false;
 
   // Determine which successors are post-dominated by a cold block.
   SmallVector<unsigned, 4> ColdEdges;
   SmallVector<unsigned, 4> NormalEdges;
-  for (succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
+  for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
     if (PostDominatedByColdCall.count(*I))
       ColdEdges.push_back(I.getSuccessorIndex());
     else
@@ -266,8 +266,8 @@ bool BranchProbabilityInfo::calcColdCallHeuristics(BasicBlock *BB) {
     // Otherwise, if the block itself contains a cold function, add it to the
     // set of blocks postdominated by a cold call.
     assert(!PostDominatedByColdCall.count(BB));
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I)
-      if (CallInst *CI = dyn_cast<CallInst>(I))
+    for (BasicBlock::const_iterator I = BB->begin(), E = BB->end(); I != E; ++I)
+      if (const CallInst *CI = dyn_cast<CallInst>(I))
         if (CI->hasFnAttr(Attribute::Cold)) {
           PostDominatedByColdCall.insert(BB);
           break;
@@ -302,8 +302,8 @@ bool BranchProbabilityInfo::calcColdCallHeuristics(BasicBlock *BB) {
 
 // Calculate Edge Weights using "Pointer Heuristics". Predict a comparsion
 // between two pointer or pointer and NULL will fail.
-bool BranchProbabilityInfo::calcPointerHeuristics(BasicBlock *BB) {
-  BranchInst * BI = dyn_cast<BranchInst>(BB->getTerminator());
+bool BranchProbabilityInfo::calcPointerHeuristics(const BasicBlock *BB) {
+  const BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
   if (!BI || !BI->isConditional())
     return false;
 
@@ -337,7 +337,7 @@ bool BranchProbabilityInfo::calcPointerHeuristics(BasicBlock *BB) {
 
 // Calculate Edge Weights using "Loop Branch Heuristics". Predict backedges
 // as taken, exiting edges as not-taken.
-bool BranchProbabilityInfo::calcLoopBranchHeuristics(BasicBlock *BB,
+bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
                                                      const LoopInfo &LI) {
   Loop *L = LI.getLoopFor(BB);
   if (!L)
@@ -347,7 +347,7 @@ bool BranchProbabilityInfo::calcLoopBranchHeuristics(BasicBlock *BB,
   SmallVector<unsigned, 8> ExitingEdges;
   SmallVector<unsigned, 8> InEdges; // Edges from header to the loop.
 
-  for (succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
+  for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
     if (!L->contains(*I))
       ExitingEdges.push_back(I.getSuccessorIndex());
     else if (L->getHeader() == *I)
@@ -393,8 +393,8 @@ bool BranchProbabilityInfo::calcLoopBranchHeuristics(BasicBlock *BB,
   return true;
 }
 
-bool BranchProbabilityInfo::calcZeroHeuristics(BasicBlock *BB) {
-  BranchInst * BI = dyn_cast<BranchInst>(BB->getTerminator());
+bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB) {
+  const BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
   if (!BI || !BI->isConditional())
     return false;
 
@@ -476,8 +476,8 @@ bool BranchProbabilityInfo::calcZeroHeuristics(BasicBlock *BB) {
   return true;
 }
 
-bool BranchProbabilityInfo::calcFloatingPointHeuristics(BasicBlock *BB) {
-  BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
+bool BranchProbabilityInfo::calcFloatingPointHeuristics(const BasicBlock *BB) {
+  const BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
   if (!BI || !BI->isConditional())
     return false;
 
@@ -513,8 +513,8 @@ bool BranchProbabilityInfo::calcFloatingPointHeuristics(BasicBlock *BB) {
   return true;
 }
 
-bool BranchProbabilityInfo::calcInvokeHeuristics(BasicBlock *BB) {
-  InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator());
+bool BranchProbabilityInfo::calcInvokeHeuristics(const BasicBlock *BB) {
+  const InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator());
   if (!II)
     return false;
 
@@ -549,12 +549,13 @@ isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const {
   return getEdgeProbability(Src, Dst) > BranchProbability(4, 5);
 }
 
-BasicBlock *BranchProbabilityInfo::getHotSucc(BasicBlock *BB) const {
+const BasicBlock *
+BranchProbabilityInfo::getHotSucc(const BasicBlock *BB) const {
   auto MaxProb = BranchProbability::getZero();
-  BasicBlock *MaxSucc = nullptr;
+  const BasicBlock *MaxSucc = nullptr;
 
-  for (succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
-    BasicBlock *Succ = *I;
+  for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
+    const BasicBlock *Succ = *I;
     auto Prob = getEdgeProbability(BB, Succ);
     if (Prob > MaxProb) {
       MaxProb = Prob;
@@ -633,7 +634,7 @@ BranchProbabilityInfo::printEdgeProbability(raw_ostream &OS,
   return OS;
 }
 
-void BranchProbabilityInfo::calculate(Function &F, const LoopInfo& LI) {
+void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI) {
   DEBUG(dbgs() << "---- Branch Probability Info : " << F.getName()
                << " ----\n\n");
   LastF = &F; // Store the last function we ran on for printing.

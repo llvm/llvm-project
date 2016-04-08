@@ -37,6 +37,9 @@ class DMTC2_MM64R6_ENC : POOL32A_MFTC2_FM_MMR6<"dmtc2", 0b0111110100>;
 class DMFC0_MM64R6_ENC : POOL32S_DMFTC0_FM_MMR6<"dmfc0", 0b00011>;
 class DMFC1_MM64R6_ENC : POOL32F_MFTC1_FM_MMR6<"dmfc1", 0b10010000>;
 class DMFC2_MM64R6_ENC : POOL32A_MFTC2_FM_MMR6<"dmfc2", 0b0110110100>;
+class DADD_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dadd", 0b100010000>;
+class DADDIU_MM64R6_ENC : DADDIU_FM_MMR6<"daddiu">;
+class DADDU_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"daddu", 0b101010000>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -114,6 +117,12 @@ class DMFC1_MM64R6_DESC : MFC1_MMR6_DESC_BASE<"dmfc1", GPR64Opnd, FGR64Opnd,
                                               II_DMFC1, bitconvert>;
 class DMFC2_MM64R6_DESC : MFC2_MMR6_DESC_BASE<"dmfc2", GPR64Opnd, COP2Opnd>;
 
+class DADD_MM64R6_DESC : ArithLogicR<"dadd", GPR64Opnd, 1, II_DADD>;
+class DADDIU_MM64R6_DESC : ArithLogicI<"daddiu", simm16_64, GPR64Opnd,
+                                       II_DADDIU, immSExt16, add>,
+                           IsAsCheapAsAMove;
+class DADDU_MM64R6_DESC : ArithLogicR<"daddu", GPR64Opnd, 1, II_DADDU, add>;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -158,13 +167,84 @@ let DecoderNamespace = "MicroMipsR6" in {
                      ISA_MICROMIPS64R6;
   def DMFC2_MM64R6 : StdMMR6Rel, DMFC2_MM64R6_ENC, DMFC2_MM64R6_DESC,
                      ISA_MICROMIPS64R6;
+  def DADD_MM64R6: StdMMR6Rel, DADD_MM64R6_DESC, DADD_MM64R6_ENC,
+                   ISA_MICROMIPS64R6;
+  def DADDIU_MM64R6: StdMMR6Rel, DADDIU_MM64R6_DESC, DADDIU_MM64R6_ENC,
+                     ISA_MICROMIPS64R6;
+  def DADDU_MM64R6: StdMMR6Rel, DADDU_MM64R6_DESC, DADDU_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
 }
 
 //===----------------------------------------------------------------------===//
-// Instruction aliases
+//
+// Arbitrary patterns that map to one or more instructions
+//
 //===----------------------------------------------------------------------===//
+
+def : MipsPat<(MipsLo tglobaladdr:$in),
+              (DADDIU_MM64R6 ZERO_64, tglobaladdr:$in)>, ISA_MICROMIPS64R6;
+def : MipsPat<(MipsLo tblockaddress:$in),
+              (DADDIU_MM64R6 ZERO_64, tblockaddress:$in)>, ISA_MICROMIPS64R6;
+def : MipsPat<(MipsLo tjumptable:$in),
+              (DADDIU_MM64R6 ZERO_64, tjumptable:$in)>, ISA_MICROMIPS64R6;
+def : MipsPat<(MipsLo tconstpool:$in),
+              (DADDIU_MM64R6 ZERO_64, tconstpool:$in)>, ISA_MICROMIPS64R6;
+def : MipsPat<(MipsLo tglobaltlsaddr:$in),
+              (DADDIU_MM64R6 ZERO_64, tglobaltlsaddr:$in)>, ISA_MICROMIPS64R6;
+def : MipsPat<(MipsLo texternalsym:$in),
+              (DADDIU_MM64R6 ZERO_64, texternalsym:$in)>, ISA_MICROMIPS64R6;
+
+def : MipsPat<(add GPR64:$hi, (MipsLo tglobaladdr:$lo)),
+              (DADDIU_MM64R6 GPR64:$hi, tglobaladdr:$lo)>, ISA_MICROMIPS64R6;
+def : MipsPat<(add GPR64:$hi, (MipsLo tblockaddress:$lo)),
+              (DADDIU_MM64R6 GPR64:$hi, tblockaddress:$lo)>, ISA_MICROMIPS64R6;
+def : MipsPat<(add GPR64:$hi, (MipsLo tjumptable:$lo)),
+              (DADDIU_MM64R6 GPR64:$hi, tjumptable:$lo)>, ISA_MICROMIPS64R6;
+def : MipsPat<(add GPR64:$hi, (MipsLo tconstpool:$lo)),
+              (DADDIU_MM64R6 GPR64:$hi, tconstpool:$lo)>, ISA_MICROMIPS64R6;
+def : MipsPat<(add GPR64:$hi, (MipsLo tglobaltlsaddr:$lo)),
+              (DADDIU_MM64R6 GPR64:$hi, tglobaltlsaddr:$lo)>, ISA_MICROMIPS64R6;
+
+def : MipsPat<(addc GPR64:$lhs, GPR64:$rhs),
+              (DADDU_MM64R6 GPR64:$lhs, GPR64:$rhs)>, ISA_MICROMIPS64R6;
+def : MipsPat<(addc GPR64:$lhs, immSExt16:$imm),
+              (DADDIU_MM64R6 GPR64:$lhs, imm:$imm)>, ISA_MICROMIPS64R6;
+
+def : WrapperPat<tglobaladdr, DADDIU_MM64R6, GPR64>, ISA_MICROMIPS64R6;
+def : WrapperPat<tconstpool, DADDIU_MM64R6, GPR64>, ISA_MICROMIPS64R6;
+def : WrapperPat<texternalsym, DADDIU_MM64R6, GPR64>, ISA_MICROMIPS64R6;
+def : WrapperPat<tblockaddress, DADDIU_MM64R6, GPR64>, ISA_MICROMIPS64R6;
+def : WrapperPat<tjumptable, DADDIU_MM64R6, GPR64>, ISA_MICROMIPS64R6;
+def : WrapperPat<tglobaltlsaddr, DADDIU_MM64R6, GPR64>, ISA_MICROMIPS64R6;
+
+//===----------------------------------------------------------------------===//
+//
+// Instruction aliases
+//
+//===----------------------------------------------------------------------===//
+
 def : MipsInstAlias<"dmtc0 $rt, $rd",
                     (DMTC0_MM64R6 COP0Opnd:$rd, GPR64Opnd:$rt, 0), 0>;
 def : MipsInstAlias<"dmfc0 $rt, $rd",
                     (DMFC0_MM64R6 GPR64Opnd:$rt, COP0Opnd:$rd, 0), 0>,
                     ISA_MICROMIPS64R6;
+def : MipsInstAlias<"daddu $rs, $rt, $imm",
+                    (DADDIU_MM64R6 GPR64Opnd:$rs,
+                                   GPR64Opnd:$rt,
+                                   simm16_64:$imm),
+                    0>, ISA_MICROMIPS64R6;
+def : MipsInstAlias<"daddu $rs, $imm",
+                    (DADDIU_MM64R6 GPR64Opnd:$rs,
+                                   GPR64Opnd:$rs,
+                                   simm16_64:$imm),
+                    0>, ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dsubu $rt, $rs, $imm",
+                    (DADDIU_MM64R6 GPR64Opnd:$rt,
+                                   GPR64Opnd:$rs,
+                                   InvertedImOperand64:$imm),
+                    0>, ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dsubu $rs, $imm",
+                    (DADDIU_MM64R6 GPR64Opnd:$rs,
+                                   GPR64Opnd:$rs,
+                                   InvertedImOperand64:$imm),
+                    0>, ISA_MICROMIPS64R6;

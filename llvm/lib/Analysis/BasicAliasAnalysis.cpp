@@ -359,7 +359,7 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
     if (!Op) {
       // The only non-operator case we can handle are GlobalAliases.
       if (const GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
-        if (!GA->mayBeOverridden()) {
+        if (!GA->isInterposable()) {
           V = GA->getAliasee();
           continue;
         }

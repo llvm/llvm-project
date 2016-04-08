@@ -427,7 +427,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
 
       // Resolve function pointers.
       Function *Callee = dyn_cast<Function>(getVal(CS.getCalledValue()));
-      if (!Callee || Callee->mayBeOverridden()) {
+      if (!Callee || Callee->isInterposable()) {
         DEBUG(dbgs() << "Can not resolve function pointer.\n");
         return false;  // Cannot resolve.
       }

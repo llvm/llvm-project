@@ -1450,7 +1450,7 @@ void computeKnownBits(Value *V, APInt &KnownZero, APInt &KnownOne,
   // A weak GlobalAlias is totally unknown. A non-weak GlobalAlias has
   // the bits of its aliasee.
   if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
-    if (!GA->mayBeOverridden())
+    if (!GA->isInterposable())
       computeKnownBits(GA->getAliasee(), KnownZero, KnownOne, Depth + 1, Q);
     return;
   }
@@ -2640,7 +2640,7 @@ Value *llvm::GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
                Operator::getOpcode(Ptr) == Instruction::AddrSpaceCast) {
       Ptr = cast<Operator>(Ptr)->getOperand(0);
     } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(Ptr)) {
-      if (GA->mayBeOverridden())
+      if (GA->isInterposable())
         break;
       Ptr = GA->getAliasee();
     } else {
@@ -2836,7 +2836,7 @@ Value *llvm::GetUnderlyingObject(Value *V, const DataLayout &DL,
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       V = cast<Operator>(V)->getOperand(0);
     } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
-      if (GA->mayBeOverridden())
+      if (GA->isInterposable())
         return V;
       V = GA->getAliasee();
     } else {
