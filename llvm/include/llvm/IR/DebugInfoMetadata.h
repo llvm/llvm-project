@@ -14,7 +14,7 @@
 #ifndef LLVM_IR_DEBUGINFOMETADATA_H
 #define LLVM_IR_DEBUGINFOMETADATA_H
 
-#include "llvm/Adt/Optional.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Dwarf.h"
 
