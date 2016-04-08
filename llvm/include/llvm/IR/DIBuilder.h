@@ -558,7 +558,8 @@ namespace llvm {
     /// \param isDefinition  True if this is a function definition.
     /// \param Virtuality    Attributes describing virtualness. e.g. pure
     ///                      virtual function.
-    /// \param VTableIndex   Index no of this method in virtual table.
+    /// \param VTableIndex   Index no of this method in virtual table, or -1u if
+    ///                      unrepresentable.
     /// \param VTableHolder  Type that holds vtable.
     /// \param Flags         e.g. is this function prototyped or not.
     ///                      This flags are used to emit dwarf attributes.
