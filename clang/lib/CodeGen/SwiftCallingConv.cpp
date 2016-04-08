@@ -603,7 +603,7 @@ CharUnits swiftcall::getNaturalAlignment(CodeGenModule &CGM, llvm::Type *type) {
   // rounded up to a power of 2.
   auto size = (unsigned long long) getTypeStoreSize(CGM, type).getQuantity();
   if (!isPowerOf2(size)) {
-    size = 1U << (llvm::findLastSet(size, llvm::ZB_Undefined) + 1);
+    size = 1ULL << (llvm::findLastSet(size, llvm::ZB_Undefined) + 1);
   }
   assert(size >= CGM.getDataLayout().getABITypeAlignment(type));
   return CharUnits::fromQuantity(size);

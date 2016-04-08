@@ -1705,18 +1705,9 @@ public:
   bool isNullPtrType() const;                   // C++0x nullptr_t
   bool isAtomicType() const;                    // C11 _Atomic()
 
-  bool isImage1dT() const;               // OpenCL image1d_t
-  bool isImage1dArrayT() const;          // OpenCL image1d_array_t
-  bool isImage1dBufferT() const;         // OpenCL image1d_buffer_t
-  bool isImage2dT() const;               // OpenCL image2d_t
-  bool isImage2dArrayT() const;          // OpenCL image2d_array_t
-  bool isImage2dDepthT() const;          // OpenCL image_2d_depth_t
-  bool isImage2dArrayDepthT() const;     // OpenCL image_2d_array_depth_t
-  bool isImage2dMSAAT() const;           // OpenCL image_2d_msaa_t
-  bool isImage2dArrayMSAAT() const;      // OpenCL image_2d_array_msaa_t
-  bool isImage2dMSAATDepth() const;      // OpenCL image_2d_msaa_depth_t
-  bool isImage2dArrayMSAATDepth() const; // OpenCL image_2d_array_msaa_depth_t
-  bool isImage3dT() const;               // OpenCL image3d_t
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+  bool is##Id##Type() const;
+#include "clang/AST/OpenCLImageTypes.def"
 
   bool isImageType() const;                     // Any OpenCL image type
 
@@ -2017,6 +2008,10 @@ template <> inline const Class##Type *Type::castAs() const { \
 class BuiltinType : public Type {
 public:
   enum Kind {
+// OpenCL image types
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) Id,
+#include "clang/AST/OpenCLImageTypes.def"
+// All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
 #include "clang/AST/BuiltinTypes.def"
@@ -5557,53 +5552,11 @@ inline bool Type::isObjCBuiltinType() const {
   return isObjCIdType() || isObjCClassType() || isObjCSelType();
 }
 
-inline bool Type::isImage1dT() const {
-  return isSpecificBuiltinType(BuiltinType::OCLImage1d);
-}
-
-inline bool Type::isImage1dArrayT() const {
-  return isSpecificBuiltinType(BuiltinType::OCLImage1dArray);
-}
-
-inline bool Type::isImage1dBufferT() const {
-  return isSpecificBuiltinType(BuiltinType::OCLImage1dBuffer);
-}
-
-inline bool Type::isImage2dT() const {
-  return isSpecificBuiltinType(BuiltinType::OCLImage2d);
-}
-
-inline bool Type::isImage2dArrayT() const {
-  return isSpecificBuiltinType(BuiltinType::OCLImage2dArray);
-}
-
-inline bool Type::isImage2dDepthT() const {
-  return isSpecificBuiltinType(BuiltinType::OCLImage2dDepth);
-}
-
-inline bool Type::isImage2dArrayDepthT() const {
-  return isSpecificBuiltinType(BuiltinType::OCLImage2dArrayDepth);
-}
-
-inline bool Type::isImage2dMSAAT() const {
-  return isSpecificBuiltinType(BuiltinType::OCLImage2dMSAA);
-}
-
-inline bool Type::isImage2dArrayMSAAT() const {
-  return isSpecificBuiltinType(BuiltinType::OCLImage2dArrayMSAA);
-}
-
-inline bool Type::isImage2dMSAATDepth() const {
-  return isSpecificBuiltinType(BuiltinType::OCLImage2dMSAADepth);
-}
-
-inline bool Type::isImage2dArrayMSAATDepth() const {
-  return isSpecificBuiltinType(BuiltinType::OCLImage2dArrayMSAADepth);
-}
-
-inline bool Type::isImage3dT() const {
-  return isSpecificBuiltinType(BuiltinType::OCLImage3d);
-}
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+  inline bool Type::is##Id##Type() const { \
+    return isSpecificBuiltinType(BuiltinType::Id); \
+  }
+#include "clang/AST/OpenCLImageTypes.def"
 
 inline bool Type::isSamplerT() const {
   return isSpecificBuiltinType(BuiltinType::OCLSampler);
@@ -5630,11 +5583,10 @@ inline bool Type::isReserveIDT() const {
 }
 
 inline bool Type::isImageType() const {
-  return isImage3dT() || isImage2dT() || isImage2dArrayT() ||
-         isImage2dDepthT() || isImage2dArrayDepthT() || isImage2dMSAAT() ||
-         isImage2dArrayMSAAT() || isImage2dMSAATDepth() ||
-         isImage2dArrayMSAATDepth() || isImage1dT() || isImage1dArrayT() ||
-         isImage1dBufferT();
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) is##Id##Type() ||
+  return
+#include "clang/AST/OpenCLImageTypes.def"
+      0; // end boolean or operation
 }
 
 inline bool Type::isPipeType() const {

@@ -1717,54 +1717,11 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificalTagType(TTK_Struct, "objc_selector");
     break;
 
-  case BuiltinType::OCLImage1d:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_image1d");
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+  case BuiltinType::Id: \
+    Out << "PAUocl_" #ImgType "_" #Suffix "@@"; \
     break;
-  case BuiltinType::OCLImage1dArray:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_image1darray");
-    break;
-  case BuiltinType::OCLImage1dBuffer:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_image1dbuffer");
-    break;
-  case BuiltinType::OCLImage2d:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_image2d");
-    break;
-  case BuiltinType::OCLImage2dArray:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_image2darray");
-    break;
-  case BuiltinType::OCLImage2dDepth:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_image2ddepth");
-    break;
-  case BuiltinType::OCLImage2dArrayDepth:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_image2darraydepth");
-    break;
-  case BuiltinType::OCLImage2dMSAA:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_image2dmsaa");
-    break;
-  case BuiltinType::OCLImage2dArrayMSAA:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_image2darraymsaa");
-    break;
-  case BuiltinType::OCLImage2dMSAADepth:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_image2dmsaadepth");
-    break;
-  case BuiltinType::OCLImage2dArrayMSAADepth:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_image2darraymsaadepth");
-    break;
-  case BuiltinType::OCLImage3d:
-    Out << "PA";
-    mangleArtificalTagType(TTK_Struct, "ocl_image3d");
-    break;
+#include "clang/AST/OpenCLImageTypes.def"
   case BuiltinType::OCLSampler:
     Out << "PA";
     mangleArtificalTagType(TTK_Struct, "ocl_sampler");

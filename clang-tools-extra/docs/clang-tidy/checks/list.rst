@@ -16,6 +16,7 @@ Clang-Tidy Checks
    cert-fio38-c (redirects to misc-non-copyable-objects) <cert-fio38-c>
    cert-flp30-c
    cert-oop11-cpp (redirects to misc-move-constructor-init) <cert-oop11-cpp>
+   cppcoreguidelines-interfaces-global-init
    cppcoreguidelines-pro-bounds-array-to-pointer-decay
    cppcoreguidelines-pro-bounds-constant-array-index
    cppcoreguidelines-pro-bounds-pointer-arithmetic

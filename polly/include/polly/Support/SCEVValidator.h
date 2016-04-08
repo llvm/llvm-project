@@ -37,9 +37,11 @@ void findLoops(const llvm::SCEV *Expr,
 /// @brief Find the values referenced by SCEVUnknowns in a given SCEV
 /// expression.
 ///
-/// @param Expr The SCEV expression to scan for SCEVUnknowns.
-/// @param Expr A vector into which the found values are inserted.
-void findValues(const llvm::SCEV *Expr, llvm::SetVector<llvm::Value *> &Values);
+/// @param Expr   The SCEV expression to scan for SCEVUnknowns.
+/// @param SE     The ScalarEvolution analysis for this function.
+/// @param Values A vector into which the found values are inserted.
+void findValues(const llvm::SCEV *Expr, llvm::ScalarEvolution &SE,
+                llvm::SetVector<llvm::Value *> &Values);
 
 /// Returns true when the SCEV contains references to instructions within the
 /// region.
