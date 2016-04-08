@@ -4,6 +4,9 @@
 ; CHECK: !named = !{!0, !1, !2, !3, !3}
 !named = !{!0, !1, !2, !3, !4}
 
+!llvm.module.flags = !{!7}
+!llvm.dbg.cu = !{!5}
+
 ; CHECK:      !0 = distinct !DISubprogram({{.*}})
 ; CHECK-NEXT: !1 = !DICompositeType({{.*}})
 !0 = distinct !DISubprogram(name: "foo")
@@ -18,3 +21,10 @@
 !4 = !DIImportedEntity(tag: DW_TAG_imported_module, name: "", scope: !0, entity: null,
                        line: 0)
 
+!5 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
+                             file: !6,
+                             isOptimized: true, flags: "-O2",
+                             splitDebugFilename: "abc.debug", emissionKind: 2,
+                             subprograms: !{!0})
+!6 = !DIFile(filename: "path/to/file", directory: "/path/to/dir")
+!7 = !{i32 2, !"Debug Info Version", i32 3}
