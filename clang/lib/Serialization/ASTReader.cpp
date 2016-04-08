@@ -217,8 +217,13 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
   if (!AllowCompatibleDifferences)                                 \
     ENUM_LANGOPT(Name, Bits, Default, Description)
 
+#define COMPATIBLE_VALUE_LANGOPT(Name, Bits, Default, Description) \
+  if (!AllowCompatibleDifferences)                                 \
+    VALUE_LANGOPT(Name, Bits, Default, Description)
+
 #define BENIGN_LANGOPT(Name, Bits, Default, Description)
 #define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description)
+#define BENIGN_VALUE_LANGOPT(Name, Type, Bits, Default, Description)
 #include "clang/Basic/LangOptions.def"
 
   if (ExistingLangOpts.ModuleFeatures != LangOpts.ModuleFeatures) {

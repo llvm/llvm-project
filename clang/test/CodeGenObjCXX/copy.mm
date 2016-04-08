@@ -11,7 +11,7 @@ namespace test0 {
   // CHECK:      alloca
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: store
-  // CHECK-NEXT: call noalias i8* @_Znwm(
+  // CHECK-NEXT: call i8* @_Znwm(
   // CHECK-NEXT: bitcast
   // CHECK-NEXT: bitcast
   // CHECK-NEXT: bitcast

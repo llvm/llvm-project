@@ -15,6 +15,8 @@ def Bstatic: Flag<["-"], "Bstatic">,
 def build_id : Flag<["--", "-"], "build-id">,
   HelpText<"Generate build ID note">;
 
+def build_id_eq : Joined<["--", "-"], "build-id=">;
+
 def L : JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Directory to search for libraries">;
 
@@ -91,6 +93,9 @@ def no_as_needed : Flag<["--"], "no-as-needed">;
 def no_demangle: Flag<["--"], "no-demangle">,
   HelpText<"Do not demangle symbol names">;
 
+def no_gnu_unique : Flag<["--"], "no-gnu-unique">,
+  HelpText<"Disable STB_GNU_UNIQUE symbol binding">;
+
 def no_whole_archive : Flag<["--", "-"], "no-whole-archive">,
   HelpText<"Restores the default behavior of loading archive members">;
 
@@ -129,6 +134,9 @@ def start_lib : Flag<["--"], "start-lib">,
 
 def strip_all : Flag<["--"], "strip-all">,
   HelpText<"Strip all symbols">;
+
+def strip_debug : Flag<["--"], "strip-debug">,
+  HelpText<"Strip debugging information">;
 
 def sysroot : Joined<["--"], "sysroot=">,
   HelpText<"Set the system root">;
@@ -175,14 +183,15 @@ def alias_init_init : Joined<["-"], "init=">, Alias<init>;
 def alias_l__library : Joined<["--"], "library=">, Alias<l>;
 def alias_o_output : Joined<["--"], "output=">, Alias<o>;
 def alias_pie_pic_executable: Flag<["--"], "pic-executable">, Alias<pie>;
-def alias_rpath_rpath : Joined<["-"], "rpath=">, Alias<rpath>;
 def alias_relocatable_r : Flag<["-"], "r">, Alias<relocatable>;
+def alias_rpath_rpath : Joined<["-"], "rpath=">, Alias<rpath>;
+def alias_script_T : JoinedOrSeparate<["-"], "T">, Alias<script>;
 def alias_shared_Bshareable : Flag<["-"], "Bshareable">, Alias<shared>;
 def alias_soname_h : JoinedOrSeparate<["-"], "h">, Alias<soname>;
 def alias_soname_soname : Separate<["-"], "soname">, Alias<soname>;
-def alias_script_T : JoinedOrSeparate<["-"], "T">, Alias<script>;
-def alias_trace : Flag<["-"], "t">, Alias<trace>;
 def alias_strip_all: Flag<["-"], "s">, Alias<strip_all>;
+def alias_strip_debug_S: Flag<["-"], "S">, Alias<strip_debug>;
+def alias_trace : Flag<["-"], "t">, Alias<trace>;
 def alias_undefined_u : JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 def alias_wrap_wrap : Joined<["--", "-"], "wrap=">, Alias<wrap>;
 
@@ -207,6 +216,7 @@ def plugin_opt : Separate<["--", "-"], "plugin-opt">;
 def plugin_opt_eq : Joined<["--", "-"], "plugin-opt=">;
 
 // Options listed below are silently ignored for now for compatibility.
+def detect_odr_violations : Flag<["--"], "detect-odr-violations">;
 def fatal_warnings : Flag<["--"], "fatal-warnings">;
 def no_add_needed : Flag<["--"], "no-add-needed">;
 def no_dynamic_linker : Flag<["--"], "no-dynamic-linker">;

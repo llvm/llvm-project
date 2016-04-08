@@ -2245,14 +2245,13 @@ void Sema::DeclareGlobalNewDelete() {
 
   QualType VoidPtr = Context.getPointerType(Context.VoidTy);
   QualType SizeT = Context.getSizeType();
-  bool AssumeSaneOperatorNew = getLangOpts().AssumeSaneOperatorNew;
 
   DeclareGlobalAllocationFunction(
       Context.DeclarationNames.getCXXOperatorName(OO_New),
-      VoidPtr, SizeT, QualType(), AssumeSaneOperatorNew);
+      VoidPtr, SizeT, QualType());
   DeclareGlobalAllocationFunction(
       Context.DeclarationNames.getCXXOperatorName(OO_Array_New),
-      VoidPtr, SizeT, QualType(), AssumeSaneOperatorNew);
+      VoidPtr, SizeT, QualType());
   DeclareGlobalAllocationFunction(
       Context.DeclarationNames.getCXXOperatorName(OO_Delete),
       Context.VoidTy, VoidPtr);
@@ -2273,8 +2272,7 @@ void Sema::DeclareGlobalNewDelete() {
 /// allocation function if it doesn't already exist.
 void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
                                            QualType Return,
-                                           QualType Param1, QualType Param2,
-                                           bool AddRestrictAttr) {
+                                           QualType Param1, QualType Param2) {
   DeclContext *GlobalCtx = Context.getTranslationUnitDecl();
   unsigned NumParams = Param2.isNull() ? 1 : 2;
 
@@ -2297,9 +2295,6 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
         // FIXME: Do we need to check for default arguments here?
         if (InitialParam1Type == Param1 &&
             (NumParams == 1 || InitialParam2Type == Param2)) {
-          if (AddRestrictAttr && !Func->hasAttr<RestrictAttr>())
-            Func->addAttr(RestrictAttr::CreateImplicit(
-                Context, RestrictAttr::GNU_malloc));
           // Make the function visible to name lookup, even if we found it in
           // an unimported module. It either is an implicitly-declared global
           // allocation function, or is suppressing that function.
@@ -2341,10 +2336,6 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
   // Implicit sized deallocation functions always have default visibility.
   Alloc->addAttr(VisibilityAttr::CreateImplicit(Context,
                                                 VisibilityAttr::Default));
-
-  if (AddRestrictAttr)
-    Alloc->addAttr(
-        RestrictAttr::CreateImplicit(Context, RestrictAttr::GNU_malloc));
 
   ParmVarDecl *ParamDecls[2];
   for (unsigned I = 0; I != NumParams; ++I) {

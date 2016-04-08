@@ -3167,25 +3167,32 @@ private:
 
 public:
   /// \brief - Returns instance or factory methods in global method pool for
-  /// given selector. If no such method or only one method found, function returns
-  /// false; otherwise, it returns true
-  bool CollectMultipleMethodsInGlobalPool(Selector Sel,
-                                          SmallVectorImpl<ObjCMethodDecl*>& Methods,
-                                          bool instance);
+  /// given selector. It checks the desired kind first, if none is found, and
+  /// parameter checkTheOther is set, it then checks the other kind. If no such
+  /// method or only one method is found, function returns false; otherwise, it
+  /// returns true.
+  bool
+  CollectMultipleMethodsInGlobalPool(Selector Sel,
+                                     SmallVectorImpl<ObjCMethodDecl*>& Methods,
+                                     bool InstanceFirst, bool CheckTheOther,
+                                     const ObjCObjectType *TypeBound = nullptr);
     
-  bool AreMultipleMethodsInGlobalPool(Selector Sel, ObjCMethodDecl *BestMethod,
-                                      SourceRange R,
-                                      bool receiverIdOrClass);
+  bool
+  AreMultipleMethodsInGlobalPool(Selector Sel, ObjCMethodDecl *BestMethod,
+                                 SourceRange R, bool receiverIdOrClass,
+                                 SmallVectorImpl<ObjCMethodDecl*>& Methods);
       
-  void DiagnoseMultipleMethodInGlobalPool(SmallVectorImpl<ObjCMethodDecl*> &Methods,
-                                          Selector Sel, SourceRange R,
-                                          bool receiverIdOrClass);
+  void
+  DiagnoseMultipleMethodInGlobalPool(SmallVectorImpl<ObjCMethodDecl*> &Methods,
+                                     Selector Sel, SourceRange R,
+                                     bool receiverIdOrClass);
 
 private:
   /// \brief - Returns a selector which best matches given argument list or
   /// nullptr if none could be found
   ObjCMethodDecl *SelectBestMethod(Selector Sel, MultiExprArg Args,
-                                   bool IsInstance);
+                                   bool IsInstance,
+                                   SmallVectorImpl<ObjCMethodDecl*>& Methods);
     
 
   /// \brief Record the typo correction failure and return an empty correction.
@@ -4715,8 +4722,7 @@ public:
   void DeclareGlobalNewDelete();
   void DeclareGlobalAllocationFunction(DeclarationName Name, QualType Return,
                                        QualType Param1,
-                                       QualType Param2 = QualType(),
-                                       bool addRestrictAttr = false);
+                                       QualType Param2 = QualType());
 
   bool FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
                                 DeclarationName Name, FunctionDecl* &Operator,

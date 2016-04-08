@@ -326,8 +326,20 @@ void PrintPPOutputPPCallbacks::InclusionDirective(SourceLocation HashLoc,
   if (Imported) {
     startNewLineIfNeeded();
     MoveToLine(HashLoc);
-    OS << "@import " << Imported->getFullModuleName() << ";"
-       << " /* clang -E: implicit import for \"" << File->getName() << "\" */";
+    if (PP.getLangOpts().ObjC2) {
+      OS << "@import " << Imported->getFullModuleName() << ";"
+         << " /* clang -E: implicit import for \"" << File->getName()
+         << "\" */";
+    } else {
+      // FIXME: Preseve whether this was a
+      // #include/#include_next/#include_macros/#import.
+      OS << "#include "
+         << (IsAngled ? '<' : '"')
+         << FileName
+         << (IsAngled ? '>' : '"')
+         << " /* clang -E: implicit import for module "
+         << Imported->getFullModuleName() << " */";
+    }
     // Since we want a newline after the @import, but not a #<line>, start a new
     // line immediately.
     EmittedTokensOnThisLine = true;
