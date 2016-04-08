@@ -4298,15 +4298,14 @@ void Verifier::verifyTypeRefs() {
 
   // Visit all the compile units again to map the type references.
   SmallDenseMap<const MDString *, const DIType *, 32> TypeRefs;
-  for (auto *CU : CUs->operands())
-    if (isa<DICompileUnit>(CU))
-      if (auto Ts = cast<DICompileUnit>(CU)->getRetainedTypes())
-        for (DIType *Op : Ts)
-          if (auto *T = dyn_cast_or_null<DICompositeType>(Op))
-            if (auto *S = T->getRawIdentifier()) {
-              UnresolvedTypeRefs.erase(S);
-              TypeRefs.insert(std::make_pair(S, T));
-            }
+  for (auto *MD : CUs->operands())
+    if (auto *CU = dyn_cast<DICompileUnit>(MD))
+      for (DIType *Op : CU->getRetainedTypes())
+        if (auto *T = dyn_cast_or_null<DICompositeType>(Op))
+          if (auto *S = T->getRawIdentifier()) {
+            UnresolvedTypeRefs.erase(S);
+            TypeRefs.insert(std::make_pair(S, T));
+          }
 
   // Verify debug info intrinsic bit piece expressions.  This needs a second
   // pass through the intructions, since we haven't built TypeRefs yet when
