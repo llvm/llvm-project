@@ -1943,11 +1943,16 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::assume: {
+    Value *IIOperand = II->getArgOperand(0);
+    // Remove an assume if it is immediately followed by an identical assume.
+    if (match(II->getNextNode(),
+              m_Intrinsic<Intrinsic::assume>(m_Specific(IIOperand))))
+      return eraseInstFromFunction(CI);
+
     // Canonicalize assume(a && b) -> assume(a); assume(b);
     // Note: New assumption intrinsics created here are registered by
     // the InstCombineIRInserter object.
-    Value *IIOperand = II->getArgOperand(0), *A, *B,
-          *AssumeIntrinsic = II->getCalledValue();
+    Value *AssumeIntrinsic = II->getCalledValue(), *A, *B;
     if (match(IIOperand, m_And(m_Value(A), m_Value(B)))) {
       Builder->CreateCall(AssumeIntrinsic, A, II->getName());
       Builder->CreateCall(AssumeIntrinsic, B, II->getName());

@@ -16,7 +16,6 @@ namespace llvm {
   class MachineFunction;
   class MachineFunctionPass;
   class VirtRegMap;
-  class LiveIntervals;
 
   /// Spiller interface.
   ///
@@ -29,7 +28,7 @@ namespace llvm {
 
     /// spill - Spill the LRE.getParent() live interval.
     virtual void spill(LiveRangeEdit &LRE) = 0;
-    virtual void postOptimization(){};
+
   };
 
   /// Create and return a spiller that will insert spill code directly instead
@@ -37,6 +36,7 @@ namespace llvm {
   Spiller *createInlineSpiller(MachineFunctionPass &pass,
                                MachineFunction &mf,
                                VirtRegMap &vrm);
+
 }
 
 #endif

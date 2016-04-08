@@ -104,6 +104,10 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   /// Whether this uses the PIC Base register or not.
   bool UsesPICBase;
 
+  /// True if this function has a subset of CSRs that is handled explicitly via
+  /// copies
+  bool IsSplitCSR;
+
 public:
   explicit PPCFunctionInfo(MachineFunction &MF) 
     : FramePointerSaveIndex(0),
@@ -125,7 +129,8 @@ public:
       VarArgsNumFPR(0),
       CRSpillFrameIndex(0),
       MF(MF),
-      UsesPICBase(0) {}
+      UsesPICBase(0),
+      IsSplitCSR(false) {}
 
   int getFramePointerSaveIndex() const { return FramePointerSaveIndex; }
   void setFramePointerSaveIndex(int Idx) { FramePointerSaveIndex = Idx; }
@@ -195,6 +200,9 @@ public:
 
   void setUsesPICBase(bool uses) { UsesPICBase = uses; }
   bool usesPICBase() const { return UsesPICBase; }
+
+  bool isSplitCSR() const { return IsSplitCSR; }
+  void setIsSplitCSR(bool s) { IsSplitCSR = s; }
 
   MCSymbol *getPICOffsetSymbol() const;
 

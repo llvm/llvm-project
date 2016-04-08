@@ -153,12 +153,3 @@ void RegAllocBase::allocatePhysRegs() {
     }
   }
 }
-
-void RegAllocBase::postOptimization() {
-  spiller().postOptimization();
-  for (auto DeadInst : DeadRemats) {
-    LIS->RemoveMachineInstrFromMaps(*DeadInst);
-    DeadInst->eraseFromParent();
-  }
-  DeadRemats.clear();
-}

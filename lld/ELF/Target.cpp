@@ -170,6 +170,7 @@ public:
   bool isRelRelative(uint32_t Type) const override;
   bool needsCopyRelImpl(uint32_t Type) const override;
   bool needsGot(uint32_t Type, const SymbolBody &S) const override;
+  bool refersToGotEntry(uint32_t Type) const override;
   bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA) const override;
@@ -1379,6 +1380,10 @@ bool AArch64TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
   default:
     return needsPlt(Type, S);
   }
+}
+
+bool AArch64TargetInfo::refersToGotEntry(uint32_t Type) const {
+  return Type == R_AARCH64_ADR_GOT_PAGE || Type == R_AARCH64_LD64_GOT_LO12_NC;
 }
 
 bool AArch64TargetInfo::needsPltImpl(uint32_t Type) const {

@@ -45,7 +45,14 @@ bool RegBankSelect::assignmentMatch(
   if (ValMapping.BreakDown.size() > 1)
     return false;
 
-  return RBI->getRegBank(Reg, *MRI, *TRI) == ValMapping.BreakDown[0].RegBank;
+  const RegisterBank *CurRegBank = RBI->getRegBank(Reg, *MRI, *TRI);
+  const RegisterBank *DesiredRegBrank = ValMapping.BreakDown[0].RegBank;
+  DEBUG(dbgs() << "Does assignment already match: ";
+        if (CurRegBank) dbgs() << *CurRegBank; else dbgs() << "none";
+        dbgs() << " against ";
+        assert(DesiredRegBrank && "The mapping must be valid");
+        dbgs() << *DesiredRegBrank << '\n';);
+  return CurRegBank == DesiredRegBrank;
 }
 
 unsigned
@@ -116,6 +123,8 @@ void RegBankSelect::assignInstr(MachineInstr &MI) {
     // If that is not the case, this means the code was broken before
     // hands because we should have found that the assignment match.
     // This will not hold when we will consider alternative mappings.
+    DEBUG(dbgs() << "Assign: " << *ValMapping.BreakDown[0].RegBank << " to "
+                 << PrintReg(Reg) << '\n');
     MRI->setRegBank(Reg, *ValMapping.BreakDown[0].RegBank);
     MO.setReg(Reg);
   }

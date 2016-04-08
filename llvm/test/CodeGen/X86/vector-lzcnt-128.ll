@@ -7,6 +7,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX2
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=knl -mattr=+avx512cd -mattr=+avx512vl | FileCheck %s --check-prefix=ALL --check-prefix=AVX512 --check-prefix=AVX512VLCD
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=knl -mattr=+avx512cd | FileCheck %s --check-prefix=ALL --check-prefix=AVX512 --check-prefix=AVX512CD
+;
+; Just one 32-bit run to make sure we do reasonable things for i64 lzcnt.
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefix=ALL --check-prefix=X32-SSE --check-prefix=X32-SSE41
 
 define <2 x i64> @testv2i64(<2 x i64> %in) nounwind {
 ; SSE2-LABEL: testv2i64:
@@ -104,6 +107,36 @@ define <2 x i64> @testv2i64(<2 x i64> %in) nounwind {
 ; AVX512CD:       ## BB#0:
 ; AVX512CD-NEXT:    vplzcntq %zmm0, %zmm0
 ; AVX512CD-NEXT:    retq
+;
+; X32-SSE-LABEL: testv2i64:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    pushl %esi
+; X32-SSE-NEXT:    pextrd $2, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    movl $63, %ecx
+; X32-SSE-NEXT:    cmovel %ecx, %eax
+; X32-SSE-NEXT:    xorl $31, %eax
+; X32-SSE-NEXT:    addl $32, %eax
+; X32-SSE-NEXT:    pextrd $3, %xmm0, %edx
+; X32-SSE-NEXT:    bsrl %edx, %esi
+; X32-SSE-NEXT:    xorl $31, %esi
+; X32-SSE-NEXT:    testl %edx, %edx
+; X32-SSE-NEXT:    cmovel %eax, %esi
+; X32-SSE-NEXT:    movd %esi, %xmm1
+; X32-SSE-NEXT:    movd %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    cmovel %ecx, %eax
+; X32-SSE-NEXT:    xorl $31, %eax
+; X32-SSE-NEXT:    addl $32, %eax
+; X32-SSE-NEXT:    pextrd $1, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %edx
+; X32-SSE-NEXT:    xorl $31, %edx
+; X32-SSE-NEXT:    testl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %edx
+; X32-SSE-NEXT:    movd %edx, %xmm0
+; X32-SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-SSE-NEXT:    popl %esi
+; X32-SSE-NEXT:    retl
 
   %out = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %in, i1 0)
   ret <2 x i64> %out
@@ -190,6 +223,31 @@ define <2 x i64> @testv2i64u(<2 x i64> %in) nounwind {
 ; AVX512CD:       ## BB#0:
 ; AVX512CD-NEXT:    vplzcntq %zmm0, %zmm0
 ; AVX512CD-NEXT:    retq
+;
+; X32-SSE-LABEL: testv2i64u:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    pextrd $3, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %ecx
+; X32-SSE-NEXT:    xorl $31, %ecx
+; X32-SSE-NEXT:    pextrd $2, %xmm0, %edx
+; X32-SSE-NEXT:    bsrl %edx, %edx
+; X32-SSE-NEXT:    xorl $31, %edx
+; X32-SSE-NEXT:    addl $32, %edx
+; X32-SSE-NEXT:    testl %eax, %eax
+; X32-SSE-NEXT:    cmovnel %ecx, %edx
+; X32-SSE-NEXT:    movd %edx, %xmm1
+; X32-SSE-NEXT:    pextrd $1, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %ecx
+; X32-SSE-NEXT:    xorl $31, %ecx
+; X32-SSE-NEXT:    movd %xmm0, %edx
+; X32-SSE-NEXT:    bsrl %edx, %edx
+; X32-SSE-NEXT:    xorl $31, %edx
+; X32-SSE-NEXT:    addl $32, %edx
+; X32-SSE-NEXT:    testl %eax, %eax
+; X32-SSE-NEXT:    cmovnel %ecx, %edx
+; X32-SSE-NEXT:    movd %edx, %xmm0
+; X32-SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-SSE-NEXT:    retl
 
   %out = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %in, i1 -1)
   ret <2 x i64> %out
@@ -352,6 +410,32 @@ define <4 x i32> @testv4i32(<4 x i32> %in) nounwind {
 ; AVX512CD:       ## BB#0:
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512CD-NEXT:    retq
+;
+; X32-SSE-LABEL: testv4i32:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    pextrd $1, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    movl $63, %ecx
+; X32-SSE-NEXT:    cmovel %ecx, %eax
+; X32-SSE-NEXT:    xorl $31, %eax
+; X32-SSE-NEXT:    movd %xmm0, %edx
+; X32-SSE-NEXT:    bsrl %edx, %edx
+; X32-SSE-NEXT:    cmovel %ecx, %edx
+; X32-SSE-NEXT:    xorl $31, %edx
+; X32-SSE-NEXT:    movd %edx, %xmm1
+; X32-SSE-NEXT:    pinsrd $1, %eax, %xmm1
+; X32-SSE-NEXT:    pextrd $2, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    cmovel %ecx, %eax
+; X32-SSE-NEXT:    xorl $31, %eax
+; X32-SSE-NEXT:    pinsrd $2, %eax, %xmm1
+; X32-SSE-NEXT:    pextrd $3, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    cmovel %ecx, %eax
+; X32-SSE-NEXT:    xorl $31, %eax
+; X32-SSE-NEXT:    pinsrd $3, %eax, %xmm1
+; X32-SSE-NEXT:    movdqa %xmm1, %xmm0
+; X32-SSE-NEXT:    retl
 
   %out = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %in, i1 0)
   ret <4 x i32> %out
@@ -489,6 +573,27 @@ define <4 x i32> @testv4i32u(<4 x i32> %in) nounwind {
 ; AVX512CD:       ## BB#0:
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
 ; AVX512CD-NEXT:    retq
+;
+; X32-SSE-LABEL: testv4i32u:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    pextrd $1, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $31, %eax
+; X32-SSE-NEXT:    movd %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    xorl $31, %ecx
+; X32-SSE-NEXT:    movd %ecx, %xmm1
+; X32-SSE-NEXT:    pinsrd $1, %eax, %xmm1
+; X32-SSE-NEXT:    pextrd $2, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $31, %eax
+; X32-SSE-NEXT:    pinsrd $2, %eax, %xmm1
+; X32-SSE-NEXT:    pextrd $3, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $31, %eax
+; X32-SSE-NEXT:    pinsrd $3, %eax, %xmm1
+; X32-SSE-NEXT:    movdqa %xmm1, %xmm0
+; X32-SSE-NEXT:    retl
 
   %out = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %in, i1 -1)
   ret <4 x i32> %out
@@ -757,6 +862,52 @@ define <8 x i16> @testv8i16(<8 x i16> %in) nounwind {
 ; AVX512CD-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512CD-NEXT:    vpsubw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512CD-NEXT:    retq
+;
+; X32-SSE-LABEL: testv8i16:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    pextrw $1, %xmm0, %eax
+; X32-SSE-NEXT:    bsrw %ax, %cx
+; X32-SSE-NEXT:    movw $31, %ax
+; X32-SSE-NEXT:    cmovew %ax, %cx
+; X32-SSE-NEXT:    xorl $15, %ecx
+; X32-SSE-NEXT:    movd %xmm0, %edx
+; X32-SSE-NEXT:    bsrw %dx, %dx
+; X32-SSE-NEXT:    cmovew %ax, %dx
+; X32-SSE-NEXT:    xorl $15, %edx
+; X32-SSE-NEXT:    movd %edx, %xmm1
+; X32-SSE-NEXT:    pinsrw $1, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrw $2, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrw %cx, %cx
+; X32-SSE-NEXT:    cmovew %ax, %cx
+; X32-SSE-NEXT:    xorl $15, %ecx
+; X32-SSE-NEXT:    pinsrw $2, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrw $3, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrw %cx, %cx
+; X32-SSE-NEXT:    cmovew %ax, %cx
+; X32-SSE-NEXT:    xorl $15, %ecx
+; X32-SSE-NEXT:    pinsrw $3, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrw $4, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrw %cx, %cx
+; X32-SSE-NEXT:    cmovew %ax, %cx
+; X32-SSE-NEXT:    xorl $15, %ecx
+; X32-SSE-NEXT:    pinsrw $4, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrw $5, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrw %cx, %cx
+; X32-SSE-NEXT:    cmovew %ax, %cx
+; X32-SSE-NEXT:    xorl $15, %ecx
+; X32-SSE-NEXT:    pinsrw $5, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrw $6, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrw %cx, %cx
+; X32-SSE-NEXT:    cmovew %ax, %cx
+; X32-SSE-NEXT:    xorl $15, %ecx
+; X32-SSE-NEXT:    pinsrw $6, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrw $7, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrw %cx, %cx
+; X32-SSE-NEXT:    cmovew %ax, %cx
+; X32-SSE-NEXT:    xorl $15, %ecx
+; X32-SSE-NEXT:    pinsrw $7, %ecx, %xmm1
+; X32-SSE-NEXT:    movdqa %xmm1, %xmm0
+; X32-SSE-NEXT:    retl
   %out = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %in, i1 0)
   ret <8 x i16> %out
 }
@@ -979,6 +1130,43 @@ define <8 x i16> @testv8i16u(<8 x i16> %in) nounwind {
 ; AVX512CD-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512CD-NEXT:    vpsubw {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512CD-NEXT:    retq
+;
+; X32-SSE-LABEL: testv8i16u:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    pextrw $1, %xmm0, %eax
+; X32-SSE-NEXT:    bsrw %ax, %ax
+; X32-SSE-NEXT:    xorl $15, %eax
+; X32-SSE-NEXT:    movd %xmm0, %ecx
+; X32-SSE-NEXT:    bsrw %cx, %cx
+; X32-SSE-NEXT:    xorl $15, %ecx
+; X32-SSE-NEXT:    movd %ecx, %xmm1
+; X32-SSE-NEXT:    pinsrw $1, %eax, %xmm1
+; X32-SSE-NEXT:    pextrw $2, %xmm0, %eax
+; X32-SSE-NEXT:    bsrw %ax, %ax
+; X32-SSE-NEXT:    xorl $15, %eax
+; X32-SSE-NEXT:    pinsrw $2, %eax, %xmm1
+; X32-SSE-NEXT:    pextrw $3, %xmm0, %eax
+; X32-SSE-NEXT:    bsrw %ax, %ax
+; X32-SSE-NEXT:    xorl $15, %eax
+; X32-SSE-NEXT:    pinsrw $3, %eax, %xmm1
+; X32-SSE-NEXT:    pextrw $4, %xmm0, %eax
+; X32-SSE-NEXT:    bsrw %ax, %ax
+; X32-SSE-NEXT:    xorl $15, %eax
+; X32-SSE-NEXT:    pinsrw $4, %eax, %xmm1
+; X32-SSE-NEXT:    pextrw $5, %xmm0, %eax
+; X32-SSE-NEXT:    bsrw %ax, %ax
+; X32-SSE-NEXT:    xorl $15, %eax
+; X32-SSE-NEXT:    pinsrw $5, %eax, %xmm1
+; X32-SSE-NEXT:    pextrw $6, %xmm0, %eax
+; X32-SSE-NEXT:    bsrw %ax, %ax
+; X32-SSE-NEXT:    xorl $15, %eax
+; X32-SSE-NEXT:    pinsrw $6, %eax, %xmm1
+; X32-SSE-NEXT:    pextrw $7, %xmm0, %eax
+; X32-SSE-NEXT:    bsrw %ax, %ax
+; X32-SSE-NEXT:    xorl $15, %eax
+; X32-SSE-NEXT:    pinsrw $7, %eax, %xmm1
+; X32-SSE-NEXT:    movdqa %xmm1, %xmm0
+; X32-SSE-NEXT:    retl
   %out = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %in, i1 -1)
   ret <8 x i16> %out
 }
@@ -1477,6 +1665,92 @@ define <16 x i8> @testv16i8(<16 x i8> %in) nounwind {
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512-NEXT:    vpsubb {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
+;
+; X32-SSE-LABEL: testv16i8:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    pextrb $1, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %ecx
+; X32-SSE-NEXT:    movl $15, %eax
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pextrb $0, %xmm0, %edx
+; X32-SSE-NEXT:    bsrl %edx, %edx
+; X32-SSE-NEXT:    cmovel %eax, %edx
+; X32-SSE-NEXT:    xorl $7, %edx
+; X32-SSE-NEXT:    movd %edx, %xmm1
+; X32-SSE-NEXT:    pinsrb $1, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $2, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $2, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $3, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $3, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $4, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $4, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $5, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $5, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $6, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $6, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $7, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $7, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $8, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $8, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $9, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $9, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $10, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $10, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $11, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $11, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $12, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $12, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $13, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $13, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $14, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $14, %ecx, %xmm1
+; X32-SSE-NEXT:    pextrb $15, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    cmovel %eax, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    pinsrb $15, %ecx, %xmm1
+; X32-SSE-NEXT:    movdqa %xmm1, %xmm0
+; X32-SSE-NEXT:    retl
   %out = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %in, i1 0)
   ret <16 x i8> %out
 }
@@ -1884,6 +2158,75 @@ define <16 x i8> @testv16i8u(<16 x i8> %in) nounwind {
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512-NEXT:    vpsubb {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
+;
+; X32-SSE-LABEL: testv16i8u:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    pextrb $1, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pextrb $0, %xmm0, %ecx
+; X32-SSE-NEXT:    bsrl %ecx, %ecx
+; X32-SSE-NEXT:    xorl $7, %ecx
+; X32-SSE-NEXT:    movd %ecx, %xmm1
+; X32-SSE-NEXT:    pinsrb $1, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $2, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $2, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $3, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $3, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $4, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $4, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $5, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $5, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $6, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $6, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $7, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $7, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $8, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $8, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $9, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $9, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $10, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $10, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $11, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $11, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $12, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $12, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $13, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $13, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $14, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $14, %eax, %xmm1
+; X32-SSE-NEXT:    pextrb $15, %xmm0, %eax
+; X32-SSE-NEXT:    bsrl %eax, %eax
+; X32-SSE-NEXT:    xorl $7, %eax
+; X32-SSE-NEXT:    pinsrb $15, %eax, %xmm1
+; X32-SSE-NEXT:    movdqa %xmm1, %xmm0
+; X32-SSE-NEXT:    retl
   %out = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %in, i1 -1)
   ret <16 x i8> %out
 }
@@ -1906,6 +2249,12 @@ define <2 x i64> @foldv2i64() nounwind {
 ; AVX512-NEXT:    movl $55, %eax
 ; AVX512-NEXT:    vmovq %rax, %xmm0
 ; AVX512-NEXT:    retq
+;
+; X32-SSE-LABEL: foldv2i64:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    movl $55, %eax
+; X32-SSE-NEXT:    movd %eax, %xmm0
+; X32-SSE-NEXT:    retl
   %out = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> <i64 256, i64 -1>, i1 0)
   ret <2 x i64> %out
 }
@@ -1928,6 +2277,12 @@ define <2 x i64> @foldv2i64u() nounwind {
 ; AVX512-NEXT:    movl $55, %eax
 ; AVX512-NEXT:    vmovq %rax, %xmm0
 ; AVX512-NEXT:    retq
+;
+; X32-SSE-LABEL: foldv2i64u:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    movl $55, %eax
+; X32-SSE-NEXT:    movd %eax, %xmm0
+; X32-SSE-NEXT:    retl
   %out = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> <i64 256, i64 -1>, i1 -1)
   ret <2 x i64> %out
 }
@@ -1952,6 +2307,11 @@ define <4 x i32> @foldv4i32() nounwind {
 ; AVX512CD:       ## BB#0:
 ; AVX512CD-NEXT:    vmovaps {{.*#+}} xmm0 = [23,0,32,24]
 ; AVX512CD-NEXT:    retq
+;
+; X32-SSE-LABEL: foldv4i32:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    movaps {{.*#+}} xmm0 = [23,0,32,24]
+; X32-SSE-NEXT:    retl
   %out = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> <i32 256, i32 -1, i32 0, i32 255>, i1 0)
   ret <4 x i32> %out
 }
@@ -1976,6 +2336,11 @@ define <4 x i32> @foldv4i32u() nounwind {
 ; AVX512CD:       ## BB#0:
 ; AVX512CD-NEXT:    vmovaps {{.*#+}} xmm0 = [23,0,32,24]
 ; AVX512CD-NEXT:    retq
+;
+; X32-SSE-LABEL: foldv4i32u:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    movaps {{.*#+}} xmm0 = [23,0,32,24]
+; X32-SSE-NEXT:    retl
   %out = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> <i32 256, i32 -1, i32 0, i32 255>, i1 -1)
   ret <4 x i32> %out
 }
@@ -2000,6 +2365,11 @@ define <8 x i16> @foldv8i16() nounwind {
 ; AVX512CD:       ## BB#0:
 ; AVX512CD-NEXT:    vmovaps {{.*#+}} xmm0 = [7,0,16,8,16,13,11,9]
 ; AVX512CD-NEXT:    retq
+;
+; X32-SSE-LABEL: foldv8i16:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    movaps {{.*#+}} xmm0 = [7,0,16,8,16,13,11,9]
+; X32-SSE-NEXT:    retl
   %out = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> <i16 256, i16 -1, i16 0, i16 255, i16 -65536, i16 7, i16 24, i16 88>, i1 0)
   ret <8 x i16> %out
 }
@@ -2024,6 +2394,11 @@ define <8 x i16> @foldv8i16u() nounwind {
 ; AVX512CD:       ## BB#0:
 ; AVX512CD-NEXT:    vmovaps {{.*#+}} xmm0 = [7,0,16,8,16,13,11,9]
 ; AVX512CD-NEXT:    retq
+;
+; X32-SSE-LABEL: foldv8i16u:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    movaps {{.*#+}} xmm0 = [7,0,16,8,16,13,11,9]
+; X32-SSE-NEXT:    retl
   %out = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> <i16 256, i16 -1, i16 0, i16 255, i16 -65536, i16 7, i16 24, i16 88>, i1 -1)
   ret <8 x i16> %out
 }
@@ -2048,6 +2423,11 @@ define <16 x i8> @foldv16i8() nounwind {
 ; AVX512CD:       ## BB#0:
 ; AVX512CD-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,8,0,8,5,3,1,0,0,7,6,5,4,3,2]
 ; AVX512CD-NEXT:    retq
+;
+; X32-SSE-LABEL: foldv16i8:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,0,8,0,8,5,3,1,0,0,7,6,5,4,3,2]
+; X32-SSE-NEXT:    retl
   %out = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> <i8 256, i8 -1, i8 0, i8 255, i8 -65536, i8 7, i8 24, i8 88, i8 -2, i8 254, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32>, i1 0)
   ret <16 x i8> %out
 }
@@ -2072,6 +2452,11 @@ define <16 x i8> @foldv16i8u() nounwind {
 ; AVX512CD:       ## BB#0:
 ; AVX512CD-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,8,0,8,5,3,1,0,0,7,6,5,4,3,2]
 ; AVX512CD-NEXT:    retq
+;
+; X32-SSE-LABEL: foldv16i8u:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,0,8,0,8,5,3,1,0,0,7,6,5,4,3,2]
+; X32-SSE-NEXT:    retl
   %out = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> <i8 256, i8 -1, i8 0, i8 255, i8 -65536, i8 7, i8 24, i8 88, i8 -2, i8 254, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32>, i1 -1)
   ret <16 x i8> %out
 }

@@ -63,11 +63,14 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
 
+  // Resize before the early returns. Some backends expect that
+  // SavedRegs.size() == TRI.getNumRegs() after this call even if there are no
+  // saved registers.
+  SavedRegs.resize(TRI.getNumRegs());
+
   // Early exit if there are no callee saved registers.
   if (!CSRegs || CSRegs[0] == 0)
     return;
-
-  SavedRegs.resize(TRI.getNumRegs());
 
   // In Naked functions we aren't going to save any registers.
   if (MF.getFunction()->hasFnAttribute(Attribute::Naked))

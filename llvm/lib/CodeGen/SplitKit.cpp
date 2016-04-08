@@ -16,7 +16,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
-#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -431,13 +430,8 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx,
   bool Late = RegIdx != 0;
 
   // Attempt cheap-as-a-copy rematerialization.
-  unsigned Original = VRM.getOriginal(Edit->get(RegIdx));
-  LiveInterval &OrigLI = LIS.getInterval(Original);
-  VNInfo *OrigVNI = OrigLI.getVNInfoAt(UseIdx);
   LiveRangeEdit::Remat RM(ParentVNI);
-  RM.OrigMI = LIS.getInstructionFromIndex(OrigVNI->def);
-
-  if (Edit->canRematerializeAt(RM, OrigVNI, UseIdx, true)) {
+  if (Edit->canRematerializeAt(RM, UseIdx, true)) {
     Def = Edit->rematerializeAt(MBB, I, LI->reg, RM, TRI, Late);
     ++NumRemats;
   } else {
@@ -722,62 +716,7 @@ SplitEditor::findShallowDominator(MachineBasicBlock *MBB,
   }
 }
 
-void SplitEditor::computeRedundantBackCopies(
-    DenseSet<unsigned> &NotToHoistSet, SmallVectorImpl<VNInfo *> &BackCopies) {
-  LiveInterval *LI = &LIS.getInterval(Edit->get(0));
-  LiveInterval *Parent = &Edit->getParent();
-  SmallVector<SmallPtrSet<VNInfo *, 8>, 8> EqualVNs(Parent->getNumValNums());
-  SmallPtrSet<VNInfo *, 8> DominatedVNIs;
-
-  // Aggregate VNIs having the same value as ParentVNI.
-  for (VNInfo *VNI : LI->valnos) {
-    if (VNI->isUnused())
-      continue;
-    VNInfo *ParentVNI = Edit->getParent().getVNInfoAt(VNI->def);
-    EqualVNs[ParentVNI->id].insert(VNI);
-  }
-
-  // For VNI aggregation of each ParentVNI, collect dominated, i.e.,
-  // redundant VNIs to BackCopies.
-  for (unsigned i = 0, e = Parent->getNumValNums(); i != e; ++i) {
-    VNInfo *ParentVNI = Parent->getValNumInfo(i);
-    if (!NotToHoistSet.count(ParentVNI->id))
-      continue;
-    SmallPtrSetIterator<VNInfo *> It1 = EqualVNs[ParentVNI->id].begin();
-    SmallPtrSetIterator<VNInfo *> It2 = It1;
-    for (; It1 != EqualVNs[ParentVNI->id].end(); ++It1) {
-      It2 = It1;
-      for (++It2; It2 != EqualVNs[ParentVNI->id].end(); ++It2) {
-        if (DominatedVNIs.count(*It1) || DominatedVNIs.count(*It2))
-          continue;
-
-        MachineBasicBlock *MBB1 = LIS.getMBBFromIndex((*It1)->def);
-        MachineBasicBlock *MBB2 = LIS.getMBBFromIndex((*It2)->def);
-        if (MBB1 == MBB2) {
-          DominatedVNIs.insert((*It1)->def < (*It2)->def ? (*It2) : (*It1));
-        } else if (MDT.dominates(MBB1, MBB2)) {
-          DominatedVNIs.insert(*It2);
-        } else if (MDT.dominates(MBB2, MBB1)) {
-          DominatedVNIs.insert(*It1);
-        }
-      }
-    }
-    if (!DominatedVNIs.empty()) {
-      forceRecompute(0, ParentVNI);
-      for (auto VNI : DominatedVNIs) {
-        BackCopies.push_back(VNI);
-      }
-      DominatedVNIs.clear();
-    }
-  }
-}
-
-/// For SM_Size mode, find a common dominator for all the back-copies for
-/// the same ParentVNI and hoist the backcopies to the dominator BB.
-/// For SM_Speed mode, if the common dominator is hot and it is not beneficial
-/// to do the hoisting, simply remove the dominated backcopies for the same
-/// ParentVNI.
-void SplitEditor::hoistCopies() {
+void SplitEditor::hoistCopiesForSize() {
   // Get the complement interval, always RegIdx 0.
   LiveInterval *LI = &LIS.getInterval(Edit->get(0));
   LiveInterval *Parent = &Edit->getParent();
@@ -786,11 +725,6 @@ void SplitEditor::hoistCopies() {
   // indexed by ParentVNI->id.
   typedef std::pair<MachineBasicBlock*, SlotIndex> DomPair;
   SmallVector<DomPair, 8> NearestDom(Parent->getNumValNums());
-  // The total cost of all the back-copies for each ParentVNI.
-  SmallVector<BlockFrequency, 8> Costs(Parent->getNumValNums());
-  // The ParentVNI->id set for which hoisting back-copies are not beneficial
-  // for Speed.
-  DenseSet<unsigned> NotToHoistSet;
 
   // Find the nearest common dominator for parent values with multiple
   // back-copies.  If a single back-copy dominates, put it in DomPair.second.
@@ -806,7 +740,6 @@ void SplitEditor::hoistCopies() {
       continue;
 
     MachineBasicBlock *ValMBB = LIS.getMBBFromIndex(VNI->def);
-
     DomPair &Dom = NearestDom[ParentVNI->id];
 
     // Keep directly defined parent values.  This is either a PHI or an
@@ -841,7 +774,6 @@ void SplitEditor::hoistCopies() {
       else if (Near != Dom.first)
         // None dominate. Hoist to common dominator, need new def.
         Dom = DomPair(Near, SlotIndex());
-      Costs[ParentVNI->id] += MBFI.getBlockFreq(ValMBB);
     }
 
     DEBUG(dbgs() << "Multi-mapped complement " << VNI->id << '@' << VNI->def
@@ -860,11 +792,6 @@ void SplitEditor::hoistCopies() {
     MachineBasicBlock *DefMBB = LIS.getMBBFromIndex(ParentVNI->def);
     // Get a less loopy dominator than Dom.first.
     Dom.first = findShallowDominator(Dom.first, DefMBB);
-    if (SpillMode == SM_Speed &&
-        MBFI.getBlockFreq(Dom.first) > Costs[ParentVNI->id]) {
-      NotToHoistSet.insert(ParentVNI->id);
-      continue;
-    }
     SlotIndex Last = LIS.getMBBEndIdx(Dom.first).getPrevSlot();
     Dom.second =
       defFromParent(0, ParentVNI, Last, *Dom.first,
@@ -879,18 +806,11 @@ void SplitEditor::hoistCopies() {
       continue;
     VNInfo *ParentVNI = Edit->getParent().getVNInfoAt(VNI->def);
     const DomPair &Dom = NearestDom[ParentVNI->id];
-    if (!Dom.first || Dom.second == VNI->def ||
-        NotToHoistSet.count(ParentVNI->id))
+    if (!Dom.first || Dom.second == VNI->def)
       continue;
     BackCopies.push_back(VNI);
     forceRecompute(0, ParentVNI);
   }
-
-  // If it is not beneficial to hoist all the BackCopies, simply remove
-  // redundant BackCopies in speed mode.
-  if (SpillMode == SM_Speed && !NotToHoistSet.empty())
-    computeRedundantBackCopies(NotToHoistSet, BackCopies);
-
   removeBackCopies(BackCopies);
 }
 
@@ -1084,8 +1004,6 @@ void SplitEditor::deleteRematVictims() {
       // Dead defs end at the dead slot.
       if (S.end != S.valno->def.getDeadSlot())
         continue;
-      if (S.valno->isPHIDef())
-        continue;
       MachineInstr *MI = LIS.getInstructionFromIndex(S.valno->def);
       assert(MI && "Missing instruction for dead def");
       MI->addRegisterDead(LI->reg, &TRI);
@@ -1130,9 +1048,10 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
     // Leave all back-copies as is.
     break;
   case SM_Size:
+    hoistCopiesForSize();
+    break;
   case SM_Speed:
-    // hoistCopies will behave differently between size and speed.
-    hoistCopies();
+    llvm_unreachable("Spill mode 'speed' not implemented yet");
   }
 
   // Transfer the simply mapped values, check if any are skipped.

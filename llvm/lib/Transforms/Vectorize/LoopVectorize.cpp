@@ -314,13 +314,13 @@ public:
   InnerLoopVectorizer(Loop *OrigLoop, PredicatedScalarEvolution &PSE,
                       LoopInfo *LI, DominatorTree *DT,
                       const TargetLibraryInfo *TLI,
-                      const TargetTransformInfo *TTI, unsigned VecWidth,
-                      unsigned UnrollFactor)
+                      const TargetTransformInfo *TTI, AssumptionCache *AC,
+                      unsigned VecWidth, unsigned UnrollFactor)
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TLI(TLI), TTI(TTI),
-        VF(VecWidth), UF(UnrollFactor), Builder(PSE.getSE()->getContext()),
-        Induction(nullptr), OldInduction(nullptr), WidenMap(UnrollFactor),
-        TripCount(nullptr), VectorTripCount(nullptr), Legal(nullptr),
-        AddedSafetyChecks(false) {}
+        AC(AC), VF(VecWidth), UF(UnrollFactor),
+        Builder(PSE.getSE()->getContext()), Induction(nullptr),
+        OldInduction(nullptr), WidenMap(UnrollFactor), TripCount(nullptr),
+        VectorTripCount(nullptr), Legal(nullptr), AddedSafetyChecks(false) {}
 
   // Perform the actual loop widening (vectorization).
   // MinimumBitWidths maps scalar integer values to the smallest bitwidth they
@@ -524,6 +524,8 @@ protected:
   const TargetLibraryInfo *TLI;
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
+  /// Assumption Cache.
+  AssumptionCache *AC;
 
   /// \brief LoopVersioning.  It's only set up (non-null) if memchecks were
   /// used.
@@ -591,8 +593,10 @@ public:
   InnerLoopUnroller(Loop *OrigLoop, PredicatedScalarEvolution &PSE,
                     LoopInfo *LI, DominatorTree *DT,
                     const TargetLibraryInfo *TLI,
-                    const TargetTransformInfo *TTI, unsigned UnrollFactor)
-      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, 1, UnrollFactor) {}
+                    const TargetTransformInfo *TTI, AssumptionCache *AC,
+                    unsigned UnrollFactor)
+      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, 1,
+                            UnrollFactor) {}
 
 private:
   void scalarizeInstruction(Instruction *Instr,
@@ -1957,7 +1961,7 @@ struct LoopVectorize : public FunctionPass {
       assert(IC > 1 && "interleave count should not be 1 or 0");
       // If we decided that it is not legal to vectorize the loop then
       // interleave it.
-      InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, IC);
+      InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, IC);
       Unroller.vectorize(&LVL, CM.MinBWs);
 
       emitOptimizationRemark(F->getContext(), LV_NAME, *F, L->getStartLoc(),
@@ -1965,7 +1969,7 @@ struct LoopVectorize : public FunctionPass {
                                  Twine(IC) + ")");
     } else {
       // If we decided that it is *legal* to vectorize the loop then do it.
-      InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, VF.Width, IC);
+      InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, VF.Width, IC);
       LB.vectorize(&LVL, CM.MinBWs);
       ++LoopsVectorized;
 
@@ -2728,6 +2732,11 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
       // Place the cloned scalar in the new loop.
       Builder.Insert(Cloned);
 
+      // If we just cloned a new assumption, add it the assumption cache.
+      if (auto *II = dyn_cast<IntrinsicInst>(Cloned))
+        if (II->getIntrinsicID() == Intrinsic::assume)
+          AC->registerAssumption(II);
+
       // If the original scalar returns a value we need to place it in a vector
       // so that future users will be able to use it.
       if (!IsVoidRetTy)
@@ -2778,7 +2787,7 @@ Value *InnerLoopVectorizer::getOrCreateTripCount(Loop *L) {
   IRBuilder<> Builder(L->getLoopPreheader()->getTerminator());
   // Find the loop boundaries.
   ScalarEvolution *SE = PSE.getSE();
-  const SCEV *BackedgeTakenCount = SE->getBackedgeTakenCount(OrigLoop);
+  const SCEV *BackedgeTakenCount = PSE.getBackedgeTakenCount();
   assert(BackedgeTakenCount != SE->getCouldNotCompute() &&
          "Invalid loop count");
 
@@ -4425,7 +4434,7 @@ bool LoopVectorizationLegality::canVectorize() {
   }
 
   // ScalarEvolution needs to be able to find the exit count.
-  const SCEV *ExitCount = PSE.getSE()->getBackedgeTakenCount(TheLoop);
+  const SCEV *ExitCount = PSE.getBackedgeTakenCount();
   if (ExitCount == PSE.getSE()->getCouldNotCompute()) {
     emitAnalysis(VectorizationReport()
                  << "could not determine number of loop iterations");
@@ -6095,6 +6104,11 @@ void InnerLoopUnroller::scalarizeInstruction(Instruction *Instr,
 
       // Place the cloned scalar in the new loop.
       Builder.Insert(Cloned);
+
+      // If we just cloned a new assumption, add it the assumption cache.
+      if (auto *II = dyn_cast<IntrinsicInst>(Cloned))
+        if (II->getIntrinsicID() == Intrinsic::assume)
+          AC->registerAssumption(II);
 
       // If the original scalar returns a value we need to place it in a vector
       // so that future users will be able to use it.
