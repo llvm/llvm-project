@@ -17197,7 +17197,7 @@ SWIGINTERN PyObject *_wrap_SBDebugger_GetInputFileHandle(PyObject *SWIGUNUSEDPAR
     char mode[4] = {
       0
     };
-    
+#ifdef __APPLE__
     int i = 0;
     if (result)
     {
@@ -17210,7 +17210,7 @@ SWIGINTERN PyObject *_wrap_SBDebugger_GetInputFileHandle(PyObject *SWIGUNUSEDPAR
       else // if (flags & __SRW)
       mode[i++] = 'a';
     }
-    
+#endif
     using namespace lldb_private;
     File file(result, false);
     PythonFile py_file(file, mode);
@@ -17250,7 +17250,7 @@ SWIGINTERN PyObject *_wrap_SBDebugger_GetOutputFileHandle(PyObject *SWIGUNUSEDPA
     char mode[4] = {
       0
     };
-    
+#ifdef __APPLE__
     int i = 0;
     if (result)
     {
@@ -17263,7 +17263,7 @@ SWIGINTERN PyObject *_wrap_SBDebugger_GetOutputFileHandle(PyObject *SWIGUNUSEDPA
       else // if (flags & __SRW)
       mode[i++] = 'a';
     }
-    
+#endif
     using namespace lldb_private;
     File file(result, false);
     PythonFile py_file(file, mode);
@@ -17303,7 +17303,7 @@ SWIGINTERN PyObject *_wrap_SBDebugger_GetErrorFileHandle(PyObject *SWIGUNUSEDPAR
     char mode[4] = {
       0
     };
-    
+#ifdef __APPLE__
     int i = 0;
     if (result)
     {
@@ -17316,7 +17316,7 @@ SWIGINTERN PyObject *_wrap_SBDebugger_GetErrorFileHandle(PyObject *SWIGUNUSEDPAR
       else // if (flags & __SRW)
       mode[i++] = 'a';
     }
-    
+#endif
     using namespace lldb_private;
     File file(result, false);
     PythonFile py_file(file, mode);
