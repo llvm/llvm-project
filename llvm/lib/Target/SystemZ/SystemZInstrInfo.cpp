@@ -510,7 +510,8 @@ bool SystemZInstrInfo::isPredicable(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   if (STI.hasLoadStoreOnCond() && getConditionalMove(Opcode))
     return true;
-  if (Opcode == SystemZ::Return)
+  if (Opcode == SystemZ::Return ||
+      Opcode == SystemZ::CallJG)
     return true;
   return false;
 }
@@ -568,6 +569,19 @@ bool SystemZInstrInfo::PredicateInstruction(
     MI.setDesc(get(SystemZ::CondReturn));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
       .addImm(CCValid).addImm(CCMask)
+      .addReg(SystemZ::CC, RegState::Implicit);
+    return true;
+  }
+  if (Opcode == SystemZ::CallJG) {
+    const GlobalValue *Global = MI.getOperand(0).getGlobal();
+    const uint32_t *RegMask = MI.getOperand(1).getRegMask();
+    MI.RemoveOperand(1);
+    MI.RemoveOperand(0);
+    MI.setDesc(get(SystemZ::CallBRCL));
+    MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+      .addImm(CCValid).addImm(CCMask)
+      .addGlobalAddress(Global)
+      .addRegMask(RegMask)
       .addReg(SystemZ::CC, RegState::Implicit);
     return true;
   }
