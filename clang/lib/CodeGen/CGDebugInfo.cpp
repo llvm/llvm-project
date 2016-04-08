@@ -403,8 +403,8 @@ void CGDebugInfo::CreateCompileUnit() {
       Producer, LO.Optimize, CGM.getCodeGenOpts().DwarfDebugFlags, RuntimeVers,
       CGM.getCodeGenOpts().SplitDwarfFile,
       DebugKind <= codegenoptions::DebugLineTablesOnly
-          ? llvm::DIBuilder::LineTablesOnly
-          : llvm::DIBuilder::FullDebug,
+          ? llvm::DICompileUnit::LineTablesOnly
+          : llvm::DICompileUnit::FullDebug,
       0 /* DWOid */, DebugKind != codegenoptions::LocTrackingOnly);
 }
 
@@ -1746,7 +1746,7 @@ CGDebugInfo::getOrCreateModuleRef(ExternalASTSource::ASTSourceDescriptor Mod,
     DIB.createCompileUnit(TheCU->getSourceLanguage(), Mod.getModuleName(),
                           Mod.getPath(), TheCU->getProducer(), true,
                           StringRef(), 0, Mod.getASTFile(),
-                          llvm::DIBuilder::FullDebug, Signature);
+                          llvm::DICompileUnit::FullDebug, Signature);
     DIB.finalize();
   }
   llvm::DIModule *Parent =
