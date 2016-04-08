@@ -198,9 +198,7 @@ CommandInterpreter::Initialize ()
     
     cmd_obj_sp = GetCommandSPExact ("_regexp-attach",false);
     if (cmd_obj_sp)
-    {
-        AddAlias ("attach", cmd_obj_sp);
-    }
+        AddAlias ("attach", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("process detach",false);
     if (cmd_obj_sp)
@@ -221,7 +219,7 @@ CommandInterpreter::Initialize ()
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-tbreak",false);
     if (cmd_obj_sp)
-        AddAlias ("tbreak", cmd_obj_sp);
+        AddAlias ("tbreak", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("thread step-inst", false);
     if (cmd_obj_sp)
@@ -279,22 +277,20 @@ CommandInterpreter::Initialize ()
     cmd_obj_sp = GetCommandSPExact ("_regexp-jump",false);
     if (cmd_obj_sp)
     {
-        AddAlias ("j", cmd_obj_sp);
-        AddAlias ("jump", cmd_obj_sp);
+        AddAlias ("j", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
+        AddAlias ("jump", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
     }
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-list", false);
     if (cmd_obj_sp)
     {
-        AddAlias ("l", cmd_obj_sp);
-        AddAlias ("list", cmd_obj_sp);
+        AddAlias ("l", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
+        AddAlias ("list", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
     }
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-env", false);
     if (cmd_obj_sp)
-    {
-        AddAlias ("env", cmd_obj_sp);
-    }
+        AddAlias ("env", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("memory read", false);
     if (cmd_obj_sp)
@@ -302,15 +298,15 @@ CommandInterpreter::Initialize ()
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-up", false);
     if (cmd_obj_sp)
-        AddAlias ("up", cmd_obj_sp);
+        AddAlias ("up", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-down", false);
     if (cmd_obj_sp)
-        AddAlias ("down", cmd_obj_sp);
+        AddAlias ("down", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-display", false);
     if (cmd_obj_sp)
-        AddAlias ("display", cmd_obj_sp);
+        AddAlias ("display", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
         
     cmd_obj_sp = GetCommandSPExact ("disassemble", false);
     if (cmd_obj_sp)
@@ -324,11 +320,11 @@ CommandInterpreter::Initialize ()
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-undisplay", false);
     if (cmd_obj_sp)
-        AddAlias ("undisplay", cmd_obj_sp);
+        AddAlias ("undisplay", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-bt", false);
     if (cmd_obj_sp)
-        AddAlias ("bt", cmd_obj_sp);
+        AddAlias ("bt", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("target create", false);
     if (cmd_obj_sp)
