@@ -327,6 +327,10 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
     def CallBR : Alias<2, (outs), (ins), [(z_sibcall R1D)]>;
 }
 
+let CCMaskFirst = 1, isCall = 1, isReturn = 1 in
+  def CallBRCL : Alias<6, (outs), (ins cond4:$valid, cond4:$R1,
+                                   pcrel32:$I2), []>;
+
 // TLS calls.  These will be lowered into a call to __tls_get_offset,
 // with an extra relocation specifying the TLS symbol.
 let isCall = 1, Defs = [R14D, CC] in {

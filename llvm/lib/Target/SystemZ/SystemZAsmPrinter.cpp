@@ -205,6 +205,13 @@ void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       .addExpr(Lower.getExpr(MI->getOperand(0), MCSymbolRefExpr::VK_PLT));
     break;
 
+  case SystemZ::CallBRCL:
+    LoweredMI = MCInstBuilder(SystemZ::BRCL)
+      .addImm(MI->getOperand(0).getImm())
+      .addImm(MI->getOperand(1).getImm())
+      .addExpr(Lower.getExpr(MI->getOperand(2), MCSymbolRefExpr::VK_PLT));
+    break;
+
   case SystemZ::CallBR:
     LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R1D);
     break;

@@ -250,7 +250,16 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
     unsigned Reg = MO.getReg();
     if (!Reg)
       continue;
-    const RegisterBank *CurRegBank = getRegBank(Reg, MRI, TRI);
+    // The register bank of Reg is just a side effect of the current
+    // excution and in particular, there is no reason to believe this
+    // is the best default mapping for the current instruction.  Keep
+    // it as an alternative register bank if we cannot figure out
+    // something.
+    const RegisterBank *AltRegBank = getRegBank(Reg, MRI, TRI);
+    // For copy-like instruction, we want to reuse the register bank
+    // that is already set on Reg, if any, since those instructions do
+    // not have any constraints.
+    const RegisterBank *CurRegBank = isCopyLike ? AltRegBank : nullptr;
     if (!CurRegBank) {
       // If this is a target specific instruction, we can deduce
       // the register bank from the encoding constraints.
@@ -262,6 +271,10 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
         if (MITy)
           CurRegBank = getRegBankForType(
               MVT::getVT(MITy, /*HandleUnknown*/ true).SimpleTy);
+        if (!CurRegBank)
+          // Use the current assigned register bank.
+          // That may not make much sense though.
+          CurRegBank = AltRegBank;
         if (!CurRegBank) {
           // All our attempts failed, give up.
           CompleteMapping = false;

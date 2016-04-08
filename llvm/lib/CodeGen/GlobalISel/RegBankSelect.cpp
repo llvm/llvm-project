@@ -10,6 +10,7 @@
 /// This file implements the RegBankSelect class.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -125,6 +126,12 @@ void RegBankSelect::assignInstr(MachineInstr &MI) {
     // This will not hold when we will consider alternative mappings.
     DEBUG(dbgs() << "Assign: " << *ValMapping.BreakDown[0].RegBank << " to "
                  << PrintReg(Reg) << '\n');
+    // For a definition, we may be changing the register bank silently
+    // for all the uses here.
+    // Although this will be correct when we do a RPO traversal of the
+    // basic block, because the only uses that could be affected are
+    // PHIs (i.e., copies), this may not be the best solution
+    // according to the cost model.
     MRI->setRegBank(Reg, *ValMapping.BreakDown[0].RegBank);
     MO.setReg(Reg);
   }
@@ -135,8 +142,11 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
   init(MF);
   // Walk the function and assign register banks to all operands.
-  for (MachineBasicBlock &MBB : MF)
-    for (MachineInstr &MI : MBB)
+  // Use a RPOT to make sure all registers are assigned before we choose
+  // the best mapping of the current instruction.
+  ReversePostOrderTraversal<MachineFunction*> RPOT(&MF);
+  for (MachineBasicBlock *MBB : RPOT)
+    for (MachineInstr &MI : *MBB)
       assignInstr(MI);
   return false;
 }

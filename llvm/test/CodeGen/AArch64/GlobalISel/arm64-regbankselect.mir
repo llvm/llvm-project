@@ -1,0 +1,49 @@
+# RUN: llc -O0 -run-pass=regbankselect -global-isel %s -o - 2>&1 | FileCheck %s
+# REQUIRES: global-isel
+
+--- |
+  ; ModuleID = 'generic-virtual-registers-type-error.mir'
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-apple-ios"
+  define void @defaultMapping() {
+  entry:
+    ret void
+  }
+  define void @defaultMappingVector() {
+  entry:
+    ret void
+  }
+...
+
+---
+# Check that we assign a relevant register bank for %0.
+# Based on the type i32, this should be gpr.
+name:            defaultMapping
+isSSA:           true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr }
+registers:
+  - { id: 0, class: _ }
+body: |
+  bb.0.entry:
+    liveins: %x0
+    ; CHECK:      %0(32) = G_ADD i32 %x0
+    %0(32) = G_ADD i32 %x0, %x0
+...
+
+---
+# Check that we assign a relevant register bank for %0.
+# Based on the type <2 x i32>, this should be fpr.
+# FPR is used for both floating point and vector registers.
+name:            defaultMappingVector
+isSSA:           true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: fpr }
+registers:
+  - { id: 0, class: _ }
+body: |
+  bb.0.entry:
+    liveins: %d0
+    ; CHECK:      %0(32) = G_ADD <2 x i32> %d0
+    %0(32) = G_ADD <2 x i32> %d0, %d0
+...

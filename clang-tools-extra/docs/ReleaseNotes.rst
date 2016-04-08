@@ -74,6 +74,12 @@ identified.  The improvements since the 3.8 release include:
 
   Flags ``for`` loops where the induction expression has a floating-point type.
 
+- New `cppcoreguidelines-interfaces-global-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-interfaces-global-init.html>`_ check
+
+  Flags initializers of globals that access extern objects, and therefore can
+  lead to order-of-initialization problems.
+
 - New `cppcoreguidelines-pro-type-member-init
   <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-type-member-init.html>`_ check
 
@@ -163,13 +169,6 @@ identified.  The improvements since the 3.8 release include:
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-definition-in-anonymous-namespace.html>`_ check
 
   Finds static function and variable definitions in anonymous namespace.
-
-- New `cppcoreguidelines-interfaces-global-init
-  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-interfaces-global-init.html>`_ check
-
-  Flags initializers of globals that access extern objects, and therefore can
-  lead to order-of-initialization problems.
-
 
 Fixed bugs:
 
