@@ -908,6 +908,12 @@ static const Expr *peelOffOuterExpr(const Expr *Ex,
     return peelOffOuterExpr(EWC->getSubExpr(), N);
   if (const OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(Ex))
     return peelOffOuterExpr(OVE->getSourceExpr(), N);
+  if (auto *POE = dyn_cast<PseudoObjectExpr>(Ex)) {
+    auto *PropRef = dyn_cast<ObjCPropertyRefExpr>(POE->getSyntacticForm());
+    if (PropRef && PropRef->isMessagingGetter()) {
+      return peelOffOuterExpr(POE->getSemanticExpr(1), N);
+    }
+  }
 
   // Peel off the ternary operator.
   if (const ConditionalOperator *CO = dyn_cast<ConditionalOperator>(Ex)) {
