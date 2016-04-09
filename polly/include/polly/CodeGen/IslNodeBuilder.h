@@ -58,6 +58,11 @@ public:
   /// @return A referecne to the associated block generator.
   BlockGenerator &getBlockGenerator() { return BlockGen; }
 
+  /// @brief Return the parallel subfunctions that have been created.
+  const ArrayRef<Function *> getParallelSubfunctions() const {
+    return ParallelSubfunctions;
+  }
+
 protected:
   Scop &S;
   PollyIRBuilder &Builder;
@@ -102,6 +107,9 @@ protected:
   // on, the only isl_ids that are stored here are the newly calculated loop
   // ivs.
   IslExprBuilder::IDToValueTy IDToValue;
+
+  /// @brief A collection of all parallel subfunctions that have been created.
+  SmallVector<Function *, 8> ParallelSubfunctions;
 
   /// Generate code for a given SCEV*
   ///

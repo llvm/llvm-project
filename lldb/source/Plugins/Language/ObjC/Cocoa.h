@@ -78,9 +78,6 @@ namespace lldb_private {
         ObjCSELSummaryProvider<false> (ValueObject&, Stream&, const TypeSummaryOptions&);
         
         bool
-        RuntimeSpecificDescriptionSummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
-        
-        bool
         NSError_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
         
         bool

@@ -3992,6 +3992,11 @@ bool ScopInfo::buildAccessMultiDimFixed(
     auto *Src = BitCast->getOperand(0);
     auto *SrcTy = Src->getType();
     auto *DstTy = BitCast->getType();
+    // Do not try to delinearize non-sized (opaque) pointers.
+    if ((SrcTy->isPointerTy() && !SrcTy->getPointerElementType()->isSized()) ||
+        (DstTy->isPointerTy() && !DstTy->getPointerElementType()->isSized())) {
+      return false;
+    }
     if (SrcTy->isPointerTy() && DstTy->isPointerTy() &&
         DL->getTypeAllocSize(SrcTy->getPointerElementType()) ==
             DL->getTypeAllocSize(DstTy->getPointerElementType()))

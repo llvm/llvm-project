@@ -119,10 +119,12 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
   for (SymbolBody *Body : Obj->getNonLocalSymbols()) {
     Symbol *Sym = insert(Body);
     Sym->Body->setUsedInRegularObj();
-    if (!Sym->Body->isUndefined() && Body->isUndefined())
-      continue;
+    if (Sym->Body->isShared())
+      Sym->Body->MustBeInDynSym = true;
     if (Sym->Body->MustBeInDynSym)
       Body->MustBeInDynSym = true;
+    if (!Sym->Body->isUndefined() && Body->isUndefined())
+      continue;
     Sym->Body = Body;
   }
   ObjectFiles.emplace_back(Obj);

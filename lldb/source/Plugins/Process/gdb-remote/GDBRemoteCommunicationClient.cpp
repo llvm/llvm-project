@@ -1165,12 +1165,13 @@ GDBRemoteCommunicationClient::SendContinuePacketAndWaitForResponse
                             // binaries that would send two stop replies anytime the process
                             // was interrupted, so we need to also check for an extra
                             // stop reply packet if we interrupted the process
-                            if (m_interrupt_sent || (signo != sigint_signo && signo != sigstop_signo))
+                            const bool received_nonstop_signal = signo != sigint_signo && signo != sigstop_signo;
+                            if (m_interrupt_sent || received_nonstop_signal)
                             {
-                                continue_after_async = false;
+                                if (received_nonstop_signal)
+                                    continue_after_async = false;
 
-                                // We didn't get a SIGINT or SIGSTOP, so try for a
-                                // very brief time (0.1s) to get another stop reply
+                                // Try for a very brief time (0.1s) to get another stop reply
                                 // packet to make sure it doesn't get in the way
                                 StringExtractorGDBRemote extra_stop_reply_packet;
                                 uint32_t timeout_usec = 100000;

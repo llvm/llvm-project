@@ -60,4 +60,8 @@ class CMICmdCmdThreadInfo : public CMICmdBase
     bool m_bThreadInvalid; // True = invalid, false = ok
     VecMIValueTuple_t m_vecMIValueTuple;
     const CMIUtilString m_constStrArgNamedThreadId;
+
+    // mi value of current-thread-id if multiple threads are requested
+    bool m_bHasCurrentThread;
+    CMICmnMIValue m_miValueCurrThreadId;
 };

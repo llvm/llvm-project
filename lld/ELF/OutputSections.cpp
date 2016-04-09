@@ -138,9 +138,6 @@ template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody &Sym) {
       ++MipsLocalEntries;
       return;
     }
-    // All preemptible symbols with MIPS GOT entries should be represented
-    // in the dynamic symbols table.
-    Sym.MustBeInDynSym = true;
   }
   Sym.GotIndex = Entries.size();
   Entries.push_back(&Sym);
@@ -299,9 +296,6 @@ RelocationSection<ELFT>::RelocationSection(StringRef Name)
 
 template <class ELFT>
 void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
-  SymbolBody *Sym = Reloc.Sym;
-  if (!Reloc.UseSymVA && Sym)
-    Sym->MustBeInDynSym = true;
   Relocs.push_back(Reloc);
 }
 

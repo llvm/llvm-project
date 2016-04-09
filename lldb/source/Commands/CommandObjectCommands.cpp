@@ -631,7 +631,7 @@ protected:
     {
         if (!raw_command_line || !raw_command_line[0])
         {
-            result.AppendError ("'alias' requires at least two arguments");
+            result.AppendError ("'command alias' requires at least two arguments");
             return false;
         }
         
@@ -686,7 +686,7 @@ protected:
         
         if (argc < 2)
         {
-            result.AppendError ("'alias' requires at least two arguments");
+            result.AppendError ("'command alias' requires at least two arguments");
             result.SetStatus (eReturnStatusFailed);
             return false;
         }
@@ -694,6 +694,17 @@ protected:
         // Get the alias command.
         
         const std::string alias_command = args.GetArgumentAtIndex (0);
+        if (alias_command.size() > 1 &&
+            alias_command[0] == '-')
+        {
+            result.AppendError("aliases starting with a dash are not supported");
+            if (alias_command == "--help" || alias_command == "--long-help")
+            {
+                result.AppendWarning("if trying to pass options to 'command alias' add a -- at the end of the options");
+            }
+            result.SetStatus (eReturnStatusFailed);
+            return false;
+        }
         
         // Strip the new alias name off 'raw_command_string'  (leave it on args, which gets passed to 'Execute', which
         // does the stripping itself.
@@ -724,12 +735,13 @@ protected:
         
         // Get CommandObject that is being aliased. The command name is read from the front of raw_command_string.
         // raw_command_string is returned with the name of the command object stripped off the front.
+        std::string original_raw_command_string(raw_command_string);
         CommandObject *cmd_obj = m_interpreter.GetCommandObjectForCommand (raw_command_string);
         
         if (!cmd_obj)
         {
-            result.AppendErrorWithFormat ("invalid command given to 'alias'. '%s' does not begin with a valid command."
-                                          "  No alias created.", raw_command_string.c_str());
+            result.AppendErrorWithFormat ("invalid command given to 'command alias'. '%s' does not begin with a valid command."
+                                          "  No alias created.", original_raw_command_string.c_str());
             result.SetStatus (eReturnStatusFailed);
             return false;
         }
@@ -792,7 +804,7 @@ protected:
 
         if (argc < 2)
         {
-            result.AppendError ("'alias' requires at least two arguments");
+            result.AppendError ("'command alias' requires at least two arguments");
             result.SetStatus (eReturnStatusFailed);
             return false;
         }

@@ -29,9 +29,10 @@
 // Throws:  None.
 //--
 CMICmdCmdThreadInfo::CMICmdCmdThreadInfo()
-    : m_bSingleThread(false)
-    , m_bThreadInvalid(true)
-    , m_constStrArgNamedThreadId("thread-id")
+    : m_bSingleThread(false),
+      m_bThreadInvalid(true),
+      m_constStrArgNamedThreadId("thread-id"),
+      m_bHasCurrentThread(false)
 {
     // Command factory matches this name with that received from the stdin stream
     m_strMiCmd = "thread-info";
@@ -124,6 +125,15 @@ CMICmdCmdThreadInfo::Execute()
         }
     }
 
+    // -thread-info with multiple threads ends with the current thread id if any
+    if (thread.IsValid())
+    {
+        const CMIUtilString strId(CMIUtilString::Format("%d", thread.GetIndexID()));
+        CMICmnMIValueConst miValueCurrThreadId(strId);
+        m_miValueCurrThreadId = miValueCurrThreadId;
+        m_bHasCurrentThread = true;
+    }
+
     return MIstatus::success;
 }
 
@@ -179,7 +189,12 @@ CMICmdCmdThreadInfo::Acknowledge()
         ++it;
     }
 
-    const CMICmnMIValueResult miValueResult("threads", miValueList);
+    CMICmnMIValueResult miValueResult("threads", miValueList);
+    if (m_bHasCurrentThread)
+    {
+        CMIUtilString strCurrThreadId = "current-thread-id";
+        miValueResult.Add(strCurrThreadId, m_miValueCurrThreadId);
+    }
     const CMICmnMIResultRecord miRecordResult(m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Done, miValueResult);
     m_miResultRecord = miRecordResult;
 

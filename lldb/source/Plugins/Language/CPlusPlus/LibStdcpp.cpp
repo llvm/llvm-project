@@ -54,7 +54,6 @@ private:
     ExecutionContextRef m_exe_ctx_ref;
     lldb::addr_t m_pair_address;
     CompilerType m_pair_type;
-    EvaluateExpressionOptions m_options;
     lldb::ValueObjectSP m_pair_sp;
 };
 
@@ -74,15 +73,10 @@ LibstdcppMapIteratorSyntheticFrontEnd::LibstdcppMapIteratorSyntheticFrontEnd (ll
     m_exe_ctx_ref(),
     m_pair_address(0),
     m_pair_type(),
-    m_options(),
     m_pair_sp()
 {
     if (valobj_sp)
         Update();
-    m_options.SetCoerceToId(false);
-    m_options.SetUnwindOnError(true);
-    m_options.SetKeepInMemory(true);
-    m_options.SetUseDynamic(lldb::eDynamicCanRunTarget);
 }
 
 bool

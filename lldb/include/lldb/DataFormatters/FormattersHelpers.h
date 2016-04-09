@@ -75,35 +75,7 @@ namespace lldb_private {
                     ScriptedSyntheticChildren::Flags flags,
                     bool regex = false);
 #endif
-        
-        StackFrame*
-        GetViableFrame (ExecutionContext exe_ctx);
-        
-        bool
-        ExtractValueFromObjCExpression (ValueObject &valobj,
-                                        const char* target_type,
-                                        const char* selector,
-                                        uint64_t &value);
-        
-        bool
-        ExtractSummaryFromObjCExpression (ValueObject &valobj,
-                                          const char* target_type,
-                                          const char* selector,
-                                          Stream &stream,
-                                          lldb::LanguageType lang_type);
-        
-        lldb::ValueObjectSP
-        CallSelectorOnObject (ValueObject &valobj,
-                              const char* return_type,
-                              const char* selector,
-                              uint64_t index);
-        
-        lldb::ValueObjectSP
-        CallSelectorOnObject (ValueObject &valobj,
-                              const char* return_type,
-                              const char* selector,
-                              const char* key);
-        
+
         size_t
         ExtractIndexFromString (const char* item_name);
         

@@ -225,9 +225,9 @@ void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, Pass *P) {
 struct ScopExpander : SCEVVisitor<ScopExpander, const SCEV *> {
   friend struct SCEVVisitor<ScopExpander, const SCEV *>;
 
-  explicit ScopExpander(const Region &R, ScalarEvolution &SE,
+  explicit ScopExpander(const Region &R, Function &F, ScalarEvolution &SE,
                         const DataLayout &DL, const char *Name, ValueMapT *VMap)
-      : Expander(SCEVExpander(SE, DL, Name)), SE(SE), Name(Name), R(R),
+      : Expander(SCEVExpander(SE, DL, Name)), F(F), SE(SE), Name(Name), R(R),
         VMap(VMap) {}
 
   Value *expandCodeFor(const SCEV *E, Type *Ty, Instruction *I) {
@@ -241,6 +241,10 @@ struct ScopExpander : SCEVVisitor<ScopExpander, const SCEV *> {
 
 private:
   SCEVExpander Expander;
+
+  /// @brief The function in which the code is placed.
+  Function &F;
+
   ScalarEvolution &SE;
   const char *Name;
   const Region &R;
@@ -264,10 +268,15 @@ private:
                   Inst->getOpcode() != Instruction::SDiv))
       return E;
 
-    if (!R.contains(Inst))
+    // If the instruction is outside the SCoP we can just use it without the
+    // need to recompute it. However, if it is in another function we need to
+    // recompute it as the definition does not dominate the use.
+    bool SameFunction = (&F == R.getEntry()->getParent());
+    if (!R.contains(Inst) && SameFunction)
       return E;
 
-    Instruction *StartIP = R.getEnteringBlock()->getTerminator();
+    Instruction *StartIP = SameFunction ? R.getEnteringBlock()->getTerminator()
+                                        : F.getEntryBlock().getTerminator();
 
     const SCEV *LHSScev = visit(SE.getSCEV(Inst->getOperand(0)));
     const SCEV *RHSScev = visit(SE.getSCEV(Inst->getOperand(1)));
@@ -333,7 +342,7 @@ private:
 Value *polly::expandCodeFor(Scop &S, ScalarEvolution &SE, const DataLayout &DL,
                             const char *Name, const SCEV *E, Type *Ty,
                             Instruction *IP, ValueMapT *VMap) {
-  ScopExpander Expander(S.getRegion(), SE, DL, Name, VMap);
+  ScopExpander Expander(S.getRegion(), *IP->getFunction(), SE, DL, Name, VMap);
   return Expander.expandCodeFor(E, Ty, IP);
 }
 
