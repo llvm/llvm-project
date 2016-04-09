@@ -11,27 +11,21 @@
 
 int main (int argc, const char * argv[])
 {
-    
-    NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
-    
+  NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
 
 	NSArray* key = [NSArray arrayWithObjects:@"foo",nil];
 	NSArray* value = [NSArray arrayWithObjects:@"key",nil];
 	NSDictionary *dict = [NSDictionary dictionaryWithObjects:value forKeys:key];
 
-    CFMutableBagRef mutable_bag_ref = CFBagCreateMutable(NULL, 15, NULL);
-    CFBagSetValue(mutable_bag_ref, CFSTR("Hello world"));
+  NSMutableIndexSet *imset = [[NSMutableIndexSet alloc] init];
+  [imset addIndex:4];
 
-    NSMutableIndexSet *imset = [[NSMutableIndexSet alloc] init];
-    [imset addIndex:4];
+  CFBinaryHeapRef binheap_ref = CFBinaryHeapCreate(NULL, 15, &kCFStringBinaryHeapCallBacks, NULL);
+  CFBinaryHeapAddValue(binheap_ref, CFSTR("Hello world"));
 
-    CFBinaryHeapRef binheap_ref = CFBinaryHeapCreate(NULL, 15, &kCFStringBinaryHeapCallBacks, NULL);
-    CFBinaryHeapAddValue(binheap_ref, CFSTR("Hello world"));
+  NSData *immutableData = [[NSData alloc] initWithBytes:"HELLO" length:1];
 
-    NSData *immutableData = [[NSData alloc] initWithBytes:"HELLO" length:1];
-
-
-    [pool drain];// Set break point at this line.
-    return 0;
+  [pool drain];// Set break point at this line.
+  return 0;
 }
 

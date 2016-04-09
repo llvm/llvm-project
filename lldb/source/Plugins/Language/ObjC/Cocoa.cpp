@@ -944,18 +944,6 @@ lldb_private::formatters::GetOSXEpoch ()
     return epoch;
 }
 
-bool
-lldb_private::formatters::RuntimeSpecificDescriptionSummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
-{
-    if (const char* description = valobj.GetObjectDescription())
-    {
-        stream.Printf("%s", description);
-        return true;
-    }
-    else
-        return false;
-}
-
 template bool
 lldb_private::formatters::NSDataSummaryProvider<true> (ValueObject&, Stream&, const TypeSummaryOptions&);
 

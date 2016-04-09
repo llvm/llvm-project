@@ -4803,19 +4803,19 @@ void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record) {
   AddSourceLocation(Range.getEnd(), Record);
 }
 
-void ASTWriter::AddAPInt(const llvm::APInt &Value, RecordDataImpl &Record) {
-  Record.push_back(Value.getBitWidth());
+void ASTRecordWriter::AddAPInt(const llvm::APInt &Value) {
+  Record->push_back(Value.getBitWidth());
   const uint64_t *Words = Value.getRawData();
-  Record.append(Words, Words + Value.getNumWords());
+  Record->append(Words, Words + Value.getNumWords());
 }
 
-void ASTWriter::AddAPSInt(const llvm::APSInt &Value, RecordDataImpl &Record) {
-  Record.push_back(Value.isUnsigned());
-  AddAPInt(Value, Record);
+void ASTRecordWriter::AddAPSInt(const llvm::APSInt &Value) {
+  Record->push_back(Value.isUnsigned());
+  AddAPInt(Value);
 }
 
-void ASTWriter::AddAPFloat(const llvm::APFloat &Value, RecordDataImpl &Record) {
-  AddAPInt(Value.bitcastToAPInt(), Record);
+void ASTRecordWriter::AddAPFloat(const llvm::APFloat &Value) {
+  AddAPInt(Value.bitcastToAPInt());
 }
 
 void ASTWriter::AddIdentifierRef(const IdentifierInfo *II, RecordDataImpl &Record) {

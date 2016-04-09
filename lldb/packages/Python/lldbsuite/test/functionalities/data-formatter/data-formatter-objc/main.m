@@ -431,31 +431,6 @@ int main (int argc, const char * argv[])
 	    CFArraySetValueAtIndex(mutable_array_ref, 9, str11);
 	    CFArraySetValueAtIndex(mutable_array_ref, 10, str12);
 
-	    CFMutableBagRef mutable_bag_ref = CFBagCreateMutable(NULL, 15, NULL);
-
-	    CFBagSetValue(mutable_bag_ref, strB10);
-	    CFBagSetValue(mutable_bag_ref, str1);
-	    CFBagSetValue(mutable_bag_ref, str2);
-	    CFBagSetValue(mutable_bag_ref, str3);
-	    CFBagSetValue(mutable_bag_ref, str4);
-	    CFBagSetValue(mutable_bag_ref, str5);
-	    CFBagSetValue(mutable_bag_ref, str6);
-	    CFBagSetValue(mutable_bag_ref, str7);
-	    CFBagSetValue(mutable_bag_ref, str8);
-	    CFBagSetValue(mutable_bag_ref, str9);
-	    CFBagSetValue(mutable_bag_ref, str10);
-	    CFBagSetValue(mutable_bag_ref, str11);
-	    CFBagSetValue(mutable_bag_ref, str12);
-	    CFBagSetValue(mutable_bag_ref, strA1);
-	    CFBagSetValue(mutable_bag_ref, strA2);
-	    CFBagSetValue(mutable_bag_ref, strA3);
-
-	    CFBagRef cfbag_ref = CFBagCreateCopy(NULL, mutable_bag_ref);
-
-	    CFBagSetValue(mutable_bag_ref, strB8);
-	    CFBagSetValue(mutable_bag_ref, strC4);
-
-
 	    CFBinaryHeapRef binheap_ref = CFBinaryHeapCreate(NULL, 15, &kCFStringBinaryHeapCallBacks, NULL);
 	    CFBinaryHeapAddValue(binheap_ref, str1);
 	    CFBinaryHeapAddValue(binheap_ref, str2);
@@ -506,8 +481,6 @@ int main (int argc, const char * argv[])
 	    NSException* except2 = [[NSException alloc] initWithName:@"TheGuyWhoHasNoName`2" reason:@"cuz it's funny" userInfo:nil];
 	    NSException* except3 = [[NSException alloc] initWithName:@"TheGuyWhoHasNoName/3" reason:@"cuz it's funny" userInfo:nil];
 
-	    NSMachPort *port = [NSMachPort port];
-
 	    NSURL *nsurl = [[NSURL alloc] initWithString:@"http://www.foo.bar"];
 	    NSURL *nsurl2 = [NSURL URLWithString:@"page.html" relativeToURL:nsurl];
 	    NSURL *nsurl3 = [NSURL URLWithString:@"?whatever" relativeToURL:nsurl2];
@@ -554,21 +527,12 @@ int main (int argc, const char * argv[])
 		NSTimeZone *home_ns = [NSTimeZone timeZoneWithName:@"Europe/Rome"];
 		NSTimeZone *europe_ns = [NSTimeZone timeZoneWithAbbreviation:@"CET"];
 
-		NSHost *localhost = [NSHost hostWithAddress:@"127.0.0.1"];
-
-#ifndef IOS
-		NSTask *my_task = [[NSTask alloc] init];
-#endif
-
-
 	CFGregorianUnits cf_greg_units = {1,3,5,12,5,7};
 	CFGregorianDate cf_greg_date = CFAbsoluteTimeGetGregorianDate(CFDateGetAbsoluteTime(date1), NULL);
 	CFRange cf_range = {4,4};
 	NSPoint ns_point = {4,4};
 	NSRange ns_range = {4,4};
-	
-	NSValue *range_value = [NSValue valueWithRange:ns_range];
-	
+		
 	NSRect ns_rect = {{1,1},{5,5}};
 	NSRect* ns_rect_ptr = &ns_rect;
 	NSRectArray ns_rect_arr = &ns_rect;

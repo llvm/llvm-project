@@ -2100,6 +2100,9 @@ def err_variable_concept_bool_decl : Error<
 def err_concept_specified_specialization : Error<
   "'concept' cannot be applied on an "
   "%select{explicit instantiation|explicit specialization|partial specialization}0">;
+def err_concept_specialized : Error<
+  "%select{function|variable}0 concept cannot be "
+  "%select{explicitly instantiated|explicitly specialized|partially specialized}1">;
 
 // C++11 char16_t/char32_t
 def warn_cxx98_compat_unicode_type : Warning<

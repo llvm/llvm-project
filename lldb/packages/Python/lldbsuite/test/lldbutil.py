@@ -1038,6 +1038,7 @@ def wait_for_file_on_target(testcase, file_path, max_attempts = 6):
             break
         if i < max_attempts:
             # Exponential backoff!
+            import time
             time.sleep(pow(2, i) * 0.25)
     else:
         testcase.fail("File %s not found even after %d attempts." % (file_path, max_attempts))

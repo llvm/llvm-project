@@ -3436,20 +3436,6 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
 }
 
 void ASTReader::loadDeclUpdateRecords(serialization::DeclID ID, Decl *D) {
-  // Load the pending visible updates for this decl context, if it has any.
-  auto I = PendingVisibleUpdates.find(ID);
-  if (I != PendingVisibleUpdates.end()) {
-    auto VisibleUpdates = std::move(I->second);
-    PendingVisibleUpdates.erase(I);
-
-    auto *DC = cast<DeclContext>(D)->getPrimaryContext();
-    for (const PendingVisibleUpdate &Update : VisibleUpdates)
-      Lookups[DC].Table.add(
-          Update.Mod, Update.Data,
-          reader::ASTDeclContextNameLookupTrait(*this, *Update.Mod));
-    DC->setHasExternalVisibleStorage(true);
-  }
-
   // The declaration may have been modified by files later in the chain.
   // If this is the case, read the record containing the updates from each file
   // and pass it to ASTDeclReader to make the modifications.
@@ -3484,6 +3470,20 @@ void ASTReader::loadDeclUpdateRecords(serialization::DeclID ID, Decl *D) {
         WasInteresting = true;
       }
     }
+  }
+
+  // Load the pending visible updates for this decl context, if it has any.
+  auto I = PendingVisibleUpdates.find(ID);
+  if (I != PendingVisibleUpdates.end()) {
+    auto VisibleUpdates = std::move(I->second);
+    PendingVisibleUpdates.erase(I);
+
+    auto *DC = cast<DeclContext>(D)->getPrimaryContext();
+    for (const PendingVisibleUpdate &Update : VisibleUpdates)
+      Lookups[DC].Table.add(
+          Update.Mod, Update.Data,
+          reader::ASTDeclContextNameLookupTrait(*this, *Update.Mod));
+    DC->setHasExternalVisibleStorage(true);
   }
 }
 
@@ -3757,7 +3757,7 @@ void ASTDeclReader::UpdateDecl(Decl *D, ModuleFile &ModuleFile,
 
     case UPD_CXX_INSTANTIATED_CLASS_DEFINITION: {
       auto *RD = cast<CXXRecordDecl>(D);
-      auto *OldDD = RD->DefinitionData.getNotUpdated();
+      auto *OldDD = RD->getCanonicalDecl()->DefinitionData.getNotUpdated();
       bool HadRealDefinition =
           OldDD && (OldDD->Definition != RD ||
                     !Reader.PendingFakeDefinitionData.count(OldDD));

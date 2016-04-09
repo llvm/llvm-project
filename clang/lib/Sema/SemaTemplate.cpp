@@ -6922,6 +6922,15 @@ bool Sema::CheckFunctionTemplateSpecialization(
   // Ignore access information;  it doesn't figure into redeclaration checking.
   FunctionDecl *Specialization = cast<FunctionDecl>(*Result);
 
+  // C++ Concepts TS [dcl.spec.concept]p7: A program shall not declare [...]
+  // an explicit specialization (14.8.3) [...] of a concept definition.
+  if (Specialization->getPrimaryTemplate()->isConcept()) {
+    Diag(FD->getLocation(), diag::err_concept_specialized)
+        << 0 /*function*/ << 1 /*explicitly specialized*/;
+    Diag(Specialization->getLocation(), diag::note_previous_declaration);
+    return true;
+  }
+
   FunctionTemplateSpecializationInfo *SpecInfo
     = Specialization->getTemplateSpecializationInfo();
   assert(SpecInfo && "Function template specialization info missing?");
@@ -7777,6 +7786,15 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
         return true;
       }
 
+      // C++ Concepts TS [dcl.spec.concept]p7: A program shall not declare an
+      // explicit instantiation (14.8.2) [...] of a concept definition.
+      if (PrevTemplate->isConcept()) {
+        Diag(D.getIdentifierLoc(), diag::err_concept_specialized)
+            << 1 /*variable*/ << 0 /*explicitly instantiated*/;
+        Diag(PrevTemplate->getLocation(), diag::note_previous_declaration);
+        return true;
+      }
+
       // Translate the parser's template argument list into our AST format.
       TemplateArgumentListInfo TemplateArgs =
           makeTemplateArgumentListInfo(*this, *D.getName().TemplateId);
@@ -7992,6 +8010,16 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     Diag(D.getIdentifierLoc(),
          diag::ext_explicit_instantiation_without_qualified_id)
     << Specialization << D.getCXXScopeSpec().getRange();
+
+  // C++ Concepts TS [dcl.spec.concept]p7: A program shall not declare an
+  // explicit instantiation (14.8.2) [...] of a concept definition.
+  if (FunTmpl && FunTmpl->isConcept() &&
+      !D.getDeclSpec().isConceptSpecified()) {
+    Diag(D.getIdentifierLoc(), diag::err_concept_specialized)
+        << 0 /*function*/ << 0 /*explicitly instantiated*/;
+    Diag(FunTmpl->getLocation(), diag::note_previous_declaration);
+    return true;
+  }
 
   CheckExplicitInstantiationScope(*this,
                    FunTmpl? (NamedDecl *)FunTmpl

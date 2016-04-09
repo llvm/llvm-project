@@ -65,10 +65,6 @@ class DataFormatterOneIsSingularTestCase(TestBase):
                     substrs = ['1 key/value pair'])
         self.expect('frame variable dict', matching=False,
                     substrs = ['1 key/value pairs'])
-        self.expect('frame variable mutable_bag_ref',
-                    substrs = ['@"1 value"'])
-        self.expect('frame variable mutable_bag_ref', matching=False,
-                    substrs = ['1 values'])
         self.expect('frame variable imset',
                     substrs = ['1 index'])
         self.expect('frame variable imset', matching=False,

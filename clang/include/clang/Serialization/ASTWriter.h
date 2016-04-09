@@ -593,15 +593,6 @@ public:
   /// \brief Emit a source range.
   void AddSourceRange(SourceRange Range, RecordDataImpl &Record);
 
-  /// \brief Emit an integral value.
-  void AddAPInt(const llvm::APInt &Value, RecordDataImpl &Record);
-
-  /// \brief Emit a signed integral value.
-  void AddAPSInt(const llvm::APSInt &Value, RecordDataImpl &Record);
-
-  /// \brief Emit a floating-point value.
-  void AddAPFloat(const llvm::APFloat &Value, RecordDataImpl &Record);
-
   /// \brief Emit a reference to an identifier.
   void AddIdentifierRef(const IdentifierInfo *II, RecordDataImpl &Record);
 
@@ -869,19 +860,13 @@ public:
   }
 
   /// \brief Emit an integral value.
-  void AddAPInt(const llvm::APInt &Value) {
-    return Writer->AddAPInt(Value, *Record);
-  }
+  void AddAPInt(const llvm::APInt &Value);
 
   /// \brief Emit a signed integral value.
-  void AddAPSInt(const llvm::APSInt &Value) {
-    return Writer->AddAPSInt(Value, *Record);
-  }
+  void AddAPSInt(const llvm::APSInt &Value);
 
   /// \brief Emit a floating-point value.
-  void AddAPFloat(const llvm::APFloat &Value) {
-    return Writer->AddAPFloat(Value, *Record);
-  }
+  void AddAPFloat(const llvm::APFloat &Value);
 
   /// \brief Emit a reference to an identifier.
   void AddIdentifierRef(const IdentifierInfo *II) {

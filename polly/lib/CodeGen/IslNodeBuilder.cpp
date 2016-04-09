@@ -622,6 +622,9 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   BasicBlock::iterator AfterLoop = Builder.GetInsertPoint();
   Builder.SetInsertPoint(&*LoopBody);
 
+  // Remember the parallel subfunction
+  ParallelSubfunctions.push_back(LoopBody->getFunction());
+
   // Save the current values.
   auto ValueMapCopy = ValueMap;
   IslExprBuilder::IDToValueTy IDToValueCopy = IDToValue;
