@@ -44,14 +44,14 @@ class MachineLoop : public LoopBase<MachineBasicBlock, MachineLoop> {
 public:
   MachineLoop();
 
-  /// getTopBlock - Return the "top" block in the loop, which is the first
-  /// block in the linear layout, ignoring any parts of the loop not
-  /// contiguous with the part the contains the header.
+  /// Return the "top" block in the loop, which is the first block in the linear
+  /// layout, ignoring any parts of the loop not contiguous with the part that
+  /// contains the header.
   MachineBasicBlock *getTopBlock();
 
-  /// getBottomBlock - Return the "bottom" block in the loop, which is the last
-  /// block in the linear layout, ignoring any parts of the loop not
-  /// contiguous with the part the contains the header.
+  /// Return the "bottom" block in the loop, which is the last block in the
+  /// linear layout, ignoring any parts of the loop not contiguous with the part
+  /// that contains the header.
   MachineBasicBlock *getBottomBlock();
 
   void dump() const;
@@ -81,72 +81,64 @@ public:
 
   LoopInfoBase<MachineBasicBlock, MachineLoop>& getBase() { return LI; }
 
-  /// iterator/begin/end - The interface to the top-level loops in the current
-  /// function.
-  ///
+  /// The iterator interface to the top-level loops in the current function.
   typedef LoopInfoBase<MachineBasicBlock, MachineLoop>::iterator iterator;
   inline iterator begin() const { return LI.begin(); }
   inline iterator end() const { return LI.end(); }
   bool empty() const { return LI.empty(); }
 
-  /// getLoopFor - Return the inner most loop that BB lives in.  If a basic
-  /// block is in no loop (for example the entry node), null is returned.
-  ///
+  /// Return the innermost loop that BB lives in. If a basic block is in no loop
+  /// (for example the entry node), null is returned.
   inline MachineLoop *getLoopFor(const MachineBasicBlock *BB) const {
     return LI.getLoopFor(BB);
   }
 
-  /// operator[] - same as getLoopFor...
-  ///
+  /// Same as getLoopFor.
   inline const MachineLoop *operator[](const MachineBasicBlock *BB) const {
     return LI.getLoopFor(BB);
   }
 
-  /// getLoopDepth - Return the loop nesting level of the specified block...
-  ///
+  /// Return the loop nesting level of the specified block.
   inline unsigned getLoopDepth(const MachineBasicBlock *BB) const {
     return LI.getLoopDepth(BB);
   }
 
-  // isLoopHeader - True if the block is a loop header node
+  /// True if the block is a loop header node.
   inline bool isLoopHeader(const MachineBasicBlock *BB) const {
     return LI.isLoopHeader(BB);
   }
 
-  /// runOnFunction - Calculate the natural loop information.
-  ///
+  /// Calculate the natural loop information.
   bool runOnMachineFunction(MachineFunction &F) override;
 
   void releaseMemory() override { LI.releaseMemory(); }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  /// removeLoop - This removes the specified top-level loop from this loop info
-  /// object.  The loop is not deleted, as it will presumably be inserted into
-  /// another loop.
+  /// This removes the specified top-level loop from this loop info object. The
+  /// loop is not deleted, as it will presumably be inserted into another loop.
   inline MachineLoop *removeLoop(iterator I) { return LI.removeLoop(I); }
 
-  /// changeLoopFor - Change the top-level loop that contains BB to the
-  /// specified loop.  This should be used by transformations that restructure
-  /// the loop hierarchy tree.
+  /// Change the top-level loop that contains BB to the specified loop. This
+  /// should be used by transformations that restructure the loop hierarchy
+  /// tree.
   inline void changeLoopFor(MachineBasicBlock *BB, MachineLoop *L) {
     LI.changeLoopFor(BB, L);
   }
 
-  /// changeTopLevelLoop - Replace the specified loop in the top-level loops
-  /// list with the indicated loop.
+  /// Replace the specified loop in the top-level loops list with the indicated
+  /// loop.
   inline void changeTopLevelLoop(MachineLoop *OldLoop, MachineLoop *NewLoop) {
     LI.changeTopLevelLoop(OldLoop, NewLoop);
   }
 
-  /// addTopLevelLoop - This adds the specified loop to the collection of
-  /// top-level loops.
+  /// This adds the specified loop to the collection of top-level loops.
   inline void addTopLevelLoop(MachineLoop *New) {
     LI.addTopLevelLoop(New);
   }
 
-  /// removeBlock - This method completely removes BB from all data structures,
-  /// including all of the Loop objects it is nested in and our mapping from
+  /// This method completely removes BB from all data structures, including all
+  /// of the Loop objects it is nested in and our mapping from
   /// MachineBasicBlocks to loops.
   void removeBlock(MachineBasicBlock *BB) {
     LI.removeBlock(BB);

@@ -1,6 +1,6 @@
 ; RUN: llvm-as < %s >%t1
 ; RUN: llvm-lto -exported-symbol=_main -set-merged-module -o %t2 %t1
-; RUN: llvm-objdump -d %t2 | FileCheck %s
+; RUN: llvm-objdump --print-imm-hex=false -d %t2 | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"

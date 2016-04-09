@@ -89,6 +89,8 @@ bool StackProtector::runOnFunction(Function &Fn) {
       getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   DT = DTWP ? &DTWP->getDomTree() : nullptr;
   TLI = TM->getSubtargetImpl(Fn)->getTargetLowering();
+  HasPrologue = false;
+  HasIRCheck = false;
 
   Attribute Attr = Fn.getFnAttribute("stack-protector-buffer-size");
   if (Attr.isStringAttribute() &&
@@ -200,11 +202,21 @@ bool StackProtector::HasAddressTaken(const Instruction *AI) {
 bool StackProtector::RequiresStackProtector() {
   bool Strong = false;
   bool NeedsProtector = false;
+  for (const BasicBlock &BB : *F)
+    for (const Instruction &I : BB)
+      if (const CallInst *CI = dyn_cast<CallInst>(&I))
+        if (CI->getCalledFunction() ==
+            Intrinsic::getDeclaration(F->getParent(),
+                                      Intrinsic::stackprotector))
+          HasPrologue = true;
+
   if (F->hasFnAttribute(Attribute::StackProtectReq)) {
     NeedsProtector = true;
     Strong = true; // Use the same heuristic as strong to determine SSPLayout
   } else if (F->hasFnAttribute(Attribute::StackProtectStrong))
     Strong = true;
+  else if (HasPrologue)
+    NeedsProtector = true;
   else if (!F->hasFnAttribute(Attribute::StackProtect))
     return false;
 
@@ -256,68 +268,6 @@ bool StackProtector::RequiresStackProtector() {
   return NeedsProtector;
 }
 
-static bool InstructionWillNotHaveChain(const Instruction *I) {
-  return !I->mayHaveSideEffects() && !I->mayReadFromMemory() &&
-         isSafeToSpeculativelyExecute(I);
-}
-
-/// Identify if RI has a previous instruction in the "Tail Position" and return
-/// it. Otherwise return 0.
-///
-/// This is based off of the code in llvm::isInTailCallPosition. The difference
-/// is that it inverts the first part of llvm::isInTailCallPosition since
-/// isInTailCallPosition is checking if a call is in a tail call position, and
-/// we are searching for an unknown tail call that might be in the tail call
-/// position. Once we find the call though, the code uses the same refactored
-/// code, returnTypeIsEligibleForTailCall.
-static CallInst *FindPotentialTailCall(BasicBlock *BB, ReturnInst *RI,
-                                       const TargetLoweringBase *TLI) {
-  // Establish a reasonable upper bound on the maximum amount of instructions we
-  // will look through to find a tail call.
-  unsigned SearchCounter = 0;
-  const unsigned MaxSearch = 4;
-  bool NoInterposingChain = true;
-
-  for (BasicBlock::reverse_iterator I = std::next(BB->rbegin()), E = BB->rend();
-       I != E && SearchCounter < MaxSearch; ++I) {
-    Instruction *Inst = &*I;
-
-    // Skip over debug intrinsics and do not allow them to affect our MaxSearch
-    // counter.
-    if (isa<DbgInfoIntrinsic>(Inst))
-      continue;
-
-    // If we find a call and the following conditions are satisifed, then we
-    // have found a tail call that satisfies at least the target independent
-    // requirements of a tail call:
-    //
-    // 1. The call site has the tail marker.
-    //
-    // 2. The call site either will not cause the creation of a chain or if a
-    // chain is necessary there are no instructions in between the callsite and
-    // the call which would create an interposing chain.
-    //
-    // 3. The return type of the function does not impede tail call
-    // optimization.
-    if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
-      if (CI->isTailCall() &&
-          (InstructionWillNotHaveChain(CI) || NoInterposingChain) &&
-          returnTypeIsEligibleForTailCall(BB->getParent(), CI, RI, *TLI))
-        return CI;
-    }
-
-    // If we did not find a call see if we have an instruction that may create
-    // an interposing chain.
-    NoInterposingChain =
-        NoInterposingChain && InstructionWillNotHaveChain(Inst);
-
-    // Increment max search.
-    SearchCounter++;
-  }
-
-  return nullptr;
-}
-
 /// Insert code into the entry block that stores the __stack_chk_guard
 /// variable onto the stack:
 ///
@@ -329,29 +279,25 @@ static CallInst *FindPotentialTailCall(BasicBlock *BB, ReturnInst *RI,
 /// Returns true if the platform/triple supports the stackprotectorcreate pseudo
 /// node.
 static bool CreatePrologue(Function *F, Module *M, ReturnInst *RI,
-                           const TargetLoweringBase *TLI, const Triple &TT,
-                           AllocaInst *&AI, Value *&StackGuardVar) {
+                           const TargetLoweringBase *TLI, AllocaInst *&AI,
+                           Value *&StackGuardVar) {
   bool SupportsSelectionDAGSP = false;
-  PointerType *PtrTy = Type::getInt8PtrTy(RI->getContext());
   IRBuilder<> B(&F->getEntryBlock().front());
 
-  StackGuardVar = TLI->getStackCookieLocation(B);
+  StackGuardVar = TLI->getIRStackGuard(B);
   if (!StackGuardVar) {
-    if (TT.isOSOpenBSD()) {
-      StackGuardVar = M->getOrInsertGlobal("__guard_local", PtrTy);
-      cast<GlobalValue>(StackGuardVar)
-          ->setVisibility(GlobalValue::HiddenVisibility);
-    } else {
-      SupportsSelectionDAGSP = true;
-      StackGuardVar = M->getOrInsertGlobal("__stack_chk_guard", PtrTy);
-    }
+    /// Use SelectionDAG SSP handling, since there isn't an IR guard.
+    SupportsSelectionDAGSP = true;
+    TLI->insertSSPDeclarations(*M);
+    StackGuardVar = TLI->getSDStackGuard(*M);
   }
+  assert(StackGuardVar && "Must have stack guard available");
 
+  PointerType *PtrTy = Type::getInt8PtrTy(RI->getContext());
   AI = B.CreateAlloca(PtrTy, nullptr, "StackGuardSlot");
   LoadInst *LI = B.CreateLoad(StackGuardVar, "StackGuard");
   B.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::stackprotector),
                {LI, AI});
-
   return SupportsSelectionDAGSP;
 }
 
@@ -362,7 +308,6 @@ static bool CreatePrologue(Function *F, Module *M, ReturnInst *RI,
 ///  - The epilogue checks the value stored in the prologue against the original
 ///    value. It calls __stack_chk_fail if they differ.
 bool StackProtector::InsertStackProtectors() {
-  bool HasPrologue = false;
   bool SupportsSelectionDAGSP =
       EnableSelectionDAGSP && !TM->Options.EnableFastISel;
   AllocaInst *AI = nullptr;       // Place on stack that stores the stack guard.
@@ -377,27 +322,10 @@ bool StackProtector::InsertStackProtectors() {
     if (!HasPrologue) {
       HasPrologue = true;
       SupportsSelectionDAGSP &=
-          CreatePrologue(F, M, RI, TLI, Trip, AI, StackGuardVar);
+          CreatePrologue(F, M, RI, TLI, AI, StackGuardVar);
     }
 
-    if (SupportsSelectionDAGSP) {
-      // Since we have a potential tail call, insert the special stack check
-      // intrinsic.
-      Instruction *InsertionPt = nullptr;
-      if (CallInst *CI = FindPotentialTailCall(BB, RI, TLI)) {
-        InsertionPt = CI;
-      } else {
-        InsertionPt = RI;
-        // At this point we know that BB has a return statement so it *DOES*
-        // have a terminator.
-        assert(InsertionPt != nullptr &&
-               "BB must have a terminator instruction at this point.");
-      }
-
-      Function *Intrinsic =
-          Intrinsic::getDeclaration(M, Intrinsic::stackprotectorcheck);
-      CallInst::Create(Intrinsic, StackGuardVar, "", InsertionPt);
-    } else {
+    if (!SupportsSelectionDAGSP) {
       // If we do not support SelectionDAG based tail calls, generate IR level
       // tail calls.
       //
@@ -427,6 +355,10 @@ bool StackProtector::InsertStackProtectors() {
       // merge pass will merge together all of the various BB into one including
       // fail BB generated by the stack protector pseudo instruction.
       BasicBlock *FailBB = CreateFailBB();
+
+      // Set HasIRCheck to true, so that SelectionDAG will not generate its own
+      // version.
+      HasIRCheck = true;
 
       // Split the basic block before the return instruction.
       BasicBlock *NewBB = BB->splitBasicBlock(RI->getIterator(), "SP_return");
@@ -486,4 +418,8 @@ BasicBlock *StackProtector::CreateFailBB() {
   }
   B.CreateUnreachable();
   return FailBB;
+}
+
+bool StackProtector::shouldEmitSDCheck(const BasicBlock &BB) const {
+  return HasPrologue && !HasIRCheck && dyn_cast<ReturnInst>(BB.getTerminator());
 }

@@ -137,7 +137,7 @@ static DIScope *getNonCompileUnitScope(DIScope *N) {
 DICompileUnit *DIBuilder::createCompileUnit(
     unsigned Lang, StringRef Filename, StringRef Directory, StringRef Producer,
     bool isOptimized, StringRef Flags, unsigned RunTimeVer, StringRef SplitName,
-    DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, bool EmitDebugInfo) {
+    DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId) {
 
   assert(((Lang <= dwarf::DW_LANG_Fortran08 && Lang >= dwarf::DW_LANG_C89) ||
           (Lang <= dwarf::DW_LANG_hi_user && Lang >= dwarf::DW_LANG_lo_user)) &&
@@ -152,15 +152,8 @@ DICompileUnit *DIBuilder::createCompileUnit(
       nullptr, nullptr, nullptr, nullptr, nullptr, DWOId);
 
   // Create a named metadata so that it is easier to find cu in a module.
-  // Note that we only generate this when the caller wants to actually
-  // emit debug information. When we are only interested in tracking
-  // source line locations throughout the backend, we prevent codegen from
-  // emitting debug info in the final output by not generating llvm.dbg.cu.
-  if (EmitDebugInfo) {
-    NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
-    NMD->addOperand(CUNode);
-  }
-
+  NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
+  NMD->addOperand(CUNode);
   trackIfUnresolved(CUNode);
   return CUNode;
 }

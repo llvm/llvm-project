@@ -75,6 +75,12 @@ private:
   /// times.
   SmallPtrSet<const PHINode *, 16> VisitedPHIs;
 
+  // A prologue is generated.
+  bool HasPrologue = false;
+
+  // IR checking code is generated.
+  bool HasIRCheck = false;
+
   /// InsertStackProtectors - Insert code into the prologue and epilogue of
   /// the function.
   ///
@@ -120,6 +126,10 @@ public:
   }
 
   SSPLayoutKind getSSPLayout(const AllocaInst *AI) const;
+
+  // Return true if StackProtector is supposed to be handled by SelectionDAG.
+  bool shouldEmitSDCheck(const BasicBlock &BB) const;
+
   void adjustForColoring(const AllocaInst *From, const AllocaInst *To);
 
   bool runOnFunction(Function &Fn) override;

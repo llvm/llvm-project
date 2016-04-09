@@ -324,8 +324,6 @@ def int_assume        : Intrinsic<[], [llvm_i1_ty], []>;
 // Stack Protector Intrinsic - The stackprotector intrinsic writes the stack
 // guard to the correct place on the stack frame.
 def int_stackprotector : Intrinsic<[], [llvm_ptr_ty, llvm_ptrptr_ty], []>;
-def int_stackprotectorcheck : Intrinsic<[], [llvm_ptrptr_ty],
-                                        [IntrReadWriteArgMem]>;
 
 // A counter increment for instrumentation based profiling.
 def int_instrprof_increment : Intrinsic<[],

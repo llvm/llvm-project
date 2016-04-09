@@ -10212,9 +10212,9 @@ bool AArch64TargetLowering::shouldNormalizeToSelectSequence(LLVMContext &,
   return false;
 }
 
-Value *AArch64TargetLowering::getStackCookieLocation(IRBuilder<> &IRB) const {
+Value *AArch64TargetLowering::getIRStackGuard(IRBuilder<> &IRB) const {
   if (!Subtarget->isTargetAndroid())
-    return TargetLowering::getStackCookieLocation(IRB);
+    return TargetLowering::getIRStackGuard(IRB);
 
   // Android provides a fixed TLS slot for the stack cookie. See the definition
   // of TLS_SLOT_STACK_GUARD in

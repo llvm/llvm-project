@@ -40,7 +40,7 @@ typedef DenseMap<const MDString *, DIType *> DITypeIdentifierMap;
 DISubprogram *getDISubprogram(const MDNode *Scope);
 
 /// \brief Generate map by visiting all retained types.
-DITypeIdentifierMap generateDITypeIdentifierMap(const NamedMDNode *CU_Nodes);
+DITypeIdentifierMap generateDITypeIdentifierMap(const Module &M);
 
 /// \brief Strip debug info in the module if it exists.
 ///

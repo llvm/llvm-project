@@ -2,12 +2,12 @@ include(ExternalProject)
 
 # llvm_ExternalProject_BuildCmd(out_var target)
 #   Utility function for constructing command lines for external project targets
-function(llvm_ExternalProject_BuildCmd out_var target)
+function(llvm_ExternalProject_BuildCmd out_var target bin_dir)
   if (CMAKE_GENERATOR MATCHES "Make")
     # Use special command for Makefiles to support parallelism.
-    set(${out_var} "$(MAKE)" "${target}" PARENT_SCOPE)
+    set(${out_var} "$(MAKE)" "-C" "${BINARY_DIR}" "${target}" PARENT_SCOPE)
   else()
-    set(${out_var} ${CMAKE_COMMAND} --build . --target ${target}
+    set(${out_var} ${CMAKE_COMMAND} --build ${bin_dir} --target ${target}
                                     --config $<CONFIGURATION> PARENT_SCOPE)
   endif()
 endfunction()
@@ -63,6 +63,7 @@ function(llvm_ExternalProject_Add name source_dir)
 
   if(CMAKE_VERSION VERSION_GREATER 3.1.0)
     set(cmake_3_1_EXCLUDE_FROM_ALL EXCLUDE_FROM_ALL 1)
+    set(cmake_3_1_BUILD_ALWAYS BUILD_ALWAYS 1)
   endif()
 
   if(CMAKE_VERSION VERSION_GREATER 3.3.20150708)
@@ -138,14 +139,21 @@ function(llvm_ExternalProject_Add name source_dir)
                ${PASSTHROUGH_VARIABLES}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
+    ${cmake_3_1_BUILD_ALWAYS}
     ${cmake_3_4_USES_TERMINAL_OPTIONS}
     )
 
-  if(ARG_USE_TOOLCHAIN)
+  if(CMAKE_VERSION VERSION_LESS 3.1.0)
+    set(ALWAYS_REBUILD ${CMAKE_CURRENT_BINARY_DIR}/${name}-always-rebuild)
+    add_custom_target(${name}-always-rebuild
+      COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_DIR}/${name}-clobber-stamp)
+
+    llvm_ExternalProject_BuildCmd(run_build all ${BINARY_DIR})
     ExternalProject_Add_Step(${name} force-rebuild
-      COMMENT "Forcing rebuild becaues tools have changed"
-      DEPENDERS configure
-      DEPENDS ${TOOLCHAIN_BINS}
+      COMMAND ${run_build}
+      COMMENT "Forcing rebuild of ${name}"
+      DEPENDEES configure clean
+      DEPENDS ${ALWAYS_REBUILD} ${ARG_DEPENDS} ${TOOLCHAIN_BINS}
       ${cmake_3_4_USES_TERMINAL} )
   endif()
 
@@ -153,7 +161,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(force_deps DEPENDS ${TOOLCHAIN_BINS})
   endif()
 
-  llvm_ExternalProject_BuildCmd(run_clean clean)
+  llvm_ExternalProject_BuildCmd(run_clean clean ${BINARY_DIR})
   ExternalProject_Add_Step(${name} clean
     COMMAND ${run_clean}
     COMMENT "Cleaning ${name}..."
@@ -184,7 +192,7 @@ function(llvm_ExternalProject_Add name source_dir)
 
   # Add top-level targets
   foreach(target ${ARG_EXTRA_TARGETS})
-    llvm_ExternalProject_BuildCmd(build_runtime_cmd ${target})
+    llvm_ExternalProject_BuildCmd(build_runtime_cmd ${target} ${BINARY_DIR})
     add_custom_target(${target}
       COMMAND ${build_runtime_cmd}
       DEPENDS ${name}-configure

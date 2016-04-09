@@ -1443,6 +1443,11 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
                                  ArrayRef<Constant *> Operands,
                                  const TargetLibraryInfo *TLI) {
   if (Operands.size() == 1) {
+    if (isa<UndefValue>(Operands[0])) {
+      // cosine(arg) is between -1 and 1. cosine(invalid arg) is NaN
+      if (IntrinsicID == Intrinsic::cos)
+        return Constant::getNullValue(Ty);
+    }
     if (ConstantFP *Op = dyn_cast<ConstantFP>(Operands[0])) {
       if (IntrinsicID == Intrinsic::convert_to_fp16) {
         APFloat Val(Op->getValueAPF());

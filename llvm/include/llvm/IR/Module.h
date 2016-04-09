@@ -626,6 +626,58 @@ public:
     return make_range(named_metadata_begin(), named_metadata_end());
   }
 
+  /// An iterator for DICompileUnits that skips those marked NoDebug.
+  class debug_compile_units_iterator
+      : public std::iterator<std::input_iterator_tag, DICompileUnit *> {
+    NamedMDNode *CUs;
+    unsigned Idx;
+    void SkipNoDebugCUs();
+  public:
+    explicit debug_compile_units_iterator(NamedMDNode *CUs, unsigned Idx)
+        : CUs(CUs), Idx(Idx) {
+      SkipNoDebugCUs();
+    }
+    debug_compile_units_iterator &operator++() {
+      ++Idx;
+      SkipNoDebugCUs();
+      return *this;
+    }
+    debug_compile_units_iterator operator++(int) {
+      debug_compile_units_iterator T(*this);
+      ++Idx;
+      return T;
+    }
+    bool operator==(const debug_compile_units_iterator &I) const {
+      return Idx == I.Idx;
+    }
+    bool operator!=(const debug_compile_units_iterator &I) const {
+      return Idx != I.Idx;
+    }
+    DICompileUnit *operator*() const;
+    DICompileUnit *operator->() const;
+  };
+
+  debug_compile_units_iterator debug_compile_units_begin() const {
+    auto *CUs = getNamedMetadata("llvm.dbg.cu");
+    return debug_compile_units_iterator(CUs, 0);
+  }
+
+  debug_compile_units_iterator debug_compile_units_end() const {
+    auto *CUs = getNamedMetadata("llvm.dbg.cu");
+    return debug_compile_units_iterator(CUs, CUs ? CUs->getNumOperands() : 0);
+  }
+
+  /// Return an iterator for all DICompileUnits listed in this Module's
+  /// llvm.dbg.cu named metadata node and aren't explicitly marked as
+  /// NoDebug.
+  iterator_range<debug_compile_units_iterator> debug_compile_units() const {
+    auto *CUs = getNamedMetadata("llvm.dbg.cu");
+    return make_range(
+        debug_compile_units_iterator(CUs, 0),
+        debug_compile_units_iterator(CUs, CUs ? CUs->getNumOperands() : 0));
+  }
+/// @}
+
   /// Destroy ConstantArrays in LLVMContext if they are not used.
   /// ConstantArrays constructed during linking can cause quadratic memory
   /// explosion. Releasing all unused constants can cause a 20% LTO compile-time
@@ -635,7 +687,6 @@ public:
   /// be called where all uses of the LLVMContext are understood.
   void dropTriviallyDeadConstantArrays();
 
-/// @}
 /// @name Utility functions for printing and dumping Module objects
 /// @{
 
