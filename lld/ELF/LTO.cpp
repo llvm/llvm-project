@@ -116,7 +116,8 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // Shared libraries need to be handled slightly differently.
     // For now, let's be conservative and just never internalize
     // symbols when creating a shared library.
-    if (!Config->Shared && !Config->ExportDynamic && !B->isUsedInRegularObj())
+    if (!Config->Shared && !Config->ExportDynamic && !B->isUsedInRegularObj() &&
+        !B->MustBeInDynSym)
       if (!Used.count(GV))
         InternalizedSyms.insert(GV->getName());
 

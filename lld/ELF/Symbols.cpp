@@ -218,6 +218,18 @@ int SymbolBody::compare(SymbolBody *Other) {
   if (L > R)
     return -Other->compare(this);
 
+  if (isShared() != Other->isShared()) {
+    SymbolBody *Shared = isShared() ? this : Other;
+    Shared->MustBeInDynSym = true;
+    if (Shared->getVisibility() == STV_DEFAULT) {
+      // We want to export all symbols that exist in the executable and are
+      // preemptable in DSOs, so that the symbols in the executable can
+      // preempt symbols in the DSO at runtime.
+      SymbolBody *NonShared = isShared() ? Other : this;
+      NonShared->MustBeInDynSym = true;
+    }
+  }
+
   if (!isShared() && !Other->isShared()) {
     uint8_t V = getMinVisibility(getVisibility(), Other->getVisibility());
     setVisibility(V);
@@ -226,15 +238,6 @@ int SymbolBody::compare(SymbolBody *Other) {
 
   if (IsUsedInRegularObj || Other->IsUsedInRegularObj)
     IsUsedInRegularObj = Other->IsUsedInRegularObj = true;
-
-  // We want to export all symbols that exist both in the executable
-  // and in DSOs, so that the symbols in the executable can interrupt
-  // symbols in the DSO at runtime.
-  if (isShared() != Other->isShared())
-    if (isa<Defined>(isShared() ? Other : this)) {
-      IsUsedInRegularObj = Other->IsUsedInRegularObj = true;
-      MustBeInDynSym = Other->MustBeInDynSym = true;
-    }
 
   if (L != R)
     return -1;

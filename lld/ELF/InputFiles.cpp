@@ -594,7 +594,8 @@ template <class ELFT> std::vector<StringRef> LazyObjectFile::getElfSymbols() {
     StringRef StringTable = check(Obj.getStringTableForSymtab(Sec));
     std::vector<StringRef> V;
     for (const Elf_Sym &Sym : Syms.slice(FirstNonLocal))
-      V.push_back(check(Sym.getName(StringTable)));
+      if (Sym.st_shndx != SHN_UNDEF)
+        V.push_back(check(Sym.getName(StringTable)));
     return V;
   }
   return {};
@@ -608,6 +609,8 @@ std::vector<StringRef> LazyObjectFile::getBitcodeSymbols() {
   for (const BasicSymbolRef &Sym : Obj->symbols()) {
     if (BitcodeFile::shouldSkip(Sym))
       continue;
+    if (Sym.getFlags() & BasicSymbolRef::SF_Undefined)
+      continue;
     SmallString<64> Name;
     raw_svector_ostream OS(Name);
     Sym.printName(OS);
@@ -616,7 +619,7 @@ std::vector<StringRef> LazyObjectFile::getBitcodeSymbols() {
   return V;
 }
 
-// Returns a vector of globally-visible symbol names.
+// Returns a vector of globally-visible defined symbol names.
 std::vector<StringRef> LazyObjectFile::getSymbols() {
   if (isBitcode(this->MB))
     return getBitcodeSymbols();

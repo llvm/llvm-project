@@ -202,6 +202,8 @@ public:
     }
 
     verifyGeneratedFunction(S, *EnteringBB->getParent());
+    for (auto *SubF : NodeBuilder.getParallelSubfunctions())
+      verifyGeneratedFunction(S, *SubF);
 
     // Mark the function such that we run additional cleanup passes on this
     // function (e.g. mem2reg to rediscover phi nodes).
