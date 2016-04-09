@@ -79,6 +79,8 @@ public:
   ~Mapper();
 
   Value *mapValue(const Value *V);
+  void remapInstruction(Instruction *I);
+  void remapFunction(Function &F);
 
   /// Map metadata.
   ///
@@ -434,7 +436,8 @@ bool MDNodeMapper::mapOperand(const Metadata *Op) {
     return false;
 
   if (Optional<Metadata *> MappedOp = M.mapSimpleMetadata(Op)) {
-    assert(M.VM.getMappedMD(Op) && "Expected result to be memoized");
+    assert((isa<MDString>(Op) || M.VM.getMappedMD(Op)) &&
+           "Expected result to be memoized");
     return *MappedOp != Op;
   }
 
@@ -447,6 +450,9 @@ Optional<Metadata *> MDNodeMapper::getMappedOp(const Metadata *Op) const {
 
   if (Optional<Metadata *> MappedOp = M.VM.getMappedMD(Op))
     return *MappedOp;
+
+  if (isa<MDString>(Op))
+    return const_cast<Metadata *>(Op);
 
   return None;
 }
@@ -649,12 +655,12 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
     return *NewMD;
 
   if (isa<MDString>(MD))
-    return mapToSelf(MD);
+    return const_cast<Metadata *>(MD);
 
   // This is a module-level metadata.  If nothing at the module level is
   // changing, use an identity mapping.
   if ((Flags & RF_NoModuleLevelChanges))
-    return mapToSelf(MD);
+    return const_cast<Metadata *>(MD);
 
   if (auto *CMD = dyn_cast<ConstantAsMetadata>(MD)) {
     // Disallow recursion into metadata mapping through mapValue.
@@ -731,15 +737,16 @@ MDNode *llvm::MapMetadata(const MDNode *MD, ValueToValueMapTy &VM,
                                           Flags, TypeMapper, Materializer));
 }
 
-/// RemapInstruction - Convert the instruction operands from referencing the
-/// current values into those specified by VMap.
-///
-void llvm::RemapInstruction(Instruction *I, ValueToValueMapTy &VMap,
+void llvm::RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
                             RemapFlags Flags, ValueMapTypeRemapper *TypeMapper,
-                            ValueMaterializer *Materializer){
+                            ValueMaterializer *Materializer) {
+  Mapper(VM, Flags, TypeMapper, Materializer).remapInstruction(I);
+}
+
+void Mapper::remapInstruction(Instruction *I) {
   // Remap operands.
   for (User::op_iterator op = I->op_begin(), E = I->op_end(); op != E; ++op) {
-    Value *V = MapValue(*op, VMap, Flags, TypeMapper, Materializer);
+    Value *V = mapValue(*op);
     // If we aren't ignoring missing entries, assert that something happened.
     if (V)
       *op = V;
@@ -751,7 +758,7 @@ void llvm::RemapInstruction(Instruction *I, ValueToValueMapTy &VMap,
   // Remap phi nodes' incoming blocks.
   if (PHINode *PN = dyn_cast<PHINode>(I)) {
     for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-      Value *V = MapValue(PN->getIncomingBlock(i), VMap, Flags);
+      Value *V = mapValue(PN->getIncomingBlock(i));
       // If we aren't ignoring missing entries, assert that something happened.
       if (V)
         PN->setIncomingBlock(i, cast<BasicBlock>(V));
@@ -766,7 +773,7 @@ void llvm::RemapInstruction(Instruction *I, ValueToValueMapTy &VMap,
   I->getAllMetadata(MDs);
   for (const auto &MI : MDs) {
     MDNode *Old = MI.second;
-    MDNode *New = MapMetadata(Old, VMap, Flags, TypeMapper, Materializer);
+    MDNode *New = cast_or_null<MDNode>(mapMetadata(Old));
     if (New != Old)
       I->setMetadata(MI.first, New);
   }
@@ -794,4 +801,33 @@ void llvm::RemapInstruction(Instruction *I, ValueToValueMapTy &VMap,
         TypeMapper->remapType(GEP->getResultElementType()));
   }
   I->mutateType(TypeMapper->remapType(I->getType()));
+}
+
+void llvm::RemapFunction(Function &F, ValueToValueMapTy &VM, RemapFlags Flags,
+                         ValueMapTypeRemapper *TypeMapper,
+                         ValueMaterializer *Materializer) {
+  Mapper(VM, Flags, TypeMapper, Materializer).remapFunction(F);
+}
+
+void Mapper::remapFunction(Function &F) {
+  // Remap the operands.
+  for (Use &Op : F.operands())
+    if (Op)
+      Op = mapValue(Op);
+
+  // Remap the metadata attachments.
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
+  F.getAllMetadata(MDs);
+  for (const auto &I : MDs)
+    F.setMetadata(I.first, cast_or_null<MDNode>(mapMetadata(I.second)));
+
+  // Remap the argument types.
+  if (TypeMapper)
+    for (Argument &A : F.args())
+      A.mutateType(TypeMapper->remapType(A.getType()));
+
+  // Remap the instructions.
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      remapInstruction(&I);
 }

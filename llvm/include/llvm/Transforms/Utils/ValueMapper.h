@@ -146,10 +146,29 @@ MDNode *MapMetadata(const MDNode *MD, ValueToValueMapTy &VM,
                     ValueMapTypeRemapper *TypeMapper = nullptr,
                     ValueMaterializer *Materializer = nullptr);
 
+/// Convert the instruction operands from referencing the current values into
+/// those specified by VM.
+///
+/// If \a RF_IgnoreMissingLocals is set and an operand can't be found via \a
+/// MapValue(), use the old value.  Otherwise assert that this doesn't happen.
+///
+/// Note that \a MapValue() only returns \c nullptr for SSA values missing from
+/// \c VM.
 void RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
                       RemapFlags Flags = RF_None,
                       ValueMapTypeRemapper *TypeMapper = nullptr,
                       ValueMaterializer *Materializer = nullptr);
+
+/// Remap the operands, metadata, arguments, and instructions of a function.
+///
+/// Calls \a MapValue() on prefix data, prologue data, and personality
+/// function; calls \a MapMetadata() on each attached MDNode; remaps the
+/// argument types using the provided \c TypeMapper; and calls \a
+/// RemapInstruction() on every instruction.
+void RemapFunction(Function &F, ValueToValueMapTy &VM,
+                   RemapFlags Flags = RF_None,
+                   ValueMapTypeRemapper *TypeMapper = nullptr,
+                   ValueMaterializer *Materializer = nullptr);
 
 /// Version of MapValue with type safety for Constant.
 inline Constant *MapValue(const Constant *V, ValueToValueMapTy &VM,

@@ -1843,6 +1843,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
           continue;
         }
 
+        auto CallingConv = DeoptCall->getCallingConv();
         auto *CurBB = RI->getParent();
         RI->eraseFromParent();
 
@@ -1856,8 +1857,9 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
                "Expected at least the deopt operand bundle");
 
         IRBuilder<> Builder(CurBB);
-        Value *NewDeoptCall =
+        CallInst *NewDeoptCall =
             Builder.CreateCall(NewDeoptIntrinsic, CallArgs, OpBundles);
+        NewDeoptCall->setCallingConv(CallingConv);
         if (NewDeoptCall->getType()->isVoidTy())
           Builder.CreateRetVoid();
         else

@@ -405,11 +405,11 @@ static void CloneLoopBlocks(Loop *L, Value *NewIter,
 /// ***Prolog case***
 ///        extraiters = tripcount % loopfactor
 ///        if (extraiters == 0) jump Loop:
-///        else jump Prol
+///        else jump Prol:
 /// Prol:  LoopBody;
 ///        extraiters -= 1                 // Omitted if unroll factor is 2.
 ///        if (extraiters != 0) jump Prol: // Omitted if unroll factor is 2.
-///        if (tripcount < loopfactor) jump End
+///        if (tripcount < loopfactor) jump End:
 /// Loop:
 /// ...
 /// End:

@@ -54,7 +54,20 @@ entry:
 define i32 @test.objectsize() {
 ; CHECK-LABEL: @test.objectsize(
 ; CHECK: @llvm.objectsize.i32.p0i8
-; CHECK-DAG: declare i32 @llvm.objectsize.i32.p0i8
   %s = call i32 @llvm.objectsize.i32(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false)
   ret i32 %s
 }
+
+@__stack_chk_guard = external global i8*
+declare void @llvm.stackprotectorcheck(i8**)
+
+define void @test.stackprotectorcheck() {
+; CHECK-LABEL: @test.stackprotectorcheck(
+; CHECK-NEXT: ret void
+  call void @llvm.stackprotectorcheck(i8** @__stack_chk_guard)
+  ret void
+}
+
+; This is part of @test.objectsize(), since llvm.objectsize declaration gets
+; emitted at the end.
+; CHECK: declare i32 @llvm.objectsize.i32.p0i8

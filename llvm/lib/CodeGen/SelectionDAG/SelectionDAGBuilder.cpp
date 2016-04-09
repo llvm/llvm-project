@@ -2014,7 +2014,10 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   MachineFrameInfo *MFI = ParentBB->getParent()->getFrameInfo();
   int FI = MFI->getStackProtectorIndex();
 
-  const Value *IRGuard = SPD.getGuard();
+  const Module &M = *ParentBB->getParent()->getFunction()->getParent();
+  const Value *IRGuard = TLI.getSDStackGuard(M);
+  assert(IRGuard && "Currently there must be an IR guard in order to use "
+                    "SelectionDAG SSP");
   SDValue GuardPtr = getValue(IRGuard);
   SDValue StackSlotPtr = DAG.getFrameIndex(FI, PtrTy);
 
@@ -5517,18 +5520,6 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::invariant_end:
     // Discard region information.
     return nullptr;
-  case Intrinsic::stackprotectorcheck: {
-    // Do not actually emit anything for this basic block. Instead we initialize
-    // the stack protector descriptor and export the guard variable so we can
-    // access it in FinishBasicBlock.
-    const BasicBlock *BB = I.getParent();
-    SPDescriptor.initialize(BB, FuncInfo.MBBMap[BB], I);
-    ExportFromCurrentBlock(SPDescriptor.getGuard());
-
-    // Flush our exports since we are going to process a terminator.
-    (void)getControlRoot();
-    return nullptr;
-  }
   case Intrinsic::clear_cache:
     return TLI.getClearCacheBuiltinName();
   case Intrinsic::donothing:
