@@ -11,9 +11,12 @@
 ;   return 1;
 ; }
 
-; Check that we still have the structure type for X even though we're not
-; going to emit a low/high_pc for foo.
-; CHECK: DW_TAG_structure_type
+; Check that we don't have the structure type for X since its scope has
+; been optimized away.
+; CHECK-NOT: DW_TAG_structure_type
+; CHECK: DW_TAG_subprogram
+; CHECK: DW_AT_name {{.*}}"bar"
+; CHECK-NOT: DW_TAG_structure_type
 
 ; Function Attrs: nounwind readnone uwtable
 define i32 @bar() #0 !dbg !4 {
