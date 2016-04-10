@@ -115,6 +115,49 @@ static value alloc_variant(int tag, void *Value) {
     return alloc_variant(0, pfun(Kid));                   \
   }
 
+/*===-- Context error handling --------------------------------------------===*/
+
+void llvm_diagnostic_handler_trampoline(LLVMDiagnosticInfoRef DI,
+                                        void *DiagnosticContext) {
+  caml_callback(*((value *)DiagnosticContext), (value)DI);
+}
+
+/* Diagnostic.t -> string */
+CAMLprim value llvm_get_diagnostic_description(value Diagnostic) {
+  return llvm_string_of_message(
+      LLVMGetDiagInfoDescription((LLVMDiagnosticInfoRef)Diagnostic));
+}
+
+/* Diagnostic.t -> DiagnosticSeverity.t */
+CAMLprim value llvm_get_diagnostic_severity(value Diagnostic) {
+  return Val_int(LLVMGetDiagInfoSeverity((LLVMDiagnosticInfoRef)Diagnostic));
+}
+
+static void llvm_remove_diagnostic_handler(LLVMContextRef C) {
+  if (LLVMContextGetDiagnosticHandler(C) ==
+      llvm_diagnostic_handler_trampoline) {
+    value *Handler = (value *)LLVMContextGetDiagnosticContext(C);
+    remove_global_root(Handler);
+    free(Handler);
+  }
+}
+
+/* llcontext -> (Diagnostic.t -> unit) option -> unit */
+CAMLprim value llvm_set_diagnostic_handler(LLVMContextRef C, value Handler) {
+  llvm_remove_diagnostic_handler(C);
+  if (Handler == Val_int(0)) {
+    LLVMContextSetDiagnosticHandler(C, NULL, NULL);
+  } else {
+    value *DiagnosticContext = malloc(sizeof(value));
+    if (DiagnosticContext == NULL)
+      caml_raise_out_of_memory();
+    caml_register_global_root(DiagnosticContext);
+    *DiagnosticContext = Field(Handler, 0);
+    LLVMContextSetDiagnosticHandler(C, llvm_diagnostic_handler_trampoline,
+                                    DiagnosticContext);
+  }
+  return Val_unit;
+}
 
 /*===-- Contexts ----------------------------------------------------------===*/
 
@@ -125,6 +168,7 @@ CAMLprim LLVMContextRef llvm_create_context(value Unit) {
 
 /* llcontext -> unit */
 CAMLprim value llvm_dispose_context(LLVMContextRef C) {
+  llvm_remove_diagnostic_handler(C);
   LLVMContextDispose(C);
   return Val_unit;
 }

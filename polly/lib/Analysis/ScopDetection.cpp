@@ -399,12 +399,6 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
       isa<UndefValue>(ICmp->getOperand(1)))
     return invalid<ReportUndefOperand>(Context, /*Assert=*/true, &BB, ICmp);
 
-  // TODO: FIXME: IslExprBuilder is not capable of producing valid code
-  //              for arbitrary pointer expressions at the moment. Until
-  //              this is fixed we disallow pointer expressions completely.
-  if (ICmp->getOperand(0)->getType()->isPointerTy())
-    return false;
-
   Loop *L = LI->getLoopFor(ICmp->getParent());
   const SCEV *LHS = SE->getSCEVAtScope(ICmp->getOperand(0), L);
   const SCEV *RHS = SE->getSCEVAtScope(ICmp->getOperand(1), L);

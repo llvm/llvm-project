@@ -19,7 +19,7 @@
 using namespace llvm;
 
 PreservedAnalyses BitcodeWriterPass::run(Module &M) {
-  WriteBitcodeToFile(&M, OS, ShouldPreserveUseListOrder, EmitSummaryIndex);
+  WriteBitcodeToFile(&M, OS, ShouldPreserveUseListOrder, EmitSummaryIndex, EmitModuleHash);
   return PreservedAnalyses::all();
 }
 
@@ -28,19 +28,20 @@ namespace {
     raw_ostream &OS; // raw_ostream to print on
     bool ShouldPreserveUseListOrder;
     bool EmitSummaryIndex;
+    bool EmitModuleHash;
 
   public:
     static char ID; // Pass identification, replacement for typeid
     explicit WriteBitcodePass(raw_ostream &o, bool ShouldPreserveUseListOrder,
-                              bool EmitSummaryIndex)
+                              bool EmitSummaryIndex, bool EmitModuleHash)
         : ModulePass(ID), OS(o),
           ShouldPreserveUseListOrder(ShouldPreserveUseListOrder),
-          EmitSummaryIndex(EmitSummaryIndex) {}
+          EmitSummaryIndex(EmitSummaryIndex), EmitModuleHash(EmitModuleHash) {}
 
     const char *getPassName() const override { return "Bitcode Writer"; }
 
     bool runOnModule(Module &M) override {
-      WriteBitcodeToFile(&M, OS, ShouldPreserveUseListOrder, EmitSummaryIndex);
+      WriteBitcodeToFile(&M, OS, ShouldPreserveUseListOrder, EmitSummaryIndex, EmitModuleHash);
       return false;
     }
   };
@@ -50,7 +51,7 @@ char WriteBitcodePass::ID = 0;
 
 ModulePass *llvm::createBitcodeWriterPass(raw_ostream &Str,
                                           bool ShouldPreserveUseListOrder,
-                                          bool EmitSummaryIndex) {
+                                          bool EmitSummaryIndex, bool EmitModuleHash) {
   return new WriteBitcodePass(Str, ShouldPreserveUseListOrder,
-                              EmitSummaryIndex);
+                              EmitSummaryIndex, EmitModuleHash);
 }

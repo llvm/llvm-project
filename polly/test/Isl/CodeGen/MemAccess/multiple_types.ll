@@ -13,19 +13,19 @@
 
 ; Short[0]
 ; CHECK: %polly.access.Short10 = getelementptr i8, i8* %Short, i64 0
-; CHECK: %12 = bitcast i8* %polly.access.Short10 to i16*
-; CHECK: %tmp5_p_scalar_ = load i16, i16* %12
+; CHECK: %24 = bitcast i8* %polly.access.Short10 to i16*
+; CHECK: %tmp5_p_scalar_ = load i16, i16* %24
 
 ; Float[8 * i]
-; CHECK: %13 = mul nsw i64 8, %polly.indvar
-; CHECK: %polly.access.Float11 = getelementptr i8, i8* %Float, i64 %13
-; CHECK: %14 = bitcast i8* %polly.access.Float11 to float*
-; CHECK: %tmp11_p_scalar_ = load float, float* %14
+; CHECK: %25 = mul nsw i64 8, %polly.indvar
+; CHECK: %polly.access.Float11 = getelementptr i8, i8* %Float, i64 %25
+; CHECK: %26 = bitcast i8* %polly.access.Float11 to float*
+; CHECK: %tmp11_p_scalar_ = load float, float* %26
 
 ; Double[8]
 ; CHECK: %polly.access.Double13 = getelementptr i8, i8* %Double, i64 8
-; CHECK: %15 = bitcast i8* %polly.access.Double13 to double*
-; CHECK: %tmp17_p_scalar_ = load double, double* %15
+; CHECK: %27 = bitcast i8* %polly.access.Double13 to double*
+; CHECK: %tmp17_p_scalar_ = load double, double* %27
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
