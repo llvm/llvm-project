@@ -5819,6 +5819,15 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, unsigned VF,
       return TTI.getAddressComputationCost(VectorTy) +
         TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS);
 
+    if (LI && Legal->isUniform(Ptr)) {
+      // Scalar load + broadcast
+      unsigned Cost = TTI.getAddressComputationCost(ValTy->getScalarType());
+      Cost += TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(),
+                                  Alignment, AS);
+      return Cost + TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast,
+                                       ValTy);
+    }
+
     // For an interleaved access, calculate the total cost of the whole
     // interleave group.
     if (Legal->isAccessInterleaved(I)) {

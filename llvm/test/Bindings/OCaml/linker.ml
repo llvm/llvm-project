@@ -16,6 +16,8 @@ open Llvm_linker
 let context = global_context ()
 let void_type = Llvm.void_type context
 
+let diagnostic_handler _ = ()
+
 (* Tiny unit test framework - really just to help find which line is busted *)
 let print_checkpoints = false
 
@@ -28,6 +30,8 @@ let suite name f =
 (*===-- Linker -----------------------------------------------------------===*)
 
 let test_linker () =
+  set_diagnostic_handler context (Some diagnostic_handler);
+
   let fty = function_type void_type [| |] in
 
   let make_module name =

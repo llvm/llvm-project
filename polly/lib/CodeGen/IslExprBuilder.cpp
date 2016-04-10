@@ -186,7 +186,6 @@ Value *IslExprBuilder::createOpAccess(isl_ast_expr *Expr) {
 Value *IslExprBuilder::createOpBin(__isl_take isl_ast_expr *Expr) {
   Value *LHS, *RHS, *Res;
   Type *MaxType;
-  isl_ast_expr *LOp, *ROp;
   isl_ast_op_type OpType;
 
   assert(isl_ast_expr_get_type(Expr) == isl_ast_expr_op &&
@@ -196,67 +195,11 @@ Value *IslExprBuilder::createOpBin(__isl_take isl_ast_expr *Expr) {
 
   OpType = isl_ast_expr_get_op_type(Expr);
 
-  LOp = isl_ast_expr_get_op_arg(Expr, 0);
-  ROp = isl_ast_expr_get_op_arg(Expr, 1);
-
-  // Catch the special case ((-<pointer>) + <pointer>) which is for
-  // isl the same as (<pointer> - <pointer>). We have to treat it here because
-  // there is no valid semantics for the (-<pointer>) expression, hence in
-  // createOpUnary such an expression will trigger a crash.
-  // FIXME: The same problem can now be triggered by a subexpression of the LHS,
-  //        however it is much less likely.
-  if (OpType == isl_ast_op_add &&
-      isl_ast_expr_get_type(LOp) == isl_ast_expr_op &&
-      isl_ast_expr_get_op_type(LOp) == isl_ast_op_minus) {
-    // Change the binary addition to a substraction.
-    OpType = isl_ast_op_sub;
-
-    // Extract the unary operand of the LHS.
-    auto *LOpOp = isl_ast_expr_get_op_arg(LOp, 0);
-    isl_ast_expr_free(LOp);
-
-    // Swap the unary operand of the LHS and the RHS.
-    LOp = ROp;
-    ROp = LOpOp;
-  }
-
-  LHS = create(LOp);
-  RHS = create(ROp);
+  LHS = create(isl_ast_expr_get_op_arg(Expr, 0));
+  RHS = create(isl_ast_expr_get_op_arg(Expr, 1));
 
   Type *LHSType = LHS->getType();
   Type *RHSType = RHS->getType();
-
-  // Handle <pointer> - <pointer>
-  if (LHSType->isPointerTy() && RHSType->isPointerTy()) {
-    isl_ast_expr_free(Expr);
-    assert(OpType == isl_ast_op_sub && "Substraction is the only valid binary "
-                                       "pointer <-> pointer operation.");
-
-    return Builder.CreatePtrDiff(LHS, RHS);
-  }
-
-  // Handle <pointer> +/- <integer> and <integer> +/- <pointer>
-  if (LHSType->isPointerTy() || RHSType->isPointerTy()) {
-    isl_ast_expr_free(Expr);
-
-    assert((LHSType->isIntegerTy() || RHSType->isIntegerTy()) &&
-           "Arithmetic operations might only performed on one but not two "
-           "pointer types.");
-
-    if (LHSType->isIntegerTy())
-      std::swap(LHS, RHS);
-
-    switch (OpType) {
-    default:
-      llvm_unreachable(
-          "Only additive binary operations are allowed on pointer types.");
-    case isl_ast_op_sub:
-      RHS = Builder.CreateNeg(RHS);
-    // Fall through
-    case isl_ast_op_add:
-      return Builder.CreateGEP(LHS, RHS);
-    }
-  }
 
   MaxType = getWidestType(LHSType, RHSType);
 
@@ -380,33 +323,37 @@ Value *IslExprBuilder::createOpICmp(__isl_take isl_ast_expr *Expr) {
 
   Value *LHS, *RHS, *Res;
 
-  LHS = create(isl_ast_expr_get_op_arg(Expr, 0));
-  RHS = create(isl_ast_expr_get_op_arg(Expr, 1));
+  auto *Op0 = isl_ast_expr_get_op_arg(Expr, 0);
+  auto *Op1 = isl_ast_expr_get_op_arg(Expr, 1);
+  bool HasNonAddressOfOperand =
+      isl_ast_expr_get_type(Op0) != isl_ast_expr_op ||
+      isl_ast_expr_get_type(Op1) != isl_ast_expr_op ||
+      isl_ast_expr_get_op_type(Op0) != isl_ast_op_address_of ||
+      isl_ast_expr_get_op_type(Op1) != isl_ast_op_address_of;
 
-  bool IsPtrType =
-      LHS->getType()->isPointerTy() || RHS->getType()->isPointerTy();
+  LHS = create(Op0);
+  RHS = create(Op1);
+
+  auto *LHSTy = LHS->getType();
+  auto *RHSTy = RHS->getType();
+  bool IsPtrType = LHSTy->isPointerTy() || RHSTy->isPointerTy();
+  bool UseUnsignedCmp = IsPtrType && !HasNonAddressOfOperand;
+
+  auto *PtrAsIntTy = Builder.getIntNTy(DL.getPointerSizeInBits());
+  if (LHSTy->isPointerTy())
+    LHS = Builder.CreatePtrToInt(LHS, PtrAsIntTy);
+  if (RHSTy->isPointerTy())
+    RHS = Builder.CreatePtrToInt(RHS, PtrAsIntTy);
 
   if (LHS->getType() != RHS->getType()) {
-    if (IsPtrType) {
-      Type *I8PtrTy = Builder.getInt8PtrTy();
-      if (!LHS->getType()->isPointerTy())
-        LHS = Builder.CreateIntToPtr(LHS, I8PtrTy);
-      if (!RHS->getType()->isPointerTy())
-        RHS = Builder.CreateIntToPtr(RHS, I8PtrTy);
-      if (LHS->getType() != I8PtrTy)
-        LHS = Builder.CreateBitCast(LHS, I8PtrTy);
-      if (RHS->getType() != I8PtrTy)
-        RHS = Builder.CreateBitCast(RHS, I8PtrTy);
-    } else {
-      Type *MaxType = LHS->getType();
-      MaxType = getWidestType(MaxType, RHS->getType());
+    Type *MaxType = LHS->getType();
+    MaxType = getWidestType(MaxType, RHS->getType());
 
-      if (MaxType != RHS->getType())
-        RHS = Builder.CreateSExt(RHS, MaxType);
+    if (MaxType != RHS->getType())
+      RHS = Builder.CreateSExt(RHS, MaxType);
 
-      if (MaxType != LHS->getType())
-        LHS = Builder.CreateSExt(LHS, MaxType);
-    }
+    if (MaxType != LHS->getType())
+      LHS = Builder.CreateSExt(LHS, MaxType);
   }
 
   isl_ast_op_type OpType = isl_ast_expr_get_op_type(Expr);
@@ -423,8 +370,8 @@ Value *IslExprBuilder::createOpICmp(__isl_take isl_ast_expr *Expr) {
       {CmpInst::ICMP_SGT, CmpInst::ICMP_UGT},
   };
 
-  Res = Builder.CreateICmp(Predicates[OpType - isl_ast_op_eq][IsPtrType], LHS,
-                           RHS);
+  Res = Builder.CreateICmp(Predicates[OpType - isl_ast_op_eq][UseUnsignedCmp],
+                           LHS, RHS);
 
   isl_ast_expr_free(Expr);
   return Res;
@@ -614,6 +561,9 @@ Value *IslExprBuilder::createId(__isl_take isl_ast_expr *Expr) {
   V = IDToValue[Id];
   if (!V)
     V = UndefValue::get(getType(Expr));
+
+  if (V->getType()->isPointerTy())
+    V = Builder.CreatePtrToInt(V, Builder.getIntNTy(DL.getPointerSizeInBits()));
 
   assert(V && "Unknown parameter id found");
 
