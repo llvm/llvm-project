@@ -1358,6 +1358,9 @@ bool isNullFPConstant(SDValue V);
 bool isAllOnesConstant(SDValue V);
 /// Returns true if \p V is a constant integer one.
 bool isOneConstant(SDValue V);
+/// Returns true if \p V is a bitwise not operation. Assumes that an all ones
+/// constant is canonicalized to be operand 1.
+bool isBitwiseNot(SDValue V);
 
 class GlobalAddressSDNode : public SDNode {
   const GlobalValue *TheGlobal;

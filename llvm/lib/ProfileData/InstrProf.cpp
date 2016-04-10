@@ -398,8 +398,10 @@ uint64_t InstrProfRecord::remapValue(uint64_t Value, uint32_t ValueKind,
         std::lower_bound(ValueMap->begin(), ValueMap->end(), Value,
                          [](const std::pair<uint64_t, uint64_t> &LHS,
                             uint64_t RHS) { return LHS.first < RHS; });
-    if (Result != ValueMap->end())
+    if (Result != ValueMap->end() && Result->first == Value)
       Value = (uint64_t)Result->second;
+    else
+      Value = 0;
     break;
   }
   }

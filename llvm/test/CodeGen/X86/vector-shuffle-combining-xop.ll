@@ -13,8 +13,8 @@ declare <16 x i8> @llvm.x86.xop.vpperm(<16 x i8>, <16 x i8>, <16 x i8>) nounwind
 define <16 x i8> @combine_vpperm_identity(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: combine_vpperm_identity:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpperm {{.*}}(%rip), %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpperm {{.*}}(%rip), %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm1[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; CHECK-NEXT:    retq
   %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> <i8 31, i8 30, i8 29, i8 28, i8 27, i8 26, i8 25, i8 24, i8 23, i8 22, i8 21, i8 20, i8 19, i8 18, i8 17, i8 16>)
   %res1 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %res0, <16 x i8> undef, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
@@ -24,7 +24,7 @@ define <16 x i8> @combine_vpperm_identity(<16 x i8> %a0, <16 x i8> %a1) {
 define <16 x i8> @combine_vpperm_as_unary_unpckhwd(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: combine_vpperm_as_unary_unpckhwd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpperm {{.*}}(%rip), %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; CHECK-NEXT:    retq
   %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a0, <16 x i8> <i8 8, i8 24, i8 9, i8 25, i8 10, i8 26, i8 11, i8 27, i8 12, i8 28, i8 13, i8 29, i8 14, i8 30, i8 15, i8 31>)
   ret <16 x i8> %res0
@@ -33,7 +33,7 @@ define <16 x i8> @combine_vpperm_as_unary_unpckhwd(<16 x i8> %a0, <16 x i8> %a1)
 define <16 x i8> @combine_vpperm_as_unpckhwd(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: combine_vpperm_as_unpckhwd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpperm {{.*}}(%rip), %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
 ; CHECK-NEXT:    retq
   %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> <i8 8, i8 24, i8 9, i8 25, i8 10, i8 26, i8 11, i8 27, i8 12, i8 28, i8 13, i8 29, i8 14, i8 30, i8 15, i8 31>)
   ret <16 x i8> %res0

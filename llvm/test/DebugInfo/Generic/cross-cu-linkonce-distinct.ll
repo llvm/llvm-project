@@ -26,24 +26,16 @@
 ; }
 ; int (*y)(int) = &func;
 
+; The DISubprogram should show up in compile unit a.
 ; CHECK: DW_TAG_compile_unit
-; CHECK:   DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "func"
+; CHECK:    DW_AT_name {{.*}}"b.cpp"
+; CHECK-NOT: DW_TAG_subprogram
+
 ; CHECK: DW_TAG_compile_unit
-
-; FIXME: Maybe we should drop the subprogram here - since the function was
-; emitted in one CU, due to linkonce_odr uniquing. We certainly don't emit the
-; subprogram here if the source location for this definition is the same (see
-; test/DebugInfo/cross-cu-linkonce.ll), though it's very easy to tickle that
-; into failing even without duplicating the source as has been done in this
-; case (two cpp files in different directories, including the same header that
-; contains an inline function - clang will produce distinct subprogram metadata
-; that won't deduplicate owing to the file location information containing the
-; directory of the source file even though the file name is absolute, not
-; relative)
-
-; CHECK: DW_TAG_subprogram
+; CHECK-NOT: DW_TAG
+; CHECK:     DW_AT_name {{.*}}"a.cpp"
+; CHECK:     DW_AT_name {{.*}} "func"
 
 @x = global i32 (i32)* @_Z4funci, align 8
 @y = global i32 (i32)* @_Z4funci, align 8
@@ -61,7 +53,7 @@ define linkonce_odr i32 @_Z4funci(i32 %i) #0 !dbg !4 {
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-attributes #0 = { inlinehint nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { inlinehint nounwind uwtable }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!12, !0}

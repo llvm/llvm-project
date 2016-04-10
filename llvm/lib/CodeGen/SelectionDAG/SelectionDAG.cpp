@@ -6708,6 +6708,10 @@ bool llvm::isOneConstant(SDValue V) {
   return Const != nullptr && Const->isOne();
 }
 
+bool llvm::isBitwiseNot(SDValue V) {
+  return V.getOpcode() == ISD::XOR && isAllOnesConstant(V.getOperand(1));
+}
+
 HandleSDNode::~HandleSDNode() {
   DropOperands();
 }

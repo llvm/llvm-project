@@ -180,8 +180,6 @@ public:
 
   void finishSubprogramDefinition(const DISubprogram *SP);
 
-  void collectDeadVariables(const DISubprogram *SP);
-
   /// Set the skeleton unit associated with this unit.
   void setSkeleton(DwarfCompileUnit &Skel) { Skeleton = &Skel; }
 
