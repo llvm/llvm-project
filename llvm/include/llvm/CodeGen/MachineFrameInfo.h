@@ -253,6 +253,9 @@ class MachineFrameInfo {
   /// Whether the "realign-stack" option is on.
   bool RealignOption;
 
+  /// Whether the function has the \c alignstack attribute.
+  bool ForcedRealign;
+
   /// True if the function dynamically adjusts the stack pointer through some
   /// opaque mechanism like inline assembly or Win32 EH.
   bool HasOpaqueSPAdjustment;
@@ -279,9 +282,9 @@ class MachineFrameInfo {
 
 public:
   explicit MachineFrameInfo(unsigned StackAlign, bool isStackRealign,
-                            bool RealignOpt)
+                            bool RealignOpt, bool ForceRealign)
       : StackAlignment(StackAlign), StackRealignable(isStackRealign),
-        RealignOption(RealignOpt) {
+        RealignOption(RealignOpt), ForcedRealign(ForceRealign) {
     StackSize = NumFixedObjects = OffsetAdjustment = MaxAlignment = 0;
     HasVarSizedObjects = false;
     FrameAddressTaken = false;

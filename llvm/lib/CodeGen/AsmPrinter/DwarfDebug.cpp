@@ -526,32 +526,10 @@ void DwarfDebug::finishVariableDefinitions() {
 
 void DwarfDebug::finishSubprogramDefinitions() {
   for (const auto &P : SPMap)
-    forBothCUs(*P.second, [&](DwarfCompileUnit &CU) {
-      CU.finishSubprogramDefinition(cast<DISubprogram>(P.first));
-    });
-}
-
-// Collect info for variables that were optimized out.
-void DwarfDebug::collectDeadVariables() {
-  const Module *M = MMI->getModule();
-
-  if (NamedMDNode *CU_Nodes = M->getNamedMetadata("llvm.dbg.cu")) {
-    for (MDNode *N : CU_Nodes->operands()) {
-      auto *TheCU = cast<DICompileUnit>(N);
-      if (TheCU->getEmissionKind() == DICompileUnit::NoDebug)
-        continue;
-
-      // Construct subprogram DIE and add variables DIEs.
-      DwarfCompileUnit *SPCU =
-          static_cast<DwarfCompileUnit *>(CUMap.lookup(TheCU));
-      assert(SPCU && "Unable to find Compile Unit!");
-      for (auto *SP : TheCU->getSubprograms()) {
-        if (ProcessedSPNodes.count(SP) != 0)
-          continue;
-        SPCU->collectDeadVariables(SP);
-      }
-    }
-  }
+    if (ProcessedSPNodes.count(P.first))
+      forBothCUs(*P.second, [&](DwarfCompileUnit &CU) {
+          CU.finishSubprogramDefinition(cast<DISubprogram>(P.first));
+        });
 }
 
 void DwarfDebug::finalizeModuleInfo() {
@@ -560,9 +538,6 @@ void DwarfDebug::finalizeModuleInfo() {
   finishSubprogramDefinitions();
 
   finishVariableDefinitions();
-
-  // Collect info for variables that were optimized out.
-  collectDeadVariables();
 
   // Handle anything that needs to be done on a per-unit basis after
   // all other generation.
@@ -1129,6 +1104,10 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
     PrevCU = nullptr;
     CurFn = nullptr;
     DebugHandlerBase::endFunction(MF);
+    // Mark functions with no debug info on any instructions, but a
+    // valid DISubprogram as processed.
+    if (auto *SP = MF->getFunction()->getSubprogram())
+      ProcessedSPNodes.insert(SP);
     return;
   }
 

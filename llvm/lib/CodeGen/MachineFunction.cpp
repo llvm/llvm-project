@@ -84,6 +84,13 @@ void ilist_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
   MBB->getParent()->DeleteMachineBasicBlock(MBB);
 }
 
+static inline unsigned getFnStackAlignment(const TargetSubtargetInfo *STI,
+                                           const Function *Fn) {
+  if (Fn->hasFnAttribute(Attribute::StackAlignment))
+    return Fn->getFnStackAlignment();
+  return STI->getFrameLowering()->getStackAlignment();
+}
+
 MachineFunction::MachineFunction(const Function *F, const TargetMachine &TM,
                                  unsigned FunctionNum, MachineModuleInfo &mmi)
     : Fn(F), Target(TM), STI(TM.getSubtargetImpl(*F)), Ctx(mmi.getContext()),
@@ -97,9 +104,11 @@ MachineFunction::MachineFunction(const Function *F, const TargetMachine &TM,
 
   MFInfo = nullptr;
   FrameInfo = new (Allocator)
-      MachineFrameInfo(STI->getFrameLowering()->getStackAlignment(),
+      MachineFrameInfo(getFnStackAlignment(STI, Fn),
                        STI->getFrameLowering()->isStackRealignable(),
-                       !F->hasFnAttribute("no-realign-stack"));
+                       !F->hasFnAttribute("no-realign-stack"),
+                       !F->hasFnAttribute("no-realign-stack") &&
+                       F->hasFnAttribute(Attribute::StackAlignment));
 
   if (Fn->hasFnAttribute(Attribute::StackAlignment))
     FrameInfo->ensureMaxAlignment(Fn->getFnStackAlignment());
@@ -613,8 +622,10 @@ int MachineFrameInfo::CreateFixedObject(uint64_t Size, int64_t SPOffset,
   // The alignment of the frame index can be determined from its offset from
   // the incoming frame position.  If the frame object is at offset 32 and
   // the stack is guaranteed to be 16-byte aligned, then we know that the
-  // object is 16-byte aligned.
-  unsigned Align = MinAlign(SPOffset, StackAlignment);
+  // object is 16-byte aligned. Note that unlike the non-fixed case, if the
+  // stack needs realignment, we can't assume that the stack will in fact be
+  // aligned.
+  unsigned Align = MinAlign(SPOffset, ForcedRealign ? 1 : StackAlignment);
   Align = clampStackAlignment(!StackRealignable || !RealignOption, Align,
                               StackAlignment);
   Objects.insert(Objects.begin(), StackObject(Size, Align, SPOffset, Immutable,
@@ -627,7 +638,7 @@ int MachineFrameInfo::CreateFixedObject(uint64_t Size, int64_t SPOffset,
 /// Returns an index with a negative value.
 int MachineFrameInfo::CreateFixedSpillStackObject(uint64_t Size,
                                                   int64_t SPOffset) {
-  unsigned Align = MinAlign(SPOffset, StackAlignment);
+  unsigned Align = MinAlign(SPOffset, ForcedRealign ? 1 : StackAlignment);
   Align = clampStackAlignment(!StackRealignable || !RealignOption, Align,
                               StackAlignment);
   Objects.insert(Objects.begin(), StackObject(Size, Align, SPOffset,

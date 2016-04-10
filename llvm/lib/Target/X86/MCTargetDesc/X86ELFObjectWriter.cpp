@@ -154,6 +154,10 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     case RT64_8:
       llvm_unreachable("Unimplemented");
     }
+  case MCSymbolRefExpr::VK_TLSCALL:
+    return ELF::R_X86_64_TLSDESC_CALL;
+  case MCSymbolRefExpr::VK_TLSDESC:
+    return ELF::R_X86_64_GOTPC32_TLSDESC;
   case MCSymbolRefExpr::VK_TLSGD:
     checkIs32(Ctx, Loc, Type);
     return ELF::R_X86_64_TLSGD;

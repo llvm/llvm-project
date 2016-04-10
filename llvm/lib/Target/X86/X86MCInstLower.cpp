@@ -1018,7 +1018,8 @@ static const Constant *getConstantFromPool(const MachineInstr &MI,
 }
 
 static std::string getShuffleComment(const MachineOperand &DstOp,
-                                     const MachineOperand &SrcOp,
+                                     const MachineOperand &SrcOp1,
+                                     const MachineOperand &SrcOp2,
                                      ArrayRef<int> Mask) {
   std::string Comment;
 
@@ -1032,39 +1033,49 @@ static std::string getShuffleComment(const MachineOperand &DstOp,
   };
 
   StringRef DstName = DstOp.isReg() ? GetRegisterName(DstOp.getReg()) : "mem";
-  StringRef SrcName = SrcOp.isReg() ? GetRegisterName(SrcOp.getReg()) : "mem";
+  StringRef Src1Name =
+      SrcOp1.isReg() ? GetRegisterName(SrcOp1.getReg()) : "mem";
+  StringRef Src2Name =
+      SrcOp2.isReg() ? GetRegisterName(SrcOp2.getReg()) : "mem";
+
+  // One source operand, fix the mask to print all elements in one span.
+  SmallVector<int, 8> ShuffleMask(Mask.begin(), Mask.end());
+  if (Src1Name == Src2Name)
+    for (int i = 0, e = ShuffleMask.size(); i != e; ++i)
+      if (ShuffleMask[i] >= e)
+        ShuffleMask[i] -= e;
 
   raw_string_ostream CS(Comment);
   CS << DstName << " = ";
-  bool NeedComma = false;
-  bool InSrc = false;
-  for (int M : Mask) {
-    // Wrap up any prior entry...
-    if (M == SM_SentinelZero && InSrc) {
-      InSrc = false;
-      CS << "]";
-    }
-    if (NeedComma)
+  for (int i = 0, e = ShuffleMask.size(); i != e; ++i) {
+    if (i != 0)
       CS << ",";
-    else
-      NeedComma = true;
-
-    // Print this shuffle...
-    if (M == SM_SentinelZero) {
+    if (ShuffleMask[i] == SM_SentinelZero) {
       CS << "zero";
-    } else {
-      if (!InSrc) {
-        InSrc = true;
-        CS << SrcName << "[";
-      }
-      if (M == SM_SentinelUndef)
+      continue;
+    }
+
+    // Otherwise, it must come from src1 or src2.  Print the span of elements
+    // that comes from this src.
+    bool isSrc1 = ShuffleMask[i] < (int)e;
+    CS << (isSrc1 ? Src1Name : Src2Name) << '[';
+
+    bool IsFirst = true;
+    while (i != e && ShuffleMask[i] != SM_SentinelZero &&
+           (ShuffleMask[i] < (int)e) == isSrc1) {
+      if (!IsFirst)
+        CS << ',';
+      else
+        IsFirst = false;
+      if (ShuffleMask[i] == SM_SentinelUndef)
         CS << "u";
       else
-        CS << M;
+        CS << ShuffleMask[i] % (int)e;
+      ++i;
     }
+    CS << ']';
+    --i; // For loop increments element #.
   }
-  if (InSrc)
-    CS << "]";
   CS.flush();
 
   return Comment;
@@ -1313,7 +1324,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       SmallVector<int, 16> Mask;
       DecodePSHUFBMask(C, Mask);
       if (!Mask.empty())
-        OutStreamer->AddComment(getShuffleComment(DstOp, SrcOp, Mask));
+        OutStreamer->AddComment(getShuffleComment(DstOp, SrcOp, SrcOp, Mask));
     }
     break;
   }
@@ -1340,7 +1351,25 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       SmallVector<int, 16> Mask;
       DecodeVPERMILPMask(C, ElSize, Mask);
       if (!Mask.empty())
-        OutStreamer->AddComment(getShuffleComment(DstOp, SrcOp, Mask));
+        OutStreamer->AddComment(getShuffleComment(DstOp, SrcOp, SrcOp, Mask));
+    }
+    break;
+  }
+  case X86::VPPERMrrm: {
+    if (!OutStreamer->isVerboseAsm())
+      break;
+    assert(MI->getNumOperands() > 6 &&
+           "We should always have at least 6 operands!");
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &SrcOp1 = MI->getOperand(1);
+    const MachineOperand &SrcOp2 = MI->getOperand(2);
+    const MachineOperand &MaskOp = MI->getOperand(6);
+
+    if (auto *C = getConstantFromPool(*MI, MaskOp)) {
+      SmallVector<int, 16> Mask;
+      DecodeVPPERMMask(C, Mask);
+      if (!Mask.empty())
+        OutStreamer->AddComment(getShuffleComment(DstOp, SrcOp1, SrcOp2, Mask));
     }
     break;
   }

@@ -136,12 +136,11 @@ define i64 @andn64(i64 %x, i64 %y)   {
   ret i64 %tmp2
 }
 
-; FIXME: Don't choose a 'test' if an 'andn' can be used.
+; Don't choose a 'test' if an 'andn' can be used.
 define i1 @andn_cmp(i32 %x, i32 %y) {
 ; CHECK-LABEL: andn_cmp:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    testl %esi, %edi
+; CHECK-NEXT:    andnl %esi, %edi, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
 ;
@@ -151,12 +150,11 @@ define i1 @andn_cmp(i32 %x, i32 %y) {
   ret i1 %cmp
 }
 
-; FIXME: Don't choose a 'test' if an 'andn' can be used.
+; Don't choose a 'test' if an 'andn' can be used.
 define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
 ; CHECK-LABEL: andn_cmp_swap_ops:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    notq %rdi
-; CHECK-NEXT:    testq %rdi, %rsi
+; CHECK-NEXT:    andnq %rsi, %rdi, %rax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
 ;

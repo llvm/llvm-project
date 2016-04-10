@@ -320,9 +320,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// Construct a DIE for this abstract scope.
   void constructAbstractSubprogramScopeDIE(LexicalScope *Scope);
 
-  /// Collect info for variables that were optimized out.
-  void collectDeadVariables();
-
   void finishVariableDefinitions();
 
   void finishSubprogramDefinitions();
