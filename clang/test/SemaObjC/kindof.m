@@ -275,6 +275,20 @@ void test(__kindof Bar *kBar) {
     [kBar test];
 }
 
+// Make sure we don't emit warning about no method found.
+typedef signed char BOOL;
+@interface A : NSObject
+@property (readonly, getter=isActive) BOOL active;
+@end
+@interface B : NSObject
+@property (getter=isActive, readonly) BOOL active;
+@end
+void foo() {
+  __kindof B *NSApp;
+  if ([NSApp isActive]) {
+  }
+}
+
 // ---------------------------------------------------------------------------
 // __kindof within specialized types
 // ---------------------------------------------------------------------------

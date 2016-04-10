@@ -103,7 +103,7 @@ void test2(Collide *a) {
 @end
 
 @interface Sub : Super
-- (int)method;
+- (int)method; // expected-note{{also found}}
 @end
 
 @implementation Sub
