@@ -90,7 +90,7 @@ char DeadCodeElim::ID = 0;
 // bounded write accesses can not overwrite all of the data-locations. As
 // this means may-writes are in the current situation always live, there is
 // no point in trying to remove them from the live-out set.
-isl_union_set *DeadCodeElim::getLiveOut(Scop &S) {
+__isl_give isl_union_set *DeadCodeElim::getLiveOut(Scop &S) {
   isl_union_map *Schedule = S.getSchedule();
   isl_union_map *WriteIterations = isl_union_map_reverse(S.getMustWrites());
   isl_union_map *WriteTimes =

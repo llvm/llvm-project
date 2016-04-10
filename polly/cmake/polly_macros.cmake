@@ -45,7 +45,7 @@ macro(add_polly_library name)
   endif( LLVM_LINK_COMPONENTS )
   install(TARGETS ${name}
     EXPORT LLVMExports
-    LIBRARY DESTINATION lib
+    LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
     ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX})
   set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
 endmacro(add_polly_library)

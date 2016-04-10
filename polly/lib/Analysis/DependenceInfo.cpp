@@ -716,7 +716,7 @@ void Dependences::releaseMemory() {
   ReductionDependences.clear();
 }
 
-isl_union_map *Dependences::getDependences(int Kinds) const {
+__isl_give isl_union_map *Dependences::getDependences(int Kinds) const {
   assert(hasValidDependences() && "No valid dependences available");
   isl_space *Space = isl_union_map_get_space(RAW);
   isl_union_map *Deps = isl_union_map_empty(Space);
@@ -745,7 +745,8 @@ bool Dependences::hasValidDependences() const {
   return (RAW != nullptr) && (WAR != nullptr) && (WAW != nullptr);
 }
 
-isl_map *Dependences::getReductionDependences(MemoryAccess *MA) const {
+__isl_give isl_map *
+Dependences::getReductionDependences(MemoryAccess *MA) const {
   return isl_map_copy(ReductionDependences.lookup(MA));
 }
 

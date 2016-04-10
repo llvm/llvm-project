@@ -243,7 +243,9 @@ int ScopArrayInfo::getElemSizeInBytes() const {
   return DL.getTypeAllocSize(ElementType);
 }
 
-isl_id *ScopArrayInfo::getBasePtrId() const { return isl_id_copy(Id); }
+__isl_give isl_id *ScopArrayInfo::getBasePtrId() const {
+  return isl_id_copy(Id);
+}
 
 void ScopArrayInfo::dump() const { print(errs()); }
 
@@ -942,7 +944,7 @@ void MemoryAccess::setNewAccessRelation(isl_map *NewAccess) {
 
 //===----------------------------------------------------------------------===//
 
-isl_map *ScopStmt::getSchedule() const {
+__isl_give isl_map *ScopStmt::getSchedule() const {
   isl_set *Domain = getDomain();
   if (isl_set_is_empty(Domain)) {
     isl_set_free(Domain);
@@ -1763,7 +1765,7 @@ __isl_give isl_id *Scop::getIdForParam(const SCEV *Parameter) {
                       const_cast<void *>((const void *)Parameter));
 }
 
-isl_set *Scop::addNonEmptyDomainConstraints(isl_set *C) const {
+__isl_give isl_set *Scop::addNonEmptyDomainConstraints(isl_set *C) const {
   isl_set *DomainContext = isl_union_set_params(getDomains());
   return isl_set_intersect_params(C, DomainContext);
 }
@@ -2109,11 +2111,11 @@ static inline __isl_give isl_set *addDomainDimId(__isl_take isl_set *Domain,
   return isl_set_set_dim_id(Domain, isl_dim_set, Dim, DimId);
 }
 
-isl_set *Scop::getDomainConditions(ScopStmt *Stmt) {
+__isl_give isl_set *Scop::getDomainConditions(ScopStmt *Stmt) {
   return getDomainConditions(Stmt->getEntryBlock());
 }
 
-isl_set *Scop::getDomainConditions(BasicBlock *BB) {
+__isl_give isl_set *Scop::getDomainConditions(BasicBlock *BB) {
   auto DIt = DomainMap.find(BB);
   if (DIt != DomainMap.end())
     return isl_set_copy(DIt->getSecond());
@@ -2449,10 +2451,11 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
   return true;
 }
 
-isl_set *Scop::getPredecessorDomainConstraints(BasicBlock *BB, isl_set *Domain,
-                                               ScopDetection &SD,
-                                               DominatorTree &DT,
-                                               LoopInfo &LI) {
+__isl_give isl_set *Scop::getPredecessorDomainConstraints(BasicBlock *BB,
+                                                          isl_set *Domain,
+                                                          ScopDetection &SD,
+                                                          DominatorTree &DT,
+                                                          LoopInfo &LI) {
   // If @p BB is the ScopEntry we are done
   if (R.getEntry() == BB)
     return isl_set_universe(isl_set_get_space(Domain));
@@ -3066,7 +3069,7 @@ const InvariantEquivClassTy *Scop::lookupInvariantEquivClass(Value *Val) const {
   return nullptr;
 }
 
-isl_set *Scop::getErrorCtxReachingStmt(ScopStmt &Stmt) {
+__isl_give isl_set *Scop::getErrorCtxReachingStmt(ScopStmt &Stmt) {
   auto *BB = Stmt.getEntryBlock();
   return isl_set_copy(ErrorDomainCtxMap.lookup(BB));
 }
