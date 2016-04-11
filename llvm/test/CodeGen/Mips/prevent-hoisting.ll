@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -O3 < %s | FileCheck %s
+; RUN: llc -march=mipsel -O3 -relocation-model=pic < %s | FileCheck %s
 
 
 ; MIPS direct branches implicitly define register $at. This test makes sure that

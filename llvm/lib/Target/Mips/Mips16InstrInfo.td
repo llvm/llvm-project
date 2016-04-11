@@ -31,6 +31,8 @@ def mem16_ea : Operand<i32> {
   let EncoderMethod = "getMemEncoding";
 }
 
+def pcrel16 : Operand<i32>;
+
 //
 // I-type instruction format
 //

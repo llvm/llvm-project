@@ -48,5 +48,7 @@
   sra $2, $3, 32      # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   srl $2, $3, -1      # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   srl $2, $3, 32      # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+  sync -1             # CHECK: :[[@LINE]]:8: error: expected 5-bit unsigned immediate
+  sync 32             # CHECK: :[[@LINE]]:8: error: expected 5-bit unsigned immediate
   swe $2, -513($gp)   # CHECK: :[[@LINE]]:11: error: expected memory with $gp and 9-bit signed offset
   swe $2, 512($gp)    # CHECK: :[[@LINE]]:11: error: expected memory with $gp and 9-bit signed offset

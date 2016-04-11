@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s
+; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s
 
 ; CHECK: lui ${{[0-9]+}}, 49152
 ; CHECK: lui ${{[0-9]+}}, 16384

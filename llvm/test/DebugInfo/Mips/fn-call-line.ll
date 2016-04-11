@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mips-linux-gnu -filetype=asm -asm-verbose=0 -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=mips-linux-gnu -filetype=asm -asm-verbose=0 -O0 -relocation-model=pic < %s | FileCheck %s
 ; RUN: llc -mtriple=mips-linux-gnu -filetype=obj -O0 < %s | llvm-dwarfdump -debug-dump=line - | FileCheck %s --check-prefix=INT
 
 ; Mips used to generate 'jumpy' debug line info around calls. The address

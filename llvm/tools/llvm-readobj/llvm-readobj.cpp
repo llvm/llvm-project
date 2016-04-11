@@ -232,6 +232,11 @@ namespace opts {
                               cl::desc("Display ELF section group contents"));
   cl::alias SectionGroupsShort("g", cl::desc("Alias for -elf-sections-groups"),
                                cl::aliasopt(SectionGroups));
+  cl::opt<bool> HashHistogram(
+      "elf-hash-histogram",
+      cl::desc("Display bucket list histogram for hash sections"));
+  cl::alias HashHistogramShort("I", cl::desc("Alias for -elf-hash-histogram"),
+                               cl::aliasopt(HashHistogram));
 
   cl::opt<OutputStyleTy>
       Output("elf-output-style", cl::desc("Specify ELF dump style"),
@@ -360,6 +365,8 @@ static void dumpObject(const ObjectFile *Obj) {
     }
     if (opts::SectionGroups)
       Dumper->printGroupSections();
+    if (opts::HashHistogram)
+      Dumper->printHashHistogram();
   }
   if (Obj->isCOFF()) {
     if (opts::COFFImports)

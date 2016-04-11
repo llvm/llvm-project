@@ -108,7 +108,7 @@ bool MCWinCOFFStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
     Symbol->setExternal(true);
     break;
   case MCSA_AltEntry:
-    report_fatal_error("COFF doesn't support the .alt_entry attribute");
+    llvm_unreachable("COFF doesn't support the .alt_entry attribute");
   }
 
   return true;

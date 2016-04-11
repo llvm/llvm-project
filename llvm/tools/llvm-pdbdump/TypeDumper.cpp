@@ -62,7 +62,7 @@ void TypeDumper::dump(const PDBSymbolTypeEnum &Symbol) {
   if (Printer.IsTypeExcluded(Symbol.getName()))
     return;
   // Dump member enums when dumping their class definition.
-  if (Symbol.isNested())
+  if (nullptr != Symbol.getClassParent())
     return;
 
   Printer.NewLine();

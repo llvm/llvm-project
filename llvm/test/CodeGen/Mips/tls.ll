@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -disable-mips-delay-filler < %s | \
+; RUN: llc -march=mipsel -disable-mips-delay-filler -relocation-model=pic < %s | \
 ; RUN:     FileCheck %s -check-prefix=PIC -check-prefix=CHECK
 ; RUN: llc -march=mipsel -relocation-model=static -disable-mips-delay-filler < \
 ; RUN:     %s | FileCheck %s -check-prefix=STATIC -check-prefix=CHECK

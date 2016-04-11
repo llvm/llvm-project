@@ -1,4 +1,4 @@
-; RUN: llc -march=mips < %s | FileCheck %s
+; RUN: llc -march=mips -relocation-model=pic < %s | FileCheck %s
 
 define void @f1(i64 %ll1, float %f, i64 %ll, i32 %i, float %f2) nounwind {
 entry:

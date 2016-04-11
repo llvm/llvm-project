@@ -1,9 +1,9 @@
 ; Check that [sl]dc1 are normally emitted. MIPS32r2 should have [sl]dxc1 too.
-; RUN: llc -march=mipsel -mcpu=mips32   < %s | \
+; RUN: llc -march=mipsel -mcpu=mips32 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefix=ALL -check-prefix=32R1-LDC1
-; RUN: llc -march=mipsel -mcpu=mips32r2 < %s | \
+; RUN: llc -march=mipsel -mcpu=mips32r2 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefix=ALL -check-prefix=32R2-LDXC1
-; RUN: llc -march=mipsel -mcpu=mips32r6 < %s | \
+; RUN: llc -march=mipsel -mcpu=mips32r6 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefix=ALL -check-prefix=32R6-LDC1
 
 ; Check that -mno-ldc1-sdc1 disables [sl]dc1

@@ -1,13 +1,13 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s
-; RUN: llc -march=mipsel -force-mips-long-branch -O3 < %s \
+; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -march=mipsel -force-mips-long-branch -O3 -relocation-model=pic < %s \
 ; RUN:   | FileCheck %s -check-prefix=O32
-; RUN: llc -march=mips64el -mcpu=mips4 -target-abi=n64 -force-mips-long-branch -O3 \
+; RUN: llc -march=mips64el -mcpu=mips4 -target-abi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
 ; RUN:   < %s | FileCheck %s -check-prefix=N64
-; RUN: llc -march=mips64el -mcpu=mips64 -target-abi=n64 -force-mips-long-branch -O3 \
+; RUN: llc -march=mips64el -mcpu=mips64 -target-abi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
 ; RUN:   < %s | FileCheck %s -check-prefix=N64
 ; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=micromips \
-; RUN:   -force-mips-long-branch -O3 < %s | FileCheck %s -check-prefix=MICROMIPS
-; RUN: llc -mtriple=mipsel-none-nacl -force-mips-long-branch -O3 < %s \
+; RUN:   -force-mips-long-branch -O3 -relocation-model=pic < %s | FileCheck %s -check-prefix=MICROMIPS
+; RUN: llc -mtriple=mipsel-none-nacl -force-mips-long-branch -O3 -relocation-model=pic < %s \
 ; RUN:   | FileCheck %s -check-prefix=NACL
 
 

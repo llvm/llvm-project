@@ -1,15 +1,15 @@
-; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32   < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=NO-SEB-SEH  -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
-; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32r2 < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
-; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32r6 < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=MIPSR6
-; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips4    < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=NO-SEB-SEH  -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
-; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips64   < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=NO-SEB-SEH  -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
-; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips64r2 < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
-; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips64r6 < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=MIPSR6
-; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32r2 -mattr=micromips < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=MICROMIPS
+; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32   -relocation-model=pic < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=NO-SEB-SEH  -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
+; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32r2 -relocation-model=pic < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
+; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32r6 -relocation-model=pic < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=MIPSR6
+; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips4    -relocation-model=pic < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=NO-SEB-SEH  -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
+; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips64   -relocation-model=pic < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=NO-SEB-SEH  -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
+; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips64r2 -relocation-model=pic < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
+; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips64r6 -relocation-model=pic < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=MIPSR6
+; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32r2 -mattr=micromips -relocation-model=pic < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=MICROMIPS
 
 ; Keep one big-endian check so that we don't reduce testing, but don't add more
 ; since endianness doesn't affect the body of the atomic operations.
-; RUN: llc -march=mips   --disable-machine-licm -mcpu=mips32 < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=NO-SEB-SEH -check-prefix=CHECK-EB -check-prefix=NOT-MICROMIPS
+; RUN: llc -march=mips   --disable-machine-licm -mcpu=mips32 -relocation-model=pic < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=NO-SEB-SEH -check-prefix=CHECK-EB -check-prefix=NOT-MICROMIPS
 
 @x = common global i32 0, align 4
 

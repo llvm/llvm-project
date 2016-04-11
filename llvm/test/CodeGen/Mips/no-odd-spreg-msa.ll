@@ -1,8 +1,8 @@
 ; RUN: llc -march=mipsel -mcpu=mips32 -mattr=+fp64,+msa,-nooddspreg \
-; RUN:     -no-integrated-as < %s | FileCheck %s -check-prefix=ALL \
+; RUN:     -no-integrated-as -relocation-model=pic < %s | FileCheck %s -check-prefix=ALL \
 ; RUN:     -check-prefix=ODDSPREG
 ; RUN: llc -march=mipsel -mcpu=mips32 -mattr=+fp64,+msa,+nooddspreg \
-; RUN:     -no-integrated-as < %s | FileCheck %s -check-prefix=ALL \
+; RUN:     -no-integrated-as -relocation-model=pic < %s | FileCheck %s -check-prefix=ALL \
 ; RUN:     -check-prefix=NOODDSPREG
 
 @v4f32 = global <4 x float> zeroinitializer

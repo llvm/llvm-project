@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -disable-mips-delay-filler < %s | FileCheck %s 
+; RUN: llc -march=mipsel -disable-mips-delay-filler -relocation-model=pic < %s | FileCheck %s
 
 @g = external global i32
 

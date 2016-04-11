@@ -71,10 +71,8 @@ define <16 x double> @select04(<16 x double> %a, <16 x double> %b) {
 define i8 @select05(i8 %a.0, i8 %m) {
 ; CHECK-LABEL: select05:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %esi, %k0
-; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    korw %k1, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    orl %esi, %edi
+; CHECK-NEXT:    movb %dil, %al
 ; CHECK-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>
   %a = bitcast i8 %a.0 to <8 x i1>
@@ -83,13 +81,28 @@ define i8 @select05(i8 %a.0, i8 %m) {
   ret i8 %res;
 }
 
+define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
+; CHECK-LABEL: select05_mem:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbw (%rsi), %ax
+; CHECK-NEXT:    kmovw %eax, %k0
+; CHECK-NEXT:    movzbw (%rdi), %ax
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    korw %k1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %mask = load <8 x i1> , <8 x i1>* %m
+  %a = load <8 x i1> , <8 x i1>* %a.0
+  %r = select <8 x i1> %mask, <8 x i1> <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>, <8 x i1> %a
+  %res = bitcast <8 x i1> %r to i8
+  ret i8 %res;
+}
+
 define i8 @select06(i8 %a.0, i8 %m) {
 ; CHECK-LABEL: select06:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %esi, %k0
-; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    kandw %k1, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    movb %dil, %al
 ; CHECK-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>
   %a = bitcast i8 %a.0 to <8 x i1>
@@ -98,6 +111,22 @@ define i8 @select06(i8 %a.0, i8 %m) {
   ret i8 %res;
 }
 
+define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
+; CHECK-LABEL: select06_mem:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movzbw (%rsi), %ax
+; CHECK-NEXT:    kmovw %eax, %k0
+; CHECK-NEXT:    movzbw (%rdi), %ax
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    kandw %k1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %mask = load <8 x i1> , <8 x i1>* %m
+  %a = load <8 x i1> , <8 x i1>* %a.0
+  %r = select <8 x i1> %mask, <8 x i1> %a, <8 x i1> zeroinitializer
+  %res = bitcast <8 x i1> %r to i8
+  ret i8 %res;
+}
 define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 ; CHECK-LABEL: select07:
 ; CHECK:       ## BB#0:
