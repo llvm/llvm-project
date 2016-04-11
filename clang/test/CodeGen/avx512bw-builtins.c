@@ -1346,5 +1346,14 @@ __m512i test_mm512_maskz_loadu_epi8(__mmask64 __U, void const *__P) {
   // CHECK: @llvm.x86.avx512.mask.loadu.b.512
   return _mm512_maskz_loadu_epi8(__U, __P); 
 }
+void test_mm512_mask_storeu_epi16(void *__P, __mmask32 __U, __m512i __A) {
+  // CHECK-LABEL: @test_mm512_mask_storeu_epi16
+  // CHECK: @llvm.x86.avx512.mask.storeu.w.
+  return _mm512_mask_storeu_epi16(__P, __U, __A); 
+}
 
-
+void test_mm512_mask_storeu_epi8(void *__P, __mmask64 __U, __m512i __A) {
+  // CHECK-LABEL: @test_mm512_mask_storeu_epi8
+  // CHECK: @llvm.x86.avx512.mask.storeu.b.
+  return _mm512_mask_storeu_epi8(__P, __U, __A); 
+}

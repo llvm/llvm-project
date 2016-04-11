@@ -1568,6 +1568,28 @@ static void handleWeakRefAttr(Sema &S, Decl *D, const AttributeList &Attr) {
                          Attr.getAttributeSpellingListIndex()));
 }
 
+static void handleIFuncAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(Attr, 0, Str))
+    return;
+
+  // Aliases should be on declarations, not definitions.
+  const auto *FD = cast<FunctionDecl>(D);
+  if (FD->isThisDeclarationADefinition()) {
+    S.Diag(Attr.getLoc(), diag::err_alias_is_definition) << FD << 1;
+    return;
+  }
+  // FIXME: it should be handled as a target specific attribute.
+  if (S.Context.getTargetInfo().getTriple().getObjectFormat() !=
+          llvm::Triple::ELF) {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) << Attr.getName();
+    return;
+  }
+
+  D->addAttr(::new (S.Context) IFuncAttr(Attr.getRange(), S.Context, Str,
+                                         Attr.getAttributeSpellingListIndex()));
+}
+
 static void handleAliasAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   StringRef Str;
   if (!S.checkStringLiteralArgumentAttr(Attr, 0, Str))
@@ -1584,13 +1606,13 @@ static void handleAliasAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   // Aliases should be on declarations, not definitions.
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->isThisDeclarationADefinition()) {
-      S.Diag(Attr.getLoc(), diag::err_alias_is_definition) << FD;
+      S.Diag(Attr.getLoc(), diag::err_alias_is_definition) << FD << 0;
       return;
     }
   } else {
     const auto *VD = cast<VarDecl>(D);
     if (VD->isThisDeclarationADefinition() && VD->isExternallyVisible()) {
-      S.Diag(Attr.getLoc(), diag::err_alias_is_definition) << VD;
+      S.Diag(Attr.getLoc(), diag::err_alias_is_definition) << VD << 0;
       return;
     }
   }
@@ -5751,6 +5773,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_IBOutletCollection:
     handleIBOutletCollection(S, D, Attr);
+    break;
+  case AttributeList::AT_IFunc:
+    handleIFuncAttr(S, D, Attr);
     break;
   case AttributeList::AT_Alias:
     handleAliasAttr(S, D, Attr);

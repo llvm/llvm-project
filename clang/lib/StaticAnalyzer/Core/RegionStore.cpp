@@ -1130,11 +1130,10 @@ void invalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
         // Check offset is not symbolic and within array's boundaries.
         // Handles arrays of 0 elements and of 0-sized elements as well.
         if (!ROffset ||
-            (ROffset &&
-             ((*ROffset >= LowerOffset && *ROffset < UpperOffset) ||
-              (UpperOverflow &&
-               (*ROffset >= LowerOffset || *ROffset < UpperOffset)) ||
-              (LowerOffset == UpperOffset && *ROffset == LowerOffset)))) {
+            ((*ROffset >= LowerOffset && *ROffset < UpperOffset) ||
+             (UpperOverflow &&
+              (*ROffset >= LowerOffset || *ROffset < UpperOffset)) ||
+             (LowerOffset == UpperOffset && *ROffset == LowerOffset))) {
           B = B.removeBinding(I.getKey());
           // Bound symbolic regions need to be invalidated for dead symbol
           // detection.
