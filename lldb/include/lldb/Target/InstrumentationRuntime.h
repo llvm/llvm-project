@@ -20,6 +20,7 @@
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-types.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Core/StructuredData.h"
 
 namespace lldb_private {
     
@@ -39,6 +40,9 @@ public:
     
     virtual bool
     IsActive();
+
+    virtual lldb::ThreadCollectionSP
+    GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info);
     
 };
     

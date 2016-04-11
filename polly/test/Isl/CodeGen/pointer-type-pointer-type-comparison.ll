@@ -1,10 +1,6 @@
 ; RUN: opt %loadPolly -polly-ast -analyze < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s -check-prefix=CODEGEN
 ;
-; TODO: FIXME: IslExprBuilder is not capable of producing valid code
-;              for arbitrary pointer expressions at the moment. Until
-;              this is fixed we disallow pointer expressions completely.
-; XFAIL: *
 
 ;    void f(int a[], int N, float *P, float *Q) {
 ;      int i;
@@ -25,7 +21,7 @@ bb:
   br i1 %brcond, label %store, label %bb.backedge
 
 store:
-  %scevgep = getelementptr i64, i64* %a, i64 %i
+  %scevgep = getelementptr inbounds i64, i64* %a, i64 %i
   store i64 %i, i64* %scevgep
   br label %bb.backedge
 
@@ -46,7 +42,14 @@ return:
 ; CHECK:     Stmt_store(c0);
 ; CHECK: }
 
-; CODEGEN:       %[[Pinc:[_a-zA-Z0-9]+]] = getelementptr float, float* %P, i64 1
-; CODEGEN-NEXT:                             icmp uge float* %Q, %[[Pinc]]
-; CODEGEN:       %[[Qinc:[_a-zA-Z0-9]+]] = getelementptr float, float* %Q, i64 1
-; CODEGEN-NEXT:                             icmp uge float* %P, %[[Qinc]]
+; CODEGEN:       polly.cond:
+; CODEGEN-NEXT:  %[[Q:[_a-zA-Z0-9]+]] = ptrtoint float* %Q to i64
+; CODEGEN-NEXT:  %[[P:[_a-zA-Z0-9]+]] = ptrtoint float* %P to i64
+; CODEGEN-NEXT:  %[[PInc:[_a-zA-Z0-9]+]] = add nsw i64 %[[P]], 1
+; CODEGEN-NEXT:  icmp sge i64 %[[Q]], %[[PInc]]
+
+; CODEGEN:       polly.cond2:
+; CODEGEN-NEXT:  %[[P2:[_a-zA-Z0-9]+]] = ptrtoint float* %P to i64
+; CODEGEN-NEXT:  %[[Q2:[_a-zA-Z0-9]+]] = ptrtoint float* %Q to i64
+; CODEGEN-NEXT:  %[[QInc:[_a-zA-Z0-9]+]] = add nsw i64 %[[Q2]], 1
+; CODEGEN-NEXT:  icmp sge i64 %[[P2]], %[[QInc]]

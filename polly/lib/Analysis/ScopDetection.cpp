@@ -399,12 +399,6 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
       isa<UndefValue>(ICmp->getOperand(1)))
     return invalid<ReportUndefOperand>(Context, /*Assert=*/true, &BB, ICmp);
 
-  // TODO: FIXME: IslExprBuilder is not capable of producing valid code
-  //              for arbitrary pointer expressions at the moment. Until
-  //              this is fixed we disallow pointer expressions completely.
-  if (ICmp->getOperand(0)->getType()->isPointerTy())
-    return false;
-
   Loop *L = LI->getLoopFor(ICmp->getParent());
   const SCEV *LHS = SE->getSCEVAtScope(ICmp->getOperand(0), L);
   const SCEV *RHS = SE->getSCEVAtScope(ICmp->getOperand(1), L);
@@ -576,6 +570,9 @@ bool ScopDetection::isInvariant(const Value &Val, const Region &Reg) const {
     return true;
 
   if (I->mayHaveSideEffects())
+    return false;
+
+  if (isa<SelectInst>(I))
     return false;
 
   // When Val is a Phi node, it is likely not invariant. We do not check whether
@@ -993,6 +990,9 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
     if (isErrorBlock(*OpInst->getParent(), Context.CurRegion, *LI, *DT))
       return false;
   }
+
+  if (isa<LandingPadInst>(&Inst) || isa<ResumeInst>(&Inst))
+    return false;
 
   // We only check the call instruction but not invoke instruction.
   if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {

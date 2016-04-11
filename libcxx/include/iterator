@@ -949,7 +949,7 @@ public:
     typedef typename iterator_traits<iterator_type>::iterator_category iterator_category;
     typedef typename iterator_traits<iterator_type>::value_type value_type;
     typedef typename iterator_traits<iterator_type>::difference_type difference_type;
-    typedef typename iterator_traits<iterator_type>::pointer pointer;
+    typedef iterator_type pointer;
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     typedef value_type&& reference;
 #else
@@ -964,10 +964,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY reference operator*() const {
       return static_cast<reference>(*__i);
     }
-    _LIBCPP_INLINE_VISIBILITY pointer  operator->() const {
-      typename iterator_traits<iterator_type>::reference __ref = *__i;
-      return &__ref;
-    }
+    _LIBCPP_INLINE_VISIBILITY pointer  operator->() const { return __i;}
     _LIBCPP_INLINE_VISIBILITY move_iterator& operator++() {++__i; return *this;}
     _LIBCPP_INLINE_VISIBILITY move_iterator  operator++(int)
         {move_iterator __tmp(*this); ++__i; return __tmp;}
@@ -1185,7 +1182,7 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
                        "Attempted to dereference a non-dereferenceable iterator");
 #endif
-        return (pointer)&reinterpret_cast<const volatile char&>(*__i);
+        return (pointer)_VSTD::addressof(*__i);
     }
     _LIBCPP_INLINE_VISIBILITY __wrap_iter& operator++() _NOEXCEPT
     {

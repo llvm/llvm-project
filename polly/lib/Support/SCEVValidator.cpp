@@ -386,16 +386,8 @@ public:
   ValidatorResult visitUnknown(const SCEVUnknown *Expr) {
     Value *V = Expr->getValue();
 
-    // TODO: FIXME: IslExprBuilder is not capable of producing valid code
-    //              for arbitrary pointer expressions at the moment. Until
-    //              this is fixed we disallow pointer expressions completely.
-    if (Expr->getType()->isPointerTy()) {
-      DEBUG(dbgs() << "INVALID: UnknownExpr is a pointer type [FIXME]");
-      return ValidatorResult(SCEVType::INVALID);
-    }
-
-    if (!Expr->getType()->isIntegerTy()) {
-      DEBUG(dbgs() << "INVALID: UnknownExpr is not an integer");
+    if (!Expr->getType()->isIntegerTy() && !Expr->getType()->isPointerTy()) {
+      DEBUG(dbgs() << "INVALID: UnknownExpr is not an integer or pointer");
       return ValidatorResult(SCEVType::INVALID);
     }
 
@@ -572,18 +564,15 @@ public:
     if (!Unknown)
       return true;
 
+    Values.insert(Unknown->getValue());
     Instruction *Inst = dyn_cast<Instruction>(Unknown->getValue());
     if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
-                  Inst->getOpcode() != Instruction::SDiv)) {
-      Values.insert(Unknown->getValue());
+                  Inst->getOpcode() != Instruction::SDiv))
       return false;
-    }
 
     auto *Dividend = SE.getSCEV(Inst->getOperand(1));
-    if (!isa<SCEVConstant>(Dividend)) {
-      Values.insert(Unknown->getValue());
+    if (!isa<SCEVConstant>(Dividend))
       return false;
-    }
 
     auto *Divisor = SE.getSCEV(Inst->getOperand(0));
     SCEVFindValues FindValues(SE, Values);

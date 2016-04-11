@@ -9,10 +9,14 @@
 ; CHECK:  %[[Cp1:[._a-zA-Z0-9]*]] = add nsw i64 %[[Cext]], 1
 ; CHECK:  %[[BMax:[._a-zA-Z0-9]*]] = getelementptr i32, i32* %B, i64 %[[Cp1]]
 ; CHECK:  %[[AMin:[._a-zA-Z0-9]*]] = getelementptr i32, i32* %A, i64 0
-; CHECK:  %[[BltA:[._a-zA-Z0-9]*]] = icmp ule i32* %[[BMax]], %[[AMin]]
+; CHECK:  %[[BMaxI:[._a-zA-Z0-9]*]] = ptrtoint i32* %[[BMax]] to i64
+; CHECK:  %[[AMinI:[._a-zA-Z0-9]*]] = ptrtoint i32* %[[AMin]] to i64
+; CHECK:  %[[BltA:[._a-zA-Z0-9]*]] = icmp ule i64 %[[BMaxI]], %[[AMinI]]
 ; CHECK:  %[[AMax:[._a-zA-Z0-9]*]] = getelementptr i32, i32* %A, i64 1024
 ; CHECK:  %[[BMin:[._a-zA-Z0-9]*]] = getelementptr i32, i32* %B, i32 %c
-; CHECK:  %[[AltB:[._a-zA-Z0-9]*]] = icmp ule i32* %[[AMax]], %[[BMin]]
+; CHECK:  %[[AMaxI:[._a-zA-Z0-9]*]] = ptrtoint i32* %[[AMax]] to i64
+; CHECK:  %[[BMinI:[._a-zA-Z0-9]*]] = ptrtoint i32* %[[BMin]] to i64
+; CHECK:  %[[AltB:[._a-zA-Z0-9]*]] = icmp ule i64 %[[AMaxI]], %[[BMinI]]
 ; CHECK:  %[[NoAlias:[._a-zA-Z0-9]*]] = or i1 %[[BltA]], %[[AltB]]
 ; CHECK:  %[[RTC:[._a-zA-Z0-9]*]] = and i1 true, %[[NoAlias]]
 ; CHECK:  br i1 %[[RTC]], label %polly.start, label %for.cond
