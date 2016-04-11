@@ -71,13 +71,14 @@ namespace {
     }
 
     bool runOnFunction(Function &F) override;
+
+  private:
     bool runOnLoop(Loop *L);
 
     /// \brief Check if the the stride of the accesses is large enough to
     /// warrant a prefetch.
     bool isStrideLargeEnough(const SCEVAddRecExpr *AR);
 
-  private:
     AssumptionCache *AC;
     LoopInfo *LI;
     ScalarEvolution *SE;
