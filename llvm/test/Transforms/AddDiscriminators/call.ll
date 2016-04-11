@@ -23,15 +23,11 @@ declare void @_Z3barv() #1
 attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-; We should be able to add discriminators even in the absence of llvm.dbg.cu.
-; When using sample profiles, the front end will generate line tables but it
-; does not generate llvm.dbg.cu to prevent codegen from emitting debug info
-; to the final binary.
-; !llvm.dbg.cu = !{!0}
+!llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
 !llvm.ident = !{!9}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 250915) (llvm/trunk 251830)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 250915) (llvm/trunk 251830)", isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, enums: !2, subprograms: !3)
 !1 = !DIFile(filename: "c.cc", directory: "/tmp")
 !2 = !{}
 !3 = !{!4}
