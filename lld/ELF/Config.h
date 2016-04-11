@@ -38,8 +38,6 @@ enum class BuildIdKind { None, Fnv1, Md5, Sha1 };
 // Most fields are initialized by the driver.
 struct Configuration {
   SymbolBody *EntrySym = nullptr;
-  SymbolBody *MipsGpDisp = nullptr;
-  SymbolBody *MipsLocalGp = nullptr;
   InputFile *FirstElf = nullptr;
   llvm::StringRef DynamicLinker;
   llvm::StringRef Entry;

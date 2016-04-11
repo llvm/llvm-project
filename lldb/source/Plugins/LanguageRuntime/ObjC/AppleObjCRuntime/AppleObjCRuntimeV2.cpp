@@ -2034,6 +2034,74 @@ AppleObjCRuntimeV2::TaggedPointerVendorV2::CreateInstance (AppleObjCRuntimeV2& r
     if (error.Fail())
         return new TaggedPointerVendorLegacy(runtime);
 
+    // try to detect the "extended tagged pointer" variables - if any are missing, use the non-extended vendor
+    do
+    {
+        auto objc_debug_taggedpointer_ext_mask = ExtractRuntimeGlobalSymbol(process,
+                                                                            ConstString("objc_debug_taggedpointer_ext_mask"),
+                                                                            objc_module_sp,
+                                                                            error);
+        if (error.Fail())
+            break;
+        
+        auto objc_debug_taggedpointer_ext_slot_shift = ExtractRuntimeGlobalSymbol(process,
+                                                                                  ConstString("objc_debug_taggedpointer_ext_slot_shift"),
+                                                                                  objc_module_sp,
+                                                                                  error,
+                                                                                  true,
+                                                                                  4);
+        if (error.Fail())
+            break;
+        
+        auto objc_debug_taggedpointer_ext_slot_mask = ExtractRuntimeGlobalSymbol(process,
+                                                                                 ConstString("objc_debug_taggedpointer_ext_slot_mask"),
+                                                                                 objc_module_sp,
+                                                                                 error,
+                                                                                 true,
+                                                                                 4);
+        if (error.Fail())
+            break;
+        
+        auto objc_debug_taggedpointer_ext_classes = ExtractRuntimeGlobalSymbol(process,
+                                                                               ConstString("objc_debug_taggedpointer_ext_classes"),
+                                                                               objc_module_sp,
+                                                                               error,
+                                                                               false);
+        if (error.Fail())
+            break;
+        
+        auto objc_debug_taggedpointer_ext_payload_lshift = ExtractRuntimeGlobalSymbol(process,
+                                                                                      ConstString("objc_debug_taggedpointer_ext_payload_lshift"),
+                                                                                      objc_module_sp,
+                                                                                      error,
+                                                                                      true,
+                                                                                      4);
+        if (error.Fail())
+            break;
+        
+        auto objc_debug_taggedpointer_ext_payload_rshift = ExtractRuntimeGlobalSymbol(process,
+                                                                                      ConstString("objc_debug_taggedpointer_ext_payload_rshift"),
+                                                                                      objc_module_sp,
+                                                                                      error,
+                                                                                      true,
+                                                                                      4);
+        if (error.Fail())
+            break;
+        
+        return new TaggedPointerVendorExtended(runtime,
+                                               objc_debug_taggedpointer_mask,
+                                               objc_debug_taggedpointer_ext_mask,
+                                               objc_debug_taggedpointer_slot_shift,
+                                               objc_debug_taggedpointer_ext_slot_shift,
+                                               objc_debug_taggedpointer_slot_mask,
+                                               objc_debug_taggedpointer_ext_slot_mask,
+                                               objc_debug_taggedpointer_payload_lshift,
+                                               objc_debug_taggedpointer_payload_rshift,
+                                               objc_debug_taggedpointer_ext_payload_lshift,
+                                               objc_debug_taggedpointer_ext_payload_rshift,
+                                               objc_debug_taggedpointer_classes,
+                                               objc_debug_taggedpointer_ext_classes);
+    } while(false);
     
     // we might want to have some rules to outlaw these values (e.g if the table's address is zero)
     
@@ -2169,6 +2237,87 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor (lldb
     }
     
     data_payload = (((uint64_t)ptr << m_objc_debug_taggedpointer_payload_lshift) >> m_objc_debug_taggedpointer_payload_rshift);
+    
+    return ClassDescriptorSP(new ClassDescriptorV2Tagged(actual_class_descriptor_sp,data_payload));
+}
+
+AppleObjCRuntimeV2::TaggedPointerVendorExtended::TaggedPointerVendorExtended (AppleObjCRuntimeV2& runtime,
+                                                                              uint64_t objc_debug_taggedpointer_mask,
+                                                                              uint64_t objc_debug_taggedpointer_ext_mask,
+                                                                              uint32_t objc_debug_taggedpointer_slot_shift,
+                                                                              uint32_t objc_debug_taggedpointer_ext_slot_shift,
+                                                                              uint32_t objc_debug_taggedpointer_slot_mask,
+                                                                              uint32_t objc_debug_taggedpointer_ext_slot_mask,
+                                                                              uint32_t objc_debug_taggedpointer_payload_lshift,
+                                                                              uint32_t objc_debug_taggedpointer_payload_rshift,
+                                                                              uint32_t objc_debug_taggedpointer_ext_payload_lshift,
+                                                                              uint32_t objc_debug_taggedpointer_ext_payload_rshift,
+                                                                              lldb::addr_t objc_debug_taggedpointer_classes,
+                                                                              lldb::addr_t objc_debug_taggedpointer_ext_classes) :
+TaggedPointerVendorRuntimeAssisted(runtime,
+                                   objc_debug_taggedpointer_mask,
+                                   objc_debug_taggedpointer_slot_shift,
+                                   objc_debug_taggedpointer_slot_mask,
+                                   objc_debug_taggedpointer_payload_lshift,
+                                   objc_debug_taggedpointer_payload_rshift,
+                                   objc_debug_taggedpointer_classes),
+m_ext_cache(),
+m_objc_debug_taggedpointer_ext_mask(objc_debug_taggedpointer_ext_mask),
+m_objc_debug_taggedpointer_ext_slot_shift(objc_debug_taggedpointer_ext_slot_shift),
+m_objc_debug_taggedpointer_ext_slot_mask(objc_debug_taggedpointer_ext_slot_mask),
+m_objc_debug_taggedpointer_ext_payload_lshift(objc_debug_taggedpointer_ext_payload_lshift),
+m_objc_debug_taggedpointer_ext_payload_rshift(objc_debug_taggedpointer_ext_payload_rshift),
+m_objc_debug_taggedpointer_ext_classes(objc_debug_taggedpointer_ext_classes)
+{
+}
+
+bool
+AppleObjCRuntimeV2::TaggedPointerVendorExtended::IsPossibleExtendedTaggedPointer (lldb::addr_t ptr)
+{
+    if (!IsPossibleTaggedPointer(ptr))
+        return false;
+    
+    if (m_objc_debug_taggedpointer_ext_mask == 0)
+        return false;
+    
+    return ((ptr & m_objc_debug_taggedpointer_ext_mask) == m_objc_debug_taggedpointer_ext_mask);
+}
+
+ObjCLanguageRuntime::ClassDescriptorSP
+AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor (lldb::addr_t ptr)
+{
+    ClassDescriptorSP actual_class_descriptor_sp;
+    uint64_t data_payload;
+    
+    if (!IsPossibleTaggedPointer(ptr))
+        return ObjCLanguageRuntime::ClassDescriptorSP();
+    
+    if (!IsPossibleExtendedTaggedPointer(ptr))
+        return this->TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(ptr);
+    
+    uintptr_t slot = (ptr >> m_objc_debug_taggedpointer_ext_slot_shift) & m_objc_debug_taggedpointer_ext_slot_mask;
+    
+    CacheIterator iterator = m_ext_cache.find(slot),
+    end = m_ext_cache.end();
+    if (iterator != end)
+    {
+        actual_class_descriptor_sp = iterator->second;
+    }
+    else
+    {
+        Process* process(m_runtime.GetProcess());
+        uintptr_t slot_ptr = slot*process->GetAddressByteSize()+m_objc_debug_taggedpointer_ext_classes;
+        Error error;
+        uintptr_t slot_data = process->ReadPointerFromMemory(slot_ptr, error);
+        if (error.Fail() || slot_data == 0 || slot_data == uintptr_t(LLDB_INVALID_ADDRESS))
+            return nullptr;
+        actual_class_descriptor_sp = m_runtime.GetClassDescriptorFromISA((ObjCISA)slot_data);
+        if (!actual_class_descriptor_sp)
+            return ObjCLanguageRuntime::ClassDescriptorSP();
+        m_ext_cache[slot] = actual_class_descriptor_sp;
+    }
+    
+    data_payload = (((uint64_t)ptr << m_objc_debug_taggedpointer_ext_payload_lshift) >> m_objc_debug_taggedpointer_ext_payload_rshift);
     
     return ClassDescriptorSP(new ClassDescriptorV2Tagged(actual_class_descriptor_sp,data_payload));
 }
