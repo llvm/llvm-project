@@ -289,6 +289,58 @@ const ScopArrayInfo *ScopArrayInfo::getFromId(isl_id *Id) {
   return SAI;
 }
 
+void MemoryAccess::wrapConstantDimensions() {
+  auto *SAI = getScopArrayInfo();
+  auto *ArraySpace = SAI->getSpace();
+  auto *Ctx = isl_space_get_ctx(ArraySpace);
+  unsigned DimsArray = SAI->getNumberOfDimensions();
+
+  auto *DivModAff = isl_multi_aff_identity(isl_space_map_from_domain_and_range(
+      isl_space_copy(ArraySpace), isl_space_copy(ArraySpace)));
+  auto *LArraySpace = isl_local_space_from_space(ArraySpace);
+
+  // Begin with last dimension, to iteratively carry into higher dimensions.
+  for (int i = DimsArray - 1; i > 0; i--) {
+    auto *DimSize = SAI->getDimensionSize(i);
+    auto *DimSizeCst = dyn_cast<SCEVConstant>(DimSize);
+
+    // This transformation is not applicable to dimensions with dynamic size.
+    if (!DimSizeCst)
+      continue;
+
+    auto *DimSizeVal = isl_valFromAPInt(Ctx, DimSizeCst->getAPInt(), false);
+    auto *Var = isl_aff_var_on_domain(isl_local_space_copy(LArraySpace),
+                                      isl_dim_set, i);
+    auto *PrevVar = isl_aff_var_on_domain(isl_local_space_copy(LArraySpace),
+                                          isl_dim_set, i - 1);
+
+    // Compute: index % size
+    // Modulo must apply in the divide of the previous iteration, if any.
+    auto *Modulo = isl_aff_copy(Var);
+    Modulo = isl_aff_mod_val(Modulo, isl_val_copy(DimSizeVal));
+    Modulo = isl_aff_pullback_multi_aff(Modulo, isl_multi_aff_copy(DivModAff));
+
+    // Compute: floor(index / size)
+    auto *Divide = Var;
+    Divide = isl_aff_div(
+        Divide,
+        isl_aff_val_on_domain(isl_local_space_copy(LArraySpace), DimSizeVal));
+    Divide = isl_aff_floor(Divide);
+    Divide = isl_aff_add(Divide, PrevVar);
+    Divide = isl_aff_pullback_multi_aff(Divide, isl_multi_aff_copy(DivModAff));
+
+    // Apply Modulo and Divide.
+    DivModAff = isl_multi_aff_set_aff(DivModAff, i, Modulo);
+    DivModAff = isl_multi_aff_set_aff(DivModAff, i - 1, Divide);
+  }
+
+  // Apply all modulo/divides on the accesses.
+  AccessRelation =
+      isl_map_apply_range(AccessRelation, isl_map_from_multi_aff(DivModAff));
+  AccessRelation = isl_map_detect_equalities(AccessRelation);
+  isl_local_space_free(LArraySpace);
+}
+
 void MemoryAccess::updateDimensionality() {
   auto *SAI = getScopArrayInfo();
   auto *ArraySpace = SAI->getSpace();
@@ -330,6 +382,14 @@ void MemoryAccess::updateDimensionality() {
     isl_val *V = isl_val_int_from_si(Ctx, ArrayElemSize);
     AccessRelation = isl_map_floordiv_val(AccessRelation, V);
   }
+
+  // We currently do this only if we added at least one dimension, which means
+  // some dimension's indices have not been specified, an indicator that some
+  // index values have been added together.
+  // TODO: Investigate general usefulness; Effect on unit tests is to make index
+  // expressions more complicated.
+  if (DimsMissing)
+    wrapConstantDimensions();
 
   if (!isAffine())
     computeBoundsOnAccessRelation(ArrayElemSize);
@@ -605,8 +665,9 @@ void MemoryAccess::assumeNoOutOfBound() {
   // bail out more often than strictly necessary.
   Outside = isl_set_remove_divs(Outside);
   Outside = isl_set_complement(Outside);
-  auto &Loc = getAccessInstruction() ? getAccessInstruction()->getDebugLoc()
-                                     : DebugLoc();
+  const auto &Loc = getAccessInstruction()
+                        ? getAccessInstruction()->getDebugLoc()
+                        : DebugLoc();
   Statement->getParent()->addAssumption(INBOUNDS, Outside, Loc, AS_ASSUMPTION);
   isl_space_free(Space);
 }

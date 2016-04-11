@@ -727,22 +727,24 @@ EhFrameHeader<ELFT>::getFdePc(uintX_t EhVA, const FdeData &F) {
 template <class ELFT> void EhFrameHeader<ELFT>::writeTo(uint8_t *Buf) {
   const endianness E = ELFT::TargetEndianness;
 
+  uintX_t EhVA = Sec->getVA();
+  uintX_t VA = this->getVA();
+
+  // InitialPC -> Offset in .eh_frame, sorted by InitialPC, and deduplicate PCs.
+  // FIXME: Deduplication leaves unneeded null bytes at the end of the section.
+  std::map<uintX_t, size_t> PcToOffset;
+  for (const FdeData &F : FdeList)
+    PcToOffset[getFdePc(EhVA, F)] = F.Off;
+
   const uint8_t Header[] = {1, DW_EH_PE_pcrel | DW_EH_PE_sdata4,
                             DW_EH_PE_udata4,
                             DW_EH_PE_datarel | DW_EH_PE_sdata4};
   memcpy(Buf, Header, sizeof(Header));
 
-  uintX_t EhVA = Sec->getVA();
-  uintX_t VA = this->getVA();
   uintX_t EhOff = EhVA - VA - 4;
   write32<E>(Buf + 4, EhOff);
-  write32<E>(Buf + 8, this->FdeList.size());
+  write32<E>(Buf + 8, PcToOffset.size());
   Buf += 12;
-
-  // InitialPC -> Offset in .eh_frame, sorted by InitialPC.
-  std::map<uintX_t, size_t> PcToOffset;
-  for (const FdeData &F : FdeList)
-    PcToOffset[getFdePc(EhVA, F)] = F.Off;
 
   for (auto &I : PcToOffset) {
     // The first four bytes are an offset to the initial PC value for the FDE.

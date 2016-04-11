@@ -1283,7 +1283,9 @@ sigint_handler (int signo)
 void
 sigtstp_handler (int signo)
 {
-    g_driver->GetDebugger().SaveInputTerminalState();
+    if (g_driver)
+        g_driver->GetDebugger().SaveInputTerminalState();
+
     signal (signo, SIG_DFL);
     kill (getpid(), signo);
     signal (signo, sigtstp_handler);
@@ -1292,7 +1294,9 @@ sigtstp_handler (int signo)
 void
 sigcont_handler (int signo)
 {
-    g_driver->GetDebugger().RestoreInputTerminalState();
+    if (g_driver)
+        g_driver->GetDebugger().RestoreInputTerminalState();
+
     signal (signo, SIG_DFL);
     kill (getpid(), signo);
     signal (signo, sigcont_handler);
