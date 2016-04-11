@@ -62,6 +62,7 @@ typedef float float4 __attribute__((ext_vector_type(4)));
 typedef float float8 __attribute__((ext_vector_type(8)));
 typedef double double2 __attribute__((ext_vector_type(2)));
 typedef double double4 __attribute__((ext_vector_type(4)));
+typedef int int3 __attribute__((ext_vector_type(3)));
 typedef int int4 __attribute__((ext_vector_type(4)));
 typedef int int5 __attribute__((ext_vector_type(5)));
 typedef int int8 __attribute__((ext_vector_type(8)));
@@ -494,3 +495,10 @@ TEST(int5)
 // CHECK:   [[SECOND:%.*]] = load i32, i32* [[T0]], align
 // CHECK:   call [[SWIFTCC]] void @take_int5(<4 x i32> [[FIRST]], i32 [[SECOND]])
 // CHECK:   ret void
+
+typedef struct {
+  int x;
+  int3 v __attribute__((packed));
+} misaligned_int3;
+TEST(misaligned_int3)
+// CHECK-LABEL: define {{.*}} @take_misaligned_int3(i32, i32, i32, i32)
