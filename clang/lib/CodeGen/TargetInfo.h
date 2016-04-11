@@ -29,15 +29,14 @@ class Value;
 }
 
 namespace clang {
-class ABIInfo;
 class Decl;
 
 namespace CodeGen {
+class ABIInfo;
 class CallArgList;
 class CodeGenModule;
 class CodeGenFunction;
 class CGFunctionInfo;
-}
 
 /// TargetCodeGenInfo - This class organizes various target-specific
 /// codegeneration issues, like target-specific attributes, builtins and so
@@ -219,6 +218,8 @@ public:
                                        llvm::StringRef Value,
                                        llvm::SmallString<32> &Opt) const {}
 };
+
+} // namespace CodeGen
 } // namespace clang
 
 #endif // LLVM_CLANG_LIB_CODEGEN_TARGETINFO_H
