@@ -3164,7 +3164,8 @@ public:
   bool
   CollectMultipleMethodsInGlobalPool(Selector Sel,
                                      SmallVectorImpl<ObjCMethodDecl*>& Methods,
-                                     bool InstanceFirst, bool CheckTheOther);
+                                     bool InstanceFirst, bool CheckTheOther,
+                                     const ObjCObjectType *TypeBound = nullptr);
     
   bool
   AreMultipleMethodsInGlobalPool(Selector Sel, ObjCMethodDecl *BestMethod,

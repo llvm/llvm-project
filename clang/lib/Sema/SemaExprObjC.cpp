@@ -2624,16 +2624,15 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
   if (!Method) {
     // Handle messages to id and __kindof types (where we use the
     // global method pool).
-    // FIXME: The type bound is currently ignored by lookup in the
-    // global pool.
     const ObjCObjectType *typeBound = nullptr;
     bool receiverIsIdLike = ReceiverType->isObjCIdOrObjectKindOfType(Context,
                                                                      typeBound);
     if (receiverIsIdLike || ReceiverType->isBlockPointerType() ||
         (Receiver && Context.isObjCNSObjectType(Receiver->getType()))) {
       SmallVector<ObjCMethodDecl*, 4> Methods;
+      // If we have a type bound, further filter the methods.
       CollectMultipleMethodsInGlobalPool(Sel, Methods, true/*InstanceFirst*/,
-                                         true/*CheckTheOther*/);
+                                         true/*CheckTheOther*/, typeBound);
       if (!Methods.empty()) {
         // We chose the first method as the initial condidate, then try to
         // select a better one.
