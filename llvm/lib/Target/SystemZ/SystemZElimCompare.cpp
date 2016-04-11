@@ -392,6 +392,9 @@ fuseCompareAndBranch(MachineInstr *Compare,
   case SystemZ::CondReturn:
     Type = SystemZII::CompareAndReturn;
     break;
+  case SystemZ::CallBCR:
+    Type = SystemZII::CompareAndSibcall;
+    break;
   default:
     return false;
   }
@@ -412,19 +415,24 @@ fuseCompareAndBranch(MachineInstr *Compare,
         (SrcReg2 && MBBI->modifiesRegister(SrcReg2, TRI)))
       return false;
 
-  // Read the branch mask and target (if applicable).
+  // Read the branch mask, target (if applicable), regmask (if applicable).
   MachineOperand CCMask(MBBI->getOperand(1));
   assert((CCMask.getImm() & ~SystemZ::CCMASK_ICMP) == 0 &&
          "Invalid condition-code mask for integer comparison");
   // This is only valid for CompareAndBranch.
   MachineOperand Target(MBBI->getOperand(
     Type == SystemZII::CompareAndBranch ? 2 : 0));
+  const uint32_t *RegMask;
+  if (Type == SystemZII::CompareAndSibcall)
+    RegMask = MBBI->getOperand(2).getRegMask();
 
   // Clear out all current operands.
   int CCUse = MBBI->findRegisterUseOperandIdx(SystemZ::CC, false, TRI);
   assert(CCUse >= 0 && "BRC/BCR must use CC");
   Branch->RemoveOperand(CCUse);
-  if (Type == SystemZII::CompareAndBranch)
+  // Remove target (branch) or regmask (sibcall).
+  if (Type == SystemZII::CompareAndBranch ||
+      Type == SystemZII::CompareAndSibcall)
     Branch->RemoveOperand(2);
   Branch->RemoveOperand(1);
   Branch->RemoveOperand(0);
@@ -443,6 +451,9 @@ fuseCompareAndBranch(MachineInstr *Compare,
     MIB.addOperand(Target)
        .addReg(SystemZ::CC, RegState::ImplicitDefine);
   }
+
+  if (Type == SystemZII::CompareAndSibcall)
+    MIB.addRegMask(RegMask);
 
   // Clear any intervening kills of SrcReg and SrcReg2.
   MBBI = Compare;

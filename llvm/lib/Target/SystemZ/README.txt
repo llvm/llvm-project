@@ -43,11 +43,6 @@ We don't use the BRANCH ON INDEX instructions.
 
 --
 
-We might want to use BRANCH ON CONDITION for conditional indirect calls
-and conditional returns.
-
---
-
 We don't use the TEST DATA CLASS instructions.
 
 --
@@ -166,3 +161,16 @@ If needed, we can support 16-byte atomics using LPQ, STPQ and CSDG.
 
 We might want to model all access registers and use them to spill
 32-bit values.
+
+--
+
+We might want to use 'j .+2' as a trap instruction, like gcc does.  It can
+also be made conditional like the return instruction, allowing us to utilize
+compare-and-trap and load-and-trap instructions.
+
+--
+
+We might want to use the 'overflow' condition of eg. AR to support
+llvm.sadd.with.overflow.i32 and related instructions - the generated code
+for signed overflow check is currently quite bad.  This would improve
+the results of using -ftrapv.

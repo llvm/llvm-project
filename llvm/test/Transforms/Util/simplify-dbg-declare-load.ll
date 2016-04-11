@@ -19,9 +19,9 @@ fail:                                             ; preds = %top
   unreachable
 
 idxend:                                           ; preds = %top
-; CHECK-NOT call void @llvm.dbg.value(metadata %foo* %cp, i64 0, metadata !1, metadata !16), !dbg !17
+; CHECK-NOT call void @llvm.dbg.value(metadata %foo* %cp,
   %0 = load volatile %foo, %foo* %cp, align 8
-; CHECK: call void @llvm.dbg.value(metadata %foo %0, i64 0, metadata !1, metadata !16), !dbg !17
+; CHECK: call void @llvm.dbg.value(metadata %foo %0,
   store volatile %foo %0, %foo* undef, align 8
   ret void
 }
@@ -30,7 +30,7 @@ attributes #0 = { nounwind readnone }
 attributes #1 = { sspreq }
 
 !llvm.module.flags = !{!0}
-!llvm.dbg.cu = !{}
+!llvm.dbg.cu = !{!18}
 
 !0 = !{i32 1, !"Debug Info Version", i32 3}
 !1 = !DILocalVariable(name: "cp", scope: !2, file: !3, line: 106, type: !12)
@@ -50,3 +50,4 @@ attributes #1 = { sspreq }
 !15 = !DIBasicType(name: "Int32", size: 32, align: 32, encoding: DW_ATE_unsigned)
 !16 = !DIExpression()
 !17 = !DILocation(line: 106, scope: !2)
+!18 = distinct !DICompileUnit(language: DW_LANG_Julia, file: !3, subprograms: !{!2})

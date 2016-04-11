@@ -10,7 +10,7 @@ target triple = "x86_64-apple-macosx"
 ; CHECK-LABEL: loop2:
 ; CHECK-NOT: extractvalue
 ; CHECK: add nuw
-; CHECK-NOT: @llvm.sadd.with.overflow
+; CHECK: @llvm.sadd.with.overflow
 ; CHECK-LABEL: loop3:
 ; CHECK-NOT: extractvalue
 ; CHECK: ret

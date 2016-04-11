@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s
+; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s
 ; check that $fp is not reserved. 
 
 define void @foo0(i32* nocapture %b) nounwind {

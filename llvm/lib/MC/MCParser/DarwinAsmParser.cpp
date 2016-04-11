@@ -50,6 +50,7 @@ public:
     // Call the base implementation.
     this->MCAsmParserExtension::Initialize(Parser);
 
+    addDirectiveHandler<&DarwinAsmParser::parseDirectiveAltEntry>(".alt_entry");
     addDirectiveHandler<&DarwinAsmParser::parseDirectiveDesc>(".desc");
     addDirectiveHandler<&DarwinAsmParser::parseDirectiveIndirectSymbol>(
       ".indirect_symbol");
@@ -179,6 +180,7 @@ public:
     LastVersionMinDirective = SMLoc();
   }
 
+  bool parseDirectiveAltEntry(StringRef, SMLoc);
   bool parseDirectiveDesc(StringRef, SMLoc);
   bool parseDirectiveIndirectSymbol(StringRef, SMLoc);
   bool parseDirectiveDumpOrLoad(StringRef, SMLoc);
@@ -405,6 +407,26 @@ bool DarwinAsmParser::parseSectionSwitch(const char *Segment,
   if (Align)
     getStreamer().EmitValueToAlignment(Align);
 
+  return false;
+}
+
+/// parseDirectiveAltEntry
+///  ::= .alt_entry identifier
+bool DarwinAsmParser::parseDirectiveAltEntry(StringRef, SMLoc) {
+  StringRef Name;
+  if (getParser().parseIdentifier(Name))
+    return TokError("expected identifier in directive");
+
+  // Look up symbol.
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+
+  if (Sym->isDefined())
+    return TokError(".alt_entry must preceed symbol definition");
+
+  if (!getStreamer().EmitSymbolAttribute(Sym, MCSA_AltEntry))
+    return TokError("unable to emit symbol attribute");
+
+  Lex();
   return false;
 }
 

@@ -14,7 +14,9 @@ entry:
 
 !llvm.module.flags = !{!17, !18}
 !llvm.ident = !{!19}
+!llvm.dbg.cu = !{!0}
 
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: FullDebug, file: !1, subprograms: !{!4, !10, !11, !14})
 !1 = !DIFile(filename: "inline-hint.cc", directory: ".")
 !2 = !{}
 !3 = !{!4, !10, !11, !14}

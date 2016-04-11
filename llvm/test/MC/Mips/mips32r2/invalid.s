@@ -36,6 +36,8 @@
         srl $2, $3, 32       # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
         sra $2, $3, -1       # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
         sra $2, $3, 32       # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
+        sync -1              # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate
+        sync 32              # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate
         syscall -1           # CHECK: :[[@LINE]]:17: error: expected 20-bit unsigned immediate
         syscall 1048576      # CHECK: :[[@LINE]]:17: error: expected 20-bit unsigned immediate
         rotr $2, $3, -1      # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
@@ -326,7 +327,8 @@ ProcessThinLTOModule(Module &TheModule, const ModuleSummaryIndex &Index,
     SmallVector<char, 128> OutputBuffer;
     {
       raw_svector_ostream OS(OutputBuffer);
-      WriteBitcodeToFile(&TheModule, OS, true, true);
+      ModuleSummaryIndexBuilder IndexBuilder(&TheModule);
+      WriteBitcodeToFile(&TheModule, OS, true, &IndexBuilder.getIndex());
     }
     return make_unique<ObjectMemoryBuffer>(std::move(OutputBuffer));
   }

@@ -158,6 +158,17 @@ def getThreeOperandOpcode : InstrMapping {
 //
 //===----------------------------------------------------------------------===//
 
+class InstI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<2, outs, ins, asmstr, pattern> {
+  field bits<16> Inst;
+  field bits<16> SoftFail = 0;
+
+  bits<8> I1;
+
+  let Inst{15-8} = op;
+  let Inst{7-0}  = I1;
+}
+
 class InstRI<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;

@@ -520,9 +520,9 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
 void StackMaps::serializeToStackMapSection() {
   (void)WSMP;
   // Bail out if there's no stack map data.
-  assert((!CSInfos.empty() || (CSInfos.empty() && ConstPool.empty())) &&
+  assert((!CSInfos.empty() || ConstPool.empty()) &&
          "Expected empty constant pool too!");
-  assert((!CSInfos.empty() || (CSInfos.empty() && FnStackSize.empty())) &&
+  assert((!CSInfos.empty() || FnStackSize.empty()) &&
          "Expected empty function record too!");
   if (CSInfos.empty())
     return;

@@ -296,6 +296,7 @@ class ARMAsmParser : public MCTargetAsmParser {
     uint64_t FB = ComputeAvailableFeatures(STI.ToggleFeature(ARM::ModeThumb));
     setAvailableFeatures(FB);
   }
+  void FixModeAfterArchChange(bool WasThumb, SMLoc Loc);
   bool isMClass() const {
     return getSTI().getFeatureBits()[ARM::FeatureMClass];
   }
@@ -9099,6 +9100,31 @@ bool ARMAsmParser::parseDirectiveUnreq(SMLoc L) {
   return false;
 }
 
+// After changing arch/CPU, try to put the ARM/Thumb mode back to what it was
+// before, if supported by the new target, or emit mapping symbols for the mode
+// switch.
+void ARMAsmParser::FixModeAfterArchChange(bool WasThumb, SMLoc Loc) {
+  if (WasThumb != isThumb()) {
+    if (WasThumb && hasThumb()) {
+      // Stay in Thumb mode
+      SwitchMode();
+    } else if (!WasThumb && hasARM()) {
+      // Stay in ARM mode
+      SwitchMode();
+    } else {
+      // Mode switch forced, because the new arch doesn't support the old mode.
+      getParser().getStreamer().EmitAssemblerFlag(isThumb() ? MCAF_Code16
+                                                            : MCAF_Code32);
+      // Warn about the implcit mode switch. GAS does not switch modes here,
+      // but instead stays in the old mode, reporting an error on any following
+      // instructions as the mode does not exist on the target.
+      Warning(Loc, Twine("new target does not support ") +
+                       (WasThumb ? "thumb" : "arm") + " mode, switching to " +
+                       (!WasThumb ? "thumb" : "arm") + " mode");
+    }
+  }
+}
+
 /// parseDirectiveArch
 ///  ::= .arch token
 bool ARMAsmParser::parseDirectiveArch(SMLoc L) {
@@ -9111,10 +9137,12 @@ bool ARMAsmParser::parseDirectiveArch(SMLoc L) {
     return false;
   }
 
+  bool WasThumb = isThumb();
   Triple T;
   MCSubtargetInfo &STI = copySTI();
   STI.setDefaultFeatures("", ("+" + ARM::getArchName(ID)).str());
   setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+  FixModeAfterArchChange(WasThumb, L);
 
   getTargetStreamer().emitArch(ID);
   return false;
@@ -9245,9 +9273,11 @@ bool ARMAsmParser::parseDirectiveCPU(SMLoc L) {
     return false;
   }
 
+  bool WasThumb = isThumb();
   MCSubtargetInfo &STI = copySTI();
   STI.setDefaultFeatures(CPU, "");
   setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+  FixModeAfterArchChange(WasThumb, L);
 
   return false;
 }

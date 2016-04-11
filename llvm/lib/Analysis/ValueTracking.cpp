@@ -3253,67 +3253,6 @@ static OverflowResult computeOverflowForSignedAdd(
   return OverflowResult::MayOverflow;
 }
 
-bool llvm::isOverflowIntrinsicNoWrap(IntrinsicInst *II, DominatorTree &DT) {
-#ifndef NDEBUG
-  auto IID = II->getIntrinsicID();
-  assert((IID == Intrinsic::sadd_with_overflow ||
-          IID == Intrinsic::uadd_with_overflow ||
-          IID == Intrinsic::ssub_with_overflow ||
-          IID == Intrinsic::usub_with_overflow ||
-          IID == Intrinsic::smul_with_overflow ||
-          IID == Intrinsic::umul_with_overflow) &&
-         "Not an overflow intrinsic!");
-#endif
-
-  SmallVector<BranchInst *, 2> GuardingBranches;
-  SmallVector<ExtractValueInst *, 2> Results;
-
-  for (User *U : II->users()) {
-    if (auto *EVI = dyn_cast<ExtractValueInst>(U)) {
-      assert(EVI->getNumIndices() == 1 && "Obvious from CI's type");
-
-      if (EVI->getIndices()[0] == 0)
-        Results.push_back(EVI);
-      else {
-        assert(EVI->getIndices()[0] == 1 && "Obvious from CI's type");
-
-        for (auto *U : EVI->users())
-          if (auto *B = dyn_cast<BranchInst>(U)) {
-            assert(B->isConditional() && "How else is it using an i1?");
-            GuardingBranches.push_back(B);
-          }
-      }
-    } else {
-      // We are using the aggregate directly in a way we don't want to analyze
-      // here (storing it to a global, say).
-      return false;
-    }
-  }
-
-  auto AllUsesGuardedByBranch = [&](BranchInst *BI) {
-    BasicBlockEdge NoWrapEdge(BI->getParent(), BI->getSuccessor(1));
-    if (!NoWrapEdge.isSingleEdge())
-      return false;
-
-    // Check if all users of the add are provably no-wrap.
-    for (auto *Result : Results) {
-      // If the extractvalue itself is not executed on overflow, the we don't
-      // need to check each use separately, since domination is transitive.
-      if (DT.dominates(NoWrapEdge, Result->getParent()))
-        continue;
-
-      for (auto &RU : Result->uses())
-        if (!DT.dominates(NoWrapEdge, RU))
-          return false;
-    }
-
-    return true;
-  };
-
-  return any_of(GuardingBranches, AllUsesGuardedByBranch);
-}
-
-
 OverflowResult llvm::computeOverflowForSignedAdd(AddOperator *Add,
                                                  const DataLayout &DL,
                                                  AssumptionCache *AC,

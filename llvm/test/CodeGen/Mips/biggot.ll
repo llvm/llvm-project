@@ -1,5 +1,5 @@
-; RUN: llc -march=mipsel -mxgot < %s | FileCheck %s -check-prefix=O32
-; RUN: llc -march=mips64el -mcpu=mips64r2 -mattr=+n64 -mxgot < %s | \
+; RUN: llc -march=mipsel -mxgot -relocation-model=pic < %s | FileCheck %s -check-prefix=O32
+; RUN: llc -march=mips64el -mcpu=mips64r2 -mattr=+n64 -mxgot -relocation-model=pic < %s | \
 ; RUN: FileCheck %s -check-prefix=N64
 
 @v0 = external global i32

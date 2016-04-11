@@ -16,11 +16,6 @@
 ;   return 0;
 ; }
 ;
-; Note that this test is missing the llvm.dbg.cu annotation. This emulates
-; the effect of the user having only used -fprofile-sample-use without
-; -gmlt when invoking the driver. In those cases, we need to track source
-; location information but we do not have to generate debug info in the
-; final binary.
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
 ; Function Attrs: nounwind uwtable
@@ -89,10 +84,11 @@ while.end:                                        ; preds = %while.cond
 
 declare i32 @printf(i8*, ...) #2
 
+!llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: NoDebug, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
 !1 = !DIFile(filename: "calls.cc", directory: ".")
 !2 = !{}
 !3 = !{!4, !7}

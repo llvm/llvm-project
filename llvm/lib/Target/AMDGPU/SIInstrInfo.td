@@ -2580,7 +2580,7 @@ multiclass DS_1A1D_PERMUTE <bits<8> op, string opName, RegisterClass rc,
   dag ins = (ins VGPR_32:$addr, rc:$data0),
   string asm = opName#" $vdst, $addr, $data0"> {
 
-  let LGKM_CNT = 0, mayLoad = 0, mayStore = 0, isConvergent = 1 in {
+  let mayLoad = 0, mayStore = 0, isConvergent = 1 in {
     def "" : DS_Pseudo <opName, outs, ins,
      [(set (i32 rc:$vdst),
          (node (i32 VGPR_32:$addr), (i32 rc:$data0)))]>;

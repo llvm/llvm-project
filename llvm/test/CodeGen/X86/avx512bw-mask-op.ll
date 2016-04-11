@@ -80,12 +80,11 @@ define void @mask64_mem(i64* %ptr) {
 define i32 @mand32(i32 %x, i32 %y) {
 ; CHECK-LABEL: mand32:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovd %edi, %k0
-; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    kandd %k1, %k0, %k2
-; CHECK-NEXT:    kxord %k1, %k0, %k0
-; CHECK-NEXT:    kord %k0, %k2, %k0
-; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    xorl %esi, %edi
+; CHECK-NEXT:    orl %eax, %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %ma = bitcast i32 %x to <32 x i1>
   %mb = bitcast i32 %y to <32 x i1>
@@ -96,18 +95,55 @@ define i32 @mand32(i32 %x, i32 %y) {
   ret i32 %ret
 }
 
+define i32 @mand32_mem(<32 x i1>* %x, <32 x i1>* %y) {
+; CHECK-LABEL: mand32_mem:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd (%rdi), %k0
+; CHECK-NEXT:    kmovd (%rsi), %k1
+; CHECK-NEXT:    kandd %k1, %k0, %k2
+; CHECK-NEXT:    kxord %k1, %k0, %k0
+; CHECK-NEXT:    kord %k0, %k2, %k0
+; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    retq
+  %ma = load <32 x i1>, <32 x i1>* %x
+  %mb = load <32 x i1>, <32 x i1>* %y
+  %mc = and <32 x i1> %ma, %mb
+  %md = xor <32 x i1> %ma, %mb
+  %me = or <32 x i1> %mc, %md
+  %ret = bitcast <32 x i1> %me to i32
+  ret i32 %ret
+}
+
 define i64 @mand64(i64 %x, i64 %y) {
 ; CHECK-LABEL: mand64:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovq %rdi, %k0
-; CHECK-NEXT:    kmovq %rsi, %k1
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    andq %rsi, %rax
+; CHECK-NEXT:    xorq %rsi, %rdi
+; CHECK-NEXT:    orq %rax, %rdi
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    retq
+  %ma = bitcast i64 %x to <64 x i1>
+  %mb = bitcast i64 %y to <64 x i1>
+  %mc = and <64 x i1> %ma, %mb
+  %md = xor <64 x i1> %ma, %mb
+  %me = or <64 x i1> %mc, %md
+  %ret = bitcast <64 x i1> %me to i64
+  ret i64 %ret
+}
+
+define i64 @mand64_mem(<64 x i1>* %x, <64 x i1>* %y) {
+; CHECK-LABEL: mand64_mem:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovq (%rdi), %k0
+; CHECK-NEXT:    kmovq (%rsi), %k1
 ; CHECK-NEXT:    kandq %k1, %k0, %k2
 ; CHECK-NEXT:    kxorq %k1, %k0, %k0
 ; CHECK-NEXT:    korq %k0, %k2, %k0
 ; CHECK-NEXT:    kmovq %k0, %rax
 ; CHECK-NEXT:    retq
-  %ma = bitcast i64 %x to <64 x i1>
-  %mb = bitcast i64 %y to <64 x i1>
+  %ma = load <64 x i1>, <64 x i1>* %x
+  %mb = load <64 x i1>, <64 x i1>* %y
   %mc = and <64 x i1> %ma, %mb
   %md = xor <64 x i1> %ma, %mb
   %me = or <64 x i1> %mc, %md

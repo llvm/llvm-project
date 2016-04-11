@@ -1,0 +1,27 @@
+RUN: llvm-readobj -elf-hash-histogram %p/Inputs/gnuhash.so.elf-ppc64 \
+RUN:  --elf-output-style=GNU | FileCheck %s -check-prefix PPC64GNU
+RUN: llvm-readobj -elf-hash-histogram %p/Inputs/gnuhash.so.elf-x86_64 --elf-output-style=GNU \
+RUN:   | FileCheck %s -check-prefix X86GNU
+RUN: llvm-readobj -elf-hash-histogram %p/Inputs/got-plt.exe.elf-mipsel --elf-output-style=GNU \
+RUN:   | FileCheck %s -check-prefix SYSV
+
+PPC64GNU: Histogram for `.gnu.hash' bucket list length (total of 3 buckets)
+PPC64GNU-NEXT:  Length  Number     % of total  Coverage
+PPC64GNU-NEXT:       0  1          ( 33.3%)       0.0%
+PPC64GNU-NEXT:       1  1          ( 33.3%)      25.0%
+PPC64GNU-NEXT:       2  0          (  0.0%)      25.0%
+PPC64GNU-NEXT:       3  1          ( 33.3%)     100.0%
+
+X86GNU: Histogram for `.gnu.hash' bucket list length (total of 3 buckets)
+X86GNU-NEXT:  Length  Number     % of total  Coverage
+X86GNU-NEXT:       0  1          ( 33.3%)       0.0%
+X86GNU-NEXT:       1  1          ( 33.3%)      25.0%
+X86GNU-NEXT:       2  0          (  0.0%)      25.0%
+X86GNU-NEXT:       3  1          ( 33.3%)     100.0%
+
+SYSV: Histogram for bucket list length (total of 3 buckets)
+SYSV-NEXT:  Length  Number     % of total  Coverage
+SYSV-NEXT:       0  0          (  0.0%)       0.0%
+SYSV-NEXT:       1  0          (  0.0%)       0.0%
+SYSV-NEXT:       2  2          ( 66.7%)      57.1%
+SYSV-NEXT:       3  1          ( 33.3%)     100.0%

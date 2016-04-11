@@ -9,7 +9,7 @@
 ; The format is func [0x<rva_start>+<prologue_length> - 0x<rva_end>-<epilogue_length>]
 ; SYM_FORMAT: ---SYMBOLS---
 ; SYM_FORMAT: symbolformat-fpo.obj
-; SYM_FORMAT-DAG: func [{{.*}}] (FPO) unsigned __cdecl fpo_func(unsigned n)
+; SYM_FORMAT-DAG: func [{{.*}}] (FPO) unsigned int __cdecl fpo_func(unsigned int n)
 ; SYM_FORMAT: symbolformat.obj
 ; SYM_FORMAT-DAG: func [{{.*}}] (EBP) int __cdecl _purecall()
 ; SYM_FORMAT-DAG: func [{{.*}}] (EBP) int __cdecl main(int argc, char** argv)
@@ -44,7 +44,7 @@
 ; TYPES_2: data +0x09 char m_char
 ; TYPES_2: data +0x0a wchar_t m_wchar_t
 ; TYPES_2: data +0x0c int m_int
-; TYPES_2: data +0x10 unsigned m_unsigned
+; TYPES_2: data +0x10 unsigned int m_unsigned
 ; TYPES_2: data +0x14 long m_long
 ; TYPES_2: data +0x18 unsigned long m_unsigned_long
 ; TYPES_2: data +0x20 __int64 m_int64
@@ -55,6 +55,6 @@
 ; TYPES_2: }
 
 ; GLOBALS: ---GLOBALS---
-; GLOBALS-DAG: func [{{.*}}] (FPO) unsigned __cdecl fpo_func(unsigned n)
+; GLOBALS-DAG: func [{{.*}}] (FPO) unsigned int __cdecl fpo_func(unsigned int n)
 ; GLOBALS-DAG: data [{{.*}}] static void* g_global_pointer
 ; GLOBALS-DAG: data [{{.*}}] static int g_global_int

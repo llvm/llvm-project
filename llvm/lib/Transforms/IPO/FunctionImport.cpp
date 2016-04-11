@@ -145,7 +145,7 @@ static void computeImportForFunction(
     FunctionImporter::ImportMapTy &ImportsForModule,
     StringMap<FunctionImporter::ExportSetTy> &ExportLists) {
   for (auto &Edge : Summary.calls()) {
-    auto GUID = Edge.first;
+    auto GUID = Edge.first.getGUID();
     DEBUG(dbgs() << " edge -> " << GUID << " Threshold:" << Threshold << "\n");
 
     if (DefinedFunctions.count(GUID)) {
@@ -181,11 +181,12 @@ static void computeImportForFunction(
     // Mark all functions and globals referenced by this function as exported to
     // the outside if they are defined in the same source module.
     for (auto &Edge : CalleeSummary->calls()) {
-      auto CalleeGUID = Edge.first;
+      auto CalleeGUID = Edge.first.getGUID();
       if (isGlobalExported(Index, ExportModulePath, CalleeGUID))
         ExportList.insert(CalleeGUID);
     }
-    for (auto &GUID : CalleeSummary->refs()) {
+    for (auto &Ref : CalleeSummary->refs()) {
+      auto GUID = Ref.getGUID();
       if (isGlobalExported(Index, ExportModulePath, GUID))
         ExportList.insert(GUID);
     }
