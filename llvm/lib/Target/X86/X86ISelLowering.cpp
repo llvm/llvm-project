@@ -2301,6 +2301,25 @@ X86TargetLowering::LowerReturn(SDValue Chain,
   // false, then an sret argument may be implicitly inserted in the SelDAG. In
   // either case FuncInfo->setSRetReturnReg() will have been called.
   if (unsigned SRetReg = FuncInfo->getSRetReturnReg()) {
+    // When we have both sret and another return value, we should use the
+    // original Chain stored in RetOps[0], instead of the current Chain updated
+    // in the above loop. If we only have sret, RetOps[0] equals to Chain.
+
+    // For the case of sret and another return value, we have
+    //   Chain_0 at the function entry
+    //   Chain_1 = getCopyToReg(Chain_0) in the above loop
+    // If we use Chain_1 in getCopyFromReg, we will have
+    //   Val = getCopyFromReg(Chain_1)
+    //   Chain_2 = getCopyToReg(Chain_1, Val) from below
+
+    // getCopyToReg(Chain_0) will be glued together with
+    // getCopyToReg(Chain_1, Val) into Unit A, getCopyFromReg(Chain_1) will be
+    // in Unit B, and we will have cyclic dependency between Unit A and Unit B:
+    //   Data dependency from Unit B to Unit A due to usage of Val in
+    //     getCopyToReg(Chain_1, Val)
+    //   Chain dependency from Unit A to Unit B
+
+    // So here, we use RetOps[0] (i.e Chain_0) for getCopyFromReg.
     SDValue Val = DAG.getCopyFromReg(RetOps[0], dl, SRetReg,
                                      getPointerTy(MF.getDataLayout()));
 

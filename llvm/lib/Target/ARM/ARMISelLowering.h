@@ -468,6 +468,10 @@ namespace llvm {
     bool isCheapToSpeculateCttz() const override;
     bool isCheapToSpeculateCtlz() const override;
 
+    bool supportSwiftError() const override {
+      return true;
+    }
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,
@@ -579,10 +583,6 @@ namespace llvm {
                             SDLoc dl, SelectionDAG &DAG,
                             SmallVectorImpl<SDValue> &InVals,
                             bool isThisReturn, SDValue ThisVal) const;
-
-    bool supportSwiftError() const override {
-      return true;
-    }
 
     bool supportSplitCSR(MachineFunction *MF) const override {
       return MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
