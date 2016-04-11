@@ -26,7 +26,6 @@ class TestSwiftieFormatting(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.expectedFailureAll(bugnumber="rdar://25587366")
     def test_swiftie_formatting(self):
         """Test that data formatters honor Swift conventions"""
         self.build()
@@ -106,6 +105,9 @@ class TestSwiftieFormatting(TestBase):
         self.assertTrue(nsarr0.GetSummary() == 'Int64(2)', 'nsarr[0] summary wrong')
         self.assertTrue(nsarr1.GetSummary() == 'Int64(3)', 'nsarr[1] summary wrong')
         self.assertTrue(nsarr3.GetSummary() == 'Int64(5)', 'nsarr[3] summary wrong')
+        
+        self.expect('frame variable -d run nsarr[4] --ptr-depth=1', substrs=['[0] = "One"', '[1] = "Two"', '[2] = "Three"'])
+        self.expect('frame variable -d run nsarr[5] --ptr-depth=1', substrs=['[0] = 1', '[1] = 2', '[2] = 3'])
 
 if __name__ == '__main__':
     import atexit

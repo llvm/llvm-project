@@ -31,7 +31,7 @@ class SwiftClass {
 
 func main() {
 	var swcla = SwiftClass()
-  var nsarr: NSArray = [2,3,"Hello",5,["One","Two","Three"]]
+  var nsarr: NSArray = [2,3,"Hello",5,["One","Two","Three"],[1,2,3]]
 	print("hello world") // Set breakpoint here
 }
 
