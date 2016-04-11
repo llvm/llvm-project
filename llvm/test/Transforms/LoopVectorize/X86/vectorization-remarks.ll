@@ -48,6 +48,7 @@ declare void @ibar(i32*) #1
 
 !llvm.module.flags = !{!7, !8}
 !llvm.ident = !{!9}
+!llvm.dbg.cu = !{!24}
 
 !1 = !DIFile(filename: "vectorization-remarks.c", directory: ".")
 !2 = !{}
@@ -72,3 +73,4 @@ declare void @ibar(i32*) #1
 !21 = !{!13, !13, i64 0}
 !22 = !DILocation(line: 20, column: 3, scope: !4)
 !23 = !DILocation(line: 21, column: 3, scope: !4)
+!24 = distinct !DICompileUnit(language: DW_LANG_C89, file: !1, subprograms: !{!4})
