@@ -105,6 +105,7 @@ return:                                           ; preds = %bb2
 
 declare void @_ZdlPv(i8*) nounwind
 
+!llvm.dbg.cu = !{!4}
 !0 = !DILocalVariable(name: "tst", line: 13, scope: !1, file: !4, type: !8)
 !1 = distinct !DILexicalBlock(line: 0, column: 0, file: !44, scope: !2)
 !2 = distinct !DILexicalBlock(line: 0, column: 0, file: !44, scope: !3)

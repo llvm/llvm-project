@@ -13,7 +13,7 @@ entry:
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
 !llvm.module.flags = !{!13}
-!llvm.dbg.lv.foo = !{!5}
+!llvm.dbg.cu = !{!2}
 
 !0 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, file: !12, scope: !1, type: !3)
 !1 = !DIFile(filename: "b.c", directory: "/tmp")

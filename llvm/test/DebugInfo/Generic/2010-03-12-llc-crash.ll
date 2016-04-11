@@ -9,6 +9,7 @@ entry:
   ret void
 }
 
+!llvm.dbg.cu = !{!3}
 !0 = !DILocalVariable(name: "sy", line: 890, arg: 1, scope: !1, file: !2, type: !7)
 !1 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 892, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !8, scope: !3, type: !4)
 !2 = !DIFile(filename: "qpainter.h", directory: "QtGui")

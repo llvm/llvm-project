@@ -22,6 +22,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 declare i32 @foo(i32) ssp
 
+!llvm.dbg.cu = !{!0}
 !0 = !DILocation(line: 5, column: 2, scope: !1)
 !1 = distinct !DILexicalBlock(line: 1, column: 1, file: null, scope: !2)
 !2 = distinct !DISubprogram(name: "bar", linkageName: "bar", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scope: !3)
