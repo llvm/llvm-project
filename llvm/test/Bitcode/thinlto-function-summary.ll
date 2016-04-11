@@ -7,7 +7,6 @@
 ; BC: <GLOBALVAL_SUMMARY_BLOCK
 ; BC-NEXT: <PERMODULE {{.*}} op0=1 op1=0
 ; BC-NEXT: <PERMODULE {{.*}} op0=2 op1=0
-; BC-NEXT: <PERMODULE {{.*}} op0=4 op1=3
 ; BC-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 ; BC-NEXT: <VALUE_SYMTAB
 ; BC-NEXT: <FNENTRY {{.*}} op0=1 {{.*}}> record string = 'foo'
@@ -37,6 +36,9 @@ entry:
   ret i32 %x
 }
 
+; FIXME: Anonymous function and alias not currently in summary until
+; follow on fixes to rename anonymous functions and emit alias summary
+; entries are committed.
 ; Check an anonymous function as well, since in that case only the alias
 ; ends up in the value symbol table and having a summary.
 @f = alias void (), void ()* @0   ; <void ()*> [#uses=0]

@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -83,9 +84,14 @@ static void WriteOutputFile(const Module *M) {
     exit(1);
   }
 
-  if (Force || !CheckBitcodeOutputToConsole(Out->os(), true))
-    WriteBitcodeToFile(M, Out->os(), PreserveBitcodeUseListOrder,
-                       EmitSummaryIndex, EmitModuleHash);
+  if (Force || !CheckBitcodeOutputToConsole(Out->os(), true)) {
+    std::unique_ptr<ModuleSummaryIndex> Index;
+    if (EmitSummaryIndex)
+      Index = ModuleSummaryIndexBuilder(M).takeIndex();
+
+    WriteBitcodeToFile(M, Out->os(), PreserveBitcodeUseListOrder, Index.get(),
+                       EmitModuleHash);
+  }
 
   // Declare success.
   Out->keep();

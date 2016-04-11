@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  Analysis
   AsmParser
   BitWriter
   Core

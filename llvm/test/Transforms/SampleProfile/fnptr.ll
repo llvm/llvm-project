@@ -126,6 +126,7 @@ declare i32 @printf(i8* nocapture readonly, ...) #1
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}
+!llvm.dbg.cu = !{!26}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !{!"clang version 3.6.0 "}
@@ -153,3 +154,4 @@ declare i32 @printf(i8* nocapture readonly, ...) #1
 !23 = !{!"branch_weights", i32 0, i32 534}
 !24 = !DILocation(line: 27, column: 3, scope: !13)
 !25 = !DILocation(line: 28, column: 3, scope: !13)
+!26 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: FullDebug, file: !4, subprograms: !{!3, !10, !13})

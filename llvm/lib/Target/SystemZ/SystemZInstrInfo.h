@@ -119,7 +119,10 @@ enum CompareAndBranchType {
   CompareAndBranch,
 
   // Indirect branch, used for return - CRBReturn etc.
-  CompareAndReturn
+  CompareAndReturn,
+
+  // Indirect branch, used for sibcall - CRBCall etc.
+  CompareAndSibcall
 };
 } // end namespace SystemZII
 

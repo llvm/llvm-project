@@ -1,13 +1,13 @@
 ; Test the MSA intrinsics that are encoded with the 2R instruction format and
 ; convert scalars to vectors.
 
-; RUN: llc -march=mips -mattr=+msa,+fp64 < %s | \
+; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefix=MIPS-ANY -check-prefix=MIPS32
-; RUN: llc -march=mipsel -mattr=+msa,+fp64 < %s | \
+; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefix=MIPS-ANY -check-prefix=MIPS32
-; RUN: llc -march=mips64 -mcpu=mips64r2 -mattr=+msa,+fp64 < %s | \
+; RUN: llc -march=mips64 -mcpu=mips64r2 -mattr=+msa,+fp64 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefix=MIPS-ANY -check-prefix=MIPS64
-; RUN: llc -march=mips64el -mcpu=mips64r2 -mattr=+msa,+fp64 < %s | \
+; RUN: llc -march=mips64el -mcpu=mips64r2 -mattr=+msa,+fp64 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefix=MIPS-ANY -check-prefix=MIPS64
 
 @llvm_mips_fill_b_ARG1 = global i32 23, align 16

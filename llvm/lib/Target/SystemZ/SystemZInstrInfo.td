@@ -41,7 +41,7 @@ let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, CCMaskFirst = 1, Uses = [CC]
   def CondReturn : Alias<2, (outs), (ins cond4:$valid, cond4:$R1), []>;
 
 // Fused compare and conditional returns.
-let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, Uses = [CC] in {
+let isReturn = 1, isTerminator = 1, hasCtrlDep = 1 in {
   def CRBReturn : Alias<6, (outs), (ins GR32:$R1, GR32:$R2, cond4:$M3), []>;
   def CGRBReturn : Alias<6, (outs), (ins GR64:$R1, GR64:$R2, cond4:$M3), []>;
   def CIBReturn : Alias<6, (outs), (ins GR32:$R1, imm32sx8:$I2, cond4:$M3), []>;
@@ -327,9 +327,25 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
     def CallBR : Alias<2, (outs), (ins), [(z_sibcall R1D)]>;
 }
 
-let CCMaskFirst = 1, isCall = 1, isReturn = 1 in
+let CCMaskFirst = 1, isCall = 1, isTerminator = 1, isReturn = 1 in {
   def CallBRCL : Alias<6, (outs), (ins cond4:$valid, cond4:$R1,
                                    pcrel32:$I2), []>;
+
+  let Uses = [R1D] in
+    def CallBCR : Alias<2, (outs), (ins cond4:$valid, cond4:$R1), []>;
+}
+
+// Fused compare and conditional sibling calls.
+let isCall = 1, isTerminator = 1, isReturn = 1, Uses = [R1D] in {
+  def CRBCall : Alias<6, (outs), (ins GR32:$R1, GR32:$R2, cond4:$M3), []>;
+  def CGRBCall : Alias<6, (outs), (ins GR64:$R1, GR64:$R2, cond4:$M3), []>;
+  def CIBCall : Alias<6, (outs), (ins GR32:$R1, imm32sx8:$I2, cond4:$M3), []>;
+  def CGIBCall : Alias<6, (outs), (ins GR64:$R1, imm64sx8:$I2, cond4:$M3), []>;
+  def CLRBCall : Alias<6, (outs), (ins GR32:$R1, GR32:$R2, cond4:$M3), []>;
+  def CLGRBCall : Alias<6, (outs), (ins GR64:$R1, GR64:$R2, cond4:$M3), []>;
+  def CLIBCall : Alias<6, (outs), (ins GR32:$R1, imm32zx8:$I2, cond4:$M3), []>;
+  def CLGIBCall : Alias<6, (outs), (ins GR64:$R1, imm64zx8:$I2, cond4:$M3), []>;
+}
 
 // TLS calls.  These will be lowered into a call to __tls_get_offset,
 // with an extra relocation specifying the TLS symbol.
@@ -1554,6 +1570,10 @@ let mayLoad = 1, Defs = [CC] in
   defm SRST : StringRRE<"srst", 0xb25e, z_search_string>;
 
 // Other instructions for inline assembly
+let hasSideEffects = 1, Defs = [CC], isCall = 1 in
+  def SVC : InstI<0x0A, (outs), (ins imm32zx8:$I1),
+                  "svc\t$I1",
+                  []>;
 let hasSideEffects = 1, Defs = [CC], mayStore = 1 in
   def STCK : InstS<0xB205, (outs), (ins bdaddr12only:$BD2),
                        "stck\t$BD2",

@@ -49,3 +49,5 @@ local_label:
         mfc2  $4, $3, 8      # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
         sdc2 $20, -1025($s2) # CHECK: :[[@LINE]]:9: error: instruction requires a CPU feature not currently enabled
         sdc2 $20, 1024($s2)  # CHECK: :[[@LINE]]:9: error: instruction requires a CPU feature not currently enabled
+        sync -1              # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate
+        sync 32              # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate

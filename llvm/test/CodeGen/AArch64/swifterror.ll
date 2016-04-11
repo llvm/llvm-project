@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck --check-prefix=CHECK-APPLE %s
-; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc -verify-machineinstrs -disable-fp-elim < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck --check-prefix=CHECK-APPLE %s
+; RUN: llc -verify-machineinstrs -disable-fp-elim -O0 < %s -mtriple=aarch64-apple-ios -disable-post-ra | FileCheck --check-prefix=CHECK-O0 %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)
@@ -300,12 +300,12 @@ define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE: orr w0, wzr, #0x10
 ; CHECK-APPLE: malloc
 ; CHECK-APPLE: orr [[ID:w[0-9]+]], wzr, #0x1
-; CHECK-FIXMEAPPLE: add [[ARGS:x[0-9]+]], [[TMP:x[0-9]+]], #16
+; CHECK-APPLE: add [[ARGS:x[0-9]+]], [[TMP:x[0-9]+]], #16
 ; CHECK-APPLE: strb [[ID]], [x0, #8]
 
 ; First vararg
-; CHECK-FIXMEAPPLE-DAG: orr {{x[0-9]+}}, [[ARGS]], #0x8
-; CHECK-FIXMEAPPLE-DAG: ldr {{w[0-9]+}}, [{{.*}}[[TMP]], #16]
+; CHECK-APPLE-DAG: orr {{x[0-9]+}}, [[ARGS]], #0x8
+; CHECK-APPLE-DAG: ldr {{w[0-9]+}}, [{{.*}}[[TMP]], #16]
 ; CHECK-APPLE: add {{x[0-9]+}}, {{x[0-9]+}}, #8
 ; Second vararg
 ; CHECK-APPLE: ldr {{w[0-9]+}}, [{{x[0-9]+}}]

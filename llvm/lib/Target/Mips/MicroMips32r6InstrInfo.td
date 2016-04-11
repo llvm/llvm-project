@@ -965,9 +965,9 @@ class LUI_MMR6_DESC : IsAsCheapAsAMove, MMR6Arch<"lui">, MipsR6Inst{
 
 class SYNC_MMR6_DESC : MMR6Arch<"sync">, MipsR6Inst {
   dag OutOperandList = (outs);
-  dag InOperandList = (ins i32imm:$stype);
+  dag InOperandList = (ins uimm5:$stype);
   string AsmString = !strconcat("sync", "\t$stype");
-  list<dag> Pattern = [(MipsSync imm:$stype)];
+  list<dag> Pattern = [(MipsSync immZExt5:$stype)];
   InstrItinClass Itinerary = NoItinerary;
   bit HasSideEffects = 1;
 }

@@ -32,15 +32,33 @@ define void @mask8_mem(i8* %ptr) {
 define i8 @mand8(i8 %x, i8 %y) {
 ; CHECK-LABEL: mand8:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovb %edi, %k0
-; CHECK-NEXT:    kmovb %esi, %k1
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    xorl %esi, %eax
+; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    orl %eax, %edi
+; CHECK-NEXT:    movb %dil, %al
+; CHECK-NEXT:    retq
+  %ma = bitcast i8 %x to <8 x i1>
+  %mb = bitcast i8 %y to <8 x i1>
+  %mc = and <8 x i1> %ma, %mb
+  %md = xor <8 x i1> %ma, %mb
+  %me = or <8 x i1> %mc, %md
+  %ret = bitcast <8 x i1> %me to i8
+  ret i8 %ret
+}
+
+define i8 @mand8_mem(<8 x i1>* %x, <8 x i1>* %y) {
+; CHECK-LABEL: mand8_mem:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovb (%rdi), %k0
+; CHECK-NEXT:    kmovb (%rsi), %k1
 ; CHECK-NEXT:    kandb %k1, %k0, %k2
 ; CHECK-NEXT:    kxorb %k1, %k0, %k0
 ; CHECK-NEXT:    korb %k0, %k2, %k0
 ; CHECK-NEXT:    kmovb %k0, %eax
 ; CHECK-NEXT:    retq
-  %ma = bitcast i8 %x to <8 x i1>
-  %mb = bitcast i8 %y to <8 x i1>
+  %ma = load <8 x i1>, <8 x i1>* %x
+  %mb = load <8 x i1>, <8 x i1>* %y
   %mc = and <8 x i1> %ma, %mb
   %md = xor <8 x i1> %ma, %mb
   %me = or <8 x i1> %mc, %md

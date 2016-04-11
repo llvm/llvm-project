@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=mipsel -mcpu=mips32   | FileCheck %s -check-prefix=ALL -check-prefix=FCC -check-prefix=32-FCC
-; RUN: llc < %s -march=mipsel -mcpu=mips32r2 | FileCheck %s -check-prefix=ALL -check-prefix=FCC -check-prefix=32-FCC
-; RUN: llc < %s -march=mipsel -mcpu=mips32r6 | FileCheck %s -check-prefix=ALL -check-prefix=GPR -check-prefix=32-GPR
+; RUN: llc < %s -march=mipsel -mcpu=mips32   -relocation-model=pic  | FileCheck %s -check-prefix=ALL -check-prefix=FCC -check-prefix=32-FCC
+; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -relocation-model=pic  | FileCheck %s -check-prefix=ALL -check-prefix=FCC -check-prefix=32-FCC
+; RUN: llc < %s -march=mipsel -mcpu=mips32r6 -relocation-model=pic  | FileCheck %s -check-prefix=ALL -check-prefix=GPR -check-prefix=32-GPR
 ; RUN: llc < %s -march=mips64el -mcpu=mips64   | FileCheck %s -check-prefix=ALL -check-prefix=FCC -check-prefix=64-FCC
 ; RUN: llc < %s -march=mips64el -mcpu=mips64r2 | FileCheck %s -check-prefix=ALL -check-prefix=FCC -check-prefix=64-FCC
 ; RUN: llc < %s -march=mips64el -mcpu=mips64r6 | FileCheck %s -check-prefix=ALL -check-prefix=GPR -check-prefix=64-GPR

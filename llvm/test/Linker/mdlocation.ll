@@ -24,3 +24,7 @@
 ; Test distinct nodes.
 !4 = distinct !DILocation(line: 3, column: 7, scope: !0)
 !5 = distinct !DILocation(line: 3, column: 7, scope: !0, inlinedAt: !4)
+
+!llvm.dbg.cu = !{!6}
+!6 = distinct !DICompileUnit(language: DW_LANG_C89, file: !7, subprograms: !{!0})
+!7 = !DIFile(filename: "source.c", directory: "/dir")

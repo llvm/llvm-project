@@ -15,6 +15,7 @@ define void @test_valid_metadata() {
 }
 
 !llvm.module.flags = !{!0, !1}
+!llvm.dbg.cu = !{!12}
 
 !0 = !{i32 2, !"Dwarf Version", i32 4}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
@@ -28,3 +29,4 @@ define void @test_valid_metadata() {
 !9 = !DILocalVariable(scope: !10)
 !10 = distinct !DISubprogram(scope: null, file: !4, isLocal: false, isDefinition: true, isOptimized: false)
 !11 = !DILocation(line: 0, scope: !10)
+!12 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: FullDebug, file: !4, subprograms: !{!3, !8, !10})

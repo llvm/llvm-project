@@ -1,6 +1,6 @@
-; RUN: llc -march=mips -mcpu=mips32r2 -O1 -filetype=obj <%s | \
+; RUN: llc -march=mips -mcpu=mips32r2 -O1 -filetype=obj -relocation-model=pic <%s | \
 ; RUN:    llvm-dwarfdump -debug-dump=all - | FileCheck %s -check-prefix=F0
-; RUN: llc -march=mips -mcpu=mips32r2 -O1 -filetype=obj <%s | \
+; RUN: llc -march=mips -mcpu=mips32r2 -O1 -filetype=obj -relocation-model=pic <%s | \
 ; RUN:    llvm-dwarfdump -debug-dump=all - | FileCheck %s -check-prefix=F1
 
 ; void foo(int *);

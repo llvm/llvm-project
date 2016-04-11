@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Function.h"
@@ -43,6 +44,43 @@ struct CalleeInfo {
     CallsiteCount++;
     ProfileCount += RHSProfileCount;
     return *this;
+  }
+};
+
+/// Struct to hold value either by GUID or Value*, depending on whether this
+/// is a combined or per-module index, respectively.
+struct ValueInfo {
+  /// The value representation used in this instance.
+  enum ValueInfoKind {
+    VI_GUID,
+    VI_Value,
+  };
+
+  /// Union of the two possible value types.
+  union ValueUnion {
+    GlobalValue::GUID Id;
+    const Value *V;
+    ValueUnion(GlobalValue::GUID Id) : Id(Id) {}
+    ValueUnion(const Value *V) : V(V) {}
+  };
+
+  /// The value being represented.
+  ValueUnion TheValue;
+  /// The value representation.
+  ValueInfoKind Kind;
+  /// Constructor for a GUID value
+  ValueInfo(GlobalValue::GUID Id = 0) : TheValue(Id), Kind(VI_GUID) {}
+  /// Constructor for a Value* value
+  ValueInfo(const Value *V) : TheValue(V), Kind(VI_Value) {}
+  /// Accessor for GUID value
+  GlobalValue::GUID getGUID() const {
+    assert(Kind == VI_GUID && "Not a GUID type");
+    return TheValue.Id;
+  }
+  /// Accessor for Value* value
+  const Value *getValue() const {
+    assert(Kind == VI_Value && "Not a Value type");
+    return TheValue.V;
   }
 };
 
@@ -78,11 +116,11 @@ private:
   /// types based on global summary-based analysis.
   GlobalValue::LinkageTypes Linkage;
 
-  /// List of GUIDs of values referenced by this global value's definition
+  /// List of values referenced by this global value's definition
   /// (either by the initializer of a global variable, or referenced
   /// from within a function). This does not include functions called, which
   /// are listed in the derived FunctionSummary object.
-  std::vector<GlobalValue::GUID> RefEdgeList;
+  std::vector<ValueInfo> RefEdgeList;
 
 protected:
   /// GlobalValueSummary constructor.
@@ -109,31 +147,35 @@ public:
   /// by \p RefGUID.
   void addRefEdge(GlobalValue::GUID RefGUID) { RefEdgeList.push_back(RefGUID); }
 
+  /// Record a reference from this global value to the global value identified
+  /// by \p RefV.
+  void addRefEdge(const Value *RefV) { RefEdgeList.push_back(RefV); }
+
   /// Record a reference from this global value to each global value identified
   /// in \p RefEdges.
-  void addRefEdges(DenseSet<unsigned> &RefEdges) {
+  void addRefEdges(DenseSet<const Value *> &RefEdges) {
     for (auto &RI : RefEdges)
       addRefEdge(RI);
   }
 
-  /// Return the list of GUIDs referenced by this global value definition.
-  std::vector<GlobalValue::GUID> &refs() { return RefEdgeList; }
-  const std::vector<GlobalValue::GUID> &refs() const { return RefEdgeList; }
+  /// Return the list of values referenced by this global value definition.
+  std::vector<ValueInfo> &refs() { return RefEdgeList; }
+  const std::vector<ValueInfo> &refs() const { return RefEdgeList; }
 };
 
 /// \brief Function summary information to aid decisions and implementation of
 /// importing.
 class FunctionSummary : public GlobalValueSummary {
 public:
-  /// <CalleeGUID, CalleeInfo> call edge pair.
-  typedef std::pair<GlobalValue::GUID, CalleeInfo> EdgeTy;
+  /// <CalleeValueInfo, CalleeInfo> call edge pair.
+  typedef std::pair<ValueInfo, CalleeInfo> EdgeTy;
 
 private:
   /// Number of instructions (ignoring debug instructions, e.g.) computed
   /// during the initial compile step when the summary index is first built.
   unsigned InstCount;
 
-  /// List of <CalleeGUID, CalleeInfo> call edge pairs from this function.
+  /// List of <CalleeValueInfo, CalleeInfo> call edge pairs from this function.
   std::vector<EdgeTy> CallGraphEdgeList;
 
 public:
@@ -156,14 +198,21 @@ public:
     CallGraphEdgeList.push_back(std::make_pair(CalleeGUID, Info));
   }
 
+  /// Record a call graph edge from this function to the function identified
+  /// by \p CalleeV, with \p CalleeInfo including the cumulative profile
+  /// count (across all calls from this function) or 0 if no PGO.
+  void addCallGraphEdge(const Value *CalleeV, CalleeInfo Info) {
+    CallGraphEdgeList.push_back(std::make_pair(CalleeV, Info));
+  }
+
   /// Record a call graph edge from this function to each function recorded
   /// in \p CallGraphEdges.
-  void addCallGraphEdges(DenseMap<unsigned, CalleeInfo> &CallGraphEdges) {
+  void addCallGraphEdges(DenseMap<const Value *, CalleeInfo> &CallGraphEdges) {
     for (auto &EI : CallGraphEdges)
       addCallGraphEdge(EI.first, EI.second);
   }
 
-  /// Return the list of <CalleeGUID, ProfileCount> pairs.
+  /// Return the list of <CalleeValueInfo, CalleeInfo> pairs.
   std::vector<EdgeTy> &calls() { return CallGraphEdgeList; }
   const std::vector<EdgeTy> &calls() const { return CallGraphEdgeList; }
 };

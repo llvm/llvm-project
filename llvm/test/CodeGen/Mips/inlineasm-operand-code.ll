@@ -1,8 +1,8 @@
 ; Positive test for inline register constraints
 ;
-; RUN: llc -no-integrated-as -march=mipsel < %s | \
+; RUN: llc -no-integrated-as -march=mipsel -relocation-model=pic < %s | \
 ; RUN:     FileCheck -check-prefix=ALL -check-prefix=LE32 -check-prefix=GAS %s
-; RUN: llc -no-integrated-as -march=mips < %s | \
+; RUN: llc -no-integrated-as -march=mips -relocation-model=pic < %s | \
 ; RUN:     FileCheck -check-prefix=ALL -check-prefix=BE32 -check-prefix=GAS %s
 
 %union.u_tag = type { i64 }

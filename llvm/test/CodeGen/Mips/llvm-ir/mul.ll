@@ -1,26 +1,26 @@
-; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s -check-prefix=ALL \
+; RUN: llc < %s -march=mips -mcpu=mips2 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=M2 -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s -check-prefix=ALL \
+; RUN: llc < %s -march=mips -mcpu=mips32 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=32R1-R5 -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r2 | FileCheck %s -check-prefix=ALL \
+; RUN: llc < %s -march=mips -mcpu=mips32r2 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=32R1-R5 -check-prefix=32R2-R5 -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r3 | FileCheck %s -check-prefix=ALL \
+; RUN: llc < %s -march=mips -mcpu=mips32r3 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=32R1-R5 -check-prefix=32R2-R5 -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r5 | FileCheck %s -check-prefix=ALL \
+; RUN: llc < %s -march=mips -mcpu=mips32r5 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=32R1-R5 -check-prefix=32R2-R5 -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s -check-prefix=ALL \
+; RUN: llc < %s -march=mips -mcpu=mips32r6 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=32R6 -check-prefix=GP32
-; RUN: llc < %s -march=mips64 -mcpu=mips4 | FileCheck %s -check-prefix=ALL \
+; RUN: llc < %s -march=mips64 -mcpu=mips4 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=M4 -check-prefix=GP64-NOT-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64 | FileCheck %s -check-prefix=ALL \
+; RUN: llc < %s -march=mips64 -mcpu=mips64 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=64R1-R5 -check-prefix=GP64-NOT-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r2 | FileCheck %s -check-prefix=ALL \
+; RUN: llc < %s -march=mips64 -mcpu=mips64r2 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=64R1-R5 -check-prefix=GP64 -check-prefix=GP64-NOT-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r3 | FileCheck %s -check-prefix=ALL \
+; RUN: llc < %s -march=mips64 -mcpu=mips64r3 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=64R1-R5 -check-prefix=GP64 -check-prefix=GP64-NOT-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r5 | FileCheck %s -check-prefix=ALL \
+; RUN: llc < %s -march=mips64 -mcpu=mips64r5 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=64R1-R5 -check-prefix=GP64 -check-prefix=GP64-NOT-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s -check-prefix=ALL \
+; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=64R6
 
 define signext i1 @mul_i1(i1 signext %a, i1 signext %b) {

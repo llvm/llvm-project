@@ -256,3 +256,44 @@ for.cond.for.end_crit_edge:
 for.end:
   ret void
 }
+
+; CHECK-LABEL: @PR27246
+;
+; int PR27246() {
+;   unsigned int e, n;
+;   for (int i = 1; i < 49; ++i) {
+;     for (int k = i; k > 1; --k)
+;       e = k;
+;     n = e;
+;   }
+;   return n;
+; }
+;
+; CHECK-NOT: vector.ph:
+;
+define i32 @PR27246() {
+entry:
+  br label %for.cond1.preheader
+
+for.cond1.preheader:
+  %i.016 = phi i32 [ 1, %entry ], [ %inc, %for.cond.cleanup3 ]
+  %e.015 = phi i32 [ undef, %entry ], [ %e.1.lcssa, %for.cond.cleanup3 ]
+  br label %for.cond1
+
+for.cond.cleanup:
+  %e.1.lcssa.lcssa = phi i32 [ %e.1.lcssa, %for.cond.cleanup3 ]
+  ret i32 %e.1.lcssa.lcssa
+
+for.cond1:
+  %e.1 = phi i32 [ %k.0, %for.cond1 ], [ %e.015, %for.cond1.preheader ]
+  %k.0 = phi i32 [ %dec, %for.cond1 ], [ %i.016, %for.cond1.preheader ]
+  %cmp2 = icmp sgt i32 %k.0, 1
+  %dec = add nsw i32 %k.0, -1
+  br i1 %cmp2, label %for.cond1, label %for.cond.cleanup3
+
+for.cond.cleanup3:
+  %e.1.lcssa = phi i32 [ %e.1, %for.cond1 ]
+  %inc = add nuw nsw i32 %i.016, 1
+  %exitcond = icmp eq i32 %inc, 49
+  br i1 %exitcond, label %for.cond.cleanup, label %for.cond1.preheader
+}
