@@ -146,6 +146,9 @@ private:
   /// \brief List of bodies of anonymous macros.
   std::deque<MCAsmMacro> MacroLikeBodies;
 
+  /// \brief List of forward directional labels for diagnosis at the end.
+  SmallVector<std::pair<SMLoc, MCSymbol *>, 4> DirectionalLabels;
+
   /// Boolean tracking whether macro substitution is enabled.
   unsigned MacrosEnabledFlag : 1;
 
@@ -683,18 +686,28 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Targets that don't do subsections via symbols may not want this, though,
   // so conservatively exclude them. Only do this if we're finalizing, though,
   // as otherwise we won't necessarilly have seen everything yet.
-  if (!NoFinalize && MAI.hasSubsectionsViaSymbols()) {
-    for (const auto &TableEntry : getContext().getSymbols()) {
-      MCSymbol *Sym = TableEntry.getValue();
-      // Variable symbols may not be marked as defined, so check those
-      // explicitly. If we know it's a variable, we have a definition for
-      // the purposes of this check.
-      if (Sym->isTemporary() && !Sym->isVariable() && !Sym->isDefined())
-        // FIXME: We would really like to refer back to where the symbol was
-        // first referenced for a source location. We need to add something
-        // to track that. Currently, we just point to the end of the file.
-        return Error(getLexer().getLoc(), "assembler local symbol '" +
-                                              Sym->getName() + "' not defined");
+  if (!NoFinalize) {
+    if (MAI.hasSubsectionsViaSymbols()) {
+      for (const auto &TableEntry : getContext().getSymbols()) {
+        MCSymbol *Sym = TableEntry.getValue();
+        // Variable symbols may not be marked as defined, so check those
+        // explicitly. If we know it's a variable, we have a definition for
+        // the purposes of this check.
+        if (Sym->isTemporary() && !Sym->isVariable() && !Sym->isDefined())
+          // FIXME: We would really like to refer back to where the symbol was
+          // first referenced for a source location. We need to add something
+          // to track that. Currently, we just point to the end of the file.
+          HadError |=
+              Error(getLexer().getLoc(), "assembler local symbol '" +
+                                             Sym->getName() + "' not defined");
+      }
+    }
+
+    // Temporary symbols like the ones for directional jumps don't go in the
+    // symbol table. They also need to be diagnosed in all (final) cases.
+    for (std::pair<SMLoc, MCSymbol *> &LocSym : DirectionalLabels) {
+      if (LocSym.second->isUndefined())
+        HadError |= Error(LocSym.first, "directional label undefined");
     }
   }
 
@@ -904,7 +917,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
             Ctx.getDirectionalLocalSymbol(IntVal, IDVal == "b");
         Res = MCSymbolRefExpr::create(Sym, Variant, getContext());
         if (IDVal == "b" && Sym->isUndefined())
-          return Error(Loc, "invalid reference to undefined symbol");
+          return Error(Loc, "directional label undefined");
+        DirectionalLabels.push_back(std::make_pair(Loc, Sym));
         EndLoc = Lexer.getTok().getEndLoc();
         Lex(); // Eat identifier.
       }
