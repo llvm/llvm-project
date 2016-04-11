@@ -51,8 +51,10 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return MF->getInfo<AArch64FunctionInfo>()->isSplitCSR() ?
            CSR_AArch64_CXX_TLS_Darwin_PE_SaveList :
            CSR_AArch64_CXX_TLS_Darwin_SaveList;
-  if (MF->getFunction()->getAttributes().hasAttrSomewhere(
-      Attribute::SwiftError))
+  if (MF->getSubtarget<AArch64Subtarget>().getTargetLowering()
+          ->supportSwiftError() &&
+      MF->getFunction()->getAttributes().hasAttrSomewhere(
+          Attribute::SwiftError))
     return CSR_AArch64_AAPCS_SwiftError_SaveList;
   if (MF->getFunction()->getCallingConv() == CallingConv::PreserveMost)
     return CSR_AArch64_RT_MostRegs_SaveList;
@@ -99,7 +101,9 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return CSR_AArch64_AllRegs_RegMask;
   if (CC == CallingConv::CXX_FAST_TLS)
     return CSR_AArch64_CXX_TLS_Darwin_RegMask;
-  if (MF.getFunction()->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
+  if (MF.getSubtarget<AArch64Subtarget>().getTargetLowering()
+          ->supportSwiftError() &&
+      MF.getFunction()->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return CSR_AArch64_AAPCS_SwiftError_RegMask;
   if (CC == CallingConv::PreserveMost)
     return CSR_AArch64_RT_MostRegs_RegMask;
