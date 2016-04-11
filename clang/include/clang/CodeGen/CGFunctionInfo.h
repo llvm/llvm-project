@@ -498,6 +498,7 @@ public:
 
   // Friending class TrailingObjects is apparently not good enough for MSVC,
   // so these have to be public.
+  friend class TrailingObjects;
   size_t numTrailingObjects(OverloadToken<ArgInfo>) const {
     return NumArgs + 1;
   }
