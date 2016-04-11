@@ -20,6 +20,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64tti"
 
+static cl::opt<unsigned> CyclonePrefetchDistance(
+    "cyclone-prefetch-distance",
+    cl::desc("Number of instructions to prefetch ahead for Cyclone"),
+    cl::init(280), cl::Hidden);
+
 /// \brief Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
@@ -570,4 +575,16 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     break;
   }
   return true;
+}
+
+unsigned AArch64TTIImpl::getCacheLineSize() {
+  if (ST->isCyclone())
+    return 64;
+  return BaseT::getCacheLineSize();
+}
+
+unsigned AArch64TTIImpl::getPrefetchDistance() {
+  if (ST->isCyclone())
+    return CyclonePrefetchDistance;
+  return BaseT::getPrefetchDistance();
 }
