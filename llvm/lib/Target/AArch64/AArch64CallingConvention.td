@@ -278,10 +278,8 @@ def CSR_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
 // case)
 def CSR_AArch64_AAPCS_ThisReturn : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X0)>;
 
-def CSR_AArch64_AAPCS_SwiftError : CalleeSavedRegs<(add LR, FP, X20, X21, X22,
-                                           X23, X24, X25, X26, X27, X28,
-                                           D8,  D9,  D10, D11,
-                                           D12, D13, D14, D15)>;
+def CSR_AArch64_AAPCS_SwiftError
+    : CalleeSavedRegs<(sub CSR_AArch64_AAPCS, X19)>;
 
 // The function used by Darwin to obtain the address of a thread-local variable
 // guarantees more than a normal AAPCS function. x16 and x17 are used on the
