@@ -273,6 +273,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       }
     }
 
+    if (auto ABIAttr = dyn_cast<ParameterABIAttr>(TmplAttr)) {
+      AddParameterABIAttr(ABIAttr->getRange(), New, ABIAttr->getABI(),
+                          ABIAttr->getSpellingListIndex());
+      continue;
+    }
+
     if (isa<NSConsumedAttr>(TmplAttr) || isa<CFConsumedAttr>(TmplAttr)) {
       AddNSConsumedAttr(TmplAttr->getRange(), New,
                         TmplAttr->getSpellingListIndex(),
