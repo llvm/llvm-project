@@ -234,6 +234,45 @@ private:
         DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendorRuntimeAssisted);
     };
     
+    class TaggedPointerVendorExtended : public TaggedPointerVendorRuntimeAssisted
+    {
+        public:
+        ObjCLanguageRuntime::ClassDescriptorSP
+        GetClassDescriptor(lldb::addr_t ptr) override;
+
+        protected:
+        TaggedPointerVendorExtended (AppleObjCRuntimeV2& runtime,
+                                     uint64_t objc_debug_taggedpointer_mask,
+                                     uint64_t objc_debug_taggedpointer_ext_mask,
+                                     uint32_t objc_debug_taggedpointer_slot_shift,
+                                     uint32_t objc_debug_taggedpointer_ext_slot_shift,
+                                     uint32_t objc_debug_taggedpointer_slot_mask,
+                                     uint32_t objc_debug_taggedpointer_ext_slot_mask,
+                                     uint32_t objc_debug_taggedpointer_payload_lshift,
+                                     uint32_t objc_debug_taggedpointer_payload_rshift,
+                                     uint32_t objc_debug_taggedpointer_ext_payload_lshift,
+                                     uint32_t objc_debug_taggedpointer_ext_payload_rshift,
+                                     lldb::addr_t objc_debug_taggedpointer_classes,
+                                     lldb::addr_t objc_debug_taggedpointer_ext_classes);
+
+        bool
+        IsPossibleExtendedTaggedPointer (lldb::addr_t ptr);
+
+        typedef std::map<uint8_t,ObjCLanguageRuntime::ClassDescriptorSP> Cache;
+        typedef Cache::iterator CacheIterator;
+        Cache                                                       m_ext_cache;
+        uint64_t                                                    m_objc_debug_taggedpointer_ext_mask;
+        uint32_t                                                    m_objc_debug_taggedpointer_ext_slot_shift;
+        uint32_t                                                    m_objc_debug_taggedpointer_ext_slot_mask;
+        uint32_t                                                    m_objc_debug_taggedpointer_ext_payload_lshift;
+        uint32_t                                                    m_objc_debug_taggedpointer_ext_payload_rshift;
+        lldb::addr_t                                                m_objc_debug_taggedpointer_ext_classes;
+
+        friend class AppleObjCRuntimeV2::TaggedPointerVendorV2;
+
+        DISALLOW_COPY_AND_ASSIGN(TaggedPointerVendorExtended);
+    };
+    
     class TaggedPointerVendorLegacy : public TaggedPointerVendorV2
     {
     public:
