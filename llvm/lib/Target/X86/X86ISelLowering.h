@@ -520,6 +520,10 @@ namespace llvm {
       LCMPXCHG8_SAVE_EBX_DAG,
       LCMPXCHG16_SAVE_RBX_DAG,
 
+      /// LOCK-prefixed arithmetic read-modify-write instructions.
+      /// EFLAGS, OUTCHAIN = LADD(INCHAIN, PTR, RHS)
+      LADD, LSUB, LOR, LXOR, LAND,
+
       // Load, scalar_to_vector, and zero extend.
       VZEXT_LOAD,
 
