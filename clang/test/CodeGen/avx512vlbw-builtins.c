@@ -2053,3 +2053,26 @@ __m256i test_mm256_maskz_loadu_epi8(__mmask32 __U, void const *__P) {
   return _mm256_maskz_loadu_epi8(__U, __P); 
 }
 
+void test_mm_mask_storeu_epi16(void *__P, __mmask8 __U, __m128i __A) {
+  // CHECK-LABEL: @test_mm_mask_storeu_epi16
+  // CHECK: @llvm.x86.avx512.mask.storeu.w.128
+  return _mm_mask_storeu_epi16(__P, __U, __A); 
+}
+
+void test_mm256_mask_storeu_epi16(void *__P, __mmask16 __U, __m256i __A) {
+  // CHECK-LABEL: @test_mm256_mask_storeu_epi16
+  // CHECK: @llvm.x86.avx512.mask.storeu.w.256
+  return _mm256_mask_storeu_epi16(__P, __U, __A); 
+}
+
+void test_mm_mask_storeu_epi8(void *__P, __mmask16 __U, __m128i __A) {
+  // CHECK-LABEL: @test_mm_mask_storeu_epi8
+  // CHECK: @llvm.x86.avx512.mask.storeu.b.128
+  return _mm_mask_storeu_epi8(__P, __U, __A); 
+}
+
+void test_mm256_mask_storeu_epi8(void *__P, __mmask32 __U, __m256i __A) {
+  // CHECK-LABEL: @test_mm256_mask_storeu_epi8
+  // CHECK: @llvm.x86.avx512.mask.storeu.b.256
+  return _mm256_mask_storeu_epi8(__P, __U, __A); 
+}

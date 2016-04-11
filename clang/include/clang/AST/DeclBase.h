@@ -568,6 +568,13 @@ public:
     return NextInContextAndBits.getInt() & ModulePrivateFlag;
   }
 
+  /// Return true if this declaration has an attribute which acts as
+  /// definition of the entity, such as 'alias' or 'ifunc'.
+  bool hasDefiningAttr() const;
+
+  /// Return this declaration's defining attribute if it has one.
+  const Attr *getDefiningAttr() const;
+
 protected:
   /// \brief Specify whether this declaration was marked as being private
   /// to the module in which it was defined.

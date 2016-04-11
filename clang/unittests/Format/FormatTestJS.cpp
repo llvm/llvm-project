@@ -686,6 +686,8 @@ TEST_F(FormatTestJS, AutomaticSemicolonInsertionHeuristic) {
   verifyFormat("x instanceof String", "x\n"
                                       "instanceof\n"
                                       "String");
+  verifyFormat("function f(@Foo bar) {}", "function f(@Foo\n"
+                                          "  bar) {}");
 }
 
 TEST_F(FormatTestJS, ClosureStyleCasts) {
@@ -933,6 +935,9 @@ TEST_F(FormatTestJS, MetadataAnnotations) {
                "  private x(): string {\n"
                "    return 'y';\n"
                "  }\n"
+               "}");
+  verifyFormat("class C {\n"
+               "  private x(@A x: string) {}\n"
                "}");
   verifyFormat("class X {}\n"
                "class Y {}");

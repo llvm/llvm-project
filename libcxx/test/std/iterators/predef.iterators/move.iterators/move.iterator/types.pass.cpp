@@ -18,7 +18,7 @@
 // public:
 //   typedef Iter                  iterator_type;
 //   typedef Iter::difference_type difference_type;
-//   typedef Iterator              pointer;
+//   typedef Iter                  pointer;
 //   typedef Iter::value_type      value_type;
 //   typedef value_type&&          reference;
 // };
@@ -36,7 +36,7 @@ test()
     typedef std::iterator_traits<It> T;
     static_assert((std::is_same<typename R::iterator_type, It>::value), "");
     static_assert((std::is_same<typename R::difference_type, typename T::difference_type>::value), "");
-    static_assert((std::is_same<typename R::pointer, typename T::pointer>::value), "");
+    static_assert((std::is_same<typename R::pointer, It>::value), "");
     static_assert((std::is_same<typename R::value_type, typename T::value_type>::value), "");
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     static_assert((std::is_same<typename R::reference, typename R::value_type&&>::value), "");

@@ -2466,17 +2466,21 @@ def err_attribute_weakref_without_alias : Error<
 def err_alias_not_supported_on_darwin : Error <
   "only weak aliases are supported on darwin">;
 def err_alias_to_undefined : Error<
-  "alias must point to a defined variable or function">;
+  "%select{alias|ifunc}0 must point to a defined %select{variable or |}1function">;
 def warn_alias_to_weak_alias : Warning<
-  "alias will always resolve to %0 even if weak definition of alias %1 is overridden">,
+  "%select{alias|ifunc}2 will always resolve to %0 even if weak definition of %1 is overridden">,
   InGroup<IgnoredAttributes>;
 def warn_alias_with_section : Warning<
-  "alias will not be in section '%0' but in the same section as the aliasee">,
+  "%select{alias|ifunc}1 will not be in section '%0' but in the same section as the %select{aliasee|resolver}2">,
   InGroup<IgnoredAttributes>;
 def err_duplicate_mangled_name : Error<
   "definition with same mangled name as another definition">;
 def err_cyclic_alias : Error<
-  "alias definition is part of a cycle">;
+  "%select{alias|ifunc}0 definition is part of a cycle">;
+def err_ifunc_resolver_return : Error<
+  "ifunc resolver function must return a pointer">;
+def err_ifunc_resolver_params : Error<
+  "ifunc resolver function must have no parameters">;
 def warn_attribute_wrong_decl_type : Warning<
   "%0 attribute only applies to %select{functions|unions|"
   "variables and functions|functions and methods|parameters|"
@@ -4221,7 +4225,7 @@ def err_redefinition : Error<"redefinition of %0">;
 def err_alias_after_tentative :
   Error<"alias definition of %0 after tentative definition">;
 def err_alias_is_definition :
-  Error<"definition %0 cannot also be an alias">;
+  Error<"definition %0 cannot also be an %select{alias|ifunc}1">;
 def err_definition_of_implicitly_declared_member : Error<
   "definition of implicitly declared %select{default constructor|copy "
   "constructor|move constructor|copy assignment operator|move assignment "

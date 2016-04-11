@@ -1981,6 +1981,22 @@ _mm512_maskz_loadu_epi8 (__mmask64 __U, void const *__P)
                  _mm512_setzero_hi (),
                  (__mmask64) __U);
 }
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm512_mask_storeu_epi16 (void *__P, __mmask32 __U, __m512i __A)
+{
+  __builtin_ia32_storedquhi512_mask ((__v32hi *) __P,
+             (__v32hi) __A,
+             (__mmask32) __U);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm512_mask_storeu_epi8 (void *__P, __mmask64 __U, __m512i __A)
+{
+  __builtin_ia32_storedquqi512_mask ((__v64qi *) __P,
+             (__v64qi) __A,
+             (__mmask64) __U);
+}
+
 #undef __DEFAULT_FN_ATTRS
 
 #endif

@@ -362,6 +362,18 @@ bool Decl::isReferenced() const {
   return false; 
 }
 
+bool Decl::hasDefiningAttr() const {
+  return hasAttr<AliasAttr>() || hasAttr<IFuncAttr>();
+}
+
+const Attr *Decl::getDefiningAttr() const {
+  if (AliasAttr *AA = getAttr<AliasAttr>())
+    return AA;
+  if (IFuncAttr *IFA = getAttr<IFuncAttr>())
+    return IFA;
+  return nullptr;
+}
+
 /// \brief Determine the availability of the given declaration based on
 /// the target platform.
 ///

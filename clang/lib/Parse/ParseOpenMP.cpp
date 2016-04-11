@@ -1596,8 +1596,7 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
        (Kind != OMPC_map)) ||
       ((Kind == OMPC_reduction) && !InvalidReductionId) ||
       ((Kind == OMPC_map) && (MapType != OMPC_MAP_unknown) &&
-       (!MapTypeModifierSpecified ||
-        (MapTypeModifierSpecified && MapTypeModifier == OMPC_MAP_always))) ||
+       (!MapTypeModifierSpecified || MapTypeModifier == OMPC_MAP_always)) ||
       ((Kind == OMPC_depend) && DepKind != OMPC_DEPEND_unknown);
   const bool MayHaveTail = (Kind == OMPC_linear || Kind == OMPC_aligned);
   while (IsComma || (Tok.isNot(tok::r_paren) && Tok.isNot(tok::colon) &&

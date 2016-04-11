@@ -1946,7 +1946,7 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   if (hasInit())
     return Definition;
 
-  if (hasAttr<AliasAttr>())
+  if (hasDefiningAttr())
     return Definition;
 
   if (const auto *SAA = getAttr<SelectAnyAttr>())
@@ -2486,7 +2486,7 @@ bool FunctionDecl::hasTrivialBody() const
 bool FunctionDecl::isDefined(const FunctionDecl *&Definition) const {
   for (auto I : redecls()) {
     if (I->IsDeleted || I->IsDefaulted || I->Body || I->IsLateTemplateParsed ||
-        I->hasAttr<AliasAttr>()) {
+        I->hasDefiningAttr()) {
       Definition = I->IsDeleted ? I->getCanonicalDecl() : I;
       return true;
     }

@@ -582,8 +582,7 @@ void IvarInvalidationCheckerImpl::MethodCrawler::markInvalidated(
     // If InvalidationMethod is present, we are processing the message send and
     // should ensure we are invalidating with the appropriate method,
     // otherwise, we are processing setting to 'nil'.
-    if (!InvalidationMethod ||
-        (InvalidationMethod && I->second.hasMethod(InvalidationMethod)))
+    if (!InvalidationMethod || I->second.hasMethod(InvalidationMethod))
       IVars.erase(I);
   }
 }
