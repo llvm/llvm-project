@@ -270,6 +270,8 @@ public:
 
   unsigned getMinPrefetchStride() { return 1; }
 
+  unsigned getMaxPrefetchIterationsAhead() { return UINT_MAX; }
+
   unsigned getMaxInterleaveFactor(unsigned VF) { return 1; }
 
   unsigned getArithmeticInstrCost(unsigned Opcode, Type *Ty,

@@ -171,6 +171,9 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
   if (!ItersAhead)
     ItersAhead = 1;
 
+  if (ItersAhead > TTI->getMaxPrefetchIterationsAhead())
+    return MadeChange;
+
   DEBUG(dbgs() << "Prefetching " << ItersAhead
                << " iterations ahead (loop size: " << LoopSize << ") in "
                << L->getHeader()->getParent()->getName() << ": " << *L);

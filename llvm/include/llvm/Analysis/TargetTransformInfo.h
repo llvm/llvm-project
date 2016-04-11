@@ -428,6 +428,11 @@ public:
   /// adding SW prefetches.  The default is 1, i.e. prefetch with any stride.
   unsigned getMinPrefetchStride() const;
 
+  /// \return The maximum number of iterations to prefetch ahead.  If the
+  /// required number of iterations is more than this number, no prefetching is
+  /// performed.
+  unsigned getMaxPrefetchIterationsAhead() const;
+
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
   /// and the number of execution units in the CPU.
@@ -624,6 +629,7 @@ public:
   virtual unsigned getCacheLineSize() = 0;
   virtual unsigned getPrefetchDistance() = 0;
   virtual unsigned getMinPrefetchStride() = 0;
+  virtual unsigned getMaxPrefetchIterationsAhead() = 0;
   virtual unsigned getMaxInterleaveFactor(unsigned VF) = 0;
   virtual unsigned
   getArithmeticInstrCost(unsigned Opcode, Type *Ty, OperandValueKind Opd1Info,
@@ -796,6 +802,9 @@ public:
   unsigned getPrefetchDistance() override { return Impl.getPrefetchDistance(); }
   unsigned getMinPrefetchStride() override {
     return Impl.getMinPrefetchStride();
+  }
+  unsigned getMaxPrefetchIterationsAhead() override {
+    return Impl.getMaxPrefetchIterationsAhead();
   }
   unsigned getMaxInterleaveFactor(unsigned VF) override {
     return Impl.getMaxInterleaveFactor(VF);
