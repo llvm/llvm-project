@@ -11,7 +11,7 @@ entry:
 ; Checks that SROA still inserts a bit_piece expression, even if it produces only one piece
 ; (as long as that piece is smaller than the whole thing)
 ; CHECK-NOT: call void @llvm.dbg.value
-; CHECK: call void @llvm.dbg.value(metadata %foo* undef, i64 0, metadata !1, metadata ![[BIT_PIECE:[0-9]+]]), !dbg
+; CHECK: call void @llvm.dbg.value(metadata %foo* undef, i64 0, {{.*}}, metadata ![[BIT_PIECE:[0-9]+]]), !dbg
 ; CHECK-NOT: call void @llvm.dbg.value
 ; CHECK: ![[BIT_PIECE]] = !DIExpression(DW_OP_bit_piece, 64, 64)
   %0 = bitcast %foo* %retval to i8*
@@ -23,7 +23,7 @@ entry:
 
 attributes #0 = { nounwind readnone }
 
-!llvm.dbg.cu = !{}
+!llvm.dbg.cu = !{!9}
 !llvm.module.flags = !{!0}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
@@ -35,3 +35,4 @@ attributes #0 = { nounwind readnone }
 !6 = !{}
 !7 = !DIExpression()
 !8 = !DILocation(line: 947, column: 35, scope: !2)
+!9 = distinct !DICompileUnit(language: DW_LANG_Julia, file: !3, subprograms: !{!2})
