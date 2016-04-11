@@ -59,31 +59,34 @@ Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
 /// that have constant shift amounts.
 /// FIXME: This can be extended to handle either a shl or lshr instruction, but
 /// it is currently only valid for a shl.
-static bool canEvaluateShiftedShift(unsigned NumBits, bool IsLeftShift,
-                                    Instruction *I, InstCombiner &IC,
+static bool canEvaluateShiftedShift(unsigned FirstShiftAmt,
+                                    bool IsFirstShiftLeft,
+                                    Instruction *SecondShift, InstCombiner &IC,
                                     Instruction *CxtI) {
-  // We can often fold the shift into shifts-by-a-constant.
-  ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1));
-  if (!CI)
+  // We need constant shifts.
+  auto *SecondShiftConst = dyn_cast<ConstantInt>(SecondShift->getOperand(1));
+  if (!SecondShiftConst)
     return false;
 
-  // We can always fold shl(c1)+shl(c2) -> shl(c1+c2).
-  if (IsLeftShift)
+  unsigned SecondShiftAmt = SecondShiftConst->getZExtValue();
+
+  // We can always fold shl(c1) + shl(c2) -> shl(c1+c2).
+  if (IsFirstShiftLeft)
     return true;
 
-  // We can always turn shl(c)+shr(c) -> and(c2).
-  if (CI->getValue() == NumBits)
+  // We can always fold shr(c) + shl(c) -> and(c2).
+  if (SecondShiftAmt == FirstShiftAmt)
     return true;
 
-  unsigned TypeWidth = I->getType()->getScalarSizeInBits();
+  unsigned TypeWidth = SecondShift->getType()->getScalarSizeInBits();
 
-  // We can turn shl(c1)+shr(c2) -> shl(c3)+and(c4), but it isn't
-  // profitable unless we know the and'd out bits are already zero.
-  if (CI->getZExtValue() > NumBits) {
-    unsigned LowBits = TypeWidth - CI->getZExtValue();
-    if (IC.MaskedValueIsZero(
-            I->getOperand(0),
-            APInt::getLowBitsSet(TypeWidth, NumBits) << LowBits, 0, CxtI))
+  // If the 2nd shift is bigger than the 1st, we can fold:
+  //   shr(c1) + shl(c2) -> shl(c3) + and(c4)
+  // but it isn't profitable unless we know the and'd out bits are already zero.
+  if (SecondShiftAmt > FirstShiftAmt) {
+    unsigned MaskShift = TypeWidth - SecondShiftAmt;
+    APInt Mask = APInt::getLowBitsSet(TypeWidth, FirstShiftAmt) << MaskShift;
+    if (IC.MaskedValueIsZero(SecondShift->getOperand(0), Mask, 0, CxtI))
       return true;
   }
 
