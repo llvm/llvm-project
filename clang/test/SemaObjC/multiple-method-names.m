@@ -2,11 +2,11 @@
 // PR22047
 
 @interface Face0
-- (void)foo:(float)i; // expected-note {{using}}
+- (void)foo:(float)i; // expected-note {{also found}}
 @end
 
 @interface Face1
-- (void)foo:(int)i __attribute__((unavailable));
+- (void)foo:(int)i __attribute__((unavailable)); // expected-note {{using}}
 @end
 
 @interface Face2

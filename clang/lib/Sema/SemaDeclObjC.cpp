@@ -3173,6 +3173,26 @@ bool Sema::MatchTwoMethodDeclarations(const ObjCMethodDecl *left,
   return true;
 }
 
+static bool isMethodContextSameForKindofLookup(ObjCMethodDecl *Method,
+                                               ObjCMethodDecl *MethodInList) {
+  auto *MethodProtocol = dyn_cast<ObjCProtocolDecl>(Method->getDeclContext());
+  auto *MethodInListProtocol =
+      dyn_cast<ObjCProtocolDecl>(MethodInList->getDeclContext());
+  // If this method belongs to a protocol but the method in list does not, or
+  // vice versa, we say the context is not the same.
+  if ((MethodProtocol && !MethodInListProtocol) ||
+      (!MethodProtocol && MethodInListProtocol))
+    return false;
+
+  if (MethodProtocol && MethodInListProtocol)
+    return true;
+
+  ObjCInterfaceDecl *MethodInterface = Method->getClassInterface();
+  ObjCInterfaceDecl *MethodInListInterface =
+      MethodInList->getClassInterface();
+  return MethodInterface == MethodInListInterface;
+}
+
 void Sema::addMethodToGlobalList(ObjCMethodList *List,
                                  ObjCMethodDecl *Method) {
   // Record at the head of the list whether there were 0, 1, or >= 2 methods
@@ -3191,13 +3211,17 @@ void Sema::addMethodToGlobalList(ObjCMethodList *List,
 
   // We've seen a method with this name, see if we have already seen this type
   // signature.
+  ObjCMethodList *Head = List;
   ObjCMethodList *Previous = List;
   for (; List; Previous = List, List = List->getNext()) {
     // If we are building a module, keep all of the methods.
     if (getLangOpts().CompilingModule)
       continue;
 
-    if (!MatchTwoMethodDeclarations(Method, List->getMethod())) {
+    // Looking for method with a type bound requires the correct context exists.
+    // We need to insert this method into the list if the context is different.
+    if (!MatchTwoMethodDeclarations(Method, List->getMethod()) ||
+        !isMethodContextSameForKindofLookup(Method, List->getMethod())) {
       // Even if two method types do not match, we would like to say
       // there is more than one declaration so unavailability/deprecated
       // warning is not too noisy.
@@ -3238,6 +3262,19 @@ void Sema::addMethodToGlobalList(ObjCMethodList *List,
   // We have a new signature for an existing method - add it.
   // This is extremely rare. Only 1% of Cocoa selectors are "overloaded".
   ObjCMethodList *Mem = BumpAlloc.Allocate<ObjCMethodList>();
+
+  // We tried to prioritize the list by putting deprecated and unavailable
+  // methods in the front.
+  if ((Method->isDeprecated() && !Head->getMethod()->isDeprecated()) ||
+      (Method->isUnavailable() &&
+       Head->getMethod()->getAvailability() < AR_Deprecated)) {
+    auto *List = new (Mem) ObjCMethodList(*Head);
+    // FIXME: should we clear the other bits in Head?
+    Head->setMethod(Method);
+    Head->setNext(List);
+    return;
+  }
+
   Previous->setNext(new (Mem) ObjCMethodList(Method));
 }
 
