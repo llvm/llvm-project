@@ -842,6 +842,10 @@ lldb_private::formatters::NSDataSummaryProvider (ValueObject& valobj, Stream& st
         if (error.Fail())
             return false;
     }
+    else if (!strcmp(class_name, "_NSZeroData"))
+    {
+        value = 0;
+    }
     else
         return false;
     
