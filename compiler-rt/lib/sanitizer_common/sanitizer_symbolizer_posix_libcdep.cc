@@ -74,6 +74,13 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
   if (use_forkpty_) {
 #if SANITIZER_MAC
     fd_t fd = kInvalidFd;
+
+    // forkpty redirects stdout and stderr into a single stream, so we would
+    // receive error messages as standard replies. To avoid that, let's dup
+    // stderr and restore it in the child.
+    int saved_stderr = dup(STDERR_FILENO);
+    CHECK_GE(saved_stderr, 0);
+
     // Use forkpty to disable buffering in the new terminal.
     pid = internal_forkpty(&fd);
     if (pid == -1) {
@@ -83,6 +90,11 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
       return false;
     } else if (pid == 0) {
       // Child subprocess.
+
+      // Restore stderr.
+      CHECK_GE(dup2(saved_stderr, STDERR_FILENO), 0);
+      close(saved_stderr);
+
       const char *argv[kArgVMax];
       GetArgV(path_, argv);
       execv(path_, const_cast<char **>(&argv[0]));
@@ -91,6 +103,8 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
 
     // Continue execution in parent process.
     input_fd_ = output_fd_ = fd;
+
+    close(saved_stderr);
 
     // Disable echo in the new terminal, disable CR.
     struct termios termflags;

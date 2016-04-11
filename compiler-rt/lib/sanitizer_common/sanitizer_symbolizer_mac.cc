@@ -79,23 +79,6 @@ class AtosSymbolizerProcess : public SymbolizerProcess {
   char pid_str_[16];
 };
 
-static const char *kAtosErrorMessages[] = {
-  "atos cannot examine process",
-  "unable to get permission to examine process",
-  "An admin user name and password is required",
-  "could not load inserted library",
-  "architecture mismatch between analysis process",
-};
-
-static bool IsAtosErrorMessage(const char *str) {
-  for (uptr i = 0; i < ARRAY_SIZE(kAtosErrorMessages); i++) {
-    if (internal_strstr(str, kAtosErrorMessages[i])) {
-      return true;
-    }
-  }
-  return false;
-}
-
 static bool ParseCommandOutput(const char *str, uptr addr, char **out_name,
                                char **out_module, char **out_file, uptr *line,
                                uptr *start_address) {
@@ -111,12 +94,6 @@ static bool ParseCommandOutput(const char *str, uptr addr, char **out_name,
   //   0xdeadbeef (in library.dylib) + 15
   //   0xdeadbeef (in library.dylib)
   //   0xdeadbeef
-
-  if (IsAtosErrorMessage(trim)) {
-    Report("atos returned an error: %s\n", trim);
-    InternalFree(trim);
-    return false;
-  }
 
   const char *rest = trim;
   char *symbol_name;
