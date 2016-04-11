@@ -131,6 +131,8 @@ public:
   unsigned getCacheLineSize();
 
   unsigned getPrefetchDistance();
+
+  unsigned getMinPrefetchStride();
   /// @}
 };
 

@@ -423,6 +423,11 @@ public:
   /// This is currently measured in number of instructions.
   unsigned getPrefetchDistance() const;
 
+  /// \return Some HW prefetchers can handle accesses up to a certain constant
+  /// stride.  This is the minimum stride in bytes where it makes sense to start
+  /// adding SW prefetches.  The default is 1, i.e. prefetch with any stride.
+  unsigned getMinPrefetchStride() const;
+
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
   /// and the number of execution units in the CPU.
@@ -618,6 +623,7 @@ public:
   virtual unsigned getRegisterBitWidth(bool Vector) = 0;
   virtual unsigned getCacheLineSize() = 0;
   virtual unsigned getPrefetchDistance() = 0;
+  virtual unsigned getMinPrefetchStride() = 0;
   virtual unsigned getMaxInterleaveFactor(unsigned VF) = 0;
   virtual unsigned
   getArithmeticInstrCost(unsigned Opcode, Type *Ty, OperandValueKind Opd1Info,
@@ -788,6 +794,9 @@ public:
     return Impl.getCacheLineSize();
   }
   unsigned getPrefetchDistance() override { return Impl.getPrefetchDistance(); }
+  unsigned getMinPrefetchStride() override {
+    return Impl.getMinPrefetchStride();
+  }
   unsigned getMaxInterleaveFactor(unsigned VF) override {
     return Impl.getMaxInterleaveFactor(VF);
   }
