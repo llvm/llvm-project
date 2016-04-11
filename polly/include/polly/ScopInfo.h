@@ -650,6 +650,21 @@ private:
   /// @param SAI Info object for the accessed array.
   void buildAccessRelation(const ScopArrayInfo *SAI);
 
+  /// @brief Carry index overflows of dimensions with constant size to the next
+  ///        higher dimension.
+  ///
+  /// For dimensions that have constant size, modulo the index by the size and
+  /// add up the carry (floored division) to the next higher dimension. This is
+  /// how overflow is defined in row-major order.
+  /// It happens e.g. when ScalarEvolution computes the offset to the base
+  /// pointer and would algebraically sum up all lower dimensions' indices of
+  /// constant size.
+  ///
+  /// Example:
+  ///   float (*A)[4];
+  ///   A[1][6] -> A[2][2]
+  void wrapConstantDimensions();
+
 public:
   /// @brief Create a new MemoryAccess.
   ///

@@ -68,7 +68,7 @@ follows:</p>
     <li><tt>cd ../../../..</tt></li>
   </ul>
   </li>
-  <li>Checkout Compiler-RT:
+  <li>Checkout Compiler-RT (optional):
   <ul>
     <li><tt>cd llvm/projects</tt></li>
     <li><tt>svn co http://llvm.org/svn/llvm-project/compiler-rt/trunk
@@ -109,7 +109,7 @@ follows:</p>
       scenarios, you can use the <tt>-DGCC_INSTALL_PREFIX</tt> cmake option
       to tell Clang where the gcc containing the desired libstdc++ is installed.
   </li>
-  <li>Try it out (assuming you add llvm/Debug+Asserts/bin to your path):
+  <li>Try it out (assuming you add llvm/build/bin to your path):
   <ul>
     <li><tt>clang --help</tt></li>
     <li><tt>clang file.c -fsyntax-only</tt> (check for correctness)</li>
@@ -120,10 +120,10 @@ follows:</p>
   </li>
 </ol>
 
-<p>Note that the C front-end uses LLVM, but does not depend on llvm-gcc. If you
-encounter problems with building Clang, make sure you have the latest SVN
-version of LLVM. LLVM contains support libraries for Clang that will be updated
-as well as development on Clang progresses.</p>
+<p>If you encounter problems while building Clang, make sure that your LLVM
+checkout is at the same revision as your Clang checkout. LLVM's interfaces
+change over time, and mismatched revisions are not expected to work
+together.</p>
   
 <h3>Simultaneously Building Clang and LLVM:</h3>
 

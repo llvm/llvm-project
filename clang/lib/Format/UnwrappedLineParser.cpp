@@ -718,7 +718,7 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
   if (PreviousMustBeValue && Line && Line->Tokens.size() > 1) {
     // If the token before the previous one is an '@', the previous token is an
     // annotation and can precede another identifier/value.
-    const FormatToken *PrePrevious = std::next(Line->Tokens.rend(), 2)->Tok;
+    const FormatToken *PrePrevious = std::prev(Line->Tokens.end(), 2)->Tok;
     if (PrePrevious->is(tok::at))
       return;
   }

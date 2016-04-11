@@ -206,12 +206,10 @@ template <class ELFT, class uintX_t>
 static uintX_t adjustMipsSymVA(uint32_t Type, const elf::ObjectFile<ELFT> &File,
                                const SymbolBody &Body, uintX_t AddrLoc,
                                uintX_t SymVA) {
-  if (Type == R_MIPS_HI16 && &Body == Config->MipsGpDisp)
-    return getMipsGpAddr<ELFT>() - AddrLoc;
-  if (Type == R_MIPS_LO16 && &Body == Config->MipsGpDisp)
-    return getMipsGpAddr<ELFT>() - AddrLoc + 4;
-  if (&Body == Config->MipsLocalGp)
-    return getMipsGpAddr<ELFT>();
+  if (Type == R_MIPS_HI16 && &Body == ElfSym<ELFT>::MipsGpDisp)
+    return SymVA - AddrLoc;
+  if (Type == R_MIPS_LO16 && &Body == ElfSym<ELFT>::MipsGpDisp)
+    return SymVA - AddrLoc + 4;
   if (Body.isLocal() && (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32))
     // We need to adjust SymVA value in case of R_MIPS_GPREL16/32
     // relocations because they use the following expression to calculate

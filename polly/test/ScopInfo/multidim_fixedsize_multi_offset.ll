@@ -1,8 +1,20 @@
-; RUN: opt %loadPolly -polly-detect -analyze < %s | FileCheck %s -check-prefix=DETECT
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ;
-; DETECT: Valid Region for Scop: for.cond => for.end
-; CHECK-NOT: Region: %for.cond---%for.end
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_for_body
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_for_body[i0] : 0 <= i0 <= 99 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_for_body[i0] -> [i0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_for_body[i0] -> MemRef_A[i0, 0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_for_body[i0] -> MemRef_A[i0, 0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_for_body[i0] -> MemRef_A[1 + i0, 0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_for_body[i0] -> MemRef_A[1 + i0, 0] };
+; CHECK-NEXT: }
 ;
 ;    void f(int A[][2]) {
 ;      int(*B)[2] = &A[0][0];
@@ -13,11 +25,8 @@
 ;      }
 ;    }
 ;
-; This test case makes sure we do not miss parts of the array subscript
-; functions, which we previously did by only considering the first of a chain
-; of GEP instructions. Today, we detect this situation and do not delinearize
-; the relevant memory access. In the future, we may want to detect this
-; pattern and combine multiple GEP functions together.
+; Verify that the additional offset to A by accessing it through C is taken into
+; account.
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

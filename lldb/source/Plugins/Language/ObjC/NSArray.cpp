@@ -35,6 +35,20 @@ using namespace lldb_private::formatters;
 
 namespace  lldb_private {
     namespace formatters {
+        std::map<ConstString, CXXFunctionSummaryFormat::Callback>&
+        NSArray_Additionals::GetAdditionalSummaries ()
+        {
+            static std::map<ConstString, CXXFunctionSummaryFormat::Callback> g_map;
+            return g_map;
+        }
+        
+        std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback>&
+        NSArray_Additionals::GetAdditionalSynthetics ()
+        {
+            static std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback> g_map;
+            return g_map;
+        }
+        
         class NSArrayMSyntheticFrontEnd : public SyntheticChildrenFrontEnd
         {
         public:
@@ -322,7 +336,14 @@ lldb_private::formatters::NSArraySummaryProvider (ValueObject& valobj, Stream& s
             return false;
     }
     else
-        return false;
+    {
+        auto& map(NSArray_Additionals::GetAdditionalSummaries());
+        auto iter = map.find(class_name), end = map.end();
+        if (iter != end)
+            return iter->second(valobj, stream, options);
+        else
+            return false;
+    }
     
     std::string prefix,suffix;
     if (Language* language = Language::FindPlugin(options.GetLanguage()))
@@ -746,7 +767,7 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex (size_t idx
     return lldb::ValueObjectSP();
 }
 
-SyntheticChildrenFrontEnd* lldb_private::formatters::NSArraySyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
+SyntheticChildrenFrontEnd* lldb_private::formatters::NSArraySyntheticFrontEndCreator (CXXSyntheticChildren* synth, lldb::ValueObjectSP valobj_sp)
 {
     if (!valobj_sp)
         return nullptr;
@@ -802,6 +823,13 @@ SyntheticChildrenFrontEnd* lldb_private::formatters::NSArraySyntheticFrontEndCre
             return (new NSArrayMSyntheticFrontEnd_1010(valobj_sp));
         else
             return (new NSArrayMSyntheticFrontEnd_109(valobj_sp));
+    }
+    else
+    {
+        auto& map(NSArray_Additionals::GetAdditionalSynthetics());
+        auto iter = map.find(class_name), end = map.end();
+        if (iter != end)
+            return iter->second(synth, valobj_sp);
     }
     
     return nullptr;

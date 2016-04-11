@@ -1344,7 +1344,6 @@ cores_match (const ArchSpec::Core core1, const ArchSpec::Core core2, bool try_in
         {
             if (core2 == ArchSpec::eCore_mips32el || core2 == ArchSpec::eCore_mips32r6el)
                 return true;
-                return true;
         }
         break;
 
