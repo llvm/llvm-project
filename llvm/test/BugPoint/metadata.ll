@@ -24,7 +24,6 @@ define void @test(i32* %a, i8* %b) {
 declare void @foo()
 
 !llvm.module.flags = !{!17}
-!llvm.dbg.cu = !{!8}
 
 !0 = !{!"boring"}
 !1 = !{!"uninteresting"}
@@ -32,7 +31,6 @@ declare void @foo()
 !3 = !{!"noise"}
 !4 = !{!"filler"}
 
-!8 = distinct !DICompileUnit(language: DW_LANG_C99, file: !15, subprograms: !{!9})
 !9 = distinct !DISubprogram(name: "test", file: !15)
 !10 = !DILocation(line: 100, column: 101, scope: !9)
 !11 = !DILocation(line: 102, column: 103, scope: !9)
