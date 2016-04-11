@@ -48,7 +48,7 @@ def RetCC_ARM_APCS : CallingConv<[
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
   CCIfType<[f32], CCBitConvertToType<i32>>,
 
-  // An SwiftError is returned in R6.
+  // A SwiftError is returned in R6.
   CCIfSwiftError<CCIfType<[i32], CCAssignToReg<[R6]>>>,
 
   // Handle all vector types as either f64 or v2f64.
@@ -176,7 +176,7 @@ def RetCC_ARM_AAPCS : CallingConv<[
   CCIfType<[v1i64, v2i32, v4i16, v8i8, v2f32], CCBitConvertToType<f64>>,
   CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32], CCBitConvertToType<v2f64>>,
 
-  // An SwiftError is returned in R6.
+  // A SwiftError is returned in R6.
   CCIfSwiftError<CCIfType<[i32], CCAssignToReg<[R6]>>>,
 
   CCIfType<[f64, v2f64], CCCustom<"RetCC_ARM_AAPCS_Custom_f64">>,
@@ -218,7 +218,7 @@ def RetCC_ARM_AAPCS_VFP : CallingConv<[
   CCIfType<[v1i64, v2i32, v4i16, v8i8, v2f32], CCBitConvertToType<f64>>,
   CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32], CCBitConvertToType<v2f64>>,
 
-  // An SwiftError is returned in R6.
+  // A SwiftError is returned in R6.
   CCIfSwiftError<CCIfType<[i32], CCAssignToReg<[R6]>>>,
 
   CCIfType<[v2f64], CCAssignToReg<[Q0, Q1, Q2, Q3]>>,

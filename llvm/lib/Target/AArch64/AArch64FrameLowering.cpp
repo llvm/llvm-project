@@ -710,7 +710,8 @@ static bool produceCompactUnwindFrame(MachineFunction &MF) {
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   AttributeSet Attrs = MF.getFunction()->getAttributes();
   return Subtarget.isTargetMachO() &&
-         !Attrs.hasAttrSomewhere(Attribute::SwiftError);
+         !(Subtarget.getTargetLowering()->supportSwiftError() &&
+           Attrs.hasAttrSomewhere(Attribute::SwiftError));
 }
 
 
