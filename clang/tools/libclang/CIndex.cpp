@@ -3571,12 +3571,13 @@ static const ExprEvalResult* evaluateExpr(Expr *expr, CXCursor C) {
       rettype = callExpr->getCallReturnType(ctx);
 
       if (rettype->isVectorType() || callExpr->getNumArgs() > 1) {
+        clang_EvalResult_dispose((CXEvalResult *)result);
         return nullptr;
       }
       if (rettype->isIntegralType(ctx) || rettype->isRealFloatingType()) {
         if(callExpr->getNumArgs() == 1 &&
-              !callExpr->getArg(0)->getType()->isIntegralType(ctx)){
-
+              !callExpr->getArg(0)->getType()->isIntegralType(ctx)) {
+          clang_EvalResult_dispose((CXEvalResult *)result);
           return nullptr;
         }
       } else if(rettype.getAsString() == "CFStringRef") {

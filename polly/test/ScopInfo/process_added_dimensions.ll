@@ -1,20 +1,32 @@
-; RUN: opt %loadPolly -polly-detect -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 
-; This test case produces the following memory access which we try hoist:
-; { Stmt_for_cond40_preheader_5[i0] -> MemRef_call[0, 0, 2240] }. However, it
-; accesses an array of size "i32 MemRef_call[*][6][64]".  That is why we
-; should turn the whole SCoP into an invalid SCoP using corresponding bounds
-; checks. Otherwise, we derive the incorrect access.
-
-; CHECK: Valid Region for Scop: for.cond40.preheader.4 => for.end76
-; CHECK-NOT:     Region: %for.cond40.preheader.4---%for.end76
+; CHECK:      Invariant Accesses: {
+; CHECK-NEXT: }
+; CHECK:      Statements {
+; CHECK-NEXT:     Stmt_for_cond40_preheader_4
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_for_cond40_preheader_4[i0] : 0 <= i0 <= 1 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_for_cond40_preheader_4[i0] -> [i0, 0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_for_cond40_preheader_4[i0] -> MemRef_call[5, 5, 0] };
+; CHECK-NEXT:     Stmt_for_cond40_preheader_5
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             { Stmt_for_cond40_preheader_5[i0] : 0 <= i0 <= 1 };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             { Stmt_for_cond40_preheader_5[i0] -> [i0, 1] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_for_cond40_preheader_5[i0] -> MemRef_call[5, 5, 0] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             { Stmt_for_cond40_preheader_5[i0] -> MemRef__pre160[] };
+; CHECK-NEXT: }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 declare noalias i8* @malloc()
 
-define void @main() {
+define i32 @main() {
 entry:
   %call = tail call noalias i8* @malloc()
   %0 = bitcast i8* %call to [6 x [6 x [64 x i32]]]*
@@ -23,7 +35,7 @@ entry:
   br label %for.cond40.preheader.4
 
 for.end76:                                        ; preds = %for.inc71.5
-  ret void
+  ret i32 %.pre160
 
 for.cond40.preheader.4:                           ; preds = %for.inc71.5, %entry
   %t.0131 = phi i32 [ 0, %entry ], [ %inc75, %for.inc71.5 ]

@@ -72,14 +72,14 @@ public:
   // Returns the size of the section in the output file.
   uintX_t getSize() const { return Header.sh_size; }
   void setSize(uintX_t Val) { Header.sh_size = Val; }
-  uintX_t getFlags() { return Header.sh_flags; }
-  uintX_t getFileOff() { return Header.sh_offset; }
-  uintX_t getAlign() {
+  uintX_t getFlags() const { return Header.sh_flags; }
+  uintX_t getFileOff() const { return Header.sh_offset; }
+  uintX_t getAlign() const {
     // The ELF spec states that a value of 0 means the section has no alignment
     // constraits.
     return std::max<uintX_t>(Header.sh_addralign, 1);
   }
-  uint32_t getType() { return Header.sh_type; }
+  uint32_t getType() const { return Header.sh_type; }
   void updateAlign(uintX_t Align) {
     if (Align > Header.sh_addralign)
       Header.sh_addralign = Align;
@@ -176,13 +176,13 @@ template <class ELFT> struct DynamicReloc {
   typedef typename ELFT::uint uintX_t;
   uint32_t Type;
 
-  SymbolBody *Sym = nullptr;
-  OutputSectionBase<ELFT> *OffsetSec = nullptr;
-  uintX_t OffsetInSec = 0;
-  bool UseSymVA = false;
-  uintX_t Addend = 0;
+  SymbolBody *Sym;
+  const OutputSectionBase<ELFT> *OffsetSec;
+  uintX_t OffsetInSec;
+  bool UseSymVA;
+  uintX_t Addend;
 
-  DynamicReloc(uint32_t Type, OutputSectionBase<ELFT> *OffsetSec,
+  DynamicReloc(uint32_t Type, const OutputSectionBase<ELFT> *OffsetSec,
                uintX_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
                uintX_t Addend)
       : Type(Type), Sym(Sym), OffsetSec(OffsetSec), OffsetInSec(OffsetInSec),

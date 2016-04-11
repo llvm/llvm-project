@@ -461,12 +461,19 @@ BitcodeFile::createSymbolBody(const DenseSet<const Comdat *> &KeptComdats,
                               const IRObjectFile &Obj,
                               const BasicSymbolRef &Sym) {
   const GlobalValue *GV = Obj.getSymbolGV(Sym.getRawDataRefImpl());
-  assert(GV);
-  if (const Comdat *C = GV->getComdat())
-    if (!KeptComdats.count(C))
-      return nullptr;
+  if (GV)
+    if (const Comdat *C = GV->getComdat())
+      if (!KeptComdats.count(C))
+        return nullptr;
 
-  uint8_t Visibility = getGvVisibility(GV);
+  uint32_t Flags = Sym.getFlags();
+  uint8_t Visibility;
+  if (GV)
+    Visibility = getGvVisibility(GV);
+  else
+    // FIXME: Set SF_Hidden flag correctly for module asm symbols, and expose
+    // protected visibility.
+    Visibility = STV_DEFAULT;
 
   SmallString<64> Name;
   raw_svector_ostream OS(Name);
@@ -475,11 +482,13 @@ BitcodeFile::createSymbolBody(const DenseSet<const Comdat *> &KeptComdats,
 
   const Module &M = Obj.getModule();
   SymbolBody *Body;
-  uint32_t Flags = Sym.getFlags();
   bool IsWeak = Flags & BasicSymbolRef::SF_Weak;
   if (Flags & BasicSymbolRef::SF_Undefined) {
     Body = new (Alloc) UndefinedBitcode(NameRef, IsWeak, Visibility);
   } else if (Flags & BasicSymbolRef::SF_Common) {
+    // FIXME: Set SF_Common flag correctly for module asm symbols, and expose
+    // size and alignment.
+    assert(GV);
     const DataLayout &DL = M.getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     Body = new (Alloc)
@@ -488,7 +497,8 @@ BitcodeFile::createSymbolBody(const DenseSet<const Comdat *> &KeptComdats,
   } else {
     Body = new (Alloc) DefinedBitcode(NameRef, IsWeak, Visibility);
   }
-  if (GV->isThreadLocal())
+  // FIXME: Expose a thread-local flag for module asm symbols.
+  if (GV && GV->isThreadLocal())
     Body->Type = STT_TLS;
   return Body;
 }

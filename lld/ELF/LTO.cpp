@@ -87,7 +87,9 @@ void BitcodeCompiler::add(BitcodeFile &F) {
 
   for (const BasicSymbolRef &Sym : Obj->symbols()) {
     GlobalValue *GV = Obj->getSymbolGV(Sym.getRawDataRefImpl());
-    assert(GV);
+    // Ignore module asm symbols.
+    if (!GV)
+      continue;
     if (GV->hasAppendingLinkage()) {
       Keep.push_back(GV);
       continue;
