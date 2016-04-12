@@ -5628,6 +5628,16 @@ def note_parameter_here : Note<
 def note_method_return_type_change : Note<
   "compiler has implicitly changed method %0 return type">;
 
+def warn_impl_required_for_class_property : Warning<
+  "class property %0 requires method %1 to be defined - "
+  "use @dynamic or provide a method implementation "
+  "in this class implementation">,
+  InGroup<ObjCPropertyImpl>;
+def warn_impl_required_in_category_for_class_property : Warning<
+  "class property %0 requires method %1 to be defined - "
+  "use @dynamic or provide a method implementation in this category">,
+  InGroup<ObjCPropertyImpl>;
+
 // C++ casts
 // These messages adhere to the TryCast pattern: %0 is an int specifying the
 // cast type, %1 is the source type, %2 is the destination type.
