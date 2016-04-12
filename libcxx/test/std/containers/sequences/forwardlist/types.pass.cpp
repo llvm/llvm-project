@@ -44,6 +44,13 @@ int main()
     static_assert((std::is_same<C::const_pointer, const char*>::value), "");
     static_assert((std::is_same<C::size_type, std::size_t>::value), "");
     static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
+
+    static_assert((std::is_signed<typename C::difference_type>::value), "");
+    static_assert((std::is_unsigned<typename C::size_type>::value), "");
+    static_assert((std::is_same<typename C::difference_type, 
+        typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
+    static_assert((std::is_same<typename C::difference_type, 
+        typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
     }
 #if __cplusplus >= 201103L
     {
@@ -57,6 +64,13 @@ int main()
 //  min_allocator doesn't have a size_type, so one gets synthesized
     static_assert((std::is_same<C::size_type, std::make_unsigned<C::difference_type>::type>::value), "");
     static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
+
+    static_assert((std::is_signed<typename C::difference_type>::value), "");
+    static_assert((std::is_unsigned<typename C::size_type>::value), "");
+    static_assert((std::is_same<typename C::difference_type, 
+        typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
+    static_assert((std::is_same<typename C::difference_type, 
+        typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
     }
 #endif
 }

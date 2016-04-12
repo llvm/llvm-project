@@ -44,6 +44,14 @@ struct Fail2 {
   int& operator*();
 };
 
+struct PointerWithOverloadedGet {
+  int* get();
+  template <typename T>
+  T* get();
+  int* operator->();
+  int& operator*();
+};
+
 void Positive() {
   BarPtr u;
   // CHECK-FIXES: BarPtr u;
@@ -100,6 +108,11 @@ void Positive() {
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: redundant get() call
   // CHECK-MESSAGES: nullptr != ss->get();
   // CHECK-FIXES: bb = nullptr != *ss;
+
+  i = *PointerWithOverloadedGet().get();
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant get() call
+  // CHECK-MESSAGES: i = *PointerWithOverloadedGet().get();
+  // CHECK-FIXES: i = *PointerWithOverloadedGet();
 }
 
 void Negative() {
@@ -112,6 +125,8 @@ void Negative() {
       return *get();
     }
   };
+
+  long l = *PointerWithOverloadedGet().get<long>();
 
   std::unique_ptr<Bar>* u;
   u->get()->Do();

@@ -669,6 +669,12 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_DEFAULT = default;
 #endif
 
+#ifdef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
+#define _LIBCPP_EQUAL_DELETE
+#else
+#define _LIBCPP_EQUAL_DELETE = delete
+#endif
+
 #ifdef __GNUC__
 #define _NOALIAS __attribute__((__malloc__))
 #else
@@ -779,6 +785,12 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_CONSTEXPR_AFTER_CXX11
 #endif
 
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
+#define _LIBCPP_CONSTEXPR_AFTER_CXX14 constexpr
+#else
+#define _LIBCPP_CONSTEXPR_AFTER_CXX14
+#endif
+
 #ifdef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #  define _LIBCPP_EXPLICIT_MOVE(x) _VSTD::move(x)
 #else
@@ -857,6 +869,11 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 #if defined(_LIBCPP_HAS_NO_VARIADIC_TEMPLATES) || defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
 #error Libc++ requires a feature complete C++11 compiler in C++11 or greater.
 #endif
+#endif
+
+#if (defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS) && defined(__clang__) \
+      && __has_attribute(acquire_capability))
+#define _LIBCPP_HAS_THREAD_SAFETY_ANNOTATIONS
 #endif
 
 #endif // __cplusplus

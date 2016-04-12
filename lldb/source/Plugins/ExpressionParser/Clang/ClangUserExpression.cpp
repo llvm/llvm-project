@@ -408,7 +408,7 @@ ClangUserExpression::Parse (DiagnosticManager &diagnostic_manager,
             }
         }
     }
-    
+
     lldb::LanguageType lang_type = lldb::eLanguageTypeUnknown;
 
     if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel)
@@ -419,14 +419,14 @@ ClangUserExpression::Parse (DiagnosticManager &diagnostic_manager,
     {
         std::unique_ptr<ExpressionSourceCode> source_code(
                                                           ExpressionSourceCode::CreateWrapped(prefix.c_str(), m_expr_text.c_str()));
-                
+
         if (m_in_cplusplus_method)
             lang_type = lldb::eLanguageTypeC_plus_plus;
         else if (m_in_objectivec_method)
             lang_type = lldb::eLanguageTypeObjC;
         else
             lang_type = lldb::eLanguageTypeC;
-        
+
         m_options.SetLanguage(lang_type);
         uint32_t first_body_line = 0;
         
@@ -545,9 +545,12 @@ ClangUserExpression::Parse (DiagnosticManager &diagnostic_manager,
     //
 
     {
-        Error jit_error = parser.PrepareForExecution(m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
-                                                     m_can_interpret, execution_policy);
-
+        Error jit_error = parser.PrepareForExecution(m_jit_start_addr,
+                                                     m_jit_end_addr,
+                                                     m_execution_unit_sp,
+                                                     exe_ctx,
+                                                     m_can_interpret,
+                                                     execution_policy);
         if (!jit_error.Success())
         {
             const char *error_cstr = jit_error.AsCString();

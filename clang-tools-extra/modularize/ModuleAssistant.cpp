@@ -99,7 +99,7 @@ bool Module::output(llvm::raw_fd_ostream &OS, int Indent) {
                                           E = HeaderFileNames.end();
        I != E; ++I) {
     OS.indent(Indent);
-    if (IsProblem)
+    if (IsProblem || strstr((*I).c_str(), ".inl"))
       OS << "exclude header \"" << *I << "\"\n";
     else
       OS << "header \"" << *I << "\"\n";
@@ -157,6 +157,18 @@ ensureNoCollisionWithReservedName(llvm::StringRef MightBeReservedName) {
   return SafeName;
 }
 
+// Convert module name to a non-keyword.
+// Prepends a '_' to the name if and only if the name is a keyword.
+static std::string
+ensureVaidModuleName(llvm::StringRef MightBeInvalidName) {
+  std::string SafeName = MightBeInvalidName;
+  std::replace(SafeName.begin(), SafeName.end(), '-', '_');
+  std::replace(SafeName.begin(), SafeName.end(), '.', '_');
+  if (isdigit(SafeName[0]))
+    SafeName = "_" + SafeName;
+  return SafeName;
+}
+
 // Add one module, given a header file path.
 static bool addModuleDescription(Module *RootModule,
                                  llvm::StringRef HeaderFilePath,
@@ -195,6 +207,7 @@ static bool addModuleDescription(Module *RootModule,
       continue;
     std::string Stem = llvm::sys::path::stem(*I);
     Stem = ensureNoCollisionWithReservedName(Stem);
+    Stem = ensureVaidModuleName(Stem);
     Module *SubModule = CurrentModule->findSubModule(Stem);
     if (!SubModule) {
       SubModule = new Module(Stem, IsProblemFile);

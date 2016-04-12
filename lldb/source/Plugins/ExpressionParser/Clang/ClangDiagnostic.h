@@ -1,4 +1,4 @@
-//===-- ClangDiagnostic.h -------------------------------------*- C++ -*-===//
+//===-- ClangDiagnostic.h ---------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

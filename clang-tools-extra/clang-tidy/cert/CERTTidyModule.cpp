@@ -16,6 +16,8 @@
 #include "../misc/NonCopyableObjects.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
+#include "CommandProcessorCheck.h"
+#include "FloatLoopCounter.h"
 #include "SetLongJmpCheck.h"
 #include "StaticObjectExceptionCheck.h"
 #include "ThrownExceptionTypeCheck.h"
@@ -53,7 +55,12 @@ public:
     // DCL
     CheckFactories.registerCheck<StaticAssertCheck>(
         "cert-dcl03-c");
-
+    // ENV
+    CheckFactories.registerCheck<CommandProcessorCheck>(
+        "cert-env33-c");
+    // FLP
+    CheckFactories.registerCheck<FloatLoopCounter>(
+        "cert-flp30-c");
     // FIO
     CheckFactories.registerCheck<NonCopyableObjectsCheck>(
         "cert-fio38-c");

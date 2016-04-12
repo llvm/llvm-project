@@ -116,7 +116,9 @@ public:
     bool
     RemapPath (const char *path, std::string &new_path) const;
 
-    
+    bool
+    ReverseRemapPath (const ConstString &path, ConstString &new_path) const;
+
     //------------------------------------------------------------------
     /// Finds a source file given a file spec using the path remappings.
     ///

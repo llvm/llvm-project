@@ -17,6 +17,9 @@ macro(pythonize_bool var)
 endmacro()
 
 pythonize_bool(LIBOMP_USE_HWLOC)
+pythonize_bool(LIBOMP_OMPT_SUPPORT)
+pythonize_bool(LIBOMP_OMPT_BLAME)
+pythonize_bool(LIBOMP_OMPT_TRACE)
 
 set(LIBOMP_TEST_CFLAGS "" CACHE STRING
   "Extra compiler flags to send to the test compiler")
@@ -44,6 +47,13 @@ if(${LIBOMP_STANDALONE_BUILD})
     libomp_warning_say("The check-libomp target will not be available!")
     return()
   endif()
+  find_program(FILECHECK_EXECUTABLE
+    NAMES FileCheck
+    PATHS ${OPENMP_LLVM_TOOLS_DIR})
+  if (NOT FILECHECK_EXECUTABLE)
+    # set to empty string so that lit can disable dependent tests
+    set(FILECHECK_EXECUTABLE "")
+  endif()
   # Set lit arguments
   # The -j 1 lets the actual tests run with the entire machine.
   # We have one test thread that spawns the tests serially.  This allows
@@ -69,6 +79,7 @@ else()
     set(LIBOMP_TEST_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang.exe)
   endif()
   set(LIBOMP_TEST_OPENMP_FLAG -fopenmp=libomp)
+  set(FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
   # Use add_lit_testsuite() from LLVM CMake.
   add_lit_testsuite(check-libomp
     "Running libomp tests"

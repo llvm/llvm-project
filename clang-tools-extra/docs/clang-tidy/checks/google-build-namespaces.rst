@@ -3,10 +3,10 @@
 google-build-namespaces
 =======================
 
-"cert-dcl59-cpp" redirects here as an alias for this check.
+`cert-dcl59-cpp` redirects here as an alias for this check.
 
 Finds anonymous namespaces in headers.
 
-http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml?showone=Namespaces#Namespaces
+https://google.github.io/styleguide/cppguide.html#Namespaces
 
-Corresponding cpplint.py check name: 'build/namespaces'.
+Corresponding cpplint.py check name: `build/namespaces`.

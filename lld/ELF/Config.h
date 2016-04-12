@@ -17,7 +17,7 @@
 #include <vector>
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 class InputFile;
 class SymbolBody;
@@ -54,7 +54,9 @@ struct Configuration {
   bool AsNeeded = false;
   bool Bsymbolic;
   bool BsymbolicFunctions;
+  bool BuildId;
   bool Demangle = true;
+  bool DisableVerify;
   bool DiscardAll;
   bool DiscardLocals;
   bool DiscardNone;
@@ -63,15 +65,24 @@ struct Configuration {
   bool ExportDynamic;
   bool GcSections;
   bool GnuHash = false;
+  bool ICF;
   bool Mips64EL = false;
-  bool NoInhibitExec;
   bool NoUndefined;
+  bool NoinhibitExec;
+  bool Pic;
+  bool Pie;
   bool PrintGcSections;
+  bool Rela;
+  bool Relocatable;
+  bool SaveTemps;
   bool Shared;
   bool Static = false;
   bool StripAll;
   bool SysvHash = true;
+  bool Threads;
+  bool Trace;
   bool Verbose;
+  bool WarnCommon;
   bool ZExecStack;
   bool ZNodelete;
   bool ZNow;
@@ -80,13 +91,14 @@ struct Configuration {
   ELFKind EKind = ELFNoneKind;
   uint16_t EMachine = llvm::ELF::EM_NONE;
   uint64_t EntryAddr = -1;
-  unsigned Optimize = 0;
+  unsigned LtoO;
+  unsigned Optimize;
 };
 
 // The only instance of Configuration struct.
 extern Configuration *Config;
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

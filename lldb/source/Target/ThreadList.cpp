@@ -71,6 +71,30 @@ ThreadList::~ThreadList()
     Clear();
 }
 
+lldb::ThreadSP
+ThreadList::GetExpressionExecutionThread()
+{
+    if (m_expression_tid_stack.empty())
+        return GetSelectedThread();
+    ThreadSP expr_thread_sp = FindThreadByID(m_expression_tid_stack.back());
+    if (expr_thread_sp)
+        return expr_thread_sp;
+    else
+        return GetSelectedThread();
+}
+
+void
+ThreadList::PushExpressionExecutionThread(lldb::tid_t tid)
+{
+    m_expression_tid_stack.push_back(tid);
+}
+    
+void
+ThreadList::PopExpressionExecutionThread(lldb::tid_t tid)
+{
+    assert(m_expression_tid_stack.back() == tid);
+    m_expression_tid_stack.pop_back();
+}
 
 uint32_t
 ThreadList::GetStopID () const
@@ -827,4 +851,17 @@ ThreadList::GetMutex ()
 {
     return m_process->m_thread_mutex;
 }
+
+ThreadList::ExpressionExecutionThreadPusher::ExpressionExecutionThreadPusher (lldb::ThreadSP thread_sp) :
+    m_thread_list(nullptr),
+    m_tid(LLDB_INVALID_THREAD_ID)
+{
+    if (thread_sp)
+    {
+        m_tid = thread_sp->GetID();
+        m_thread_list = &thread_sp->GetProcess()->GetThreadList();
+        m_thread_list->PushExpressionExecutionThread(m_tid);
+    }
+}
+
 

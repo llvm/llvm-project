@@ -9,7 +9,7 @@ sections:
     SectionData:     B800000000506800000000680000000050E80000000050E800000000
   - Name:            .drectve
     Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
-    Alignment:       2147483648
+    Alignment:       1
     SectionData:     2f696e636c7564653a62617200  # /include:bar
 symbols:
   - Name:            .text

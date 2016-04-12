@@ -10,8 +10,8 @@
 ; we will add the assumption that i+1 won't overflow only to the former.
 ;
 ; CHECK:      Function: wrap
-; CHECK:      Boundary Context:
-; CHECK:      [N] -> {  : N <= 125 }
+; CHECK:      Invalid Context:
+; CHECK:      [N] -> {  : N >= 126 }
 ;
 ;
 ; FIXME: This is a negative test as nowrap should not need an assumed context.
@@ -19,7 +19,7 @@
 ;        which lacks the <nsw> flags we would need to avoid runtime checks.
 ;
 ; CHECK:      Function: nowrap
-; CHECK:      Boundary Context:
+; CHECK:      Invalid Context:
 ; CHECK-NOT:  [N] -> {  :  }
 ;
 target datalayout = "e-m:e-i8:64-f80:128-n8:16:32:64-S128"

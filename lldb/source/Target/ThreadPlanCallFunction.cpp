@@ -545,6 +545,7 @@ ThreadPlanCallFunction::SetBreakpoints ()
                                                                                       backstop_name.AsCString(),
                                                                                       eFunctionNameTypeFull,
                                                                                       eLanguageTypeUnknown,
+                                                                                      0,
                                                                                       skip_prologue,
                                                                                       is_internal,
                                                                                       is_hardware);

@@ -56,6 +56,8 @@ public:
     Data.info.flags |= (swiftVersion << 8);
   }
 
+  ~ObjCImageInfoAtom() override = default;
+
   ContentType contentType() const override {
     return DefinedAtom::typeObjCImageInfo;
   }
@@ -93,15 +95,15 @@ class ObjCPass : public Pass {
 public:
   ObjCPass(const MachOLinkingContext &context)
       : _ctx(context),
-        _file("<mach-o objc pass>") {
+        _file(*_ctx.make_file<MachOFile>("<mach-o objc pass>")) {
     _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
   }
 
-  std::error_code perform(SimpleFile &mergedFile) override {
+  llvm::Error perform(SimpleFile &mergedFile) override {
     // Add the image info.
     mergedFile.addAtom(*getImageInfo());
 
-    return std::error_code();
+    return llvm::Error();
   }
 
 private:
@@ -113,7 +115,7 @@ private:
   }
 
   const MachOLinkingContext   &_ctx;
-  MachOFile                   _file;
+  MachOFile                   &_file;
 };
 
 

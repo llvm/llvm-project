@@ -67,6 +67,7 @@ class Abstract
 };
 
 enum Enum {zero, one};
+struct incomplete_type;
 
 typedef void (*FunctionPtr)();
 
@@ -95,4 +96,5 @@ int main()
     test_is_not_member_pointer<bit_zero>();
     test_is_not_member_pointer<NotEmpty>();
     test_is_not_member_pointer<Abstract>();
+    test_is_not_member_pointer<incomplete_type>();
 }

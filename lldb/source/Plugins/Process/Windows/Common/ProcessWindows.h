@@ -25,7 +25,7 @@ public:
     // Constructors and destructors
     //------------------------------------------------------------------
     ProcessWindows(lldb::TargetSP target_sp,
-                   lldb_private::Listener &listener);
+                   lldb::ListenerSP listener_sp);
 
     ~ProcessWindows();
 

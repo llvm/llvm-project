@@ -19,6 +19,14 @@ tls1:
  .long 0
  .size tls1, 4
 
+.type  tls2,@object
+.globl tls2
+.hidden tls2
+.align 4
+tls2:
+ .long 0
+ .size tls2, 4
+
 .section .text
 .globl _start
 _start:
@@ -28,13 +36,13 @@ call __tls_get_addr@plt
 leal tls1@tlsgd(,%ebx,1),%eax
 call __tls_get_addr@plt
 
-leal tls0@tlsldm(%ebx),%eax
+leal tls2@tlsldm(%ebx),%eax
 call __tls_get_addr@plt
-leal tls0@dtpoff(%eax),%edx
+leal tls2@dtpoff(%eax),%edx
 
-leal tls1@tlsldm(%ebx),%eax
+leal tls2@tlsldm(%ebx),%eax
 call __tls_get_addr@plt
-leal tls1@dtpoff(%eax),%edx
+leal tls2@dtpoff(%eax),%edx
 
 movl %gs:0,%eax
 addl tls0@gotntpoff(%ebx),%eax
@@ -81,10 +89,10 @@ addl tls1@gotntpoff(%ebx),%eax
 // -16 is a local module tls index offset.
 // DIS-NEXT: 1018: 8d 83 f0 ff ff ff leal -16(%ebx), %eax
 // DIS-NEXT: 101e: e8 4d 00 00 00    calll 77
-// DIS-NEXT: 1023: 8d 90 00 00 00 00 leal (%eax), %edx
+// DIS-NEXT: 1023: 8d 90 08 00 00 00 leal 8(%eax), %edx
 // DIS-NEXT: 1029: 8d 83 f0 ff ff ff leal -16(%ebx), %eax
 // DIS-NEXT: 102f: e8 3c 00 00 00    calll 60
-// DIS-NEXT: 1034: 8d 90 04 00 00 00 leal 4(%eax), %edx
+// DIS-NEXT: 1034: 8d 90 08 00 00 00 leal 8(%eax), %edx
 // Initial exec model:
 // DIS-NEXT: 103a: 65 a1 00 00 00 00 movl %gs:0, %eax
 // DIS-NEXT: 1040: 03 83 f8 ff ff ff addl -8(%ebx), %eax

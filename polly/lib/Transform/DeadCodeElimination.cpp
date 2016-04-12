@@ -115,7 +115,7 @@ isl_union_set *DeadCodeElim::getLiveOut(Scop &S) {
 /// simplifies the life set with an affine hull.
 bool DeadCodeElim::eliminateDeadCode(Scop &S, int PreciseSteps) {
   DependenceInfo &DI = getAnalysis<DependenceInfo>();
-  const Dependences &D = DI.getDependences();
+  const Dependences &D = DI.getDependences(Dependences::AL_Statement);
 
   if (!D.hasValidDependences())
     return false;
@@ -159,7 +159,7 @@ bool DeadCodeElim::eliminateDeadCode(Scop &S, int PreciseSteps) {
   // FIXME: We can probably avoid the recomputation of all dependences by
   // updating them explicitly.
   if (Changed)
-    DI.recomputeDependences();
+    DI.recomputeDependences(Dependences::AL_Statement);
   return Changed;
 }
 

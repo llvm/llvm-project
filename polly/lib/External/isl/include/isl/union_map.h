@@ -217,6 +217,8 @@ __isl_export
 isl_bool isl_union_map_is_strict_subset(__isl_keep isl_union_map *umap1,
 	__isl_keep isl_union_map *umap2);
 
+uint32_t isl_union_map_get_hash(__isl_keep isl_union_map *umap);
+
 int isl_union_map_n_map(__isl_keep isl_union_map *umap);
 __isl_export
 isl_stat isl_union_map_foreach_map(__isl_keep isl_union_map *umap,

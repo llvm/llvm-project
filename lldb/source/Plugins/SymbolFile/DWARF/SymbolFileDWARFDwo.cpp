@@ -12,6 +12,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
@@ -128,4 +129,11 @@ TypeSystem*
 SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language)
 {
     return GetBaseSymbolFile()->GetTypeSystemForLanguage(language);
+}
+
+DWARFDIE
+SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref)
+{
+    lldbassert(m_base_dwarf_cu->GetOffset() == die_ref.cu_offset);
+    return DebugInfo()->GetDIEForDIEOffset(die_ref.die_offset);
 }

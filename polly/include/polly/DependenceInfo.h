@@ -9,13 +9,13 @@
 //
 // Calculate the data dependency relations for a Scop using ISL.
 //
-// The integer set library (ISL) from Sven, has a integrated dependency analysis
+// The integer set library (ISL) from Sven has an integrated dependency analysis
 // to calculate data dependences. This pass takes advantage of this and
-// calculate those dependences a Scop.
+// calculates those dependences of a Scop.
 //
 // The dependences in this pass are exact in terms that for a specific read
 // statement instance only the last write statement instance is returned. In
-// case of may writes a set of possible write instances is returned. This
+// case of may-writes, a set of possible write instances is returned. This
 // analysis will never produce redundant dependences.
 //
 //===----------------------------------------------------------------------===//
@@ -43,10 +43,20 @@ class MemoryAccess;
 
 /// @brief The accumulated dependence information for a SCoP.
 ///
-/// The dependences struct holds all dependence information we collect and
+/// The Dependences struct holds all dependence information we collect and
 /// compute for one SCoP. It also offers an interface that allows users to
 /// query only specific parts.
 struct Dependences {
+  // Granularities of the current dependence analysis
+  enum AnalyisLevel {
+    AL_Statement = 0,
+    // Distinguish accessed memory references in the same statement
+    AL_Reference,
+    // Distinguish memory access instances in the same statement
+    AL_Access,
+
+    NumAnalysisLevels
+  };
 
   /// @brief Map type for reduction dependences.
   using ReductionDependencesMapTy = DenseMap<MemoryAccess *, isl_map *>;
@@ -57,13 +67,13 @@ struct Dependences {
   /// @brief The type of the dependences.
   ///
   /// Reduction dependences are separated from RAW/WAW/WAR dependences because
-  /// we can ignore them during the scheduling. This is the case since the order
+  /// we can ignore them during the scheduling. That's because the order
   /// in which the reduction statements are executed does not matter. However,
   /// if they are executed in parallel we need to take additional measures
   /// (e.g, privatization) to ensure a correct result. The (reverse) transitive
   /// closure of the reduction dependences are used to check for parallel
   /// executed reduction statements during code generation. These dependences
-  /// connect all instances of a reduction with each other, they are therefor
+  /// connect all instances of a reduction with each other, they are therefore
   /// cyclic and possibly "reversed".
   enum Type {
     // Write after read
@@ -121,11 +131,11 @@ struct Dependences {
   /// @param S             The current SCoP.
   /// @param NewSchedules  The new schedules
   ///
-  /// @return bool True if the new schedule is valid, false it it reverses
-  ///              dependences.
+  /// @return True if the new schedule is valid, false it it reverses
+  ///         dependences.
   bool isValidSchedule(Scop &S, StatementToIslMapTy *NewSchedules) const;
 
-  /// @brief Print the dependence information stored.
+  /// @brief Print the stored dependence information.
   void print(llvm::raw_ostream &OS) const;
 
   /// @brief Dump the dependence information stored to the dbgs stream.
@@ -133,18 +143,19 @@ struct Dependences {
 
   /// @brief Allow the DependenceInfo access to private members and methods.
   ///
-  /// To restict access to the internal state only the DependenceInfo class
-  /// is able to call or modify a dependences struct.
+  /// To restrict access to the internal state, only the DependenceInfo class
+  /// is able to call or modify a Dependences struct.
   friend class DependenceInfo;
-
-private:
-  /// @brief Create an empty dependences struct.
-  Dependences()
-      : RAW(nullptr), WAR(nullptr), WAW(nullptr), RED(nullptr),
-        TC_RED(nullptr) {}
 
   /// @brief Destructor that will free internal objects.
   ~Dependences() { releaseMemory(); }
+
+private:
+  /// @brief Create an empty dependences struct.
+  explicit Dependences(const std::shared_ptr<isl_ctx> &IslCtx,
+                       AnalyisLevel Level)
+      : RAW(nullptr), WAR(nullptr), WAW(nullptr), RED(nullptr), TC_RED(nullptr),
+        IslCtx(IslCtx), Level(Level) {}
 
   /// @brief Calculate and add at the privatization dependences.
   void addPrivatizationDependences();
@@ -155,9 +166,9 @@ private:
   /// @brief Set the reduction dependences for @p MA to @p Deps.
   void setReductionDependences(MemoryAccess *MA, __isl_take isl_map *Deps);
 
-  /// @brief Free the objects associated with this dependences struct.
+  /// @brief Free the objects associated with this Dependences struct.
   ///
-  /// The dependences struct will again be "empty" afterwards.
+  /// The Dependences struct will again be "empty" afterwards.
   void releaseMemory();
 
   /// @brief The different basic kinds of dependences we calculate.
@@ -173,6 +184,12 @@ private:
 
   /// @brief Mapping from memory accesses to their reduction dependences.
   ReductionDependencesMapTy ReductionDependences;
+
+  /// @brief Isl context from the SCoP.
+  std::shared_ptr<isl_ctx> IslCtx;
+
+  /// @brief Granularity of this dependence analysis
+  const AnalyisLevel Level;
 };
 
 class DependenceInfo : public ScopPass {
@@ -183,19 +200,27 @@ public:
   DependenceInfo() : ScopPass(ID) {}
 
   /// @brief Return the dependence information for the current SCoP.
-  const Dependences &getDependences() { return D; }
+  ///
+  /// @param Level The granularity of dependence analysis result.
+  ///
+  /// @return The dependence analysis result
+  ///
+  const Dependences &getDependences(Dependences::AnalyisLevel Level);
 
   /// @brief Recompute dependences from schedule and memory accesses.
-  void recomputeDependences();
+  const Dependences &recomputeDependences(Dependences::AnalyisLevel Level);
 
   /// @brief Compute the dependence information for the SCoP @p S.
   bool runOnScop(Scop &S) override;
 
   /// @brief Print the dependences for the given SCoP to @p OS.
-  void printScop(raw_ostream &OS, Scop &) const override { D.print(OS); }
+  void printScop(raw_ostream &OS, Scop &) const override;
 
   /// @brief Release the internal memory.
-  void releaseMemory() override { D.releaseMemory(); }
+  void releaseMemory() override {
+    for (auto &d : D)
+      d.reset();
+  }
 
   /// @brief Register all analyses and transformation required.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -204,7 +229,7 @@ private:
   Scop *S;
 
   /// @brief Dependences struct for the current SCoP.
-  Dependences D;
+  std::unique_ptr<Dependences> D[Dependences::NumAnalysisLevels];
 };
 
 } // End polly namespace.

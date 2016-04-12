@@ -33,7 +33,7 @@ sections:
     SectionData:     B82A000000C3
   - Name:            .drectve
     Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
-    Alignment:       2147483648
+    Alignment:       1
     SectionData:     2f696e636c7564653a7573656400  # /include:used
 symbols:
   - Name:            '.text$mn'

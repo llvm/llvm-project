@@ -13,7 +13,7 @@
 
 namespace lld {
 
-File::~File() {}
+File::~File() { }
 
 File::AtomVector<DefinedAtom> File::_noDefinedAtoms;
 File::AtomVector<UndefinedAtom> File::_noUndefinedAtoms;

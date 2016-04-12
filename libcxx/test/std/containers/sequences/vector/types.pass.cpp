@@ -45,6 +45,9 @@ test()
 {
     typedef std::vector<T, Allocator> C;
 
+//  TODO: These tests should use allocator_traits to get stuff, rather than
+//  blindly pulling typedefs out of the allocator. This is why we can't call
+//  test<int, min_allocator<int>>() below.
     static_assert((std::is_same<typename C::value_type, T>::value), "");
     static_assert((std::is_same<typename C::value_type, typename Allocator::value_type>::value), "");
     static_assert((std::is_same<typename C::allocator_type, Allocator>::value), "");
@@ -54,6 +57,14 @@ test()
     static_assert((std::is_same<typename C::const_reference, typename Allocator::const_reference>::value), "");
     static_assert((std::is_same<typename C::pointer, typename Allocator::pointer>::value), "");
     static_assert((std::is_same<typename C::const_pointer, typename Allocator::const_pointer>::value), "");
+
+    static_assert((std::is_signed<typename C::difference_type>::value), "");
+    static_assert((std::is_unsigned<typename C::size_type>::value), "");
+//     static_assert((std::is_same<typename C::difference_type, 
+//         typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
+//     static_assert((std::is_same<typename C::difference_type, 
+//         typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
+
     static_assert((std::is_same<
         typename std::iterator_traits<typename C::iterator>::iterator_category,
         std::random_access_iterator_tag>::value), "");
@@ -76,11 +87,22 @@ int main()
     static_assert((std::is_same<std::vector<char>::allocator_type,
                                 std::allocator<char> >::value), "");
 #if __cplusplus >= 201103L
-    static_assert((std::is_same<std::vector<int, min_allocator<int>>::value_type, int>::value), "");
-    static_assert((std::is_same<std::vector<int, min_allocator<int>>::allocator_type, min_allocator<int> >::value), "");
-    static_assert((std::is_same<std::vector<int, min_allocator<int>>::reference, int&>::value), "");
-    static_assert((std::is_same<std::vector<int, min_allocator<int>>::const_reference, const int&>::value), "");
-    static_assert((std::is_same<std::vector<int, min_allocator<int>>::pointer, min_pointer<int>>::value), "");
-    static_assert((std::is_same<std::vector<int, min_allocator<int>>::const_pointer, min_pointer<const int>>::value), "");
+    { 
+
+    typedef std::vector<int, min_allocator<int> > C;
+    static_assert((std::is_same<C::value_type, int>::value), "");
+    static_assert((std::is_same<C::allocator_type, min_allocator<int> >::value), "");
+    static_assert((std::is_same<C::reference, int&>::value), "");
+    static_assert((std::is_same<C::const_reference, const int&>::value), "");
+    static_assert((std::is_same<C::pointer, min_pointer<int>>::value), "");
+    static_assert((std::is_same<C::const_pointer, min_pointer<const int>>::value), "");
+
+    static_assert((std::is_signed<typename C::difference_type>::value), "");
+    static_assert((std::is_unsigned<typename C::size_type>::value), "");
+//     static_assert((std::is_same<typename C::difference_type, 
+//         typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
+//     static_assert((std::is_same<typename C::difference_type, 
+//         typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
+    }
 #endif
 }

@@ -125,7 +125,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager, ExecutionCo
             function_stack_top = m_stack_frame_top;
 
             IRInterpreter::Interpret(*module, *function, args, *m_execution_unit_sp.get(), interpreter_error,
-                                     function_stack_bottom, function_stack_top, exe_ctx);
+                function_stack_bottom, function_stack_top, exe_ctx);
 
             if (!interpreter_error.Success())
             {

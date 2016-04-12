@@ -35,8 +35,8 @@
   <h1>OpenMP&reg;: Support for the OpenMP language</h1>
   <!--*********************************************************************-->
 
-  <p>The OpenMP subproject of LLVM is intended to contain all of the
-     components required to build an executing OpenMP program that are
+  <p>The OpenMP subproject of LLVM contains the
+     components required to build an executable OpenMP program that are
      outside the compiler itself.
   </p>
 
@@ -44,30 +44,27 @@
     <ul>
       <li>
         the code for the runtime library against which
-        code compiled by the OpenMP/Clang compiler must be linked before it
-        can run. This code is also available
-        at <a href="http://openmprtl.org/">openmprtl.org</a>; we intend to
-        keep the different sites in sync.
+        code compiled by <tt>clang -fopenmp</tt> must be linked before it
+        can run.
       </li>
       <li>
         the library that supports offload to target devices (in
         "offload")
       </li>
       <li>
-        the OpenUH test-suite which is being integrated.
+        the OpenUH test-suite used to validate the OpenMP runtime
       </li>
     </ul>
   </p>
 
-  <p>Support for the parts of the OpenMP 4.0 language that are not
+  <p>Support for the parts of the OpenMP 4.0 (and later) language that are not
   associated with the "target" constructs are contained in the
   "runtime" directory. Support for offloading computation via the
   "target" directive is in the separate "offload" directory. That
   builds a library that provides the interfaces for transferring code
-  and data to an attached computational device. Initial support here
-  is for the Intel&reg Xeon Phi&#0153 coprocessor, but work is
-  beginning to support other attached computing devices, and the
-  design is intended to be general. The README.txt in the "offload"
+  and data to attached computational devices such as
+  the Intel&reg Xeon Phi&#0153 coprocessor or GPUs.
+  The README.txt in the "offload"
   directory describes how to build the offload library.
   </p>
 
@@ -79,19 +76,37 @@
   </p>
 
   <!--=====================================================================-->
+  <h2 id="dir-structure">Status</h2>
+  <!--=====================================================================-->
+
+   <p>With the release of Clang 3.8.0, OpenMP 3.1 support is enabled in
+   Clang by default, and the OpenMP runtime is therefore built as a
+   normal part of the Clang build, and distributed with the binary
+   distributions.You do not, therefore, need explicitly to check out this code, or
+   build it out of tree; a normal Clang check out and build will
+   automatically include building these runtime libraries.
+   </p>
+
+  <!--=====================================================================-->
   <h2 id="goals">Features and Goals</h2>
   <!--=====================================================================-->
 
     <ul>
-        <li>Correctness as defined by the 
-          <a href="http://www.openmp.org/mp-documents/OpenMP3.1.pdf">OpenMP
-          3.1 standard (PDF)</a> now, and <a href="http://www.openmp.org/mp-documents/OpenMP4.0.0.pdf">OpenMP
-          4.0 standard (PDF)</a> in the future.</li>
+        <li>Support for the <a href="http://www.openmp.org/mp-documents/OpenMP3.1.pdf">OpenMP
+          3.1 standard (PDF)</a> has been achieved in the Clang 3.8.0
+          release.
+        </li>
+
+        <li>Support for the
+ <a href="http://www.openmp.org/mp-documents/OpenMP4.0.0.pdf">OpenMP
+          4.0 standard (PDF)</a> and <a href="http://www.openmp.org/mp-documents/OpenMP4.5.pdf">OpenMP
+          4.5 standard (PDF)</a> is now being implemented. (Some OpenMP 4.0
+          and 4.5 features are already available).
         <li>High performance.</li>
         <li>ABI compatibility with <a href="http://gcc.gnu.org">Gcc</a> and
         <a href="http://software.intel.com/en-us/intel-compilers">Intel's
         existing OpenMP compilers.</a> 
-        With this release we have restored compatibility with OpenMP
+        We currently have binary compatibility with OpenMP
         3.1 code compiled by gcc 4.9, however we do not have support
         for OpenMP 4.0 code that uses task cancellation when compiled
         by gcc 4.9. How we will support such code remains a research issue.
@@ -110,6 +125,14 @@
   <h2 id="requirements">Platform Support</h2>
   <!--=====================================================================-->
 
+   <p>The runtime can be built with gcc, icc or clang. However, note
+   that a runtime built with clang cannot be guaranteed to work with
+   OpenMP code compiled by the other compilers, since clang does not support
+   a 128-bit float type, and cannot therefore generate the code used
+   for reductions of that type (which may occur in user code compiled
+   by the other compilers).
+   </p>
+
   <p>The OpenMP runtime is known to work on 
     <ul>
       <li>ARM&reg;&nbsp; architecture processors</li>
@@ -127,23 +150,6 @@
     <a href="README.txt">README.txt</a>
   </p>
 
-
-  <!--=====================================================================-->
-  <h2 id="dir-structure">Status</h2>
-  <!--=====================================================================-->
-
-   <p>The runtime can be built with gcc, icc or clang. However, note
-   that a runtime built with clang cannot be guaranteed to work with
-   OpenMP code compiled by the other compilers, since clang does not support
-   a 128-bit float type, and cannot therefore generate the code used
-   for reductions of that type (which may occur in user code compiled
-   by the other compilers).
-   </p>
- 
-   <p>The University of Houston has kindly contributed their test
-   suite (in the "testsuite" directory). Integration and use of this
-   for automatic testing is in progress.
-   </p>
 
   <!--=====================================================================-->
   <h2>Get it and get involved!</h2>

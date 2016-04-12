@@ -108,7 +108,7 @@ conditions are satisfied:
 
 * The initializer for the variable being declared is not a braced initializer
   list. Otherwise, use of ``auto`` would cause the type of the variable to be
-  deduced as``std::initializer_list``.
+  deduced as ``std::initializer_list``.
 
 New expressions
 ---------------

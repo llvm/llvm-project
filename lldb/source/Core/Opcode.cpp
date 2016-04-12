@@ -13,6 +13,7 @@
 // C++ Includes
 // Other libraries and framework includes
 #include "llvm/ADT/Triple.h"
+
 // Project includes
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/DataBufferHeap.h"
@@ -20,10 +21,8 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Host/Endian.h"
 
-
 using namespace lldb;
 using namespace lldb_private;
-
 
 int
 Opcode::Dump (Stream *s, uint32_t min_byte_width)
@@ -50,13 +49,11 @@ Opcode::Dump (Stream *s, uint32_t min_byte_width)
         break;
 
     case Opcode::eTypeBytes:
+        for (uint32_t i = 0; i < m_data.inst.length; ++i)
         {
-            for (uint32_t i=0; i<m_data.inst.length; ++i)
-            {
-                if (i > 0)
-                    bytes_written += s->PutChar (' ');
-                bytes_written += s->Printf ("%2.2x", m_data.inst.bytes[i]);
-            }
+            if (i > 0)
+                bytes_written += s->PutChar (' ');
+            bytes_written += s->Printf ("%2.2x", m_data.inst.bytes[i]);
         }
         break;
     }
@@ -94,7 +91,7 @@ Opcode::GetData (DataExtractor &data) const
 {
     uint32_t byte_size = GetByteSize ();
     uint8_t swap_buf[8];
-    const void *buf = NULL;
+    const void *buf = nullptr;
 
     if (byte_size > 0)
     {
@@ -148,7 +145,7 @@ Opcode::GetData (DataExtractor &data) const
             }
         }
     }
-    if (buf)
+    if (buf != nullptr)
     {
         DataBufferSP buffer_sp;
 
@@ -160,6 +157,3 @@ Opcode::GetData (DataExtractor &data) const
     data.Clear();
     return 0;
 }
-
-
-

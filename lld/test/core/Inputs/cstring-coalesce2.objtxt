@@ -1,6 +1,0 @@
----
-defined-atoms:
-    - ref-name:          L2
-      type:              c-string
-      merge:             by-content
-      content:           [ 74, 68, 65, 72, 65, 00 ]

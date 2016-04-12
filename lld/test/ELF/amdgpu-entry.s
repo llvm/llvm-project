@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri %s -o %t.o
-# RUN: not lld -e kernel0 -flavor gnu %t.o -o %t
+# RUN: not ld.lld -e kernel0 %t.o -o %t
 
 # REQUIRES: amdgpu
 

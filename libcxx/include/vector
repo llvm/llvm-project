@@ -262,6 +262,7 @@ void swap(vector<T,Allocator>& x, vector<T,Allocator>& y)
 */
 
 #include <__config>
+#include <iosfwd> // for forward declaration of vector
 #include <__bit_reference>
 #include <type_traits>
 #include <climits>
@@ -453,7 +454,7 @@ __vector_base<_Tp, _Allocator>::~__vector_base()
     }
 }
 
-template <class _Tp, class _Allocator = allocator<_Tp> >
+template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_TYPE_VIS_ONLY vector
     : private __vector_base<_Tp, _Allocator>
 {

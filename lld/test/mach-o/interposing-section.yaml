@@ -31,7 +31,7 @@ sections:
     section:         __interpose
     type:            S_INTERPOSING
     attributes:      [  ]
-    alignment:       3
+    alignment:       8
     address:         0x0000000000000010
     content:         [ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ]

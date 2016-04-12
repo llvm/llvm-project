@@ -6,26 +6,33 @@
 
 package runtime
 
-var Fadd64 = fadd64
-var Fsub64 = fsub64
-var Fmul64 = fmul64
-var Fdiv64 = fdiv64
-var F64to32 = f64to32
-var F32to64 = f32to64
-var Fcmp64 = fcmp64
-var Fintto64 = fintto64
-var F64toint = f64toint
+import "unsafe"
 
-func entersyscall()
-func exitsyscall()
+//var Fadd64 = fadd64
+//var Fsub64 = fsub64
+//var Fmul64 = fmul64
+//var Fdiv64 = fdiv64
+//var F64to32 = f64to32
+//var F32to64 = f32to64
+//var Fcmp64 = fcmp64
+//var Fintto64 = fintto64
+//var F64toint = f64toint
+//var Sqrt = sqrt
+
+func entersyscall(int32)
+func exitsyscall(int32)
 func golockedOSThread() bool
 
 var Entersyscall = entersyscall
 var Exitsyscall = exitsyscall
 var LockedOSThread = golockedOSThread
 
+// var Xadduintptr = xadduintptr
+
+// var FuncPC = funcPC
+
 type LFNode struct {
-	Next    *LFNode
+	Next    uint64
 	Pushcnt uintptr
 }
 
@@ -36,18 +43,16 @@ var LFStackPush = lfstackpush_go
 var LFStackPop = lfstackpop_go
 
 type ParFor struct {
-	body    *byte
-	done    uint32
-	Nthr    uint32
-	nthrmax uint32
-	thrseq  uint32
-	Cnt     uint32
-	Ctx     *byte
-	wait    bool
+	body   func(*ParFor, uint32)
+	done   uint32
+	Nthr   uint32
+	thrseq uint32
+	Cnt    uint32
+	wait   bool
 }
 
 func newParFor(nthrmax uint32) *ParFor
-func parForSetup(desc *ParFor, nthr, n uint32, ctx *byte, wait bool, body func(*ParFor, uint32))
+func parForSetup(desc *ParFor, nthr, n uint32, wait bool, body func(*ParFor, uint32))
 func parForDo(desc *ParFor)
 func parForIters(desc *ParFor, tid uintptr) (uintptr, uintptr)
 
@@ -60,31 +65,110 @@ func ParForIters(desc *ParFor, tid uint32) (uint32, uint32) {
 	return uint32(begin), uint32(end)
 }
 
-func testSchedLocalQueue()
-func testSchedLocalQueueSteal()
+func GCMask(x interface{}) (ret []byte) {
+	return nil
+}
 
-var TestSchedLocalQueue1 = testSchedLocalQueue
-var TestSchedLocalQueueSteal1 = testSchedLocalQueueSteal
+//func testSchedLocalQueue()
+//func testSchedLocalQueueSteal()
+//
+//func RunSchedLocalQueueTest() {
+//	testSchedLocalQueue()
+//}
+//
+//func RunSchedLocalQueueStealTest() {
+//	testSchedLocalQueueSteal()
+//}
 
-// func haveGoodHash() bool
-// func stringHash(s string, seed uintptr) uintptr
-// func bytesHash(b []byte, seed uintptr) uintptr
-// func int32Hash(i uint32, seed uintptr) uintptr
-// func int64Hash(i uint64, seed uintptr) uintptr
+//var StringHash = stringHash
+//var BytesHash = bytesHash
+//var Int32Hash = int32Hash
+//var Int64Hash = int64Hash
+//var EfaceHash = efaceHash
+//var IfaceHash = ifaceHash
+//var MemclrBytes = memclrBytes
 
-// var HaveGoodHash = haveGoodHash
-// var StringHash = stringHash
-// var BytesHash = bytesHash
-// var Int32Hash = int32Hash
-// var Int64Hash = int64Hash
+// var HashLoad = &hashLoad
 
-var hashLoad float64 // declared in hashmap.c
-var HashLoad = &hashLoad
+// entry point for testing
+//func GostringW(w []uint16) (s string) {
+//	s = gostringw(&w[0])
+//	return
+//}
 
-func memclrBytes(b []byte)
+//var Gostringnocopy = gostringnocopy
+//var Maxstring = &maxstring
 
-var MemclrBytes = memclrBytes
+//type Uintreg uintreg
 
-// func gogoBytes() int32
+//extern __go_open
+func open(path *byte, mode int32, perm int32) int32
 
-// var GogoBytes = gogoBytes
+func Open(path *byte, mode int32, perm int32) int32 {
+	return open(path, mode, perm)
+}
+
+//extern close
+func close(int32) int32
+
+func Close(fd int32) int32 {
+	return close(fd)
+}
+
+//extern read
+func read(fd int32, buf unsafe.Pointer, size int32) int32
+
+func Read(fd int32, buf unsafe.Pointer, size int32) int32 {
+	return read(fd, buf, size)
+}
+
+//extern write
+func write(fd int32, buf unsafe.Pointer, size int32) int32
+
+func Write(fd uintptr, buf unsafe.Pointer, size int32) int32 {
+	return write(int32(fd), buf, size)
+}
+
+func envs() []string
+func setenvs([]string)
+
+var Envs = envs
+var SetEnvs = setenvs
+
+//var BigEndian = _BigEndian
+
+// For benchmarking.
+
+/*
+func BenchSetType(n int, x interface{}) {
+	e := *(*eface)(unsafe.Pointer(&x))
+	t := e._type
+	var size uintptr
+	var p unsafe.Pointer
+	switch t.kind & kindMask {
+	case _KindPtr:
+		t = (*ptrtype)(unsafe.Pointer(t)).elem
+		size = t.size
+		p = e.data
+	case _KindSlice:
+		slice := *(*struct {
+			ptr      unsafe.Pointer
+			len, cap uintptr
+		})(e.data)
+		t = (*slicetype)(unsafe.Pointer(t)).elem
+		size = t.size * slice.len
+		p = slice.ptr
+	}
+	allocSize := roundupsize(size)
+	systemstack(func() {
+		for i := 0; i < n; i++ {
+			heapBitsSetType(uintptr(p), allocSize, size, t)
+		}
+	})
+}
+
+const PtrSize = ptrSize
+
+var TestingAssertE2I2GC = &testingAssertE2I2GC
+var TestingAssertE2T2GC = &testingAssertE2T2GC
+*/

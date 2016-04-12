@@ -20,9 +20,8 @@
 #include "lldb/Host/windows/win32.h" // snprintf
 #endif
 #include "llvm/Support/Compiler.h"   // LLVM_{NOEXCEPT, CONSTEXPR, ALIGNAS}
-#undef _LIBCPP_EXTERN_TEMPLATE       // Avoid warning below
-
 #include "lldb/lldb-private.h"
+#undef _LIBCPP_EXTERN_TEMPLATE       // Avoid warning below
 
 //===-------------------------- cxa_demangle.cpp --------------------------===//
 //

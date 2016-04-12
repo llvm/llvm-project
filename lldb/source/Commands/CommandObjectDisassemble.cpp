@@ -7,12 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CommandObjectDisassemble.h"
-
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "CommandObjectDisassemble.h"
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
@@ -54,9 +53,7 @@ CommandObjectDisassemble::CommandOptions::CommandOptions (CommandInterpreter &in
     OptionParsingStarting();
 }
 
-CommandObjectDisassemble::CommandOptions::~CommandOptions ()
-{
-}
+CommandObjectDisassemble::CommandOptions::~CommandOptions() = default;
 
 Error
 CommandObjectDisassemble::CommandOptions::SetOptionValue (uint32_t option_idx, const char *option_arg)
@@ -105,6 +102,7 @@ CommandObjectDisassemble::CommandOptions::SetOptionValue (uint32_t option_idx, c
                 some_location_specified = true;
         }
         break;
+
     case 'n':
         func_name.assign (option_arg);
         some_location_specified = true;
@@ -139,6 +137,7 @@ CommandObjectDisassemble::CommandOptions::SetOptionValue (uint32_t option_idx, c
                 error.SetErrorStringWithFormat("Disassembler flavors are currently only supported for x86 and x86_64 targets.");
             break;
         }
+
     case 'r':
         raw = true;
         break;
@@ -218,7 +217,6 @@ CommandObjectDisassemble::CommandOptions::OptionParsingFinished ()
     if (!some_location_specified)
         current_function = true;
     return Error();
-    
 }
 
 const OptionDefinition*
@@ -230,32 +228,30 @@ CommandObjectDisassemble::CommandOptions::GetDefinitions ()
 OptionDefinition
 CommandObjectDisassemble::CommandOptions::g_option_table[] =
 {
-{ LLDB_OPT_SET_ALL, false, "bytes"        , 'b', OptionParser::eNoArgument        , NULL, NULL, 0, eArgTypeNone,        "Show opcode bytes when disassembling."},
-{ LLDB_OPT_SET_ALL, false, "context"      , 'C', OptionParser::eRequiredArgument  , NULL, NULL, 0, eArgTypeNumLines,    "Number of context lines of source to show."},
-{ LLDB_OPT_SET_ALL, false, "mixed"        , 'm', OptionParser::eNoArgument        , NULL, NULL, 0, eArgTypeNone,        "Enable mixed source and assembly display."},
-{ LLDB_OPT_SET_ALL, false, "raw"          , 'r', OptionParser::eNoArgument        , NULL, NULL, 0, eArgTypeNone,        "Print raw disassembly with no symbol information."},
-{ LLDB_OPT_SET_ALL, false, "plugin"       , 'P', OptionParser::eRequiredArgument  , NULL, NULL, 0, eArgTypePlugin,      "Name of the disassembler plugin you want to use."},
-{ LLDB_OPT_SET_ALL, false, "flavor"       , 'F', OptionParser::eRequiredArgument  , NULL, NULL, 0, eArgTypeDisassemblyFlavor,        "Name of the disassembly flavor you want to use.  "
+{ LLDB_OPT_SET_ALL, false, "bytes"        , 'b', OptionParser::eNoArgument        , nullptr, nullptr, 0, eArgTypeNone,        "Show opcode bytes when disassembling."},
+{ LLDB_OPT_SET_ALL, false, "context"      , 'C', OptionParser::eRequiredArgument  , nullptr, nullptr, 0, eArgTypeNumLines,    "Number of context lines of source to show."},
+{ LLDB_OPT_SET_ALL, false, "mixed"        , 'm', OptionParser::eNoArgument        , nullptr, nullptr, 0, eArgTypeNone,        "Enable mixed source and assembly display."},
+{ LLDB_OPT_SET_ALL, false, "raw"          , 'r', OptionParser::eNoArgument        , nullptr, nullptr, 0, eArgTypeNone,        "Print raw disassembly with no symbol information."},
+{ LLDB_OPT_SET_ALL, false, "plugin"       , 'P', OptionParser::eRequiredArgument  , nullptr, nullptr, 0, eArgTypePlugin,      "Name of the disassembler plugin you want to use."},
+{ LLDB_OPT_SET_ALL, false, "flavor"       , 'F', OptionParser::eRequiredArgument  , nullptr, nullptr, 0, eArgTypeDisassemblyFlavor,        "Name of the disassembly flavor you want to use.  "
                                                                                                           "Currently the only valid options are default, and for Intel"
                                                                                                           " architectures, att and intel."},
-{ LLDB_OPT_SET_ALL, false, "arch"         , 'A', OptionParser::eRequiredArgument  , NULL, NULL, 0, eArgTypeArchitecture,"Specify the architecture to use from cross disassembly."},
+{ LLDB_OPT_SET_ALL, false, "arch"         , 'A', OptionParser::eRequiredArgument  , nullptr, nullptr, 0, eArgTypeArchitecture,"Specify the architecture to use from cross disassembly."},
 { LLDB_OPT_SET_1  |
-  LLDB_OPT_SET_2  , true , "start-address", 's', OptionParser::eRequiredArgument  , NULL, NULL, 0, eArgTypeAddressOrExpression,"Address at which to start disassembling."},
-{ LLDB_OPT_SET_1  , false, "end-address"  , 'e', OptionParser::eRequiredArgument  , NULL, NULL, 0, eArgTypeAddressOrExpression,  "Address at which to end disassembling."},
+  LLDB_OPT_SET_2  , true , "start-address", 's', OptionParser::eRequiredArgument  , nullptr, nullptr, 0, eArgTypeAddressOrExpression,"Address at which to start disassembling."},
+{ LLDB_OPT_SET_1  , false, "end-address"  , 'e', OptionParser::eRequiredArgument  , nullptr, nullptr, 0, eArgTypeAddressOrExpression,  "Address at which to end disassembling."},
 { LLDB_OPT_SET_2  |
   LLDB_OPT_SET_3  |
   LLDB_OPT_SET_4  |
-  LLDB_OPT_SET_5  , false, "count"        , 'c', OptionParser::eRequiredArgument  , NULL, NULL, 0, eArgTypeNumLines,    "Number of instructions to display."},
-{ LLDB_OPT_SET_3  , false, "name"         , 'n', OptionParser::eRequiredArgument  , NULL, NULL, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,
+  LLDB_OPT_SET_5  , false, "count"        , 'c', OptionParser::eRequiredArgument  , nullptr, nullptr, 0, eArgTypeNumLines,    "Number of instructions to display."},
+{ LLDB_OPT_SET_3  , false, "name"         , 'n', OptionParser::eRequiredArgument  , nullptr, nullptr, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,
                                                                                                           "Disassemble entire contents of the given function name."},
-{ LLDB_OPT_SET_4  , false, "frame"        , 'f', OptionParser::eNoArgument        , NULL, NULL, 0, eArgTypeNone,        "Disassemble from the start of the current frame's function."},
-{ LLDB_OPT_SET_5  , false, "pc"           , 'p', OptionParser::eNoArgument        , NULL, NULL, 0, eArgTypeNone,        "Disassemble around the current pc."},
-{ LLDB_OPT_SET_6  , false, "line"         , 'l', OptionParser::eNoArgument        , NULL, NULL, 0, eArgTypeNone,        "Disassemble the current frame's current source line instructions if there is debug line table information, else disassemble around the pc."},
-{ LLDB_OPT_SET_7  , false, "address"      , 'a', OptionParser::eRequiredArgument  , NULL, NULL, 0, eArgTypeAddressOrExpression, "Disassemble function containing this address."},
-{ 0               , false, NULL           ,   0, 0                  , NULL, NULL, 0, eArgTypeNone,        NULL }
+{ LLDB_OPT_SET_4  , false, "frame"        , 'f', OptionParser::eNoArgument        , nullptr, nullptr, 0, eArgTypeNone,        "Disassemble from the start of the current frame's function."},
+{ LLDB_OPT_SET_5  , false, "pc"           , 'p', OptionParser::eNoArgument        , nullptr, nullptr, 0, eArgTypeNone,        "Disassemble around the current pc."},
+{ LLDB_OPT_SET_6  , false, "line"         , 'l', OptionParser::eNoArgument        , nullptr, nullptr, 0, eArgTypeNone,        "Disassemble the current frame's current source line instructions if there is debug line table information, else disassemble around the pc."},
+{ LLDB_OPT_SET_7  , false, "address"      , 'a', OptionParser::eRequiredArgument  , nullptr, nullptr, 0, eArgTypeAddressOrExpression, "Disassemble function containing this address."},
+{ 0               , false, nullptr           ,   0, 0                  , nullptr, nullptr, 0, eArgTypeNone,        nullptr }
 };
-
-
 
 //-------------------------------------------------------------------------
 // CommandObjectDisassemble
@@ -270,15 +266,13 @@ CommandObjectDisassemble::CommandObjectDisassemble (CommandInterpreter &interpre
 {
 }
 
-CommandObjectDisassemble::~CommandObjectDisassemble()
-{
-}
+CommandObjectDisassemble::~CommandObjectDisassemble() = default;
 
 bool
 CommandObjectDisassemble::DoExecute (Args& command, CommandReturnObject &result)
 {
     Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
-    if (target == NULL)
+    if (target == nullptr)
     {
         result.AppendError ("invalid target, create a debug target using the 'target create' command");
         result.SetStatus (eReturnStatusFailed);
@@ -313,7 +307,7 @@ CommandObjectDisassemble::DoExecute (Args& command, CommandReturnObject &result)
         result.SetStatus (eReturnStatusFailed);
         return false;
     }
-    else if (flavor_string != NULL && !disassembler->FlavorValidForArchSpec(m_options.arch, flavor_string))
+    else if (flavor_string != nullptr && !disassembler->FlavorValidForArchSpec(m_options.arch, flavor_string))
         result.AppendWarningWithFormat("invalid disassembler flavor \"%s\", using default.\n", flavor_string);
 
     result.SetStatus (eReturnStatusSuccessFinishResult);
@@ -346,17 +340,17 @@ CommandObjectDisassemble::DoExecute (Args& command, CommandReturnObject &result)
     {
         ConstString name(m_options.func_name.c_str());
         
-        if (Disassembler::Disassemble (m_interpreter.GetDebugger(), 
-                                       m_options.arch,
-                                       plugin_name,
-                                       flavor_string,
-                                       m_exe_ctx,
-                                       name,
-                                       NULL,    // Module *
-                                       m_options.num_instructions,
-                                       m_options.show_mixed ? m_options.num_lines_context : 0,
-                                       options,
-                                       result.GetOutputStream()))
+        if (Disassembler::Disassemble(m_interpreter.GetDebugger(),
+                                      m_options.arch,
+                                      plugin_name,
+                                      flavor_string,
+                                      m_exe_ctx,
+                                      name,
+                                      nullptr,    // Module *
+                                      m_options.num_instructions,
+                                      m_options.show_mixed ? m_options.num_lines_context : 0,
+                                      options,
+                                      result.GetOutputStream()))
         {
             result.SetStatus (eReturnStatusSuccessFinishResult);
         }
@@ -373,7 +367,7 @@ CommandObjectDisassemble::DoExecute (Args& command, CommandReturnObject &result)
         StackFrame *frame = m_exe_ctx.GetFramePtr();
         if (m_options.frame_line)
         {
-            if (frame == NULL)
+            if (frame == nullptr)
             {
                 result.AppendError ("Cannot disassemble around the current line without a selected frame.\n");
                 result.SetStatus (eReturnStatusFailed);
@@ -392,7 +386,7 @@ CommandObjectDisassemble::DoExecute (Args& command, CommandReturnObject &result)
         }
         else if (m_options.current_function)
         {
-            if (frame == NULL)
+            if (frame == nullptr)
             {
                 result.AppendError ("Cannot disassemble around the current function without a selected frame.\n");
                 result.SetStatus (eReturnStatusFailed);
@@ -412,7 +406,7 @@ CommandObjectDisassemble::DoExecute (Args& command, CommandReturnObject &result)
         {
             if (m_options.at_pc)
             {
-                if (frame == NULL)
+                if (frame == nullptr)
                 {
                     result.AppendError ("Cannot disassemble around the current PC without a selected frame.\n");
                     result.SetStatus (eReturnStatusFailed);
@@ -498,7 +492,6 @@ CommandObjectDisassemble::DoExecute (Args& command, CommandReturnObject &result)
                                     }
                                 }
                             }
-                            
                         }
                     }
                 }
@@ -509,7 +502,7 @@ CommandObjectDisassemble::DoExecute (Args& command, CommandReturnObject &result)
 
         if (m_options.num_instructions != 0)
         {
-            if (ranges.size() == 0)
+            if (ranges.empty())
             {
                 // The default action is to disassemble the current frame function.
                 if (frame)
@@ -561,7 +554,7 @@ CommandObjectDisassemble::DoExecute (Args& command, CommandReturnObject &result)
         }
         else
         {
-            if (ranges.size() == 0)
+            if (ranges.empty())
             {
                 // The default action is to disassemble the current frame function.
                 if (frame)

@@ -35,6 +35,20 @@ using namespace lldb_private::formatters;
 
 namespace  lldb_private {
     namespace formatters {
+        std::map<ConstString, CXXFunctionSummaryFormat::Callback>&
+        NSArray_Additionals::GetAdditionalSummaries ()
+        {
+            static std::map<ConstString, CXXFunctionSummaryFormat::Callback> g_map;
+            return g_map;
+        }
+        
+        std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback>&
+        NSArray_Additionals::GetAdditionalSynthetics ()
+        {
+            static std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback> g_map;
+            return g_map;
+        }
+        
         class NSArrayMSyntheticFrontEnd : public SyntheticChildrenFrontEnd
         {
         public:
@@ -103,7 +117,7 @@ namespace  lldb_private {
             struct DataDescriptor_32
             {
                 uint32_t _used;
-                uint32_t _priv1 : 2 ;
+                uint32_t _priv1 : 2;
                 uint32_t _size : 30;
                 uint32_t _priv2 : 2;
                 uint32_t _offset : 30;
@@ -114,7 +128,7 @@ namespace  lldb_private {
             struct DataDescriptor_64
             {
                 uint64_t _used;
-                uint64_t _priv1 : 2 ;
+                uint64_t _priv1 : 2;
                 uint64_t _size : 62;
                 uint64_t _priv2 : 2;
                 uint64_t _offset : 62;
@@ -269,7 +283,7 @@ lldb_private::formatters::NSArraySummaryProvider (ValueObject& valobj, Stream& s
     
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(valobj));
     
-    if (!descriptor.get() || !descriptor->IsValid())
+    if (!descriptor || !descriptor->IsValid())
         return false;
     
     uint32_t ptr_size = process_sp->GetAddressByteSize();
@@ -322,7 +336,14 @@ lldb_private::formatters::NSArraySummaryProvider (ValueObject& valobj, Stream& s
             return false;
     }
     else
+    {
+        auto& map(NSArray_Additionals::GetAdditionalSummaries());
+        auto iter = map.find(class_name), end = map.end();
+        if (iter != end)
+            return iter->second(valobj, stream, options);
+        else
             return false;
+    }
     
     std::string prefix,suffix;
     if (Language* language = Language::FindPlugin(options.GetLanguage()))
@@ -361,16 +382,16 @@ m_children()
 }
 
 lldb_private::formatters::NSArrayMSyntheticFrontEnd_109::NSArrayMSyntheticFrontEnd_109 (lldb::ValueObjectSP valobj_sp) :
-NSArrayMSyntheticFrontEnd(valobj_sp),
-m_data_32(NULL),
-m_data_64(NULL)
+    NSArrayMSyntheticFrontEnd(valobj_sp),
+    m_data_32(nullptr),
+    m_data_64(nullptr)
 {
 }
 
 lldb_private::formatters::NSArrayMSyntheticFrontEnd_1010::NSArrayMSyntheticFrontEnd_1010 (lldb::ValueObjectSP valobj_sp) :
-NSArrayMSyntheticFrontEnd(valobj_sp),
-m_data_32(NULL),
-m_data_64(NULL)
+    NSArrayMSyntheticFrontEnd(valobj_sp),
+    m_data_32(nullptr),
+    m_data_64(nullptr)
 {
 }
 
@@ -408,9 +429,9 @@ lldb_private::formatters::NSArrayMSyntheticFrontEnd_109::Update()
     ValueObjectSP valobj_sp = m_backend.GetSP();
     m_ptr_size = 0;
     delete m_data_32;
-    m_data_32 = NULL;
+    m_data_32 = nullptr;
     delete m_data_64;
-    m_data_64 = NULL;
+    m_data_64 = nullptr;
     if (!valobj_sp)
         return false;
     m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
@@ -443,9 +464,9 @@ lldb_private::formatters::NSArrayMSyntheticFrontEnd_1010::Update()
     ValueObjectSP valobj_sp = m_backend.GetSP();
     m_ptr_size = 0;
     delete m_data_32;
-    m_data_32 = NULL;
+    m_data_32 = nullptr;
     delete m_data_64;
-    m_data_64 = NULL;
+    m_data_64 = nullptr;
     if (!valobj_sp)
         return false;
     m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
@@ -490,9 +511,9 @@ lldb_private::formatters::NSArrayMSyntheticFrontEnd::GetIndexOfChildWithName (co
 lldb_private::formatters::NSArrayMSyntheticFrontEnd_109::~NSArrayMSyntheticFrontEnd_109()
 {
     delete m_data_32;
-    m_data_32 = NULL;
+    m_data_32 = nullptr;
     delete m_data_64;
-    m_data_64 = NULL;
+    m_data_64 = nullptr;
 }
 
 lldb::addr_t
@@ -534,9 +555,9 @@ lldb_private::formatters::NSArrayMSyntheticFrontEnd_109::GetSize ()
 lldb_private::formatters::NSArrayMSyntheticFrontEnd_1010::~NSArrayMSyntheticFrontEnd_1010()
 {
     delete m_data_32;
-    m_data_32 = NULL;
+    m_data_32 = nullptr;
     delete m_data_64;
-    m_data_64 = NULL;
+    m_data_64 = nullptr;
 }
 
 lldb::addr_t
@@ -576,11 +597,11 @@ lldb_private::formatters::NSArrayMSyntheticFrontEnd_1010::GetSize ()
 }
 
 lldb_private::formatters::NSArrayISyntheticFrontEnd::NSArrayISyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
-SyntheticChildrenFrontEnd (*valobj_sp.get()),
-m_exe_ctx_ref (),
-m_ptr_size (8),
-m_items (0),
-m_data_ptr (0)
+    SyntheticChildrenFrontEnd(*valobj_sp),
+    m_exe_ctx_ref(),
+    m_ptr_size(8),
+    m_items(0),
+    m_data_ptr(0)
 {
     if (valobj_sp)
     {
@@ -665,7 +686,7 @@ lldb_private::formatters::NSArrayISyntheticFrontEnd::GetChildAtIndex (size_t idx
 }
 
 lldb_private::formatters::NSArray0SyntheticFrontEnd::NSArray0SyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
-SyntheticChildrenFrontEnd (*valobj_sp.get())
+    SyntheticChildrenFrontEnd(*valobj_sp)
 {
 }
 
@@ -746,17 +767,17 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex (size_t idx
     return lldb::ValueObjectSP();
 }
 
-SyntheticChildrenFrontEnd* lldb_private::formatters::NSArraySyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
+SyntheticChildrenFrontEnd* lldb_private::formatters::NSArraySyntheticFrontEndCreator (CXXSyntheticChildren* synth, lldb::ValueObjectSP valobj_sp)
 {
     if (!valobj_sp)
         return nullptr;
     
     lldb::ProcessSP process_sp (valobj_sp->GetProcessSP());
     if (!process_sp)
-        return NULL;
+        return nullptr;
     AppleObjCRuntime *runtime = llvm::dyn_cast_or_null<AppleObjCRuntime>(process_sp->GetObjCLanguageRuntime());
     if (!runtime)
-        return NULL;
+        return nullptr;
     
     CompilerType valobj_type(valobj_sp->GetCompilerType());
     Flags flags(valobj_type.GetTypeInfo());
@@ -766,13 +787,13 @@ SyntheticChildrenFrontEnd* lldb_private::formatters::NSArraySyntheticFrontEndCre
         Error error;
         valobj_sp = valobj_sp->AddressOf(error);
         if (error.Fail() || !valobj_sp)
-            return NULL;
+            return nullptr;
     }
     
-    ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(*valobj_sp.get()));
+    ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(*valobj_sp));
     
-    if (!descriptor.get() || !descriptor->IsValid())
-        return NULL;
+    if (!descriptor || !descriptor->IsValid())
+        return nullptr;
     
     ConstString class_name(descriptor->GetClassName());
     
@@ -802,6 +823,13 @@ SyntheticChildrenFrontEnd* lldb_private::formatters::NSArraySyntheticFrontEndCre
             return (new NSArrayMSyntheticFrontEnd_1010(valobj_sp));
         else
             return (new NSArrayMSyntheticFrontEnd_109(valobj_sp));
+    }
+    else
+    {
+        auto& map(NSArray_Additionals::GetAdditionalSynthetics());
+        auto iter = map.find(class_name), end = map.end();
+        if (iter != end)
+            return iter->second(synth, valobj_sp);
     }
     
     return nullptr;

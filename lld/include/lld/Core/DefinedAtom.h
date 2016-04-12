@@ -149,13 +149,6 @@ public:
     typeTLVInitialZeroFill, // TLV initial zero fill data [Darwin]
     typeTLVInitializerPtr,  // pointer to thread local initializer [Darwin]
     typeDSOHandle,          // atom representing DSO handle [Darwin]
-    typeThreadZeroFill,     // Uninitialized thread local data(TBSS) [ELF]
-    typeThreadData,         // Initialized thread local data(TDATA) [ELF]
-    typeRONote,             // Identifies readonly note sections [ELF]
-    typeRWNote,             // Identifies readwrite note sections [ELF]
-    typeNoAlloc,            // Identifies non allocatable sections [ELF]
-    typeGroupComdat,        // Identifies a section group [ELF, COFF]
-    typeGnuLinkOnce,        // Identifies a gnu.linkonce section [ELF]
     typeSectCreate,         // Created via the -sectcreate option [Darwin]
   };
 
@@ -223,11 +216,6 @@ public:
   ///
   /// This is used by the linker to order the layout of Atoms so that the
   /// resulting image is stable and reproducible.
-  ///
-  /// Note that this should not be confused with ordinals of exported symbols in
-  /// Windows DLLs. In Windows terminology, ordinals are symbols' export table
-  /// indices (small integers) which can be used instead of symbol names to
-  /// refer items in a DLL.
   virtual uint64_t ordinal() const = 0;
 
   /// \brief the number of bytes of space this atom's content will occupy in the
@@ -355,16 +343,15 @@ public:
     ContentType atomContentType = contentType();
     return !(atomContentType == DefinedAtom::typeZeroFill ||
              atomContentType == DefinedAtom::typeZeroFillFast ||
-             atomContentType == DefinedAtom::typeTLVInitialZeroFill ||
-             atomContentType == DefinedAtom::typeThreadZeroFill);
+             atomContentType == DefinedAtom::typeTLVInitialZeroFill);
   }
 
-  /// Utility function to check if the atom belongs to a group section
-  /// that represents section groups or .gnu.linkonce sections.
-  bool isGroupParent() const {
+  /// Utility function to check if relocations in this atom to other defined
+  /// atoms can be implicitly generated, and so we don't need to explicitly
+  /// emit those relocations.
+  bool relocsToDefinedCanBeImplicit() const {
     ContentType atomContentType = contentType();
-    return (atomContentType == DefinedAtom::typeGroupComdat ||
-            atomContentType == DefinedAtom::typeGnuLinkOnce);
+    return atomContentType == typeCFI;
   }
 
   // Returns true if lhs should be placed before rhs in the final output.
@@ -375,6 +362,8 @@ protected:
   // DefinedAtom is an abstract base class. Only subclasses can access
   // constructor.
   DefinedAtom() : Atom(definitionRegular) { }
+
+  ~DefinedAtom() override = default;
 
   /// \brief Returns a pointer to the Reference object that the abstract
   /// iterator "points" to.

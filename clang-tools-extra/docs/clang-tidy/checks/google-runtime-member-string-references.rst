@@ -3,7 +3,6 @@
 google-runtime-member-string-references
 =======================================
 
-
 Finds members of type ``const string&``.
 
 const string reference members are generally considered unsafe as they can
@@ -24,4 +23,4 @@ reference.
 This check emit warnings for both ``std::string`` and ``::string`` const
 reference members.
 
-Corresponding cpplint.py check name: 'runtime/member_string_reference'.
+Corresponding cpplint.py check name: `runtime/member_string_reference`.

@@ -24,7 +24,7 @@ class TestCStepping(TestBase):
         self.main_source = "main.c"
 
     @add_test_categories(['pyapi'])
-    @expectedFailureFreeBSD('llvm.org/pr17932')
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr17932')
     @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr14437")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24777")
     def test_and_python_api(self):

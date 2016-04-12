@@ -178,9 +178,6 @@ func adjChunks() (*objtype, *objtype) {
 
 // Make sure an empty slice on the stack doesn't pin the next object in memory.
 func TestEmptySlice(t *testing.T) {
-	if true { // disable until bug 7564 is fixed.
-		return
-	}
 	if runtime.Compiler == "gccgo" {
 		t.Skip("skipping for gccgo")
 	}

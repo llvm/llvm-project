@@ -147,7 +147,6 @@ private:
 
   Defined *createDefined(COFFSymbolRef Sym, const void *Aux, bool IsFirst);
   Undefined *createUndefined(COFFSymbolRef Sym);
-  Undefined *createWeakExternal(COFFSymbolRef Sym, const void *Aux);
 
   std::unique_ptr<COFFObjectFile> COFFObj;
   llvm::BumpPtrAllocator Alloc;

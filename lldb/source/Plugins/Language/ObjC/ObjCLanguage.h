@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <cstring>
 #include <vector>
 
 // Other libraries and framework includes
@@ -187,7 +188,7 @@ public:
         if (!name)
             return false;
             
-        if (strchr(name, ':') == NULL)
+        if (strchr(name, ':') == nullptr)
             return true;
         else if (name[strlen(name) - 1] == ':')
             return true;

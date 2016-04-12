@@ -30,5 +30,11 @@
 // RUN: ld.lld -o %t3 %t.o --whole-archive %t.a --no-whole-archive
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=ADDED %s
 
+// --whole-archive should also work with thin archives
+// RUN: rm -f %tthin.a
+// RUN: llvm-ar --format=gnu rcsT %tthin.a %ta.o
+// RUN: ld.lld -o %t3 %t.o --whole-archive %tthin.a
+// RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=ADDED %s
+
 .globl _start;
 _start:

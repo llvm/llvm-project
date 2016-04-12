@@ -7,16 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Symbol/ClangASTImporter.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangExternalASTSourceCommon.h"
+#include "lldb/Symbol/ClangUtil.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "llvm/Support/raw_ostream.h"
-#include "lldb/Core/Log.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Symbol/ClangASTImporter.h"
-#include "lldb/Symbol/ClangExternalASTSourceCommon.h"
-#include "lldb/Utility/LLDBAssert.h"
 
 using namespace lldb_private;
 using namespace clang;
@@ -345,6 +346,211 @@ ClangASTImporter::DeportDecl (clang::ASTContext *dst_ctx,
                     result->getDeclKindName(), static_cast<void*>(result));
 
     return result;
+}
+
+bool
+ClangASTImporter::CanImport(const CompilerType &type)
+{
+    if (!ClangUtil::IsClangType(type))
+        return false;
+
+    // TODO: remove external completion BOOL
+    // CompleteAndFetchChildren should get the Decl out and check for the
+
+    clang::QualType qual_type(ClangUtil::GetCanonicalQualType(ClangUtil::RemoveFastQualifiers(type)));
+
+    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+    switch (type_class)
+    {
+        case clang::Type::Record:
+        {
+            const clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
+            if (cxx_record_decl)
+            {
+                if (ResolveDeclOrigin(cxx_record_decl, NULL, NULL))
+                    return true;
+            }
+        }
+        break;
+
+        case clang::Type::Enum:
+        {
+            clang::EnumDecl *enum_decl = llvm::cast<clang::EnumType>(qual_type)->getDecl();
+            if (enum_decl)
+            {
+                if (ResolveDeclOrigin(enum_decl, NULL, NULL))
+                    return true;
+            }
+        }
+        break;
+
+        case clang::Type::ObjCObject:
+        case clang::Type::ObjCInterface:
+        {
+            const clang::ObjCObjectType *objc_class_type = llvm::dyn_cast<clang::ObjCObjectType>(qual_type);
+            if (objc_class_type)
+            {
+                clang::ObjCInterfaceDecl *class_interface_decl = objc_class_type->getInterface();
+                // We currently can't complete objective C types through the newly added ASTContext
+                // because it only supports TagDecl objects right now...
+                if (class_interface_decl)
+                {
+                    if (ResolveDeclOrigin(class_interface_decl, NULL, NULL))
+                        return true;
+                }
+            }
+        }
+        break;
+
+        case clang::Type::Typedef:
+            return CanImport(CompilerType(
+                type.GetTypeSystem(),
+                llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr()));
+
+        case clang::Type::Auto:
+            return CanImport(CompilerType(type.GetTypeSystem(),
+                                          llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr()));
+
+        case clang::Type::Elaborated:
+            return CanImport(CompilerType(
+                type.GetTypeSystem(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr()));
+
+        case clang::Type::Paren:
+            return CanImport(CompilerType(type.GetTypeSystem(),
+                                          llvm::cast<clang::ParenType>(qual_type)->desugar().getAsOpaquePtr()));
+
+        default:
+            break;
+    }
+
+    return false;
+}
+
+bool
+ClangASTImporter::Import(const CompilerType &type)
+{
+    if (!ClangUtil::IsClangType(type))
+        return false;
+    // TODO: remove external completion BOOL
+    // CompleteAndFetchChildren should get the Decl out and check for the
+
+    clang::QualType qual_type(ClangUtil::GetCanonicalQualType(ClangUtil::RemoveFastQualifiers(type)));
+
+    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+    switch (type_class)
+    {
+        case clang::Type::Record:
+        {
+            const clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
+            if (cxx_record_decl)
+            {
+                if (ResolveDeclOrigin(cxx_record_decl, NULL, NULL))
+                    return CompleteAndFetchChildren(qual_type);
+            }
+        }
+        break;
+
+        case clang::Type::Enum:
+        {
+            clang::EnumDecl *enum_decl = llvm::cast<clang::EnumType>(qual_type)->getDecl();
+            if (enum_decl)
+            {
+                if (ResolveDeclOrigin(enum_decl, NULL, NULL))
+                    return CompleteAndFetchChildren(qual_type);
+            }
+        }
+        break;
+
+        case clang::Type::ObjCObject:
+        case clang::Type::ObjCInterface:
+        {
+            const clang::ObjCObjectType *objc_class_type = llvm::dyn_cast<clang::ObjCObjectType>(qual_type);
+            if (objc_class_type)
+            {
+                clang::ObjCInterfaceDecl *class_interface_decl = objc_class_type->getInterface();
+                // We currently can't complete objective C types through the newly added ASTContext
+                // because it only supports TagDecl objects right now...
+                if (class_interface_decl)
+                {
+                    if (ResolveDeclOrigin(class_interface_decl, NULL, NULL))
+                        return CompleteAndFetchChildren(qual_type);
+                }
+            }
+        }
+        break;
+
+        case clang::Type::Typedef:
+            return Import(CompilerType(
+                type.GetTypeSystem(),
+                llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr()));
+
+        case clang::Type::Auto:
+            return Import(CompilerType(type.GetTypeSystem(),
+                                       llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr()));
+
+        case clang::Type::Elaborated:
+            return Import(CompilerType(type.GetTypeSystem(),
+                                       llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr()));
+
+        case clang::Type::Paren:
+            return Import(CompilerType(type.GetTypeSystem(),
+                                       llvm::cast<clang::ParenType>(qual_type)->desugar().getAsOpaquePtr()));
+
+        default:
+            break;
+    }
+    return false;
+}
+
+bool
+ClangASTImporter::CompleteType(const CompilerType &compiler_type)
+{
+    if (!CanImport(compiler_type))
+        return false;
+
+    if (Import(compiler_type))
+    {
+        ClangASTContext::CompleteTagDeclarationDefinition(compiler_type);
+        return true;
+    }
+
+    ClangASTContext::SetHasExternalStorage(compiler_type.GetOpaqueQualType(), false);
+    return false;
+}
+
+bool
+ClangASTImporter::LayoutRecordType(const clang::RecordDecl *record_decl, uint64_t &bit_size, uint64_t &alignment,
+                                   llvm::DenseMap<const clang::FieldDecl *, uint64_t> &field_offsets,
+                                   llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits> &base_offsets,
+                                   llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits> &vbase_offsets)
+{
+    RecordDeclToLayoutMap::iterator pos = m_record_decl_to_layout_map.find(record_decl);
+    bool success = false;
+    base_offsets.clear();
+    vbase_offsets.clear();
+    if (pos != m_record_decl_to_layout_map.end())
+    {
+        bit_size = pos->second.bit_size;
+        alignment = pos->second.alignment;
+        field_offsets.swap(pos->second.field_offsets);
+        base_offsets.swap(pos->second.base_offsets);
+        vbase_offsets.swap(pos->second.vbase_offsets);
+        m_record_decl_to_layout_map.erase(pos);
+        success = true;
+    }
+    else
+    {
+        bit_size = 0;
+        alignment = 0;
+        field_offsets.clear();
+    }
+    return success;
+}
+
+void
+ClangASTImporter::InsertRecordDecl(clang::RecordDecl *decl, const LayoutInfo &layout)
+{
+    m_record_decl_to_layout_map.insert(std::make_pair(decl, layout));
 }
 
 void

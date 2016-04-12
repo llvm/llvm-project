@@ -21,7 +21,7 @@ namespace readability {
 ///
 /// http://llvm.org/docs/CodingStandards.html#namespace-indentation
 ///
-/// http://google-styleguide.googlecode.com/svn/trunk/cppguide.html#Namespaces
+/// https://google.github.io/styleguide/cppguide.html#Namespaces
 class NamespaceCommentCheck : public ClangTidyCheck {
 public:
   NamespaceCommentCheck(StringRef Name, ClangTidyContext *Context);

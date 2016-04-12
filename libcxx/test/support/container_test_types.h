@@ -86,11 +86,13 @@
  */
 
 #include <functional>
-#include <unordered_map>
-#include <unordered_set>
 #include <cassert>
 
 #include "test_macros.h"
+
+#if TEST_STD_VER < 11
+#error This header requires C++11 or greater
+#endif
 
 namespace detail {
 // TypeID - Represent a unique identifier for a type. TypeID allows equality
@@ -101,7 +103,7 @@ struct TypeID {
   friend bool operator!=(TypeID const& LHS, TypeID const& RHS)
   {return LHS.m_id != RHS.m_id; }
 private:
-  explicit TEST_CONSTEXPR TypeID(const int* xid) : m_id(xid) {}
+  explicit constexpr TypeID(const int* xid) : m_id(xid) {}
   const int* const m_id;
   template <class T> friend class TypeInfo;
 };
@@ -132,37 +134,17 @@ const int TypeInfo<T>::dummy_addr = 42;
 
 // makeTypeID - Return the TypeID for the specified type 'T'.
 template <class T>
-inline TEST_CONSTEXPR TypeID const& makeTypeID() { return TypeInfo<T>::GetID(); }
+inline constexpr TypeID const& makeTypeID() { return TypeInfo<T>::GetID(); }
 
-#if TEST_STD_VER >= 11
 template <class ...Args>
 struct ArgumentListID {};
 
 // makeArgumentID - Create and return a unique identifier for a given set
 // of arguments.
 template <class ...Args>
-inline TEST_CONSTEXPR TypeID const& makeArgumentID() {
+inline constexpr TypeID const& makeArgumentID() {
   return makeTypeID<ArgumentListID<Args...>>();
 }
-#else
-template <class A1 = void, class A2 = void, class A3 = void>
-struct ArgumentListID {};
-
-template <class A1>
-inline TypeID const& makeArgumentID() {
-  return makeTypeID<ArgumentListID<A1> >();
-}
-
-template <class A1, class A2>
-inline TypeID const& makeArgumentID() {
-  return makeTypeID<ArgumentListID<A1, A2> >();
-}
-
-template <class A1, class A2, class A3>
-inline TypeID const& makeArgumentID() {
-  return makeTypeID<ArgumentListID<A1, A2, A3> >();
-}
-#endif
 
 } // namespace detail
 
@@ -199,7 +181,6 @@ struct AllocatorConstructController {
     m_expected_args = &tid;
   }
 
-#if TEST_STD_VER >= 11
   template <class ...Args>
   void expect(int times = 1) {
     assert(!unchecked());
@@ -211,19 +192,7 @@ struct AllocatorConstructController {
   bool check() {
     return check(detail::makeArgumentID<Args...>());
   }
-#else
-  template <class A1>
-  void expect(int times = 1) {
-    assert(!unchecked());
-    assert(times > 0);
-    m_expected_count = times - 1;
-    m_expected_args = &detail::makeArgumentID<A1>();
-  }
-  template <class A1>
-  bool check() {
-    return check(detail::makeArgumentID<A1>());
-  }
-#endif
+
 
   // Return true iff the program is currently within a call to "Allocator::construct"
   bool isInAllocatorConstruct() const {
@@ -315,7 +284,7 @@ public:
     {
         return ::operator delete(static_cast<void*>(p));
     }
-#if TEST_STD_VER >= 11
+
     template <class Up, class ...Args>
     void construct(Up* p, Args&&... args) {
       static_assert((std::is_same<Up, AllowConstructT>::value),
@@ -326,28 +295,6 @@ public:
         ::new ((void*)p) Up(std::forward<Args>(args)...);
       }
     }
-#else
-    template <class Up, class A0>
-    void construct(Up* p, A0& a0) {
-      static_assert((std::is_same<Up, AllowConstructT>::value),
-                    "Only allowed to construct Up");
-      assert(controller->check<A0&>());
-      {
-        InAllocatorConstructGuard g(controller);
-        ::new ((void*)p) Up(a0);
-      }
-    }
-    template <class Up, class A0, class A1>
-    void construct(Up* p, A0& a0, A1& a1) {
-      static_assert((std::is_same<Up, AllowConstructT>::value),
-                    "Only allowed to construct Up");
-      assert((controller->check<A0&, A1&>()));
-      {
-        InAllocatorConstructGuard g(controller);
-        ::new ((void*)p) Up(a0, a1);
-      }
-    }
-#endif
 
     template <class Up>
     void destroy(Up* p) {
@@ -363,7 +310,7 @@ public:
     friend bool operator!=(ContainerTestAllocator x, ContainerTestAllocator y) {return !(x == y);}
 };
 
-#if TEST_STD_VER >= 11
+
 namespace test_detail {
 typedef ContainerTestAllocator<int, int> A1;
 typedef std::allocator_traits<A1> A1T;
@@ -373,7 +320,6 @@ typedef std::allocator_traits<A2> A2T;
 static_assert(std::is_same<A1T::rebind_traits<float>, A2T>::value, "");
 static_assert(std::is_same<A2T::rebind_traits<int>, A1T>::value, "");
 } // end namespace test_detail
-#endif
 
 //===----------------------------------------------------------------------===//
 //  'CopyInsertable', 'MoveInsertable' and 'EmplaceConstructible' test types
@@ -413,7 +359,6 @@ struct CopyInsertable {
     other.copied_once = true;
   }
 
-#if TEST_STD_VER >= 11
   CopyInsertable(CopyInsertable&& other) : CopyInsertable(other) {}
 
   // Forgive pair for not downcasting this to an lvalue it its constructors.
@@ -424,12 +369,6 @@ struct CopyInsertable {
   CopyInsertable(Args&&... args) {
     assert(false);
   }
-#else
-  template <class Arg>
-  CopyInsertable(Arg&) {
-    assert(false);
-  }
-#endif
 
   ~CopyInsertable() {
     assert(constructed_under_allocator == getConstructController()->isInAllocatorConstruct());
@@ -458,68 +397,89 @@ bool operator <(CopyInsertable<ID> const& L, CopyInsertable<ID> const& R) {
   return L.data < R.data;
 }
 
-namespace std {
-template <int ID>
-struct hash< ::CopyInsertable<ID> > {
-  typedef ::CopyInsertable<ID> argument_type;
-  typedef size_t result_type;
 
-  size_t operator()(argument_type const& arg) const {
-    return arg.data;
-  }
-};
-} // namespace std
+#ifdef _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_NAMESPACE_STD
+#else
+namespace std {
+#endif
+  template <int ID>
+  struct hash< ::CopyInsertable<ID> > {
+    typedef ::CopyInsertable<ID> argument_type;
+    typedef size_t result_type;
+
+    size_t operator()(argument_type const& arg) const {
+      return arg.data;
+    }
+  };
+
+  template <class _Key, class _Value, class _Less, class _Alloc>
+  class map;
+  template <class _Key, class _Value, class _Less, class _Alloc>
+  class multimap;
+  template <class _Value, class _Less, class _Alloc>
+  class set;
+  template <class _Value, class _Less, class _Alloc>
+  class multiset;
+  template <class _Key, class _Value, class _Hash, class _Equals, class _Alloc>
+  class unordered_map;
+  template <class _Key, class _Value, class _Hash, class _Equals, class _Alloc>
+  class unordered_multimap;
+  template <class _Value, class _Hash, class _Equals, class _Alloc>
+  class unordered_set;
+  template <class _Value, class _Hash, class _Equals, class _Alloc>
+  class unordered_multiset;
+
+#ifdef _LIBCPP_END_NAMESPACE_STD
+_LIBCPP_END_NAMESPACE_STD
+#else
+} // end namespace std
+#endif
 
 // TCT - Test container type
 namespace TCT {
 
-template <class Key = CopyInsertable<1>, class Value = CopyInsertable<2> >
-struct unordered_map_type {
-    typedef std::pair<const Key, Value> ValueTp;
-    typedef
+template <class Key = CopyInsertable<1>, class Value = CopyInsertable<2>,
+          class ValueTp = std::pair<const Key, Value> >
+using unordered_map =
       std::unordered_map<Key, Value, std::hash<Key>, std::equal_to<Key>,
-                              ContainerTestAllocator<ValueTp, ValueTp> >
-      type;
-};
+                              ContainerTestAllocator<ValueTp, ValueTp> >;
 
-template <class Key = CopyInsertable<1>, class Value = CopyInsertable<2> >
-struct unordered_multimap_type {
-    typedef std::pair<const Key, Value> ValueTp;
-    typedef
+template <class Key = CopyInsertable<1>, class Value = CopyInsertable<2>,
+          class ValueTp = std::pair<const Key, Value> >
+using map =
+      std::map<Key, Value, std::less<Key>,
+                              ContainerTestAllocator<ValueTp, ValueTp> >;
+
+template <class Key = CopyInsertable<1>, class Value = CopyInsertable<2>,
+          class ValueTp = std::pair<const Key, Value> >
+using unordered_multimap =
       std::unordered_multimap<Key, Value, std::hash<Key>, std::equal_to<Key>,
-                                   ContainerTestAllocator<ValueTp, ValueTp> >
-      type;
-};
+                                   ContainerTestAllocator<ValueTp, ValueTp> >;
+
+template <class Key = CopyInsertable<1>, class Value = CopyInsertable<2>,
+          class ValueTp = std::pair<const Key, Value> >
+using multimap =
+      std::multimap<Key, Value, std::less<Key>,
+                              ContainerTestAllocator<ValueTp, ValueTp> >;
 
 template <class Value = CopyInsertable<1> >
-struct unordered_set_type {
-  typedef
-    std::unordered_set<Value, std::hash<Value>, std::equal_to<Value>,
-                               ContainerTestAllocator<Value, Value> >
-    type;
-};
+using unordered_set =
+  std::unordered_set<Value, std::hash<Value>, std::equal_to<Value>,
+                               ContainerTestAllocator<Value, Value> >;
 
 template <class Value = CopyInsertable<1> >
-struct unordered_multiset_type {
-  typedef
+using set =
+    std::set<Value, std::less<Value>, ContainerTestAllocator<Value, Value> >;
+
+template <class Value = CopyInsertable<1> >
+using unordered_multiset =
     std::unordered_multiset<Value, std::hash<Value>, std::equal_to<Value>,
-                                    ContainerTestAllocator<Value, Value> >
-    type;
-};
+                                    ContainerTestAllocator<Value, Value> >;
 
-#if TEST_STD_VER >= 11
-template <class ...Args>
-using unordered_map = typename unordered_map_type<Args...>::type;
-
-template <class ...Args>
-using unordered_multimap = typename unordered_multimap_type<Args...>::type;
-
-template <class ...Args>
-using unordered_set = typename unordered_set_type<Args...>::type;
-
-template <class ...Args>
-using unordered_multiset = typename unordered_multiset_type<Args...>::type;
-#endif
+template <class Value = CopyInsertable<1> >
+using multiset =
+    std::multiset<Value, std::less<Value>, ContainerTestAllocator<Value, Value> >;
 
 } // end namespace TCT
 

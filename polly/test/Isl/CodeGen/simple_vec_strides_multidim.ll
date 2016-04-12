@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-vectorizer=polly -S -dce < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-opt-isl -polly-codegen -polly-vectorizer=polly -polly-prevect-width=8 -S -dce < %s | FileCheck %s
 ;
 ;    void foo(long n, float A[restrict][n], float B[restrict][n],
 ;             float C[restrict][n], float D[restrict][n]) {

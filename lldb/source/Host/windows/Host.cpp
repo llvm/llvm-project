@@ -26,6 +26,8 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredData.h"
 
+#include "llvm/Support/ConvertUTF.h"
+
 // Windows includes
 #include <TlHelp32.h>
 
@@ -68,12 +70,11 @@ namespace
     bool GetExecutableForProcess(const AutoHandle &handle, std::string &path)
     {
         // Get the process image path.  MAX_PATH isn't long enough, paths can actually be up to 32KB.
-        std::vector<char> buffer(32768);
+        std::vector<wchar_t> buffer(PATH_MAX);
         DWORD dwSize = buffer.size();
-        if (!::QueryFullProcessImageNameA(handle.get(), 0, &buffer[0], &dwSize))
+        if (!::QueryFullProcessImageNameW(handle.get(), 0, &buffer[0], &dwSize))
             return false;
-        path.assign(&buffer[0]);
-        return true;
+        return llvm::convertWideToUTF8(buffer.data(), path);
     }
 
     void GetProcessExecutableAndTriple(const AutoHandle &handle, ProcessInstanceInfo &process)
@@ -156,15 +157,17 @@ Host::GetModuleFileSpecForHostAddress (const void *host_addr)
     if (!::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)host_addr, &hmodule))
         return module_filespec;
 
-    std::vector<char> buffer(MAX_PATH);
+    std::vector<wchar_t> buffer(PATH_MAX);
     DWORD chars_copied = 0;
     do {
-        chars_copied = ::GetModuleFileName(hmodule, &buffer[0], buffer.size());
+        chars_copied = ::GetModuleFileNameW(hmodule, &buffer[0], buffer.size());
         if (chars_copied == buffer.size() && ::GetLastError() == ERROR_INSUFFICIENT_BUFFER)
             buffer.resize(buffer.size() * 2);
     } while (chars_copied >= buffer.size());
-
-    module_filespec.SetFile(&buffer[0], false);
+    std::string path;
+    if (!llvm::convertWideToUTF8(buffer.data(), path))
+        return module_filespec;
+    module_filespec.SetFile(path, false);
     return module_filespec;
 }
 
@@ -177,23 +180,25 @@ Host::FindProcesses (const ProcessInstanceInfoMatch &match_info, ProcessInstance
     if (!snapshot.IsValid())
         return 0;
 
-    PROCESSENTRY32 pe = {0};
-    pe.dwSize = sizeof(PROCESSENTRY32);
-    if (Process32First(snapshot.get(), &pe))
+    PROCESSENTRY32W pe = {0};
+    pe.dwSize = sizeof(PROCESSENTRY32W);
+    if (Process32FirstW(snapshot.get(), &pe))
     {
         do
         {
             AutoHandle handle(::OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pe.th32ProcessID), nullptr);
 
             ProcessInstanceInfo process;
-            process.SetExecutableFile(FileSpec(pe.szExeFile, false), true);
+            std::string exeFile;
+            llvm::convertWideToUTF8(pe.szExeFile, exeFile);
+            process.SetExecutableFile(FileSpec(exeFile, false), true);
             process.SetProcessID(pe.th32ProcessID);
             process.SetParentProcessID(pe.th32ParentProcessID);
             GetProcessExecutableAndTriple(handle, process);
 
             if (match_info.MatchAllProcesses() || match_info.Matches(process))
                 process_infos.Append(process);
-        } while (Process32Next(snapshot.get(), &pe));
+        } while (Process32NextW(snapshot.get(), &pe));
     }
     return process_infos.GetSize();
 }
@@ -312,15 +317,21 @@ Host::GetEnvironment(StringList &env)
 {
     // The environment block on Windows is a contiguous buffer of NULL terminated strings,
     // where the end of the environment block is indicated by two consecutive NULLs.
-    LPCH environment_block = ::GetEnvironmentStrings();
+    LPWCH environment_block = ::GetEnvironmentStringsW();
     env.Clear();
-    while (*environment_block != '\0')
+    while (*environment_block != L'\0')
     {
-        llvm::StringRef current_var(environment_block);
+        std::string current_var;
+        auto current_var_size = wcslen(environment_block) + 1;
+        if (!llvm::convertWideToUTF8(environment_block, current_var))
+        {
+            environment_block += current_var_size;
+            continue;
+        }
         if (current_var[0] != '=')
             env.AppendString(current_var);
 
-        environment_block += current_var.size()+1;
+        environment_block += current_var_size;
     }
     return env.GetSize();
 }

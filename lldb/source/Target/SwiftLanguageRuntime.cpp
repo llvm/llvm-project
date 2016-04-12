@@ -298,7 +298,7 @@ GetObjectDescription_ObjectCopy (Process *process,
     }
     
     StreamString expr_string;
-    expr_string.Printf("$__lldb__DumpForDebugger(Swift.UnsafePointer<%s>(bitPattern: 0x%" PRIx64 ").pointee)",static_type.GetTypeName().GetCString(),copy_location);
+    expr_string.Printf("$__lldb__DumpForDebugger(Swift.UnsafePointer<%s>(bitPattern: 0x%" PRIx64 ")!.pointee)",static_type.GetTypeName().GetCString(),copy_location);
     
     if (log)
         log->Printf("[GetObjectDescription_ObjectCopy] expression: %s", expr_string.GetData());
@@ -4315,6 +4315,7 @@ SwiftLanguageRuntime::CreateExceptionResolver (Breakpoint *bkpt, bool catch_bp, 
                                                        eFunctionNameTypeBase,
                                                        eLanguageTypeUnknown,
                                                        Breakpoint::Exact,
+                                                       0,
                                                        eLazyBoolNo));
     // FIXME: We don't do catch breakpoints for ObjC yet.
     // Should there be some way for the runtime to specify what it can do in this regard?

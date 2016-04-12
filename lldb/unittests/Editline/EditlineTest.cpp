@@ -191,8 +191,9 @@ EditlineAdapter::SendLine (const std::string &line)
                  eoln,
                  eoln_length * sizeof (char));
 
-    EXPECT_EQ (eoln_length * sizeof (char), input_bytes_written);
-    return eoln_length * sizeof (char) == input_bytes_written;
+    EXPECT_NE(-1, input_bytes_written) << strerror(errno);
+    EXPECT_EQ (eoln_length * sizeof (char), size_t(input_bytes_written));
+    return eoln_length * sizeof (char) == size_t(input_bytes_written);
 }
 
 bool
@@ -363,7 +364,7 @@ TEST_F(EditlineTestFixture, EditlineReceivesMultiLineText)
     EXPECT_EQ (input_lines.size (), el_reported_lines.GetSize ());
     if (input_lines.size () == el_reported_lines.GetSize ())
     {
-        for (auto i = 0; i < input_lines.size(); ++i)
+        for (size_t i = 0; i < input_lines.size(); ++i)
             EXPECT_EQ (input_lines[i], el_reported_lines[i]);
     }
 }

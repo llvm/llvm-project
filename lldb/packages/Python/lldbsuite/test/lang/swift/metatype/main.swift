@@ -13,7 +13,7 @@ class C {}
 class D : C {}
 protocol P {}
 
-func main<T>(x: T) {
+func main<T>(_ x: T) {
   var s = String.self
   var c = D.self
   var t = (1,2,"hello").dynamicType

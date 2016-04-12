@@ -39,9 +39,10 @@ public:
     size_t GetNumCompileUnits();
     bool ContainsCompileUnit (const DWARFCompileUnit *cu) const;
     DWARFCompileUnit* GetCompileUnitAtIndex (uint32_t idx);
-    DWARFCompileUnit* GetCompileUnit (dw_offset_t cu_offset, uint32_t* idx_ptr = NULL);
-    DWARFCompileUnit* GetCompileUnitContainingDIE (const DIERef& die_ref);
-
+    DWARFCompileUnit* GetCompileUnit(dw_offset_t cu_offset, uint32_t* idx_ptr = NULL);
+    DWARFCompileUnit* GetCompileUnitContainingDIEOffset (dw_offset_t die_offset);
+    DWARFCompileUnit* GetCompileUnit(const DIERef& die_ref);
+    DWARFDIE GetDIEForDIEOffset(dw_offset_t die_offset);
     DWARFDIE GetDIE (const DIERef& die_ref);
 
     void Dump(lldb_private::Stream *s, const uint32_t die_offset, const uint32_t recurse_depth);

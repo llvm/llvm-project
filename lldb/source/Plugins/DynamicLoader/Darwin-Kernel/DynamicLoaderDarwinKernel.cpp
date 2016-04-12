@@ -181,8 +181,8 @@ DynamicLoaderDarwinKernel::CreateInstance (Process* process, bool force)
     // At this point if there is an ExecutableModule, it is a kernel and the Target is some variant of an Apple system.  
     // If the Process hasn't provided the kernel load address, we need to look around in memory to find it.
 
-    addr_t kernel_load_address = SearchForDarwinKernel (process);
-    if (kernel_load_address != LLDB_INVALID_ADDRESS)
+    const addr_t kernel_load_address = SearchForDarwinKernel (process);
+    if (CheckForKernelImageAtAddress (kernel_load_address, process).IsValid())
     {
         process->SetCanRunCode(false);
         return new DynamicLoaderDarwinKernel (process, kernel_load_address);
@@ -1561,6 +1561,7 @@ DynamicLoaderDarwinKernel::SetNotificationBreakpointIfNeeded ()
                                                                   "OSKextLoadedKextSummariesUpdated",
                                                                   eFunctionNameTypeFull,
                                                                   eLanguageTypeUnknown,
+                                                                  0,
                                                                   skip_prologue,
                                                                   internal_bp,
                                                                   hardware).get();

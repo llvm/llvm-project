@@ -372,9 +372,6 @@ public:
     void ResetOutputFileHandle(FILE *new_fh) override;
 
     static void
-    InitializePrivate ();
-
-    static void
     InitializeInterpreter (SWIGInitCallback python_swig_init_callback,
                            SWIGBreakpointCallbackFunction swig_breakpoint_callback,
                            SWIGWatchpointCallbackFunction swig_watchpoint_callback,
@@ -507,6 +504,9 @@ public:
     };
 
 protected:
+    static void
+    InitializePrivate ();
+
     class SynchronicityHandler
     {
     private:

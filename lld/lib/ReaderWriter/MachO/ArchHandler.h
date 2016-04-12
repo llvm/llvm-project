@@ -14,6 +14,7 @@
 #include "File.h"
 #include "MachONormalizedFile.h"
 #include "lld/Core/LLVM.h"
+#include "lld/Core/Error.h"
 #include "lld/Core/Reference.h"
 #include "lld/Core/Simple.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
@@ -78,6 +79,11 @@ public:
   /// actually be used.
   virtual uint32_t dwarfCompactUnwindType() = 0;
 
+  /// Reference from an __eh_frame CIE atom to its personality function it's
+  /// describing. Usually pointer-sized and PC-relative, but differs in whether
+  /// it needs to be in relocatable objects.
+  virtual Reference::KindValue unwindRefToPersonalityFunctionKind() = 0;
+
   /// Reference from an __eh_frame FDE to the CIE it's based on.
   virtual Reference::KindValue unwindRefToCIEKind() = 0;
 
@@ -111,20 +117,20 @@ public:
 
   /// Prototype for a helper function.  Given a sectionIndex and address,
   /// finds the atom and offset with that atom of that address.
-  typedef std::function<std::error_code (uint32_t sectionIndex, uint64_t addr,
+  typedef std::function<llvm::Error (uint32_t sectionIndex, uint64_t addr,
                         const lld::Atom **, Reference::Addend *)>
                         FindAtomBySectionAndAddress;
 
   /// Prototype for a helper function.  Given a symbolIndex, finds the atom
   /// representing that symbol.
-  typedef std::function<std::error_code (uint32_t symbolIndex,
+  typedef std::function<llvm::Error (uint32_t symbolIndex,
                         const lld::Atom **)> FindAtomBySymbolIndex;
 
   /// Analyzes a relocation from a .o file and returns the info
   /// (kind, target, addend) needed to instantiate a Reference.
   /// Two helper functions are passed as parameters to find the target atom
   /// given a symbol index or address.
-  virtual std::error_code
+  virtual llvm::Error
           getReferenceInfo(const normalized::Relocation &reloc,
                            const DefinedAtom *inAtom,
                            uint32_t offsetInAtom,
@@ -139,7 +145,7 @@ public:
   /// (kind, target, addend) needed to instantiate a Reference.
   /// Two helper functions are passed as parameters to find the target atom
   /// given a symbol index or address.
-  virtual std::error_code
+  virtual llvm::Error
       getPairReferenceInfo(const normalized::Relocation &reloc1,
                            const normalized::Relocation &reloc2,
                            const DefinedAtom *inAtom,
@@ -173,7 +179,7 @@ public:
                                    FindAddressForAtom findAddress,
                                    FindAddressForAtom findSectionAddress,
                                    uint64_t imageBaseAddress,
-                                   uint8_t *atomContentBuffer) = 0;
+                          llvm::MutableArrayRef<uint8_t> atomContentBuffer) = 0;
 
   /// Used in -r mode to convert a Reference to a mach-o relocation.
   virtual void appendSectionRelocations(const DefinedAtom &atom,

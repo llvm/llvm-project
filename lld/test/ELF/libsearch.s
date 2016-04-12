@@ -23,7 +23,7 @@
 // Should fail if cannot find specified library (without -L switch)
 // RUN: not ld.lld -o %t3 %t.o -lls 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOLIB %s
-// NOLIB: Unable to find library -lls
+// NOLIB: unable to find library -lls
 
 // Should use explicitly specified static library
 // Also ensure that we accept -L <arg>
@@ -55,7 +55,7 @@
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=STATIC %s
 // RUN: not ld.lld -o %t3 %t.o -L%t.dir -Bstatic -lls2 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOLIB2 %s
-// NOLIB2: Unable to find library -lls2
+// NOLIB2: unable to find library -lls2
 
 // -Bdynamic should restore default behaviour
 // RUN: ld.lld -o %t3 %t.o -L%t.dir -Bstatic -Bdynamic -lls

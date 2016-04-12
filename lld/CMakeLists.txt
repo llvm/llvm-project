@@ -94,7 +94,7 @@ endmacro(add_lld_library)
 
 
 add_subdirectory(lib)
-add_subdirectory(tools)
+add_subdirectory(tools/lld)
 
 if (LLVM_INCLUDE_TESTS)
   add_subdirectory(test)

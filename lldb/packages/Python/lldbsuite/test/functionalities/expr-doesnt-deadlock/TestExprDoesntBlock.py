@@ -20,7 +20,7 @@ class ExprDoesntDeadlockTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureFreeBSD('llvm.org/pr17946')
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr17946')
     @expectedFlakeyLinux # failed 1/365 test runs, line 61, thread.IsValid()
     @expectedFailureAll(oslist=["windows"], bugnumber="Windows doesn't have pthreads, test needs to be ported")
     def test_with_run_command(self):

@@ -10,15 +10,13 @@
 #include "DIERef.h"
 #include "DWARFCompileUnit.h"
 #include "DWARFFormValue.h"
+#include "DWARFDebugInfo.h"
+#include "SymbolFileDWARF.h"
+#include "SymbolFileDWARFDebugMap.h"
 
 DIERef::DIERef() :
     cu_offset(DW_INVALID_OFFSET),
     die_offset(DW_INVALID_OFFSET)
-{}
-
-DIERef::DIERef(dw_offset_t d) :
-    cu_offset(DW_INVALID_OFFSET),
-    die_offset(d)
 {}
 
 DIERef::DIERef(dw_offset_t c, dw_offset_t d) :
@@ -26,10 +24,35 @@ DIERef::DIERef(dw_offset_t c, dw_offset_t d) :
     die_offset(d)
 {}
 
-DIERef::DIERef(lldb::user_id_t uid) :
-    cu_offset(uid>>32),
+DIERef::DIERef(lldb::user_id_t uid, SymbolFileDWARF *dwarf) :
+    cu_offset(DW_INVALID_OFFSET),
     die_offset(uid&0xffffffff)
-{}
+{
+    SymbolFileDWARFDebugMap *debug_map = dwarf->GetDebugMapSymfile();
+    if (debug_map)
+    {
+        const uint32_t oso_idx = debug_map->GetOSOIndexFromUserID(uid);
+        SymbolFileDWARF *actual_dwarf = debug_map->GetSymbolFileByOSOIndex(oso_idx);
+        if (actual_dwarf)
+        {
+            DWARFDebugInfo *debug_info = actual_dwarf->DebugInfo();
+            if (debug_info)
+            {
+                DWARFCompileUnit *dwarf_cu = debug_info->GetCompileUnitContainingDIEOffset(die_offset);
+                if (dwarf_cu)
+                {
+                    cu_offset = dwarf_cu->GetOffset();
+                    return;
+                }
+            }
+        }
+        die_offset = DW_INVALID_OFFSET;
+    }
+    else
+    {
+        cu_offset = uid>>32;
+    }
+}
 
 DIERef::DIERef(const DWARFFormValue& form_value) :
     cu_offset(DW_INVALID_OFFSET),
@@ -50,7 +73,19 @@ DIERef::DIERef(const DWARFFormValue& form_value) :
 }
 
 lldb::user_id_t
-DIERef::GetUID() const
+DIERef::GetUID(SymbolFileDWARF *dwarf) const
 {
-    return ((lldb::user_id_t)cu_offset) << 32 | die_offset;
+    //----------------------------------------------------------------------
+    // Each SymbolFileDWARF will set its ID to what is expected.
+    //
+    // SymbolFileDWARF, when used for DWARF with .o files on MacOSX, has the
+    // ID set to the compile unit index.
+    //
+    // SymbolFileDWARFDwo sets the ID to the compile unit offset.
+    //----------------------------------------------------------------------
+    if (dwarf)
+        return dwarf->GetID() | die_offset;
+    else
+        return LLDB_INVALID_UID;
 }
+

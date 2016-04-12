@@ -183,6 +183,38 @@
             integer (kind=omp_proc_bind_kind) omp_get_proc_bind
           end function omp_get_proc_bind
 
+          function omp_get_num_places() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_num_places
+          end function omp_get_num_places
+
+          function omp_get_place_num_procs(place_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind), value :: place_num
+            integer (kind=omp_integer_kind) omp_get_place_num_procs
+          end function omp_get_place_num_procs
+
+          subroutine omp_get_place_proc_ids(place_num, ids) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind), value :: place_num
+            integer (kind=kmp_pointer_kind) ids
+          end subroutine omp_get_place_proc_ids
+
+          function omp_get_place_num() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_place_num
+          end function omp_get_place_num
+
+          function omp_get_partition_num_places() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_partition_num_places
+          end function omp_get_partition_num_places
+
+          subroutine omp_get_partition_place_nums(place_nums) bind(c)
+            use omp_lib_kinds
+            integer (kind=kmp_pointer_kind) place_nums
+          end subroutine omp_get_partition_place_nums
+
           function omp_get_wtime() bind(c)
             use omp_lib_kinds
             real (kind=kmp_double_kind) omp_get_wtime
@@ -309,6 +341,11 @@
             integer (kind=omp_integer_kind) omp_test_nest_lock
             integer (kind=omp_nest_lock_kind) lockvar
           end function omp_test_nest_lock
+
+          function omp_get_max_task_priority() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_max_task_priority
+          end function omp_get_max_task_priority
 
 !         ***
 !         *** kmp_* entry points

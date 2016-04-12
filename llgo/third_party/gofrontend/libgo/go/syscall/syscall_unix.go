@@ -172,6 +172,30 @@ func Munmap(b []byte) (err error) {
 	return mapper.Munmap(b)
 }
 
+// Do the interface allocations only once for common
+// Errno values.
+var (
+	errEAGAIN error = EAGAIN
+	errEINVAL error = EINVAL
+	errENOENT error = ENOENT
+)
+
+// errnoErr returns common boxed Errno values, to prevent
+// allocations at runtime.
+func errnoErr(e Errno) error {
+	switch e {
+	case 0:
+		return nil
+	case EAGAIN:
+		return errEAGAIN
+	case EINVAL:
+		return errEINVAL
+	case ENOENT:
+		return errENOENT
+	}
+	return e
+}
+
 // A Signal is a number describing a process signal.
 // It implements the os.Signal interface.
 type Signal int

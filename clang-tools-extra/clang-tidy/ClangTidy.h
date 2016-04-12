@@ -31,37 +31,37 @@ class CompilationDatabase;
 
 namespace tidy {
 
-/// \brief Provides access to the \c ClangTidyCheck options via check-local
+/// \brief Provides access to the ``ClangTidyCheck`` options via check-local
 /// names.
 ///
-/// Methods of this class prepend <tt>CheckName + "."</tt> to translate
-/// check-local option names to global option names.
+/// Methods of this class prepend ``CheckName + "."`` to translate check-local
+/// option names to global option names.
 class OptionsView {
 public:
   /// \brief Initializes the instance using \p CheckName + "." as a prefix.
   OptionsView(StringRef CheckName,
               const ClangTidyOptions::OptionMap &CheckOptions);
 
-  /// \brief Read a named option from the \c Context.
+  /// \brief Read a named option from the ``Context``.
   ///
   /// Reads the option with the check-local name \p LocalName from the
-  /// \c CheckOptions. If the corresponding key is not present, returns
+  /// ``CheckOptions``. If the corresponding key is not present, returns
   /// \p Default.
   std::string get(StringRef LocalName, StringRef Default) const;
 
-  /// \brief Read a named option from the \c Context.
+  /// \brief Read a named option from the ``Context``.
   ///
   /// Reads the option with the check-local name \p LocalName from local or
-  /// global \c CheckOptions. Gets local option first. If local is not
-  /// present, falls back to get global option. If global option is not present
-  /// either, returns Default.
+  /// global ``CheckOptions``. Gets local option first. If local is not present,
+  /// falls back to get global option. If global option is not present either,
+  /// returns Default.
   std::string getLocalOrGlobal(StringRef LocalName, StringRef Default) const;
 
-  /// \brief Read a named option from the \c Context and parse it as an integral
-  /// type \c T.
+  /// \brief Read a named option from the ``Context`` and parse it as an
+  /// integral type ``T``.
   ///
   /// Reads the option with the check-local name \p LocalName from the
-  /// \c CheckOptions. If the corresponding key is not present, returns
+  /// ``CheckOptions``. If the corresponding key is not present, returns
   /// \p Default.
   template <typename T>
   typename std::enable_if<std::is_integral<T>::value, T>::type
@@ -79,7 +79,7 @@ public:
              StringRef Value) const;
 
   /// \brief Stores an option with the check-local name \p LocalName with
-  /// \c int64_t value \p Value to \p Options.
+  /// ``int64_t`` value \p Value to \p Options.
   void store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
              int64_t Value) const;
 
@@ -90,20 +90,20 @@ private:
 
 /// \brief Base class for all clang-tidy checks.
 ///
-/// To implement a \c ClangTidyCheck, write a subclass and override some of the
+/// To implement a ``ClangTidyCheck``, write a subclass and override some of the
 /// base class's methods. E.g. to implement a check that validates namespace
-/// declarations, override \c registerMatchers:
+/// declarations, override ``registerMatchers``:
 ///
-/// \code
-/// registerMatchers(ast_matchers::MatchFinder *Finder) {
+/// ```c++
+/// void registerMatchers(ast_matchers::MatchFinder *Finder) override {
 ///   Finder->addMatcher(namespaceDecl().bind("namespace"), this);
 /// }
-/// \endcode
+/// ```
 ///
-/// and then override \c check(const MatchResult &Result) to do the actual
+/// and then override ``check(const MatchResult &Result)`` to do the actual
 /// check for each match.
 ///
-/// A new \c ClangTidyCheck instance is created per translation unit.
+/// A new ``ClangTidyCheck`` instance is created per translation unit.
 ///
 /// FIXME: Figure out whether carrying information from one TU to another is
 /// useful/necessary.
@@ -121,7 +121,7 @@ public:
     assert(!CheckName.empty());
   }
 
-  /// \brief Override this to register \c PPCallbacks with \c Compiler.
+  /// \brief Override this to register ``PPCallbacks`` with ``Compiler``.
   ///
   /// This should be used for clang-tidy checks that analyze preprocessor-
   /// dependent properties, e.g. the order of include directives.
@@ -141,7 +141,7 @@ public:
   /// matches occur in the order of the AST traversal.
   virtual void registerMatchers(ast_matchers::MatchFinder *Finder) {}
 
-  /// \brief \c ClangTidyChecks that register ASTMatchers should do the actual
+  /// \brief ``ClangTidyChecks`` that register ASTMatchers should do the actual
   /// work in here.
   virtual void check(const ast_matchers::MatchFinder::MatchResult &Result) {}
 
@@ -152,7 +152,7 @@ public:
   /// \brief Should store all options supported by this check with their
   /// current values or default values for options that haven't been overridden.
   ///
-  /// The check should use \c Options.store() to store each option it supports
+  /// The check should use ``Options.store()`` to store each option it supports
   /// whether it has the default value or it has been overridden.
   virtual void storeOptions(ClangTidyOptions::OptionMap &Options) {}
 

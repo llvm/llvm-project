@@ -1,5 +1,0 @@
-RUN: lld -flavor old-gnu -target hexagon %p/Inputs/got-plt-order.o -o %t -shared
-RUN: llvm-objdump -section-headers %t | FileCheck %s
-
-CHECK: .got
-CHECK-NEXT: .got.plt

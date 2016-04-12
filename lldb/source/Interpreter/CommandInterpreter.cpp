@@ -105,7 +105,7 @@ CommandInterpreter::GetStaticBroadcasterClass ()
 }
 
 CommandInterpreter::CommandInterpreter(Debugger &debugger, ScriptLanguage script_language, bool synchronous_execution)
-    : Broadcaster(&debugger, CommandInterpreter::GetStaticBroadcasterClass().AsCString()),
+    : Broadcaster(debugger.GetBroadcasterManager(), CommandInterpreter::GetStaticBroadcasterClass().AsCString()),
       Properties(OptionValuePropertiesSP(new OptionValueProperties(ConstString("interpreter")))),
       IOHandlerDelegate(IOHandlerDelegate::Completion::LLDBCommand),
       m_debugger(debugger),
@@ -185,6 +185,9 @@ CommandInterpreter::Initialize ()
 
     LoadCommandDictionary ();
 
+    // An alias arguments vector to reuse - reset it before use...
+    OptionArgVectorSP alias_arguments_vector_sp (new OptionArgVector);
+    
     // Set up some initial aliases.
     CommandObjectSP cmd_obj_sp = GetCommandSPExact ("quit", false);
     if (cmd_obj_sp)
@@ -195,9 +198,7 @@ CommandInterpreter::Initialize ()
     
     cmd_obj_sp = GetCommandSPExact ("_regexp-attach",false);
     if (cmd_obj_sp)
-    {
-        AddAlias ("attach", cmd_obj_sp);
-    }
+        AddAlias ("attach", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("process detach",false);
     if (cmd_obj_sp)
@@ -214,11 +215,11 @@ CommandInterpreter::Initialize ()
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-break",false);
     if (cmd_obj_sp)
-        AddAlias ("b", cmd_obj_sp);
+        AddAlias ("b", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-tbreak",false);
     if (cmd_obj_sp)
-        AddAlias ("tbreak", cmd_obj_sp);
+        AddAlias ("tbreak", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("thread step-inst", false);
     if (cmd_obj_sp)
@@ -239,6 +240,13 @@ CommandInterpreter::Initialize ()
     {
         AddAlias ("s", cmd_obj_sp);
         AddAlias ("step", cmd_obj_sp);
+        CommandAlias *sif_alias = AddAlias ("sif", cmd_obj_sp, "--end-linenumber block --step-in-target %1");
+        if (sif_alias)
+        {
+            sif_alias->SetHelp("Step through the current block, stopping if you step "
+                               "directly into a function whose name matches the TargetFunctionName.");
+            sif_alias->SetSyntax("sif <TargetFunctionName>");
+        }
     }
 
     cmd_obj_sp = GetCommandSPExact ("thread step-over", false);
@@ -269,22 +277,20 @@ CommandInterpreter::Initialize ()
     cmd_obj_sp = GetCommandSPExact ("_regexp-jump",false);
     if (cmd_obj_sp)
     {
-        AddAlias ("j", cmd_obj_sp);
-        AddAlias ("jump", cmd_obj_sp);
+        AddAlias ("j", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
+        AddAlias ("jump", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
     }
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-list", false);
     if (cmd_obj_sp)
     {
-        AddAlias ("l", cmd_obj_sp);
-        AddAlias ("list", cmd_obj_sp);
+        AddAlias ("l", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
+        AddAlias ("list", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
     }
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-env", false);
     if (cmd_obj_sp)
-    {
-        AddAlias ("env", cmd_obj_sp);
-    }
+        AddAlias ("env", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("memory read", false);
     if (cmd_obj_sp)
@@ -292,15 +298,15 @@ CommandInterpreter::Initialize ()
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-up", false);
     if (cmd_obj_sp)
-        AddAlias ("up", cmd_obj_sp);
+        AddAlias ("up", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-down", false);
     if (cmd_obj_sp)
-        AddAlias ("down", cmd_obj_sp);
+        AddAlias ("down", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-display", false);
     if (cmd_obj_sp)
-        AddAlias ("display", cmd_obj_sp);
+        AddAlias ("display", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
         
     cmd_obj_sp = GetCommandSPExact ("disassemble", false);
     if (cmd_obj_sp)
@@ -314,11 +320,11 @@ CommandInterpreter::Initialize ()
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-undisplay", false);
     if (cmd_obj_sp)
-        AddAlias ("undisplay", cmd_obj_sp);
+        AddAlias ("undisplay", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-bt", false);
     if (cmd_obj_sp)
-        AddAlias ("bt", cmd_obj_sp);
+        AddAlias ("bt", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("target create", false);
     if (cmd_obj_sp)
@@ -329,28 +335,22 @@ CommandInterpreter::Initialize ()
         AddAlias ("image", cmd_obj_sp);
 
 
-    OptionArgVectorSP alias_arguments_vector_sp (new OptionArgVector);
-    
+    alias_arguments_vector_sp.reset(new OptionArgVector);
+
     cmd_obj_sp = GetCommandSPExact ("expression", false);
     if (cmd_obj_sp)
     {        
-        ProcessAliasOptionsArgs (cmd_obj_sp, "--", alias_arguments_vector_sp);
-        AddAlias ("p", cmd_obj_sp);
-        AddAlias ("print", cmd_obj_sp);
-        AddAlias ("call", cmd_obj_sp);
-        AddOrReplaceAliasOptions ("p", alias_arguments_vector_sp);
-        AddOrReplaceAliasOptions ("print", alias_arguments_vector_sp);
-        AddOrReplaceAliasOptions ("call", alias_arguments_vector_sp);
+        AddAlias ("p", cmd_obj_sp, "--")->SetHelpLong("");
+        AddAlias ("print", cmd_obj_sp, "--")->SetHelpLong("");
+        AddAlias ("call", cmd_obj_sp, "--")->SetHelpLong("");
 
-        alias_arguments_vector_sp.reset (new OptionArgVector);
-        ProcessAliasOptionsArgs (cmd_obj_sp, "-O -- ", alias_arguments_vector_sp);
-        AddAlias ("po", cmd_obj_sp);
-        AddOrReplaceAliasOptions ("po", alias_arguments_vector_sp);
-        
-        alias_arguments_vector_sp.reset (new OptionArgVector);
-        ProcessAliasOptionsArgs (cmd_obj_sp, "--repl -- ", alias_arguments_vector_sp);
-        AddAlias ("repl", cmd_obj_sp);
-        AddOrReplaceAliasOptions ("repl", alias_arguments_vector_sp);
+        if (auto po = AddAlias ("po", cmd_obj_sp, "-O --"))
+        {
+            po->SetHelp("Evaluate an expression in the current program context, using user defined variables and variables currently in scope, and display the result of evaluation in a language-specific manner.");
+            po->SetHelpLong("");
+        }
+
+        AddAlias ("repl", cmd_obj_sp, "--repl --");
     }
     
     cmd_obj_sp = GetCommandSPExact ("process kill", false);
@@ -364,26 +364,23 @@ CommandInterpreter::Initialize ()
     {
         alias_arguments_vector_sp.reset (new OptionArgVector);
 #if defined (__arm__) || defined (__arm64__) || defined (__aarch64__)
-        ProcessAliasOptionsArgs (cmd_obj_sp, "--", alias_arguments_vector_sp);
+        AddAlias ("r", cmd_obj_sp, "--");
+        AddAlias ("run", cmd_obj_sp, "--");
 #else
     #if defined(__APPLE__)
         std::string shell_option;
         shell_option.append("--shell-expand-args");
         shell_option.append(" true");
         shell_option.append(" --");
-        ProcessAliasOptionsArgs (cmd_obj_sp, shell_option.c_str(), alias_arguments_vector_sp);
+        AddAlias ("r", cmd_obj_sp, "--shell-expand-args true --");
+        AddAlias ("run", cmd_obj_sp, "--shell-expand-args true --");
     #else
-        std::string shell_option;
-        shell_option.append("--shell-expand-args");
-        shell_option.append(" true");
-        shell_option.append(" --");
-        ProcessAliasOptionsArgs (cmd_obj_sp, shell_option.c_str(), alias_arguments_vector_sp);
+        StreamString defaultshell;
+        defaultshell.Printf("--shell=%s --", HostInfo::GetDefaultShell().GetPath().c_str());
+        AddAlias ("r", cmd_obj_sp, defaultshell.GetData());
+        AddAlias ("run", cmd_obj_sp, defaultshell.GetData());
     #endif
 #endif
-        AddAlias ("r", cmd_obj_sp);
-        AddAlias ("run", cmd_obj_sp);
-        AddOrReplaceAliasOptions ("r", alias_arguments_vector_sp);
-        AddOrReplaceAliasOptions ("run", alias_arguments_vector_sp);
     }
     
     cmd_obj_sp = GetCommandSPExact ("target symbols add", false);
@@ -395,10 +392,7 @@ CommandInterpreter::Initialize ()
     cmd_obj_sp = GetCommandSPExact ("breakpoint set", false);
     if (cmd_obj_sp)
     {
-        alias_arguments_vector_sp.reset (new OptionArgVector);
-        ProcessAliasOptionsArgs (cmd_obj_sp, "--func-regex %1", alias_arguments_vector_sp);
-        AddAlias ("rbreak", cmd_obj_sp);
-        AddOrReplaceAliasOptions("rbreak", alias_arguments_vector_sp);
+        AddAlias ("rbreak", cmd_obj_sp, "--func-regex %1");
     }
 }
 
@@ -759,11 +753,11 @@ int
 CommandInterpreter::GetCommandNamesMatchingPartialString (const char *cmd_str, bool include_aliases,
                                                           StringList &matches)
 {
-    CommandObject::AddNamesMatchingPartialString (m_command_dict, cmd_str, matches);
+    AddNamesMatchingPartialString (m_command_dict, cmd_str, matches);
 
     if (include_aliases)
     {
-        CommandObject::AddNamesMatchingPartialString (m_alias_dict, cmd_str, matches);
+        AddNamesMatchingPartialString (m_alias_dict, cmd_str, matches);
     }
 
     return matches.GetSize();
@@ -786,9 +780,9 @@ CommandInterpreter::GetCommandSP (const char *cmd_cstr, bool include_aliases, bo
 
     if (include_aliases && HasAliases())
     {
-        pos = m_alias_dict.find(cmd);
-        if (pos != m_alias_dict.end())
-            command_sp = pos->second;
+        auto alias_pos = m_alias_dict.find(cmd);
+        if (alias_pos != m_alias_dict.end())
+            command_sp = alias_pos->second;
     }
 
     if (HasUserCommands())
@@ -817,7 +811,7 @@ CommandInterpreter::GetCommandSP (const char *cmd_cstr, bool include_aliases, bo
         
         if (HasCommands())
         {
-            num_cmd_matches = CommandObject::AddNamesMatchingPartialString (m_command_dict, cmd_cstr, *matches);
+            num_cmd_matches = AddNamesMatchingPartialString (m_command_dict, cmd_cstr, *matches);
         }
 
         if (num_cmd_matches == 1)
@@ -830,21 +824,21 @@ CommandInterpreter::GetCommandSP (const char *cmd_cstr, bool include_aliases, bo
 
         if (include_aliases && HasAliases())
         {
-            num_alias_matches = CommandObject::AddNamesMatchingPartialString (m_alias_dict, cmd_cstr, *matches);
+            num_alias_matches = AddNamesMatchingPartialString (m_alias_dict, cmd_cstr, *matches);
 
         }
 
         if (num_alias_matches == 1)
         {
             cmd.assign(matches->GetStringAtIndex (num_cmd_matches));
-            pos = m_alias_dict.find(cmd);
-            if (pos != m_alias_dict.end())
-                alias_match_sp = pos->second;
+            auto alias_pos = m_alias_dict.find(cmd);
+            if (alias_pos != m_alias_dict.end())
+                alias_match_sp = alias_pos->second;
         }
 
         if (HasUserCommands())
         {
-            num_user_matches = CommandObject::AddNamesMatchingPartialString (m_user_dict, cmd_cstr, *matches);
+            num_user_matches = AddNamesMatchingPartialString (m_user_dict, cmd_cstr, *matches);
         }
 
         if (num_user_matches == 1)
@@ -1020,59 +1014,6 @@ CommandInterpreter::CommandExists (const char *cmd)
 }
 
 bool
-CommandInterpreter::ProcessAliasOptionsArgs (lldb::CommandObjectSP &cmd_obj_sp, 
-                                            const char *options_args, 
-                                            OptionArgVectorSP &option_arg_vector_sp)
-{
-    bool success = true;
-    OptionArgVector *option_arg_vector = option_arg_vector_sp.get();
-    
-    if (!options_args || (strlen (options_args) < 1))
-        return true;
-
-    std::string options_string (options_args);
-    Args args (options_args);
-    CommandReturnObject result;
-    // Check to see if the command being aliased can take any command options.
-    Options *options = cmd_obj_sp->GetOptions ();
-    if (options)
-    {
-        // See if any options were specified as part of the alias;  if so, handle them appropriately.
-        options->NotifyOptionParsingStarting ();
-        args.Unshift ("dummy_arg");
-        args.ParseAliasOptions (*options, result, option_arg_vector, options_string);
-        args.Shift ();
-        if (result.Succeeded())
-            options->VerifyPartialOptions (result);
-        if (!result.Succeeded() && result.GetStatus() != lldb::eReturnStatusStarted)
-        {
-            result.AppendError ("Unable to create requested alias.\n");
-            return false;
-        }
-    }
-    
-    if (!options_string.empty())
-    {
-        if (cmd_obj_sp->WantsRawCommandString ())
-            option_arg_vector->push_back (OptionArgPair ("<argument>",
-                                                          OptionArgValue (-1,
-                                                                          options_string)));
-        else
-        {
-            const size_t argc = args.GetArgumentCount();
-            for (size_t i = 0; i < argc; ++i)
-                if (strcmp (args.GetArgumentAtIndex (i), "") != 0)
-                    option_arg_vector->push_back 
-                                (OptionArgPair ("<argument>",
-                                                OptionArgValue (-1,
-                                                                std::string (args.GetArgumentAtIndex (i)))));
-        }
-    }
-        
-    return success;
-}
-
-bool
 CommandInterpreter::GetAliasFullName (const char *cmd, std::string &full_name)
 {
     bool exact_match  = (m_alias_dict.find(cmd) != m_alias_dict.end());
@@ -1085,7 +1026,7 @@ CommandInterpreter::GetAliasFullName (const char *cmd, std::string &full_name)
     {
         StringList matches;
         size_t num_alias_matches;
-        num_alias_matches = CommandObject::AddNamesMatchingPartialString (m_alias_dict, cmd, matches);
+        num_alias_matches = AddNamesMatchingPartialString (m_alias_dict, cmd, matches);
         if (num_alias_matches == 1)
         {
             // Make sure this isn't shadowing a command in the regular command space:
@@ -1118,20 +1059,32 @@ CommandInterpreter::UserCommandExists (const char *cmd)
     return m_user_dict.find(cmd) != m_user_dict.end();
 }
 
-void
-CommandInterpreter::AddAlias (const char *alias_name, CommandObjectSP& command_obj_sp)
+CommandAlias*
+CommandInterpreter::AddAlias (const char *alias_name,
+                              lldb::CommandObjectSP& command_obj_sp,
+                              const char *args_string)
 {
     if (command_obj_sp.get())
         assert((this == &command_obj_sp->GetCommandInterpreter()) && "tried to add a CommandObject from a different interpreter");
-
-    command_obj_sp->SetIsAlias (true);
-    m_alias_dict[alias_name] = command_obj_sp;
+    
+    std::unique_ptr<CommandAlias> command_alias_up(new CommandAlias(*this,
+                                                                    command_obj_sp,
+                                                                    args_string,
+                                                                    alias_name));
+    
+    if (command_alias_up && command_alias_up->IsValid())
+    {
+        m_alias_dict[alias_name] = CommandObjectSP(command_alias_up.get());
+        return command_alias_up.release();
+    }
+    
+    return nullptr;
 }
 
 bool
 CommandInterpreter::RemoveAlias (const char *alias_name)
 {
-    CommandObject::CommandMap::iterator pos = m_alias_dict.find(alias_name);
+    auto pos = m_alias_dict.find(alias_name);
     if (pos != m_alias_dict.end())
     {
         m_alias_dict.erase(pos);
@@ -1165,56 +1118,6 @@ CommandInterpreter::RemoveUser (const char *alias_name)
         return true;
     }
     return false;
-}
-
-void
-CommandInterpreter::GetAliasHelp (const char *alias_name, const char *command_name, StreamString &help_string)
-{
-    help_string.Printf ("'%s", command_name);
-    OptionArgVectorSP option_arg_vector_sp = GetAliasOptions (alias_name);
-
-    if (option_arg_vector_sp)
-    {
-        OptionArgVector *options = option_arg_vector_sp.get();
-        for (size_t i = 0; i < options->size(); ++i)
-        {
-            OptionArgPair cur_option = (*options)[i];
-            std::string opt = cur_option.first;
-            OptionArgValue value_pair = cur_option.second;
-            std::string value = value_pair.second;
-            if (opt.compare("<argument>") == 0)
-            {
-                help_string.Printf (" %s", value.c_str());
-            }
-            else
-            {
-                help_string.Printf (" %s", opt.c_str());
-                if ((value.compare ("<no-argument>") != 0)
-                    && (value.compare ("<need-argument") != 0))
-                {
-                    help_string.Printf (" %s", value.c_str());
-                }
-            }
-        }
-    }
-
-    help_string.Printf ("'");
-}
-
-size_t
-CommandInterpreter::FindLongestCommandWord (CommandObject::CommandMap &dict)
-{
-    CommandObject::CommandMap::const_iterator pos;
-    CommandObject::CommandMap::const_iterator end = dict.end();
-    size_t max_len = 0;
-
-    for (pos = dict.begin(); pos != end; ++pos)
-    {
-        size_t len = pos->first.size();
-        if (max_len < len)
-            max_len = len;
-    }
-    return max_len;
 }
 
 void
@@ -1255,17 +1158,10 @@ CommandInterpreter::GetHelp (CommandReturnObject &result,
         result.AppendMessage("");
         max_len = FindLongestCommandWord (m_alias_dict);
 
-        for (pos = m_alias_dict.begin(); pos != m_alias_dict.end(); ++pos)
+        for (auto alias_pos = m_alias_dict.begin(); alias_pos != m_alias_dict.end(); ++alias_pos)
         {
-            StreamString sstr;
-            StreamString translation_and_help;
-            std::string entry_name = pos->first;
-            std::string second_entry = pos->second.get()->GetCommandName();
-            GetAliasHelp (pos->first.c_str(), pos->second->GetCommandName(), sstr);
-            
-            translation_and_help.Printf ("(%s)  %s", sstr.GetData(), pos->second->GetHelp());
-            OutputFormattedHelpText (result.GetOutputStream(), pos->first.c_str(), "--", 
-                                     translation_and_help.GetData(), max_len);
+            OutputFormattedHelpText (result.GetOutputStream(), alias_pos->first.c_str(), "--", alias_pos->second->GetHelp(),
+                                     max_len);
         }
         result.AppendMessage("");
     }
@@ -1465,15 +1361,17 @@ CommandInterpreter::BuildAliasResult (const char *alias_name,
     alias_cmd_obj = GetCommandObject (alias_name);
     StreamString result_str;
     
-    if (alias_cmd_obj)
+    if (alias_cmd_obj && alias_cmd_obj->IsAlias())
     {
+        std::pair<CommandObjectSP, OptionArgVectorSP> desugared = ((CommandAlias*)alias_cmd_obj)->Desugar();
+        OptionArgVectorSP option_arg_vector_sp =  desugared.second;
+        alias_cmd_obj = desugared.first.get();
         std::string alias_name_str = alias_name;
         if ((cmd_args.GetArgumentCount() == 0)
             || (alias_name_str.compare (cmd_args.GetArgumentAtIndex(0)) != 0))
             cmd_args.Unshift (alias_name);
             
         result_str.Printf ("%s", alias_cmd_obj->GetCommandName ());
-        OptionArgVectorSP option_arg_vector_sp = GetAliasOptions (alias_name);
 
         if (option_arg_vector_sp.get())
         {
@@ -1631,6 +1529,7 @@ CommandInterpreter::PreprocessCommand (std::string &command)
                                     break;
                                 case eExpressionResultUnavailable:
                                     error.SetErrorStringWithFormat ("expression error fetching result for the expression '%s'", expr_str.c_str());
+                                    break;
                                 case eExpressionCompleted:
                                     break;
                                 case eExpressionDiscarded:
@@ -2099,38 +1998,18 @@ CommandInterpreter::Confirm (const char *message, bool default_answer)
     return confirm->GetResponse();
 }
     
-OptionArgVectorSP
-CommandInterpreter::GetAliasOptions (const char *alias_name)
+CommandAlias*
+CommandInterpreter::GetAlias (const char *alias_name)
 {
-    OptionArgMap::iterator pos;
     OptionArgVectorSP ret_val;
 
     std::string alias (alias_name);
 
-    if (HasAliasOptions())
-    {
-        pos = m_alias_options.find (alias);
-        if (pos != m_alias_options.end())
-          ret_val = pos->second;
-    }
-
-    return ret_val;
-}
-
-void
-CommandInterpreter::RemoveAliasOptions (const char *alias_name)
-{
-    OptionArgMap::iterator pos = m_alias_options.find(alias_name);
-    if (pos != m_alias_options.end())
-    {
-        m_alias_options.erase (pos);
-    }
-}
-
-void
-CommandInterpreter::AddOrReplaceAliasOptions (const char *alias_name, OptionArgVectorSP &option_arg_vector_sp)
-{
-    m_alias_options[alias_name] = option_arg_vector_sp;
+    auto pos = m_alias_dict.find(alias);
+    if (pos != m_alias_dict.end())
+        return (CommandAlias*)pos->second.get();
+    
+    return nullptr;
 }
 
 bool
@@ -2154,7 +2033,7 @@ CommandInterpreter::HasUserCommands ()
 bool
 CommandInterpreter::HasAliasOptions ()
 {
-    return (!m_alias_options.empty());
+    return HasAliases();
 }
 
 void
@@ -2164,7 +2043,7 @@ CommandInterpreter::BuildAliasCommandArgs (CommandObject *alias_cmd_obj,
                                            std::string &raw_input_string,
                                            CommandReturnObject &result)
 {
-    OptionArgVectorSP option_arg_vector_sp = GetAliasOptions (alias_name);
+    OptionArgVectorSP option_arg_vector_sp = GetAlias(alias_name)->GetOptionArguments();
     
     bool wants_raw_input = alias_cmd_obj->WantsRawCommandString();
 
@@ -2902,54 +2781,63 @@ CommandInterpreter::OutputHelpText (Stream &strm,
 }
 
 void
-CommandInterpreter::FindCommandsForApropos (const char *search_word, StringList &commands_found,
-                                            StringList &commands_help, bool search_builtin_commands, bool search_user_commands)
+CommandInterpreter::FindCommandsForApropos (const char *search_word,
+                                            StringList &commands_found,
+                                            StringList &commands_help,
+                                            CommandObject::CommandMap &command_map)
+{
+    CommandObject::CommandMap::const_iterator pos;
+    
+    for (pos = command_map.begin(); pos != command_map.end(); ++pos)
+    {
+        const char *command_name = pos->first.c_str();
+        CommandObject *cmd_obj = pos->second.get();
+        
+        const bool search_short_help = true;
+        const bool search_long_help = false;
+        const bool search_syntax = false;
+        const bool search_options = false;
+        if (strcasestr(command_name, search_word) ||
+            cmd_obj->HelpTextContainsWord (search_word,
+                                           search_short_help,
+                                           search_long_help,
+                                           search_syntax,
+                                           search_options))
+        {
+            commands_found.AppendString (command_name);
+            commands_help.AppendString (cmd_obj->GetHelp());
+        }
+        
+        if (cmd_obj->IsMultiwordObject())
+        {
+            CommandObjectMultiword *cmd_multiword = (CommandObjectMultiword*)cmd_obj;
+            FindCommandsForApropos(search_word,
+                                   commands_found,
+                                   commands_help,
+                                   cmd_multiword->GetSubcommandDictionary());
+        }
+    }
+}
+
+
+void
+CommandInterpreter::FindCommandsForApropos (const char *search_word,
+                                            StringList &commands_found,
+                                            StringList &commands_help,
+                                            bool search_builtin_commands,
+                                            bool search_user_commands,
+                                            bool search_alias_commands)
 {
     CommandObject::CommandMap::const_iterator pos;
 
     if (search_builtin_commands)
-    {
-        for (pos = m_command_dict.begin(); pos != m_command_dict.end(); ++pos)
-        {
-            const char *command_name = pos->first.c_str();
-            CommandObject *cmd_obj = pos->second.get();
-
-            if (cmd_obj->HelpTextContainsWord (search_word))
-            {
-                commands_found.AppendString (command_name);
-                commands_help.AppendString (cmd_obj->GetHelp());
-            }
-
-            if (cmd_obj->IsMultiwordObject())
-                cmd_obj->AproposAllSubCommands (command_name,
-                                                search_word,
-                                                commands_found,
-                                                commands_help);
-          
-        }
-    }
+        FindCommandsForApropos(search_word, commands_found, commands_help, m_command_dict);
     
     if (search_user_commands)
-    {
-        for (pos = m_user_dict.begin(); pos != m_user_dict.end(); ++pos)
-        {
-            const char *command_name = pos->first.c_str();
-            CommandObject *cmd_obj = pos->second.get();
+        FindCommandsForApropos(search_word, commands_found, commands_help, m_user_dict);
 
-            if (cmd_obj->HelpTextContainsWord (search_word))
-            {
-                commands_found.AppendString (command_name);
-                commands_help.AppendString (cmd_obj->GetHelp());
-            }
-
-            if (cmd_obj->IsMultiwordObject())
-                cmd_obj->AproposAllSubCommands (command_name,
-                                                search_word,
-                                                commands_found,
-                                                commands_help);
-          
-        }
-    }
+    if (search_alias_commands)
+        FindCommandsForApropos(search_word, commands_found, commands_help, m_alias_dict);
 }
 
 void

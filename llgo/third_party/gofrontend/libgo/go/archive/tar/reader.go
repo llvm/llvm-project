@@ -85,6 +85,8 @@ const (
 func NewReader(r io.Reader) *Reader { return &Reader{r: r} }
 
 // Next advances to the next entry in the tar archive.
+//
+// io.EOF is returned at the end of the input.
 func (tr *Reader) Next() (*Header, error) {
 	var hdr *Header
 	if tr.err == nil {
@@ -108,7 +110,13 @@ func (tr *Reader) Next() (*Header, error) {
 		// We actually read the whole file,
 		// but this skips alignment padding
 		tr.skipUnread()
+		if tr.err != nil {
+			return nil, tr.err
+		}
 		hdr = tr.readHeader()
+		if hdr == nil {
+			return nil, tr.err
+		}
 		mergePAX(hdr, headers)
 
 		// Check for a PAX format sparse file
@@ -331,7 +339,7 @@ func parsePAX(r io.Reader) (map[string]string, error) {
 		}
 		// Parse the first token as a decimal integer.
 		n, err := strconv.ParseInt(string(buf[:sp]), 10, 0)
-		if err != nil {
+		if err != nil || n < 5 || int64(len(buf)) < n {
 			return nil, ErrHeader
 		}
 		// Extract everything between the decimal and the n -1 on the
@@ -461,6 +469,10 @@ func (tr *Reader) readHeader() *Header {
 	hdr.Uid = int(tr.octal(s.next(8)))
 	hdr.Gid = int(tr.octal(s.next(8)))
 	hdr.Size = tr.octal(s.next(12))
+	if hdr.Size < 0 {
+		tr.err = ErrHeader
+		return nil
+	}
 	hdr.ModTime = time.Unix(tr.octal(s.next(12)), 0)
 	s.next(8) // chksum
 	hdr.Typeflag = s.next(1)[0]
@@ -784,6 +796,9 @@ func (sfr *sparseFileReader) Read(b []byte) (n int, err error) {
 		}
 		// Otherwise, we're at the end of the file
 		return 0, io.EOF
+	}
+	if sfr.tot < sfr.sp[0].offset {
+		return 0, io.ErrUnexpectedEOF
 	}
 	if sfr.pos < sfr.sp[0].offset {
 		// We're in a hole

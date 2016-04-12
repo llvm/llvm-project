@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <map>
 
 // class map
@@ -17,12 +19,13 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "count_new.hpp"
 #include "MoveOnly.h"
 #include "min_allocator.h"
+#include "container_test_types.h"
 
 int main()
 {
-#if TEST_STD_VER >= 11
     {
     std::map<MoveOnly, double> m;
     assert(m.size() == 0);
@@ -52,5 +55,27 @@ int main()
     assert(m[6] == 6.5);
     assert(m.size() == 2);
     }
-#endif
+    {
+        // Use "container_test_types.h" to check what arguments get passed
+        // to the allocator for operator[]
+        using Container = TCT::map<>;
+        using Key = Container::key_type;
+        using MappedType = Container::mapped_type;
+        using ValueTp = Container::value_type;
+        ConstructController* cc = getConstructController();
+        cc->reset();
+        {
+            Container c;
+            Key k(1);
+            cc->expect<std::piecewise_construct_t const&, std::tuple<Key &&>&&, std::tuple<>&&>();
+            MappedType& mref = c[std::move(k)];
+            assert(!cc->unchecked());
+            {
+                Key k2(1);
+                DisableAllocationGuard g;
+                MappedType& mref2 = c[std::move(k2)];
+                assert(&mref == &mref2);
+            }
+        }
+    }
 }

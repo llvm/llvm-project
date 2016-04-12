@@ -70,6 +70,7 @@ class SCEVUnknown;
 class CallInst;
 class Instruction;
 class Value;
+class IntrinsicInst;
 }
 
 namespace polly {
@@ -109,6 +110,7 @@ extern bool PollyTrackFailures;
 extern bool PollyDelinearize;
 extern bool PollyUseRuntimeAliasChecks;
 extern bool PollyProcessUnprofitable;
+extern bool PollyInvariantLoadHoisting;
 
 /// @brief A function attribute which will cause Polly to skip the function
 extern llvm::StringRef PollySkipFnAttr;
@@ -144,9 +146,9 @@ public:
 
     /// @brief The set of base pointers with non-affine accesses.
     ///
-    /// This set contains all base pointers which are used in memory accesses
-    /// that can not be detected as affine accesses.
-    SetVector<const SCEVUnknown *> NonAffineAccesses;
+    /// This set contains all base pointers and the locations where they are
+    /// used for memory accesses that can not be detected as affine accesses.
+    SetVector<std::pair<const SCEVUnknown *, Loop *>> NonAffineAccesses;
     BaseToElSize ElementSize;
 
     /// @brief The region has at least one load instruction.
@@ -154,6 +156,9 @@ public:
 
     /// @brief The region has at least one store instruction.
     bool hasStores;
+
+    /// @brief Flag to indicate the region has at least one unknown access.
+    bool HasUnknownAccess;
 
     /// @brief The set of non-affine subregions in the region we analyze.
     NonAffineSubRegionSetTy NonAffineSubRegionSet;
@@ -171,7 +176,7 @@ public:
     /// @brief Initialize a DetectionContext from scratch.
     DetectionContext(Region &R, AliasAnalysis &AA, bool Verify)
         : CurRegion(R), AST(AA), Verifying(Verify), Log(&R), hasLoads(false),
-          hasStores(false) {}
+          hasStores(false), HasUnknownAccess(false) {}
 
     /// @brief Initialize a DetectionContext with the data from @p DC.
     DetectionContext(const DetectionContext &&DC)
@@ -180,7 +185,7 @@ public:
           Accesses(std::move(DC.Accesses)),
           NonAffineAccesses(std::move(DC.NonAffineAccesses)),
           ElementSize(std::move(DC.ElementSize)), hasLoads(DC.hasLoads),
-          hasStores(DC.hasStores),
+          hasStores(DC.hasStores), HasUnknownAccess(DC.HasUnknownAccess),
           NonAffineSubRegionSet(std::move(DC.NonAffineSubRegionSet)),
           BoxedLoopsSet(std::move(DC.BoxedLoopsSet)),
           RequiredILS(std::move(DC.RequiredILS)) {
@@ -247,11 +252,12 @@ private:
   /// @param Context     The current detection context.
   /// @param Sizes       The sizes of the different array dimensions.
   /// @param BasePointer The base pointer we are interested in.
+  /// @param Scope       The location where @p BasePointer is being used.
   /// @returns True if one or more array sizes could be derived - meaning: we
   ///          see this array as multi-dimensional.
   bool hasValidArraySizes(DetectionContext &Context,
                           SmallVectorImpl<const SCEV *> &Sizes,
-                          const SCEVUnknown *BasePointer) const;
+                          const SCEVUnknown *BasePointer, Loop *Scope) const;
 
   /// @brief Derive access functions for a given base pointer.
   ///
@@ -271,10 +277,11 @@ private:
   ///
   /// @param Context     The current detection context.
   /// @param basepointer the base pointer we are interested in.
+  /// @param Scope       The location where @p BasePointer is being used.
   /// @param True if consistent (multi-dimensional) array accesses could be
   ///        derived for this array.
   bool hasBaseAffineAccesses(DetectionContext &Context,
-                             const SCEVUnknown *BasePointer) const;
+                             const SCEVUnknown *BasePointer, Loop *Scope) const;
 
   // Delinearize all non affine memory accesses and return false when there
   // exists a non affine memory access that cannot be delinearized. Return true
@@ -328,11 +335,21 @@ private:
   /// @return True if R is a Scop, false otherwise.
   bool isValidRegion(DetectionContext &Context) const;
 
+  /// @brief Check if an intrinsic call can be part of a Scop.
+  ///
+  /// @param II      The intrinsic call instruction to check.
+  /// @param Context The current detection context.
+  ///
+  /// @return True if the call instruction is valid, false otherwise.
+  bool isValidIntrinsicInst(IntrinsicInst &II, DetectionContext &Context) const;
+
   /// @brief Check if a call instruction can be part of a Scop.
   ///
-  /// @param CI The call instruction to check.
+  /// @param CI      The call instruction to check.
+  /// @param Context The current detection context.
+  ///
   /// @return True if the call instruction is valid, false otherwise.
-  static bool isValidCallInst(CallInst &CI);
+  bool isValidCallInst(CallInst &CI, DetectionContext &Context) const;
 
   /// @brief Check if the given loads could be invariant and can be hoisted.
   ///
@@ -354,6 +371,15 @@ private:
   /// @return True if the value represented by Val is invariant in the region
   ///         identified by Reg.
   bool isInvariant(const Value &Val, const Region &Reg) const;
+
+  /// @brief Check if the memory access caused by @p Inst is valid.
+  ///
+  /// @param Inst    The access instruction.
+  /// @param AF      The access function.
+  /// @param BP      The access base pointer.
+  /// @param Context The current detection context.
+  bool isValidAccess(Instruction *Inst, const SCEV *AF, const SCEVUnknown *BP,
+                     DetectionContext &Context) const;
 
   /// @brief Check if a memory access can be part of a Scop.
   ///
@@ -412,9 +438,10 @@ private:
   /// non-affine.
   ///
   /// @param S           The expression to be checked.
+  /// @param Scope       The loop nest in which @p S is used.
   /// @param Context     The context of scop detection.
   /// @param BaseAddress The base address of the expression @p S (if any).
-  bool isAffine(const SCEV *S, DetectionContext &Context,
+  bool isAffine(const SCEV *S, Loop *Scope, DetectionContext &Context,
                 Value *BaseAddress = nullptr) const;
 
   /// @brief Check if the control flow in a basic block is valid.
@@ -489,6 +516,9 @@ public:
   ///
   /// This was added to give the DOT printer easy access to this information.
   RegionInfo *getRI() const { return RI; }
+
+  /// @brief Get the LoopInfo stored in this pass.
+  LoopInfo *getLI() const { return LI; }
 
   /// @brief Is the region is the maximum region of a Scop?
   ///

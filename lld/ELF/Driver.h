@@ -17,12 +17,9 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 extern class LinkerDriver *Driver;
-
-// Entry point of the ELF linker. Returns true on success.
-bool link(ArrayRef<const char *> Args, llvm::raw_ostream &Error = llvm::errs());
 
 class LinkerDriver {
 public:
@@ -31,6 +28,7 @@ public:
   void addLibrary(StringRef Name);
 
 private:
+  std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB);
   void readConfigs(llvm::opt::InputArgList &Args);
   void createFiles(llvm::opt::InputArgList &Args);
   template <class ELFT> void link(llvm::opt::InputArgList &Args);
@@ -42,8 +40,14 @@ private:
 };
 
 // Parses command line options.
-llvm::opt::InputArgList parseArgs(llvm::BumpPtrAllocator *A,
-                                  ArrayRef<const char *> Args);
+class ELFOptTable : public llvm::opt::OptTable {
+public:
+  ELFOptTable();
+  llvm::opt::InputArgList parse(ArrayRef<const char *> Argv);
+
+private:
+  llvm::BumpPtrAllocator Alloc;
+};
 
 // Create enum with OPT_xxx values for each option in Options.td
 enum {
@@ -53,11 +57,14 @@ enum {
 #undef OPTION
 };
 
+void printHelp(const char *Argv0);
+void printVersion();
+
 std::string findFromSearchPaths(StringRef Path);
 std::string searchLibrary(StringRef Path);
 std::string buildSysrootedPath(llvm::StringRef Dir, llvm::StringRef File);
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

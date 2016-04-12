@@ -116,8 +116,9 @@ ClangTidyMessage::ClangTidyMessage(StringRef Message,
 
 ClangTidyError::ClangTidyError(StringRef CheckName,
                                ClangTidyError::Level DiagLevel,
-                               bool IsWarningAsError)
-    : CheckName(CheckName), DiagLevel(DiagLevel),
+                               bool IsWarningAsError,
+                               StringRef BuildDirectory)
+    : CheckName(CheckName), BuildDirectory(BuildDirectory), DiagLevel(DiagLevel),
       IsWarningAsError(IsWarningAsError) {}
 
 // Returns true if GlobList starts with the negative indicator ('-'), removes it
@@ -335,13 +336,13 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     bool IsWarningAsError =
         DiagLevel == DiagnosticsEngine::Warning &&
         Context.getWarningAsErrorFilter().contains(CheckName);
-    Errors.push_back(ClangTidyError(CheckName, Level, IsWarningAsError));
+    Errors.push_back(ClangTidyError(CheckName, Level, IsWarningAsError,
+                                    Context.getCurrentBuildDirectory()));
   }
 
-  // FIXME: Provide correct LangOptions for each file.
-  LangOptions LangOpts;
   ClangTidyDiagnosticRenderer Converter(
-      LangOpts, &Context.DiagEngine->getDiagnosticOptions(), Errors.back());
+      Context.getLangOpts(), &Context.DiagEngine->getDiagnosticOptions(),
+      Errors.back());
   SmallString<100> Message;
   Info.FormatDiagnostic(Message);
   SourceManager *Sources = nullptr;

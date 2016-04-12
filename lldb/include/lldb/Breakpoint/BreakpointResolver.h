@@ -60,7 +60,7 @@ public:
     /// @result
     ///   Returns breakpoint location id.
     //------------------------------------------------------------------
-    BreakpointResolver (Breakpoint *bkpt, unsigned char resolverType);
+    BreakpointResolver (Breakpoint *bkpt, unsigned char resolverType, lldb::addr_t offset = 0);
 
     //------------------------------------------------------------------
     /// The Destructor is virtual, all significant breakpoint resolvers derive
@@ -76,6 +76,29 @@ public:
     //------------------------------------------------------------------
     void
     SetBreakpoint (Breakpoint *bkpt);
+
+    //------------------------------------------------------------------
+    /// This updates the offset for this breakpoint.  All the locations currently
+    /// set for this breakpoint will have their offset adjusted when this is called.
+    ///
+    /// @param[in] offset
+    ///   The offset to add to all locations.
+    //------------------------------------------------------------------
+    void
+    SetOffset (lldb::addr_t offset);
+
+    //------------------------------------------------------------------
+    /// This updates the offset for this breakpoint.  All the locations currently
+    /// set for this breakpoint will have their offset adjusted when this is called.
+    ///
+    /// @param[in] offset
+    ///   The offset to add to all locations.
+    //------------------------------------------------------------------
+    lldb::addr_t
+    GetOffset () const
+    {
+        return m_offset;
+    }
 
     //------------------------------------------------------------------
     /// In response to this method the resolver scans all the modules in the breakpoint's
@@ -145,8 +168,12 @@ protected:
     /// matching addresses to unique entries, and skip the prologue if asked to do so, and then set
     /// breakpoint locations in this breakpoint for all the resultant addresses.
     void SetSCMatchesByLine (SearchFilter &filter, SymbolContextList &sc_list, bool skip_prologue, const char *log_ident);
+
+    lldb::BreakpointLocationSP
+    AddLocation(Address loc_addr, bool *new_location = NULL);
     
     Breakpoint *m_breakpoint;  // This is the breakpoint we add locations to.
+    lldb::addr_t m_offset;      // A random offset the user asked us to add to any breakpoints we set.
 
 private:
     // Subclass identifier (for llvm isa/dyn_cast)

@@ -549,6 +549,7 @@ eSectionTypeARMexidx = _lldb.eSectionTypeARMexidx
 eSectionTypeARMextab = _lldb.eSectionTypeARMextab
 eSectionTypeCompactUnwind = _lldb.eSectionTypeCompactUnwind
 eSectionTypeGoSymtab = _lldb.eSectionTypeGoSymtab
+eSectionTypeAbsoluteAddress = _lldb.eSectionTypeAbsoluteAddress
 eSectionTypeOther = _lldb.eSectionTypeOther
 eEmulateInstructionOptionNone = _lldb.eEmulateInstructionOptionNone
 eEmulateInstructionOptionAutoAdvancePC = _lldb.eEmulateInstructionOptionAutoAdvancePC
@@ -8781,6 +8782,7 @@ class SBTarget(_object):
         """
         BreakpointCreateByLocation(self, str file, uint32_t line) -> SBBreakpoint
         BreakpointCreateByLocation(self, SBFileSpec file_spec, uint32_t line) -> SBBreakpoint
+        BreakpointCreateByLocation(self, SBFileSpec file_spec, uint32_t line, addr_t offset) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateByLocation(self, *args)
 
@@ -8798,10 +8800,13 @@ class SBTarget(_object):
 
     def BreakpointCreateByNames(self, *args):
         """
-        BreakpointCreateByNames(self, str symbol_name, uint32_t num_names, uint32_t name_type_mask, 
-            SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint
-        BreakpointCreateByNames(self, str symbol_name, uint32_t num_names, uint32_t name_type_mask, 
-            LanguageType symbol_language, SBFileSpecList module_list, 
+        BreakpointCreateByNames(self, str symbol_name, uint32_t name_type_mask, SBFileSpecList module_list, 
+            SBFileSpecList comp_unit_list) -> SBBreakpoint
+        BreakpointCreateByNames(self, str symbol_name, uint32_t name_type_mask, LanguageType symbol_language, 
+            SBFileSpecList module_list, 
+            SBFileSpecList comp_unit_list) -> SBBreakpoint
+        BreakpointCreateByNames(self, str symbol_name, uint32_t name_type_mask, LanguageType symbol_language, 
+            addr_t offset, SBFileSpecList module_list, 
             SBFileSpecList comp_unit_list) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateByNames(self, *args)

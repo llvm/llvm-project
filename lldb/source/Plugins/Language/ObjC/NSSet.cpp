@@ -94,33 +94,6 @@ namespace lldb_private {
             std::vector<SetItemDescriptor> m_children;
         };
         
-        class NSOrderedSetSyntheticFrontEnd : public SyntheticChildrenFrontEnd
-        {
-        public:
-            NSOrderedSetSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp);
-
-            ~NSOrderedSetSyntheticFrontEnd() override = default;
-
-            size_t
-            CalculateNumChildren() override;
-            
-            lldb::ValueObjectSP
-            GetChildAtIndex(size_t idx) override;
-            
-            bool
-            Update() override;
-            
-            bool
-            MightHaveChildren() override;
-            
-            size_t
-            GetIndexOfChildWithName(const ConstString &name) override;
-
-        private:
-            uint32_t m_count;
-            std::map<uint32_t,lldb::ValueObjectSP> m_children;
-        };
-        
         class NSSetMSyntheticFrontEnd : public SyntheticChildrenFrontEnd
         {
         public:
@@ -215,7 +188,7 @@ lldb_private::formatters::NSSetSummaryProvider (ValueObject& valobj, Stream& str
     
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(valobj));
     
-    if (!descriptor.get() || !descriptor->IsValid())
+    if (!descriptor || !descriptor->IsValid())
         return false;
     
     uint32_t ptr_size = process_sp->GetAddressByteSize();
@@ -304,10 +277,10 @@ SyntheticChildrenFrontEnd* lldb_private::formatters::NSSetSyntheticFrontEndCreat
 {
     lldb::ProcessSP process_sp (valobj_sp->GetProcessSP());
     if (!process_sp)
-        return NULL;
+        return nullptr;
     ObjCLanguageRuntime *runtime = (ObjCLanguageRuntime*)process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC);
     if (!runtime)
-        return NULL;
+        return nullptr;
     
     CompilerType valobj_type(valobj_sp->GetCompilerType());
     Flags flags(valobj_type.GetTypeInfo());
@@ -317,19 +290,19 @@ SyntheticChildrenFrontEnd* lldb_private::formatters::NSSetSyntheticFrontEndCreat
         Error error;
         valobj_sp = valobj_sp->AddressOf(error);
         if (error.Fail() || !valobj_sp)
-            return NULL;
+            return nullptr;
     }
     
-    ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(*valobj_sp.get()));
+    ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(*valobj_sp));
     
-    if (!descriptor.get() || !descriptor->IsValid())
-        return NULL;
+    if (!descriptor || !descriptor->IsValid())
+        return nullptr;
     
     ConstString class_name_cs = descriptor->GetClassName();
     const char* class_name = class_name_cs.GetCString();
     
     if (!class_name || !*class_name)
-        return NULL;
+        return nullptr;
     
     if (!strcmp(class_name,"__NSSetI"))
     {
@@ -338,10 +311,6 @@ SyntheticChildrenFrontEnd* lldb_private::formatters::NSSetSyntheticFrontEndCreat
     else if (!strcmp(class_name,"__NSSetM"))
     {
         return (new NSSetMSyntheticFrontEnd(valobj_sp));
-    }
-    else if ((!strcmp(class_name,"__NSOrderedSetI")) || (!strcmp(class_name,"__NSOrderedSetM")))
-    {
-        return new NSOrderedSetSyntheticFrontEnd(valobj_sp); // this runs code
     }
     else
     {
@@ -354,11 +323,11 @@ SyntheticChildrenFrontEnd* lldb_private::formatters::NSSetSyntheticFrontEndCreat
 }
 
 lldb_private::formatters::NSSetISyntheticFrontEnd::NSSetISyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
-SyntheticChildrenFrontEnd(*valobj_sp.get()),
-m_exe_ctx_ref(),
-m_ptr_size(8),
-m_data_32(NULL),
-m_data_64(NULL)
+    SyntheticChildrenFrontEnd(*valobj_sp),
+    m_exe_ctx_ref(),
+    m_ptr_size(8),
+    m_data_32(nullptr),
+    m_data_64(nullptr)
 {
     if (valobj_sp)
         Update();
@@ -367,9 +336,9 @@ m_data_64(NULL)
 lldb_private::formatters::NSSetISyntheticFrontEnd::~NSSetISyntheticFrontEnd ()
 {
     delete m_data_32;
-    m_data_32 = NULL;
+    m_data_32 = nullptr;
     delete m_data_64;
-    m_data_64 = NULL;
+    m_data_64 = nullptr;
 }
 
 size_t
@@ -395,9 +364,9 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::Update()
 {
     m_children.clear();
     delete m_data_32;
-    m_data_32 = NULL;
+    m_data_32 = nullptr;
     delete m_data_64;
-    m_data_64 = NULL;
+    m_data_64 = nullptr;
     m_ptr_size = 0;
     ValueObjectSP valobj_sp = m_backend.GetSP();
     if (!valobj_sp)
@@ -521,11 +490,11 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::GetChildAtIndex (size_t idx)
 }
 
 lldb_private::formatters::NSSetMSyntheticFrontEnd::NSSetMSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
-SyntheticChildrenFrontEnd(*valobj_sp.get()),
-m_exe_ctx_ref(),
-m_ptr_size(8),
-m_data_32(NULL),
-m_data_64(NULL)
+    SyntheticChildrenFrontEnd(*valobj_sp),
+    m_exe_ctx_ref(),
+    m_ptr_size(8),
+    m_data_32(nullptr),
+    m_data_64(nullptr)
 {
     if (valobj_sp)
         Update ();
@@ -534,9 +503,9 @@ m_data_64(NULL)
 lldb_private::formatters::NSSetMSyntheticFrontEnd::~NSSetMSyntheticFrontEnd ()
 {
     delete m_data_32;
-    m_data_32 = NULL;
+    m_data_32 = nullptr;
     delete m_data_64;
-    m_data_64 = NULL;
+    m_data_64 = nullptr;
 }
 
 size_t
@@ -564,9 +533,9 @@ lldb_private::formatters::NSSetMSyntheticFrontEnd::Update()
     ValueObjectSP valobj_sp = m_backend.GetSP();
     m_ptr_size = 0;
     delete m_data_32;
-    m_data_32 = NULL;
+    m_data_32 = nullptr;
     delete m_data_64;
-    m_data_64 = NULL;
+    m_data_64 = nullptr;
     if (!valobj_sp)
         return false;
     if (!valobj_sp)
@@ -686,69 +655,6 @@ lldb_private::formatters::NSSetMSyntheticFrontEnd::GetChildAtIndex (size_t idx)
                                   m_backend.GetCompilerType().GetBasicTypeFromAST(lldb::eBasicTypeObjCID));
     }
     return set_item.valobj_sp;
-}
-
-lldb_private::formatters::NSOrderedSetSyntheticFrontEnd::NSOrderedSetSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
-SyntheticChildrenFrontEnd(*valobj_sp.get()),
-m_count(UINT32_MAX),
-m_children()
-{}
-
-size_t
-lldb_private::formatters::NSOrderedSetSyntheticFrontEnd::CalculateNumChildren ()
-{
-    if (m_count != UINT32_MAX)
-        return m_count;
-    uint64_t count_temp;
-    if (ExtractValueFromObjCExpression(m_backend,"unsigned int","count",count_temp))
-        return (m_count = count_temp);
-    return (m_count = 0);
-}
-
-lldb::ValueObjectSP
-lldb_private::formatters::NSOrderedSetSyntheticFrontEnd::GetChildAtIndex (size_t idx)
-{
-    auto iter = m_children.find(idx);
-    if (iter == m_children.end())
-    {
-        lldb::ValueObjectSP retval_sp;
-        if (idx <= m_count)
-        {
-            retval_sp = CallSelectorOnObject(m_backend, "id", "objectAtIndex", idx);
-            if (retval_sp)
-            {
-                StreamString idx_name;
-                idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-                retval_sp->SetName(ConstString(idx_name.GetData()));
-            }
-            m_children[idx] = retval_sp;
-        }
-        return retval_sp;
-    }
-    else
-        return iter->second;
-}
-
-bool
-lldb_private::formatters::NSOrderedSetSyntheticFrontEnd::Update()
-{
-    return false;
-}
-
-bool
-lldb_private::formatters::NSOrderedSetSyntheticFrontEnd::MightHaveChildren ()
-{
-    return true;
-}
-
-size_t
-lldb_private::formatters::NSOrderedSetSyntheticFrontEnd::GetIndexOfChildWithName (const ConstString &name)
-{
-    const char* item_name = name.GetCString();
-    uint32_t idx = ExtractIndexFromString(item_name);
-    if (idx < UINT32_MAX && idx >= CalculateNumChildren())
-        return UINT32_MAX;
-    return idx;
 }
 
 template bool

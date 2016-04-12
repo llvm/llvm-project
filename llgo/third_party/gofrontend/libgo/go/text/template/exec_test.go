@@ -527,6 +527,24 @@ var execTests = []execTest{
 	{"bug12XE", "{{printf `%T` 0XEE}}", "int", T{}, true},
 	// Chained nodes did not work as arguments. Issue 8473.
 	{"bug13", "{{print (.Copy).I}}", "17", tVal, true},
+	// Didn't protect against nil or literal values in field chains.
+	{"bug14a", "{{(nil).True}}", "", tVal, false},
+	{"bug14b", "{{$x := nil}}{{$x.anything}}", "", tVal, false},
+	{"bug14c", `{{$x := (1.0)}}{{$y := ("hello")}}{{$x.anything}}{{$y.true}}`, "", tVal, false},
+	// Didn't call validateType on function results. Issue 10800.
+	{"bug15", "{{valueString returnInt}}", "", tVal, false},
+	// Variadic function corner cases. Issue 10946.
+	{"bug16a", "{{true|printf}}", "", tVal, false},
+	{"bug16b", "{{1|printf}}", "", tVal, false},
+	{"bug16c", "{{1.1|printf}}", "", tVal, false},
+	{"bug16d", "{{'x'|printf}}", "", tVal, false},
+	{"bug16e", "{{0i|printf}}", "", tVal, false},
+	{"bug16f", "{{true|twoArgs \"xxx\"}}", "", tVal, false},
+	{"bug16g", "{{\"aaa\" |twoArgs \"bbb\"}}", "twoArgs=bbbaaa", tVal, true},
+	{"bug16h", "{{1|oneArg}}", "", tVal, false},
+	{"bug16i", "{{\"aaa\"|oneArg}}", "oneArg=aaa", tVal, true},
+	{"bug16j", "{{1+2i|printf \"%v\"}}", "(1+2i)", tVal, true},
+	{"bug16k", "{{\"aaa\"|printf }}", "aaa", tVal, true},
 }
 
 func zeroArgs() string {
@@ -535,6 +553,10 @@ func zeroArgs() string {
 
 func oneArg(a string) string {
 	return "oneArg=" + a
+}
+
+func twoArgs(a, b string) string {
+	return "twoArgs=" + a + b
 }
 
 func dddArg(a int, b ...string) string {
@@ -564,6 +586,11 @@ func vfunc(V, *V) string {
 // valueString takes a string, not a pointer.
 func valueString(v string) string {
 	return "value is ignored"
+}
+
+// returnInt returns an int
+func returnInt() int {
+	return 7
 }
 
 func add(args ...int) int {
@@ -607,7 +634,9 @@ func testExecute(execTests []execTest, template *Template, t *testing.T) {
 		"makemap":     makemap,
 		"mapOfThree":  mapOfThree,
 		"oneArg":      oneArg,
+		"returnInt":   returnInt,
 		"stringer":    stringer,
+		"twoArgs":     twoArgs,
 		"typeOf":      typeOf,
 		"valueString": valueString,
 		"vfunc":       vfunc,
@@ -853,7 +882,13 @@ func TestTree(t *testing.T) {
 
 func TestExecuteOnNewTemplate(t *testing.T) {
 	// This is issue 3872.
-	_ = New("Name").Templates()
+	New("Name").Templates()
+	// This is issue 11379.
+	new(Template).Templates()
+	new(Template).Parse("")
+	new(Template).New("abc").Parse("")
+	new(Template).Execute(nil, nil)                // returns an error (but does not crash)
+	new(Template).ExecuteTemplate(nil, "XXX", nil) // returns an error (but does not crash)
 }
 
 const testTemplates = `{{define "one"}}one{{end}}{{define "two"}}two{{end}}`
@@ -1040,5 +1075,69 @@ func TestComparison(t *testing.T) {
 		if b.String() != test.truth {
 			t.Errorf("%s: want %s; got %s", test.expr, test.truth, b.String())
 		}
+	}
+}
+
+func TestMissingMapKey(t *testing.T) {
+	data := map[string]int{
+		"x": 99,
+	}
+	tmpl, err := New("t1").Parse("{{.x}} {{.y}}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var b bytes.Buffer
+	// By default, just get "<no value>"
+	err = tmpl.Execute(&b, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "99 <no value>"
+	got := b.String()
+	if got != want {
+		t.Errorf("got %q; expected %q", got, want)
+	}
+	// Same if we set the option explicitly to the default.
+	tmpl.Option("missingkey=default")
+	b.Reset()
+	err = tmpl.Execute(&b, data)
+	if err != nil {
+		t.Fatal("default:", err)
+	}
+	want = "99 <no value>"
+	got = b.String()
+	if got != want {
+		t.Errorf("got %q; expected %q", got, want)
+	}
+	// Next we ask for a zero value
+	tmpl.Option("missingkey=zero")
+	b.Reset()
+	err = tmpl.Execute(&b, data)
+	if err != nil {
+		t.Fatal("zero:", err)
+	}
+	want = "99 0"
+	got = b.String()
+	if got != want {
+		t.Errorf("got %q; expected %q", got, want)
+	}
+	// Now we ask for an error.
+	tmpl.Option("missingkey=error")
+	err = tmpl.Execute(&b, data)
+	if err == nil {
+		t.Errorf("expected error; got none")
+	}
+}
+
+// Test that the error message for multiline unterminated string
+// refers to the line number of the opening quote.
+func TestUnterminatedStringError(t *testing.T) {
+	_, err := New("X").Parse("hello\n\n{{`unterminated\n\n\n\n}}\n some more\n\n")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	str := err.Error()
+	if !strings.Contains(str, "X:3: unexpected unterminated raw quoted strin") {
+		t.Fatalf("unexpected error: %s", str)
 	}
 }

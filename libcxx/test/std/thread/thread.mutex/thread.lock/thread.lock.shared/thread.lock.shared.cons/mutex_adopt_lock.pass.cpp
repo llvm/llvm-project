@@ -18,12 +18,24 @@
 
 #include <shared_mutex>
 #include <cassert>
+#include "nasty_containers.hpp"
 
 int main()
 {
-    std::shared_timed_mutex m;
-    m.lock_shared();
-    std::shared_lock<std::shared_timed_mutex> lk(m, std::adopt_lock);
-    assert(lk.mutex() == &m);
+    {
+    typedef std::shared_timed_mutex M;
+    M m;
+    m.lock();
+    std::unique_lock<M> lk(m, std::adopt_lock);
+    assert(lk.mutex() == std::addressof(m));
     assert(lk.owns_lock() == true);
+    }
+    {
+    typedef nasty_mutex M;
+    M m;
+    m.lock();
+    std::unique_lock<M> lk(m, std::adopt_lock);
+    assert(lk.mutex() == std::addressof(m));
+    assert(lk.owns_lock() == true);
+    }
 }

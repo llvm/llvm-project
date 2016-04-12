@@ -33,11 +33,31 @@ namespace mach_o {
 class LayoutPass : public Pass {
 public:
   struct SortKey {
-    SortKey(const DefinedAtom *atom, const DefinedAtom *root, uint64_t override)
-        : _atom(atom), _root(root), _override(override) {}
-    const DefinedAtom *_atom;
+    SortKey(OwningAtomPtr<DefinedAtom> &&atom,
+            const DefinedAtom *root, uint64_t override)
+    : _atom(std::move(atom)), _root(root), _override(override) {}
+    OwningAtomPtr<DefinedAtom> _atom;
     const DefinedAtom *_root;
     uint64_t _override;
+
+    // Note, these are only here to appease MSVC bots which didn't like
+    // the same methods being implemented/deleted in OwningAtomPtr.
+    SortKey(SortKey &&key) : _atom(std::move(key._atom)), _root(key._root),
+                             _override(key._override) {
+      key._root = nullptr;
+    }
+
+    SortKey &operator=(SortKey &&key) {
+      _atom = std::move(key._atom);
+      _root = key._root;
+      key._root = nullptr;
+      _override = key._override;
+      return *this;
+    }
+
+  private:
+    SortKey(const SortKey &) = delete;
+    void operator=(const SortKey&) = delete;
   };
 
   typedef std::function<bool (const DefinedAtom *left, const DefinedAtom *right,
@@ -46,17 +66,17 @@ public:
   LayoutPass(const Registry &registry, SortOverride sorter);
 
   /// Sorts atoms in mergedFile by content type then by command line order.
-  std::error_code perform(SimpleFile &mergedFile) override;
+  llvm::Error perform(SimpleFile &mergedFile) override;
 
   ~LayoutPass() override = default;
 
 private:
   // Build the followOn atoms chain as specified by the kindLayoutAfter
   // reference type
-  void buildFollowOnTable(SimpleFile::DefinedAtomRange &range);
+  void buildFollowOnTable(const SimpleFile::DefinedAtomRange &range);
 
   // Build a map of Atoms to ordinals for sorting the atoms
-  void buildOrdinalOverrideMap(SimpleFile::DefinedAtomRange &range);
+  void buildOrdinalOverrideMap(const SimpleFile::DefinedAtomRange &range);
 
   const Registry &_registry;
   SortOverride _customSorter;
@@ -85,11 +105,12 @@ private:
   void setChainRoot(const DefinedAtom *targetAtom, const DefinedAtom *root);
 
   std::vector<SortKey> decorate(SimpleFile::DefinedAtomRange &atomRange) const;
+
   void undecorate(SimpleFile::DefinedAtomRange &atomRange,
                   std::vector<SortKey> &keys) const;
 
   // Check if the follow-on graph is a correct structure. For debugging only.
-  void checkFollowonChain(SimpleFile::DefinedAtomRange &range);
+  void checkFollowonChain(const SimpleFile::DefinedAtomRange &range);
 };
 
 } // namespace mach_o

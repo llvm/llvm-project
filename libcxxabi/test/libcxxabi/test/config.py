@@ -33,6 +33,11 @@ class Configuration(LibcxxConfiguration):
         self.libcxxabi_obj_root = self.get_lit_conf('libcxxabi_obj_root')
         super(Configuration, self).configure_obj_root()
 
+    def configure_features(self):
+        super(Configuration, self).configure_features()
+        if self.get_lit_bool('thread_atexit', True):
+            self.config.available_features.add('thread_atexit')
+
     def configure_compile_flags(self):
         self.cxx.compile_flags += ['-DLIBCXXABI_NO_TIMER']
         self.cxx.compile_flags += ['-funwind-tables']

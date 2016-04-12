@@ -133,13 +133,13 @@ public:
   /// Writes the normalized file as a binary mach-o file to the specified
   /// path.  This does not have a stream interface because the generated
   /// file may need the 'x' bit set.
-  std::error_code writeBinary(StringRef path);
+  llvm::Error writeBinary(StringRef path);
 
 private:
   uint32_t    loadCommandsSize(uint32_t &count);
   void        buildFileOffsets();
   void        writeMachHeader();
-  std::error_code writeLoadCommands();
+  llvm::Error writeLoadCommands();
   void        writeSectionContent();
   void        writeRelocations();
   void        writeSymbolTable();
@@ -179,8 +179,8 @@ private:
   };
 
   template <typename T>
-  std::error_code writeSingleSegmentLoadCommand(uint8_t *&lc);
-  template <typename T> std::error_code writeSegmentLoadCommands(uint8_t *&lc);
+  llvm::Error writeSingleSegmentLoadCommand(uint8_t *&lc);
+  template <typename T> llvm::Error writeSegmentLoadCommands(uint8_t *&lc);
 
   uint32_t pointerAlign(uint32_t value);
   static StringRef dyldPath();
@@ -628,7 +628,7 @@ uint32_t MachOFileLayout::indirectSymbolElementSize(const Section &sect) {
 }
 
 template <typename T>
-std::error_code MachOFileLayout::writeSingleSegmentLoadCommand(uint8_t *&lc) {
+llvm::Error MachOFileLayout::writeSingleSegmentLoadCommand(uint8_t *&lc) {
   typename T::command* seg = reinterpret_cast<typename T::command*>(lc);
   seg->cmd = T::LC;
   seg->cmdsize = sizeof(typename T::command)
@@ -668,11 +668,11 @@ std::error_code MachOFileLayout::writeSingleSegmentLoadCommand(uint8_t *&lc) {
     ++sout;
   }
   lc = next;
-  return std::error_code();
+  return llvm::Error();
 }
 
 template <typename T>
-std::error_code MachOFileLayout::writeSegmentLoadCommands(uint8_t *&lc) {
+llvm::Error MachOFileLayout::writeSegmentLoadCommands(uint8_t *&lc) {
   uint32_t indirectSymRunningIndex = 0;
   for (const Segment &seg : _file.segments) {
     // Link edit has no sections and a custom range of address, so handle it
@@ -738,7 +738,7 @@ std::error_code MachOFileLayout::writeSegmentLoadCommands(uint8_t *&lc) {
     }
     lc = reinterpret_cast<uint8_t*>(next);
   }
-  return std::error_code();
+  return llvm::Error();
 }
 
 static void writeVersionMinLoadCommand(const NormalizedFile &_file,
@@ -773,15 +773,17 @@ static void writeVersionMinLoadCommand(const NormalizedFile &_file,
   lc += sizeof(version_min_command);
 }
 
-std::error_code MachOFileLayout::writeLoadCommands() {
-  std::error_code ec;
+llvm::Error MachOFileLayout::writeLoadCommands() {
   uint8_t *lc = &_buffer[_startOfLoadCommands];
   if (_file.fileType == llvm::MachO::MH_OBJECT) {
     // Object files have one unnamed segment which holds all sections.
-    if (_is64)
-      ec = writeSingleSegmentLoadCommand<MachO64Trait>(lc);
-    else
-      ec = writeSingleSegmentLoadCommand<MachO32Trait>(lc);
+    if (_is64) {
+     if (auto ec = writeSingleSegmentLoadCommand<MachO64Trait>(lc))
+       return ec;
+    } else {
+      if (auto ec = writeSingleSegmentLoadCommand<MachO32Trait>(lc))
+        return ec;
+    }
     // Add LC_SYMTAB with symbol table info
     symtab_command* st = reinterpret_cast<symtab_command*>(lc);
     st->cmd     = LC_SYMTAB;
@@ -824,10 +826,13 @@ std::error_code MachOFileLayout::writeLoadCommands() {
     }
   } else {
     // Final linked images have sections under segments.
-    if (_is64)
-      ec = writeSegmentLoadCommands<MachO64Trait>(lc);
-    else
-      ec = writeSegmentLoadCommands<MachO32Trait>(lc);
+    if (_is64) {
+      if (auto ec = writeSegmentLoadCommands<MachO64Trait>(lc))
+        return ec;
+    } else {
+      if (auto ec = writeSegmentLoadCommands<MachO32Trait>(lc))
+        return ec;
+    }
 
     // Add LC_ID_DYLIB command for dynamic libraries.
     if (_file.fileType == llvm::MachO::MH_DYLIB) {
@@ -928,25 +933,31 @@ std::error_code MachOFileLayout::writeLoadCommands() {
 
     // Add LC_SOURCE_VERSION
     {
-      source_version_command* sv = reinterpret_cast<source_version_command*>(lc);
-      sv->cmd       = LC_SOURCE_VERSION;
-      sv->cmdsize   = sizeof(source_version_command);
-      sv->version   = _file.sourceVersion;
+      // Note, using a temporary here to appease UB as we may not be aligned
+      // enough for a struct containing a uint64_t when emitting a 32-bit binary
+      source_version_command sv;
+      sv.cmd       = LC_SOURCE_VERSION;
+      sv.cmdsize   = sizeof(source_version_command);
+      sv.version   = _file.sourceVersion;
       if (_swap)
-        swapStruct(*sv);
+        swapStruct(sv);
+      memcpy(lc, &sv, sizeof(source_version_command));
       lc += sizeof(source_version_command);
     }
 
     // If main executable, add LC_MAIN.
     if (_file.fileType == llvm::MachO::MH_EXECUTE) {
       // Build LC_MAIN load command.
-      entry_point_command* ep = reinterpret_cast<entry_point_command*>(lc);
-      ep->cmd       = LC_MAIN;
-      ep->cmdsize   = sizeof(entry_point_command);
-      ep->entryoff  = _file.entryAddress - _seg1addr;
-      ep->stacksize = _file.stackSize;
+      // Note, using a temporary here to appease UB as we may not be aligned
+      // enough for a struct containing a uint64_t when emitting a 32-bit binary
+      entry_point_command ep;
+      ep.cmd       = LC_MAIN;
+      ep.cmdsize   = sizeof(entry_point_command);
+      ep.entryoff  = _file.entryAddress - _seg1addr;
+      ep.stacksize = _file.stackSize;
       if (_swap)
-        swapStruct(*ep);
+        swapStruct(ep);
+      memcpy(lc, &ep, sizeof(entry_point_command));
       lc += sizeof(entry_point_command);
     }
 
@@ -1006,7 +1017,7 @@ std::error_code MachOFileLayout::writeLoadCommands() {
       lc += sizeof(linkedit_data_command);
     }
   }
-  return ec;
+  return llvm::Error();
 }
 
 void MachOFileLayout::writeSectionContent() {
@@ -1066,6 +1077,8 @@ void MachOFileLayout::appendSymbols(const std::vector<Symbol> &symbols,
 }
 
 void MachOFileLayout::writeFunctionStartsInfo() {
+  if (!_functionStartsSize)
+    return;
   memcpy(&_buffer[_startOfFunctionStarts], _file.functionStarts.data(),
          _functionStartsSize);
 }
@@ -1451,10 +1464,10 @@ void MachOFileLayout::writeLinkEditContent() {
   }
 }
 
-std::error_code MachOFileLayout::writeBinary(StringRef path) {
+llvm::Error MachOFileLayout::writeBinary(StringRef path) {
   // Check for pending error from constructor.
   if (_ec)
-    return _ec;
+    return llvm::errorCodeToError(_ec);
   // Create FileOutputBuffer with calculated size.
   unsigned flags = 0;
   if (_file.fileType != llvm::MachO::MH_OBJECT)
@@ -1462,23 +1475,22 @@ std::error_code MachOFileLayout::writeBinary(StringRef path) {
   ErrorOr<std::unique_ptr<llvm::FileOutputBuffer>> fobOrErr =
       llvm::FileOutputBuffer::create(path, size(), flags);
   if (std::error_code ec = fobOrErr.getError())
-    return ec;
+    return llvm::errorCodeToError(ec);
   std::unique_ptr<llvm::FileOutputBuffer> &fob = *fobOrErr;
   // Write content.
   _buffer = fob->getBufferStart();
   writeMachHeader();
-  std::error_code ec = writeLoadCommands();
-  if (ec)
+  if (auto ec = writeLoadCommands())
     return ec;
   writeSectionContent();
   writeLinkEditContent();
   fob->commit();
 
-  return std::error_code();
+  return llvm::Error();
 }
 
 /// Takes in-memory normalized view and writes a mach-o object file.
-std::error_code writeBinary(const NormalizedFile &file, StringRef path) {
+llvm::Error writeBinary(const NormalizedFile &file, StringRef path) {
   MachOFileLayout layout(file);
   return layout.writeBinary(path);
 }

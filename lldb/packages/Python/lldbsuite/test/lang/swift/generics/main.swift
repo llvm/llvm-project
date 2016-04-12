@@ -20,7 +20,7 @@ extension String : Proto {
 	func get() -> Int { return 1 }
 }
 
-func function <SomeType : Proto> (x : SomeType)
+func function <SomeType : Proto> (_ x : SomeType)
 {
 	var v = x.get()
 	print(v) //Break here
@@ -29,11 +29,11 @@ func function <SomeType : Proto> (x : SomeType)
 class AClass <TypeA>
 {
 	init () {}
-	func method1(x : TypeA)
+	func method1(_ x : TypeA)
 	{
 		print("hello world") //Break here
 	}
-	func method2 <TypeB> (x : TypeA, _ y : TypeB)
+	func method2 <TypeB> (_ x : TypeA, _ y : TypeB)
 	{
 		print("Hello world") //Break here
 	}

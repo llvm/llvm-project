@@ -333,6 +333,65 @@ SwiftArrayBufferHandler::CreateBufferHandler (ValueObject& valobj)
         return nullptr;
     }
     
+    if (valobj_typename.startswith("_TtCs21_SwiftDeferredNSArray"))
+    {
+        ProcessSP process_sp(valobj.GetProcessSP());
+        if (!process_sp)
+            return nullptr;
+        Error error;
+
+        lldb::addr_t buffer_ptr = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS) + 3 * process_sp->GetAddressByteSize();
+        buffer_ptr = process_sp->ReadPointerFromMemory(buffer_ptr, error);
+        if (error.Fail() || buffer_ptr == LLDB_INVALID_ADDRESS)
+            return nullptr;
+
+        lldb::addr_t argmetadata_ptr = process_sp->ReadPointerFromMemory(buffer_ptr, error);
+        if (error.Fail() || argmetadata_ptr == LLDB_INVALID_ADDRESS)
+            return nullptr;
+        
+        SwiftLanguageRuntime *swift_runtime = process_sp->GetSwiftLanguageRuntime();
+        if (!swift_runtime)
+            return nullptr;
+        
+        CompilerType argument_type;
+        
+        SwiftASTContext *swift_ast_ctx(llvm::dyn_cast_or_null<SwiftASTContext>(valobj.GetCompilerType().GetTypeSystem()));
+        if (!swift_ast_ctx)
+        {
+            swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(process_sp->GetTarget().GetScratchTypeSystemForLanguage(nullptr, lldb::eLanguageTypeSwift));
+        }
+        if (!swift_ast_ctx)
+            return nullptr;
+        
+        SwiftLanguageRuntime::MetadataSP metadata_sp(swift_runtime->GetMetadataForLocation(argmetadata_ptr));
+        if (metadata_sp)
+        {
+            if (SwiftLanguageRuntime::ClassMetadata* class_metadata = llvm::dyn_cast_or_null<SwiftLanguageRuntime::ClassMetadata>(metadata_sp.get()))
+            {
+                if (auto gpv = class_metadata->GetGenericParameterVector())
+                {
+                    if (gpv->GetNumParameters() == 1)
+                    {
+                        if (auto param = gpv->GetParameterAtIndex(0).GetMetadata())
+                        {
+                            argument_type = swift_runtime->GetTypeForMetadata(param,
+                                                                              swift_ast_ctx,
+                                                                              error);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!argument_type.IsValid())
+            return nullptr;
+    
+        auto handler = std::unique_ptr<SwiftArrayBufferHandler>(new SwiftArrayNativeBufferHandler(valobj, buffer_ptr, argument_type));
+        if (handler && handler->IsValid())
+            return handler;
+        return nullptr;
+    }
+    
     if (valobj_typename.startswith("Swift.NativeArray<"))
     {
         // Swift.NativeArray

@@ -11,14 +11,11 @@
 #define LLD_ELF_SYMBOL_TABLE_H
 
 #include "InputFiles.h"
+#include "LTO.h"
 #include "llvm/ADT/MapVector.h"
 
-namespace llvm {
-class Module;
-}
-
 namespace lld {
-namespace elf2 {
+namespace elf {
 class Lazy;
 template <class ELFT> class OutputSectionBase;
 struct Symbol;
@@ -35,8 +32,8 @@ class Undefined;
 // undefined, it'll read an archive member to read a real definition
 // to replace the lazy symbol. The logic is implemented in resolve().
 template <class ELFT> class SymbolTable {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::uint uintX_t;
 
 public:
   void addFile(std::unique_ptr<InputFile> File);
@@ -56,27 +53,24 @@ public:
 
   SymbolBody *addUndefined(StringRef Name);
   SymbolBody *addUndefinedOpt(StringRef Name);
-  SymbolBody *addAbsolute(StringRef Name, Elf_Sym &ESym);
+  DefinedRegular<ELFT> *addAbsolute(StringRef Name,
+                                    uint8_t Visibility = llvm::ELF::STV_HIDDEN);
   SymbolBody *addSynthetic(StringRef Name, OutputSectionBase<ELFT> &Section,
-                           uintX_t Value);
-  SymbolBody *addIgnored(StringRef Name);
+                           uintX_t Value, uint8_t Visibility);
+  DefinedRegular<ELFT> *addIgnored(StringRef Name,
+                                   uint8_t Visibility = llvm::ELF::STV_HIDDEN);
 
   void scanShlibUndefined();
   SymbolBody *find(StringRef Name);
   void wrap(StringRef Name);
-  ELFFileBase<ELFT> *findFile(SymbolBody *B);
+  InputFile *findFile(SymbolBody *B);
 
 private:
   Symbol *insert(SymbolBody *New);
   void addLazy(Lazy *New);
   void addMemberFile(Undefined *Undef, Lazy *L);
   void resolve(SymbolBody *Body);
-  std::unique_ptr<InputFile> codegen(llvm::Module &M);
   std::string conflictMsg(SymbolBody *Old, SymbolBody *New);
-
-  SmallString<0> OwningLTOData;
-  std::unique_ptr<MemoryBuffer> LtoBuffer;
-  ObjectFile<ELFT> *createCombinedLtoObject();
 
   // The order the global symbols are in is not defined. We can use an arbitrary
   // order, but it has to be reproducible. That is true even when cross linking.
@@ -101,9 +95,11 @@ private:
 
   // Set of .so files to not link the same shared object file more than once.
   llvm::DenseSet<StringRef> SoNames;
+
+  std::unique_ptr<BitcodeCompiler> Lto;
 };
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

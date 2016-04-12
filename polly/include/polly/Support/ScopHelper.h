@@ -17,10 +17,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
 class LoopInfo;
+class Loop;
 class ScalarEvolution;
 class SCEV;
 class Region;
@@ -42,7 +44,7 @@ using InvariantLoadsSetTy = llvm::SetVector<llvm::AssertingVH<llvm::LoadInst>>;
 /// @brief Utility proxy to wrap the common members of LoadInst and StoreInst.
 ///
 /// This works like the LLVM utility class CallSite, ie. it forwards all calls
-/// to either a LoadInst or StoreInst.
+/// to either a LoadInst, StoreInst, MemIntrinsic or MemTransferInst.
 /// It is similar to LLVM's utility classes IntrinsicInst, MemIntrinsic,
 /// MemTransferInst, etc. in that it offers a common interface, but does not act
 /// as a fake base class.
@@ -50,10 +52,12 @@ using InvariantLoadsSetTy = llvm::SetVector<llvm::AssertingVH<llvm::LoadInst>>;
 /// referenced object and should be passed by-value as it is small enough.
 ///
 /// This proxy can either represent a LoadInst instance, a StoreInst instance,
-/// or a nullptr (only creatable using the default constructor); never an
-/// Instruction that is not a load or store.
-/// When representing a nullptr, only the following methods are defined:
-/// isNull(), isInstruction(), isLoad(), isStore(), operator bool(), operator!()
+/// a MemIntrinsic instance (memset, memmove, memcpy), a CallInst instance or a
+/// nullptr (only creatable using the default constructor); never an Instruction
+/// that is neither of the above mentioned. When representing a nullptr, only
+/// the following methods are defined:
+/// isNull(), isInstruction(), isLoad(), isStore(), ..., isMemTransferInst(),
+/// operator bool(), operator!()
 ///
 /// The functions isa, cast, cast_or_null, dyn_cast are modeled te resemble
 /// those from llvm/Support/Casting.h. Partial template function specialization
@@ -71,14 +75,18 @@ public:
   /* implicit */ MemAccInst(llvm::LoadInst *LI) : I(LI) {}
   /* implicit */ MemAccInst(llvm::StoreInst &SI) : I(&SI) {}
   /* implicit */ MemAccInst(llvm::StoreInst *SI) : I(SI) {}
+  /* implicit */ MemAccInst(llvm::MemIntrinsic *MI) : I(MI) {}
+  /* implicit */ MemAccInst(llvm::CallInst *CI) : I(CI) {}
   explicit MemAccInst(llvm::Instruction &I) : I(&I) { assert(isa(I)); }
   explicit MemAccInst(llvm::Instruction *I) : I(I) { assert(isa(I)); }
 
   static bool isa(const llvm::Value &V) {
-    return llvm::isa<llvm::LoadInst>(V) || llvm::isa<llvm::StoreInst>(V);
+    return llvm::isa<llvm::LoadInst>(V) || llvm::isa<llvm::StoreInst>(V) ||
+           llvm::isa<llvm::CallInst>(V) || llvm::isa<llvm::MemIntrinsic>(V);
   }
   static bool isa(const llvm::Value *V) {
-    return llvm::isa<llvm::LoadInst>(V) || llvm::isa<llvm::StoreInst>(V);
+    return llvm::isa<llvm::LoadInst>(V) || llvm::isa<llvm::StoreInst>(V) ||
+           llvm::isa<llvm::CallInst>(V) || llvm::isa<llvm::MemIntrinsic>(V);
   }
   static MemAccInst cast(llvm::Value &V) {
     return MemAccInst(llvm::cast<llvm::Instruction>(V));
@@ -126,32 +134,42 @@ public:
     I = SI;
     return *this;
   }
+  MemAccInst &operator=(llvm::MemIntrinsic &MI) {
+    I = &MI;
+    return *this;
+  }
+  MemAccInst &operator=(llvm::MemIntrinsic *MI) {
+    I = MI;
+    return *this;
+  }
+  MemAccInst &operator=(llvm::CallInst &CI) {
+    I = &CI;
+    return *this;
+  }
+  MemAccInst &operator=(llvm::CallInst *CI) {
+    I = CI;
+    return *this;
+  }
 
+  llvm::Instruction *get() const {
+    assert(I && "Unexpected nullptr!");
+    return I;
+  }
   operator llvm::Instruction *() const { return asInstruction(); }
+  llvm::Instruction *operator->() const { return get(); }
+
   explicit operator bool() const { return isInstruction(); }
   bool operator!() const { return isNull(); }
-
-  llvm::Value *getOperand(unsigned i) const { return I->getOperand(i); }
-  llvm::BasicBlock *getParent() const { return I->getParent(); }
-  llvm::LLVMContext &getContext() const { return I->getContext(); }
-  void getAAMetadata(llvm::AAMDNodes &N, bool Merge = false) const {
-    I->getAAMetadata(N, Merge);
-  }
-
-  /// @brief Get the debug location of this instruction.
-  ///
-  /// @returns The debug location of this instruction.
-  const llvm::DebugLoc &getDebugLoc() const {
-    if (I)
-      return I->getDebugLoc();
-    llvm_unreachable("Operation not supported on nullptr");
-  }
 
   llvm::Value *getValueOperand() const {
     if (isLoad())
       return asLoad();
     if (isStore())
       return asStore()->getValueOperand();
+    if (isMemIntrinsic())
+      return nullptr;
+    if (isCallInst())
+      return nullptr;
     llvm_unreachable("Operation not supported on nullptr");
   }
   llvm::Value *getPointerOperand() const {
@@ -159,6 +177,10 @@ public:
       return asLoad()->getPointerOperand();
     if (isStore())
       return asStore()->getPointerOperand();
+    if (isMemIntrinsic())
+      return asMemIntrinsic()->getRawDest();
+    if (isCallInst())
+      return nullptr;
     llvm_unreachable("Operation not supported on nullptr");
   }
 
@@ -167,6 +189,10 @@ public:
       return asLoad()->getAlignment();
     if (isStore())
       return asStore()->getAlignment();
+    if (isMemIntrinsic())
+      return asMemIntrinsic()->getAlignment();
+    if (isCallInst())
+      return 0;
     llvm_unreachable("Operation not supported on nullptr");
   }
   bool isVolatile() const {
@@ -174,6 +200,10 @@ public:
       return asLoad()->isVolatile();
     if (isStore())
       return asStore()->isVolatile();
+    if (isMemIntrinsic())
+      return asMemIntrinsic()->isVolatile();
+    if (isCallInst())
+      return false;
     llvm_unreachable("Operation not supported on nullptr");
   }
   bool isSimple() const {
@@ -181,6 +211,10 @@ public:
       return asLoad()->isSimple();
     if (isStore())
       return asStore()->isSimple();
+    if (isMemIntrinsic())
+      return !asMemIntrinsic()->isVolatile();
+    if (isCallInst())
+      return true;
     llvm_unreachable("Operation not supported on nullptr");
   }
   llvm::AtomicOrdering getOrdering() const {
@@ -188,6 +222,10 @@ public:
       return asLoad()->getOrdering();
     if (isStore())
       return asStore()->getOrdering();
+    if (isMemIntrinsic())
+      return llvm::AtomicOrdering::NotAtomic;
+    if (isCallInst())
+      return llvm::AtomicOrdering::NotAtomic;
     llvm_unreachable("Operation not supported on nullptr");
   }
   bool isUnordered() const {
@@ -195,18 +233,56 @@ public:
       return asLoad()->isUnordered();
     if (isStore())
       return asStore()->isUnordered();
+    // Copied from the Load/Store implementation of isUnordered:
+    if (isMemIntrinsic())
+      return !asMemIntrinsic()->isVolatile();
+    if (isCallInst())
+      return true;
     llvm_unreachable("Operation not supported on nullptr");
   }
 
   bool isNull() const { return !I; }
   bool isInstruction() const { return I; }
-  bool isLoad() const { return I && llvm::isa<llvm::LoadInst>(I); }
-  bool isStore() const { return I && llvm::isa<llvm::StoreInst>(I); }
 
   llvm::Instruction *asInstruction() const { return I; }
+
+private:
+  bool isLoad() const { return I && llvm::isa<llvm::LoadInst>(I); }
+  bool isStore() const { return I && llvm::isa<llvm::StoreInst>(I); }
+  bool isCallInst() const { return I && llvm::isa<llvm::CallInst>(I); }
+  bool isMemIntrinsic() const { return I && llvm::isa<llvm::MemIntrinsic>(I); }
+  bool isMemSetInst() const { return I && llvm::isa<llvm::MemSetInst>(I); }
+  bool isMemTransferInst() const {
+    return I && llvm::isa<llvm::MemTransferInst>(I);
+  }
+
   llvm::LoadInst *asLoad() const { return llvm::cast<llvm::LoadInst>(I); }
   llvm::StoreInst *asStore() const { return llvm::cast<llvm::StoreInst>(I); }
+  llvm::CallInst *asCallInst() const { return llvm::cast<llvm::CallInst>(I); }
+  llvm::MemIntrinsic *asMemIntrinsic() const {
+    return llvm::cast<llvm::MemIntrinsic>(I);
+  }
+  llvm::MemSetInst *asMemSetInst() const {
+    return llvm::cast<llvm::MemSetInst>(I);
+  }
+  llvm::MemTransferInst *asMemTransferInst() const {
+    return llvm::cast<llvm::MemTransferInst>(I);
+  }
 };
+}
+
+namespace llvm {
+/// @brief Specialize simplify_type for MemAccInst to enable dyn_cast and cast
+///        from a MemAccInst object.
+template <> struct simplify_type<polly::MemAccInst> {
+  typedef Instruction *SimpleType;
+  static SimpleType getSimplifiedValue(polly::MemAccInst &I) {
+    return I.asInstruction();
+  }
+};
+}
+
+namespace polly {
 
 /// @brief Check if the PHINode has any incoming Invoke edge.
 ///
@@ -316,11 +392,13 @@ bool isIgnoredIntrinsic(const llvm::Value *V);
 /// @param LI The LoopInfo analysis.
 /// @param SE The scalar evolution database.
 /// @param R The region out of which SSA names are parameters.
+/// @param Scope Location where the value would by synthesized.
 /// @return If the instruction I can be regenerated from its
 ///         scalar evolution representation, return true,
 ///         otherwise return false.
 bool canSynthesize(const llvm::Value *V, const llvm::LoopInfo *LI,
-                   llvm::ScalarEvolution *SE, const llvm::Region *R);
+                   llvm::ScalarEvolution *SE, const llvm::Region *R,
+                   llvm::Loop *Scope);
 
 /// @brief Return the block in which a value is used.
 ///

@@ -17,6 +17,7 @@
 
 #include "Target.h"
 #include "Error.h"
+#include "InputFiles.h"
 #include "OutputSections.h"
 #include "Symbols.h"
 
@@ -31,129 +32,115 @@ using namespace llvm::support::endian;
 using namespace llvm::ELF;
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 TargetInfo *Target;
 
-template <endianness E> static void add32(void *P, int32_t V) {
-  write32<E>(P, read32<E>(P) + V);
-}
-
-static void add32le(uint8_t *P, int32_t V) { add32<support::little>(P, V); }
 static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 
 template <unsigned N> static void checkInt(int64_t V, uint32_t Type) {
   if (isInt<N>(V))
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("Relocation " + S + " out of range");
+  error("relocation " + S + " out of range");
 }
 
 template <unsigned N> static void checkUInt(uint64_t V, uint32_t Type) {
   if (isUInt<N>(V))
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("Relocation " + S + " out of range");
+  error("relocation " + S + " out of range");
 }
 
 template <unsigned N> static void checkIntUInt(uint64_t V, uint32_t Type) {
   if (isInt<N>(V) || isUInt<N>(V))
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("Relocation " + S + " out of range");
+  error("relocation " + S + " out of range");
 }
 
 template <unsigned N> static void checkAlignment(uint64_t V, uint32_t Type) {
   if ((V & (N - 1)) == 0)
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("Improper alignment for relocation " + S);
-}
-
-template <class ELFT> bool isGnuIFunc(const SymbolBody &S) {
-  if (auto *SS = dyn_cast<DefinedElf<ELFT>>(&S))
-    return SS->Sym.getType() == STT_GNU_IFUNC;
-  return false;
+  error("improper alignment for relocation " + S);
 }
 
 namespace {
 class X86TargetInfo final : public TargetInfo {
 public:
   X86TargetInfo();
+  uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
-  unsigned getDynRel(unsigned Type) const override;
-  unsigned getTlsGotRel(unsigned Type) const override;
-  bool isTlsLocalDynamicRel(unsigned Type) const override;
-  bool isTlsGlobalDynamicRel(unsigned Type) const override;
-  bool isTlsDynRel(unsigned Type, const SymbolBody &S) const override;
+  uint32_t getDynRel(uint32_t Type) const override;
+  uint32_t getTlsGotRel(uint32_t Type) const override;
+  bool pointsToLocalDynamicGotEntry(uint32_t Type) const override;
+  bool isTlsLocalDynamicRel(uint32_t Type) const override;
+  bool isTlsGlobalDynamicRel(uint32_t Type) const override;
+  bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, uint64_t Plt) const override;
   void writePltZero(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
-  bool needsDynRelative(unsigned Type) const override;
-  bool needsGot(uint32_t Type, SymbolBody &S) const override;
-  PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
+  bool isRelRelative(uint32_t Type) const override;
+  bool needsCopyRelImpl(uint32_t Type) const override;
+  bool needsDynRelative(uint32_t Type) const override;
+  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
+  bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA, uint64_t ZA = 0,
-                   uint8_t *PairedLoc = nullptr) const override;
-  bool canRelaxTls(unsigned Type, const SymbolBody *S) const override;
-  unsigned relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                    uint64_t SA, const SymbolBody *S) const override;
-  bool isGotRelative(uint32_t Type) const override;
+                   uint64_t SA) const override;
 
-private:
-  void relocateTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
-                         uint64_t SA) const;
-  void relocateTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
-                         uint64_t SA) const;
-  void relocateTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
-                         uint64_t SA) const;
-  void relocateTlsIeToLe(unsigned Type, uint8_t *Loc, uint8_t *BufEnd,
-                         uint64_t P, uint64_t SA) const;
+  size_t relaxTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                        uint64_t P, uint64_t SA) const override;
+  size_t relaxTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                        uint64_t P, uint64_t SA) const override;
+  size_t relaxTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                        uint64_t P, uint64_t SA) const override;
+  size_t relaxTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                        uint64_t P, uint64_t SA) const override;
+
+  bool isGotRelative(uint32_t Type) const override;
+  bool refersToGotEntry(uint32_t Type) const override;
 };
 
 class X86_64TargetInfo final : public TargetInfo {
 public:
   X86_64TargetInfo();
-  unsigned getTlsGotRel(unsigned Type) const override;
-  bool isTlsLocalDynamicRel(unsigned Type) const override;
-  bool isTlsGlobalDynamicRel(unsigned Type) const override;
-  bool isTlsDynRel(unsigned Type, const SymbolBody &S) const override;
+  uint32_t getDynRel(uint32_t Type) const override;
+  uint32_t getTlsGotRel(uint32_t Type) const override;
+  bool pointsToLocalDynamicGotEntry(uint32_t Type) const override;
+  bool isTlsLocalDynamicRel(uint32_t Type) const override;
+  bool isTlsGlobalDynamicRel(uint32_t Type) const override;
+  bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
   void writeGotPlt(uint8_t *Buf, uint64_t Plt) const override;
   void writePltZero(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
-  bool needsGot(uint32_t Type, SymbolBody &S) const override;
-  PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
+  bool needsCopyRelImpl(uint32_t Type) const override;
+  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
+  bool refersToGotEntry(uint32_t Type) const override;
+  bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA, uint64_t ZA = 0,
-                   uint8_t *PairedLoc = nullptr) const override;
+                   uint64_t SA) const override;
   bool isRelRelative(uint32_t Type) const override;
-  bool canRelaxTls(unsigned Type, const SymbolBody *S) const override;
   bool isSizeRel(uint32_t Type) const override;
-  unsigned relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                    uint64_t SA, const SymbolBody *S) const override;
 
-private:
-  void relocateTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
-                         uint64_t SA) const;
-  void relocateTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
-                         uint64_t SA) const;
-  void relocateTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
-                         uint64_t SA) const;
-  void relocateTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
-                         uint64_t SA) const;
+  size_t relaxTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                        uint64_t P, uint64_t SA) const override;
+  size_t relaxTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                        uint64_t P, uint64_t SA) const override;
+  size_t relaxTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                        uint64_t P, uint64_t SA) const override;
+  size_t relaxTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                        uint64_t P, uint64_t SA) const override;
 };
 
 class PPCTargetInfo final : public TargetInfo {
 public:
   PPCTargetInfo();
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA, uint64_t ZA = 0,
-                   uint8_t *PairedLoc = nullptr) const override;
+                   uint64_t SA) const override;
   bool isRelRelative(uint32_t Type) const override;
 };
 
@@ -162,41 +149,36 @@ public:
   PPC64TargetInfo();
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  bool needsGot(uint32_t Type, SymbolBody &S) const override;
-  PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
+  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
+  bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA, uint64_t ZA = 0,
-                   uint8_t *PairedLoc = nullptr) const override;
+                   uint64_t SA) const override;
   bool isRelRelative(uint32_t Type) const override;
 };
 
 class AArch64TargetInfo final : public TargetInfo {
 public:
   AArch64TargetInfo();
-  unsigned getDynRel(unsigned Type) const override;
-  bool isTlsGlobalDynamicRel(unsigned Type) const override;
+  uint32_t getDynRel(uint32_t Type) const override;
+  bool isTlsGlobalDynamicRel(uint32_t Type) const override;
+  bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, uint64_t Plt) const override;
   void writePltZero(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  unsigned getTlsGotRel(unsigned Type) const override;
-  bool isTlsDynRel(unsigned Type, const SymbolBody &S) const override;
-  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
-  bool needsGot(uint32_t Type, SymbolBody &S) const override;
-  PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
+  uint32_t getTlsGotRel(uint32_t Type) const override;
+  bool isRelRelative(uint32_t Type) const override;
+  bool needsCopyRelImpl(uint32_t Type) const override;
+  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
+  bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA, uint64_t ZA = 0,
-                   uint8_t *PairedLoc = nullptr) const override;
-  unsigned relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                    uint64_t SA, const SymbolBody *S) const override;
-  bool canRelaxTls(unsigned Type, const SymbolBody *S) const override;
+                   uint64_t SA) const override;
+  size_t relaxTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                        uint64_t P, uint64_t SA) const override;
+  size_t relaxTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                        uint64_t P, uint64_t SA) const override;
 
 private:
-  void relocateTlsGdToLe(unsigned Type, uint8_t *Loc, uint8_t *BufEnd,
-                         uint64_t P, uint64_t SA) const;
-  void relocateTlsIeToLe(unsigned Type, uint8_t *Loc, uint8_t *BufEnd,
-                         uint64_t P, uint64_t SA) const;
-
   static const uint64_t TcbSize = 16;
 };
 
@@ -204,27 +186,30 @@ class AMDGPUTargetInfo final : public TargetInfo {
 public:
   AMDGPUTargetInfo() {}
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA, uint64_t ZA = 0,
-                   uint8_t *PairedLoc = nullptr) const override;
+                   uint64_t SA) const override;
 };
 
 template <class ELFT> class MipsTargetInfo final : public TargetInfo {
 public:
   MipsTargetInfo();
-  unsigned getDynRel(unsigned Type) const override;
+  uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
+  uint32_t getDynRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, uint64_t Plt) const override;
   void writePltZero(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   void writeGotHeader(uint8_t *Buf) const override;
-  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
-  bool needsGot(uint32_t Type, SymbolBody &S) const override;
-  PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
+  void writeThunk(uint8_t *Buf, uint64_t S) const override;
+  bool needsCopyRelImpl(uint32_t Type) const override;
+  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
+  bool needsPltImpl(uint32_t Type) const override;
+  bool needsThunk(uint32_t Type, const InputFile &File,
+                  const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t S, uint64_t ZA = 0,
-                   uint8_t *PairedLoc = nullptr) const override;
+                   uint64_t SA) const override;
   bool isHintRel(uint32_t Type) const override;
   bool isRelRelative(uint32_t Type) const override;
+  bool refersToGotEntry(uint32_t Type) const override;
 };
 } // anonymous namespace
 
@@ -243,7 +228,7 @@ TargetInfo *createTarget() {
     case ELF32BEKind:
       return new MipsTargetInfo<ELF32BE>();
     default:
-      fatal("Unsupported MIPS target");
+      fatal("unsupported MIPS target");
     }
   case EM_PPC:
     return new PPCTargetInfo();
@@ -252,23 +237,55 @@ TargetInfo *createTarget() {
   case EM_X86_64:
     return new X86_64TargetInfo();
   }
-  fatal("Unknown target machine");
+  fatal("unknown target machine");
 }
 
 TargetInfo::~TargetInfo() {}
 
-bool TargetInfo::canRelaxTls(unsigned Type, const SymbolBody *S) const {
+uint64_t TargetInfo::getImplicitAddend(const uint8_t *Buf,
+                                       uint32_t Type) const {
+  return 0;
+}
+
+bool TargetInfo::canRelaxTls(uint32_t Type, const SymbolBody *S) const {
+  if (Config->Shared || (S && !S->isTls()))
+    return false;
+
+  // We know we are producing an executable.
+
+  // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
+  // depending on the symbol being locally defined or not.
+  if (isTlsGlobalDynamicRel(Type))
+    return true;
+
+  // Local-Dynamic relocs can be relaxed to Local-Exec.
+  if (isTlsLocalDynamicRel(Type))
+    return true;
+
+  // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
+  // defined.
+  if (isTlsInitialExecRel(Type))
+    return !S->isPreemptible();
+
   return false;
 }
 
-uint64_t TargetInfo::getVAStart() const { return Config->Shared ? 0 : VAStart; }
+uint64_t TargetInfo::getVAStart() const { return Config->Pic ? 0 : VAStart; }
 
+bool TargetInfo::needsCopyRelImpl(uint32_t Type) const { return false; }
+
+template <typename ELFT> static bool mayNeedCopy(const SymbolBody &S) {
+  if (Config->Shared)
+    return false;
+  auto *SS = dyn_cast<SharedSymbol<ELFT>>(&S);
+  if (!SS)
+    return false;
+  return SS->isObject();
+}
+
+template <class ELFT>
 bool TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
-  return false;
-}
-
-bool TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {
-  return false;
+  return mayNeedCopy<ELFT>(S) && needsCopyRelImpl(Type);
 }
 
 bool TargetInfo::isGotRelative(uint32_t Type) const { return false; }
@@ -276,25 +293,98 @@ bool TargetInfo::isHintRel(uint32_t Type) const { return false; }
 bool TargetInfo::isRelRelative(uint32_t Type) const { return true; }
 bool TargetInfo::isSizeRel(uint32_t Type) const { return false; }
 
-bool TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const { return false; }
+bool TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
+  return false;
+}
+
+bool TargetInfo::needsPltImpl(uint32_t Type) const { return false; }
+
+bool TargetInfo::refersToGotEntry(uint32_t Type) const { return false; }
 
 TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
                                          const SymbolBody &S) const {
+  if (S.isGnuIFunc())
+    return Plt_Explicit;
+  if (S.isPreemptible() && needsPltImpl(Type))
+    return Plt_Explicit;
+
+  // This handles a non PIC program call to function in a shared library.
+  // In an ideal world, we could just report an error saying the relocation
+  // can overflow at runtime.
+  // In the real world with glibc, crt1.o has a R_X86_64_PC32 pointing to
+  // libc.so.
+  //
+  // The general idea on how to handle such cases is to create a PLT entry
+  // and use that as the function value.
+  //
+  // For the static linking part, we just return true and everything else
+  // will use the the PLT entry as the address.
+  //
+  // The remaining problem is making sure pointer equality still works. We
+  // need the help of the dynamic linker for that. We let it know that we have
+  // a direct reference to a so symbol by creating an undefined symbol with a
+  // non zero st_value. Seeing that, the dynamic linker resolves the symbol to
+  // the value of the symbol we created. This is true even for got entries, so
+  // pointer equality is maintained. To avoid an infinite loop, the only entry
+  // that points to the real function is a dedicated got entry used by the
+  // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
+  // R_386_JMP_SLOT, etc).
+  if (S.isShared())
+    if (!Config->Pic && S.isFunc() && !refersToGotEntry(Type))
+      return Plt_Implicit;
+
   return Plt_No;
 }
 
-bool TargetInfo::isTlsLocalDynamicRel(unsigned Type) const {
+bool TargetInfo::needsThunk(uint32_t Type, const InputFile &File,
+                            const SymbolBody &S) const {
   return false;
 }
 
-bool TargetInfo::isTlsGlobalDynamicRel(unsigned Type) const {
+bool TargetInfo::isTlsInitialExecRel(uint32_t Type) const { return false; }
+
+bool TargetInfo::pointsToLocalDynamicGotEntry(uint32_t Type) const {
   return false;
 }
 
-unsigned TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                              uint64_t P, uint64_t SA,
-                              const SymbolBody *S) const {
-  return 0;
+bool TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const { return false; }
+
+bool TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
+  return false;
+}
+
+size_t TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                            uint64_t P, uint64_t SA,
+                            const SymbolBody &S) const {
+  if (isTlsGlobalDynamicRel(Type)) {
+    if (S.isPreemptible())
+      return relaxTlsGdToIe(Loc, BufEnd, Type, P, SA);
+    return relaxTlsGdToLe(Loc, BufEnd, Type, P, SA);
+  }
+  if (isTlsLocalDynamicRel(Type))
+    return relaxTlsLdToLe(Loc, BufEnd, Type, P, SA);
+  assert(isTlsInitialExecRel(Type));
+  return relaxTlsIeToLe(Loc, BufEnd, Type, P, SA);
+}
+
+size_t TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                                  uint64_t P, uint64_t SA) const {
+  llvm_unreachable("Should not have claimed to be relaxable");
+}
+
+size_t TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                                  uint64_t P, uint64_t SA) const {
+  llvm_unreachable("Should not have claimed to be relaxable");
+}
+
+size_t TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                                  uint64_t P, uint64_t SA) const {
+  llvm_unreachable("Should not have claimed to be relaxable");
+}
+
+size_t TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                                  uint64_t P, uint64_t SA) const {
+  llvm_unreachable("Should not have claimed to be relaxable");
 }
 
 X86TargetInfo::X86TargetInfo() {
@@ -311,6 +401,17 @@ X86TargetInfo::X86TargetInfo() {
   PltZeroSize = 16;
 }
 
+bool X86TargetInfo::isRelRelative(uint32_t Type) const {
+  switch (Type) {
+  default:
+    return false;
+  case R_386_PC32:
+  case R_386_PLT32:
+  case R_386_TLS_LDO_32:
+    return true;
+  }
+}
+
 void X86TargetInfo::writeGotPltHeader(uint8_t *Buf) const {
   write32le(Buf, Out<ELF32LE>::Dynamic->getVA());
 }
@@ -321,7 +422,7 @@ void X86TargetInfo::writeGotPlt(uint8_t *Buf, uint64_t Plt) const {
   write32le(Buf, Plt + 6);
 }
 
-unsigned X86TargetInfo::getDynRel(unsigned Type) const {
+uint32_t X86TargetInfo::getDynRel(uint32_t Type) const {
   if (Type == R_386_TLS_LE)
     return R_386_TLS_TPOFF;
   if (Type == R_386_TLS_LE_32)
@@ -329,33 +430,32 @@ unsigned X86TargetInfo::getDynRel(unsigned Type) const {
   return Type;
 }
 
-unsigned X86TargetInfo::getTlsGotRel(unsigned Type) const {
+uint32_t X86TargetInfo::getTlsGotRel(uint32_t Type) const {
   if (Type == R_386_TLS_IE)
     return Type;
   return TlsGotRel;
 }
 
-bool X86TargetInfo::isTlsGlobalDynamicRel(unsigned Type) const {
+bool X86TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
   return Type == R_386_TLS_GD;
 }
 
-bool X86TargetInfo::isTlsLocalDynamicRel(unsigned Type) const {
+bool X86TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const {
+  return Type == R_386_TLS_LDO_32 || Type == R_386_TLS_LDM;
+}
+
+bool X86TargetInfo::pointsToLocalDynamicGotEntry(uint32_t Type) const {
   return Type == R_386_TLS_LDM;
 }
 
-bool X86TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {
-  if (Type == R_386_TLS_LE || Type == R_386_TLS_LE_32 ||
-      Type == R_386_TLS_GOTIE)
-    return Config->Shared;
-  if (Type == R_386_TLS_IE)
-    return canBePreempted(&S, true);
-  return Type == R_386_TLS_GD;
+bool X86TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
+  return Type == R_386_TLS_IE || Type == R_386_TLS_GOTIE;
 }
 
 void X86TargetInfo::writePltZero(uint8_t *Buf) const {
   // Executable files and shared object files have
   // separate procedure linkage tables.
-  if (Config->Shared) {
+  if (Config->Pic) {
     const uint8_t V[] = {
         0xff, 0xb3, 0x04, 0x00, 0x00, 0x00, // pushl 4(%ebx)
         0xff, 0xa3, 0x08, 0x00, 0x00, 0x00, // jmp   *8(%ebx)
@@ -387,7 +487,7 @@ void X86TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   memcpy(Buf, Inst, sizeof(Inst));
 
   // jmp *foo@GOT(%ebx) or jmp *foo_in_GOT
-  Buf[1] = Config->Shared ? 0xa3 : 0x25;
+  Buf[1] = Config->Pic ? 0xa3 : 0x25;
   uint32_t Got = UseLazyBinding ? Out<ELF32LE>::GotPlt->getVA()
                                 : Out<ELF32LE>::Got->getVA();
   write32le(Buf + 2, Config->Shared ? GotEntryAddr - Got : GotEntryAddr);
@@ -395,28 +495,20 @@ void X86TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32le(Buf + 12, -Index * PltEntrySize - PltZeroSize - 16);
 }
 
-bool X86TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
-  if (Type == R_386_32 || Type == R_386_16 || Type == R_386_8)
-    if (auto *SS = dyn_cast<SharedSymbol<ELF32LE>>(&S))
-      return SS->Sym.getType() == STT_OBJECT;
-  return false;
+bool X86TargetInfo::needsCopyRelImpl(uint32_t Type) const {
+  return Type == R_386_32 || Type == R_386_16 || Type == R_386_8;
 }
 
-bool X86TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
+bool X86TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
   if (S.isTls() && Type == R_386_TLS_GD)
-    return Target->canRelaxTls(Type, &S) && canBePreempted(&S, true);
+    return Target->canRelaxTls(Type, &S) && S.isPreemptible();
   if (Type == R_386_TLS_GOTIE || Type == R_386_TLS_IE)
     return !canRelaxTls(Type, &S);
   return Type == R_386_GOT32 || needsPlt(Type, S);
 }
 
-TargetInfo::PltNeed X86TargetInfo::needsPlt(uint32_t Type,
-                                            const SymbolBody &S) const {
-  if (isGnuIFunc<ELF32LE>(S) ||
-      (Type == R_386_PLT32 && canBePreempted(&S, true)) ||
-      (Type == R_386_PC32 && S.isShared()))
-    return Plt_Explicit;
-  return Plt_No;
+bool X86TargetInfo::needsPltImpl(uint32_t Type) const {
+  return Type == R_386_PLT32;
 }
 
 bool X86TargetInfo::isGotRelative(uint32_t Type) const {
@@ -426,29 +518,47 @@ bool X86TargetInfo::isGotRelative(uint32_t Type) const {
   return Type == R_386_GOTOFF;
 }
 
+bool X86TargetInfo::refersToGotEntry(uint32_t Type) const {
+  return Type == R_386_GOT32;
+}
+
+uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
+                                          uint32_t Type) const {
+  switch (Type) {
+  default:
+    return 0;
+  case R_386_32:
+  case R_386_GOT32:
+  case R_386_GOTOFF:
+  case R_386_GOTPC:
+  case R_386_PC32:
+  case R_386_PLT32:
+    return read32le(Buf);
+  }
+}
+
 void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                uint64_t P, uint64_t SA, uint64_t ZA,
-                                uint8_t *PairedLoc) const {
+                                uint64_t P, uint64_t SA) const {
   switch (Type) {
   case R_386_32:
-    add32le(Loc, SA);
+    write32le(Loc, SA);
     break;
   case R_386_GOT32: {
     uint64_t V = SA - Out<ELF32LE>::Got->getVA() -
                  Out<ELF32LE>::Got->getNumEntries() * 4;
     checkInt<32>(V, Type);
-    add32le(Loc, V);
+    write32le(Loc, V);
     break;
   }
   case R_386_GOTOFF:
-    add32le(Loc, SA - Out<ELF32LE>::Got->getVA());
+    write32le(Loc, SA - Out<ELF32LE>::Got->getVA());
     break;
   case R_386_GOTPC:
-    add32le(Loc, SA + Out<ELF32LE>::Got->getVA() - P);
+    write32le(Loc, SA + Out<ELF32LE>::Got->getVA() - P);
     break;
   case R_386_PC32:
   case R_386_PLT32:
-    add32le(Loc, SA - P);
+    write32le(Loc, SA - P);
     break;
   case R_386_TLS_GD:
   case R_386_TLS_LDM:
@@ -474,43 +584,32 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
   }
 }
 
-bool X86TargetInfo::canRelaxTls(unsigned Type, const SymbolBody *S) const {
-  if (Config->Shared || (S && !S->isTls()))
-    return false;
-  return Type == R_386_TLS_LDO_32 || Type == R_386_TLS_LDM ||
-         Type == R_386_TLS_GD ||
-         (Type == R_386_TLS_IE && !canBePreempted(S, true)) ||
-         (Type == R_386_TLS_GOTIE && !canBePreempted(S, true));
-}
-
-bool X86TargetInfo::needsDynRelative(unsigned Type) const {
+bool X86TargetInfo::needsDynRelative(uint32_t Type) const {
   return Config->Shared && Type == R_386_TLS_IE;
 }
 
-unsigned X86TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                 uint64_t P, uint64_t SA,
-                                 const SymbolBody *S) const {
-  switch (Type) {
-  case R_386_TLS_GD:
-    if (canBePreempted(S, true))
-      relocateTlsGdToIe(Loc, BufEnd, P, SA);
-    else
-      relocateTlsGdToLe(Loc, BufEnd, P, SA);
-    // The next relocation should be against __tls_get_addr, so skip it
-    return 1;
-  case R_386_TLS_GOTIE:
-  case R_386_TLS_IE:
-    relocateTlsIeToLe(Type, Loc, BufEnd, P, SA);
-    return 0;
-  case R_386_TLS_LDM:
-    relocateTlsLdToLe(Loc, BufEnd, P, SA);
-    // The next relocation should be against __tls_get_addr, so skip it
-    return 1;
-  case R_386_TLS_LDO_32:
-    relocateOne(Loc, BufEnd, R_386_TLS_LE, P, SA);
-    return 0;
-  }
-  llvm_unreachable("Unknown TLS optimization");
+size_t X86TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd,
+                                     uint32_t Type, uint64_t P,
+                                     uint64_t SA) const {
+  // GD can be optimized to LE:
+  //   leal x@tlsgd(, %ebx, 1),
+  //   call __tls_get_addr@plt
+  // Can be converted to:
+  //   movl %gs:0,%eax
+  //   addl $x@ntpoff,%eax
+  // But gold emits subl $foo@tpoff,%eax instead of addl.
+  // These instructions are completely equal in behavior.
+  // This method generates subl to be consistent with gold.
+  const uint8_t Inst[] = {
+      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
+      0x81, 0xe8, 0x00, 0x00, 0x00, 0x00  // subl 0(%ebx), %eax
+  };
+  memcpy(Loc - 3, Inst, sizeof(Inst));
+  relocateOne(Loc + 5, BufEnd, R_386_32, P,
+              Out<ELF32LE>::TlsPhdr->p_memsz - SA);
+
+  // The next relocation should be against __tls_get_addr, so skip it
+  return 1;
 }
 
 // "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.1
@@ -521,8 +620,9 @@ unsigned X86TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
 // Is converted to:
 //   movl %gs:0, %eax
 //   addl x@gotntpoff(%ebx), %eax
-void X86TargetInfo::relocateTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
-                                      uint64_t SA) const {
+size_t X86TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd,
+                                     uint32_t Type, uint64_t P,
+                                     uint64_t SA) const {
   const uint8_t Inst[] = {
       0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
       0x03, 0x83, 0x00, 0x00, 0x00, 0x00  // addl 0(%ebx), %eax
@@ -531,43 +631,9 @@ void X86TargetInfo::relocateTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
   relocateOne(Loc + 5, BufEnd, R_386_32, P,
               SA - Out<ELF32LE>::Got->getVA() -
                   Out<ELF32LE>::Got->getNumEntries() * 4);
-}
 
-// GD can be optimized to LE:
-//   leal x@tlsgd(, %ebx, 1),
-//   call __tls_get_addr@plt
-// Can be converted to:
-//   movl %gs:0,%eax
-//   addl $x@ntpoff,%eax
-// But gold emits subl $foo@tpoff,%eax instead of addl.
-// These instructions are completely equal in behavior.
-// This method generates subl to be consistent with gold.
-void X86TargetInfo::relocateTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
-                                      uint64_t SA) const {
-  const uint8_t Inst[] = {
-      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
-      0x81, 0xe8, 0x00, 0x00, 0x00, 0x00  // subl 0(%ebx), %eax
-  };
-  memcpy(Loc - 3, Inst, sizeof(Inst));
-  relocateOne(Loc + 5, BufEnd, R_386_32, P,
-              Out<ELF32LE>::TlsPhdr->p_memsz - SA);
-}
-
-// LD can be optimized to LE:
-//   leal foo(%reg),%eax
-//   call ___tls_get_addr
-// Is converted to:
-//   movl %gs:0,%eax
-//   nop
-//   leal 0(%esi,1),%esi
-void X86TargetInfo::relocateTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
-                                      uint64_t SA) const {
-  const uint8_t Inst[] = {
-      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0,%eax
-      0x90,                               // nop
-      0x8d, 0x74, 0x26, 0x00              // leal 0(%esi,1),%esi
-  };
-  memcpy(Loc - 2, Inst, sizeof(Inst));
+  // The next relocation should be against __tls_get_addr, so skip it
+  return 1;
 }
 
 // In some conditions, relocations can be optimized to avoid using GOT.
@@ -575,9 +641,10 @@ void X86TargetInfo::relocateTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint64_t P,
 // Read "ELF Handling For Thread-Local Storage, 5.1
 // IA-32 Linker Optimizations" (http://www.akkadia.org/drepper/tls.pdf)
 // by Ulrich Drepper for details.
-void X86TargetInfo::relocateTlsIeToLe(unsigned Type, uint8_t *Loc,
-                                      uint8_t *BufEnd, uint64_t P,
-                                      uint64_t SA) const {
+
+size_t X86TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd,
+                                     uint32_t Type, uint64_t P,
+                                     uint64_t SA) const {
   // Ulrich's document section 6.2 says that @gotntpoff can
   // be used with MOVL or ADDL instructions.
   // @indntpoff is similar to @gotntpoff, but for use in
@@ -612,6 +679,34 @@ void X86TargetInfo::relocateTlsIeToLe(unsigned Type, uint8_t *Loc,
       *Op = 0x80 | Reg | (Reg << 3);
   }
   relocateOne(Loc, BufEnd, R_386_TLS_LE, P, SA);
+
+  return 0;
+}
+
+size_t X86TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd,
+                                     uint32_t Type, uint64_t P,
+                                     uint64_t SA) const {
+  if (Type == R_386_TLS_LDO_32) {
+    relocateOne(Loc, BufEnd, R_386_TLS_LE, P, SA);
+    return 0;
+  }
+
+  // LD can be optimized to LE:
+  //   leal foo(%reg),%eax
+  //   call ___tls_get_addr
+  // Is converted to:
+  //   movl %gs:0,%eax
+  //   nop
+  //   leal 0(%esi,1),%esi
+  const uint8_t Inst[] = {
+      0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0,%eax
+      0x90,                               // nop
+      0x8d, 0x74, 0x26, 0x00              // leal 0(%esi,1),%esi
+  };
+  memcpy(Loc - 2, Inst, sizeof(Inst));
+
+  // The next relocation should be against __tls_get_addr, so skip it
+  return 1;
 }
 
 X86_64TargetInfo::X86_64TargetInfo() {
@@ -665,85 +760,58 @@ void X86_64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32le(Buf + 12, -Index * PltEntrySize - PltZeroSize - 16);
 }
 
-bool X86_64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
-  if (Type == R_X86_64_32S || Type == R_X86_64_32 || Type == R_X86_64_PC32 ||
-      Type == R_X86_64_64)
-    if (auto *SS = dyn_cast<SharedSymbol<ELF64LE>>(&S))
-      return SS->Sym.getType() == STT_OBJECT;
-  return false;
+bool X86_64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
+  return Type == R_X86_64_32S || Type == R_X86_64_32 || Type == R_X86_64_PC32 ||
+         Type == R_X86_64_64;
 }
 
-bool X86_64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
+bool X86_64TargetInfo::refersToGotEntry(uint32_t Type) const {
+  return Type == R_X86_64_GOTPCREL || Type == R_X86_64_GOTPCRELX ||
+         Type == R_X86_64_REX_GOTPCRELX;
+}
+
+bool X86_64TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
   if (Type == R_X86_64_TLSGD)
-    return Target->canRelaxTls(Type, &S) && canBePreempted(&S, true);
+    return Target->canRelaxTls(Type, &S) && S.isPreemptible();
   if (Type == R_X86_64_GOTTPOFF)
     return !canRelaxTls(Type, &S);
-  return Type == R_X86_64_GOTPCREL || needsPlt(Type, S);
+  return refersToGotEntry(Type) || needsPlt(Type, S);
 }
 
-unsigned X86_64TargetInfo::getTlsGotRel(unsigned Type) const {
+uint32_t X86_64TargetInfo::getDynRel(uint32_t Type) const {
+  if (Type == R_X86_64_PC32 || Type == R_X86_64_32)
+    if (Config->Shared)
+      error(getELFRelocationTypeName(EM_X86_64, Type) +
+            " cannot be a dynamic relocation");
+  return Type;
+}
+
+uint32_t X86_64TargetInfo::getTlsGotRel(uint32_t Type) const {
   // No other types of TLS relocations requiring GOT should
   // reach here.
   assert(Type == R_X86_64_GOTTPOFF);
   return R_X86_64_PC32;
 }
 
-bool X86_64TargetInfo::isTlsGlobalDynamicRel(unsigned Type) const {
+bool X86_64TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
+  return Type == R_X86_64_GOTTPOFF;
+}
+
+bool X86_64TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
   return Type == R_X86_64_TLSGD;
 }
 
-bool X86_64TargetInfo::isTlsLocalDynamicRel(unsigned Type) const {
+bool X86_64TargetInfo::pointsToLocalDynamicGotEntry(uint32_t Type) const {
   return Type == R_X86_64_TLSLD;
 }
 
-bool X86_64TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {
-  return Type == R_X86_64_GOTTPOFF || Type == R_X86_64_TLSGD;
+bool X86_64TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const {
+  return Type == R_X86_64_DTPOFF32 || Type == R_X86_64_DTPOFF64 ||
+         Type == R_X86_64_TLSLD;
 }
 
-TargetInfo::PltNeed X86_64TargetInfo::needsPlt(uint32_t Type,
-                                               const SymbolBody &S) const {
-  if (needsCopyRel(Type, S))
-    return Plt_No;
-  if (isGnuIFunc<ELF64LE>(S))
-    return Plt_Explicit;
-
-  switch (Type) {
-  default:
-    return Plt_No;
-  case R_X86_64_32:
-  case R_X86_64_64:
-  case R_X86_64_PC32:
-    // This relocation is defined to have a value of (S + A - P).
-    // The problems start when a non PIC program calls a function in a shared
-    // library.
-    // In an ideal world, we could just report an error saying the relocation
-    // can overflow at runtime.
-    // In the real world with glibc, crt1.o has a R_X86_64_PC32 pointing to
-    // libc.so.
-    //
-    // The general idea on how to handle such cases is to create a PLT entry
-    // and use that as the function value.
-    //
-    // For the static linking part, we just return true and everything else
-    // will use the the PLT entry as the address.
-    //
-    // The remaining problem is making sure pointer equality still works. We
-    // need the help of the dynamic linker for that. We let it know that we have
-    // a direct reference to a so symbol by creating an undefined symbol with a
-    // non zero st_value. Seeing that, the dynamic linker resolves the symbol to
-    // the value of the symbol we created. This is true even for got entries, so
-    // pointer equality is maintained. To avoid an infinite loop, the only entry
-    // that points to the real function is a dedicated got entry used by the
-    // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
-    // R_386_JMP_SLOT, etc).
-    if (!S.isShared())
-      return Plt_No;
-    return Plt_Implicit;
-  case R_X86_64_PLT32:
-    if (canBePreempted(&S, true))
-      return Plt_Explicit;
-    return Plt_No;
-  }
+bool X86_64TargetInfo::needsPltImpl(uint32_t Type) const {
+  return Type == R_X86_64_PLT32;
 }
 
 bool X86_64TargetInfo::isRelRelative(uint32_t Type) const {
@@ -765,35 +833,6 @@ bool X86_64TargetInfo::isSizeRel(uint32_t Type) const {
   return Type == R_X86_64_SIZE32 || Type == R_X86_64_SIZE64;
 }
 
-bool X86_64TargetInfo::canRelaxTls(unsigned Type, const SymbolBody *S) const {
-  if (Config->Shared || (S && !S->isTls()))
-    return false;
-  return Type == R_X86_64_TLSGD || Type == R_X86_64_TLSLD ||
-         Type == R_X86_64_DTPOFF32 ||
-         (Type == R_X86_64_GOTTPOFF && !canBePreempted(S, true));
-}
-
-// "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.5
-// x86-x64 linker optimizations, http://www.akkadia.org/drepper/tls.pdf) shows
-// how LD can be optimized to LE:
-//   leaq bar@tlsld(%rip), %rdi
-//   callq __tls_get_addr@PLT
-//   leaq bar@dtpoff(%rax), %rcx
-// Is converted to:
-//  .word 0x6666
-//  .byte 0x66
-//  mov %fs:0,%rax
-//  leaq bar@tpoff(%rax), %rcx
-void X86_64TargetInfo::relocateTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd,
-                                         uint64_t P, uint64_t SA) const {
-  const uint8_t Inst[] = {
-      0x66, 0x66,                                          //.word 0x6666
-      0x66,                                                //.byte 0x66
-      0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00 // mov %fs:0,%rax
-  };
-  memcpy(Loc - 3, Inst, sizeof(Inst));
-}
-
 // "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.5
 // x86-x64 linker optimizations, http://www.akkadia.org/drepper/tls.pdf) shows
 // how GD can be optimized to LE:
@@ -805,14 +844,18 @@ void X86_64TargetInfo::relocateTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd,
 // Is converted to:
 //  mov %fs:0x0,%rax
 //  lea x@tpoff,%rax
-void X86_64TargetInfo::relocateTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd,
-                                         uint64_t P, uint64_t SA) const {
+size_t X86_64TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd,
+                                        uint32_t Type, uint64_t P,
+                                        uint64_t SA) const {
   const uint8_t Inst[] = {
       0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:0x0,%rax
       0x48, 0x8d, 0x80, 0x00, 0x00, 0x00, 0x00              // lea x@tpoff,%rax
   };
   memcpy(Loc - 4, Inst, sizeof(Inst));
   relocateOne(Loc + 8, BufEnd, R_X86_64_TPOFF32, P, SA);
+
+  // The next relocation should be against __tls_get_addr, so skip it
+  return 1;
 }
 
 // "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.5
@@ -826,14 +869,18 @@ void X86_64TargetInfo::relocateTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd,
 // Is converted to:
 //  mov %fs:0x0,%rax
 //  addq x@tpoff,%rax
-void X86_64TargetInfo::relocateTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd,
-                                         uint64_t P, uint64_t SA) const {
+size_t X86_64TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd,
+                                        uint32_t Type, uint64_t P,
+                                        uint64_t SA) const {
   const uint8_t Inst[] = {
       0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:0x0,%rax
       0x48, 0x03, 0x05, 0x00, 0x00, 0x00, 0x00              // addq x@tpoff,%rax
   };
   memcpy(Loc - 4, Inst, sizeof(Inst));
   relocateOne(Loc + 8, BufEnd, R_X86_64_PC32, P + 12, SA);
+
+  // The next relocation should be against __tls_get_addr, so skip it
+  return 1;
 }
 
 // In some conditions, R_X86_64_GOTTPOFF relocation can be optimized to
@@ -841,8 +888,9 @@ void X86_64TargetInfo::relocateTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd,
 // This function does that. Read "ELF Handling For Thread-Local Storage,
 // 5.5 x86-x64 linker optimizations" (http://www.akkadia.org/drepper/tls.pdf)
 // by Ulrich Drepper for details.
-void X86_64TargetInfo::relocateTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd,
-                                         uint64_t P, uint64_t SA) const {
+size_t X86_64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd,
+                                        uint32_t Type, uint64_t P,
+                                        uint64_t SA) const {
   // Ulrich's document section 6.5 says that @gottpoff(%rip) must be
   // used in MOVQ or ADDQ instructions only.
   // "MOVQ foo@GOTTPOFF(%RIP), %REG" is transformed to "MOVQ $foo, %REG".
@@ -869,42 +917,44 @@ void X86_64TargetInfo::relocateTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd,
     *Prefix = (IsMov || RspAdd) ? 0x49 : 0x4d;
   *RegSlot = (IsMov || RspAdd) ? (0xc0 | Reg) : (0x80 | Reg | (Reg << 3));
   relocateOne(Loc, BufEnd, R_X86_64_TPOFF32, P, SA);
+  return 0;
 }
 
-// This function applies a TLS relocation with an optimization as described
-// in the Ulrich's document. As a result of rewriting instructions at the
-// relocation target, relocations immediately follow the TLS relocation (which
-// would be applied to rewritten instructions) may have to be skipped.
-// This function returns a number of relocations that need to be skipped.
-unsigned X86_64TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd,
-                                    uint32_t Type, uint64_t P, uint64_t SA,
-                                    const SymbolBody *S) const {
-  switch (Type) {
-  case R_X86_64_DTPOFF32:
+// "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.5
+// x86-x64 linker optimizations, http://www.akkadia.org/drepper/tls.pdf) shows
+// how LD can be optimized to LE:
+//   leaq bar@tlsld(%rip), %rdi
+//   callq __tls_get_addr@PLT
+//   leaq bar@dtpoff(%rax), %rcx
+// Is converted to:
+//  .word 0x6666
+//  .byte 0x66
+//  mov %fs:0,%rax
+//  leaq bar@tpoff(%rax), %rcx
+size_t X86_64TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd,
+                                        uint32_t Type, uint64_t P,
+                                        uint64_t SA) const {
+  if (Type == R_X86_64_DTPOFF64) {
+    write64le(Loc, SA - Out<ELF64LE>::TlsPhdr->p_memsz);
+    return 0;
+  }
+  if (Type == R_X86_64_DTPOFF32) {
     relocateOne(Loc, BufEnd, R_X86_64_TPOFF32, P, SA);
     return 0;
-  case R_X86_64_GOTTPOFF:
-    relocateTlsIeToLe(Loc, BufEnd, P, SA);
-    return 0;
-  case R_X86_64_TLSGD: {
-    if (canBePreempted(S, true))
-      relocateTlsGdToIe(Loc, BufEnd, P, SA);
-    else
-      relocateTlsGdToLe(Loc, BufEnd, P, SA);
-    // The next relocation should be against __tls_get_addr, so skip it
-    return 1;
   }
-  case R_X86_64_TLSLD:
-    relocateTlsLdToLe(Loc, BufEnd, P, SA);
-    // The next relocation should be against __tls_get_addr, so skip it
-    return 1;
-  }
-  llvm_unreachable("Unknown TLS optimization");
+
+  const uint8_t Inst[] = {
+      0x66, 0x66,                                          //.word 0x6666
+      0x66,                                                //.byte 0x66
+      0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00 // mov %fs:0,%rax
+  };
+  memcpy(Loc - 3, Inst, sizeof(Inst));
+  // The next relocation should be against __tls_get_addr, so skip it
+  return 1;
 }
 
 void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                   uint64_t P, uint64_t SA, uint64_t ZA,
-                                   uint8_t *PairedLoc) const {
+                                   uint64_t P, uint64_t SA) const {
   switch (Type) {
   case R_X86_64_32:
     checkUInt<32>(SA, Type);
@@ -922,6 +972,8 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     write32le(Loc, SA);
     break;
   case R_X86_64_GOTPCREL:
+  case R_X86_64_GOTPCRELX:
+  case R_X86_64_REX_GOTPCRELX:
   case R_X86_64_PC32:
   case R_X86_64_PLT32:
   case R_X86_64_TLSGD:
@@ -929,10 +981,10 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     write32le(Loc, SA - P);
     break;
   case R_X86_64_SIZE32:
-    write32le(Loc, ZA);
+    write32le(Loc, SA);
     break;
   case R_X86_64_SIZE64:
-    write64le(Loc, ZA);
+    write64le(Loc, SA);
     break;
   case R_X86_64_TPOFF32: {
     uint64_t Val = SA - Out<ELF64LE>::TlsPhdr->p_memsz;
@@ -961,8 +1013,7 @@ PPCTargetInfo::PPCTargetInfo() {}
 bool PPCTargetInfo::isRelRelative(uint32_t Type) const { return false; }
 
 void PPCTargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                uint64_t P, uint64_t SA, uint64_t ZA,
-                                uint8_t *PairedLoc) const {
+                                uint64_t P, uint64_t SA) const {
   switch (Type) {
   case R_PPC_ADDR16_HA:
     write16be(Loc, applyPPCHa(SA));
@@ -1033,7 +1084,7 @@ void PPC64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32be(Buf + 28, 0x4e800420);                   // bctr
 }
 
-bool PPC64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
+bool PPC64TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
   if (needsPlt(Type, S))
     return true;
 
@@ -1049,12 +1100,9 @@ bool PPC64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   }
 }
 
-TargetInfo::PltNeed PPC64TargetInfo::needsPlt(uint32_t Type,
-                                              const SymbolBody &S) const {
+bool PPC64TargetInfo::needsPltImpl(uint32_t Type) const {
   // These are function calls that need to be redirected through a PLT stub.
-  if (Type == R_PPC64_REL24 && canBePreempted(&S, false))
-    return Plt_Explicit;
-  return Plt_No;
+  return Type == R_PPC64_REL24;
 }
 
 bool PPC64TargetInfo::isRelRelative(uint32_t Type) const {
@@ -1068,8 +1116,7 @@ bool PPC64TargetInfo::isRelRelative(uint32_t Type) const {
 }
 
 void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                  uint64_t P, uint64_t SA, uint64_t ZA,
-                                  uint8_t *PairedLoc) const {
+                                  uint64_t P, uint64_t SA) const {
   uint64_t TB = getPPC64TocBase();
 
   // For a TOC-relative relocation, adjust the addend and proceed in terms of
@@ -1188,6 +1235,7 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
 
 AArch64TargetInfo::AArch64TargetInfo() {
   CopyRel = R_AARCH64_COPY;
+  RelativeRel = R_AARCH64_RELATIVE;
   IRelativeRel = R_AARCH64_IRELATIVE;
   GotRel = R_AARCH64_GLOB_DAT;
   PltRel = R_AARCH64_JUMP_SLOT;
@@ -1199,18 +1247,46 @@ AArch64TargetInfo::AArch64TargetInfo() {
   PltZeroSize = 32;
 }
 
-bool AArch64TargetInfo::isTlsGlobalDynamicRel(unsigned Type) const {
+bool AArch64TargetInfo::isRelRelative(uint32_t Type) const {
+  switch (Type) {
+  default:
+    return false;
+  case R_AARCH64_PREL32:
+  case R_AARCH64_ADR_PREL_LO21:
+  case R_AARCH64_ADR_PREL_PG_HI21:
+  case R_AARCH64_ADR_GOT_PAGE:
+  case R_AARCH64_LDST8_ABS_LO12_NC:
+  case R_AARCH64_LDST16_ABS_LO12_NC:
+  case R_AARCH64_LDST32_ABS_LO12_NC:
+  case R_AARCH64_LDST64_ABS_LO12_NC:
+  case R_AARCH64_LDST128_ABS_LO12_NC:
+  case R_AARCH64_ADD_ABS_LO12_NC:
+  case R_AARCH64_CALL26:
+  case R_AARCH64_JUMP26:
+  case R_AARCH64_CONDBR19:
+  case R_AARCH64_TSTBR14:
+  case R_AARCH64_PREL64:
+    return true;
+  }
+}
+
+bool AArch64TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
   return Type == R_AARCH64_TLSDESC_ADR_PAGE21 ||
          Type == R_AARCH64_TLSDESC_LD64_LO12_NC ||
          Type == R_AARCH64_TLSDESC_ADD_LO12_NC ||
          Type == R_AARCH64_TLSDESC_CALL;
 }
 
-unsigned AArch64TargetInfo::getDynRel(unsigned Type) const {
+bool AArch64TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
+  return Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
+         Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC;
+}
+
+uint32_t AArch64TargetInfo::getDynRel(uint32_t Type) const {
   if (Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64)
     return Type;
   StringRef S = getELFRelocationTypeName(EM_AARCH64, Type);
-  error("Relocation " + S + " cannot be used when making a shared object; "
+  error("relocation " + S + " cannot be used when making a shared object; "
                             "recompile with -fPIC.");
   // Keep it going with a dummy value so that we can find more reloc errors.
   return R_AARCH64_ABS32;
@@ -1261,24 +1337,13 @@ void AArch64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
               GotEntryAddr);
 }
 
-unsigned AArch64TargetInfo::getTlsGotRel(unsigned Type) const {
+uint32_t AArch64TargetInfo::getTlsGotRel(uint32_t Type) const {
   assert(Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
-    Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC);
-    return Type;
+         Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC);
+  return Type;
 }
 
-bool AArch64TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {
-  return Type == R_AARCH64_TLSDESC_ADR_PAGE21 ||
-         Type == R_AARCH64_TLSDESC_LD64_LO12_NC ||
-         Type == R_AARCH64_TLSDESC_ADD_LO12_NC ||
-         Type == R_AARCH64_TLSDESC_CALL ||
-         Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
-         Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC;
-}
-
-bool AArch64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
-  if (Config->Shared)
-    return false;
+bool AArch64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -1293,16 +1358,15 @@ bool AArch64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   case R_AARCH64_LDST32_ABS_LO12_NC:
   case R_AARCH64_LDST64_ABS_LO12_NC:
   case R_AARCH64_LDST128_ABS_LO12_NC:
-    if (auto *SS = dyn_cast<SharedSymbol<ELF64LE>>(&S))
-      return SS->Sym.getType() == STT_OBJECT;
-    return false;
+    return true;
   }
 }
 
-bool AArch64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
+bool AArch64TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
   switch (Type) {
-  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+    return !canRelaxTls(Type, &S);
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_LD64_GOT_LO12_NC:
     return true;
@@ -1311,20 +1375,15 @@ bool AArch64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   }
 }
 
-TargetInfo::PltNeed AArch64TargetInfo::needsPlt(uint32_t Type,
-                                                const SymbolBody &S) const {
-  if (isGnuIFunc<ELF64LE>(S))
-    return Plt_Explicit;
+bool AArch64TargetInfo::needsPltImpl(uint32_t Type) const {
   switch (Type) {
   default:
-    return Plt_No;
+    return false;
   case R_AARCH64_CALL26:
   case R_AARCH64_CONDBR19:
   case R_AARCH64_JUMP26:
   case R_AARCH64_TSTBR14:
-    if (canBePreempted(&S, true))
-      return Plt_Explicit;
-    return Plt_No;
+    return true;
   }
 }
 
@@ -1347,8 +1406,8 @@ static uint64_t getAArch64Page(uint64_t Expr) {
 }
 
 void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
-                                    uint32_t Type, uint64_t P, uint64_t SA,
-                                    uint64_t ZA, uint8_t *PairedLoc) const {
+                                    uint32_t Type, uint64_t P,
+                                    uint64_t SA) const {
   switch (Type) {
   case R_AARCH64_ABS16:
     checkIntUInt<16>(SA, Type);
@@ -1453,52 +1512,9 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
   }
 }
 
-bool AArch64TargetInfo::canRelaxTls(unsigned Type, const SymbolBody *S) const {
-  if (Config->Shared || (S && !S->isTls()))
-    return false;
-
-  // Global-Dynamic relocs can be relaxed to Initial-Exec if the target is
-  // an executable.  And if the target is local it can also be fully relaxed to
-  // Local-Exec.
-  if (isTlsGlobalDynamicRel(Type))
-    return !canBePreempted(S, true);
-
-  // Initial-Exec relocs can be relaxed to Local-Exec if the target is a local
-  // symbol.
-  if (Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
-      Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC)
-    return !canBePreempted(S, true);
-
-  return false;
-}
-
-unsigned AArch64TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd,
-                                     uint32_t Type, uint64_t P, uint64_t SA,
-                                     const SymbolBody *S) const {
-  switch (Type) {
-  case R_AARCH64_TLSDESC_ADR_PAGE21:
-  case R_AARCH64_TLSDESC_LD64_LO12_NC:
-  case R_AARCH64_TLSDESC_ADD_LO12_NC:
-  case R_AARCH64_TLSDESC_CALL: {
-    if (canBePreempted(S, true))
-      fatal("Unsupported TLS optimization");
-    uint64_t X = S ? S->getVA<ELF64LE>() : SA;
-    relocateTlsGdToLe(Type, Loc, BufEnd, P, X);
-    return 0;
-  }
-  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
-    relocateTlsIeToLe(Type, Loc, BufEnd, P, S->getVA<ELF64LE>());
-    return 0;
-  }
-  llvm_unreachable("Unknown TLS optimization");
-}
-
-// Global-Dynamic relocations can be relaxed to Local-Exec if both binary is
-// an executable and target is final (can notbe preempted).
-void AArch64TargetInfo::relocateTlsGdToLe(unsigned Type, uint8_t *Loc,
-                                          uint8_t *BufEnd, uint64_t P,
-                                          uint64_t SA) const {
+size_t AArch64TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd,
+                                         uint32_t Type, uint64_t P,
+                                         uint64_t SA) const {
   // TLSDESC Global-Dynamic relocation are in the form:
   //   adrp    x0, :tlsdesc:v             [R_AARCH64_TLSDESC_ADR_PAGE21]
   //   ldr     x1, [x0, #:tlsdesc_lo12:v  [R_AARCH64_TLSDESC_LD64_LO12_NC]
@@ -1509,7 +1525,6 @@ void AArch64TargetInfo::relocateTlsGdToLe(unsigned Type, uint8_t *Loc,
   //   movk    x0, #0x10
   //   nop
   //   nop
-
   uint64_t TPOff = llvm::alignTo(TcbSize, Out<ELF64LE>::TlsPhdr->p_align);
   uint64_t X = SA + TPOff;
   checkUInt<32>(X, Type);
@@ -1530,21 +1545,21 @@ void AArch64TargetInfo::relocateTlsGdToLe(unsigned Type, uint8_t *Loc,
     NewInst = 0xf2800000 | ((X & 0xffff) << 5);
     break;
   default:
-    llvm_unreachable("Unsupported Relocation for TLS GD to LE relax");
+    llvm_unreachable("unsupported Relocation for TLS GD to LE relax");
   }
   write32le(Loc, NewInst);
+
+  return 0;
 }
 
-// Initial-Exec relocations can be relaxed to Local-Exec if symbol is final
-// (can not be preempted).
-void AArch64TargetInfo::relocateTlsIeToLe(unsigned Type, uint8_t *Loc,
-                                          uint8_t *BufEnd, uint64_t P,
-                                          uint64_t SA) const {
+size_t AArch64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd,
+                                         uint32_t Type, uint64_t P,
+                                         uint64_t SA) const {
   uint64_t TPOff = llvm::alignTo(TcbSize, Out<ELF64LE>::TlsPhdr->p_align);
   uint64_t X = SA + TPOff;
   checkUInt<32>(X, Type);
 
-  uint32_t Inst = read32le (Loc);
+  uint32_t Inst = read32le(Loc);
   uint32_t NewInst;
   if (Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21) {
     // Generate movz.
@@ -1555,19 +1570,19 @@ void AArch64TargetInfo::relocateTlsIeToLe(unsigned Type, uint8_t *Loc,
     unsigned RegNo = (Inst & 0x1f);
     NewInst = (0xf2800000 | RegNo) | ((X & 0xffff) << 5);
   } else {
-    llvm_unreachable("Invalid Relocation for TLS IE to LE Relax");
+    llvm_unreachable("invalid Relocation for TLS IE to LE Relax");
   }
   write32le(Loc, NewInst);
-}
 
+  return 0;
+}
 
 // Implementing relocations for AMDGPU is low priority since most
 // programs don't use relocations now. Thus, this function is not
 // actually called (relocateOne is called for each relocation).
 // That's why the AMDGPU port works without implementing this function.
 void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                   uint64_t P, uint64_t SA, uint64_t ZA,
-                                   uint8_t *PairedLoc) const {
+                                   uint64_t P, uint64_t SA) const {
   llvm_unreachable("not implemented");
 }
 
@@ -1577,6 +1592,7 @@ template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   PageSize = 65536;
   PltEntrySize = 16;
   PltZeroSize = 32;
+  ThunkSize = 16;
   UseLazyBinding = true;
   CopyRel = R_MIPS_COPY;
   PltRel = R_MIPS_JUMP_SLOT;
@@ -1584,11 +1600,11 @@ template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
 }
 
 template <class ELFT>
-unsigned MipsTargetInfo<ELFT>::getDynRel(unsigned Type) const {
+uint32_t MipsTargetInfo<ELFT>::getDynRel(uint32_t Type) const {
   if (Type == R_MIPS_32 || Type == R_MIPS_64)
     return R_MIPS_REL32;
   StringRef S = getELFRelocationTypeName(EM_MIPS, Type);
-  error("Relocation " + S + " cannot be used when making a shared object; "
+  error("relocation " + S + " cannot be used when making a shared object; "
                             "recompile with -fPIC.");
   // Keep it going with a dummy value so that we can find more reloc errors.
   return R_MIPS_32;
@@ -1596,8 +1612,8 @@ unsigned MipsTargetInfo<ELFT>::getDynRel(unsigned Type) const {
 
 template <class ELFT>
 void MipsTargetInfo<ELFT>::writeGotHeader(uint8_t *Buf) const {
-  typedef typename ELFFile<ELFT>::Elf_Off Elf_Off;
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Off Elf_Off;
+  typedef typename ELFT::uint uintX_t;
 
   // Set the MSB of the second GOT slot. This is not required by any
   // MIPS ABI documentation, though.
@@ -1625,22 +1641,38 @@ void MipsTargetInfo<ELFT>::writeGotPlt(uint8_t *Buf, uint64_t Plt) const {
 static uint16_t mipsHigh(uint64_t V) { return (V + 0x8000) >> 16; }
 
 template <endianness E, uint8_t BSIZE, uint8_t SHIFT>
+static int64_t getPcRelocAddend(const uint8_t *Loc) {
+  uint32_t Instr = read32<E>(Loc);
+  uint32_t Mask = 0xffffffff >> (32 - BSIZE);
+  return SignExtend64<BSIZE + SHIFT>((Instr & Mask) << SHIFT);
+}
+
+template <endianness E, uint8_t BSIZE, uint8_t SHIFT>
 static void applyMipsPcReloc(uint8_t *Loc, uint32_t Type, uint64_t P,
-                             uint64_t S) {
+                             uint64_t SA) {
   uint32_t Mask = 0xffffffff >> (32 - BSIZE);
   uint32_t Instr = read32<E>(Loc);
-  int64_t A = SignExtend64<BSIZE + SHIFT>((Instr & Mask) << SHIFT);
+  int64_t V = SA - P;
   if (SHIFT > 0)
-    checkAlignment<(1 << SHIFT)>(S + A, Type);
-  int64_t V = S + A - P;
+    checkAlignment<(1 << SHIFT)>(V, Type);
   checkInt<BSIZE + SHIFT>(V, Type);
   write32<E>(Loc, (Instr & ~Mask) | ((V >> SHIFT) & Mask));
 }
 
 template <endianness E>
-static void applyMipsHi16Reloc(uint8_t *Loc, uint64_t S, int64_t A) {
+static void writeMipsHi16(uint8_t *Loc, uint64_t V) {
   uint32_t Instr = read32<E>(Loc);
-  write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S + A));
+  write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(V));
+}
+
+template <endianness E>
+static void writeMipsLo16(uint8_t *Loc, uint64_t V) {
+  uint32_t Instr = read32<E>(Loc);
+  write32<E>(Loc, (Instr & 0xffff0000) | (V & 0xffff));
+}
+
+template <endianness E> static int16_t readSignedLo16(const uint8_t *Loc) {
+  return SignExtend32<16>(read32<E>(Loc) & 0xffff);
 }
 
 template <class ELFT>
@@ -1655,10 +1687,9 @@ void MipsTargetInfo<ELFT>::writePltZero(uint8_t *Buf) const {
   write32<E>(Buf + 24, 0x0320f809); // jalr  $25
   write32<E>(Buf + 28, 0x2718fffe); // subu  $24, $24, 2
   uint64_t Got = Out<ELFT>::GotPlt->getVA();
-  uint64_t Plt = Out<ELFT>::Plt->getVA();
-  applyMipsHi16Reloc<E>(Buf, Got, 0);
-  relocateOne(Buf + 4, Buf + 8, R_MIPS_LO16, Plt + 4, Got);
-  relocateOne(Buf + 8, Buf + 12, R_MIPS_LO16, Plt + 8, Got);
+  writeMipsHi16<E>(Buf, Got);
+  writeMipsLo16<E>(Buf + 4, Got);
+  writeMipsLo16<E>(Buf + 8, Got);
 }
 
 template <class ELFT>
@@ -1670,130 +1701,183 @@ void MipsTargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32<E>(Buf + 4, 0x8df90000);  // l[wd] $25, %lo(.got.plt entry)($15)
   write32<E>(Buf + 8, 0x03200008);  // jr    $25
   write32<E>(Buf + 12, 0x25f80000); // addiu $24, $15, %lo(.got.plt entry)
-  applyMipsHi16Reloc<E>(Buf, GotEntryAddr, 0);
-  relocateOne(Buf + 4, Buf + 8, R_MIPS_LO16, PltEntryAddr + 4, GotEntryAddr);
-  relocateOne(Buf + 12, Buf + 16, R_MIPS_LO16, PltEntryAddr + 8, GotEntryAddr);
+  writeMipsHi16<E>(Buf, GotEntryAddr);
+  writeMipsLo16<E>(Buf + 4, GotEntryAddr);
+  writeMipsLo16<E>(Buf + 12, GotEntryAddr);
 }
 
 template <class ELFT>
-bool MipsTargetInfo<ELFT>::needsCopyRel(uint32_t Type,
-                                        const SymbolBody &S) const {
-  if (Config->Shared)
+void MipsTargetInfo<ELFT>::writeThunk(uint8_t *Buf, uint64_t S) const {
+  // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
+  // See MipsTargetInfo::writeThunk for details.
+  const endianness E = ELFT::TargetEndianness;
+  write32<E>(Buf, 0x3c190000);      // lui   $25, %hi(func)
+  write32<E>(Buf + 4, 0x08000000);  // j     func
+  write32<E>(Buf + 8, 0x27390000);  // addiu $25, $25, %lo(func)
+  write32<E>(Buf + 12, 0x00000000); // nop
+  writeMipsHi16<E>(Buf, S);
+  write32<E>(Buf + 4, 0x08000000 | (S >> 2));
+  writeMipsLo16<E>(Buf + 8, S);
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::needsCopyRelImpl(uint32_t Type) const {
+  return !isRelRelative(Type) || Type == R_MIPS_LO16;
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::needsGot(uint32_t Type, const SymbolBody &S) const {
+  return needsPlt(Type, S) || refersToGotEntry(Type);
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::refersToGotEntry(uint32_t Type) const {
+  return Type == R_MIPS_GOT16 || Type == R_MIPS_CALL16;
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::needsPltImpl(uint32_t Type) const {
+  return Type == R_MIPS_26;
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::needsThunk(uint32_t Type, const InputFile &File,
+                                      const SymbolBody &S) const {
+  // Any MIPS PIC code function is invoked with its address in register $t9.
+  // So if we have a branch instruction from non-PIC code to the PIC one
+  // we cannot make the jump directly and need to create a small stubs
+  // to save the target function address.
+  // See page 3-38 ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+  if (Type != R_MIPS_26)
     return false;
-  if (Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type))
-    if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(&S))
-      return SS->Sym.getType() == STT_OBJECT;
-  return false;
+  auto *F = dyn_cast<ELFFileBase<ELFT>>(&File);
+  if (!F)
+    return false;
+  // If current file has PIC code, LA25 stub is not required.
+  if (F->getObj().getHeader()->e_flags & EF_MIPS_PIC)
+    return false;
+  auto *D = dyn_cast<DefinedRegular<ELFT>>(&S);
+  if (!D || !D->Section)
+    return false;
+  // LA25 is required if target file has PIC code
+  // or target symbol is a PIC symbol.
+  return (D->Section->getFile()->getObj().getHeader()->e_flags & EF_MIPS_PIC) ||
+         (D->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC;
 }
 
 template <class ELFT>
-bool MipsTargetInfo<ELFT>::needsGot(uint32_t Type, SymbolBody &S) const {
-  return needsPlt(Type, S) || Type == R_MIPS_GOT16 || Type == R_MIPS_CALL16;
-}
-
-template <class ELFT>
-TargetInfo::PltNeed MipsTargetInfo<ELFT>::needsPlt(uint32_t Type,
-                                                   const SymbolBody &S) const {
-  if (needsCopyRel(Type, S))
-    return Plt_No;
-  if (Type == R_MIPS_26 && canBePreempted(&S, false))
-    return Plt_Explicit;
-  if (Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type))
-    if (S.isShared())
-      return Plt_Explicit;
-  return Plt_No;
+uint64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
+                                                 uint32_t Type) const {
+  const endianness E = ELFT::TargetEndianness;
+  switch (Type) {
+  default:
+    return 0;
+  case R_MIPS_32:
+  case R_MIPS_GPREL32:
+    return read32<E>(Buf);
+  case R_MIPS_26:
+    // FIXME (simon): If the relocation target symbol is not a PLT entry
+    // we should use another expression for calculation:
+    // ((A << 2) | (P & 0xf0000000)) >> 2
+    return SignExtend64<28>((read32<E>(Buf) & 0x3ffffff) << 2);
+  case R_MIPS_GPREL16:
+  case R_MIPS_LO16:
+  case R_MIPS_PCLO16:
+  case R_MIPS_TLS_DTPREL_HI16:
+  case R_MIPS_TLS_DTPREL_LO16:
+  case R_MIPS_TLS_TPREL_HI16:
+  case R_MIPS_TLS_TPREL_LO16:
+    return readSignedLo16<E>(Buf);
+  case R_MIPS_PC16:
+    return getPcRelocAddend<E, 16, 2>(Buf);
+  case R_MIPS_PC19_S2:
+    return getPcRelocAddend<E, 19, 2>(Buf);
+  case R_MIPS_PC21_S2:
+    return getPcRelocAddend<E, 21, 2>(Buf);
+  case R_MIPS_PC26_S2:
+    return getPcRelocAddend<E, 26, 2>(Buf);
+  case R_MIPS_PC32:
+    return getPcRelocAddend<E, 32, 0>(Buf);
+  }
 }
 
 template <class ELFT>
 void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
-                                       uint32_t Type, uint64_t P, uint64_t S,
-                                       uint64_t ZA, uint8_t *PairedLoc) const {
+                                       uint32_t Type, uint64_t P,
+                                       uint64_t SA) const {
   const endianness E = ELFT::TargetEndianness;
+  // Thread pointer and DRP offsets from the start of TLS data area.
+  // https://www.linux-mips.org/wiki/NPTL
+  const uint32_t TPOffset = 0x7000;
+  const uint32_t DTPOffset = 0x8000;
   switch (Type) {
   case R_MIPS_32:
-    add32<E>(Loc, S);
+    write32<E>(Loc, SA);
     break;
   case R_MIPS_26: {
     uint32_t Instr = read32<E>(Loc);
-    // FIXME (simon): If the relocation target symbol is not a PLT entry
-    // we should use another expression for calculation:
-    // ((A << 2) | (P & 0xf0000000)) >> 2
-    S += SignExtend64<28>((Instr & 0x3ffffff) << 2);
-    write32<E>(Loc, (Instr & ~0x3ffffff) | (S >> 2));
+    write32<E>(Loc, (Instr & ~0x3ffffff) | (SA >> 2));
     break;
   }
   case R_MIPS_CALL16:
   case R_MIPS_GOT16: {
-    int64_t V = S - getMipsGpAddr<ELFT>();
+    int64_t V = SA - getMipsGpAddr<ELFT>();
     if (Type == R_MIPS_GOT16)
       checkInt<16>(V, Type);
-    write32<E>(Loc, (read32<E>(Loc) & 0xffff0000) | (V & 0xffff));
+    writeMipsLo16<E>(Loc, V);
     break;
   }
   case R_MIPS_GPREL16: {
-    uint32_t Instr = read32<E>(Loc);
-    int64_t V = S + SignExtend64<16>(Instr & 0xffff) - getMipsGpAddr<ELFT>();
+    int64_t V = SA - getMipsGpAddr<ELFT>();
     checkInt<16>(V, Type);
-    write32<E>(Loc, (Instr & 0xffff0000) | (V & 0xffff));
+    writeMipsLo16<E>(Loc, V);
     break;
   }
   case R_MIPS_GPREL32:
-    write32<E>(Loc, S + int32_t(read32<E>(Loc)) - getMipsGpAddr<ELFT>());
+    write32<E>(Loc, SA - getMipsGpAddr<ELFT>());
     break;
-  case R_MIPS_HI16: {
-    uint32_t Instr = read32<E>(Loc);
-    if (PairedLoc) {
-      uint64_t AHL = ((Instr & 0xffff) << 16) +
-                     SignExtend64<16>(read32<E>(PairedLoc) & 0xffff);
-      applyMipsHi16Reloc<E>(Loc, S, AHL);
-    } else {
-      warning("Can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16");
-      applyMipsHi16Reloc<E>(Loc, S, 0);
-    }
+  case R_MIPS_HI16:
+    writeMipsHi16<E>(Loc, SA);
     break;
-  }
   case R_MIPS_JALR:
     // Ignore this optimization relocation for now
     break;
-  case R_MIPS_LO16: {
-    uint32_t Instr = read32<E>(Loc);
-    int64_t AHL = SignExtend64<16>(Instr & 0xffff);
-    write32<E>(Loc, (Instr & 0xffff0000) | ((S + AHL) & 0xffff));
+  case R_MIPS_LO16:
+    writeMipsLo16<E>(Loc, SA);
     break;
-  }
   case R_MIPS_PC16:
-    applyMipsPcReloc<E, 16, 2>(Loc, Type, P, S);
+    applyMipsPcReloc<E, 16, 2>(Loc, Type, P, SA);
     break;
   case R_MIPS_PC19_S2:
-    applyMipsPcReloc<E, 19, 2>(Loc, Type, P, S);
+    applyMipsPcReloc<E, 19, 2>(Loc, Type, P, SA);
     break;
   case R_MIPS_PC21_S2:
-    applyMipsPcReloc<E, 21, 2>(Loc, Type, P, S);
+    applyMipsPcReloc<E, 21, 2>(Loc, Type, P, SA);
     break;
   case R_MIPS_PC26_S2:
-    applyMipsPcReloc<E, 26, 2>(Loc, Type, P, S);
+    applyMipsPcReloc<E, 26, 2>(Loc, Type, P, SA);
     break;
   case R_MIPS_PC32:
-    applyMipsPcReloc<E, 32, 0>(Loc, Type, P, S);
+    applyMipsPcReloc<E, 32, 0>(Loc, Type, P, SA);
     break;
-  case R_MIPS_PCHI16: {
-    uint32_t Instr = read32<E>(Loc);
-    if (PairedLoc) {
-      uint64_t AHL = ((Instr & 0xffff) << 16) +
-                     SignExtend64<16>(read32<E>(PairedLoc) & 0xffff);
-      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S + AHL - P));
-    } else {
-      warning("Can't find matching R_MIPS_PCLO16 relocation for R_MIPS_PCHI16");
-      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S - P));
-    }
+  case R_MIPS_PCHI16:
+    writeMipsHi16<E>(Loc, SA - P);
     break;
-  }
-  case R_MIPS_PCLO16: {
-    uint32_t Instr = read32<E>(Loc);
-    int64_t AHL = SignExtend64<16>(Instr & 0xffff);
-    write32<E>(Loc, (Instr & 0xffff0000) | ((S + AHL - P) & 0xffff));
+  case R_MIPS_PCLO16:
+    writeMipsLo16<E>(Loc, SA - P);
     break;
-  }
+  case R_MIPS_TLS_DTPREL_HI16:
+    writeMipsHi16<E>(Loc, SA - DTPOffset);
+    break;
+  case R_MIPS_TLS_DTPREL_LO16:
+    writeMipsLo16<E>(Loc, SA - DTPOffset);
+    break;
+  case R_MIPS_TLS_TPREL_HI16:
+    writeMipsHi16<E>(Loc, SA - TPOffset);
+    break;
+  case R_MIPS_TLS_TPREL_LO16:
+    writeMipsLo16<E>(Loc, SA - TPOffset);
+    break;
   default:
     fatal("unrecognized reloc " + Twine(Type));
   }
@@ -1808,36 +1892,41 @@ template <class ELFT>
 bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
   switch (Type) {
   default:
-    return false;
-  case R_MIPS_PC16:
-  case R_MIPS_PC19_S2:
-  case R_MIPS_PC21_S2:
-  case R_MIPS_PC26_S2:
-  case R_MIPS_PC32:
-  case R_MIPS_PCHI16:
-  case R_MIPS_PCLO16:
     return true;
+  case R_MIPS_26:
+  case R_MIPS_32:
+  case R_MIPS_64:
+  case R_MIPS_HI16:
+  case R_MIPS_TLS_DTPREL_HI16:
+  case R_MIPS_TLS_DTPREL_LO16:
+  case R_MIPS_TLS_TPREL_HI16:
+  case R_MIPS_TLS_TPREL_LO16:
+    return false;
   }
 }
 
 // _gp is a MIPS-specific ABI-defined symbol which points to
 // a location that is relative to GOT. This function returns
 // the value for the symbol.
-template <class ELFT> typename ELFFile<ELFT>::uintX_t getMipsGpAddr() {
+template <class ELFT> typename ELFT::uint getMipsGpAddr() {
   unsigned GPOffset = 0x7ff0;
   if (uint64_t V = Out<ELFT>::Got->getVA())
     return V + GPOffset;
   return 0;
 }
 
-template bool isGnuIFunc<ELF32LE>(const SymbolBody &S);
-template bool isGnuIFunc<ELF32BE>(const SymbolBody &S);
-template bool isGnuIFunc<ELF64LE>(const SymbolBody &S);
-template bool isGnuIFunc<ELF64BE>(const SymbolBody &S);
-
 template uint32_t getMipsGpAddr<ELF32LE>();
 template uint32_t getMipsGpAddr<ELF32BE>();
 template uint64_t getMipsGpAddr<ELF64LE>();
 template uint64_t getMipsGpAddr<ELF64BE>();
+
+template bool TargetInfo::needsCopyRel<ELF32LE>(uint32_t,
+                                                const SymbolBody &) const;
+template bool TargetInfo::needsCopyRel<ELF32BE>(uint32_t,
+                                                const SymbolBody &) const;
+template bool TargetInfo::needsCopyRel<ELF64LE>(uint32_t,
+                                                const SymbolBody &) const;
+template bool TargetInfo::needsCopyRel<ELF64BE>(uint32_t,
+                                                const SymbolBody &) const;
 }
 }

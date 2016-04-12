@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-scops -analyze \
 ; RUN: -polly-allow-differing-element-types < %s | FileCheck %s
 ;
-;  void multiple_types(i128 *A) {
+;  void multiple_types(i8 *A) {
 ;    for (long i = 0; i < 100; i++) {
 ;      A[i] = *(i128 *)&A[16 * i] +
 ;             *(i192 *)&A[24 * i];

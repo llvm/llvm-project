@@ -1,4 +1,4 @@
-//===-- LibStdcpp.cpp ---------------------------------------------*- C++ -*-===//
+//===-- LibStdcpp.cpp -------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,6 +9,10 @@
 
 #include "LibStdcpp.h"
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Stream.h"
@@ -28,7 +32,9 @@ class LibstdcppMapIteratorSyntheticFrontEnd : public SyntheticChildrenFrontEnd
 {
 public:
     LibstdcppMapIteratorSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp);
-    
+
+    ~LibstdcppMapIteratorSyntheticFrontEnd() override = default;
+
     size_t
     CalculateNumChildren() override;
     
@@ -44,13 +50,10 @@ public:
     size_t
     GetIndexOfChildWithName (const ConstString &name) override;
     
-    ~LibstdcppMapIteratorSyntheticFrontEnd() override;
-    
 private:
     ExecutionContextRef m_exe_ctx_ref;
     lldb::addr_t m_pair_address;
     CompilerType m_pair_type;
-    EvaluateExpressionOptions m_options;
     lldb::ValueObjectSP m_pair_sp;
 };
 
@@ -66,20 +69,14 @@ private:
  */
 
 LibstdcppMapIteratorSyntheticFrontEnd::LibstdcppMapIteratorSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
-    SyntheticChildrenFrontEnd(*valobj_sp.get()),
+    SyntheticChildrenFrontEnd(*valobj_sp),
     m_exe_ctx_ref(),
     m_pair_address(0),
     m_pair_type(),
-    m_options(),
     m_pair_sp()
 {
     if (valobj_sp)
         Update();
-    m_options.SetCoerceToId(false);
-    m_options.SetUnwindOnError(true);
-    m_options.SetKeepInMemory(true);
-    m_options.SetResultIsInternal(true);
-    m_options.SetUseDynamic(lldb::eDynamicCanRunTarget);
 }
 
 bool
@@ -160,15 +157,10 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName (const ConstStrin
     return UINT32_MAX;
 }
 
-LibstdcppMapIteratorSyntheticFrontEnd::~LibstdcppMapIteratorSyntheticFrontEnd ()
-{}
-
 SyntheticChildrenFrontEnd*
 lldb_private::formatters::LibstdcppMapIteratorSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
 {
-    if (!valobj_sp)
-        return NULL;
-    return (new LibstdcppMapIteratorSyntheticFrontEnd(valobj_sp));
+    return (valobj_sp ? new LibstdcppMapIteratorSyntheticFrontEnd(valobj_sp) : nullptr);
 }
 
 /*
@@ -186,17 +178,15 @@ lldb_private::formatters::LibStdcppVectorIteratorSyntheticFrontEndCreator (CXXSy
     static ConstString g_item_name;
     if (!g_item_name)
         g_item_name.SetCString("_M_current");
-    if (!valobj_sp)
-        return NULL;
-    return (new VectorIteratorSyntheticFrontEnd(valobj_sp,g_item_name));
+    return (valobj_sp ? new VectorIteratorSyntheticFrontEnd(valobj_sp, g_item_name) : nullptr);
 }
 
 lldb_private::formatters::VectorIteratorSyntheticFrontEnd::VectorIteratorSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp,
                                                                                             ConstString item_name) :
-SyntheticChildrenFrontEnd(*valobj_sp.get()),
-m_exe_ctx_ref(),
-m_item_name(item_name),
-m_item_sp()
+    SyntheticChildrenFrontEnd(*valobj_sp),
+    m_exe_ctx_ref(),
+    m_item_name(item_name),
+    m_item_sp()
 {
     if (valobj_sp)
         Update();
@@ -255,9 +245,7 @@ lldb_private::formatters::VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithNa
     return UINT32_MAX;
 }
 
-lldb_private::formatters::VectorIteratorSyntheticFrontEnd::~VectorIteratorSyntheticFrontEnd ()
-{
-}
+lldb_private::formatters::VectorIteratorSyntheticFrontEnd::~VectorIteratorSyntheticFrontEnd() = default;
 
 bool
 lldb_private::formatters::LibStdcppStringSummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)

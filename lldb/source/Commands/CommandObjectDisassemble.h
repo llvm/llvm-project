@@ -30,7 +30,6 @@ public:
     class CommandOptions : public Options
     {
     public:
-
         CommandOptions (CommandInterpreter &interpreter);
 
         ~CommandOptions() override;
@@ -47,16 +46,14 @@ public:
         const char *
         GetPluginName ()
         {
-            if (plugin_name.empty())
-                return NULL;
-            return plugin_name.c_str();
+            return (plugin_name.empty() ? nullptr : plugin_name.c_str());
         }
         
         const char *
         GetFlavorString ()
         {
             if (flavor_string.empty() || flavor_string == "default")
-                return NULL;
+                return nullptr;
             return flavor_string.c_str();
         }
         

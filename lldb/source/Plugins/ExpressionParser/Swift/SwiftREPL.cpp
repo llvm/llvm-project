@@ -90,6 +90,7 @@ SwiftREPL::CreateInstance (Error &err, lldb::LanguageType language, Debugger *de
                                                                                bp_name,                 // Function name
                                                                                eFunctionNameTypeAuto,   // Name type
                                                                                eLanguageTypeUnknown,    // Language
+                                                                               0,                       // offset
                                                                                eLazyBoolYes,            // skip_prologue,
                                                                                true,                    // internal
                                                                                false);                  // request_hardware

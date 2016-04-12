@@ -389,6 +389,11 @@ kmpc_set_defaults                           224
     %ifdef OMP_41
 	__kmpc_proxy_task_completed	    259
 	__kmpc_proxy_task_completed_ooo	    260
+        __kmpc_doacross_init                261
+        __kmpc_doacross_wait                262
+        __kmpc_doacross_post                263
+        __kmpc_doacross_fini                264
+        __kmpc_taskloop                     266
     %endif
 %endif
 
@@ -497,6 +502,13 @@ kmp_set_warnings_off                        780
 %ifdef OMP_41
     omp_init_lock_with_hint                 870
     omp_init_nest_lock_with_hint            871
+    omp_get_max_task_priority               872
+    omp_get_num_places                      873
+    omp_get_place_num_procs                 874
+    omp_get_place_proc_ids                  875
+    omp_get_place_num                       876
+    omp_get_partition_num_places            877
+    omp_get_partition_place_nums            878
 %endif # OMP_41
 
 %ifndef stub

@@ -36,9 +36,11 @@ func llvmDataLayout(triple string) (string, error) {
 				llvm.RelocDefault,
 				llvm.CodeModelDefault,
 			)
-			target := machine.TargetData().String()
+			targetData := machine.CreateTargetData()
+			targetDataLayout := targetData.String()
+			targetData.Dispose()
 			machine.Dispose()
-			return target, nil
+			return targetDataLayout, nil
 		}
 	}
 	return "", fmt.Errorf("Invalid target triple: %s", triple)

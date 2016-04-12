@@ -61,6 +61,7 @@ ObjCLanguage::GetPluginNameStatic()
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------
+
 lldb_private::ConstString
 ObjCLanguage::GetPluginName()
 {
@@ -76,6 +77,7 @@ ObjCLanguage::GetPluginVersion()
 //------------------------------------------------------------------
 // Static Functions
 //------------------------------------------------------------------
+
 Language *
 ObjCLanguage::CreateInstance (lldb::LanguageType language)
 {
@@ -192,7 +194,7 @@ ObjCLanguage::MethodName::GetClassNameWithCategory ()
                 m_class_category.SetCStringWithLength (class_start, space_pos - class_start);
                 // If m_class hasn't been filled in and the class with category doesn't
                 // contain a '(', then we can also fill in the m_class
-                if (!m_class && strchr (m_class_category.GetCString(), '(') == NULL)
+                if (!m_class && strchr(m_class_category.GetCString(), '(') == nullptr)
                 {
                     m_class = m_class_category;
                     // No '(' was found in the full name, we can definitively say
@@ -544,6 +546,7 @@ LoadObjCFormatters(TypeCategoryImplSP objc_category_sp)
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSBundleSummaryProvider, "NSBundle summary provider", ConstString("NSBundle"), appkit_flags);
     
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSDataSummaryProvider<false>, "NSData summary provider", ConstString("NSData"), appkit_flags);
+    AddCXXSummary(objc_category_sp, lldb_private::formatters::NSDataSummaryProvider<false>, "NSData summary provider", ConstString("_NSInlineData"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSDataSummaryProvider<false>, "NSData summary provider", ConstString("NSConcreteData"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSDataSummaryProvider<false>, "NSData summary provider", ConstString("NSConcreteMutableData"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSDataSummaryProvider<false>, "NSData summary provider", ConstString("NSMutableData"), appkit_flags);
@@ -555,21 +558,16 @@ LoadObjCFormatters(TypeCategoryImplSP objc_category_sp)
     
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNotificationSummaryProvider, "NSNotification summary provider", ConstString("NSNotification"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNotificationSummaryProvider, "NSNotification summary provider", ConstString("NSConcreteNotification"), appkit_flags);
-    
+
     //AddStringSummary(objc_category_sp, "domain: ${var._domain} - code: ${var._code}", ConstString("NSError"), appkit_flags);
     //AddStringSummary(objc_category_sp,"name:${var.name%S} reason:${var.reason%S}",ConstString("NSException"),appkit_flags);
-    
+
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider, "NSNumber summary provider", ConstString("NSNumber"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider, "CFNumberRef summary provider", ConstString("CFNumberRef"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider, "NSNumber summary provider", ConstString("__NSCFBoolean"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider, "NSNumber summary provider", ConstString("__NSCFNumber"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider, "NSNumber summary provider", ConstString("NSCFBoolean"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider, "NSNumber summary provider", ConstString("NSCFNumber"), appkit_flags);
-    
-    AddCXXSummary(objc_category_sp, lldb_private::formatters::RuntimeSpecificDescriptionSummaryProvider, "NSDecimalNumber summary provider", ConstString("NSDecimalNumber"), appkit_flags);
-    AddCXXSummary(objc_category_sp, lldb_private::formatters::RuntimeSpecificDescriptionSummaryProvider, "NSHost summary provider", ConstString("NSHost"), appkit_flags);
-    AddCXXSummary(objc_category_sp, lldb_private::formatters::RuntimeSpecificDescriptionSummaryProvider, "NSTask summary provider", ConstString("NSTask"), appkit_flags);
-    AddCXXSummary(objc_category_sp, lldb_private::formatters::RuntimeSpecificDescriptionSummaryProvider, "NSValue summary provider", ConstString("NSValue"), appkit_flags);
     
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSURLSummaryProvider, "NSURL summary provider", ConstString("NSURL"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSURLSummaryProvider, "NSURL summary provider", ConstString("CFURLRef"), appkit_flags);
@@ -737,7 +735,7 @@ ObjCLanguage::GetTypeScavenger ()
                     ConstString key_cs(key);
                     
                     if (clang_modules_decl_vendor->FindDecls(key_cs, false, UINT32_MAX, decls) > 0 &&
-                        decls.size() > 0)
+                        !decls.empty())
                     {
                         CompilerType module_type = ClangASTContext::GetTypeForDecl(decls.front());
                         result = true;

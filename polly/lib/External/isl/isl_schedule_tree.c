@@ -140,21 +140,12 @@ __isl_take isl_schedule_tree *isl_schedule_tree_dup(
 
 /* Return an isl_schedule_tree that is equal to "tree" and that has only
  * a single reference.
- *
- * This function is called before a tree is modified.
- * A static tree (with negative reference count) should never be modified,
- * so it is not allowed to call this function on a static tree.
  */
 __isl_give isl_schedule_tree *isl_schedule_tree_cow(
 	__isl_take isl_schedule_tree *tree)
 {
 	if (!tree)
 		return NULL;
-
-	if (tree->ref < 0)
-		isl_die(isl_schedule_tree_get_ctx(tree), isl_error_internal,
-			"static trees cannot be modified",
-			return isl_schedule_tree_free(tree));
 
 	if (tree->ref == 1)
 		return tree;
@@ -163,18 +154,12 @@ __isl_give isl_schedule_tree *isl_schedule_tree_cow(
 }
 
 /* Return a new reference to "tree".
- *
- * A static tree (with negative reference count) does not keep track
- * of the number of references and should not be modified.
  */
 __isl_give isl_schedule_tree *isl_schedule_tree_copy(
 	__isl_keep isl_schedule_tree *tree)
 {
 	if (!tree)
 		return NULL;
-
-	if (tree->ref < 0)
-		return tree;
 
 	tree->ref++;
 	return tree;
@@ -186,8 +171,6 @@ __isl_null isl_schedule_tree *isl_schedule_tree_free(
 	__isl_take isl_schedule_tree *tree)
 {
 	if (!tree)
-		return NULL;
-	if (tree->ref < 0)
 		return NULL;
 	if (--tree->ref > 0)
 		return NULL;

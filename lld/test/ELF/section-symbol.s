@@ -23,6 +23,17 @@
 // CHECK-NEXT:     Other: 0
 // CHECK-NEXT:     Section: .text
 // CHECK-NEXT:   }
+// CHECK-NEXT:   Symbol {
+// CHECK-NEXT:     Name: _DYNAMIC
+// CHECK-NEXT:     Value:
+// CHECK-NEXT:     Size: 0
+// CHECK-NEXT:     Binding: Local
+// CHECK-NEXT:     Type: None
+// CHECK-NEXT:     Other [ (0x2)
+// CHECK-NEXT:       STV_HIDDEN
+// CHECK-NEXT:     ]
+// CHECK-NEXT:     Section: .dynamic
+// CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
 foo:

@@ -26,21 +26,39 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 
-LinkerScript *elf2::Script;
+LinkerScript *elf::Script;
+
+template <class ELFT>
+SectionRule *LinkerScript::find(InputSectionBase<ELFT> *S) {
+  for (SectionRule &R : Sections)
+    if (R.match(S))
+      return &R;
+  return nullptr;
+}
 
 template <class ELFT>
 StringRef LinkerScript::getOutputSection(InputSectionBase<ELFT> *S) {
-  for (SectionRule &R : Sections)
-    if (R.match(S))
-      return R.Dest;
-  return "";
+  SectionRule *R = find(S);
+  return R ? R->Dest : "";
 }
 
 template <class ELFT>
 bool LinkerScript::isDiscarded(InputSectionBase<ELFT> *S) {
   return getOutputSection(S) == "/DISCARD/";
+}
+
+template <class ELFT> bool LinkerScript::shouldKeep(InputSectionBase<ELFT> *S) {
+  SectionRule *R = find(S);
+  return R && R->Keep;
+}
+
+ArrayRef<uint8_t> LinkerScript::getFiller(StringRef Name) {
+  auto I = Filler.find(Name);
+  if (I == Filler.end())
+    return {};
+  return I->second;
 }
 
 // A compartor to sort output sections. Returns -1 or 1 if both
@@ -55,8 +73,9 @@ int LinkerScript::compareSections(StringRef A, StringRef B) {
   return I < J ? -1 : 1;
 }
 
-// Returns true if S matches T. S may contain a meta character '*'
-// which matches zero or more occurrences of any character.
+// Returns true if S matches T. S can contain glob meta-characters.
+// The asterisk ('*') matches zero or more characacters, and the question
+// mark ('?') matches one character.
 static bool matchStr(StringRef S, StringRef T) {
   for (;;) {
     if (S.empty())
@@ -71,7 +90,7 @@ static bool matchStr(StringRef S, StringRef T) {
           return true;
       return false;
     }
-    if (T.empty() || S[0] != T[0])
+    if (T.empty() || (S[0] != T[0] && S[0] != '?'))
       return false;
     S = S.substr(1);
     T = T.substr(1);
@@ -82,10 +101,13 @@ template <class ELFT> bool SectionRule::match(InputSectionBase<ELFT> *S) {
   return matchStr(SectionPattern, S->getSectionName());
 }
 
-class elf2::ScriptParser {
+class elf::ScriptParser {
+  typedef void (ScriptParser::*Handler)();
+
 public:
   ScriptParser(BumpPtrAllocator *A, StringRef S, bool B)
-      : Saver(*A), Tokens(tokenize(S)), IsUnderSysroot(B) {}
+      : Saver(*A), Input(S), Tokens(tokenize(S)), IsUnderSysroot(B) {}
+
   void run();
 
 private:
@@ -94,6 +116,7 @@ private:
   static StringRef skipSpace(StringRef S);
   bool atEOF();
   StringRef next();
+  StringRef peek();
   bool skip(StringRef Tok);
   void expect(StringRef Expect);
 
@@ -104,6 +127,7 @@ private:
   void readExtern();
   void readGroup();
   void readInclude();
+  void readNothing() {}
   void readOutput();
   void readOutputArch();
   void readOutputFormat();
@@ -111,41 +135,40 @@ private:
   void readSections();
 
   void readOutputSectionDescription();
+  void readSectionPatterns(StringRef OutSec, bool Keep);
+
+  size_t getPos();
+  std::vector<uint8_t> parseHex(StringRef S);
 
   StringSaver Saver;
+  StringRef Input;
   std::vector<StringRef> Tokens;
-  bool Error = false;
+  const static StringMap<Handler> Cmd;
   size_t Pos = 0;
   bool IsUnderSysroot;
+  bool Error = false;
 };
+
+const StringMap<elf::ScriptParser::Handler> elf::ScriptParser::Cmd = {
+    {"ENTRY", &ScriptParser::readEntry},
+    {"EXTERN", &ScriptParser::readExtern},
+    {"GROUP", &ScriptParser::readGroup},
+    {"INCLUDE", &ScriptParser::readInclude},
+    {"INPUT", &ScriptParser::readGroup},
+    {"OUTPUT", &ScriptParser::readOutput},
+    {"OUTPUT_ARCH", &ScriptParser::readOutputArch},
+    {"OUTPUT_FORMAT", &ScriptParser::readOutputFormat},
+    {"SEARCH_DIR", &ScriptParser::readSearchDir},
+    {"SECTIONS", &ScriptParser::readSections},
+    {";", &ScriptParser::readNothing}};
 
 void ScriptParser::run() {
   while (!atEOF()) {
     StringRef Tok = next();
-    if (Tok == ";")
-      continue;
-    if (Tok == "ENTRY") {
-      readEntry();
-    } else if (Tok == "EXTERN") {
-      readExtern();
-    } else if (Tok == "GROUP" || Tok == "INPUT") {
-      readGroup();
-    } else if (Tok == "INCLUDE") {
-      readInclude();
-    } else if (Tok == "OUTPUT") {
-      readOutput();
-    } else if (Tok == "OUTPUT_ARCH") {
-      readOutputArch();
-    } else if (Tok == "OUTPUT_FORMAT") {
-      readOutputFormat();
-    } else if (Tok == "SEARCH_DIR") {
-      readSearchDir();
-    } else if (Tok == "SECTIONS") {
-      readSections();
-    } else {
+    if (Handler Fn = Cmd.lookup(Tok))
+      (this->*Fn)();
+    else
       setError("unknown directive: " + Tok);
-      return;
-    }
   }
 }
 
@@ -153,7 +176,7 @@ void ScriptParser::run() {
 void ScriptParser::setError(const Twine &Msg) {
   if (Error)
     return;
-  error(Msg);
+  error("line " + Twine(getPos()) + ": " + Msg);
   Error = true;
 }
 
@@ -222,6 +245,14 @@ StringRef ScriptParser::next() {
   return Tokens[Pos++];
 }
 
+StringRef ScriptParser::peek() {
+  StringRef Tok = next();
+  if (Error)
+    return "";
+  --Pos;
+  return Tok;
+}
+
 bool ScriptParser::skip(StringRef Tok) {
   if (Error)
     return false;
@@ -267,7 +298,7 @@ void ScriptParser::addFile(StringRef S) {
   } else {
     std::string Path = findFromSearchPaths(S);
     if (Path.empty())
-      setError("Unable to find " + S);
+      setError("unable to find " + S);
     else
       Driver->addFile(Saver.save(Path));
   }
@@ -377,16 +408,63 @@ void ScriptParser::readSections() {
     readOutputSectionDescription();
 }
 
+void ScriptParser::readSectionPatterns(StringRef OutSec, bool Keep) {
+  expect("(");
+  while (!Error && !skip(")"))
+    Script->Sections.emplace_back(OutSec, next(), Keep);
+}
+
+// Returns the current line number.
+size_t ScriptParser::getPos() {
+  if (Pos == 0)
+    return 1;
+  const char *Begin = Input.data();
+  const char *Tok = Tokens[Pos - 1].data();
+  return StringRef(Begin, Tok - Begin).count('\n') + 1;
+}
+
+std::vector<uint8_t> ScriptParser::parseHex(StringRef S) {
+  std::vector<uint8_t> Hex;
+  while (!S.empty()) {
+    StringRef B = S.substr(0, 2);
+    S = S.substr(2);
+    uint8_t H;
+    if (B.getAsInteger(16, H)) {
+      setError("not a hexadecimal value: " + B);
+      return {};
+    }
+    Hex.push_back(H);
+  }
+  return Hex;
+}
+
 void ScriptParser::readOutputSectionDescription() {
   StringRef OutSec = next();
   Script->SectionOrder.push_back(OutSec);
   expect(":");
   expect("{");
   while (!Error && !skip("}")) {
-    next(); // Skip input file name.
-    expect("(");
-    while (!Error && !skip(")"))
-      Script->Sections.push_back({OutSec, next()});
+    StringRef Tok = next();
+    if (Tok == "*") {
+      readSectionPatterns(OutSec, false);
+    } else if (Tok == "KEEP") {
+      expect("(");
+      next(); // Skip *
+      readSectionPatterns(OutSec, true);
+      expect(")");
+    } else {
+      setError("unknown command " + Tok);
+    }
+  }
+  StringRef Tok = peek();
+  if (Tok.startswith("=")) {
+    if (!Tok.startswith("=0x")) {
+      setError("filler should be a hexadecimal value");
+      return;
+    }
+    Tok = Tok.substr(3);
+    Script->Filler[OutSec] = parseHex(Tok);
+    next();
   }
 }
 
@@ -415,7 +493,7 @@ template bool LinkerScript::isDiscarded(InputSectionBase<ELF32BE> *);
 template bool LinkerScript::isDiscarded(InputSectionBase<ELF64LE> *);
 template bool LinkerScript::isDiscarded(InputSectionBase<ELF64BE> *);
 
-template bool SectionRule::match(InputSectionBase<ELF32LE> *);
-template bool SectionRule::match(InputSectionBase<ELF32BE> *);
-template bool SectionRule::match(InputSectionBase<ELF64LE> *);
-template bool SectionRule::match(InputSectionBase<ELF64BE> *);
+template bool LinkerScript::shouldKeep(InputSectionBase<ELF32LE> *);
+template bool LinkerScript::shouldKeep(InputSectionBase<ELF32BE> *);
+template bool LinkerScript::shouldKeep(InputSectionBase<ELF64LE> *);
+template bool LinkerScript::shouldKeep(InputSectionBase<ELF64BE> *);

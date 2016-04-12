@@ -7,9 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef NASTY_VECTOR_H
-#define NASTY_VECTOR_H
+#ifndef NASTY_CONTAINERS_H
+#define NASTY_CONTAINERS_H
 
+#include <cassert>
 #include <vector>
 #include <list>
 
@@ -124,8 +125,8 @@ public:
     void swap(nasty_vector &nv) _NOEXCEPT_(std::__is_nothrow_swappable<nested_container>::value)
     { v_.swap(nv.v_); }
     
-    nasty_vector *operator &()             { return nullptr; }  // nasty
-    const nasty_vector *operator &() const { return nullptr; }  // nasty
+    nasty_vector *operator &()             { assert(false); return nullptr; }  // nasty
+    const nasty_vector *operator &() const { assert(false); return nullptr; }  // nasty
     
     nested_container v_;
 };
@@ -270,13 +271,39 @@ public:
 //         void sort(Compare comp);
 //     void reverse() noexcept;
 
-    nasty_list *operator &()             { return nullptr; }  // nasty
-    const nasty_list *operator &() const { return nullptr; }  // nasty
+    nasty_list *operator &()             { assert(false); return nullptr; }  // nasty
+    const nasty_list *operator &() const { assert(false); return nullptr; }  // nasty
 
     nested_container l_;
 };
 
 template <class T>
 bool operator==(const nasty_list<T>& x, const nasty_list<T>& y) { return x.l_ == y.l_; }
+
+// Not really a mutex, but can play one in tests
+class nasty_mutex
+{
+public:
+     nasty_mutex() _NOEXCEPT {}
+     ~nasty_mutex() {}
+
+	nasty_mutex *operator& ()   { assert(false); }
+	template <typename T>
+	void operator, (const T &) { assert(false); }
+
+private:
+    nasty_mutex(const nasty_mutex&)            { assert(false); }
+    nasty_mutex& operator=(const nasty_mutex&) { assert(false); return *this; }
+
+public:
+    void lock()               {}
+    bool try_lock() _NOEXCEPT { return true; }
+    void unlock() _NOEXCEPT   {}
+
+    // Shared ownership
+    void lock_shared()     {}
+    bool try_lock_shared() { return true; }
+    void unlock_shared()   {}
+};
 
 #endif

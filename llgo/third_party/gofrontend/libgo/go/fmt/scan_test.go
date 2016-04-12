@@ -300,10 +300,13 @@ var scanfTests = []ScanfTest{
 	{"%2s", "sssss", &xVal, Xs("ss")},
 
 	// Fixed bugs
-	{"%d\n", "27\n", &intVal, 27},  // ok
-	{"%d\n", "28 \n", &intVal, 28}, // was: "unexpected newline"
-	{"%v", "0", &intVal, 0},        // was: "EOF"; 0 was taken as base prefix and not counted.
-	{"%v", "0", &uintVal, uint(0)}, // was: "EOF"; 0 was taken as base prefix and not counted.
+	{"%d\n", "27\n", &intVal, 27},      // ok
+	{"%d\n", "28 \n", &intVal, 28},     // was: "unexpected newline"
+	{"%v", "0", &intVal, 0},            // was: "EOF"; 0 was taken as base prefix and not counted.
+	{"%v", "0", &uintVal, uint(0)},     // was: "EOF"; 0 was taken as base prefix and not counted.
+	{"%c", " ", &uintVal, uint(' ')},   // %c must accept a blank.
+	{"%c", "\t", &uintVal, uint('\t')}, // %c must accept any space.
+	{"%c", "\n", &uintVal, uint('\n')}, // %c must accept any space.
 }
 
 var overflowTests = []ScanTest{
@@ -340,6 +343,8 @@ var multiTests = []ScanfMultiTest{
 	{"%6vX=%3fY", "3+2iX=2.5Y", args(&c, &f), args((3 + 2i), 2.5), ""},
 	{"%d%s", "123abc", args(&i, &s), args(123, "abc"), ""},
 	{"%c%c%c", "2\u50c2X", args(&r1, &r2, &r3), args('2', '\u50c2', 'X'), ""},
+	{"%5s%d", " 1234567 ", args(&s, &i), args("12345", 67), ""},
+	{"%5s%d", " 12 34 567 ", args(&s, &i), args("12", 34), ""},
 
 	// Custom scanners.
 	{"%e%f", "eefffff", args(&x, &y), args(Xs("ee"), Xs("fffff")), ""},
@@ -864,7 +869,7 @@ func TestScanStateCount(t *testing.T) {
 		t.Fatal(err)
 	}
 	if n != 3 {
-		t.Fatalf("expected 3 items consumed, got %d")
+		t.Fatalf("expected 3 items consumed, got %d", n)
 	}
 	if a.rune != '1' || b.rune != '2' || c.rune != '➂' {
 		t.Errorf("bad scan rune: %q %q %q should be '1' '2' '➂'", a.rune, b.rune, c.rune)
@@ -988,5 +993,169 @@ func BenchmarkScanRecursiveInt(b *testing.B) {
 		b.StartTimer()
 		Fscan(buf, &r)
 		b.StopTimer()
+	}
+}
+
+// Issue 9124.
+// %x on bytes couldn't handle non-space bytes terminating the scan.
+func TestHexBytes(t *testing.T) {
+	var a, b []byte
+	n, err := Sscanf("00010203", "%x", &a)
+	if n != 1 || err != nil {
+		t.Errorf("simple: got count, err = %d, %v; expected 1, nil", n, err)
+	}
+	check := func(msg string, x []byte) {
+		if len(x) != 4 {
+			t.Errorf("%s: bad length %d", msg, len(x))
+		}
+		for i, b := range x {
+			if int(b) != i {
+				t.Errorf("%s: bad x[%d] = %x", msg, i, x[i])
+			}
+		}
+	}
+	check("simple", a)
+	a = nil
+
+	n, err = Sscanf("00010203 00010203", "%x %x", &a, &b)
+	if n != 2 || err != nil {
+		t.Errorf("simple pair: got count, err = %d, %v; expected 2, nil", n, err)
+	}
+	check("simple pair a", a)
+	check("simple pair b", b)
+	a = nil
+	b = nil
+
+	n, err = Sscanf("00010203:", "%x", &a)
+	if n != 1 || err != nil {
+		t.Errorf("colon: got count, err = %d, %v; expected 1, nil", n, err)
+	}
+	check("colon", a)
+	a = nil
+
+	n, err = Sscanf("00010203:00010203", "%x:%x", &a, &b)
+	if n != 2 || err != nil {
+		t.Errorf("colon pair: got count, err = %d, %v; expected 2, nil", n, err)
+	}
+	check("colon pair a", a)
+	check("colon pair b", b)
+	a = nil
+	b = nil
+
+	// This one fails because there is a hex byte after the data,
+	// that is, an odd number of hex input bytes.
+	n, err = Sscanf("000102034:", "%x", &a)
+	if n != 0 || err == nil {
+		t.Errorf("odd count: got count, err = %d, %v; expected 0, error", n, err)
+	}
+}
+
+func TestScanNewlinesAreSpaces(t *testing.T) {
+	var a, b int
+	var tests = []struct {
+		name  string
+		text  string
+		count int
+	}{
+		{"newlines", "1\n2\n", 2},
+		{"no final newline", "1\n2", 2},
+		{"newlines with spaces ", "1  \n  2  \n", 2},
+		{"no final newline with spaces", "1  \n  2", 2},
+	}
+	for _, test := range tests {
+		n, err := Sscan(test.text, &a, &b)
+		if n != test.count {
+			t.Errorf("%s: expected to scan %d item(s), scanned %d", test.name, test.count, n)
+		}
+		if err != nil {
+			t.Errorf("%s: unexpected error: %s", test.name, err)
+		}
+	}
+}
+
+func TestScanlnNewlinesTerminate(t *testing.T) {
+	var a, b int
+	var tests = []struct {
+		name  string
+		text  string
+		count int
+		ok    bool
+	}{
+		{"one line one item", "1\n", 1, false},
+		{"one line two items with spaces ", "   1 2    \n", 2, true},
+		{"one line two items no newline", "   1 2", 2, true},
+		{"two lines two items", "1\n2\n", 1, false},
+	}
+	for _, test := range tests {
+		n, err := Sscanln(test.text, &a, &b)
+		if n != test.count {
+			t.Errorf("%s: expected to scan %d item(s), scanned %d", test.name, test.count, n)
+		}
+		if test.ok && err != nil {
+			t.Errorf("%s: unexpected error: %s", test.name, err)
+		}
+		if !test.ok && err == nil {
+			t.Errorf("%s: expected error; got none", test.name)
+		}
+	}
+}
+
+func TestScanfNewlineMatchFormat(t *testing.T) {
+	var a, b int
+	var tests = []struct {
+		name   string
+		text   string
+		format string
+		count  int
+		ok     bool
+	}{
+		{"newline in both", "1\n2", "%d\n%d\n", 2, true},
+		{"newline in input", "1\n2", "%d %d", 1, false},
+		{"space-newline in input", "1 \n2", "%d %d", 1, false},
+		{"newline in format", "1 2", "%d\n%d", 1, false},
+		{"space-newline in format", "1 2", "%d \n%d", 1, false},
+		{"space-newline in both", "1 \n2", "%d \n%d", 2, true},
+		{"extra space in format", "1\n2", "%d\n %d", 2, true},
+		{"two extra spaces in format", "1\n2", "%d \n %d", 2, true},
+	}
+	for _, test := range tests {
+		n, err := Sscanf(test.text, test.format, &a, &b)
+		if n != test.count {
+			t.Errorf("%s: expected to scan %d item(s), scanned %d", test.name, test.count, n)
+		}
+		if test.ok && err != nil {
+			t.Errorf("%s: unexpected error: %s", test.name, err)
+		}
+		if !test.ok && err == nil {
+			t.Errorf("%s: expected error; got none", test.name)
+		}
+	}
+}
+
+// Test for issue 12090: Was unreading at EOF, double-scanning a byte.
+
+type hexBytes [2]byte
+
+func (h *hexBytes) Scan(ss ScanState, verb rune) error {
+	var b []byte
+	_, err := Fscanf(ss, "%4x", &b)
+	if err != nil {
+		panic(err) // Really shouldn't happen.
+	}
+	copy((*h)[:], b)
+	return err
+}
+
+func TestHexByte(t *testing.T) {
+	var h hexBytes
+	n, err := Sscanln("0123\n", &h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("expected 1 item; scanned %d", n)
+	}
+	if h[0] != 0x01 || h[1] != 0x23 {
+		t.Fatalf("expected 0123 got %x", h)
 	}
 }

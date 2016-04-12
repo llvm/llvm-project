@@ -10,8 +10,6 @@
 #include "gtest/gtest.h"
 #include "../../lib/ReaderWriter/MachO/MachONormalizedFile.h"
 #include "llvm/Support/MachO.h"
-#include <assert.h>
-#include <vector>
 
 using llvm::StringRef;
 using llvm::MemoryBuffer;
@@ -21,10 +19,9 @@ using lld::mach_o::normalized::Symbol;
 using lld::mach_o::normalized::Section;
 using lld::mach_o::normalized::Relocation;
 
-
 static std::unique_ptr<NormalizedFile> fromYAML(StringRef str) {
   std::unique_ptr<MemoryBuffer> mb(MemoryBuffer::getMemBuffer(str));
-  ErrorOr<std::unique_ptr<NormalizedFile>> r
+  llvm::Expected<std::unique_ptr<NormalizedFile>> r
                                     = lld::mach_o::normalized::readYaml(mb);
   EXPECT_FALSE(!r);
   return std::move(*r);
@@ -35,7 +32,6 @@ static void toYAML(const NormalizedFile &f, std::string &out) {
   std::error_code ec = lld::mach_o::normalized::writeYaml(f, ostr);
   EXPECT_TRUE(!ec);
 }
-
 
 // ppc is no longer supported, but it is here to test endianness handling.
 TEST(ObjectFileYAML, empty_ppc) {
@@ -134,7 +130,6 @@ TEST(ObjectFileYAML, empty_armv7s) {
   EXPECT_TRUE(f->undefinedSymbols.empty());
 }
 
-
 TEST(ObjectFileYAML, roundTrip) {
   std::string intermediate;
   {
@@ -156,7 +151,6 @@ TEST(ObjectFileYAML, roundTrip) {
     EXPECT_TRUE(f2->undefinedSymbols.empty());
   }
 }
-
 
 TEST(ObjectFileYAML, oneSymbol) {
   std::unique_ptr<NormalizedFile> f = fromYAML(
@@ -185,7 +179,6 @@ TEST(ObjectFileYAML, oneSymbol) {
   EXPECT_EQ((int)(sym.desc), 0);
   EXPECT_EQ((uint64_t)sym.value, 0x100ULL);
 }
-
 
 TEST(ObjectFileYAML, oneSection) {
   std::unique_ptr<NormalizedFile> f = fromYAML(
@@ -219,7 +212,6 @@ TEST(ObjectFileYAML, oneSection) {
   EXPECT_EQ((int)(sect.content[0]), 0x90);
   EXPECT_EQ((int)(sect.content[1]), 0x90);
 }
-
 
 TEST(ObjectFileYAML, hello_x86_64) {
   std::unique_ptr<NormalizedFile> f = fromYAML(
@@ -348,7 +340,6 @@ TEST(ObjectFileYAML, hello_x86_64) {
   EXPECT_EQ((int)(sym3.desc), 0);
   EXPECT_EQ((uint64_t)sym3.value, 0x0ULL);
 }
-
 
 TEST(ObjectFileYAML, hello_x86) {
   std::unique_ptr<NormalizedFile> f = fromYAML(
@@ -606,8 +597,6 @@ TEST(ObjectFileYAML, hello_armv6) {
   EXPECT_EQ((int)(sym2.desc), 0);
   EXPECT_EQ((uint64_t)sym2.value, 0x0ULL);
 }
-
-
 
 TEST(ObjectFileYAML, hello_armv7) {
   std::unique_ptr<NormalizedFile> f = fromYAML(

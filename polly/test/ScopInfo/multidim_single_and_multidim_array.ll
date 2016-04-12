@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-scops -polly-delinearize=false -analyze < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-scops -polly-delinearize=false -polly-allow-nonaffine -analyze < %s | FileCheck %s --check-prefix=NONAFFINE
-; RUN: opt %loadPolly -polly-scops -polly-delinearize -analyze < %s | FileCheck %s --check-prefix=DELIN
-; RUN: opt %loadPolly -polly-scops -polly-delinearize -polly-allow-nonaffine -analyze < %s | FileCheck %s --check-prefix=DELIN
+; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s --check-prefix=DELIN
+; RUN: opt %loadPolly -polly-scops -polly-allow-nonaffine -analyze < %s | FileCheck %s --check-prefix=DELIN
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

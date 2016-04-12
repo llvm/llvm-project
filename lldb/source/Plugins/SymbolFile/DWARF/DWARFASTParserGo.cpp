@@ -144,7 +144,7 @@ DWARFASTParserGo::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc, cons
                         }
                     }
 
-                    DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\") type => 0x%8.8lx\n", dwarf->MakeUserID(die.GetOffset()),
+                    DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\") type => 0x%8.8lx\n", die.GetID(),
                                  DW_TAG_value_to_name(tag), type_name_cstr, encoding_uid);
 
                     switch (tag)
@@ -183,7 +183,7 @@ DWARFASTParserGo::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc, cons
                             break;
                     }
 
-                    type_sp.reset(new Type(dwarf->MakeUserID(die.GetOffset()), dwarf, type_name_const_str, byte_size,
+                    type_sp.reset(new Type(die.GetID(), dwarf, type_name_const_str, byte_size,
                                            NULL, encoding_uid, encoding_data_type, &decl, compiler_type, resolve_state));
 
                     dwarf->m_die_to_type[die.GetDIE()] = type_sp.get();
@@ -254,7 +254,7 @@ DWARFASTParserGo::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc, cons
                         }
                     }
 
-                    DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", dwarf->MakeUserID(die.GetOffset()),
+                    DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
                                  DW_TAG_value_to_name(tag), type_name_cstr);
 
                     bool compiler_type_was_created = false;
@@ -265,7 +265,7 @@ DWARFASTParserGo::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc, cons
                         compiler_type = m_ast.CreateStructType(go_kind, type_name_const_str, byte_size);
                     }
 
-                    type_sp.reset(new Type(dwarf->MakeUserID(die.GetOffset()), dwarf, type_name_const_str, byte_size,
+                    type_sp.reset(new Type(die.GetID(), dwarf, type_name_const_str, byte_size,
                                            NULL, LLDB_INVALID_UID, Type::eEncodingIsUID, &decl, compiler_type,
                                            Type::eResolveStateForward));
 
@@ -347,7 +347,7 @@ DWARFASTParserGo::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc, cons
                         }
                     }
 
-                    DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", dwarf->MakeUserID(die.GetOffset()),
+                    DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
                                  DW_TAG_value_to_name(tag), type_name_cstr);
 
                     std::vector<CompilerType> function_param_types;
@@ -363,7 +363,7 @@ DWARFASTParserGo::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc, cons
                     compiler_type = m_ast.CreateFunctionType(type_name_const_str, function_param_types.data(),
                                                           function_param_types.size(), is_variadic);
 
-                    type_sp.reset(new Type(dwarf->MakeUserID(die.GetOffset()), dwarf, type_name_const_str, 0, NULL,
+                    type_sp.reset(new Type(die.GetID(), dwarf, type_name_const_str, 0, NULL,
                                            LLDB_INVALID_UID, Type::eEncodingIsUID, &decl, compiler_type,
                                            Type::eResolveStateFull));
                     assert(type_sp.get());
@@ -410,7 +410,7 @@ DWARFASTParserGo::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc, cons
                             }
                         }
 
-                        DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", dwarf->MakeUserID(die.GetOffset()),
+                        DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
                                      DW_TAG_value_to_name(tag), type_name_cstr);
 
                         Type *element_type = dwarf->ResolveTypeUID(type_die_offset);
@@ -433,7 +433,7 @@ DWARFASTParserGo::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc, cons
                             {
                                 compiler_type = m_ast.CreateArrayType(type_name_const_str, array_element_type, 0);
                             }
-                            type_sp.reset(new Type(dwarf->MakeUserID(die.GetOffset()), dwarf, type_name_const_str,
+                            type_sp.reset(new Type(die.GetID(), dwarf, type_name_const_str,
                                                    byte_stride, NULL, type_die_offset, Type::eEncodingIsUID, &decl,
                                                    compiler_type, Type::eResolveStateFull));
                             type_sp->SetEncodingType(element_type);
@@ -463,7 +463,7 @@ DWARFASTParserGo::ParseTypeFromDWARF(const lldb_private::SymbolContext &sc, cons
                 else if (sc.function != NULL && sc_parent_die)
                 {
                     symbol_context_scope =
-                        sc.function->GetBlock(true).FindBlockByID(dwarf->MakeUserID(sc_parent_die.GetOffset()));
+                        sc.function->GetBlock(true).FindBlockByID(sc_parent_die.GetID());
                     if (symbol_context_scope == NULL)
                         symbol_context_scope = sc.function;
                 }
@@ -510,7 +510,7 @@ DWARFASTParserGo::ParseChildParameters(const SymbolContext &sc,
                 if (num_attributes > 0)
                 {
                     Declaration decl;
-                    dw_offset_t param_type_die_offset = DW_INVALID_OFFSET;
+                    DWARFFormValue param_type_die_offset;
 
                     uint32_t i;
                     for (i = 0; i < num_attributes; ++i)
@@ -525,7 +525,7 @@ DWARFASTParserGo::ParseChildParameters(const SymbolContext &sc,
                                     // = form_value.AsCString();
                                     break;
                                 case DW_AT_type:
-                                    param_type_die_offset = form_value.Reference();
+                                    param_type_die_offset = form_value;
                                     break;
                                 case DW_AT_location:
                                 //                          if (form_value.BlockData())
@@ -547,7 +547,7 @@ DWARFASTParserGo::ParseChildParameters(const SymbolContext &sc,
                         }
                     }
 
-                    Type *type = parent_die.ResolveTypeUID(param_type_die_offset);
+                    Type *type = parent_die.ResolveTypeUID(DIERef(param_type_die_offset));
                     if (type)
                     {
                         function_param_types.push_back(type->GetForwardCompilerType());
@@ -628,7 +628,7 @@ DWARFASTParserGo::CompleteTypeFromDWARF(const DWARFDIE &die, lldb_private::Type 
     Log *log = nullptr; // (LogChannelDWARF::GetLogIfAny(DWARF_LOG_DEBUG_INFO|DWARF_LOG_TYPE_COMPLETION));
     if (log)
         dwarf->GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
-            log, "0x%8.8" PRIx64 ": %s '%s' resolving forward declaration...", dwarf->MakeUserID(die.GetOffset()),
+            log, "0x%8.8" PRIx64 ": %s '%s' resolving forward declaration...", die.GetID(),
             DW_TAG_value_to_name(tag), type->GetName().AsCString());
     assert(compiler_type);
     DWARFAttributes attributes;
@@ -683,7 +683,7 @@ DWARFASTParserGo::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &par
                     Declaration decl;
                     const char *name = NULL;
 
-                    lldb::user_id_t encoding_uid = LLDB_INVALID_UID;
+                    DWARFFormValue encoding_uid;
                     uint32_t member_byte_offset = UINT32_MAX;
                     uint32_t i;
                     for (i = 0; i < num_attributes; ++i)
@@ -698,7 +698,7 @@ DWARFASTParserGo::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &par
                                     name = form_value.AsCString();
                                     break;
                                 case DW_AT_type:
-                                    encoding_uid = form_value.Reference();
+                                    encoding_uid = form_value;
                                     break;
                                 case DW_AT_data_member_location:
                                     if (form_value.BlockData())
@@ -715,7 +715,7 @@ DWARFASTParserGo::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &par
                                                                       NULL, // RegisterContext *
                                                                       module_sp, debug_info_data, die.GetCU(),
                                                                       block_offset, block_length, eRegisterKindDWARF,
-                                                                      &initialValue, memberOffset, NULL))
+                                                                      &initialValue, NULL, memberOffset, NULL))
                                         {
                                             member_byte_offset = memberOffset.ResolveValue(NULL).UInt();
                                         }
@@ -735,7 +735,7 @@ DWARFASTParserGo::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &par
                         }
                     }
 
-                    Type *member_type = die.ResolveTypeUID(encoding_uid);
+                    Type *member_type = die.ResolveTypeUID(DIERef(encoding_uid));
                     if (member_type)
                     {
                         CompilerType member_go_type = member_type->GetFullCompilerType();
@@ -808,10 +808,12 @@ DWARFASTParserGo::ParseFunctionFromDWARF(const SymbolContext &sc, const DWARFDIE
 
             if (dwarf->FixupAddress(func_range.GetBaseAddress()))
             {
-                const user_id_t func_user_id = dwarf->MakeUserID(die.GetOffset());
+                const user_id_t func_user_id = die.GetID();
                 func_sp.reset(new Function(sc.comp_unit,
-                                           dwarf->MakeUserID(func_user_id), // UserID is the DIE offset
-                                           dwarf->MakeUserID(func_user_id), func_name, func_type,
+                                           func_user_id, // UserID is the DIE offset
+                                           func_user_id,
+                                           func_name,
+                                           func_type,
                                            func_range)); // first address range
 
                 if (func_sp.get() != NULL)

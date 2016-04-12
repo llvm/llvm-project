@@ -215,6 +215,8 @@ bool BracesAroundStatementsCheck::checkStmt(
     return false;
   }
 
+  if (!InitialLoc.isValid())
+    return false;
   const SourceManager &SM = *Result.SourceManager;
   const ASTContext *Context = Result.Context;
 
@@ -225,8 +227,6 @@ bool BracesAroundStatementsCheck::checkStmt(
   if (FileRange.isInvalid())
     return false;
 
-  // InitialLoc points at the last token before opening brace to be inserted.
-  assert(InitialLoc.isValid());
   // Convert InitialLoc to file location, if it's on the same macro expansion
   // level as the start of the statement. We also need file locations for
   // Lexer::getLocForEndOfToken working properly.

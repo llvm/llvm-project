@@ -1,6 +1,0 @@
----
-defined-atoms:
-    - name:         _foo
-      merge:        as-weak
-      scope:        global
-      type:         data

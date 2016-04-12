@@ -7,7 +7,6 @@ from __future__ import print_function
 
 
 
-import unittest2
 import os, time
 import lldb
 from lldbsuite.test.decorators import *
@@ -31,21 +30,18 @@ class UnicodeLiteralsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @unittest2.expectedFailure("rdar://18684408")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr1(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.build()
         self.rdar12991846(expr=1)
 
-    @unittest2.expectedFailure("rdar://18684408")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr2(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.build()
         self.rdar12991846(expr=2)
 
-    @unittest2.expectedFailure("rdar://18684408")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr3(self):
         """Test that the expression parser returns proper Unicode strings."""

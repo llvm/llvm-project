@@ -15,7 +15,7 @@ sections:
     SectionData:     B82A000000C3
   - Name:            .drectve
     Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
-    Alignment:       2147483648
+    Alignment:       1
     SectionData:     2f616c7465726e6174656e616d653a6d61696e3d57696e4d61696e00  # /alternatename:main=WinMain
 symbols:
   - Name:            .text

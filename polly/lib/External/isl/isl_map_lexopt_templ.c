@@ -19,7 +19,8 @@
 
 /* Given a basic map "bmap", compute the lexicographically minimal
  * (or maximal) image element for each domain element in dom.
- * Set *empty to those elements in dom that do not have an image element.
+ * If empty is not NULL, then set *empty to those elements in dom
+ * that do not have an image element.
  *
  * We first make sure the basic sets in dom are disjoint and then
  * simply collect the results over each of the basic sets separately.
@@ -32,6 +33,7 @@ static __isl_give TYPE *SF(basic_map_partial_lexopt,SUFFIX)(
 {
 	int i;
 	TYPE *res;
+	isl_set *all_empty;
 
 	dom = isl_set_make_disjoint(dom);
 	if (!dom)
@@ -49,24 +51,29 @@ static __isl_give TYPE *SF(basic_map_partial_lexopt,SUFFIX)(
 
 	res = SF(isl_basic_map_partial_lexopt,SUFFIX)(isl_basic_map_copy(bmap),
 			isl_basic_set_copy(dom->p[0]), empty, max);
-		
+
+	if (empty)
+		all_empty = *empty;
 	for (i = 1; i < dom->n; ++i) {
 		TYPE *res_i;
-		isl_set *empty_i;
 
 		res_i = SF(isl_basic_map_partial_lexopt,SUFFIX)(
 				isl_basic_map_copy(bmap),
-				isl_basic_set_copy(dom->p[i]), &empty_i, max);
+				isl_basic_set_copy(dom->p[i]), empty, max);
 
 		res = ADD(res, res_i);
-		*empty = isl_set_union_disjoint(*empty, empty_i);
+		if (empty)
+			all_empty = isl_set_union_disjoint(all_empty, *empty);
 	}
 
+	if (empty)
+		*empty = all_empty;
 	isl_set_free(dom);
 	isl_basic_map_free(bmap);
 	return res;
 error:
-	*empty = NULL;
+	if (empty)
+		*empty = NULL;
 	isl_set_free(dom);
 	isl_basic_map_free(bmap);
 	return NULL;

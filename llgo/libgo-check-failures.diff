@@ -47,15 +47,3 @@ diff -r a6e10414311a libgo/go/runtime/mfinal_test.go
  		select {
  		case <-ch:
  		case <-time.After(time.Second * 4):
-diff -r a6e10414311a libgo/go/runtime/runtime_test.go
---- a/libgo/go/runtime/runtime_test.go	Fri Jan 16 07:57:02 2015 -0800
-+++ b/libgo/go/runtime/runtime_test.go	Fri Apr 03 15:07:47 2015 -0700
-@@ -176,6 +176,8 @@
- }
- 
- func TestSetPanicOnFault(t *testing.T) {
-+	t.Skip("skipping for llgo due to lack of non-call exception support")
-+
- 	// This currently results in a fault in the signal trampoline on
- 	// dragonfly/386 - see issue 7421.
- 	if GOOS == "dragonfly" && GOARCH == "386" {

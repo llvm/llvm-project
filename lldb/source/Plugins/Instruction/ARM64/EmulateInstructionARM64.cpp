@@ -980,7 +980,7 @@ EmulateInstructionARM64::EmulateLDRSTRImm (const uint32_t opcode)
 
             if (!WriteRegister (context, &reg_info_Rt, data_Rt))
                 return false;
-
+            break;
         default:
             return false;
     }

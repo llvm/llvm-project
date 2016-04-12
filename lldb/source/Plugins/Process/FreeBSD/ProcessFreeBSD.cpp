@@ -63,12 +63,12 @@ namespace
 
 lldb::ProcessSP
 ProcessFreeBSD::CreateInstance(lldb::TargetSP target_sp,
-                               Listener &listener,
+                               lldb::ListenerSP listener_sp,
                                const FileSpec *crash_file_path)
 {
     lldb::ProcessSP process_sp;
     if (crash_file_path == NULL)
-        process_sp.reset(new ProcessFreeBSD (target_sp, listener, GetFreeBSDSignals()));
+        process_sp.reset(new ProcessFreeBSD (target_sp, listener_sp, GetFreeBSDSignals()));
     return process_sp;
 }
 
@@ -269,8 +269,8 @@ ProcessFreeBSD::SendMessage(const ProcessMessage &message)
 //------------------------------------------------------------------------------
 // Constructors and destructors.
 
-ProcessFreeBSD::ProcessFreeBSD(lldb::TargetSP target_sp, Listener &listener, UnixSignalsSP &unix_signals_sp)
-    : Process(target_sp, listener, unix_signals_sp),
+ProcessFreeBSD::ProcessFreeBSD(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp, UnixSignalsSP &unix_signals_sp)
+    : Process(target_sp, listener_sp, unix_signals_sp),
       m_byte_order(endian::InlHostByteOrder()),
       m_monitor(NULL),
       m_module(NULL),

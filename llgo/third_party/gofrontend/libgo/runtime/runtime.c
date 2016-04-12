@@ -35,6 +35,7 @@ extern volatile intgo runtime_MemProfileRate
 int32
 runtime_gotraceback(bool *crash)
 {
+	String s;
 	const byte *p;
 	uint32 x;
 
@@ -44,15 +45,14 @@ runtime_gotraceback(bool *crash)
 		return runtime_m()->traceback;
 	x = runtime_atomicload(&traceback_cache);
 	if(x == ~(uint32)0) {
-		p = runtime_getenv("GOTRACEBACK");
-		if(p == nil)
-			p = (const byte*)"";
-		if(p[0] == '\0')
+		s = runtime_getenv("GOTRACEBACK");
+		p = s.str;
+		if(s.len == 0)
 			x = 1<<1;
-		else if(runtime_strcmp((const char *)p, "crash") == 0)
+		else if(s.len == 5 && runtime_strcmp((const char *)p, "crash") == 0)
 			x = (2<<1) | 1;
 		else
-			x = runtime_atoi(p)<<1;	
+			x = runtime_atoi(p, s.len)<<1;	
 		runtime_atomicstore(&traceback_cache, x);
 	}
 	if(crash != nil)
@@ -136,13 +136,15 @@ os_runtime_args()
 }
 
 int32
-runtime_atoi(const byte *p)
+runtime_atoi(const byte *p, intgo len)
 {
 	int32 n;
 
 	n = 0;
-	while('0' <= *p && *p <= '9')
+	while(len > 0 && '0' <= *p && *p <= '9') {
 		n = n*10 + *p++ - '0';
+		len--;
+	}
 	return n;
 }
 
@@ -339,7 +341,9 @@ static struct {
 void
 runtime_parsedebugvars(void)
 {
-	const byte *p;
+	String s;
+	const byte *p, *pn;
+	intgo len;
 	intgo i, n;
 	bool tmp;
 	
@@ -352,24 +356,27 @@ runtime_parsedebugvars(void)
 	traceback_cache = ~(uint32)0;
 	runtime_gotraceback(&tmp);
 
-	p = runtime_getenv("GODEBUG");
-	if(p == nil)
+	s = runtime_getenv("GODEBUG");
+	if(s.len == 0)
 		return;
+	p = s.str;
+	len = s.len;
 	for(;;) {
 		for(i=0; i<(intgo)nelem(dbgvar); i++) {
 			n = runtime_findnull((const byte*)dbgvar[i].name);
-			if(runtime_mcmp(p, "memprofilerate", n) == 0 && p[n] == '=')
+			if(len > n && runtime_mcmp(p, "memprofilerate", n) == 0 && p[n] == '=')
 				// Set the MemProfileRate directly since it
 				// is an int, not int32, and should only lbe
 				// set here if specified by GODEBUG
-				runtime_MemProfileRate = runtime_atoi(p+n+1);
-			else if(runtime_mcmp(p, dbgvar[i].name, n) == 0 && p[n] == '=')
-				*dbgvar[i].value = runtime_atoi(p+n+1);
+				runtime_MemProfileRate = runtime_atoi(p+n+1, len-(n+1));
+			else if(len > n && runtime_mcmp(p, dbgvar[i].name, n) == 0 && p[n] == '=')
+				*dbgvar[i].value = runtime_atoi(p+n+1, len-(n+1));
 		}
-		p = (const byte *)runtime_strstr((const char *)p, ",");
-		if(p == nil)
+		pn = (const byte *)runtime_strstr((const char *)p, ",");
+		if(pn == nil || pn - p >= len)
 			break;
-		p++;
+		len -= (pn - p) - 1;
+		p = pn + 1;
 	}
 }
 

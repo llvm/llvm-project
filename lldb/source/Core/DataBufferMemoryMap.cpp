@@ -7,10 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#include <errno.h>
+// C Includes
 #include <fcntl.h>
-#include <limits.h>
 #include <sys/stat.h>
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"
@@ -18,8 +16,14 @@
 #include <sys/mman.h>
 #endif
 
+// C++ Includes
+#include <cerrno>
+#include <climits>
+
+// Other libraries and framework includes
 #include "llvm/Support/MathExtras.h"
 
+// Project includes
 #include "lldb/Core/DataBufferMemoryMap.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Host/File.h"
@@ -34,9 +38,9 @@ using namespace lldb_private;
 // Default Constructor
 //----------------------------------------------------------------------
 DataBufferMemoryMap::DataBufferMemoryMap() :
-    m_mmap_addr(NULL),
+    m_mmap_addr(nullptr),
     m_mmap_size(0),
-    m_data(NULL),
+    m_data(nullptr),
     m_size(0)
 {
 }
@@ -51,7 +55,7 @@ DataBufferMemoryMap::~DataBufferMemoryMap()
 }
 
 //----------------------------------------------------------------------
-// Return a pointer to the bytes owned by this object, or NULL if
+// Return a pointer to the bytes owned by this object, or nullptr if
 // the object contains no bytes.
 //----------------------------------------------------------------------
 uint8_t *
@@ -61,7 +65,7 @@ DataBufferMemoryMap::GetBytes()
 }
 
 //----------------------------------------------------------------------
-// Return a const pointer to the bytes owned by this object, or NULL
+// Return a const pointer to the bytes owned by this object, or nullptr
 // if the object contains no bytes.
 //----------------------------------------------------------------------
 const uint8_t *
@@ -86,7 +90,7 @@ DataBufferMemoryMap::GetByteSize() const
 void
 DataBufferMemoryMap::Clear()
 {
-    if (m_mmap_addr != NULL)
+    if (m_mmap_addr != nullptr)
     {
         Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_MMAP));
         if (log)
@@ -97,9 +101,9 @@ DataBufferMemoryMap::Clear()
 #else
         ::munmap((void *)m_mmap_addr, m_mmap_size);
 #endif
-        m_mmap_addr = NULL;
+        m_mmap_addr = nullptr;
         m_mmap_size = 0;
-        m_data = NULL;
+        m_data = nullptr;
         m_size = 0;
     }
 }
@@ -118,7 +122,7 @@ DataBufferMemoryMap::MemoryMapFromFileSpec (const FileSpec* filespec,
                                             size_t length,
                                             bool writeable)
 {
-    if (filespec != NULL)
+    if (filespec != nullptr)
     {
         Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_MMAP));
         if (log)
@@ -149,7 +153,6 @@ DataBufferMemoryMap::MemoryMapFromFileSpec (const FileSpec* filespec,
     Clear();
     return 0;
 }
-
 
 #ifdef _WIN32
 static size_t win32memmapalignment = 0;
@@ -208,8 +211,8 @@ DataBufferMemoryMap::MemoryMapFromFileDescriptor (int fd,
 
         if (length > 0)
         {
-            HANDLE fileMapping = CreateFileMapping(handle, NULL, writeable ? PAGE_READWRITE : PAGE_READONLY, file_size_high, file_size_low, NULL);
-            if (fileMapping != NULL)
+            HANDLE fileMapping = CreateFileMapping(handle, nullptr, writeable ? PAGE_READWRITE : PAGE_READONLY, file_size_high, file_size_low, nullptr);
+            if (fileMapping != nullptr)
             {
                 if (win32memmapalignment == 0) LoadWin32MemMapAlignment();
                 lldb::offset_t realoffset = offset;
@@ -259,7 +262,7 @@ DataBufferMemoryMap::MemoryMapFromFileDescriptor (int fd,
                     if (fd_is_file)
                         flags |= MAP_FILE;
 
-                    m_mmap_addr = (uint8_t *)::mmap(NULL, length, prot, flags, fd, offset);
+                    m_mmap_addr = (uint8_t *)::mmap(nullptr, length, prot, flags, fd, offset);
                     Error error;
 
                     if (m_mmap_addr == (void*)-1)
@@ -271,13 +274,13 @@ DataBufferMemoryMap::MemoryMapFromFileDescriptor (int fd,
                             size_t page_offset = offset % HostInfo::GetPageSize();
                             if (page_offset != 0)
                             {
-                                m_mmap_addr = (uint8_t *)::mmap(NULL, length + page_offset, prot, flags, fd, offset - page_offset);
+                                m_mmap_addr = (uint8_t *)::mmap(nullptr, length + page_offset, prot, flags, fd, offset - page_offset);
                                 if (m_mmap_addr == (void*)-1)
                                 {
                                     // Failed to map file
-                                    m_mmap_addr = NULL;
+                                    m_mmap_addr = nullptr;
                                 }
-                                else if (m_mmap_addr != NULL)
+                                else if (m_mmap_addr != nullptr)
                                 {
                                     // We recovered and were able to memory map
                                     // after we aligned things to page boundaries

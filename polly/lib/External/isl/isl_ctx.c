@@ -14,6 +14,14 @@
 #define __isl_calloc(type,size)		((type *)calloc(1, size))
 #define __isl_calloc_type(type)		__isl_calloc(type,sizeof(type))
 
+/* Return the negation of "b", where the negation of isl_bool_error
+ * is isl_bool_error again.
+ */
+isl_bool isl_bool_not(isl_bool b)
+{
+	return b < 0 ? isl_bool_error : !b;
+}
+
 /* Check that the result of an allocation ("p") is not NULL and
  * complain if it is.
  * The only exception is when allocation size ("size") is equal to zero.

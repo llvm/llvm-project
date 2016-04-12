@@ -98,6 +98,7 @@ class Configuration(object):
         self.configure_cxx_library_root()
         self.configure_use_system_cxx_lib()
         self.configure_use_clang_verify()
+        self.configure_use_thread_safety()
         self.configure_execute_external()
         self.configure_ccache()
         self.configure_compile_flags()
@@ -217,6 +218,14 @@ class Configuration(object):
                 ['-Xclang', '-verify-ignore-unexpected'])
             self.lit_config.note(
                 "inferred use_clang_verify as: %r" % self.use_clang_verify)
+
+    def configure_use_thread_safety(self):
+        '''If set, run clang with -verify on failing tests.'''
+        has_thread_safety = self.cxx.hasCompileFlag('-Werror=thread-safety')
+        if has_thread_safety:
+            self.cxx.compile_flags += ['-Werror=thread-safety']
+            self.config.available_features.add('thread-safety')
+            self.lit_config.note("enabling thread-safety annotations")
 
     def configure_execute_external(self):
         # Choose between lit's internal shell pipeline runner and a real shell.
@@ -515,7 +524,7 @@ class Configuration(object):
         if enable_warnings:
             self.cxx.compile_flags += [
                 '-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
-                '-Wall', '-Werror'
+                '-Wall', '-Wextra', '-Werror'
             ]
             self.cxx.addWarningFlagIfSupported('-Wno-attributes')
             self.cxx.addWarningFlagIfSupported('-Wno-pessimizing-move')
@@ -525,6 +534,8 @@ class Configuration(object):
             # compiles clean with them.
             self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
             self.cxx.addWarningFlagIfSupported('-Wno-unused-variable')
+            self.cxx.addWarningFlagIfSupported('-Wno-unused-parameter')
+            self.cxx.addWarningFlagIfSupported('-Wno-sign-compare')
             std = self.get_lit_conf('std', None)
             if std in ['c++98', 'c++03']:
                 # The '#define static_assert' provided by libc++ in C++03 mode

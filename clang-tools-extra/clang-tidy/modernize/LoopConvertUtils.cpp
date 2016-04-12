@@ -391,8 +391,8 @@ static bool isAliasDecl(ASTContext *Context, const Decl *TheDecl,
     // This check is needed because getMethodDecl can return nullptr if the
     // callee is a member function pointer.
     const auto *MDecl = MemCall->getMethodDecl();
-    if (MDecl && !isa<CXXConversionDecl>(MDecl) && MDecl->getName() == "at" &&
-        MemCall->getNumArgs() == 1) {
+    if (MDecl && !isa<CXXConversionDecl>(MDecl) &&
+        MDecl->getNameAsString() == "at" && MemCall->getNumArgs() == 1) {
       return isIndexInSubscriptExpr(MemCall->getArg(0), IndexVar);
     }
     return false;
@@ -557,7 +557,9 @@ bool ForLoopIndexUseVisitor::TraverseMemberExpr(MemberExpr *Member) {
     if (ExprType.isNull())
       ExprType = Obj->getType();
 
-    assert(ExprType->isPointerType() && "Operator-> returned non-pointer type");
+    if (!ExprType->isPointerType())
+      return false;
+
     // FIXME: This works around not having the location of the arrow operator.
     // Consider adding OperatorLoc to MemberExpr?
     SourceLocation ArrowLoc = Lexer::getLocForEndOfToken(

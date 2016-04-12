@@ -51,6 +51,7 @@ class ObjCDataFormatterTestCase(TestBase):
 
 
     @skipUnlessDarwin
+    @expectedFailureAll(bugnumber="rdar://25587546")
     def test_nserror_with_run_command(self):
         """Test formatters for NSError."""
         self.appkit_tester_impl(self.nserror_data_formatter_commands)
@@ -66,11 +67,6 @@ class ObjCDataFormatterTestCase(TestBase):
     def test_nsexception_with_run_command(self):
         """Test formatters for NSException."""
         self.appkit_tester_impl(self.nsexception_data_formatter_commands)
-
-    @skipUnlessDarwin
-    def test_nsmisc_with_run_command(self):
-        """Test formatters for misc NS classes."""
-        self.appkit_tester_impl(self.nsmisc_data_formatter_commands)
 
 
     @skipUnlessDarwin
@@ -192,7 +188,7 @@ class ObjCDataFormatterTestCase(TestBase):
     
     def nsnumber_data_formatter_commands(self):
         # Now enable AppKit and check we are displaying Cocoa classes correctly
-        self.expect('frame variable num1 num2 num3 num4 num5 num6 num7 num8_Y num8_N num9',
+        self.expect('frame variable num1 num2 num3 num4 num5 num6 num7 num9',
                     substrs = ['(NSNumber *) num1 = ',' (int)5',
                     '(NSNumber *) num2 = ',' (float)3.1',
                     '(NSNumber *) num3 = ',' (double)3.14',
@@ -200,12 +196,7 @@ class ObjCDataFormatterTestCase(TestBase):
                     '(NSNumber *) num5 = ',' (char)65',
                     '(NSNumber *) num6 = ',' (long)255',
                     '(NSNumber *) num7 = ','2000000',
-                    '(NSNumber *) num8_Y = ',' @"1"',
-                    '(NSNumber *) num8_N = ',' @"0"',
                     '(NSNumber *) num9 = ',' (short)-31616'])
-
-        self.expect('frame variable decimal_one',
-                    substrs = ['(NSDecimalNumber *) decimal_one = 0x','1'])
 
         self.expect('frame variable num_at1 num_at2 num_at3 num_at4',
                     substrs = ['(NSNumber *) num_at1 = ',' (int)12',
@@ -224,11 +215,9 @@ class ObjCDataFormatterTestCase(TestBase):
         self.expect('frame variable iset1 iset2 imset',
                     substrs = ['4 indexes','512 indexes','10 indexes'])
 
-        self.expect('frame variable mutable_bag_ref cfbag_ref binheap_ref',
-                    substrs = ['(CFMutableBagRef) mutable_bag_ref = ','@"17 values"',
-                    '(CFBagRef) cfbag_ref = ','@"15 values"',
-                    '(CFBinaryHeapRef) binheap_ref = ','@"21 items"'])
-                    
+        self.expect('frame variable binheap_ref',
+                    substrs = ['(CFBinaryHeapRef) binheap_ref = ','@"21 items"'])
+
         self.expect('expression -d run -- [NSArray new]', substrs=['@"0 elements"'])
 
     def nsdata_data_formatter_commands(self):
@@ -257,6 +246,9 @@ class ObjCDataFormatterTestCase(TestBase):
         self.expect('frame variable  -d run-target nserror->_userInfo',
                     substrs = ['2 key/value pairs'])
 
+        self.expect('frame variable nserror->_userInfo',
+                    substrs = ['2 key/value pairs'])
+
         self.expect('frame variable nserror->_userInfo --ptr-depth 1 -d run-target',
                     substrs = ['@"a"','@"b"',"1","2"])
 
@@ -272,20 +264,6 @@ class ObjCDataFormatterTestCase(TestBase):
                     '(NSException *) except1 = ','name: @"TheGuyWhoHasNoName~1" - reason: @"cuz it\'s funny"',
                     '(NSException *) except2 = ','name: @"TheGuyWhoHasNoName`2" - reason: @"cuz it\'s funny"',
                     '(NSException *) except3 = ','name: @"TheGuyWhoHasNoName/3" - reason: @"cuz it\'s funny"'])
-
-    def nsmisc_data_formatter_commands(self):
-        self.expect('frame variable localhost',
-                    substrs = ['<NSHost ','> localhost ((','"127.0.0.1"'])
-
-        if self.getArchitecture() in ['i386', 'x86_64']:
-            self.expect('frame variable my_task',
-                        substrs = ['<NS','Task: 0x'])
-
-        self.expect('frame variable range_value',
-                    substrs = ['NSRange: {4, 4}'])
-
-        self.expect('frame variable port',
-                    substrs = ['(NSMachPort *) port = ',' mach port: '])
 
     def nsdate_data_formatter_commands(self):
         self.expect('frame variable date1 date2',

@@ -229,6 +229,23 @@ def make_symlink_windows(vstrSrcPath, vstrTargetPath):
     dbg = utilsDebug.CDebugFnVerbose("Python script make_symlink_windows()")
     bOk = True
     strErrMsg = ""
+    # If the src file doesn't exist, this is an error and we should throw.
+    src_stat = os.stat(vstrSrcPath)
+
+    try:
+        target_stat = os.stat(vstrTargetPath)
+        # If the target file exists but refers to a different file, delete it so that we can
+        # re-create the link.  This can happen if you run this script once (creating a link)
+        # and then delete the source file (so that a brand new file gets created the next time
+        # you compile and link), and then re-run this script, so that both the target hardlink
+        # and the source file exist, but the target refers to an old copy of the source.
+        if (target_stat.st_ino == src_stat.st_ino) and (target_stat.st_dev == src_stat.st_dev):
+            return (bOk, strErrMsg)
+
+        os.remove(vstrTargetPath)
+    except:
+        # If the target file don't exist, ignore this exception, we will link it shortly.
+        pass
 
     try:
         csl = ctypes.windll.kernel32.CreateHardLinkW
@@ -280,10 +297,6 @@ def make_symlink_native(vDictArgs, strSrc, strTarget):
         bOk = False
         strErrMsg = strErrMsgOsTypeUnknown
     elif eOSType == utilsOsType.EnumOsType.Windows:
-        if os.path.isfile(strTarget):
-            if bDbg:
-                print((strMsgSymlinkExists % target_filename))
-            return (bOk, strErrMsg)
         if bDbg:
             print((strMsgSymlinkMk % (target_filename, strSrc, strTarget)))
         bOk, strErrMsg = make_symlink_windows(strSrc,

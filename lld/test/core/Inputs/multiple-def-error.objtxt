@@ -1,5 +1,0 @@
----
-defined-atoms:
-    - name:         _foo
-      scope:        global
-      type:         data

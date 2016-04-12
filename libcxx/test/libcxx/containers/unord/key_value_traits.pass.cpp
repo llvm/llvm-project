@@ -18,7 +18,7 @@
 void testKeyValueTrait() {
   {
     typedef int Tp;
-    typedef std::__key_value_types<Tp> Traits;
+    typedef std::__hash_key_value_types<Tp> Traits;
     static_assert((std::is_same<Traits::key_type, int>::value), "");
     static_assert((std::is_same<Traits::__node_value_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__container_value_type, Tp>::value), "");
@@ -26,7 +26,7 @@ void testKeyValueTrait() {
   }
   {
     typedef std::pair<int, int> Tp;
-    typedef std::__key_value_types<Tp> Traits;
+    typedef std::__hash_key_value_types<Tp> Traits;
     static_assert((std::is_same<Traits::key_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__node_value_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__container_value_type, Tp>::value), "");
@@ -34,7 +34,7 @@ void testKeyValueTrait() {
   }
   {
     typedef std::pair<const int, int> Tp;
-    typedef std::__key_value_types<Tp> Traits;
+    typedef std::__hash_key_value_types<Tp> Traits;
     static_assert((std::is_same<Traits::key_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__node_value_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__container_value_type, Tp>::value), "");
@@ -42,7 +42,7 @@ void testKeyValueTrait() {
   }
   {
     typedef std::__hash_value_type<int, int> Tp;
-    typedef std::__key_value_types<Tp> Traits;
+    typedef std::__hash_key_value_types<Tp> Traits;
     static_assert((std::is_same<Traits::key_type, int>::value), "");
     static_assert((std::is_same<Traits::mapped_type, int>::value), "");
     static_assert((std::is_same<Traits::__node_value_type, Tp>::value), "");

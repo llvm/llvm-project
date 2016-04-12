@@ -27,7 +27,7 @@ namespace build {
 ///     For extension-less header files, using an empty string or leaving an
 ///     empty string between "," if there are other filename extensions.
 ///
-/// http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml?showone=Namespaces#Namespaces
+/// https://google.github.io/styleguide/cppguide.html#Namespaces
 ///
 /// Corresponding cpplint.py check name: 'build/namespaces'.
 class UnnamedNamespaceInHeaderCheck : public ClangTidyCheck {

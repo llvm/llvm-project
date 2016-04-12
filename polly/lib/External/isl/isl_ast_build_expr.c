@@ -15,9 +15,10 @@
 #include <isl_ast_build_expr.h>
 #include <isl_ast_private.h>
 #include <isl_ast_build_private.h>
+#include <isl_sort.h>
 
 /* Compute the "opposite" of the (numerator of the) argument of a div
- * with denonimator "d".
+ * with denominator "d".
  *
  * In particular, compute
  *
@@ -1577,67 +1578,478 @@ __isl_give isl_ast_expr *isl_ast_build_expr_from_set(
 	return isl_ast_build_expr_from_set_internal(build, set);
 }
 
+/* State of data about previous pieces in
+ * isl_ast_build_expr_from_pw_aff_internal.
+ *
+ * isl_state_none: no data about previous pieces
+ * isl_state_single: data about a single previous piece
+ * isl_state_min: data represents minimum of several pieces
+ * isl_state_max: data represents maximum of several pieces
+ */
+enum isl_from_pw_aff_state {
+	isl_state_none,
+	isl_state_single,
+	isl_state_min,
+	isl_state_max
+};
+
+/* Internal date structure representing a single piece in the input of
+ * isl_ast_build_expr_from_pw_aff_internal.
+ *
+ * If "state" is isl_state_none, then "set_list" and "aff_list" are not used.
+ * If "state" is isl_state_single, then "set_list" and "aff_list" contain the
+ * single previous subpiece.
+ * If "state" is isl_state_min, then "set_list" and "aff_list" contain
+ * a sequence of several previous subpieces that are equal to the minimum
+ * of the entries in "aff_list" over the union of "set_list"
+ * If "state" is isl_state_max, then "set_list" and "aff_list" contain
+ * a sequence of several previous subpieces that are equal to the maximum
+ * of the entries in "aff_list" over the union of "set_list"
+ *
+ * During the construction of the pieces, "set" is NULL.
+ * After the construction, "set" is set to the union of the elements
+ * in "set_list", at which point "set_list" is set to NULL.
+ */
+struct isl_from_pw_aff_piece {
+	enum isl_from_pw_aff_state state;
+	isl_set *set;
+	isl_set_list *set_list;
+	isl_aff_list *aff_list;
+};
+
+/* Internal data structure for isl_ast_build_expr_from_pw_aff_internal.
+ *
+ * "build" specifies the domain against which the result is simplified.
+ * "dom" is the domain of the entire isl_pw_aff.
+ *
+ * "n" is the number of pieces constructed already.
+ * In particular, during the construction of the pieces, "n" points to
+ * the piece that is being constructed.  After the construction of the
+ * pieces, "n" is set to the total number of pieces.
+ * "max" is the total number of allocated entries.
+ * "p" contains the individual pieces.
+ */
 struct isl_from_pw_aff_data {
 	isl_ast_build *build;
-	int n;
-	isl_ast_expr **next;
 	isl_set *dom;
+
+	int n;
+	int max;
+	struct isl_from_pw_aff_piece *p;
 };
+
+/* Initialize "data" based on "build" and "pa".
+ */
+static isl_stat isl_from_pw_aff_data_init(struct isl_from_pw_aff_data *data,
+	__isl_keep isl_ast_build *build, __isl_keep isl_pw_aff *pa)
+{
+	int n;
+	isl_ctx *ctx;
+
+	ctx = isl_pw_aff_get_ctx(pa);
+	n = isl_pw_aff_n_piece(pa);
+	if (n == 0)
+		isl_die(ctx, isl_error_invalid,
+			"cannot handle void expression", return isl_stat_error);
+	data->max = n;
+	data->p = isl_calloc_array(ctx, struct isl_from_pw_aff_piece, n);
+	if (!data->p)
+		return isl_stat_error;
+	data->build = build;
+	data->dom = isl_pw_aff_domain(isl_pw_aff_copy(pa));
+	data->n = 0;
+
+	return isl_stat_ok;
+}
+
+/* Free all memory allocated for "data".
+ */
+static void isl_from_pw_aff_data_clear(struct isl_from_pw_aff_data *data)
+{
+	int i;
+
+	isl_set_free(data->dom);
+	if (!data->p)
+		return;
+
+	for (i = 0; i < data->max; ++i) {
+		isl_set_free(data->p[i].set);
+		isl_set_list_free(data->p[i].set_list);
+		isl_aff_list_free(data->p[i].aff_list);
+	}
+	free(data->p);
+}
+
+/* Initialize the current entry of "data" to an unused piece.
+ */
+static void set_none(struct isl_from_pw_aff_data *data)
+{
+	data->p[data->n].state = isl_state_none;
+	data->p[data->n].set_list = NULL;
+	data->p[data->n].aff_list = NULL;
+}
+
+/* Store "set" and "aff" in the current entry of "data" as a single subpiece.
+ */
+static void set_single(struct isl_from_pw_aff_data *data,
+	__isl_take isl_set *set, __isl_take isl_aff *aff)
+{
+	data->p[data->n].state = isl_state_single;
+	data->p[data->n].set_list = isl_set_list_from_set(set);
+	data->p[data->n].aff_list = isl_aff_list_from_aff(aff);
+}
+
+/* Extend the current entry of "data" with "set" and "aff"
+ * as a minimum expression.
+ */
+static isl_stat extend_min(struct isl_from_pw_aff_data *data,
+	__isl_take isl_set *set, __isl_take isl_aff *aff)
+{
+	int n = data->n;
+	data->p[n].state = isl_state_min;
+	data->p[n].set_list = isl_set_list_add(data->p[n].set_list, set);
+	data->p[n].aff_list = isl_aff_list_add(data->p[n].aff_list, aff);
+
+	if (!data->p[n].set_list || !data->p[n].aff_list)
+		return isl_stat_error;
+	return isl_stat_ok;
+}
+
+/* Extend the current entry of "data" with "set" and "aff"
+ * as a maximum expression.
+ */
+static isl_stat extend_max(struct isl_from_pw_aff_data *data,
+	__isl_take isl_set *set, __isl_take isl_aff *aff)
+{
+	int n = data->n;
+	data->p[n].state = isl_state_max;
+	data->p[n].set_list = isl_set_list_add(data->p[n].set_list, set);
+	data->p[n].aff_list = isl_aff_list_add(data->p[n].aff_list, aff);
+
+	if (!data->p[n].set_list || !data->p[n].aff_list)
+		return isl_stat_error;
+	return isl_stat_ok;
+}
+
+/* Construct an isl_ast_expr from "list" within "build".
+ * If "state" is isl_state_single, then "list" contains a single entry and
+ * an isl_ast_expr is constructed for that entry.
+ * Otherwise a min or max expression is constructed from "list"
+ * depending on "state".
+ */
+static __isl_give isl_ast_expr *ast_expr_from_aff_list(
+	__isl_take isl_aff_list *list, enum isl_from_pw_aff_state state,
+	__isl_keep isl_ast_build *build)
+{
+	int i, n;
+	isl_aff *aff;
+	isl_ast_expr *expr;
+	enum isl_ast_op_type op_type;
+
+	if (state == isl_state_single) {
+		aff = isl_aff_list_get_aff(list, 0);
+		isl_aff_list_free(list);
+		return isl_ast_expr_from_aff(aff, build);
+	}
+	n = isl_aff_list_n_aff(list);
+	op_type = state == isl_state_min ? isl_ast_op_min : isl_ast_op_max;
+	expr = isl_ast_expr_alloc_op(isl_ast_build_get_ctx(build), op_type, n);
+	if (!expr)
+		goto error;
+
+	for (i = 0; i < n; ++i) {
+		isl_ast_expr *expr_i;
+
+		aff = isl_aff_list_get_aff(list, i);
+		expr_i = isl_ast_expr_from_aff(aff, build);
+		if (!expr_i)
+			goto error;
+		expr->u.op.args[i] = expr_i;
+	}
+
+	isl_aff_list_free(list);
+	return expr;
+error:
+	isl_aff_list_free(list);
+	isl_ast_expr_free(expr);
+	return NULL;
+}
+
+/* Extend the expression in "next" to take into account
+ * the piece at position "pos" in "data", allowing for a further extension
+ * for the next piece(s).
+ * In particular, "next" is set to a select operation that selects
+ * an isl_ast_expr corresponding to data->aff_list on data->set and
+ * to an expression that will be filled in by later calls.
+ * Return a pointer to this location.
+ * Afterwards, the state of "data" is set to isl_state_none.
+ *
+ * The constraints of data->set are added to the generated
+ * constraints of the build such that they can be exploited to simplify
+ * the AST expression constructed from data->aff_list.
+ */
+static isl_ast_expr **add_intermediate_piece(struct isl_from_pw_aff_data *data,
+	int pos, isl_ast_expr **next)
+{
+	isl_ctx *ctx;
+	isl_ast_build *build;
+	isl_ast_expr *ternary, *arg;
+	isl_set *set, *gist;
+
+	set = data->p[pos].set;
+	data->p[pos].set = NULL;
+	ctx = isl_ast_build_get_ctx(data->build);
+	ternary = isl_ast_expr_alloc_op(ctx, isl_ast_op_select, 3);
+	gist = isl_set_gist(isl_set_copy(set), isl_set_copy(data->dom));
+	arg = isl_ast_build_expr_from_set_internal(data->build, gist);
+	ternary = isl_ast_expr_set_op_arg(ternary, 0, arg);
+	build = isl_ast_build_copy(data->build);
+	build = isl_ast_build_restrict_generated(build, set);
+	arg = ast_expr_from_aff_list(data->p[pos].aff_list,
+					data->p[pos].state, build);
+	data->p[pos].aff_list = NULL;
+	isl_ast_build_free(build);
+	ternary = isl_ast_expr_set_op_arg(ternary, 1, arg);
+	data->p[pos].state = isl_state_none;
+	if (!ternary)
+		return NULL;
+
+	*next = ternary;
+	return &ternary->u.op.args[2];
+}
+
+/* Extend the expression in "next" to take into account
+ * the final piece, located at position "pos" in "data".
+ * In particular, "next" is set to evaluate data->aff_list
+ * and the domain is ignored.
+ * Return isl_stat_ok on success and isl_stat_error on failure.
+ *
+ * The constraints of data->set are however added to the generated
+ * constraints of the build such that they can be exploited to simplify
+ * the AST expression constructed from data->aff_list.
+ */
+static isl_stat add_last_piece(struct isl_from_pw_aff_data *data,
+	int pos, isl_ast_expr **next)
+{
+	isl_ast_build *build;
+
+	if (data->p[pos].state == isl_state_none)
+		isl_die(isl_ast_build_get_ctx(data->build), isl_error_invalid,
+			"cannot handle void expression", return isl_stat_error);
+
+	build = isl_ast_build_copy(data->build);
+	build = isl_ast_build_restrict_generated(build, data->p[pos].set);
+	data->p[pos].set = NULL;
+	*next = ast_expr_from_aff_list(data->p[pos].aff_list,
+						data->p[pos].state, build);
+	data->p[pos].aff_list = NULL;
+	isl_ast_build_free(build);
+	data->p[pos].state = isl_state_none;
+	if (!*next)
+		return isl_stat_error;
+
+	return isl_stat_ok;
+}
+
+/* Return -1 if the piece "p1" should be sorted before "p2"
+ * and 1 if it should be sorted after "p2".
+ * Return 0 if they do not need to be sorted in a specific order.
+ *
+ * Pieces are sorted according to the number of disjuncts
+ * in their domains.
+ */
+static int sort_pieces_cmp(const void *p1, const void *p2, void *arg)
+{
+	const struct isl_from_pw_aff_piece *piece1 = p1;
+	const struct isl_from_pw_aff_piece *piece2 = p2;
+	int n1, n2;
+
+	n1 = isl_set_n_basic_set(piece1->set);
+	n2 = isl_set_n_basic_set(piece2->set);
+
+	return n1 - n2;
+}
+
+/* Construct an isl_ast_expr from the pieces in "data".
+ * Return the result or NULL on failure.
+ *
+ * When this function is called, data->n points to the current piece.
+ * If this is an effective piece, then first increment data->n such
+ * that data->n contains the number of pieces.
+ * The "set_list" fields are subsequently replaced by the corresponding
+ * "set" fields, after which the pieces are sorted according to
+ * the number of disjuncts in these "set" fields.
+ *
+ * Construct intermediate AST expressions for the initial pieces and
+ * finish off with the final pieces.
+ */
+static isl_ast_expr *build_pieces(struct isl_from_pw_aff_data *data)
+{
+	int i;
+	isl_ast_expr *res = NULL;
+	isl_ast_expr **next = &res;
+
+	if (data->p[data->n].state != isl_state_none)
+		data->n++;
+	if (data->n == 0)
+		isl_die(isl_ast_build_get_ctx(data->build), isl_error_invalid,
+			"cannot handle void expression", return NULL);
+
+	for (i = 0; i < data->n; ++i) {
+		data->p[i].set = isl_set_list_union(data->p[i].set_list);
+		if (data->p[i].state != isl_state_single)
+			data->p[i].set = isl_set_coalesce(data->p[i].set);
+		data->p[i].set_list = NULL;
+	}
+
+	if (isl_sort(data->p, data->n, sizeof(data->p[0]),
+			&sort_pieces_cmp, NULL) < 0)
+		return isl_ast_expr_free(res);
+
+	for (i = 0; i + 1 < data->n; ++i) {
+		next = add_intermediate_piece(data, i, next);
+		if (!next)
+			return isl_ast_expr_free(res);
+	}
+
+	if (add_last_piece(data, data->n - 1, next) < 0)
+		return isl_ast_expr_free(res);
+
+	return res;
+}
+
+/* Can the list of subpieces in the last piece of "data" be extended with
+ * "set" and "aff" based on "test"?
+ * In particular, is it the case for each entry (set_i, aff_i) that
+ *
+ *	test(aff, aff_i) holds on set_i, and
+ *	test(aff_i, aff) holds on set?
+ *
+ * "test" returns the set of elements where the tests holds, meaning
+ * that test(aff_i, aff) holds on set if set is a subset of test(aff_i, aff).
+ *
+ * This function is used to detect min/max expressions.
+ * If the ast_build_detect_min_max option is turned off, then
+ * do not even try and perform any detection and return false instead.
+ */
+static isl_bool extends(struct isl_from_pw_aff_data *data,
+	__isl_keep isl_set *set, __isl_keep isl_aff *aff,
+	__isl_give isl_basic_set *(*test)(__isl_take isl_aff *aff1,
+		__isl_take isl_aff *aff2))
+{
+	int i, n;
+	isl_ctx *ctx;
+	isl_set *dom;
+
+	ctx = isl_ast_build_get_ctx(data->build);
+	if (!isl_options_get_ast_build_detect_min_max(ctx))
+		return isl_bool_false;
+
+	dom = isl_ast_build_get_domain(data->build);
+	set = isl_set_intersect(dom, isl_set_copy(set));
+
+	n = isl_set_list_n_set(data->p[data->n].set_list);
+	for (i = 0; i < n ; ++i) {
+		isl_aff *aff_i;
+		isl_set *valid;
+		isl_set *dom, *required;
+		isl_bool is_valid;
+
+		aff_i = isl_aff_list_get_aff(data->p[data->n].aff_list, i);
+		valid = isl_set_from_basic_set(test(isl_aff_copy(aff), aff_i));
+		required = isl_set_list_get_set(data->p[data->n].set_list, i);
+		dom = isl_ast_build_get_domain(data->build);
+		required = isl_set_intersect(dom, required);
+		is_valid = isl_set_is_subset(required, valid);
+		isl_set_free(required);
+		isl_set_free(valid);
+		if (is_valid < 0 || !is_valid) {
+			isl_set_free(set);
+			return is_valid;
+		}
+
+		aff_i = isl_aff_list_get_aff(data->p[data->n].aff_list, i);
+		valid = isl_set_from_basic_set(test(aff_i, isl_aff_copy(aff)));
+		is_valid = isl_set_is_subset(set, valid);
+		isl_set_free(valid);
+		if (is_valid < 0 || !is_valid) {
+			isl_set_free(set);
+			return is_valid;
+		}
+	}
+
+	isl_set_free(set);
+	return isl_bool_true;
+}
+
+/* Can the list of pieces in "data" be extended with "set" and "aff"
+ * to form/preserve a minimum expression?
+ * In particular, is it the case for each entry (set_i, aff_i) that
+ *
+ *	aff >= aff_i on set_i, and
+ *	aff_i >= aff on set?
+ */
+static isl_bool extends_min(struct isl_from_pw_aff_data *data,
+	__isl_keep isl_set *set,  __isl_keep isl_aff *aff)
+{
+	return extends(data, set, aff, &isl_aff_ge_basic_set);
+}
+
+/* Can the list of pieces in "data" be extended with "set" and "aff"
+ * to form/preserve a maximum expression?
+ * In particular, is it the case for each entry (set_i, aff_i) that
+ *
+ *	aff <= aff_i on set_i, and
+ *	aff_i <= aff on set?
+ */
+static isl_bool extends_max(struct isl_from_pw_aff_data *data,
+	__isl_keep isl_set *set,  __isl_keep isl_aff *aff)
+{
+	return extends(data, set, aff, &isl_aff_le_basic_set);
+}
 
 /* This function is called during the construction of an isl_ast_expr
  * that evaluates an isl_pw_aff.
- * Adjust data->next to take into account this piece.
- *
- * data->n is the number of pairs of set and aff to go.
- * data->dom is the domain of the entire isl_pw_aff.
- *
- * If this is the last pair, then data->next is set to evaluate aff
- * and the domain is ignored.
- * Otherwise, data->next is set to a select operation that selects
- * an isl_ast_expr corresponding to "aff" on "set" and to an expression
- * that will be filled in by later calls otherwise.
- *
- * In both cases, the constraints of "set" are added to the generated
- * constraints of the build such that they can be exploited to simplify
- * the AST expression constructed from "aff".
+ * If the last piece of "data" contains either a single subpiece
+ * or a minimum, then check if this minimum expression can be extended
+ * with (set, aff).
+ * If so, extend the sequence and return.
+ * Perform the same operation for maximum expressions.
+ * If no such extension can be performed, then move to the next piece
+ * in "data" (if the current piece contains any data), and then store
+ * the current subpiece in the current piece of "data" for later handling.
  */
 static isl_stat ast_expr_from_pw_aff(__isl_take isl_set *set,
 	__isl_take isl_aff *aff, void *user)
 {
 	struct isl_from_pw_aff_data *data = user;
-	isl_ctx *ctx;
-	isl_ast_build *build;
+	isl_bool test;
+	enum isl_from_pw_aff_state state;
 
-	ctx = isl_set_get_ctx(set);
-	data->n--;
-	if (data->n == 0) {
-		build = isl_ast_build_copy(data->build);
-		build = isl_ast_build_restrict_generated(build, set);
-		*data->next = isl_ast_expr_from_aff(aff, build);
-		isl_ast_build_free(build);
-		if (!*data->next)
-			return isl_stat_error;
-	} else {
-		isl_ast_expr *ternary, *arg;
-		isl_set *gist;
-
-		ternary = isl_ast_expr_alloc_op(ctx, isl_ast_op_select, 3);
-		gist = isl_set_gist(isl_set_copy(set), isl_set_copy(data->dom));
-		arg = isl_ast_build_expr_from_set_internal(data->build, gist);
-		ternary = isl_ast_expr_set_op_arg(ternary, 0, arg);
-		build = isl_ast_build_copy(data->build);
-		build = isl_ast_build_restrict_generated(build, set);
-		arg = isl_ast_expr_from_aff(aff, build);
-		isl_ast_build_free(build);
-		ternary = isl_ast_expr_set_op_arg(ternary, 1, arg);
-		if (!ternary)
-			return isl_stat_error;
-
-		*data->next = ternary;
-		data->next = &ternary->u.op.args[2];
+	state = data->p[data->n].state;
+	if (state == isl_state_single || state == isl_state_min) {
+		test = extends_min(data, set, aff);
+		if (test < 0)
+			goto error;
+		if (test)
+			return extend_min(data, set, aff);
 	}
+	if (state == isl_state_single || state == isl_state_max) {
+		test = extends_max(data, set, aff);
+		if (test < 0)
+			goto error;
+		if (test)
+			return extend_max(data, set, aff);
+	}
+	if (state != isl_state_none)
+		data->n++;
+	set_single(data, set, aff);
 
 	return isl_stat_ok;
+error:
+	isl_set_free(set);
+	isl_aff_free(aff);
+	return isl_stat_error;
 }
 
 /* Construct an isl_ast_expr that evaluates "pa".
@@ -1648,7 +2060,7 @@ static isl_stat ast_expr_from_pw_aff(__isl_take isl_set *set,
 __isl_give isl_ast_expr *isl_ast_build_expr_from_pw_aff_internal(
 	__isl_keep isl_ast_build *build, __isl_take isl_pw_aff *pa)
 {
-	struct isl_from_pw_aff_data data;
+	struct isl_from_pw_aff_data data = { NULL };
 	isl_ast_expr *res = NULL;
 
 	pa = isl_ast_build_compute_gist_pw_aff(build, pa);
@@ -1656,20 +2068,20 @@ __isl_give isl_ast_expr *isl_ast_build_expr_from_pw_aff_internal(
 	if (!pa)
 		return NULL;
 
-	data.build = build;
-	data.n = isl_pw_aff_n_piece(pa);
-	data.next = &res;
-	data.dom = isl_pw_aff_domain(isl_pw_aff_copy(pa));
+	if (isl_from_pw_aff_data_init(&data, build, pa) < 0)
+		goto error;
+	set_none(&data);
 
-	if (isl_pw_aff_foreach_piece(pa, &ast_expr_from_pw_aff, &data) < 0)
-		res = isl_ast_expr_free(res);
-	else if (!res)
-		isl_die(isl_pw_aff_get_ctx(pa), isl_error_invalid,
-			"cannot handle void expression", res = NULL);
+	if (isl_pw_aff_foreach_piece(pa, &ast_expr_from_pw_aff, &data) >= 0)
+		res = build_pieces(&data);
 
 	isl_pw_aff_free(pa);
-	isl_set_free(data.dom);
+	isl_from_pw_aff_data_clear(&data);
 	return res;
+error:
+	isl_pw_aff_free(pa);
+	isl_from_pw_aff_data_clear(&data);
+	return NULL;
 }
 
 /* Construct an isl_ast_expr that evaluates "pa".

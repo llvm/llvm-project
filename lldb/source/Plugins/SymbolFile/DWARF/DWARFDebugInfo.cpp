@@ -209,48 +209,51 @@ DWARFDebugInfo::GetCompileUnit(dw_offset_t cu_offset, uint32_t* idx_ptr)
 }
 
 DWARFCompileUnit *
-DWARFDebugInfo::GetCompileUnitContainingDIE (const DIERef& die_ref)
+DWARFDebugInfo::GetCompileUnit (const DIERef& die_ref)
 {
-    dw_offset_t search_offset = die_ref.die_offset;
-    bool is_cu_offset = false;
-    if (m_dwarf2Data->GetID() == 0 && die_ref.cu_offset != DW_INVALID_OFFSET)
-    {
-        is_cu_offset = true;
-        search_offset = die_ref.cu_offset;
-    }
+    if (die_ref.cu_offset == DW_INVALID_OFFSET)
+        return GetCompileUnitContainingDIEOffset(die_ref.die_offset);
+    else
+        return GetCompileUnit(die_ref.cu_offset);
+}
+
+DWARFCompileUnit*
+DWARFDebugInfo::GetCompileUnitContainingDIEOffset(dw_offset_t die_offset)
+{
+    ParseCompileUnitHeadersIfNeeded();
 
     DWARFCompileUnitSP cu_sp;
-    if (search_offset != DW_INVALID_OFFSET)
-    {
-        ParseCompileUnitHeadersIfNeeded();
 
-        // Watch out for single compile unit executable as they are pretty common
-        const size_t num_cus = m_compile_units.size();
-        if (num_cus == 1)
+    // Watch out for single compile unit executable as they are pretty common
+    const size_t num_cus = m_compile_units.size();
+    if (num_cus == 1)
+    {
+        if (m_compile_units[0]->ContainsDIEOffset(die_offset))
+            return m_compile_units[0].get();
+    }
+    else if (num_cus)
+    {
+        CompileUnitColl::const_iterator end_pos = m_compile_units.end();
+        CompileUnitColl::const_iterator begin_pos = m_compile_units.begin();
+        CompileUnitColl::const_iterator pos = std::upper_bound(begin_pos, end_pos, die_offset, OffsetLessThanCompileUnitOffset);
+        if (pos != begin_pos)
         {
-            if ((is_cu_offset && m_compile_units[0]->GetOffset() == search_offset) ||
-                (!is_cu_offset && m_compile_units[0]->ContainsDIEOffset(search_offset)))
-            {
-                cu_sp = m_compile_units[0];
-            }
-        }
-        else if (num_cus)
-        {
-            CompileUnitColl::const_iterator end_pos = m_compile_units.end();
-            CompileUnitColl::const_iterator begin_pos = m_compile_units.begin();
-            CompileUnitColl::const_iterator pos = std::upper_bound(begin_pos, end_pos, search_offset, OffsetLessThanCompileUnitOffset);
-            if (pos != begin_pos)
-            {
-                --pos;
-                if ((is_cu_offset && (*pos)->GetOffset() == search_offset) ||
-                    (!is_cu_offset && (*pos)->ContainsDIEOffset(search_offset)))
-                {
-                    cu_sp = *pos;
-                }
-            }
+            --pos;
+            if ((*pos)->ContainsDIEOffset(die_offset))
+                return (*pos).get();
         }
     }
-    return cu_sp.get();
+
+    return nullptr;
+}
+
+DWARFDIE
+DWARFDebugInfo::GetDIEForDIEOffset(dw_offset_t die_offset)
+{
+    DWARFCompileUnit* cu = GetCompileUnitContainingDIEOffset(die_offset);
+    if (cu)
+        return cu->GetDIE(die_offset);
+    return DWARFDIE();
 }
 
 //----------------------------------------------------------------------
@@ -261,7 +264,7 @@ DWARFDebugInfo::GetCompileUnitContainingDIE (const DIERef& die_ref)
 DWARFDIE
 DWARFDebugInfo::GetDIE(const DIERef& die_ref)
 {
-    DWARFCompileUnit *cu = GetCompileUnitContainingDIE(die_ref);
+    DWARFCompileUnit *cu = GetCompileUnit(die_ref);
     if (cu)
         return cu->GetDIE (die_ref.die_offset);
     return DWARFDIE();    // Not found

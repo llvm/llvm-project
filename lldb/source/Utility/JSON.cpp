@@ -445,6 +445,7 @@ JSONParser::GetToken (std::string &value)
                                 value = std::move(error.GetString());
                                 return Token::Error;
                             }
+                            break;
 
                         default:
                             done = true;

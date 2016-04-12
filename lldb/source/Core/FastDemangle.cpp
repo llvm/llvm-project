@@ -2365,6 +2365,7 @@ private:
                 Write('(');
                 Write(m_read_ptr, m_read_end - m_read_ptr);
                 Write(')');
+                LLVM_FALLTHROUGH;
             case '\0':
                 return true;
             default:

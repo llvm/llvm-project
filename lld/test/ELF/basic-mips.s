@@ -187,15 +187,6 @@ __start:
 # CHECK-NEXT:     Section: Undefined (0x0)
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _gp
-# CHECK-NEXT:     Value: 0x0
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Binding: Local (0x0)
-# CHECK-NEXT:     Type: None (0x0)
-# CHECK-NEXT:     Other: 0
-# CHECK-NEXT:     Section: Absolute (0xFFF1)
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: __start
 # CHECK-NEXT:     Value: 0x20000
 # CHECK-NEXT:     Size: 0
@@ -203,6 +194,15 @@ __start:
 # CHECK-NEXT:     Type: None (0x0)
 # CHECK-NEXT:     Other: 0
 # CHECK-NEXT:     Section: .text
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _gp
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type: None (0x0)
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Absolute (0xFFF1)
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 # CHECK-NEXT: ProgramHeaders [

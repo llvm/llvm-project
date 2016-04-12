@@ -87,10 +87,6 @@ namespace platform_linux {
         bool
         GetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch) override;
 
-        size_t
-        GetSoftwareBreakpointTrapOpcode (Target &target,
-                                         BreakpointSite *bp_site) override;
-
         int32_t
         GetResumeCountForLaunchInfo (ProcessLaunchInfo &launch_info) override;
 

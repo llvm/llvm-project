@@ -27,9 +27,9 @@ for (int c0 = 0; c0 <= 1; c0 += 1) {
           if (c3 + 30 >= 2 * length && c4 == 0)
             S_4(c0);
         }
-      if (c2 + 16 == length && (length - 16) % 32 == 0)
+      if (c2 + 16 == length)
         S_4(c0);
-    } else if (length == 0) {
+    } else if (length >= 32) {
       S_4(c0);
     } else
       S_4(c0);

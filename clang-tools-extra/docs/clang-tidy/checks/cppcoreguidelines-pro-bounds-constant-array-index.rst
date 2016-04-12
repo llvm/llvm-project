@@ -8,9 +8,8 @@ This check flags all array subscript expressions on static arrays and
 are out of bounds (for ``std::array``). For out-of-bounds checking of static
 arrays, see the clang-diagnostic-array-bounds check.
 
-The check can generate fixes after the option
-``cppcoreguidelines-pro-bounds-constant-array-index.GslHeader`` has been set to
-the name of the include file that contains ``gsl::at()``, e.g. ``"gsl/gsl.h"``.
+The check can generate fixes after the option :option:`GslHeader` has been set
+to the name of the include file that contains ``gsl::at()``, e.g. `"gsl/gsl.h"`.
 
 This rule is part of the "Bounds safety" profile of the C++ Core Guidelines, see
 https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Pro-bounds-arrayindex.

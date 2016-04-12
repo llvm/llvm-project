@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Process.h"
@@ -18,16 +22,15 @@ using namespace lldb_private;
 SystemRuntime*
 SystemRuntime::FindPlugin (Process *process)
 {
-    SystemRuntimeCreateInstance create_callback = NULL;
-    for (uint32_t idx = 0; (create_callback = PluginManager::GetSystemRuntimeCreateCallbackAtIndex(idx)) != NULL; ++idx)
+    SystemRuntimeCreateInstance create_callback = nullptr;
+    for (uint32_t idx = 0; (create_callback = PluginManager::GetSystemRuntimeCreateCallbackAtIndex(idx)) != nullptr; ++idx)
     {
         std::unique_ptr<SystemRuntime> instance_ap(create_callback(process));
-        if (instance_ap.get())
+        if (instance_ap)
             return instance_ap.release();
     }
-    return NULL;
+    return nullptr;
 }
-
 
 //----------------------------------------------------------------------
 // SystemRuntime constructor
@@ -38,12 +41,7 @@ SystemRuntime::SystemRuntime(Process *process) :
 {
 }
 
-//----------------------------------------------------------------------
-// Destructor
-//----------------------------------------------------------------------
-SystemRuntime::~SystemRuntime()
-{
-}
+SystemRuntime::~SystemRuntime() = default;
 
 void
 SystemRuntime::DidAttach ()

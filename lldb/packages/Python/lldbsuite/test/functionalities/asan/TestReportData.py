@@ -21,7 +21,6 @@ class AsanTestReportDataCase(TestBase):
     @skipIfFreeBSD # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessCompilerRt
-    @expectedFailureDarwin
     def test(self):
         self.build ()
         self.asan_tests ()
@@ -40,16 +39,10 @@ class AsanTestReportDataCase(TestBase):
         self.expect("file " + exe, patterns = [ "Current executable set to .*a.out" ])
         self.runCmd("run")
 
-        # ASan will relaunch the process to insert its library.
-        self.expect("thread list", "Process should be stopped due to exec.",
-            substrs = ['stopped', 'stop reason = '])
-
-        # no extended info when we have no ASan report
-        thread = self.dbg.GetSelectedTarget().process.GetSelectedThread()
-        s = lldb.SBStream()
-        self.assertFalse(thread.GetStopReasonExtendedInfoAsJSON(s))
-
-        self.runCmd("continue")
+        stop_reason = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        if stop_reason == lldb.eStopReasonExec:
+            # On OS X 10.10 and older, we need to re-exec to enable interceptors.
+            self.runCmd("continue")
 
         self.expect("thread list", "Process should be stopped due to ASan report",
             substrs = ['stopped', 'stop reason = Use of deallocated memory detected'])
@@ -63,7 +56,7 @@ class AsanTestReportDataCase(TestBase):
             substrs = ["access_size", "access_type", "address", "pc", "description", "heap-use-after-free"])
 
         output_lines = self.res.GetOutput().split('\n')
-        json_line = output_lines[2]
+        json_line = '\n'.join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["description"], "heap-use-after-free")
         self.assertEqual(data["instrumentation_class"], "AddressSanitizer")

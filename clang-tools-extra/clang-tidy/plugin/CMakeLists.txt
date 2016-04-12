@@ -1,0 +1,20 @@
+add_clang_library(clangTidyPlugin
+  ClangTidyPlugin.cpp
+
+  LINK_LIBS
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangFrontend
+  clangSema
+  clangTidy
+  clangTidyCERTModule
+  clangTidyCppCoreGuidelinesModule
+  clangTidyGoogleModule
+  clangTidyLLVMModule
+  clangTidyMiscModule
+  clangTidyModernizeModule
+  clangTidyPerformanceModule
+  clangTidyReadabilityModule
+  clangTooling
+  )

@@ -14,11 +14,7 @@ ISL_DECLARE_LIST(schedule_tree)
 /* A schedule (sub)tree.
  *
  * The leaves of a tree are not explicitly represented inside
- * the isl_schedule_tree.  If a tree consists of only a leaf,
- * then it is equal to the static object isl_schedule_tree_empty.
- *
- * ctx may be NULL if type is isl_schedule_node_leaf.
- * In this case, ref has a negative value.
+ * the isl_schedule_tree, except when the tree consists of only a leaf.
  *
  * The "band" field is valid when type is isl_schedule_node_band.
  * The "context" field is valid when type is isl_schedule_node_context

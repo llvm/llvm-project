@@ -1,9 +1,0 @@
-
-RUN: lld -flavor old-gnu -target i386 -o %t1 %p/Inputs/rodata-test.i386 --noinhibit-exec
-RUN: llvm-objdump -section-headers %t1 |  FileCheck -check-prefix=i386 %s
-RUN: lld -flavor old-gnu -target hexagon -o %t2 %p/Inputs/rodata-test.hexagon --noinhibit-exec
-RUN: llvm-objdump -section-headers %t2 |  FileCheck -check-prefix=hexagon %s
-
-i386:  .rodata       00000004 0000000000000114 DATA
-
-hexagon:  .rodata       00000004 0000000000000114 DATA

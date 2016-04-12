@@ -67,6 +67,7 @@ class Abstract
 };
 
 enum Enum {zero, one};
+struct incomplete_type;
 
 typedef void (*FunctionPtr)();
 
@@ -76,6 +77,7 @@ int main()
     test_is_class<bit_zero>();
     test_is_class<NotEmpty>();
     test_is_class<Abstract>();
+    test_is_class<incomplete_type>();
 
 #if TEST_STD_VER >= 11
 // In C++03 we have an emulation of std::nullptr_t

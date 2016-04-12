@@ -27,46 +27,55 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/GoASTContext.h"
 #include "lldb/Symbol/SwiftASTContext.h"
+#include "lldb/Symbol/JavaASTContext.h"
 
-#include "Plugins/ABI/MacOSX-i386/ABIMacOSX_i386.h"
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
 #include "Plugins/ABI/MacOSX-arm64/ABIMacOSX_arm64.h"
+#include "Plugins/ABI/MacOSX-i386/ABIMacOSX_i386.h"
 #include "Plugins/ABI/SysV-arm/ABISysV_arm.h"
 #include "Plugins/ABI/SysV-arm64/ABISysV_arm64.h"
 #include "Plugins/ABI/SysV-hexagon/ABISysV_hexagon.h"
 #include "Plugins/ABI/SysV-i386/ABISysV_i386.h"
-#include "Plugins/ABI/SysV-x86_64/ABISysV_x86_64.h"
-#include "Plugins/ABI/SysV-ppc/ABISysV_ppc.h"
-#include "Plugins/ABI/SysV-ppc64/ABISysV_ppc64.h"
 #include "Plugins/ABI/SysV-mips/ABISysV_mips.h"
 #include "Plugins/ABI/SysV-mips64/ABISysV_mips64.h"
+#include "Plugins/ABI/SysV-ppc/ABISysV_ppc.h"
+#include "Plugins/ABI/SysV-ppc64/ABISysV_ppc64.h"
+#include "Plugins/ABI/SysV-x86_64/ABISysV_x86_64.h"
 #include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
 #include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
+#include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
+#include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
+#include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
 #include "Plugins/InstrumentationRuntime/AddressSanitizer/AddressSanitizerRuntime.h"
 #include "Plugins/InstrumentationRuntime/ThreadSanitizer/ThreadSanitizerRuntime.h"
 #include "Plugins/JITLoader/GDB/JITLoaderGDB.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/Go/GoLanguage.h"
+#include "Plugins/Language/Java/JavaLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/ItaniumABI/ItaniumABILanguageRuntime.h"
+#include "Plugins/LanguageRuntime/Go/GoLanguageRuntime.h"
+#include "Plugins/LanguageRuntime/Java/JavaLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV1.h"
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV2.h"
-#include "Plugins/LanguageRuntime/Go/GoLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime/RenderScriptRuntime.h"
 #include "Plugins/MemoryHistory/asan/MemoryHistoryASan.h"
+#include "Plugins/OperatingSystem/Python/OperatingSystemPython.h"
+#include "Plugins/OperatingSystem/Go/OperatingSystemGo.h"
 #include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
 #include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
 #include "Plugins/ScriptInterpreter/None/ScriptInterpreterNone.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDebugMap.h"
+#include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "Plugins/SymbolVendor/ELF/SymbolVendorELF.h"
 #include "Plugins/SystemRuntime/MacOSX/SystemRuntimeMacOSX.h"
-#include "Plugins/UnwindAssembly/x86/UnwindAssembly-x86.h"
 #include "Plugins/UnwindAssembly/InstEmulation/UnwindAssemblyInstEmulation.h"
+#include "Plugins/UnwindAssembly/x86/UnwindAssembly-x86.h"
 
 #if defined(__APPLE__)
 #include "Plugins/Process/mach-core/ProcessMachCore.h"
@@ -76,6 +85,7 @@
 #include "Plugins/Platform/MacOSX/PlatformAppleWatchSimulator.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteAppleTV.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteAppleWatch.h"
+#include "Plugins/DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernel.h"
 #endif
 
 #if defined(__FreeBSD__)
@@ -280,6 +290,11 @@ SystemInitializerFull::Initialize()
     SystemInitializerCommon::Initialize();
     ScriptInterpreterNone::Initialize();
 
+#ifndef LLDB_DISABLE_PYTHON
+    OperatingSystemPython::Initialize();
+#endif
+    OperatingSystemGo::Initialize();
+
 #if !defined(LLDB_DISABLE_PYTHON)
     InitializeSWIG();
 
@@ -297,6 +312,7 @@ SystemInitializerFull::Initialize()
 
     ClangASTContext::Initialize();
     GoASTContext::Initialize();
+    JavaASTContext::Initialize();
     SwiftASTContext::Initialize();
 
     ABIMacOSX_i386::Initialize();
@@ -324,6 +340,8 @@ SystemInitializerFull::Initialize()
 
     SymbolVendorELF::Initialize();
     SymbolFileDWARF::Initialize();
+    // TODO re-add when swift-llvm/stable and swift-clang/stable catch up to llvm::IPDBSession API required by SymbolFilePDB.
+    // SymbolFilePDB::Initialize();
     SymbolFileSymtab::Initialize();
     UnwindAssemblyInstEmulation::Initialize();
     UnwindAssembly_x86::Initialize();
@@ -335,9 +353,11 @@ SystemInitializerFull::Initialize()
     SystemRuntimeMacOSX::Initialize();
     RenderScriptRuntime::Initialize();
     GoLanguageRuntime::Initialize();
+    JavaLanguageRuntime::Initialize();
 
     CPlusPlusLanguage::Initialize();
     GoLanguage::Initialize();
+    JavaLanguage::Initialize();
     ObjCLanguage::Initialize();
     ObjCPlusPlusLanguage::Initialize();
 
@@ -357,6 +377,7 @@ SystemInitializerFull::Initialize()
     PlatformAppleWatchSimulator::Initialize();
     PlatformRemoteAppleTV::Initialize();
     PlatformRemoteAppleWatch::Initialize();
+    DynamicLoaderDarwinKernel::Initialize();
 #endif
     //----------------------------------------------------------------------
     // Platform agnostic plugins
@@ -364,7 +385,10 @@ SystemInitializerFull::Initialize()
     platform_gdb_server::PlatformRemoteGDBServer::Initialize();
 
     process_gdb_remote::ProcessGDBRemote::Initialize();
+    DynamicLoaderMacOSXDYLD::Initialize();
+    DynamicLoaderPOSIXDYLD::Initialize();
     DynamicLoaderStatic::Initialize();
+    DynamicLoaderWindowsDYLD::Initialize();
 
     // Scan for any system or user LLDB plug-ins
     PluginManager::Initialize();
@@ -420,6 +444,7 @@ SystemInitializerFull::Terminate()
 
     ClangASTContext::Terminate();
     GoASTContext::Terminate();
+    JavaASTContext::Terminate();
     SwiftASTContext::Terminate();
 
     ABIMacOSX_i386::Terminate();
@@ -446,6 +471,8 @@ SystemInitializerFull::Terminate()
     ThreadSanitizerRuntime::Terminate();
     SymbolVendorELF::Terminate();
     SymbolFileDWARF::Terminate();
+    // TODO re-add when swift-llvm/stable and swift-clang/stable catch up to llvm::IPDBSession API required by SymbolFilePDB.
+    // SymbolFilePDB::Terminate();
     SymbolFileSymtab::Terminate();
     UnwindAssembly_x86::Terminate();
     UnwindAssemblyInstEmulation::Terminate();
@@ -456,15 +483,18 @@ SystemInitializerFull::Terminate()
     AppleObjCRuntimeV1::Terminate();
     SystemRuntimeMacOSX::Terminate();
     RenderScriptRuntime::Terminate();
+    JavaLanguageRuntime::Terminate();
 
     ::SwiftTerminate();
 
     CPlusPlusLanguage::Terminate();
     GoLanguage::Terminate();
+    JavaLanguage::Terminate();
     ObjCLanguage::Terminate();
     ObjCPlusPlusLanguage::Terminate();
 
 #if defined(__APPLE__)
+    DynamicLoaderDarwinKernel::Terminate();
     ProcessMachCore::Terminate();
     ProcessKDP::Terminate();
     SymbolVendorMacOSX::Terminate();
@@ -481,7 +511,15 @@ SystemInitializerFull::Terminate()
 
     platform_gdb_server::PlatformRemoteGDBServer::Terminate();
     process_gdb_remote::ProcessGDBRemote::Terminate();
+    DynamicLoaderMacOSXDYLD::Terminate();
+    DynamicLoaderPOSIXDYLD::Terminate();
     DynamicLoaderStatic::Terminate();
+    DynamicLoaderWindowsDYLD::Terminate();
+
+#ifndef LLDB_DISABLE_PYTHON
+    OperatingSystemPython::Terminate();
+#endif
+    OperatingSystemGo::Terminate();
 
     // Now shutdown the common parts, in reverse order.
     SystemInitializerCommon::Terminate();

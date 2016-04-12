@@ -420,6 +420,10 @@ def process_dir(root, files, dotest_argv, inferior_pid_events):
     results = []
     for (base_name, full_test_path) in files:
         import __main__ as main
+        global dotest_options
+        if dotest_options.p and not re.search(dotest_options.p, base_name):
+            continue
+
         script_file = main.__file__
         command = ([sys.executable, script_file] +
                    dotest_argv +

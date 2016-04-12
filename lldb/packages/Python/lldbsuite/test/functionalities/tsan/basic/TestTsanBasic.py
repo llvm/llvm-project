@@ -34,6 +34,11 @@ class TsanBasicTestCase(TestBase):
 
         self.runCmd("run")
 
+        stop_reason = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
+        if stop_reason == lldb.eStopReasonExec:
+            # On OS X 10.10 and older, we need to re-exec to enable interceptors.
+            self.runCmd("continue")
+
         # the stop reason of the thread should be breakpoint.
         self.expect("thread list", "A data race should be detected",
             substrs = ['stopped', 'stop reason = Data race detected'])
@@ -68,7 +73,7 @@ class TsanBasicTestCase(TestBase):
         json_line = '\n'.join(output_lines[2:])
         data = json.loads(json_line)
         self.assertEqual(data["instrumentation_class"], "ThreadSanitizer")
-        self.assertEqual(data["description"], "data-race")
+        self.assertEqual(data["issue_type"], "data-race")
         self.assertEqual(len(data["mops"]), 2)
 
         backtraces = thread.GetStopReasonExtendedBacktraces(lldb.eInstrumentationRuntimeTypeAddressSanitizer)
@@ -104,7 +109,7 @@ class TsanBasicTestCase(TestBase):
         self.runCmd("continue")
 
         # the stop reason of the thread should be a SIGABRT.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+        self.expect("thread list", "We should be stopped due a SIGABRT",
             substrs = ['stopped', 'stop reason = signal SIGABRT'])
 
         # test that we're in pthread_kill now (TSan abort the process)

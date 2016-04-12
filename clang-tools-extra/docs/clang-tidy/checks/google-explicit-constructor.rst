@@ -6,4 +6,4 @@ google-explicit-constructor
 
 Checks that all single-argument constructors are explicit.
 
-See http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml#Explicit_Constructors
+See https://google.github.io/styleguide/cppguide.html#Explicit_Constructors

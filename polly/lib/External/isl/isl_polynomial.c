@@ -23,6 +23,7 @@
 #include <isl_mat_private.h>
 #include <isl_vec_private.h>
 #include <isl_range.h>
+#include <isl_local.h>
 #include <isl_local_space_private.h>
 #include <isl_aff_private.h>
 #include <isl_val_private.h>
@@ -65,6 +66,57 @@ __isl_keep struct isl_upoly_rec *isl_upoly_as_rec(__isl_keep struct isl_upoly *u
 	isl_assert(up->ctx, up->var >= 0, return NULL);
 
 	return (struct isl_upoly_rec *)up;
+}
+
+/* Compare two polynomials.
+ *
+ * Return -1 if "up1" is "smaller" than "up2", 1 if "up1" is "greater"
+ * than "up2" and 0 if they are equal.
+ */
+static int isl_upoly_plain_cmp(__isl_keep struct isl_upoly *up1,
+	__isl_keep struct isl_upoly *up2)
+{
+	int i;
+	struct isl_upoly_rec *rec1, *rec2;
+
+	if (up1 == up2)
+		return 0;
+	if (!up1)
+		return -1;
+	if (!up2)
+		return 1;
+	if (up1->var != up2->var)
+		return up1->var - up2->var;
+
+	if (isl_upoly_is_cst(up1)) {
+		struct isl_upoly_cst *cst1, *cst2;
+		int cmp;
+
+		cst1 = isl_upoly_as_cst(up1);
+		cst2 = isl_upoly_as_cst(up2);
+		if (!cst1 || !cst2)
+			return 0;
+		cmp = isl_int_cmp(cst1->n, cst2->n);
+		if (cmp != 0)
+			return cmp;
+		return isl_int_cmp(cst1->d, cst2->d);
+	}
+
+	rec1 = isl_upoly_as_rec(up1);
+	rec2 = isl_upoly_as_rec(up2);
+	if (!rec1 || !rec2)
+		return 0;
+
+	if (rec1->n != rec2->n)
+		return rec1->n - rec2->n;
+
+	for (i = 0; i < rec1->n; ++i) {
+		int cmp = isl_upoly_plain_cmp(rec1->p[i], rec2->p[i]);
+		if (cmp != 0)
+			return cmp;
+	}
+
+	return 0;
 }
 
 isl_bool isl_upoly_is_equal(__isl_keep struct isl_upoly *up1,
@@ -1890,6 +1942,34 @@ __isl_give isl_vec *isl_qpolynomial_extract_affine(
 error:
 	isl_vec_free(aff);
 	return NULL;
+}
+
+/* Compare two quasi-polynomials.
+ *
+ * Return -1 if "qp1" is "smaller" than "qp2", 1 if "qp1" is "greater"
+ * than "qp2" and 0 if they are equal.
+ */
+int isl_qpolynomial_plain_cmp(__isl_keep isl_qpolynomial *qp1,
+	__isl_keep isl_qpolynomial *qp2)
+{
+	int cmp;
+
+	if (qp1 == qp2)
+		return 0;
+	if (!qp1)
+		return -1;
+	if (!qp2)
+		return 1;
+
+	cmp = isl_space_cmp(qp1->dim, qp2->dim);
+	if (cmp != 0)
+		return cmp;
+
+	cmp = isl_local_cmp(qp1->div, qp2->div);
+	if (cmp != 0)
+		return cmp;
+
+	return isl_upoly_plain_cmp(qp1->upoly, qp2->upoly);
 }
 
 /* Is "qp1" obviously equal to "qp2"?

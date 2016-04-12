@@ -48,13 +48,13 @@ struct C
 
 int main()
 {
-    static_assert((std::is_same<std::priority_queue<int>::container_type, std::vector<int> >::value), "");
-    static_assert((std::is_same<std::priority_queue<double, std::deque<int> >::container_type, std::deque<int> >::value), "");
-    static_assert((std::is_same<std::priority_queue<double, std::deque<int> >::value_type, int>::value), "");
-    static_assert((std::is_same<std::priority_queue<int>::reference, std::vector<int>::reference>::value), "");
-    static_assert((std::is_same<std::priority_queue<int>::const_reference, std::vector<int>::const_reference>::value), "");
-    static_assert((std::is_same<std::priority_queue<int>::size_type, std::vector<int>::size_type>::value), "");
-    static_assert((std::uses_allocator<std::priority_queue<int>, std::allocator<int> >::value), "");
+    static_assert(( std::is_same<std::priority_queue<int>::container_type, std::vector<int> >::value), "");
+    static_assert(( std::is_same<std::priority_queue<int, std::deque<int> >::container_type, std::deque<int> >::value), "");
+    static_assert(( std::is_same<std::priority_queue<int, std::deque<int> >::value_type, int>::value), "");
+    static_assert(( std::is_same<std::priority_queue<int>::reference, std::vector<int>::reference>::value), "");
+    static_assert(( std::is_same<std::priority_queue<int>::const_reference, std::vector<int>::const_reference>::value), "");
+    static_assert(( std::is_same<std::priority_queue<int>::size_type, std::vector<int>::size_type>::value), "");
+    static_assert(( std::uses_allocator<std::priority_queue<int>, std::allocator<int> >::value), "");
     static_assert((!std::uses_allocator<std::priority_queue<int, C>, std::allocator<int> >::value), "");
     test t;
 }

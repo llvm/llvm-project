@@ -14,7 +14,7 @@
 // We need to be sure that there is no suitable library in the /lib directory
 // RUN: not ld.lld -o %t/r %t/m.o -L/lib -l:libls.a 2>&1 \
 // RUN:     | FileCheck --check-prefix=NOLIB %s
-// NOLIB: Unable to find library -l:libls.a
+// NOLIB: unable to find library -l:libls.a
 
 // Should just remove the '=' symbol if --sysroot is not specified.
 // Case 1: relative path

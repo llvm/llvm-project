@@ -13,6 +13,7 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
+#include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 
 namespace lldb_private {
@@ -78,9 +79,6 @@ namespace lldb_private {
         ObjCSELSummaryProvider<false> (ValueObject&, Stream&, const TypeSummaryOptions&);
         
         bool
-        RuntimeSpecificDescriptionSummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
-        
-        bool
         NSError_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
         
         bool
@@ -91,6 +89,16 @@ namespace lldb_private {
         
         SyntheticChildrenFrontEnd*
         NSExceptionSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp);
+        
+        class NSArray_Additionals
+        {
+        public:
+            static std::map<ConstString, CXXFunctionSummaryFormat::Callback>&
+            GetAdditionalSummaries ();
+            
+            static std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback>&
+            GetAdditionalSynthetics ();
+        };
     } // namespace formatters
 } // namespace lldb_private
 

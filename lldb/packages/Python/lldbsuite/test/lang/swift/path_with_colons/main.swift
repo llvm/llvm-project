@@ -9,7 +9,7 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-func foo(x: Int, y: Int, z: Int) -> Int {
+func foo(_ x: Int, y: Int, z: Int) -> Int {
   return x + y - z
 }
 

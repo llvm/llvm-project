@@ -79,7 +79,7 @@ public:
                           lldb::LanguageType wrapping_language,
                           size_t &start_loc,
                           size_t &end_loc);
-    
+
 private:
     ExpressionSourceCode (const char *name,
                           const char *prefix,

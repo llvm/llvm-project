@@ -2,9 +2,13 @@
 #include <isl/map.h>
 #include <isl/set.h>
 
-#define KEY_BASE	map
-#define KEY_EQUAL	isl_map_plain_is_equal
-#define VAL_BASE	basic_set
-#define VAL_EQUAL	isl_basic_set_plain_is_equal
+#define ISL_KEY		isl_map
+#define ISL_VAL		isl_basic_set
+#define ISL_HMAP_SUFFIX	map_to_basic_set
+#define ISL_HMAP	isl_map_to_basic_set
+#define ISL_KEY_IS_EQUAL	isl_map_plain_is_equal
+#define ISL_VAL_IS_EQUAL	isl_basic_set_plain_is_equal
+#define ISL_KEY_PRINT		isl_printer_print_map
+#define ISL_VAL_PRINT		isl_printer_print_basic_set
 
-#include <isl_hmap_templ.c>
+#include <isl/hmap_templ.c>

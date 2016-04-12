@@ -12,7 +12,7 @@
 public struct MyStruct {
     private typealias IntegerType = Int
     private var m_integer = IntegerType(345)
-    private func Foo(i : IntegerType)
+    private func Foo(_ i : IntegerType)
     {
         print("i = \(i)") // breakpoint 1
     }

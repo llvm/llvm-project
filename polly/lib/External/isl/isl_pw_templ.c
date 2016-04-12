@@ -12,12 +12,10 @@
  */
 
 #include <isl/aff.h>
+#include <isl_sort.h>
 #include <isl_val_private.h>
 
-#define xFN(TYPE,NAME) TYPE ## _ ## NAME
-#define FN(TYPE,NAME) xFN(TYPE,NAME)
-#define xS(TYPE,NAME) struct TYPE ## _ ## NAME
-#define S(TYPE,NAME) xS(TYPE,NAME)
+#include <isl_pw_macro.h>
 
 #ifdef HAS_TYPE
 __isl_give PW *FN(PW,alloc_size)(__isl_take isl_space *dim,
@@ -1046,30 +1044,76 @@ __isl_give PW *FN(PW,gist_params)(__isl_take PW *pw,
 						&FN(PW,gist_params_aligned));
 }
 
-__isl_give PW *FN(PW,coalesce)(__isl_take PW *pw)
+/* Return -1 if the piece "p1" should be sorted before "p2"
+ * and 1 if it should be sorted after "p2".
+ * Return 0 if they do not need to be sorted in a specific order.
+ *
+ * The two pieces are compared on the basis of their function value expressions.
+ */
+static int FN(PW,sort_field_cmp)(const void *p1, const void *p2, void *arg)
+{
+	struct FN(PW,piece) const *pc1 = p1;
+	struct FN(PW,piece) const *pc2 = p2;
+
+	return FN(EL,plain_cmp)(pc1->FIELD, pc2->FIELD);
+}
+
+/* Sort the pieces of "pw" according to their function value
+ * expressions and then combine pairs of adjacent pieces with
+ * the same such expression.
+ *
+ * The sorting is performed in place because it does not
+ * change the meaning of "pw", but care needs to be
+ * taken not to change any possible other copies of "pw"
+ * in case anything goes wrong.
+ */
+__isl_give PW *FN(PW,sort)(__isl_take PW *pw)
 {
 	int i, j;
+	isl_set *set;
 
 	if (!pw)
 		return NULL;
-	if (pw->n == 0)
+	if (pw->n <= 1)
 		return pw;
-
-	for (i = pw->n - 1; i >= 0; --i) {
-		for (j = i - 1; j >= 0; --j) {
-			if (!FN(EL,plain_is_equal)(pw->p[i].FIELD,
-							pw->p[j].FIELD))
-				continue;
-			pw->p[j].set = isl_set_union(pw->p[j].set,
-							pw->p[i].set);
-			FN(EL,free)(pw->p[i].FIELD);
-			if (i != pw->n - 1)
-				pw->p[i] = pw->p[pw->n - 1];
-			pw->n--;
-			break;
-		}
-		if (j >= 0)
+	if (isl_sort(pw->p, pw->n, sizeof(pw->p[0]),
+		    &FN(PW,sort_field_cmp), NULL) < 0)
+		return FN(PW,free)(pw);
+	for (i = pw->n - 1; i >= 1; --i) {
+		if (!FN(EL,plain_is_equal)(pw->p[i - 1].FIELD, pw->p[i].FIELD))
 			continue;
+		set = isl_set_union(isl_set_copy(pw->p[i - 1].set),
+				    isl_set_copy(pw->p[i].set));
+		if (!set)
+			return FN(PW,free)(pw);
+		isl_set_free(pw->p[i].set);
+		FN(EL,free)(pw->p[i].FIELD);
+		isl_set_free(pw->p[i - 1].set);
+		pw->p[i - 1].set = set;
+		for (j = i + 1; j < pw->n; ++j)
+			pw->p[j - 1] = pw->p[j];
+		pw->n--;
+	}
+
+	return pw;
+}
+
+/* Coalesce the domains of "pw".
+ *
+ * Prior to the actual coalescing, first sort the pieces such that
+ * pieces with the same function value expression are combined
+ * into a single piece, the combined domain of which can then
+ * be coalesced.
+ */
+__isl_give PW *FN(PW,coalesce)(__isl_take PW *pw)
+{
+	int i;
+
+	pw = FN(PW,sort)(pw);
+	if (!pw)
+		return NULL;
+
+	for (i = 0; i < pw->n; ++i) {
 		pw->p[i].set = isl_set_coalesce(pw->p[i].set);
 		if (!pw->p[i].set)
 			goto error;
@@ -1884,23 +1928,21 @@ __isl_give PW *FN(PW,scale)(__isl_take PW *pw, isl_int v)
 	return FN(PW,mul_isl_int)(pw, v);
 }
 
-static int FN(PW,qsort_set_cmp)(const void *p1, const void *p2)
-{
-	isl_set *set1 = *(isl_set * const *)p1;
-	isl_set *set2 = *(isl_set * const *)p2;
-
-	return isl_set_plain_cmp(set1, set2);
-}
-
-/* We normalize in place, but if anything goes wrong we need
+/* Apply some normalization to "pw".
+ * In particular, sort the pieces according to their function value
+ * expressions, combining pairs of adjacent pieces with
+ * the same such expression, and then normalize the domains of the pieces.
+ *
+ * We normalize in place, but if anything goes wrong we need
  * to return NULL, so we need to make sure we don't change the
- * meaning of any possible other copies of map.
+ * meaning of any possible other copies of "pw".
  */
 __isl_give PW *FN(PW,normalize)(__isl_take PW *pw)
 {
-	int i, j;
+	int i;
 	isl_set *set;
 
+	pw = FN(PW,sort)(pw);
 	if (!pw)
 		return NULL;
 	for (i = 0; i < pw->n; ++i) {
@@ -1909,24 +1951,6 @@ __isl_give PW *FN(PW,normalize)(__isl_take PW *pw)
 			return FN(PW,free)(pw);
 		isl_set_free(pw->p[i].set);
 		pw->p[i].set = set;
-	}
-	qsort(pw->p, pw->n, sizeof(pw->p[0]), &FN(PW,qsort_set_cmp));
-	for (i = pw->n - 1; i >= 1; --i) {
-		if (!isl_set_plain_is_equal(pw->p[i - 1].set, pw->p[i].set))
-			continue;
-		if (!FN(EL,plain_is_equal)(pw->p[i - 1].FIELD, pw->p[i].FIELD))
-			continue;
-		set = isl_set_union(isl_set_copy(pw->p[i - 1].set),
-				    isl_set_copy(pw->p[i].set));
-		if (!set)
-			return FN(PW,free)(pw);
-		isl_set_free(pw->p[i].set);
-		FN(EL,free)(pw->p[i].FIELD);
-		isl_set_free(pw->p[i - 1].set);
-		pw->p[i - 1].set = set;
-		for (j = i + 1; j < pw->n; ++j)
-			pw->p[j - 1] = pw->p[j];
-		pw->n--;
 	}
 
 	return pw;

@@ -784,6 +784,7 @@ IRMemoryMap::GetMemoryData (DataExtractor &extractor, lldb::addr_t process_addre
                     return;
                 }
             }
+            break;
         case eAllocationPolicyHostOnly:
             if (!allocation.m_data.GetByteSize())
             {

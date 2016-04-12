@@ -53,6 +53,9 @@ public:
     case delta32ToGOT:
       canBypassGOT = false;
       return true;
+    case unwindCIEToPersonalityFunction:
+      canBypassGOT = false;
+      return true;
     case imageOffsetGot:
       canBypassGOT = false;
       return true;
@@ -108,6 +111,10 @@ public:
     return imageOffsetGot;
   }
 
+  Reference::KindValue unwindRefToPersonalityFunctionKind() override {
+    return unwindCIEToPersonalityFunction;
+  }
+
   Reference::KindValue unwindRefToCIEKind() override {
     return negDelta32;
   }
@@ -128,16 +135,16 @@ public:
     return 0x03000000;
   }
 
-  std::error_code getReferenceInfo(const normalized::Relocation &reloc,
-                                   const DefinedAtom *inAtom,
-                                   uint32_t offsetInAtom,
-                                   uint64_t fixupAddress, bool isBig,
-                                   FindAtomBySectionAndAddress atomFromAddress,
-                                   FindAtomBySymbolIndex atomFromSymbolIndex,
-                                   Reference::KindValue *kind,
-                                   const lld::Atom **target,
-                                   Reference::Addend *addend) override;
-  std::error_code
+  llvm::Error getReferenceInfo(const normalized::Relocation &reloc,
+                               const DefinedAtom *inAtom,
+                               uint32_t offsetInAtom,
+                               uint64_t fixupAddress, bool isBig,
+                               FindAtomBySectionAndAddress atomFromAddress,
+                               FindAtomBySymbolIndex atomFromSymbolIndex,
+                               Reference::KindValue *kind,
+                               const lld::Atom **target,
+                               Reference::Addend *addend) override;
+  llvm::Error
       getPairReferenceInfo(const normalized::Relocation &reloc1,
                            const normalized::Relocation &reloc2,
                            const DefinedAtom *inAtom,
@@ -157,7 +164,7 @@ public:
                            FindAddressForAtom findAddress,
                            FindAddressForAtom findSectionAddress,
                            uint64_t imageBaseAddress,
-                           uint8_t *atomContentBuffer) override;
+                    llvm::MutableArrayRef<uint8_t> atomContentBuffer) override;
 
   void appendSectionRelocations(const DefinedAtom &atom,
                                 uint64_t atomSectionOffset,
@@ -201,6 +208,9 @@ private:
     imageOffset,           /// Location contains offset of atom in final image
     imageOffsetGot,        /// Location contains offset of GOT entry for atom in
                            /// final image (typically personality function).
+    unwindCIEToPersonalityFunction,   /// Nearly delta32ToGOT, but cannot be
+                           /// rematerialized in relocatable object
+                           /// (yay for implicit contracts!).
     unwindFDEToFunction,   /// Nearly delta64, but cannot be rematerialized in
                            /// relocatable object (yay for implicit contracts!).
     unwindInfoToEhFrame,   /// Fix low 24 bits of compact unwind encoding to
@@ -248,6 +258,7 @@ const Registry::KindStrings ArchHandler_arm64::_sKindStrings[] = {
   LLD_KIND_STRING_ENTRY(lazyImmediateLocation),
   LLD_KIND_STRING_ENTRY(imageOffset),
   LLD_KIND_STRING_ENTRY(imageOffsetGot),
+  LLD_KIND_STRING_ENTRY(unwindCIEToPersonalityFunction),
   LLD_KIND_STRING_ENTRY(unwindFDEToFunction),
   LLD_KIND_STRING_ENTRY(unwindInfoToEhFrame),
 
@@ -364,7 +375,7 @@ uint32_t ArchHandler_arm64::setImm12(uint32_t instruction, uint32_t offset) {
   return (instruction & 0xFFC003FF) | imm12;
 }
 
-std::error_code ArchHandler_arm64::getReferenceInfo(
+llvm::Error ArchHandler_arm64::getReferenceInfo(
     const Relocation &reloc, const DefinedAtom *inAtom, uint32_t offsetInAtom,
     uint64_t fixupAddress, bool isBig,
     FindAtomBySectionAndAddress atomFromAddress,
@@ -378,56 +389,56 @@ std::error_code ArchHandler_arm64::getReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return std::error_code();
+    return llvm::Error();
   case ARM64_RELOC_PAGE21             | rPcRel | rExtern | rLength4:
     // ex: adrp x1, _foo@PAGE
     *kind = page21;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return std::error_code();
+    return llvm::Error();
   case ARM64_RELOC_PAGEOFF12                   | rExtern | rLength4:
     // ex: ldr x0, [x1, _foo@PAGEOFF]
     *kind = offset12KindFromInstruction(*(const little32_t *)fixupContent);
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return std::error_code();
+    return llvm::Error();
   case ARM64_RELOC_GOT_LOAD_PAGE21    | rPcRel | rExtern | rLength4:
     // ex: adrp x1, _foo@GOTPAGE
     *kind = gotPage21;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return std::error_code();
+    return llvm::Error();
   case ARM64_RELOC_GOT_LOAD_PAGEOFF12          | rExtern | rLength4:
     // ex: ldr x0, [x1, _foo@GOTPAGEOFF]
     *kind = gotOffset12;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return std::error_code();
+    return llvm::Error();
   case ARM64_RELOC_TLVP_LOAD_PAGE21   | rPcRel | rExtern | rLength4:
     // ex: adrp x1, _foo@TLVPAGE
     *kind = tlvPage21;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return std::error_code();
+    return llvm::Error();
   case ARM64_RELOC_TLVP_LOAD_PAGEOFF12         | rExtern | rLength4:
     // ex: ldr x0, [x1, _foo@TLVPAGEOFF]
     *kind = tlvOffset12;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return std::error_code();
+    return llvm::Error();
   case ARM64_RELOC_UNSIGNED                    | rExtern | rLength8:
     // ex: .quad _foo + N
     *kind = pointer64;
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = *(const little64_t *)fixupContent;
-    return std::error_code();
+    return llvm::Error();
   case ARM64_RELOC_UNSIGNED                              | rLength8:
      // ex: .quad Lfoo + N
      *kind = pointer64;
@@ -439,27 +450,33 @@ std::error_code ArchHandler_arm64::getReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return std::error_code();
+    return llvm::Error();
   case ARM64_RELOC_POINTER_TO_GOT     | rPcRel | rExtern | rLength4:
     // ex: .long _foo@GOT - .
-    *kind = delta32ToGOT;
+
+    // If we are in an .eh_frame section, then the kind of the relocation should
+    // not be delta32ToGOT.  It may instead be unwindCIEToPersonalityFunction.
+    if (inAtom->contentType() == DefinedAtom::typeCFI)
+      *kind = unwindCIEToPersonalityFunction;
+    else
+      *kind = delta32ToGOT;
+
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
-    return std::error_code();
+    return llvm::Error();
   default:
-    return make_dynamic_error_code("unsupported arm64 relocation type");
+    return llvm::make_error<GenericError>("unsupported arm64 relocation type");
   }
 }
 
-std::error_code ArchHandler_arm64::getPairReferenceInfo(
+llvm::Error ArchHandler_arm64::getPairReferenceInfo(
     const normalized::Relocation &reloc1, const normalized::Relocation &reloc2,
     const DefinedAtom *inAtom, uint32_t offsetInAtom, uint64_t fixupAddress,
     bool swap, bool scatterable, FindAtomBySectionAndAddress atomFromAddress,
     FindAtomBySymbolIndex atomFromSymbolIndex, Reference::KindValue *kind,
     const lld::Atom **target, Reference::Addend *addend) {
   const uint8_t *fixupContent = &inAtom->rawContent()[offsetInAtom];
-  const uint32_t *cont32 = reinterpret_cast<const uint32_t *>(fixupContent);
   switch (relocPattern(reloc1) << 16 | relocPattern(reloc2)) {
   case ((ARM64_RELOC_ADDEND                                | rLength4) << 16 |
          ARM64_RELOC_BRANCH26           | rPcRel | rExtern | rLength4):
@@ -468,7 +485,7 @@ std::error_code ArchHandler_arm64::getPairReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc2.symbol, target))
       return ec;
     *addend = reloc1.symbol;
-    return std::error_code();
+    return llvm::Error();
   case ((ARM64_RELOC_ADDEND                                | rLength4) << 16 |
          ARM64_RELOC_PAGE21             | rPcRel | rExtern | rLength4):
     // ex: adrp x1, _foo@PAGE
@@ -476,26 +493,36 @@ std::error_code ArchHandler_arm64::getPairReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc2.symbol, target))
       return ec;
     *addend = reloc1.symbol;
-    return std::error_code();
+    return llvm::Error();
   case ((ARM64_RELOC_ADDEND                                | rLength4) << 16 |
-         ARM64_RELOC_PAGEOFF12                   | rExtern | rLength4):
+         ARM64_RELOC_PAGEOFF12                   | rExtern | rLength4): {
     // ex: ldr w0, [x1, _foo@PAGEOFF]
-    *kind = offset12KindFromInstruction(*cont32);
+    uint32_t cont32 = (int32_t)*(const little32_t *)fixupContent;
+    *kind = offset12KindFromInstruction(cont32);
     if (auto ec = atomFromSymbolIndex(reloc2.symbol, target))
       return ec;
     *addend = reloc1.symbol;
-    return std::error_code();
+    return llvm::Error();
+  }
   case ((ARM64_RELOC_SUBTRACTOR                  | rExtern | rLength8) << 16 |
          ARM64_RELOC_UNSIGNED                    | rExtern | rLength8):
     // ex: .quad _foo - .
-    *kind = delta64;
     if (auto ec = atomFromSymbolIndex(reloc2.symbol, target))
       return ec;
+
+    // If we are in an .eh_frame section, then the kind of the relocation should
+    // not be delta64.  It may instead be unwindFDEToFunction.
+    if (inAtom->contentType() == DefinedAtom::typeCFI)
+      *kind = unwindFDEToFunction;
+    else
+      *kind = delta64;
+
     // The offsets of the 2 relocations must match
     if (reloc1.offset != reloc2.offset)
-      return make_dynamic_error_code("paired relocs must have the same offset");
+      return llvm::make_error<GenericError>(
+                                    "paired relocs must have the same offset");
     *addend = (int64_t)*(const little64_t *)fixupContent + offsetInAtom;
-    return std::error_code();
+    return llvm::Error();
   case ((ARM64_RELOC_SUBTRACTOR                  | rExtern | rLength4) << 16 |
          ARM64_RELOC_UNSIGNED                    | rExtern | rLength4):
     // ex: .quad _foo - .
@@ -503,18 +530,19 @@ std::error_code ArchHandler_arm64::getPairReferenceInfo(
     if (auto ec = atomFromSymbolIndex(reloc2.symbol, target))
       return ec;
     *addend = (int32_t)*(const little32_t *)fixupContent + offsetInAtom;
-    return std::error_code();
+    return llvm::Error();
   default:
-    return make_dynamic_error_code("unsupported arm64 relocation pair");
+    return llvm::make_error<GenericError>("unsupported arm64 relocation pair");
   }
 }
 
 void ArchHandler_arm64::generateAtomContent(
     const DefinedAtom &atom, bool relocatable, FindAddressForAtom findAddress,
     FindAddressForAtom findSectionAddress, uint64_t imageBaseAddress,
-    uint8_t *atomContentBuffer) {
+    llvm::MutableArrayRef<uint8_t> atomContentBuffer) {
   // Copy raw bytes.
-  memcpy(atomContentBuffer, atom.rawContent().data(), atom.size());
+  std::copy(atom.rawContent().begin(), atom.rawContent().end(),
+            atomContentBuffer.begin());
   // Apply fix-ups.
 #ifndef NDEBUG
   if (atom.begin() != atom.end()) {
@@ -629,6 +657,7 @@ void ArchHandler_arm64::applyFixupFinal(const Reference &ref, uint8_t *loc,
     return;
   case delta32:
   case delta32ToGOT:
+  case unwindCIEToPersonalityFunction:
     *loc32 = (targetAddress - fixupAddress) + ref.addend();
     return;
   case negDelta32:
@@ -718,6 +747,13 @@ void ArchHandler_arm64::applyFixupRelocatable(const Reference &ref,
     return;
   case delta32ToGOT:
     *loc32 = inAtomAddress - fixupAddress;
+    return;
+  case unwindCIEToPersonalityFunction:
+    // We don't emit unwindCIEToPersonalityFunction in -r mode as they are
+    // implicitly generated from the data in the __eh_frame section.  So here we
+    // need to use the targetAddress so that we can generate the full relocation
+    // when we parse again later.
+    *loc32 = targetAddress - fixupAddress;
     return;
   case addOffset12:
     llvm_unreachable("lazy reference kind implies GOT pass was run");
@@ -841,6 +877,7 @@ void ArchHandler_arm64::appendSectionRelocations(
   case imageOffset:
   case imageOffsetGot:
     llvm_unreachable("deltas from mach_header can only be in final images");
+  case unwindCIEToPersonalityFunction:
   case unwindFDEToFunction:
   case unwindInfoToEhFrame:
   case negDelta32:

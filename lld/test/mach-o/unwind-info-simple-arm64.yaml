@@ -125,7 +125,7 @@ sections:
     section:         __compact_unwind
     type:            S_REGULAR
     attributes:      [  ]
-    alignment:       3
+    alignment:       8
     address:         0x00000000000000A8
     content:         [ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                        0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,

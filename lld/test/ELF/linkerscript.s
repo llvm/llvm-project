@@ -1,3 +1,9 @@
+# There is some bad quoting interaction between lit's internal shell, which is
+# implemented in Python, and the Cygwin implementations of the Unix utilities.
+# Avoid running these tests on Windows for now by requiring a real shell.
+
+# REQUIRES: shell
+
 # REQUIRES: x86
 # RUN: mkdir -p %t.dir
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t

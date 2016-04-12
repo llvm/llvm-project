@@ -5,17 +5,29 @@
 # RUN: llvm-readobj -s -r %tout | FileCheck -check-prefix=RELOC %s
 # REQUIRES: aarch64
 
-#Local-Dynamic to Initial-Exec relax creates no
-#RELOC:      Relocations [
-#RELOC-NEXT: ]
+# Initial-Exec to Local-Exec relax creates no dynamic relocations.
+# RELOC:      Relocations [
+# RELOC-NEXT: ]
 
 # TCB size = 0x16 and foo is first element from TLS register.
-#CHECK: Disassembly of section .text:
-#CHECK: _start:
-#CHECK:  11000:	00 00 a0 d2	movz	x0, #0, lsl #16
-#CHECK:  11004:	00 02 80 f2 	movk	x0, #0x10
+# CHECK: Disassembly of section .text:
+# CHECK: _start:
+# CHECK-NEXT: 11000:  00 00 a0 d2   movz   x0, #0, lsl #16
+# CHECK-NEXT: 11004:  80 02 80 f2   movk   x0, #0x14
+# CHECK-NEXT: 11008:  00 00 a0 d2   movz   x0, #0, lsl #16
+# CHECK-NEXT: 1100c:  00 02 80 f2   movk   x0, #0x10
+
+.section .tdata
+.align 2
+.type foo_local, %object
+.size foo_local, 4
+foo_local:
+.word 5
+.text
 
 .globl _start
 _start:
  adrp    x0, :gottprel:foo
  ldr     x0, [x0, :gottprel_lo12:foo]
+ adrp    x0, :gottprel:foo_local
+ ldr     x0, [x0, :gottprel_lo12:foo_local]

@@ -24,8 +24,35 @@
 using namespace llvm;
 using namespace polly;
 
-SCEVAffinator::SCEVAffinator(Scop *S)
-    : S(S), Ctx(S->getIslCtx()), R(S->getRegion()), SE(*S->getSE()),
+// The maximal number of basic sets we allow during the construction of a
+// piecewise affine function. More complex ones will result in very high
+// compile time.
+static int const MaxConjunctsInPwAff = 100;
+
+/// @brief Add the number of basic sets in @p Domain to @p User
+static isl_stat addNumBasicSets(isl_set *Domain, isl_aff *Aff, void *User) {
+  auto *NumBasicSets = static_cast<unsigned *>(User);
+  *NumBasicSets += isl_set_n_basic_set(Domain);
+  isl_set_free(Domain);
+  isl_aff_free(Aff);
+  return isl_stat_ok;
+}
+
+/// @brief Determine if @p PWA is to complex to continue
+///
+/// Note that @p PWA will be "free" (deallocated) if this function returns true,
+/// but not if this function returns false.
+static bool isToComplex(isl_pw_aff *PWA) {
+  unsigned NumBasicSets = 0;
+  isl_pw_aff_foreach_piece(PWA, addNumBasicSets, &NumBasicSets);
+  if (NumBasicSets <= MaxConjunctsInPwAff)
+    return false;
+  isl_pw_aff_free(PWA);
+  return true;
+}
+
+SCEVAffinator::SCEVAffinator(Scop *S, LoopInfo &LI)
+    : S(S), Ctx(S->getIslCtx()), R(S->getRegion()), SE(*S->getSE()), LI(LI),
       TD(R.getEntry()->getParent()->getParent()->getDataLayout()) {}
 
 SCEVAffinator::~SCEVAffinator() {
@@ -44,7 +71,8 @@ __isl_give isl_pw_aff *SCEVAffinator::getPwAff(const SCEV *Expr,
   } else
     NumIterators = 0;
 
-  S->addParams(getParamsInAffineExpr(&R, Expr, SE));
+  auto *Scope = LI.getLoopFor(BB);
+  S->addParams(getParamsInAffineExpr(&R, Scope, Expr, SE));
 
   return visit(Expr);
 }
@@ -232,6 +260,8 @@ __isl_give isl_pw_aff *SCEVAffinator::visitAddExpr(const SCEVAddExpr *Expr) {
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
     isl_pw_aff *NextSummand = visit(Expr->getOperand(i));
     Sum = isl_pw_aff_add(Sum, NextSummand);
+    if (isToComplex(Sum))
+      return nullptr;
   }
 
   return Sum;
@@ -291,6 +321,8 @@ __isl_give isl_pw_aff *SCEVAffinator::visitSMaxExpr(const SCEVSMaxExpr *Expr) {
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
     isl_pw_aff *NextOperand = visit(Expr->getOperand(i));
     Max = isl_pw_aff_max(Max, NextOperand);
+    if (isToComplex(Max))
+      return nullptr;
   }
 
   return Max;

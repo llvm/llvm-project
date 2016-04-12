@@ -10,14 +10,6 @@
 // All symbols are handled as SymbolBodies regardless of their types.
 // This file defines various types of SymbolBodies.
 //
-// File-scope symbols in ELF objects are the only exception of SymbolBody
-// instantiation. We will never create SymbolBodies for them for performance
-// reason. They are often represented as nullptrs. This is fine for symbol
-// resolution because the symbol table naturally cares only about
-// externally-visible symbols. For relocations, you have to deal with both
-// local and non-local functions, and we have two different functions
-// where we need them.
-//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLD_ELF_SYMBOLS_H
@@ -30,7 +22,7 @@
 #include "llvm/Object/ELF.h"
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 class ArchiveFile;
 class InputFile;
@@ -39,10 +31,6 @@ template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class SharedFile;
-
-// Initializes global objects defined in this file.
-// Called at the beginning of main().
-void initSymbols();
 
 // Returns a demangled C++ symbol name. If Name is not a mangled
 // name or the system does not provide __cxa_demangle function,
@@ -63,7 +51,6 @@ public:
     DefinedFirst,
     DefinedRegularKind = DefinedFirst,
     SharedKind,
-    DefinedElfLast = SharedKind,
     DefinedCommonKind,
     DefinedBitcodeKind,
     DefinedSyntheticKind,
@@ -75,7 +62,7 @@ public:
 
   Kind kind() const { return static_cast<Kind>(SymbolKind); }
 
-  bool isWeak() const { return IsWeak; }
+  bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
   bool isUndefined() const {
     return SymbolKind == UndefinedKind || SymbolKind == UndefinedElfKind;
   }
@@ -83,34 +70,43 @@ public:
   bool isCommon() const { return SymbolKind == DefinedCommonKind; }
   bool isLazy() const { return SymbolKind == LazyKind; }
   bool isShared() const { return SymbolKind == SharedKind; }
+  bool isLocal() const { return Binding == llvm::ELF::STB_LOCAL; }
   bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
-  bool isTls() const { return IsTls; }
-  bool isFunc() const { return IsFunc; }
+  bool isPreemptible() const;
 
   // Returns the symbol name.
-  StringRef getName() const { return Name; }
+  StringRef getName() const {
+    assert(!isLocal());
+    return StringRef(Name.S, Name.Len);
+  }
+  uint32_t getNameOffset() const {
+    assert(isLocal());
+    return NameOffset;
+  }
 
-  uint8_t getVisibility() const { return Visibility; }
+  uint8_t getVisibility() const { return StOther & 0x3; }
 
   unsigned DynsymIndex = 0;
   uint32_t GlobalDynIndex = -1;
   uint32_t GotIndex = -1;
   uint32_t GotPltIndex = -1;
   uint32_t PltIndex = -1;
+  uint32_t ThunkIndex = -1;
   bool hasGlobalDynIndex() { return GlobalDynIndex != uint32_t(-1); }
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
+  bool hasThunk() const { return ThunkIndex != -1U; }
+
+  void setUsedInRegularObj() { IsUsedInRegularObj = true; }
 
   template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getVA() const;
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getGotVA() const;
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getGotPltVA() const;
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getPltVA() const;
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getSize() const;
+  typename ELFT::uint getVA(typename ELFT::uint Addend = 0) const;
+
+  template <class ELFT> typename ELFT::uint getGotVA() const;
+  template <class ELFT> typename ELFT::uint getGotPltVA() const;
+  template <class ELFT> typename ELFT::uint getPltVA() const;
+  template <class ELFT> typename ELFT::uint getThunkVA() const;
+  template <class ELFT> typename ELFT::uint getSize() const;
 
   // A SymbolBody has a backreference to a Symbol. Originally they are
   // doubly-linked. A backreference will never change. But the pointer
@@ -119,26 +115,28 @@ public:
   // has chosen the object among other objects having the same name,
   // you can access P->Backref->Body to get the resolver's result.
   void setBackref(Symbol *P) { Backref = P; }
-  SymbolBody *repl() { return Backref ? Backref->Body : this; }
-  Symbol *getSymbol() { return Backref; }
+  SymbolBody &repl() { return Backref ? *Backref->Body : *this; }
+  Symbol *getSymbol() const { return Backref; }
 
   // Decides which symbol should "win" in the symbol table, this or
   // the Other. Returns 1 if this wins, -1 if the Other wins, or 0 if
   // they are duplicate (conflicting) symbols.
-  template <class ELFT> int compare(SymbolBody *Other);
+  int compare(SymbolBody *Other);
 
 protected:
-  SymbolBody(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
-             bool IsTls, bool IsFunc)
-      : SymbolKind(K), IsWeak(IsWeak), Visibility(Visibility),
-        MustBeInDynSym(false), NeedsCopyOrPltAddr(false), IsTls(IsTls),
-        IsFunc(IsFunc), Name(Name) {
-    IsUsedInRegularObj = K != SharedKind && K != LazyKind;
+  SymbolBody(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,
+             uint8_t Type)
+      : SymbolKind(K), MustBeInDynSym(false), NeedsCopyOrPltAddr(false),
+        Type(Type), Binding(Binding), StOther(StOther),
+        Name({Name.data(), Name.size()}) {
+    assert(!isLocal());
+    IsUsedInRegularObj =
+        K != SharedKind && K != LazyKind && K != DefinedBitcodeKind;
   }
 
+  SymbolBody(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type);
+
   const unsigned SymbolKind : 8;
-  unsigned IsWeak : 1;
-  unsigned Visibility : 2;
 
   // True if the symbol was used for linking and thus need to be
   // added to the output file's symbol table. It is usually true,
@@ -154,50 +152,51 @@ public:
   // symbol or if the symbol should point to its plt entry.
   unsigned NeedsCopyOrPltAddr : 1;
 
-protected:
-  unsigned IsTls : 1;
-  unsigned IsFunc : 1;
+  // The following fields have the same meaning as the ELF symbol attributes.
+  uint8_t Type;    // symbol type
+  uint8_t Binding; // symbol binding
+  uint8_t StOther; // st_other field value
 
-  StringRef Name;
+  bool isSection() const { return Type == llvm::ELF::STT_SECTION; }
+  bool isTls() const { return Type == llvm::ELF::STT_TLS; }
+  bool isFunc() const { return Type == llvm::ELF::STT_FUNC; }
+  bool isGnuIFunc() const { return Type == llvm::ELF::STT_GNU_IFUNC; }
+  bool isObject() const { return Type == llvm::ELF::STT_OBJECT; }
+  bool isFile() const { return Type == llvm::ELF::STT_FILE; }
+  void setVisibility(uint8_t V) { StOther = (StOther & ~0x3) | V; }
+
+protected:
+  struct Str {
+    const char *S;
+    size_t Len;
+  };
+  union {
+    Str Name;
+    uint32_t NameOffset;
+  };
   Symbol *Backref = nullptr;
 };
 
 // The base class for any defined symbols.
 class Defined : public SymbolBody {
 public:
-  Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility, bool IsTls,
-          bool IsFunction);
+  Defined(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,
+          uint8_t Type);
+  Defined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type);
   static bool classof(const SymbolBody *S) { return S->isDefined(); }
 };
 
-// Any defined symbol from an ELF file.
-template <class ELFT> class DefinedElf : public Defined {
-protected:
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-
-public:
-  DefinedElf(Kind K, StringRef N, const Elf_Sym &Sym)
-      : Defined(K, N, Sym.getBinding() == llvm::ELF::STB_WEAK,
-                Sym.getVisibility(), Sym.getType() == llvm::ELF::STT_TLS,
-                Sym.getType() == llvm::ELF::STT_FUNC),
-        Sym(Sym) {}
-
-  const Elf_Sym &Sym;
-  static bool classof(const SymbolBody *S) {
-    return S->kind() <= DefinedElfLast;
-  }
-};
-
+// The defined symbol in LLVM bitcode files.
 class DefinedBitcode : public Defined {
 public:
-  DefinedBitcode(StringRef Name);
+  DefinedBitcode(StringRef Name, bool IsWeak, uint8_t StOther);
   static bool classof(const SymbolBody *S);
 };
 
 class DefinedCommon : public Defined {
 public:
-  DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment, bool IsWeak,
-                uint8_t Visibility);
+  DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment, uint8_t Binding,
+                uint8_t StOther, uint8_t Type);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedCommonKind;
@@ -208,28 +207,58 @@ public:
   uint64_t OffsetInBss;
 
   // The maximum alignment we have seen for this symbol.
-  uint64_t MaxAlignment;
+  uint64_t Alignment;
 
   uint64_t Size;
 };
 
 // Regular defined symbols read from object file symbol tables.
-template <class ELFT> class DefinedRegular : public DefinedElf<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
+template <class ELFT> class DefinedRegular : public Defined {
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::uint uintX_t;
 
 public:
-  DefinedRegular(StringRef N, const Elf_Sym &Sym,
+  DefinedRegular(StringRef Name, const Elf_Sym &Sym,
                  InputSectionBase<ELFT> *Section)
-      : DefinedElf<ELFT>(SymbolBody::DefinedRegularKind, N, Sym),
-        Section(Section) {}
+      : Defined(SymbolBody::DefinedRegularKind, Name, Sym.getBinding(),
+                Sym.st_other, Sym.getType()),
+        Value(Sym.st_value), Size(Sym.st_size),
+        Section(Section ? Section->Repl : NullInputSection) {}
+
+  DefinedRegular(const Elf_Sym &Sym, InputSectionBase<ELFT> *Section)
+      : Defined(SymbolBody::DefinedRegularKind, Sym.st_name, Sym.st_other,
+                Sym.getType()),
+        Value(Sym.st_value), Size(Sym.st_size),
+        Section(Section ? Section->Repl : NullInputSection) {
+    assert(isLocal());
+  }
+
+  DefinedRegular(StringRef Name, uint8_t Binding, uint8_t StOther)
+      : Defined(SymbolBody::DefinedRegularKind, Name, Binding, StOther,
+                llvm::ELF::STT_NOTYPE),
+        Value(0), Size(0), Section(NullInputSection) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedRegularKind;
   }
 
-  // If this is null, the symbol is absolute.
-  InputSectionBase<ELFT> *Section;
+  uintX_t Value;
+  uintX_t Size;
+
+  // The input section this symbol belongs to. Notice that this is
+  // a reference to a pointer. We are using two levels of indirections
+  // because of ICF. If ICF decides two sections need to be merged, it
+  // manipulates this Section pointers so that they point to the same
+  // section. This is a bit tricky, so be careful to not be confused.
+  // If this is null, the symbol is an absolute symbol.
+  InputSectionBase<ELFT> *&Section;
+
+private:
+  static InputSectionBase<ELFT> *NullInputSection;
 };
+
+template <class ELFT>
+InputSectionBase<ELFT> *DefinedRegular<ELFT>::NullInputSection;
 
 // DefinedSynthetic is a class to represent linker-generated ELF symbols.
 // The difference from the regular symbol is that DefinedSynthetic symbols
@@ -237,14 +266,17 @@ public:
 // takes an output section to calculate output VA, etc.
 template <class ELFT> class DefinedSynthetic : public Defined {
 public:
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
-  DefinedSynthetic(StringRef N, uintX_t Value,
-                   OutputSectionBase<ELFT> &Section);
+  typedef typename ELFT::uint uintX_t;
+  DefinedSynthetic(StringRef N, uintX_t Value, OutputSectionBase<ELFT> &Section,
+                   uint8_t StOther);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedSyntheticKind;
   }
+
+  // Special value designates that the symbol 'points'
+  // to the end of the section.
+  static const uintX_t SectionEnd = uintX_t(-1);
 
   uintX_t Value;
   const OutputSectionBase<ELFT> &Section;
@@ -256,11 +288,12 @@ class Undefined : public SymbolBody {
   bool CanKeepUndefined;
 
 protected:
-  Undefined(Kind K, StringRef N, bool IsWeak, uint8_t Visibility, bool IsTls);
+  Undefined(Kind K, StringRef N, uint8_t Binding, uint8_t StOther,
+            uint8_t Type);
+  Undefined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type);
 
 public:
-  Undefined(StringRef N, bool IsWeak, uint8_t Visibility,
-            bool CanKeepUndefined);
+  Undefined(StringRef N, bool IsWeak, uint8_t StOther, bool CanKeepUndefined);
 
   static bool classof(const SymbolBody *S) { return S->isUndefined(); }
 
@@ -268,20 +301,23 @@ public:
 };
 
 template <class ELFT> class UndefinedElf : public Undefined {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
+  typedef typename ELFT::uint uintX_t;
+  typedef typename ELFT::Sym Elf_Sym;
 
 public:
   UndefinedElf(StringRef N, const Elf_Sym &Sym);
-  const Elf_Sym &Sym;
+  UndefinedElf(const Elf_Sym &Sym);
+
+  uintX_t Size;
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::UndefinedElfKind;
   }
 };
 
-template <class ELFT> class SharedSymbol : public DefinedElf<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+template <class ELFT> class SharedSymbol : public Defined {
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::uint uintX_t;
 
 public:
   static bool classof(const SymbolBody *S) {
@@ -289,14 +325,17 @@ public:
   }
 
   SharedSymbol(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym)
-      : DefinedElf<ELFT>(SymbolBody::SharedKind, Name, Sym), File(F) {}
+      : Defined(SymbolBody::SharedKind, Name, Sym.getBinding(), Sym.st_other,
+                Sym.getType()),
+        File(F), Sym(Sym) {}
 
   SharedFile<ELFT> *File;
+  const Elf_Sym &Sym;
 
   // OffsetInBss is significant only when needsCopy() is true.
   uintX_t OffsetInBss = 0;
 
-  bool needsCopy() const { return this->NeedsCopyOrPltAddr && !this->IsFunc; }
+  bool needsCopy() const { return this->NeedsCopyOrPltAddr && !this->isFunc(); }
 };
 
 // This class represents a symbol defined in an archive file. It is
@@ -307,8 +346,8 @@ public:
 class Lazy : public SymbolBody {
 public:
   Lazy(ArchiveFile *F, const llvm::object::Archive::Symbol S)
-      : SymbolBody(LazyKind, S.getName(), false, llvm::ELF::STV_DEFAULT,
-                   /*IsTls*/ false, /*IsFunction*/ false),
+      : SymbolBody(LazyKind, S.getName(), llvm::ELF::STB_GLOBAL,
+                   llvm::ELF::STV_DEFAULT, /* Type */ 0),
         File(F), Sym(S) {}
 
   static bool classof(const SymbolBody *S) { return S->kind() == LazyKind; }
@@ -317,44 +356,46 @@ public:
   // was already returned.
   std::unique_ptr<InputFile> getMember();
 
-  void setWeak() { IsWeak = true; }
-  void setUsedInRegularObj() { IsUsedInRegularObj = true; }
-
 private:
   ArchiveFile *File;
   const llvm::object::Archive::Symbol Sym;
 };
 
 // Some linker-generated symbols need to be created as
-// DefinedRegular symbols, so they need Elf_Sym symbols.
-// Here we allocate such Elf_Sym symbols statically.
+// DefinedRegular symbols.
 template <class ELFT> struct ElfSym {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
+  // The content for _etext and etext symbols.
+  static DefinedRegular<ELFT> *Etext;
+  static DefinedRegular<ELFT> *Etext2;
 
-  // Used to represent an undefined symbol which we don't want to add to the
-  // output file's symbol table. It has weak binding and can be substituted.
-  static Elf_Sym Ignored;
+  // The content for _edata and edata symbols.
+  static DefinedRegular<ELFT> *Edata;
+  static DefinedRegular<ELFT> *Edata2;
 
   // The content for _end and end symbols.
-  static Elf_Sym End;
+  static DefinedRegular<ELFT> *End;
+  static DefinedRegular<ELFT> *End2;
 
   // The content for _gp symbol for MIPS target.
-  static Elf_Sym MipsGp;
+  static DefinedRegular<ELFT> *MipsGp;
 
   // __rel_iplt_start/__rel_iplt_end for signaling
   // where R_[*]_IRELATIVE relocations do live.
-  static Elf_Sym RelaIpltStart;
-  static Elf_Sym RelaIpltEnd;
+  static DefinedRegular<ELFT> *RelaIpltStart;
+  static DefinedRegular<ELFT> *RelaIpltEnd;
 };
 
-template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::Ignored;
-template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::End;
-template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::MipsGp;
-template <class ELFT>
-typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::RelaIpltStart;
-template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::RelaIpltEnd;
+template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Etext;
+template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Etext2;
+template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Edata;
+template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Edata2;
+template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::End;
+template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::End2;
+template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::MipsGp;
+template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::RelaIpltStart;
+template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::RelaIpltEnd;
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

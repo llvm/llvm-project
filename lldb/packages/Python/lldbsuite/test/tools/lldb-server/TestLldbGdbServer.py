@@ -246,6 +246,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.inferior_print_exit()
 
     @llgs_test
+    @expectedFlakeyLinux("llvm.org/pr25652")
     def test_inferior_print_exit_llgs(self):
         self.init_llgs_test()
         self.build()
@@ -1233,6 +1234,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.software_breakpoint_set_and_remove_work()
 
     @llgs_test
+    @expectedFlakeyLinux("llvm.org/pr25652")
     def test_software_breakpoint_set_and_remove_work_llgs(self):
         self.init_llgs_test()
         self.build()

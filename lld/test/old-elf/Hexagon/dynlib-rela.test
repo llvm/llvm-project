@@ -1,9 +1,0 @@
-# Tests that the relocation sections have the right alignment.
-RUN: lld -flavor old-gnu -target hexagon %p/Inputs/use-shared.hexagon -shared -o %t1
-RUN: llvm-readobj -sections %t1 > %t2
-RUN: FileCheck -check-prefix=SECTIONS %s < %t2
-
-SECTIONS:  Section {
-SECTIONS:    Name: .rela.plt (23)
-SECTIONS:    AddressAlignment: 4
-SECTIONS:  }

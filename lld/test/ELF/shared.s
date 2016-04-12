@@ -144,6 +144,17 @@
 // CHECK-NEXT:     Section: Undefined
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
+// CHECK-NEXT:     Name: _DYNAMIC
+// CHECK-NEXT:     Value: 0x12000
+// CHECK-NEXT:     Size: 0
+// CHECK-NEXT:     Binding: Local
+// CHECK-NEXT:     Type: None
+// CHECK-NEXT:     Other [ (0x2)
+// CHECK-NEXT:       STV_HIDDEN
+// CHECK-NEXT:     ]
+// CHECK-NEXT:     Section: .dynamic
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: _start
 // CHECK-NEXT:     Value: 0x11000
 // CHECK-NEXT:     Size: 0
@@ -291,5 +302,5 @@
 
 .global _start
 _start:
-.long bar
-.long zed
+.long bar@GOT
+.long zed@GOT

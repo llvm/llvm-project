@@ -39,7 +39,18 @@ namespace
 
 std::atomic<bool> Timer::g_quiet(true);
 std::atomic<unsigned> Timer::g_display_depth(0);
-std::mutex Timer::g_file_mutex;
+static std::mutex &
+GetFileMutex()
+{
+    static std::mutex *g_file_mutex_ptr = nullptr;
+    static std::once_flag g_once_flag;
+    std::call_once(g_once_flag,  []() {
+        // leaked on purpose to ensure this mutex works after main thread has run
+        // global C++ destructor chain
+        g_file_mutex_ptr = new std::mutex();
+    });
+    return *g_file_mutex_ptr;
+}
 
 
 static Mutex &
@@ -97,7 +108,7 @@ Timer::Timer (const char *category, const char *format, ...) :
     {
         if (g_quiet == false)
         {
-            std::lock_guard<std::mutex> lock(g_file_mutex);
+            std::lock_guard<std::mutex> lock(GetFileMutex());
 
             // Indent
             ::fprintf(stdout, "%*s", stack->m_depth * TIMER_INDENT_AMOUNT, "");
@@ -152,7 +163,7 @@ Timer::~Timer()
 
         if (g_quiet == false)
         {
-            std::lock_guard<std::mutex> lock(g_file_mutex);
+            std::lock_guard<std::mutex> lock(GetFileMutex());
             ::fprintf(stdout, "%*s%.9f sec (%.9f sec)\n", (stack->m_depth - 1) * TIMER_INDENT_AMOUNT, "",
                       total_nsec / 1000000000.0, timer_nsec / 1000000000.0);
         }

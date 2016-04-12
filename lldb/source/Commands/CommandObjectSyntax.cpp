@@ -7,15 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CommandObjectSyntax.h"
-
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "CommandObjectSyntax.h"
+#include "CommandObjectHelp.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/Options.h"
-
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
@@ -47,10 +46,7 @@ CommandObjectSyntax::CommandObjectSyntax (CommandInterpreter &interpreter) :
     m_arguments.push_back (arg);
 }
 
-CommandObjectSyntax::~CommandObjectSyntax()
-{
-}
-
+CommandObjectSyntax::~CommandObjectSyntax() = default;
 
 bool
 CommandObjectSyntax::DoExecute (Args& command, CommandReturnObject &result)
@@ -82,10 +78,10 @@ CommandObjectSyntax::DoExecute (Args& command, CommandReturnObject &result)
             }
         }
         
-        if (all_okay && (cmd_obj != NULL))
+        if (all_okay && (cmd_obj != nullptr))
         {
             Stream &output_strm = result.GetOutputStream();
-            if (cmd_obj->GetOptions() != NULL)
+            if (cmd_obj->GetOptions() != nullptr)
             {
                 output_strm.Printf ("\nSyntax: %s\n", cmd_obj->GetSyntax());
                 output_strm.Printf ("(Try 'help %s' for more information on command options syntax.)\n",
@@ -102,8 +98,17 @@ CommandObjectSyntax::DoExecute (Args& command, CommandReturnObject &result)
         {
             std::string cmd_string;
             command.GetCommandString (cmd_string);
-            result.AppendErrorWithFormat ("'%s' is not a known command.\n", cmd_string.c_str());
-            result.AppendError ("Try 'help' to see a current list of commands.");
+
+            StreamString error_msg_stream;
+            const bool generate_apropos = true;
+            const bool generate_type_lookup = false;
+            CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(&error_msg_stream,
+                                                                    cmd_string.c_str(),
+                                                                    nullptr,
+                                                                    nullptr,
+                                                                    generate_apropos,
+                                                                    generate_type_lookup);
+            result.AppendErrorWithFormat ("%s", error_msg_stream.GetData());
             result.SetStatus (eReturnStatusFailed);
         }
     }
