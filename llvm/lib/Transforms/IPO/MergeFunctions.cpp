@@ -921,15 +921,6 @@ int FunctionComparator::cmpOperations(const Instruction *L,
                            R->getRawSubclassOptionalData()))
     return Res;
 
-  if (const AllocaInst *AI = dyn_cast<AllocaInst>(L)) {
-    if (int Res = cmpTypes(AI->getAllocatedType(),
-                           cast<AllocaInst>(R)->getAllocatedType()))
-      return Res;
-    if (int Res =
-            cmpNumbers(AI->getAlignment(), cast<AllocaInst>(R)->getAlignment()))
-      return Res;
-  }
-
   // We have two instructions of identical opcode and #operands.  Check to see
   // if all operands are the same type
   for (unsigned i = 0, e = L->getNumOperands(); i != e; ++i) {
@@ -939,6 +930,12 @@ int FunctionComparator::cmpOperations(const Instruction *L,
   }
 
   // Check special state that is a part of some instructions.
+  if (const AllocaInst *AI = dyn_cast<AllocaInst>(L)) {
+    if (int Res = cmpTypes(AI->getAllocatedType(),
+                           cast<AllocaInst>(R)->getAllocatedType()))
+      return Res;
+    return cmpNumbers(AI->getAlignment(), cast<AllocaInst>(R)->getAlignment());
+  }
   if (const LoadInst *LI = dyn_cast<LoadInst>(L)) {
     if (int Res = cmpNumbers(LI->isVolatile(), cast<LoadInst>(R)->isVolatile()))
       return Res;

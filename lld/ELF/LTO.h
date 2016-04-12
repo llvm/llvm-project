@@ -39,12 +39,15 @@ public:
   void add(BitcodeFile &F);
   std::unique_ptr<InputFile> compile();
 
+  BitcodeCompiler()
+      : Combined(new llvm::Module("ld-temp.o", Context)), Mover(*Combined) {}
+
 private:
   llvm::TargetMachine *getTargetMachine();
 
   llvm::LLVMContext Context;
-  llvm::Module Combined{"ld-temp.o", Context};
-  llvm::IRMover Mover{Combined};
+  std::unique_ptr<llvm::Module> Combined;
+  llvm::IRMover Mover;
   SmallString<0> OwningData;
   std::unique_ptr<MemoryBuffer> MB;
   llvm::StringSet<> InternalizedSyms;

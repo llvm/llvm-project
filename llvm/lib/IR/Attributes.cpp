@@ -32,6 +32,35 @@ using namespace llvm;
 // Attribute Construction Methods
 //===----------------------------------------------------------------------===//
 
+// allocsize has two integer arguments, but because they're both 32 bits, we can
+// pack them into one 64-bit value, at the cost of making said value
+// nonsensical.
+//
+// In order to do this, we need to reserve one value of the second (optional)
+// allocsize argument to signify "not present."
+LLVM_CONSTEXPR static unsigned AllocSizeNumElemsNotPresent = -1;
+
+static uint64_t packAllocSizeArgs(unsigned ElemSizeArg,
+                                  const Optional<unsigned> &NumElemsArg) {
+  assert((!NumElemsArg.hasValue() ||
+          *NumElemsArg != AllocSizeNumElemsNotPresent) &&
+         "Attempting to pack a reserved value");
+
+  return uint64_t(ElemSizeArg) << 32 |
+         NumElemsArg.getValueOr(AllocSizeNumElemsNotPresent);
+}
+
+static std::pair<unsigned, Optional<unsigned>>
+unpackAllocSizeArgs(uint64_t Num) {
+  unsigned NumElems = Num & std::numeric_limits<unsigned>::max();
+  unsigned ElemSizeArg = Num >> 32;
+
+  Optional<unsigned> NumElemsArg;
+  if (NumElems != AllocSizeNumElemsNotPresent)
+    NumElemsArg = NumElems;
+  return std::make_pair(ElemSizeArg, NumElemsArg);
+}
+
 Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
                          uint64_t Val) {
   LLVMContextImpl *pImpl = Context.pImpl;
@@ -99,6 +128,14 @@ Attribute Attribute::getWithDereferenceableOrNullBytes(LLVMContext &Context,
                                                        uint64_t Bytes) {
   assert(Bytes && "Bytes must be non-zero.");
   return get(Context, DereferenceableOrNull, Bytes);
+}
+
+Attribute
+Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
+                                const Optional<unsigned> &NumElemsArg) {
+  assert(!(ElemSizeArg == 0 && NumElemsArg && *NumElemsArg == 0) &&
+         "Invalid allocsize arguments -- given allocsize(0, 0)");
+  return get(Context, AllocSize, packAllocSizeArgs(ElemSizeArg, NumElemsArg));
 }
 
 //===----------------------------------------------------------------------===//
@@ -178,6 +215,12 @@ uint64_t Attribute::getDereferenceableOrNullBytes() const {
          "Trying to get dereferenceable bytes from "
          "non-dereferenceable attribute!");
   return pImpl->getValueAsInt();
+}
+
+std::pair<unsigned, Optional<unsigned>> Attribute::getAllocSizeArgs() const {
+  assert(hasAttribute(Attribute::AllocSize) &&
+         "Trying to get allocsize args from non-allocsize attribute");
+  return unpackAllocSizeArgs(pImpl->getValueAsInt());
 }
 
 std::string Attribute::getAsString(bool InAttrGrp) const {
@@ -311,6 +354,21 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
 
   if (hasAttribute(Attribute::DereferenceableOrNull))
     return AttrWithBytesToString("dereferenceable_or_null");
+
+  if (hasAttribute(Attribute::AllocSize)) {
+    unsigned ElemSize;
+    Optional<unsigned> NumElems;
+    std::tie(ElemSize, NumElems) = getAllocSizeArgs();
+
+    std::string Result = "allocsize(";
+    Result += utostr(ElemSize);
+    if (NumElems.hasValue()) {
+      Result += ',';
+      Result += utostr(*NumElems);
+    }
+    Result += ')';
+    return Result;
+  }
 
   // Convert target-dependent attributes to strings of the form:
   //
@@ -468,6 +526,9 @@ uint64_t AttributeImpl::getAttrMask(Attribute::AttrKind Val) {
   case Attribute::ArgMemOnly:
     llvm_unreachable("argmemonly attribute not supported in raw format");
     break;
+  case Attribute::AllocSize:
+    llvm_unreachable("allocsize not supported in raw format");
+    break;
   }
   llvm_unreachable("Unsupported attribute type");
 }
@@ -559,6 +620,14 @@ uint64_t AttributeSetNode::getDereferenceableOrNullBytes() const {
   return 0;
 }
 
+std::pair<unsigned, Optional<unsigned>>
+AttributeSetNode::getAllocSizeArgs() const {
+  for (iterator I = begin(), E = end(); I != E; ++I)
+    if (I->hasAttribute(Attribute::AllocSize))
+      return I->getAllocSizeArgs();
+  return std::make_pair(0, 0);
+}
+
 std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
   std::string Str;
   for (iterator I = begin(), E = end(); I != E; ++I) {
@@ -594,6 +663,8 @@ uint64_t AttributeSetImpl::Raw(unsigned Index) const {
         Mask |= (Log2_32(ASN->getStackAlignment()) + 1) << 26;
       else if (Kind == Attribute::Dereferenceable)
         llvm_unreachable("dereferenceable not supported in bit mask");
+      else if (Kind == Attribute::AllocSize)
+        llvm_unreachable("allocsize not supported in bit mask");
       else
         Mask |= AttributeImpl::getAttrMask(Kind);
     }
@@ -709,6 +780,11 @@ AttributeSet AttributeSet::get(LLVMContext &C, unsigned Index,
       Attr = Attribute::getWithDereferenceableOrNullBytes(
           C, B.getDereferenceableOrNullBytes());
       break;
+    case Attribute::AllocSize: {
+      auto A = B.getAllocSizeArgs();
+      Attr = Attribute::getWithAllocSizeArgs(C, A.first, A.second);
+      break;
+    }
     default:
       Attr = Attribute::get(C, Kind);
     }
@@ -960,6 +1036,15 @@ AttributeSet AttributeSet::addDereferenceableOrNullAttr(LLVMContext &C,
   return addAttributes(C, Index, AttributeSet::get(C, Index, B));
 }
 
+AttributeSet
+AttributeSet::addAllocSizeAttr(LLVMContext &C, unsigned Index,
+                               unsigned ElemSizeArg,
+                               const Optional<unsigned> &NumElemsArg) {
+  llvm::AttrBuilder B;
+  B.addAllocSizeAttr(ElemSizeArg, NumElemsArg);
+  return addAttributes(C, Index, AttributeSet::get(C, Index, B));
+}
+
 //===----------------------------------------------------------------------===//
 // AttributeSet Accessor Methods
 //===----------------------------------------------------------------------===//
@@ -1057,8 +1142,13 @@ uint64_t AttributeSet::getDereferenceableOrNullBytes(unsigned Index) const {
   return ASN ? ASN->getDereferenceableOrNullBytes() : 0;
 }
 
-std::string AttributeSet::getAsString(unsigned Index,
-                                      bool InAttrGrp) const {
+std::pair<unsigned, Optional<unsigned>>
+AttributeSet::getAllocSizeArgs(unsigned Index) const {
+  AttributeSetNode *ASN = getAttributes(Index);
+  return ASN ? ASN->getAllocSizeArgs() : std::make_pair(0, 0);
+}
+
+std::string AttributeSet::getAsString(unsigned Index, bool InAttrGrp) const {
   AttributeSetNode *ASN = getAttributes(Index);
   return ASN ? ASN->getAsString(InAttrGrp) : std::string("");
 }
@@ -1133,7 +1223,7 @@ LLVM_DUMP_METHOD void AttributeSet::dump() const {
 
 AttrBuilder::AttrBuilder(AttributeSet AS, unsigned Index)
     : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
-      DerefOrNullBytes(0) {
+      DerefOrNullBytes(0), AllocSizeArgs(0) {
   AttributeSetImpl *pImpl = AS.pImpl;
   if (!pImpl) return;
 
@@ -1152,12 +1242,13 @@ void AttrBuilder::clear() {
   Attrs.reset();
   TargetDepAttrs.clear();
   Alignment = StackAlignment = DerefBytes = DerefOrNullBytes = 0;
+  AllocSizeArgs = 0;
 }
 
 AttrBuilder &AttrBuilder::addAttribute(Attribute::AttrKind Val) {
   assert((unsigned)Val < Attribute::EndAttrKinds && "Attribute out of range!");
   assert(Val != Attribute::Alignment && Val != Attribute::StackAlignment &&
-         Val != Attribute::Dereferenceable &&
+         Val != Attribute::Dereferenceable && Val != Attribute::AllocSize &&
          "Adding integer attribute without adding a value!");
   Attrs[Val] = true;
   return *this;
@@ -1180,6 +1271,8 @@ AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
     DerefBytes = Attr.getDereferenceableBytes();
   else if (Kind == Attribute::DereferenceableOrNull)
     DerefOrNullBytes = Attr.getDereferenceableOrNullBytes();
+  else if (Kind == Attribute::AllocSize)
+    AllocSizeArgs = Attr.getValueAsInt();
   return *this;
 }
 
@@ -1200,6 +1293,8 @@ AttrBuilder &AttrBuilder::removeAttribute(Attribute::AttrKind Val) {
     DerefBytes = 0;
   else if (Val == Attribute::DereferenceableOrNull)
     DerefOrNullBytes = 0;
+  else if (Val == Attribute::AllocSize)
+    AllocSizeArgs = 0;
 
   return *this;
 }
@@ -1232,6 +1327,10 @@ AttrBuilder &AttrBuilder::removeAttribute(StringRef A) {
   if (I != TargetDepAttrs.end())
     TargetDepAttrs.erase(I);
   return *this;
+}
+
+std::pair<unsigned, Optional<unsigned>> AttrBuilder::getAllocSizeArgs() const {
+  return unpackAllocSizeArgs(AllocSizeArgs);
 }
 
 AttrBuilder &AttrBuilder::addAlignmentAttr(unsigned Align) {
@@ -1274,6 +1373,22 @@ AttrBuilder &AttrBuilder::addDereferenceableOrNullAttr(uint64_t Bytes) {
   return *this;
 }
 
+AttrBuilder &AttrBuilder::addAllocSizeAttr(unsigned ElemSize,
+                                           const Optional<unsigned> &NumElems) {
+  return addAllocSizeAttrFromRawRepr(packAllocSizeArgs(ElemSize, NumElems));
+}
+
+AttrBuilder &AttrBuilder::addAllocSizeAttrFromRawRepr(uint64_t RawArgs) {
+  // (0, 0) is our "not present" value, so we need to check for it here.
+  assert(RawArgs && "Invalid allocsize arguments -- given allocsize(0, 0)");
+
+  Attrs[Attribute::AllocSize] = true;
+  // Reuse existing machinery to store this as a single 64-bit integer so we can
+  // save a few bytes over using a pair<unsigned, Optional<unsigned>>.
+  AllocSizeArgs = RawArgs;
+  return *this;
+}
+
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   // FIXME: What if both have alignments, but they don't match?!
   if (!Alignment)
@@ -1287,6 +1402,9 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
 
   if (!DerefOrNullBytes)
     DerefOrNullBytes = B.DerefOrNullBytes;
+
+  if (!AllocSizeArgs)
+    AllocSizeArgs = B.AllocSizeArgs;
 
   Attrs |= B.Attrs;
 
@@ -1309,6 +1427,9 @@ AttrBuilder &AttrBuilder::remove(const AttrBuilder &B) {
 
   if (B.DerefOrNullBytes)
     DerefOrNullBytes = 0;
+
+  if (B.AllocSizeArgs)
+    AllocSizeArgs = 0;
 
   Attrs &= ~B.Attrs;
 
@@ -1388,7 +1509,8 @@ AttrBuilder &AttrBuilder::addRawValue(uint64_t Val) {
        I = Attribute::AttrKind(I + 1)) {
     if (I == Attribute::Dereferenceable ||
         I == Attribute::DereferenceableOrNull ||
-        I == Attribute::ArgMemOnly)
+        I == Attribute::ArgMemOnly ||
+        I == Attribute::AllocSize)
       continue;
     if (uint64_t A = (Val & AttributeImpl::getAttrMask(I))) {
       Attrs[I] = true;
@@ -1477,20 +1599,14 @@ static void adjustCallerSSPLevel(Function &Caller, const Function &Callee) {
                                               AttributeSet::FunctionIndex,
                                               B);
 
-  if (Callee.hasFnAttribute(Attribute::SafeStack)) {
-    Caller.removeAttributes(AttributeSet::FunctionIndex, OldSSPAttr);
-    Caller.addFnAttr(Attribute::SafeStack);
-  } else if (Callee.hasFnAttribute(Attribute::StackProtectReq) &&
-             !Caller.hasFnAttribute(Attribute::SafeStack)) {
+  if (Callee.hasFnAttribute(Attribute::StackProtectReq)) {
     Caller.removeAttributes(AttributeSet::FunctionIndex, OldSSPAttr);
     Caller.addFnAttr(Attribute::StackProtectReq);
   } else if (Callee.hasFnAttribute(Attribute::StackProtectStrong) &&
-             !Caller.hasFnAttribute(Attribute::SafeStack) &&
              !Caller.hasFnAttribute(Attribute::StackProtectReq)) {
     Caller.removeAttributes(AttributeSet::FunctionIndex, OldSSPAttr);
     Caller.addFnAttr(Attribute::StackProtectStrong);
   } else if (Callee.hasFnAttribute(Attribute::StackProtect) &&
-             !Caller.hasFnAttribute(Attribute::SafeStack) &&
              !Caller.hasFnAttribute(Attribute::StackProtectReq) &&
              !Caller.hasFnAttribute(Attribute::StackProtectStrong))
     Caller.addFnAttr(Attribute::StackProtect);

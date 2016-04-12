@@ -355,7 +355,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R10:
     case ARM::R11:
     case ARM::R12:
-      if (STI.isTargetDarwin()) {
+      if (STI.isTargetMachO()) {
         GPRCS2Size += 4;
         break;
       }
@@ -559,7 +559,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R10:
       case ARM::R11:
       case ARM::R12:
-        if (STI.isTargetDarwin())
+        if (STI.isTargetMachO())
           break;
         // fallthrough
       case ARM::R0:
@@ -592,7 +592,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R10:
       case ARM::R11:
       case ARM::R12:
-        if (STI.isTargetDarwin()) {
+        if (STI.isTargetMachO()) {
           unsigned DwarfReg =  MRI->getDwarfRegNum(Reg, true);
           unsigned Offset = MFI->getObjectOffset(FI);
           unsigned CFIIndex = MMI.addFrameInst(
@@ -904,7 +904,7 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
     unsigned LastReg = 0;
     for (; i != 0; --i) {
       unsigned Reg = CSI[i-1].getReg();
-      if (!(Func)(Reg, STI.isTargetDarwin())) continue;
+      if (!(Func)(Reg, STI.isTargetMachO())) continue;
 
       // D-registers in the aligned area DPRCS2 are NOT spilled here.
       if (Reg >= ARM::D8 && Reg < ARM::D8 + NumAlignedDPRCS2Regs)
@@ -991,7 +991,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
     bool DeleteRet = false;
     for (; i != 0; --i) {
       unsigned Reg = CSI[i-1].getReg();
-      if (!(Func)(Reg, STI.isTargetDarwin())) continue;
+      if (!(Func)(Reg, STI.isTargetMachO())) continue;
 
       // The aligned reloads from area DPRCS2 are not inserted here.
       if (Reg >= ARM::D8 && Reg < ARM::D8 + NumAlignedDPRCS2Regs)
@@ -1545,7 +1545,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     if (Spilled) {
       NumGPRSpills++;
 
-      if (!STI.isTargetDarwin()) {
+      if (!STI.isTargetMachO()) {
         if (Reg == ARM::LR)
           LRSpilled = true;
         CS1Spilled = true;
@@ -1567,7 +1567,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
         break;
       }
     } else {
-      if (!STI.isTargetDarwin()) {
+      if (!STI.isTargetMachO()) {
         UnspilledCS1GPRs.push_back(Reg);
         continue;
       }

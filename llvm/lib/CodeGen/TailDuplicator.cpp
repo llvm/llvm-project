@@ -801,8 +801,6 @@ bool TailDuplicator::tailDuplicate(MachineFunction &MF, bool IsSimple,
         // from PredBB.
         MachineInstr *MI = &*I++;
         processPHI(MI, TailBB, PrevBB, LocalVRMap, CopyInfos, UsedByPhi, true);
-        if (MI->getParent())
-          MI->eraseFromParent();
       }
 
       // Now copy the non-PHI instructions.

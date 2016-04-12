@@ -58,18 +58,109 @@ bool RegBankSelect::assignmentMatch(
 
 unsigned
 RegBankSelect::repairReg(unsigned Reg,
-                         const RegisterBankInfo::ValueMapping &ValMapping) {
+                         const RegisterBankInfo::ValueMapping &ValMapping,
+                         MachineInstr &DefUseMI, bool IsDef) {
   assert(ValMapping.BreakDown.size() == 1 &&
          "Support for complex break down not supported yet");
   const RegisterBankInfo::PartialMapping &PartialMap = ValMapping.BreakDown[0];
-  assert(PartialMap.Mask.getBitWidth() == MRI->getSize(Reg) &&
+  assert(PartialMap.Mask.getBitWidth() ==
+             (TargetRegisterInfo::isPhysicalRegister(Reg)
+                  ? TRI->getMinimalPhysRegClass(Reg)->getSize() * 8
+                  : MRI->getSize(Reg)) &&
          "Repairing other than copy not implemented yet");
+  // If the MIRBuilder is configured to insert somewhere else than
+  // DefUseMI, we may not use this function like was it first
+  // internded (local repairing), so make sure we pay attention before
+  // we remove the assert.
+  // In particular, it is likely that we will have to properly save
+  // the insertion point of the MIRBuilder and restore it at the end
+  // of this method.
+  assert(&DefUseMI == &(*MIRBuilder.getInsertPt()) &&
+         "Need to save and restore the insertion point");
+  // For use, we will add a copy just in front of the instruction.
+  // For def, we will add a copy just after the instruction.
+  // In either case, the insertion point must be valid. In particular,
+  // make sure we do not insert in the middle of terminators or phis.
+  bool Before = !IsDef;
+  setSafeInsertionPoint(DefUseMI, Before);
+  if (DefUseMI.isTerminator() && Before) {
+    // Check that the insertion point does not happen
+    // before the definition of Reg.
+    // This can happen if Reg is defined by a terminator
+    // and used by another one.
+    // In that case the repairing code is actually more involved
+    // because we have to split the block.
+
+    // Assert that this is not a physical register.
+    // The target independent code does not insert physical registers
+    // on terminators, so if we end up in this situation, this is
+    // likely a bug in the target.
+    assert(!TargetRegisterInfo::isPhysicalRegister(Reg) &&
+           "Check for physical register not implemented");
+    const MachineInstr *RegDef = MRI->getVRegDef(Reg);
+    assert(RegDef && "Reg has more than one definition?");
+    // Assert to make the code more readable; Reg is used by DefUseMI, i.e.,
+    // (Before == !IsDef == true), so DefUseMI != RegDef otherwise we have
+    // a use (that is not a PHI) that is not dominated by its def.
+    assert(&DefUseMI != RegDef && "Def does not dominate all of its uses");
+    if (RegDef->isTerminator() && RegDef->getParent() == DefUseMI.getParent())
+      // By construction, the repairing should happen between two
+      // terminators: RegDef and DefUseMI.
+      // This is not implemented.
+      report_fatal_error("Repairing between terminators not implemented yet");
+  }
+
+  // Create a new temporary to hold the repaired value.
   unsigned NewReg =
       MRI->createGenericVirtualRegister(PartialMap.Mask.getBitWidth());
-  (void)MIRBuilder.buildInstr(TargetOpcode::COPY, NewReg, Reg);
+  // Set the registers for the source and destination of the copy.
+  unsigned Src = Reg, Dst = NewReg;
+  // If this is a definition that we repair, the copy will be
+  // inverted.
+  if (IsDef)
+    std::swap(Src, Dst);
+  (void)MIRBuilder.buildInstr(TargetOpcode::COPY, Dst, Src);
+
   DEBUG(dbgs() << "Repair: " << PrintReg(Reg) << " with: "
         << PrintReg(NewReg) << '\n');
+
+  // Restore the insertion point of the MIRBuilder.
+  MIRBuilder.setInstr(DefUseMI, Before);
   return NewReg;
+}
+
+void RegBankSelect::setSafeInsertionPoint(MachineInstr &InsertPt, bool Before) {
+  // Check that we are not looking to insert before a phi.
+  // Indeed, we would need more information on what to do.
+  // By default that should be all the predecessors, but this is
+  // probably not what we want in general.
+  assert((!Before || !InsertPt.isPHI()) &&
+         "Insertion before phis not implemented");
+  // The same kind of observation hold for terminators if we try to
+  // insert after them.
+  assert((Before || !InsertPt.isTerminator()) &&
+         "Insertion after terminatos not implemented");
+  if (InsertPt.isPHI()) {
+    assert(!Before && "Not supported!!");
+    MachineBasicBlock *MBB = InsertPt.getParent();
+    assert(MBB && "Insertion point is not in a basic block");
+    MachineBasicBlock::iterator FirstNonPHIPt = MBB->getFirstNonPHI();
+    if (FirstNonPHIPt == MBB->end()) {
+      // If there is not any non-phi instruction, insert at the end of MBB.
+      MIRBuilder.setMBB(*MBB, /*Beginning*/ false);
+      return;
+    }
+    // The insertion point before the first non-phi instruction.
+    MIRBuilder.setInstr(*FirstNonPHIPt, /*Before*/ true);
+    return;
+  }
+  if (InsertPt.isTerminator()) {
+    MachineBasicBlock *MBB = InsertPt.getParent();
+    assert(MBB && "Insertion point is not in a basic block");
+    MIRBuilder.setInstr(*MBB->getFirstTerminator(), /*Before*/ true);
+    return;
+  }
+  MIRBuilder.setInstr(InsertPt, /*Before*/ Before);
 }
 
 void RegBankSelect::assignInstr(MachineInstr &MI) {
@@ -110,14 +201,31 @@ void RegBankSelect::assignInstr(MachineInstr &MI) {
     // Indeed, if Reg is already assigned a register bank, at this
     // point, we know it is different from the one defined by the
     // chosen mapping, we need to adjust for that.
+    // For definitions, changing the register bank will affect all
+    // its uses, and in particular the ones we already visited.
+    // Although this is correct, since with the RPO traversal of the
+    // basic blocks the only uses that we already visisted for this
+    // definition are PHIs (i.e., copies), this may not be the best
+    // solution according to the cost model.
+    // Therefore, create a new temporary for Reg.
     assert(ValMapping.BreakDown.size() == 1 &&
            "Support for complex break down not supported yet");
-    if (!MO.isDef() && MRI->getRegClassOrRegBank(Reg)) {
-      // For phis, we need to change the insertion point to the end of
-      // the related predecessor block.
-      assert(!MI.isPHI() && "PHI support not implemented yet");
-      Reg = repairReg(Reg, ValMapping);
+    if (TargetRegisterInfo::isPhysicalRegister(Reg) ||
+        MRI->getRegClassOrRegBank(Reg)) {
+      if (!MO.isDef() && MI.isPHI()) {
+        // Phis are already copies, so there is nothing to repair.
+        // Note: This will not hold when we support break downs with
+        // more than one segment.
+        DEBUG(dbgs() << "Skip PHI use\n");
+        continue;
+      }
+      // If MO is a definition, since repairing after a terminator is
+      // painful, do not repair. Indeed, this is probably not worse
+      // saving the move in the PHIs that will get reassigned.
+      if (!MO.isDef() || !MI.isTerminator())
+        Reg = repairReg(Reg, ValMapping, MI, MO.isDef());
     }
+
     // If we end up here, MO should be free of encoding constraints,
     // i.e., we do not have to constrained the RegBank of Reg to
     // the requirement of the operands.
@@ -126,12 +234,7 @@ void RegBankSelect::assignInstr(MachineInstr &MI) {
     // This will not hold when we will consider alternative mappings.
     DEBUG(dbgs() << "Assign: " << *ValMapping.BreakDown[0].RegBank << " to "
                  << PrintReg(Reg) << '\n');
-    // For a definition, we may be changing the register bank silently
-    // for all the uses here.
-    // Although this will be correct when we do a RPO traversal of the
-    // basic block, because the only uses that could be affected are
-    // PHIs (i.e., copies), this may not be the best solution
-    // according to the cost model.
+
     MRI->setRegBank(Reg, *ValMapping.BreakDown[0].RegBank);
     MO.setReg(Reg);
   }

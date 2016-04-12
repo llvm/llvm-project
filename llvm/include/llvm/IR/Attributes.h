@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <bitset>
@@ -94,6 +95,9 @@ public:
                                               uint64_t Bytes);
   static Attribute getWithDereferenceableOrNullBytes(LLVMContext &Context,
                                                      uint64_t Bytes);
+  static Attribute getWithAllocSizeArgs(LLVMContext &Context,
+                                        unsigned ElemSizeArg,
+                                        const Optional<unsigned> &NumElemsArg);
 
   //===--------------------------------------------------------------------===//
   // Attribute Accessors
@@ -146,6 +150,10 @@ public:
   /// \brief Returns the number of dereferenceable_or_null bytes from the
   /// dereferenceable_or_null attribute.
   uint64_t getDereferenceableOrNullBytes() const;
+
+  /// Returns the argument numbers for the allocsize attribute (or pair(0, 0)
+  /// if not known).
+  std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
   /// \brief The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -267,6 +275,12 @@ public:
   AttributeSet addDereferenceableOrNullAttr(LLVMContext &C, unsigned Index,
                                             uint64_t Bytes) const;
 
+  /// Add the allocsize attribute to the attribute set at the given index.
+  /// Because attribute sets are immutable, this returns a new set.
+  AttributeSet addAllocSizeAttr(LLVMContext &C, unsigned Index,
+                                unsigned ElemSizeArg,
+                                const Optional<unsigned> &NumElemsArg);
+
   //===--------------------------------------------------------------------===//
   // AttributeSet Accessors
   //===--------------------------------------------------------------------===//
@@ -318,6 +332,10 @@ public:
   /// \brief Get the number of dereferenceable_or_null bytes (or zero if
   /// unknown).
   uint64_t getDereferenceableOrNullBytes(unsigned Index) const;
+
+  /// Get the allocsize argument numbers (or pair(0, 0) if unknown).
+  std::pair<unsigned, Optional<unsigned>>
+  getAllocSizeArgs(unsigned Index) const;
 
   /// \brief Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
@@ -400,19 +418,20 @@ class AttrBuilder {
   uint64_t StackAlignment;
   uint64_t DerefBytes;
   uint64_t DerefOrNullBytes;
+  uint64_t AllocSizeArgs;
 
 public:
   AttrBuilder()
       : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
-        DerefOrNullBytes(0) {}
+        DerefOrNullBytes(0), AllocSizeArgs(0) {}
   explicit AttrBuilder(uint64_t Val)
       : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
-        DerefOrNullBytes(0) {
+        DerefOrNullBytes(0), AllocSizeArgs(0) {
     addRawValue(Val);
   }
   AttrBuilder(const Attribute &A)
       : Attrs(0), Alignment(0), StackAlignment(0), DerefBytes(0),
-        DerefOrNullBytes(0) {
+        DerefOrNullBytes(0), AllocSizeArgs(0) {
     addAttribute(A);
   }
   AttrBuilder(AttributeSet AS, unsigned Idx);
@@ -481,6 +500,10 @@ public:
   /// dereferenceable_or_null attribute exists (zero is returned otherwise).
   uint64_t getDereferenceableOrNullBytes() const { return DerefOrNullBytes; }
 
+  /// Retrieve the allocsize args, if the allocsize attribute exists.  If it
+  /// doesn't exist, pair(0, 0) is returned.
+  std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
+
   /// \brief This turns an int alignment (which must be a power of 2) into the
   /// form used internally in Attribute.
   AttrBuilder &addAlignmentAttr(unsigned Align);
@@ -496,6 +519,14 @@ public:
   /// \brief This turns the number of dereferenceable_or_null bytes into the
   /// form used internally in Attribute.
   AttrBuilder &addDereferenceableOrNullAttr(uint64_t Bytes);
+
+  /// This turns one (or two) ints into the form used internally in Attribute.
+  AttrBuilder &addAllocSizeAttr(unsigned ElemSizeArg,
+                                const Optional<unsigned> &NumElemsArg);
+
+  /// Add an allocsize attribute, using the representation returned by
+  /// Attribute.getIntValue().
+  AttrBuilder &addAllocSizeAttrFromRawRepr(uint64_t RawAllocSizeRepr);
 
   /// \brief Return true if the builder contains no target-independent
   /// attributes.

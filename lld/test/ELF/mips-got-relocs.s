@@ -47,9 +47,10 @@ v1:
 # EXE_SYM: Sections:
 # EXE_SYM: .got 0000000c 0000000000030000 DATA
 # EXE_SYM: SYMBOL TABLE:
+# EXE_SYM: 00040000 g       .data		 00000004 v1
 # EXE_SYM: 00037ff0         *ABS*		 00000000 _gp
 #          ^-- .got + GP offset (0x7ff0)
-# EXE_SYM: 00040000 g       .data		 00000004 v1
+
 
 # EXE_GOT_BE: Contents of section .got:
 # EXE_GOT_BE:  30000 00000000 80000000 00040000
@@ -70,9 +71,9 @@ v1:
 # DSO_SYM: Sections:
 # DSO_SYM: .got 0000000c 0000000000020000 DATA
 # DSO_SYM: SYMBOL TABLE:
+# DSO_SYM: 00030000 g       .data		 00000004 v1
 # DSO_SYM: 00027ff0         *ABS*		 00000000 _gp
 #          ^-- .got + GP offset (0x7ff0)
-# DSO_SYM: 00030000 g       .data		 00000004 v1
 
 # DSO_GOT_BE: Contents of section .got:
 # DSO_GOT_BE:  20000 00000000 80000000 00030000

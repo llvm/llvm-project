@@ -405,7 +405,66 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::SYNC_FETCH_AND_UMIN_4] = "__sync_fetch_and_umin_4";
   Names[RTLIB::SYNC_FETCH_AND_UMIN_8] = "__sync_fetch_and_umin_8";
   Names[RTLIB::SYNC_FETCH_AND_UMIN_16] = "__sync_fetch_and_umin_16";
-  
+
+  Names[RTLIB::ATOMIC_LOAD] = "__atomic_load";
+  Names[RTLIB::ATOMIC_LOAD_1] = "__atomic_load_1";
+  Names[RTLIB::ATOMIC_LOAD_2] = "__atomic_load_2";
+  Names[RTLIB::ATOMIC_LOAD_4] = "__atomic_load_4";
+  Names[RTLIB::ATOMIC_LOAD_8] = "__atomic_load_8";
+  Names[RTLIB::ATOMIC_LOAD_16] = "__atomic_load_16";
+
+  Names[RTLIB::ATOMIC_STORE] = "__atomic_store";
+  Names[RTLIB::ATOMIC_STORE_1] = "__atomic_store_1";
+  Names[RTLIB::ATOMIC_STORE_2] = "__atomic_store_2";
+  Names[RTLIB::ATOMIC_STORE_4] = "__atomic_store_4";
+  Names[RTLIB::ATOMIC_STORE_8] = "__atomic_store_8";
+  Names[RTLIB::ATOMIC_STORE_16] = "__atomic_store_16";
+
+  Names[RTLIB::ATOMIC_EXCHANGE] = "__atomic_exchange";
+  Names[RTLIB::ATOMIC_EXCHANGE_1] = "__atomic_exchange_1";
+  Names[RTLIB::ATOMIC_EXCHANGE_2] = "__atomic_exchange_2";
+  Names[RTLIB::ATOMIC_EXCHANGE_4] = "__atomic_exchange_4";
+  Names[RTLIB::ATOMIC_EXCHANGE_8] = "__atomic_exchange_8";
+  Names[RTLIB::ATOMIC_EXCHANGE_16] = "__atomic_exchange_16";
+
+  Names[RTLIB::ATOMIC_COMPARE_EXCHANGE] = "__atomic_compare_exchange";
+  Names[RTLIB::ATOMIC_COMPARE_EXCHANGE_1] = "__atomic_compare_exchange_1";
+  Names[RTLIB::ATOMIC_COMPARE_EXCHANGE_2] = "__atomic_compare_exchange_2";
+  Names[RTLIB::ATOMIC_COMPARE_EXCHANGE_4] = "__atomic_compare_exchange_4";
+  Names[RTLIB::ATOMIC_COMPARE_EXCHANGE_8] = "__atomic_compare_exchange_8";
+  Names[RTLIB::ATOMIC_COMPARE_EXCHANGE_16] = "__atomic_compare_exchange_16";
+
+  Names[RTLIB::ATOMIC_FETCH_ADD_1] = "__atomic_fetch_add_1";
+  Names[RTLIB::ATOMIC_FETCH_ADD_2] = "__atomic_fetch_add_2";
+  Names[RTLIB::ATOMIC_FETCH_ADD_4] = "__atomic_fetch_add_4";
+  Names[RTLIB::ATOMIC_FETCH_ADD_8] = "__atomic_fetch_add_8";
+  Names[RTLIB::ATOMIC_FETCH_ADD_16] = "__atomic_fetch_add_16";
+  Names[RTLIB::ATOMIC_FETCH_SUB_1] = "__atomic_fetch_sub_1";
+  Names[RTLIB::ATOMIC_FETCH_SUB_2] = "__atomic_fetch_sub_2";
+  Names[RTLIB::ATOMIC_FETCH_SUB_4] = "__atomic_fetch_sub_4";
+  Names[RTLIB::ATOMIC_FETCH_SUB_8] = "__atomic_fetch_sub_8";
+  Names[RTLIB::ATOMIC_FETCH_SUB_16] = "__atomic_fetch_sub_16";
+  Names[RTLIB::ATOMIC_FETCH_AND_1] = "__atomic_fetch_and_1";
+  Names[RTLIB::ATOMIC_FETCH_AND_2] = "__atomic_fetch_and_2";
+  Names[RTLIB::ATOMIC_FETCH_AND_4] = "__atomic_fetch_and_4";
+  Names[RTLIB::ATOMIC_FETCH_AND_8] = "__atomic_fetch_and_8";
+  Names[RTLIB::ATOMIC_FETCH_AND_16] = "__atomic_fetch_and_16";
+  Names[RTLIB::ATOMIC_FETCH_OR_1] = "__atomic_fetch_or_1";
+  Names[RTLIB::ATOMIC_FETCH_OR_2] = "__atomic_fetch_or_2";
+  Names[RTLIB::ATOMIC_FETCH_OR_4] = "__atomic_fetch_or_4";
+  Names[RTLIB::ATOMIC_FETCH_OR_8] = "__atomic_fetch_or_8";
+  Names[RTLIB::ATOMIC_FETCH_OR_16] = "__atomic_fetch_or_16";
+  Names[RTLIB::ATOMIC_FETCH_XOR_1] = "__atomic_fetch_xor_1";
+  Names[RTLIB::ATOMIC_FETCH_XOR_2] = "__atomic_fetch_xor_2";
+  Names[RTLIB::ATOMIC_FETCH_XOR_4] = "__atomic_fetch_xor_4";
+  Names[RTLIB::ATOMIC_FETCH_XOR_8] = "__atomic_fetch_xor_8";
+  Names[RTLIB::ATOMIC_FETCH_XOR_16] = "__atomic_fetch_xor_16";
+  Names[RTLIB::ATOMIC_FETCH_NAND_1] = "__atomic_fetch_nand_1";
+  Names[RTLIB::ATOMIC_FETCH_NAND_2] = "__atomic_fetch_nand_2";
+  Names[RTLIB::ATOMIC_FETCH_NAND_4] = "__atomic_fetch_nand_4";
+  Names[RTLIB::ATOMIC_FETCH_NAND_8] = "__atomic_fetch_nand_8";
+  Names[RTLIB::ATOMIC_FETCH_NAND_16] = "__atomic_fetch_nand_16";
+
   if (TT.getEnvironment() == Triple::GNU) {
     Names[RTLIB::SINCOS_F32] = "sincosf";
     Names[RTLIB::SINCOS_F64] = "sincos";
@@ -777,6 +836,9 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   GatherAllAliasesMaxDepth = 6;
   MinStackArgumentAlignment = 1;
   MinimumJumpTableEntries = 4;
+  // TODO: the default will be switched to 0 in the next commit, along
+  // with the Target-specific changes necessary.
+  MaxAtomicSizeInBitsSupported = 1024;
 
   InitLibcallNames(LibcallRoutineNames, TM.getTargetTriple());
   InitCmpLibcallCCs(CmpLibcallCCs);

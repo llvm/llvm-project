@@ -838,11 +838,15 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   // If we need to spill the CR and the LR but we don't have two separate
   // registers available, we must spill them one at a time
   if (MustSaveCR && SingleScratchReg && MustSaveLR) {
-    // FIXME: In the ELFv2 ABI, we are not required to save all CR fields.
-    // If only one or two CR fields are clobbered, it could be more
-    // efficient to use mfocrf to selectively save just those fields.
+    // In the ELFv2 ABI, we are not required to save all CR fields.
+    // If only one or two CR fields are clobbered, it is more efficient to use
+    // mfocrf to selectively save just those fields, because mfocrf has short
+    // latency compares to mfcr.
+    unsigned MfcrOpcode = PPC::MFCR8;
+    if (isELFv2ABI && MustSaveCRs.size() == 1)
+      MfcrOpcode = PPC::MFOCRF8;
     MachineInstrBuilder MIB =
-      BuildMI(MBB, MBBI, dl, TII.get(PPC::MFCR8), TempReg);
+      BuildMI(MBB, MBBI, dl, TII.get(MfcrOpcode), TempReg);
     for (unsigned i = 0, e = MustSaveCRs.size(); i != e; ++i)
       MIB.addReg(MustSaveCRs[i], RegState::ImplicitKill);
     BuildMI(MBB, MBBI, dl, TII.get(PPC::STW8))
@@ -856,11 +860,15 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (MustSaveCR &&
       !(SingleScratchReg && MustSaveLR)) { // will only occur for PPC64
-    // FIXME: In the ELFv2 ABI, we are not required to save all CR fields.
-    // If only one or two CR fields are clobbered, it could be more
-    // efficient to use mfocrf to selectively save just those fields.
+    // In the ELFv2 ABI, we are not required to save all CR fields.
+    // If only one or two CR fields are clobbered, it is more efficient to use
+    // mfocrf to selectively save just those fields, because mfocrf has short
+    // latency compares to mfcr.
+    unsigned MfcrOpcode = PPC::MFCR8;
+    if (isELFv2ABI && MustSaveCRs.size() == 1)
+      MfcrOpcode = PPC::MFOCRF8;
     MachineInstrBuilder MIB =
-      BuildMI(MBB, MBBI, dl, TII.get(PPC::MFCR8), TempReg);
+      BuildMI(MBB, MBBI, dl, TII.get(MfcrOpcode), TempReg);
     for (unsigned i = 0, e = MustSaveCRs.size(); i != e; ++i)
       MIB.addReg(MustSaveCRs[i], RegState::ImplicitKill);
   }

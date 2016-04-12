@@ -16,6 +16,10 @@ class StrBoolAttr<string S> : Attr<S>;
 /// 0 means unaligned (different from align(1)).
 def Alignment : EnumAttr<"align">;
 
+/// The result of the function is guaranteed to point to a number of bytes that
+/// we can determine if we know the value of the function's arguments.
+def AllocSize : EnumAttr<"allocsize">;
+
 /// inline=always.
 def AlwaysInline : EnumAttr<"alwaysinline">;
 

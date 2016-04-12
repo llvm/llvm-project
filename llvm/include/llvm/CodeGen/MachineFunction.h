@@ -106,11 +106,16 @@ public:
 
   // Property descriptions:
   // IsSSA: True when the machine function is in SSA form and virtual registers
-  // have a single def.
-  // TracksLiveness: (currently unsued, intended to eventually replace
-  // MachineRegisterInfo::tracksLiveness())
+  //  have a single def.
+  // TracksLiveness: True when tracking register liveness accurately.
+  //  While this property is set, register liveness information in basic block
+  //  live-in lists and machine instruction operands (e.g. kill flags, implicit
+  //  defs) is accurate. This means it can be used to change the code in ways
+  //  that affect the values in registers, for example by the register
+  //  scavenger.
+  //  When this property is clear, liveness is no longer reliable.
   // AllVRegsAllocated: All virtual registers have been allocated; i.e. all
-  // register operands are physical registers.
+  //  register operands are physical registers.
   enum class Property : unsigned {
     IsSSA,
     TracksLiveness,

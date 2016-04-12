@@ -39,6 +39,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
@@ -173,10 +174,6 @@ private:
   bool compileOptimizedToFile(const char **Name);
   void restoreLinkageForExternals();
   void applyScopeRestrictions();
-  void applyRestriction(GlobalValue &GV, ArrayRef<StringRef> Libcalls,
-                        std::vector<const char *> &MustPreserveList,
-                        SmallPtrSetImpl<GlobalValue *> &AsmUsed,
-                        Mangler &Mangler);
   bool determineTarget();
 
   static void DiagnosticHandler(const DiagnosticInfo &DI, void *Context);
@@ -185,8 +182,6 @@ private:
 
   void emitError(const std::string &ErrMsg);
 
-  typedef StringMap<uint8_t> StringSet;
-
   LLVMContext &Context;
   std::unique_ptr<Module> MergedModule;
   std::unique_ptr<Linker> TheLinker;
@@ -194,8 +189,8 @@ private:
   bool EmitDwarfDebugInfo = false;
   bool ScopeRestrictionsDone = false;
   Reloc::Model RelocModel = Reloc::Default;
-  StringSet MustPreserveSymbols;
-  StringSet AsmUndefinedRefs;
+  StringSet<> MustPreserveSymbols;
+  StringSet<> AsmUndefinedRefs;
   StringMap<GlobalValue::LinkageTypes> ExternalSymbols;
   std::vector<std::string> CodegenOptions;
   std::string FeatureStr;
