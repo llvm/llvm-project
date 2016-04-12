@@ -279,6 +279,78 @@ TSAN_INTERCEPTOR(void, dispatch_group_notify_f, dispatch_group_t group,
                                 dispatch_callback_wrap_acquire);
 }
 
+TSAN_INTERCEPTOR(void, dispatch_source_set_event_handler,
+                 dispatch_source_t source, dispatch_block_t handler) {
+  SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_event_handler, source, handler);
+  dispatch_block_t new_handler = ^(void) {
+    {
+      SCOPED_INTERCEPTOR_RAW(dispatch_source_set_event_handler_callback);
+      Acquire(thr, pc, (uptr)source);
+    }
+    handler();
+  };
+  Release(thr, pc, (uptr)source);
+  REAL(dispatch_source_set_event_handler)(source, new_handler);
+}
+
+TSAN_INTERCEPTOR(void, dispatch_source_set_event_handler_f,
+                 dispatch_source_t source, dispatch_function_t handler) {
+  SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_event_handler_f, source, handler);
+  dispatch_block_t block = ^(void) {
+    handler(dispatch_get_context(source));
+  };
+  WRAP(dispatch_source_set_event_handler)(source, block);
+}
+
+TSAN_INTERCEPTOR(void, dispatch_source_set_cancel_handler,
+                 dispatch_source_t source, dispatch_block_t handler) {
+  SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_cancel_handler, source, handler);
+  dispatch_block_t new_handler = ^(void) {
+    {
+      SCOPED_INTERCEPTOR_RAW(dispatch_source_set_cancel_handler_callback);
+      Acquire(thr, pc, (uptr)source);
+    }
+    handler();
+  };
+  Release(thr, pc, (uptr)source);
+  REAL(dispatch_source_set_cancel_handler)(source, new_handler);
+}
+
+TSAN_INTERCEPTOR(void, dispatch_source_set_cancel_handler_f,
+                 dispatch_source_t source, dispatch_function_t handler) {
+  SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_cancel_handler_f, source,
+                          handler);
+  dispatch_block_t block = ^(void) {
+    handler(dispatch_get_context(source));
+  };
+  WRAP(dispatch_source_set_cancel_handler)(source, block);
+}
+
+TSAN_INTERCEPTOR(void, dispatch_source_set_registration_handler,
+                 dispatch_source_t source, dispatch_block_t handler) {
+  SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_registration_handler, source,
+                          handler);
+  dispatch_block_t new_handler = ^(void) {
+    {
+      SCOPED_INTERCEPTOR_RAW(dispatch_source_set_registration_handler_callback);
+      Acquire(thr, pc, (uptr)source);
+    }
+    handler();
+  };
+  Release(thr, pc, (uptr)source);
+  REAL(dispatch_source_set_registration_handler)(source, new_handler);
+}
+
+TSAN_INTERCEPTOR(void, dispatch_source_set_registration_handler_f,
+                 dispatch_source_t source, dispatch_function_t handler) {
+  SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_registration_handler_f, source,
+                          handler);
+  dispatch_block_t block = ^(void) {
+    handler(dispatch_get_context(source));
+  };
+  WRAP(dispatch_source_set_registration_handler)(source, block);
+}
+
 }  // namespace __tsan
 
 #endif  // SANITIZER_MAC
