@@ -45,6 +45,8 @@ __attribute__((objc_root_class))
 
 @property(readonly) int *propertyReturningNull;
 
+@property(readonly) int *synthesizedProperty;
+
 @end
 
 @implementation SomeClass
@@ -67,6 +69,17 @@ void testMethodReturningNull(SomeClass *sc) {
 
 void testPropertyReturningNull(SomeClass *sc) {
   int *result = sc.propertyReturningNull;
+  *result = 1;
+#ifndef SUPPRESSED
+  // expected-warning@-2 {{Dereference of null pointer}}
+#endif
+}
+
+void testSynthesizedPropertyReturningNull(SomeClass *sc) {
+  if (sc.synthesizedProperty)
+    return;
+
+  int *result = sc.synthesizedProperty;
   *result = 1;
 #ifndef SUPPRESSED
   // expected-warning@-2 {{Dereference of null pointer}}

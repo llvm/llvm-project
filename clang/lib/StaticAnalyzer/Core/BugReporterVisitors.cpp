@@ -324,6 +324,9 @@ public:
     }
 
     PathDiagnosticLocation L(Ret, BRC.getSourceManager(), StackFrame);
+    if (!L.isValid() || !L.asLocation().isValid())
+      return nullptr;
+
     return new PathDiagnosticEventPiece(L, Out.str());
   }
 
