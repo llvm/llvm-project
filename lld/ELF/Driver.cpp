@@ -415,14 +415,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
       Config->EntrySym = Symtab.addUndefined(S);
   }
 
-  if (Config->EMachine == EM_MIPS) {
-    // Define _gp for MIPS. st_value of _gp symbol will be updated by Writer
-    // so that it points to an absolute address which is relative to GOT.
-    // See "Global Data Symbols" in Chapter 6 in the following document:
-    // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-    ElfSym<ELFT>::MipsGp = Symtab.addAbsolute("_gp", STV_DEFAULT);
-  }
-
   for (std::unique_ptr<InputFile> &F : Files)
     Symtab.addFile(std::move(F));
   if (HasError)

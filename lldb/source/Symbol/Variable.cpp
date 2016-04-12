@@ -244,16 +244,22 @@ CompilerDeclContext
 Variable::GetDeclContext ()
 {
     Type *type = GetType();
-    return type->GetSymbolFile()->GetDeclContextContainingUID(GetID());
+    if (type)
+        return type->GetSymbolFile()->GetDeclContextContainingUID(GetID());
+    return CompilerDeclContext();
 }
 
 CompilerDecl
 Variable::GetDecl ()
 {
+    CompilerDecl decl;
     Type *type = GetType();
-    CompilerDecl decl = type->GetSymbolFile()->GetDeclForUID(GetID());
-    if (decl)
-        decl.GetTypeSystem()->DeclLinkToObject(decl.GetOpaqueDecl(), shared_from_this());
+    if (type)
+    {
+        decl = type->GetSymbolFile()->GetDeclForUID(GetID());
+        if (decl)
+            decl.GetTypeSystem()->DeclLinkToObject(decl.GetOpaqueDecl(), shared_from_this());
+    }
     return decl;
 }
 
