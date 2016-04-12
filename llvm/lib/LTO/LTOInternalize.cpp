@@ -48,7 +48,7 @@ public:
 private:
   // Inputs
   const StringSet<> &MustPreserveSymbols;
-  const StringSet<> AsmUndefinedRefs;
+  const StringSet<> &AsmUndefinedRefs;
   const TargetMachine &TM;
 
   // Temps
