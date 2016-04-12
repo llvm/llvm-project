@@ -101,7 +101,7 @@ if.end16:                                         ; preds = %entry, %if.end13, %
   ret i32 2
 }
 
-; CHECK: mfcr {{[0-9]+}}
+; CHECK: mfocrf {{[0-9]+}}
 
 !llvm.ident = !{!0}
 

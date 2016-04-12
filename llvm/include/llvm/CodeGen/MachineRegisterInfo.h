@@ -50,11 +50,6 @@ private:
   MachineFunction *MF;
   Delegate *TheDelegate;
 
-  /// TracksLiveness - True while register liveness is being tracked accurately.
-  /// Basic block live-in lists, kill flags, and implicit defs may not be
-  /// accurate when after this flag is cleared.
-  bool TracksLiveness;
-
   /// True if subregister liveness is tracked.
   bool TracksSubRegLiveness;
 
@@ -175,21 +170,21 @@ public:
   }
 
   /// tracksLiveness - Returns true when tracking register liveness accurately.
-  ///
-  /// While this flag is true, register liveness information in basic block
-  /// live-in lists and machine instruction operands is accurate. This means it
-  /// can be used to change the code in ways that affect the values in
-  /// registers, for example by the register scavenger.
-  ///
-  /// When this flag is false, liveness is no longer reliable.
-  bool tracksLiveness() const { return TracksLiveness; }
+  /// (see MachineFUnctionProperties::Property description for details)
+  bool tracksLiveness() const {
+    return MF->getProperties().hasProperty(
+        MachineFunctionProperties::Property::TracksLiveness);
+  }
 
   /// invalidateLiveness - Indicates that register liveness is no longer being
   /// tracked accurately.
   ///
   /// This should be called by late passes that invalidate the liveness
   /// information.
-  void invalidateLiveness() { TracksLiveness = false; }
+  void invalidateLiveness() {
+    MF->getProperties().clear(
+        MachineFunctionProperties::Property::TracksLiveness);
+  }
 
   /// Returns true if liveness for register class @p RC should be tracked at
   /// the subregister level.

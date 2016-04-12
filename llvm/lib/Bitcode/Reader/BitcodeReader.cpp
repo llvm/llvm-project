@@ -1288,6 +1288,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Dereferenceable;
   case bitc::ATTR_KIND_DEREFERENCEABLE_OR_NULL:
     return Attribute::DereferenceableOrNull;
+  case bitc::ATTR_KIND_ALLOC_SIZE:
+    return Attribute::AllocSize;
   case bitc::ATTR_KIND_NO_RED_ZONE:
     return Attribute::NoRedZone;
   case bitc::ATTR_KIND_NO_RETURN:
@@ -1412,6 +1414,8 @@ std::error_code BitcodeReader::parseAttributeGroupBlock() {
             B.addDereferenceableAttr(Record[++i]);
           else if (Kind == Attribute::DereferenceableOrNull)
             B.addDereferenceableOrNullAttr(Record[++i]);
+          else if (Kind == Attribute::AllocSize)
+            B.addAllocSizeAttrFromRawRepr(Record[++i]);
         } else {                     // String attribute
           assert((Record[i] == 3 || Record[i] == 4) &&
                  "Invalid attribute group entry");

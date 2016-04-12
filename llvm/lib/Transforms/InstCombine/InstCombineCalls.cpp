@@ -996,8 +996,13 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   default: break;
   case Intrinsic::objectsize: {
     uint64_t Size;
-    if (getObjectSize(II->getArgOperand(0), Size, DL, TLI))
-      return replaceInstUsesWith(CI, ConstantInt::get(CI.getType(), Size));
+    if (getObjectSize(II->getArgOperand(0), Size, DL, TLI)) {
+      APInt APSize(II->getType()->getIntegerBitWidth(), Size);
+      // Equality check to be sure that `Size` can fit in a value of type
+      // `II->getType()`
+      if (APSize == Size)
+        return replaceInstUsesWith(CI, ConstantInt::get(II->getType(), APSize));
+    }
     return nullptr;
   }
   case Intrinsic::bswap: {

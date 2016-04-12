@@ -49,12 +49,9 @@ ARMBaseRegisterInfo::ARMBaseRegisterInfo()
     : ARMGenRegisterInfo(ARM::LR, 0, 0, ARM::PC), BasePtr(ARM::R6) {}
 
 static unsigned getFramePointerReg(const ARMSubtarget &STI) {
-  if (STI.isTargetMachO()) {
-    if (STI.isTargetDarwin() || STI.isThumb1Only())
-      return ARM::R7;
-    else
-      return ARM::R11;
-  } else if (STI.isTargetWindows())
+  if (STI.isTargetMachO())
+    return ARM::R7;
+  else if (STI.isTargetWindows())
     return ARM::R11;
   else // ARM EABI
     return STI.isThumb() ? ARM::R7 : ARM::R11;

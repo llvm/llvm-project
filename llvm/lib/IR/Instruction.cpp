@@ -271,8 +271,9 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   }
 }
 
-/// Return true if both instructions have the same special state
-/// This must be kept in sync with lib/Transforms/IPO/MergeFunctions.cpp.
+/// Return true if both instructions have the same special state This must be
+/// kept in sync with FunctionComparator::cmpOperations in
+/// lib/Transforms/IPO/MergeFunctions.cpp.
 static bool haveSameSpecialState(const Instruction *I1, const Instruction *I2,
                                  bool IgnoreAlignment = false) {
   assert(I1->getOpcode() == I2->getOpcode() &&
@@ -360,8 +361,7 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
   return haveSameSpecialState(this, I);
 }
 
-// isSameOperationAs
-// This should be kept in sync with isEquivalentOperation in
+// Keep this in sync with FunctionComparator::cmpOperations in
 // lib/Transforms/IPO/MergeFunctions.cpp.
 bool Instruction::isSameOperationAs(const Instruction *I,
                                     unsigned flags) const {

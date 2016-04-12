@@ -210,6 +210,9 @@ bool StackProtector::RequiresStackProtector() {
                                       Intrinsic::stackprotector))
           HasPrologue = true;
 
+  if (F->hasFnAttribute(Attribute::SafeStack))
+    return false;
+
   if (F->hasFnAttribute(Attribute::StackProtectReq)) {
     NeedsProtector = true;
     Strong = true; // Use the same heuristic as strong to determine SSPLayout

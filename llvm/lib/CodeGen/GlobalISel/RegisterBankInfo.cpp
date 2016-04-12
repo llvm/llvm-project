@@ -309,10 +309,17 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
   // Propagate RegBank to all operands that do not have a
   // mapping yet.
   for (unsigned OpIdx = 0, End = MI.getNumOperands(); OpIdx != End; ++OpIdx) {
+    const MachineOperand &MO = MI.getOperand(OpIdx);
+    // Don't assign a mapping for non-reg operands.
+    if (!MO.isReg())
+      continue;
+
+    // If a mapping already exists, do not touch it.
     if (!static_cast<const InstructionMapping *>(&Mapping)
              ->getOperandMapping(OpIdx)
              .BreakDown.empty())
       continue;
+
     Mapping.setOperandMapping(OpIdx, RegSize, *RegBank);
   }
   return Mapping;

@@ -2636,6 +2636,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   }
 
   // varargs
+  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   if (isVarArg) {
     if (!Subtarget->isTargetDarwin()) {
       // The AAPCS variadic function ABI is identical to the non-variadic
@@ -2644,15 +2645,13 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       saveVarArgRegisters(CCInfo, DAG, DL, Chain);
     }
 
-    AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     // This will point to the next argument passed via stack.
     unsigned StackOffset = CCInfo.getNextStackOffset();
     // We currently pass all varargs at 8-byte alignment.
     StackOffset = ((StackOffset + 7) & ~7);
-    AFI->setVarArgsStackIndex(MFI->CreateFixedObject(4, StackOffset, true));
+    FuncInfo->setVarArgsStackIndex(MFI->CreateFixedObject(4, StackOffset, true));
   }
 
-  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   unsigned StackArgSize = CCInfo.getNextStackOffset();
   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
   if (DoesCalleeRestoreStack(CallConv, TailCallOpt)) {

@@ -204,7 +204,7 @@ define void @f34()
 ; CHECK: define void @f34()
 {
         call void @nobuiltin() nobuiltin
-; CHECK: call void @nobuiltin() #30
+; CHECK: call void @nobuiltin() #32
         ret void;
 }
 
@@ -318,6 +318,16 @@ entry:
   ret float 1.0
 }
 
+; CHECK: define i8* @f54(i32) #30
+define i8* @f54(i32) allocsize(0) {
+  ret i8* null
+}
+
+; CHECK: define i8* @f55(i32, i32) #31
+define i8* @f55(i32, i32) allocsize(0, 1) {
+  ret i8* null
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -348,4 +358,6 @@ entry:
 ; CHECK: attributes #27 = { norecurse }
 ; CHECK: attributes #28 = { inaccessiblememonly }
 ; CHECK: attributes #29 = { inaccessiblemem_or_argmemonly }
-; CHECK: attributes #30 = { nobuiltin }
+; CHECK: attributes #30 = { allocsize(0) }
+; CHECK: attributes #31 = { allocsize(0,1) }
+; CHECK: attributes #32 = { nobuiltin }

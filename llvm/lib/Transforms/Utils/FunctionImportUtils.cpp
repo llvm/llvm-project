@@ -80,7 +80,7 @@ std::string FunctionImportGlobalProcessing::getName(const GlobalValue *SGV) {
       (doPromoteLocalToGlobal(SGV) || isPerformingImport()))
     return ModuleSummaryIndex::getGlobalNameForLocal(
         SGV->getName(),
-        ImportIndex.getModuleId(SGV->getParent()->getModuleIdentifier()));
+        ImportIndex.getModuleHash(SGV->getParent()->getModuleIdentifier()));
   return SGV->getName();
 }
 

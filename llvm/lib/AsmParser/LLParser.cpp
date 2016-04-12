@@ -14,6 +14,7 @@
 #include "LLParser.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/CallingConv.h"
@@ -1051,6 +1052,15 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
       B.addStackAlignmentAttr(Alignment);
       continue;
     }
+    case lltok::kw_allocsize: {
+      unsigned ElemSizeArg;
+      Optional<unsigned> NumElemsArg;
+      // inAttrGrp doesn't matter; we only support allocsize(a[, b])
+      if (parseAllocSizeArguments(ElemSizeArg, NumElemsArg))
+        return true;
+      B.addAllocSizeAttr(ElemSizeArg, NumElemsArg);
+      continue;
+    }
     case lltok::kw_alwaysinline: B.addAttribute(Attribute::AlwaysInline); break;
     case lltok::kw_argmemonly: B.addAttribute(Attribute::ArgMemOnly); break;
     case lltok::kw_builtin: B.addAttribute(Attribute::Builtin); break;
@@ -1787,6 +1797,35 @@ bool LLParser::ParseOptionalCommaAlign(unsigned &Alignment,
     if (ParseOptionalAlignment(Alignment)) return true;
   }
 
+  return false;
+}
+
+bool LLParser::parseAllocSizeArguments(unsigned &BaseSizeArg,
+                                       Optional<unsigned> &HowManyArg) {
+  Lex.Lex();
+
+  auto StartParen = Lex.getLoc();
+  if (!EatIfPresent(lltok::lparen))
+    return Error(StartParen, "expected '('");
+
+  if (ParseUInt32(BaseSizeArg))
+    return true;
+
+  if (EatIfPresent(lltok::comma)) {
+    auto HowManyAt = Lex.getLoc();
+    unsigned HowMany;
+    if (ParseUInt32(HowMany))
+      return true;
+    if (HowMany == BaseSizeArg)
+      return Error(HowManyAt,
+                   "'allocsize' indices can't refer to the same parameter");
+    HowManyArg = HowMany;
+  } else
+    HowManyArg = None;
+
+  auto EndParen = Lex.getLoc();
+  if (!EatIfPresent(lltok::rparen))
+    return Error(EndParen, "expected ')'");
   return false;
 }
 

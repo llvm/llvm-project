@@ -17,6 +17,7 @@
 #define LLVM_LIB_IR_ATTRIBUTEIMPL_H
 
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -120,7 +121,8 @@ public:
       : EnumAttributeImpl(IntAttrEntry, Kind), Val(Val) {
     assert((Kind == Attribute::Alignment || Kind == Attribute::StackAlignment ||
             Kind == Attribute::Dereferenceable ||
-            Kind == Attribute::DereferenceableOrNull) &&
+            Kind == Attribute::DereferenceableOrNull ||
+            Kind == Attribute::AllocSize) &&
            "Wrong kind for int attribute!");
   }
 
@@ -188,6 +190,7 @@ public:
   unsigned getStackAlignment() const;
   uint64_t getDereferenceableBytes() const;
   uint64_t getDereferenceableOrNullBytes() const;
+  std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
   std::string getAsString(bool InAttrGrp) const;
 
   typedef const Attribute *iterator;

@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/CodeGen/Passes.h"
@@ -31,6 +32,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -40,6 +42,7 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -122,6 +125,13 @@ class SafeStack : public FunctionPass {
   /// \brief Build a value representing a pointer to the unsafe stack pointer.
   Value *getOrCreateUnsafeStackPtr(IRBuilder<> &IRB, Function &F);
 
+  /// \brief Return the value of the stack canary.
+  Value *getStackGuard(IRBuilder<> &IRB, Function &F);
+
+  /// \brief Load stack guard from the frame and check if it has changed.
+  void checkStackGuard(IRBuilder<> &IRB, Function &F, ReturnInst &RI,
+                       AllocaInst *StackGuardSlot, Value *StackGuard);
+
   /// \brief Find all static allocas, dynamic allocas, return instructions and
   /// stack restore points (exception unwind blocks and setjmp calls) in the
   /// given function and append them to the respective vectors.
@@ -145,7 +155,8 @@ class SafeStack : public FunctionPass {
                                         ArrayRef<AllocaInst *> StaticAllocas,
                                         ArrayRef<Argument *> ByValArguments,
                                         ArrayRef<ReturnInst *> Returns,
-                                        Instruction *BasePointer);
+                                        Instruction *BasePointer,
+                                        AllocaInst *StackGuardSlot);
 
   /// \brief Generate code to restore the stack after all stack restore points
   /// in \p StackRestorePoints.
@@ -379,6 +390,16 @@ Value *SafeStack::getOrCreateUnsafeStackPtr(IRBuilder<> &IRB, Function &F) {
   return UnsafeStackPtr;
 }
 
+Value *SafeStack::getStackGuard(IRBuilder<> &IRB, Function &F) {
+  Value *StackGuardVar = nullptr;
+  if (TL)
+    StackGuardVar = TL->getIRStackGuard(IRB);
+  if (!StackGuardVar)
+    StackGuardVar =
+        F.getParent()->getOrInsertGlobal("__stack_chk_guard", StackPtrTy);
+  return IRB.CreateLoad(StackGuardVar, "StackGuard");
+}
+
 void SafeStack::findInsts(Function &F,
                           SmallVectorImpl<AllocaInst *> &StaticAllocas,
                           SmallVectorImpl<AllocaInst *> &DynamicAllocas,
@@ -464,13 +485,33 @@ SafeStack::createStackRestorePoints(IRBuilder<> &IRB, Function &F,
   return DynamicTop;
 }
 
+void SafeStack::checkStackGuard(IRBuilder<> &IRB, Function &F, ReturnInst &RI,
+                                AllocaInst *StackGuardSlot, Value *StackGuard) {
+  Value *V = IRB.CreateLoad(StackGuardSlot);
+  Value *Cmp = IRB.CreateICmpNE(StackGuard, V);
+
+  auto SuccessProb = BranchProbabilityInfo::getBranchProbStackProtector(true);
+  auto FailureProb = BranchProbabilityInfo::getBranchProbStackProtector(false);
+  MDNode *Weights = MDBuilder(F.getContext())
+                        .createBranchWeights(SuccessProb.getNumerator(),
+                                             FailureProb.getNumerator());
+  Instruction *CheckTerm =
+      SplitBlockAndInsertIfThen(Cmp, &RI,
+                                /* Unreachable */ true, Weights);
+  IRBuilder<> IRBFail(CheckTerm);
+  // FIXME: respect -fsanitize-trap / -ftrap-function here?
+  Constant *StackChkFail = F.getParent()->getOrInsertFunction(
+      "__stack_chk_fail", IRB.getVoidTy(), nullptr);
+  IRBFail.CreateCall(StackChkFail, {});
+}
+
 /// We explicitly compute and set the unsafe stack layout for all unsafe
 /// static alloca instructions. We save the unsafe "base pointer" in the
 /// prologue into a local variable and restore it in the epilogue.
 Value *SafeStack::moveStaticAllocasToUnsafeStack(
     IRBuilder<> &IRB, Function &F, ArrayRef<AllocaInst *> StaticAllocas,
     ArrayRef<Argument *> ByValArguments, ArrayRef<ReturnInst *> Returns,
-    Instruction *BasePointer) {
+    Instruction *BasePointer, AllocaInst *StackGuardSlot) {
   if (StaticAllocas.empty() && ByValArguments.empty())
     return BasePointer;
 
@@ -505,6 +546,18 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
   int64_t StaticOffset = 0; // Current stack top.
   IRB.SetInsertPoint(BasePointer->getNextNode());
+
+  if (StackGuardSlot) {
+    StaticOffset += getStaticAllocaAllocationSize(StackGuardSlot);
+    Value *Off = IRB.CreateGEP(BasePointer, // BasePointer is i8*
+                               ConstantInt::get(Int32Ty, -StaticOffset));
+    Value *NewAI =
+        IRB.CreateBitCast(Off, StackGuardSlot->getType(), "StackGuardSlot");
+
+    // Replace alloc with the new location.
+    StackGuardSlot->replaceAllUsesWith(NewAI);
+    StackGuardSlot->eraseFromParent();
+  }
 
   for (Argument *Arg : ByValArguments) {
     Type *Ty = Arg->getType()->getPointerElementType();
@@ -667,18 +720,6 @@ bool SafeStack::runOnFunction(Function &F) {
   TL = TM ? TM->getSubtargetImpl(F)->getTargetLowering() : nullptr;
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
-  {
-    // Make sure the regular stack protector won't run on this function
-    // (safestack attribute takes precedence).
-    AttrBuilder B;
-    B.addAttribute(Attribute::StackProtect)
-        .addAttribute(Attribute::StackProtectReq)
-        .addAttribute(Attribute::StackProtectStrong);
-    F.removeAttributes(
-        AttributeSet::FunctionIndex,
-        AttributeSet::get(F.getContext(), AttributeSet::FunctionIndex, B));
-  }
-
   ++NumFunctions;
 
   SmallVector<AllocaInst *, 16> StaticAllocas;
@@ -715,13 +756,29 @@ bool SafeStack::runOnFunction(Function &F) {
   // Load the current stack pointer (we'll also use it as a base pointer).
   // FIXME: use a dedicated register for it ?
   Instruction *BasePointer =
-    IRB.CreateLoad(UnsafeStackPtr, false, "unsafe_stack_ptr");
+      IRB.CreateLoad(UnsafeStackPtr, false, "unsafe_stack_ptr");
   assert(BasePointer->getType() == StackPtrTy);
 
-  // The top of the unsafe stack after all unsafe static allocas are allocated.
-  Value *StaticTop = moveStaticAllocasToUnsafeStack(IRB, F, StaticAllocas,
-                                                    ByValArguments, Returns,
-                                                    BasePointer);
+  AllocaInst *StackGuardSlot = nullptr;
+  // FIXME: implement weaker forms of stack protector.
+  if (F.hasFnAttribute(Attribute::StackProtect) ||
+      F.hasFnAttribute(Attribute::StackProtectStrong) ||
+      F.hasFnAttribute(Attribute::StackProtectReq)) {
+    Value *StackGuard = getStackGuard(IRB, F);
+    StackGuardSlot = IRB.CreateAlloca(StackPtrTy, nullptr);
+    IRB.CreateStore(StackGuard, StackGuardSlot);
+
+    for (ReturnInst *RI : Returns) {
+      IRBuilder<> IRBRet(RI);
+      checkStackGuard(IRBRet, F, *RI, StackGuardSlot, StackGuard);
+    }
+  }
+
+  // The top of the unsafe stack after all unsafe static allocas are
+  // allocated.
+  Value *StaticTop =
+      moveStaticAllocasToUnsafeStack(IRB, F, StaticAllocas, ByValArguments,
+                                     Returns, BasePointer, StackGuardSlot);
 
   // Safe stack object that stores the current unsafe stack top. It is updated
   // as unsafe dynamic (non-constant-sized) allocas are allocated and freed.

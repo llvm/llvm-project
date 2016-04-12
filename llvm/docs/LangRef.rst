@@ -1269,6 +1269,15 @@ example:
     epilogue, the backend should forcibly align the stack pointer.
     Specify the desired alignment, which must be a power of two, in
     parentheses.
+``allocsize(<EltSizeParam>[, <NumEltsParam>])``
+    This attribute indicates that the annotated function will always return at
+    least a given number of bytes (or null). Its arguments are zero-indexed
+    parameter numbers; if one argument is provided, then it's assumed that at
+    least ``CallSite.Args[EltSizeParam]`` bytes will be available at the
+    returned pointer. If two are provided, then it's assumed that
+    ``CallSite.Args[EltSizeParam] * CallSite.Args[NumEltsParam]`` bytes are
+    available. The referenced parameters must be integer types. No assumptions
+    are made about the contents of the returned block of memory.
 ``alwaysinline``
     This attribute indicates that the inliner should attempt to inline
     this function into callers whenever possible, ignoring any active

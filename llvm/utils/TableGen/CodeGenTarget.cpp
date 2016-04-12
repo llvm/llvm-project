@@ -352,9 +352,9 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
     BitsInit *BI = R->getValueAsBitsInit("Inst");
 
     unsigned numBits = BI->getNumBits();
- 
+
     SmallVector<Init *, 16> NewBits(numBits);
- 
+
     for (unsigned bit = 0, end = numBits / 2; bit != end; ++bit) {
       unsigned bitSwapIdx = numBits - bit - 1;
       Init *OrigBit = BI->getBit(bit);

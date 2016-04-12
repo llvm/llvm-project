@@ -104,11 +104,31 @@ private:
   bool assignmentMatch(unsigned Reg,
                        const RegisterBankInfo::ValueMapping &ValMapping) const;
 
-  /// Insert repairing code to map \p Reg as specified by \p ValMapping.
-  /// The repairing code is inserted where the MIRBuilder points.
+  /// Insert repairing code for \p Reg as specified by \p ValMapping.
+  /// The repairing code is inserted before \p DefUseMI if \p IsDef is false
+  /// and after otherwise.
+  /// The transformation could be sketched as:
+  /// \code
+  /// ... = op Reg
+  /// \endcode
+  /// Becomes
+  /// \code
+  /// <returned reg> = COPY Reg
+  /// ... = op Reg
+  /// \endcode
+  ///
+  /// \note This is the responsability of the caller to replace \p Reg
+  /// by the returned register.
+  ///
   /// \return The register of the properly mapped value.
   unsigned repairReg(unsigned Reg,
-                     const RegisterBankInfo::ValueMapping &ValMapping);
+                     const RegisterBankInfo::ValueMapping &ValMapping,
+                     MachineInstr &DefUseMI, bool IsDef);
+
+  /// Set the insertion point of the MIRBuilder to a safe point
+  /// to insert instructions before (\p Before == true) or after
+  /// \p InsertPt.
+  void setSafeInsertionPoint(MachineInstr &InsertPt, bool Before);
 
 public:
   // Ctor, nothing fancy.

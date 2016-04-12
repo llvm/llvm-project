@@ -25,8 +25,7 @@ using namespace llvm;
 void MachineRegisterInfo::Delegate::anchor() {}
 
 MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
-  : MF(MF), TheDelegate(nullptr), TracksLiveness(true),
-    TracksSubRegLiveness(false) {
+    : MF(MF), TheDelegate(nullptr), TracksSubRegLiveness(false) {
   unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);
   RegAllocHints.reserve(256);

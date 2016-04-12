@@ -1313,7 +1313,8 @@ void Verifier::verifyAttributeTypes(AttributeSet Attrs, unsigned Idx,
         I->getKindAsEnum() == Attribute::ArgMemOnly ||
         I->getKindAsEnum() == Attribute::NoRecurse ||
         I->getKindAsEnum() == Attribute::InaccessibleMemOnly ||
-        I->getKindAsEnum() == Attribute::InaccessibleMemOrArgMemOnly) {
+        I->getKindAsEnum() == Attribute::InaccessibleMemOrArgMemOnly ||
+        I->getKindAsEnum() == Attribute::AllocSize) {
       if (!isFunction) {
         CheckFailed("Attribute '" + I->getAsString() +
                     "' only applies to functions!", V);
@@ -1544,6 +1545,33 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeSet Attrs,
     const GlobalValue *GV = cast<GlobalValue>(V);
     Assert(GV->hasUnnamedAddr(),
            "Attribute 'jumptable' requires 'unnamed_addr'", V);
+  }
+
+  if (Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::AllocSize)) {
+    std::pair<unsigned, Optional<unsigned>> Args =
+        Attrs.getAllocSizeArgs(AttributeSet::FunctionIndex);
+
+    auto CheckParam = [&](StringRef Name, unsigned ParamNo) {
+      if (ParamNo >= FT->getNumParams()) {
+        CheckFailed("'allocsize' " + Name + " argument is out of bounds", V);
+        return false;
+      }
+
+      if (!FT->getParamType(ParamNo)->isIntegerTy()) {
+        CheckFailed("'allocsize' " + Name +
+                        " argument must refer to an integer parameter",
+                    V);
+        return false;
+      }
+
+      return true;
+    };
+
+    if (!CheckParam("element size", Args.first))
+      return;
+
+    if (Args.second && !CheckParam("number of elements", *Args.second))
+      return;
   }
 }
 

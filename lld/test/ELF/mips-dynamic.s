@@ -71,9 +71,9 @@
 # DSO:      ]
 # DSO:      DynamicSymbols [
 # DSO:          Name: @
-# DSO:          Name: _gp@
 # DSO:          Name: __start@
 # DSO:          Name: _foo@
+# DSO:          Name: _gp@
 # DSO:      ]
 # DSO:      DynamicSection [
 # DSO-NEXT:   Tag        Type                 Name/Value

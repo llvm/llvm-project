@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -403,10 +404,10 @@ public:
 
   /// Convenience method for creating a promoted global name
   /// for the given value name of a local, and its original module's ID.
-  static std::string getGlobalNameForLocal(StringRef Name, uint64_t ModId) {
+  static std::string getGlobalNameForLocal(StringRef Name, ModuleHash ModHash) {
     SmallString<256> NewName(Name);
     NewName += ".llvm.";
-    raw_svector_ostream(NewName) << ModId;
+    NewName += utohexstr(ModHash[0]); // Take the first 32 bits
     return NewName.str();
   }
 

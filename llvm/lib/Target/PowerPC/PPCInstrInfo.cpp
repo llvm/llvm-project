@@ -1763,6 +1763,10 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr *CmpInstr,
           get(TargetOpcode::COPY), CRReg)
     .addReg(PPC::CR0, MIOpC != NewOpC ? RegState::Kill : 0);
 
+  // Even if CR0 register were dead before, it is alive now since the
+  // instruction we just built uses it.
+  MI->clearRegisterDeads(PPC::CR0);
+
   if (MIOpC != NewOpC) {
     // We need to be careful here: we're replacing one instruction with
     // another, and we need to make sure that we get all of the right

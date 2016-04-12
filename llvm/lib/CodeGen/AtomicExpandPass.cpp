@@ -8,10 +8,10 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains a pass (at IR level) to replace atomic instructions with
-// target specific instruction which implement the same semantics in a way
-// which better fits the target backend.  This can include the use of either
-// (intrinsic-based) load-linked/store-conditional loops, AtomicCmpXchg, or
-// type coercions.
+// __atomic_* library calls, or target specific instruction which implement the
+// same semantics in a way which better fits the target backend.  This can
+// include the use of (intrinsic-based) load-linked/store-conditional loops,
+// AtomicCmpXchg, or type coercions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -64,18 +64,94 @@ namespace {
     bool expandAtomicCmpXchg(AtomicCmpXchgInst *CI);
     bool isIdempotentRMW(AtomicRMWInst *AI);
     bool simplifyIdempotentRMW(AtomicRMWInst *AI);
+
+    bool expandAtomicOpToLibcall(Instruction *I, unsigned Size, unsigned Align,
+                                 Value *PointerOperand, Value *ValueOperand,
+                                 Value *CASExpected, AtomicOrdering Ordering,
+                                 AtomicOrdering Ordering2,
+                                 ArrayRef<RTLIB::Libcall> Libcalls);
+    void expandAtomicLoadToLibcall(LoadInst *LI);
+    void expandAtomicStoreToLibcall(StoreInst *LI);
+    void expandAtomicRMWToLibcall(AtomicRMWInst *I);
+    void expandAtomicCASToLibcall(AtomicCmpXchgInst *I);
   };
 }
 
 char AtomicExpand::ID = 0;
 char &llvm::AtomicExpandID = AtomicExpand::ID;
-INITIALIZE_TM_PASS(AtomicExpand, "atomic-expand",
-    "Expand Atomic calls in terms of either load-linked & store-conditional or cmpxchg",
-    false, false)
+INITIALIZE_TM_PASS(AtomicExpand, "atomic-expand", "Expand Atomic instructions",
+                   false, false)
 
 FunctionPass *llvm::createAtomicExpandPass(const TargetMachine *TM) {
   return new AtomicExpand(TM);
 }
+
+namespace {
+// Helper functions to retrieve the size of atomic instructions.
+unsigned getAtomicOpSize(LoadInst *LI) {
+  const DataLayout &DL = LI->getModule()->getDataLayout();
+  return DL.getTypeStoreSize(LI->getType());
+}
+
+unsigned getAtomicOpSize(StoreInst *SI) {
+  const DataLayout &DL = SI->getModule()->getDataLayout();
+  return DL.getTypeStoreSize(SI->getValueOperand()->getType());
+}
+
+unsigned getAtomicOpSize(AtomicRMWInst *RMWI) {
+  const DataLayout &DL = RMWI->getModule()->getDataLayout();
+  return DL.getTypeStoreSize(RMWI->getValOperand()->getType());
+}
+
+unsigned getAtomicOpSize(AtomicCmpXchgInst *CASI) {
+  const DataLayout &DL = CASI->getModule()->getDataLayout();
+  return DL.getTypeStoreSize(CASI->getCompareOperand()->getType());
+}
+
+// Helper functions to retrieve the alignment of atomic instructions.
+unsigned getAtomicOpAlign(LoadInst *LI) {
+  unsigned Align = LI->getAlignment();
+  // In the future, if this IR restriction is relaxed, we should
+  // return DataLayout::getABITypeAlignment when there's no align
+  // value.
+  assert(Align != 0 && "An atomic LoadInst always has an explicit alignment");
+  return Align;
+}
+
+unsigned getAtomicOpAlign(StoreInst *SI) {
+  unsigned Align = SI->getAlignment();
+  // In the future, if this IR restriction is relaxed, we should
+  // return DataLayout::getABITypeAlignment when there's no align
+  // value.
+  assert(Align != 0 && "An atomic StoreInst always has an explicit alignment");
+  return Align;
+}
+
+unsigned getAtomicOpAlign(AtomicRMWInst *RMWI) {
+  // TODO(PR27168): This instruction has no alignment attribute, but unlike the
+  // default alignment for load/store, the default here is to assume
+  // it has NATURAL alignment, not DataLayout-specified alignment.
+  const DataLayout &DL = RMWI->getModule()->getDataLayout();
+  return DL.getTypeStoreSize(RMWI->getValOperand()->getType());
+}
+
+unsigned getAtomicOpAlign(AtomicCmpXchgInst *CASI) {
+  // TODO(PR27168): same comment as above.
+  const DataLayout &DL = CASI->getModule()->getDataLayout();
+  return DL.getTypeStoreSize(CASI->getCompareOperand()->getType());
+}
+
+// Determine if a particular atomic operation has a supported size,
+// and is of appropriate alignment, to be passed through for target
+// lowering. (Versus turning into a __atomic libcall)
+template <typename Inst>
+bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
+  unsigned Size = getAtomicOpSize(I);
+  unsigned Align = getAtomicOpAlign(I);
+  return Align >= Size && Size <= TLI->getMaxAtomicSizeInBitsSupported() / 8;
+}
+
+} // end anonymous namespace
 
 bool AtomicExpand::runOnFunction(Function &F) {
   if (!TM || !TM->getSubtargetImpl(F)->enableAtomicExpand())
@@ -99,6 +175,33 @@ bool AtomicExpand::runOnFunction(Function &F) {
     auto RMWI = dyn_cast<AtomicRMWInst>(I);
     auto CASI = dyn_cast<AtomicCmpXchgInst>(I);
     assert((LI || SI || RMWI || CASI) && "Unknown atomic instruction");
+
+    // If the Size/Alignment is not supported, replace with a libcall.
+    if (LI) {
+      if (!atomicSizeSupported(TLI, LI)) {
+        expandAtomicLoadToLibcall(LI);
+        MadeChange = true;
+        continue;
+      }
+    } else if (SI) {
+      if (!atomicSizeSupported(TLI, SI)) {
+        expandAtomicStoreToLibcall(SI);
+        MadeChange = true;
+        continue;
+      }
+    } else if (RMWI) {
+      if (!atomicSizeSupported(TLI, RMWI)) {
+        expandAtomicRMWToLibcall(RMWI);
+        MadeChange = true;
+        continue;
+      }
+    } else if (CASI) {
+      if (!atomicSizeSupported(TLI, CASI)) {
+        expandAtomicCASToLibcall(CASI);
+        MadeChange = true;
+        continue;
+      }
+    }
 
     if (TLI->shouldInsertFencesForAtomic(I)) {
       auto FenceOrdering = AtomicOrdering::Monotonic;
@@ -144,7 +247,7 @@ bool AtomicExpand::runOnFunction(Function &F) {
         assert(LI->getType()->isIntegerTy() && "invariant broken");
         MadeChange = true;
       }
-      
+
       MadeChange |= tryExpandAtomicLoad(LI);
     } else if (SI) {
       if (SI->getValueOperand()->getType()->isFloatingPointTy()) {
@@ -831,5 +934,386 @@ bool llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
   AI->replaceAllUsesWith(NewLoaded);
   AI->eraseFromParent();
 
+  return true;
+}
+
+// This converts from LLVM's internal AtomicOrdering enum to the
+// memory_order_* value required by the __atomic_* libcalls.
+static int libcallAtomicModel(AtomicOrdering AO) {
+  enum {
+    AO_ABI_memory_order_relaxed = 0,
+    AO_ABI_memory_order_consume = 1,
+    AO_ABI_memory_order_acquire = 2,
+    AO_ABI_memory_order_release = 3,
+    AO_ABI_memory_order_acq_rel = 4,
+    AO_ABI_memory_order_seq_cst = 5
+  };
+
+  switch (AO) {
+  case AtomicOrdering::NotAtomic:
+    llvm_unreachable("Expected atomic memory order.");
+  case AtomicOrdering::Unordered:
+  case AtomicOrdering::Monotonic:
+    return AO_ABI_memory_order_relaxed;
+  // Not implemented yet in llvm:
+  // case AtomicOrdering::Consume:
+  //  return AO_ABI_memory_order_consume;
+  case AtomicOrdering::Acquire:
+    return AO_ABI_memory_order_acquire;
+  case AtomicOrdering::Release:
+    return AO_ABI_memory_order_release;
+  case AtomicOrdering::AcquireRelease:
+    return AO_ABI_memory_order_acq_rel;
+  case AtomicOrdering::SequentiallyConsistent:
+    return AO_ABI_memory_order_seq_cst;
+  }
+  llvm_unreachable("Unknown atomic memory order.");
+}
+
+// In order to use one of the sized library calls such as
+// __atomic_fetch_add_4, the alignment must be sufficient, the size
+// must be one of the potentially-specialized sizes, and the value
+// type must actually exist in C on the target (otherwise, the
+// function wouldn't actually be defined.)
+static bool canUseSizedAtomicCall(unsigned Size, unsigned Align,
+                                  const DataLayout &DL) {
+  // TODO: "LargestSize" is an approximation for "largest type that
+  // you can express in C". It seems to be the case that int128 is
+  // supported on all 64-bit platforms, otherwise only up to 64-bit
+  // integers are supported. If we get this wrong, then we'll try to
+  // call a sized libcall that doesn't actually exist. There should
+  // really be some more reliable way in LLVM of determining integer
+  // sizes which are valid in the target's C ABI...
+  unsigned LargestSize = DL.getLargestLegalIntTypeSize() >= 64 ? 16 : 8;
+  return Align >= Size &&
+         (Size == 1 || Size == 2 || Size == 4 || Size == 8 || Size == 16) &&
+         Size <= LargestSize;
+}
+
+void AtomicExpand::expandAtomicLoadToLibcall(LoadInst *I) {
+  static const RTLIB::Libcall Libcalls[6] = {
+      RTLIB::ATOMIC_LOAD,   RTLIB::ATOMIC_LOAD_1, RTLIB::ATOMIC_LOAD_2,
+      RTLIB::ATOMIC_LOAD_4, RTLIB::ATOMIC_LOAD_8, RTLIB::ATOMIC_LOAD_16};
+  unsigned Size = getAtomicOpSize(I);
+  unsigned Align = getAtomicOpAlign(I);
+
+  bool expanded = expandAtomicOpToLibcall(
+      I, Size, Align, I->getPointerOperand(), nullptr, nullptr,
+      I->getOrdering(), AtomicOrdering::NotAtomic, Libcalls);
+  (void)expanded;
+  assert(expanded && "expandAtomicOpToLibcall shouldn't fail tor Load");
+}
+
+void AtomicExpand::expandAtomicStoreToLibcall(StoreInst *I) {
+  static const RTLIB::Libcall Libcalls[6] = {
+      RTLIB::ATOMIC_STORE,   RTLIB::ATOMIC_STORE_1, RTLIB::ATOMIC_STORE_2,
+      RTLIB::ATOMIC_STORE_4, RTLIB::ATOMIC_STORE_8, RTLIB::ATOMIC_STORE_16};
+  unsigned Size = getAtomicOpSize(I);
+  unsigned Align = getAtomicOpAlign(I);
+
+  bool expanded = expandAtomicOpToLibcall(
+      I, Size, Align, I->getPointerOperand(), I->getValueOperand(), nullptr,
+      I->getOrdering(), AtomicOrdering::NotAtomic, Libcalls);
+  (void)expanded;
+  assert(expanded && "expandAtomicOpToLibcall shouldn't fail tor Store");
+}
+
+void AtomicExpand::expandAtomicCASToLibcall(AtomicCmpXchgInst *I) {
+  static const RTLIB::Libcall Libcalls[6] = {
+      RTLIB::ATOMIC_COMPARE_EXCHANGE,   RTLIB::ATOMIC_COMPARE_EXCHANGE_1,
+      RTLIB::ATOMIC_COMPARE_EXCHANGE_2, RTLIB::ATOMIC_COMPARE_EXCHANGE_4,
+      RTLIB::ATOMIC_COMPARE_EXCHANGE_8, RTLIB::ATOMIC_COMPARE_EXCHANGE_16};
+  unsigned Size = getAtomicOpSize(I);
+  unsigned Align = getAtomicOpAlign(I);
+
+  bool expanded = expandAtomicOpToLibcall(
+      I, Size, Align, I->getPointerOperand(), I->getNewValOperand(),
+      I->getCompareOperand(), I->getSuccessOrdering(), I->getFailureOrdering(),
+      Libcalls);
+  (void)expanded;
+  assert(expanded && "expandAtomicOpToLibcall shouldn't fail tor CAS");
+}
+
+static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
+  static const RTLIB::Libcall LibcallsXchg[6] = {
+      RTLIB::ATOMIC_EXCHANGE,   RTLIB::ATOMIC_EXCHANGE_1,
+      RTLIB::ATOMIC_EXCHANGE_2, RTLIB::ATOMIC_EXCHANGE_4,
+      RTLIB::ATOMIC_EXCHANGE_8, RTLIB::ATOMIC_EXCHANGE_16};
+  static const RTLIB::Libcall LibcallsAdd[6] = {
+      RTLIB::UNKNOWN_LIBCALL,    RTLIB::ATOMIC_FETCH_ADD_1,
+      RTLIB::ATOMIC_FETCH_ADD_2, RTLIB::ATOMIC_FETCH_ADD_4,
+      RTLIB::ATOMIC_FETCH_ADD_8, RTLIB::ATOMIC_FETCH_ADD_16};
+  static const RTLIB::Libcall LibcallsSub[6] = {
+      RTLIB::UNKNOWN_LIBCALL,    RTLIB::ATOMIC_FETCH_SUB_1,
+      RTLIB::ATOMIC_FETCH_SUB_2, RTLIB::ATOMIC_FETCH_SUB_4,
+      RTLIB::ATOMIC_FETCH_SUB_8, RTLIB::ATOMIC_FETCH_SUB_16};
+  static const RTLIB::Libcall LibcallsAnd[6] = {
+      RTLIB::UNKNOWN_LIBCALL,    RTLIB::ATOMIC_FETCH_AND_1,
+      RTLIB::ATOMIC_FETCH_AND_2, RTLIB::ATOMIC_FETCH_AND_4,
+      RTLIB::ATOMIC_FETCH_AND_8, RTLIB::ATOMIC_FETCH_AND_16};
+  static const RTLIB::Libcall LibcallsOr[6] = {
+      RTLIB::UNKNOWN_LIBCALL,   RTLIB::ATOMIC_FETCH_OR_1,
+      RTLIB::ATOMIC_FETCH_OR_2, RTLIB::ATOMIC_FETCH_OR_4,
+      RTLIB::ATOMIC_FETCH_OR_8, RTLIB::ATOMIC_FETCH_OR_16};
+  static const RTLIB::Libcall LibcallsXor[6] = {
+      RTLIB::UNKNOWN_LIBCALL,    RTLIB::ATOMIC_FETCH_XOR_1,
+      RTLIB::ATOMIC_FETCH_XOR_2, RTLIB::ATOMIC_FETCH_XOR_4,
+      RTLIB::ATOMIC_FETCH_XOR_8, RTLIB::ATOMIC_FETCH_XOR_16};
+  static const RTLIB::Libcall LibcallsNand[6] = {
+      RTLIB::UNKNOWN_LIBCALL,     RTLIB::ATOMIC_FETCH_NAND_1,
+      RTLIB::ATOMIC_FETCH_NAND_2, RTLIB::ATOMIC_FETCH_NAND_4,
+      RTLIB::ATOMIC_FETCH_NAND_8, RTLIB::ATOMIC_FETCH_NAND_16};
+
+  switch (Op) {
+  case AtomicRMWInst::BAD_BINOP:
+    llvm_unreachable("Should not have BAD_BINOP.");
+  case AtomicRMWInst::Xchg:
+    return ArrayRef<RTLIB::Libcall>(LibcallsXchg);
+  case AtomicRMWInst::Add:
+    return ArrayRef<RTLIB::Libcall>(LibcallsAdd);
+  case AtomicRMWInst::Sub:
+    return ArrayRef<RTLIB::Libcall>(LibcallsSub);
+  case AtomicRMWInst::And:
+    return ArrayRef<RTLIB::Libcall>(LibcallsAnd);
+  case AtomicRMWInst::Or:
+    return ArrayRef<RTLIB::Libcall>(LibcallsOr);
+  case AtomicRMWInst::Xor:
+    return ArrayRef<RTLIB::Libcall>(LibcallsXor);
+  case AtomicRMWInst::Nand:
+    return ArrayRef<RTLIB::Libcall>(LibcallsNand);
+  case AtomicRMWInst::Max:
+  case AtomicRMWInst::Min:
+  case AtomicRMWInst::UMax:
+  case AtomicRMWInst::UMin:
+    // No atomic libcalls are available for max/min/umax/umin.
+    return ArrayRef<RTLIB::Libcall>();
+  }
+  llvm_unreachable("Unexpected AtomicRMW operation.");
+}
+
+void AtomicExpand::expandAtomicRMWToLibcall(AtomicRMWInst *I) {
+  ArrayRef<RTLIB::Libcall> Libcalls = GetRMWLibcall(I->getOperation());
+
+  unsigned Size = getAtomicOpSize(I);
+  unsigned Align = getAtomicOpAlign(I);
+
+  bool Success = false;
+  if (!Libcalls.empty())
+    Success = expandAtomicOpToLibcall(
+        I, Size, Align, I->getPointerOperand(), I->getValOperand(), nullptr,
+        I->getOrdering(), AtomicOrdering::NotAtomic, Libcalls);
+
+  // The expansion failed: either there were no libcalls at all for
+  // the operation (min/max), or there were only size-specialized
+  // libcalls (add/sub/etc) and we needed a generic. So, expand to a
+  // CAS libcall, via a CAS loop, instead.
+  if (!Success) {
+    expandAtomicRMWToCmpXchg(I, [this](IRBuilder<> &Builder, Value *Addr,
+                                       Value *Loaded, Value *NewVal,
+                                       AtomicOrdering MemOpOrder,
+                                       Value *&Success, Value *&NewLoaded) {
+      // Create the CAS instruction normally...
+      AtomicCmpXchgInst *Pair = Builder.CreateAtomicCmpXchg(
+          Addr, Loaded, NewVal, MemOpOrder,
+          AtomicCmpXchgInst::getStrongestFailureOrdering(MemOpOrder));
+      Success = Builder.CreateExtractValue(Pair, 1, "success");
+      NewLoaded = Builder.CreateExtractValue(Pair, 0, "newloaded");
+
+      // ...and then expand the CAS into a libcall.
+      expandAtomicCASToLibcall(Pair);
+    });
+  }
+}
+
+// A helper routine for the above expandAtomic*ToLibcall functions.
+//
+// 'Libcalls' contains an array of enum values for the particular
+// ATOMIC libcalls to be emitted. All of the other arguments besides
+// 'I' are extracted from the Instruction subclass by the
+// caller. Depending on the particular call, some will be null.
+bool AtomicExpand::expandAtomicOpToLibcall(
+    Instruction *I, unsigned Size, unsigned Align, Value *PointerOperand,
+    Value *ValueOperand, Value *CASExpected, AtomicOrdering Ordering,
+    AtomicOrdering Ordering2, ArrayRef<RTLIB::Libcall> Libcalls) {
+  assert(Libcalls.size() == 6);
+
+  LLVMContext &Ctx = I->getContext();
+  Module *M = I->getModule();
+  const DataLayout &DL = M->getDataLayout();
+  IRBuilder<> Builder(I);
+  IRBuilder<> AllocaBuilder(&I->getFunction()->getEntryBlock().front());
+
+  bool UseSizedLibcall = canUseSizedAtomicCall(Size, Align, DL);
+  Type *SizedIntTy = Type::getIntNTy(Ctx, Size * 8);
+
+  unsigned AllocaAlignment = DL.getPrefTypeAlignment(SizedIntTy);
+
+  // TODO: the "order" argument type is "int", not int32. So
+  // getInt32Ty may be wrong if the arch uses e.g. 16-bit ints.
+  ConstantInt *SizeVal64 = ConstantInt::get(Type::getInt64Ty(Ctx), Size);
+  Constant *OrderingVal =
+      ConstantInt::get(Type::getInt32Ty(Ctx), libcallAtomicModel(Ordering));
+  Constant *Ordering2Val = CASExpected
+                               ? ConstantInt::get(Type::getInt32Ty(Ctx),
+                                                  libcallAtomicModel(Ordering2))
+                               : nullptr;
+  bool HasResult = I->getType() != Type::getVoidTy(Ctx);
+
+  RTLIB::Libcall RTLibType;
+  if (UseSizedLibcall) {
+    switch (Size) {
+    case 1: RTLibType = Libcalls[1]; break;
+    case 2: RTLibType = Libcalls[2]; break;
+    case 4: RTLibType = Libcalls[3]; break;
+    case 8: RTLibType = Libcalls[4]; break;
+    case 16: RTLibType = Libcalls[5]; break;
+    }
+  } else if (Libcalls[0] != RTLIB::UNKNOWN_LIBCALL) {
+    RTLibType = Libcalls[0];
+  } else {
+    // Can't use sized function, and there's no generic for this
+    // operation, so give up.
+    return false;
+  }
+
+  // Build up the function call. There's two kinds. First, the sized
+  // variants.  These calls are going to be one of the following (with
+  // N=1,2,4,8,16):
+  //  iN    __atomic_load_N(iN *ptr, int ordering)
+  //  void  __atomic_store_N(iN *ptr, iN val, int ordering)
+  //  iN    __atomic_{exchange|fetch_*}_N(iN *ptr, iN val, int ordering)
+  //  bool  __atomic_compare_exchange_N(iN *ptr, iN *expected, iN desired,
+  //                                    int success_order, int failure_order)
+  //
+  // Note that these functions can be used for non-integer atomic
+  // operations, the values just need to be bitcast to integers on the
+  // way in and out.
+  //
+  // And, then, the generic variants. They look like the following:
+  //  void  __atomic_load(size_t size, void *ptr, void *ret, int ordering)
+  //  void  __atomic_store(size_t size, void *ptr, void *val, int ordering)
+  //  void  __atomic_exchange(size_t size, void *ptr, void *val, void *ret,
+  //                          int ordering)
+  //  bool  __atomic_compare_exchange(size_t size, void *ptr, void *expected,
+  //                                  void *desired, int success_order,
+  //                                  int failure_order)
+  //
+  // The different signatures are built up depending on the
+  // 'UseSizedLibcall', 'CASExpected', 'ValueOperand', and 'HasResult'
+  // variables.
+
+  AllocaInst *AllocaCASExpected = nullptr;
+  Value *AllocaCASExpected_i8 = nullptr;
+  AllocaInst *AllocaValue = nullptr;
+  Value *AllocaValue_i8 = nullptr;
+  AllocaInst *AllocaResult = nullptr;
+  Value *AllocaResult_i8 = nullptr;
+
+  Type *ResultTy;
+  SmallVector<Value *, 6> Args;
+  AttributeSet Attr;
+
+  // 'size' argument.
+  if (!UseSizedLibcall) {
+    // Note, getIntPtrType is assumed equivalent to size_t.
+    Args.push_back(ConstantInt::get(DL.getIntPtrType(Ctx), Size));
+  }
+
+  // 'ptr' argument.
+  Value *PtrVal =
+      Builder.CreateBitCast(PointerOperand, Type::getInt8PtrTy(Ctx));
+  Args.push_back(PtrVal);
+
+  // 'expected' argument, if present.
+  if (CASExpected) {
+    AllocaCASExpected = AllocaBuilder.CreateAlloca(CASExpected->getType());
+    AllocaCASExpected->setAlignment(AllocaAlignment);
+    AllocaCASExpected_i8 =
+        Builder.CreateBitCast(AllocaCASExpected, Type::getInt8PtrTy(Ctx));
+    Builder.CreateLifetimeStart(AllocaCASExpected_i8, SizeVal64);
+    Builder.CreateAlignedStore(CASExpected, AllocaCASExpected, AllocaAlignment);
+    Args.push_back(AllocaCASExpected_i8);
+  }
+
+  // 'val' argument ('desired' for cas), if present.
+  if (ValueOperand) {
+    if (UseSizedLibcall) {
+      Value *IntValue =
+          Builder.CreateBitOrPointerCast(ValueOperand, SizedIntTy);
+      Args.push_back(IntValue);
+    } else {
+      AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());
+      AllocaValue->setAlignment(AllocaAlignment);
+      AllocaValue_i8 =
+          Builder.CreateBitCast(AllocaValue, Type::getInt8PtrTy(Ctx));
+      Builder.CreateLifetimeStart(AllocaValue_i8, SizeVal64);
+      Builder.CreateAlignedStore(ValueOperand, AllocaValue, AllocaAlignment);
+      Args.push_back(AllocaValue_i8);
+    }
+  }
+
+  // 'ret' argument.
+  if (!CASExpected && HasResult && !UseSizedLibcall) {
+    AllocaResult = AllocaBuilder.CreateAlloca(I->getType());
+    AllocaResult->setAlignment(AllocaAlignment);
+    AllocaResult_i8 =
+        Builder.CreateBitCast(AllocaResult, Type::getInt8PtrTy(Ctx));
+    Builder.CreateLifetimeStart(AllocaResult_i8, SizeVal64);
+    Args.push_back(AllocaResult_i8);
+  }
+
+  // 'ordering' ('success_order' for cas) argument.
+  Args.push_back(OrderingVal);
+
+  // 'failure_order' argument, if present.
+  if (Ordering2Val)
+    Args.push_back(Ordering2Val);
+
+  // Now, the return type.
+  if (CASExpected) {
+    ResultTy = Type::getInt1Ty(Ctx);
+    Attr = Attr.addAttribute(Ctx, AttributeSet::ReturnIndex, Attribute::ZExt);
+  } else if (HasResult && UseSizedLibcall)
+    ResultTy = SizedIntTy;
+  else
+    ResultTy = Type::getVoidTy(Ctx);
+
+  // Done with setting up arguments and return types, create the call:
+  SmallVector<Type *, 6> ArgTys;
+  for (Value *Arg : Args)
+    ArgTys.push_back(Arg->getType());
+  FunctionType *FnType = FunctionType::get(ResultTy, ArgTys, false);
+  Constant *LibcallFn =
+      M->getOrInsertFunction(TLI->getLibcallName(RTLibType), FnType, Attr);
+  CallInst *Call = Builder.CreateCall(LibcallFn, Args);
+  Call->setAttributes(Attr);
+  Value *Result = Call;
+
+  // And then, extract the results...
+  if (ValueOperand && !UseSizedLibcall)
+    Builder.CreateLifetimeEnd(AllocaValue_i8, SizeVal64);
+
+  if (CASExpected) {
+    // The final result from the CAS is {load of 'expected' alloca, bool result
+    // from call}
+    Type *FinalResultTy = I->getType();
+    Value *V = UndefValue::get(FinalResultTy);
+    Value *ExpectedOut =
+        Builder.CreateAlignedLoad(AllocaCASExpected, AllocaAlignment);
+    Builder.CreateLifetimeEnd(AllocaCASExpected_i8, SizeVal64);
+    V = Builder.CreateInsertValue(V, ExpectedOut, 0);
+    V = Builder.CreateInsertValue(V, Result, 1);
+    I->replaceAllUsesWith(V);
+  } else if (HasResult) {
+    Value *V;
+    if (UseSizedLibcall)
+      V = Builder.CreateBitOrPointerCast(Result, I->getType());
+    else {
+      V = Builder.CreateAlignedLoad(AllocaResult, AllocaAlignment);
+      Builder.CreateLifetimeEnd(AllocaResult_i8, SizeVal64);
+    }
+    I->replaceAllUsesWith(V);
+  }
+  I->eraseFromParent();
   return true;
 }

@@ -50,9 +50,6 @@ class MachineIRBuilder {
     return *TII;
   }
 
-  /// Current insertion point for new instructions.
-  MachineBasicBlock::iterator getInsertPt();
-
 public:
   /// Getter for the function we currently build.
   MachineFunction &getMF() {
@@ -65,6 +62,9 @@ public:
     assert(MBB && "MachineBasicBlock is not set");
     return *MBB;
   }
+
+  /// Current insertion point for new instructions.
+  MachineBasicBlock::iterator getInsertPt();
 
   /// Setters for the insertion point.
   /// @{
