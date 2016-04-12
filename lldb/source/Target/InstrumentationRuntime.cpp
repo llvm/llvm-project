@@ -50,3 +50,9 @@ InstrumentationRuntime::IsActive()
 {
     return false;
 }
+
+lldb::ThreadCollectionSP
+InstrumentationRuntime::GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info)
+{
+    return ThreadCollectionSP(new ThreadCollection());
+}

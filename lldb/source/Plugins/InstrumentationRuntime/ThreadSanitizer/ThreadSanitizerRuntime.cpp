@@ -24,9 +24,11 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/InstrumentationRuntimeStopInfo.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "Plugins/Process/Utility/HistoryThread.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -346,7 +348,7 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref)
     
     StructuredData::Dictionary *dict = new StructuredData::Dictionary();
     dict->AddStringItem("instrumentation_class", "ThreadSanitizer");
-    dict->AddStringItem("description", RetrieveString(main_value, process_sp, ".description"));
+    dict->AddStringItem("issue_type", RetrieveString(main_value, process_sp, ".description"));
     dict->AddIntegerItem("report_count", main_value->GetValueForExpressionPath(".report_count")->GetValueAsUnsigned(0));
     dict->AddItem("sleep_trace", StructuredData::ObjectSP(CreateStackTrace(main_value, ".sleep_trace")));
     
@@ -412,40 +414,172 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref)
 std::string
 ThreadSanitizerRuntime::FormatDescription(StructuredData::ObjectSP report)
 {
-    std::string description = report->GetAsDictionary()->GetValueForKey("description")->GetAsString()->GetValue();
+    std::string description = report->GetAsDictionary()->GetValueForKey("issue_type")->GetAsString()->GetValue();
     
     if (description == "data-race") {
-        return "Data race detected";
+        return "Data race";
     } else if (description == "data-race-vptr") {
-        return "Data race on C++ virtual pointer detected";
+        return "Data race on C++ virtual pointer";
     } else if (description == "heap-use-after-free") {
-        return "Use of deallocated memory detected";
+        return "Use of deallocated memory";
     } else if (description == "heap-use-after-free-vptr") {
-        return "Use of deallocated C++ virtual pointer detected";
+        return "Use of deallocated C++ virtual pointer";
     } else if (description == "thread-leak") {
-        return "Thread leak detected";
+        return "Thread leak";
     } else if (description == "locked-mutex-destroy") {
-        return "Destruction of a locked mutex detected";
+        return "Destruction of a locked mutex";
     } else if (description == "mutex-double-lock") {
-        return "Double lock of a mutex detected";
+        return "Double lock of a mutex";
     } else if (description == "mutex-invalid-access") {
-        return "Use of an invalid mutex (e.g. uninitialized or destroyed) detected";
+        return "Use of an invalid mutex (e.g. uninitialized or destroyed)";
     } else if (description == "mutex-bad-unlock") {
-        return "Unlock of an unlocked mutex (or by a wrong thread) detected";
+        return "Unlock of an unlocked mutex (or by a wrong thread)";
     } else if (description == "mutex-bad-read-lock") {
-        return "Read lock of a write locked mutex detected";
+        return "Read lock of a write locked mutex";
     } else if (description == "mutex-bad-read-unlock") {
-        return "Read unlock of a write locked mutex detected";
+        return "Read unlock of a write locked mutex";
     } else if (description == "signal-unsafe-call") {
-        return "Signal-unsafe call inside a signal handler detected";
+        return "Signal-unsafe call inside a signal handler";
     } else if (description == "errno-in-signal-handler") {
-        return "Overwrite of errno in a signal handler detected";
+        return "Overwrite of errno in a signal handler";
     } else if (description == "lock-order-inversion") {
-        return "Lock order inversion (potential deadlock) detected";
+        return "Lock order inversion (potential deadlock)";
     }
     
     // for unknown report codes just show the code
     return description;
+}
+
+static std::string
+Sprintf(const char *format, ...)
+{
+    StreamString s;
+    va_list args;
+    va_start (args, format);
+    s.PrintfVarArg(format, args);
+    va_end (args);
+    return s.GetString();
+}
+
+static std::string
+GetSymbolNameFromAddress(ProcessSP process_sp, addr_t addr)
+{
+    lldb_private::Address so_addr;
+    if (! process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(addr, so_addr))
+        return "";
+    
+    lldb_private::Symbol *symbol = so_addr.CalculateSymbolContextSymbol();
+    if (! symbol)
+        return "";
+    
+    std::string sym_name = symbol->GetName().GetCString();
+    return sym_name;
+}
+
+addr_t
+ThreadSanitizerRuntime::GetFirstNonInternalFramePc(StructuredData::ObjectSP trace)
+{
+    ProcessSP process_sp = GetProcessSP();
+    ModuleSP runtime_module_sp = GetRuntimeModuleSP();
+    
+    addr_t result = 0;
+    trace->GetAsArray()->ForEach([process_sp, runtime_module_sp, &result] (StructuredData::Object *o) -> bool {
+        addr_t addr = o->GetIntegerValue();
+        lldb_private::Address so_addr;
+        if (! process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(addr, so_addr))
+            return true;
+        
+        if (so_addr.GetModule() == runtime_module_sp)
+            return true;
+        
+        result = addr;
+        return false;
+    });
+    
+    return result;
+}
+
+std::string
+ThreadSanitizerRuntime::GenerateSummary(StructuredData::ObjectSP report)
+{
+    ProcessSP process_sp = GetProcessSP();
+    
+    std::string summary = report->GetAsDictionary()->GetValueForKey("description")->GetAsString()->GetValue();
+    addr_t pc = 0;
+    if (report->GetAsDictionary()->GetValueForKey("mops")->GetAsArray()->GetSize() > 0)
+        pc = GetFirstNonInternalFramePc(report->GetAsDictionary()->GetValueForKey("mops")->GetAsArray()->GetItemAtIndex(0)->GetAsDictionary()->GetValueForKey("trace"));
+
+    if (report->GetAsDictionary()->GetValueForKey("stacks")->GetAsArray()->GetSize() > 0)
+        pc = GetFirstNonInternalFramePc(report->GetAsDictionary()->GetValueForKey("stacks")->GetAsArray()->GetItemAtIndex(0)->GetAsDictionary()->GetValueForKey("trace"));
+
+    if (pc != 0) {
+        summary = summary + " in " + GetSymbolNameFromAddress(process_sp, pc);
+    }
+    
+    if (report->GetAsDictionary()->GetValueForKey("locs")->GetAsArray()->GetSize() > 0) {
+        StructuredData::ObjectSP loc = report->GetAsDictionary()->GetValueForKey("locs")->GetAsArray()->GetItemAtIndex(0);
+        addr_t addr = loc->GetAsDictionary()->GetValueForKey("address")->GetAsInteger()->GetValue();
+        if (addr == 0)
+            addr = loc->GetAsDictionary()->GetValueForKey("start")->GetAsInteger()->GetValue();
+        
+        if (addr != 0) {
+            summary = summary + " at " + Sprintf("0x%llx", addr);
+        } else {
+            int fd = loc->GetAsDictionary()->GetValueForKey("file_descriptor")->GetAsInteger()->GetValue();
+            if (fd != 0) {
+                summary = summary + " on file descriptor " + Sprintf("%d", fd);
+            }
+        }
+    }
+    
+    return summary;
+}
+
+addr_t
+ThreadSanitizerRuntime::GetMainRacyAddress(StructuredData::ObjectSP report)
+{
+    addr_t result = (addr_t)-1;
+    
+    report->GetObjectForDotSeparatedPath("mops")->GetAsArray()->ForEach([&result] (StructuredData::Object *o) -> bool {
+        addr_t addr = o->GetObjectForDotSeparatedPath("address")->GetIntegerValue();
+        if (addr < result) result = addr;
+        return true;
+    });
+
+    return (result == (addr_t)-1) ? 0 : result;
+}
+
+std::string
+ThreadSanitizerRuntime::GetLocationDescription(StructuredData::ObjectSP report)
+{
+    std::string result = "";
+    
+    ProcessSP process_sp = GetProcessSP();
+    
+    if (report->GetAsDictionary()->GetValueForKey("locs")->GetAsArray()->GetSize() > 0) {
+        StructuredData::ObjectSP loc = report->GetAsDictionary()->GetValueForKey("locs")->GetAsArray()->GetItemAtIndex(0);
+        std::string type = loc->GetAsDictionary()->GetValueForKey("type")->GetStringValue();
+        if (type == "global") {
+            addr_t addr = loc->GetAsDictionary()->GetValueForKey("address")->GetAsInteger()->GetValue();
+            std::string global_name = GetSymbolNameFromAddress(process_sp, addr);
+            result = Sprintf("Location is a global '%s'", global_name.c_str());
+        } else if (type == "heap") {
+            addr_t addr = loc->GetAsDictionary()->GetValueForKey("start")->GetAsInteger()->GetValue();
+            long size = loc->GetAsDictionary()->GetValueForKey("size")->GetAsInteger()->GetValue();
+            result = Sprintf("Location is a %ld-byte heap object at 0x%llx", size, addr);
+        } else if (type == "stack") {
+            int tid = loc->GetAsDictionary()->GetValueForKey("thread_id")->GetAsInteger()->GetValue();
+            result = Sprintf("Location is stack of thread %d", tid);
+        } else if (type == "tls") {
+            int tid = loc->GetAsDictionary()->GetValueForKey("thread_id")->GetAsInteger()->GetValue();
+            result = Sprintf("Location is TLS of thread %d", tid);
+        } else if (type == "fd") {
+            int fd = loc->GetAsDictionary()->GetValueForKey("file_descriptor")->GetAsInteger()->GetValue();
+            result = Sprintf("Location is file descriptor %d", fd);
+        }
+    }
+    
+    return result;
 }
 
 bool
@@ -458,17 +592,27 @@ ThreadSanitizerRuntime::NotifyBreakpointHit(void *baton, StoppointCallbackContex
     ThreadSanitizerRuntime *const instance = static_cast<ThreadSanitizerRuntime*>(baton);
     
     StructuredData::ObjectSP report = instance->RetrieveReportData(context->exe_ctx_ref);
-    std::string description;
+    std::string stop_reason_description;
     if (report) {
-        description = instance->FormatDescription(report);
+        std::string issue_description = instance->FormatDescription(report);
+        report->GetAsDictionary()->AddStringItem("description", issue_description);
+        stop_reason_description = issue_description + " detected";
+        report->GetAsDictionary()->AddStringItem("stop_description", stop_reason_description);
+        std::string summary = instance->GenerateSummary(report);
+        report->GetAsDictionary()->AddStringItem("summary", summary);
+        addr_t main_address = instance->GetMainRacyAddress(report);
+        report->GetAsDictionary()->AddIntegerItem("memory_address", main_address);
+        std::string location_description = instance->GetLocationDescription(report);
+        report->GetAsDictionary()->AddStringItem("location_description", location_description);
     }
+    
     ProcessSP process_sp = instance->GetProcessSP();
     // Make sure this is the right process
     if (process_sp && process_sp == context->exe_ctx_ref.GetProcessSP())
     {
         ThreadSP thread_sp = context->exe_ctx_ref.GetThreadSP();
         if (thread_sp)
-            thread_sp->SetStopInfo(InstrumentationRuntimeStopInfo::CreateStopReasonWithInstrumentationData(*thread_sp, description.c_str(), report));
+            thread_sp->SetStopInfo(InstrumentationRuntimeStopInfo::CreateStopReasonWithInstrumentationData(*thread_sp, stop_reason_description.c_str(), report));
         
         StreamFileSP stream_sp (process_sp->GetTarget().GetDebugger().GetOutputFile());
         if (stream_sp)
@@ -535,4 +679,101 @@ ThreadSanitizerRuntime::Deactivate()
         }
     }
     m_is_active = false;
+}
+
+static std::string
+GenerateThreadName(std::string path, StructuredData::Object *o) {
+    std::string result = "additional information";
+    
+    if (path == "mops") {
+        int size = o->GetObjectForDotSeparatedPath("size")->GetIntegerValue();
+        int thread_id = o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
+        bool is_write = o->GetObjectForDotSeparatedPath("is_write")->GetBooleanValue();
+        bool is_atomic = o->GetObjectForDotSeparatedPath("is_atomic")->GetBooleanValue();
+        addr_t addr = o->GetObjectForDotSeparatedPath("address")->GetIntegerValue();
+        
+        result = Sprintf("%s%s of size %d at 0x%llx by thread %d", is_atomic ? "atomic " : "", is_write ? "write" : "read", size, addr, thread_id);
+    }
+    
+    if (path == "threads") {
+        int thread_id = o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
+        int parent_thread_id = o->GetObjectForDotSeparatedPath("parent_thread_id")->GetIntegerValue();
+        
+        result = Sprintf("thread %d created by thread %d at", thread_id, parent_thread_id);
+    }
+    
+    if (path == "locs") {
+        std::string type = o->GetAsDictionary()->GetValueForKey("type")->GetStringValue();
+        int thread_id = o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
+        int fd = o->GetObjectForDotSeparatedPath("file_descriptor")->GetIntegerValue();
+        if (type == "heap") {
+            result = Sprintf("Heap block allocated by thread %d at", thread_id);
+        } else if (type == "fd") {
+            result = Sprintf("File descriptor %d created by thread %t at", fd, thread_id);
+        }
+    }
+    
+    if (path == "mutexes") {
+        int mutex_id = o->GetObjectForDotSeparatedPath("mutex_id")->GetIntegerValue();
+        
+        result = Sprintf("mutex M%d created at", mutex_id);
+    }
+    
+    if (path == "stacks") {
+        result = "happened at";
+    }
+    
+    result[0] = toupper(result[0]);
+    
+    return result;
+}
+
+static void
+AddThreadsForPath(std::string path, ThreadCollectionSP threads, ProcessSP process_sp, StructuredData::ObjectSP info)
+{
+    info->GetObjectForDotSeparatedPath(path)->GetAsArray()->ForEach([process_sp, threads, path] (StructuredData::Object *o) -> bool {
+        std::vector<lldb::addr_t> pcs;
+        o->GetObjectForDotSeparatedPath("trace")->GetAsArray()->ForEach([&pcs] (StructuredData::Object *pc) -> bool {
+            pcs.push_back(pc->GetAsInteger()->GetValue());
+            return true;
+        });
+        
+        if (pcs.size() == 0)
+            return true;
+        
+        StructuredData::ObjectSP thread_id_obj = o->GetObjectForDotSeparatedPath("thread_id");
+        tid_t tid = thread_id_obj ? thread_id_obj->GetIntegerValue() : 0;
+        
+        uint32_t stop_id = 0;
+        bool stop_id_is_valid = false;
+        HistoryThread *history_thread = new HistoryThread(*process_sp, tid, pcs, stop_id, stop_id_is_valid);
+        ThreadSP new_thread_sp(history_thread);
+        new_thread_sp->SetName(GenerateThreadName(path, o).c_str());
+        
+        // Save this in the Process' ExtendedThreadList so a strong pointer retains the object
+        process_sp->GetExtendedThreadList().AddThread(new_thread_sp);
+        threads->AddThread(new_thread_sp);
+        
+        return true;
+    });
+}
+
+lldb::ThreadCollectionSP
+ThreadSanitizerRuntime::GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info)
+{
+    ThreadCollectionSP threads;
+    threads.reset(new ThreadCollection());
+
+    if (info->GetObjectForDotSeparatedPath("instrumentation_class")->GetStringValue() != "ThreadSanitizer")
+        return threads;
+    
+    ProcessSP process_sp = GetProcessSP();
+    
+    AddThreadsForPath("stacks", threads, process_sp, info);
+    AddThreadsForPath("mops", threads, process_sp, info);
+    AddThreadsForPath("locs", threads, process_sp, info);
+    AddThreadsForPath("mutexes", threads, process_sp, info);
+    AddThreadsForPath("threads", threads, process_sp, info);
+    
+    return threads;
 }

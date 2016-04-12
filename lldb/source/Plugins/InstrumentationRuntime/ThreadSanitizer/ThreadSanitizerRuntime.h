@@ -63,6 +63,9 @@ public:
     bool
     IsActive() override;
     
+    lldb::ThreadCollectionSP
+    GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info) override;
+    
 private:
     ThreadSanitizerRuntime(const lldb::ProcessSP &process_sp);
     
@@ -92,6 +95,18 @@ private:
     
     std::string
     FormatDescription(StructuredData::ObjectSP report);
+    
+    std::string
+    GenerateSummary(StructuredData::ObjectSP report);
+    
+    lldb::addr_t
+    GetMainRacyAddress(StructuredData::ObjectSP report);
+    
+    std::string
+    GetLocationDescription(StructuredData::ObjectSP report);
+    
+    lldb::addr_t
+    GetFirstNonInternalFramePc(StructuredData::ObjectSP trace);
     
     bool m_is_active;
     lldb::ModuleWP m_runtime_module_wp;
