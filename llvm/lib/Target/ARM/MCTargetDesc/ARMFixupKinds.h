@@ -100,6 +100,9 @@ enum Fixups {
   fixup_t2_movt_hi16, // :upper16:
   fixup_t2_movw_lo16, // :lower16:
 
+  // fixup_arm_mod_imm - Fixup for mod_imm
+  fixup_arm_mod_imm,
+
   // Marker
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind
