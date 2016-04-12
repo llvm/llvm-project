@@ -69,12 +69,6 @@ class GoUserExpression : public UserExpression
     Parse(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx, lldb_private::ExecutionPolicy execution_policy,
           bool keep_result_in_memory, bool generate_debug_info, uint32_t line_offset) override;
 
-    lldb::ExpressionResults
-    Execute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
-            const EvaluateExpressionOptions &options,
-            lldb::UserExpressionSP &shared_ptr_to_me,
-            lldb::ExpressionVariableSP &result) override;
-
     bool
     CanInterpret() override
     {
@@ -87,6 +81,12 @@ class GoUserExpression : public UserExpression
     {
         return true;
     }
+
+  protected:
+      lldb::ExpressionResults
+      DoExecute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+                const EvaluateExpressionOptions &options, lldb::UserExpressionSP &shared_ptr_to_me,
+                lldb::ExpressionVariableSP &result) override;
 
   private:
     class GoInterpreter;
