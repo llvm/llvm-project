@@ -5500,6 +5500,7 @@ TEST(StatementMatcher, HasReturnValue) {
   StatementMatcher RetVal = returnStmt(hasReturnValue(binaryOperator()));
   EXPECT_TRUE(matches("int F() { int a, b; return a + b; }", RetVal));
   EXPECT_FALSE(matches("int F() { int a; return a; }", RetVal));
+  EXPECT_FALSE(matches("void F() { return; }", RetVal));
 }
 
 } // end namespace ast_matchers

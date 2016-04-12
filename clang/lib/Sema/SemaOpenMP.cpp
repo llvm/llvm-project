@@ -3190,10 +3190,11 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   return Res;
 }
 
-Sema::DeclGroupPtrTy
-Sema::ActOnOpenMPDeclareSimdDirective(DeclGroupPtrTy DG,
-                                      OMPDeclareSimdDeclAttr::BranchStateTy BS,
-                                      Expr *Simdlen, SourceRange SR) {
+Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareSimdDirective(
+    DeclGroupPtrTy DG, OMPDeclareSimdDeclAttr::BranchStateTy BS, Expr *Simdlen,
+    ArrayRef<Expr *> Uniforms, ArrayRef<Expr *> Aligneds,
+    ArrayRef<Expr *> Alignments, SourceRange SR) {
+  assert(Aligneds.size() == Alignments.size());
   if (!DG || DG.get().isNull())
     return DeclGroupPtrTy();
 
@@ -3205,9 +3206,9 @@ Sema::ActOnOpenMPDeclareSimdDirective(DeclGroupPtrTy DG,
   if (auto *FTD = dyn_cast<FunctionTemplateDecl>(ADecl))
     ADecl = FTD->getTemplatedDecl();
 
-  if (!isa<FunctionDecl>(ADecl)) {
-    Diag(ADecl->getLocation(), diag::err_omp_function_expected)
-        << ADecl->getDeclContext()->isFileContext();
+  auto *FD = dyn_cast<FunctionDecl>(ADecl);
+  if (!FD) {
+    Diag(ADecl->getLocation(), diag::err_omp_function_expected);
     return DeclGroupPtrTy();
   }
 
@@ -3215,13 +3216,97 @@ Sema::ActOnOpenMPDeclareSimdDirective(DeclGroupPtrTy DG,
   // The parameter of the simdlen clause must be a constant positive integer
   // expression.
   ExprResult SL;
-  if (Simdlen) {
+  if (Simdlen)
     SL = VerifyPositiveIntegerConstantInClause(Simdlen, OMPC_simdlen);
-    if (SL.isInvalid())
-      return DG;
+  // OpenMP [2.8.2, declare simd construct, Description]
+  // The special this pointer can be used as if was one of the arguments to the
+  // function in any of the linear, aligned, or uniform clauses.
+  // The uniform clause declares one or more arguments to have an invariant
+  // value for all concurrent invocations of the function in the execution of a
+  // single SIMD loop.
+  for (auto *E : Uniforms) {
+    E = E->IgnoreParenImpCasts();
+    if (auto *DRE = dyn_cast<DeclRefExpr>(E))
+      if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
+        if (FD->getNumParams() > PVD->getFunctionScopeIndex() &&
+            FD->getParamDecl(PVD->getFunctionScopeIndex())
+                    ->getCanonicalDecl() == PVD->getCanonicalDecl())
+          continue;
+    if (isa<CXXThisExpr>(E))
+      continue;
+    Diag(E->getExprLoc(), diag::err_omp_param_or_this_in_clause)
+        << FD->getDeclName() << (isa<CXXMethodDecl>(ADecl) ? 1 : 0);
   }
-  auto *NewAttr =
-      OMPDeclareSimdDeclAttr::CreateImplicit(Context, BS, SL.get(), SR);
+  // OpenMP [2.8.2, declare simd construct, Description]
+  // The aligned clause declares that the object to which each list item points
+  // is aligned to the number of bytes expressed in the optional parameter of
+  // the aligned clause.
+  // The special this pointer can be used as if was one of the arguments to the
+  // function in any of the linear, aligned, or uniform clauses.
+  // The type of list items appearing in the aligned clause must be array,
+  // pointer, reference to array, or reference to pointer.
+  llvm::DenseMap<Decl *, Expr *> AlignedArgs;
+  Expr *AlignedThis = nullptr;
+  for (auto *E : Aligneds) {
+    E = E->IgnoreParenImpCasts();
+    if (auto *DRE = dyn_cast<DeclRefExpr>(E))
+      if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl())) {
+        auto *CanonPVD = PVD->getCanonicalDecl();
+        if (FD->getNumParams() > PVD->getFunctionScopeIndex() &&
+            FD->getParamDecl(PVD->getFunctionScopeIndex())
+                    ->getCanonicalDecl() == CanonPVD) {
+          // OpenMP  [2.8.1, simd construct, Restrictions]
+          // A list-item cannot appear in more than one aligned clause.
+          if (AlignedArgs.count(CanonPVD) > 0) {
+            Diag(E->getExprLoc(), diag::err_omp_aligned_twice)
+                << 1 << E->getSourceRange();
+            Diag(AlignedArgs[CanonPVD]->getExprLoc(),
+                 diag::note_omp_explicit_dsa)
+                << getOpenMPClauseName(OMPC_aligned);
+            continue;
+          }
+          AlignedArgs[CanonPVD] = E;
+          QualType QTy = PVD->getType()
+                             .getNonReferenceType()
+                             .getUnqualifiedType()
+                             .getCanonicalType();
+          const Type *Ty = QTy.getTypePtrOrNull();
+          if (!Ty || (!Ty->isArrayType() && !Ty->isPointerType())) {
+            Diag(E->getExprLoc(), diag::err_omp_aligned_expected_array_or_ptr)
+                << QTy << getLangOpts().CPlusPlus << E->getSourceRange();
+            Diag(PVD->getLocation(), diag::note_previous_decl) << PVD;
+          }
+          continue;
+        }
+      }
+    if (isa<CXXThisExpr>(E)) {
+      if (AlignedThis) {
+        Diag(E->getExprLoc(), diag::err_omp_aligned_twice)
+            << 2 << E->getSourceRange();
+        Diag(AlignedThis->getExprLoc(), diag::note_omp_explicit_dsa)
+            << getOpenMPClauseName(OMPC_aligned);
+      }
+      AlignedThis = E;
+      continue;
+    }
+    Diag(E->getExprLoc(), diag::err_omp_param_or_this_in_clause)
+        << FD->getDeclName() << (isa<CXXMethodDecl>(ADecl) ? 1 : 0);
+  }
+  // The optional parameter of the aligned clause, alignment, must be a constant
+  // positive integer expression. If no optional parameter is specified,
+  // implementation-defined default alignments for SIMD instructions on the
+  // target platforms are assumed.
+  SmallVector<Expr *, 4> NewAligns;
+  for (auto *E : Alignments) {
+    ExprResult Align;
+    if (E)
+      Align = VerifyPositiveIntegerConstantInClause(E, OMPC_aligned);
+    NewAligns.push_back(Align.get());
+  }
+  auto *NewAttr = OMPDeclareSimdDeclAttr::CreateImplicit(
+      Context, BS, SL.get(), const_cast<Expr **>(Uniforms.data()),
+      Uniforms.size(), const_cast<Expr **>(Aligneds.data()), Aligneds.size(),
+      const_cast<Expr **>(NewAligns.data()), NewAligns.size(), SR);
   ADecl->addAttr(NewAttr);
   return ConvertDeclToDeclGroup(ADecl);
 }
@@ -6386,6 +6471,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_dist_schedule:
   case OMPC_defaultmap:
   case OMPC_unknown:
+  case OMPC_uniform:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -6671,6 +6757,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_dist_schedule:
   case OMPC_defaultmap:
   case OMPC_unknown:
+  case OMPC_uniform:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -6821,6 +6908,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_num_tasks:
   case OMPC_hint:
   case OMPC_unknown:
+  case OMPC_uniform:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -7004,6 +7092,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_dist_schedule:
   case OMPC_defaultmap:
   case OMPC_unknown:
+  case OMPC_uniform:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -7149,6 +7238,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_dist_schedule:
   case OMPC_defaultmap:
   case OMPC_unknown:
+  case OMPC_uniform:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -8838,7 +8928,7 @@ OMPClause *Sema::ActOnOpenMPAlignedClause(
     // OpenMP  [2.8.1, simd construct, Restrictions]
     // A list-item cannot appear in more than one aligned clause.
     if (Expr *PrevRef = DSAStack->addUniqueAligned(D, SimpleRefExpr)) {
-      Diag(ELoc, diag::err_omp_aligned_twice) << ERange;
+      Diag(ELoc, diag::err_omp_aligned_twice) << 0 << ERange;
       Diag(PrevRef->getExprLoc(), diag::note_omp_explicit_dsa)
           << getOpenMPClauseName(OMPC_aligned);
       continue;

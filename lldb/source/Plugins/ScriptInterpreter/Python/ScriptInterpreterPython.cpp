@@ -274,8 +274,8 @@ ScriptInterpreterPython::ScriptInterpreterPython(CommandInterpreter &interpreter
     m_lock_count(0),
     m_command_thread_state(nullptr)
 {
-    InitializePrivate();
-    
+    assert(g_initialized && "ScriptInterpreterPython created but InitializePrivate has not been called!");
+
     m_dictionary_name.append("_dict");
     StreamString run_string;
     run_string.Printf ("%s = dict()", m_dictionary_name.c_str());
@@ -330,6 +330,8 @@ ScriptInterpreterPython::Initialize()
 
     std::call_once(g_once_flag, []()
     {
+        InitializePrivate();
+
         PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                       GetPluginDescriptionStatic(),
                                       lldb::eScriptLanguagePython,
@@ -3095,9 +3097,7 @@ ScriptInterpreterPython::InitializeInterpreter (SWIGInitCallback swig_init_callb
 void
 ScriptInterpreterPython::InitializePrivate ()
 {
-    if (g_initialized)
-        return;
-
+    assert(!g_initialized && "ScriptInterpreterPython::InitializePrivate() called more than once!");
     g_initialized = true;
 
     Timer scoped_timer (__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
