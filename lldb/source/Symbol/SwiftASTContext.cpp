@@ -5732,6 +5732,8 @@ SwiftASTContext::IsPossibleDynamicType (void* type,
                                         bool check_objc,
                                         bool check_swift)
 {
+    VALID_OR_RETURN(false);
+
     if (type && check_swift)
     {
         // FIXME: use the dynamic_pointee_type
@@ -5740,21 +5742,24 @@ SwiftASTContext::IsPossibleDynamicType (void* type,
         if (type_flags.AnySet(eTypeIsArchetype | eTypeIsClass | eTypeIsProtocol))
             return true;
         
-        if (type_flags.AnySet(eTypeIsStructUnion | eTypeIsEnumeration | eTypeIsTuple))
+        if (auto ast_ctx = GetASTContext())
         {
-            CompilerType compiler_type(GetASTContext(), GetCanonicalSwiftType(type));
-            return !SwiftASTContext::IsFullyRealized(compiler_type);
+            if (type_flags.AnySet(eTypeIsStructUnion | eTypeIsEnumeration | eTypeIsTuple))
+            {
+                CompilerType compiler_type(ast_ctx, GetCanonicalSwiftType(type));
+                return !SwiftASTContext::IsFullyRealized(compiler_type);
+            }
+
+            auto can_type = GetCanonicalSwiftType(type).getPointer();
+            if (can_type == ast_ctx->TheRawPointerType.getPointer())
+                return true;
+            if (can_type == ast_ctx->TheUnknownObjectType.getPointer())
+                return true;
+            if (can_type == ast_ctx->TheNativeObjectType.getPointer())
+                return true;
+            if (can_type == ast_ctx->TheBridgeObjectType.getPointer())
+                return true;
         }
-        
-        auto can_type = GetCanonicalSwiftType(type).getPointer();
-        if (can_type == GetASTContext()->TheRawPointerType.getPointer())
-            return true;
-        if (can_type == GetASTContext()->TheUnknownObjectType.getPointer())
-            return true;
-        if (can_type == GetASTContext()->TheNativeObjectType.getPointer())
-            return true;
-        if (can_type == GetASTContext()->TheBridgeObjectType.getPointer())
-            return true;
     }
 
     if (dynamic_pointee_type)
