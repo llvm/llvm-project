@@ -143,7 +143,7 @@ static void computeImportForFunction(
     const std::map<GlobalValue::GUID, FunctionSummary *> &DefinedFunctions,
     SmallVectorImpl<EdgeInfo> &Worklist,
     FunctionImporter::ImportMapTy &ImportsForModule,
-    StringMap<FunctionImporter::ExportSetTy> &ExportLists) {
+    StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
   for (auto &Edge : Summary.calls()) {
     auto GUID = Edge.first.getGUID();
     DEBUG(dbgs() << " edge -> " << GUID << " Threshold:" << Threshold << "\n");
@@ -176,19 +176,21 @@ static void computeImportForFunction(
 
     // Make exports in the source module.
     auto ExportModulePath = CalleeSummary->modulePath();
-    auto ExportList = ExportLists[ExportModulePath];
-    ExportList.insert(GUID);
-    // Mark all functions and globals referenced by this function as exported to
-    // the outside if they are defined in the same source module.
-    for (auto &Edge : CalleeSummary->calls()) {
-      auto CalleeGUID = Edge.first.getGUID();
-      if (isGlobalExported(Index, ExportModulePath, CalleeGUID))
-        ExportList.insert(CalleeGUID);
-    }
-    for (auto &Ref : CalleeSummary->refs()) {
-      auto GUID = Ref.getGUID();
-      if (isGlobalExported(Index, ExportModulePath, GUID))
-        ExportList.insert(GUID);
+    if (ExportLists) {
+      auto ExportList = (*ExportLists)[ExportModulePath];
+      ExportList.insert(GUID);
+      // Mark all functions and globals referenced by this function as exported
+      // to the outside if they are defined in the same source module.
+      for (auto &Edge : CalleeSummary->calls()) {
+        auto CalleeGUID = Edge.first.getGUID();
+        if (isGlobalExported(Index, ExportModulePath, CalleeGUID))
+          ExportList.insert(CalleeGUID);
+      }
+      for (auto &Ref : CalleeSummary->refs()) {
+        auto GUID = Ref.getGUID();
+        if (isGlobalExported(Index, ExportModulePath, GUID))
+          ExportList.insert(GUID);
+      }
     }
 
     // Insert the newly imported function to the worklist.
@@ -203,7 +205,7 @@ static void ComputeImportForModule(
     const std::map<GlobalValue::GUID, FunctionSummary *> &DefinedFunctions,
     const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportsForModule,
-    StringMap<FunctionImporter::ExportSetTy> &ExportLists) {
+    StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
   // Worklist contains the list of function imported in this module, for which
   // we will analyse the callees and may import further down the callgraph.
   SmallVector<EdgeInfo, 128> Worklist;
@@ -234,7 +236,7 @@ static void ComputeImportForModule(
 
 } // anonymous namespace
 
-/// Compute all the import and export for every module in the Index.
+/// Compute all the import and export for every module using the Index.
 void llvm::ComputeCrossModuleImport(
     const ModuleSummaryIndex &Index,
     StringMap<FunctionImporter::ImportMapTy> &ImportLists,
@@ -265,7 +267,7 @@ void llvm::ComputeCrossModuleImport(
     DEBUG(dbgs() << "Computing import for Module '" << DefinedFunctions.first()
                  << "'\n");
     ComputeImportForModule(DefinedFunctions.second, Index, ImportsForModule,
-                           ExportLists);
+                           &ExportLists);
   }
 
 #ifndef NDEBUG
@@ -282,6 +284,31 @@ void llvm::ComputeCrossModuleImport(
       DEBUG(dbgs() << " - " << Src.second.size() << " functions imported from "
                    << SrcModName << "\n");
     }
+  }
+#endif
+}
+
+/// Compute all the imports for the given module in the Index.
+void llvm::ComputeCrossModuleImportForModule(
+    StringRef ModulePath, const ModuleSummaryIndex &Index,
+    FunctionImporter::ImportMapTy &ImportList) {
+
+  // Collect the list of functions this module defines.
+  // GUID -> Summary
+  std::map<GlobalValue::GUID, FunctionSummary *> FunctionInfoMap;
+  Index.collectDefinedFunctionsForModule(ModulePath, FunctionInfoMap);
+
+  // Compute the import list for this module.
+  DEBUG(dbgs() << "Computing import for Module '" << ModulePath << "'\n");
+  ComputeImportForModule(FunctionInfoMap, Index, ImportList);
+
+#ifndef NDEBUG
+  DEBUG(dbgs() << "* Module " << ModulePath << " imports from "
+               << ImportList.size() << " modules.\n");
+  for (auto &Src : ImportList) {
+    auto SrcModName = Src.first();
+    DEBUG(dbgs() << " - " << Src.second.size() << " functions imported from "
+                 << SrcModName << "\n");
   }
 #endif
 }
@@ -463,13 +490,10 @@ public:
       Index = IndexPtr.get();
     }
 
-    // First step is collecting the import/export lists
-    // The export list is not used yet, but could limit the amount of renaming
-    // performed in renameModuleForThinLTO()
-    StringMap<FunctionImporter::ImportMapTy> ImportLists;
-    StringMap<FunctionImporter::ExportSetTy> ExportLists;
-    ComputeCrossModuleImport(*Index, ImportLists, ExportLists);
-    auto &ImportList = ImportLists[M.getModuleIdentifier()];
+    // First step is collecting the import list.
+    FunctionImporter::ImportMapTy ImportList;
+    ComputeCrossModuleImportForModule(M.getModuleIdentifier(), *Index,
+                                      ImportList);
 
     // Next we need to promote to global scope and rename any local values that
     // are potentially exported to other modules.

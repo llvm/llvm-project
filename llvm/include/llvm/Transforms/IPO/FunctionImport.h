@@ -70,6 +70,14 @@ void ComputeCrossModuleImport(
     const ModuleSummaryIndex &Index,
     StringMap<FunctionImporter::ImportMapTy> &ImportLists,
     StringMap<FunctionImporter::ExportSetTy> &ExportLists);
+
+/// Compute all the imports for the given module using the Index.
+///
+/// \p ImportList will be populated with a map that can be passed to
+/// FunctionImporter::importFunctions() above (see description there).
+void ComputeCrossModuleImportForModule(
+    StringRef ModulePath, const ModuleSummaryIndex &Index,
+    FunctionImporter::ImportMapTy &ImportList);
 }
 
 #endif // LLVM_FUNCTIONIMPORT_H
