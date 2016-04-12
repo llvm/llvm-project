@@ -68,7 +68,7 @@ static void DumpPlaceholderArguments (lldb_private::Stream &wrapped_stream, llvm
     {
         const char *name = binding.name;
         
-        wrapped_stream.Printf(", _ __lldb_placeholder_%s : UnsafePointer<%s>", name, name);
+        wrapped_stream.Printf(", _ __lldb_placeholder_%s : UnsafePointer<%s>!", name, name);
     }
 }
 
@@ -80,7 +80,7 @@ static void DumpPlaceholdersIntoCall (lldb_private::Stream &wrapped_stream, llvm
     for (const Expression::SwiftGenericInfo::Binding &binding : generic_bindings)
     {
         wrapped_stream.Printf(",\n"
-                              "      UnsafePointer<$__lldb_typeof_generic_%s>(nil)", binding.name);
+                              "      (nil as UnsafePointer<$__lldb_typeof_generic_%s>?)", binding.name);
     }
 }
 

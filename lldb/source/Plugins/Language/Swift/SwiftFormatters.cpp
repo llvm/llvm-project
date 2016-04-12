@@ -138,6 +138,7 @@ lldb_private::formatters::swift::StringCore_SummaryProvider (ValueObject& valobj
 bool
 lldb_private::formatters::swift::StringCore_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& summary_options, StringPrinter::ReadStringAndDumpToStreamOptions read_options)
 {
+    static ConstString g_some("some");
     static ConstString g__baseAddress("_baseAddress");
     static ConstString g__countAndFlags("_countAndFlags");
     static ConstString g_value("_value");
@@ -146,13 +147,13 @@ lldb_private::formatters::swift::StringCore_SummaryProvider (ValueObject& valobj
     ProcessSP process_sp(valobj.GetProcessSP());
     if (!process_sp)
         return false;
-    ValueObjectSP baseAddress_sp(valobj.GetChildAtNamePath({ g__baseAddress, g__rawValue }));
+    ValueObjectSP baseAddress_sp(valobj.GetChildAtNamePath({ g__baseAddress, g_some, g__rawValue }));
     ValueObjectSP _countAndFlags_sp(valobj.GetChildAtNamePath({ g__countAndFlags, g_value }));
     
-    if (!baseAddress_sp || !_countAndFlags_sp)
+    if (!_countAndFlags_sp)
         return false;
     
-    lldb::addr_t baseAddress = baseAddress_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    lldb::addr_t baseAddress = baseAddress_sp ? baseAddress_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS) : 0;
     InferiorSizedWord _countAndFlags = InferiorSizedWord(_countAndFlags_sp->GetValueAsUnsigned(0),*process_sp.get());
     
     if (baseAddress == LLDB_INVALID_ADDRESS)
