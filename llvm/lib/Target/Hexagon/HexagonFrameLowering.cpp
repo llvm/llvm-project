@@ -1152,8 +1152,7 @@ static void dump_registers(BitVector &Regs, const TargetRegisterInfo &TRI) {
 
 
 bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
-      const TargetRegisterInfo *TRI, std::vector<CalleeSavedInfo> &CSI,
-      unsigned &MinCSFrameIndex, unsigned &MaxCSFrameIndex) const {
+      const TargetRegisterInfo *TRI, std::vector<CalleeSavedInfo> &CSI) const {
   DEBUG(dbgs() << LLVM_FUNCTION_NAME << " on "
                << MF.getFunction()->getName() << '\n');
   MachineFrameInfo *MFI = MF.getFrameInfo();

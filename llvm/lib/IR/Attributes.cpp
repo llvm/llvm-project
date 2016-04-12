@@ -512,10 +512,10 @@ uint64_t AttributeImpl::getAttrMask(Attribute::AttrKind Val) {
   case Attribute::Convergent:      return 1ULL << 46;
   case Attribute::SafeStack:       return 1ULL << 47;
   case Attribute::NoRecurse:       return 1ULL << 48;
-  case Attribute::SwiftSelf:       return 1ULL << 49;
-  case Attribute::SwiftError:      return 1ULL << 50;
-  case Attribute::InaccessibleMemOnly:         return 1ULL << 51;
-  case Attribute::InaccessibleMemOrArgMemOnly: return 1ULL << 52;
+  case Attribute::InaccessibleMemOnly:         return 1ULL << 49;
+  case Attribute::InaccessibleMemOrArgMemOnly: return 1ULL << 50;
+  case Attribute::SwiftSelf:       return 1ULL << 51;
+  case Attribute::SwiftError:      return 1ULL << 52;
   case Attribute::Dereferenceable:
     llvm_unreachable("dereferenceable attribute not supported in raw format");
     break;

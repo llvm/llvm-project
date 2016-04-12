@@ -120,10 +120,7 @@ public:
   virtual bool
   assignCalleeSavedSpillSlots(MachineFunction &MF,
                               const TargetRegisterInfo *TRI,
-                              std::vector<CalleeSavedInfo> &CSI,
-                              unsigned &MinCSFrameIndex,
-                              unsigned &MaxCSFrameIndex) const {
-
+                              std::vector<CalleeSavedInfo> &CSI) const {
     return false;
   }
 

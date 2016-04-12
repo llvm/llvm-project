@@ -80,9 +80,7 @@ public:
   bool
   assignCalleeSavedSpillSlots(MachineFunction &MF,
                               const TargetRegisterInfo *TRI,
-                              std::vector<CalleeSavedInfo> &CSI,
-                              unsigned &MinCSFrameIndex,
-                              unsigned &MaxCSFrameIndex) const override;
+                              std::vector<CalleeSavedInfo> &CSI) const override;
 
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
