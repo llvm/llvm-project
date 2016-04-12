@@ -8,7 +8,7 @@
 ;    }
 ;
 ; CHECK:      Invalid Context:
-; CHECK-NEXT:   [A, B] -> {  : (4*floor((-A + B)/4) < -A + B and 4*floor((A - B)/4) < A - B) or (4*floor((-A + B)/4) = -A + B and B >= 9223372036854775808 + A) or (4*floor((-A + B)/4) = -A + B and B <= -4 + A) }
+; CHECK-NEXT:   [A, B] -> { : (4*floor((A - B)/4) < A - B) or (4*floor((-A + B)/4) = -A + B and B >= 9223372036854775808 + A) or (4*floor((-A + B)/4) = -A + B and B <= -4 + A) }
 ;
 ; CHECK:      Domain :=
 ; CHECK-NEXT:   [A, B] -> { Stmt_while_body[i0] : 4*floor((A - B)/4) = A - B and B >= A and i0 >= 0 and 4i0 < -A + B }

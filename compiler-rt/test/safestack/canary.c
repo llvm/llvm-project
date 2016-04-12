@@ -1,7 +1,7 @@
-// RUN: %clang_safestack -g %s -o %t.nossp
+// RUN: %clang_safestack -fno-stack-protector -D_FORTIFY_SOURCE=0 -g %s -o %t.nossp
 // RUN: %run %t.nossp 2>&1 | FileCheck --check-prefix=NOSSP %s
 
-// RUN: %clang_safestack -fstack-protector-all -g %s -o %t.ssp
+// RUN: %clang_safestack -fstack-protector-all -D_FORTIFY_SOURCE=0 -g %s -o %t.ssp
 // RUN: not --crash %run %t.ssp 2>&1 | FileCheck -check-prefix=SSP %s
 
 // Test stack canaries on the unsafe stack.
