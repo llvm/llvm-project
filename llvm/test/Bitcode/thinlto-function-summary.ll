@@ -1,4 +1,4 @@
-; RUN: llvm-as -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
+; RUN: opt -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
 ; Check for summary block/records.
 
 ; Check the value ids in the summary entries against the
@@ -13,7 +13,7 @@
 ; BC-NEXT: <FNENTRY {{.*}} op0=2 {{.*}}> record string = 'bar'
 ; BC-NEXT: <FNENTRY {{.*}} op0=4 {{.*}}> record string = 'f'
 
-; RUN: llvm-as -module-summary < %s | llvm-dis | FileCheck %s
+; RUN: opt -module-summary < %s | llvm-dis | FileCheck %s
 ; Check that this round-trips correctly.
 
 ; ModuleID = '<stdin>'

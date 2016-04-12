@@ -1,5 +1,5 @@
-; RUN: llvm-as -module-summary %s -o %t.o
-; RUN: llvm-as -module-summary %p/Inputs/thinlto_linkonceresolution.ll -o %t2.o
+; RUN: opt -module-summary %s -o %t.o
+; RUN: opt -module-summary %p/Inputs/thinlto_linkonceresolution.ll -o %t2.o
 
 ; Ensure the plugin ensures that for ThinLTO the prevailing copy of a
 ; linkonce symbol is changed to weak to ensure it is not eliminated.

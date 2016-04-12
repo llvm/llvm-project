@@ -13,8 +13,8 @@
 ; RUN: llvm-nm %t4 | FileCheck %s --check-prefix=NM
 
 ; Next generate summary sections and test gold handling.
-; RUN: llvm-as -module-summary %s -o %t.o
-; RUN: llvm-as -module-summary %p/Inputs/thinlto.ll -o %t2.o
+; RUN: opt -module-summary %s -o %t.o
+; RUN: opt -module-summary %p/Inputs/thinlto.ll -o %t2.o
 
 ; Ensure gold generates an index and not a binary if requested.
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \

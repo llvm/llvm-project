@@ -1,7 +1,7 @@
 ; Test to check the callgraph in summary
-; RUN: llvm-as -module-summary %s -o %t.o
+; RUN: opt -module-summary %s -o %t.o
 ; RUN: llvm-bcanalyzer -dump %t.o | FileCheck %s
-; RUN: llvm-as -module-summary %p/Inputs/thinlto-function-summary-callgraph.ll -o %t2.o
+; RUN: opt -module-summary %p/Inputs/thinlto-function-summary-callgraph.ll -o %t2.o
 ; RUN: llvm-lto -thinlto -o %t3 %t.o %t2.o
 ; RUN: llvm-bcanalyzer -dump %t3.thinlto.bc | FileCheck %s --check-prefix=COMBINED
 

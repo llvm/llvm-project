@@ -1,6 +1,6 @@
 ; Test combined function index generation for ThinLTO via llvm-lto.
-; RUN: llvm-as -module-summary %s -o %t.o
-; RUN: llvm-as -module-summary %p/Inputs/thinlto.ll -o %t2.o
+; RUN: opt -module-summary %s -o %t.o
+; RUN: opt -module-summary %p/Inputs/thinlto.ll -o %t2.o
 ; RUN: llvm-lto -thinlto -o %t3 %t.o %t2.o
 ; RUN: llvm-bcanalyzer -dump %t3.thinlto.bc | FileCheck %s --check-prefix=COMBINED
 ; RUN: not test -e %t3
