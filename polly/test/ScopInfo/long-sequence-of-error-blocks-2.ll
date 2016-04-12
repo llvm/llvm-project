@@ -12,8 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK:      Assumed Context:
 ; CHECK-NEXT:   [tmp17, tmp21, tmp27, tmp31, tmp37, tmp41, tmp46, tmp52, tmp56, tmp62] -> {  :  }
 ; CHECK:      Invalid Context:
-; CHECK-NEXT:   [tmp17, tmp21, tmp27, tmp31, tmp37, tmp41, tmp46, tmp52, tmp56, tmp62] -> { : (tmp17 < 0 and tmp21 < 0) or (tmp17 < 0 and tmp21 > 0) or (tmp17 > 0 and tmp21 < 0) or (tmp17 > 0 and tmp21 > 0) or (tmp37 < 0 and tmp41 < 0 and tmp46 > 0) or (tmp37 < 0 and tmp41 > 0 and tmp46 > 0) or (tmp37 > 0 and tmp41 < 0 and tmp46 > 0) or (tmp37 > 0 and tmp41 > 0 and tmp46 > 0) or (tmp27 = 3 and tmp31 <= 143) or (tmp56 = 0 and tmp52 < 0) or (tmp56 = 0 and tmp52 > 0) }
-
+; CHECK-NEXT:   [tmp17, tmp21, tmp27, tmp31, tmp37, tmp41, tmp46, tmp52, tmp56, tmp62] -> { : (tmp37 < 0 and tmp41 < 0 and tmp46 > 0) or (tmp17 < 0 and tmp21 < 0) or (tmp17 < 0 and tmp21 > 0) or (tmp17 > 0 and tmp21 < 0) or (tmp17 > 0 and tmp21 > 0) or (tmp37 < 0 and tmp41 > 0 and tmp46 > 0) or (tmp37 > 0 and tmp41 < 0 and tmp46 > 0) or (tmp37 > 0 and tmp41 > 0 and tmp46 > 0) or (tmp27 = 3 and tmp31 <= 143) or (tmp56 = 0 and tmp52 < 0) or (tmp56 = 0 and tmp52 > 0) }
 
 @global = external global [300 x i8], align 16
 @global1 = external global %struct.hoge*, align 8

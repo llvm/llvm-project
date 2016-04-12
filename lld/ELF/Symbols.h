@@ -403,10 +403,10 @@ template <class ELFT> struct ElfSym {
   static DefinedRegular<ELFT> *End2;
 
   // The content for _gp symbol for MIPS target.
-  static DefinedRegular<ELFT> *MipsGp;
+  static SymbolBody *MipsGp;
 
-  static DefinedRegular<ELFT> *MipsLocalGp;
-  static DefinedRegular<ELFT> *MipsGpDisp;
+  static SymbolBody *MipsLocalGp;
+  static SymbolBody *MipsGpDisp;
 
   // __rel_iplt_start/__rel_iplt_end for signaling
   // where R_[*]_IRELATIVE relocations do live.
@@ -420,9 +420,9 @@ template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Edata;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Edata2;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::End;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::End2;
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::MipsGp;
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::MipsLocalGp;
-template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::MipsGpDisp;
+template <class ELFT> SymbolBody *ElfSym<ELFT>::MipsGp;
+template <class ELFT> SymbolBody *ElfSym<ELFT>::MipsLocalGp;
+template <class ELFT> SymbolBody *ElfSym<ELFT>::MipsGpDisp;
 template <class ELFT> SymbolBody *ElfSym<ELFT>::RelaIpltStart;
 template <class ELFT> SymbolBody *ElfSym<ELFT>::RelaIpltEnd;
 

@@ -40,11 +40,6 @@ public:
                        const EvaluateExpressionOptions &options);
     ~LLVMUserExpression() override;
 
-    lldb::ExpressionResults
-    Execute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
-            const EvaluateExpressionOptions &options, lldb::UserExpressionSP &shared_ptr_to_me,
-            lldb::ExpressionVariableSP &result) override;
-
     bool
     FinalizeJITExecution(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
                          lldb::ExpressionVariableSP &result,
@@ -70,6 +65,11 @@ public:
     lldb::ModuleSP GetJITModule() override;
 
 protected:
+    lldb::ExpressionResults
+    DoExecute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+              const EvaluateExpressionOptions &options, lldb::UserExpressionSP &shared_ptr_to_me,
+              lldb::ExpressionVariableSP &result) override;
+
     virtual void
     ScanContext(ExecutionContext &exe_ctx, lldb_private::Error &err) = 0;
 

@@ -320,6 +320,8 @@ TSAN_INTERCEPTOR(void, dispatch_group_notify_f, dispatch_group_t group,
 TSAN_INTERCEPTOR(void, dispatch_source_set_event_handler,
                  dispatch_source_t source, dispatch_block_t handler) {
   SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_event_handler, source, handler);
+  if (handler == nullptr)
+    return REAL(dispatch_source_set_event_handler)(source, nullptr);
   dispatch_block_t new_handler = ^(void) {
     {
       SCOPED_INTERCEPTOR_RAW(dispatch_source_set_event_handler_callback);
@@ -334,6 +336,8 @@ TSAN_INTERCEPTOR(void, dispatch_source_set_event_handler,
 TSAN_INTERCEPTOR(void, dispatch_source_set_event_handler_f,
                  dispatch_source_t source, dispatch_function_t handler) {
   SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_event_handler_f, source, handler);
+  if (handler == nullptr)
+    return REAL(dispatch_source_set_event_handler)(source, nullptr);
   dispatch_block_t block = ^(void) {
     handler(dispatch_get_context(source));
   };
@@ -343,6 +347,8 @@ TSAN_INTERCEPTOR(void, dispatch_source_set_event_handler_f,
 TSAN_INTERCEPTOR(void, dispatch_source_set_cancel_handler,
                  dispatch_source_t source, dispatch_block_t handler) {
   SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_cancel_handler, source, handler);
+  if (handler == nullptr)
+    return REAL(dispatch_source_set_cancel_handler)(source, nullptr);
   dispatch_block_t new_handler = ^(void) {
     {
       SCOPED_INTERCEPTOR_RAW(dispatch_source_set_cancel_handler_callback);
@@ -358,6 +364,8 @@ TSAN_INTERCEPTOR(void, dispatch_source_set_cancel_handler_f,
                  dispatch_source_t source, dispatch_function_t handler) {
   SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_cancel_handler_f, source,
                           handler);
+  if (handler == nullptr)
+    return REAL(dispatch_source_set_cancel_handler)(source, nullptr);
   dispatch_block_t block = ^(void) {
     handler(dispatch_get_context(source));
   };
@@ -368,6 +376,8 @@ TSAN_INTERCEPTOR(void, dispatch_source_set_registration_handler,
                  dispatch_source_t source, dispatch_block_t handler) {
   SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_registration_handler, source,
                           handler);
+  if (handler == nullptr)
+    return REAL(dispatch_source_set_registration_handler)(source, nullptr);
   dispatch_block_t new_handler = ^(void) {
     {
       SCOPED_INTERCEPTOR_RAW(dispatch_source_set_registration_handler_callback);
@@ -383,6 +393,8 @@ TSAN_INTERCEPTOR(void, dispatch_source_set_registration_handler_f,
                  dispatch_source_t source, dispatch_function_t handler) {
   SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_registration_handler_f, source,
                           handler);
+  if (handler == nullptr)
+    return REAL(dispatch_source_set_registration_handler)(source, nullptr);
   dispatch_block_t block = ^(void) {
     handler(dispatch_get_context(source));
   };

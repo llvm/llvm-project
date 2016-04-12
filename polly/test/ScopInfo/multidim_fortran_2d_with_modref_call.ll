@@ -19,7 +19,7 @@
 ; CHECK-NEXT:    Assumed Context:
 ; CHECK-NEXT:    [tmp14, p_1] -> {  :  }
 ; CHECK-NEXT:    Invalid Context:
-; CHECK-NEXT:    [tmp14, p_1] -> {  : tmp14 > 0 and (tmp14 >= 1152921504606846977 or p_1 <= -1152921504606846977 or p_1 >= 1152921504606846977 - tmp14) }
+; CHECK-NEXT:    [tmp14, p_1] -> { : tmp14 > 0 and (p_1 <= -1152921504606846977 or tmp14 >= 1152921504606846977 or p_1 >= 1152921504606846977 - tmp14) }
 ; CHECK-NEXT:    p0: %tmp14
 ; CHECK-NEXT:    p1: {0,+,(0 smax %tmp)}<%bb12>
 ; CHECK-NEXT:    Arrays {

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/Support/SCEVAffinator.h"
+#include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/SCEVValidator.h"
@@ -23,6 +24,12 @@
 
 using namespace llvm;
 using namespace polly;
+
+static cl::opt<bool> IgnoreIntegerWrapping(
+    "polly-ignore-integer-wrapping",
+    cl::desc("Do not build run-time checks to proof absence of integer "
+             "wrapping"),
+    cl::Hidden, cl::ZeroOrMore, cl::init(false), cl::cat(PollyCategory));
 
 // The maximal number of basic sets we allow during the construction of a
 // piecewise affine function. More complex ones will result in very high
@@ -84,10 +91,8 @@ __isl_give isl_pw_aff *SCEVAffinator::getPwAff(const SCEV *Expr,
   return visit(Expr);
 }
 
-__isl_give isl_set *
-SCEVAffinator::getWrappingContext(SCEV::NoWrapFlags Flags, Type *ExprType,
-                                  __isl_keep isl_pw_aff *PWA,
-                                  __isl_take isl_set *ExprDomain) const {
+void SCEVAffinator::checkForWrapping(const SCEV *Expr,
+                                     __isl_keep isl_pw_aff *PWA) const {
   // If the SCEV flags do contain NSW (no signed wrap) then PWA already
   // represents Expr in modulo semantic (it is not allowed to overflow), thus we
   // are done. Otherwise, we will compute:
@@ -95,44 +100,19 @@ SCEVAffinator::getWrappingContext(SCEV::NoWrapFlags Flags, Type *ExprType,
   // whereas n is the number of bits of the Expr, hence:
   //   n = bitwidth(ExprType)
 
-  if (Flags & SCEV::FlagNSW)
-    return nullptr;
+  if (IgnoreIntegerWrapping || (getNoWrapFlags(Expr) & SCEV::FlagNSW))
+    return;
 
-  isl_pw_aff *PWAMod = addModuloSemantic(isl_pw_aff_copy(PWA), ExprType);
-  if (isl_pw_aff_is_equal(PWA, PWAMod)) {
-    isl_pw_aff_free(PWAMod);
-    return nullptr;
-  }
+  auto *PWAMod = addModuloSemantic(isl_pw_aff_copy(PWA), Expr->getType());
+  auto *NotEqualSet = isl_pw_aff_ne_set(isl_pw_aff_copy(PWA), PWAMod);
 
-  PWA = isl_pw_aff_copy(PWA);
+  const DebugLoc &Loc = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
+  NotEqualSet = BB ? NotEqualSet : isl_set_params(NotEqualSet);
 
-  auto *NotEqualSet = isl_pw_aff_ne_set(PWA, PWAMod);
-  NotEqualSet = isl_set_intersect(NotEqualSet, isl_set_copy(ExprDomain));
-  NotEqualSet = isl_set_gist_params(NotEqualSet, S->getContext());
-  NotEqualSet = isl_set_params(NotEqualSet);
-  return NotEqualSet;
-}
-
-__isl_give isl_set *SCEVAffinator::getWrappingContext() const {
-
-  isl_set *WrappingCtx = isl_set_empty(S->getParamSpace());
-
-  for (const auto &CachedPair : CachedExpressions) {
-    const SCEV *Expr = CachedPair.first.first;
-    SCEV::NoWrapFlags Flags = getNoWrapFlags(Expr);
-
-    isl_pw_aff *PWA = CachedPair.second;
-    BasicBlock *BB = CachedPair.first.second;
-    isl_set *ExprDomain = BB ? S->getDomainConditions(BB) : nullptr;
-
-    isl_set *WPWACtx =
-        getWrappingContext(Flags, Expr->getType(), PWA, ExprDomain);
-    isl_set_free(ExprDomain);
-
-    WrappingCtx = WPWACtx ? isl_set_union(WrappingCtx, WPWACtx) : WrappingCtx;
-  }
-
-  return WrappingCtx;
+  if (isl_set_is_empty(NotEqualSet))
+    isl_set_free(NotEqualSet);
+  else
+    S->recordAssumption(WRAPPING, NotEqualSet, Loc, AS_RESTRICTION, BB);
 }
 
 __isl_give isl_pw_aff *
@@ -198,6 +178,7 @@ __isl_give isl_pw_aff *SCEVAffinator::visit(const SCEV *Expr) {
     PWA = isl_pw_aff_alloc(Domain, Affine);
   } else {
     PWA = SCEVVisitor<SCEVAffinator, isl_pw_aff *>::visit(Expr);
+    checkForWrapping(Expr, PWA);
   }
 
   PWA = isl_pw_aff_mul(visitConstant(Factor), PWA);
@@ -205,6 +186,8 @@ __isl_give isl_pw_aff *SCEVAffinator::visit(const SCEV *Expr) {
   // For compile time reasons we need to simplify the PWA before we cache and
   // return it.
   PWA = isl_pw_aff_coalesce(PWA);
+  checkForWrapping(Key.first, PWA);
+
   CachedExpressions[Key] = isl_pw_aff_copy(PWA);
   return PWA;
 }

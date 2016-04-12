@@ -283,6 +283,7 @@ def main():
                 if not link_polly_into_tools:
                     newtool += ['-load',os.path.join(polly_lib_dir,'LLVMPolly' + shlibext)]
                 newtool.append('-polly-process-unprofitable')
+                newtool.append('-polly-remarks-minimal')
             elif toolarg == '2>&1':
                 optstderr = subprocess.STDOUT
             else:
