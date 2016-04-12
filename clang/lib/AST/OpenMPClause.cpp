@@ -86,6 +86,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_hint:
   case OMPC_defaultmap:
   case OMPC_unknown:
+  case OMPC_uniform:
     break;
   }
 
@@ -146,6 +147,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_hint:
   case OMPC_defaultmap:
   case OMPC_unknown:
+  case OMPC_uniform:
     break;
   }
 

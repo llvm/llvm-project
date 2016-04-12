@@ -5013,9 +5013,11 @@ AST_MATCHER_P(Decl, hasAttr, attr::Kind, AttrKind) {
 ///   matches 'return a + b'
 /// with binaryOperator()
 ///   matching 'a + b'
-AST_MATCHER_P(ReturnStmt, hasReturnValue, internal::Matcher<Expr>, 
+AST_MATCHER_P(ReturnStmt, hasReturnValue, internal::Matcher<Expr>,
               InnerMatcher) {
-  return InnerMatcher.matches(*Node.getRetValue(), Finder, Builder);
+  if (const auto *RetValue = Node.getRetValue())
+    return InnerMatcher.matches(*RetValue, Finder, Builder);
+  return false;
 }
 
 

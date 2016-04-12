@@ -6,16 +6,16 @@
 #ifndef HEADER
 #define HEADER
 
-#pragma omp declare simd
-#pragma omp declare simd simdlen(32)
-#pragma omp declare simd inbranch
-#pragma omp declare simd notinbranch simdlen(2)
-void add_1(float *d, float *s1, float *s2) __attribute__((cold));
+#pragma omp declare simd aligned(b : 64)
+#pragma omp declare simd simdlen(32) aligned(d, s1)
+#pragma omp declare simd inbranch, uniform(d)
+#pragma omp declare simd notinbranch simdlen(2), uniform(s1, s2)
+void add_1(float *d, float *s1, float *s2, double b[]) __attribute__((cold));
 
-// CHECK: #pragma omp declare simd notinbranch simdlen(2)
-// CHECK-NEXT: #pragma omp declare simd inbranch
-// CHECK-NEXT: #pragma omp declare simd simdlen(32)
-// CHECK-NEXT: #pragma omp declare simd
-// CHECK-NEXT: void add_1(float *d, float *s1, float *s2) __attribute__((cold))
+// CHECK: #pragma omp declare simd notinbranch simdlen(2) uniform(s1, s2)
+// CHECK-NEXT: #pragma omp declare simd inbranch uniform(d)
+// CHECK-NEXT: #pragma omp declare simd simdlen(32) aligned(d) aligned(s1)
+// CHECK-NEXT: #pragma omp declare simd aligned(b: 64)
+// CHECK-NEXT: void add_1(float *d, float *s1, float *s2, double b[]) __attribute__((cold))
 
 #endif

@@ -51,6 +51,13 @@ static bool isToComplex(isl_pw_aff *PWA) {
   return true;
 }
 
+/// @brief Return the flag describing the possible wrapping of @p Expr.
+static SCEV::NoWrapFlags getNoWrapFlags(const SCEV *Expr) {
+  if (auto *NAry = dyn_cast<SCEVNAryExpr>(Expr))
+    return NAry->getNoWrapFlags();
+  return SCEV::NoWrapMask;
+}
+
 SCEVAffinator::SCEVAffinator(Scop *S, LoopInfo &LI)
     : S(S), Ctx(S->getIslCtx()), R(S->getRegion()), SE(*S->getSE()), LI(LI),
       TD(R.getEntry()->getParent()->getParent()->getDataLayout()) {}
@@ -112,21 +119,7 @@ __isl_give isl_set *SCEVAffinator::getWrappingContext() const {
 
   for (const auto &CachedPair : CachedExpressions) {
     const SCEV *Expr = CachedPair.first.first;
-    SCEV::NoWrapFlags Flags;
-
-    switch (Expr->getSCEVType()) {
-    case scAddExpr:
-      Flags = cast<SCEVAddExpr>(Expr)->getNoWrapFlags();
-      break;
-    case scMulExpr:
-      Flags = cast<SCEVMulExpr>(Expr)->getNoWrapFlags();
-      break;
-    case scAddRecExpr:
-      Flags = cast<SCEVAddRecExpr>(Expr)->getNoWrapFlags();
-      break;
-    default:
-      continue;
-    }
+    SCEV::NoWrapFlags Flags = getNoWrapFlags(Expr);
 
     isl_pw_aff *PWA = CachedPair.second;
     BasicBlock *BB = CachedPair.first.second;

@@ -35,6 +35,7 @@ enum OpenMPClauseKind {
   OMPC_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_threadprivate,
+  OMPC_uniform,
   OMPC_unknown
 };
 

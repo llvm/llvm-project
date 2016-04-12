@@ -4878,15 +4878,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -stack-protector=0 is default.
   unsigned StackProtectorLevel = 0;
-  if (getToolChain().getSanitizerArgs().needsSafeStackRt()) {
-    Args.ClaimAllArgs(options::OPT_fno_stack_protector);
-    Args.ClaimAllArgs(options::OPT_fstack_protector_all);
-    Args.ClaimAllArgs(options::OPT_fstack_protector_strong);
-    Args.ClaimAllArgs(options::OPT_fstack_protector);
-  } else if (Arg *A = Args.getLastArg(options::OPT_fno_stack_protector,
-                                      options::OPT_fstack_protector_all,
-                                      options::OPT_fstack_protector_strong,
-                                      options::OPT_fstack_protector)) {
+  if (Arg *A = Args.getLastArg(options::OPT_fno_stack_protector,
+                               options::OPT_fstack_protector_all,
+                               options::OPT_fstack_protector_strong,
+                               options::OPT_fstack_protector)) {
     if (A->getOption().matches(options::OPT_fstack_protector)) {
       StackProtectorLevel = std::max<unsigned>(
           LangOptions::SSPOn,

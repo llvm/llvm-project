@@ -2517,6 +2517,7 @@ bool RecursiveASTVisitor<Derived>::TraverseOMPClause(OMPClause *C) {
     break;
 #include "clang/Basic/OpenMPKinds.def"
   case OMPC_threadprivate:
+  case OMPC_uniform:
   case OMPC_unknown:
     break;
   }
