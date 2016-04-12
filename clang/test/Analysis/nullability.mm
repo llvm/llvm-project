@@ -238,6 +238,41 @@ void testPreconditionViolationInInlinedFunction(Dummy *p) {
   doNotWarnWhenPreconditionIsViolated(p);
 }
 
+@interface TestInlinedPreconditionViolationClass : NSObject
+@end
+
+@implementation TestInlinedPreconditionViolationClass
+-(Dummy * _Nonnull) calleeWithParam:(Dummy * _Nonnull) p2 {
+  Dummy *x = 0;
+  if (!p2) // p2 binding becomes dead at this point.
+    return x; // no-warning
+  else
+   return p2;
+}
+
+-(Dummy *)callerWithParam:(Dummy * _Nonnull) p1 {
+  return [self calleeWithParam:p1];
+}
+
+@end
+
+int * _Nonnull InlinedPreconditionViolationInFunctionCallee(int * _Nonnull p2) {
+  int *x = 0;
+  if (!p2) // p2 binding becomes dead at this point.
+    return x; // no-warning
+  else
+   return p2;
+}
+
+int * _Nonnull InlinedReturnNullOverSuppressionCallee(int * _Nonnull p2) {
+  int *result = 0;
+  return result; // no-warning; but this is an over suppression
+}
+
+int *InlinedReturnNullOverSuppressionCaller(int * _Nonnull p1) {
+  return InlinedReturnNullOverSuppressionCallee(p1);
+}
+
 void inlinedNullable(Dummy *_Nullable p) {
   if (p) return;
 }
