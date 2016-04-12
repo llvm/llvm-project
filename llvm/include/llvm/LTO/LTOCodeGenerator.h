@@ -173,10 +173,6 @@ private:
   bool compileOptimizedToFile(const char **Name);
   void restoreLinkageForExternals();
   void applyScopeRestrictions();
-  void applyRestriction(GlobalValue &GV, ArrayRef<StringRef> Libcalls,
-                        std::vector<const char *> &MustPreserveList,
-                        SmallPtrSetImpl<GlobalValue *> &AsmUsed,
-                        Mangler &Mangler);
   bool determineTarget();
 
   static void DiagnosticHandler(const DiagnosticInfo &DI, void *Context);
