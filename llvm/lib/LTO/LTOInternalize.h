@@ -26,8 +26,7 @@ class TargetMachine;
 void LTOInternalize(
     Module &TheModule, const TargetMachine &TM,
     const std::function<bool(const GlobalValue &)> &MustPreserveSymbols,
-    const StringSet<> &AsmUndefinedRefs,
-    StringMap<GlobalValue::LinkageTypes> *ExternalSymbols);
+    const StringSet<> &AsmUndefinedRefs);
 }
 
 #endif // LLVM_LTO_LTOINTERNALIZE_H

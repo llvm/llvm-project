@@ -28,10 +28,8 @@ class ComputeAsmUsed {
 public:
   ComputeAsmUsed(const StringSet<> &AsmUndefinedRefs, const TargetMachine &TM,
                  const Module &TheModule,
-                 StringMap<GlobalValue::LinkageTypes> *ExternalSymbols,
                  SmallPtrSetImpl<const GlobalValue *> &AsmUsed)
-      : AsmUndefinedRefs(AsmUndefinedRefs), TM(TM),
-        ExternalSymbols(ExternalSymbols), AsmUsed(AsmUsed) {
+      : AsmUndefinedRefs(AsmUndefinedRefs), TM(TM), AsmUsed(AsmUsed) {
     accumulateAndSortLibcalls(TheModule);
     for (const Function &F : TheModule)
       findAsmUses(F);
@@ -51,7 +49,6 @@ private:
   std::vector<StringRef> Libcalls;
 
   // Output
-  StringMap<GlobalValue::LinkageTypes> *ExternalSymbols;
   SmallPtrSetImpl<const GlobalValue *> &AsmUsed;
 
   // Collect names of runtime library functions. User-defined functions with the
@@ -114,13 +111,6 @@ private:
     if (isa<Function>(GV) &&
         std::binary_search(Libcalls.begin(), Libcalls.end(), GV.getName()))
       AsmUsed.insert(&GV);
-
-    // Record the linkage type of non-local symbols so they can be restored
-    // prior
-    // to module splitting.
-    if (ExternalSymbols && !GV.hasAvailableExternallyLinkage() &&
-        !GV.hasLocalLinkage() && GV.hasName())
-      ExternalSymbols->insert(std::make_pair(GV.getName(), GV.getLinkage()));
   }
 };
 
@@ -142,10 +132,9 @@ static void findUsedValues(GlobalVariable *LLVMUsed,
 void llvm::LTOInternalize(
     Module &TheModule, const TargetMachine &TM,
     const std::function<bool(const GlobalValue &)> &MustPreserveSymbols,
-    const StringSet<> &AsmUndefinedRefs,
-    StringMap<GlobalValue::LinkageTypes> *ExternalSymbols) {
+    const StringSet<> &AsmUndefinedRefs) {
   SmallPtrSet<const GlobalValue *, 8> AsmUsed;
-  ComputeAsmUsed(AsmUndefinedRefs, TM, TheModule, ExternalSymbols, AsmUsed);
+  ComputeAsmUsed(AsmUndefinedRefs, TM, TheModule, AsmUsed);
 
   GlobalVariable *LLVMCompilerUsed =
       TheModule.getGlobalVariable("llvm.compiler.used");
