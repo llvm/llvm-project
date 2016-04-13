@@ -1167,6 +1167,11 @@ def getDefaultTimeout(platform_name):
     if os.getenv("LLDB_TEST_TIMEOUT"):
         return os.getenv("LLDB_TEST_TIMEOUT")
 
+    # https://bugs.swift.org/browse/SR-1220
+    # Temporary work-around for timeout rerun issues.
+    # Remove this as soon as SR-1220 is resolved.
+    return "10m"
+
     if platform_name is None:
         platform_name = sys.platform
 
