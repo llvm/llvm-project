@@ -337,6 +337,23 @@ void LTOCodeGenerator::applyScopeRestrictions() {
   if (ScopeRestrictionsDone || !ShouldInternalize)
     return;
 
+  if (ShouldRestoreGlobalsLinkage) {
+    // Record the linkage type of non-local symbols so they can be restored
+    // prior
+    // to module splitting.
+    auto RecordLinkage = [&](const GlobalValue &GV) {
+      if (!GV.hasAvailableExternallyLinkage() && !GV.hasLocalLinkage() &&
+          GV.hasName())
+        ExternalSymbols.insert(std::make_pair(GV.getName(), GV.getLinkage()));
+    };
+    for (auto &GV : *MergedModule)
+      RecordLinkage(GV);
+    for (auto &GV : MergedModule->globals())
+      RecordLinkage(GV);
+    for (auto &GV : MergedModule->aliases())
+      RecordLinkage(GV);
+  }
+
   // Declare a callback for the internalize pass that will ask for every
   // candidate GlobalValue if it can be internalized or not.
   Mangler Mangler;
@@ -352,8 +369,7 @@ void LTOCodeGenerator::applyScopeRestrictions() {
     return MustPreserveSymbols.count(MangledName);
   };
 
-  LTOInternalize(*MergedModule, *TargetMach, MustPreserveGV, AsmUndefinedRefs,
-                 (ShouldRestoreGlobalsLinkage ? &ExternalSymbols : nullptr));
+  LTOInternalize(*MergedModule, *TargetMach, MustPreserveGV, AsmUndefinedRefs);
 
   ScopeRestrictionsDone = true;
 }
