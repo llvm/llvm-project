@@ -356,29 +356,70 @@ static Nullability getNullabilityAnnotation(QualType Type) {
   return Nullability::Unspecified;
 }
 
-template <typename ParamVarDeclRange>
+/// Returns true when the value stored at the given location is null
+/// and the passed in type is nonnnull.
+static bool checkValueAtLValForInvariantViolation(ProgramStateRef State,
+                                                  SVal LV, QualType T) {
+  if (getNullabilityAnnotation(T) != Nullability::Nonnull)
+    return false;
+
+  auto RegionVal = LV.getAs<loc::MemRegionVal>();
+  if (!RegionVal)
+    return false;
+
+  auto StoredVal =
+  State->getSVal(RegionVal->getRegion()).getAs<DefinedOrUnknownSVal>();
+  if (!StoredVal)
+    return false;
+
+  if (getNullConstraint(*StoredVal, State) == NullConstraint::IsNull)
+    return true;
+
+  return false;
+}
+
 static bool
-checkParamsForPreconditionViolation(const ParamVarDeclRange &Params,
+checkParamsForPreconditionViolation(ArrayRef<ParmVarDecl *> Params,
                                     ProgramStateRef State,
                                     const LocationContext *LocCtxt) {
   for (const auto *ParamDecl : Params) {
     if (ParamDecl->isParameterPack())
       break;
 
-    if (getNullabilityAnnotation(ParamDecl->getType()) != Nullability::Nonnull)
-      continue;
+    SVal LV = State->getLValue(ParamDecl, LocCtxt);
+    if (checkValueAtLValForInvariantViolation(State, LV,
+                                              ParamDecl->getType())) {
+      return true;
+    }
+  }
+  return false;
+}
 
-    auto RegVal = State->getLValue(ParamDecl, LocCtxt)
-                      .template getAs<loc::MemRegionVal>();
-    if (!RegVal)
-      continue;
+static bool
+checkSelfIvarsForInvariantViolation(ProgramStateRef State,
+                                    const LocationContext *LocCtxt) {
+  auto *MD = dyn_cast<ObjCMethodDecl>(LocCtxt->getDecl());
+  if (!MD || !MD->isInstanceMethod())
+    return false;
 
-    auto ParamValue = State->getSVal(RegVal->getRegion())
-                          .template getAs<DefinedOrUnknownSVal>();
-    if (!ParamValue)
-      continue;
+  const ImplicitParamDecl *SelfDecl = LocCtxt->getSelfDecl();
+  if (!SelfDecl)
+    return false;
 
-    if (getNullConstraint(*ParamValue, State) == NullConstraint::IsNull) {
+  SVal SelfVal = State->getSVal(State->getRegion(SelfDecl, LocCtxt));
+
+  const ObjCObjectPointerType *SelfType =
+      dyn_cast<ObjCObjectPointerType>(SelfDecl->getType());
+  if (!SelfType)
+    return false;
+
+  const ObjCInterfaceDecl *ID = SelfType->getInterfaceDecl();
+  if (!ID)
+    return false;
+
+  for (const auto *IvarDecl : ID->ivars()) {
+    SVal LV = State->getLValue(IvarDecl, SelfVal);
+    if (checkValueAtLValForInvariantViolation(State, LV, IvarDecl->getType())) {
       return true;
     }
   }
@@ -405,7 +446,8 @@ static bool checkInvariantViolation(ProgramStateRef State, ExplodedNode *N,
   else
     return false;
 
-  if (checkParamsForPreconditionViolation(Params, State, LocCtxt)) {
+  if (checkParamsForPreconditionViolation(Params, State, LocCtxt) ||
+      checkSelfIvarsForInvariantViolation(State, LocCtxt)) {
     if (!N->isSink())
       C.addTransition(State->set<InvariantViolated>(true), N);
     return true;

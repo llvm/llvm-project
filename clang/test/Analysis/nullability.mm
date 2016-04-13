@@ -444,3 +444,45 @@ void callMethodInSystemHeader() {
   // expected-warning@-2{{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
   #endif
 }
+
+// Test to make sure the analyzer doesn't warn when an a nullability invariant
+// has already been found to be violated on an instance variable.
+
+@class MyInternalClass;
+@interface MyClass : NSObject {
+  MyInternalClass * _Nonnull _internal;
+}
+@end
+
+@interface MyInternalClass : NSObject {
+  @public
+  id _someIvar;
+}
+-(id _Nonnull)methodWithInternalImplementation;
+@end
+
+@interface MyClass () {
+  MyInternalClass * _Nonnull _nilledOutInternal;
+}
+@end
+
+@implementation MyClass
+-(id _Nonnull)methodWithInternalImplementation {
+  if (!_internal)
+    return nil; // no-warning
+
+  return [_internal methodWithInternalImplementation];
+}
+
+- (id _Nonnull)methodReturningIvarInImplementation; {
+  return _internal == 0 ? nil : _internal->_someIvar; // no-warning
+}
+
+-(id _Nonnull)methodWithNilledOutInternal {
+  // The cast below should (but does not yet) suppress the warning on the
+  // assignment.
+  _nilledOutInternal = (id _Nonnull)nil; // expected-warning {{Null is assigned to a pointer which is expected to have non-null value}}
+
+  return nil; // no-warning
+}
+@end
