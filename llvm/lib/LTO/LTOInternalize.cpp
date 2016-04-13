@@ -18,7 +18,7 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/Internalize.h"
 
 using namespace llvm;
 
@@ -170,9 +170,5 @@ void llvm::LTOInternalize(
     LLVMCompilerUsed->setSection("llvm.metadata");
   }
 
-  legacy::PassManager passes;
-  passes.add(createInternalizePass(MustPreserveSymbols));
-
-  // apply scope restrictions
-  passes.run(TheModule);
+  internalizeModule(TheModule, MustPreserveSymbols);
 }
