@@ -29,13 +29,20 @@
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataStream.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <deque>
 using namespace llvm;
+
+static cl::opt<bool> PrintSummaryGUIDs(
+    "print-summary-global-ids", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Print the global id for each value when reading the module summary"));
 
 namespace {
 enum {
@@ -5541,8 +5548,11 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
              "No linkage found for VST entry?");
       std::string GlobalId = GlobalValue::getGlobalIdentifier(
           ValueName, VLI->second, SourceFileName);
-      TheIndex->addGlobalValueInfo(GlobalId, std::move(GlobalValInfo));
-      ValueIdToCallGraphGUIDMap[ValueID] = GlobalValue::getGUID(GlobalId);
+      auto ValueGUID = GlobalValue::getGUID(GlobalId);
+      if (PrintSummaryGUIDs)
+        dbgs() << "GUID " << ValueGUID << " is " << ValueName << "\n";
+      TheIndex->addGlobalValueInfo(ValueGUID, std::move(GlobalValInfo));
+      ValueIdToCallGraphGUIDMap[ValueID] = ValueGUID;
       ValueName.clear();
       break;
     }
@@ -5561,9 +5571,11 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
              "No linkage found for VST entry?");
       std::string FunctionGlobalId = GlobalValue::getGlobalIdentifier(
           ValueName, VLI->second, SourceFileName);
-      TheIndex->addGlobalValueInfo(FunctionGlobalId, std::move(FuncInfo));
-      ValueIdToCallGraphGUIDMap[ValueID] =
-          GlobalValue::getGUID(FunctionGlobalId);
+      auto FunctionGUID = GlobalValue::getGUID(FunctionGlobalId);
+      if (PrintSummaryGUIDs)
+        dbgs() << "GUID " << FunctionGUID << " is " << ValueName << "\n";
+      TheIndex->addGlobalValueInfo(FunctionGUID, std::move(FuncInfo));
+      ValueIdToCallGraphGUIDMap[ValueID] = FunctionGUID;
 
       ValueName.clear();
       break;
