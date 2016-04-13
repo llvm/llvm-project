@@ -25,6 +25,7 @@ __attribute__((objc_root_class))
 @end
 
 @interface NSString : NSObject <NSCopying> // expected-note{{receiver is instance of class declared here}}
+- (void)compare:(NSString *)string;
 - (NSString *)stringByAppendingString:(NSString *)string;
 + (instancetype)string;
 @end
@@ -287,6 +288,18 @@ void foo() {
   __kindof B *NSApp;
   if ([NSApp isActive]) {
   }
+}
+
+typedef const struct CGPath *CGPathRef;
+@interface C : NSObject
+@property (copy) NSString *path;
+@end
+@interface D : NSObject
+@property CGPathRef path __attribute__((availability(macosx,unavailable)));
+@end
+// Make sure we choose "NSString *path" for [s1 path].
+void bar(id s1, id s2) {
+  return [[s1 path] compare:[s2 path]];
 }
 
 // ---------------------------------------------------------------------------
