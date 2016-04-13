@@ -14,7 +14,7 @@
 
 #include "llvm/LTO/LTOCodeGenerator.h"
 
-#include "LTOInternalize.h"
+#include "UpdateCompilerUsed.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/Passes.h"
@@ -54,6 +54,7 @@
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include <system_error>
@@ -354,6 +355,10 @@ void LTOCodeGenerator::applyScopeRestrictions() {
       RecordLinkage(GV);
   }
 
+  // Update the llvm.compiler_used globals to force preserving libcalls and
+  // symbols referenced from asm
+  UpdateCompilerUsed(*MergedModule, *TargetMach, AsmUndefinedRefs);
+
   // Declare a callback for the internalize pass that will ask for every
   // candidate GlobalValue if it can be internalized or not.
   Mangler Mangler;
@@ -369,7 +374,7 @@ void LTOCodeGenerator::applyScopeRestrictions() {
     return MustPreserveSymbols.count(MangledName);
   };
 
-  LTOInternalize(*MergedModule, *TargetMach, MustPreserveGV, AsmUndefinedRefs);
+  internalizeModule(*MergedModule, MustPreserveGV);
 
   ScopeRestrictionsDone = true;
 }
