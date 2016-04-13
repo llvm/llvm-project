@@ -1,0 +1,90 @@
+; RUN: opt -codegenprepare -S  < %s | FileCheck %s
+
+; #include<stdlib.h>
+; #define STATIC_BUF_SIZE 10
+; #define LARGER_BUF_SIZE 30
+;
+; size_t foo1(int flag) {
+;   char *cptr;
+;   char chararray[LARGER_BUF_SIZE];
+;   char chararray2[STATIC_BUF_SIZE];
+;   if(flag)
+;     cptr = chararray2;
+;    else
+;     cptr = chararray;
+;
+;   return  __builtin_object_size(cptr, 2);
+; }
+;
+; size_t foo2(int n) {
+;   char Small[10];
+;   char Large[20];
+;   char *Ptr = n ? Small : Large + 19;
+;   return __builtin_object_size(Ptr, 0);
+; }
+;
+; void foo() {
+;   size_t ret;
+;   size_t ret1;
+;   ret = foo1(0);
+;   ret1 = foo2(0);
+;   printf("\n%d %d\n", ret, ret1);
+; }
+
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+@.str = private unnamed_addr constant [8 x i8] c"\0A%d %d\0A\00", align 1
+
+define i64 @foo1(i32 %flag) {
+entry:
+  %chararray = alloca [30 x i8], align 16
+  %chararray2 = alloca [10 x i8], align 1
+  %0 = getelementptr inbounds [30 x i8], [30 x i8]* %chararray, i64 0, i64 0
+  call void @llvm.lifetime.start(i64 30, i8* %0)
+  %1 = getelementptr inbounds [10 x i8], [10 x i8]* %chararray2, i64 0, i64 0
+  call void @llvm.lifetime.start(i64 10, i8* %1)
+  %tobool = icmp eq i32 %flag, 0
+  %cptr.0 = select i1 %tobool, i8* %0, i8* %1
+  %2 = call i64 @llvm.objectsize.i64.p0i8(i8* %cptr.0, i1 true)
+  call void @llvm.lifetime.end(i64 10, i8* %1)
+  call void @llvm.lifetime.end(i64 30, i8* %0)
+  ret i64 %2
+; CHECK-LABEL: foo1
+; CHECK:  ret i64 10
+}
+
+declare void @llvm.lifetime.start(i64, i8* nocapture)
+
+declare i64 @llvm.objectsize.i64.p0i8(i8*, i1)
+
+declare void @llvm.lifetime.end(i64, i8* nocapture)
+
+define i64 @foo2(i32 %n) {
+entry:
+  %Small = alloca [10 x i8], align 1
+  %Large = alloca [20 x i8], align 16
+  %0 = getelementptr inbounds [10 x i8], [10 x i8]* %Small, i64 0, i64 0
+  call void @llvm.lifetime.start(i64 10, i8* %0)
+  %1 = getelementptr inbounds [20 x i8], [20 x i8]* %Large, i64 0, i64 0
+  call void @llvm.lifetime.start(i64 20, i8* %1)
+  %tobool = icmp ne i32 %n, 0
+  %add.ptr = getelementptr inbounds [20 x i8], [20 x i8]* %Large, i64 0, i64 19
+  %cond = select i1 %tobool, i8* %0, i8* %add.ptr
+  %2 = call i64 @llvm.objectsize.i64.p0i8(i8* %cond, i1 false)
+  call void @llvm.lifetime.end(i64 20, i8* %1)
+  call void @llvm.lifetime.end(i64 10, i8* %0)
+  ret i64 %2
+; CHECK-LABEL: foo2
+; CHECK:  ret i64 10
+}
+
+define void @foo() {
+entry:
+  %call = tail call i64 @foo1(i32 0)
+  %call1 = tail call i64 @foo2(i32 0)
+  %call2 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i64 0, i64 0), i64 %call, i64 %call1)
+  ret void
+}
+
+declare i32 @printf(i8* nocapture readonly, ...)

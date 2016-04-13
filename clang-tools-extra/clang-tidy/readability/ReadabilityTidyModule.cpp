@@ -13,6 +13,7 @@
 #include "AvoidConstParamsInDecls.h"
 #include "BracesAroundStatementsCheck.h"
 #include "ContainerSizeEmptyCheck.h"
+#include "DeletedDefaultCheck.h"
 #include "ElseAfterReturnCheck.h"
 #include "FunctionSizeCheck.h"
 #include "IdentifierNamingCheck.h"
@@ -40,6 +41,8 @@ public:
         "readability-braces-around-statements");
     CheckFactories.registerCheck<ContainerSizeEmptyCheck>(
         "readability-container-size-empty");
+    CheckFactories.registerCheck<DeletedDefaultCheck>(
+        "readability-deleted-default");
     CheckFactories.registerCheck<ElseAfterReturnCheck>(
         "readability-else-after-return");
     CheckFactories.registerCheck<FunctionSizeCheck>(
