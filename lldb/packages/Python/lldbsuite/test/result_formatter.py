@@ -267,7 +267,7 @@ class EventBuilder(object):
         if hasattr(test, "test_filename"):
             test_filename = EventBuilder._normalize_test_filename(test.test_filename)
         else:
-            test_filename = EventBuilder._normalize_test_filename(inspect.getfile(test.__class__))
+            test_filename = inspect.getsourcefile(test.__class__)
 
         event = EventBuilder.bare_event(event_type)
         event.update({
