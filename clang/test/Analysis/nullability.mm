@@ -174,6 +174,47 @@ void testIndirectCastNilToNonnullAndPass() {
   takesNonnull(p);  // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
 }
 
+void testDirectCastNilToNonnullAndAssignToLocalInInitializer() {
+  Dummy * _Nonnull nonnullLocalWithAssignmentInInitializer = (Dummy * _Nonnull)0; // no-warning
+  (void)nonnullLocalWithAssignmentInInitializer;
+
+  // Since we've already had an invariant violation along this path,
+  // we shouldn't warn here.
+  nonnullLocalWithAssignmentInInitializer = 0;
+  (void)nonnullLocalWithAssignmentInInitializer;
+
+}
+
+void testDirectCastNilToNonnullAndAssignToLocal(Dummy * _Nonnull p) {
+  Dummy * _Nonnull nonnullLocalWithAssignment = p;
+  nonnullLocalWithAssignment = (Dummy * _Nonnull)0; // no-warning
+  (void)nonnullLocalWithAssignment;
+
+  // Since we've already had an invariant violation along this path,
+  // we shouldn't warn here.
+  nonnullLocalWithAssignment = 0;
+  (void)nonnullLocalWithAssignment;
+}
+
+void testDirectCastNilToNonnullAndAssignToParam(Dummy * _Nonnull p) {
+  p = (Dummy * _Nonnull)0; // no-warning
+}
+
+@interface ClassWithNonnullIvar : NSObject {
+  Dummy *_nonnullIvar;
+}
+@end
+
+@implementation ClassWithNonnullIvar
+-(void)testDirectCastNilToNonnullAndAssignToIvar {
+  _nonnullIvar = (Dummy * _Nonnull)0; // no-warning;
+
+  // Since we've already had an invariant violation along this path,
+  // we shouldn't warn here.
+  _nonnullIvar = 0;
+}
+@end
+
 void testIndirectNilPassToNonnull() {
   Dummy *p = 0;
   takesNonnull(p);  // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
@@ -479,9 +520,7 @@ void callMethodInSystemHeader() {
 }
 
 -(id _Nonnull)methodWithNilledOutInternal {
-  // The cast below should (but does not yet) suppress the warning on the
-  // assignment.
-  _nilledOutInternal = (id _Nonnull)nil; // expected-warning {{Null is assigned to a pointer which is expected to have non-null value}}
+  _nilledOutInternal = (id _Nonnull)nil;
 
   return nil; // no-warning
 }
