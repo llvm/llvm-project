@@ -138,8 +138,8 @@ using EdgeInfo = std::pair<const FunctionSummary *, unsigned /* Threshold */>;
 /// imported functions and the symbols they reference in their source module as
 /// exported from their source module.
 static void computeImportForFunction(
-    StringRef ModulePath, const FunctionSummary &Summary,
-    const ModuleSummaryIndex &Index, unsigned Threshold,
+    const FunctionSummary &Summary, const ModuleSummaryIndex &Index,
+    unsigned Threshold,
     const std::map<GlobalValue::GUID, FunctionSummary *> &DefinedFunctions,
     SmallVectorImpl<EdgeInfo> &Worklist,
     FunctionImporter::ImportMapTy &ImportsForModule,
@@ -199,7 +199,6 @@ static void computeImportForFunction(
 /// as well as the list of "exports", i.e. the list of symbols referenced from
 /// another module (that may require promotion).
 static void ComputeImportForModule(
-    StringRef ModulePath,
     const std::map<GlobalValue::GUID, FunctionSummary *> &DefinedFunctions,
     const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportsForModule,
@@ -213,7 +212,7 @@ static void ComputeImportForModule(
   for (auto &FuncInfo : DefinedFunctions) {
     auto *Summary = FuncInfo.second;
     DEBUG(dbgs() << "Initalize import for " << FuncInfo.first << "\n");
-    computeImportForFunction(ModulePath, *Summary, Index, ImportInstrLimit,
+    computeImportForFunction(*Summary, Index, ImportInstrLimit,
                              DefinedFunctions, Worklist, ImportsForModule,
                              ExportLists);
   }
@@ -227,9 +226,8 @@ static void ComputeImportForModule(
     // Adjust the threshold
     Threshold = Threshold * ImportInstrFactor;
 
-    computeImportForFunction(ModulePath, *Summary, Index, Threshold,
-                             DefinedFunctions, Worklist, ImportsForModule,
-                             ExportLists);
+    computeImportForFunction(*Summary, Index, Threshold, DefinedFunctions,
+                             Worklist, ImportsForModule, ExportLists);
   }
 }
 
@@ -265,8 +263,8 @@ void llvm::ComputeCrossModuleImport(
     auto &ImportsForModule = ImportLists[DefinedFunctions.first()];
     DEBUG(dbgs() << "Computing import for Module '" << DefinedFunctions.first()
                  << "'\n");
-    ComputeImportForModule(DefinedFunctions.first(), DefinedFunctions.second,
-                           Index, ImportsForModule, ExportLists);
+    ComputeImportForModule(DefinedFunctions.second, Index, ImportsForModule,
+                           ExportLists);
   }
 
 #ifndef NDEBUG
