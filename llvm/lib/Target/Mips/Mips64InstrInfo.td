@@ -63,6 +63,10 @@ def PowerOf2HI : PatLeaf<(imm), [{
     return false;
 }]>;
 
+def assertzext_lt_i32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
+  return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLT(MVT::i32);
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instructions specific format
 //===----------------------------------------------------------------------===//
@@ -511,7 +515,17 @@ defm : SetgeImmPats<GPR64, SLTi64, SLTiu64>;
 // truncate
 def : MipsPat<(trunc (assertsext GPR64:$src)),
               (EXTRACT_SUBREG GPR64:$src, sub_32)>;
-def : MipsPat<(trunc (assertzext GPR64:$src)),
+// The forward compatibility strategy employed by MIPS requires us to treat
+// values as being sign extended to an infinite number of bits. This allows
+// existing software to run without modification on any future MIPS
+// implementation (e.g. 128-bit, or 1024-bit). Being compatible with this
+// strategy requires that truncation acts as a sign-extension for values being
+// fed into instructions operating on 32-bit values. Such instructions have
+// undefined results if this is not true.
+// For our case, this means that we can't issue an extract_subreg for nodes
+// such as (trunc:i32 (assertzext:i64 X, i32)), because the sign-bit of the
+// lower subreg would not be replicated into the upper half.
+def : MipsPat<(trunc (assertzext_lt_i32 GPR64:$src)),
               (EXTRACT_SUBREG GPR64:$src, sub_32)>;
 def : MipsPat<(i32 (trunc GPR64:$src)),
               (SLL (EXTRACT_SUBREG GPR64:$src, sub_32), 0)>;

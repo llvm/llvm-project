@@ -26,6 +26,7 @@ namespace llvm {
   class AssumptionCache;
   class DataLayout;
   class DominatorTree;
+  class GEPOperator;
   class Instruction;
   class Loop;
   class LoopInfo;
@@ -182,6 +183,10 @@ namespace llvm {
     return GetPointerBaseWithConstantOffset(const_cast<Value *>(Ptr), Offset,
                                             DL);
   }
+
+  /// Returns true if the GEP is based on a pointer to a string (array of i8), 
+  /// and is indexing into this string.
+  bool isGEPBasedOnPointerToString(const GEPOperator *GEP);
 
   /// getConstantStringInfo - This function computes the length of a
   /// null-terminated C string pointed to by V.  If successful, it returns true

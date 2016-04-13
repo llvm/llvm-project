@@ -150,6 +150,74 @@ define i1 @andn_cmp(i32 %x, i32 %y) {
   ret i1 %cmp
 }
 
+; TODO: Recognize a disguised andn in the following 4 tests.
+define i1 @and_cmp1(i32 %x, i32 %y) {
+; CHECK-LABEL: and_cmp1:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+;
+  %and = and i32 %x, %y
+  %cmp = icmp eq i32 %and, %y
+  ret i1 %cmp
+}
+
+define i1 @and_cmp2(i32 %x, i32 %y) {
+; CHECK-LABEL: and_cmp2:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+;
+  %and = and i32 %y, %x
+  %cmp = icmp ne i32 %and, %y
+  ret i1 %cmp
+}
+
+define i1 @and_cmp3(i32 %x, i32 %y) {
+; CHECK-LABEL: and_cmp3:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    cmpl %edi, %esi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+;
+  %and = and i32 %x, %y
+  %cmp = icmp eq i32 %y, %and
+  ret i1 %cmp
+}
+
+define i1 @and_cmp4(i32 %x, i32 %y) {
+; CHECK-LABEL: and_cmp4:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    cmpl %edi, %esi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+;
+  %and = and i32 %y, %x
+  %cmp = icmp ne i32 %y, %and
+  ret i1 %cmp
+}
+
+; A mask and compare against constant is ok for an 'andn' too
+; even though the BMI instruction doesn't have an immediate form.
+define i1 @and_cmp_const(i32 %x) {
+; CHECK-LABEL: and_cmp_const:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andl $43, %edi
+; CHECK-NEXT:    cmpl $43, %edi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+;
+  %and = and i32 %x, 43
+  %cmp = icmp eq i32 %and, 43
+  ret i1 %cmp
+}
+
 ; Don't choose a 'test' if an 'andn' can be used.
 define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
 ; CHECK-LABEL: andn_cmp_swap_ops:

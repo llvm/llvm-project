@@ -1413,9 +1413,10 @@ TEST_F(DISubprogramTest, get) {
   bool IsDefinition = true;
   unsigned ScopeLine = 3;
   DITypeRef ContainingType = getCompositeType();
-  unsigned Virtuality = 4;
+  unsigned Virtuality = 2;
   unsigned VirtualIndex = 5;
   unsigned Flags = 6;
+  unsigned NotFlags = (~Flags) & ((1 << 27) - 1);
   bool IsOptimized = false;
   MDTuple *TemplateParams = getTuple();
   DISubprogram *Declaration = getSubprogram();
@@ -1513,7 +1514,7 @@ TEST_F(DISubprogramTest, get) {
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 ~Flags, IsOptimized, TemplateParams,
+                                 NotFlags, IsOptimized, TemplateParams,
                                  Declaration, Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,

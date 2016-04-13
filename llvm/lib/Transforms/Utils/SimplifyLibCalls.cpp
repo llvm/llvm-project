@@ -535,6 +535,57 @@ Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilder<> &B) {
   if (uint64_t Len = GetStringLength(Src))
     return ConstantInt::get(CI->getType(), Len - 1);
 
+  // If s is a constant pointer pointing to a string literal, we can fold
+  // strlen(s + x) to strlen(s) - x, when x is known to be in the range 
+  // [0, strlen(s)] or the string has a single null terminator '\0' at the end.
+  // We only try to simplify strlen when the pointer s points to an array 
+  // of i8. Otherwise, we would need to scale the offset x before doing the
+  // subtraction. This will make the optimization more complex, and it's not 
+  // very useful because calling strlen for a pointer of other types is 
+  // very uncommon.
+  if (GEPOperator *GEP = dyn_cast<GEPOperator>(Src)) {
+    if (!isGEPBasedOnPointerToString(GEP))
+      return nullptr;
+
+    StringRef Str;
+    if (getConstantStringInfo(GEP->getOperand(0), Str, 0, false)) {
+      size_t NullTermIdx = Str.find('\0');
+      
+      // If the string does not have '\0', leave it to strlen to compute
+      // its length.
+      if (NullTermIdx == StringRef::npos)
+        return nullptr;
+     
+      Value *Offset = GEP->getOperand(2);
+      unsigned BitWidth = Offset->getType()->getIntegerBitWidth();
+      APInt KnownZero(BitWidth, 0);
+      APInt KnownOne(BitWidth, 0);
+      computeKnownBits(Offset, KnownZero, KnownOne, DL, 0, nullptr, CI, 
+                       nullptr);
+      KnownZero.flipAllBits();
+      size_t ArrSize = 
+             cast<ArrayType>(GEP->getSourceElementType())->getNumElements();
+
+      // KnownZero's bits are flipped, so zeros in KnownZero now represent 
+      // bits known to be zeros in Offset, and ones in KnowZero represent 
+      // bits unknown in Offset. Therefore, Offset is known to be in range
+      // [0, NullTermIdx] when the flipped KnownZero is non-negative and 
+      // unsigned-less-than NullTermIdx.
+      //
+      // If Offset is not provably in the range [0, NullTermIdx], we can still 
+      // optimize if we can prove that the program has undefined behavior when 
+      // Offset is outside that range. That is the case when GEP->getOperand(0) 
+      // is a pointer to an object whose memory extent is NullTermIdx+1.
+      if ((KnownZero.isNonNegative() && KnownZero.ule(NullTermIdx)) || 
+          (GEP->isInBounds() && isa<GlobalVariable>(GEP->getOperand(0)) &&
+           NullTermIdx == ArrSize - 1))
+        return B.CreateSub(ConstantInt::get(CI->getType(), NullTermIdx), 
+                           Offset);
+    }
+
+    return nullptr;
+  }
+
   // strlen(x?"foo":"bars") --> x ? 3 : 4
   if (SelectInst *SI = dyn_cast<SelectInst>(Src)) {
     uint64_t LenTrue = GetStringLength(SI->getTrueValue());

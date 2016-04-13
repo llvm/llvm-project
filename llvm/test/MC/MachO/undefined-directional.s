@@ -4,6 +4,8 @@
         jmp 1b
 // CHECK: [[@LINE+1]]:{{[0-9]+}}: error: directional label undefined
         jmp 1f
-// CHECK: [[@LINE+1]]:{{[0-9]+}}: error: directional label undefined
+# 10 "wibble.s"
+// CHECK: wibble.s:11:{{[0-9]+}}: error: directional label undefined
         jmp 2f
 
+# 42 "invalid.s"

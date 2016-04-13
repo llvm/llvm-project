@@ -9,6 +9,7 @@
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -61,6 +62,47 @@ TEST(ValueMapperTest, MapMetadataCycle) {
     EXPECT_EQ(U1, MapMetadata(U1, VM, RF_None));
     EXPECT_EQ(U0, MapMetadata(U0, VM, RF_None));
   }
+}
+
+TEST(ValueMapperTest, MapMetadataDuplicatedCycle) {
+  LLVMContext Context;
+  auto *PtrTy = Type::getInt8Ty(Context)->getPointerTo();
+  std::unique_ptr<GlobalVariable> G0 = llvm::make_unique<GlobalVariable>(
+      PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "G0");
+  std::unique_ptr<GlobalVariable> G1 = llvm::make_unique<GlobalVariable>(
+      PtrTy, false, GlobalValue::ExternalLinkage, nullptr, "G1");
+
+  // Create a cycle that references G0.
+  MDNode *N0; // !0 = !{!1}
+  MDNode *N1; // !1 = !{!0, i8* @G0}
+  {
+    auto T0 = MDTuple::getTemporary(Context, nullptr);
+    Metadata *Ops1[] = {T0.get(), ConstantAsMetadata::get(G0.get())};
+    N1 = MDTuple::get(Context, Ops1);
+    T0->replaceOperandWith(0, N1);
+    N0 = MDNode::replaceWithUniqued(std::move(T0));
+  }
+
+  // Resolve N0 and N1.
+  ASSERT_FALSE(N0->isResolved());
+  ASSERT_FALSE(N1->isResolved());
+  N0->resolveCycles();
+  ASSERT_TRUE(N0->isResolved());
+  ASSERT_TRUE(N1->isResolved());
+
+  // Seed the value map to map G0 to G1 and map the nodes.  The output should
+  // have new nodes that reference G1 (instead of G0).
+  ValueToValueMapTy VM;
+  VM[G0.get()] = G1.get();
+  MDNode *MappedN0 = MapMetadata(N0, VM);
+  MDNode *MappedN1 = MapMetadata(N1, VM);
+  EXPECT_NE(N0, MappedN0);
+  EXPECT_NE(N1, MappedN1);
+  EXPECT_EQ(ConstantAsMetadata::get(G1.get()), MappedN1->getOperand(1));
+
+  // Check that the output nodes are resolved.
+  EXPECT_TRUE(MappedN0->isResolved());
+  EXPECT_TRUE(MappedN1->isResolved());
 }
 
 TEST(ValueMapperTest, MapMetadataUnresolved) {

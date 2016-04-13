@@ -384,17 +384,32 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
           FlatUsed = true;
           continue;
 
+        case AMDGPU::TBA:
+        case AMDGPU::TBA_LO:
+        case AMDGPU::TBA_HI:
+        case AMDGPU::TMA:
+        case AMDGPU::TMA_LO:
+        case AMDGPU::TMA_HI:
+          llvm_unreachable("Trap Handler registers should not be used");
+          continue;
+
         default:
           break;
         }
 
         if (AMDGPU::SReg_32RegClass.contains(reg)) {
+          if (AMDGPU::TTMP_32RegClass.contains(reg)) {
+            llvm_unreachable("Trap Handler registers should not be used");
+          }
           isSGPR = true;
           width = 1;
         } else if (AMDGPU::VGPR_32RegClass.contains(reg)) {
           isSGPR = false;
           width = 1;
         } else if (AMDGPU::SReg_64RegClass.contains(reg)) {
+          if (AMDGPU::TTMP_64RegClass.contains(reg)) {
+            llvm_unreachable("Trap Handler registers should not be used");
+          }
           isSGPR = true;
           width = 2;
         } else if (AMDGPU::VReg_64RegClass.contains(reg)) {

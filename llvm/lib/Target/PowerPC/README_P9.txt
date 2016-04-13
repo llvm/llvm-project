@@ -373,6 +373,13 @@ VSX:
   . Provide builtin?
     (set f128:$vT, (int_ppc_vsx_xsrqpxp f128:$vB))
 
+Fixed Point Facility:
+
+- Exploit cmprb and cmpeqb (perhaps for something like
+  isalpha/isdigit/isupper/islower and isspace respectivelly). This can
+  perhaps be done through a builtin.
+
+- Provide testing for cnttz[dw]
 - Insert Exponent DP/QP: xsiexpdp xsiexpqp
   . Use intrinsic?
   . xsiexpdp:

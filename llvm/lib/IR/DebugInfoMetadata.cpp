@@ -194,15 +194,14 @@ void GenericDINode::recalculateHash() {
     }                                                                          \
   } while (false)
 #define DEFINE_GETIMPL_STORE(CLASS, ARGS, OPS)                                 \
-  return storeImpl(new (ArrayRef<Metadata *>(OPS).size())                      \
+  return storeImpl(new (array_lengthof(OPS))                                   \
                        CLASS(Context, Storage, UNWRAP_ARGS(ARGS), OPS),        \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_NO_OPS(CLASS, ARGS)                               \
   return storeImpl(new (0u) CLASS(Context, Storage, UNWRAP_ARGS(ARGS)),        \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(CLASS, OPS)                   \
-  return storeImpl(new (ArrayRef<Metadata *>(OPS).size())                      \
-                       CLASS(Context, Storage, OPS),                           \
+  return storeImpl(new (array_lengthof(OPS)) CLASS(Context, Storage, OPS),     \
                    Storage, Context.pImpl->CLASS##s)
 
 DISubrange *DISubrange::getImpl(LLVMContext &Context, int64_t Count, int64_t Lo,
@@ -301,7 +300,7 @@ DICompileUnit *DICompileUnit::getImpl(
   Metadata *Ops[] = {File, Producer, Flags, SplitDebugFilename, EnumTypes,
                      RetainedTypes, Subprograms, GlobalVariables,
                      ImportedEntities, Macros};
-  return storeImpl(new (ArrayRef<Metadata *>(Ops).size()) DICompileUnit(
+  return storeImpl(new (array_lengthof(Ops)) DICompileUnit(
                        Context, Storage, SourceLanguage, IsOptimized,
                        RuntimeVersion, EmissionKind, DWOId, Ops),
                    Storage);

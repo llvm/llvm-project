@@ -21,7 +21,7 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; MIPS64-NOT: pop
 }
 
-define i32 @cnt32(i32 zeroext %x) nounwind readnone {
+define i32 @cnt32(i32 signext %x) nounwind readnone {
   %cnt = tail call i32 @llvm.ctpop.i32(i32 %x)
   ret i32 %cnt
 ; OCTEON-LABEL: cnt32:

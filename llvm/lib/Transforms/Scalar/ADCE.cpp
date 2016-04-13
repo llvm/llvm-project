@@ -27,6 +27,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Pass.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Transforms/Scalar.h"
 using namespace llvm;
 
@@ -61,6 +62,17 @@ static void collectLiveScopes(const DILocation &DL,
     collectLiveScopes(*IA, AliveScopes);
 }
 
+// Check if this instruction is a runtime call for value profiling and
+// if it's instrumenting a constant.
+static bool isInstrumentsConstant(Instruction &I) {
+  if (CallInst *CI = dyn_cast<CallInst>(&I))
+    if (Function *Callee = CI->getCalledFunction())
+      if (Callee->getName().equals(getInstrProfValueProfFuncName()))
+        if (isa<Constant>(CI->getArgOperand(0)))
+          return true;
+  return false;
+}
+
 static bool aggressiveDCE(Function& F) {
   SmallPtrSet<Instruction*, 32> Alive;
   SmallVector<Instruction*, 128> Worklist;
@@ -68,6 +80,10 @@ static bool aggressiveDCE(Function& F) {
   // Collect the set of "root" instructions that are known live.
   for (Instruction &I : instructions(F)) {
     if (isa<TerminatorInst>(I) || I.isEHPad() || I.mayHaveSideEffects()) {
+      // Skip any value profile instrumentation calls if they are
+      // instrumenting constants.
+      if (isInstrumentsConstant(I))
+        continue;
       Alive.insert(&I);
       Worklist.push_back(&I);
     }

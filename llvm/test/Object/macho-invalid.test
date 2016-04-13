@@ -9,11 +9,11 @@ RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-incomple
 RUN:      | FileCheck -check-prefix INCOMPLETE-LOADC %s
 INCOMPLETE-LOADC: truncated or malformed object (load command 0 extends past the end all load commands in the file)
 
-RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-too-small-load-command 2>&1 \
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-too-small-load-command 2>&1 \
 RUN:      | FileCheck -check-prefix SMALL-LOADC-SIZE %s
-RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-too-small-load-command 2>&1 \
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-too-small-load-command 2>&1 \
 RUN:      | FileCheck -check-prefix SMALL-LOADC-SIZE %s
-SMALL-LOADC-SIZE: Mach-O load command with size < 8 bytes
+SMALL-LOADC-SIZE: truncated or malformed object (load commands extends past the end of the file)
 
 RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-too-small-segment-load-command 2>&1 \
 RUN:      | FileCheck -check-prefix SMALL-SEGLOADC-SIZE %s
@@ -27,13 +27,12 @@ RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-no-size-for-sec
 RUN:      | FileCheck -check-prefix TOO-MANY-SECTS %s
 TOO-MANY-SECTS: Mach-O segment load command contains too many sections
 
-RUN: not llvm-objdump -t %p/Inputs/macho-invalid-bad-symbol-index 2>&1 \
+RUN: not llvm-objdump -macho -t %p/Inputs/macho-invalid-bad-symbol-index 2>&1 \
 RUN:      | FileCheck -check-prefix BAD-SYMBOL %s
-BAD-SYMBOL: Invalid data was encountered while parsing the file.
-RUN: llvm-objdump -t %p/Inputs/macho-valid-0-nsyms 2>&1 \
+BAD-SYMBOL: truncated or malformed object (ilocalsym plus nlocalsym in LC_DYSYMTAB load command extends past the end of the symbol table)
+RUN: llvm-objdump -macho -t %p/Inputs/macho-valid-0-nsyms 2>&1 \
 RUN:      | FileCheck -check-prefix ZERO-NSYMS %s
 ZERO-NSYMS: SYMBOL TABLE
-ZERO-NSYMS-NOT: Requested symbol index is out of range
 
 RUN: not llvm-objdump -t %p/Inputs/macho-invalid-symbol-name-past-eof 2>&1 \
 RUN:      | FileCheck -check-prefix NAME-PAST-EOF %s
@@ -58,9 +57,8 @@ RUN: not llvm-objdump -t %p/Inputs/macho-invalid-section-index-getSectionRawName
 RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC-objdump %s
 INVALID-SECTION-IDX-SYMBOL-SEC-objdump: Invalid data was encountered while parsing the file.
 
-RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-header 2>&1 | FileCheck -check-prefix INVALID-HEADER %s
-INVALID-HEADER: The file was not recognized as a valid object file.
-NOT-INVALID-HEADER: Invalid data was encountered while parsing the file.
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-header 2>&1 | FileCheck -check-prefix INVALID-HEADER %s
+INVALID-HEADER: The file was not recognized as a valid object file
 
-RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-incomplete-segment-load-command 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC %s
-INCOMPLETE-SEGMENT-LOADC: Invalid data was encountered while parsing the file
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-incomplete-segment-load-command 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC %s
+INCOMPLETE-SEGMENT-LOADC: truncated or malformed object (load commands extends past the end of the file)

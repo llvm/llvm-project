@@ -52,7 +52,7 @@ protected:
   enum StorageType { Uniqued, Distinct, Temporary };
 
   /// \brief Storage flag for non-uniqued, otherwise unowned, metadata.
-  unsigned Storage : 2;
+  unsigned char Storage;
   // TODO: expose remaining bits to subclasses.
 
   unsigned short SubclassData16;
@@ -93,6 +93,7 @@ public:
 protected:
   Metadata(unsigned ID, StorageType Storage)
       : SubclassID(ID), Storage(Storage), SubclassData16(0), SubclassData32(0) {
+    static_assert(sizeof(*this) == 8, "Metdata fields poorly packed");
   }
   ~Metadata() = default;
 
