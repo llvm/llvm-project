@@ -1992,7 +1992,7 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   //                 ::= f  # float
   //                 ::= d  # double
   //                 ::= e  # long double, __float80
-  // UNSUPPORTED:    ::= g  # __float128
+  //                 ::= g  # __float128
   // UNSUPPORTED:    ::= Dd # IEEE 754r decimal floating point (64 bits)
   // UNSUPPORTED:    ::= De # IEEE 754r decimal floating point (128 bits)
   // UNSUPPORTED:    ::= Df # IEEE 754r decimal floating point (32 bits)
@@ -2073,6 +2073,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
                 ? 'g'
                 : 'e');
     break;
+  case BuiltinType::Float128:
+    if (getASTContext().getTargetInfo().useFloat128ManglingForLongDouble())
+      Out << "U10__float128"; // Match the GCC mangling
+    else
+      Out << 'g';
+    break;
   case BuiltinType::NullPtr:
     Out << "Dn";
     break;
@@ -2097,7 +2103,7 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     type_name = "ocl_" #ImgType "_" #Suffix; \
     Out << type_name.size() << type_name; \
     break;
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
   case BuiltinType::OCLSampler:
     Out << "11ocl_sampler";
     break;

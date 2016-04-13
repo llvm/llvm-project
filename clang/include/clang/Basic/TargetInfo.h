@@ -64,7 +64,7 @@ protected:
   unsigned char HalfWidth, HalfAlign;
   unsigned char FloatWidth, FloatAlign;
   unsigned char DoubleWidth, DoubleAlign;
-  unsigned char LongDoubleWidth, LongDoubleAlign;
+  unsigned char LongDoubleWidth, LongDoubleAlign, Float128Align;
   unsigned char LargeArrayMinWidth, LargeArrayAlign;
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
@@ -78,7 +78,7 @@ protected:
   std::unique_ptr<llvm::DataLayout> DataLayout;
   const char *MCountName;
   const llvm::fltSemantics *HalfFormat, *FloatFormat, *DoubleFormat,
-    *LongDoubleFormat;
+    *LongDoubleFormat, *Float128Format;
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
   const LangAS::Map *AddrSpaceMap;
@@ -136,7 +136,8 @@ public:
     NoFloat = 255,
     Float = 0,
     Double,
-    LongDouble
+    LongDouble,
+    Float128
   };
 
   /// \brief The different kinds of __builtin_va_list types defined by
@@ -327,6 +328,11 @@ public:
     return getPointerWidth(0) >= 64;
   } // FIXME
 
+  /// \brief Determine whether the __float128 type is supported on this target.
+  virtual bool hasFloat128Type() const {
+    return false;
+  }
+
   /// \brief Return the alignment that is suitable for storing any
   /// object with a fundamental alignment requirement.
   unsigned getSuitableAlign() const { return SuitableAlign; }
@@ -377,6 +383,14 @@ public:
   unsigned getLongDoubleAlign() const { return LongDoubleAlign; }
   const llvm::fltSemantics &getLongDoubleFormat() const {
     return *LongDoubleFormat;
+  }
+
+  /// getFloat128Width/Align/Format - Return the size/align/format of
+  /// '__float128'.
+  unsigned getFloat128Width() const { return 128; }
+  unsigned getFloat128Align() const { return Float128Align; }
+  const llvm::fltSemantics &getFloat128Format() const {
+    return *Float128Format;
   }
 
   /// \brief Return true if the 'long double' type should be mangled like

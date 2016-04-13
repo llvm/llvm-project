@@ -417,8 +417,6 @@ def err_pp_used_poisoned_id : Error<"attempt to use a poisoned identifier">;
 def err_feature_check_malformed : Error<
   "builtin feature check macro requires a parenthesized identifier">;
 
-def err_warning_check_malformed : Error<
-  "builtin warning check macro requires a parenthesized string">;
 def warn_has_warning_invalid_option :
    ExtWarn<"__has_warning expected option name (e.g. \"-Wundef\")">,
    InGroup<MalformedWarningCheck>;

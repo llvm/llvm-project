@@ -46,6 +46,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   DoubleAlign = 64;
   LongDoubleWidth = 64;
   LongDoubleAlign = 64;
+  Float128Align = 128;
   LargeArrayMinWidth = 0;
   LargeArrayAlign = 0;
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 0;
@@ -72,6 +73,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   FloatFormat = &llvm::APFloat::IEEEsingle;
   DoubleFormat = &llvm::APFloat::IEEEdouble;
   LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+  Float128Format = &llvm::APFloat::IEEEquad;
   MCountName = "mcount";
   RegParmMax = 0;
   SSERegParmMax = 0;
@@ -223,6 +225,8 @@ TargetInfo::RealType TargetInfo::getRealTypeByWidth(unsigned BitWidth) const {
     if (&getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble ||
         &getLongDoubleFormat() == &llvm::APFloat::IEEEquad)
       return LongDouble;
+    if (hasFloat128Type())
+      return Float128;
     break;
   }
 

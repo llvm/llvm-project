@@ -380,6 +380,7 @@ KEYWORD(__builtin_offsetof          , KEYALL)
 TYPE_TRAIT_2(__builtin_types_compatible_p, TypeCompatible, KEYNOCXX)
 KEYWORD(__builtin_va_arg            , KEYALL)
 KEYWORD(__extension__               , KEYALL)
+KEYWORD(__float128                  , KEYALL)
 KEYWORD(__imag                      , KEYALL)
 KEYWORD(__int128                    , KEYALL)
 KEYWORD(__label__                   , KEYALL)
@@ -519,7 +520,7 @@ ALIAS("read_write", __read_write    , KEYOPENCL)
 KEYWORD(__builtin_astype            , KEYOPENCL)
 KEYWORD(vec_step                    , KEYOPENCL|KEYALTIVEC|KEYZVECTOR)
 #define GENERIC_IMAGE_TYPE(ImgType, Id) KEYWORD(ImgType##_t, KEYOPENCL)
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
 
 // OpenMP Type Traits
 KEYWORD(__builtin_omp_required_simd_align, KEYALL)

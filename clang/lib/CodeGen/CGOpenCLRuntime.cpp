@@ -45,7 +45,7 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
     return llvm::PointerType::get( \
         llvm::StructType::create(Ctx, "opencl." #ImgType "_" #Suffix "_t"), \
         ImgAddrSpc);
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
   case BuiltinType::OCLSampler:
     return llvm::IntegerType::get(Ctx, 32);
   case BuiltinType::OCLEvent:

@@ -18,11 +18,13 @@
 @property int z;
 @property(readonly) int ro, ro2;
 @property (class) int c;
-@property (class) int c2;
+@property (class) int c2; // expected-note {{property declared here}} \
+                          // expected-note {{property declared here}}
 @property (class) int x;
 @end
 
-@implementation A
+@implementation A // expected-warning {{class property 'c2' requires method 'c2' to be defined}} \
+                  // expected-warning {{class property 'c2' requires method 'setC2:' to be defined}}
 @dynamic x; // refers to the instance property
 @dynamic (class) x; // refers to the class property
 @synthesize z, c2; // expected-error {{@synthesize not allowed on a class property 'c2'}}

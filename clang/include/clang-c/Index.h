@@ -2929,6 +2929,7 @@ enum CXTypeKind {
   CXType_ObjCId = 27,
   CXType_ObjCClass = 28,
   CXType_ObjCSel = 29,
+  CXType_Float128 = 30,
   CXType_FirstBuiltin = CXType_Void,
   CXType_LastBuiltin  = CXType_ObjCSel,
 

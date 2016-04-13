@@ -82,6 +82,12 @@
 // RUN: %clang_cl /I myincludedir -### -- %s 2>&1 | FileCheck -check-prefix=SLASH_I %s
 // SLASH_I: "-I" "myincludedir"
 
+// RUN: %clang_cl /imsvcmyincludedir -### -- %s 2>&1 | FileCheck -check-prefix=SLASH_imsvc %s
+// RUN: %clang_cl /imsvc myincludedir -### -- %s 2>&1 | FileCheck -check-prefix=SLASH_imsvc %s
+// Clang's resource header directory should be first:
+// SLASH_imsvc: "-internal-isystem" "{{[^"]*}}lib{{/|\\\\}}clang{{[^"]*}}include"
+// SLASH_imsvc: "-internal-isystem" "myincludedir"
+
 // RUN: %clang_cl /J -### -- %s 2>&1 | FileCheck -check-prefix=J %s
 // J: -fno-signed-char
 
@@ -452,7 +458,6 @@
 // RUN:     -fno-ms-compatibility \
 // RUN:     -fms-extensions \
 // RUN:     -fno-ms-extensions \
-// RUN:     -isystem=some/path \
 // RUN:     -mllvm -disable-llvm-optzns \
 // RUN:     -Wunused-variable \
 // RUN:     -fmacro-backtrace-limit=0 \

@@ -527,6 +527,10 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                   "include");
   }
 
+  // Add %INCLUDE%-like directories from the -imsvc flag.
+  for (const auto &Path : DriverArgs.getAllArgValues(options::OPT__SLASH_imsvc))
+    addSystemInclude(DriverArgs, CC1Args, Path);
+
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 

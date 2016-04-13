@@ -23,13 +23,13 @@ void test1(const char *msg) {
 }
 
 // NOSSP-NOT: attributes #[[A]] = {{.*}} ssp
-// SSP: attributes #[[A]] = {{.*}} ssp
+// SSP: attributes #[[A]] = {{.*}} ssp{{ }}
 // SSPSTRONG: attributes #[[A]] = {{.*}} sspstrong
 // SSPREQ: attributes #[[A]] = {{.*}} sspreq
 
 // SAFESTACK-NOSSP: attributes #[[A]] = {{.*}} safestack
 // SAFESTACK-NOSSP-NOT: ssp
 
-// SAFESTACK-SSP: attributes #[[A]] = {{.*}} safestack ssp
+// SAFESTACK-SSP: attributes #[[A]] = {{.*}} safestack ssp{{ }}
 // SAFESTACK-SSPSTRONG: attributes #[[A]] = {{.*}} safestack sspstrong
 // SAFESTACK-SSPREQ: attributes #[[A]] = {{.*}} safestack sspreq

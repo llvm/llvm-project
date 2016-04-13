@@ -6,14 +6,14 @@
 #ifndef HEADER
 #define HEADER
 
-#pragma omp declare simd
+#pragma omp declare simd linear(d: 8)
 #pragma omp declare simd inbranch simdlen(32)
 #pragma omp declare simd notinbranch
 void add_1(float *d) __attribute__((cold));
 
 // CHECK: #pragma omp declare simd notinbranch
 // CHECK-NEXT: #pragma omp declare simd inbranch simdlen(32)
-// CHECK-NEXT: #pragma omp declare simd
+// CHECK-NEXT: #pragma omp declare simd linear(val(d): 8)
 // CHECK-NEXT: void add_1(float *d) __attribute__((cold));
 //
 
@@ -48,28 +48,28 @@ void h(int *hp, int *hp2, int *hq, int *lin)
 }
 
 class VV {
-  // CHECK: #pragma omp declare simd uniform(this, a)
+  // CHECK: #pragma omp declare simd uniform(this, a) linear(val(b): a)
   // CHECK-NEXT: int add(int a, int b) __attribute__((cold))    {
   // CHECK-NEXT: return a + b;
   // CHECK-NEXT: }
-  #pragma omp declare simd uniform(this, a)
+  #pragma omp declare simd uniform(this, a) linear(val(b): a)
   int add(int a, int b) __attribute__((cold)) { return a + b; }
 
-  // CHECK: #pragma omp declare simd aligned(b: 4) aligned(a)
+  // CHECK: #pragma omp declare simd aligned(b: 4) aligned(a) linear(ref(b): 4) linear(val(this)) linear(val(a))
   // CHECK-NEXT: float taddpf(float *a, float *&b)     {
   // CHECK-NEXT: return *a + *b;
   // CHECK-NEXT: }
-  #pragma omp declare simd aligned (b: 4) aligned(a)
+  #pragma omp declare simd aligned (b: 4) aligned(a) linear(ref(b): 4) linear(this, a)
   float taddpf(float *a, float *&b) { return *a + *b; }
 
 // CHECK: #pragma omp declare simd aligned(b: 8)
-// CHECK-NEXT: #pragma omp declare simd
-// CHECK-NEXT: int tadd(int (&b)[]) {
+// CHECK-NEXT: #pragma omp declare simd linear(uval(c): 8)
+// CHECK-NEXT: int tadd(int (&b)[], int &c) {
 // CHECK-NEXT: return this->x[b[0]] + b[0];
 // CHECK-NEXT: }
-  #pragma omp declare simd
+  #pragma omp declare simd linear(uval(c): 8)
   #pragma omp declare simd aligned(b : 8)
-  int tadd(int (&b)[]) { return x[b[0]] + b[0]; }
+  int tadd(int (&b)[], int &c) { return x[b[0]] + b[0]; }
 
 private:
   int x[10];
@@ -78,7 +78,7 @@ private:
 // CHECK: template <int X = 16, typename T = float> class TVV {
 // CHECK: #pragma omp declare simd
 // CHECK-NEXT: int tadd(int a, int b);
-// CHECK: #pragma omp declare simd aligned(a: 16 * 2) aligned(b)
+// CHECK: #pragma omp declare simd aligned(a: 16 * 2) aligned(b) linear(ref(b): 16)
 // CHECK-NEXT: float taddpf(float *a, float *&b) {
 // CHECK-NEXT: return *a + *b;
 // CHECK-NEXT: }
@@ -100,7 +100,7 @@ public:
 // CHECK-NEXT: return a + b;
 // CHECK-NEXT: }
 
-  #pragma omp declare simd aligned(a : X * 2) aligned(b)
+  #pragma omp declare simd aligned(a : X * 2) aligned(b) linear(ref(b): X)
   float taddpf(float *a, T *&b) { return *a + *b; }
 
 // CHECK: #pragma omp declare simd aligned(a: X * 2) aligned(b)
@@ -123,13 +123,13 @@ private:
 };
 // CHECK: };
 
-// CHECK: #pragma omp declare simd simdlen(64) aligned(b: 64 * 2)
-// CHECK: template <int N = 64> void foo(int (&b)[64])
-// CHECK: #pragma omp declare simd simdlen(N) aligned(b: N * 2)
-// CHECK: template <int N> void foo(int (&b)[N])
-#pragma omp declare simd simdlen(N) aligned(b : N * 2)
+// CHECK: #pragma omp declare simd simdlen(64) aligned(b: 64 * 2) linear(uval(c): 64)
+// CHECK: template <int N = 64> void foo(int (&b)[64], float *&c)
+// CHECK: #pragma omp declare simd simdlen(N) aligned(b: N * 2) linear(uval(c): N)
+// CHECK: template <int N> void foo(int (&b)[N], float *&c)
+#pragma omp declare simd simdlen(N) aligned(b : N * 2) linear(uval(c): N)
 template <int N>
-void foo(int (&b)[N]);
+void foo(int (&b)[N], float *&c);
 
 // CHECK: TVV<16, float> t16;
 TVV<16, float> t16;
@@ -140,7 +140,7 @@ void f() {
   float r = t16.taddpf(&a, p);
   int res = t16.tadd(b);
   int c[64];
-  foo(c);
+  foo(c, p);
 }
 
 #endif

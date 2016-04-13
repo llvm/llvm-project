@@ -239,15 +239,13 @@ instantiateDependentModeAttr(Sema &S,
 static void instantiateOMPDeclareSimdDeclAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
     const OMPDeclareSimdDeclAttr &Attr, Decl *New) {
-  ExprResult Simdlen;
-  if (auto *E = Attr.getSimdlen())
-    Simdlen = S.SubstExpr(E, TemplateArgs);
   // Allow 'this' in clauses with varlists.
   if (auto *FTD = dyn_cast<FunctionTemplateDecl>(New))
     New = FTD->getTemplatedDecl();
   auto *FD = cast<FunctionDecl>(New);
   auto *ThisContext = dyn_cast_or_null<CXXRecordDecl>(FD->getDeclContext());
-  SmallVector<Expr *, 4> Uniforms, Aligneds, Alignments;
+  SmallVector<Expr *, 4> Uniforms, Aligneds, Alignments, Linears, Steps;
+  SmallVector<unsigned, 4> LinModifiers;
 
   auto &&Subst = [&](Expr *E) -> ExprResult {
     if (auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
@@ -263,6 +261,10 @@ static void instantiateOMPDeclareSimdDeclAttr(
                                      FD->isCXXInstanceMember());
     return S.SubstExpr(E, TemplateArgs);
   };
+
+  ExprResult Simdlen;
+  if (auto *E = Attr.getSimdlen())
+    Simdlen = Subst(E);
 
   if (Attr.uniforms_size() > 0) {
     for(auto *E : Attr.uniforms()) {
@@ -285,9 +287,24 @@ static void instantiateOMPDeclareSimdDeclAttr(
     Alignments.push_back(Inst.get());
     ++AI;
   }
+
+  auto SI = Attr.steps_begin();
+  for (auto *E : Attr.linears()) {
+    ExprResult Inst = Subst(E);
+    if (Inst.isInvalid())
+      continue;
+    Linears.push_back(Inst.get());
+    Inst = ExprEmpty();
+    if (*SI)
+      Inst = S.SubstExpr(*SI, TemplateArgs);
+    Steps.push_back(Inst.get());
+    ++SI;
+  }
+  LinModifiers.append(Attr.modifiers_begin(), Attr.modifiers_end());
   (void)S.ActOnOpenMPDeclareSimdDirective(
       S.ConvertDeclToDeclGroup(New), Attr.getBranchState(), Simdlen.get(),
-      Uniforms, Aligneds, Alignments, Attr.getRange());
+      Uniforms, Aligneds, Alignments, Linears, LinModifiers, Steps,
+      Attr.getRange());
 }
 
 void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,

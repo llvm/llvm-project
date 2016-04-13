@@ -5271,8 +5271,6 @@ def err_typecheck_pointer_arith_void_type : Error<
   "arithmetic on%select{ a|}0 pointer%select{|s}0 to void">;
 def err_typecheck_decl_incomplete_type : Error<
   "variable has incomplete type %0">;
-def err_typecheck_decl_incomplete_type___float128 : Error<
-  "support for type '__float128' is not yet implemented">;
 def ext_typecheck_decl_incomplete_type : ExtWarn<
   "tentative definition of variable with internal linkage has incomplete non-array type %0">,
   InGroup<DiagGroup<"tentative-definition-incomplete-type">>;
@@ -5401,7 +5399,9 @@ def ext_typecheck_comparison_of_distinct_pointers_nonstandard : ExtWarn<
   "composite pointer type %2">, InGroup<CompareDistinctPointerType>;
 def err_typecheck_op_on_nonoverlapping_address_space_pointers : Error<
   "%select{comparison between %diff{ ($ and $)|}0,1"
-  "|arithmetic operation with operands of type %diff{ ($ and $)|}0,1}2"
+  "|arithmetic operation with operands of type %diff{ ($ and $)|}0,1"
+  "|conditional operator with the second and third operands of type "
+  "%diff{ ($ and $)|}0,1}2"
   " which are pointers to non-overlapping address spaces">;
 
 def err_typecheck_assign_const : Error<
@@ -5671,6 +5671,16 @@ def note_parameter_here : Note<
   "passing argument to parameter here">;
 def note_method_return_type_change : Note<
   "compiler has implicitly changed method %0 return type">;
+
+def warn_impl_required_for_class_property : Warning<
+  "class property %0 requires method %1 to be defined - "
+  "use @dynamic or provide a method implementation "
+  "in this class implementation">,
+  InGroup<ObjCPropertyImpl>;
+def warn_impl_required_in_category_for_class_property : Warning<
+  "class property %0 requires method %1 to be defined - "
+  "use @dynamic or provide a method implementation in this category">,
+  InGroup<ObjCPropertyImpl>;
 
 // C++ casts
 // These messages adhere to the TryCast pattern: %0 is an int specifying the
@@ -6515,9 +6525,6 @@ def err_global_call_not_config : Error<
 def err_ref_bad_target : Error<
   "reference to %select{__device__|__global__|__host__|__host__ __device__}0 "
   "function %1 in %select{__device__|__global__|__host__|__host__ __device__}2 function">;
-def warn_host_calls_from_host_device : Warning<
-  "calling __host__ function %0 from __host__ __device__ function %1 can lead to runtime errors">,
-  InGroup<CudaCompat>;
 def warn_kern_is_method : Extension<
   "kernel function %0 is a member function; this may not be accepted by nvcc">,
   InGroup<CudaCompat>;
@@ -7617,8 +7624,8 @@ def err_c99_array_usage_cxx : Error<
   "feature, not permitted in C++">;
  def err_type_requires_extension : Error<
   "use of type %0 requires %1 extension to be enabled">;
-def err_int128_unsupported : Error<
-  "__int128 is not supported on this target">;
+def err_type_unsupported : Error<
+  "%0 is not supported on this target">;
 def err_nsconsumed_attribute_mismatch : Error<
   "overriding method has mismatched ns_consumed attribute on its"
   " parameter">;
@@ -8215,6 +8222,10 @@ def err_omp_variable_in_map_and_dsa : Error<
   "%0 variable cannot be in a map clause in '#pragma omp %1' directive">;
 def err_omp_param_or_this_in_clause : Error<
   "expected reference to one of the parameters of function %0%select{| or 'this'}1">;
+def err_omp_expected_uniform_param : Error<
+  "expected a reference to a parameter specified in a 'uniform' clause">;
+def err_omp_expected_int_param : Error<
+  "expected a reference to an integer-typed parameter">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
