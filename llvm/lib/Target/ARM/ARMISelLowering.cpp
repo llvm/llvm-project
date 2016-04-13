@@ -2146,10 +2146,11 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
                                   CCAssignFnForNode(CallerCC, true, isVarArg)))
     return false;
   // The callee has to preserve all registers the caller needs to preserve.
+  const ARMBaseRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
   if (CalleeCC != CallerCC) {
-    const ARMBaseRegisterInfo *TRI = Subtarget->getRegisterInfo();
-    if (!TRI->regmaskSubsetEqual(TRI->getCallPreservedMask(MF, CallerCC),
-                                 TRI->getCallPreservedMask(MF, CalleeCC)))
+    const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
+    if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
       return false;
   }
 
@@ -2205,6 +2206,28 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
             return false;
         }
       }
+    }
+
+    // Parameters passed in callee saved registers must have the same value in
+    // caller and callee.
+    for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
+      const CCValAssign &ArgLoc = ArgLocs[I];
+      if (!ArgLoc.isRegLoc())
+        continue;
+      unsigned Reg = ArgLoc.getLocReg();
+      // Only look at callee saved registers.
+      if (MachineOperand::clobbersPhysReg(CallerPreserved, Reg))
+        continue;
+      // Check that we pass the value used for the caller.
+      // (We look for a CopyFromReg reading a virtual register that is used
+      //  for the function live-in value of register Reg)
+      SDValue Value = OutVals[I];
+      if (Value->getOpcode() != ISD::CopyFromReg)
+        return false;
+      unsigned ArgReg = cast<RegisterSDNode>(Value->getOperand(1))->getReg();
+      const MachineRegisterInfo &MRI = MF.getRegInfo();
+      if (MRI.getLiveInPhysReg(ArgReg) != Reg)
+        return false;
     }
   }
 

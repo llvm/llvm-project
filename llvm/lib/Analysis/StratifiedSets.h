@@ -25,44 +25,45 @@
 #include <vector>
 
 namespace llvm {
-// \brief An index into Stratified Sets.
+/// An index into Stratified Sets.
 typedef unsigned StratifiedIndex;
-// NOTE: ^ This can't be a short -- bootstrapping clang has a case where
-// ~1M sets exist.
+/// NOTE: ^ This can't be a short -- bootstrapping clang has a case where
+/// ~1M sets exist.
 
 // \brief Container of information related to a value in a StratifiedSet.
 struct StratifiedInfo {
   StratifiedIndex Index;
-  // For field sensitivity, etc. we can tack attributes on to this struct.
+  /// For field sensitivity, etc. we can tack fields on here.
 };
 
-// The number of attributes that StratifiedAttrs should contain. Attributes are
-// described below, and 32 was an arbitrary choice because it fits nicely in 32
-// bits (because we use a bitset for StratifiedAttrs).
+/// The number of attributes that StratifiedAttrs should contain. Attributes are
+/// described below, and 32 was an arbitrary choice because it fits nicely in 32
+/// bits (because we use a bitset for StratifiedAttrs).
 static const unsigned NumStratifiedAttrs = 32;
 
-// These are attributes that the users of StratifiedSets/StratifiedSetBuilders
-// may use for various purposes. These also have the special property of that
-// they are merged down. So, if set A is above set B, and one decides to set an
-// attribute in set A, then the attribute will automatically be set in set B.
+/// These are attributes that the users of StratifiedSets/StratifiedSetBuilders
+/// may use for various purposes. These also have the special property of that
+/// they are merged down. So, if set A is above set B, and one decides to set an
+/// attribute in set A, then the attribute will automatically be set in set B.
 typedef std::bitset<NumStratifiedAttrs> StratifiedAttrs;
 
-// \brief A "link" between two StratifiedSets.
+/// A "link" between two StratifiedSets.
 struct StratifiedLink {
-  // \brief This is a value used to signify "does not exist" where
-  // the StratifiedIndex type is used. This is used instead of
-  // Optional<StratifiedIndex> because Optional<StratifiedIndex> would
-  // eat up a considerable amount of extra memory, after struct
-  // padding/alignment is taken into account.
+  /// \brief This is a value used to signify "does not exist" where the
+  /// StratifiedIndex type is used.
+  ///
+  /// This is used instead of Optional<StratifiedIndex> because
+  /// Optional<StratifiedIndex> would eat up a considerable amount of extra
+  /// memory, after struct padding/alignment is taken into account.
   static const StratifiedIndex SetSentinel;
 
-  // \brief The index for the set "above" current
+  /// The index for the set "above" current
   StratifiedIndex Above;
 
-  // \brief The link for the set "below" current
+  /// The link for the set "below" current
   StratifiedIndex Below;
 
-  // \brief Attributes for these StratifiedSets.
+  /// Attributes for these StratifiedSets.
   StratifiedAttrs Attrs;
 
   StratifiedLink() : Above(SetSentinel), Below(SetSentinel) {}
@@ -74,25 +75,25 @@ struct StratifiedLink {
   void clearAbove() { Above = SetSentinel; }
 };
 
-// \brief These are stratified sets, as described in "Fast algorithms for
-// Dyck-CFL-reachability with applications to Alias Analysis" by Zhang Q, Lyu M
-// R, Yuan H, and Su Z. -- in short, this is meant to represent different sets
-// of Value*s. If two Value*s are in the same set, or if both sets have 
-// overlapping attributes, then the Value*s are said to alias.
-//
-// Sets may be related by position, meaning that one set may be considered as
-// above or below another. In CFL Alias Analysis, this gives us an indication
-// of how two variables are related; if the set of variable A is below a set
-// containing variable B, then at some point, a variable that has interacted
-// with B (or B itself) was either used in order to extract the variable A, or
-// was used as storage of variable A.
-//
-// Sets may also have attributes (as noted above). These attributes are
-// generally used for noting whether a variable in the set has interacted with
-// a variable whose origins we don't quite know (i.e. globals/arguments), or if
-// the variable may have had operations performed on it (modified in a function
-// call). All attributes that exist in a set A must exist in all sets marked as
-// below set A.
+/// \brief These are stratified sets, as described in "Fast algorithms for
+/// Dyck-CFL-reachability with applications to Alias Analysis" by Zhang Q, Lyu M
+/// R, Yuan H, and Su Z. -- in short, this is meant to represent different sets
+/// of Value*s. If two Value*s are in the same set, or if both sets have
+/// overlapping attributes, then the Value*s are said to alias.
+///
+/// Sets may be related by position, meaning that one set may be considered as
+/// above or below another. In CFL Alias Analysis, this gives us an indication
+/// of how two variables are related; if the set of variable A is below a set
+/// containing variable B, then at some point, a variable that has interacted
+/// with B (or B itself) was either used in order to extract the variable A, or
+/// was used as storage of variable A.
+///
+/// Sets may also have attributes (as noted above). These attributes are
+/// generally used for noting whether a variable in the set has interacted with
+/// a variable whose origins we don't quite know (i.e. globals/arguments), or if
+/// the variable may have had operations performed on it (modified in a function
+/// call). All attributes that exist in a set A must exist in all sets marked as
+/// below set A.
 template <typename T> class StratifiedSets {
 public:
   StratifiedSets() {}
@@ -111,9 +112,8 @@ public:
 
   Optional<StratifiedInfo> find(const T &Elem) const {
     auto Iter = Values.find(Elem);
-    if (Iter == Values.end()) {
-      return NoneType();
-    }
+    if (Iter == Values.end())
+      return None;
     return Iter->second;
   }
 
@@ -129,91 +129,91 @@ private:
   bool inbounds(StratifiedIndex Idx) const { return Idx < Links.size(); }
 };
 
-// \brief Generic Builder class that produces StratifiedSets instances.
-//
-// The goal of this builder is to efficiently produce correct StratifiedSets
-// instances. To this end, we use a few tricks:
-//   > Set chains (A method for linking sets together)
-//   > Set remaps (A method for marking a set as an alias [irony?] of another)
-//
-// ==== Set chains ====
-// This builder has a notion of some value A being above, below, or with some
-// other value B:
-//   > The `A above B` relationship implies that there is a reference edge going
-//   from A to B. Namely, it notes that A can store anything in B's set.
-//   > The `A below B` relationship is the opposite of `A above B`. It implies
-//   that there's a dereference edge going from A to B.
-//   > The `A with B` relationship states that there's an assignment edge going
-//   from A to B, and that A and B should be treated as equals.
-//
-// As an example, take the following code snippet:
-//
-// %a = alloca i32, align 4
-// %ap = alloca i32*, align 8
-// %app = alloca i32**, align 8
-// store %a, %ap
-// store %ap, %app
-// %aw = getelementptr %ap, 0
-//
-// Given this, the follow relations exist:
-//   - %a below %ap & %ap above %a
-//   - %ap below %app & %app above %ap
-//   - %aw with %ap & %ap with %aw
-//
-// These relations produce the following sets:
-//   [{%a}, {%ap, %aw}, {%app}]
-//
-// ...Which states that the only MayAlias relationship in the above program is
-// between %ap and %aw.
-//
-// Life gets more complicated when we actually have logic in our programs. So,
-// we either must remove this logic from our programs, or make consessions for
-// it in our AA algorithms. In this case, we have decided to select the latter
-// option.
-//
-// First complication: Conditionals
-// Motivation:
-//  %ad = alloca int, align 4
-//  %a = alloca int*, align 8
-//  %b = alloca int*, align 8
-//  %bp = alloca int**, align 8
-//  %c = call i1 @SomeFunc()
-//  %k = select %c, %ad, %bp
-//  store %ad, %a
-//  store %b, %bp
-//
-// %k has 'with' edges to both %a and %b, which ordinarily would not be linked
-// together. So, we merge the set that contains %a with the set that contains
-// %b. We then recursively merge the set above %a with the set above %b, and
-// the set below  %a with the set below %b, etc. Ultimately, the sets for this
+/// Generic Builder class that produces StratifiedSets instances.
+///
+/// The goal of this builder is to efficiently produce correct StratifiedSets
+/// instances. To this end, we use a few tricks:
+///   > Set chains (A method for linking sets together)
+///   > Set remaps (A method for marking a set as an alias [irony?] of another)
+///
+/// ==== Set chains ====
+/// This builder has a notion of some value A being above, below, or with some
+/// other value B:
+///   > The `A above B` relationship implies that there is a reference edge
+///   going from A to B. Namely, it notes that A can store anything in B's set.
+///   > The `A below B` relationship is the opposite of `A above B`. It implies
+///   that there's a dereference edge going from A to B.
+///   > The `A with B` relationship states that there's an assignment edge going
+///   from A to B, and that A and B should be treated as equals.
+///
+/// As an example, take the following code snippet:
+///
+/// %a = alloca i32, align 4
+/// %ap = alloca i32*, align 8
+/// %app = alloca i32**, align 8
+/// store %a, %ap
+/// store %ap, %app
+/// %aw = getelementptr %ap, 0
+///
+/// Given this, the follow relations exist:
+///   - %a below %ap & %ap above %a
+///   - %ap below %app & %app above %ap
+///   - %aw with %ap & %ap with %aw
+///
+/// These relations produce the following sets:
+///   [{%a}, {%ap, %aw}, {%app}]
+///
+/// ...Which states that the only MayAlias relationship in the above program is
+/// between %ap and %aw.
+///
+/// Life gets more complicated when we actually have logic in our programs. So,
+/// we either must remove this logic from our programs, or make consessions for
+/// it in our AA algorithms. In this case, we have decided to select the latter
+/// option.
+///
+/// First complication: Conditionals
+/// Motivation:
+///  %ad = alloca int, align 4
+///  %a = alloca int*, align 8
+///  %b = alloca int*, align 8
+///  %bp = alloca int**, align 8
+///  %c = call i1 @SomeFunc()
+///  %k = select %c, %ad, %bp
+///  store %ad, %a
+///  store %b, %bp
+///
+/// %k has 'with' edges to both %a and %b, which ordinarily would not be linked
+/// together. So, we merge the set that contains %a with the set that contains
+/// %b. We then recursively merge the set above %a with the set above %b, and
+/// the set below  %a with the set below %b, etc. Ultimately, the sets for this
 // program would end up like: {%ad}, {%a, %b, %k}, {%bp}, where {%ad} is below
-// {%a, %b, %c} is below {%ad}.
-//
-// Second complication: Arbitrary casts
-// Motivation:
-//  %ip = alloca int*, align 8
-//  %ipp = alloca int**, align 8
-//  %i = bitcast ipp to int
-//  store %ip, %ipp
-//  store %i, %ip
-//
-// This is impossible to construct with any of the rules above, because a set
-// containing both {%i, %ipp} is supposed to exist, the set with %i is supposed
-// to be below the set with %ip, and the set with %ip is supposed to be below
-// the set with %ipp. Because we don't allow circular relationships like this,
-// we merge all concerned sets into one. So, the above code would generate a
-// single StratifiedSet: {%ip, %ipp, %i}.
-//
-// ==== Set remaps ====
-// More of an implementation detail than anything -- when merging sets, we need
-// to update the numbers of all of the elements mapped to those sets. Rather
-// than doing this at each merge, we note in the BuilderLink structure that a
-// remap has occurred, and use this information so we can defer renumbering set
-// elements until build time.
+/// {%a, %b, %c} is below {%ad}.
+///
+/// Second complication: Arbitrary casts
+/// Motivation:
+///  %ip = alloca int*, align 8
+///  %ipp = alloca int**, align 8
+///  %i = bitcast ipp to int
+///  store %ip, %ipp
+///  store %i, %ip
+///
+/// This is impossible to construct with any of the rules above, because a set
+/// containing both {%i, %ipp} is supposed to exist, the set with %i is supposed
+/// to be below the set with %ip, and the set with %ip is supposed to be below
+/// the set with %ipp. Because we don't allow circular relationships like this,
+/// we merge all concerned sets into one. So, the above code would generate a
+/// single StratifiedSet: {%ip, %ipp, %i}.
+///
+/// ==== Set remaps ====
+/// More of an implementation detail than anything -- when merging sets, we need
+/// to update the numbers of all of the elements mapped to those sets. Rather
+/// than doing this at each merge, we note in the BuilderLink structure that a
+/// remap has occurred, and use this information so we can defer renumbering set
+/// elements until build time.
 template <typename T> class StratifiedSetsBuilder {
-  // \brief Represents a Stratified Set, with information about the Stratified
-  // Set above it, the set below it, and whether the current set has been
-  // remapped to another.
+  /// \brief Represents a Stratified Set, with information about the Stratified
+  /// Set above it, the set below it, and whether the current set has been
+  /// remapped to another.
   struct BuilderLink {
     const StratifiedIndex Number;
 
@@ -281,7 +281,7 @@ template <typename T> class StratifiedSetsBuilder {
 
     bool isRemapped() const { return Remap != StratifiedLink::SetSentinel; }
 
-    // \brief For initial remapping to another set
+    /// For initial remapping to another set
     void remapTo(StratifiedIndex Other) {
       assert(!isRemapped());
       Remap = Other;
@@ -292,15 +292,15 @@ template <typename T> class StratifiedSetsBuilder {
       return Remap;
     }
 
-    // \brief Should only be called when we're already remapped.
+    /// Should only be called when we're already remapped.
     void updateRemap(StratifiedIndex Other) {
       assert(isRemapped());
       Remap = Other;
     }
 
-    // \brief Prefer the above functions to calling things directly on what's
-    // returned from this -- they guard against unexpected calls when the
-    // current BuilderLink is remapped.
+    /// Prefer the above functions to calling things directly on what's returned
+    /// from this -- they guard against unexpected calls when the current
+    /// BuilderLink is remapped.
     const StratifiedLink &getLink() const { return Link; }
 
   private:
@@ -308,15 +308,14 @@ template <typename T> class StratifiedSetsBuilder {
     StratifiedIndex Remap;
   };
 
-  // \brief This function performs all of the set unioning/value renumbering
-  // that we've been putting off, and generates a vector<StratifiedLink> that
-  // may be placed in a StratifiedSets instance.
+  /// \brief This function performs all of the set unioning/value renumbering
+  /// that we've been putting off, and generates a vector<StratifiedLink> that
+  /// may be placed in a StratifiedSets instance.
   void finalizeSets(std::vector<StratifiedLink> &StratLinks) {
     DenseMap<StratifiedIndex, StratifiedIndex> Remaps;
     for (auto &Link : Links) {
-      if (Link.isRemapped()) {
+      if (Link.isRemapped())
         continue;
-      }
 
       StratifiedIndex Number = StratLinks.size();
       Remaps.insert(std::make_pair(Link.Number, Number));
@@ -348,8 +347,8 @@ template <typename T> class StratifiedSetsBuilder {
     }
   }
 
-  // \brief There's a guarantee in StratifiedLink where all bits set in a
-  // Link.externals will be set in all Link.externals "below" it.
+  /// \brief There's a guarantee in StratifiedLink where all bits set in a
+  /// Link.externals will be set in all Link.externals "below" it.
   static void propagateAttrs(std::vector<StratifiedLink> &Links) {
     const auto getHighestParentAbove = [&Links](StratifiedIndex Idx) {
       const auto *Link = &Links[Idx];
@@ -363,9 +362,8 @@ template <typename T> class StratifiedSetsBuilder {
     SmallSet<StratifiedIndex, 16> Visited;
     for (unsigned I = 0, E = Links.size(); I < E; ++I) {
       auto CurrentIndex = getHighestParentAbove(I);
-      if (!Visited.insert(CurrentIndex).second) {
+      if (!Visited.insert(CurrentIndex).second)
         continue;
-      }
 
       while (Links[CurrentIndex].hasBelow()) {
         auto &CurrentBits = Links[CurrentIndex].Attrs;
@@ -378,8 +376,8 @@ template <typename T> class StratifiedSetsBuilder {
   }
 
 public:
-  // \brief Builds a StratifiedSet from the information we've been given since
-  // either construction or the prior build() call.
+  /// Builds a StratifiedSet from the information we've been given since either
+  /// construction or the prior build() call.
   StratifiedSets<T> build() {
     std::vector<StratifiedLink> StratLinks;
     finalizeSets(StratLinks);
@@ -401,9 +399,9 @@ public:
     return addAtMerging(Main, NewIndex);
   }
 
-  // \brief Restructures the stratified sets as necessary to make "ToAdd" in a
-  // set above "Main". There are some cases where this is not possible (see
-  // above), so we merge them such that ToAdd and Main are in the same set.
+  /// \brief Restructures the stratified sets as necessary to make "ToAdd" in a
+  /// set above "Main". There are some cases where this is not possible (see
+  /// above), so we merge them such that ToAdd and Main are in the same set.
   bool addAbove(const T &Main, const T &ToAdd) {
     assert(has(Main));
     auto Index = *indexOf(Main);
@@ -414,9 +412,9 @@ public:
     return addAtMerging(ToAdd, Above);
   }
 
-  // \brief Restructures the stratified sets as necessary to make "ToAdd" in a
-  // set below "Main". There are some cases where this is not possible (see
-  // above), so we merge them such that ToAdd and Main are in the same set.
+  /// \brief Restructures the stratified sets as necessary to make "ToAdd" in a
+  /// set below "Main". There are some cases where this is not possible (see
+  /// above), so we merge them such that ToAdd and Main are in the same set.
   bool addBelow(const T &Main, const T &ToAdd) {
     assert(has(Main));
     auto Index = *indexOf(Main);
@@ -467,9 +465,9 @@ public:
     return Attrs[AttrNum];
   }
 
-  // \brief Gets the attributes that have been applied to the set that Main
-  // belongs to. It ignores attributes in any sets above the one that Main
-  // resides in.
+  /// \brief Gets the attributes that have been applied to the set that Main
+  /// belongs to. It ignores attributes in any sets above the one that Main
+  /// resides in.
   StratifiedAttrs getRawAttributes(const T &Main) {
     assert(has(Main));
     auto *Info = *get(Main);
@@ -477,9 +475,9 @@ public:
     return Link.getAttrs();
   }
 
-  // \brief Gets an attribute from the attributes that have been applied to the
-  // set that Main belongs to. It ignores attributes in any sets above the one
-  // that Main resides in.
+  /// \brief Gets an attribute from the attributes that have been applied to the
+  /// set that Main belongs to. It ignores attributes in any sets above the one
+  /// that Main resides in.
   bool getRawAttribute(const T &Main, unsigned AttrNum) {
     assert(AttrNum < StratifiedLink::SetSentinel);
     auto Attrs = getRawAttributes(Main);
@@ -490,8 +488,7 @@ private:
   DenseMap<T, StratifiedInfo> Values;
   std::vector<BuilderLink> Links;
 
-  // \brief Adds the given element at the given index, merging sets if
-  // necessary.
+  /// Adds the given element at the given index, merging sets if necessary.
   bool addAtMerging(const T &ToAdd, StratifiedIndex Index) {
     StratifiedInfo Info = {Index};
     auto Pair = Values.insert(std::make_pair(ToAdd, Info));
@@ -509,8 +506,8 @@ private:
     return false;
   }
 
-  // \brief Gets the BuilderLink at the given index, taking set remapping into
-  // account.
+  /// Gets the BuilderLink at the given index, taking set remapping into
+  /// account.
   BuilderLink &linksAt(StratifiedIndex Index) {
     auto *Start = &Links[Index];
     if (!Start->isRemapped())
@@ -534,8 +531,8 @@ private:
     return *Current;
   }
 
-  // \brief Merges two sets into one another. Assumes that these sets are not
-  // already one in the same
+  /// \brief Merges two sets into one another. Assumes that these sets are not
+  /// already one in the same.
   void merge(StratifiedIndex Idx1, StratifiedIndex Idx2) {
     assert(inbounds(Idx1) && inbounds(Idx2));
     assert(&linksAt(Idx1) != &linksAt(Idx2) &&
@@ -555,8 +552,8 @@ private:
     mergeDirect(Idx1, Idx2);
   }
 
-  // \brief Merges two sets assuming that the set at `Idx1` is unreachable from
-  // traversing above or below the set at `Idx2`.
+  /// \brief Merges two sets assuming that the set at `Idx1` is unreachable from
+  /// traversing above or below the set at `Idx2`.
   void mergeDirect(StratifiedIndex Idx1, StratifiedIndex Idx2) {
     assert(inbounds(Idx1) && inbounds(Idx2));
 
@@ -602,9 +599,9 @@ private:
     LinksFrom->remapTo(LinksInto->Number);
   }
 
-  // \brief Checks to see if lowerIndex is at a level lower than upperIndex.
-  // If so, it will merge lowerIndex with upperIndex (and all of the sets
-  // between) and return true. Otherwise, it will return false.
+  /// Checks to see if lowerIndex is at a level lower than upperIndex. If so, it
+  /// will merge lowerIndex with upperIndex (and all of the sets between) and
+  /// return true. Otherwise, it will return false.
   bool tryMergeUpwards(StratifiedIndex LowerIndex, StratifiedIndex UpperIndex) {
     assert(inbounds(LowerIndex) && inbounds(UpperIndex));
     auto *Lower = &linksAt(LowerIndex);
@@ -644,21 +641,21 @@ private:
   Optional<const StratifiedInfo *> get(const T &Val) const {
     auto Result = Values.find(Val);
     if (Result == Values.end())
-      return NoneType();
+      return None;
     return &Result->second;
   }
 
   Optional<StratifiedInfo *> get(const T &Val) {
     auto Result = Values.find(Val);
     if (Result == Values.end())
-      return NoneType();
+      return None;
     return &Result->second;
   }
 
   Optional<StratifiedIndex> indexOf(const T &Val) {
     auto MaybeVal = get(Val);
     if (!MaybeVal.hasValue())
-      return NoneType();
+      return None;
     auto *Info = *MaybeVal;
     auto &Link = linksAt(Info->Index);
     return Link.Number;

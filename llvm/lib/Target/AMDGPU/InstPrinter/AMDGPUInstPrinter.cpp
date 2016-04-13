@@ -18,6 +18,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <string>
+
 using namespace llvm;
 
 void AMDGPUInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
@@ -189,6 +191,18 @@ void AMDGPUInstPrinter::printRegOperand(unsigned reg, raw_ostream &O,
   case AMDGPU::VCC_HI:
     O << "vcc_hi";
     return;
+  case AMDGPU::TBA_LO:
+    O << "tba_lo";
+    return;
+  case AMDGPU::TBA_HI:
+    O << "tba_hi";
+    return;
+  case AMDGPU::TMA_LO:
+    O << "tma_lo";
+    return;
+  case AMDGPU::TMA_HI:
+    O << "tma_hi";
+    return;
   case AMDGPU::EXEC_LO:
     O << "exec_lo";
     return;
@@ -205,41 +219,44 @@ void AMDGPUInstPrinter::printRegOperand(unsigned reg, raw_ostream &O,
     break;
   }
 
-  char Type;
+  std::string Type;
   unsigned NumRegs;
 
   if (MRI.getRegClass(AMDGPU::VGPR_32RegClassID).contains(reg)) {
-    Type = 'v';
+    Type = "v";
     NumRegs = 1;
   } else  if (MRI.getRegClass(AMDGPU::SGPR_32RegClassID).contains(reg)) {
-    Type = 's';
+    Type = "s";
     NumRegs = 1;
   } else if (MRI.getRegClass(AMDGPU::VReg_64RegClassID).contains(reg)) {
-    Type = 'v';
+    Type = "v";
     NumRegs = 2;
-  } else  if (MRI.getRegClass(AMDGPU::SReg_64RegClassID).contains(reg)) {
-    Type = 's';
+  } else  if (MRI.getRegClass(AMDGPU::SGPR_64RegClassID).contains(reg)) {
+    Type = "s";
+    NumRegs = 2;
+  } else  if (MRI.getRegClass(AMDGPU::TTMP_64RegClassID).contains(reg)) {
+    Type = "ttmp";
     NumRegs = 2;
   } else if (MRI.getRegClass(AMDGPU::VReg_128RegClassID).contains(reg)) {
-    Type = 'v';
+    Type = "v";
     NumRegs = 4;
   } else  if (MRI.getRegClass(AMDGPU::SReg_128RegClassID).contains(reg)) {
-    Type = 's';
+    Type = "s";
     NumRegs = 4;
   } else if (MRI.getRegClass(AMDGPU::VReg_96RegClassID).contains(reg)) {
-    Type = 'v';
+    Type = "v";
     NumRegs = 3;
   } else if (MRI.getRegClass(AMDGPU::VReg_256RegClassID).contains(reg)) {
-    Type = 'v';
+    Type = "v";
     NumRegs = 8;
   } else if (MRI.getRegClass(AMDGPU::SReg_256RegClassID).contains(reg)) {
-    Type = 's';
+    Type = "s";
     NumRegs = 8;
   } else if (MRI.getRegClass(AMDGPU::VReg_512RegClassID).contains(reg)) {
-    Type = 'v';
+    Type = "v";
     NumRegs = 16;
   } else if (MRI.getRegClass(AMDGPU::SReg_512RegClassID).contains(reg)) {
-    Type = 's';
+    Type = "s";
     NumRegs = 16;
   } else {
     O << getRegisterName(reg);
@@ -249,6 +266,8 @@ void AMDGPUInstPrinter::printRegOperand(unsigned reg, raw_ostream &O,
   // The low 8 bits of the encoding value is the register index, for both VGPRs
   // and SGPRs.
   unsigned RegIdx = MRI.getEncodingValue(reg) & ((1 << 8) - 1);
+  if (Type == "ttmp")
+    RegIdx -= 112; // Trap temps start at offset 112. TODO: Get this from tablegen.
   if (NumRegs == 1) {
     O << Type << RegIdx;
     return;

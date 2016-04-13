@@ -36,32 +36,28 @@
 using namespace llvm;
 
 static cl::opt<char>
-OptLevel("O",
-         cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                  "(default = '-O2')"),
-         cl::Prefix,
-         cl::ZeroOrMore,
-         cl::init('2'));
+    OptLevel("O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                           "(default = '-O2')"),
+             cl::Prefix, cl::ZeroOrMore, cl::init('2'));
 
 static cl::opt<bool> DisableVerify(
     "disable-verify", cl::init(false),
     cl::desc("Do not run the verifier during the optimization pipeline"));
 
-static cl::opt<bool>
-DisableInline("disable-inlining", cl::init(false),
-  cl::desc("Do not run the inliner pass"));
+static cl::opt<bool> DisableInline("disable-inlining", cl::init(false),
+                                   cl::desc("Do not run the inliner pass"));
 
 static cl::opt<bool>
-DisableGVNLoadPRE("disable-gvn-loadpre", cl::init(false),
-  cl::desc("Do not run the GVN load PRE pass"));
+    DisableGVNLoadPRE("disable-gvn-loadpre", cl::init(false),
+                      cl::desc("Do not run the GVN load PRE pass"));
 
-static cl::opt<bool>
-DisableLTOVectorization("disable-lto-vectorization", cl::init(false),
-  cl::desc("Do not run loop or slp vectorization during LTO"));
+static cl::opt<bool> DisableLTOVectorization(
+    "disable-lto-vectorization", cl::init(false),
+    cl::desc("Do not run loop or slp vectorization during LTO"));
 
-static cl::opt<bool>
-UseDiagnosticHandler("use-diagnostic-handler", cl::init(false),
-  cl::desc("Use a diagnostic handler to test the handler interface"));
+static cl::opt<bool> UseDiagnosticHandler(
+    "use-diagnostic-handler", cl::init(false),
+    cl::desc("Use a diagnostic handler to test the handler interface"));
 
 static cl::opt<bool>
     ThinLTO("thinlto", cl::init(false),
@@ -98,27 +94,25 @@ static cl::opt<std::string>
                           "to perform the promotion and/or importing."));
 
 static cl::opt<bool>
-SaveModuleFile("save-merged-module", cl::init(false),
-               cl::desc("Write merged LTO module to file before CodeGen"));
+    SaveModuleFile("save-merged-module", cl::init(false),
+                   cl::desc("Write merged LTO module to file before CodeGen"));
+
+static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
+                                            cl::desc("<input bitcode files>"));
+
+static cl::opt<std::string> OutputFilename("o", cl::init(""),
+                                           cl::desc("Override output filename"),
+                                           cl::value_desc("filename"));
 
 static cl::list<std::string>
-InputFilenames(cl::Positional, cl::OneOrMore,
-  cl::desc("<input bitcode files>"));
-
-static cl::opt<std::string>
-OutputFilename("o", cl::init(""),
-  cl::desc("Override output filename"),
-  cl::value_desc("filename"));
+    ExportedSymbols("exported-symbol",
+                    cl::desc("Symbol to export from the resulting object file"),
+                    cl::ZeroOrMore);
 
 static cl::list<std::string>
-ExportedSymbols("exported-symbol",
-  cl::desc("Symbol to export from the resulting object file"),
-  cl::ZeroOrMore);
-
-static cl::list<std::string>
-DSOSymbols("dso-symbol",
-  cl::desc("Symbol to put in the symtab in the resulting dso"),
-  cl::ZeroOrMore);
+    DSOSymbols("dso-symbol",
+               cl::desc("Symbol to put in the symtab in the resulting dso"),
+               cl::ZeroOrMore);
 
 static cl::opt<bool> ListSymbolsOnly(
     "list-symbols-only", cl::init(false),
@@ -609,8 +603,7 @@ int main(int argc, char **argv) {
       CodeGen.setModule(std::move(Module));
     } else if (!CodeGen.addModule(Module.get())) {
       // Print a message here so that we know addModule() did not abort.
-      errs() << argv[0] << ": error adding file '" << InputFilenames[i] << "'\n";
-      return 1;
+      error("error adding file '" + InputFilenames[i] + "'");
     }
   }
 
@@ -644,8 +637,7 @@ int main(int argc, char **argv) {
     if (!CodeGen.optimize(DisableVerify, DisableInline, DisableGVNLoadPRE,
                           DisableLTOVectorization)) {
       // Diagnostic messages should have been printed by the handler.
-      errs() << argv[0] << ": error optimizing the code\n";
-      return 1;
+      error("error optimizing the code");
     }
 
     if (SaveModuleFile) {
@@ -653,10 +645,8 @@ int main(int argc, char **argv) {
       ModuleFilename += ".merged.bc";
       std::string ErrMsg;
 
-      if (!CodeGen.writeMergedModules(ModuleFilename.c_str())) {
-        errs() << argv[0] << ": writing merged module failed.\n";
-        return 1;
-      }
+      if (!CodeGen.writeMergedModules(ModuleFilename.c_str()))
+        error("writing merged module failed.");
     }
 
     std::list<tool_output_file> OSs;
@@ -667,40 +657,29 @@ int main(int argc, char **argv) {
         PartFilename += "." + utostr(I);
       std::error_code EC;
       OSs.emplace_back(PartFilename, EC, sys::fs::F_None);
-      if (EC) {
-        errs() << argv[0] << ": error opening the file '" << PartFilename
-               << "': " << EC.message() << "\n";
-        return 1;
-      }
+      if (EC)
+        error("error opening the file '" + PartFilename + "': " + EC.message());
       OSPtrs.push_back(&OSs.back().os());
     }
 
-    if (!CodeGen.compileOptimized(OSPtrs)) {
+    if (!CodeGen.compileOptimized(OSPtrs))
       // Diagnostic messages should have been printed by the handler.
-      errs() << argv[0] << ": error compiling the code\n";
-      return 1;
-    }
+      error("error compiling the code");
 
     for (tool_output_file &OS : OSs)
       OS.keep();
   } else {
-    if (Parallelism != 1) {
-      errs() << argv[0] << ": -j must be specified together with -o\n";
-      return 1;
-    }
+    if (Parallelism != 1)
+      error("-j must be specified together with -o");
 
-    if (SaveModuleFile) {
-      errs() << argv[0] << ": -save-merged-module must be specified with -o\n";
-      return 1;
-    }
+    if (SaveModuleFile)
+      error(": -save-merged-module must be specified with -o");
 
     const char *OutputName = nullptr;
     if (!CodeGen.compile_to_file(&OutputName, DisableVerify, DisableInline,
-                                 DisableGVNLoadPRE, DisableLTOVectorization)) {
+                                 DisableGVNLoadPRE, DisableLTOVectorization))
+      error("error compiling the code");
       // Diagnostic messages should have been printed by the handler.
-      errs() << argv[0] << ": error compiling the code\n";
-      return 1;
-    }
 
     outs() << "Wrote native object file '" << OutputName << "'\n";
   }

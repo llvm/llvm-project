@@ -208,6 +208,11 @@ getNextLoadCommandInfo(const MachOObjectFile *Obj,
 template <typename T>
 static void parseHeader(const MachOObjectFile *Obj, T &Header,
                         Error &Err) {
+  if (sizeof(T) > Obj->getData().size()) {
+    Err = malformedError(*Obj, "truncated or malformed object (the mach header "
+                         "extends past the end of the file)");
+    return;
+  }
   if (auto HeaderOrErr = getStructOrErr<T>(Obj, getPtr(Obj, 0)))
     Header = *HeaderOrErr;
   else
@@ -267,12 +272,22 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       DyldInfoLoadCmd(nullptr), UuidLoadCmd(nullptr),
       HasPageZeroSegment(false) {
   ErrorAsOutParameter ErrAsOutParam(Err);
-  if (is64Bit())
+  uint64_t big_size;
+  if (is64Bit()) {
     parseHeader(this, Header64, Err);
-  else
+    big_size = sizeof(MachO::mach_header_64);
+  } else {
     parseHeader(this, Header, Err);
+    big_size = sizeof(MachO::mach_header);
+  }
   if (Err)
     return;
+  big_size += getHeader().sizeofcmds;
+  if (getData().data() + big_size > getData().end()) {
+    Err = malformedError(getFileName(), "truncated or malformed object "
+                         "(load commands extends past the end of the file)");
+    return;
+  }
 
   uint32_t LoadCommandCount = getHeader().ncmds;
   if (LoadCommandCount == 0)

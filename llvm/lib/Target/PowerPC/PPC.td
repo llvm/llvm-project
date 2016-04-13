@@ -122,12 +122,6 @@ def FeatureP8Crypto : SubtargetFeature<"crypto", "HasP8Crypto", "true",
 def FeatureP8Vector  : SubtargetFeature<"power8-vector", "HasP8Vector", "true",
                                         "Enable POWER8 vector instructions",
                                         [FeatureVSX, FeatureP8Altivec]>;
-def FeatureP9Altivec : SubtargetFeature<"power9-altivec", "HasP9Altivec", "true",
-                                        "Enable POWER9 Altivec instructions",
-                                        [FeatureP8Altivec]>;
-def FeatureP9Vector  : SubtargetFeature<"power9-vector", "HasP9Vector", "true",
-                                        "Enable POWER9 vector instructions",
-                                        [FeatureP8Vector, FeatureP9Altivec]>;
 def FeatureDirectMove :
   SubtargetFeature<"direct-move", "HasDirectMove", "true",
                    "Enable Power8 direct move instructions",
@@ -149,7 +143,6 @@ def FeatureFloat128 :
   SubtargetFeature<"float128", "HasFloat128", "true",
                    "Enable the __float128 data type for IEEE-754R Binary128.",
                    [FeatureVSX]>;
-
 def FeaturePOPCNTD   : SubtargetFeature<"popcntd","HasPOPCNTD",
                                         "POPCNTD_Fast",
                                         "Enable the popcnt[dw] instructions">;
@@ -166,6 +159,13 @@ def DeprecatedDST    : SubtargetFeature<"", "DeprecatedDST", "true",
 def FeatureISA3_0 : SubtargetFeature<"isa-v30-instructions", "IsISA3_0",
                                      "true",
                                      "Enable instructions added in ISA 3.0.">;
+def FeatureP9Altivec : SubtargetFeature<"power9-altivec", "HasP9Altivec", "true",
+                                        "Enable POWER9 Altivec instructions",
+                                        [FeatureISA3_0, FeatureP8Altivec]>;
+def FeatureP9Vector  : SubtargetFeature<"power9-vector", "HasP9Vector", "true",
+                                        "Enable POWER9 vector instructions",
+                                        [FeatureISA3_0, FeatureP8Vector,
+                                         FeatureP9Altivec]>;
 
 /*  Since new processors generally contain a superset of features of those that
     came before them, the idea is to make implementations of new processors
@@ -198,6 +198,8 @@ def ProcessorFeatures {
        FeatureFusion];
   list<SubtargetFeature> Power8FeatureList =
       !listconcat(Power7FeatureList, Power8SpecificFeatures);
+  list<SubtargetFeature> Power9SpecificFeatures =
+      [FeatureP9Altivec, FeatureP9Vector, FeatureISA3_0];
 }
 
 // Note: Future features to add when support is extended to more

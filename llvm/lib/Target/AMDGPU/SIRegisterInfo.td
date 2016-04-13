@@ -44,6 +44,40 @@ def EXEC : RegisterWithSubRegs<"EXEC", [EXEC_LO, EXEC_HI]>,
 def SCC : SIReg<"scc", 253>;
 def M0 : SIReg <"m0", 124>;
 
+// Trap handler registers
+def TBA_LO : SIReg<"tba_lo", 108>;
+def TBA_HI : SIReg<"tba_hi", 109>;
+
+def TBA : RegisterWithSubRegs<"tba", [TBA_LO, TBA_HI]>,
+          DwarfRegAlias<TBA_LO> {
+  let Namespace = "AMDGPU";
+  let SubRegIndices = [sub0, sub1];
+  let HWEncoding = 108;
+}
+
+def TMA_LO : SIReg<"tma_lo", 110>;
+def TMA_HI : SIReg<"tma_hi", 111>;
+
+def TMA : RegisterWithSubRegs<"tma", [TMA_LO, TMA_HI]>,
+          DwarfRegAlias<TMA_LO> {
+  let Namespace = "AMDGPU";
+  let SubRegIndices = [sub0, sub1];
+  let HWEncoding = 110;
+}
+
+def TTMP0 : SIReg <"ttmp0", 112>;
+def TTMP1 : SIReg <"ttmp1", 113>;
+def TTMP2 : SIReg <"ttmp2", 114>;
+def TTMP3 : SIReg <"ttmp3", 115>;
+def TTMP4 : SIReg <"ttmp4", 116>;
+def TTMP5 : SIReg <"ttmp5", 117>;
+def TTMP6 : SIReg <"ttmp6", 118>;
+def TTMP7 : SIReg <"ttmp7", 119>;
+def TTMP8 : SIReg <"ttmp8", 120>;
+def TTMP9 : SIReg <"ttmp9", 121>;
+def TTMP10 : SIReg <"ttmp10", 122>;
+def TTMP11 : SIReg <"ttmp11", 123>;
+
 multiclass FLAT_SCR_LOHI_m <string n, bits<16> ci_e, bits<16> vi_e> {
   def _ci : SIReg<n, ci_e>;
   def _vi : SIReg<n, vi_e>;
@@ -135,6 +169,24 @@ def SGPR_512 : RegisterTuples<[sub0, sub1, sub2, sub3, sub4, sub5, sub6, sub7,
                                (add (decimate (shl SGPR_32, 14), 4)),
                                (add (decimate (shl SGPR_32, 15), 4))]>;
 
+// Trap handler TMP 32-bit registers
+def TTMP_32 : RegisterClass<"AMDGPU", [i32, f32], 32,
+                            (add (sequence "TTMP%u", 0, 11))> {
+  let isAllocatable = 0;
+}
+
+// Trap handler TMP 64-bit registers
+def TTMP_64Regs : RegisterTuples<[sub0, sub1],
+                             [(add (decimate TTMP_32, 2)),
+                              (add (decimate (shl TTMP_32, 1), 2))]>;
+
+// Trap handler TMP 128-bit registers
+def TTMP_128Regs : RegisterTuples<[sub0, sub1, sub2, sub3],
+                              [(add (decimate TTMP_32, 4)),
+                               (add (decimate (shl TTMP_32, 1), 4)),
+                               (add (decimate (shl TTMP_32, 2), 4)),
+                               (add (decimate (shl TTMP_32, 3), 4))]>;
+
 // VGPR 32-bit registers
 def VGPR_32 : RegisterClass<"AMDGPU", [i32, f32], 32,
                             (add (sequence "VGPR%u", 0, 255))>;
@@ -199,13 +251,18 @@ class RegImmMatcher<string name> : AsmOperandClass {
 
 // Register class for all scalar registers (SGPRs + Special Registers)
 def SReg_32 : RegisterClass<"AMDGPU", [i32, f32], 32,
-  (add SGPR_32, M0, VCC_LO, VCC_HI, EXEC_LO, EXEC_HI, FLAT_SCR_LO, FLAT_SCR_HI)
+  (add SGPR_32, M0, VCC_LO, VCC_HI, EXEC_LO, EXEC_HI, FLAT_SCR_LO, FLAT_SCR_HI,
+   TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI)
 >;
 
 def SGPR_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 32, (add SGPR_64Regs)>;
 
+def TTMP_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 32, (add TTMP_64Regs)> {
+  let isAllocatable = 0;
+}
+
 def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1], 32,
-  (add SGPR_64, VCC, EXEC, FLAT_SCR)
+  (add SGPR_64, VCC, EXEC, FLAT_SCR, TTMP_64)
 >;
 
 def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add SGPR_128)> {

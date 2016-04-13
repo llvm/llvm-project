@@ -533,6 +533,24 @@
 # CHECK-BE: cmplw 2, 3, 4                   # encoding: [0x7d,0x03,0x20,0x40]
 # CHECK-LE: cmplw 2, 3, 4                   # encoding: [0x40,0x20,0x03,0x7d]
             cmpl 2, 0, 3, 4
+# CHECK-BE: cmprb 3, 1, 7, 17               # encoding: [0x7d,0xa7,0x89,0x80]
+# CHECK-LE: cmprb 3, 1, 7, 17               # encoding: [0x80,0x89,0xa7,0x7d]
+            cmprb 3, 1, 7, 17
+# CHECK-BE: cmpeqb 3, 7, 17                 # encoding: [0x7d,0x87,0x89,0xc0]
+# CHECK-LE: cmpeqb 3, 7, 17                 # encoding: [0xc0,0x89,0x87,0x7d]
+            cmpeqb 3, 7, 17
+# CHECK-BE: cnttzw 7, 17                    # encoding: [0x7e,0x27,0x04,0x34]
+# CHECK-LE: cnttzw 7, 17                    # encoding: [0x34,0x04,0x27,0x7e]
+            cnttzw 7, 17
+# CHECK-BE: cnttzw. 7, 17                   # encoding: [0x7e,0x27,0x04,0x35]
+# CHECK-LE: cnttzw. 7, 17                   # encoding: [0x35,0x04,0x27,0x7e]
+            cnttzw. 7, 17
+# CHECK-BE: cnttzd 7, 17                    # encoding: [0x7e,0x27,0x04,0x74]
+# CHECK-LE: cnttzd 7, 17                    # encoding: [0x74,0x04,0x27,0x7e]
+            cnttzd 7, 17
+# CHECK-BE: cnttzd. 7, 17                   # encoding: [0x7e,0x27,0x04,0x75]
+# CHECK-LE: cnttzd. 7, 17                   # encoding: [0x75,0x04,0x27,0x7e]
+            cnttzd. 7, 17
 
 # Fixed-point trap instructions
 

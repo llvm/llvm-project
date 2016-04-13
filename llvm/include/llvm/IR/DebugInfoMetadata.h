@@ -1229,12 +1229,21 @@ class DISubprogram : public DILocalScope {
 
   unsigned Line;
   unsigned ScopeLine;
-  unsigned Virtuality;
   unsigned VirtualIndex;
-  unsigned Flags;
-  bool IsLocalToUnit;
-  bool IsDefinition;
-  bool IsOptimized;
+
+  // Virtuality can only assume three values, so we can pack
+  // in 2 bits (none/pure/pure_virtual).
+  unsigned Virtuality : 2;
+
+  unsigned Flags : 27;
+
+  // These are boolean flags so one bit is enough.
+  // MSVC starts a new container field every time the base
+  // type changes so we can't use 'bool' to ensure these bits
+  // are packed.
+  unsigned IsLocalToUnit : 1;
+  unsigned IsDefinition : 1;
+  unsigned IsOptimized : 1;
 
   DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
                unsigned ScopeLine, unsigned Virtuality, unsigned VirtualIndex,
@@ -1242,9 +1251,13 @@ class DISubprogram : public DILocalScope {
                bool IsOptimized, ArrayRef<Metadata *> Ops)
       : DILocalScope(C, DISubprogramKind, Storage, dwarf::DW_TAG_subprogram,
                      Ops),
-        Line(Line), ScopeLine(ScopeLine), Virtuality(Virtuality),
-        VirtualIndex(VirtualIndex), Flags(Flags), IsLocalToUnit(IsLocalToUnit),
-        IsDefinition(IsDefinition), IsOptimized(IsOptimized) {}
+        Line(Line), ScopeLine(ScopeLine), VirtualIndex(VirtualIndex),
+        Virtuality(Virtuality), Flags(Flags), IsLocalToUnit(IsLocalToUnit),
+        IsDefinition(IsDefinition), IsOptimized(IsOptimized) {
+    static_assert(dwarf::DW_VIRTUALITY_max < 4, "Virtuality out of range");
+    assert(Virtuality < 4 && "Virtuality out of range");
+    assert((Flags < (1 << 27)) && "Flags out of range");
+  }
   ~DISubprogram() = default;
 
   static DISubprogram *

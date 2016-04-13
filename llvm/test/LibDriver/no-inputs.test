@@ -1,0 +1,2 @@
+RUN: llvm-lib -out:%t.a
+RUN: test ! -e %t.a

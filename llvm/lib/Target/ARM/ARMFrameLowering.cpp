@@ -910,27 +910,21 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
       if (Reg >= ARM::D8 && Reg < ARM::D8 + NumAlignedDPRCS2Regs)
         continue;
 
-      // Add the callee-saved register as live-in unless it's LR and
-      // @llvm.returnaddress is called. If LR is returned for
-      // @llvm.returnaddress then it's already added to the function and
-      // entry block live-in sets.
-      bool isKill = true;
-      if (Reg == ARM::LR) {
-        if (MF.getFrameInfo()->isReturnAddressTaken() &&
-            MF.getRegInfo().isLiveIn(Reg))
-          isKill = false;
-      }
-
-      if (isKill)
+      bool isLiveIn = MF.getRegInfo().isLiveIn(Reg);
+      if (!isLiveIn)
         MBB.addLiveIn(Reg);
-
       // If NoGap is true, push consecutive registers and then leave the rest
       // for other instructions. e.g.
       // vpush {d8, d10, d11} -> vpush {d8}, vpush {d10, d11}
       if (NoGap && LastReg && LastReg != Reg-1)
         break;
       LastReg = Reg;
-      Regs.push_back(std::make_pair(Reg, isKill));
+      // Do not set a kill flag on values that are also marked as live-in. This
+      // happens with the @llvm-returnaddress intrinsic and with arguments
+      // passed in callee saved registers.
+      // Omitting the kill flags is conservatively correct even if the live-in
+      // is not used after all.
+      Regs.push_back(std::make_pair(Reg, /*isKill=*/!isLiveIn));
     }
 
     if (Regs.empty())

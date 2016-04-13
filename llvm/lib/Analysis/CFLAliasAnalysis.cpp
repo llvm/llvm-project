@@ -62,7 +62,7 @@ CFLAAResult::CFLAAResult() : AAResultBase() {}
 CFLAAResult::CFLAAResult(CFLAAResult &&Arg) : AAResultBase(std::move(Arg)) {}
 CFLAAResult::~CFLAAResult() {}
 
-// \brief Information we have about a function and would like to keep around
+/// Information we have about a function and would like to keep around.
 struct CFLAAResult::FunctionInfo {
   StratifiedSets<Value *> Sets;
   // Lots of functions have < 4 returns. Adjust as necessary.
@@ -72,33 +72,31 @@ struct CFLAAResult::FunctionInfo {
       : Sets(std::move(S)), ReturnedValues(std::move(RV)) {}
 };
 
-// Try to go from a Value* to a Function*. Never returns nullptr.
+/// Try to go from a Value* to a Function*. Never returns nullptr.
 static Optional<Function *> parentFunctionOfValue(Value *);
 
-// Returns possible functions called by the Inst* into the given
-// SmallVectorImpl. Returns true if targets found, false otherwise.
-// This is templated because InvokeInst/CallInst give us the same
-// set of functions that we care about, and I don't like repeating
-// myself.
+/// Returns possible functions called by the Inst* into the given
+/// SmallVectorImpl. Returns true if targets found, false otherwise. This is
+/// templated so we can use it with CallInsts and InvokeInsts.
 template <typename Inst>
 static bool getPossibleTargets(Inst *, SmallVectorImpl<Function *> &);
 
-// Some instructions need to have their users tracked. Instructions like
-// `add` require you to get the users of the Instruction* itself, other
-// instructions like `store` require you to get the users of the first
-// operand. This function gets the "proper" value to track for each
-// type of instruction we support.
+/// Some instructions need to have their users tracked. Instructions like
+/// `add` require you to get the users of the Instruction* itself, other
+/// instructions like `store` require you to get the users of the first
+/// operand. This function gets the "proper" value to track for each
+/// type of instruction we support.
 static Optional<Value *> getTargetValue(Instruction *);
 
-// There are certain instructions (i.e. FenceInst, etc.) that we ignore.
-// This notes that we should ignore those.
+/// Determines whether or not we an instruction is useless to us (e.g.
+/// FenceInst)
 static bool hasUsefulEdges(Instruction *);
 
 const StratifiedIndex StratifiedLink::SetSentinel =
     std::numeric_limits<StratifiedIndex>::max();
 
 namespace {
-// StratifiedInfo Attribute things.
+/// StratifiedInfo Attribute things.
 typedef unsigned StratifiedAttr;
 LLVM_CONSTEXPR unsigned MaxStratifiedAttrIndex = NumStratifiedAttrs;
 LLVM_CONSTEXPR unsigned AttrAllIndex = 0;
@@ -112,53 +110,53 @@ LLVM_CONSTEXPR StratifiedAttr AttrNone = 0;
 LLVM_CONSTEXPR StratifiedAttr AttrUnknown = 1 << AttrUnknownIndex;
 LLVM_CONSTEXPR StratifiedAttr AttrAll = ~AttrNone;
 
-// \brief StratifiedSets call for knowledge of "direction", so this is how we
-// represent that locally.
+/// StratifiedSets call for knowledge of "direction", so this is how we
+/// represent that locally.
 enum class Level { Same, Above, Below };
 
-// \brief Edges can be one of four "weights" -- each weight must have an inverse
-// weight (Assign has Assign; Reference has Dereference).
+/// Edges can be one of four "weights" -- each weight must have an inverse
+/// weight (Assign has Assign; Reference has Dereference).
 enum class EdgeType {
-  // The weight assigned when assigning from or to a value. For example, in:
-  // %b = getelementptr %a, 0
-  // ...The relationships are %b assign %a, and %a assign %b. This used to be
-  // two edges, but having a distinction bought us nothing.
+  /// The weight assigned when assigning from or to a value. For example, in:
+  /// %b = getelementptr %a, 0
+  /// ...The relationships are %b assign %a, and %a assign %b. This used to be
+  /// two edges, but having a distinction bought us nothing.
   Assign,
 
-  // The edge used when we have an edge going from some handle to a Value.
-  // Examples of this include:
-  // %b = load %a              (%b Dereference %a)
-  // %b = extractelement %a, 0 (%a Dereference %b)
+  /// The edge used when we have an edge going from some handle to a Value.
+  /// Examples of this include:
+  /// %b = load %a              (%b Dereference %a)
+  /// %b = extractelement %a, 0 (%a Dereference %b)
   Dereference,
 
-  // The edge used when our edge goes from a value to a handle that may have
-  // contained it at some point. Examples:
-  // %b = load %a              (%a Reference %b)
-  // %b = extractelement %a, 0 (%b Reference %a)
+  /// The edge used when our edge goes from a value to a handle that may have
+  /// contained it at some point. Examples:
+  /// %b = load %a              (%a Reference %b)
+  /// %b = extractelement %a, 0 (%b Reference %a)
   Reference
 };
 
 // \brief Encodes the notion of a "use"
 struct Edge {
-  // \brief Which value the edge is coming from
+  /// Which value the edge is coming from
   Value *From;
 
-  // \brief Which value the edge is pointing to
+  /// Which value the edge is pointing to
   Value *To;
 
-  // \brief Edge weight
+  /// Edge weight
   EdgeType Weight;
 
-  // \brief Whether we aliased any external values along the way that may be
-  // invisible to the analysis (i.e. landingpad for exceptions, calls for
-  // interprocedural analysis, etc.)
+  /// Whether we aliased any external values along the way that may be
+  /// invisible to the analysis (i.e. landingpad for exceptions, calls for
+  /// interprocedural analysis, etc.)
   StratifiedAttrs AdditionalAttrs;
 
   Edge(Value *From, Value *To, EdgeType W, StratifiedAttrs A)
       : From(From), To(To), Weight(W), AdditionalAttrs(A) {}
 };
 
-// \brief Gets the edges our graph should have, based on an Instruction*
+/// Gets the edges our graph should have, based on an Instruction*
 class GetEdgesVisitor : public InstVisitor<GetEdgesVisitor, void> {
   CFLAAResult &AA;
   SmallVectorImpl<Edge> &Output;
@@ -258,8 +256,8 @@ public:
     return Fn->isDeclaration() || !Fn->hasLocalLinkage();
   }
 
-  // Gets whether the sets at Index1 above, below, or equal to the sets at
-  // Index2. Returns None if they are not in the same set chain.
+  /// Gets whether the sets at Index1 above, below, or equal to the sets at
+  /// Index2. Returns None if they are not in the same set chain.
   static Optional<Level> getIndexRelation(const StratifiedSets<Value *> &Sets,
                                           StratifiedIndex Index1,
                                           StratifiedIndex Index2) {
@@ -291,8 +289,8 @@ public:
     const unsigned MaxSupportedArgs = 50;
     assert(Fns.size() > 0);
 
-    // I put this here to give us an upper bound on time taken by IPA. Is it
-    // really (realistically) needed? Keep in mind that we do have an n^2 algo.
+    // This algorithm is n^2, so an arbitrary upper-bound of 50 args was
+    // selected, so it doesn't take too long in insane cases.
     if (std::distance(Args.begin(), Args.end()) > (int)MaxSupportedArgs)
       return false;
 
@@ -351,12 +349,12 @@ public:
       if (Parameters.size() != Arguments.size())
         return false;
 
-      // Adding edges between arguments for arguments that may end up aliasing
-      // each other. This is necessary for functions such as
-      // void foo(int** a, int** b) { *a = *b; }
-      // (Technically, the proper sets for this would be those below
-      // Arguments[I] and Arguments[X], but our algorithm will produce
-      // extremely similar, and equally correct, results either way)
+      /// Adding edges between arguments for arguments that may end up aliasing
+      /// each other. This is necessary for functions such as
+      /// void foo(int** a, int** b) { *a = *b; }
+      /// (Technically, the proper sets for this would be those below
+      /// Arguments[I] and Arguments[X], but our algorithm will produce
+      /// extremely similar, and equally correct, results either way)
       for (unsigned I = 0, E = Arguments.size(); I != E; ++I) {
         auto &MainVal = Arguments[I];
         auto &MainInfo = Parameters[I];
@@ -406,11 +404,10 @@ public:
 
   void visitInvokeInst(InvokeInst &Inst) { visitCallLikeInst(Inst); }
 
-  // Because vectors/aggregates are immutable and unaddressable,
-  // there's nothing we can do to coax a value out of them, other
-  // than calling Extract{Element,Value}. We can effectively treat
-  // them as pointers to arbitrary memory locations we can store in
-  // and load from.
+  /// Because vectors/aggregates are immutable and unaddressable, there's
+  /// nothing we can do to coax a value out of them, other than calling
+  /// Extract{Element,Value}. We can effectively treat them as pointers to
+  /// arbitrary memory locations we can store in and load from.
   void visitExtractElementInst(ExtractElementInst &Inst) {
     auto *Ptr = Inst.getVectorOperand();
     auto *Val = &Inst;
@@ -464,16 +461,16 @@ public:
   }
 };
 
-// For a given instruction, we need to know which Value* to get the
-// users of in order to build our graph. In some cases (i.e. add),
-// we simply need the Instruction*. In other cases (i.e. store),
-// finding the users of the Instruction* is useless; we need to find
-// the users of the first operand. This handles determining which
-// value to follow for us.
-//
-// Note: we *need* to keep this in sync with GetEdgesVisitor. Add
-// something to GetEdgesVisitor, add it here -- remove something from
-// GetEdgesVisitor, remove it here.
+/// For a given instruction, we need to know which Value* to get the
+/// users of in order to build our graph. In some cases (i.e. add),
+/// we simply need the Instruction*. In other cases (i.e. store),
+/// finding the users of the Instruction* is useless; we need to find
+/// the users of the first operand. This handles determining which
+/// value to follow for us.
+///
+/// Note: we *need* to keep this in sync with GetEdgesVisitor. Add
+/// something to GetEdgesVisitor, add it here -- remove something from
+/// GetEdgesVisitor, remove it here.
 class GetTargetValueVisitor
     : public InstVisitor<GetTargetValueVisitor, Value *> {
 public:
@@ -498,7 +495,7 @@ public:
   }
 };
 
-// Set building requires a weighted bidirectional graph.
+/// Set building requires a weighted bidirectional graph.
 template <typename EdgeTypeT> class WeightedBidirectionalGraph {
 public:
   typedef std::size_t Node;
@@ -531,12 +528,10 @@ private:
   NodeImpl &getNode(Node N) { return NodeImpls[N]; }
 
 public:
-  // ----- Various Edge iterators for the graph ----- //
-
-  // \brief Iterator for edges. Because this graph is bidirected, we don't
-  // allow modification of the edges using this iterator. Additionally, the
-  // iterator becomes invalid if you add edges to or from the node you're
-  // getting the edges of.
+  /// \brief Iterator for edges. Because this graph is bidirected, we don't
+  /// allow modification of the edges using this iterator. Additionally, the
+  /// iterator becomes invalid if you add edges to or from the node you're
+  /// getting the edges of.
   struct EdgeIterator : public std::iterator<std::forward_iterator_tag,
                                              std::tuple<EdgeTypeT, Node *>> {
     EdgeIterator(const typename std::vector<Edge>::const_iterator &Iter)
@@ -573,7 +568,7 @@ public:
     std::tuple<EdgeTypeT, Node> Store;
   };
 
-  // Wrapper for EdgeIterator with begin()/end() calls.
+  /// Wrapper for EdgeIterator with begin()/end() calls.
   struct EdgeIterable {
     EdgeIterable(const std::vector<Edge> &Edges)
         : BeginIter(Edges.begin()), EndIter(Edges.end()) {}
@@ -617,16 +612,16 @@ public:
     ToNode.Edges.push_back(Edge(ReverseWeight, From));
   }
 
-  EdgeIterable edgesFor(const Node &N) const {
+  iterator_range<EdgeIterator> edgesFor(const Node &N) const {
     const auto &Node = getNode(N);
-    return EdgeIterable(Node.Edges);
+    return make_range(EdgeIterator(Node.Edges.begin()),
+                      EdgeIterator(Node.Edges.end()));
   }
 
   bool empty() const { return NodeImpls.empty(); }
   std::size_t size() const { return NodeImpls.size(); }
 
-  // \brief Gets an arbitrary node in the graph as a starting point for
-  // traversal.
+  /// Gets an arbitrary node in the graph as a starting point for traversal.
   Node getEntryNode() {
     assert(inbounds(StartNode));
     return StartNode;
@@ -641,47 +636,47 @@ typedef DenseMap<Value *, GraphT::Node> NodeMapT;
 // Function declarations that require types defined in the namespace above
 //===----------------------------------------------------------------------===//
 
-// Given an argument number, returns the appropriate Attr index to set.
-static StratifiedAttr argNumberToAttrIndex(StratifiedAttr);
+/// Given an argument number, returns the appropriate Attr index to set.
+static StratifiedAttr argNumberToAttrIndex(unsigned ArgNum);
 
-// Given a Value, potentially return which AttrIndex it maps to.
+/// Given a Value, potentially return which AttrIndex it maps to.
 static Optional<StratifiedAttr> valueToAttrIndex(Value *Val);
 
-// Gets the inverse of a given EdgeType.
-static EdgeType flipWeight(EdgeType);
+/// Gets the inverse of a given EdgeType.
+static EdgeType flipWeight(EdgeType Initial);
 
-// Gets edges of the given Instruction*, writing them to the SmallVector*.
+/// Gets edges of the given Instruction*, writing them to the SmallVector*.
 static void argsToEdges(CFLAAResult &, Instruction *, SmallVectorImpl<Edge> &);
 
-// Gets edges of the given ConstantExpr*, writing them to the SmallVector*.
+/// Gets edges of the given ConstantExpr*, writing them to the SmallVector*.
 static void argsToEdges(CFLAAResult &, ConstantExpr *, SmallVectorImpl<Edge> &);
 
-// Gets the "Level" that one should travel in StratifiedSets
-// given an EdgeType.
+/// Gets the "Level" that one should travel in StratifiedSets
+/// given an EdgeType.
 static Level directionOfEdgeType(EdgeType);
 
-// Builds the graph needed for constructing the StratifiedSets for the
-// given function
+/// Builds the graph needed for constructing the StratifiedSets for the
+/// given function
 static void buildGraphFrom(CFLAAResult &, Function *,
                            SmallVectorImpl<Value *> &, NodeMapT &, GraphT &);
 
-// Gets the edges of a ConstantExpr as if it was an Instruction. This
-// function also acts on any nested ConstantExprs, adding the edges
-// of those to the given SmallVector as well.
+/// Gets the edges of a ConstantExpr as if it was an Instruction. This function
+/// also acts on any nested ConstantExprs, adding the edges of those to the
+/// given SmallVector as well.
 static void constexprToEdges(CFLAAResult &, ConstantExpr &,
                              SmallVectorImpl<Edge> &);
 
-// Given an Instruction, this will add it to the graph, along with any
-// Instructions that are potentially only available from said Instruction
-// For example, given the following line:
-//   %0 = load i16* getelementptr ([1 x i16]* @a, 0, 0), align 2
-// addInstructionToGraph would add both the `load` and `getelementptr`
-// instructions to the graph appropriately.
+/// Given an Instruction, this will add it to the graph, along with any
+/// Instructions that are potentially only available from said Instruction
+/// For example, given the following line:
+///   %0 = load i16* getelementptr ([1 x i16]* @a, 0, 0), align 2
+/// addInstructionToGraph would add both the `load` and `getelementptr`
+/// instructions to the graph appropriately.
 static void addInstructionToGraph(CFLAAResult &, Instruction &,
                                   SmallVectorImpl<Value *> &, NodeMapT &,
                                   GraphT &);
 
-// Notes whether it would be pointless to add the given Value to our sets.
+/// Determines whether it would be pointless to add the given Value to our sets.
 static bool canSkipAddingToSets(Value *Val);
 
 static Optional<Function *> parentFunctionOfValue(Value *Val) {
@@ -848,7 +843,7 @@ static void addInstructionToGraph(CFLAAResult &Analysis, Instruction &Inst,
     return;
   }
 
-  const auto addEdgeToGraph = [&Graph, &findOrInsertNode](const Edge &E) {
+  auto addEdgeToGraph = [&](const Edge &E) {
     auto To = findOrInsertNode(E.To);
     auto From = findOrInsertNode(E.From);
     auto FlippedWeight = flipWeight(E.Weight);
@@ -873,13 +868,11 @@ static void addInstructionToGraph(CFLAAResult &Analysis, Instruction &Inst,
   }
 }
 
-// Aside: We may remove graph construction entirely, because it doesn't really
-// buy us much that we don't already have. I'd like to add interprocedural
-// analysis prior to this however, in case that somehow requires the graph
-// produced by this for efficient execution
 static void buildGraphFrom(CFLAAResult &Analysis, Function *Fn,
                            SmallVectorImpl<Value *> &ReturnedValues,
                            NodeMapT &Map, GraphT &Graph) {
+  // (N.B. We may remove graph construction entirely, because it doesn't really
+  // buy us much.)
   for (auto &Bb : Fn->getBasicBlockList())
     for (auto &Inst : Bb.getInstList())
       addInstructionToGraph(Analysis, Inst, ReturnedValues, Map, Graph);
@@ -1003,15 +996,14 @@ void CFLAAResult::scan(Function *Fn) {
   assert(InsertPair.second &&
          "Trying to scan a function that has already been cached");
 
-  FunctionInfo Info(buildSetsFrom(Fn));
-  Cache[Fn] = std::move(Info);
+  Cache[Fn] = buildSetsFrom(Fn);
   Handles.push_front(FunctionHandle(Fn, this));
 }
 
 void CFLAAResult::evict(Function *Fn) { Cache.erase(Fn); }
 
-/// \brief Ensures that the given function is available in the cache.
-/// Returns the appropriate entry from the cache.
+/// Ensures that the given function is available in the cache, and returns the
+/// entry.
 const Optional<CFLAAResult::FunctionInfo> &
 CFLAAResult::ensureCached(Function *Fn) {
   auto Iter = Cache.find(Fn);
@@ -1033,8 +1025,8 @@ AliasResult CFLAAResult::query(const MemoryLocation &LocA,
   auto MaybeFnA = parentFunctionOfValue(ValA);
   auto MaybeFnB = parentFunctionOfValue(ValB);
   if (!MaybeFnA.hasValue() && !MaybeFnB.hasValue()) {
-    // The only times this is known to happen are when globals + InlineAsm
-    // are involved
+    // The only times this is known to happen are when globals + InlineAsm are
+    // involved
     DEBUG(dbgs() << "CFLAA: could not extract parent function information.\n");
     return MayAlias;
   }
@@ -1067,28 +1059,23 @@ AliasResult CFLAAResult::query(const MemoryLocation &LocA,
 
   // Stratified set attributes are used as markets to signify whether a member
   // of a StratifiedSet (or a member of a set above the current set) has
-  // interacted with either arguments or globals. "Interacted with" meaning
-  // its value may be different depending on the value of an argument or
-  // global. The thought behind this is that, because arguments and globals
-  // may alias each other, if AttrsA and AttrsB have touched args/globals,
-  // we must conservatively say that they alias. However, if at least one of
-  // the sets has no values that could legally be altered by changing the value
-  // of an argument or global, then we don't have to be as conservative.
+  // interacted with either arguments or globals. "Interacted with" meaning its
+  // value may be different depending on the value of an argument or global. The
+  // thought behind this is that, because arguments and globals may alias each
+  // other, if AttrsA and AttrsB have touched args/globals, we must
+  // conservatively say that they alias. However, if at least one of the sets
+  // has no values that could legally be altered by changing the value of an
+  // argument or global, then we don't have to be as conservative.
   if (AttrsA.any() && AttrsB.any())
     return MayAlias;
 
   // We currently unify things even if the accesses to them may not be in
-  // bounds, so we can't return partial alias here because we don't
-  // know whether the pointer is really within the object or not.
-  // IE Given an out of bounds GEP and an alloca'd pointer, we may
-  // unify the two. We can't return partial alias for this case.
-  // Since we do not currently track enough information to
-  // differentiate
-
-  if (SetA.Index == SetB.Index)
-    return MayAlias;
-
-  return NoAlias;
+  // bounds, so we can't return partial alias here because we don't know whether
+  // the pointer is really within the object or not.
+  // e.g. Given an out of bounds GEP and an alloca'd pointer, we may unify the
+  // two. We can't return partial alias for this case. Since we do not currently
+  // track enough information to differentiate.
+  return SetA.Index == SetB.Index ? MayAlias : NoAlias;
 }
 
 char CFLAA::PassID;

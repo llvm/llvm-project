@@ -697,13 +697,13 @@ int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
 }
 
 static unsigned getPrologueDeath(MachineFunction &MF, unsigned Reg) {
-  if (Reg != AArch64::LR)
-    return getKillRegState(true);
-
-  // LR maybe referred to later by an @llvm.returnaddress intrinsic.
-  bool LRLiveIn = MF.getRegInfo().isLiveIn(AArch64::LR);
-  bool LRKill = !(LRLiveIn && MF.getFrameInfo()->isReturnAddressTaken());
-  return getKillRegState(LRKill);
+  // Do not set a kill flag on values that are also marked as live-in. This
+  // happens with the @llvm-returnaddress intrinsic and with arguments passed in
+  // callee saved registers.
+  // Omitting the kill flags is conservatively correct even if the live-in
+  // is not used after all.
+  bool IsLiveIn = MF.getRegInfo().isLiveIn(Reg);
+  return getKillRegState(!IsLiveIn);
 }
 
 static bool produceCompactUnwindFrame(MachineFunction &MF) {

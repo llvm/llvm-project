@@ -574,8 +574,10 @@ struct OptionalOperand {
 
 }
 
-static int getRegClass(bool IsVgpr, unsigned RegWidth) {
-  if (IsVgpr) {
+enum  RegisterKind { IS_VGPR, IS_SGPR, IS_TTMP };
+
+static int getRegClass(RegisterKind Is, unsigned RegWidth) {
+  if (Is == IS_VGPR) {
     switch (RegWidth) {
       default: return -1;
       case 1: return AMDGPU::VGPR_32RegClassID;
@@ -585,16 +587,23 @@ static int getRegClass(bool IsVgpr, unsigned RegWidth) {
       case 8: return AMDGPU::VReg_256RegClassID;
       case 16: return AMDGPU::VReg_512RegClassID;
     }
+  } else if (Is == IS_TTMP) {
+    switch (RegWidth) {
+      default: return -1;
+      case 1: return AMDGPU::TTMP_32RegClassID;
+      case 2: return AMDGPU::TTMP_64RegClassID;
+    }
+  } else if (Is == IS_SGPR) {
+    switch (RegWidth) {
+      default: return -1;
+      case 1: return AMDGPU::SGPR_32RegClassID;
+      case 2: return AMDGPU::SGPR_64RegClassID;
+      case 4: return AMDGPU::SReg_128RegClassID;
+      case 8: return AMDGPU::SReg_256RegClassID;
+      case 16: return AMDGPU::SReg_512RegClassID;
+    }
   }
-
-  switch (RegWidth) {
-    default: return -1;
-    case 1: return AMDGPU::SGPR_32RegClassID;
-    case 2: return AMDGPU::SGPR_64RegClassID;
-    case 4: return AMDGPU::SReg_128RegClassID;
-    case 8: return AMDGPU::SReg_256RegClassID;
-    case 16: return AMDGPU::SReg_512RegClassID;
-  }
+  return -1;
 }
 
 static unsigned getRegForName(StringRef RegName) {
@@ -611,6 +620,10 @@ static unsigned getRegForName(StringRef RegName) {
     .Case("vcc_hi", AMDGPU::VCC_HI)
     .Case("exec_lo", AMDGPU::EXEC_LO)
     .Case("exec_hi", AMDGPU::EXEC_HI)
+    .Case("tma_lo", AMDGPU::TMA_LO)
+    .Case("tma_hi", AMDGPU::TMA_HI)
+    .Case("tba_lo", AMDGPU::TBA_LO)
+    .Case("tba_hi", AMDGPU::TBA_HI)
     .Default(0);
 }
 
@@ -641,21 +654,21 @@ std::unique_ptr<AMDGPUOperand> AMDGPUAsmParser::parseRegister() {
                                     TRI, &getSTI(), false);
   }
 
-  // Match vgprs and sgprs
-  if (RegName[0] != 's' && RegName[0] != 'v')
+  // Match vgprs, sgprs and ttmps
+  if (RegName[0] != 's' && RegName[0] != 'v' && !RegName.startswith("ttmp"))
     return nullptr;
 
-  bool IsVgpr = RegName[0] == 'v';
+  const RegisterKind Is = RegName[0] == 'v' ? IS_VGPR : RegName[0] == 's' ? IS_SGPR : IS_TTMP;
   unsigned RegWidth;
   unsigned RegIndexInClass;
-  if (RegName.size() > 1) {
-    // We have a 32-bit register
+  if (RegName.size() > (Is == IS_TTMP ? strlen("ttmp") : 1) ) {
+    // We have a single 32-bit register. Syntax: vXX
     RegWidth = 1;
-    if (RegName.substr(1).getAsInteger(10, RegIndexInClass))
+    if (RegName.substr(Is == IS_TTMP ? strlen("ttmp") : 1).getAsInteger(10, RegIndexInClass))
       return nullptr;
     Parser.Lex();
   } else {
-    // We have a register greater than 32-bits.
+    // We have a register greater than 32-bits (a range of single registers). Syntax: v[XX:YY]
 
     int64_t RegLo, RegHi;
     Parser.Lex();
@@ -678,11 +691,11 @@ std::unique_ptr<AMDGPUOperand> AMDGPUAsmParser::parseRegister() {
 
     Parser.Lex();
     RegWidth = (RegHi - RegLo) + 1;
-    if (IsVgpr) {
+    if (Is == IS_VGPR) {
       // VGPR registers aren't aligned.
       RegIndexInClass = RegLo;
     } else {
-      // SGPR registers are aligned.  Max alignment is 4 dwords.
+      // SGPR and TTMP registers must be are aligned. Max required alignment is 4 dwords.
       unsigned Size = std::min(RegWidth, 4u);
       if (RegLo % Size != 0)
         return nullptr;
@@ -691,7 +704,7 @@ std::unique_ptr<AMDGPUOperand> AMDGPUAsmParser::parseRegister() {
     }
   }
 
-  int RCID = getRegClass(IsVgpr, RegWidth);
+  int RCID = getRegClass(Is, RegWidth);
   if (RCID == -1)
     return nullptr;
 

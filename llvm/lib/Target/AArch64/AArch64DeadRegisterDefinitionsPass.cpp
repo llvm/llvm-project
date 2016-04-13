@@ -93,6 +93,12 @@ bool AArch64DeadRegisterDefinitions::processMachineBasicBlock(
       DEBUG(dbgs() << "    Ignoring, operand is frame index\n");
       continue;
     }
+    if (MI.definesRegister(AArch64::XZR) || MI.definesRegister(AArch64::WZR)) {
+      // It is not allowed to write to the same register (not even the zero
+      // register) twice in a single instruction.
+      DEBUG(dbgs() << "    Ignoring, XZR or WZR already used by the instruction\n");
+      continue;
+    }
     for (int i = 0, e = MI.getDesc().getNumDefs(); i != e; ++i) {
       MachineOperand &MO = MI.getOperand(i);
       if (MO.isReg() && MO.isDead() && MO.isDef()) {
@@ -128,6 +134,8 @@ bool AArch64DeadRegisterDefinitions::processMachineBasicBlock(
         MO.setReg(NewReg);
         DEBUG(MI.print(dbgs()));
         ++NumDeadDefsReplaced;
+        // Only replace one dead register, see check for zero register above.
+        break;
       }
     }
   }

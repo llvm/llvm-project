@@ -171,7 +171,8 @@ private:
   void buildScratchLoadStore(MachineBasicBlock::iterator MI,
                              unsigned LoadStoreOp, unsigned Value,
                              unsigned ScratchRsrcReg, unsigned ScratchOffset,
-                             int64_t Offset) const;
+                             int64_t Offset,
+                             RegScavenger *RS) const;
 };
 
 } // End namespace llvm

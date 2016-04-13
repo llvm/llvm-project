@@ -2650,6 +2650,24 @@ Value *llvm::GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
   return Ptr;
 }
 
+bool llvm::isGEPBasedOnPointerToString(const GEPOperator *GEP) {
+  // Make sure the GEP has exactly three arguments.
+  if (GEP->getNumOperands() != 3)
+    return false;
+
+  // Make sure the index-ee is a pointer to array of i8.
+  ArrayType *AT = dyn_cast<ArrayType>(GEP->getSourceElementType());
+  if (!AT || !AT->getElementType()->isIntegerTy(8))
+    return false;
+
+  // Check to make sure that the first operand of the GEP is an integer and
+  // has value 0 so that we are sure we're indexing into the initializer.
+  const ConstantInt *FirstIdx = dyn_cast<ConstantInt>(GEP->getOperand(1));
+  if (!FirstIdx || !FirstIdx->isZero())
+    return false;
+
+  return true;
+} 
 
 /// This function computes the length of a null-terminated C string pointed to
 /// by V. If successful, it returns true and returns the string in Str.
@@ -2664,19 +2682,9 @@ bool llvm::getConstantStringInfo(const Value *V, StringRef &Str,
   // If the value is a GEP instruction or constant expression, treat it as an
   // offset.
   if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
-    // Make sure the GEP has exactly three arguments.
-    if (GEP->getNumOperands() != 3)
-      return false;
-
-    // Make sure the index-ee is a pointer to array of i8.
-    ArrayType *AT = dyn_cast<ArrayType>(GEP->getSourceElementType());
-    if (!AT || !AT->getElementType()->isIntegerTy(8))
-      return false;
-
-    // Check to make sure that the first operand of the GEP is an integer and
-    // has value 0 so that we are sure we're indexing into the initializer.
-    const ConstantInt *FirstIdx = dyn_cast<ConstantInt>(GEP->getOperand(1));
-    if (!FirstIdx || !FirstIdx->isZero())
+    // The GEP operator should be based on a pointer to string constant, and is
+    // indexing into the string constant.
+    if (!isGEPBasedOnPointerToString(GEP))
       return false;
 
     // If the second index isn't a ConstantInt, then this is a variable index

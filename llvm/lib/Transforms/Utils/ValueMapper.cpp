@@ -587,6 +587,7 @@ void MDNodeMapper::mapDistinctNodes() {
 
 void MDNodeMapper::mapUniquedNodes() {
   // Construct uniqued nodes, building forward references as necessary.
+  SmallVector<MDNode *, 16> CyclicNodes;
   for (auto *N : POT) {
     if (N->isDistinct())
       continue;
@@ -601,11 +602,12 @@ void MDNodeMapper::mapUniquedNodes() {
 
     TempMDNode ClonedN = D.Placeholder ? std::move(D.Placeholder) : N->clone();
     remapOperands(D, *ClonedN);
-    M.mapToMetadata(N, MDNode::replaceWithUniqued(std::move(ClonedN)));
+    CyclicNodes.push_back(MDNode::replaceWithUniqued(std::move(ClonedN)));
+    M.mapToMetadata(N, CyclicNodes.back());
   }
 
   // Resolve cycles.
-  for (auto *N : POT)
+  for (auto *N : CyclicNodes)
     if (!N->isResolved())
       N->resolveCycles();
 }
