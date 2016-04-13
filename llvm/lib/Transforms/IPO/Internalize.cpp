@@ -54,19 +54,84 @@ APIList("internalize-public-api-list", cl::value_desc("list"),
         cl::CommaSeparated);
 
 namespace {
-  class InternalizePass : public ModulePass {
+// Helper to load an API list to preserve from file and expose it as a functor
+// to the Internalize Pass
+class PreserveAPIList {
+public:
+  PreserveAPIList() {
+    if (!APIFile.empty())
+      LoadFile(APIFile);
+    ExternalNames.insert(APIList.begin(), APIList.end());
+  }
+
+  bool operator()(const GlobalValue &GV) {
+    return ExternalNames.count(GV.getName());
+  }
+
+private:
+  // Contains the set of symbols loaded from file
     StringSet<> ExternalNames;
 
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    explicit InternalizePass();
-    explicit InternalizePass(ArrayRef<const char *> ExportList);
-    explicit InternalizePass(StringSet<> ExportList);
-    void LoadFile(const char *Filename);
+    void LoadFile(StringRef Filename) {
+      // Load the APIFile...
+      std::ifstream In(Filename.data());
+      if (!In.good()) {
+        errs() << "WARNING: Internalize couldn't load file '" << Filename
+               << "'! Continuing as if it's empty.\n";
+        return; // Just continue as if the file were empty
+      }
+      while (In) {
+        std::string Symbol;
+        In >> Symbol;
+        if (!Symbol.empty())
+          ExternalNames.insert(Symbol);
+      }
+    }
+};
+}
+
+namespace {
+class InternalizePass : public ModulePass {
+  // Client supply callback to control wheter a symbol must be preserved.
+  std::function<bool(const GlobalValue &)> MustPreserveGV;
+
+  // Set of symbols private to the compiler that this pass should not touch.
+  StringSet<> AlwaysPreserved;
+
+  // Return false if we're allowed to internalize this GV.
+  bool ShouldPreserveGV(const GlobalValue &GV) {
+    // Function must be defined here
+    if (GV.isDeclaration())
+      return true;
+
+    // Available externally is really just a "declaration with a body".
+    if (GV.hasAvailableExternallyLinkage())
+      return true;
+
+    // Assume that dllexported symbols are referenced elsewhere
+    if (GV.hasDLLExportStorageClass())
+      return true;
+
+    // Already local, has nothing to do.
+    if (GV.hasLocalLinkage())
+      return false;
+
+    // Check some special cases
+    if (AlwaysPreserved.count(GV.getName()))
+      return true;
+
+    return MustPreserveGV(GV);
+  }
+
     bool maybeInternalize(GlobalValue &GV,
                           const std::set<const Comdat *> &ExternalComdats);
     void checkComdatVisibility(GlobalValue &GV,
                                std::set<const Comdat *> &ExternalComdats);
+
+  public:
+    static char ID; // Pass identification, replacement for typeid
+    explicit InternalizePass();
+    InternalizePass(std::function<bool(const GlobalValue &)> MustPreserveGV);
     bool runOnModule(Module &M) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -80,60 +145,13 @@ char InternalizePass::ID = 0;
 INITIALIZE_PASS(InternalizePass, "internalize",
                 "Internalize Global Symbols", false, false)
 
-InternalizePass::InternalizePass() : ModulePass(ID) {
+InternalizePass::InternalizePass()
+    : ModulePass(ID), MustPreserveGV(PreserveAPIList()) {}
+
+InternalizePass::InternalizePass(
+    std::function<bool(const GlobalValue &)> MustPreserveGV)
+    : ModulePass(ID), MustPreserveGV(std::move(MustPreserveGV)) {
   initializeInternalizePassPass(*PassRegistry::getPassRegistry());
-  if (!APIFile.empty())           // If a filename is specified, use it.
-    LoadFile(APIFile.c_str());
-  ExternalNames.insert(APIList.begin(), APIList.end());
-}
-
-InternalizePass::InternalizePass(ArrayRef<const char *> ExportList)
-    : ModulePass(ID) {
-  initializeInternalizePassPass(*PassRegistry::getPassRegistry());
-  for(ArrayRef<const char *>::const_iterator itr = ExportList.begin();
-        itr != ExportList.end(); itr++) {
-    ExternalNames.insert(*itr);
-  }
-}
-
-InternalizePass::InternalizePass(StringSet<> ExportList)
-    : ModulePass(ID), ExternalNames(std::move(ExportList)) {}
-
-void InternalizePass::LoadFile(const char *Filename) {
-  // Load the APIFile...
-  std::ifstream In(Filename);
-  if (!In.good()) {
-    errs() << "WARNING: Internalize couldn't load file '" << Filename
-         << "'! Continuing as if it's empty.\n";
-    return; // Just continue as if the file were empty
-  }
-  while (In) {
-    std::string Symbol;
-    In >> Symbol;
-    if (!Symbol.empty())
-      ExternalNames.insert(Symbol);
-  }
-}
-
-static bool isExternallyVisible(const GlobalValue &GV,
-                                const StringSet<> &ExternalNames) {
-  // Function must be defined here
-  if (GV.isDeclaration())
-    return true;
-
-  // Available externally is really just a "declaration with a body".
-  if (GV.hasAvailableExternallyLinkage())
-    return true;
-
-  // Assume that dllexported symbols are referenced elsewhere
-  if (GV.hasDLLExportStorageClass())
-    return true;
-
-  // Marked to keep external?
-  if (!GV.hasLocalLinkage() && ExternalNames.count(GV.getName()))
-    return true;
-
-  return false;
 }
 
 // Internalize GV if it is possible to do so, i.e. it is not externally visible
@@ -154,7 +172,7 @@ bool InternalizePass::maybeInternalize(
     if (GV.hasLocalLinkage())
       return false;
 
-    if (isExternallyVisible(GV, ExternalNames))
+    if (ShouldPreserveGV(GV))
       return false;
   }
 
@@ -171,7 +189,7 @@ void InternalizePass::checkComdatVisibility(
   if (!C)
     return;
 
-  if (isExternallyVisible(GV, ExternalNames))
+  if (ShouldPreserveGV(GV))
     ExternalComdats.insert(C);
 }
 
@@ -204,7 +222,7 @@ bool InternalizePass::runOnModule(Module &M) {
   // conservative, we internalize symbols in llvm.compiler.used, but we
   // keep llvm.compiler.used so that the symbol is not deleted by llvm.
   for (GlobalValue *V : Used) {
-    ExternalNames.insert(V->getName());
+    AlwaysPreserved.insert(V->getName());
   }
 
   // Mark all functions not in the api as internal.
@@ -223,20 +241,20 @@ bool InternalizePass::runOnModule(Module &M) {
   // Never internalize the llvm.used symbol.  It is used to implement
   // attribute((used)).
   // FIXME: Shouldn't this just filter on llvm.metadata section??
-  ExternalNames.insert("llvm.used");
-  ExternalNames.insert("llvm.compiler.used");
+  AlwaysPreserved.insert("llvm.used");
+  AlwaysPreserved.insert("llvm.compiler.used");
 
   // Never internalize anchors used by the machine module info, else the info
   // won't find them.  (see MachineModuleInfo.)
-  ExternalNames.insert("llvm.global_ctors");
-  ExternalNames.insert("llvm.global_dtors");
-  ExternalNames.insert("llvm.global.annotations");
+  AlwaysPreserved.insert("llvm.global_ctors");
+  AlwaysPreserved.insert("llvm.global_dtors");
+  AlwaysPreserved.insert("llvm.global.annotations");
 
   // Never internalize symbols code-gen inserts.
   // FIXME: We should probably add this (and the __stack_chk_guard) via some
   // type of call-back in CodeGen.
-  ExternalNames.insert("__stack_chk_fail");
-  ExternalNames.insert("__stack_chk_guard");
+  AlwaysPreserved.insert("__stack_chk_fail");
+  AlwaysPreserved.insert("__stack_chk_guard");
 
   // Mark all global variables with initializers that are not in the api as
   // internal as well.
@@ -268,12 +286,12 @@ bool InternalizePass::runOnModule(Module &M) {
   return true;
 }
 
-ModulePass *llvm::createInternalizePass() { return new InternalizePass(); }
-
-ModulePass *llvm::createInternalizePass(ArrayRef<const char *> ExportList) {
-  return new InternalizePass(ExportList);
+ModulePass *llvm::createInternalizePass() {
+  return new InternalizePass(PreserveAPIList());
 }
 
-ModulePass *llvm::createInternalizePass(StringSet<> ExportList) {
-  return new InternalizePass(std::move(ExportList));
+ModulePass *llvm::createInternalizePass(
+    std::function<bool(const GlobalValue &)> MustPreserveGV) {
+  return new InternalizePass(std::move(MustPreserveGV));
 }
+

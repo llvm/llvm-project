@@ -19,6 +19,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 
+#include <functional>
+
 namespace llvm {
 
 class ModuleSummaryIndex;
@@ -120,17 +122,16 @@ Pass *createPruneEHPass();
 /// createInternalizePass - This pass loops over all of the functions in the
 /// input module, internalizing all globals (functions and variables) it can.
 ////
-/// The symbols in \p ExportList are never internalized.
+/// Before internalizing a symbol, the callback \p MustPreserveGV is invoked and
+/// gives to the client the ability to prevent internalizing specific symbols.
 ///
 /// The symbol in DSOList are internalized if it is safe to drop them from
 /// the symbol table.
 ///
 /// Note that commandline options that are used with the above function are not
 /// used now!
-ModulePass *createInternalizePass(StringSet<> ExportList);
-
-/// Same as above, but with an exportList created for an array.
-ModulePass *createInternalizePass(ArrayRef<const char *> ExportList);
+ModulePass *
+createInternalizePass(std::function<bool(const GlobalValue &)> MustPreserveGV);
 
 /// createInternalizePass - Same as above, but with an empty exportList.
 ModulePass *createInternalizePass();
