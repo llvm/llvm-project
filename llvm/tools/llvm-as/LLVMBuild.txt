@@ -19,4 +19,4 @@
 type = Tool
 name = llvm-as
 parent = Tools
-required_libraries = Analysis AsmParser BitWriter
+required_libraries = AsmParser BitWriter

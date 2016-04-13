@@ -1,13 +1,13 @@
 ; First ensure that the ThinLTO handling in llvm-link and llvm-lto handles
 ; bitcode without summary sections gracefully.
-; RUN: llvm-as %s -o %t.bc
-; RUN: llvm-as %p/Inputs/funcimport.ll -o %t2.bc
+; RUN: opt %s -o %t.bc
+; RUN: opt %p/Inputs/funcimport.ll -o %t2.bc
 ; RUN: llvm-link %t.bc -summary-index=%t.bc -S
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; Do setup work for all below tests: generate bitcode and combined index
-; RUN: llvm-as -module-summary %s -o %t.bc
-; RUN: llvm-as -module-summary %p/Inputs/funcimport.ll -o %t2.bc
+; RUN: opt -module-summary %s -o %t.bc
+; RUN: opt -module-summary %p/Inputs/funcimport.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; Ensure statics are promoted/renamed correctly from this file (all but

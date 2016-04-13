@@ -1,5 +1,5 @@
 ; Test to check both the callgraph and refgraph in summary
-; RUN: llvm-as -module-summary %s -o %t.o
+; RUN: opt -module-summary %s -o %t.o
 ; RUN: llvm-bcanalyzer -dump %t.o | FileCheck %s
 
 ; See if the calls and other references are recorded properly using the

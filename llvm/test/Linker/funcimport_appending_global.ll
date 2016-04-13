@@ -1,5 +1,5 @@
-; RUN: llvm-as -module-summary %s -o %t.bc
-; RUN: llvm-as -module-summary %p/Inputs/funcimport_appending_global.ll -o %t2.bc
+; RUN: opt -module-summary %s -o %t.bc
+; RUN: opt -module-summary %p/Inputs/funcimport_appending_global.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; Do the import now
