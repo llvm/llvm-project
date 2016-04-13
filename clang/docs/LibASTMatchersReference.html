@@ -1799,6 +1799,21 @@ cxxConstructorDecl(isDefaultConstructor()) will match #1, but not #2 or #3.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructorDecl.html">CXXConstructorDecl</a>&gt;</td><td class="name" onclick="toggle('isDelegatingConstructor0')"><a name="isDelegatingConstructor0Anchor">isDelegatingConstructor</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isDelegatingConstructor0"><pre>Matches constructors that delegate to another constructor.
+
+Given
+  struct S {
+    S(); #1
+    S(int) {} #2
+    S(S &amp;&amp;) : S() {} #3
+  };
+  S::S() : S(0) {} #4
+cxxConstructorDecl(isDelegatingConstructor()) will match #3 and #4, but not
+#1 or #2.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructorDecl.html">CXXConstructorDecl</a>&gt;</td><td class="name" onclick="toggle('isExplicit0')"><a name="isExplicit0Anchor">isExplicit</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isExplicit0"><pre>Matches constructor and conversion declarations that are marked with
 the explicit keyword.
@@ -1980,6 +1995,19 @@ Given
     virtual void x() = 0;
   };
   matches A::x
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isUserProvided0')"><a name="isUserProvided0Anchor">isUserProvided</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isUserProvided0"><pre>Matches method declarations that are user-provided.
+
+Given
+  struct S {
+    S(); #1
+    S(const S &amp;) = default; #2
+    S(S &amp;&amp;) = delete; #3
+  };
+cxxConstructorDecl(isUserProvided()) will match #1, but not #2 or #3.
 </pre></td></tr>
 
 
@@ -2538,7 +2566,7 @@ memberExpr(isArrow())
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt;</td><td class="name" onclick="toggle('hasName0')"><a name="hasName0Anchor">hasName</a></td><td>std::string Name</td></tr>
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt;</td><td class="name" onclick="toggle('hasName0')"><a name="hasName0Anchor">hasName</a></td><td>std::string  Name</td></tr>
 <tr><td colspan="4" class="doc" id="hasName0"><pre>Matches NamedDecl nodes that have the specified name.
 
 Supports specifying enclosing namespaces or classes by prefixing the name
@@ -2731,13 +2759,20 @@ matches "a(char)", "b(wchar_t)", but not "c(double)".
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;</td><td class="name" onclick="toggle('isAnyPointer0')"><a name="isAnyPointer0Anchor">isAnyPointer</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isAnyPointer0"><pre>Matches QualType nodes that are of any pointer type.
+<tr><td colspan="4" class="doc" id="isAnyPointer0"><pre>Matches QualType nodes that are of any pointer type; this includes
+the Objective-C object pointer type, which is different despite being
+syntactically similar.
 
 Given
   int *i = nullptr;
+
+  @interface Foo
+  @end
+  Foo *f;
+
   int j;
 varDecl(hasType(isAnyPointer()))
-  matches "int *i", but not "int j".
+  matches "int *i" and "Foo *f", but not "int j".
 </pre></td></tr>
 
 
@@ -3225,16 +3260,6 @@ Given:
 expr(nullPointerConstant())
   matches the initializer for v1, v2, v3, cp, and ip. Does not match the
   initializer for i.
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;internal::Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt;&gt;</td><td class="name" onclick="toggle('hasAnyName0')"><a name="hasAnyName0Anchor">hasAnyName</a></td><td>StringRef, ..., StringRef</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyName0"><pre>Matches NamedDecl nodes that have any of the specified names.
-
-This matcher is only provided as a performance optimization of hasName.
-    hasAnyName(a, b, c)
- is equivalent but faster than
-    anyOf(hasName(a), hasName(b), hasName(c))
 </pre></td></tr>
 
 

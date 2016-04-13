@@ -376,9 +376,8 @@ public:
   }
 };
 bool isParallelOrTaskRegion(OpenMPDirectiveKind DKind) {
-  return isOpenMPParallelDirective(DKind) || DKind == OMPD_task ||
-         isOpenMPTeamsDirective(DKind) || DKind == OMPD_unknown ||
-         isOpenMPTaskLoopDirective(DKind);
+  return isOpenMPParallelDirective(DKind) || isOpenMPTaskingDirective(DKind) ||
+         isOpenMPTeamsDirective(DKind) || DKind == OMPD_unknown;
 }
 } // namespace
 
@@ -474,27 +473,24 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(StackTy::reverse_iterator& Iter,
     //  In a task construct, if no default clause is present, a variable that in
     //  the enclosing context is determined to be shared by all implicit tasks
     //  bound to the current team is shared.
-    if (DVar.DKind == OMPD_task) {
+    if (isOpenMPTaskingDirective(DVar.DKind)) {
       DSAVarData DVarTemp;
       for (StackTy::reverse_iterator I = std::next(Iter), EE = Stack.rend();
            I != EE; ++I) {
         // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables
-        // Referenced
-        // in a Construct, implicitly determined, p.6]
+        // Referenced in a Construct, implicitly determined, p.6]
         //  In a task construct, if no default clause is present, a variable
         //  whose data-sharing attribute is not determined by the rules above is
         //  firstprivate.
         DVarTemp = getDSA(I, D);
         if (DVarTemp.CKind != OMPC_shared) {
           DVar.RefExpr = nullptr;
-          DVar.DKind = OMPD_task;
           DVar.CKind = OMPC_firstprivate;
           return DVar;
         }
         if (isParallelOrTaskRegion(I->Directive))
           break;
       }
-      DVar.DKind = OMPD_task;
       DVar.CKind =
           (DVarTemp.CKind == OMPC_unknown) ? OMPC_firstprivate : OMPC_shared;
       return DVar;
@@ -1337,7 +1333,8 @@ static void ReportOriginalDSA(Sema &SemaRef, DSAStackTy *Stack,
       Reason = PDSA_LoopIterVarLastprivate;
     else
       Reason = PDSA_LoopIterVarLinear;
-  } else if (DVar.DKind == OMPD_task && DVar.CKind == OMPC_firstprivate) {
+  } else if (isOpenMPTaskingDirective(DVar.DKind) &&
+             DVar.CKind == OMPC_firstprivate) {
     Reason = PDSA_TaskVarFirstprivate;
     ReportLoc = DVar.ImplicitDSALoc;
   } else if (VD && VD->isStaticLocal())
@@ -1406,7 +1403,7 @@ public:
                                              isOpenMPTeamsDirective(K);
                                     },
                                     false);
-      if (DKind == OMPD_task && DVar.CKind == OMPC_reduction) {
+      if (isOpenMPTaskingDirective(DKind) && DVar.CKind == OMPC_reduction) {
         ErrorFound = true;
         SemaRef.Diag(ELoc, diag::err_omp_reduction_in_task);
         ReportOriginalDSA(SemaRef, Stack, VD, DVar);
@@ -1415,7 +1412,8 @@ public:
 
       // Define implicit data-sharing attributes for task.
       DVar = Stack->getImplicitDSA(VD, false);
-      if (DKind == OMPD_task && DVar.CKind != OMPC_shared)
+      if (isOpenMPTaskingDirective(DKind) && DVar.CKind != OMPC_shared &&
+          !Stack->isLoopControlVariable(VD).first)
         ImplicitFirstprivate.push_back(E);
     }
   }
@@ -1442,7 +1440,7 @@ public:
                                             isOpenMPTeamsDirective(K);
                                    },
                                    false);
-        if (DKind == OMPD_task && DVar.CKind == OMPC_reduction) {
+        if (isOpenMPTaskingDirective(DKind) && DVar.CKind == OMPC_reduction) {
           ErrorFound = true;
           SemaRef.Diag(ELoc, diag::err_omp_reduction_in_task);
           ReportOriginalDSA(SemaRef, Stack, FD, DVar);
@@ -1451,7 +1449,8 @@ public:
 
         // Define implicit data-sharing attributes for task.
         DVar = Stack->getImplicitDSA(FD, false);
-        if (DKind == OMPD_task && DVar.CKind != OMPC_shared)
+        if (isOpenMPTaskingDirective(DKind) && DVar.CKind != OMPC_shared &&
+            !Stack->isLoopControlVariable(FD).first)
           ImplicitFirstprivate.push_back(E);
       }
     }
@@ -2763,8 +2762,7 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       // A master region may not be closely nested inside a worksharing,
       // atomic, or explicit task region.
       NestingProhibited = isOpenMPWorksharingDirective(ParentRegion) ||
-                          ParentRegion == OMPD_task ||
-                          isOpenMPTaskLoopDirective(ParentRegion);
+                          isOpenMPTaskingDirective(ParentRegion);
     } else if (CurrentRegion == OMPD_critical && CurrentName.getName()) {
       // OpenMP [2.16, Nesting of Regions]
       // A critical region may not be nested (closely or otherwise) inside a
@@ -2798,21 +2796,21 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       // OpenMP [2.16, Nesting of Regions]
       // A barrier region may not be closely nested inside a worksharing,
       // explicit task, critical, ordered, atomic, or master region.
-      NestingProhibited =
-          isOpenMPWorksharingDirective(ParentRegion) ||
-          ParentRegion == OMPD_task || ParentRegion == OMPD_master ||
-          ParentRegion == OMPD_critical || ParentRegion == OMPD_ordered ||
-          isOpenMPTaskLoopDirective(ParentRegion);
+      NestingProhibited = isOpenMPWorksharingDirective(ParentRegion) ||
+                          isOpenMPTaskingDirective(ParentRegion) ||
+                          ParentRegion == OMPD_master ||
+                          ParentRegion == OMPD_critical ||
+                          ParentRegion == OMPD_ordered;
     } else if (isOpenMPWorksharingDirective(CurrentRegion) &&
                !isOpenMPParallelDirective(CurrentRegion)) {
       // OpenMP [2.16, Nesting of Regions]
       // A worksharing region may not be closely nested inside a worksharing,
       // explicit task, critical, ordered, atomic, or master region.
-      NestingProhibited =
-          isOpenMPWorksharingDirective(ParentRegion) ||
-          ParentRegion == OMPD_task || ParentRegion == OMPD_master ||
-          ParentRegion == OMPD_critical || ParentRegion == OMPD_ordered ||
-          isOpenMPTaskLoopDirective(ParentRegion);
+      NestingProhibited = isOpenMPWorksharingDirective(ParentRegion) ||
+                          isOpenMPTaskingDirective(ParentRegion) ||
+                          ParentRegion == OMPD_master ||
+                          ParentRegion == OMPD_critical ||
+                          ParentRegion == OMPD_ordered;
       Recommend = ShouldBeInParallelRegion;
     } else if (CurrentRegion == OMPD_ordered) {
       // OpenMP [2.16, Nesting of Regions]
@@ -2824,8 +2822,7 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       // An ordered construct with the simd clause is the only OpenMP construct
       // that can appear in the simd region.
       NestingProhibited = ParentRegion == OMPD_critical ||
-                          ParentRegion == OMPD_task ||
-                          isOpenMPTaskLoopDirective(ParentRegion) ||
+                          isOpenMPTaskingDirective(ParentRegion) ||
                           !(isOpenMPSimdDirective(ParentRegion) ||
                             Stack->isParentOrderedRegion());
       Recommend = ShouldBeInOrderedRegion;
@@ -7495,7 +7492,7 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
 
     // Variably modified types are not supported for tasks.
     if (!Type->isAnyPointerType() && Type->isVariablyModifiedType() &&
-        DSAStack->getCurrentDirective() == OMPD_task) {
+        isOpenMPTaskingDirective(DSAStack->getCurrentDirective())) {
       Diag(ELoc, diag::err_omp_variably_modified_type_not_supported)
           << getOpenMPClauseName(OMPC_private) << Type
           << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
@@ -7693,7 +7690,7 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       //  construct must not appear in a firstprivate clause in a task construct
       //  encountered during execution of any of the worksharing regions arising
       //  from the worksharing construct.
-      if (CurrDir == OMPD_task) {
+      if (isOpenMPTaskingDirective(CurrDir)) {
         DVar =
             DSAStack->hasInnermostDSA(D, MatchesAnyClause(OMPC_reduction),
                                       [](OpenMPDirectiveKind K) -> bool {
@@ -7770,7 +7767,7 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
 
     // Variably modified types are not supported for tasks.
     if (!Type->isAnyPointerType() && Type->isVariablyModifiedType() &&
-        DSAStack->getCurrentDirective() == OMPD_task) {
+        isOpenMPTaskingDirective(DSAStack->getCurrentDirective())) {
       Diag(ELoc, diag::err_omp_variably_modified_type_not_supported)
           << getOpenMPClauseName(OMPC_firstprivate) << Type
           << getOpenMPDirectiveName(DSAStack->getCurrentDirective());

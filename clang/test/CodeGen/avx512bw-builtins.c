@@ -1404,3 +1404,69 @@ __mmask32 test_mm512_mask_testn_epi16_mask(__mmask32 __U, __m512i __A, __m512i _
   return _mm512_mask_testn_epi16_mask(__U, __A, __B); 
 }
 
+__mmask64 test_mm512_movepi8_mask(__m512i __A) {
+  // CHECK-LABEL: @test_mm512_movepi8_mask
+  // CHECK: @llvm.x86.avx512.cvtb2mask.512
+  return _mm512_movepi8_mask(__A); 
+}
+
+__m512i test_mm512_movm_epi8(__mmask64 __A) {
+  // CHECK-LABEL: @test_mm512_movm_epi8
+  // CHECK: @llvm.x86.avx512.cvtmask2b.512
+  return _mm512_movm_epi8(__A); 
+}
+
+__m512i test_mm512_movm_epi16(__mmask32 __A) {
+  // CHECK-LABEL: @test_mm512_movm_epi16
+  // CHECK: @llvm.x86.avx512.cvtmask2w.512
+  return _mm512_movm_epi16(__A); 
+}
+
+
+__m512i test_mm512_broadcastb_epi8(__m128i __A) {
+  // CHECK-LABEL: @test_mm512_broadcastb_epi8
+  // CHECK: @llvm.x86.avx512.pbroadcastb.512
+  return _mm512_broadcastb_epi8(__A); 
+}
+
+__m512i test_mm512_mask_broadcastb_epi8(__m512i __O, __mmask64 __M, __m128i __A) {
+  // CHECK-LABEL: @test_mm512_mask_broadcastb_epi8
+  // CHECK: @llvm.x86.avx512.pbroadcastb.512
+  return _mm512_mask_broadcastb_epi8(__O, __M, __A); 
+}
+
+__m512i test_mm512_maskz_broadcastb_epi8(__mmask64 __M, __m128i __A) {
+  // CHECK-LABEL: @test_mm512_maskz_broadcastb_epi8
+  // CHECK: @llvm.x86.avx512.pbroadcastb.512
+  return _mm512_maskz_broadcastb_epi8(__M, __A); 
+}
+
+__m512i test_mm512_broadcastw_epi16(__m128i __A) {
+  // CHECK-LABEL: @test_mm512_broadcastw_epi16
+  // CHECK: @llvm.x86.avx512.pbroadcastw.512
+  return _mm512_broadcastw_epi16(__A); 
+}
+
+__m512i test_mm512_mask_broadcastw_epi16(__m512i __O, __mmask32 __M, __m128i __A) {
+  // CHECK-LABEL: @test_mm512_mask_broadcastw_epi16
+  // CHECK: @llvm.x86.avx512.pbroadcastw.512
+  return _mm512_mask_broadcastw_epi16(__O, __M, __A); 
+}
+
+__m512i test_mm512_maskz_broadcastw_epi16(__mmask32 __M, __m128i __A) {
+  // CHECK-LABEL: @test_mm512_maskz_broadcastw_epi16
+  // CHECK: @llvm.x86.avx512.pbroadcastw.512
+  return _mm512_maskz_broadcastw_epi16(__M, __A); 
+}
+
+__m512i test_mm512_mask_set1_epi16(__m512i __O, __mmask32 __M, short __A) {
+  // CHECK-LABEL: @test_mm512_mask_set1_epi16
+  // CHECK: @llvm.x86.avx512.mask.pbroadcast.w.gpr.512
+  return _mm512_mask_set1_epi16(__O, __M, __A); 
+}
+
+__m512i test_mm512_maskz_set1_epi16(__mmask32 __M, short __A) {
+  // CHECK-LABEL: @test_mm512_maskz_set1_epi16
+  // CHECK: @llvm.x86.avx512.mask.pbroadcast.w.gpr.512
+  return _mm512_maskz_set1_epi16(__M, __A); 
+}
