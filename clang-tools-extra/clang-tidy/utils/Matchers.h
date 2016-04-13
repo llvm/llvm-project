@@ -23,6 +23,11 @@ AST_MATCHER(QualType, isExpensiveToCopy) {
   return IsExpensive && *IsExpensive;
 }
 
+AST_MATCHER(RecordDecl, isTriviallyDefaultConstructible) {
+  return type_traits::recordIsTriviallyDefaultConstructible(
+      Node, Finder->getASTContext());
+}
+
 } // namespace matchers
 } // namespace tidy
 } // namespace clang

@@ -367,28 +367,28 @@ const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.
 //
-
+static APInt getSizeWithOverflow(const SizeOffsetType &Data) {
+  if (Data.second.isNegative() || Data.first.ult(Data.second))
+    return APInt(Data.first.getBitWidth(), 0);
+  return Data.first - Data.second;
+}
 
 /// \brief Compute the size of the object pointed by Ptr. Returns true and the
 /// object size in Size if successful, and false otherwise.
 /// If RoundToAlign is true, then Size is rounded up to the aligment of allocas,
 /// byval arguments, and global variables.
 bool llvm::getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
-                         const TargetLibraryInfo *TLI, bool RoundToAlign) {
-  ObjectSizeOffsetVisitor Visitor(DL, TLI, Ptr->getContext(), RoundToAlign);
+                         const TargetLibraryInfo *TLI, bool RoundToAlign,
+                         llvm::ObjSizeMode Mode) {
+  ObjectSizeOffsetVisitor Visitor(DL, TLI, Ptr->getContext(),
+                                  RoundToAlign, Mode);
   SizeOffsetType Data = Visitor.compute(const_cast<Value*>(Ptr));
   if (!Visitor.bothKnown(Data))
     return false;
 
-  APInt ObjSize = Data.first, Offset = Data.second;
-  // check for overflow
-  if (Offset.slt(0) || ObjSize.ult(Offset))
-    Size = 0;
-  else
-    Size = (ObjSize - Offset).getZExtValue();
+  Size = getSizeWithOverflow(Data).getZExtValue();
   return true;
 }
-
 
 STATISTIC(ObjectVisitorArgument,
           "Number of arguments with unsolved size and offset");
@@ -405,8 +405,9 @@ APInt ObjectSizeOffsetVisitor::align(APInt Size, uint64_t Align) {
 ObjectSizeOffsetVisitor::ObjectSizeOffsetVisitor(const DataLayout &DL,
                                                  const TargetLibraryInfo *TLI,
                                                  LLVMContext &Context,
-                                                 bool RoundToAlign)
-    : DL(DL), TLI(TLI), RoundToAlign(RoundToAlign) {
+                                                 bool RoundToAlign,
+                                                 ObjSizeMode Mode)
+    : DL(DL), TLI(TLI), RoundToAlign(RoundToAlign), Mode(Mode) {
   // Pointer size must be rechecked for each object visited since it could have
   // a different address space.
 }
@@ -606,8 +607,28 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitPHINode(PHINode&) {
 SizeOffsetType ObjectSizeOffsetVisitor::visitSelectInst(SelectInst &I) {
   SizeOffsetType TrueSide  = compute(I.getTrueValue());
   SizeOffsetType FalseSide = compute(I.getFalseValue());
-  if (bothKnown(TrueSide) && bothKnown(FalseSide) && TrueSide == FalseSide)
-    return TrueSide;
+  if (bothKnown(TrueSide) && bothKnown(FalseSide)) {
+    if (TrueSide == FalseSide) {
+        return TrueSide;
+    }
+
+    APInt TrueResult = getSizeWithOverflow(TrueSide);
+    APInt FalseResult = getSizeWithOverflow(FalseSide);
+
+    if (TrueResult == FalseResult) {
+      return TrueSide;
+    }
+    if (Mode == ObjSizeMode::Min) {
+      if (TrueResult.slt(FalseResult))
+        return TrueSide;
+      return FalseSide;
+    }
+    if (Mode == ObjSizeMode::Max) {
+      if (TrueResult.sgt(FalseResult))
+        return TrueSide;
+      return FalseSide;
+    }
+  }
   return unknown();
 }
 

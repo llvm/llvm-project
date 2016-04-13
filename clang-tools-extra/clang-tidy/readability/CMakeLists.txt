@@ -4,6 +4,7 @@ add_clang_library(clangTidyReadabilityModule
   AvoidConstParamsInDecls.cpp
   BracesAroundStatementsCheck.cpp
   ContainerSizeEmptyCheck.cpp
+  DeletedDefaultCheck.cpp
   ElseAfterReturnCheck.cpp
   FunctionSizeCheck.cpp
   IdentifierNamingCheck.cpp
