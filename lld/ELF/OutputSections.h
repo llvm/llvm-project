@@ -112,7 +112,7 @@ public:
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
   bool empty() const { return MipsLocalEntries == 0 && Entries.empty(); }
-  uintX_t getMipsLocalFullAddr(const SymbolBody &B);
+  uintX_t getMipsLocalEntryAddr(uintX_t EntryValue);
   uintX_t getMipsLocalPageAddr(uintX_t Addr);
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;
   uintX_t getGlobalDynOffset(const SymbolBody &B) const;
@@ -139,7 +139,6 @@ private:
   llvm::SmallPtrSet<const OutputSectionBase<ELFT> *, 10> MipsOutSections;
   llvm::DenseMap<uintX_t, size_t> MipsLocalGotPos;
 
-  uintX_t getMipsLocalEntryAddr(uintX_t EntryValue);
 };
 
 template <class ELFT>

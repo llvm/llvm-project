@@ -1,8 +1,17 @@
 // REQUIRES: x86
 
-// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
-// RUN: ld.lld %t -o %t2 -shared
-// RUN: llvm-readobj -s -section-data -r %t2 | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/relocation-copy.s -o %t2.o
+// RUN: ld.lld %t2.o -o %t2.so -shared
+// RUN: ld.lld %t.o %t2.so -o %t.exe
+// RUN: llvm-readobj -s -section-data -r %t.exe | FileCheck %s
+
+        .global _start
+_start:
+        .long x
+
+        .section foo
+        .long y
 
 // CHECK:      Name: .text
 // CHECK-NEXT: Type: SHT_PROGBITS
@@ -10,45 +19,34 @@
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_EXECINSTR
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x1000
+// CHECK-NEXT: Address: 0x11000
 // CHECK-NEXT: Offset: 0x1000
-// CHECK-NEXT: Size: 16
+// CHECK-NEXT: Size: 4
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
 // CHECK-NEXT: AddressAlignment: 4
 // CHECK-NEXT: EntrySize: 0
 // CHECK-NEXT: SectionData (
-// CHECK-NEXT:   0000: 00100000 00000000 00000000 00000000
+// CHECK-NEXT:   0000: 00300100
 // CHECK-NEXT: )
 
 // CHECK:      Name: foo
 // CHECK-NEXT: Type: SHT_PROGBITS
-// CHECK-NEXT:    Flags [
+// CHECK-NEXT: Flags [
 // CHECK-NEXT: ]
 // CHECK-NEXT: Address: 0x0
-// CHECK-NEXT: Offset:
-// CHECK-NEXT: Size: 16
+// CHECK-NEXT: Offset: 0x20B0
+// CHECK-NEXT: Size: 4
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
 // CHECK-NEXT: AddressAlignment: 1
 // CHECK-NEXT: EntrySize: 0
 // CHECK-NEXT: SectionData (
-// CHECK-NEXT:   0000: 00100000 00000000 00000000 00000000
+// CHECK-NEXT:   0000: 00000000
 // CHECK-NEXT: )
 
 // CHECK:      Relocations [
-// CHECK-NEXT:   Section ({{.}}) .rela.dyn {
-// CHECK-NEXT:     0x1000 R_X86_64_RELATIVE - 0x1000
-// CHECK-NEXT:     0x1008 R_X86_64_64 zed 0x0
+// CHECK-NEXT:   Section (4) .rela.dyn {
+// CHECK-NEXT:     0x13000 R_X86_64_COPY x 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
-
-        .global zed
-zed:
-bar:
-        .quad bar
-        .quad zed
-
-        .section foo
-        .quad bar
-        .quad zed

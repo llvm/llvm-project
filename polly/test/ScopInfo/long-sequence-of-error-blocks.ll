@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK:      Assumed Context:
 ; CHECK-NEXT: [tmp17, tmp21, tmp27, tmp31] -> {  :  }
 ; CHECK:      Invalid Context:
-; CHECK-NEXT: [tmp17, tmp21, tmp27, tmp31] -> {  : (tmp17 < 0 and tmp21 < 0) or (tmp17 < 0 and tmp21 > 0) or (tmp17 > 0 and tmp21 < 0) or (tmp17 > 0 and tmp21 > 0) or (tmp27 = 3 and tmp31 <= 143) }
+; CHECK-NEXT: [tmp17, tmp21, tmp27, tmp31] -> { : (tmp27 = 3 and tmp31 <= 143) or (tmp17 < 0 and tmp21 < 0) or (tmp17 < 0 and tmp21 > 0) or (tmp17 > 0 and tmp21 < 0) or (tmp17 > 0 and tmp21 > 0) }
 ;
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_bb15

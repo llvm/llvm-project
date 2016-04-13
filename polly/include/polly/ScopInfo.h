@@ -797,6 +797,9 @@ public:
   /// @brief Return the access function subscript in the dimension @p Dim.
   const SCEV *getSubscript(unsigned Dim) const { return Subscripts[Dim]; }
 
+  /// @brief Compute the isl representation for the SCEV @p E wrt. this access.
+  __isl_give isl_pw_aff *getPwAff(const SCEV *E);
+
   /// Get the stride of this memory access in the specified Schedule. Schedule
   /// is a map from the statement to a schedule where the innermost dimension is
   /// the dimension of the innermost loop containing the statement.
@@ -931,6 +934,14 @@ private:
 
   /// The Scop containing this ScopStmt
   Scop &Parent;
+
+  /// @brief The context under which this statement is not modeled precisely.
+  ///
+  /// The invalid context for a statement describes all parameter combinations
+  /// under which the statement looks to be executed but is in fact not because
+  /// some assumption/restriction makes the statement/scop invalid. Currently
+  /// it is build only using error block domain contexts.
+  isl_set *InvalidContext;
 
   /// The iteration domain describes the set of iterations for which this
   /// statement is executed.
@@ -1085,6 +1096,14 @@ public:
 
   /// @brief Get an isl string representing this schedule.
   std::string getScheduleStr() const;
+
+  /// @brief Get the invalid context for this statement.
+  __isl_give isl_set *getInvalidContext() const {
+    return isl_set_copy(InvalidContext);
+  }
+
+  /// @brief Set the invalid context for this statement to @p IC.
+  void setInvalidContext(__isl_take isl_set *IC);
 
   /// @brief Get the BasicBlock represented by this ScopStmt (if any).
   ///
@@ -1332,14 +1351,6 @@ private:
   /// @brief A map from basic blocks to their domains.
   DenseMap<BasicBlock *, isl_set *> DomainMap;
 
-  /// @brief A map from basic blocks to the error context reaching them.
-  ///
-  /// The error context describes all parameter configurations under which
-  /// the block would be executed but the control would pass an error block.
-  /// This information is not contained in the domain and only implicit in the
-  /// AssumedContext/InvalidContext.
-  DenseMap<BasicBlock *, isl_set *> ErrorDomainCtxMap;
-
   /// Constraints on parameters.
   isl_set *Context;
 
@@ -1372,6 +1383,37 @@ private:
   /// in the assumed context to be "true" the constraints in the invalid context
   /// need to be "false". Otherwise they behave the same.
   isl_set *InvalidContext;
+
+  /// @brief Helper struct to remember assumptions.
+  struct Assumption {
+
+    /// @brief The kind of the assumption (e.g., WRAPPING).
+    AssumptionKind Kind;
+
+    /// @brief Flag to distinguish assumptions and restrictions.
+    AssumptionSign Sign;
+
+    /// @brief The valid/invalid context if this is an assumption/restriction.
+    isl_set *Set;
+
+    /// @brief The location that caused this assumption.
+    DebugLoc Loc;
+
+    /// @brief An optional block whos domain can simplify the assumption.
+    BasicBlock *BB;
+  };
+
+  /// @brief Collection to hold taken assumptions.
+  ///
+  /// There are two reasons why we want to record assumptions first before we
+  /// add them to the assumed/invalid context:
+  ///   1) If the SCoP is not profitable or otherwise invalid without the
+  ///      assumed/invalid context we do not have to compute it.
+  ///   2) Information about the context are gathered rather late in the SCoP
+  ///      construction (basically after we know all parameters), thus the user
+  ///      might see overly complicated assumptions to be taken while they will
+  ///      only be simplified later on.
+  SmallVector<Assumption, 8> RecordedAssumptions;
 
   /// @brief The schedule of the SCoP
   ///
@@ -1517,20 +1559,19 @@ private:
   void propagateDomainConstraints(Region *R, ScopDetection &SD,
                                   DominatorTree &DT, LoopInfo &LI);
 
-  /// @brief Propagate of error block domain contexts through @p R.
+  /// @brief Propagate invalid contexts of statements through @p R.
   ///
-  /// This method will propagate error block domain contexts through @p R
-  /// and thereby fill the ErrorDomainCtxMap map. Additionally, the domains
-  /// of error statements and those only reachable via error statements will
-  /// be replaced by an empty set. Later those will be removed completely from
-  /// the SCoP.
+  /// This method will propagate invalid statement contexts through @p R and at
+  /// the same time add error block domain context to them. Additionally, the
+  /// domains of error statements and those only reachable via error statements
+  /// will be replaced by an empty set. Later those will be removed completely.
   ///
   /// @param R  The currently traversed region.
   /// @param SD The ScopDetection analysis for the current function.
   /// @param DT The DominatorTree for the current function.
   /// @param LI The LoopInfo for the current function.
-  void propagateErrorConstraints(Region *R, ScopDetection &SD,
-                                 DominatorTree &DT, LoopInfo &LI);
+  void propagateInvalidStmtContexts(Region *R, ScopDetection &SD,
+                                    DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Compute the domain for each basic block in @p R.
   ///
@@ -1565,9 +1606,6 @@ private:
   /// @param RemoveIgnoredStmts If true, also removed ignored statments.
   /// @see isIgnored()
   void simplifySCoP(bool RemoveIgnoredStmts, DominatorTree &DT, LoopInfo &LI);
-
-  /// @brief Return the error context under which @p Stmt is reached.
-  __isl_give isl_set *getErrorCtxReachingStmt(ScopStmt &Stmt);
 
   /// @brief Create equivalence classes for required invariant accesses.
   ///
@@ -1637,9 +1675,6 @@ private:
 
   /// @brief Build the Context of the Scop.
   void buildContext();
-
-  /// @brief Add the restrictions based on the wrapping of expressions.
-  void addWrappingContext();
 
   /// @brief Add user provided parameter constraints to context (source code).
   void addUserAssumptions(AssumptionCache &AC, DominatorTree &DT, LoopInfo &LI);
@@ -1918,6 +1953,28 @@ public:
   ///             (needed/assumptions) or negative (invalid/restrictions).
   void addAssumption(AssumptionKind Kind, __isl_take isl_set *Set, DebugLoc Loc,
                      AssumptionSign Sign);
+
+  /// @brief Record an assumption for later addition to the assumed context.
+  ///
+  /// This function will add the assumption to the RecordedAssumptions. This
+  /// collection will be added (@see addAssumption) to the assumed context once
+  /// all paramaters are known and the context is fully build.
+  ///
+  /// @param Kind The assumption kind describing the underlying cause.
+  /// @param Set  The relations between parameters that are assumed to hold.
+  /// @param Loc  The location in the source that caused this assumption.
+  /// @param Sign Enum to indicate if the assumptions in @p Set are positive
+  ///             (needed/assumptions) or negative (invalid/restrictions).
+  /// @param BB   The block in which this assumption was taken. If it is
+  ///             set, the domain of that block will be used to simplify the
+  ///             actual assumption in @p Set once it is added. This is useful
+  ///             if the assumption was created prior to the domain.
+  void recordAssumption(AssumptionKind Kind, __isl_take isl_set *Set,
+                        DebugLoc Loc, AssumptionSign Sign,
+                        BasicBlock *BB = nullptr);
+
+  /// @brief Add all recorded assumptions to the assumed context.
+  void addRecordedAssumptions();
 
   /// @brief Mark the scop as invalid.
   ///

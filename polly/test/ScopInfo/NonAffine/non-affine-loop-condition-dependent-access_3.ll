@@ -24,7 +24,7 @@
 ; INNERMOST-NEXT: Assumed Context:
 ; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  :  }
 ; INNERMOST-NEXT: Invalid Context:
-; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  : p_0 < 0 }
+; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  : 1 = 0 }
 ; INNERMOST-NEXT: p0: {0,+,{0,+,1}<nuw><nsw><%bb11>}<nuw><nsw><%bb13>
 ; INNERMOST-NEXT: p1: {0,+,1}<nuw><nsw><%bb11>
 ; INNERMOST-NEXT: p2: {0,+,1}<nuw><nsw><%bb13>

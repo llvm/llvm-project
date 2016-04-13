@@ -159,6 +159,7 @@ class NamespaceLookupTestCase(TestBase):
 
     # NOTE: this test may fail on older systems that don't emit import
     # entries in DWARF - may need to add checks for compiler versions here.
+    @skipIf(compiler="gcc", oslist=["linux"], debug_info=["dwo"]) # Skip to avoid crash
     @expectedFailureAll(oslist=["windows", "linux", "freebsd"], bugnumber="llvm.org/pr25819")
     def test_scope_after_using_directive_lookup_with_run_command(self):
         """Test scope lookup after using directive in lldb."""

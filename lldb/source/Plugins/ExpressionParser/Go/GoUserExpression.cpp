@@ -265,9 +265,9 @@ GoUserExpression::Parse(DiagnosticManager &diagnostic_manager, ExecutionContext 
 }
 
 lldb::ExpressionResults
-GoUserExpression::Execute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
-                          const EvaluateExpressionOptions &options, lldb::UserExpressionSP &shared_ptr_to_me,
-                          lldb::ExpressionVariableSP &result)
+GoUserExpression::DoExecute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+                            const EvaluateExpressionOptions &options, lldb::UserExpressionSP &shared_ptr_to_me,
+                            lldb::ExpressionVariableSP &result)
 {
     Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_STEP));
 

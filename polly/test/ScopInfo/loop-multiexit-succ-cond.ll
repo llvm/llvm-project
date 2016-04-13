@@ -6,7 +6,7 @@
 ; CHECK:      Assumed Context:
 ; CHECK-NEXT:   [count1, dobreak, count2] -> {  :  }
 ; CHECK-NEXT: Invalid Context:
-; CHECK-NEXT:   [count1, dobreak, count2] -> {  : count1 <= 0 or (count1 > 0 and dobreak > 0) or (count1 > 0 and dobreak <= 0 and count2 > 0) }
+; CHECK-NEXT:   [count1, dobreak, count2] -> {  : (count1 > 0 and dobreak > 0) or count1 <= 0 or (count1 > 0 and dobreak <= 0 and count2 > 0) }
 ;
 ; CHECK:      Stmt_loop_enter
 ; CHECK-NEXT:     Domain :=

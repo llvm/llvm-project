@@ -97,6 +97,7 @@
 // DISASM-NEXT:    11007: e8 34 00 00 00 callq 52
 // DISASM-NEXT:    1100c: ba 58 01 01 00 movl $65880, %edx
 // DISASM-NEXT:    11011: ba 88 01 01 00 movl $65928, %edx
+// DISASM-NEXT:    11016: ba 89 01 01 00 movl $65929, %edx
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-NEXT: .plt:
 // DISASM-NEXT:    11020: ff 35 e2 0f 00 00 pushq 4066(%rip)
@@ -128,3 +129,4 @@ _start:
  call bar
  movl $__rela_iplt_start,%edx
  movl $__rela_iplt_end,%edx
+ movl $__rela_iplt_end + 1,%edx

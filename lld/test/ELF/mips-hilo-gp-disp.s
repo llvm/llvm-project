@@ -27,7 +27,7 @@ __start:
 # EXE: SYMBOL TABLE:
 # EXE: 00020000     .text   00000000 __start
 # EXE: 00020010     .text   00000000 _foo
-# EXE: 00037ff0     *ABS*   00000000 _gp
+# EXE: 00037ff0     .got    00000000 _gp
 
 # SO:      Disassembly of section .text:
 # SO-NEXT: __start:
@@ -39,4 +39,4 @@ __start:
 # SO: SYMBOL TABLE:
 # SO: 00010000     .text   00000000 __start
 # SO: 00010010     .text   00000000 _foo
-# SO: 00027ff0     *ABS*   00000000 _gp
+# SO: 00027ff0     .got    00000000 _gp

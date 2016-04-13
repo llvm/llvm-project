@@ -356,11 +356,6 @@ UserExpression::Evaluate (ExecutionContext &exe_ctx,
             execution_results =
                 user_expression_sp->Execute(diagnostic_manager, exe_ctx, options, user_expression_sp, expr_result);
 
-            if (options.GetResultIsInternal() && expr_result && process)
-            {
-                process->GetTarget().GetPersistentExpressionStateForLanguage(language)->RemovePersistentVariable (expr_result);
-            }
-
             if (execution_results != lldb::eExpressionCompleted)
             {
                 if (log)
@@ -405,3 +400,21 @@ UserExpression::Evaluate (ExecutionContext &exe_ctx,
 
     return execution_results;
 }
+
+lldb::ExpressionResults
+UserExpression::Execute(DiagnosticManager &diagnostic_manager,
+                        ExecutionContext &exe_ctx,
+                        const EvaluateExpressionOptions &options,
+                        lldb::UserExpressionSP &shared_ptr_to_me,
+                        lldb::ExpressionVariableSP &result_var)
+{
+    lldb::ExpressionResults expr_result = DoExecute(diagnostic_manager, exe_ctx, options, shared_ptr_to_me, result_var);
+    Target *target = exe_ctx.GetTargetPtr();
+    if (options.GetResultIsInternal() && result_var && target)
+    {
+        target->GetPersistentExpressionStateForLanguage(m_language)->RemovePersistentVariable (result_var);
+    }
+    return expr_result;
+}
+
+

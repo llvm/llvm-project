@@ -107,7 +107,8 @@ public:
     MatchesContext (ExecutionContext &exe_ctx);
 
     //------------------------------------------------------------------
-    /// Execute the parsed expression
+    /// Execute the parsed expression by callinng the derived class's
+    /// DoExecute method.
     ///
     /// @param[in] diagnostic_manager
     ///     A diagnostic manager to report errors to.
@@ -133,9 +134,9 @@ public:
     /// @return
     ///     A Process::Execution results value.
     //------------------------------------------------------------------
-    virtual lldb::ExpressionResults
+    lldb::ExpressionResults
     Execute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
-            lldb::UserExpressionSP &shared_ptr_to_me, lldb::ExpressionVariableSP &result) = 0;
+            lldb::UserExpressionSP &shared_ptr_to_me, lldb::ExpressionVariableSP &result);
 
     //------------------------------------------------------------------
     /// Apply the side effects of the function to program state.
@@ -312,6 +313,10 @@ public:
     }
 
 protected:
+    virtual lldb::ExpressionResults
+    DoExecute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
+            lldb::UserExpressionSP &shared_ptr_to_me, lldb::ExpressionVariableSP &result) = 0;
+
     static lldb::addr_t
     GetObjectPointer (lldb::StackFrameSP frame_sp,
                       ConstString &object_name,
