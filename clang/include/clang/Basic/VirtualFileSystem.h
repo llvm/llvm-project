@@ -325,6 +325,7 @@ class YAMLVFSWriter {
   std::vector<YAMLVFSEntry> Mappings;
   Optional<bool> IsCaseSensitive;
   Optional<bool> IsOverlayRelative;
+  Optional<bool> UseExternalNames;
   std::string OverlayDir;
 
 public:
@@ -332,6 +333,9 @@ public:
   void addFileMapping(StringRef VirtualPath, StringRef RealPath);
   void setCaseSensitivity(bool CaseSensitive) {
     IsCaseSensitive = CaseSensitive;
+  }
+  void setUseExternalNames(bool UseExtNames) {
+    UseExternalNames = UseExtNames;
   }
   void setOverlayDir(StringRef OverlayDirectory) {
     IsOverlayRelative = true;
