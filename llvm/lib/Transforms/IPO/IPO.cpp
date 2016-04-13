@@ -16,6 +16,7 @@
 #include "llvm-c/Initialization.h"
 #include "llvm-c/Transforms/IPO.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Transforms/IPO.h"
 
