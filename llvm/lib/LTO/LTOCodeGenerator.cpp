@@ -337,8 +337,22 @@ void LTOCodeGenerator::applyScopeRestrictions() {
   if (ScopeRestrictionsDone || !ShouldInternalize)
     return;
 
-  LTOInternalize(*MergedModule, *TargetMach, MustPreserveSymbols,
-                 AsmUndefinedRefs,
+  // Declare a callback for the internalize pass that will ask for every
+  // candidate GlobalValue if it can be internalized or not.
+  Mangler Mangler;
+  SmallString<64> MangledName;
+  auto MustPreserveGV = [&](const GlobalValue &GV) -> bool {
+    // Need to mangle the GV as the "MustPreserveSymbols" StringSet is filled
+    // with the linker supplied name, which on Darwin includes a leading
+    // underscore.
+    MangledName.clear();
+    MangledName.reserve(GV.getName().size() + 1);
+    Mangler::getNameWithPrefix(MangledName, GV.getName(),
+                               MergedModule->getDataLayout());
+    return MustPreserveSymbols.count(MangledName);
+  };
+
+  LTOInternalize(*MergedModule, *TargetMach, MustPreserveGV, AsmUndefinedRefs,
                  (ShouldRestoreGlobalsLinkage ? &ExternalSymbols : nullptr));
 
   ScopeRestrictionsDone = true;

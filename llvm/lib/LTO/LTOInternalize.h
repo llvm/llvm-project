@@ -17,14 +17,17 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
 
+#include <functional>
+
 namespace llvm {
 class Module;
 class TargetMachine;
 
-void LTOInternalize(Module &TheModule, const TargetMachine &TM,
-                    const StringSet<> &MustPreserveSymbols,
-                    const StringSet<> &AsmUndefinedRefs,
-                    StringMap<GlobalValue::LinkageTypes> *ExternalSymbols);
+void LTOInternalize(
+    Module &TheModule, const TargetMachine &TM,
+    const std::function<bool(const GlobalValue &)> &MustPreserveSymbols,
+    const StringSet<> &AsmUndefinedRefs,
+    StringMap<GlobalValue::LinkageTypes> *ExternalSymbols);
 }
 
 #endif // LLVM_LTO_LTOINTERNALIZE_H

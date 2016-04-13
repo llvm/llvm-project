@@ -23,31 +23,26 @@
 using namespace llvm;
 
 namespace {
-
-class ComputePreserveList {
+// Helper class that populate the array of symbols used in inlined assembly.
+class ComputeAsmUsed {
 public:
-  ComputePreserveList(const StringSet<> &MustPreserveSymbols,
-                      const StringSet<> &AsmUndefinedRefs,
-                      const TargetMachine &TM, const Module &TheModule,
-                      StringMap<GlobalValue::LinkageTypes> *ExternalSymbols,
-                      std::vector<const char *> &MustPreserveList,
-                      SmallPtrSetImpl<const GlobalValue *> &AsmUsed)
-      : MustPreserveSymbols(MustPreserveSymbols),
-        AsmUndefinedRefs(AsmUndefinedRefs), TM(TM),
-        ExternalSymbols(ExternalSymbols), MustPreserveList(MustPreserveList),
-        AsmUsed(AsmUsed) {
+  ComputeAsmUsed(const StringSet<> &AsmUndefinedRefs, const TargetMachine &TM,
+                 const Module &TheModule,
+                 StringMap<GlobalValue::LinkageTypes> *ExternalSymbols,
+                 SmallPtrSetImpl<const GlobalValue *> &AsmUsed)
+      : AsmUndefinedRefs(AsmUndefinedRefs), TM(TM),
+        ExternalSymbols(ExternalSymbols), AsmUsed(AsmUsed) {
     accumulateAndSortLibcalls(TheModule);
     for (const Function &F : TheModule)
-      applyRestriction(F);
+      findAsmUses(F);
     for (const GlobalVariable &GV : TheModule.globals())
-      applyRestriction(GV);
+      findAsmUses(GV);
     for (const GlobalAlias &GA : TheModule.aliases())
-      applyRestriction(GA);
+      findAsmUses(GA);
   }
 
 private:
   // Inputs
-  const StringSet<> &MustPreserveSymbols;
   const StringSet<> &AsmUndefinedRefs;
   const TargetMachine &TM;
 
@@ -57,7 +52,6 @@ private:
 
   // Output
   StringMap<GlobalValue::LinkageTypes> *ExternalSymbols;
-  std::vector<const char *> &MustPreserveList;
   SmallPtrSetImpl<const GlobalValue *> &AsmUsed;
 
   // Collect names of runtime library functions. User-defined functions with the
@@ -97,7 +91,7 @@ private:
                    Libcalls.end());
   }
 
-  void applyRestriction(const GlobalValue &GV) {
+  void findAsmUses(const GlobalValue &GV) {
     // There are no restrictions to apply to declarations.
     if (GV.isDeclaration())
       return;
@@ -109,8 +103,6 @@ private:
     SmallString<64> Buffer;
     TM.getNameWithPrefix(Buffer, &GV, Mangler);
 
-    if (MustPreserveSymbols.count(Buffer))
-      MustPreserveList.push_back(GV.getName().data());
     if (AsmUndefinedRefs.count(Buffer))
       AsmUsed.insert(&GV);
 
@@ -146,18 +138,14 @@ static void findUsedValues(GlobalVariable *LLVMUsed,
       UsedValues.insert(GV);
 }
 
+// mark which symbols can not be internalized
 void llvm::LTOInternalize(
     Module &TheModule, const TargetMachine &TM,
-    const StringSet<> &MustPreserveSymbols, const StringSet<> &AsmUndefinedRefs,
+    const std::function<bool(const GlobalValue &)> &MustPreserveSymbols,
+    const StringSet<> &AsmUndefinedRefs,
     StringMap<GlobalValue::LinkageTypes> *ExternalSymbols) {
-  legacy::PassManager passes;
-  // mark which symbols can not be internalized
-  Mangler Mangler;
-  std::vector<const char *> MustPreserveList;
   SmallPtrSet<const GlobalValue *, 8> AsmUsed;
-
-  ComputePreserveList(MustPreserveSymbols, AsmUndefinedRefs, TM, TheModule,
-                      ExternalSymbols, MustPreserveList, AsmUsed);
+  ComputeAsmUsed(AsmUndefinedRefs, TM, TheModule, ExternalSymbols, AsmUsed);
 
   GlobalVariable *LLVMCompilerUsed =
       TheModule.getGlobalVariable("llvm.compiler.used");
@@ -182,7 +170,8 @@ void llvm::LTOInternalize(
     LLVMCompilerUsed->setSection("llvm.metadata");
   }
 
-  passes.add(createInternalizePass(MustPreserveList));
+  legacy::PassManager passes;
+  passes.add(createInternalizePass(MustPreserveSymbols));
 
   // apply scope restrictions
   passes.run(TheModule);
