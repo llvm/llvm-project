@@ -1707,7 +1707,7 @@ public:
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   bool is##Id##Type() const;
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
 
   bool isImageType() const;                     // Any OpenCL image type
 
@@ -2010,7 +2010,7 @@ public:
   enum Kind {
 // OpenCL image types
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) Id,
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
@@ -2051,7 +2051,7 @@ public:
   }
 
   bool isFloatingPoint() const {
-    return getKind() >= Half && getKind() <= LongDouble;
+    return getKind() >= Half && getKind() <= Float128;
   }
 
   /// Determines whether the given kind corresponds to a placeholder type.
@@ -5556,7 +5556,7 @@ inline bool Type::isObjCBuiltinType() const {
   inline bool Type::is##Id##Type() const { \
     return isSpecificBuiltinType(BuiltinType::Id); \
   }
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
 
 inline bool Type::isSamplerT() const {
   return isSpecificBuiltinType(BuiltinType::OCLSampler);
@@ -5585,7 +5585,7 @@ inline bool Type::isReserveIDT() const {
 inline bool Type::isImageType() const {
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) is##Id##Type() ||
   return
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
       0; // end boolean or operation
 }
 

@@ -1675,7 +1675,12 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
           getLangOpts().CurrentModule) {
     // If this include corresponds to a module but that module is
     // unavailable, diagnose the situation and bail out.
-    if (!SuggestedModule.getModule()->isAvailable()) {
+    // FIXME: Remove this; loadModule does the same check (but produces
+    // slightly worse diagnostics).
+    if (!SuggestedModule.getModule()->isAvailable() &&
+        !SuggestedModule.getModule()
+             ->getTopLevelModule()
+             ->HasIncompatibleModuleFile) {
       clang::Module::Requirement Requirement;
       clang::Module::UnresolvedHeaderDirective MissingHeader;
       clang::Module *ShadowingModule = nullptr;

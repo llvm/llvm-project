@@ -391,12 +391,12 @@ public:
 ///      'simdlen' '(' <expr> ')'
 ///      { 'uniform' '(' <argument_list> ')' }
 ///      { 'aligned '(' <argument_list> [ ':' <alignment> ] ')' }
-static bool parseDeclareSimdClauses(Parser &P,
-                                    OMPDeclareSimdDeclAttr::BranchStateTy &BS,
-                                    ExprResult &SimdLen,
-                                    SmallVectorImpl<Expr *> &Uniforms,
-                                    SmallVectorImpl<Expr *> &Aligneds,
-                                    SmallVectorImpl<Expr *> &Alignments) {
+///      { 'linear '(' <argument_list> [ ':' <step> ] ')' }
+static bool parseDeclareSimdClauses(
+    Parser &P, OMPDeclareSimdDeclAttr::BranchStateTy &BS, ExprResult &SimdLen,
+    SmallVectorImpl<Expr *> &Uniforms, SmallVectorImpl<Expr *> &Aligneds,
+    SmallVectorImpl<Expr *> &Alignments, SmallVectorImpl<Expr *> &Linears,
+    SmallVectorImpl<unsigned> &LinModifiers, SmallVectorImpl<Expr *> &Steps) {
   SourceRange BSRange;
   const Token &Tok = P.getCurToken();
   bool IsError = false;
@@ -430,12 +430,14 @@ static bool parseDeclareSimdClauses(Parser &P,
         IsError = true;
     } else {
       OpenMPClauseKind CKind = getOpenMPClauseKind(ClauseName);
-      if (CKind == OMPC_uniform || CKind == OMPC_aligned) {
+      if (CKind == OMPC_uniform || CKind == OMPC_aligned ||
+          CKind == OMPC_linear) {
         Parser::OpenMPVarListDataTy Data;
         auto *Vars = &Uniforms;
-        if (CKind == OMPC_aligned) {
+        if (CKind == OMPC_aligned)
           Vars = &Aligneds;
-        }
+        else if (CKind == OMPC_linear)
+          Vars = &Linears;
 
         P.ConsumeToken();
         if (P.ParseOpenMPVarList(OMPD_declare_simd,
@@ -443,6 +445,14 @@ static bool parseDeclareSimdClauses(Parser &P,
           IsError = true;
         if (CKind == OMPC_aligned)
           Alignments.append(Aligneds.size() - Alignments.size(), Data.TailExpr);
+        else if (CKind == OMPC_linear) {
+          if (P.getActions().CheckOpenMPLinearModifier(Data.LinKind,
+                                                       Data.DepLinMapLoc))
+            Data.LinKind = OMPC_LINEAR_val;
+          LinModifiers.append(Linears.size() - LinModifiers.size(),
+                              Data.LinKind);
+          Steps.append(Linears.size() - Steps.size(), Data.TailExpr);
+        }
       } else
         // TODO: add parsing of other clauses.
         break;
@@ -470,8 +480,12 @@ Parser::ParseOMPDeclareSimdClauses(Parser::DeclGroupPtrTy Ptr,
   SmallVector<Expr *, 4> Uniforms;
   SmallVector<Expr *, 4> Aligneds;
   SmallVector<Expr *, 4> Alignments;
-  bool IsError = parseDeclareSimdClauses(*this, BS, Simdlen, Uniforms, Aligneds,
-                                         Alignments);
+  SmallVector<Expr *, 4> Linears;
+  SmallVector<unsigned, 4> LinModifiers;
+  SmallVector<Expr *, 4> Steps;
+  bool IsError =
+      parseDeclareSimdClauses(*this, BS, Simdlen, Uniforms, Aligneds,
+                              Alignments, Linears, LinModifiers, Steps);
   // Need to check for extra tokens.
   if (Tok.isNot(tok::annot_pragma_openmp_end)) {
     Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
@@ -483,8 +497,8 @@ Parser::ParseOMPDeclareSimdClauses(Parser::DeclGroupPtrTy Ptr,
   SourceLocation EndLoc = ConsumeToken();
   if (!IsError) {
     return Actions.ActOnOpenMPDeclareSimdDirective(
-        Ptr, BS, Simdlen.get(), Uniforms, Aligneds, Alignments,
-        SourceRange(Loc, EndLoc));
+        Ptr, BS, Simdlen.get(), Uniforms, Aligneds, Alignments, Linears,
+        LinModifiers, Steps, SourceRange(Loc, EndLoc));
   }
   return Ptr;
 }

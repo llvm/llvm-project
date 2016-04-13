@@ -2345,7 +2345,9 @@ def OMPDeclareSimdDecl : Attr {
                  [ "", "inbranch", "notinbranch" ],
                  [ "BS_Undefined", "BS_Inbranch", "BS_Notinbranch" ]>,
     ExprArgument<"Simdlen">, VariadicExprArgument<"Uniforms">,
-    VariadicExprArgument<"Aligneds">, VariadicExprArgument<"Alignments">
+    VariadicExprArgument<"Aligneds">, VariadicExprArgument<"Alignments">,
+    VariadicExprArgument<"Linears">, VariadicUnsignedArgument<"Modifiers">,
+    VariadicExprArgument<"Steps">
   ];
   let AdditionalMembers = [{
     void printPrettyPragma(raw_ostream & OS, const PrintingPolicy &Policy)
@@ -2368,7 +2370,7 @@ def OMPDeclareSimdDecl : Attr {
         OS << ") ";
       }
       alignments_iterator NI = alignments_begin();
-      for (auto E : aligneds()) {
+      for (auto *E : aligneds()) {
         OS << "aligned(";
         E->printPretty(OS, nullptr, Policy);
         if (*NI) {
@@ -2377,6 +2379,23 @@ def OMPDeclareSimdDecl : Attr {
         }
         OS << ") ";
         ++NI;
+      }
+      steps_iterator I = steps_begin();
+      modifiers_iterator MI = modifiers_begin();
+      for (auto *E : linears()) {
+        OS << "linear(";
+        if (*MI != OMPC_LINEAR_unknown)
+          OS << getOpenMPSimpleClauseTypeName(OMPC_linear, *MI) << "(";
+        E->printPretty(OS, nullptr, Policy);
+        if (*MI != OMPC_LINEAR_unknown)
+          OS << ")";
+        if (*I) {
+          OS << ": ";
+          (*I)->printPretty(OS, nullptr, Policy);
+        }
+        OS << ") ";
+        ++I;
+        ++MI;
       }
     }
   }];

@@ -441,13 +441,14 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
   case BuiltinType::Int128:
   case BuiltinType::LongDouble:
   case BuiltinType::UInt128:
+  case BuiltinType::Float128:
   case BuiltinType::NullPtr:
   case BuiltinType::ObjCClass:
   case BuiltinType::ObjCId:
   case BuiltinType::ObjCSel:
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   case BuiltinType::Id:
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
   case BuiltinType::OCLSampler:
   case BuiltinType::OCLEvent:
   case BuiltinType::OCLClkEvent:

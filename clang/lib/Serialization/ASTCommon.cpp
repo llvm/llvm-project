@@ -91,6 +91,9 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::LongDouble:
     ID = PREDEF_TYPE_LONGDOUBLE_ID;
     break;
+  case BuiltinType::Float128:
+    ID = PREDEF_TYPE_FLOAT128_ID;
+    break;
   case BuiltinType::NullPtr:
     ID = PREDEF_TYPE_NULLPTR_ID;
     break;
@@ -131,7 +134,7 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::Id: \
     ID = PREDEF_TYPE_##Id##_ID; \
     break;
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
   case BuiltinType::OCLSampler:
     ID = PREDEF_TYPE_SAMPLER_ID;
     break;

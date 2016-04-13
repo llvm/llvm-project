@@ -1121,10 +1121,22 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DECL_TEMPLATE_TYPE_PARM);
   RECORD(DECL_NON_TYPE_TEMPLATE_PARM);
   RECORD(DECL_TEMPLATE_TEMPLATE_PARM);
+  RECORD(DECL_TYPE_ALIAS_TEMPLATE);
   RECORD(DECL_STATIC_ASSERT);
   RECORD(DECL_CXX_BASE_SPECIFIERS);
+  RECORD(DECL_CXX_CTOR_INITIALIZERS);
   RECORD(DECL_INDIRECTFIELD);
   RECORD(DECL_EXPANDED_NON_TYPE_TEMPLATE_PARM_PACK);
+  RECORD(DECL_EXPANDED_TEMPLATE_TEMPLATE_PARM_PACK);
+  RECORD(DECL_CLASS_SCOPE_FUNCTION_SPECIALIZATION);
+  RECORD(DECL_IMPORT);
+  RECORD(DECL_OMP_THREADPRIVATE);
+  RECORD(DECL_EMPTY);
+  RECORD(DECL_OBJC_TYPE_PARAM);
+  RECORD(DECL_OMP_CAPTUREDEXPR);
+  RECORD(DECL_PRAGMA_COMMENT);
+  RECORD(DECL_PRAGMA_DETECT_MISMATCH);
+  RECORD(DECL_OMP_DECLARE_REDUCTION);
   
   // Statements and Exprs can occur in the Decls and Types block.
   AddStmtsExprs(Stream, Record);
@@ -4695,6 +4707,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         auto *RD = cast<CXXRecordDecl>(D);
         UpdatedDeclContexts.insert(RD->getPrimaryContext());
         Record.AddCXXDefinitionData(RD);
+        // FIXME: Use AddOffset here.
         Record.push_back(WriteDeclContextLexicalBlock(
             *Context, const_cast<CXXRecordDecl *>(RD)));
 

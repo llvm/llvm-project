@@ -798,10 +798,12 @@ namespace clang {
       PREDEF_TYPE_RESERVE_ID_ID = 42,
       /// \brief The placeholder type for OpenMP array section.
       PREDEF_TYPE_OMP_ARRAY_SECTION = 43,
+      /// \brief The '__float128' type
+      PREDEF_TYPE_FLOAT128_ID = 44,
       /// \brief OpenCL image types with auto numeration
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
       PREDEF_TYPE_##Id##_ID,
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
     };
 
     /// \brief The number of predefined type IDs that are reserved for

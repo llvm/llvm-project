@@ -54,6 +54,7 @@ namespace clang {
     TST_half,         // OpenCL half, ARM NEON __fp16
     TST_float,
     TST_double,
+    TST_float128,
     TST_bool,         // _Bool
     TST_decimal32,    // _Decimal32
     TST_decimal64,    // _Decimal64
@@ -74,7 +75,7 @@ namespace clang {
     TST_unknown_anytype,  // __unknown_anytype extension
     TST_atomic,           // C11 _Atomic
 #define GENERIC_IMAGE_TYPE(ImgType, Id) TST_##ImgType##_t, // OpenCL image types
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
     TST_error // erroneous type
   };
 

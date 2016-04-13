@@ -98,6 +98,9 @@ private:
     return PerFunctionPasses;
   }
 
+  /// Set LLVM command line options passed through -backend-option.
+  void setCommandLineOpts();
+
   void CreatePasses(ModuleSummaryIndex *ModuleSummary);
 
   /// Generates the TargetMachine.
@@ -453,6 +456,24 @@ void EmitAssemblyHelper::CreatePasses(ModuleSummaryIndex *ModuleSummary) {
   PMBuilder.populateModulePassManager(*MPM);
 }
 
+void EmitAssemblyHelper::setCommandLineOpts() {
+  SmallVector<const char *, 16> BackendArgs;
+  BackendArgs.push_back("clang"); // Fake program name.
+  if (!CodeGenOpts.DebugPass.empty()) {
+    BackendArgs.push_back("-debug-pass");
+    BackendArgs.push_back(CodeGenOpts.DebugPass.c_str());
+  }
+  if (!CodeGenOpts.LimitFloatPrecision.empty()) {
+    BackendArgs.push_back("-limit-float-precision");
+    BackendArgs.push_back(CodeGenOpts.LimitFloatPrecision.c_str());
+  }
+  for (const std::string &BackendOption : CodeGenOpts.BackendOptions)
+    BackendArgs.push_back(BackendOption.c_str());
+  BackendArgs.push_back(nullptr);
+  llvm::cl::ParseCommandLineOptions(BackendArgs.size() - 1,
+                                    BackendArgs.data());
+}
+
 TargetMachine *EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   // Create the TargetMachine for generating code.
   std::string Error;
@@ -474,22 +495,6 @@ TargetMachine *EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
       .Default(~0u);
   assert(CodeModel != ~0u && "invalid code model!");
   llvm::CodeModel::Model CM = static_cast<llvm::CodeModel::Model>(CodeModel);
-
-  SmallVector<const char *, 16> BackendArgs;
-  BackendArgs.push_back("clang"); // Fake program name.
-  if (!CodeGenOpts.DebugPass.empty()) {
-    BackendArgs.push_back("-debug-pass");
-    BackendArgs.push_back(CodeGenOpts.DebugPass.c_str());
-  }
-  if (!CodeGenOpts.LimitFloatPrecision.empty()) {
-    BackendArgs.push_back("-limit-float-precision");
-    BackendArgs.push_back(CodeGenOpts.LimitFloatPrecision.c_str());
-  }
-  for (const std::string &BackendOption : CodeGenOpts.BackendOptions)
-    BackendArgs.push_back(BackendOption.c_str());
-  BackendArgs.push_back(nullptr);
-  llvm::cl::ParseCommandLineOptions(BackendArgs.size() - 1,
-                                    BackendArgs.data());
 
   std::string FeaturesStr =
       llvm::join(TargetOpts.Features.begin(), TargetOpts.Features.end(), ",");
@@ -628,6 +633,8 @@ bool EmitAssemblyHelper::AddEmitPasses(BackendAction Action,
 void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
                                       raw_pwrite_stream *OS) {
   TimeRegion Region(llvm::TimePassesIsEnabled ? &CodeGenerationTime : nullptr);
+
+  setCommandLineOpts();
 
   bool UsesCodeGen = (Action != Backend_EmitNothing &&
                       Action != Backend_EmitBC &&

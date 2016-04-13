@@ -449,6 +449,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::Float:
     case BuiltinType::Double:
     case BuiltinType::LongDouble:
+    case BuiltinType::Float128:
       ResultType = getTypeForFormat(getLLVMContext(),
                                     Context.getFloatTypeSemantics(T),
                                     /* UseNativeHalf = */ false);
@@ -466,7 +467,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
     case BuiltinType::Id:
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
     case BuiltinType::OCLSampler:
     case BuiltinType::OCLEvent:
     case BuiltinType::OCLClkEvent:

@@ -787,10 +787,28 @@ class ASTRecordWriter {
   /// declaration or type.
   SmallVector<Stmt *, 16> StmtsToEmit;
 
+  static const int MaxOffsetIndices = 4;
+  /// \brief Indices of record elements that describe offsets within the
+  /// bitcode. These will be converted to offsets relative to the current
+  /// record when emitted.
+  unsigned OffsetIndices[MaxOffsetIndices];
+  unsigned NumOffsetIndices = 0;
+
   /// \brief Flush all of the statements and expressions that have
   /// been added to the queue via AddStmt().
   void FlushStmts();
   void FlushSubStmts();
+
+  void PrepareToEmit(uint64_t MyOffset) {
+    // Convert offsets into relative form.
+    for (unsigned I = 0; I != NumOffsetIndices; ++I) {
+      auto &StoredOffset = (*Record)[OffsetIndices[I]];
+      assert(StoredOffset < MyOffset && "invalid offset");
+      if (StoredOffset)
+        StoredOffset = MyOffset - StoredOffset;
+    }
+    NumOffsetIndices = 0;
+  }
 
 public:
   /// Construct a ASTRecordWriter that uses the default encoding scheme.
@@ -801,6 +819,10 @@ public:
   /// ASTRecordWriter.
   ASTRecordWriter(ASTRecordWriter &Parent, ASTWriter::RecordDataImpl &Record)
       : Writer(Parent.Writer), Record(&Record) {}
+
+  /// Copying an ASTRecordWriter is almost certainly a bug.
+  ASTRecordWriter(const ASTRecordWriter&) = delete;
+  void operator=(const ASTRecordWriter&) = delete;
 
   /// \brief Extract the underlying record storage.
   ASTWriter::RecordDataImpl &getRecordData() const { return *Record; }
@@ -822,6 +844,7 @@ public:
   // FIXME: Allow record producers to suggest Abbrevs.
   uint64_t Emit(unsigned Code, unsigned Abbrev = 0) {
     uint64_t Offset = Writer->Stream.GetCurrentBitNo();
+    PrepareToEmit(Offset);
     Writer->Stream.EmitRecord(Code, *Record, Abbrev);
     FlushStmts();
     return Offset;
@@ -830,8 +853,17 @@ public:
   /// \brief Emit the record to the stream, preceded by its substatements.
   uint64_t EmitStmt(unsigned Code, unsigned Abbrev = 0) {
     FlushSubStmts();
+    PrepareToEmit(Writer->Stream.GetCurrentBitNo());
     Writer->Stream.EmitRecord(Code, *Record, Abbrev);
     return Writer->Stream.GetCurrentBitNo();
+  }
+
+  /// \brief Add a bit offset into the record. This will be converted into an
+  /// offset relative to the current record when emitted.
+  void AddOffset(uint64_t BitOffset) {
+    assert(NumOffsetIndices != MaxOffsetIndices && "too many offset indices");
+    OffsetIndices[NumOffsetIndices++] = Record->size();
+    Record->push_back(BitOffset);
   }
 
   /// \brief Add the given statement or expression to the queue of

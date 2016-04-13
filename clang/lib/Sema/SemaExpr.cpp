@@ -1155,6 +1155,48 @@ static QualType handleFloatConversion(Sema &S, ExprResult &LHS,
                                     /*convertFloat=*/!IsCompAssign);
 }
 
+/// \brief Diagnose attempts to convert between __float128 and long double if
+/// there is no support for such conversion. Helper function of
+/// UsualArithmeticConversions().
+static bool unsupportedTypeConversion(const Sema &S, QualType LHSType,
+                                      QualType RHSType) {
+  /*  No issue converting if at least one of the types is not a floating point
+      type or the two types have the same rank.
+  */
+  if (!LHSType->isFloatingType() || !RHSType->isFloatingType() ||
+      S.Context.getFloatingTypeOrder(LHSType, RHSType) == 0)
+    return false;
+
+  assert(LHSType->isFloatingType() && RHSType->isFloatingType() &&
+         "The remaining types must be floating point types.");
+
+  auto *LHSComplex = LHSType->getAs<ComplexType>();
+  auto *RHSComplex = RHSType->getAs<ComplexType>();
+
+  QualType LHSElemType = LHSComplex ?
+    LHSComplex->getElementType() : LHSType;
+  QualType RHSElemType = RHSComplex ?
+    RHSComplex->getElementType() : RHSType;
+
+  // No issue if the two types have the same representation
+  if (&S.Context.getFloatTypeSemantics(LHSElemType) ==
+      &S.Context.getFloatTypeSemantics(RHSElemType))
+    return false;
+
+  bool Float128AndLongDouble = (LHSElemType == S.Context.Float128Ty &&
+                                RHSElemType == S.Context.LongDoubleTy);
+  Float128AndLongDouble |= (LHSElemType == S.Context.LongDoubleTy &&
+                            RHSElemType == S.Context.Float128Ty);
+
+  /* We've handled the situation where __float128 and long double have the same
+     representation. The only other allowable conversion is if long double is
+     really just double.
+  */
+  return Float128AndLongDouble &&
+    (&S.Context.getFloatTypeSemantics(S.Context.LongDoubleTy) !=
+     &llvm::APFloat::IEEEdouble);
+}
+
 typedef ExprResult PerformCastFn(Sema &S, Expr *operand, QualType toType);
 
 namespace {
@@ -1317,6 +1359,11 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
     return LHSType;
 
   // At this point, we have two different arithmetic types.
+
+  // Diagnose attempts to convert between __float128 and long double where
+  // such conversions currently can't be handled.
+  if (unsupportedTypeConversion(*this, LHSType, RHSType))
+    return QualType();
 
   // Handle complex types first (C99 6.3.1.8p1).
   if (LHSType->isComplexType() || RHSType->isComplexType())
@@ -3325,10 +3372,12 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       }
     } else if (Literal.isFloat)
       Ty = Context.FloatTy;
-    else if (!Literal.isLong)
-      Ty = Context.DoubleTy;
-    else
+    else if (Literal.isLong)
       Ty = Context.LongDoubleTy;
+    else if (Literal.isFloat128)
+      Ty = Context.Float128Ty;
+    else
+      Ty = Context.DoubleTy;
 
     Res = BuildFloatingLiteral(*this, Literal, Ty, Tok.getLocation());
 
@@ -4917,7 +4966,7 @@ static bool isPlaceholderToRemoveAsArg(QualType type) {
   // Ignore all the non-placeholder types.
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   case BuiltinType::Id:
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
 #define PLACEHOLDER_TYPE(ID, SINGLETON_ID)
 #define BUILTIN_TYPE(ID, SINGLETON_ID) case BuiltinType::ID:
 #include "clang/AST/BuiltinTypes.def"
@@ -6193,30 +6242,87 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
   lhptee = S.Context.getQualifiedType(lhptee.getUnqualifiedType(), lhQual);
   rhptee = S.Context.getQualifiedType(rhptee.getUnqualifiedType(), rhQual);
 
+  // For OpenCL:
+  // 1. If LHS and RHS types match exactly and:
+  //  (a) AS match => use standard C rules, no bitcast or addrspacecast
+  //  (b) AS overlap => generate addrspacecast
+  //  (c) AS don't overlap => give an error
+  // 2. if LHS and RHS types don't match:
+  //  (a) AS match => use standard C rules, generate bitcast
+  //  (b) AS overlap => generate addrspacecast instead of bitcast
+  //  (c) AS don't overlap => give an error
+
+  // For OpenCL, non-null composite type is returned only for cases 1a and 1b.
   QualType CompositeTy = S.Context.mergeTypes(lhptee, rhptee);
 
+  // OpenCL cases 1c, 2a, 2b, and 2c.
   if (CompositeTy.isNull()) {
-    S.Diag(Loc, diag::ext_typecheck_cond_incompatible_pointers)
-      << LHSTy << RHSTy << LHS.get()->getSourceRange()
-      << RHS.get()->getSourceRange();
     // In this situation, we assume void* type. No especially good
     // reason, but this is what gcc does, and we do have to pick
     // to get a consistent AST.
-    QualType incompatTy = S.Context.getPointerType(S.Context.VoidTy);
-    LHS = S.ImpCastExprToType(LHS.get(), incompatTy, CK_BitCast);
-    RHS = S.ImpCastExprToType(RHS.get(), incompatTy, CK_BitCast);
+    QualType incompatTy;
+    if (S.getLangOpts().OpenCL) {
+      // OpenCL v1.1 s6.5 - Conversion between pointers to distinct address
+      // spaces is disallowed.
+      unsigned ResultAddrSpace;
+      if (lhQual.isAddressSpaceSupersetOf(rhQual)) {
+        // Cases 2a and 2b.
+        ResultAddrSpace = lhQual.getAddressSpace();
+      } else if (rhQual.isAddressSpaceSupersetOf(lhQual)) {
+        // Cases 2a and 2b.
+        ResultAddrSpace = rhQual.getAddressSpace();
+      } else {
+        // Cases 1c and 2c.
+        S.Diag(Loc,
+               diag::err_typecheck_op_on_nonoverlapping_address_space_pointers)
+            << LHSTy << RHSTy << 2 << LHS.get()->getSourceRange()
+            << RHS.get()->getSourceRange();
+        return QualType();
+      }
+
+      // Continue handling cases 2a and 2b.
+      incompatTy = S.Context.getPointerType(
+          S.Context.getAddrSpaceQualType(S.Context.VoidTy, ResultAddrSpace));
+      LHS = S.ImpCastExprToType(LHS.get(), incompatTy,
+                                (lhQual.getAddressSpace() != ResultAddrSpace)
+                                    ? CK_AddressSpaceConversion /* 2b */
+                                    : CK_BitCast /* 2a */);
+      RHS = S.ImpCastExprToType(RHS.get(), incompatTy,
+                                (rhQual.getAddressSpace() != ResultAddrSpace)
+                                    ? CK_AddressSpaceConversion /* 2b */
+                                    : CK_BitCast /* 2a */);
+    } else {
+      S.Diag(Loc, diag::ext_typecheck_cond_incompatible_pointers)
+          << LHSTy << RHSTy << LHS.get()->getSourceRange()
+          << RHS.get()->getSourceRange();
+      incompatTy = S.Context.getPointerType(S.Context.VoidTy);
+      LHS = S.ImpCastExprToType(LHS.get(), incompatTy, CK_BitCast);
+      RHS = S.ImpCastExprToType(RHS.get(), incompatTy, CK_BitCast);
+    }
     return incompatTy;
   }
 
   // The pointer types are compatible.
   QualType ResultTy = CompositeTy.withCVRQualifiers(MergedCVRQual);
+  auto LHSCastKind = CK_BitCast, RHSCastKind = CK_BitCast;
   if (IsBlockPointer)
     ResultTy = S.Context.getBlockPointerType(ResultTy);
-  else
+  else {
+    // Cases 1a and 1b for OpenCL.
+    auto ResultAddrSpace = ResultTy.getQualifiers().getAddressSpace();
+    LHSCastKind = lhQual.getAddressSpace() == ResultAddrSpace
+                      ? CK_BitCast /* 1a */
+                      : CK_AddressSpaceConversion /* 1b */;
+    RHSCastKind = rhQual.getAddressSpace() == ResultAddrSpace
+                      ? CK_BitCast /* 1a */
+                      : CK_AddressSpaceConversion /* 1b */;
     ResultTy = S.Context.getPointerType(ResultTy);
+  }
 
-  LHS = S.ImpCastExprToType(LHS.get(), ResultTy, CK_BitCast);
-  RHS = S.ImpCastExprToType(RHS.get(), ResultTy, CK_BitCast);
+  // For case 1a of OpenCL, S.ImpCastExprToType will not insert bitcast
+  // if the target type does not change.
+  LHS = S.ImpCastExprToType(LHS.get(), ResultTy, LHSCastKind);
+  RHS = S.ImpCastExprToType(RHS.get(), ResultTy, RHSCastKind);
   return ResultTy;
 }
 
@@ -6544,6 +6650,15 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
 
   QualType LHSTy = LHS.get()->getType();
   QualType RHSTy = RHS.get()->getType();
+
+  // Diagnose attempts to convert between __float128 and long double where
+  // such conversions currently can't be handled.
+  if (unsupportedTypeConversion(*this, LHSTy, RHSTy)) {
+    Diag(QuestionLoc,
+         diag::err_typecheck_cond_incompatible_operands) << LHSTy << RHSTy
+      << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
+    return QualType();
+  }
 
   // OpenCL v2.0 s6.12.5 - Blocks cannot be used as expressions of the ternary
   // selection operator (?:).
@@ -7277,6 +7392,11 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
     }
     return Incompatible;
   }
+
+  // Diagnose attempts to convert between __float128 and long double where
+  // such conversions currently can't be handled.
+  if (unsupportedTypeConversion(*this, LHSType, RHSType))
+    return Incompatible;
 
   // Arithmetic conversions.
   if (LHSType->isArithmeticType() && RHSType->isArithmeticType() &&
@@ -14845,7 +14965,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
   // Everything else should be impossible.
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   case BuiltinType::Id:
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define PLACEHOLDER_TYPE(Id, SingletonId)
 #include "clang/AST/BuiltinTypes.def"

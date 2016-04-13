@@ -1355,7 +1355,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   }
   case DeclSpec::TST_int128:
     if (!S.Context.getTargetInfo().hasInt128Type())
-      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_int128_unsupported);
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
+        << "__int128";
     if (DS.getTypeSpecSign() == DeclSpec::TSS_unsigned)
       Result = Context.UnsignedInt128Ty;
     else
@@ -1376,6 +1377,12 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
           << Result << "cl_khr_fp64";
       declarator.setInvalidType(true);
     }
+    break;
+  case DeclSpec::TST_float128:
+    if (!S.Context.getTargetInfo().hasFloat128Type())
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
+        << "__float128";
+    Result = Context.Float128Ty;
     break;
   case DeclSpec::TST_bool: Result = Context.BoolTy; break; // _Bool or bool
     break;
@@ -1580,7 +1587,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
                  .Cases("read_write", "__read_write", Context.Id##RWTy) \
                  .Default(Context.Id##ROTy); \
     break;
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
 
   case DeclSpec::TST_error:
     Result = Context.IntTy;
@@ -6971,13 +6978,6 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
 
   if (!Diagnoser)
     return true;
-
-  // We have an incomplete type. Produce a diagnostic.
-  if (Ident___float128 &&
-      T == Context.getTypeDeclType(Context.getFloat128StubType())) {
-    Diag(Loc, diag::err_typecheck_decl_incomplete_type___float128);
-    return true;
-  }
 
   Diagnoser->diagnose(*this, Loc, T);
 

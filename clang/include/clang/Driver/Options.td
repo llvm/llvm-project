@@ -95,6 +95,8 @@ def m_ppc_Features_Group : OptionGroup<"<ppc features group>">,
                            Group<m_Group>;
 def m_wasm_Features_Group : OptionGroup<"<wasm features group>">,
                             Group<m_Group>;
+def m_amdgpu_Features_Group : OptionGroup<"<amdgpu features group>">,
+                              Group<m_Group>;
 
 def m_libc_Group          : OptionGroup<"<m libc group>">, Group<m_Group>;
 def u_Group               : OptionGroup<"<u group>">;
@@ -1264,7 +1266,7 @@ def iquote : JoinedOrSeparate<["-"], "iquote">, Group<clang_i_Group>, Flags<[CC1
 def isysroot : JoinedOrSeparate<["-"], "isysroot">, Group<clang_i_Group>, Flags<[CC1Option]>,
   HelpText<"Set the system root directory (usually /)">, MetaVarName<"<dir>">;
 def isystem : JoinedOrSeparate<["-"], "isystem">, Group<clang_i_Group>,
-  Flags<[CC1Option, CoreOption]>,
+  Flags<[CC1Option]>,
   HelpText<"Add directory to SYSTEM include search path">, MetaVarName<"<directory>">;
 def iwithprefixbefore : JoinedOrSeparate<["-"], "iwithprefixbefore">, Group<clang_i_Group>,
   HelpText<"Set directory to include search path with prefix">, MetaVarName<"<dir>">,
@@ -1456,6 +1458,16 @@ def ffixed_x18 : Flag<["-"], "ffixed-x18">, Group<m_aarch64_Features_Group>,
 def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
 def mno_simd128 : Flag<["-"], "mno-simd128">, Group<m_wasm_Features_Group>;
 
+def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">,
+  Flags<[HelpHidden]>,
+  Group<m_Group>,
+  HelpText<"Generate additional code for specified <version> of debugger ABI (AMDGPU only)">,
+  MetaVarName<"<version>">;
+def mamdgpu_debugger_insert_nops : Flag<["-"], "mamdgpu-debugger-insert-nops">,
+  Group<m_amdgpu_Features_Group>;
+def mamdgpu_debugger_reserve_trap_regs : Flag<["-"], "mamdgpu-debugger-reserve-trap-regs">,
+  Group<m_amdgpu_Features_Group>;
+
 def mvsx : Flag<["-"], "mvsx">, Group<m_ppc_Features_Group>;
 def mno_vsx : Flag<["-"], "mno-vsx">, Group<m_ppc_Features_Group>;
 def mpower8_vector : Flag<["-"], "mpower8-vector">,
@@ -1493,6 +1505,10 @@ def minvariant_function_descriptors :
 def mno_invariant_function_descriptors :
   Flag<["-"], "mno-invariant-function-descriptors">,
   Group<m_ppc_Features_Group>;
+def mfloat128: Flag<["-"], "mfloat128">,
+    Group<m_ppc_Features_Group>;
+def mno_float128 : Flag<["-"], "mno-float128">,
+    Group<m_ppc_Features_Group>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable AltiVec vector initializer syntax">;

@@ -893,9 +893,10 @@ public:
   CanQualType SignedCharTy, ShortTy, IntTy, LongTy, LongLongTy, Int128Ty;
   CanQualType UnsignedCharTy, UnsignedShortTy, UnsignedIntTy, UnsignedLongTy;
   CanQualType UnsignedLongLongTy, UnsignedInt128Ty;
-  CanQualType FloatTy, DoubleTy, LongDoubleTy;
+  CanQualType FloatTy, DoubleTy, LongDoubleTy, Float128Ty;
   CanQualType HalfTy; // [OpenCL 6.1.1.1], ARM NEON
   CanQualType FloatComplexTy, DoubleComplexTy, LongDoubleComplexTy;
+  CanQualType Float128ComplexTy;
   CanQualType VoidPtrTy, NullPtrTy;
   CanQualType DependentTy, OverloadTy, BoundMemberTy, UnknownAnyTy;
   CanQualType BuiltinFnTy;
@@ -904,7 +905,7 @@ public:
   CanQualType ObjCBuiltinBoolTy;
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   CanQualType SingletonId;
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
   CanQualType OCLSamplerTy, OCLEventTy, OCLClkEventTy;
   CanQualType OCLQueueTy, OCLNDRangeTy, OCLReserveIDTy;
   CanQualType OMPArraySectionTy;
@@ -967,9 +968,6 @@ public:
 
   /// \brief Retrieve the declaration for the 128-bit unsigned integer type.
   TypedefDecl *getUInt128Decl() const;
-
-  /// \brief Retrieve the declaration for a 128-bit float stub type.
-  TypeDecl *getFloat128StubType() const;
 
   //===--------------------------------------------------------------------===//
   //                           Type Constructors

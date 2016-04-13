@@ -156,6 +156,7 @@ add_custom_command(OUTPUT ${dst}
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
                    COMMENT "Copying vtables blacklist")
 add_custom_target(vtables_blacklist DEPENDS ${dst})
+set_target_properties(vtables_blacklist PROPERTIES FOLDER "Misc")
 if(TARGET clang)
   add_dependencies(clang vtables_blacklist)
 endif()

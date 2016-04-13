@@ -478,7 +478,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::Id: \
     return getOrCreateStructPtrType("opencl_" #ImgType "_" #Suffix "_t", \
                                     SingletonId);
-#include "clang/AST/OpenCLImageTypes.def"
+#include "clang/Basic/OpenCLImageTypes.def"
   case BuiltinType::OCLSampler:
     return DBuilder.createBasicType(
         "opencl_sampler_t", CGM.getContext().getTypeSize(BT),
@@ -528,7 +528,13 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::Half:
   case BuiltinType::Float:
   case BuiltinType::LongDouble:
+  case BuiltinType::Float128:
   case BuiltinType::Double:
+    // FIXME: For targets where long double and __float128 have the same size,
+    // they are currently indistinguishable in the debugger without some
+    // special treatment. However, there is currently no consensus on encoding
+    // and this should be updated once a DWARF encoding exists for distinct
+    // floating point types of the same size.
     Encoding = llvm::dwarf::DW_ATE_float;
     break;
   }
@@ -1119,6 +1125,11 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
   // Since a single ctor/dtor corresponds to multiple functions, it doesn't
   // make sense to give a single ctor/dtor a linkage name.
   StringRef MethodLinkageName;
+  // FIXME: 'isFunctionLocalClass' seems like an arbitrary/unintentional
+  // property to use here. It may've been intended to model "is non-external
+  // type" but misses cases of non-function-local but non-external classes such
+  // as those in anonymous namespaces as well as the reverse - external types
+  // that are function local, such as those in (non-local) inline functions.
   if (!IsCtorOrDtor && !isFunctionLocalClass(Method->getParent()))
     MethodLinkageName = CGM.getMangledName(Method);
 
