@@ -234,6 +234,8 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   if (PrepareForThinLTO) {
     MPM.add(createAggressiveDCEPass());        // Delete dead instructions
     MPM.add(createInstructionCombiningPass()); // Combine silly seq's
+    // Rename anon function to export them
+    MPM.add(createNameAnonFunctionPass());
     return;
   }
   // Rotate Loop - disable header duplication at -Oz

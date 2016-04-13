@@ -505,6 +505,9 @@ FunctionPass *createLoopVersioningPass();
 //
 FunctionPass *createLoopDataPrefetchPass();
 
+///===---------------------------------------------------------------------===//
+ModulePass *createNameAnonFunctionPass();
+
 } // End llvm namespace
 
 #endif
