@@ -46,7 +46,7 @@ private:
 
   // Temps
   llvm::Mangler Mangler;
-  std::vector<StringRef> Libcalls;
+  StringSet<> Libcalls;
 
   // Output
   SmallPtrSetImpl<const GlobalValue *> &AsmUsed;
@@ -64,7 +64,7 @@ private:
          I != E; ++I) {
       LibFunc::Func F = static_cast<LibFunc::Func>(I);
       if (TLI.has(F))
-        Libcalls.push_back(TLI.getName(F));
+        Libcalls.insert(TLI.getName(F));
     }
 
     SmallPtrSet<const TargetLowering *, 1> TLSet;
@@ -80,12 +80,8 @@ private:
              I != E; ++I)
           if (const char *Name =
                   Lowering->getLibcallName(static_cast<RTLIB::Libcall>(I)))
-            Libcalls.push_back(Name);
+            Libcalls.insert(Name);
     }
-
-    array_pod_sort(Libcalls.begin(), Libcalls.end());
-    Libcalls.erase(std::unique(Libcalls.begin(), Libcalls.end()),
-                   Libcalls.end());
   }
 
   void findAsmUses(const GlobalValue &GV) {
@@ -108,8 +104,7 @@ private:
     // optimizations like -globalopt, causing problems when later optimizations
     // add new library calls (e.g., llvm.memset => memset and printf => puts).
     // Leave it to the linker to remove any dead code (e.g. with -dead_strip).
-    if (isa<Function>(GV) &&
-        std::binary_search(Libcalls.begin(), Libcalls.end(), GV.getName()))
+    if (isa<Function>(GV) && Libcalls.count(GV.getName()))
       AsmUsed.insert(&GV);
   }
 };
