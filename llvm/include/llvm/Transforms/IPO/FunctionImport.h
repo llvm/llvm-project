@@ -11,6 +11,7 @@
 #define LLVM_FUNCTIONIMPORT_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/IR/GlobalValue.h"
 
 #include <functional>
 #include <map>
@@ -29,7 +30,7 @@ public:
   /// containing all the functions to import for a source module.
   /// The keys is the GUID identifying a function to import, and the value
   /// is the threshold applied when deciding to import it.
-  typedef std::map<uint64_t, unsigned> FunctionsToImportTy;
+  typedef std::map<GlobalValue::GUID, unsigned> FunctionsToImportTy;
 
   /// The map contains an entry for every module to import from, the key being
   /// the module identifier to pass to the ModuleLoader. The value is the set of
@@ -37,7 +38,7 @@ public:
   typedef StringMap<FunctionsToImportTy> ImportMapTy;
 
   /// The set contains an entry for every global value the module exports.
-  typedef std::unordered_set<uint64_t> ExportSetTy;
+  typedef std::unordered_set<GlobalValue::GUID> ExportSetTy;
 
   /// Create a Function Importer.
   FunctionImporter(
