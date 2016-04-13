@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LTOInternalize.h"
+#include "UpdateCompilerUsed.h"
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -23,20 +23,23 @@
 using namespace llvm;
 
 namespace {
-// Helper class that populate the array of symbols used in inlined assembly.
-class ComputeAsmUsed {
+
+// Helper class that collects AsmUsed and user supplied libcalls.
+class PreserveLibCallsAndAsmUsed {
 public:
-  ComputeAsmUsed(const StringSet<> &AsmUndefinedRefs, const TargetMachine &TM,
-                 const Module &TheModule,
-                 SmallPtrSetImpl<const GlobalValue *> &AsmUsed)
-      : AsmUndefinedRefs(AsmUndefinedRefs), TM(TM), AsmUsed(AsmUsed) {
-    accumulateAndSortLibcalls(TheModule);
+  PreserveLibCallsAndAsmUsed(const StringSet<> &AsmUndefinedRefs,
+                             const TargetMachine &TM,
+                             SmallPtrSetImpl<const GlobalValue *> &LLVMUsed)
+      : AsmUndefinedRefs(AsmUndefinedRefs), TM(TM), LLVMUsed(LLVMUsed) {}
+
+  void findInModule(const Module &TheModule) {
+    initializeLibCalls(TheModule);
     for (const Function &F : TheModule)
-      findAsmUses(F);
+      findLibCallsAndAsm(F);
     for (const GlobalVariable &GV : TheModule.globals())
-      findAsmUses(GV);
+      findLibCallsAndAsm(GV);
     for (const GlobalAlias &GA : TheModule.aliases())
-      findAsmUses(GA);
+      findLibCallsAndAsm(GA);
   }
 
 private:
@@ -49,12 +52,12 @@ private:
   StringSet<> Libcalls;
 
   // Output
-  SmallPtrSetImpl<const GlobalValue *> &AsmUsed;
+  SmallPtrSetImpl<const GlobalValue *> &LLVMUsed;
 
   // Collect names of runtime library functions. User-defined functions with the
   // same names are added to llvm.compiler.used to prevent them from being
   // deleted by optimizations.
-  void accumulateAndSortLibcalls(const Module &TheModule) {
+  void initializeLibCalls(const Module &TheModule) {
     TargetLibraryInfoImpl TLII(Triple(TM.getTargetTriple()));
     TargetLibraryInfo TLI(TLII);
 
@@ -84,7 +87,7 @@ private:
     }
   }
 
-  void findAsmUses(const GlobalValue &GV) {
+  void findLibCallsAndAsm(const GlobalValue &GV) {
     // There are no restrictions to apply to declarations.
     if (GV.isDeclaration())
       return;
@@ -93,66 +96,52 @@ private:
     if (GV.hasPrivateLinkage())
       return;
 
-    SmallString<64> Buffer;
-    TM.getNameWithPrefix(Buffer, &GV, Mangler);
-
-    if (AsmUndefinedRefs.count(Buffer))
-      AsmUsed.insert(&GV);
-
     // Conservatively append user-supplied runtime library functions to
     // llvm.compiler.used.  These could be internalized and deleted by
     // optimizations like -globalopt, causing problems when later optimizations
     // add new library calls (e.g., llvm.memset => memset and printf => puts).
     // Leave it to the linker to remove any dead code (e.g. with -dead_strip).
     if (isa<Function>(GV) && Libcalls.count(GV.getName()))
-      AsmUsed.insert(&GV);
+      LLVMUsed.insert(&GV);
+
+    SmallString<64> Buffer;
+    TM.getNameWithPrefix(Buffer, &GV, Mangler);
+    if (AsmUndefinedRefs.count(Buffer))
+      LLVMUsed.insert(&GV);
   }
 };
 
 } // namespace anonymous
 
-static void findUsedValues(GlobalVariable *LLVMUsed,
-                           SmallPtrSetImpl<const GlobalValue *> &UsedValues) {
-  if (!LLVMUsed)
+void llvm::UpdateCompilerUsed(Module &TheModule, const TargetMachine &TM,
+                              const StringSet<> &AsmUndefinedRefs) {
+  SmallPtrSet<const GlobalValue *, 8> UsedValues;
+  PreserveLibCallsAndAsmUsed(AsmUndefinedRefs, TM, UsedValues)
+      .findInModule(TheModule);
+
+  if (UsedValues.empty())
     return;
 
-  ConstantArray *Inits = cast<ConstantArray>(LLVMUsed->getInitializer());
-  for (unsigned i = 0, e = Inits->getNumOperands(); i != e; ++i)
-    if (GlobalValue *GV =
-            dyn_cast<GlobalValue>(Inits->getOperand(i)->stripPointerCasts()))
-      UsedValues.insert(GV);
-}
-
-// mark which symbols can not be internalized
-void llvm::LTOInternalize(
-    Module &TheModule, const TargetMachine &TM,
-    const std::function<bool(const GlobalValue &)> &MustPreserveSymbols,
-    const StringSet<> &AsmUndefinedRefs) {
-  SmallPtrSet<const GlobalValue *, 8> AsmUsed;
-  ComputeAsmUsed(AsmUndefinedRefs, TM, TheModule, AsmUsed);
-
-  GlobalVariable *LLVMCompilerUsed =
-      TheModule.getGlobalVariable("llvm.compiler.used");
-  findUsedValues(LLVMCompilerUsed, AsmUsed);
-  if (LLVMCompilerUsed)
-    LLVMCompilerUsed->eraseFromParent();
-
-  if (!AsmUsed.empty()) {
-    llvm::Type *i8PTy = llvm::Type::getInt8PtrTy(TheModule.getContext());
-    std::vector<Constant *> asmUsed2;
-    for (const auto *GV : AsmUsed) {
-      Constant *c =
-          ConstantExpr::getBitCast(const_cast<GlobalValue *>(GV), i8PTy);
-      asmUsed2.push_back(c);
-    }
-
-    llvm::ArrayType *ATy = llvm::ArrayType::get(i8PTy, asmUsed2.size());
-    LLVMCompilerUsed = new llvm::GlobalVariable(
-        TheModule, ATy, false, llvm::GlobalValue::AppendingLinkage,
-        llvm::ConstantArray::get(ATy, asmUsed2), "llvm.compiler.used");
-
-    LLVMCompilerUsed->setSection("llvm.metadata");
+  llvm::Type *i8PTy = llvm::Type::getInt8PtrTy(TheModule.getContext());
+  std::vector<Constant *> UsedValuesList;
+  for (const auto *GV : UsedValues) {
+    Constant *c =
+        ConstantExpr::getBitCast(const_cast<GlobalValue *>(GV), i8PTy);
+    UsedValuesList.push_back(c);
   }
 
-  internalizeModule(TheModule, MustPreserveSymbols);
+  GlobalVariable *LLVMUsed = TheModule.getGlobalVariable("llvm.compiler.used");
+  if (LLVMUsed) {
+    ConstantArray *Inits = cast<ConstantArray>(LLVMUsed->getInitializer());
+    for (auto &V : Inits->operands())
+      UsedValuesList.push_back(cast<Constant>(&V));
+    LLVMUsed->eraseFromParent();
+  }
+
+  llvm::ArrayType *ATy = llvm::ArrayType::get(i8PTy, UsedValuesList.size());
+  LLVMUsed = new llvm::GlobalVariable(
+      TheModule, ATy, false, llvm::GlobalValue::AppendingLinkage,
+      llvm::ConstantArray::get(ATy, UsedValuesList), "llvm.compiler.used");
+
+  LLVMUsed->setSection("llvm.metadata");
 }

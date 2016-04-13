@@ -1,7 +1,7 @@
 add_llvm_library(LLVMLTO
   LTOModule.cpp
   LTOCodeGenerator.cpp
-  LTOInternalize.cpp
+  UpdateCompilerUsed.cpp
   ThinLTOCodeGenerator.cpp
 
   ADDITIONAL_HEADER_DIRS
