@@ -601,9 +601,7 @@ int main(int argc, char **argv) {
       CodeGen.setModule(std::move(Module));
     } else if (!CodeGen.addModule(Module.get())) {
       // Print a message here so that we know addModule() did not abort.
-      errs() << argv[0] << ": error adding file '" << InputFilenames[i]
-             << "'\n";
-      return 1;
+      error("error adding file '" + InputFilenames[i] + "'");
     }
   }
 
@@ -637,8 +635,7 @@ int main(int argc, char **argv) {
     if (!CodeGen.optimize(DisableVerify, DisableInline, DisableGVNLoadPRE,
                           DisableLTOVectorization)) {
       // Diagnostic messages should have been printed by the handler.
-      errs() << argv[0] << ": error optimizing the code\n";
-      return 1;
+      error("error optimizing the code");
     }
 
     if (SaveModuleFile) {
@@ -646,10 +643,8 @@ int main(int argc, char **argv) {
       ModuleFilename += ".merged.bc";
       std::string ErrMsg;
 
-      if (!CodeGen.writeMergedModules(ModuleFilename.c_str())) {
-        errs() << argv[0] << ": writing merged module failed.\n";
-        return 1;
-      }
+      if (!CodeGen.writeMergedModules(ModuleFilename.c_str()))
+        error("writing merged module failed.");
     }
 
     std::list<tool_output_file> OSs;
@@ -660,40 +655,29 @@ int main(int argc, char **argv) {
         PartFilename += "." + utostr(I);
       std::error_code EC;
       OSs.emplace_back(PartFilename, EC, sys::fs::F_None);
-      if (EC) {
-        errs() << argv[0] << ": error opening the file '" << PartFilename
-               << "': " << EC.message() << "\n";
-        return 1;
-      }
+      if (EC)
+        error("error opening the file '" + PartFilename + "': " + EC.message());
       OSPtrs.push_back(&OSs.back().os());
     }
 
-    if (!CodeGen.compileOptimized(OSPtrs)) {
+    if (!CodeGen.compileOptimized(OSPtrs))
       // Diagnostic messages should have been printed by the handler.
-      errs() << argv[0] << ": error compiling the code\n";
-      return 1;
-    }
+      error("error compiling the code");
 
     for (tool_output_file &OS : OSs)
       OS.keep();
   } else {
-    if (Parallelism != 1) {
-      errs() << argv[0] << ": -j must be specified together with -o\n";
-      return 1;
-    }
+    if (Parallelism != 1)
+      error("-j must be specified together with -o");
 
-    if (SaveModuleFile) {
-      errs() << argv[0] << ": -save-merged-module must be specified with -o\n";
-      return 1;
-    }
+    if (SaveModuleFile)
+      error(": -save-merged-module must be specified with -o");
 
     const char *OutputName = nullptr;
     if (!CodeGen.compile_to_file(&OutputName, DisableVerify, DisableInline,
-                                 DisableGVNLoadPRE, DisableLTOVectorization)) {
+                                 DisableGVNLoadPRE, DisableLTOVectorization))
+      error("error compiling the code");
       // Diagnostic messages should have been printed by the handler.
-      errs() << argv[0] << ": error compiling the code\n";
-      return 1;
-    }
 
     outs() << "Wrote native object file '" << OutputName << "'\n";
   }
