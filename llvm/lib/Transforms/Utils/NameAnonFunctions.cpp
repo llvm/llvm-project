@@ -98,5 +98,5 @@ INITIALIZE_PASS_END(NameAnonFunction, "name-anon-functions",
                     "Provide a name to nameless functions", false, false)
 
 namespace llvm {
-Pass *createNameAnonFunctionPass() { return new NameAnonFunction(); }
+ModulePass *createNameAnonFunctionPass() { return new NameAnonFunction(); }
 }
