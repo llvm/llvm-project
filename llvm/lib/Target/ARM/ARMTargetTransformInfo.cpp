@@ -18,12 +18,12 @@ using namespace llvm;
 int ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 
-  unsigned Bits = Ty->getPrimitiveSizeInBits();
-  if (Bits == 0 || Bits > 32)
-    return 4;
+ unsigned Bits = Ty->getPrimitiveSizeInBits();
+ if (Bits == 0 || Bits > 64)
+   return 4;
 
-  int32_t SImmVal = Imm.getSExtValue();
-  uint32_t ZImmVal = Imm.getZExtValue();
+  int64_t SImmVal = Imm.getSExtValue();
+  uint64_t ZImmVal = Imm.getZExtValue();
   if (!ST->isThumb()) {
     if ((SImmVal >= 0 && SImmVal < 65536) ||
         (ARM_AM::getSOImmVal(ZImmVal) != -1) ||
