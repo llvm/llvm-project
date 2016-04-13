@@ -53,7 +53,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
                         uptr access_size, u32 exp, bool fatal);
 void ReportStackOverflow(const SignalContext &sig);
 void ReportDeadlySignal(const char *description, const SignalContext &sig);
-void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
+void ReportNewDeleteSizeMismatch(uptr addr, uptr alloc_size, uptr delete_size,
                                  BufferedStackTrace *free_stack);
 void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack);
 void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack);

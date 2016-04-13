@@ -117,24 +117,24 @@ public:
     unique_lock() _NOEXCEPT : __m_(nullptr), __owns_(false) {}
     _LIBCPP_INLINE_VISIBILITY
     explicit unique_lock(mutex_type& __m)
-        : __m_(addressof(__m)), __owns_(true) {__m_->lock();}
+        : __m_(_VSTD::addressof(__m)), __owns_(true) {__m_->lock();}
     _LIBCPP_INLINE_VISIBILITY
     unique_lock(mutex_type& __m, defer_lock_t) _NOEXCEPT
-        : __m_(addressof(__m)), __owns_(false) {}
+        : __m_(_VSTD::addressof(__m)), __owns_(false) {}
     _LIBCPP_INLINE_VISIBILITY
     unique_lock(mutex_type& __m, try_to_lock_t)
-        : __m_(addressof(__m)), __owns_(__m.try_lock()) {}
+        : __m_(_VSTD::addressof(__m)), __owns_(__m.try_lock()) {}
     _LIBCPP_INLINE_VISIBILITY
     unique_lock(mutex_type& __m, adopt_lock_t)
-        : __m_(addressof(__m)), __owns_(true) {}
+        : __m_(_VSTD::addressof(__m)), __owns_(true) {}
     template <class _Clock, class _Duration>
     _LIBCPP_INLINE_VISIBILITY
         unique_lock(mutex_type& __m, const chrono::time_point<_Clock, _Duration>& __t)
-            : __m_(addressof(__m)), __owns_(__m.try_lock_until(__t)) {}
+            : __m_(_VSTD::addressof(__m)), __owns_(__m.try_lock_until(__t)) {}
     template <class _Rep, class _Period>
     _LIBCPP_INLINE_VISIBILITY
         unique_lock(mutex_type& __m, const chrono::duration<_Rep, _Period>& __d)
-            : __m_(addressof(__m)), __owns_(__m.try_lock_for(__d)) {}
+            : __m_(_VSTD::addressof(__m)), __owns_(__m.try_lock_for(__d)) {}
     _LIBCPP_INLINE_VISIBILITY
     ~unique_lock()
     {

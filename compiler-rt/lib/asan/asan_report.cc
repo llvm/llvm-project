@@ -815,7 +815,7 @@ void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {
   ReportErrorSummary("double-free", &stack);
 }
 
-void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
+void ReportNewDeleteSizeMismatch(uptr addr, uptr alloc_size, uptr delete_size,
                                  BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
   Decorator d;
@@ -829,7 +829,7 @@ void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
   Printf("%s  object passed to delete has wrong type:\n", d.EndWarning());
   Printf("  size of the allocated type:   %zd bytes;\n"
          "  size of the deallocated type: %zd bytes.\n",
-         asan_mz_size(reinterpret_cast<void*>(addr)), delete_size);
+         alloc_size, delete_size);
   CHECK_GT(free_stack->size, 0);
   ScarinessScore::PrintSimple(10, "new-delete-type-mismatch");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);

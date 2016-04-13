@@ -47,8 +47,8 @@
 # EXE-DAG:    0x70000005 MIPS_FLAGS           NOTPOT
 # EXE-DAG:    0x70000006 MIPS_BASE_ADDRESS
 # EXE-DAG:    0x7000000A MIPS_LOCAL_GOTNO     2
-# EXE-DAG:    0x70000011 MIPS_SYMTABNO        3
-# EXE-DAG:    0x70000013 MIPS_GOTSYM          0x3
+# EXE-DAG:    0x70000011 MIPS_SYMTABNO        2
+# EXE-DAG:    0x70000013 MIPS_GOTSYM          0x2
 # EXE-DAG:    0x70000016 MIPS_RLD_MAP         [[RLDMAPADDR]]
 # EXE:      ]
 
@@ -73,7 +73,6 @@
 # DSO:          Name: @
 # DSO:          Name: __start@
 # DSO:          Name: _foo@
-# DSO:          Name: _gp@
 # DSO:      ]
 # DSO:      DynamicSection [
 # DSO-NEXT:   Tag        Type                 Name/Value
@@ -82,8 +81,8 @@
 # DSO-DAG:    0x70000005 MIPS_FLAGS           NOTPOT
 # DSO-DAG:    0x70000006 MIPS_BASE_ADDRESS    0x0
 # DSO-DAG:    0x7000000A MIPS_LOCAL_GOTNO     2
-# DSO-DAG:    0x70000011 MIPS_SYMTABNO        4
-# DSO-DAG:    0x70000013 MIPS_GOTSYM          0x4
+# DSO-DAG:    0x70000011 MIPS_SYMTABNO        3
+# DSO-DAG:    0x70000013 MIPS_GOTSYM          0x3
 # DSO:      ]
 
   .text

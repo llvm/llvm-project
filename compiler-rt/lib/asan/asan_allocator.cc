@@ -479,14 +479,6 @@ struct Allocator {
   void QuarantineChunk(AsanChunk *m, void *ptr, BufferedStackTrace *stack,
                        AllocType alloc_type) {
     CHECK_EQ(m->chunk_state, CHUNK_QUARANTINE);
-
-    if (m->alloc_type != alloc_type) {
-      if (atomic_load(&alloc_dealloc_mismatch, memory_order_acquire)) {
-        ReportAllocTypeMismatch((uptr)ptr, stack, (AllocType)m->alloc_type,
-                                (AllocType)alloc_type);
-      }
-    }
-
     CHECK_GE(m->alloc_tid, 0);
     if (SANITIZER_WORDSIZE == 64)  // On 32-bits this resides in user area.
       CHECK_EQ(m->free_tid, kInvalidTid);
@@ -523,14 +515,24 @@ struct Allocator {
 
     uptr chunk_beg = p - kChunkHeaderSize;
     AsanChunk *m = reinterpret_cast<AsanChunk *>(chunk_beg);
-    if (delete_size && flags()->new_delete_type_mismatch &&
-        delete_size != m->UsedSize()) {
-      ReportNewDeleteSizeMismatch(p, delete_size, stack);
-    }
+
     ASAN_FREE_HOOK(ptr);
     // Must mark the chunk as quarantined before any changes to its metadata.
     // Do not quarantine given chunk if we failed to set CHUNK_QUARANTINE flag.
     if (!AtomicallySetQuarantineFlagIfAllocated(m, ptr, stack)) return;
+
+    if (m->alloc_type != alloc_type) {
+      if (atomic_load(&alloc_dealloc_mismatch, memory_order_acquire)) {
+        ReportAllocTypeMismatch((uptr)ptr, stack, (AllocType)m->alloc_type,
+                                (AllocType)alloc_type);
+      }
+    }
+
+    if (delete_size && flags()->new_delete_type_mismatch &&
+        delete_size != m->UsedSize()) {
+      ReportNewDeleteSizeMismatch(p, m->UsedSize(), delete_size, stack);
+    }
+
     QuarantineChunk(m, ptr, stack, alloc_type);
   }
 

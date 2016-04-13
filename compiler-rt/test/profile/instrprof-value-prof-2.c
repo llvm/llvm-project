@@ -33,10 +33,19 @@ void caller_with_value_site_never_called2() {}
 void caller_without_value_site2() {}
 void caller_with_vp2() {}
 
+void (*callee1Ptr)();
+void (*callee2Ptr)();
+
+void __attribute__ ((noinline)) setFunctionPointers () {
+  callee1Ptr = callee1;
+  callee2Ptr = callee2;
+}
+
 int main(int argc, const char *argv[]) {
   unsigned S, NS = 10, V;
   const __llvm_profile_data *Data, *DataEnd;
 
+  setFunctionPointers();
   Data = __llvm_profile_begin_data();
   DataEnd = __llvm_profile_end_data();
   for (; Data < DataEnd; Data = __llvm_profile_iterate_data(Data)) {
@@ -55,9 +64,9 @@ int main(int argc, const char *argv[]) {
     for (S = 0; S < NS; S++) {
       unsigned C;
       for (C = 0; C < S + 1; C++) {
-        __llvm_profile_instrument_target((uint64_t)&callee1, (void *)Data, S);
+        __llvm_profile_instrument_target((uint64_t)callee1Ptr, (void *)Data, S);
         if (C % 2 == 0)
-          __llvm_profile_instrument_target((uint64_t)&callee2, (void *)Data, S);
+          __llvm_profile_instrument_target((uint64_t)callee2Ptr, (void *)Data, S);
       }
     }
   }

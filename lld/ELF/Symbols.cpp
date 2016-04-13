@@ -218,10 +218,12 @@ int SymbolBody::compare(SymbolBody *Other) {
   if (L > R)
     return -Other->compare(this);
 
+  uint8_t V = getMinVisibility(getVisibility(), Other->getVisibility());
   if (isShared() != Other->isShared()) {
     SymbolBody *Shared = isShared() ? this : Other;
     Shared->MustBeInDynSym = true;
-    if (Shared->getVisibility() == STV_DEFAULT) {
+    if (Shared->getVisibility() == STV_DEFAULT &&
+        (V == STV_DEFAULT || V == STV_PROTECTED)) {
       // We want to export all symbols that exist in the executable and are
       // preemptable in DSOs, so that the symbols in the executable can
       // preempt symbols in the DSO at runtime.
@@ -231,7 +233,6 @@ int SymbolBody::compare(SymbolBody *Other) {
   }
 
   if (!isShared() && !Other->isShared()) {
-    uint8_t V = getMinVisibility(getVisibility(), Other->getVisibility());
     setVisibility(V);
     Other->setVisibility(V);
   }
@@ -296,9 +297,8 @@ UndefinedElf<ELFT>::UndefinedElf(const Elf_Sym &Sym)
 
 template <typename ELFT>
 DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
-                                         OutputSectionBase<ELFT> &Section,
-                                         uint8_t StOther)
-    : Defined(SymbolBody::DefinedSyntheticKind, N, STB_GLOBAL, StOther,
+                                         OutputSectionBase<ELFT> &Section)
+    : Defined(SymbolBody::DefinedSyntheticKind, N, STB_GLOBAL, STV_HIDDEN,
               0 /* Type */),
       Value(Value), Section(Section) {}
 
