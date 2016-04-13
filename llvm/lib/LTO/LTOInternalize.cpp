@@ -52,7 +52,7 @@ private:
   const TargetMachine &TM;
 
   // Temps
-  Mangler Mangler;
+  llvm::Mangler Mangler;
   std::vector<StringRef> Libcalls;
 
   // Output
