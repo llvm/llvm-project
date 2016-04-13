@@ -15,7 +15,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -44,10 +43,6 @@ static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"));
 
 static cl::opt<bool> DisableOutput("disable-output", cl::desc("Disable output"),
                                    cl::init(false));
-
-static cl::opt<bool> EmitSummaryIndex("module-summary",
-                                      cl::desc("Emit module summary index"),
-                                      cl::init(false));
 
 static cl::opt<bool> EmitModuleHash("module-hash", cl::desc("Emit module hash"),
                                     cl::init(false));
@@ -84,14 +79,9 @@ static void WriteOutputFile(const Module *M) {
     exit(1);
   }
 
-  if (Force || !CheckBitcodeOutputToConsole(Out->os(), true)) {
-    std::unique_ptr<ModuleSummaryIndex> Index;
-    if (EmitSummaryIndex)
-      Index = ModuleSummaryIndexBuilder(M).takeIndex();
-
-    WriteBitcodeToFile(M, Out->os(), PreserveBitcodeUseListOrder, Index.get(),
+  if (Force || !CheckBitcodeOutputToConsole(Out->os(), true))
+    WriteBitcodeToFile(M, Out->os(), PreserveBitcodeUseListOrder, nullptr,
                        EmitModuleHash);
-  }
 
   // Declare success.
   Out->keep();

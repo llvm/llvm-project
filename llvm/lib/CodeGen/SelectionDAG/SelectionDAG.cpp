@@ -3295,18 +3295,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, SDLoc DL, EVT VT,
   // Handle the case of two scalars.
   if (const ConstantSDNode *Scalar1 = dyn_cast<ConstantSDNode>(Cst1)) {
     if (const ConstantSDNode *Scalar2 = dyn_cast<ConstantSDNode>(Cst2)) {
-      if (SDValue Folded =
-          FoldConstantArithmetic(Opcode, DL, VT, Scalar1, Scalar2)) {
-        if (!VT.isVector())
-          return Folded;
-        SmallVector<SDValue, 4> Outputs;
-        // We may have a vector type but a scalar result. Create a splat.
-        Outputs.resize(VT.getVectorNumElements(), Outputs.back());
-        // Build a big vector out of the scalar elements we generated.
-        return getNode(ISD::BUILD_VECTOR, SDLoc(), VT, Outputs);
-      } else {
-        return SDValue();
-      }
+      SDValue Folded = FoldConstantArithmetic(Opcode, DL, VT, Scalar1, Scalar2);
+      assert((!Folded || !VT.isVector()) &&
+             "Can't fold vectors ops with scalar operands");
+      return Folded;
     }
   }
 

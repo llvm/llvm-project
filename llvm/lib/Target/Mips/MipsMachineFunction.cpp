@@ -42,7 +42,9 @@ unsigned MipsFunctionInfo::getGlobalBaseReg() {
       STI.inMips16Mode()
           ? &Mips::CPU16RegsRegClass
           : STI.inMicroMipsMode()
-                ? &Mips::GPRMM16RegClass
+                ? STI.hasMips64()
+                      ? &Mips::GPRMM16_64RegClass
+                      : &Mips::GPRMM16RegClass
                 : static_cast<const MipsTargetMachine &>(MF.getTarget())
                           .getABI()
                           .IsN64()

@@ -46,11 +46,11 @@ define void @s_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %val) nounwind 
 }
 
 ; FUNC-LABEL: {{^}}v_abs_v2i32:
-; GCN: v_sub_i32_e32 [[NEG0:v[0-9]+]], vcc, 0, [[SRC0:v[0-9]+]]
-; GCN: v_sub_i32_e32 [[NEG1:v[0-9]+]], vcc, 0, [[SRC1:v[0-9]+]]
+; GCN-DAG: v_sub_i32_e32 [[NEG0:v[0-9]+]], vcc, 0, [[SRC0:v[0-9]+]]
+; GCN-DAG: v_sub_i32_e32 [[NEG1:v[0-9]+]], vcc, 0, [[SRC1:v[0-9]+]]
 
-; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG0]], [[SRC0]]
-; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG1]], [[SRC1]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG0]], [[SRC0]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG1]], [[SRC1]]
 
 ; GCN: v_add_i32
 ; GCN: v_add_i32
@@ -97,15 +97,15 @@ define void @s_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %val) nounwind 
 }
 
 ; FUNC-LABEL: {{^}}v_abs_v4i32:
-; GCN: v_sub_i32_e32 [[NEG0:v[0-9]+]], vcc, 0, [[SRC0:v[0-9]+]]
-; GCN: v_sub_i32_e32 [[NEG1:v[0-9]+]], vcc, 0, [[SRC1:v[0-9]+]]
-; GCN: v_sub_i32_e32 [[NEG2:v[0-9]+]], vcc, 0, [[SRC2:v[0-9]+]]
-; GCN: v_sub_i32_e32 [[NEG3:v[0-9]+]], vcc, 0, [[SRC3:v[0-9]+]]
+; GCN-DAG: v_sub_i32_e32 [[NEG0:v[0-9]+]], vcc, 0, [[SRC0:v[0-9]+]]
+; GCN-DAG: v_sub_i32_e32 [[NEG1:v[0-9]+]], vcc, 0, [[SRC1:v[0-9]+]]
+; GCN-DAG: v_sub_i32_e32 [[NEG2:v[0-9]+]], vcc, 0, [[SRC2:v[0-9]+]]
+; GCN-DAG: v_sub_i32_e32 [[NEG3:v[0-9]+]], vcc, 0, [[SRC3:v[0-9]+]]
 
-; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG0]], [[SRC0]]
-; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG1]], [[SRC1]]
-; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG2]], [[SRC2]]
-; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG3]], [[SRC3]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG0]], [[SRC0]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG1]], [[SRC1]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG2]], [[SRC2]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG3]], [[SRC3]]
 
 ; GCN: v_add_i32
 ; GCN: v_add_i32

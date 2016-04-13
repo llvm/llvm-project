@@ -158,6 +158,12 @@ DisableSLPVectorization("disable-slp-vectorization",
                         cl::desc("Disable the slp vectorization pass"),
                         cl::init(false));
 
+static cl::opt<bool> EmitSummaryIndex("module-summary",
+                                      cl::desc("Emit module summary index"),
+                                      cl::init(false));
+
+static cl::opt<bool> EmitModuleHash("module-hash", cl::desc("Emit module hash"),
+                                    cl::init(false));
 
 static cl::opt<bool>
 DisableSimplifyLibCalls("disable-simplify-libcalls",
@@ -617,7 +623,8 @@ int main(int argc, char **argv) {
     if (OutputAssembly)
       Passes.add(createPrintModulePass(*OS, "", PreserveAssemblyUseListOrder));
     else
-      Passes.add(createBitcodeWriterPass(*OS, PreserveBitcodeUseListOrder));
+      Passes.add(createBitcodeWriterPass(*OS, PreserveBitcodeUseListOrder,
+                                         EmitSummaryIndex, EmitModuleHash));
   }
 
   // Before executing passes, print the final values of the LLVM options.

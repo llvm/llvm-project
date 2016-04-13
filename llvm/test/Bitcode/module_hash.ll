@@ -1,14 +1,14 @@
 ; Check per module hash.
-; RUN: llvm-as  -module-hash  %s -o - | llvm-bcanalyzer -dump | FileCheck %s --check-prefix=MOD1
+; RUN: opt  -module-hash  %s -o - | llvm-bcanalyzer -dump | FileCheck %s --check-prefix=MOD1
 ; MOD1: <HASH op0={{[0-9]*}} op1={{[0-9]*}} op2={{[0-9]*}} op3={{[0-9]*}} op4={{[0-9]*}} (match)/>
-; RUN: llvm-as  -module-hash  %p/Inputs/module_hash.ll -o - | llvm-bcanalyzer -dump | FileCheck %s --check-prefix=MOD2
+; RUN: opt  -module-hash  %p/Inputs/module_hash.ll -o - | llvm-bcanalyzer -dump | FileCheck %s --check-prefix=MOD2
 ; MOD2: <HASH op0={{[0-9]*}} op1={{[0-9]*}} op2={{[0-9]*}} op3={{[0-9]*}} op4={{[0-9]*}} (match)/>
 
 ; Check that the hash matches in the combined index.
 
 ; First regenerate the modules with a summary
-; RUN: llvm-as  -module-hash -module-summary %s -o %t.m1.bc
-; RUN: llvm-as  -module-hash -module-summary %p/Inputs/module_hash.ll -o %t.m2.bc
+; RUN: opt  -module-hash -module-summary %s -o %t.m1.bc
+; RUN: opt  -module-hash -module-summary %p/Inputs/module_hash.ll -o %t.m2.bc
 
 ; Recover the hashes from the modules themselves.
 ; RUN: llvm-bcanalyzer -dump %t.m1.bc | grep '<HASH'  > %t.hash

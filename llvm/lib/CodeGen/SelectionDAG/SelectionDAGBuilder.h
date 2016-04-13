@@ -904,7 +904,7 @@ private:
 
   // These two are implemented in StatepointLowering.cpp
   void visitGCRelocate(const GCRelocateInst &I);
-  void visitGCResult(const CallInst &I);
+  void visitGCResult(const GCResultInst &I);
 
   void visitUserOp1(const Instruction &I) {
     llvm_unreachable("UserOp1 should not exist at instruction selection time!");

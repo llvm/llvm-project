@@ -12,9 +12,9 @@ entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
 
-  %a = load float, float addrspace(1)* %in
-  %b = load float, float addrspace(1)* %b_ptr
-  %c = load float, float addrspace(1)* %c_ptr
+  %a = load volatile float, float addrspace(1)* %in
+  %b = load volatile float, float addrspace(1)* %b_ptr
+  %c = load volatile float, float addrspace(1)* %c_ptr
 
   %tmp0 = fmul float %a, %b
   %tmp1 = fadd float %tmp0, %c
@@ -71,11 +71,11 @@ entry:
   %d_ptr = getelementptr float, float addrspace(1)* %in, i32 3
   %e_ptr = getelementptr float, float addrspace(1)* %in, i32 4
 
-  %a = load float, float addrspace(1)* %in
-  %b = load float, float addrspace(1)* %b_ptr
-  %c = load float, float addrspace(1)* %c_ptr
-  %d = load float, float addrspace(1)* %d_ptr
-  %e = load float, float addrspace(1)* %e_ptr
+  %a = load volatile float, float addrspace(1)* %in
+  %b = load volatile float, float addrspace(1)* %b_ptr
+  %c = load volatile float, float addrspace(1)* %c_ptr
+  %d = load volatile float, float addrspace(1)* %d_ptr
+  %e = load volatile float, float addrspace(1)* %e_ptr
 
   %tmp0 = fmul float %a, %b
   %tmp1 = fadd float %tmp0, %c

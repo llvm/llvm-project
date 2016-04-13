@@ -117,7 +117,7 @@ VerifySCEV("verify-scev",
            cl::desc("Verify ScalarEvolution's backedge taken counts (slow)"));
 static cl::opt<bool>
     VerifySCEVMap("verify-scev-maps",
-                  cl::desc("Verify no dangling value in ScalarEvolution's"
+                  cl::desc("Verify no dangling value in ScalarEvolution's "
                            "ExprValueMap (slow)"));
 
 //===----------------------------------------------------------------------===//

@@ -199,7 +199,7 @@ bool RABasic::spillInterferences(LiveInterval &VirtReg, unsigned PhysReg,
     Matrix->unassign(Spill);
 
     // Spill the extracted interval.
-    LiveRangeEdit LRE(&Spill, SplitVRegs, *MF, *LIS, VRM);
+    LiveRangeEdit LRE(&Spill, SplitVRegs, *MF, *LIS, VRM, nullptr, &DeadRemats);
     spiller().spill(LRE);
   }
   return true;
@@ -258,7 +258,7 @@ unsigned RABasic::selectOrSplit(LiveInterval &VirtReg,
   DEBUG(dbgs() << "spilling: " << VirtReg << '\n');
   if (!VirtReg.isSpillable())
     return ~0u;
-  LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM);
+  LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM, nullptr, &DeadRemats);
   spiller().spill(LRE);
 
   // The live virtual register requesting allocation was spilled, so tell
@@ -283,6 +283,7 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM));
 
   allocatePhysRegs();
+  postOptimization();
 
   // Diagnostic output before rewriting
   DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << *VRM << "\n");

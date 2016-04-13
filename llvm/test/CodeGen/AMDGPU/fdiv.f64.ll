@@ -31,8 +31,8 @@
 ; COMMON: s_endpgm
 define void @fdiv_f64(double addrspace(1)* %out, double addrspace(1)* %in) nounwind {
   %gep.1 = getelementptr double, double addrspace(1)* %in, i32 1
-  %num = load double, double addrspace(1)* %in
-  %den = load double, double addrspace(1)* %gep.1
+  %num = load volatile double, double addrspace(1)* %in
+  %den = load volatile double, double addrspace(1)* %gep.1
   %result = fdiv double %num, %den
   store double %result, double addrspace(1)* %out
   ret void

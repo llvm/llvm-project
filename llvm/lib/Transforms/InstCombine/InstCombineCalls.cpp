@@ -834,11 +834,12 @@ static Instruction *simplifyMaskedScatter(IntrinsicInst &II, InstCombiner &IC) {
 static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
   Value *Ptr = II.getOperand(0);
   Value *Mask = II.getOperand(1);
+  Constant *ZeroVec = Constant::getNullValue(II.getType());
 
   // Special case a zero mask since that's not a ConstantDataVector.
-  // This masked load instruction does nothing, so return an undef.
+  // This masked load instruction creates a zero vector.
   if (isa<ConstantAggregateZero>(Mask))
-    return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
+    return IC.replaceInstUsesWith(II, ZeroVec);
 
   auto *ConstMask = dyn_cast<ConstantDataVector>(Mask);
   if (!ConstMask)
@@ -857,7 +858,9 @@ static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
   // on each element's most significant bit (the sign bit).
   Constant *BoolMask = getNegativeIsTrueBoolVec(ConstMask);
 
-  CallInst *NewMaskedLoad = IC.Builder->CreateMaskedLoad(PtrCast, 1, BoolMask);
+  // The pass-through vector for an x86 masked load is a zero vector.
+  CallInst *NewMaskedLoad =
+      IC.Builder->CreateMaskedLoad(PtrCast, 1, BoolMask, ZeroVec);
   return IC.replaceInstUsesWith(II, NewMaskedLoad);
 }
 

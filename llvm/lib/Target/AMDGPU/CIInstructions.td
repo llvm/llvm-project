@@ -333,8 +333,10 @@ class FlatAtomicPat <FLAT inst, SDPatternOperator node, ValueType vt,
 >;
 
 def : FlatAtomicPat <FLAT_ATOMIC_ADD_RTN, atomic_add_global, i32>;
-def : FlatAtomicPat <FLAT_ATOMIC_AND_RTN, atomic_and_global, i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_SUB_RTN, atomic_sub_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_INC_RTN, atomic_inc_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_DEC_RTN, atomic_dec_global, i32>;
+def : FlatAtomicPat <FLAT_ATOMIC_AND_RTN, atomic_and_global, i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_SMAX_RTN, atomic_max_global, i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_UMAX_RTN, atomic_umax_global, i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_SMIN_RTN, atomic_min_global, i32>;
@@ -344,6 +346,18 @@ def : FlatAtomicPat <FLAT_ATOMIC_SWAP_RTN, atomic_swap_global, i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_CMPSWAP_RTN, atomic_cmp_swap_global, i32, v2i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_XOR_RTN, atomic_xor_global, i32>;
 
+def : FlatAtomicPat <FLAT_ATOMIC_ADD_X2_RTN, atomic_add_global, i64>;
+def : FlatAtomicPat <FLAT_ATOMIC_SUB_X2_RTN, atomic_sub_global, i64>;
+def : FlatAtomicPat <FLAT_ATOMIC_INC_X2_RTN, atomic_inc_global, i64>;
+def : FlatAtomicPat <FLAT_ATOMIC_DEC_X2_RTN, atomic_dec_global, i64>;
+def : FlatAtomicPat <FLAT_ATOMIC_AND_X2_RTN, atomic_and_global, i64>;
+def : FlatAtomicPat <FLAT_ATOMIC_SMAX_X2_RTN, atomic_max_global, i64>;
+def : FlatAtomicPat <FLAT_ATOMIC_UMAX_X2_RTN, atomic_umax_global, i64>;
+def : FlatAtomicPat <FLAT_ATOMIC_SMIN_X2_RTN, atomic_min_global, i64>;
+def : FlatAtomicPat <FLAT_ATOMIC_UMIN_X2_RTN, atomic_umin_global, i64>;
+def : FlatAtomicPat <FLAT_ATOMIC_OR_X2_RTN, atomic_or_global, i64>;
+def : FlatAtomicPat <FLAT_ATOMIC_SWAP_X2_RTN, atomic_swap_global, i64>;
 def : FlatAtomicPat <FLAT_ATOMIC_CMPSWAP_X2_RTN, atomic_cmp_swap_global, i64, v2i64>;
+def : FlatAtomicPat <FLAT_ATOMIC_XOR_X2_RTN, atomic_xor_global, i64>;
 
 } // End Predicates = [isCIVI]

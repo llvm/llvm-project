@@ -513,10 +513,27 @@ class RDHWR_MMR6_DESC : MMR6Arch<"rdhwr">, MipsR6Inst {
 class WAIT_MMR6_DESC : WaitMM<"wait">;
 class SSNOP_MMR6_DESC : Barrier<"ssnop">;
 class SLL_MMR6_DESC : shift_rotate_imm<"sll", uimm5, GPR32Opnd, II_SLL>;
-class DIV_MMR6_DESC : ArithLogicR<"div", GPR32Opnd>;
-class DIVU_MMR6_DESC : ArithLogicR<"divu", GPR32Opnd>;
-class MOD_MMR6_DESC : ArithLogicR<"mod", GPR32Opnd>;
-class MODU_MMR6_DESC : ArithLogicR<"modu", GPR32Opnd>;
+
+class DIVMOD_MMR6_DESC_BASE<string opstr, RegisterOperand GPROpnd,
+                            SDPatternOperator OpNode=null_frag>
+    : MipsR6Inst {
+  dag OutOperandList = (outs GPROpnd:$rd);
+  dag InOperandList = (ins GPROpnd:$rs, GPROpnd:$rt);
+  string AsmString = !strconcat(opstr, "\t$rd, $rs, $rt");
+  list<dag> Pattern = [(set GPROpnd:$rd, (OpNode GPROpnd:$rs, GPROpnd:$rt))];
+  string BaseOpcode = opstr;
+  Format f = FrmR;
+  let isCommutable = 0;
+  let isReMaterializable = 1;
+
+  // This instruction doesn't trap division by zero itself. We must insert
+  // teq instructions as well.
+  bit usesCustomInserter = 1;
+}
+class DIV_MMR6_DESC  : DIVMOD_MMR6_DESC_BASE<"div", GPR32Opnd, sdiv>;
+class DIVU_MMR6_DESC : DIVMOD_MMR6_DESC_BASE<"divu", GPR32Opnd, udiv>;
+class MOD_MMR6_DESC  : DIVMOD_MMR6_DESC_BASE<"mod", GPR32Opnd, srem>;
+class MODU_MMR6_DESC : DIVMOD_MMR6_DESC_BASE<"modu", GPR32Opnd, urem>;
 class AND_MMR6_DESC : ArithLogicR<"and", GPR32Opnd>;
 class ANDI_MMR6_DESC : ArithLogicI<"andi", uimm16, GPR32Opnd>;
 class NOR_MMR6_DESC : ArithLogicR<"nor", GPR32Opnd>;

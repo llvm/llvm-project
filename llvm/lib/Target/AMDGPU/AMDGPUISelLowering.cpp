@@ -2813,6 +2813,8 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STORE_MSKOR)
   NODE_NAME_CASE(TBUFFER_STORE_FORMAT)
   NODE_NAME_CASE(ATOMIC_CMP_SWAP)
+  NODE_NAME_CASE(ATOMIC_INC)
+  NODE_NAME_CASE(ATOMIC_DEC)
   case AMDGPUISD::LAST_AMDGPU_ISD_NUMBER: break;
   }
   return nullptr;

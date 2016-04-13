@@ -320,8 +320,8 @@ private:
   int cmpValues(const Value *L, const Value *R);
 
   /// Compare two Instructions for equivalence, similar to
-  /// Instruction::isSameOperationAs but with modifications to the type
-  /// comparison.
+  /// Instruction::isSameOperationAs.
+  ///
   /// Stages are listed in "most significant stage first" order:
   /// On each stage below, we do comparison between some left and right
   /// operation parts. If parts are non-equal, we assign parts comparison
@@ -339,8 +339,9 @@ private:
   /// For example, for Load it would be:
   /// 6.1.Load: volatile (as boolean flag)
   /// 6.2.Load: alignment (as integer numbers)
-  /// 6.3.Load: synch-scope (as integer numbers)
-  /// 6.4.Load: range metadata (as integer numbers)
+  /// 6.3.Load: ordering (as underlying enum class value)
+  /// 6.4.Load: synch-scope (as integer numbers)
+  /// 6.5.Load: range metadata (as integer ranges)
   /// On this stage its better to see the code, since its not more than 10-15
   /// strings for particular instruction, and could change sometimes.
   int cmpOperations(const Instruction *L, const Instruction *R) const;
@@ -905,9 +906,9 @@ int FunctionComparator::cmpTypes(Type *TyL, Type *TyR) const {
 int FunctionComparator::cmpOperations(const Instruction *L,
                                       const Instruction *R) const {
   // Differences from Instruction::isSameOperationAs:
-  //  * replace type comparison with calls to isEquivalentType.
-  //  * we test for I->hasSameSubclassOptionalData (nuw/nsw/tail) at the top
-  //  * because of the above, we don't test for the tail bit on calls later on
+  //  * replace type comparison with calls to cmpTypes.
+  //  * we test for I->getRawSubclassOptionalData (nuw/nsw/tail) at the top.
+  //  * because of the above, we don't test for the tail bit on calls later on.
   if (int Res = cmpNumbers(L->getOpcode(), R->getOpcode()))
     return Res;
 
@@ -1000,6 +1001,7 @@ int FunctionComparator::cmpOperations(const Instruction *L,
       if (int Res = cmpNumbers(LIndices[i], RIndices[i]))
         return Res;
     }
+    return 0;
   }
   if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(L)) {
     ArrayRef<unsigned> LIndices = EVI->getIndices();
@@ -1017,7 +1019,6 @@ int FunctionComparator::cmpOperations(const Instruction *L,
       return Res;
     return cmpNumbers(FI->getSynchScope(), cast<FenceInst>(R)->getSynchScope());
   }
-
   if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(L)) {
     if (int Res = cmpNumbers(CXI->isVolatile(),
                              cast<AtomicCmpXchgInst>(R)->isVolatile()))

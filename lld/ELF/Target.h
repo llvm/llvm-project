@@ -10,6 +10,7 @@
 #ifndef LLD_ELF_TARGET_H
 #define LLD_ELF_TARGET_H
 
+#include "InputSection.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ELF.h"
 
@@ -68,16 +69,15 @@ public:
 
   virtual void writeThunk(uint8_t *Buf, uint64_t S) const {}
 
-  virtual void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                           uint64_t P, uint64_t SA) const = 0;
+  virtual RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const = 0;
+  virtual void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const = 0;
   virtual bool isGotRelative(uint32_t Type) const;
   bool canRelaxTls(uint32_t Type, const SymbolBody *S) const;
   template <class ELFT>
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const;
-  size_t relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                  uint64_t SA, const SymbolBody &S) const;
   virtual ~TargetInfo();
 
+  unsigned TlsGdToLeSkip = 1;
   unsigned PageSize = 4096;
 
   // On freebsd x86_64 the first page cannot be mmaped.
@@ -103,18 +103,14 @@ public:
   uint32_t ThunkSize = 0;
   bool UseLazyBinding = false;
 
+  virtual void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
+  virtual void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
+  virtual void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
+  virtual void relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
+
 private:
   virtual bool needsCopyRelImpl(uint32_t Type) const;
   virtual bool needsPltImpl(uint32_t Type) const;
-
-  virtual size_t relaxTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                uint64_t P, uint64_t SA) const;
-  virtual size_t relaxTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                uint64_t P, uint64_t SA) const;
-  virtual size_t relaxTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                uint64_t P, uint64_t SA) const;
-  virtual size_t relaxTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                                uint64_t P, uint64_t SA) const;
 };
 
 uint64_t getPPC64TocBase();

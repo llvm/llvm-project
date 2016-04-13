@@ -159,45 +159,48 @@ static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
                                          const MachineFrameInfo *MFI,
                                          UnderlyingObjectsVector &Objects,
                                          const DataLayout &DL) {
-  if (!MI->hasOneMemOperand() ||
-      (!(*MI->memoperands_begin())->getValue() &&
-       !(*MI->memoperands_begin())->getPseudoValue()) ||
-      (*MI->memoperands_begin())->isVolatile())
-    return;
-
-  if (const PseudoSourceValue *PSV =
-      (*MI->memoperands_begin())->getPseudoValue()) {
-    // Function that contain tail calls don't have unique PseudoSourceValue
-    // objects. Two PseudoSourceValues might refer to the same or overlapping
-    // locations. The client code calling this function assumes this is not the
-    // case. So return a conservative answer of no known object.
-    if (MFI->hasTailCall())
-      return;
-
-    // For now, ignore PseudoSourceValues which may alias LLVM IR values
-    // because the code that uses this function has no way to cope with
-    // such aliases.
-    if (!PSV->isAliased(MFI)) {
-      bool MayAlias = PSV->mayAlias(MFI);
-      Objects.push_back(UnderlyingObjectsVector::value_type(PSV, MayAlias));
-    }
-    return;
-  }
-
-  const Value *V = (*MI->memoperands_begin())->getValue();
-  if (!V)
-    return;
-
-  SmallVector<Value *, 4> Objs;
-  getUnderlyingObjects(V, Objs, DL);
-
-  for (Value *V : Objs) {
-    if (!isIdentifiedObject(V)) {
+  for (auto *MMO : MI->memoperands()) {
+    if (MMO->isVolatile()) {
       Objects.clear();
       return;
     }
 
-    Objects.push_back(UnderlyingObjectsVector::value_type(V, true));
+    if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
+      // Function that contain tail calls don't have unique PseudoSourceValue
+      // objects. Two PseudoSourceValues might refer to the same or overlapping
+      // locations. The client code calling this function assumes this is not the
+      // case. So return a conservative answer of no known object.
+      if (MFI->hasTailCall()) {
+        Objects.clear();
+        return;
+      }
+
+      // For now, ignore PseudoSourceValues which may alias LLVM IR values
+      // because the code that uses this function has no way to cope with
+      // such aliases.
+      if (PSV->isAliased(MFI)) {
+        Objects.clear();
+        return;
+      }
+
+      bool MayAlias = PSV->mayAlias(MFI);
+      Objects.push_back(UnderlyingObjectsVector::value_type(PSV, MayAlias));
+    } else if (const Value *V = MMO->getValue()) {
+      SmallVector<Value *, 4> Objs;
+      getUnderlyingObjects(V, Objs, DL);
+
+      for (Value *V : Objs) {
+        if (!isIdentifiedObject(V)) {
+          Objects.clear();
+          return;
+        }
+
+        Objects.push_back(UnderlyingObjectsVector::value_type(V, true));
+      }
+    } else {
+      Objects.clear();
+      return;
+    }
   }
 }
 
@@ -1037,6 +1040,14 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
           // Add dependencies to previous stores and loads mapped to V.
           addChainDependencies(SU, stores_, V);
           addChainDependencies(SU, (ThisMayAlias ? Loads : NonAliasLoads), V);
+        }
+        // Update the store map after all chains have been added to avoid adding
+        // self-loop edge if multiple underlying objects are present.
+        for (auto &underlObj : Objs) {
+          ValueType V = underlObj.getPointer();
+          bool ThisMayAlias = underlObj.getInt();
+
+          Value2SUsMap &stores_ = (ThisMayAlias ? Stores : NonAliasStores);
 
           // Map this store to V.
           stores_.insert(SU, V);

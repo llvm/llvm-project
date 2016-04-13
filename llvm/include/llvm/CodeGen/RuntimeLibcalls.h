@@ -467,8 +467,6 @@ namespace RTLIB {
     ATOMIC_FETCH_NAND_8,
     ATOMIC_FETCH_NAND_16,
 
-    ATOMIC_IS_LOCK_FREE,
-
     // Stack Protector Fail.
     STACKPROTECTOR_CHECK_FAIL,
 

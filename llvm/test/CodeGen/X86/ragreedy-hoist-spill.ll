@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-macosx -regalloc=greedy | FileCheck %s
 
 ; This testing case is reduced from 254.gap SyFgets function.
-; We make sure a spill is not hoisted to a hotter outer loop.
+; We make sure a spill is hoisted to a cold BB inside the hotter outer loop.
 
 %struct.TMP.1 = type { %struct.TMP.2*, %struct.TMP.2*, [1024 x i8] }
 %struct.TMP.2 = type { i8*, i32, i32, i16, i16, %struct.TMP.3, i32, i8*, i32 (i8*)*, i32 (i8*, i8*, i32)*, i64 (i8*, i64, i32)*, i32 (i8*, i8*, i32)*, %struct.TMP.3, %struct.TMP.4*, i32, [3 x i8], [1 x i8], %struct.TMP.3, i32, i64 }
@@ -181,6 +181,10 @@ sw.bb474:
   br i1 %cmp476, label %if.end517, label %do.body479.preheader
 
 do.body479.preheader:
+  ; CHECK: do.body479.preheader
+  ; spill is hoisted here. Although loop depth1 is even hotter than loop depth2, do.body479.preheader is cold.
+  ; CHECK: movq %r{{.*}}, {{[0-9]+}}(%rsp)
+  ; CHECK: land.rhs485
   %cmp4833314 = icmp eq i8 undef, 0
   br i1 %cmp4833314, label %if.end517, label %land.rhs485
 
@@ -200,8 +204,8 @@ land.lhs.true490:
 
 lor.rhs500:
   ; CHECK: lor.rhs500
-  ; Make sure that we don't hoist the spill to outer loops.
-  ; CHECK: movq %r{{.*}}, {{[0-9]+}}(%rsp)
+  ; Make sure spill is hoisted to a cold preheader in outside loop.
+  ; CHECK-NOT: movq %r{{.*}}, {{[0-9]+}}(%rsp)
   ; CHECK: callq {{.*}}maskrune
   %call3.i.i2792 = call i32 @__maskrune(i32 undef, i64 256)
   br i1 undef, label %land.lhs.true504, label %do.body479.backedge

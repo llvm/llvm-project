@@ -337,7 +337,8 @@ SDNode *AMDGPUDAGToDAGISel::Select(SDNode *N) {
     return nullptr;   // Already selected.
   }
 
-  if (isa<AtomicSDNode>(N))
+  if (isa<AtomicSDNode>(N) ||
+      (Opc == AMDGPUISD::ATOMIC_INC || Opc == AMDGPUISD::ATOMIC_DEC))
     N = glueCopyToM0(N);
 
   switch (Opc) {

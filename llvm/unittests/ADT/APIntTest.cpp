@@ -994,6 +994,23 @@ TEST(APIntTest, IsSplat) {
   EXPECT_TRUE(E.isSplat(32));
 }
 
+TEST(APIntTest, isMask) {
+  EXPECT_FALSE(APIntOps::isMask(APInt(32, 0x01010101)));
+  EXPECT_FALSE(APIntOps::isMask(APInt(32, 0xf0000000)));
+  EXPECT_FALSE(APIntOps::isMask(APInt(32, 0xffff0000)));
+  EXPECT_FALSE(APIntOps::isMask(APInt(32, 0xff << 1)));
+
+  for (int N : { 1, 2, 3, 4, 7, 8, 16, 32, 64, 127, 128, 129, 256 }) {
+    EXPECT_FALSE(APIntOps::isMask(APInt(N, 0)));
+
+    APInt One(N, 1);
+    for (int I = 1; I <= N; ++I) {
+      APInt MaskVal = One.shl(I) - 1;
+      EXPECT_TRUE(APIntOps::isMask(MaskVal));
+    }
+  }
+}
+
 #if defined(__clang__)
 // Disable the pragma warning from versions of Clang without -Wself-move
 #pragma clang diagnostic push

@@ -242,6 +242,11 @@
           logical (kind=omp_logical_kind) omp_is_initial_device
         end function omp_is_initial_device
 
+        function omp_get_initial_device() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_get_initial_device
+        end function omp_get_initial_device
+
         subroutine omp_init_lock(lockvar) bind(c)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_init_lock

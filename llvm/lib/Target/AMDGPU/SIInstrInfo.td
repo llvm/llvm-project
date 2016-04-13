@@ -95,6 +95,14 @@ def SIload_constant : SDNode<"AMDGPUISD::LOAD_CONSTANT",
                       [SDNPMayLoad, SDNPMemOperand]
 >;
 
+def SIatomic_inc : SDNode<"AMDGPUISD::ATOMIC_INC", SDTAtomic2,
+  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
+>;
+
+def SIatomic_dec : SDNode<"AMDGPUISD::ATOMIC_DEC", SDTAtomic2,
+  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
+>;
+
 def SItbuffer_store : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT",
   SDTypeProfile<0, 13,
     [SDTCisVT<0, v4i32>,   // rsrc(SGPR)
@@ -179,6 +187,13 @@ def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
   return isConstantLoad(cast<LoadSDNode>(N), -1) &&
   static_cast<const SITargetLowering *>(getTargetLowering())->isMemOpUniform(N);
 }]>;
+
+//===----------------------------------------------------------------------===//
+// PatFrags for global memory operations
+//===----------------------------------------------------------------------===//
+
+def atomic_inc_global : global_binary_atomic_op<SIatomic_inc>;
+def atomic_dec_global : global_binary_atomic_op<SIatomic_dec>;
 
 //===----------------------------------------------------------------------===//
 // SDNodes and PatFrag for local loads and stores to enable s_mov_b32 m0, -1
@@ -279,9 +294,10 @@ def si_uniform_br_scc : PatFrag <
   return isCBranchSCC(N);
 }]>;
 
-multiclass SIAtomicM0Glue2 <string op_name> {
+multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0> {
 
-  def _glue : SDNode <"ISD::ATOMIC_"#op_name, SDTAtomic2,
+  def _glue : SDNode <
+    !if(is_amdgpu, "AMDGPUISD", "ISD")#"::ATOMIC_"#op_name, SDTAtomic2,
     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand, SDNPInGlue]
   >;
 
@@ -289,11 +305,13 @@ multiclass SIAtomicM0Glue2 <string op_name> {
 }
 
 defm si_atomic_load_add : SIAtomicM0Glue2 <"LOAD_ADD">;
+defm si_atomic_load_sub : SIAtomicM0Glue2 <"LOAD_SUB">;
+defm si_atomic_inc : SIAtomicM0Glue2 <"INC", 1>;
+defm si_atomic_dec : SIAtomicM0Glue2 <"DEC", 1>;
 defm si_atomic_load_and : SIAtomicM0Glue2 <"LOAD_AND">;
 defm si_atomic_load_min : SIAtomicM0Glue2 <"LOAD_MIN">;
 defm si_atomic_load_max : SIAtomicM0Glue2 <"LOAD_MAX">;
 defm si_atomic_load_or : SIAtomicM0Glue2 <"LOAD_OR">;
-defm si_atomic_load_sub : SIAtomicM0Glue2 <"LOAD_SUB">;
 defm si_atomic_load_xor : SIAtomicM0Glue2 <"LOAD_XOR">;
 defm si_atomic_load_umin : SIAtomicM0Glue2 <"LOAD_UMIN">;
 defm si_atomic_load_umax : SIAtomicM0Glue2 <"LOAD_UMAX">;
@@ -1379,11 +1397,11 @@ class getInsDPP <RegisterClass Src0RC, RegisterClass Src1RC, int NumSrcArgs,
               !if (!eq(HasModifiers, 1),
                 // VOP1_DPP with modifiers
                 (ins InputModsNoDefault:$src0_modifiers, Src0RC:$src0,
-                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, 
+                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                      bank_mask:$bank_mask, bound_ctrl:$bound_ctrl)
               /* else */,
                 // VOP1_DPP without modifiers
-                (ins Src0RC:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, 
+                (ins Src0RC:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                 bank_mask:$bank_mask, bound_ctrl:$bound_ctrl)
               /* endif */)
               /* NumSrcArgs == 2 */,
@@ -1391,12 +1409,12 @@ class getInsDPP <RegisterClass Src0RC, RegisterClass Src1RC, int NumSrcArgs,
                 // VOP2_DPP with modifiers
                 (ins InputModsNoDefault:$src0_modifiers, Src0RC:$src0,
                       InputModsNoDefault:$src1_modifiers, Src1RC:$src1,
-                      dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, 
+                      dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                       bank_mask:$bank_mask, bound_ctrl:$bound_ctrl)
               /* else */,
                 // VOP2_DPP without modifiers
-                (ins Src0RC:$src0, Src1RC:$src1, dpp_ctrl:$dpp_ctrl, 
-                row_mask:$row_mask, bank_mask:$bank_mask, 
+                (ins Src0RC:$src0, Src1RC:$src1, dpp_ctrl:$dpp_ctrl,
+                row_mask:$row_mask, bank_mask:$bank_mask,
                 bound_ctrl:$bound_ctrl)
              /* endif */)));
 }
@@ -1641,9 +1659,9 @@ def VOP_MAC : VOPProfile <[f32, f32, f32, f32]> {
   let Ins64 = getIns64<Src0RC64, Src1RC64, RegisterOperand<VGPR_32>, 3,
                              HasModifiers>.ret;
   let InsDPP = (ins InputModsNoDefault:$src0_modifiers, Src0RC32:$src0,
-                    InputModsNoDefault:$src1_modifiers, Src1RC32:$src1, 
+                    InputModsNoDefault:$src1_modifiers, Src1RC32:$src1,
                     VGPR_32:$src2, // stub argument
-                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, 
+                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
   let Asm32 = getAsm32<1, 2, f32>.ret;
   let Asm64 = getAsm64<1, 2, HasModifiers, f32>.ret;

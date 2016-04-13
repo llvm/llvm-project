@@ -12,4 +12,4 @@ define {i32, i1} @test2(i32* %ptr, i32 %cmp, i32 %new) {
   ret {i32, i1} %orig
 }
 
-attributes #0 = { "ShaderType"="0" }
+attributes #0 = { nounwind }

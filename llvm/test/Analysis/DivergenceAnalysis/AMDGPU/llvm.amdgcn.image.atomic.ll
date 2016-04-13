@@ -104,19 +104,18 @@ main_body:
   ret float %r
 }
 
-declare i32 @llvm.amdgcn.image.atomic.swap.i32(i32, i32, <8 x i32>, i1, i1, i1) #1
-declare i32 @llvm.amdgcn.image.atomic.add.i32(i32, i32, <8 x i32>, i1, i1, i1) #1
-declare i32 @llvm.amdgcn.image.atomic.sub.i32(i32, i32, <8 x i32>, i1, i1, i1) #1
-declare i32 @llvm.amdgcn.image.atomic.smin.i32(i32, i32, <8 x i32>, i1, i1, i1) #1
-declare i32 @llvm.amdgcn.image.atomic.umin.i32(i32, i32, <8 x i32>, i1, i1, i1) #1
-declare i32 @llvm.amdgcn.image.atomic.smax.i32(i32, i32, <8 x i32>, i1, i1, i1) #1
-declare i32 @llvm.amdgcn.image.atomic.umax.i32(i32, i32, <8 x i32>, i1, i1, i1) #1
-declare i32 @llvm.amdgcn.image.atomic.and.i32(i32, i32, <8 x i32>, i1, i1, i1) #1
-declare i32 @llvm.amdgcn.image.atomic.or.i32(i32, i32, <8 x i32>, i1, i1, i1) #1
-declare i32 @llvm.amdgcn.image.atomic.xor.i32(i32, i32, <8 x i32>, i1, i1, i1) #1
-declare i32 @llvm.amdgcn.image.atomic.inc.i32(i32, i32, <8 x i32>, i1, i1, i1) #1
-declare i32 @llvm.amdgcn.image.atomic.dec.i32(i32, i32, <8 x i32>, i1, i1, i1) #1
-declare i32 @llvm.amdgcn.image.atomic.cmpswap.i32(i32, i32, i32, <8 x i32>,i1, i1, i1) #1
+declare i32 @llvm.amdgcn.image.atomic.swap.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
+declare i32 @llvm.amdgcn.image.atomic.add.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
+declare i32 @llvm.amdgcn.image.atomic.sub.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
+declare i32 @llvm.amdgcn.image.atomic.smin.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
+declare i32 @llvm.amdgcn.image.atomic.umin.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
+declare i32 @llvm.amdgcn.image.atomic.smax.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
+declare i32 @llvm.amdgcn.image.atomic.umax.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
+declare i32 @llvm.amdgcn.image.atomic.and.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
+declare i32 @llvm.amdgcn.image.atomic.or.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
+declare i32 @llvm.amdgcn.image.atomic.xor.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
+declare i32 @llvm.amdgcn.image.atomic.inc.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
+declare i32 @llvm.amdgcn.image.atomic.dec.i32(i32, i32, <8 x i32>, i1, i1, i1) #0
+declare i32 @llvm.amdgcn.image.atomic.cmpswap.i32(i32, i32, i32, <8 x i32>,i1, i1, i1) #0
 
-attributes #0 = { "ShaderType"="0" }
-attributes #1 = { nounwind }
+attributes #0 = { nounwind }

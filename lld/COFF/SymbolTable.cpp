@@ -430,8 +430,7 @@ std::vector<ObjectFile *> SymbolTable::createLTOObjects(LTOCodeGenerator *CG) {
 
   std::vector<ObjectFile *> ObjFiles;
   for (SmallString<0> &Obj : Objs) {
-    auto *ObjFile = new ObjectFile(
-        MemoryBufferRef(StringRef(Obj.data(), Obj.size()), "<LTO object>"));
+    auto *ObjFile = new ObjectFile(MemoryBufferRef(Obj, "<LTO object>"));
     Files.emplace_back(ObjFile);
     ObjectFiles.push_back(ObjFile);
     ObjFile->parse();

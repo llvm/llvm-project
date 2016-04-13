@@ -63,6 +63,6 @@ ENDIF28:                                          ; preds = %ENDIF
   br i1 %tmp36, label %ENDLOOP, label %LOOP.outer
 }
 
-attributes #0 = { "ShaderType"="1" "enable-no-nans-fp-math"="true" "unsafe-fp-math"="true" }
+attributes #0 = { "enable-no-nans-fp-math"="true" "unsafe-fp-math"="true" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { readnone }

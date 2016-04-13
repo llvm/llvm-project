@@ -62,9 +62,9 @@ define void @rsqrt_fmul(float addrspace(1)* %out, float addrspace(1)* %in) {
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr float, float addrspace(1)* %gep.0, i32 2
 
-  %a = load float, float addrspace(1)* %gep.0
-  %b = load float, float addrspace(1)* %gep.1
-  %c = load float, float addrspace(1)* %gep.2
+  %a = load volatile float, float addrspace(1)* %gep.0
+  %b = load volatile float, float addrspace(1)* %gep.1
+  %c = load volatile float, float addrspace(1)* %gep.2
 
   %x = call float @llvm.sqrt.f32(float %a)
   %y = fmul float %x, %b

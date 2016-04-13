@@ -238,6 +238,8 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
   delete RS;
   SaveBlocks.clear();
   RestoreBlocks.clear();
+  MFI->setSavePoint(nullptr);
+  MFI->setRestorePoint(nullptr);
   return true;
 }
 

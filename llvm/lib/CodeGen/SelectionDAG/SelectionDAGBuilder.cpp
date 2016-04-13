@@ -5539,7 +5539,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     return nullptr;
   }
   case Intrinsic::experimental_gc_result: {
-    visitGCResult(I);
+    visitGCResult(cast<GCResultInst>(I));
     return nullptr;
   }
   case Intrinsic::experimental_gc_relocate: {

@@ -90,21 +90,10 @@ SystemZ
 X86
 ---
 
-AMD - Official manuals and docs
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 * `AMD processor manuals <http://www.amd.com/us-en/Processors/TechnicalResources/0,,30_182_739,00.html>`_
-* `X86-64 ABI <http://www.x86-64.org/documentation>`_
-
-Intel - Official manuals and docs
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 * `Intel 64 and IA-32 manuals <http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html>`_
 * `Intel Itanium documentation <http://www.intel.com/design/itanium/documentation.htm?iid=ipp_srvr_proc_itanium2+techdocs>`_
-
-Other x86-specific information
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+* `X86 and X86-64 SysV psABI <https://github.com/hjl-tools/x86-psABI/wiki/X86-psABI>`_
 * `Calling conventions for different C++ compilers and operating systems  <http://www.agner.org/optimize/calling_conventions.pdf>`_
 
 XCore
@@ -127,6 +116,7 @@ ABI
 Linux
 -----
 
+* `Linux extensions to gabi <https://github.com/hjl-tools/linux-abi/wiki/Linux-Extensions-to-gABI>`_
 * `PowerPC 64-bit ELF ABI Supplement <http://www.linuxbase.org/spec/ELF/ppc64/>`_
 * `Procedure Call Standard for the AArch64 Architecture <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055a/IHI0055A_aapcs64.pdf>`_
 * `ELF for the ARM Architecture <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0044e/IHI0044E_aaelf.pdf>`_

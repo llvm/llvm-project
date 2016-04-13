@@ -14,8 +14,8 @@ define void @madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noa
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %mul = fmul float %a, 10.0
   %madmk = fadd float %mul, %b
@@ -41,9 +41,9 @@ define void @madmk_2_use_f32(float addrspace(1)* noalias %out, float addrspace(1
   %out.gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
   %out.gep.1 = getelementptr float, float addrspace(1)* %in.gep.0, i32 1
 
-  %a = load float, float addrspace(1)* %in.gep.0, align 4
-  %b = load float, float addrspace(1)* %in.gep.1, align 4
-  %c = load float, float addrspace(1)* %in.gep.2, align 4
+  %a = load volatile float, float addrspace(1)* %in.gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %in.gep.1, align 4
+  %c = load volatile float, float addrspace(1)* %in.gep.2, align 4
 
   %mul0 = fmul float %a, 10.0
   %mul1 = fmul float %a, 10.0
@@ -66,8 +66,8 @@ define void @madmk_inline_imm_f32(float addrspace(1)* noalias %out, float addrsp
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %mul = fmul float %a, 4.0
   %madmk = fadd float %mul, %b
@@ -131,8 +131,8 @@ define void @no_madmk_src0_modifier_f32(float addrspace(1)* noalias %out, float 
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %a.fabs = call float @llvm.fabs.f32(float %a) nounwind readnone
 
@@ -152,8 +152,8 @@ define void @no_madmk_src2_modifier_f32(float addrspace(1)* noalias %out, float 
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %b.fabs = call float @llvm.fabs.f32(float %b) nounwind readnone
 

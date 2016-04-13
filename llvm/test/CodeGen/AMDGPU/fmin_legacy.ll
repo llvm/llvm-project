@@ -51,8 +51,8 @@ define void @test_fmin_legacy_ule_f32(float addrspace(1)* %out, float addrspace(
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %cmp = fcmp ule float %a, %b
   %val = select i1 %cmp, float %a, float %b
@@ -70,8 +70,8 @@ define void @test_fmin_legacy_ole_f32(float addrspace(1)* %out, float addrspace(
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %cmp = fcmp ole float %a, %b
   %val = select i1 %cmp, float %a, float %b
@@ -89,8 +89,8 @@ define void @test_fmin_legacy_olt_f32(float addrspace(1)* %out, float addrspace(
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %cmp = fcmp olt float %a, %b
   %val = select i1 %cmp, float %a, float %b
@@ -108,8 +108,8 @@ define void @test_fmin_legacy_ult_f32(float addrspace(1)* %out, float addrspace(
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %cmp = fcmp ult float %a, %b
   %val = select i1 %cmp, float %a, float %b
@@ -193,8 +193,8 @@ define void @test_fmin_legacy_ole_f32_multi_use(float addrspace(1)* %out0, i1 ad
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %cmp = fcmp ole float %a, %b
   %val0 = select i1 %cmp, float %a, float %b

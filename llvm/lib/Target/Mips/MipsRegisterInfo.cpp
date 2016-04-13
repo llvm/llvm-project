@@ -51,7 +51,13 @@ const TargetRegisterClass *
 MipsRegisterInfo::getPointerRegClass(const MachineFunction &MF,
                                      unsigned Kind) const {
   MipsABIInfo ABI = MF.getSubtarget<MipsSubtarget>().getABI();
-  return ABI.ArePtrs64bit() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
+  bool inMicroMips = MF.getSubtarget<MipsSubtarget>().inMicroMipsMode();
+ 
+  return ABI.ArePtrs64bit() ?
+             inMicroMips ?
+                 &Mips::GPRMM16_64RegClass : &Mips::GPR64RegClass
+             : inMicroMips ?
+                 &Mips::GPRMM16RegClass : &Mips::GPR32RegClass;
 }
 
 unsigned

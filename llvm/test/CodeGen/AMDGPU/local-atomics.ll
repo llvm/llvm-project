@@ -324,7 +324,6 @@ define void @lds_atomic_xchg_noret_i32_offset(i32 addrspace(3)* %ptr) nounwind {
   ret void
 }
 
-; XXX - Is it really necessary to load 4 into VGPR?
 ; FUNC-LABEL: {{^}}lds_atomic_add_noret_i32:
 ; GCN: s_load_dword [[SPTR:s[0-9]+]],
 ; GCN: v_mov_b32_e32 [[DATA:v[0-9]+]], 4
