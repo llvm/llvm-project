@@ -123,7 +123,7 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
   return NewName;
 }
 
-std::string GlobalValue::getGlobalIdentifier() {
+std::string GlobalValue::getGlobalIdentifier() const {
   return getGlobalIdentifier(getName(), getLinkage(),
                              getParent()->getSourceFileName());
 }
