@@ -309,6 +309,20 @@ public:
     GlobalValueMap[ValueGUID].push_back(std::move(Info));
   }
 
+  /// Returns the first GlobalValueInfo for \p GV, asserting that there
+  /// is only one if \p PerModuleIndex.
+  GlobalValueInfo *getGlobalValueInfo(const GlobalValue &GV,
+                                      bool PerModuleIndex = true) const {
+    assert(GV.hasName() && "Can't get GlobalValueInfo for GV with no name");
+    return getGlobalValueInfo(GlobalValue::getGUID(GV.getName()),
+                              PerModuleIndex);
+  }
+
+  /// Returns the first GlobalValueInfo for \p ValueGUID, asserting that there
+  /// is only one if \p PerModuleIndex.
+  GlobalValueInfo *getGlobalValueInfo(GlobalValue::GUID ValueGUID,
+                                      bool PerModuleIndex = true) const;
+
   /// Table of modules, containing module hash and id.
   const StringMap<std::pair<uint64_t, ModuleHash>> &modulePaths() const {
     return ModulePathStringTable;

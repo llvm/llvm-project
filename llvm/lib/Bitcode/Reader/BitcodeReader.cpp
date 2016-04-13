@@ -5846,12 +5846,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
                              CalleeInfo(CallsiteCount, ProfileCount));
       }
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID);
-      auto InfoList = TheIndex->findGlobalValueInfoList(GUID);
-      assert(InfoList != TheIndex->end() &&
-             "Expected VST parse to create GlobalValueInfo entry");
-      assert(InfoList->second.size() == 1 &&
-             "Expected a single GlobalValueInfo per GUID in module");
-      auto &Info = InfoList->second[0];
+      auto *Info = TheIndex->getGlobalValueInfo(GUID);
       assert(!Info->summary() && "Expected a single summary per VST entry");
       Info->setSummary(std::move(FS));
       break;
@@ -5870,12 +5865,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
         FS->addRefEdge(RefGUID);
       }
       GlobalValue::GUID GUID = getGUIDFromValueId(ValueID);
-      auto InfoList = TheIndex->findGlobalValueInfoList(GUID);
-      assert(InfoList != TheIndex->end() &&
-             "Expected VST parse to create GlobalValueInfo entry");
-      assert(InfoList->second.size() == 1 &&
-             "Expected a single GlobalValueInfo per GUID in module");
-      auto &Info = InfoList->second[0];
+      auto *Info = TheIndex->getGlobalValueInfo(GUID);
       assert(!Info->summary() && "Expected a single summary per VST entry");
       Info->setSummary(std::move(FS));
       break;
