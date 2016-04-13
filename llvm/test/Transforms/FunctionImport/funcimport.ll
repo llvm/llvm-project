@@ -87,4 +87,4 @@ declare void @weakfunc(...) #1
 ; INSTLIM5-DAG: declare hidden void @funcwithpersonality.llvm.2()
 
 ; INSTLIMDEF-DAG: Import globalfunc2
-; INSTLIMDEF: 11 function-import - Number of functions imported
+; INSTLIMDEF-DAG: 11 function-import - Number of functions imported
