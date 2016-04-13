@@ -98,6 +98,7 @@ Clang-Tidy Checks
    readability-avoid-const-params-in-decls
    readability-braces-around-statements
    readability-container-size-empty
+   readability-deleted-default
    readability-else-after-return
    readability-function-size
    readability-identifier-naming

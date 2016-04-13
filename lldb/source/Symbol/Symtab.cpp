@@ -969,7 +969,7 @@ Symtab::InitAddressIndexes()
             // entries that didn't already have a size from the Symbol (e.g. if we
             // have a plain linker symbol with an address only, instead of debug info
             // where we get an address and a size and a type, etc.)
-            for (int i = 0; i < num_entries; i++)
+            for (size_t i = 0; i < num_entries; i++)
             {
                 FileRangeToIndexMap::Entry *entry = m_file_addr_to_index.GetMutableEntryAtIndex (i);
                 if (entry->GetByteSize() == 0)
@@ -986,7 +986,7 @@ Symtab::InitAddressIndexes()
                                         (entry->GetRangeBase() - containing_section->GetRangeBase());
                     }
                     
-                    for (int j = i; j < num_entries; j++)
+                    for (size_t j = i; j < num_entries; j++)
                     {
                         FileRangeToIndexMap::Entry *next_entry = m_file_addr_to_index.GetMutableEntryAtIndex (j);
                         addr_t next_base_addr = next_entry->GetRangeBase();
