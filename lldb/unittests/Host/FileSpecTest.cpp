@@ -47,7 +47,6 @@ TEST(FileSpecTest, FileAndDirectoryComponents)
 
     FileSpec fs_windows_long("F:\\bar\\baz", false, FileSpec::ePathSyntaxWindows);
     EXPECT_STREQ("F:\\bar\\baz", fs_windows_long.GetCString());
-    // We get "F:/bar" instead.
     EXPECT_STREQ("F:\\bar", fs_windows_long.GetDirectory().GetCString());
     EXPECT_STREQ("baz", fs_windows_long.GetFilename().GetCString());
 
@@ -58,7 +57,6 @@ TEST(FileSpecTest, FileAndDirectoryComponents)
 
     FileSpec fs_windows_trailing_slash("F:\\bar\\", false, FileSpec::ePathSyntaxWindows);
     EXPECT_STREQ("F:\\bar\\.", fs_windows_trailing_slash.GetCString());
-    // We get "F:/bar" instead.
     EXPECT_STREQ("F:\\bar", fs_windows_trailing_slash.GetDirectory().GetCString());
     EXPECT_STREQ(".", fs_windows_trailing_slash.GetFilename().GetCString());
 }

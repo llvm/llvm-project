@@ -632,3 +632,6 @@ bool clang::isOpenMPThreadPrivate(OpenMPClauseKind Kind) {
   return Kind == OMPC_threadprivate || Kind == OMPC_copyin;
 }
 
+bool clang::isOpenMPTaskingDirective(OpenMPDirectiveKind Kind) {
+  return Kind == OMPD_task || isOpenMPTaskLoopDirective(Kind);
+}
