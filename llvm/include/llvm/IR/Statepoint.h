@@ -39,6 +39,7 @@ enum class StatepointFlags {
 };
 
 class GCRelocateInst;
+class GCResultInst;
 class ImmutableStatepoint;
 
 bool isStatepoint(ImmutableCallSite CS);
@@ -46,8 +47,6 @@ bool isStatepoint(const Value *V);
 bool isStatepoint(const Value &V);
 
 bool isGCRelocate(ImmutableCallSite CS);
-
-bool isGCResult(const Value *V);
 bool isGCResult(ImmutableCallSite CS);
 
 /// Analogous to CallSiteBase, this provides most of the actual
@@ -253,11 +252,10 @@ public:
   /// Get the experimental_gc_result call tied to this statepoint.  Can be
   /// nullptr if there isn't a gc_result tied to this statepoint.  Guaranteed to
   /// be a CallInst if non-null.
-  InstructionTy *getGCResult() const {
+  const GCResultInst *getGCResult() const {
     for (auto *U : getInstruction()->users())
-      if (isGCResult(U))
-        return cast<CallInst>(U);
-
+      if (auto *GRI = dyn_cast<GCResultInst>(U))
+        return GRI;
     return nullptr;
   }
 
@@ -306,11 +304,13 @@ public:
   explicit Statepoint(CallSite CS) : Base(CS) {}
 };
 
-/// This represents the gc.relocate intrinsic.
-class GCRelocateInst : public IntrinsicInst {
+/// Common base class for representing values projected from a statepoint.  
+/// Currently, the only projections available are gc.result and gc.relocate.
+class GCProjectionInst : public IntrinsicInst {
 public:
   static inline bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::experimental_gc_relocate;
+    return I->getIntrinsicID() == Intrinsic::experimental_gc_relocate ||
+      I->getIntrinsicID() == Intrinsic::experimental_gc_result;
   }
   static inline bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
@@ -331,6 +331,7 @@ public:
     // This takes care both of relocates for call statepoints and relocates
     // on normal path of invoke statepoint.
     if (!isa<LandingPadInst>(Token)) {
+      assert(isStatepoint(Token));
       return cast<Instruction>(Token);
     }
 
@@ -344,6 +345,17 @@ public:
     assert(isStatepoint(InvokeBB->getTerminator()));
 
     return InvokeBB->getTerminator();
+  }
+};
+
+/// This represents the gc.relocate intrinsic.
+class GCRelocateInst : public GCProjectionInst {
+public:
+  static inline bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::experimental_gc_relocate;
+  }
+  static inline bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
   /// The index into the associate statepoint's argument list
@@ -367,6 +379,17 @@ public:
   Value *getDerivedPtr() const {
     ImmutableCallSite CS(getStatepoint());
     return *(CS.arg_begin() + getDerivedPtrIndex());
+  }
+};
+
+/// This represents the gc.result intrinsic.
+class GCResultInst : public GCProjectionInst {
+public:
+  static inline bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::experimental_gc_result;
+  }
+  static inline bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 };
 

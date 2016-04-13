@@ -12,7 +12,7 @@
 // pushes. This is beneficial for two main reasons:
 // 1) The push instruction encoding is much smaller than an esp-relative mov
 // 2) It is possible to push memory arguments directly. So, if the
-//    the transformation is preformed pre-reg-alloc, it can help relieve
+//    the transformation is performed pre-reg-alloc, it can help relieve
 //    register pressure.
 //
 //===----------------------------------------------------------------------===//
@@ -21,8 +21,8 @@
 
 #include "X86.h"
 #include "X86InstrInfo.h"
-#include "X86Subtarget.h"
 #include "X86MachineFunctionInfo.h"
+#include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -55,7 +55,7 @@ private:
   struct CallContext {
     CallContext()
         : FrameSetup(nullptr), Call(nullptr), SPCopy(nullptr), ExpectedDist(0),
-          MovVector(4, nullptr), NoStackParams(false), UsePush(false){}
+          MovVector(4, nullptr), NoStackParams(false), UsePush(false) {}
 
     // Iterator referring to the frame setup instruction
     MachineBasicBlock::iterator FrameSetup;
@@ -75,7 +75,7 @@ private:
     // True if this call site has no stack parameters
     bool NoStackParams;
 
-    // True of this callsite can use push instructions
+    // True if this call site can use push instructions
     bool UsePush;
   };
 
@@ -134,8 +134,8 @@ bool X86CallFrameOptimization::isLegal(MachineFunction &MF) {
   // We can't encode multiple DW_CFA_GNU_args_size or DW_CFA_def_cfa_offset
   // in the compact unwind encoding that Darwin uses. So, bail if there
   // is a danger of that being generated.
-  if (STI->isTargetDarwin() && 
-     (!MF.getMMI().getLandingPads().empty() || 
+  if (STI->isTargetDarwin() &&
+      (!MF.getMMI().getLandingPads().empty() ||
        (MF.getFunction()->needsUnwindTableEntry() && !TFL->hasFP(MF))))
     return false;
 
@@ -171,8 +171,8 @@ bool X86CallFrameOptimization::isLegal(MachineFunction &MF) {
 
 // Check whether this transformation is profitable for a particular
 // function - in terms of code size.
-bool X86CallFrameOptimization::isProfitable(MachineFunction &MF, 
-  ContextVector &CallSeqVector) {
+bool X86CallFrameOptimization::isProfitable(MachineFunction &MF,
+                                            ContextVector &CallSeqVector) {
   // This transformation is always a win when we do not expect to have
   // a reserved call frame. Under other circumstances, it may be either
   // a win or a loss, and requires a heuristic.
@@ -211,7 +211,7 @@ bool X86CallFrameOptimization::isProfitable(MachineFunction &MF,
     }
   }
 
-  return (Advantage >= 0);
+  return Advantage >= 0;
 }
 
 bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
@@ -311,8 +311,8 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
                                                CallContext &Context) {
   // Check that this particular call sequence is amenable to the
   // transformation.
-  const X86RegisterInfo &RegInfo = *static_cast<const X86RegisterInfo *>(
-                                       STI->getRegisterInfo());
+  const X86RegisterInfo &RegInfo =
+      *static_cast<const X86RegisterInfo *>(STI->getRegisterInfo());
   unsigned FrameDestroyOpcode = TII->getCallFrameDestroyOpcode();
 
   // We expect to enter this at the beginning of a call sequence
@@ -467,7 +467,7 @@ bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
           PushOpcode = X86::PUSH32i8;
       }
       Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode))
-          .addOperand(PushOp);
+                 .addOperand(PushOp);
     } else {
       unsigned int Reg = PushOp.getReg();
 
@@ -488,8 +488,8 @@ bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
         DefMov->eraseFromParent();
       } else {
         Push = BuildMI(MBB, Context.Call, DL, TII->get(X86::PUSH32r))
-            .addReg(Reg)
-            .getInstr();
+                   .addReg(Reg)
+                   .getInstr();
       }
     }
 
@@ -497,7 +497,7 @@ bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
     // offset after each push.
     // TODO: This is needed only if we require precise CFA.
     if (!TFL->hasFP(MF))
-      TFL->BuildCFI(MBB, std::next(Push), DL, 
+      TFL->BuildCFI(MBB, std::next(Push), DL,
                     MCCFIInstruction::createAdjustCfaOffset(nullptr, 4));
 
     MBB.erase(MOV);

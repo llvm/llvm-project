@@ -1011,6 +1011,22 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
 
   if (N.isDefinition())
     Assert(N.isDistinct(), "subprogram definitions must be distinct", &N);
+
+  // Ensure that every DISubprogram with isDefinition: true belongs
+  // to a DICompileUnit.
+  // FIXME: This is a very inefficient way of handling the problem.
+  // Use a SmallSetPtr which contains the Listed DISubprograms in the CU
+  // instead.
+  if (N.isDefinition()) {
+    auto *CUs = M->getNamedMetadata("llvm.dbg.cu");
+    Assert(CUs, "subprogram must belong to a compile unit", &N);
+    for (auto *CU : CUs->operands())
+      if (auto Subprograms = cast<DICompileUnit>(CU)->getSubprograms())
+        for (const auto *Sp : Subprograms)
+          if (Sp == &N)
+            return;
+    Assert(false, "subprogram not found in any compile unit", &N);
+  }
 }
 
 void Verifier::visitDILexicalBlockBase(const DILexicalBlockBase &N) {
@@ -1774,11 +1790,11 @@ void Verifier::verifyStatepoint(ImmutableCallSite CS) {
     const CallInst *Call = dyn_cast<const CallInst>(U);
     Assert(Call, "illegal use of statepoint token", &CI, U);
     if (!Call) continue;
-    Assert(isa<GCRelocateInst>(Call) || isGCResult(Call),
+    Assert(isa<GCRelocateInst>(Call) || isa<GCResultInst>(Call),
            "gc.result or gc.relocate are the only value uses"
            "of a gc.statepoint",
            &CI, U);
-    if (isGCResult(Call)) {
+    if (isa<GCResultInst>(Call)) {
       Assert(Call->getArgOperand(0) == &CI,
              "gc.result connected to wrong gc.statepoint", &CI, Call);
     } else if (isa<GCRelocateInst>(Call)) {

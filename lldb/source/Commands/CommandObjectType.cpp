@@ -1718,20 +1718,23 @@ CommandObjectTypeSummaryAdd::Execute_StringSummary (Args& command, CommandReturn
         return false;
     }
     
-    Error error;
-    
-    lldb::TypeSummaryImplSP entry(new StringSummaryFormat(m_options.m_flags,
-                                                        format_cstr));
-    
-    if (error.Fail())
+    std::unique_ptr<StringSummaryFormat> string_format(new StringSummaryFormat(m_options.m_flags, format_cstr));
+    if (!string_format)
     {
-        result.AppendError(error.AsCString());
+        result.AppendError("summary creation failed");
         result.SetStatus(eReturnStatusFailed);
         return false;
     }
+    if (string_format->m_error.Fail())
+    {
+        result.AppendErrorWithFormat("syntax error: %s", string_format->m_error.AsCString("<unknown>"));
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+    }
+    lldb::TypeSummaryImplSP entry(string_format.release());
     
     // now I have a valid format, let's add it to every type
-    
+    Error error;
     for (size_t i = 0; i < argc; i++)
     {
         const char* typeA = command.GetArgumentAtIndex(i);

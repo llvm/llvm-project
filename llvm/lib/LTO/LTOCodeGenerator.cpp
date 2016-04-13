@@ -14,7 +14,7 @@
 
 #include "llvm/LTO/LTOCodeGenerator.h"
 
-#include "LTOInternalize.h"
+#include "UpdateCompilerUsed.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/Passes.h"
@@ -54,6 +54,7 @@
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include <system_error>
@@ -337,9 +338,43 @@ void LTOCodeGenerator::applyScopeRestrictions() {
   if (ScopeRestrictionsDone || !ShouldInternalize)
     return;
 
-  LTOInternalize(*MergedModule, *TargetMach, MustPreserveSymbols,
-                 AsmUndefinedRefs,
-                 (ShouldRestoreGlobalsLinkage ? &ExternalSymbols : nullptr));
+  if (ShouldRestoreGlobalsLinkage) {
+    // Record the linkage type of non-local symbols so they can be restored
+    // prior
+    // to module splitting.
+    auto RecordLinkage = [&](const GlobalValue &GV) {
+      if (!GV.hasAvailableExternallyLinkage() && !GV.hasLocalLinkage() &&
+          GV.hasName())
+        ExternalSymbols.insert(std::make_pair(GV.getName(), GV.getLinkage()));
+    };
+    for (auto &GV : *MergedModule)
+      RecordLinkage(GV);
+    for (auto &GV : MergedModule->globals())
+      RecordLinkage(GV);
+    for (auto &GV : MergedModule->aliases())
+      RecordLinkage(GV);
+  }
+
+  // Update the llvm.compiler_used globals to force preserving libcalls and
+  // symbols referenced from asm
+  UpdateCompilerUsed(*MergedModule, *TargetMach, AsmUndefinedRefs);
+
+  // Declare a callback for the internalize pass that will ask for every
+  // candidate GlobalValue if it can be internalized or not.
+  Mangler Mangler;
+  SmallString<64> MangledName;
+  auto MustPreserveGV = [&](const GlobalValue &GV) -> bool {
+    // Need to mangle the GV as the "MustPreserveSymbols" StringSet is filled
+    // with the linker supplied name, which on Darwin includes a leading
+    // underscore.
+    MangledName.clear();
+    MangledName.reserve(GV.getName().size() + 1);
+    Mangler::getNameWithPrefix(MangledName, GV.getName(),
+                               MergedModule->getDataLayout());
+    return MustPreserveSymbols.count(MangledName);
+  };
+
+  internalizeModule(*MergedModule, MustPreserveGV);
 
   ScopeRestrictionsDone = true;
 }

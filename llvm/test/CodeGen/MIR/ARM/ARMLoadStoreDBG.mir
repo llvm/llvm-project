@@ -117,8 +117,6 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       '%bb.2.if.end'
-  restorePoint:    '%bb.2.if.end'
 stack:           
   - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '%lr' }
   - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, callee-saved-register: '%r7' }

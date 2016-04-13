@@ -1,9 +1,9 @@
 ; RUN: llc -march=amdgcn -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}stored_fi_to_lds:
-; GCN: s_load_dword [[LDSPTR:s[0-9]+]]
-; GCN: v_mov_b32_e32 [[ZERO1:v[0-9]+]], 0{{$}}
-; GCN: buffer_store_dword v{{[0-9]+}}, [[ZERO1]]
+; GCN-DAG: s_load_dword [[LDSPTR:s[0-9]+]]
+; GCN-DAG: v_mov_b32_e32 [[ZERO1:v[0-9]+]], 0{{$}}
+; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ZERO1]]
 ; GCN: v_mov_b32_e32 [[ZERO0:v[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 [[VLDSPTR:v[0-9]+]], [[LDSPTR]]
 ; GCN: ds_write_b32  [[VLDSPTR]], [[ZERO0]]

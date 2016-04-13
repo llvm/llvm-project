@@ -116,6 +116,17 @@
     extern int  __KAI_KMPC_CONVENTION  omp_get_cancellation (void);
 
 #   include <stdlib.h>
+    /* OpenMP 4.5 */
+    extern int   __KAI_KMPC_CONVENTION  omp_get_initial_device (void);
+    extern void* __KAI_KMPC_CONVENTION  omp_target_alloc(size_t, int);
+    extern void  __KAI_KMPC_CONVENTION  omp_target_free(void *, int);
+    extern int   __KAI_KMPC_CONVENTION  omp_target_is_present(void *, int);
+    extern int   __KAI_KMPC_CONVENTION  omp_target_memcpy(void *, void *, size_t, size_t, size_t, int, int);
+    extern int   __KAI_KMPC_CONVENTION  omp_target_memcpy_rect(void *, void *, size_t, int, const size_t *,
+                                            const size_t *, const size_t *, const size_t *, const size_t *, int, int);
+    extern int   __KAI_KMPC_CONVENTION  omp_target_associate_ptr(void *, void *, size_t, size_t, int);
+    extern int   __KAI_KMPC_CONVENTION  omp_target_disassociate_ptr(void *, int);
+
     /* kmp API functions */
     extern int    __KAI_KMPC_CONVENTION  kmp_get_stacksize          (void);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_stacksize          (int);

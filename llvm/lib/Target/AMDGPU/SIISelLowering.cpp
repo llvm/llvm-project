@@ -128,6 +128,8 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v16i8, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v4f32, Custom);
 
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
+
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
   setOperationAction(ISD::BR_CC, MVT::i32, Expand);
@@ -306,6 +308,25 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
 //===----------------------------------------------------------------------===//
 // TargetLowering queries
 //===----------------------------------------------------------------------===//
+
+bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
+                                          const CallInst &CI,
+                                          unsigned IntrID) const {
+  switch (IntrID) {
+  case Intrinsic::amdgcn_atomic_inc:
+  case Intrinsic::amdgcn_atomic_dec:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(CI.getType());
+    Info.ptrVal = CI.getOperand(0);
+    Info.align = 0;
+    Info.vol = false;
+    Info.readMem = true;
+    Info.writeMem = true;
+    return true;
+  default:
+    return false;
+  }
+}
 
 bool SITargetLowering::isShuffleMaskLegal(const SmallVectorImpl<int> &,
                                           EVT) const {
@@ -1173,6 +1194,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerGlobalAddress(MFI, Op, DAG);
   }
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::INTRINSIC_W_CHAIN: return LowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::INTRINSIC_VOID: return LowerINTRINSIC_VOID(Op, DAG);
   }
   return SDValue();
@@ -1635,6 +1657,29 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE3, DL, VT, Op.getOperand(1));
   default:
     return AMDGPUTargetLowering::LowerOperation(Op, DAG);
+  }
+}
+
+SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  unsigned IntrID = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+  switch (IntrID) {
+  case Intrinsic::amdgcn_atomic_inc:
+  case Intrinsic::amdgcn_atomic_dec: {
+    MemSDNode *M = cast<MemSDNode>(Op);
+    unsigned Opc = (IntrID == Intrinsic::amdgcn_atomic_inc) ?
+      AMDGPUISD::ATOMIC_INC : AMDGPUISD::ATOMIC_DEC;
+    SDValue Ops[] = {
+      M->getOperand(0), // Chain
+      M->getOperand(2), // Ptr
+      M->getOperand(3)  // Value
+    };
+
+    return DAG.getMemIntrinsicNode(Opc, SDLoc(Op), M->getVTList(), Ops,
+                                   M->getMemoryVT(), M->getMemOperand());
+  }
+  default:
+    return SDValue();
   }
 }
 
@@ -2287,6 +2332,36 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
+  EVT VT = N->getValueType(0);
+  if (VT == MVT::i64) {
+    // TODO: This could be a generic combine with a predicate for extracting the
+    // high half of an integer being free.
+
+    // (or i64:x, (zero_extend i32:y)) ->
+    //   i64 (bitcast (v2i32 build_vector (or i32:y, lo_32(x)), hi_32(x)))
+    if (LHS.getOpcode() == ISD::ZERO_EXTEND &&
+        RHS.getOpcode() != ISD::ZERO_EXTEND)
+      std::swap(LHS, RHS);
+
+    if (RHS.getOpcode() == ISD::ZERO_EXTEND) {
+      SDValue ExtSrc = RHS.getOperand(0);
+      EVT SrcVT = ExtSrc.getValueType();
+      if (SrcVT == MVT::i32) {
+        SDLoc SL(N);
+        SDValue LowLHS, HiBits;
+        std::tie(LowLHS, HiBits) = split64BitValue(LHS, DAG);
+        SDValue LowOr = DAG.getNode(ISD::OR, SL, MVT::i32, LowLHS, ExtSrc);
+
+        DCI.AddToWorklist(LowOr.getNode());
+        DCI.AddToWorklist(HiBits.getNode());
+
+        SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32,
+                                  LowOr, HiBits);
+        return DAG.getNode(ISD::BITCAST, SL, MVT::i64, Vec);
+      }
+    }
+  }
+
   // or (fp_class x, c1), (fp_class x, c2) -> fp_class x, (c1 | c2)
   if (LHS.getOpcode() == AMDGPUISD::FP_CLASS &&
       RHS.getOpcode() == AMDGPUISD::FP_CLASS) {
@@ -2644,7 +2719,9 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ATOMIC_LOAD_MIN:
   case ISD::ATOMIC_LOAD_MAX:
   case ISD::ATOMIC_LOAD_UMIN:
-  case ISD::ATOMIC_LOAD_UMAX: { // TODO: Target mem intrinsics.
+  case ISD::ATOMIC_LOAD_UMAX:
+  case AMDGPUISD::ATOMIC_INC:
+  case AMDGPUISD::ATOMIC_DEC: { // TODO: Target mem intrinsics.
     if (DCI.isBeforeLegalize())
       break;
 

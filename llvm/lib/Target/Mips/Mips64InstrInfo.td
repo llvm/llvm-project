@@ -224,10 +224,12 @@ def PseudoDMULT  : MultDivPseudo<DMULT, ACC128, GPR64Opnd, MipsMult,
                                  II_DMULT>, ISA_MIPS3_NOT_32R6_64R6;
 def PseudoDMULTu : MultDivPseudo<DMULTu, ACC128, GPR64Opnd, MipsMultu,
                                  II_DMULTU>, ISA_MIPS3_NOT_32R6_64R6;
-def DSDIV : Div<"ddiv", II_DDIV, GPR64Opnd, [HI0_64, LO0_64]>,
-            MULT_FM<0, 0x1e>, ISA_MIPS3_NOT_32R6_64R6;
-def DUDIV : Div<"ddivu", II_DDIVU, GPR64Opnd, [HI0_64, LO0_64]>,
-            MULT_FM<0, 0x1f>, ISA_MIPS3_NOT_32R6_64R6;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def DSDIV : Div<"ddiv", II_DDIV, GPR64Opnd, [HI0_64, LO0_64]>,
+              MULT_FM<0, 0x1e>, ISA_MIPS3_NOT_32R6_64R6;
+  def DUDIV : Div<"ddivu", II_DDIVU, GPR64Opnd, [HI0_64, LO0_64]>,
+              MULT_FM<0, 0x1f>, ISA_MIPS3_NOT_32R6_64R6;
+}
 def PseudoDSDIV : MultDivPseudo<DSDIV, ACC128, GPR64Opnd, MipsDivRem,
                                 II_DDIV, 0, 1, 1>, ISA_MIPS3_NOT_32R6_64R6;
 def PseudoDUDIV : MultDivPseudo<DUDIV, ACC128, GPR64Opnd, MipsDivRemU,

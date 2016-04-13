@@ -894,6 +894,38 @@ typedef struct
     addr_t match_offset;
 } SymbolSearchInfo;
 
+// Add all the section file start address & size to the RangeVector,
+// recusively adding any children sections.  
+static void
+AddSectionsToRangeMap (SectionList *sectlist, RangeVector<addr_t, addr_t> &section_ranges)
+{
+    const int num_sections = sectlist->GetNumSections (0);
+    for (int i = 0; i < num_sections; i++)
+    {
+        SectionSP sect_sp = sectlist->GetSectionAtIndex (i);
+        if (sect_sp)
+        {
+            SectionList &child_sectlist = sect_sp->GetChildren();
+
+            // If this section has children, add the children to the RangeVector.
+            // Else add this section to the RangeVector.
+            if (child_sectlist.GetNumSections (0) > 0)
+            {
+                AddSectionsToRangeMap (&child_sectlist, section_ranges);
+            }
+            else
+            {
+                addr_t base_addr = sect_sp->GetFileAddress();
+                size_t size = sect_sp->GetByteSize();
+                RangeVector<addr_t, addr_t>::Entry entry;
+                entry.SetRangeBase (base_addr);
+                entry.SetByteSize (size);
+                section_ranges.Append (entry);
+            }
+        }
+    }
+}
+
 void
 Symtab::InitAddressIndexes()
 {
@@ -915,26 +947,75 @@ Symtab::InitAddressIndexes()
                 m_file_addr_to_index.Append(entry);
             }
         }
-
         const size_t num_entries = m_file_addr_to_index.GetSize();
         if (num_entries > 0)
         {
             m_file_addr_to_index.Sort();
 
-            // Now our last address range might not have had sizes because there
-            // was no subsequent symbol to calculate the size from. If this is
-            // the case, then calculate the size by capping it at the end of the
-            // section in which the symbol resides
-            lldb::addr_t total_size = 0;
-            const FileRangeToIndexMap::Entry* entry = m_file_addr_to_index.Back();
-            if (entry->GetByteSize() == 0)
+            // Create a RangeVector with the start & size of all the sections for
+            // this objfile.  We'll need to check this for any FileRangeToIndexMap
+            // entries with an uninitialized size, which could potentially be a
+            // large number so reconstituting the weak pointer is busywork when it
+            // is invariant information.
+            SectionList *sectlist = m_objfile->GetSectionList();
+            RangeVector<addr_t, addr_t> section_ranges;
+            if (sectlist)
             {
-                const Address& address = m_symbols[entry->data].GetAddressRef();
-                if (SectionSP section_sp = address.GetSection())
-                    total_size = entry->base + section_sp->GetByteSize() - address.GetOffset();
+                AddSectionsToRangeMap (sectlist, section_ranges);
+                section_ranges.Sort();
             }
 
-            m_file_addr_to_index.CalculateSizesOfZeroByteSizeRanges(total_size);
+            // Iterate through the FileRangeToIndexMap and fill in the size for any
+            // entries that didn't already have a size from the Symbol (e.g. if we
+            // have a plain linker symbol with an address only, instead of debug info
+            // where we get an address and a size and a type, etc.)
+            for (int i = 0; i < num_entries; i++)
+            {
+                FileRangeToIndexMap::Entry *entry = m_file_addr_to_index.GetMutableEntryAtIndex (i);
+                if (entry->GetByteSize() == 0)
+                {
+                    addr_t curr_base_addr = entry->GetRangeBase();
+                    const RangeVector<addr_t, addr_t>::Entry *containing_section =
+                                                              section_ranges.FindEntryThatContains (curr_base_addr);
+
+                    // Use the end of the section as the default max size of the symbol
+                    addr_t sym_size = 0;
+                    if (containing_section)
+                    {
+                        sym_size = containing_section->GetByteSize() - 
+                                        (entry->GetRangeBase() - containing_section->GetRangeBase());
+                    }
+                    
+                    for (int j = i; j < num_entries; j++)
+                    {
+                        FileRangeToIndexMap::Entry *next_entry = m_file_addr_to_index.GetMutableEntryAtIndex (j);
+                        addr_t next_base_addr = next_entry->GetRangeBase();
+                        if (next_base_addr > curr_base_addr)
+                        {
+                            addr_t size_to_next_symbol = next_base_addr - curr_base_addr;
+
+                            // Take the difference between this symbol and the next one as its size,
+                            // if it is less than the size of the section.
+                            if (sym_size == 0 || size_to_next_symbol < sym_size)
+                            {
+                                sym_size = size_to_next_symbol;
+                            }
+                            break;
+                        }
+                    }
+
+                    if (sym_size > 0)
+                    {
+                        entry->SetByteSize (sym_size);
+                        Symbol &symbol = m_symbols[entry->data];
+                        symbol.SetByteSize (sym_size);
+                        symbol.SetSizeIsSynthesized (true);
+                    }
+                }
+            }
+
+            // Sort again in case the range size changes the ordering
+            m_file_addr_to_index.Sort();
         }
     }
 }

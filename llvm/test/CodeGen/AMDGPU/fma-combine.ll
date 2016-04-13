@@ -20,9 +20,9 @@ define void @combine_to_fma_f64_0(double addrspace(1)* noalias %out, double addr
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
   %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
 
-  %a = load double, double addrspace(1)* %gep.0
-  %b = load double, double addrspace(1)* %gep.1
-  %c = load double, double addrspace(1)* %gep.2
+  %a = load volatile double, double addrspace(1)* %gep.0
+  %b = load volatile double, double addrspace(1)* %gep.1
+  %c = load volatile double, double addrspace(1)* %gep.2
 
   %mul = fmul double %a, %b
   %fma = fadd double %mul, %c
@@ -50,16 +50,16 @@ define void @combine_to_fma_f64_0_2use(double addrspace(1)* noalias %out, double
   %gep.out.0 = getelementptr double, double addrspace(1)* %out, i32 %tid
   %gep.out.1 = getelementptr double, double addrspace(1)* %gep.out.0, i32 1
 
-  %a = load double, double addrspace(1)* %gep.0
-  %b = load double, double addrspace(1)* %gep.1
-  %c = load double, double addrspace(1)* %gep.2
-  %d = load double, double addrspace(1)* %gep.3
+  %a = load volatile double, double addrspace(1)* %gep.0
+  %b = load volatile double, double addrspace(1)* %gep.1
+  %c = load volatile double, double addrspace(1)* %gep.2
+  %d = load volatile double, double addrspace(1)* %gep.3
 
   %mul = fmul double %a, %b
   %fma0 = fadd double %mul, %c
   %fma1 = fadd double %mul, %d
-  store double %fma0, double addrspace(1)* %gep.out.0
-  store double %fma1, double addrspace(1)* %gep.out.1
+  store volatile double %fma0, double addrspace(1)* %gep.out.0
+  store volatile double %fma1, double addrspace(1)* %gep.out.1
   ret void
 }
 
@@ -77,9 +77,9 @@ define void @combine_to_fma_f64_1(double addrspace(1)* noalias %out, double addr
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
   %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
 
-  %a = load double, double addrspace(1)* %gep.0
-  %b = load double, double addrspace(1)* %gep.1
-  %c = load double, double addrspace(1)* %gep.2
+  %a = load volatile double, double addrspace(1)* %gep.0
+  %b = load volatile double, double addrspace(1)* %gep.1
+  %c = load volatile double, double addrspace(1)* %gep.2
 
   %mul = fmul double %a, %b
   %fma = fadd double %c, %mul
@@ -101,9 +101,9 @@ define void @combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
   %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
 
-  %a = load double, double addrspace(1)* %gep.0
-  %b = load double, double addrspace(1)* %gep.1
-  %c = load double, double addrspace(1)* %gep.2
+  %a = load volatile double, double addrspace(1)* %gep.0
+  %b = load volatile double, double addrspace(1)* %gep.1
+  %c = load volatile double, double addrspace(1)* %gep.2
 
   %mul = fmul double %a, %b
   %fma = fsub double %mul, %c
@@ -131,16 +131,16 @@ define void @combine_to_fma_fsub_f64_0_2use(double addrspace(1)* noalias %out, d
   %gep.out.0 = getelementptr double, double addrspace(1)* %out, i32 %tid
   %gep.out.1 = getelementptr double, double addrspace(1)* %gep.out.0, i32 1
 
-  %a = load double, double addrspace(1)* %gep.0
-  %b = load double, double addrspace(1)* %gep.1
-  %c = load double, double addrspace(1)* %gep.2
-  %d = load double, double addrspace(1)* %gep.3
+  %a = load volatile double, double addrspace(1)* %gep.0
+  %b = load volatile double, double addrspace(1)* %gep.1
+  %c = load volatile double, double addrspace(1)* %gep.2
+  %d = load volatile double, double addrspace(1)* %gep.3
 
   %mul = fmul double %a, %b
   %fma0 = fsub double %mul, %c
   %fma1 = fsub double %mul, %d
-  store double %fma0, double addrspace(1)* %gep.out.0
-  store double %fma1, double addrspace(1)* %gep.out.1
+  store volatile double %fma0, double addrspace(1)* %gep.out.0
+  store volatile double %fma1, double addrspace(1)* %gep.out.1
   ret void
 }
 
@@ -158,9 +158,9 @@ define void @combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
   %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
 
-  %a = load double, double addrspace(1)* %gep.0
-  %b = load double, double addrspace(1)* %gep.1
-  %c = load double, double addrspace(1)* %gep.2
+  %a = load volatile double, double addrspace(1)* %gep.0
+  %b = load volatile double, double addrspace(1)* %gep.1
+  %c = load volatile double, double addrspace(1)* %gep.2
 
   %mul = fmul double %a, %b
   %fma = fsub double %c, %mul
@@ -188,16 +188,16 @@ define void @combine_to_fma_fsub_1_f64_2use(double addrspace(1)* noalias %out, d
   %gep.out.0 = getelementptr double, double addrspace(1)* %out, i32 %tid
   %gep.out.1 = getelementptr double, double addrspace(1)* %gep.out.0, i32 1
 
-  %a = load double, double addrspace(1)* %gep.0
-  %b = load double, double addrspace(1)* %gep.1
-  %c = load double, double addrspace(1)* %gep.2
-  %d = load double, double addrspace(1)* %gep.3
+  %a = load volatile double, double addrspace(1)* %gep.0
+  %b = load volatile double, double addrspace(1)* %gep.1
+  %c = load volatile double, double addrspace(1)* %gep.2
+  %d = load volatile double, double addrspace(1)* %gep.3
 
   %mul = fmul double %a, %b
   %fma0 = fsub double %c, %mul
   %fma1 = fsub double %d, %mul
-  store double %fma0, double addrspace(1)* %gep.out.0
-  store double %fma1, double addrspace(1)* %gep.out.1
+  store volatile double %fma0, double addrspace(1)* %gep.out.0
+  store volatile double %fma1, double addrspace(1)* %gep.out.1
   ret void
 }
 
@@ -215,9 +215,9 @@ define void @combine_to_fma_fsub_2_f64(double addrspace(1)* noalias %out, double
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
   %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
 
-  %a = load double, double addrspace(1)* %gep.0
-  %b = load double, double addrspace(1)* %gep.1
-  %c = load double, double addrspace(1)* %gep.2
+  %a = load volatile double, double addrspace(1)* %gep.0
+  %b = load volatile double, double addrspace(1)* %gep.1
+  %c = load volatile double, double addrspace(1)* %gep.2
 
   %mul = fmul double %a, %b
   %mul.neg = fsub double -0.0, %mul
@@ -246,18 +246,18 @@ define void @combine_to_fma_fsub_2_f64_2uses_neg(double addrspace(1)* noalias %o
   %gep.out.0 = getelementptr double, double addrspace(1)* %out, i32 %tid
   %gep.out.1 = getelementptr double, double addrspace(1)* %gep.out.0, i32 1
 
-  %a = load double, double addrspace(1)* %gep.0
-  %b = load double, double addrspace(1)* %gep.1
-  %c = load double, double addrspace(1)* %gep.2
-  %d = load double, double addrspace(1)* %gep.3
+  %a = load volatile double, double addrspace(1)* %gep.0
+  %b = load volatile double, double addrspace(1)* %gep.1
+  %c = load volatile double, double addrspace(1)* %gep.2
+  %d = load volatile double, double addrspace(1)* %gep.3
 
   %mul = fmul double %a, %b
   %mul.neg = fsub double -0.0, %mul
   %fma0 = fsub double %mul.neg, %c
   %fma1 = fsub double %mul.neg, %d
 
-  store double %fma0, double addrspace(1)* %gep.out.0
-  store double %fma1, double addrspace(1)* %gep.out.1
+  store volatile double %fma0, double addrspace(1)* %gep.out.0
+  store volatile double %fma1, double addrspace(1)* %gep.out.1
   ret void
 }
 
@@ -280,18 +280,18 @@ define void @combine_to_fma_fsub_2_f64_2uses_mul(double addrspace(1)* noalias %o
   %gep.out.0 = getelementptr double, double addrspace(1)* %out, i32 %tid
   %gep.out.1 = getelementptr double, double addrspace(1)* %gep.out.0, i32 1
 
-  %a = load double, double addrspace(1)* %gep.0
-  %b = load double, double addrspace(1)* %gep.1
-  %c = load double, double addrspace(1)* %gep.2
-  %d = load double, double addrspace(1)* %gep.3
+  %a = load volatile double, double addrspace(1)* %gep.0
+  %b = load volatile double, double addrspace(1)* %gep.1
+  %c = load volatile double, double addrspace(1)* %gep.2
+  %d = load volatile double, double addrspace(1)* %gep.3
 
   %mul = fmul double %a, %b
   %mul.neg = fsub double -0.0, %mul
   %fma0 = fsub double %mul.neg, %c
   %fma1 = fsub double %mul, %d
 
-  store double %fma0, double addrspace(1)* %gep.out.0
-  store double %fma1, double addrspace(1)* %gep.out.1
+  store volatile double %fma0, double addrspace(1)* %gep.out.0
+  store volatile double %fma1, double addrspace(1)* %gep.out.1
   ret void
 }
 
@@ -315,11 +315,11 @@ define void @aggressive_combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %
   %gep.4 = getelementptr double, double addrspace(1)* %gep.0, i32 4
   %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
 
-  %x = load double, double addrspace(1)* %gep.0
-  %y = load double, double addrspace(1)* %gep.1
-  %z = load double, double addrspace(1)* %gep.2
-  %u = load double, double addrspace(1)* %gep.3
-  %v = load double, double addrspace(1)* %gep.4
+  %x = load volatile double, double addrspace(1)* %gep.0
+  %y = load volatile double, double addrspace(1)* %gep.1
+  %z = load volatile double, double addrspace(1)* %gep.2
+  %u = load volatile double, double addrspace(1)* %gep.3
+  %v = load volatile double, double addrspace(1)* %gep.4
 
   %tmp0 = fmul double %u, %v
   %tmp1 = call double @llvm.fma.f64(double %x, double %y, double %tmp0) #0
@@ -350,11 +350,11 @@ define void @aggressive_combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %
   %gep.4 = getelementptr double, double addrspace(1)* %gep.0, i32 4
   %gep.out = getelementptr double, double addrspace(1)* %out, i32 %tid
 
-  %x = load double, double addrspace(1)* %gep.0
-  %y = load double, double addrspace(1)* %gep.1
-  %z = load double, double addrspace(1)* %gep.2
-  %u = load double, double addrspace(1)* %gep.3
-  %v = load double, double addrspace(1)* %gep.4
+  %x = load volatile double, double addrspace(1)* %gep.0
+  %y = load volatile double, double addrspace(1)* %gep.1
+  %z = load volatile double, double addrspace(1)* %gep.2
+  %u = load volatile double, double addrspace(1)* %gep.3
+  %v = load volatile double, double addrspace(1)* %gep.4
 
   %tmp0 = fmul double %u, %v
   %tmp1 = call double @llvm.fma.f64(double %y, double %z, double %tmp0) #0
@@ -373,8 +373,8 @@ define void @aggressive_combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %
 define void @test_f32_mul_add_x_one_y(float addrspace(1)* %out,
                                         float addrspace(1)* %in1,
                                         float addrspace(1)* %in2) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
+  %x = load volatile float, float addrspace(1)* %in1
+  %y = load volatile float, float addrspace(1)* %in2
   %a = fadd float %x, 1.0
   %m = fmul float %a, %y
   store float %m, float addrspace(1)* %out
@@ -386,8 +386,8 @@ define void @test_f32_mul_add_x_one_y(float addrspace(1)* %out,
 define void @test_f32_mul_y_add_x_one(float addrspace(1)* %out,
                                         float addrspace(1)* %in1,
                                         float addrspace(1)* %in2) {
-  %x = load float, float addrspace(1)* %in1
-  %y = load float, float addrspace(1)* %in2
+  %x = load volatile float, float addrspace(1)* %in1
+  %y = load volatile float, float addrspace(1)* %in2
   %a = fadd float %x, 1.0
   %m = fmul float %y, %a
   store float %m, float addrspace(1)* %out

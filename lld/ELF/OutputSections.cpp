@@ -166,12 +166,6 @@ template <class ELFT> bool GotSection<ELFT>::addTlsIndex() {
 
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t
-GotSection<ELFT>::getMipsLocalFullAddr(const SymbolBody &B) {
-  return getMipsLocalEntryAddr(B.getVA<ELFT>());
-}
-
-template <class ELFT>
-typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getMipsLocalPageAddr(uintX_t EntryValue) {
   // Initialize the entry by the %hi(EntryValue) expression
   // but without right-shifting.
@@ -1211,16 +1205,8 @@ template <class ELFT> void EHOutputSection<ELFT>::writeTo(uint8_t *Buf) {
     }
   }
 
-  for (EHInputSection<ELFT> *S : Sections) {
-    const Elf_Shdr *RelSec = S->RelocSection;
-    if (!RelSec)
-      continue;
-    ELFFile<ELFT> &EObj = S->getFile()->getObj();
-    if (RelSec->sh_type == SHT_RELA)
-      S->relocate(Buf, nullptr, EObj.relas(RelSec));
-    else
-      S->relocate(Buf, nullptr, EObj.rels(RelSec));
-  }
+  for (EHInputSection<ELFT> *S : Sections)
+    S->relocate(Buf, nullptr);
 }
 
 template <class ELFT>

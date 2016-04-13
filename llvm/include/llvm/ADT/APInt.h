@@ -1782,6 +1782,13 @@ inline bool isMask(unsigned numBits, const APInt &APIVal) {
          APIVal == APInt::getLowBitsSet(APIVal.getBitWidth(), numBits);
 }
 
+/// \returns true if the argument is a non-empty sequence of ones starting at
+/// the least significant bit with the remainder zero (32 bit version).
+/// Ex. isMask(0x0000FFFFU) == true.
+inline bool isMask(const APInt &Value) {
+  return (Value != 0) && ((Value + 1) & Value) == 0;
+}
+
 /// \brief Return true if the argument APInt value contains a sequence of ones
 /// with the remainder zero.
 inline bool isShiftedMask(unsigned numBits, const APInt &APIVal) {

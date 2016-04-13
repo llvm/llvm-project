@@ -4570,7 +4570,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
             break;
             // fabs(x) < 0 --> false
           case FCmpInst::FCMP_OLT:
-            return replaceInstUsesWith(I, Builder->getFalse());
+            llvm_unreachable("handled by SimplifyFCmpInst");
             // fabs(x) > 0 --> x != 0
           case FCmpInst::FCMP_OGT:
             return new FCmpInst(FCmpInst::FCMP_ONE, CI->getArgOperand(0), RHSC);

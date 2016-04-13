@@ -14893,19 +14893,19 @@ SDValue X86TargetLowering::LowerToBT(SDValue And, ISD::CondCode CC,
     std::swap(Op0, Op1);
   if (Op0.getOpcode() == ISD::SHL) {
     if (isOneConstant(Op0.getOperand(0))) {
-        // If we looked past a truncate, check that it's only truncating away
-        // known zeros.
-        unsigned BitWidth = Op0.getValueSizeInBits();
-        unsigned AndBitWidth = And.getValueSizeInBits();
-        if (BitWidth > AndBitWidth) {
-          APInt Zeros, Ones;
-          DAG.computeKnownBits(Op0, Zeros, Ones);
-          if (Zeros.countLeadingOnes() < BitWidth - AndBitWidth)
-            return SDValue();
-        }
-        LHS = Op1;
-        RHS = Op0.getOperand(1);
+      // If we looked past a truncate, check that it's only truncating away
+      // known zeros.
+      unsigned BitWidth = Op0.getValueSizeInBits();
+      unsigned AndBitWidth = And.getValueSizeInBits();
+      if (BitWidth > AndBitWidth) {
+        APInt Zeros, Ones;
+        DAG.computeKnownBits(Op0, Zeros, Ones);
+        if (Zeros.countLeadingOnes() < BitWidth - AndBitWidth)
+          return SDValue();
       }
+      LHS = Op1;
+      RHS = Op0.getOperand(1);
+    }
   } else if (Op1.getOpcode() == ISD::Constant) {
     ConstantSDNode *AndRHS = cast<ConstantSDNode>(Op1);
     uint64_t AndRHSVal = AndRHS->getZExtValue();

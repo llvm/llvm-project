@@ -86,8 +86,8 @@ entry:
   %cond = select i1 %cmp, fp128 %x, fp128 %y
   ret fp128 %cond
 ; CHECK-LABEL: TestMax:
-; CHECK: movaps %xmm1
 ; CHECK: movaps %xmm0
+; CHECK: movaps %xmm1
 ; CHECK: callq __gttf2
 ; CHECK: movaps {{.*}}, %xmm0
 ; CHECK: testl %eax, %eax

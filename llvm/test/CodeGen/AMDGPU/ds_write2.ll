@@ -31,8 +31,8 @@ define void @simple_write2_two_val_f32(float addrspace(1)* %C, float addrspace(1
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep.0 = getelementptr float, float addrspace(1)* %in, i32 %x.i
   %in.gep.1 = getelementptr float, float addrspace(1)* %in.gep.0, i32 1
-  %val0 = load float, float addrspace(1)* %in.gep.0, align 4
-  %val1 = load float, float addrspace(1)* %in.gep.1, align 4
+  %val0 = load volatile float, float addrspace(1)* %in.gep.0, align 4
+  %val1 = load volatile float, float addrspace(1)* %in.gep.1, align 4
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   store float %val0, float addrspace(3)* %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 8
@@ -50,8 +50,8 @@ define void @simple_write2_two_val_f32_volatile_0(float addrspace(1)* %C, float 
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in0.gep = getelementptr float, float addrspace(1)* %in0, i32 %x.i
   %in1.gep = getelementptr float, float addrspace(1)* %in1, i32 %x.i
-  %val0 = load float, float addrspace(1)* %in0.gep, align 4
-  %val1 = load float, float addrspace(1)* %in1.gep, align 4
+  %val0 = load volatile float, float addrspace(1)* %in0.gep, align 4
+  %val1 = load volatile float, float addrspace(1)* %in1.gep, align 4
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   store volatile float %val0, float addrspace(3)* %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 8
@@ -69,8 +69,8 @@ define void @simple_write2_two_val_f32_volatile_1(float addrspace(1)* %C, float 
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in0.gep = getelementptr float, float addrspace(1)* %in0, i32 %x.i
   %in1.gep = getelementptr float, float addrspace(1)* %in1, i32 %x.i
-  %val0 = load float, float addrspace(1)* %in0.gep, align 4
-  %val1 = load float, float addrspace(1)* %in1.gep, align 4
+  %val0 = load volatile float, float addrspace(1)* %in0.gep, align 4
+  %val1 = load volatile float, float addrspace(1)* %in1.gep, align 4
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   store float %val0, float addrspace(3)* %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 8
@@ -90,8 +90,8 @@ define void @simple_write2_two_val_subreg2_mixed_f32(float addrspace(1)* %C, <2 
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep.0 = getelementptr <2 x float>, <2 x float> addrspace(1)* %in, i32 %x.i
   %in.gep.1 = getelementptr <2 x float>, <2 x float> addrspace(1)* %in.gep.0, i32 1
-  %val0 = load <2 x float>, <2 x float> addrspace(1)* %in.gep.0, align 8
-  %val1 = load <2 x float>, <2 x float> addrspace(1)* %in.gep.1, align 8
+  %val0 = load volatile <2 x float>, <2 x float> addrspace(1)* %in.gep.0, align 8
+  %val1 = load volatile <2 x float>, <2 x float> addrspace(1)* %in.gep.1, align 8
   %val0.0 = extractelement <2 x float> %val0, i32 0
   %val1.1 = extractelement <2 x float> %val1, i32 1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
@@ -150,8 +150,8 @@ define void @simple_write2_two_val_max_offset_f32(float addrspace(1)* %C, float 
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep.0 = getelementptr float, float addrspace(1)* %in, i32 %x.i
   %in.gep.1 = getelementptr float, float addrspace(1)* %in.gep.0, i32 1
-  %val0 = load float, float addrspace(1)* %in.gep.0, align 4
-  %val1 = load float, float addrspace(1)* %in.gep.1, align 4
+  %val0 = load volatile float, float addrspace(1)* %in.gep.0, align 4
+  %val1 = load volatile float, float addrspace(1)* %in.gep.1, align 4
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   store float %val0, float addrspace(3)* %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 255
@@ -310,8 +310,8 @@ define void @simple_write2_two_val_f64(double addrspace(1)* %C, double addrspace
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep.0 = getelementptr double, double addrspace(1)* %in, i32 %x.i
   %in.gep.1 = getelementptr double, double addrspace(1)* %in.gep.0, i32 1
-  %val0 = load double, double addrspace(1)* %in.gep.0, align 8
-  %val1 = load double, double addrspace(1)* %in.gep.1, align 8
+  %val0 = load volatile double, double addrspace(1)* %in.gep.0, align 8
+  %val1 = load volatile double, double addrspace(1)* %in.gep.1, align 8
   %arrayidx0 = getelementptr inbounds [512 x double], [512 x double] addrspace(3)* @lds.f64, i32 0, i32 %x.i
   store double %val0, double addrspace(3)* %arrayidx0, align 8
   %add.x = add nsw i32 %x.i, 8

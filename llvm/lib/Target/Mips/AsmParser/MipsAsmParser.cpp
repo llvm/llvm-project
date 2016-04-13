@@ -5350,7 +5350,7 @@ bool MipsAsmParser::parseSetArchDirective() {
           .Case("mips64r3", "mips64r3")
           .Case("mips64r5", "mips64r5")
           .Case("mips64r6", "mips64r6")
-          .Case("cnmips", "cnmips")
+          .Case("octeon", "cnmips")
           .Case("r4000", "mips3") // This is an implementation of Mips3.
           .Default("");
 

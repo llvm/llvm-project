@@ -36,8 +36,8 @@ define void @multiple_use_fadd_fmac(float addrspace(1)* %out, float %x, float %y
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %mul2 = fmul fast float %x, 2.0
   %mad = fadd fast float %mul2, %y
-  store float %mul2, float addrspace(1)* %out
-  store float %mad, float addrspace(1)* %out.gep.1
+  store volatile float %mul2, float addrspace(1)* %out
+  store volatile float %mad, float addrspace(1)* %out.gep.1
   ret void
 }
 
@@ -52,8 +52,8 @@ define void @multiple_use_fadd_fmad(float addrspace(1)* %out, float %x, float %y
   %x.abs = call float @llvm.fabs.f32(float %x)
   %mul2 = fmul fast float %x.abs, 2.0
   %mad = fadd fast float %mul2, %y
-  store float %mul2, float addrspace(1)* %out
-  store float %mad, float addrspace(1)* %out.gep.1
+  store volatile float %mul2, float addrspace(1)* %out
+  store volatile float %mad, float addrspace(1)* %out.gep.1
   ret void
 }
 
@@ -66,8 +66,8 @@ define void @multiple_use_fadd_multi_fmad(float addrspace(1)* %out, float %x, fl
   %mul2 = fmul fast float %x.abs, 2.0
   %mad0 = fadd fast float %mul2, %y
   %mad1 = fadd fast float %mul2, %z
-  store float %mad0, float addrspace(1)* %out
-  store float %mad1, float addrspace(1)* %out.gep.1
+  store volatile float %mad0, float addrspace(1)* %out
+  store volatile float %mad1, float addrspace(1)* %out.gep.1
   ret void
 }
 
@@ -80,7 +80,7 @@ define void @fmul_x2_xn2(float addrspace(1)* %out, float %x, float %y) #0 {
   %mul2 = fmul fast float %x, 2.0
   %muln2 = fmul fast float %x, -2.0
   %mul = fmul fast float %mul2, %muln2
-  store float %mul, float addrspace(1)* %out
+  store volatile float %mul, float addrspace(1)* %out
   ret void
 }
 
@@ -94,7 +94,7 @@ define void @fmul_x2_xn3(float addrspace(1)* %out, float %x, float %y) #0 {
   %mul2 = fmul fast float %x, 2.0
   %muln2 = fmul fast float %x, -3.0
   %mul = fmul fast float %mul2, %muln2
-  store float %mul, float addrspace(1)* %out
+  store volatile float %mul, float addrspace(1)* %out
   ret void
 }
 

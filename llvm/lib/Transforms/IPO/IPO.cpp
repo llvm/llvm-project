@@ -106,10 +106,10 @@ void LLVMAddIPSCCPPass(LLVMPassManagerRef PM) {
 }
 
 void LLVMAddInternalizePass(LLVMPassManagerRef PM, unsigned AllButMain) {
-  std::vector<const char *> Export;
-  if (AllButMain)
-    Export.push_back("main");
-  unwrap(PM)->add(createInternalizePass(Export));
+  auto PreserveMain = [=](const GlobalValue &GV) {
+    return AllButMain && GV.getName() == "main";
+  };
+  unwrap(PM)->add(createInternalizePass(PreserveMain));
 }
 
 void LLVMAddStripDeadPrototypesPass(LLVMPassManagerRef PM) {

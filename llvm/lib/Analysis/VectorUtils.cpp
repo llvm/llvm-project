@@ -121,10 +121,10 @@ llvm::checkBinaryFloatSignature(const CallInst &I,
 /// \brief Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its ID, in case it does not found it return not_intrinsic.
-Intrinsic::ID llvm::getIntrinsicIDForCall(CallInst *CI,
+Intrinsic::ID llvm::getIntrinsicIDForCall(const CallInst *CI,
                                           const TargetLibraryInfo *TLI) {
   // If we have an intrinsic call, check if it is trivially vectorizable.
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI)) {
+  if (const auto *II = dyn_cast<IntrinsicInst>(CI)) {
     Intrinsic::ID ID = II->getIntrinsicID();
     if (isTriviallyVectorizable(ID) || ID == Intrinsic::lifetime_start ||
         ID == Intrinsic::lifetime_end || ID == Intrinsic::assume)

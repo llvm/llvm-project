@@ -45,13 +45,7 @@ bool llvm::isGCRelocate(ImmutableCallSite CS) {
 }
 
 bool llvm::isGCResult(ImmutableCallSite CS) {
-  if (auto *F = getCalledFunction(CS))
-    return F->getIntrinsicID() == Intrinsic::experimental_gc_result;
-  return false;
-}
-
-bool llvm::isGCResult(const Value *V) {
-  return isGCResult(ImmutableCallSite(V));
+  return CS.getInstruction() && isa<GCResultInst>(CS.getInstruction());
 }
 
 bool llvm::isStatepointDirectiveAttr(Attribute Attr) {

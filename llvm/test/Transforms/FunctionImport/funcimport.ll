@@ -1,6 +1,6 @@
 ; Do setup work for all below tests: generate bitcode and combined index
-; RUN: llvm-as -module-summary %s -o %t.bc
-; RUN: llvm-as -module-summary %p/Inputs/funcimport.ll -o %t2.bc
+; RUN: opt -module-summary %s -o %t.bc
+; RUN: opt -module-summary %p/Inputs/funcimport.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -print-summary-global-ids -o %t3 %t.bc %t2.bc 2>&1 | FileCheck %s --check-prefix=GUID
 
 ; Do the import now

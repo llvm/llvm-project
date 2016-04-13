@@ -955,10 +955,10 @@ protected:
 OptionDefinition
 g_memory_find_option_table[] =
 {
-    { LLDB_OPT_SET_1, false, "expression", 'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeExpression, "Evaluate an expression to obtain a byte pattern."},
-    { LLDB_OPT_SET_2, false, "string", 's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeName,   "Use text to find a byte pattern."},
-    { LLDB_OPT_SET_1|LLDB_OPT_SET_2, false, "count", 'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,   "How many times to perform the search."},
-    { LLDB_OPT_SET_1|LLDB_OPT_SET_2, false, "dump-offset", 'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset,   "When dumping memory for a match, an offset from the match location to start dumping from."},
+    { LLDB_OPT_SET_1, true, "expression", 'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeExpression, "Evaluate an expression to obtain a byte pattern."},
+    { LLDB_OPT_SET_2, true, "string", 's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeName,   "Use text to find a byte pattern."},
+    { LLDB_OPT_SET_ALL, false, "count", 'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,   "How many times to perform the search."},
+    { LLDB_OPT_SET_ALL, false, "dump-offset", 'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset,   "When dumping memory for a match, an offset from the match location to start dumping from."},
 };
 
 //----------------------------------------------------------------------
@@ -1072,7 +1072,7 @@ public:
     m_arguments.push_back (arg1);
     m_arguments.push_back (arg2);
     
-    m_option_group.Append (&m_memory_options, LLDB_OPT_SET_ALL, LLDB_OPT_SET_2);
+    m_option_group.Append (&m_memory_options);
     m_option_group.Finalize();
   }
 

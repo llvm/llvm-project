@@ -434,6 +434,12 @@ public:
   /// but if there was only one module or this was the first module we might
   /// not invoke mergeFrom.
   void removeEmptySummaryEntries();
+
+  /// Collect for the given module the list of function it defines
+  /// (GUID -> Summary).
+  void collectDefinedFunctionsForModule(
+      StringRef ModulePath,
+      std::map<GlobalValue::GUID, FunctionSummary *> &FunctionInfoMap) const;
 };
 
 } // End llvm namespace

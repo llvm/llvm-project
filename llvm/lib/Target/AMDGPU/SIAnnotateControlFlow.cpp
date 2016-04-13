@@ -262,7 +262,23 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
 
       BasicBlock *From = Phi->getIncomingBlock(i);
       if (From == IDom) {
+        // We're in the following situation:
+        //   IDom/From
+        //      |   \
+        //      |   If-block
+        //      |   /
+        //     Parent
+        // where we want to break out of the loop if the If-block is not taken.
+        // Due to the depth-first traversal, there should be an end.cf
+        // intrinsic in Parent, and we insert an else.break before it.
+        //
+        // Note that the end.cf need not be the first non-phi instruction
+        // of parent, particularly when we're dealing with a multi-level
+        // break, but it should occur within a group of intrinsic calls
+        // at the beginning of the block.
         CallInst *OldEnd = dyn_cast<CallInst>(Parent->getFirstInsertionPt());
+        while (OldEnd && OldEnd->getCalledFunction() != EndCf)
+          OldEnd = dyn_cast<CallInst>(OldEnd->getNextNode());
         if (OldEnd && OldEnd->getCalledFunction() == EndCf) {
           Value *Args[] = { OldEnd->getArgOperand(0), NewPhi };
           Ret = CallInst::Create(ElseBreak, Args, "", OldEnd);

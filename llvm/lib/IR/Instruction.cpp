@@ -279,6 +279,10 @@ static bool haveSameSpecialState(const Instruction *I1, const Instruction *I2,
   assert(I1->getOpcode() == I2->getOpcode() &&
          "Can not compare special state of different instructions");
 
+  if (const AllocaInst *AI = dyn_cast<AllocaInst>(I1))
+    return AI->getAllocatedType() == cast<AllocaInst>(I2)->getAllocatedType() &&
+           (AI->getAlignment() == cast<AllocaInst>(I2)->getAlignment() ||
+            IgnoreAlignment);
   if (const LoadInst *LI = dyn_cast<LoadInst>(I1))
     return LI->isVolatile() == cast<LoadInst>(I2)->isVolatile() &&
            (LI->getAlignment() == cast<LoadInst>(I2)->getAlignment() ||

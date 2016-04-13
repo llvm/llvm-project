@@ -97,10 +97,10 @@ class DALIGN_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
 
 class DALIGN_MMR6_DESC : DALIGN_DESC_BASE<"dalign", GPR64Opnd, uimm3>;
 
-class DDIV_MM64R6_DESC : ArithLogicR<"ddiv", GPR32Opnd>;
-class DMOD_MM64R6_DESC : ArithLogicR<"dmod", GPR32Opnd>;
-class DDIVU_MM64R6_DESC : ArithLogicR<"ddivu", GPR32Opnd>;
-class DMODU_MM64R6_DESC : ArithLogicR<"dmodu", GPR32Opnd>;
+class DDIV_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"ddiv", GPR64Opnd, sdiv>;
+class DMOD_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"dmod", GPR64Opnd, srem>;
+class DDIVU_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"ddivu", GPR64Opnd, udiv>;
+class DMODU_MM64R6_DESC : DIVMOD_MMR6_DESC_BASE<"dmodu", GPR64Opnd, urem>;
 
 class DINSU_MM64R6_DESC : InsBase<"dinsu", GPR64Opnd, uimm5_plus32,
                                   uimm5_inssize_plus1, MipsIns>;

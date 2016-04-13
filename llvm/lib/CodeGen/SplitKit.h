@@ -18,6 +18,7 @@
 #include "LiveRangeCalc.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -329,9 +330,14 @@ private:
   MachineBasicBlock *findShallowDominator(MachineBasicBlock *MBB,
                                           MachineBasicBlock *DefMBB);
 
-  /// hoistCopiesForSize - Hoist back-copies to the complement interval in a
-  /// way that minimizes code size. This implements the SM_Size spill mode.
-  void hoistCopiesForSize();
+  /// Find out all the backCopies dominated by others.
+  void computeRedundantBackCopies(DenseSet<unsigned> &NotToHoistSet,
+                                  SmallVectorImpl<VNInfo *> &BackCopies);
+
+  /// Hoist back-copies to the complement interval. It tries to hoist all
+  /// the back-copies to one BB if it is beneficial, or else simply remove
+  /// redundent backcopies dominated by others.
+  void hoistCopies();
 
   /// transferValues - Transfer values to the new ranges.
   /// Return true if any ranges were skipped.

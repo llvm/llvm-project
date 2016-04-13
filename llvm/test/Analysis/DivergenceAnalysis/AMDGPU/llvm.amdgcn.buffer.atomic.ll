@@ -88,17 +88,16 @@ main_body:
   ret float %r
 }
 
-declare i32 @llvm.amdgcn.buffer.atomic.swap(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.add(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.smin(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.umin(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.smax(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.umax(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.and(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.or(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.xor(i32, <4 x i32>, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32, i32, <4 x i32>, i32, i32, i1) #1
+declare i32 @llvm.amdgcn.buffer.atomic.swap(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.add(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.smin(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.umin(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.smax(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.umax(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.and(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.or(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.xor(i32, <4 x i32>, i32, i32, i1) #0
+declare i32 @llvm.amdgcn.buffer.atomic.cmpswap(i32, i32, <4 x i32>, i32, i32, i1) #0
 
-attributes #0 = { "ShaderType"="0" }
-attributes #1 = { nounwind }
+attributes #0 = { nounwind }

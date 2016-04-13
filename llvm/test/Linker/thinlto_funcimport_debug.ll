@@ -1,6 +1,6 @@
 ; Do setup work for all below tests: generate bitcode and combined index
-; RUN: llvm-as -module-summary %s -o %t.bc
-; RUN: llvm-as -module-summary %p/Inputs/thinlto_funcimport_debug.ll -o %t2.bc
+; RUN: opt -module-summary %s -o %t.bc
+; RUN: opt -module-summary %p/Inputs/thinlto_funcimport_debug.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; If we import func1 and not func2 we should only link DISubprogram for func1

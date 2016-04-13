@@ -20,6 +20,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -2267,7 +2268,8 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
 /// NOTE: this function will need to be revisited when we support non-default
 /// rounding modes!
 ///
-bool llvm::CannotBeNegativeZero(const Value *V, unsigned Depth) {
+bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
+                                unsigned Depth) {
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V))
     return !CFP->getValueAPF().isNegZero();
 
@@ -2295,30 +2297,26 @@ bool llvm::CannotBeNegativeZero(const Value *V, unsigned Depth) {
   if (isa<SIToFPInst>(I) || isa<UIToFPInst>(I))
     return true;
 
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+  if (const CallInst *CI = dyn_cast<CallInst>(I)) {
+    Intrinsic::ID IID = getIntrinsicIDForCall(CI, TLI);
+    switch (IID) {
+    default:
+      break;
     // sqrt(-0.0) = -0.0, no other negative results are possible.
-    if (II->getIntrinsicID() == Intrinsic::sqrt)
-      return CannotBeNegativeZero(II->getArgOperand(0), Depth+1);
-
-  if (const CallInst *CI = dyn_cast<CallInst>(I))
-    if (const Function *F = CI->getCalledFunction()) {
-      if (F->isDeclaration()) {
-        // abs(x) != -0.0
-        if (F->getName() == "abs") return true;
-        // fabs[lf](x) != -0.0
-        if (F->getName() == "fabs") return true;
-        if (F->getName() == "fabsf") return true;
-        if (F->getName() == "fabsl") return true;
-        if (F->getName() == "sqrt" || F->getName() == "sqrtf" ||
-            F->getName() == "sqrtl")
-          return CannotBeNegativeZero(CI->getArgOperand(0), Depth+1);
-      }
+    case Intrinsic::sqrt:
+      return CannotBeNegativeZero(CI->getArgOperand(0), TLI, Depth + 1);
+    // fabs(x) != -0.0
+    case Intrinsic::fabs:
+      return true;
     }
+  }
 
   return false;
 }
 
-bool llvm::CannotBeOrderedLessThanZero(const Value *V, unsigned Depth) {
+bool llvm::CannotBeOrderedLessThanZero(const Value *V,
+                                       const TargetLibraryInfo *TLI,
+                                       unsigned Depth) {
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V))
     return !CFP->getValueAPF().isNegative() || CFP->getValueAPF().isZero();
 
@@ -2344,43 +2342,44 @@ bool llvm::CannotBeOrderedLessThanZero(const Value *V, unsigned Depth) {
   case Instruction::FAdd:
   case Instruction::FDiv:
   case Instruction::FRem:
-    return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1) &&
-           CannotBeOrderedLessThanZero(I->getOperand(1), Depth+1);
+    return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1) &&
+           CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1);
   case Instruction::Select:
-    return CannotBeOrderedLessThanZero(I->getOperand(1), Depth+1) &&
-           CannotBeOrderedLessThanZero(I->getOperand(2), Depth+1);
+    return CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1) &&
+           CannotBeOrderedLessThanZero(I->getOperand(2), TLI, Depth + 1);
   case Instruction::FPExt:
   case Instruction::FPTrunc:
     // Widening/narrowing never change sign.
-    return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1);
-  case Instruction::Call: 
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) 
-      switch (II->getIntrinsicID()) {
-      default: break;
-      case Intrinsic::maxnum:
-        return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1) ||
-               CannotBeOrderedLessThanZero(I->getOperand(1), Depth+1);
-      case Intrinsic::minnum:
-        return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1) &&
-               CannotBeOrderedLessThanZero(I->getOperand(1), Depth+1);
-      case Intrinsic::exp:
-      case Intrinsic::exp2:
-      case Intrinsic::fabs:
-      case Intrinsic::sqrt:
-        return true;
-      case Intrinsic::powi: 
-        if (ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1))) {
-          // powi(x,n) is non-negative if n is even.
-          if (CI->getBitWidth() <= 64 && CI->getSExtValue() % 2u == 0)
-            return true;
-        }
-        return CannotBeOrderedLessThanZero(I->getOperand(0), Depth+1);
-      case Intrinsic::fma:
-      case Intrinsic::fmuladd:
-        // x*x+y is non-negative if y is non-negative.
-        return I->getOperand(0) == I->getOperand(1) && 
-               CannotBeOrderedLessThanZero(I->getOperand(2), Depth+1);
+    return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1);
+  case Instruction::Call:
+    Intrinsic::ID IID = getIntrinsicIDForCall(cast<CallInst>(I), TLI);
+    switch (IID) {
+    default:
+      break;
+    case Intrinsic::maxnum:
+      return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1) ||
+             CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1);
+    case Intrinsic::minnum:
+      return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1) &&
+             CannotBeOrderedLessThanZero(I->getOperand(1), TLI, Depth + 1);
+    case Intrinsic::exp:
+    case Intrinsic::exp2:
+    case Intrinsic::fabs:
+    case Intrinsic::sqrt:
+      return true;
+    case Intrinsic::powi:
+      if (ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1))) {
+        // powi(x,n) is non-negative if n is even.
+        if (CI->getBitWidth() <= 64 && CI->getSExtValue() % 2u == 0)
+          return true;
       }
+      return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1);
+    case Intrinsic::fma:
+    case Intrinsic::fmuladd:
+      // x*x+y is non-negative if y is non-negative.
+      return I->getOperand(0) == I->getOperand(1) &&
+             CannotBeOrderedLessThanZero(I->getOperand(2), TLI, Depth + 1);
+    }
     break;
   }
   return false; 

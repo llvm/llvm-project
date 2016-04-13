@@ -87,18 +87,6 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::UREM_I64] = "__umoddi3";
   Names[RTLIB::UREM_I128] = "__umodti3";
 
-  // These are generally not available.
-  Names[RTLIB::SDIVREM_I8] = nullptr;
-  Names[RTLIB::SDIVREM_I16] = nullptr;
-  Names[RTLIB::SDIVREM_I32] = nullptr;
-  Names[RTLIB::SDIVREM_I64] = nullptr;
-  Names[RTLIB::SDIVREM_I128] = nullptr;
-  Names[RTLIB::UDIVREM_I8] = nullptr;
-  Names[RTLIB::UDIVREM_I16] = nullptr;
-  Names[RTLIB::UDIVREM_I32] = nullptr;
-  Names[RTLIB::UDIVREM_I64] = nullptr;
-  Names[RTLIB::UDIVREM_I128] = nullptr;
-
   Names[RTLIB::NEG_I32] = "__negsi2";
   Names[RTLIB::NEG_I64] = "__negdi2";
   Names[RTLIB::ADD_F32] = "__addsf3";
@@ -236,8 +224,16 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::FPEXT_F64_F128] = "__extenddftf2";
   Names[RTLIB::FPEXT_F32_F128] = "__extendsftf2";
   Names[RTLIB::FPEXT_F32_F64] = "__extendsfdf2";
-  Names[RTLIB::FPEXT_F16_F32] = "__gnu_h2f_ieee";
-  Names[RTLIB::FPROUND_F32_F16] = "__gnu_f2h_ieee";
+  if (TT.isOSDarwin()) {
+    // For f16/f32 conversions, Darwin uses the standard naming scheme, instead
+    // of the gnueabi-style __gnu_*_ieee.
+    // FIXME: What about other targets?
+    Names[RTLIB::FPEXT_F16_F32] = "__extendhfsf2";
+    Names[RTLIB::FPROUND_F32_F16] = "__truncsfhf2";
+  } else {
+    Names[RTLIB::FPEXT_F16_F32] = "__gnu_h2f_ieee";
+    Names[RTLIB::FPROUND_F32_F16] = "__gnu_f2h_ieee";
+  }
   Names[RTLIB::FPROUND_F64_F16] = "__truncdfhf2";
   Names[RTLIB::FPROUND_F80_F16] = "__truncxfhf2";
   Names[RTLIB::FPROUND_F128_F16] = "__trunctfhf2";
@@ -471,28 +467,10 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
     Names[RTLIB::SINCOS_F80] = "sincosl";
     Names[RTLIB::SINCOS_F128] = "sincosl";
     Names[RTLIB::SINCOS_PPCF128] = "sincosl";
-  } else {
-    // These are generally not available.
-    Names[RTLIB::SINCOS_F32] = nullptr;
-    Names[RTLIB::SINCOS_F64] = nullptr;
-    Names[RTLIB::SINCOS_F80] = nullptr;
-    Names[RTLIB::SINCOS_F128] = nullptr;
-    Names[RTLIB::SINCOS_PPCF128] = nullptr;
   }
 
   if (!TT.isOSOpenBSD()) {
     Names[RTLIB::STACKPROTECTOR_CHECK_FAIL] = "__stack_chk_fail";
-  } else {
-    // These are generally not available.
-    Names[RTLIB::STACKPROTECTOR_CHECK_FAIL] = nullptr;
-  }
-
-  // For f16/f32 conversions, Darwin uses the standard naming scheme, instead
-  // of the gnueabi-style __gnu_*_ieee.
-  // FIXME: What about other targets?
-  if (TT.isOSDarwin()) {
-    Names[RTLIB::FPEXT_F16_F32] = "__extendhfsf2";
-    Names[RTLIB::FPROUND_F32_F16] = "__truncsfhf2";
   }
 
   Names[RTLIB::DEOPTIMIZE] = "__llvm_deoptimize";
@@ -839,6 +817,8 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   // TODO: the default will be switched to 0 in the next commit, along
   // with the Target-specific changes necessary.
   MaxAtomicSizeInBitsSupported = 1024;
+
+  std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames), nullptr);
 
   InitLibcallNames(LibcallRoutineNames, TM.getTargetTriple());
   InitCmpLibcallCCs(CmpLibcallCCs);
