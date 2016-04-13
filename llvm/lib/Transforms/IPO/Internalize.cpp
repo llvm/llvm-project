@@ -213,6 +213,7 @@ void Internalizer::checkComdatVisibility(
 }
 
 bool Internalizer::internalizeModule(Module &M, CallGraph *CG) {
+  bool Changed = false;
   CallGraphNode *ExternalNode = CG ? CG->getExternalCallingNode() : nullptr;
 
   SmallPtrSet<GlobalValue *, 8> Used;
@@ -246,6 +247,7 @@ bool Internalizer::internalizeModule(Module &M, CallGraph *CG) {
   for (Function &I : M) {
     if (!maybeInternalize(I, ExternalComdats))
       continue;
+    Changed = true;
 
     if (ExternalNode)
       // Remove a callgraph edge from the external node to this function.
@@ -278,6 +280,7 @@ bool Internalizer::internalizeModule(Module &M, CallGraph *CG) {
   for (auto &GV : M.globals()) {
     if (!maybeInternalize(GV, ExternalComdats))
       continue;
+    Changed = true;
 
     ++NumGlobals;
     DEBUG(dbgs() << "Internalized gvar " << GV.getName() << "\n");
@@ -287,18 +290,13 @@ bool Internalizer::internalizeModule(Module &M, CallGraph *CG) {
   for (auto &GA : M.aliases()) {
     if (!maybeInternalize(GA, ExternalComdats))
       continue;
+    Changed = true;
 
     ++NumAliases;
     DEBUG(dbgs() << "Internalized alias " << GA.getName() << "\n");
   }
 
-  // We do not keep track of whether this pass changed the module because
-  // it adds unnecessary complexity:
-  // 1) This pass will generally be near the start of the pass pipeline, so
-  //    there will be no analyses to invalidate.
-  // 2) This pass will most likely end up changing the module and it isn't worth
-  //    worrying about optimizing the case where the module is unchanged.
-  return true;
+  return Changed;
 }
 
 /// Public API below
