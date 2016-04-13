@@ -1195,7 +1195,13 @@ namespace lldb_private {
         {
             return ((i < m_entries.size()) ? &m_entries[i] : nullptr);
         }
-        
+
+        Entry *
+        GetMutableEntryAtIndex (size_t i)
+        {
+            return ((i < m_entries.size()) ? &m_entries[i] : nullptr);
+        }
+
         // Clients must ensure that "i" is a valid index prior to calling this function
         const Entry &
         GetEntryRef (size_t i) const
