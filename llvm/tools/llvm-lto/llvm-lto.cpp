@@ -601,9 +601,7 @@ int main(int argc, char **argv) {
       CodeGen.setModule(std::move(Module));
     } else if (!CodeGen.addModule(Module.get())) {
       // Print a message here so that we know addModule() did not abort.
-      errs() << argv[0] << ": error adding file '" << InputFilenames[i]
-             << "'\n";
-      return 1;
+      error("error adding file '" + InputFilenames[i] + "'");
     }
   }
 
