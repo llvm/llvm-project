@@ -14,6 +14,7 @@
 #include "llvm/Transforms/IPO/FunctionImport.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -31,6 +32,8 @@
 
 using namespace llvm;
 
+STATISTIC(NumImported, "Number of functions imported");
+
 /// Limit on instruction count of imported functions.
 static cl::opt<unsigned> ImportInstrLimit(
     "import-instr-limit", cl::init(100), cl::Hidden, cl::value_desc("N"),
@@ -42,6 +45,9 @@ static cl::opt<float>
                       cl::desc("As we import functions, multiply the "
                                "`import-instr-limit` threshold by this factor "
                                "before processing newly imported functions"));
+
+static cl::opt<bool> PrintImports("print-imports", cl::init(false), cl::Hidden,
+                                  cl::desc("Print imported functions"));
 
 // Load lazily a module from \p FileName in \p Context.
 static std::unique_ptr<Module> loadFile(const std::string &FileName,
@@ -348,12 +354,20 @@ bool FunctionImporter::importFunctions(
     if (renameModuleForThinLTO(*SrcModule, Index, &GlobalsToImport))
       return true;
 
+    if (PrintImports) {
+      for (const auto *GV : GlobalsToImport)
+        dbgs() << DestModule.getSourceFileName() << ": Import " << GV->getName()
+               << " from " << SrcModule->getSourceFileName() << "\n";
+    }
+
     if (TheLinker.linkInModule(std::move(SrcModule), Linker::Flags::None,
                                &GlobalsToImport))
       report_fatal_error("Function Import: link error");
 
     ImportedCount += GlobalsToImport.size();
   }
+
+  NumImported += ImportedCount;
 
   DEBUG(dbgs() << "Imported " << ImportedCount << " functions for Module "
                << DestModule.getModuleIdentifier() << "\n");

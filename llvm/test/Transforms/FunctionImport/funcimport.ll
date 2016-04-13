@@ -4,7 +4,7 @@
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; Do the import now
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -S | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIMDEF
+; RUN: opt -function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIMDEF
 
 ; Test import with smaller instruction limit
 ; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=5 -S | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIM5
@@ -34,9 +34,12 @@ declare void @analias(...) #1
 
 ; Aliases import the aliasee function
 declare void @linkoncealias(...) #1
+; INSTLIMDEF-DAG: Import linkoncealias
+; INSTLIMDEF-DAG: Import linkoncefunc
 ; CHECK-DAG: define linkonce_odr void @linkoncefunc()
 ; CHECK-DAG: @linkoncealias = alias void (...), bitcast (void ()* @linkoncefunc to void (...)*
 
+; INSTLIMDEF-DAG: Import referencestatics
 ; INSTLIMDEF-DAG: define available_externally i32 @referencestatics(i32 %i)
 ; INSTLIM5-DAG: declare i32 @referencestatics(...)
 declare i32 @referencestatics(...) #1
@@ -44,22 +47,28 @@ declare i32 @referencestatics(...) #1
 ; The import of referencestatics will expose call to staticfunc that
 ; should in turn be imported as a promoted/renamed and hidden function.
 ; Ensure that the call is to the properly-renamed function.
+; INSTLIMDEF-DAG: Import staticfunc
 ; INSTLIMDEF-DAG: %call = call i32 @staticfunc.llvm.2()
 ; INSTLIMDEF-DAG: define available_externally hidden i32 @staticfunc.llvm.2()
 
+; INSTLIMDEF-DAG: Import referenceglobals
 ; CHECK-DAG: define available_externally i32 @referenceglobals(i32 %i)
 declare i32 @referenceglobals(...) #1
 
 ; The import of referenceglobals will expose call to globalfunc1 that
 ; should in turn be imported.
+; INSTLIMDEF-DAG: Import globalfunc1
 ; CHECK-DAG: define available_externally void @globalfunc1()
 
+; INSTLIMDEF-DAG: Import referencecommon
 ; CHECK-DAG: define available_externally i32 @referencecommon(i32 %i)
 declare i32 @referencecommon(...) #1
 
+; INSTLIMDEF-DAG: Import setfuncptr
 ; CHECK-DAG: define available_externally void @setfuncptr()
 declare void @setfuncptr(...) #1
 
+; INSTLIMDEF-DAG: Import callfuncptr
 ; CHECK-DAG: define available_externally void @callfuncptr()
 declare void @callfuncptr(...) #1
 
@@ -73,5 +82,9 @@ declare void @callfuncptr(...) #1
 ; CHECK-DAG: declare void @weakfunc(...)
 declare void @weakfunc(...) #1
 
+; INSTLIMDEF-DAG: Import funcwithpersonality
 ; INSTLIMDEF-DAG: define available_externally hidden void @funcwithpersonality.llvm.2() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; INSTLIM5-DAG: declare hidden void @funcwithpersonality.llvm.2()
+
+; INSTLIMDEF-DAG: Import globalfunc2
+; INSTLIMDEF: 11 function-import - Number of functions imported
