@@ -117,11 +117,6 @@ public:
     AU.addPreserved<CallGraphWrapperPass>();
   }
 };
-} // end anonymous namespace
-
-char InternalizePass::ID = 0;
-INITIALIZE_PASS(InternalizePass, "internalize", "Internalize Global Symbols",
-                false, false)
 
 // Helper class to perform internalization.
 class Internalizer {
@@ -298,6 +293,12 @@ bool Internalizer::internalizeModule(Module &M, CallGraph *CG) {
 
   return Changed;
 }
+
+} // end anonymous namespace
+
+char InternalizePass::ID = 0;
+INITIALIZE_PASS(InternalizePass, "internalize", "Internalize Global Symbols",
+                false, false)
 
 /// Public API below
 
