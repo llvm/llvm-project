@@ -19,6 +19,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -37,25 +38,25 @@ using namespace llvm;
 
 #define DEBUG_TYPE "internalize"
 
-STATISTIC(NumAliases  , "Number of aliases internalized");
+STATISTIC(NumAliases, "Number of aliases internalized");
 STATISTIC(NumFunctions, "Number of functions internalized");
-STATISTIC(NumGlobals  , "Number of global vars internalized");
+STATISTIC(NumGlobals, "Number of global vars internalized");
 
 // APIFile - A file which contains a list of symbols that should not be marked
 // external.
 static cl::opt<std::string>
-APIFile("internalize-public-api-file", cl::value_desc("filename"),
-        cl::desc("A file containing list of symbol names to preserve"));
+    APIFile("internalize-public-api-file", cl::value_desc("filename"),
+            cl::desc("A file containing list of symbol names to preserve"));
 
 // APIList - A list of symbols that should not be marked internal.
 static cl::list<std::string>
-APIList("internalize-public-api-list", cl::value_desc("list"),
-        cl::desc("A list of symbol names to preserve"),
-        cl::CommaSeparated);
+    APIList("internalize-public-api-list", cl::value_desc("list"),
+            cl::desc("A list of symbol names to preserve"), cl::CommaSeparated);
 
 namespace {
+
 // Helper to load an API list to preserve from file and expose it as a functor
-// to the Internalize Pass
+// for internalization.
 class PreserveAPIList {
 public:
   PreserveAPIList() {
@@ -70,30 +71,62 @@ public:
 
 private:
   // Contains the set of symbols loaded from file
-    StringSet<> ExternalNames;
+  StringSet<> ExternalNames;
 
-    void LoadFile(StringRef Filename) {
-      // Load the APIFile...
-      std::ifstream In(Filename.data());
-      if (!In.good()) {
-        errs() << "WARNING: Internalize couldn't load file '" << Filename
-               << "'! Continuing as if it's empty.\n";
-        return; // Just continue as if the file were empty
-      }
-      while (In) {
-        std::string Symbol;
-        In >> Symbol;
-        if (!Symbol.empty())
-          ExternalNames.insert(Symbol);
-      }
+  void LoadFile(StringRef Filename) {
+    // Load the APIFile...
+    std::ifstream In(Filename.data());
+    if (!In.good()) {
+      errs() << "WARNING: Internalize couldn't load file '" << Filename
+             << "'! Continuing as if it's empty.\n";
+      return; // Just continue as if the file were empty
     }
+    while (In) {
+      std::string Symbol;
+      In >> Symbol;
+      if (!Symbol.empty())
+        ExternalNames.insert(Symbol);
+    }
+  }
 };
-}
 
-namespace {
+// Internalization exposed as a pass
 class InternalizePass : public ModulePass {
-  // Client supply callback to control wheter a symbol must be preserved.
+  // Client supplied callback to control wheter a symbol must be preserved.
   std::function<bool(const GlobalValue &)> MustPreserveGV;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  InternalizePass() : ModulePass(ID), MustPreserveGV(PreserveAPIList()) {}
+
+  InternalizePass(std::function<bool(const GlobalValue &)> MustPreserveGV)
+      : ModulePass(ID), MustPreserveGV(std::move(MustPreserveGV)) {
+    initializeInternalizePassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnModule(Module &M) override {
+    CallGraphWrapperPass *CGPass =
+        getAnalysisIfAvailable<CallGraphWrapperPass>();
+    CallGraph *CG = CGPass ? &CGPass->getCallGraph() : nullptr;
+    return internalizeModule(M, MustPreserveGV, CG);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addPreserved<CallGraphWrapperPass>();
+  }
+};
+} // end anonymous namespace
+
+char InternalizePass::ID = 0;
+INITIALIZE_PASS(InternalizePass, "internalize", "Internalize Global Symbols",
+                false, false)
+
+// Helper class to perform internalization.
+class Internalizer {
+  // Client supplied callback to control wheter a symbol must be preserved.
+  const std::function<bool(const GlobalValue &)> &MustPreserveGV;
 
   // Set of symbols private to the compiler that this pass should not touch.
   StringSet<> AlwaysPreserved;
@@ -123,40 +156,26 @@ class InternalizePass : public ModulePass {
     return MustPreserveGV(GV);
   }
 
-    bool maybeInternalize(GlobalValue &GV,
-                          const std::set<const Comdat *> &ExternalComdats);
-    void checkComdatVisibility(GlobalValue &GV,
-                               std::set<const Comdat *> &ExternalComdats);
+  bool maybeInternalize(GlobalValue &GV,
+                        const std::set<const Comdat *> &ExternalComdats);
+  void checkComdatVisibility(GlobalValue &GV,
+                             std::set<const Comdat *> &ExternalComdats);
 
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    explicit InternalizePass();
-    InternalizePass(std::function<bool(const GlobalValue &)> MustPreserveGV);
-    bool runOnModule(Module &M) override;
+public:
+  Internalizer(const std::function<bool(const GlobalValue &)> &MustPreserveGV)
+      : MustPreserveGV(MustPreserveGV) {}
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addPreserved<CallGraphWrapperPass>();
-    }
-  };
-} // end anonymous namespace
-
-char InternalizePass::ID = 0;
-INITIALIZE_PASS(InternalizePass, "internalize",
-                "Internalize Global Symbols", false, false)
-
-InternalizePass::InternalizePass()
-    : ModulePass(ID), MustPreserveGV(PreserveAPIList()) {}
-
-InternalizePass::InternalizePass(
-    std::function<bool(const GlobalValue &)> MustPreserveGV)
-    : ModulePass(ID), MustPreserveGV(std::move(MustPreserveGV)) {
-  initializeInternalizePassPass(*PassRegistry::getPassRegistry());
-}
+  /// Run the internalizer on \p TheModule, returns true if any changes was
+  /// made.
+  ///
+  /// If the CallGraph \p CG is supplied, it will be updated when
+  /// internalizing a function (by removing any edge from the "external node")
+  bool internalizeModule(Module &TheModule, CallGraph *CG = nullptr);
+};
 
 // Internalize GV if it is possible to do so, i.e. it is not externally visible
 // and is not a member of an externally visible comdat.
-bool InternalizePass::maybeInternalize(
+bool Internalizer::maybeInternalize(
     GlobalValue &GV, const std::set<const Comdat *> &ExternalComdats) {
   if (Comdat *C = GV.getComdat()) {
     if (ExternalComdats.count(C))
@@ -183,7 +202,7 @@ bool InternalizePass::maybeInternalize(
 
 // If GV is part of a comdat and is externally visible, keep track of its
 // comdat so that we don't internalize any of its members.
-void InternalizePass::checkComdatVisibility(
+void Internalizer::checkComdatVisibility(
     GlobalValue &GV, std::set<const Comdat *> &ExternalComdats) {
   Comdat *C = GV.getComdat();
   if (!C)
@@ -193,9 +212,7 @@ void InternalizePass::checkComdatVisibility(
     ExternalComdats.insert(C);
 }
 
-bool InternalizePass::runOnModule(Module &M) {
-  CallGraphWrapperPass *CGPass = getAnalysisIfAvailable<CallGraphWrapperPass>();
-  CallGraph *CG = CGPass ? &CGPass->getCallGraph() : nullptr;
+bool Internalizer::internalizeModule(Module &M, CallGraph *CG) {
   CallGraphNode *ExternalNode = CG ? CG->getExternalCallingNode() : nullptr;
 
   SmallPtrSet<GlobalValue *, 8> Used;
@@ -258,8 +275,8 @@ bool InternalizePass::runOnModule(Module &M) {
 
   // Mark all global variables with initializers that are not in the api as
   // internal as well.
-  for (Module::global_iterator I = M.global_begin(), E = M.global_end();
-       I != E; ++I) {
+  for (Module::global_iterator I = M.global_begin(), E = M.global_end(); I != E;
+       ++I) {
     if (!maybeInternalize(*I, ExternalComdats))
       continue;
 
@@ -268,8 +285,8 @@ bool InternalizePass::runOnModule(Module &M) {
   }
 
   // Mark all aliases that are not in the api as internal as well.
-  for (Module::alias_iterator I = M.alias_begin(), E = M.alias_end();
-       I != E; ++I) {
+  for (Module::alias_iterator I = M.alias_begin(), E = M.alias_end(); I != E;
+       ++I) {
     if (!maybeInternalize(*I, ExternalComdats))
       continue;
 
@@ -286,12 +303,18 @@ bool InternalizePass::runOnModule(Module &M) {
   return true;
 }
 
-ModulePass *llvm::createInternalizePass() {
-  return new InternalizePass(PreserveAPIList());
+/// Public API below
+
+bool llvm::internalizeModule(
+    Module &TheModule,
+    const std::function<bool(const GlobalValue &)> &MustPreserveGV,
+    CallGraph *CG) {
+  return Internalizer(MustPreserveGV).internalizeModule(TheModule, CG);
 }
+
+ModulePass *llvm::createInternalizePass() { return new InternalizePass(); }
 
 ModulePass *llvm::createInternalizePass(
     std::function<bool(const GlobalValue &)> MustPreserveGV) {
   return new InternalizePass(std::move(MustPreserveGV));
 }
-
