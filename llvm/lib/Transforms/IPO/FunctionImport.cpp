@@ -177,7 +177,7 @@ static void computeImportForFunction(
     // Make exports in the source module.
     auto ExportModulePath = CalleeSummary->modulePath();
     if (ExportLists) {
-      auto ExportList = (*ExportLists)[ExportModulePath];
+      auto &ExportList = (*ExportLists)[ExportModulePath];
       ExportList.insert(GUID);
       // Mark all functions and globals referenced by this function as exported
       // to the outside if they are defined in the same source module.
