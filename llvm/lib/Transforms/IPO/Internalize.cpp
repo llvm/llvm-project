@@ -275,23 +275,21 @@ bool Internalizer::internalizeModule(Module &M, CallGraph *CG) {
 
   // Mark all global variables with initializers that are not in the api as
   // internal as well.
-  for (Module::global_iterator I = M.global_begin(), E = M.global_end(); I != E;
-       ++I) {
-    if (!maybeInternalize(*I, ExternalComdats))
+  for (auto &GV : M.globals()) {
+    if (!maybeInternalize(GV, ExternalComdats))
       continue;
 
     ++NumGlobals;
-    DEBUG(dbgs() << "Internalized gvar " << I->getName() << "\n");
+    DEBUG(dbgs() << "Internalized gvar " << GV.getName() << "\n");
   }
 
   // Mark all aliases that are not in the api as internal as well.
-  for (Module::alias_iterator I = M.alias_begin(), E = M.alias_end(); I != E;
-       ++I) {
-    if (!maybeInternalize(*I, ExternalComdats))
+  for (auto &GA : M.aliases()) {
+    if (!maybeInternalize(GA, ExternalComdats))
       continue;
 
     ++NumAliases;
-    DEBUG(dbgs() << "Internalized alias " << I->getName() << "\n");
+    DEBUG(dbgs() << "Internalized alias " << GA.getName() << "\n");
   }
 
   // We do not keep track of whether this pass changed the module because
