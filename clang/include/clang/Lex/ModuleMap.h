@@ -50,6 +50,11 @@ public:
   /// \param IsSystem Whether this is a module map from a system include path.
   virtual void moduleMapFileRead(SourceLocation FileStart,
                                  const FileEntry &File, bool IsSystem) {}
+
+  /// \brief Called when a header is added during module map parsing.
+  ///
+  /// \param File The header file itself.
+  virtual void moduleMapAddHeader(const FileEntry &File) {}
 };
   
 class ModuleMap {
