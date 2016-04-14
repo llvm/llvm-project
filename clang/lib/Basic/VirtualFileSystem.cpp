@@ -844,7 +844,7 @@ class RedirectingFileSystem : public vfs::FileSystem {
   /// \brief Whether to perform case-sensitive comparisons.
   ///
   /// Currently, case-insensitive matching only works correctly with ASCII.
-  bool CaseSensitive;
+  bool CaseSensitive = true;
 
   /// IsRelativeOverlay marks whether a IsExternalContentsPrefixDir path must
   /// be prefixed in every 'external-contents' when reading from YAML files.
@@ -852,7 +852,7 @@ class RedirectingFileSystem : public vfs::FileSystem {
 
   /// \brief Whether to use to use the value of 'external-contents' for the
   /// names of files.  This global value is overridable on a per-file basis.
-  bool UseExternalNames;
+  bool UseExternalNames = true;
   /// @}
 
   /// Virtual file paths and external files could be canonicalized without "..",
@@ -869,7 +869,7 @@ class RedirectingFileSystem : public vfs::FileSystem {
 
 private:
   RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> ExternalFS)
-      : ExternalFS(ExternalFS), CaseSensitive(true), UseExternalNames(true) {}
+      : ExternalFS(ExternalFS) {}
 
   /// \brief Looks up \p Path in \c Roots.
   ErrorOr<Entry *> lookupPath(const Twine &Path);
