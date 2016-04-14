@@ -3409,26 +3409,23 @@ static StringLiteral* getCFSTR_value(CallExpr *callExpr) {
   return S;
 }
 
-typedef struct {
+struct ExprEvalResult {
   CXEvalResultKind EvalType;
   union {
     int intVal;
     double floatVal;
     char *stringVal;
   } EvalData;
-} ExprEvalResult;
+  ~ExprEvalResult() {
+    if (EvalType != CXEval_UnExposed && EvalType != CXEval_Float &&
+        EvalType != CXEval_Int) {
+      delete EvalData.stringVal;
+    }
+  }
+};
 
 void clang_EvalResult_dispose(CXEvalResult E) {
-  ExprEvalResult *ER = (ExprEvalResult *)E;
-  if (ER) {
-    CXEvalResultKind evalType = ER->EvalType;
-
-    if (evalType != CXEval_UnExposed &&  evalType != CXEval_Float &&
-            evalType != CXEval_Int && ER->EvalData.stringVal) {
-            free((void *) ER->EvalData.stringVal);
-    }
-    free((void *)ER);
-  }
+  delete static_cast<ExprEvalResult *>(E);
 }
 
 CXEvalResultKind clang_EvalResult_getKind(CXEvalResult E) {
@@ -3462,156 +3459,140 @@ const char* clang_EvalResult_getAsStr(CXEvalResult E) {
 static const ExprEvalResult* evaluateExpr(Expr *expr, CXCursor C) {
   Expr::EvalResult ER;
   ASTContext &ctx = getCursorContext(C);
-  if (!expr) {
+  if (!expr)
     return nullptr;
-  }
+
   expr = expr->IgnoreParens();
-  bool res = expr->EvaluateAsRValue(ER, ctx);
+  if (!expr->EvaluateAsRValue(ER, ctx))
+    return nullptr;
+
   QualType rettype;
   CallExpr *callExpr;
-  ExprEvalResult *result = (ExprEvalResult *) malloc(sizeof(ExprEvalResult));
-  if (!result) {
-    return nullptr;
-  }
+  auto result = llvm::make_unique<ExprEvalResult>();
   result->EvalType = CXEval_UnExposed;
 
-  if (res) {
+  if (ER.Val.isInt()) {
+    result->EvalType = CXEval_Int;
+    result->EvalData.intVal = ER.Val.getInt().getExtValue();
+    return result.release();
+  }
 
-    if (ER.Val.isInt()) {
-      result->EvalType = CXEval_Int;
-      result->EvalData.intVal = ER.Val.getInt().getExtValue();
-      return result;
-    } else if (ER.Val.isFloat()) {
+  if (ER.Val.isFloat()) {
+    llvm::SmallVector<char, 100> Buffer;
+    ER.Val.getFloat().toString(Buffer);
+    std::string floatStr(Buffer.data(), Buffer.size());
+    result->EvalType = CXEval_Float;
+    bool ignored;
+    llvm::APFloat apFloat = ER.Val.getFloat();
+    apFloat.convert(llvm::APFloat::IEEEdouble,
+                    llvm::APFloat::rmNearestTiesToEven, &ignored);
+    result->EvalData.floatVal = apFloat.convertToDouble();
+    return result.release();
+  }
 
-      llvm::SmallVector<char, 100> Buffer;
-      ER.Val.getFloat().toString(Buffer);
-      std::string floatStr(Buffer.data(), Buffer.size());
-      result->EvalType = CXEval_Float;
-      bool ignored;
-      llvm::APFloat apFloat = ER.Val.getFloat();
-      apFloat.convert(llvm::APFloat::IEEEdouble,
-                      llvm::APFloat::rmNearestTiesToEven, &ignored);
-      result->EvalData.floatVal = apFloat.convertToDouble();
-      return result;
-
-    } else if (expr->getStmtClass() == Stmt::ImplicitCastExprClass) {
-
-      const ImplicitCastExpr *I = dyn_cast<ImplicitCastExpr>(expr);
-      auto *subExpr = I->getSubExprAsWritten();
-      if (subExpr->getStmtClass() == Stmt::StringLiteralClass ||
-          subExpr->getStmtClass() == Stmt::ObjCStringLiteralClass) {
-
-        const StringLiteral *StrE = nullptr;
-        const ObjCStringLiteral *ObjCExpr;
-        ObjCExpr = dyn_cast<ObjCStringLiteral>(subExpr);
-
-        if (ObjCExpr) {
-          StrE = ObjCExpr->getString();
-          result->EvalType = CXEval_ObjCStrLiteral;
-        } else {
-          StrE = cast<StringLiteral>(I->getSubExprAsWritten());
-          result->EvalType = CXEval_StrLiteral;
-        }
-
-        std::string strRef(StrE->getString().str());
-        result->EvalData.stringVal = (char *)malloc(strRef.size()+1);
-        strncpy((char*)result->EvalData.stringVal, strRef.c_str(),
-                   strRef.size());
-        result->EvalData.stringVal[strRef.size()] = '\0';
-        return result;
-      }
-
-    } else if (expr->getStmtClass() == Stmt::ObjCStringLiteralClass ||
-             expr->getStmtClass() == Stmt::StringLiteralClass) {
-
+  if (expr->getStmtClass() == Stmt::ImplicitCastExprClass) {
+    const ImplicitCastExpr *I = dyn_cast<ImplicitCastExpr>(expr);
+    auto *subExpr = I->getSubExprAsWritten();
+    if (subExpr->getStmtClass() == Stmt::StringLiteralClass ||
+        subExpr->getStmtClass() == Stmt::ObjCStringLiteralClass) {
       const StringLiteral *StrE = nullptr;
       const ObjCStringLiteral *ObjCExpr;
-      ObjCExpr = dyn_cast<ObjCStringLiteral>(expr);
+      ObjCExpr = dyn_cast<ObjCStringLiteral>(subExpr);
 
       if (ObjCExpr) {
         StrE = ObjCExpr->getString();
         result->EvalType = CXEval_ObjCStrLiteral;
       } else {
-        StrE = cast<StringLiteral>(expr);
+        StrE = cast<StringLiteral>(I->getSubExprAsWritten());
         result->EvalType = CXEval_StrLiteral;
       }
 
       std::string strRef(StrE->getString().str());
-      result->EvalData.stringVal = (char *)malloc(strRef.size()+1);
-      strncpy((char*)result->EvalData.stringVal, strRef.c_str(),
-                  strRef.size());
+      result->EvalData.stringVal = new char[strRef.size() + 1];
+      strncpy((char *)result->EvalData.stringVal, strRef.c_str(),
+              strRef.size());
       result->EvalData.stringVal[strRef.size()] = '\0';
-      return result;
+      return result.release();
+    }
+  } else if (expr->getStmtClass() == Stmt::ObjCStringLiteralClass ||
+             expr->getStmtClass() == Stmt::StringLiteralClass) {
+    const StringLiteral *StrE = nullptr;
+    const ObjCStringLiteral *ObjCExpr;
+    ObjCExpr = dyn_cast<ObjCStringLiteral>(expr);
 
-    } else if (expr->getStmtClass() == Stmt::CStyleCastExprClass) {
+    if (ObjCExpr) {
+      StrE = ObjCExpr->getString();
+      result->EvalType = CXEval_ObjCStrLiteral;
+    } else {
+      StrE = cast<StringLiteral>(expr);
+      result->EvalType = CXEval_StrLiteral;
+    }
 
-      CStyleCastExpr *CC = static_cast<CStyleCastExpr *>(expr);
+    std::string strRef(StrE->getString().str());
+    result->EvalData.stringVal = new char[strRef.size() + 1];
+    strncpy((char *)result->EvalData.stringVal, strRef.c_str(), strRef.size());
+    result->EvalData.stringVal[strRef.size()] = '\0';
+    return result.release();
+  }
 
-      rettype = CC->getType();
-      if (rettype.getAsString() == "CFStringRef" &&
-            CC->getSubExpr()->getStmtClass() == Stmt::CallExprClass) {
+  if (expr->getStmtClass() == Stmt::CStyleCastExprClass) {
+    CStyleCastExpr *CC = static_cast<CStyleCastExpr *>(expr);
 
-        callExpr = static_cast<CallExpr *>(CC->getSubExpr());
-        StringLiteral* S = getCFSTR_value(callExpr);
-        if (S) {
-          std::string strLiteral(S->getString().str());
-          result->EvalType = CXEval_CFStr;
+    rettype = CC->getType();
+    if (rettype.getAsString() == "CFStringRef" &&
+        CC->getSubExpr()->getStmtClass() == Stmt::CallExprClass) {
 
-          result->EvalData.stringVal = (char *)malloc(strLiteral.size()+1);
-          strncpy((char*)result->EvalData.stringVal, strLiteral.c_str(),
-                     strLiteral.size());
-          result->EvalData.stringVal[strLiteral.size()] = '\0';
-          return result;
-        }
-      }
+      callExpr = static_cast<CallExpr *>(CC->getSubExpr());
+      StringLiteral *S = getCFSTR_value(callExpr);
+      if (S) {
+        std::string strLiteral(S->getString().str());
+        result->EvalType = CXEval_CFStr;
 
-    } else if (expr->getStmtClass() == Stmt::CallExprClass) {
-
-      callExpr = static_cast<CallExpr *>(expr);
-      rettype = callExpr->getCallReturnType(ctx);
-
-      if (rettype->isVectorType() || callExpr->getNumArgs() > 1) {
-        clang_EvalResult_dispose((CXEvalResult *)result);
-        return nullptr;
-      }
-      if (rettype->isIntegralType(ctx) || rettype->isRealFloatingType()) {
-        if(callExpr->getNumArgs() == 1 &&
-              !callExpr->getArg(0)->getType()->isIntegralType(ctx)) {
-          clang_EvalResult_dispose((CXEvalResult *)result);
-          return nullptr;
-        }
-      } else if(rettype.getAsString() == "CFStringRef") {
-
-        StringLiteral* S = getCFSTR_value(callExpr);
-        if (S) {
-          std::string strLiteral(S->getString().str());
-          result->EvalType = CXEval_CFStr;
-          result->EvalData.stringVal = (char *)malloc(strLiteral.size()+1);
-          strncpy((char*)result->EvalData.stringVal, strLiteral.c_str(),
-                     strLiteral.size());
-          result->EvalData.stringVal[strLiteral.size()] = '\0';
-          return result;
-        }
-      }
-
-    } else if (expr->getStmtClass() == Stmt::DeclRefExprClass) {
-
-      DeclRefExpr *D = static_cast<DeclRefExpr *>(expr);
-      ValueDecl *V = D->getDecl();
-      if (V->getKind() == Decl::Function) {
-        std::string strName(V->getNameAsString());
-        result->EvalType = CXEval_Other;
-        result->EvalData.stringVal = (char *)malloc(strName.size()+1);
-        strncpy((char*)result->EvalData.stringVal, strName.c_str(),
-                   strName.size());
-        result->EvalData.stringVal[strName.size()] = '\0';
-        return result;
+        result->EvalData.stringVal = new char[strLiteral.size() + 1];
+        strncpy((char *)result->EvalData.stringVal, strLiteral.c_str(),
+                strLiteral.size());
+        result->EvalData.stringVal[strLiteral.size()] = '\0';
+        return result.release();
       }
     }
 
+  } else if (expr->getStmtClass() == Stmt::CallExprClass) {
+    callExpr = static_cast<CallExpr *>(expr);
+    rettype = callExpr->getCallReturnType(ctx);
+
+    if (rettype->isVectorType() || callExpr->getNumArgs() > 1)
+      return nullptr;
+
+    if (rettype->isIntegralType(ctx) || rettype->isRealFloatingType()) {
+      if (callExpr->getNumArgs() == 1 &&
+          !callExpr->getArg(0)->getType()->isIntegralType(ctx))
+        return nullptr;
+    } else if (rettype.getAsString() == "CFStringRef") {
+
+      StringLiteral *S = getCFSTR_value(callExpr);
+      if (S) {
+        std::string strLiteral(S->getString().str());
+        result->EvalType = CXEval_CFStr;
+        result->EvalData.stringVal = new char[strLiteral.size() + 1];
+        strncpy((char *)result->EvalData.stringVal, strLiteral.c_str(),
+                strLiteral.size());
+        result->EvalData.stringVal[strLiteral.size()] = '\0';
+        return result.release();
+      }
+    }
+  } else if (expr->getStmtClass() == Stmt::DeclRefExprClass) {
+    DeclRefExpr *D = static_cast<DeclRefExpr *>(expr);
+    ValueDecl *V = D->getDecl();
+    if (V->getKind() == Decl::Function) {
+      std::string strName = V->getNameAsString();
+      result->EvalType = CXEval_Other;
+      result->EvalData.stringVal = new char[strName.size() + 1];
+      strncpy(result->EvalData.stringVal, strName.c_str(), strName.size());
+      result->EvalData.stringVal[strName.size()] = '\0';
+      return result.release();
+    }
   }
 
-  clang_EvalResult_dispose((CXEvalResult *)result);
   return nullptr;
 }
 

@@ -1306,6 +1306,16 @@ class ObjCTypeArgOrProtocolValidatorCCC : public CorrectionCandidateCallback {
 };
 } // end anonymous namespace
 
+void Sema::DiagnoseTypeArgsAndProtocols(IdentifierInfo *ProtocolId,
+                                        SourceLocation ProtocolLoc,
+                                        IdentifierInfo *TypeArgId,
+                                        SourceLocation TypeArgLoc,
+                                        bool SelectProtocolFirst) {
+  Diag(TypeArgLoc, diag::err_objc_type_args_and_protocols)
+      << SelectProtocolFirst << TypeArgId << ProtocolId
+      << SourceRange(ProtocolLoc);
+}
+
 void Sema::actOnObjCTypeArgsOrProtocolQualifiers(
        Scope *S,
        ParsedType baseType,
@@ -1573,11 +1583,9 @@ void Sema::actOnObjCTypeArgsOrProtocolQualifiers(
 
       // We have a conflict: some names refer to protocols and others
       // refer to types.
-      Diag(identifierLocs[i], diag::err_objc_type_args_and_protocols)
-        << (protocols[i] != nullptr)
-        << identifiers[i]
-        << identifiers[0]
-        << SourceRange(identifierLocs[0]);
+      DiagnoseTypeArgsAndProtocols(identifiers[0], identifierLocs[0],
+                                   identifiers[i], identifierLocs[i],
+                                   protocols[i] != nullptr);
 
       protocols.clear();
       typeArgs.clear();
@@ -3211,22 +3219,43 @@ void Sema::addMethodToGlobalList(ObjCMethodList *List,
 
   // We've seen a method with this name, see if we have already seen this type
   // signature.
-  ObjCMethodList *Head = List;
   ObjCMethodList *Previous = List;
+  ObjCMethodList *ListWithSameDeclaration = nullptr;
   for (; List; Previous = List, List = List->getNext()) {
     // If we are building a module, keep all of the methods.
     if (getLangOpts().CompilingModule)
       continue;
 
+    bool SameDeclaration = MatchTwoMethodDeclarations(Method,
+                                                      List->getMethod());
     // Looking for method with a type bound requires the correct context exists.
-    // We need to insert this method into the list if the context is different.
-    if (!MatchTwoMethodDeclarations(Method, List->getMethod()) ||
+    // We need to insert a method into the list if the context is different.
+    // If the method's declaration matches the list
+    // a> the method belongs to a different context: we need to insert it, in
+    //    order to emit the availability message, we need to prioritize over
+    //    availability among the methods with the same declaration.
+    // b> the method belongs to the same context: there is no need to insert a
+    //    new entry.
+    // If the method's declaration does not match the list, we insert it to the
+    // end.
+    if (!SameDeclaration ||
         !isMethodContextSameForKindofLookup(Method, List->getMethod())) {
       // Even if two method types do not match, we would like to say
       // there is more than one declaration so unavailability/deprecated
       // warning is not too noisy.
       if (!Method->isDefined())
         List->setHasMoreThanOneDecl(true);
+
+      // For methods with the same declaration, the one that is deprecated
+      // should be put in the front for better diagnostics.
+      if (Method->isDeprecated() && SameDeclaration &&
+          !ListWithSameDeclaration && !List->getMethod()->isDeprecated())
+        ListWithSameDeclaration = List;
+
+      if (Method->isUnavailable() && SameDeclaration &&
+          !ListWithSameDeclaration &&
+          List->getMethod()->getAvailability() < AR_Deprecated)
+        ListWithSameDeclaration = List;
       continue;
     }
 
@@ -3263,15 +3292,12 @@ void Sema::addMethodToGlobalList(ObjCMethodList *List,
   // This is extremely rare. Only 1% of Cocoa selectors are "overloaded".
   ObjCMethodList *Mem = BumpAlloc.Allocate<ObjCMethodList>();
 
-  // We tried to prioritize the list by putting deprecated and unavailable
-  // methods in the front.
-  if ((Method->isDeprecated() && !Head->getMethod()->isDeprecated()) ||
-      (Method->isUnavailable() &&
-       Head->getMethod()->getAvailability() < AR_Deprecated)) {
-    auto *List = new (Mem) ObjCMethodList(*Head);
-    // FIXME: should we clear the other bits in Head?
-    Head->setMethod(Method);
-    Head->setNext(List);
+  // We insert it right before ListWithSameDeclaration.
+  if (ListWithSameDeclaration) {
+    auto *List = new (Mem) ObjCMethodList(*ListWithSameDeclaration);
+    // FIXME: should we clear the other bits in ListWithSameDeclaration?
+    ListWithSameDeclaration->setMethod(Method);
+    ListWithSameDeclaration->setNext(List);
     return;
   }
 

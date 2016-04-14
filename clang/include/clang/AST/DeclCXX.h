@@ -523,6 +523,13 @@ class CXXRecordDecl : public RecordDecl {
       return getVBasesSlowCase();
     }
 
+    ArrayRef<CXXBaseSpecifier> bases() const {
+      return llvm::makeArrayRef(getBases(), NumBases);
+    }
+    ArrayRef<CXXBaseSpecifier> vbases() const {
+      return llvm::makeArrayRef(getVBases(), NumVBases);
+    }
+
   private:
     CXXBaseSpecifier *getBasesSlowCase() const;
     CXXBaseSpecifier *getVBasesSlowCase() const;
@@ -2134,8 +2141,7 @@ public:
     assert(I < getNumArrayIndices() && "Out of bounds member array index");
     getTrailingObjects<VarDecl *>()[I] = Index;
   }
-  ArrayRef<VarDecl *> getArrayIndexes() {
-    assert(getNumArrayIndices() != 0 && "Getting indexes for non-array init");
+  ArrayRef<VarDecl *> getArrayIndices() {
     return llvm::makeArrayRef(getTrailingObjects<VarDecl *>(),
                               getNumArrayIndices());
   }

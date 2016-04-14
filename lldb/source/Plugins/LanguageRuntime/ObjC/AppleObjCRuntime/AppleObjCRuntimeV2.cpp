@@ -43,6 +43,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -483,6 +484,52 @@ AppleObjCRuntimeV2::CreateInstance (Process *process, LanguageType language)
 class CommandObjectObjC_ClassTable_Dump : public CommandObjectParsed
 {
 public:
+    class CommandOptions : public Options
+    {
+    public:
+        CommandOptions (CommandInterpreter &interpreter) :
+        Options(interpreter),
+        m_verbose(false,false)
+        {}
+        
+        ~CommandOptions() override = default;
+
+        Error
+        SetOptionValue(uint32_t option_idx, const char *option_arg) override
+        {
+            Error error;
+            const int short_option = m_getopt_table[option_idx].val;
+            switch (short_option)
+            {
+                case 'v':
+                    m_verbose.SetCurrentValue(true);
+                    m_verbose.SetOptionWasSet();
+                    break;
+                    
+                default:
+                    error.SetErrorStringWithFormat("unrecognized short option '%c'", short_option);
+                    break;
+            }
+            
+            return error;
+        }
+        
+        void
+        OptionParsingStarting() override
+        {
+            m_verbose.Clear();
+        }
+        
+        const OptionDefinition*
+        GetDefinitions() override
+        {
+            return g_option_table;
+        }
+
+        OptionValueBoolean m_verbose;
+        static OptionDefinition g_option_table[];
+    };
+
     CommandObjectObjC_ClassTable_Dump (CommandInterpreter &interpreter) :
     CommandObjectParsed (interpreter,
                          "dump",
@@ -490,39 +537,116 @@ public:
                          "language objc class-table dump",
                          eCommandRequiresProcess       |
                          eCommandProcessMustBeLaunched |
-                         eCommandProcessMustBePaused   )
+                         eCommandProcessMustBePaused   ),
+    m_options(interpreter)
     {
+        CommandArgumentEntry arg;
+        CommandArgumentData index_arg;
+        
+        // Define the first (and only) variant of this arg.
+        index_arg.arg_type = eArgTypeRegularExpression;
+        index_arg.arg_repetition = eArgRepeatOptional;
+        
+        // There is only one variant this argument could be; put it into the argument entry.
+        arg.push_back (index_arg);
+        
+        // Push the data for the first argument into the m_arguments vector.
+        m_arguments.push_back (arg);
     }
 
     ~CommandObjectObjC_ClassTable_Dump() override = default;
 
+    Options *
+    GetOptions() override
+    {
+        return &m_options;
+    }
+    
 protected:
     bool
     DoExecute(Args& command, CommandReturnObject &result) override
     {
+        std::unique_ptr<RegularExpression> regex_up;
+        switch(command.GetArgumentCount())
+        {
+            case 0:
+                break;
+            case 1:
+            {
+                regex_up.reset(new RegularExpression());
+                if (!regex_up->Compile(command.GetArgumentAtIndex(0)))
+                {
+                    result.AppendError("invalid argument - please provide a valid regular expression");
+                    result.SetStatus(lldb::eReturnStatusFailed);
+                    return false;
+                }
+                break;
+            }
+            default:
+            {
+                result.AppendError("please provide 0 or 1 arguments");
+                result.SetStatus(lldb::eReturnStatusFailed);
+                return false;
+            }
+        }
+        
         Process *process = m_exe_ctx.GetProcessPtr();
         ObjCLanguageRuntime *objc_runtime = process->GetObjCLanguageRuntime();
         if (objc_runtime)
         {
             auto iterators_pair = objc_runtime->GetDescriptorIteratorPair();
             auto iterator = iterators_pair.first;
+            auto& stdout(result.GetOutputStream());
             for(; iterator != iterators_pair.second; iterator++)
             {
-                result.GetOutputStream().Printf("isa = 0x%" PRIx64, iterator->first);
                 if (iterator->second)
                 {
-                    result.GetOutputStream().Printf(" name = %s", iterator->second->GetClassName().AsCString("<unknown>"));
-                    result.GetOutputStream().Printf(" instance size = %" PRIu64, iterator->second->GetInstanceSize());
-                    result.GetOutputStream().Printf(" num ivars = %" PRIuPTR, (uintptr_t)iterator->second->GetNumIVars());
+                    const char* class_name = iterator->second->GetClassName().AsCString("<unknown>");
+                    if (regex_up && class_name && !regex_up->Execute(class_name))
+                        continue;
+                    stdout.Printf("isa = 0x%" PRIx64, iterator->first);
+                    stdout.Printf(" name = %s", class_name);
+                    stdout.Printf(" instance size = %" PRIu64, iterator->second->GetInstanceSize());
+                    stdout.Printf(" num ivars = %" PRIuPTR, (uintptr_t)iterator->second->GetNumIVars());
                     if (auto superclass = iterator->second->GetSuperclass())
                     {
-                        result.GetOutputStream().Printf(" superclass = %s", superclass->GetClassName().AsCString("<unknown>"));
+                        stdout.Printf(" superclass = %s", superclass->GetClassName().AsCString("<unknown>"));
                     }
-                    result.GetOutputStream().Printf("\n");
+                    stdout.Printf("\n");
+                    if (m_options.m_verbose)
+                    {
+                        for(size_t i = 0;
+                            i < iterator->second->GetNumIVars();
+                            i++)
+                        {
+                            auto ivar = iterator->second->GetIVarAtIndex(i);
+                            stdout.Printf("  ivar name = %s type = %s size = %" PRIu64 " offset = %" PRId32 "\n",
+                                                            ivar.m_name.AsCString("<unknown>"),
+                                                            ivar.m_type.GetDisplayTypeName().AsCString("<unknown>"),
+                                                            ivar.m_size,
+                                                            ivar.m_offset);
+                        }
+                        iterator->second->Describe(nullptr,
+                                                   [objc_runtime, &stdout] (const char* name, const char* type) -> bool {
+                                                       stdout.Printf("  instance method name = %s type = %s\n",
+                                                                     name,
+                                                                     type);
+                                                       return false;
+                                                   },
+                                                   [objc_runtime, &stdout] (const char* name, const char* type) -> bool {
+                                                       stdout.Printf("  class method name = %s type = %s\n",
+                                                                     name,
+                                                                     type);
+                                                       return false;
+                                                   },
+                                                   nullptr);
+                    }
                 }
                 else
                 {
-                    result.GetOutputStream().Printf(" has no associated class.\n");
+                    if (regex_up && !regex_up->Execute(""))
+                        continue;
+                    stdout.Printf("isa = 0x%" PRIx64 " has no associated class.\n", iterator->first);
                 }
             }
             result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
@@ -535,6 +659,15 @@ protected:
             return false;
         }
     }
+    
+    CommandOptions m_options;
+};
+
+OptionDefinition
+CommandObjectObjC_ClassTable_Dump::CommandOptions::g_option_table[] =
+{
+    { LLDB_OPT_SET_ALL, false, "verbose"        , 'v', OptionParser::eNoArgument        , nullptr, nullptr, 0, eArgTypeNone,        "Print ivar and method information in detail"},
+    { 0               , false, nullptr           ,   0, 0                  , nullptr, nullptr, 0, eArgTypeNone,        nullptr }
 };
 
 class CommandObjectMultiwordObjC_TaggedPointer_Info : public CommandObjectParsed

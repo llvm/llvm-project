@@ -13317,13 +13317,20 @@ void Sema::MarkVTableUsed(SourceLocation Loc, CXXRecordDecl *Class,
     // the deleting destructor is emitted with the vtable, not with the
     // destructor definition as in the Itanium ABI.
     // If it has a definition, we do the check at that point instead.
-    if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
-        Class->hasUserDeclaredDestructor() &&
-        !Class->getDestructor()->isDefined() &&
-        !Class->getDestructor()->isDeleted()) {
-      CXXDestructorDecl *DD = Class->getDestructor();
-      ContextRAII SavedContext(*this, DD);
-      CheckDestructor(DD);
+    if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+      if (Class->hasUserDeclaredDestructor() &&
+          !Class->getDestructor()->isDefined() &&
+          !Class->getDestructor()->isDeleted()) {
+        CXXDestructorDecl *DD = Class->getDestructor();
+        ContextRAII SavedContext(*this, DD);
+        CheckDestructor(DD);
+      } else if (Class->hasAttr<DLLImportAttr>()) {
+        // We always synthesize vtables on the import side. To make sure
+        // CheckDestructor gets called, mark the destructor referenced.
+        assert(Class->getDestructor() &&
+               "The destructor has always been declared on a dllimport class");
+        MarkFunctionReferenced(Loc, Class->getDestructor());
+      }
     }
   }
 

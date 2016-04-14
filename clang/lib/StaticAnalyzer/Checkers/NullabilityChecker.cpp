@@ -1103,26 +1103,48 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
     ValNullability = getNullabilityAnnotation(Sym->getType());
 
   Nullability LocNullability = getNullabilityAnnotation(LocType);
+
+  // If the type of the RHS expression is nonnull, don't warn. This
+  // enables explicit suppression with a cast to nonnull.
+  Nullability ValueExprTypeLevelNullability = Nullability::Unspecified;
+  const Expr *ValueExpr = matchValueExprForBind(S);
+  if (ValueExpr) {
+    ValueExprTypeLevelNullability =
+      getNullabilityAnnotation(lookThroughImplicitCasts(ValueExpr)->getType());
+  }
+
+  bool NullAssignedToNonNull = (LocNullability == Nullability::Nonnull &&
+                                RhsNullness == NullConstraint::IsNull);
   if (Filter.CheckNullPassedToNonnull &&
-      RhsNullness == NullConstraint::IsNull &&
+      NullAssignedToNonNull &&
       ValNullability != Nullability::Nonnull &&
-      LocNullability == Nullability::Nonnull &&
+      ValueExprTypeLevelNullability != Nullability::Nonnull &&
       !isARCNilInitializedLocal(C, S)) {
     static CheckerProgramPointTag Tag(this, "NullPassedToNonnull");
     ExplodedNode *N = C.generateErrorNode(State, &Tag);
     if (!N)
       return;
 
-    const Stmt *ValueExpr = matchValueExprForBind(S);
-    if (!ValueExpr)
-      ValueExpr = S;
+
+    const Stmt *ValueStmt = S;
+    if (ValueExpr)
+      ValueStmt = ValueExpr;
 
     reportBugIfInvariantHolds("Null is assigned to a pointer which is "
                               "expected to have non-null value",
                               ErrorKind::NilAssignedToNonnull, N, nullptr, C,
-                              ValueExpr);
+                              ValueStmt);
     return;
   }
+
+  // If null was returned from a non-null function, mark the nullability
+  // invariant as violated even if the diagnostic was suppressed.
+  if (NullAssignedToNonNull) {
+    State = State->set<InvariantViolated>(true);
+    C.addTransition(State);
+    return;
+  }
+
   // Intentionally missing case: '0' is bound to a reference. It is handled by
   // the DereferenceChecker.
 

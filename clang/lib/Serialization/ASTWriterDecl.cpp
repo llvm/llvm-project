@@ -49,14 +49,7 @@ namespace clang {
       if (!Code)
         llvm::report_fatal_error(StringRef("unexpected declaration kind '") +
             D->getDeclKindName() + "'");
-
-      auto Offset = Record.Emit(Code, AbbrevToUse);
-
-      // Flush any base specifiers and ctor initializers that
-      // were written as part of this declaration.
-      Writer.FlushPendingAfterDecl();
-
-      return Offset;
+      return Record.Emit(Code, AbbrevToUse);
     }
 
     void Visit(Decl *D);
@@ -823,7 +816,7 @@ void ASTDeclWriter::VisitObjCImplementationDecl(ObjCImplementationDecl *D) {
   Record.push_back(D->hasDestructors());
   Record.push_back(D->NumIvarInitializers);
   if (D->NumIvarInitializers)
-    Record.AddCXXCtorInitializersRef(
+    Record.AddCXXCtorInitializers(
         llvm::makeArrayRef(D->init_begin(), D->init_end()));
   Code = serialization::DECL_OBJC_IMPLEMENTATION;
 }
@@ -2177,7 +2170,7 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
   if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
     Record->push_back(CD->getNumCtorInitializers());
     if (CD->getNumCtorInitializers())
-      AddCXXCtorInitializersRef(
+      AddCXXCtorInitializers(
           llvm::makeArrayRef(CD->init_begin(), CD->init_end()));
   }
   AddStmt(FD->getBody());
