@@ -30,7 +30,7 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/ModuleSummaryIndexObjectFile.h"
-#include "llvm/Support/raw_sha1_ostream.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
@@ -274,20 +274,6 @@ crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
   Importer.importFunctions(TheModule, ImportList);
 }
 
-static std::string toHex(StringRef Input) {
-  static const char *const LUT = "0123456789ABCDEF";
-  size_t Length = Input.size();
-
-  std::string Output;
-  Output.reserve(2 * Length);
-  for (size_t i = 0; i < Length; ++i) {
-    const unsigned char c = Input[i];
-    Output.push_back(LUT[c >> 4]);
-    Output.push_back(LUT[c & 15]);
-  }
-  return Output;
-}
-
 static void optimizeModule(Module &TheModule, TargetMachine &TM) {
   // Populate the PassManager
   PassManagerBuilder PMB;
@@ -367,32 +353,6 @@ ProcessThinLTOModule(Module &TheModule, const ModuleSummaryIndex &Index,
     saveTempBitcode(TheModule, SaveTempsDir, count, ".3.imported.bc");
   }
 
-  std::string CachedFilename;
-  if (!CacheOptions.Path.empty()) {
-    // Compute the hash of the IR
-    raw_sha1_ostream HashStream;
-    WriteBitcodeToFile(&TheModule, HashStream);
-    auto Hash = toHex(HashStream.sha1());
-
-    // Check if this IR has already an object file in the cache
-    sys::fs::file_status Status;
-    CachedFilename = (Twine(CacheOptions.Path) + "/" + Hash + ".o").str();
-    sys::fs::status(CachedFilename, Status);
-    if (sys::fs::exists(Status)) {
-      // Cache Hit!
-      auto FileLoaded =
-      MemoryBuffer::getFile(CachedFilename, Status.getSize(), false);
-      if (!FileLoaded) {
-        errs() << "ThinLTO: error opening the file '" << CachedFilename
-        << "': " << FileLoaded.getError().message() << "\n";
-        report_fatal_error("FAILURE");
-      }
-      return std::move(*FileLoaded);
-    }
-    // Cache miss, move on
-  }
-
-
   optimizeModule(TheModule, TM);
 
   saveTempBitcode(TheModule, SaveTempsDir, count, ".3.opt.bc");
@@ -408,28 +368,7 @@ ProcessThinLTOModule(Module &TheModule, const ModuleSummaryIndex &Index,
     return make_unique<ObjectMemoryBuffer>(std::move(OutputBuffer));
   }
 
-  auto OutputBuffer = codegenModule(TheModule, TM);
-
-  if (!CachedFilename.empty()) {
-    // Cache the Produced object file
-
-    // Write to a temporary to avoid race condition
-    SmallString<128> TempFilename;
-    int TempFD;
-    std::error_code EC =
-    sys::fs::createTemporaryFile("Thin", "tmp.o", TempFD, TempFilename);
-    if (EC) {
-      errs() << "Error: " << EC.message() << "\n";
-      report_fatal_error("ThinLTO: Can't get a temporary file");
-    }
-    {
-      raw_fd_ostream OS(TempFD, /* ShouldClose */ true);
-      OS << OutputBuffer->getBuffer();
-    }
-    // Rename to final destination (hopefully race condition won't matter here)
-    sys::fs::rename(TempFilename, CachedFilename);
-  }
-  return OutputBuffer;
+  return codegenModule(TheModule, TM);
 }
 
 // Initialize the TargetMachine builder for a given Triple
