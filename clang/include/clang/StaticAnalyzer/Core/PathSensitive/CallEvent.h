@@ -68,6 +68,9 @@ public:
   /// name regardless the number of arguments.
   CallDescription(StringRef FuncName, unsigned RequiredArgs = NoArgRequirement)
       : II(nullptr), FuncName(FuncName), RequiredArgs(RequiredArgs) {}
+
+  /// \brief Get the name of the function that this object matches.
+  StringRef getFunctionName() const { return FuncName; }
 };
 
 template<typename T = CallEvent>
