@@ -3040,7 +3040,8 @@ Sema::IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType) {
               return (ToPointeeType->getKind() == BuiltinType::Char_U ||
                       ToPointeeType->getKind() == BuiltinType::Char_S);
             case StringLiteral::Wide:
-              return ToPointeeType->isWideCharType();
+              return Context.typesAreCompatible(Context.getWideCharType(),
+                                                QualType(ToPointeeType, 0));
           }
         }
       }
