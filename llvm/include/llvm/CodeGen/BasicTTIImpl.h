@@ -587,13 +587,14 @@ public:
 
   /// Get intrinsic cost based on arguments  
   unsigned getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
-                                 ArrayRef<Value *> Args) {
+                                 ArrayRef<Value *> Args, FastMathFlags FMF) {
     switch (IID) {
     default: {
       SmallVector<Type *, 4> Types;
       for (Value *Op : Args)
         Types.push_back(Op->getType());
-      return static_cast<T *>(this)->getIntrinsicInstrCost(IID, RetTy, Types);
+      return static_cast<T *>(this)->getIntrinsicInstrCost(IID, RetTy, Types,
+                                                           FMF);
     }
     case Intrinsic::masked_scatter: {
       Value *Mask = Args[3];
@@ -619,8 +620,8 @@ public:
   
   /// Get intrinsic cost based on argument types
   unsigned getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
-                                 ArrayRef<Type *> Tys) {
-    unsigned ISD = 0;
+                                 ArrayRef<Type *> Tys, FastMathFlags FMF) {
+    SmallVector<unsigned, 2> ISDs;
     unsigned SingleCallCost = 10; // Library call cost. Make it expensive.
     switch (IID) {
     default: {
@@ -647,74 +648,78 @@ public:
         return 1; // Return cost of a scalar intrinsic. Assume it to be cheap.
 
       unsigned ScalarCost = static_cast<T *>(this)->getIntrinsicInstrCost(
-          IID, ScalarRetTy, ScalarTys);
+          IID, ScalarRetTy, ScalarTys, FMF);
 
       return ScalarCalls * ScalarCost + ScalarizationCost;
     }
     // Look for intrinsics that can be lowered directly or turned into a scalar
     // intrinsic call.
     case Intrinsic::sqrt:
-      ISD = ISD::FSQRT;
+      ISDs.push_back(ISD::FSQRT);
       break;
     case Intrinsic::sin:
-      ISD = ISD::FSIN;
+      ISDs.push_back(ISD::FSIN);
       break;
     case Intrinsic::cos:
-      ISD = ISD::FCOS;
+      ISDs.push_back(ISD::FCOS);
       break;
     case Intrinsic::exp:
-      ISD = ISD::FEXP;
+      ISDs.push_back(ISD::FEXP);
       break;
     case Intrinsic::exp2:
-      ISD = ISD::FEXP2;
+      ISDs.push_back(ISD::FEXP2);
       break;
     case Intrinsic::log:
-      ISD = ISD::FLOG;
+      ISDs.push_back(ISD::FLOG);
       break;
     case Intrinsic::log10:
-      ISD = ISD::FLOG10;
+      ISDs.push_back(ISD::FLOG10);
       break;
     case Intrinsic::log2:
-      ISD = ISD::FLOG2;
+      ISDs.push_back(ISD::FLOG2);
       break;
     case Intrinsic::fabs:
-      ISD = ISD::FABS;
+      ISDs.push_back(ISD::FABS);
       break;
     case Intrinsic::minnum:
-      ISD = ISD::FMINNUM;
+      ISDs.push_back(ISD::FMINNUM);
+      if (FMF.noNaNs())
+        ISDs.push_back(ISD::FMINNAN);
       break;
     case Intrinsic::maxnum:
-      ISD = ISD::FMAXNUM;
+      ISDs.push_back(ISD::FMAXNUM);
+      if (FMF.noNaNs())
+        ISDs.push_back(ISD::FMAXNAN);
       break;
     case Intrinsic::copysign:
-      ISD = ISD::FCOPYSIGN;
+      ISDs.push_back(ISD::FCOPYSIGN);
       break;
     case Intrinsic::floor:
-      ISD = ISD::FFLOOR;
+      ISDs.push_back(ISD::FFLOOR);
       break;
     case Intrinsic::ceil:
-      ISD = ISD::FCEIL;
+      ISDs.push_back(ISD::FCEIL);
       break;
     case Intrinsic::trunc:
-      ISD = ISD::FTRUNC;
+      ISDs.push_back(ISD::FTRUNC);
       break;
     case Intrinsic::nearbyint:
-      ISD = ISD::FNEARBYINT;
+      ISDs.push_back(ISD::FNEARBYINT);
       break;
     case Intrinsic::rint:
-      ISD = ISD::FRINT;
+      ISDs.push_back(ISD::FRINT);
       break;
     case Intrinsic::round:
-      ISD = ISD::FROUND;
+      ISDs.push_back(ISD::FROUND);
       break;
     case Intrinsic::pow:
-      ISD = ISD::FPOW;
+      ISDs.push_back(ISD::FPOW);
       break;
     case Intrinsic::fma:
-      ISD = ISD::FMA;
+      ISDs.push_back(ISD::FMA);
       break;
     case Intrinsic::fmuladd:
-      ISD = ISD::FMA;
+      ISDs.push_back(ISD::FMA);
       break;
     // FIXME: We should return 0 whenever getIntrinsicCost == TCC_Free.
     case Intrinsic::lifetime_start:
@@ -727,7 +732,7 @@ public:
       return static_cast<T *>(this)
           ->getMaskedMemoryOpCost(Instruction::Load, RetTy, 0, 0);
     case Intrinsic::ctpop:
-      ISD = ISD::CTPOP;
+      ISDs.push_back(ISD::CTPOP);
       // In case of legalization use TCC_Expensive. This is cheaper than a
       // library call but still not a cheap instruction.
       SingleCallCost = TargetTransformInfo::TCC_Expensive;
@@ -738,26 +743,36 @@ public:
     const TargetLoweringBase *TLI = getTLI();
     std::pair<unsigned, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);
 
-    if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
-      if (IID == Intrinsic::fabs &&
-          TLI->isFAbsFree(LT.second)) {
-        return 0;
+    SmallVector<unsigned, 2> LegalCost;
+    SmallVector<unsigned, 2> CustomCost;
+    for (unsigned ISD : ISDs) {
+      if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
+        if (IID == Intrinsic::fabs && TLI->isFAbsFree(LT.second)) {
+          return 0;
+        }
+
+        // The operation is legal. Assume it costs 1.
+        // If the type is split to multiple registers, assume that there is some
+        // overhead to this.
+        // TODO: Once we have extract/insert subvector cost we need to use them.
+        if (LT.first > 1)
+          LegalCost.push_back(LT.first * 2);
+        else
+          LegalCost.push_back(LT.first * 1);
+      } else if (!TLI->isOperationExpand(ISD, LT.second)) {
+        // If the operation is custom lowered then assume
+        // that the code is twice as expensive.
+        CustomCost.push_back(LT.first * 2);
       }
-
-      // The operation is legal. Assume it costs 1.
-      // If the type is split to multiple registers, assume that there is some
-      // overhead to this.
-      // TODO: Once we have extract/insert subvector cost we need to use them.
-      if (LT.first > 1)
-        return LT.first * 2;
-      return LT.first * 1;
     }
 
-    if (!TLI->isOperationExpand(ISD, LT.second)) {
-      // If the operation is custom lowered then assume
-      // thare the code is twice as expensive.
-      return LT.first * 2;
-    }
+    auto MinLegalCostI = std::min_element(LegalCost.begin(), LegalCost.end());
+    if (MinLegalCostI != LegalCost.end())
+      return *MinLegalCostI;
+
+    auto MinCustomCostI = std::min_element(CustomCost.begin(), CustomCost.end());
+    if (MinCustomCostI != CustomCost.end())
+      return *MinCustomCostI;
 
     // If we can't lower fmuladd into an FMA estimate the cost as a floating
     // point mul followed by an add.
@@ -781,7 +796,7 @@ public:
         ScalarTys.push_back(Ty);
       }
       unsigned ScalarCost = static_cast<T *>(this)->getIntrinsicInstrCost(
-          IID, RetTy->getScalarType(), ScalarTys);
+          IID, RetTy->getScalarType(), ScalarTys, FMF);
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
         if (Tys[i]->isVectorTy()) {
           ScalarizationCost += getScalarizationOverhead(Tys[i], false, true);

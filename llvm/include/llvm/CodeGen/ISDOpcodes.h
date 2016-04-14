@@ -257,6 +257,9 @@ namespace ISD {
     /// value as an integer 0/1 value.
     FGETSIGN,
 
+    /// Returns platform specific canonical encoding of a floating point number.
+    FCANONICALIZE,
+
     /// BUILD_VECTOR(ELT0, ELT1, ELT2, ELT3,...) - Return a vector with the
     /// specified, possibly variable, elements.  The number of elements is
     /// required to be a power of two.  The types of the operands must all be

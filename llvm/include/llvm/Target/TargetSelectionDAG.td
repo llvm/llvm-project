@@ -434,6 +434,7 @@ def fmaxnum    : SDNode<"ISD::FMAXNUM"    , SDTFPBinOp,
 def fminnan    : SDNode<"ISD::FMINNAN"    , SDTFPBinOp>;
 def fmaxnan    : SDNode<"ISD::FMAXNAN"    , SDTFPBinOp>;
 def fgetsign   : SDNode<"ISD::FGETSIGN"   , SDTFPToIntOp>;
+def fcanonicalize : SDNode<"ISD::FCANONICALIZE", SDTFPUnaryOp>;
 def fneg       : SDNode<"ISD::FNEG"       , SDTFPUnaryOp>;
 def fsqrt      : SDNode<"ISD::FSQRT"      , SDTFPUnaryOp>;
 def fsin       : SDNode<"ISD::FSIN"       , SDTFPUnaryOp>;

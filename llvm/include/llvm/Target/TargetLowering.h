@@ -43,6 +43,7 @@
 namespace llvm {
   class CallInst;
   class CCState;
+  class CCValAssign;
   class FastISel;
   class FunctionLoweringInfo;
   class ImmutableCallSite;
@@ -52,6 +53,7 @@ namespace llvm {
   class MachineInstr;
   class MachineJumpTableInfo;
   class MachineLoop;
+  class MachineRegisterInfo;
   class Mangler;
   class MCContext;
   class MCExpr;
@@ -2138,6 +2140,14 @@ public:
                                           bool isSigned, SDLoc dl,
                                           bool doesNotReturn = false,
                                           bool isReturnValueUsed = true) const;
+
+  /// Check whether parameters to a call that are passed in callee saved
+  /// registers are the same as from the calling function.  This needs to be
+  /// checked for tail call eligibility.
+  bool parametersInCSRMatch(const MachineRegisterInfo &MRI,
+      const uint32_t *CallerPreservedMask,
+      const SmallVectorImpl<CCValAssign> &ArgLocs,
+      const SmallVectorImpl<SDValue> &OutVals) const;
 
   //===--------------------------------------------------------------------===//
   // TargetLowering Optimization Methods

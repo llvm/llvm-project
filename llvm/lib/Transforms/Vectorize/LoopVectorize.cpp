@@ -3302,7 +3302,11 @@ static unsigned getVectorIntrinsicCost(CallInst *CI, unsigned VF,
   for (unsigned i = 0, ie = CI->getNumArgOperands(); i != ie; ++i)
     Tys.push_back(ToVectorTy(CI->getArgOperand(i)->getType(), VF));
 
-  return TTI.getIntrinsicInstrCost(ID, RetTy, Tys);
+  FastMathFlags FMF;
+  if (auto *FPMO = dyn_cast<FPMathOperator>(CI))
+    FMF = FPMO->getFastMathFlags();
+
+  return TTI.getIntrinsicInstrCost(ID, RetTy, Tys, FMF);
 }
 
 static Type *smallestIntegerVectorType(Type *T1, Type *T2) {
@@ -4269,7 +4273,13 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
           }
         }
         assert(VectorF && "Can't create vector function.");
-        Entry[Part] = Builder.CreateCall(VectorF, Args);
+
+        CallInst *V = Builder.CreateCall(VectorF, Args);
+
+        if (isa<FPMathOperator>(V))
+          V->copyFastMathFlags(CI);
+
+        Entry[Part] = V;
       }
 
       addMetadata(Entry, &*it);

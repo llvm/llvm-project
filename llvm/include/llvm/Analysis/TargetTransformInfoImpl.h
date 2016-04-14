@@ -324,11 +324,11 @@ public:
   }
 
   unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                 ArrayRef<Type *> Tys) {
+                                 ArrayRef<Type *> Tys, FastMathFlags FMF) {
     return 1;
   }
   unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                 ArrayRef<Value *> Args) {
+                                 ArrayRef<Value *> Args, FastMathFlags FMF) {
     return 1;
   }
 

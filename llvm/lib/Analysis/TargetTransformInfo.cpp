@@ -315,15 +315,17 @@ int TargetTransformInfo::getInterleavedMemoryOpCost(
 }
 
 int TargetTransformInfo::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                               ArrayRef<Type *> Tys) const {
-  int Cost = TTIImpl->getIntrinsicInstrCost(ID, RetTy, Tys);
+                                               ArrayRef<Type *> Tys,
+                                               FastMathFlags FMF) const {
+  int Cost = TTIImpl->getIntrinsicInstrCost(ID, RetTy, Tys, FMF);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
 
 int TargetTransformInfo::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                               ArrayRef<Value *> Args) const {
-  int Cost = TTIImpl->getIntrinsicInstrCost(ID, RetTy, Args);
+                                               ArrayRef<Value *> Args,
+                                               FastMathFlags FMF) const {
+  int Cost = TTIImpl->getIntrinsicInstrCost(ID, RetTy, Args, FMF);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

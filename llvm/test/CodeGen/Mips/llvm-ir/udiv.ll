@@ -1,35 +1,37 @@
 ; RUN: llc < %s -march=mips -mcpu=mips2 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=NOT-R6 -check-prefix=GP32
+; RUN:    -check-prefix=ALL -check-prefix=NOT-R6 -check-prefix=GP32
 ; RUN: llc < %s -march=mips -mcpu=mips32 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=NOT-R6 -check-prefix=GP32
+; RUN:    -check-prefix=ALL -check-prefix=NOT-R6 -check-prefix=GP32
 ; RUN: llc < %s -march=mips -mcpu=mips32r2 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=NOT-R6 -check-prefix=GP32
+; RUN:    -check-prefix=ALL -check-prefix=NOT-R6 -check-prefix=GP32
 ; RUN: llc < %s -march=mips -mcpu=mips32r3 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=NOT-R6 -check-prefix=GP32
+; RUN:    -check-prefix=ALL -check-prefix=NOT-R6 -check-prefix=GP32
 ; RUN: llc < %s -march=mips -mcpu=mips32r5 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=NOT-R6 -check-prefix=GP32
+; RUN:    -check-prefix=ALL -check-prefix=NOT-R6 -check-prefix=GP32
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=R6 -check-prefix=GP32
+; RUN:    -check-prefix=ALL -check-prefix=R6 -check-prefix=GP32
+
 ; RUN: llc < %s -march=mips64 -mcpu=mips3 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=NOT-R6 -check-prefix=GP64-NOT-R6
+; RUN:    -check-prefix=ALL -check-prefix=NOT-R6 -check-prefix=GP64-NOT-R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips4 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=NOT-R6 -check-prefix=GP64-NOT-R6
+; RUN:    -check-prefix=ALL -check-prefix=NOT-R6 -check-prefix=GP64-NOT-R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips64 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=NOT-R6 -check-prefix=GP64-NOT-R6
+; RUN:    -check-prefix=ALL -check-prefix=NOT-R6 -check-prefix=GP64-NOT-R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r2 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=NOT-R6 -check-prefix=GP64-NOT-R6
+; RUN:    -check-prefix=ALL -check-prefix=NOT-R6 -check-prefix=GP64-NOT-R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r3 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=NOT-R6 -check-prefix=GP64-NOT-R6
+; RUN:    -check-prefix=ALL -check-prefix=NOT-R6 -check-prefix=GP64-NOT-R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r5 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=NOT-R6 -check-prefix=GP64-NOT-R6
+; RUN:    -check-prefix=ALL -check-prefix=NOT-R6 -check-prefix=GP64-NOT-R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=R6 -check-prefix=64R6
+; RUN:    -check-prefix=ALL -check-prefix=R6 -check-prefix=64R6
+
 ; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=MM -check-prefix=MMR3 -check-prefix=MM32
+; RUN:    -check-prefix=ALL -check-prefix=MMR3 -check-prefix=MM32
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=MM -check-prefix=MMR6 -check-prefix=MM32
+; RUN:    -check-prefix=ALL -check-prefix=MMR6 -check-prefix=MM32
 ; RUN: llc < %s -march=mips -mcpu=mips64r6 -mattr=+micromips -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefix=MM -check-prefix=MMR6 -check-prefix=MM64
+; RUN:    -check-prefix=ALL -check-prefix=MMR6 -check-prefix=MM64
 
 define zeroext i1 @udiv_i1(i1 zeroext %a, i1 zeroext %b) {
 entry:
