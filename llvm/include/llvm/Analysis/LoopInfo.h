@@ -550,8 +550,6 @@ public:
   /// loop (for example the entry node), null is returned.
   LoopT *getLoopFor(const BlockT *BB) const { return BBMap.lookup(BB); }
 
-  const DenseMap<const BlockT *, LoopT *> &getBlockMap() const { return BBMap; }
-
   /// Same as getLoopFor.
   const LoopT *operator[](const BlockT *BB) const {
     return getLoopFor(BB);
