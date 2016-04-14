@@ -617,7 +617,7 @@ protected:
         {
             auto iterators_pair = objc_runtime->GetDescriptorIteratorPair();
             auto iterator = iterators_pair.first;
-            auto& stdout(result.GetOutputStream());
+            Stream &stdout(result.GetOutputStream());
             for(; iterator != iterators_pair.second; iterator++)
             {
                 if (iterator->second)
