@@ -112,6 +112,10 @@ void ModuleDependencyCollector::writeFileMap() {
   // the sensitivity at the path where the headers all collected to.
   VFSWriter.setCaseSensitivity(isCaseSensitivePath(VFSDir));
 
+  // Do not rely on real path names when executing the crash reproducer scripts
+  // since we only want to actually use the files we have on the VFS cache.
+  VFSWriter.setUseExternalNames(false);
+
   std::error_code EC;
   SmallString<256> YAMLPath = VFSDir;
   llvm::sys::path::append(YAMLPath, "vfs.yaml");

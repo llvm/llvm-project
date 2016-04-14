@@ -743,6 +743,17 @@ namespace PR21366 {
   inline void S::outOfClassInlineMethod() {}
 }
 
+namespace PR27319 {
+  // Make sure we don't assert due to not having checked for operator delete on
+  // the destructor.
+  template <typename> struct A {
+    virtual ~A() = default;
+  };
+  extern template struct __declspec(dllimport) A<int>;
+  void f() { new A<int>(); }
+  // MO1-DAG: @"\01??_S?$A@H@PR27319@@6B@" = linkonce_odr unnamed_addr constant [1 x i8*]
+}
+
 // MS ignores DLL attributes on partial specializations.
 template <typename T> struct PartiallySpecializedClassTemplate {};
 template <typename T> struct __declspec(dllimport) PartiallySpecializedClassTemplate<T*> { void f(); };

@@ -1687,11 +1687,6 @@ public:
   /// redeclaration chain for \p D.
   void CompleteRedeclChain(const Decl *D) override;
 
-  /// \brief Read a CXXBaseSpecifiers ID form the given record and
-  /// return its global bit offset.
-  uint64_t readCXXBaseSpecifiers(ModuleFile &M, const RecordData &Record,
-                                 unsigned &Idx);
-
   CXXBaseSpecifier *GetExternalCXXBaseSpecifiers(uint64_t Offset) override;
 
   /// \brief Resolve the offset of a statement into a statement.
@@ -1970,11 +1965,6 @@ public:
   CXXCtorInitializer **
   ReadCXXCtorInitializers(ModuleFile &F, const RecordData &Record,
                           unsigned &Idx);
-
-  /// \brief Read a CXXCtorInitializers ID from the given record and
-  /// return its global bit offset.
-  uint64_t ReadCXXCtorInitializersRef(ModuleFile &M, const RecordData &Record,
-                                      unsigned &Idx);
 
   /// \brief Read the contents of a CXXCtorInitializer array.
   CXXCtorInitializer **GetExternalCXXCtorInitializers(uint64_t Offset) override;

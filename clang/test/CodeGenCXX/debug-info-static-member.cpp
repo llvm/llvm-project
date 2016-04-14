@@ -1,4 +1,6 @@
 // RUN: %clangxx -target x86_64-unknown-unknown -g %s -emit-llvm -S -o - | FileCheck %s
+// RUN: %clangxx -target x86_64-unknown-unknown -g -std=c++98 %s -emit-llvm -S -o - | FileCheck %s
+// RUN: %clangxx -target x86_64-unknown-unknown -g -std=c++11 %s -emit-llvm -S -o - | FileCheck %s
 // PR14471
 
 enum X {
@@ -10,7 +12,11 @@ class C
   const static bool const_a = true;
 protected:
   static int b;
+#if __cplusplus >= 201103L
+  constexpr static float const_b = 3.14;
+#else
   const static float const_b = 3.14;
+#endif
 public:
   static int c;
   const static int const_c = 18;

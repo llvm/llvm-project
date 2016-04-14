@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fblocks %s -Wno-error=non-pod-varargs
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -std=c++98 %s -Wno-error=non-pod-varargs
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -std=c++11 %s -Wno-error=non-pod-varargs
 
 // Check that the warning is still there under -fms-compatibility.
 // RUN: %clang_cc1 -fsyntax-only -verify -fblocks %s -Wno-error=non-pod-varargs -fms-compatibility
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -std=c++98 %s -Wno-error=non-pod-varargs -fms-compatibility
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -std=c++11 %s -Wno-error=non-pod-varargs -fms-compatibility
 
 extern char version[];
 
@@ -18,11 +22,19 @@ void t1()
 {
   C c(10);
   
-  g(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
+  g(10, c);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
+#endif
+
   g(10, version);
 
   void (*ptr)(int, ...) = g;
-  ptr(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
+  ptr(10, c);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
+#endif
+
   ptr(10, version);
 }
 
@@ -30,18 +42,34 @@ void t2()
 {
   C c(10);
 
-  c.g(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic method; call will abort at runtime}}
+  c.g(10, c);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic method; call will abort at runtime}}
+#endif
+
   c.g(10, version);
 
   void (C::*ptr)(int, ...) = &C::g;
-  (c.*ptr)(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic method; call will abort at runtime}}
+  (c.*ptr)(10, c);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic method; call will abort at runtime}}
+#endif
+
   (c.*ptr)(10, version);
  
-  C::h(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
+  C::h(10, c);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
+#endif
+
   C::h(10, version);
 
   void (*static_ptr)(int, ...) = &C::h; 
-  static_ptr(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
+  static_ptr(10, c);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
+#endif
+
   static_ptr(10, version);
 }
 
@@ -51,7 +79,11 @@ void t3()
 {
   C c(10);
   
-  block(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic block; call will abort at runtime}}
+  block(10, c);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic block; call will abort at runtime}}
+#endif
+
   block(10, version);
 }
 
@@ -66,7 +98,11 @@ void t4()
 
   D d;
   
-  d(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic method; call will abort at runtime}}
+  d(10, c);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic method; call will abort at runtime}}
+#endif
+
   d(10, version);
 }
 
@@ -78,10 +114,16 @@ void t5()
 {
   C c(10);
   
-  E e(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic constructor; call will abort at runtime}} \
-    // expected-error{{calling a private constructor of class 'E'}}
-  (void)E(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic constructor; call will abort at runtime}} \
-    // expected-error{{calling a private constructor of class 'E'}}
+  E e(10, c);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic constructor; call will abort at runtime}}
+#endif
+  // expected-error@-4 {{calling a private constructor of class 'E'}}
+  (void)E(10, c);
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic constructor; call will abort at runtime}}
+#endif
+  // expected-error@-4 {{calling a private constructor of class 'E'}}
 
 }
 
@@ -103,7 +145,13 @@ Base &get_base(...);
 int eat_base(...);
 
 void test_typeid(Base &base) {
-  (void)typeid(get_base(base)); // expected-warning{{cannot pass object of non-POD type 'Base' through variadic function; call will abort at runtime}} expected-warning{{expression with side effects will be evaluated despite being used as an operand to 'typeid'}}
+  (void)typeid(get_base(base));
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'Base' through variadic function; call will abort at runtime}}
+#else
+  // expected-warning@-4 {{cannot pass object of non-trivial type 'Base' through variadic function; call will abort at runtime}}
+#endif
+  // expected-warning@-6 {{expression with side effects will be evaluated despite being used as an operand to 'typeid'}}
   (void)typeid(eat_base(base)); // okay
 }
 
@@ -136,7 +184,10 @@ void t8(int n, ...) {
 
 int t9(int n) {
   // Make sure the error works in potentially-evaluated sizeof
-  return (int)sizeof(*(Helper(Foo()), (int (*)[n])0)); // expected-warning{{cannot pass object of non-POD type}}
+  return (int)sizeof(*(Helper(Foo()), (int (*)[n])0));
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{cannot pass object of non-POD type 'Foo' through variadic function; call will abort at runtime}}
+#endif
 }
 
 // PR14057
@@ -173,22 +224,43 @@ namespace t11 {
   void test() {
     C c(10);
 
-    (get_f_ptr())(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
+    (get_f_ptr())(10, c);
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
+#endif
     (get_f_ptr())(10, version);
 
-    (c.*get_m_ptr())(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic method; call will abort at runtime}}
+    (c.*get_m_ptr())(10, c);
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic method; call will abort at runtime}}
+#endif
     (c.*get_m_ptr())(10, version);
 
-    (get_b_ptr())(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic block; call will abort at runtime}}
+    (get_b_ptr())(10, c);
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic block; call will abort at runtime}}
+#endif
+
     (get_b_ptr())(10, version);
 
-    (arr_f_ptr[3])(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
+    (arr_f_ptr[3])(10, c);
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic function; call will abort at runtime}}
+#endif
+
     (arr_f_ptr[3])(10, version);
 
-    (c.*arr_m_ptr[3])(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic method; call will abort at runtime}}
+    (c.*arr_m_ptr[3])(10, c);
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic method; call will abort at runtime}}
+#endif
+
     (c.*arr_m_ptr[3])(10, version);
 
-    (arr_b_ptr[3])(10, c); // expected-warning{{cannot pass object of non-POD type 'C' through variadic block; call will abort at runtime}}
+    (arr_b_ptr[3])(10, c);
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{cannot pass object of non-POD type 'C' through variadic block; call will abort at runtime}}
+#endif
     (arr_b_ptr[3])(10, version);
   }
 }

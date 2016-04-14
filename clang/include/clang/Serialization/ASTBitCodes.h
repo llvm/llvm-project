@@ -491,9 +491,7 @@ namespace clang {
       // ID 30 used to be a decl update record. These are now in the DECLTYPES
       // block.
       
-      /// \brief Record code for the table of offsets to CXXBaseSpecifier
-      /// sets.
-      CXX_BASE_SPECIFIER_OFFSETS = 31,
+      // ID 31 used to be a list of offsets to DECL_CXX_BASE_SPECIFIERS records.
 
       /// \brief Record code for \#pragma diagnostic mappings.
       DIAG_PRAGMA_MAPPINGS = 32,
@@ -573,9 +571,7 @@ namespace clang {
       /// \brief Record code for potentially unused local typedef names.
       UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES = 52,
 
-      /// \brief Record code for the table of offsets to CXXCtorInitializers
-      /// lists.
-      CXX_CTOR_INITIALIZERS_OFFSETS = 53,
+      // ID 53 used to be a table of constructor initializer records.
 
       /// \brief Delete expressions that will be analyzed later.
       DELETE_EXPRS_TO_ANALYZE = 54,

@@ -7926,6 +7926,298 @@ _mm256_maskz_broadcastq_epi64 (__mmask8 __M, __m128i __A)
                    __M);
 }
 
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_cvtsepi32_epi8 (__m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsdb128_mask ((__v4si) __A,
+               (__v16qi)_mm_undefined_si128(),
+               (__mmask8) -1);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_cvtsepi32_epi8 (__m128i __O, __mmask8 __M, __m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsdb128_mask ((__v4si) __A,
+               (__v16qi) __O, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_maskz_cvtsepi32_epi8 (__mmask8 __M, __m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsdb128_mask ((__v4si) __A,
+               (__v16qi) _mm_setzero_si128 (),
+               __M);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_mask_cvtsepi32_storeu_epi8 (void * __P, __mmask8 __M, __m128i __A)
+{
+  __builtin_ia32_pmovsdb128mem_mask ((__v16qi *) __P, (__v4si) __A, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_cvtsepi32_epi8 (__m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsdb256_mask ((__v8si) __A,
+               (__v16qi)_mm_undefined_si128(),
+               (__mmask8) -1);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_mask_cvtsepi32_epi8 (__m128i __O, __mmask8 __M, __m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsdb256_mask ((__v8si) __A,
+               (__v16qi) __O, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_maskz_cvtsepi32_epi8 (__mmask8 __M, __m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsdb256_mask ((__v8si) __A,
+               (__v16qi) _mm_setzero_si128 (),
+               __M);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm256_mask_cvtsepi32_storeu_epi8 (void * __P, __mmask8 __M, __m256i __A)
+{
+  __builtin_ia32_pmovsdb256mem_mask ((__v16qi *) __P, (__v8si) __A, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_cvtsepi32_epi16 (__m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsdw128_mask ((__v4si) __A,
+               (__v8hi)_mm_setzero_si128 (),
+               (__mmask8) -1);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_cvtsepi32_epi16 (__m128i __O, __mmask8 __M, __m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsdw128_mask ((__v4si) __A,
+               (__v8hi)__O,
+               __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_maskz_cvtsepi32_epi16 (__mmask8 __M, __m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsdw128_mask ((__v4si) __A,
+               (__v8hi) _mm_setzero_si128 (),
+               __M);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_mask_cvtsepi32_storeu_epi16 (void * __P, __mmask8 __M, __m128i __A)
+{
+  __builtin_ia32_pmovsdw128mem_mask ((__v8hi *) __P, (__v4si) __A, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_cvtsepi32_epi16 (__m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsdw256_mask ((__v8si) __A,
+               (__v8hi)_mm_undefined_si128(),
+               (__mmask8) -1);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_mask_cvtsepi32_epi16 (__m128i __O, __mmask8 __M, __m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsdw256_mask ((__v8si) __A,
+               (__v8hi) __O, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_maskz_cvtsepi32_epi16 (__mmask8 __M, __m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsdw256_mask ((__v8si) __A,
+               (__v8hi) _mm_setzero_si128 (),
+               __M);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm256_mask_cvtsepi32_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
+{
+  __builtin_ia32_pmovsdw256mem_mask ((__v8hi *) __P, (__v8si) __A, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_cvtsepi64_epi8 (__m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqb128_mask ((__v2di) __A,
+               (__v16qi)_mm_undefined_si128(),
+               (__mmask8) -1);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_cvtsepi64_epi8 (__m128i __O, __mmask8 __M, __m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqb128_mask ((__v2di) __A,
+               (__v16qi) __O, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_maskz_cvtsepi64_epi8 (__mmask8 __M, __m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqb128_mask ((__v2di) __A,
+               (__v16qi) _mm_setzero_si128 (),
+               __M);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_mask_cvtsepi64_storeu_epi8 (void * __P, __mmask8 __M, __m128i __A)
+{
+  __builtin_ia32_pmovsqb128mem_mask ((__v16qi *) __P, (__v2di) __A, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_cvtsepi64_epi8 (__m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqb256_mask ((__v4di) __A,
+               (__v16qi)_mm_undefined_si128(),
+               (__mmask8) -1);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_mask_cvtsepi64_epi8 (__m128i __O, __mmask8 __M, __m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqb256_mask ((__v4di) __A,
+               (__v16qi) __O, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_maskz_cvtsepi64_epi8 (__mmask8 __M, __m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqb256_mask ((__v4di) __A,
+               (__v16qi) _mm_setzero_si128 (),
+               __M);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm256_mask_cvtsepi64_storeu_epi8 (void * __P, __mmask8 __M, __m256i __A)
+{
+  __builtin_ia32_pmovsqb256mem_mask ((__v16qi *) __P, (__v4di) __A, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_cvtsepi64_epi32 (__m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqd128_mask ((__v2di) __A,
+               (__v4si)_mm_undefined_si128(),
+               (__mmask8) -1);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_cvtsepi64_epi32 (__m128i __O, __mmask8 __M, __m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqd128_mask ((__v2di) __A,
+               (__v4si) __O, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_maskz_cvtsepi64_epi32 (__mmask8 __M, __m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqd128_mask ((__v2di) __A,
+               (__v4si) _mm_setzero_si128 (),
+               __M);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_mask_cvtsepi64_storeu_epi32 (void * __P, __mmask8 __M, __m128i __A)
+{
+  __builtin_ia32_pmovsqd128mem_mask ((__v4si *) __P, (__v2di) __A, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_cvtsepi64_epi32 (__m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqd256_mask ((__v4di) __A,
+               (__v4si)_mm_undefined_si128(),
+               (__mmask8) -1);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_mask_cvtsepi64_epi32 (__m128i __O, __mmask8 __M, __m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqd256_mask ((__v4di) __A,
+               (__v4si)__O,
+               __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_maskz_cvtsepi64_epi32 (__mmask8 __M, __m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqd256_mask ((__v4di) __A,
+               (__v4si) _mm_setzero_si128 (),
+               __M);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm256_mask_cvtsepi64_storeu_epi32 (void * __P, __mmask8 __M, __m256i __A)
+{
+  __builtin_ia32_pmovsqd256mem_mask ((__v4si *) __P, (__v4di) __A, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_cvtsepi64_epi16 (__m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqw128_mask ((__v2di) __A,
+               (__v8hi)_mm_undefined_si128(),
+               (__mmask8) -1);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_cvtsepi64_epi16 (__m128i __O, __mmask8 __M, __m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqw128_mask ((__v2di) __A,
+               (__v8hi) __O, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_maskz_cvtsepi64_epi16 (__mmask8 __M, __m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqw128_mask ((__v2di) __A,
+               (__v8hi) _mm_setzero_si128 (),
+               __M);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_mask_cvtsepi64_storeu_epi16 (void * __P, __mmask8 __M, __m128i __A)
+{
+  __builtin_ia32_pmovsqw128mem_mask ((__v8hi *) __P, (__v2di) __A, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_cvtsepi64_epi16 (__m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqw256_mask ((__v4di) __A,
+               (__v8hi)_mm_undefined_si128(),
+               (__mmask8) -1);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_mask_cvtsepi64_epi16 (__m128i __O, __mmask8 __M, __m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqw256_mask ((__v4di) __A,
+               (__v8hi) __O, __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm256_maskz_cvtsepi64_epi16 (__mmask8 __M, __m256i __A)
+{
+  return (__m128i) __builtin_ia32_pmovsqw256_mask ((__v4di) __A,
+               (__v8hi) _mm_setzero_si128 (),
+               __M);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm256_mask_cvtsepi64_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
+{
+  __builtin_ia32_pmovsqw256mem_mask ((__v8hi *) __P, (__v4di) __A, __M);
+}
+
 #undef __DEFAULT_FN_ATTRS
 #undef __DEFAULT_FN_ATTRS_BOTH
 

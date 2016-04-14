@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic -Wc++11-compat %s
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic -std=c++98 -Wc++11-compat %s
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic -std=c++11 %s
 
 // Example from the standard
 template<class T> class Array { void mf() { } }; 
@@ -39,5 +41,16 @@ namespace N {
 }
 using namespace N;
 
-template struct X1<int>; // expected-warning{{must occur in}}
-template void f1(int); // expected-warning{{must occur in}}
+template struct X1<int>;
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{explicit instantiation of 'N::X1' must occur in namespace 'N'}}
+#else
+// expected-error@-4 {{explicit instantiation of 'N::X1' must occur in namespace 'N'}}
+#endif
+
+template void f1(int);
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{explicit instantiation of 'N::f1' must occur in namespace 'N'}}
+#else
+// expected-error@-4 {{explicit instantiation of 'N::f1' must occur in namespace 'N'}}
+#endif

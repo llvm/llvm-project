@@ -746,7 +746,7 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
 
   ArrayRef<VarDecl *> ArrayIndexes;
   if (MemberInit->getNumArrayIndices())
-    ArrayIndexes = MemberInit->getArrayIndexes();
+    ArrayIndexes = MemberInit->getArrayIndices();
   CGF.EmitInitializerForField(Field, LHS, MemberInit->getInit(), ArrayIndexes);
 }
 

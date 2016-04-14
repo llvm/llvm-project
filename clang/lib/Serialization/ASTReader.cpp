@@ -3053,28 +3053,6 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       F.ObjCCategories.swap(Record);
       break;
 
-    case CXX_BASE_SPECIFIER_OFFSETS: {
-      if (F.LocalNumCXXBaseSpecifiers != 0) {
-        Error("duplicate CXX_BASE_SPECIFIER_OFFSETS record in AST file");
-        return Failure;
-      }
-
-      F.LocalNumCXXBaseSpecifiers = Record[0];
-      F.CXXBaseSpecifiersOffsets = (const uint32_t *)Blob.data();
-      break;
-    }
-
-    case CXX_CTOR_INITIALIZERS_OFFSETS: {
-      if (F.LocalNumCXXCtorInitializers != 0) {
-        Error("duplicate CXX_CTOR_INITIALIZERS_OFFSETS record in AST file");
-        return Failure;
-      }
-
-      F.LocalNumCXXCtorInitializers = Record[0];
-      F.CXXCtorInitializersOffsets = (const uint32_t *)Blob.data();
-      break;
-    }
-
     case DIAG_PRAGMA_MAPPINGS:
       if (F.PragmaDiagMappings.empty())
         F.PragmaDiagMappings.swap(Record);
@@ -6305,18 +6283,6 @@ void ASTReader::CompleteRedeclChain(const Decl *D) {
   }
 }
 
-uint64_t ASTReader::ReadCXXCtorInitializersRef(ModuleFile &M,
-                                               const RecordData &Record,
-                                               unsigned &Idx) {
-  if (Idx >= Record.size() || Record[Idx] > M.LocalNumCXXCtorInitializers) {
-    Error("malformed AST file: missing C++ ctor initializers");
-    return 0;
-  }
-
-  unsigned LocalID = Record[Idx++];
-  return getGlobalBitOffset(M, M.CXXCtorInitializersOffsets[LocalID - 1]);
-}
-
 CXXCtorInitializer **
 ASTReader::GetExternalCXXCtorInitializers(uint64_t Offset) {
   RecordLocation Loc = getLocalBitOffset(Offset);
@@ -6335,18 +6301,6 @@ ASTReader::GetExternalCXXCtorInitializers(uint64_t Offset) {
 
   unsigned Idx = 0;
   return ReadCXXCtorInitializers(*Loc.F, Record, Idx);
-}
-
-uint64_t ASTReader::readCXXBaseSpecifiers(ModuleFile &M,
-                                          const RecordData &Record,
-                                          unsigned &Idx) {
-  if (Idx >= Record.size() || Record[Idx] > M.LocalNumCXXBaseSpecifiers) {
-    Error("malformed AST file: missing C++ base specifier");
-    return 0;
-  }
-
-  unsigned LocalID = Record[Idx++];
-  return getGlobalBitOffset(M, M.CXXBaseSpecifiersOffsets[LocalID - 1]);
 }
 
 CXXBaseSpecifier *ASTReader::GetExternalCXXBaseSpecifiers(uint64_t Offset) {

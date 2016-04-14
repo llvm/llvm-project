@@ -7751,22 +7751,28 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   if (TheTargetCodeGenInfo)
     return *TheTargetCodeGenInfo;
 
+  // Helper to set the unique_ptr while still keeping the return value.
+  auto SetCGInfo = [&](TargetCodeGenInfo *P) -> const TargetCodeGenInfo & {
+    this->TheTargetCodeGenInfo.reset(P);
+    return *P;
+  };
+
   const llvm::Triple &Triple = getTarget().getTriple();
   switch (Triple.getArch()) {
   default:
-    return *(TheTargetCodeGenInfo = new DefaultTargetCodeGenInfo(Types));
+    return SetCGInfo(new DefaultTargetCodeGenInfo(Types));
 
   case llvm::Triple::le32:
-    return *(TheTargetCodeGenInfo = new PNaClTargetCodeGenInfo(Types));
+    return SetCGInfo(new PNaClTargetCodeGenInfo(Types));
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
     if (Triple.getOS() == llvm::Triple::NaCl)
-      return *(TheTargetCodeGenInfo = new PNaClTargetCodeGenInfo(Types));
-    return *(TheTargetCodeGenInfo = new MIPSTargetCodeGenInfo(Types, true));
+      return SetCGInfo(new PNaClTargetCodeGenInfo(Types));
+    return SetCGInfo(new MIPSTargetCodeGenInfo(Types, true));
 
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
-    return *(TheTargetCodeGenInfo = new MIPSTargetCodeGenInfo(Types, false));
+    return SetCGInfo(new MIPSTargetCodeGenInfo(Types, false));
 
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be: {
@@ -7774,41 +7780,39 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     if (getTarget().getABI() == "darwinpcs")
       Kind = AArch64ABIInfo::DarwinPCS;
 
-    return *(TheTargetCodeGenInfo = new AArch64TargetCodeGenInfo(Types, Kind));
+    return SetCGInfo(new AArch64TargetCodeGenInfo(Types, Kind));
   }
 
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
-    return *(TheTargetCodeGenInfo = new WebAssemblyTargetCodeGenInfo(Types));
+    return SetCGInfo(new WebAssemblyTargetCodeGenInfo(Types));
 
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
-  case llvm::Triple::thumbeb:
-    {
-      if (Triple.getOS() == llvm::Triple::Win32) {
-        TheTargetCodeGenInfo =
-            new WindowsARMTargetCodeGenInfo(Types, ARMABIInfo::AAPCS_VFP);
-        return *TheTargetCodeGenInfo;
-      }
-
-      ARMABIInfo::ABIKind Kind = ARMABIInfo::AAPCS;
-      StringRef ABIStr = getTarget().getABI();
-      if (ABIStr == "apcs-gnu")
-        Kind = ARMABIInfo::APCS;
-      else if (ABIStr == "aapcs16")
-        Kind = ARMABIInfo::AAPCS16_VFP;
-      else if (CodeGenOpts.FloatABI == "hard" ||
-               (CodeGenOpts.FloatABI != "soft" &&
-                Triple.getEnvironment() == llvm::Triple::GNUEABIHF))
-        Kind = ARMABIInfo::AAPCS_VFP;
-
-      return *(TheTargetCodeGenInfo = new ARMTargetCodeGenInfo(Types, Kind));
+  case llvm::Triple::thumbeb: {
+    if (Triple.getOS() == llvm::Triple::Win32) {
+      return SetCGInfo(
+          new WindowsARMTargetCodeGenInfo(Types, ARMABIInfo::AAPCS_VFP));
     }
 
+    ARMABIInfo::ABIKind Kind = ARMABIInfo::AAPCS;
+    StringRef ABIStr = getTarget().getABI();
+    if (ABIStr == "apcs-gnu")
+      Kind = ARMABIInfo::APCS;
+    else if (ABIStr == "aapcs16")
+      Kind = ARMABIInfo::AAPCS16_VFP;
+    else if (CodeGenOpts.FloatABI == "hard" ||
+             (CodeGenOpts.FloatABI != "soft" &&
+              Triple.getEnvironment() == llvm::Triple::GNUEABIHF))
+      Kind = ARMABIInfo::AAPCS_VFP;
+
+    return SetCGInfo(new ARMTargetCodeGenInfo(Types, Kind));
+  }
+
   case llvm::Triple::ppc:
-    return *(TheTargetCodeGenInfo = 
-             new PPC32TargetCodeGenInfo(Types, CodeGenOpts.FloatABI == "soft"));
+    return SetCGInfo(
+        new PPC32TargetCodeGenInfo(Types, CodeGenOpts.FloatABI == "soft"));
   case llvm::Triple::ppc64:
     if (Triple.isOSBinFormatELF()) {
       PPC64_SVR4_ABIInfo::ABIKind Kind = PPC64_SVR4_ABIInfo::ELFv1;
@@ -7816,10 +7820,9 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
         Kind = PPC64_SVR4_ABIInfo::ELFv2;
       bool HasQPX = getTarget().getABI() == "elfv1-qpx";
 
-      return *(TheTargetCodeGenInfo =
-               new PPC64_SVR4_TargetCodeGenInfo(Types, Kind, HasQPX));
+      return SetCGInfo(new PPC64_SVR4_TargetCodeGenInfo(Types, Kind, HasQPX));
     } else
-      return *(TheTargetCodeGenInfo = new PPC64TargetCodeGenInfo(Types));
+      return SetCGInfo(new PPC64TargetCodeGenInfo(Types));
   case llvm::Triple::ppc64le: {
     assert(Triple.isOSBinFormatELF() && "PPC64 LE non-ELF not supported!");
     PPC64_SVR4_ABIInfo::ABIKind Kind = PPC64_SVR4_ABIInfo::ELFv2;
@@ -7827,25 +7830,23 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
       Kind = PPC64_SVR4_ABIInfo::ELFv1;
     bool HasQPX = getTarget().getABI() == "elfv1-qpx";
 
-    return *(TheTargetCodeGenInfo =
-             new PPC64_SVR4_TargetCodeGenInfo(Types, Kind, HasQPX));
+    return SetCGInfo(new PPC64_SVR4_TargetCodeGenInfo(Types, Kind, HasQPX));
   }
 
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
-    return *(TheTargetCodeGenInfo = new NVPTXTargetCodeGenInfo(Types));
+    return SetCGInfo(new NVPTXTargetCodeGenInfo(Types));
 
   case llvm::Triple::msp430:
-    return *(TheTargetCodeGenInfo = new MSP430TargetCodeGenInfo(Types));
+    return SetCGInfo(new MSP430TargetCodeGenInfo(Types));
 
   case llvm::Triple::systemz: {
     bool HasVector = getTarget().getABI() == "vector";
-    return *(TheTargetCodeGenInfo = new SystemZTargetCodeGenInfo(Types,
-                                                                 HasVector));
+    return SetCGInfo(new SystemZTargetCodeGenInfo(Types, HasVector));
   }
 
   case llvm::Triple::tce:
-    return *(TheTargetCodeGenInfo = new TCETargetCodeGenInfo(Types));
+    return SetCGInfo(new TCETargetCodeGenInfo(Types));
 
   case llvm::Triple::x86: {
     bool IsDarwinVectorABI = Triple.isOSDarwin();
@@ -7854,49 +7855,47 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     bool IsWin32FloatStructABI = Triple.isOSWindows() && !Triple.isOSCygMing();
 
     if (Triple.getOS() == llvm::Triple::Win32) {
-      return *(TheTargetCodeGenInfo = new WinX86_32TargetCodeGenInfo(
-                   Types, IsDarwinVectorABI, RetSmallStructInRegABI,
-                   IsWin32FloatStructABI, CodeGenOpts.NumRegisterParameters));
+      return SetCGInfo(new WinX86_32TargetCodeGenInfo(
+          Types, IsDarwinVectorABI, RetSmallStructInRegABI,
+          IsWin32FloatStructABI, CodeGenOpts.NumRegisterParameters));
     } else {
-      return *(TheTargetCodeGenInfo = new X86_32TargetCodeGenInfo(
-                   Types, IsDarwinVectorABI, RetSmallStructInRegABI,
-                   IsWin32FloatStructABI, CodeGenOpts.NumRegisterParameters,
-                   CodeGenOpts.FloatABI == "soft"));
+      return SetCGInfo(new X86_32TargetCodeGenInfo(
+          Types, IsDarwinVectorABI, RetSmallStructInRegABI,
+          IsWin32FloatStructABI, CodeGenOpts.NumRegisterParameters,
+          CodeGenOpts.FloatABI == "soft"));
     }
   }
 
   case llvm::Triple::x86_64: {
     StringRef ABI = getTarget().getABI();
-    X86AVXABILevel AVXLevel = (ABI == "avx512" ? X86AVXABILevel::AVX512 :
-                               ABI == "avx" ? X86AVXABILevel::AVX :
-                               X86AVXABILevel::None);
+    X86AVXABILevel AVXLevel =
+        (ABI == "avx512"
+             ? X86AVXABILevel::AVX512
+             : ABI == "avx" ? X86AVXABILevel::AVX : X86AVXABILevel::None);
 
     switch (Triple.getOS()) {
     case llvm::Triple::Win32:
-      return *(TheTargetCodeGenInfo =
-                   new WinX86_64TargetCodeGenInfo(Types, AVXLevel));
+      return SetCGInfo(new WinX86_64TargetCodeGenInfo(Types, AVXLevel));
     case llvm::Triple::PS4:
-      return *(TheTargetCodeGenInfo =
-                   new PS4TargetCodeGenInfo(Types, AVXLevel));
+      return SetCGInfo(new PS4TargetCodeGenInfo(Types, AVXLevel));
     default:
-      return *(TheTargetCodeGenInfo =
-                   new X86_64TargetCodeGenInfo(Types, AVXLevel));
+      return SetCGInfo(new X86_64TargetCodeGenInfo(Types, AVXLevel));
     }
   }
   case llvm::Triple::hexagon:
-    return *(TheTargetCodeGenInfo = new HexagonTargetCodeGenInfo(Types));
+    return SetCGInfo(new HexagonTargetCodeGenInfo(Types));
   case llvm::Triple::lanai:
-    return *(TheTargetCodeGenInfo = new LanaiTargetCodeGenInfo(Types));
+    return SetCGInfo(new LanaiTargetCodeGenInfo(Types));
   case llvm::Triple::r600:
-    return *(TheTargetCodeGenInfo = new AMDGPUTargetCodeGenInfo(Types));
+    return SetCGInfo(new AMDGPUTargetCodeGenInfo(Types));
   case llvm::Triple::amdgcn:
-    return *(TheTargetCodeGenInfo = new AMDGPUTargetCodeGenInfo(Types));
+    return SetCGInfo(new AMDGPUTargetCodeGenInfo(Types));
   case llvm::Triple::sparcv9:
-    return *(TheTargetCodeGenInfo = new SparcV9TargetCodeGenInfo(Types));
+    return SetCGInfo(new SparcV9TargetCodeGenInfo(Types));
   case llvm::Triple::xcore:
-    return *(TheTargetCodeGenInfo = new XCoreTargetCodeGenInfo(Types));
+    return SetCGInfo(new XCoreTargetCodeGenInfo(Types));
   case llvm::Triple::spir:
   case llvm::Triple::spir64:
-    return *(TheTargetCodeGenInfo = new SPIRTargetCodeGenInfo(Types));
+    return SetCGInfo(new SPIRTargetCodeGenInfo(Types));
   }
 }
