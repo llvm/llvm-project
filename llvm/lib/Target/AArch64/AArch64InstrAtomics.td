@@ -379,25 +379,20 @@ def : Pat<(int_aarch64_clrex), (CLREX 0xf)>;
 let Constraints = "@earlyclobber $Rd,@earlyclobber $status",
     mayLoad = 1, mayStore = 1 in {
 def CMP_SWAP_8 : Pseudo<(outs GPR32:$Rd, GPR32:$status),
-                        (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>,
-                 Sched<[WriteAtomic]>;
+                        (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>;
 
 def CMP_SWAP_16 : Pseudo<(outs GPR32:$Rd, GPR32:$status),
-                         (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>,
-                  Sched<[WriteAtomic]>;
+                         (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>;
 
 def CMP_SWAP_32 : Pseudo<(outs GPR32:$Rd, GPR32:$status),
-                         (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>,
-                  Sched<[WriteAtomic]>;
+                         (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>;
 
 def CMP_SWAP_64 : Pseudo<(outs GPR64:$Rd, GPR32:$status),
-                         (ins GPR64:$addr, GPR64:$desired, GPR64:$new), []>,
-                  Sched<[WriteAtomic]>;
+                         (ins GPR64:$addr, GPR64:$desired, GPR64:$new), []>;
 }
 
 let Constraints = "@earlyclobber $RdLo,@earlyclobber $RdHi,@earlyclobber $status",
     mayLoad = 1, mayStore = 1 in
 def CMP_SWAP_128 : Pseudo<(outs GPR64:$RdLo, GPR64:$RdHi, GPR32:$status),
                           (ins GPR64:$addr, GPR64:$desiredLo, GPR64:$desiredHi,
-                               GPR64:$newLo, GPR64:$newHi), []>,
-                   Sched<[WriteAtomic]>;
+                               GPR64:$newLo, GPR64:$newHi), []>;
