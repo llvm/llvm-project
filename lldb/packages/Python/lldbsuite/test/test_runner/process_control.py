@@ -9,7 +9,7 @@ within the LLDB test suite.
 
 
 This module provides process-management support for the LLDB test
-running infrasructure.
+running infrastructure.
 """
 
 # System imports
@@ -302,7 +302,7 @@ class UnixProcessHelper(ProcessHelper):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            universal_newlines=True, # Elicits automatic byte -> string decoding in Py3
+            universal_newlines=True,  # Elicits automatic byte -> string decoding in Py3
             close_fds=True,
             preexec_fn=preexec_func)
 
@@ -410,7 +410,8 @@ class UnixProcessHelper(ProcessHelper):
         signo = -popen_status
         signal_names_by_number = self._signal_names_by_number()
         signal_name = signal_names_by_number.get(signo, "")
-        return (signo, signal_name)
+        return signo, signal_name
+
 
 class WindowsProcessHelper(ProcessHelper):
     """Provides a Windows implementation of the ProcessHelper class."""
@@ -429,7 +430,7 @@ class WindowsProcessHelper(ProcessHelper):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            universal_newlines=True, # Elicits automatic byte -> string decoding in Py3
+            universal_newlines=True,  # Elicits automatic byte -> string decoding in Py3
             creationflags=creation_flags)
 
     def was_hard_terminate(self, returncode):

@@ -76,6 +76,18 @@ def create_results_formatter(config):
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(("localhost", port))
+
+        # Wait for the ack from the listener side.
+        # This is needed to prevent a race condition
+        # in the main dosep.py processing loop: we
+        # can't allow a worker queue thread to die
+        # that has outstanding messages to a listener
+        # socket before the listener socket asyncore
+        # listener socket gets spun up; otherwise,
+        # we lose the test result info.
+        read_bytes = sock.recv(1)
+        # print("\n** socket creation: received ack: {}".format(ord(read_bytes[0])), file=sys.stderr)
+
         return (sock, lambda: socket_closer(sock))
 
     default_formatter_name = None
