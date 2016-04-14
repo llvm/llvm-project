@@ -78,7 +78,6 @@ struct OneFunctionCoverageReader : CoverageMappingReader {
 
 struct CoverageMappingTest : ::testing::Test {
   StringMap<unsigned> Files;
-  unsigned NextFile;
   std::vector<CounterMappingRegion> InputCMRs;
 
   std::vector<StringRef> OutputFiles;
@@ -91,7 +90,6 @@ struct CoverageMappingTest : ::testing::Test {
   std::unique_ptr<CoverageMapping> LoadedCoverage;
 
   void SetUp() override {
-    NextFile = 0;
     ProfileWriter.setOutputSparse(false);
   }
 
@@ -99,8 +97,9 @@ struct CoverageMappingTest : ::testing::Test {
     auto R = Files.find(Name);
     if (R != Files.end())
       return R->second;
-    Files[Name] = NextFile;
-    return NextFile++;
+    unsigned Index = Files.size();
+    Files.emplace_second(Name, Index);
+    return Index;
   }
 
   void addCMR(Counter C, StringRef File, unsigned LS, unsigned CS, unsigned LE,
@@ -116,9 +115,9 @@ struct CoverageMappingTest : ::testing::Test {
   }
 
   std::string writeCoverageRegions() {
-    SmallVector<unsigned, 8> FileIDs;
-    for (const auto &E : Files)
-      FileIDs.push_back(E.getValue());
+    SmallVector<unsigned, 8> FileIDs(Files.size());
+    for (unsigned I = 0; I < FileIDs.size(); ++I)
+      FileIDs[I] = I;
     std::string Coverage;
     llvm::raw_string_ostream OS(Coverage);
     CoverageMappingWriter(FileIDs, None, InputCMRs).write(OS);
@@ -126,9 +125,9 @@ struct CoverageMappingTest : ::testing::Test {
   }
 
   void readCoverageRegions(std::string Coverage) {
-    SmallVector<StringRef, 8> Filenames;
+    SmallVector<StringRef, 8> Filenames(Files.size());
     for (const auto &E : Files)
-      Filenames.push_back(E.getKey());
+      Filenames[E.getValue()] = E.getKey();
     RawCoverageMappingReader Reader(Coverage, Filenames, OutputFiles,
                                     OutputExpressions, OutputCMRs);
     ASSERT_TRUE(NoError(Reader.read()));
@@ -147,9 +146,11 @@ struct CoverageMappingTest : ::testing::Test {
     readCoverageRegions(Regions);
 
     SmallVector<StringRef, 8> Filenames;
-    if (EmitFilenames)
+    if (EmitFilenames) {
+      Filenames.resize(Files.size());
       for (const auto &E : Files)
-        Filenames.push_back(E.getKey());
+        Filenames[E.getValue()] = E.getKey();
+    }
     OneFunctionCoverageReader CovReader(FuncName, Hash, Filenames, OutputCMRs);
     auto CoverageOrErr = CoverageMapping::load(CovReader, *ProfileReader);
     ASSERT_TRUE(NoError(CoverageOrErr.getError()));
@@ -183,6 +184,52 @@ TEST_P(MaybeSparseCoverageMappingTest, basic_write_read) {
     ASSERT_EQ(InputCMRs[I].startLoc(), OutputCMRs[I].startLoc());
     ASSERT_EQ(InputCMRs[I].endLoc(),   OutputCMRs[I].endLoc());
     ASSERT_EQ(InputCMRs[I].Kind,       OutputCMRs[I].Kind);
+  }
+}
+
+TEST_P(MaybeSparseCoverageMappingTest,
+       correct_deserialize_for_more_than_two_files) {
+  const char *FileNames[] = {"bar", "baz", "foo"};
+  static const unsigned N = array_lengthof(FileNames);
+
+  for (unsigned I = 0; I < N; ++I)
+    // Use LineStart to hold the index of the file name
+    // in order to preserve that information during possible sorting of CMRs.
+    addCMR(Counter::getCounter(0), FileNames[I], I, 1, I, 1);
+
+  std::string Coverage = writeCoverageRegions();
+  readCoverageRegions(Coverage);
+
+  ASSERT_EQ(N, OutputCMRs.size());
+  ASSERT_EQ(N, OutputFiles.size());
+
+  for (unsigned I = 0; I < N; ++I) {
+    ASSERT_GT(N, OutputCMRs[I].FileID);
+    ASSERT_GT(N, OutputCMRs[I].LineStart);
+    EXPECT_EQ(FileNames[OutputCMRs[I].LineStart],
+              OutputFiles[OutputCMRs[I].FileID]);
+  }
+}
+
+TEST_P(MaybeSparseCoverageMappingTest, load_coverage_for_more_than_two_files) {
+  InstrProfRecord Record("func", 0x1234, {0});
+  ProfileWriter.addRecord(std::move(Record));
+  readProfCounts();
+
+  const char *FileNames[] = {"bar", "baz", "foo"};
+  static const unsigned N = array_lengthof(FileNames);
+
+  for (unsigned I = 0; I < N; ++I)
+    // Use LineStart to hold the index of the file name
+    // in order to preserve that information during possible sorting of CMRs.
+    addCMR(Counter::getCounter(0), FileNames[I], I, 1, I, 1);
+
+  loadCoverageMapping("func", 0x1234);
+
+  for (unsigned I = 0; I < N; ++I) {
+    CoverageData Data = LoadedCoverage->getCoverageForFile(FileNames[I]);
+    ASSERT_TRUE(!Data.empty());
+    EXPECT_EQ(I, Data.begin()->Line);
   }
 }
 
