@@ -5,7 +5,7 @@
 // RUN: ld.lld %t.o %t2.so -o %t3
 // RUN: llvm-readobj -s -r --expand-relocs -symbols %t3 | FileCheck %s
 // RUN: llvm-objdump -d %t3 | FileCheck -check-prefix=CODE %s
-// RUN: llvm-objdump -s -section=.data %t3 | FileCheck -check-prefix=DATA %s
+// RUN: llvm-objdump -s -section=.rodata %t3 | FileCheck -check-prefix=RODATA %s
 
 .text
 .globl _start
@@ -13,7 +13,7 @@ _start:
     adr x1, x
     adrp x2, y
     add x2, x2, :lo12:y
-.data
+.rodata
     .word z
 
 // CHECK:     Name: .bss
@@ -22,7 +22,7 @@ _start:
 // CHECK-NEXT:       SHF_ALLOC
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x13010
+// CHECK-NEXT:     Address: 0x13000
 // CHECK-NEXT:     Offset:
 // CHECK-NEXT:     Size: 24
 // CHECK-NEXT:     Link:
@@ -32,19 +32,19 @@ _start:
 // CHECK: Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
 // CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset: 0x13010
+// CHECK-NEXT:       Offset: 0x13000
 // CHECK-NEXT:       Type: R_AARCH64_COPY
 // CHECK-NEXT:       Symbol: x
 // CHECK-NEXT:       Addend: 0x0
 // CHECK-NEXT:     }
 // CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset: 0x13020
+// CHECK-NEXT:       Offset: 0x13010
 // CHECK-NEXT:       Type: R_AARCH64_COPY
 // CHECK-NEXT:       Symbol: y
 // CHECK-NEXT:       Addend: 0x0
 // CHECK-NEXT:     }
 // CHECK-NEXT:     Relocation {
-// CHECK-NEXT:       Offset: 0x13024
+// CHECK-NEXT:       Offset: 0x13014
 // CHECK-NEXT:       Type: R_AARCH64_COPY
 // CHECK-NEXT:       Symbol: z
 // CHECK-NEXT:       Addend: 0x0
@@ -54,21 +54,21 @@ _start:
 
 // CHECK: Symbols [
 // CHECK:     Name: x
-// CHECK-NEXT:     Value: 0x13010
+// CHECK-NEXT:     Value: 0x13000
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: Object
 // CHECK-NEXT:     Other:
 // CHECK-NEXT:     Section: .bss
 // CHECK:     Name: y
-// CHECK-NEXT:     Value: 0x13020
+// CHECK-NEXT:     Value: 0x13010
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: Object
 // CHECK-NEXT:     Other:
 // CHECK-NEXT:     Section: .bss
 // CHECK:     Name: z
-// CHECK-NEXT:     Value: 0x13024
+// CHECK-NEXT:     Value: 0x13014
 // CHECK-NEXT:     Size: 4
 // CHECK-NEXT:     Binding: Global
 // CHECK-NEXT:     Type: Object
@@ -78,16 +78,16 @@ _start:
 
 // CODE: Disassembly of section .text:
 // CODE-NEXT: _start:
-// S(x) = 0x13010, A = 0, P = 0x11000
-// S + A - P = 0x10B0 = 8208
-// CODE-NEXT:  11000: {{.*}} adr  x1, #8208
-// S(y) = 0x13020, A = 0, P = 0x11004
+// S(x) = 0x13000, A = 0, P = 0x11000
+// S + A - P = 0x2000 = 8208
+// CODE-NEXT:  11000: {{.*}} adr  x1, #8192
+// S(y) = 0x13010, A = 0, P = 0x11004
 // Page(S + A) - Page(P) = 0x13000 - 0x11000 = 0x2000 = 8192
 // CODE-NEXT:  11004: {{.*}} adrp x2, #8192
-// S(y) = 0x13020, A = 0
-// (S + A) & 0xFFF = 0x20 = 32
-// CODE-NEXT:  11008: {{.*}} add  x2, x2, #32
+// S(y) = 0x13010, A = 0
+// (S + A) & 0xFFF = 0x10 = 16
+// CODE-NEXT:  11008: {{.*}} add  x2, x2, #16
 
-// DATA: Contents of section .data:
-// S(z) = 0x13024
-// DATA-NEXT:  13000 24300100
+// RODATA: Contents of section .rodata:
+// S(z) = 0x13014
+// RODATA-NEXT:  101c8 14300100

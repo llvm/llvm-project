@@ -394,6 +394,8 @@ FileSpec::SetFile (const char *pathname, bool resolve, PathSyntax syntax)
         m_is_resolved = true;
     }
 
+    Normalize(resolved, syntax);
+
     llvm::StringRef resolve_path_ref(resolved.c_str());
     size_t dir_end = ParentPathEnd(resolve_path_ref, syntax);
     if (dir_end == 0)
