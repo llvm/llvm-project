@@ -269,8 +269,8 @@ InputSectionBase<ELFT> *DefinedRegular<ELFT>::NullInputSection;
 template <class ELFT> class DefinedSynthetic : public Defined {
 public:
   typedef typename ELFT::uint uintX_t;
-  DefinedSynthetic(StringRef N, uintX_t Value, OutputSectionBase<ELFT> &Section,
-                   uint8_t StOther);
+  DefinedSynthetic(StringRef N, uintX_t Value,
+                   OutputSectionBase<ELFT> &Section);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedSyntheticKind;

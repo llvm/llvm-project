@@ -44,6 +44,9 @@ def discard_none : Flag<["-"], "discard-none">,
 def dynamic_linker : Separate<["--", "-"], "dynamic-linker">,
   HelpText<"Which dynamic linker to use">;
 
+def dynamic_list : Separate<["--", "-"], "dynamic-list">,
+  HelpText<"Read a list of dynamic symbols">;
+
 def eh_frame_hdr : Flag<["--"], "eh-frame-hdr">,
   HelpText<"Request creation of .eh_frame_hdr section and PT_GNU_EH_FRAME segment header">;
 
@@ -175,6 +178,7 @@ def alias_Bstatic_static: Flag<["-"], "static">, Alias<Bstatic>;
 def alias_L__library_path : Joined<["--"], "library-path=">, Alias<L>;
 def alias_discard_all_x: Flag<["-"], "x">, Alias<discard_all>;
 def alias_discard_locals_X: Flag<["-"], "X">, Alias<discard_locals>;
+def alias_dynamic_list: Joined<["--", "-"], "dynamic-list=">, Alias<dynamic_list>;
 def alias_entry_e : JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_export_dynamic_E: Flag<["-"], "E">, Alias<export_dynamic>;
 def alias_fini_fini : Joined<["-"], "fini=">, Alias<fini>;

@@ -319,25 +319,25 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     explicit shared_lock(mutex_type& __m)
-        : __m_(addressof(__m)),
+        : __m_(_VSTD::addressof(__m)),
           __owns_(true)
         {__m_->lock_shared();}
 
     _LIBCPP_INLINE_VISIBILITY
     shared_lock(mutex_type& __m, defer_lock_t) _NOEXCEPT
-        : __m_(addressof(__m)),
+        : __m_(_VSTD::addressof(__m)),
           __owns_(false)
         {}
 
     _LIBCPP_INLINE_VISIBILITY
     shared_lock(mutex_type& __m, try_to_lock_t)
-        : __m_(addressof(__m)),
+        : __m_(_VSTD::addressof(__m)),
           __owns_(__m.try_lock_shared())
         {}
 
     _LIBCPP_INLINE_VISIBILITY
     shared_lock(mutex_type& __m, adopt_lock_t)
-        : __m_(addressof(__m)),
+        : __m_(_VSTD::addressof(__m)),
           __owns_(true)
         {}
 
@@ -345,7 +345,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         shared_lock(mutex_type& __m,
                     const chrono::time_point<_Clock, _Duration>& __abs_time)
-            : __m_(addressof(__m)),
+            : __m_(_VSTD::addressof(__m)),
               __owns_(__m.try_lock_shared_until(__abs_time))
             {}
 
@@ -353,7 +353,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         shared_lock(mutex_type& __m,
                     const chrono::duration<_Rep, _Period>& __rel_time)
-            : __m_(addressof(__m)),
+            : __m_(_VSTD::addressof(__m)),
               __owns_(__m.try_lock_shared_for(__rel_time))
             {}
 
