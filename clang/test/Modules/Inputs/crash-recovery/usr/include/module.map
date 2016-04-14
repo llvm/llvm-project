@@ -1,0 +1,6 @@
+module cstd [system] {
+  // Only in system headers directory
+  module stdio {
+    header "stdio.h"
+  }
+}
