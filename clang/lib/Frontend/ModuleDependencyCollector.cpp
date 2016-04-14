@@ -52,6 +52,24 @@ struct ModuleDependencyMMCallbacks : public ModuleMapCallbacks {
 
 }
 
+// TODO: move this to Support/Path.h and check for HAVE_REALPATH?
+static bool real_path(StringRef SrcPath, SmallVectorImpl<char> &RealPath) {
+#ifdef LLVM_ON_UNIX
+  char CanonicalPath[PATH_MAX];
+
+  // TODO: emit a warning in case this fails...?
+  if (!realpath(SrcPath.str().c_str(), CanonicalPath))
+    return false;
+
+  SmallString<256> RPath(CanonicalPath);
+  RealPath.swap(RPath);
+  return true;
+#else
+  // FIXME: Add support for systems without realpath.
+  return false;
+#endif
+}
+
 void ModuleDependencyCollector::attachToASTReader(ASTReader &R) {
   R.addListener(llvm::make_unique<ModuleDependencyListener>(*this));
 }
@@ -79,24 +97,6 @@ void ModuleDependencyCollector::writeFileMap() {
     return;
   }
   VFSWriter.write(OS);
-}
-
-// TODO: move this to Support/Path.h and check for HAVE_REALPATH?
-static bool real_path(StringRef SrcPath, SmallVectorImpl<char> &RealPath) {
-#ifdef LLVM_ON_UNIX
-  char CanonicalPath[PATH_MAX];
-
-  // TODO: emit a warning in case this fails...?
-  if (!realpath(SrcPath.str().c_str(), CanonicalPath))
-    return false;
-
-  SmallString<256> RPath(CanonicalPath);
-  RealPath.swap(RPath);
-  return true;
-#else
-  // FIXME: Add support for systems without realpath.
-  return false;
-#endif
 }
 
 bool ModuleDependencyCollector::getRealPath(StringRef SrcPath,
