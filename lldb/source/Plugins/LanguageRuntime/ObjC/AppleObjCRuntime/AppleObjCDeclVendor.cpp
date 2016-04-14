@@ -407,6 +407,24 @@ public:
         
         return ret;
     }
+    
+    explicit operator bool ()
+    {
+        return m_is_valid;
+    }
+    
+    size_t
+    GetNumTypes ()
+    {
+        return m_type_vector.size();
+    }
+    
+    const char*
+    GetTypeAtIndex (size_t idx)
+    {
+        return m_type_vector[idx].c_str();
+    }
+    
 private:
     typedef std::vector <std::string> TypeVector;
     
