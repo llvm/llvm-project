@@ -53,7 +53,8 @@ using namespace __tsan;
   SCOPED_INTERCEPTOR_RAW(free, ptr); \
   user_free(thr, pc, ptr)
 #define COMMON_MALLOC_SIZE(ptr) \
-  uptr size = user_alloc_usable_size(ptr);
+  uptr size = user_alloc_usable_size(ptr); \
+  if (size == 0) size = 1;
 #define COMMON_MALLOC_FILL_STATS(zone, stats)
 #define COMMON_MALLOC_REPORT_UNKNOWN_REALLOC(ptr, zone_ptr, zone_name) \
   (void)zone_name; \
