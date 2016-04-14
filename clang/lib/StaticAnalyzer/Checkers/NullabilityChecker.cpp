@@ -562,7 +562,8 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   if (Filter.CheckNullReturnedFromNonnull &&
       NullReturnedFromNonNull &&
       RetExprTypeLevelNullability != Nullability::Nonnull &&
-      !InSuppressedMethodFamily) {
+      !InSuppressedMethodFamily &&
+      C.getLocationContext()->inTopFrame()) {
     static CheckerProgramPointTag Tag(this, "NullReturnedFromNonnull");
     ExplodedNode *N = C.generateErrorNode(State, &Tag);
     if (!N)
