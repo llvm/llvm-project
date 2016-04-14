@@ -638,14 +638,13 @@ def int_clear_cache : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty],
 
 //===-------------------------- Masked Intrinsics -------------------------===//
 //
-def int_masked_store : Intrinsic<[], [llvm_anyvector_ty,
-                                      LLVMAnyPointerType<LLVMMatchType<0>>,
+def int_masked_store : Intrinsic<[], [llvm_anyvector_ty, LLVMPointerTo<0>,
                                       llvm_i32_ty,
                                       LLVMVectorSameWidth<0, llvm_i1_ty>],
                                  [IntrReadWriteArgMem]>;
 
 def int_masked_load  : Intrinsic<[llvm_anyvector_ty],
-                                 [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty,
+                                 [LLVMPointerTo<0>, llvm_i32_ty,
                                   LLVMVectorSameWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
                                  [IntrReadArgMem]>;
 

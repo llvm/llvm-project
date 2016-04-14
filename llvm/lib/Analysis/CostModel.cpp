@@ -504,8 +504,12 @@ unsigned CostModelAnalysis::getInstructionCost(const Instruction *I) const {
       for (unsigned J = 0, JE = II->getNumArgOperands(); J != JE; ++J)
         Args.push_back(II->getArgOperand(J));
 
+      FastMathFlags FMF;
+      if (auto *FPMO = dyn_cast<FPMathOperator>(II))
+        FMF = FPMO->getFastMathFlags();
+
       return TTI->getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(),
-                                        Args);
+                                        Args, FMF);
     }
     return -1;
   default:

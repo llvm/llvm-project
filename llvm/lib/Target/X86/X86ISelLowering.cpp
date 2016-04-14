@@ -3849,27 +3849,9 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
       }
     }
 
-    // Parameters passed in callee saved registers must have the same value in
-    // caller and callee.
-    for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
-      const CCValAssign &ArgLoc = ArgLocs[I];
-      if (!ArgLoc.isRegLoc())
-        continue;
-      unsigned Reg = ArgLoc.getLocReg();
-      // Only look at callee saved registers.
-      if (MachineOperand::clobbersPhysReg(CallerPreserved, Reg))
-        continue;
-      // Check that we pass the value used for the caller.
-      // (We look for a CopyFromReg reading a virtual register that is used
-      //  for the function live-in value of register Reg)
-      SDValue Value = OutVals[I];
-      if (Value->getOpcode() != ISD::CopyFromReg)
-        return false;
-      unsigned ArgReg = cast<RegisterSDNode>(Value->getOperand(1))->getReg();
-      const MachineRegisterInfo &MRI = MF.getRegInfo();
-      if (MRI.getLiveInPhysReg(ArgReg) != Reg)
-        return false;
-    }
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+    if (!parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals))
+      return false;
   }
 
   bool CalleeWillPop =

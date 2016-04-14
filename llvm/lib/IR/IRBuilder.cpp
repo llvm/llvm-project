@@ -212,15 +212,13 @@ CallInst *IRBuilderBase::CreateAssumption(Value *Cond) {
 CallInst *IRBuilderBase::CreateMaskedLoad(Value *Ptr, unsigned Align,
                                           Value *Mask, Value *PassThru,
                                           const Twine &Name) {
-  PointerType *PtrTy = cast<PointerType>(Ptr->getType());
-  Type *DataTy = PtrTy->getElementType();
+  // DataTy is the overloaded type
+  Type *DataTy = cast<PointerType>(Ptr->getType())->getElementType();
   assert(DataTy->isVectorTy() && "Ptr should point to a vector");
   if (!PassThru)
     PassThru = UndefValue::get(DataTy);
-  Type *OverloadedTypes[] = { DataTy, PtrTy };
   Value *Ops[] = { Ptr, getInt32(Align), Mask,  PassThru};
-  return CreateMaskedIntrinsic(Intrinsic::masked_load, Ops,
-                               OverloadedTypes, Name);
+  return CreateMaskedIntrinsic(Intrinsic::masked_load, Ops, DataTy, Name);
 }
 
 /// \brief Create a call to a Masked Store intrinsic.
@@ -231,22 +229,19 @@ CallInst *IRBuilderBase::CreateMaskedLoad(Value *Ptr, unsigned Align,
 ///            be accessed in memory
 CallInst *IRBuilderBase::CreateMaskedStore(Value *Val, Value *Ptr,
                                            unsigned Align, Value *Mask) {
-  PointerType *PtrTy = cast<PointerType>(Ptr->getType());
-  Type *DataTy = PtrTy->getElementType();
-  assert(DataTy->isVectorTy() && "Ptr should point to a vector");
-  Type *OverloadedTypes[] = { DataTy, PtrTy };
   Value *Ops[] = { Val, Ptr, getInt32(Align), Mask };
-  return CreateMaskedIntrinsic(Intrinsic::masked_store, Ops, OverloadedTypes);
+  // Type of the data to be stored - the only one overloaded type
+  return CreateMaskedIntrinsic(Intrinsic::masked_store, Ops, Val->getType());
 }
 
 /// Create a call to a Masked intrinsic, with given intrinsic Id,
-/// an array of operands - Ops, and an array of overloaded types -
-/// OverloadedTypes.
+/// an array of operands - Ops, and one overloaded type - DataTy
 CallInst *IRBuilderBase::CreateMaskedIntrinsic(Intrinsic::ID Id,
                                                ArrayRef<Value *> Ops,
-                                               ArrayRef<Type *> OverloadedTypes,
+                                               Type *DataTy,
                                                const Twine &Name) {
   Module *M = BB->getParent()->getParent();
+  Type *OverloadedTypes[] = { DataTy };
   Value *TheFn = Intrinsic::getDeclaration(M, Id, OverloadedTypes);
   return createCallHelper(TheFn, Ops, this, Name);
 }
@@ -275,7 +270,7 @@ CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, unsigned Align,
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
-  return CreateMaskedIntrinsic(Intrinsic::masked_gather, Ops, { DataTy }, Name);
+  return CreateMaskedIntrinsic(Intrinsic::masked_gather, Ops, DataTy, Name);
 }
 
 /// \brief Create a call to a Masked Scatter intrinsic.
@@ -305,7 +300,7 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
-  return CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, { DataTy });
+  return CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, DataTy);
 }
 
 template <typename T0, typename T1, typename T2, typename T3>

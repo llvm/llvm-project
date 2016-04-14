@@ -13,6 +13,9 @@ _start:
         .section foo
         .long y
 
+        .section bar, "aw"
+        .long z
+
 // CHECK:      Name: .text
 // CHECK-NEXT: Type: SHT_PROGBITS
 // CHECK-NEXT: Flags [
@@ -27,7 +30,24 @@ _start:
 // CHECK-NEXT: AddressAlignment: 4
 // CHECK-NEXT: EntrySize: 0
 // CHECK-NEXT: SectionData (
-// CHECK-NEXT:   0000: 00300100
+// CHECK-NEXT:   0000: 10300100
+// CHECK-NEXT: )
+
+// CHECK:      Name: bar
+// CHECK-NEXT: Type: SHT_PROGBITS
+// CHECK-NEXT: Flags [
+// CHECK-NEXT:   SHF_ALLOC
+// CHECK-NEXT:   SHF_WRITE
+// CHECK-NEXT: ]
+// CHECK-NEXT: Address: 0x13000
+// CHECK-NEXT: Offset: 0x3000
+// CHECK-NEXT: Size: 4
+// CHECK-NEXT: Link: 0
+// CHECK-NEXT: Info: 0
+// CHECK-NEXT: AddressAlignment: 1
+// CHECK-NEXT: EntrySize: 0
+// CHECK-NEXT: SectionData (
+// CHECK-NEXT:   0000: 00000000
 // CHECK-NEXT: )
 
 // CHECK:      Name: foo
@@ -35,7 +55,7 @@ _start:
 // CHECK-NEXT: Flags [
 // CHECK-NEXT: ]
 // CHECK-NEXT: Address: 0x0
-// CHECK-NEXT: Offset: 0x20B0
+// CHECK-NEXT: Offset: 0x3004
 // CHECK-NEXT: Size: 4
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
@@ -47,6 +67,7 @@ _start:
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section (4) .rela.dyn {
-// CHECK-NEXT:     0x13000 R_X86_64_COPY x 0x0
+// CHECK-NEXT:     0x13010 R_X86_64_COPY x 0x0
+// CHECK-NEXT:     0x13000 R_X86_64_32 z 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]

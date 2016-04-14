@@ -1117,16 +1117,25 @@ namespace {
       }
 
       if (IID && TTI) {
+        FastMathFlags FMFCI;
+        if (auto *FPMOCI = dyn_cast<FPMathOperator>(CI))
+          FMFCI = FPMOCI->getFastMathFlags();
+
         SmallVector<Type*, 4> Tys;
         for (unsigned i = 0, ie = CI->getNumArgOperands(); i != ie; ++i)
           Tys.push_back(CI->getArgOperand(i)->getType());
-        unsigned ICost = TTI->getIntrinsicInstrCost(IID, IT1, Tys);
+        unsigned ICost = TTI->getIntrinsicInstrCost(IID, IT1, Tys, FMFCI);
 
         Tys.clear();
         CallInst *CJ = cast<CallInst>(J);
+
+        FastMathFlags FMFCJ;
+        if (auto *FPMOCJ = dyn_cast<FPMathOperator>(CJ))
+          FMFCJ = FPMOCJ->getFastMathFlags();
+
         for (unsigned i = 0, ie = CJ->getNumArgOperands(); i != ie; ++i)
           Tys.push_back(CJ->getArgOperand(i)->getType());
-        unsigned JCost = TTI->getIntrinsicInstrCost(IID, JT1, Tys);
+        unsigned JCost = TTI->getIntrinsicInstrCost(IID, JT1, Tys, FMFCJ);
 
         Tys.clear();
         assert(CI->getNumArgOperands() == CJ->getNumArgOperands() &&
@@ -1140,8 +1149,10 @@ namespace {
                                             CJ->getArgOperand(i)->getType()));
         }
 
+        FastMathFlags FMFV = FMFCI;
+        FMFV &= FMFCJ;
         Type *RetTy = getVecTypeForPair(IT1, JT1);
-        unsigned VCost = TTI->getIntrinsicInstrCost(IID, RetTy, Tys);
+        unsigned VCost = TTI->getIntrinsicInstrCost(IID, RetTy, Tys, FMFV);
 
         if (VCost > ICost + JCost)
           return false;

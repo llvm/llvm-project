@@ -281,6 +281,7 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::UINT_TO_FP);
+  setTargetDAGCombine(ISD::FCANONICALIZE);
 
   // All memory operations. Some folding on the pointer operand is done to help
   // matching the constant offsets in the addressing modes.
@@ -2400,6 +2401,46 @@ SDValue SITargetLowering::performClassCombine(SDNode *N,
   return SDValue();
 }
 
+// Constant fold canonicalize.
+SDValue SITargetLowering::performFCanonicalizeCombine(
+  SDNode *N,
+  DAGCombinerInfo &DCI) const {
+  ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(N->getOperand(0));
+  if (!CFP)
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  const APFloat &C = CFP->getValueAPF();
+
+  // Flush denormals to 0 if not enabled.
+  if (C.isDenormal()) {
+    EVT VT = N->getValueType(0);
+    if (VT == MVT::f32 && !Subtarget->hasFP32Denormals())
+      return DAG.getConstantFP(0.0, SDLoc(N), VT);
+
+    if (VT == MVT::f64 && !Subtarget->hasFP64Denormals())
+      return DAG.getConstantFP(0.0, SDLoc(N), VT);
+  }
+
+  if (C.isNaN()) {
+    EVT VT = N->getValueType(0);
+    APFloat CanonicalQNaN = APFloat::getQNaN(C.getSemantics());
+    if (C.isSignaling()) {
+      // Quiet a signaling NaN.
+      return DAG.getConstantFP(CanonicalQNaN, SDLoc(N), VT);
+    }
+
+    // Make sure it is the canonical NaN bitpattern.
+    //
+    // TODO: Can we use -1 as the canonical NaN value since it's an inline
+    // immediate?
+    if (C.bitcastToAPInt() != CanonicalQNaN.bitcastToAPInt())
+      return DAG.getConstantFP(CanonicalQNaN, SDLoc(N), VT);
+  }
+
+  return SDValue(CFP, 0);
+}
+
 static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   switch (Opc) {
   case ISD::FMAXNUM:
@@ -2747,6 +2788,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performOrCombine(N, DCI);
   case AMDGPUISD::FP_CLASS:
     return performClassCombine(N, DCI);
+  case ISD::FCANONICALIZE:
+    return performFCanonicalizeCombine(N, DCI);
   }
   return AMDGPUTargetLowering::PerformDAGCombine(N, DCI);
 }

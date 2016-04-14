@@ -427,7 +427,9 @@ static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
 template <class ELFT>
 template <class RelTy>
 void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
-  bool IsAlloc = C.getSectionHdr()->sh_flags & SHF_ALLOC;
+  uintX_t Flags = C.getSectionHdr()->sh_flags;
+  bool IsAlloc = Flags & SHF_ALLOC;
+  bool IsWrite = Flags & SHF_WRITE;
 
   auto AddDyn = [=](const DynamicReloc<ELFT> &Reloc) {
     if (IsAlloc)
@@ -480,10 +482,11 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       AddDyn({Target->RelativeRel, C.OutSec, Offset, true, &Body,
               getAddend<ELFT>(RI)});
 
-    // If a symbol in a DSO is referenced directly instead of through GOT,
-    // we need to create a copy relocation for the symbol.
+    // If a symbol in a DSO is referenced directly instead of through GOT
+    // in a read-only section, we need to create a copy relocation for the
+    // symbol.
     if (auto *B = dyn_cast<SharedSymbol<ELFT>>(&Body)) {
-      if (IsAlloc && Target->needsCopyRel<ELFT>(Type, *B)) {
+      if (IsAlloc && !IsWrite && Target->needsCopyRel<ELFT>(Type, *B)) {
         if (!B->needsCopy())
           addCopyRelSymbol(B);
         C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
