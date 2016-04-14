@@ -402,6 +402,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, Custom);
+
   // Lower READCYCLECOUNTER using an mrs from PMCCNTR_EL0.
   // This requires the Performance Monitors extension.
   if (Subtarget->hasPerfMon())
@@ -9994,6 +9996,31 @@ static void ReplaceReductionResults(SDNode *N,
   Results.push_back(SplitVal);
 }
 
+static void ReplaceCMP_SWAP_128Results(SDNode *N,
+                                       SmallVectorImpl<SDValue> & Results,
+                                       SelectionDAG &DAG) {
+  assert(N->getValueType(0) == MVT::i128 &&
+         "AtomicCmpSwap on types less than 128 should be legal");
+  SDValue Ops[] = {N->getOperand(1),
+                   N->getOperand(2)->getOperand(0),
+                   N->getOperand(2)->getOperand(1),
+                   N->getOperand(3)->getOperand(0),
+                   N->getOperand(3)->getOperand(1),
+                   N->getOperand(0)};
+  SDNode *CmpSwap = DAG.getMachineNode(
+      AArch64::CMP_SWAP_128, SDLoc(N),
+      DAG.getVTList(MVT::i64, MVT::i64, MVT::i32, MVT::Other), Ops);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineSDNode::mmo_iterator MemOp = MF.allocateMemRefsArray(1);
+  MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
+  cast<MachineSDNode>(CmpSwap)->setMemRefs(MemOp, MemOp + 1);
+
+  Results.push_back(SDValue(CmpSwap, 0));
+  Results.push_back(SDValue(CmpSwap, 1));
+  Results.push_back(SDValue(CmpSwap, 3));
+}
+
 void AArch64TargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
@@ -10024,6 +10051,9 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::FP_TO_SINT:
     assert(N->getValueType(0) == MVT::i128 && "unexpected illegal conversion");
     // Let normal code take care of it by not adding anything to Results.
+    return;
+  case ISD::ATOMIC_CMP_SWAP:
+    ReplaceCMP_SWAP_128Results(N, Results, DAG);
     return;
   }
 }
@@ -10076,7 +10106,12 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
 bool AArch64TargetLowering::shouldExpandAtomicCmpXchgInIR(
     AtomicCmpXchgInst *AI) const {
-  return true;
+  // At -O0, fast-regalloc cannot cope with the live vregs necessary to
+  // implement cmpxchg without spilling. If the address being exchanged is also
+  // on the stack and close enough to the spill slot, this can lead to a
+  // situation where the monitor always gets cleared and the atomic operation
+  // can never succeed. So at -O0 we need a late-expanded pseudo-inst instead.
+  return getTargetMachine().getOptLevel() != 0;
 }
 
 Value *AArch64TargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
