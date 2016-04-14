@@ -39,6 +39,7 @@ const char TestProgram[] =
     "EmitCXXGlobalInitFunc test;    ";
 
 TEST(BufferSourceTest, EmitCXXGlobalInitFunc) {
+    LLVMContext Context;
     CompilerInstance compiler;
 
     compiler.createDiagnostics();
@@ -65,7 +66,7 @@ TEST(BufferSourceTest, EmitCXXGlobalInitFunc) {
             compiler.getHeaderSearchOpts(),
             compiler.getPreprocessorOpts(),
             compiler.getCodeGenOpts(),
-            llvm::getGlobalContext())));
+            Context)));
 
     compiler.createSema(clang::TU_Prefix, nullptr);
 
