@@ -50,7 +50,12 @@ void f4() {
   float2 f2;
   double d;
   f2 += d;
-  d += f2;
+  // We used to allow the next statement, but we've always rejected the next two
+  // statements
+  // FIXME: This diagnostic is inaccurate.
+  d += f2; // expected-error {{cannot convert between vector values of different size}}
+  d = f2; // expected-error {{assigning to 'double' from incompatible type 'float2'}}
+  d = d + f2; // expected-error {{assigning to 'double' from incompatible type 'float2'}}
 }
 
 // rdar://15931426

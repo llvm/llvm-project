@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+
 template<typename T> class A; // expected-note 2 {{template parameter is declared here}} expected-note{{template is declared here}}
 
 // [temp.arg.type]p1
@@ -24,11 +27,21 @@ A<ns::B> a8; // expected-error{{use of class template 'ns::B' requires template 
 // [temp.arg.type]p2
 void f() {
   class X { };
-  A<X> * a = 0; // expected-warning{{template argument uses local type 'X'}}
+  A<X> * a = 0;
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{template argument uses local type 'X'}}
+#endif
 }
 
-struct { int x; } Unnamed; // expected-note{{unnamed type used in template argument was declared here}}
-A<__typeof__(Unnamed)> *a9; // expected-warning{{template argument uses unnamed type}}
+struct { int x; } Unnamed;
+#if __cplusplus <= 199711L
+// expected-note@-2 {{unnamed type used in template argument was declared here}}
+#endif
+
+A<__typeof__(Unnamed)> *a9;
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{template argument uses unnamed type}}
+#endif
 
 template<typename T, unsigned N>
 struct Array {

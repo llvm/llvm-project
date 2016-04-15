@@ -840,8 +840,14 @@ bool RecursiveASTVisitor<Derived>::TraverseConstructorInitializer(
     TRY_TO(TraverseStmt(Init->getInit()));
 
   if (getDerived().shouldVisitImplicitCode())
-    for (VarDecl *VD : Init->getArrayIndices())
+    // The braces for this one-line loop are required for MSVC2013.  It
+    // refuses to compile
+    //     for (int i : int_vec)
+    //       do {} while(false);
+    // without braces on the for loop.
+    for (VarDecl *VD : Init->getArrayIndices()) {
       TRY_TO(TraverseDecl(VD));
+    }
 
   return true;
 }

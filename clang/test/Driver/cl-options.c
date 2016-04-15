@@ -85,7 +85,7 @@
 // RUN: %clang_cl /imsvcmyincludedir -### -- %s 2>&1 | FileCheck -check-prefix=SLASH_imsvc %s
 // RUN: %clang_cl /imsvc myincludedir -### -- %s 2>&1 | FileCheck -check-prefix=SLASH_imsvc %s
 // Clang's resource header directory should be first:
-// SLASH_imsvc: "-internal-isystem" "{{[^"]*}}lib{{/|\\\\}}clang{{[^"]*}}include"
+// SLASH_imsvc: "-internal-isystem" "{{[^"]*}}lib{{(64)?/|\\\\}}clang{{[^"]*}}include"
 // SLASH_imsvc: "-internal-isystem" "myincludedir"
 
 // RUN: %clang_cl /J -### -- %s 2>&1 | FileCheck -check-prefix=J %s

@@ -16,7 +16,6 @@
 #define LLVM_CLANG_FORMAT_FORMAT_H
 
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <system_error>
@@ -26,6 +25,10 @@ namespace clang {
 class Lexer;
 class SourceManager;
 class DiagnosticConsumer;
+
+namespace vfs {
+class FileSystem;
+}
 
 namespace format {
 
@@ -600,6 +603,8 @@ struct FormatStyle {
     UT_Never,
     /// Use tabs only for indentation.
     UT_ForIndentation,
+    /// Use tabs only for line continuation and indentation.
+    UT_ForContinuationAndIndentation,
     /// Use tabs whenever we need to fill whitespace that spans at least from
     /// one tab stop to the next one.
     UT_Always
