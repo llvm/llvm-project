@@ -32,6 +32,7 @@ namespace lld {
 namespace coff {
 
 int InputFile::NextIndex = 0;
+llvm::LLVMContext BitcodeFile::Context;
 
 // Returns the last element of a path, which is supposed to be a filename.
 static StringRef getBasename(StringRef Path) {
@@ -320,9 +321,8 @@ void BitcodeFile::parse() {
   // Usually parse() is thread-safe, but bitcode file is an exception.
   std::lock_guard<std::mutex> Lock(Mu);
 
-  ErrorOr<std::unique_ptr<LTOModule>> ModOrErr =
-      LTOModule::createFromBuffer(llvm::getGlobalContext(), MB.getBufferStart(),
-                                  MB.getBufferSize(), llvm::TargetOptions());
+  ErrorOr<std::unique_ptr<LTOModule>> ModOrErr = LTOModule::createFromBuffer(
+      Context, MB.getBufferStart(), MB.getBufferSize(), llvm::TargetOptions());
   error(ModOrErr, "Could not create lto module");
   M = std::move(*ModOrErr);
 

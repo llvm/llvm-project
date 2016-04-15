@@ -957,8 +957,10 @@ __kmp_init_indirect_csptr(kmp_critical_name * crit, ident_t const * loc, kmp_int
         } else {                                                                                                 \
             KMP_YIELD_SPIN(spins);                                                                               \
         }                                                                                                        \
+        kmp_backoff_t backoff = __kmp_spin_backoff_params;                                                       \
         while (l->lk.poll != KMP_LOCK_FREE(tas) ||                                                               \
                ! KMP_COMPARE_AND_STORE_ACQ32(&(l->lk.poll), KMP_LOCK_FREE(tas), KMP_LOCK_BUSY(gtid+1, tas))) {   \
+            __kmp_spin_backoff(&backoff);                                                                        \
             if (TCR_4(__kmp_nth) > (__kmp_avail_proc ? __kmp_avail_proc : __kmp_xproc)) {                        \
                 KMP_YIELD(TRUE);                                                                                 \
             } else {                                                                                             \

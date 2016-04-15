@@ -1103,6 +1103,7 @@ static void
 __kmp_invoke_task( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t * current_task )
 {
     kmp_taskdata_t * taskdata = KMP_TASK_TO_TASKDATA(task);
+    kmp_uint64 cur_time;
 #if OMP_40_ENABLED
     int discard = 0 /* false */;
 #endif
@@ -1124,6 +1125,13 @@ __kmp_invoke_task( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t * current_ta
 
             return;
          }
+#endif
+
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
+    if(__kmp_forkjoin_frames_mode == 3) {
+        // Get the current time stamp to measure task execution time to correct barrier imbalance time
+        cur_time = __itt_get_timestamp();
+    }
 #endif
 
 #if OMP_41_ENABLED
@@ -1219,6 +1227,15 @@ __kmp_invoke_task( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t * current_ta
 #endif
        __kmp_task_finish( gtid, task, current_task );
 
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
+    // Barrier imbalance - correct arrive time after the task finished
+    if(__kmp_forkjoin_frames_mode == 3) {
+        kmp_info_t *this_thr = __kmp_threads [ gtid ];
+        if(this_thr->th.th_bar_arrive_time) {
+            this_thr->th.th_bar_arrive_time += (__itt_get_timestamp() - cur_time);
+        }
+    }
+#endif
     KA_TRACE(30, ("__kmp_invoke_task(exit): T#%d completed task %p, resuming task %p\n",
                   gtid, taskdata, current_task) );
     return;

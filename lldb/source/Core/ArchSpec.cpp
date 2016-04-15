@@ -130,6 +130,8 @@ static const CoreDefinition g_core_definitions[] =
     { eByteOrderBig   , 8, 4, 4, llvm::Triple::ppc64  , ArchSpec::eCore_ppc64_generic   , "powerpc64" },
     { eByteOrderBig   , 8, 4, 4, llvm::Triple::ppc64  , ArchSpec::eCore_ppc64_ppc970_64 , "ppc970-64" },
     
+    { eByteOrderBig   , 8, 2, 6, llvm::Triple::systemz, ArchSpec::eCore_s390x_generic   , "s390x"     },
+
     { eByteOrderLittle, 4, 4, 4, llvm::Triple::sparc  , ArchSpec::eCore_sparc_generic   , "sparc"     },
     { eByteOrderLittle, 8, 4, 4, llvm::Triple::sparcv9, ArchSpec::eCore_sparc9_generic  , "sparcv9"   },
 
@@ -285,6 +287,7 @@ static const ArchDefinitionEntry g_elf_arch_entries[] =
     { ArchSpec::eCore_ppc64_generic   , llvm::ELF::EM_PPC64  , LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu }, // PowerPC64
     { ArchSpec::eCore_arm_generic     , llvm::ELF::EM_ARM    , LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu }, // ARM
     { ArchSpec::eCore_arm_aarch64     , llvm::ELF::EM_AARCH64, LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu }, // ARM64
+    { ArchSpec::eCore_s390x_generic   , llvm::ELF::EM_S390   , LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu }, // SystemZ
     { ArchSpec::eCore_sparc9_generic  , llvm::ELF::EM_SPARCV9, LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu }, // SPARC V9
     { ArchSpec::eCore_x86_64_x86_64   , llvm::ELF::EM_X86_64 , LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu }, // AMD64
     { ArchSpec::eCore_mips32          , llvm::ELF::EM_MIPS   , ArchSpec::eMIPSSubType_mips32,     0xFFFFFFFFu, 0xFFFFFFFFu }, // mips32

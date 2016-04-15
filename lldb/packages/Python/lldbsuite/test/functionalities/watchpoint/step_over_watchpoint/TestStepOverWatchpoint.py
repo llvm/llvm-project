@@ -20,6 +20,7 @@ class TestStepOverWatchpoint(TestBase):
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
     @expectedFailureAll(oslist=["linux"], archs=['aarch64', 'arm'], bugnumber="llvm.org/pr26031")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureAll(archs=['s390x']) # Read-write watchpoints not supported on SystemZ
     def test(self):
         """Test stepping over watchpoints."""
         self.build()

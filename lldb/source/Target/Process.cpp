@@ -2437,7 +2437,7 @@ Process::ReadStringFromMemory (addr_t addr, char *dst, size_t max_bytes, Error &
             // Search for a null terminator of correct size and alignment in bytes_read
             size_t aligned_start = total_bytes_read - total_bytes_read % type_width;
             for (size_t i = aligned_start; i + type_width <= total_bytes_read + bytes_read; i += type_width)
-                if (::strncmp(&dst[i], terminator, type_width) == 0)
+                if (::memcmp(&dst[i], terminator, type_width) == 0)
                 {
                     error.Clear();
                     return i;

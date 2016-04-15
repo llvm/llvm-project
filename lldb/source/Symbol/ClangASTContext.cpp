@@ -90,6 +90,7 @@
 #include "lldb/Target/Target.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
+#include "Plugins/SymbolFile/PDB/PDBASTParser.h"
 
 #include <stdio.h>
 
@@ -783,8 +784,8 @@ ClangASTContext::GetBuiltinTypeForEncodingAndBitSize (ASTContext *ast, Encoding 
         break;
         
     case eEncodingSint:
-        if (QualTypeMatchesBitSize (bit_size, ast, ast->CharTy))
-            return CompilerType (ast, ast->CharTy);
+        if (QualTypeMatchesBitSize (bit_size, ast, ast->SignedCharTy))
+            return CompilerType (ast, ast->SignedCharTy);
         if (QualTypeMatchesBitSize (bit_size, ast, ast->ShortTy))
             return CompilerType (ast, ast->ShortTy);
         if (QualTypeMatchesBitSize (bit_size, ast, ast->IntTy))
@@ -3442,7 +3443,27 @@ ClangASTContext::IsObjCObjectOrInterfaceType (const CompilerType& type)
 }
 
 bool
-ClangASTContext::IsPolymorphicClass (lldb::opaque_compiler_type_t type)
+ClangASTContext::IsClassType(lldb::opaque_compiler_type_t type)
+{
+    if (!type)
+        return false;
+    clang::QualType qual_type(GetCanonicalQualType(type));
+    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+    return (type_class == clang::Type::Record);
+}
+
+bool
+ClangASTContext::IsEnumType(lldb::opaque_compiler_type_t type)
+{
+    if (!type)
+        return false;
+    clang::QualType qual_type(GetCanonicalQualType(type));
+    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+    return (type_class == clang::Type::Enum);
+}
+
+bool
+ClangASTContext::IsPolymorphicClass(lldb::opaque_compiler_type_t type)
 {
     if (type)
     {
@@ -5204,7 +5225,7 @@ ClangASTContext::GetNumChildren (lldb::opaque_compiler_type_t type, bool omit_em
 CompilerType
 ClangASTContext::GetBuiltinTypeByName (const ConstString &name)
 {
-    return GetBasicType (GetBasicTypeEnumeration (name));
+    return GetBasicType(GetBasicTypeEnumeration(name));
 }
 
 lldb::BasicType
@@ -6074,8 +6095,9 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
                                                         {
                                                             clang::CharUnits base_offset_offset = itanium_vtable_ctx->getVirtualBaseOffsetOffset(cxx_record_decl, base_class_decl);
                                                             const lldb::addr_t base_offset_addr = vtable_ptr + base_offset_offset.getQuantity();
-                                                            const uint32_t base_offset = process->ReadUnsignedIntegerFromMemory(base_offset_addr, 4, UINT32_MAX, err);
-                                                            if (base_offset != UINT32_MAX)
+                                                            const uint32_t base_offset_size = process->GetAddressByteSize();
+                                                            const uint64_t base_offset = process->ReadUnsignedIntegerFromMemory(base_offset_addr, base_offset_size, UINT32_MAX, err);
+                                                            if (base_offset < UINT32_MAX)
                                                             {
                                                                 handled = true;
                                                                 bit_offset = base_offset * 8;
@@ -9471,6 +9493,13 @@ ClangASTContext::GetDWARFParser()
     return m_dwarf_ast_parser_ap.get();
 }
 
+PDBASTParser *
+ClangASTContext::GetPDBParser()
+{
+    if (!m_pdb_ast_parser_ap)
+        m_pdb_ast_parser_ap.reset(new PDBASTParser(*this));
+    return m_pdb_ast_parser_ap.get();
+}
 
 bool
 ClangASTContext::LayoutRecordType(void *baton,

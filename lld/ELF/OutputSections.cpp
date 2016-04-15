@@ -1487,7 +1487,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   case SymbolBody::DefinedSyntheticKind:
     return &cast<DefinedSynthetic<ELFT>>(Sym)->Section;
   case SymbolBody::DefinedRegularKind: {
-    auto &D = cast<DefinedRegular<ELFT>>(Sym->repl());
+    auto &D = cast<DefinedRegular<ELFT>>(*Sym);
     if (D.Section)
       return D.Section->OutSec;
     break;

@@ -61,6 +61,7 @@ Clang-Tidy Checks
    misc-macro-repeated-side-effects
    misc-misplaced-widening-cast
    misc-move-constructor-init
+   misc-multiple-statement-macro
    misc-new-delete-overloads
    misc-noexcept-move-constructor
    misc-non-copyable-objects

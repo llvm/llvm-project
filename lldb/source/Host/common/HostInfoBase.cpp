@@ -420,6 +420,7 @@ HostInfoBase::ComputeHostArchitectureSupport(ArchSpec &arch_32, ArchSpec &arch_6
         case llvm::Triple::mips64:
         case llvm::Triple::mips64el:
         case llvm::Triple::sparcv9:
+        case llvm::Triple::systemz:
             arch_64.SetTriple(triple);
             break;
     }

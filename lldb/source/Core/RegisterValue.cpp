@@ -203,34 +203,13 @@ RegisterValue::SetFromMemoryData (const RegisterInfo *reg_info,
     // Use a data extractor to correctly copy and pad the bytes read into the
     // register value
     DataExtractor src_data (src, src_len, src_byte_order, 4);
-    
-    // Given the register info, set the value type of this RegisterValue object
-    SetType (reg_info);
-    // And make sure we were able to figure out what that register value was
-    RegisterValue::Type value_type = GetType();
-    if (value_type == eTypeInvalid)        
-    {
-        // No value has been read into this object...
-        error.SetErrorStringWithFormat("invalid register value type for register %s", reg_info->name);
+
+    error = SetValueFromData(reg_info, src_data, 0, true);
+    if (error.Fail())
         return 0;
-    }
-    else if (value_type == eTypeBytes)
-    {
-        buffer.byte_order = src_byte_order;
-        // Make sure to set the buffer length of the destination buffer to avoid
-        // problems due to uninitialized variables.
-        buffer.length = src_len;
-    }
 
-    const uint32_t bytes_copied = src_data.CopyByteOrderedData (0,               // src offset
-                                                                src_len,         // src length
-                                                                GetBytes(),      // dst buffer
-                                                                GetByteSize(),   // dst length
-                                                                GetByteOrder()); // dst byte order
-    if (bytes_copied == 0)
-        error.SetErrorStringWithFormat("failed to copy data for register write of %s", reg_info->name);
-
-    return bytes_copied;
+    // If SetValueFromData succeeded, we must have copied all of src_len
+    return src_len;
 }
 
 bool
@@ -282,41 +261,12 @@ RegisterValue::Clear()
 RegisterValue::Type
 RegisterValue::SetType (const RegisterInfo *reg_info)
 {
-    m_type = eTypeInvalid;
-    const uint32_t byte_size = reg_info->byte_size;
-    switch (reg_info->encoding)
-    {
-        case eEncodingInvalid:
-            break;
-            
-        case eEncodingUint:
-        case eEncodingSint:
-            if (byte_size == 1)
-                m_type = eTypeUInt8;
-            else if (byte_size <= 2)
-                m_type = eTypeUInt16;
-            else if (byte_size <= 4)
-                m_type = eTypeUInt32;
-            else if (byte_size <= 8)
-                m_type = eTypeUInt64;
-            else if (byte_size <= 16)
-                m_type = eTypeUInt128;
-            break;
+    // To change the type, we simply copy the data in again, using the new format
+    RegisterValue copy;
+    DataExtractor copy_data;
+    if (copy.CopyValue(*this) && copy.GetData(copy_data))
+        SetValueFromData(reg_info, copy_data, 0, true);
 
-        case eEncodingIEEE754:
-            if (byte_size == sizeof(float))
-                m_type = eTypeFloat;
-            else if (byte_size == sizeof(double))
-                m_type = eTypeDouble;
-            else if (byte_size == sizeof(long double))
-                m_type = eTypeLongDouble;
-            break;
-
-        case eEncodingVector:
-            m_type = eTypeBytes;
-            break;
-    }
-    m_scalar.SetType(reg_info);
     return m_type;
 }
 
@@ -354,16 +304,23 @@ RegisterValue::SetValueFromData (const RegisterInfo *reg_info, DataExtractor &sr
     memset (buffer.bytes, 0, sizeof (buffer.bytes));
 
     type128 int128;
-    switch (SetType (reg_info))
+
+    m_type = eTypeInvalid;
+    switch (reg_info->encoding)
     {
-        case eTypeInvalid:
-            error.SetErrorString("");
+        case eEncodingInvalid:
             break;
-        case eTypeUInt8:    SetUInt8  (src.GetMaxU32 (&src_offset, src_len)); break;
-        case eTypeUInt16:   SetUInt16 (src.GetMaxU32 (&src_offset, src_len)); break;
-        case eTypeUInt32:   SetUInt32 (src.GetMaxU32 (&src_offset, src_len)); break;
-        case eTypeUInt64:   SetUInt64 (src.GetMaxU64 (&src_offset, src_len)); break;
-        case eTypeUInt128:
+        case eEncodingUint:
+        case eEncodingSint:
+            if (reg_info->byte_size == 1)
+                SetUInt8(src.GetMaxU32(&src_offset, src_len));
+            else if (reg_info->byte_size <= 2)
+                SetUInt16(src.GetMaxU32(&src_offset, src_len));
+            else if (reg_info->byte_size <= 4)
+                SetUInt32(src.GetMaxU32(&src_offset, src_len));
+            else if (reg_info->byte_size <= 8)
+                SetUInt64(src.GetMaxU64(&src_offset, src_len));
+            else if (reg_info->byte_size <= 16)
             {
                 uint64_t data1 = src.GetU64 (&src_offset);
                 uint64_t data2 = src.GetU64 (&src_offset);
@@ -380,10 +337,15 @@ RegisterValue::SetValueFromData (const RegisterInfo *reg_info, DataExtractor &sr
                 SetUInt128 (llvm::APInt(128, 2, int128.x));
             }
             break;
-        case eTypeFloat:        SetFloat (src.GetFloat (&src_offset));      break;
-        case eTypeDouble:       SetDouble(src.GetDouble (&src_offset));     break;
-        case eTypeLongDouble:   SetFloat (src.GetLongDouble (&src_offset)); break;
-        case eTypeBytes:
+        case eEncodingIEEE754:
+            if (reg_info->byte_size == sizeof(float))
+                SetFloat(src.GetFloat(&src_offset));
+            else if (reg_info->byte_size == sizeof(double))
+                SetDouble(src.GetDouble(&src_offset));
+            else if (reg_info->byte_size == sizeof(long double))
+                SetLongDouble(src.GetLongDouble(&src_offset));
+            break;
+        case eEncodingVector:
         {
             m_type = eTypeBytes;
             buffer.length = reg_info->byte_size;
@@ -397,12 +359,14 @@ RegisterValue::SetValueFromData (const RegisterInfo *reg_info, DataExtractor &sr
                                          buffer.length,          // dst length
                                          buffer.byte_order) == 0)// dst byte order
             {
-                error.SetErrorString ("data copy failed data.");
+                error.SetErrorStringWithFormat("failed to copy data for register write of %s", reg_info->name);
                 return error;
             }
         }
     }
-    
+
+    if (m_type == eTypeInvalid)
+        error.SetErrorStringWithFormat("invalid register value type for register %s", reg_info->name);
     return error;
 }
 
@@ -823,25 +787,6 @@ RegisterValue::GetAsLongDouble (long double fail_value, bool *success_ptr) const
 
 const void *
 RegisterValue::GetBytes () const
-{
-    switch (m_type)
-    {
-        case eTypeInvalid:      break;
-        case eTypeUInt8:
-        case eTypeUInt16:
-        case eTypeUInt32:
-        case eTypeUInt64:
-        case eTypeUInt128:
-        case eTypeFloat:
-        case eTypeDouble:
-        case eTypeLongDouble:   return m_scalar.GetBytes();
-        case eTypeBytes:        return buffer.bytes;
-    }
-    return nullptr;
-}
-
-void *
-RegisterValue::GetBytes ()
 {
     switch (m_type)
     {

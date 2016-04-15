@@ -12,6 +12,7 @@
 
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTOModule.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
@@ -203,8 +204,9 @@ public:
   static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
   std::vector<SymbolBody *> &getSymbols() override { return SymbolBodies; }
   MachineTypes getMachineType() override;
-
   std::unique_ptr<LTOModule> takeModule() { return std::move(M); }
+
+  static llvm::LLVMContext Context;
 
 private:
   void parse() override;

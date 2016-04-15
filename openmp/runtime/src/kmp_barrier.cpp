@@ -1198,8 +1198,11 @@ __kmp_barrier(enum barrier_type bt, int gtid, int is_split, size_t reduce_size,
                     if( __itt_metadata_add_ptr ) {
                         // Initialize with master's wait time
                         kmp_uint64 delta = cur_time - this_thr->th.th_bar_arrive_time;
+                        // Set arrive time to zero to be able to check it in __kmp_invoke_task(); the same is done inside the loop below
+                        this_thr->th.th_bar_arrive_time = 0;
                         for (i=1; i<nproc; ++i) {
                             delta += ( cur_time - other_threads[i]->th.th_bar_arrive_time );
+                            other_threads[i]->th.th_bar_arrive_time = 0;
                         }
                         __kmp_itt_metadata_imbalance(gtid, this_thr->th.th_frame_time, cur_time, delta, (kmp_uint64)( reduce != NULL));
                     }
@@ -1489,8 +1492,11 @@ __kmp_join_barrier(int gtid)
                 if( __itt_metadata_add_ptr ) {
                     // Initialize with master's wait time
                     kmp_uint64 delta = cur_time - this_thr->th.th_bar_arrive_time;
+                    // Set arrive time to zero to be able to check it in __kmp_invoke_task(); the same is done inside the loop below
+                    this_thr->th.th_bar_arrive_time = 0;
                     for (i=1; i<nproc; ++i) {
                         delta += ( cur_time - other_threads[i]->th.th_bar_arrive_time );
+                        other_threads[i]->th.th_bar_arrive_time = 0;
                     }
                     __kmp_itt_metadata_imbalance(gtid, this_thr->th.th_frame_time, cur_time, delta, 0);
                 }

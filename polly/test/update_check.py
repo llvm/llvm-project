@@ -95,6 +95,10 @@ def classyfier1(lines):
             yield  {'AssumedContext'}
             line = i.__next__()
             yield  {'AssumedContext'}
+        elif line == '    Invalid Context:':
+            yield  {'InvalidContext'}
+            line = i.__next__()
+            yield  {'InvalidContext'}
         elif line == '    Boundary Context:':
             yield  {'BoundaryContext'}
             line = i.__next__()

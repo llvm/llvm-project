@@ -120,7 +120,6 @@ public:
   bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   bool isRelRelative(uint32_t Type) const override;
-  bool isSizeRel(uint32_t Type) const override;
 
   void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -282,7 +281,6 @@ bool TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
 bool TargetInfo::isGotRelative(uint32_t Type) const { return false; }
 bool TargetInfo::isHintRel(uint32_t Type) const { return false; }
 bool TargetInfo::isRelRelative(uint32_t Type) const { return true; }
-bool TargetInfo::isSizeRel(uint32_t Type) const { return false; }
 
 bool TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
   return false;
@@ -422,7 +420,7 @@ uint32_t X86TargetInfo::getDynRel(uint32_t Type) const {
 uint32_t X86TargetInfo::getTlsGotRel(uint32_t Type) const {
   if (Type == R_386_TLS_IE)
     return Type;
-  return TlsGotRel;
+  return R_386_GOT32;
 }
 
 bool X86TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
@@ -532,13 +530,6 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_386_32:
     write32le(Loc, Val);
     break;
-  case R_386_GOT32: {
-    uint64_t V = Val - Out<ELF32LE>::Got->getVA() -
-                 Out<ELF32LE>::Got->getNumEntries() * 4;
-    checkInt<32>(V, Type);
-    write32le(Loc, V);
-    break;
-  }
   case R_386_GOTOFF:
     write32le(Loc, Val - Out<ELF32LE>::Got->getVA());
     break;
@@ -549,9 +540,9 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_386_PLT32:
     write32le(Loc, Val);
     break;
+  case R_386_GOT32:
   case R_386_TLS_GD:
-  case R_386_TLS_LDM:
-  case R_386_TLS_TPOFF: {
+  case R_386_TLS_LDM: {
     uint64_t V = Val - Out<ELF32LE>::Got->getVA() -
                  Out<ELF32LE>::Got->getNumEntries() * 4;
     checkInt<32>(V, Type);
@@ -699,6 +690,9 @@ RelExpr X86_64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   switch (Type) {
   default:
     return R_ABS;
+  case R_X86_64_SIZE32:
+  case R_X86_64_SIZE64:
+    return R_SIZE;
   case R_X86_64_GOTPCREL:
   case R_X86_64_PLT32:
   case R_X86_64_PC32:
@@ -815,10 +809,6 @@ bool X86_64TargetInfo::isRelRelative(uint32_t Type) const {
   case R_X86_64_TPOFF32:
     return true;
   }
-}
-
-bool X86_64TargetInfo::isSizeRel(uint32_t Type) const {
-  return Type == R_X86_64_SIZE32 || Type == R_X86_64_SIZE64;
 }
 
 // "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.5
@@ -1589,6 +1579,7 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
   default:
     return R_ABS;
   case R_MIPS_HI16:
+  case R_MIPS_LO16:
     // MIPS _gp_disp designates offset between start of function and 'gp'
     // pointer into GOT. __gnu_local_gp is equal to the current value of
     // the 'gp'. Therefore any relocations against them do not require

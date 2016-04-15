@@ -31,6 +31,8 @@ class SyntheticCappingTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+        process = self.dbg.GetSelectedTarget().GetProcess()
+
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
             substrs = ['stopped',
@@ -52,25 +54,31 @@ class SyntheticCappingTestCase(TestBase):
         self.runCmd("script from fooSynthProvider import *")
         self.runCmd("type synth add -l fooSynthProvider foo")
 
+        # note that the value of fake_a depends on target byte order
+        if process.GetByteOrder() == lldb.eByteOrderLittle:
+            fake_a_val = 0x02000000
+        else:
+            fake_a_val = 0x00000100
+
         # check that the synthetic children work, so we know we are doing the right thing
         self.expect("frame variable f00_1",
-                    substrs = ['r = 33',
-                               'fake_a = 16777216',
-                               'a = 0']);
+                    substrs = ['r = 34',
+                               'fake_a = %d' % fake_a_val,
+                               'a = 1']);
 
         # check that capping works
         self.runCmd("settings set target.max-children-count 2", check=False)
         
         self.expect("frame variable f00_1",
                     substrs = ['...',
-                               'fake_a = 16777216',
-                               'a = 0']);
+                               'fake_a = %d' % fake_a_val,
+                               'a = 1']);
         
         self.expect("frame variable f00_1", matching=False,
-                    substrs = ['r = 33']);
+                    substrs = ['r = 34']);
 
         
         self.runCmd("settings set target.max-children-count 256", check=False)
 
         self.expect("frame variable f00_1", matching=True,
-                    substrs = ['r = 33']);
+                    substrs = ['r = 34']);

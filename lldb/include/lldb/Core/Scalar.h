@@ -120,7 +120,7 @@ public:
     bool
     ClearBit(uint32_t bit);
 
-    void *
+    const void *
     GetBytes() const;
 
     size_t
@@ -231,9 +231,6 @@ public:
     Scalar::Type
     GetType() const { return m_type; }
 
-    void
-    SetType(const RegisterInfo*);
-
     //----------------------------------------------------------------------
     // Returns a casted value of the current contained data without
     // modifying the current value. FAIL_VALUE will be returned if the type
@@ -257,7 +254,7 @@ public:
     unsigned char
     UChar(unsigned char fail_value = 0) const;
 
-    char
+    signed char
     SChar(char fail_value = 0) const;
 
     unsigned short

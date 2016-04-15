@@ -596,7 +596,7 @@ protected:
         {
             auto iterators_pair = objc_runtime->GetDescriptorIteratorPair();
             auto iterator = iterators_pair.first;
-            auto &out = result.GetOutputStream();
+            auto &std_out = result.GetOutputStream();
             for(; iterator != iterators_pair.second; iterator++)
             {
                 if (iterator->second)
@@ -604,15 +604,15 @@ protected:
                     const char* class_name = iterator->second->GetClassName().AsCString("<unknown>");
                     if (regex_up && class_name && !regex_up->Execute(class_name))
                         continue;
-                    out.Printf("isa = 0x%" PRIx64, iterator->first);
-                    out.Printf(" name = %s", class_name);
-                    out.Printf(" instance size = %" PRIu64, iterator->second->GetInstanceSize());
-                    out.Printf(" num ivars = %" PRIuPTR, (uintptr_t)iterator->second->GetNumIVars());
+                    std_out.Printf("isa = 0x%" PRIx64, iterator->first);
+                    std_out.Printf(" name = %s", class_name);
+                    std_out.Printf(" instance size = %" PRIu64, iterator->second->GetInstanceSize());
+                    std_out.Printf(" num ivars = %" PRIuPTR, (uintptr_t)iterator->second->GetNumIVars());
                     if (auto superclass = iterator->second->GetSuperclass())
                     {
-                        out.Printf(" superclass = %s", superclass->GetClassName().AsCString("<unknown>"));
+                        std_out.Printf(" superclass = %s", superclass->GetClassName().AsCString("<unknown>"));
                     }
-                    out.Printf("\n");
+                    std_out.Printf("\n");
                     if (m_options.m_verbose)
                     {
                         for(size_t i = 0;
@@ -620,23 +620,23 @@ protected:
                             i++)
                         {
                             auto ivar = iterator->second->GetIVarAtIndex(i);
-                            out.Printf("  ivar name = %s type = %s size = %" PRIu64 " offset = %" PRId32 "\n",
+                            std_out.Printf("  ivar name = %s type = %s size = %" PRIu64 " offset = %" PRId32 "\n",
                                                             ivar.m_name.AsCString("<unknown>"),
                                                             ivar.m_type.GetDisplayTypeName().AsCString("<unknown>"),
                                                             ivar.m_size,
                                                             ivar.m_offset);
                         }
                         iterator->second->Describe(nullptr,
-                                                   [objc_runtime, &out] (const char* name, const char* type) -> bool {
-                                                       out.Printf("  instance method name = %s type = %s\n",
-                                                                  name,
-                                                                  type);
+                                                   [objc_runtime, &std_out] (const char* name, const char* type) -> bool {
+                                                       std_out.Printf("  instance method name = %s type = %s\n",
+                                                                      name,
+                                                                      type);
                                                        return false;
                                                    },
-                                                   [objc_runtime, &out] (const char* name, const char* type) -> bool {
-                                                       out.Printf("  class method name = %s type = %s\n",
-                                                                  name,
-                                                                  type);
+                                                   [objc_runtime, &std_out] (const char* name, const char* type) -> bool {
+                                                       std_out.Printf("  class method name = %s type = %s\n",
+                                                                      name,
+                                                                      type);
                                                        return false;
                                                    },
                                                    nullptr);
@@ -646,7 +646,7 @@ protected:
                 {
                     if (regex_up && !regex_up->Execute(""))
                         continue;
-                    out.Printf("isa = 0x%" PRIx64 " has no associated class.\n", iterator->first);
+                    std_out.Printf("isa = 0x%" PRIx64 " has no associated class.\n", iterator->first);
                 }
             }
             result.SetStatus(lldb::eReturnStatusSuccessFinishResult);

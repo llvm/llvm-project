@@ -10,11 +10,10 @@
 #ifndef lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
 #define lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
 
-#include <unordered_map>
-
 #include "lldb/Core/UserID.h"
 #include "lldb/Symbol/SymbolFile.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 
@@ -170,6 +169,12 @@ public:
     uint32_t
     GetPluginVersion() override;
 
+    llvm::IPDBSession &
+    GetPDBSession();
+
+    const llvm::IPDBSession &
+    GetPDBSession() const;
+
 private:
     lldb::CompUnitSP
     ParseCompileUnitForSymIndex(uint32_t id);
@@ -179,12 +184,21 @@ private:
 
     void
     BuildSupportFileIdToSupportFileIndexMap(const llvm::PDBSymbolCompiland &cu,
-                                            std::unordered_map<uint32_t, uint32_t> &index_map) const;
+                                            llvm::DenseMap<uint32_t, uint32_t> &index_map) const;
 
-    std::unordered_map<uint32_t, lldb::CompUnitSP> m_comp_units;
+    void
+    FindTypesByRegex(const std::string &regex, uint32_t max_matches, lldb_private::TypeMap &types);
 
+    void
+    FindTypesByName(const std::string &name, uint32_t max_matches, lldb_private::TypeMap &types);
+
+    llvm::DenseMap<uint32_t, lldb::CompUnitSP> m_comp_units;
+    llvm::DenseMap<uint32_t, lldb::TypeSP> m_types;
+
+    std::vector<lldb::TypeSP> m_builtin_types;
     std::unique_ptr<llvm::IPDBSession> m_session_up;
     uint32_t m_cached_compile_unit_count;
+    std::unique_ptr<lldb_private::CompilerDeclContext> m_tu_decl_ctx_up;
 };
 
 #endif // lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_

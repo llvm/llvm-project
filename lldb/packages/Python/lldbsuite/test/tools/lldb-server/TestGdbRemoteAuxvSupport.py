@@ -25,7 +25,7 @@ class TestGdbRemoteAuxvSupport(gdbremote_testcase.GdbRemoteTestCaseBase):
             # Start the inferior...
             "read packet: $c#63",
             # ... match output....
-            { "type":"output_match", "regex":r"^message:main entered\r\n$" },
+            { "type":"output_match", "regex":self.maybe_strict_output_regex(r"message:main entered\r\n") },
             ], True)
         # ... then interrupt.
         self.add_interrupt_packets()
