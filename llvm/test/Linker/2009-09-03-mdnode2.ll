@@ -23,6 +23,6 @@ declare void @llvm.dbg.region.end(metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!1}
 
-!0 = distinct !DISubprogram(name: "f", linkageName: "f", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scope: !1)
+!0 = distinct !DISubprogram(name: "f", linkageName: "f", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !1, scope: !1)
 !1 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "ellcc 0.1.0", isOptimized: true, emissionKind: FullDebug, file: !2)
 !2 = !DIFile(filename: "b.c", directory: "/home/rich/ellcc/test/source")

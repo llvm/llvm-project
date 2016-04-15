@@ -312,20 +312,6 @@ bool StripDeadDebugInfo::runOnModule(Module &M) {
   }
 
   for (DICompileUnit *DIC : F.compile_units()) {
-    // Create our live subprogram list.
-    bool SubprogramChange = false;
-    for (DISubprogram *DISP : DIC->getSubprograms()) {
-      // Make sure we visit each subprogram only once.
-      if (!VisitedSet.insert(DISP).second)
-        continue;
-
-      // If the function referenced by DISP is not null, the function is live.
-      if (LiveSPs.count(DISP))
-        LiveSubprograms.push_back(DISP);
-      else
-        SubprogramChange = true;
-    }
-
     // Create our live global variable list.
     bool GlobalVariableChange = false;
     for (DIGlobalVariable *DIG : DIC->getGlobalVariables()) {
@@ -341,14 +327,8 @@ bool StripDeadDebugInfo::runOnModule(Module &M) {
         GlobalVariableChange = true;
     }
 
-    // If we found dead subprograms or global variables, replace the current
-    // subprogram list/global variable list with our new live subprogram/global
-    // variable list.
-    if (SubprogramChange) {
-      DIC->replaceSubprograms(MDTuple::get(C, LiveSubprograms));
-      Changed = true;
-    }
-
+    // If we found dead global variables, replace the current global
+    // variable list with our new live global variable list.
     if (GlobalVariableChange) {
       DIC->replaceGlobalVariables(MDTuple::get(C, LiveGlobalVariables));
       Changed = true;
