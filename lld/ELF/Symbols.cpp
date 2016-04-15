@@ -121,6 +121,9 @@ bool SymbolBody::isPreemptible() const {
   if (isShared())
     return true;
 
+  if (getVisibility() != STV_DEFAULT)
+    return false;
+
   if (isUndefined()) {
     if (!isWeak())
       return true;
@@ -136,8 +139,6 @@ bool SymbolBody::isPreemptible() const {
   }
 
   if (!Config->Shared)
-    return false;
-  if (getVisibility() != STV_DEFAULT)
     return false;
   if (Config->Bsymbolic || (Config->BsymbolicFunctions && isFunc()))
     return false;

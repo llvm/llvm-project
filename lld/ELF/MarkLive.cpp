@@ -99,12 +99,13 @@ template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
 
   auto MarkSymbol = [&](SymbolBody *Sym) {
     if (Sym)
-      if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&Sym->repl()))
+      if (auto *D = dyn_cast<DefinedRegular<ELFT>>(Sym))
         Enqueue(D->Section);
   };
 
   // Add GC root symbols.
-  MarkSymbol(Config->EntrySym);
+  if (Config->EntrySym)
+    MarkSymbol(Config->EntrySym->Body);
   MarkSymbol(Symtab->find(Config->Init));
   MarkSymbol(Symtab->find(Config->Fini));
   for (StringRef S : Config->Undefined)

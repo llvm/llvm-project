@@ -220,8 +220,12 @@ template <class ELFT> void Writer<ELFT>::run() {
   } else {
     createPhdrs();
     fixHeaders();
-    fixSectionAlignments();
-    assignAddresses();
+    if (Script->Exists) {
+      Script->assignAddresses(OutputSections);
+    } else {
+      fixSectionAlignments();
+      assignAddresses();
+    }
     assignFileOffsets();
     setPhdrs();
     fixAbsoluteSymbols();
@@ -411,6 +415,16 @@ static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
   return 0;
 }
 
+// True if non-preemptable symbol always has the same value regardless of where
+// the DSO is loaded.
+template <class ELFT> static bool isAbsolute(const SymbolBody &Body) {
+  if (Body.isUndefined() && Body.isWeak())
+    return true; // always 0
+  if (const auto *DR = dyn_cast<DefinedRegular<ELFT>>(&Body))
+    return DR->Section == nullptr; // Absolute symbol.
+  return false;
+}
+
 // The reason we have to do this early scan is as follows
 // * To mmap the output file, we need to know the size
 // * For that, we need to know how many dynamic relocs we will have.
@@ -578,16 +592,12 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
         continue;
 
-      if (Preemptible || Config->Pic) {
+      if (Preemptible || (Config->Pic && !isAbsolute<ELFT>(Body))) {
         uint32_t DynType;
         if (Body.isTls())
           DynType = Target->TlsGotRel;
         else if (Preemptible)
           DynType = Target->GotRel;
-        else if (Body.isUndefined())
-          // Weak undefined symbols evaluate to zero, so don't create
-          // relocations for them.
-          continue;
         else
           DynType = Target->RelativeRel;
         AddDyn({DynType, Out<ELFT>::Got, Body.getGotOffset<ELFT>(),
@@ -618,7 +628,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     // can process some of it and and just ask the dynamic linker to add the
     // load address.
     if (!Config->Pic || Target->isRelRelative(Type) || Expr == R_PC ||
-        Expr == R_SIZE) {
+        Expr == R_SIZE || isAbsolute<ELFT>(Body)) {
       if (Config->EMachine == EM_MIPS && Body.isLocal() &&
           (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32))
         Expr = R_MIPS_GP0;
@@ -1535,10 +1545,11 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // sections. These are special, we do not include them into output sections
 // list, but have them to simplify the code.
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
-  Out<ELFT>::ElfHeader->setVA(Target->getVAStart());
+  uintX_t BaseVA = Script->Exists ? 0 : Target->getVAStart();
+  Out<ELFT>::ElfHeader->setVA(BaseVA);
   Out<ELFT>::ElfHeader->setFileOffset(0);
   uintX_t Off = Out<ELFT>::ElfHeader->getSize();
-  Out<ELFT>::ProgramHeaders->setVA(Off + Target->getVAStart());
+  Out<ELFT>::ProgramHeaders->setVA(Off + BaseVA);
   Out<ELFT>::ProgramHeaders->setFileOffset(Off);
 }
 
@@ -1628,8 +1639,8 @@ static uint32_t getMipsEFlags() {
 }
 
 template <class ELFT> static typename ELFT::uint getEntryAddr() {
-  if (SymbolBody *B = Config->EntrySym)
-    return B->repl().getVA<ELFT>();
+  if (Symbol *S = Config->EntrySym)
+    return S->Body->getVA<ELFT>();
   if (Config->EntryAddr != uint64_t(-1))
     return Config->EntryAddr;
   return 0;

@@ -428,7 +428,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     // Set either EntryAddr (if S is a number) or EntrySym (otherwise).
     StringRef S = Config->Entry;
     if (S.getAsInteger(0, Config->EntryAddr))
-      Config->EntrySym = Symtab.addUndefined(S);
+      Config->EntrySym = Symtab.addUndefined(S)->getSymbol();
   }
 
   for (std::unique_ptr<InputFile> &F : Files)

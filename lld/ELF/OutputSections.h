@@ -138,7 +138,6 @@ private:
   // Output sections referenced by MIPS GOT relocations.
   llvm::SmallPtrSet<const OutputSectionBase<ELFT> *, 10> MipsOutSections;
   llvm::DenseMap<uintX_t, size_t> MipsLocalGotPos;
-
 };
 
 template <class ELFT>

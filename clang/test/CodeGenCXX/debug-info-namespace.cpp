@@ -67,10 +67,7 @@ void B::func_fwd() {}
 // CHECK: [[BAR:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "bar",
 // CHECK-SAME:                               line: 6
 // CHECK-SAME:                               DIFlagFwdDecl
-// CHECK: [[F1:![0-9]+]] = distinct !DISubprogram(name: "f1",{{.*}} line: 4
-// CHECK-SAME:                           isDefinition: true
-// CHECK: [[FUNC:![0-9]+]] = distinct !DISubprogram(name: "func",{{.*}} isDefinition: true
-// CHECK: [[FUNC_FWD:![0-9]+]] = distinct !DISubprogram(name: "func_fwd",{{.*}} line: 47,{{.*}} isDefinition: true
+
 // CHECK: [[I:![0-9]+]] = !DIGlobalVariable(name: "i",{{.*}} scope: [[NS]],
 // CHECK: [[VAR_FWD:![0-9]+]] = !DIGlobalVariable(name: "var_fwd",{{.*}} scope: [[NS]],
 // CHECK-SAME:                                    line: 44
@@ -82,11 +79,15 @@ void B::func_fwd() {}
 // CHECK: [[M3]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, name: "E", scope: [[CU]], entity: [[CTXT]], line: 19)
 // CHECK: [[M4]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: [[LEX2:![0-9]+]], entity: [[NS]], line: 23)
 // CHECK: [[LEX2]] = distinct !DILexicalBlock(scope: [[LEX1:![0-9]+]], file: [[FOOCPP]],
-// CHECK: [[LEX1]] = distinct !DILexicalBlock(scope: [[FUNC]], file: [[FOOCPP]],
+// CHECK: [[LEX1]] = distinct !DILexicalBlock(scope: [[FUNC:![0-9]+]], file: [[FOOCPP]],
+// CHECK: [[FUNC]] = distinct !DISubprogram(name: "func",{{.*}} isDefinition: true
+
 // CHECK: [[M5]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: [[FUNC]], entity: [[CTXT]],
 // CHECK: [[M6]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[FOO:!"_ZTSN1A1B3fooE"]], line: 27)
 // CHECK: [[M7]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[BAR:!"_ZTSN1A1B3barE"]]
-// CHECK: [[M8]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[F1]]
+// CHECK: [[M8]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[F1:![0-9]+]]
+// CHECK: [[F1:![0-9]+]] = distinct !DISubprogram(name: "f1",{{.*}} line: 4
+// CHECK-SAME:                           isDefinition: true
 // CHECK: [[M9]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[I]]
 // CHECK: [[M10]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[BAZ:![0-9]+]]
 // CHECK: [[BAZ]] = !DIDerivedType(tag: DW_TAG_typedef, name: "baz", scope: [[NS]], file: [[FOOCPP]],
@@ -100,6 +101,7 @@ void B::func_fwd() {}
 // CHECK-SAME:                          scope: [[NS]], file: [[FOOCPP]], line: 9
 // CHECK: [[M15]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[VAR_FWD:![0-9]+]]
 // CHECK: [[M16]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[FUNC_FWD:![0-9]+]]
+// CHECK: [[FUNC_FWD]] = distinct !DISubprogram(name: "func_fwd",{{.*}} line: 47,{{.*}} isDefinition: true
 // CHECK: [[M17]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[CTXT]], entity: [[I]]
 
 // CHECK-GMLT: [[CU:![0-9]+]] = distinct !DICompileUnit(

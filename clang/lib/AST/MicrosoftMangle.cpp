@@ -1444,9 +1444,6 @@ void MicrosoftCXXNameMangler::manglePointerExtQualifiers(Qualifiers Quals,
       (PointeeType.isNull() || !PointeeType->isFunctionType()))
     Out << 'E';
 
-  if (!PointeeType.isNull() && PointeeType.getLocalQualifiers().hasUnaligned())
-    Out << 'F';
-
   if (HasRestrict)
     Out << 'I';
 }
@@ -1580,8 +1577,6 @@ void MicrosoftCXXNameMangler::mangleType(QualType T, SourceRange Range,
     }
     break;
   case QMM_Result:
-    // Presence of __unaligned qualifier shouldn't affect mangling here.
-    Quals.removeUnaligned();
     if ((!IsPointer && Quals) || isa<TagType>(T)) {
       Out << '?';
       mangleQualifiers(Quals, false);
@@ -1756,7 +1751,6 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     Out << "$$T";
     break;
 
-  case BuiltinType::Float128:
   case BuiltinType::Half: {
     DiagnosticsEngine &Diags = Context.getDiags();
     unsigned DiagID = Diags.getCustomDiagID(

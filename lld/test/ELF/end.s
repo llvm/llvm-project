@@ -36,13 +36,13 @@
 // NOBSS-NEXT:       SHF_ALLOC
 // NOBSS-NEXT:       SHF_WRITE
 // NOBSS-NEXT:     ]
-// NOBSS-NEXT:     Address: 0x12000
+// NOBSS-NEXT:     Address: 0x159
 // NOBSS-NEXT:     Offset:
 // NOBSS-NEXT:     Size: 2
 // NOBSS: ]
 // NOBSS: Symbols [
 // NOBSS:     Name: _end
-// NOBSS-NEXT:     Value: 0x12002
+// NOBSS-NEXT:     Value: 0x15B
 // NOBSS: ]
 
 // If the layout of the sections is changed, "_end" should point to the end of allocated address space.
@@ -60,13 +60,13 @@
 // TEXTATEND-NEXT:       SHF_ALLOC
 // TEXTATEND-NEXT:       SHF_EXECINSTR
 // TEXTATEND-NEXT:     ]
-// TEXTATEND-NEXT:     Address: 0x12000
+// TEXTATEND-NEXT:     Address: 0x160
 // TEXTATEND-NEXT:     Offset:
 // TEXTATEND-NEXT:     Size: 1
 // TEXTATEND: ]
 // TEXTATEND: Symbols [
 // TEXTATEND:     Name: _end
-// TEXTATEND-NEXT:     Value: 0x12001
+// TEXTATEND-NEXT:     Value: 0x161
 // TEXTATEND: ]
 
 .global _start,_end

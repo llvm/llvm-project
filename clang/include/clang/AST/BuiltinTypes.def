@@ -133,9 +133,6 @@ FLOATING_TYPE(Double, DoubleTy)
 // 'long double'
 FLOATING_TYPE(LongDouble, LongDoubleTy)
 
-// '__float128'
-FLOATING_TYPE(Float128, Float128Ty)
-
 //===- Language-specific types --------------------------------------------===//
 
 // This is the type of C++0x 'nullptr'.

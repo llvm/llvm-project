@@ -24,7 +24,7 @@ OutputFilename("o", cl::desc("Output filename"),
                cl::value_desc("filename"));
 
 int main(int argc, char **argv) {
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 
   cl::ParseCommandLineOptions(argc, argv, "libclc builtin preparation tool\n");

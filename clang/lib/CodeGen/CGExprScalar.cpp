@@ -1796,19 +1796,15 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       amt = llvm::ConstantFP::get(VMContext,
                                   llvm::APFloat(static_cast<double>(amount)));
     else {
-      // Remaining types are Half, LongDouble or __float128. Convert from float.
+      // Remaining types are either Half or LongDouble.  Convert from float.
       llvm::APFloat F(static_cast<float>(amount));
       bool ignored;
-      const llvm::fltSemantics *FS;
       // Don't use getFloatTypeSemantics because Half isn't
       // necessarily represented using the "half" LLVM type.
-      if (value->getType()->isFP128Ty())
-        FS = &CGF.getTarget().getFloat128Format();
-      else if (value->getType()->isHalfTy())
-        FS = &CGF.getTarget().getHalfFormat();
-      else
-        FS = &CGF.getTarget().getLongDoubleFormat();
-      F.convert(*FS, llvm::APFloat::rmTowardZero, &ignored);
+      F.convert(value->getType()->isHalfTy()
+                    ? CGF.getTarget().getHalfFormat()
+                    : CGF.getTarget().getLongDoubleFormat(),
+                llvm::APFloat::rmTowardZero, &ignored);
       amt = llvm::ConstantFP::get(VMContext, F);
     }
     value = Builder.CreateFAdd(value, amt, isInc ? "inc" : "dec");

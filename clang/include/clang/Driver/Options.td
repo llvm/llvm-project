@@ -1505,10 +1505,6 @@ def minvariant_function_descriptors :
 def mno_invariant_function_descriptors :
   Flag<["-"], "mno-invariant-function-descriptors">,
   Group<m_ppc_Features_Group>;
-def mfloat128: Flag<["-"], "mfloat128">,
-    Group<m_ppc_Features_Group>;
-def mno_float128 : Flag<["-"], "mno-float128">,
-    Group<m_ppc_Features_Group>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable AltiVec vector initializer syntax">;

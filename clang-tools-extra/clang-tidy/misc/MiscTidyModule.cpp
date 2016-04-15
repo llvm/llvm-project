@@ -29,7 +29,9 @@
 #include "NewDeleteOverloadsCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
 #include "NonCopyableObjects.h"
+#include "PointerAndIntegralOperationCheck.h"
 #include "SizeofContainerCheck.h"
+#include "SizeofExpressionCheck.h"
 #include "StaticAssertCheck.h"
 #include "StringIntegerAssignmentCheck.h"
 #include "StringLiteralWithEmbeddedNulCheck.h"
@@ -88,7 +90,11 @@ public:
         "misc-noexcept-move-constructor");
     CheckFactories.registerCheck<NonCopyableObjectsCheck>(
         "misc-non-copyable-objects");
+    CheckFactories.registerCheck<PointerAndIntegralOperationCheck>(
+        "misc-pointer-and-integral-operation");
     CheckFactories.registerCheck<SizeofContainerCheck>("misc-sizeof-container");
+    CheckFactories.registerCheck<SizeofExpressionCheck>(
+        "misc-sizeof-expression");
     CheckFactories.registerCheck<StaticAssertCheck>(
         "misc-static-assert");
     CheckFactories.registerCheck<StringIntegerAssignmentCheck>(

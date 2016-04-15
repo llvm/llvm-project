@@ -170,11 +170,3 @@ void myprintf(const char *f, ...) {
     __va_start(ap, f); // expected-warning {{incompatible pointer types passing 'my_va_list'}}
   }
 }
-
-// __unaligned handling
-void test_unaligned() {
-  __unaligned int *p1 = 0;
-  int *p2 = p1; // expected-warning {{initializing 'int *' with an expression of type '__unaligned int *' discards qualifiers}}
-  __unaligned int *p3 = p2;
-}
-

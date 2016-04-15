@@ -50,15 +50,6 @@ inline int add3(int x) {
 // CHECK: [[ELEM_X]] = !DIDerivedType(tag: DW_TAG_member, name: "x", scope: !"_ZTS4elem"
 // CHECK-SAME:                        baseType: !"_ZTS4virtI4elemE"
 
-// Check that the member function template specialization and implicit special
-// members (the default ctor) refer to their class by scope, even though they
-// didn't appear in the class's member list (C_MEM). This prevents the functions
-// from being added to type units, while still appearing in the type
-// declaration/reference in the compile unit.
-// CHECK: !DISubprogram(name: "MyClass"
-// CHECK-SAME:          scope: !"_ZTS7MyClass"
-// CHECK: !DISubprogram(name: "add<2>"
-// CHECK-SAME:          scope: !"_ZTS7MyClass"
 
 template<typename T>
 struct outer {
@@ -98,3 +89,13 @@ inline void f1() {
 void f2() {
   virt<elem> d; // emit 'virt<elem>'
 }
+
+// Check that the member function template specialization and implicit special
+// members (the default ctor) refer to their class by scope, even though they
+// didn't appear in the class's member list (C_MEM). This prevents the functions
+// from being added to type units, while still appearing in the type
+// declaration/reference in the compile unit.
+// CHECK: !DISubprogram(name: "MyClass"
+// CHECK-SAME:          scope: !"_ZTS7MyClass"
+// CHECK: !DISubprogram(name: "add<2>"
+// CHECK-SAME:          scope: !"_ZTS7MyClass"

@@ -20,7 +20,7 @@ namespace lld {
 namespace elf {
 
 class InputFile;
-class SymbolBody;
+struct Symbol;
 
 enum ELFKind {
   ELFNoneKind,
@@ -37,7 +37,7 @@ enum class BuildIdKind { None, Fnv1, Md5, Sha1 };
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
 struct Configuration {
-  SymbolBody *EntrySym = nullptr;
+  Symbol *EntrySym = nullptr;
   InputFile *FirstElf = nullptr;
   llvm::StringRef DynamicLinker;
   llvm::StringRef Entry;
