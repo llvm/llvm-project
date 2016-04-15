@@ -695,25 +695,6 @@ void DwarfCompileUnit::finishSubprogramDefinition(const DISubprogram *SP) {
       applySubprogramAttributesToDefinition(SP, *D);
   }
 }
-void DwarfCompileUnit::collectDeadVariables(const DISubprogram *SP) {
-  assert(SP && "CU's subprogram list contains a non-subprogram");
-  assert(SP->isDefinition() &&
-         "CU's subprogram list contains a subprogram declaration");
-  auto Variables = SP->getVariables();
-  if (Variables.size() == 0)
-    return;
-
-  DIE *SPDIE = DU->getAbstractSPDies().lookup(SP);
-  if (!SPDIE)
-    SPDIE = getDIE(SP);
-  assert(SPDIE);
-  for (const DILocalVariable *DV : Variables) {
-    DbgVariable NewVar(DV, /* IA */ nullptr, DD);
-    auto VariableDie = constructVariableDIE(NewVar);
-    applyVariableAttributes(NewVar, *VariableDie);
-    SPDIE->addChild(std::move(VariableDie));
-  }
-}
 
 void DwarfCompileUnit::emitHeader(bool UseOffsets) {
   // Don't bother labeling the .dwo unit, as its offset isn't used.
