@@ -134,6 +134,8 @@ def should_build_llvm ():
 
 def do_symlink (source_path, link_path):
     print "Symlinking " + source_path + " to " + link_path
+    if os.path.islink(link_path):
+        os.remove(link_path)
     if not os.path.exists(link_path):
         os.symlink(source_path, link_path)
 
