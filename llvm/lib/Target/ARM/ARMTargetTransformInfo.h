@@ -54,6 +54,10 @@ public:
 
   bool enableInterleavedAccessVectorization() { return true; }
 
+  bool isFPVectorizationPotentiallyUnsafe() {
+    return !ST->hasFPARMv8() && !ST->isTargetDarwin();
+  }
+
   /// \name Scalar TTI Implementations
   /// @{
 

@@ -30,6 +30,7 @@ protected:
   std::unique_ptr<BranchProbabilityInfo> BPI;
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<LoopInfo> LI;
+  LLVMContext C;
 
   BlockFrequencyInfo buildBFI(Function &F) {
     DT.reset(new DominatorTree(F));
@@ -50,7 +51,6 @@ protected:
                               "  %y2 = phi i32 [0, %bb1], [1, %bb2] \n"
                               "  ret i32 %y2\n"
                               "}\n";
-    LLVMContext &C = getGlobalContext();
     SMDiagnostic Err;
     return parseAssemblyString(ModuleStrig, Err, C);
   }

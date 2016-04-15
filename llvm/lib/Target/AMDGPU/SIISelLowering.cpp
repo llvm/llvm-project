@@ -37,6 +37,16 @@
 
 using namespace llvm;
 
+static unsigned findFirstFreeSGPR(CCState &CCInfo) {
+  unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
+  for (unsigned Reg = 0; Reg < NumSGPRs; ++Reg) {
+    if (!CCInfo.isAllocated(AMDGPU::SGPR0 + Reg)) {
+      return AMDGPU::SGPR0 + Reg;
+    }
+  }
+  llvm_unreachable("Cannot allocate sgpr");
+}
+
 SITargetLowering::SITargetLowering(TargetMachine &TM,
                                    const AMDGPUSubtarget &STI)
     : AMDGPUTargetLowering(TM, STI) {
@@ -712,6 +722,15 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (!AMDGPU::isShader(CallConv)) {
     getOriginalFunctionArgs(DAG, DAG.getMachineFunction().getFunction(), Ins,
                             Splits);
+
+    assert(Info->hasWorkGroupIDX() && Info->hasWorkItemIDX());
+  } else {
+    assert(!Info->hasPrivateSegmentBuffer() && !Info->hasDispatchPtr() &&
+           !Info->hasKernargSegmentPtr() && !Info->hasFlatScratchInit() &&
+           !Info->hasWorkGroupIDX() && !Info->hasWorkGroupIDY() &&
+           !Info->hasWorkGroupIDZ() && !Info->hasWorkGroupInfo() &&
+           !Info->hasWorkItemIDX() && !Info->hasWorkItemIDY() &&
+           !Info->hasWorkItemIDZ());
   }
 
   // FIXME: How should these inputs interact with inreg / custom SGPR inputs?
@@ -834,8 +853,7 @@ SDValue SITargetLowering::LowerFormalArguments(
     unsigned Reg = Info->addWorkGroupIDX();
     MF.addLiveIn(Reg, &AMDGPU::SReg_32RegClass);
     CCInfo.AllocateReg(Reg);
-  } else
-    llvm_unreachable("work group id x is always enabled");
+  }
 
   if (Info->hasWorkGroupIDY()) {
     unsigned Reg = Info->addWorkGroupIDY();
@@ -857,8 +875,13 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   if (Info->hasPrivateSegmentWaveByteOffset()) {
     // Scratch wave offset passed in system SGPR.
-    unsigned PrivateSegmentWaveByteOffsetReg
-      = Info->addPrivateSegmentWaveByteOffset();
+    unsigned PrivateSegmentWaveByteOffsetReg;
+
+    if (AMDGPU::isShader(CallConv)) {
+      PrivateSegmentWaveByteOffsetReg = findFirstFreeSGPR(CCInfo);
+      Info->setPrivateSegmentWaveByteOffset(PrivateSegmentWaveByteOffsetReg);
+    } else
+      PrivateSegmentWaveByteOffsetReg = Info->addPrivateSegmentWaveByteOffset();
 
     MF.addLiveIn(PrivateSegmentWaveByteOffsetReg, &AMDGPU::SGPR_32RegClass);
     CCInfo.AllocateReg(PrivateSegmentWaveByteOffsetReg);
@@ -923,8 +946,7 @@ SDValue SITargetLowering::LowerFormalArguments(
     unsigned Reg = TRI->getPreloadedValue(MF, SIRegisterInfo::WORKITEM_ID_X);
     MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass);
     CCInfo.AllocateReg(Reg);
-  } else
-    llvm_unreachable("workitem id x should always be enabled");
+  }
 
   if (Info->hasWorkItemIDY()) {
     unsigned Reg = TRI->getPreloadedValue(MF, SIRegisterInfo::WORKITEM_ID_Y);
@@ -1081,10 +1103,18 @@ unsigned SITargetLowering::getRegisterByName(const char* RegName, EVT VT,
                            + StringRef(RegName) + "\"."));
 }
 
-MachineBasicBlock * SITargetLowering::EmitInstrWithCustomInserter(
-    MachineInstr * MI, MachineBasicBlock * BB) const {
-
+MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
+  MachineInstr *MI, MachineBasicBlock *BB) const {
   switch (MI->getOpcode()) {
+  case AMDGPU::SI_INIT_M0: {
+    const SIInstrInfo *TII =
+      static_cast<const SIInstrInfo *>(Subtarget->getInstrInfo());
+    BuildMI(*BB, MI->getIterator(), MI->getDebugLoc(),
+            TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+      .addOperand(MI->getOperand(0));
+    MI->eraseFromParent();
+    break;
+  }
   case AMDGPU::BRANCH:
     return BB;
   case AMDGPU::GET_GROUPSTATICSIZE: {
@@ -1373,19 +1403,18 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
 
 SDValue SITargetLowering::copyToM0(SelectionDAG &DAG, SDValue Chain, SDLoc DL,
                                    SDValue V) const {
+  // We can't use S_MOV_B32 directly, because there is no way to specify m0 as
+  // the destination register.
+  //
   // We can't use CopyToReg, because MachineCSE won't combine COPY instructions,
   // so we will end up with redundant moves to m0.
   //
-  // We can't use S_MOV_B32, because there is no way to specify m0 as the
-  // destination register.
-  //
-  // We have to use them both.  Machine cse will combine all the S_MOV_B32
-  // instructions and the register coalescer eliminate the extra copies.
-  SDNode *M0 = DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, V.getValueType(), V);
-  return DAG.getCopyToReg(Chain, DL, DAG.getRegister(AMDGPU::M0, MVT::i32),
-                          SDValue(M0, 0), SDValue()); // Glue
-                                                      // A Null SDValue creates
-                                                      // a glue result.
+  // We use a pseudo to ensure we emit s_mov_b32 with m0 as the direct result.
+
+  // A Null SDValue creates a glue result.
+  SDNode *M0 = DAG.getMachineNode(AMDGPU::SI_INIT_M0, DL, MVT::Other, MVT::Glue,
+                                  V, Chain);
+  return SDValue(M0, 0);
 }
 
 SDValue SITargetLowering::lowerImplicitZextParam(SelectionDAG &DAG,
@@ -1785,7 +1814,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     // size.
     switch (Subtarget->getMaxPrivateElementSize()) {
     case 4:
-      return ScalarizeVectorLoad(Op, DAG);
+      return scalarizeVectorLoad(Load, DAG);
     case 8:
       if (NumElements > 2)
         return SplitVectorLoad(Op, DAG);
@@ -2018,7 +2047,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   case AMDGPUAS::PRIVATE_ADDRESS: {
     switch (Subtarget->getMaxPrivateElementSize()) {
     case 4:
-      return ScalarizeVectorStore(Op, DAG);
+      return scalarizeVectorStore(Store, DAG);
     case 8:
       if (NumElements > 2)
         return SplitVectorStore(Op, DAG);

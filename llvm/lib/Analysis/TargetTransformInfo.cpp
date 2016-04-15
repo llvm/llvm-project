@@ -66,6 +66,10 @@ int TargetTransformInfo::getCallCost(const Function *F,
   return Cost;
 }
 
+unsigned TargetTransformInfo::getInliningThresholdMultiplier() const {
+  return TTIImpl->getInliningThresholdMultiplier();
+}
+
 int TargetTransformInfo::getIntrinsicCost(
     Intrinsic::ID IID, Type *RetTy, ArrayRef<const Value *> Arguments) const {
   int Cost = TTIImpl->getIntrinsicCost(IID, RetTy, Arguments);
@@ -170,6 +174,10 @@ bool TargetTransformInfo::enableAggressiveInterleaving(bool LoopHasReductions) c
 
 bool TargetTransformInfo::enableInterleavedAccessVectorization() const {
   return TTIImpl->enableInterleavedAccessVectorization();
+}
+
+bool TargetTransformInfo::isFPVectorizationPotentiallyUnsafe() const {
+  return TTIImpl->isFPVectorizationPotentiallyUnsafe();
 }
 
 TargetTransformInfo::PopcntSupportKind

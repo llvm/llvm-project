@@ -29,7 +29,7 @@ AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {
 }
 
-bool AArch64CallLowering::LowerReturn(MachineIRBuilder &MIRBuilder,
+bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                         const Value *Val, unsigned VReg) const {
   MachineInstr *Return = MIRBuilder.buildInstr(AArch64::RET_ReallyLR);
   assert(Return && "Unable to build a return instruction?!");
@@ -53,7 +53,7 @@ bool AArch64CallLowering::LowerReturn(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
-bool AArch64CallLowering::LowerFormalArguments(
+bool AArch64CallLowering::lowerFormalArguments(
     MachineIRBuilder &MIRBuilder, const Function::ArgumentListType &Args,
     const SmallVectorImpl<unsigned> &VRegs) const {
   MachineFunction &MF = MIRBuilder.getMF();

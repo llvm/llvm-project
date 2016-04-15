@@ -124,6 +124,10 @@ static unsigned getIntegerAttribute(const Function &F, const char *Name,
   return Result;
 }
 
+unsigned getMaximumWorkGroupSize(const Function &F) {
+  return getIntegerAttribute(F, "amdgpu-max-work-group-size", 256);
+}
+
 unsigned getInitialPSInputAddr(const Function &F) {
   return getIntegerAttribute(F, "InitialPSInputAddr", 0);
 }

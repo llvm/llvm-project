@@ -251,7 +251,7 @@ default case for our existing binary operator node:
       case '<':
         L = Builder.CreateFCmpULT(L, R, "cmptmp");
         // Convert bool 0/1 to double 0.0 or 1.0
-        return Builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),
+        return Builder.CreateUIToFP(L, Type::getDoubleTy(LLVMContext),
                                     "booltmp");
       default:
         break;
@@ -288,7 +288,7 @@ The final piece of code we are missing, is a bit of top-level magic:
         BinopPrecedence[Proto->getOperatorName()] = Proto->getBinaryPrecedence();
 
       // Create a new basic block to start insertion into.
-      BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", TheFunction);
+      BasicBlock *BB = BasicBlock::Create(LLVMContext, "entry", TheFunction);
       Builder.SetInsertPoint(BB);
 
       if (Value *RetVal = Body->codegen()) {

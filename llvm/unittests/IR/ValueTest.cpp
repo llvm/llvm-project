@@ -45,7 +45,7 @@ TEST(ValueTest, UsedInBasicBlock) {
 }
 
 TEST(GlobalTest, CreateAddressSpace) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("TestModule", Ctx));
   Type *Int8Ty = Type::getInt8Ty(Ctx);
   Type *Int32Ty = Type::getInt32Ty(Ctx);
@@ -92,7 +92,7 @@ TEST(GlobalTest, CreateAddressSpace) {
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 TEST(GlobalTest, AlignDeath) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("TestModule", Ctx));
   Type *Int32Ty = Type::getInt32Ty(Ctx);
   GlobalVariable *Var =

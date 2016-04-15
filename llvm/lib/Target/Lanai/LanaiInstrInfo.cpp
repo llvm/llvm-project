@@ -23,10 +23,11 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 
+using namespace llvm;
+
 #define GET_INSTRINFO_CTOR_DTOR
 #include "LanaiGenInstrInfo.inc"
 
-namespace llvm {
 LanaiInstrInfo::LanaiInstrInfo()
     : LanaiGenInstrInfo(Lanai::ADJCALLSTACKDOWN, Lanai::ADJCALLSTACKUP),
       RegisterInfo() {}
@@ -82,6 +83,38 @@ void LanaiInstrInfo::loadRegFromStackSlot(
       .addFrameIndex(FrameIndex)
       .addImm(0)
       .addImm(LPAC::ADD);
+}
+
+bool LanaiInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr *MIa,
+                                                     MachineInstr *MIb,
+                                                     AliasAnalysis *AA) const {
+  assert(MIa && MIa->mayLoadOrStore() && "MIa must be a load or store.");
+  assert(MIb && MIb->mayLoadOrStore() && "MIb must be a load or store.");
+
+  if (MIa->hasUnmodeledSideEffects() || MIb->hasUnmodeledSideEffects() ||
+      MIa->hasOrderedMemoryRef() || MIb->hasOrderedMemoryRef())
+    return false;
+
+  // Retrieve the base register, offset from the base register and width. Width
+  // is the size of memory that is being loaded/stored (e.g. 1, 2, 4).  If
+  // base registers are identical, and the offset of a lower memory access +
+  // the width doesn't overlap the offset of a higher memory access,
+  // then the memory accesses are different.
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  unsigned BaseRegA = 0, BaseRegB = 0;
+  int64_t OffsetA = 0, OffsetB = 0;
+  unsigned int WidthA = 0, WidthB = 0;
+  if (getMemOpBaseRegImmOfsWidth(MIa, BaseRegA, OffsetA, WidthA, TRI) &&
+      getMemOpBaseRegImmOfsWidth(MIb, BaseRegB, OffsetB, WidthB, TRI)) {
+    if (BaseRegA == BaseRegB) {
+      int LowOffset = std::min(OffsetA, OffsetB);
+      int HighOffset = std::max(OffsetA, OffsetB);
+      int LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
+      if (LowOffset + LowWidth <= HighOffset)
+        return true;
+    }
+  }
+  return false;
 }
 
 bool LanaiInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
@@ -321,4 +354,61 @@ unsigned LanaiInstrInfo::isStoreToStackSlot(const MachineInstr *MI,
     }
   return 0;
 }
-} // namespace llvm
+
+bool LanaiInstrInfo::getMemOpBaseRegImmOfsWidth(
+    MachineInstr *LdSt, unsigned &BaseReg, int64_t &Offset, unsigned &Width,
+    const TargetRegisterInfo *TRI) const {
+  // Handle only loads/stores with base register followed by immediate offset
+  // and with add as ALU op.
+  if (LdSt->getNumOperands() != 4)
+    return false;
+  if (!LdSt->getOperand(1).isReg() || !LdSt->getOperand(2).isImm() ||
+      !(LdSt->getOperand(3).isImm() &&
+        LdSt->getOperand(3).getImm() == LPAC::ADD))
+    return false;
+
+  switch (LdSt->getOpcode()) {
+  default:
+    return false;
+  case Lanai::LDW_RI:
+  case Lanai::LDW_RR:
+  case Lanai::SW_RR:
+  case Lanai::SW_RI:
+    Width = 4;
+    break;
+  case Lanai::LDHs_RI:
+  case Lanai::LDHz_RI:
+  case Lanai::STH_RI:
+    Width = 2;
+    break;
+  case Lanai::LDBs_RI:
+  case Lanai::LDBz_RI:
+  case Lanai::STB_RI:
+    Width = 1;
+    break;
+  }
+
+  BaseReg = LdSt->getOperand(1).getReg();
+  Offset = LdSt->getOperand(2).getImm();
+  return true;
+}
+
+bool LanaiInstrInfo::getMemOpBaseRegImmOfs(
+    MachineInstr *LdSt, unsigned &BaseReg, int64_t &Offset,
+    const TargetRegisterInfo *TRI) const {
+  switch (LdSt->getOpcode()) {
+  default:
+    return false;
+  case Lanai::LDW_RI:
+  case Lanai::LDW_RR:
+  case Lanai::SW_RR:
+  case Lanai::SW_RI:
+  case Lanai::LDHs_RI:
+  case Lanai::LDHz_RI:
+  case Lanai::STH_RI:
+  case Lanai::LDBs_RI:
+  case Lanai::LDBz_RI:
+    unsigned Width;
+    return getMemOpBaseRegImmOfsWidth(LdSt, BaseReg, Offset, Width, TRI);
+  }
+}

@@ -23,7 +23,7 @@ namespace llvm {
 namespace {
 
 TEST(VerifierTest, Branch_i1) {
-  LLVMContext &C = getGlobalContext();
+  LLVMContext C;
   Module M("M", C);
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
   Function *F = cast<Function>(M.getOrInsertFunction("foo", FTy));
@@ -46,7 +46,7 @@ TEST(VerifierTest, Branch_i1) {
 }
 
 TEST(VerifierTest, InvalidRetAttribute) {
-  LLVMContext &C = getGlobalContext();
+  LLVMContext C;
   Module M("M", C);
   FunctionType *FTy = FunctionType::get(Type::getInt32Ty(C), /*isVarArg=*/false);
   Function *F = cast<Function>(M.getOrInsertFunction("foo", FTy));
@@ -62,7 +62,7 @@ TEST(VerifierTest, InvalidRetAttribute) {
 }
 
 TEST(VerifierTest, CrossModuleRef) {
-  LLVMContext &C = getGlobalContext();
+  LLVMContext C;
   Module M1("M1", C);
   Module M2("M2", C);
   Module M3("M3", C);
@@ -121,7 +121,7 @@ TEST(VerifierTest, CrossModuleRef) {
 }
 
 TEST(VerifierTest, CrossModuleMetadataRef) {
-  LLVMContext &C = getGlobalContext();
+  LLVMContext C;
   Module M1("M1", C);
   Module M2("M2", C);
   GlobalVariable *newGV =

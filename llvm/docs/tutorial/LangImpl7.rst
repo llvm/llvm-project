@@ -339,7 +339,7 @@ the function:
                                               const std::string &VarName) {
       IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
                      TheFunction->getEntryBlock().begin());
-      return TmpB.CreateAlloca(Type::getDoubleTy(getGlobalContext()), 0,
+      return TmpB.CreateAlloca(Type::getDoubleTy(LLVMContext), 0,
                                VarName.c_str());
     }
 
@@ -812,7 +812,7 @@ previous value that we replace in OldBindings.
           if (!InitVal)
             return nullptr;
         } else { // If not specified, use 0.0.
-          InitVal = ConstantFP::get(getGlobalContext(), APFloat(0.0));
+          InitVal = ConstantFP::get(LLVMContext, APFloat(0.0));
         }
 
         AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, VarName);

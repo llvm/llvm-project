@@ -45,6 +45,7 @@ bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);
 bool isReadOnlySegment(const GlobalValue *GV);
 
+unsigned getMaximumWorkGroupSize(const Function &F);
 unsigned getInitialPSInputAddr(const Function &F);
 
 bool isShader(CallingConv::ID cc);

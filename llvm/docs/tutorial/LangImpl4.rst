@@ -131,7 +131,8 @@ for us:
 
     void InitializeModuleAndPassManager(void) {
       // Open a new module.
-      TheModule = llvm::make_unique<Module>("my cool jit", getGlobalContext());
+      Context LLVMContext;
+      TheModule = llvm::make_unique<Module>("my cool jit", LLVMContext);
       TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
 
       // Create a new pass manager attached to it.

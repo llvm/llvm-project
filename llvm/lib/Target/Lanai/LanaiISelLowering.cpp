@@ -104,7 +104,7 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ROTR, MVT::i32, Expand);
   setOperationAction(ISD::ROTL, MVT::i32, Expand);
   setOperationAction(ISD::SHL_PARTS, MVT::i32, Expand);
-  setOperationAction(ISD::SRL_PARTS, MVT::i32, Expand);
+  setOperationAction(ISD::SRL_PARTS, MVT::i32, Custom);
   setOperationAction(ISD::SRA_PARTS, MVT::i32, Expand);
 
   setOperationAction(ISD::BSWAP, MVT::i32, Expand);
@@ -169,6 +169,8 @@ SDValue LanaiTargetLowering::LowerOperation(SDValue Op,
     return LowerSELECT_CC(Op, DAG);
   case ISD::SETCC:
     return LowerSETCC(Op, DAG);
+  case ISD::SRL_PARTS:
+    return LowerSRL_PARTS(Op, DAG);
   case ISD::VASTART:
     return LowerVASTART(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
@@ -1204,4 +1206,44 @@ SDValue LanaiTargetLowering::LowerJumpTable(SDValue Op,
     SDValue Result = DAG.getNode(ISD::OR, DL, MVT::i32, Hi, Lo);
     return Result;
   }
+}
+
+SDValue LanaiTargetLowering::LowerSRL_PARTS(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+  unsigned VTBits = VT.getSizeInBits();
+  SDLoc dl(Op);
+  SDValue ShOpLo = Op.getOperand(0);
+  SDValue ShOpHi = Op.getOperand(1);
+  SDValue ShAmt = Op.getOperand(2);
+
+  // Performs the following for a >> b:
+  //   unsigned r_high = a_high >> b;
+  //   r_high = (32 - b <= 0) ? 0 : r_high;
+  //
+  //   unsigned r_low = a_low >> b;
+  //   r_low = (32 - b <= 0) ? r_high : r_low;
+  //   r_low = (b == 0) ? r_low : r_low | (a_high << (32 - b));
+  //   return (unsigned long long)r_high << 32 | r_low;
+  // Note: This takes advantage of Lanai's shift behavior to avoid needing to
+  // mask the shift amount.
+
+  SDValue Zero = DAG.getConstant(0, dl, MVT::i32);
+  SDValue NegatedPlus32 = DAG.getNode(
+      ISD::SUB, dl, MVT::i32, DAG.getConstant(VTBits, dl, MVT::i32), ShAmt);
+  SDValue SetCC = DAG.getSetCC(dl, MVT::i32, NegatedPlus32, Zero, ISD::SETLE);
+
+  SDValue Hi = DAG.getNode(ISD::SRL, dl, MVT::i32, ShOpHi, ShAmt);
+  Hi = DAG.getSelect(dl, MVT::i32, SetCC, Zero, Hi);
+
+  SDValue Lo = DAG.getNode(ISD::SRL, dl, MVT::i32, ShOpLo, ShAmt);
+  Lo = DAG.getSelect(dl, MVT::i32, SetCC, Hi, Lo);
+  SDValue CarryBits =
+      DAG.getNode(ISD::SHL, dl, MVT::i32, ShOpHi, NegatedPlus32);
+  SDValue ShiftIsZero = DAG.getSetCC(dl, MVT::i32, ShAmt, Zero, ISD::SETEQ);
+  Lo = DAG.getSelect(dl, MVT::i32, ShiftIsZero, Lo,
+                     DAG.getNode(ISD::OR, dl, MVT::i32, Lo, CarryBits));
+
+  SDValue Ops[2] = {Lo, Hi};
+  return DAG.getMergeValues(Ops, dl);
 }

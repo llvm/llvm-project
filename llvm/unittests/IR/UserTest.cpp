@@ -94,9 +94,9 @@ TEST(UserTest, ValueOpIteration) {
 }
 
 TEST(UserTest, PersonalityUser) {
-  Module M("", getGlobalContext());
-  FunctionType *RetVoidTy =
-      FunctionType::get(Type::getVoidTy(getGlobalContext()), false);
+  LLVMContext Context;
+  Module M("", Context);
+  FunctionType *RetVoidTy = FunctionType::get(Type::getVoidTy(Context), false);
   Function *PersonalityF = Function::Create(
       RetVoidTy, GlobalValue::ExternalLinkage, "PersonalityFn", &M);
   Function *TestF =

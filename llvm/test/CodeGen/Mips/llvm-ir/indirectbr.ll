@@ -15,7 +15,7 @@
 define i32 @br(i8 *%addr) {
 ; ALL-LABEL: br:
 ; NOT-R6:        jr $4 # <MCInst #{{[0-9]+}} JR
-; R6C:           jic $4, 0 # <MCInst #{{[0-9]+}} JIC
+; R6C:           jrc $4 # <MCInst #{{[0-9]+}} JIC
 
 
 ; ALL: $BB0_1: # %L1

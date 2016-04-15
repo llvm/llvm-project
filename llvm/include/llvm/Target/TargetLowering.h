@@ -1422,6 +1422,13 @@ protected:
     PromoteToType[std::make_pair(Opc, OrigVT.SimpleTy)] = DestVT.SimpleTy;
   }
 
+  /// Convenience method to set an operation to Promote and specify the type
+  /// in a single call.
+  void setOperationPromotedToType(unsigned Opc, MVT OrigVT, MVT DestVT) {
+    setOperationAction(Opc, OrigVT, Promote);
+    AddPromotedToType(Opc, OrigVT, DestVT);
+  }
+
   /// Targets should invoke this method for each target independent node that
   /// they want to provide a custom DAG combiner for by implementing the
   /// PerformDAGCombine virtual method.

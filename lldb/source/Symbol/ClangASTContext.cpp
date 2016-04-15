@@ -90,6 +90,7 @@
 #include "lldb/Target/Target.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
+#include "Plugins/SymbolFile/PDB/PDBASTParser.h"
 
 #include <stdio.h>
 
@@ -3442,7 +3443,27 @@ ClangASTContext::IsObjCObjectOrInterfaceType (const CompilerType& type)
 }
 
 bool
-ClangASTContext::IsPolymorphicClass (lldb::opaque_compiler_type_t type)
+ClangASTContext::IsClassType(lldb::opaque_compiler_type_t type)
+{
+    if (!type)
+        return false;
+    clang::QualType qual_type(GetCanonicalQualType(type));
+    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+    return (type_class == clang::Type::Record);
+}
+
+bool
+ClangASTContext::IsEnumType(lldb::opaque_compiler_type_t type)
+{
+    if (!type)
+        return false;
+    clang::QualType qual_type(GetCanonicalQualType(type));
+    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+    return (type_class == clang::Type::Enum);
+}
+
+bool
+ClangASTContext::IsPolymorphicClass(lldb::opaque_compiler_type_t type)
 {
     if (type)
     {
@@ -5204,7 +5225,7 @@ ClangASTContext::GetNumChildren (lldb::opaque_compiler_type_t type, bool omit_em
 CompilerType
 ClangASTContext::GetBuiltinTypeByName (const ConstString &name)
 {
-    return GetBasicType (GetBasicTypeEnumeration (name));
+    return GetBasicType(GetBasicTypeEnumeration(name));
 }
 
 lldb::BasicType
@@ -9472,6 +9493,13 @@ ClangASTContext::GetDWARFParser()
     return m_dwarf_ast_parser_ap.get();
 }
 
+PDBASTParser *
+ClangASTContext::GetPDBParser()
+{
+    if (!m_pdb_ast_parser_ap)
+        m_pdb_ast_parser_ap.reset(new PDBASTParser(*this));
+    return m_pdb_ast_parser_ap.get();
+}
 
 bool
 ClangASTContext::LayoutRecordType(void *baton,

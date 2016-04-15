@@ -963,6 +963,9 @@ class LoopVectorizeHints {
   /// Return the loop metadata prefix.
   static StringRef Prefix() { return "llvm.loop."; }
 
+  /// True if there is any unsafe math in the loop.
+  bool PotentiallyUnsafe;
+
 public:
   enum ForceKind {
     FK_Undefined = -1, ///< Not selected.
@@ -975,7 +978,7 @@ public:
               HK_WIDTH),
         Interleave("interleave.count", DisableInterleaving, HK_UNROLL),
         Force("vectorize.enable", FK_Undefined, HK_FORCE),
-        TheLoop(L) {
+        PotentiallyUnsafe(false), TheLoop(L) {
     // Populate values with existing loop metadata.
     getHintsFromMetadata();
 
@@ -1071,6 +1074,19 @@ public:
     // reordering floating-point operations will change the way round-off
     // error accumulates in the loop.
     return getForce() == LoopVectorizeHints::FK_Enabled || getWidth() > 1;
+  }
+
+  bool isPotentiallyUnsafe() const {
+    // Avoid FP vectorization if the target is unsure about proper support.
+    // This may be related to the SIMD unit in the target not handling
+    // IEEE 754 FP ops properly, or bad single-to-double promotions.
+    // Otherwise, a sequence of vectorized loops, even without reduction,
+    // could lead to different end results on the destination vectors.
+    return getForce() != LoopVectorizeHints::FK_Enabled && PotentiallyUnsafe;
+  }
+
+  void setPotentiallyUnsafe() {
+    PotentiallyUnsafe = true;
   }
 
 private:
@@ -1234,7 +1250,7 @@ public:
                             const TargetTransformInfo *TTI,
                             LoopAccessAnalysis *LAA,
                             LoopVectorizationRequirements *R,
-                            const LoopVectorizeHints *H)
+                            LoopVectorizeHints *H)
       : NumPredStores(0), TheLoop(L), PSE(PSE), TLI(TLI), TheFunction(F),
         TTI(TTI), DT(DT), LAA(LAA), LAI(nullptr), InterleaveInfo(PSE, L, DT),
         Induction(nullptr), WidestIndTy(nullptr), HasFunNoNaNAttr(false),
@@ -1460,7 +1476,7 @@ private:
   LoopVectorizationRequirements *Requirements;
 
   /// Used to emit an analysis of any legality issues.
-  const LoopVectorizeHints *Hints;
+  LoopVectorizeHints *Hints;
 
   ValueToValueMap Strides;
   SmallPtrSet<Value *, 8> StrideSet;
@@ -1880,6 +1896,21 @@ struct LoopVectorize : public FunctionPass {
           F, L, Hints,
           VectorizationReport()
               << "loop not vectorized due to NoImplicitFloat attribute");
+      emitMissedWarning(F, L, Hints);
+      return false;
+    }
+
+    // Check if the target supports potentially unsafe FP vectorization.
+    // FIXME: Add a check for the type of safety issue (denormal, signaling)
+    // for the target we're vectorizing for, to make sure none of the
+    // additional fp-math flags can help.
+    if (Hints.isPotentiallyUnsafe() &&
+        TTI->isFPVectorizationPotentiallyUnsafe()) {
+      DEBUG(dbgs() << "LV: Potentially unsafe FP op prevents vectorization.\n");
+      emitAnalysisDiag(
+          F, L, Hints,
+          VectorizationReport()
+             << "loop not vectorized due to unsafe FP support.");
       emitMissedWarning(F, L, Hints);
       return false;
     }
@@ -4695,11 +4726,22 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         }
         if (EnableMemAccessVersioning)
           collectStridedAccess(ST);
-      }
 
-      if (EnableMemAccessVersioning)
-        if (LoadInst *LI = dyn_cast<LoadInst>(it))
+      } else if (LoadInst *LI = dyn_cast<LoadInst>(it)) {
+        if (EnableMemAccessVersioning)
           collectStridedAccess(LI);
+
+      // FP instructions can allow unsafe algebra, thus vectorizable by
+      // non-IEEE-754 compliant SIMD units.
+      // This applies to floating-point math operations and calls, not memory
+      // operations, shuffles, or casts, as they don't change precision or
+      // semantics.
+      } else if (it->getType()->isFloatingPointTy() &&
+                (CI || it->isBinaryOp()) &&
+                !it->hasUnsafeAlgebra()) {
+        DEBUG(dbgs() << "LV: Found FP op with unsafe algebra.\n");
+        Hints->setPotentiallyUnsafe();
+      }
 
       // Reduction instructions are allowed to have exit users.
       // All other instructions must not have external users.

@@ -20,15 +20,15 @@
 namespace llvm {
 
 class AArch64TargetLowering;
-  
+
 class AArch64CallLowering: public CallLowering {
  public:
   AArch64CallLowering(const AArch64TargetLowering &TLI);
-  
-  bool LowerReturn(MachineIRBuilder &MIRBuiler, const Value *Val,
+
+  bool lowerReturn(MachineIRBuilder &MIRBuiler, const Value *Val,
                    unsigned VReg) const override;
   bool
-  LowerFormalArguments(MachineIRBuilder &MIRBuilder,
+  lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                        const Function::ArgumentListType &Args,
                        const SmallVectorImpl<unsigned> &VRegs) const override;
 };

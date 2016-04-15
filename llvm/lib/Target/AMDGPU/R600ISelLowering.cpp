@@ -1573,7 +1573,7 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
   if (LoadNode->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS && VT.isVector()) {
     SDValue MergedValues[2] = {
-      ScalarizeVectorLoad(Op, DAG),
+      scalarizeVectorLoad(LoadNode, DAG),
       Chain
     };
     return DAG.getMergeValues(MergedValues, DL);

@@ -79,7 +79,7 @@ bool IRTranslator::translateReturn(const Instruction &Inst) {
   // The target may mess up with the insertion point, but
   // this is not important as a return is the last instruction
   // of the block anyway.
-  return CLI->LowerReturn(MIRBuilder, Ret, !Ret ? 0 : getOrCreateVReg(*Ret));
+  return CLI->lowerReturn(MIRBuilder, Ret, !Ret ? 0 : getOrCreateVReg(*Ret));
 }
 
 bool IRTranslator::translateBr(const Instruction &Inst) {
@@ -136,7 +136,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
   for (const Argument &Arg: F.args())
     VRegArgs.push_back(getOrCreateVReg(Arg));
   bool Succeeded =
-      CLI->LowerFormalArguments(MIRBuilder, F.getArgumentList(), VRegArgs);
+      CLI->lowerFormalArguments(MIRBuilder, F.getArgumentList(), VRegArgs);
   if (!Succeeded)
     report_fatal_error("Unable to lower arguments");
 

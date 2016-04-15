@@ -1058,6 +1058,8 @@ static void removeModOperands(MachineInstr &MI) {
   MI.RemoveOperand(Src0ModIdx);
 }
 
+// TODO: Maybe this should be removed this and custom fold everything in
+// SIFoldOperands?
 bool SIInstrInfo::FoldImmediate(MachineInstr *UseMI, MachineInstr *DefMI,
                                 unsigned Reg, MachineRegisterInfo *MRI) const {
   if (!MRI->hasOneNonDBGUse(Reg))
@@ -1072,6 +1074,14 @@ bool SIInstrInfo::FoldImmediate(MachineInstr *UseMI, MachineInstr *DefMI,
         hasModifiersSet(*UseMI, AMDGPU::OpName::src2_modifiers)) {
       return false;
     }
+
+    const MachineOperand &ImmOp = DefMI->getOperand(1);
+
+    // If this is a free constant, there's no reason to do this.
+    // TODO: We could fold this here instead of letting SIFoldOperands do it
+    // later.
+    if (isInlineConstant(ImmOp, 4))
+      return false;
 
     MachineOperand *Src0 = getNamedOperand(*UseMI, AMDGPU::OpName::src0);
     MachineOperand *Src1 = getNamedOperand(*UseMI, AMDGPU::OpName::src1);

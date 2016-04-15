@@ -230,9 +230,8 @@ define void @v_ashr_32_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
 ; GCN-LABEL: {{^}}s_ashr_63_i64:
 ; GCN-DAG: s_load_dword s[[HI:[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
 ; GCN: s_ashr_i32 s[[SHIFT:[0-9]+]], s[[HI]], 31
-; GCN-DAG: s_mov_b32 s[[COPYSHIFT:[0-9]+]], s[[SHIFT]]
-; GCN-DAG: s_add_u32 {{s[0-9]+}}, s[[HI]], {{s[0-9]+}}
-; GCN: s_addc_u32 {{s[0-9]+}}, s[[COPYSHIFT]], {{s[0-9]+}}
+; GCN: s_add_u32 {{s[0-9]+}}, s[[HI]], {{s[0-9]+}}
+; GCN: s_addc_u32 {{s[0-9]+}}, s[[SHIFT]], {{s[0-9]+}}
 define void @s_ashr_63_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
   %result = ashr i64 %a, 63
   %add = add i64 %result, %b

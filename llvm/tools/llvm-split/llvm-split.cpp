@@ -41,7 +41,7 @@ static cl::opt<bool>
                    cl::desc("Split without externalizing locals"));
 
 int main(int argc, char **argv) {
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
   SMDiagnostic Err;
   cl::ParseCommandLineOptions(argc, argv, "LLVM module splitter\n");
 

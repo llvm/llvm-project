@@ -11,6 +11,7 @@
 
 ; GCN-LABEL: {{^}}main:
 
+; GCN: s_mov_b32 s11, s12
 ; GCN: s_mov_b32 s12, SCRATCH_RSRC_DWORD0
 ; GCN-NEXT: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
 ; GCN-NEXT: s_mov_b32 s14, -1

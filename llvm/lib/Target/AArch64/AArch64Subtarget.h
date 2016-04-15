@@ -15,11 +15,11 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64SUBTARGET_H
 
 #include "AArch64FrameLowering.h"
-#include "AArch64GISelAccessor.h"
 #include "AArch64ISelLowering.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64SelectionDAGInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <string>
@@ -85,7 +85,7 @@ protected:
   /// Gather the accessor points to GlobalISel-related APIs.
   /// This is used to avoid ifndefs spreading around while GISel is
   /// an optional library.
-  std::unique_ptr<AArch64GISelAccessor> GISelAccessor;
+  std::unique_ptr<GISelAccessor> GISel;
 
 private:
   /// initializeSubtargetDependencies - Initializes using CPUString and the
@@ -101,8 +101,8 @@ public:
                    bool LittleEndian);
 
   /// This object will take onwership of \p GISelAccessor.
-  void setGISelAccessor(AArch64GISelAccessor &GISelAccessor) {
-    this->GISelAccessor.reset(&GISelAccessor);
+  void setGISelAccessor(GISelAccessor &GISel) {
+    this->GISel.reset(&GISel);
   }
 
   const AArch64SelectionDAGInfo *getSelectionDAGInfo() const override {

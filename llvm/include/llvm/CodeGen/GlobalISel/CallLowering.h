@@ -40,13 +40,13 @@ class CallLowering {
  public:
   CallLowering(const TargetLowering *TLI) : TLI(TLI) {}
   virtual ~CallLowering() {}
-  
+
   /// This hook must be implemented to lower outgoing return values, described
   /// by \p Val, into the specified virtual register \p VReg.
   /// This hook is used by GlobalISel.
   ///
   /// \return True if the lowering succeeds, false otherwise.
-  virtual bool LowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
+  virtual bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
                            unsigned VReg) const {
     return false;
   }
@@ -61,7 +61,7 @@ class CallLowering {
   ///
   /// \return True if the lowering succeeded, false otherwise.
   virtual bool
-  LowerFormalArguments(MachineIRBuilder &MIRBuilder,
+  lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                        const Function::ArgumentListType &Args,
                        const SmallVectorImpl<unsigned> &VRegs) const {
     return false;

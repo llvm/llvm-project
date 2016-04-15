@@ -1,13 +1,17 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
 ; XUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
+ ; FIXME: None of these trigger madmk emission anymore. It is still
+ ; possible, but requires the correct registers to be used which is
+ ; hard to trigger.
+
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare float @llvm.fabs.f32(float) nounwind readnone
 
 ; GCN-LABEL: {{^}}madmk_f32:
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; GCN: v_madmk_f32_e32 {{v[0-9]+}}, [[VA]], 0x41200000, [[VB]]
+; GCN: v_mac_f32_e32 [[VB]], 0x41200000, [[VA]]
 define void @madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
@@ -182,7 +186,7 @@ define void @madmk_add_inline_imm_f32(float addrspace(1)* noalias %out, float ad
 
 ; SI-LABEL: {{^}}kill_madmk_verifier_error:
 ; SI: s_xor_b64
-; SI: v_madmk_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, 0x472aee8c, {{v[0-9]+}}
+; SI: v_mac_f32_e32 {{v[0-9]+}}, 0x472aee8c, {{v[0-9]+}}
 ; SI: s_or_b64
 define void @kill_madmk_verifier_error() nounwind {
 bb:

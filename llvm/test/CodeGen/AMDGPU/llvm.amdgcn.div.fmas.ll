@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN -check-prefix=SI %s
 ; XUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN -check-prefix=VI %s
 
 ; FIXME: Enable for VI.
@@ -45,7 +45,7 @@ define void @test_div_fmas_f32_inline_imm_0(float addrspace(1)* %out, float %a, 
 ; SI-DAG: s_load_dword [[SC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xd
 ; SI-DAG: v_mov_b32_e32 [[VC:v[0-9]+]], [[SC]]
 ; SI-DAG: v_mov_b32_e32 [[VA:v[0-9]+]], [[SA]]
-; SI: v_div_fmas_f32 [[RESULT:v[0-9]+]], 1.0, [[VA]], [[VC]]
+; SI: v_div_fmas_f32 [[RESULT:v[0-9]+]], [[VA]], 1.0, [[VC]]
 ; SI: buffer_store_dword [[RESULT]],
 ; SI: s_endpgm
 define void @test_div_fmas_f32_inline_imm_1(float addrspace(1)* %out, float %a, float %b, float %c, i1 %d) nounwind {
@@ -146,7 +146,7 @@ define void @test_div_fmas_f32_logical_cond_to_vcc(float addrspace(1)* %out, flo
 
 ; SI: BB9_2:
 ; SI: s_or_b64 exec, exec, [[SAVE]]
-; SI: v_cmp_ne_i32_e32 vcc, 0, v0
+; SI: v_cmp_ne_i32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 ; SI: buffer_store_dword
 ; SI: s_endpgm

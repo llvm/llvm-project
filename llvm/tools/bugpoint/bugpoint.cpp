@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
   sys::SetInterruptFunction(BugpointInterruptFunction);
 #endif
 
-  LLVMContext& Context = getGlobalContext();
+  LLVMContext Context;
   // If we have an override, set it and then track the triple we want Modules
   // to use.
   if (!OverrideTriple.empty()) {

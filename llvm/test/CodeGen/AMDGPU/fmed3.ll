@@ -96,8 +96,8 @@ define void @v_test_fmed3_r_i_i_multi_use_f32(float addrspace(1)* %out, float ad
 }
 
 ; GCN-LABEL: {{^}}v_test_fmed3_r_i_i_f64:
-; GCN: v_max_f64 {{v\[[0-9]+:[0-9]+\]}}, 2.0, {{v\[[0-9]+:[0-9]+\]}}
-; GCN: v_min_f64 {{v\[[0-9]+:[0-9]+\]}}, 4.0, {{v\[[0-9]+:[0-9]+\]}}
+; GCN: v_max_f64 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, 2.0
+; GCN: v_min_f64 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, 4.0
 define void @v_test_fmed3_r_i_i_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid

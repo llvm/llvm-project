@@ -22,6 +22,7 @@
 #include "AMDGPUSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -98,6 +99,7 @@ private:
   std::unique_ptr<AMDGPUFrameLowering> FrameLowering;
   std::unique_ptr<AMDGPUTargetLowering> TLInfo;
   std::unique_ptr<AMDGPUInstrInfo> InstrInfo;
+  std::unique_ptr<GISelAccessor> GISel;
   InstrItineraryData InstrItins;
   Triple TargetTriple;
 
@@ -106,6 +108,10 @@ public:
                   TargetMachine &TM);
   AMDGPUSubtarget &initializeSubtargetDependencies(const Triple &TT,
                                                    StringRef GPU, StringRef FS);
+
+  void setGISelAccessor(GISelAccessor &GISel) {
+    this->GISel.reset(&GISel);
+  }
 
   const AMDGPUFrameLowering *getFrameLowering() const override {
     return FrameLowering.get();
@@ -122,6 +128,8 @@ public:
   const InstrItineraryData *getInstrItineraryData() const override {
     return &InstrItins;
   }
+
+  const CallLowering *getCallLowering() const override;
 
   void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
 

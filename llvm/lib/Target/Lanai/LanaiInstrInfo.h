@@ -35,6 +35,9 @@ public:
     return RegisterInfo;
   }
 
+  bool areMemAccessesTriviallyDisjoint(MachineInstr *MIa, MachineInstr *MIb,
+                                       AliasAnalysis *AA) const override;
+
   unsigned isLoadFromStackSlot(const MachineInstr *MI,
                                int &FrameIndex) const override;
 
@@ -63,6 +66,14 @@ public:
                        const TargetRegisterInfo *RegisterInfo) const override;
 
   bool expandPostRAPseudo(MachineBasicBlock::iterator MI) const override;
+
+  bool getMemOpBaseRegImmOfs(MachineInstr *LdSt, unsigned &BaseReg,
+                             int64_t &Offset,
+                             const TargetRegisterInfo *TRI) const override;
+
+  bool getMemOpBaseRegImmOfsWidth(MachineInstr *LdSt, unsigned &BaseReg,
+                                  int64_t &Offset, unsigned &Width,
+                                  const TargetRegisterInfo *TRI) const;
 
   bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TrueBlock,
                      MachineBasicBlock *&FalseBlock,

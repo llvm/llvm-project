@@ -1,4 +1,4 @@
-//===-- AArch64GISelAccessor.h - AArch64 GISel Accessor ---------*- C++ -*-===//
+//===-- GISelAccessor.h - GISel Accessor ------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===/
 
-#ifndef LLVM_LIB_TARGET_AARCH64_AARCH64GISELACCESSOR_H
-#define LLVM_LIB_TARGET_AARCH64_AARCH64GISELACCESSOR_H
+#ifndef LLVM_CODEGEN_GLOBALISEL_GISELACCESSOR_H
+#define LLVM_CODEGEN_GLOBALISEL_GISELACCESSOR_H
 
 namespace llvm {
 class CallLowering;
@@ -24,8 +24,8 @@ class RegisterBankInfo;
 /// It should be derived to feature an actual accessor to the GISel APIs.
 /// The reason why this is not simply done into the subtarget is to avoid
 /// spreading ifdefs around.
-struct AArch64GISelAccessor {
-  virtual ~AArch64GISelAccessor() {}
+struct GISelAccessor {
+  virtual ~GISelAccessor() {}
   virtual const CallLowering *getCallLowering() const { return nullptr;}
   virtual const RegisterBankInfo *getRegBankInfo() const { return nullptr;}
 };

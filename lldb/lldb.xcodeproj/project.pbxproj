@@ -697,6 +697,7 @@
 		4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */; };
 		4C2479BD1BA39295009C9A7B /* FunctionCaller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083321B9A5DE200D5CF24 /* FunctionCaller.cpp */; };
 		4C3ADCD61810D88B00357218 /* BreakpointResolverFileRegex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CAA56141422D986001FFA01 /* BreakpointResolverFileRegex.cpp */; };
+		4C562CC71CC07DF700C52EAC /* PDBASTParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */; };
 		4C56543119D1EFAA002E9C44 /* ThreadPlanPython.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543019D1EFAA002E9C44 /* ThreadPlanPython.cpp */; };
 		4C56543519D2297A002E9C44 /* SBThreadPlan.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C56543419D2297A002E9C44 /* SBThreadPlan.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4C56543719D22B32002E9C44 /* SBThreadPlan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C56543619D22B32002E9C44 /* SBThreadPlan.cpp */; };
@@ -2376,6 +2377,8 @@
 		4C43DF8611069BFD00E55CBF /* ThreadPlanStepOverRange.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ThreadPlanStepOverRange.h; path = include/lldb/Target/ThreadPlanStepOverRange.h; sourceTree = "<group>"; };
 		4C43DF8911069C3200E55CBF /* ThreadPlanStepInRange.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanStepInRange.cpp; path = source/Target/ThreadPlanStepInRange.cpp; sourceTree = "<group>"; };
 		4C43DF8A11069C3200E55CBF /* ThreadPlanStepOverRange.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanStepOverRange.cpp; path = source/Target/ThreadPlanStepOverRange.cpp; sourceTree = "<group>"; };
+		4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBASTParser.cpp; path = PDB/PDBASTParser.cpp; sourceTree = "<group>"; };
+		4C562CC31CC07DDD00C52EAC /* PDBASTParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PDBASTParser.h; path = PDB/PDBASTParser.h; sourceTree = "<group>"; };
 		4C56543019D1EFAA002E9C44 /* ThreadPlanPython.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ThreadPlanPython.cpp; path = source/Target/ThreadPlanPython.cpp; sourceTree = "<group>"; };
 		4C56543219D1EFB5002E9C44 /* ThreadPlanPython.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ThreadPlanPython.h; path = include/lldb/Target/ThreadPlanPython.h; sourceTree = "<group>"; };
 		4C56543419D2297A002E9C44 /* SBThreadPlan.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBThreadPlan.h; path = include/lldb/API/SBThreadPlan.h; sourceTree = "<group>"; };
@@ -5856,6 +5859,8 @@
 		AF6335DF1C87B20A00F7D554 /* PDB */ = {
 			isa = PBXGroup;
 			children = (
+				4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */,
+				4C562CC31CC07DDD00C52EAC /* PDBASTParser.h */,
 				AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */,
 				AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */,
 			);
@@ -6991,6 +6996,7 @@
 				26D1803E16CEBFD300EDFB5B /* KQueue.cpp in Sources */,
 				26A69C5F137A17A500262477 /* RegisterValue.cpp in Sources */,
 				2690B3711381D5C300ECFBAE /* Memory.cpp in Sources */,
+				4C562CC71CC07DF700C52EAC /* PDBASTParser.cpp in Sources */,
 				B28058A1139988B0002D96D0 /* InferiorCallPOSIX.cpp in Sources */,
 				AF20F76A1AF18F9000751A6E /* ABISysV_arm64.cpp in Sources */,
 				26F73062139D8FDB00FD51C7 /* History.cpp in Sources */,

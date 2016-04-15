@@ -133,6 +133,9 @@ def JIC64 : JIC_ENC, JIC64_DESC, ISA_MIPS64R6;
 
 def : MipsInstAlias<"jr $rs", (JALR64 ZERO_64, GPR64Opnd:$rs), 1>, ISA_MIPS64R6;
 
+def : MipsInstAlias<"jrc $rs", (JIC64 GPR64Opnd:$rs, 0), 1>, ISA_MIPS64R6;
+
+def : MipsInstAlias<"jalrc $rs", (JIALC64 GPR64Opnd:$rs, 0), 1>, ISA_MIPS64R6;
 //===----------------------------------------------------------------------===//
 //
 // Patterns and Pseudo Instructions

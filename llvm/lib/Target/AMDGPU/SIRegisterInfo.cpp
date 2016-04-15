@@ -23,6 +23,53 @@
 
 using namespace llvm;
 
+static unsigned getMaxWaveCountPerSIMD(const MachineFunction &MF) {
+  const SIMachineFunctionInfo& MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  unsigned SIMDPerCU = 4;
+
+  unsigned MaxInvocationsPerWave = SIMDPerCU * ST.getWavefrontSize();
+  return alignTo(MFI.getMaximumWorkGroupSize(MF), MaxInvocationsPerWave) /
+           MaxInvocationsPerWave;
+}
+
+static unsigned getMaxWorkGroupSGPRCount(const MachineFunction &MF) {
+  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  unsigned MaxWaveCountPerSIMD = getMaxWaveCountPerSIMD(MF);
+
+  unsigned TotalSGPRCountPerSIMD, AddressableSGPRCount, SGPRUsageAlignment;
+  unsigned ReservedSGPRCount;
+
+  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    TotalSGPRCountPerSIMD = 800;
+    AddressableSGPRCount = 102;
+    SGPRUsageAlignment = 16;
+    ReservedSGPRCount = 6; // VCC, FLAT_SCRATCH, XNACK
+  } else {
+    TotalSGPRCountPerSIMD = 512;
+    AddressableSGPRCount = 104;
+    SGPRUsageAlignment = 8;
+    ReservedSGPRCount = 2; // VCC
+  }
+
+  unsigned MaxSGPRCount = (TotalSGPRCountPerSIMD / MaxWaveCountPerSIMD);
+  MaxSGPRCount = alignDown(MaxSGPRCount, SGPRUsageAlignment);
+
+  if (ST.hasSGPRInitBug())
+    MaxSGPRCount = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
+
+  return std::min(MaxSGPRCount - ReservedSGPRCount, AddressableSGPRCount);
+}
+
+static unsigned getMaxWorkGroupVGPRCount(const MachineFunction &MF) {
+  unsigned MaxWaveCountPerSIMD = getMaxWaveCountPerSIMD(MF);
+  unsigned TotalVGPRCountPerSIMD = 256;
+  unsigned VGPRUsageAlignment = 4;
+
+  return alignDown(TotalVGPRCountPerSIMD / MaxWaveCountPerSIMD,
+                   VGPRUsageAlignment);
+}
+
 static bool hasPressureSet(const int *PSets, unsigned PSetID) {
   for (unsigned i = 0; PSets[i] != -1; ++i) {
     if (PSets[i] == (int)PSetID)
@@ -71,38 +118,27 @@ void SIRegisterInfo::reserveRegisterTuples(BitVector &Reserved, unsigned Reg) co
 
 unsigned SIRegisterInfo::reservedPrivateSegmentBufferReg(
   const MachineFunction &MF) const {
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
-  if (ST.hasSGPRInitBug()) {
-    // Leave space for flat_scr, xnack_mask, vcc, and alignment
-    unsigned BaseIdx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 8 - 4;
-    unsigned BaseReg(AMDGPU::SGPR_32RegClass.getRegister(BaseIdx));
-    return getMatchingSuperReg(BaseReg, AMDGPU::sub0, &AMDGPU::SReg_128RegClass);
-  }
-
-  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    // 96/97 need to be reserved for flat_scr, 98/99 for xnack_mask, and
-    // 100/101 for vcc. This is the next sgpr128 down.
-    return AMDGPU::SGPR92_SGPR93_SGPR94_SGPR95;
-  }
-
-  return AMDGPU::SGPR96_SGPR97_SGPR98_SGPR99;
+  unsigned BaseIdx = alignDown(getMaxWorkGroupSGPRCount(MF), 4) - 4;
+  unsigned BaseReg(AMDGPU::SGPR_32RegClass.getRegister(BaseIdx));
+  return getMatchingSuperReg(BaseReg, AMDGPU::sub0, &AMDGPU::SReg_128RegClass);
 }
 
 unsigned SIRegisterInfo::reservedPrivateSegmentWaveByteOffsetReg(
   const MachineFunction &MF) const {
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
-  if (ST.hasSGPRInitBug()) {
-    unsigned Idx = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 6 - 1;
-    return AMDGPU::SGPR_32RegClass.getRegister(Idx);
-  }
+  unsigned RegCount = getMaxWorkGroupSGPRCount(MF);
+  unsigned Reg;
 
-  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    // Next register before reservations for flat_scr, xnack_mask, vcc,
-    // and scratch resource.
-    return AMDGPU::SGPR91;
+  // Try to place it in a hole after PrivateSegmentbufferReg.
+  if (RegCount & 3) {
+    // We cannot put the segment buffer in (Idx - 4) ... (Idx - 1) due to
+    // alignment constraints, so we have a hole where can put the wave offset.
+    Reg = RegCount - 1;
+  } else {
+    // We can put the segment buffer in (Idx - 4) ... (Idx - 1) and put the
+    // wave offset before it.
+    Reg = RegCount - 5;
   }
-
-  return AMDGPU::SGPR95;
+  return AMDGPU::SGPR_32RegClass.getRegister(Reg);
 }
 
 BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
@@ -124,35 +160,20 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::TTMP8_TTMP9);
   reserveRegisterTuples(Reserved, AMDGPU::TTMP10_TTMP11);
 
-  // Reserve the last 2 registers so we will always have at least 2 more that
-  // will physically contain VCC.
-  reserveRegisterTuples(Reserved, AMDGPU::SGPR102_SGPR103);
+  unsigned MaxWorkGroupSGPRCount = getMaxWorkGroupSGPRCount(MF);
+  unsigned MaxWorkGroupVGPRCount = getMaxWorkGroupVGPRCount(MF);
 
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
-
-  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    // SI/CI have 104 SGPRs. VI has 102. We need to shift down the reservation
-    // for VCC/XNACK_MASK/FLAT_SCR.
-    //
-    // TODO The SGPRs that alias to XNACK_MASK could be used as general purpose
-    // SGPRs when the XNACK feature is not used. This is currently not done
-    // because the code that counts SGPRs cannot account for such holes.
-    reserveRegisterTuples(Reserved, AMDGPU::SGPR96_SGPR97);
-    reserveRegisterTuples(Reserved, AMDGPU::SGPR98_SGPR99);
-    reserveRegisterTuples(Reserved, AMDGPU::SGPR100_SGPR101);
+  unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
+  unsigned NumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+  for (unsigned i = MaxWorkGroupSGPRCount; i < NumSGPRs; ++i) {
+    unsigned Reg = AMDGPU::SGPR_32RegClass.getRegister(i);
+    reserveRegisterTuples(Reserved, Reg);
   }
 
-  // Tonga and Iceland can only allocate a fixed number of SGPRs due
-  // to a hw bug.
-  if (ST.hasSGPRInitBug()) {
-    unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
-    // Reserve some SGPRs for FLAT_SCRATCH, XNACK_MASK, and VCC (6 SGPRs).
-    unsigned Limit = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG - 6;
 
-    for (unsigned i = Limit; i < NumSGPRs; ++i) {
-      unsigned Reg = AMDGPU::SGPR_32RegClass.getRegister(i);
-      reserveRegisterTuples(Reserved, Reg);
-    }
+  for (unsigned i = MaxWorkGroupVGPRCount; i < NumVGPRs; ++i) {
+    unsigned Reg = AMDGPU::VGPR_32RegClass.getRegister(i);
+    reserveRegisterTuples(Reserved, Reg);
   }
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();

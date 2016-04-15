@@ -1020,7 +1020,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
   if (error(BufferOrErr.getError(), Filename))
     return;
 
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
   Expected<std::unique_ptr<Binary>> BinaryOrErr = createBinary(
       BufferOrErr.get()->getMemBufferRef(), NoLLVMBitcode ? nullptr : &Context);
   if (!BinaryOrErr) {

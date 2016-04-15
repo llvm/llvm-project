@@ -350,47 +350,19 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock *BB,
 /// for either a value in a register or a register-indirect+offset
 /// address.  The convention is that a DBG_VALUE is indirect iff the
 /// second operand is an immediate.
-inline MachineInstrBuilder BuildMI(MachineFunction &MF, DebugLoc DL,
-                                   const MCInstrDesc &MCID, bool IsIndirect,
-                                   unsigned Reg, unsigned Offset,
-                                   const MDNode *Variable, const MDNode *Expr) {
-  assert(isa<DILocalVariable>(Variable) && "not a variable");
-  assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
-  assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
-         "Expected inlined-at fields to agree");
-  if (IsIndirect)
-    return BuildMI(MF, DL, MCID)
-        .addReg(Reg, RegState::Debug)
-        .addImm(Offset)
-        .addMetadata(Variable)
-        .addMetadata(Expr);
-  else {
-    assert(Offset == 0 && "A direct address cannot have an offset.");
-    return BuildMI(MF, DL, MCID)
-        .addReg(Reg, RegState::Debug)
-        .addReg(0U, RegState::Debug)
-        .addMetadata(Variable)
-        .addMetadata(Expr);
-  }
-}
+MachineInstrBuilder BuildMI(MachineFunction &MF, DebugLoc DL,
+                            const MCInstrDesc &MCID, bool IsIndirect,
+                            unsigned Reg, unsigned Offset,
+                            const MDNode *Variable, const MDNode *Expr);
 
 /// This version of the builder builds a DBG_VALUE intrinsic
 /// for either a value in a register or a register-indirect+offset
 /// address and inserts it at position I.
-inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
-                                   MachineBasicBlock::iterator I, DebugLoc DL,
-                                   const MCInstrDesc &MCID, bool IsIndirect,
-                                   unsigned Reg, unsigned Offset,
-                                   const MDNode *Variable, const MDNode *Expr) {
-  assert(isa<DILocalVariable>(Variable) && "not a variable");
-  assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
-  MachineFunction &MF = *BB.getParent();
-  MachineInstr *MI =
-      BuildMI(MF, DL, MCID, IsIndirect, Reg, Offset, Variable, Expr);
-  BB.insert(I, MI);
-  return MachineInstrBuilder(MF, MI);
-}
-
+MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
+                            MachineBasicBlock::iterator I, DebugLoc DL,
+                            const MCInstrDesc &MCID, bool IsIndirect,
+                            unsigned Reg, unsigned Offset,
+                            const MDNode *Variable, const MDNode *Expr);
 
 inline unsigned getDefRegState(bool B) {
   return B ? RegState::Define : 0;

@@ -153,30 +153,30 @@ struct TestInvalidationFunctionPass
   StringRef Name;
 };
 
-std::unique_ptr<Module> parseIR(const char *IR) {
-  LLVMContext &C = getGlobalContext();
+std::unique_ptr<Module> parseIR(LLVMContext &Context, const char *IR) {
   SMDiagnostic Err;
-  return parseAssemblyString(IR, Err, C);
+  return parseAssemblyString(IR, Err, Context);
 }
 
 class PassManagerTest : public ::testing::Test {
 protected:
+  LLVMContext Context;
   std::unique_ptr<Module> M;
 
 public:
   PassManagerTest()
-      : M(parseIR("define void @f() {\n"
-                  "entry:\n"
-                  "  call void @g()\n"
-                  "  call void @h()\n"
-                  "  ret void\n"
-                  "}\n"
-                  "define void @g() {\n"
-                  "  ret void\n"
-                  "}\n"
-                  "define void @h() {\n"
-                  "  ret void\n"
-                  "}\n")) {}
+      : M(parseIR(Context, "define void @f() {\n"
+                           "entry:\n"
+                           "  call void @g()\n"
+                           "  call void @h()\n"
+                           "  ret void\n"
+                           "}\n"
+                           "define void @g() {\n"
+                           "  ret void\n"
+                           "}\n"
+                           "define void @h() {\n"
+                           "  ret void\n"
+                           "}\n")) {}
 };
 
 TEST_F(PassManagerTest, BasicPreservedAnalyses) {

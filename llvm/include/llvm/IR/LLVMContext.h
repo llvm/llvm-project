@@ -235,10 +235,6 @@ private:
   friend class Module;
 };
 
-/// getGlobalContext - Returns a global context.  This is for LLVM clients that
-/// only care about operating on a single thread.
-extern LLVMContext &getGlobalContext();
-
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLVMContext, LLVMContextRef)
 

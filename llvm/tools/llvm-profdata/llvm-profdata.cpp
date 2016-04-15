@@ -164,9 +164,9 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
   auto Writer = std::move(WriterOrErr.get());
   StringMap<FunctionSamples> ProfileMap;
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
+  LLVMContext Context;
   for (const auto &Input : Inputs) {
-    auto ReaderOrErr =
-        SampleProfileReader::create(Input.Filename, getGlobalContext());
+    auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context);
     if (std::error_code EC = ReaderOrErr.getError())
       exitWithErrorCode(EC, Input.Filename);
 
@@ -365,7 +365,8 @@ static int showSampleProfile(std::string Filename, bool ShowCounts,
                              bool ShowAllFunctions, std::string ShowFunction,
                              raw_fd_ostream &OS) {
   using namespace sampleprof;
-  auto ReaderOrErr = SampleProfileReader::create(Filename, getGlobalContext());
+  LLVMContext Context;
+  auto ReaderOrErr = SampleProfileReader::create(Filename, Context);
   if (std::error_code EC = ReaderOrErr.getError())
     exitWithErrorCode(EC, Filename);
 

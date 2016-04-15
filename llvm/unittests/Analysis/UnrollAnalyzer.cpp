@@ -60,11 +60,11 @@ struct UnrollAnalyzerTest : public FunctionPass {
 
 char UnrollAnalyzerTest::ID = 0;
 
-std::unique_ptr<Module> makeLLVMModule(UnrollAnalyzerTest *P,
+std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
+                                       UnrollAnalyzerTest *P,
                                        const char *ModuleStr) {
-  LLVMContext &C = getGlobalContext();
   SMDiagnostic Err;
-  return parseAssemblyString(ModuleStr, Err, C);
+  return parseAssemblyString(ModuleStr, Err, Context);
 }
 
 TEST(UnrollAnalyzerTest, BasicSimplifications) {
@@ -86,7 +86,8 @@ TEST(UnrollAnalyzerTest, BasicSimplifications) {
       "  ret i64 %x.lcssa\n"
       "}\n";
   UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
-  std::unique_ptr<Module> M = makeLLVMModule(P, ModuleStr);
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, P, ModuleStr);
   legacy::PassManager Passes;
   Passes.add(P);
   Passes.run(*M);
@@ -148,7 +149,8 @@ TEST(UnrollAnalyzerTest, OuterLoopSimplification) {
       "}\n";
 
   UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
-  std::unique_ptr<Module> M = makeLLVMModule(P, ModuleStr);
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, P, ModuleStr);
   legacy::PassManager Passes;
   Passes.add(P);
   Passes.run(*M);
@@ -188,7 +190,8 @@ TEST(UnrollAnalyzerTest, CmpSimplifications) {
       "  ret void\n"
       "}\n";
   UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
-  std::unique_ptr<Module> M = makeLLVMModule(P, ModuleStr);
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, P, ModuleStr);
   legacy::PassManager Passes;
   Passes.add(P);
   Passes.run(*M);
@@ -234,7 +237,8 @@ TEST(UnrollAnalyzerTest, PtrCmpSimplifications) {
       "  ret void\n"
       "}\n";
   UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
-  std::unique_ptr<Module> M = makeLLVMModule(P, ModuleStr);
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, P, ModuleStr);
   legacy::PassManager Passes;
   Passes.add(P);
   Passes.run(*M);
@@ -279,7 +283,8 @@ TEST(UnrollAnalyzerTest, CastSimplifications) {
       "}\n";
 
   UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
-  std::unique_ptr<Module> M = makeLLVMModule(P, ModuleStr);
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, P, ModuleStr);
   legacy::PassManager Passes;
   Passes.add(P);
   Passes.run(*M);

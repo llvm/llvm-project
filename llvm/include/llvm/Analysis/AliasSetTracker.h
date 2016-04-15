@@ -59,8 +59,12 @@ class AliasSet : public ilist_node<AliasSet> {
       return &NextInList;
     }
 
-    void updateSizeAndAAInfo(uint64_t NewSize, const AAMDNodes &NewAAInfo) {
-      if (NewSize > Size) Size = NewSize;
+    bool updateSizeAndAAInfo(uint64_t NewSize, const AAMDNodes &NewAAInfo) {
+      bool SizeChanged = false;
+      if (NewSize > Size) {
+        Size = NewSize;
+        SizeChanged = true;
+      }
 
       if (AAInfo == DenseMapInfo<AAMDNodes>::getEmptyKey())
         // We don't have a AAInfo yet. Set it to NewAAInfo.
@@ -68,6 +72,8 @@ class AliasSet : public ilist_node<AliasSet> {
       else if (AAInfo != NewAAInfo)
         // NewAAInfo conflicts with AAInfo.
         AAInfo = DenseMapInfo<AAMDNodes>::getTombstoneKey();
+
+      return SizeChanged;
     }
 
     uint64_t getSize() const { return Size; }
@@ -365,7 +371,7 @@ public:
   /// otherwise return null.
   AliasSet *getAliasSetForPointerIfExists(const Value *P, uint64_t Size,
                                           const AAMDNodes &AAInfo) {
-    return findAliasSetForPointer(P, Size, AAInfo);
+    return mergeAliasSetsForPointer(P, Size, AAInfo);
   }
 
   /// Return true if the specified location is represented by this alias set,
@@ -425,8 +431,8 @@ private:
     AS.Access |= E;
     return AS;
   }
-  AliasSet *findAliasSetForPointer(const Value *Ptr, uint64_t Size,
-                                   const AAMDNodes &AAInfo);
+  AliasSet *mergeAliasSetsForPointer(const Value *Ptr, uint64_t Size,
+                                     const AAMDNodes &AAInfo);
 
   AliasSet *findAliasSetForUnknownInst(Instruction *Inst);
 };

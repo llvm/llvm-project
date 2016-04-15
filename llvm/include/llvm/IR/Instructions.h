@@ -2693,6 +2693,11 @@ public:
   /// same value, return the value, otherwise return null.
   Value *hasConstantValue() const;
 
+  /// hasConstantOrUndefValue - Whether the specified PHI node always merges
+  /// together the same value, assuming undefs are equal to a unique
+  /// non-undef value.
+  bool hasConstantOrUndefValue() const;
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::PHI;

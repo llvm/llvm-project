@@ -24,7 +24,7 @@ entry:
 
 ; GCN-LABEL: {{^}}mad_inline_sgpr_inline:
 ; GCN-NOT: v_mac_f32
-; GCN: v_mad_f32 v{{[0-9]}}, 0.5, s{{[0-9]+}}, 0.5
+; GCN: v_mad_f32 v{{[0-9]}}, s{{[0-9]+}}, 0.5, 0.5
 define void @mad_inline_sgpr_inline(float addrspace(1)* %out, float %in) {
 entry:
   %tmp0 = fmul float 0.5, %in

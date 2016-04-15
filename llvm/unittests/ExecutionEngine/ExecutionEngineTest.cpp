@@ -28,7 +28,7 @@ private:
 
 protected:
   ExecutionEngineTest() {
-    auto Owner = make_unique<Module>("<main>", getGlobalContext());
+    auto Owner = make_unique<Module>("<main>", Context);
     M = Owner.get();
     Engine.reset(EngineBuilder(std::move(Owner)).setErrorStr(&Error).create());
   }
@@ -44,13 +44,13 @@ protected:
   }
 
   std::string Error;
+  LLVMContext Context;
   Module *M;  // Owned by ExecutionEngine.
   std::unique_ptr<ExecutionEngine> Engine;
 };
 
 TEST_F(ExecutionEngineTest, ForwardGlobalMapping) {
-  GlobalVariable *G1 =
-      NewExtGlobal(Type::getInt32Ty(getGlobalContext()), "Global1");
+  GlobalVariable *G1 = NewExtGlobal(Type::getInt32Ty(Context), "Global1");
   int32_t Mem1 = 3;
   Engine->addGlobalMapping(G1, &Mem1);
   EXPECT_EQ(&Mem1, Engine->getPointerToGlobalIfAvailable(G1));
@@ -63,8 +63,7 @@ TEST_F(ExecutionEngineTest, ForwardGlobalMapping) {
   Engine->updateGlobalMapping(G1, &Mem2);
   EXPECT_EQ(&Mem2, Engine->getPointerToGlobalIfAvailable(G1));
 
-  GlobalVariable *G2 =
-      NewExtGlobal(Type::getInt32Ty(getGlobalContext()), "Global1");
+  GlobalVariable *G2 = NewExtGlobal(Type::getInt32Ty(Context), "Global1");
   EXPECT_EQ(nullptr, Engine->getPointerToGlobalIfAvailable(G2))
     << "The NULL return shouldn't depend on having called"
     << " updateGlobalMapping(..., NULL)";
@@ -76,8 +75,7 @@ TEST_F(ExecutionEngineTest, ForwardGlobalMapping) {
 }
 
 TEST_F(ExecutionEngineTest, ReverseGlobalMapping) {
-  GlobalVariable *G1 =
-      NewExtGlobal(Type::getInt32Ty(getGlobalContext()), "Global1");
+  GlobalVariable *G1 = NewExtGlobal(Type::getInt32Ty(Context), "Global1");
 
   int32_t Mem1 = 3;
   Engine->addGlobalMapping(G1, &Mem1);
@@ -87,8 +85,7 @@ TEST_F(ExecutionEngineTest, ReverseGlobalMapping) {
   EXPECT_EQ(nullptr, Engine->getGlobalValueAtAddress(&Mem1));
   EXPECT_EQ(G1, Engine->getGlobalValueAtAddress(&Mem2));
 
-  GlobalVariable *G2 =
-      NewExtGlobal(Type::getInt32Ty(getGlobalContext()), "Global2");
+  GlobalVariable *G2 = NewExtGlobal(Type::getInt32Ty(Context), "Global2");
   Engine->updateGlobalMapping(G2, &Mem1);
   EXPECT_EQ(G2, Engine->getGlobalValueAtAddress(&Mem1));
   EXPECT_EQ(G1, Engine->getGlobalValueAtAddress(&Mem2));
@@ -104,8 +101,7 @@ TEST_F(ExecutionEngineTest, ReverseGlobalMapping) {
 }
 
 TEST_F(ExecutionEngineTest, ClearModuleMappings) {
-  GlobalVariable *G1 =
-      NewExtGlobal(Type::getInt32Ty(getGlobalContext()), "Global1");
+  GlobalVariable *G1 = NewExtGlobal(Type::getInt32Ty(Context), "Global1");
 
   int32_t Mem1 = 3;
   Engine->addGlobalMapping(G1, &Mem1);
@@ -115,8 +111,7 @@ TEST_F(ExecutionEngineTest, ClearModuleMappings) {
 
   EXPECT_EQ(nullptr, Engine->getGlobalValueAtAddress(&Mem1));
 
-  GlobalVariable *G2 =
-      NewExtGlobal(Type::getInt32Ty(getGlobalContext()), "Global2");
+  GlobalVariable *G2 = NewExtGlobal(Type::getInt32Ty(Context), "Global2");
   // After clearing the module mappings, we can assign a new GV to the
   // same address.
   Engine->addGlobalMapping(G2, &Mem1);
@@ -124,8 +119,7 @@ TEST_F(ExecutionEngineTest, ClearModuleMappings) {
 }
 
 TEST_F(ExecutionEngineTest, DestructionRemovesGlobalMapping) {
-  GlobalVariable *G1 =
-    NewExtGlobal(Type::getInt32Ty(getGlobalContext()), "Global1");
+  GlobalVariable *G1 = NewExtGlobal(Type::getInt32Ty(Context), "Global1");
   int32_t Mem1 = 3;
   Engine->addGlobalMapping(G1, &Mem1);
   // Make sure the reverse mapping is enabled.

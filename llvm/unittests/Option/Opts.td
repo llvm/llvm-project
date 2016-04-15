@@ -26,3 +26,5 @@ def Joo : Flag<["-"], "Joo">, Alias<B>, AliasArgs<["bar"]>;
 def K : Flag<["-"], "K">, Alias<B>;
 
 def Slurp : Option<["-"], "slurp", KIND_REMAINING_ARGS>;
+
+def SlurpJoined : Option<["-"], "slurpjoined", KIND_REMAINING_ARGS_JOINED>;

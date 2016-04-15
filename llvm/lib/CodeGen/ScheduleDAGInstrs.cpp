@@ -159,49 +159,46 @@ static void getUnderlyingObjectsForInstr(const MachineInstr *MI,
                                          const MachineFrameInfo *MFI,
                                          UnderlyingObjectsVector &Objects,
                                          const DataLayout &DL) {
-  for (auto *MMO : MI->memoperands()) {
-    if (MMO->isVolatile()) {
-      Objects.clear();
-      return;
-    }
+  auto allMMOsOkay = [&]() {
+    for (const MachineMemOperand *MMO : MI->memoperands()) {
+      if (MMO->isVolatile())
+        return false;
 
-    if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
-      // Function that contain tail calls don't have unique PseudoSourceValue
-      // objects. Two PseudoSourceValues might refer to the same or overlapping
-      // locations. The client code calling this function assumes this is not the
-      // case. So return a conservative answer of no known object.
-      if (MFI->hasTailCall()) {
-        Objects.clear();
-        return;
-      }
+      if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
+        // Function that contain tail calls don't have unique PseudoSourceValue
+        // objects. Two PseudoSourceValues might refer to the same or
+        // overlapping locations. The client code calling this function assumes
+        // this is not the case. So return a conservative answer of no known
+        // object.
+        if (MFI->hasTailCall())
+          return false;
 
-      // For now, ignore PseudoSourceValues which may alias LLVM IR values
-      // because the code that uses this function has no way to cope with
-      // such aliases.
-      if (PSV->isAliased(MFI)) {
-        Objects.clear();
-        return;
-      }
+        // For now, ignore PseudoSourceValues which may alias LLVM IR values
+        // because the code that uses this function has no way to cope with
+        // such aliases.
+        if (PSV->isAliased(MFI))
+          return false;
 
-      bool MayAlias = PSV->mayAlias(MFI);
-      Objects.push_back(UnderlyingObjectsVector::value_type(PSV, MayAlias));
-    } else if (const Value *V = MMO->getValue()) {
-      SmallVector<Value *, 4> Objs;
-      getUnderlyingObjects(V, Objs, DL);
+        bool MayAlias = PSV->mayAlias(MFI);
+        Objects.push_back(UnderlyingObjectsVector::value_type(PSV, MayAlias));
+      } else if (const Value *V = MMO->getValue()) {
+        SmallVector<Value *, 4> Objs;
+        getUnderlyingObjects(V, Objs, DL);
 
-      for (Value *V : Objs) {
-        if (!isIdentifiedObject(V)) {
-          Objects.clear();
-          return;
+        for (Value *V : Objs) {
+          if (!isIdentifiedObject(V))
+            return false;
+
+          Objects.push_back(UnderlyingObjectsVector::value_type(V, true));
         }
-
-        Objects.push_back(UnderlyingObjectsVector::value_type(V, true));
-      }
-    } else {
-      Objects.clear();
-      return;
+      } else
+        return false;
     }
-  }
+    return true;
+  };
+
+  if (!allMMOsOkay())
+    Objects.clear();
 }
 
 void ScheduleDAGInstrs::startBlock(MachineBasicBlock *bb) {
@@ -1031,26 +1028,22 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
       } else {
         // Add precise dependencies against all previously seen memory
         // accesses mapped to the same Value(s).
-        for (auto &underlObj : Objs) {
-          ValueType V = underlObj.getPointer();
-          bool ThisMayAlias = underlObj.getInt();
-
-          Value2SUsMap &stores_ = (ThisMayAlias ? Stores : NonAliasStores);
+        for (const UnderlyingObject &UnderlObj : Objs) {
+          ValueType V = UnderlObj.getValue();
+          bool ThisMayAlias = UnderlObj.mayAlias();
 
           // Add dependencies to previous stores and loads mapped to V.
-          addChainDependencies(SU, stores_, V);
+          addChainDependencies(SU, (ThisMayAlias ? Stores : NonAliasStores), V);
           addChainDependencies(SU, (ThisMayAlias ? Loads : NonAliasLoads), V);
         }
         // Update the store map after all chains have been added to avoid adding
         // self-loop edge if multiple underlying objects are present.
-        for (auto &underlObj : Objs) {
-          ValueType V = underlObj.getPointer();
-          bool ThisMayAlias = underlObj.getInt();
-
-          Value2SUsMap &stores_ = (ThisMayAlias ? Stores : NonAliasStores);
+        for (const UnderlyingObject &UnderlObj : Objs) {
+          ValueType V = UnderlObj.getValue();
+          bool ThisMayAlias = UnderlObj.mayAlias();
 
           // Map this store to V.
-          stores_.insert(SU, V);
+          (ThisMayAlias ? Stores : NonAliasStores).insert(SU, V);
         }
         // The store may have dependencies to unanalyzable loads and
         // stores.
@@ -1065,9 +1058,9 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
 
         Loads.insert(SU, UnknownValue);
       } else {
-        for (auto &underlObj : Objs) {
-          ValueType V = underlObj.getPointer();
-          bool ThisMayAlias = underlObj.getInt();
+        for (const UnderlyingObject &UnderlObj : Objs) {
+          ValueType V = UnderlObj.getValue();
+          bool ThisMayAlias = UnderlObj.mayAlias();
 
           // Add precise dependencies against all previously seen stores
           // mapping to the same Value(s).

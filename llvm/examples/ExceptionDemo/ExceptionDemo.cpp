@@ -1951,12 +1951,12 @@ int main(int argc, char *argv[]) {
 
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
-  llvm::LLVMContext &context = llvm::getGlobalContext();
-  llvm::IRBuilder<> theBuilder(context);
+  llvm::LLVMContext Context;
+  llvm::IRBuilder<> theBuilder(Context);
 
   // Make the module, which holds all the code.
   std::unique_ptr<llvm::Module> Owner =
-      llvm::make_unique<llvm::Module>("my cool jit", context);
+      llvm::make_unique<llvm::Module>("my cool jit", Context);
   llvm::Module *module = Owner.get();
 
   std::unique_ptr<llvm::RTDyldMemoryManager> MemMgr(new llvm::SectionMemoryManager());
