@@ -62,7 +62,7 @@ namespace __sanitizer {
 }  // namespace __sanitizer
 
 #if !defined(__powerpc64__) && !defined(__x86_64__) && !defined(__aarch64__)\
-                            && !defined(__mips__)
+                            && !defined(__mips__) && !defined(__s390__)
 COMPILER_CHECK(struct___old_kernel_stat_sz == sizeof(struct __old_kernel_stat));
 #endif
 

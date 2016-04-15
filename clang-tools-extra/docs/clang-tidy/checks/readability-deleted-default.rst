@@ -7,6 +7,7 @@ Checks that constructors and assignment operators marked as ``= default`` are
 not actually deleted by the compiler.
 
 .. code:: c++
+
   class Example {
   public:
     // This constructor is deleted because I is missing a default value.

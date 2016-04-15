@@ -16,6 +16,9 @@ __start:
   lui    $t0,%hi(_gp_disp)
   addi   $t0,$t0,%lo(_gp_disp)
   lw     $v0,%call16(_foo)($gp)
+bar:
+  lui    $t0,%hi(_gp_disp)
+  addi   $t0,$t0,%lo(_gp_disp)
 
 # EXE:      Disassembly of section .text:
 # EXE-NEXT: __start:
@@ -23,11 +26,16 @@ __start:
 #                                              ^-- %hi(0x37ff0-0x20000)
 # EXE-NEXT:  20004:   21 08 7f f0   addi   $8, $8, 32752
 #                                                  ^-- %lo(0x37ff0-0x20004+4)
+# EXE:      bar:
+# EXE-NEXT:  2000c:   3c 08 00 01   lui    $8, 1
+#                                              ^-- %hi(0x37ff0-0x2000c)
+# EXE-NEXT:  20010:   21 08 7f e4   addi   $8, $8, 32740
+#                                                  ^-- %lo(0x37ff0-0x20010+4)
 
 # EXE: SYMBOL TABLE:
+# EXE: 0002000c     .text   00000000 bar
 # EXE: 00037ff0     .got    00000000 .hidden _gp
 # EXE: 00020000     .text   00000000 __start
-# EXE: 00020010     .text   00000000 _foo
 
 # SO:      Disassembly of section .text:
 # SO-NEXT: __start:
@@ -35,8 +43,13 @@ __start:
 #                                             ^-- %hi(0x27ff0-0x10000)
 # SO-NEXT:  10004:   21 08 7f f0   addi   $8, $8, 32752
 #                                                 ^-- %lo(0x27ff0-0x10004+4)
+# SO:       bar:
+# SO-NEXT:   1000c:   3c 08 00 01   lui    $8, 1
+#                                              ^-- %hi(0x27ff0-0x1000c)
+# SO-NEXT:   10010:   21 08 7f e4   addi   $8, $8, 32740
+#                                                  ^-- %lo(0x27ff0-0x10010+4)
 
 # SO: SYMBOL TABLE:
+# SO: 0001000c     .text   00000000 bar
 # SO: 00027ff0     .got    00000000 .hidden _gp
 # SO: 00010000     .text   00000000 __start
-# SO: 00010010     .text   00000000 _foo

@@ -1,7 +1,11 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 
-; CHECK:      Invariant Accesses: {
-; CHECK-NEXT: }
+; CHECK:      Context:
+; CHECK-NEXT: {  :  }
+; CHECK:      Assumed Context:
+; CHECK-NEXT: {  :  }
+; CHECK:      Invalid Context:
+; CHECK-NEXT: {  : 1 = 0 }
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_for_cond40_preheader_4
 ; CHECK-NEXT:         Domain :=

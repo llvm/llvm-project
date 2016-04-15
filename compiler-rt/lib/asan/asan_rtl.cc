@@ -27,6 +27,10 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#if defined(__s390x__) && defined(__linux__)
+// For AvoidCVE_2016_2143.
+#include "sanitizer_common/sanitizer_linux.h"
+#endif
 #include "sanitizer_common/sanitizer_symbolizer.h"
 #include "lsan/lsan_common.h"
 #include "ubsan/ubsan_init.h"
@@ -415,6 +419,9 @@ static void AsanInitInternal() {
 
   AsanCheckIncompatibleRT();
   AsanCheckDynamicRTPrereqs();
+#if defined(__s390x__) && defined(__linux__)
+  AvoidCVE_2016_2143();
+#endif
 
   SetCanPoisonMemory(flags()->poison_heap);
   SetMallocContextSize(common_flags()->malloc_context_size);

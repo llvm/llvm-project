@@ -42,6 +42,10 @@ typedef SizeClassAllocator64<
 static const u64 kAddressSpaceSize = 1ULL << 40;
 #elif defined(__aarch64__)
 static const u64 kAddressSpaceSize = 1ULL << 39;
+#elif defined(__s390x__)
+static const u64 kAddressSpaceSize = 1ULL << 53;
+#elif defined(__s390__)
+static const u64 kAddressSpaceSize = 1ULL << 31;
 #else
 static const u64 kAddressSpaceSize = 1ULL << 32;
 #endif

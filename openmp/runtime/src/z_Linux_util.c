@@ -2211,6 +2211,15 @@ __kmp_elapsed_tick( double *t )
     *t = 1 / (double) CLOCKS_PER_SEC;
 }
 
+/* Return the current time stamp in nsec */
+kmp_uint64
+__kmp_now_nsec()
+{
+    struct timeval t;
+    gettimeofday(&t, NULL);
+    return KMP_NSEC_PER_SEC*t.tv_sec + 1000*t.tv_usec;
+}
+
 /*
     Determine whether the given address is mapped into the current address space.
 */

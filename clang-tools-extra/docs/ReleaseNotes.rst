@@ -286,6 +286,7 @@ The 3.8 release didn't include release notes for :program:`clang-tidy`. In the
   direct base class of this kind.
 
   The check has two complementary aspects:
+
   1. Ensure every constructor for a record type needing initialization
      value-initializes all members and direct bases via a combination of
      in-class initializers and the member initializer list.

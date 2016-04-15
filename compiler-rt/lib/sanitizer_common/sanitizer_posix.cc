@@ -104,15 +104,21 @@ uptr GetMaxVirtualAddress() {
   return (1ULL << (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1)) - 1;
 # elif defined(__mips64)
   return (1ULL << 40) - 1;  // 0x000000ffffffffffUL;
+# elif defined(__s390x__)
+  return (1ULL << 53) - 1;  // 0x001fffffffffffffUL;
 # else
   return (1ULL << 47) - 1;  // 0x00007fffffffffffUL;
 # endif
 #else  // SANITIZER_WORDSIZE == 32
+# if defined(__s390__)
+  return (1ULL << 31) - 1;  // 0x7fffffff;
+# else
   uptr res = (1ULL << 32) - 1;  // 0xffffffff;
   if (!common_flags()->full_address_space)
     res -= GetKernelAreaSize();
   CHECK_LT(reinterpret_cast<uptr>(&res), res);
   return res;
+# endif
 #endif  // SANITIZER_WORDSIZE
 }
 

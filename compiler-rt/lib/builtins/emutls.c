@@ -164,12 +164,14 @@ emutls_get_address_array(uintptr_t index) {
     emutls_address_array* array = pthread_getspecific(emutls_pthread_key);
     if (array == NULL) {
         uintptr_t new_size = emutls_new_data_array_size(index);
-        array = calloc(new_size + 1, sizeof(void*));
+        array = malloc(new_size * sizeof(void *) + sizeof(emutls_address_array));
+        if (array)
+            memset(array->data, 0, new_size * sizeof(void*));
         emutls_check_array_set_size(array, new_size);
     } else if (index > array->size) {
         uintptr_t orig_size = array->size;
         uintptr_t new_size = emutls_new_data_array_size(index);
-        array = realloc(array, (new_size + 1) * sizeof(void*));
+        array = realloc(array, new_size * sizeof(void *) + sizeof(emutls_address_array));
         if (array)
             memset(array->data + orig_size, 0,
                    (new_size - orig_size) * sizeof(void*));

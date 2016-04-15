@@ -1055,7 +1055,14 @@ COMPILER_CHECK(sizeof(__sanitizer_sigaction) == sizeof(struct sigaction));
 // Can't write checks for sa_handler and sa_sigaction due to them being
 // preprocessor macros.
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_mask);
+#ifndef __GLIBC_PREREQ
+#define __GLIBC_PREREQ(x, y) 0
+#endif
+#if !defined(__s390x__) || __GLIBC_PREREQ (2, 20)
+// On s390x glibc 2.19 and earlier sa_flags was unsigned long, and sa_resv
+// didn't exist.
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_flags);
+#endif
 #if SANITIZER_LINUX && (!SANITIZER_ANDROID || !SANITIZER_MIPS32)
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_restorer);
 #endif
@@ -1127,9 +1134,6 @@ CHECK_SIZE_AND_OFFSET(ipc_perm, uid);
 CHECK_SIZE_AND_OFFSET(ipc_perm, gid);
 CHECK_SIZE_AND_OFFSET(ipc_perm, cuid);
 CHECK_SIZE_AND_OFFSET(ipc_perm, cgid);
-#ifndef __GLIBC_PREREQ
-#define __GLIBC_PREREQ(x, y) 0
-#endif
 #if !defined(__aarch64__) || !SANITIZER_LINUX || __GLIBC_PREREQ (2, 21)
 /* On aarch64 glibc 2.20 and earlier provided incorrect mode field.  */
 CHECK_SIZE_AND_OFFSET(ipc_perm, mode);
