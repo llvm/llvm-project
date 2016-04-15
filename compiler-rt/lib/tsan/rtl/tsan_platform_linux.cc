@@ -247,9 +247,6 @@ static void InitDataSeg() {
 #endif  // #ifndef SANITIZER_GO
 
 void InitializePlatformEarly() {
-#ifdef __s390x__
-  AvoidCVE_2016_2143();
-#endif
 #ifdef TSAN_RUNTIME_VMA
   vmaSize =
     (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);

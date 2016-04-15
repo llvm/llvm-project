@@ -10,7 +10,7 @@ int main() {
   pthread_t t;
   pthread_create(&t, 0, Thread, 0);
   pthread_detach(t);
-  printf("PASS\n");
+  fprintf(stderr, "PASS\n");
   return 0;
 }
 

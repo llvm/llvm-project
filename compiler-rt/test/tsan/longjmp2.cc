@@ -16,11 +16,11 @@ int main() {
   sigjmp_buf env;
   printf("env=%p\n", env);
   if (sigsetjmp(env, 1) == 42) {
-    printf("JUMPED\n");
+    fprintf(stderr, "JUMPED\n");
     return 0;
   }
   foo(env);
-  printf("FAILED\n");
+  fprintf(stderr, "FAILED\n");
   return 0;
 }
 

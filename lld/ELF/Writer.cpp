@@ -563,23 +563,10 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     }
 
     // If a relocation needs GOT, we create a GOT slot for the symbol.
-    if (Target->needsGot(Type, Body)) {
+    if (Expr == R_GOT || Expr == R_MIPS_GOT || Expr == R_MIPS_GOT_LOCAL ||
+        Expr == R_GOT_PAGE_PC || Expr == R_GOT_PC) {
       uint32_t T = Body.isTls() ? Target->getTlsGotRel(Type) : Type;
-      RelExpr E;
-      if (Expr == R_PC)
-        E = R_GOT_PC;
-      else if (Expr == R_PAGE_PC)
-        E = R_GOT_PAGE_PC;
-      else if (Config->EMachine == EM_MIPS) {
-        if (Body.isLocal())
-          E = R_MIPS_GOT_LOCAL;
-        else if (!Body.isPreemptible())
-          E = R_MIPS_GOT;
-        else
-          E = R_GOT;
-      } else
-        E = R_GOT;
-      C.Relocations.push_back({E, T, Offset, Addend, &Body});
+      C.Relocations.push_back({Expr, T, Offset, Addend, &Body});
       if (Body.isInGot())
         continue;
       Out<ELFT>::Got->addEntry(Body);

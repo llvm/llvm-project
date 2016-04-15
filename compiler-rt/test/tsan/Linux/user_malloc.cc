@@ -8,7 +8,7 @@ extern "C" void __interceptor_free(void *p);
 extern "C" void *malloc(unsigned long size) {
   static int first = 0;
   if (__sync_lock_test_and_set(&first, 1) == 0)
-    printf("user malloc\n");
+    fprintf(stderr, "user malloc\n");
   return __interceptor_malloc(size);
 }
 

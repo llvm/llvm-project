@@ -26,10 +26,10 @@ int main() {
   stress(jheap);
   pthread_join(th, 0);
   if (__tsan_java_fini() != 0) {
-    printf("FAILED\n");
+    fprintf(stderr, "FAILED\n");
     return 1;
   }
-  printf("DONE\n");
+  fprintf(stderr, "DONE\n");
   return 0;
 }
 
