@@ -10,14 +10,13 @@
 
 ; Check that we have exactly two subprograms (that func's subprogram wasn't
 ; linked more than once for example), and that they are connected to
-; the subprogram list on a compute unit.
-; CHECK: !{{[0-9]+}} = distinct !DICompileUnit({{.*}} subprograms: ![[SPs1:[0-9]+]]
-; CHECK: ![[SPs1]] = !{![[MAINSP:[0-9]+]]}
-; CHECK: ![[MAINSP]] = distinct !DISubprogram(name: "main"
-; CHECK: !{{[0-9]+}} = distinct !DICompileUnit({{.*}} subprograms: ![[SPs2:[0-9]+]]
-; CHECK-NOT: ![[SPs2]] = !{{{.*}}null{{.*}}}
-; CHECK: ![[SPs2]] = !{![[FUNCSP:[0-9]+]]}
-; CHECK: ![[FUNCSP]] = distinct !DISubprogram(name: "func"
+; the correct compile unit.
+; CHECK: ![[CU1:[0-9]+]] = distinct !DICompileUnit(
+; CHECK: ![[CU2:[0-9]+]] = distinct !DICompileUnit(
+; CHECK: distinct !DISubprogram(name: "main"
+; CHECK-SAME:                   unit: ![[CU1]]
+; CHECK: distinct !DISubprogram(name: "func"
+; CHECK-SAME:                   unit: ![[CU2]]
 ; CHECK-NOT: distinct !DISubprogram
 
 ; ModuleID = 'funcimport_debug.o'
@@ -40,11 +39,10 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 255685) (llvm/trunk 255682)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 255685) (llvm/trunk 255682)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "funcimport_debug.c", directory: ".")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, variables: !2)
+!4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, variables: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

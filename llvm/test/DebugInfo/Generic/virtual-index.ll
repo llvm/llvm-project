@@ -38,7 +38,7 @@ define void @_ZN1A1gEv(%struct.A* %this) unnamed_addr !dbg !19 {
 !llvm.module.flags = !{!20, !21}
 !llvm.ident = !{!22}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, subprograms: !17)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3)
 !1 = !DIFile(filename: "x", directory: "x")
 !2 = !{}
 !3 = !{!4}
@@ -55,9 +55,8 @@ define void @_ZN1A1gEv(%struct.A* %this) unnamed_addr !dbg !19 {
 !14 = !{null, !15}
 !15 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !"_ZTS1A", size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
 !16 = !DISubprogram(name: "g", linkageName: "_ZN1A1gEv", scope: !"_ZTS1A", file: !1, line: 3, type: !13, isLocal: false, isDefinition: false, scopeLine: 3, containingType: !"_ZTS1A", virtuality: DW_VIRTUALITY_virtual, virtualIndex: 4294967295, flags: DIFlagPrototyped, isOptimized: false)
-!17 = !{!18, !19}
-!18 = distinct !DISubprogram(name: "f", linkageName: "_ZN1A1fEv", scope: !"_ZTS1A", file: !1, line: 6, type: !13, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, declaration: !12, variables: !2)
-!19 = distinct !DISubprogram(name: "g", linkageName: "_ZN1A1gEv", scope: !"_ZTS1A", file: !1, line: 7, type: !13, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, declaration: !16, variables: !2)
+!18 = distinct !DISubprogram(name: "f", linkageName: "_ZN1A1fEv", scope: !"_ZTS1A", file: !1, line: 6, type: !13, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !12, variables: !2)
+!19 = distinct !DISubprogram(name: "g", linkageName: "_ZN1A1gEv", scope: !"_ZTS1A", file: !1, line: 7, type: !13, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !16, variables: !2)
 !20 = !{i32 2, !"Dwarf Version", i32 4}
 !21 = !{i32 2, !"Debug Info Version", i32 3}
 !22 = !{!"clang version 3.9.0 (trunk 263469) (llvm/trunk 263156)"}

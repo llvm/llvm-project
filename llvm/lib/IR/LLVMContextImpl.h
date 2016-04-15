@@ -480,6 +480,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   unsigned VirtualIndex;
   unsigned Flags;
   bool IsOptimized;
+  Metadata *Unit;
   Metadata *TemplateParams;
   Metadata *Declaration;
   Metadata *Variables;
@@ -489,14 +490,14 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
                 bool IsLocalToUnit, bool IsDefinition, unsigned ScopeLine,
                 Metadata *ContainingType, unsigned Virtuality,
                 unsigned VirtualIndex, unsigned Flags, bool IsOptimized,
-                Metadata *TemplateParams, Metadata *Declaration,
+                Metadata *Unit, Metadata *TemplateParams, Metadata *Declaration,
                 Metadata *Variables)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
         Line(Line), Type(Type), IsLocalToUnit(IsLocalToUnit),
         IsDefinition(IsDefinition), ScopeLine(ScopeLine),
         ContainingType(ContainingType), Virtuality(Virtuality),
         VirtualIndex(VirtualIndex), Flags(Flags), IsOptimized(IsOptimized),
-        TemplateParams(TemplateParams), Declaration(Declaration),
+        Unit(Unit), TemplateParams(TemplateParams), Declaration(Declaration),
         Variables(Variables) {}
   MDNodeKeyImpl(const DISubprogram *N)
       : Scope(N->getRawScope()), Name(N->getRawName()),
@@ -506,7 +507,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
         ScopeLine(N->getScopeLine()), ContainingType(N->getRawContainingType()),
         Virtuality(N->getVirtuality()), VirtualIndex(N->getVirtualIndex()),
         Flags(N->getFlags()), IsOptimized(N->isOptimized()),
-        TemplateParams(N->getRawTemplateParams()),
+        Unit(N->getRawUnit()), TemplateParams(N->getRawTemplateParams()),
         Declaration(N->getRawDeclaration()), Variables(N->getRawVariables()) {}
 
   bool isKeyOf(const DISubprogram *RHS) const {
@@ -519,7 +520,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
            ContainingType == RHS->getRawContainingType() &&
            Virtuality == RHS->getVirtuality() &&
            VirtualIndex == RHS->getVirtualIndex() && Flags == RHS->getFlags() &&
-           IsOptimized == RHS->isOptimized() &&
+           IsOptimized == RHS->isOptimized() && Unit == RHS->getUnit() &&
            TemplateParams == RHS->getRawTemplateParams() &&
            Declaration == RHS->getRawDeclaration() &&
            Variables == RHS->getRawVariables();
