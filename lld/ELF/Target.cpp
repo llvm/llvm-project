@@ -86,7 +86,6 @@ public:
   bool isRelRelative(uint32_t Type) const override;
   bool needsCopyRelImpl(uint32_t Type) const override;
   bool needsDynRelative(uint32_t Type) const override;
-  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
   bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 
@@ -115,7 +114,6 @@ public:
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   bool needsCopyRelImpl(uint32_t Type) const override;
-  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
   bool refersToGotEntry(uint32_t Type) const override;
   bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -141,7 +139,6 @@ public:
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
   bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   bool isRelRelative(uint32_t Type) const override;
@@ -161,7 +158,6 @@ public:
   uint32_t getTlsGotRel(uint32_t Type) const override;
   bool isRelRelative(uint32_t Type) const override;
   bool needsCopyRelImpl(uint32_t Type) const override;
-  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
   bool refersToGotEntry(uint32_t Type) const override;
   bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -192,7 +188,6 @@ public:
   void writeGotHeader(uint8_t *Buf) const override;
   void writeThunk(uint8_t *Buf, uint64_t S) const override;
   bool needsCopyRelImpl(uint32_t Type) const override;
-  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
   bool needsPltImpl(uint32_t Type) const override;
   bool needsThunk(uint32_t Type, const InputFile &File,
                   const SymbolBody &S) const override;
@@ -281,10 +276,6 @@ bool TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
 bool TargetInfo::isGotRelative(uint32_t Type) const { return false; }
 bool TargetInfo::isHintRel(uint32_t Type) const { return false; }
 bool TargetInfo::isRelRelative(uint32_t Type) const { return true; }
-
-bool TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
-  return false;
-}
 
 bool TargetInfo::needsPltImpl(uint32_t Type) const { return false; }
 
@@ -385,6 +376,10 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_386_PC32:
   case R_386_GOTPC:
     return R_PC;
+  case R_386_GOT32:
+  case R_386_TLS_GOTIE:
+  case R_386_TLS_IE:
+    return R_GOT;
   }
 }
 
@@ -484,14 +479,6 @@ void X86TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 
 bool X86TargetInfo::needsCopyRelImpl(uint32_t Type) const {
   return Type == R_386_32 || Type == R_386_16 || Type == R_386_8;
-}
-
-bool X86TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
-  if (S.isTls() && Type == R_386_TLS_GD)
-    return Target->canRelaxTls(Type, &S) && S.isPreemptible();
-  if (Type == R_386_TLS_GOTIE || Type == R_386_TLS_IE)
-    return !canRelaxTls(Type, &S);
-  return Type == R_386_GOT32 || needsPlt(Type, S);
 }
 
 bool X86TargetInfo::needsPltImpl(uint32_t Type) const {
@@ -689,13 +676,16 @@ RelExpr X86_64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_X86_64_SIZE32:
   case R_X86_64_SIZE64:
     return R_SIZE;
-  case R_X86_64_GOTPCREL:
   case R_X86_64_PLT32:
   case R_X86_64_PC32:
   case R_X86_64_TLSLD:
-  case R_X86_64_GOTTPOFF:
   case R_X86_64_TLSGD:
     return R_PC;
+  case R_X86_64_GOT32:
+    return R_GOT;
+  case R_X86_64_GOTPCREL:
+  case R_X86_64_GOTTPOFF:
+    return R_GOT_PC;
   }
 }
 
@@ -744,14 +734,6 @@ bool X86_64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
 bool X86_64TargetInfo::refersToGotEntry(uint32_t Type) const {
   return Type == R_X86_64_GOTPCREL || Type == R_X86_64_GOTPCRELX ||
          Type == R_X86_64_REX_GOTPCRELX;
-}
-
-bool X86_64TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
-  if (Type == R_X86_64_TLSGD)
-    return Target->canRelaxTls(Type, &S) && S.isPreemptible();
-  if (Type == R_X86_64_GOTTPOFF)
-    return !canRelaxTls(Type, &S);
-  return refersToGotEntry(Type) || needsPlt(Type, S);
 }
 
 uint32_t X86_64TargetInfo::getDynRel(uint32_t Type) const {
@@ -1058,22 +1040,6 @@ void PPC64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32be(Buf + 28, 0x4e800420);                   // bctr
 }
 
-bool PPC64TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
-  if (needsPlt(Type, S))
-    return true;
-
-  switch (Type) {
-  default: return false;
-  case R_PPC64_GOT16:
-  case R_PPC64_GOT16_DS:
-  case R_PPC64_GOT16_HA:
-  case R_PPC64_GOT16_HI:
-  case R_PPC64_GOT16_LO:
-  case R_PPC64_GOT16_LO_DS:
-    return true;
-  }
-}
-
 bool PPC64TargetInfo::needsPltImpl(uint32_t Type) const {
   // These are function calls that need to be redirected through a PLT stub.
   return Type == R_PPC64_REL24;
@@ -1210,10 +1176,14 @@ RelExpr AArch64TargetInfo::getRelExpr(uint32_t Type,
   case R_AARCH64_ADR_PREL_LO21:
   case R_AARCH64_TSTBR14:
     return R_PC;
-  case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_ADR_PREL_PG_HI21:
-  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     return R_PAGE_PC;
+  case R_AARCH64_LD64_GOT_LO12_NC:
+  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+    return R_GOT;
+  case R_AARCH64_ADR_GOT_PAGE:
+  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+    return R_GOT_PAGE_PC;
   }
 }
 
@@ -1334,19 +1304,6 @@ bool AArch64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
   case R_AARCH64_LDST64_ABS_LO12_NC:
   case R_AARCH64_LDST128_ABS_LO12_NC:
     return true;
-  }
-}
-
-bool AArch64TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
-  switch (Type) {
-  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
-    return !canRelaxTls(Type, &S);
-  case R_AARCH64_ADR_GOT_PAGE:
-  case R_AARCH64_LD64_GOT_LO12_NC:
-    return true;
-  default:
-    return needsPlt(Type, S);
   }
 }
 
@@ -1591,6 +1548,13 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
   case R_MIPS_PCHI16:
   case R_MIPS_PCLO16:
     return R_PC;
+  case R_MIPS_GOT16:
+  case R_MIPS_CALL16:
+    if (S.isLocal())
+      return R_MIPS_GOT_LOCAL;
+    if (!S.isPreemptible())
+      return R_MIPS_GOT;
+    return R_GOT;
   }
 }
 
@@ -1716,11 +1680,6 @@ void MipsTargetInfo<ELFT>::writeThunk(uint8_t *Buf, uint64_t S) const {
 template <class ELFT>
 bool MipsTargetInfo<ELFT>::needsCopyRelImpl(uint32_t Type) const {
   return !isRelRelative(Type) || Type == R_MIPS_LO16;
-}
-
-template <class ELFT>
-bool MipsTargetInfo<ELFT>::needsGot(uint32_t Type, const SymbolBody &S) const {
-  return needsPlt(Type, S) || refersToGotEntry(Type);
 }
 
 template <class ELFT>
