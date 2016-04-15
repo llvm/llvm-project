@@ -10,9 +10,10 @@
 // CHECK: , !dbg !
 // CHECK-NOT: DW_TAG_base_type
 
-// But llvm.dbg.cu should be missing (to prevent writing debug info to
+// The CU should be marked NoDebug (to prevent writing debug info to
 // the final output).
-// CHECK-NOT: !llvm.dbg.cu = !{
+// CHECK: !llvm.dbg.cu = !{![[CU:.*]]}
+// CHECK: ![[CU]] = distinct !DICompileUnit({{.*}}emissionKind: NoDebug
 
 int bar(int j) {
   return (j + j - 2) * (j - 2) * j;
