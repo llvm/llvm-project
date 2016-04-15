@@ -8,6 +8,7 @@ import unittest2
 import os, time
 import lldb
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 class BlocksTestCase(TestBase):
@@ -36,6 +37,7 @@ class BlocksTestCase(TestBase):
         self.wait_for_breakpoint()
     
     @unittest2.expectedFailure("rdar://problem/10413887 - Call blocks in expressions")
+    @skipUnlessDarwin
     def test_expr(self):
         self.launch_common()
 
@@ -51,6 +53,7 @@ class BlocksTestCase(TestBase):
         self.expect("expression (int)neg (-12)", VARIABLES_DISPLAYED_CORRECTLY,
             substrs = ["= 12"])
 
+    @skipUnlessDarwin
     def test_define(self):
         self.launch_common()
 
