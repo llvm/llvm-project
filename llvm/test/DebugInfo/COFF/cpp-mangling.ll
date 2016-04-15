@@ -35,11 +35,10 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!9, !10, !11}
 !llvm.ident = !{!12}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 (trunk 257652)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 (trunk 257652)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "t2.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo::bar", linkageName: "\01?bar@foo@@YAHH@Z", scope: !5, file: !1, line: 2, type: !6, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!4 = distinct !DISubprogram(name: "foo::bar", linkageName: "\01?bar@foo@@YAHH@Z", scope: !5, file: !1, line: 2, type: !6, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !5 = !DINamespace(name: "foo", scope: null, file: !1, line: 1)
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !8}

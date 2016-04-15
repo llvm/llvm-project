@@ -86,15 +86,14 @@ declare i32 @printf(i8*, ...)
 !llvm.module.flags = !{!15, !16}
 !llvm.ident = !{!17}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 253667) (llvm/trunk 253670)", isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, enums: !2, subprograms: !3, globals: !11)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 253667) (llvm/trunk 253670)", isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, enums: !2, globals: !11)
 !1 = !DIFile(filename: "cov-zero-samples.cc", directory: ".")
 !2 = !{}
-!3 = !{!4, !8}
-!4 = distinct !DISubprogram(name: "never_called", linkageName: "_Z12never_calledi", scope: !1, file: !1, line: 5, type: !5, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!4 = distinct !DISubprogram(name: "never_called", linkageName: "_Z12never_calledi", scope: !1, file: !1, line: 5, type: !5, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !7}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!8 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 7, type: !9, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!8 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 7, type: !9, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!7}
 !11 = !{!12}

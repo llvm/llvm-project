@@ -365,8 +365,8 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(LexicalScope *Scope) {
 
   // Find the subprogram's DwarfCompileUnit in the SPMap in case the subprogram
   // was inlined from another compile unit.
-  auto &CU = SPMap[SP];
-  forBothCUs(*CU, [&](DwarfCompileUnit &CU) {
+  auto &CU = *CUMap.lookup(cast<DISubprogram>(SP)->getUnit());
+  forBothCUs(CU, [&](DwarfCompileUnit &CU) {
     CU.constructAbstractSubprogramScopeDIE(Scope);
   });
 }
@@ -483,8 +483,6 @@ void DwarfDebug::beginModule() {
       CU.addImportedEntity(IE);
     for (auto *GV : CUNode->getGlobalVariables())
       CU.getOrCreateGlobalVariableDIE(GV);
-    for (auto *SP : CUNode->getSubprograms())
-      SPMap.insert(std::make_pair(SP, &CU));
     for (auto *Ty : CUNode->getEnumTypes()) {
       // The enum types array by design contains pointers to
       // MDNodes rather than DIRefs. Unique them here.
@@ -493,10 +491,10 @@ void DwarfDebug::beginModule() {
     for (auto *Ty : CUNode->getRetainedTypes()) {
       // The retained types array by design contains pointers to
       // MDNodes rather than DIRefs. Unique them here.
-      DIType *RT = cast<DIType>(resolve(Ty->getRef()));
-      if (!RT->isExternalTypeRef())
-        // There is no point in force-emitting a forward declaration.
-        CU.getOrCreateTypeDIE(RT);
+      if (DIType *RT = dyn_cast<DIType>(resolve(Ty->getRef())))
+        if (!RT->isExternalTypeRef())
+          // There is no point in force-emitting a forward declaration.
+          CU.getOrCreateTypeDIE(RT);
     }
     // Emit imported_modules last so that the relevant context is already
     // available.
@@ -525,10 +523,19 @@ void DwarfDebug::finishVariableDefinitions() {
 }
 
 void DwarfDebug::finishSubprogramDefinitions() {
-  for (const auto &P : SPMap)
-    if (ProcessedSPNodes.count(P.first))
-      forBothCUs(*P.second, [&](DwarfCompileUnit &CU) {
-          CU.finishSubprogramDefinition(cast<DISubprogram>(P.first));
+  for (auto &F : MMI->getModule()->functions())
+    if (auto *SP = F.getSubprogram())
+      if (ProcessedSPNodes.count(SP) &&
+          SP->getUnit()->getEmissionKind() != DICompileUnit::NoDebug)
+        forBothCUs(*CUMap.lookup(SP->getUnit()), [&](DwarfCompileUnit &CU) {
+          CU.finishSubprogramDefinition(SP);
+        });
+  for (auto *AbsScope : LScopes.getAbstractScopesList())
+    if (auto *SP = dyn_cast<DISubprogram>(AbsScope->getScopeNode()))
+      if (ProcessedSPNodes.count(SP) &&
+          SP->getUnit()->getEmissionKind() != DICompileUnit::NoDebug)
+        forBothCUs(*CUMap.lookup(SP->getUnit()), [&](DwarfCompileUnit &CU) {
+          CU.finishSubprogramDefinition(SP);
         });
 }
 
@@ -668,7 +675,6 @@ void DwarfDebug::endModule() {
   }
 
   // clean up.
-  SPMap.clear();
   AbstractVariables.clear();
 }
 
@@ -1067,11 +1073,13 @@ void DwarfDebug::beginFunction(const MachineFunction *MF) {
   // isn't structurally identical (see: file path/name info from clang, which
   // includes the directory of the cpp file being built, even when the file name
   // is absolute (such as an <> lookup header)))
-  DwarfCompileUnit *TheCU = SPMap.lookup(FnScope->getScopeNode());
-  if (!TheCU)
-    // Once DISubprogram points to the owning CU, we can assert that the CU has
-    // a NoDebug EmissionKind here.
+  auto *SP = cast<DISubprogram>(FnScope->getScopeNode());
+  DwarfCompileUnit *TheCU = CUMap.lookup(SP->getUnit());
+  if (!TheCU) {
+    assert(SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug &&
+           "DICompileUnit missing from llvm.dbg.cu?");
     return;
+  }
   if (Asm->OutStreamer->hasRawTextSupport())
     // Use a single line table if we are generating assembly.
     Asm->OutStreamer->getContext().setDwarfCompileUnitID(0);
@@ -1093,11 +1101,9 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
   assert(CurFn == MF &&
       "endFunction should be called with the same function as beginFunction");
 
-  if (!MMI->hasDebugInfo() || LScopes.empty() ||
-      !MF->getFunction()->getSubprogram() ||
-      // Once DISubprogram points to the owning CU, we can check for a
-      // CU with a NoDebug EmissionKind here.
-      !SPMap.lookup(MF->getFunction()->getSubprogram())) {
+  const DISubprogram *SP = MF->getFunction()->getSubprogram();
+  if (!MMI->hasDebugInfo() || LScopes.empty() || !SP ||
+      SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug) {
     // If we don't have a lexical scope for this function then there will
     // be a hole in the range information. Keep note of this by setting the
     // previously used section to nullptr.
@@ -1106,7 +1112,7 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
     DebugHandlerBase::endFunction(MF);
     // Mark functions with no debug info on any instructions, but a
     // valid DISubprogram as processed.
-    if (auto *SP = MF->getFunction()->getSubprogram())
+    if (SP)
       ProcessedSPNodes.insert(SP);
     return;
   }
@@ -1115,8 +1121,8 @@ void DwarfDebug::endFunction(const MachineFunction *MF) {
   Asm->OutStreamer->getContext().setDwarfCompileUnitID(0);
 
   LexicalScope *FnScope = LScopes.getCurrentFunctionScope();
-  auto *SP = cast<DISubprogram>(FnScope->getScopeNode());
-  DwarfCompileUnit &TheCU = *SPMap.lookup(SP);
+  SP = cast<DISubprogram>(FnScope->getScopeNode());
+  DwarfCompileUnit &TheCU = *CUMap.lookup(SP->getUnit());
 
   DenseSet<InlinedVariable> ProcessedVars;
   collectVariableInfo(TheCU, SP, ProcessedVars);

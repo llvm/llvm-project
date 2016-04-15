@@ -403,9 +403,9 @@ namespace llvm {
         uint64_t AlignInBits = 0, unsigned Flags = DINode::FlagFwdDecl,
         StringRef UniqueIdentifier = "");
 
-    /// Retain DIType* in a module even if it is not referenced
+    /// Retain DIScope* in a module even if it is not referenced
     /// through debug info anchors.
-    void retainType(DIType *T);
+    void retainType(DIScope *T);
 
     /// Create unspecified parameter type
     /// for a subroutine type.

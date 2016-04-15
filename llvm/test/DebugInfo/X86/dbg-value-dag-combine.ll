@@ -24,9 +24,9 @@ entry:
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!20}
 
-!0 = distinct !DISubprogram(name: "__OpenCL_test_kernel", linkageName: "__OpenCL_test_kernel", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !19, scope: !1, type: !3)
+!0 = distinct !DISubprogram(name: "__OpenCL_test_kernel", linkageName: "__OpenCL_test_kernel", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !2, file: !19, scope: !1, type: !3)
 !1 = !DIFile(filename: "OCL6368.tmp.cl", directory: "E:CUsersCmvillmow.AMDCAppDataCLocalCTemp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "clc", isOptimized: false, emissionKind: FullDebug, file: !19, enums: !12, retainedTypes: !12, subprograms: !18, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "clc", isOptimized: false, emissionKind: FullDebug, file: !19, enums: !12, retainedTypes: !12, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{null, !5}
 !5 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, scope: !2, baseType: !6)
@@ -42,6 +42,5 @@ entry:
 !15 = !DILocation(line: 5, column: 15, scope: !10)
 !16 = !DILocation(line: 6, column: 18, scope: !10)
 !17 = !DILocation(line: 7, column: 1, scope: !0)
-!18 = !{!0}
 !19 = !DIFile(filename: "OCL6368.tmp.cl", directory: "E:\5CUsers\5Cmvillmow.AMD\5CAppData\5CLocal\5CTemp")
 !20 = !{i32 1, !"Debug Info Version", i32 3}

@@ -1053,10 +1053,9 @@ void MipsAsmPrinter::NaClAlignIndirectJumpTargets(MachineFunction &MF) {
   }
 
   // If basic block address is taken, block can be target of indirect branch.
-  for (MachineFunction::iterator MBB = MF.begin(), E = MF.end();
-                                 MBB != E; ++MBB) {
-    if (MBB->hasAddressTaken())
-      MBB->setAlignment(MIPS_NACL_BUNDLE_ALIGN);
+  for (auto &MBB : MF) {
+    if (MBB.hasAddressTaken())
+      MBB.setAlignment(MIPS_NACL_BUNDLE_ALIGN);
   }
 }
 

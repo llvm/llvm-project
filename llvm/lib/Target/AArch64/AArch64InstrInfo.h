@@ -109,7 +109,9 @@ public:
 
   bool enableClusterLoads() const override { return true; }
 
-  bool shouldClusterLoads(MachineInstr *FirstLdSt, MachineInstr *SecondLdSt,
+  bool enableClusterStores() const override { return true; }
+
+  bool shouldClusterMemOps(MachineInstr *FirstLdSt, MachineInstr *SecondLdSt,
                           unsigned NumLoads) const override;
 
   bool shouldScheduleAdjacent(MachineInstr *First,

@@ -96,17 +96,19 @@ void DIBuilder::finalize() {
     CUNode->replaceRetainedTypes(MDTuple::get(VMContext, RetainValues));
 
   DISubprogramArray SPs = MDTuple::get(VMContext, AllSubprograms);
-  if (!AllSubprograms.empty())
-    CUNode->replaceSubprograms(SPs.get());
-
-  for (auto *SP : SPs) {
+  auto resolveVariables = [&](DISubprogram *SP) {
     if (MDTuple *Temp = SP->getVariables().get()) {
       const auto &PV = PreservedVariables.lookup(SP);
       SmallVector<Metadata *, 4> Variables(PV.begin(), PV.end());
       DINodeArray AV = getOrCreateArray(Variables);
       TempMDTuple(Temp)->replaceAllUsesWith(AV.get());
     }
-  }
+  };
+  for (auto *SP : SPs)
+    resolveVariables(SP);
+  for (auto *N : RetainValues)
+    if (auto *SP = dyn_cast<DISubprogram>(N))
+      resolveVariables(SP);
 
   if (!AllGVs.empty())
     CUNode->replaceGlobalVariables(MDTuple::get(VMContext, AllGVs));
@@ -148,8 +150,8 @@ DICompileUnit *DIBuilder::createCompileUnit(
   assert(!CUNode && "Can only make one compile unit per DIBuilder instance");
   CUNode = DICompileUnit::getDistinct(
       VMContext, Lang, DIFile::get(VMContext, Filename, Directory), Producer,
-      isOptimized, Flags, RunTimeVer, SplitName, Kind, nullptr,
-      nullptr, nullptr, nullptr, nullptr, nullptr, DWOId);
+      isOptimized, Flags, RunTimeVer, SplitName, Kind, nullptr, nullptr,
+      nullptr, nullptr, nullptr, DWOId);
 
   // Create a named metadata so that it is easier to find cu in a module.
   NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
@@ -505,8 +507,11 @@ DIType *DIBuilder::createObjectPointerType(DIType *Ty) {
   return createTypeWithFlags(VMContext, Ty, Flags);
 }
 
-void DIBuilder::retainType(DIType *T) {
+void DIBuilder::retainType(DIScope *T) {
   assert(T && "Expected non-null type");
+  assert((isa<DIType>(T) || (isa<DISubprogram>(T) &&
+                             cast<DISubprogram>(T)->isDefinition() == false)) &&
+         "Expected type or subprogram declaration");
   AllRetainTypes.emplace_back(T);
 }
 
@@ -684,12 +689,12 @@ DISubprogram *DIBuilder::createFunction(
     unsigned LineNo, DISubroutineType *Ty, bool isLocalToUnit,
     bool isDefinition, unsigned ScopeLine, unsigned Flags, bool isOptimized,
     DITemplateParameterArray TParams, DISubprogram *Decl) {
-  auto *Node =
-      getSubprogram(/* IsDistinct = */ isDefinition, VMContext,
-                    DIScopeRef::get(getNonCompileUnitScope(Context)), Name,
-                    LinkageName, File, LineNo, Ty, isLocalToUnit, isDefinition,
-                    ScopeLine, nullptr, 0, 0, Flags, isOptimized, TParams, Decl,
-                    MDTuple::getTemporary(VMContext, None).release());
+  auto *Node = getSubprogram(
+      /* IsDistinct = */ isDefinition, VMContext,
+      DIScopeRef::get(getNonCompileUnitScope(Context)), Name, LinkageName, File,
+      LineNo, Ty, isLocalToUnit, isDefinition, ScopeLine, nullptr, 0, 0, Flags,
+      isOptimized, isDefinition ? CUNode : nullptr, TParams, Decl,
+      MDTuple::getTemporary(VMContext, None).release());
 
   if (isDefinition)
     AllSubprograms.push_back(Node);
@@ -705,8 +710,8 @@ DISubprogram *DIBuilder::createTempFunctionFwdDecl(
   return DISubprogram::getTemporary(
              VMContext, DIScopeRef::get(getNonCompileUnitScope(Context)), Name,
              LinkageName, File, LineNo, Ty, isLocalToUnit, isDefinition,
-             ScopeLine, nullptr, 0, 0, Flags, isOptimized, TParams, Decl,
-             nullptr)
+             ScopeLine, nullptr, 0, 0, Flags, isOptimized,
+             isDefinition ? CUNode : nullptr, TParams, Decl, nullptr)
       .release();
 }
 
@@ -724,7 +729,8 @@ DIBuilder::createMethod(DIScope *Context, StringRef Name, StringRef LinkageName,
       /* IsDistinct = */ isDefinition, VMContext,
       DIScopeRef::get(cast<DIScope>(Context)), Name, LinkageName, F, LineNo, Ty,
       isLocalToUnit, isDefinition, LineNo, DITypeRef::get(VTableHolder), VK,
-      VIndex, Flags, isOptimized, TParams, nullptr, nullptr);
+      VIndex, Flags, isOptimized, isDefinition ? CUNode : nullptr, TParams,
+      nullptr, nullptr);
 
   if (isDefinition)
     AllSubprograms.push_back(SP);

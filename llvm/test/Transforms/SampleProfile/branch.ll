@@ -157,13 +157,12 @@ attributes #4 = { nounwind readonly }
 !llvm.module.flags = !{!13, !14}
 !llvm.ident = !{!15}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 248211) (llvm/trunk 248217)", isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, enums: !2, retainedTypes: !3, subprograms: !5)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 248211) (llvm/trunk 248217)", isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, enums: !2, retainedTypes: !3)
 !1 = !DIFile(filename: "test.cc", directory: "/ssd/llvm_commit")
 !2 = !{}
 !3 = !{!4}
 !4 = !DIBasicType(name: "double", size: 64, align: 64, encoding: DW_ATE_float)
-!5 = !{!6}
-!6 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 4, type: !7, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!6 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 4, type: !7, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !9, !10}
 !9 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

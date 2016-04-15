@@ -76,14 +76,13 @@ attributes #0 = { norecurse nounwind uwtable "disable-tail-calls"="false" "less-
 !llvm.module.flags = !{!12, !13, !14}
 !llvm.ident = !{!15}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3, globals: !8)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !8)
 !1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
-!3 = !{!4, !7}
-!4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 7, type: !5, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: true, variables: !2)
+!4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 7, type: !5, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
-!7 = distinct !DISubprogram(name: "file_change", scope: !1, file: !1, line: 2, type: !5, isLocal: true, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, variables: !2)
+!7 = distinct !DISubprogram(name: "file_change", scope: !1, file: !1, line: 2, type: !5, isLocal: true, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
 !8 = !{!9}
 !9 = !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 1, type: !10, isLocal: false, isDefinition: true, variable: i32* @x)
 !10 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !11)

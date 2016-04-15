@@ -220,16 +220,20 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
 
   MachineRegisterInfo *MRI = &MF.getRegInfo();
 
-  for (MachineFunction::iterator MFI = MF.begin(), MFE = MF.end(); MFI != MFE;
-       ++MFI)
-    for (MachineBasicBlock::iterator I = MFI->begin(); I != MFI->end(); ++I) {
-      if (I->getOpcode() == Mips::RDDSP)
-        addDSPCtrlRegOperands(false, *I, MF);
-      else if (I->getOpcode() == Mips::WRDSP)
-        addDSPCtrlRegOperands(true, *I, MF);
-      else
-        replaceUsesWithZeroReg(MRI, *I);
+  for (auto &MBB: MF) {
+    for (auto &MI: MBB) {
+      switch (MI.getOpcode()) {
+      case Mips::RDDSP:
+        addDSPCtrlRegOperands(false, MI, MF);
+        break;
+      case Mips::WRDSP:
+        addDSPCtrlRegOperands(true, MI, MF);
+        break;
+      default:
+        replaceUsesWithZeroReg(MRI, MI);
+      }
     }
+  }
 }
 
 SDNode *MipsSEDAGToDAGISel::selectAddESubE(unsigned MOp, SDValue InFlag,

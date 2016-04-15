@@ -62,7 +62,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!22, !23}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, enums: !2, retainedTypes: !3, subprograms: !12, globals: !20, imports: !2, emissionKind: FullDebug)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, enums: !2, retainedTypes: !3, globals: !20, imports: !2, emissionKind: FullDebug)
 !1 = !DIFile(filename: "test.cpp", directory: "")
 !2 = !{}
 !3 = !{!4}
@@ -74,8 +74,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !9 = !DIBasicType(encoding: DW_ATE_signed, size: 32, align: 32, name: "int")
 !10 = !DIDerivedType(baseType: !"_ZTS1C", tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial)
 !11 = !DIBasicType(tag: DW_TAG_base_type, name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
-!12 = !{!13}
-!13 = distinct !DISubprogram(name: "test_with_debug", linkageName: "test_with_debug", line: 6, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 6, file: !1, scope: !14, type: !15, variables: !17)
+!13 = distinct !DISubprogram(name: "test_with_debug", linkageName: "test_with_debug", line: 6, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 6, file: !1, scope: !14, type: !15, variables: !17)
 !14 = !DIFile(filename: "test.cpp", directory: "")
 !15 = !DISubroutineType(types: !16)
 !16 = !{null}

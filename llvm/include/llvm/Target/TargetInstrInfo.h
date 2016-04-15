@@ -997,9 +997,11 @@ public:
 
   virtual bool enableClusterLoads() const { return false; }
 
-  virtual bool shouldClusterLoads(MachineInstr *FirstLdSt,
-                                  MachineInstr *SecondLdSt,
-                                  unsigned NumLoads) const {
+  virtual bool enableClusterStores() const { return false; }
+
+  virtual bool shouldClusterMemOps(MachineInstr *FirstLdSt,
+                                   MachineInstr *SecondLdSt,
+                                   unsigned NumLoads) const {
     return false;
   }
 

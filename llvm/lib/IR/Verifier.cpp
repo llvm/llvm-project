@@ -951,13 +951,10 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
   if (auto *Array = N.getRawRetainedTypes()) {
     Assert(isa<MDTuple>(Array), "invalid retained type list", &N, Array);
     for (Metadata *Op : N.getRetainedTypes()->operands()) {
-      Assert(Op && isa<DIType>(Op), "invalid retained type", &N, Op);
-    }
-  }
-  if (auto *Array = N.getRawSubprograms()) {
-    Assert(isa<MDTuple>(Array), "invalid subprogram list", &N, Array);
-    for (Metadata *Op : N.getSubprograms()->operands()) {
-      Assert(Op && isa<DISubprogram>(Op), "invalid subprogram ref", &N, Op);
+      Assert(Op && (isa<DIType>(Op) ||
+                    (isa<DISubprogram>(Op) &&
+                     cast<DISubprogram>(Op)->isDefinition() == false)),
+             "invalid retained type", &N, Op);
     }
   }
   if (auto *Array = N.getRawGlobalVariables()) {
@@ -994,10 +991,9 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
          N.getRawContainingType());
   if (auto *Params = N.getRawTemplateParams())
     visitTemplateParams(N, *Params);
-  if (auto *S = N.getRawDeclaration()) {
+  if (auto *S = N.getRawDeclaration())
     Assert(isa<DISubprogram>(S) && !cast<DISubprogram>(S)->isDefinition(),
            "invalid subprogram declaration", &N, S);
-  }
   if (auto *RawVars = N.getRawVariables()) {
     auto *Vars = dyn_cast<MDTuple>(RawVars);
     Assert(Vars, "invalid variable list", &N, RawVars);
@@ -1009,8 +1005,16 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
   Assert(!hasConflictingReferenceFlags(N.getFlags()), "invalid reference flags",
          &N);
 
-  if (N.isDefinition())
+  auto *Unit = N.getRawUnit();
+  if (N.isDefinition()) {
+    // Subprogram definitions (not part of the type hierarchy).
     Assert(N.isDistinct(), "subprogram definitions must be distinct", &N);
+    Assert(Unit, "subprogram definitions must have a compile unit", &N);
+    Assert(isa<DICompileUnit>(Unit), "invalid unit type", &N, Unit);
+  } else {
+    // Subprogram declarations (part of the type hierarchy).
+    Assert(!Unit, "subprogram declarations must not have a compile unit", &N);
+  }
 }
 
 void Verifier::visitDILexicalBlockBase(const DILexicalBlockBase &N) {
@@ -2022,6 +2026,8 @@ void Verifier::visitFunction(const Function &F) {
   auto *N = F.getSubprogram();
   if (!N)
     return;
+
+  visitDISubprogram(*N);
 
   // Check that all !dbg attachments lead to back to N (or, at least, another
   // subprogram that describes the same function).
@@ -4419,7 +4425,7 @@ void Verifier::verifyTypeRefs() {
     auto *Array = CU->getRawRetainedTypes();
     if (!Array || !isa<MDTuple>(Array))
       continue;
-    for (DIType *Op : CU->getRetainedTypes())
+    for (DIScope *Op : CU->getRetainedTypes())
       if (auto *T = dyn_cast_or_null<DICompositeType>(Op))
         if (auto *S = T->getRawIdentifier()) {
           UnresolvedTypeRefs.erase(S);

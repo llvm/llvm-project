@@ -1673,7 +1673,6 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Printer.printEmissionKind("emissionKind", N->getEmissionKind());
   Printer.printMetadata("enums", N->getRawEnumTypes());
   Printer.printMetadata("retainedTypes", N->getRawRetainedTypes());
-  Printer.printMetadata("subprograms", N->getRawSubprograms());
   Printer.printMetadata("globals", N->getRawGlobalVariables());
   Printer.printMetadata("imports", N->getRawImportedEntities());
   Printer.printMetadata("macros", N->getRawMacros());
@@ -1703,6 +1702,7 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
     Printer.printInt("virtualIndex", N->getVirtualIndex(), false);
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printBool("isOptimized", N->isOptimized());
+  Printer.printMetadata("unit", N->getRawUnit());
   Printer.printMetadata("templateParams", N->getRawTemplateParams());
   Printer.printMetadata("declaration", N->getRawDeclaration());
   Printer.printMetadata("variables", N->getRawVariables());

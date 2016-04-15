@@ -81,7 +81,7 @@ eh.resume:                                        ; preds = %catch
 !3 = !{}
 !4 = !DISubroutineType(types: !3)
 !5 = !DIFile(filename: "Vector.h", directory: "/tmp")
-!6 = distinct !DISubprogram(name: "destruct", scope: !5, file: !5, line: 71, type: !4, isLocal: false, isDefinition: true, scopeLine: 72, flags: DIFlagPrototyped, isOptimized: false, variables: !3)
+!6 = distinct !DISubprogram(name: "destruct", scope: !5, file: !5, line: 71, type: !4, isLocal: false, isDefinition: true, scopeLine: 72, flags: DIFlagPrototyped, isOptimized: false, unit: !14, variables: !3)
 !7 = !DILocation(line: 73, column: 38, scope: !6)
 !8 = !DILocation(line: 73, column: 13, scope: !6)
 !9 = !DILocation(line: 73, column: 27, scope: !6)
@@ -92,5 +92,4 @@ eh.resume:                                        ; preds = %catch
 !14 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
                              file: !5,
                              isOptimized: true, flags: "-O2",
-                             splitDebugFilename: "abc.debug", emissionKind: 2,
-                             subprograms: !{!6})
+                             splitDebugFilename: "abc.debug", emissionKind: 2)

@@ -30,11 +30,10 @@ return:                                           ; preds = %if.end, %if.then
 !llvm.module.flags = !{!6, !7}
 !llvm.ident = !{!8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251524) (llvm/trunk 251531)", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251524) (llvm/trunk 251531)", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2)
 !1 = !DIFile(filename: "coverage-warning.c", directory: ".")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !5 = !DISubroutineType(types: !2)
 !6 = !{i32 2, !"Dwarf Version", i32 4}
 !7 = !{i32 2, !"Debug Info Version", i32 3}

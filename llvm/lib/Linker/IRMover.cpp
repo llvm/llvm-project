@@ -400,11 +400,6 @@ class IRLinker {
   /// Flags to pass to value mapper invocations.
   RemapFlags ValueMapperFlags = RF_MoveDistinctMDs | RF_IgnoreMissingLocals;
 
-  /// Set of subprogram metadata that does not need to be linked into the
-  /// destination module, because the functions were not imported directly
-  /// or via an inlined body in an imported function.
-  bool HasUnneededSPs = false;
-
   /// Handles cloning of a global values from the source module into
   /// the destination module, including setting the attributes and visibility.
   GlobalValue *copyGlobalValueProto(const GlobalValue *SGV, bool ForDefinition);
@@ -469,15 +464,6 @@ class IRLinker {
   GlobalValue *copyGlobalAliasProto(const GlobalAlias *SGA);
 
   void linkNamedMDNodes();
-
-  /// Look for subprograms referenced from !llvm.dbg.cu that we don't want to
-  /// link in and map it to nullptr.
-  ///
-  /// \post HasUnneededSPs is true iff any unneeded subprograms were found.
-  void mapUnneededSubprograms();
-
-  /// Remove null subprograms from !llvm.dbg.cu.
-  void stripNullSubprograms(DICompileUnit *CU);
 
 public:
   IRLinker(Module &DstM, IRMover::IdentifiedStructTypeSet &Set,
@@ -1004,60 +990,8 @@ bool IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
   return false;
 }
 
-void IRLinker::mapUnneededSubprograms() {
-  // Track unneeded nodes to make it simpler to handle the case
-  // where we are checking if an already-mapped SP is needed.
-  NamedMDNode *CompileUnits = SrcM->getNamedMetadata("llvm.dbg.cu");
-  if (!CompileUnits)
-    return;
-
-  // Seed the ValueMap with the imported entities, in case they reference new
-  // subprograms.
-  // FIXME: The DISubprogram for functions not linked in but kept due to
-  // being referenced by a DIImportedEntity should also get their
-  // IsDefinition flag is unset.
-  for (unsigned I = 0, E = CompileUnits->getNumOperands(); I != E; ++I) {
-    if (MDTuple *IEs = cast<DICompileUnit>(CompileUnits->getOperand(I))
-                           ->getImportedEntities()
-                           .get())
-      (void)MapMetadata(IEs, ValueMap,
-                        ValueMapperFlags | RF_NullMapMissingGlobalValues,
-                        &TypeMap, &GValMaterializer);
-  }
-
-  // Try to insert nullptr into the map for any SP not already mapped.  If
-  // the insertion succeeds, we don't need this subprogram.
-  for (unsigned I = 0, E = CompileUnits->getNumOperands(); I != E; ++I) {
-    for (auto *Op :
-         cast<DICompileUnit>(CompileUnits->getOperand(I))->getSubprograms())
-      if (ValueMap.MD().insert(std::make_pair(Op, TrackingMDRef())).second)
-        HasUnneededSPs = true;
-  }
-}
-
-// Squash null subprograms from the given compile unit's subprogram list.
-void IRLinker::stripNullSubprograms(DICompileUnit *CU) {
-  // There won't be any nulls if we didn't have any subprograms marked
-  // as unneeded.
-  if (!HasUnneededSPs)
-    return;
-  SmallVector<Metadata *, 16> NewSPs;
-  NewSPs.reserve(CU->getSubprograms().size());
-  bool FoundNull = false;
-  for (DISubprogram *SP : CU->getSubprograms()) {
-    if (!SP) {
-      FoundNull = true;
-      continue;
-    }
-    NewSPs.push_back(SP);
-  }
-  if (FoundNull)
-    CU->replaceSubprograms(MDTuple::get(CU->getContext(), NewSPs));
-}
-
 /// Insert all of the named MDNodes in Src into the Dest module.
 void IRLinker::linkNamedMDNodes() {
-  mapUnneededSubprograms();
   const NamedMDNode *SrcModFlags = SrcM->getModuleFlagsMetadata();
   for (const NamedMDNode &NMD : SrcM->named_metadata()) {
     // Don't link module flags here. Do them separately.
@@ -1069,11 +1003,6 @@ void IRLinker::linkNamedMDNodes() {
       MDNode *DestMD = MapMetadata(
           op, ValueMap, ValueMapperFlags | RF_NullMapMissingGlobalValues,
           &TypeMap, &GValMaterializer);
-      // For each newly mapped compile unit remove any null subprograms,
-      // which occur when mapUnneededSubprograms identified any as unneeded
-      // in the dest module.
-      if (auto *CU = dyn_cast<DICompileUnit>(DestMD))
-        stripNullSubprograms(CU);
       DestNMD->addOperand(DestMD);
     }
   }

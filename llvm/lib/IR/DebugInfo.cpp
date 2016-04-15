@@ -94,12 +94,13 @@ void DebugInfoFinder::processModule(const Module &M) {
         processType(DIG->getType().resolve(TypeIdentifierMap));
       }
     }
-    for (auto *SP : CU->getSubprograms())
-      processSubprogram(SP);
     for (auto *ET : CU->getEnumTypes())
       processType(ET);
     for (auto *RT : CU->getRetainedTypes())
-      processType(RT);
+      if (auto *T = dyn_cast<DIType>(RT))
+        processType(T);
+      else
+        processSubprogram(cast<DISubprogram>(RT));
     for (auto *Import : CU->getImportedEntities()) {
       auto *Entity = Import->getEntity().resolve(TypeIdentifierMap);
       if (auto *T = dyn_cast<DIType>(Entity))
@@ -112,6 +113,9 @@ void DebugInfoFinder::processModule(const Module &M) {
         processScope(M->getScope());
     }
   }
+  for (auto &F : M.functions())
+    if (auto *SP = cast_or_null<DISubprogram>(F.getSubprogram()))
+      processSubprogram(SP);
 }
 
 void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {

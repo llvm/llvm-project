@@ -58,19 +58,18 @@ attributes #0 = { norecurse nounwind uwtable "disable-tail-calls"="false" "less-
 !llvm.module.flags = !{!16, !17, !18}
 !llvm.ident = !{!19}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3, globals: !13)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !13)
 !1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
-!3 = !{!4, !8, !11, !12}
-!4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 12, type: !5, isLocal: false, isDefinition: true, scopeLine: 12, flags: DIFlagPrototyped, isOptimized: true, variables: !2)
+!4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 12, type: !5, isLocal: false, isDefinition: true, scopeLine: 12, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!8 = distinct !DISubprogram(name: "h", linkageName: "\01?h@@YAXXZ", scope: !1, file: !1, line: 9, type: !9, isLocal: true, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, variables: !2)
+!8 = distinct !DISubprogram(name: "h", linkageName: "\01?h@@YAXXZ", scope: !1, file: !1, line: 9, type: !9, isLocal: true, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
 !9 = !DISubroutineType(types: !10)
 !10 = !{null}
-!11 = distinct !DISubprogram(name: "g", linkageName: "\01?g@@YAXXZ", scope: !1, file: !1, line: 6, type: !9, isLocal: true, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, variables: !2)
-!12 = distinct !DISubprogram(name: "f", linkageName: "\01?f@@YAXXZ", scope: !1, file: !1, line: 2, type: !9, isLocal: true, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, variables: !2)
+!11 = distinct !DISubprogram(name: "g", linkageName: "\01?g@@YAXXZ", scope: !1, file: !1, line: 6, type: !9, isLocal: true, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!12 = distinct !DISubprogram(name: "f", linkageName: "\01?f@@YAXXZ", scope: !1, file: !1, line: 2, type: !9, isLocal: true, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
 !13 = !{!14}
 !14 = !DIGlobalVariable(name: "x", linkageName: "\01?x@@3HC", scope: !0, file: !1, line: 1, type: !15, isLocal: false, isDefinition: true, variable: i32* @"\01?x@@3HC")
 !15 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !7)

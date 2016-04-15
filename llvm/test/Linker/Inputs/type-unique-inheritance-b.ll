@@ -40,7 +40,7 @@ attributes #3 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!27, !38}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 (http://llvm.org/git/clang.git f54e02f969d02d640103db73efc30c45439fceab) (http://llvm.org/git/llvm.git 284353b55896cb1babfaa7add7c0a363245342d2)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !19, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 (http://llvm.org/git/clang.git f54e02f969d02d640103db73efc30c45439fceab) (http://llvm.org/git/llvm.git 284353b55896cb1babfaa7add7c0a363245342d2)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, globals: !2, imports: !2)
 !1 = !DIFile(filename: "bar.cpp", directory: "/Users/mren/c_testing/type_unique_air/inher")
 !2 = !{}
 !3 = !{!4, !11, !15}
@@ -59,12 +59,11 @@ attributes #3 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !16 = !{!17}
 !17 = !DIDerivedType(tag: DW_TAG_member, name: "b", line: 4, size: 32, align: 32, flags: DIFlagPrivate, file: !5, scope: !"_ZTS4Base", baseType: !8)
 !18 = !DIDerivedType(tag: DW_TAG_member, name: "x", line: 4, size: 32, align: 32, offset: 32, flags: DIFlagPrivate, file: !12, scope: !"_ZTS1A", baseType: !8)
-!19 = !{!20, !24}
-!20 = distinct !DISubprogram(name: "g", linkageName: "_Z1gi", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 4, file: !1, scope: !21, type: !22, variables: !2)
+!20 = distinct !DISubprogram(name: "g", linkageName: "_Z1gi", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 4, file: !1, scope: !21, type: !22, variables: !2)
 !21 = !DIFile(filename: "bar.cpp", directory: "/Users/mren/c_testing/type_unique_air/inher")
 !22 = !DISubroutineType(types: !23)
 !23 = !{null, !8}
-!24 = distinct !DISubprogram(name: "main", line: 9, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 9, file: !1, scope: !21, type: !25, variables: !2)
+!24 = distinct !DISubprogram(name: "main", line: 9, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 9, file: !1, scope: !21, type: !25, variables: !2)
 !25 = !DISubroutineType(types: !26)
 !26 = !{!8}
 !27 = !{i32 2, !"Dwarf Version", i32 2}

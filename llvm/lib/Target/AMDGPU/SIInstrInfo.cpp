@@ -292,9 +292,9 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr *LdSt, unsigned &BaseReg,
   return false;
 }
 
-bool SIInstrInfo::shouldClusterLoads(MachineInstr *FirstLdSt,
-                                     MachineInstr *SecondLdSt,
-                                     unsigned NumLoads) const {
+bool SIInstrInfo::shouldClusterMemOps(MachineInstr *FirstLdSt,
+                                      MachineInstr *SecondLdSt,
+                                      unsigned NumLoads) const {
 	const MachineOperand *FirstDst = nullptr;
 	const MachineOperand *SecondDst = nullptr;
 

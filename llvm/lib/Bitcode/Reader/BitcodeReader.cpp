@@ -1948,6 +1948,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
   if (Stream.EnterSubBlock(bitc::METADATA_BLOCK_ID))
     return error("Invalid record");
 
+  std::vector<std::pair<DICompileUnit *, Metadata *>> CUSubprograms;
   SmallVector<uint64_t, 64> Record;
 
   auto getMD = [&](unsigned ID) -> Metadata * {
@@ -1976,6 +1977,13 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
+      // Upgrade old-style CU <-> SP pointers to point from SP to CU.
+      for (auto CU_SP : CUSubprograms)
+        if (auto *SPs = dyn_cast_or_null<MDTuple>(CU_SP.second))
+          for (auto &Op : SPs->operands())
+            if (auto *SP = dyn_cast_or_null<MDNode>(Op))
+              SP->replaceOperandWith(7, CU_SP.first);
+
       MetadataList.tryToResolveCycles();
       return std::error_code();
     case BitstreamEntry::Record:
@@ -2249,24 +2257,32 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
 
       // Ignore Record[0], which indicates whether this compile unit is
       // distinct.  It's always distinct.
-      MetadataList.assignValue(
-          DICompileUnit::getDistinct(
-              Context, Record[1], getMDOrNull(Record[2]),
-              getMDString(Record[3]), Record[4], getMDString(Record[5]),
-              Record[6], getMDString(Record[7]), Record[8],
-              getMDOrNull(Record[9]), getMDOrNull(Record[10]),
-              getMDOrNull(Record[11]), getMDOrNull(Record[12]),
-              getMDOrNull(Record[13]),
-              Record.size() <= 15 ? nullptr : getMDOrNull(Record[15]),
-              Record.size() <= 14 ? 0 : Record[14]),
-          NextMetadataNo++);
+      auto *CU = DICompileUnit::getDistinct(
+          Context, Record[1], getMDOrNull(Record[2]), getMDString(Record[3]),
+          Record[4], getMDString(Record[5]), Record[6], getMDString(Record[7]),
+          Record[8], getMDOrNull(Record[9]), getMDOrNull(Record[10]),
+          getMDOrNull(Record[12]), getMDOrNull(Record[13]),
+          Record.size() <= 15 ? nullptr : getMDOrNull(Record[15]),
+          Record.size() <= 14 ? 0 : Record[14]);
+
+      MetadataList.assignValue(CU, NextMetadataNo++);
+
+      // Move the Upgrade the list of subprograms.
+      if (Metadata *SPs = getMDOrNull(Record[11]))
+        CUSubprograms.push_back({CU, SPs});
       break;
     }
     case bitc::METADATA_SUBPROGRAM: {
       if (Record.size() != 18 && Record.size() != 19)
         return error("Invalid record");
 
-      bool HasFn = Record.size() == 19;
+      // Version 1 has a Function as Record[15].
+      // Version 2 has removed Record[15].
+      // Version 3 has the Unit as Record[15].
+      Metadata *CUorFn = getMDOrNull(Record[15]);
+      unsigned Offset = Record.size() == 19 ? 1 : 0;
+      bool HasFn = Offset && dyn_cast_or_null<ConstantAsMetadata>(CUorFn);
+      bool HasCU = Offset && !HasFn;
       DISubprogram *SP = GET_OR_DISTINCT(
           DISubprogram,
           Record[0] || Record[8], // All definitions should be distinct.
@@ -2274,13 +2290,14 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
            getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
            getMDOrNull(Record[6]), Record[7], Record[8], Record[9],
            getMDOrNull(Record[10]), Record[11], Record[12], Record[13],
-           Record[14], getMDOrNull(Record[15 + HasFn]),
-           getMDOrNull(Record[16 + HasFn]), getMDOrNull(Record[17 + HasFn])));
+           Record[14], HasCU ? CUorFn : nullptr,
+           getMDOrNull(Record[15 + Offset]), getMDOrNull(Record[16 + Offset]),
+           getMDOrNull(Record[17 + Offset])));
       MetadataList.assignValue(SP, NextMetadataNo++);
 
       // Upgrade sp->function mapping to function->sp mapping.
-      if (HasFn && Record[15]) {
-        if (auto *CMD = dyn_cast<ConstantAsMetadata>(getMDOrNull(Record[15])))
+      if (HasFn) {
+        if (auto *CMD = dyn_cast<ConstantAsMetadata>(CUorFn))
           if (auto *F = dyn_cast<Function>(CMD->getValue())) {
             if (F->isMaterializable())
               // Defer until materialized; unmaterialized functions may not have

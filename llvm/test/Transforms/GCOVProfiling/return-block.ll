@@ -44,11 +44,10 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!11, !12}
 !llvm.ident = !{!13}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 (trunk 223182)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !8, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 (trunk 223182)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !8, imports: !2)
 !1 = !DIFile(filename: ".../llvm/test/Transforms/GCOVProfiling/return-block.ll", directory: "")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "test", line: 5, isLocal: false, isDefinition: true, isOptimized: true, scopeLine: 5, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "test", line: 5, isLocal: false, isDefinition: true, isOptimized: true, unit: !0, scopeLine: 5, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: ".../llvm/test/Transforms/GCOVProfiling/return-block.ll", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}

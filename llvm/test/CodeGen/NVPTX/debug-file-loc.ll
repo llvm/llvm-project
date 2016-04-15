@@ -30,14 +30,13 @@ bb:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2)
 !1 = !DIFile(filename: "bar.cu", directory: "/source/dir")
 !2 = !{}
-!3 = !{!4, !7}
-!4 = distinct !DISubprogram(name: "foo", scope: !5, file: !5, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", scope: !5, file: !5, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !5 = !DIFile(filename: "foo.h", directory: "/source/dir")
 !6 = !DISubroutineType(types: !2)
-!7 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 2, type: !6, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!7 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 2, type: !6, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !8 = !{i32 2, !"Dwarf Version", i32 4}
 !9 = !{i32 2, !"Debug Info Version", i32 3}
 !10 = !DILocation(line: 1, column: 31, scope: !4)

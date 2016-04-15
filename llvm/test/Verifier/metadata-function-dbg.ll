@@ -16,8 +16,7 @@ define void @bar() !dbg !6 {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 
 !llvm.dbg.cu = !{!1}
-!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, subprograms: !3)
+!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2)
 !2 = !DIFile(filename: "t.c", directory: "/path/to/dir")
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !2)
+!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !2, unit: !1)
 !6 = !{}

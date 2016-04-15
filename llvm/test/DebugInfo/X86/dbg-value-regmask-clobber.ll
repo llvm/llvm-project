@@ -75,11 +75,10 @@ attributes #3 = { nounwind }
 !llvm.module.flags = !{!17, !18, !19}
 !llvm.ident = !{!20}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (trunk 260617) (llvm/trunk 260619)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, subprograms: !3, globals: !14)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (trunk 260617) (llvm/trunk 260619)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !14)
 !1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, variables: !11)
+!4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !11)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !7, !8}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

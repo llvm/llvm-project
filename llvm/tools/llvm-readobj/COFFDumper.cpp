@@ -654,6 +654,8 @@ static const EnumEntry<SimpleTypeKind> SimpleTypeNames[] = {
     {"unsigned char*", SimpleTypeKind::UnsignedCharacter},
     {"char*", SimpleTypeKind::NarrowCharacter},
     {"wchar_t*", SimpleTypeKind::WideCharacter},
+    {"char16_t*", SimpleTypeKind::Character16},
+    {"char32_t*", SimpleTypeKind::Character32},
     {"__int8*", SimpleTypeKind::SByte},
     {"unsigned __int8*", SimpleTypeKind::Byte},
     {"short*", SimpleTypeKind::Int16Short},

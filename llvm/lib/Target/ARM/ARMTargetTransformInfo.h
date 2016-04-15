@@ -64,9 +64,7 @@ public:
   using BaseT::getIntImmCost;
   int getIntImmCost(const APInt &Imm, Type *Ty);
 
-  int getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm, Type *Ty) {
-    return getIntImmCost(Imm, Ty);
-  }
+  int getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm, Type *Ty);
 
   /// @}
 
