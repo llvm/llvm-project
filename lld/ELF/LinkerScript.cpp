@@ -17,19 +17,54 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputSection.h"
+#include "OutputSections.h"
 #include "ScriptParser.h"
 #include "SymbolTable.h"
+#include "llvm/Support/ELF.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
 
 using namespace llvm;
+using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
 LinkerScript *elf::Script;
+
+static uint64_t getInteger(StringRef S) {
+  uint64_t V;
+  if (S.getAsInteger(0, V)) {
+    error("malformed number: " + S);
+    return 0;
+  }
+  return V;
+}
+
+// Evaluates the expression given by list of tokens.
+uint64_t LinkerScript::evaluate(std::vector<StringRef> &Tokens,
+                                uint64_t LocCounter) {
+  uint64_t Result = 0;
+  for (size_t I = 0, E = Tokens.size(); I < E; ++I) {
+    // Each second token should be '+' as this is the
+    // only operator we support now.
+    if (I % 2 == 1) {
+      if (Tokens[I] == "+")
+        continue;
+      error("error in location counter expression");
+      return 0;
+    }
+
+    StringRef Tok = Tokens[I];
+    if (Tok == ".")
+      Result += LocCounter;
+    else
+      Result += getInteger(Tok);
+  }
+  return Result;
+}
 
 template <class ELFT>
 SectionRule *LinkerScript::find(InputSectionBase<ELFT> *S) {
@@ -53,6 +88,66 @@ bool LinkerScript::isDiscarded(InputSectionBase<ELFT> *S) {
 template <class ELFT> bool LinkerScript::shouldKeep(InputSectionBase<ELFT> *S) {
   SectionRule *R = find(S);
   return R && R->Keep;
+}
+
+// This method finalizes the Locations list. Adds neccesary locations for
+// orphan sections, what prepares it for futher use without
+// changes in LinkerScript::assignAddresses().
+template <class ELFT>
+void LinkerScript::fixupLocations(std::vector<OutputSectionBase<ELFT> *> &S) {
+  // Orphan sections are sections present in the input files which
+  // are not explicitly placed into the output file by the linker
+  // script. We place orphan sections at end of file. Other linkers places
+  // them using some heuristics as described in
+  // https://sourceware.org/binutils/docs/ld/Orphan-Sections.html#Orphan-Sections.
+  for (OutputSectionBase<ELFT> *Sec : S) {
+    StringRef Name = Sec->getName();
+    auto I = std::find(SectionOrder.begin(), SectionOrder.end(), Name);
+    if (I == SectionOrder.end())
+      Locations.push_back({Command::Section, {}, {Name}});
+  }
+}
+
+template <class ELFT>
+void LinkerScript::assignAddresses(std::vector<OutputSectionBase<ELFT> *> &S) {
+  typedef typename ELFT::uint uintX_t;
+
+  Script->fixupLocations(S);
+
+  uintX_t ThreadBssOffset = 0;
+  uintX_t VA =
+      Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+
+  for (LocationNode &Node : Locations) {
+    if (Node.Type == Command::Expr) {
+      VA = evaluate(Node.Expr, VA);
+      continue;
+    }
+
+    auto I =
+        std::find_if(S.begin(), S.end(), [&](OutputSectionBase<ELFT> *Sec) {
+          return Sec->getName() == Node.SectionName;
+        });
+    if (I == S.end())
+      continue;
+
+    OutputSectionBase<ELFT> *Sec = *I;
+    uintX_t Align = Sec->getAlign();
+    if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
+      uintX_t TVA = VA + ThreadBssOffset;
+      TVA = alignTo(TVA, Align);
+      Sec->setVA(TVA);
+      ThreadBssOffset = TVA - VA + Sec->getSize();
+      continue;
+    }
+
+    if (Sec->getFlags() & SHF_ALLOC) {
+      VA = alignTo(VA, Align);
+      Sec->setVA(VA);
+      VA += Sec->getSize();
+      continue;
+    }
+  }
 }
 
 ArrayRef<uint8_t> LinkerScript::getFiller(StringRef Name) {
@@ -126,6 +221,7 @@ private:
   void readSearchDir();
   void readSections();
 
+  void readLocationCounterValue();
   void readOutputSectionDescription();
   void readSectionPatterns(StringRef OutSec, bool Keep);
 
@@ -287,8 +383,13 @@ void ScriptParser::readSearchDir() {
 
 void ScriptParser::readSections() {
   expect("{");
-  while (!Error && !skip("}"))
-    readOutputSectionDescription();
+  while (!Error && !skip("}")) {
+    StringRef Tok = peek();
+    if (Tok == ".")
+      readLocationCounterValue();
+    else
+      readOutputSectionDescription();
+  }
 }
 
 void ScriptParser::readSectionPatterns(StringRef OutSec, bool Keep) {
@@ -297,9 +398,25 @@ void ScriptParser::readSectionPatterns(StringRef OutSec, bool Keep) {
     Script->Sections.emplace_back(OutSec, next(), Keep);
 }
 
+void ScriptParser::readLocationCounterValue() {
+  expect(".");
+  expect("=");
+  Script->Locations.push_back({Command::Expr, {}, {}});
+  LocationNode &Node = Script->Locations.back();
+  while (!Error) {
+    StringRef Tok = next();
+    if (Tok == ";")
+      break;
+    Node.Expr.push_back(Tok);
+  }
+  if (Node.Expr.empty())
+    error("error in location counter expression");
+}
+
 void ScriptParser::readOutputSectionDescription() {
   StringRef OutSec = next();
   Script->SectionOrder.push_back(OutSec);
+  Script->Locations.push_back({Command::Section, {}, {OutSec}});
   expect(":");
   expect("{");
   while (!Error && !skip("}")) {
@@ -340,6 +457,7 @@ static bool isUnderSysroot(StringRef Path) {
 void LinkerScript::read(MemoryBufferRef MB) {
   StringRef Path = MB.getBufferIdentifier();
   ScriptParser(&Alloc, MB.getBuffer(), isUnderSysroot(Path)).run();
+  Exists = true;
 }
 
 template StringRef LinkerScript::getOutputSection(InputSectionBase<ELF32LE> *);
@@ -356,3 +474,12 @@ template bool LinkerScript::shouldKeep(InputSectionBase<ELF32LE> *);
 template bool LinkerScript::shouldKeep(InputSectionBase<ELF32BE> *);
 template bool LinkerScript::shouldKeep(InputSectionBase<ELF64LE> *);
 template bool LinkerScript::shouldKeep(InputSectionBase<ELF64BE> *);
+
+template void
+LinkerScript::assignAddresses(std::vector<OutputSectionBase<ELF32LE> *> &);
+template void
+LinkerScript::assignAddresses(std::vector<OutputSectionBase<ELF32BE> *> &);
+template void
+LinkerScript::assignAddresses(std::vector<OutputSectionBase<ELF64LE> *> &);
+template void
+LinkerScript::assignAddresses(std::vector<OutputSectionBase<ELF64BE> *> &);

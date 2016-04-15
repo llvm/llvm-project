@@ -525,7 +525,6 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   isHalf = false;
   isFloat = false;
   isImaginary = false;
-  isFloat128 = false;
   MicrosoftInteger = 0;
   hadError = false;
 
@@ -568,16 +567,8 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     case 'f':      // FP Suffix for "float"
     case 'F':
       if (!isFPConstant) break;  // Error for integer constant.
-      if (isHalf || isFloat || isLong || isFloat128)
-        break; // HF, FF, LF, QF invalid.
+      if (isHalf || isFloat || isLong) break; // HF, FF, LF invalid.
       isFloat = true;
-      continue;  // Success.
-    case 'q':    // FP Suffix for "__float128"
-    case 'Q':
-      if (!isFPConstant) break;  // Error for integer constant.
-      if (isHalf || isFloat || isLong || isFloat128)
-        break; // HQ, FQ, LQ, QQ invalid.
-      isFloat128 = true;
       continue;  // Success.
     case 'u':
     case 'U':
@@ -588,7 +579,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     case 'l':
     case 'L':
       if (isLong || isLongLong) break;  // Cannot be repeated.
-      if (isHalf || isFloat || isFloat128) break;     // LH, LF, LQ invalid.
+      if (isHalf || isFloat) break;     // LH, LF invalid.
 
       // Check for long long.  The L's need to be adjacent and the same case.
       if (s[1] == s[0]) {

@@ -15,9 +15,5 @@ void Derived::VariadicFunction(...) { }
 // CHECK-LABEL: define void @_ZT{{.+}}N7Derived16VariadicFunctionEz(
 // CHECK: ret void, !dbg ![[LOC:[0-9]+]]
 //
-// CHECK: !llvm.dbg.cu = !{![[CU:[0-9]+]]}
-//
-// CHECK: ![[CU]] = distinct !DICompileUnit({{.*}} subprograms: ![[SPs:[0-9]+]]
-// CHECK: ![[SPs]] = !{![[SP]]}
 // CHECK: ![[SP]] = distinct !DISubprogram(name: "VariadicFunction"
 // CHECK: ![[LOC]] = !DILocation({{.*}}scope: ![[SP]])

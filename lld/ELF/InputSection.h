@@ -18,6 +18,8 @@
 namespace lld {
 namespace elf {
 
+class SymbolBody;
+
 template <class ELFT> class ICF;
 template <class ELFT> class DefinedRegular;
 template <class ELFT> class ObjectFile;

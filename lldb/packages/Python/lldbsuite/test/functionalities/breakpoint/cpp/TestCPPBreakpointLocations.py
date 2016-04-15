@@ -26,7 +26,7 @@ class TestCPPBreakpointLocations(TestBase):
         name = bp_dict['name']
         names = bp_dict['loc_names']
         bp = target.BreakpointCreateByName (name)
-        self.assertTrue (bp.GetNumLocations() <= len(names), "Make sure we find the right number of breakpoint locations")
+        self.assertEquals(bp.GetNumLocations(), len(names), "Make sure we find the right number of breakpoint locations")
         
         bp_loc_names = list()
         for bp_loc in bp:
@@ -48,19 +48,48 @@ class TestCPPBreakpointLocations(TestBase):
             { 'name' : 'func1', 'loc_names' : [ 'a::c::func1()', 'b::c::func1()'] },
             { 'name' : 'func2', 'loc_names' : [ 'a::c::func2()', 'c::d::func2()'] },
             { 'name' : 'func3', 'loc_names' : [ 'a::c::func3()', 'b::c::func3()', 'c::d::func3()'] },
-            { 'name' : '~c', 'loc_names' : [ 'a::c::~c()', 'b::c::~c()', 'a::c::~c()', 'b::c::~c()'] },
             { 'name' : 'c::func1', 'loc_names' : [ 'a::c::func1()', 'b::c::func1()'] },
             { 'name' : 'c::func2', 'loc_names' : [ 'a::c::func2()'] },
             { 'name' : 'c::func3', 'loc_names' : [ 'a::c::func3()', 'b::c::func3()'] },
-            { 'name' : 'c::~c', 'loc_names' : [ 'a::c::~c()', 'b::c::~c()', 'a::c::~c()', 'b::c::~c()'] },
             { 'name' : 'a::c::func1', 'loc_names' : [ 'a::c::func1()'] },
             { 'name' : 'b::c::func1', 'loc_names' : [ 'b::c::func1()'] },
             { 'name' : 'c::d::func2', 'loc_names' : [ 'c::d::func2()'] },
             { 'name' : 'a::c::func1()', 'loc_names' : [ 'a::c::func1()'] },
             { 'name' : 'b::c::func1()', 'loc_names' : [ 'b::c::func1()'] },
             { 'name' : 'c::d::func2()', 'loc_names' : [ 'c::d::func2()'] },
-            { 'name' : 'c::~c()', 'loc_names' : [ 'a::c::~c()', 'b::c::~c()', 'a::c::~c()', 'b::c::~c()'] },
         ]
         
         for bp_dict in bp_dicts:
             self.verify_breakpoint_locations(target, bp_dict)
+
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
+    def test_destructors(self):
+        self.build()
+        exe = os.path.join(os.getcwd(), "a.out")
+        target = self.dbg.CreateTarget(exe)
+
+        # Don't skip prologue, so we can check the breakpoint address more easily
+        self.runCmd("settings set target.skip-prologue false")
+        try:
+            names = ['~c', 'c::~c', 'c::~c()']
+            loc_names = {'a::c::~c()', 'b::c::~c()'}
+            # TODO: For windows targets we should put windows mangled names here
+            symbols = ['_ZN1a1cD1Ev', '_ZN1a1cD2Ev', '_ZN1b1cD1Ev', '_ZN1b1cD2Ev']
+
+            for name in names:
+                bp = target.BreakpointCreateByName(name)
+
+                bp_loc_names = { bp_loc.GetAddress().GetFunction().GetName() for bp_loc in bp }
+                self.assertEquals(bp_loc_names, loc_names, "Breakpoint set on the correct symbol")
+
+                bp_addresses = { bp_loc.GetLoadAddress() for bp_loc in bp }
+                symbol_addresses = set()
+                for symbol in symbols:
+                    sc_list = target.FindSymbols(symbol, lldb.eSymbolTypeCode)
+                    self.assertEquals(sc_list.GetSize(), 1, "Found symbol " + symbol)
+                    symbol = sc_list.GetContextAtIndex(0).GetSymbol()
+                    symbol_addresses.add(symbol.GetStartAddress().GetLoadAddress(target))
+
+                self.assertEquals(symbol_addresses, bp_addresses, "Breakpoint set on correct address")
+        finally:
+            self.runCmd("settings clear target.skip-prologue")

@@ -29,17 +29,12 @@ int foo(ObjCClass *c) {
   return [c property];
 }
 
-// CHECK-NOT: !DICompositeType(tag: DW_TAG_structure_type,
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ObjCClass",
-// CHECK-SAME:             scope: ![[MOD:[0-9]+]],
-// CHECK-SAME:             flags: DIFlagFwdDecl)
-// CHECK-NOT: !DICompositeType(tag: DW_TAG_structure_type,
-// CHECK: ![[MOD]] = !DIModule(scope: null, name: "DebugObjC
-
 // CHECK: !DIGlobalVariable(name: "GlobalUnion",
 // CHECK-SAME:              type: ![[GLOBAL_UNION:[0-9]+]]
+// CHECK: ![[MOD:.*]] = !DIModule(scope: null, name: "DebugObjC
 // CHECK: ![[GLOBAL_UNION]] = !DICompositeType(tag: DW_TAG_union_type,
 // CHECK-SAME:                elements: !{{[0-9]+}})
+
 // CHECK: !DIGlobalVariable(name: "GlobalStruct",
 // CHECK-SAME:              type: ![[GLOBAL_STRUCT:[0-9]+]]
 // CHECK: ![[GLOBAL_STRUCT]] = !DICompositeType(tag: DW_TAG_structure_type,
@@ -49,13 +44,19 @@ int foo(ObjCClass *c) {
 // CHECK-SAME:           baseType: ![[TD_UNION:.*]])
 // CHECK: ![[TD_UNION]] = !DICompositeType(tag: DW_TAG_union_type,
 // CHECK-SAME:             flags: DIFlagFwdDecl)
+
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefEnum",
 // CHECK-SAME:           baseType: ![[TD_ENUM:.*]])
 // CHECK: ![[TD_ENUM]] = !DICompositeType(tag: DW_TAG_enumeration_type,
 // CHECK-SAME:             flags: DIFlagFwdDecl)
+
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefStruct",
 // CHECK-SAME:           baseType: ![[TD_STRUCT:.*]])
 // CHECK: ![[TD_STRUCT]] = !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK-SAME:             flags: DIFlagFwdDecl)
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ObjCClass",
+// CHECK-SAME:             scope: ![[MOD]],
 // CHECK-SAME:             flags: DIFlagFwdDecl)
 
 // CHECK-NOT: !DICompositeType(tag: DW_TAG_structure_type,

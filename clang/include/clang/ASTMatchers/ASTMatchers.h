@@ -163,7 +163,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, TranslationUnitDecl>
 /// Given
 /// \code
 ///   typedef int X;
-//    using Y = int;
+///   using Y = int;
 /// \endcode
 /// typedefDecl()
 ///   matches "typedef int X", but not "using Y = int"
@@ -174,7 +174,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, TypedefDecl> typedefDecl;
 /// Given
 /// \code
 ///   typedef int X;
-//    using Y = int;
+///   using Y = int;
 /// \endcode
 /// typedefNameDecl()
 ///   matches "typedef int X" and "using Y = int"
@@ -186,7 +186,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, TypedefNameDecl>
 /// Given
 /// \code
 ///   typedef int X;
-//    using Y = int;
+///   using Y = int;
 /// \endcode
 /// typeAliasDecl()
 ///   matches "using Y = int", but not "typedef int X"

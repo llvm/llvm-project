@@ -528,6 +528,10 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                 uint64_t Val) const {
   switch (Type) {
   case R_386_32:
+  case R_386_PC32:
+  case R_386_PLT32:
+  case R_386_TLS_IE:
+  case R_386_TLS_LDO_32:
     write32le(Loc, Val);
     break;
   case R_386_GOTOFF:
@@ -535,10 +539,6 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   case R_386_GOTPC:
     write32le(Loc, Val + Out<ELF32LE>::Got->getVA());
-    break;
-  case R_386_PC32:
-  case R_386_PLT32:
-    write32le(Loc, Val);
     break;
   case R_386_GOT32:
   case R_386_TLS_GD:
@@ -549,10 +549,6 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write32le(Loc, V);
     break;
   }
-  case R_386_TLS_IE:
-  case R_386_TLS_LDO_32:
-    write32le(Loc, Val);
-    break;
   case R_386_TLS_LE:
     write32le(Loc, Val - Out<ELF32LE>::TlsPhdr->p_memsz);
     break;

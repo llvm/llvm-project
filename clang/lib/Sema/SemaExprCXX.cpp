@@ -5172,12 +5172,6 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     QualType ResTy = UsualArithmeticConversions(LHS, RHS);
     if (LHS.isInvalid() || RHS.isInvalid())
       return QualType();
-    if (ResTy.isNull()) {
-      Diag(QuestionLoc,
-           diag::err_typecheck_cond_incompatible_operands) << LTy << RTy
-        << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
-      return QualType();
-    }
 
     LHS = ImpCastExprToType(LHS.get(), ResTy, PrepareScalarCast(LHS, ResTy));
     RHS = ImpCastExprToType(RHS.get(), ResTy, PrepareScalarCast(RHS, ResTy));

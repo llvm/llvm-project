@@ -58,6 +58,9 @@
 // CHECK-SAME:             name: "Template<float, DebugCXX::traits<float> >"
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIfNS_6traitsIfEEEE")
 
+// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "B",
+// no mangled name here yet.
+
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "FwdVirtual"
 // CHECK-SAME:             elements:
 // CHECK-SAME:             identifier: "_ZTS10FwdVirtual")
@@ -79,9 +82,6 @@
 // CHECK: ![[GET_PARENT]] = !DISubprogram(name: "getParent"
 
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "FloatInstatiation"
-// no mangled name here yet.
-
-// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "B",
 // no mangled name here yet.
 
 // CHECK: !DICompositeType(tag: DW_TAG_union_type,

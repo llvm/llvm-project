@@ -365,7 +365,7 @@ ABISysV_s390x::GetArgumentValues(Thread &thread, ValueList &values) const
     if (!sp)
         return false;
 
-    addr_t current_stack_argument = sp;
+    addr_t current_stack_argument = sp + 160;
 
     uint32_t argument_register_ids[5];
 
@@ -382,7 +382,6 @@ ABISysV_s390x::GetArgumentValues(Thread &thread, ValueList &values) const
 
     unsigned int current_argument_register = 0;
 
-    return false;
     for (value_index = 0; value_index < num_values; ++value_index)
     {
         Value *value = values.GetValueAtIndex(value_index);

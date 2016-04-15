@@ -958,13 +958,13 @@ public:
     uint64_t
     GetValueAsUnsigned () const
     {
-        return *m_value.getRawData();
+        return m_value.getZExtValue();
     }
 
     int64_t
     GetValueAsSigned () const
     {
-        return (int64_t) *m_value.getRawData();
+        return m_value.getSExtValue();
     }
 
 protected:
