@@ -47,6 +47,21 @@ int ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   return 3;
 }
 
+int ARMTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
+                              Type *Ty) {
+  // Division by a constant can be turned into multiplication, but only if we
+  // know it's constant. So it's not so much that the immediate is cheap (it's
+  // not), but that the alternative is worse.
+  // FIXME: this is probably unneeded with GlobalISel.
+  if ((Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
+       Opcode == Instruction::SRem || Opcode == Instruction::URem) &&
+      Idx == 1)
+    return 0;
+
+  return getIntImmCost(Imm, Ty);
+}
+
+
 int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
