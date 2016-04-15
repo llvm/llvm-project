@@ -22,6 +22,8 @@ First, implement a fuzzing target function, like this::
 Next, build the Fuzzer library as a static archive. Note that libFuzzer contains the `main()` function::
 
   svn co http://llvm.org/svn/llvm-project/llvm/trunk/lib/Fuzzer
+  # Alternative: get libFuzzer from a dedicated git mirror:
+  # git clone https://chromium.googlesource.com/chromium/llvm-project/llvm/lib/Fuzzer
   clang++ -c -g -O2 -std=c++11 Fuzzer/*.cpp -IFuzzer
   ar ruv libFuzzer.a Fuzzer*.o
 

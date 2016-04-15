@@ -10,7 +10,7 @@
 !39 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 9999)", isOptimized: true, emissionKind: FullDebug, file: !109, enums: !108, retainedTypes: !108)
 !46 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, file: !109, baseType: !47)
 !47 = !DIBasicType(tag: DW_TAG_base_type, name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
-!97 = distinct !DISubprogram(name: "main", linkageName: "main", line: 73, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scope: !39, type: !98)
+!97 = distinct !DISubprogram(name: "main", linkageName: "main", line: 73, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !39, scope: !39, type: !98)
 !98 = !DISubroutineType(types: !99)
 !99 = !{!100}
 !100 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

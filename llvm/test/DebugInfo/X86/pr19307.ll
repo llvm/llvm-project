@@ -84,7 +84,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !llvm.module.flags = !{!42, !43}
 !llvm.ident = !{!44}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (209308)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, subprograms: !12, globals: !2, imports: !21)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (209308)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, globals: !2, imports: !21)
 !1 = !DIFile(filename: "pr19307.cc", directory: "/llvm_cmake_gcc")
 !2 = !{}
 !3 = !{!4, !6, !8}
@@ -96,8 +96,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !9 = !DIFile(filename: "/usr/lib/gcc/x86_64-linux-gnu/4.6/../../../../include/c++/4.6/bits/basic_string.tcc", directory: "/llvm_cmake_gcc")
 !10 = !DINamespace(name: "std", line: 153, file: !11, scope: null)
 !11 = !DIFile(filename: "/usr/lib/gcc/x86_64-linux-gnu/4.6/../../../../include/c++/4.6/x86_64-linux-gnu/bits/c++config.h", directory: "/llvm_cmake_gcc")
-!12 = !{!13}
-!13 = distinct !DISubprogram(name: "parse_range", linkageName: "_Z11parse_rangeRyS_Ss", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 4, file: !1, scope: !14, type: !15, variables: !2)
+!13 = distinct !DISubprogram(name: "parse_range", linkageName: "_Z11parse_rangeRyS_Ss", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 4, file: !1, scope: !14, type: !15, variables: !2)
 !14 = !DIFile(filename: "pr19307.cc", directory: "/llvm_cmake_gcc")
 !15 = !DISubroutineType(types: !16)
 !16 = !{null, !17, !17, !19}

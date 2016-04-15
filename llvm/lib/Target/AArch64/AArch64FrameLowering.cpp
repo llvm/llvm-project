@@ -871,6 +871,9 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
         .addReg(AArch64::SP)
         .addImm(Offset) // [sp, #offset * 8], where factor * 8 is implicit
         .setMIFlag(MachineInstr::FrameSetup);
+      MIB.addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx + 1),
+          MachineMemOperand::MOStore, 8, 8));
     } else {
       MBB.addLiveIn(Reg1);
       MIB.addReg(Reg1, getPrologueDeath(MF, Reg1))
@@ -878,6 +881,9 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
         .addImm(BumpSP ? Offset * 8 : Offset) // pre-inc version is unscaled
         .setMIFlag(MachineInstr::FrameSetup);
     }
+    MIB.addMemOperand(MF.getMachineMemOperand(
+        MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx),
+        MachineMemOperand::MOStore, 8, 8));
   }
   return true;
 }
@@ -935,18 +941,25 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     if (BumpSP)
       MIB.addReg(AArch64::SP, RegState::Define);
 
-    if (RPI.isPaired())
+    if (RPI.isPaired()) {
       MIB.addReg(Reg2, getDefRegState(true))
         .addReg(Reg1, getDefRegState(true))
         .addReg(AArch64::SP)
         .addImm(Offset) // [sp], #offset * 8  or [sp, #offset * 8]
                         // where the factor * 8 is implicit
         .setMIFlag(MachineInstr::FrameDestroy);
-    else
+      MIB.addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx + 1),
+          MachineMemOperand::MOLoad, 8, 8));
+    } else {
       MIB.addReg(Reg1, getDefRegState(true))
         .addReg(AArch64::SP)
         .addImm(BumpSP ? Offset * 8 : Offset) // post-dec version is unscaled
         .setMIFlag(MachineInstr::FrameDestroy);
+    }
+    MIB.addMemOperand(MF.getMachineMemOperand(
+        MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx),
+        MachineMemOperand::MOLoad, 8, 8));
   }
   return true;
 }

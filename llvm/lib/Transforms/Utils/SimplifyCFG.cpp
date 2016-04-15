@@ -1678,8 +1678,8 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
     Value *TrueV = ThenV, *FalseV = OrigV;
     if (Invert)
       std::swap(TrueV, FalseV);
-    Value *V = Builder.CreateSelect(BrCond, TrueV, FalseV,
-                                    TrueV->getName() + "." + FalseV->getName());
+    Value *V = Builder.CreateSelect(
+        BrCond, TrueV, FalseV, TrueV->getName() + "." + FalseV->getName(), BI);
     PN->setIncomingValue(OrigI, V);
     PN->setIncomingValue(ThenI, V);
   }

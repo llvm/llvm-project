@@ -9,3 +9,15 @@ entry:
 }
 ; CHECK-LABEL: define <4 x i1> @test1(
 ; CHECK:   ret <4 x i1> zeroinitializer
+
+declare float @fabsf()
+
+define i1 @test2() {
+  %call = call float @fabsf()
+  %cmp = fcmp olt float %call, 0.000000e+00
+  ret i1 %cmp
+}
+; CHECK-LABEL: define i1 @test2(
+; CHECK:  %[[call:.*]] = call float @fabsf()
+; CHECK:  %[[cmp:.*]] = fcmp olt float %[[call]], 0.000000e+00
+; CHECK:  ret i1 %[[cmp]]

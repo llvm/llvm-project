@@ -26,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -4564,39 +4565,33 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
           break;
 
         CallInst *CI = cast<CallInst>(LHSI);
-        const Function *F = CI->getCalledFunction();
-        if (!F)
+        Intrinsic::ID IID = getIntrinsicIDForCall(CI, TLI);
+        if (IID != Intrinsic::fabs)
           break;
 
         // Various optimization for fabs compared with zero.
-        LibFunc::Func Func;
-        if (F->getIntrinsicID() == Intrinsic::fabs ||
-            (TLI->getLibFunc(F->getName(), Func) && TLI->has(Func) &&
-             (Func == LibFunc::fabs || Func == LibFunc::fabsf ||
-              Func == LibFunc::fabsl))) {
-          switch (I.getPredicate()) {
-          default:
-            break;
-            // fabs(x) < 0 --> false
-          case FCmpInst::FCMP_OLT:
-            llvm_unreachable("handled by SimplifyFCmpInst");
-            // fabs(x) > 0 --> x != 0
-          case FCmpInst::FCMP_OGT:
-            return new FCmpInst(FCmpInst::FCMP_ONE, CI->getArgOperand(0), RHSC);
-            // fabs(x) <= 0 --> x == 0
-          case FCmpInst::FCMP_OLE:
-            return new FCmpInst(FCmpInst::FCMP_OEQ, CI->getArgOperand(0), RHSC);
-            // fabs(x) >= 0 --> !isnan(x)
-          case FCmpInst::FCMP_OGE:
-            return new FCmpInst(FCmpInst::FCMP_ORD, CI->getArgOperand(0), RHSC);
-            // fabs(x) == 0 --> x == 0
-            // fabs(x) != 0 --> x != 0
-          case FCmpInst::FCMP_OEQ:
-          case FCmpInst::FCMP_UEQ:
-          case FCmpInst::FCMP_ONE:
-          case FCmpInst::FCMP_UNE:
-            return new FCmpInst(I.getPredicate(), CI->getArgOperand(0), RHSC);
-          }
+        switch (I.getPredicate()) {
+        default:
+          break;
+        // fabs(x) < 0 --> false
+        case FCmpInst::FCMP_OLT:
+          llvm_unreachable("handled by SimplifyFCmpInst");
+        // fabs(x) > 0 --> x != 0
+        case FCmpInst::FCMP_OGT:
+          return new FCmpInst(FCmpInst::FCMP_ONE, CI->getArgOperand(0), RHSC);
+        // fabs(x) <= 0 --> x == 0
+        case FCmpInst::FCMP_OLE:
+          return new FCmpInst(FCmpInst::FCMP_OEQ, CI->getArgOperand(0), RHSC);
+        // fabs(x) >= 0 --> !isnan(x)
+        case FCmpInst::FCMP_OGE:
+          return new FCmpInst(FCmpInst::FCMP_ORD, CI->getArgOperand(0), RHSC);
+        // fabs(x) == 0 --> x == 0
+        // fabs(x) != 0 --> x != 0
+        case FCmpInst::FCMP_OEQ:
+        case FCmpInst::FCMP_UEQ:
+        case FCmpInst::FCMP_ONE:
+        case FCmpInst::FCMP_UNE:
+          return new FCmpInst(I.getPredicate(), CI->getArgOperand(0), RHSC);
         }
       }
       }

@@ -289,17 +289,17 @@ DICompileUnit *DICompileUnit::getImpl(
     MDString *Producer, bool IsOptimized, MDString *Flags,
     unsigned RuntimeVersion, MDString *SplitDebugFilename,
     unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
-    Metadata *Subprograms, Metadata *GlobalVariables,
-    Metadata *ImportedEntities, Metadata *Macros, uint64_t DWOId,
-    StorageType Storage, bool ShouldCreate) {
+    Metadata *GlobalVariables, Metadata *ImportedEntities, Metadata *Macros,
+    uint64_t DWOId, StorageType Storage, bool ShouldCreate) {
   assert(Storage != Uniqued && "Cannot unique DICompileUnit");
   assert(isCanonical(Producer) && "Expected canonical MDString");
   assert(isCanonical(Flags) && "Expected canonical MDString");
   assert(isCanonical(SplitDebugFilename) && "Expected canonical MDString");
 
-  Metadata *Ops[] = {File, Producer, Flags, SplitDebugFilename, EnumTypes,
-                     RetainedTypes, Subprograms, GlobalVariables,
-                     ImportedEntities, Macros};
+  Metadata *Ops[] = {
+      File,      Producer,      Flags,           SplitDebugFilename,
+      EnumTypes, RetainedTypes, GlobalVariables, ImportedEntities,
+      Macros};
   return storeImpl(new (array_lengthof(Ops)) DICompileUnit(
                        Context, Storage, SourceLanguage, IsOptimized,
                        RuntimeVersion, EmissionKind, DWOId, Ops),
@@ -335,7 +335,7 @@ DISubprogram *DISubprogram::getImpl(
     MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
     bool IsLocalToUnit, bool IsDefinition, unsigned ScopeLine,
     Metadata *ContainingType, unsigned Virtuality, unsigned VirtualIndex,
-    unsigned Flags, bool IsOptimized, Metadata *TemplateParams,
+    unsigned Flags, bool IsOptimized, Metadata *Unit, Metadata *TemplateParams,
     Metadata *Declaration, Metadata *Variables, StorageType Storage,
     bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
@@ -343,11 +343,11 @@ DISubprogram *DISubprogram::getImpl(
   DEFINE_GETIMPL_LOOKUP(DISubprogram,
                         (Scope, Name, LinkageName, File, Line, Type,
                          IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
-                         Virtuality, VirtualIndex, Flags, IsOptimized,
+                         Virtuality, VirtualIndex, Flags, IsOptimized, Unit,
                          TemplateParams, Declaration, Variables));
-  Metadata *Ops[] = {File,        Scope,    Name,           Name,
-                     LinkageName, Type,     ContainingType, TemplateParams,
-                     Declaration, Variables};
+  Metadata *Ops[] = {File,           Scope,       Name,           Name,
+                     LinkageName,    Type,        ContainingType, Unit,
+                     TemplateParams, Declaration, Variables};
   DEFINE_GETIMPL_STORE(DISubprogram,
                        (Line, ScopeLine, Virtuality, VirtualIndex, Flags,
                         IsLocalToUnit, IsDefinition, IsOptimized),

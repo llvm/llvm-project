@@ -55,7 +55,7 @@ attributes #2 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 !llvm.module.flags = !{!15, !16}
 !llvm.ident = !{!17}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 254019) (llvm/trunk 254036)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, subprograms: !11)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 254019) (llvm/trunk 254036)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3)
 !1 = !DIFile(filename: "../llvm/2.cc", directory: "/code/build-llvm")
 !2 = !{}
 !3 = !{!4}
@@ -66,8 +66,7 @@ attributes #2 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 !8 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 !9 = !{!10}
 !10 = !DISubrange(count: 100)
-!11 = !{!12}
-!12 = distinct !DISubprogram(name: "f", linkageName: "_Z1f1S", scope: !1, file: !1, line: 10, type: !13, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!12 = distinct !DISubprogram(name: "f", linkageName: "_Z1f1S", scope: !1, file: !1, line: 10, type: !13, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !13 = !DISubroutineType(types: !14)
 !14 = !{null, !"_ZTS1S"}
 !15 = !{i32 2, !"Dwarf Version", i32 4}

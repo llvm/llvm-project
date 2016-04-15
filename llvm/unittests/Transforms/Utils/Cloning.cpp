@@ -314,21 +314,6 @@ TEST_F(CloneFunc, Subprogram) {
       (Sub1 == NewFunc->getSubprogram() && Sub2 == OldFunc->getSubprogram()));
 }
 
-// Test that the new subprogram entry was not added to the CU which doesn't
-// contain the old subprogram entry.
-TEST_F(CloneFunc, SubprogramInRightCU) {
-  EXPECT_FALSE(verifyModule(*M));
-
-  EXPECT_EQ(2U, Finder->compile_unit_count());
-
-  auto Iter = Finder->compile_units().begin();
-  auto *CU1 = cast<DICompileUnit>(*Iter);
-  Iter++;
-  auto *CU2 = cast<DICompileUnit>(*Iter);
-  EXPECT_TRUE(CU1->getSubprograms().size() == 0 ||
-              CU2->getSubprograms().size() == 0);
-}
-
 // Test that instructions in the old function still belong to it in the
 // metadata, while instruction in the new function belong to the new one.
 TEST_F(CloneFunc, InstructionOwnership) {

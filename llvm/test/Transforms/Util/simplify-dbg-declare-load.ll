@@ -34,7 +34,7 @@ attributes #1 = { sspreq }
 
 !0 = !{i32 1, !"Debug Info Version", i32 3}
 !1 = !DILocalVariable(name: "cp", scope: !2, file: !3, line: 106, type: !12)
-!2 = distinct !DISubprogram(name: "fastshortest", linkageName: "julia_fastshortest_6256", scope: null, file: !3, type: !4, isLocal: false, isDefinition: true, isOptimized: true, variables: !11)
+!2 = distinct !DISubprogram(name: "fastshortest", linkageName: "julia_fastshortest_6256", scope: null, file: !3, type: !4, isLocal: false, isDefinition: true, isOptimized: true, unit: !18, variables: !11)
 !3 = !DIFile(filename: "grisu/fastshortest.jl", directory: ".")
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !7}
@@ -50,4 +50,4 @@ attributes #1 = { sspreq }
 !15 = !DIBasicType(name: "Int32", size: 32, align: 32, encoding: DW_ATE_unsigned)
 !16 = !DIExpression()
 !17 = !DILocation(line: 106, scope: !2)
-!18 = distinct !DICompileUnit(language: DW_LANG_Julia, file: !3, subprograms: !{!2})
+!18 = distinct !DICompileUnit(language: DW_LANG_Julia, file: !3)

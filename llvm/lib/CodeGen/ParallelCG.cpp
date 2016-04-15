@@ -25,39 +25,47 @@
 
 using namespace llvm;
 
-static void codegen(Module *M, llvm::raw_pwrite_stream &OS,
-                    const Target *TheTarget, StringRef CPU, StringRef Features,
-                    const TargetOptions &Options, Reloc::Model RM,
-                    CodeModel::Model CM, CodeGenOpt::Level OL,
-                    TargetMachine::CodeGenFileType FileType) {
-  std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-      M->getTargetTriple(), CPU, Features, Options, RM, CM, OL));
-
+static void
+codegen(Module *M, llvm::raw_pwrite_stream &OS,
+        std::function<std::unique_ptr<TargetMachine>()> TMFactory,
+        TargetMachine::CodeGenFileType FileType) {
+  std::unique_ptr<TargetMachine> TM = TMFactory();
   legacy::PassManager CodeGenPasses;
   if (TM->addPassesToEmitFile(CodeGenPasses, OS, FileType))
     report_fatal_error("Failed to setup codegen");
   CodeGenPasses.run(*M);
 }
 
-std::unique_ptr<Module> llvm::splitCodeGen(
-    std::unique_ptr<Module> M, ArrayRef<llvm::raw_pwrite_stream *> OSs,
-    ArrayRef<llvm::raw_pwrite_stream *> BCOSs, StringRef CPU,
-    StringRef Features, const TargetOptions &Options, Reloc::Model RM,
-    CodeModel::Model CM, CodeGenOpt::Level OL,
-    TargetMachine::CodeGenFileType FileType, bool PreserveLocals) {
-  StringRef TripleStr = M->getTargetTriple();
+std::unique_ptr<Module>
+llvm::splitCodeGen(std::unique_ptr<Module> M, ArrayRef<raw_pwrite_stream *> OSs,
+                   ArrayRef<llvm::raw_pwrite_stream *> BCOSs, StringRef CPU,
+                   StringRef Features, const TargetOptions &Options,
+                   Reloc::Model RM, CodeModel::Model CM, CodeGenOpt::Level OL,
+                   TargetMachine::CodeGenFileType FileType,
+                   bool PreserveLocals) {
+  std::string TripleStr = M->getTargetTriple();
   std::string ErrMsg;
+
   const Target *TheTarget = TargetRegistry::lookupTarget(TripleStr, ErrMsg);
   if (!TheTarget)
     report_fatal_error(Twine("Target not found: ") + ErrMsg);
+  return splitCodeGen(std::move(M), OSs, BCOSs, [&]() {
+    return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
+        TripleStr, CPU, Features, Options, RM, CM, OL));
+  }, FileType, PreserveLocals);
+}
 
+std::unique_ptr<Module> llvm::splitCodeGen(
+    std::unique_ptr<Module> M, ArrayRef<llvm::raw_pwrite_stream *> OSs,
+    ArrayRef<llvm::raw_pwrite_stream *> BCOSs,
+    const std::function<std::unique_ptr<TargetMachine>()> &TMFactory,
+    TargetMachine::CodeGenFileType FileType, bool PreserveLocals) {
   assert(BCOSs.empty() || BCOSs.size() == OSs.size());
 
   if (OSs.size() == 1) {
     if (!BCOSs.empty())
       WriteBitcodeToFile(M.get(), *BCOSs[0]);
-    codegen(M.get(), *OSs[0], TheTarget, CPU, Features, Options, RM, CM, OL,
-            FileType);
+    codegen(M.get(), *OSs[0], TMFactory, FileType);
     return M;
   }
 
@@ -88,8 +96,7 @@ std::unique_ptr<Module> llvm::splitCodeGen(
           llvm::raw_pwrite_stream *ThreadOS = OSs[ThreadCount++];
           // Enqueue the task
           CodegenThreadPool.async(
-              [TheTarget, CPU, Features, Options, RM, CM, OL, FileType,
-               ThreadOS](const SmallVector<char, 0> &BC) {
+              [TMFactory, FileType, ThreadOS](const SmallVector<char, 0> &BC) {
                 LLVMContext Ctx;
                 ErrorOr<std::unique_ptr<Module>> MOrErr = parseBitcodeFile(
                     MemoryBufferRef(StringRef(BC.data(), BC.size()),
@@ -99,8 +106,7 @@ std::unique_ptr<Module> llvm::splitCodeGen(
                   report_fatal_error("Failed to read bitcode");
                 std::unique_ptr<Module> MPartInCtx = std::move(MOrErr.get());
 
-                codegen(MPartInCtx.get(), *ThreadOS, TheTarget, CPU, Features,
-                        Options, RM, CM, OL, FileType);
+                codegen(MPartInCtx.get(), *ThreadOS, TMFactory, FileType);
               },
               // Pass BC using std::move to ensure that it get moved rather than
               // copied into the thread's context.

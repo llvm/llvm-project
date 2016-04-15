@@ -3046,6 +3046,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr *MI,
     // special case to check if the atomic has only one extract_subreg use,
     // which itself has no uses.
     if ((Node->hasNUsesOfValue(1, 0) &&
+         Node->use_begin()->isMachineOpcode() &&
          Node->use_begin()->getMachineOpcode() == AMDGPU::EXTRACT_SUBREG &&
          !Node->use_begin()->hasAnyUseOfValue(0))) {
       unsigned Def = MI->getOperand(0).getReg();

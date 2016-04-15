@@ -2030,11 +2030,10 @@ entry:
 !3 = !{}
 !4 = !DISubroutineType(types: !3)
 !5 = !DIFile(filename: "atomic.cpp", directory: "/tmp")
-!6 = distinct !DISubprogram(name: "test", scope: !5, file: !5, line: 99, type: !4, isLocal: false, isDefinition: true, scopeLine: 100, flags: DIFlagPrototyped, isOptimized: false, variables: !3)
+!6 = distinct !DISubprogram(name: "test", scope: !5, file: !5, line: 99, type: !4, isLocal: false, isDefinition: true, scopeLine: 100, flags: DIFlagPrototyped, isOptimized: false, unit: !8, variables: !3)
 !7 = !DILocation(line: 100, column: 1, scope: !6)
 
 !8 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
                              file: !5,
                              isOptimized: true, flags: "-O2",
-                             splitDebugFilename: "abc.debug", emissionKind: 2,
-                             subprograms: !{!6})
+                             splitDebugFilename: "abc.debug", emissionKind: 2)

@@ -312,6 +312,7 @@ private:
   }
 };
 
+static LLVMContext Context;
 static ExecutionEngine *EE = nullptr;
 static LLIObjectCache *CacheManager = nullptr;
 
@@ -385,7 +386,6 @@ int main(int argc, char **argv, char * const *envp) {
   sys::PrintStackTraceOnErrorSignal();
   PrettyStackTraceProgram X(argc, argv);
 
-  LLVMContext Context;
   atexit(do_shutdown);  // Call llvm_shutdown() on exit.
 
   // If we have a native target, initialize it to ensure it is linked in and

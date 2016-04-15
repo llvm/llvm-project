@@ -100,6 +100,15 @@ main_body:
   ret float %out
 }
 
+;CHECK-LABEL: {{^}}test4:
+;CHECK: buffer_atomic_add v0,
+define amdgpu_ps float @test4() {
+main_body:
+  %v = call i32 @llvm.amdgcn.buffer.atomic.add(i32 1, <4 x i32> undef, i32 0, i32 4, i1 false)
+  %v.float = bitcast i32 %v to float
+  ret float %v.float
+}
+
 declare i32 @llvm.amdgcn.buffer.atomic.swap(i32, <4 x i32>, i32, i32, i1) #0
 declare i32 @llvm.amdgcn.buffer.atomic.add(i32, <4 x i32>, i32, i32, i1) #0
 declare i32 @llvm.amdgcn.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i1) #0

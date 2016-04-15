@@ -49,40 +49,58 @@ void PrintTo(const CoverageSegment &S, ::std::ostream *os) {
 
 namespace {
 
-struct OneFunctionCoverageReader : CoverageMappingReader {
+struct OutputFunctionCoverageData {
   StringRef Name;
   uint64_t Hash;
   std::vector<StringRef> Filenames;
-  ArrayRef<CounterMappingRegion> Regions;
-  bool Done;
+  std::vector<CounterMappingRegion> Regions;
 
-  OneFunctionCoverageReader(StringRef Name, uint64_t Hash,
-                            ArrayRef<StringRef> Filenames,
-                            ArrayRef<CounterMappingRegion> Regions)
-      : Name(Name), Hash(Hash), Filenames(Filenames), Regions(Regions),
-        Done(false) {}
-
-  std::error_code readNextRecord(CoverageMappingRecord &Record) override {
-    if (Done)
-      return instrprof_error::eof;
-    Done = true;
-
+  void fillCoverageMappingRecord(CoverageMappingRecord &Record) const {
     Record.FunctionName = Name;
     Record.FunctionHash = Hash;
     Record.Filenames = Filenames;
     Record.Expressions = {};
     Record.MappingRegions = Regions;
+  }
+};
+
+struct CoverageMappingReaderMock : CoverageMappingReader {
+  ArrayRef<OutputFunctionCoverageData> Functions;
+
+  CoverageMappingReaderMock(ArrayRef<OutputFunctionCoverageData> Functions)
+      : Functions(Functions) {}
+
+  std::error_code readNextRecord(CoverageMappingRecord &Record) override {
+    if (Functions.empty())
+      return instrprof_error::eof;
+
+    Functions.front().fillCoverageMappingRecord(Record);
+    Functions = Functions.slice(1);
+
     return instrprof_error::success;
   }
 };
 
+struct InputFunctionCoverageData {
+  // Maps the global file index from CoverageMappingTest.Files
+  // to the index of that file within this function. We can't just use
+  // global file indexes here because local indexes have to be dense.
+  // This map is used during serialization to create the virtual file mapping
+  // (from local fileId to global Index) in the head of the per-function
+  // coverage mapping data.
+  SmallDenseMap<unsigned, unsigned> ReverseVirtualFileMapping;
+  std::string Name;
+  uint64_t Hash;
+  std::vector<CounterMappingRegion> Regions;
+
+  InputFunctionCoverageData(std::string Name, uint64_t Hash)
+      : Name(std::move(Name)), Hash(Hash) {}
+};
+
 struct CoverageMappingTest : ::testing::Test {
   StringMap<unsigned> Files;
-  std::vector<CounterMappingRegion> InputCMRs;
-
-  std::vector<StringRef> OutputFiles;
-  std::vector<CounterExpression> OutputExpressions;
-  std::vector<CounterMappingRegion> OutputCMRs;
+  std::vector<InputFunctionCoverageData> InputFunctions;
+  std::vector<OutputFunctionCoverageData> OutputFunctions;
 
   InstrProfWriter ProfileWriter;
   std::unique_ptr<IndexedInstrProfReader> ProfileReader;
@@ -93,7 +111,7 @@ struct CoverageMappingTest : ::testing::Test {
     ProfileWriter.setOutputSparse(false);
   }
 
-  unsigned getFile(StringRef Name) {
+  unsigned getGlobalFileIndex(StringRef Name) {
     auto R = Files.find(Name);
     if (R != Files.end())
       return R->second;
@@ -102,35 +120,71 @@ struct CoverageMappingTest : ::testing::Test {
     return Index;
   }
 
+  // Return the file index of file 'Name' for the current function.
+  // Add the file into the global map if necesary.
+  // See also InputFunctionCoverageData::ReverseVirtualFileMapping
+  // for additional comments.
+  unsigned getFileIndexForFunction(StringRef Name) {
+    unsigned GlobalIndex = getGlobalFileIndex(Name);
+    auto &CurrentFunctionFileMapping =
+        InputFunctions.back().ReverseVirtualFileMapping;
+    auto R = CurrentFunctionFileMapping.find(GlobalIndex);
+    if (R != CurrentFunctionFileMapping.end())
+      return R->second;
+    unsigned IndexInFunction = CurrentFunctionFileMapping.size();
+    CurrentFunctionFileMapping.insert(
+        std::make_pair(GlobalIndex, IndexInFunction));
+    return IndexInFunction;
+  }
+
+  void startFunction(StringRef FuncName, uint64_t Hash) {
+    InputFunctions.emplace_back(FuncName.str(), Hash);
+  }
+
   void addCMR(Counter C, StringRef File, unsigned LS, unsigned CS, unsigned LE,
               unsigned CE) {
-    InputCMRs.push_back(
-        CounterMappingRegion::makeRegion(C, getFile(File), LS, CS, LE, CE));
+    InputFunctions.back().Regions.push_back(CounterMappingRegion::makeRegion(
+        C, getFileIndexForFunction(File), LS, CS, LE, CE));
   }
 
   void addExpansionCMR(StringRef File, StringRef ExpandedFile, unsigned LS,
                        unsigned CS, unsigned LE, unsigned CE) {
-    InputCMRs.push_back(CounterMappingRegion::makeExpansion(
-        getFile(File), getFile(ExpandedFile), LS, CS, LE, CE));
+    InputFunctions.back().Regions.push_back(CounterMappingRegion::makeExpansion(
+        getFileIndexForFunction(File), getFileIndexForFunction(ExpandedFile),
+        LS, CS, LE, CE));
   }
 
-  std::string writeCoverageRegions() {
-    SmallVector<unsigned, 8> FileIDs(Files.size());
-    for (unsigned I = 0; I < FileIDs.size(); ++I)
-      FileIDs[I] = I;
+  std::string writeCoverageRegions(InputFunctionCoverageData &Data) {
+    SmallVector<unsigned, 8> FileIDs(Data.ReverseVirtualFileMapping.size());
+    for (const auto &E : Data.ReverseVirtualFileMapping)
+      FileIDs[E.second] = E.first;
     std::string Coverage;
     llvm::raw_string_ostream OS(Coverage);
-    CoverageMappingWriter(FileIDs, None, InputCMRs).write(OS);
+    CoverageMappingWriter(FileIDs, None, Data.Regions).write(OS);
     return OS.str();
   }
 
-  void readCoverageRegions(std::string Coverage) {
+  void readCoverageRegions(std::string Coverage,
+                           OutputFunctionCoverageData &Data) {
     SmallVector<StringRef, 8> Filenames(Files.size());
     for (const auto &E : Files)
       Filenames[E.getValue()] = E.getKey();
-    RawCoverageMappingReader Reader(Coverage, Filenames, OutputFiles,
-                                    OutputExpressions, OutputCMRs);
+    std::vector<CounterExpression> Expressions;
+    RawCoverageMappingReader Reader(Coverage, Filenames, Data.Filenames,
+                                    Expressions, Data.Regions);
     ASSERT_TRUE(NoError(Reader.read()));
+  }
+
+  void writeAndReadCoverageRegions(bool EmitFilenames = true) {
+    OutputFunctions.resize(InputFunctions.size());
+    for (unsigned I = 0; I < InputFunctions.size(); ++I) {
+      std::string Regions = writeCoverageRegions(InputFunctions[I]);
+      readCoverageRegions(Regions, OutputFunctions[I]);
+      OutputFunctions[I].Name = InputFunctions[I].Name;
+      OutputFunctions[I].Hash = InputFunctions[I].Hash;
+      if (!EmitFilenames)
+        OutputFunctions[I].Filenames.clear();
+    }
   }
 
   void readProfCounts() {
@@ -140,18 +194,11 @@ struct CoverageMappingTest : ::testing::Test {
     ProfileReader = std::move(ReaderOrErr.get());
   }
 
-  void loadCoverageMapping(StringRef FuncName, uint64_t Hash,
-                           bool EmitFilenames = true) {
-    std::string Regions = writeCoverageRegions();
-    readCoverageRegions(Regions);
+  void loadCoverageMapping(bool EmitFilenames = true) {
+    readProfCounts();
+    writeAndReadCoverageRegions(EmitFilenames);
 
-    SmallVector<StringRef, 8> Filenames;
-    if (EmitFilenames) {
-      Filenames.resize(Files.size());
-      for (const auto &E : Files)
-        Filenames[E.getValue()] = E.getKey();
-    }
-    OneFunctionCoverageReader CovReader(FuncName, Hash, Filenames, OutputCMRs);
+    CoverageMappingReaderMock CovReader(OutputFunctions);
     auto CoverageOrErr = CoverageMapping::load(CovReader, *ProfileReader);
     ASSERT_TRUE(NoError(CoverageOrErr.getError()));
     LoadedCoverage = std::move(CoverageOrErr.get());
@@ -168,22 +215,27 @@ struct MaybeSparseCoverageMappingTest
 };
 
 TEST_P(MaybeSparseCoverageMappingTest, basic_write_read) {
+  startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "foo", 1, 1, 1, 1);
   addCMR(Counter::getCounter(1), "foo", 2, 1, 2, 2);
   addCMR(Counter::getZero(),     "foo", 3, 1, 3, 4);
   addCMR(Counter::getCounter(2), "foo", 4, 1, 4, 8);
   addCMR(Counter::getCounter(3), "bar", 1, 2, 3, 4);
-  std::string Coverage = writeCoverageRegions();
-  readCoverageRegions(Coverage);
 
-  size_t N = makeArrayRef(InputCMRs).size();
-  ASSERT_EQ(N, OutputCMRs.size());
+  writeAndReadCoverageRegions();
+  ASSERT_EQ(1u, InputFunctions.size());
+  ASSERT_EQ(1u, OutputFunctions.size());
+  InputFunctionCoverageData &Input = InputFunctions.back();
+  OutputFunctionCoverageData &Output = OutputFunctions.back();
+
+  size_t N = makeArrayRef(Input.Regions).size();
+  ASSERT_EQ(N, Output.Regions.size());
   for (size_t I = 0; I < N; ++I) {
-    ASSERT_EQ(InputCMRs[I].Count,      OutputCMRs[I].Count);
-    ASSERT_EQ(InputCMRs[I].FileID,     OutputCMRs[I].FileID);
-    ASSERT_EQ(InputCMRs[I].startLoc(), OutputCMRs[I].startLoc());
-    ASSERT_EQ(InputCMRs[I].endLoc(),   OutputCMRs[I].endLoc());
-    ASSERT_EQ(InputCMRs[I].Kind,       OutputCMRs[I].Kind);
+    ASSERT_EQ(Input.Regions[I].Count, Output.Regions[I].Count);
+    ASSERT_EQ(Input.Regions[I].FileID, Output.Regions[I].FileID);
+    ASSERT_EQ(Input.Regions[I].startLoc(), Output.Regions[I].startLoc());
+    ASSERT_EQ(Input.Regions[I].endLoc(), Output.Regions[I].endLoc());
+    ASSERT_EQ(Input.Regions[I].Kind, Output.Regions[I].Kind);
   }
 }
 
@@ -192,39 +244,41 @@ TEST_P(MaybeSparseCoverageMappingTest,
   const char *FileNames[] = {"bar", "baz", "foo"};
   static const unsigned N = array_lengthof(FileNames);
 
+  startFunction("func", 0x1234);
   for (unsigned I = 0; I < N; ++I)
     // Use LineStart to hold the index of the file name
     // in order to preserve that information during possible sorting of CMRs.
     addCMR(Counter::getCounter(0), FileNames[I], I, 1, I, 1);
 
-  std::string Coverage = writeCoverageRegions();
-  readCoverageRegions(Coverage);
+  writeAndReadCoverageRegions();
+  ASSERT_EQ(1u, OutputFunctions.size());
+  OutputFunctionCoverageData &Output = OutputFunctions.back();
 
-  ASSERT_EQ(N, OutputCMRs.size());
-  ASSERT_EQ(N, OutputFiles.size());
+  ASSERT_EQ(N, Output.Regions.size());
+  ASSERT_EQ(N, Output.Filenames.size());
 
   for (unsigned I = 0; I < N; ++I) {
-    ASSERT_GT(N, OutputCMRs[I].FileID);
-    ASSERT_GT(N, OutputCMRs[I].LineStart);
-    EXPECT_EQ(FileNames[OutputCMRs[I].LineStart],
-              OutputFiles[OutputCMRs[I].FileID]);
+    ASSERT_GT(N, Output.Regions[I].FileID);
+    ASSERT_GT(N, Output.Regions[I].LineStart);
+    EXPECT_EQ(FileNames[Output.Regions[I].LineStart],
+              Output.Filenames[Output.Regions[I].FileID]);
   }
 }
 
 TEST_P(MaybeSparseCoverageMappingTest, load_coverage_for_more_than_two_files) {
   InstrProfRecord Record("func", 0x1234, {0});
   ProfileWriter.addRecord(std::move(Record));
-  readProfCounts();
 
   const char *FileNames[] = {"bar", "baz", "foo"};
   static const unsigned N = array_lengthof(FileNames);
 
+  startFunction("func", 0x1234);
   for (unsigned I = 0; I < N; ++I)
     // Use LineStart to hold the index of the file name
     // in order to preserve that information during possible sorting of CMRs.
     addCMR(Counter::getCounter(0), FileNames[I], I, 1, I, 1);
 
-  loadCoverageMapping("func", 0x1234);
+  loadCoverageMapping();
 
   for (unsigned I = 0; I < N; ++I) {
     CoverageData Data = LoadedCoverage->getCoverageForFile(FileNames[I]);
@@ -233,29 +287,63 @@ TEST_P(MaybeSparseCoverageMappingTest, load_coverage_for_more_than_two_files) {
   }
 }
 
+TEST_P(MaybeSparseCoverageMappingTest, load_coverage_for_several_functions) {
+  InstrProfRecord RecordFunc1("func1", 0x1234, {10});
+  ProfileWriter.addRecord(std::move(RecordFunc1));
+  InstrProfRecord RecordFunc2("func2", 0x2345, {20});
+  ProfileWriter.addRecord(std::move(RecordFunc2));
+
+  startFunction("func1", 0x1234);
+  addCMR(Counter::getCounter(0), "foo", 1, 1, 5, 5);
+
+  startFunction("func2", 0x2345);
+  addCMR(Counter::getCounter(0), "bar", 2, 2, 6, 6);
+
+  loadCoverageMapping();
+
+  const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  EXPECT_EQ(2U, std::distance(FunctionRecords.begin(), FunctionRecords.end()));
+  for (const auto &FunctionRecord : FunctionRecords) {
+    CoverageData Data = LoadedCoverage->getCoverageForFunction(FunctionRecord);
+    std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+    ASSERT_EQ(2U, Segments.size());
+    if (FunctionRecord.Name == "func1") {
+      EXPECT_EQ(CoverageSegment(1, 1, 10, true), Segments[0]);
+      EXPECT_EQ(CoverageSegment(5, 5, false), Segments[1]);
+    } else {
+      ASSERT_EQ("func2", FunctionRecord.Name);
+      EXPECT_EQ(CoverageSegment(2, 2, 20, true), Segments[0]);
+      EXPECT_EQ(CoverageSegment(6, 6, false), Segments[1]);
+    }
+  }
+}
+
 TEST_P(MaybeSparseCoverageMappingTest, expansion_gets_first_counter) {
+  startFunction("func", 0x1234);
   addCMR(Counter::getCounter(1), "foo", 10, 1, 10, 2);
   // This starts earlier in "foo", so the expansion should get its counter.
   addCMR(Counter::getCounter(2), "foo", 1, 1, 20, 1);
   addExpansionCMR("bar", "foo", 3, 3, 3, 3);
-  std::string Coverage = writeCoverageRegions();
-  readCoverageRegions(Coverage);
 
-  ASSERT_EQ(CounterMappingRegion::ExpansionRegion, OutputCMRs[2].Kind);
-  ASSERT_EQ(Counter::getCounter(2), OutputCMRs[2].Count);
-  ASSERT_EQ(3U, OutputCMRs[2].LineStart);
+  writeAndReadCoverageRegions();
+  ASSERT_EQ(1u, OutputFunctions.size());
+  OutputFunctionCoverageData &Output = OutputFunctions.back();
+
+  ASSERT_EQ(CounterMappingRegion::ExpansionRegion, Output.Regions[2].Kind);
+  ASSERT_EQ(Counter::getCounter(2), Output.Regions[2].Count);
+  ASSERT_EQ(3U, Output.Regions[2].LineStart);
 }
 
 TEST_P(MaybeSparseCoverageMappingTest, basic_coverage_iteration) {
   InstrProfRecord Record("func", 0x1234, {30, 20, 10, 0});
   ProfileWriter.addRecord(std::move(Record));
-  readProfCounts();
 
+  startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
   addCMR(Counter::getCounter(1), "file1", 1, 1, 4, 7);
   addCMR(Counter::getCounter(2), "file1", 5, 8, 9, 1);
   addCMR(Counter::getCounter(3), "file1", 10, 10, 11, 11);
-  loadCoverageMapping("func", 0x1234);
+  loadCoverageMapping();
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -270,10 +358,9 @@ TEST_P(MaybeSparseCoverageMappingTest, basic_coverage_iteration) {
 }
 
 TEST_P(MaybeSparseCoverageMappingTest, uncovered_function) {
-  readProfCounts();
-
+  startFunction("func", 0x1234);
   addCMR(Counter::getZero(), "file1", 1, 2, 3, 4);
-  loadCoverageMapping("func", 0x1234);
+  loadCoverageMapping();
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -283,11 +370,10 @@ TEST_P(MaybeSparseCoverageMappingTest, uncovered_function) {
 }
 
 TEST_P(MaybeSparseCoverageMappingTest, uncovered_function_with_mapping) {
-  readProfCounts();
-
+  startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
   addCMR(Counter::getCounter(1), "file1", 1, 1, 4, 7);
-  loadCoverageMapping("func", 0x1234);
+  loadCoverageMapping();
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -300,12 +386,12 @@ TEST_P(MaybeSparseCoverageMappingTest, uncovered_function_with_mapping) {
 TEST_P(MaybeSparseCoverageMappingTest, combine_regions) {
   InstrProfRecord Record("func", 0x1234, {10, 20, 30});
   ProfileWriter.addRecord(std::move(Record));
-  readProfCounts();
 
+  startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
   addCMR(Counter::getCounter(1), "file1", 3, 3, 4, 4);
   addCMR(Counter::getCounter(2), "file1", 3, 3, 4, 4);
-  loadCoverageMapping("func", 0x1234);
+  loadCoverageMapping();
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -321,13 +407,13 @@ TEST_P(MaybeSparseCoverageMappingTest, dont_combine_expansions) {
   InstrProfRecord Record2("func", 0x1234, {0, 0});
   ProfileWriter.addRecord(std::move(Record1));
   ProfileWriter.addRecord(std::move(Record2));
-  readProfCounts();
 
+  startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
   addCMR(Counter::getCounter(1), "file1", 3, 3, 4, 4);
   addCMR(Counter::getCounter(1), "include1", 6, 6, 7, 7);
   addExpansionCMR("file1", "include1", 3, 3, 4, 4);
-  loadCoverageMapping("func", 0x1234);
+  loadCoverageMapping();
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -341,10 +427,10 @@ TEST_P(MaybeSparseCoverageMappingTest, dont_combine_expansions) {
 TEST_P(MaybeSparseCoverageMappingTest, strip_filename_prefix) {
   InstrProfRecord Record("file1:func", 0x1234, {0});
   ProfileWriter.addRecord(std::move(Record));
-  readProfCounts();
 
+  startFunction("file1:func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
-  loadCoverageMapping("file1:func", 0x1234);
+  loadCoverageMapping();
 
   std::vector<std::string> Names;
   for (const auto &Func : LoadedCoverage->getCoveredFunctions())
@@ -356,10 +442,10 @@ TEST_P(MaybeSparseCoverageMappingTest, strip_filename_prefix) {
 TEST_P(MaybeSparseCoverageMappingTest, strip_unknown_filename_prefix) {
   InstrProfRecord Record("<unknown>:func", 0x1234, {0});
   ProfileWriter.addRecord(std::move(Record));
-  readProfCounts();
 
+  startFunction("<unknown>:func", 0x1234);
   addCMR(Counter::getCounter(0), "", 1, 1, 9, 9);
-  loadCoverageMapping("<unknown>:func", 0x1234, /*EmitFilenames=*/false);
+  loadCoverageMapping(/*EmitFilenames=*/false);
 
   std::vector<std::string> Names;
   for (const auto &Func : LoadedCoverage->getCoveredFunctions())
