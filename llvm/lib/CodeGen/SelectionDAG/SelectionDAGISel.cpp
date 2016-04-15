@@ -1669,14 +1669,23 @@ SelectionDAGISel::FinishBasicBlock() {
       // If all cases cover a contiguous range, it is not necessary to jump to
       // the default block after the last bit test fails. This is because the
       // range check during bit test header creation has guaranteed that every
-      // case here doesn't go outside the range.
+      // case here doesn't go outside the range. In this case, there is no need
+      // to perform the last bit test, as it will always be true. Instead, make
+      // the second-to-last bit-test fall through to the target of the last bit
+      // test, and delete the last bit test.
+
       MachineBasicBlock *NextMBB;
-      if (BTB.ContiguousRange && j + 2 == ej)
+      if (BTB.ContiguousRange && j + 2 == ej) {
+        // Second-to-last bit-test with contiguous range: fall through to the
+        // target of the final bit test.
         NextMBB = BTB.Cases[j + 1].TargetBB;
-      else if (j + 1 != ej)
-        NextMBB = BTB.Cases[j + 1].ThisBB;
-      else
+      } else if (j + 1 == ej) {
+        // For the last bit test, fall through to Default.
         NextMBB = BTB.Default;
+      } else {
+        // Otherwise, fall through to the next bit test.
+        NextMBB = BTB.Cases[j + 1].ThisBB;
+      }
 
       SDB->visitBitTestCase(BTB, NextMBB, UnhandledProb, BTB.Reg, BTB.Cases[j],
                             FuncInfo->MBB);
@@ -1685,8 +1694,11 @@ SelectionDAGISel::FinishBasicBlock() {
       SDB->clear();
       CodeGenAndEmitDAG();
 
-      if (BTB.ContiguousRange && j + 2 == ej)
+      if (BTB.ContiguousRange && j + 2 == ej) {
+        // Since we're not going to use the final bit test, remove it.
+        BTB.Cases.pop_back();
         break;
+      }
     }
 
     // Update PHI Nodes
@@ -1697,12 +1709,14 @@ SelectionDAGISel::FinishBasicBlock() {
       assert(PHI->isPHI() &&
              "This is not a machine PHI node that we are updating!");
       // This is "default" BB. We have two jumps to it. From "header" BB and
-      // from last "case" BB.
-      if (PHIBB == BTB.Default)
-        PHI.addReg(FuncInfo->PHINodesToUpdate[pi].second)
-           .addMBB(BTB.Parent)
-           .addReg(FuncInfo->PHINodesToUpdate[pi].second)
-           .addMBB(BTB.Cases.back().ThisBB);
+      // from last "case" BB, unless the latter was skipped.
+      if (PHIBB == BTB.Default) {
+        PHI.addReg(FuncInfo->PHINodesToUpdate[pi].second).addMBB(BTB.Parent);
+        if (!BTB.ContiguousRange) {
+          PHI.addReg(FuncInfo->PHINodesToUpdate[pi].second)
+              .addMBB(BTB.Cases.back().ThisBB);
+         }
+      }
       // One of "cases" BB.
       for (unsigned j = 0, ej = BTB.Cases.size();
            j != ej; ++j) {
