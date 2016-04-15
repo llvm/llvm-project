@@ -62,7 +62,7 @@ class MDNodeMapper;
 class Mapper {
   friend class MDNodeMapper;
 
-  ValueToValueMapTy &VM;
+  ValueToValueMapTy *VM;
   RemapFlags Flags;
   ValueMapTypeRemapper *TypeMapper;
   ValueMaterializer *Materializer;
@@ -73,7 +73,7 @@ class Mapper {
 public:
   Mapper(ValueToValueMapTy &VM, RemapFlags Flags,
          ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer)
-      : VM(VM), Flags(Flags), TypeMapper(TypeMapper),
+      : VM(&VM), Flags(Flags), TypeMapper(TypeMapper),
         Materializer(Materializer) {}
 
   ~Mapper();
@@ -103,6 +103,8 @@ public:
   Metadata *mapLocalAsMetadata(const LocalAsMetadata &LAM);
 
 private:
+  ValueToValueMapTy &getVM() { return *VM; }
+
   Value *mapBlockAddress(const BlockAddress &BA);
 
   /// Map metadata that doesn't require visiting operands.
@@ -256,16 +258,17 @@ Value *llvm::MapValue(const Value *V, ValueToValueMapTy &VM, RemapFlags Flags,
 }
 
 Value *Mapper::mapValue(const Value *V) {
-  ValueToValueMapTy::iterator I = VM.find(V);
-  
+  ValueToValueMapTy::iterator I = getVM().find(V);
+
   // If the value already exists in the map, use it.
-  if (I != VM.end() && I->second) return I->second;
-  
+  if (I != getVM().end() && I->second)
+    return I->second;
+
   // If we have a materializer and it can materialize a value, use that.
   if (Materializer) {
     if (Value *NewV =
             Materializer->materializeDeclFor(const_cast<Value *>(V))) {
-      VM[V] = NewV;
+      getVM()[V] = NewV;
       if (auto *NewGV = dyn_cast<GlobalValue>(NewV))
         DelayedInits.push_back(
             DelayedGlobalValueInit(cast<GlobalValue>(V), NewGV));
@@ -278,7 +281,7 @@ Value *Mapper::mapValue(const Value *V) {
   if (isa<GlobalValue>(V)) {
     if (Flags & RF_NullMapMissingGlobalValues)
       return nullptr;
-    return VM[V] = const_cast<Value*>(V);
+    return getVM()[V] = const_cast<Value *>(V);
   }
 
   if (const InlineAsm *IA = dyn_cast<InlineAsm>(V)) {
@@ -291,8 +294,8 @@ Value *Mapper::mapValue(const Value *V) {
         V = InlineAsm::get(NewTy, IA->getAsmString(), IA->getConstraintString(),
                            IA->hasSideEffects(), IA->isAlignStack());
     }
-    
-    return VM[V] = const_cast<Value*>(V);
+
+    return getVM()[V] = const_cast<Value *>(V);
   }
 
   if (const auto *MDV = dyn_cast<MetadataAsValue>(V)) {
@@ -317,13 +320,13 @@ Value *Mapper::mapValue(const Value *V) {
     // If this is a module-level metadata and we know that nothing at the module
     // level is changing, then use an identity mapping.
     if (Flags & RF_NoModuleLevelChanges)
-      return VM[V] = const_cast<Value *>(V);
+      return getVM()[V] = const_cast<Value *>(V);
 
     // Map the metadata and turn it into a value.
     auto *MappedMD = mapMetadata(MD);
     if (MD == MappedMD)
-      return VM[V] = const_cast<Value *>(V);
-    return VM[V] = MetadataAsValue::get(V->getContext(), MappedMD);
+      return getVM()[V] = const_cast<Value *>(V);
+    return getVM()[V] = MetadataAsValue::get(V->getContext(), MappedMD);
   }
 
   // Okay, this either must be a constant (which may or may not be mappable) or
@@ -353,8 +356,8 @@ Value *Mapper::mapValue(const Value *V) {
   // If the result type and all operands match up, then just insert an identity
   // mapping.
   if (OpNo == NumOperands && NewTy == C->getType())
-    return VM[V] = C;
-  
+    return getVM()[V] = C;
+
   // Okay, we need to create a new constant.  We've already processed some or
   // all of the operands, set them all up now.
   SmallVector<Constant*, 8> Ops;
@@ -376,20 +379,20 @@ Value *Mapper::mapValue(const Value *V) {
       NewSrcTy = TypeMapper->remapType(GEPO->getSourceElementType());
 
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C))
-    return VM[V] = CE->getWithOperands(Ops, NewTy, false, NewSrcTy);
+    return getVM()[V] = CE->getWithOperands(Ops, NewTy, false, NewSrcTy);
   if (isa<ConstantArray>(C))
-    return VM[V] = ConstantArray::get(cast<ArrayType>(NewTy), Ops);
+    return getVM()[V] = ConstantArray::get(cast<ArrayType>(NewTy), Ops);
   if (isa<ConstantStruct>(C))
-    return VM[V] = ConstantStruct::get(cast<StructType>(NewTy), Ops);
+    return getVM()[V] = ConstantStruct::get(cast<StructType>(NewTy), Ops);
   if (isa<ConstantVector>(C))
-    return VM[V] = ConstantVector::get(Ops);
+    return getVM()[V] = ConstantVector::get(Ops);
   // If this is a no-operand constant, it must be because the type was remapped.
   if (isa<UndefValue>(C))
-    return VM[V] = UndefValue::get(NewTy);
+    return getVM()[V] = UndefValue::get(NewTy);
   if (isa<ConstantAggregateZero>(C))
-    return VM[V] = ConstantAggregateZero::get(NewTy);
+    return getVM()[V] = ConstantAggregateZero::get(NewTy);
   assert(isa<ConstantPointerNull>(C));
-  return VM[V] = ConstantPointerNull::get(cast<PointerType>(NewTy));
+  return getVM()[V] = ConstantPointerNull::get(cast<PointerType>(NewTy));
 }
 
 Value *Mapper::mapBlockAddress(const BlockAddress &BA) {
@@ -406,11 +409,11 @@ Value *Mapper::mapBlockAddress(const BlockAddress &BA) {
     BB = cast_or_null<BasicBlock>(mapValue(BA.getBasicBlock()));
   }
 
-  return VM[&BA] = BlockAddress::get(F, BB ? BB : BA.getBasicBlock());
+  return getVM()[&BA] = BlockAddress::get(F, BB ? BB : BA.getBasicBlock());
 }
 
 Metadata *Mapper::mapToMetadata(const Metadata *Key, Metadata *Val) {
-  VM.MD()[Key].reset(Val);
+  getVM().MD()[Key].reset(Val);
   return Val;
 }
 
@@ -423,7 +426,7 @@ bool MDNodeMapper::mapOperand(const Metadata *Op) {
     return false;
 
   if (Optional<Metadata *> MappedOp = M.mapSimpleMetadata(Op)) {
-    assert((isa<MDString>(Op) || M.VM.getMappedMD(Op)) &&
+    assert((isa<MDString>(Op) || M.getVM().getMappedMD(Op)) &&
            "Expected result to be memoized");
     return *MappedOp != Op;
   }
@@ -435,7 +438,7 @@ Optional<Metadata *> MDNodeMapper::getMappedOp(const Metadata *Op) const {
   if (!Op)
     return nullptr;
 
-  if (Optional<Metadata *> MappedOp = M.VM.getMappedMD(Op))
+  if (Optional<Metadata *> MappedOp = M.getVM().getMappedMD(Op))
     return *MappedOp;
 
   if (isa<MDString>(Op))
@@ -640,7 +643,7 @@ Metadata *MDNodeMapper::map(const MDNode &FirstN) {
 
 Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
   // If the value already exists in the map, use it.
-  if (Optional<Metadata *> NewMD = VM.getMappedMD(MD))
+  if (Optional<Metadata *> NewMD = getVM().getMappedMD(MD))
     return *NewMD;
 
   if (isa<MDString>(MD))
@@ -653,9 +656,9 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
 
   if (auto *CMD = dyn_cast<ConstantAsMetadata>(MD)) {
     // Disallow recursion into metadata mapping through mapValue.
-    VM.disableMapMetadata();
+    getVM().disableMapMetadata();
     Value *MappedV = mapValue(CMD->getValue());
-    VM.enableMapMetadata();
+    getVM().enableMapMetadata();
 
     if (CMD->getValue() == MappedV)
       return mapToSelf(MD);
