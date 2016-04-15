@@ -162,6 +162,9 @@ public:
     bool
     MakeSigned ();
 
+    bool
+    MakeUnsigned ();
+
     static const char *
     GetValueTypeAsCString (Scalar::Type value_type);
 
@@ -239,18 +242,6 @@ public:
     int
     SInt(int fail_value = 0) const;
 
-    // Return the raw unsigned integer without any casting or conversion
-    unsigned int
-    RawUInt () const;
-
-    // Return the raw unsigned long without any casting or conversion
-    unsigned long
-    RawULong () const;
-
-    // Return the raw unsigned long long without any casting or conversion
-    unsigned long long
-    RawULongLong () const;
-
     unsigned char
     UChar(unsigned char fail_value = 0) const;
 
@@ -298,9 +289,6 @@ public:
 
     long double
     LongDouble(long double fail_value = 0.0) const;
-
-    uint64_t
-    GetRawBits64 (uint64_t fail_value) const;
 
     Error
     SetValueFromCString (const char *s, lldb::Encoding encoding, size_t byte_size);
