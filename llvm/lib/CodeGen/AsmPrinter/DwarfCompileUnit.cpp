@@ -22,6 +22,7 @@ DwarfCompileUnit::DwarfCompileUnit(unsigned UID, const DICompileUnit *Node,
     : DwarfUnit(UID, dwarf::DW_TAG_compile_unit, Node, A, DW, DWU),
       Skeleton(nullptr), BaseAddress(nullptr) {
   insertDIE(Node, &getUnitDie());
+  MacroLabelBegin = Asm->createTempSymbol("cu_macro_begin");
 }
 
 /// addLabelAddress - Add a dwarf label attribute data and value using

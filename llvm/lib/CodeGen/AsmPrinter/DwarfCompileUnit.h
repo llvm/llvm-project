@@ -39,6 +39,9 @@ class DwarfCompileUnit : public DwarfUnit {
   /// The start of the unit within its section.
   MCSymbol *LabelBegin;
 
+  /// The start of the unit macro info within macro section.
+  MCSymbol *MacroLabelBegin;
+
   typedef llvm::SmallVector<const MDNode *, 8> ImportedEntityList;
   typedef llvm::DenseMap<const MDNode *, ImportedEntityList>
   ImportedEntityMap;
@@ -187,6 +190,10 @@ public:
   MCSymbol *getLabelBegin() const {
     assert(Section);
     return LabelBegin;
+  }
+
+  MCSymbol *getMacroLabelBegin() const {
+    return MacroLabelBegin;
   }
 
   /// Add a new global name to the compile unit.
