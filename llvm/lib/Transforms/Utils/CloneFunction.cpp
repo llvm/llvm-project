@@ -119,6 +119,15 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
           .addAttributes(NewFunc->getContext(), AttributeSet::FunctionIndex,
                          OldAttrs.getFnAttributes()));
 
+  SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
+  OldFunc->getAllMetadata(MDs);
+  for (auto MD : MDs)
+    NewFunc->setMetadata(
+        MD.first,
+        MapMetadata(MD.second, VMap,
+                    ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
+                    TypeMapper, Materializer));
+
   // Loop over all of the basic blocks in the function, cloning them as
   // appropriate.  Note that we save BE this way in order to handle cloning of
   // recursive functions into themselves.
@@ -165,8 +174,8 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
 
 // Clone the module-level debug info associated with OldFunc. The cloned data
 // will point to NewFunc instead.
-void llvm::CloneDebugInfoMetadata(Function *NewFunc, const Function *OldFunc,
-                                  ValueToValueMapTy &VMap) {
+static void CloneDebugInfoMetadata(Function *NewFunc, const Function *OldFunc,
+                                   ValueToValueMapTy &VMap) {
   if (const DISubprogram *OldSP = OldFunc->getSubprogram()) {
     auto *NewSP = cast<DISubprogram>(MapMetadata(OldSP, VMap));
     // FIXME: There ought to be a better way to do this: ValueMapper
