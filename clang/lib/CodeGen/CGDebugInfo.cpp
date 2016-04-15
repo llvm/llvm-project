@@ -2799,11 +2799,11 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   unsigned LineNo = getLineNumber(Loc);
   unsigned ScopeLine = 0;
 
-  DBuilder.createFunction(FDContext, Name, LinkageName, Unit, LineNo,
-                          getOrCreateFunctionType(D, FnType, Unit),
-                          false /*internalLinkage*/, true /*definition*/,
-                          ScopeLine, Flags, CGM.getLangOpts().Optimize,
-                          TParamsArray.get(), getFunctionDeclaration(D));
+  DBuilder.retainType(DBuilder.createFunction(
+      FDContext, Name, LinkageName, Unit, LineNo,
+      getOrCreateFunctionType(D, FnType, Unit), false /*internalLinkage*/,
+      false /*definition*/, ScopeLine, Flags, CGM.getLangOpts().Optimize,
+      TParamsArray.get(), getFunctionDeclaration(D)));
 }
 
 void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
