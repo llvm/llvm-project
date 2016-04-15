@@ -999,12 +999,10 @@ void IRLinker::linkNamedMDNodes() {
       continue;
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.
-    for (const MDNode *op : NMD.operands()) {
-      MDNode *DestMD = MapMetadata(
-          op, ValueMap, ValueMapperFlags | RF_NullMapMissingGlobalValues,
-          &TypeMap, &GValMaterializer);
-      DestNMD->addOperand(DestMD);
-    }
+    for (const MDNode *Op : NMD.operands())
+      DestNMD->addOperand(MapMetadata(
+          Op, ValueMap, ValueMapperFlags | RF_NullMapMissingGlobalValues,
+          &TypeMap, &GValMaterializer));
   }
 }
 
