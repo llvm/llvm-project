@@ -21,9 +21,8 @@ class BlocksTestCase(TestBase):
         # Find the line numbers to break at.
         self.lines.append(line_number('main.c', '// Set breakpoint 0 here.'))
         self.lines.append(line_number('main.c', '// Set breakpoint 1 here.'))
-    
-    @unittest2.expectedFailure("rdar://problem/10413887 - Call blocks in expressions")
-    def test_expr(self):
+
+    def launch_common(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
@@ -35,6 +34,10 @@ class BlocksTestCase(TestBase):
             lldbutil.run_break_set_by_file_and_line (self, "main.c", line, num_expected_locations=1, loc_exact=True)
 
         self.wait_for_breakpoint()
+    
+    @unittest2.expectedFailure("rdar://problem/10413887 - Call blocks in expressions")
+    def test_expr(self):
+        self.launch_common()
 
         self.expect("expression a + b", VARIABLES_DISPLAYED_CORRECTLY,
             substrs = ["= 7"])
@@ -47,6 +50,13 @@ class BlocksTestCase(TestBase):
         # This should display correctly.
         self.expect("expression (int)neg (-12)", VARIABLES_DISPLAYED_CORRECTLY,
             substrs = ["= 12"])
+
+    def test_define(self):
+        self.launch_common()
+
+        self.runCmd("expression int (^$add)(int, int) = ^int(int a, int b) { return a + b; };")
+
+        self.expect("expression $add(2,3)", VARIABLES_DISPLAYED_CORRECTLY, substrs = [" = 5"])
     
     def wait_for_breakpoint(self):
         if self.is_started == False:
