@@ -2611,17 +2611,17 @@ ObjectFileELF::ParseTrampolineSymbols(Symtab *symbol_table,
 {
     assert(rel_hdr->sh_type == SHT_RELA || rel_hdr->sh_type == SHT_REL);
 
-    // The link field points to the associated symbol table. The info field
-    // points to the section holding the plt.
+    // The link field points to the associated symbol table.
     user_id_t symtab_id = rel_hdr->sh_link;
-    user_id_t plt_id = rel_hdr->sh_info;
 
     // If the link field doesn't point to the appropriate symbol name table then
     // try to find it by name as some compiler don't fill in the link fields.
     if (!symtab_id)
         symtab_id = GetSectionIndexByName(".dynsym");
-    if (!plt_id)
-        plt_id = GetSectionIndexByName(".plt");
+
+    // Get PLT section.  We cannot use rel_hdr->sh_info, since current linkers
+    // point that to the .got.plt or .got section instead of .plt.
+    user_id_t plt_id = GetSectionIndexByName(".plt");
 
     if (!symtab_id || !plt_id)
         return 0;

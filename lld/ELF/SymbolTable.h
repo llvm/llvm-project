@@ -12,13 +12,44 @@
 
 #include "InputFiles.h"
 #include "LTO.h"
-#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace lld {
 namespace elf {
 class Lazy;
 template <class ELFT> class OutputSectionBase;
 struct Symbol;
+
+struct SymName {
+  SymName(StringRef Name) : Name(Name) {
+    Hash = llvm::DenseMapInfo<StringRef>::getHashValue(Name);
+  }
+  SymName(StringRef Name, unsigned Hash) : Name(Name), Hash(Hash) {}
+  StringRef Name;
+  unsigned Hash;
+};
+}
+}
+
+namespace llvm {
+template <> struct DenseMapInfo<lld::elf::SymName> {
+  static lld::elf::SymName getEmptyKey() {
+    StringRef N = DenseMapInfo<StringRef>::getEmptyKey();
+    return {N, 0};
+  }
+  static lld::elf::SymName getTombstoneKey() {
+    StringRef N = DenseMapInfo<StringRef>::getTombstoneKey();
+    return {N, 0};
+  }
+  static unsigned getHashValue(lld::elf::SymName Name) { return Name.Hash; }
+  static bool isEqual(lld::elf::SymName A, lld::elf::SymName B) {
+    return A.Name == B.Name;
+  }
+};
+}
+
+namespace lld {
+namespace elf {
 
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
@@ -38,9 +69,7 @@ public:
   void addFile(std::unique_ptr<InputFile> File);
   void addCombinedLtoObject();
 
-  const llvm::MapVector<StringRef, Symbol *> &getSymbols() const {
-    return Symtab;
-  }
+  llvm::ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
   const std::vector<std::unique_ptr<ObjectFile<ELFT>>> &getObjectFiles() const {
     return ObjectFiles;
@@ -75,11 +104,12 @@ private:
   // The order the global symbols are in is not defined. We can use an arbitrary
   // order, but it has to be reproducible. That is true even when cross linking.
   // The default hashing of StringRef produces different results on 32 and 64
-  // bit systems so we use a MapVector. That is arbitrary, deterministic but
-  // a bit inefficient.
+  // bit systems so we use a map to a vector. That is arbitrary, deterministic
+  // but a bit inefficient.
   // FIXME: Experiment with passing in a custom hashing or sorting the symbols
   // once symbol resolution is finished.
-  llvm::MapVector<StringRef, Symbol *> Symtab;
+  llvm::DenseMap<SymName, unsigned> Symtab;
+  std::vector<Symbol *> SymVector;
   llvm::BumpPtrAllocator Alloc;
 
   // Comdat groups define "link once" sections. If two comdat groups have the

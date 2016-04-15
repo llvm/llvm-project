@@ -56,6 +56,7 @@
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <ucontext.h>
 #include <unistd.h>
 
@@ -112,7 +113,32 @@ namespace __sanitizer {
 // --------------- sanitizer_libc.h
 uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
                    OFF_T offset) {
-#if SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
+#ifdef __s390__
+  struct s390_mmap_params {
+    unsigned long addr;
+    unsigned long length;
+    unsigned long prot;
+    unsigned long flags;
+    unsigned long fd;
+    unsigned long offset;
+  } params = {
+    (unsigned long)addr,
+    (unsigned long)length,
+    (unsigned long)prot,
+    (unsigned long)flags,
+    (unsigned long)fd,
+# ifdef __s390x__
+    (unsigned long)offset,
+# else
+    (unsigned long)(offset / 4096),
+# endif
+  };
+# ifdef __s390x__
+  return internal_syscall(SYSCALL(mmap), &params);
+# else
+  return internal_syscall(SYSCALL(mmap2), &params);
+# endif
+#elif SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
   return internal_syscall(SYSCALL(mmap), (uptr)addr, length, prot, flags, fd,
                           offset);
 #else
@@ -464,12 +490,13 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
 #else
   // On FreeBSD, retrieving the argument and environment arrays is done via the
   // kern.ps_strings sysctl, which returns a pointer to a structure containing
-  // this information.  If the sysctl is not available, a "hardcoded" address,
-  // PS_STRINGS, must be used instead.  See also <sys/exec.h>.
+  // this information. See also <sys/exec.h>.
   ps_strings *pss;
   size_t sz = sizeof(pss);
-  if (sysctlbyname("kern.ps_strings", &pss, &sz, NULL, 0) == -1)
-    pss = (ps_strings*)PS_STRINGS;
+  if (sysctlbyname("kern.ps_strings", &pss, &sz, NULL, 0) == -1) {
+    Printf("sysctl kern.ps_strings failed\n");
+    Die();
+  }
   *argv = pss->ps_argvstr;
   *envp = pss->ps_envstr;
 #endif
@@ -1312,6 +1339,15 @@ void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *pc = ucontext->uc_mcontext.pc;
   *bp = ucontext->uc_mcontext.gregs[30];
   *sp = ucontext->uc_mcontext.gregs[29];
+#elif defined(__s390__)
+  ucontext_t *ucontext = (ucontext_t*)context;
+# if defined(__s390x__)
+  *pc = ucontext->uc_mcontext.psw.addr;
+# else
+  *pc = ucontext->uc_mcontext.psw.addr & 0x7fffffff;
+# endif
+  *bp = ucontext->uc_mcontext.gregs[11];
+  *sp = ucontext->uc_mcontext.gregs[15];
 #else
 # error "Unsupported arch"
 #endif
@@ -1320,6 +1356,72 @@ void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 void MaybeReexec() {
   // No need to re-exec on Linux.
 }
+
+#ifdef __s390x__
+static bool FixedCVE_2016_2143() {
+  // Try to determine if the running kernel has a fix for CVE-2016-2143,
+  // return false if in doubt (better safe than sorry).  Distros may want to
+  // adjust this for their own kernels.
+  struct utsname buf;
+  unsigned int major, minor, patch = 0;
+  // This should never fail, but just in case...
+  if (uname(&buf))
+    return false;
+  char *ptr = buf.release;
+  major = internal_simple_strtoll(ptr, &ptr, 10);
+  // At least first 2 should be matched.
+  if (ptr[0] != '.')
+    return false;
+  minor = internal_simple_strtoll(ptr+1, &ptr, 10);
+  // Third is optional.
+  if (ptr[0] == '.')
+    patch = internal_simple_strtoll(ptr+1, &ptr, 10);
+  if (major < 3) {
+    // <3.0 is bad.
+    return false;
+  } else if (major == 3) {
+    // 3.2.79+ is OK.
+    if (minor == 2 && patch >= 79)
+      return true;
+    // Otherwise, bad.
+    return false;
+  } else if (major == 4) {
+    // 4.1.21+ is OK.
+    if (minor == 1 && patch >= 21)
+      return true;
+    // 4.4.6+ is OK.
+    if (minor == 4 && patch >= 6)
+      return true;
+    // Otherwise, OK if 4.5+.
+    return minor >= 5;
+  } else {
+    // Linux 5 and up are fine.
+    return true;
+  }
+}
+
+void AvoidCVE_2016_2143() {
+  // Older kernels are affected by CVE-2016-2143 - they will crash hard
+  // if someone uses 4-level page tables (ie. virtual addresses >= 4TB)
+  // and fork() in the same process.  Unfortunately, sanitizers tend to
+  // require such addresses.  Since this is very likely to crash the whole
+  // machine (sanitizers themselves use fork() for llvm-symbolizer, for one),
+  // abort the process at initialization instead.
+  if (FixedCVE_2016_2143())
+    return;
+  if (GetEnv("SANITIZER_IGNORE_CVE_2016_2143"))
+    return;
+  Report(
+    "ERROR: Your kernel seems to be vulnerable to CVE-2016-2143.  Using ASan,\n"
+    "MSan or TSan with such kernel can and will crash your machine, or worse.\n"
+    "\n"
+    "If you are certain your kernel is not vulnerable (you have compiled it\n"
+    "yourself, are are using an unrecognized distribution kernel), you can\n"
+    "override this safety check by exporting SANITIZER_IGNORE_CVE_2016_2143\n"
+    "with any value.\n");
+  Die();
+}
+#endif
 
 } // namespace __sanitizer
 

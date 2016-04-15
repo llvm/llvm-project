@@ -42,8 +42,9 @@ private:
   void processFunctionDecl(const ast_matchers::MatchFinder::MatchResult &Result,
                            const FunctionDecl *Function);
 
-  void processTypedefDecl(const ast_matchers::MatchFinder::MatchResult &Result,
-                          const TypedefDecl *Typedef);
+  void
+  processTypedefNameDecl(const ast_matchers::MatchFinder::MatchResult &Result,
+                         const TypedefNameDecl *Typedef);
 
   void processFieldDecl(const ast_matchers::MatchFinder::MatchResult &Result,
                         const FieldDecl *Member);

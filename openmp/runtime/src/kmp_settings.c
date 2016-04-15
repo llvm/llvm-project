@@ -4037,6 +4037,102 @@ __kmp_stg_print_lock_kind( kmp_str_buf_t * buffer, char const * name, void * dat
     }
 }
 
+// -------------------------------------------------------------------------------------------------
+// KMP_SPIN_BACKOFF_PARAMS
+// -------------------------------------------------------------------------------------------------
+
+// KMP_SPIN_BACKOFF_PARAMS=max_backoff[,min_tick] (max backoff size, min tick for machine pause)
+static void
+__kmp_stg_parse_spin_backoff_params(const char* name, const char* value, void* data)
+{
+    const char *next = value;
+
+    int total = 0;          // Count elements that were set. It'll be used as an array size
+    int prev_comma = FALSE; // For correct processing sequential commas
+    int i;
+
+    kmp_uint32 max_backoff = __kmp_spin_backoff_params.max_backoff;
+    kmp_uint32 min_tick = __kmp_spin_backoff_params.min_tick;
+
+    // Run only 3 iterations because it is enough to read two values or find a syntax error
+    for ( i = 0; i < 3 ; i++) {
+        SKIP_WS( next );
+
+        if ( *next == '\0' ) {
+            break;
+        }
+        // Next character is not an integer or not a comma OR number of values > 2 => end of list
+        if ( ( ( *next < '0' || *next > '9' ) && *next !=',' ) || total > 2 ) {
+            KMP_WARNING( EnvSyntaxError, name, value );
+            return;
+        }
+        // The next character is ','
+        if ( *next == ',' ) {
+            // ',' is the fisrt character
+            if ( total == 0 || prev_comma ) {
+                total++;
+            }
+            prev_comma = TRUE;
+            next++; //skip ','
+            SKIP_WS( next );
+        }
+        // Next character is a digit
+        if ( *next >= '0' && *next <= '9' ) {
+            int num;
+            const char *buf = next;
+            char const * msg  = NULL;
+            prev_comma = FALSE;
+            SKIP_DIGITS( next );
+            total++;
+
+            const char *tmp = next;
+            SKIP_WS( tmp );
+            if ( ( *next == ' ' || *next == '\t' ) && ( *tmp >= '0' && *tmp <= '9' ) ) {
+                KMP_WARNING( EnvSpacesNotAllowed, name, value );
+                return;
+            }
+
+            num = __kmp_str_to_int( buf, *next );
+            if ( num <= 0 ) { // The number of retries should be > 0
+                msg = KMP_I18N_STR( ValueTooSmall );
+                num = 1;
+            } else if ( num > KMP_INT_MAX ) {
+                msg = KMP_I18N_STR( ValueTooLarge );
+                num = KMP_INT_MAX;
+            }
+            if ( msg != NULL ) {
+                // Message is not empty. Print warning.
+                KMP_WARNING( ParseSizeIntWarn, name, value, msg );
+                KMP_INFORM( Using_int_Value, name, num );
+            }
+            if( total == 1 ) {
+                max_backoff = num;
+            } else if( total == 2 ) {
+                min_tick = num;
+            }
+        }
+    }
+    KMP_DEBUG_ASSERT( total > 0 );
+    if( total <= 0 ) {
+        KMP_WARNING( EnvSyntaxError, name, value );
+        return;
+    }
+    __kmp_spin_backoff_params.max_backoff = max_backoff;
+    __kmp_spin_backoff_params.min_tick    = min_tick;
+}
+
+static void
+__kmp_stg_print_spin_backoff_params(kmp_str_buf_t *buffer, char const* name, void* data)
+{
+    if( __kmp_env_format ) {
+        KMP_STR_BUF_PRINT_NAME_EX(name);
+    } else {
+        __kmp_str_buf_print( buffer, "   %s='", name );
+    }
+    __kmp_str_buf_print( buffer, "%d,%d'\n", __kmp_spin_backoff_params.max_backoff,
+                         __kmp_spin_backoff_params.min_tick );
+}
+
 #if KMP_USE_ADAPTIVE_LOCKS
 
 // -------------------------------------------------------------------------------------------------
@@ -4653,6 +4749,7 @@ static kmp_setting_t __kmp_stg_table[] = {
 
     { "KMP_NUM_LOCKS_IN_BLOCK",            __kmp_stg_parse_lock_block,         __kmp_stg_print_lock_block,         NULL, 0, 0 },
     { "KMP_LOCK_KIND",                     __kmp_stg_parse_lock_kind,          __kmp_stg_print_lock_kind,          NULL, 0, 0 },
+    { "KMP_SPIN_BACKOFF_PARAMS",           __kmp_stg_parse_spin_backoff_params, __kmp_stg_print_spin_backoff_params, NULL, 0, 0 },
 #if KMP_USE_ADAPTIVE_LOCKS
     { "KMP_ADAPTIVE_LOCK_PROPS",           __kmp_stg_parse_adaptive_lock_props,__kmp_stg_print_adaptive_lock_props,  NULL, 0, 0 },
 #if KMP_DEBUG_ADAPTIVE_LOCKS

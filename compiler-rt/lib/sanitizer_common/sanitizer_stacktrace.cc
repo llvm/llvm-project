@@ -92,6 +92,8 @@ void BufferedStackTrace::FastUnwindStack(uptr pc, uptr bp, uptr stack_top,
         !IsAligned((uptr)caller_frame, sizeof(uhwptr)))
       break;
     uhwptr pc1 = caller_frame[2];
+#elif defined(__s390__)
+    uhwptr pc1 = frame[14];
 #else
     uhwptr pc1 = frame[1];
 #endif

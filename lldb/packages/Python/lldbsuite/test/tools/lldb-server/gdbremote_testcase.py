@@ -1355,6 +1355,9 @@ class GdbRemoteTestCaseBase(TestBase):
         #MIPS required "3" (ADDIU, SB, LD) machine instructions for updation of variable value
         if re.match("mips",arch):
            expected_step_count = 3
+        #S390X requires "2" (LARL, MVI) machine instructions for updation of variable value
+        if re.match("s390x",arch):
+           expected_step_count = 2
         self.assertEqual(step_count, expected_step_count)
 
         # Verify we hit the next state.
@@ -1370,4 +1373,7 @@ class GdbRemoteTestCaseBase(TestBase):
         (state_reached, step_count) = self.count_single_steps_until_true(main_thread_id, self.g_c1_c2_contents_are, args, max_step_count=5, use_Hc_packet=use_Hc_packet, step_instruction=step_instruction)
         self.assertTrue(state_reached)
         self.assertEqual(step_count, expected_step_count)
+
+    def maybe_strict_output_regex(self, regex):
+        return '.*'+regex+'.*' if lldbplatformutil.hasChattyStderr(self) else '^'+regex+'$'
 

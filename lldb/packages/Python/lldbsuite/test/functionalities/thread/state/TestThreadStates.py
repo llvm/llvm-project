@@ -89,11 +89,11 @@ class ThreadStateTestCase(TestBase):
         # Kill the process
         self.runCmd("process kill")
 
-    def wait_for_running_event(self):
+    def wait_for_running_event(self, process):
         listener = self.dbg.GetListener()
         if lldb.remote_platform:
-            lldbutil.expect_state_changes(self, listener, [lldb.eStateConnected])
-        lldbutil.expect_state_changes(self, listener, [lldb.eStateRunning])
+            lldbutil.expect_state_changes(self, listener, process, [lldb.eStateConnected])
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
 
     def thread_state_after_continue_test(self):
         """Test thread state after continue."""
@@ -117,7 +117,7 @@ class ThreadStateTestCase(TestBase):
         # Continue, the inferior will go into an infinite loop waiting for 'g_test' to change.
         self.dbg.SetAsync(True)
         self.runCmd("continue")
-        self.wait_for_running_event()
+        self.wait_for_running_event(process)
 
         # Check the thread state. It should be running.
         self.assertFalse(thread.IsStopped(), "Thread state is \'stopped\' when it should be running.")

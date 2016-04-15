@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-typedef char v4i8 __attribute__ ((vector_size(4)));
+typedef signed char v4i8 __attribute__ ((vector_size(4)));
 v4i8 global_vector = {1, 2, 3, 4};
 
 int

@@ -101,7 +101,7 @@ class Quarantine {
   void NOINLINE DoRecycle(Cache *c, Callback cb) {
     while (QuarantineBatch *b = c->DequeueBatch()) {
       const uptr kPrefetch = 16;
-      COMPILER_CHECK(kPrefetch <= ARRAY_SIZE(b->batch));
+      CHECK(kPrefetch <= ARRAY_SIZE(b->batch));
       for (uptr i = 0; i < kPrefetch; i++)
         PREFETCH(b->batch[i]);
       for (uptr i = 0, count = b->count; i < count; i++) {

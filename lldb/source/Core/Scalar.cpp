@@ -250,7 +250,7 @@ Scalar::GetData (DataExtractor &data, size_t limit_byte_size) const
     return false;
 }
 
-void *
+const void *
 Scalar::GetBytes() const
 {
     static float_t flt_val;
@@ -269,16 +269,16 @@ Scalar::GetBytes() const
     case e_uint128:
     case e_sint256:
     case e_uint256:
-        return const_cast<void *>(reinterpret_cast<const void *>(m_integer.getRawData()));
+        return reinterpret_cast<const void *>(m_integer.getRawData());
     case e_float:
         flt_val = m_float.convertToFloat();
-        return (void *)&flt_val;
+        return reinterpret_cast<const void *>(&flt_val);
     case e_double:
         dbl_val = m_float.convertToDouble();
-        return (void *)&dbl_val;
+        return reinterpret_cast<const void *>(&dbl_val);
     case e_long_double:
         llvm::APInt ldbl_val = m_float.bitcastToAPInt();
-        return const_cast<void *>(reinterpret_cast<const void *>(ldbl_val.getRawData()));
+        return reinterpret_cast<const void *>(ldbl_val.getRawData());
     }
     return nullptr;
 }
@@ -3130,82 +3130,3 @@ Scalar::SetBit (uint32_t bit)
     return false;
 }
 
-void
-Scalar::SetType (const RegisterInfo *reg_info)
-{
-    const uint32_t byte_size = reg_info->byte_size;
-    switch (reg_info->encoding)
-    {
-        case eEncodingInvalid:
-            break;
-        case eEncodingUint:
-            if (byte_size == 1 || byte_size == 2 || byte_size == 4)
-            {
-                m_integer = llvm::APInt(sizeof(uint_t) * 8, *(const uint64_t *)m_integer.getRawData(), false);
-                m_type = e_uint;
-            }
-            if (byte_size == 8)
-            {
-                m_integer = llvm::APInt(sizeof(ulonglong_t) * 8, *(const uint64_t *)m_integer.getRawData(), false);
-                m_type = e_ulonglong;
-            }
-            if (byte_size == 16)
-            {
-                m_integer = llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, ((const type128 *)m_integer.getRawData())->x);
-                m_type = e_uint128;
-            }
-            if (byte_size == 32)
-            {
-                m_integer = llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, ((const type256 *)m_integer.getRawData())->x);
-                m_type = e_uint256;
-            }
-            break;
-        case eEncodingSint:
-            if (byte_size == 1 || byte_size == 2 || byte_size == 4)
-            {
-                m_integer = llvm::APInt(sizeof(sint_t) * 8, *(const uint64_t *)m_integer.getRawData(), true);
-                m_type = e_sint;
-            }
-            if (byte_size == 8)
-            {
-                m_integer = llvm::APInt(sizeof(slonglong_t) * 8, *(const uint64_t *)m_integer.getRawData(), true);
-                m_type = e_slonglong;
-            }
-            if (byte_size == 16)
-            {
-                m_integer = llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, ((const type128 *)m_integer.getRawData())->x);
-                m_type = e_sint128;
-            }
-            if (byte_size == 32)
-            {
-                m_integer = llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, ((const type256 *)m_integer.getRawData())->x);
-                m_type = e_sint256;
-            }
-            break;
-        case eEncodingIEEE754:
-            if (byte_size == sizeof(float))
-            {
-                bool losesInfo = false;
-                m_float.convert(llvm::APFloat::IEEEsingle, llvm::APFloat::rmTowardZero, &losesInfo);
-                m_type = e_float;
-            }
-            else if (byte_size == sizeof(double))
-            {
-                bool losesInfo = false;
-                m_float.convert(llvm::APFloat::IEEEdouble, llvm::APFloat::rmTowardZero, &losesInfo);
-                m_type = e_double;
-            }
-            else if (byte_size == sizeof(long double))
-            {
-                if(m_ieee_quad)
-                     m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_float.bitcastToAPInt());
-                 else
-                     m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_float.bitcastToAPInt());
-                m_type = e_long_double;
-            }
-            break;
-        case eEncodingVector:
-            m_type = e_void;
-            break;
-    }
-}

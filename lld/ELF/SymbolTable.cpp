@@ -273,9 +273,15 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
 // Find an existing symbol or create and insert a new one.
 template <class ELFT> Symbol *SymbolTable<ELFT>::insert(SymbolBody *New) {
   StringRef Name = New->getName();
-  Symbol *&Sym = Symtab[Name];
-  if (!Sym)
+  unsigned NumSyms = SymVector.size();
+  auto P = Symtab.insert(std::make_pair(Name, NumSyms));
+  Symbol *Sym;
+  if (P.second) {
     Sym = new (Alloc) Symbol{New};
+    SymVector.push_back(Sym);
+  } else {
+    Sym = SymVector[P.first->second];
+  }
   New->setBackref(Sym);
   return Sym;
 }
@@ -284,7 +290,7 @@ template <class ELFT> SymbolBody *SymbolTable<ELFT>::find(StringRef Name) {
   auto It = Symtab.find(Name);
   if (It == Symtab.end())
     return nullptr;
-  return It->second->Body;
+  return SymVector[It->second]->Body;
 }
 
 template <class ELFT> void SymbolTable<ELFT>::addLazy(Lazy *L) {

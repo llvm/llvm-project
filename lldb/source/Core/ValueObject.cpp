@@ -2146,6 +2146,10 @@ ValueObject::GetSyntheticBitFieldChild (uint32_t from, uint32_t to, bool can_cre
         synthetic_child_sp = GetSyntheticChild (index_const_str);
         if (!synthetic_child_sp)
         {
+            uint32_t bit_field_size = to - from + 1;
+            uint32_t bit_field_offset = from;
+            if (GetDataExtractor().GetByteOrder() == eByteOrderBig)
+                bit_field_offset = GetByteSize() * 8 - bit_field_size - bit_field_offset;
             // We haven't made a synthetic array member for INDEX yet, so
             // lets make one and cache it for any future reference.
             ValueObjectChild *synthetic_child = new ValueObjectChild (*this,
@@ -2153,8 +2157,8 @@ ValueObject::GetSyntheticBitFieldChild (uint32_t from, uint32_t to, bool can_cre
                                                                       index_const_str,
                                                                       GetByteSize(),
                                                                       0,
-                                                                      to-from+1,
-                                                                      from,
+                                                                      bit_field_size,
+                                                                      bit_field_offset,
                                                                       false,
                                                                       false,
                                                                       eAddressTypeInvalid,

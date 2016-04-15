@@ -17,6 +17,7 @@ add_clang_library(clangTidyMiscModule
   MisplacedWideningCastCheck.cpp
   MoveConstantArgumentCheck.cpp
   MoveConstructorInitCheck.cpp
+  MultipleStatementMacroCheck.cpp
   NewDeleteOverloadsCheck.cpp
   NoexceptMoveConstructorCheck.cpp
   NonCopyableObjects.cpp

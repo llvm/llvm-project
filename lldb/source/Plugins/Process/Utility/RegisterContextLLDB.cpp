@@ -1390,45 +1390,28 @@ RegisterContextLLDB::SavedLocationForRegister (uint32_t lldb_regnum, lldb_privat
         }
     }
 
-    if (have_unwindplan_regloc == false)
-    {
-        // Did the UnwindPlan fail to give us the caller's stack pointer?  
-        // The stack pointer is defined to be the same as THIS frame's CFA, so return the CFA value as
-        // the caller's stack pointer.  This is true on x86-32/x86-64 at least.
-
-        RegisterNumber sp_regnum (m_thread, eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
-        if (sp_regnum.GetAsKind (eRegisterKindLLDB) != LLDB_INVALID_REGNUM 
-            && sp_regnum.GetAsKind (eRegisterKindLLDB) == regnum.GetAsKind (eRegisterKindLLDB))
-        {
-            // make sure we won't lose precision copying an addr_t (m_cfa) into a uint64_t (.inferred_value)
-            assert (sizeof (addr_t) <= sizeof (uint64_t));
-            regloc.type = UnwindLLDB::RegisterLocation::eRegisterValueInferred;
-            regloc.location.inferred_value = m_cfa;
-            m_registers[regnum.GetAsKind (eRegisterKindLLDB)] = regloc;
-            UnwindLogMsg ("supplying caller's stack pointer %s (%d) value, computed from CFA", 
-                        regnum.GetName(), regnum.GetAsKind (eRegisterKindLLDB));
-            return UnwindLLDB::RegisterSearchResult::eRegisterFound;
-        }
-    }
-
     ExecutionContext exe_ctx(m_thread.shared_from_this());
     Process *process = exe_ctx.GetProcessPtr();
     if (have_unwindplan_regloc == false)
     {
-        // If a volatile register is being requested, we don't want to forward the next frame's register contents
-        // up the stack -- the register is not retrievable at this frame.
+        // If the UnwindPlan failed to give us an unwind location for this register, we may be able to fall back
+        // to some ABI-defined default.  For example, some ABIs allow to determine the caller's SP via the CFA.
+        // Also, the ABI may set volatile registers to the undefined state.
         ABI *abi = process ? process->GetABI().get() : NULL;
         if (abi)
         {
             const RegisterInfo *reg_info = GetRegisterInfoAtIndex(regnum.GetAsKind (eRegisterKindLLDB));
-            if (reg_info && abi->RegisterIsVolatile (reg_info))
+            if (reg_info && abi->GetFallbackRegisterLocation (reg_info, unwindplan_regloc))
             {
-                UnwindLogMsg ("did not supply reg location for %s (%d) because it is volatile",
+                UnwindLogMsg ("supplying caller's saved %s (%d)'s location using ABI default",
                               regnum.GetName(), regnum.GetAsKind (eRegisterKindLLDB));
-                return UnwindLLDB::RegisterSearchResult::eRegisterIsVolatile;
+                have_unwindplan_regloc = true;
             }
         }
+    }
 
+    if (have_unwindplan_regloc == false)
+    {
         if (IsFrameZero ())
         {
             // This is frame 0 - we should return the actual live register context value
@@ -1466,6 +1449,13 @@ RegisterContextLLDB::SavedLocationForRegister (uint32_t lldb_regnum, lldb_privat
         UnwindLogMsg ("save location for %s (%d) is unspecified, continue searching", 
                       regnum.GetName(), regnum.GetAsKind (eRegisterKindLLDB));
         return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
+    }
+
+    if (unwindplan_regloc.IsUndefined())
+    {
+         UnwindLogMsg ("did not supply reg location for %s (%d) because it is volatile",
+                       regnum.GetName(), regnum.GetAsKind (eRegisterKindLLDB));
+         return UnwindLLDB::RegisterSearchResult::eRegisterIsVolatile;
     }
 
     if (unwindplan_regloc.IsSame())

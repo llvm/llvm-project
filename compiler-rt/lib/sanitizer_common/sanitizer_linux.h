@@ -83,6 +83,11 @@ bool LibraryNameIs(const char *full_name, const char *base_name);
 
 // Call cb for each region mapped by map.
 void ForEachMappedRegion(link_map *map, void (*cb)(const void *, uptr));
+
+#ifdef __s390x__
+// Aborts the process if running on a kernel without a fix for CVE-2016-2143.
+void AvoidCVE_2016_2143();
+#endif
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_FREEBSD || SANITIZER_LINUX

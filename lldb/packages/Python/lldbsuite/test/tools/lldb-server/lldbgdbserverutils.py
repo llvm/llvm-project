@@ -387,7 +387,10 @@ def pack_register_hex(endian, value, byte_size=None):
         return retval
 
     elif endian == 'big':
-        retval = value.encode("hex")
+        retval = ""
+        while value != 0:
+            retval = "{:02x}".format(value & 0xff) + retval
+            value = value >> 8
         if byte_size:
             # Add zero-fill to the left/front (MSB side) of the value.
             retval = ("00" * (byte_size - len(retval)/2)) + retval
@@ -784,7 +787,7 @@ class GdbRemoteTestSequence(object):
                     regex = line.get("regex", None)
                     # Compile the regex.
                     if regex and (type(regex) == str):
-                        regex = re.compile(regex)
+                        regex = re.compile(regex, re.DOTALL)
 
                     regex_mode = line.get("regex_mode", "match")
                     capture = line.get("capture", None)

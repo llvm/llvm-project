@@ -763,8 +763,10 @@ public:
     ///
     /// @param[in] bitfield_bit_offset
     ///     The bit offset of the bitfield value in the extracted
-    ///     integer (the number of bits to shift the integer to the
-    ///     right).
+    ///     integer.  For little-endian data, this is the offset of
+    ///     the LSB of the bitfield from the LSB of the integer.
+    ///     For big-endian data, this is the offset of the MSB of the
+    ///     bitfield from the MSB of the integer.
     ///
     /// @return
     ///     The unsigned bitfield integer value that was extracted, or
@@ -805,8 +807,10 @@ public:
     ///
     /// @param[in] bitfield_bit_offset
     ///     The bit offset of the bitfield value in the extracted
-    ///     integer (the number of bits to shift the integer to the
-    ///     right).
+    ///     integer.  For little-endian data, this is the offset of
+    ///     the LSB of the bitfield from the LSB of the integer.
+    ///     For big-endian data, this is the offset of the MSB of the
+    ///     bitfield from the MSB of the integer.
     ///
     /// @return
     ///     The signed bitfield integer value that was extracted, or

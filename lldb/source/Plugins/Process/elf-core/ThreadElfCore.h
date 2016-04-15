@@ -68,6 +68,7 @@ struct ELFLinuxPrStatus
     {
         switch(arch.GetCore())
         {
+            case lldb_private::ArchSpec::eCore_s390x_generic:
             case lldb_private::ArchSpec::eCore_x86_64_x86_64:
                 return ELFLINUXPRSTATUS64_SIZE;
             default:
@@ -102,6 +103,7 @@ struct ELFLinuxPrPsInfo
     {
         switch(arch.GetCore())
         {
+            case lldb_private::ArchSpec::eCore_s390x_generic:
             case lldb_private::ArchSpec::eCore_x86_64_x86_64:
                 return ELFLINUXPRPSINFO64_SIZE;
             default:

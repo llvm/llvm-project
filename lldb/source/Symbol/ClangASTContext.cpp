@@ -783,8 +783,8 @@ ClangASTContext::GetBuiltinTypeForEncodingAndBitSize (ASTContext *ast, Encoding 
         break;
         
     case eEncodingSint:
-        if (QualTypeMatchesBitSize (bit_size, ast, ast->CharTy))
-            return CompilerType (ast, ast->CharTy);
+        if (QualTypeMatchesBitSize (bit_size, ast, ast->SignedCharTy))
+            return CompilerType (ast, ast->SignedCharTy);
         if (QualTypeMatchesBitSize (bit_size, ast, ast->ShortTy))
             return CompilerType (ast, ast->ShortTy);
         if (QualTypeMatchesBitSize (bit_size, ast, ast->IntTy))
@@ -6074,8 +6074,9 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
                                                         {
                                                             clang::CharUnits base_offset_offset = itanium_vtable_ctx->getVirtualBaseOffsetOffset(cxx_record_decl, base_class_decl);
                                                             const lldb::addr_t base_offset_addr = vtable_ptr + base_offset_offset.getQuantity();
-                                                            const uint32_t base_offset = process->ReadUnsignedIntegerFromMemory(base_offset_addr, 4, UINT32_MAX, err);
-                                                            if (base_offset != UINT32_MAX)
+                                                            const uint32_t base_offset_size = process->GetAddressByteSize();
+                                                            const uint64_t base_offset = process->ReadUnsignedIntegerFromMemory(base_offset_addr, base_offset_size, UINT32_MAX, err);
+                                                            if (base_offset < UINT32_MAX)
                                                             {
                                                                 handled = true;
                                                                 bit_offset = base_offset * 8;

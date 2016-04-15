@@ -750,14 +750,15 @@ def print_stacktraces(process, string_buffer = False):
     if string_buffer:
         return output.getvalue()
 
-def expect_state_changes(test, listener, states, timeout = 5):
+def expect_state_changes(test, listener, process, states, timeout = 5):
     """Listens for state changed events on the listener and makes sure they match what we
     expect. Stop-and-restart events (where GetRestartedFromEvent() returns true) are ignored."""
 
     for expected_state in states:
         def get_next_event():
             event = lldb.SBEvent()
-            if not listener.WaitForEvent(timeout, event):
+            if not listener.WaitForEventForBroadcasterWithType(timeout, process.GetBroadcaster(),
+                    lldb.SBProcess.eBroadcastBitStateChanged, event):
                 test.fail("Timed out while waiting for a transition to state %s" %
                     lldb.SBDebugger.StateAsCString(expected_state))
             return event

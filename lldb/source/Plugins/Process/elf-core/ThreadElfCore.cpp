@@ -18,6 +18,7 @@
 #include "ProcessElfCore.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_arm.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_arm64.h"
+#include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_arm.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_arm64.h"
@@ -29,6 +30,7 @@
 #include "RegisterContextPOSIXCore_arm64.h"
 #include "RegisterContextPOSIXCore_mips64.h"
 #include "RegisterContextPOSIXCore_powerpc.h"
+#include "RegisterContextPOSIXCore_s390x.h"
 #include "RegisterContextPOSIXCore_x86_64.h"
 
 using namespace lldb;
@@ -139,6 +141,9 @@ ThreadElfCore::CreateRegisterContextForFrame (StackFrame *frame)
                     case llvm::Triple::aarch64:
                         reg_interface = new RegisterContextLinux_arm64(arch);
                         break;
+                    case llvm::Triple::systemz:
+                        reg_interface = new RegisterContextLinux_s390x(arch);
+                        break;
                     case llvm::Triple::x86_64:
                         reg_interface = new RegisterContextLinux_x86_64(arch);
                         break;
@@ -173,6 +178,9 @@ ThreadElfCore::CreateRegisterContextForFrame (StackFrame *frame)
             case llvm::Triple::ppc:
             case llvm::Triple::ppc64:
                 m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_powerpc (*this, reg_interface, m_gpregset_data, m_fpregset_data, m_vregset_data));
+                break;
+            case llvm::Triple::systemz:
+                m_thread_reg_ctx_sp.reset(new RegisterContextCorePOSIX_s390x (*this, reg_interface, m_gpregset_data, m_fpregset_data));
                 break;
             case llvm::Triple::x86:
             case llvm::Triple::x86_64:
@@ -218,6 +226,7 @@ ELFLinuxPrStatus::Parse(DataExtractor &data, ArchSpec &arch)
     size_t len;
     switch(arch.GetCore())
     {
+        case ArchSpec::eCore_s390x_generic:
         case ArchSpec::eCore_x86_64_x86_64:
             len = data.ExtractBytes(0, ELFLINUXPRSTATUS64_SIZE, byteorder, this);
             return len == ELFLINUXPRSTATUS64_SIZE;
@@ -241,6 +250,7 @@ ELFLinuxPrPsInfo::Parse(DataExtractor &data, ArchSpec &arch)
     size_t len;
     switch(arch.GetCore())
     {
+        case ArchSpec::eCore_s390x_generic:
         case ArchSpec::eCore_x86_64_x86_64:
             len = data.ExtractBytes(0, ELFLINUXPRPSINFO64_SIZE, byteorder, this);
             return len == ELFLINUXPRPSINFO64_SIZE;

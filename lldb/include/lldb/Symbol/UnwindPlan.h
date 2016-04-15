@@ -116,6 +116,12 @@ public:
                 return m_type == unspecified; 
             }
 
+            bool
+            IsUndefined () const
+            {
+                return m_type == undefined;
+            }
+
             bool 
             IsCFAPlusOffset () const
             {

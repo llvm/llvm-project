@@ -485,6 +485,7 @@ PlatformLinux::GetSupportedArchitectureAtIndex (uint32_t idx, ArchSpec &arch)
             case 6: triple.setArchName("mips"); break;
             case 7: triple.setArchName("mips64el"); break;
             case 8: triple.setArchName("mipsel"); break;
+            case 9: triple.setArchName("s390x"); break;
             default: return false;
         }
         // Leave the vendor as "llvm::Triple:UnknownVendor" and don't specify the vendor by

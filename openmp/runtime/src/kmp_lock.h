@@ -1265,6 +1265,19 @@ __kmp_get_user_lock_owner(kmp_user_lock_p, kmp_uint32);
 
 #endif // KMP_USE_DYNAMIC_LOCK
 
+// data structure for using backoff within spin locks.
+typedef struct {
+    kmp_uint32 step;        // current step
+    kmp_uint32 max_backoff; // upper bound of outer delay loop
+    kmp_uint32 min_tick;    // size of inner delay loop in ticks (machine-dependent)
+} kmp_backoff_t;
+
+// Runtime's default backoff parameters
+extern kmp_backoff_t __kmp_spin_backoff_params;
+
+// Backoff function
+extern void __kmp_spin_backoff(kmp_backoff_t *);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus
