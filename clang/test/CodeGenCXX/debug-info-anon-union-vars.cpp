@@ -44,8 +44,8 @@ void instantiate(int x) {
   buildBytes(x);
 }
 
-// CHECK: [[FILE:.*]] = !DIFile(filename: "{{.*}}debug-info-anon-union-vars.cpp",
-// CHECK: !DIGlobalVariable(name: "c",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
+// CHECK: !DIGlobalVariable(name: "c",{{.*}} file: [[FILE:.*]], line: 6,{{.*}} isLocal: true, isDefinition: true
+// CHECK: [[FILE]] = !DIFile(filename: "{{.*}}debug-info-anon-union-vars.cpp",
 // CHECK: !DIGlobalVariable(name: "d",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
 // CHECK: !DIGlobalVariable(name: "a",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
 // CHECK: !DIGlobalVariable(name: "b",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true

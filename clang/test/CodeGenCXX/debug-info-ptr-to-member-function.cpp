@@ -7,15 +7,15 @@ struct T {
 
 void foo(int (T::*method)()) {}
 
-// A pointer to a member function is a pair of function- and this-pointer.
-// CHECK: !DIDerivedType(tag: DW_TAG_ptr_to_member_type,
-// DARWIN-X64-SAME:      size: 128
-// WIN32-X64-SAME:       size: 64
-
 struct Incomplete;
 
 int (Incomplete::**bar)();
+// A pointer to a member function is a pair of function- and this-pointer.
 // CHECK: !DIDerivedType(tag: DW_TAG_ptr_to_member_type,
 // DARWIN-X64-SAME:           size: 128
 // WIN32-X64-NOT:             size:
 // CHECK-SAME:                extraData: {{.*}})
+
+// CHECK: !DIDerivedType(tag: DW_TAG_ptr_to_member_type,
+// DARWIN-X64-SAME:      size: 128
+// WIN32-X64-SAME:       size: 64

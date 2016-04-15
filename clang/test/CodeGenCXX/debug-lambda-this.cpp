@@ -12,10 +12,10 @@ int D::d(int x) {
   }();
 }
 
+// CHECK: ![[POINTER:.*]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !"_ZTS1D", size: 64, align: 64)
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "this",
 // CHECK-SAME:           line: 11
-// CHECK-SAME:           baseType: ![[POINTER:[0-9]+]]
+// CHECK-SAME:           baseType: ![[POINTER]]
 // CHECK-SAME:           size: 64, align: 64
 // CHECK-NOT:            offset: 0
 // CHECK-SAME:           ){{$}}
-// CHECK: ![[POINTER]] = !DIDerivedType(tag: DW_TAG_pointer_type
