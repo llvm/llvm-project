@@ -2,9 +2,6 @@
 ; RUN: opt < %s -loop-vectorize -force-vector-width=1 -force-vector-interleave=4 -mtriple=x86_64-unknown-linux -S -pass-remarks='loop-vectorize' 2>&1 | FileCheck -check-prefix=UNROLLED %s
 ; RUN: opt < %s -loop-vectorize -force-vector-width=1 -force-vector-interleave=1 -mtriple=x86_64-unknown-linux -S -pass-remarks-analysis='loop-vectorize' 2>&1 | FileCheck -check-prefix=NONE %s
 
-; This code has all the !dbg annotations needed to track source line information,
-; but is missing the llvm.dbg.cu annotation. This prevents code generation from
-; emitting debug info in the final output.
 ; RUN: llc < %s -mtriple x86_64-pc-linux-gnu -o - | FileCheck -check-prefix=DEBUG-OUTPUT %s
 ; DEBUG-OUTPUT-NOT: .loc
 ; DEBUG-OUTPUT-NOT: {{.*}}.debug_info
@@ -73,4 +70,4 @@ declare void @ibar(i32*) #1
 !21 = !{!13, !13, i64 0}
 !22 = !DILocation(line: 20, column: 3, scope: !4)
 !23 = !DILocation(line: 21, column: 3, scope: !4)
-!24 = distinct !DICompileUnit(language: DW_LANG_C89, file: !1)
+!24 = distinct !DICompileUnit(language: DW_LANG_C89, file: !1, emissionKind: NoDebug)
