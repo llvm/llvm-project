@@ -951,6 +951,21 @@ bool StructurizeCFG::runOnRegion(Region *R, RGPassManager &RGM) {
     // TODO: We could probably be smarter here with how we handle sub-regions.
     if (hasOnlyUniformBranches(R)) {
       DEBUG(dbgs() << "Skipping region with uniform control flow: " << *R << '\n');
+
+      // Mark all direct child block terminators as having been treated as
+      // uniform. To account for a possible future in which non-uniform
+      // sub-regions are treated more cleverly, indirect children are not
+      // marked as uniform.
+      MDNode *MD = MDNode::get(R->getEntry()->getParent()->getContext(), {});
+      Region::element_iterator E = R->element_end();
+      for (Region::element_iterator I = R->element_begin(); I != E; ++I) {
+        if (I->isSubRegion())
+          continue;
+
+        if (Instruction *Term = I->getEntry()->getTerminator())
+          Term->setMetadata("structurizecfg.uniform", MD);
+      }
+
       return false;
     }
   }

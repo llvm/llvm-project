@@ -159,7 +159,7 @@ define void @commute_mul_fabs_x_fneg_fabs_y_f32(float addrspace(1)* %out, float 
 ; SI-LABEL: {{^}}fma_a_2.0_neg_b_f32
 ; SI-DAG: buffer_load_dword [[R1:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_load_dword [[R2:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; SI: v_fma_f32 [[RESULT:v[0-9]+]], 2.0, [[R1]], |[[R2]]|
+; SI: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], 2.0, |[[R2]]|
 ; SI: buffer_store_dword [[RESULT]]
 define void @fma_a_2.0_neg_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

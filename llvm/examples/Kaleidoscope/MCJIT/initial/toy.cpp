@@ -852,7 +852,8 @@ void MCJITHelper::dump()
 //===----------------------------------------------------------------------===//
 
 static MCJITHelper *TheHelper;
-static IRBuilder<> Builder(getGlobalContext());
+static LLVMContext TheContext;
+static IRBuilder<> Builder(TheContext);
 static std::map<std::string, AllocaInst*> NamedValues;
 
 Value *ErrorV(const char *Str) { Error(Str); return 0; }
@@ -863,12 +864,11 @@ static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
                                           const std::string &VarName) {
   IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
                  TheFunction->getEntryBlock().begin());
-  return TmpB.CreateAlloca(Type::getDoubleTy(getGlobalContext()), 0,
-                           VarName.c_str());
+  return TmpB.CreateAlloca(Type::getDoubleTy(TheContext), 0, VarName.c_str());
 }
 
 Value *NumberExprAST::Codegen() {
-  return ConstantFP::get(getGlobalContext(), APFloat(Val));
+  return ConstantFP::get(TheContext, APFloat(Val));
 }
 
 Value *VariableExprAST::Codegen() {
@@ -924,8 +924,7 @@ Value *BinaryExprAST::Codegen() {
   case '<':
     L = Builder.CreateFCmpULT(L, R, "cmptmp");
     // Convert bool 0/1 to double 0.0 or 1.0
-    return Builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),
-                                "booltmp");
+    return Builder.CreateUIToFP(L, Type::getDoubleTy(TheContext), "booltmp");
   default: break;
   }
 
@@ -962,17 +961,16 @@ Value *IfExprAST::Codegen() {
   if (CondV == 0) return 0;
 
   // Convert condition to a bool by comparing equal to 0.0.
-  CondV = Builder.CreateFCmpONE(CondV,
-                              ConstantFP::get(getGlobalContext(), APFloat(0.0)),
-                                "ifcond");
+  CondV = Builder.CreateFCmpONE(
+      CondV, ConstantFP::get(TheContext, APFloat(0.0)), "ifcond");
 
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
   // Create blocks for the then and else cases.  Insert the 'then' block at the
   // end of the function.
-  BasicBlock *ThenBB = BasicBlock::Create(getGlobalContext(), "then", TheFunction);
-  BasicBlock *ElseBB = BasicBlock::Create(getGlobalContext(), "else");
-  BasicBlock *MergeBB = BasicBlock::Create(getGlobalContext(), "ifcont");
+  BasicBlock *ThenBB = BasicBlock::Create(TheContext, "then", TheFunction);
+  BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
+  BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
 
   Builder.CreateCondBr(CondV, ThenBB, ElseBB);
 
@@ -1000,8 +998,7 @@ Value *IfExprAST::Codegen() {
   // Emit merge block.
   TheFunction->getBasicBlockList().push_back(MergeBB);
   Builder.SetInsertPoint(MergeBB);
-  PHINode *PN = Builder.CreatePHI(Type::getDoubleTy(getGlobalContext()), 2,
-                                  "iftmp");
+  PHINode *PN = Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
 
   PN->addIncoming(ThenV, ThenBB);
   PN->addIncoming(ElseV, ElseBB);
@@ -1043,7 +1040,7 @@ Value *ForExprAST::Codegen() {
 
   // Make the new basic block for the loop header, inserting after current
   // block.
-  BasicBlock *LoopBB = BasicBlock::Create(getGlobalContext(), "loop", TheFunction);
+  BasicBlock *LoopBB = BasicBlock::Create(TheContext, "loop", TheFunction);
 
   // Insert an explicit fall through from the current block to the LoopBB.
   Builder.CreateBr(LoopBB);
@@ -1069,7 +1066,7 @@ Value *ForExprAST::Codegen() {
     if (StepVal == 0) return 0;
   } else {
     // If not specified, use 1.0.
-    StepVal = ConstantFP::get(getGlobalContext(), APFloat(1.0));
+    StepVal = ConstantFP::get(TheContext, APFloat(1.0));
   }
 
   // Compute the end condition.
@@ -1083,12 +1080,12 @@ Value *ForExprAST::Codegen() {
   Builder.CreateStore(NextVar, Alloca);
 
   // Convert condition to a bool by comparing equal to 0.0.
-  EndCond = Builder.CreateFCmpONE(EndCond,
-                              ConstantFP::get(getGlobalContext(), APFloat(0.0)),
-                                  "loopcond");
+  EndCond = Builder.CreateFCmpONE(
+      EndCond, ConstantFP::get(TheContext, APFloat(0.0)), "loopcond");
 
   // Create the "after loop" block and insert it.
-  BasicBlock *AfterBB = BasicBlock::Create(getGlobalContext(), "afterloop", TheFunction);
+  BasicBlock *AfterBB =
+      BasicBlock::Create(TheContext, "afterloop", TheFunction);
 
   // Insert the conditional branch into the end of LoopEndBB.
   Builder.CreateCondBr(EndCond, LoopBB, AfterBB);
@@ -1104,7 +1101,7 @@ Value *ForExprAST::Codegen() {
 
 
   // for expr always returns 0.0.
-  return Constant::getNullValue(Type::getDoubleTy(getGlobalContext()));
+  return Constant::getNullValue(Type::getDoubleTy(TheContext));
 }
 
 Value *VarExprAST::Codegen() {
@@ -1127,7 +1124,7 @@ Value *VarExprAST::Codegen() {
       InitVal = Init->Codegen();
       if (InitVal == 0) return 0;
     } else { // If not specified, use 0.0.
-      InitVal = ConstantFP::get(getGlobalContext(), APFloat(0.0));
+      InitVal = ConstantFP::get(TheContext, APFloat(0.0));
     }
 
     AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, VarName);
@@ -1155,10 +1152,9 @@ Value *VarExprAST::Codegen() {
 
 Function *PrototypeAST::Codegen() {
   // Make the function type:  double(double,double) etc.
-  std::vector<Type*> Doubles(Args.size(),
-                             Type::getDoubleTy(getGlobalContext()));
-  FunctionType *FT = FunctionType::get(Type::getDoubleTy(getGlobalContext()),
-                                       Doubles, false);
+  std::vector<Type *> Doubles(Args.size(), Type::getDoubleTy(TheContext));
+  FunctionType *FT =
+      FunctionType::get(Type::getDoubleTy(TheContext), Doubles, false);
 
   std::string FnName = MakeLegalFunctionName(Name);
 
@@ -1223,7 +1219,7 @@ Function *FunctionAST::Codegen() {
     BinopPrecedence[Proto->getOperatorName()] = Proto->getBinaryPrecedence();
 
   // Create a new basic block to start insertion into.
-  BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", TheFunction);
+  BasicBlock *BB = BasicBlock::Create(TheContext, "entry", TheFunction);
   Builder.SetInsertPoint(BB);
 
   // Add all arguments to the symbol table and create their allocas.
@@ -1349,7 +1345,7 @@ int main() {
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext &Context = TheContext;
 
   // Install standard binary operators.
   // 1 is lowest precedence.

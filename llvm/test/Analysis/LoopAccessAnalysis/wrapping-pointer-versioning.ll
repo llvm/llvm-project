@@ -31,6 +31,11 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; We have added the nusw flag to turn this expression into the SCEV expression:
 ;    i64 {0,+,2}<%for.body>
 
+; LAA: [PSE]  %arrayidxA = getelementptr i16, i16* %a, i64 %mul_ext:
+; LAA-NEXT: ((2 * (zext i32 {0,+,2}<%for.body> to i64)) + %a)
+; LAA-NEXT: --> {%a,+,4}<%for.body>
+
+
 ; LV-LABEL: f1
 ; LV-LABEL: for.body.lver.check
 ; LV: [[PredCheck0:%[^ ]*]] = icmp ne i128
@@ -100,6 +105,10 @@ for.end:                                          ; preds = %for.body
 ; We have added the nusw flag to turn this expression into the following SCEV:
 ;     i64 {zext i32 (2 * (trunc i64 %N to i32)) to i64,+,-2}<%for.body>
 
+; LAA: [PSE]  %arrayidxA = getelementptr i16, i16* %a, i64 %mul_ext:
+; LAA-NEXT: ((2 * (zext i32 {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> to i64)) + %a)
+; LAA-NEXT: --> {((2 * (zext i32 (2 * (trunc i64 %N to i32)) to i64)) + %a),+,-4}<%for.body>
+
 ; LV-LABEL: f2
 ; LV-LABEL: for.body.lver.check
 ; LV: [[PredCheck0:%[^ ]*]] = icmp ne i128
@@ -154,6 +163,10 @@ for.end:                                          ; preds = %for.body
 ; We have added the nssw flag to turn this expression into the following SCEV:
 ;     i64 {0,+,2}<%for.body>
 
+; LAA: [PSE]  %arrayidxA = getelementptr i16, i16* %a, i64 %mul_ext:
+; LAA-NEXT: ((2 * (sext i32 {0,+,2}<%for.body> to i64)) + %a)
+; LAA-NEXT: --> {%a,+,4}<%for.body>
+
 ; LV-LABEL: f3
 ; LV-LABEL: for.body.lver.check
 ; LV: [[PredCheck0:%[^ ]*]] = icmp ne i128
@@ -203,6 +216,10 @@ for.end:                                          ; preds = %for.body
 ;     i64  (sext i32 {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> to i64)
 ; We have added the nssw flag to turn this expression into the following SCEV:
 ;     i64 {sext i32 (2 * (trunc i64 %N to i32)) to i64,+,-2}<%for.body>
+
+; LAA: [PSE]  %arrayidxA = getelementptr i16, i16* %a, i64 %mul_ext:
+; LAA-NEXT: ((2 * (sext i32 {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> to i64)) + %a)
+; LAA-NEXT: --> {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64)) + %a),+,-4}<%for.body>
 
 ; LV-LABEL: f4
 ; LV-LABEL: for.body.lver.check
@@ -256,6 +273,10 @@ for.end:                                          ; preds = %for.body
 ; LAA: SCEV assumptions:
 ; LAA-NEXT: {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> Added Flags: <nssw>
 ; LAA-NEXT: {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64)) + %a),+,-4}<%for.body> Added Flags: <nusw>
+
+; LAA: [PSE]  %arrayidxA = getelementptr inbounds i16, i16* %a, i32 %mul:
+; LAA-NEXT: ((2 * (sext i32 {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> to i64))<nsw> + %a)<nsw>
+; LAA-NEXT: --> {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64)) + %a),+,-4}<%for.body>
 
 ; LV-LABEL: f5
 ; LV-LABEL: for.body.lver.check

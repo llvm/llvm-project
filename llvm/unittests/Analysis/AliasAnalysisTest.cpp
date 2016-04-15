@@ -207,14 +207,13 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
 
 class AAPassInfraTest : public testing::Test {
 protected:
-  LLVMContext &C;
+  LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M;
 
 public:
   AAPassInfraTest()
-      : C(getGlobalContext()),
-        M(parseAssemblyString("define i32 @f(i32* %x, i32* %y) {\n"
+      : M(parseAssemblyString("define i32 @f(i32* %x, i32* %y) {\n"
                               "entry:\n"
                               "  %lx = load i32, i32* %x\n"
                               "  %ly = load i32, i32* %y\n"

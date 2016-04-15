@@ -362,3 +362,43 @@ def : Pat<(stlxr_4 (and GPR64:$val, 0xffffffff), GPR64sp:$addr),
 // And clear exclusive.
 
 def : Pat<(int_aarch64_clrex), (CLREX 0xf)>;
+
+//===----------------------------------
+// Atomic cmpxchg for -O0
+//===----------------------------------
+
+// The fast register allocator used during -O0 inserts spills to cover any VRegs
+// live across basic block boundaries. When this happens between an LDXR and an
+// STXR it can clear the exclusive monitor, causing all cmpxchg attempts to
+// fail.
+
+// Unfortunately, this means we have to have an alternative (expanded
+// post-regalloc) path for -O0 compilations. Fortunately this path can be
+// significantly more naive than the standard expansion: we conservatively
+// assume seq_cst, strong cmpxchg and omit clrex on failure.
+
+let Constraints = "@earlyclobber $Rd,@earlyclobber $status",
+    mayLoad = 1, mayStore = 1 in {
+def CMP_SWAP_8 : Pseudo<(outs GPR32:$Rd, GPR32:$status),
+                        (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>,
+                 Sched<[WriteAtomic]>;
+
+def CMP_SWAP_16 : Pseudo<(outs GPR32:$Rd, GPR32:$status),
+                         (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>,
+                  Sched<[WriteAtomic]>;
+
+def CMP_SWAP_32 : Pseudo<(outs GPR32:$Rd, GPR32:$status),
+                         (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>,
+                  Sched<[WriteAtomic]>;
+
+def CMP_SWAP_64 : Pseudo<(outs GPR64:$Rd, GPR32:$status),
+                         (ins GPR64:$addr, GPR64:$desired, GPR64:$new), []>,
+                  Sched<[WriteAtomic]>;
+}
+
+let Constraints = "@earlyclobber $RdLo,@earlyclobber $RdHi,@earlyclobber $status",
+    mayLoad = 1, mayStore = 1 in
+def CMP_SWAP_128 : Pseudo<(outs GPR64:$RdLo, GPR64:$RdHi, GPR32:$status),
+                          (ins GPR64:$addr, GPR64:$desiredLo, GPR64:$desiredHi,
+                               GPR64:$newLo, GPR64:$newHi), []>,
+                   Sched<[WriteAtomic]>;

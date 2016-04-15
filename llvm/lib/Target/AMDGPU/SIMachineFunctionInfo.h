@@ -60,6 +60,8 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   unsigned PSInputAddr;
   bool ReturnsVoid;
 
+  unsigned MaximumWorkGroupSize;
+
 public:
   // FIXME: Make private
   unsigned LDSWaveSpillSize;
@@ -162,6 +164,10 @@ public:
     PrivateSegmentWaveByteOffsetSystemSGPR = getNextSystemSGPR();
     NumSystemSGPRs += 1;
     return PrivateSegmentWaveByteOffsetSystemSGPR;
+  }
+
+  void setPrivateSegmentWaveByteOffset(unsigned Reg) {
+    PrivateSegmentWaveByteOffsetSystemSGPR = Reg;
   }
 
   bool hasPrivateSegmentBuffer() const {

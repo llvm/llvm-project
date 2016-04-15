@@ -208,13 +208,12 @@ void AliasSetTracker::clear() {
 }
 
 
-/// findAliasSetForPointer - Given a pointer, find the one alias set to put the
-/// instruction referring to the pointer into.  If there are multiple alias sets
-/// that may alias the pointer, merge them together and return the unified set.
-///
-AliasSet *AliasSetTracker::findAliasSetForPointer(const Value *Ptr,
-                                                  uint64_t Size,
-                                                  const AAMDNodes &AAInfo) {
+/// mergeAliasSetsForPointer - Given a pointer, merge all alias sets that may
+/// alias the pointer. Return the unified set, or nullptr if no set that aliases
+/// the pointer was found.
+AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
+                                                    uint64_t Size,
+                                                    const AAMDNodes &AAInfo) {
   AliasSet *FoundSet = nullptr;
   for (iterator I = begin(), E = end(); I != E;) {
     iterator Cur = I++;
@@ -274,12 +273,18 @@ AliasSet &AliasSetTracker::getAliasSetForPointer(Value *Pointer, uint64_t Size,
 
   // Check to see if the pointer is already known.
   if (Entry.hasAliasSet()) {
-    Entry.updateSizeAndAAInfo(Size, AAInfo);
+    // If the size changed, we may need to merge several alias sets.
+    // Note that we can *not* return the result of mergeAliasSetsForPointer
+    // due to a quirk of alias analysis behavior. Since alias(undef, undef)
+    // is NoAlias, mergeAliasSetsForPointer(undef, ...) will not find the
+    // the right set for undef, even if it exists.
+    if (Entry.updateSizeAndAAInfo(Size, AAInfo))
+      mergeAliasSetsForPointer(Pointer, Size, AAInfo);
     // Return the set!
     return *Entry.getAliasSet(*this)->getForwardedTarget(*this);
   }
   
-  if (AliasSet *AS = findAliasSetForPointer(Pointer, Size, AAInfo)) {
+  if (AliasSet *AS = mergeAliasSetsForPointer(Pointer, Size, AAInfo)) {
     // Add it to the alias set it aliases.
     AS->addPointer(*this, Entry, Size, AAInfo);
     return *AS;
@@ -457,7 +462,7 @@ void AliasSetTracker::remove(AliasSet &AS) {
 
 bool
 AliasSetTracker::remove(Value *Ptr, uint64_t Size, const AAMDNodes &AAInfo) {
-  AliasSet *AS = findAliasSetForPointer(Ptr, Size, AAInfo);
+  AliasSet *AS = mergeAliasSetsForPointer(Ptr, Size, AAInfo);
   if (!AS) return false;
   remove(*AS);
   return true;
@@ -470,7 +475,7 @@ bool AliasSetTracker::remove(LoadInst *LI) {
   AAMDNodes AAInfo;
   LI->getAAMetadata(AAInfo);
 
-  AliasSet *AS = findAliasSetForPointer(LI->getOperand(0), Size, AAInfo);
+  AliasSet *AS = mergeAliasSetsForPointer(LI->getOperand(0), Size, AAInfo);
   if (!AS) return false;
   remove(*AS);
   return true;
@@ -483,7 +488,7 @@ bool AliasSetTracker::remove(StoreInst *SI) {
   AAMDNodes AAInfo;
   SI->getAAMetadata(AAInfo);
 
-  AliasSet *AS = findAliasSetForPointer(SI->getOperand(1), Size, AAInfo);
+  AliasSet *AS = mergeAliasSetsForPointer(SI->getOperand(1), Size, AAInfo);
   if (!AS) return false;
   remove(*AS);
   return true;
@@ -493,8 +498,8 @@ bool AliasSetTracker::remove(VAArgInst *VAAI) {
   AAMDNodes AAInfo;
   VAAI->getAAMetadata(AAInfo);
 
-  AliasSet *AS = findAliasSetForPointer(VAAI->getOperand(0),
-                                        MemoryLocation::UnknownSize, AAInfo);
+  AliasSet *AS = mergeAliasSetsForPointer(VAAI->getOperand(0),
+                                          MemoryLocation::UnknownSize, AAInfo);
   if (!AS) return false;
   remove(*AS);
   return true;
@@ -510,7 +515,7 @@ bool AliasSetTracker::remove(MemSetInst *MSI) {
   else
     Len = MemoryLocation::UnknownSize;
 
-  AliasSet *AS = findAliasSetForPointer(MSI->getRawDest(), Len, AAInfo);
+  AliasSet *AS = mergeAliasSetsForPointer(MSI->getRawDest(), Len, AAInfo);
   if (!AS)
     return false;
   remove(*AS);

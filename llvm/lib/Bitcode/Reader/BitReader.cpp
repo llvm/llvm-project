@@ -25,14 +25,13 @@ using namespace llvm;
    Optionally returns a human-readable error message via OutMessage. */
 LLVMBool LLVMParseBitcode(LLVMMemoryBufferRef MemBuf, LLVMModuleRef *OutModule,
                           char **OutMessage) {
-  return LLVMParseBitcodeInContext(wrap(&getGlobalContext()), MemBuf, OutModule,
+  return LLVMParseBitcodeInContext(LLVMGetGlobalContext(), MemBuf, OutModule,
                                    OutMessage);
 }
 
 LLVMBool LLVMParseBitcode2(LLVMMemoryBufferRef MemBuf,
                            LLVMModuleRef *OutModule) {
-  return LLVMParseBitcodeInContext2(wrap(&getGlobalContext()), MemBuf,
-                                    OutModule);
+  return LLVMParseBitcodeInContext2(LLVMGetGlobalContext(), MemBuf, OutModule);
 }
 
 static void diagnosticHandler(const DiagnosticInfo &DI, void *C) {

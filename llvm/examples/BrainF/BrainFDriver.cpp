@@ -88,7 +88,7 @@ void addMainFunction(Module *mod) {
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, " BrainF compiler\n");
 
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
 
   if (InputFilename == "") {
     errs() << "Error: You must specify the filename of the program to "

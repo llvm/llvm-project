@@ -17,6 +17,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -1164,6 +1165,16 @@ int MachineInstr::findInlineAsmFlagIdx(unsigned OpIdx,
   return -1;
 }
 
+const DILocalVariable *MachineInstr::getDebugVariable() const {
+  assert(isDebugValue() && "not a DBG_VALUE");
+  return cast<DILocalVariable>(getOperand(2).getMetadata());
+}
+
+const DIExpression *MachineInstr::getDebugExpression() const {
+  assert(isDebugValue() && "not a DBG_VALUE");
+  return cast<DIExpression>(getOperand(3).getMetadata());
+}
+
 const TargetRegisterClass*
 MachineInstr::getRegClassConstraint(unsigned OpIdx,
                                     const TargetInstrInfo *TII,
@@ -2137,4 +2148,42 @@ void MachineInstr::emitError(StringRef Msg) const {
     if (const MachineFunction *MF = MBB->getParent())
       return MF->getMMI().getModule()->getContext().emitError(LocCookie, Msg);
   report_fatal_error(Msg);
+}
+
+MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, DebugLoc DL,
+                                  const MCInstrDesc &MCID, bool IsIndirect,
+                                  unsigned Reg, unsigned Offset,
+                                  const MDNode *Variable, const MDNode *Expr) {
+  assert(isa<DILocalVariable>(Variable) && "not a variable");
+  assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
+  assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
+  if (IsIndirect)
+    return BuildMI(MF, DL, MCID)
+        .addReg(Reg, RegState::Debug)
+        .addImm(Offset)
+        .addMetadata(Variable)
+        .addMetadata(Expr);
+  else {
+    assert(Offset == 0 && "A direct address cannot have an offset.");
+    return BuildMI(MF, DL, MCID)
+        .addReg(Reg, RegState::Debug)
+        .addReg(0U, RegState::Debug)
+        .addMetadata(Variable)
+        .addMetadata(Expr);
+  }
+}
+
+MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
+                                  MachineBasicBlock::iterator I, DebugLoc DL,
+                                  const MCInstrDesc &MCID, bool IsIndirect,
+                                  unsigned Reg, unsigned Offset,
+                                  const MDNode *Variable, const MDNode *Expr) {
+  assert(isa<DILocalVariable>(Variable) && "not a variable");
+  assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
+  MachineFunction &MF = *BB.getParent();
+  MachineInstr *MI =
+      BuildMI(MF, DL, MCID, IsIndirect, Reg, Offset, Variable, Expr);
+  BB.insert(I, MI);
+  return MachineInstrBuilder(MF, MI);
 }

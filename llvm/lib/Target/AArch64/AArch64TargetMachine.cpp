@@ -157,7 +157,7 @@ AArch64TargetMachine::~AArch64TargetMachine() {}
 
 #ifdef LLVM_BUILD_GLOBAL_ISEL
 namespace {
-struct AArch64GISelActualAccessor : public AArch64GISelAccessor {
+struct AArch64GISelActualAccessor : public GISelAccessor {
   std::unique_ptr<CallLowering> CallLoweringInfo;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
   const CallLowering *getCallLowering() const override {
@@ -191,16 +191,16 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     I = llvm::make_unique<AArch64Subtarget>(TargetTriple, CPU, FS, *this,
                                             isLittle);
 #ifndef LLVM_BUILD_GLOBAL_ISEL
-    AArch64GISelAccessor *GISelAccessor = new AArch64GISelAccessor();
+   GISelAccessor *GISel = new GISelAccessor();
 #else
-    AArch64GISelActualAccessor *GISelAccessor =
+    AArch64GISelActualAccessor *GISel =
         new AArch64GISelActualAccessor();
-    GISelAccessor->CallLoweringInfo.reset(
+    GISel->CallLoweringInfo.reset(
         new AArch64CallLowering(*I->getTargetLowering()));
-    GISelAccessor->RegBankInfo.reset(
+    GISel->RegBankInfo.reset(
         new AArch64RegisterBankInfo(*I->getRegisterInfo()));
 #endif
-    I->setGISelAccessor(*GISelAccessor);
+    I->setGISelAccessor(*GISel);
   }
   return I.get();
 }

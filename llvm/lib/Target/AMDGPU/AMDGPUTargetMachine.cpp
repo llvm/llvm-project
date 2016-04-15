@@ -23,6 +23,7 @@
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
 #include "llvm/Analysis/Passes.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -48,7 +49,6 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSILowerI1CopiesPass(*PR);
   initializeSIFixSGPRCopiesPass(*PR);
   initializeSIFoldOperandsPass(*PR);
-  initializeSIFixSGPRLiveRangesPass(*PR);
   initializeSIFixControlFlowLiveIntervalsPass(*PR);
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
@@ -202,7 +202,12 @@ public:
   GCNPassConfig(TargetMachine *TM, PassManagerBase &PM)
     : AMDGPUPassConfig(TM, PM) { }
   bool addPreISel() override;
+  void addMachineSSAOptimization() override;
   bool addInstSelector() override;
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+  bool addIRTranslator() override;
+  bool addRegBankSelect() override;
+#endif
   void addFastRegAlloc(FunctionPass *RegAllocPass) override;
   void addOptimizedRegAlloc(FunctionPass *RegAllocPass) override;
   void addPreRegAlloc() override;
@@ -319,13 +324,37 @@ bool GCNPassConfig::addPreISel() {
   return false;
 }
 
+void GCNPassConfig::addMachineSSAOptimization() {
+  TargetPassConfig::addMachineSSAOptimization();
+
+  // We want to fold operands after PeepholeOptimizer has run (or as part of
+  // it), because it will eliminate extra copies making it easier to fold the
+  // real source operand. We want to eliminate dead instructions after, so that
+  // we see fewer uses of the copies. We then need to clean up the dead
+  // instructions leftover after the operands are folded as well.
+  //
+  // XXX - Can we get away without running DeadMachineInstructionElim again?
+  addPass(&SIFoldOperandsID);
+  addPass(&DeadMachineInstructionElimID);
+}
+
 bool GCNPassConfig::addInstSelector() {
   AMDGPUPassConfig::addInstSelector();
   addPass(createSILowerI1CopiesPass());
   addPass(&SIFixSGPRCopiesID);
-  addPass(createSIFoldOperandsPass());
   return false;
 }
+
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+bool GCNPassConfig::addIRTranslator() {
+  addPass(new IRTranslator());
+  return false;
+}
+
+bool GCNPassConfig::addRegBankSelect() {
+  return false;
+}
+#endif
 
 void GCNPassConfig::addPreRegAlloc() {
   const AMDGPUSubtarget &ST = *getAMDGPUTargetMachine().getSubtargetImpl();
@@ -351,16 +380,10 @@ void GCNPassConfig::addPreRegAlloc() {
 }
 
 void GCNPassConfig::addFastRegAlloc(FunctionPass *RegAllocPass) {
-  addPass(&SIFixSGPRLiveRangesID);
   TargetPassConfig::addFastRegAlloc(RegAllocPass);
 }
 
 void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
-  // We want to run this after LiveVariables is computed to avoid computing them
-  // twice.
-  // FIXME: We shouldn't disable the verifier here. r249087 introduced a failure
-  // that needs to be fixed.
-  insertPass(&LiveVariablesID, &SIFixSGPRLiveRangesID, /*VerifyAfter=*/false);
   TargetPassConfig::addOptimizedRegAlloc(RegAllocPass);
 }
 

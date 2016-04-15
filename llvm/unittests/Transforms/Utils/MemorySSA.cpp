@@ -20,7 +20,7 @@
 using namespace llvm;
 
 TEST(MemorySSA, RemoveMemoryAccess) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   std::unique_ptr<Module> M(new Module("Remove memory access", C));
   IRBuilder<> B(C);
   DataLayout DL("e-i64:64-f80:128-n8:16:32:64-S128");

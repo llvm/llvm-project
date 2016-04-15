@@ -747,11 +747,11 @@ void llvm::RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
 
 void Mapper::remapInstruction(Instruction *I) {
   // Remap operands.
-  for (User::op_iterator op = I->op_begin(), E = I->op_end(); op != E; ++op) {
-    Value *V = mapValue(*op);
+  for (Use &Op : I->operands()) {
+    Value *V = mapValue(Op);
     // If we aren't ignoring missing entries, assert that something happened.
     if (V)
-      *op = V;
+      Op = V;
     else
       assert((Flags & RF_IgnoreMissingLocals) &&
              "Referenced value not in value map!");

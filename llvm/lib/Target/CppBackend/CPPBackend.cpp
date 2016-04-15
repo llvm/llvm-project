@@ -1947,6 +1947,7 @@ void CppWriter::printProgram(const std::string& fname,
   Out << "#include <llvm/Support/MathExtras.h>\n";
   Out << "#include <algorithm>\n";
   Out << "using namespace llvm;\n\n";
+  Out << "static LLVMContext TheContext;\n\n";
   Out << "Module* " << fname << "();\n\n";
   Out << "int main(int argc, char**argv) {\n";
   Out << "  Module* Mod = " << fname << "();\n";
@@ -1965,7 +1966,7 @@ void CppWriter::printModule(const std::string& fname,
   nl(Out,1) << "// Module Construction";
   nl(Out) << "Module* mod = new Module(\"";
   printEscapedString(mName);
-  Out << "\", getGlobalContext());";
+  Out << "\", TheContext);";
   if (!TheModule->getTargetTriple().empty()) {
     nl(Out) << "mod->setDataLayout(\"" << TheModule->getDataLayoutStr()
             << "\");";

@@ -22,7 +22,8 @@ namespace llvm {
 namespace {
 
 TEST(ConstantsTest, Integer_i1) {
-  IntegerType* Int1 = IntegerType::get(getGlobalContext(), 1);
+  LLVMContext Context;
+  IntegerType *Int1 = IntegerType::get(Context, 1);
   Constant* One = ConstantInt::get(Int1, 1, true);
   Constant* Zero = ConstantInt::get(Int1, 0);
   Constant* NegOne = ConstantInt::get(Int1, static_cast<uint64_t>(-1), true);
@@ -103,7 +104,8 @@ TEST(ConstantsTest, Integer_i1) {
 }
 
 TEST(ConstantsTest, IntSigns) {
-  IntegerType* Int8Ty = Type::getInt8Ty(getGlobalContext());
+  LLVMContext Context;
+  IntegerType *Int8Ty = Type::getInt8Ty(Context);
   EXPECT_EQ(100, ConstantInt::get(Int8Ty, 100, false)->getSExtValue());
   EXPECT_EQ(100, ConstantInt::get(Int8Ty, 100, true)->getSExtValue());
   EXPECT_EQ(100, ConstantInt::getSigned(Int8Ty, 100)->getSExtValue());
@@ -116,16 +118,17 @@ TEST(ConstantsTest, IntSigns) {
 }
 
 TEST(ConstantsTest, FP128Test) {
-  Type *FP128Ty = Type::getFP128Ty(getGlobalContext());
+  LLVMContext Context;
+  Type *FP128Ty = Type::getFP128Ty(Context);
 
-  IntegerType *Int128Ty = Type::getIntNTy(getGlobalContext(), 128);
+  IntegerType *Int128Ty = Type::getIntNTy(Context, 128);
   Constant *Zero128 = Constant::getNullValue(Int128Ty);
   Constant *X = ConstantExpr::getUIToFP(Zero128, FP128Ty);
   EXPECT_TRUE(isa<ConstantFP>(X));
 }
 
 TEST(ConstantsTest, PointerCast) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Type *Int8PtrTy = Type::getInt8PtrTy(C);
   Type *Int32PtrTy = Type::getInt32PtrTy(C);
   Type *Int64Ty = Type::getInt64Ty(C);
@@ -165,14 +168,15 @@ TEST(ConstantsTest, PointerCast) {
   }
 
 TEST(ConstantsTest, AsInstructionsTest) {
-  std::unique_ptr<Module> M(new Module("MyModule", getGlobalContext()));
+  LLVMContext Context;
+  std::unique_ptr<Module> M(new Module("MyModule", Context));
 
-  Type *Int64Ty = Type::getInt64Ty(getGlobalContext());
-  Type *Int32Ty = Type::getInt32Ty(getGlobalContext());
-  Type *Int16Ty = Type::getInt16Ty(getGlobalContext());
-  Type *Int1Ty = Type::getInt1Ty(getGlobalContext());
-  Type *FloatTy = Type::getFloatTy(getGlobalContext());
-  Type *DoubleTy = Type::getDoubleTy(getGlobalContext());
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *Int16Ty = Type::getInt16Ty(Context);
+  Type *Int1Ty = Type::getInt1Ty(Context);
+  Type *FloatTy = Type::getFloatTy(Context);
+  Type *DoubleTy = Type::getDoubleTy(Context);
 
   Constant *Global = M->getOrInsertGlobal("dummy",
                                          PointerType::getUnqual(Int32Ty));
@@ -189,8 +193,7 @@ TEST(ConstantsTest, AsInstructionsTest) {
 
   Constant *One = ConstantInt::get(Int32Ty, 1);
   Constant *Two = ConstantInt::get(Int64Ty, 2);
-  Constant *Big = ConstantInt::get(getGlobalContext(),
-                                   APInt{256, uint64_t(-1), true});
+  Constant *Big = ConstantInt::get(Context, APInt{256, uint64_t(-1), true});
   Constant *Elt = ConstantInt::get(Int16Ty, 2015);
   Constant *Undef16  = UndefValue::get(Int16Ty);
   Constant *Undef64  = UndefValue::get(Int64Ty);
@@ -278,9 +281,10 @@ TEST(ConstantsTest, AsInstructionsTest) {
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 TEST(ConstantsTest, ReplaceWithConstantTest) {
-  std::unique_ptr<Module> M(new Module("MyModule", getGlobalContext()));
+  LLVMContext Context;
+  std::unique_ptr<Module> M(new Module("MyModule", Context));
 
-  Type *Int32Ty = Type::getInt32Ty(getGlobalContext());
+  Type *Int32Ty = Type::getInt32Ty(Context);
   Constant *One = ConstantInt::get(Int32Ty, 1);
 
   Constant *Global =

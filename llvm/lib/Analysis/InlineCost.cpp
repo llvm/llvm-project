@@ -655,6 +655,10 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
        ColdThreshold.getNumOccurrences() > 0) &&
       ColdCallee && ColdThreshold < Threshold)
     Threshold = ColdThreshold;
+
+  // Finally, take the target-specific inlining threshold multiplier into
+  // account.
+  Threshold *= TTI.getInliningThresholdMultiplier();
 }
 
 bool CallAnalyzer::visitCmpInst(CmpInst &I) {

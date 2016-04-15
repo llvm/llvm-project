@@ -384,6 +384,9 @@ struct __all
     : is_same<__all<_Pred...>, __all<(_Pred, true)...>>
 { };
 
+template <class ..._Tp>
+struct __lazy_all : __all<_Tp::value...> {};
+
 template <class _Tp>
 struct __all_default_constructible;
 
@@ -523,6 +526,19 @@ public:
     _LIBCPP_CONSTEXPR tuple()
         _NOEXCEPT_(__all<is_nothrow_default_constructible<_Tp>::value...>::value) {}
 
+    template <class _AllocArgT, class _Alloc, bool _Dummy = true, class = typename enable_if<
+        __lazy_and<
+            is_base_of<allocator_arg_t, _AllocArgT>,
+            __lazy_all<__dependent_type<is_default_constructible<_Tp>, _Dummy>...>
+       >::value
+    >::type>
+    _LIBCPP_INLINE_VISIBILITY
+    tuple(_AllocArgT, _Alloc const& __a)
+      : base_(allocator_arg_t(), __a,
+                    __tuple_indices<>(), __tuple_types<>(),
+                    typename __make_tuple_indices<sizeof...(_Tp), 0>::type(),
+                    __tuple_types<_Tp...>()) {}
+
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     explicit tuple(const _Tp& ... __t) _NOEXCEPT_((__all<is_nothrow_copy_constructible<_Tp>::value...>::value)) 
         : base_(typename __make_tuple_indices<sizeof...(_Tp)>::type(),
@@ -631,21 +647,8 @@ public:
     template <class _Alloc, class ..._Up,
               class = typename enable_if
                       <
-                         sizeof...(_Up) <= sizeof...(_Tp) &&
-                         __tuple_convertible
-                         <
-                            tuple<_Up...>,
-                            typename __make_tuple_types<tuple,
-                                     sizeof...(_Up) < sizeof...(_Tp) ?
-                                        sizeof...(_Up) :
-                                        sizeof...(_Tp)>::type
-                         >::value &&
-                         __all_default_constructible<
-                            typename __make_tuple_types<tuple, sizeof...(_Tp),
-                                sizeof...(_Up) < sizeof...(_Tp) ?
-                                    sizeof...(_Up) :
-                                    sizeof...(_Tp)>::type
-                         >::value
+                         sizeof...(_Up) == sizeof...(_Tp) &&
+                         __tuple_convertible<tuple<_Up...>, tuple>::value
                       >::type
              >
         _LIBCPP_INLINE_VISIBILITY

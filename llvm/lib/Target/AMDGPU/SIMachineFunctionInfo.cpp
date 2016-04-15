@@ -48,6 +48,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     PrivateSegmentWaveByteOffsetSystemSGPR(AMDGPU::NoRegister),
     PSInputAddr(0),
     ReturnsVoid(true),
+    MaximumWorkGroupSize(0),
     LDSWaveSpillSize(0),
     PSInputEna(0),
     NumUserSGPRs(0),
@@ -65,12 +66,12 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     GridWorkgroupCountX(false),
     GridWorkgroupCountY(false),
     GridWorkgroupCountZ(false),
-    WorkGroupIDX(true),
+    WorkGroupIDX(false),
     WorkGroupIDY(false),
     WorkGroupIDZ(false),
     WorkGroupInfo(false),
     PrivateSegmentWaveByteOffset(false),
-    WorkItemIDX(true),
+    WorkItemIDX(false),
     WorkItemIDY(false),
     WorkItemIDZ(false) {
   const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
@@ -80,8 +81,11 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
   const MachineFrameInfo *FrameInfo = MF.getFrameInfo();
 
-  if (!AMDGPU::isShader(F->getCallingConv()))
+  if (!AMDGPU::isShader(F->getCallingConv())) {
     KernargSegmentPtr = true;
+    WorkGroupIDX = true;
+    WorkItemIDX = true;
+  }
 
   if (F->hasFnAttribute("amdgpu-work-group-id-y"))
     WorkGroupIDY = true;
@@ -120,6 +124,11 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   if (HasStackObjects && ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS &&
       ST.isAmdHsaOS())
     FlatScratchInit = true;
+
+  if (AMDGPU::isCompute(F->getCallingConv()))
+    MaximumWorkGroupSize = AMDGPU::getMaximumWorkGroupSize(*F);
+  else
+    MaximumWorkGroupSize = ST.getWavefrontSize();
 }
 
 unsigned SIMachineFunctionInfo::addPrivateSegmentBuffer(
@@ -199,10 +208,5 @@ SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg(
 
 unsigned SIMachineFunctionInfo::getMaximumWorkGroupSize(
                                               const MachineFunction &MF) const {
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
-  // FIXME: We should get this information from kernel attributes if it
-  // is available.
-  if (AMDGPU::isCompute(MF.getFunction()->getCallingConv()))
-    return 256;
-  return ST.getWavefrontSize();
+  return MaximumWorkGroupSize;
 }

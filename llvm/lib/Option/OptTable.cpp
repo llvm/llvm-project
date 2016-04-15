@@ -315,7 +315,7 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
     break;
 
   case Option::SeparateClass: case Option::JoinedOrSeparateClass:
-  case Option::RemainingArgsClass:
+  case Option::RemainingArgsClass: case Option::RemainingArgsJoinedClass:
     Name += ' ';
     // FALLTHROUGH
   case Option::JoinedClass: case Option::CommaJoinedClass:

@@ -636,6 +636,8 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        InstrProfValueKind ValueKind, uint32_t SiteIdx,
                        uint32_t MaxMDCount) {
   uint32_t NV = InstrProfR.getNumValueDataForSite(ValueKind, SiteIdx);
+  if (!NV)
+    return;
 
   uint64_t Sum = 0;
   std::unique_ptr<InstrProfValueData[]> VD =

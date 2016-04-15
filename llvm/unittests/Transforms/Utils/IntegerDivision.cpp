@@ -21,7 +21,7 @@ namespace {
 
 
 TEST(IntegerDivision, SDiv) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test division", C);
   IRBuilder<> Builder(C);
 
@@ -51,7 +51,7 @@ TEST(IntegerDivision, SDiv) {
 }
 
 TEST(IntegerDivision, UDiv) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test division", C);
   IRBuilder<> Builder(C);
 
@@ -81,7 +81,7 @@ TEST(IntegerDivision, UDiv) {
 }
 
 TEST(IntegerDivision, SRem) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test remainder", C);
   IRBuilder<> Builder(C);
 
@@ -111,7 +111,7 @@ TEST(IntegerDivision, SRem) {
 }
 
 TEST(IntegerDivision, URem) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test remainder", C);
   IRBuilder<> Builder(C);
 
@@ -142,7 +142,7 @@ TEST(IntegerDivision, URem) {
 
 
 TEST(IntegerDivision, SDiv64) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test division", C);
   IRBuilder<> Builder(C);
 
@@ -172,7 +172,7 @@ TEST(IntegerDivision, SDiv64) {
 }
 
 TEST(IntegerDivision, UDiv64) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test division", C);
   IRBuilder<> Builder(C);
 
@@ -202,7 +202,7 @@ TEST(IntegerDivision, UDiv64) {
 }
 
 TEST(IntegerDivision, SRem64) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test remainder", C);
   IRBuilder<> Builder(C);
 
@@ -232,7 +232,7 @@ TEST(IntegerDivision, SRem64) {
 }
 
 TEST(IntegerDivision, URem64) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Module M("test remainder", C);
   IRBuilder<> Builder(C);
 

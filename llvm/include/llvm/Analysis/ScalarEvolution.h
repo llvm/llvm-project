@@ -1691,6 +1691,9 @@ namespace llvm {
     ScalarEvolution *getSE() const { return &SE; }
     /// We need to explicitly define the copy constructor because of FlagsMap.
     PredicatedScalarEvolution(const PredicatedScalarEvolution&);
+    /// Print the SCEV mappings done by the Predicated Scalar Evolution.
+    /// The printed text is indented by \p Depth.
+    void print(raw_ostream &OS, unsigned Depth) const;
   private:
     /// \brief Increments the version number of the predicate.
     /// This needs to be called every time the SCEV predicate changes.

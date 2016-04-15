@@ -128,6 +128,8 @@ public:
     return TTI::TCC_Basic * (NumArgs + 1);
   }
 
+  unsigned getInliningThresholdMultiplier() { return 1; }
+
   unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
                             ArrayRef<Type *> ParamTys) {
     switch (IID) {
@@ -239,6 +241,8 @@ public:
   bool enableAggressiveInterleaving(bool LoopHasReductions) { return false; }
 
   bool enableInterleavedAccessVectorization() { return false; }
+
+  bool isFPVectorizationPotentiallyUnsafe() { return false; }
 
   TTI::PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) {
     return TTI::PSK_Software;

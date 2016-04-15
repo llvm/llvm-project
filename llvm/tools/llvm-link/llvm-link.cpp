@@ -331,7 +331,7 @@ int main(int argc, char **argv) {
   sys::PrintStackTraceOnErrorSignal();
   PrettyStackTraceProgram X(argc, argv);
 
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
   Context.setDiagnosticHandler(diagnosticHandlerWithContext, nullptr, true);
 
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.

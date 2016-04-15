@@ -29,6 +29,7 @@ namespace {
 
 struct SampleProfTest : ::testing::Test {
   std::string Data;
+  LLVMContext Context;
   std::unique_ptr<raw_ostream> OS;
   std::unique_ptr<SampleProfileWriter> Writer;
   std::unique_ptr<SampleProfileReader> Reader;
@@ -43,7 +44,7 @@ struct SampleProfTest : ::testing::Test {
   }
 
   void readProfile(std::unique_ptr<MemoryBuffer> &Profile) {
-    auto ReaderOrErr = SampleProfileReader::create(Profile, getGlobalContext());
+    auto ReaderOrErr = SampleProfileReader::create(Profile, Context);
     ASSERT_TRUE(NoError(ReaderOrErr.getError()));
     Reader = std::move(ReaderOrErr.get());
   }
@@ -127,7 +128,7 @@ struct SampleProfTest : ::testing::Test {
     VerifySummary(Summary);
 
     // Test that conversion of summary to and from Metadata works.
-    Metadata *MD = Summary.getMD(getGlobalContext());
+    Metadata *MD = Summary.getMD(Context);
     ASSERT_TRUE(MD);
     ProfileSummary *PS = ProfileSummary::getFromMD(MD);
     ASSERT_TRUE(PS);
@@ -137,7 +138,7 @@ struct SampleProfTest : ::testing::Test {
     delete SPS;
 
     // Test that summary can be attached to and read back from module.
-    Module M("my_module", getGlobalContext());
+    Module M("my_module", Context);
     M.setProfileSummary(MD);
     MD = M.getProfileSummary();
     ASSERT_TRUE(MD);

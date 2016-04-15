@@ -2419,11 +2419,6 @@ determine what context they belong to by looking at their own ``Type``.  If you
 are adding new entities to LLVM IR, please try to maintain this interface
 design.
 
-For clients that do *not* require the benefits of isolation, LLVM provides a
-convenience API ``getGlobalContext()``.  This returns a global, lazily
-initialized ``LLVMContext`` that may be used in situations where isolation is
-not a concern.
-
 .. _jitthreading:
 
 Threads and the JIT

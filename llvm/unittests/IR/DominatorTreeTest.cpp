@@ -215,7 +215,7 @@ namespace llvm {
     };
     char DPass::ID = 0;
 
-    std::unique_ptr<Module> makeLLVMModule(DPass *P) {
+    std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context, DPass *P) {
       const char *ModuleStrig =
         "declare i32 @g()\n" \
         "define void @f(i32 %x) personality i32 ()* @g {\n" \
@@ -239,14 +239,14 @@ namespace llvm {
         "  %y9 = phi i32 [0, %bb2], [%y4, %bb1]\n"
         "  ret void\n" \
         "}\n";
-      LLVMContext &C = getGlobalContext();
       SMDiagnostic Err;
-      return parseAssemblyString(ModuleStrig, Err, C);
+      return parseAssemblyString(ModuleStrig, Err, Context);
     }
 
     TEST(DominatorTree, Unreachable) {
       DPass *P = new DPass();
-      std::unique_ptr<Module> M = makeLLVMModule(P);
+      LLVMContext Context;
+      std::unique_ptr<Module> M = makeLLVMModule(Context, P);
       legacy::PassManager Passes;
       Passes.add(P);
       Passes.run(*M);

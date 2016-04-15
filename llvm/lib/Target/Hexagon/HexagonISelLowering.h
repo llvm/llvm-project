@@ -94,7 +94,7 @@ bool isPositiveHalfWord(SDNode *N);
 
     bool CanReturnSmallStruct(const Function* CalleeFn, unsigned& RetSize)
         const;
-    void promoteLdStType(EVT VT, EVT PromotedLdStVT);
+    void promoteLdStType(MVT VT, MVT PromotedLdStVT);
     const HexagonTargetMachine &HTM;
     const HexagonSubtarget &Subtarget;
 

@@ -43,6 +43,8 @@ static cl::opt<std::string>
 OutputFilename("o", cl::desc("Override output filename"),
                cl::value_desc("filename"));
 
+static LLVMContext Context;
+
 namespace cl {
 template <> class parser<Type*> final : public basic_parser<Type*> {
 public:
@@ -50,7 +52,6 @@ public:
 
   // Parse options as IR types. Return true on error.
   bool parse(Option &O, StringRef, StringRef Arg, Type *&Value) {
-    auto &Context = getGlobalContext();
     if      (Arg == "half")      Value = Type::getHalfTy(Context);
     else if (Arg == "fp128")     Value = Type::getFP128Ty(Context);
     else if (Arg == "x86_fp80")  Value = Type::getX86_FP80Ty(Context);
@@ -687,7 +688,7 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm codegen stress-tester\n");
   llvm_shutdown_obj Y;
 
-  auto M = make_unique<Module>("/tmp/autogen.bc", getGlobalContext());
+  auto M = make_unique<Module>("/tmp/autogen.bc", Context);
   Function *F = GenEmptyFunction(M.get());
 
   // Pick an initial seed value

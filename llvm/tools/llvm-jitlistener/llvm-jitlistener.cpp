@@ -105,8 +105,6 @@ unsigned int GetNewMethodID(void) {
 class JitEventListenerTest {
 protected:
   void InitEE(const std::string &IRFile) {
-    LLVMContext &Context = getGlobalContext();
-
     // If we have a native target, initialize it to ensure it is linked in and
     // usable by the JIT.
     InitializeNativeTarget();

@@ -180,7 +180,8 @@ TEST_F(InstrProfTest, get_profile_summary) {
   VerifySummary(PS);
 
   // Test that conversion of summary to and from Metadata works.
-  Metadata *MD = PS.getMD(getGlobalContext());
+  LLVMContext Context;
+  Metadata *MD = PS.getMD(Context);
   ASSERT_TRUE(MD);
   ProfileSummary *PSFromMD = ProfileSummary::getFromMD(MD);
   ASSERT_TRUE(PSFromMD);
@@ -190,7 +191,7 @@ TEST_F(InstrProfTest, get_profile_summary) {
   delete IPS;
 
   // Test that summary can be attached to and read back from module.
-  Module M("my_module", getGlobalContext());
+  Module M("my_module", Context);
   M.setProfileSummary(MD);
   MD = M.getProfileSummary();
   ASSERT_TRUE(MD);

@@ -25,7 +25,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -35,6 +34,8 @@
 namespace llvm {
 
 template <typename T> class SmallVectorImpl;
+class DILocalVariable;
+class DIExpression;
 class TargetInstrInfo;
 class TargetRegisterClass;
 class TargetRegisterInfo;
@@ -263,17 +264,11 @@ public:
 
   /// Return the debug variable referenced by
   /// this DBG_VALUE instruction.
-  const DILocalVariable *getDebugVariable() const {
-    assert(isDebugValue() && "not a DBG_VALUE");
-    return cast<DILocalVariable>(getOperand(2).getMetadata());
-  }
+  const DILocalVariable *getDebugVariable() const;
 
   /// Return the complex address expression referenced by
   /// this DBG_VALUE instruction.
-  const DIExpression *getDebugExpression() const {
-    assert(isDebugValue() && "not a DBG_VALUE");
-    return cast<DIExpression>(getOperand(3).getMetadata());
-  }
+  const DIExpression *getDebugExpression() const;
 
   /// Emit an error referring to the source location of this instruction.
   /// This should only be used for inline assembly that is somehow

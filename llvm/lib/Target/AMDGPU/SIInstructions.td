@@ -2014,7 +2014,23 @@ def SI_KILL : InstSI <
 
 } // End mayLoad = 1, mayStore = 1, hasSideEffects = 1
 
-let Uses = [EXEC], Defs = [EXEC,VCC,M0] in {
+// Used as an isel pseudo to directly emit initialization with an
+// s_mov_b32 rather than a copy of another initialized
+// register. MachineCSE skips copies, and we don't want to have to
+// fold operands before it runs.
+def SI_INIT_M0 : InstSI <
+  (outs),
+  (ins SSrc_32:$src), "", []> {
+  let Defs = [M0];
+  let usesCustomInserter = 1;
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+  let isAsCheapAsAMove = 1;
+  let SALU = 1;
+  let isReMaterializable = 1;
+}
+
+let Uses = [EXEC], Defs = [EXEC, VCC, M0] in {
 
 class SI_INDIRECT_SRC<RegisterClass rc> : InstSI <
   (outs VGPR_32:$dst, SReg_64:$temp),

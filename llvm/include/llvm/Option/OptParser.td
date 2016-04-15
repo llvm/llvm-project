@@ -46,6 +46,9 @@ def KIND_JOINED_OR_SEPARATE : OptionKind<"JoinedOrSeparate">;
 def KIND_JOINED_AND_SEPARATE : OptionKind<"JoinedAndSeparate">;
 // An option which consumes all remaining arguments if there are any.
 def KIND_REMAINING_ARGS : OptionKind<"RemainingArgs">;
+// An option which consumes an optional joined argument and any other remaining
+// arguments.
+def KIND_REMAINING_ARGS_JOINED : OptionKind<"RemainingArgsJoined">;
 
 // Define the option flags.
 

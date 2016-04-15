@@ -678,7 +678,37 @@ void IfConverter::ScanInstructions(BBInfo &BBI) {
     if (MI.isDebugValue())
       continue;
 
-    if (MI.isNotDuplicable())
+    // It's unsafe to duplicate convergent instructions in this context, so set
+    // BBI.CannotBeCopied to true if MI is convergent.  To see why, consider the
+    // following CFG, which is subject to our "simple" transformation.
+    //
+    //    BB0     // if (c1) goto BB1; else goto BB2;
+    //   /   \
+    //  BB1   |
+    //   |   BB2  // if (c2) goto TBB; else goto FBB;
+    //   |   / |
+    //   |  /  |
+    //   TBB   |
+    //    |    |
+    //    |   FBB
+    //    |
+    //    exit
+    //
+    // Suppose we want to move TBB's contents up into BB1 and BB2 (in BB1 they'd
+    // be unconditional, and in BB2, they'd be predicated upon c2), and suppose
+    // TBB contains a convergent instruction.  This is safe iff doing so does
+    // not add a control-flow dependency to the convergent instruction -- i.e.,
+    // it's safe iff the set of control flows that leads us to the convergent
+    // instruction does not get smaller after the transformation.
+    //
+    // Originally we executed TBB if c1 || c2.  After the transformation, there
+    // are two copies of TBB's instructions.  We get to the first if c1, and we
+    // get to the second if !c1 && c2.
+    //
+    // There are clearly fewer ways to satisfy the condition "c1" than
+    // "c1 || c2".  Since we've shrunk the set of control flows which lead to
+    // our convergent instruction, the transformation is unsafe.
+    if (MI.isNotDuplicable() || MI.isConvergent())
       BBI.CannotBeCopied = true;
 
     bool isPredicated = TII->isPredicated(MI);

@@ -2248,6 +2248,15 @@ Instruction *InstCombiner::visitICmpInstWithInstAndIntCst(ICmpInst &ICI,
           Constant *NotCI = ConstantExpr::getNot(RHS);
           if (!ConstantExpr::getAnd(BOC, NotCI)->isNullValue())
             return replaceInstUsesWith(ICI, Builder->getInt1(isICMP_NE));
+
+          // Comparing if all bits outside of a constant mask are set?
+          // Replace (X | C) == -1 with (X & ~C) == ~C.
+          // This removes the -1 constant.
+          if (BO->hasOneUse() && RHS->isAllOnesValue()) {
+            Constant *NotBOC = ConstantExpr::getNot(BOC);
+            Value *And = Builder->CreateAnd(BO->getOperand(0), NotBOC);
+            return new ICmpInst(ICI.getPredicate(), And, NotBOC);
+          }
         }
         break;
 

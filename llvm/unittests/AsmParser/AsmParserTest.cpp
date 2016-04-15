@@ -21,7 +21,7 @@ using namespace llvm;
 namespace {
 
 TEST(AsmParserTest, NullTerminatedInput) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   StringRef Source = "; Empty module \n";
   SMDiagnostic Error;
   auto Mod = parseAssemblyString(Source, Error, Ctx);
@@ -34,7 +34,7 @@ TEST(AsmParserTest, NullTerminatedInput) {
 #ifndef NDEBUG
 
 TEST(AsmParserTest, NonNullTerminatedInput) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   StringRef Source = "; Empty module \n\1\2";
   SMDiagnostic Error;
   std::unique_ptr<Module> Mod;
@@ -47,7 +47,7 @@ TEST(AsmParserTest, NonNullTerminatedInput) {
 #endif
 
 TEST(AsmParserTest, SlotMappingTest) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   StringRef Source = "@0 = global i32 0\n !0 = !{}\n !42 = !{i32 42}";
   SMDiagnostic Error;
   SlotMapping Mapping;
@@ -66,7 +66,7 @@ TEST(AsmParserTest, SlotMappingTest) {
 }
 
 TEST(AsmParserTest, TypeAndConstantValueParsing) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   SMDiagnostic Error;
   StringRef Source = "define void @test() {\n  entry:\n  ret void\n}";
   auto Mod = parseAssemblyString(Source, Error, Ctx);
@@ -117,7 +117,7 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
 }
 
 TEST(AsmParserTest, TypeAndConstantValueWithSlotMappingParsing) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   SMDiagnostic Error;
   StringRef Source =
       "%st = type { i32, i32 }\n"
@@ -153,7 +153,7 @@ TEST(AsmParserTest, TypeAndConstantValueWithSlotMappingParsing) {
 }
 
 TEST(AsmParserTest, TypeWithSlotMappingParsing) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   SMDiagnostic Error;
   StringRef Source =
       "%st = type { i32, i32 }\n"
@@ -277,7 +277,7 @@ TEST(AsmParserTest, TypeWithSlotMappingParsing) {
 }
 
 TEST(AsmParserTest, TypeAtBeginningWithSlotMappingParsing) {
-  LLVMContext &Ctx = getGlobalContext();
+  LLVMContext Ctx;
   SMDiagnostic Error;
   StringRef Source =
       "%st = type { i32, i32 }\n"

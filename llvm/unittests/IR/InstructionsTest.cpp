@@ -27,7 +27,7 @@ namespace llvm {
 namespace {
 
 TEST(InstructionsTest, ReturnInst) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   // test for PR6589
   const ReturnInst* r0 = ReturnInst::Create(C);
@@ -103,7 +103,7 @@ TEST_F(ModuleWithFunctionTest, InvokeInst) {
 }
 
 TEST(InstructionsTest, BranchInst) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   // Make a BasicBlocks
   BasicBlock* bb0 = BasicBlock::Create(C);
@@ -169,7 +169,7 @@ TEST(InstructionsTest, BranchInst) {
 }
 
 TEST(InstructionsTest, CastInst) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   Type *Int8Ty = Type::getInt8Ty(C);
   Type *Int16Ty = Type::getInt16Ty(C);
@@ -281,14 +281,18 @@ TEST(InstructionsTest, CastInst) {
   // First form
   BasicBlock *BB = BasicBlock::Create(C);
   Constant *NullV2I32Ptr = Constant::getNullValue(V2Int32PtrTy);
-  CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty, "foo", BB);
+  auto Inst1 = CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty, "foo", BB);
 
   // Second form
-  CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty);
+  auto Inst2 = CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty);
+
+  delete Inst2;
+  Inst1->eraseFromParent();
+  delete BB;
 }
 
 TEST(InstructionsTest, VectorGep) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   // Type Definitions
   Type *I8Ty = IntegerType::get(C, 8);
@@ -391,7 +395,7 @@ TEST(InstructionsTest, VectorGep) {
 }
 
 TEST(InstructionsTest, FPMathOperator) {
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
   IRBuilder<> Builder(Context);
   MDBuilder MDHelper(Context);
   Instruction *I = Builder.CreatePHI(Builder.getDoubleTy(), 0);
@@ -406,7 +410,7 @@ TEST(InstructionsTest, FPMathOperator) {
 
 
 TEST(InstructionsTest, isEliminableCastPair) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
 
   Type* Int16Ty = Type::getInt16Ty(C);
   Type* Int32Ty = Type::getInt32Ty(C);
@@ -486,7 +490,7 @@ TEST(InstructionsTest, isEliminableCastPair) {
 }
 
 TEST(InstructionsTest, CloneCall) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *ArgTys[] = {Int32Ty, Int32Ty, Int32Ty};
   Type *FnTy = FunctionType::get(Int32Ty, ArgTys, /*isVarArg=*/false);
@@ -519,7 +523,7 @@ TEST(InstructionsTest, CloneCall) {
 }
 
 TEST(InstructionsTest, AlterCallBundles) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
   Value *Callee = Constant::getNullValue(FnTy->getPointerTo());
@@ -546,7 +550,7 @@ TEST(InstructionsTest, AlterCallBundles) {
 }
 
 TEST(InstructionsTest, AlterInvokeBundles) {
-  LLVMContext &C(getGlobalContext());
+  LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
   Value *Callee = Constant::getNullValue(FnTy->getPointerTo());

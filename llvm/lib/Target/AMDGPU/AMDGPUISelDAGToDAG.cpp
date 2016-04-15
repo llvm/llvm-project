@@ -661,7 +661,9 @@ bool AMDGPUDAGToDAGISel::isPrivateLoad(const LoadSDNode *N) const {
 
 bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {
   const BasicBlock *BB = FuncInfo->MBB->getBasicBlock();
-  return BB->getTerminator()->getMetadata("amdgpu.uniform");
+  const Instruction *Term = BB->getTerminator();
+  return Term->getMetadata("amdgpu.uniform") ||
+         Term->getMetadata("structurizecfg.uniform");
 }
 
 const char *AMDGPUDAGToDAGISel::getPassName() const {

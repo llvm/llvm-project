@@ -316,7 +316,7 @@ int main(int argc, char **argv) {
   EnableDebugBuffering = true;
 
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
 
   InitializeAllTargets();
   InitializeAllTargetMCs();

@@ -154,6 +154,24 @@ Value *PHINode::hasConstantValue() const {
   return ConstantValue;
 }
 
+/// hasConstantOrUndefValue - Whether the specified PHI node always merges
+/// together the same value, assuming that undefs result in the same value as
+/// non-undefs.
+/// Unlike \ref hasConstantValue, this does not return a value because the
+/// unique non-undef incoming value need not dominate the PHI node.
+bool PHINode::hasConstantOrUndefValue() const {
+  Value *ConstantValue = nullptr;
+  for (unsigned i = 0, e = getNumIncomingValues(); i != e; ++i) {
+    Value *Incoming = getIncomingValue(i);
+    if (Incoming != this && !isa<UndefValue>(Incoming)) {
+      if (ConstantValue && ConstantValue != Incoming)
+        return false;
+      ConstantValue = Incoming;
+    }
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 //                       LandingPadInst Implementation
 //===----------------------------------------------------------------------===//

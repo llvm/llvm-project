@@ -48,7 +48,6 @@ FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createSILowerControlFlowPass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIFixSGPRCopiesPass();
-FunctionPass *createSIFixSGPRLiveRangesPass();
 FunctionPass *createSICodeEmitterPass(formatted_raw_ostream &OS);
 FunctionPass *createSIInsertNopsPass();
 FunctionPass *createSIInsertWaitsPass();
@@ -92,9 +91,6 @@ FunctionPass *createAMDGPUAnnotateUniformValues();
 
 void initializeSIFixControlFlowLiveIntervalsPass(PassRegistry&);
 extern char &SIFixControlFlowLiveIntervalsID;
-
-void initializeSIFixSGPRLiveRangesPass(PassRegistry&);
-extern char &SIFixSGPRLiveRangesID;
 
 void initializeAMDGPUAnnotateUniformValuesPass(PassRegistry&);
 extern char &AMDGPUAnnotateUniformValuesPassID;

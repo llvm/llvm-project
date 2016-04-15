@@ -166,6 +166,14 @@ public:
   /// This overload allows specifying a set of candidate argument values.
   int getCallCost(const Function *F, ArrayRef<const Value *> Arguments) const;
 
+  /// \returns A value by which our inlining threshold should be multiplied.
+  /// This is primarily used to bump up the inlining threshold wholesale on
+  /// targets where calls are unusually expensive.
+  ///
+  /// TODO: This is a rather blunt instrument.  Perhaps altering the costs of
+  /// individual classes of instructions would be better.
+  unsigned getInliningThresholdMultiplier() const;
+
   /// \brief Estimate the cost of an intrinsic when lowered.
   ///
   /// Mirrors the \c getCallCost method but uses an intrinsic identifier.
@@ -366,6 +374,15 @@ public:
 
   /// \brief Enable matching of interleaved access groups.
   bool enableInterleavedAccessVectorization() const;
+
+  /// \brief Indicate that it is potentially unsafe to automatically vectorize
+  /// floating-point operations because the semantics of vector and scalar
+  /// floating-point semantics may differ. For example, ARM NEON v7 SIMD math
+  /// does not support IEEE-754 denormal numbers, while depending on the
+  /// platform, scalar floating-point math does.
+  /// This applies to floating-point math operations and calls, not memory
+  /// operations, shuffles, or casts.
+  bool isFPVectorizationPotentiallyUnsafe() const;
 
   /// \brief Return hardware support for population count.
   PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) const;
@@ -591,6 +608,7 @@ public:
   virtual int getCallCost(const Function *F, int NumArgs) = 0;
   virtual int getCallCost(const Function *F,
                           ArrayRef<const Value *> Arguments) = 0;
+  virtual unsigned getInliningThresholdMultiplier() = 0;
   virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
                                ArrayRef<Type *> ParamTys) = 0;
   virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
@@ -621,6 +639,7 @@ public:
   virtual bool shouldBuildLookupTables() = 0;
   virtual bool enableAggressiveInterleaving(bool LoopHasReductions) = 0;
   virtual bool enableInterleavedAccessVectorization() = 0;
+  virtual bool isFPVectorizationPotentiallyUnsafe() = 0;
   virtual PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) = 0;
   virtual bool haveFastSqrt(Type *Ty) = 0;
   virtual int getFPOpCost(Type *Ty) = 0;
@@ -712,6 +731,9 @@ public:
                   ArrayRef<const Value *> Arguments) override {
     return Impl.getCallCost(F, Arguments);
   }
+  unsigned getInliningThresholdMultiplier() override {
+    return Impl.getInliningThresholdMultiplier();
+  }
   int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
                        ArrayRef<Type *> ParamTys) override {
     return Impl.getIntrinsicCost(IID, RetTy, ParamTys);
@@ -778,6 +800,9 @@ public:
   }
   bool enableInterleavedAccessVectorization() override {
     return Impl.enableInterleavedAccessVectorization();
+  }
+  bool isFPVectorizationPotentiallyUnsafe() override {
+    return Impl.isFPVectorizationPotentiallyUnsafe();
   }
   PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) override {
     return Impl.getPopcntSupport(IntTyWidthInBit);

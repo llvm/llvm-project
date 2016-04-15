@@ -603,7 +603,8 @@ static std::unique_ptr<PrototypeAST> ParseExtern() {
 //===----------------------------------------------------------------------===//
 
 static std::unique_ptr<Module> TheModule;
-static IRBuilder<> Builder(getGlobalContext());
+static LLVMContext TheContext;
+static IRBuilder<> Builder(TheContext);
 static std::map<std::string, Value *> NamedValues;
 static std::unique_ptr<legacy::FunctionPassManager> TheFPM;
 static std::unique_ptr<KaleidoscopeJIT> TheJIT;
@@ -630,7 +631,7 @@ Function *getFunction(std::string Name) {
 }
 
 Value *NumberExprAST::codegen() {
-  return ConstantFP::get(getGlobalContext(), APFloat(Val));
+  return ConstantFP::get(TheContext, APFloat(Val));
 }
 
 Value *VariableExprAST::codegen() {
@@ -669,8 +670,7 @@ Value *BinaryExprAST::codegen() {
   case '<':
     L = Builder.CreateFCmpULT(L, R, "cmptmp");
     // Convert bool 0/1 to double 0.0 or 1.0
-    return Builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),
-                                "booltmp");
+    return Builder.CreateUIToFP(L, Type::getDoubleTy(TheContext), "booltmp");
   default:
     break;
   }
@@ -711,16 +711,15 @@ Value *IfExprAST::codegen() {
 
   // Convert condition to a bool by comparing equal to 0.0.
   CondV = Builder.CreateFCmpONE(
-      CondV, ConstantFP::get(getGlobalContext(), APFloat(0.0)), "ifcond");
+      CondV, ConstantFP::get(TheContext, APFloat(0.0)), "ifcond");
 
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
   // Create blocks for the then and else cases.  Insert the 'then' block at the
   // end of the function.
-  BasicBlock *ThenBB =
-      BasicBlock::Create(getGlobalContext(), "then", TheFunction);
-  BasicBlock *ElseBB = BasicBlock::Create(getGlobalContext(), "else");
-  BasicBlock *MergeBB = BasicBlock::Create(getGlobalContext(), "ifcont");
+  BasicBlock *ThenBB = BasicBlock::Create(TheContext, "then", TheFunction);
+  BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
+  BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
 
   Builder.CreateCondBr(CondV, ThenBB, ElseBB);
 
@@ -750,8 +749,7 @@ Value *IfExprAST::codegen() {
   // Emit merge block.
   TheFunction->getBasicBlockList().push_back(MergeBB);
   Builder.SetInsertPoint(MergeBB);
-  PHINode *PN =
-      Builder.CreatePHI(Type::getDoubleTy(getGlobalContext()), 2, "iftmp");
+  PHINode *PN = Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
 
   PN->addIncoming(ThenV, ThenBB);
   PN->addIncoming(ElseV, ElseBB);
@@ -783,8 +781,7 @@ Value *ForExprAST::codegen() {
   // block.
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
   BasicBlock *PreheaderBB = Builder.GetInsertBlock();
-  BasicBlock *LoopBB =
-      BasicBlock::Create(getGlobalContext(), "loop", TheFunction);
+  BasicBlock *LoopBB = BasicBlock::Create(TheContext, "loop", TheFunction);
 
   // Insert an explicit fall through from the current block to the LoopBB.
   Builder.CreateBr(LoopBB);
@@ -793,8 +790,8 @@ Value *ForExprAST::codegen() {
   Builder.SetInsertPoint(LoopBB);
 
   // Start the PHI node with an entry for Start.
-  PHINode *Variable = Builder.CreatePHI(Type::getDoubleTy(getGlobalContext()),
-                                        2, VarName.c_str());
+  PHINode *Variable =
+      Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, VarName.c_str());
   Variable->addIncoming(StartVal, PreheaderBB);
 
   // Within the loop, the variable is defined equal to the PHI node.  If it
@@ -816,7 +813,7 @@ Value *ForExprAST::codegen() {
       return nullptr;
   } else {
     // If not specified, use 1.0.
-    StepVal = ConstantFP::get(getGlobalContext(), APFloat(1.0));
+    StepVal = ConstantFP::get(TheContext, APFloat(1.0));
   }
 
   Value *NextVar = Builder.CreateFAdd(Variable, StepVal, "nextvar");
@@ -828,12 +825,12 @@ Value *ForExprAST::codegen() {
 
   // Convert condition to a bool by comparing equal to 0.0.
   EndCond = Builder.CreateFCmpONE(
-      EndCond, ConstantFP::get(getGlobalContext(), APFloat(0.0)), "loopcond");
+      EndCond, ConstantFP::get(TheContext, APFloat(0.0)), "loopcond");
 
   // Create the "after loop" block and insert it.
   BasicBlock *LoopEndBB = Builder.GetInsertBlock();
   BasicBlock *AfterBB =
-      BasicBlock::Create(getGlobalContext(), "afterloop", TheFunction);
+      BasicBlock::Create(TheContext, "afterloop", TheFunction);
 
   // Insert the conditional branch into the end of LoopEndBB.
   Builder.CreateCondBr(EndCond, LoopBB, AfterBB);
@@ -851,15 +848,14 @@ Value *ForExprAST::codegen() {
     NamedValues.erase(VarName);
 
   // for expr always returns 0.0.
-  return Constant::getNullValue(Type::getDoubleTy(getGlobalContext()));
+  return Constant::getNullValue(Type::getDoubleTy(TheContext));
 }
 
 Function *PrototypeAST::codegen() {
   // Make the function type:  double(double,double) etc.
-  std::vector<Type *> Doubles(Args.size(),
-                              Type::getDoubleTy(getGlobalContext()));
+  std::vector<Type *> Doubles(Args.size(), Type::getDoubleTy(TheContext));
   FunctionType *FT =
-      FunctionType::get(Type::getDoubleTy(getGlobalContext()), Doubles, false);
+      FunctionType::get(Type::getDoubleTy(TheContext), Doubles, false);
 
   Function *F =
       Function::Create(FT, Function::ExternalLinkage, Name, TheModule.get());
@@ -886,7 +882,7 @@ Function *FunctionAST::codegen() {
     BinopPrecedence[P.getOperatorName()] = P.getBinaryPrecedence();
 
   // Create a new basic block to start insertion into.
-  BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", TheFunction);
+  BasicBlock *BB = BasicBlock::Create(TheContext, "entry", TheFunction);
   Builder.SetInsertPoint(BB);
 
   // Record the function arguments in the NamedValues map.
@@ -921,7 +917,7 @@ Function *FunctionAST::codegen() {
 
 static void InitializeModuleAndPassManager() {
   // Open a new module.
-  TheModule = llvm::make_unique<Module>("my cool jit", getGlobalContext());
+  TheModule = llvm::make_unique<Module>("my cool jit", TheContext);
   TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
 
   // Create a new pass manager attached to it.

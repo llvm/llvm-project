@@ -25,12 +25,6 @@
 #include <cctype>
 using namespace llvm;
 
-static ManagedStatic<LLVMContext> GlobalContext;
-
-LLVMContext& llvm::getGlobalContext() {
-  return *GlobalContext;
-}
-
 LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
   // Create the fixed metadata kinds. This is done in the same order as the
   // MD_* enum values so that they correspond.

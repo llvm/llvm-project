@@ -1956,3 +1956,26 @@ define i1 @PR26407(i32 %x, i32 %y) {
   %cmp = icmp uge i32 %addx, %addy
   ret i1 %cmp
 }
+
+define i1 @cmp_inverse_mask_bits_set_eq(i32 %x) {
+; CHECK-LABEL: @cmp_inverse_mask_bits_set_eq(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %x, -43
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], -43
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or i32 %x, 42
+  %cmp = icmp eq i32 %or, -1
+  ret i1 %cmp
+}
+
+define i1 @cmp_inverse_mask_bits_set_ne(i32 %x) {
+; CHECK-LABEL: @cmp_inverse_mask_bits_set_ne(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %x, -43
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], -43
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or i32 %x, 42
+  %cmp = icmp ne i32 %or, -1
+  ret i1 %cmp
+}
+

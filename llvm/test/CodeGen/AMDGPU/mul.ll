@@ -96,8 +96,8 @@ define void @v_mul64_sext_c(i64 addrspace(1)* %out, i32 addrspace(1)* %in) {
 }
 
 ; FUNC-LABEL: {{^}}v_mul64_sext_inline_imm:
-; SI-DAG: v_mul_lo_i32 v{{[0-9]+}}, 9, v{{[0-9]+}}
-; SI-DAG: v_mul_hi_i32 v{{[0-9]+}}, 9, v{{[0-9]+}}
+; SI-DAG: v_mul_lo_i32 v{{[0-9]+}}, v{{[0-9]+}}, 9
+; SI-DAG: v_mul_hi_i32 v{{[0-9]+}}, v{{[0-9]+}}, 9
 ; SI: s_endpgm
 define void @v_mul64_sext_inline_imm(i64 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %val = load i32, i32 addrspace(1)* %in, align 4

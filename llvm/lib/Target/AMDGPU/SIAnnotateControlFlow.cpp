@@ -69,6 +69,8 @@ class SIAnnotateControlFlow : public FunctionPass {
 
   LoopInfo *LI;
 
+  bool isUniform(BranchInst *T);
+
   bool isTopOfStack(BasicBlock *BB);
 
   Value *popSaved();
@@ -162,6 +164,13 @@ bool SIAnnotateControlFlow::doInitialization(Module &M) {
   return false;
 }
 
+/// \brief Is the branch condition uniform or did the StructurizeCFG pass
+/// consider it as such?
+bool SIAnnotateControlFlow::isUniform(BranchInst *T) {
+  return DA->isUniform(T->getCondition()) ||
+         T->getMetadata("structurizecfg.uniform") != nullptr;
+}
+
 /// \brief Is BB the last block saved on the stack ?
 bool SIAnnotateControlFlow::isTopOfStack(BasicBlock *BB) {
   return !Stack.empty() && Stack.back().first == BB;
@@ -204,7 +213,7 @@ void SIAnnotateControlFlow::eraseIfUnused(PHINode *Phi) {
 
 /// \brief Open a new "If" block
 void SIAnnotateControlFlow::openIf(BranchInst *Term) {
-  if (DA->isUniform(Term->getCondition())) {
+  if (isUniform(Term)) {
     return;
   }
   Value *Ret = CallInst::Create(If, Term->getCondition(), "", Term);
@@ -214,7 +223,7 @@ void SIAnnotateControlFlow::openIf(BranchInst *Term) {
 
 /// \brief Close the last "If" block and open a new "Else" block
 void SIAnnotateControlFlow::insertElse(BranchInst *Term) {
-  if (DA->isUniform(Term->getCondition())) {
+  if (isUniform(Term)) {
     return;
   }
   Value *Ret = CallInst::Create(Else, popSaved(), "", Term);
@@ -316,7 +325,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
 
 /// \brief Handle a back edge (loop)
 void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
-  if (DA->isUniform(Term->getCondition())) {
+  if (isUniform(Term)) {
     return;
   }
 
@@ -341,8 +350,7 @@ void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
 void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
   llvm::Loop *L = LI->getLoopFor(BB);
 
-  if (Stack.back().first != BB)
-    return;
+  assert(Stack.back().first == BB);
 
   if (L && L->getHeader() == BB) {
     // We can't insert an EndCF call into a loop header, because it will

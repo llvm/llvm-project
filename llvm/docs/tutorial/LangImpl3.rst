@@ -74,7 +74,7 @@ parser, which will be used to report errors found during code generation
 .. code-block:: c++
 
     static std::unique_ptr<Module> *TheModule;
-    static IRBuilder<> Builder(getGlobalContext());
+    static IRBuilder<> Builder(LLVMContext);
     static std::map<std::string, Value*> NamedValues;
 
     Value *LogErrorV(const char *Str) {
@@ -116,7 +116,7 @@ First we'll do numeric literals:
 .. code-block:: c++
 
     Value *NumberExprAST::codegen() {
-      return ConstantFP::get(getGlobalContext(), APFloat(Val));
+      return ConstantFP::get(LLVMContext, APFloat(Val));
     }
 
 In the LLVM IR, numeric constants are represented with the
@@ -165,7 +165,7 @@ variables <LangImpl7.html#user-defined-local-variables>`_.
       case '<':
         L = Builder.CreateFCmpULT(L, R, "cmptmp");
         // Convert bool 0/1 to double 0.0 or 1.0
-        return Builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),
+        return Builder.CreateUIToFP(L, Type::getDoubleTy(LLVMContext),
                                     "booltmp");
       default:
         return LogErrorV("invalid binary operator");
@@ -264,9 +264,9 @@ with:
     Function *PrototypeAST::codegen() {
       // Make the function type:  double(double,double) etc.
       std::vector<Type*> Doubles(Args.size(),
-                                 Type::getDoubleTy(getGlobalContext()));
+                                 Type::getDoubleTy(LLVMContext));
       FunctionType *FT =
-        FunctionType::get(Type::getDoubleTy(getGlobalContext()), Doubles, false);
+        FunctionType::get(Type::getDoubleTy(LLVMContext), Doubles, false);
 
       Function *F =
         Function::Create(FT, Function::ExternalLinkage, Name, TheModule);
@@ -340,7 +340,7 @@ assert that the function is empty (i.e. has no body yet) before we start.
 .. code-block:: c++
 
   // Create a new basic block to start insertion into.
-  BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", TheFunction);
+  BasicBlock *BB = BasicBlock::Create(LLVMContext, "entry", TheFunction);
   Builder.SetInsertPoint(BB);
 
   // Record the function arguments in the NamedValues map.

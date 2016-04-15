@@ -381,7 +381,8 @@ static std::unique_ptr<PrototypeAST> ParseExtern() {
 //===----------------------------------------------------------------------===//
 
 static std::unique_ptr<Module> TheModule;
-static IRBuilder<> Builder(getGlobalContext());
+static LLVMContext TheContext;
+static IRBuilder<> Builder(TheContext);
 static std::map<std::string, Value *> NamedValues;
 
 Value *LogErrorV(const char *Str) {
@@ -390,7 +391,7 @@ Value *LogErrorV(const char *Str) {
 }
 
 Value *NumberExprAST::codegen() {
-  return ConstantFP::get(getGlobalContext(), APFloat(Val));
+  return ConstantFP::get(TheContext, APFloat(Val));
 }
 
 Value *VariableExprAST::codegen() {
@@ -417,8 +418,7 @@ Value *BinaryExprAST::codegen() {
   case '<':
     L = Builder.CreateFCmpULT(L, R, "cmptmp");
     // Convert bool 0/1 to double 0.0 or 1.0
-    return Builder.CreateUIToFP(L, Type::getDoubleTy(getGlobalContext()),
-                                "booltmp");
+    return Builder.CreateUIToFP(L, Type::getDoubleTy(TheContext), "booltmp");
   default:
     return LogErrorV("invalid binary operator");
   }
@@ -446,10 +446,9 @@ Value *CallExprAST::codegen() {
 
 Function *PrototypeAST::codegen() {
   // Make the function type:  double(double,double) etc.
-  std::vector<Type *> Doubles(Args.size(),
-                              Type::getDoubleTy(getGlobalContext()));
+  std::vector<Type *> Doubles(Args.size(), Type::getDoubleTy(TheContext));
   FunctionType *FT =
-      FunctionType::get(Type::getDoubleTy(getGlobalContext()), Doubles, false);
+      FunctionType::get(Type::getDoubleTy(TheContext), Doubles, false);
 
   Function *F =
       Function::Create(FT, Function::ExternalLinkage, Name, TheModule.get());
@@ -473,7 +472,7 @@ Function *FunctionAST::codegen() {
     return nullptr;
 
   // Create a new basic block to start insertion into.
-  BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", TheFunction);
+  BasicBlock *BB = BasicBlock::Create(TheContext, "entry", TheFunction);
   Builder.SetInsertPoint(BB);
 
   // Record the function arguments in the NamedValues map.
@@ -577,7 +576,7 @@ int main() {
   getNextToken();
 
   // Make the module, which holds all the code.
-  TheModule = llvm::make_unique<Module>("my cool jit", getGlobalContext());
+  TheModule = llvm::make_unique<Module>("my cool jit", TheContext);
 
   // Run the main "interpreter loop" now.
   MainLoop();

@@ -4,9 +4,9 @@
 ; Function Attrs: nounwind
 define void @l()  {
 entry:
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %call = tail call i32 @k()
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %call1 = tail call i32 @j()
   %cmp = icmp eq i32 %call, %call1
 ; CHECK: bnec
@@ -15,12 +15,12 @@ entry:
 if.then:                                          ; preds = %entry:
 ; STATIC: nop
 ; STATIC: jal
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   tail call void @f(i32 signext -2)
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-; CHECK: jic $ra, 0
+; CHECK: jrc  $ra
   ret void
 }
 
@@ -33,9 +33,9 @@ declare void @f(i32 signext)
 ; Function Attrs: define void @l2()  {
 define void @l2()  {
 entry:
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %call = tail call i32 @k()
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %call1 = tail call i32 @i()
   %cmp = icmp eq i32 %call, %call1
 ; CHECK beqc
@@ -44,12 +44,12 @@ entry:
 if.then:                                          ; preds = %entry:
 ; STATIC: nop
 ; STATIC: jal
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   tail call void @f(i32 signext -1)
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
-; CHECK: jic $ra, 0
+; CHECK: jrc  $ra
   ret void
 }
 
@@ -58,7 +58,7 @@ declare i32 @i()
 ; Function Attrs: nounwind
 define void @l3()  {
 entry:
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %call = tail call i32 @k()
   %cmp = icmp slt i32 %call, 0
 ; CHECK : bgez
@@ -67,12 +67,12 @@ entry:
 if.then:                                          ; preds = %entry:
 ; STATIC: nop
 ; STATIC: jal
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   tail call void @f(i32 signext 0)
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-; CHECK: jic $ra, 0
+; CHECK: jrc $ra
   ret void
 }
 
@@ -91,16 +91,16 @@ if.then:                                          ; preds = %entry:
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-; CHECK: jic $ra, 0
+; CHECK: jrc $ra
   ret void
 }
 
 ; Function Attrs: nounwind
 define void @l5()  {
 entry:
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %call = tail call i32 @k()
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %cmp = icmp sgt i32 %call, 0
 ; CHECK: blezc
   br i1 %cmp, label %if.then, label %if.end
@@ -108,21 +108,21 @@ entry:
 if.then:                                          ; preds = %entry:
 ; STATIC: nop
 ; STATIC: jal
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   tail call void @f(i32 signext 2) 
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-; CHECK: jic $ra, 0
+; CHECK: jrc  $ra
   ret void
 }
 
 ; Function Attrs: nounwind
 define void @l6()  {
 entry:
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %call = tail call i32 @k()
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %cmp = icmp sgt i32 %call, -1
 ; CHECK: bltzc
   br i1 %cmp, label %if.then, label %if.end
@@ -130,19 +130,19 @@ entry:
 if.then:                                          ; preds = %entry:
 ; STATIC: nop
 ; STATIC: jal
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   tail call void @f(i32 signext 3)
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-; CHECK: jic $ra, 0
+; CHECK: jrc $ra
   ret void
 }
 
 ; Function Attrs: nounwind
 define void @l7()  {
 entry:
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %call = tail call i32 @k()
   %cmp = icmp eq i32 %call, 0
 ; CHECK: bnezc
@@ -151,19 +151,19 @@ entry:
 if.then:                                          ; preds = %entry:
 ; STATIC: nop
 ; STATIC: jal
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   tail call void @f(i32 signext 4)
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-; CHECK: jic $ra, 0
+; CHECK: jrc  $ra
   ret void
 }
 
 ; Function Attrs: nounwind
 define void @l8()  {
 entry:
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %call = tail call i32 @k()
   %cmp = icmp eq i32 %call, 0
 ; CHECK: beqzc
@@ -172,12 +172,12 @@ entry:
 if.then:                                          ; preds = %entry:
 ; STATIC: nop
 ; STATIC: jal
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   tail call void @f(i32 signext 5)
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
-; CHECK: jic $ra, 0
+; CHECK: jrc  $ra
   ret void
 }
 
@@ -187,20 +187,20 @@ entry:
   store i8* ()* %i, i8* ()** %i.addr, align 4
 ; STATIC32: jal
 ; STATIC32: nop
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %call = call i32 @k()
-; PIC: jialc $25, 0
+; PIC: jalrc $25
   %cmp = icmp ne i32 %call, 0
 ; CHECK: beqzc
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   %0 = load i8* ()*, i8* ()** %i.addr, align 4
-; CHECK: jialc $25, 0
+; CHECK: jalrc $25
   %call1 = call i8* %0()
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-; CHECK: jic $ra, 0
+; CHECK: jrc $ra
   ret i32 -1
 }

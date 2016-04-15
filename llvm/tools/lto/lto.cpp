@@ -101,7 +101,8 @@ static void lto_initialize() {
     InitializeAllAsmPrinters();
     InitializeAllDisassemblers();
 
-    LTOContext = &getGlobalContext();
+    static LLVMContext Context;
+    LTOContext = &Context;
     LTOContext->setDiagnosticHandler(diagnosticHandler, nullptr, true);
     initialized = true;
   }

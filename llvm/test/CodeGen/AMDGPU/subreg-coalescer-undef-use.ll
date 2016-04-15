@@ -12,7 +12,7 @@ target triple="amdgcn--"
 ; CHECK-NEXT: s_and_saveexec_b64 s[2:3], vcc
 ; CHECK-NEXT: s_xor_b64 s[2:3], exec, s[2:3]
 ; BB0_1:
-; CHECK: s_load_dword s6, s[0:1], 0xa
+; CHECK: s_load_dword s0, s[0:1], 0xa
 ; CHECK-NEXT: s_waitcnt lgkmcnt(0)
 ; BB0_2:
 ; CHECK: s_or_b64 exec, exec, s[2:3]

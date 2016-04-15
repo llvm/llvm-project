@@ -1904,6 +1904,11 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
 
   OS.indent(Depth) << "SCEV assumptions:\n";
   PSE.getUnionPredicate().print(OS, Depth);
+
+  OS << "\n";
+
+  OS.indent(Depth) << "Expressions re-written:\n";
+  PSE.print(OS, Depth);
 }
 
 const LoopAccessInfo &

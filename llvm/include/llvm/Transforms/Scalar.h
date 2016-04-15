@@ -430,6 +430,10 @@ createSeparateConstOffsetFromGEPPass(const TargetMachine *TM = nullptr,
 //
 FunctionPass *createSpeculativeExecutionPass();
 
+// Same as createSpeculativeExecutionPass, but does nothing unless
+// TargetTransformInfo::hasBranchDivergence() is true.
+FunctionPass *createSpeculativeExecutionIfHasBranchDivergencePass();
+
 //===----------------------------------------------------------------------===//
 //
 // LoadCombine - Combine loads into bigger loads.
