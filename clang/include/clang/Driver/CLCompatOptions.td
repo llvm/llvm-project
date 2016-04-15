@@ -45,8 +45,8 @@ class CLCompileJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<cl_compile_Group>,
   Flags<[CLOption, DriverOption]>;
 
-class CLRemainingArgs<string name> : Option<["/", "-"], name,
-  KIND_REMAINING_ARGS>, Group<cl_Group>, Flags<[CLOption, DriverOption]>;
+class CLRemainingArgsJoined<string name> : Option<["/", "-"], name,
+  KIND_REMAINING_ARGS_JOINED>, Group<cl_Group>, Flags<[CLOption, DriverOption]>;
 
 // Aliases:
 // (We don't put any of these in cl_compile_Group as the options they alias are
@@ -215,7 +215,7 @@ def _SLASH_imsvc : CLJoinedOrSeparate<"imsvc">,
   MetaVarName<"<dir>">;
 def _SLASH_LD : CLFlag<"LD">, HelpText<"Create DLL">;
 def _SLASH_LDd : CLFlag<"LDd">, HelpText<"Create debug DLL">;
-def _SLASH_link : CLRemainingArgs<"link">,
+def _SLASH_link : CLRemainingArgsJoined<"link">,
   HelpText<"Forward options to the linker">, MetaVarName<"<options>">;
 def _SLASH_MD : Option<["/", "-"], "MD", KIND_FLAG>, Group<_SLASH_M_Group>,
   Flags<[CLOption, DriverOption]>, HelpText<"Use DLL run-time">;

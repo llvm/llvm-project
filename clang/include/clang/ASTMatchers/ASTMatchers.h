@@ -163,10 +163,34 @@ const internal::VariadicDynCastAllOfMatcher<Decl, TranslationUnitDecl>
 /// Given
 /// \code
 ///   typedef int X;
+//    using Y = int;
 /// \endcode
 /// typedefDecl()
-///   matches "typedef int X"
+///   matches "typedef int X", but not "using Y = int"
 const internal::VariadicDynCastAllOfMatcher<Decl, TypedefDecl> typedefDecl;
+
+/// \brief Matches typedef name declarations.
+///
+/// Given
+/// \code
+///   typedef int X;
+//    using Y = int;
+/// \endcode
+/// typedefNameDecl()
+///   matches "typedef int X" and "using Y = int"
+const internal::VariadicDynCastAllOfMatcher<Decl, TypedefNameDecl>
+    typedefNameDecl;
+
+/// \brief Matches type alias declarations.
+///
+/// Given
+/// \code
+///   typedef int X;
+//    using Y = int;
+/// \endcode
+/// typeAliasDecl()
+///   matches "using Y = int", but not "typedef int X"
+const internal::VariadicDynCastAllOfMatcher<Decl, TypeAliasDecl> typeAliasDecl;
 
 /// \brief Matches AST nodes that were expanded within the main-file.
 ///
@@ -2451,9 +2475,9 @@ AST_MATCHER_P_OVERLOAD(CallExpr, callee, internal::Matcher<Decl>, InnerMatcher,
 ///  typedef int U;
 /// \endcode
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
-    hasType, AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, TypedefDecl, ValueDecl),
+    hasType, AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, TypedefNameDecl, ValueDecl),
     internal::Matcher<QualType>, InnerMatcher, 0) {
-  return InnerMatcher.matches(internal::getUnderlyingType<NodeType>(Node),
+  return InnerMatcher.matches(internal::getUnderlyingType(Node),
                               Finder, Builder);
 }
 

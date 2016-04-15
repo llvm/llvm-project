@@ -1101,6 +1101,16 @@ TEST(HasType, MatchesTypedefDecl) {
                       typedefDecl(hasType(asString("foo")), hasName("bar"))));
 }
 
+TEST(HasType, MatchesTypedefNameDecl) {
+  EXPECT_TRUE(matches("using X = int;", typedefNameDecl(hasType(asString("int")))));
+  EXPECT_TRUE(matches("using T = const int;",
+                      typedefNameDecl(hasType(asString("const int")))));
+  EXPECT_TRUE(notMatches("using T = const int;",
+                         typedefNameDecl(hasType(asString("int")))));
+  EXPECT_TRUE(matches("using foo = int; using bar = foo;",
+                      typedefNameDecl(hasType(asString("foo")), hasName("bar"))));
+}
+
 TEST(HasTypeLoc, MatchesDeclaratorDecls) {
   EXPECT_TRUE(matches("int x;",
                       varDecl(hasName("x"), hasTypeLoc(loc(asString("int"))))));
@@ -5404,9 +5414,25 @@ TEST(EqualsBoundNodeMatcher, UnlessDescendantsOfAncestorsMatch) {
           .bind("data")));
 }
 
-TEST(TypeDefDeclMatcher, Match) {
+TEST(TypedefDeclMatcher, Match) {
   EXPECT_TRUE(matches("typedef int typedefDeclTest;",
                       typedefDecl(hasName("typedefDeclTest"))));
+  EXPECT_TRUE(notMatches("using typedefDeclTest2 = int;",
+                         typedefDecl(hasName("typedefDeclTest2"))));
+}
+
+TEST(TypeAliasDeclMatcher, Match) {
+  EXPECT_TRUE(matches("using typeAliasTest2 = int;",
+                      typeAliasDecl(hasName("typeAliasTest2"))));
+  EXPECT_TRUE(notMatches("typedef int typeAliasTest;",
+                         typeAliasDecl(hasName("typeAliasTest"))));
+}
+
+TEST(TypedefNameDeclMatcher, Match) {
+  EXPECT_TRUE(matches("typedef int typedefNameDeclTest1;",
+                      typedefNameDecl(hasName("typedefNameDeclTest1"))));
+  EXPECT_TRUE(matches("using typedefNameDeclTest2 = int;",
+                      typedefNameDecl(hasName("typedefNameDeclTest2"))));
 }
 
 TEST(IsInlineMatcher, IsInline) {

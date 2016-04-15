@@ -494,6 +494,7 @@ const char *DeclSpec::getSpecifierName(TQ T) {
   case DeclSpec::TQ_restrict:    return "restrict";
   case DeclSpec::TQ_volatile:    return "volatile";
   case DeclSpec::TQ_atomic:      return "_Atomic";
+  case DeclSpec::TQ_unaligned:   return "__unaligned";
   }
   llvm_unreachable("Unknown typespec!");
 }
@@ -796,6 +797,7 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc, const char *&PrevSpec,
   case TQ_restrict: TQ_restrictLoc = Loc; return false;
   case TQ_volatile: TQ_volatileLoc = Loc; return false;
   case TQ_atomic:   TQ_atomicLoc = Loc; return false;
+  case TQ_unaligned: TQ_unalignedLoc = Loc; return false;
   }
 
   llvm_unreachable("Unknown type qualifier!");
@@ -961,10 +963,10 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
        TypeSpecSign != TSS_unspecified ||
        TypeAltiVecVector || TypeAltiVecPixel || TypeAltiVecBool ||
        TypeQualifiers)) {
-    const unsigned NumLocs = 8;
+    const unsigned NumLocs = 9;
     SourceLocation ExtraLocs[NumLocs] = {
       TSWLoc, TSCLoc, TSSLoc, AltiVecLoc,
-      TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc
+      TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc, TQ_unalignedLoc
     };
     FixItHint Hints[NumLocs];
     SourceLocation FirstLoc;

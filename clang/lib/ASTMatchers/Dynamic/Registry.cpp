@@ -388,7 +388,9 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(translationUnitDecl);
   REGISTER_MATCHER(type);
   REGISTER_MATCHER(typedefDecl);
+  REGISTER_MATCHER(typedefNameDecl);
   REGISTER_MATCHER(typedefType);
+  REGISTER_MATCHER(typeAliasDecl);
   REGISTER_MATCHER(typeLoc);
   REGISTER_MATCHER(unaryExprOrTypeTraitExpr);
   REGISTER_MATCHER(unaryOperator);

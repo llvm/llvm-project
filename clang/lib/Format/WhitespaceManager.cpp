@@ -558,6 +558,14 @@ void WhitespaceManager::appendIndentText(std::string &Text,
     }
     Text.append(Spaces, ' ');
     break;
+  case FormatStyle::UT_ForContinuationAndIndentation:
+    if (WhitespaceStartColumn == 0) {
+      unsigned Tabs = Spaces / Style.TabWidth;
+      Text.append(Tabs, '\t');
+      Spaces -= Tabs * Style.TabWidth;
+    }
+    Text.append(Spaces, ' ');
+    break;
   }
 }
 

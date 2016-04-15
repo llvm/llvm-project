@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify -fms-extensions -fexceptions -fcxx-exceptions
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify -fms-extensions -fexceptions -fcxx-exceptions -DTEST1
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify -fexceptions -fcxx-exceptions -DTEST2
 
+#if TEST1
 
 // Microsoft doesn't validate exception specification.
 namespace microsoft_exception_spec {
@@ -80,7 +82,32 @@ struct M {
 // __unaligned handling
 typedef char __unaligned *aligned_type;
 typedef struct UnalignedTag { int f; } __unaligned *aligned_type2;
+typedef char __unaligned aligned_type3;
 
+// Check that __unaligned qualifier can be used for overloading
+void foo_unaligned(int *arg) {}
+void foo_unaligned(__unaligned int *arg) {}
+void foo_unaligned(int arg) {} // expected-note {{previous definition is here}}
+void foo_unaligned(__unaligned int arg) {} // expected-error {{redefinition of 'foo_unaligned'}}
+class A_unaligned {};
+class B_unaligned : public A_unaligned {};
+int foo_unaligned(__unaligned A_unaligned *arg) { return 0; }
+void *foo_unaligned(B_unaligned *arg) { return 0; }
+
+void test_unaligned() {
+  int *p1 = 0;
+  foo_unaligned(p1);
+
+  __unaligned int *p2 = 0;
+  foo_unaligned(p2);
+
+  __unaligned B_unaligned *p3 = 0;
+  int p4 = foo_unaligned(p3);
+
+  B_unaligned *p5 = p3; // expected-error {{cannot initialize a variable of type 'B_unaligned *' with an lvalue of type '__unaligned B_unaligned *'}}
+
+  __unaligned B_unaligned *p6 = p3;
+}
 
 template<typename T> void h1(T (__stdcall M::* const )()) { }
 
@@ -420,3 +447,15 @@ struct S {
 
 int S::fn() { return 0; } // expected-warning {{is missing exception specification}}
 }
+
+#elif TEST2
+
+// Check that __unaligned is not recognized if MS extensions are not enabled
+typedef char __unaligned *aligned_type; // expected-error {{expected ';' after top level declarator}}
+
+#else
+
+#error Unknown test mode
+
+#endif
+

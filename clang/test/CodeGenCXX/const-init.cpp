@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++98 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++11 -o - %s | FileCheck %s
 
 // CHECK: @a = global i32 10
 int a = 10;
@@ -27,8 +29,13 @@ C g0 = { C::e1 };
 
 namespace test2 {
   struct A {
+#if __cplusplus <= 199711L
     static const double d = 1.0;
     static const float f = d / 2;
+#else
+    static constexpr double d = 1.0;
+    static constexpr float f = d / 2;
+#endif
     static int g();
   } a;
 

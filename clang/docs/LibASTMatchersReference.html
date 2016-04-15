@@ -405,13 +405,36 @@ decl(hasDeclContext(translationUnitDecl()))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('typeAliasDecl0')"><a name="typeAliasDecl0Anchor">typeAliasDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypeAliasDecl.html">TypeAliasDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="typeAliasDecl0"><pre>Matches type alias declarations.
+
+Given
+  typedef int X;
+   using Y = int;
+typeAliasDecl()
+  matches "using Y = int", but not "typedef int X"
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('typedefDecl0')"><a name="typedefDecl0Anchor">typedefDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefDecl.html">TypedefDecl</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="typedefDecl0"><pre>Matches typedef declarations.
 
 Given
   typedef int X;
+   using Y = int;
 typedefDecl()
-  matches "typedef int X"
+  matches "typedef int X", but not "using Y = int"
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('typedefNameDecl0')"><a name="typedefNameDecl0Anchor">typedefNameDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="typedefNameDecl0"><pre>Matches typedef name declarations.
+
+Given
+  typedef int X;
+   using Y = int;
+typedefNameDecl()
+  matches "typedef int X" and "using Y = int"
 </pre></td></tr>
 
 
@@ -5083,7 +5106,7 @@ Usable as: Any Matcher
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefDecl.html">TypedefDecl</a>&gt;</td><td class="name" onclick="toggle('hasType1')"><a name="hasType1Anchor">hasType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerMatcher</td></tr>
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefNameDecl.html">TypedefNameDecl</a>&gt;</td><td class="name" onclick="toggle('hasType1')"><a name="hasType1Anchor">hasType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasType1"><pre>Matches if the expression's or declaration's type matches a type
 matcher.
 

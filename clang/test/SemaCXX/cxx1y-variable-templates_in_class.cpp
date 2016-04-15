@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only %s -Wno-c++11-extensions -Wno-c++1y-extensions -DPRECXX11
+// RUN: %clang_cc1 -std=c++98 -verify -fsyntax-only %s -Wno-c++11-extensions -Wno-c++1y-extensions -DPRECXX11
 // RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only -Wno-c++1y-extensions %s
 // RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only %s -DCPP1Y
 

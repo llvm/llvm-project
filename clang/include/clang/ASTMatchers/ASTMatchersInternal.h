@@ -96,12 +96,13 @@ private:
 
 /// \brief Unifies obtaining the underlying type of a regular node through
 /// `getType` and a TypedefNameDecl node through `getUnderlyingType`.
-template <typename NodeType>
-inline QualType getUnderlyingType(const NodeType &Node) {
+inline QualType getUnderlyingType(const Expr &Node) { return Node.getType(); }
+
+inline QualType getUnderlyingType(const ValueDecl &Node) {
   return Node.getType();
 }
 
-template <> inline QualType getUnderlyingType(const TypedefDecl &Node) {
+inline QualType getUnderlyingType(const TypedefNameDecl &Node) {
   return Node.getUnderlyingType();
 }
 

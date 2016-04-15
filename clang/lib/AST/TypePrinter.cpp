@@ -1592,6 +1592,12 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
     AppendTypeQualList(OS, quals, Policy.LangOpts.C99);
     addSpace = true;
   }
+  if (hasUnaligned()) {
+    if (addSpace)
+      OS << ' ';
+    OS << "__unaligned";
+    addSpace = true;
+  }
   if (unsigned addrspace = getAddressSpace()) {
     if (addSpace)
       OS << ' ';

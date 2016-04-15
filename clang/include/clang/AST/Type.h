@@ -152,8 +152,8 @@ public:
 
   enum {
     /// The maximum supported address space number.
-    /// 24 bits should be enough for anyone.
-    MaxAddressSpace = 0xffffffu,
+    /// 23 bits should be enough for anyone.
+    MaxAddressSpace = 0x7fffffu,
 
     /// The width of the "fast" qualifier mask.
     FastWidth = 3,
@@ -264,6 +264,13 @@ public:
     assert(!(mask & ~CVRMask) && "bitmask contains non-CVR bits");
     Mask |= mask;
   }
+
+  bool hasUnaligned() const { return Mask & UMask; }
+  void setUnaligned(bool flag) {
+    Mask = (Mask & ~UMask) | (flag ? UMask : 0);
+  }
+  void removeUnaligned() { Mask &= ~UMask; }
+  void addUnaligned() { Mask |= UMask; }
 
   bool hasObjCGCAttr() const { return Mask & GCAttrMask; }
   GC getObjCGCAttr() const { return GC((Mask & GCAttrMask) >> GCAttrShift); }
@@ -433,7 +440,9 @@ public:
            // ObjC lifetime qualifiers must match exactly.
            getObjCLifetime() == other.getObjCLifetime() &&
            // CVR qualifiers may subset.
-           (((Mask & CVRMask) | (other.Mask & CVRMask)) == (Mask & CVRMask));
+           (((Mask & CVRMask) | (other.Mask & CVRMask)) == (Mask & CVRMask)) &&
+           // U qualifier may superset.
+           (!(other.Mask & UMask) || (Mask & UMask));
   }
 
   /// \brief Determines if these qualifiers compatibly include another set of
@@ -501,16 +510,19 @@ public:
 
 private:
 
-  // bits:     |0 1 2|3 .. 4|5  ..  7|8   ...   31|
-  //           |C R V|GCAttr|Lifetime|AddressSpace|
+  // bits:     |0 1 2|3|4 .. 5|6  ..  8|9   ...   31|
+  //           |C R V|U|GCAttr|Lifetime|AddressSpace|
   uint32_t Mask;
 
-  static const uint32_t GCAttrMask = 0x18;
-  static const uint32_t GCAttrShift = 3;
-  static const uint32_t LifetimeMask = 0xE0;
-  static const uint32_t LifetimeShift = 5;
-  static const uint32_t AddressSpaceMask = ~(CVRMask|GCAttrMask|LifetimeMask);
-  static const uint32_t AddressSpaceShift = 8;
+  static const uint32_t UMask = 0x8;
+  static const uint32_t UShift = 3;
+  static const uint32_t GCAttrMask = 0x30;
+  static const uint32_t GCAttrShift = 4;
+  static const uint32_t LifetimeMask = 0x1C0;
+  static const uint32_t LifetimeShift = 6;
+  static const uint32_t AddressSpaceMask =
+      ~(CVRMask | UMask | GCAttrMask | LifetimeMask);
+  static const uint32_t AddressSpaceShift = 9;
 };
 
 /// A std::pair-like structure for storing a qualified type split
@@ -4278,6 +4290,8 @@ class InjectedClassNameType : public Type {
   friend class ASTReader; // FIXME: ASTContext::getInjectedClassNameType is not
                           // currently suitable for AST reading, too much
                           // interdependencies.
+  friend class ASTNodeImporter;
+
   InjectedClassNameType(CXXRecordDecl *D, QualType TST)
     : Type(InjectedClassName, QualType(), /*Dependent=*/true,
            /*InstantiationDependent=*/true,
