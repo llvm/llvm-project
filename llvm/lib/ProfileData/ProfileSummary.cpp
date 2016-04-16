@@ -15,6 +15,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
@@ -31,6 +32,10 @@ const std::vector<uint32_t> ProfileSummary::DefaultCutoffs(
      200000, 300000, 400000, 500000, 600000, 500000, 600000, 700000, 800000,
      900000, 950000, 990000, 999000, 999900, 999990, 999999});
 const char *ProfileSummary::KindStr[2] = {"InstrProf", "SampleProfile"};
+
+ManagedStatic<std::pair<Module *, std::unique_ptr<ProfileSummary>>>
+    ProfileSummary::CachedSummary;
+ManagedStatic<sys::SmartMutex<true>> ProfileSummary::CacheMutex;
 
 void InstrProfSummary::addRecord(const InstrProfRecord &R) {
   addEntryCount(R.Counts[0]);
@@ -80,6 +85,39 @@ void ProfileSummary::computeDetailedSummary() {
     ProfileSummaryEntry PSE = {Cutoff, Count, CountsSeen};
     DetailedSummary.push_back(PSE);
   }
+}
+
+bool ProfileSummary::operator==(ProfileSummary &Other) {
+  if (getKind() != Other.getKind())
+    return false;
+  if (TotalCount != Other.TotalCount)
+    return false;
+  if (MaxCount != Other.MaxCount)
+    return false;
+  if (MaxFunctionCount != Other.MaxFunctionCount)
+    return false;
+  if (NumFunctions != Other.NumFunctions)
+    return false;
+  if (NumCounts != Other.NumCounts)
+    return false;
+  std::vector<ProfileSummaryEntry> DS1 = getDetailedSummary();
+  std::vector<ProfileSummaryEntry> DS2 = Other.getDetailedSummary();
+  auto CompareSummaryEntry = [](ProfileSummaryEntry &E1,
+                                ProfileSummaryEntry &E2) {
+    return E1.Cutoff == E2.Cutoff && E1.MinCount == E2.MinCount &&
+           E1.NumCounts == E2.NumCounts;
+  };
+  if (!std::equal(DS1.begin(), DS1.end(), DS2.begin(), CompareSummaryEntry))
+    return false;
+  return true;
+}
+
+bool InstrProfSummary::operator==(ProfileSummary &Other) {
+  InstrProfSummary *OtherIPS = dyn_cast<InstrProfSummary>(&Other);
+  if (!OtherIPS)
+    return false;
+  return MaxInternalBlockCount == OtherIPS->MaxInternalBlockCount &&
+         ProfileSummary::operator==(Other);
 }
 
 // Returns true if the function is a hot function.
@@ -361,4 +399,10 @@ ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
     return getInstrProfSummaryFromMD(Tuple);
   else
     return nullptr;
+}
+
+ProfileSummary *ProfileSummary::computeProfileSummary(Module *M) {
+  if (Metadata *MD = M->getProfileSummary())
+    return getFromMD(MD);
+  return nullptr;
 }

@@ -51,9 +51,30 @@ public:
   unsigned getRegPressureSetLimit(const MachineFunction &MF,
                                   unsigned Idx) const override;
 
+
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;
 
+
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;
+  bool requiresVirtualBaseRegisters(const MachineFunction &Fn) const override;
+
+  int64_t getFrameIndexInstrOffset(const MachineInstr *MI,
+                                   int Idx) const override;
+
+  bool needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const override;
+
+  void materializeFrameBaseRegister(MachineBasicBlock *MBB,
+                                    unsigned BaseReg, int FrameIdx,
+                                    int64_t Offset) const override;
+
+  void resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
+                         int64_t Offset) const override;
+
+  bool isFrameOffsetLegal(const MachineInstr *MI, unsigned BaseReg,
+                          int64_t Offset) const override;
+
+  const TargetRegisterClass *getPointerRegClass(
+    const MachineFunction &MF, unsigned Kind = 0) const override;
 
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,

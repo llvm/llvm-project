@@ -55,7 +55,8 @@ static cl::opt<bool> DisableHoisting("disable-spill-hoist", cl::Hidden,
                                      cl::desc("Disable inline spill hoisting"));
 
 namespace {
-class HoistSpillHelper {
+class HoistSpillHelper : private LiveRangeEdit::Delegate {
+  MachineFunction &MF;
   LiveIntervals &LIS;
   LiveStacks &LSS;
   AliasAnalysis *AA;
@@ -105,7 +106,7 @@ class HoistSpillHelper {
 public:
   HoistSpillHelper(MachineFunctionPass &pass, MachineFunction &mf,
                    VirtRegMap &vrm)
-      : LIS(pass.getAnalysis<LiveIntervals>()),
+      : MF(mf), LIS(pass.getAnalysis<LiveIntervals>()),
         LSS(pass.getAnalysis<LiveStacks>()),
         AA(&pass.getAnalysis<AAResultsWrapperPass>().getAAResults()),
         MDT(pass.getAnalysis<MachineDominatorTree>()),
@@ -118,7 +119,8 @@ public:
   void addToMergeableSpills(MachineInstr *Spill, int StackSlot,
                             unsigned Original);
   bool rmFromMergeableSpills(MachineInstr *Spill, int StackSlot);
-  void hoistAllSpills(LiveRangeEdit &Edit);
+  void hoistAllSpills();
+  void LRE_DidCloneVirtReg(unsigned, unsigned) override;
 };
 
 class InlineSpiller : public Spiller {
@@ -1040,13 +1042,7 @@ void InlineSpiller::spill(LiveRangeEdit &edit) {
 
 /// Optimizations after all the reg selections and spills are done.
 ///
-void InlineSpiller::postOptimization() {
-  SmallVector<unsigned, 4> NewVRegs;
-  LiveRangeEdit LRE(nullptr, NewVRegs, MF, LIS, &VRM, nullptr);
-  HSpiller.hoistAllSpills(LRE);
-  assert(NewVRegs.size() == 0 &&
-         "No new vregs should be generated in hoistAllSpills");
-}
+void InlineSpiller::postOptimization() { HSpiller.hoistAllSpills(); }
 
 /// When a spill is inserted, add the spill to MergeableSpills map.
 ///
@@ -1360,7 +1356,10 @@ void HoistSpillHelper::runHoistSpills(
 /// its subtree to that node. In this way, we can get benefit locally even if
 /// hoisting all the equal spills to one cold place is impossible.
 ///
-void HoistSpillHelper::hoistAllSpills(LiveRangeEdit &Edit) {
+void HoistSpillHelper::hoistAllSpills() {
+  SmallVector<unsigned, 4> NewVRegs;
+  LiveRangeEdit Edit(nullptr, NewVRegs, MF, LIS, &VRM, this);
+
   // Save the mapping between stackslot and its original reg.
   DenseMap<int, unsigned> SlotToOrigReg;
   for (unsigned i = 0, e = MRI.getNumVirtRegs(); i != e; ++i) {
@@ -1436,6 +1435,17 @@ void HoistSpillHelper::hoistAllSpills(LiveRangeEdit &Edit) {
           RMEnt->RemoveOperand(i - 1);
       }
     }
-    Edit.eliminateDeadDefs(SpillsToRm, None, true);
+    Edit.eliminateDeadDefs(SpillsToRm, None);
   }
+}
+
+/// For VirtReg clone, the \p New register should have the same physreg or
+/// stackslot as the \p old register.
+void HoistSpillHelper::LRE_DidCloneVirtReg(unsigned New, unsigned Old) {
+  if (VRM.hasPhys(Old))
+    VRM.assignVirt2Phys(New, VRM.getPhys(Old));
+  else if (VRM.getStackSlot(Old) != VirtRegMap::NO_STACK_SLOT)
+    VRM.assignVirt2StackSlot(New, VRM.getStackSlot(Old));
+  else
+    llvm_unreachable("VReg should be assigned either physreg or stackslot");
 }

@@ -15,7 +15,6 @@
 #ifndef LLVM_IR_MODULE_H
 #define LLVM_IR_MODULE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/DataLayout.h"
@@ -30,6 +29,7 @@
 #include <system_error>
 
 namespace llvm {
+template <typename T> class Optional;
 class FunctionType;
 class GVMaterializer;
 class LLVMContext;

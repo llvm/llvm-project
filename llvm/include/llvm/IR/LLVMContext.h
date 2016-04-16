@@ -16,7 +16,6 @@
 #define LLVM_IR_LLVMCONTEXT_H
 
 #include "llvm/Support/CBindingWrapping.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Options.h"
 
 namespace llvm {

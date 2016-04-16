@@ -16,12 +16,10 @@
 #ifndef LLVM_IR_COMDAT_H
 #define LLVM_IR_COMDAT_H
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Compiler.h"
-
 namespace llvm {
 
 class raw_ostream;
+class StringRef;
 template <typename ValueTy> class StringMapEntry;
 
 // This is a Name X SelectionKind pair. The reason for having this be an

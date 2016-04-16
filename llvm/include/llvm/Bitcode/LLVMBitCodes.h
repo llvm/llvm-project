@@ -213,6 +213,10 @@ enum GlobalValueSummarySymtabCodes {
   FS_COMBINED_PROFILE = 5,
   // COMBINED_GLOBALVAR_INIT_REFS: [modid, linkage, n x valueid]
   FS_COMBINED_GLOBALVAR_INIT_REFS = 6,
+  // ALIAS: [valueid, linkage, valueid]
+  FS_ALIAS = 7,
+  // COMBINED_ALIAS: [modid, linkage, offset]
+  FS_COMBINED_ALIAS = 8,
 };
 
 enum MetadataCodes {

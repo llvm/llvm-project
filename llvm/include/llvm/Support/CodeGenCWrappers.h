@@ -17,8 +17,8 @@
 #define LLVM_SUPPORT_CODEGENCWRAPPERS_H
 
 #include "llvm-c/TargetMachine.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/CodeGenCWrappers.h"
 
 namespace llvm {
 

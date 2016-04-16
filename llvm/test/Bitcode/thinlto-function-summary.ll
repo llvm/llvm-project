@@ -1,4 +1,4 @@
-; RUN: opt -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
+; RUN: opt -name-anon-functions -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
 ; Check for summary block/records.
 
 ; Check the value ids in the summary entries against the
@@ -7,13 +7,16 @@
 ; BC: <GLOBALVAL_SUMMARY_BLOCK
 ; BC-NEXT: <PERMODULE {{.*}} op0=1 op1=0
 ; BC-NEXT: <PERMODULE {{.*}} op0=2 op1=0
+; BC-NEXT: <PERMODULE {{.*}} op0=3 op1=3
+; BC-NEXT: <ALIAS {{.*}} op0=4 op1=0 op2=3
 ; BC-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 ; BC-NEXT: <VALUE_SYMTAB
+; BC-NEXT: <FNENTRY {{.*}} op0=3 {{.*}}> record string = 'anon.
 ; BC-NEXT: <FNENTRY {{.*}} op0=1 {{.*}}> record string = 'foo'
 ; BC-NEXT: <FNENTRY {{.*}} op0=2 {{.*}}> record string = 'bar'
 ; BC-NEXT: <FNENTRY {{.*}} op0=4 {{.*}}> record string = 'f'
 
-; RUN: opt -module-summary < %s | llvm-dis | FileCheck %s
+; RUN: opt -name-anon-functions -module-summary < %s | llvm-dis | FileCheck %s
 ; Check that this round-trips correctly.
 
 ; ModuleID = '<stdin>'

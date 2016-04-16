@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-linux-gnu %s -o - -jump-table-density=40 | FileCheck %s
-; RUN: llc -mtriple=x86_64-linux-gnu %s -o - -O0 -jump-table-density=40 | FileCheck --check-prefix=NOOPT %s
+; RUN: llc -mtriple=x86_64-linux-gnu %s -o - -jump-table-density=40 -verify-machineinstrs | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu %s -o - -O0 -jump-table-density=40 -verify-machineinstrs | FileCheck --check-prefix=NOOPT %s
 
 declare void @g(i32)
 
@@ -747,4 +747,34 @@ bb1: tail call void @g(i32 1) br label %return
 return: ret void
 ; Don't assert due to truncating the bitwidth (64) to i4 when checking
 ; that the bit-test range fits in a word.
+}
+
+
+define i32 @pr27132(i32 %i) {
+entry:
+  br i1 undef, label %sw, label %end
+sw:
+  switch i32 %i, label %end [
+    i32 99,  label %sw.bb
+    i32 98,  label %sw.bb
+    i32 101, label %sw.bb
+    i32 97,  label %sw.bb2
+    i32 96,  label %sw.bb2
+    i32 100, label %sw.bb2
+  ]
+sw.bb:
+  unreachable
+sw.bb2:
+  unreachable
+end:
+  %p = phi i32 [ 1, %sw ], [ 0, %entry ]
+  ret i32 %p
+
+; CHECK-LABEL: pr27132:
+; The switch is lowered with bit tests. Since the case range is contiguous, the
+; second bit test is redundant and can be skipped. Check that we don't update
+; the phi node with an incoming value from the MBB of the skipped bit test
+; (-verify-machine-instrs cathces this).
+; CHECK: btl
+; CHECK-NOT: btl
 }

@@ -14,7 +14,6 @@
 #ifndef LLVM_IR_DEBUGINFOMETADATA_H
 #define LLVM_IR_DEBUGINFOMETADATA_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Dwarf.h"
 
@@ -43,6 +42,8 @@
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(CLASS, FORMAL, ARGS)
 
 namespace llvm {
+
+template <typename T> class Optional;
 
 /// \brief Pointer union between a subclass of DINode and MDString.
 ///
@@ -1868,13 +1869,16 @@ class DILocalVariable : public DIVariable {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  unsigned Arg;
-  unsigned Flags;
+  unsigned Arg : 16;
+  unsigned Flags : 16;
 
   DILocalVariable(LLVMContext &C, StorageType Storage, unsigned Line,
                   unsigned Arg, unsigned Flags, ArrayRef<Metadata *> Ops)
       : DIVariable(C, DILocalVariableKind, Storage, Line, Ops), Arg(Arg),
-        Flags(Flags) {}
+        Flags(Flags) {
+    assert(Flags < (1 << 16) && "DILocalVariable: Flags out of range");
+    assert(Arg < (1 << 16) && "DILocalVariable: Arg out of range");
+  }
   ~DILocalVariable() = default;
 
   static DILocalVariable *getImpl(LLVMContext &Context, DIScope *Scope,

@@ -1,4 +1,4 @@
-; RUN: llc -verify-regalloc < %s
+; RUN: llc -verify-regalloc -verify-machineinstrs < %s
 ; PR27275: When enabling remat for vreg defined by PHIs, make sure the update
 ; of the live range removes dead phi. Otherwise, we may end up with PHIs with
 ; incorrect operands and that will trigger assertions or verifier failures
