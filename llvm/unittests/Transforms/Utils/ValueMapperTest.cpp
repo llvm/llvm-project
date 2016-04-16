@@ -19,16 +19,16 @@ using namespace llvm;
 
 namespace {
 
-TEST(ValueMapperTest, mapMDNode) {
+TEST(ValueMapperTest, MapMetadata) {
   LLVMContext Context;
   auto *U = MDTuple::get(Context, None);
 
   // The node should be unchanged.
   ValueToValueMapTy VM;
-  EXPECT_EQ(U, ValueMapper(VM).mapMDNode(*U));
+  EXPECT_EQ(U, MapMetadata(U, VM, RF_None));
 }
 
-TEST(ValueMapperTest, mapMDNodeCycle) {
+TEST(ValueMapperTest, MapMetadataCycle) {
   LLVMContext Context;
   MDNode *U0;
   MDNode *U1;
@@ -52,19 +52,19 @@ TEST(ValueMapperTest, mapMDNodeCycle) {
   // Cycles shouldn't be duplicated.
   {
     ValueToValueMapTy VM;
-    EXPECT_EQ(U0, ValueMapper(VM).mapMDNode(*U0));
-    EXPECT_EQ(U1, ValueMapper(VM).mapMDNode(*U1));
+    EXPECT_EQ(U0, MapMetadata(U0, VM, RF_None));
+    EXPECT_EQ(U1, MapMetadata(U1, VM, RF_None));
   }
 
   // Check the other order.
   {
     ValueToValueMapTy VM;
-    EXPECT_EQ(U1, ValueMapper(VM).mapMDNode(*U1));
-    EXPECT_EQ(U0, ValueMapper(VM).mapMDNode(*U0));
+    EXPECT_EQ(U1, MapMetadata(U1, VM, RF_None));
+    EXPECT_EQ(U0, MapMetadata(U0, VM, RF_None));
   }
 }
 
-TEST(ValueMapperTest, mapMDNodeDuplicatedCycle) {
+TEST(ValueMapperTest, MapMetadataDuplicatedCycle) {
   LLVMContext Context;
   auto *PtrTy = Type::getInt8Ty(Context)->getPointerTo();
   std::unique_ptr<GlobalVariable> G0 = llvm::make_unique<GlobalVariable>(
@@ -94,8 +94,8 @@ TEST(ValueMapperTest, mapMDNodeDuplicatedCycle) {
   // have new nodes that reference G1 (instead of G0).
   ValueToValueMapTy VM;
   VM[G0.get()] = G1.get();
-  MDNode *MappedN0 = ValueMapper(VM).mapMDNode(*N0);
-  MDNode *MappedN1 = ValueMapper(VM).mapMDNode(*N1);
+  MDNode *MappedN0 = MapMetadata(N0, VM);
+  MDNode *MappedN1 = MapMetadata(N1, VM);
   EXPECT_NE(N0, MappedN0);
   EXPECT_NE(N1, MappedN1);
   EXPECT_EQ(ConstantAsMetadata::get(G1.get()), MappedN1->getOperand(1));
@@ -105,31 +105,31 @@ TEST(ValueMapperTest, mapMDNodeDuplicatedCycle) {
   EXPECT_TRUE(MappedN1->isResolved());
 }
 
-TEST(ValueMapperTest, mapMDNodeUnresolved) {
+TEST(ValueMapperTest, MapMetadataUnresolved) {
   LLVMContext Context;
   TempMDTuple T = MDTuple::getTemporary(Context, None);
 
   ValueToValueMapTy VM;
-  EXPECT_EQ(T.get(), ValueMapper(VM, RF_NoModuleLevelChanges).mapMDNode(*T));
+  EXPECT_EQ(T.get(), MapMetadata(T.get(), VM, RF_NoModuleLevelChanges));
 }
 
-TEST(ValueMapperTest, mapMDNodeDistinct) {
+TEST(ValueMapperTest, MapMetadataDistinct) {
   LLVMContext Context;
   auto *D = MDTuple::getDistinct(Context, None);
 
   {
     // The node should be cloned.
     ValueToValueMapTy VM;
-    EXPECT_NE(D, ValueMapper(VM).mapMDNode(*D));
+    EXPECT_NE(D, MapMetadata(D, VM, RF_None));
   }
   {
     // The node should be moved.
     ValueToValueMapTy VM;
-    EXPECT_EQ(D, ValueMapper(VM, RF_MoveDistinctMDs).mapMDNode(*D));
+    EXPECT_EQ(D, MapMetadata(D, VM, RF_MoveDistinctMDs));
   }
 }
 
-TEST(ValueMapperTest, mapMDNodeDistinctOperands) {
+TEST(ValueMapperTest, MapMetadataDistinctOperands) {
   LLVMContext Context;
   Metadata *Old = MDTuple::getDistinct(Context, None);
   auto *D = MDTuple::getDistinct(Context, Old);
@@ -140,11 +140,11 @@ TEST(ValueMapperTest, mapMDNodeDistinctOperands) {
   VM.MD()[Old].reset(New);
 
   // Make sure operands are updated.
-  EXPECT_EQ(D, ValueMapper(VM, RF_MoveDistinctMDs).mapMDNode(*D));
+  EXPECT_EQ(D, MapMetadata(D, VM, RF_MoveDistinctMDs));
   EXPECT_EQ(New, D->getOperand(0));
 }
 
-TEST(ValueMapperTest, mapMDNodeSeeded) {
+TEST(ValueMapperTest, MapMetadataSeeded) {
   LLVMContext Context;
   auto *D = MDTuple::getDistinct(Context, None);
 
@@ -154,10 +154,10 @@ TEST(ValueMapperTest, mapMDNodeSeeded) {
 
   VM.MD().insert(std::make_pair(D, TrackingMDRef(D)));
   EXPECT_EQ(D, *VM.getMappedMD(D));
-  EXPECT_EQ(D, ValueMapper(VM).mapMDNode(*D));
+  EXPECT_EQ(D, MapMetadata(D, VM, RF_None));
 }
 
-TEST(ValueMapperTest, mapMDNodeSeededWithNull) {
+TEST(ValueMapperTest, MapMetadataSeededWithNull) {
   LLVMContext Context;
   auto *D = MDTuple::getDistinct(Context, None);
 
@@ -167,10 +167,10 @@ TEST(ValueMapperTest, mapMDNodeSeededWithNull) {
 
   VM.MD().insert(std::make_pair(D, TrackingMDRef()));
   EXPECT_EQ(nullptr, *VM.getMappedMD(D));
-  EXPECT_EQ(nullptr, ValueMapper(VM).mapMDNode(*D));
+  EXPECT_EQ(nullptr, MapMetadata(D, VM, RF_None));
 }
 
-TEST(ValueMapperTest, mapMetadataNullMapGlobalWithIgnoreMissingLocals) {
+TEST(ValueMapperTest, MapMetadataNullMapGlobalWithIgnoreMissingLocals) {
   LLVMContext C;
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
@@ -179,25 +179,25 @@ TEST(ValueMapperTest, mapMetadataNullMapGlobalWithIgnoreMissingLocals) {
 
   ValueToValueMapTy VM;
   RemapFlags Flags = RF_IgnoreMissingLocals | RF_NullMapMissingGlobalValues;
-  EXPECT_EQ(nullptr, ValueMapper(VM, Flags).mapValue(*F));
+  EXPECT_EQ(nullptr, MapValue(F.get(), VM, Flags));
 }
 
-TEST(ValueMapperTest, mapMetadataMDString) {
+TEST(ValueMapperTest, MapMetadataMDString) {
   LLVMContext C;
   auto *S1 = MDString::get(C, "S1");
   ValueToValueMapTy VM;
 
   // Make sure S1 maps to itself, but isn't memoized.
-  EXPECT_EQ(S1, ValueMapper(VM).mapMetadata(*S1));
+  EXPECT_EQ(S1, MapMetadata(S1, VM));
   EXPECT_EQ(None, VM.getMappedMD(S1));
 
   // We still expect VM.MD() to be respected.
   auto *S2 = MDString::get(C, "S2");
   VM.MD()[S1].reset(S2);
-  EXPECT_EQ(S2, ValueMapper(VM).mapMetadata(*S1));
+  EXPECT_EQ(S2, MapMetadata(S1, VM));
 }
 
-TEST(ValueMapperTest, mapMetadataGetMappedMD) {
+TEST(ValueMapperTest, MapMetadataGetMappedMD) {
   LLVMContext C;
   auto *N0 = MDTuple::get(C, None);
   auto *N1 = MDTuple::get(C, N0);
@@ -205,8 +205,8 @@ TEST(ValueMapperTest, mapMetadataGetMappedMD) {
   // Make sure hasMD and getMappedMD work correctly.
   ValueToValueMapTy VM;
   EXPECT_FALSE(VM.hasMD());
-  EXPECT_EQ(N0, ValueMapper(VM).mapMetadata(*N0));
-  EXPECT_EQ(N1, ValueMapper(VM).mapMetadata(*N1));
+  EXPECT_EQ(N0, MapMetadata(N0, VM));
+  EXPECT_EQ(N1, MapMetadata(N1, VM));
   EXPECT_TRUE(VM.hasMD());
   ASSERT_NE(None, VM.getMappedMD(N0));
   ASSERT_NE(None, VM.getMappedMD(N1));
@@ -214,7 +214,7 @@ TEST(ValueMapperTest, mapMetadataGetMappedMD) {
   EXPECT_EQ(N1, *VM.getMappedMD(N1));
 }
 
-TEST(ValueMapperTest, mapMetadataNoModuleLevelChanges) {
+TEST(ValueMapperTest, MapMetadataNoModuleLevelChanges) {
   LLVMContext C;
   auto *N0 = MDTuple::get(C, None);
   auto *N1 = MDTuple::get(C, N0);
@@ -222,14 +222,14 @@ TEST(ValueMapperTest, mapMetadataNoModuleLevelChanges) {
   // Nothing should be memoized when RF_NoModuleLevelChanges.
   ValueToValueMapTy VM;
   EXPECT_FALSE(VM.hasMD());
-  EXPECT_EQ(N0, ValueMapper(VM, RF_NoModuleLevelChanges).mapMetadata(*N0));
-  EXPECT_EQ(N1, ValueMapper(VM, RF_NoModuleLevelChanges).mapMetadata(*N1));
+  EXPECT_EQ(N0, MapMetadata(N0, VM, RF_NoModuleLevelChanges));
+  EXPECT_EQ(N1, MapMetadata(N1, VM, RF_NoModuleLevelChanges));
   EXPECT_FALSE(VM.hasMD());
   EXPECT_EQ(None, VM.getMappedMD(N0));
   EXPECT_EQ(None, VM.getMappedMD(N1));
 }
 
-TEST(ValueMapperTest, mapMetadataConstantAsMetadata) {
+TEST(ValueMapperTest, MapMetadataConstantAsMetadata) {
   LLVMContext C;
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
@@ -239,23 +239,23 @@ TEST(ValueMapperTest, mapMetadataConstantAsMetadata) {
   auto *CAM = ConstantAsMetadata::get(F.get());
   {
     ValueToValueMapTy VM;
-    EXPECT_EQ(CAM, ValueMapper(VM).mapMetadata(*CAM));
+    EXPECT_EQ(CAM, MapMetadata(CAM, VM));
     EXPECT_TRUE(VM.MD().count(CAM));
     VM.MD().erase(CAM);
-    EXPECT_EQ(CAM, ValueMapper(VM, RF_IgnoreMissingLocals).mapMetadata(*CAM));
+    EXPECT_EQ(CAM, MapMetadata(CAM, VM, RF_IgnoreMissingLocals));
     EXPECT_TRUE(VM.MD().count(CAM));
 
     auto *N = MDTuple::get(C, None);
     VM.MD()[CAM].reset(N);
-    EXPECT_EQ(N, ValueMapper(VM).mapMetadata(*CAM));
-    EXPECT_EQ(N, ValueMapper(VM, RF_IgnoreMissingLocals).mapMetadata(*CAM));
+    EXPECT_EQ(N, MapMetadata(CAM, VM));
+    EXPECT_EQ(N, MapMetadata(CAM, VM, RF_IgnoreMissingLocals));
   }
 
   std::unique_ptr<Function> F2(
       Function::Create(FTy, GlobalValue::ExternalLinkage, "F2"));
   ValueToValueMapTy VM;
   VM[F.get()] = F2.get();
-  auto *F2MD = ValueMapper(VM).mapMetadata(*CAM);
+  auto *F2MD = MapMetadata(CAM, VM);
   EXPECT_TRUE(VM.MD().count(CAM));
   EXPECT_TRUE(F2MD);
   EXPECT_EQ(F2.get(), cast<ConstantAsMetadata>(F2MD)->getValue());
@@ -263,7 +263,7 @@ TEST(ValueMapperTest, mapMetadataConstantAsMetadata) {
 
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
-TEST(ValueMapperTest, mapMetadataLocalAsMetadata) {
+TEST(ValueMapperTest, MapMetadataLocalAsMetadata) {
   LLVMContext C;
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
@@ -271,18 +271,18 @@ TEST(ValueMapperTest, mapMetadataLocalAsMetadata) {
       Function::Create(FTy, GlobalValue::ExternalLinkage, "F"));
   Argument &A = *F->arg_begin();
 
-  // mapMetadata doesn't support LocalAsMetadata.  The only valid container for
+  // MapMetadata doesn't support LocalAsMetadata.  The only valid container for
   // LocalAsMetadata is a MetadataAsValue instance, so use it directly.
   auto *LAM = LocalAsMetadata::get(&A);
   ValueToValueMapTy VM;
-  EXPECT_DEATH(ValueMapper(VM).mapMetadata(*LAM), "Unexpected local metadata");
-  EXPECT_DEATH(ValueMapper(VM, RF_IgnoreMissingLocals).mapMetadata(*LAM),
+  EXPECT_DEATH(MapMetadata(LAM, VM), "Unexpected local metadata");
+  EXPECT_DEATH(MapMetadata(LAM, VM, RF_IgnoreMissingLocals),
                "Unexpected local metadata");
 }
 #endif
 #endif
 
-TEST(ValueMapperTest, mapValueLocalAsMetadata) {
+TEST(ValueMapperTest, MapValueLocalAsMetadata) {
   LLVMContext C;
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
@@ -305,26 +305,26 @@ TEST(ValueMapperTest, mapValueLocalAsMetadata) {
   auto *N0 = MDTuple::get(C, None);
   auto *N0AV = MetadataAsValue::get(C, N0);
   ValueToValueMapTy VM;
-  EXPECT_EQ(N0AV, ValueMapper(VM).mapValue(*MAV));
-  EXPECT_EQ(nullptr, ValueMapper(VM, RF_IgnoreMissingLocals).mapValue(*MAV));
+  EXPECT_EQ(N0AV, MapValue(MAV, VM));
+  EXPECT_EQ(nullptr, MapValue(MAV, VM, RF_IgnoreMissingLocals));
   EXPECT_FALSE(VM.count(MAV));
   EXPECT_FALSE(VM.count(&A));
   EXPECT_EQ(None, VM.getMappedMD(LAM));
 
   VM[MAV] = MAV;
-  EXPECT_EQ(MAV, ValueMapper(VM).mapValue(*MAV));
-  EXPECT_EQ(MAV, ValueMapper(VM, RF_IgnoreMissingLocals).mapValue(*MAV));
+  EXPECT_EQ(MAV, MapValue(MAV, VM));
+  EXPECT_EQ(MAV, MapValue(MAV, VM, RF_IgnoreMissingLocals));
   EXPECT_TRUE(VM.count(MAV));
   EXPECT_FALSE(VM.count(&A));
 
   VM[MAV] = &A;
-  EXPECT_EQ(&A, ValueMapper(VM).mapValue(*MAV));
-  EXPECT_EQ(&A, ValueMapper(VM, RF_IgnoreMissingLocals).mapValue(*MAV));
+  EXPECT_EQ(&A, MapValue(MAV, VM));
+  EXPECT_EQ(&A, MapValue(MAV, VM, RF_IgnoreMissingLocals));
   EXPECT_TRUE(VM.count(MAV));
   EXPECT_FALSE(VM.count(&A));
 }
 
-TEST(ValueMapperTest, mapValueLocalAsMetadataToConstant) {
+TEST(ValueMapperTest, MapValueLocalAsMetadataToConstant) {
   LLVMContext Context;
   auto *Int8 = Type::getInt8Ty(Context);
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), Int8, false);
@@ -342,8 +342,8 @@ TEST(ValueMapperTest, mapValueLocalAsMetadataToConstant) {
   auto *MDC = MetadataAsValue::get(Context, ValueAsMetadata::get(&C));
   EXPECT_TRUE(isa<LocalAsMetadata>(MDA->getMetadata()));
   EXPECT_TRUE(isa<ConstantAsMetadata>(MDC->getMetadata()));
-  EXPECT_EQ(&C, ValueMapper(VM).mapValue(A));
-  EXPECT_EQ(MDC, ValueMapper(VM).mapValue(*MDA));
+  EXPECT_EQ(&C, MapValue(&A, VM));
+  EXPECT_EQ(MDC, MapValue(MDA, VM));
 }
 
 } // end namespace
