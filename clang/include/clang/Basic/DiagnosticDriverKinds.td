@@ -23,6 +23,9 @@ def err_drv_unknown_language : Error<"language not recognized: '%0'">;
 def err_drv_invalid_arch_name : Error<
   "invalid arch name '%0'">;
 def err_drv_cuda_bad_gpu_arch : Error<"Unsupported CUDA gpu architecture: %0">;
+def err_drv_no_cuda_installation : Error<
+  "cannot find CUDA installation.  Provide its path via --cuda-path, or pass "
+  "-nocudainc to build without CUDA includes.">;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
