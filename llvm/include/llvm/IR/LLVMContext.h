@@ -94,7 +94,6 @@ public:
   /// tag registered with an LLVMContext has an unique ID.
   uint32_t getOperandBundleTagID(StringRef Tag) const;
 
-
   /// Define the GC for a function
   void setGC(const Function &Fn, std::string GCName);
 
