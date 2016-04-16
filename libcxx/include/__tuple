@@ -95,8 +95,6 @@ get(const tuple<_Tp...>&&) _NOEXCEPT;
 
 // pair specializations
 
-template <class _T1, class _T2> struct _LIBCPP_TYPE_VIS_ONLY pair;
-
 template <class _T1, class _T2> struct __tuple_like<pair<_T1, _T2> > : true_type {};
 
 template <size_t _Ip, class _T1, class _T2>

@@ -321,6 +321,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->LtoO = getInteger(Args, OPT_lto_O, 2);
   if (Config->LtoO > 3)
     error("invalid optimization level for LTO: " + getString(Args, OPT_lto_O));
+  Config->LtoJobs = getInteger(Args, OPT_lto_jobs, 1);
+  if (Config->LtoJobs == 0)
+    error("number of threads must be > 0");
 
   Config->ZExecStack = hasZOption(Args, "execstack");
   Config->ZNodelete = hasZOption(Args, "nodelete");
@@ -428,7 +431,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     // Set either EntryAddr (if S is a number) or EntrySym (otherwise).
     StringRef S = Config->Entry;
     if (S.getAsInteger(0, Config->EntryAddr))
-      Config->EntrySym = Symtab.addUndefined(S);
+      Config->EntrySym = Symtab.addUndefined(S)->getSymbol();
   }
 
   for (std::unique_ptr<InputFile> &F : Files)

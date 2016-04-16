@@ -237,7 +237,9 @@ def G : Separate<["-"], "G">;
 // Aliases for ignored options
 def alias_version_script_version_script : Joined<["--"], "version-script=">, Alias<version_script>;
 
-// Debugging/developer options
+// LTO-related options.
+def lto_jobs : Joined<["--"], "lto-jobs=">,
+  HelpText<"Number of threads to run codegen">;
 def disable_verify : Flag<["-"], "disable-verify">;
 def mllvm : Separate<["-"], "mllvm">;
 def save_temps : Flag<["-"], "save-temps">;

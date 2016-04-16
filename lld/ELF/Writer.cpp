@@ -411,6 +411,16 @@ static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
   return 0;
 }
 
+// True if non-preemptable symbol always has the same value regardless of where
+// the DSO is loaded.
+template <class ELFT> static bool isAbsolute(const SymbolBody &Body) {
+  if (Body.isUndefined() && Body.isWeak())
+    return true; // always 0
+  if (const auto *DR = dyn_cast<DefinedRegular<ELFT>>(&Body))
+    return DR->Section == nullptr; // Absolute symbol.
+  return false;
+}
+
 // The reason we have to do this early scan is as follows
 // * To mmap the output file, we need to know the size
 // * For that, we need to know how many dynamic relocs we will have.
@@ -549,23 +559,10 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     }
 
     // If a relocation needs GOT, we create a GOT slot for the symbol.
-    if (Target->needsGot(Type, Body)) {
+    if (Expr == R_GOT || Expr == R_MIPS_GOT || Expr == R_MIPS_GOT_LOCAL ||
+        Expr == R_GOT_PAGE_PC || Expr == R_GOT_PC) {
       uint32_t T = Body.isTls() ? Target->getTlsGotRel(Type) : Type;
-      RelExpr E;
-      if (Expr == R_PC)
-        E = R_GOT_PC;
-      else if (Expr == R_PAGE_PC)
-        E = R_GOT_PAGE_PC;
-      else if (Config->EMachine == EM_MIPS) {
-        if (Body.isLocal())
-          E = R_MIPS_GOT_LOCAL;
-        else if (!Body.isPreemptible())
-          E = R_MIPS_GOT;
-        else
-          E = R_GOT;
-      } else
-        E = R_GOT;
-      C.Relocations.push_back({E, T, Offset, Addend, &Body});
+      C.Relocations.push_back({Expr, T, Offset, Addend, &Body});
       if (Body.isInGot())
         continue;
       Out<ELFT>::Got->addEntry(Body);
@@ -578,16 +575,12 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
         continue;
 
-      if (Preemptible || Config->Pic) {
+      if (Preemptible || (Config->Pic && !isAbsolute<ELFT>(Body))) {
         uint32_t DynType;
         if (Body.isTls())
           DynType = Target->TlsGotRel;
         else if (Preemptible)
           DynType = Target->GotRel;
-        else if (Body.isUndefined())
-          // Weak undefined symbols evaluate to zero, so don't create
-          // relocations for them.
-          continue;
         else
           DynType = Target->RelativeRel;
         AddDyn({DynType, Out<ELFT>::Got, Body.getGotOffset<ELFT>(),
@@ -618,7 +611,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     // can process some of it and and just ask the dynamic linker to add the
     // load address.
     if (!Config->Pic || Target->isRelRelative(Type) || Expr == R_PC ||
-        Expr == R_SIZE) {
+        Expr == R_SIZE || isAbsolute<ELFT>(Body)) {
       if (Config->EMachine == EM_MIPS && Body.isLocal() &&
           (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32))
         Expr = R_MIPS_GP0;
@@ -1628,8 +1621,8 @@ static uint32_t getMipsEFlags() {
 }
 
 template <class ELFT> static typename ELFT::uint getEntryAddr() {
-  if (SymbolBody *B = Config->EntrySym)
-    return B->repl().getVA<ELFT>();
+  if (Symbol *S = Config->EntrySym)
+    return S->Body->getVA<ELFT>();
   if (Config->EntryAddr != uint64_t(-1))
     return Config->EntryAddr;
   return 0;
