@@ -92,23 +92,13 @@ namespace llvm {
     ///                      out into.
     /// \param Kind          The kind of debug information to generate.
     /// \param DWOId         The DWOId if this is a split skeleton compile unit.
-    /// \param EmitDebugInfo A boolean flag which indicates whether
-    ///                      debug information should be written to
-    ///                      the final output or not. When this is
-    ///                      false, debug information annotations will
-    ///                      be present in the IL but they are not
-    ///                      written to the final assembly or object
-    ///                      file. This supports tracking source
-    ///                      location information in the back end
-    ///                      without actually changing the output
-    ///                      (e.g., when using optimization remarks).
     DICompileUnit *
     createCompileUnit(unsigned Lang, StringRef File, StringRef Dir,
                       StringRef Producer, bool isOptimized, StringRef Flags,
                       unsigned RV, StringRef SplitName = StringRef(),
                       DICompileUnit::DebugEmissionKind Kind =
                           DICompileUnit::DebugEmissionKind::FullDebug,
-                      uint64_t DWOId = 0, bool EmitDebugInfo = true);
+                      uint64_t DWOId = 0);
 
     /// Create a file descriptor to hold debugging information
     /// for a file.

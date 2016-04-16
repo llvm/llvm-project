@@ -45,7 +45,7 @@ DISubprogram *getDISubprogram(const MDNode *Scope);
 DISubprogram *getDISubprogram(const Function *F);
 
 /// \brief Generate map by visiting all retained types.
-DITypeIdentifierMap generateDITypeIdentifierMap(const NamedMDNode *CU_Nodes);
+DITypeIdentifierMap generateDITypeIdentifierMap(const Module &M);
 
 /// \brief Strip debug info in the module if it exists.
 ///
