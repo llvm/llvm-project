@@ -87,7 +87,7 @@ declare void @weakfunc(...) #1
 ; INSTLIM5-DAG: declare hidden void @funcwithpersonality.llvm.{{.*}}()
 
 ; INSTLIMDEF-DAG: Import globalfunc2
-; INSTLIMDEF-DAG: 9 function-import - Number of functions imported
+; INSTLIMDEF-DAG: 11 function-import - Number of functions imported
 
 ; The actual GUID values will depend on path to test.
 ; GUID-DAG: GUID {{.*}} is weakalias

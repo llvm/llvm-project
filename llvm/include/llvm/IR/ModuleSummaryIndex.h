@@ -93,7 +93,7 @@ struct ValueInfo {
 class GlobalValueSummary {
 public:
   /// \brief Sububclass discriminator (for dyn_cast<> et al.)
-  enum SummaryKind { FunctionKind, GlobalVarKind };
+  enum SummaryKind { AliasKind, FunctionKind, GlobalVarKind };
 
 private:
   /// Kind of summary for use in dyn_cast<> et al.
@@ -162,6 +162,32 @@ public:
   /// Return the list of values referenced by this global value definition.
   std::vector<ValueInfo> &refs() { return RefEdgeList; }
   const std::vector<ValueInfo> &refs() const { return RefEdgeList; }
+};
+
+/// \brief Alias summary information.
+class AliasSummary : public GlobalValueSummary {
+  GlobalValueSummary *AliaseeSummary;
+
+public:
+  /// Summary constructors.
+  AliasSummary(GlobalValue::LinkageTypes Linkage)
+      : GlobalValueSummary(AliasKind, Linkage) {}
+
+  /// Check if this is an alias summary.
+  static bool classof(const GlobalValueSummary *GVS) {
+    return GVS->getSummaryKind() == AliasKind;
+  }
+
+  void setAliasee(GlobalValueSummary *Aliasee) { AliaseeSummary = Aliasee; }
+
+  const GlobalValueSummary &getAliasee() const {
+    return const_cast<AliasSummary *>(this)->getAliasee();
+  }
+
+  GlobalValueSummary &getAliasee() {
+    assert(AliaseeSummary && "Unexpected missing aliasee summary");
+    return *AliaseeSummary;
+  }
 };
 
 /// \brief Function summary information to aid decisions and implementation of
@@ -439,7 +465,7 @@ public:
   /// (GUID -> Summary).
   void collectDefinedFunctionsForModule(
       StringRef ModulePath,
-      std::map<GlobalValue::GUID, FunctionSummary *> &FunctionInfoMap) const;
+      std::map<GlobalValue::GUID, GlobalValueSummary *> &FunctionInfoMap) const;
 };
 
 } // End llvm namespace
