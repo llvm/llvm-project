@@ -1948,8 +1948,8 @@ class DILocalVariable : public DIVariable {
                   unsigned Arg, unsigned Flags, ArrayRef<Metadata *> Ops)
       : DIVariable(C, DILocalVariableKind, Storage, Line, Ops), Arg(Arg),
         Flags(Flags) {
-    assert(Flags < ((1 << 16) - 1) && "DILocalVariable: Flags out of range");
-    assert(Arg < ((1 << 16) - 1) && "DILocalVariable: Arg out of range");
+    assert(Flags < (1 << 16) && "DILocalVariable: Flags out of range");
+    assert(Arg < (1 << 16) && "DILocalVariable: Arg out of range");
   }
   ~DILocalVariable() = default;
 
