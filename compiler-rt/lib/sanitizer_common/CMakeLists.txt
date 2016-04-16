@@ -11,6 +11,7 @@ set(SANITIZER_SOURCES
   sanitizer_libc.cc
   sanitizer_libignore.cc
   sanitizer_linux.cc
+  sanitizer_linux_s390.cc
   sanitizer_mac.cc
   sanitizer_persistent_allocator.cc
   sanitizer_platform_limits_linux.cc

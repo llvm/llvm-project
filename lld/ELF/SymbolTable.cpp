@@ -122,24 +122,27 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
   Lto.reset(new BitcodeCompiler);
   for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles)
     Lto->add(*F);
-  std::unique_ptr<InputFile> IF = Lto->compile();
-  ObjectFile<ELFT> *Obj = cast<ObjectFile<ELFT>>(IF.release());
+  std::vector<std::unique_ptr<InputFile>> IFs = Lto->compile();
 
   // Replace bitcode symbols.
-  llvm::DenseSet<StringRef> DummyGroups;
-  Obj->parse(DummyGroups);
-  for (SymbolBody *Body : Obj->getNonLocalSymbols()) {
-    Symbol *Sym = insert(Body);
-    Sym->Body->setUsedInRegularObj();
-    if (Sym->Body->isShared())
-      Sym->Body->MustBeInDynSym = true;
-    if (Sym->Body->MustBeInDynSym)
-      Body->MustBeInDynSym = true;
-    if (!Sym->Body->isUndefined() && Body->isUndefined())
-      continue;
-    Sym->Body = Body;
+  for (auto &IF : IFs) {
+    ObjectFile<ELFT> *Obj = cast<ObjectFile<ELFT>>(IF.release());
+
+    llvm::DenseSet<StringRef> DummyGroups;
+    Obj->parse(DummyGroups);
+    for (SymbolBody *Body : Obj->getNonLocalSymbols()) {
+      Symbol *Sym = insert(Body);
+      Sym->Body->setUsedInRegularObj();
+      if (Sym->Body->isShared())
+        Sym->Body->MustBeInDynSym = true;
+      if (Sym->Body->MustBeInDynSym)
+        Body->MustBeInDynSym = true;
+      if (!Sym->Body->isUndefined() && Body->isUndefined())
+        continue;
+      Sym->Body = Body;
+    }
+    ObjectFiles.emplace_back(Obj);
   }
-  ObjectFiles.emplace_back(Obj);
 }
 
 // Add an undefined symbol.

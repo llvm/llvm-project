@@ -214,3 +214,6 @@ _start:
 
 # RUN: not ld.lld %t -o %t -m wrong_emul 2>&1 | FileCheck --check-prefix=UNKNOWN_EMUL %s
 # UNKNOWN_EMUL: unknown emulation: wrong_emul
+
+# RUN: not ld.lld %t --lto-jobs=0 2>&1 | FileCheck --check-prefix=NOTHREADS %s
+# NOTHREADS: number of threads must be > 0

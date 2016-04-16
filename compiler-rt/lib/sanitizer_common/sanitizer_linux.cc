@@ -110,34 +110,10 @@ namespace __sanitizer {
 #endif
 
 // --------------- sanitizer_libc.h
+#if !SANITIZER_S390
 uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
                    OFF_T offset) {
-#ifdef __s390__
-  struct s390_mmap_params {
-    unsigned long addr;
-    unsigned long length;
-    unsigned long prot;
-    unsigned long flags;
-    unsigned long fd;
-    unsigned long offset;
-  } params = {
-    (unsigned long)addr,
-    (unsigned long)length,
-    (unsigned long)prot,
-    (unsigned long)flags,
-    (unsigned long)fd,
-# ifdef __s390x__
-    (unsigned long)offset,
-# else
-    (unsigned long)(offset / 4096),
-# endif
-  };
-# ifdef __s390x__
-  return internal_syscall(SYSCALL(mmap), &params);
-# else
-  return internal_syscall(SYSCALL(mmap2), &params);
-# endif
-#elif SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
+#if SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
   return internal_syscall(SYSCALL(mmap), (uptr)addr, length, prot, flags, fd,
                           offset);
 #else
@@ -147,6 +123,7 @@ uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
                           offset / 4096);
 #endif
 }
+#endif // !SANITIZER_S390
 
 uptr internal_munmap(void *addr, uptr length) {
   return internal_syscall(SYSCALL(munmap), (uptr)addr, length);
