@@ -133,6 +133,9 @@ static bool ParseOneFlag(const char *Param) {
       PrintedWarning = true;
       Printf("INFO: libFuzzer ignores flags that start with '--'\n");
     }
+    for (size_t F = 0; F < kNumFlags; F++)
+      if (FlagValue(Param + 1, FlagDescriptions[F].Name))
+        Printf("WARNING: did you mean '%s' (single dash)?\n", Param + 1);
     return true;
   }
   for (size_t F = 0; F < kNumFlags; F++) {

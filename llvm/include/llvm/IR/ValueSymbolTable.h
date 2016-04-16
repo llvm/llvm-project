@@ -14,13 +14,13 @@
 #ifndef LLVM_IR_VALUESYMBOLTABLE_H
 #define LLVM_IR_VALUESYMBOLTABLE_H
 
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
   template <typename ValueSubClass> class SymbolTableListTraits;
+  template <unsigned InternalLen> class SmallString;
   class BasicBlock;
   class Function;
   class NamedMDNode;

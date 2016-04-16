@@ -16,13 +16,13 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
 class DataLayout;
 template <typename T> class SmallVectorImpl;
 class Twine;
+class raw_ostream;
 
 class Mangler {
   /// We need to give global values the same name every time they are mangled.

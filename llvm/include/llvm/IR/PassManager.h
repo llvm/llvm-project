@@ -44,7 +44,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManagerInternal.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TypeName.h"
 #include "llvm/Support/raw_ostream.h"
@@ -54,9 +53,6 @@
 #include <vector>
 
 namespace llvm {
-
-class Module;
-class Function;
 
 /// \brief An abstract set of preserved analyses following a transformation pass
 /// run.

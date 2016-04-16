@@ -73,7 +73,7 @@ void ModuleSummaryIndex::removeEmptySummaryEntries() {
 // (GUID -> Summary).
 void ModuleSummaryIndex::collectDefinedFunctionsForModule(
     StringRef ModulePath,
-    std::map<GlobalValue::GUID, FunctionSummary *> &FunctionInfoMap) const {
+    std::map<GlobalValue::GUID, GlobalValueSummary *> &FunctionInfoMap) const {
   for (auto &GlobalList : *this) {
     auto GUID = GlobalList.first;
     for (auto &GlobInfo : GlobalList.second) {
@@ -85,6 +85,19 @@ void ModuleSummaryIndex::collectDefinedFunctionsForModule(
       if (Summary->modulePath() != ModulePath)
         continue;
       FunctionInfoMap[GUID] = Summary;
+    }
+  }
+}
+
+// Collect for each module the list of function it defines (GUID -> Summary).
+void ModuleSummaryIndex::collectDefinedGVSummariesPerModule(
+    StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>> &
+        Module2FunctionInfoMap) const {
+  for (auto &GlobalList : *this) {
+    auto GUID = GlobalList.first;
+    for (auto &GlobInfo : GlobalList.second) {
+      auto *Summary = GlobInfo->summary();
+      Module2FunctionInfoMap[Summary->modulePath()][GUID] = Summary;
     }
   }
 }

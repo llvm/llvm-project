@@ -21,9 +21,7 @@
 #ifndef LLVM_IR_VERIFIER_H
 #define LLVM_IR_VERIFIER_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PassManager.h"
-#include <string>
 
 namespace llvm {
 

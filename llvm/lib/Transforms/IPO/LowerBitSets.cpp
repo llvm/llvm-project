@@ -639,8 +639,9 @@ void LowerBitSets::verifyBitSetMDNode(MDNode *Op) {
 
   if (OpGlobal->isThreadLocal())
     report_fatal_error("Bit set element may not be thread-local");
-  if (OpGlobal->hasSection())
-    report_fatal_error("Bit set element may not have an explicit section");
+  if (isa<GlobalVariable>(OpGlobal) && OpGlobal->hasSection())
+    report_fatal_error(
+        "Bit set global var element may not have an explicit section");
 
   if (isa<GlobalVariable>(OpGlobal) && OpGlobal->isDeclarationForLinker())
     report_fatal_error("Bit set global var element must be a definition");

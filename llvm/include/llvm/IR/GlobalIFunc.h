@@ -18,12 +18,12 @@
 #ifndef LLVM_IR_GLOBALIFUNC_H
 #define LLVM_IR_GLOBALIFUNC_H
 
-#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/GlobalIndirectSymbol.h"
 
 namespace llvm {
 
+class Twine;
 class Module;
 
 // Traits class for using GlobalIFunc in symbol table in Module.

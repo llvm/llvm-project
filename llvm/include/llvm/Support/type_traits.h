@@ -17,6 +17,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "llvm/Support/Compiler.h"
+
 #ifndef __has_feature
 #define LLVM_DEFINED_HAS_FEATURE
 #define __has_feature(x) 0

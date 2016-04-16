@@ -241,11 +241,8 @@ public:
   /// RegsBeingSpilled lists registers currently being spilled by the register
   /// allocator.  These registers should not be split into new intervals
   /// as currently those new intervals are not guaranteed to spill.
-  /// NoSplit indicates this func is used after the iterations of selectOrSplit
-  /// where registers should not be split into new intervals.
   void eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
-                         ArrayRef<unsigned> RegsBeingSpilled = None,
-                         bool NoSplit = false);
+                         ArrayRef<unsigned> RegsBeingSpilled = None);
 
   /// calculateRegClassAndHint - Recompute register class and hint for each new
   /// register.

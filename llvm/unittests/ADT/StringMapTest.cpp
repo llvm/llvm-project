@@ -7,9 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
+#include "gtest/gtest.h"
 #include <tuple>
 using namespace llvm;
 

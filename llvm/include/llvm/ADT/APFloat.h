@@ -25,6 +25,8 @@ struct fltSemantics;
 class APSInt;
 class StringRef;
 
+template <typename T> class SmallVectorImpl;
+
 /// Enum that represents what fraction of the LSB truncated bits of an fp number
 /// represent.
 ///

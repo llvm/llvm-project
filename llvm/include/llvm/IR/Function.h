@@ -19,7 +19,6 @@
 #define LLVM_IR_FUNCTION_H
 
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -30,6 +29,7 @@
 
 namespace llvm {
 
+template <typename T> class Optional;
 class FunctionType;
 class LLVMContext;
 class DISubprogram;

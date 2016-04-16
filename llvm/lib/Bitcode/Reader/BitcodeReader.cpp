@@ -5882,6 +5882,35 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       Info->setSummary(std::move(FS));
       break;
     }
+    // FS_ALIAS: [valueid, linkage, valueid]
+    // Aliases must be emitted (and parsed) after all FS_PERMODULE entries, as
+    // they expect all aliasee summaries to be available.
+    case bitc::FS_ALIAS: {
+      unsigned ValueID = Record[0];
+      uint64_t RawLinkage = Record[1];
+      unsigned AliaseeID = Record[2];
+      std::unique_ptr<AliasSummary> AS =
+          llvm::make_unique<AliasSummary>(getDecodedLinkage(RawLinkage));
+      // The module path string ref set in the summary must be owned by the
+      // index's module string table. Since we don't have a module path
+      // string table section in the per-module index, we create a single
+      // module path string table entry with an empty (0) ID to take
+      // ownership.
+      AS->setModulePath(
+          TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0)->first());
+
+      GlobalValue::GUID AliaseeGUID = getGUIDFromValueId(AliaseeID);
+      auto *AliaseeInfo = TheIndex->getGlobalValueInfo(AliaseeGUID);
+      if (!AliaseeInfo->summary())
+        return error("Alias expects aliasee summary to be parsed");
+      AS->setAliasee(AliaseeInfo->summary());
+
+      GlobalValue::GUID GUID = getGUIDFromValueId(ValueID);
+      auto *Info = TheIndex->getGlobalValueInfo(GUID);
+      assert(!Info->summary() && "Expected a single summary per VST entry");
+      Info->setSummary(std::move(AS));
+      break;
+    }
     // FS_PERMODULE_GLOBALVAR_INIT_REFS: [valueid, linkage, n x valueid]
     case bitc::FS_PERMODULE_GLOBALVAR_INIT_REFS: {
       unsigned ValueID = Record[0];
@@ -5937,6 +5966,28 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       auto *Info = getInfoFromSummaryOffset(CurRecordBit);
       assert(!Info->summary() && "Expected a single summary per VST entry");
       Info->setSummary(std::move(FS));
+      Combined = true;
+      break;
+    }
+    // FS_COMBINED_ALIAS: [modid, linkage, offset]
+    // Aliases must be emitted (and parsed) after all FS_COMBINED entries, as
+    // they expect all aliasee summaries to be available.
+    case bitc::FS_COMBINED_ALIAS: {
+      uint64_t ModuleId = Record[0];
+      uint64_t RawLinkage = Record[1];
+      uint64_t AliaseeSummaryOffset = Record[2];
+      std::unique_ptr<AliasSummary> AS =
+          llvm::make_unique<AliasSummary>(getDecodedLinkage(RawLinkage));
+      AS->setModulePath(ModuleIdMap[ModuleId]);
+
+      auto *AliaseeInfo = getInfoFromSummaryOffset(AliaseeSummaryOffset);
+      if (!AliaseeInfo->summary())
+        return error("Alias expects aliasee summary to be parsed");
+      AS->setAliasee(AliaseeInfo->summary());
+
+      auto *Info = getInfoFromSummaryOffset(CurRecordBit);
+      assert(!Info->summary() && "Expected a single summary per VST entry");
+      Info->setSummary(std::move(AS));
       Combined = true;
       break;
     }

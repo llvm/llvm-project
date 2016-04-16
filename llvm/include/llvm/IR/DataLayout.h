@@ -20,7 +20,6 @@
 #ifndef LLVM_IR_DATALAYOUT_H
 #define LLVM_IR_DATALAYOUT_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -34,8 +33,6 @@ typedef struct LLVMOpaqueTargetData *LLVMTargetDataRef;
 namespace llvm {
 
 class Value;
-class Type;
-class IntegerType;
 class StructType;
 class StructLayout;
 class Triple;

@@ -15,12 +15,12 @@
 #ifndef LLVM_IR_GLOBALALIAS_H
 #define LLVM_IR_GLOBALALIAS_H
 
-#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/GlobalIndirectSymbol.h"
 
 namespace llvm {
 
+class Twine;
 class Module;
 template <typename ValueSubClass> class SymbolTableListTraits;
 
