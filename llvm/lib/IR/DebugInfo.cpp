@@ -57,10 +57,9 @@ DISubprogram *llvm::getDISubprogram(const Function *F) {
 }
 
 DITypeIdentifierMap
-llvm::generateDITypeIdentifierMap(const NamedMDNode *CU_Nodes) {
+llvm::generateDITypeIdentifierMap(const Module &M) {
   DITypeIdentifierMap Map;
-  for (unsigned CUi = 0, CUe = CU_Nodes->getNumOperands(); CUi != CUe; ++CUi) {
-    auto *CU = cast<DICompileUnit>(CU_Nodes->getOperand(CUi));
+  for (DICompileUnit *CU : M.debug_compile_units()) {
     DINodeArray Retain = CU->getRetainedTypes();
     for (unsigned Ti = 0, Te = Retain.size(); Ti != Te; ++Ti) {
       if (!isa<DICompositeType>(Retain[Ti]))
@@ -97,24 +96,20 @@ void DebugInfoFinder::reset() {
 }
 
 void DebugInfoFinder::InitializeTypeMap(const Module &M) {
-  if (!TypeMapInitialized)
-    if (NamedMDNode *CU_Nodes = M.getNamedMetadata("llvm.dbg.cu")) {
-      TypeIdentifierMap = generateDITypeIdentifierMap(CU_Nodes);
-      TypeMapInitialized = true;
-    }
+  if (TypeMapInitialized)
+    return;
+  TypeIdentifierMap = generateDITypeIdentifierMap(M);
+  TypeMapInitialized = true;
 }
 
 void DebugInfoFinder::processModule(const Module &M) {
   InitializeTypeMap(M);
-  if (NamedMDNode *CU_Nodes = M.getNamedMetadata("llvm.dbg.cu")) {
-    for (unsigned i = 0, e = CU_Nodes->getNumOperands(); i != e; ++i) {
-      auto *CU = cast<DICompileUnit>(CU_Nodes->getOperand(i));
-      addCompileUnit(CU);
-      for (auto *DIG : CU->getGlobalVariables()) {
-        if (addGlobalVariable(DIG)) {
-          processScope(DIG->getScope());
-          processType(DIG->getType().resolve(TypeIdentifierMap));
-        }
+  for (auto *CU : M.debug_compile_units()) {
+    addCompileUnit(CU);
+    for (auto *DIG : CU->getGlobalVariables()) {
+      if (addGlobalVariable(DIG)) {
+        processScope(DIG->getScope());
+        processType(DIG->getType().resolve(TypeIdentifierMap));
       }
       for (auto *ET : CU->getEnumTypes())
         processType(ET);

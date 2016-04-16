@@ -45,9 +45,7 @@ struct BreakpointPrinter : public ModulePass {
 
   bool runOnModule(Module &M) override {
     TypeIdentifierMap.clear();
-    NamedMDNode *CU_Nodes = M.getNamedMetadata("llvm.dbg.cu");
-    if (CU_Nodes)
-      TypeIdentifierMap = generateDITypeIdentifierMap(CU_Nodes);
+    TypeIdentifierMap = generateDITypeIdentifierMap(M);
 
     StringSet<> Processed;
     if (NamedMDNode *NMD = M.getNamedMetadata("llvm.dbg.sp"))

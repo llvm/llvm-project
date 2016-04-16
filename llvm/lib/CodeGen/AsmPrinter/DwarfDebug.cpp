@@ -464,15 +464,18 @@ void DwarfDebug::beginModule() {
 
   const Module *M = MMI->getModule();
 
-  NamedMDNode *CU_Nodes = M->getNamedMetadata("llvm.dbg.cu");
-  if (!CU_Nodes)
-    return;
-  TypeIdentifierMap = generateDITypeIdentifierMap(CU_Nodes);
+  TypeIdentifierMap = generateDITypeIdentifierMap(*M);
+  unsigned NumDebugCUs = 0;
+  for (DICompileUnit *CUNode : M->debug_compile_units()) {
+    (void)CUNode;
+    ++NumDebugCUs;
+  }
 
-  SingleCU = CU_Nodes->getNumOperands() == 1;
+  // Tell MMI whether we have debug info.
+  MMI->setDebugInfoAvailability(NumDebugCUs > 0);
+  SingleCU = NumDebugCUs == 1;
 
-  for (MDNode *N : CU_Nodes->operands()) {
-    auto *CUNode = cast<DICompileUnit>(N);
+  for (DICompileUnit *CUNode : M->debug_compile_units()) {
     DwarfCompileUnit &CU = constructDwarfCompileUnit(CUNode);
     for (auto *IE : CUNode->getImportedEntities())
       CU.addImportedEntity(IE);
@@ -496,9 +499,6 @@ void DwarfDebug::beginModule() {
     for (auto *IE : CUNode->getImportedEntities())
       constructAndAddImportedEntityDIE(CU, IE);
   }
-
-  // Tell MMI that we have debug info.
-  MMI->setDebugInfoAvailability(true);
 }
 
 void DwarfDebug::finishVariableDefinitions() {
