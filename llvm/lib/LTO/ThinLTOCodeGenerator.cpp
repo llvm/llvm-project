@@ -43,6 +43,8 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "thinlto"
+
 namespace llvm {
 // Flags -discard-value-names, defined in LTOCodeGenerator.cpp
 extern cl::opt<bool> LTODiscardValueNames;
@@ -150,24 +152,15 @@ bool IsFirstDefinitionForLinker(const GlobalValueInfoList &GVInfo,
   return true;
 }
 
-static void ResolveODR(GlobalValue &GV, const ModuleSummaryIndex &Index,
-                             StringRef ModulePath) {
-  if (GV.isDeclaration())
-    return;
-
+static GlobalValue::LinkageTypes ResolveODR(const ModuleSummaryIndex &Index,
+                                            StringRef ModuleIdentifier,
+                                            GlobalValue::GUID GUID,
+                                            const GlobalValueSummary &GV) {
   auto HasMultipleCopies =
       [&](const GlobalValueInfoList &GVInfo) { return GVInfo.size() > 1; };
 
-  auto getGVInfo = [&](GlobalValue &GV) -> const GlobalValueInfoList *{
-    auto GUID = Function::getGlobalIdentifier(GV.getName(), GV.getLinkage(),
-                                              ModulePath);
-    auto It = Index.findGlobalValueInfoList(GV.getName());
-    if (It == Index.end())
-      return nullptr;
-    return &It->second;
-  };
-
-  switch (GV.getLinkage()) {
+  auto OriginalLinkage = GV.linkage();
+  switch (OriginalLinkage) {
   case GlobalValue::ExternalLinkage:
   case GlobalValue::AvailableExternallyLinkage:
   case GlobalValue::AppendingLinkage:
@@ -180,20 +173,19 @@ static void ResolveODR(GlobalValue &GV, const ModuleSummaryIndex &Index,
     break;
   case GlobalValue::LinkOnceODRLinkage:
   case GlobalValue::WeakODRLinkage: {
-    auto *GVInfo = getGVInfo(GV);
-    if (!GVInfo)
-      break;
+    auto &GVInfo = Index.findGlobalValueInfoList(GUID)->second;
     // We need to emit only one of these, the first module will keep
     // it, but turned into a weak while the others will drop it.
-    if (!HasMultipleCopies(*GVInfo))
+    if (!HasMultipleCopies(GVInfo))
       break;
-    if (IsFirstDefinitionForLinker(*GVInfo, Index, ModulePath))
-      GV.setLinkage(GlobalValue::WeakODRLinkage);
+    if (IsFirstDefinitionForLinker(GVInfo, Index, ModuleIdentifier))
+      return GlobalValue::WeakODRLinkage;
     else
-      GV.setLinkage(GlobalValue::AvailableExternallyLinkage);
+      return GlobalValue::AvailableExternallyLinkage;
     break;
   }
   }
+  return OriginalLinkage;
 }
 
 /// Resolve LinkOnceODR and WeakODR.
@@ -202,8 +194,11 @@ static void ResolveODR(GlobalValue &GV, const ModuleSummaryIndex &Index,
 /// current module. However there is a chance that another module is still
 /// referencing them because of the import. We make sure we always emit at least
 /// one copy.
-static void ResolveODR(Module &TheModule,
-                             const ModuleSummaryIndex &Index) {
+static void ResolveODR(
+    const ModuleSummaryIndex &Index,
+    const std::map<GlobalValue::GUID, GlobalValueSummary *> &DefinedGlobals,
+    StringRef ModuleIdentifier,
+    DenseMap<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR) {
   if (Index.modulePaths().size() == 1)
     // Nothing to do if we don't have multiple modules
     return;
@@ -211,20 +206,42 @@ static void ResolveODR(Module &TheModule,
   // We won't optimize the globals that are referenced by an alias for now
   // Ideally we should turn the alias into a global and duplicate the definition
   // when needed.
-  DenseSet<GlobalValue *> GlobalInvolvedWithAlias;
-  for (auto &GA : TheModule.aliases()) {
-    auto *GO = GA.getBaseObject();
-    if (auto *GV = dyn_cast<GlobalValue>(GO))
-      GlobalInvolvedWithAlias.insert(GV);
+  DenseSet<GlobalValueSummary *> GlobalInvolvedWithAlias;
+  for (auto &GA : DefinedGlobals) {
+    if (auto AS = dyn_cast<AliasSummary>(GA.second))
+      GlobalInvolvedWithAlias.insert(&AS->getAliasee());
   }
+
+  for (auto &GV : DefinedGlobals) {
+    if (GlobalInvolvedWithAlias.count(GV.second))
+      continue;
+    auto NewLinkage = ResolveODR(Index, ModuleIdentifier, GV.first, *GV.second);
+    if (NewLinkage != GV.second->linkage()) {
+      ResolvedODR[GV.first] = NewLinkage;
+    }
+  }
+}
+
+/// Fixup linkage, see ResolveODR() above.
+void fixupODR(
+    Module &TheModule,
+    const DenseMap<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR) {
   // Process functions and global now
   for (auto &GV : TheModule) {
-    if (!GlobalInvolvedWithAlias.count(&GV))
-      ResolveODR(GV, Index, TheModule.getModuleIdentifier());
+    auto NewLinkage = ResolvedODR.find(GV.getGUID());
+    if (NewLinkage == ResolvedODR.end())
+      continue;
+    DEBUG(dbgs() << "ODR fixing up linkage for `" << GV.getName() << "` from "
+                 << GV.getLinkage() << " to " << NewLinkage->second << "\n");
+    GV.setLinkage(NewLinkage->second);
   }
   for (auto &GV : TheModule.globals()) {
-    if (!GlobalInvolvedWithAlias.count(&GV))
-      ResolveODR(GV, Index, TheModule.getModuleIdentifier());
+    auto NewLinkage = ResolvedODR.find(GV.getGUID());
+    if (NewLinkage == ResolvedODR.end())
+      continue;
+    DEBUG(dbgs() << "ODR fixing up linkage for `" << GV.getName() << "` from "
+                 << GV.getLinkage() << " to " << NewLinkage->second << "\n");
+    GV.setLinkage(NewLinkage->second);
   }
 }
 
@@ -322,13 +339,13 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
   return make_unique<ObjectMemoryBuffer>(std::move(OutputBuffer));
 }
 
-static std::unique_ptr<MemoryBuffer>
-ProcessThinLTOModule(Module &TheModule, const ModuleSummaryIndex &Index,
-                     StringMap<MemoryBufferRef> &ModuleMap, TargetMachine &TM,
-                     const FunctionImporter::ImportMapTy &ImportList,
-                     ThinLTOCodeGenerator::CachingOptions CacheOptions,
-                     bool DisableCodeGen, StringRef SaveTempsDir,
-                     unsigned count) {
+static std::unique_ptr<MemoryBuffer> ProcessThinLTOModule(
+    Module &TheModule, const ModuleSummaryIndex &Index,
+    StringMap<MemoryBufferRef> &ModuleMap, TargetMachine &TM,
+    const FunctionImporter::ImportMapTy &ImportList,
+    DenseMap<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
+    ThinLTOCodeGenerator::CachingOptions CacheOptions, bool DisableCodeGen,
+    StringRef SaveTempsDir, unsigned count) {
 
   // Save temps: after IPO.
   saveTempBitcode(TheModule, SaveTempsDir, count, ".1.IPO.bc");
@@ -342,7 +359,7 @@ ProcessThinLTOModule(Module &TheModule, const ModuleSummaryIndex &Index,
     // Resolve the LinkOnce/Weak ODR, trying to turn them into
     // "available_externally" when possible.
     // This is a compile-time optimization.
-    ResolveODR(TheModule, Index);
+    fixupODR(TheModule, ResolvedODR);
 
     // Save temps: after promotion.
     saveTempBitcode(TheModule, SaveTempsDir, count, ".2.promoted.bc");
@@ -466,10 +483,19 @@ std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
  */
 void ThinLTOCodeGenerator::promote(Module &TheModule,
                                    ModuleSummaryIndex &Index) {
+  auto ModuleIdentifier = TheModule.getModuleIdentifier();
+  // Collect for each module the list of function it defines (GUID -> Summary).
+  StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
+      ModuleToDefinedGVSummaries;
+  Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Resolve the LinkOnceODR, trying to turn them into "available_externally"
   // where possible.
-  ResolveODR(TheModule, Index);
+  // This is a compile-time optimization.
+  DenseMap<GlobalValue::GUID, GlobalValue::LinkageTypes> ResolvedODR;
+  ResolveODR(Index, ModuleToDefinedGVSummaries[ModuleIdentifier],
+             ModuleIdentifier, ResolvedODR);
+  fixupODR(TheModule, ResolvedODR);
 
   promoteModule(TheModule, Index);
 }
@@ -480,12 +506,18 @@ void ThinLTOCodeGenerator::promote(Module &TheModule,
 void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
                                              ModuleSummaryIndex &Index) {
   auto ModuleMap = generateModuleMap(Modules);
+  auto ModuleCount = Index.modulePaths().size();
+
+  // Collect for each module the list of function it defines (GUID -> Summary).
+  StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
+      ModuleToDefinedGVSummaries(ModuleCount);
+  Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Generate import/export list
-  auto ModuleCount = Index.modulePaths().size();
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
   StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(Index, ImportLists, ExportLists);
+  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
+                           ExportLists);
   auto &ImportList = ImportLists[TheModule.getModuleIdentifier()];
 
   crossImportIntoModule(TheModule, Index, ModuleMap, ImportList);
@@ -553,11 +585,17 @@ void ThinLTOCodeGenerator::run() {
   auto ModuleMap = generateModuleMap(Modules);
   auto ModuleCount = Modules.size();
 
+  // Collect for each module the list of function it defines (GUID -> Summary).
+  StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
+      ModuleToDefinedGVSummaries(ModuleCount);
+  Index->collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
+
   // Collect the import/export lists for all modules from the call-graph in the
   // combined index.
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
   StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(*Index, ImportLists, ExportLists);
+  ComputeCrossModuleImport(*Index, ModuleToDefinedGVSummaries, ImportLists,
+                           ExportLists);
 
   // Parallel optimizer + codegen
   {
@@ -567,6 +605,11 @@ void ThinLTOCodeGenerator::run() {
       Pool.async([&](int count) {
         LLVMContext Context;
         Context.setDiscardValueNames(LTODiscardValueNames);
+        auto ModuleIdentifier = ModuleBuffer.getBufferIdentifier();
+
+        DenseMap<GlobalValue::GUID, GlobalValue::LinkageTypes> ResolvedODR;
+        ResolveODR(*Index, ModuleToDefinedGVSummaries[ModuleIdentifier],
+                   ModuleIdentifier, ResolvedODR);
 
         // Parse module now
         auto TheModule = loadModuleFromBuffer(ModuleBuffer, Context, false);
@@ -576,10 +619,10 @@ void ThinLTOCodeGenerator::run() {
           saveTempBitcode(*TheModule, SaveTempsDir, count, ".0.original.bc");
         }
 
-        auto &ImportList = ImportLists[TheModule->getModuleIdentifier()];
+        auto &ImportList = ImportLists[ModuleIdentifier];
         ProducedBinaries[count] = ProcessThinLTOModule(
             *TheModule, *Index, ModuleMap, *TMBuilder.create(), ImportList,
-            CacheOptions, DisableCodeGen, SaveTempsDir, count);
+            ResolvedODR, CacheOptions, DisableCodeGen, SaveTempsDir, count);
       }, count);
       count++;
     }
