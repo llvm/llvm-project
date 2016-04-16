@@ -37,20 +37,22 @@ class InputFile;
 class BitcodeCompiler {
 public:
   void add(BitcodeFile &F);
-  std::unique_ptr<InputFile> compile();
+  std::vector<std::unique_ptr<InputFile>> compile();
 
   BitcodeCompiler()
       : Combined(new llvm::Module("ld-temp.o", Context)), Mover(*Combined) {}
 
 private:
-  llvm::TargetMachine *getTargetMachine();
+  std::vector<std::unique_ptr<InputFile>> runSplitCodegen();
+  std::unique_ptr<llvm::TargetMachine> getTargetMachine();
 
   llvm::LLVMContext Context;
   std::unique_ptr<llvm::Module> Combined;
   llvm::IRMover Mover;
-  SmallString<0> OwningData;
+  std::vector<SmallString<0>> OwningData;
   std::unique_ptr<MemoryBuffer> MB;
   llvm::StringSet<> InternalizedSyms;
+  std::string TheTriple;
 };
 }
 }

@@ -7,20 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <unordered_map>
+// <set>
 
-// class unordered_multimap
+// class set
 
 // insert(...)
+// emplace(...)
+// emplace_hint(...)
 
 // UNSUPPORTED: c++98, c++03
 
-#include <unordered_map>
-
+#include <set>
 #include "container_test_types.h"
-#include "../../../map_allocator_requirement_test_templates.h"
+#include "../../set_allocator_requirement_test_templates.h"
 
 int main()
 {
-  testMultimapInsert<TCT::unordered_multimap<> >();
+  testSetInsert<TCT::set<> >();
+  testSetEmplace<TCT::set<> >();
+  testSetEmplaceHint<TCT::set<> >();
 }

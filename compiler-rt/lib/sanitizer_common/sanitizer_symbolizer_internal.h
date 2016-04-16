@@ -28,7 +28,7 @@ const char *ExtractUptr(const char *str, const char *delims, uptr *result);
 const char *ExtractTokenUpToDelimiter(const char *str, const char *delimiter,
                                       char **result);
 
-const char *DemangleCXXABI(const char *name);
+const char *DemangleSwiftAndCXX(const char *name);
 
 // SymbolizerTool is an interface that is implemented by individual "tools"
 // that can perform symbolication (external llvm-symbolizer, libbacktrace,

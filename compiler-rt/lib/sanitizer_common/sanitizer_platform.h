@@ -108,6 +108,21 @@
 # define SANITIZER_MIPS64 0
 #endif
 
+#if defined(__s390__)
+# define SANITIZER_S390 1
+# if defined(__s390x__)
+#  define SANITIZER_S390_31 0
+#  define SANITIZER_S390_64 1
+# else
+#  define SANITIZER_S390_31 1
+#  define SANITIZER_S390_64 0
+# endif
+#else
+# define SANITIZER_S390 0
+# define SANITIZER_S390_31 0
+# define SANITIZER_S390_64 0
+#endif
+
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
 // But in some cases (e.g. AArch64's 39-bit address space) SizeClassAllocator64
 // does not work well and we need to fallback to SizeClassAllocator32.

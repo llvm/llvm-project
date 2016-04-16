@@ -1,3 +1,5 @@
+@LIT_SITE_CFG_IN_HEADER@
+
 # Tool-specific config options.
 config.ubsan_lit_test_mode = "@UBSAN_LIT_TEST_MODE@"
 config.target_cflags = "@UBSAN_TEST_TARGET_CFLAGS@"

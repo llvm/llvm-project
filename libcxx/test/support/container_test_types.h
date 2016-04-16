@@ -158,6 +158,11 @@ struct AllocatorConstructController {
   bool m_allow_unchecked;
   int m_expected_count;
 
+  void clear() {
+    m_expected_args = nullptr;
+    m_expected_count = -1;
+  }
+
   // Check for and consume an expected construction added by 'expect'.
   // Return true if the construction was expected and false otherwise.
   // This should only be called by 'Allocator.construct'.
