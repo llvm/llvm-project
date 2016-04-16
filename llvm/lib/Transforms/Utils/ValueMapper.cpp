@@ -505,6 +505,7 @@ bool MDNodeMapper::mapOperand(const Metadata *Op) {
     return false;
 
   if (Optional<Metadata *> MappedOp = M.mapSimpleMetadata(Op)) {
+#ifndef NDEBUG
     if (auto *CMD = dyn_cast<ConstantAsMetadata>(Op))
       assert((!*MappedOp || M.getVM().count(CMD->getValue()) ||
               M.getVM().getMappedMD(Op)) &&
@@ -512,6 +513,7 @@ bool MDNodeMapper::mapOperand(const Metadata *Op) {
     else
       assert((isa<MDString>(Op) || M.getVM().getMappedMD(Op)) &&
              "Expected result to be memoized");
+#endif
     return *MappedOp != Op;
   }
 
