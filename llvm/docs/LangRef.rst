@@ -3911,8 +3911,10 @@ The following ``tag:`` values are valid:
   DW_TAG_pointer_type       = 15
   DW_TAG_reference_type     = 16
   DW_TAG_typedef            = 22
+  DW_TAG_inheritance        = 28
   DW_TAG_ptr_to_member_type = 31
   DW_TAG_const_type         = 38
+  DW_TAG_friend             = 42
   DW_TAG_volatile_type      = 53
   DW_TAG_restrict_type      = 55
 
@@ -3921,6 +3923,10 @@ The following ``tag:`` values are valid:
 is the ``baseType:``. The ``offset:`` is the member's bit offset.
 ``DW_TAG_formal_parameter`` is used to define a member which is a formal
 argument of a subprogram.
+
+``DW_TAG_inheritance`` and ``DW_TAG_friend`` are used in the ``elements:``
+field of :ref:`composite types <DICompositeType>` to describe parents and
+friends.
 
 ``DW_TAG_typedef`` is used to provide a name for the ``baseType:``.
 
@@ -3961,9 +3967,6 @@ The following ``tag:`` values are valid:
   DW_TAG_enumeration_type = 4
   DW_TAG_structure_type   = 19
   DW_TAG_union_type       = 23
-  DW_TAG_subroutine_type  = 21
-  DW_TAG_inheritance      = 28
-
 
 For ``DW_TAG_array_type``, the ``elements:`` should be :ref:`subrange
 descriptors <DISubrange>`, each representing the range of subscripts at that
@@ -3977,7 +3980,9 @@ value for the set. All enumeration type descriptors are collected in the
 
 For ``DW_TAG_structure_type``, ``DW_TAG_class_type``, and
 ``DW_TAG_union_type``, the ``elements:`` should be :ref:`derived types
-<DIDerivedType>` with ``tag: DW_TAG_member`` or ``tag: DW_TAG_inheritance``.
+<DIDerivedType>` with ``tag: DW_TAG_member``, ``tag: DW_TAG_inheritance``, or
+``tag: DW_TAG_friend``; or :ref:`subprograms <DISubprogram>` with
+``isDefinition: false``.
 
 .. _DISubrange:
 
