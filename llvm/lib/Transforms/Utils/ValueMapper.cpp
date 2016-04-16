@@ -189,149 +189,149 @@ private:
 class MDNodeMapper {
   Mapper &M;
 
+  /// Data about a node in \a UniquedGraph.
   struct Data {
-    bool HasChangedOps = false;
-    bool HasChangedAddress = false;
+    bool HasChanged = false;
     unsigned ID = ~0u;
     TempMDNode Placeholder;
 
     Data() {}
     Data(Data &&X)
-        : HasChangedOps(std::move(X.HasChangedOps)),
-          HasChangedAddress(std::move(X.HasChangedAddress)),
-          ID(std::move(X.ID)), Placeholder(std::move(X.Placeholder)) {}
+        : HasChanged(std::move(X.HasChanged)), ID(std::move(X.ID)),
+          Placeholder(std::move(X.Placeholder)) {}
     Data &operator=(Data &&X) {
-      HasChangedOps = std::move(X.HasChangedOps);
-      HasChangedAddress = std::move(X.HasChangedAddress);
+      HasChanged = std::move(X.HasChanged);
       ID = std::move(X.ID);
       Placeholder = std::move(X.Placeholder);
       return *this;
     }
   };
 
-  SmallDenseMap<const Metadata *, Data, 32> Info;
-  SmallVector<std::pair<MDNode *, bool>, 16> Worklist;
-  SmallVector<MDNode *, 16> POT;
+  /// A graph of uniqued nodes.
+  struct UniquedGraph {
+    SmallDenseMap<const Metadata *, Data, 32> Info; // Node properties.
+    SmallVector<MDNode *, 16> POT;                  // Post-order traversal.
+
+    /// Propagate changed operands through the post-order traversal.
+    ///
+    /// Iteratively update \a Data::HasChanged for each node based on \a
+    /// Data::HasChanged of its operands, until fixed point.
+    void propagateChanges();
+
+    /// Get a forward reference to a node to use as an operand.
+    Metadata &getFwdReference(MDNode &Op);
+  };
+
+  /// Worklist of distinct nodes whose operands need to be remapped.
+  SmallVector<MDNode *, 16> DistinctWorklist;
+
+  // Storage for a UniquedGraph.
+  SmallDenseMap<const Metadata *, Data, 32> InfoStorage;
+  SmallVector<MDNode *, 16> POTStorage;
 
 public:
   MDNodeMapper(Mapper &M) : M(M) {}
 
   /// Map a metadata node (and its transitive operands).
   ///
-  /// This is the only entry point into MDNodeMapper.  It works as follows:
+  /// Map all the (unmapped) nodes in the subgraph under \c N.  The iterative
+  /// algorithm handles distinct nodes and uniqued node subgraphs using
+  /// different strategies.
   ///
-  ///  1. \a createPOT(): use a worklist to perform a post-order traversal of
-  ///     the transitively referenced unmapped nodes.
+  /// Distinct nodes are immediately mapped and added to \a DistinctWorklist
+  /// using \a mapDistinctNode().  Their mapping can always be computed
+  /// immediately without visiting operands, even if their operands change.
   ///
-  ///  2. \a propagateChangedOperands(): track which nodes will change
-  ///     operands, and which will have new addresses in the mapped scheme.
-  ///     Propagate the changes through the POT until fixed point, to pick up
-  ///     uniquing cycles that need to change.
+  /// The mapping for uniqued nodes depends on whether their operands change.
+  /// \a mapTopLevelUniquedNode() traverses the transitive uniqued subgraph of
+  /// a node to calculate uniqued node mappings in bulk.  Distinct leafs are
+  /// added to \a DistinctWorklist with \a mapDistinctNode().
   ///
-  ///  3. \a mapDistinctNodes(): map all the distinct nodes without touching
-  ///     their operands.  If RF_MoveDistinctMetadata, they get mapped to
-  ///     themselves; otherwise, they get mapped to clones.
-  ///
-  ///  4. \a mapUniquedNodes(): map the uniqued nodes (bottom-up), lazily
-  ///     creating temporaries for forward references as needed.
-  ///
-  ///  5. \a remapDistinctOperands(): remap the operands of the distinct nodes.
-  Metadata *map(const MDNode &FirstN);
+  /// After mapping \c N itself, this function remaps the operands of the
+  /// distinct nodes in \a DistinctWorklist until the entire subgraph under \c
+  /// N has been mapped.
+  Metadata *map(const MDNode &N);
 
 private:
-  /// Return \c true as long as there's work to do.
-  bool hasWork() const { return !Worklist.empty(); }
+  /// Map a top-level uniqued node and the uniqued subgraph underneath it.
+  ///
+  /// This builds up a post-order traversal of the (unmapped) uniqued subgraph
+  /// underneath \c FirstN and calculates the nodes' mapping.  Each node uses
+  /// the identity mapping (\a Mapper::mapToSelf()) as long as all of its
+  /// operands uses the identity mapping.
+  ///
+  /// The algorithm works as follows:
+  ///
+  ///  1. \a createPOT(): traverse the uniqued subgraph under \c FirstN and
+  ///     save the post-order traversal in the given \a UniquedGraph, tracking
+  ///     nodes' operands change.
+  ///
+  ///  2. \a UniquedGraph::propagateChanges(): propagate changed operands
+  ///     through the \a UniquedGraph until fixed point, following the rule
+  ///     that if a node changes, any node that references must also change.
+  ///
+  ///  3. \a mapNodesInPOT(): map the uniqued nodes, creating new uniqued nodes
+  ///     (referencing new operands) where necessary.
+  Metadata *mapTopLevelUniquedNode(const MDNode &FirstN);
 
-  /// Get the current node in the worklist.
-  MDNode &getCurrentNode() const { return *Worklist.back().first; }
+  /// Try to map the operand of an \a MDNode.
+  ///
+  /// If \c Op is already mapped, return the mapping.  If it's not an \a
+  /// MDNode, compute and return the mapping.  If it's a distinct \a MDNode,
+  /// return the result of \a mapDistinctNode().
+  ///
+  /// \return None if \c Op is an unmapped uniqued \a MDNode.
+  /// \post getMappedOp(Op) only returns None if this returns None.
+  Optional<Metadata *> tryToMapOperand(const Metadata *Op);
 
-  /// Push a node onto the worklist.
+  /// Map a distinct node.
   ///
-  /// Adds \c N to \a Worklist and \a Info, unless it's already inserted.  If
-  /// \c N.isDistinct(), \a Data::HasChangedAddress will be set based on \a
-  /// RF_MoveDistinctMDs.
+  /// Return the mapping for the distinct node \c N, saving the result in \a
+  /// DistinctWorklist for later remapping.
   ///
-  /// Returns the data for the node.
-  ///
-  /// \post Data::HasChangedAddress iff !RF_MoveDistinctMDs && N.isDistinct().
-  /// \post Worklist.back().first == &N.
-  /// \post Worklist.back().second == false.
-  Data &push(const MDNode &N);
-
-  /// Map a node operand, and return true if it changes.
-  ///
-  /// \post getMappedOp(Op) does not return None.
-  bool mapOperand(const Metadata *Op);
+  /// \pre \c N is not yet mapped.
+  /// \pre \c N.isDistinct().
+  MDNode *mapDistinctNode(const MDNode &N);
 
   /// Get a previously mapped node.
   Optional<Metadata *> getMappedOp(const Metadata *Op) const;
 
-  /// Try to pop a node off the worklist and store it in POT.
-  ///
-  /// Returns \c true if it popped; \c false if its operands need to be
-  /// visited.
-  ///
-  /// \post If Worklist.back().second == false: Worklist.back().second == true.
-  /// \post Else: Worklist.back() has been popped off and added to \a POT.
-  bool tryToPop();
-
-  /// Get a forward reference to a node to use as an operand.
-  ///
-  /// Returns \c Op if it's not changing; otherwise, lazily creates a temporary
-  /// node and returns it.
-  Metadata &getFwdReference(const Data &D, MDNode &Op);
-
-  /// Create a post-order traversal from the given node.
+  /// Create a post-order traversal of an unmapped uniqued node subgraph.
   ///
   /// This traverses the metadata graph deeply enough to map \c FirstN.  It
-  /// uses \a mapOperand() (indirectly, \a Mapper::mapSimplifiedNode()), so any
+  /// uses \a tryToMapOperand() (via \a Mapper::mapSimplifiedNode()), so any
   /// metadata that has already been mapped will not be part of the POT.
   ///
-  /// \post \a POT is a post-order traversal ending with \c FirstN.
-  bool createPOT(const MDNode &FirstN);
+  /// Each node that has a changed operand from outside the graph (e.g., a
+  /// distinct node, an already-mapped uniqued node, or \a ConstantAsMetadata)
+  /// is marked with \a Data::HasChanged.
+  ///
+  /// \return \c true if any nodes in \c G have \a Data::HasChanged.
+  /// \post \c G.POT is a post-order traversal ending with \c FirstN.
+  /// \post \a Data::hasChanged in \c G.Info indicates whether any node needs
+  /// to change because of operands outside the graph.
+  bool createPOT(UniquedGraph &G, const MDNode &FirstN);
 
-  /// Propagate changed operands through post-order traversal.
+  /// Map all the nodes in the given uniqued graph.
   ///
-  /// Until fixed point, iteratively update:
+  /// This visits all the nodes in \c G in post-order, using the identity
+  /// mapping or creating a new node depending on \a Data::HasChanged.
   ///
-  ///   - \a Data::HasChangedOps based on \a Data::HasChangedAddress of operands;
-  ///   - \a Data::HasChangedAddress based on Data::HasChangedOps.
-  ///
-  /// This algorithm never changes \a Data::HasChangedAddress for distinct
-  /// nodes.
-  ///
-  /// \post \a POT is a post-order traversal ending with \c FirstN.
-  void propagateChangedOperands();
+  /// \pre \a getMappedOp() returns None for nodes in \c G, but not for any of
+  /// their operands outside of \c G.
+  /// \pre \a Data::HasChanged is true for a node in \c G iff any of its
+  /// operands have changed.
+  /// \post \a getMappedOp() returns the mapped node for every node in \c G.
+  void mapNodesInPOT(UniquedGraph &G);
 
-  /// Map all distinct nodes in POT.
+  /// Remap a node's operands using the given functor.
   ///
-  /// \post \a getMappedOp() returns the correct node for every distinct node.
-  void mapDistinctNodes();
-
-  /// Map all uniqued nodes in POT with the correct operands.
-  ///
-  /// \pre Distinct nodes are mapped (\a mapDistinctNodes() has been called).
-  /// \post \a getMappedOp() returns the correct node for every node.
-  /// \post \a MDNode::operands() is correct for every uniqued node.
-  /// \post \a MDNode::isResolved() returns true for every node.
-  void mapUniquedNodes();
-
-  /// Re-map the operands for distinct nodes in POT.
-  ///
-  /// \pre Distinct nodes are mapped (\a mapDistinctNodes() has been called).
-  /// \pre Uniqued nodes are mapped (\a mapUniquedNodes() has been called).
-  /// \post \a MDNode::operands() is correct for every distinct node.
-  void remapDistinctOperands();
-
-  /// Remap a node's operands.
-  ///
-  /// Iterate through operands and update them in place using \a getMappedOp()
-  /// and \a getFwdReference().
+  /// Iterate through the operands of \c N and update them in place using \c
+  /// mapOperand.
   ///
   /// \pre N.isDistinct() or N.isTemporary().
-  /// \pre Distinct nodes are mapped (\a mapDistinctNodes() has been called).
-  /// \pre If \c N is distinct, all uniqued nodes are already mapped.
-  void remapOperands(const Data &D, MDNode &N);
+  template <class OperandMapper>
+  void remapOperands(MDNode &N, OperandMapper mapOperand);
 };
 
 } // end namespace
@@ -500,9 +500,9 @@ Metadata *Mapper::mapToSelf(const Metadata *MD) {
   return mapToMetadata(MD, const_cast<Metadata *>(MD));
 }
 
-bool MDNodeMapper::mapOperand(const Metadata *Op) {
+Optional<Metadata *> MDNodeMapper::tryToMapOperand(const Metadata *Op) {
   if (!Op)
-    return false;
+    return nullptr;
 
   if (Optional<Metadata *> MappedOp = M.mapSimpleMetadata(Op)) {
 #ifndef NDEBUG
@@ -514,10 +514,23 @@ bool MDNodeMapper::mapOperand(const Metadata *Op) {
       assert((isa<MDString>(Op) || M.getVM().getMappedMD(Op)) &&
              "Expected result to be memoized");
 #endif
-    return *MappedOp != Op;
+    return *MappedOp;
   }
 
-  return push(*cast<MDNode>(Op)).HasChangedAddress;
+  const MDNode &N = *cast<MDNode>(Op);
+  if (N.isDistinct())
+    return mapDistinctNode(N);
+  return None;
+}
+
+MDNode *MDNodeMapper::mapDistinctNode(const MDNode &N) {
+  assert(N.isDistinct() && "Expected a distinct node");
+  assert(!M.getVM().getMappedMD(&N) && "Expected an unmapped node");
+  DistinctWorklist.push_back(cast<MDNode>(
+      (M.Flags & RF_MoveDistinctMDs)
+          ? M.mapToSelf(&N)
+          : M.mapToMetadata(&N, MDNode::replaceWithDistinct(N.clone()))));
+  return DistinctWorklist.back();
 }
 
 static ConstantAsMetadata *wrapConstantAsMetadata(const ConstantAsMetadata &CMD,
@@ -543,14 +556,12 @@ Optional<Metadata *> MDNodeMapper::getMappedOp(const Metadata *Op) const {
   return None;
 }
 
-Metadata &MDNodeMapper::getFwdReference(const Data &D, MDNode &Op) {
+Metadata &MDNodeMapper::UniquedGraph::getFwdReference(MDNode &Op) {
   auto Where = Info.find(&Op);
   assert(Where != Info.end() && "Expected a valid reference");
 
   auto &OpD = Where->second;
-  assert(OpD.ID > D.ID && "Expected a forward reference");
-
-  if (!OpD.HasChangedAddress)
+  if (!OpD.HasChanged)
     return Op;
 
   // Lazily construct a temporary node.
@@ -560,128 +571,93 @@ Metadata &MDNodeMapper::getFwdReference(const Data &D, MDNode &Op) {
   return *OpD.Placeholder;
 }
 
-void MDNodeMapper::remapOperands(const Data &D, MDNode &N) {
+template <class OperandMapper>
+void MDNodeMapper::remapOperands(MDNode &N, OperandMapper mapOperand) {
+  assert(!N.isUniqued() && "Expected distinct or temporary nodes");
   for (unsigned I = 0, E = N.getNumOperands(); I != E; ++I) {
     Metadata *Old = N.getOperand(I);
-    Metadata *New;
-    if (Optional<Metadata *> MappedOp = getMappedOp(Old)){
-      New = *MappedOp;
-    } else {
-      assert(!N.isDistinct() &&
-             "Expected all nodes to be pre-mapped for distinct operands");
-      MDNode &OldN = *cast<MDNode>(Old);
-      assert(!OldN.isDistinct() && "Expected distinct nodes to be pre-mapped");
-      New = &getFwdReference(D, OldN);
-    }
+    Metadata *New = mapOperand(Old);
 
     if (Old != New)
       N.replaceOperandWith(I, New);
   }
 }
 
-MDNodeMapper::Data &MDNodeMapper::push(const MDNode &N) {
-  auto Insertion = Info.insert(std::make_pair(&N, Data()));
-  auto &D = Insertion.first->second;
-  if (!Insertion.second)
-    return D;
+bool MDNodeMapper::createPOT(UniquedGraph &G, const MDNode &FirstN) {
+  assert(G.Info.empty() && "Expected a fresh traversal");
+  assert(FirstN.isUniqued() && "Expected uniqued node in POT");
 
-  // Add to the worklist; check for distinct nodes that are required to be
-  // copied.
-  Worklist.push_back(std::make_pair(&const_cast<MDNode &>(N), false));
-  D.HasChangedAddress = !(M.Flags & RF_MoveDistinctMDs) && N.isDistinct();
-  return D;
-}
-
-bool MDNodeMapper::tryToPop() {
-  if (!Worklist.back().second) {
-    Worklist.back().second = true;
-    return false;
-  }
-
-  MDNode *N = Worklist.pop_back_val().first;
-  Info[N].ID = POT.size();
-  POT.push_back(N);
-  return true;
-}
-
-bool MDNodeMapper::createPOT(const MDNode &FirstN) {
+  // Construct a post-order traversal of the uniqued subgraph under FirstN.
   bool AnyChanges = false;
 
-  // Do a traversal of the unmapped subgraph, tracking whether operands change.
-  // In some cases, these changes will propagate naturally, but
-  // propagateChangedOperands() catches the general case.
-  AnyChanges |= push(FirstN).HasChangedAddress;
-  while (hasWork()) {
-    if (tryToPop())
+  // The flag on the worklist indicates whether this is the first or second
+  // visit of a node.  The first visit looks through the operands; the second
+  // visit adds the node to POT.
+  SmallVector<std::pair<MDNode *, bool>, 16> Worklist;
+  Worklist.push_back(std::make_pair(&const_cast<MDNode &>(FirstN), false));
+  (void)G.Info[&FirstN];
+  while (!Worklist.empty()) {
+    MDNode &N = *Worklist.back().first;
+    if (Worklist.back().second) {
+      // We've already visited operands.  Add this to POT.
+      Worklist.pop_back();
+      G.Info[&N].ID = G.POT.size();
+      G.POT.push_back(&N);
       continue;
+    }
+    Worklist.back().second = true;
 
-    MDNode &N = getCurrentNode();
+    // Look through the operands for changes, pushing unmapped uniqued nodes
+    // onto to the worklist.
+    assert(N.isUniqued() && "Expected only uniqued nodes in POT");
     bool LocalChanges = false;
-    for (const Metadata *Op : N.operands())
-      LocalChanges |= mapOperand(Op);
+    for (Metadata *Op : N.operands()) {
+      assert(Op != &N && "Uniqued nodes cannot have self-references");
+      if (Optional<Metadata *> MappedOp = tryToMapOperand(Op)) {
+        AnyChanges |= LocalChanges |= Op != *MappedOp;
+        continue;
+      }
 
-    if (!LocalChanges)
-      continue;
+      MDNode &OpN = *cast<MDNode>(Op);
+      assert(OpN.isUniqued() &&
+             "Only uniqued operands cannot be mapped immediately");
+      if (G.Info.insert(std::make_pair(&OpN, Data())).second)
+        Worklist.push_back(std::make_pair(&OpN, false));
+    }
 
-    AnyChanges = true;
-    auto &D = Info[&N];
-    D.HasChangedOps = true;
-
-    // Uniqued nodes change address when operands change.
-    if (!N.isDistinct())
-      D.HasChangedAddress = true;
+    if (LocalChanges)
+      G.Info[&N].HasChanged = true;
   }
   return AnyChanges;
 }
 
-void MDNodeMapper::propagateChangedOperands() {
-  bool AnyChangedAddresses;
+void MDNodeMapper::UniquedGraph::propagateChanges() {
+  bool AnyChanges;
   do {
-    AnyChangedAddresses = false;
+    AnyChanges = false;
     for (MDNode *N : POT) {
-      auto &NI = Info[N];
-      if (NI.HasChangedOps)
+      auto &D = Info[N];
+      if (D.HasChanged)
         continue;
 
       if (!llvm::any_of(N->operands(), [&](const Metadata *Op) {
             auto Where = Info.find(Op);
-            return Where != Info.end() && Where->second.HasChangedAddress;
+            return Where != Info.end() && Where->second.HasChanged;
           }))
         continue;
 
-      NI.HasChangedOps = true;
-      if (!N->isDistinct()) {
-        NI.HasChangedAddress = true;
-        AnyChangedAddresses = true;
-      }
+      AnyChanges = D.HasChanged = true;
     }
-  } while (AnyChangedAddresses);
+  } while (AnyChanges);
 }
 
-void MDNodeMapper::mapDistinctNodes() {
-  // Map all the distinct nodes in POT.
-  for (MDNode *N : POT) {
-    if (!N->isDistinct())
-      continue;
-
-    if (M.Flags & RF_MoveDistinctMDs)
-      M.mapToSelf(N);
-    else
-      M.mapToMetadata(N, MDNode::replaceWithDistinct(N->clone()));
-  }
-}
-
-void MDNodeMapper::mapUniquedNodes() {
+void MDNodeMapper::mapNodesInPOT(UniquedGraph &G) {
   // Construct uniqued nodes, building forward references as necessary.
   SmallVector<MDNode *, 16> CyclicNodes;
-  for (auto *N : POT) {
-    if (N->isDistinct())
-      continue;
-
-    auto &D = Info[N];
-    assert(D.HasChangedAddress == D.HasChangedOps &&
-           "Uniqued nodes should change address iff ops change");
-    if (!D.HasChangedAddress) {
+  for (auto *N : G.POT) {
+    auto &D = G.Info[N];
+    if (!D.HasChanged) {
+      // The node hasn't changed.
       M.mapToSelf(N);
       continue;
     }
@@ -691,7 +667,13 @@ void MDNodeMapper::mapUniquedNodes() {
 
     // Clone the uniqued node and remap the operands.
     TempMDNode ClonedN = D.Placeholder ? std::move(D.Placeholder) : N->clone();
-    remapOperands(D, *ClonedN);
+    remapOperands(*ClonedN, [this, &D, &G](Metadata *Old) {
+      if (Optional<Metadata *> MappedOp = getMappedOp(Old))
+        return *MappedOp;
+      assert(G.Info[Old].ID > D.ID && "Expected a forward reference");
+      return &G.getFwdReference(*cast<MDNode>(Old));
+    });
+
     auto *NewN = MDNode::replaceWithUniqued(std::move(ClonedN));
     M.mapToMetadata(N, NewN);
 
@@ -707,40 +689,42 @@ void MDNodeMapper::mapUniquedNodes() {
       N->resolveCycles();
 }
 
-void MDNodeMapper::remapDistinctOperands() {
-  for (auto *N : POT) {
-    if (!N->isDistinct())
-      continue;
-
-    auto &D = Info[N];
-    if (!D.HasChangedOps)
-      continue;
-
-    assert(D.HasChangedAddress == !bool(M.Flags & RF_MoveDistinctMDs) &&
-           "Distinct nodes should change address iff they cannot be moved");
-    remapOperands(D, D.HasChangedAddress ? *cast<MDNode>(*getMappedOp(N)) : *N);
-  }
-}
-
-Metadata *MDNodeMapper::map(const MDNode &FirstN) {
+Metadata *MDNodeMapper::map(const MDNode &N) {
+  assert(DistinctWorklist.empty() && "MDNodeMapper::map is not recursive");
   assert(!(M.Flags & RF_NoModuleLevelChanges) &&
          "MDNodeMapper::map assumes module-level changes");
-  assert(POT.empty() && "MDNodeMapper::map is not re-entrant");
 
   // Require resolved nodes whenever metadata might be remapped.
-  assert(FirstN.isResolved() && "Unexpected unresolved node");
+  assert(N.isResolved() && "Unexpected unresolved node");
 
-  // Return early if nothing at all changed.
-  if (!createPOT(FirstN)) {
-    for (const MDNode *N : POT)
+  Metadata *MappedN =
+      N.isUniqued() ? mapTopLevelUniquedNode(N) : mapDistinctNode(N);
+  while (!DistinctWorklist.empty())
+    remapOperands(*DistinctWorklist.pop_back_val(), [this](Metadata *Old) {
+      if (Optional<Metadata *> MappedOp = tryToMapOperand(Old))
+        return *MappedOp;
+      return mapTopLevelUniquedNode(*cast<MDNode>(Old));
+    });
+  return MappedN;
+}
+
+Metadata *MDNodeMapper::mapTopLevelUniquedNode(const MDNode &FirstN) {
+  assert(FirstN.isUniqued() && "Expected uniqued node");
+
+  // Create a post-order traversal of uniqued nodes under FirstN.
+  UniquedGraph G;
+  if (!createPOT(G, FirstN)) {
+    // Return early if no nodes have changed.
+    for (const MDNode *N : G.POT)
       M.mapToSelf(N);
     return &const_cast<MDNode &>(FirstN);
   }
 
-  propagateChangedOperands();
-  mapDistinctNodes();
-  mapUniquedNodes();
-  remapDistinctOperands();
+  // Update graph with all nodes that have changed.
+  G.propagateChanges();
+
+  // Map all the nodes in the graph.
+  mapNodesInPOT(G);
 
   // Return the original node, remapped.
   return *getMappedOp(&FirstN);
