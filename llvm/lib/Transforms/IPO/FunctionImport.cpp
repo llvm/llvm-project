@@ -143,7 +143,7 @@ using EdgeInfo = std::pair<const FunctionSummary *, unsigned /* Threshold */>;
 static void computeImportForFunction(
     const FunctionSummary &Summary, const ModuleSummaryIndex &Index,
     unsigned Threshold,
-    const std::map<GlobalValue::GUID, GlobalValueSummary *> &DefinedFunctions,
+    const std::map<GlobalValue::GUID, GlobalValueSummary *> &DefinedGVSummaries,
     SmallVectorImpl<EdgeInfo> &Worklist,
     FunctionImporter::ImportMapTy &ImportsForModule,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
@@ -151,7 +151,7 @@ static void computeImportForFunction(
     auto GUID = Edge.first.getGUID();
     DEBUG(dbgs() << " edge -> " << GUID << " Threshold:" << Threshold << "\n");
 
-    if (DefinedFunctions.count(GUID)) {
+    if (DefinedGVSummaries.count(GUID)) {
       DEBUG(dbgs() << "ignored! Target already in destination module.\n");
       continue;
     }
@@ -212,7 +212,7 @@ static void computeImportForFunction(
 /// as well as the list of "exports", i.e. the list of symbols referenced from
 /// another module (that may require promotion).
 static void ComputeImportForModule(
-    const std::map<GlobalValue::GUID, GlobalValueSummary *> &DefinedFunctions,
+    const std::map<GlobalValue::GUID, GlobalValueSummary *> &DefinedGVSummaries,
     const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportsForModule,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
@@ -222,14 +222,17 @@ static void ComputeImportForModule(
 
   // Populate the worklist with the import for the functions in the current
   // module
-  for (auto &FuncInfo : DefinedFunctions) {
-    auto *Summary = FuncInfo.second;
+  for (auto &GVInfo : DefinedGVSummaries) {
+    auto *Summary = GVInfo.second;
     if (auto *AS = dyn_cast<AliasSummary>(Summary))
       Summary = &AS->getAliasee();
-    auto *FuncSummary = cast<FunctionSummary>(Summary);
-    DEBUG(dbgs() << "Initalize import for " << FuncInfo.first << "\n");
+    auto *FuncSummary = dyn_cast<FunctionSummary>(Summary);
+    if (!FuncSummary)
+      // Skip import for global variables
+      continue;
+    DEBUG(dbgs() << "Initalize import for " << GVInfo.first << "\n");
     computeImportForFunction(*FuncSummary, Index, ImportInstrLimit,
-                             DefinedFunctions, Worklist, ImportsForModule,
+                             DefinedGVSummaries, Worklist, ImportsForModule,
                              ExportLists);
   }
 
@@ -242,7 +245,7 @@ static void ComputeImportForModule(
     // Adjust the threshold
     Threshold = Threshold * ImportInstrFactor;
 
-    computeImportForFunction(*Summary, Index, Threshold, DefinedFunctions,
+    computeImportForFunction(*Summary, Index, Threshold, DefinedGVSummaries,
                              Worklist, ImportsForModule, ExportLists);
   }
 }
@@ -252,38 +255,16 @@ static void ComputeImportForModule(
 /// Compute all the import and export for every module using the Index.
 void llvm::ComputeCrossModuleImport(
     const ModuleSummaryIndex &Index,
+    const StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>> &
+        ModuleToDefinedGVSummaries,
     StringMap<FunctionImporter::ImportMapTy> &ImportLists,
     StringMap<FunctionImporter::ExportSetTy> &ExportLists) {
-  auto ModuleCount = Index.modulePaths().size();
-
-  // Collect for each module the list of function it defines.
-  // GUID -> Summary
-  StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
-      Module2FunctionInfoMap(ModuleCount);
-
-  for (auto &GlobalList : Index) {
-    auto GUID = GlobalList.first;
-    for (auto &GlobInfo : GlobalList.second) {
-      auto *Summary = GlobInfo->summary();
-      if (isa<GlobalVarSummary>(Summary))
-        /// Ignore global variable, focus on functions
-        continue;
-      if (auto *AS = dyn_cast<AliasSummary>(Summary))
-        if (isa<GlobalVarSummary>(&AS->getAliasee()))
-          /// Ignore alias to global variable, focus on functions
-          continue;
-      DEBUG(dbgs() << "Adding definition: Module '" << Summary->modulePath()
-                   << "' defines '" << GUID << "'\n");
-      Module2FunctionInfoMap[Summary->modulePath()][GUID] = Summary;
-    }
-  }
-
   // For each module that has function defined, compute the import/export lists.
-  for (auto &DefinedFunctions : Module2FunctionInfoMap) {
-    auto &ImportsForModule = ImportLists[DefinedFunctions.first()];
-    DEBUG(dbgs() << "Computing import for Module '" << DefinedFunctions.first()
-                 << "'\n");
-    ComputeImportForModule(DefinedFunctions.second, Index, ImportsForModule,
+  for (auto &DefinedGVSummaries : ModuleToDefinedGVSummaries) {
+    auto &ImportsForModule = ImportLists[DefinedGVSummaries.first()];
+    DEBUG(dbgs() << "Computing import for Module '"
+                 << DefinedGVSummaries.first() << "'\n");
+    ComputeImportForModule(DefinedGVSummaries.second, Index, ImportsForModule,
                            &ExportLists);
   }
 

@@ -466,6 +466,12 @@ public:
   void collectDefinedFunctionsForModule(
       StringRef ModulePath,
       std::map<GlobalValue::GUID, GlobalValueSummary *> &FunctionInfoMap) const;
+
+  /// Collect for each module the list of Summaries it defines (GUID ->
+  /// Summary).
+  void collectDefinedGVSummariesPerModule(
+      StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>> &
+          ModuleToDefinedGVSummaries) const;
 };
 
 } // End llvm namespace

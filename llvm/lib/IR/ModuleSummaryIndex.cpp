@@ -89,6 +89,19 @@ void ModuleSummaryIndex::collectDefinedFunctionsForModule(
   }
 }
 
+// Collect for each module the list of function it defines (GUID -> Summary).
+void ModuleSummaryIndex::collectDefinedGVSummariesPerModule(
+    StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>> &
+        Module2FunctionInfoMap) const {
+  for (auto &GlobalList : *this) {
+    auto GUID = GlobalList.first;
+    for (auto &GlobInfo : GlobalList.second) {
+      auto *Summary = GlobInfo->summary();
+      Module2FunctionInfoMap[Summary->modulePath()][GUID] = Summary;
+    }
+  }
+}
+
 GlobalValueInfo *
 ModuleSummaryIndex::getGlobalValueInfo(uint64_t ValueGUID,
                                        bool PerModuleIndex) const {
