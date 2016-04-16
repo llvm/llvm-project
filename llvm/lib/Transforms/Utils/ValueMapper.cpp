@@ -16,6 +16,8 @@
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
@@ -29,14 +31,6 @@ void ValueMaterializer::materializeInitFor(GlobalValue *New, GlobalValue *Old) {
 }
 
 namespace {
-
-/// A GlobalValue whose initializer needs to be materialized.
-struct DelayedGlobalValueInit {
-  GlobalValue *Old;
-  GlobalValue *New;
-  DelayedGlobalValueInit(const GlobalValue *Old, GlobalValue *New)
-      : Old(const_cast<GlobalValue *>(Old)), New(New) {}
-};
 
 /// A basic block used in a BlockAddress whose function body is not yet
 /// materialized.
@@ -58,29 +52,87 @@ struct DelayedBasicBlock {
         TempBB(BasicBlock::Create(Old.getContext())) {}
 };
 
+struct WorklistEntry {
+  enum EntryKind {
+    MapGlobalInit,
+    MapAppendingVar,
+    MapGlobalAliasee,
+    RemapFunction
+  };
+  struct GVInitTy {
+    GlobalVariable *GV;
+    Constant *Init;
+  };
+  struct AppendingGVTy {
+    GlobalVariable *GV;
+    Constant *InitPrefix;
+  };
+  struct GlobalAliaseeTy {
+    GlobalAlias *GA;
+    Constant *Aliasee;
+  };
+
+  unsigned Kind : 2;
+  unsigned MCID : 29;
+  unsigned AppendingGVIsOldCtorDtor : 1;
+  unsigned AppendingGVNumNewMembers;
+  union {
+    GVInitTy GVInit;
+    AppendingGVTy AppendingGV;
+    GlobalAliaseeTy GlobalAliasee;
+    Function *RemapF;
+  } Data;
+};
+
+struct MappingContext {
+  ValueToValueMapTy *VM;
+  ValueMaterializer *Materializer = nullptr;
+
+  /// Construct a MappingContext with a value map and materializer.
+  explicit MappingContext(ValueToValueMapTy &VM,
+                          ValueMaterializer *Materializer = nullptr)
+      : VM(&VM), Materializer(Materializer) {}
+};
+
 class MDNodeMapper;
 class Mapper {
   friend class MDNodeMapper;
 
-  ValueToValueMapTy *VM;
   RemapFlags Flags;
   ValueMapTypeRemapper *TypeMapper;
-  ValueMaterializer *Materializer;
-
-  SmallVector<DelayedGlobalValueInit, 8> DelayedInits;
+  unsigned CurrentMCID = 0;
+  SmallVector<MappingContext, 2> MCs;
+  SmallVector<WorklistEntry, 4> Worklist;
   SmallVector<DelayedBasicBlock, 1> DelayedBBs;
+  SmallVector<Constant *, 16> AppendingInits;
 
 public:
   Mapper(ValueToValueMapTy &VM, RemapFlags Flags,
          ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer)
-      : VM(&VM), Flags(Flags), TypeMapper(TypeMapper),
-        Materializer(Materializer) {}
+      : Flags(Flags), TypeMapper(TypeMapper),
+        MCs(1, MappingContext(VM, Materializer)) {}
 
-  ~Mapper();
+  /// ValueMapper should explicitly call \a flush() before destruction.
+  ~Mapper() { assert(!hasWorkToDo() && "Expected to be flushed"); }
+
+  bool hasWorkToDo() const { return !Worklist.empty(); }
+
+  unsigned
+  registerAlternateMappingContext(ValueToValueMapTy &VM,
+                                  ValueMaterializer *Materializer = nullptr) {
+    MCs.push_back(MappingContext(VM, Materializer));
+    return MCs.size() - 1;
+  }
+
+  void addFlags(RemapFlags Flags);
 
   Value *mapValue(const Value *V);
   void remapInstruction(Instruction *I);
   void remapFunction(Function &F);
+
+  Constant *mapConstant(const Constant *C) {
+    return cast_or_null<Constant>(mapValue(C));
+  }
 
   /// Map metadata.
   ///
@@ -102,8 +154,28 @@ public:
   // through metadata operands, always return nullptr on unmapped locals.
   Metadata *mapLocalAsMetadata(const LocalAsMetadata &LAM);
 
+  void scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
+                                    unsigned MCID);
+  void scheduleMapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
+                                    bool IsOldCtorDtor,
+                                    ArrayRef<Constant *> NewMembers,
+                                    unsigned MCID);
+  void scheduleMapGlobalAliasee(GlobalAlias &GA, Constant &Aliasee,
+                                unsigned MCID);
+  void scheduleRemapFunction(Function &F, unsigned MCID);
+
+  void flush();
+
 private:
-  ValueToValueMapTy &getVM() { return *VM; }
+  void mapGlobalInitializer(GlobalVariable &GV, Constant &Init);
+  void mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
+                            bool IsOldCtorDtor,
+                            ArrayRef<Constant *> NewMembers);
+  void mapGlobalAliasee(GlobalAlias &GA, Constant &Aliasee);
+  void remapFunction(Function &F, ValueToValueMapTy &VM);
+
+  ValueToValueMapTy &getVM() { return *MCs[CurrentMCID].VM; }
+  ValueMaterializer *getMaterializer() { return MCs[CurrentMCID].Materializer; }
 
   Value *mapBlockAddress(const BlockAddress &BA);
 
@@ -251,12 +323,6 @@ private:
 
 } // end namespace
 
-Value *llvm::MapValue(const Value *V, ValueToValueMapTy &VM, RemapFlags Flags,
-                      ValueMapTypeRemapper *TypeMapper,
-                      ValueMaterializer *Materializer) {
-  return Mapper(VM, Flags, TypeMapper, Materializer).mapValue(V);
-}
-
 Value *Mapper::mapValue(const Value *V) {
   ValueToValueMapTy::iterator I = getVM().find(V);
 
@@ -265,13 +331,13 @@ Value *Mapper::mapValue(const Value *V) {
     return I->second;
 
   // If we have a materializer and it can materialize a value, use that.
-  if (Materializer) {
+  if (auto *Materializer = getMaterializer()) {
     if (Value *NewV =
             Materializer->materializeDeclFor(const_cast<Value *>(V))) {
       getVM()[V] = NewV;
       if (auto *NewGV = dyn_cast<GlobalValue>(NewV))
-        DelayedInits.push_back(
-            DelayedGlobalValueInit(cast<GlobalValue>(V), NewGV));
+        Materializer->materializeInitFor(
+            NewGV, cast<GlobalValue>(const_cast<Value *>(V)));
       return NewV;
     }
   }
@@ -671,12 +737,6 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
   return None;
 }
 
-Metadata *llvm::MapMetadata(const Metadata *MD, ValueToValueMapTy &VM,
-                            RemapFlags Flags, ValueMapTypeRemapper *TypeMapper,
-                            ValueMaterializer *Materializer) {
-  return Mapper(VM, Flags, TypeMapper, Materializer).mapMetadata(MD);
-}
-
 Metadata *Mapper::mapLocalAsMetadata(const LocalAsMetadata &LAM) {
   // Lookup the mapping for the value itself, and return the appropriate
   // metadata.
@@ -703,36 +763,42 @@ Metadata *Mapper::mapMetadata(const Metadata *MD) {
   return MDNodeMapper(*this).map(*cast<MDNode>(MD));
 }
 
-Mapper::~Mapper() {
-  // Materialize global initializers.
-  while (!DelayedInits.empty()) {
-    auto Init = DelayedInits.pop_back_val();
-    Materializer->materializeInitFor(Init.New, Init.Old);
+void Mapper::flush() {
+  // Flush out the worklist of global values.
+  while (!Worklist.empty()) {
+    WorklistEntry E = Worklist.pop_back_val();
+    CurrentMCID = E.MCID;
+    switch (E.Kind) {
+    case WorklistEntry::MapGlobalInit:
+      E.Data.GVInit.GV->setInitializer(mapConstant(E.Data.GVInit.Init));
+      break;
+    case WorklistEntry::MapAppendingVar: {
+      unsigned PrefixSize = AppendingInits.size() - E.AppendingGVNumNewMembers;
+      mapAppendingVariable(*E.Data.AppendingGV.GV,
+                           E.Data.AppendingGV.InitPrefix,
+                           E.AppendingGVIsOldCtorDtor,
+                           makeArrayRef(AppendingInits).slice(PrefixSize));
+      AppendingInits.resize(PrefixSize);
+      break;
+    }
+    case WorklistEntry::MapGlobalAliasee:
+      E.Data.GlobalAliasee.GA->setAliasee(
+          mapConstant(E.Data.GlobalAliasee.Aliasee));
+      break;
+    case WorklistEntry::RemapFunction:
+      remapFunction(*E.Data.RemapF);
+      break;
+    }
   }
+  CurrentMCID = 0;
 
-  // Process block addresses delayed until global inits.
+  // Finish logic for block addresses now that all global values have been
+  // handled.
   while (!DelayedBBs.empty()) {
     DelayedBasicBlock DBB = DelayedBBs.pop_back_val();
     BasicBlock *BB = cast_or_null<BasicBlock>(mapValue(DBB.OldBB));
     DBB.TempBB->replaceAllUsesWith(BB ? BB : DBB.OldBB);
   }
-
-  // We don't expect these to grow after clearing.
-  assert(DelayedInits.empty());
-  assert(DelayedBBs.empty());
-}
-
-MDNode *llvm::MapMetadata(const MDNode *MD, ValueToValueMapTy &VM,
-                          RemapFlags Flags, ValueMapTypeRemapper *TypeMapper,
-                          ValueMaterializer *Materializer) {
-  return cast_or_null<MDNode>(MapMetadata(static_cast<const Metadata *>(MD), VM,
-                                          Flags, TypeMapper, Materializer));
-}
-
-void llvm::RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
-                            RemapFlags Flags, ValueMapTypeRemapper *TypeMapper,
-                            ValueMaterializer *Materializer) {
-  Mapper(VM, Flags, TypeMapper, Materializer).remapInstruction(I);
 }
 
 void Mapper::remapInstruction(Instruction *I) {
@@ -769,7 +835,7 @@ void Mapper::remapInstruction(Instruction *I) {
     if (New != Old)
       I->setMetadata(MI.first, New);
   }
-  
+
   if (!TypeMapper)
     return;
 
@@ -795,12 +861,6 @@ void Mapper::remapInstruction(Instruction *I) {
   I->mutateType(TypeMapper->remapType(I->getType()));
 }
 
-void llvm::RemapFunction(Function &F, ValueToValueMapTy &VM, RemapFlags Flags,
-                         ValueMapTypeRemapper *TypeMapper,
-                         ValueMaterializer *Materializer) {
-  Mapper(VM, Flags, TypeMapper, Materializer).remapFunction(F);
-}
-
 void Mapper::remapFunction(Function &F) {
   // Remap the operands.
   for (Use &Op : F.operands())
@@ -822,4 +882,186 @@ void Mapper::remapFunction(Function &F) {
   for (BasicBlock &BB : F)
     for (Instruction &I : BB)
       remapInstruction(&I);
+}
+
+void Mapper::mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
+                                  bool IsOldCtorDtor,
+                                  ArrayRef<Constant *> NewMembers) {
+  SmallVector<Constant *, 16> Elements;
+  if (InitPrefix) {
+    unsigned NumElements =
+        cast<ArrayType>(InitPrefix->getType())->getNumElements();
+    for (unsigned I = 0; I != NumElements; ++I)
+      Elements.push_back(InitPrefix->getAggregateElement(I));
+  }
+
+  PointerType *VoidPtrTy;
+  Type *EltTy;
+  if (IsOldCtorDtor) {
+    // FIXME: This upgrade is done during linking to support the C API.  See
+    // also IRLinker::linkAppendingVarProto() in IRMover.cpp.
+    VoidPtrTy = Type::getInt8Ty(GV.getContext())->getPointerTo();
+    auto &ST = *cast<StructType>(NewMembers.front()->getType());
+    Type *Tys[3] = {ST.getElementType(0), ST.getElementType(1), VoidPtrTy};
+    EltTy = StructType::get(GV.getContext(), Tys, false);
+  }
+
+  for (auto *V : NewMembers) {
+    Constant *NewV;
+    if (IsOldCtorDtor) {
+      auto *S = cast<ConstantStruct>(V);
+      auto *E1 = mapValue(S->getOperand(0));
+      auto *E2 = mapValue(S->getOperand(1));
+      Value *Null = Constant::getNullValue(VoidPtrTy);
+      NewV =
+          ConstantStruct::get(cast<StructType>(EltTy), E1, E2, Null, nullptr);
+    } else {
+      NewV = cast_or_null<Constant>(mapValue(V));
+    }
+    Elements.push_back(NewV);
+  }
+
+  GV.setInitializer(ConstantArray::get(
+      cast<ArrayType>(GV.getType()->getElementType()), Elements));
+}
+
+void Mapper::scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
+                                          unsigned MCID) {
+  assert(MCID < MCs.size() && "Invalid mapping context");
+
+  WorklistEntry WE;
+  WE.Kind = WorklistEntry::MapGlobalInit;
+  WE.MCID = MCID;
+  WE.Data.GVInit.GV = &GV;
+  WE.Data.GVInit.Init = &Init;
+  Worklist.push_back(WE);
+}
+
+void Mapper::scheduleMapAppendingVariable(GlobalVariable &GV,
+                                          Constant *InitPrefix,
+                                          bool IsOldCtorDtor,
+                                          ArrayRef<Constant *> NewMembers,
+                                          unsigned MCID) {
+  assert(MCID < MCs.size() && "Invalid mapping context");
+
+  WorklistEntry WE;
+  WE.Kind = WorklistEntry::MapAppendingVar;
+  WE.MCID = MCID;
+  WE.Data.AppendingGV.GV = &GV;
+  WE.Data.AppendingGV.InitPrefix = InitPrefix;
+  WE.AppendingGVIsOldCtorDtor = IsOldCtorDtor;
+  WE.AppendingGVNumNewMembers = NewMembers.size();
+  Worklist.push_back(WE);
+  AppendingInits.append(NewMembers.begin(), NewMembers.end());
+}
+
+void Mapper::scheduleMapGlobalAliasee(GlobalAlias &GA, Constant &Aliasee,
+                                      unsigned MCID) {
+  assert(MCID < MCs.size() && "Invalid mapping context");
+
+  WorklistEntry WE;
+  WE.Kind = WorklistEntry::MapGlobalAliasee;
+  WE.MCID = MCID;
+  WE.Data.GlobalAliasee.GA = &GA;
+  WE.Data.GlobalAliasee.Aliasee = &Aliasee;
+  Worklist.push_back(WE);
+}
+
+void Mapper::scheduleRemapFunction(Function &F, unsigned MCID) {
+  assert(MCID < MCs.size() && "Invalid mapping context");
+
+  WorklistEntry WE;
+  WE.Kind = WorklistEntry::RemapFunction;
+  WE.MCID = MCID;
+  WE.Data.RemapF = &F;
+  Worklist.push_back(WE);
+}
+
+void Mapper::addFlags(RemapFlags Flags) {
+  assert(!hasWorkToDo() && "Expected to have flushed the worklist");
+  this->Flags = this->Flags | Flags;
+}
+
+static Mapper *getAsMapper(void *pImpl) {
+  return reinterpret_cast<Mapper *>(pImpl);
+}
+
+namespace {
+
+class FlushingMapper {
+  Mapper &M;
+
+public:
+  explicit FlushingMapper(void *pImpl) : M(*getAsMapper(pImpl)) {
+    assert(!M.hasWorkToDo() && "Expected to be flushed");
+  }
+  ~FlushingMapper() { M.flush(); }
+  Mapper *operator->() const { return &M; }
+};
+
+} // end namespace
+
+ValueMapper::ValueMapper(ValueToValueMapTy &VM, RemapFlags Flags,
+                         ValueMapTypeRemapper *TypeMapper,
+                         ValueMaterializer *Materializer)
+    : pImpl(new Mapper(VM, Flags, TypeMapper, Materializer)) {}
+
+ValueMapper::~ValueMapper() { delete getAsMapper(pImpl); }
+
+unsigned
+ValueMapper::registerAlternateMappingContext(ValueToValueMapTy &VM,
+                                             ValueMaterializer *Materializer) {
+  return getAsMapper(pImpl)->registerAlternateMappingContext(VM, Materializer);
+}
+
+void ValueMapper::addFlags(RemapFlags Flags) {
+  FlushingMapper(pImpl)->addFlags(Flags);
+}
+
+Value *ValueMapper::mapValue(const Value &V) {
+  return FlushingMapper(pImpl)->mapValue(&V);
+}
+
+Constant *ValueMapper::mapConstant(const Constant &C) {
+  return cast_or_null<Constant>(mapValue(C));
+}
+
+Metadata *ValueMapper::mapMetadata(const Metadata &MD) {
+  return FlushingMapper(pImpl)->mapMetadata(&MD);
+}
+
+MDNode *ValueMapper::mapMDNode(const MDNode &N) {
+  return cast_or_null<MDNode>(mapMetadata(N));
+}
+
+void ValueMapper::remapInstruction(Instruction &I) {
+  FlushingMapper(pImpl)->remapInstruction(&I);
+}
+
+void ValueMapper::remapFunction(Function &F) {
+  FlushingMapper(pImpl)->remapFunction(F);
+}
+
+void ValueMapper::scheduleMapGlobalInitializer(GlobalVariable &GV,
+                                               Constant &Init,
+                                               unsigned MCID) {
+  getAsMapper(pImpl)->scheduleMapGlobalInitializer(GV, Init, MCID);
+}
+
+void ValueMapper::scheduleMapAppendingVariable(GlobalVariable &GV,
+                                               Constant *InitPrefix,
+                                               bool IsOldCtorDtor,
+                                               ArrayRef<Constant *> NewMembers,
+                                               unsigned MCID) {
+  getAsMapper(pImpl)->scheduleMapAppendingVariable(
+      GV, InitPrefix, IsOldCtorDtor, NewMembers, MCID);
+}
+
+void ValueMapper::scheduleMapGlobalAliasee(GlobalAlias &GA, Constant &Aliasee,
+                                           unsigned MCID) {
+  getAsMapper(pImpl)->scheduleMapGlobalAliasee(GA, Aliasee, MCID);
+}
+
+void ValueMapper::scheduleRemapFunction(Function &F, unsigned MCID) {
+  getAsMapper(pImpl)->scheduleRemapFunction(F, MCID);
 }
