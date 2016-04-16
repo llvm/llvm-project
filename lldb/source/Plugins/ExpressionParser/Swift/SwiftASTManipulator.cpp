@@ -120,10 +120,10 @@ SwiftASTManipulator::WrapExpression(lldb_private::Stream &wrapped_stream,
     {
         const char *playground_prefix = R"(
 @_silgen_name ("playground_logger_initialize") func $builtin_logger_initialize ()
-@_silgen_name ("playground_log_hidden") func $builtin_log_with_id<T> (object : T, _ name : String, _ id : Int, _ sl : Int, _ el : Int, _ sc : Int, _ ec: Int) -> AnyObject
-@_silgen_name ("playground_log_scope_entry") func $builtin_log_scope_entry (sl : Int, _ el : Int, _ sc : Int, _ ec: Int) -> AnyObject
-@_silgen_name ("playground_log_scope_exit") func $builtin_log_scope_exit (sl : Int, _ el : Int, _ sc : Int, _ ec: Int) -> AnyObject
-@_silgen_name ("playground_log_postprint") func $builtin_postPrint (sl : Int, _ el : Int, _ sc : Int, _ ec: Int) -> AnyObject
+@_silgen_name ("playground_log_hidden") func $builtin_log_with_id<T> (_ object : T, _ name : String, _ id : Int, _ sl : Int, _ el : Int, _ sc : Int, _ ec: Int) -> AnyObject
+@_silgen_name ("playground_log_scope_entry") func $builtin_log_scope_entry (_ sl : Int, _ el : Int, _ sc : Int, _ ec: Int) -> AnyObject
+@_silgen_name ("playground_log_scope_exit") func $builtin_log_scope_exit (_ sl : Int, _ el : Int, _ sc : Int, _ ec: Int) -> AnyObject
+@_silgen_name ("playground_log_postprint") func $builtin_postPrint (_ sl : Int, _ el : Int, _ sc : Int, _ ec: Int) -> AnyObject
 @_silgen_name ("DVTSendPlaygroundLogData") func $builtin_send_data (_ :  AnyObject!)
 $builtin_logger_initialize()
 )";
