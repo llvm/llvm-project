@@ -238,13 +238,14 @@ TEST(ValueMapperTest, mapMetadataConstantAsMetadata) {
 
   auto *CAM = ConstantAsMetadata::get(F.get());
   {
+    // ConstantAsMetadata shouldn't be memoized.
     ValueToValueMapTy VM;
     EXPECT_EQ(CAM, ValueMapper(VM).mapMetadata(*CAM));
-    EXPECT_TRUE(VM.MD().count(CAM));
-    VM.MD().erase(CAM);
+    EXPECT_FALSE(VM.MD().count(CAM));
     EXPECT_EQ(CAM, ValueMapper(VM, RF_IgnoreMissingLocals).mapMetadata(*CAM));
-    EXPECT_TRUE(VM.MD().count(CAM));
+    EXPECT_FALSE(VM.MD().count(CAM));
 
+    // But it should respect a mapping that gets seeded.
     auto *N = MDTuple::get(C, None);
     VM.MD()[CAM].reset(N);
     EXPECT_EQ(N, ValueMapper(VM).mapMetadata(*CAM));
@@ -256,7 +257,7 @@ TEST(ValueMapperTest, mapMetadataConstantAsMetadata) {
   ValueToValueMapTy VM;
   VM[F.get()] = F2.get();
   auto *F2MD = ValueMapper(VM).mapMetadata(*CAM);
-  EXPECT_TRUE(VM.MD().count(CAM));
+  EXPECT_FALSE(VM.MD().count(CAM));
   EXPECT_TRUE(F2MD);
   EXPECT_EQ(F2.get(), cast<ConstantAsMetadata>(F2MD)->getValue());
 }
