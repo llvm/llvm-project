@@ -55,6 +55,7 @@ TEST(Symbolizer, ExtractTokenUpToDelimiter) {
   InternalFree(token);
 }
 
+#if !SANITIZER_WINDOWS
 TEST(Symbolizer, DemangleSwiftAndCXX) {
   // Swift names are not demangled in default llvm build because Swift
   // runtime is not linked in.
@@ -64,5 +65,6 @@ TEST(Symbolizer, DemangleSwiftAndCXX) {
   EXPECT_STREQ("foo", DemangleSwiftAndCXX("foo"));
   EXPECT_STREQ("", DemangleSwiftAndCXX(""));
 }
+#endif
 
 }  // namespace __sanitizer
