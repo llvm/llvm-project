@@ -47,7 +47,19 @@ module _Builtin_intrinsics [system] [extern_c] {
     export *
 
     header "immintrin.h"
+    textual header "f16cintrin.h"
+    textual header "avxintrin.h"
+    textual header "avx2intrin.h"
+    textual header "avx512fintrin.h"
+    textual header "avx512erintrin.h"
+    textual header "fmaintrin.h"
+
     header "x86intrin.h"
+    textual header "bmiintrin.h"
+    textual header "bmi2intrin.h"
+    textual header "lzcntintrin.h"
+    textual header "xopintrin.h"
+    textual header "fma4intrin.h"
 
     explicit module mm_malloc {
       header "mm_malloc.h"
@@ -60,10 +72,6 @@ module _Builtin_intrinsics [system] [extern_c] {
 
     explicit module mmx {
       header "mmintrin.h"
-    }
-
-    explicit module f16c {
-      header "f16cintrin.h"
     }
 
     explicit module sse {
@@ -103,57 +111,12 @@ module _Builtin_intrinsics [system] [extern_c] {
       header "ammintrin.h"
     }
 
-    explicit module avx {
-      export sse4_2
-      header "avxintrin.h"
-    }
-
-    explicit module avx2 {
-      export avx
-      header "avx2intrin.h"
-    }
-
-    explicit module avx512f {
-      export avx2
-      header "avx512fintrin.h"
-    }
-
-    explicit module avx512er {
-      header "avx512erintrin.h"
-    }
-
-    explicit module bmi {
-      header "bmiintrin.h"
-    }
-
-    explicit module bmi2 {
-      header "bmi2intrin.h"
-    }
-
-    explicit module fma {
-      header "fmaintrin.h"
-    }
-
-    explicit module fma4 {
-      export sse3
-      header "fma4intrin.h"
-    }
-
-    explicit module lzcnt {
-      header "lzcntintrin.h"
-    }
-
     explicit module popcnt {
       header "popcntintrin.h"
     }
 
     explicit module mm3dnow {
       header "mm3dnow.h"
-    }
-
-    explicit module xop {
-      export fma4
-      header "xopintrin.h"
     }
 
     explicit module aes_pclmul {

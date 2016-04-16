@@ -4118,11 +4118,14 @@ void Linux::AddCudaIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nocudainc))
     return;
 
-  if (CudaInstallation.isValid()) {
-    addSystemInclude(DriverArgs, CC1Args, CudaInstallation.getIncludePath());
-    CC1Args.push_back("-include");
-    CC1Args.push_back("__clang_cuda_runtime_wrapper.h");
+  if (!CudaInstallation.isValid()) {
+    getDriver().Diag(diag::err_drv_no_cuda_installation);
+    return;
   }
+
+  addSystemInclude(DriverArgs, CC1Args, CudaInstallation.getIncludePath());
+  CC1Args.push_back("-include");
+  CC1Args.push_back("__clang_cuda_runtime_wrapper.h");
 }
 
 bool Linux::isPIEDefault() const { return getSanitizerArgs().requiresPIE(); }

@@ -409,6 +409,8 @@ def err_pp_remainder_by_zero : Error<
   "remainder by zero in preprocessor expression">;
 def err_pp_expr_bad_token_binop : Error<
   "token is not a valid binary operator in a preprocessor subexpression">;
+def err_pp_expr_bad_token_lparen : Error<
+  "function-like macro %0 is not defined">;
 def err_pp_expr_bad_token_start_expr : Error<
   "invalid token at start of a preprocessor expression">;
 def err_pp_invalid_poison : Error<"can only poison identifier tokens">;
