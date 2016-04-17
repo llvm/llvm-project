@@ -14,7 +14,8 @@ class C {
   let m_counter: Int
   private init(_ val: Int) { m_counter = val }
   class func Create() -> C {
-    return C(++Nested.g_counter)
+    Nested.g_counter += 1
+    return C(Nested.g_counter)
   }
 }
 
