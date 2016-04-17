@@ -3906,7 +3906,6 @@ The following ``tag:`` values are valid:
 
 .. code-block:: llvm
 
-  DW_TAG_formal_parameter   = 5
   DW_TAG_member             = 13
   DW_TAG_pointer_type       = 15
   DW_TAG_reference_type     = 16
@@ -3919,10 +3918,8 @@ The following ``tag:`` values are valid:
   DW_TAG_restrict_type      = 55
 
 ``DW_TAG_member`` is used to define a member of a :ref:`composite type
-<DICompositeType>` or :ref:`subprogram <DISubprogram>`. The type of the member
-is the ``baseType:``. The ``offset:`` is the member's bit offset.
-``DW_TAG_formal_parameter`` is used to define a member which is a formal
-argument of a subprogram.
+<DICompositeType>`. The type of the member is the ``baseType:``. The
+``offset:`` is the member's bit offset.
 
 ``DW_TAG_inheritance`` and ``DW_TAG_friend`` are used in the ``elements:``
 field of :ref:`composite types <DICompositeType>` to describe parents and
