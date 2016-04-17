@@ -24,7 +24,7 @@ inline int add3(int x) {
 // CHECK-SAME:                         type: [[FOO_FUNC_TYPE:![0-9]*]]
 // CHECK: [[FOO_FUNC_TYPE]] = !DISubroutineType(types: [[FOO_FUNC_PARAMS:![0-9]*]])
 // CHECK: [[FOO_FUNC_PARAMS]] = !{null, !{{[0-9]*}}, !"[[OUTER_FOO_INNER_ID:.*]]"}
-// CHECK: !{{[0-9]*}} = !DICompositeType(tag: DW_TAG_structure_type, name: "inner"{{.*}}, identifier: "[[OUTER_FOO_INNER_ID]]")
+// CHECK: !{{[0-9]*}} = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "inner"{{.*}}, identifier: "[[OUTER_FOO_INNER_ID]]")
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "virt<elem>"
 // CHECK-SAME:             elements: [[VIRT_MEM:![0-9]*]]
@@ -34,7 +34,7 @@ inline int add3(int x) {
 // CHECK: [[VIRT_TEMP_PARAM]] = !{[[VIRT_T:![0-9]*]]}
 // CHECK: [[VIRT_T]] = !DITemplateTypeParameter(name: "T", type: !"_ZTS4elem")
 
-// CHECK: [[C:![0-9]*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "MyClass"
+// CHECK: [[C:![0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "MyClass"
 // CHECK-SAME:                             elements: [[C_MEM:![0-9]*]]
 // CHECK-SAME:                             vtableHolder: !"_ZTS7MyClass"
 // CHECK-SAME:                             identifier: "_ZTS7MyClass")
@@ -43,7 +43,7 @@ inline int add3(int x) {
 
 // CHECK: [[C_FUNC]] = !DISubprogram(name: "func",{{.*}} line: 7,
 
-// CHECK: [[ELEM:![0-9]*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "elem"
+// CHECK: [[ELEM:![0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "elem"
 // CHECK-SAME:                                elements: [[ELEM_MEM:![0-9]*]]
 // CHECK-SAME:                                identifier: "_ZTS4elem"
 // CHECK: [[ELEM_MEM]] = !{[[ELEM_X:![0-9]*]]}

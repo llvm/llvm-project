@@ -14,6 +14,7 @@
 
 #include "ScriptParser.h"
 #include "Error.h"
+#include "llvm/ADT/Twine.h"
 
 using namespace llvm;
 using namespace lld;

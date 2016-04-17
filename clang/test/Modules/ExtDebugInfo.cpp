@@ -91,11 +91,11 @@ void foo() {
 
 // CHECK: !DIGlobalVariable(name: "GlobalUnion",
 // CHECK-SAME:              type: ![[GLOBAL_UNION:[0-9]+]]
-// CHECK: ![[GLOBAL_UNION]] = !DICompositeType(tag: DW_TAG_union_type,
+// CHECK: ![[GLOBAL_UNION]] = distinct !DICompositeType(tag: DW_TAG_union_type,
 // CHECK-SAME:                elements: !{{[0-9]+}})
 // CHECK: !DIGlobalVariable(name: "GlobalStruct",
 // CHECK-SAME:              type: ![[GLOBAL_STRUCT:[0-9]+]]
-// CHECK: ![[GLOBAL_STRUCT]] = !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK: ![[GLOBAL_STRUCT]] = distinct !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-SAME:                elements: !{{[0-9]+}})
 
 // CHECK: !DIGlobalVariable(name: "anon",

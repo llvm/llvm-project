@@ -15,7 +15,7 @@ void foo (const char *c) {
   str.assign(c, str);
 }
 
-// CHECK: [[BS:.*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "basic_string<char>"
+// CHECK: [[BS:.*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "basic_string<char>"
 // CHECK-SAME:                         line: 4
 // CHECK-SAME:                         size: 8, align: 8
 // CHECK: [[TYPE:![0-9]*]] = !DISubroutineType(types: [[ARGS:.*]])
