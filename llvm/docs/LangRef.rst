@@ -3949,6 +3949,11 @@ identifier used for type merging between modules. When specified, other types
 can refer to composite types indirectly via a :ref:`metadata string
 <metadata-string>` that matches their identifier.
 
+For a given ``identifier:``, there should only be a single composite type that
+does not have  ``flags: DIFlagFwdDecl`` set.  LLVM tools that link modules
+together will unique such definitions at parse time via the ``identifier:``
+field, even if the nodes are ``distinct``.
+
 .. code-block:: llvm
 
     !0 = !DIEnumerator(name: "SixKind", value: 7)

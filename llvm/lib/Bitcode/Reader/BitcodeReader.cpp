@@ -2204,16 +2204,29 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       if (Record.size() != 16)
         return error("Invalid record");
 
-      MetadataList.assignValue(
-          GET_OR_DISTINCT(DICompositeType, Record[0],
-                          (Context, Record[1], getMDString(Record[2]),
-                           getMDOrNull(Record[3]), Record[4],
-                           getMDOrNull(Record[5]), getMDOrNull(Record[6]),
-                           Record[7], Record[8], Record[9], Record[10],
-                           getMDOrNull(Record[11]), Record[12],
-                           getMDOrNull(Record[13]), getMDOrNull(Record[14]),
-                           getMDString(Record[15]))),
-          NextMetadataNo++);
+      // If we have a UUID and this is not a forward declaration, lookup the
+      // mapping.
+      unsigned Flags = Record[10];
+      auto *Identifier = getMDString(Record[15]);
+      DIType **MappedT = nullptr;
+      if (!(Flags & DINode::FlagFwdDecl) && Identifier)
+        MappedT = Context.getOrInsertDITypeMapping(*Identifier);
+
+      // Use the mapped type node, or create a new one if necessary.
+      DIType *CT = MappedT ? *MappedT : nullptr;
+      if (!CT) {
+        CT = GET_OR_DISTINCT(
+            DICompositeType, Record[0],
+            (Context, Record[1], getMDString(Record[2]), getMDOrNull(Record[3]),
+             Record[4], getMDOrNull(Record[5]), getMDOrNull(Record[6]),
+             Record[7], Record[8], Record[9], Flags, getMDOrNull(Record[11]),
+             Record[12], getMDOrNull(Record[13]), getMDOrNull(Record[14]),
+             Identifier));
+        if (MappedT)
+          *MappedT = CT;
+      }
+
+      MetadataList.assignValue(CT, NextMetadataNo++);
       break;
     }
     case bitc::METADATA_SUBROUTINE_TYPE: {

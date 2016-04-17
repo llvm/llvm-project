@@ -310,6 +310,23 @@ void LLVMContext::deleteGC(const Function &Fn) {
 
 bool LLVMContext::discardValueNames() const { return pImpl->DiscardValueNames; }
 
+bool LLVMContext::hasDITypeMap() const { return !!pImpl->DITypeMap; }
+
+void LLVMContext::ensureDITypeMap() {
+  if (pImpl->DITypeMap)
+    return;
+
+  pImpl->DITypeMap = llvm::make_unique<DenseMap<const MDString *, DIType *>>();
+}
+
+void LLVMContext::destroyDITypeMap() { pImpl->DITypeMap.reset(); }
+
+DIType **LLVMContext::getOrInsertDITypeMapping(const MDString &S) {
+  if (!hasDITypeMap())
+    return nullptr;
+  return &(*pImpl->DITypeMap)[&S];
+}
+
 void LLVMContext::setDiscardValueNames(bool Discard) {
   pImpl->DiscardValueNames = Discard;
 }
