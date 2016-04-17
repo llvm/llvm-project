@@ -71,6 +71,10 @@ static cl::opt<bool>
 Internalize("internalize", cl::desc("Internalize linked symbols"));
 
 static cl::opt<bool>
+    DisableDITypeMap("disable-debug-info-type-map",
+                     cl::desc("Don't use a uniquing type map for debug info"));
+
+static cl::opt<bool>
 OnlyNeeded("only-needed", cl::desc("Link only needed symbols"));
 
 static cl::opt<bool>
@@ -336,6 +340,9 @@ int main(int argc, char **argv) {
 
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
+
+  if (!DisableDITypeMap)
+    Context.ensureDITypeMap();
 
   auto Composite = make_unique<Module>("llvm-link", Context);
   Linker L(*Composite);

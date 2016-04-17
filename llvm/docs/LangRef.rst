@@ -3963,21 +3963,27 @@ The following ``tag:`` values are valid:
 
 .. code-block:: llvm
 
-  DW_TAG_formal_parameter   = 5
   DW_TAG_member             = 13
   DW_TAG_pointer_type       = 15
   DW_TAG_reference_type     = 16
   DW_TAG_typedef            = 22
+  DW_TAG_inheritance        = 28
   DW_TAG_ptr_to_member_type = 31
   DW_TAG_const_type         = 38
+  DW_TAG_friend             = 42
   DW_TAG_volatile_type      = 53
   DW_TAG_restrict_type      = 55
 
 ``DW_TAG_member`` is used to define a member of a :ref:`composite type
-<DICompositeType>` or :ref:`subprogram <DISubprogram>`. The type of the member
-is the ``baseType:``. The ``offset:`` is the member's bit offset.
-``DW_TAG_formal_parameter`` is used to define a member which is a formal
-argument of a subprogram.
+<DICompositeType>`. The type of the member is the ``baseType:``. The
+``offset:`` is the member's bit offset.  If the composite type has a non-empty
+``identifier:``, then it respects ODR rules.  In that case, the ``scope:``
+reference will be a :ref:`metadata string <metadata-string>`, and the member
+will be uniqued solely based on its ``name:`` and ``scope:``.
+
+``DW_TAG_inheritance`` and ``DW_TAG_friend`` are used in the ``elements:``
+field of :ref:`composite types <DICompositeType>` to describe parents and
+friends.
 
 ``DW_TAG_typedef`` is used to provide a name for the ``baseType:``.
 
@@ -4000,6 +4006,11 @@ identifier used for type merging between modules. When specified, other types
 can refer to composite types indirectly via a :ref:`metadata string
 <metadata-string>` that matches their identifier.
 
+For a given ``identifier:``, there should only be a single composite type that
+does not have  ``flags: DIFlagFwdDecl`` set.  LLVM tools that link modules
+together will unique such definitions at parse time via the ``identifier:``
+field, even if the nodes are ``distinct``.
+
 .. code-block:: llvm
 
     !0 = !DIEnumerator(name: "SixKind", value: 7)
@@ -4018,9 +4029,6 @@ The following ``tag:`` values are valid:
   DW_TAG_enumeration_type = 4
   DW_TAG_structure_type   = 19
   DW_TAG_union_type       = 23
-  DW_TAG_subroutine_type  = 21
-  DW_TAG_inheritance      = 28
-
 
 For ``DW_TAG_array_type``, the ``elements:`` should be :ref:`subrange
 descriptors <DISubrange>`, each representing the range of subscripts at that
@@ -4034,7 +4042,9 @@ value for the set. All enumeration type descriptors are collected in the
 
 For ``DW_TAG_structure_type``, ``DW_TAG_class_type``, and
 ``DW_TAG_union_type``, the ``elements:`` should be :ref:`derived types
-<DIDerivedType>` with ``tag: DW_TAG_member`` or ``tag: DW_TAG_inheritance``.
+<DIDerivedType>` with ``tag: DW_TAG_member``, ``tag: DW_TAG_inheritance``, or
+``tag: DW_TAG_friend``; or :ref:`subprograms <DISubprogram>` with
+``isDefinition: false``.
 
 .. _DISubrange:
 
@@ -4123,6 +4133,12 @@ metadata. The ``variables:`` field points at :ref:`variables <DILocalVariable>`
 that must be retained, even if their IR counterparts are optimized out of
 the IR. The ``type:`` field must point at an :ref:`DISubroutineType`.
 
+When ``isDefinition: false``, subprograms describe a declaration in the type
+tree as opposed to a definition of a funciton.  If the scope is a
+:ref:`metadata string <metadata-string>` then the composite type follows ODR
+rules, and the subprogram declaration is uniqued based only on its
+``linkageName:`` and ``scope:``.
+
 .. code-block:: llvm
 
     define void @_Z3foov() !dbg !0 {
@@ -4131,7 +4147,7 @@ the IR. The ``type:`` field must point at an :ref:`DISubroutineType`.
 
     !0 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1,
                                 file: !2, line: 7, type: !3, isLocal: true,
-                                isDefinition: false, scopeLine: 8,
+                                isDefinition: true, scopeLine: 8,
                                 containingType: !4,
                                 virtuality: DW_VIRTUALITY_pure_virtual,
                                 virtualIndex: 10, flags: DIFlagPrototyped,

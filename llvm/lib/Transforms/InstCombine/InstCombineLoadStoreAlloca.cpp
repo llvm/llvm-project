@@ -640,7 +640,7 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
     }
 
     if (GlobalAlias *GA = dyn_cast<GlobalAlias>(P)) {
-      if (!GA->isInterposable())
+      if (GA->isInterposable())
         return false;
       Worklist.push_back(GA->getAliasee());
       continue;

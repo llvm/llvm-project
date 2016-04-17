@@ -28,6 +28,51 @@ define <4 x float> @combine_vpermilvar_4f32_identity(<4 x float> %a0) {
   ret <4 x float> %2
 }
 
+define <4 x float> @combine_vpermilvar_4f32_movddup(<4 x float> %a0) {
+; ALL-LABEL: combine_vpermilvar_4f32_movddup:
+; ALL:       # BB#0:
+; ALL-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; ALL-NEXT:    retq
+  %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 0, i32 1, i32 0, i32 1>)
+  ret <4 x float> %1
+}
+
+define <4 x float> @combine_vpermilvar_4f32_movshdup(<4 x float> %a0) {
+; ALL-LABEL: combine_vpermilvar_4f32_movshdup:
+; ALL:       # BB#0:
+; ALL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; ALL-NEXT:    retq
+  %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 1, i32 1, i32 3, i32 3>)
+  ret <4 x float> %1
+}
+
+define <4 x float> @combine_vpermilvar_4f32_movsldup(<4 x float> %a0) {
+; ALL-LABEL: combine_vpermilvar_4f32_movsldup:
+; ALL:       # BB#0:
+; ALL-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
+; ALL-NEXT:    retq
+  %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 0, i32 0, i32 2, i32 2>)
+  ret <4 x float> %1
+}
+
+define <4 x float> @combine_vpermilvar_4f32_unpckh(<4 x float> %a0) {
+; ALL-LABEL: combine_vpermilvar_4f32_unpckh:
+; ALL:       # BB#0:
+; ALL-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; ALL-NEXT:    retq
+  %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 2, i32 2, i32 3, i32 3>)
+  ret <4 x float> %1
+}
+
+define <4 x float> @combine_vpermilvar_4f32_unpckl(<4 x float> %a0) {
+; ALL-LABEL: combine_vpermilvar_4f32_unpckl:
+; ALL:       # BB#0:
+; ALL-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; ALL-NEXT:    retq
+  %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 0, i32 0, i32 1, i32 1>)
+  ret <4 x float> %1
+}
+
 define <8 x float> @combine_vpermilvar_8f32_identity(<8 x float> %a0) {
 ; ALL-LABEL: combine_vpermilvar_8f32_identity:
 ; ALL:       # BB#0:
@@ -35,6 +80,33 @@ define <8 x float> @combine_vpermilvar_8f32_identity(<8 x float> %a0) {
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 2, i32 3, i32 0, i32 1>)
   %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %1, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 2, i32 3, i32 0, i32 1>)
   ret <8 x float> %2
+}
+
+define <8 x float> @combine_vpermilvar_8f32_movddup(<8 x float> %a0) {
+; ALL-LABEL: combine_vpermilvar_8f32_movddup:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,0,1,4,5,4,5]
+; ALL-NEXT:    retq
+  %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5>)
+  ret <8 x float> %1
+}
+
+define <8 x float> @combine_vpermilvar_8f32_movshdup(<8 x float> %a0) {
+; ALL-LABEL: combine_vpermilvar_8f32_movshdup:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
+; ALL-NEXT:    retq
+  %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>)
+  ret <8 x float> %1
+}
+
+define <8 x float> @combine_vpermilvar_8f32_movsldup(<8 x float> %a0) {
+; ALL-LABEL: combine_vpermilvar_8f32_movsldup:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
+; ALL-NEXT:    retq
+  %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>)
+  ret <8 x float> %1
 }
 
 define <2 x double> @combine_vpermilvar_2f64_identity(<2 x double> %a0) {
@@ -46,6 +118,16 @@ define <2 x double> @combine_vpermilvar_2f64_identity(<2 x double> %a0) {
   ret <2 x double> %2
 }
 
+define <2 x double> @combine_vpermilvar_2f64_movddup(<2 x double> %a0) {
+; ALL-LABEL: combine_vpermilvar_2f64_movddup:
+; ALL:       # BB#0:
+; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0
+; ALL-NEXT:    retq
+  %1 = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %a0, <2 x i64> <i64 0, i64 0>)
+  ret <2 x double> %1
+}
+
 define <4 x double> @combine_vpermilvar_4f64_identity(<4 x double> %a0) {
 ; ALL-LABEL: combine_vpermilvar_4f64_identity:
 ; ALL:       # BB#0:
@@ -53,6 +135,15 @@ define <4 x double> @combine_vpermilvar_4f64_identity(<4 x double> %a0) {
   %1 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)
   %2 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double>  %1, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)
   ret <4 x double> %2
+}
+
+define <4 x double> @combine_vpermilvar_4f64_movddup(<4 x double> %a0) {
+; ALL-LABEL: combine_vpermilvar_4f64_movddup:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[0,0,2,2]
+; ALL-NEXT:    retq
+  %1 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 0, i64 0, i64 4, i64 4>)
+  ret <4 x double> %1
 }
 
 define <4 x float> @combine_vpermilvar_4f32_4stage(<4 x float> %a0) {

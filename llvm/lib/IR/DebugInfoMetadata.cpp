@@ -254,6 +254,7 @@ DICompositeType *DICompositeType::getImpl(
     Metadata *TemplateParams, MDString *Identifier, StorageType Storage,
     bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
+
   DEFINE_GETIMPL_LOOKUP(
       DICompositeType, (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                         AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,

@@ -3839,11 +3839,25 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
+  // If this isn't a forward declaration and it has a UUID, check for it in the
+  // type map in the context.
+  DIType **MappedT = nullptr;
+  if (!(flags.Val & DINode::FlagFwdDecl) && identifier.Val &&
+      (MappedT = Context.getOrInsertDITypeMapping(*identifier.Val)) &&
+      *MappedT) {
+    Result = *MappedT;
+    return false;
+  }
+
+  // Create a new node, and save it in the context if it belongs in the type
+  // map.
   Result = GET_OR_DISTINCT(
       DICompositeType,
       (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
        runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val));
+  if (MappedT)
+    *MappedT = cast<DIType>(Result);
   return false;
 }
 
