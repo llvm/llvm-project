@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
 
 // CHECK: ![[INT:[0-9]+]] = !DIBasicType(name: "int"
 
-// CHECK: [[C:![0-9]*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "C",
+// CHECK: [[C:![0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "C",
 // CHECK-NOT:                              DIFlagFwdDecl
 // CHECK-SAME:                             elements: [[C_MEM:![0-9]*]]
 // CHECK-SAME:                             vtableHolder: !"_ZTS1C"

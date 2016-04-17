@@ -14,6 +14,7 @@
 #include <vector>
 
 // Other libraries and framework includes
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 // Project includes

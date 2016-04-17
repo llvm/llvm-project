@@ -50,7 +50,7 @@
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "FwdDeclared"
 // CHECK-SAME:             elements:
 
-// CHECK: ![[TD_UNION:.*]] = !DICompositeType(tag: DW_TAG_union_type,
+// CHECK: ![[TD_UNION:.*]] = distinct !DICompositeType(tag: DW_TAG_union_type,
 // CHECK-NOT:              name:
 // CHECK-SAME:             elements:
 // CHECK-SAME:             )
@@ -61,7 +61,7 @@
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefEnum",
 // CHECK-SAME:           baseType: ![[TD_ENUM:.*]])
 
-// CHECK: ![[TD_STRUCT:.*]] = !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK: ![[TD_STRUCT:.*]] = distinct !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-NOT:              name:
 // CHECK-SAME:             elements:
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefStruct",

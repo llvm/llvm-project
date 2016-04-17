@@ -220,8 +220,12 @@ template <class ELFT> void Writer<ELFT>::run() {
   } else {
     createPhdrs();
     fixHeaders();
-    fixSectionAlignments();
-    assignAddresses();
+    if (Script->DoLayout) {
+      Script->assignAddresses(OutputSections);
+    } else {
+      fixSectionAlignments();
+      assignAddresses();
+    }
     assignFileOffsets();
     setPhdrs();
     fixAbsoluteSymbols();
@@ -1528,10 +1532,11 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // sections. These are special, we do not include them into output sections
 // list, but have them to simplify the code.
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
-  Out<ELFT>::ElfHeader->setVA(Target->getVAStart());
+  uintX_t BaseVA = Script->DoLayout ? 0 : Target->getVAStart();
+  Out<ELFT>::ElfHeader->setVA(BaseVA);
   Out<ELFT>::ElfHeader->setFileOffset(0);
   uintX_t Off = Out<ELFT>::ElfHeader->getSize();
-  Out<ELFT>::ProgramHeaders->setVA(Off + Target->getVAStart());
+  Out<ELFT>::ProgramHeaders->setVA(Off + BaseVA);
   Out<ELFT>::ProgramHeaders->setFileOffset(Off);
 }
 

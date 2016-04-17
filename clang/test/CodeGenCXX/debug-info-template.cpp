@@ -6,7 +6,7 @@
 // CHECK: [[RETAIN]] = !{!{{[0-9]]*}}, [[FOO:![0-9]*]],
 
 
-// CHECK: [[TC:![0-9]*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "TC<unsigned int, 2, &glb, &foo::e, &foo::f, &foo::g, 1, 2, 3>"
+// CHECK: [[TC:![0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "TC<unsigned int, 2, &glb, &foo::e, &foo::f, &foo::g, 1, 2, 3>"
 // CHECK-SAME:                              templateParams: [[TCARGS:![0-9]*]]
 // CHECK: [[TCARGS]] = !{[[TCARG1:![0-9]*]], [[TCARG2:![0-9]*]], [[TCARG3:![0-9]*]], [[TCARG4:![0-9]*]], [[TCARG5:![0-9]*]], [[TCARG6:![0-9]*]], [[TCARG7:![0-9]*]]}
 //
@@ -48,7 +48,7 @@
 // We could just emit a declaration of 'foo' here, rather than the entire
 // definition (same goes for any time we emit a member (function or data)
 // pointer type)
-// CHECK: [[FOO]] = !DICompositeType(tag: DW_TAG_structure_type, name: "foo", {{.*}}identifier: "_ZTS3foo")
+// CHECK: [[FOO]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "foo", {{.*}}identifier: "_ZTS3foo")
 // CHECK: !DISubprogram(name: "f", linkageName: "_ZN3foo1fEv", {{.*}}type: [[FTYPE:![0-9]*]]
 //
 
