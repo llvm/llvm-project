@@ -540,7 +540,7 @@ void IRLinker::materializeInitFor(GlobalValue *New, GlobalValue *Old,
     if (!F->isDeclaration())
       return;
   } else if (auto *V = dyn_cast<GlobalVariable>(New)) {
-    if (V->hasInitializer())
+    if (V->hasInitializer() || V->hasAppendingLinkage())
       return;
   } else {
     auto *A = cast<GlobalAlias>(New);
