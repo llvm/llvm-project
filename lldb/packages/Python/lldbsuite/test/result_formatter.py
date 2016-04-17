@@ -64,7 +64,7 @@ def create_results_formatter(config):
     def create_socket(port):
         """Creates a socket to the localhost on the given port.
 
-        @param port the port number of the listenering port on
+        @param port the port number of the listening port on
         the localhost.
 
         @return (socket object, socket closing function)
@@ -243,6 +243,14 @@ class EventBuilder(object):
         return event
 
     @staticmethod
+    def _normalize_test_filename(test_filename):
+        # Convert .pyc ending to .py.
+        if test_filename is not None and test_filename.endswith(".pyc"):
+            return test_filename[0:-1]
+        else:
+            return test_filename
+
+    @staticmethod
     def _event_dictionary_common(test, event_type):
         """Returns an event dictionary setup with values for the given event type.
 
@@ -257,9 +265,9 @@ class EventBuilder(object):
         # Determine the filename for the test case.  If there is an attribute
         # for it, use it.  Otherwise, determine from the TestCase class path.
         if hasattr(test, "test_filename"):
-            test_filename = test.test_filename
+            test_filename = EventBuilder._normalize_test_filename(test.test_filename)
         else:
-            test_filename = inspect.getfile(test.__class__)
+            test_filename = EventBuilder._normalize_test_filename(inspect.getfile(test.__class__))
 
         event = EventBuilder.bare_event(event_type)
         event.update({
@@ -498,7 +506,7 @@ class EventBuilder(object):
         if exception_description is not None:
             event["exception_description"] = exception_description
         if test_filename is not None:
-            event["test_filename"] = test_filename
+            event["test_filename"] = EventBuilder._normalize_test_filename(test_filename)
         if command_line is not None:
             event["command_line"] = command_line
         return event
@@ -522,7 +530,7 @@ class EventBuilder(object):
         if worker_index is not None:
             event["worker_index"] = int(worker_index)
         if test_filename is not None:
-            event["test_filename"] = test_filename
+            event["test_filename"] = EventBuilder._normalize_test_filename(test_filename)
         if command_line is not None:
             event["command_line"] = command_line
         return event
