@@ -13,18 +13,31 @@ declare <16 x i8> @llvm.x86.xop.vpperm(<16 x i8>, <16 x i8>, <16 x i8>) nounwind
 define <16 x i8> @combine_vpperm_identity(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: combine_vpperm_identity:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm1[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> <i8 31, i8 30, i8 29, i8 28, i8 27, i8 26, i8 25, i8 24, i8 23, i8 22, i8 21, i8 20, i8 19, i8 18, i8 17, i8 16>)
   %res1 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %res0, <16 x i8> undef, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
   ret <16 x i8> %res1
 }
 
+define <16 x i8> @combine_vpperm_identity_bitcast(<16 x i8> %a0, <16 x i8> %a1) {
+; CHECK-LABEL: combine_vpperm_identity_bitcast:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %mask = bitcast <2 x i64> <i64 1084818905618843912, i64 506097522914230528> to <16 x i8>
+  %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %mask)
+  %res1 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %res0, <16 x i8> undef, <16 x i8> %mask)
+  %res2 = bitcast <16 x i8> %res1 to <2 x i64>
+  %res3 = add <2 x i64> %res2, <i64 1084818905618843912, i64 506097522914230528>
+  %res4 = bitcast <2 x i64> %res3 to <16 x i8>
+  ret <16 x i8> %res4
+}
+
 define <16 x i8> @combine_vpperm_as_unary_unpckhwd(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: combine_vpperm_as_unary_unpckhwd:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; CHECK-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; CHECK-NEXT:    retq
   %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a0, <16 x i8> <i8 8, i8 24, i8 9, i8 25, i8 10, i8 26, i8 11, i8 27, i8 12, i8 28, i8 13, i8 29, i8 14, i8 30, i8 15, i8 31>)
   ret <16 x i8> %res0

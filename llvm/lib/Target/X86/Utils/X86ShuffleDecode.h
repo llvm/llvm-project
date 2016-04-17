@@ -73,7 +73,7 @@ void DecodePSHUFLWMask(MVT VT, unsigned Imm, SmallVectorImpl<int> &ShuffleMask);
 /// Decodes a PSWAPD 3DNow! instruction.
 void DecodePSWAPMask(MVT VT, SmallVectorImpl<int> &ShuffleMask);
 
-/// Decodes the shuffle masks for shufp*. 
+/// Decodes the shuffle masks for shufp*.
 /// VT indicates the type of the vector allowing it to handle different
 /// datatypes and vector widths.
 void DecodeSHUFPMask(MVT VT, unsigned Imm, SmallVectorImpl<int> &ShuffleMask);
@@ -107,6 +107,13 @@ void decodeVSHUF64x2FamilyMask(MVT VT, unsigned Imm,
 /// Decodes the shuffle masks for VPERMQ/VPERMPD.
 /// No VT provided since it only works on 256-bit, 4 element vectors.
 void DecodeVPERMMask(unsigned Imm, SmallVectorImpl<int> &ShuffleMask);
+
+/// Decode a VPPERM mask from a raw array of constants such as from
+/// BUILD_VECTOR.
+/// This can only basic masks (permutes + zeros), not any of the other
+/// operations that VPPERM can perform.
+void DecodeVPPERMMask(ArrayRef<uint64_t> RawMask,
+                      SmallVectorImpl<int> &ShuffleMask);
 
 /// Decode a zero extension instruction as a shuffle mask.
 void DecodeZeroExtendMask(MVT SrcScalarVT, MVT DstVT,

@@ -860,7 +860,7 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
            N.getExtraData());
   }
 
-  Assert(isScopeRef(N, N.getScope()), "invalid scope", &N, N.getScope());
+  Assert(isScopeRef(N, N.getScope()), "invalid scope", &N, N.getRawScope());
   Assert(isTypeRef(N, N.getBaseType()), "invalid base type", &N,
          N.getBaseType());
 }
@@ -890,7 +890,7 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
              N.getTag() == dwarf::DW_TAG_class_type,
          "invalid tag", &N);
 
-  Assert(isScopeRef(N, N.getScope()), "invalid scope", &N, N.getScope());
+  Assert(isScopeRef(N, N.getScope()), "invalid scope", &N, N.getRawScope());
   Assert(isTypeRef(N, N.getBaseType()), "invalid base type", &N,
          N.getBaseType());
 

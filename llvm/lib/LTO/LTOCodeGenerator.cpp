@@ -84,6 +84,7 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
     : Context(Context), MergedModule(new Module("ld-temp.o", Context)),
       TheLinker(new Linker(*MergedModule)) {
   Context.setDiscardValueNames(LTODiscardValueNames);
+  Context.ensureDITypeMap();
   initializeLTOPasses();
 }
 

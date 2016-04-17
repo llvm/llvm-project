@@ -25,6 +25,8 @@ class StringRef;
 class Twine;
 class Instruction;
 class Module;
+class MDString;
+class DIType;
 class SMDiagnostic;
 class DiagnosticInfo;
 template <typename T> class SmallVectorImpl;
@@ -94,7 +96,6 @@ public:
   /// tag registered with an LLVMContext has an unique ID.
   uint32_t getOperandBundleTagID(StringRef Tag) const;
 
-
   /// Define the GC for a function
   void setGC(const Function &Fn, std::string GCName);
 
@@ -113,6 +114,23 @@ public:
   /// GlobalValue). Clients can use this flag to save memory and runtime,
   /// especially in release mode.
   void setDiscardValueNames(bool Discard);
+
+  /// Whether there is a string map for uniquing debug info types with
+  /// identifiers across the context.  Off by default.
+  bool hasDITypeMap() const;
+  void ensureDITypeMap();
+  void destroyDITypeMap();
+
+  /// Get or insert the DIType mapped to the given string.
+  ///
+  /// Returns the address of the current \a DIType pointer mapped to \c S,
+  /// inserting a mapping to \c nullptr if \c S was not previously mapped.
+  /// This method has no effect (and returns \c nullptr instead of a valid
+  /// address) if \a hasDITypeMap() is \c false.
+  ///
+  /// \post If \a hasDITypeMap(), \c S will have a (possibly null) mapping.
+  /// \note The returned address is only valid until the next call.
+  DIType **getOrInsertDITypeMapping(const MDString &S);
 
   typedef void (*InlineAsmDiagHandlerTy)(const SMDiagnostic&, void *Context,
                                          unsigned LocCookie);
