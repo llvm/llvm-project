@@ -56,7 +56,7 @@ void instantiate(int x) {
 // CHECK: !DILocalVariable(
 // CHECK-NOT: name:
 // CHECK: type: ![[UNION:[0-9]+]]
-// CHECK: ![[UNION]] = !DICompositeType(tag: DW_TAG_union_type,
+// CHECK: ![[UNION]] = distinct !DICompositeType(tag: DW_TAG_union_type,
 // CHECK-NOT: name:
 // CHECK: elements
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "i", scope: ![[UNION]],
