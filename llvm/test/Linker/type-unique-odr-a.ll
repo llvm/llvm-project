@@ -1,6 +1,9 @@
 ; REQUIRES: default_triple, object-emission
 ;
-; RUN: llvm-link %s %p/type-unique-odr-b.ll -S -o - | %llc_dwarf -dwarf-linkage-names=Enable -filetype=obj -O0 | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: llvm-link %s %p/type-unique-odr-b.ll -S -o - \
+; RUN:   | %llc_dwarf -dwarf-linkage-names=Enable -filetype=obj -O0 \
+; RUN:   | llvm-dwarfdump -debug-dump=info - \
+; RUN:   | FileCheck %s
 ;
 ; Test ODR-based type uniquing for C++ class members.
 ; rdar://problem/15851313.
@@ -24,25 +27,28 @@
 ;
 ; CHECK:      DW_TAG_class_type
 ; CHECK-NEXT:   DW_AT_name {{.*}} "A"
-; CHECK-NOT:  DW_TAG
-; CHECK:      DW_TAG_member
-; CHECK-NEXT:   DW_AT_name {{.*}} "data"
-; CHECK-NOT:  DW_TAG
-; CHECK:      DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_linkage_name {{.*}} "_ZN1A6getFooEv"
-; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_name {{.*}} "getFoo"
-; CHECK:      DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_linkage_name {{.*}} "_Z3bazv"
-; CHECK:      DW_TAG_subprogram
-; CHECK-NOT: DW_TAG
-; CHECK:   DW_AT_linkage_name {{.*}} "_ZL3barv"
+; CHECK-NOT:    DW_TAG
+; CHECK:        DW_TAG_member
+; CHECK-NEXT:     DW_AT_name {{.*}} "data"
+; CHECK-NOT:    DW_TAG
+; CHECK:        DW_TAG_subprogram
+; CHECK-NOT:    DW_TAG
+; CHECK:          DW_AT_linkage_name {{.*}} "_ZN1A6getFooEv"
+; CHECK-NOT:    DW_TAG
+; CHECK:          DW_AT_name {{.*}} "getFoo"
 
-; getFoo and A may only appear once.
+; Ensure that there aren't any other subprograms in class A.
+; CHECK-NOT:      DW_TAG
+; CHECK:          DW_TAG_formal_parameter
+; CHECK-NOT:      DW_TAG
+; CHECK:          NULL
+; CHECK-NOT:    DW_TAG
+; CHECK:        NULL
+; CHECK-NOT:  DW_TAG
+; CHECK:      DW_TAG_base_type
+
+; Ensure that getFoo and A are only emitted once.
 ; CHECK-NOT:  AT_name{{.*(getFoo)|("A")}}
-
 
 ; ModuleID = 'type-unique-odr-a.cpp'
 
