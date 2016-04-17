@@ -393,7 +393,14 @@ ExpressionSourceCode::GetText (std::string &text,
         StreamString pound_body;
         if (pound_file && pound_line)
         {
-            pound_body.Printf("#line %u \"%s\"\n%s", pound_line, pound_file, body);
+            if (wrapping_language == lldb::eLanguageTypeSwift)
+            {
+                pound_body.Printf("#sourceLocation(file: \"%s\", line: %u)\n%s", pound_file, pound_line, body);
+            }
+            else
+            {
+                pound_body.Printf("#line %u \"%s\"\n%s", pound_line, pound_file, body);
+            }
             body = pound_body.GetString().c_str();
         }
 

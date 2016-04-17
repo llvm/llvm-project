@@ -138,7 +138,7 @@ $builtin_logger_initialize()
 )";
         if (pound_file && pound_line)
         {
-            wrapped_stream.Printf("%s#line %u \"%s\"\n%s\n#line\n", playground_prefix, pound_line, pound_file, orig_text);
+            wrapped_stream.Printf("%s#sourceLocation(file: \"%s\", line: %u)\n%s\n", playground_prefix, pound_file, pound_line, orig_text);
             first_body_line = 1;
         }
         else
@@ -152,7 +152,7 @@ $builtin_logger_initialize()
     {
         if (pound_file && pound_line)
         {
-            wrapped_stream.Printf("#line %u \"%s\"\n%s\n#line\n", pound_line, llvm::sys::path::filename(pound_file).data(), orig_text);
+            wrapped_stream.Printf("#sourceLocation(file: \"%s\", line:  %u)\n%s\n", llvm::sys::path::filename(pound_file).data(), pound_line, orig_text);
         }
         else
         {
@@ -167,14 +167,14 @@ $builtin_logger_initialize()
 
     if (pound_file && pound_line)
     {
-        fixed_text.Printf("#line %u \"%s\"\n%s\n#line\n", pound_line, pound_file, orig_text);
+        fixed_text.Printf("#sourceLocation(file: \"%s\", line: %u)\n%s\n", pound_file, pound_line, orig_text);
         text = fixed_text.GetString().c_str();
     }
     else if (generate_debug_info)
     {
         if (ExpressionSourceCode::SaveExpressionTextToTempFile(orig_text, options, expr_source_path))
         {
-            fixed_text.Printf("#line 1 \"%s\"\n%s\n#line\n", expr_source_path.c_str(), orig_text);
+            fixed_text.Printf("#sourceLocation(file: \"%s\", line: 1)\n%s\n", expr_source_path.c_str(), orig_text);
             text = fixed_text.GetString().c_str();
         }
     }
@@ -359,7 +359,7 @@ $builtin_logger_initialize()
         }
     }
     
-    // The first source line will be 1 if we used the #line directive
+    // The first source line will be 1 if we used the #sourceLocation directive
     if (!expr_source_path.empty() || (pound_file && pound_line))
         first_body_line = 1;
 }

@@ -40,12 +40,12 @@ struct Struct {
 
 func foo (_ x: inout Class) {
 	print(x.ivar)
-	x.ivar++ // Set breakpoint here for Class access
+	x.ivar += 1 // Set breakpoint here for Class access
 }
 
 func foo(_ x: inout Struct) {
 	print(x.ivar)
-	x.ivar++ // Set breakpoint here for Struct access
+	x.ivar += 1 // Set breakpoint here for Struct access
 }
 
 func foo (_ x: inout String) {

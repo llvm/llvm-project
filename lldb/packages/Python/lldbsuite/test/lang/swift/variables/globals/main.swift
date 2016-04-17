@@ -14,7 +14,7 @@ var g_counter = 1
 
 class Foo {
 	var x : Int
-	init () { x = g_counter++ }
+	init () { x = g_counter; g_counter += 1 }
 }
 
 var my_foo = Foo()
