@@ -454,6 +454,44 @@ TEST_P(MaybeSparseCoverageMappingTest, strip_unknown_filename_prefix) {
   ASSERT_EQ("func", Names[0]);
 }
 
+TEST_P(MaybeSparseCoverageMappingTest, dont_detect_false_instantiations) {
+  InstrProfRecord Record1("foo", 0x1234, {10});
+  InstrProfRecord Record2("bar", 0x2345, {20});
+  ProfileWriter.addRecord(std::move(Record1));
+  ProfileWriter.addRecord(std::move(Record2));
+
+  startFunction("foo", 0x1234);
+  addCMR(Counter::getCounter(0), "expanded", 1, 1, 1, 10);
+  addExpansionCMR("main", "expanded", 4, 1, 4, 5);
+
+  startFunction("bar", 0x2345);
+  addCMR(Counter::getCounter(0), "expanded", 1, 1, 1, 10);
+  addExpansionCMR("main", "expanded", 9, 1, 9, 5);
+
+  loadCoverageMapping();
+
+  std::vector<const FunctionRecord *> Instantiations =
+      LoadedCoverage->getInstantiations("expanded");
+  ASSERT_TRUE(Instantiations.empty());
+}
+
+TEST_P(MaybeSparseCoverageMappingTest, load_coverage_for_expanded_file) {
+  InstrProfRecord Record("func", 0x1234, {10});
+  ProfileWriter.addRecord(std::move(Record));
+
+  startFunction("func", 0x1234);
+  addCMR(Counter::getCounter(0), "expanded", 1, 1, 1, 10);
+  addExpansionCMR("main", "expanded", 4, 1, 4, 5);
+
+  loadCoverageMapping();
+
+  CoverageData Data = LoadedCoverage->getCoverageForFile("expanded");
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+  ASSERT_EQ(2U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 1, 10, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(1, 10, false), Segments[1]);
+}
+
 INSTANTIATE_TEST_CASE_P(MaybeSparse, MaybeSparseCoverageMappingTest,
                         ::testing::Bool());
 
