@@ -25,7 +25,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
-#include <map>
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"

@@ -19,7 +19,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Allocator.h"
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace llvm {

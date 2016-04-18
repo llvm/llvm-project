@@ -15,7 +15,6 @@
 #ifndef LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 #define LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include <cassert>
 #include <cstdint>
 #include <utility>
@@ -23,6 +22,8 @@
 
 namespace llvm {
 
+template <typename T> class ArrayRef;
+template <typename T> class MutableArrayRef;
 class Function;
 class GlobalVariable;
 

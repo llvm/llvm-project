@@ -14,7 +14,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SSAUPDATER_H
 #define LLVM_TRANSFORMS_UTILS_SSAUPDATER_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 
@@ -22,8 +21,9 @@ namespace llvm {
   class BasicBlock;
   class Instruction;
   class LoadInst;
-  template<typename T> class SmallVectorImpl;
-  template<typename T> class SSAUpdaterTraits;
+  template <typename T> class ArrayRef;
+  template <typename T> class SmallVectorImpl;
+  template <typename T> class SSAUpdaterTraits;
   class PHINode;
   class Type;
   class Use;

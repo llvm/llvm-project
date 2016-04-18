@@ -13,12 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/PassRegistry.h"
-#include "llvm/IR/Function.h"
 #include "llvm/PassSupport.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/RWMutex.h"
-#include <vector>
 
 using namespace llvm;
 

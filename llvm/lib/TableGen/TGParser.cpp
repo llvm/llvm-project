@@ -15,10 +15,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
-#include <sstream>
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//

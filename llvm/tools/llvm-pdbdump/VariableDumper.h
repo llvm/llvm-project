@@ -11,10 +11,10 @@
 #define LLVM_TOOLS_LLVMPDBDUMP_VARIABLEDUMPER_H
 
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 
+class StringRef;
 class LinePrinter;
 
 class VariableDumper : public PDBSymDumper {

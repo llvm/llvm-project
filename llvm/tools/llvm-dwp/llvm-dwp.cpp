@@ -36,11 +36,9 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include <list>
 #include <iostream>
 #include <memory>
 #include <system_error>
-#include <unordered_set>
 
 using namespace llvm;
 using namespace llvm::object;

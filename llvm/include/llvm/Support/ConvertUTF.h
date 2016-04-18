@@ -180,10 +180,13 @@ unsigned getNumBytesForUTF8(UTF8 firstByte);
 /*************************************************************************/
 /* Below are LLVM-specific wrappers of the functions above. */
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
+#include <string>
+#include <cstddef>
 
 namespace llvm {
+template <typename T> class ArrayRef;
+template <typename T> class SmallVectorImpl;
+class StringRef;
 
 /**
  * Convert an UTF8 StringRef to UTF8, UTF16, or UTF32 depending on

@@ -11,11 +11,12 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringRef.h"
 #include <system_error>
 #include <utility> // for std::pair
 
 namespace llvm {
+class StringRef;
+
 /// \brief Class that manages the creation of a lock file to aid
 /// implicit coordination between different processes.
 ///

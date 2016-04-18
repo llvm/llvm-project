@@ -15,7 +15,6 @@
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCTARGETDESC_H
 
 #include "llvm/Support/DataTypes.h"
-#include <string>
 
 namespace llvm {
 class formatted_raw_ostream;

@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
-#include <vector>
 
 namespace llvm {
 class SelectionDAGBuilder;

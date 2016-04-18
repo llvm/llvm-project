@@ -16,14 +16,12 @@
 
 #include "JITSymbol.h"
 #include "LambdaResolver.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
 #include "llvm/Support/Process.h"
-#include <sstream>
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
 namespace orc {

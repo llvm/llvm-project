@@ -202,7 +202,6 @@
 #ifndef RDF_GRAPH_H
 #define RDF_GRAPH_H
 
-#include "llvm/ADT/BitVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"

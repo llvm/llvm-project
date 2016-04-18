@@ -15,20 +15,18 @@
 #ifndef LLVM_MC_MCDWARF_H
 #define LLVM_MC_MCDWARF_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCSection.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Dwarf.h"
-#include "llvm/Support/raw_ostream.h"
-#include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace llvm {
+template <typename T> class ArrayRef;
+class raw_ostream;
 class MCAsmBackend;
 class MCContext;
 class MCObjectStreamer;

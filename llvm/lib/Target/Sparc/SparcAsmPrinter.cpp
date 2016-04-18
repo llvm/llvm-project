@@ -18,7 +18,6 @@
 #include "SparcInstrInfo.h"
 #include "SparcTargetMachine.h"
 #include "SparcTargetStreamer.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"

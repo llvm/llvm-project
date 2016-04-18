@@ -20,7 +20,6 @@
 
 #include "llvm/CodeGen/LiveInterval.h"
 #include "RegisterCoalescer.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"

@@ -9,13 +9,14 @@
 #ifndef LLVM_TOOLS_LLVM_OBJDUMP_LLVM_OBJDUMP_H
 #define LLVM_TOOLS_LLVM_OBJDUMP_LLVM_OBJDUMP_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
+class StringRef;
+
 namespace object {
   class COFFObjectFile;
   class MachOObjectFile;

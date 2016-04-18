@@ -45,7 +45,6 @@
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
-#include <deque>
 using namespace llvm;
 
 #define DEBUG_TYPE "globalopt"

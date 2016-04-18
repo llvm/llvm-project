@@ -11,10 +11,11 @@
 #define LLVM_DEBUGINFO_PDB_DIA_DIASESSION_H
 
 #include "DIASupport.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 
 namespace llvm {
+class StringRef;
+
 class DIASession : public IPDBSession {
 public:
   explicit DIASession(CComPtr<IDiaSession> DiaSession);

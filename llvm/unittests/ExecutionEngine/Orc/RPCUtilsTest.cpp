@@ -44,26 +44,25 @@ private:
 class DummyRPC : public testing::Test,
                  public RPC<QueueChannel> {
 public:
-  typedef Procedure<1, void(bool)> Proc1;
-  typedef Procedure<2, void(int8_t, uint8_t, int16_t, uint16_t,
-                            int32_t, uint32_t, int64_t, uint64_t,
-                            bool, std::string, std::vector<int>)> AllTheTypes;
+  typedef Function<2, void(bool)> BasicVoid;
+  typedef Function<3, int32_t(bool)> BasicInt;
+  typedef Function<4, void(int8_t, uint8_t, int16_t, uint16_t,
+                           int32_t, uint32_t, int64_t, uint64_t,
+                           bool, std::string, std::vector<int>)> AllTheTypes;
 };
 
 
-TEST_F(DummyRPC, TestBasic) {
+TEST_F(DummyRPC, TestAsyncBasicVoid) {
   std::queue<char> Queue;
   QueueChannel C(Queue);
 
-  {
-    // Make a call to Proc1.
-    auto EC = call<Proc1>(C, true);
-    EXPECT_FALSE(EC) << "Simple call over queue failed";
-  }
+  // Make an async call.
+  auto ResOrErr = callAsync<BasicVoid>(C, true);
+  EXPECT_TRUE(!!ResOrErr) << "Simple call over queue failed";
 
   {
     // Expect a call to Proc1.
-    auto EC = expect<Proc1>(C,
+    auto EC = expect<BasicVoid>(C,
                 [&](bool &B) {
                   EXPECT_EQ(B, true)
                     << "Bool serialization broken";
@@ -71,29 +70,69 @@ TEST_F(DummyRPC, TestBasic) {
                 });
     EXPECT_FALSE(EC) << "Simple expect over queue failed";
   }
+
+  {
+    // Wait for the result.
+    auto EC = waitForResult(C, ResOrErr->second, handleNone);
+    EXPECT_FALSE(EC) << "Could not read result.";
+  }
+
+  // Verify that the function returned ok.
+  auto Val = ResOrErr->first.get();
+  EXPECT_TRUE(Val) << "Remote void function failed to execute.";
+}
+
+TEST_F(DummyRPC, TestAsyncBasicInt) {
+  std::queue<char> Queue;
+  QueueChannel C(Queue);
+
+  // Make an async call.
+  auto ResOrErr = callAsync<BasicInt>(C, false);
+  EXPECT_TRUE(!!ResOrErr) << "Simple call over queue failed";
+
+  {
+    // Expect a call to Proc1.
+    auto EC = expect<BasicInt>(C,
+                [&](bool &B) {
+                  EXPECT_EQ(B, false)
+                    << "Bool serialization broken";
+                  return 42;
+                });
+    EXPECT_FALSE(EC) << "Simple expect over queue failed";
+  }
+
+  {
+    // Wait for the result.
+    auto EC = waitForResult(C, ResOrErr->second, handleNone);
+    EXPECT_FALSE(EC) << "Could not read result.";
+  }
+
+  // Verify that the function returned ok.
+  auto Val = ResOrErr->first.get();
+  EXPECT_TRUE(!!Val) << "Remote int function failed to execute.";
+  EXPECT_EQ(*Val, 42) << "Remote int function return wrong value.";
 }
 
 TEST_F(DummyRPC, TestSerialization) {
   std::queue<char> Queue;
   QueueChannel C(Queue);
 
-  {
-    // Make a call to Proc1.
-    std::vector<int> v({42, 7});
-    auto EC = call<AllTheTypes>(C,
-                                -101,
-                                250,
-                                -10000,
-                                10000,
-                                -1000000000,
-                                1000000000,
-                                -10000000000,
-                                10000000000,
-                                true,
-                                "foo",
-                                v);
-    EXPECT_FALSE(EC) << "Big (serialization test) call over queue failed";
-  }
+  // Make a call to Proc1.
+  std::vector<int> v({42, 7});
+  auto ResOrErr = callAsync<AllTheTypes>(C,
+                                         -101,
+                                         250,
+                                         -10000,
+                                         10000,
+                                         -1000000000,
+                                         1000000000,
+                                         -10000000000,
+                                         10000000000,
+                                         true,
+                                         "foo",
+                                         v);
+  EXPECT_TRUE(!!ResOrErr)
+    << "Big (serialization test) call over queue failed";
 
   {
     // Expect a call to Proc1.
@@ -136,4 +175,14 @@ TEST_F(DummyRPC, TestSerialization) {
                   });
     EXPECT_FALSE(EC) << "Big (serialization test) call over queue failed";
   }
+
+  {
+    // Wait for the result.
+    auto EC = waitForResult(C, ResOrErr->second, handleNone);
+    EXPECT_FALSE(EC) << "Could not read result.";
+  }
+
+  // Verify that the function returned ok.
+  auto Val = ResOrErr->first.get();
+  EXPECT_TRUE(Val) << "Remote void function failed to execute.";
 }

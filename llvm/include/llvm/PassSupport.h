@@ -26,8 +26,6 @@
 #include "llvm/PassInfo.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Atomic.h"
-#include "llvm/Support/Compiler.h"
-#include <vector>
 
 namespace llvm {
 

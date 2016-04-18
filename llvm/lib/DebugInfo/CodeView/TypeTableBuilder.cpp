@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/FieldListRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/MethodListRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"

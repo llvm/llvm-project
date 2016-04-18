@@ -16,7 +16,6 @@
 #define LLVM_IR_IRBUILDER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/ConstantFolder.h"
@@ -31,6 +30,7 @@
 #include "llvm/Support/CBindingWrapping.h"
 
 namespace llvm {
+class StringRef;
 class MDNode;
 
 /// \brief This provides the default implementation of the IRBuilder

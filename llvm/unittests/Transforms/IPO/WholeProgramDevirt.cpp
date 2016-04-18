@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

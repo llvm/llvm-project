@@ -38,6 +38,8 @@ public:
       return "Remote indirect stubs owner Id already in use";
     case OrcErrorCode::UnexpectedRPCCall:
       return "Unexpected RPC call";
+    case OrcErrorCode::UnexpectedRPCResponse:
+      return "Unexpected RPC response";
     }
     llvm_unreachable("Unhandled error code");
   }

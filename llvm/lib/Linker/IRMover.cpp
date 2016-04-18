@@ -362,6 +362,9 @@ public:
   void materializeInitFor(GlobalValue *New, GlobalValue *Old) override;
 };
 
+/// Type of the Metadata map in \a ValueToValueMapTy.
+typedef DenseMap<const Metadata *, TrackingMDRef> MDMapT;
+
 /// This is responsible for keeping track of the state used for moving data
 /// from SrcM to DstM.
 class IRLinker {
@@ -374,6 +377,9 @@ class IRLinker {
   TypeMapTy TypeMap;
   GlobalValueMaterializer GValMaterializer;
   LocalValueMaterializer LValMaterializer;
+
+  /// A metadata map that's shared between IRLinker instances.
+  MDMapT &SharedMDs;
 
   /// Mapping of values from what they used to be in Src, to what they are now
   /// in DstM.  ValueToValueMapTy is a ValueMap, which involves some overhead
@@ -467,18 +473,21 @@ class IRLinker {
   void linkNamedMDNodes();
 
 public:
-  IRLinker(Module &DstM, IRMover::IdentifiedStructTypeSet &Set,
-           std::unique_ptr<Module> SrcM, ArrayRef<GlobalValue *> ValuesToLink,
+  IRLinker(Module &DstM, MDMapT &SharedMDs,
+           IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
+           ArrayRef<GlobalValue *> ValuesToLink,
            std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor)
       : DstM(DstM), SrcM(std::move(SrcM)), AddLazyFor(AddLazyFor), TypeMap(Set),
-        GValMaterializer(*this), LValMaterializer(*this),
+        GValMaterializer(*this), LValMaterializer(*this), SharedMDs(SharedMDs),
         Mapper(ValueMap, RF_MoveDistinctMDs | RF_IgnoreMissingLocals, &TypeMap,
                &GValMaterializer),
         AliasMCID(Mapper.registerAlternateMappingContext(AliasValueMap,
                                                          &LValMaterializer)) {
+    ValueMap.MD().swap(SharedMDs);
     for (GlobalValue *GV : ValuesToLink)
       maybeAdd(GV);
   }
+  ~IRLinker() { ValueMap.MD().swap(SharedMDs); }
 
   bool run();
   Value *materializeDeclFor(Value *V, bool ForAlias);
@@ -540,7 +549,7 @@ void IRLinker::materializeInitFor(GlobalValue *New, GlobalValue *Old,
     if (!F->isDeclaration())
       return;
   } else if (auto *V = dyn_cast<GlobalVariable>(New)) {
-    if (V->hasInitializer())
+    if (V->hasInitializer() || V->hasAppendingLinkage())
       return;
   } else {
     auto *A = cast<GlobalAlias>(New);
@@ -813,9 +822,6 @@ Constant *IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   forceRenaming(NG, SrcGV->getName());
 
   Constant *Ret = ConstantExpr::getBitCast(NG, TypeMap.get(SrcGV->getType()));
-
-  // Stop recursion.
-  ValueMap[SrcGV] = Ret;
 
   Mapper.scheduleMapAppendingVariable(*NG,
                                       DstGV ? DstGV->getInitializer() : nullptr,
@@ -1353,8 +1359,8 @@ IRMover::IRMover(Module &M) : Composite(M) {
 bool IRMover::move(
     std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
     std::function<void(GlobalValue &, ValueAdder Add)> AddLazyFor) {
-  IRLinker TheIRLinker(Composite, IdentifiedStructTypes, std::move(Src),
-                       ValuesToLink, AddLazyFor);
+  IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
+                       std::move(Src), ValuesToLink, AddLazyFor);
   bool RetCode = TheIRLinker.run();
   Composite.dropTriviallyDeadConstantArrays();
   return RetCode;

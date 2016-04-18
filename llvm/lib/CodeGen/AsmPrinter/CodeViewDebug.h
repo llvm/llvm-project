@@ -17,7 +17,6 @@
 #include "DebugHandlerBase.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -29,6 +28,7 @@
 
 namespace llvm {
 
+class StringRef;
 class LexicalScope;
 
 /// \brief Collects and handles line tables information in a CodeView format.

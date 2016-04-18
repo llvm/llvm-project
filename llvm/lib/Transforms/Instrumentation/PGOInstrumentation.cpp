@@ -50,7 +50,6 @@
 
 #include "CFGMST.h"
 #include "IndirectCallSiteVisitor.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Triple.h"

@@ -30,7 +30,6 @@
 #include "llvm/Support/MemoryObject.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
-#include <vector>
 
 using namespace llvm;
 using namespace Hexagon;

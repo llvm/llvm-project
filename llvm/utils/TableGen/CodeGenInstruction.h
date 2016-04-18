@@ -14,7 +14,6 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENINSTRUCTION_H
 #define LLVM_UTILS_TABLEGEN_CODEGENINSTRUCTION_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/SMLoc.h"
@@ -23,10 +22,10 @@
 #include <vector>
 
 namespace llvm {
+template <typename T> class ArrayRef;
   class Record;
   class DagInit;
   class CodeGenTarget;
-  class StringRef;
 
   class CGIOperandList {
   public:

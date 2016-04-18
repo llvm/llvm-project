@@ -14,7 +14,6 @@
 #ifndef LLVM_LIB_TARGET_LANAI_MCTARGETDESC_LANAIMCASMINFO_H
 #define LLVM_LIB_TARGET_LANAI_MCTARGETDESC_LANAIMCASMINFO_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfoELF.h"
 
 namespace llvm {

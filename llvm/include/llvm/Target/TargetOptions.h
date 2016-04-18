@@ -17,7 +17,6 @@
 
 #include "llvm/Target/TargetRecip.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include <string>
 
 namespace llvm {
   class MachineFunction;

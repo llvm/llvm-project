@@ -34,7 +34,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -42,7 +41,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
 #include <deque>
-#include <set>
 #include <string>
 #include <vector>
 using namespace llvm;

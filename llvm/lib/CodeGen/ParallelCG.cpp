@@ -36,25 +36,6 @@ codegen(Module *M, llvm::raw_pwrite_stream &OS,
   CodeGenPasses.run(*M);
 }
 
-std::unique_ptr<Module>
-llvm::splitCodeGen(std::unique_ptr<Module> M, ArrayRef<raw_pwrite_stream *> OSs,
-                   ArrayRef<llvm::raw_pwrite_stream *> BCOSs, StringRef CPU,
-                   StringRef Features, const TargetOptions &Options,
-                   Reloc::Model RM, CodeModel::Model CM, CodeGenOpt::Level OL,
-                   TargetMachine::CodeGenFileType FileType,
-                   bool PreserveLocals) {
-  std::string TripleStr = M->getTargetTriple();
-  std::string ErrMsg;
-
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleStr, ErrMsg);
-  if (!TheTarget)
-    report_fatal_error(Twine("Target not found: ") + ErrMsg);
-  return splitCodeGen(std::move(M), OSs, BCOSs, [&]() {
-    return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-        TripleStr, CPU, Features, Options, RM, CM, OL));
-  }, FileType, PreserveLocals);
-}
-
 std::unique_ptr<Module> llvm::splitCodeGen(
     std::unique_ptr<Module> M, ArrayRef<llvm::raw_pwrite_stream *> OSs,
     ArrayRef<llvm::raw_pwrite_stream *> BCOSs,
@@ -84,7 +65,7 @@ std::unique_ptr<Module> llvm::splitCodeGen(
           // spinning up new threads which deserialize the partitions into
           // separate contexts.
           // FIXME: Provide a more direct way to do this in LLVM.
-          SmallVector<char, 0> BC;
+          SmallString<0> BC;
           raw_svector_ostream BCOS(BC);
           WriteBitcodeToFile(MPart.get(), BCOS);
 
@@ -96,7 +77,7 @@ std::unique_ptr<Module> llvm::splitCodeGen(
           llvm::raw_pwrite_stream *ThreadOS = OSs[ThreadCount++];
           // Enqueue the task
           CodegenThreadPool.async(
-              [TMFactory, FileType, ThreadOS](const SmallVector<char, 0> &BC) {
+              [TMFactory, FileType, ThreadOS](const SmallString<0> &BC) {
                 LLVMContext Ctx;
                 ErrorOr<std::unique_ptr<Module>> MOrErr = parseBitcodeFile(
                     MemoryBufferRef(StringRef(BC.data(), BC.size()),

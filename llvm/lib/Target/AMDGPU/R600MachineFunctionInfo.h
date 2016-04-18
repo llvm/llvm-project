@@ -14,7 +14,6 @@
 #define LLVM_LIB_TARGET_AMDGPU_R600MACHINEFUNCTIONINFO_H
 
 #include "AMDGPUMachineFunction.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include <vector>
 

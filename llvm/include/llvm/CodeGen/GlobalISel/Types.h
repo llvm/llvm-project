@@ -16,7 +16,6 @@
 #define LLVM_CODEGEN_GLOBALISEL_TYPES_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Value.h"
 
 namespace llvm {

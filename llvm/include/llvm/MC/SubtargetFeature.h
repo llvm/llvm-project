@@ -18,12 +18,13 @@
 #ifndef LLVM_MC_SUBTARGETFEATURE_H
 #define LLVM_MC_SUBTARGETFEATURE_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/DataTypes.h"
 #include <bitset>
+#include <vector>
 
 namespace llvm {
+template <typename T> class ArrayRef;
   class raw_ostream;
   class StringRef;
 

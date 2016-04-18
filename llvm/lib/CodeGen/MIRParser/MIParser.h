@@ -15,10 +15,10 @@
 #define LLVM_LIB_CODEGEN_MIRPARSER_MIPARSER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 
+class StringRef;
 class BasicBlock;
 class MachineBasicBlock;
 class MachineInstr;

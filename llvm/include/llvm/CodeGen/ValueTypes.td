@@ -96,24 +96,24 @@ def x86mmx : ValueType<64 , 64>;   // X86 MMX value
 def FlagVT : ValueType<0  , 65>;   // Pre-RA sched glue
 def isVoid : ValueType<0  , 66>;   // Produces no value
 def untyped: ValueType<8  , 67>;   // Produces an untyped value
-def token  : ValueType<0  , 249>;  // TokenTy
-def MetadataVT: ValueType<0, 250>; // Metadata
+def token  : ValueType<0  , 120>;  // TokenTy
+def MetadataVT: ValueType<0, 121>; // Metadata
 
 // Pseudo valuetype mapped to the current pointer size to any address space.
 // Should only be used in TableGen.
-def iPTRAny   : ValueType<0, 251>;
+def iPTRAny   : ValueType<0, 122>;
 
 // Pseudo valuetype to represent "vector of any size"
-def vAny   : ValueType<0  , 252>;
+def vAny   : ValueType<0  , 123>;
 
 // Pseudo valuetype to represent "float of any format"
-def fAny   : ValueType<0  , 253>;
+def fAny   : ValueType<0  , 124>;
 
 // Pseudo valuetype to represent "integer of any bit width"
-def iAny   : ValueType<0  , 254>;
+def iAny   : ValueType<0  , 125>;
 
 // Pseudo valuetype mapped to the current pointer size.
-def iPTR   : ValueType<0  , 255>;
+def iPTR   : ValueType<0  , 126>;
 
 // Pseudo valuetype to represent "any type of any size".
-def Any    : ValueType<0  , 256>;
+def Any    : ValueType<0  , 127>;

@@ -12,14 +12,11 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Compiler.h"
 #include <bitset>
 #include <cassert>
 #include <cmath>
-#include <limits>
 #include <type_traits>
 #include <utility>
 #include <vector>

@@ -54,9 +54,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #endif
 
-#include <algorithm>
-#include <vector>
-
 using namespace llvm;
 
 #define DEBUG_TYPE "ctrloops"

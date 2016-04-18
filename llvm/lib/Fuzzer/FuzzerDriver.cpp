@@ -12,16 +12,14 @@
 #include "FuzzerInterface.h"
 #include "FuzzerInternal.h"
 
-#include <cstring>
-#include <chrono>
-#include <unistd.h>
-#include <thread>
+#include <algorithm>
 #include <atomic>
+#include <chrono>
+#include <cstring>
 #include <mutex>
 #include <string>
-#include <sstream>
-#include <algorithm>
-#include <iterator>
+#include <thread>
+#include <unistd.h>
 
 // This function should be present in the libFuzzer so that the client
 // binary can test for its existence.

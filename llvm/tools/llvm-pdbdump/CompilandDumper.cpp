@@ -33,7 +33,6 @@
 #include "FunctionDumper.h"
 
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 

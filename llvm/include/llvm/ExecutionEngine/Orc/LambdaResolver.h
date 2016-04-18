@@ -18,7 +18,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include <memory>
-#include <vector>
 
 namespace llvm {
 namespace orc {

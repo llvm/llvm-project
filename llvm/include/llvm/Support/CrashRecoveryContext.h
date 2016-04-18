@@ -11,7 +11,6 @@
 #define LLVM_SUPPORT_CRASHRECOVERYCONTEXT_H
 
 #include "llvm/ADT/STLExtras.h"
-#include <string>
 
 namespace llvm {
 class CrashRecoveryContextCleanup;

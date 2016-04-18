@@ -19,7 +19,6 @@
 
 #include "CodeGenTarget.h"
 #include "X86DisassemblerTables.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/TableGen/Record.h"
 

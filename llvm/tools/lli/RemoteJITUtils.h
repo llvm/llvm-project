@@ -16,6 +16,7 @@
 
 #include "llvm/ExecutionEngine/Orc/RPCChannel.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include <mutex>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>

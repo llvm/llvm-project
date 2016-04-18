@@ -16,7 +16,6 @@
 
 #include "HexagonBaseInfo.h"
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/CommandLine.h"

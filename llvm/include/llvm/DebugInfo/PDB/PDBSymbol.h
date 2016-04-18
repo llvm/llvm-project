@@ -15,9 +15,7 @@
 #include "PDBExtras.h"
 #include "PDBTypes.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include <unordered_map>
 
 #define FORWARD_SYMBOL_METHOD(MethodName)                                      \
   auto MethodName() const->decltype(RawSymbol->MethodName()) {                 \
@@ -26,6 +24,7 @@
 
 namespace llvm {
 
+class StringRef;
 class IPDBRawSymbol;
 class raw_ostream;
 

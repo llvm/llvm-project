@@ -18,7 +18,6 @@
 #ifndef LLVM_CODEGEN_MIRPARSER_MIRPARSER_H
 #define LLVM_CODEGEN_MIRPARSER_MIRPARSER_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunctionInitializer.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -26,6 +25,7 @@
 
 namespace llvm {
 
+class StringRef;
 class MIRParserImpl;
 class SMDiagnostic;
 

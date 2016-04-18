@@ -10,13 +10,15 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPETABLEBUILDER_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPETABLEBUILDER_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+
+class StringRef;
+
 namespace codeview {
 
 class FieldListRecordBuilder;
