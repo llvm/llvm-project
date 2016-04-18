@@ -1,4 +1,4 @@
-; RUN: opt -S -o - -mtriple=armv7-apple-ios7.0 -atomic-expand %s | FileCheck %s
+; RUN: opt -S -o - -mtriple=armv7-apple-ios7.0 -atomic-expand -codegen-opt-level=1 %s | FileCheck %s
 
 define i8 @test_atomic_xchg_i8(i8* %ptr, i8 %xchgend) {
 ; CHECK-LABEL: @test_atomic_xchg_i8
