@@ -2466,7 +2466,7 @@ bool Sema::SemaBuiltinVAStartImpl(CallExpr *TheCall) {
 
   if (!SecondArgIsLastNamedArgument)
     Diag(TheCall->getArg(1)->getLocStart(),
-         diag::warn_second_parameter_of_va_start_not_last_named_argument);
+         diag::warn_second_arg_of_va_start_not_last_named_param);
   else if (Type->isReferenceType()) {
     Diag(Arg->getLocStart(),
          diag::warn_va_start_of_reference_type_is_undefined);

@@ -7351,8 +7351,9 @@ def err_va_start_used_in_wrong_abi_function : Error<
   "'va_start' used in %select{System V|Win64}0 ABI function">;
 def err_ms_va_start_used_in_sysv_function : Error<
   "'__builtin_ms_va_start' used in System V ABI function">;
-def warn_second_parameter_of_va_start_not_last_named_argument : Warning<
-  "second parameter of 'va_start' not last named argument">, InGroup<Varargs>;
+def warn_second_arg_of_va_start_not_last_named_param : Warning<
+  "second argument to 'va_start' is not the last named parameter">,
+  InGroup<Varargs>;
 def warn_va_start_of_reference_type_is_undefined : Warning<
   "'va_start' has undefined behavior with reference types">, InGroup<Varargs>;
 def err_first_argument_to_va_arg_not_of_type_va_list : Error<
