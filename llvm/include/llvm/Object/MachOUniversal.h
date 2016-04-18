@@ -14,7 +14,6 @@
 #ifndef LLVM_OBJECT_MACHOUNIVERSAL_H
 #define LLVM_OBJECT_MACHOUNIVERSAL_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/Archive.h"
@@ -24,6 +23,8 @@
 #include "llvm/Support/MachO.h"
 
 namespace llvm {
+class StringRef;
+
 namespace object {
 
 class MachOUniversalBinary : public Binary {

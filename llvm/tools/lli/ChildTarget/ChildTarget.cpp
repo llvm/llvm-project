@@ -54,8 +54,8 @@ int main(int argc, char *argv[]) {
   JITServer Server(Channel, SymbolLookup, RegisterEHFrames, DeregisterEHFrames);
 
   while (1) {
-    JITServer::JITProcId Id = JITServer::InvalidId;
-    if (auto EC = Server.getNextProcId(Id)) {
+    JITServer::JITFuncId Id = JITServer::InvalidId;
+    if (auto EC = Server.getNextFuncId(Id)) {
       errs() << "Error: " << EC.message() << "\n";
       return 1;
     }
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     case JITServer::TerminateSessionId:
       return 0;
     default:
-      if (auto EC = Server.handleKnownProcedure(Id)) {
+      if (auto EC = Server.handleKnownFunction(Id)) {
         errs() << "Error: " << EC.message() << "\n";
         return 1;
       }

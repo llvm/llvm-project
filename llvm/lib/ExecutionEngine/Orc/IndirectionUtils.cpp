@@ -13,7 +13,6 @@
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include <set>
 #include <sstream>
 
 namespace llvm {

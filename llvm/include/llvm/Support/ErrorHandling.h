@@ -15,11 +15,11 @@
 #ifndef LLVM_SUPPORT_ERRORHANDLING_H
 #define LLVM_SUPPORT_ERRORHANDLING_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {
+class StringRef;
   class Twine;
 
   /// An error handler callback.

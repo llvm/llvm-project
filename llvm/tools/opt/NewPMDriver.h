@@ -21,9 +21,8 @@
 #ifndef LLVM_TOOLS_OPT_NEWPMDRIVER_H
 #define LLVM_TOOLS_OPT_NEWPMDRIVER_H
 
-#include "llvm/ADT/StringRef.h"
-
 namespace llvm {
+class StringRef;
 class LLVMContext;
 class Module;
 class TargetMachine;

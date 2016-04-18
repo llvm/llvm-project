@@ -575,10 +575,10 @@ bool ValueEnumerator::insertMetadata(unsigned F, const Metadata *MD) {
 }
 
 void ValueEnumerator::dropFunctionFromOps(const MDNode &N) {
-  SmallVector<const MDNode *, 64> WorkList;
-  WorkList.push_back(&N);
-  while (!WorkList.empty()) {
-    for (const Metadata *Op : WorkList.pop_back_val()->operands()) {
+  SmallVector<const MDNode *, 64> Worklist;
+  Worklist.push_back(&N);
+  while (!Worklist.empty()) {
+    for (const Metadata *Op : Worklist.pop_back_val()->operands()) {
       if (!Op)
         continue;
 
@@ -594,7 +594,7 @@ void ValueEnumerator::dropFunctionFromOps(const MDNode &N) {
       // Drop the tag, and if it's a node (with potential operands), queue it.
       Entry.F = 0;
       if (auto *OpN = dyn_cast<MDNode>(Op))
-        WorkList.push_back(OpN);
+        Worklist.push_back(OpN);
     }
   }
 }

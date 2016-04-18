@@ -16,10 +16,10 @@
 #ifndef LLVM_TRANSFORMS_UTILS_UNROLLLOOP_H
 #define LLVM_TRANSFORMS_UTILS_UNROLLLOOP_H
 
-#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 
+class StringRef;
 class AssumptionCache;
 class DominatorTree;
 class Loop;

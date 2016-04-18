@@ -49,7 +49,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Vectorize.h"
 #include <algorithm>
-#include <map>
 #include <memory>
 
 using namespace llvm;

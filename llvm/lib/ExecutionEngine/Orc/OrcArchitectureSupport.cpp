@@ -10,7 +10,6 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/Orc/OrcArchitectureSupport.h"
 #include "llvm/Support/Process.h"
-#include <array>
 
 namespace llvm {
 namespace orc {

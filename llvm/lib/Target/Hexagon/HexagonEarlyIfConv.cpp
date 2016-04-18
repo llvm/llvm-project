@@ -78,8 +78,6 @@
 #include "HexagonTargetMachine.h"
 
 #include <functional>
-#include <set>
-#include <vector>
 
 using namespace llvm;
 

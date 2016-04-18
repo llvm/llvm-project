@@ -20,11 +20,11 @@
 #define LLVM_PASSANALYSISSUPPORT_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Pass.h"
 #include <vector>
 
 namespace llvm {
+class StringRef;
 
 //===----------------------------------------------------------------------===//
 /// Represent the analysis usage information of a pass.  This tracks analyses

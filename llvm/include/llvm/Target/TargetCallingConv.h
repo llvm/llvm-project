@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/MathExtras.h"
-#include <string>
 #include <climits>
 
 namespace llvm {

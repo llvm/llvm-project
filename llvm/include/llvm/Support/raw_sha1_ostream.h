@@ -16,6 +16,7 @@
 
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace llvm {
 

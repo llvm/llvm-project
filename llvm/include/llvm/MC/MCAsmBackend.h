@@ -29,7 +29,7 @@ class MCRelaxableFragment;
 class MCObjectWriter;
 class MCSection;
 class MCValue;
-class raw_ostream;
+class raw_pwrite_stream;
 
 /// Generic interface to target specific assembler backends.
 class MCAsmBackend {

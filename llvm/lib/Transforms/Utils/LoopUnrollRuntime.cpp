@@ -94,7 +94,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
       Value *V = PN->getIncomingValueForBlock(Latch);
       if (Instruction *I = dyn_cast<Instruction>(V)) {
         if (L->contains(I)) {
-          V = VMap[I];
+          V = VMap.lookup(I);
         }
       }
       // Adding a value to the new PHI node from the last prolog block
@@ -199,7 +199,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     Instruction *I = dyn_cast<Instruction>(V);
     if (I && L->contains(I))
       // If value comes from an instruction in the loop add VMap value.
-      V = VMap[I];
+      V = VMap.lookup(I);
     // For the instruction out of the loop, constant or undefined value
     // insert value itself.
     EpilogPN->addIncoming(V, EpilogLatch);
@@ -353,8 +353,8 @@ static void CloneLoopBlocks(Loop *L, Value *NewIter,
       idx = NewPHI->getBasicBlockIndex(Latch);
       Value *InVal = NewPHI->getIncomingValue(idx);
       NewPHI->setIncomingBlock(idx, NewLatch);
-      if (VMap[InVal])
-        NewPHI->setIncomingValue(idx, VMap[InVal]);
+      if (Value *V = VMap.lookup(InVal))
+        NewPHI->setIncomingValue(idx, V);
     }
   }
   if (NewLoop) {

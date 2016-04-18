@@ -15,7 +15,6 @@
 #define LLVM_RUNTIME_DYLD_COFF_H
 
 #include "RuntimeDyldImpl.h"
-#include "llvm/ADT/DenseMap.h"
 
 #define DEBUG_TYPE "dyld"
 

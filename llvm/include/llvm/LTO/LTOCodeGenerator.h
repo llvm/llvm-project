@@ -36,7 +36,6 @@
 #define LLVM_LTO_LTOCODEGENERATOR_H
 
 #include "llvm-c/lto.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
@@ -48,6 +47,7 @@
 #include <vector>
 
 namespace llvm {
+template <typename T> class ArrayRef;
   class LLVMContext;
   class DiagnosticInfo;
   class Linker;
@@ -175,6 +175,7 @@ private:
   void restoreLinkageForExternals();
   void applyScopeRestrictions();
   bool determineTarget();
+  std::unique_ptr<TargetMachine> createTargetMachine();
 
   static void DiagnosticHandler(const DiagnosticInfo &DI, void *Context);
 
@@ -199,6 +200,8 @@ private:
   std::string NativeObjectPath;
   TargetOptions Options;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
+  const Target *MArch = nullptr;
+  std::string TripleStr;
   unsigned OptLevel = 2;
   lto_diagnostic_handler_t DiagHandler = nullptr;
   void *DiagContext = nullptr;

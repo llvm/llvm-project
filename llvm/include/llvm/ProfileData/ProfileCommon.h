@@ -15,7 +15,6 @@
 #ifndef LLVM_PROFILEDATA_PROFILE_COMMON_H
 #define LLVM_PROFILEDATA_PROFILE_COMMON_H
 
-#include "llvm/ADT/APInt.h"
 #include <cstdint>
 #include <functional>
 #include <map>

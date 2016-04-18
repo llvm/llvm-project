@@ -16,12 +16,11 @@
 #ifndef LLVM_SUPPORT_SHA1_H
 #define LLVM_SUPPORT_SHA1_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
-
 #include <cstdint>
 
 namespace llvm {
+template <typename T> class ArrayRef;
+class StringRef;
 
 /// A class that wrap the SHA1 algorithm.
 class SHA1 {

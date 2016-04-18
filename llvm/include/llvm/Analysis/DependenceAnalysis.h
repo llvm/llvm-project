@@ -41,12 +41,12 @@
 #define LLVM_ANALYSIS_DEPENDENCEANALYSIS_H
 
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
+template <typename T> class ArrayRef;
   class Loop;
   class LoopInfo;
   class ScalarEvolution;

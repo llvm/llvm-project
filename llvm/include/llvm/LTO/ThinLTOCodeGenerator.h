@@ -17,7 +17,6 @@
 #define LLVM_LTO_THINLTOCODEGENERATOR_H
 
 #include "llvm-c/lto.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/CodeGen.h"
@@ -27,6 +26,7 @@
 #include <string>
 
 namespace llvm {
+class StringRef;
 class ModuleSummaryIndex;
 class LLVMContext;
 class TargetMachine;

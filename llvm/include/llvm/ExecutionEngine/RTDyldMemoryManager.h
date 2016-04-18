@@ -16,7 +16,6 @@
 
 #include "RuntimeDyld.h"
 #include "llvm-c/ExecutionEngine.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Memory.h"
 

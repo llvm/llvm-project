@@ -12,7 +12,6 @@
 
 #include "NVPTXSection.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
-#include <string>
 
 namespace llvm {
 class GlobalVariable;

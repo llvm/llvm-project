@@ -10,7 +10,6 @@
 #ifndef LLVM_LIB_TARGET_MIPS_MIPSMCINSTLOWER_H
 #define LLVM_LIB_TARGET_MIPS_MIPSMCINSTLOWER_H
 #include "MCTargetDesc/MipsMCExpr.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/Support/Compiler.h"
 

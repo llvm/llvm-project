@@ -16,14 +16,15 @@
 
 #include "JITSymbolFlags.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Memory.h"
-#include "llvm/DebugInfo/DIContext.h"
 #include <map>
 #include <memory>
 
 namespace llvm {
+
+class StringRef;
 
 namespace object {
   class ObjectFile;

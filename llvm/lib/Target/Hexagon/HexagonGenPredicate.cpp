@@ -9,24 +9,22 @@
 
 #define DEBUG_TYPE "gen-pred"
 
+#include "HexagonTargetMachine.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetInstrInfo.h"
-#include "HexagonTargetMachine.h"
+#include "llvm/Target/TargetMachine.h"
 
 #include <functional>
 #include <queue>
 #include <set>
-#include <vector>
 
 using namespace llvm;
 

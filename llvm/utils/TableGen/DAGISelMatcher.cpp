@@ -225,12 +225,14 @@ void CheckFoldableChainNodeMatcher::printImpl(raw_ostream &OS,
 }
 
 void EmitIntegerMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
-  OS.indent(indent) << "EmitInteger " << Val << " VT=" << VT << '\n';
+  OS.indent(indent) << "EmitInteger " << Val << " VT=" << getEnumName(VT)
+                    << '\n';
 }
 
 void EmitStringIntegerMatcher::
 printImpl(raw_ostream &OS, unsigned indent) const {
-  OS.indent(indent) << "EmitStringInteger " << Val << " VT=" << VT << '\n';
+  OS.indent(indent) << "EmitStringInteger " << Val << " VT=" << getEnumName(VT)
+                    << '\n';
 }
 
 void EmitRegisterMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
@@ -239,7 +241,7 @@ void EmitRegisterMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
     OS << Reg->getName();
   else
     OS << "zero_reg";
-  OS << " VT=" << VT << '\n';
+  OS << " VT=" << getEnumName(VT) << '\n';
 }
 
 void EmitConvertToTargetMatcher::

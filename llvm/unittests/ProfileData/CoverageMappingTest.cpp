@@ -15,7 +15,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
-#include <sstream>
+#include <ostream>
 
 using namespace llvm;
 using namespace coverage;

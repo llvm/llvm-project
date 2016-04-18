@@ -16,7 +16,6 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_BYTESTREAMER_H
 
 #include "DIEHash.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/LEB128.h"

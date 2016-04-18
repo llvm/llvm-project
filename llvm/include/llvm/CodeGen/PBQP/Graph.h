@@ -15,12 +15,7 @@
 #ifndef LLVM_CODEGEN_PBQP_GRAPH_H
 #define LLVM_CODEGEN_PBQP_GRAPH_H
 
-#include "llvm/ADT/ilist.h"
-#include "llvm/ADT/ilist_node.h"
 #include "llvm/Support/Debug.h"
-#include <list>
-#include <map>
-#include <set>
 #include <vector>
 
 namespace llvm {

@@ -17,7 +17,6 @@
 #define LLVM_TRANSFORMS_UTILS_SIMPLIFYINDVAR_H
 
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 

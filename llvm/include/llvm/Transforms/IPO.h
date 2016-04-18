@@ -15,14 +15,12 @@
 #ifndef LLVM_TRANSFORMS_IPO_H
 #define LLVM_TRANSFORMS_IPO_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
-
 #include <functional>
+#include <vector>
 
 namespace llvm {
 
+class StringRef;
 class ModuleSummaryIndex;
 class ModulePass;
 class Pass;

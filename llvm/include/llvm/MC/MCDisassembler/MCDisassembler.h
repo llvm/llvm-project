@@ -10,12 +10,12 @@
 #define LLVM_MC_MCDISASSEMBLER_MCDISASSEMBLER_H
 
 #include "llvm-c/Disassembler.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
 
+template <typename T> class ArrayRef;
 class MCInst;
 class MCSubtargetInfo;
 class raw_ostream;

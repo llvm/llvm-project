@@ -33,7 +33,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Dwarf.h"
-#include <vector>
 
 namespace llvm {
 

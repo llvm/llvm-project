@@ -19,9 +19,8 @@
 #ifndef LLVM_LIB_IR_CONSTANTFOLD_H
 #define LLVM_LIB_IR_CONSTANTFOLD_H
 
-#include "llvm/ADT/ArrayRef.h"
-
 namespace llvm {
+template <typename T> class ArrayRef;
   class Value;
   class Constant;
   class Type;

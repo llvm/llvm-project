@@ -25,7 +25,6 @@
 #ifndef LLVM_SUPPORT_PROCESS_H
 #define LLVM_SUPPORT_PROCESS_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Allocator.h"
@@ -34,6 +33,7 @@
 #include <system_error>
 
 namespace llvm {
+template <typename T> class ArrayRef;
 class StringRef;
 
 namespace sys {

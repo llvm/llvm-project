@@ -16,13 +16,13 @@
 #define LLVM_LIB_TARGET_X86_UTILS_X86SHUFFLEDECODE_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/ArrayRef.h"
 
 //===----------------------------------------------------------------------===//
 //  Vector Mask Decoding
 //===----------------------------------------------------------------------===//
 
 namespace llvm {
+template <typename T> class ArrayRef;
 class MVT;
 
 enum { SM_SentinelUndef = -1, SM_SentinelZero = -2 };

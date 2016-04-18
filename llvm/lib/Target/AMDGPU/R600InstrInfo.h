@@ -18,7 +18,6 @@
 #include "AMDGPUInstrInfo.h"
 #include "R600Defines.h"
 #include "R600RegisterInfo.h"
-#include <map>
 
 namespace llvm {
   class AMDGPUTargetMachine;
