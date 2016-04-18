@@ -13,9 +13,12 @@
 
 #include "llvm/Support/CachePruning.h"
 
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+
+#define DEBUG_TYPE "cache-pruning"
 
 #include <set>
 
@@ -33,9 +36,11 @@ bool CachePruning::prune() {
   SmallString<128> TimestampFile(Path);
   sys::path::append(TimestampFile, "llvmcache.timestamp");
 
-  if (Expiration == 0 && PercentageOfAvailableSpace == 0)
+  if (Expiration == 0 && PercentageOfAvailableSpace == 0) {
+    DEBUG(dbgs() << "No pruning settings set, exit early\n");
     // Nothing will be pruned, early exit
     return false;
+  }
 
   // Try to stat() the timestamp file.
   sys::fs::file_status FileStatus;
@@ -54,8 +59,12 @@ bool CachePruning::prune() {
       // If not, do nothing.
       sys::TimeValue TimeStampModTime = FileStatus.getLastModificationTime();
       auto TimeInterval = sys::TimeValue(sys::TimeValue::SecondsType(Interval));
-      if (CurrentTime - TimeStampModTime <= TimeInterval)
+      auto TimeStampAge = CurrentTime - TimeStampModTime;
+      if (TimeStampAge <= TimeInterval) {
+        DEBUG(dbgs() << "Timestamp file too recent (" << TimeStampAge.seconds()
+                     << "s old), do not prune.\n");
         return false;
+      }
     }
     // Write a new timestamp file so that nobody else attempts to prune.
     // There is a benign race condition here, if two processes happen to
@@ -93,12 +102,17 @@ bool CachePruning::prune() {
 
     // Look at this file. If we can't stat it, there's nothing interesting
     // there.
-    if (sys::fs::status(File->path(), FileStatus))
+    if (sys::fs::status(File->path(), FileStatus)) {
+      DEBUG(dbgs() << "Ignore " << File->path() << " (can't stat)\n");
       continue;
+    }
 
     // If the file hasn't been used recently enough, delete it
     sys::TimeValue FileAccessTime = FileStatus.getLastAccessedTime();
-    if (CurrentTime - FileAccessTime > TimeExpiration) {
+    auto FileAge = CurrentTime - FileAccessTime;
+    if (FileAge > TimeExpiration) {
+      DEBUG(dbgs() << "Remove " << File->path() << " (" << FileAge.seconds()
+                   << "s old)\n");
       sys::fs::remove(File->path());
       continue;
     }
@@ -116,6 +130,8 @@ bool CachePruning::prune() {
     sys::fs::space_info SpaceInfo = ErrOrSpaceInfo.get();
     auto AvailableSpace = TotalSize + SpaceInfo.free;
     auto FileAndSize = FileSizes.rbegin();
+    DEBUG(dbgs() << "Occupancy: " << ((100 * TotalSize) / AvailableSpace)
+                 << "% target is: " << PercentageOfAvailableSpace << "\n");
     // Remove the oldest accessed files first, till we get below the threshold
     while (((100 * TotalSize) / AvailableSpace) > PercentageOfAvailableSpace &&
            FileAndSize != FileSizes.rend()) {
@@ -123,6 +139,9 @@ bool CachePruning::prune() {
       sys::fs::remove(FileAndSize->second);
       // Update size
       TotalSize -= FileAndSize->first;
+      DEBUG(dbgs() << " - Remove " << FileAndSize->second << " (size "
+                   << FileAndSize->first << "), new occupancy is " << TotalSize
+                   << "%\n");
       ++FileAndSize;
     }
   }
