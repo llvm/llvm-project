@@ -25,7 +25,6 @@ class TargetInfo {
 public:
   uint64_t getVAStart() const;
   virtual bool isTlsInitialExecRel(uint32_t Type) const;
-  virtual bool pointsToLocalDynamicGotEntry(uint32_t Type) const;
   virtual bool isTlsLocalDynamicRel(uint32_t Type) const;
   virtual bool isTlsGlobalDynamicRel(uint32_t Type) const;
   virtual uint32_t getDynRel(uint32_t Type) const { return Type; }

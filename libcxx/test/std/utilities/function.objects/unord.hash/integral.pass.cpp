@@ -67,7 +67,7 @@ int main()
 	test<int16_t>();
 	test<int32_t>();
 	test<int64_t>();
-	
+
 	test<int_fast8_t>();
 	test<int_fast16_t>();
 	test<int_fast32_t>();
@@ -80,12 +80,12 @@ int main()
 
     test<intmax_t>();
     test<intptr_t>();
-	
+
 	test<uint8_t>();
 	test<uint16_t>();
 	test<uint32_t>();
 	test<uint64_t>();
-	
+
 	test<uint_fast8_t>();
 	test<uint_fast16_t>();
 	test<uint_fast32_t>();
@@ -98,4 +98,9 @@ int main()
 
     test<uintmax_t>();
     test<uintptr_t>();
+
+#ifndef _LIBCPP_HAS_NO_INT128
+    test<__int128_t>();
+    test<__uint128_t>();
+#endif
 }

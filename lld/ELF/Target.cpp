@@ -75,7 +75,6 @@ public:
   void writeGotPltHeader(uint8_t *Buf) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   uint32_t getTlsGotRel(uint32_t Type) const override;
-  bool pointsToLocalDynamicGotEntry(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
   bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
@@ -104,7 +103,6 @@ public:
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   uint32_t getTlsGotRel(uint32_t Type) const override;
-  bool pointsToLocalDynamicGotEntry(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
   bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
@@ -323,10 +321,6 @@ bool TargetInfo::needsThunk(uint32_t Type, const InputFile &File,
 
 bool TargetInfo::isTlsInitialExecRel(uint32_t Type) const { return false; }
 
-bool TargetInfo::pointsToLocalDynamicGotEntry(uint32_t Type) const {
-  return false;
-}
-
 bool TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const { return false; }
 
 bool TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
@@ -372,6 +366,10 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   switch (Type) {
   default:
     return R_ABS;
+  case R_386_TLS_GD:
+    return R_TLSGD;
+  case R_386_TLS_LDM:
+    return R_TLSLD;
   case R_386_PLT32:
   case R_386_PC32:
   case R_386_GOTPC:
@@ -424,10 +422,6 @@ bool X86TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
 
 bool X86TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const {
   return Type == R_386_TLS_LDO_32 || Type == R_386_TLS_LDM;
-}
-
-bool X86TargetInfo::pointsToLocalDynamicGotEntry(uint32_t Type) const {
-  return Type == R_386_TLS_LDM;
 }
 
 bool X86TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
@@ -673,13 +667,15 @@ RelExpr X86_64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   switch (Type) {
   default:
     return R_ABS;
+  case R_X86_64_TLSLD:
+    return R_TLSLD_PC;
+  case R_X86_64_TLSGD:
+    return R_TLSGD_PC;
   case R_X86_64_SIZE32:
   case R_X86_64_SIZE64:
     return R_SIZE;
   case R_X86_64_PLT32:
   case R_X86_64_PC32:
-  case R_X86_64_TLSLD:
-  case R_X86_64_TLSGD:
     return R_PC;
   case R_X86_64_GOT32:
     return R_GOT;
@@ -757,10 +753,6 @@ bool X86_64TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
 
 bool X86_64TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
   return Type == R_X86_64_TLSGD;
-}
-
-bool X86_64TargetInfo::pointsToLocalDynamicGotEntry(uint32_t Type) const {
-  return Type == R_X86_64_TLSLD;
 }
 
 bool X86_64TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const {

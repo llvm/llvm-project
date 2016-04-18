@@ -25,6 +25,7 @@ add_lld_library(lldELF
   Analysis
   BitReader
   BitWriter
+  Codegen
   Core
   IPO
   Linker

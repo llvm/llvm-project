@@ -79,6 +79,40 @@ typedef Caster<Q_Const,    true> MoveConstCaster;
 typedef Caster<Q_Volatile, true> MoveVolatileCaster;
 typedef Caster<Q_CV,       true> MoveCVCaster;
 
+
+template <class Tp>
+Tp const& makeConst(Tp& ref) { return ref; }
+
+template <class Tp>
+Tp const* makeConst(Tp* ptr) { return ptr; }
+
+template <class Tp>
+std::reference_wrapper<const Tp> makeConst(std::reference_wrapper<Tp>& ref) {
+    return std::reference_wrapper<const Tp>(ref.get());
+}
+
+template <class Tp>
+Tp volatile& makeVolatile(Tp& ref) { return ref; }
+
+template <class Tp>
+Tp volatile* makeVolatile(Tp* ptr) { return ptr; }
+
+template <class Tp>
+std::reference_wrapper<volatile Tp> makeVolatile(std::reference_wrapper<Tp>& ref) {
+    return std::reference_wrapper<volatile Tp>(ref.get());
+}
+
+template <class Tp>
+Tp const volatile& makeCV(Tp& ref) { return ref; }
+
+template <class Tp>
+Tp const volatile* makeCV(Tp* ptr) { return ptr; }
+
+template <class Tp>
+std::reference_wrapper<const volatile Tp> makeCV(std::reference_wrapper<Tp>& ref) {
+    return std::reference_wrapper<const volatile Tp>(ref.get());
+}
+
 // A shorter name for 'static_cast'
 template <class QualType, class Tp>
 QualType C_(Tp& v) { return static_cast<QualType>(v); };

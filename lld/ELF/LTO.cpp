@@ -142,7 +142,8 @@ static void internalize(GlobalValue &GV) {
   GV.setLinkage(GlobalValue::InternalLinkage);
 }
 
-std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::runSplitCodegen() {
+std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::runSplitCodegen(
+    const std::function<std::unique_ptr<TargetMachine>()> &TMFactory) {
   unsigned NumThreads = Config->LtoJobs;
   OwningData.resize(NumThreads);
 
@@ -153,8 +154,7 @@ std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::runSplitCodegen() {
     OSPtrs.push_back(&OSs.back());
   }
 
-  splitCodeGen(std::move(Combined), OSPtrs, {},
-               [this]() { return getTargetMachine(); });
+  splitCodeGen(std::move(Combined), OSPtrs, {}, TMFactory);
 
   std::vector<std::unique_ptr<InputFile>> ObjFiles;
   for (SmallString<0> &Obj : OwningData)
@@ -181,19 +181,20 @@ std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::compile() {
   if (Config->SaveTemps)
     saveBCFile(*Combined, ".lto.bc");
 
-  std::unique_ptr<TargetMachine> TM(getTargetMachine());
-  runLTOPasses(*Combined, *TM);
-
-  return runSplitCodegen();
-}
-
-std::unique_ptr<TargetMachine> BitcodeCompiler::getTargetMachine() {
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(TheTriple, Msg);
   if (!T)
     fatal("target not found: " + Msg);
   TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
   Reloc::Model R = Config->Pic ? Reloc::PIC_ : Reloc::Static;
-  return std::unique_ptr<TargetMachine>(
-      T->createTargetMachine(TheTriple, "", "", Options, R));
+
+  auto CreateTargetMachine = [&]() {
+    return std::unique_ptr<TargetMachine>(
+        T->createTargetMachine(TheTriple, "", "", Options, R));
+  };
+
+  std::unique_ptr<TargetMachine> TM = CreateTargetMachine();
+  runLTOPasses(*Combined, *TM);
+
+  return runSplitCodegen(CreateTargetMachine);
 }

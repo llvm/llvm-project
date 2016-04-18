@@ -33,6 +33,8 @@ template <class Container>
 void testMapInsert()
 {
   typedef typename Container::value_type ValueTp;
+  typedef typename Container::key_type Key;
+  typedef typename Container::mapped_type Mapped;
   typedef Container C;
   typedef std::pair<typename C::iterator, bool> R;
   ConstructController* cc = getConstructController();
@@ -82,6 +84,18 @@ void testMapInsert()
     const ValueTp v(42, 1);
     cc->expect<const ValueTp&>();
     assert(c.insert(std::move(v)).second);
+    assert(!cc->unchecked());
+    {
+      DisableAllocationGuard g;
+      const ValueTp v2(42, 1);
+      assert(c.insert(std::move(v2)).second == false);
+    }
+  }
+  {
+    CHECKPOINT("Testing C::insert({key, value})");
+    Container c;
+    cc->expect<ValueTp&&>();
+    assert(c.insert({42, 1}).second);
     assert(!cc->unchecked());
     {
       DisableAllocationGuard g;
@@ -141,6 +155,140 @@ void testMapInsert()
     }
   }
 }
+
+
+template <class Container>
+void testMapInsertHint()
+{
+  typedef typename Container::value_type ValueTp;
+  typedef typename Container::key_type Key;
+  typedef typename Container::mapped_type Mapped;
+  typedef typename std::pair<Key, Mapped> NonConstKeyPair;
+  typedef Container C;
+  typedef typename C::iterator It;
+  ConstructController* cc = getConstructController();
+  cc->reset();
+  {
+    CHECKPOINT("Testing C::insert(p, const value_type&)");
+    Container c;
+    const ValueTp v(42, 1);
+    cc->expect<const ValueTp&>();
+    It ret = c.insert(c.end(), v);
+    assert(ret != c.end());
+    assert(c.size() == 1);
+    assert(!cc->unchecked());
+    {
+      DisableAllocationGuard g;
+      const ValueTp v2(42, 1);
+      It ret2 = c.insert(c.begin(), v2);
+      assert(&(*ret2) == &(*ret));
+      assert(c.size() == 1);
+    }
+  }
+  {
+    CHECKPOINT("Testing C::insert(p, value_type&)");
+    Container c;
+    ValueTp v(42, 1);
+    cc->expect<ValueTp const&>();
+    It ret = c.insert(c.end(), v);
+    assert(ret != c.end());
+    assert(c.size() == 1);
+    assert(!cc->unchecked());
+    {
+      DisableAllocationGuard g;
+      ValueTp v2(42, 1);
+      It ret2 = c.insert(c.begin(), v2);
+      assert(&(*ret2) == &(*ret));
+      assert(c.size() == 1);
+    }
+  }
+  {
+    CHECKPOINT("Testing C::insert(p, value_type&&)");
+    Container c;
+    ValueTp v(42, 1);
+    cc->expect<ValueTp&&>();
+    It ret = c.insert(c.end(), std::move(v));
+    assert(ret != c.end());
+    assert(c.size() == 1);
+    assert(!cc->unchecked());
+    {
+      DisableAllocationGuard g;
+      ValueTp v2(42, 1);
+      It ret2 = c.insert(c.begin(), std::move(v2));
+      assert(&(*ret2) == &(*ret));
+      assert(c.size() == 1);
+    }
+  }
+  {
+    CHECKPOINT("Testing C::insert(p, {key, value})");
+    Container c;
+    cc->expect<ValueTp&&>();
+    It ret = c.insert(c.end(), {42, 1});
+    assert(ret != c.end());
+    assert(c.size() == 1);
+    assert(!cc->unchecked());
+    {
+      DisableAllocationGuard g;
+      It ret2 = c.insert(c.begin(), {42, 1});
+      assert(&(*ret2) == &(*ret));
+      assert(c.size() == 1);
+    }
+  }
+  {
+    CHECKPOINT("Testing C::insert(p, const value_type&&)");
+    Container c;
+    const ValueTp v(42, 1);
+    cc->expect<const ValueTp&>();
+    It ret = c.insert(c.end(), std::move(v));
+    assert(ret != c.end());
+    assert(c.size() == 1);
+    assert(!cc->unchecked());
+    {
+      DisableAllocationGuard g;
+      const ValueTp v2(42, 1);
+      It ret2 = c.insert(c.begin(), std::move(v2));
+      assert(&(*ret2) == &(*ret));
+      assert(c.size() == 1);
+    }
+  }
+  {
+    CHECKPOINT("Testing C::insert(p, pair<Key, Mapped> const&)");
+    Container c;
+    const NonConstKeyPair v(42, 1);
+    cc->expect<const NonConstKeyPair&>();
+    It ret = c.insert(c.end(), v);
+    assert(ret != c.end());
+    assert(c.size() == 1);
+    assert(!cc->unchecked());
+    {
+      DisableAllocationGuard g;
+      const NonConstKeyPair v2(42, 1);
+      It ret2 = c.insert(c.begin(), v2);
+      assert(&(*ret2) == &(*ret));
+      assert(c.size() == 1);
+    }
+  }
+  {
+    CHECKPOINT("Testing C::insert(p, pair<Key, Mapped>&&)");
+    Container c;
+    NonConstKeyPair v(42, 1);
+    cc->expect<NonConstKeyPair&&>();
+    It ret = c.insert(c.end(), std::move(v));
+    assert(ret != c.end());
+    assert(c.size() == 1);
+    assert(!cc->unchecked());
+    {
+      DisableAllocationGuard g;
+      NonConstKeyPair v2(42, 1);
+      It ret2 = c.insert(c.begin(), std::move(v2));
+      assert(&(*ret2) == &(*ret));
+      assert(c.size() == 1);
+    }
+  }
+
+
+}
+
 
 template <class Container>
 void testMapEmplace()
@@ -510,6 +658,13 @@ void testMultimapInsert()
     assert(!cc->unchecked());
   }
   {
+    CHECKPOINT("Testing C::insert({key, value})");
+    Container c;
+    cc->expect<ValueTp&&>();
+    c.insert({42, 1});
+    assert(!cc->unchecked());
+  }
+  {
     CHECKPOINT("Testing C::insert(std::initializer_list<ValueTp>)");
     Container c;
     std::initializer_list<ValueTp> il = { ValueTp(1, 1), ValueTp(2, 1) };
@@ -542,7 +697,47 @@ void testMultimapInsert()
     c.insert(std::begin(ValueList), std::end(ValueList));
     assert(!cc->unchecked());
   }
+}
 
+
+template <class Container>
+void testMultimapInsertHint()
+{
+  typedef typename Container::value_type ValueTp;
+  typedef Container C;
+  ConstructController* cc = getConstructController();
+  cc->reset();
+  {
+    CHECKPOINT("Testing C::insert(p, const value_type&)");
+    Container c;
+    const ValueTp v(42, 1);
+    cc->expect<const ValueTp&>();
+    c.insert(c.begin(), v);
+    assert(!cc->unchecked());
+  }
+  {
+    CHECKPOINT("Testing C::insert(p, value_type&)");
+    Container c;
+    ValueTp v(42, 1);
+    cc->expect<ValueTp&>();
+    c.insert(c.begin(), v);
+    assert(!cc->unchecked());
+  }
+  {
+    CHECKPOINT("Testing C::insert(p, value_type&&)");
+    Container c;
+    ValueTp v(42, 1);
+    cc->expect<ValueTp&&>();
+    c.insert(c.begin(), std::move(v));
+    assert(!cc->unchecked());
+  }
+  {
+    CHECKPOINT("Testing C::insert(p, {key, value})");
+    Container c;
+    cc->expect<ValueTp&&>();
+    c.insert(c.begin(), {42, 1});
+    assert(!cc->unchecked());
+  }
 }
 
 #endif

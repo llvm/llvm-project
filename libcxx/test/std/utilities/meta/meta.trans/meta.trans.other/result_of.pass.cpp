@@ -13,6 +13,7 @@
 
 #include <type_traits>
 #include <memory>
+#include <cassert>
 #include "test_macros.h"
 
 struct S
@@ -24,6 +25,11 @@ struct S
     double volatile& operator()(char, int&) volatile;
     double const volatile& operator()(char, int&) const volatile;
 };
+
+
+struct SD : public S { };
+
+struct NotDerived {};
 
 template <class Tp>
 struct Voider {
@@ -52,6 +58,7 @@ void test_no_result()
 
 int main()
 {
+    typedef NotDerived ND;
     { // functor object
     test_result_of<S(int), short> ();
     test_result_of<S&(unsigned char, int&), double> ();
@@ -90,32 +97,64 @@ int main()
     typedef int         (S::*PMS0)();
     typedef int*        (S::*PMS1)(long);
     typedef int&        (S::*PMS2)(long, int);
-    test_result_of<PMS0(               S),   int> ();
-    test_result_of<PMS0(               S&),  int> ();
-    test_result_of<PMS0(               S*),  int> ();
-    test_result_of<PMS0(               S*&), int> ();
-    test_result_of<PMS0(std::unique_ptr<S>), int> ();
+    test_result_of<PMS0(                             S),   int> ();
+    test_result_of<PMS0(                             S&),  int> ();
+    test_result_of<PMS0(                             S*),  int> ();
+    test_result_of<PMS0(                             S*&), int> ();
+    test_result_of<PMS0(      std::reference_wrapper<S>),  int> ();
+    test_result_of<PMS0(const std::reference_wrapper<S>&), int> ();
+    test_result_of<PMS0(      std::reference_wrapper<SD>),  int> ();
+    test_result_of<PMS0(const std::reference_wrapper<SD>&), int> ();
+    test_result_of<PMS0(std::unique_ptr<S>),  int> ();
+    test_result_of<PMS0(std::unique_ptr<SD>), int> ();
     test_no_result<PMS0(const          S&)>();
     test_no_result<PMS0(volatile       S&)>();
     test_no_result<PMS0(const volatile S&)>();
+    test_no_result<PMS0(ND &                           )>();
+    test_no_result<PMS0(const ND&                      )>();
+    test_no_result<PMS0(std::unique_ptr<S const>       )>();
+    test_no_result<PMS0(std::reference_wrapper<S const>)>();
+    test_no_result<PMS0(std::reference_wrapper<ND>     )>();
+    test_no_result<PMS0(std::unique_ptr<ND>            )>();
 
-    test_result_of<PMS1(               S,   int), int*> ();
-    test_result_of<PMS1(               S&,  int), int*> ();
-    test_result_of<PMS1(               S*,  int), int*> ();
-    test_result_of<PMS1(               S*&, int), int*> ();
-    test_result_of<PMS1(std::unique_ptr<S>, int), int*> ();
+    test_result_of<PMS1(                             S,   int), int*> ();
+    test_result_of<PMS1(                             S&,  int), int*> ();
+    test_result_of<PMS1(                             S*,  int), int*> ();
+    test_result_of<PMS1(                             S*&, int), int*> ();
+    test_result_of<PMS1(std::unique_ptr<S>,               int), int*> ();
+    test_result_of<PMS1(std::unique_ptr<SD>,              int), int*> ();
+    test_result_of<PMS1(std::reference_wrapper<S>,        int), int*> ();
+    test_result_of<PMS1(const std::reference_wrapper<S>&, int), int*> ();
+    test_result_of<PMS1(std::reference_wrapper<SD>,        int), int*> ();
+    test_result_of<PMS1(const std::reference_wrapper<SD>&, int), int*> ();
     test_no_result<PMS1(const          S&, int)>();
     test_no_result<PMS1(volatile       S&, int)>();
     test_no_result<PMS1(const volatile S&, int)>();
+    test_no_result<PMS1(ND &,                            int)>();
+    test_no_result<PMS1(const ND&,                       int)>();
+    test_no_result<PMS1(std::unique_ptr<S const>,        int)>();
+    test_no_result<PMS1(std::reference_wrapper<S const>, int)>();
+    test_no_result<PMS1(std::reference_wrapper<ND>,      int)>();
+    test_no_result<PMS1(std::unique_ptr<ND>,             int)>();
 
     test_result_of<PMS2(               S,   int, int), int&> ();
     test_result_of<PMS2(               S&,  int, int), int&> ();
     test_result_of<PMS2(               S*,  int, int), int&> ();
     test_result_of<PMS2(               S*&, int, int), int&> ();
     test_result_of<PMS2(std::unique_ptr<S>, int, int), int&> ();
+    test_result_of<PMS2(std::unique_ptr<SD>, int, int), int&> ();
+    test_result_of<PMS2(std::reference_wrapper<S>,         int, int), int&> ();
+    test_result_of<PMS2(const std::reference_wrapper<S>&,  int, int), int&> ();
+    test_result_of<PMS2(std::reference_wrapper<SD>,        int, int), int&> ();
+    test_result_of<PMS2(const std::reference_wrapper<SD>&, int, int), int&> ();
     test_no_result<PMS2(const          S&, int, int)>();
     test_no_result<PMS2(volatile       S&, int, int)>();
     test_no_result<PMS2(const volatile S&, int, int)>();
+    test_no_result<PMS2(std::unique_ptr<S const>,   int, int)>();
+    test_no_result<PMS2(std::reference_wrapper<S const>, int, int)>();
+    test_no_result<PMS2(const ND&,                  int, int)>();
+    test_no_result<PMS2(std::reference_wrapper<ND>, int, int)>();
+    test_no_result<PMS2(std::unique_ptr<ND>,        int, int)>();
 
     typedef int        (S::*PMS0C)() const;
     typedef int*       (S::*PMS1C)(long) const;
@@ -128,6 +167,15 @@ int main()
     test_result_of<PMS0C(               S*&), int> ();
     test_result_of<PMS0C(const          S*&), int> ();
     test_result_of<PMS0C(std::unique_ptr<S>), int> ();
+    test_result_of<PMS0C(std::unique_ptr<SD>), int> ();
+    test_result_of<PMS0C(std::reference_wrapper<S>              ), int> ();
+    test_result_of<PMS0C(std::reference_wrapper<const S>        ), int> ();
+    test_result_of<PMS0C(const std::reference_wrapper<S> &      ), int> ();
+    test_result_of<PMS0C(const std::reference_wrapper<const S> &), int> ();
+    test_result_of<PMS0C(std::reference_wrapper<SD>             ), int> ();
+    test_result_of<PMS0C(std::reference_wrapper<const SD>       ), int> ();
+    test_result_of<PMS0C(const std::reference_wrapper<SD> &     ), int> ();
+    test_result_of<PMS0C(const std::reference_wrapper<const SD> &), int> ();
     test_no_result<PMS0C(volatile       S&)>();
     test_no_result<PMS0C(const volatile S&)>();
 
@@ -248,5 +296,16 @@ int main()
     test_result_of<PMD(volatile S*), volatile char&> ();
     test_result_of<PMD(const volatile S&), const volatile char&> ();
     test_result_of<PMD(const volatile S*), const volatile char&> ();
+    test_result_of<PMD(SD&), char &>();
+    test_result_of<PMD(SD const&), const char&>();
+    test_result_of<PMD(SD*), char&>();
+    test_result_of<PMD(const SD*), const char&>();
+    test_result_of<PMD(std::unique_ptr<S>), char &>();
+    test_result_of<PMD(std::unique_ptr<S const>), const char&>();
+#if TEST_STD_VER >= 11
+    test_result_of<PMD(std::reference_wrapper<S>), char&>();
+    test_result_of<PMD(std::reference_wrapper<S const>), const char&>();
+#endif
+    test_no_result<PMD(ND&)>();
     }
 }

@@ -283,7 +283,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     return 0;
 
   typedef typename ELFT::uint uintX_t;
-  if (Target->pointsToLocalDynamicGotEntry(Type)) {
+  if (Expr == R_TLSLD_PC || Expr == R_TLSLD) {
     if (Target->canRelaxTls(Type, nullptr)) {
       C.Relocations.push_back(
           {R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Body});
@@ -293,7 +293,6 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
       Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, Out<ELFT>::Got,
                                     Out<ELFT>::Got->getTlsIndexOff(), false,
                                     nullptr, 0});
-    Expr = Expr == R_PC ? R_TLSLD_PC : R_TLSLD;
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
@@ -318,13 +317,13 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
                                       Off + (uintX_t)sizeof(uintX_t), false,
                                       &Body, 0});
       }
-      Expr = Expr == R_PC ? R_TLSGD_PC : R_TLSGD;
       C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
       return 1;
     }
 
     if (Body.isPreemptible()) {
-      Expr = Expr == R_PC ? R_RELAX_TLS_GD_TO_IE_PC : R_RELAX_TLS_GD_TO_IE;
+      Expr =
+          Expr == R_TLSGD_PC ? R_RELAX_TLS_GD_TO_IE_PC : R_RELAX_TLS_GD_TO_IE;
       C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
       if (!Body.isInGot()) {
         Out<ELFT>::Got->addEntry(Body);

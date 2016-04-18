@@ -45,8 +45,8 @@ public:
   }
 
 private:
-  std::vector<std::unique_ptr<InputFile>> runSplitCodegen();
-  std::unique_ptr<llvm::TargetMachine> getTargetMachine();
+  std::vector<std::unique_ptr<InputFile>> runSplitCodegen(
+      const std::function<std::unique_ptr<llvm::TargetMachine>()> &TMFactory);
 
   llvm::LLVMContext Context;
   std::unique_ptr<llvm::Module> Combined;

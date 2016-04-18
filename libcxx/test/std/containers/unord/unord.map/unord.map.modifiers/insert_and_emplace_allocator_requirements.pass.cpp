@@ -25,6 +25,7 @@
 int main()
 {
   testMapInsert<TCT::unordered_map<> >();
+  testMapInsertHint<TCT::unordered_map<> >();
   testMapEmplace<TCT::unordered_map<> >();
   testMapEmplaceHint<TCT::unordered_map<> >();
 }
