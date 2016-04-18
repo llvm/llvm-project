@@ -40,11 +40,13 @@ public:
   std::vector<std::unique_ptr<InputFile>> compile();
 
   BitcodeCompiler()
-      : Combined(new llvm::Module("ld-temp.o", Context)), Mover(*Combined) {}
+      : Combined(new llvm::Module("ld-temp.o", Context)), Mover(*Combined) {
+    Context.ensureDITypeMap();
+  }
 
 private:
-  std::vector<std::unique_ptr<InputFile>> runSplitCodegen();
-  std::unique_ptr<llvm::TargetMachine> getTargetMachine();
+  std::vector<std::unique_ptr<InputFile>> runSplitCodegen(
+      const std::function<std::unique_ptr<llvm::TargetMachine>()> &TMFactory);
 
   llvm::LLVMContext Context;
   std::unique_ptr<llvm::Module> Combined;

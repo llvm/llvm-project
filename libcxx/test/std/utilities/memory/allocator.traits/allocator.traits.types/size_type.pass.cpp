@@ -19,6 +19,8 @@
 #include <memory>
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class T>
 struct A
 {
@@ -42,6 +44,14 @@ struct C
     struct const_void_pointer {};
 };
 
+template <class T>
+struct D {
+    typedef T value_type;
+    typedef short difference_type;
+private:
+    typedef void size_type;
+};
+
 namespace std
 {
 
@@ -60,4 +70,7 @@ int main()
                    std::make_unsigned<std::ptrdiff_t>::type>::value), "");
     static_assert((std::is_same<std::allocator_traits<C<char> >::size_type,
                    unsigned char>::value), "");
+#if TEST_STD_VER >= 11
+    static_assert((std::is_same<std::allocator_traits<D<char> >::size_type, unsigned short>::value), "");
+#endif
 }

@@ -18,69 +18,64 @@
 #include <unordered_map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
+
+
+template <class Container>
+void do_insert_cv_test()
+{
+    typedef Container M;
+    typedef std::pair<typename M::iterator, bool> R;
+    typedef typename M::value_type VT;
+    M m;
+
+    const VT v1(2.5, 2);
+    R r = m.insert(v1);
+    assert(r.second);
+    assert(m.size() == 1);
+    assert(r.first->first == 2.5);
+    assert(r.first->second == 2);
+
+    r = m.insert(VT(2.5, 3)); // test rvalue insertion works in C++03
+    assert(!r.second);
+    assert(m.size() == 1);
+    assert(r.first->first == 2.5);
+    assert(r.first->second == 2);
+
+    const VT v2(1.5, 1);
+    r = m.insert(v2);
+    assert(r.second);
+    assert(m.size() == 2);
+    assert(r.first->first == 1.5);
+    assert(r.first->second == 1);
+
+    const VT v3(3.5, 3);
+    r = m.insert(v3);
+    assert(r.second);
+    assert(m.size() == 3);
+    assert(r.first->first == 3.5);
+    assert(r.first->second == 3);
+
+    const VT v4(3.5, 4);
+    r = m.insert(v4);
+    assert(!r.second);
+    assert(m.size() == 3);
+    assert(r.first->first == 3.5);
+    assert(r.first->second == 3);
+}
 
 int main()
 {
     {
-        typedef std::unordered_map<double, int> C;
-        typedef std::pair<C::iterator, bool> R;
-        typedef C::value_type P;
-        C c;
-        R r = c.insert(P(3.5, 3));
-        assert(r.second);
-        assert(c.size() == 1);
-        assert(r.first->first == 3.5);
-        assert(r.first->second == 3);
-
-        r = c.insert(P(3.5, 4));
-        assert(!r.second);
-        assert(c.size() == 1);
-        assert(r.first->first == 3.5);
-        assert(r.first->second == 3);
-
-        r = c.insert(P(4.5, 4));
-        assert(r.second);
-        assert(c.size() == 2);
-        assert(r.first->first == 4.5);
-        assert(r.first->second == 4);
-
-        r = c.insert(P(5.5, 4));
-        assert(r.second);
-        assert(c.size() == 3);
-        assert(r.first->first == 5.5);
-        assert(r.first->second == 4);
+        typedef std::unordered_map<double, int> M;
+        do_insert_cv_test<M>();
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::unordered_map<double, int, std::hash<double>, std::equal_to<double>,
-                            min_allocator<std::pair<const double, int>>> C;
-        typedef std::pair<C::iterator, bool> R;
-        typedef C::value_type P;
-        C c;
-        R r = c.insert(P(3.5, 3));
-        assert(r.second);
-        assert(c.size() == 1);
-        assert(r.first->first == 3.5);
-        assert(r.first->second == 3);
-
-        r = c.insert(P(3.5, 4));
-        assert(!r.second);
-        assert(c.size() == 1);
-        assert(r.first->first == 3.5);
-        assert(r.first->second == 3);
-
-        r = c.insert(P(4.5, 4));
-        assert(r.second);
-        assert(c.size() == 2);
-        assert(r.first->first == 4.5);
-        assert(r.first->second == 4);
-
-        r = c.insert(P(5.5, 4));
-        assert(r.second);
-        assert(c.size() == 3);
-        assert(r.first->first == 5.5);
-        assert(r.first->second == 4);
+                            min_allocator<std::pair<const double, int>>> M;
+        do_insert_cv_test<M>();
     }
 #endif
 }

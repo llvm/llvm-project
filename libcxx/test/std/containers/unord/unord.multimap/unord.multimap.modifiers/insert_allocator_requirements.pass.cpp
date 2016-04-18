@@ -23,4 +23,5 @@
 int main()
 {
   testMultimapInsert<TCT::unordered_multimap<> >();
+  testMultimapInsertHint<TCT::unordered_multimap<> >();
 }
