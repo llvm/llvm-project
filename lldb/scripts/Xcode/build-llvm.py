@@ -167,7 +167,7 @@ def build_script_environment():
     return join_dicts(os.environ, BUILD_SCRIPT_ENVIRONMENT())
 
 def build_llvm ():
-    subprocess.call(["python", build_script_path()] + build_script_flags(), cwd=lldb_source_path(), env=build_script_environment())
+    subprocess.check_call(["python", build_script_path()] + build_script_flags(), cwd=lldb_source_path(), env=build_script_environment())
 
 def build_llvm_if_needed ():
     if should_build_llvm():
