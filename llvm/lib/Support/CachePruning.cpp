@@ -76,7 +76,7 @@ bool CachePruning::prune() {
           return;
         TotalSize += FileStatus.getSize();
         FileSizes.insert(
-            std::make_pair(FileAccessTime.seconds(), std::string(Path)));
+            std::make_pair(FileStatus.getSize(), std::string(Path)));
       };
 
   // Walk the entire directory cache, looking for unused files.
