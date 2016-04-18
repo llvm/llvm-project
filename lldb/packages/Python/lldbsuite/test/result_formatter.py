@@ -243,12 +243,11 @@ class EventBuilder(object):
         return event
 
     @staticmethod
-    def _normalize_test_filename(test_filename):
-        # Convert .pyc ending to .py.
-        if test_filename is not None and test_filename.endswith(".pyc"):
-            return test_filename[0:-1]
-        else:
-            return test_filename
+    def _assert_is_python_sourcefile(test_filename):
+        if test_filename is not None:
+            if not test_filename.endswith(".py"):
+                raise Exception("source python filename has unexpected extension: {}".format(test_filename))
+        return test_filename
 
     @staticmethod
     def _event_dictionary_common(test, event_type):
@@ -265,9 +264,9 @@ class EventBuilder(object):
         # Determine the filename for the test case.  If there is an attribute
         # for it, use it.  Otherwise, determine from the TestCase class path.
         if hasattr(test, "test_filename"):
-            test_filename = EventBuilder._normalize_test_filename(test.test_filename)
+            test_filename = EventBuilder._assert_is_python_sourcefile(test.test_filename)
         else:
-            test_filename = inspect.getsourcefile(test.__class__)
+            test_filename = EventBuilder._assert_is_python_sourcefile(inspect.getsourcefile(test.__class__))
 
         event = EventBuilder.bare_event(event_type)
         event.update({
@@ -506,7 +505,7 @@ class EventBuilder(object):
         if exception_description is not None:
             event["exception_description"] = exception_description
         if test_filename is not None:
-            event["test_filename"] = EventBuilder._normalize_test_filename(test_filename)
+            event["test_filename"] = EventBuilder._assert_is_python_sourcefile(test_filename)
         if command_line is not None:
             event["command_line"] = command_line
         return event
@@ -530,7 +529,7 @@ class EventBuilder(object):
         if worker_index is not None:
             event["worker_index"] = int(worker_index)
         if test_filename is not None:
-            event["test_filename"] = EventBuilder._normalize_test_filename(test_filename)
+            event["test_filename"] = EventBuilder._assert_is_python_sourcefile(test_filename)
         if command_line is not None:
             event["command_line"] = command_line
         return event
