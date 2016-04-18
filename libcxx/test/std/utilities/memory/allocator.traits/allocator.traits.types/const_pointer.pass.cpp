@@ -20,6 +20,8 @@
 #include <memory>
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class T>
 struct Ptr {};
 
@@ -47,9 +49,19 @@ struct C
     typedef CPtr<const T> const_pointer;
 };
 
+template <class T>
+struct D {
+  typedef T value_type;
+private:
+  typedef void const_pointer;
+};
+
 int main()
 {
     static_assert((std::is_same<std::allocator_traits<A<char> >::const_pointer, Ptr<const char> >::value), "");
     static_assert((std::is_same<std::allocator_traits<B<char> >::const_pointer, const char*>::value), "");
     static_assert((std::is_same<std::allocator_traits<C<char> >::const_pointer, CPtr<const char> >::value), "");
+#if TEST_STD_VER >= 11
+    static_assert((std::is_same<std::allocator_traits<D<char> >::const_pointer, const char*>::value), "");
+#endif
 }

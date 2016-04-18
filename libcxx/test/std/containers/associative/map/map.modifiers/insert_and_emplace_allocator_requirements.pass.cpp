@@ -25,6 +25,7 @@
 int main()
 {
   testMapInsert<TCT::map<> >();
+  testMapInsertHint<TCT::map<> >();
   testMapEmplace<TCT::map<> >();
   testMapEmplaceHint<TCT::map<> >();
 }

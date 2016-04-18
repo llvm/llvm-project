@@ -14,12 +14,14 @@
 //------------------------------------------------------------------------------
 // TESTING INVOKE(f, t1, t2, ..., tN)
 //   - Bullet 1 -- (t1.*f)(t2, ..., tN)
-//   - Bullet 2 -- ((*t1).*f)(t2, ..., tN)
+//   - Bullet 2 -- (t1.get().*f)(t2, ..., tN) // t1 is a reference_wrapper
+//   - Bullet 3 -- ((*t1).*f)(t2, ..., tN)
 //
 // Overview:
-//    Bullets 1 and 2 handle the case where 'f' is a pointer to member function.
+//    Bullets 1, 2 and 3 handle the case where 'f' is a pointer to member function.
 //    Bullet 1 only handles the cases where t1 is an object of type T or a
-//    type derived from 'T'. Bullet 2 handles all other cases.
+//    type derived from 'T'. Bullet 2 handles the case where 't1' is a reference
+//    wrapper and bullet 3 handles all other cases.
 //
 // Concerns:
 //   1) cv-qualified member function signatures are accepted.
@@ -31,6 +33,7 @@
 //      as the call object.
 //   7) Pointers to T or a type derived from T can be used as the call object.
 //   8) Reference return types are properly deduced.
+//   9) reference_wrappers are properly handled and unwrapped.
 //
 //
 // Plan:
@@ -123,6 +126,7 @@ private:
 #endif // TEST_STD_VER >= 11
 
 
+
 //==============================================================================
 // TestCase - A test case for a single member function.
 //   ClassType - The type of the class being tested.
@@ -151,6 +155,8 @@ private:
         D* der_ptr = &der;
         DerefToType<T>   dref;
         DerefPropType<T> dref2;
+        std::reference_wrapper<T> rref(obj);
+        std::reference_wrapper<D> drref(der);
 
          // (Plan-3) Dispatch based on the CV tags.
         CV tag;
@@ -158,9 +164,13 @@ private:
         runTestDispatch(tag,  obj);
         runTestDispatch(tag,  der);
         runTestDispatch(tag, dref2);
-        runTestDispatchIf(NotRValue, tag,  dref);
-        runTestDispatchIf(NotRValue, tag,  obj_ptr);
+        runTestDispatchIf(NotRValue, tag, dref);
+        runTestDispatchIf(NotRValue, tag, obj_ptr);
         runTestDispatchIf(NotRValue, tag, der_ptr);
+#if TEST_STD_VER >= 11
+        runTestDispatchIf(NotRValue, tag, rref);
+        runTestDispatchIf(NotRValue, tag, drref);
+#endif
     }
 
     template <class QT, class Tp>
@@ -179,27 +189,43 @@ private:
 
     template <class Tp>
     void runTestDispatch(Q_Const, Tp& v) {
-        Tp const& cv = v;
         runTest(v);
-        runTest(cv);
+        runTest(makeConst(v));
     }
 
     template <class Tp>
     void runTestDispatch(Q_Volatile, Tp& v) {
-        Tp volatile& vv = v;
         runTest(v);
-        runTest(vv);
+        runTest(makeVolatile(v));
+
     }
 
     template <class Tp>
     void runTestDispatch(Q_CV, Tp& v) {
-        Tp const& cv = v;
-        Tp volatile& vv = v;
-        Tp const volatile& cvv = v;
         runTest(v);
-        runTest(cv);
-        runTest(vv);
-        runTest(cvv);
+        runTest(makeConst(v));
+        runTest(makeVolatile(v));
+        runTest(makeCV(v));
+    }
+
+    template <class T>
+    void runTest(const std::reference_wrapper<T>& obj) {
+        typedef Caster<Q_None, RValue> SCast;
+        typedef Caster<Q_None, ArgRValue> ACast;
+        typedef CallSig (ClassType::*MemPtr);
+        // Delegate test to logic in invoke_helpers.h
+        BasicTest<MethodID<MemPtr>, Arity, SCast, ACast> b;
+        b.runTest( (MemPtr)&ClassType::f, obj);
+    }
+
+    template <class T>
+    void runTest(T* obj) {
+        typedef Caster<Q_None, RValue> SCast;
+        typedef Caster<Q_None, ArgRValue> ACast;
+        typedef CallSig (ClassType::*MemPtr);
+        // Delegate test to logic in invoke_helpers.h
+        BasicTest<MethodID<MemPtr>, Arity, SCast, ACast> b;
+        b.runTest( (MemPtr)&ClassType::f, obj);
     }
 
     template <class Obj>
@@ -219,6 +245,27 @@ struct TestCase : public TestCaseImp<MemFun03, Sig, Arity, CV> {};
 #if TEST_STD_VER >= 11
 template <class Sig, int Arity, class CV, bool RValue = false>
 struct TestCase11 : public TestCaseImp<MemFun11, Sig, Arity, CV, RValue, true> {};
+#endif
+
+template <class Tp>
+struct DerivedFromRefWrap : public std::reference_wrapper<Tp> {
+  DerivedFromRefWrap(Tp& tp) : std::reference_wrapper<Tp>(tp) {}
+};
+
+#if TEST_STD_VER >= 11
+void test_derived_from_ref_wrap() {
+    int x = 42;
+    std::reference_wrapper<int> r(x);
+    std::reference_wrapper<std::reference_wrapper<int>> r2(r);
+    DerivedFromRefWrap<int> d(x);
+    auto get_fn = &std::reference_wrapper<int>::get;
+    auto& ret = std::__invoke(get_fn, r);
+    assert(&ret == &x);
+    auto& ret2 = std::__invoke(get_fn, d);
+    assert(&ret2 == &x);
+    auto& ret3 = std::__invoke(get_fn, r2);
+    assert(&ret3 == &x);
+}
 #endif
 
 int main() {
@@ -314,5 +361,7 @@ int main() {
     TestCase11<R(A&&, A&&, A&&, ...)  const &&,           3, Q_Const, /* RValue */ true>::run();
     TestCase11<R(A&&, A&&, A&&, ...)  volatile &&,        3, Q_Volatile, /* RValue */ true>::run();
     TestCase11<R(A&&, A&&, A&&, ...)  const volatile &&,  3, Q_CV, /* RValue */ true>::run();
+
+    test_derived_from_ref_wrap();
 #endif
 }

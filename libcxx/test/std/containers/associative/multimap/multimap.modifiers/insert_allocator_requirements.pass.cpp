@@ -24,4 +24,5 @@
 int main()
 {
   testMultimapInsert<TCT::multimap<> >();
+  testMultimapInsertHint<TCT::multimap<> >();
 }

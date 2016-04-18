@@ -501,7 +501,6 @@ swap(pair<_T1, _T2>& __x, pair<_T1, _T2>& __y)
 
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
-template <class _Tp> class _LIBCPP_TYPE_VIS_ONLY reference_wrapper;
 
 template <class _Tp>
 struct __make_pair_return_impl

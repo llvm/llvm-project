@@ -2473,6 +2473,22 @@ struct _LIBCPP_TYPE_VIS_ONLY hash<unsigned long long>
 {
 };
 
+#ifndef _LIBCPP_HAS_NO_INT128
+
+template <>
+struct _LIBCPP_TYPE_VIS_ONLY hash<__int128_t>
+    : public __scalar_hash<__int128_t>
+{
+};
+
+template <>
+struct _LIBCPP_TYPE_VIS_ONLY hash<__uint128_t>
+    : public __scalar_hash<__uint128_t>
+{
+};
+
+#endif
+
 template <>
 struct _LIBCPP_TYPE_VIS_ONLY hash<float>
     : public __scalar_hash<float>

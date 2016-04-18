@@ -1076,9 +1076,7 @@ public:
         insert(const_iterator __p, const value_type& __v)
             {return __tree_.__insert_unique(__p.__i_, __v);}
 
-#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
-    // TODO(EricWF): These functions are C++17 only but they should probably
-    // be exposed in C++11.
+#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool>
     insert(value_type&& __v) {return __tree_.__insert_unique(_VSTD::move(__v));}
@@ -1787,6 +1785,14 @@ public:
         iterator insert(const_iterator __pos, _Pp&& __p)
             {return __tree_.__insert_multi(__pos.__i_, _VSTD::forward<_Pp>(__p));}
 
+    _LIBCPP_INLINE_VISIBILITY
+    iterator insert(value_type&& __v)
+        {return __tree_.__insert_multi(_VSTD::move(__v));}
+
+    _LIBCPP_INLINE_VISIBILITY
+    iterator insert(const_iterator __p, value_type&& __v)
+        {return __tree_.__insert_multi(__p.__i_, _VSTD::move(__v));}
+
 #endif  // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1795,18 +1801,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator __p, const value_type& __v)
             {return __tree_.__insert_multi(__p.__i_, __v);}
-
-#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
-    // TODO(EricWF): These functions are C++17 only but they should probably
-    // be exposed in C++11.
-    _LIBCPP_INLINE_VISIBILITY
-    iterator insert(value_type&& __v)
-        {return __tree_.__insert_multi(_VSTD::move(__v));}
-
-    _LIBCPP_INLINE_VISIBILITY
-    iterator insert(const_iterator __p, value_type&& __v)
-        {return __tree_.__insert_multi(__p.__i_, _VSTD::move(__v));}
-#endif
 
     template <class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY
