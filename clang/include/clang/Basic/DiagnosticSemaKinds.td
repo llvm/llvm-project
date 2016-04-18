@@ -8298,4 +8298,12 @@ def warn_objc_redundant_qualified_class_type : Warning<
   "parameterized class %0 already conforms to the protocols listed; did you "
   "forget a '*'?">, InGroup<ObjCProtocolQualifiers>;
 
+def warn_block_literal_attributes_on_omitted_return_type : Warning<
+  "attribute %0 ignored, because it cannot be applied to omitted return type">,
+  InGroup<IgnoredAttributes>;
+
+def warn_block_literal_qualifiers_on_omitted_return_type : Warning<
+  "'%0' qualifier on omitted return type %1 has no effect">,
+  InGroup<IgnoredQualifiers>;
+
 } // end of sema component.
