@@ -483,11 +483,11 @@ public:
                &GValMaterializer),
         AliasMCID(Mapper.registerAlternateMappingContext(AliasValueMap,
                                                          &LValMaterializer)) {
-    ValueMap.MD().swap(SharedMDs);
+    ValueMap.getMDMap() = std::move(SharedMDs);
     for (GlobalValue *GV : ValuesToLink)
       maybeAdd(GV);
   }
-  ~IRLinker() { ValueMap.MD().swap(SharedMDs); }
+  ~IRLinker() { SharedMDs = std::move(*ValueMap.getMDMap()); }
 
   bool run();
   Value *materializeDeclFor(Value *V, bool ForAlias);

@@ -109,6 +109,7 @@ public:
       MDMap.emplace();
     return *MDMap;
   }
+  Optional<MDMapT> &getMDMap() { return MDMap; }
 
   bool mayMapMetadata() const { return MayMapMetadata; }
   void enableMapMetadata() { MayMapMetadata = true; }
