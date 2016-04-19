@@ -15,6 +15,7 @@ set(IRSources
   FunctionTest.cpp
   IRBuilderTest.cpp
   InstructionsTest.cpp
+  LLVMContextTest.cpp
   LegacyPassManagerTest.cpp
   MDBuilderTest.cpp
   MetadataTest.cpp

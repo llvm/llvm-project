@@ -1022,6 +1022,9 @@ public:
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
 #include "llvm/IR/Metadata.def"
 
+  // Optional map for looking up composite types by identifier.
+  std::unique_ptr<DenseMap<const MDString *, DIType *>> DITypeMap;
+
   // MDNodes may be uniqued or not uniqued.  When they're not uniqued, they
   // aren't in the MDNodeSet, but they're still shared between objects, so no
   // one object can destroy them.  This set allows us to at least destroy them
