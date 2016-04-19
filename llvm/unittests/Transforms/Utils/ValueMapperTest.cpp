@@ -182,6 +182,21 @@ TEST(ValueMapperTest, MapMetadataNullMapGlobalWithIgnoreMissingLocals) {
   EXPECT_EQ(nullptr, MapValue(F.get(), VM, Flags));
 }
 
+TEST(ValueMapperTest, MapMetadataMDString) {
+  LLVMContext C;
+  auto *S1 = MDString::get(C, "S1");
+  ValueToValueMapTy VM;
+
+  // Make sure S1 maps to itself, but isn't memoized.
+  EXPECT_EQ(S1, MapMetadata(S1, VM));
+  EXPECT_EQ(None, VM.getMappedMD(S1));
+
+  // We still expect VM.MD() to be respected.
+  auto *S2 = MDString::get(C, "S2");
+  VM.MD()[S1].reset(S2);
+  EXPECT_EQ(S2, MapMetadata(S1, VM));
+}
+
 TEST(ValueMapperTest, MapMetadataConstantAsMetadata) {
   LLVMContext C;
   FunctionType *FTy =

@@ -421,7 +421,8 @@ bool MDNodeMapper::mapOperand(const Metadata *Op) {
     return false;
 
   if (Optional<Metadata *> MappedOp = M.mapSimpleMetadata(Op)) {
-    assert(M.VM.getMappedMD(Op) && "Expected result to be memoized");
+    assert((isa<MDString>(Op) || M.VM.getMappedMD(Op)) &&
+           "Expected result to be memoized");
     return *MappedOp != Op;
   }
 
@@ -434,6 +435,9 @@ Optional<Metadata *> MDNodeMapper::getMappedOp(const Metadata *Op) const {
 
   if (Optional<Metadata *> MappedOp = M.VM.getMappedMD(Op))
     return *MappedOp;
+
+  if (isa<MDString>(Op))
+    return const_cast<Metadata *>(Op);
 
   return None;
 }
@@ -638,7 +642,7 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
     return *NewMD;
 
   if (isa<MDString>(MD))
-    return mapToSelf(MD);
+    return const_cast<Metadata *>(MD);
 
   // This is a module-level metadata.  If nothing at the module level is
   // changing, use an identity mapping.
