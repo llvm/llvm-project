@@ -83,7 +83,9 @@ static bool canEvaluateShiftedShift(unsigned FirstShiftAmt,
   // If the 2nd shift is bigger than the 1st, we can fold:
   //   shr(c1) + shl(c2) -> shl(c3) + and(c4)
   // but it isn't profitable unless we know the and'd out bits are already zero.
-  if (SecondShiftAmt > FirstShiftAmt) {
+  // Also check that the 2nd shift is valid (less than the type width) or we'll
+  // crash trying to produce the bit mask for the 'and'.
+  if (SecondShiftAmt > FirstShiftAmt && SecondShiftAmt < TypeWidth) {
     unsigned MaskShift = TypeWidth - SecondShiftAmt;
     APInt Mask = APInt::getLowBitsSet(TypeWidth, FirstShiftAmt) << MaskShift;
     if (IC.MaskedValueIsZero(SecondShift->getOperand(0), Mask, 0, CxtI))
