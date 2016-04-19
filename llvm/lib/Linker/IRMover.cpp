@@ -949,43 +949,26 @@ bool IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
   if (std::error_code EC = Src.materialize())
     return emitError(EC.message());
 
-  // Link in the prefix data.
+  // Link in the operands without remapping.
   if (Src.hasPrefixData())
-    Dst.setPrefixData(MapValue(Src.getPrefixData(), ValueMap, ValueMapperFlags,
-                               &TypeMap, &GValMaterializer));
-
-  // Link in the prologue data.
+    Dst.setPrefixData(Src.getPrefixData());
   if (Src.hasPrologueData())
-    Dst.setPrologueData(MapValue(Src.getPrologueData(), ValueMap,
-                                 ValueMapperFlags, &TypeMap,
-                                 &GValMaterializer));
-
-  // Link in the personality function.
+    Dst.setPrologueData(Src.getPrologueData());
   if (Src.hasPersonalityFn())
-    Dst.setPersonalityFn(MapValue(Src.getPersonalityFn(), ValueMap,
-                                  ValueMapperFlags, &TypeMap,
-                                  &GValMaterializer));
+    Dst.setPersonalityFn(Src.getPersonalityFn());
 
-  // Copy over the metadata attachments.
+  // Copy over the metadata attachments without remapping.
   SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
   Src.getAllMetadata(MDs);
   for (const auto &I : MDs)
-    Dst.setMetadata(I.first, MapMetadata(I.second, ValueMap, ValueMapperFlags,
-                                         &TypeMap, &GValMaterializer));
+    Dst.setMetadata(I.first, I.second);
 
   // Steal arguments and splice the body of Src into Dst.
   Dst.stealArgumentListFrom(Src);
   Dst.getBasicBlockList().splice(Dst.end(), Src.getBasicBlockList());
 
-  // At this point, everything has been moved over, but the types and non-local
-  // operands will be wrong.  Loop through everything and patch it up.
-  for (Argument &A : Dst.args())
-    A.mutateType(TypeMap.get(A.getType()));
-  for (BasicBlock &BB : Dst)
-    for (Instruction &I : BB)
-      RemapInstruction(&I, ValueMap, ValueMapperFlags, &TypeMap,
-                       &GValMaterializer);
-
+  // Everything has been moved over.  Remap it.
+  RemapFunction(Dst, ValueMap, ValueMapperFlags, &TypeMap, &GValMaterializer);
   return false;
 }
 
