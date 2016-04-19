@@ -55,6 +55,41 @@ Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
   return nullptr;
 }
 
+/// Return true if we can simplify two logical (either left or right) shifts
+/// that have constant shift amounts.
+/// FIXME: This can be extended to handle either a shl or lshr instruction, but
+/// it is currently only valid for a shl.
+static bool canEvaluateShiftedShift(unsigned NumBits, bool IsLeftShift,
+                                    Instruction *I, InstCombiner &IC,
+                                    Instruction *CxtI) {
+  // We can often fold the shift into shifts-by-a-constant.
+  ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1));
+  if (!CI)
+    return false;
+
+  // We can always fold shl(c1)+shl(c2) -> shl(c1+c2).
+  if (IsLeftShift)
+    return true;
+
+  // We can always turn shl(c)+shr(c) -> and(c2).
+  if (CI->getValue() == NumBits)
+    return true;
+
+  unsigned TypeWidth = I->getType()->getScalarSizeInBits();
+
+  // We can turn shl(c1)+shr(c2) -> shl(c3)+and(c4), but it isn't
+  // profitable unless we know the and'd out bits are already zero.
+  if (CI->getZExtValue() > NumBits) {
+    unsigned LowBits = TypeWidth - CI->getZExtValue();
+    if (IC.MaskedValueIsZero(
+            I->getOperand(0),
+            APInt::getLowBitsSet(TypeWidth, NumBits) << LowBits, 0, CxtI))
+      return true;
+  }
+
+  return false;
+}
+
 /// See if we can compute the specified value, but shifted
 /// logically to the left or right by some number of bits.  This should return
 /// true if the expression can be computed for the same cost as the current
@@ -114,31 +149,9 @@ static bool CanEvaluateShifted(Value *V, unsigned NumBits, bool isLeftShift,
     return CanEvaluateShifted(I->getOperand(0), NumBits, isLeftShift, IC, I) &&
            CanEvaluateShifted(I->getOperand(1), NumBits, isLeftShift, IC, I);
 
-  case Instruction::Shl: {
-    // We can often fold the shift into shifts-by-a-constant.
-    CI = dyn_cast<ConstantInt>(I->getOperand(1));
-    if (!CI) return false;
+  case Instruction::Shl:
+    return canEvaluateShiftedShift(NumBits, isLeftShift, I, IC, CxtI);
 
-    // We can always fold shl(c1)+shl(c2) -> shl(c1+c2).
-    if (isLeftShift) return true;
-
-    // We can always turn shl(c)+shr(c) -> and(c2).
-    if (CI->getValue() == NumBits) return true;
-
-    unsigned TypeWidth = I->getType()->getScalarSizeInBits();
-
-    // We can turn shl(c1)+shr(c2) -> shl(c3)+and(c4), but it isn't
-    // profitable unless we know the and'd out bits are already zero.
-    if (CI->getZExtValue() > NumBits) {
-      unsigned LowBits = TypeWidth - CI->getZExtValue();
-      if (IC.MaskedValueIsZero(I->getOperand(0),
-                       APInt::getLowBitsSet(TypeWidth, NumBits) << LowBits,
-                       0, CxtI))
-        return true;
-    }
-
-    return false;
-  }
   case Instruction::LShr: {
     // We can often fold the shift into shifts-by-a-constant.
     CI = dyn_cast<ConstantInt>(I->getOperand(1));
