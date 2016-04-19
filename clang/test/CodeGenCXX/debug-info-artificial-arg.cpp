@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
   A reallyA (500);
 }
 
-// CHECK: ![[CLASSTYPE:.*]] = !DICompositeType(tag: DW_TAG_class_type, name: "A",
+// CHECK: ![[CLASSTYPE:.*]] = distinct !DICompositeType(tag: DW_TAG_class_type, name: "A",
 // CHECK-SAME:                                 identifier: "_ZTS1A"
 // CHECK: ![[ARTARG:.*]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !"_ZTS1A",
 // CHECK-SAME:                            DIFlagArtificial
