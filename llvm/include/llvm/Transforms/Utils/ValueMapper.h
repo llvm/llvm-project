@@ -68,21 +68,13 @@ enum RemapFlags {
   RF_NoModuleLevelChanges = 1,
 
   /// If this flag is set, the remapper ignores missing function-local entries
-  /// (Argument, Instruction, BasicBlock) that are not in the value map.  If it
-  /// is unset, it aborts if an operand is asked to be remapped which doesn't
-  /// exist in the mapping.
+  /// (Argument, Instruction, BasicBlock) that are not in the
+  /// value map.  If it is unset, it aborts if an operand is asked to be
+  /// remapped which doesn't exist in the mapping.
   ///
-  /// There are no such assertions in MapValue(), whose results are almost
-  /// unchanged by this flag.  This flag mainly changes the assertion behaviour
-  /// in RemapInstruction().
-  ///
-  /// Since an Instruction's metadata operands (even that point to SSA values)
-  /// aren't guaranteed to be dominated by their definitions, MapMetadata will
-  /// return "!{}" instead of "null" for \a LocalAsMetadata instances whose SSA
-  /// values are unmapped when this flag is set.  Otherwise, \a MapValue()
-  /// completely ignores this flag.
-  ///
-  /// \a MapMetadata() always ignores this flag.
+  /// There are no such assertions in MapValue(), whose result should be
+  /// essentially unchanged by this flag.  This only changes the assertion
+  /// behaviour in RemapInstruction().
   RF_IgnoreMissingLocals = 2,
 
   /// Instruct the remapper to move distinct metadata instead of duplicating it
@@ -109,32 +101,12 @@ static inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
 ///  3. Else if \c V is a function-local value, return nullptr.
 ///  4. Else if \c V is a \a GlobalValue, return \c nullptr or \c V depending
 ///     on \a RF_NullMapMissingGlobalValues.
-///  5. Else if \c V is a \a MetadataAsValue wrapping a LocalAsMetadata,
-///     recurse on the local SSA value, and return nullptr or "metadata !{}" on
-///     missing depending on RF_IgnoreMissingValues.
-///  6. Else if \c V is a \a MetadataAsValue, rewrap the return of \a
-///     MapMetadata().
-///  7. Else, compute the equivalent constant, and return it.
+///  5. Else, Compute the equivalent constant, and return it.
 Value *MapValue(const Value *V, ValueToValueMapTy &VM,
                 RemapFlags Flags = RF_None,
                 ValueMapTypeRemapper *TypeMapper = nullptr,
                 ValueMaterializer *Materializer = nullptr);
 
-/// Lookup or compute a mapping for a piece of metadata.
-///
-/// Compute and memoize a mapping for \c MD.
-///
-///  1. If \c MD is mapped, return it.
-///  2. Else if \a RF_NoModuleLevelChanges or \c MD is an \a MDString, return
-///     \c MD.
-///  3. Else if \c MD is a \a ConstantAsMetadata, call \a MapValue() and
-///     re-wrap its return (returning nullptr on nullptr).
-///  4. Else, \c MD is an \a MDNode.  These are remapped, along with their
-///     transitive operands.  Distinct nodes are duplicated or moved depending
-///     on \a RF_MoveDistinctNodes.  Uniqued nodes are remapped like constants.
-///
-/// \note \a LocalAsMetadata is completely unsupported by \a MapMetadata.
-/// Instead, use \a MapValue() with its wrapping \a MetadataAsValue instance.
 Metadata *MapMetadata(const Metadata *MD, ValueToValueMapTy &VM,
                       RemapFlags Flags = RF_None,
                       ValueMapTypeRemapper *TypeMapper = nullptr,
