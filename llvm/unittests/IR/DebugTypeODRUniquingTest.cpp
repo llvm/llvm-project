@@ -1,4 +1,4 @@
-//===- LLVMContextTest.cpp - LLVMContext unit tests -----------------------===//
+//===- DebugTypeODRUniquingTest.cpp - Debug type ODR uniquing tests -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,7 +14,7 @@ using namespace llvm;
 
 namespace {
 
-TEST(LLVMContextTest, enableDebugTypeODRUniquing) {
+TEST(DebugTypeODRUniquingTest, enableDebugTypeODRUniquing) {
   LLVMContext Context;
   EXPECT_FALSE(Context.isODRUniquingDebugTypes());
   Context.enableDebugTypeODRUniquing();
@@ -23,7 +23,7 @@ TEST(LLVMContextTest, enableDebugTypeODRUniquing) {
   EXPECT_FALSE(Context.isODRUniquingDebugTypes());
 }
 
-TEST(LLVMContextTest, getOrInsertODRUniquedType) {
+TEST(DebugTypeODRUniquingTest, getODRType) {
   LLVMContext Context;
   MDString &UUID = *MDString::get(Context, "string");
 
