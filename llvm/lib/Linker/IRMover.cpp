@@ -617,8 +617,7 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
 
   if (ForDefinition)
     NewGV->setLinkage(SGV->getLinkage());
-  else if (SGV->hasExternalWeakLinkage() || SGV->hasWeakLinkage() ||
-           SGV->hasLinkOnceLinkage())
+  else if (SGV->hasExternalWeakLinkage())
     NewGV->setLinkage(GlobalValue::ExternalWeakLinkage);
 
   NewGV->copyAttributesFrom(SGV);
