@@ -13,10 +13,10 @@
 
 //------------------------------------------------------------------------------
 // TESTING INVOKE(f, t1, t2, ..., tN)
-//   - Bullet 5 -- f(t2, ..., tN)
+//   - Bullet 7 -- f(t2, ..., tN)
 //
 // Overview:
-//    Bullet 5 handles the cases where the first argument is not a member
+//    Bullet 7 handles the cases where the first argument is not a member
 //   function.
 //
 // Concerns:

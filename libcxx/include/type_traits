@@ -369,6 +369,7 @@ namespace std
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _T1, class _T2> struct _LIBCPP_TYPE_VIS_ONLY pair;
+template <class _Tp> class _LIBCPP_TYPE_VIS_ONLY reference_wrapper;
 
 template <class>
 struct __void_t { typedef void type; };
@@ -3965,6 +3966,11 @@ template <class _Tp> _LIBCPP_CONSTEXPR bool is_trivial_v
     = is_trivial<_Tp>::value;
 #endif
 
+template <class _Tp> struct __is_reference_wrapper_impl : public false_type {};
+template <class _Tp> struct __is_reference_wrapper_impl<reference_wrapper<_Tp> > : public true_type {};
+template <class _Tp> struct __is_reference_wrapper
+    : public __is_reference_wrapper_impl<typename remove_cv<_Tp>::type> {};
+
 #ifndef _LIBCPP_HAS_NO_VARIADICS
 
 // Check for complete types
@@ -4111,6 +4117,15 @@ struct __check_complete<_Rp _Class::*>
 {
 };
 
+
+template <class _Fp, class _A0>
+using __arg_is_base_of_ptm =
+    is_base_of<typename remove_reference<typename __member_pointer_traits<typename remove_reference<_Fp>::type>::_ClassType>::type,
+               typename remove_reference<_A0>::type>;
+
+template <class _A0>
+using __arg_is_reference_wrapper = __is_reference_wrapper<typename decay<_A0>::type>;
+
 // __invoke forward declarations
 
 // fall back - none of the bullets
@@ -4120,14 +4135,13 @@ auto
 __invoke(__any, _Args&& ...__args)
     -> __nat;
 
-// bullets 1 and 2
+// bullets 1, 2 and 3
 
 template <class _Fp, class _A0, class ..._Args,
             class = typename enable_if
             <
                 is_member_function_pointer<typename remove_reference<_Fp>::type>::value &&
-                is_base_of<typename remove_reference<typename __member_pointer_traits<typename remove_reference<_Fp>::type>::_ClassType>::type,
-                           typename remove_reference<_A0>::type>::value
+                __arg_is_base_of_ptm<_Fp, _A0>::value
             >::type
          >
 _LIBCPP_INLINE_VISIBILITY
@@ -4135,12 +4149,25 @@ auto
 __invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
     -> decltype((_VSTD::forward<_A0>(__a0).*__f)(_VSTD::forward<_Args>(__args)...));
 
+
 template <class _Fp, class _A0, class ..._Args,
             class = typename enable_if
             <
                 is_member_function_pointer<typename remove_reference<_Fp>::type>::value &&
-                !is_base_of<typename remove_reference<typename __member_pointer_traits<typename remove_reference<_Fp>::type>::_ClassType>::type,
-                           typename remove_reference<_A0>::type>::value
+                __arg_is_reference_wrapper<_A0>::value
+            >::type
+         >
+_LIBCPP_INLINE_VISIBILITY
+auto
+__invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
+    -> decltype((__a0.get().*__f)(_VSTD::forward<_Args>(__args)...));
+
+template <class _Fp, class _A0, class ..._Args,
+            class = typename enable_if
+            <
+                is_member_function_pointer<typename remove_reference<_Fp>::type>::value &&
+                !__arg_is_base_of_ptm<_Fp, _A0>::value &&
+                !__arg_is_reference_wrapper<_A0>::value
             >::type
          >
 _LIBCPP_INLINE_VISIBILITY
@@ -4148,14 +4175,13 @@ auto
 __invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
     -> decltype(((*_VSTD::forward<_A0>(__a0)).*__f)(_VSTD::forward<_Args>(__args)...));
 
-// bullets 3 and 4
+// bullets 4, 5 and 6
 
 template <class _Fp, class _A0,
             class = typename enable_if
             <
                 is_member_object_pointer<typename remove_reference<_Fp>::type>::value &&
-                is_base_of<typename __member_pointer_traits<typename remove_reference<_Fp>::type>::_ClassType,
-                           typename remove_reference<_A0>::type>::value
+                __arg_is_base_of_ptm<_Fp, _A0>::value
             >::type
          >
 _LIBCPP_INLINE_VISIBILITY
@@ -4163,12 +4189,25 @@ auto
 __invoke(_Fp&& __f, _A0&& __a0)
     -> decltype(_VSTD::forward<_A0>(__a0).*__f);
 
+
 template <class _Fp, class _A0,
             class = typename enable_if
             <
                 is_member_object_pointer<typename remove_reference<_Fp>::type>::value &&
-                !is_base_of<typename __member_pointer_traits<typename remove_reference<_Fp>::type>::_ClassType,
-                           typename remove_reference<_A0>::type>::value
+                __arg_is_reference_wrapper<_A0>::value
+            >::type
+         >
+_LIBCPP_INLINE_VISIBILITY
+auto
+__invoke(_Fp&& __f, _A0&& __a0)
+    -> decltype(__a0.get().*__f);
+
+template <class _Fp, class _A0,
+            class = typename enable_if
+            <
+                is_member_object_pointer<typename remove_reference<_Fp>::type>::value &&
+                !__arg_is_base_of_ptm<_Fp, _A0>::value &&
+                !__arg_is_reference_wrapper<_A0>::value
             >::type
          >
 _LIBCPP_INLINE_VISIBILITY
@@ -4176,7 +4215,7 @@ auto
 __invoke(_Fp&& __f, _A0&& __a0)
     -> decltype((*_VSTD::forward<_A0>(__a0)).*__f);
 
-// bullet 5
+// bullet 7
 
 template <class _Fp, class ..._Args>
 _LIBCPP_INLINE_VISIBILITY

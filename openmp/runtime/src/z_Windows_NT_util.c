@@ -507,19 +507,22 @@ __kmp_yield( int cond )
 void
 __kmp_gtid_set_specific( int gtid )
 {
-    KA_TRACE( 50, ("__kmp_gtid_set_specific: T#%d key:%d\n",
-                gtid, __kmp_gtid_threadprivate_key ));
-    KMP_ASSERT( __kmp_init_runtime );
-    if( ! TlsSetValue( __kmp_gtid_threadprivate_key, (LPVOID)(gtid+1)) )
-        KMP_FATAL( TLSSetValueFailed );
+    if( __kmp_init_gtid ) {
+        KA_TRACE( 50, ("__kmp_gtid_set_specific: T#%d key:%d\n",
+                    gtid, __kmp_gtid_threadprivate_key ));
+        if( ! TlsSetValue( __kmp_gtid_threadprivate_key, (LPVOID)(gtid+1)) )
+            KMP_FATAL( TLSSetValueFailed );
+    } else {
+        KA_TRACE( 50, ("__kmp_gtid_set_specific: runtime shutdown, returning\n" ) );
+    }
 }
 
 int
 __kmp_gtid_get_specific()
 {
     int gtid;
-    if( !__kmp_init_runtime ) {
-        KA_TRACE( 50, ("__kmp_get_specific: runtime shutdown, returning KMP_GTID_SHUTDOWN\n" ) );
+    if( !__kmp_init_gtid ) {
+        KA_TRACE( 50, ("__kmp_gtid_get_specific: runtime shutdown, returning KMP_GTID_SHUTDOWN\n" ) );
         return KMP_GTID_SHUTDOWN;
     }
     gtid = (int)(kmp_intptr_t)TlsGetValue( __kmp_gtid_threadprivate_key );

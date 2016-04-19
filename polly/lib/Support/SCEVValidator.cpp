@@ -419,113 +419,42 @@ public:
 };
 
 /// @brief Check whether a SCEV refers to an SSA name defined inside a region.
-///
-struct SCEVInRegionDependences
-    : public SCEVVisitor<SCEVInRegionDependences, bool> {
-public:
-  /// Returns true when the SCEV has SSA names defined in region R. It @p
-  /// AllowLoops is false, loop dependences are checked as well. AddRec SCEVs
-  /// are only allowed within its loop (current loop determined by @p Scope),
-  /// not outside of it unless AddRec's loop is not even in the region.
-  static bool hasDependences(const SCEV *S, const Region *R, Loop *Scope,
-                             bool AllowLoops) {
-    SCEVInRegionDependences Ignore(R, Scope, AllowLoops);
-    return Ignore.visit(S);
-  }
-
-  SCEVInRegionDependences(const Region *R, Loop *Scope, bool AllowLoops)
-      : R(R), Scope(Scope), AllowLoops(AllowLoops) {}
-
-  bool visit(const SCEV *Expr) {
-    return SCEVVisitor<SCEVInRegionDependences, bool>::visit(Expr);
-  }
-
-  bool visitConstant(const SCEVConstant *Constant) { return false; }
-
-  bool visitTruncateExpr(const SCEVTruncateExpr *Expr) {
-    return visit(Expr->getOperand());
-  }
-
-  bool visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-    return visit(Expr->getOperand());
-  }
-
-  bool visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
-    return visit(Expr->getOperand());
-  }
-
-  bool visitAddExpr(const SCEVAddExpr *Expr) {
-    for (int i = 0, e = Expr->getNumOperands(); i < e; ++i)
-      if (visit(Expr->getOperand(i)))
-        return true;
-
-    return false;
-  }
-
-  bool visitMulExpr(const SCEVMulExpr *Expr) {
-    for (int i = 0, e = Expr->getNumOperands(); i < e; ++i)
-      if (visit(Expr->getOperand(i)))
-        return true;
-
-    return false;
-  }
-
-  bool visitUDivExpr(const SCEVUDivExpr *Expr) {
-    if (visit(Expr->getLHS()))
-      return true;
-
-    if (visit(Expr->getRHS()))
-      return true;
-
-    return false;
-  }
-
-  bool visitAddRecExpr(const SCEVAddRecExpr *Expr) {
-    if (!AllowLoops) {
-      if (!Scope)
-        return true;
-      auto *L = Expr->getLoop();
-      if (R->contains(L) && !L->contains(Scope))
-        return true;
-    }
-
-    for (size_t i = 0; i < Expr->getNumOperands(); ++i)
-      if (visit(Expr->getOperand(i)))
-        return true;
-
-    return false;
-  }
-
-  bool visitSMaxExpr(const SCEVSMaxExpr *Expr) {
-    for (size_t i = 0; i < Expr->getNumOperands(); ++i)
-      if (visit(Expr->getOperand(i)))
-        return true;
-
-    return false;
-  }
-
-  bool visitUMaxExpr(const SCEVUMaxExpr *Expr) {
-    for (size_t i = 0; i < Expr->getNumOperands(); ++i)
-      if (visit(Expr->getOperand(i)))
-        return true;
-
-    return false;
-  }
-
-  bool visitUnknown(const SCEVUnknown *Expr) {
-    Instruction *Inst = dyn_cast<Instruction>(Expr->getValue());
-
-    // Return true when Inst is defined inside the region R.
-    if (Inst && R->contains(Inst))
-      return true;
-
-    return false;
-  }
-
-private:
+class SCEVInRegionDependences {
   const Region *R;
   Loop *Scope;
   bool AllowLoops;
+  bool HasInRegionDeps = false;
+
+public:
+  SCEVInRegionDependences(const Region *R, Loop *Scope, bool AllowLoops)
+      : R(R), Scope(Scope), AllowLoops(AllowLoops) {}
+
+  bool follow(const SCEV *S) {
+    if (auto Unknown = dyn_cast<SCEVUnknown>(S)) {
+      Instruction *Inst = dyn_cast<Instruction>(Unknown->getValue());
+
+      // Return true when Inst is defined inside the region R.
+      if (Inst && R->contains(Inst)) {
+        HasInRegionDeps = true;
+        return false;
+      }
+    } else if (auto AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
+      if (!AllowLoops) {
+        if (!Scope) {
+          HasInRegionDeps = true;
+          return false;
+        }
+        auto *L = AddRec->getLoop();
+        if (R->contains(L) && !L->contains(Scope)) {
+          HasInRegionDeps = true;
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  bool isDone() { return false; }
+  bool hasDependences() { return HasInRegionDeps; }
 };
 
 namespace polly {
@@ -594,7 +523,10 @@ void findValues(const SCEV *Expr, ScalarEvolution &SE,
 
 bool hasScalarDepsInsideRegion(const SCEV *Expr, const Region *R,
                                llvm::Loop *Scope, bool AllowLoops) {
-  return SCEVInRegionDependences::hasDependences(Expr, R, Scope, AllowLoops);
+  SCEVInRegionDependences InRegionDeps(R, Scope, AllowLoops);
+  SCEVTraversal<SCEVInRegionDependences> ST(InRegionDeps);
+  ST.visitAll(Expr);
+  return InRegionDeps.hasDependences();
 }
 
 bool isAffineExpr(const Region *R, llvm::Loop *Scope, const SCEV *Expr,

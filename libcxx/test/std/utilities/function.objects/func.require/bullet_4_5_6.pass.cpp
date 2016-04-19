@@ -13,13 +13,15 @@
 
 //------------------------------------------------------------------------------
 // TESTING INVOKE(f, t1, t2, ..., tN)
-//   - Bullet 3 -- t1.*f
-//   - Bullet 4 -- (*t1).*f
+//   - Bullet 4 -- t1.*f
+//   - Bullet 5 -- t1.get().*f // t1 is a reference wrapper.
+//   - Bullet 6 -- (*t1).*f
 //
 // Overview:
-//    Bullets 3 and 4 handle the case where 'f' is a pointer to member object.
-//    Bullet 3 only handles the cases where t1 is an object of type T or a
-//    type derived from 'T'. Bullet 4 handles all other cases.
+//    Bullets 4, 5 and 6 handle the case where 'f' is a pointer to member object.
+//    Bullet 4 only handles the cases where t1 is an object of type T or a
+//    type derived from 'T'. Bullet 5 handles cases where 't1' is a reference_wrapper
+//     and bullet 6 handles all other cases.
 //
 // Concerns:
 //   1) The return type is always an lvalue reference.
@@ -30,6 +32,7 @@
 //   6) All types that dereference to T or a type derived from T can be used
 //      as the call object.
 //   7) Pointers to T or a type derived from T can be used as the call object.
+//   8) reference_wrapper's are properly unwrapped before invoking the function.
 
 #include <functional>
 #include <type_traits>
@@ -66,6 +69,8 @@ private:
         Derived* der_ptr = &der;
         DerefToType<TestType>   dref;
         DerefPropType<TestType> dref2;
+        std::reference_wrapper<TestType> rref(obj);
+        std::reference_wrapper<Derived> drref(der);
 
         {
             typedef ObjectType (TestType::*MemPtr);
@@ -74,9 +79,13 @@ private:
             runTestDispatch<E>(M, obj, &obj.object);
             runTestDispatch<E>(M, der, &der.object);
             runTestDispatch<E>(M, dref2, &dref2.object.object);
-            runTestPointerDispatch<E>(M, obj_ptr, &obj_ptr->object);
-            runTestPointerDispatch<E>(M, der_ptr, &der_ptr->object);
-            runTestPointerDispatch<E>(M, dref, &dref.object.object);
+            runTestPropCVDispatch<E>(M, obj_ptr, &obj_ptr->object);
+            runTestPropCVDispatch<E>(M, der_ptr, &der_ptr->object);
+#if TEST_STD_VER >= 11
+            runTestPropCVDispatch<E>(M, rref, &(rref.get().object));
+            runTestPropCVDispatch<E>(M, drref, &(drref.get().object));
+#endif
+            runTestNoPropDispatch<E>(M, dref, &dref.object.object);
         }
         {
             typedef ObjectType const (TestType::*CMemPtr);
@@ -85,9 +94,13 @@ private:
             runTestDispatch<E>(M, obj, &obj.object);
             runTestDispatch<E>(M, der, &der.object);
             runTestDispatch<E>(M, dref2, &dref2.object.object);
-            runTestPointerDispatch<E>(M, obj_ptr, &obj_ptr->object);
-            runTestPointerDispatch<E>(M, der_ptr, &der_ptr->object);
-            runTestPointerDispatch<E>(M, dref, &dref.object.object);
+            runTestPropCVDispatch<E>(M, obj_ptr, &obj_ptr->object);
+            runTestPropCVDispatch<E>(M, der_ptr, &der_ptr->object);
+#if TEST_STD_VER >= 11
+            runTestPropCVDispatch<E>(M, rref, &(rref.get().object));
+            runTestPropCVDispatch<E>(M, drref, &(drref.get().object));
+#endif
+            runTestNoPropDispatch<E>(M, dref,    &dref.object.object);
         }
         {
             typedef ObjectType volatile (TestType::*VMemPtr);
@@ -96,9 +109,13 @@ private:
             runTestDispatch<E>(M, obj,  &obj.object);
             runTestDispatch<E>(M, der,  &der.object);
             runTestDispatch<E>(M, dref2, &dref2.object.object);
-            runTestPointerDispatch<E>(M, obj_ptr, &obj_ptr->object);
-            runTestPointerDispatch<E>(M, der_ptr, &der_ptr->object);
-            runTestPointerDispatch<E>(M, dref,    &dref.object.object);
+            runTestPropCVDispatch<E>(M, obj_ptr, &obj_ptr->object);
+            runTestPropCVDispatch<E>(M, der_ptr, &der_ptr->object);
+#if TEST_STD_VER >= 11
+            runTestPropCVDispatch<E>(M, rref, &(rref.get().object));
+            runTestPropCVDispatch<E>(M, drref, &(drref.get().object));
+#endif
+            runTestNoPropDispatch<E>(M, dref,    &dref.object.object);
         }
         {
             typedef ObjectType const volatile (TestType::*CVMemPtr);
@@ -107,9 +124,13 @@ private:
             runTestDispatch<E>(M, obj,   &obj.object);
             runTestDispatch<E>(M, der,   &der.object);
             runTestDispatch<E>(M, dref2, &dref2.object.object);
-            runTestPointerDispatch<E>(M, obj_ptr, &obj_ptr->object);
-            runTestPointerDispatch<E>(M, der_ptr, &der_ptr->object);
-            runTestPointerDispatch<E>(M, dref,    &dref.object.object);
+            runTestPropCVDispatch<E>(M, obj_ptr, &obj_ptr->object);
+            runTestPropCVDispatch<E>(M, der_ptr, &der_ptr->object);
+#if TEST_STD_VER >= 11
+            runTestPropCVDispatch<E>(M, rref, &(rref.get().object));
+            runTestPropCVDispatch<E>(M, drref, &(drref.get().object));
+#endif
+            runTestNoPropDispatch<E>(M, dref,    &dref.object.object);
         }
     }
 
@@ -128,7 +149,15 @@ private:
     }
 
     template <class Expect, class Fn, class T>
-    void runTestPointerDispatch(Fn M, T& obj, ObjectType* expect) {
+    void runTestPropCVDispatch(Fn M, T& obj, ObjectType* expect) {
+        runTest<Expect &>              (M, obj,                     expect);
+        runTest<Expect const&>         (M, makeConst(obj),          expect);
+        runTest<Expect volatile&>      (M, makeVolatile(obj),       expect);
+        runTest<Expect const volatile&>(M, makeCV(obj),             expect);
+    }
+
+    template <class Expect, class Fn, class T>
+    void runTestNoPropDispatch(Fn M, T& obj, ObjectType* expect) {
         runTest<Expect&>(M, C_<T &>(obj),               expect);
         runTest<Expect&>(M, C_<T const&>(obj),          expect);
         runTest<Expect&>(M, C_<T volatile&>(obj),       expect);
@@ -139,6 +168,15 @@ private:
         runTest<Expect&>(M, C_<T volatile&&>(obj),       expect);
         runTest<Expect&>(M, C_<T const volatile&&>(obj), expect);
 #endif
+    }
+
+    template <class Expect, class Fn, class T>
+    void runTest(Fn M, const T& obj, ObjectType* expect) {
+         static_assert((std::is_same<
+            decltype(std::__invoke(M, obj)), Expect
+          >::value), "");
+        Expect e = std::__invoke(M, obj);
+        assert(&e == expect);
     }
 
     template <class Expect, class Fn, class T>
@@ -154,6 +192,9 @@ private:
         assert(&e == expect);
     }
 };
+
+
+
 
 int main() {
     TestCase<ArgType>::run();

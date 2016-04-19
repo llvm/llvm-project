@@ -41,4 +41,4 @@ add_lld_library(lldELF
   ${PTHREAD_LIB}
   )
 
-add_dependencies(lldELF ELFOptionsTableGen)
+add_dependencies(lldELF intrinsics_gen ELFOptionsTableGen)

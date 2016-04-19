@@ -17,14 +17,36 @@
 // UNSUPPORTED: c++98, c++03
 
 #include <tuple>
+#include <memory>
 #include <cassert>
 
 #include "allocators.h"
 #include "../alloc_first.h"
 #include "../alloc_last.h"
 
+struct ImplicitCopy {
+  explicit ImplicitCopy(int) {}
+  ImplicitCopy(ImplicitCopy const&) {}
+};
+
+// Test that tuple(std::allocator_arg, Alloc, Types const&...) allows implicit
+// copy conversions in return value expressions.
+std::tuple<ImplicitCopy> testImplicitCopy1() {
+    ImplicitCopy i(42);
+    return {std::allocator_arg, std::allocator<void>{}, i};
+}
+
+std::tuple<ImplicitCopy> testImplicitCopy2() {
+    const ImplicitCopy i(42);
+    return {std::allocator_arg, std::allocator<void>{}, i};
+}
+
 int main()
 {
+    {
+        // check that the literal '0' can implicitly initialize a stored pointer.
+        std::tuple<int*> t = {std::allocator_arg, std::allocator<void>{}, 0};
+    }
     {
         std::tuple<int> t(std::allocator_arg, A1<int>(), 3);
         assert(std::get<0>(t) == 3);

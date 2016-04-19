@@ -48,6 +48,7 @@ def manifestuac : P<"manifestuac", "User access control">;
 def manifestfile : P<"manifestfile", "Manifest file path">;
 def manifestdependency : P<"manifestdependency",
                            "Attributes for <dependency> in manifest file">;
+def manifestinput : P<"manifestinput", "Specify manifest file">;
 
 // We cannot use multiclass P because class name "incl" is different
 // from its command line option name. We do this because "include" is

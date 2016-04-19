@@ -171,7 +171,7 @@ class SourceManagerTestCase(TestBase):
         self.expect("source list -f main.c -l %d" % self.line, SOURCE_DISPLAYED_CORRECTLY,
             substrs = ['Hello lldb'])
 
-    def test_set_breakpoint_with_absloute_path(self):
+    def test_set_breakpoint_with_absolute_path(self):
         self.build()
         self.runCmd("settings set target.source-map %s %s" % (os.getcwd(), os.path.join(os.getcwd(), "hidden")))
 

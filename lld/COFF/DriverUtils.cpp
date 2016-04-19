@@ -240,10 +240,17 @@ static void quoteAndPrint(raw_ostream &Out, StringRef S) {
   }
 }
 
-// Create a manifest file contents.
-static std::string createManifestXml() {
-  std::string S;
-  llvm::raw_string_ostream OS(S);
+// Create the default manifest file as a temporary file.
+static std::string createDefaultXml() {
+  // Create a temporary file.
+  SmallString<128> Path;
+  std::error_code EC = sys::fs::createTemporaryFile("tmp", "manifest", Path);
+  error(EC, "cannot create a temporary file");
+
+  // Open the temporary file for writing.
+  llvm::raw_fd_ostream OS(Path, EC, sys::fs::F_Text);
+  error(EC, Twine("failed to open ") + Path);
+
   // Emit the XML. Note that we do *not* verify that the XML attributes are
   // syntactically correct. This is intentional for link.exe compatibility.
   OS << "<?xml version=\"1.0\" standalone=\"yes\"?>\n"
@@ -267,8 +274,42 @@ static std::string createManifestXml() {
     }
   }
   OS << "</assembly>\n";
-  OS.flush();
-  return S;
+  OS.close();
+  return StringRef(Path);
+}
+
+static std::string readFile(StringRef Path) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr = MemoryBuffer::getFile(Path);
+  error(BufOrErr, "Could not open " + Path);
+  std::unique_ptr<MemoryBuffer> Buf(std::move(*BufOrErr));
+  return Buf->getBuffer();
+}
+
+static std::string createManifestXml() {
+  // Create the default manifest file.
+  std::string Path1 = createDefaultXml();
+  if (Config->ManifestInput.empty())
+    return readFile(Path1);
+
+  // If manifest files are supplied by the user using /MANIFESTINPUT
+  // option, we need to merge them with the default manifest.
+  SmallString<128> Path2;
+  std::error_code EC = sys::fs::createTemporaryFile("tmp", "manifest", Path2);
+  error(EC, "cannot create a temporary file");
+  FileRemover Remover1(Path1);
+  FileRemover Remover2(Path2);
+
+  Executor E("mt.exe");
+  E.add("/manifest");
+  E.add(Path1);
+  for (StringRef Filename : Config->ManifestInput) {
+    E.add("/manifest");
+    E.add(Filename);
+  }
+  E.add("/nologo");
+  E.add("/out:" + StringRef(Path2));
+  E.run();
+  return readFile(Path2);
 }
 
 // Create a resource file containing a manifest XML.

@@ -984,117 +984,85 @@ public:
 #endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_VARIADICS
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         pair<iterator, bool> try_emplace(const key_type& __k, _Args&&... __args)
     {
-        iterator __p = __table_.find(__k);
-        if ( __p != end())
-            return _VSTD::make_pair(__p, false);
-        else
-            return _VSTD::make_pair(
-                      emplace_hint(__p, 
-                        _VSTD::piecewise_construct, _VSTD::forward_as_tuple(__k), 
-                        _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...)),
-                      true);
+        return __table_.__emplace_unique_key_args(__k, _VSTD::piecewise_construct,
+            _VSTD::forward_as_tuple(__k),
+            _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
     }
 
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         pair<iterator, bool> try_emplace(key_type&& __k, _Args&&... __args)
     {
-        iterator __p = __table_.find(__k);
-        if ( __p != end())
-            return _VSTD::make_pair(__p, false);
-        else
-            return _VSTD::make_pair(
-                      emplace_hint(__p, 
-                        _VSTD::piecewise_construct, _VSTD::forward_as_tuple(_VSTD::move(__k)), 
-                        _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...)),
-                      true);
+        return __table_.__emplace_unique_key_args(__k, _VSTD::piecewise_construct,
+            _VSTD::forward_as_tuple(_VSTD::move(__k)),
+            _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
     }
 
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         iterator try_emplace(const_iterator __h, const key_type& __k, _Args&&... __args)
     {
-        iterator __p = __table_.find(__k);
-        if ( __p != end())
-            return __p;
-        else
-            return emplace_hint(__h, 
-                      _VSTD::piecewise_construct, _VSTD::forward_as_tuple(__k), 
-                      _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
+#if _LIBCPP_DEBUG_LEVEL >= 2
+        _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+            "unordered_map::try_emplace(const_iterator, key, args...) called with an iterator not"
+            " referring to this unordered_map");
+#endif
+            return try_emplace(__k, _VSTD::forward<_Args>(__args)...).first;
     }
 
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         iterator try_emplace(const_iterator __h, key_type&& __k, _Args&&... __args)
     {
-        iterator __p = __table_.find(__k);
-        if ( __p != end())
-            return __p;
-        else
-            return emplace_hint(__h, 
-                      _VSTD::piecewise_construct, _VSTD::forward_as_tuple(_VSTD::move(__k)), 
-                      _VSTD::forward_as_tuple(_VSTD::forward<_Args>(__args)...));
+#if _LIBCPP_DEBUG_LEVEL >= 2
+        _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+            "unordered_map::try_emplace(const_iterator, key, args...) called with an iterator not"
+            " referring to this unordered_map");
+#endif
+        return try_emplace(_VSTD::move(__k), _VSTD::forward<_Args>(__args)...).first;
     }
 
     template <class _Vp>
         _LIBCPP_INLINE_VISIBILITY
         pair<iterator, bool> insert_or_assign(const key_type& __k, _Vp&& __v)
     {
-        iterator __p = __table_.find(__k);
-        if ( __p != end())
-        {
-            __p->second = _VSTD::move(__v);
-            return _VSTD::make_pair(__p, false);
+        pair<iterator, bool> __res = __table_.__emplace_unique_key_args(__k,
+            __k, _VSTD::forward<_Vp>(__v));
+        if (!__res.second) {
+            __res.first->second = _VSTD::forward<_Vp>(__v);
         }
-        return _VSTD::make_pair(emplace_hint(__p, __k, _VSTD::forward<_Vp>(__v)), true);
+        return __res;
     }
-        
+
     template <class _Vp>
         _LIBCPP_INLINE_VISIBILITY
         pair<iterator, bool> insert_or_assign(key_type&& __k, _Vp&& __v)
     {
-        iterator __p = __table_.find(__k);
-        if ( __p != end())
-        {
-            __p->second = _VSTD::move(__v);
-            return _VSTD::make_pair(__p, false);
+        pair<iterator, bool> __res = __table_.__emplace_unique_key_args(__k,
+            _VSTD::move(__k), _VSTD::forward<_Vp>(__v));
+        if (!__res.second) {
+            __res.first->second = _VSTD::forward<_Vp>(__v);
         }
-        return _VSTD::make_pair(emplace_hint(__p, _VSTD::forward<key_type>(__k), _VSTD::forward<_Vp>(__v)), true);
+        return __res;
     }
 
     template <class _Vp>
         _LIBCPP_INLINE_VISIBILITY
         iterator insert_or_assign(const_iterator __h, const key_type& __k, _Vp&& __v)
      {
-        iterator __p = __table_.find(__k);
-        if ( __p != end())
-        {
-            __p->second = _VSTD::move(__v);
-            return __p;
-        }
-        return emplace_hint(__h, __k, _VSTD::forward<_Vp>(__v));
+          return insert_or_assign(__k, _VSTD::forward<_Vp>(__v)).first;
      }
 
     template <class _Vp>
         _LIBCPP_INLINE_VISIBILITY
         iterator insert_or_assign(const_iterator __h, key_type&& __k, _Vp&& __v)
      {
-        iterator __p = __table_.find(__k);
-        if ( __p != end())
-        {
-            __p->second = _VSTD::move(__v);
-            return __p;
-        }
-        return emplace_hint(__h, _VSTD::forward<key_type>(__k), _VSTD::forward<_Vp>(__v));
+        return insert_or_assign(_VSTD::move(__k), _VSTD::forward<_Vp>(__v)).first;
      }
-#endif
-#endif
 #endif
 
     _LIBCPP_INLINE_VISIBILITY

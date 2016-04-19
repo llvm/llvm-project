@@ -44,10 +44,10 @@ private:
 // This enum represents what we can observe in SECTIONS tag of script:
 // Expr is a location counter change, like ". = . + 0x1000"
 // Section is a description of output section, like ".data :..."
-enum class Command { Expr, Section };
+enum SectionsCommandKind { ExprKind, SectionKind };
 
-struct LocationNode {
-  Command Type;
+struct SectionsCommand {
+  SectionsCommandKind Kind;
   std::vector<StringRef> Expr;
   StringRef SectionName;
 };
@@ -72,8 +72,6 @@ public:
   bool DoLayout = false;
 
 private:
-  template <class ELFT>
-  void fixupLocations(std::vector<OutputSectionBase<ELFT> *> &);
   uint64_t evaluate(std::vector<StringRef> &Tokens, uint64_t LocCounter);
   template <class ELFT> SectionRule *find(InputSectionBase<ELFT> *S);
 
@@ -87,7 +85,7 @@ private:
   llvm::StringMap<std::vector<uint8_t>> Filler;
 
   // Used to assign addresses to sections.
-  std::vector<LocationNode> Locations;
+  std::vector<SectionsCommand> Commands;
 
   llvm::BumpPtrAllocator Alloc;
 };
