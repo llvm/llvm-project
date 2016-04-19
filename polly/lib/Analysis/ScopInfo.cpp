@@ -1220,16 +1220,17 @@ static __isl_give isl_set *buildConditionSet(ICmpInst::Predicate Pred,
 /// will be moved from @p SI to its successors. Hence, @p ConditionSets will
 /// have as many elements as @p SI has successors.
 static void
-buildConditionSets(Scop &S, SwitchInst *SI, Loop *L, __isl_keep isl_set *Domain,
+buildConditionSets(ScopStmt &Stmt, SwitchInst *SI, Loop *L,
+                   __isl_keep isl_set *Domain,
                    SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
 
   Value *Condition = getConditionFromTerminator(SI);
   assert(Condition && "No condition for switch");
 
+  Scop &S = *Stmt.getParent();
   ScalarEvolution &SE = *S.getSE();
-  BasicBlock *BB = SI->getParent();
   isl_pw_aff *LHS, *RHS;
-  LHS = S.getPwAff(SE.getSCEVAtScope(Condition, L), BB);
+  LHS = Stmt.getPwAff(SE.getSCEVAtScope(Condition, L));
 
   unsigned NumSuccessors = SI->getNumSuccessors();
   ConditionSets.resize(NumSuccessors);
@@ -1237,7 +1238,7 @@ buildConditionSets(Scop &S, SwitchInst *SI, Loop *L, __isl_keep isl_set *Domain,
     unsigned Idx = Case.getSuccessorIndex();
     ConstantInt *CaseValue = Case.getCaseValue();
 
-    RHS = S.getPwAff(SE.getSCEV(CaseValue), BB);
+    RHS = Stmt.getPwAff(SE.getSCEV(CaseValue));
     isl_set *CaseConditionSet =
         buildConditionSet(ICmpInst::ICMP_EQ, isl_pw_aff_copy(LHS), RHS, Domain);
     ConditionSets[Idx] = isl_set_coalesce(
@@ -1264,10 +1265,11 @@ buildConditionSets(Scop &S, SwitchInst *SI, Loop *L, __isl_keep isl_set *Domain,
 /// context under which @p Condition is true/false will be returned as the
 /// new elements of @p ConditionSets.
 static void
-buildConditionSets(Scop &S, Value *Condition, TerminatorInst *TI, Loop *L,
-                   __isl_keep isl_set *Domain,
+buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
+                   Loop *L, __isl_keep isl_set *Domain,
                    SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
 
+  Scop &S = *Stmt.getParent();
   isl_set *ConsequenceCondSet = nullptr;
   if (auto *CCond = dyn_cast<ConstantInt>(Condition)) {
     if (CCond->isZero())
@@ -1278,8 +1280,10 @@ buildConditionSets(Scop &S, Value *Condition, TerminatorInst *TI, Loop *L,
     auto Opcode = BinOp->getOpcode();
     assert(Opcode == Instruction::And || Opcode == Instruction::Or);
 
-    buildConditionSets(S, BinOp->getOperand(0), TI, L, Domain, ConditionSets);
-    buildConditionSets(S, BinOp->getOperand(1), TI, L, Domain, ConditionSets);
+    buildConditionSets(Stmt, BinOp->getOperand(0), TI, L, Domain,
+                       ConditionSets);
+    buildConditionSets(Stmt, BinOp->getOperand(1), TI, L, Domain,
+                       ConditionSets);
 
     isl_set_free(ConditionSets.pop_back_val());
     isl_set *ConsCondPart0 = ConditionSets.pop_back_val();
@@ -1296,10 +1300,9 @@ buildConditionSets(Scop &S, Value *Condition, TerminatorInst *TI, Loop *L,
            "Condition of exiting branch was neither constant nor ICmp!");
 
     ScalarEvolution &SE = *S.getSE();
-    BasicBlock *BB = TI ? TI->getParent() : nullptr;
     isl_pw_aff *LHS, *RHS;
-    LHS = S.getPwAff(SE.getSCEVAtScope(ICond->getOperand(0), L), BB);
-    RHS = S.getPwAff(SE.getSCEVAtScope(ICond->getOperand(1), L), BB);
+    LHS = Stmt.getPwAff(SE.getSCEVAtScope(ICond->getOperand(0), L));
+    RHS = Stmt.getPwAff(SE.getSCEVAtScope(ICond->getOperand(1), L));
     ConsequenceCondSet =
         buildConditionSet(ICond->getPredicate(), LHS, RHS, Domain);
   }
@@ -1333,12 +1336,12 @@ buildConditionSets(Scop &S, Value *Condition, TerminatorInst *TI, Loop *L,
 /// will be moved from @p TI to its successors. Hence, @p ConditionSets will
 /// have as many elements as @p TI has successors.
 static void
-buildConditionSets(Scop &S, TerminatorInst *TI, Loop *L,
+buildConditionSets(ScopStmt &Stmt, TerminatorInst *TI, Loop *L,
                    __isl_keep isl_set *Domain,
                    SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
 
   if (SwitchInst *SI = dyn_cast<SwitchInst>(TI))
-    return buildConditionSets(S, SI, L, Domain, ConditionSets);
+    return buildConditionSets(Stmt, SI, L, Domain, ConditionSets);
 
   assert(isa<BranchInst>(TI) && "Terminator was neither branch nor switch.");
 
@@ -1350,7 +1353,7 @@ buildConditionSets(Scop &S, TerminatorInst *TI, Loop *L,
   Value *Condition = getConditionFromTerminator(TI);
   assert(Condition && "No condition for Terminator");
 
-  return buildConditionSets(S, Condition, TI, L, Domain, ConditionSets);
+  return buildConditionSets(Stmt, Condition, TI, L, Domain, ConditionSets);
 }
 
 void ScopStmt::buildDomain() {
@@ -1870,7 +1873,7 @@ void Scop::addUserAssumptions(AssumptionCache &AC, DominatorTree &DT,
     addParams(Params);
 
     SmallVector<isl_set *, 2> ConditionSets;
-    buildConditionSets(*this, Val, nullptr, L, Context, ConditionSets);
+    buildConditionSets(*Stmts.begin(), Val, nullptr, L, Context, ConditionSets);
     assert(ConditionSets.size() == 2);
     isl_set_free(ConditionSets[1]);
 
@@ -2179,11 +2182,11 @@ static inline __isl_give isl_set *addDomainDimId(__isl_take isl_set *Domain,
   return isl_set_set_dim_id(Domain, isl_dim_set, Dim, DimId);
 }
 
-__isl_give isl_set *Scop::getDomainConditions(ScopStmt *Stmt) {
+__isl_give isl_set *Scop::getDomainConditions(const ScopStmt *Stmt) const {
   return getDomainConditions(Stmt->getEntryBlock());
 }
 
-__isl_give isl_set *Scop::getDomainConditions(BasicBlock *BB) {
+__isl_give isl_set *Scop::getDomainConditions(BasicBlock *BB) const {
   auto DIt = DomainMap.find(BB);
   if (DIt != DomainMap.end())
     return isl_set_copy(DIt->getSecond());
@@ -2478,7 +2481,7 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
     if (RN->isSubRegion())
       ConditionSets.push_back(isl_set_copy(Domain));
     else
-      buildConditionSets(*this, TI, BBLoop, Domain, ConditionSets);
+      buildConditionSets(*getStmtFor(BB), TI, BBLoop, Domain, ConditionSets);
 
     // Now iterate over the successors and set their initial domain based on
     // their condition set. We skip back edges here and have to be careful when
@@ -2488,6 +2491,13 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
     for (unsigned u = 0, e = ConditionSets.size(); u < e; u++) {
       isl_set *CondSet = ConditionSets[u];
       BasicBlock *SuccBB = getRegionNodeSuccessor(RN, TI, u);
+
+      auto *SuccStmt = getStmtFor(SuccBB);
+      // Skip blocks outside the region.
+      if (!SuccStmt) {
+        isl_set_free(CondSet);
+        continue;
+      }
 
       // If we propagate the domain of some block to "SuccBB" we do not have to
       // adjust the domain.
@@ -2690,7 +2700,8 @@ void Scop::addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI) {
     else {
       SmallVector<isl_set *, 8> ConditionSets;
       int idx = BI->getSuccessor(0) != HeaderBB;
-      buildConditionSets(*this, TI, L, LatchBBDom, ConditionSets);
+      buildConditionSets(*getStmtFor(LatchBB), TI, L, LatchBBDom,
+                         ConditionSets);
 
       // Free the non back edge condition set as we do not need it.
       isl_set_free(ConditionSets[1 - idx]);
@@ -2992,11 +3003,12 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
 
 void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, ScopDetection &SD,
                 DominatorTree &DT, LoopInfo &LI) {
-  addUserAssumptions(AC, DT, LI);
   buildInvariantEquivalenceClasses(SD);
 
   if (!buildDomains(&R, SD, DT, LI))
     return;
+
+  addUserAssumptions(AC, DT, LI);
 
   // Remove empty and ignored statements.
   // Exit early in case there are no executable statements left in this scop.

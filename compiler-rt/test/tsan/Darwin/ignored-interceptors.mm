@@ -9,7 +9,7 @@
 // RUN: %deflake %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-RACE
 
 // With ignore_interceptors_accesses=1, no races are reported.
-// RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK
+// RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s
 
 // With ignore_interceptors_accesses=1, races in user's code are still reported.
 // RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %deflake %run %t race 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-RACE

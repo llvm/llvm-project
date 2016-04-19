@@ -585,36 +585,6 @@ __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid)
         }
     }
 
-#if USE_ITT_BUILD
-    kmp_uint64 cur_time = 0;
-#if  USE_ITT_NOTIFY
-    if ( __itt_get_timestamp_ptr ) {
-        cur_time = __itt_get_timestamp();
-    }
-#endif /* USE_ITT_NOTIFY */
-    if ( this_thr->th.th_team->t.t_level == 0
-#if OMP_40_ENABLED
-        && this_thr->th.th_teams_microtask == NULL
-#endif
-    ) {
-        // Report the barrier
-        this_thr->th.th_ident = loc;
-        if ( ( __itt_frame_submit_v3_ptr || KMP_ITT_DEBUG ) &&
-            ( __kmp_forkjoin_frames_mode == 3 || __kmp_forkjoin_frames_mode == 1 ) )
-        {
-            __kmp_itt_frame_submit( global_tid, this_thr->th.th_frame_time_serialized,
-                                    cur_time, 0, loc, this_thr->th.th_team_nproc, 0 );
-            if ( __kmp_forkjoin_frames_mode == 3 )
-                // Since barrier frame for serialized region is equal to the region we use the same begin timestamp as for the barrier.
-                __kmp_itt_frame_submit( global_tid, serial_team->t.t_region_time,
-                                        cur_time, 0, loc, this_thr->th.th_team_nproc, 2 );
-        } else if ( ( __itt_frame_end_v3_ptr || KMP_ITT_DEBUG ) &&
-            ! __kmp_forkjoin_frames_mode && __kmp_forkjoin_frames )
-            // Mark the end of the "parallel" region for VTune. Only use one of frame notification scheme at the moment.
-            __kmp_itt_region_joined( global_tid, 1 );
-    }
-#endif /* USE_ITT_BUILD */
-
     if ( __kmp_env_consistency_check )
         __kmp_pop_parallel( global_tid, NULL );
 }

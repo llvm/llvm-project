@@ -183,9 +183,11 @@ endif
 
 LIMIT_DEBUG_INFO_FLAGS =
 NO_LIMIT_DEBUG_INFO_FLAGS =
+MODULE_DEBUG_INFO_FLAGS =
 ifneq (,$(findstring clang,$(CC)))
    LIMIT_DEBUG_INFO_FLAGS += -flimit-debug-info
    NO_LIMIT_DEBUG_INFO_FLAGS += -fno-limit-debug-info
+   MODULE_DEBUG_INFO_FLAGS += -gmodules
 endif
 
 DEBUG_INFO_FLAG ?= -g
@@ -341,6 +343,14 @@ ifneq "$(strip $(DYLIB_CXX_SOURCES))" ""
     DYLIB_OBJECTS +=$(strip $(DYLIB_CXX_SOURCES:.cpp=.o))
     CXX = $(call cxx_compiler,$(CC))
     LD = $(call cxx_linker,$(CC))
+endif
+
+#----------------------------------------------------------------------
+# Check if we have a precompiled header
+#----------------------------------------------------------------------
+ifneq "$(strip $(PCH_CXX_SOURCE))" ""
+    PCH_OUTPUT = $(PCH_CXX_SOURCE:.h=.h.pch)
+    PCHFLAGS = -include $(PCH_CXX_SOURCE)
 endif
 
 #----------------------------------------------------------------------
@@ -502,6 +512,17 @@ endif
 endif
 
 #----------------------------------------------------------------------
+# Make the precompiled header and compile C++ sources against it
+#----------------------------------------------------------------------
+
+#ifneq "$(PCH_OUTPUT)" ""
+$(PCH_OUTPUT) : $(PCH_CXX_SOURCE)
+	$(CXX) $(CXXFLAGS) -x c++-header -o $(PCH_OUTPUT) $(PCH_CXX_SOURCE)
+%.o : %.cpp $(PCH_OUTPUT)
+	$(CXX) $(PCHFLAGS) $(CXXFLAGS) $(CFLAGS) -c -o $@ $<
+#endif
+
+#----------------------------------------------------------------------
 # Automatic variables based on items already entered. Below we create
 # an object's lists from the list of sources by replacing all entries
 # that end with .c with .o, and we also create a list of prerequisite
@@ -573,6 +594,9 @@ clean::
 ifneq "$(DYLIB_NAME)" ""
 	$(RM) -r $(DYLIB_FILENAME).dSYM
 	$(RM) $(DYLIB_OBJECTS) $(DYLIB_PREREQS) $(DYLIB_PREREQS:.d=.d.tmp) $(DYLIB_DWOS) $(DYLIB_FILENAME) $(DYLIB_FILENAME).debug
+endif
+ifneq "$(PCH_OUTPUT)" ""
+	$(RM) $(PCH_OUTPUT)
 endif
 ifneq "$(DSYM)" ""
 	$(RM) -r "$(DSYM)"

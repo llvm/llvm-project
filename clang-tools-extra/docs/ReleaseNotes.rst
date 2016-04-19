@@ -135,6 +135,11 @@ identified.  The improvements since the 3.8 release include:
   Finds most instances of stray semicolons that unexpectedly alter the meaning
   of the code.
 
+- New `misc-unused-using-decls
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-unused-using-decls.html>`_ check
+
+  Finds unused ``using`` declarations.
+
 - New `modernize-deprecated-headers
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-deprecated-headers.html>`_ check
 

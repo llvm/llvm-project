@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSED_ALIAS_DECLS_H
 
 #include "../ClangTidy.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace clang {
 namespace tidy {
