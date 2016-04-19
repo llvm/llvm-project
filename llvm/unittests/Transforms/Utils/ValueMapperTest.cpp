@@ -197,6 +197,38 @@ TEST(ValueMapperTest, MapMetadataMDString) {
   EXPECT_EQ(S2, MapMetadata(S1, VM));
 }
 
+TEST(ValueMapperTest, MapMetadataGetMappedMD) {
+  LLVMContext C;
+  auto *N0 = MDTuple::get(C, None);
+  auto *N1 = MDTuple::get(C, N0);
+
+  // Make sure hasMD and getMappedMD work correctly.
+  ValueToValueMapTy VM;
+  EXPECT_FALSE(VM.hasMD());
+  EXPECT_EQ(N0, MapMetadata(N0, VM));
+  EXPECT_EQ(N1, MapMetadata(N1, VM));
+  EXPECT_TRUE(VM.hasMD());
+  ASSERT_NE(None, VM.getMappedMD(N0));
+  ASSERT_NE(None, VM.getMappedMD(N1));
+  EXPECT_EQ(N0, *VM.getMappedMD(N0));
+  EXPECT_EQ(N1, *VM.getMappedMD(N1));
+}
+
+TEST(ValueMapperTest, MapMetadataNoModuleLevelChanges) {
+  LLVMContext C;
+  auto *N0 = MDTuple::get(C, None);
+  auto *N1 = MDTuple::get(C, N0);
+
+  // Nothing should be memoized when RF_NoModuleLevelChanges.
+  ValueToValueMapTy VM;
+  EXPECT_FALSE(VM.hasMD());
+  EXPECT_EQ(N0, MapMetadata(N0, VM, RF_NoModuleLevelChanges));
+  EXPECT_EQ(N1, MapMetadata(N1, VM, RF_NoModuleLevelChanges));
+  EXPECT_FALSE(VM.hasMD());
+  EXPECT_EQ(None, VM.getMappedMD(N0));
+  EXPECT_EQ(None, VM.getMappedMD(N1));
+}
+
 TEST(ValueMapperTest, MapMetadataConstantAsMetadata) {
   LLVMContext C;
   FunctionType *FTy =

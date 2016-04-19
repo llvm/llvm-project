@@ -103,7 +103,7 @@ public:
   explicit ValueMap(const ExtraData &Data, unsigned NumInitBuckets = 64)
       : Map(NumInitBuckets), Data(Data) {}
 
-  bool hasMD() const { return MDMap; }
+  bool hasMD() const { return bool(MDMap); }
   MDMapT &MD() {
     if (!MDMap)
       MDMap.reset(new MDMapT);
