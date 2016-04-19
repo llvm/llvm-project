@@ -185,7 +185,8 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     }
 
     addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
-    addLinkageName(*VariableDIE, GV->getLinkageName());
+    if (DD->useAllLinkageNames())
+      addLinkageName(*VariableDIE, GV->getLinkageName());
   } else if (const ConstantInt *CI =
                  dyn_cast_or_null<ConstantInt>(GV->getVariable())) {
     addConstantValue(*VariableDIE, CI, GTy);

@@ -54,13 +54,15 @@ int main(int argc, char *argv[]) {
   JITServer Server(Channel, SymbolLookup, RegisterEHFrames, DeregisterEHFrames);
 
   while (1) {
-    JITServer::JITFuncId Id = JITServer::InvalidId;
-    if (auto EC = Server.getNextFuncId(Id)) {
+    uint32_t RawId;
+    if (auto EC = Server.startReceivingFunction(Channel, RawId)) {
       errs() << "Error: " << EC.message() << "\n";
       return 1;
     }
+    auto Id = static_cast<JITServer::JITFuncId>(RawId);
     switch (Id) {
     case JITServer::TerminateSessionId:
+      Server.handleTerminateSession();
       return 0;
     default:
       if (auto EC = Server.handleKnownFunction(Id)) {

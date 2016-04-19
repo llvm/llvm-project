@@ -16,9 +16,10 @@
 #include "llvm/IR/Dominators.h"
 #include <queue>
 
-using namespace llvm;
-
-void IDFCalculator::calculate(SmallVectorImpl<BasicBlock *> &PHIBlocks) {
+namespace llvm {
+template <class NodeTy>
+void IDFCalculator<NodeTy>::calculate(
+    SmallVectorImpl<BasicBlock *> &PHIBlocks) {
   // If we haven't computed dominator tree levels, do so now.
   if (DomLevels.empty()) {
     for (auto DFI = df_begin(DT.getRootNode()), DFE = df_end(DT.getRootNode());
@@ -61,8 +62,12 @@ void IDFCalculator::calculate(SmallVectorImpl<BasicBlock *> &PHIBlocks) {
     while (!Worklist.empty()) {
       DomTreeNode *Node = Worklist.pop_back_val();
       BasicBlock *BB = Node->getBlock();
-
-      for (auto Succ : successors(BB)) {
+      // Succ is the successor in the direction we are calculating IDF, so it is
+      // successor for IDF, and predecessor for Reverse IDF.
+      for (auto SuccIter = GraphTraits<NodeTy>::child_begin(BB),
+                End = GraphTraits<NodeTy>::child_end(BB);
+           SuccIter != End; ++SuccIter) {
+        BasicBlock *Succ = *SuccIter;
         DomTreeNode *SuccNode = DT.getNode(Succ);
 
         // Quickly skip all CFG edges that are also dominator tree edges instead
@@ -92,4 +97,8 @@ void IDFCalculator::calculate(SmallVectorImpl<BasicBlock *> &PHIBlocks) {
       }
     }
   }
+}
+
+template class IDFCalculator<BasicBlock *>;
+template class IDFCalculator<Inverse<BasicBlock *>>;
 }

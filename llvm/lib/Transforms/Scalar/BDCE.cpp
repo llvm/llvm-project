@@ -45,7 +45,7 @@ struct BDCE : public FunctionPass {
 
   void getAnalysisUsage(AnalysisUsage& AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<DemandedBits>();
+    AU.addRequired<DemandedBitsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
@@ -54,14 +54,14 @@ struct BDCE : public FunctionPass {
 char BDCE::ID = 0;
 INITIALIZE_PASS_BEGIN(BDCE, "bdce", "Bit-Tracking Dead Code Elimination",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(DemandedBits)
+INITIALIZE_PASS_DEPENDENCY(DemandedBitsWrapperPass)
 INITIALIZE_PASS_END(BDCE, "bdce", "Bit-Tracking Dead Code Elimination",
                     false, false)
 
 bool BDCE::runOnFunction(Function& F) {
   if (skipOptnoneFunction(F))
     return false;
-  DemandedBits &DB = getAnalysis<DemandedBits>();
+  auto &DB = getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
 
   SmallVector<Instruction*, 128> Worklist;
   bool Changed = false;

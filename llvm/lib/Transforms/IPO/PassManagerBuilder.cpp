@@ -220,7 +220,7 @@ void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM) {
     // Add the profile lowering pass.
     InstrProfOptions Options;
     Options.InstrProfileOutput = PGOInstrGen;
-    MPM.add(createInstrProfilingPass(Options));
+    MPM.add(createInstrProfilingLegacyPass(Options));
   }
   if (!PGOInstrUse.empty())
     MPM.add(createPGOInstrumentationUsePass(PGOInstrUse));

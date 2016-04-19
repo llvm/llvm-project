@@ -602,6 +602,8 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&StackMapLivenessID, false);
   addPass(&LiveDebugValuesID, false);
 
+  addPass(&PatchableFunctionID, false);
+
   AddingMachinePasses = false;
 }
 

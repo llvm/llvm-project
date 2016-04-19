@@ -227,6 +227,7 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&LiveDebugValuesID);
   disablePass(&PostRASchedulerID);
   disablePass(&FuncletLayoutID);
+  disablePass(&PatchableFunctionID);
 
   addPass(createNVVMReflectPass());
   if (getOptLevel() != CodeGenOpt::None)

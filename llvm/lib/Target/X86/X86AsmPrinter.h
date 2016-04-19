@@ -29,6 +29,7 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   const X86Subtarget *Subtarget;
   StackMaps SM;
   FaultMaps FM;
+  std::unique_ptr<MCCodeEmitter> CodeEmitter;
 
   // This utility class tracks the length of a stackmap instruction's 'shadow'.
   // It is used by the X86AsmPrinter to ensure that the stackmap shadow
@@ -40,10 +41,11 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   // few instruction bytes to cover the shadow are NOPs used for padding.
   class StackMapShadowTracker {
   public:
-    StackMapShadowTracker(TargetMachine &TM);
+    StackMapShadowTracker();
     ~StackMapShadowTracker();
     void startFunction(MachineFunction &MF);
-    void count(MCInst &Inst, const MCSubtargetInfo &STI);
+    void count(MCInst &Inst, const MCSubtargetInfo &STI,
+               MCCodeEmitter *CodeEmitter);
 
     // Called to signal the start of a shadow of RequiredSize bytes.
     void reset(unsigned RequiredSize) {
@@ -56,9 +58,7 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
     // to emit any necessary padding-NOPs.
     void emitShadowPadding(MCStreamer &OutStreamer, const MCSubtargetInfo &STI);
   private:
-    TargetMachine &TM;
     const MachineFunction *MF;
-    std::unique_ptr<MCCodeEmitter> CodeEmitter;
     bool InShadow;
 
     // RequiredShadowSize holds the length of the shadow specified in the most
@@ -82,14 +82,14 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   void LowerPATCHPOINT(const MachineInstr &MI, X86MCInstLower &MCIL);
   void LowerSTATEPOINT(const MachineInstr &MI, X86MCInstLower &MCIL);
   void LowerFAULTING_LOAD_OP(const MachineInstr &MI, X86MCInstLower &MCIL);
+  void LowerPATCHABLE_OP(const MachineInstr &MI, X86MCInstLower &MCIL);
 
   void LowerTlsAddr(X86MCInstLower &MCInstLowering, const MachineInstr &MI);
 
  public:
    explicit X86AsmPrinter(TargetMachine &TM,
                           std::unique_ptr<MCStreamer> Streamer)
-       : AsmPrinter(TM, std::move(Streamer)), SM(*this), FM(*this),
-         SMShadowTracker(TM) {}
+       : AsmPrinter(TM, std::move(Streamer)), SM(*this), FM(*this) {}
 
   const char *getPassName() const override {
     return "X86 Assembly / Object Emitter";

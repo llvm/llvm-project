@@ -304,7 +304,7 @@ MemorySSAWalker *MemorySSA::buildMemorySSA(AliasAnalysis *AA,
   }
 
   // Determine where our MemoryPhi's should go
-  IDFCalculator IDFs(*DT);
+  ForwardIDFCalculator IDFs(*DT);
   IDFs.setDefiningBlocks(DefiningBlocks);
   IDFs.setLiveInBlocks(LiveInBlocks);
   SmallVector<BasicBlock *, 32> IDFBlocks;

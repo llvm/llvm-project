@@ -27,6 +27,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionCOFF.h"
@@ -49,6 +50,9 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<X86Subtarget>();
 
   SMShadowTracker.startFunction(MF);
+  CodeEmitter.reset(TM.getTarget().createMCCodeEmitter(
+      *MF.getSubtarget().getInstrInfo(), *MF.getSubtarget().getRegisterInfo(),
+      MF.getContext()));
 
   SetupMachineFunction(MF);
 

@@ -191,6 +191,7 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   disablePass(&FuncletLayoutID);
   disablePass(&StackMapLivenessID);
   disablePass(&LiveDebugValuesID);
+  disablePass(&PatchableFunctionID);
 
   if (getOptLevel() != CodeGenOpt::None) {
     // Mark registers as representing wasm's expression stack.

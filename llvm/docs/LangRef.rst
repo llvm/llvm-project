@@ -1405,6 +1405,31 @@ example:
     passes make choices that keep the code size of this function low,
     and otherwise do optimizations specifically to reduce code size as
     long as they do not significantly impact runtime performance.
+``"patchable-function"``
+    This attribute tells the code generator that the code
+    generated for this function needs to follow certain conventions that
+    make it possible for a runtime function to patch over it later.
+    The exact effect of this attribute depends on its string value,
+    for which there currently is one legal possiblity:
+
+     * ``"prologue-short-redirect"`` - This style of patchable
+       function is intended to support patching a function prologue to
+       redirect control away from the function in a thread safe
+       manner.  It guarantees that the first instruction of the
+       function will be large enough to accommodate a short jump
+       instruction, and will be sufficiently aligned to allow being
+       fully changed via an atomic compare-and-swap instruction.
+       While the first requirement can be satisfied by inserting large
+       enough NOP, LLVM can and will try to re-purpose an existing
+       instruction (i.e. one that would have to be emitted anyway) as
+       the patchable instruction larger than a short jump.
+
+       ``"prologue-short-redirect"`` is currently only supported on
+       x86-64.
+
+    This attribute by itself does not imply restrictions on
+    inter-procedural optimizations.  All of the semantic effects the
+    patching may have to be separately conveyed via the linkage type.
 ``readnone``
     On a function, this attribute indicates that the function computes its
     result (or decides to unwind an exception) based strictly on its arguments,

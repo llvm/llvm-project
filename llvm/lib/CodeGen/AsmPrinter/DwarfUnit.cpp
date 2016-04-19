@@ -665,7 +665,7 @@ void DwarfUnit::addConstantValue(DIE &Die, const APInt &Val, bool Unsigned) {
 }
 
 void DwarfUnit::addLinkageName(DIE &Die, StringRef LinkageName) {
-  if (!LinkageName.empty() && DD->useLinkageNames())
+  if (!LinkageName.empty())
     addString(Die,
               DD->getDwarfVersion() >= 4 ? dwarf::DW_AT_linkage_name
                                          : dwarf::DW_AT_MIPS_linkage_name,
@@ -1177,7 +1177,9 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
   assert(((LinkageName.empty() || DeclLinkageName.empty()) ||
           LinkageName == DeclLinkageName) &&
          "decl has a linkage name and it is different");
-  if (DeclLinkageName.empty())
+  if (DeclLinkageName.empty() &&
+      // Always emit it for abstract subprograms.
+      (DD->useAllLinkageNames() || DU->getAbstractSPDies().lookup(SP)))
     addLinkageName(SPDie, LinkageName);
 
   if (!DeclDie)

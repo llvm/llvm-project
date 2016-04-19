@@ -128,7 +128,7 @@ define i1 @test7(i32 %length.i, i32 %i) {
   ret i1 %res
 }
 
-; i +_{nuw} 1 <s L  ==> i < L +_{nuw} 1
+; i +_{nuw} 1 <u L  ==> i < L +_{nuw} 1
 define i1 @test8(i32 %length.i, i32 %i) {
 ; CHECK-LABEL: @test8(
 ; CHECK:         ret i1 true
@@ -141,7 +141,7 @@ define i1 @test8(i32 %length.i, i32 %i) {
   ret i1 %res
 }
 
-; i +_{nuw} C <s L ==> i < L, even if C is negative
+; i +_{nuw} C <u L ==> i < L, even if C is negative
 define i1 @test9(i32 %length.i, i32 %i) {
 ; CHECK-LABEL: @test9(
 ; CHECK:         ret i1 true

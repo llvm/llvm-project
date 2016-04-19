@@ -76,6 +76,7 @@ add_llvm_library(LLVMCodeGen
   MachineSSAUpdater.cpp
   MachineTraceMetrics.cpp
   MachineVerifier.cpp
+  PatchableFunction.cpp
   MIRPrinter.cpp
   MIRPrintingPass.cpp
   OptimizePHIs.cpp

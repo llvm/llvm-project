@@ -280,7 +280,6 @@ void Fuzzer::ShuffleAndMinimize() {
 }
 
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
-  UnitStartTime = system_clock::now();
   TotalNumberOfRuns++;
 
   PrepareCoverageBeforeRun();
@@ -312,6 +311,7 @@ void Fuzzer::RunOneAndUpdateCorpus(uint8_t *Data, size_t Size) {
 }
 
 void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
+  UnitStartTime = system_clock::now();
   // We copy the contents of Unit into a separate heap buffer
   // so that we reliably find buffer overflows in it.
   std::unique_ptr<uint8_t[]> DataCopy(new uint8_t[Size]);
@@ -320,10 +320,10 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   CurrentUnitData = DataCopy.get();
   CurrentUnitSize = Size;
   int Res = CB(DataCopy.get(), Size);
+  CurrentUnitSize = 0;
+  CurrentUnitData = nullptr;
   (void)Res;
   assert(Res == 0);
-  CurrentUnitData = nullptr;
-  CurrentUnitSize = 0;
 }
 
 size_t Fuzzer::RecordBlockCoverage() {

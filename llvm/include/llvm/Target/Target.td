@@ -929,6 +929,14 @@ def FAULTING_LOAD_OP : Instruction {
   let usesCustomInserter = 1;
   let mayLoad = 1;
 }
+def PATCHABLE_OP : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins variable_ops);
+  let usesCustomInserter = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
+}
 
 // Generic opcodes used in GlobalISel.
 include "llvm/Target/GenericOpcodes.td"

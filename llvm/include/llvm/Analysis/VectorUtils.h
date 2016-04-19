@@ -22,7 +22,7 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
-struct DemandedBits;
+class DemandedBits;
 class GetElementPtrInst;
 class Loop;
 class ScalarEvolution;

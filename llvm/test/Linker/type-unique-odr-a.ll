@@ -1,11 +1,11 @@
 ; REQUIRES: default_triple, object-emission
 ;
 ; RUN: llvm-link %s %p/type-unique-odr-b.ll -S -o - \
-; RUN:   | %llc_dwarf -dwarf-linkage-names=Enable -filetype=obj -O0 \
+; RUN:   | %llc_dwarf -dwarf-linkage-names=All -filetype=obj -O0 \
 ; RUN:   | llvm-dwarfdump -debug-dump=info - \
 ; RUN:   | FileCheck %s
 ; RUN: llvm-link %p/type-unique-odr-b.ll %s -S -o - \
-; RUN:   | %llc_dwarf -dwarf-linkage-names=Enable -filetype=obj -O0 \
+; RUN:   | %llc_dwarf -dwarf-linkage-names=All -filetype=obj -O0 \
 ; RUN:   | llvm-dwarfdump -debug-dump=info - \
 ; RUN:   | FileCheck %s
 ;

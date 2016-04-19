@@ -342,7 +342,7 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm linker\n");
 
   if (!DisableDITypeMap)
-    Context.ensureDITypeMap();
+    Context.enableDebugTypeODRUniquing();
 
   auto Composite = make_unique<Module>("llvm-link", Context);
   Linker L(*Composite);

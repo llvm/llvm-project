@@ -376,8 +376,11 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
     F.SetMaxLen(
         std::min(std::max(kMinDefaultLen, F.MaxUnitSizeInCorpus()), kMaxSaneLen));
 
-  if (F.CorpusSize() == 0)
+  if (F.CorpusSize() == 0) {
     F.AddToCorpus(Unit());  // Can't fuzz empty corpus, so add an empty input.
+    if (Options.Verbosity)
+      Printf("INFO: A corpus is not provided, starting from an empty corpus\n");
+  }
   F.ShuffleAndMinimize();
   if (Flags.drill)
     F.Drill();

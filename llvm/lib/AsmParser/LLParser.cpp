@@ -3843,7 +3843,7 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
   // type map in the context.
   DIType **MappedT = nullptr;
   if (!(flags.Val & DINode::FlagFwdDecl) && identifier.Val &&
-      (MappedT = Context.getOrInsertDITypeMapping(*identifier.Val)) &&
+      (MappedT = Context.getOrInsertODRUniquedType(*identifier.Val)) &&
       *MappedT) {
     Result = *MappedT;
     return false;

@@ -118,3 +118,4 @@ FD_MASK_3: INITED
 
 RUN: LLVMFuzzer-SimpleTest -runs=10 --max_len=100 2>&1 | FileCheck %s --check-prefix=DASH_DASH
 DASH_DASH: WARNING: did you mean '-max_len=100' (single dash)?
+DASH_DASH: INFO: A corpus is not provided, starting from an empty corpus

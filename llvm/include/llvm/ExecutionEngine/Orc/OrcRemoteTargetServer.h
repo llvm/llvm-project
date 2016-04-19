@@ -45,10 +45,6 @@ public:
         EHFramesRegister(std::move(EHFramesRegister)),
         EHFramesDeregister(std::move(EHFramesDeregister)) {}
 
-  std::error_code getNextFuncId(JITFuncId &Id) {
-    return deserialize(Channel, Id);
-  }
-
   std::error_code handleKnownFunction(JITFuncId Id) {
     typedef OrcRemoteTargetServer ThisT;
 

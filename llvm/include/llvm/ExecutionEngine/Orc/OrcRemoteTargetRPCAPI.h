@@ -29,7 +29,7 @@ public:
   DirectBufferWriter() = default;
   DirectBufferWriter(const char *Src, TargetAddress Dst, uint64_t Size)
     : Src(Src), Dst(Dst), Size(Size) {}
-  
+
   const char *getSrc() const { return Src; }
   TargetAddress getDst() const { return Dst; }
   uint64_t getSize() const { return Size; }
@@ -47,7 +47,7 @@ inline std::error_code serialize(RPCChannel &C,
     return EC;
   return C.appendBytes(DBW.getSrc(), DBW.getSize());
 }
-  
+
 inline std::error_code deserialize(RPCChannel &C,
 				   DirectBufferWriter &DBW) {
   TargetAddress Dst;
@@ -57,9 +57,9 @@ inline std::error_code deserialize(RPCChannel &C,
   if (auto EC = deserialize(C, Size))
     return EC;
   char *Addr = reinterpret_cast<char*>(static_cast<uintptr_t>(Dst));
-  
+
   DBW = DirectBufferWriter(0, Dst, Size);
-  
+
   return C.readBytes(Addr, Size);
 }
 

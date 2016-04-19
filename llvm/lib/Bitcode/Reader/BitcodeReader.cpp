@@ -2211,7 +2211,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       auto *Identifier = getMDString(Record[15]);
       DIType **MappedT = nullptr;
       if (!(Flags & DINode::FlagFwdDecl) && Identifier)
-        MappedT = Context.getOrInsertDITypeMapping(*Identifier);
+        MappedT = Context.getOrInsertODRUniquedType(*Identifier);
 
       // Use the mapped type node, or create a new one if necessary.
       DIType *CT = MappedT ? *MappedT : nullptr;

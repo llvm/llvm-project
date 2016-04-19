@@ -4,6 +4,7 @@
 
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -instrprof -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -S | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-pc-win32-coff -instrprof -S | FileCheck %s --check-prefix=COFF
 
 $_Z3barIvEvv = comdat any
