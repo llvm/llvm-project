@@ -90,59 +90,57 @@ template <class ELFT> bool LinkerScript::shouldKeep(InputSectionBase<ELFT> *S) {
   return R && R->Keep;
 }
 
-// This method finalizes the Locations list. Adds neccesary locations for
-// orphan sections, what prepares it for futher use without
-// changes in LinkerScript::assignAddresses().
 template <class ELFT>
-void LinkerScript::fixupLocations(std::vector<OutputSectionBase<ELFT> *> &S) {
-  // Orphan sections are sections present in the input files which
-  // are not explicitly placed into the output file by the linker
-  // script. We place orphan sections at end of file. Other linkers places
-  // them using some heuristics as described in
-  // https://sourceware.org/binutils/docs/ld/Orphan-Sections.html#Orphan-Sections.
-  for (OutputSectionBase<ELFT> *Sec : S) {
-    StringRef Name = Sec->getName();
-    auto I = std::find(SectionOrder.begin(), SectionOrder.end(), Name);
-    if (I == SectionOrder.end())
-      Locations.push_back({Command::Section, {}, {Name}});
-  }
+static OutputSectionBase<ELFT> *
+findSection(std::vector<OutputSectionBase<ELFT> *> &V, StringRef Name) {
+  for (OutputSectionBase<ELFT> *Sec : V)
+    if (Sec->getName() == Name)
+      return Sec;
+  return nullptr;
 }
 
 template <class ELFT>
-void LinkerScript::assignAddresses(std::vector<OutputSectionBase<ELFT> *> &S) {
+void LinkerScript::assignAddresses(
+    std::vector<OutputSectionBase<ELFT> *> &Sections) {
   typedef typename ELFT::uint uintX_t;
 
-  Script->fixupLocations(S);
+  // Orphan sections are sections present in the input files which
+  // are not explicitly placed into the output file by the linker script.
+  // We place orphan sections at end of file.
+  // Other linkers places them using some heuristics as described in
+  // https://sourceware.org/binutils/docs/ld/Orphan-Sections.html#Orphan-Sections.
+  for (OutputSectionBase<ELFT> *Sec : Sections) {
+    StringRef Name = Sec->getName();
+    auto I = std::find(SectionOrder.begin(), SectionOrder.end(), Name);
+    if (I == SectionOrder.end())
+      Commands.push_back({SectionKind, {}, Name});
+  }
 
+  // Assign addresses as instructed by linker script SECTIONS sub-commands.
   uintX_t ThreadBssOffset = 0;
   uintX_t VA =
       Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
 
-  for (LocationNode &Node : Locations) {
-    if (Node.Type == Command::Expr) {
-      VA = evaluate(Node.Expr, VA);
+  for (SectionsCommand &Cmd : Commands) {
+    if (Cmd.Kind == ExprKind) {
+      VA = evaluate(Cmd.Expr, VA);
       continue;
     }
 
-    auto I =
-        std::find_if(S.begin(), S.end(), [&](OutputSectionBase<ELFT> *Sec) {
-          return Sec->getName() == Node.SectionName;
-        });
-    if (I == S.end())
+    OutputSectionBase<ELFT> *Sec = findSection(Sections, Cmd.SectionName);
+    if (!Sec)
       continue;
 
-    OutputSectionBase<ELFT> *Sec = *I;
-    uintX_t Align = Sec->getAlign();
     if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
       uintX_t TVA = VA + ThreadBssOffset;
-      TVA = alignTo(TVA, Align);
+      TVA = alignTo(TVA, Sec->getAlign());
       Sec->setVA(TVA);
       ThreadBssOffset = TVA - VA + Sec->getSize();
       continue;
     }
 
     if (Sec->getFlags() & SHF_ALLOC) {
-      VA = alignTo(VA, Align);
+      VA = alignTo(VA, Sec->getAlign());
       Sec->setVA(VA);
       VA += Sec->getSize();
       continue;
@@ -402,22 +400,22 @@ void ScriptParser::readSectionPatterns(StringRef OutSec, bool Keep) {
 void ScriptParser::readLocationCounterValue() {
   expect(".");
   expect("=");
-  Script->Locations.push_back({Command::Expr, {}, {}});
-  LocationNode &Node = Script->Locations.back();
+  Script->Commands.push_back({ExprKind, {}, ""});
+  SectionsCommand &Cmd = Script->Commands.back();
   while (!Error) {
     StringRef Tok = next();
     if (Tok == ";")
       break;
-    Node.Expr.push_back(Tok);
+    Cmd.Expr.push_back(Tok);
   }
-  if (Node.Expr.empty())
+  if (Cmd.Expr.empty())
     error("error in location counter expression");
 }
 
 void ScriptParser::readOutputSectionDescription() {
   StringRef OutSec = next();
   Script->SectionOrder.push_back(OutSec);
-  Script->Locations.push_back({Command::Section, {}, {OutSec}});
+  Script->Commands.push_back({SectionKind, {}, OutSec});
   expect(":");
   expect("{");
   while (!Error && !skip("}")) {

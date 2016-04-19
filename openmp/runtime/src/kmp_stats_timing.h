@@ -93,27 +93,4 @@ inline std::string formatTicks(double interval, int width)
     return formatSI(interval, width, 'T');
 }
 
-class timePair
-{
-    tsc_tick_count KMP_ALIGN_CACHE start;
-    tsc_tick_count end;
-
-public:
-    timePair() : start(-std::numeric_limits<int64_t>::max()), end(-std::numeric_limits<int64_t>::max()) {}
-    tsc_tick_count get_start() const { return start; }
-    tsc_tick_count get_end()   const { return end; }
-    tsc_tick_count * get_startp()    { return &start; }
-    tsc_tick_count * get_endp()      { return &end; }
-
-    void markStart() { start = tsc_tick_count::now(); }
-    void markEnd()   { end   = tsc_tick_count::now(); }
-    void set_start(tsc_tick_count s) { start = s; }
-    void set_end  (tsc_tick_count e) { end = e; }
-
-    tsc_tick_count::tsc_interval_t duration() const { return end-start; }
-    std::string format() const;
-
-};
-
-extern tsc_tick_count::tsc_interval_t computeLastInLastOutInterval(timePair * times, int nTimes);
 #endif // KMP_STATS_TIMING_H

@@ -1897,18 +1897,21 @@ __kmp_yield( int cond )
 void
 __kmp_gtid_set_specific( int gtid )
 {
-    int status;
-    KMP_ASSERT( __kmp_init_runtime );
-    status = pthread_setspecific( __kmp_gtid_threadprivate_key, (void*)(intptr_t)(gtid+1) );
-    KMP_CHECK_SYSFAIL( "pthread_setspecific", status );
+    if( __kmp_init_gtid ) {
+        int status;
+        status = pthread_setspecific( __kmp_gtid_threadprivate_key, (void*)(intptr_t)(gtid+1) );
+        KMP_CHECK_SYSFAIL( "pthread_setspecific", status );
+    } else {
+        KA_TRACE( 50, ("__kmp_gtid_set_specific: runtime shutdown, returning\n" ) );
+    }
 }
 
 int
 __kmp_gtid_get_specific()
 {
     int gtid;
-    if ( !__kmp_init_runtime ) {
-        KA_TRACE( 50, ("__kmp_get_specific: runtime shutdown, returning KMP_GTID_SHUTDOWN\n" ) );
+    if ( !__kmp_init_gtid ) {
+        KA_TRACE( 50, ("__kmp_gtid_get_specific: runtime shutdown, returning KMP_GTID_SHUTDOWN\n" ) );
         return KMP_GTID_SHUTDOWN;
     }
     gtid = (int)(size_t)pthread_getspecific( __kmp_gtid_threadprivate_key );

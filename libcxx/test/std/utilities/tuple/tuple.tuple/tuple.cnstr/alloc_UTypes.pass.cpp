@@ -73,8 +73,17 @@ void test_uses_allocator_sfinae_evaluation()
     }
 }
 
+struct Explicit {
+  int value;
+  explicit Explicit(int x) : value(x) {}
+};
+
 int main()
 {
+    {
+        std::tuple<Explicit> t{std::allocator_arg, std::allocator<void>{}, 42};
+        assert(std::get<0>(t).value == 42);
+    }
     {
         std::tuple<MoveOnly> t(std::allocator_arg, A1<int>(), MoveOnly(0));
         assert(std::get<0>(t) == 0);

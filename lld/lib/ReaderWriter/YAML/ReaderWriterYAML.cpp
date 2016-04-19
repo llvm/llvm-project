@@ -18,6 +18,7 @@
 #include "lld/Core/Writer.h"
 #include "lld/ReaderWriter/YamlContext.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
@@ -819,7 +820,7 @@ template <> struct MappingTraits<const lld::DefinedAtom *> {
     }
 
     ~NormalizedAtom() override = default;
-    
+
     const lld::DefinedAtom *denormalize(IO &io) {
       YamlContext *info = reinterpret_cast<YamlContext *>(io.getContext());
       assert(info != nullptr);

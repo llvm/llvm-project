@@ -124,3 +124,11 @@ R_X86_64_GOTPCREL:
 // 7952 = 0x101f0000 in little endian
 // CHECK:      Contents of section .R_X86_64_GOTPCREL
 // CHECK-NEXT:   101d0 201f0000
+
+.section .R_X86_64_GOT32,"a",@progbits
+.global R_X86_64_GOT32
+R_X86_64_GOT32:
+        .long zed@got
+
+// CHECK: Contents of section .R_X86_64_GOT32:
+// CHECK-NEXT: f8ffffff

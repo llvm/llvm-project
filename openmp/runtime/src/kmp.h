@@ -2189,6 +2189,7 @@ struct kmp_taskdata {                                 /* aligned during dynamic 
                                                       /* Currently not used except for perhaps IDB */
     kmp_taskdata_t *        td_parent;                /* parent task                             */
     kmp_int32               td_level;                 /* task nesting level                      */
+    kmp_int32               td_untied_count;          /* untied task active parts counter        */
     ident_t *               td_ident;                 /* task identifier                         */
                             // Taskwait data.
     ident_t *               td_taskwait_ident;

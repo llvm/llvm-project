@@ -20,6 +20,16 @@
 #include <string>
 #include <cassert>
 
+struct Explicit {
+  int value;
+  explicit Explicit(int x) : value(x) {}
+};
+
+struct Implicit {
+  int value;
+  Implicit(int x) : value(x) {}
+};
+
 struct B
 {
     int id_;
@@ -114,5 +124,15 @@ int main()
         assert(std::get<0>(t1) == 2);
         assert(std::get<1>(t1) == int('a'));
         assert(std::get<2>(t1).id_ == 3);
+    }
+    {
+        const std::tuple<int> t1(42);
+        std::tuple<Explicit> t2(t1);
+        assert(std::get<0>(t2).value == 42);
+    }
+    {
+        const std::tuple<int> t1(42);
+        std::tuple<Implicit> t2 = t1;
+        assert(std::get<0>(t2).value == 42);
     }
 }

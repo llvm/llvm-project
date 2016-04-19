@@ -159,9 +159,11 @@ static typename ELFT::uint
 getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
          const SymbolBody &Body, uint8_t *BufLoc,
          const elf::ObjectFile<ELFT> &File, RelExpr Expr) {
+  typedef typename ELFT::uint uintX_t;
   switch (Expr) {
   case R_TLSLD:
-    return Out<ELFT>::Got->getTlsIndexVA() + A;
+    return Out<ELFT>::Got->getTlsIndexOff() + A -
+           Out<ELFT>::Got->getNumEntries() * sizeof(uintX_t);
   case R_TLSLD_PC:
     return Out<ELFT>::Got->getTlsIndexVA() + A - P;
   case R_THUNK:
@@ -169,7 +171,8 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
   case R_PPC_TOC:
     return getPPC64TocBase() + A;
   case R_TLSGD:
-    return Out<ELFT>::Got->getGlobalDynAddr(Body) + A;
+    return Out<ELFT>::Got->getGlobalDynOffset(Body) + A -
+           Out<ELFT>::Got->getNumEntries() * sizeof(uintX_t);
   case R_TLSGD_PC:
     return Out<ELFT>::Got->getGlobalDynAddr(Body) + A - P;
   case R_PLT:
@@ -179,6 +182,11 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
     return Body.getPltVA<ELFT>() + A - P;
   case R_SIZE:
     return Body.getSize<ELFT>() + A;
+  case R_GOTREL:
+    return Body.getVA<ELFT>(A) - Out<ELFT>::Got->getVA();
+  case R_GOT_FROM_END:
+    return Body.getGotOffset<ELFT>() + A -
+           Out<ELFT>::Got->getNumEntries() * sizeof(uintX_t);
   case R_GOT:
   case R_RELAX_TLS_GD_TO_IE:
     return Body.getGotVA<ELFT>() + A;
@@ -187,6 +195,12 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
   case R_GOT_PC:
   case R_RELAX_TLS_GD_TO_IE_PC:
     return Body.getGotVA<ELFT>() + A - P;
+  case R_GOTONLY_PC:
+    return Out<ELFT>::Got->getVA() + A - P;
+  case R_TLS:
+    return Body.getVA<ELFT>(A) - Out<ELFT>::TlsPhdr->p_memsz;
+  case R_NEG_TLS:
+    return Out<ELF32LE>::TlsPhdr->p_memsz - Body.getVA<ELFT>(A);
   case R_ABS:
   case R_RELAX_TLS_GD_TO_LE:
   case R_RELAX_TLS_IE_TO_LE:
