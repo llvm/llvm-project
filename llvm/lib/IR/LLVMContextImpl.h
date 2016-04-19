@@ -1027,9 +1027,9 @@ public:
 
   // MDNodes may be uniqued or not uniqued.  When they're not uniqued, they
   // aren't in the MDNodeSet, but they're still shared between objects, so no
-  // one object can destroy them.  This set allows us to at least destroy them
-  // on Context destruction.
-  SmallPtrSet<MDNode *, 1> DistinctMDNodes;
+  // one object can destroy them.  Keep track of them here so we can delete
+  // them on context teardown.
+  std::vector<MDNode *> DistinctMDNodes;
 
   DenseMap<Type*, ConstantAggregateZero*> CAZConstants;
 
