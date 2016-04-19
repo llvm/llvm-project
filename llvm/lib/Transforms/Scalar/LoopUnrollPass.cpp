@@ -606,9 +606,8 @@ static unsigned ApproximateLoopSize(const Loop *L, unsigned &NumCalls,
   CodeMetrics::collectEphemeralValues(L, AC, EphValues);
 
   CodeMetrics Metrics;
-  for (Loop::block_iterator I = L->block_begin(), E = L->block_end();
-       I != E; ++I)
-    Metrics.analyzeBasicBlock(*I, TTI, EphValues);
+  for (BasicBlock *BB : L->blocks())
+    Metrics.analyzeBasicBlock(BB, TTI, EphValues);
   NumCalls = Metrics.NumInlineCandidates;
   NotDuplicatable = Metrics.notDuplicatable;
 
