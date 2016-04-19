@@ -343,7 +343,10 @@ void kmp_stats_output_module::printTimerStats(FILE *statsOut, statistic const * 
         char tag = timeStat::noUnits(s) ? ' ' : 'T';
 
         fprintf (statsOut, "%-28s, %s\n", timeStat::name(s), stat->format(tag, true).c_str());
-        // Also print the Total_ versions of times.
+    }
+    // Also print the Total_ versions of times.
+    for (timer_e s = timer_e(0); s<TIMER_LAST; s = timer_e(s+1)) {
+        char tag = timeStat::noUnits(s) ? ' ' : 'T';
         if (totalStats && !timeStat::noTotal(s))
             fprintf(statsOut, "Total_%-22s, %s\n", timeStat::name(s), totalStats[s].format(tag, true).c_str());
     }

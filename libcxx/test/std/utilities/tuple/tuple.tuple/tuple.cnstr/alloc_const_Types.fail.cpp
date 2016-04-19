@@ -11,38 +11,33 @@
 
 // template <class... Types> class tuple;
 
-// explicit tuple(const T&...);
+// template <class Alloc>
+//   EXPLICIT tuple(allocator_arg_t, const Alloc& a, const Types&...);
 
 // UNSUPPORTED: c++98, c++03
 
 #include <tuple>
-#include <string>
+#include <memory>
 #include <cassert>
 
 struct ExplicitCopy {
-  ExplicitCopy(int) {}
   explicit ExplicitCopy(ExplicitCopy const&) {}
+  explicit ExplicitCopy(int) {}
 };
 
-std::tuple<ExplicitCopy> const_explicit_copy() {
+std::tuple<ExplicitCopy> const_explicit_copy_test() {
     const ExplicitCopy e(42);
-    return {e};
+    return {std::allocator_arg, std::allocator<void>{}, e};
     // expected-error@-1 {{chosen constructor is explicit in copy-initialization}}
 }
 
-
-std::tuple<ExplicitCopy> non_const_explicit_copy() {
+std::tuple<ExplicitCopy> non_const_explicity_copy_test() {
     ExplicitCopy e(42);
-    return {e};
+    return {std::allocator_arg, std::allocator<void>{}, e};
     // expected-error@-1 {{chosen constructor is explicit in copy-initialization}}
 }
-
-std::tuple<ExplicitCopy> const_explicit_copy_no_brace() {
-    const ExplicitCopy e(42);
-    return e;
-    // expected-error@-1 {{no viable conversion}}
-}
-
 int main()
 {
+    const_explicit_copy_test();
+    non_const_explicity_copy_test();
 }

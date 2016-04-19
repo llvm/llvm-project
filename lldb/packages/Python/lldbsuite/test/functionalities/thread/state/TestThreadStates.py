@@ -180,7 +180,7 @@ class ThreadStateTestCase(TestBase):
         # Continue, the inferior will go into an infinite loop waiting for 'g_test' to change.
         self.dbg.SetAsync(True)
         self.runCmd("continue")
-        self.wait_for_running_event()
+        self.wait_for_running_event(process)
 
         # Go back to synchronous interactions
         self.dbg.SetAsync(False)
@@ -221,7 +221,7 @@ class ThreadStateTestCase(TestBase):
         # Continue, the inferior will go into an infinite loop waiting for 'g_test' to change.
         self.dbg.SetAsync(True)
         self.runCmd("continue")
-        self.wait_for_running_event()
+        self.wait_for_running_event(process)
 
         # Check the thread state. It should be running.
         self.assertFalse(thread.IsStopped(), "Thread state is \'stopped\' when it should be running.")

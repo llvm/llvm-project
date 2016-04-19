@@ -189,6 +189,12 @@ def ApplyDecoratorsToFunction(func, decorators):
     
 
 def MakeInlineTest(__file, __globals, decorators=None):
+    # Adjust the filename if it ends in .pyc.  We want filenames to
+    # reflect the source python file, not the compiled variant.
+    if __file is not None and __file.endswith(".pyc"):
+        # Strip the trailing "c"
+        __file = __file[0:-1]
+
     # Derive the test name from the current file name
     file_basename = os.path.basename(__file)
     InlineTest.mydir = TestBase.compute_mydir(__file)
@@ -205,7 +211,8 @@ def MakeInlineTest(__file, __globals, decorators=None):
     # Add the test case to the globals, and hide InlineTest
     __globals.update({test_name : test})
 
-    # Store the name of the originating file.o
+    # Keep track of the original test filename so we report it
+    # correctly in test results.
     test.test_filename = __file
     return test
 

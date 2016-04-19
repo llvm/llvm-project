@@ -53,8 +53,35 @@ struct NoValueCtorEmpty
     { static_assert(never<T>::value, "This should not be instantiated"); }
 };
 
+
+struct ImplicitCopy {
+  explicit ImplicitCopy(int) {}
+  ImplicitCopy(ImplicitCopy const&) {}
+};
+
+// Test that tuple(std::allocator_arg, Alloc, Types const&...) allows implicit
+// copy conversions in return value expressions.
+std::tuple<ImplicitCopy> testImplicitCopy1() {
+    ImplicitCopy i(42);
+    return {i};
+}
+
+std::tuple<ImplicitCopy> testImplicitCopy2() {
+    const ImplicitCopy i(42);
+    return {i};
+}
+
+std::tuple<ImplicitCopy> testImplicitCopy3() {
+    const ImplicitCopy i(42);
+    return i;
+}
+
 int main()
 {
+    {
+        // check that the literal '0' can implicitly initialize a stored pointer.
+        std::tuple<int*> t = 0;
+    }
     {
         std::tuple<int> t(2);
         assert(std::get<0>(t) == 2);

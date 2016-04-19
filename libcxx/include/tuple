@@ -449,7 +449,7 @@ struct __tuple_impl<__tuple_indices<_Indx...>, _Tp...>
     template <class _Alloc, class _Tuple,
               class = typename enable_if
                       <
-                         __tuple_convertible<_Tuple, tuple<_Tp...> >::value
+                         __tuple_constructible<_Tuple, tuple<_Tp...> >::value
                       >::type
              >
         _LIBCPP_INLINE_VISIBILITY
@@ -673,8 +673,17 @@ public:
                     typename __make_tuple_indices<sizeof...(_Tp), 0>::type(),
                     __tuple_types<_Tp...>()) {}
 
+    template <bool _Dummy = true,
+              typename enable_if
+                      <
+                         _CheckArgsConstructor<
+                            _Dummy
+                         >::template __enable_implicit<_Tp...>(),
+                         bool
+                      >::type = false
+        >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-    explicit tuple(const _Tp& ... __t) _NOEXCEPT_((__all<is_nothrow_copy_constructible<_Tp>::value...>::value)) 
+    tuple(const _Tp& ... __t) _NOEXCEPT_((__all<is_nothrow_copy_constructible<_Tp>::value...>::value))
         : base_(typename __make_tuple_indices<sizeof...(_Tp)>::type(),
                 typename __make_tuple_types<tuple, sizeof...(_Tp)>::type(),
                 typename __make_tuple_indices<0>::type(),
@@ -682,8 +691,54 @@ public:
                 __t...
                ) {}
 
-    template <class _Alloc>
+    template <bool _Dummy = true,
+              typename enable_if
+                      <
+                         _CheckArgsConstructor<
+                            _Dummy
+                         >::template __enable_explicit<_Tp...>(),
+                         bool
+                      >::type = false
+        >
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+    explicit tuple(const _Tp& ... __t) _NOEXCEPT_((__all<is_nothrow_copy_constructible<_Tp>::value...>::value))
+        : base_(typename __make_tuple_indices<sizeof...(_Tp)>::type(),
+                typename __make_tuple_types<tuple, sizeof...(_Tp)>::type(),
+                typename __make_tuple_indices<0>::type(),
+                typename __make_tuple_types<tuple, 0>::type(),
+                __t...
+               ) {}
+
+    template <class _Alloc, bool _Dummy = true,
+              typename enable_if
+                      <
+                         _CheckArgsConstructor<
+                            _Dummy
+                         >::template __enable_implicit<_Tp...>(),
+                         bool
+                      >::type = false
+        >
       _LIBCPP_INLINE_VISIBILITY
+      tuple(allocator_arg_t, const _Alloc& __a, const _Tp& ... __t)
+        : base_(allocator_arg_t(), __a,
+                typename __make_tuple_indices<sizeof...(_Tp)>::type(),
+                typename __make_tuple_types<tuple, sizeof...(_Tp)>::type(),
+                typename __make_tuple_indices<0>::type(),
+                typename __make_tuple_types<tuple, 0>::type(),
+                __t...
+               ) {}
+
+    template <class _Alloc, bool _Dummy = true,
+              typename enable_if
+                      <
+                         _CheckArgsConstructor<
+                            _Dummy
+                         >::template __enable_explicit<_Tp...>(),
+                         bool
+                      >::type = false
+        >
+      _LIBCPP_INLINE_VISIBILITY
+      explicit
       tuple(allocator_arg_t, const _Alloc& __a, const _Tp& ... __t)
         : base_(allocator_arg_t(), __a,
                 typename __make_tuple_indices<sizeof...(_Tp)>::type(),
@@ -749,15 +804,36 @@ public:
                     _VSTD::forward<_Up>(__u)...) {}
 
     template <class _Alloc, class ..._Up,
-              class = typename enable_if
+              typename enable_if
                       <
                          _CheckArgsConstructor<
                              sizeof...(_Up) == sizeof...(_Tp) &&
                              !_PackExpandsToThisTuple<_Up...>::value
-                         >::template __enable_implicit<_Up...>()
-                      >::type
+                         >::template __enable_implicit<_Up...>(),
+                         bool
+                      >::type = false
              >
         _LIBCPP_INLINE_VISIBILITY
+        tuple(allocator_arg_t, const _Alloc& __a, _Up&&... __u)
+            : base_(allocator_arg_t(), __a,
+                    typename __make_tuple_indices<sizeof...(_Up)>::type(),
+                    typename __make_tuple_types<tuple, sizeof...(_Up)>::type(),
+                    typename __make_tuple_indices<sizeof...(_Tp), sizeof...(_Up)>::type(),
+                    typename __make_tuple_types<tuple, sizeof...(_Tp), sizeof...(_Up)>::type(),
+                    _VSTD::forward<_Up>(__u)...) {}
+
+    template <class _Alloc, class ..._Up,
+              typename enable_if
+                      <
+                         _CheckArgsConstructor<
+                             sizeof...(_Up) == sizeof...(_Tp) &&
+                             !_PackExpandsToThisTuple<_Up...>::value
+                         >::template __enable_explicit<_Up...>(),
+                         bool
+                      >::type = false
+             >
+        _LIBCPP_INLINE_VISIBILITY
+        explicit
         tuple(allocator_arg_t, const _Alloc& __a, _Up&&... __u)
             : base_(allocator_arg_t(), __a,
                     typename __make_tuple_indices<sizeof...(_Up)>::type(),
@@ -796,14 +872,29 @@ public:
             : base_(_VSTD::forward<_Tuple>(__t)) {}
 
     template <class _Alloc, class _Tuple,
-              class = typename enable_if
+              typename enable_if
                       <
                          _CheckTupleLikeConstructor<
                              __tuple_like_with_size<_Tuple, sizeof...(_Tp)>::value
-                         >::template __enable_implicit<_Tuple>()
-                      >::type
+                         >::template __enable_implicit<_Tuple>(),
+                         bool
+                      >::type = false
              >
         _LIBCPP_INLINE_VISIBILITY
+        tuple(allocator_arg_t, const _Alloc& __a, _Tuple&& __t)
+            : base_(allocator_arg_t(), __a, _VSTD::forward<_Tuple>(__t)) {}
+
+    template <class _Alloc, class _Tuple,
+              typename enable_if
+                      <
+                         _CheckTupleLikeConstructor<
+                             __tuple_like_with_size<_Tuple, sizeof...(_Tp)>::value
+                         >::template __enable_explicit<_Tuple>(),
+                         bool
+                      >::type = false
+             >
+        _LIBCPP_INLINE_VISIBILITY
+        explicit
         tuple(allocator_arg_t, const _Alloc& __a, _Tuple&& __t)
             : base_(allocator_arg_t(), __a, _VSTD::forward<_Tuple>(__t)) {}
 

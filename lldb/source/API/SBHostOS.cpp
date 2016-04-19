@@ -18,7 +18,7 @@
 #include "lldb/Host/ThreadLauncher.h"
 
 #include "llvm/Support/Path.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallString.h"
 
 using namespace lldb;
 using namespace lldb_private;

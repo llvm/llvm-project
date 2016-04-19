@@ -423,6 +423,10 @@ void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
   if (auto *Arg = Args.getLastArg(OPT_manifestfile))
     Config->ManifestFile = Arg->getValue();
 
+  // Handle /manifestinput
+  for (auto *Arg : Args.filtered(OPT_manifestinput))
+    Config->ManifestInput.push_back(Arg->getValue());
+
   // Handle miscellaneous boolean flags.
   if (Args.hasArg(OPT_allowbind_no))
     Config->AllowBind = false;

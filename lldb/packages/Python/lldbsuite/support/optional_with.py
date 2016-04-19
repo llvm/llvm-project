@@ -1,18 +1,8 @@
-"""
-The LLVM Compiler Infrastructure
+# ====================================================================
+# Provides a with-style resource handler for optionally-None resources
+# ====================================================================
 
-This file is distributed under the University of Illinois Open Source
-License. See LICENSE.TXT for details.
-
-Provides classes used by the test results reporting infrastructure
-within the LLDB test suite.
-
-
-This module contains utilities used by the lldb test framwork.
-"""
-
-
-class OptionalWith(object):
+class optional_with(object):
     # pylint: disable=too-few-public-methods
     # This is a wrapper - it is not meant to provide any extra methods.
     """Provides a wrapper for objects supporting "with", allowing None.
@@ -22,13 +12,13 @@ class OptionalWith(object):
 
     e.g.
 
-    wrapped_lock = OptionalWith(thread.Lock())
+    wrapped_lock = optional_with(thread.Lock())
     with wrapped_lock:
         # Do something while the lock is obtained.
         pass
 
     might_be_none = None
-    wrapped_none = OptionalWith(might_be_none)
+    wrapped_none = optional_with(might_be_none)
     with wrapped_none:
         # This code here still works.
         pass
@@ -40,13 +30,13 @@ class OptionalWith(object):
         lock.acquire()
 
     try:
-        code_fragament_always_run()
+        code_fragment_always_run()
     finally:
         if lock:
             lock.release()
 
     And I'd posit it is safer, as it becomes impossible to
-    forget the try/finally using OptionalWith(), since
+    forget the try/finally using optional_with(), since
     the with syntax can be used.
     """
     def __init__(self, wrapped_object):

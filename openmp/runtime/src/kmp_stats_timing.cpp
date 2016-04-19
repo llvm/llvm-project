@@ -142,27 +142,3 @@ std::string formatSI(double interval, int width, char unit)
 
     return os.str();
 }
-
-tsc_tick_count::tsc_interval_t computeLastInLastOutInterval(timePair * times, int nTimes)
-{
-    timePair lastTimes = times[0];
-    tsc_tick_count * startp = lastTimes.get_startp();
-    tsc_tick_count * endp   = lastTimes.get_endp();
-
-    for (int i=1; i<nTimes; i++)
-    {
-       (*startp) = startp->later(times[i].get_start());
-       (*endp)   = endp->later  (times[i].get_end());
-    }
-
-    return lastTimes.duration();
-}
-
-std::string timePair::format() const
-{
-    std::ostringstream oss;
-
-    oss << start.getValue() << ":" << end.getValue() << " = " << (end-start).getValue();
-
-    return oss.str();
-}

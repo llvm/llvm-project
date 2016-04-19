@@ -41,7 +41,7 @@ public:
 
   BitcodeCompiler()
       : Combined(new llvm::Module("ld-temp.o", Context)), Mover(*Combined) {
-    Context.ensureDITypeMap();
+    Context.enableDebugTypeODRUniquing();
   }
 
 private:

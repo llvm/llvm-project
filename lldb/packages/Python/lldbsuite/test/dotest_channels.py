@@ -55,6 +55,14 @@ class UnpicklingForwardingReaderChannel(asyncore.dispatcher):
             # unpickled results.
             raise Exception("forwarding function must be set")
 
+        # Initiate all connections by sending an ack.  This allows
+        # the initiators of the socket to await this to ensure
+        # that this end is up and running (and therefore already
+        # into the async map).
+        ack_bytes = bytearray()
+        ack_bytes.append(chr(42))
+        file_object.send(ack_bytes)
+
     def deserialize_payload(self):
         """Unpickles the collected input buffer bytes and forwards."""
         if len(self.ibuffer) > 0:

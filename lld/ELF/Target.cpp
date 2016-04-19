@@ -93,7 +93,6 @@ public:
   void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 
-  bool isGotRelative(uint32_t Type) const override;
   bool refersToGotEntry(uint32_t Type) const override;
 };
 
@@ -271,7 +270,6 @@ bool TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   return mayNeedCopy<ELFT>(S) && needsCopyRelImpl(Type);
 }
 
-bool TargetInfo::isGotRelative(uint32_t Type) const { return false; }
 bool TargetInfo::isHintRel(uint32_t Type) const { return false; }
 bool TargetInfo::isRelRelative(uint32_t Type) const { return true; }
 
@@ -372,12 +370,20 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     return R_TLSLD;
   case R_386_PLT32:
   case R_386_PC32:
-  case R_386_GOTPC:
     return R_PC;
-  case R_386_GOT32:
-  case R_386_TLS_GOTIE:
+  case R_386_GOTPC:
+    return R_GOTONLY_PC;
   case R_386_TLS_IE:
     return R_GOT;
+  case R_386_GOT32:
+  case R_386_TLS_GOTIE:
+    return R_GOT_FROM_END;
+  case R_386_GOTOFF:
+    return R_GOTREL;
+  case R_386_TLS_LE:
+    return R_TLS;
+  case R_386_TLS_LE_32:
+    return R_NEG_TLS;
   }
 }
 
@@ -479,13 +485,6 @@ bool X86TargetInfo::needsPltImpl(uint32_t Type) const {
   return Type == R_386_PLT32;
 }
 
-bool X86TargetInfo::isGotRelative(uint32_t Type) const {
-  // This relocation does not require got entry,
-  // but it is relative to got and needs it to be created.
-  // Here we request for that.
-  return Type == R_386_GOTOFF;
-}
-
 bool X86TargetInfo::refersToGotEntry(uint32_t Type) const {
   return Type == R_386_GOT32;
 }
@@ -507,38 +506,8 @@ uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
 
 void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                 uint64_t Val) const {
-  switch (Type) {
-  case R_386_32:
-  case R_386_PC32:
-  case R_386_PLT32:
-  case R_386_TLS_IE:
-  case R_386_TLS_LDO_32:
-    write32le(Loc, Val);
-    break;
-  case R_386_GOTOFF:
-    write32le(Loc, Val - Out<ELF32LE>::Got->getVA());
-    break;
-  case R_386_GOTPC:
-    write32le(Loc, Val + Out<ELF32LE>::Got->getVA());
-    break;
-  case R_386_GOT32:
-  case R_386_TLS_GD:
-  case R_386_TLS_LDM: {
-    uint64_t V = Val - Out<ELF32LE>::Got->getVA() -
-                 Out<ELF32LE>::Got->getNumEntries() * 4;
-    checkInt<32>(V, Type);
-    write32le(Loc, V);
-    break;
-  }
-  case R_386_TLS_LE:
-    write32le(Loc, Val - Out<ELF32LE>::TlsPhdr->p_memsz);
-    break;
-  case R_386_TLS_LE_32:
-    write32le(Loc, Out<ELF32LE>::TlsPhdr->p_memsz - Val);
-    break;
-  default:
-    fatal("unrecognized reloc " + Twine(Type));
-  }
+  checkInt<32>(Val, Type);
+  write32le(Loc, Val);
 }
 
 bool X86TargetInfo::needsDynRelative(uint32_t Type) const {
@@ -623,13 +592,13 @@ void X86TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
     else
       *Op = 0x80 | Reg | (Reg << 3);
   }
-  relocateOne(Loc, R_386_TLS_LE, Val);
+  relocateOne(Loc, R_386_TLS_LE, Val - Out<ELF32LE>::TlsPhdr->p_memsz);
 }
 
 void X86TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
                                    uint64_t Val) const {
   if (Type == R_386_TLS_LDO_32) {
-    relocateOne(Loc, R_386_TLS_LE, Val);
+    relocateOne(Loc, R_386_TLS_LE, Val - Out<ELF32LE>::TlsPhdr->p_memsz);
     return;
   }
 
@@ -667,6 +636,8 @@ RelExpr X86_64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   switch (Type) {
   default:
     return R_ABS;
+  case R_X86_64_TPOFF32:
+    return R_TLS;
   case R_X86_64_TLSLD:
     return R_TLSLD_PC;
   case R_X86_64_TLSGD:
@@ -678,7 +649,7 @@ RelExpr X86_64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_X86_64_PC32:
     return R_PC;
   case R_X86_64_GOT32:
-    return R_GOT;
+    return R_GOT_FROM_END;
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
@@ -799,7 +770,8 @@ void X86_64TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
       0x48, 0x8d, 0x80, 0x00, 0x00, 0x00, 0x00              // lea x@tpoff,%rax
   };
   memcpy(Loc - 4, Inst, sizeof(Inst));
-  relocateOne(Loc + 8, R_X86_64_TPOFF32, Val + 4);
+  relocateOne(Loc + 8, R_X86_64_TPOFF32,
+              Val + 4 - Out<ELF64LE>::TlsPhdr->p_memsz);
 }
 
 // "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.5
@@ -855,7 +827,7 @@ void X86_64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
   if (*Prefix == 0x4c)
     *Prefix = (IsMov || RspAdd) ? 0x49 : 0x4d;
   *RegSlot = (IsMov || RspAdd) ? (0xc0 | Reg) : (0x80 | Reg | (Reg << 3));
-  relocateOne(Loc, R_X86_64_TPOFF32, Val + 4);
+  relocateOne(Loc, R_X86_64_TPOFF32, Val + 4 - Out<ELF64LE>::TlsPhdr->p_memsz);
 }
 
 // "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.5
@@ -876,7 +848,7 @@ void X86_64TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
     return;
   }
   if (Type == R_X86_64_DTPOFF32) {
-    relocateOne(Loc, R_X86_64_TPOFF32, Val);
+    relocateOne(Loc, R_X86_64_TPOFF32, Val - Out<ELF64LE>::TlsPhdr->p_memsz);
     return;
   }
 
@@ -896,15 +868,15 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write32le(Loc, Val);
     break;
   case R_X86_64_32S:
+  case R_X86_64_TPOFF32:
+  case R_X86_64_GOT32:
     checkInt<32>(Val, Type);
     write32le(Loc, Val);
     break;
   case R_X86_64_64:
   case R_X86_64_DTPOFF64:
+  case R_X86_64_SIZE64:
     write64le(Loc, Val);
-    break;
-  case R_X86_64_DTPOFF32:
-    write32le(Loc, Val);
     break;
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
@@ -913,20 +885,10 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_X86_64_PLT32:
   case R_X86_64_TLSGD:
   case R_X86_64_TLSLD:
-    write32le(Loc, Val);
-    break;
+  case R_X86_64_DTPOFF32:
   case R_X86_64_SIZE32:
     write32le(Loc, Val);
     break;
-  case R_X86_64_SIZE64:
-    write64le(Loc, Val);
-    break;
-  case R_X86_64_TPOFF32: {
-    Val -= Out<ELF64LE>::TlsPhdr->p_memsz;
-    checkInt<32>(Val, Type);
-    write32le(Loc, Val);
-    break;
-  }
   default:
     fatal("unrecognized reloc " + Twine(Type));
   }

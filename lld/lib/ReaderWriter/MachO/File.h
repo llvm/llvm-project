@@ -14,6 +14,7 @@
 #include "MachONormalizedFile.h"
 #include "lld/Core/SharedLibraryFile.h"
 #include "lld/Core/Simple.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include <unordered_map>
 

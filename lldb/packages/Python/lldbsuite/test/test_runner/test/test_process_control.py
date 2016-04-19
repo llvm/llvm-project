@@ -12,18 +12,18 @@ within the LLDB test suite.
 Tests the process_control module.
 """
 
+from __future__ import print_function
+
 # System imports.
 import os
+import os.path
 import platform
 import unittest
 import sys
 import threading
 
-# Add lib dir to pythonpath
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'lib'))
-
 # Our imports.
-import process_control
+from test_runner import process_control
 
 
 class TestInferiorDriver(process_control.ProcessDriver):
@@ -77,7 +77,10 @@ class ProcessControlTests(unittest.TestCase):
             options=None):
 
         # Base command.
-        command = ([sys.executable, "inferior.py"])
+        script_name = "{}/inferior.py".format(os.path.dirname(__file__))
+        if not os.path.exists(script_name):
+            raise Exception("test inferior python script not found: {}".format(script_name))
+        command = ([sys.executable, script_name])
 
         if ignore_soft_terminate:
             cls._suppress_soft_terminate(command)

@@ -3737,6 +3737,7 @@ __kmp_register_root( int initial_thread )
 
     /* initialize the thread, get it ready to go */
     __kmp_initialize_info( root_thread, root->r.r_root_team, 0, gtid );
+    TCW_4(__kmp_init_gtid, TRUE);
 
     /* prepare the master thread for get_gtid() */
     __kmp_gtid_set_specific( gtid );
@@ -3748,7 +3749,6 @@ __kmp_register_root( int initial_thread )
     #endif
     __kmp_create_worker( gtid, root_thread, __kmp_stksize );
     KMP_DEBUG_ASSERT( __kmp_gtid_get_specific() == gtid );
-    TCW_4(__kmp_init_gtid, TRUE);
 
     KA_TRACE( 20, ("__kmp_register_root: T#%d init T#%d(%d:%d) arrived: join=%u, plain=%u\n",
                     gtid, __kmp_gtid_from_tid( 0, root->r.r_hot_team ),

@@ -44,7 +44,6 @@ template <class ELFT>
 OutputSectionBase<ELFT>::OutputSectionBase(StringRef Name, uint32_t Type,
                                            uintX_t Flags)
     : Name(Name) {
-  memset(&Header, 0, sizeof(Elf_Shdr));
   Header.sh_type = Type;
   Header.sh_flags = Flags;
 }
