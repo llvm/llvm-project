@@ -3077,6 +3077,7 @@ void ASTWriter::WriteReferencedSelectorsPool(Sema &SemaRef) {
     return;
 
   RecordData Record;
+  ASTRecordWriter Writer(*this, Record);
 
   // Note: this writes out all references even for a dependent AST. But it is
   // very tricky to fix, and given that @selector shouldn't really appear in
@@ -3084,10 +3085,10 @@ void ASTWriter::WriteReferencedSelectorsPool(Sema &SemaRef) {
   for (auto &SelectorAndLocation : SemaRef.ReferencedSelectors) {
     Selector Sel = SelectorAndLocation.first;
     SourceLocation Loc = SelectorAndLocation.second;
-    AddSelectorRef(Sel, Record);
-    AddSourceLocation(Loc, Record);
+    Writer.AddSelectorRef(Sel);
+    Writer.AddSourceLocation(Loc);
   }
-  Stream.EmitRecord(REFERENCED_SELECTOR_POOL, Record);
+  Writer.Emit(REFERENCED_SELECTOR_POOL);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4825,8 +4826,8 @@ uint64_t ASTWriter::getMacroDirectivesOffset(const IdentifierInfo *Name) {
   return IdentMacroDirectivesOffsetMap.lookup(Name);
 }
 
-void ASTWriter::AddSelectorRef(const Selector SelRef, RecordDataImpl &Record) {
-  Record.push_back(getSelectorRef(SelRef));
+void ASTRecordWriter::AddSelectorRef(const Selector SelRef) {
+  Record->push_back(Writer->getSelectorRef(SelRef));
 }
 
 SelectorID ASTWriter::getSelectorRef(Selector Sel) {
@@ -4848,8 +4849,8 @@ SelectorID ASTWriter::getSelectorRef(Selector Sel) {
   return SID;
 }
 
-void ASTWriter::AddCXXTemporary(const CXXTemporary *Temp, RecordDataImpl &Record) {
-  AddDeclRef(Temp->getDestructor(), Record);
+void ASTRecordWriter::AddCXXTemporary(const CXXTemporary *Temp) {
+  AddDeclRef(Temp->getDestructor());
 }
 
 void ASTRecordWriter::AddTemplateArgumentLocInfo(
@@ -5040,32 +5041,32 @@ void ASTWriter::associateDeclWithFile(const Decl *D, DeclID ID) {
   Decls.insert(I, LocDecl);
 }
 
-void ASTWriter::AddDeclarationName(DeclarationName Name, RecordDataImpl &Record) {
+void ASTRecordWriter::AddDeclarationName(DeclarationName Name) {
   // FIXME: Emit a stable enum for NameKind.  0 = Identifier etc.
-  Record.push_back(Name.getNameKind());
+  Record->push_back(Name.getNameKind());
   switch (Name.getNameKind()) {
   case DeclarationName::Identifier:
-    AddIdentifierRef(Name.getAsIdentifierInfo(), Record);
+    AddIdentifierRef(Name.getAsIdentifierInfo());
     break;
 
   case DeclarationName::ObjCZeroArgSelector:
   case DeclarationName::ObjCOneArgSelector:
   case DeclarationName::ObjCMultiArgSelector:
-    AddSelectorRef(Name.getObjCSelector(), Record);
+    AddSelectorRef(Name.getObjCSelector());
     break;
 
   case DeclarationName::CXXConstructorName:
   case DeclarationName::CXXDestructorName:
   case DeclarationName::CXXConversionFunctionName:
-    AddTypeRef(Name.getCXXNameType(), Record);
+    AddTypeRef(Name.getCXXNameType());
     break;
 
   case DeclarationName::CXXOperatorName:
-    Record.push_back(Name.getCXXOverloadedOperator());
+    Record->push_back(Name.getCXXOverloadedOperator());
     break;
 
   case DeclarationName::CXXLiteralOperatorName:
-    AddIdentifierRef(Name.getCXXLiteralIdentifier(), Record);
+    AddIdentifierRef(Name.getCXXLiteralIdentifier());
     break;
 
   case DeclarationName::CXXUsingDirective:
@@ -5139,8 +5140,7 @@ void ASTRecordWriter::AddQualifierInfo(const QualifierInfo &Info) {
     AddTemplateParameterList(Info.TemplParamLists[i]);
 }
 
-void ASTWriter::AddNestedNameSpecifier(NestedNameSpecifier *NNS,
-                                       RecordDataImpl &Record) {
+void ASTRecordWriter::AddNestedNameSpecifier(NestedNameSpecifier *NNS) {
   // Nested name specifiers usually aren't too long. I think that 8 would
   // typically accommodate the vast majority.
   SmallVector<NestedNameSpecifier *, 8> NestedNames;
@@ -5151,28 +5151,28 @@ void ASTWriter::AddNestedNameSpecifier(NestedNameSpecifier *NNS,
     NNS = NNS->getPrefix();
   }
 
-  Record.push_back(NestedNames.size());
+  Record->push_back(NestedNames.size());
   while(!NestedNames.empty()) {
     NNS = NestedNames.pop_back_val();
     NestedNameSpecifier::SpecifierKind Kind = NNS->getKind();
-    Record.push_back(Kind);
+    Record->push_back(Kind);
     switch (Kind) {
     case NestedNameSpecifier::Identifier:
-      AddIdentifierRef(NNS->getAsIdentifier(), Record);
+      AddIdentifierRef(NNS->getAsIdentifier());
       break;
 
     case NestedNameSpecifier::Namespace:
-      AddDeclRef(NNS->getAsNamespace(), Record);
+      AddDeclRef(NNS->getAsNamespace());
       break;
 
     case NestedNameSpecifier::NamespaceAlias:
-      AddDeclRef(NNS->getAsNamespaceAlias(), Record);
+      AddDeclRef(NNS->getAsNamespaceAlias());
       break;
 
     case NestedNameSpecifier::TypeSpec:
     case NestedNameSpecifier::TypeSpecWithTemplate:
-      AddTypeRef(QualType(NNS->getAsType(), 0), Record);
-      Record.push_back(Kind == NestedNameSpecifier::TypeSpecWithTemplate);
+      AddTypeRef(QualType(NNS->getAsType(), 0));
+      Record->push_back(Kind == NestedNameSpecifier::TypeSpecWithTemplate);
       break;
 
     case NestedNameSpecifier::Global:
@@ -5180,7 +5180,7 @@ void ASTWriter::AddNestedNameSpecifier(NestedNameSpecifier *NNS,
       break;
 
     case NestedNameSpecifier::Super:
-      AddDeclRef(NNS->getAsRecordDecl(), Record);
+      AddDeclRef(NNS->getAsRecordDecl());
       break;
     }
   }
@@ -5332,16 +5332,15 @@ void ASTRecordWriter::AddTemplateArgument(const TemplateArgument &Arg) {
   }
 }
 
-void
-ASTWriter::AddTemplateParameterList(const TemplateParameterList *TemplateParams,
-                                    RecordDataImpl &Record) {
+void ASTRecordWriter::AddTemplateParameterList(
+    const TemplateParameterList *TemplateParams) {
   assert(TemplateParams && "No TemplateParams!");
-  AddSourceLocation(TemplateParams->getTemplateLoc(), Record);
-  AddSourceLocation(TemplateParams->getLAngleLoc(), Record);
-  AddSourceLocation(TemplateParams->getRAngleLoc(), Record);
-  Record.push_back(TemplateParams->size());
+  AddSourceLocation(TemplateParams->getTemplateLoc());
+  AddSourceLocation(TemplateParams->getLAngleLoc());
+  AddSourceLocation(TemplateParams->getRAngleLoc());
+  Record->push_back(TemplateParams->size());
   for (const auto &P : *TemplateParams)
-    AddDeclRef(P, Record);
+    AddDeclRef(P);
 }
 
 /// \brief Emit a template argument list.
@@ -5364,13 +5363,12 @@ void ASTRecordWriter::AddASTTemplateArgumentListInfo(
     AddTemplateArgumentLoc(TemplArgs[i]);
 }
 
-void
-ASTWriter::AddUnresolvedSet(const ASTUnresolvedSet &Set, RecordDataImpl &Record) {
-  Record.push_back(Set.size());
+void ASTRecordWriter::AddUnresolvedSet(const ASTUnresolvedSet &Set) {
+  Record->push_back(Set.size());
   for (ASTUnresolvedSet::const_iterator
          I = Set.begin(), E = Set.end(); I != E; ++I) {
-    AddDeclRef(I.getDecl(), Record);
-    Record.push_back(I.getAccess());
+    AddDeclRef(I.getDecl());
+    Record->push_back(I.getAccess());
   }
 }
 

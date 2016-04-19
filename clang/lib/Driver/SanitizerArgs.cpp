@@ -482,6 +482,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       if ((CoverageFeatures & CoverageTracePC) ||
           (AllAddedKinds & SupportsCoverage)) {
         Arg->claim();
+      } else {
+        CoverageFeatures = 0;
       }
     } else if (Arg->getOption().matches(options::OPT_fno_sanitize_coverage)) {
       Arg->claim();

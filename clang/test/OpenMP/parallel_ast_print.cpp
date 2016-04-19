@@ -227,4 +227,7 @@ void foo(const Foo<int> &arg) {
   }
 }
 
+template<typename T>
+T S<T>::TS = 0;
+
 #endif

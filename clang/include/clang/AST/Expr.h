@@ -29,6 +29,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
 
 namespace clang {
@@ -4828,16 +4829,6 @@ public:
 #include "clang/Basic/Builtins.def"
     // Avoid trailing comma
     BI_First = 0
-  };
-
-  // The ABI values for various atomic memory orderings.
-  enum AtomicOrderingKind {
-    AO_ABI_memory_order_relaxed = 0,
-    AO_ABI_memory_order_consume = 1,
-    AO_ABI_memory_order_acquire = 2,
-    AO_ABI_memory_order_release = 3,
-    AO_ABI_memory_order_acq_rel = 4,
-    AO_ABI_memory_order_seq_cst = 5
   };
 
 private:
