@@ -2223,8 +2223,8 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       Metadata *TemplateParams = getMDOrNull(Record[14]);
       auto *Identifier = getMDString(Record[15]);
       DICompositeType *CT = nullptr;
-      if (!(Flags & DINode::FlagFwdDecl) && Identifier)
-        CT = DICompositeType::getODRType(
+      if (Identifier)
+        CT = DICompositeType::buildODRType(
             Context, *Identifier, Tag, Name, File, Line, Scope, BaseType,
             SizeInBits, AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
             VTableHolder, TemplateParams);
