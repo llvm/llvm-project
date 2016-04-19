@@ -67,17 +67,22 @@ enum RemapFlags {
   /// values like functions and global metadata.
   RF_NoModuleLevelChanges = 1,
 
-  /// If this flag is set, the remapper ignores entries that are not in the
+  /// If this flag is set, the remapper ignores missing function-local entries
+  /// (Argument, Instruction, BasicBlock) that are not in the
   /// value map.  If it is unset, it aborts if an operand is asked to be
   /// remapped which doesn't exist in the mapping.
-  RF_IgnoreMissingEntries = 2,
+  ///
+  /// There are no such assertions in MapValue(), whose result should be
+  /// essentially unchanged by this flag.  This only changes the assertion
+  /// behaviour in RemapInstruction().
+  RF_IgnoreMissingLocals = 2,
 
   /// Instruct the remapper to move distinct metadata instead of duplicating it
   /// when there are module-level changes.
   RF_MoveDistinctMDs = 4,
 
   /// Any global values not in value map are mapped to null instead of mapping
-  /// to self.  Illegal if RF_IgnoreMissingEntries is also set.
+  /// to self.  Illegal if RF_IgnoreMissingLocals is also set.
   RF_NullMapMissingGlobalValues = 8,
 };
 
@@ -85,6 +90,18 @@ static inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
   return RemapFlags(unsigned(LHS) | unsigned(RHS));
 }
 
+/// Look up or compute a value in the value map.
+///
+/// Return a mapped value for a function-local value (Argument, Instruction,
+/// BasicBlock), or compute and memoize a value for a Constant.
+///
+///  1. If \c V is in VM, return the result.
+///  2. Else if \c V can be materialized with \c Materializer, do so, memoize
+///     it in \c VM, and return it.
+///  3. Else if \c V is a function-local value, return nullptr.
+///  4. Else if \c V is a \a GlobalValue, return \c nullptr or \c V depending
+///     on \a RF_NullMapMissingGlobalValues.
+///  5. Else, Compute the equivalent constant, and return it.
 Value *MapValue(const Value *V, ValueToValueMapTy &VM,
                 RemapFlags Flags = RF_None,
                 ValueMapTypeRemapper *TypeMapper = nullptr,
