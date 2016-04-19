@@ -824,8 +824,7 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     StateOption = llvm::StringSwitch<bool>(OptionInfo->getName())
                       .Case("vectorize", true)
                       .Case("interleave", true)
-                      .Case("unroll", true)
-                      .Default(false);
+                      .Default(false) || OptionUnroll;
   }
 
   // Verify loop hint has an argument.
