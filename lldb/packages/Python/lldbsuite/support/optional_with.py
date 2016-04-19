@@ -1,16 +1,6 @@
-"""
-The LLVM Compiler Infrastructure
-
-This file is distributed under the University of Illinois Open Source
-License. See LICENSE.TXT for details.
-
-Provides classes used by the test results reporting infrastructure
-within the LLDB test suite.
-
-
-This module contains utilities used by the lldb test framework.
-"""
-
+# ====================================================================
+# Provides a with-style resource handler for optionally-None resources
+# ====================================================================
 
 class optional_with(object):
     # pylint: disable=too-few-public-methods
