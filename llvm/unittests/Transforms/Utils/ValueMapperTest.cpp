@@ -251,4 +251,16 @@ TEST(ValueMapperTest, MapValueLocalAsMetadata) {
   EXPECT_EQ(&A, MapValue(MAV, VM, RF_IgnoreMissingLocals));
 }
 
+TEST(ValueMapperTest, MapMetadataNullMapGlobalWithIgnoreMissingLocals) {
+  LLVMContext C;
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
+  std::unique_ptr<Function> F(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F"));
+
+  ValueToValueMapTy VM;
+  RemapFlags Flags = RF_IgnoreMissingLocals | RF_NullMapMissingGlobalValues;
+  EXPECT_EQ(nullptr, MapValue(F.get(), VM, Flags));
+}
+
 } // end namespace
