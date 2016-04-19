@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -98,6 +99,10 @@ struct MappingContext {
 class MDNodeMapper;
 class Mapper {
   friend class MDNodeMapper;
+
+#ifndef NDEBUG
+  DenseSet<GlobalValue *> AlreadyScheduled;
+#endif
 
   RemapFlags Flags;
   ValueMapTypeRemapper *TypeMapper;
@@ -963,6 +968,7 @@ void Mapper::mapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
 
 void Mapper::scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
                                           unsigned MCID) {
+  assert(AlreadyScheduled.insert(&GV).second && "Should not reschedule");
   assert(MCID < MCs.size() && "Invalid mapping context");
 
   WorklistEntry WE;
@@ -978,6 +984,7 @@ void Mapper::scheduleMapAppendingVariable(GlobalVariable &GV,
                                           bool IsOldCtorDtor,
                                           ArrayRef<Constant *> NewMembers,
                                           unsigned MCID) {
+  assert(AlreadyScheduled.insert(&GV).second && "Should not reschedule");
   assert(MCID < MCs.size() && "Invalid mapping context");
 
   WorklistEntry WE;
@@ -993,6 +1000,7 @@ void Mapper::scheduleMapAppendingVariable(GlobalVariable &GV,
 
 void Mapper::scheduleMapGlobalAliasee(GlobalAlias &GA, Constant &Aliasee,
                                       unsigned MCID) {
+  assert(AlreadyScheduled.insert(&GA).second && "Should not reschedule");
   assert(MCID < MCs.size() && "Invalid mapping context");
 
   WorklistEntry WE;
@@ -1004,6 +1012,7 @@ void Mapper::scheduleMapGlobalAliasee(GlobalAlias &GA, Constant &Aliasee,
 }
 
 void Mapper::scheduleRemapFunction(Function &F, unsigned MCID) {
+  assert(AlreadyScheduled.insert(&F).second && "Should not reschedule");
   assert(MCID < MCs.size() && "Invalid mapping context");
 
   WorklistEntry WE;
