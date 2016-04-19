@@ -195,9 +195,18 @@ class MDNodeMapper {
     unsigned ID = ~0u;
     TempMDNode Placeholder;
 
-    Data() = default;
-    Data(Data &&) = default;
-    Data &operator=(Data &&) = default;
+    Data() {}
+    Data(Data &&X)
+        : HasChangedOps(std::move(X.HasChangedOps)),
+          HasChangedAddress(std::move(X.HasChangedAddress)),
+          ID(std::move(X.ID)), Placeholder(std::move(X.Placeholder)) {}
+    Data &operator=(Data &&X) {
+      HasChangedOps = std::move(X.HasChangedOps);
+      HasChangedAddress = std::move(X.HasChangedAddress);
+      ID = std::move(X.ID);
+      Placeholder = std::move(X.Placeholder);
+      return *this;
+    }
   };
 
   SmallDenseMap<const Metadata *, Data, 32> Info;
