@@ -4030,8 +4030,19 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
     // agree in both total size and mode (float vs. vector) are
     // treated as being equivalent here.
     const Type *TyPtr = Ty.getTypePtr();
-    if (!Base)
+    if (!Base) {
       Base = TyPtr;
+      // If it's a non-power-of-2 vector, its size is already a power-of-2,
+      // so make sure to widen it explicitly.
+      if (const VectorType *VT = Base->getAs<VectorType>()) {
+        QualType EltTy = VT->getElementType();
+        unsigned NumElements =
+            getContext().getTypeSize(VT) / getContext().getTypeSize(EltTy);
+        Base = getContext()
+                   .getVectorType(EltTy, NumElements, VT->getVectorKind())
+                   .getTypePtr();
+      }
+    }
 
     if (Base->isVectorType() != TyPtr->isVectorType() ||
         getContext().getTypeSize(Base) != getContext().getTypeSize(TyPtr))
