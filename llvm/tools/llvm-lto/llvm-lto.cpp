@@ -36,32 +36,28 @@
 using namespace llvm;
 
 static cl::opt<char>
-OptLevel("O",
-         cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                  "(default = '-O2')"),
-         cl::Prefix,
-         cl::ZeroOrMore,
-         cl::init('2'));
+    OptLevel("O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                           "(default = '-O2')"),
+             cl::Prefix, cl::ZeroOrMore, cl::init('2'));
 
 static cl::opt<bool> DisableVerify(
     "disable-verify", cl::init(false),
     cl::desc("Do not run the verifier during the optimization pipeline"));
 
-static cl::opt<bool>
-DisableInline("disable-inlining", cl::init(false),
-  cl::desc("Do not run the inliner pass"));
+static cl::opt<bool> DisableInline("disable-inlining", cl::init(false),
+                                   cl::desc("Do not run the inliner pass"));
 
 static cl::opt<bool>
-DisableGVNLoadPRE("disable-gvn-loadpre", cl::init(false),
-  cl::desc("Do not run the GVN load PRE pass"));
+    DisableGVNLoadPRE("disable-gvn-loadpre", cl::init(false),
+                      cl::desc("Do not run the GVN load PRE pass"));
 
-static cl::opt<bool>
-DisableLTOVectorization("disable-lto-vectorization", cl::init(false),
-  cl::desc("Do not run loop or slp vectorization during LTO"));
+static cl::opt<bool> DisableLTOVectorization(
+    "disable-lto-vectorization", cl::init(false),
+    cl::desc("Do not run loop or slp vectorization during LTO"));
 
-static cl::opt<bool>
-UseDiagnosticHandler("use-diagnostic-handler", cl::init(false),
-  cl::desc("Use a diagnostic handler to test the handler interface"));
+static cl::opt<bool> UseDiagnosticHandler(
+    "use-diagnostic-handler", cl::init(false),
+    cl::desc("Use a diagnostic handler to test the handler interface"));
 
 static cl::opt<bool>
     ThinLTO("thinlto", cl::init(false),
@@ -98,27 +94,25 @@ static cl::opt<std::string>
                           "to perform the promotion and/or importing."));
 
 static cl::opt<bool>
-SaveModuleFile("save-merged-module", cl::init(false),
-               cl::desc("Write merged LTO module to file before CodeGen"));
+    SaveModuleFile("save-merged-module", cl::init(false),
+                   cl::desc("Write merged LTO module to file before CodeGen"));
+
+static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
+                                            cl::desc("<input bitcode files>"));
+
+static cl::opt<std::string> OutputFilename("o", cl::init(""),
+                                           cl::desc("Override output filename"),
+                                           cl::value_desc("filename"));
 
 static cl::list<std::string>
-InputFilenames(cl::Positional, cl::OneOrMore,
-  cl::desc("<input bitcode files>"));
-
-static cl::opt<std::string>
-OutputFilename("o", cl::init(""),
-  cl::desc("Override output filename"),
-  cl::value_desc("filename"));
+    ExportedSymbols("exported-symbol",
+                    cl::desc("Symbol to export from the resulting object file"),
+                    cl::ZeroOrMore);
 
 static cl::list<std::string>
-ExportedSymbols("exported-symbol",
-  cl::desc("Symbol to export from the resulting object file"),
-  cl::ZeroOrMore);
-
-static cl::list<std::string>
-DSOSymbols("dso-symbol",
-  cl::desc("Symbol to put in the symtab in the resulting dso"),
-  cl::ZeroOrMore);
+    DSOSymbols("dso-symbol",
+               cl::desc("Symbol to put in the symtab in the resulting dso"),
+               cl::ZeroOrMore);
 
 static cl::opt<bool> ListSymbolsOnly(
     "list-symbols-only", cl::init(false),
@@ -607,7 +601,8 @@ int main(int argc, char **argv) {
       CodeGen.setModule(std::move(Module));
     } else if (!CodeGen.addModule(Module.get())) {
       // Print a message here so that we know addModule() did not abort.
-      errs() << argv[0] << ": error adding file '" << InputFilenames[i] << "'\n";
+      errs() << argv[0] << ": error adding file '" << InputFilenames[i]
+             << "'\n";
       return 1;
     }
   }
