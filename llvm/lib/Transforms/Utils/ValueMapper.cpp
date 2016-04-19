@@ -640,10 +640,12 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
   if (isa<MDString>(MD))
     return mapToSelf(MD);
 
-  if (auto *CMD = dyn_cast<ConstantAsMetadata>(MD)) {
-    if ((Flags & RF_NoModuleLevelChanges))
-      return mapToSelf(MD);
+  // This is a module-level metadata.  If nothing at the module level is
+  // changing, use an identity mapping.
+  if ((Flags & RF_NoModuleLevelChanges))
+    return mapToSelf(MD);
 
+  if (auto *CMD = dyn_cast<ConstantAsMetadata>(MD)) {
     // Disallow recursion into metadata mapping through mapValue.
     VM.disableMapMetadata();
     Value *MappedV = mapValue(CMD->getValue());
@@ -656,11 +658,6 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
   }
 
   assert(isa<MDNode>(MD) && "Expected a metadata node");
-
-  // If this is a module-level metadata and we know that nothing at the
-  // module level is changing, then use an identity mapping.
-  if (Flags & RF_NoModuleLevelChanges)
-    return mapToSelf(MD);
 
   return None;
 }
