@@ -671,10 +671,19 @@ void MDNodeMapper::mapUniquedNodes() {
       continue;
     }
 
+    // Remember whether this node had a placeholder.
+    bool HadPlaceholder(D.Placeholder);
+
+    // Clone the uniqued node and remap the operands.
     TempMDNode ClonedN = D.Placeholder ? std::move(D.Placeholder) : N->clone();
     remapOperands(D, *ClonedN);
-    CyclicNodes.push_back(MDNode::replaceWithUniqued(std::move(ClonedN)));
-    M.mapToMetadata(N, CyclicNodes.back());
+    auto *NewN = MDNode::replaceWithUniqued(std::move(ClonedN));
+    M.mapToMetadata(N, NewN);
+
+    // Nodes that were referenced out of order in the POT are involved in a
+    // uniquing cycle.
+    if (HadPlaceholder)
+      CyclicNodes.push_back(NewN);
   }
 
   // Resolve cycles.
