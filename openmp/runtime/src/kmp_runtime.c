@@ -1374,30 +1374,6 @@ __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid)
     if ( __kmp_env_consistency_check )
         __kmp_push_parallel( global_tid, NULL );
 
-#if USE_ITT_BUILD
-    // Mark the start of the "parallel" region for VTune. Only use one of frame notification scheme at the moment
-    if ( serial_team->t.t_level == 1
-#if OMP_40_ENABLED
-        && this_thr->th.th_teams_microtask == NULL
-#endif
-    ) {
-#if USE_ITT_NOTIFY
-        // Save the start of the "parallel" region for VTune. This is the frame begin at the same time.
-        if ( ( __itt_get_timestamp_ptr || KMP_ITT_DEBUG ) &&
-            ( __kmp_forkjoin_frames_mode == 3 || __kmp_forkjoin_frames_mode == 1 ) )
-        {
-             serial_team->t.t_region_time = this_thr->th.th_frame_time_serialized = __itt_get_timestamp();
-        } else // only one notification scheme (either "submit" or "forking/joined", not both)
-#endif
-        if ( ( __itt_frame_begin_v3_ptr || KMP_ITT_DEBUG ) &&
-             __kmp_forkjoin_frames && ! __kmp_forkjoin_frames_mode )
-        {
-            this_thr->th.th_ident = loc;
-            // 0 - no barriers; 1 - serialized parallel
-            __kmp_itt_region_forking( global_tid, this_thr->th.th_team_nproc, 0, 1 );
-        }
-    }
-#endif /* USE_ITT_BUILD */
 }
 
 /* most of the work for a fork */

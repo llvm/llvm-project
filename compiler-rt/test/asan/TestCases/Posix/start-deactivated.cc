@@ -6,7 +6,7 @@
 // RUN: %clangxx -O0 %s -c -o %t.o
 // RUN: %clangxx_asan -O0 %t.o %libdl -o %t
 // RUN: %env_asan_opts=start_deactivated=1,allocator_may_return_null=0 \
-// RUN:   ASAN_ACTIVATION_OPTIONS=allocator_may_return_null=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK
+// RUN:   ASAN_ACTIVATION_OPTIONS=allocator_may_return_null=1 not %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=start_deactivated=1 \
 // RUN:   ASAN_ACTIVATION_OPTIONS=help=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-HELP
 // RUN: %env_asan_opts=start_deactivated=1,verbosity=1 \

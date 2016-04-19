@@ -32,10 +32,11 @@ add_clang_library(clangTidyMiscModule
   SwappedArgumentsCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp
   UndelegatedConstructor.cpp
+  UniqueptrResetReleaseCheck.cpp
   UnusedAliasDeclsCheck.cpp
   UnusedParametersCheck.cpp
   UnusedRAIICheck.cpp
-  UniqueptrResetReleaseCheck.cpp
+  UnusedUsingDeclsCheck.cpp
   VirtualNearMissCheck.cpp
 
   LINK_LIBS

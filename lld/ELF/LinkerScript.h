@@ -42,8 +42,8 @@ private:
 };
 
 // This enum represents what we can observe in SECTIONS tag of script:
-// Expr is a location counter change, like ". = . + 0x1000"
-// Section is a description of output section, like ".data :..."
+// ExprKind is a location counter change, like ". = . + 0x1000"
+// SectionKind is a description of output section, like ".data :..."
 enum SectionsCommandKind { ExprKind, SectionKind };
 
 struct SectionsCommand {
@@ -72,7 +72,6 @@ public:
   bool DoLayout = false;
 
 private:
-  uint64_t evaluate(std::vector<StringRef> &Tokens, uint64_t LocCounter);
   template <class ELFT> SectionRule *find(InputSectionBase<ELFT> *S);
 
   // SECTIONS commands.

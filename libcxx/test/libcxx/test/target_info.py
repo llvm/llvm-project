@@ -90,11 +90,8 @@ class DarwinLocalTI(DefaultTargetInfo):
     def configure_env(self, env):
         library_paths = []
         # Configure the library path for libc++
-        libcxx_library = self.full_config.get_lit_conf('libcxx_library')
         if self.full_config.use_system_cxx_lib:
             pass
-        elif libcxx_library:
-            library_paths += [os.path.dirname(libcxx_library)]
         elif self.full_config.cxx_library_root:
             library_paths += [self.full_config.cxx_library_root]
         # Configure the abi library path
@@ -104,6 +101,15 @@ class DarwinLocalTI(DefaultTargetInfo):
             env['DYLD_LIBRARY_PATH'] = ':'.join(library_paths)
 
     def allow_cxxabi_link(self):
+        # FIXME: PR27405
+        # libc++ *should* export all of the symbols found in libc++abi on OS X.
+        # For this reason LibcxxConfiguration will not link libc++abi in OS X.
+        # However __cxa_throw_bad_new_array_length doesn't get exported into
+        # libc++ yet so we still need to explicitly link libc++abi when testing
+        # libc++abi
+        # See PR22654.
+        if(self.full_config.get_lit_conf('name', '') == 'libc++abi'):
+            return True
         # Don't link libc++abi explicitly on OS X because the symbols
         # should be available in libc++ directly.
         return False
@@ -162,11 +168,14 @@ class LinuxLocalTI(DefaultTargetInfo):
         enable_threads = ('libcpp-has-no-threads' not in
                           self.full_config.config.available_features)
         llvm_unwinder = self.full_config.get_lit_bool('llvm_unwinder', False)
+        shared_libcxx = self.full_config.get_lit_bool('enable_shared', True)
         flags += ['-lm']
         if not llvm_unwinder:
             flags += ['-lgcc_s', '-lgcc']
         if enable_threads:
             flags += ['-lpthread']
+            if not shared_libcxx:
+              flags += ['-lrt']
         flags += ['-lc']
         if llvm_unwinder:
             flags += ['-lunwind', '-ldl']

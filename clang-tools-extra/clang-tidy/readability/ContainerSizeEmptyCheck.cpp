@@ -16,6 +16,7 @@ using namespace clang::ast_matchers;
 
 static bool isContainerName(llvm::StringRef ClassName) {
   static const char *const ContainerNames[] = {"array",
+                                               "basic_string",
                                                "deque",
                                                "forward_list",
                                                "list",
@@ -59,14 +60,13 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
     return;
 
   const auto WrongUse = anyOf(
-      hasParent(
-          binaryOperator(
-              anyOf(has(integerLiteral(equals(0))),
-                    allOf(anyOf(hasOperatorName("<"), hasOperatorName(">="),
-                                hasOperatorName(">"), hasOperatorName("<=")),
-                          hasEitherOperand(
-                              ignoringImpCasts(integerLiteral(equals(1)))))))
-              .bind("SizeBinaryOp")),
+      hasParent(binaryOperator(
+                    anyOf(hasOperatorName("<"), hasOperatorName(">="),
+                          hasOperatorName(">"), hasOperatorName("<="),
+                          hasOperatorName("=="), hasOperatorName("!=")),
+                    hasEitherOperand(ignoringImpCasts(anyOf(
+                        integerLiteral(equals(1)), integerLiteral(equals(0))))))
+                    .bind("SizeBinaryOp")),
       hasParent(implicitCastExpr(
           hasImplicitDestinationType(booleanType()),
           anyOf(
@@ -120,6 +120,10 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
 
     // Constant that is not handled.
     if (Value > 1)
+      return;
+
+    if (Value == 1 && (OpCode == BinaryOperatorKind::BO_EQ ||
+                       OpCode == BinaryOperatorKind::BO_NE))
       return;
 
     // Always true, no warnings for that.

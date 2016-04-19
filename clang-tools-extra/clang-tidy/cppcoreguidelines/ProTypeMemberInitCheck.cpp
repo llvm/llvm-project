@@ -77,7 +77,7 @@ SourceLocation getLocationForEndOfToken(const ASTContext &Context,
                                         SourceLocation Location) {
   return Lexer::getLocForEndOfToken(Location, 0, Context.getSourceManager(),
                                     Context.getLangOpts());
-};
+}
 
 // There are 3 kinds of insertion placements:
 enum class InitializerPlacement {
@@ -248,7 +248,7 @@ void forEachField(const RecordDecl *Record, const T &Fields,
   }
 }
 
-} // namespace
+} // anonymous namespace
 
 ProTypeMemberInitCheck::ProTypeMemberInitCheck(StringRef Name,
                                                ClangTidyContext *Context)

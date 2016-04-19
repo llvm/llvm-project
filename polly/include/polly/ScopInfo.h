@@ -2128,12 +2128,12 @@ public:
   /// @brief Return the domain of @p Stmt.
   ///
   /// @param Stmt The statement for which the conditions should be returned.
-  __isl_give isl_set *getDomainConditions(ScopStmt *Stmt);
+  __isl_give isl_set *getDomainConditions(const ScopStmt *Stmt) const;
 
   /// @brief Return the domain of @p BB.
   ///
   /// @param BB The block for which the conditions should be returned.
-  __isl_give isl_set *getDomainConditions(BasicBlock *BB);
+  __isl_give isl_set *getDomainConditions(BasicBlock *BB) const;
 
   /// @brief Get a union set containing the iteration domains of all statements.
   __isl_give isl_union_set *getDomains() const;

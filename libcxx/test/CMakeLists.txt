@@ -14,6 +14,7 @@ pythonize_bool(LIBCXX_ENABLE_RTTI)
 pythonize_bool(LIBCXX_ENABLE_SHARED)
 pythonize_bool(LIBCXX_BUILD_32_BITS)
 pythonize_bool(LIBCXX_GENERATE_COVERAGE)
+pythonize_bool(LIBCXXABI_ENABLE_SHARED)
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
 pythonize_bool(LIBCXX_HAS_ATOMIC_LIB)
 
@@ -21,6 +22,13 @@ pythonize_bool(LIBCXX_HAS_ATOMIC_LIB)
 # libc++ statically or via a linker script.
 if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY OR LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
   set(LIBCXX_CXX_ABI_LIBNAME "none")
+endif()
+
+# By default, for non-standalone builds, libcxx and libcxxabi share a library
+# directory.
+if (NOT LIBCXX_CXX_ABI_LIBRARY_PATH)
+  set(LIBCXX_CXX_ABI_LIBRARY_PATH "${LIBCXX_LIBRARY_DIR}" CACHE PATH
+      "The path to libc++abi library.")
 endif()
 
 set(LIBCXX_TARGET_INFO "libcxx.test.target_info.LocalTI" CACHE STRING

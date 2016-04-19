@@ -89,10 +89,10 @@ static kmp_bootstrap_lock_t  metadata_lock = KMP_BOOTSTRAP_LOCK_INITIALIZER( met
 // -------------------------------------------------------------------------------------------------
 
 LINKAGE void
-__kmp_itt_region_forking( int gtid, int team_size, int barriers, int serialized ) {
+__kmp_itt_region_forking( int gtid, int team_size, int barriers ) {
 #if USE_ITT_NOTIFY
     kmp_team_t *      team = __kmp_team_from_gtid( gtid );
-    if (team->t.t_active_level + serialized > 1)
+    if (team->t.t_active_level > 1)
     {
         // The frame notifications are only supported for the outermost teams.
         return;
@@ -176,8 +176,8 @@ __kmp_itt_region_forking( int gtid, int team_size, int barriers, int serialized 
             }
         }
         KMP_ITT_DEBUG_LOCK();
-        KMP_ITT_DEBUG_PRINT( "[frm beg] gtid=%d, idx=%x, serialized:%d, loc:%p\n",
-                         gtid, loc->reserved_2, serialized, loc );
+        KMP_ITT_DEBUG_PRINT( "[frm beg] gtid=%d, idx=%x, loc:%p\n",
+                         gtid, loc->reserved_2, loc );
     }
 #endif
 } // __kmp_itt_region_forking
@@ -409,10 +409,10 @@ __kmp_itt_region_finished( int gtid ) {
 // -------------------------------------------------------------------------------------------------
 
 LINKAGE void
-__kmp_itt_region_joined( int gtid, int serialized ) {
+__kmp_itt_region_joined( int gtid ) {
 #if USE_ITT_NOTIFY
     kmp_team_t *      team = __kmp_team_from_gtid( gtid );
-    if (team->t.t_active_level + serialized > 1)
+    if (team->t.t_active_level > 1)
     {
         // The frame notifications are only supported for the outermost teams.
         return;
@@ -424,8 +424,8 @@ __kmp_itt_region_joined( int gtid, int serialized ) {
         if(frm < KMP_MAX_FRAME_DOMAINS) {
             KMP_ITT_DEBUG_LOCK();
             __itt_frame_end_v3(__kmp_itt_region_domains[frm], NULL);
-            KMP_ITT_DEBUG_PRINT( "[frm end] gtid=%d, idx=%x, serialized:%d, loc:%p\n",
-                         gtid, loc->reserved_2, serialized, loc );
+            KMP_ITT_DEBUG_PRINT( "[frm end] gtid=%d, idx=%x, loc:%p\n",
+                         gtid, loc->reserved_2, loc );
         }
     }
 #endif

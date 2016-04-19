@@ -20,6 +20,7 @@
 #include "OutputSections.h"
 #include "ScriptParser.h"
 #include "SymbolTable.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -43,27 +44,106 @@ static uint64_t getInteger(StringRef S) {
   return V;
 }
 
-// Evaluates the expression given by list of tokens.
-uint64_t LinkerScript::evaluate(std::vector<StringRef> &Tokens,
-                                uint64_t LocCounter) {
-  uint64_t Result = 0;
-  for (size_t I = 0, E = Tokens.size(); I < E; ++I) {
-    // Each second token should be '+' as this is the
-    // only operator we support now.
-    if (I % 2 == 1) {
-      if (Tokens[I] == "+")
-        continue;
-      error("error in location counter expression");
+static int precedence(StringRef Op) {
+  return StringSwitch<int>(Op)
+      .Case("*", 4)
+      .Case("/", 3)
+      .Case("+", 2)
+      .Case("-", 2)
+      .Case("&", 1)
+      .Default(-1);
+}
+
+static StringRef next(ArrayRef<StringRef> &Tokens) {
+  if (Tokens.empty()) {
+    error("no next token");
+    return "";
+  }
+  StringRef Tok = Tokens.front();
+  Tokens = Tokens.slice(1);
+  return Tok;
+}
+
+static uint64_t parseExpr(uint64_t Lhs, int MinPrec,
+                          ArrayRef<StringRef> &Tokens, uint64_t Dot);
+
+// This is a part of the operator-precedence parser to evaluate
+// arithmetic expressions in SECTIONS command. This function evaluates an
+// integer literal, a parenthesized expression or the special variable ".".
+static uint64_t parsePrimary(ArrayRef<StringRef> &Tokens, uint64_t Dot) {
+  StringRef Tok = next(Tokens);
+  if (Tok == ".")
+    return Dot;
+  if (Tok == "(") {
+    uint64_t V = parsePrimary(Tokens, Dot);
+    V = parseExpr(V, 0, Tokens, Dot);
+    if (Tokens.empty()) {
+      error(") expected");
+    } else {
+      Tok = next(Tokens);
+      if (Tok != ")")
+        error(") expected, but got " + Tok);
+    }
+    return V;
+  }
+  return getInteger(Tok);
+}
+
+static uint64_t apply(StringRef Op, uint64_t L, uint64_t R) {
+  if (Op == "+")
+    return L + R;
+  if (Op == "-")
+    return L - R;
+  if (Op == "*")
+    return L * R;
+  if (Op == "/") {
+    if (R == 0) {
+      error("division by zero");
       return 0;
     }
-
-    StringRef Tok = Tokens[I];
-    if (Tok == ".")
-      Result += LocCounter;
-    else
-      Result += getInteger(Tok);
+    return L / R;
   }
-  return Result;
+  if (Op == "&")
+    return L & R;
+  llvm_unreachable("invalid operator");
+  return 0;
+}
+
+// This is an operator-precedence parser to evaluate
+// arithmetic expressions in SECTIONS command.
+static uint64_t parseExpr(uint64_t Lhs, int MinPrec,
+                          ArrayRef<StringRef> &Tokens, uint64_t Dot) {
+  while (!Tokens.empty()) {
+    // Read an operator and an expression.
+    StringRef Op1 = Tokens.front();
+    if (precedence(Op1) < MinPrec)
+      return Lhs;
+    next(Tokens);
+    uint64_t Rhs = parsePrimary(Tokens, Dot);
+
+    // Evaluate the remaining part of the expression first if the
+    // next operator has greater precedence than the previous one.
+    // For example, if we have read "+" and "3", and if the next
+    // operator is "*", then we'll evaluate 3 * ... part first.
+    while (!Tokens.empty()) {
+      StringRef Op2 = Tokens.front();
+      if (precedence(Op2) <= precedence(Op1))
+        break;
+      Rhs = parseExpr(Rhs, precedence(Op2), Tokens, Dot);
+    }
+
+    Lhs = apply(Op1, Lhs, Rhs);
+  }
+  return Lhs;
+}
+
+// Evaluates the expression given by list of tokens.
+uint64_t evaluate(ArrayRef<StringRef> Tokens, uint64_t Dot) {
+  uint64_t V = parsePrimary(Tokens, Dot);
+  V = parseExpr(V, 0, Tokens, Dot);
+  if (!Tokens.empty())
+    error("stray token: " + Tokens[0]);
+  return V;
 }
 
 template <class ELFT>

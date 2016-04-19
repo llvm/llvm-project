@@ -14,6 +14,8 @@ config.enable_32bit             = "@LLVM_BUILD_32_BITS@"
 config.target_info              = "@LIBCXXABI_TARGET_INFO@"
 config.executor                 = "@LIBCXXABI_EXECUTOR@"
 config.thread_atexit            = "@LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL@"
+config.libcxxabi_shared         = "@LIBCXXABI_ENABLE_SHARED@"
+config.enable_shared            = "@LIBCXX_ENABLE_SHARED@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@LIBCXXABI_SOURCE_DIR@/test/lit.cfg")

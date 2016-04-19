@@ -2351,7 +2351,6 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
     kmp_uint64              th_bar_arrive_time;           /* arrival to barrier timestamp */
     kmp_uint64              th_bar_min_time;              /* minimum arrival time at the barrier */
     kmp_uint64              th_frame_time;                /* frame timestamp */
-    kmp_uint64              th_frame_time_serialized;     /* frame timestamp in serialized parallel */
 #endif /* USE_ITT_BUILD */
     kmp_local_t             th_local;
     struct private_common  *th_pri_head;
