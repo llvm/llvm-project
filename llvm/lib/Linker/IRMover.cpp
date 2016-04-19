@@ -814,9 +814,6 @@ Constant *IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
 
   Constant *Ret = ConstantExpr::getBitCast(NG, TypeMap.get(SrcGV->getType()));
 
-  // Stop recursion.
-  ValueMap[SrcGV] = Ret;
-
   Mapper.scheduleMapAppendingVariable(*NG,
                                       DstGV ? DstGV->getInitializer() : nullptr,
                                       IsOldStructor, SrcElements);
