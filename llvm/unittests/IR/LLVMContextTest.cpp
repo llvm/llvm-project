@@ -32,18 +32,20 @@ TEST(LLVMContextTest, getOrInsertODRUniquedType) {
 
   // Get the mapping.
   Context.enableDebugTypeODRUniquing();
-  DIType **Mapping = Context.getOrInsertODRUniquedType(S);
+  DICompositeType **Mapping = Context.getOrInsertODRUniquedType(S);
   ASSERT_TRUE(Mapping);
 
   // Create some type and add it to the mapping.
-  auto &BT =
-      *DIBasicType::get(Context, dwarf::DW_TAG_unspecified_type, S.getString());
-  *Mapping = &BT;
+  auto &CT = *DICompositeType::get(Context, dwarf::DW_TAG_class_type, "name",
+                                   nullptr, 0, nullptr, nullptr, 0, 0, 0, 0,
+                                   nullptr, 0, nullptr, nullptr, S.getString());
+  ASSERT_EQ(S.getString(), CT.getIdentifier());
+  *Mapping = &CT;
 
   // Check that we get it back.
   Mapping = Context.getOrInsertODRUniquedType(S);
   ASSERT_TRUE(Mapping);
-  EXPECT_EQ(&BT, *Mapping);
+  EXPECT_EQ(&CT, *Mapping);
 
   // Check that it's discarded with the type map.
   Context.disableDebugTypeODRUniquing();
