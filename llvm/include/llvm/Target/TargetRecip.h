@@ -18,9 +18,10 @@
 #define LLVM_TARGET_TARGETRECIP_H
 
 #include "llvm/ADT/StringRef.h"
-#include <vector>
-#include <string>
 #include <map>
+#include <stdint.h>
+#include <string>
+#include <vector>
 
 namespace llvm {
 

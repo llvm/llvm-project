@@ -253,6 +253,8 @@ private:
 
   SDNode *SelectSMLAWSMULW(SDNode *N);
 
+  SDNode *SelectCMP_SWAP(SDNode *N);
+
   /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
   /// inline asm expressions.
   bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
@@ -2597,6 +2599,34 @@ SDNode *ARMDAGToDAGISel::SelectSMLAWSMULW(SDNode *N) {
   return nullptr;
 }
 
+/// We've got special pseudo-instructions for these
+SDNode *ARMDAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
+  unsigned Opcode;
+  EVT MemTy = cast<MemSDNode>(N)->getMemoryVT();
+  if (MemTy == MVT::i8)
+    Opcode = ARM::CMP_SWAP_8;
+  else if (MemTy == MVT::i16)
+    Opcode = ARM::CMP_SWAP_16;
+  else if (MemTy == MVT::i32)
+    Opcode = ARM::CMP_SWAP_32;
+  else
+    llvm_unreachable("Unknown AtomicCmpSwap type");
+
+  SDValue Ops[] = {N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                   N->getOperand(0)};
+  SDNode *CmpSwap = CurDAG->getMachineNode(
+      Opcode, SDLoc(N),
+      CurDAG->getVTList(MVT::i32, MVT::i32, MVT::Other), Ops);
+
+  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
+  MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
+  cast<MachineSDNode>(CmpSwap)->setMemRefs(MemOp, MemOp + 1);
+
+  ReplaceUses(SDValue(N, 0), SDValue(CmpSwap, 0));
+  ReplaceUses(SDValue(N, 1), SDValue(CmpSwap, 2));
+  return nullptr;
+}
+
 SDNode *ARMDAGToDAGISel::SelectConcatVector(SDNode *N) {
   // The only time a CONCAT_VECTORS operation can have legal types is when
   // two 64-bit vectors are concatenated to a 128-bit vector.
@@ -3493,6 +3523,9 @@ SDNode *ARMDAGToDAGISel::Select(SDNode *N) {
 
   case ISD::CONCAT_VECTORS:
     return SelectConcatVector(N);
+
+  case ISD::ATOMIC_CMP_SWAP:
+      return SelectCMP_SWAP(N);
   }
 
   return SelectCode(N);

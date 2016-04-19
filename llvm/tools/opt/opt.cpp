@@ -136,6 +136,10 @@ static cl::opt<bool>
 OptLevelO3("O3",
            cl::desc("Optimization level 3. Similar to clang -O3"));
 
+static cl::opt<unsigned>
+CodeGenOptLevel("codegen-opt-level",
+                cl::desc("Override optimization level for codegen hooks"));
+
 static cl::opt<std::string>
 TargetTriple("mtriple", cl::desc("Override target triple for module"));
 
@@ -272,6 +276,8 @@ static void AddStandardLinkPasses(legacy::PassManagerBase &PM) {
 //
 
 static CodeGenOpt::Level GetCodeGenOptLevel() {
+  if (CodeGenOptLevel.getNumOccurrences())
+    return static_cast<CodeGenOpt::Level>(unsigned(CodeGenOptLevel));
   if (OptLevelO1)
     return CodeGenOpt::Less;
   if (OptLevelO2)

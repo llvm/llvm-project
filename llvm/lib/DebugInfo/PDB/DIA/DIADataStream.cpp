@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/DIA/DIADataStream.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ConvertUTF.h"
 
 using namespace llvm;

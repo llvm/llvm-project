@@ -88,8 +88,7 @@ void MipsTargetStreamer::emitDirectiveSetHardFloat() {
 void MipsTargetStreamer::emitDirectiveSetDsp() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoDsp() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveCpLoad(unsigned RegNo) {}
-void MipsTargetStreamer::emitDirectiveCpRestore(
-    SmallVector<MCInst, 3> &StoreInsts, int Offset) {
+void MipsTargetStreamer::emitDirectiveCpRestore(int Offset) {
   forbidModuleDirective();
 }
 void MipsTargetStreamer::emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
@@ -363,9 +362,8 @@ void MipsTargetAsmStreamer::emitDirectiveCpLoad(unsigned RegNo) {
   forbidModuleDirective();
 }
 
-void MipsTargetAsmStreamer::emitDirectiveCpRestore(
-    SmallVector<MCInst, 3> &StoreInsts, int Offset) {
-  MipsTargetStreamer::emitDirectiveCpRestore(StoreInsts, Offset);
+void MipsTargetAsmStreamer::emitDirectiveCpRestore(int Offset) {
+  MipsTargetStreamer::emitDirectiveCpRestore(Offset);
   OS << "\t.cprestore\t" << Offset << "\n";
 }
 
@@ -784,9 +782,8 @@ void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
   forbidModuleDirective();
 }
 
-void MipsTargetELFStreamer::emitDirectiveCpRestore(
-    SmallVector<MCInst, 3> &StoreInsts, int Offset) {
-  MipsTargetStreamer::emitDirectiveCpRestore(StoreInsts, Offset);
+void MipsTargetELFStreamer::emitDirectiveCpRestore(int Offset) {
+  MipsTargetStreamer::emitDirectiveCpRestore(Offset);
   // .cprestore offset
   // When PIC mode is enabled and the O32 ABI is used, this directive expands
   // to:
@@ -798,8 +795,8 @@ void MipsTargetELFStreamer::emitDirectiveCpRestore(
   if (!Pic || (getABI().IsN32() || getABI().IsN64()))
     return;
 
-  for (const MCInst &Inst : StoreInsts)
-    getStreamer().EmitInstruction(Inst, STI);
+  // FIXME: MipsAsmParser currently emits the instructions that should be
+  // emitted here.
 }
 
 void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,

@@ -105,13 +105,21 @@ DwarfPubSections("generate-dwarf-pub-sections", cl::Hidden,
                             clEnumVal(Disable, "Disabled"), clEnumValEnd),
                  cl::init(Default));
 
-static cl::opt<DefaultOnOff>
-DwarfLinkageNames("dwarf-linkage-names", cl::Hidden,
-                  cl::desc("Emit DWARF linkage-name attributes."),
-                  cl::values(clEnumVal(Default, "Default for platform"),
-                             clEnumVal(Enable, "Enabled"),
-                             clEnumVal(Disable, "Disabled"), clEnumValEnd),
-                  cl::init(Default));
+enum LinkageNameOption {
+  DefaultLinkageNames,
+  AllLinkageNames,
+  AbstractLinkageNames
+};
+static cl::opt<LinkageNameOption>
+    DwarfLinkageNames("dwarf-linkage-names", cl::Hidden,
+                      cl::desc("Which DWARF linkage-name attributes to emit."),
+                      cl::values(clEnumValN(DefaultLinkageNames, "Default",
+                                            "Default for platform"),
+                                 clEnumValN(AllLinkageNames, "All", "All"),
+                                 clEnumValN(AbstractLinkageNames, "Abstract",
+                                            "Abstract subprograms"),
+                                 clEnumValEnd),
+                      cl::init(DefaultLinkageNames));
 
 static const char *const DWARFGroupName = "DWARF Emission";
 static const char *const DbgTimerName = "DWARF Debug Writer";
@@ -245,11 +253,11 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   else
     HasDwarfPubSections = DwarfPubSections == Enable;
 
-  // SCE does not use linkage names.
-  if (DwarfLinkageNames == Default)
-    UseLinkageNames = !tuneForSCE();
+  // SCE defaults to linkage names only for abstract subprograms.
+  if (DwarfLinkageNames == DefaultLinkageNames)
+    UseAllLinkageNames = !tuneForSCE();
   else
-    UseLinkageNames = DwarfLinkageNames == Enable;
+    UseAllLinkageNames = DwarfLinkageNames == AllLinkageNames;
 
   unsigned DwarfVersionNumber = Asm->TM.Options.MCOptions.DwarfVersion;
   DwarfVersion = DwarfVersionNumber ? DwarfVersionNumber

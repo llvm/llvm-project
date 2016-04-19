@@ -249,8 +249,8 @@ class DwarfDebug : public DebugHandlerBase {
   /// Whether to use the GNU TLS opcode (instead of the standard opcode).
   bool UseGNUTLSOpcode;
 
-  /// Whether to emit DW_AT_[MIPS_]linkage_name.
-  bool UseLinkageNames;
+  /// Whether to emit all linkage names, or just abstract subprograms.
+  bool UseAllLinkageNames;
 
   /// Version of dwarf we're emitting.
   unsigned DwarfVersion;
@@ -478,8 +478,9 @@ public:
     SymSize[Sym] = Size;
   }
 
-  /// Returns whether to emit DW_AT_[MIPS_]linkage_name.
-  bool useLinkageNames() const { return UseLinkageNames; }
+  /// Returns whether we should emit all DW_AT_[MIPS_]linkage_name.
+  /// If not, we still might emit certain cases.
+  bool useAllLinkageNames() const { return UseAllLinkageNames; }
 
   /// Returns whether to use DW_OP_GNU_push_tls_address, instead of the
   /// standard DW_OP_form_tls_address opcode

@@ -21,8 +21,6 @@
 #include <vector>
 
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Mutex.h"
 
 namespace llvm {
 class Function;
@@ -37,7 +35,6 @@ class LLVMContext;
 class Metadata;
 class MDTuple;
 class MDNode;
-class Module;
 
 inline const char *getHotSectionPrefix() { return ".hot"; }
 inline const char *getUnlikelySectionPrefix() { return ".unlikely"; }
@@ -70,14 +67,6 @@ private:
   // appears in the profile. The map is kept sorted in the descending order of
   // counts.
   std::map<uint64_t, uint32_t, std::greater<uint64_t>> CountFrequencies;
-  // Compute profile summary for a module.
-  static ProfileSummary *computeProfileSummary(Module *M);
-  // Cache of last seen module and its profile summary.
-  static ManagedStatic<std::pair<Module *, std::unique_ptr<ProfileSummary>>>
-      CachedSummary;
-  // Mutex to access summary cache
-  static ManagedStatic<sys::SmartMutex<true>> CacheMutex;
-
 protected:
   SummaryEntryVector DetailedSummary;
   std::vector<uint32_t> DetailedSummaryCutoffs;
@@ -96,12 +85,14 @@ protected:
       : PSK(K), DetailedSummary(DetailedSummary), TotalCount(TotalCount),
         MaxCount(MaxCount), MaxFunctionCount(MaxFunctionCount),
         NumCounts(NumCounts), NumFunctions(NumFunctions) {}
+  ~ProfileSummary() = default;
   inline void addCount(uint64_t Count);
   /// \brief Return metadata specific to the profile format.
   /// Derived classes implement this method to return a vector of Metadata.
   virtual std::vector<Metadata *> getFormatSpecificMD(LLVMContext &Context) = 0;
   /// \brief Return detailed summary as metadata.
   Metadata *getDetailedSummaryMD(LLVMContext &Context);
+
 public:
   static const int Scale = 1000000;
   Kind getKind() const { return PSK; }
@@ -120,10 +111,6 @@ public:
   static ProfileSummary *getFromMD(Metadata *MD);
   uint32_t getNumFunctions() { return NumFunctions; }
   uint64_t getMaxFunctionCount() { return MaxFunctionCount; }
-  /// \brief Get profile summary associated with module \p M
-  static inline ProfileSummary *getProfileSummary(Module *M);
-  virtual ~ProfileSummary() = default;
-  virtual bool operator==(ProfileSummary &Other);
 };
 
 class InstrProfSummary final : public ProfileSummary {
@@ -153,7 +140,6 @@ public:
   uint64_t getTotalCount() { return TotalCount; }
   uint64_t getMaxBlockCount() { return MaxCount; }
   uint64_t getMaxInternalBlockCount() { return MaxInternalBlockCount; }
-  bool operator==(ProfileSummary &Other) override;
 };
 
 class SampleProfileSummary final : public ProfileSummary {
@@ -194,24 +180,5 @@ SummaryEntryVector &ProfileSummary::getDetailedSummary() {
   return DetailedSummary;
 }
 
-ProfileSummary *ProfileSummary::getProfileSummary(Module *M) {
-  if (!M)
-    return nullptr;
-  sys::SmartScopedLock<true> Lock(*CacheMutex);
-  // Computing profile summary for a module involves parsing a fairly large
-  // metadata and could be expensive. We use a simple cache of the last seen
-  // module and its profile summary.
-  if (CachedSummary->first != M) {
-    auto *Summary = computeProfileSummary(M);
-    // Do not cache if the summary is empty. This is because a later pass
-    // (sample profile loader, for example) could attach the summary metadata on
-    // the module.
-    if (!Summary)
-      return nullptr;
-    CachedSummary->first = M;
-    CachedSummary->second.reset(Summary);
-  }
-  return CachedSummary->second.get();
-}
 } // end namespace llvm
 #endif

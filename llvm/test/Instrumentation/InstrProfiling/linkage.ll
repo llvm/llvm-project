@@ -2,6 +2,8 @@
 
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -instrprof -S | FileCheck %s --check-prefix=OTHER --check-prefix=COMMON
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -S | FileCheck %s --check-prefix=LINUX --check-prefix=COMMON
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -passes=instrprof -S | FileCheck %s --check-prefix=OTHER --check-prefix=COMMON
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=LINUX --check-prefix=COMMON
 
 @__profn_foo = hidden constant [3 x i8] c"foo"
 @__profn_foo_weak = weak hidden constant [8 x i8] c"foo_weak"

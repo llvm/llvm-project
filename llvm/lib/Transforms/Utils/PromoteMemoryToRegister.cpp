@@ -523,7 +523,7 @@ void PromoteMem2Reg::run() {
 
   AllocaInfo Info;
   LargeBlockInfo LBI;
-  IDFCalculator IDF(DT);
+  ForwardIDFCalculator IDF(DT);
 
   for (unsigned AllocaNum = 0; AllocaNum != Allocas.size(); ++AllocaNum) {
     AllocaInst *AI = Allocas[AllocaNum];

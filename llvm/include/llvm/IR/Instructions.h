@@ -25,6 +25,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <iterator>
 
@@ -36,90 +37,10 @@ class ConstantRange;
 class DataLayout;
 class LLVMContext;
 
-/// C++ defines ordering as a lattice. LLVM supplements this with NotAtomic and
-/// Unordered, which are both below the C++ orders. See docs/Atomics.rst for
-/// details.
-///
-/// not_atomic-->unordered-->relaxed-->release--------------->acq_rel-->seq_cst
-///                                   \-->consume-->acquire--/
-enum class AtomicOrdering {
-  NotAtomic = 0,
-  Unordered = 1,
-  Monotonic = 2, // Equivalent to C++'s relaxed.
-  // Consume = 3,  // Not specified yet.
-  Acquire = 4,
-  Release = 5,
-  AcquireRelease = 6,
-  SequentiallyConsistent = 7
-};
-
-bool operator<(AtomicOrdering, AtomicOrdering) = delete;
-bool operator>(AtomicOrdering, AtomicOrdering) = delete;
-bool operator<=(AtomicOrdering, AtomicOrdering) = delete;
-bool operator>=(AtomicOrdering, AtomicOrdering) = delete;
-
-/// String used by LLVM IR to represent atomic ordering.
-static inline const char *toIRString(AtomicOrdering ao) {
-  static const char *names[8] = {"not_atomic", "unordered", "monotonic",
-                                 "consume",    "acquire",   "release",
-                                 "acq_rel",    "seq_cst"};
-  return names[(size_t)ao];
-}
-
-/// Returns true if ao is stronger than other as defined by the AtomicOrdering
-/// lattice, which is based on C++'s definition.
-static inline bool isStrongerThan(AtomicOrdering ao, AtomicOrdering other) {
-  static const bool lookup[8][8] = {
-      //               NA UN RX CO AC RE AR SC
-      /* NotAtomic */ {0, 0, 0, 0, 0, 0, 0, 0},
-      /* Unordered */ {1, 0, 0, 0, 0, 0, 0, 0},
-      /* relaxed   */ {1, 1, 0, 0, 0, 0, 0, 0},
-      /* consume   */ {1, 1, 1, 0, 0, 0, 0, 0},
-      /* acquire   */ {1, 1, 1, 1, 0, 0, 0, 0},
-      /* release   */ {1, 1, 1, 0, 0, 0, 0, 0},
-      /* acq_rel   */ {1, 1, 1, 1, 1, 1, 0, 0},
-      /* seq_cst   */ {1, 1, 1, 1, 1, 1, 1, 0},
-  };
-  return lookup[(size_t)ao][(size_t)other];
-}
-
-static inline bool isAtLeastOrStrongerThan(AtomicOrdering ao,
-                                           AtomicOrdering other) {
-  static const bool lookup[8][8] = {
-      //               NA UN RX CO AC RE AR SC
-      /* NotAtomic */ {1, 0, 0, 0, 0, 0, 0, 0},
-      /* Unordered */ {1, 1, 0, 0, 0, 0, 0, 0},
-      /* relaxed   */ {1, 1, 1, 0, 0, 0, 0, 0},
-      /* consume   */ {1, 1, 1, 1, 0, 0, 0, 0},
-      /* acquire   */ {1, 1, 1, 1, 1, 0, 0, 0},
-      /* release   */ {1, 1, 1, 0, 0, 1, 0, 0},
-      /* acq_rel   */ {1, 1, 1, 1, 1, 1, 1, 0},
-      /* seq_cst   */ {1, 1, 1, 1, 1, 1, 1, 1},
-  };
-  return lookup[(size_t)ao][(size_t)other];
-}
-
-static inline bool isStrongerThanUnordered(AtomicOrdering Ord) {
-  return isStrongerThan(Ord, AtomicOrdering::Unordered);
-}
-
-static inline bool isStrongerThanMonotonic(AtomicOrdering Ord) {
-  return isStrongerThan(Ord, AtomicOrdering::Monotonic);
-}
-
-static inline bool isAcquireOrStronger(AtomicOrdering Ord) {
-  return isAtLeastOrStrongerThan(Ord, AtomicOrdering::Acquire);
-}
-
-static inline bool isReleaseOrStronger(AtomicOrdering Ord) {
-  return isAtLeastOrStrongerThan(Ord, AtomicOrdering::Release);
-}
-
 enum SynchronizationScope {
   SingleThread = 0,
   CrossThread = 1
 };
-
 
 //===----------------------------------------------------------------------===//
 //                                AllocaInst Class

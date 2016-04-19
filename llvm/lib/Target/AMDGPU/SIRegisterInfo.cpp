@@ -235,13 +235,7 @@ bool SIRegisterInfo::requiresVirtualBaseRegisters(
 
 int64_t SIRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
                                                  int Idx) const {
-
-  const MachineFunction *MF = MI->getParent()->getParent();
-  const AMDGPUSubtarget &Subtarget = MF->getSubtarget<AMDGPUSubtarget>();
-  const SIInstrInfo *TII
-    = static_cast<const SIInstrInfo *>(Subtarget.getInstrInfo());
-
-  if (!TII->isMUBUF(*MI))
+  if (!SIInstrInfo::isMUBUF(*MI))
     return 0;
 
   assert(Idx == AMDGPU::getNamedOperandIdx(MI->getOpcode(),
@@ -349,12 +343,7 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
 bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
                                         unsigned BaseReg,
                                         int64_t Offset) const {
-  const MachineFunction *MF = MI->getParent()->getParent();
-  const AMDGPUSubtarget &Subtarget = MF->getSubtarget<AMDGPUSubtarget>();
-  const SIInstrInfo *TII
-    = static_cast<const SIInstrInfo *>(Subtarget.getInstrInfo());
-
-  return TII->isMUBUF(*MI) && isUInt<12>(Offset);
+  return SIInstrInfo::isMUBUF(*MI) && isUInt<12>(Offset);
 }
 
 const TargetRegisterClass *SIRegisterInfo::getPointerRegClass(

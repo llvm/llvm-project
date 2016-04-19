@@ -423,13 +423,13 @@ defm S_GETREG_B32 : SOPK_32 <sopk<0x12, 0x11>, "s_getreg_b32", []>;
 
 defm S_SETREG_B32 : SOPK_m <
   sopk<0x13, 0x12>, "s_setreg_b32", (outs),
-  (ins SReg_32:$sdst, u16imm:$simm16), " $sdst, $simm16"
+  (ins SReg_32:$sdst, u16imm:$simm16), " $simm16, $sdst"
 >;
 // FIXME: Not on SI?
 //defm S_GETREG_REGRD_B32 : SOPK_32 <sopk<0x14, 0x13>, "s_getreg_regrd_b32", []>;
 defm S_SETREG_IMM32_B32 : SOPK_IMM32 <
   sopk<0x15, 0x14>, "s_setreg_imm32_b32", (outs),
-  (ins i32imm:$imm, u16imm:$simm16), " $imm, $simm16"
+  (ins i32imm:$imm, u16imm:$simm16), " $simm16, $imm"
 >;
 
 //===----------------------------------------------------------------------===//

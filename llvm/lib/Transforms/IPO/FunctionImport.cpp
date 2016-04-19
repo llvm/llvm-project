@@ -348,9 +348,9 @@ bool FunctionImporter::importFunctions(
         continue;
       auto GUID = GV.getGUID();
       auto Import = ImportGUIDs.count(GUID);
-      DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing " << GUID << " "
-                   << GV.getName() << " from " << SrcModule->getSourceFileName()
-                   << "\n");
+      DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing function " << GUID
+                   << " " << GV.getName() << " from "
+                   << SrcModule->getSourceFileName() << "\n");
       if (Import) {
         GV.materialize();
         GlobalsToImport.insert(&GV);
@@ -361,9 +361,9 @@ bool FunctionImporter::importFunctions(
         continue;
       auto GUID = GV.getGUID();
       auto Import = ImportGUIDs.count(GUID);
-      DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing " << GUID << " "
-                   << GV.getName() << " from " << SrcModule->getSourceFileName()
-                   << "\n");
+      DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing global " << GUID
+                   << " " << GV.getName() << " from "
+                   << SrcModule->getSourceFileName() << "\n");
       if (Import) {
         GV.materialize();
         GlobalsToImport.insert(&GV);
@@ -374,9 +374,9 @@ bool FunctionImporter::importFunctions(
         continue;
       auto GUID = GV.getGUID();
       auto Import = ImportGUIDs.count(GUID);
-      DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing " << GUID << " "
-                   << GV.getName() << " from " << SrcModule->getSourceFileName()
-                   << "\n");
+      DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing alias " << GUID
+                   << " " << GV.getName() << " from "
+                   << SrcModule->getSourceFileName() << "\n");
       if (Import) {
         // Alias can't point to "available_externally". However when we import
         // linkOnceODR the linkage does not change. So we import the alias

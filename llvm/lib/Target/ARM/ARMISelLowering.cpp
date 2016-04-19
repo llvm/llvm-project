@@ -850,10 +850,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     // ATOMIC_FENCE needs custom lowering; the others should have been expanded
     // to ldrex/strex loops already.
     setOperationAction(ISD::ATOMIC_FENCE,     MVT::Other, Custom);
+    if (!Subtarget->isThumb() || !Subtarget->isMClass())
+      setOperationAction(ISD::ATOMIC_CMP_SWAP,  MVT::i64, Custom);
 
     // On v8, we have particularly efficient implementations of atomic fences
     // if they can be combined with nearby atomic loads and stores.
-    if (!Subtarget->hasV8Ops()) {
+    if (!Subtarget->hasV8Ops() || getTargetMachine().getOptLevel() == 0) {
       // Automatically insert fences (dmb ish) around ATOMIC_SWAP etc.
       InsertFencesForAtomic = true;
     }
@@ -6969,6 +6971,44 @@ static void ReplaceREADCYCLECOUNTER(SDNode *N,
   Results.push_back(Cycles32.getValue(1));
 }
 
+static SDValue createGPRPairNode(SelectionDAG &DAG, SDValue V0, SDValue V1) {
+  SDLoc dl(V0.getNode());
+  SDValue RegClass =
+      DAG.getTargetConstant(ARM::GPRPairRegClassID, dl, MVT::i32);
+  SDValue SubReg0 = DAG.getTargetConstant(ARM::gsub_0, dl, MVT::i32);
+  SDValue SubReg1 = DAG.getTargetConstant(ARM::gsub_1, dl, MVT::i32);
+  const SDValue Ops[] = { RegClass, V0, SubReg0, V1, SubReg1 };
+  return SDValue(
+      DAG.getMachineNode(TargetOpcode::REG_SEQUENCE, dl, MVT::Untyped, Ops), 0);
+}
+
+static void ReplaceCMP_SWAP_64Results(SDNode *N,
+                                       SmallVectorImpl<SDValue> & Results,
+                                       SelectionDAG &DAG) {
+  assert(N->getValueType(0) == MVT::i64 &&
+         "AtomicCmpSwap on types less than 64 should be legal");
+  SDValue Ops[] = {N->getOperand(1),
+                   createGPRPairNode(DAG, N->getOperand(2)->getOperand(0),
+                                     N->getOperand(2)->getOperand(1)),
+                   createGPRPairNode(DAG, N->getOperand(3)->getOperand(0),
+                                     N->getOperand(3)->getOperand(1)),
+                   N->getOperand(0)};
+  SDNode *CmpSwap = DAG.getMachineNode(
+      ARM::CMP_SWAP_64, SDLoc(N),
+      DAG.getVTList(MVT::Untyped, MVT::i32, MVT::Other), Ops);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineSDNode::mmo_iterator MemOp = MF.allocateMemRefsArray(1);
+  MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
+  cast<MachineSDNode>(CmpSwap)->setMemRefs(MemOp, MemOp + 1);
+
+  Results.push_back(DAG.getTargetExtractSubreg(ARM::gsub_0, SDLoc(N), MVT::i32,
+                                               SDValue(CmpSwap, 0)));
+  Results.push_back(DAG.getTargetExtractSubreg(ARM::gsub_1, SDLoc(N), MVT::i32,
+                                               SDValue(CmpSwap, 0)));
+  Results.push_back(SDValue(CmpSwap, 2));
+}
+
 SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Don't know how to custom lower this!");
@@ -7097,6 +7137,9 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
     assert(Subtarget->isTargetWindows() && "can only expand DIV on Windows");
     return ExpandDIV_Windows(SDValue(N, 0), DAG, N->getOpcode() == ISD::SDIV,
                              Results);
+  case ISD::ATOMIC_CMP_SWAP:
+    ReplaceCMP_SWAP_64Results(N, Results, DAG);
+    return;
   }
   if (Res.getNode())
     Results.push_back(Res);
@@ -12155,7 +12198,12 @@ ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
 bool ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(
     AtomicCmpXchgInst *AI) const {
-  return true;
+  // At -O0, fast-regalloc cannot cope with the live vregs necessary to
+  // implement cmpxchg without spilling. If the address being exchanged is also
+  // on the stack and close enough to the spill slot, this can lead to a
+  // situation where the monitor always gets cleared and the atomic operation
+  // can never succeed. So at -O0 we need a late-expanded pseudo-inst instead.
+  return getTargetMachine().getOptLevel() != 0;
 }
 
 bool ARMTargetLowering::shouldInsertFencesForAtomic(

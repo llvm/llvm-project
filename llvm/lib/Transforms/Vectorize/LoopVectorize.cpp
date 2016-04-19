@@ -1498,9 +1498,9 @@ public:
   LoopVectorizationCostModel(Loop *L, ScalarEvolution *SE, LoopInfo *LI,
                              LoopVectorizationLegality *Legal,
                              const TargetTransformInfo &TTI,
-                             const TargetLibraryInfo *TLI, DemandedBits *DB,
-                             AssumptionCache *AC, const Function *F,
-                             const LoopVectorizeHints *Hints,
+                             const TargetLibraryInfo *TLI,
+                             DemandedBits *DB, AssumptionCache *AC,
+                             const Function *F, const LoopVectorizeHints *Hints,
                              SmallPtrSetImpl<const Value *> &ValuesToIgnore)
       : TheLoop(L), SE(SE), LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), DB(DB),
         TheFunction(F), Hints(Hints), ValuesToIgnore(ValuesToIgnore) {}
@@ -1717,7 +1717,7 @@ struct LoopVectorize : public FunctionPass {
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
     AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     LAA = &getAnalysis<LoopAccessAnalysis>();
-    DB = &getAnalysis<DemandedBits>();
+    DB = &getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
 
     // Compute some weights outside of the loop over the loops. Compute this
     // using a BranchProbability to re-use its scaling math.
@@ -2035,7 +2035,7 @@ struct LoopVectorize : public FunctionPass {
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<LoopAccessAnalysis>();
-    AU.addRequired<DemandedBits>();
+    AU.addRequired<DemandedBitsWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<BasicAAWrapperPass>();
@@ -6064,7 +6064,7 @@ INITIALIZE_PASS_DEPENDENCY(LCSSA)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(LoopAccessAnalysis)
-INITIALIZE_PASS_DEPENDENCY(DemandedBits)
+INITIALIZE_PASS_DEPENDENCY(DemandedBitsWrapperPass)
 INITIALIZE_PASS_END(LoopVectorize, LV_NAME, lv_name, false, false)
 
 namespace llvm {

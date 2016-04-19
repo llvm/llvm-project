@@ -148,6 +148,9 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemcpyOptSize = 8;
   MaxStoresPerMemmove = 16; // For @llvm.memmove -> sequence of stores
   MaxStoresPerMemmoveOptSize = 8;
+
+  // Booleans always contain 0 or 1.
+  setBooleanContents(ZeroOrOneBooleanContent);
 }
 
 SDValue LanaiTargetLowering::LowerOperation(SDValue Op,
@@ -456,7 +459,7 @@ SDValue LanaiTargetLowering::LowerCCCArguments(
       }
       default:
         DEBUG(dbgs() << "LowerFormalArguments Unhandled argument type: "
-                     << RegVT.getSimpleVT().SimpleTy << "\n");
+                     << (int)RegVT.getSimpleVT().SimpleTy << "\n");
         llvm_unreachable("unhandled argument type");
       }
     } else {

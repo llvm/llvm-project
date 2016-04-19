@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/DIA/DIASourceFile.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumSymbols.h"
 #include "llvm/DebugInfo/PDB/DIA/DIASession.h"

@@ -391,8 +391,8 @@ private:
   void DumpCurrentUnit(const char *Prefix);
   void DeathCallback();
 
-  uint8_t *CurrentUnitData;
-  size_t CurrentUnitSize;
+  uint8_t *CurrentUnitData = nullptr;
+  size_t CurrentUnitSize = 0;
 
   size_t TotalNumberOfRuns = 0;
   size_t TotalNumberOfExecutedTraceBasedMutations = 0;

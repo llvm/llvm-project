@@ -124,7 +124,7 @@ void initializeAAResultsWrapperPassPass(PassRegistry &);
 void initializeGCOVProfilerPass(PassRegistry&);
 void initializePGOInstrumentationGenPass(PassRegistry&);
 void initializePGOInstrumentationUsePass(PassRegistry&);
-void initializeInstrProfilingPass(PassRegistry&);
+void initializeInstrProfilingLegacyPassPass(PassRegistry &);
 void initializeAddressSanitizerPass(PassRegistry&);
 void initializeAddressSanitizerModulePass(PassRegistry&);
 void initializeMemorySanitizerPass(PassRegistry&);
@@ -323,12 +323,13 @@ void initializeDwarfEHPreparePass(PassRegistry&);
 void initializeFloat2IntPass(PassRegistry&);
 void initializeLoopDistributePass(PassRegistry&);
 void initializeSjLjEHPreparePass(PassRegistry&);
-void initializeDemandedBitsPass(PassRegistry&);
+void initializeDemandedBitsWrapperPassPass(PassRegistry&);
 void initializeFuncletLayoutPass(PassRegistry &);
 void initializeLoopLoadEliminationPass(PassRegistry&);
 void initializeFunctionImportPassPass(PassRegistry &);
 void initializeLoopVersioningPassPass(PassRegistry &);
 void initializeWholeProgramDevirtPass(PassRegistry &);
+void initializePatchableFunctionPass(PassRegistry &);
 }
 
 #endif

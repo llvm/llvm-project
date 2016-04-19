@@ -18,7 +18,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/InstrProfiling.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -31,113 +31,68 @@ cl::opt<bool> DoNameCompression("enable-name-compression",
                                 cl::desc("Enable name string compression"),
                                 cl::init(true));
 
-class InstrProfiling : public ModulePass {
+class InstrProfilingLegacyPass : public ModulePass {
+  InstrProfiling InstrProf;
+
 public:
   static char ID;
-
-  InstrProfiling() : ModulePass(ID) {}
-
-  InstrProfiling(const InstrProfOptions &Options)
-      : ModulePass(ID), Options(Options) {}
-
+  InstrProfilingLegacyPass() : ModulePass(ID), InstrProf() {}
+  InstrProfilingLegacyPass(const InstrProfOptions &Options)
+      : ModulePass(ID), InstrProf(Options) {}
   const char *getPassName() const override {
     return "Frontend instrumentation-based coverage lowering";
   }
 
-  bool runOnModule(Module &M) override;
+  bool runOnModule(Module &M) override { return InstrProf.run(M); }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
   }
-
-private:
-  InstrProfOptions Options;
-  Module *M;
-  typedef struct PerFunctionProfileData {
-    uint32_t NumValueSites[IPVK_Last+1];
-    GlobalVariable* RegionCounters;
-    GlobalVariable* DataVar;
-    PerFunctionProfileData() : RegionCounters(nullptr), DataVar(nullptr) {
-      memset(NumValueSites, 0, sizeof(uint32_t) * (IPVK_Last+1));
-    }
-  } PerFunctionProfileData;
-  DenseMap<GlobalVariable *, PerFunctionProfileData> ProfileDataMap;
-  std::vector<Value *> UsedVars;
-  std::vector<GlobalVariable *> ReferencedNames;
-  GlobalVariable *NamesVar;
-  size_t NamesSize;
-
-  bool isMachO() const {
-    return Triple(M->getTargetTriple()).isOSBinFormatMachO();
-  }
-
-  /// Get the section name for the counter variables.
-  StringRef getCountersSection() const {
-    return getInstrProfCountersSectionName(isMachO());
-  }
-
-  /// Get the section name for the name variables.
-  StringRef getNameSection() const {
-    return getInstrProfNameSectionName(isMachO());
-  }
-
-  /// Get the section name for the profile data variables.
-  StringRef getDataSection() const {
-    return getInstrProfDataSectionName(isMachO());
-  }
-
-  /// Get the section name for the coverage mapping data.
-  StringRef getCoverageSection() const {
-    return getInstrProfCoverageSectionName(isMachO());
-  }
-
-  /// Count the number of instrumented value sites for the function.
-  void computeNumValueSiteCounts(InstrProfValueProfileInst *Ins);
-
-  /// Replace instrprof_value_profile with a call to runtime library.
-  void lowerValueProfileInst(InstrProfValueProfileInst *Ins);
-
-  /// Replace instrprof_increment with an increment of the appropriate value.
-  void lowerIncrement(InstrProfIncrementInst *Inc);
-
-  /// Force emitting of name vars for unused functions.
-  void lowerCoverageData(GlobalVariable *CoverageNamesVar);
-
-  /// Get the region counters for an increment, creating them if necessary.
-  ///
-  /// If the counter array doesn't yet exist, the profile data variables
-  /// referring to them will also be created.
-  GlobalVariable *getOrCreateRegionCounters(InstrProfIncrementInst *Inc);
-
-  /// Emit the section with compressed function names.
-  void emitNameData();
-
-  /// Emit runtime registration functions for each profile data variable.
-  void emitRegistration();
-
-  /// Emit the necessary plumbing to pull in the runtime initialization.
-  void emitRuntimeHook();
-
-  /// Add uses of our data variables and runtime hook.
-  void emitUses();
-
-  /// Create a static initializer for our data, on platforms that need it,
-  /// and for any profile output file that was specified.
-  void emitInitialization();
 };
 
 } // anonymous namespace
 
-char InstrProfiling::ID = 0;
-INITIALIZE_PASS(InstrProfiling, "instrprof",
+PreservedAnalyses InstrProfiling::run(Module &M, AnalysisManager<Module> &AM) {
+  if (!run(M))
+    return PreservedAnalyses::all();
+
+  return PreservedAnalyses::none();
+}
+
+char InstrProfilingLegacyPass::ID = 0;
+INITIALIZE_PASS(InstrProfilingLegacyPass, "instrprof",
                 "Frontend instrumentation-based coverage lowering.", false,
                 false)
 
-ModulePass *llvm::createInstrProfilingPass(const InstrProfOptions &Options) {
-  return new InstrProfiling(Options);
+ModulePass *llvm::createInstrProfilingLegacyPass(const InstrProfOptions &Options) {
+  return new InstrProfilingLegacyPass(Options);
 }
 
-bool InstrProfiling::runOnModule(Module &M) {
+bool InstrProfiling::isMachO() const {
+  return Triple(M->getTargetTriple()).isOSBinFormatMachO();
+}
+
+/// Get the section name for the counter variables.
+StringRef InstrProfiling::getCountersSection() const {
+  return getInstrProfCountersSectionName(isMachO());
+}
+
+/// Get the section name for the name variables.
+StringRef InstrProfiling::getNameSection() const {
+  return getInstrProfNameSectionName(isMachO());
+}
+
+/// Get the section name for the profile data variables.
+StringRef InstrProfiling::getDataSection() const {
+  return getInstrProfDataSectionName(isMachO());
+}
+
+/// Get the section name for the coverage mapping data.
+StringRef InstrProfiling::getCoverageSection() const {
+  return getInstrProfCoverageSectionName(isMachO());
+}
+
+bool InstrProfiling::run(Module &M) {
   bool MadeChange = false;
 
   this->M = &M;

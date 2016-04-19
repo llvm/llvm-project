@@ -133,16 +133,25 @@ HANDLE_TARGET_OPCODE(LOCAL_ESCAPE, 21)
 /// comparisons into existing memory operations.
 HANDLE_TARGET_OPCODE(FAULTING_LOAD_OP, 22)
 
+/// Wraps a machine instruction to add patchability constraints.  An
+/// instruction wrapped in PATCHABLE_OP has to either have a minimum
+/// size or be preceded with a nop of that size.  The first operand is
+/// an immediate denoting the minimum size of the instruction, the
+/// second operand is an immediate denoting the opcode of the original
+/// instruction.  The rest of the operands are the operands of the
+/// original instruction.
+HANDLE_TARGET_OPCODE(PATCHABLE_OP, 23)
+
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.
 
 /// Generic ADD instruction. This is an integer add.
-HANDLE_TARGET_OPCODE(G_ADD, 23)
+HANDLE_TARGET_OPCODE(G_ADD, 24)
 HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_START, G_ADD)
 
 /// Generic BRANCH instruction. This is an unconditional branch.
-HANDLE_TARGET_OPCODE(G_BR, 24)
+HANDLE_TARGET_OPCODE(G_BR, 25)
 
 // TODO: Add more generic opcodes as we move along.
 

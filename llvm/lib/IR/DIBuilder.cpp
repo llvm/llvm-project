@@ -664,19 +664,6 @@ DIExpression *DIBuilder::createBitPieceExpression(unsigned OffsetInBytes,
   return DIExpression::get(VMContext, Addr);
 }
 
-DISubprogram *DIBuilder::createFunction(
-    DIScopeRef Context, StringRef Name, StringRef LinkageName, DIFile *File,
-    unsigned LineNo, DISubroutineType *Ty, bool isLocalToUnit,
-    bool isDefinition, unsigned ScopeLine, unsigned Flags, bool isOptimized,
-    DITemplateParameterArray TParams, DISubprogram *Decl) {
-  // dragonegg does not generate identifier for types, so using an empty map
-  // to resolve the context should be fine.
-  DITypeIdentifierMap EmptyMap;
-  return createFunction(Context.resolve(EmptyMap), Name, LinkageName, File,
-                        LineNo, Ty, isLocalToUnit, isDefinition, ScopeLine,
-                        Flags, isOptimized, TParams, Decl);
-}
-
 template <class... Ts>
 static DISubprogram *getSubprogram(bool IsDistinct, Ts &&... Args) {
   if (IsDistinct)

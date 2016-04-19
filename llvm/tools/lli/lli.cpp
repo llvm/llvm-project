@@ -312,27 +312,12 @@ private:
   }
 };
 
-static LLVMContext Context;
-static ExecutionEngine *EE = nullptr;
-static LLIObjectCache *CacheManager = nullptr;
-
-static void do_shutdown() {
-  // Cygwin-1.5 invokes DLL's dtors before atexit handler.
-#ifndef DO_NOTHING_ATEXIT
-  delete EE;
-  if (CacheManager)
-    delete CacheManager;
-  llvm_shutdown();
-#endif
-}
-
 // On Mingw and Cygwin, an external symbol named '__main' is called from the
 // generated 'main' function to allow static intialization.  To avoid linking
 // problems with remote targets (because lli's remote target support does not
 // currently handle external linking) we add a secondary module which defines
 // an empty '__main' function.
-static void addCygMingExtraModule(ExecutionEngine *EE,
-                                  LLVMContext &Context,
+static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
                                   StringRef TargetTripleStr) {
   IRBuilder<> Builder(Context);
   Triple TargetTriple(TargetTripleStr);
@@ -362,7 +347,7 @@ static void addCygMingExtraModule(ExecutionEngine *EE,
   Builder.CreateRet(ReturnVal);
 
   // Add this new module to the ExecutionEngine.
-  EE->addModule(std::move(M));
+  EE.addModule(std::move(M));
 }
 
 CodeGenOpt::Level getOptLevel() {
@@ -386,7 +371,7 @@ int main(int argc, char **argv, char * const *envp) {
   sys::PrintStackTraceOnErrorSignal();
   PrettyStackTraceProgram X(argc, argv);
 
-  atexit(do_shutdown);  // Call llvm_shutdown() on exit.
+  atexit(llvm_shutdown); // Call llvm_shutdown() on exit.
 
   // If we have a native target, initialize it to ensure it is linked in and
   // usable by the JIT.
@@ -400,6 +385,8 @@ int main(int argc, char **argv, char * const *envp) {
   // If the user doesn't want core files, disable them.
   if (DisableCoreFiles)
     sys::Process::PreventCoreFiles();
+
+  LLVMContext Context;
 
   // Load the bitcode...
   SMDiagnostic Err;
@@ -471,7 +458,7 @@ int main(int argc, char **argv, char * const *envp) {
 
   builder.setTargetOptions(Options);
 
-  EE = builder.create();
+  std::unique_ptr<ExecutionEngine> EE(builder.create());
   if (!EE) {
     if (!ErrorMsg.empty())
       errs() << argv[0] << ": error creating EE: " << ErrorMsg << "\n";
@@ -480,9 +467,10 @@ int main(int argc, char **argv, char * const *envp) {
     exit(1);
   }
 
+  std::unique_ptr<LLIObjectCache> CacheManager;
   if (EnableCacheManager) {
-    CacheManager = new LLIObjectCache(ObjectCacheDir);
-    EE->setObjectCache(CacheManager);
+    CacheManager.reset(new LLIObjectCache(ObjectCacheDir));
+    EE->setObjectCache(CacheManager.get());
   }
 
   // Load any additional modules specified on the command line.
@@ -538,7 +526,7 @@ int main(int argc, char **argv, char * const *envp) {
   // If the target is Cygwin/MingW and we are generating remote code, we
   // need an extra module to help out with linking.
   if (RemoteMCJIT && Triple(Mod->getTargetTriple()).isOSCygMing()) {
-    addCygMingExtraModule(EE, Context, Mod->getTargetTriple());
+    addCygMingExtraModule(*EE, Context, Mod->getTargetTriple());
   }
 
   // The following functions have no effect if their respective profiling
@@ -710,8 +698,7 @@ int main(int argc, char **argv, char * const *envp) {
     // Delete the EE - we need to tear it down *before* we terminate the session
     // with the remote, otherwise it'll crash when it tries to release resources
     // on a remote that has already been disconnected.
-    delete EE;
-    EE = nullptr;
+    EE.reset();
 
     // Signal the remote target that we're done JITing.
     R->terminateSession();

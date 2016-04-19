@@ -599,6 +599,9 @@ namespace llvm {
   /// \brief This pass lays out funclets contiguously.
   extern char &FuncletLayoutID;
 
+  /// \brief This pass implements the "patchable-function" attribute.
+  extern char &PatchableFunctionID;
+
   /// createStackProtectorPass - This pass adds stack protectors to functions.
   ///
   FunctionPass *createStackProtectorPass(const TargetMachine *TM);

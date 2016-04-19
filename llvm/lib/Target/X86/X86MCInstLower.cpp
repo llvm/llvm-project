@@ -20,6 +20,7 @@
 #include "Utils/X86ShuffleDecode.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -70,24 +71,21 @@ private:
 
 // Emit a minimal sequence of nops spanning NumBytes bytes.
 static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
-                     const MCSubtargetInfo &STI);
+                     const MCSubtargetInfo &STI, bool OnlyOneNop = false);
 
 namespace llvm {
-   X86AsmPrinter::StackMapShadowTracker::StackMapShadowTracker(TargetMachine &TM)
-     : TM(TM), InShadow(false), RequiredShadowSize(0), CurrentShadowSize(0) {}
+   X86AsmPrinter::StackMapShadowTracker::StackMapShadowTracker()
+     : InShadow(false), RequiredShadowSize(0), CurrentShadowSize(0) {}
 
   X86AsmPrinter::StackMapShadowTracker::~StackMapShadowTracker() {}
 
-  void
-  X86AsmPrinter::StackMapShadowTracker::startFunction(MachineFunction &F) {
+  void X86AsmPrinter::StackMapShadowTracker::startFunction(MachineFunction &F) {
     MF = &F;
-    CodeEmitter.reset(TM.getTarget().createMCCodeEmitter(
-        *MF->getSubtarget().getInstrInfo(),
-        *MF->getSubtarget().getRegisterInfo(), MF->getContext()));
   }
 
   void X86AsmPrinter::StackMapShadowTracker::count(MCInst &Inst,
-                                                   const MCSubtargetInfo &STI) {
+                                                   const MCSubtargetInfo &STI,
+                                                   MCCodeEmitter *CodeEmitter) {
     if (InShadow) {
       SmallString<256> Code;
       SmallVector<MCFixup, 4> Fixups;
@@ -110,7 +108,7 @@ namespace llvm {
 
   void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
     OutStreamer->EmitInstruction(Inst, getSubtargetInfo());
-    SMShadowTracker.count(Inst, getSubtargetInfo());
+    SMShadowTracker.count(Inst, getSubtargetInfo(), CodeEmitter.get());
   }
 } // end llvm namespace
 
@@ -786,7 +784,8 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
 }
 
 /// \brief Emit the optimal amount of multi-byte nops on X86.
-static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit, const MCSubtargetInfo &STI) {
+static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
+                     const MCSubtargetInfo &STI, bool OnlyOneNop) {
   // This works only for 64bit. For 32bit we have to do additional checking if
   // the CPU supports multi-byte nops.
   assert(Is64Bit && "EmitNops only supports X86-64");
@@ -833,6 +832,10 @@ static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit, const MCSu
                          .addImm(Displacement).addReg(SegmentReg), STI);
       break;
     }
+
+    (void) OnlyOneNop;
+    assert((!OnlyOneNop || NumBytes == 0) &&
+           "Allowed only one nop instruction!");
   } // while (NumBytes)
 }
 
@@ -913,6 +916,41 @@ void X86AsmPrinter::LowerFAULTING_LOAD_OP(const MachineInstr &MI,
       LoadMI.addOperand(MaybeOperand.getValue());
 
   OutStreamer->EmitInstruction(LoadMI, getSubtargetInfo());
+}
+
+void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
+                                      X86MCInstLower &MCIL) {
+  // PATCHABLE_OP minsize, opcode, operands
+
+  unsigned MinSize = MI.getOperand(0).getImm();
+  unsigned Opcode = MI.getOperand(1).getImm();
+
+  MCInst MCI;
+  MCI.setOpcode(Opcode);
+  for (auto &MO : make_range(MI.operands_begin() + 2, MI.operands_end()))
+    if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
+      MCI.addOperand(MaybeOperand.getValue());
+
+  SmallString<256> Code;
+  SmallVector<MCFixup, 4> Fixups;
+  raw_svector_ostream VecOS(Code);
+  CodeEmitter->encodeInstruction(MCI, VecOS, Fixups, getSubtargetInfo());
+
+  if (Code.size() < MinSize) {
+    if (MinSize == 2 && Opcode == X86::PUSH64r) {
+      // This is an optimization that lets us get away without emitting a nop in
+      // many cases.
+      //
+      // NB! In some cases the encoding for PUSH64r (e.g. PUSH64r %R9) takes two
+      // bytes too, so the check on MinSize is important.
+      MCI.setOpcode(X86::PUSH64rmr);
+    } else {
+      EmitNops(*OutStreamer, MinSize, Subtarget->is64Bit(), getSubtargetInfo(),
+               /* OnlyOneNop = */ true);
+    }
+  }
+
+  OutStreamer->EmitInstruction(MCI, getSubtargetInfo());
 }
 
 // Lower a stackmap of the form:
@@ -1213,6 +1251,9 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case TargetOpcode::FAULTING_LOAD_OP:
     return LowerFAULTING_LOAD_OP(*MI, MCInstLowering);
 
+  case TargetOpcode::PATCHABLE_OP:
+    return LowerPATCHABLE_OP(*MI, MCInstLowering);
+
   case TargetOpcode::STACKMAP:
     return LowerSTACKMAP(*MI);
 
@@ -1475,7 +1516,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   // is at the end of the shadow.
   if (MI->isCall()) {
     // Count then size of the call towards the shadow
-    SMShadowTracker.count(TmpInst, getSubtargetInfo());
+    SMShadowTracker.count(TmpInst, getSubtargetInfo(), CodeEmitter.get());
     // Then flush the shadow so that we fill with nops before the call, not
     // after it.
     SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());

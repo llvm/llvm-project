@@ -1114,7 +1114,7 @@ static void thinLTOBackendTask(claimed_file &F, const void *View,
                                raw_fd_ostream *OS, unsigned TaskID) {
   // Need to use a separate context for each task
   LLVMContext Context;
-  Context.ensureDITypeMap(); // Merge debug info types.
+  Context.enableDebugTypeODRUniquing(); // Merge debug info types.
   Context.setDiagnosticHandler(diagnosticHandlerForContext, nullptr, true);
 
   std::unique_ptr<llvm::Module> NewModule(new llvm::Module(File.name, Context));
@@ -1236,7 +1236,7 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
   }
 
   LLVMContext Context;
-  Context.ensureDITypeMap(); // Merge debug info types.
+  Context.enableDebugTypeODRUniquing(); // Merge debug info types.
   Context.setDiagnosticHandler(diagnosticHandlerForContext, nullptr, true);
 
   std::unique_ptr<Module> Combined(new Module("ld-temp.o", Context));

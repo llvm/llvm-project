@@ -30,7 +30,6 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -627,11 +626,10 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
   // a well-tuned heuristic based on *callsite* hotness and not callee hotness.
   uint64_t FunctionCount = 0, MaxFunctionCount = 0;
   bool HasPGOCounts = false;
-  ProfileSummary *PS = ProfileSummary::getProfileSummary(Callee.getParent());
-  if (Callee.getEntryCount() && PS) {
+  if (Callee.getEntryCount() && Callee.getParent()->getMaximumFunctionCount()) {
     HasPGOCounts = true;
     FunctionCount = Callee.getEntryCount().getValue();
-    MaxFunctionCount = PS->getMaxFunctionCount();
+    MaxFunctionCount = Callee.getParent()->getMaximumFunctionCount().getValue();
   }
 
   // Listen to the inlinehint attribute or profile based hotness information

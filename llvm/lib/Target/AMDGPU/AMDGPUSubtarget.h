@@ -95,6 +95,7 @@ private:
   int LDSBankCount;
   unsigned IsaVersion;
   bool EnableSIScheduler;
+  bool DebuggerInsertNops;
 
   std::unique_ptr<AMDGPUFrameLowering> FrameLowering;
   std::unique_ptr<AMDGPUTargetLowering> TLInfo;
@@ -302,6 +303,10 @@ public:
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
+  }
+
+  bool debuggerInsertNops() const {
+    return DebuggerInsertNops;
   }
 
   bool dumpCode() const {

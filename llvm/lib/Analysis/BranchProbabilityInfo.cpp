@@ -115,7 +115,12 @@ static const uint32_t IH_NONTAKEN_WEIGHT = 1;
 bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
   const TerminatorInst *TI = BB->getTerminator();
   if (TI->getNumSuccessors() == 0) {
-    if (isa<UnreachableInst>(TI))
+    if (isa<UnreachableInst>(TI) ||
+        // If this block is terminated by a call to
+        // @llvm.experimental.deoptimize then treat it like an unreachable since
+        // the @llvm.experimental.deoptimize call is expected to practically
+        // never execute.
+        BB->getTerminatingDeoptimizeCall())
       PostDominatedByUnreachable.insert(BB);
     return false;
   }

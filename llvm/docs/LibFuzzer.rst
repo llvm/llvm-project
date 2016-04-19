@@ -553,7 +553,7 @@ Trophies
 
 * `Python <http://bugs.python.org/issue25388>`_
 
-* OpenSSL/BoringSSL: `[1] <https://boringssl.googlesource.com/boringssl/+/cb852981cd61733a7a1ae4fd8755b7ff950e857d>`_ `[2] <https://openssl.org/news/secadv/20160301.txt>`_ `[3] <https://boringssl.googlesource.com/boringssl/+/2b07fa4b22198ac02e0cee8f37f3337c3dba91bc>`_ `[4] <https://boringssl.googlesource.com/boringssl/+/6b6e0b20893e2be0e68af605a60ffa2cbb0ffa64>`_
+* OpenSSL/BoringSSL: `[1] <https://boringssl.googlesource.com/boringssl/+/cb852981cd61733a7a1ae4fd8755b7ff950e857d>`_ `[2] <https://openssl.org/news/secadv/20160301.txt>`_ `[3] <https://boringssl.googlesource.com/boringssl/+/2b07fa4b22198ac02e0cee8f37f3337c3dba91bc>`_ `[4] <https://boringssl.googlesource.com/boringssl/+/6b6e0b20893e2be0e68af605a60ffa2cbb0ffa64>`_  `[5] <https://github.com/openssl/openssl/pull/931/commits/dd5ac557f052cc2b7f718ac44a8cb7ac6f77dca8>`_ `[6] <https://github.com/openssl/openssl/pull/931/commits/19b5b9194071d1d84e38ac9a952e715afbc85a81>`_
 
 * `Libxml2
   <https://bugzilla.gnome.org/buglist.cgi?bug_status=__all__&content=libFuzzer&list_id=68957&order=Importance&product=libxml2&query_format=specific>`_ and `[HT206167] <https://support.apple.com/en-gb/HT206167>`_ (CVE-2015-5312, CVE-2015-7500, CVE-2015-7942)

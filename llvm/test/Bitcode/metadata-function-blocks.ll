@@ -19,14 +19,14 @@
 ; Each node gets a new number.  Bottom-up traversal of nodes.
 !named = !{!6}
 
-; CHECK-NEXT:   <NODE op0=1/>
-!4 = !{!"named"}
-
 ; CHECK-NEXT:   <NODE op0=2/>
-!5 = !{!"named and foo"}
+!4 = !{!"named and foo"}
 
-; CHECK-NEXT:   <NODE op0=1 op1=4 op2=5/>
-!6 = !{!"named", !4, !5}
+; CHECK-NEXT:   <NODE op0=1/>
+!5 = !{!"named"}
+
+; CHECK-NEXT:   <NODE op0=1 op1=5 op2=4/>
+!6 = !{!"named", !5, !4}
 
 ; CHECK-NEXT:   <NODE op0=3/>
 !7 = !{!"foo and bar"}

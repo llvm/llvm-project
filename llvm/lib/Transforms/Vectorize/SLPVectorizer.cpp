@@ -3407,7 +3407,7 @@ struct SLPVectorizer : public FunctionPass {
     LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    DB = &getAnalysis<DemandedBits>();
+    DB = &getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
 
     Stores.clear();
     GEPs.clear();
@@ -3484,7 +3484,7 @@ struct SLPVectorizer : public FunctionPass {
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<DemandedBits>();
+    AU.addRequired<DemandedBitsWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<AAResultsWrapperPass>();
@@ -4575,7 +4575,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(DemandedBits)
+INITIALIZE_PASS_DEPENDENCY(DemandedBitsWrapperPass)
 INITIALIZE_PASS_END(SLPVectorizer, SV_NAME, lv_name, false, false)
 
 namespace llvm {

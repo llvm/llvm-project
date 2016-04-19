@@ -78,8 +78,7 @@ public:
 
   // PIC support
   virtual void emitDirectiveCpLoad(unsigned RegNo);
-  virtual void emitDirectiveCpRestore(SmallVector<MCInst, 3> &StoreInsts,
-                                      int Offset);
+  virtual void emitDirectiveCpRestore(int Offset);
   virtual void emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
                                     const MCSymbol &Sym, bool IsReg);
   virtual void emitDirectiveCpreturn(unsigned SaveLocation,
@@ -193,8 +192,7 @@ public:
 
   // PIC support
   void emitDirectiveCpLoad(unsigned RegNo) override;
-  void emitDirectiveCpRestore(SmallVector<MCInst, 3> &StoreInsts,
-                              int Offset) override;
+  void emitDirectiveCpRestore(int Offset) override;
   void emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
                             const MCSymbol &Sym, bool IsReg) override;
   void emitDirectiveCpreturn(unsigned SaveLocation,
@@ -246,8 +244,7 @@ public:
 
   // PIC support
   void emitDirectiveCpLoad(unsigned RegNo) override;
-  void emitDirectiveCpRestore(SmallVector<MCInst, 3> &StoreInsts,
-                              int Offset) override;
+  void emitDirectiveCpRestore(int Offset) override;
   void emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
                             const MCSymbol &Sym, bool IsReg) override;
   void emitDirectiveCpreturn(unsigned SaveLocation,

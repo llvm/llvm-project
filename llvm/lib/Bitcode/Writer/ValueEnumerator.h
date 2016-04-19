@@ -82,6 +82,7 @@ private:
       return MDs[ID - 1];
     }
   };
+
   typedef DenseMap<const Metadata *, MDIndex> MetadataMapType;
   MetadataMapType MetadataMap;
 
@@ -236,7 +237,7 @@ private:
   void organizeMetadata();
 
   /// Drop the function tag from the transitive operands of the given node.
-  void dropFunctionFromOps(const MDNode &N);
+  void dropFunctionFromMetadata(MetadataMapType::value_type &FirstMD);
 
   /// Incorporate the function metadata.
   ///
@@ -244,11 +245,11 @@ private:
   /// function.
   void incorporateFunctionMetadata(const Function &F);
 
-  bool insertMetadata(unsigned F, const Metadata *MD);
+  void enumerateMetadataImpl(
+      unsigned F, const Metadata *MD,
+      SmallVectorImpl<std::pair<const MDNode *, bool>> &Worklist);
 
   unsigned getMetadataFunctionID(const Function *F) const;
-  void EnumerateMDNodeOperands(const Function *F, const MDNode *N);
-  void EnumerateMDNodeOperands(unsigned F, const MDNode *N);
   void EnumerateMetadata(const Function *F, const Metadata *MD);
   void EnumerateMetadata(unsigned F, const Metadata *MD);
   void EnumerateFunctionLocalMetadata(const Function &F,

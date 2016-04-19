@@ -96,7 +96,7 @@ struct InstrProfOptions {
 };
 
 /// Insert frontend instrumentation based profiling.
-ModulePass *createInstrProfilingPass(
+ModulePass *createInstrProfilingLegacyPass(
     const InstrProfOptions &Options = InstrProfOptions());
 
 // Insert AddressSanitizer (address sanity checking) instrumentation

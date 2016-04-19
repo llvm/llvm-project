@@ -524,17 +524,6 @@ namespace llvm {
         bool isOptimized = false, DITemplateParameterArray TParams = nullptr,
         DISubprogram *Decl = nullptr);
 
-    /// FIXME: this is added for dragonegg. Once we update dragonegg
-    /// to call resolve function, this will be removed.
-    DISubprogram *createFunction(DIScopeRef Scope, StringRef Name,
-                                 StringRef LinkageName, DIFile *File,
-                                 unsigned LineNo, DISubroutineType *Ty,
-                                 bool isLocalToUnit, bool isDefinition,
-                                 unsigned ScopeLine, unsigned Flags = 0,
-                                 bool isOptimized = false,
-                                 DITemplateParameterArray TParams = nullptr,
-                                 DISubprogram *Decl = nullptr);
-
     /// Create a new descriptor for the specified C++ method.
     /// See comments in \a DISubprogram* for descriptions of these fields.
     /// \param Scope         Function scope.
