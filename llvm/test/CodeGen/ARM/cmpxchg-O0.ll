@@ -79,3 +79,24 @@ define { i64, i1 } @test_cmpxchg_64(i64* %addr, i64 %desired, i64 %new) nounwind
   %res = cmpxchg i64* %addr, i64 %desired, i64 %new seq_cst monotonic
   ret { i64, i1 } %res
 }
+
+define { i64, i1 } @test_nontrivial_args(i64* %addr, i64 %desired, i64 %new) {
+; CHECK-LABEL: test_nontrivial_args:
+; CHECK:     dmb ish
+; CHECK-NOT: uxt
+; CHECK: [[RETRY:.LBB[0-9]+_[0-9]+]]:
+; CHECK:     ldrexd [[OLDLO:r[0-9]+]], [[OLDHI:r[0-9]+]], [r0]
+; CHECK:     cmp [[OLDLO]], {{r[0-9]+}}
+; CHECK:     sbcs{{(\.w)?}} [[STATUS:r[0-9]+]], [[OLDHI]], {{r[0-9]+}}
+; CHECK:     bne [[DONE:.LBB[0-9]+_[0-9]+]]
+; CHECK:     strexd [[STATUS]], {{r[0-9]+}}, {{r[0-9]+}}, [r0]
+; CHECK:     cmp{{(\.w)?}} [[STATUS]], #0
+; CHECK:     bne [[RETRY]]
+; CHECK: [[DONE]]:
+; CHECK:     dmb ish
+
+  %desired1 = add i64 %desired, 1
+  %new1 = add i64 %new, 1
+  %res = cmpxchg i64* %addr, i64 %desired1, i64 %new1 seq_cst seq_cst
+  ret { i64, i1 } %res
+}
