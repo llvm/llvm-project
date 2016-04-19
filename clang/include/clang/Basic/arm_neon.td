@@ -339,6 +339,7 @@ def OP_MLALHi   : Op<(call "vmlal", $p0, (call "vget_high", $p1),
                                          (call "vget_high", $p2))>;
 def OP_MLALHi_N : Op<(call "vmlal_n", $p0, (call "vget_high", $p1), $p2)>;
 def OP_MLS      : Op<(op "-", $p0, (op "*", $p1, $p2))>;
+def OP_FMLS     : Op<(call "vfma", $p0, (op "-", $p1), $p2)>;
 def OP_MLSL     : Op<(op "-", $p0, (call "vmull", $p1, $p2))>;
 def OP_MLSLHi   : Op<(call "vmlsl", $p0, (call "vget_high", $p1),
                                          (call "vget_high", $p2))>;
@@ -347,7 +348,7 @@ def OP_MUL_N    : Op<(op "*", $p0, (dup $p1))>;
 def OP_MLA_N    : Op<(op "+", $p0, (op "*", $p1, (dup $p2)))>;
 def OP_MLS_N    : Op<(op "-", $p0, (op "*", $p1, (dup $p2)))>;
 def OP_FMLA_N   : Op<(call "vfma", $p0, $p1, (dup $p2))>;
-def OP_FMLS_N   : Op<(call "vfms", $p0, $p1, (dup $p2))>;
+def OP_FMLS_N   : Op<(call "vfma", $p0, (op "-", $p1), (dup $p2))>;
 def OP_MLAL_N   : Op<(op "+", $p0, (call "vmull", $p1, (dup $p2)))>;
 def OP_MLSL_N   : Op<(op "-", $p0, (call "vmull", $p1, (dup $p2)))>;
 def OP_MUL_LN   : Op<(op "*", $p0, (splat $p1, $p2))>;
@@ -377,8 +378,8 @@ def OP_QRDMLAH : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, $p2))>;
 def OP_QRDMLSH : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, $p2))>;
 def OP_QRDMLAH_LN : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, (splat $p2, $p3)))>;
 def OP_QRDMLSH_LN : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, (splat $p2, $p3)))>;
-def OP_FMS_LN   : Op<(call "vfma_lane", $p0, $p1, (op "-", $p2), $p3)>;
-def OP_FMS_LNQ  : Op<(call "vfma_laneq", $p0, $p1, (op "-", $p2), $p3)>;
+def OP_FMS_LN   : Op<(call "vfma_lane", $p0, (op "-", $p1), $p2, $p3)>;
+def OP_FMS_LNQ  : Op<(call "vfma_laneq", $p0, (op "-", $p1), $p2, $p3)>;
 def OP_TRN1     : Op<(shuffle $p0, $p1, (interleave (decimate mask0, 2),
                                                     (decimate mask1, 2)))>;
 def OP_ZIP1     : Op<(shuffle $p0, $p1, (lowhalf (interleave mask0, mask1)))>;
@@ -826,7 +827,7 @@ def VREINTERPRET
 
 let ArchGuard = "defined(__ARM_FEATURE_FMA)" in {
   def VFMA : SInst<"vfma", "dddd", "fQf">;
-  def VFMS : SInst<"vfms", "dddd", "fQf">;
+  def VFMS : SOpInst<"vfms", "dddd", "fQf", OP_FMLS>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -911,7 +912,7 @@ def FDIV : IOpInst<"vdiv", "ddd",  "fdQfQd", OP_DIV>;
 ////////////////////////////////////////////////////////////////////////////////
 // Vector fused multiply-add operations
 def FMLA : SInst<"vfma", "dddd", "dQd">;
-def FMLS : SInst<"vfms", "dddd", "dQd">;
+def FMLS : SOpInst<"vfms", "dddd", "dQd", OP_FMLS>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUL, MLA, MLS, FMA, FMS definitions with scalar argument
