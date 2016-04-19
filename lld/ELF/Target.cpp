@@ -651,6 +651,8 @@ RelExpr X86_64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_X86_64_GOT32:
     return R_GOT_FROM_END;
   case R_X86_64_GOTPCREL:
+  case R_X86_64_GOTPCRELX:
+  case R_X86_64_REX_GOTPCRELX:
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
   }
@@ -1508,7 +1510,7 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
       return R_MIPS_GOT_LOCAL;
     if (!S.isPreemptible())
       return R_MIPS_GOT;
-    return R_GOT;
+    return R_GOT_OFF;
   }
 }
 
@@ -1724,14 +1726,12 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     write32<E>(Loc, (Instr & ~0x3ffffff) | (Val >> 2));
     break;
   }
+  case R_MIPS_GOT16:
+    checkInt<16>(Val, Type);
+  // fallthrough
   case R_MIPS_CALL16:
-  case R_MIPS_GOT16: {
-    int64_t V = Val - getMipsGpAddr<ELFT>();
-    if (Type == R_MIPS_GOT16)
-      checkInt<16>(V, Type);
-    writeMipsLo16<E>(Loc, V);
+    writeMipsLo16<E>(Loc, Val);
     break;
-  }
   case R_MIPS_GPREL16: {
     int64_t V = Val - getMipsGpAddr<ELFT>();
     checkInt<16>(V, Type);

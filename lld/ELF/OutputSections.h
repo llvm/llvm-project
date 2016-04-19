@@ -112,8 +112,8 @@ public:
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
   bool empty() const { return MipsLocalEntries == 0 && Entries.empty(); }
-  uintX_t getMipsLocalEntryAddr(uintX_t EntryValue);
-  uintX_t getMipsLocalPageAddr(uintX_t Addr);
+  uintX_t getMipsLocalEntryOffset(uintX_t EntryValue);
+  uintX_t getMipsLocalPageOffset(uintX_t Addr);
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;
   uintX_t getGlobalDynOffset(const SymbolBody &B) const;
   uintX_t getNumEntries() const { return Entries.size(); }

@@ -31,6 +31,7 @@ enum RelExpr {
   R_GOT,
   R_GOTONLY_PC,
   R_GOTREL,
+  R_GOT_OFF,
   R_GOT_FROM_END,
   R_GOT_PAGE_PC,
   R_GOT_PC,

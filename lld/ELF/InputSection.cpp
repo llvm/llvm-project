@@ -211,18 +211,20 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
     // relocations because they use the following expression to calculate
     // the relocation's result for local symbol: S + A + GP0 - G.
     return Body.getVA<ELFT>(A) + File.getMipsGp0();
+  case R_GOT_OFF:
+    return Body.getGotOffset<ELFT>() + A;
   case R_MIPS_GOT_LOCAL:
     // If relocation against MIPS local symbol requires GOT entry, this entry
     // should be initialized by 'page address'. This address is high 16-bits
     // of sum the symbol's value and the addend.
-    return Out<ELFT>::Got->getMipsLocalPageAddr(Body.getVA<ELFT>(A));
+    return Out<ELFT>::Got->getMipsLocalPageOffset(Body.getVA<ELFT>(A));
   case R_MIPS_GOT:
     // For non-local symbols GOT entries should contain their full
     // addresses. But if such symbol cannot be preempted, we do not
     // have to put them into the "global" part of GOT and use dynamic
     // linker to determine their actual addresses. That is why we
     // create GOT entries for them in the "local" part of GOT.
-    return Out<ELFT>::Got->getMipsLocalEntryAddr(Body.getVA<ELFT>(A));
+    return Out<ELFT>::Got->getMipsLocalEntryOffset(Body.getVA<ELFT>(A));
   case R_PPC_OPD: {
     uint64_t SymVA = Body.getVA<ELFT>(A);
     // If we have an undefined weak symbol, we might get here with a symbol
