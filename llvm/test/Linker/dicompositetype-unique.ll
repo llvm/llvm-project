@@ -21,11 +21,11 @@
 !named = !{!0, !1}
 
 ; Check both directions.
-; CHECK:        !1 = !DICompositeType(
+; CHECK:        !1 = distinct !DICompositeType(
 ; CHECK-SAME:                         name: "T1"
 ; CHECK-SAME:                         identifier: "T"
 ; CHECK-NOT:       identifier: "T"
-; REVERSE:      !1 = !DICompositeType(
+; REVERSE:      !1 = distinct !DICompositeType(
 ; REVERSE-SAME:                       name: "T2"
 ; REVERSE-SAME:                       identifier: "T"
 ; REVERSE-NOT:     identifier: "T"
