@@ -4,6 +4,10 @@
 ; RUN:   | %llc_dwarf -dwarf-linkage-names=Enable -filetype=obj -O0 \
 ; RUN:   | llvm-dwarfdump -debug-dump=info - \
 ; RUN:   | FileCheck %s
+; RUN: llvm-link %p/type-unique-odr-b.ll %s -S -o - \
+; RUN:   | %llc_dwarf -dwarf-linkage-names=Enable -filetype=obj -O0 \
+; RUN:   | llvm-dwarfdump -debug-dump=info - \
+; RUN:   | FileCheck %s
 ;
 ; Test ODR-based type uniquing for C++ class members.
 ; rdar://problem/15851313.

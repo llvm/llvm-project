@@ -32,6 +32,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Dwarf.h"
 #include <vector>
 
 namespace llvm {
@@ -376,11 +377,41 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
            ExtraData == RHS->getRawExtraData();
   }
   unsigned getHashValue() const {
+    // If this is a member inside an ODR type, only hash the type and the name.
+    // Otherwise the hash will be stronger than
+    // MDNodeSubsetEqualImpl::isODRMember().
+    if (Tag == dwarf::DW_TAG_member && Name && Scope && isa<MDString>(Scope))
+      return hash_combine(Name, Scope);
+
     // Intentionally computes the hash on a subset of the operands for
     // performance reason. The subset has to be significant enough to avoid
     // collision "most of the time". There is no correctness issue in case of
     // collision because of the full check above.
     return hash_combine(Tag, Name, File, Line, Scope, BaseType, Flags);
+  }
+};
+
+template <> struct MDNodeSubsetEqualImpl<DIDerivedType> {
+  typedef MDNodeKeyImpl<DIDerivedType> KeyTy;
+  static bool isSubsetEqual(const KeyTy &LHS, const DIDerivedType *RHS) {
+    return isODRMember(LHS.Tag, LHS.Scope, LHS.Name, RHS);
+  }
+  static bool isSubsetEqual(const DIDerivedType *LHS, const DIDerivedType *RHS) {
+    return isODRMember(LHS->getTag(), LHS->getRawScope(), LHS->getRawName(),
+                       RHS);
+  }
+
+  /// Subprograms compare equal if they declare the same function in an ODR
+  /// type.
+  static bool isODRMember(unsigned Tag, const Metadata *Scope,
+                          const MDString *Name, const DIDerivedType *RHS) {
+    // Check whether the LHS is eligible.
+    if (Tag != dwarf::DW_TAG_member || !Name || !Scope || !isa<MDString>(Scope))
+      return false;
+
+    // Compare to the RHS.
+    return Tag == RHS->getTag() && Name == RHS->getRawName() &&
+           Scope == RHS->getRawScope();
   }
 };
 
@@ -537,11 +568,44 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
            Variables == RHS->getRawVariables();
   }
   unsigned getHashValue() const {
+    // If this is a declaration inside an ODR type, only hash the type and the
+    // name.  Otherwise the hash will be stronger than
+    // MDNodeSubsetEqualImpl::isDeclarationOfODRMember().
+    if (!IsDefinition && LinkageName && Scope && isa<MDString>(Scope))
+      return hash_combine(LinkageName, Scope);
+
     // Intentionally computes the hash on a subset of the operands for
     // performance reason. The subset has to be significant enough to avoid
     // collision "most of the time". There is no correctness issue in case of
     // collision because of the full check above.
     return hash_combine(Name, Scope, File, Type, Line);
+  }
+};
+
+template <> struct MDNodeSubsetEqualImpl<DISubprogram> {
+  typedef MDNodeKeyImpl<DISubprogram> KeyTy;
+  static bool isSubsetEqual(const KeyTy &LHS, const DISubprogram *RHS) {
+    return isDeclarationOfODRMember(LHS.IsDefinition, LHS.Scope,
+                                    LHS.LinkageName, RHS);
+  }
+  static bool isSubsetEqual(const DISubprogram *LHS, const DISubprogram *RHS) {
+    return isDeclarationOfODRMember(LHS->isDefinition(), LHS->getRawScope(),
+                                    LHS->getRawLinkageName(), RHS);
+  }
+
+  /// Subprograms compare equal if they declare the same function in an ODR
+  /// type.
+  static bool isDeclarationOfODRMember(bool IsDefinition, const Metadata *Scope,
+                                       const MDString *LinkageName,
+                                       const DISubprogram *RHS) {
+    // Check whether the LHS is eligible.
+    if (IsDefinition || !Scope || !LinkageName || !Scope ||
+        !isa<MDString>(Scope))
+      return false;
+
+    // Compare to the RHS.
+    return IsDefinition == RHS->isDefinition() && Scope == RHS->getRawScope() &&
+           LinkageName == RHS->getRawLinkageName();
   }
 };
 

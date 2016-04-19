@@ -3919,7 +3919,10 @@ The following ``tag:`` values are valid:
 
 ``DW_TAG_member`` is used to define a member of a :ref:`composite type
 <DICompositeType>`. The type of the member is the ``baseType:``. The
-``offset:`` is the member's bit offset.
+``offset:`` is the member's bit offset.  If the composite type has a non-empty
+``identifier:``, then it respects ODR rules.  In that case, the ``scope:``
+reference will be a :ref:`metadata string <metadata-string>`, and the member
+will be uniqued solely based on its ``name:`` and ``scope:``.
 
 ``DW_TAG_inheritance`` and ``DW_TAG_friend`` are used in the ``elements:``
 field of :ref:`composite types <DICompositeType>` to describe parents and
@@ -4068,6 +4071,12 @@ metadata. The ``variables:`` field points at :ref:`variables <DILocalVariable>`
 that must be retained, even if their IR counterparts are optimized out of
 the IR. The ``type:`` field must point at an :ref:`DISubroutineType`.
 
+When ``isDefinition: false``, subprograms describe a declaration in the type
+tree as opposed to a definition of a funciton.  If the scope is a
+:ref:`metadata string <metadata-string>` then the composite type follows ODR
+rules, and the subprogram declaration is uniqued based only on its
+``linkageName:`` and ``scope:``.
+
 .. code-block:: llvm
 
     define void @_Z3foov() !dbg !0 {
@@ -4076,7 +4085,7 @@ the IR. The ``type:`` field must point at an :ref:`DISubroutineType`.
 
     !0 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1,
                                 file: !2, line: 7, type: !3, isLocal: true,
-                                isDefinition: false, scopeLine: 8,
+                                isDefinition: true, scopeLine: 8,
                                 containingType: !4,
                                 virtuality: DW_VIRTUALITY_pure_virtual,
                                 virtualIndex: 10, flags: DIFlagPrototyped,
