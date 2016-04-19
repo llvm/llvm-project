@@ -804,16 +804,16 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     Count = TripCount;
 
   unsigned NumInlineCandidates;
-  bool notDuplicatable;
+  bool NotDuplicatable;
   unsigned LoopSize =
-      ApproximateLoopSize(L, NumInlineCandidates, notDuplicatable, TTI, &AC);
+      ApproximateLoopSize(L, NumInlineCandidates, NotDuplicatable, TTI, &AC);
   DEBUG(dbgs() << "  Loop Size = " << LoopSize << "\n");
 
   // When computing the unrolled size, note that the conditional branch on the
   // backedge and the comparison feeding it are not replicated like the rest of
   // the loop body (which is why 2 is subtracted).
   uint64_t UnrolledSize = (uint64_t)(LoopSize-2) * Count + 2;
-  if (notDuplicatable) {
+  if (NotDuplicatable) {
     DEBUG(dbgs() << "  Not unrolling loop which contains non-duplicatable"
                  << " instructions.\n");
     return false;
