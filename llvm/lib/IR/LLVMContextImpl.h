@@ -211,6 +211,17 @@ public:
 template <class NodeTy> struct MDNodeKeyImpl;
 template <class NodeTy> struct MDNodeInfo;
 
+/// Configuration point for MDNodeInfo::isEqual().
+template <class NodeTy> struct MDNodeSubsetEqualImpl {
+  typedef MDNodeKeyImpl<NodeTy> KeyTy;
+  static bool isSubsetEqual(const KeyTy &LHS, const NodeTy *RHS) {
+    return false;
+  }
+  static bool isSubsetEqual(const NodeTy *LHS, const NodeTy *RHS) {
+    return false;
+  }
+};
+
 /// \brief DenseMapInfo for MDTuple.
 ///
 /// Note that we don't need the is-function-local bit, since that's implicit in
@@ -845,6 +856,7 @@ template <> struct MDNodeKeyImpl<DIMacroFile> {
 /// \brief DenseMapInfo for MDNode subclasses.
 template <class NodeTy> struct MDNodeInfo {
   typedef MDNodeKeyImpl<NodeTy> KeyTy;
+  typedef MDNodeSubsetEqualImpl<NodeTy> SubsetEqualTy;
   static inline NodeTy *getEmptyKey() {
     return DenseMapInfo<NodeTy *>::getEmptyKey();
   }
@@ -858,10 +870,14 @@ template <class NodeTy> struct MDNodeInfo {
   static bool isEqual(const KeyTy &LHS, const NodeTy *RHS) {
     if (RHS == getEmptyKey() || RHS == getTombstoneKey())
       return false;
-    return LHS.isKeyOf(RHS);
+    return SubsetEqualTy::isSubsetEqual(LHS, RHS) || LHS.isKeyOf(RHS);
   }
   static bool isEqual(const NodeTy *LHS, const NodeTy *RHS) {
-    return LHS == RHS;
+    if (LHS == RHS)
+      return true;
+    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+      return false;
+    return SubsetEqualTy::isSubsetEqual(LHS, RHS);
   }
 };
 
