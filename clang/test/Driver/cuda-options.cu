@@ -22,22 +22,45 @@
 // RUN: | FileCheck -check-prefix NODEVICE -check-prefix HOST \
 // RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
 
-// Same test as above, but with preceeding --cuda-device-only to make sure only
-// the last option has an effect.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only --cuda-host-only %s 2>&1 \
-// RUN: | FileCheck -check-prefix NODEVICE -check-prefix HOST \
-// RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
-
 // Verify that --cuda-device-only disables host-side compilation and linking.
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix NOHOST -check-prefix NOLINK %s
 
-// Same test as above, but with preceeding --cuda-host-only to make sure only
-// the last option has an effect.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-host-only --cuda-device-only %s 2>&1 \
+// Check that the last of --cuda-compile-host-device, --cuda-host-only, and
+// --cuda-device-only wins.
+
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
+// RUN:    --cuda-host-only %s 2>&1 \
+// RUN: | FileCheck -check-prefix NODEVICE -check-prefix HOST \
+// RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
+
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-compile-host-device \
+// RUN:    --cuda-host-only %s 2>&1 \
+// RUN: | FileCheck -check-prefix NODEVICE -check-prefix HOST \
+// RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
+
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-host-only \
+// RUN:    --cuda-device-only %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix NOHOST -check-prefix NOLINK %s
+
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-compile-host-device \
+// RUN:    --cuda-device-only %s 2>&1 \
+// RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
+// RUN:    -check-prefix NOHOST -check-prefix NOLINK %s
+
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-host-only \
+// RUN:   --cuda-compile-host-device %s 2>&1 \
+// RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
+// RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
+// RUN:    -check-prefix LINK %s
+
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
+// RUN:   --cuda-compile-host-device %s 2>&1 \
+// RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
+// RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
+// RUN:    -check-prefix LINK %s
 
 // Verify that --cuda-gpu-arch option passes the correct GPU archtecture to
 // device compilation.

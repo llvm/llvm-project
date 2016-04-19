@@ -53,6 +53,7 @@ struct PrintingPolicy;
 class RecordDecl;
 class Stmt;
 class StoredDeclsMap;
+class TemplateDecl;
 class TranslationUnitDecl;
 class UsingDirectiveDecl;
 }
@@ -909,6 +910,10 @@ public:
             DeclKind <= Decl::lastFunction) ||
            DeclKind == FunctionTemplate;
   }
+
+  /// \brief If this is a declaration that describes some template, this
+  /// method returns that template declaration.
+  TemplateDecl *getDescribedTemplate() const;
 
   /// \brief Returns the function itself, or the templated function if this is a
   /// function template.

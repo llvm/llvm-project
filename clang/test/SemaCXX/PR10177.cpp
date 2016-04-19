@@ -54,6 +54,7 @@ namespace N {
 
 namespace { template<typename> extern int n; }
 template<typename T> int g() { return n<int>; }
+namespace { extern template int n<int>; }
 
 #endif
 

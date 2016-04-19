@@ -196,6 +196,17 @@ bool Decl::isTemplateDecl() const {
   return isa<TemplateDecl>(this);
 }
 
+TemplateDecl *Decl::getDescribedTemplate() const {
+  if (auto *FD = dyn_cast<FunctionDecl>(this))
+    return FD->getDescribedFunctionTemplate();
+  else if (auto *RD = dyn_cast<CXXRecordDecl>(this))
+    return RD->getDescribedClassTemplate();
+  else if (auto *VD = dyn_cast<VarDecl>(this))
+    return VD->getDescribedVarTemplate();
+
+  return nullptr;
+}
+
 const DeclContext *Decl::getParentFunctionOrMethod() const {
   for (const DeclContext *DC = getDeclContext();
        DC && !DC->isTranslationUnit() && !DC->isNamespace(); 

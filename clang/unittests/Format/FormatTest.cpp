@@ -5621,6 +5621,10 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                AlignLeft);
   verifyFormat("Deleted& operator=(const Deleted&) &;", AlignLeft);
   verifyFormat("SomeType MemberFunction(const Deleted&) &;", AlignLeft);
+  verifyFormat("auto Function(T t) & -> void {}", AlignLeft);
+  verifyFormat("auto Function(T... t) & -> void {}", AlignLeft);
+  verifyFormat("auto Function(T) & -> void {}", AlignLeft);
+  verifyFormat("auto Function(T) & -> void;", AlignLeft);
 
   FormatStyle Spaces = getLLVMStyle();
   Spaces.SpacesInCStyleCastParentheses = true;
@@ -6119,6 +6123,10 @@ TEST_F(FormatTest, BreaksLongDeclarations) {
                "LooooooooooooooooooooooooooooooooooongFunctionDefinition() {}");
   verifyFormat("decltype(LoooooooooooooooooooooooooooooooooooooooongName)\n"
                "LooooooooooooooooooooooooooooooooooongFunctionDefinition() {}");
+  verifyFormat("LoooooooooooooooooooooooooooooooooooooooongReturnType\n"
+               "LooooooooooooooooooooooooooongFunctionDeclaration(T... t);");
+  verifyFormat("LoooooooooooooooooooooooooooooooooooooooongReturnType\n"
+               "LooooooooooooooooooooooooooongFunctionDeclaration(T /*t*/) {}");
   FormatStyle Indented = getLLVMStyle();
   Indented.IndentWrappedFunctionNames = true;
   verifyFormat("LoooooooooooooooooooooooooooooooooooooooongReturnType\n"
