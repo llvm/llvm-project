@@ -746,8 +746,7 @@ void Mapper::remapInstruction(Instruction *I) {
   // Remap phi nodes' incoming blocks.
   if (PHINode *PN = dyn_cast<PHINode>(I)) {
     for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-      // FIXME: Use Mapper::mapValue (but note the missing Materializer flag).
-      Value *V = MapValue(PN->getIncomingBlock(i), VM, Flags);
+      Value *V = mapValue(PN->getIncomingBlock(i));
       // If we aren't ignoring missing entries, assert that something happened.
       if (V)
         PN->setIncomingBlock(i, cast<BasicBlock>(V));
