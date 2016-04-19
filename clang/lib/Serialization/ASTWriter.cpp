@@ -5703,6 +5703,9 @@ static bool isImportedDeclContext(ASTReader *Chain, const Decl *D) {
 }
 
 void ASTWriter::AddedVisibleDecl(const DeclContext *DC, const Decl *D) {
+   assert(DC->isLookupContext() &&
+          "Should not add lookup results to non-lookup contexts!");
+
   // TU is handled elsewhere.
   if (isa<TranslationUnitDecl>(DC))
     return;
