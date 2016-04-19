@@ -492,12 +492,24 @@ bool MDNodeMapper::mapOperand(const Metadata *Op) {
     return false;
 
   if (Optional<Metadata *> MappedOp = M.mapSimpleMetadata(Op)) {
-    assert((isa<MDString>(Op) || M.getVM().getMappedMD(Op)) &&
-           "Expected result to be memoized");
+    if (auto *CMD = dyn_cast<ConstantAsMetadata>(Op))
+      assert((!*MappedOp || M.getVM().count(CMD->getValue()) ||
+              M.getVM().getMappedMD(Op)) &&
+             "Expected Value to be memoized");
+    else
+      assert((isa<MDString>(Op) || M.getVM().getMappedMD(Op)) &&
+             "Expected result to be memoized");
     return *MappedOp != Op;
   }
 
   return push(*cast<MDNode>(Op)).HasChangedAddress;
+}
+
+static ConstantAsMetadata *wrapConstantAsMetadata(const ConstantAsMetadata &CMD,
+                                                  Value *MappedV) {
+  if (CMD.getValue() == MappedV)
+    return const_cast<ConstantAsMetadata *>(&CMD);
+  return MappedV ? ConstantAsMetadata::getConstant(MappedV) : nullptr;
 }
 
 Optional<Metadata *> MDNodeMapper::getMappedOp(const Metadata *Op) const {
@@ -509,6 +521,9 @@ Optional<Metadata *> MDNodeMapper::getMappedOp(const Metadata *Op) const {
 
   if (isa<MDString>(Op))
     return const_cast<Metadata *>(Op);
+
+  if (auto *CMD = dyn_cast<ConstantAsMetadata>(Op))
+    return wrapConstantAsMetadata(*CMD, M.getVM().lookup(CMD->getValue()));
 
   return None;
 }
@@ -707,6 +722,19 @@ Metadata *MDNodeMapper::map(const MDNode &FirstN) {
   return *getMappedOp(&FirstN);
 }
 
+namespace {
+
+struct MapMetadataDisabler {
+  ValueToValueMapTy &VM;
+
+  MapMetadataDisabler(ValueToValueMapTy &VM) : VM(VM) {
+    VM.disableMapMetadata();
+  }
+  ~MapMetadataDisabler() { VM.enableMapMetadata(); }
+};
+
+} // end namespace
+
 Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
   // If the value already exists in the map, use it.
   if (Optional<Metadata *> NewMD = getVM().getMappedMD(MD))
@@ -722,14 +750,13 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
 
   if (auto *CMD = dyn_cast<ConstantAsMetadata>(MD)) {
     // Disallow recursion into metadata mapping through mapValue.
-    getVM().disableMapMetadata();
-    Value *MappedV = mapValue(CMD->getValue());
-    getVM().enableMapMetadata();
+    MapMetadataDisabler MMD(getVM());
 
-    if (CMD->getValue() == MappedV)
-      return mapToSelf(MD);
-
-    return mapToMetadata(MD, MappedV ? ValueAsMetadata::get(MappedV) : nullptr);
+    // Don't memoize ConstantAsMetadata.  Instead of lasting until the
+    // LLVMContext is destroyed, they can be deleted when the GlobalValue they
+    // reference is destructed.  These aren't super common, so the extra
+    // indirection isn't that expensive.
+    return wrapConstantAsMetadata(*CMD, mapValue(CMD->getValue()));
   }
 
   assert(isa<MDNode>(MD) && "Expected a metadata node");
