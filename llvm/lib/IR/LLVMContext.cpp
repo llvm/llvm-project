@@ -316,8 +316,7 @@ void LLVMContext::enableDebugTypeODRUniquing() {
   if (pImpl->DITypeMap)
     return;
 
-  pImpl->DITypeMap =
-      llvm::make_unique<DenseMap<const MDString *, DICompositeType *>>();
+  pImpl->DITypeMap.emplace();
 }
 
 void LLVMContext::disableDebugTypeODRUniquing() { pImpl->DITypeMap.reset(); }
