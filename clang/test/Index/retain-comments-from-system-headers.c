@@ -13,7 +13,7 @@ int user_function(int a);
 // RUN: c-index-test -test-load-source all %s -fretain-comments-from-system-headers -I %S/Inputs | FileCheck %s -check-prefix=CHECK-RETAIN
 
 // Modules:
-// RUN: c-index-test -test-load-source all %s -I %S/Inputs -fmodules -fmodules-cache-path=%t/cache -fmodule-map-file=%S/Inputs/retain-comments-from-system-headers-module.map | FileCheck %s -check-prefix=CHECK
+// RUN: c-index-test -test-load-source all %s -I %S/Inputs -fmodules -fmodules-cache-path=%t/cache -fmodule-map-file=%S/Inputs/retain-comments-from-system-headers-module.map | FileCheck %s
 // RUN: c-index-test -test-load-source all %s -fretain-comments-from-system-headers -I %S/Inputs -fmodules -fmodules-cache-path=%t/cache -fmodule-map-file=%S/Inputs/retain-comments-from-system-headers-module.map | FileCheck %s -check-prefix=CHECK-RETAIN
 
 // CHECK: retain-comments-from-system-headers.h:7:5: FunctionDecl=system_function:7:5 Extent=[7:1 - 7:27]

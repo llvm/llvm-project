@@ -35,6 +35,10 @@ void test_result_of_imp()
 #if TEST_STD_VER > 11
     static_assert((std::is_same<std::result_of_t<T>, U>::value), "");
 #endif
+#if TEST_STD_VER > 14
+    static_assert(std::is_callable<T>::value, "");
+    static_assert(std::is_callable<T, U>::value, "");
+#endif
 }
 
 int main()

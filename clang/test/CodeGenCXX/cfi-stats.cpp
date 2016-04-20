@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall,cfi-nvcall,cfi-derived-cast,cfi-unrelated-cast,cfi-icall -fsanitize-stats -emit-llvm -o - %s | FileCheck --check-prefix=CHECK %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall,cfi-nvcall,cfi-derived-cast,cfi-unrelated-cast,cfi-icall -fsanitize-stats -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: [[STATS:@[^ ]*]] = internal global { i8*, i32, [5 x [2 x i8*]] } { i8* null, i32 5, [5 x [2 x i8*]]
 // CHECK: {{\[\[}}2 x i8*] zeroinitializer,

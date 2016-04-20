@@ -422,11 +422,11 @@ int main() {
 // CHECK: ret void
 
 // CHECK: define internal i32 [[TASK_ENTRY]](i32, [[KMP_TASK_TMAIN_TY]]* noalias)
-
-// CHECK: [[PRIV_T_VAR_ADDR:%.+]] = alloca i32*,
-// CHECK: [[PRIV_VEC_ADDR:%.+]] = alloca [2 x i32]*,
-// CHECK: [[PRIV_S_ARR_ADDR:%.+]] = alloca [2 x [[S_INT_TY]]]*,
-// CHECK: [[PRIV_VAR_ADDR:%.+]] = alloca [[S_INT_TY]]*,
+// CHECK: alloca i32*,
+// CHECK-DAG: [[PRIV_T_VAR_ADDR:%.+]] = alloca i32*,
+// CHECK-DAG: [[PRIV_VEC_ADDR:%.+]] = alloca [2 x i32]*,
+// CHECK-DAG: [[PRIV_S_ARR_ADDR:%.+]] = alloca [2 x [[S_INT_TY]]]*,
+// CHECK-DAG: [[PRIV_VAR_ADDR:%.+]] = alloca [[S_INT_TY]]*,
 // CHECK: store void (i8*, ...)* bitcast (void ([[PRIVATES_TMAIN_TY]]*, i32**, [2 x i32]**, [2 x [[S_INT_TY]]]**, [[S_INT_TY]]**)* [[PRIVATES_MAP_FN]] to void (i8*, ...)*), void (i8*, ...)** [[MAP_FN_ADDR:%.+]],
 // CHECK: [[MAP_FN:%.+]] = load void (i8*, ...)*, void (i8*, ...)** [[MAP_FN_ADDR]],
 // CHECK: call void (i8*, ...) [[MAP_FN]](i8* %{{.+}}, i32** [[PRIV_T_VAR_ADDR]], [2 x i32]** [[PRIV_VEC_ADDR]], [2 x [[S_INT_TY]]]** [[PRIV_S_ARR_ADDR]], [[S_INT_TY]]** [[PRIV_VAR_ADDR]])

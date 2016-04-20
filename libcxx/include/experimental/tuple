@@ -57,9 +57,10 @@ _LIBCPP_CONSTEXPR size_t tuple_size_v = tuple_size<_Tp>::value;
 
 template <class _Fn, class _Tuple, size_t ..._Id>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_CONSTEXPR_AFTER_CXX11
 decltype(auto) __apply_tuple_impl(_Fn && __f, _Tuple && __t,
                                   integer_sequence<size_t, _Id...>) {
-    return _VSTD::__invoke(
+    return _VSTD::__invoke_constexpr(
         _VSTD::forward<_Fn>(__f),
         _VSTD::get<_Id>(_VSTD::forward<_Tuple>(__t))...
     );

@@ -200,7 +200,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   // Any DebugInfoKind implies GenDwarfForAssembly.
   Opts.GenDwarfForAssembly = Args.hasArg(OPT_debug_info_kind_EQ);
   Opts.CompressDebugSections = Args.hasArg(OPT_compress_debug_sections);
-  Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 0, Diags);
+  Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 2, Diags);
   Opts.DwarfDebugFlags = Args.getLastArgValue(OPT_dwarf_debug_flags);
   Opts.DwarfDebugProducer = Args.getLastArgValue(OPT_dwarf_debug_producer);
   Opts.DebugCompilationDir = Args.getLastArgValue(OPT_fdebug_compilation_dir);

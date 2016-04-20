@@ -4647,11 +4647,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F);
   }
 
-  if (BuiltinID == AArch64::BI__builtin_thread_pointer) {
-    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_thread_pointer);
-    return Builder.CreateCall(F);
-  }
-
   // CRC32
   Intrinsic::ID CRCIntrinsicID = Intrinsic::not_intrinsic;
   switch (BuiltinID) {
@@ -5318,22 +5313,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *F = CGM.getIntrinsic(Intrinsic::fma, Ty);
     Ops[2] = Builder.CreateExtractElement(Ops[2], Ops[3], "extract");
     return Builder.CreateCall(F, {Ops[1], Ops[2], Ops[0]});
-  }
-  case NEON::BI__builtin_neon_vfms_v:
-  case NEON::BI__builtin_neon_vfmsq_v: {  // Only used for FP types
-    // FIXME: probably remove when we no longer support aarch64_simd.h
-    // (arm_neon.h delegates to vfma).
-
-    // The ARM builtins (and instructions) have the addend as the first
-    // operand, but the 'fma' intrinsics have it last. Swap it around here.
-    Value *Subtrahend = Ops[0];
-    Value *Multiplicand = Ops[2];
-    Ops[0] = Multiplicand;
-    Ops[2] = Subtrahend;
-    Ops[1] = Builder.CreateBitCast(Ops[1], VTy);
-    Ops[1] = Builder.CreateFNeg(Ops[1]);
-    Int = Intrinsic::fma;
-    return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "fmls");
   }
   case NEON::BI__builtin_neon_vmull_v:
     // FIXME: improve sharing scheme to cope with 3 alternative LLVM intrinsics.

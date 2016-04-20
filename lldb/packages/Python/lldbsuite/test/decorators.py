@@ -15,7 +15,6 @@ import unittest2
 
 # LLDB modules
 import use_lldb_suite
-import lldbtest
 
 import lldb
 from . import configuration
@@ -512,8 +511,8 @@ def skipUnlessCompilerRt(func):
 def skipUnlessClangModules():
     """Decorate the item to skip test unless Clang -gmodules flag is supported."""
     def is_compiler_clang_with_gmodules(self):
-        builder = lldbtest.builder_module()
-        compiler_path = builder.getCompiler()
+        compiler_path = self.getCompiler()
+        print(compiler_path)
         compiler = os.path.basename(compiler_path)
         if compiler != "clang":
             return "Test requires clang as compiler"

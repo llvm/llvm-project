@@ -455,17 +455,25 @@ public:
       OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen);
 
   /// \brief Emits outlined function for the OpenMP task directive \a D. This
-  /// outlined function has type void(*)(kmp_int32 ThreadID, kmp_int32
-  /// PartID, struct context_vars*).
+  /// outlined function has type void(*)(kmp_int32 ThreadID, struct task_t*
+  /// TaskT).
   /// \param D OpenMP directive.
   /// \param ThreadIDVar Variable for thread id in the current OpenMP region.
+  /// \param PartIDVar Variable for partition id in the current OpenMP untied
+  /// task region.
+  /// \param TaskTVar Variable for task_t argument.
   /// \param InnermostKind Kind of innermost directive (for simple directives it
   /// is a directive itself, for combined - its innermost directive).
   /// \param CodeGen Code generation sequence for the \a D directive.
+  /// \param Tied true if task is generated for tied task, false otherwise.
+  /// \param NumberOfParts Number of parts in untied task. Ignored for tied
+  /// tasks.
   ///
   virtual llvm::Value *emitTaskOutlinedFunction(
       const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
-      OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen);
+      const VarDecl *PartIDVar, const VarDecl *TaskTVar,
+      OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen,
+      bool Tied, unsigned &NumberOfParts);
 
   /// \brief Cleans up references to the objects in finished function.
   ///
@@ -731,6 +739,7 @@ public:
   /// \param Tied true if the task is tied (the task is tied to the thread that
   /// can suspend its task region), false - untied (the task is not tied to any
   /// thread).
+  /// \param NumberOfParts Number of parts for untied task.
   /// \param Final Contains either constant bool value, or llvm::Value * of i1
   /// type for final clause. If the value is true, the task forces all of its
   /// child tasks to become final and included tasks.
@@ -757,8 +766,8 @@ public:
   virtual void emitTaskCall(
       CodeGenFunction &CGF, SourceLocation Loc, const OMPExecutableDirective &D,
       bool Tied, llvm::PointerIntPair<llvm::Value *, 1, bool> Final,
-      llvm::Value *TaskFunction, QualType SharedsTy, Address Shareds,
-      const Expr *IfCond, ArrayRef<const Expr *> PrivateVars,
+      unsigned NumberOfParts, llvm::Value *TaskFunction, QualType SharedsTy,
+      Address Shareds, const Expr *IfCond, ArrayRef<const Expr *> PrivateVars,
       ArrayRef<const Expr *> PrivateCopies,
       ArrayRef<const Expr *> FirstprivateVars,
       ArrayRef<const Expr *> FirstprivateCopies,

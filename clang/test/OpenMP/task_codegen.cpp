@@ -230,6 +230,19 @@ int main() {
     a = 4;
     c = 5;
   }
+// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i32 0, i64 32, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_T]]{{.*}}*)* [[TASK_ENTRY6:@.+]] to i32 (i32, i8*)*))
+// CHECK: [[DESTRUCTORS_REF_PTR:%.+]] = getelementptr inbounds [[KMP_TASK_T]]{{.*}}* {{%.+}}, i32 0, i32 3
+// CHECK: store i32 (i32, i8*)* null, i32 (i32, i8*)** [[DESTRUCTORS_REF_PTR]]
+// CHECK: call i32 @__kmpc_omp_task([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i8* [[ORIG_TASK_PTR]])
+#pragma omp task untied
+  {
+    S s1;
+#pragma omp task
+    a = 4;
+#pragma omp taskyield
+    s1 = S();
+#pragma omp taskwait
+  }
   return a;
 }
 // CHECK: define internal i32 [[TASK_ENTRY1]](i32, [[KMP_TASK_T]]{{.*}}* noalias)
@@ -240,16 +253,42 @@ int main() {
 // CHECK: store i32 10, i32* %{{.+}}
 
 // CHECK: define internal i32 [[TASK_ENTRY2]](i32, [[KMP_TASK_T]]{{.*}}* noalias)
-// CHECK: store i32 1, i32* [[A_PTR:@.+]]
+// CHECK: store i32 1, i32* [[A_PTR]]
 
 // CHECK: define internal i32 [[TASK_ENTRY3]](i32, [[KMP_TASK_T]]{{.*}}* noalias)
-// CHECK: store i32 2, i32* [[A_PTR:@.+]]
+// CHECK: store i32 2, i32* [[A_PTR]]
 
 // CHECK: define internal i32 [[TASK_ENTRY4]](i32, [[KMP_TASK_T]]{{.*}}* noalias)
-// CHECK: store i32 3, i32* [[A_PTR:@.+]]
+// CHECK: store i32 3, i32* [[A_PTR]]
 
 // CHECK: define internal i32 [[TASK_ENTRY5]](i32, [[KMP_TASK_T]]{{.*}}* noalias)
-// CHECK: store i32 4, i32* [[A_PTR:@.+]]
+// CHECK: store i32 4, i32* [[A_PTR]]
 // CHECK: store i32 5, i32* [[C_PTR:%.+]], align 128
+
+// CHECK: define internal i32
+// CHECK: store i32 4, i32* [[A_PTR]]
+
+// CHECK: define internal i32 [[TASK_ENTRY6]](i32, [[KMP_TASK_T]]{{.*}}* noalias)
+// CHECK: switch i32 %{{.+}}, label
+// CHECK: load i32*, i32** %
+// CHECK: store i32 1, i32* %
+// CHECK: call i32 @__kmpc_omp_task(%
+
+// CHECK: call i8* @__kmpc_omp_task_alloc(
+// CHECK: store i32 (i32, i8*)* null, i32 (i32, i8*)** %
+// CHECK: call i32 @__kmpc_omp_task(%
+// CHECK: load i32*, i32** %
+// CHECK: store i32 2, i32* %
+// CHECK: call i32 @__kmpc_omp_task(%
+
+// CHECK: call i32 @__kmpc_omp_taskyield(%
+// CHECK: load i32*, i32** %
+// CHECK: store i32 3, i32* %
+// CHECK: call i32 @__kmpc_omp_task(%
+
+// CHECK: call i32 @__kmpc_omp_taskwait(%
+// CHECK: load i32*, i32** %
+// CHECK: store i32 4, i32* %
+// CHECK: call i32 @__kmpc_omp_task(%
 #endif
 

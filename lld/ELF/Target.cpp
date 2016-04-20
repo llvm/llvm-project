@@ -1510,7 +1510,7 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
       return R_MIPS_GOT_LOCAL;
     if (!S.isPreemptible())
       return R_MIPS_GOT;
-    return R_GOT;
+    return R_GOT_OFF;
   }
 }
 
@@ -1726,14 +1726,12 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     write32<E>(Loc, (Instr & ~0x3ffffff) | (Val >> 2));
     break;
   }
+  case R_MIPS_GOT16:
+    checkInt<16>(Val, Type);
+  // fallthrough
   case R_MIPS_CALL16:
-  case R_MIPS_GOT16: {
-    int64_t V = Val - getMipsGpAddr<ELFT>();
-    if (Type == R_MIPS_GOT16)
-      checkInt<16>(V, Type);
-    writeMipsLo16<E>(Loc, V);
+    writeMipsLo16<E>(Loc, Val);
     break;
-  }
   case R_MIPS_GPREL16: {
     int64_t V = Val - getMipsGpAddr<ELFT>();
     checkInt<16>(V, Type);

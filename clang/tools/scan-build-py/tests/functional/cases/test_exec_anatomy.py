@@ -4,7 +4,7 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-from ...unit import fixtures
+import libear
 import unittest
 
 import os.path
@@ -45,6 +45,6 @@ class ExecAnatomyTest(unittest.TestCase):
     def test_all_exec_calls(self):
         this_dir, _ = os.path.split(__file__)
         source_dir = os.path.normpath(os.path.join(this_dir, '..', 'exec'))
-        with fixtures.TempDir() as tmp_dir:
+        with libear.TemporaryDirectory() as tmp_dir:
             expected, result = run(source_dir, tmp_dir)
             self.assertEqualJson(expected, result)
