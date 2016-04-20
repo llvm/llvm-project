@@ -82,13 +82,13 @@ static cl::opt<bool> VerifyDebugInfo("verify-debug-info", cl::init(true));
 
 namespace {
 struct VerifierSupport {
-  raw_ostream &OS;
+  raw_ostream *OS;
   const Module *M = nullptr;
 
   /// Track the brokenness of the module while recursively visiting.
   bool Broken = false;
 
-  explicit VerifierSupport(raw_ostream &OS) : OS(OS) {}
+  explicit VerifierSupport(raw_ostream *OS) : OS(OS) {}
 
 private:
   template <class NodeTy> void Write(const ilist_iterator<NodeTy> &I) {
@@ -98,17 +98,17 @@ private:
   void Write(const Module *M) {
     if (!M)
       return;
-    OS << "; ModuleID = '" << M->getModuleIdentifier() << "'\n";
+    *OS << "; ModuleID = '" << M->getModuleIdentifier() << "'\n";
   }
 
   void Write(const Value *V) {
     if (!V)
       return;
     if (isa<Instruction>(V)) {
-      OS << *V << '\n';
+      *OS << *V << '\n';
     } else {
-      V->printAsOperand(OS, true, M);
-      OS << '\n';
+      V->printAsOperand(*OS, true, M);
+      *OS << '\n';
     }
   }
   void Write(ImmutableCallSite CS) {
@@ -118,8 +118,8 @@ private:
   void Write(const Metadata *MD) {
     if (!MD)
       return;
-    MD->print(OS, M);
-    OS << '\n';
+    MD->print(*OS, M);
+    *OS << '\n';
   }
 
   template <class T> void Write(const MDTupleTypedArrayWrapper<T> &MD) {
@@ -129,20 +129,20 @@ private:
   void Write(const NamedMDNode *NMD) {
     if (!NMD)
       return;
-    NMD->print(OS);
-    OS << '\n';
+    NMD->print(*OS);
+    *OS << '\n';
   }
 
   void Write(Type *T) {
     if (!T)
       return;
-    OS << ' ' << *T;
+    *OS << ' ' << *T;
   }
 
   void Write(const Comdat *C) {
     if (!C)
       return;
-    OS << *C;
+    *OS << *C;
   }
 
   template <typename T> void Write(ArrayRef<T> Vs) {
@@ -164,7 +164,8 @@ public:
   /// This provides a nice place to put a breakpoint if you want to see why
   /// something is not correct.
   void CheckFailed(const Twine &Message) {
-    OS << Message << '\n';
+    if (OS)
+      *OS << Message << '\n';
     Broken = true;
   }
 
@@ -175,7 +176,8 @@ public:
   template <typename T1, typename... Ts>
   void CheckFailed(const Twine &Message, const T1 &V1, const Ts &... Vs) {
     CheckFailed(Message);
-    WriteTs(V1, Vs...);
+    if (OS)
+      WriteTs(V1, Vs...);
   }
 };
 
@@ -228,7 +230,7 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   void checkAtomicMemAccessSize(const Module *M, Type *Ty,
                                 const Instruction *I);
 public:
-  explicit Verifier(raw_ostream &OS)
+  explicit Verifier(raw_ostream *OS)
       : VerifierSupport(OS), Context(nullptr), LandingPadResultTy(nullptr),
         SawFrameEscape(false) {}
 
@@ -239,16 +241,19 @@ public:
     // First ensure the function is well-enough formed to compute dominance
     // information.
     if (F.empty()) {
-      OS << "Function '" << F.getName()
-         << "' does not contain an entry block!\n";
+      if (OS)
+        *OS << "Function '" << F.getName()
+            << "' does not contain an entry block!\n";
       return false;
     }
     for (Function::const_iterator I = F.begin(), E = F.end(); I != E; ++I) {
       if (I->empty() || !I->back().isTerminator()) {
-        OS << "Basic Block in function '" << F.getName()
-           << "' does not have terminator!\n";
-        I->printAsOperand(OS, true);
-        OS << "\n";
+        if (OS) {
+          *OS << "Basic Block in function '" << F.getName()
+              << "' does not have terminator!\n";
+          I->printAsOperand(*OS, true);
+          *OS << "\n";
+        }
         return false;
       }
     }
@@ -4354,8 +4359,8 @@ bool llvm::verifyFunction(const Function &f, raw_ostream *OS) {
   Function &F = const_cast<Function &>(f);
   assert(!F.isDeclaration() && "Cannot verify external functions");
 
-  raw_null_ostream NullStr;
-  Verifier V(OS ? *OS : NullStr);
+  // Don't use a raw_null_ostream.  Printing IR is expensive.
+  Verifier V(OS);
 
   // Note that this function's return value is inverted from what you would
   // expect of a function called "verify".
@@ -4363,8 +4368,8 @@ bool llvm::verifyFunction(const Function &f, raw_ostream *OS) {
 }
 
 bool llvm::verifyModule(const Module &M, raw_ostream *OS) {
-  raw_null_ostream NullStr;
-  Verifier V(OS ? *OS : NullStr);
+  // Don't use a raw_null_ostream.  Printing IR is expensive.
+  Verifier V(OS);
 
   bool Broken = false;
   for (Module::const_iterator I = M.begin(), E = M.end(); I != E; ++I)
@@ -4383,11 +4388,11 @@ struct VerifierLegacyPass : public FunctionPass {
   Verifier V;
   bool FatalErrors;
 
-  VerifierLegacyPass() : FunctionPass(ID), V(dbgs()), FatalErrors(true) {
+  VerifierLegacyPass() : FunctionPass(ID), V(&dbgs()), FatalErrors(true) {
     initializeVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
   }
   explicit VerifierLegacyPass(bool FatalErrors)
-      : FunctionPass(ID), V(dbgs()), FatalErrors(FatalErrors) {
+      : FunctionPass(ID), V(&dbgs()), FatalErrors(FatalErrors) {
     initializeVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
