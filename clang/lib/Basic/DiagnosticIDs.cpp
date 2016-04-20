@@ -462,6 +462,12 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
       Result = diag::Severity::Fatal;
   }
 
+  // If explicitly requested, map fatal errors to errors.
+  if (Result == diag::Severity::Fatal) {
+      if (Diag.FatalsAsError)
+        Result = diag::Severity::Error;
+  }
+
   // Custom diagnostics always are emitted in system headers.
   bool ShowInSystemHeader =
       !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemHeader;
