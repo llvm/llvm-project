@@ -2965,15 +2965,16 @@ struct VarArgMIPS64Helper : public VarArgHelper {
     const DataLayout &DL = F.getParent()->getDataLayout();
     for (CallSite::arg_iterator ArgIt = CS.arg_begin() + 1, End = CS.arg_end();
          ArgIt != End; ++ArgIt) {
+      llvm::Triple TargetTriple(F.getParent()->getTargetTriple());
       Value *A = *ArgIt;
       Value *Base;
       uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
-#if defined(__MIPSEB__) || defined(MIPSEB)
-      // Adjusting the shadow for argument with size < 8 to match the placement
-      // of bits in big endian system
-      if (ArgSize < 8)
-        VAArgOffset += (8 - ArgSize);
-#endif
+      if (TargetTriple.getArch() == llvm::Triple::mips64) {
+        // Adjusting the shadow for argument with size < 8 to match the placement
+        // of bits in big endian system
+        if (ArgSize < 8)
+          VAArgOffset += (8 - ArgSize);
+      }
       Base = getShadowPtrForVAArgument(A->getType(), IRB, VAArgOffset);
       VAArgOffset += ArgSize;
       VAArgOffset = alignTo(VAArgOffset, 8);

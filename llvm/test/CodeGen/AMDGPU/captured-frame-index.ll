@@ -16,11 +16,11 @@ define void @stored_fi_to_lds(float* addrspace(3)* %ptr) #0 {
 
 ; Offset is applied
 ; GCN-LABEL: {{^}}stored_fi_to_lds_2_small_objects:
-; GCN: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
-; GCN: buffer_store_dword v{{[0-9]+}}, [[ZERO]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
-; GCN: buffer_store_dword v{{[0-9]+}}, [[ZERO]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:4{{$}}
+; GCN-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
+; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ZERO]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+; GCN-DAG: buffer_store_dword v{{[0-9]+}}, [[ZERO]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:4{{$}}
 
-; GCN: s_load_dword [[LDSPTR:s[0-9]+]]
+; GCN-DAG: s_load_dword [[LDSPTR:s[0-9]+]]
 
 ; GCN-DAG: v_mov_b32_e32 [[VLDSPTR:v[0-9]+]], [[LDSPTR]]
 ; GCN: ds_write_b32  [[VLDSPTR]], [[ZERO]]

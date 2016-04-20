@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s --check-prefix=CHECK
+; RUN: opt < %s -indvars -S | FileCheck %s
 
 declare i1 @b()
 

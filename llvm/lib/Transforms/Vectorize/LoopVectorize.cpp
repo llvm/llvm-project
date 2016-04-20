@@ -3325,7 +3325,7 @@ static unsigned getVectorCallCost(CallInst *CI, unsigned VF,
 static unsigned getVectorIntrinsicCost(CallInst *CI, unsigned VF,
                                        const TargetTransformInfo &TTI,
                                        const TargetLibraryInfo *TLI) {
-  Intrinsic::ID ID = getIntrinsicIDForCall(CI, TLI);
+  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
   assert(ID && "Expected intrinsic call!");
 
   Type *RetTy = ToVectorTy(CI->getType(), VF);
@@ -4251,7 +4251,7 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
       for (unsigned i = 0, ie = CI->getNumArgOperands(); i != ie; ++i)
         Tys.push_back(ToVectorTy(CI->getArgOperand(i)->getType(), VF));
 
-      Intrinsic::ID ID = getIntrinsicIDForCall(CI, TLI);
+      Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
       if (ID &&
           (ID == Intrinsic::assume || ID == Intrinsic::lifetime_end ||
            ID == Intrinsic::lifetime_start)) {
@@ -4684,7 +4684,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       //   * Have a mapping to an IR intrinsic.
       //   * Have a vector version available.
       CallInst *CI = dyn_cast<CallInst>(it);
-      if (CI && !getIntrinsicIDForCall(CI, TLI) && !isa<DbgInfoIntrinsic>(CI) &&
+      if (CI && !getVectorIntrinsicIDForCall(CI, TLI) && !isa<DbgInfoIntrinsic>(CI) &&
           !(CI->getCalledFunction() && TLI &&
             TLI->isFunctionVectorizable(CI->getCalledFunction()->getName()))) {
         emitAnalysis(VectorizationReport(&*it)
@@ -4696,7 +4696,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       // Intrinsics such as powi,cttz and ctlz are legal to vectorize if the
       // second argument is the same (i.e. loop invariant)
       if (CI &&
-          hasVectorInstrinsicScalarOpd(getIntrinsicIDForCall(CI, TLI), 1)) {
+          hasVectorInstrinsicScalarOpd(getVectorIntrinsicIDForCall(CI, TLI), 1)) {
         auto *SE = PSE.getSE();
         if (!SE->isLoopInvariant(PSE.getSCEV(CI->getOperand(1)), TheLoop)) {
           emitAnalysis(VectorizationReport(&*it)
@@ -6020,7 +6020,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, unsigned VF,
     bool NeedToScalarize;
     CallInst *CI = cast<CallInst>(I);
     unsigned CallCost = getVectorCallCost(CI, VF, TTI, TLI, NeedToScalarize);
-    if (getIntrinsicIDForCall(CI, TLI))
+    if (getVectorIntrinsicIDForCall(CI, TLI))
       return std::min(CallCost, getVectorIntrinsicCost(CI, VF, TTI, TLI));
     return CallCost;
   }

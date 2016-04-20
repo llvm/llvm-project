@@ -96,3 +96,32 @@ define void @test2(i32 %i, i32 %len, i1* %c.ptr) {
   call void @side_effect(i32 %t)
   ret void
 }
+
+; A s<= B implies A s> B is false.
+; CHECK-LABEL: @test3(
+; CHECK: entry:
+; CHECK: br i1 %cmp, label %if.end, label %if.end3
+; CHECK-NOT: br i1 %cmp1, label %if.then2, label %if.end
+; CHECK-NOT: call void @side_effect(i32 0)
+; CHECK: br label %if.end3
+; CHECK: ret void
+
+define void @test3(i32 %a, i32 %b) {
+entry:
+  %cmp = icmp sle i32 %a, %b
+  br i1 %cmp, label %if.then, label %if.end3
+
+if.then:
+  %cmp1 = icmp sgt i32 %a, %b
+  br i1 %cmp1, label %if.then2, label %if.end
+
+if.then2:
+  call void @side_effect(i32 0)
+  br label %if.end
+
+if.end:
+  br label %if.end3
+
+if.end3:
+  ret void
+}

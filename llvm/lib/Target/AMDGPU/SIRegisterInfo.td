@@ -262,7 +262,7 @@ def TTMP_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 32, (add TTMP_64Regs)> 
 }
 
 def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1], 32,
-  (add SGPR_64, VCC, EXEC, FLAT_SCR, TTMP_64)
+  (add SGPR_64, VCC, EXEC, FLAT_SCR, TTMP_64, TBA, TMA)
 >;
 
 def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add SGPR_128)> {

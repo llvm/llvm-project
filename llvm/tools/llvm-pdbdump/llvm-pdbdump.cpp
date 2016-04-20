@@ -624,8 +624,14 @@ static void dumpInput(StringRef Path) {
   switch (Error) {
   case PDB_ErrorCode::Success:
     break;
-  case PDB_ErrorCode::NoPdbImpl:
-    outs() << "Reading PDBs is not supported on this platform.\n";
+  case PDB_ErrorCode::NoDiaSupport:
+    outs() << "LLVM was not compiled with support for DIA.  This usually means "
+              "that either LLVM was not compiled with MSVC, or your MSVC "
+              "installation is corrupt.\n";
+    return;
+  case PDB_ErrorCode::CouldNotCreateImpl:
+    outs() << "Failed to connect to DIA at runtime.  Verify that Visual Studio "
+              "is properly installed, or that msdiaXX.dll is in your PATH.\n";
     return;
   case PDB_ErrorCode::InvalidPath:
     outs() << "Unable to load PDB at '" << Path

@@ -97,3 +97,19 @@ s_or_b32      ttmp9, ttmp9, 0x00280000
 s_mov_b64     ttmp[4:5], exec
 // SICI: s_mov_b64 ttmp[4:5], exec       ; encoding: [0x7e,0x04,0xf4,0xbe]
 // VI:   s_mov_b64 ttmp[4:5], exec       ; encoding: [0x7e,0x01,0xf4,0xbe]
+
+s_mov_b64     tba, ttmp[4:5]
+// SICI: s_mov_b64 tba, ttmp[4:5]        ; encoding: [0x74,0x04,0xec,0xbe]
+// VI:   s_mov_b64 tba, ttmp[4:5]        ; encoding: [0x74,0x01,0xec,0xbe]
+
+s_mov_b64     ttmp[4:5], tba
+// SICI: s_mov_b64 ttmp[4:5], tba        ; encoding: [0x6c,0x04,0xf4,0xbe]
+// VI:   s_mov_b64 ttmp[4:5], tba        ; encoding: [0x6c,0x01,0xf4,0xbe]
+
+s_mov_b64     tma, ttmp[4:5]
+// SICI: s_mov_b64 tma, ttmp[4:5]        ; encoding: [0x74,0x04,0xee,0xbe]
+// VI:   s_mov_b64 tma, ttmp[4:5]        ; encoding: [0x74,0x01,0xee,0xbe]
+
+s_mov_b64     ttmp[4:5], tma
+// SICI: s_mov_b64 ttmp[4:5], tma        ; encoding: [0x6e,0x04,0xf4,0xbe]
+// VI:   s_mov_b64 ttmp[4:5], tma        ; encoding: [0x6e,0x01,0xf4,0xbe]

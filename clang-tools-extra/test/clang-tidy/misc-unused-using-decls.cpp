@@ -6,6 +6,7 @@ namespace n {
 class A;
 class B;
 class C;
+class D;
 class D { public: static int i; };
 }
 

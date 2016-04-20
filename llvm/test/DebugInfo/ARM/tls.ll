@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -filetype=asm -mtriple=armv7-linux-gnuehabi < %s \
-; RUN:     | FileCheck %s --check-prefix=CHECK
+; RUN:     | FileCheck %s
 ; RUN: llc -O0 -filetype=asm -mtriple=armv7-linux-gnuehabi -emulated-tls < %s \
 ; RUN:     | FileCheck %s --check-prefix=EMU
 

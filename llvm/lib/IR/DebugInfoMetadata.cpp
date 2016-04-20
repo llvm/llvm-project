@@ -255,6 +255,7 @@ DICompositeType *DICompositeType::getImpl(
     bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
 
+  // Keep this in sync with buildODRType.
   DEFINE_GETIMPL_LOOKUP(
       DICompositeType, (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                         AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
@@ -264,6 +265,66 @@ DICompositeType *DICompositeType::getImpl(
   DEFINE_GETIMPL_STORE(DICompositeType, (Tag, Line, RuntimeLang, SizeInBits,
                                          AlignInBits, OffsetInBits, Flags),
                        Ops);
+}
+
+DICompositeType *DICompositeType::buildODRType(
+    LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
+    Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
+    uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
+    unsigned Flags, Metadata *Elements, unsigned RuntimeLang,
+    Metadata *VTableHolder, Metadata *TemplateParams) {
+  assert(!Identifier.getString().empty() && "Expected valid identifier");
+  if (!Context.isODRUniquingDebugTypes())
+    return nullptr;
+  auto *&CT = (*Context.pImpl->DITypeMap)[&Identifier];
+  if (!CT)
+    return CT = DICompositeType::getDistinct(
+               Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
+               AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
+               VTableHolder, TemplateParams, &Identifier);
+
+  // Only mutate CT if it's a forward declaration and the new operands aren't.
+  assert(CT->getRawIdentifier() == &Identifier && "Wrong ODR identifier?");
+  if (!CT->isForwardDecl() || (Flags & DINode::FlagFwdDecl))
+    return CT;
+
+  // Mutate CT in place.  Keep this in sync with getImpl.
+  CT->mutate(Tag, Line, RuntimeLang, SizeInBits, AlignInBits, OffsetInBits,
+             Flags);
+  Metadata *Ops[] = {File,     Scope,        Name,           BaseType,
+                     Elements, VTableHolder, TemplateParams, &Identifier};
+  assert(std::end(Ops) - std::begin(Ops) == CT->getNumOperands() &&
+         "Mismatched number of operands");
+  for (unsigned I = 0, E = CT->getNumOperands(); I != E; ++I)
+    if (Ops[I] != CT->getOperand(I))
+      CT->setOperand(I, Ops[I]);
+  return CT;
+}
+
+DICompositeType *DICompositeType::getODRType(
+    LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
+    Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
+    uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
+    unsigned Flags, Metadata *Elements, unsigned RuntimeLang,
+    Metadata *VTableHolder, Metadata *TemplateParams) {
+  assert(!Identifier.getString().empty() && "Expected valid identifier");
+  if (!Context.isODRUniquingDebugTypes())
+    return nullptr;
+  auto *&CT = (*Context.pImpl->DITypeMap)[&Identifier];
+  if (!CT)
+    CT = DICompositeType::getDistinct(
+        Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
+        AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder,
+        TemplateParams, &Identifier);
+  return CT;
+}
+
+DICompositeType *DICompositeType::getODRTypeIfExists(LLVMContext &Context,
+                                                     MDString &Identifier) {
+  assert(!Identifier.getString().empty() && "Expected valid identifier");
+  if (!Context.isODRUniquingDebugTypes())
+    return nullptr;
+  return Context.pImpl->DITypeMap->lookup(&Identifier);
 }
 
 DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context,

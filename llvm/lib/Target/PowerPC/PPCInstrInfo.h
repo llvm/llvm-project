@@ -272,6 +272,9 @@ public:
 
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableBitmaskMachineOperandTargetFlags() const override;
+
+  // Lower pseudo instructions after register allocation.
+  bool expandPostRAPseudo(MachineBasicBlock::iterator MI) const override;
 };
 
 }

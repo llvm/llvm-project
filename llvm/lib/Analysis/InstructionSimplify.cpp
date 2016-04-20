@@ -2131,14 +2131,16 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       if (match(RHS, m_Zero()))
         return LHS;
       break;
-    case ICmpInst::ICMP_UGE:
+    case ICmpInst::ICMP_UGE: {
       // X >=u 1 -> X
       if (match(RHS, m_One()))
         return LHS;
-      if (isImpliedCondition(RHS, LHS, Q.DL))
+      bool ImpliedTrue;
+      if (isImpliedCondition(RHS, LHS, ImpliedTrue, Q.DL) && ImpliedTrue)
         return getTrue(ITy);
       break;
-    case ICmpInst::ICMP_SGE:
+    }
+    case ICmpInst::ICMP_SGE: {
       /// For signed comparison, the values for an i1 are 0 and -1
       /// respectively. This maps into a truth table of:
       /// LHS | RHS | LHS >=s RHS   | LHS implies RHS
@@ -2146,9 +2148,11 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       ///  0  |  1  |  1 (0 >= -1)  |  1
       ///  1  |  0  |  0 (-1 >= 0)  |  0
       ///  1  |  1  |  1 (-1 >= -1) |  1
-      if (isImpliedCondition(LHS, RHS, Q.DL))
+      bool ImpliedTrue;
+      if (isImpliedCondition(LHS, RHS, ImpliedTrue, Q.DL) && ImpliedTrue)
         return getTrue(ITy);
       break;
+    }
     case ICmpInst::ICMP_SLT:
       // X <s 0 -> X
       if (match(RHS, m_Zero()))
@@ -2159,10 +2163,12 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       if (match(RHS, m_One()))
         return LHS;
       break;
-    case ICmpInst::ICMP_ULE:
-      if (isImpliedCondition(LHS, RHS, Q.DL))
+    case ICmpInst::ICMP_ULE: {
+      bool ImpliedTrue;
+      if (isImpliedCondition(LHS, RHS, ImpliedTrue, Q.DL) && ImpliedTrue)
         return getTrue(ITy);
       break;
+    }
     }
   }
 

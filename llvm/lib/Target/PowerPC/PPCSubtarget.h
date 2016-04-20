@@ -286,6 +286,7 @@ public:
 
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
   bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
+  bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
 
   bool isDarwinABI() const { return isTargetMachO() || isDarwin(); }
   bool isSVR4ABI() const { return !isDarwinABI(); }

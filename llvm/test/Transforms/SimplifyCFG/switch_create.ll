@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s | FileCheck -check-prefix=CHECK %s
+; RUN: opt -S -simplifycfg < %s | FileCheck %s
 ; RUN: opt -S -default-data-layout="p:32:32-p1:16:16" -simplifycfg < %s | FileCheck -check-prefix=CHECK -check-prefix=DL %s
 
 declare void @foo1()

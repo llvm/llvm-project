@@ -11,8 +11,8 @@ declare void @llvm.amdgcn.s.barrier() #1
 
 ; FUNC-LABEL: @reorder_local_load_global_store_local_load
 ; CI: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:4
-; CI-NEXT: buffer_store_dword
 ; CI-NEXT: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}} offset:8
+; CI: buffer_store_dword
 define void @reorder_local_load_global_store_local_load(i32 addrspace(1)* %out, i32 addrspace(1)* %gptr) #0 {
   %ptr0 = load i32 addrspace(3)*, i32 addrspace(3)* addrspace(3)* @stored_lds_ptr, align 4
 
@@ -71,9 +71,9 @@ define void @no_reorder_barrier_local_load_global_store_local_load(i32 addrspace
 }
 
 ; FUNC-LABEL: @reorder_constant_load_global_store_constant_load
+; CI: buffer_store_dword
 ; CI: v_readfirstlane_b32 s[[PTR_LO:[0-9]+]], v{{[0-9]+}}
 ; CI: v_readfirstlane_b32 s[[PTR_HI:[0-9]+]], v{{[0-9]+}}
-; CI-DAG: buffer_store_dword
 ; CI-DAG: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x1
 ; CI-DAG: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0x2
 ; CI: buffer_store_dword
@@ -184,11 +184,11 @@ define void @reorder_local_offsets(i32 addrspace(1)* nocapture %out, i32 addrspa
 }
 
 ; FUNC-LABEL: @reorder_global_offsets
-; CI: buffer_store_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:12
 ; CI: buffer_load_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:400
 ; CI: buffer_load_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:404
-; CI: buffer_store_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:400
+; CI: buffer_store_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:12
 ; CI: buffer_load_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:12
+; CI: buffer_store_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:400
 ; CI: buffer_store_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:404
 ; CI: buffer_store_dword
 ; CI: s_endpgm

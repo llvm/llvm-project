@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -disable-post-ra | FileCheck --check-prefix=CHECK %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -disable-post-ra | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mattr=-fp-armv8 -disable-post-ra | FileCheck --check-prefix=CHECK-NOFP %s
 
 %myStruct = type { i64 , i8, i32 }

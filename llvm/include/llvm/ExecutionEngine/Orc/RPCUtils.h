@@ -328,6 +328,30 @@ template <typename ChannelT, typename FunctionIdT = uint32_t,
           typename SequenceNumberT = uint16_t>
 class RPC : public RPCBase {
 public:
+
+  /// RPC default constructor.
+  RPC() = default;
+
+  /// RPC instances cannot be copied.
+  RPC(const RPC&) = delete;
+
+  /// RPC instances cannot be copied.
+  RPC& operator=(const RPC&) = delete;
+
+  /// RPC move constructor.
+  // FIXME: Remove once MSVC can synthesize move ops.
+  RPC(RPC &&Other)
+    : SequenceNumberMgr(std::move(Other.SequenceNumberMgr)),
+      OutstandingResults(std::move(Other.OutstandingResults)) {}
+
+  /// RPC move assignment.
+  // FIXME: Remove once MSVC can synthesize move ops.
+  RPC& operator=(RPC &&Other) {
+    SequenceNumberMgr = std::move(Other.SequenceNumberMgr);
+    OutstandingResults = std::move(Other.OutstandingResults);
+    return *this;
+  }
+
   /// Utility class for defining/referring to RPC procedures.
   ///
   /// Typedefs of this utility are used when calling/handling remote procedures.

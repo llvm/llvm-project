@@ -806,7 +806,7 @@ void MDNode::storeDistinctInContext() {
 #include "llvm/IR/Metadata.def"
   }
 
-  getContext().pImpl->DistinctMDNodes.insert(this);
+  getContext().pImpl->DistinctMDNodes.push_back(this);
 }
 
 void MDNode::replaceOperandWith(unsigned I, Metadata *New) {

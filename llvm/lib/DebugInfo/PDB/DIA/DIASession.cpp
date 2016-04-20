@@ -24,17 +24,18 @@ using namespace llvm;
 
 namespace {
 
-bool LoadDIA(CComPtr<IDiaDataSource>& DiaDataSource) {
+PDB_ErrorCode LoadDIA(CComPtr<IDiaDataSource> &DiaDataSource) {
   if (SUCCEEDED(CoCreateInstance(CLSID_DiaSource, nullptr, CLSCTX_INPROC_SERVER,
                                  IID_IDiaDataSource,
                                  reinterpret_cast<LPVOID *>(&DiaDataSource))))
-    return true;
+    return PDB_ErrorCode::Success;
 
   // If the CoCreateInstance call above failed, msdia*.dll is not registered.
   // Try loading the DLL corresponding to the #included DIA SDK.
 #if !defined(_MSC_VER)
-  return false;
-#else
+  return PDB_ErrorCode::NoDiaSupport;
+#endif
+
   const wchar_t *msdia_dll = nullptr;
 #if _MSC_VER == 1900
   msdia_dll = L"msdia140.dll"; // VS2015
@@ -43,10 +44,12 @@ bool LoadDIA(CComPtr<IDiaDataSource>& DiaDataSource) {
 #else
 #error "Unknown Visual Studio version."
 #endif
-  return msdia_dll &&
-         SUCCEEDED(NoRegCoCreate(msdia_dll, CLSID_DiaSource, IID_IDiaDataSource,
-                                 reinterpret_cast<LPVOID *>(&DiaDataSource)));
-#endif
+
+  if (SUCCEEDED(NoRegCoCreate(msdia_dll, CLSID_DiaSource, IID_IDiaDataSource,
+                              reinterpret_cast<LPVOID *>(&DiaDataSource))))
+    return PDB_ErrorCode::Success;
+  else
+    return PDB_ErrorCode::CouldNotCreateImpl;
 }
 
 }
@@ -59,8 +62,9 @@ PDB_ErrorCode DIASession::createFromPdb(StringRef Path,
   CComPtr<IDiaSession> DiaSession;
 
   // We assume that CoInitializeEx has already been called by the executable.
-  if (!LoadDIA(DiaDataSource))
-    return PDB_ErrorCode::NoPdbImpl;
+  PDB_ErrorCode result = LoadDIA(DiaDataSource);
+  if (result != PDB_ErrorCode::Success)
+    return result;
 
   llvm::SmallVector<UTF16, 128> Path16;
   if (!llvm::convertUTF8ToUTF16String(Path, Path16))
@@ -98,8 +102,9 @@ PDB_ErrorCode DIASession::createFromExe(StringRef Path,
   CComPtr<IDiaSession> DiaSession;
 
   // We assume that CoInitializeEx has already been called by the executable.
-  if (!LoadDIA(DiaDataSource))
-    return PDB_ErrorCode::NoPdbImpl;
+  PDB_ErrorCode result = LoadDIA(DiaDataSource);
+  if (result != PDB_ErrorCode::Success)
+    return result;
 
   llvm::SmallVector<UTF16, 128> Path16;
   if (!llvm::convertUTF8ToUTF16String(Path, Path16))

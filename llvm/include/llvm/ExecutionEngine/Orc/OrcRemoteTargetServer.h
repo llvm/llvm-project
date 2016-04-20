@@ -45,6 +45,18 @@ public:
         EHFramesRegister(std::move(EHFramesRegister)),
         EHFramesDeregister(std::move(EHFramesDeregister)) {}
 
+  // FIXME: Remove move/copy ops once MSVC supports synthesizing move ops.
+  OrcRemoteTargetServer(const OrcRemoteTargetServer&) = delete;
+  OrcRemoteTargetServer& operator=(const OrcRemoteTargetServer&) = delete;
+
+  OrcRemoteTargetServer(OrcRemoteTargetServer &&Other)
+    : Channel(Other.Channel),
+      SymbolLookup(std::move(Other.SymbolLookup)),
+      EHFramesRegister(std::move(Other.EHFramesRegister)),
+      EHFramesDeregister(std::move(Other.EHFramesDeregister)) {}
+
+  OrcRemoteTargetServer& operator=(OrcRemoteTargetServer&&) = delete;
+
   std::error_code handleKnownFunction(JITFuncId Id) {
     typedef OrcRemoteTargetServer ThisT;
 

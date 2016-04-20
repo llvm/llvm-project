@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=aarch64-apple-ios | FileCheck %s
-; RUN: llc < %s -mtriple=aarch64-apple-ios -enable-shrink-wrap=true | FileCheck --check-prefix=CHECK %s
+; RUN: llc < %s -mtriple=aarch64-apple-ios -enable-shrink-wrap=true | FileCheck %s
 ; Shrink wrapping currently does not kick in because we have a TLS CALL
 ; in the entry block and it will clobber the link register.
 

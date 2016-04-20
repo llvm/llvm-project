@@ -1,4 +1,4 @@
-;RUN: llc -march=amdgcn -mcpu=verde < %s | FileCheck %s --check-prefix=CHECK
+;RUN: llc -march=amdgcn -mcpu=verde < %s | FileCheck %s
 
 ; Test a simple uniform loop that lives inside non-uniform control flow.
 

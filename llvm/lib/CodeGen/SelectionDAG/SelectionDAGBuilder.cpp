@@ -1998,6 +1998,26 @@ void SelectionDAGBuilder::visitJumpTableHeader(JumpTable &JT,
   DAG.setRoot(BrCond);
 }
 
+/// Create a LOAD_STACK_GUARD node, and let it carry the target specific global
+/// variable if there exists one.
+static SDValue getLoadStackGuard(SelectionDAG &DAG, SDLoc DL, SDValue &Chain) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
+  MachineFunction &MF = DAG.getMachineFunction();
+  Value *Global = TLI.getSDagStackGuard(*MF.getFunction()->getParent());
+  MachineSDNode *Node =
+      DAG.getMachineNode(TargetOpcode::LOAD_STACK_GUARD, DL, PtrTy, Chain);
+  if (Global) {
+    MachinePointerInfo MPInfo(Global);
+    MachineInstr::mmo_iterator MemRefs = MF.allocateMemRefsArray(1);
+    unsigned Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant;
+    *MemRefs = MF.getMachineMemOperand(MPInfo, Flags, PtrTy.getSizeInBits() / 8,
+                                       DAG.getEVTAlignment(PtrTy));
+    Node->setMemRefs(MemRefs, MemRefs + 1);
+  }
+  return SDValue(Node, 0);
+}
+
 /// Codegen a new tail for a stack protector check ParentMBB which has had its
 /// tail spliced into a stack protector check success bb.
 ///
@@ -2014,30 +2034,25 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   MachineFrameInfo *MFI = ParentBB->getParent()->getFrameInfo();
   int FI = MFI->getStackProtectorIndex();
 
-  const Module &M = *ParentBB->getParent()->getFunction()->getParent();
-  const Value *IRGuard = TLI.getSDStackGuard(M);
-  assert(IRGuard && "Currently there must be an IR guard in order to use "
-                    "SelectionDAG SSP");
-  SDValue GuardPtr = getValue(IRGuard);
-  SDValue StackSlotPtr = DAG.getFrameIndex(FI, PtrTy);
-
-  unsigned Align = DL->getPrefTypeAlignment(IRGuard->getType());
-
   SDValue Guard;
   SDLoc dl = getCurSDLoc();
+  SDValue StackSlotPtr = DAG.getFrameIndex(FI, PtrTy);
+  const Module &M = *ParentBB->getParent()->getFunction()->getParent();
+  unsigned Align = DL->getPrefTypeAlignment(Type::getInt8PtrTy(M.getContext()));
 
-  // If GuardReg is set and useLoadStackGuardNode returns true, retrieve the
-  // guard value from the virtual register holding the value. Otherwise, emit a
-  // volatile load to retrieve the stack guard value.
-  unsigned GuardReg = SPD.getGuardReg();
+  // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
+  // Otherwise, emit a volatile load to retrieve the stack guard value.
+  SDValue Chain = DAG.getEntryNode();
+  if (TLI.useLoadStackGuardNode()) {
+    Guard = getLoadStackGuard(DAG, dl, Chain);
+  } else {
+    const Value *IRGuard = TLI.getSDagStackGuard(M);
+    SDValue GuardPtr = getValue(IRGuard);
 
-  if (GuardReg && TLI.useLoadStackGuardNode())
-    Guard = DAG.getCopyFromReg(DAG.getEntryNode(), dl, GuardReg,
-                               PtrTy);
-  else
-    Guard = DAG.getLoad(PtrTy, dl, DAG.getEntryNode(),
-                        GuardPtr, MachinePointerInfo(IRGuard, 0),
-                        true, false, false, Align);
+    Guard =
+        DAG.getLoad(PtrTy, dl, Chain, GuardPtr, MachinePointerInfo(IRGuard, 0),
+                    true, false, false, Align);
+  }
 
   SDValue StackSlot = DAG.getLoad(
       PtrTy, dl, DAG.getEntryNode(), StackSlotPtr,
@@ -5288,47 +5303,35 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     setValue(&I, Res);
     return nullptr;
   }
+  case Intrinsic::stackguard: {
+    EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
+    MachineFunction &MF = DAG.getMachineFunction();
+    const Module &M = *MF.getFunction()->getParent();
+    SDValue Chain = getRoot();
+    if (TLI.useLoadStackGuardNode()) {
+      Res = getLoadStackGuard(DAG, sdl, Chain);
+    } else {
+      const Value *Global = TLI.getSDagStackGuard(M);
+      unsigned Align = DL->getPrefTypeAlignment(Global->getType());
+      Res =
+          DAG.getLoad(PtrTy, sdl, Chain, getValue(Global),
+                      MachinePointerInfo(Global, 0), true, false, false, Align);
+    }
+    DAG.setRoot(Chain);
+    setValue(&I, Res);
+    return nullptr;
+  }
   case Intrinsic::stackprotector: {
     // Emit code into the DAG to store the stack guard onto the stack.
     MachineFunction &MF = DAG.getMachineFunction();
     MachineFrameInfo *MFI = MF.getFrameInfo();
     EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
     SDValue Src, Chain = getRoot();
-    const Value *Ptr = cast<LoadInst>(I.getArgOperand(0))->getPointerOperand();
-    const GlobalVariable *GV = dyn_cast<GlobalVariable>(Ptr);
 
-    // See if Ptr is a bitcast. If it is, look through it and see if we can get
-    // global variable __stack_chk_guard.
-    if (!GV)
-      if (const Operator *BC = dyn_cast<Operator>(Ptr))
-        if (BC->getOpcode() == Instruction::BitCast)
-          GV = dyn_cast<GlobalVariable>(BC->getOperand(0));
-
-    if (GV && TLI.useLoadStackGuardNode()) {
-      // Emit a LOAD_STACK_GUARD node.
-      MachineSDNode *Node = DAG.getMachineNode(TargetOpcode::LOAD_STACK_GUARD,
-                                               sdl, PtrTy, Chain);
-      MachinePointerInfo MPInfo(GV);
-      MachineInstr::mmo_iterator MemRefs = MF.allocateMemRefsArray(1);
-      unsigned Flags = MachineMemOperand::MOLoad |
-                       MachineMemOperand::MOInvariant;
-      *MemRefs = MF.getMachineMemOperand(MPInfo, Flags,
-                                         PtrTy.getSizeInBits() / 8,
-                                         DAG.getEVTAlignment(PtrTy));
-      Node->setMemRefs(MemRefs, MemRefs + 1);
-
-      // Copy the guard value to a virtual register so that it can be
-      // retrieved in the epilogue.
-      Src = SDValue(Node, 0);
-      const TargetRegisterClass *RC =
-          TLI.getRegClassFor(Src.getSimpleValueType());
-      unsigned Reg = MF.getRegInfo().createVirtualRegister(RC);
-
-      SPDescriptor.setGuardReg(Reg);
-      Chain = DAG.getCopyToReg(Chain, sdl, Reg, Src);
-    } else {
+    if (TLI.useLoadStackGuardNode())
+      Src = getLoadStackGuard(DAG, sdl, Chain);
+    else
       Src = getValue(I.getArgOperand(0));   // The guard's value.
-    }
 
     AllocaInst *Slot = cast<AllocaInst>(I.getArgOperand(1));
 

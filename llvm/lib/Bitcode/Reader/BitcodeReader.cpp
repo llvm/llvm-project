@@ -2207,25 +2207,36 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
 
       // If we have a UUID and this is not a forward declaration, lookup the
       // mapping.
+      bool IsDistinct = Record[0];
+      unsigned Tag = Record[1];
+      MDString *Name = getMDString(Record[2]);
+      Metadata *File = getMDOrNull(Record[3]);
+      unsigned Line = Record[4];
+      Metadata *Scope = getMDOrNull(Record[5]);
+      Metadata *BaseType = getMDOrNull(Record[6]);
+      uint64_t SizeInBits = Record[7];
+      uint64_t AlignInBits = Record[8];
+      uint64_t OffsetInBits = Record[9];
       unsigned Flags = Record[10];
+      Metadata *Elements = getMDOrNull(Record[11]);
+      unsigned RuntimeLang = Record[12];
+      Metadata *VTableHolder = getMDOrNull(Record[13]);
+      Metadata *TemplateParams = getMDOrNull(Record[14]);
       auto *Identifier = getMDString(Record[15]);
-      DIType **MappedT = nullptr;
-      if (!(Flags & DINode::FlagFwdDecl) && Identifier)
-        MappedT = Context.getOrInsertODRUniquedType(*Identifier);
+      DICompositeType *CT = nullptr;
+      if (Identifier)
+        CT = DICompositeType::buildODRType(
+            Context, *Identifier, Tag, Name, File, Line, Scope, BaseType,
+            SizeInBits, AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
+            VTableHolder, TemplateParams);
 
-      // Use the mapped type node, or create a new one if necessary.
-      DIType *CT = MappedT ? *MappedT : nullptr;
-      if (!CT) {
-        CT = GET_OR_DISTINCT(
-            DICompositeType, Record[0],
-            (Context, Record[1], getMDString(Record[2]), getMDOrNull(Record[3]),
-             Record[4], getMDOrNull(Record[5]), getMDOrNull(Record[6]),
-             Record[7], Record[8], Record[9], Flags, getMDOrNull(Record[11]),
-             Record[12], getMDOrNull(Record[13]), getMDOrNull(Record[14]),
-             Identifier));
-        if (MappedT)
-          *MappedT = CT;
-      }
+      // Create a node if we didn't get a lazy ODR type.
+      if (!CT)
+        CT = GET_OR_DISTINCT(DICompositeType, IsDistinct,
+                             (Context, Tag, Name, File, Line, Scope, BaseType,
+                              SizeInBits, AlignInBits, OffsetInBits, Flags,
+                              Elements, RuntimeLang, VTableHolder,
+                              TemplateParams, Identifier));
 
       MetadataList.assignValue(CT, NextMetadataNo++);
       break;

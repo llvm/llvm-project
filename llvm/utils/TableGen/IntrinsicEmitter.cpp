@@ -462,8 +462,8 @@ struct AttributeComparator {
       return R->isConvergent;
 
     // Try to order by readonly/readnone attribute.
-    CodeGenIntrinsic::ModRefKind LK = L->ModRef;
-    CodeGenIntrinsic::ModRefKind RK = R->ModRef;
+    CodeGenIntrinsic::ModRefBehavior LK = L->ModRef;
+    CodeGenIntrinsic::ModRefBehavior RK = R->ModRef;
     if (LK != RK) return (LK > RK);
 
     // Order by argument attributes.
@@ -616,11 +616,13 @@ EmitAttributes(const std::vector<CodeGenIntrinsic> &Ints, raw_ostream &OS) {
           OS << ",";
         OS << "Attribute::ReadOnly";
         break;
+      case CodeGenIntrinsic::WriteArgMem:
       case CodeGenIntrinsic::ReadWriteArgMem:
         if (addComma)
           OS << ",";
         OS << "Attribute::ArgMemOnly";
         break;
+      case CodeGenIntrinsic::WriteMem:
       case CodeGenIntrinsic::ReadWriteMem:
         break;
       }

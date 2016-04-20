@@ -2256,11 +2256,12 @@ bool DependenceAnalysis::testMIV(const SCEV *Src,
 // Given a product, e.g., 10*X*Y, returns the first constant operand,
 // in this case 10. If there is no constant part, returns NULL.
 static
-const SCEVConstant *getConstantPart(const SCEVMulExpr *Product) {
-  for (unsigned Op = 0, Ops = Product->getNumOperands(); Op < Ops; Op++) {
-    if (const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Product->getOperand(Op)))
+const SCEVConstant *getConstantPart(const SCEV *Expr) {
+  if (const auto *Constant = dyn_cast<SCEVConstant>(Expr))
+    return Constant;
+  else if (const auto *Product = dyn_cast<SCEVMulExpr>(Expr))
+    if (const auto *Constant = dyn_cast<SCEVConstant>(Product->getOperand(0)))
       return Constant;
-  }
   return nullptr;
 }
 
@@ -2299,11 +2300,9 @@ bool DependenceAnalysis::gcdMIVtest(const SCEV *Src,
   while (const SCEVAddRecExpr *AddRec =
          dyn_cast<SCEVAddRecExpr>(Coefficients)) {
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-    const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Coeff);
-    if (const SCEVMulExpr *Product = dyn_cast<SCEVMulExpr>(Coeff))
-      // If the coefficient is the product of a constant and other stuff,
-      // we can use the constant in the GCD computation.
-      Constant = getConstantPart(Product);
+    // If the coefficient is the product of a constant and other stuff,
+    // we can use the constant in the GCD computation.
+    const auto *Constant = getConstantPart(Coeff);
     if (!Constant)
       return false;
     APInt ConstCoeff = Constant->getAPInt();
@@ -2320,11 +2319,9 @@ bool DependenceAnalysis::gcdMIVtest(const SCEV *Src,
   while (const SCEVAddRecExpr *AddRec =
          dyn_cast<SCEVAddRecExpr>(Coefficients)) {
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-    const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Coeff);
-    if (const SCEVMulExpr *Product = dyn_cast<SCEVMulExpr>(Coeff))
-      // If the coefficient is the product of a constant and other stuff,
-      // we can use the constant in the GCD computation.
-      Constant = getConstantPart(Product);
+    // If the coefficient is the product of a constant and other stuff,
+    // we can use the constant in the GCD computation.
+    const auto *Constant = getConstantPart(Coeff);
     if (!Constant)
       return false;
     APInt ConstCoeff = Constant->getAPInt();
@@ -2403,12 +2400,9 @@ bool DependenceAnalysis::gcdMIVtest(const SCEV *Src,
       if (CurLoop == AddRec->getLoop())
         ; // SrcCoeff == Coeff
       else {
-        if (const SCEVMulExpr *Product = dyn_cast<SCEVMulExpr>(Coeff))
-          // If the coefficient is the product of a constant and other stuff,
-          // we can use the constant in the GCD computation.
-          Constant = getConstantPart(Product);
-        else
-          Constant = cast<SCEVConstant>(Coeff);
+        // If the coefficient is the product of a constant and other stuff,
+        // we can use the constant in the GCD computation.
+        Constant = getConstantPart(Coeff);
         if (!Constant)
           return false;
         APInt ConstCoeff = Constant->getAPInt();
@@ -2423,12 +2417,9 @@ bool DependenceAnalysis::gcdMIVtest(const SCEV *Src,
       if (CurLoop == AddRec->getLoop())
         DstCoeff = Coeff;
       else {
-        if (const SCEVMulExpr *Product = dyn_cast<SCEVMulExpr>(Coeff))
-          // If the coefficient is the product of a constant and other stuff,
-          // we can use the constant in the GCD computation.
-          Constant = getConstantPart(Product);
-        else
-          Constant = cast<SCEVConstant>(Coeff);
+        // If the coefficient is the product of a constant and other stuff,
+        // we can use the constant in the GCD computation.
+        Constant = getConstantPart(Coeff);
         if (!Constant)
           return false;
         APInt ConstCoeff = Constant->getAPInt();
@@ -2437,18 +2428,12 @@ bool DependenceAnalysis::gcdMIVtest(const SCEV *Src,
       Inner = AddRec->getStart();
     }
     Delta = SE->getMinusSCEV(SrcCoeff, DstCoeff);
-    if (const SCEVMulExpr *Product = dyn_cast<SCEVMulExpr>(Delta))
-      // If the coefficient is the product of a constant and other stuff,
-      // we can use the constant in the GCD computation.
-      Constant = getConstantPart(Product);
-    else if (isa<SCEVConstant>(Delta))
-      Constant = cast<SCEVConstant>(Delta);
-    else {
+    // If the coefficient is the product of a constant and other stuff,
+    // we can use the constant in the GCD computation.
+    Constant = getConstantPart(Delta);
+    if (!Constant)
       // The difference of the two coefficients might not be a product
       // or constant, in which case we give up on this direction.
-      continue;
-    }
-    if (!Constant)
       continue;
     APInt ConstCoeff = Constant->getAPInt();
     RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff.abs());

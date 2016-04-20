@@ -59,11 +59,36 @@ namespace llvm {
 
     IntrinsicSignature IS;
 
-    // Memory mod/ref behavior of this intrinsic.
-    enum ModRefKind {
-      NoMem, ReadArgMem, ReadMem, ReadWriteArgMem, ReadWriteMem
+    /// Bit flags describing the type (ref/mod) and location of memory
+    /// accesses that may be performed by the intrinsics. Analogous to
+    /// \c FunctionModRefBehaviour.
+    enum ModRefBits {
+      /// The intrinsic may access memory anywhere, i.e. it is not restricted
+      /// to access through pointer arguments.
+      MR_Anywhere = 1,
+
+      /// The intrinsic may read memory.
+      MR_Ref = 2,
+
+      /// The intrinsic may write memory.
+      MR_Mod = 4,
+
+      /// The intrinsic may both read and write memory.
+      MR_ModRef = MR_Ref | MR_Mod,
     };
-    ModRefKind ModRef;
+
+    /// Memory mod/ref behavior of this intrinsic, corresponding to
+    /// intrinsic properties (IntrReadMem, IntrReadArgMem, etc.).
+    enum ModRefBehavior {
+      NoMem = 0,
+      ReadArgMem = MR_Ref,
+      ReadMem = MR_Ref | MR_Anywhere,
+      WriteArgMem = MR_Mod,
+      WriteMem = MR_Mod | MR_Anywhere,
+      ReadWriteArgMem = MR_ModRef,
+      ReadWriteMem = MR_ModRef | MR_Anywhere,
+    };
+    ModRefBehavior ModRef;
 
     /// This is set to true if the intrinsic is overloaded by its argument
     /// types.

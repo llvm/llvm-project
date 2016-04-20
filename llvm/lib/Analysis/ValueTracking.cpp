@@ -2262,6 +2262,153 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
   return false;
 }
 
+/// \brief Check call has a unary float signature
+/// It checks following:
+/// a) call should have a single argument
+/// b) argument type should be floating point type
+/// c) call instruction type and argument type should be same
+/// d) call should only reads memory.
+/// If all these condition is met then return ValidIntrinsicID
+/// else return not_intrinsic.
+static Intrinsic::ID checkUnaryFloatSignature(ImmutableCallSite ICS,
+                                              Intrinsic::ID ValidIntrinsicID) {
+  if (ICS.getNumArgOperands() != 1 ||
+      !ICS.getArgOperand(0)->getType()->isFloatingPointTy() ||
+      ICS.getType() != ICS.getArgOperand(0)->getType() ||
+      !ICS.onlyReadsMemory())
+    return Intrinsic::not_intrinsic;
+
+  return ValidIntrinsicID;
+}
+
+/// \brief Check call has a binary float signature
+/// It checks following:
+/// a) call should have 2 arguments.
+/// b) arguments type should be floating point type
+/// c) call instruction type and arguments type should be same
+/// d) call should only reads memory.
+/// If all these condition is met then return ValidIntrinsicID
+/// else return not_intrinsic.
+static Intrinsic::ID checkBinaryFloatSignature(ImmutableCallSite ICS,
+                                               Intrinsic::ID ValidIntrinsicID) {
+  if (ICS.getNumArgOperands() != 2 ||
+      !ICS.getArgOperand(0)->getType()->isFloatingPointTy() ||
+      !ICS.getArgOperand(1)->getType()->isFloatingPointTy() ||
+      ICS.getType() != ICS.getArgOperand(0)->getType() ||
+      ICS.getType() != ICS.getArgOperand(1)->getType() ||
+      !ICS.onlyReadsMemory())
+    return Intrinsic::not_intrinsic;
+
+  return ValidIntrinsicID;
+}
+
+Intrinsic::ID llvm::getIntrinsicForCallSite(ImmutableCallSite ICS,
+                                            const TargetLibraryInfo *TLI) {
+  const Function *F = ICS.getCalledFunction();
+  if (!F)
+    return Intrinsic::not_intrinsic;
+
+  if (F->isIntrinsic())
+    return F->getIntrinsicID();
+
+  if (!TLI)
+    return Intrinsic::not_intrinsic;
+
+  LibFunc::Func Func;
+  // We're going to make assumptions on the semantics of the functions, check
+  // that the target knows that it's available in this environment and it does
+  // not have local linkage.
+  if (!F || F->hasLocalLinkage() || !TLI->getLibFunc(F->getName(), Func))
+    return Intrinsic::not_intrinsic;
+
+  // Otherwise check if we have a call to a function that can be turned into a
+  // vector intrinsic.
+  switch (Func) {
+  default:
+    break;
+  case LibFunc::sin:
+  case LibFunc::sinf:
+  case LibFunc::sinl:
+    return checkUnaryFloatSignature(ICS, Intrinsic::sin);
+  case LibFunc::cos:
+  case LibFunc::cosf:
+  case LibFunc::cosl:
+    return checkUnaryFloatSignature(ICS, Intrinsic::cos);
+  case LibFunc::exp:
+  case LibFunc::expf:
+  case LibFunc::expl:
+    return checkUnaryFloatSignature(ICS, Intrinsic::exp);
+  case LibFunc::exp2:
+  case LibFunc::exp2f:
+  case LibFunc::exp2l:
+    return checkUnaryFloatSignature(ICS, Intrinsic::exp2);
+  case LibFunc::log:
+  case LibFunc::logf:
+  case LibFunc::logl:
+    return checkUnaryFloatSignature(ICS, Intrinsic::log);
+  case LibFunc::log10:
+  case LibFunc::log10f:
+  case LibFunc::log10l:
+    return checkUnaryFloatSignature(ICS, Intrinsic::log10);
+  case LibFunc::log2:
+  case LibFunc::log2f:
+  case LibFunc::log2l:
+    return checkUnaryFloatSignature(ICS, Intrinsic::log2);
+  case LibFunc::fabs:
+  case LibFunc::fabsf:
+  case LibFunc::fabsl:
+    return checkUnaryFloatSignature(ICS, Intrinsic::fabs);
+  case LibFunc::fmin:
+  case LibFunc::fminf:
+  case LibFunc::fminl:
+    return checkBinaryFloatSignature(ICS, Intrinsic::minnum);
+  case LibFunc::fmax:
+  case LibFunc::fmaxf:
+  case LibFunc::fmaxl:
+    return checkBinaryFloatSignature(ICS, Intrinsic::maxnum);
+  case LibFunc::copysign:
+  case LibFunc::copysignf:
+  case LibFunc::copysignl:
+    return checkBinaryFloatSignature(ICS, Intrinsic::copysign);
+  case LibFunc::floor:
+  case LibFunc::floorf:
+  case LibFunc::floorl:
+    return checkUnaryFloatSignature(ICS, Intrinsic::floor);
+  case LibFunc::ceil:
+  case LibFunc::ceilf:
+  case LibFunc::ceill:
+    return checkUnaryFloatSignature(ICS, Intrinsic::ceil);
+  case LibFunc::trunc:
+  case LibFunc::truncf:
+  case LibFunc::truncl:
+    return checkUnaryFloatSignature(ICS, Intrinsic::trunc);
+  case LibFunc::rint:
+  case LibFunc::rintf:
+  case LibFunc::rintl:
+    return checkUnaryFloatSignature(ICS, Intrinsic::rint);
+  case LibFunc::nearbyint:
+  case LibFunc::nearbyintf:
+  case LibFunc::nearbyintl:
+    return checkUnaryFloatSignature(ICS, Intrinsic::nearbyint);
+  case LibFunc::round:
+  case LibFunc::roundf:
+  case LibFunc::roundl:
+    return checkUnaryFloatSignature(ICS, Intrinsic::round);
+  case LibFunc::pow:
+  case LibFunc::powf:
+  case LibFunc::powl:
+    return checkBinaryFloatSignature(ICS, Intrinsic::pow);
+  case LibFunc::sqrt:
+  case LibFunc::sqrtf:
+  case LibFunc::sqrtl:
+    if (ICS->hasNoNaNs())
+      return checkUnaryFloatSignature(ICS, Intrinsic::sqrt);
+    return Intrinsic::not_intrinsic;
+  }
+
+  return Intrinsic::not_intrinsic;
+}
+
 /// Return true if we can prove that the specified FP value is never equal to
 /// -0.0.
 ///
@@ -2298,7 +2445,7 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
     return true;
 
   if (const CallInst *CI = dyn_cast<CallInst>(I)) {
-    Intrinsic::ID IID = getIntrinsicIDForCall(CI, TLI);
+    Intrinsic::ID IID = getIntrinsicForCallSite(CI, TLI);
     switch (IID) {
     default:
       break;
@@ -2352,7 +2499,7 @@ bool llvm::CannotBeOrderedLessThanZero(const Value *V,
     // Widening/narrowing never change sign.
     return CannotBeOrderedLessThanZero(I->getOperand(0), TLI, Depth + 1);
   case Instruction::Call:
-    Intrinsic::ID IID = getIntrinsicIDForCall(cast<CallInst>(I), TLI);
+    Intrinsic::ID IID = getIntrinsicForCallSite(cast<CallInst>(I), TLI);
     switch (IID) {
     default:
       break;
@@ -3788,16 +3935,104 @@ static bool isImpliedCondOperands(CmpInst::Predicate Pred, Value *ALHS,
   }
 }
 
-bool llvm::isImpliedCondition(Value *LHS, Value *RHS, const DataLayout &DL,
-                              unsigned Depth, AssumptionCache *AC,
-                              const Instruction *CxtI,
+/// Return true if "icmp2 BPred BLHS BRHS" is known to be implied by "icmp1
+/// APred ALHS ARHS".  The implication may be either true or false depending on
+/// the return value of ImpliedTrue.
+static bool isImpliedCondMatchingOperands(CmpInst::Predicate APred, Value *ALHS,
+                                          Value *ARHS, CmpInst::Predicate BPred,
+                                          Value *BLHS, Value *BRHS,
+                                          bool &ImpliedTrue) {
+  // The operands of the two compares must match.
+  bool IsMatchingOps = (ALHS == BLHS && ARHS == BRHS);
+  bool IsSwappedOps = (ALHS == BRHS && ARHS == BLHS);
+  if (!IsMatchingOps && !IsSwappedOps)
+    return false;
+
+  // Canonicalize the operands so they're matching.
+  if (IsSwappedOps) {
+    std::swap(BLHS, BRHS);
+    BPred = ICmpInst::getSwappedPredicate(BPred);
+  }
+
+  // If the predicates match, then we know the first condition implies the
+  // second is true.
+  if (APred == BPred) {
+    ImpliedTrue = true;
+    return true;
+  }
+
+  // If an inverted APred matches BPred, we can infer the second condition is
+  // false.
+  if (CmpInst::getInversePredicate(APred) == BPred) {
+    ImpliedTrue = false;
+    return true;
+  }
+
+  // If a swapped APred matches BPred, we can infer the second condition is
+  // false in many cases.
+  if (CmpInst::getSwappedPredicate(APred) == BPred) {
+    switch (APred) {
+    default:
+      break;
+    case CmpInst::ICMP_UGT: // A >u B implies A <u B is false.
+    case CmpInst::ICMP_ULT: // A <u B implies A >u B is false.
+    case CmpInst::ICMP_SGT: // A >s B implies A <s B is false.
+    case CmpInst::ICMP_SLT: // A <s B implies A >s B is false.
+      ImpliedTrue = false;
+      return true;
+    }
+  }
+
+  // The predicates must match sign or at least one of them must be an equality
+  // comparison (which is signless).
+  if (ICmpInst::isSigned(APred) != ICmpInst::isSigned(BPred) &&
+      !ICmpInst::isEquality(APred) && !ICmpInst::isEquality(BPred))
+    return false;
+
+  switch (APred) {
+  default:
+    break;
+  case CmpInst::ICMP_EQ:
+    // A == B implies A > B and A < B are false.
+    if (CmpInst::isFalseWhenEqual(BPred)) {
+      ImpliedTrue = false;
+      return true;
+    }
+    break;
+  case CmpInst::ICMP_UGT:
+  case CmpInst::ICMP_ULT:
+  case CmpInst::ICMP_SGT:
+  case CmpInst::ICMP_SLT:
+    // A > B implies A == B is false.
+    // A < B implies A == B is false.
+    if (BPred == CmpInst::ICMP_EQ) {
+      ImpliedTrue = false;
+      return true;
+    }
+    // A > B implies A != B is true.
+    // A < B implies A != B is true.
+    if (BPred == CmpInst::ICMP_NE) {
+      ImpliedTrue = true;
+      return true;
+    }
+    break;
+  }
+  return false;
+}
+
+bool llvm::isImpliedCondition(Value *LHS, Value *RHS, bool &ImpliedTrue,
+                              const DataLayout &DL, unsigned Depth,
+                              AssumptionCache *AC, const Instruction *CxtI,
                               const DominatorTree *DT) {
   assert(LHS->getType() == RHS->getType() && "mismatched type");
   Type *OpTy = LHS->getType();
   assert(OpTy->getScalarType()->isIntegerTy(1));
 
   // LHS ==> RHS by definition
-  if (LHS == RHS) return true;
+  if (LHS == RHS) {
+    ImpliedTrue = true;
+    return true;
+  }
 
   if (OpTy->isVectorTy())
     // TODO: extending the code below to handle vectors
@@ -3812,9 +4047,15 @@ bool llvm::isImpliedCondition(Value *LHS, Value *RHS, const DataLayout &DL,
       !match(RHS, m_ICmp(BPred, m_Value(BLHS), m_Value(BRHS))))
     return false;
 
-  if (APred == BPred)
+  if (isImpliedCondMatchingOperands(APred, ALHS, ARHS, BPred, BLHS, BRHS,
+                                    ImpliedTrue))
+    return true;
+
+  if (APred == BPred) {
+    ImpliedTrue = true;
     return isImpliedCondOperands(APred, ALHS, ARHS, BLHS, BRHS, DL, Depth, AC,
                                  CxtI, DT);
+  }
 
   return false;
 }

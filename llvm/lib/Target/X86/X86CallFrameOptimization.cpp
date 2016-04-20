@@ -10,7 +10,7 @@
 // This file defines a pass that optimizes call sequences on x86.
 // Currently, it converts movs of function parameters onto the stack into
 // pushes. This is beneficial for two main reasons:
-// 1) The push instruction encoding is much smaller than an esp-relative mov
+// 1) The push instruction encoding is much smaller than a stack-ptr-based mov.
 // 2) It is possible to push memory arguments directly. So, if the
 //    the transformation is performed pre-reg-alloc, it can help relieve
 //    register pressure.
@@ -106,6 +106,8 @@ private:
   const X86FrameLowering *TFL;
   const X86Subtarget *STI;
   const MachineRegisterInfo *MRI;
+  unsigned SlotSize;
+  unsigned Log2SlotSize;
   static char ID;
 };
 
@@ -207,7 +209,7 @@ bool X86CallFrameOptimization::isProfitable(MachineFunction &MF,
         Advantage -= 3;
       // Now, for each push, we save ~3 bytes. For small constants, we actually,
       // save more (up to 5 bytes), but 3 should be a good approximation.
-      Advantage += (CC.ExpectedDist / 4) * 3;
+      Advantage += (CC.ExpectedDist >> Log2SlotSize) * 3;
     }
   }
 
@@ -219,6 +221,12 @@ bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
   TII = STI->getInstrInfo();
   TFL = STI->getFrameLowering();
   MRI = &MF.getRegInfo();
+
+  const X86RegisterInfo &RegInfo =
+      *static_cast<const X86RegisterInfo *>(STI->getRegisterInfo());
+  SlotSize = RegInfo.getSlotSize();
+  assert(isPowerOf2_32(SlotSize) && "Expect power of 2 stack slot size");
+  Log2SlotSize = Log2_32(SlotSize);
 
   if (!isLegal(MF))
     return false;
@@ -322,7 +330,8 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
 
   // How much do we adjust the stack? This puts an upper bound on
   // the number of parameters actually passed on it.
-  unsigned int MaxAdjust = FrameSetup->getOperand(0).getImm() / 4;
+  unsigned int MaxAdjust =
+      FrameSetup->getOperand(0).getImm() >> Log2SlotSize;
 
   // A zero adjustment means no stack parameters
   if (!MaxAdjust) {
@@ -347,8 +356,8 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
   unsigned StackPtr = Context.SPCopy->getOperand(0).getReg();
 
   // Scan the call setup sequence for the pattern we're looking for.
-  // We only handle a simple case - a sequence of MOV32mi or MOV32mr
-  // instructions, that push a sequence of 32-bit values onto the stack, with
+  // We only handle a simple case - a sequence of store instructions that
+  // push a sequence of stack-slot-aligned values onto the stack, with
   // no gaps between them.
   if (MaxAdjust > 4)
     Context.MovVector.resize(MaxAdjust, nullptr);
@@ -363,9 +372,9 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
       continue;
     }
 
-    // We know the instruction is a MOV32mi/MOV32mr.
+    // We know the instruction has a supported store opcode.
     // We only want movs of the form:
-    // movl imm/r32, k(%esp)
+    // mov imm/reg, k(%StackPtr)
     // If we run into something else, bail.
     // Note that AddrBaseReg may, counter to its name, not be a register,
     // but rather a frame index.
@@ -386,9 +395,9 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
            "Negative stack displacement when passing parameters");
 
     // We really don't want to consider the unaligned case.
-    if (StackDisp % 4)
+    if (StackDisp & (SlotSize - 1))
       return;
-    StackDisp /= 4;
+    StackDisp >>= Log2SlotSize;
 
     assert((size_t)StackDisp < Context.MovVector.size() &&
            "Function call has more parameters than the stack is adjusted for.");
@@ -419,9 +428,9 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
     return;
 
   // Now, go through the vector, and see that we don't have any gaps,
-  // but only a series of 32-bit MOVs.
+  // but only a series of MOVs.
   auto MMI = Context.MovVector.begin(), MME = Context.MovVector.end();
-  for (; MMI != MME; ++MMI, Context.ExpectedDist += 4)
+  for (; MMI != MME; ++MMI, Context.ExpectedDist += SlotSize)
     if (*MMI == nullptr)
       break;
 
@@ -451,12 +460,16 @@ bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
   // Now, iterate through the vector in reverse order, and replace the movs
   // with pushes. MOVmi/MOVmr doesn't have any defs, so no need to
   // replace uses.
-  for (int Idx = (Context.ExpectedDist / 4) - 1; Idx >= 0; --Idx) {
+  for (int Idx = (Context.ExpectedDist >> Log2SlotSize) - 1; Idx >= 0; --Idx) {
     MachineBasicBlock::iterator MOV = *Context.MovVector[Idx];
     MachineOperand PushOp = MOV->getOperand(X86::AddrNumOperands);
     MachineBasicBlock::iterator Push = nullptr;
-    if (MOV->getOpcode() == X86::MOV32mi) {
-      unsigned PushOpcode = X86::PUSHi32;
+    unsigned PushOpcode;
+    switch (MOV->getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected Opcode!");
+    case X86::MOV32mi:
+      PushOpcode = X86::PUSHi32;
       // If the operand is a small (8-bit) immediate, we can use a
       // PUSH instruction with a shorter encoding.
       // Note that isImm() may fail even though this is a MOVmi, because
@@ -468,7 +481,8 @@ bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
       }
       Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode))
                  .addOperand(PushOp);
-    } else {
+      break;
+    case X86::MOV32mr:
       unsigned int Reg = PushOp.getReg();
 
       // If PUSHrmm is not slow on this target, try to fold the source of the
@@ -479,7 +493,8 @@ bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
       // conservative about that.
       MachineInstr *DefMov = nullptr;
       if (!SlowPUSHrmm && (DefMov = canFoldIntoRegPush(FrameSetup, Reg))) {
-        Push = BuildMI(MBB, Context.Call, DL, TII->get(X86::PUSH32rmm));
+        PushOpcode = X86::PUSH32rmm;
+        Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode));
 
         unsigned NumOps = DefMov->getDesc().getNumOperands();
         for (unsigned i = NumOps - X86::AddrNumOperands; i != NumOps; ++i)
@@ -487,18 +502,21 @@ bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
 
         DefMov->eraseFromParent();
       } else {
-        Push = BuildMI(MBB, Context.Call, DL, TII->get(X86::PUSH32r))
+        PushOpcode = X86::PUSH32r;
+        Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode))
                    .addReg(Reg)
                    .getInstr();
       }
+      break;
     }
 
     // For debugging, when using SP-based CFA, we need to adjust the CFA
     // offset after each push.
     // TODO: This is needed only if we require precise CFA.
     if (!TFL->hasFP(MF))
-      TFL->BuildCFI(MBB, std::next(Push), DL,
-                    MCCFIInstruction::createAdjustCfaOffset(nullptr, 4));
+      TFL->BuildCFI(
+          MBB, std::next(Push), DL,
+          MCCFIInstruction::createAdjustCfaOffset(nullptr, SlotSize));
 
     MBB.erase(MOV);
   }

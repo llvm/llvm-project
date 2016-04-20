@@ -20,7 +20,6 @@ def FSUB_MM  : MMRel, ADDS_FT<"sub.d", AFGR64Opnd, II_SUB_D, 0, fsub>,
 def LWC1_MM : MMRel, LW_FT<"lwc1", FGR32Opnd, II_LWC1, load>, LW_FM_MM<0x27>;
 def SWC1_MM : MMRel, SW_FT<"swc1", FGR32Opnd, II_SWC1, store>,
               LW_FM_MM<0x26>;
-def LDC1_MM : MMRel, LW_FT<"ldc1", AFGR64Opnd, II_LDC1, load>, LW_FM_MM<0x2f>;
 def SDC1_MM : MMRel, SW_FT<"sdc1", AFGR64Opnd, II_SDC1, store>,
               LW_FM_MM<0x2e>;
 def LWXC1_MM : MMRel, LWXC1_FT<"lwxc1", FGR32Opnd, II_LWXC1, load>,
@@ -147,4 +146,9 @@ let AdditionalPredicates = [InMicroMips] in {
              MFC1_FM_MM<0xe0>, ISA_MIPS32R2, FGR_32;
   def MFHC1_MM : MMRel, MFC1_FT<"mfhc1", GPR32Opnd, AFGR64Opnd, II_MFHC1>,
                  MFC1_FM_MM<0xc0>, ISA_MIPS32R2, FGR_32;
+  def LDC1_MM : MMRel, LW_FT<"ldc1", AFGR64Opnd, II_LDC1, load>,
+                LW_FM_MM<0x2f>, FGR_32 {
+    let DecoderNamespace = "MicroMips";
+    let DecoderMethod = "DecodeFMemMMR6";
+  }
 }

@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=armv7k-apple-watchos2.0 | FileCheck %s
-; RUN: llc < %s -mtriple=armv7k-apple-watchos2.0 -enable-shrink-wrap=true | FileCheck --check-prefix=CHECK %s
+; RUN: llc < %s -mtriple=armv7k-apple-watchos2.0 -enable-shrink-wrap=true | FileCheck %s
 ; RUN: llc < %s -mtriple=armv7-apple-ios8.0 | FileCheck %s
-; RUN: llc < %s -mtriple=armv7-apple-ios8.0 -enable-shrink-wrap=true | FileCheck --check-prefix=CHECK %s
+; RUN: llc < %s -mtriple=armv7-apple-ios8.0 -enable-shrink-wrap=true | FileCheck %s
 
 ; RUN: llc < %s -mtriple=armv7k-apple-watchos2.0 -O0 | FileCheck --check-prefix=CHECK-O0 --check-prefix=WATCH-O0 %s
 ; RUN: llc < %s -mtriple=armv7-apple-ios8.0 -O0 | FileCheck --check-prefix=CHECK-O0 --check-prefix=IOS-O0 %s

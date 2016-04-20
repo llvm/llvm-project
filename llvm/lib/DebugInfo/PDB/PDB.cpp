@@ -26,7 +26,7 @@ PDB_ErrorCode llvm::loadDataForPDB(PDB_ReaderType Type, StringRef Path,
 #if HAVE_DIA_SDK
   return DIASession::createFromPdb(Path, Session);
 #endif
-  return PDB_ErrorCode::NoPdbImpl;
+  return PDB_ErrorCode::NoDiaSupport;
 }
 
 PDB_ErrorCode llvm::loadDataForEXE(PDB_ReaderType Type, StringRef Path,
@@ -35,5 +35,5 @@ PDB_ErrorCode llvm::loadDataForEXE(PDB_ReaderType Type, StringRef Path,
 #if HAVE_DIA_SDK
   return DIASession::createFromExe(Path, Session);
 #endif
-  return PDB_ErrorCode::NoPdbImpl;
+  return PDB_ErrorCode::NoDiaSupport;
 }

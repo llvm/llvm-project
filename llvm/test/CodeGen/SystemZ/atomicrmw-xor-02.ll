@@ -1,6 +1,6 @@
 ; Test 16-bit atomic XORs.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK
+; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-SHIFT1
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-SHIFT2
 

@@ -2533,14 +2533,9 @@ SDValue SystemZTargetLowering::lowerTLSGetOffset(GlobalAddressSDNode *Node,
   return DAG.getCopyFromReg(Chain, DL, SystemZ::R2D, PtrVT, Glue);
 }
 
-SDValue SystemZTargetLowering::lowerGlobalTLSAddress(GlobalAddressSDNode *Node,
-                                                     SelectionDAG &DAG) const {
-  if (DAG.getTarget().Options.EmulatedTLS)
-    return LowerToTLSEmulatedModel(Node, DAG);
-  SDLoc DL(Node);
-  const GlobalValue *GV = Node->getGlobal();
+SDValue SystemZTargetLowering::lowerThreadPointer(const SDLoc &DL,
+                                                  SelectionDAG &DAG) const {
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  TLSModel::Model model = DAG.getTarget().getTLSModel(GV);
 
   // The high part of the thread pointer is in access register 0.
   SDValue TPHi = DAG.getNode(SystemZISD::EXTRACT_ACCESS, DL, MVT::i32,
@@ -2555,7 +2550,19 @@ SDValue SystemZTargetLowering::lowerGlobalTLSAddress(GlobalAddressSDNode *Node,
   // Merge them into a single 64-bit address.
   SDValue TPHiShifted = DAG.getNode(ISD::SHL, DL, PtrVT, TPHi,
                                     DAG.getConstant(32, DL, PtrVT));
-  SDValue TP = DAG.getNode(ISD::OR, DL, PtrVT, TPHiShifted, TPLo);
+  return DAG.getNode(ISD::OR, DL, PtrVT, TPHiShifted, TPLo);
+}
+
+SDValue SystemZTargetLowering::lowerGlobalTLSAddress(GlobalAddressSDNode *Node,
+                                                     SelectionDAG &DAG) const {
+  if (DAG.getTarget().Options.EmulatedTLS)
+    return LowerToTLSEmulatedModel(Node, DAG);
+  SDLoc DL(Node);
+  const GlobalValue *GV = Node->getGlobal();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  TLSModel::Model model = DAG.getTarget().getTLSModel(GV);
+
+  SDValue TP = lowerThreadPointer(DL, DAG);
 
   // Get the offset of GA from the thread pointer, based on the TLS model.
   SDValue Offset;
@@ -3396,6 +3403,9 @@ SystemZTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   unsigned Id = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   switch (Id) {
+  case Intrinsic::thread_pointer:
+    return lowerThreadPointer(SDLoc(Op), DAG);
+
   case Intrinsic::s390_vpdi:
     return DAG.getNode(SystemZISD::PERMUTE_DWORDS, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));

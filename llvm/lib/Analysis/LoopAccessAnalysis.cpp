@@ -1505,7 +1505,7 @@ void LoopAccessInfo::analyzeLoop(const ValueToValueMap &Strides) {
         // vectorize a loop if it contains known function calls that don't set
         // the flag. Therefore, it is safe to ignore this read from memory.
         CallInst *Call = dyn_cast<CallInst>(it);
-        if (Call && getIntrinsicIDForCall(Call, TLI))
+        if (Call && getVectorIntrinsicIDForCall(Call, TLI))
           continue;
 
         // If the function has an explicit vectorized counterpart, we can safely

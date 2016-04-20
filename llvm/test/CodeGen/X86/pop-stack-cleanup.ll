@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-windows | FileCheck %s -check-prefix=CHECK 
+; RUN: llc < %s -mtriple=i686-windows | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s -check-prefix=LINUX64
 
 declare void @param1(i32 %a)

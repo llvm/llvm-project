@@ -175,6 +175,9 @@ protected:
     return MDString::get(Context, S);
   }
 
+  /// Allow subclasses to mutate the tag.
+  void setTag(unsigned Tag) { SubclassData16 = Tag; }
+
 public:
   unsigned getTag() const { return SubclassData16; }
 
@@ -530,10 +533,27 @@ protected:
   DIType(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
          unsigned Line, uint64_t SizeInBits, uint64_t AlignInBits,
          uint64_t OffsetInBits, unsigned Flags, ArrayRef<Metadata *> Ops)
-      : DIScope(C, ID, Storage, Tag, Ops), Line(Line), Flags(Flags),
-        SizeInBits(SizeInBits), AlignInBits(AlignInBits),
-        OffsetInBits(OffsetInBits) {}
+      : DIScope(C, ID, Storage, Tag, Ops) {
+    init(Line, SizeInBits, AlignInBits, OffsetInBits, Flags);
+  }
   ~DIType() = default;
+
+  void init(unsigned Line, uint64_t SizeInBits, uint64_t AlignInBits,
+            uint64_t OffsetInBits, unsigned Flags) {
+    this->Line = Line;
+    this->Flags = Flags;
+    this->SizeInBits = SizeInBits;
+    this->AlignInBits = AlignInBits;
+    this->OffsetInBits = OffsetInBits;
+  }
+
+  /// Change fields in place.
+  void mutate(unsigned Tag, unsigned Line, uint64_t SizeInBits,
+              uint64_t AlignInBits, uint64_t OffsetInBits, unsigned Flags) {
+    assert(isDistinct() && "Only distinct nodes can mutate");
+    setTag(Tag);
+    init(Line, SizeInBits, AlignInBits, OffsetInBits, Flags);
+  }
 
 public:
   TempDIType clone() const {
@@ -770,6 +790,16 @@ class DICompositeType : public DIType {
         RuntimeLang(RuntimeLang) {}
   ~DICompositeType() = default;
 
+  /// Change fields in place.
+  void mutate(unsigned Tag, unsigned Line, unsigned RuntimeLang,
+              uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
+              unsigned Flags) {
+    assert(isDistinct() && "Only distinct nodes can mutate");
+    assert(getRawIdentifier() && "Only ODR-uniqued nodes should mutate");
+    this->RuntimeLang = RuntimeLang;
+    DIType::mutate(Tag, Line, SizeInBits, AlignInBits, OffsetInBits, Flags);
+  }
+
   static DICompositeType *
   getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, Metadata *File,
           unsigned Line, DIScopeRef Scope, DITypeRef BaseType,
@@ -824,6 +854,40 @@ public:
                      VTableHolder, TemplateParams, Identifier))
 
   TempDICompositeType clone() const { return cloneImpl(); }
+
+  /// Get a DICompositeType with the given ODR identifier.
+  ///
+  /// If \a LLVMContext::isODRUniquingDebugTypes(), gets the mapped
+  /// DICompositeType for the given ODR \c Identifier.  If none exists, creates
+  /// a new node.
+  ///
+  /// Else, returns \c nullptr.
+  static DICompositeType *
+  getODRType(LLVMContext &Context, MDString &Identifier, unsigned Tag,
+             MDString *Name, Metadata *File, unsigned Line, Metadata *Scope,
+             Metadata *BaseType, uint64_t SizeInBits, uint64_t AlignInBits,
+             uint64_t OffsetInBits, unsigned Flags, Metadata *Elements,
+             unsigned RuntimeLang, Metadata *VTableHolder,
+             Metadata *TemplateParams);
+  static DICompositeType *getODRTypeIfExists(LLVMContext &Context,
+                                             MDString &Identifier);
+
+  /// Build a DICompositeType with the given ODR identifier.
+  ///
+  /// Looks up the mapped DICompositeType for the given ODR \c Identifier.  If
+  /// it doesn't exist, creates a new one.  If it does exist and \a
+  /// isForwardDecl(), and the new arguments would be a definition, mutates the
+  /// the type in place.  In either case, returns the type.
+  ///
+  /// If not \a LLVMContext::isODRUniquingDebugTypes(), this function returns
+  /// nullptr.
+  static DICompositeType *
+  buildODRType(LLVMContext &Context, MDString &Identifier, unsigned Tag,
+               MDString *Name, Metadata *File, unsigned Line, Metadata *Scope,
+               Metadata *BaseType, uint64_t SizeInBits, uint64_t AlignInBits,
+               uint64_t OffsetInBits, unsigned Flags, Metadata *Elements,
+               unsigned RuntimeLang, Metadata *VTableHolder,
+               Metadata *TemplateParams);
 
   DITypeRef getBaseType() const { return DITypeRef(getRawBaseType()); }
   DINodeArray getElements() const {

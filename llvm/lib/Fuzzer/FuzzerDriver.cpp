@@ -294,6 +294,7 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
   Options.Reload = Flags.reload;
   Options.OnlyASCII = Flags.only_ascii;
   Options.OutputCSV = Flags.output_csv;
+  Options.DetectLeaks = Flags.detect_leaks;
   if (Flags.runs >= 0)
     Options.MaxNumberOfRuns = Flags.runs;
   if (!Inputs->empty())

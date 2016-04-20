@@ -95,6 +95,7 @@ SchedCustomRegistry("hexagon", "Run Hexagon's custom scheduler",
 
 namespace llvm {
   FunctionPass *createHexagonBitSimplify();
+  FunctionPass *createHexagonBranchRelaxation();
   FunctionPass *createHexagonCallFrameInformation();
   FunctionPass *createHexagonCFGOptimizer();
   FunctionPass *createHexagonCommonGEP();
@@ -286,6 +287,8 @@ void HexagonPassConfig::addPreEmitPass() {
 
   if (!NoOpt)
     addPass(createHexagonNewValueJump(), false);
+
+  addPass(createHexagonBranchRelaxation(), false);
 
   // Create Packets.
   if (!NoOpt) {

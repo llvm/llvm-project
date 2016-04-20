@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s
 
 ; First, a simple example from Clang. The registers could plausibly be
 ; different, but probably won't be.

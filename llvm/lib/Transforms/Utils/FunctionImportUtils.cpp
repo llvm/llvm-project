@@ -132,7 +132,7 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV) {
     // linker. The module linking caller needs to enforce this.
     assert(!doImportAsDefinition(SGV));
     // If imported as a declaration, it becomes external_weak.
-    return GlobalValue::ExternalWeakLinkage;
+    return SGV->getLinkage();
 
   case GlobalValue::WeakODRLinkage:
     // For weak_odr linkage, there is a guarantee that all copies will be

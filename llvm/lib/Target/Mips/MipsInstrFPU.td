@@ -404,14 +404,17 @@ def LWC1 : MMRel, LW_FT<"lwc1", FGR32Opnd, II_LWC1, load>, LW_FM<0x31>;
 def SWC1 : MMRel, SW_FT<"swc1", FGR32Opnd, II_SWC1, store>, LW_FM<0x39>;
 
 let DecoderNamespace = "Mips64" in {
-  def LDC164 : LW_FT<"ldc1", FGR64Opnd, II_LDC1, load>, LW_FM<0x35>, ISA_MIPS2,
-               FGR_64;
+  let AdditionalPredicates = [NotInMicroMips] in {
+    def LDC164 : LW_FT<"ldc1", FGR64Opnd, II_LDC1, load>, LW_FM<0x35>,
+                 ISA_MIPS2, FGR_64;
+  }
   def SDC164 : SW_FT<"sdc1", FGR64Opnd, II_SDC1, store>, LW_FM<0x3d>, ISA_MIPS2,
                FGR_64;
 }
-
-def LDC1 : MMRel, LW_FT<"ldc1", AFGR64Opnd, II_LDC1, load>, LW_FM<0x35>,
-           ISA_MIPS2, FGR_32;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def LDC1 : MMRel, StdMMR6Rel, LW_FT<"ldc1", AFGR64Opnd, II_LDC1, load>,
+             LW_FM<0x35>, ISA_MIPS2, FGR_32;
+}
 def SDC1 : MMRel, SW_FT<"sdc1", AFGR64Opnd, II_SDC1, store>, LW_FM<0x3d>,
            ISA_MIPS2, FGR_32;
 

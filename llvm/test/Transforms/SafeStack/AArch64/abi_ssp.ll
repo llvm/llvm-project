@@ -3,10 +3,10 @@
 
 define void @foo() nounwind uwtable safestack sspreq {
 entry:
-; The first @llvm.aarch64.thread.pointer is for the unsafe stack pointer, skip it.
-; TLS: call i8* @llvm.aarch64.thread.pointer()
+; The first @llvm.thread.pointer is for the unsafe stack pointer, skip it.
+; TLS: call i8* @llvm.thread.pointer()
 
-; TLS: %[[TP2:.*]] = call i8* @llvm.aarch64.thread.pointer()
+; TLS: %[[TP2:.*]] = call i8* @llvm.thread.pointer()
 ; TLS: %[[B:.*]] = getelementptr i8, i8* %[[TP2]], i32 40
 ; TLS: %[[C:.*]] = bitcast i8* %[[B]] to i8**
 ; TLS: %[[StackGuard:.*]] = load i8*, i8** %[[C]]

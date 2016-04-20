@@ -575,6 +575,7 @@ void ThinLTOCodeGenerator::run() {
       Pool.async([&](int count) {
         LLVMContext Context;
         Context.setDiscardValueNames(LTODiscardValueNames);
+        Context.enableDebugTypeODRUniquing();
         auto ModuleIdentifier = ModuleBuffer.getBufferIdentifier();
 
         DenseMap<GlobalValue::GUID, GlobalValue::LinkageTypes> ResolvedODR;

@@ -18,6 +18,9 @@
 #if __has_include(<sanitizer / coverage_interface.h>)
 #include <sanitizer/coverage_interface.h>
 #endif
+#if __has_include(<sanitizer / lsan_interface.h>)
+#include <sanitizer/lsan_interface.h>
+#endif
 #endif
 
 #define NO_SANITIZE_MEMORY
@@ -47,6 +50,11 @@ __sanitizer_get_coverage_pc_buffer(uintptr_t **data);
 __attribute__((weak)) size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
                                                      size_t MaxSize,
                                                      unsigned int Seed);
+__attribute__((weak)) void __sanitizer_malloc_hook(void *ptr, size_t size);
+__attribute__((weak)) void __sanitizer_free_hook(void *ptr);
+__attribute__((weak)) void __lsan_enable();
+__attribute__((weak)) void __lsan_disable();
+__attribute__((weak)) int __lsan_do_recoverable_leak_check();
 }
 
 namespace fuzzer {
@@ -277,6 +285,7 @@ void Fuzzer::ShuffleAndMinimize() {
   for (auto &X : Corpus)
     UnitHashesAddedToCorpus.insert(Hash(X));
   PrintStats("INITED");
+  CheckForMemoryLeaks();
 }
 
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
@@ -310,6 +319,26 @@ void Fuzzer::RunOneAndUpdateCorpus(uint8_t *Data, size_t Size) {
     ReportNewCoverage({Data, Data + Size});
 }
 
+// Leak detection is expensive, so we first check if there were more mallocs
+// than frees (using the sanitizer malloc hooks) and only then try to call lsan.
+struct MallocFreeTracer {
+  void Start() {
+    Mallocs = 0;
+    Frees = 0;
+  }
+  // Returns true if there were more mallocs than frees.
+  bool Stop() { return Mallocs > Frees; }
+  size_t Mallocs;
+  size_t Frees;
+};
+
+static thread_local MallocFreeTracer AllocTracer;
+
+extern "C" {
+void __sanitizer_malloc_hook(void *ptr, size_t size) { AllocTracer.Mallocs++; }
+void __sanitizer_free_hook(void *ptr) { AllocTracer.Frees++; }
+}  // extern "C"
+
 void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   UnitStartTime = system_clock::now();
   // We copy the contents of Unit into a separate heap buffer
@@ -319,10 +348,12 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   AssignTaintLabels(DataCopy.get(), Size);
   CurrentUnitData = DataCopy.get();
   CurrentUnitSize = Size;
+  AllocTracer.Start();
   int Res = CB(DataCopy.get(), Size);
+  (void)Res;
+  HasMoreMallocsThanFrees = AllocTracer.Stop();
   CurrentUnitSize = 0;
   CurrentUnitData = nullptr;
-  (void)Res;
   assert(Res == 0);
 }
 
@@ -498,6 +529,47 @@ void Fuzzer::Merge(const std::vector<std::string> &Corpora) {
   Printf("=== Merge: written %zd units\n", Res.size());
 }
 
+// Tries to call lsan, and if there are leaks exits. We call this right after
+// the initial corpus was read because if there are leaky inputs in the corpus
+// further fuzzing will likely hit OOMs.
+void Fuzzer::CheckForMemoryLeaks() {
+  if (!Options.DetectLeaks) return;
+  if (!__lsan_do_recoverable_leak_check)
+    return;
+  if (__lsan_do_recoverable_leak_check()) {
+    Printf("==%d== ERROR: libFuzzer: initial corpus triggers memory leaks.\n"
+           "Exiting now. Use -detect_leaks=0 to disable leak detection here.\n"
+           "LeakSanitizer will still check for leaks at the process exit.\n",
+           GetPid());
+    PrintFinalStats();
+    _Exit(Options.ErrorExitCode);
+  }
+}
+
+// Tries detecting a memory leak on the particular input that we have just
+// executed before calling this function.
+void Fuzzer::TryDetectingAMemoryLeak(uint8_t *Data, size_t Size) {
+  if (!HasMoreMallocsThanFrees) return;  // mallocs==frees, a leak is unlikely.
+  if (!Options.DetectLeaks) return;
+  if (!&__lsan_enable || !&__lsan_disable || !__lsan_do_recoverable_leak_check)
+    return;  // No lsan.
+  // Run the target once again, but with lsan disabled so that if there is
+  // a real leak we do not report it twice.
+  __lsan_disable();
+  RunOneAndUpdateCorpus(Data, Size);
+  __lsan_enable();
+  if (!HasMoreMallocsThanFrees) return;  // a leak is unlikely.
+  // Now perform the actual lsan pass. This is expensive and we must ensure
+  // we don't call it too often.
+  if (__lsan_do_recoverable_leak_check()) {  // Leak is found, report it.
+    CurrentUnitData = Data;
+    CurrentUnitSize = Size;
+    DumpCurrentUnit("leak-");
+    PrintFinalStats();
+    _Exit(Options.ErrorExitCode);  // not exit() to disable lsan further on.
+  }
+}
+
 void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
 
@@ -522,6 +594,7 @@ void Fuzzer::MutateAndTestOne() {
       StartTraceRecording();
     RunOneAndUpdateCorpus(MutateInPlaceHere.data(), Size);
     StopTraceRecording();
+    TryDetectingAMemoryLeak(MutateInPlaceHere.data(), Size);
   }
 }
 

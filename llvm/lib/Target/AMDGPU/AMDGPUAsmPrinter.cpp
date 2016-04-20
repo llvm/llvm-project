@@ -370,6 +370,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
         unsigned reg = MO.getReg();
         switch (reg) {
         case AMDGPU::EXEC:
+        case AMDGPU::EXEC_LO:
+        case AMDGPU::EXEC_HI:
         case AMDGPU::SCC:
         case AMDGPU::M0:
           continue;

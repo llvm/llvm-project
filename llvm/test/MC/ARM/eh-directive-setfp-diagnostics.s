@@ -1,5 +1,5 @@
 @ RUN: not llvm-mc -triple=armv7-unknown-linux-gnueabi < %s 2> %t
-@ RUN: FileCheck --check-prefix=CHECK < %t %s
+@ RUN: FileCheck < %t %s
 
 @ Check the diagnostics for .setfp directive.
 

@@ -949,23 +949,18 @@ defm BUFFER_LOAD_FORMAT_XYZ : MUBUF_Load_Helper <
 defm BUFFER_LOAD_FORMAT_XYZW : MUBUF_Load_Helper <
   mubuf<0x03>, "buffer_load_format_xyzw", VReg_128
 >;
-// Without mayLoad and hasSideEffects, TableGen complains about the pattern
-// matching llvm.amdgcn.buffer.store.format. Eventually, we'll need a way
-// to express the effects of the intrinsic more precisely.
-let mayLoad = 1, hasSideEffects = 1 in {
-  defm BUFFER_STORE_FORMAT_X : MUBUF_Store_Helper <
-    mubuf<0x04>, "buffer_store_format_x", VGPR_32
-  >;
-  defm BUFFER_STORE_FORMAT_XY : MUBUF_Store_Helper <
-    mubuf<0x05>, "buffer_store_format_xy", VReg_64
-  >;
-  defm BUFFER_STORE_FORMAT_XYZ : MUBUF_Store_Helper <
-    mubuf<0x06>, "buffer_store_format_xyz", VReg_96
-  >;
-  defm BUFFER_STORE_FORMAT_XYZW : MUBUF_Store_Helper <
-    mubuf<0x07>, "buffer_store_format_xyzw", VReg_128
-  >;
-}
+defm BUFFER_STORE_FORMAT_X : MUBUF_Store_Helper <
+  mubuf<0x04>, "buffer_store_format_x", VGPR_32
+>;
+defm BUFFER_STORE_FORMAT_XY : MUBUF_Store_Helper <
+  mubuf<0x05>, "buffer_store_format_xy", VReg_64
+>;
+defm BUFFER_STORE_FORMAT_XYZ : MUBUF_Store_Helper <
+  mubuf<0x06>, "buffer_store_format_xyz", VReg_96
+>;
+defm BUFFER_STORE_FORMAT_XYZW : MUBUF_Store_Helper <
+  mubuf<0x07>, "buffer_store_format_xyzw", VReg_128
+>;
 defm BUFFER_LOAD_UBYTE : MUBUF_Load_Helper <
   mubuf<0x08, 0x10>, "buffer_load_ubyte", VGPR_32, i32, az_extloadi8_global
 >;
@@ -996,11 +991,6 @@ defm BUFFER_STORE_SHORT : MUBUF_Store_Helper <
   mubuf<0x1a>, "buffer_store_short", VGPR_32, i32, truncstorei16_global
 >;
 
-// Without mayLoad and hasSideEffects, TableGen complains about the pattern
-// matching llvm.amdgcn.buffer.store. Eventually, we'll want a WriteOnly
-// property to express the effects of this intrinsic more precisely, see
-// http://reviews.llvm.org/D18291
-let mayLoad = 1, hasSideEffects = 1 in {
 defm BUFFER_STORE_DWORD : MUBUF_Store_Helper <
   mubuf<0x1c>, "buffer_store_dword", VGPR_32, i32, global_store
 >;
@@ -1012,7 +1002,6 @@ defm BUFFER_STORE_DWORDX2 : MUBUF_Store_Helper <
 defm BUFFER_STORE_DWORDX4 : MUBUF_Store_Helper <
   mubuf<0x1e, 0x1f>, "buffer_store_dwordx4", VReg_128, v4i32, global_store
 >;
-}
 
 defm BUFFER_ATOMIC_SWAP : MUBUF_Atomic <
   mubuf<0x30, 0x40>, "buffer_atomic_swap", VGPR_32, i32, atomic_swap_global

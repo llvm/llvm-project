@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s -check-prefix=CHECK
+; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-linux -sink-insts-to-avoid-spills | FileCheck %s -check-prefix=SINK
 
 ; Ensure that we sink copy-like instructions into loops to avoid register

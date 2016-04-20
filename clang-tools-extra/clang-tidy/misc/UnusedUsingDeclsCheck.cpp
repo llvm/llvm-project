@@ -30,7 +30,8 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     // than one shadow.
     if (Using->shadow_size() != 1)
       return;
-    const auto* TargetDecl = Using->shadow_begin()->getTargetDecl();
+    const auto *TargetDecl =
+        Using->shadow_begin()->getTargetDecl()->getCanonicalDecl();
 
     // FIXME: Handle other target types.
     if (!isa<RecordDecl>(TargetDecl))
@@ -52,8 +53,9 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   // FIXME: This currently doesn't look at whether the type reference is
   // actually found with the help of the using declaration.
   if (const auto *Used = Result.Nodes.getNodeAs<NamedDecl>("used")) {
-    if (FoundDecls.find(Used) != FoundDecls.end())
-      FoundDecls[Used] = nullptr;
+    auto I = FoundDecls.find(Used->getCanonicalDecl());
+    if (I != FoundDecls.end())
+      I->second = nullptr;
   }
 }
 
