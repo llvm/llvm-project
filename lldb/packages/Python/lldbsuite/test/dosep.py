@@ -30,8 +30,8 @@ ulimit -c unlimited
 echo core.%p | sudo tee /proc/sys/kernel/core_pattern
 """
 
-from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import print_function
 
 # system packages and modules
 import asyncore
@@ -52,13 +52,12 @@ from six.moves import queue
 import lldbsuite
 import lldbsuite.support.seven as seven
 
-from lldbsuite.support import optional_with
 from . import configuration
-from . import dotest_channels
 from . import dotest_args
-from . import result_formatter
-
-from .result_formatter import EventBuilder
+from lldbsuite.support import optional_with
+from lldbsuite.test_event import dotest_channels
+from lldbsuite.test_event.event_builder import EventBuilder
+from lldbsuite.test_event import formatter
 
 from .test_runner import process_control
 
@@ -299,9 +298,9 @@ def send_events_to_collector(events, command):
     event_port = int(command[arg_index])
 
     # Create results formatter connected back to collector via socket.
-    config = result_formatter.FormatterConfig()
+    config = formatter.FormatterConfig()
     config.port = event_port
-    formatter_spec = result_formatter.create_results_formatter(config)
+    formatter_spec = formatter.create_results_formatter(config)
     if formatter_spec is None or formatter_spec.formatter is None:
         raise Exception(
             "Failed to create socket-based ResultsFormatter "
