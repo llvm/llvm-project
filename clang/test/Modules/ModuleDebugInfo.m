@@ -39,12 +39,17 @@
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ObjCClass",
 // CHECK-SAME:             scope: ![[MODULE]],
+// CHECK-SAME:             elements
 
 // The forward declaration should not be in the module scope.
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "OpaqueData", file
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "FwdDecl",
 // CHECK-SAME:             scope: ![[MODULE]],
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ObjCClassWithPrivateIVars",
+// CHECK-SAME:             scope: ![[MODULE]],
+// CHECK-SAME:             elements
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "FwdDeclared"
 // CHECK-SAME:             elements:
