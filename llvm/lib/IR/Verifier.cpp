@@ -83,13 +83,12 @@ static cl::opt<bool> VerifyDebugInfo("verify-debug-info", cl::init(true));
 namespace {
 struct VerifierSupport {
   raw_ostream &OS;
-  const Module *M;
+  const Module *M = nullptr;
 
-  /// \brief Track the brokenness of the module while recursively visiting.
-  bool Broken;
+  /// Track the brokenness of the module while recursively visiting.
+  bool Broken = false;
 
-  explicit VerifierSupport(raw_ostream &OS)
-      : OS(OS), M(nullptr), Broken(false) {}
+  explicit VerifierSupport(raw_ostream &OS) : OS(OS) {}
 
 private:
   template <class NodeTy> void Write(const ilist_iterator<NodeTy> &I) {
