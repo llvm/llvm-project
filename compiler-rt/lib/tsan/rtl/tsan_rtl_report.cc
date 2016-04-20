@@ -680,6 +680,14 @@ void PrintCurrentStack(ThreadState *thr, uptr pc) {
   PrintStack(SymbolizeStack(trace));
 }
 
+// Always inlining PrintCurrentStackSlow, because LocatePcInTrace assumes
+// __sanitizer_print_stack_trace exists in the actual unwinded stack, but
+// tail-call to PrintCurrentStackSlow breaks this assumption because
+// __sanitizer_print_stack_trace disappears after tail-call.
+// However, this solution is not reliable enough, please see dvyukov's comment
+// http://reviews.llvm.org/D19148#406208
+// Also see PR27280 comment 2 and 3 for breaking examples and analysis.
+ALWAYS_INLINE
 void PrintCurrentStackSlow(uptr pc) {
 #ifndef SANITIZER_GO
   BufferedStackTrace *ptrace =

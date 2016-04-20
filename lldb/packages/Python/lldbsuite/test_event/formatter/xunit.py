@@ -8,8 +8,8 @@ Provides an xUnit ResultsFormatter for integrating the LLDB
 test suite with the Jenkins xUnit aggregator and other xUnit-compliant
 test output processors.
 """
-from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import print_function
 
 # System modules
 import re
@@ -20,8 +20,8 @@ import xml.sax.saxutils
 import six
 
 # Local modules
-from .result_formatter import EventBuilder
-from .result_formatter import ResultsFormatter
+from ..event_builder import EventBuilder
+from .results_formatter import ResultsFormatter
 
 
 class XunitFormatter(ResultsFormatter):
@@ -36,10 +36,10 @@ class XunitFormatter(ResultsFormatter):
 
     @staticmethod
     def _build_illegal_xml_regex():
-        """Contructs a regex to match all illegal xml characters.
+        """Constructs a regex to match all illegal xml characters.
 
         Expects to be used against a unicode string."""
-        # Construct the range pairs of invalid unicode chareacters.
+        # Construct the range pairs of invalid unicode characters.
         illegal_chars_u = [
             (0x00, 0x08), (0x0B, 0x0C), (0x0E, 0x1F), (0x7F, 0x84),
             (0x86, 0x9F), (0xFDD0, 0xFDDF), (0xFFFE, 0xFFFF)]
@@ -139,10 +139,10 @@ class XunitFormatter(ResultsFormatter):
 
     @staticmethod
     def _build_regex_list_from_patterns(patterns):
-        """Builds a list of compiled regexes from option value.
+        """Builds a list of compiled regular expressions from option value.
 
-        @param option string containing a comma-separated list of regex
-        patterns. Zero-length or None will produce an empty regex list.
+        @param patterns contains a list of regular expression
+        patterns.
 
         @return list of compiled regular expressions, empty if no
         patterns provided.
@@ -156,7 +156,7 @@ class XunitFormatter(ResultsFormatter):
     def __init__(self, out_file, options):
         """Initializes the XunitFormatter instance.
         @param out_file file-like object where formatted output is written.
-        @param options_dict specifies a dictionary of options for the
+        @param options specifies a dictionary of options for the
         formatter.
         """
         # Initialize the parent
@@ -198,9 +198,7 @@ class XunitFormatter(ResultsFormatter):
                 self._handle_timeout
             }
 
-    RESULT_TYPES = set(
-        [EventBuilder.TYPE_TEST_RESULT,
-         EventBuilder.TYPE_JOB_RESULT])
+    RESULT_TYPES = {EventBuilder.TYPE_TEST_RESULT, EventBuilder.TYPE_JOB_RESULT}
 
     def handle_event(self, test_event):
         super(XunitFormatter, self).handle_event(test_event)
@@ -401,7 +399,8 @@ class XunitFormatter(ResultsFormatter):
             raise Exception(
                 "unknown xfail option: {}".format(self.options.xfail))
 
-    def _handle_expected_timeout(self, test_event):
+    @staticmethod
+    def _handle_expected_timeout(test_event):
         """Handles expected_timeout.
         @param test_event the test event to handle.
         """
@@ -418,7 +417,7 @@ class XunitFormatter(ResultsFormatter):
             # test results viewer.
             result = self._common_add_testcase_entry(
                 test_event,
-                inner_content=("<unexpected-success />"))
+                inner_content="<unexpected-success />")
             with self.lock:
                 self.elements["unexpected_successes"].append(result)
         elif self.options.xpass == XunitFormatter.RM_SUCCESS:
@@ -519,7 +518,7 @@ class XunitFormatter(ResultsFormatter):
 
         xUnit output is in XML.  The reporting system cannot complete the
         formatting of the output without knowing when there is no more input.
-        This call addresses notifcation of the completed test run and thus is
+        This call addresses notification of the completed test run and thus is
         when we can finish off the report output.
         """
 

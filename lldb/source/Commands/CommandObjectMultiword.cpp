@@ -367,6 +367,15 @@ CommandObjectProxy::IsMultiwordObject ()
     return false;
 }
 
+CommandObjectMultiword*
+CommandObjectProxy::GetAsMultiwordCommand ()
+{
+    CommandObject *proxy_command = GetProxyCommandObject();
+    if (proxy_command)
+        return proxy_command->GetAsMultiwordCommand();
+    return nullptr;
+}
+
 void
 CommandObjectProxy::GenerateHelpText (Stream &result)
 {

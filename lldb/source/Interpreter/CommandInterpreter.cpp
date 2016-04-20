@@ -2806,7 +2806,7 @@ CommandInterpreter::FindCommandsForApropos (const char *search_word,
         
         if (cmd_obj->IsMultiwordObject())
         {
-            CommandObjectMultiword *cmd_multiword = (CommandObjectMultiword*)cmd_obj;
+            CommandObjectMultiword *cmd_multiword = cmd_obj->GetAsMultiwordCommand();
             FindCommandsForApropos(search_word,
                                    commands_found,
                                    commands_help,

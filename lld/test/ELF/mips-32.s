@@ -4,13 +4,15 @@
 # RUN: ld.lld -shared %t-be.o -o %t-be.so
 # RUN: llvm-objdump -t -s %t-be.so \
 # RUN:   | FileCheck -check-prefix=SYM -check-prefix=BE %s
-# RUN: llvm-readobj -r -dynamic-table %t-be.so | FileCheck -check-prefix=REL %s
+# RUN: llvm-readobj -r -dynamic-table -mips-plt-got %t-be.so \
+# RUN:   | FileCheck -check-prefix=REL %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s -o %t-el.o
 # RUN: ld.lld -shared %t-el.o -o %t-el.so
 # RUN: llvm-objdump -t -s %t-el.so \
 # RUN:   | FileCheck -check-prefix=SYM -check-prefix=EL %s
-# RUN: llvm-readobj -r -dynamic-table %t-el.so | FileCheck -check-prefix=REL %s
+# RUN: llvm-readobj -r -dynamic-table -mips-plt-got %t-el.so \
+# RUN:   | FileCheck -check-prefix=REL %s
 
 # REQUIRES: mips
 
@@ -54,3 +56,23 @@ v2:
 # REL:   Tag        Type                 Name/Value
 # REL:   0x00000012 RELSZ                16 (bytes)
 # REL:   0x00000013 RELENT               8 (bytes)
+
+# REL:      Primary GOT {
+# REL-NEXT:   Canonical gp value:
+# REL-NEXT:   Reserved entries [
+# REL:        ]
+# REL-NEXT:   Local entries [
+# REL-NEXT:   ]
+# REL-NEXT:   Global entries [
+# REL-NEXT:     Entry {
+# REL-NEXT:       Address:
+# REL-NEXT:       Access:
+# REL-NEXT:       Initial: 0x30004
+# REL-NEXT:       Value: 0x30004
+# REL-NEXT:       Type: Object
+# REL-NEXT:       Section: .data
+# REL-NEXT:       Name: v2
+# REL-NEXT:     }
+# REL-NEXT:   ]
+# REL-NEXT:   Number of TLS and multi-GOT entries: 0
+# REL-NEXT: }

@@ -115,13 +115,9 @@ void *mempcpy(void *dest, const void *src, size_t n);
 # define SUPERUSER_GROUP "root"
 #endif
 
-// We cannot include sanitizer_common.h (it conflicts with public interface
-// headers), so just pull this function directly.
-
-namespace __sanitizer {
-uintptr_t GetPageSizeCached();
+static uintptr_t GetPageSize() {
+  return sysconf(_SC_PAGESIZE);
 }
-using __sanitizer::GetPageSizeCached;
 
 const size_t kMaxPathLength = 4096;
 
@@ -3239,7 +3235,7 @@ TEST(MemorySanitizer, memalign) {
 
 TEST(MemorySanitizer, valloc) {
   void *a = valloc(100);
-  uintptr_t PageSize = GetPageSizeCached();
+  uintptr_t PageSize = GetPageSize();
   EXPECT_EQ(0U, (uintptr_t)a % PageSize);
   free(a);
 }
@@ -3247,7 +3243,7 @@ TEST(MemorySanitizer, valloc) {
 // There's no pvalloc() on FreeBSD.
 #if !defined(__FreeBSD__)
 TEST(MemorySanitizer, pvalloc) {
-  uintptr_t PageSize = GetPageSizeCached();
+  uintptr_t PageSize = GetPageSize();
   void *p = pvalloc(PageSize + 100);
   EXPECT_EQ(0U, (uintptr_t)p % PageSize);
   EXPECT_EQ(2 * PageSize, __sanitizer_get_allocated_size(p));

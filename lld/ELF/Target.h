@@ -55,9 +55,6 @@ public:
   // dynamic linker if isRelRelative returns true.
   virtual bool isRelRelative(uint32_t Type) const;
 
-  virtual bool needsDynRelative(uint32_t Type) const { return false; }
-  virtual bool refersToGotEntry(uint32_t Type) const;
-
   enum PltNeed { Plt_No, Plt_Explicit, Plt_Implicit };
   PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const;
 
@@ -68,7 +65,6 @@ public:
 
   virtual RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const = 0;
   virtual void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const = 0;
-  bool canRelaxTls(uint32_t Type, const SymbolBody *S) const;
   template <class ELFT>
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const;
   virtual ~TargetInfo();
