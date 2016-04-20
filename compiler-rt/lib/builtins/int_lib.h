@@ -35,11 +35,7 @@
 # define COMPILER_RT_ABI __attribute__((pcs("aapcs")))
 #else
 # define ARM_EABI_FNALIAS(aeabi_name, name)
-# if defined(__arm__) && defined(_WIN32) && (!defined(_MSC_VER) || defined(__clang__))
-#   define COMPILER_RT_ABI __attribute__((pcs("aapcs")))
-# else
-#   define COMPILER_RT_ABI
-# endif
+# define COMPILER_RT_ABI
 #endif
 
 #ifdef _MSC_VER

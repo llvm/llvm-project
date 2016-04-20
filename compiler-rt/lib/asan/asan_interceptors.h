@@ -72,6 +72,12 @@
 # define ASAN_INTERCEPT___CXA_ATEXIT 0
 #endif
 
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
+# define ASAN_INTERCEPT___STRDUP 1
+#else
+# define ASAN_INTERCEPT___STRDUP 0
+#endif
+
 DECLARE_REAL(int, memcmp, const void *a1, const void *a2, uptr size)
 DECLARE_REAL(void*, memcpy, void *to, const void *from, uptr size)
 DECLARE_REAL(void*, memset, void *block, int c, uptr size)

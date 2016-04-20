@@ -39,6 +39,13 @@ template <class T> T check(ErrorOr<T> EO) {
   fatal(EO.getError().message());
 }
 
+template <class T> T check(Expected<T> EO) {
+  if (EO)
+    return std::move(*EO);
+  check(errorToErrorCode(EO.takeError()));
+  return T();
+}
+
 template <class T> T check(ErrorOr<T> EO, const Twine &Prefix) {
   if (EO)
     return std::move(*EO);

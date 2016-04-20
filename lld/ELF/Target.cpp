@@ -84,7 +84,6 @@ public:
                 int32_t Index, unsigned RelOff) const override;
   bool isRelRelative(uint32_t Type) const override;
   bool needsCopyRelImpl(uint32_t Type) const override;
-  bool needsDynRelative(uint32_t Type) const override;
   bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 
@@ -92,8 +91,6 @@ public:
   void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-
-  bool refersToGotEntry(uint32_t Type) const override;
 };
 
 class X86_64TargetInfo final : public TargetInfo {
@@ -111,7 +108,6 @@ public:
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   bool needsCopyRelImpl(uint32_t Type) const override;
-  bool refersToGotEntry(uint32_t Type) const override;
   bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   bool isRelRelative(uint32_t Type) const override;
@@ -155,7 +151,6 @@ public:
   uint32_t getTlsGotRel(uint32_t Type) const override;
   bool isRelRelative(uint32_t Type) const override;
   bool needsCopyRelImpl(uint32_t Type) const override;
-  bool refersToGotEntry(uint32_t Type) const override;
   bool needsPltImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -191,7 +186,6 @@ public:
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   bool isHintRel(uint32_t Type) const override;
   bool isRelRelative(uint32_t Type) const override;
-  bool refersToGotEntry(uint32_t Type) const override;
 };
 } // anonymous namespace
 
@@ -229,29 +223,6 @@ uint64_t TargetInfo::getImplicitAddend(const uint8_t *Buf,
   return 0;
 }
 
-bool TargetInfo::canRelaxTls(uint32_t Type, const SymbolBody *S) const {
-  if (Config->Shared || (S && !S->isTls()))
-    return false;
-
-  // We know we are producing an executable.
-
-  // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
-  // depending on the symbol being locally defined or not.
-  if (isTlsGlobalDynamicRel(Type))
-    return true;
-
-  // Local-Dynamic relocs can be relaxed to Local-Exec.
-  if (isTlsLocalDynamicRel(Type))
-    return true;
-
-  // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
-  // defined.
-  if (isTlsInitialExecRel(Type))
-    return !S->isPreemptible();
-
-  return false;
-}
-
 uint64_t TargetInfo::getVAStart() const { return Config->Pic ? 0 : VAStart; }
 
 bool TargetInfo::needsCopyRelImpl(uint32_t Type) const { return false; }
@@ -274,8 +245,6 @@ bool TargetInfo::isHintRel(uint32_t Type) const { return false; }
 bool TargetInfo::isRelRelative(uint32_t Type) const { return true; }
 
 bool TargetInfo::needsPltImpl(uint32_t Type) const { return false; }
-
-bool TargetInfo::refersToGotEntry(uint32_t Type) const { return false; }
 
 TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
                                          const SymbolBody &S) const {
@@ -305,9 +274,11 @@ TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
   // that points to the real function is a dedicated got entry used by the
   // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
   // R_386_JMP_SLOT, etc).
-  if (S.isShared())
-    if (!Config->Pic && S.isFunc() && !refersToGotEntry(Type))
+  if (S.isShared() && !Config->Pic && S.isFunc()) {
+    RelExpr Expr = getRelExpr(Type, S);
+    if (!refersToGotEntry(Expr))
       return Plt_Implicit;
+  }
 
   return Plt_No;
 }
@@ -485,10 +456,6 @@ bool X86TargetInfo::needsPltImpl(uint32_t Type) const {
   return Type == R_386_PLT32;
 }
 
-bool X86TargetInfo::refersToGotEntry(uint32_t Type) const {
-  return Type == R_386_GOT32;
-}
-
 uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
                                           uint32_t Type) const {
   switch (Type) {
@@ -508,10 +475,6 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                 uint64_t Val) const {
   checkInt<32>(Val, Type);
   write32le(Loc, Val);
-}
-
-bool X86TargetInfo::needsDynRelative(uint32_t Type) const {
-  return Config->Shared && Type == R_386_TLS_IE;
 }
 
 void X86TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
@@ -698,11 +661,6 @@ void X86_64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 bool X86_64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
   return Type == R_X86_64_32S || Type == R_X86_64_32 || Type == R_X86_64_PC32 ||
          Type == R_X86_64_64;
-}
-
-bool X86_64TargetInfo::refersToGotEntry(uint32_t Type) const {
-  return Type == R_X86_64_GOTPCREL || Type == R_X86_64_GOTPCRELX ||
-         Type == R_X86_64_REX_GOTPCRELX;
 }
 
 uint32_t X86_64TargetInfo::getDynRel(uint32_t Type) const {
@@ -1166,6 +1124,7 @@ bool AArch64TargetInfo::isRelRelative(uint32_t Type) const {
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
   case R_AARCH64_TSTBR14:
+  case R_AARCH64_LD64_GOT_LO12_NC:
     return true;
   }
 }
@@ -1261,10 +1220,6 @@ bool AArch64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
   case R_AARCH64_LDST128_ABS_LO12_NC:
     return true;
   }
-}
-
-bool AArch64TargetInfo::refersToGotEntry(uint32_t Type) const {
-  return Type == R_AARCH64_ADR_GOT_PAGE || Type == R_AARCH64_LD64_GOT_LO12_NC;
 }
 
 bool AArch64TargetInfo::needsPltImpl(uint32_t Type) const {
@@ -1639,11 +1594,6 @@ bool MipsTargetInfo<ELFT>::needsCopyRelImpl(uint32_t Type) const {
 }
 
 template <class ELFT>
-bool MipsTargetInfo<ELFT>::refersToGotEntry(uint32_t Type) const {
-  return Type == R_MIPS_GOT16 || Type == R_MIPS_CALL16;
-}
-
-template <class ELFT>
 bool MipsTargetInfo<ELFT>::needsPltImpl(uint32_t Type) const {
   return Type == R_MIPS_26;
 }
@@ -1802,10 +1752,6 @@ bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
   case R_MIPS_32:
   case R_MIPS_64:
   case R_MIPS_HI16:
-  case R_MIPS_TLS_DTPREL_HI16:
-  case R_MIPS_TLS_DTPREL_LO16:
-  case R_MIPS_TLS_TPREL_HI16:
-  case R_MIPS_TLS_TPREL_LO16:
     return false;
   }
 }

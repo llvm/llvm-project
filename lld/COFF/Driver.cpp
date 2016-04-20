@@ -50,11 +50,12 @@ bool link(llvm::ArrayRef<const char *> Args) {
   return true;
 }
 
-// Drop directory components and replace extension with ".exe".
+// Drop directory components and replace extension with ".exe" or ".dll".
 static std::string getOutputPath(StringRef Path) {
   auto P = Path.find_last_of("\\/");
   StringRef S = (P == StringRef::npos) ? Path : Path.substr(P + 1);
-  return (S.substr(0, S.rfind('.')) + ".exe").str();
+  const char* E = Config->DLL ? ".dll" : ".exe";
+  return (S.substr(0, S.rfind('.')) + E).str();
 }
 
 // Opens a file. Path has to be resolved already.

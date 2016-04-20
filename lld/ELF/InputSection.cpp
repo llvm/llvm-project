@@ -206,11 +206,6 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
   case R_RELAX_TLS_IE_TO_LE:
   case R_RELAX_TLS_LD_TO_LE:
     return Body.getVA<ELFT>(A);
-  case R_MIPS_GP0:
-    // We need to adjust SymVA value in case of R_MIPS_GPREL16/32
-    // relocations because they use the following expression to calculate
-    // the relocation's result for local symbol: S + A + GP0 - G.
-    return Body.getVA<ELFT>(A) + File.getMipsGp0();
   case R_GOT_OFF:
     return Body.getGotOffset<ELFT>() + A;
   case R_MIPS_GOT_LOCAL:

@@ -115,7 +115,7 @@ void BufferedStackTrace::PopStackFrames(uptr count) {
 uptr BufferedStackTrace::LocatePcInTrace(uptr pc) {
   // Use threshold to find PC in stack trace, as PC we want to unwind from may
   // slightly differ from return address in the actual unwinded stack trace.
-  const int kPcThreshold = 320;
+  const int kPcThreshold = 350;
   for (uptr i = 0; i < size; ++i) {
     if (MatchPc(pc, trace[i], kPcThreshold))
       return i;

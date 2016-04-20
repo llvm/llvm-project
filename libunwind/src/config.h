@@ -39,13 +39,7 @@
     }
   #endif
 
-  #define _LIBUNWIND_BUILD_ZERO_COST_APIS (defined(__i386__) || \
-                                           defined(__x86_64__) || \
-                                           defined(__arm64__) || \
-                                           defined(__mips__))
   #define _LIBUNWIND_BUILD_SJLJ_APIS      defined(__arm__)
-  #define _LIBUNWIND_SUPPORT_FRAME_APIS   (defined(__i386__) || \
-                                           defined(__x86_64__))
   #define _LIBUNWIND_EXPORT               __attribute__((visibility("default")))
   #define _LIBUNWIND_HIDDEN               __attribute__((visibility("hidden")))
   #define _LIBUNWIND_LOG(msg, ...) fprintf(stderr, "libuwind: " msg, __VA_ARGS__)
@@ -71,24 +65,37 @@
     abort();
   }
 
-  #define _LIBUNWIND_BUILD_ZERO_COST_APIS (defined(__i386__) || \
-                                           defined(__x86_64__) || \
-                                           defined(__arm__) || \
-                                           defined(__aarch64__))
   #define _LIBUNWIND_BUILD_SJLJ_APIS      0
-  #define _LIBUNWIND_SUPPORT_FRAME_APIS   (defined(__i386__) || \
-                                           defined(__x86_64__))
   #define _LIBUNWIND_EXPORT               __attribute__((visibility("default")))
   #define _LIBUNWIND_HIDDEN               __attribute__((visibility("hidden")))
   #define _LIBUNWIND_LOG(msg, ...) fprintf(stderr, "libuwind: " msg, __VA_ARGS__)
   #define _LIBUNWIND_ABORT(msg) assert_rtn(__func__, __FILE__, __LINE__, msg)
 
-  #define _LIBUNWIND_SUPPORT_COMPACT_UNWIND 0
-  #define _LIBUNWIND_SUPPORT_DWARF_UNWIND !defined(__arm__) || \
-                                          defined(__ARM_DWARF_EH__)
-  #define _LIBUNWIND_SUPPORT_DWARF_INDEX _LIBUNWIND_SUPPORT_DWARF_UNWIND
+  #if defined(__ARM_DWARF_EH__) || !defined(__arm__)
+    #define _LIBUNWIND_SUPPORT_COMPACT_UNWIND 0
+    #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
+    #define _LIBUNWIND_SUPPORT_DWARF_INDEX 1
+  #else
+    #define _LIBUNWIND_SUPPORT_COMPACT_UNWIND 0
+    #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 0
+    #define _LIBUNWIND_SUPPORT_DWARF_INDEX 0
+  #endif
 #endif
 
+#if defined(__i386__) || defined(__x86_64__)
+#define _LIBUNWIND_SUPPORT_FRAME_APIS 1
+#else
+#define _LIBUNWIND_SUPPORT_FRAME_APIS 0
+#endif
+
+#if defined(__i386__) || defined(__x86_64__) ||                                \
+    (!defined(__APPLE__) && defined(__arm__)) ||                               \
+    (defined(__arm64__) || defined(__aarch64__)) ||                            \
+    (defined(__APPLE__) && defined(__mips__))
+#define _LIBUNWIND_BUILD_ZERO_COST_APIS 1
+#else
+#define _LIBUNWIND_BUILD_ZERO_COST_APIS 0
+#endif
 
 // Macros that define away in non-Debug builds
 #ifdef NDEBUG
