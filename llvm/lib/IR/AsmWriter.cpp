@@ -682,14 +682,25 @@ ModuleSlotTracker::ModuleSlotTracker(SlotTracker &Machine, const Module *M,
 
 ModuleSlotTracker::ModuleSlotTracker(const Module *M,
                                      bool ShouldInitializeAllMetadata)
-    : MachineStorage(M ? new SlotTracker(M, ShouldInitializeAllMetadata)
-                       : nullptr),
-      M(M), Machine(MachineStorage.get()) {}
+    : ShouldCreateStorage(M),
+      ShouldInitializeAllMetadata(ShouldInitializeAllMetadata), M(M) {}
 
 ModuleSlotTracker::~ModuleSlotTracker() {}
 
+SlotTracker *ModuleSlotTracker::getMachine() {
+  if (!ShouldCreateStorage)
+    return Machine;
+
+  ShouldCreateStorage = false;
+  MachineStorage =
+      llvm::make_unique<SlotTracker>(M, ShouldInitializeAllMetadata);
+  Machine = MachineStorage.get();
+  return Machine;
+}
+
 void ModuleSlotTracker::incorporateFunction(const Function &F) {
-  if (!Machine)
+  // Using getMachine() may lazily create the slot tracker.
+  if (!getMachine())
     return;
 
   // Nothing to do if this is the right function already.
