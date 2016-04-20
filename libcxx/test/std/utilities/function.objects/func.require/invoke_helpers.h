@@ -271,89 +271,185 @@ private:
     ArgType a0, a1, a2;
 
     //==========================================================================
-    //                       BULLET 1 AND 2 TEST METHODS
+    //                       BULLET 1, 2 AND 3 TEST METHODS
     //==========================================================================
     template <class MethodPtr, class ObjectT>
     void runTestImp(Int<0>, MethodPtr ptr, ObjectT& object) {
-        static_assert((std::is_same<
-            decltype(std::__invoke(ptr, object_cast(object)))
-          , CallRet>::value), "");
-        assert(ID::unchecked_call == false);
-        CallRet ret = std::__invoke(ptr, object_cast(object));
-        assert(ID::checkCalled(ret));
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke(ptr, object_cast(object)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke(ptr, object_cast(object));
+            assert(ID::checkCalled(ret));
+        }
+#if TEST_STD_VER >= 11
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke_constexpr(ptr, object_cast(object)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke_constexpr(ptr, object_cast(object));
+            assert(ID::checkCalled(ret));
+        }
+#endif
     }
 
     template <class MethodPtr, class ObjectT>
     void runTestImp(Int<1>, MethodPtr ptr, ObjectT& object) {
-        static_assert((std::is_same<
-            decltype(std::__invoke(ptr, object_cast(object), arg_cast(a0)))
-          , CallRet>::value), "");
-        assert(ID::unchecked_call == false);
-        CallRet ret = std::__invoke(ptr, object_cast(object), arg_cast(a0));
-        assert(ID::checkCalled(ret));
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke(ptr, object_cast(object), arg_cast(a0)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke(ptr, object_cast(object), arg_cast(a0));
+            assert(ID::checkCalled(ret));
+        }
+#if TEST_STD_VER >= 11
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke_constexpr(ptr, object_cast(object), arg_cast(a0)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke_constexpr(ptr, object_cast(object), arg_cast(a0));
+            assert(ID::checkCalled(ret));
+        }
+#endif
     }
 
     template <class MethodPtr, class ObjectT>
     void runTestImp(Int<2>, MethodPtr ptr, ObjectT& object) {
-        static_assert((std::is_same<
-            decltype(std::__invoke(ptr, object_cast(object), arg_cast(a0), arg_cast(a1)))
-          , CallRet>::value), "");
-        assert(ID::unchecked_call == false);
-        CallRet ret = std::__invoke(ptr, object_cast(object), arg_cast(a0), arg_cast(a1));
-        assert(ID::checkCalled(ret));
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke(ptr, object_cast(object), arg_cast(a0), arg_cast(a1)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke(ptr, object_cast(object), arg_cast(a0), arg_cast(a1));
+            assert(ID::checkCalled(ret));
+        }
+#if TEST_STD_VER >= 11
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke_constexpr(ptr, object_cast(object), arg_cast(a0), arg_cast(a1)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke_constexpr(ptr, object_cast(object), arg_cast(a0), arg_cast(a1));
+            assert(ID::checkCalled(ret));
+        }
+#endif
     }
 
     template <class MethodPtr, class ObjectT>
     void runTestImp(Int<3>, MethodPtr ptr, ObjectT& object) {
-        static_assert((std::is_same<
-            decltype(std::__invoke(ptr, object_cast(object), arg_cast(a0), arg_cast(a1), arg_cast(a2)))
-          , CallRet>::value), "");
-        assert(ID::unchecked_call == false);
-        CallRet ret = std::__invoke(ptr, object_cast(object), arg_cast(a0), arg_cast(a1), arg_cast(a2));
-        assert(ID::checkCalled(ret));
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke(ptr, object_cast(object), arg_cast(a0), arg_cast(a1), arg_cast(a2)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke(ptr, object_cast(object), arg_cast(a0), arg_cast(a1), arg_cast(a2));
+            assert(ID::checkCalled(ret));
+        }
+#if TEST_STD_VER >= 11
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke_constexpr(ptr, object_cast(object), arg_cast(a0), arg_cast(a1), arg_cast(a2)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke_constexpr(ptr, object_cast(object), arg_cast(a0), arg_cast(a1), arg_cast(a2));
+            assert(ID::checkCalled(ret));
+        }
+#endif
     }
 
     //==========================================================================
-    //                       BULLET 5 TEST METHODS
+    //                       BULLET 7 TEST METHODS
     //==========================================================================
     template <class ObjectT>
     void runTestImp(Int<0>, ObjectT& object) {
-        static_assert((std::is_same<
-            decltype(std::__invoke(object_cast(object)))
-          , CallRet>::value), "");
-        assert(ID::unchecked_call == false);
-        CallRet ret = std::__invoke(object_cast(object));
-        assert(ID::checkCalled(ret));
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke(object_cast(object)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke(object_cast(object));
+            assert(ID::checkCalled(ret));
+        }
+#if TEST_STD_VER >= 11
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke_constexpr(object_cast(object)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke_constexpr(object_cast(object));
+            assert(ID::checkCalled(ret));
+        }
+#endif
     }
 
     template <class ObjectT>
     void runTestImp(Int<1>, ObjectT& object) {
-        static_assert((std::is_same<
-            decltype(std::__invoke(object_cast(object), arg_cast(a0)))
-          , CallRet>::value), "");
-        assert(ID::unchecked_call == false);
-        CallRet ret = std::__invoke(object_cast(object), arg_cast(a0));
-        assert(ID::checkCalled(ret));
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke(object_cast(object), arg_cast(a0)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke(object_cast(object), arg_cast(a0));
+            assert(ID::checkCalled(ret));
+        }
+#if TEST_STD_VER >= 11
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke_constexpr(object_cast(object), arg_cast(a0)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke_constexpr(object_cast(object), arg_cast(a0));
+            assert(ID::checkCalled(ret));
+        }
+#endif
     }
 
     template <class ObjectT>
     void runTestImp(Int<2>, ObjectT& object) {
-        static_assert((std::is_same<
-            decltype(std::__invoke(object_cast(object), arg_cast(a0), arg_cast(a1)))
-          , CallRet>::value), "");
-        assert(ID::unchecked_call == false);
-        CallRet ret = std::__invoke(object_cast(object), arg_cast(a0), arg_cast(a1));
-        assert(ID::checkCalled(ret));
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke(object_cast(object), arg_cast(a0), arg_cast(a1)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke(object_cast(object), arg_cast(a0), arg_cast(a1));
+            assert(ID::checkCalled(ret));
+        }
+#if TEST_STD_VER >= 11
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke_constexpr(object_cast(object), arg_cast(a0), arg_cast(a1)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke_constexpr(object_cast(object), arg_cast(a0), arg_cast(a1));
+            assert(ID::checkCalled(ret));
+        }
+#endif
     }
 
     template <class ObjectT>
     void runTestImp(Int<3>, ObjectT& object) {
-        static_assert((std::is_same<
-            decltype(std::__invoke(object_cast(object), arg_cast(a0), arg_cast(a1), arg_cast(a2)))
-          , CallRet>::value), "");
-        assert(ID::unchecked_call == false);
-        CallRet ret = std::__invoke(object_cast(object), arg_cast(a0), arg_cast(a1), arg_cast(a2));
-        assert(ID::checkCalled(ret));
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke(object_cast(object), arg_cast(a0), arg_cast(a1), arg_cast(a2)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke(object_cast(object), arg_cast(a0), arg_cast(a1), arg_cast(a2));
+            assert(ID::checkCalled(ret));
+        }
+#if TEST_STD_VER >= 11
+        {
+            static_assert((std::is_same<
+                decltype(std::__invoke_constexpr(object_cast(object), arg_cast(a0), arg_cast(a1), arg_cast(a2)))
+              , CallRet>::value), "");
+            assert(ID::unchecked_call == false);
+            CallRet ret = std::__invoke_constexpr(object_cast(object), arg_cast(a0), arg_cast(a1), arg_cast(a2));
+            assert(ID::checkCalled(ret));
+        }
+#endif
     }
 };
 

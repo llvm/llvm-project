@@ -4,13 +4,12 @@
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 
-from ...unit import fixtures
+import libear
 from . import call_and_report
 import unittest
 
 import os.path
 import string
-import subprocess
 import glob
 
 
@@ -37,19 +36,19 @@ def run_analyzer(directory, cdb, args):
 
 class OutputDirectoryTest(unittest.TestCase):
     def test_regular_keeps_report_dir(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
             exit_code, reportdir = run_analyzer(tmpdir, cdb, [])
             self.assertTrue(os.path.isdir(reportdir))
 
     def test_clear_deletes_report_dir(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('clean', tmpdir)
             exit_code, reportdir = run_analyzer(tmpdir, cdb, [])
             self.assertFalse(os.path.isdir(reportdir))
 
     def test_clear_keeps_report_dir_when_asked(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('clean', tmpdir)
             exit_code, reportdir = run_analyzer(tmpdir, cdb, ['--keep-empty'])
             self.assertTrue(os.path.isdir(reportdir))
@@ -57,38 +56,38 @@ class OutputDirectoryTest(unittest.TestCase):
 
 class ExitCodeTest(unittest.TestCase):
     def test_regular_does_not_set_exit_code(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
             exit_code, __ = run_analyzer(tmpdir, cdb, [])
             self.assertFalse(exit_code)
 
     def test_clear_does_not_set_exit_code(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('clean', tmpdir)
             exit_code, __ = run_analyzer(tmpdir, cdb, [])
             self.assertFalse(exit_code)
 
     def test_regular_sets_exit_code_if_asked(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
             exit_code, __ = run_analyzer(tmpdir, cdb, ['--status-bugs'])
             self.assertTrue(exit_code)
 
     def test_clear_does_not_set_exit_code_if_asked(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('clean', tmpdir)
             exit_code, __ = run_analyzer(tmpdir, cdb, ['--status-bugs'])
             self.assertFalse(exit_code)
 
     def test_regular_sets_exit_code_if_asked_from_plist(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
             exit_code, __ = run_analyzer(
                 tmpdir, cdb, ['--status-bugs', '--plist'])
             self.assertTrue(exit_code)
 
     def test_clear_does_not_set_exit_code_if_asked_from_plist(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('clean', tmpdir)
             exit_code, __ = run_analyzer(
                 tmpdir, cdb, ['--status-bugs', '--plist'])
@@ -105,7 +104,7 @@ class OutputFormatTest(unittest.TestCase):
         return len(glob.glob(os.path.join(directory, 'report-*.plist')))
 
     def test_default_creates_html_report(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
             exit_code, reportdir = run_analyzer(tmpdir, cdb, [])
             self.assertTrue(
@@ -114,7 +113,7 @@ class OutputFormatTest(unittest.TestCase):
             self.assertEqual(self.get_plist_count(reportdir), 0)
 
     def test_plist_and_html_creates_html_report(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
             exit_code, reportdir = run_analyzer(tmpdir, cdb, ['--plist-html'])
             self.assertTrue(
@@ -123,7 +122,7 @@ class OutputFormatTest(unittest.TestCase):
             self.assertEqual(self.get_plist_count(reportdir), 5)
 
     def test_plist_does_not_creates_html_report(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('regular', tmpdir)
             exit_code, reportdir = run_analyzer(tmpdir, cdb, ['--plist'])
             self.assertFalse(
@@ -134,14 +133,14 @@ class OutputFormatTest(unittest.TestCase):
 
 class FailureReportTest(unittest.TestCase):
     def test_broken_creates_failure_reports(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('broken', tmpdir)
             exit_code, reportdir = run_analyzer(tmpdir, cdb, [])
             self.assertTrue(
                 os.path.isdir(os.path.join(reportdir, 'failures')))
 
     def test_broken_does_not_creates_failure_reports(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('broken', tmpdir)
             exit_code, reportdir = run_analyzer(
                 tmpdir, cdb, ['--no-failure-reports'])
@@ -170,13 +169,13 @@ class TitleTest(unittest.TestCase):
         self.assertEqual(result['page'], expected)
 
     def test_default_title_in_report(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('broken', tmpdir)
             exit_code, reportdir = run_analyzer(tmpdir, cdb, [])
             self.assertTitleEqual(reportdir, 'src - analyzer results')
 
     def test_given_title_in_report(self):
-        with fixtures.TempDir() as tmpdir:
+        with libear.TemporaryDirectory() as tmpdir:
             cdb = prepare_cdb('broken', tmpdir)
             exit_code, reportdir = run_analyzer(
                 tmpdir, cdb, ['--html-title', 'this is the title'])

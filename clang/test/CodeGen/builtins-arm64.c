@@ -7,7 +7,7 @@ void f0(void *a, void *b) {
 
 void *tp (void) {
   return __builtin_thread_pointer ();
-// CHECK: call {{.*}} @llvm.aarch64.thread.pointer()
+// CHECK: call {{.*}} @llvm.thread.pointer()
 }
 
 // CHECK: call {{.*}} @llvm.aarch64.rbit.i32(i32 %a)

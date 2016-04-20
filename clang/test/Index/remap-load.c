@@ -1,4 +1,4 @@
-// RUN: c-index-test -test-load-source all -remap-file="%s,%S/Inputs/remap-load-to.c" %s | FileCheck -check-prefix=CHECK %s
+// RUN: c-index-test -test-load-source all -remap-file="%s,%S/Inputs/remap-load-to.c" %s | FileCheck %s
 
 // CHECK: remap-load.c:1:5: FunctionDecl=foo:1:5 (Definition) Extent=[1:1 - 3:2]
 // CHECK: remap-load.c:1:13: ParmDecl=parm1:1:13 (Definition) Extent=[1:9 - 1:18]

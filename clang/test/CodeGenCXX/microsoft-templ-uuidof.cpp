@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -DDEFINE_GUID -triple=i386-pc-win32 -fms-extensions | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -emit-llvm %s -o - -DDEFINE_GUID -triple=i386-pc-win32 -fms-extensions | FileCheck %s
 
 struct _GUID;
 

@@ -14,7 +14,7 @@
 // template<class T, class A, class... Args>
 //    shared_ptr<T> allocate_shared(const A& a, Args&&... args);
 
-#define _LIBCPP_HAS_NO_VARIADICS
+
 #include <memory>
 #include <new>
 #include <cstdlib>

@@ -138,7 +138,7 @@ static uint64_t parseExpr(uint64_t Lhs, int MinPrec,
 }
 
 // Evaluates the expression given by list of tokens.
-uint64_t evaluate(ArrayRef<StringRef> Tokens, uint64_t Dot) {
+static uint64_t evaluate(ArrayRef<StringRef> Tokens, uint64_t Dot) {
   uint64_t V = parsePrimary(Tokens, Dot);
   V = parseExpr(V, 0, Tokens, Dot);
   if (!Tokens.empty())

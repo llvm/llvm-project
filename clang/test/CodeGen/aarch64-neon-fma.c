@@ -227,17 +227,17 @@ float64x2_t test_vfmaq_n_f64(float64x2_t a, float64x2_t b, float64_t c) {
 }
 
 // CHECK-LABEL: define <2 x double> @test_vfmsq_n_f64(<2 x double> %a, <2 x double> %b, double %c) #0 {
+// CHECK:   [[SUB_I:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %b
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x double> undef, double %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x double> [[VECINIT_I]], double %c, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <2 x double> %b to <16 x i8>
+// CHECK:   [[TMP1:%.*]] = bitcast <2 x double> [[SUB_I]] to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x double> [[VECINIT1_I]] to <16 x i8>
-// CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
-// CHECK:   [[TMP4:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[TMP3]]
-// CHECK:   [[FMLS_I_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x double>
-// CHECK:   [[FMLS1_I_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x double>
-// CHECK:   [[FMLS2_I_I:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[FMLS_I_I]], <2 x double> [[TMP4]], <2 x double> [[FMLS1_I_I]]) #2
-// CHECK:   ret <2 x double> [[FMLS2_I_I]]
+// CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x double>
+// CHECK:   [[TMP4:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// CHECK:   [[TMP5:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x double>
+// CHECK:   [[TMP6:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP4]], <2 x double> [[TMP5]], <2 x double> [[TMP3]]) #2
+// CHECK:   ret <2 x double> [[TMP6]]
 float64x2_t test_vfmsq_n_f64(float64x2_t a, float64x2_t b, float64_t c) {
   return vfmsq_n_f64(a, b, c);
 }

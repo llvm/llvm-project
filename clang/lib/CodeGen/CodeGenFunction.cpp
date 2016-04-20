@@ -1313,15 +1313,12 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
   // create metadata that specifies that the branch is unpredictable.
   // Don't bother if not optimizing because that metadata would not be used.
   llvm::MDNode *Unpredictable = nullptr;
-  if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
-    if (const CallExpr *Call = dyn_cast<CallExpr>(Cond)) {
-      const Decl *TargetDecl = Call->getCalleeDecl();
-      if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-        if (FD->getBuiltinID() == Builtin::BI__builtin_unpredictable) {
-          llvm::MDBuilder MDHelper(getLLVMContext());
-          Unpredictable = MDHelper.createUnpredictable();
-        }
-      }
+  auto *Call = dyn_cast<CallExpr>(Cond);
+  if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
+    auto *FD = dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl());
+    if (FD && FD->getBuiltinID() == Builtin::BI__builtin_unpredictable) {
+      llvm::MDBuilder MDHelper(getLLVMContext());
+      Unpredictable = MDHelper.createUnpredictable();
     }
   }
 

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <memory>
 
 // shared_ptr
@@ -55,7 +57,6 @@ int main()
     }
     assert(A::count == 0);
     assert(test_allocator<A>::alloc_count == 0);
-#if __cplusplus >= 201103L
     {
     int i = 67;
     char c = 'e';
@@ -74,5 +75,4 @@ int main()
     assert(p->get_char() == 'f');
     }
     assert(A::count == 0);
-#endif
 }

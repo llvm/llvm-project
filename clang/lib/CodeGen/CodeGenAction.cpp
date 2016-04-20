@@ -794,6 +794,11 @@ void CodeGenAction::ExecuteAction() {
     if (Invalid)
       return;
 
+    // For ThinLTO backend invocations, ensure that the context
+    // merges types based on ODR identifiers.
+    if (!CI.getCodeGenOpts().ThinLTOIndexFile.empty())
+      VMContext->enableDebugTypeODRUniquing();
+
     llvm::SMDiagnostic Err;
     TheModule = parseIR(MainFile->getMemBufferRef(), Err, *VMContext);
     if (!TheModule) {

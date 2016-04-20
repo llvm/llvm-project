@@ -708,6 +708,19 @@ TEST(DeclarationMatcher, HasDescendantMemoizationUsesRestrictKind) {
                       decl(anyOf(hasDescendant(RD), hasDescendant(VD)))));
 }
 
+TEST(DeclarationMatcher, HasAncestorMemoization) {
+  // This triggers an hasAncestor with a TemplateArgument in the bound nodes.
+  // That node can't be memoized so we have to check for it before trying to put
+  // it on the cache.
+  DeclarationMatcher CannotMemoize = classTemplateSpecializationDecl(
+      hasAnyTemplateArgument(templateArgument().bind("targ")),
+      forEach(fieldDecl(hasAncestor(forStmt()))));
+
+  EXPECT_TRUE(notMatches("template <typename T> struct S;"
+                         "template <> struct S<int>{ int i; int j; };",
+                         CannotMemoize));
+}
+
 TEST(DeclarationMatcher, HasAttr) {
   EXPECT_TRUE(matches("struct __attribute__((warn_unused)) X {};",
                       decl(hasAttr(clang::attr::WarnUnused))));
