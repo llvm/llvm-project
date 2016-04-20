@@ -2230,6 +2230,14 @@ private:
                                         SourceLocation ScopeLoc,
                                         AttributeList::Syntax Syntax);
 
+  void ParseSwiftNewtypeAttribute(IdentifierInfo &SwiftNewtype,
+                                  SourceLocation SwiftNewtypeLoc,
+                                  ParsedAttributes &attrs,
+                                  SourceLocation *endLoc,
+                                  IdentifierInfo *ScopeName,
+                                  SourceLocation ScopeLoc,
+                                  AttributeList::Syntax Syntax);
+
   void ParseAttributeWithTypeArg(IdentifierInfo &AttrName,
                                  SourceLocation AttrNameLoc,
                                  ParsedAttributes &Attrs,
