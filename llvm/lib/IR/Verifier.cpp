@@ -67,6 +67,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Pass.h"
@@ -84,6 +85,7 @@ namespace {
 struct VerifierSupport {
   raw_ostream *OS;
   const Module *M = nullptr;
+  Optional<ModuleSlotTracker> MST;
 
   /// Track the brokenness of the module while recursively visiting.
   bool Broken = false;
@@ -105,9 +107,10 @@ private:
     if (!V)
       return;
     if (isa<Instruction>(V)) {
-      *OS << *V << '\n';
+      V->print(*OS, *MST);
+      *OS << '\n';
     } else {
-      V->printAsOperand(*OS, true, M);
+      V->printAsOperand(*OS, true, *MST);
       *OS << '\n';
     }
   }
@@ -118,7 +121,7 @@ private:
   void Write(const Metadata *MD) {
     if (!MD)
       return;
-    MD->print(*OS, M);
+    MD->print(*OS, *MST, M);
     *OS << '\n';
   }
 
@@ -129,7 +132,7 @@ private:
   void Write(const NamedMDNode *NMD) {
     if (!NMD)
       return;
-    NMD->print(*OS);
+    NMD->print(*OS, *MST);
     *OS << '\n';
   }
 
@@ -229,13 +232,21 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
 
   void checkAtomicMemAccessSize(const Module *M, Type *Ty,
                                 const Instruction *I);
+
+  void updateModule(const Module *NewM) {
+    if (M == NewM)
+      return;
+    MST.emplace(NewM);
+    M = NewM;
+  }
+
 public:
   explicit Verifier(raw_ostream *OS)
       : VerifierSupport(OS), Context(nullptr), LandingPadResultTy(nullptr),
         SawFrameEscape(false) {}
 
   bool verify(const Function &F) {
-    M = F.getParent();
+    updateModule(F.getParent());
     Context = &M->getContext();
 
     // First ensure the function is well-enough formed to compute dominance
@@ -278,7 +289,7 @@ public:
   }
 
   bool verify(const Module &M) {
-    this->M = &M;
+    updateModule(&M);
     Context = &M.getContext();
     Broken = false;
 
