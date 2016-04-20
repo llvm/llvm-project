@@ -41,6 +41,12 @@ public:
     {
         return true;
     }
+    
+    CommandObjectMultiword*
+    GetAsMultiwordCommand () override
+    {
+        return this;
+    }
 
     bool
     LoadSubCommand(const char *cmd_name,
@@ -130,6 +136,9 @@ public:
 
     bool
     IsMultiwordObject() override;
+    
+    CommandObjectMultiword*
+    GetAsMultiwordCommand () override;
     
     void
     GenerateHelpText (Stream &result) override;
