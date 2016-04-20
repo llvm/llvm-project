@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=cortex-a9 | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=cortex-a9 -jump-table-density=40 | FileCheck %s
 ; Test that ldmia_ret preserves implicit operands for return values.
 ;
 ; This CFG is reduced from a benchmark miscompile. With current
