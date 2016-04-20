@@ -115,7 +115,8 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
 
     # Add top-level targets for various compiler-rt test suites.
     set(COMPILER_RT_TEST_SUITES check-asan check-asan-dynamic check-dfsan
-      check-lsan check-msan check-sanitizer check-tsan check-ubsan)
+      check-lsan check-msan check-sanitizer check-tsan check-ubsan
+      check-profile check-cfi check-cfi-and-supported check-safestack)
     foreach(test_suite ${COMPILER_RT_TEST_SUITES})
       get_ext_project_build_command(run_test_suite ${test_suite})
       add_custom_target(${test_suite}
