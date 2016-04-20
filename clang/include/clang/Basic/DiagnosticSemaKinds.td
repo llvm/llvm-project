@@ -3024,6 +3024,9 @@ def err_attr_swift_error_no_error_parameter : Error<
 def err_attr_swift_error_return_type : Error<
   "%0 attribute with '%1' convention can only be applied to a "
   "%select{function|method}2 returning %select{an integral type|a pointer}3">;
+def warn_swift_newtype_attribute_non_typedef : Warning<
+  "'swift_newtype' attribute may be put on a typedef only; "
+  "attribute is ignored">;
 
 // Function Parameter Semantic Analysis.
 def err_param_with_void_type : Error<"argument may not have 'void' type">;

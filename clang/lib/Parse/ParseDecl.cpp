@@ -238,6 +238,38 @@ IdentifierLoc *Parser::ParseIdentifierLoc() {
   return IL;
 }
 
+void Parser::ParseSwiftNewtypeAttribute(
+    IdentifierInfo &SwiftNewtype, SourceLocation SwiftNewtypeLoc,
+    ParsedAttributes &attrs, SourceLocation *endLoc, IdentifierInfo *ScopeName,
+    SourceLocation ScopeLoc, AttributeList::Syntax Syntax) {
+
+  BalancedDelimiterTracker Parens(*this, tok::l_paren);
+  Parens.consumeOpen();
+
+  if (Tok.is(tok::r_paren)) {
+    Diag(Tok.getLocation(), diag::err_argument_required_after_attribute);
+    Parens.consumeClose();
+    return;
+  }
+  if (Tok.isNot(tok::kw_struct) && Tok.isNot(tok::kw_enum)) {
+    Diag(Tok.getLocation(), diag::warn_attribute_type_not_supported)
+        << &SwiftNewtype << Tok.getIdentifierInfo();
+    if (!isTokenSpecial())
+      ConsumeToken();
+    Parens.consumeClose();
+    return;
+  }
+  auto IL = IdentifierLoc::create(Actions.Context, Tok.getLocation(),
+                                  Tok.getIdentifierInfo());
+  ConsumeToken();
+  auto identLoc = ArgsUnion(IL);
+
+  attrs.addNew(&SwiftNewtype,
+               SourceRange(SwiftNewtypeLoc, Parens.getCloseLocation()),
+               ScopeName, ScopeLoc, &identLoc, 1, Syntax);
+  Parens.consumeClose();
+}
+
 void Parser::ParseAttributeWithTypeArg(IdentifierInfo &AttrName,
                                        SourceLocation AttrNameLoc,
                                        ParsedAttributes &Attrs,
@@ -356,6 +388,10 @@ void Parser::ParseGNUAttributeArgs(IdentifierInfo *AttrName,
   } else if (AttrKind == AttributeList::AT_TypeTagForDatatype) {
     ParseTypeTagForDatatypeAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                      ScopeName, ScopeLoc, Syntax);
+    return;
+  } else if (AttrKind == AttributeList::AT_SwiftNewtype) {
+    ParseSwiftNewtypeAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
+                               ScopeName, ScopeLoc, Syntax);
     return;
   } else if (attributeIsTypeArgAttr(*AttrName)) {
     ParseAttributeWithTypeArg(*AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
