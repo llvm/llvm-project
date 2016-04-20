@@ -1,4 +1,4 @@
-; RUN: llc %s -o - | FileCheck %s --check-prefix=CHECK
+; RUN: llc %s -o - | FileCheck %s
 ;
 ; Note: This test cannot be merged with the shrink-wrapping tests
 ; because the booleans set on the command line take precedence on

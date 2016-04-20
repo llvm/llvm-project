@@ -97,7 +97,7 @@ public:
 
 protected:
   StringRef Name;
-  Elf_Shdr Header = {};
+  Elf_Shdr Header;
 };
 
 template <class ELFT> class GotSection final : public OutputSectionBase<ELFT> {

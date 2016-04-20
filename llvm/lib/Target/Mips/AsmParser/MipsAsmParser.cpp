@@ -2188,7 +2188,6 @@ template <unsigned N> static bool isShiftedUIntAtAnyPosition(uint64_t x) {
 /// @param IsAddress    True if the immediate represents an address. False if it
 ///                     is an integer.
 /// @param IDLoc        Location of the immediate in the source file.
-/// @param Instructions The instructions emitted by this expansion.
 bool MipsAsmParser::loadImmediate(int64_t ImmValue, unsigned DstReg,
                                   unsigned SrcReg, bool Is32BitImm,
                                   bool IsAddress, SMLoc IDLoc, MCStreamer &Out,

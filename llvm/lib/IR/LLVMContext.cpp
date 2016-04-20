@@ -317,16 +317,10 @@ void LLVMContext::enableDebugTypeODRUniquing() {
   if (pImpl->DITypeMap)
     return;
 
-  pImpl->DITypeMap = llvm::make_unique<DenseMap<const MDString *, DIType *>>();
+  pImpl->DITypeMap.emplace();
 }
 
 void LLVMContext::disableDebugTypeODRUniquing() { pImpl->DITypeMap.reset(); }
-
-DIType **LLVMContext::getOrInsertODRUniquedType(const MDString &S) {
-  if (!isODRUniquingDebugTypes())
-    return nullptr;
-  return &(*pImpl->DITypeMap)[&S];
-}
 
 void LLVMContext::setDiscardValueNames(bool Discard) {
   pImpl->DiscardValueNames = Discard;

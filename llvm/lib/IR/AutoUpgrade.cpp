@@ -126,6 +126,10 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                           StoreLaneInts[fArgs.size() - 5], Tys);
       return true;
     }
+    if (Name == "aarch64.thread.pointer" || Name == "arm.thread.pointer") {
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::thread_pointer);
+      return true;
+    }
     break;
   }
 
@@ -796,6 +800,12 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
 
     CallInst *NewCall = Builder.CreateCall(NewFn, Args);
     CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+    return;
+  }
+
+  case Intrinsic::thread_pointer: {
+    CI->replaceAllUsesWith(Builder.CreateCall(NewFn, {}));
     CI->eraseFromParent();
     return;
   }

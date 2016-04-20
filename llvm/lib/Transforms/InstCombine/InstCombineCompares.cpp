@@ -4564,7 +4564,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
           break;
 
         CallInst *CI = cast<CallInst>(LHSI);
-        Intrinsic::ID IID = getIntrinsicIDForCall(CI, TLI);
+        Intrinsic::ID IID = getIntrinsicForCallSite(CI, TLI);
         if (IID != Intrinsic::fabs)
           break;
 

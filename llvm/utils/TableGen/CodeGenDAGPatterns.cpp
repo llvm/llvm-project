@@ -2816,14 +2816,14 @@ public:
 
     if (const CodeGenIntrinsic *IntInfo = N->getIntrinsicInfo(CDP)) {
       // If this is an intrinsic, analyze it.
-      if (IntInfo->ModRef >= CodeGenIntrinsic::ReadArgMem)
+      if (IntInfo->ModRef & CodeGenIntrinsic::MR_Ref)
         mayLoad = true;// These may load memory.
 
-      if (IntInfo->ModRef >= CodeGenIntrinsic::ReadWriteArgMem)
+      if (IntInfo->ModRef & CodeGenIntrinsic::MR_Mod)
         mayStore = true;// Intrinsics that can write to memory are 'mayStore'.
 
       if (IntInfo->ModRef >= CodeGenIntrinsic::ReadWriteMem)
-        // WriteMem intrinsics can have other strange effects.
+        // ReadWriteMem intrinsics can have other strange effects.
         hasSideEffects = true;
     }
   }
@@ -2974,9 +2974,16 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
   // fill in the InstResults map.
   for (unsigned j = 0, e = I->getNumTrees(); j != e; ++j) {
     TreePatternNode *Pat = I->getTree(j);
-    if (Pat->getNumTypes() != 0)
+    if (Pat->getNumTypes() != 0) {
+      std::string Types;
+      for (unsigned k = 0, ke = Pat->getNumTypes(); k != ke; ++k) {
+        if (k > 0)
+          Types += ", ";
+        Types += Pat->getExtType(k).getName();
+      }
       I->error("Top-level forms in instruction pattern should have"
-               " void types");
+               " void types, has types " + Types);
+    }
 
     // Find inputs and outputs, and verify the structure of the uses/defs.
     FindPatternInputsAndOutputs(I, Pat, InstInputs, InstResults,

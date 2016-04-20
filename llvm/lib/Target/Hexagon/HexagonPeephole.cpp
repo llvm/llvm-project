@@ -67,11 +67,11 @@ static cl::opt<bool> DisablePNotP("disable-hexagon-pnotp",
     cl::desc("Disable Optimization of PNotP"));
 
 static cl::opt<bool> DisableOptSZExt("disable-hexagon-optszext",
-    cl::Hidden, cl::ZeroOrMore, cl::init(false),
+    cl::Hidden, cl::ZeroOrMore, cl::init(true),
     cl::desc("Disable Optimization of Sign/Zero Extends"));
 
 static cl::opt<bool> DisableOptExtTo64("disable-hexagon-opt-ext-to-64",
-    cl::Hidden, cl::ZeroOrMore, cl::init(false),
+    cl::Hidden, cl::ZeroOrMore, cl::init(true),
     cl::desc("Disable Optimization of extensions to i64."));
 
 namespace llvm {
@@ -308,6 +308,7 @@ void HexagonPeephole::ChangeOpInto(MachineOperand &Dst, MachineOperand &Src) {
     case MachineOperand::MO_Register:
       if (Src.isReg()) {
         Dst.setReg(Src.getReg());
+        Dst.setSubReg(Src.getSubReg());
       } else if (Src.isImm()) {
         Dst.ChangeToImmediate(Src.getImm());
       } else {
@@ -322,6 +323,7 @@ void HexagonPeephole::ChangeOpInto(MachineOperand &Dst, MachineOperand &Src) {
         Dst.ChangeToRegister(Src.getReg(), Src.isDef(), Src.isImplicit(),
                              Src.isKill(), Src.isDead(), Src.isUndef(),
                              Src.isDebug());
+        Dst.setSubReg(Src.getSubReg());
       } else {
         llvm_unreachable("Unexpected src operand type");
       }

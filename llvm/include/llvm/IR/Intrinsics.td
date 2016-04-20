@@ -38,6 +38,17 @@ def IntrReadArgMem : IntrinsicProperty;
 // deleted if dead.
 def IntrReadMem : IntrinsicProperty;
 
+// IntrWriteMem - This intrinsic writes to unspecified memory, but does not
+// read from memory, and has no other side effects. This means dead stores
+// before calls to this intrinsics may be removed.
+def IntrWriteMem : IntrinsicProperty;
+
+// IntrWriteArgMem - This intrinsic writes only to memory that one of its
+// arguments points to, but may access an unspecified amount. The intrinsic
+// does not read from memory and has no other side effects. This means that
+// dead stores before calls to this intrinsics may be removed.
+def IntrWriteArgMem : IntrinsicProperty;
+
 // IntrReadWriteArgMem - This intrinsic reads and writes only from memory that
 // one of its arguments points to, but may access an unspecified amount.  The
 // reads and writes may be volatile, but except for this it has no other side
@@ -306,6 +317,9 @@ def int_stackrestore  : Intrinsic<[], [llvm_ptr_ty]>,
 
 def int_get_dynamic_area_offset : Intrinsic<[llvm_anyint_ty]>;
 
+def int_thread_pointer : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>,
+                         GCCBuiltin<"__builtin_thread_pointer">;
+
 // IntrReadWriteArgMem is more pessimistic than strictly necessary for prefetch,
 // however it does conveniently prevent the prefetch from being reordered
 // with respect to nearby accesses to the same memory.
@@ -324,6 +338,7 @@ def int_assume        : Intrinsic<[], [llvm_i1_ty], []>;
 // Stack Protector Intrinsic - The stackprotector intrinsic writes the stack
 // guard to the correct place on the stack frame.
 def int_stackprotector : Intrinsic<[], [llvm_ptr_ty, llvm_ptrptr_ty], []>;
+def int_stackguard : Intrinsic<[llvm_ptr_ty], [], []>;
 
 // A counter increment for instrumentation based profiling.
 def int_instrprof_increment : Intrinsic<[],

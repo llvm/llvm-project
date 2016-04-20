@@ -71,46 +71,35 @@ private:
 
 // Emit a minimal sequence of nops spanning NumBytes bytes.
 static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
-                     const MCSubtargetInfo &STI, bool OnlyOneNop = false);
+                     const MCSubtargetInfo &STI);
 
-namespace llvm {
-   X86AsmPrinter::StackMapShadowTracker::StackMapShadowTracker()
-     : InShadow(false), RequiredShadowSize(0), CurrentShadowSize(0) {}
-
-  X86AsmPrinter::StackMapShadowTracker::~StackMapShadowTracker() {}
-
-  void X86AsmPrinter::StackMapShadowTracker::startFunction(MachineFunction &F) {
-    MF = &F;
+void X86AsmPrinter::StackMapShadowTracker::count(MCInst &Inst,
+                                                 const MCSubtargetInfo &STI,
+                                                 MCCodeEmitter *CodeEmitter) {
+  if (InShadow) {
+    SmallString<256> Code;
+    SmallVector<MCFixup, 4> Fixups;
+    raw_svector_ostream VecOS(Code);
+    CodeEmitter->encodeInstruction(Inst, VecOS, Fixups, STI);
+    CurrentShadowSize += Code.size();
+    if (CurrentShadowSize >= RequiredShadowSize)
+      InShadow = false; // The shadow is big enough. Stop counting.
   }
+}
 
-  void X86AsmPrinter::StackMapShadowTracker::count(MCInst &Inst,
-                                                   const MCSubtargetInfo &STI,
-                                                   MCCodeEmitter *CodeEmitter) {
-    if (InShadow) {
-      SmallString<256> Code;
-      SmallVector<MCFixup, 4> Fixups;
-      raw_svector_ostream VecOS(Code);
-      CodeEmitter->encodeInstruction(Inst, VecOS, Fixups, STI);
-      CurrentShadowSize += Code.size();
-      if (CurrentShadowSize >= RequiredShadowSize)
-        InShadow = false; // The shadow is big enough. Stop counting.
-    }
-  }
-
-  void X86AsmPrinter::StackMapShadowTracker::emitShadowPadding(
+void X86AsmPrinter::StackMapShadowTracker::emitShadowPadding(
     MCStreamer &OutStreamer, const MCSubtargetInfo &STI) {
-    if (InShadow && CurrentShadowSize < RequiredShadowSize) {
-      InShadow = false;
-      EmitNops(OutStreamer, RequiredShadowSize - CurrentShadowSize,
-               MF->getSubtarget<X86Subtarget>().is64Bit(), STI);
-    }
+  if (InShadow && CurrentShadowSize < RequiredShadowSize) {
+    InShadow = false;
+    EmitNops(OutStreamer, RequiredShadowSize - CurrentShadowSize,
+             MF->getSubtarget<X86Subtarget>().is64Bit(), STI);
   }
+}
 
-  void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
-    OutStreamer->EmitInstruction(Inst, getSubtargetInfo());
-    SMShadowTracker.count(Inst, getSubtargetInfo(), CodeEmitter.get());
-  }
-} // end llvm namespace
+void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
+  OutStreamer->EmitInstruction(Inst, getSubtargetInfo());
+  SMShadowTracker.count(Inst, getSubtargetInfo(), CodeEmitter.get());
+}
 
 X86MCInstLower::X86MCInstLower(const MachineFunction &mf,
                                X86AsmPrinter &asmprinter)
@@ -783,60 +772,75 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
                             .addExpr(tlsRef));
 }
 
-/// \brief Emit the optimal amount of multi-byte nops on X86.
-static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
-                     const MCSubtargetInfo &STI, bool OnlyOneNop) {
+/// \brief Emit the largest nop instruction smaller than or equal to \p NumBytes
+/// bytes.  Return the size of nop emitted.
+static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
+                        const MCSubtargetInfo &STI) {
   // This works only for 64bit. For 32bit we have to do additional checking if
   // the CPU supports multi-byte nops.
   assert(Is64Bit && "EmitNops only supports X86-64");
+
+  unsigned NopSize;
+  unsigned Opc, BaseReg, ScaleVal, IndexReg, Displacement, SegmentReg;
+  Opc = IndexReg = Displacement = SegmentReg = 0;
+  BaseReg = X86::RAX;
+  ScaleVal = 1;
+  switch (NumBytes) {
+  case  0: llvm_unreachable("Zero nops?"); break;
+  case  1: NopSize = 1; Opc = X86::NOOP; break;
+  case  2: NopSize = 2; Opc = X86::XCHG16ar; break;
+  case  3: NopSize = 3; Opc = X86::NOOPL; break;
+  case  4: NopSize = 4; Opc = X86::NOOPL; Displacement = 8; break;
+  case  5: NopSize = 5; Opc = X86::NOOPL; Displacement = 8;
+           IndexReg = X86::RAX; break;
+  case  6: NopSize = 6; Opc = X86::NOOPW; Displacement = 8;
+           IndexReg = X86::RAX; break;
+  case  7: NopSize = 7; Opc = X86::NOOPL; Displacement = 512; break;
+  case  8: NopSize = 8; Opc = X86::NOOPL; Displacement = 512;
+           IndexReg = X86::RAX; break;
+  case  9: NopSize = 9; Opc = X86::NOOPW; Displacement = 512;
+           IndexReg = X86::RAX; break;
+  default: NopSize = 10; Opc = X86::NOOPW; Displacement = 512;
+           IndexReg = X86::RAX; SegmentReg = X86::CS; break;
+  }
+
+  unsigned NumPrefixes = std::min(NumBytes - NopSize, 5U);
+  NopSize += NumPrefixes;
+  for (unsigned i = 0; i != NumPrefixes; ++i)
+    OS.EmitBytes("\x66");
+
+  switch (Opc) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+    break;
+  case X86::NOOP:
+    OS.EmitInstruction(MCInstBuilder(Opc), STI);
+    break;
+  case X86::XCHG16ar:
+    OS.EmitInstruction(MCInstBuilder(Opc).addReg(X86::AX), STI);
+    break;
+  case X86::NOOPL:
+  case X86::NOOPW:
+    OS.EmitInstruction(MCInstBuilder(Opc)
+                           .addReg(BaseReg)
+                           .addImm(ScaleVal)
+                           .addReg(IndexReg)
+                           .addImm(Displacement)
+                           .addReg(SegmentReg),
+                       STI);
+    break;
+  }
+  assert(NopSize <= NumBytes && "We overemitted?");
+  return NopSize;
+}
+
+/// \brief Emit the optimal amount of multi-byte nops on X86.
+static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
+                     const MCSubtargetInfo &STI) {
   while (NumBytes) {
-    unsigned Opc, BaseReg, ScaleVal, IndexReg, Displacement, SegmentReg;
-    Opc = IndexReg = Displacement = SegmentReg = 0;
-    BaseReg = X86::RAX; ScaleVal = 1;
-    switch (NumBytes) {
-    case  0: llvm_unreachable("Zero nops?"); break;
-    case  1: NumBytes -=  1; Opc = X86::NOOP; break;
-    case  2: NumBytes -=  2; Opc = X86::XCHG16ar; break;
-    case  3: NumBytes -=  3; Opc = X86::NOOPL; break;
-    case  4: NumBytes -=  4; Opc = X86::NOOPL; Displacement = 8; break;
-    case  5: NumBytes -=  5; Opc = X86::NOOPL; Displacement = 8;
-             IndexReg = X86::RAX; break;
-    case  6: NumBytes -=  6; Opc = X86::NOOPW; Displacement = 8;
-             IndexReg = X86::RAX; break;
-    case  7: NumBytes -=  7; Opc = X86::NOOPL; Displacement = 512; break;
-    case  8: NumBytes -=  8; Opc = X86::NOOPL; Displacement = 512;
-             IndexReg = X86::RAX; break;
-    case  9: NumBytes -=  9; Opc = X86::NOOPW; Displacement = 512;
-             IndexReg = X86::RAX; break;
-    default: NumBytes -= 10; Opc = X86::NOOPW; Displacement = 512;
-             IndexReg = X86::RAX; SegmentReg = X86::CS; break;
-    }
-
-    unsigned NumPrefixes = std::min(NumBytes, 5U);
-    NumBytes -= NumPrefixes;
-    for (unsigned i = 0; i != NumPrefixes; ++i)
-      OS.EmitBytes("\x66");
-
-    switch (Opc) {
-    default: llvm_unreachable("Unexpected opcode"); break;
-    case X86::NOOP:
-      OS.EmitInstruction(MCInstBuilder(Opc), STI);
-      break;
-    case X86::XCHG16ar:
-      OS.EmitInstruction(MCInstBuilder(Opc).addReg(X86::AX), STI);
-      break;
-    case X86::NOOPL:
-    case X86::NOOPW:
-      OS.EmitInstruction(MCInstBuilder(Opc).addReg(BaseReg)
-                         .addImm(ScaleVal).addReg(IndexReg)
-                         .addImm(Displacement).addReg(SegmentReg), STI);
-      break;
-    }
-
-    (void) OnlyOneNop;
-    assert((!OnlyOneNop || NumBytes == 0) &&
-           "Allowed only one nop instruction!");
-  } // while (NumBytes)
+    NumBytes -= EmitNop(OS, NumBytes, Is64Bit, STI);
+    assert(NumBytes >= 0 && "Emitted more than I asked for!");
+  }
 }
 
 void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
@@ -945,8 +949,10 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
       // bytes too, so the check on MinSize is important.
       MCI.setOpcode(X86::PUSH64rmr);
     } else {
-      EmitNops(*OutStreamer, MinSize, Subtarget->is64Bit(), getSubtargetInfo(),
-               /* OnlyOneNop = */ true);
+      unsigned NopSize = EmitNop(*OutStreamer, MinSize, Subtarget->is64Bit(),
+                                 getSubtargetInfo());
+      assert(NopSize == MinSize && "Could not implement MinSize!");
+      (void) NopSize;
     }
   }
 

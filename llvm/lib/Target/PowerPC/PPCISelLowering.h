@@ -688,6 +688,10 @@ namespace llvm {
     unsigned
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
+    /// Override to support customized stack guard loading.
+    bool useLoadStackGuardNode() const override;
+    void insertSSPDeclarations(Module &M) const override;
+
   private:
     struct ReuseLoadInfo {
       SDValue Ptr;

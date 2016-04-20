@@ -271,36 +271,51 @@ bool StackProtector::RequiresStackProtector() {
   return NeedsProtector;
 }
 
-/// Insert code into the entry block that stores the __stack_chk_guard
+/// Create a stack guard loading and populate whether SelectionDAG SSP is
+/// supported.
+static Value *getStackGuard(const TargetLoweringBase *TLI, Module *M,
+                            IRBuilder<> &B,
+                            bool *SupportsSelectionDAGSP = nullptr) {
+  if (Value *Guard = TLI->getIRStackGuard(B))
+    return B.CreateLoad(Guard, true, "StackGuard");
+
+  // Use SelectionDAG SSP handling, since there isn't an IR guard.
+  //
+  // This is more or less weird, since we optionally output whether we
+  // should perform a SelectionDAG SP here. The reason is that it's strictly
+  // defined as !TLI->getIRStackGuard(B), where getIRStackGuard is also
+  // mutating. There is no way to get this bit without mutating the IR, so
+  // getting this bit has to happen in this right time.
+  //
+  // We could have define a new function TLI::supportsSelectionDAGSP(), but that
+  // will put more burden on the backends' overriding work, especially when it
+  // actually conveys the same information getIRStackGuard() already gives.
+  if (SupportsSelectionDAGSP)
+    *SupportsSelectionDAGSP = true;
+  TLI->insertSSPDeclarations(*M);
+  return B.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::stackguard));
+}
+
+/// Insert code into the entry block that stores the stack guard
 /// variable onto the stack:
 ///
 ///   entry:
 ///     StackGuardSlot = alloca i8*
-///     StackGuard = load __stack_chk_guard
-///     call void @llvm.stackprotect.create(StackGuard, StackGuardSlot)
+///     StackGuard = <stack guard>
+///     call void @llvm.stackprotector(StackGuard, StackGuardSlot)
 ///
 /// Returns true if the platform/triple supports the stackprotectorcreate pseudo
 /// node.
 static bool CreatePrologue(Function *F, Module *M, ReturnInst *RI,
-                           const TargetLoweringBase *TLI, AllocaInst *&AI,
-                           Value *&StackGuardVar) {
+                           const TargetLoweringBase *TLI, AllocaInst *&AI) {
   bool SupportsSelectionDAGSP = false;
   IRBuilder<> B(&F->getEntryBlock().front());
-
-  StackGuardVar = TLI->getIRStackGuard(B);
-  if (!StackGuardVar) {
-    /// Use SelectionDAG SSP handling, since there isn't an IR guard.
-    SupportsSelectionDAGSP = true;
-    TLI->insertSSPDeclarations(*M);
-    StackGuardVar = TLI->getSDStackGuard(*M);
-  }
-  assert(StackGuardVar && "Must have stack guard available");
-
   PointerType *PtrTy = Type::getInt8PtrTy(RI->getContext());
   AI = B.CreateAlloca(PtrTy, nullptr, "StackGuardSlot");
-  LoadInst *LI = B.CreateLoad(StackGuardVar, "StackGuard");
+
+  Value *Guard = getStackGuard(TLI, M, B, &SupportsSelectionDAGSP);
   B.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::stackprotector),
-               {LI, AI});
+               {Guard, AI});
   return SupportsSelectionDAGSP;
 }
 
@@ -314,7 +329,6 @@ bool StackProtector::InsertStackProtectors() {
   bool SupportsSelectionDAGSP =
       EnableSelectionDAGSP && !TM->Options.EnableFastISel;
   AllocaInst *AI = nullptr;       // Place on stack that stores the stack guard.
-  Value *StackGuardVar = nullptr; // The stack guard variable.
 
   for (Function::iterator I = F->begin(), E = F->end(); I != E;) {
     BasicBlock *BB = &*I++;
@@ -324,8 +338,7 @@ bool StackProtector::InsertStackProtectors() {
 
     if (!HasPrologue) {
       HasPrologue = true;
-      SupportsSelectionDAGSP &=
-          CreatePrologue(F, M, RI, TLI, AI, StackGuardVar);
+      SupportsSelectionDAGSP &= CreatePrologue(F, M, RI, TLI, AI);
     }
 
     if (!SupportsSelectionDAGSP) {
@@ -342,7 +355,7 @@ bool StackProtector::InsertStackProtectors() {
       //
       //   return:
       //     ...
-      //     %1 = load __stack_chk_guard
+      //     %1 = <stack guard>
       //     %2 = load StackGuardSlot
       //     %3 = cmp i1 %1, %2
       //     br i1 %3, label %SP_return, label %CallStackCheckFailBlk
@@ -381,9 +394,9 @@ bool StackProtector::InsertStackProtectors() {
 
       // Generate the stack protector instructions in the old basic block.
       IRBuilder<> B(BB);
-      LoadInst *LI1 = B.CreateLoad(StackGuardVar);
-      LoadInst *LI2 = B.CreateLoad(AI);
-      Value *Cmp = B.CreateICmpEQ(LI1, LI2);
+      Value *Guard = getStackGuard(TLI, M, B);
+      LoadInst *LI2 = B.CreateLoad(AI, true);
+      Value *Cmp = B.CreateICmpEQ(Guard, LI2);
       auto SuccessProb =
           BranchProbabilityInfo::getBranchProbStackProtector(true);
       auto FailureProb =

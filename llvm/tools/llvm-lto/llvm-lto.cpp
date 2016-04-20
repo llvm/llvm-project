@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTOCodeGenerator.h"
 #include "llvm/LTO/LTOModule.h"
@@ -205,6 +206,11 @@ static void error(const ErrorOr<T> &V, const Twine &Prefix) {
   error(V.getError(), Prefix);
 }
 
+static void maybeVerifyModule(const Module &Mod) {
+  if (!DisableVerify && verifyModule(Mod))
+    error("Broken Module");
+}
+
 static std::unique_ptr<LTOModule>
 getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
                   const TargetOptions &Options) {
@@ -219,6 +225,7 @@ getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
       std::move(Context), Buffer->getBufferStart(), Buffer->getBufferSize(),
       Options, Path);
   CurrentActivity = "";
+  maybeVerifyModule((*Ret)->getModule());
   return std::move(*Ret);
 }
 
@@ -303,6 +310,7 @@ static std::unique_ptr<Module> loadModule(StringRef Filename,
     Err.print("llvm-lto", errs());
     report_fatal_error("Can't load module for file " + Filename);
   }
+  maybeVerifyModule(*M);
   return M;
 }
 
@@ -310,6 +318,7 @@ static void writeModuleToFile(Module &TheModule, StringRef Filename) {
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC, sys::fs::OpenFlags::F_None);
   error(EC, "error opening the file '" + Filename + "'");
+  maybeVerifyModule(TheModule);
   WriteBitcodeToFile(&TheModule, OS, /* ShouldPreserveUseListOrder */ true);
 }
 

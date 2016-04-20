@@ -85,6 +85,17 @@ protected:
   };
 
 public:
+
+  // FIXME: Remove constructors once MSVC supports synthesizing move-ops.
+  OrcRemoteTargetRPCAPI() = default;
+  OrcRemoteTargetRPCAPI(const OrcRemoteTargetRPCAPI&) = delete;
+  OrcRemoteTargetRPCAPI& operator=(const OrcRemoteTargetRPCAPI&) = delete;
+
+  OrcRemoteTargetRPCAPI(OrcRemoteTargetRPCAPI&&) {}
+  OrcRemoteTargetRPCAPI& operator=(OrcRemoteTargetRPCAPI&&) {
+    return *this;
+  }
+
   enum JITFuncId : uint32_t {
     InvalidId = RPCFunctionIdTraits<JITFuncId>::InvalidId,
     CallIntVoidId = RPCFunctionIdTraits<JITFuncId>::FirstValidId,

@@ -13,9 +13,6 @@
 
 let TargetPrefix = "aarch64" in {
 
-def int_aarch64_thread_pointer : GCCBuiltin<"__builtin_thread_pointer">,
-            Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
-
 def int_aarch64_ldxr : Intrinsic<[llvm_i64_ty], [llvm_anyptr_ty]>;
 def int_aarch64_ldaxr : Intrinsic<[llvm_i64_ty], [llvm_anyptr_ty]>;
 def int_aarch64_stxr : Intrinsic<[llvm_i32_ty], [llvm_i64_ty, llvm_anyptr_ty]>;

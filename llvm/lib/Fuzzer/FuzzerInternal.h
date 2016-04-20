@@ -304,6 +304,7 @@ public:
     bool OutputCSV = false;
     bool PrintNewCovPcs = false;
     bool PrintFinalStats = false;
+    bool DetectLeaks = false;
   };
   Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options);
   void AddToCorpus(const Unit &U) {
@@ -366,6 +367,8 @@ private:
   void PrintStats(const char *Where, const char *End = "\n");
   void PrintStatusForNewUnit(const Unit &U);
   void ShuffleCorpus(UnitVector *V);
+  void TryDetectingAMemoryLeak(uint8_t *Data, size_t Size);
+  void CheckForMemoryLeaks();
 
   // Updates the probability distribution for the units in the corpus.
   // Must be called whenever the corpus or unit weights are changed.
@@ -397,6 +400,8 @@ private:
   size_t TotalNumberOfRuns = 0;
   size_t TotalNumberOfExecutedTraceBasedMutations = 0;
   size_t NumberOfNewUnitsAdded = 0;
+
+  bool HasMoreMallocsThanFrees = false;
 
   std::vector<Unit> Corpus;
   std::unordered_set<std::string> UnitHashesAddedToCorpus;

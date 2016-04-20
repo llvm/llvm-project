@@ -19,7 +19,7 @@
 ; Ensure that f() is defined in resulting object file, and also
 ; confirm the weak linkage directly in the saved opt bitcode files.
 ; CHECK-NOT: U f
-; OPT: declare extern_weak hidden void @f()
+; OPT: declare hidden void @f()
 ; OPT2: define weak_odr hidden void @f()
 
 target triple = "x86_64-unknown-linux-gnu"

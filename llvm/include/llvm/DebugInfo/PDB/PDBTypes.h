@@ -320,7 +320,8 @@ enum class PDB_MemberAccess { Private = 1, Protected = 2, Public = 3 };
 
 enum class PDB_ErrorCode {
   Success,
-  NoPdbImpl,
+  NoDiaSupport,
+  CouldNotCreateImpl,
   InvalidPath,
   InvalidFileFormat,
   InvalidParameter,

@@ -1,6 +1,5 @@
 ; RUN: llc -march=hexagon -hexagon-small-data-threshold=0 < %s | FileCheck %s
 ; Check that we generate load instructions with absolute addressing mode.
-; XFAIL: *
 
 @a0 = external global i32
 @a1 = external global i32

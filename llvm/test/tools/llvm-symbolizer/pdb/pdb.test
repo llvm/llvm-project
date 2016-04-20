@@ -1,6 +1,6 @@
 RUN: grep '^ADDR:' %s | sed -s 's/ADDR: //' \
 RUN: 	| llvm-symbolizer -obj="%p/Inputs/test.exe" \
-RUN:    | FileCheck %s --check-prefix=CHECK
+RUN:    | FileCheck %s
 RUN: grep '^ADDR:' %s | sed -s 's/ADDR: //' \
 RUN: 	| llvm-symbolizer -obj="%p/Inputs/test.exe" -demangle=false \
 RUN: 	| FileCheck %s --check-prefix=CHECK-NO-DEMANGLE

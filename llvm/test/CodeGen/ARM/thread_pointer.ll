@@ -3,8 +3,8 @@
 
 define i8* @test() {
 entry:
-	%tmp1 = call i8* @llvm.arm.thread.pointer( )		; <i8*> [#uses=0]
+	%tmp1 = call i8* @llvm.thread.pointer( )		; <i8*> [#uses=0]
 	ret i8* %tmp1
 }
 
-declare i8* @llvm.arm.thread.pointer()
+declare i8* @llvm.thread.pointer()

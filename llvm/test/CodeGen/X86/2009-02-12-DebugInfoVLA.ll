@@ -12,7 +12,7 @@ define signext i8 @foo(i8* %s1) nounwind ssp {
 ;  movq	%rax, %rsp
 
 ; CHECK-LABEL: @foo
-; CHECK: movq	-40(%rbp), %rsp
+; CHECK: movq	-{{[0-9]+}}(%rbp), %rsp
 
 entry:
   %s1_addr = alloca i8*                           ; <i8**> [#uses=2]

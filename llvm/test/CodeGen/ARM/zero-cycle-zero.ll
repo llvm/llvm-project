@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=armv8 -mcpu=cyclone < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOTSWIFT
-; RUN: llc -mtriple=armv8 -mcpu=swift < %s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -mtriple=armv8 -mcpu=swift < %s | FileCheck %s
 ; RUN: llc -mtriple=armv8 -mcpu=cortex-a57 < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOTSWIFT
 
 declare arm_aapcs_vfpcc void @take_vec64(<2 x i32>)

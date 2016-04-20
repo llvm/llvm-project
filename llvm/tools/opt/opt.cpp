@@ -102,6 +102,10 @@ static cl::opt<bool>
 VerifyEach("verify-each", cl::desc("Verify after each transform"));
 
 static cl::opt<bool>
+    DisableDITypeMap("disable-debug-info-type-map",
+                     cl::desc("Don't use a uniquing type map for debug info"));
+
+static cl::opt<bool>
 StripDebug("strip-debug",
            cl::desc("Strip debugger symbol info from translation unit"));
 
@@ -365,6 +369,8 @@ int main(int argc, char **argv) {
   SMDiagnostic Err;
 
   Context.setDiscardValueNames(DiscardValueNames);
+  if (!DisableDITypeMap)
+    Context.enableDebugTypeODRUniquing();
 
   // Load the input module...
   std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);

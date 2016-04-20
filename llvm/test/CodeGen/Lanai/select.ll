@@ -8,7 +8,7 @@ target triple = "lanai"
 ; CHECK-LABEL: select_i32_bool:
 ; CHECK: sub.f %r6, 0x0, %r0
 ; CHECK: sel.ne %r7, %r18, %rv
-define i32 @select_i32_bool(i1 inreg %a, i32 inreg %b, i32 inreg %c) {
+define i32 @select_i32_bool(i1 zeroext inreg %a, i32 inreg %b, i32 inreg %c) {
   %cond = select i1 %a, i32 %b, i32 %c
   ret i32 %cond
 }

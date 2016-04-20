@@ -79,6 +79,8 @@ FUZZER_FLAG_INT(handle_term, 1, "If 1, try to intercept SIGTERM.")
 FUZZER_FLAG_INT(close_fd_mask, 0, "If 1, close stdout at startup; "
     "if 2, close stderr; if 3, close both. "
     "Be careful, this will also close e.g. asan's stderr/stdout.")
+FUZZER_FLAG_INT(detect_leaks, 0, "If 1, and if LeakSanitizer is enabled "
+    "try to detect memory leaks during fuzzing (i.e. not only at shut down).")
 
 FUZZER_DEPRECATED_FLAG(exit_on_first)
 FUZZER_DEPRECATED_FLAG(save_minimized_corpus)

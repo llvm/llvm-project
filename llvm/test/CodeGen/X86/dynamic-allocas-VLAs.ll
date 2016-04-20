@@ -60,12 +60,10 @@ entry:
 ; CHECK: _t3
 ; CHECK: pushq %rbp
 ; CHECK: movq %rsp, %rbp
-; CHECK: pushq %rbx
 ; CHECK-NOT: andq $-{{[0-9]+}}, %rsp
 ; CHECK: subq ${{[0-9]+}}, %rsp
 ;
-; CHECK: leaq -{{[0-9]+}}(%rbp), %rsp
-; CHECK: popq %rbx
+; CHECK: movq %rbp, %rsp
 ; CHECK: popq %rbp
 }
 
@@ -85,7 +83,6 @@ entry:
 ; CHECK: _t4
 ; CHECK: pushq %rbp
 ; CHECK: movq %rsp, %rbp
-; CHECK: pushq %r14
 ; CHECK: pushq %rbx
 ; CHECK: andq $-32, %rsp
 ; CHECK: subq ${{[0-9]+}}, %rsp
@@ -95,9 +92,8 @@ entry:
 ; CHECK: leaq {{[0-9]*}}(%rbx), %rdx
 ; CHECK: callq   _t4_helper
 ;
-; CHECK: leaq -16(%rbp), %rsp
+; CHECK: leaq -{{[0-9]+}}(%rbp), %rsp
 ; CHECK: popq %rbx
-; CHECK: popq %r14
 ; CHECK: popq %rbp
 }
 

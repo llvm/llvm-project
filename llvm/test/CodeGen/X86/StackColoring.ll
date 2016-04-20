@@ -243,8 +243,8 @@ bb3:
 
 ; Adopt the test from Transforms/Inline/array_merge.ll'
 ;CHECK-LABEL: array_merge:
-;YESCOLOR: subq  $816, %rsp
-;NOCOLOR: subq  $1616, %rsp
+;YESCOLOR: subq  $808, %rsp
+;NOCOLOR: subq  $1608, %rsp
 define void @array_merge() nounwind ssp {
 entry:
   %A.i1 = alloca [100 x i32], align 4

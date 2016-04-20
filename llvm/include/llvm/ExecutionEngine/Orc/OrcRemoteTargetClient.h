@@ -37,6 +37,25 @@ template <typename ChannelT>
 class OrcRemoteTargetClient : public OrcRemoteTargetRPCAPI {
 public:
 
+  // FIXME: Remove move/copy ops once MSVC supports synthesizing move ops.
+
+  OrcRemoteTargetClient(const OrcRemoteTargetClient&) = delete;
+  OrcRemoteTargetClient& operator=(const OrcRemoteTargetClient&) = delete;
+
+  OrcRemoteTargetClient(OrcRemoteTargetClient &&Other)
+    : Channel(Other.Channel),
+      ExistingError(std::move(Other.ExistingError)),
+      RemoteTargetTriple(std::move(Other.RemoteTargetTriple)),
+      RemotePointerSize(std::move(Other.RemotePointerSize)),
+      RemotePageSize(std::move(Other.RemotePageSize)),
+      RemoteTrampolineSize(std::move(Other.RemoteTrampolineSize)),
+      RemoteIndirectStubSize(std::move(Other.RemoteIndirectStubSize)),
+      AllocatorIds(std::move(Other.AllocatorIds)),
+      IndirectStubOwnerIds(std::move(Other.IndirectStubOwnerIds)),
+      CompileCallback(std::move(Other.CompileCallback)) {}
+
+  OrcRemoteTargetClient& operator=(OrcRemoteTargetClient&&) = delete;
+
   /// Remote memory manager.
   class RCMemoryManager : public RuntimeDyld::MemoryManager {
   public:

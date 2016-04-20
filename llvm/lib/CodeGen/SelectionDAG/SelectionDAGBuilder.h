@@ -465,8 +465,7 @@ private:
   class StackProtectorDescriptor {
   public:
     StackProtectorDescriptor()
-        : ParentMBB(nullptr), SuccessMBB(nullptr), FailureMBB(nullptr),
-          GuardReg(0) {}
+        : ParentMBB(nullptr), SuccessMBB(nullptr), FailureMBB(nullptr) {}
 
     /// Returns true if all fields of the stack protector descriptor are
     /// initialized implying that we should/are ready to emit a stack protector.
@@ -511,15 +510,11 @@ private:
     /// always the same.
     void resetPerFunctionState() {
       FailureMBB = nullptr;
-      GuardReg = 0;
     }
 
     MachineBasicBlock *getParentMBB() { return ParentMBB; }
     MachineBasicBlock *getSuccessMBB() { return SuccessMBB; }
     MachineBasicBlock *getFailureMBB() { return FailureMBB; }
-
-    unsigned getGuardReg() const { return GuardReg; }
-    void setGuardReg(unsigned R) { GuardReg = R; }
 
   private:
     /// The basic block for which we are generating the stack protector.
@@ -538,9 +533,6 @@ private:
     /// This basic block visited on stack protector check failure that will
     /// contain a call to __stack_chk_fail().
     MachineBasicBlock *FailureMBB;
-
-    /// The virtual register holding the stack guard value.
-    unsigned GuardReg;
 
     /// Add a successor machine basic block to ParentMBB. If the successor mbb
     /// has not been created yet (i.e. if SuccMBB = 0), then the machine basic

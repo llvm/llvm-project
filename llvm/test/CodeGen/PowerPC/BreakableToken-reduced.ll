@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -enable-shrink-wrap=true %s -o - | FileCheck %s --check-prefix=CHECK
+; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -enable-shrink-wrap=true %s -o - | FileCheck %s
 ;
 ; Test the use of a non-R0 register to save/restore the LR in function 
 ; prologue/epilogue.

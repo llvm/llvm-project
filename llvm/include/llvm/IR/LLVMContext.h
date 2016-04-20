@@ -26,7 +26,7 @@ class Twine;
 class Instruction;
 class Module;
 class MDString;
-class DIType;
+class DICompositeType;
 class SMDiagnostic;
 class DiagnosticInfo;
 template <typename T> class SmallVectorImpl;
@@ -120,17 +120,6 @@ public:
   bool isODRUniquingDebugTypes() const;
   void enableDebugTypeODRUniquing();
   void disableDebugTypeODRUniquing();
-
-  /// Get or insert the DIType mapped to the given string.
-  ///
-  /// Returns the address of the current \a DIType pointer mapped to \c S,
-  /// inserting a mapping to \c nullptr if \c S was not previously mapped.
-  /// This method has no effect (and returns \c nullptr instead of a valid
-  /// address) if \a isODRUniquingDebugTypes() is \c false.
-  ///
-  /// \post If \a isODRUniquingDebugTypes(), \c S will have a (possibly null)
-  /// mapping.  \note The returned address is only valid until the next call.
-  DIType **getOrInsertODRUniquedType(const MDString &S);
 
   typedef void (*InlineAsmDiagHandlerTy)(const SMDiagnostic&, void *Context,
                                          unsigned LocCookie);

@@ -1749,7 +1749,7 @@ def LWC2 : LW_FT2<"lwc2", COP2Opnd, NoItinerary, load>, LW_FM<0x32>,
            ISA_MIPS1_NOT_32R6_64R6;
 def SWC2 : SW_FT2<"swc2", COP2Opnd, NoItinerary, store>, LW_FM<0x3a>,
            ISA_MIPS1_NOT_32R6_64R6;
-def LDC2 : LW_FT2<"ldc2", COP2Opnd, NoItinerary, load>, LW_FM<0x36>,
+def LDC2 : StdMMR6Rel, LW_FT2<"ldc2", COP2Opnd, NoItinerary, load>, LW_FM<0x36>,
            ISA_MIPS2_NOT_32R6_64R6;
 def SDC2 : SW_FT2<"sdc2", COP2Opnd, NoItinerary, store>, LW_FM<0x3e>,
            ISA_MIPS2_NOT_32R6_64R6;

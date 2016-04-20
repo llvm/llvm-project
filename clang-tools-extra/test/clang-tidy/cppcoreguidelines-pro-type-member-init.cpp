@@ -331,3 +331,10 @@ struct PositiveAnonymousUnionAndStruct {
   int X;
   // CHECK-FIXES: int X{};
 };
+
+// This check results in a CXXConstructorDecl with no body.
+struct NegativeDeletedConstructor : NegativeAggregateType {
+  NegativeDeletedConstructor() = delete;
+
+  Template<int> F;
+};

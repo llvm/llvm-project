@@ -60,34 +60,8 @@ protected:
 
 public:
   enum MetadataKind {
-    MDTupleKind,
-    DILocationKind,
-    GenericDINodeKind,
-    DISubrangeKind,
-    DIEnumeratorKind,
-    DIBasicTypeKind,
-    DIDerivedTypeKind,
-    DICompositeTypeKind,
-    DISubroutineTypeKind,
-    DIFileKind,
-    DICompileUnitKind,
-    DISubprogramKind,
-    DILexicalBlockKind,
-    DILexicalBlockFileKind,
-    DINamespaceKind,
-    DIModuleKind,
-    DITemplateTypeParameterKind,
-    DITemplateValueParameterKind,
-    DIGlobalVariableKind,
-    DILocalVariableKind,
-    DIExpressionKind,
-    DIObjCPropertyKind,
-    DIImportedEntityKind,
-    ConstantAsMetadataKind,
-    LocalAsMetadataKind,
-    MDStringKind,
-    DIMacroKind,
-    DIMacroFileKind
+#define HANDLE_METADATA_LEAF(CLASS) CLASS##Kind,
+#include "llvm/IR/Metadata.def"
   };
 
 protected:

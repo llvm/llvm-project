@@ -1,6 +1,6 @@
 # RUN: llvm-mc -arch=mips -mcpu=mips32r2 -filetype=obj %s -o - | \
 # RUN:   llvm-readobj -sections -section-data - | \
-# RUN:     FileCheck %s -check-prefix=CHECK
+# RUN:     FileCheck %s
 	mfc0	$16, $15, 1
 	mfc0	$16, $16, 1
 
