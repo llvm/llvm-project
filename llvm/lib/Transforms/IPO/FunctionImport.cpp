@@ -86,12 +86,21 @@ selectCallee(const GlobalValueInfoList &CalleeInfoList, unsigned Threshold) {
         assert(GlobInfo->summary() &&
                "We should not have a Global Info without summary");
         auto *GVSummary = GlobInfo->summary();
-        if (auto *AS = dyn_cast<AliasSummary>(GVSummary))
-          GVSummary = &AS->getAliasee();
-        auto *Summary = cast<FunctionSummary>(GVSummary);
-
-        if (GlobalValue::isWeakAnyLinkage(Summary->linkage()))
+        if (GlobalValue::isWeakAnyLinkage(GVSummary->linkage()))
+          // There is no point in importing weak symbols, we can't inline them
           return false;
+        if (auto *AS = dyn_cast<AliasSummary>(GVSummary)) {
+          GVSummary = &AS->getAliasee();
+          // Alias can't point to "available_externally". However when we import
+          // linkOnceODR the linkage does not change. So we import the alias
+          // and aliasee only in this case.
+          // FIXME: we should import alias as available_externally *function*,
+          // the destination module does need to know it is an alias.
+          if (!GlobalValue::isLinkOnceODRLinkage(GVSummary->linkage()))
+            return false;
+        }
+
+        auto *Summary = cast<FunctionSummary>(GVSummary);
 
         if (Summary->instCount() > Threshold)
           return false;
@@ -166,16 +175,9 @@ static void computeImportForFunction(
     if (isa<AliasSummary>(CalleeSummary)) {
       ResolvedCalleeSummary = cast<FunctionSummary>(
           &cast<AliasSummary>(CalleeSummary)->getAliasee());
-      if (!GlobalValue::isLinkOnceODRLinkage(
-              ResolvedCalleeSummary->linkage())) {
-        // Alias can't point to "available_externally". However when we import
-        // linkOnceODR the linkage does not change. So we import the alias
-        // and aliasee only in this case.
-        // FIXME: we should import alias as available_externally *function*, the
-        // destination module does need to know it is an alias.
-        DEBUG(dbgs() << "ignored! Aliasee is not linkonce_odr.\n");
-        continue;
-      }
+      assert(
+          GlobalValue::isLinkOnceODRLinkage(ResolvedCalleeSummary->linkage()) &&
+          "Unexpected alias to a non-linkonceODR in import list");
     } else
       ResolvedCalleeSummary = cast<FunctionSummary>(CalleeSummary);
 
