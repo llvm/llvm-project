@@ -30,6 +30,8 @@ class Value;
 class ModuleSlotTracker {
   /// Storage for a slot tracker.
   std::unique_ptr<SlotTracker> MachineStorage;
+  bool ShouldCreateStorage = false;
+  bool ShouldInitializeAllMetadata = false;
 
   const Module *M = nullptr;
   const Function *F = nullptr;
@@ -53,7 +55,9 @@ public:
   /// Destructor to clean up storage.
   ~ModuleSlotTracker();
 
-  SlotTracker *getMachine() const { return Machine; }
+  /// Lazily creates a slot tracker.
+  SlotTracker *getMachine();
+
   const Module *getModule() const { return M; }
   const Function *getCurrentFunction() const { return F; }
 
