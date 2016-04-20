@@ -3248,6 +3248,22 @@ void NamedMDNode::print(raw_ostream &ROS, bool IsForDebug) const {
   W.printNamedMDNode(this);
 }
 
+void NamedMDNode::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                        bool IsForDebug) const {
+  Optional<SlotTracker> LocalST;
+  SlotTracker *SlotTable;
+  if (auto *ST = MST.getMachine())
+    SlotTable = ST;
+  else {
+    LocalST.emplace(getParent());
+    SlotTable = &*LocalST;
+  }
+
+  formatted_raw_ostream OS(ROS);
+  AssemblyWriter W(OS, *SlotTable, getParent(), nullptr, IsForDebug);
+  W.printNamedMDNode(this);
+}
+
 void Comdat::print(raw_ostream &ROS, bool /*IsForDebug*/) const {
   PrintLLVMName(ROS, getName(), ComdatPrefix);
   ROS << " = comdat ";
