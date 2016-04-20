@@ -163,10 +163,20 @@ static void computeImportForFunction(
     }
     // "Resolve" the summary, traversing alias,
     const FunctionSummary *ResolvedCalleeSummary;
-    if (isa<AliasSummary>(CalleeSummary))
+    if (isa<AliasSummary>(CalleeSummary)) {
       ResolvedCalleeSummary = cast<FunctionSummary>(
           &cast<AliasSummary>(CalleeSummary)->getAliasee());
-    else
+      if (!GlobalValue::isLinkOnceODRLinkage(
+              ResolvedCalleeSummary->linkage())) {
+        // Alias can't point to "available_externally". However when we import
+        // linkOnceODR the linkage does not change. So we import the alias
+        // and aliasee only in this case.
+        // FIXME: we should import alias as available_externally *function*, the
+        // destination module does need to know it is an alias.
+        DEBUG(dbgs() << "ignored! Aliasee is not linkonce_odr.\n");
+        continue;
+      }
+    } else
       ResolvedCalleeSummary = cast<FunctionSummary>(CalleeSummary);
 
     assert(ResolvedCalleeSummary->instCount() <= Threshold &&
@@ -380,10 +390,11 @@ bool FunctionImporter::importFunctions(
       if (Import) {
         // Alias can't point to "available_externally". However when we import
         // linkOnceODR the linkage does not change. So we import the alias
-        // and aliasee only in this case.
+        // and aliasee only in this case. This has been handled by
+        // computeImportForFunction()
         GlobalObject *GO = GV.getBaseObject();
-        if (!GO->hasLinkOnceODRLinkage())
-          continue;
+        assert(GO->hasLinkOnceODRLinkage() &&
+               "Unexpected alias to a non-linkonceODR in import list");
 #ifndef NDEBUG
         if (!GlobalsToImport.count(GO))
           DEBUG(dbgs() << " alias triggers importing aliasee " << GO->getGUID()
