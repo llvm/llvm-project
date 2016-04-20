@@ -1982,6 +1982,16 @@ All of these conventions except ``none`` require the function to have an error p
 }];
 }
 
+def SwiftNewtypeDocs : Documentation {
+  let Category = SwiftDocs;
+  let Content = [{
+The ``swift_newtype`` attribute indicates that the typedef to which the attribute appertains is imported as a new Swift type of the typedef's name.
+* ``swift_newtype(struct)`` means that a Swift struct will be created for this typedef.
+* ``swift_newtype(enum)`` means that a Swift enum will be created for this typedef.
+  }];
+}
+
+
 def OMPDeclareTargetDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "#pragma omp declare target";
