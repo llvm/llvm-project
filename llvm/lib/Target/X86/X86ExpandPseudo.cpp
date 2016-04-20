@@ -164,13 +164,14 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
                     TII->get(STI->is64Bit() ? X86::RETIQ : X86::RETIL))
                 .addImm(StackAdj);
     } else {
-      assert(!Is64Bit && "shouldn't need to do this for x86_64 targets!");
+      assert(!STI->is64Bit() &&
+             "shouldn't need to do this for x86_64 targets!");
       // A ret can only handle immediates as big as 2**16-1.  If we need to pop
       // off bytes before the return address, we must do it manually.
-      BuildMI(MBB, MBBI, DL, X86::POP32r).addReg(X86::ECX, RegState::Define);
+      BuildMI(MBB, MBBI, DL, TII->get(X86::POP32r)).addReg(X86::ECX, RegState::Define);
       X86FL->emitSPUpdate(MBB, MBBI, StackAdj, /*InEpilogue=*/true);
-      BuildMI(MBB, MBBI, DL, X86::PUSH32r).addReg(X86::ECX);
-      MIB = BuildMI(MBB, MBBI, DL, X86::RETL);
+      BuildMI(MBB, MBBI, DL, TII->get(X86::PUSH32r)).addReg(X86::ECX);
+      MIB = BuildMI(MBB, MBBI, DL, TII->get(X86::RETL));
     }
     for (unsigned I = 1, E = MBBI->getNumOperands(); I != E; ++I)
       MIB.addOperand(MBBI->getOperand(I));
