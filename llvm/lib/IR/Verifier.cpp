@@ -264,7 +264,7 @@ public:
       if (OS) {
         *OS << "Basic Block in function '" << F.getName()
             << "' does not have terminator!\n";
-        BB.printAsOperand(*OS, true);
+        BB.printAsOperand(*OS, true, *MST);
         *OS << "\n";
       }
       return false;
