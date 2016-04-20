@@ -3026,7 +3026,7 @@ def err_attr_swift_error_return_type : Error<
   "%select{function|method}2 returning %select{an integral type|a pointer}3">;
 def warn_swift_newtype_attribute_non_typedef : Warning<
   "'swift_newtype' attribute may be put on a typedef only; "
-  "attribute is ignored">;
+  "attribute is ignored">, InGroup<DiagGroup<"swift-newtype-attribute">>;
 
 // Function Parameter Semantic Analysis.
 def err_param_with_void_type : Error<"argument may not have 'void' type">;
