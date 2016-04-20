@@ -257,16 +257,17 @@ public:
             << "' does not contain an entry block!\n";
       return false;
     }
-    for (Function::const_iterator I = F.begin(), E = F.end(); I != E; ++I) {
-      if (I->empty() || !I->back().isTerminator()) {
-        if (OS) {
-          *OS << "Basic Block in function '" << F.getName()
-              << "' does not have terminator!\n";
-          I->printAsOperand(*OS, true);
-          *OS << "\n";
-        }
-        return false;
+    for (const BasicBlock &BB : F) {
+      if (!BB.empty() && BB.back().isTerminator())
+        continue;
+
+      if (OS) {
+        *OS << "Basic Block in function '" << F.getName()
+            << "' does not have terminator!\n";
+        BB.printAsOperand(*OS, true);
+        *OS << "\n";
       }
+      return false;
     }
 
     // Now directly compute a dominance tree. We don't rely on the pass
