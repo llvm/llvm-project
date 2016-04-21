@@ -45,6 +45,9 @@ class ModuleLinker {
   /// to Add.
   void addLazyFor(GlobalValue &GV, IRMover::ValueAdder Add);
 
+  bool shouldLinkReferencedLinkOnce() {
+    return !(Flags & Linker::DontForceLinkLinkonceODR);
+  }
   bool shouldOverrideFromSrc() { return Flags & Linker::OverrideFromSrc; }
   bool shouldLinkOnlyNeeded() { return Flags & Linker::LinkOnlyNeeded; }
   bool shouldInternalizeLinkedSymbols() {
@@ -409,6 +412,12 @@ bool ModuleLinker::linkIfNeeded(GlobalValue &GV) {
 }
 
 void ModuleLinker::addLazyFor(GlobalValue &GV, IRMover::ValueAdder Add) {
+  if (!shouldLinkReferencedLinkOnce())
+    // For ThinLTO we don't import more than what was required.
+    // The client has to guarantee that the linkonce will be availabe at link
+    // time (by promoting it to weak for instance).
+    return;
+
   // Add these to the internalize list
   if (!GV.hasLinkOnceLinkage())
     return;
