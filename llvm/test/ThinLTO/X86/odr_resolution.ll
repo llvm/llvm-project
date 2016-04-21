@@ -10,8 +10,8 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
-; Alias are not optimized
-; MOD1: @linkoncealias = linkonce_odr alias void (), void ()* @linkonceodrfuncwithalias
+; Alias are resolved, but can't be turned into "available_externally"
+; MOD1: @linkoncealias = weak_odr alias void (), void ()* @linkonceodrfuncwithalias
 ; MOD2: @linkoncealias = linkonce_odr alias void (), void ()* @linkonceodrfuncwithalias
 @linkoncealias = linkonce_odr alias void (), void ()* @linkonceodrfuncwithalias
 
