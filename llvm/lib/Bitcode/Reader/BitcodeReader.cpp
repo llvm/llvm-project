@@ -2208,12 +2208,12 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       // mapping.
       unsigned Flags = Record[10];
       auto *Identifier = getMDString(Record[15]);
-      DIType **MappedT = nullptr;
+      DICompositeType **MappedT = nullptr;
       if (!(Flags & DINode::FlagFwdDecl) && Identifier)
         MappedT = Context.getOrInsertODRUniquedType(*Identifier);
 
       // Use the mapped type node, or create a new one if necessary.
-      DIType *CT = MappedT ? *MappedT : nullptr;
+      DICompositeType *CT = MappedT ? *MappedT : nullptr;
       if (!CT) {
         CT = GET_OR_DISTINCT(
             DICompositeType, Record[0],
