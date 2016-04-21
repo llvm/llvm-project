@@ -87,13 +87,19 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
   Visitor.ExpectedQualTypeNames["non_dependent_type_var"] =
       "Foo<X>::non_dependent_type";
   Visitor.ExpectedQualTypeNames["AnEnumVar"] = "EnumScopeClass::AnEnum";
+  Visitor.ExpectedQualTypeNames["AliasTypeVal"] = "A::B::C::InnerAlias<int>";
   Visitor.runOver(
       "int CheckInt;\n"
+      "template <typename T>\n"
+      "class OuterTemplateClass { };\n"
       "namespace A {\n"
       " namespace B {\n"
       "   class Class0 { };\n"
       "   namespace C {\n"
       "     typedef int MyInt;"
+      "     template <typename T>\n"
+      "     using InnerAlias = OuterTemplateClass<T>;\n"
+      "     InnerAlias<int> AliasTypeVal;\n"
       "   }\n"
       "   template<class X, class Y> class Template0;"
       "   template<class X, class Y> class Template1;"
@@ -148,7 +154,8 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
       "public:\n"
       "  enum AnEnum { ZERO, ONE };\n"
       "};\n"
-      "EnumScopeClass::AnEnum AnEnumVar;\n"
+      "EnumScopeClass::AnEnum AnEnumVar;\n",
+      TypeNameVisitor::Lang_CXX11
 );
 
   TypeNameVisitor Complex;

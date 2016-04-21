@@ -1664,8 +1664,11 @@ llvm::DIType *CGDebugInfo::CreateType(const ObjCInterfaceType *Ty,
   if (!ID)
     return nullptr;
 
-  // Return a forward declaration if this type was imported from a clang module.
-  if (DebugTypeExtRefs && ID->isFromASTFile() && ID->getDefinition())
+  // Return a forward declaration if this type was imported from a clang module,
+  // and this is not the compile unit with the implementation of the type (which
+  // may contain hidden ivars).
+  if (DebugTypeExtRefs && ID->isFromASTFile() && ID->getDefinition() &&
+      !ID->getImplementation())
     return DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,
                                       ID->getName(),
                                       getDeclContextDescriptor(ID), Unit, 0);
