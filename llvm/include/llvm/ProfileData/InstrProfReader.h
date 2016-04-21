@@ -196,7 +196,7 @@ public:
   }
 
 private:
-  void createSymtab(InstrProfSymtab &Symtab);
+  std::error_code createSymtab(InstrProfSymtab &Symtab);
   std::error_code readNextHeader(const char *CurrentPos);
   std::error_code readHeader(const RawInstrProf::Header &Header);
   template <class IntT> IntT swap(IntT Int) const {
