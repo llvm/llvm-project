@@ -33,6 +33,7 @@ class Module;
 class Metadata;
 class LocalAsMetadata;
 class MDNode;
+class MDOperand;
 class NamedMDNode;
 class AttributeSet;
 class ValueSymbolTable;
@@ -244,9 +245,9 @@ private:
   /// function.
   void incorporateFunctionMetadata(const Function &F);
 
-  void enumerateMetadataImpl(
+  bool enumerateMetadataImpl(
       unsigned F, const Metadata *MD,
-      SmallVectorImpl<std::pair<const MDNode *, bool>> &Worklist);
+      SmallVectorImpl<std::pair<const MDNode *, const MDOperand *>> &Worklist);
 
   unsigned getMetadataFunctionID(const Function *F) const;
   void EnumerateMetadata(const Function *F, const Metadata *MD);
