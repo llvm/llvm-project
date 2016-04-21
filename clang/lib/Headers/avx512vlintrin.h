@@ -8978,6 +8978,86 @@ __builtin_ia32_getmantps256_mask ((__v8sf)( __A),\
                 (__mmask8)( __U));\
 })
 
+#define _mm_mmask_i64gather_pd( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3div2df ((__v2df) __v1_old, __addr, (__v2di) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm_mmask_i64gather_epi64( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3div2di ((__v2di) __v1_old, __addr, (__v2di) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm256_mmask_i64gather_pd( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3div4df ((__v4df) __v1_old, __addr, (__v4di) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm256_mmask_i64gather_epi64( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3div4di ((__v4di) __v1_old, __addr, (__v4di) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm_mmask_i64gather_ps( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3div4sf ((__v4sf) __v1_old, __addr, (__v2di) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm_mmask_i64gather_epi32( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3div4si ((__v4si) __v1_old, __addr, (__v2di) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm256_mmask_i64gather_ps( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3div8sf ((__v4sf) __v1_old, __addr, (__v4di) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm256_mmask_i64gather_epi32( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3div8si ((__v4si) __v1_old, __addr, (__v4di) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm_mmask_i32gather_pd( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3siv2df ((__v2df) __v1_old, __addr, (__v4si) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm_mmask_i32gather_epi64( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3siv2di ((__v2di) __v1_old, __addr, (__v4si) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm256_mmask_i32gather_pd( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3siv4df ((__v4df) __v1_old, __addr, (__v4si) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm256_mmask_i32gather_epi64( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3siv4di ((__v4di) __v1_old, __addr, (__v4si) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm_mmask_i32gather_ps( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3siv4sf ((__v4sf) __v1_old, __addr, (__v4si) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm_mmask_i32gather_epi32( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3siv4si ((__v4si) __v1_old, __addr, (__v4si) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm256_mmask_i32gather_ps( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3siv8sf ((__v8sf) __v1_old, __addr, (__v8si) __index,\
+                               __mask, __scale);\
+})
+
+#define _mm256_mmask_i32gather_epi32( __v1_old, __mask, __index, __addr, __scale) __extension__ ({\
+__builtin_ia32_gather3siv8si ((__v8si) __v1_old, __addr, (__v8si) __index,\
+                               __mask, __scale);\
+})
+
 #undef __DEFAULT_FN_ATTRS
 #undef __DEFAULT_FN_ATTRS_BOTH
 

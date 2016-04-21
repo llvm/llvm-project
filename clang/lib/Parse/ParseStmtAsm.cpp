@@ -335,6 +335,33 @@ static bool buildMSAsmString(Preprocessor &PP, SourceLocation AsmLoc,
   return false;
 }
 
+/// isTypeQualifier - Return true if the current token could be the
+/// start of a type-qualifier-list.
+static bool isTypeQualifier(const Token &Tok) {
+  switch (Tok.getKind()) {
+  default: return false;
+  // type-qualifier
+  case tok::kw_const:
+  case tok::kw_volatile:
+  case tok::kw_restrict:
+  case tok::kw___private:
+  case tok::kw___local:
+  case tok::kw___global:
+  case tok::kw___constant:
+  case tok::kw___generic:
+  case tok::kw___read_only:
+  case tok::kw___read_write:
+  case tok::kw___write_only:
+    return true;
+  }
+}
+
+// Determine if this is a GCC-style asm statement.
+static bool isGCCAsmStatement(const Token &TokAfterAsm) {
+  return TokAfterAsm.is(tok::l_paren) || TokAfterAsm.is(tok::kw_goto) ||
+         isTypeQualifier(TokAfterAsm);
+}
+
 /// ParseMicrosoftAsmStatement. When -fms-extensions/-fasm-blocks is enabled,
 /// this routine is called to collect the tokens for an MS asm statement.
 ///
@@ -415,11 +442,11 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
       if (ExpLoc.first != FID ||
           SrcMgr.getLineNumber(ExpLoc.first, ExpLoc.second) != LineNo) {
         // If this is a single-line __asm, we're done, except if the next
-        // line begins with an __asm too, in which case we finish a comment
+        // line is MS-style asm too, in which case we finish a comment
         // if needed and then keep processing the next line as a single
         // line __asm.
         bool isAsm = Tok.is(tok::kw_asm);
-        if (SingleLineMode && !isAsm)
+        if (SingleLineMode && (!isAsm || isGCCAsmStatement(NextToken())))
           break;
         // We're no longer in a comment.
         InAsmComment = false;
@@ -643,8 +670,7 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
   assert(Tok.is(tok::kw_asm) && "Not an asm stmt");
   SourceLocation AsmLoc = ConsumeToken();
 
-  if (getLangOpts().AsmBlocks && Tok.isNot(tok::l_paren) &&
-      !isTypeQualifier()) {
+  if (getLangOpts().AsmBlocks && !isGCCAsmStatement(Tok)) {
     msAsm = true;
     return ParseMicrosoftAsmStatement(AsmLoc);
   }
@@ -664,6 +690,14 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
 
   // Remember if this was a volatile asm.
   bool isVolatile = DS.getTypeQualifiers() & DeclSpec::TQ_volatile;
+
+  // TODO: support "asm goto" constructs (PR#9295).
+  if (Tok.is(tok::kw_goto)) {
+    Diag(Tok, diag::err_asm_goto_not_supported_yet);
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return StmtError();
+  }
+
   if (Tok.isNot(tok::l_paren)) {
     Diag(Tok, diag::err_expected_lparen_after) << "asm";
     SkipUntil(tok::r_paren, StopAtSemi);

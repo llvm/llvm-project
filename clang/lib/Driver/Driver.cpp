@@ -278,6 +278,10 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
     DAL->append(A);
   }
 
+  // Enforce -static if -miamcu is present.
+  if (Args.hasArg(options::OPT_miamcu))
+    DAL->AddFlagArg(0, Opts->getOption(options::OPT_static));
+
 // Add a default value of -mlinker-version=, if one was given and the user
 // didn't specify one.
 #if defined(HOST_LINK_VERSION)
@@ -296,7 +300,8 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
 ///
 /// This routine provides the logic to compute a target triple from various
 /// args passed to the driver and the default triple string.
-static llvm::Triple computeTargetTriple(StringRef DefaultTargetTriple,
+static llvm::Triple computeTargetTriple(const Driver &D,
+                                        StringRef DefaultTargetTriple,
                                         const ArgList &Args,
                                         StringRef DarwinArchName = "") {
   // FIXME: Already done in Compilation *Driver::BuildCompilation
@@ -341,8 +346,9 @@ static llvm::Triple computeTargetTriple(StringRef DefaultTargetTriple,
     return Target;
 
   // Handle pseudo-target flags '-m64', '-mx32', '-m32' and '-m16'.
-  if (Arg *A = Args.getLastArg(options::OPT_m64, options::OPT_mx32,
-                               options::OPT_m32, options::OPT_m16)) {
+  Arg *A = Args.getLastArg(options::OPT_m64, options::OPT_mx32,
+                           options::OPT_m32, options::OPT_m16);
+  if (A) {
     llvm::Triple::ArchType AT = llvm::Triple::UnknownArch;
 
     if (A->getOption().matches(options::OPT_m64)) {
@@ -365,6 +371,25 @@ static llvm::Triple computeTargetTriple(StringRef DefaultTargetTriple,
 
     if (AT != llvm::Triple::UnknownArch && AT != Target.getArch())
       Target.setArch(AT);
+  }
+
+  // Handle -miamcu flag.
+  if (Args.hasArg(options::OPT_miamcu)) {
+    if (Target.get32BitArchVariant().getArch() != llvm::Triple::x86)
+      D.Diag(diag::err_drv_unsupported_opt_for_target) << "-miamcu"
+                                                       << Target.str();
+
+    if (A && !A->getOption().matches(options::OPT_m32))
+      D.Diag(diag::err_drv_argument_not_allowed_with)
+          << "-miamcu" << A->getBaseArg().getAsString(Args);
+
+    Target.setArch(llvm::Triple::x86);
+    Target.setArchName("i586");
+    Target.setEnvironment(llvm::Triple::UnknownEnvironment);
+    Target.setEnvironmentName("");
+    Target.setOS(llvm::Triple::ELFIAMCU);
+    Target.setVendor(llvm::Triple::UnknownVendor);
+    Target.setVendorName("intel");
   }
 
   return Target;
@@ -501,8 +526,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   DerivedArgList *TranslatedArgs = TranslateInputArgs(*UArgs);
 
   // Owned by the host.
-  const ToolChain &TC =
-      getToolChain(*UArgs, computeTargetTriple(DefaultTargetTriple, *UArgs));
+  const ToolChain &TC = getToolChain(
+      *UArgs, computeTargetTriple(*this, DefaultTargetTriple, *UArgs));
 
   // The compilation takes ownership of Args.
   Compilation *C = new Compilation(*this, TC, UArgs.release(), TranslatedArgs);
@@ -1981,9 +2006,9 @@ InputInfo Driver::BuildJobsForActionNoCache(
     const char *ArchName = BAA->getArchName();
 
     if (ArchName)
-      TC = &getToolChain(
-          C.getArgs(),
-          computeTargetTriple(DefaultTargetTriple, C.getArgs(), ArchName));
+      TC = &getToolChain(C.getArgs(),
+                         computeTargetTriple(*this, DefaultTargetTriple,
+                                             C.getArgs(), ArchName));
     else
       TC = &C.getDefaultToolChain();
 
