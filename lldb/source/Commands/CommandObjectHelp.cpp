@@ -35,22 +35,16 @@ CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage (Stream *s,
     if (s && command && *command)
     {
         s->Printf("'%s' is not a known command.\n", command);
-        if (prefix && *prefix)
-        {
-            s->Printf("Try '%shelp' to see a current list of commands.\n", prefix);
-        }
-        else
-        {
-            s->PutCString("Try 'help' to see a current list of commands.\n");
-        }
-        
+        s->Printf("Try '%shelp' to see a current list of commands.\n", prefix ? prefix : "");
         if (include_apropos)
         {
-            s->Printf("Try 'apropos %s' for a list of related commands.\n", subcommand ? subcommand : command);
+	  s->Printf("Try '%sapropos %s' for a list of related commands.\n",
+                    prefix ? prefix : "", subcommand ? subcommand : command);
         }
         if (include_type_lookup)
         {
-            s->Printf("Try 'type lookup %s' for information on types, methods, functions, modules, etc.", subcommand ? subcommand : command);
+            s->Printf("Try '%stype lookup %s' for information on types, methods, functions, modules, etc.",
+		      prefix ? prefix : "", subcommand ? subcommand : command);
         }
     }
 }
