@@ -262,40 +262,57 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
 
+    // We can't compile expressions without a target.  So if the exe_scope is null or doesn't have a target,
+    // then we just need to get out of here.  I'll lldb_assert and not make any of the compiler objects since
+    // I can't return errors directly from the constructor.  Further calls will check if the compiler was made and
+    // bag out if it wasn't.
+    
+    if (!exe_scope)
+    {
+        lldb_assert(exe_scope, "Can't make an expression parser with a null scope.", __FUNCTION__, __FILE__, __LINE__);
+        return;
+    }
+    
+    lldb::TargetSP target_sp;
+    target_sp = exe_scope->CalculateTarget();
+    if (!target_sp)
+    {
+        lldb_assert(exe_scope, "Can't make an expression parser with a null target.", __FUNCTION__, __FILE__, __LINE__);
+        return;
+    }
+    
     // 1. Create a new compiler instance.
     m_compiler.reset(new CompilerInstance());
     lldb::LanguageType frame_lang = expr.Language(); // defaults to lldb::eLanguageTypeUnknown
     bool overridden_target_opts = false;
     lldb_private::LanguageRuntime *lang_rt = nullptr;
-    lldb::TargetSP target_sp;
-    if (exe_scope)
-        target_sp = exe_scope->CalculateTarget();
-
+    
     ArchSpec target_arch;
-    if (target_sp)
-        target_arch = target_sp->GetArchitecture();
+    target_arch = target_sp->GetArchitecture();
 
     const auto target_machine = target_arch.GetMachine();
 
     // If the expression is being evaluated in the context of an existing
     // stack frame, we introspect to see if the language runtime is available.
-    auto frame = exe_scope->CalculateStackFrame();
-
+    
+    lldb::StackFrameSP frame_sp = exe_scope->CalculateStackFrame();
+    lldb::ProcessSP process_sp = exe_scope->CalculateProcess();
+    
     // Make sure the user hasn't provided a preferred execution language
     // with `expression --language X -- ...`
-    if (frame && frame_lang == lldb::eLanguageTypeUnknown)
-        frame_lang = frame->GetLanguage();
+    if (frame_sp && frame_lang == lldb::eLanguageTypeUnknown)
+        frame_lang = frame_sp->GetLanguage();
 
-    if (frame_lang != lldb::eLanguageTypeUnknown)
+    if (process_sp && frame_lang != lldb::eLanguageTypeUnknown)
     {
-        lang_rt = exe_scope->CalculateProcess()->GetLanguageRuntime(frame_lang);
+        lang_rt = process_sp->GetLanguageRuntime(frame_lang);
         if (log)
             log->Printf("Frame has language of type %s", Language::GetNameForLanguageType(frame_lang));
     }
 
     // 2. Configure the compiler with a set of default options that are appropriate
     // for most situations.
-    if (target_sp && target_arch.IsValid())
+    if (target_arch.IsValid())
     {
         std::string triple = target_arch.GetTriple().str();
         m_compiler->getTargetOpts().Triple = triple;
@@ -431,10 +448,6 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     // As a result, we spend a long time parsing and importing debug
     // information.
     m_compiler->getLangOpts().SpellChecking = false;
-
-    lldb::ProcessSP process_sp;
-    if (exe_scope)
-        process_sp = exe_scope->CalculateProcess();
 
     if (process_sp && m_compiler->getLangOpts().ObjC1)
     {

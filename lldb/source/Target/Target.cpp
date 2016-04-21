@@ -222,7 +222,7 @@ Target::GetREPL (Error &err, lldb::LanguageType language, const char *repl_optio
         }
         else if (repl_languages.size() == 0)
         {
-            err.SetErrorStringWithFormat("LLDB isn't configured with support support for any REPLs.");
+            err.SetErrorStringWithFormat("LLDB isn't configured with REPL support for any languages.");
             return REPLSP();
         }
         else

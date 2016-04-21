@@ -304,6 +304,8 @@ static NestedNameSpecifier *createNestedNameSpecifierForScopeOf(
     Decl = TDT->getDecl();
   } else if (const auto *TagDeclType = dyn_cast<TagType>(TypePtr)) {
     Decl = TagDeclType->getDecl();
+  } else if (const auto *TST = dyn_cast<TemplateSpecializationType>(TypePtr)) {
+    Decl = TST->getTemplateName().getAsTemplateDecl();
   } else {
     Decl = TypePtr->getAsCXXRecordDecl();
   }
