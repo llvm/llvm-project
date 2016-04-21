@@ -2956,6 +2956,15 @@ llvm::Constant *CGObjCCommonMac::EmitPropertyList(Twine Name,
                                        const ObjCContainerDecl *OCD,
                                        const ObjCCommonTypesHelper &ObjCTypes,
                                        bool IsClassProperty) {
+  if (IsClassProperty) {
+    // Make this entry NULL for OS X with deployment target < 10.11, for iOS
+    // with deployment target < 9.0.
+    const llvm::Triple &Triple = CGM.getTarget().getTriple();
+    if ((Triple.isMacOSX() && Triple.isMacOSXVersionLT(10, 11)) ||
+        (Triple.isiOS() && Triple.isOSVersionLT(9)))
+      return llvm::Constant::getNullValue(ObjCTypes.PropertyListPtrTy);
+  }
+
   SmallVector<llvm::Constant *, 16> Properties;
   llvm::SmallPtrSet<const IdentifierInfo*, 16> PropertySet;
 
