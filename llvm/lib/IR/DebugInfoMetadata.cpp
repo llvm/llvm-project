@@ -284,6 +284,32 @@ DICompositeType *DICompositeType::getImpl(
                        Ops);
 }
 
+DICompositeType *DICompositeType::getODRType(
+    LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
+    Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
+    uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
+    unsigned Flags, Metadata *Elements, unsigned RuntimeLang,
+    Metadata *VTableHolder, Metadata *TemplateParams) {
+  assert(!Identifier.getString().empty() && "Expected valid identifier");
+  if (!Context.isODRUniquingDebugTypes())
+    return nullptr;
+  auto *&CT = (*Context.pImpl->DITypeMap)[&Identifier];
+  if (!CT)
+    CT = DICompositeType::getDistinct(
+        Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
+        AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder,
+        TemplateParams, &Identifier);
+  return CT;
+}
+
+DICompositeType *DICompositeType::getODRTypeIfExists(LLVMContext &Context,
+                                                     MDString &Identifier) {
+  assert(!Identifier.getString().empty() && "Expected valid identifier");
+  if (!Context.isODRUniquingDebugTypes())
+    return nullptr;
+  return Context.pImpl->DITypeMap->lookup(&Identifier);
+}
+
 DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context,
                                             unsigned Flags, Metadata *TypeArray,
                                             StorageType Storage,

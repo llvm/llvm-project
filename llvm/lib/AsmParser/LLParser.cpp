@@ -3746,13 +3746,15 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
 
   // If this isn't a forward declaration and it has a UUID, check for it in the
   // type map in the context.
-  DICompositeType **MappedT = nullptr;
-  if (!(flags.Val & DINode::FlagFwdDecl) && identifier.Val &&
-      (MappedT = Context.getOrInsertODRUniquedType(*identifier.Val)) &&
-      *MappedT) {
-    Result = *MappedT;
-    return false;
-  }
+  if (!(flags.Val & DINode::FlagFwdDecl) && identifier.Val)
+    if (auto *CT = DICompositeType::getODRType(
+            Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
+            scope.Val, baseType.Val, size.Val, align.Val, offset.Val, flags.Val,
+            elements.Val, runtimeLang.Val, vtableHolder.Val,
+            templateParams.Val)) {
+      Result = CT;
+      return false;
+    }
 
   // Create a new node, and save it in the context if it belongs in the type
   // map.
@@ -3761,8 +3763,6 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
       (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
        runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val));
-  if (MappedT)
-    *MappedT = cast<DICompositeType>(Result);
   return false;
 }
 

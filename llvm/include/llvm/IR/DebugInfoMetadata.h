@@ -824,6 +824,23 @@ public:
 
   TempDICompositeType clone() const { return cloneImpl(); }
 
+  /// Get a DICompositeType with the given ODR identifier.
+  ///
+  /// If \a LLVMContext::isODRUniquingDebugTypes(), gets the mapped
+  /// DICompositeType for the given ODR \c Identifier.  If none exists, creates
+  /// a new node.
+  ///
+  /// Else, returns \c nullptr.
+  static DICompositeType *
+  getODRType(LLVMContext &Context, MDString &Identifier, unsigned Tag,
+             MDString *Name, Metadata *File, unsigned Line, Metadata *Scope,
+             Metadata *BaseType, uint64_t SizeInBits, uint64_t AlignInBits,
+             uint64_t OffsetInBits, unsigned Flags, Metadata *Elements,
+             unsigned RuntimeLang, Metadata *VTableHolder,
+             Metadata *TemplateParams);
+  static DICompositeType *getODRTypeIfExists(LLVMContext &Context,
+                                             MDString &Identifier);
+
   DITypeRef getBaseType() const { return DITypeRef(getRawBaseType()); }
   DINodeArray getElements() const {
     return cast_or_null<MDTuple>(getRawElements());
