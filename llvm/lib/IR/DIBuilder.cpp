@@ -609,7 +609,7 @@ DIGlobalVariable *DIBuilder::createTempGlobalVariableFwdDecl(
 
 static DILocalVariable *createLocalVariable(
     LLVMContext &VMContext,
-    DenseMap<MDNode *, std::vector<TrackingMDNodeRef>> &PreservedVariables,
+    DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> &PreservedVariables,
     DIScope *Scope, StringRef Name, unsigned ArgNo, DIFile *File,
     unsigned LineNo, DIType *Ty, bool AlwaysPreserve, unsigned Flags) {
   // FIXME: Why getNonCompileUnitScope()?
