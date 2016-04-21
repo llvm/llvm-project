@@ -433,70 +433,70 @@ def int_aarch64_neon_vcopy_lane: AdvSIMD_2Vector2Index_Intrinsic;
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_1Vec_Load_Intrinsic
       : Intrinsic<[llvm_anyvector_ty], [LLVMAnyPointerType<LLVMMatchType<0>>],
-                  [IntrReadArgMem]>;
+                  [IntrReadMem, IntrArgMemOnly]>;
   class AdvSIMD_1Vec_Store_Lane_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty, llvm_i64_ty, llvm_anyptr_ty],
-                [IntrReadWriteArgMem, NoCapture<2>]>;
+                [IntrArgMemOnly, NoCapture<2>]>;
 
   class AdvSIMD_2Vec_Load_Intrinsic
     : Intrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                 [LLVMAnyPointerType<LLVMMatchType<0>>],
-                [IntrReadArgMem]>;
+                [IntrReadMem, IntrArgMemOnly]>;
   class AdvSIMD_2Vec_Load_Lane_Intrinsic
     : Intrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                 [LLVMMatchType<0>, LLVMMatchType<0>,
                  llvm_i64_ty, llvm_anyptr_ty],
-                [IntrReadArgMem]>;
+                [IntrReadMem, IntrArgMemOnly]>;
   class AdvSIMD_2Vec_Store_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                      LLVMAnyPointerType<LLVMMatchType<0>>],
-                [IntrReadWriteArgMem, NoCapture<2>]>;
+                [IntrArgMemOnly, NoCapture<2>]>;
   class AdvSIMD_2Vec_Store_Lane_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                  llvm_i64_ty, llvm_anyptr_ty],
-                [IntrReadWriteArgMem, NoCapture<3>]>;
+                [IntrArgMemOnly, NoCapture<3>]>;
 
   class AdvSIMD_3Vec_Load_Intrinsic
     : Intrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>],
                 [LLVMAnyPointerType<LLVMMatchType<0>>],
-                [IntrReadArgMem]>;
+                [IntrReadMem, IntrArgMemOnly]>;
   class AdvSIMD_3Vec_Load_Lane_Intrinsic
     : Intrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>],
                 [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
                  llvm_i64_ty, llvm_anyptr_ty],
-                [IntrReadArgMem]>;
+                [IntrReadMem, IntrArgMemOnly]>;
   class AdvSIMD_3Vec_Store_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                      LLVMMatchType<0>, LLVMAnyPointerType<LLVMMatchType<0>>],
-                [IntrReadWriteArgMem, NoCapture<3>]>;
+                [IntrArgMemOnly, NoCapture<3>]>;
   class AdvSIMD_3Vec_Store_Lane_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty,
                  LLVMMatchType<0>, LLVMMatchType<0>,
                  llvm_i64_ty, llvm_anyptr_ty],
-                [IntrReadWriteArgMem, NoCapture<4>]>;
+                [IntrArgMemOnly, NoCapture<4>]>;
 
   class AdvSIMD_4Vec_Load_Intrinsic
     : Intrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>],
                 [LLVMAnyPointerType<LLVMMatchType<0>>],
-                [IntrReadArgMem]>;
+                [IntrReadMem, IntrArgMemOnly]>;
   class AdvSIMD_4Vec_Load_Lane_Intrinsic
     : Intrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>],
                 [LLVMMatchType<0>, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>,
                  llvm_i64_ty, llvm_anyptr_ty],
-                [IntrReadArgMem]>;
+                [IntrReadMem, IntrArgMemOnly]>;
   class AdvSIMD_4Vec_Store_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>,
                  LLVMAnyPointerType<LLVMMatchType<0>>],
-                [IntrReadWriteArgMem, NoCapture<4>]>;
+                [IntrArgMemOnly, NoCapture<4>]>;
   class AdvSIMD_4Vec_Store_Lane_Intrinsic
     : Intrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>,
                  llvm_i64_ty, llvm_anyptr_ty],
-                [IntrReadWriteArgMem, NoCapture<5>]>;
+                [IntrArgMemOnly, NoCapture<5>]>;
 }
 
 // Memory ops

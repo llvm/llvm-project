@@ -40,6 +40,7 @@ class DMFC2_MM64R6_ENC : POOL32A_MFTC2_FM_MMR6<"dmfc2", 0b0110110100>;
 class DADD_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dadd", 0b100010000>;
 class DADDIU_MM64R6_ENC : DADDIU_FM_MMR6<"daddiu">;
 class DADDU_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"daddu", 0b101010000>;
+class LDPC_MMR646_ENC : PCREL18_FM_MMR6<0b110>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -123,6 +124,8 @@ class DADDIU_MM64R6_DESC : ArithLogicI<"daddiu", simm16_64, GPR64Opnd,
                            IsAsCheapAsAMove;
 class DADDU_MM64R6_DESC : ArithLogicR<"daddu", GPR64Opnd, 1, II_DADDU, add>;
 
+class LDPC_MM64R6_DESC : PCREL_MMR6_DESC_BASE<"ldpc", GPR64Opnd, simm18_lsl3>;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -173,6 +176,8 @@ let DecoderNamespace = "MicroMipsR6" in {
                      ISA_MICROMIPS64R6;
   def DADDU_MM64R6: StdMMR6Rel, DADDU_MM64R6_DESC, DADDU_MM64R6_ENC,
                     ISA_MICROMIPS64R6;
+  def LDPC_MM64R6 :  R6MMR6Rel, LDPC_MMR646_ENC, LDPC_MM64R6_DESC,
+                     ISA_MICROMIPS64R6;
 }
 
 //===----------------------------------------------------------------------===//

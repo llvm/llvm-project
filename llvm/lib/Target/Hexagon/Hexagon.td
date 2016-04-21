@@ -252,6 +252,7 @@ def : Proc<"hexagonv60", HexagonModelV60,
 //===----------------------------------------------------------------------===//
 
 def HexagonAsmParser : AsmParser {
+  let ShouldEmitMatchRegisterAltName = 1;
   bit HasMnemonicFirst = 0;
 }
 

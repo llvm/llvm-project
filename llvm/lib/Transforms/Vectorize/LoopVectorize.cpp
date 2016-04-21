@@ -1707,6 +1707,9 @@ struct LoopVectorize : public FunctionPass {
   BlockFrequency ColdEntryFreq;
 
   bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);

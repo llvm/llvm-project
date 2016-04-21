@@ -1144,7 +1144,15 @@ public:
         (R0 == Mips::A0 && R1 == Mips::S6) ||
         (R0 == Mips::A0 && R1 == Mips::A1) ||
         (R0 == Mips::A0 && R1 == Mips::A2) ||
-        (R0 == Mips::A0 && R1 == Mips::A3))
+        (R0 == Mips::A0 && R1 == Mips::A3) ||
+        (R0 == Mips::A1_64 && R1 == Mips::A2_64) ||
+        (R0 == Mips::A1_64 && R1 == Mips::A3_64) ||
+        (R0 == Mips::A2_64 && R1 == Mips::A3_64) ||
+        (R0 == Mips::A0_64 && R1 == Mips::S5_64) ||
+        (R0 == Mips::A0_64 && R1 == Mips::S6_64) ||
+        (R0 == Mips::A0_64 && R1 == Mips::A1_64) ||
+        (R0 == Mips::A0_64 && R1 == Mips::A2_64) ||
+        (R0 == Mips::A0_64 && R1 == Mips::A3_64))
       return true;
 
     return false;

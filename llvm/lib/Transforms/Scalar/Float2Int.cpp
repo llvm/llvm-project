@@ -516,7 +516,7 @@ void Float2Int::cleanup() {
 }
 
 bool Float2Int::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
+  if (skipFunction(F))
     return false;
 
   DEBUG(dbgs() << "F2I: Looking at function " << F.getName() << "\n");

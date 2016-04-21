@@ -118,7 +118,14 @@ public:
   unsigned getOrCreateSourceID(StringRef FileName, StringRef DirName) override;
 
   void addImportedEntity(const DIImportedEntity* IE) {
-    ImportedEntities[IE->getScope()].push_back(IE);
+    DIScope *Scope = IE->getScope();
+    assert(Scope && "Invalid Scope encoding!");
+    if (!isa<DILocalScope>(Scope))
+      // No need to add imported enities that are not local declaration.
+      return;
+
+    auto *LocalScope = cast<DILocalScope>(Scope)->getNonLexicalBlockFileScope();
+    ImportedEntities[LocalScope].push_back(IE);
   }
 
   /// addRange - Add an address range to the list of ranges for this unit.

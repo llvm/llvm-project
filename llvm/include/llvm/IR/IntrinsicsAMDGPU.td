@@ -154,12 +154,12 @@ def int_amdgcn_cubetc : GCCBuiltin<"__builtin_amdgcn_cubetc">,
 // TODO: Do we want an ordering for these?
 def int_amdgcn_atomic_inc : Intrinsic<[llvm_anyint_ty],
   [llvm_anyptr_ty, LLVMMatchType<0>],
-  [IntrReadWriteArgMem, NoCapture<0>]
+  [IntrArgMemOnly, NoCapture<0>]
 >;
 
 def int_amdgcn_atomic_dec : Intrinsic<[llvm_anyint_ty],
   [llvm_anyptr_ty, LLVMMatchType<0>],
-  [IntrReadWriteArgMem, NoCapture<0>]
+  [IntrArgMemOnly, NoCapture<0>]
 >;
 
 class AMDGPUImageLoad : Intrinsic <

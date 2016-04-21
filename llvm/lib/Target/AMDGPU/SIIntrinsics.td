@@ -50,7 +50,7 @@ let TargetPrefix = "SI", isTarget = 1 in {
      llvm_i32_ty,     // glc(imm)
      llvm_i32_ty,     // slc(imm)
      llvm_i32_ty],    // tfe(imm)
-    [IntrReadArgMem]>;
+    [IntrReadMem, IntrArgMemOnly]>;
 
   def int_SI_sendmsg : Intrinsic <[], [llvm_i32_ty, llvm_i32_ty], []>;
 

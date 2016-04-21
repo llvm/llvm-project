@@ -5134,6 +5134,9 @@ static void print_image_info32(SectionRef S, struct DisassembleInfo *info) {
   struct objc_image_info32 o;
   const char *r;
 
+  if (S == SectionRef())
+    return;
+
   StringRef SectName;
   S.getName(SectName);
   DataRefImpl Ref = S.getRawDataRefImpl();

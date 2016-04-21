@@ -319,7 +319,7 @@ ScheduleDAGInstrs *PostMachineScheduler::createPostMachineScheduler() {
 /// design would be to split blocks at scheduling boundaries, but LLVM has a
 /// general bias against block splitting purely for implementation simplicity.
 bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
-  if (skipOptnoneFunction(*mf.getFunction()))
+  if (skipFunction(*mf.getFunction()))
     return false;
 
   if (EnableMachineSched.getNumOccurrences()) {
@@ -357,7 +357,7 @@ bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
 }
 
 bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
-  if (skipOptnoneFunction(*mf.getFunction()))
+  if (skipFunction(*mf.getFunction()))
     return false;
 
   if (EnablePostRAMachineSched.getNumOccurrences()) {

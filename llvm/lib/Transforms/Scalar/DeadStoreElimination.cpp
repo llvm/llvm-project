@@ -58,7 +58,7 @@ namespace {
     }
 
     bool runOnFunction(Function &F) override {
-      if (skipOptnoneFunction(F))
+      if (skipFunction(F))
         return false;
 
       AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();

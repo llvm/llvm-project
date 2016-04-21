@@ -1864,7 +1864,7 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
            "Only Linux target is expected to contain LOAD_STACK_GUARD");
     const int64_t Offset = Subtarget.isPPC64() ? -0x7010 : -0x7008;
     const unsigned Reg = Subtarget.isPPC64() ? PPC::X13 : PPC::R2;
-    MI->setDesc(get(PPC::LD));
+    MI->setDesc(get(Subtarget.isPPC64() ? PPC::LD : PPC::LWZ));
     MachineInstrBuilder(*MI->getParent()->getParent(), MI)
         .addImm(Offset)
         .addReg(Reg);

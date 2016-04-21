@@ -3597,6 +3597,58 @@ bool CmpInst::isFalseWhenEqual(Predicate predicate) {
   }
 }
 
+bool CmpInst::isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2) {
+  // If the predicates match, then we know the first condition implies the
+  // second is true.
+  if (Pred1 == Pred2)
+    return true;
+
+  switch (Pred1) {
+  default:
+    break;
+  case ICMP_UGT: // A >u B implies A != B is true.
+  case ICMP_ULT: // A <u B implies A != B is true.
+  case ICMP_SGT: // A >s B implies A != B is true.
+  case ICMP_SLT: // A <s B implies A != B is true.
+    return Pred2 == ICMP_NE;
+  }
+  return false;
+}
+
+bool CmpInst::isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2) {
+  // If an inverted Pred1 matches Pred2, we can infer the second condition is
+  // false.
+  if (getInversePredicate(Pred1) == Pred2)
+    return true;
+
+  // If a swapped Pred1 matches Pred2, we can infer the second condition is
+  // false in many cases.
+  if (getSwappedPredicate(Pred1) == Pred2) {
+    switch (Pred1) {
+    default:
+      break;
+    case ICMP_UGT: // A >u B implies A <u B is false.
+    case ICMP_ULT: // A <u B implies A >u B is false.
+    case ICMP_SGT: // A >s B implies A <s B is false.
+    case ICMP_SLT: // A <s B implies A >s B is false.
+      return true;
+    }
+  }
+  // A == B implies A > B and A < B are false.
+  if (Pred1 == ICMP_EQ && isFalseWhenEqual(Pred2))
+    return true;
+
+  switch (Pred1) {
+  default:
+    break;
+  case ICMP_UGT: // A >u B implies A == B is false.
+  case ICMP_ULT: // A <u B implies A == B is false.
+  case ICMP_SGT: // A >s B implies A == B is false.
+  case ICMP_SLT: // A <s B implies A == B is false.
+    return Pred2 == ICMP_EQ;
+  }
+  return false;
+}
 
 //===----------------------------------------------------------------------===//
 //                        SwitchInst Implementation

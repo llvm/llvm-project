@@ -325,3 +325,7 @@ void LLVMContext::disableDebugTypeODRUniquing() { pImpl->DITypeMap.reset(); }
 void LLVMContext::setDiscardValueNames(bool Discard) {
   pImpl->DiscardValueNames = Discard;
 }
+
+OptBisect &LLVMContext::getOptBisect() {
+  return pImpl->getOptBisect();
+}

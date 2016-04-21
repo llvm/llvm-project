@@ -573,16 +573,12 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
 
     if (Property->getName() == "IntrNoMem")
       ModRef = NoMem;
-    else if (Property->getName() == "IntrReadArgMem")
-      ModRef = ReadArgMem;
     else if (Property->getName() == "IntrReadMem")
-      ModRef = ReadMem;
+      ModRef = ModRefBehavior(ModRef & ~MR_Mod);
     else if (Property->getName() == "IntrWriteMem")
-      ModRef = WriteMem;
-    else if (Property->getName() == "IntrWriteArgMem")
-      ModRef = WriteArgMem;
-    else if (Property->getName() == "IntrReadWriteArgMem")
-      ModRef = ReadWriteArgMem;
+      ModRef = ModRefBehavior(ModRef & ~MR_Ref);
+    else if (Property->getName() == "IntrArgMemOnly")
+      ModRef = ModRefBehavior(ModRef & ~MR_Anywhere);
     else if (Property->getName() == "Commutative")
       isCommutative = true;
     else if (Property->getName() == "Throws")

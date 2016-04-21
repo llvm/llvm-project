@@ -116,7 +116,7 @@ namespace {
       initializeLowerAtomicPass(*PassRegistry::getPassRegistry());
     }
     bool runOnBasicBlock(BasicBlock &BB) override {
-      if (skipOptnoneFunction(BB))
+      if (skipBasicBlock(BB))
         return false;
       bool Changed = false;
       for (BasicBlock::iterator DI = BB.begin(), DE = BB.end(); DI != DE; ) {

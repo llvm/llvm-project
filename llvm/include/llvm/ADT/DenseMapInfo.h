@@ -31,6 +31,36 @@ struct DenseMapInfo {
   //static bool isEqual(const T &LHS, const T &RHS);
 };
 
+template <typename T> struct CachedHash {
+  CachedHash(T Val) : Val(std::move(Val)) {
+    Hash = DenseMapInfo<T>::getHashValue(Val);
+  }
+  CachedHash(T Val, unsigned Hash) : Val(std::move(Val)), Hash(Hash) {}
+  T Val;
+  unsigned Hash;
+};
+
+// Provide DenseMapInfo for all CachedHash<T>.
+template <typename T> struct DenseMapInfo<CachedHash<T>> {
+  static CachedHash<T> getEmptyKey() {
+    T N = DenseMapInfo<T>::getEmptyKey();
+    return {N, 0};
+  }
+  static CachedHash<T> getTombstoneKey() {
+    T N = DenseMapInfo<T>::getTombstoneKey();
+    return {N, 0};
+  }
+  static unsigned getHashValue(CachedHash<T> Val) {
+    assert(!isEqual(Val, getEmptyKey()) && "Cannot hash the empty key!");
+    assert(!isEqual(Val, getTombstoneKey()) &&
+           "Cannot hash the tombstone key!");
+    return Val.Hash;
+  }
+  static bool isEqual(CachedHash<T> A, CachedHash<T> B) {
+    return DenseMapInfo<T>::isEqual(A.Val, B.Val);
+  }
+};
+
 // Provide DenseMapInfo for all pointers.
 template<typename T>
 struct DenseMapInfo<T*> {

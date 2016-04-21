@@ -56,6 +56,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
@@ -1862,6 +1863,14 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   return nullptr;
 }
 
+static bool isNeverEqualToUnescapedAlloc(Value *V) {
+  if (isa<ConstantPointerNull>(V))
+    return true;
+  if (auto *LI = dyn_cast<LoadInst>(V))
+    return isa<GlobalVariable>(LI->getPointerOperand());
+  return false;
+}
+
 static bool
 isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<WeakVH> &Users,
                      const TargetLibraryInfo *TLI) {
@@ -1886,7 +1895,12 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<WeakVH> &Users,
       case Instruction::ICmp: {
         ICmpInst *ICI = cast<ICmpInst>(I);
         // We can fold eq/ne comparisons with null to false/true, respectively.
-        if (!ICI->isEquality() || !isa<ConstantPointerNull>(ICI->getOperand(1)))
+        // We fold comparisons in some conditions provided the alloc has not
+        // escaped.
+        if (!ICI->isEquality())
+          return false;
+        unsigned OtherIndex = (ICI->getOperand(0) == PI) ? 1 : 0;
+        if (!isNeverEqualToUnescapedAlloc(ICI->getOperand(OtherIndex)))
           return false;
         Users.emplace_back(I);
         continue;
@@ -3088,6 +3102,9 @@ combineInstructionsOverFunction(Function &F, InstCombineWorklist &Worklist,
 
 PreservedAnalyses InstCombinePass::run(Function &F,
                                        AnalysisManager<Function> &AM) {
+  if (skipPassForFunction(name(), F))
+    return PreservedAnalyses::all();
+
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
@@ -3120,7 +3137,7 @@ void InstructionCombiningPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool InstructionCombiningPass::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
+  if (skipFunction(F))
     return false;
 
   // Required analyses.

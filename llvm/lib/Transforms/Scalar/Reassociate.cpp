@@ -2257,7 +2257,7 @@ void Reassociate::ReassociateExpression(BinaryOperator *I) {
 }
 
 bool Reassociate::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
+  if (skipFunction(F))
     return false;
 
   // Reassociate needs for each instruction to have its operands already

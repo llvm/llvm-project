@@ -61,7 +61,11 @@ public:
 
   /// Check if this register bank is valid. In other words,
   /// if it has been properly constructed.
-  void verify(const TargetRegisterInfo &TRI) const;
+  ///
+  /// \note This method does not check anything when assertions are disabled.
+  ///
+  /// \return True is the check was successful.
+  bool verify(const TargetRegisterInfo &TRI) const;
 
   /// Check whether this register bank covers \p RC.
   /// In other words, check if this register bank fully covers

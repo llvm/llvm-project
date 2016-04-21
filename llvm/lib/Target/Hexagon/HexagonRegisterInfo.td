@@ -13,8 +13,8 @@
 
 let Namespace = "Hexagon" in {
 
-  class HexagonReg<bits<5> num, string n, list<string> alt = [], 
-                   list<Register> alias = []> : Register<n> {
+  class HexagonReg<bits<5> num, string n, list<string> alt = [],
+                   list<Register> alias = []> : Register<n, alt> {
     field bits<5> Num;
     let Aliases = alias;
     let HWEncoding{4-0} = num;
@@ -31,7 +31,8 @@ let Namespace = "Hexagon" in {
 
   // Registers are identified with 5-bit ID numbers.
   // Ri - 32-bit integer registers.
-  class Ri<bits<5> num, string n, list<string> alt = []> : HexagonReg<num, n, alt> {
+  class Ri<bits<5> num, string n, list<string> alt = []> :
+        HexagonReg<num, n, alt> {
     let Num = num;
   }
 
@@ -42,8 +43,9 @@ let Namespace = "Hexagon" in {
 
 
   // Rd - 64-bit registers.
-  class Rd<bits<5> num, string n, list<Register> subregs> :
-        HexagonDoubleReg<num, n, subregs> {
+  class Rd<bits<5> num, string n, list<Register> subregs,
+           list<string> alt = []> :
+        HexagonDoubleReg<num, n, subregs, alt> {
     let Num = num;
     let SubRegs = subregs;
   }
@@ -94,11 +96,11 @@ let Namespace = "Hexagon" in {
 
   // Aliases of the R* registers used to hold 64-bit int values (doubles).
   let SubRegIndices = [subreg_loreg, subreg_hireg], CoveredBySubRegs = 1 in {
-  def D0  : Rd< 0,  "r1:0",  [R0,  R1]>, DwarfRegNum<[32]>;
-  def D1  : Rd< 2,  "r3:2",  [R2,  R3]>, DwarfRegNum<[34]>;
-  def D2  : Rd< 4,  "r5:4",  [R4,  R5]>, DwarfRegNum<[36]>;
-  def D3  : Rd< 6,  "r7:6",  [R6,  R7]>, DwarfRegNum<[38]>;
-  def D4  : Rd< 8,  "r9:8",  [R8,  R9]>, DwarfRegNum<[40]>;
+  def D0  : Rd< 0,  "r1:0",  [R0,  R1]>,  DwarfRegNum<[32]>;
+  def D1  : Rd< 2,  "r3:2",  [R2,  R3]>,  DwarfRegNum<[34]>;
+  def D2  : Rd< 4,  "r5:4",  [R4,  R5]>,  DwarfRegNum<[36]>;
+  def D3  : Rd< 6,  "r7:6",  [R6,  R7]>,  DwarfRegNum<[38]>;
+  def D4  : Rd< 8,  "r9:8",  [R8,  R9]>,  DwarfRegNum<[40]>;
   def D5  : Rd<10, "r11:10", [R10, R11]>, DwarfRegNum<[42]>;
   def D6  : Rd<12, "r13:12", [R12, R13]>, DwarfRegNum<[44]>;
   def D7  : Rd<14, "r15:14", [R14, R15]>, DwarfRegNum<[46]>;
@@ -109,7 +111,7 @@ let Namespace = "Hexagon" in {
   def D12 : Rd<24, "r25:24", [R24, R25]>, DwarfRegNum<[56]>;
   def D13 : Rd<26, "r27:26", [R26, R27]>, DwarfRegNum<[58]>;
   def D14 : Rd<28, "r29:28", [R28, R29]>, DwarfRegNum<[60]>;
-  def D15 : Rd<30, "r31:30", [R30, R31]>, DwarfRegNum<[62]>;
+  def D15 : Rd<30, "r31:30", [R30, R31], ["lr:fp"]>, DwarfRegNum<[62]>;
   }
 
   // Predicate registers.

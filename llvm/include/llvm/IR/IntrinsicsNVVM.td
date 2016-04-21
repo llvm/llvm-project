@@ -720,13 +720,13 @@ def llvm_anyi64ptr_ty     : LLVMAnyPointerType<llvm_i64_ty>;     // (space)i64*
 // Atomic not available as an llvm intrinsic.
   def int_nvvm_atomic_load_add_f32 : Intrinsic<[llvm_float_ty],
           [LLVMAnyPointerType<llvm_float_ty>, llvm_float_ty],
-                                      [IntrReadWriteArgMem, NoCapture<0>]>;
+                                      [IntrArgMemOnly, NoCapture<0>]>;
   def int_nvvm_atomic_load_inc_32 : Intrinsic<[llvm_i32_ty],
           [LLVMAnyPointerType<llvm_i32_ty>, llvm_i32_ty],
-                                      [IntrReadWriteArgMem, NoCapture<0>]>;
+                                      [IntrArgMemOnly, NoCapture<0>]>;
   def int_nvvm_atomic_load_dec_32 : Intrinsic<[llvm_i32_ty],
           [LLVMAnyPointerType<llvm_i32_ty>, llvm_i32_ty],
-                                      [IntrReadWriteArgMem, NoCapture<0>]>;
+                                      [IntrArgMemOnly, NoCapture<0>]>;
 
 // Bar.Sync
   def int_cuda_syncthreads : GCCBuiltin<"__syncthreads">,

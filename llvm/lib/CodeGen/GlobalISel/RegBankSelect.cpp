@@ -63,7 +63,7 @@ RegBankSelect::repairReg(unsigned Reg,
   assert(ValMapping.BreakDown.size() == 1 &&
          "Support for complex break down not supported yet");
   const RegisterBankInfo::PartialMapping &PartialMap = ValMapping.BreakDown[0];
-  assert(PartialMap.Mask.getBitWidth() ==
+  assert(PartialMap.Length ==
              (TargetRegisterInfo::isPhysicalRegister(Reg)
                   ? TRI->getMinimalPhysRegClass(Reg)->getSize() * 8
                   : MRI->getSize(Reg)) &&
@@ -111,8 +111,7 @@ RegBankSelect::repairReg(unsigned Reg,
   }
 
   // Create a new temporary to hold the repaired value.
-  unsigned NewReg =
-      MRI->createGenericVirtualRegister(PartialMap.Mask.getBitWidth());
+  unsigned NewReg = MRI->createGenericVirtualRegister(PartialMap.Length);
   // Set the registers for the source and destination of the copy.
   unsigned Src = Reg, Dst = NewReg;
   // If this is a definition that we repair, the copy will be
@@ -168,7 +167,7 @@ void RegBankSelect::assignInstr(MachineInstr &MI) {
   const RegisterBankInfo::InstructionMapping DefaultMapping =
       RBI->getInstrMapping(MI);
   // Make sure the mapping is valid for MI.
-  DefaultMapping.verify(MI);
+  assert(DefaultMapping.verify(MI) && "Invalid instruction mapping");
 
   DEBUG(dbgs() << "Mapping: " << DefaultMapping << '\n');
 

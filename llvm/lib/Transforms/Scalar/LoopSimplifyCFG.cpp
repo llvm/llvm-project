@@ -91,7 +91,7 @@ static bool simplifyLoopCFG(Loop *L, DominatorTree *DT, LoopInfo *LI) {
 /// runOnLoop - Perform basic CFG simplifications to assist other loop passes.
 /// For now, this only attempts to merge blocks in the trivial case.
 bool LoopSimplifyCFG::runOnLoop(Loop *L, LPPassManager &) {
-  if (skipOptnoneFunction(L))
+  if (skipLoop(L))
     return false;
 
   DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();

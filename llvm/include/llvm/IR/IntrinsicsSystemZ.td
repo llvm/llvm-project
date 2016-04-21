@@ -217,7 +217,7 @@ let TargetPrefix = "s390" in {
                       Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
 
   def int_s390_ntstg : Intrinsic<[], [llvm_i64_ty, llvm_ptr64_ty],
-                                 [IntrReadWriteArgMem]>;
+                                 [IntrArgMemOnly]>;
 
   def int_s390_ppa_txassist : GCCBuiltin<"__builtin_tx_assist">,
                               Intrinsic<[], [llvm_i32_ty]>;
@@ -236,11 +236,11 @@ let TargetPrefix = "s390" in {
 
   def int_s390_vlbb : GCCBuiltin<"__builtin_s390_vlbb">,
                       Intrinsic<[llvm_v16i8_ty], [llvm_ptr_ty, llvm_i32_ty],
-                                [IntrReadArgMem]>;
+                                [IntrReadMem, IntrArgMemOnly]>;
 
   def int_s390_vll : GCCBuiltin<"__builtin_s390_vll">,
                      Intrinsic<[llvm_v16i8_ty], [llvm_i32_ty, llvm_ptr_ty],
-                               [IntrReadArgMem]>;
+                               [IntrReadMem, IntrArgMemOnly]>;
 
   def int_s390_vpdi : GCCBuiltin<"__builtin_s390_vpdi">,
                       Intrinsic<[llvm_v2i64_ty],
@@ -262,7 +262,7 @@ let TargetPrefix = "s390" in {
                       Intrinsic<[], [llvm_v16i8_ty, llvm_i32_ty, llvm_ptr_ty],
                                 // In fact write-only but there's no property
                                 // for that.
-                                [IntrReadWriteArgMem]>;
+                                [IntrArgMemOnly]>;
 
   defm int_s390_vupl  : SystemZUnaryExtBHWF<"vupl">;
   defm int_s390_vupll : SystemZUnaryExtBHF<"vupll">;

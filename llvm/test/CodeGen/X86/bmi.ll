@@ -311,7 +311,7 @@ define i64 @bextr64b(i64 %x)  uwtable  ssp {
 ; CHECK-LABEL: bextr64b:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movl $3076, %eax # imm = 0xC04
-; CHECK-NEXT:    bextrq %rax, %rdi, %rax
+; CHECK-NEXT:    bextrl %eax, %edi, %eax
 ; CHECK-NEXT:    retq
 ;
   %1 = lshr i64 %x, 4
@@ -323,7 +323,7 @@ define i64 @bextr64b_load(i64* %x) {
 ; CHECK-LABEL: bextr64b_load:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movl $3076, %eax # imm = 0xC04
-; CHECK-NEXT:    bextrq %rax, (%rdi), %rax
+; CHECK-NEXT:    bextrl %eax, (%rdi), %eax
 ; CHECK-NEXT:    retq
 ;
   %1 = load i64, i64* %x, align 8

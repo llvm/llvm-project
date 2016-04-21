@@ -53,8 +53,8 @@ bool isGCResult(ImmutableCallSite CS);
 /// functionality for Statepoint and ImmutableStatepoint.  It is
 /// templatized to allow easily specializing of const and non-const
 /// concrete subtypes.  This is structured analogous to CallSite
-/// rather than the IntrinsicInst.h helpers since we want to support
-/// invokable statepoints in the near future.
+/// rather than the IntrinsicInst.h helpers since we need to support
+/// invokable statepoints.
 template <typename FunTy, typename InstructionTy, typename ValueTy,
           typename CallSiteTy>
 class StatepointBase {
@@ -348,7 +348,7 @@ public:
   }
 };
 
-/// This represents the gc.relocate intrinsic.
+/// Represents calls to the gc.relocate intrinsic.
 class GCRelocateInst : public GCProjectionInst {
 public:
   static inline bool classof(const IntrinsicInst *I) {
@@ -382,7 +382,7 @@ public:
   }
 };
 
-/// This represents the gc.result intrinsic.
+/// Represents calls to the gc.result intrinsic.
 class GCResultInst : public GCProjectionInst {
 public:
   static inline bool classof(const IntrinsicInst *I) {

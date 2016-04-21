@@ -211,7 +211,7 @@ FunctionPass *llvm::createCodeGenPreparePass(const TargetMachine *TM) {
 }
 
 bool CodeGenPrepare::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
+  if (skipFunction(F))
     return false;
 
   DL = &F.getParent()->getDataLayout();

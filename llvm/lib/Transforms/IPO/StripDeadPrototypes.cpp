@@ -17,6 +17,7 @@
 #include "llvm/Transforms/IPO/StripDeadPrototypes.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/OptBisect.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/IPO.h"
 
@@ -54,6 +55,9 @@ static bool stripDeadPrototypes(Module &M) {
 }
 
 PreservedAnalyses StripDeadPrototypesPass::run(Module &M) {
+  if (skipPassForModule(name(), M))
+    return PreservedAnalyses::all();
+
   if (stripDeadPrototypes(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -69,6 +73,9 @@ public:
         *PassRegistry::getPassRegistry());
   }
   bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+
     return stripDeadPrototypes(M);
   }
 };
