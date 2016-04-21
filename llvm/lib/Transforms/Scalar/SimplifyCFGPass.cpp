@@ -36,6 +36,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/OptBisect.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -187,6 +188,9 @@ SimplifyCFGPass::SimplifyCFGPass(int BonusInstThreshold)
 
 PreservedAnalyses SimplifyCFGPass::run(Function &F,
                                        AnalysisManager<Function> &AM) {
+  if (skipPassForFunction(name(), F))
+    return PreservedAnalyses::all();
+
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
 
@@ -212,7 +216,7 @@ struct CFGSimplifyPass : public FunctionPass {
     if (PredicateFtor && !PredicateFtor(F))
       return false;
 
-    if (skipOptnoneFunction(F))
+    if (skipFunction(F))
       return false;
 
     AssumptionCache *AC =

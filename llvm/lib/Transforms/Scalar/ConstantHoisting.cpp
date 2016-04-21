@@ -187,7 +187,7 @@ FunctionPass *llvm::createConstantHoistingPass() {
 
 /// \brief Perform the constant hoisting optimization for the given function.
 bool ConstantHoisting::runOnFunction(Function &Fn) {
-  if (skipOptnoneFunction(Fn))
+  if (skipFunction(Fn))
     return false;
 
   DEBUG(dbgs() << "********** Begin Constant Hoisting **********\n");

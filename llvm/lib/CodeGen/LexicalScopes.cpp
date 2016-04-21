@@ -113,8 +113,7 @@ LexicalScope *LexicalScopes::findLexicalScope(const DILocation *DL) {
 
   // The scope that we were created with could have an extra file - which
   // isn't what we care about in this case.
-  if (auto *File = dyn_cast<DILexicalBlockFile>(Scope))
-    Scope = File->getScope();
+  Scope = Scope->getNonLexicalBlockFileScope();
 
   if (auto *IA = DL->getInlinedAt()) {
     auto I = InlinedLexicalScopeMap.find(std::make_pair(Scope, IA));
@@ -140,8 +139,8 @@ LexicalScope *LexicalScopes::getOrCreateLexicalScope(const DILocalScope *Scope,
 /// getOrCreateRegularScope - Find or create a regular lexical scope.
 LexicalScope *
 LexicalScopes::getOrCreateRegularScope(const DILocalScope *Scope) {
-  if (auto *File = dyn_cast<DILexicalBlockFile>(Scope))
-    Scope = File->getScope();
+  assert(Scope && "Invalid Scope encoding!");
+  Scope = Scope->getNonLexicalBlockFileScope();
 
   auto I = LexicalScopeMap.find(Scope);
   if (I != LexicalScopeMap.end())
@@ -169,6 +168,8 @@ LexicalScopes::getOrCreateRegularScope(const DILocalScope *Scope) {
 LexicalScope *
 LexicalScopes::getOrCreateInlinedScope(const DILocalScope *Scope,
                                        const DILocation *InlinedAt) {
+  assert(Scope && "Invalid Scope encoding!");
+  Scope = Scope->getNonLexicalBlockFileScope();
   std::pair<const DILocalScope *, const DILocation *> P(Scope, InlinedAt);
   auto I = InlinedLexicalScopeMap.find(P);
   if (I != InlinedLexicalScopeMap.end())
@@ -192,9 +193,7 @@ LexicalScopes::getOrCreateInlinedScope(const DILocalScope *Scope,
 LexicalScope *
 LexicalScopes::getOrCreateAbstractScope(const DILocalScope *Scope) {
   assert(Scope && "Invalid Scope encoding!");
-
-  if (auto *File = dyn_cast<DILexicalBlockFile>(Scope))
-    Scope = File->getScope();
+  Scope = Scope->getNonLexicalBlockFileScope();
   auto I = AbstractScopeMap.find(Scope);
   if (I != AbstractScopeMap.end())
     return &I->second;

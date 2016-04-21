@@ -72,7 +72,7 @@ bool HexagonSplitConst32AndConst64::runOnMachineFunction(MachineFunction &Fn) {
   const HexagonTargetObjectFile &TLOF =
       *static_cast<const HexagonTargetObjectFile *>(
           Fn.getTarget().getObjFileLowering());
-  if (TLOF.IsSmallDataEnabled())
+  if (TLOF.isSmallDataEnabled())
     return true;
 
   const TargetInstrInfo *TII = Fn.getSubtarget().getInstrInfo();

@@ -26,6 +26,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/OptBisect.h"
 #include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Transforms/Scalar.h"
@@ -146,6 +147,9 @@ static bool aggressiveDCE(Function& F) {
 }
 
 PreservedAnalyses ADCEPass::run(Function &F) {
+  if (skipPassForFunction(name(), F))
+    return PreservedAnalyses::all();
+
   if (aggressiveDCE(F))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -159,7 +163,7 @@ struct ADCELegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function& F) override {
-    if (skipOptnoneFunction(F))
+    if (skipFunction(F))
       return false;
     return aggressiveDCE(F);
   }

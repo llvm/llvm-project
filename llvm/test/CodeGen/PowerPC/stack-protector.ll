@@ -5,7 +5,7 @@
 
 ; DARWIN32: __stack_chk_guard
 ; DARWIN64: __stack_chk_guard
-; LINUX32: ld {{[0-9]+}}, -28680(2)
+; LINUX32: lwz {{[0-9]+}}, -28680(2)
 ; LINUX64: ld {{[0-9]+}}, -28688(13)
 
 ; DARWIN32: __stack_chk_fail

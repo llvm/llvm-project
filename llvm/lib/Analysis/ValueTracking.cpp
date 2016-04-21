@@ -3935,61 +3935,11 @@ static Optional<bool> isImpliedCondMatchingOperands(CmpInst::Predicate APred,
     std::swap(BLHS, BRHS);
     BPred = ICmpInst::getSwappedPredicate(BPred);
   }
-
-  // If the predicates match, then we know the first condition implies the
-  // second is true.
-  if (APred == BPred)
+  if (CmpInst::isImpliedTrueByMatchingCmp(APred, BPred))
     return true;
-
-  // If an inverted APred matches BPred, we can infer the second condition is
-  // false.
-  if (CmpInst::getInversePredicate(APred) == BPred)
+  if (CmpInst::isImpliedFalseByMatchingCmp(APred, BPred))
     return false;
 
-  // If a swapped APred matches BPred, we can infer the second condition is
-  // false in many cases.
-  if (CmpInst::getSwappedPredicate(APred) == BPred) {
-    switch (APred) {
-    default:
-      break;
-    case CmpInst::ICMP_UGT: // A >u B implies A <u B is false.
-    case CmpInst::ICMP_ULT: // A <u B implies A >u B is false.
-    case CmpInst::ICMP_SGT: // A >s B implies A <s B is false.
-    case CmpInst::ICMP_SLT: // A <s B implies A >s B is false.
-      return false;
-    }
-  }
-
-  // The predicates must match sign or at least one of them must be an equality
-  // comparison (which is signless).
-  if (ICmpInst::isSigned(APred) != ICmpInst::isSigned(BPred) &&
-      !ICmpInst::isEquality(APred) && !ICmpInst::isEquality(BPred))
-    return None;
-
-  switch (APred) {
-  default:
-    break;
-  case CmpInst::ICMP_EQ:
-    // A == B implies A > B and A < B are false.
-    if (CmpInst::isFalseWhenEqual(BPred))
-      return false;
-
-    break;
-  case CmpInst::ICMP_UGT:
-  case CmpInst::ICMP_ULT:
-  case CmpInst::ICMP_SGT:
-  case CmpInst::ICMP_SLT:
-    // A > B implies A == B is false.
-    // A < B implies A == B is false.
-    if (BPred == CmpInst::ICMP_EQ)
-      return false;
-
-    // A > B implies A != B is true.
-    // A < B implies A != B is true.
-    if (BPred == CmpInst::ICMP_NE)
-      return true;
-    break;
-  }
   return None;
 }
 

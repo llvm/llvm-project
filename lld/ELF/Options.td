@@ -32,10 +32,10 @@ def as_needed : Flag<["--"], "as-needed">;
 def disable_new_dtags : Flag<["--"], "disable-new-dtags">,
   HelpText<"Disable new dynamic tags">;
 
-def discard_all : Flag<["-"], "discard-all">,
+def discard_all : Flag<["--", "-"], "discard-all">,
   HelpText<"Delete all local symbols">;
 
-def discard_locals : Flag<["-"], "discard-locals">,
+def discard_locals : Flag<["--", "-"], "discard-locals">,
   HelpText<"Delete temporary local symbols">;
 
 def discard_none : Flag<["-"], "discard-none">,
@@ -223,6 +223,8 @@ def plugin_opt_eq : Joined<["--", "-"], "plugin-opt=">;
 def detect_odr_violations : Flag<["--"], "detect-odr-violations">;
 def fatal_warnings : Flag<["--"], "fatal-warnings">;
 def no_add_needed : Flag<["--"], "no-add-needed">;
+def no_copy_dt_needed_entries : Flag<["--"], "no-copy-dt-needed-entries">,
+                                Alias<no_add_needed>;
 def no_dynamic_linker : Flag<["--"], "no-dynamic-linker">;
 def no_fatal_warnings : Flag<["--"], "no-fatal-warnings">;
 def no_warn_common : Flag<["--", "-"], "no-warn-common">;

@@ -43,6 +43,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/OptBisect.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -4229,6 +4230,9 @@ PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
 }
 
 PreservedAnalyses SROA::run(Function &F, AnalysisManager<Function> &AM) {
+  if (skipPassForFunction(name(), F))
+    return PreservedAnalyses::all();
+
   return runImpl(F, AM.getResult<DominatorTreeAnalysis>(F),
                  AM.getResult<AssumptionAnalysis>(F));
 }
@@ -4246,7 +4250,7 @@ public:
     initializeSROALegacyPassPass(*PassRegistry::getPassRegistry());
   }
   bool runOnFunction(Function &F) override {
-    if (skipOptnoneFunction(F))
+    if (skipFunction(F))
       return false;
 
     auto PA = Impl.runImpl(

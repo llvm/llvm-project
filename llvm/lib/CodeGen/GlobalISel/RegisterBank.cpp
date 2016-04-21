@@ -22,7 +22,7 @@ const unsigned RegisterBank::InvalidID = UINT_MAX;
 
 RegisterBank::RegisterBank() : ID(InvalidID), Name(nullptr), Size(0) {}
 
-void RegisterBank::verify(const TargetRegisterInfo &TRI) const {
+bool RegisterBank::verify(const TargetRegisterInfo &TRI) const {
   assert(isValid() && "Invalid register bank");
   assert(ContainedRegClasses.size() == TRI.getNumRegClasses() &&
          "TRI does not match the initialization process?");
@@ -50,6 +50,7 @@ void RegisterBank::verify(const TargetRegisterInfo &TRI) const {
       assert(covers(SubRC) && "Not all subclasses are covered");
     }
   }
+  return true;
 }
 
 bool RegisterBank::covers(const TargetRegisterClass &RC) const {

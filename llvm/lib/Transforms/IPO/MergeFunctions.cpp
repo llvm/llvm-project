@@ -1525,6 +1525,9 @@ bool MergeFunctions::doSanityCheck(std::vector<WeakVH> &Worklist) {
 }
 
 bool MergeFunctions::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
   bool Changed = false;
 
   // All functions in the module, ordered by hash. Functions with a unique

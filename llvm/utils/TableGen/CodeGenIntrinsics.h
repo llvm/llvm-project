@@ -78,7 +78,7 @@ namespace llvm {
     };
 
     /// Memory mod/ref behavior of this intrinsic, corresponding to
-    /// intrinsic properties (IntrReadMem, IntrReadArgMem, etc.).
+    /// intrinsic properties (IntrReadMem, IntrArgMemOnly, etc.).
     enum ModRefBehavior {
       NoMem = 0,
       ReadArgMem = MR_Ref,

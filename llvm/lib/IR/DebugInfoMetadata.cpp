@@ -392,6 +392,12 @@ DISubprogram *DILocalScope::getSubprogram() const {
   return const_cast<DISubprogram *>(cast<DISubprogram>(this));
 }
 
+DILocalScope *DILocalScope::getNonLexicalBlockFileScope() const {
+  if (auto *File = dyn_cast<DILexicalBlockFile>(this))
+    return File->getScope()->getNonLexicalBlockFileScope();
+  return const_cast<DILocalScope *>(this);
+}
+
 DISubprogram *DISubprogram::getImpl(
     LLVMContext &Context, Metadata *Scope, MDString *Name,
     MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,

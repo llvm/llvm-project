@@ -60,7 +60,7 @@ AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
          "Class not added?");
   assert(RBCCR.getSize() == 32 && "CCR should hold up to 32-bit");
 
-  verify(TRI);
+  assert(verify(TRI) && "Invalid register bank information");
 }
 
 unsigned AArch64RegisterBankInfo::copyCost(const RegisterBank &A,

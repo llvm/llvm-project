@@ -67,14 +67,15 @@ RegisterBankInfo::RegisterBankInfo(unsigned NumRegBanks)
   RegBanks.reset(new RegisterBank[NumRegBanks]);
 }
 
-void RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
+bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
   for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
     const RegisterBank &RegBank = getRegBank(Idx);
     assert(Idx == RegBank.getID() &&
            "ID does not match the index in the array");
     DEBUG(dbgs() << "Verify " << RegBank << '\n');
-    RegBank.verify(TRI);
+    assert(RegBank.verify(TRI) && "RegBank is invalid");
   }
+  return true;
 }
 
 void RegisterBankInfo::createRegisterBank(unsigned ID, const char *Name) {
@@ -344,7 +345,7 @@ RegisterBankInfo::getInstrPossibleMappings(const MachineInstr &MI) const {
     PossibleMappings.emplace_back(std::move(AltMapping));
 #ifndef NDEBUG
   for (const InstructionMapping &Mapping : PossibleMappings)
-    Mapping.verify(MI);
+    assert(Mapping.verify(MI) && "Mapping is invalid");
 #endif
   return PossibleMappings;
 }
@@ -363,51 +364,49 @@ void RegisterBankInfo::PartialMapping::dump() const {
   dbgs() << '\n';
 }
 
-void RegisterBankInfo::PartialMapping::verify() const {
+bool RegisterBankInfo::PartialMapping::verify() const {
   assert(RegBank && "Register bank not set");
-  // Check what is the minimum width that will live into RegBank.
-  // RegBank will have to, at least, accomodate all the bits between the first
-  // and last bits active in Mask.
-  // If Mask is zero, then ActiveWidth is 0.
-  unsigned ActiveWidth = 0;
-  // Otherwise, remove the trailing and leading zeros from the bitwidth.
-  // 0..0 ActiveWidth 0..0.
-  if (Mask.getBoolValue())
-    ActiveWidth = Mask.getBitWidth() - Mask.countLeadingZeros() -
-                  Mask.countTrailingZeros();
-  (void)ActiveWidth;
-  assert(ActiveWidth <= Mask.getBitWidth() &&
-         "Wrong computation of ActiveWidth, overflow?");
-  assert(RegBank->getSize() >= ActiveWidth &&
-         "Register bank too small for Mask");
+  assert(Length && "Empty mapping");
+  assert((StartIdx < getHighBitIdx()) && "Overflow, switch to APInt?");
+  // Check if the minimum width fits into RegBank.
+  assert(RegBank->getSize() >= Length && "Register bank too small for Mask");
+  return true;
 }
 
 void RegisterBankInfo::PartialMapping::print(raw_ostream &OS) const {
-  SmallString<128> MaskStr;
-  Mask.toString(MaskStr, /*Radix*/ 16, /*Signed*/ 0, /*formatAsCLiteral*/ true);
-  OS << "Mask(" << Mask.getBitWidth() << ") = " << MaskStr << ", RegBank = ";
+  OS << "[" << StartIdx << ", " << getHighBitIdx() << "], RegBank = ";
   if (RegBank)
     OS << *RegBank;
   else
     OS << "nullptr";
 }
 
-void RegisterBankInfo::ValueMapping::verify(unsigned ExpectedBitWidth) const {
+bool RegisterBankInfo::ValueMapping::verify(unsigned ExpectedBitWidth) const {
   assert(!BreakDown.empty() && "Value mapped nowhere?!");
-  unsigned ValueBitWidth = BreakDown.back().Mask.getBitWidth();
-  assert(ValueBitWidth == ExpectedBitWidth && "BitWidth does not match");
-  APInt ValueMask(ValueBitWidth, 0);
+  unsigned OrigValueBitWidth = 0;
   for (const RegisterBankInfo::PartialMapping &PartMap : BreakDown) {
-    // Check that all the partial mapping have the same bitwidth.
-    assert(PartMap.Mask.getBitWidth() == ValueBitWidth &&
-           "Value does not have the same size accross the partial mappings");
-    // Check that the union of the partial mappings covers the whole value.
-    ValueMask |= PartMap.Mask;
     // Check that each register bank is big enough to hold the partial value:
     // this check is done by PartialMapping::verify
-    PartMap.verify();
+    assert(PartMap.verify() && "Partial mapping is invalid");
+    // The original value should completely be mapped.
+    // Thus the maximum accessed index + 1 is the size of the original value.
+    OrigValueBitWidth =
+        std::max(OrigValueBitWidth, PartMap.getHighBitIdx() + 1);
+  }
+  assert(OrigValueBitWidth == ExpectedBitWidth && "BitWidth does not match");
+  APInt ValueMask(OrigValueBitWidth, 0);
+  for (const RegisterBankInfo::PartialMapping &PartMap : BreakDown) {
+    // Check that the union of the partial mappings covers the whole value,
+    // without overlaps.
+    // The high bit is exclusive in the APInt API, thus getHighBitIdx + 1.
+    APInt PartMapMask = APInt::getBitsSet(OrigValueBitWidth, PartMap.StartIdx,
+                                          PartMap.getHighBitIdx() + 1);
+    ValueMask ^= PartMapMask;
+    assert((ValueMask & PartMapMask) == PartMapMask &&
+           "Some partial mappings overlap");
   }
   assert(ValueMask.isAllOnesValue() && "Value is not fully mapped");
+  return true;
 }
 
 void RegisterBankInfo::ValueMapping::dump() const {
@@ -430,15 +429,13 @@ void RegisterBankInfo::InstructionMapping::setOperandMapping(
     unsigned OpIdx, unsigned MaskSize, const RegisterBank &RegBank) {
   // Build the value mapping.
   assert(MaskSize <= RegBank.getSize() && "Register bank is too small");
-  APInt Mask(MaskSize, 0);
-  // The value is represented by all the bits.
-  Mask.flipAllBits();
 
   // Create the mapping object.
-  getOperandMapping(OpIdx).BreakDown.push_back(PartialMapping(Mask, RegBank));
+  getOperandMapping(OpIdx).BreakDown.push_back(
+      PartialMapping(0, MaskSize, RegBank));
 }
 
-void RegisterBankInfo::InstructionMapping::verify(
+bool RegisterBankInfo::InstructionMapping::verify(
     const MachineInstr &MI) const {
   // Check that all the register operands are properly mapped.
   // Check the constructor invariant.
@@ -464,8 +461,9 @@ void RegisterBankInfo::InstructionMapping::verify(
     // Register size in bits.
     // This size must match what the mapping expects.
     unsigned RegSize = getSizeInBits(Reg, MRI, TRI);
-    MOMapping.verify(RegSize);
+    assert(MOMapping.verify(RegSize) && "Value mapping is invalid");
   }
+  return true;
 }
 
 void RegisterBankInfo::InstructionMapping::dump() const {

@@ -77,7 +77,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "sgpr-copies"
+#define DEBUG_TYPE "si-fix-sgpr-copies"
 
 namespace {
 

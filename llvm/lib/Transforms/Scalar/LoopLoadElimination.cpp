@@ -531,6 +531,9 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+
     auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto *LAA = &getAnalysis<LoopAccessAnalysis>();
     auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();

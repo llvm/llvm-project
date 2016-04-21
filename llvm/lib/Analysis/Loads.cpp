@@ -416,6 +416,14 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
   Value *Ptr = Load->getPointerOperand();
   Type *AccessTy = Load->getType();
 
+  // We can never remove a volatile load
+  if (Load->isVolatile())
+    return nullptr;
+
+  // Anything stronger than unordered is currently unimplemented.
+  if (!Load->isUnordered())
+    return nullptr;
+
   const DataLayout &DL = ScanBB->getModule()->getDataLayout();
 
   // Try to get the store size for the type.
@@ -445,6 +453,12 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
       if (AreEquivalentAddressValues(
               LI->getPointerOperand()->stripPointerCasts(), StrippedPtr) &&
           CastInst::isBitOrNoopPointerCastable(LI->getType(), AccessTy, DL)) {
+
+        // We can value forward from an atomic to a non-atomic, but not the
+        // other way around.
+        if (LI->isAtomic() < Load->isAtomic())
+          return nullptr;
+
         if (AATags)
           LI->getAAMetadata(*AATags);
         return LI;
@@ -458,6 +472,12 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
       if (AreEquivalentAddressValues(StorePtr, StrippedPtr) &&
           CastInst::isBitOrNoopPointerCastable(SI->getValueOperand()->getType(),
                                                AccessTy, DL)) {
+
+        // We can value forward from an atomic to a non-atomic, but not the
+        // other way around.
+        if (SI->isAtomic() < Load->isAtomic())
+          return nullptr;
+
         if (AATags)
           SI->getAAMetadata(*AATags);
         return SI->getOperand(0);

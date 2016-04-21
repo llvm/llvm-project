@@ -223,12 +223,10 @@ ret:
 
 ; GCN: s_cbranch_vccnz BB4_2
 
-; GCN: s_lshr_b64 s{{\[}}[[LO:[0-9]+]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, 15
-; GCN: s_and_b32 s{{[0-9]+}}, s[[LO]], 0xff
+; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x8000f
 
 ; GCN: BB4_2:
-; GCN: s_lshr_b64 s{{\[}}[[LO:[0-9]+]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, 15
-; GCN: s_and_b32 s{{[0-9]+}}, s[[LO]], 0x7f
+; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7000f
 
 ; GCN: BB4_3:
 ; GCN: buffer_store_dwordx2

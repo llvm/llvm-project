@@ -2027,7 +2027,6 @@ bool AMDGPUOperand::isDPPCtrl() const {
 
 AMDGPUAsmParser::OperandMatchResultTy
 AMDGPUAsmParser::parseDPPCtrlOps(OperandVector &Operands) {
-  // ToDo: use same syntax as sp3 for dpp_ctrl
   SMLoc S = Parser.getTok().getLoc();
   StringRef Prefix;
   int64_t Int;
@@ -2043,6 +2042,19 @@ AMDGPUAsmParser::parseDPPCtrlOps(OperandVector &Operands) {
   } else if (Prefix == "row_half_mirror") {
     Int = 0x141;
   } else {
+    // Check to prevent parseDPPCtrlOps from eating invalid tokens
+    if (Prefix != "quad_perm"
+        && Prefix != "row_shl"
+        && Prefix != "row_shr"
+        && Prefix != "row_ror"
+        && Prefix != "wave_shl"
+        && Prefix != "wave_rol"
+        && Prefix != "wave_shr"
+        && Prefix != "wave_ror"
+        && Prefix != "row_bcast") {
+      return MatchOperand_NoMatch;
+    }
+
     Parser.Lex();
     if (getLexer().isNot(AsmToken::Colon))
       return MatchOperand_ParseFail;
@@ -2114,7 +2126,7 @@ AMDGPUAsmParser::parseDPPCtrlOps(OperandVector &Operands) {
           Int = 0x143;
         }
       } else {
-        return MatchOperand_NoMatch;
+        return MatchOperand_ParseFail;
       }
     }
   }

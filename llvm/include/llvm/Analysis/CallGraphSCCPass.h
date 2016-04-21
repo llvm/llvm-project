@@ -77,15 +77,21 @@ public:
   /// the call graph.  If the derived class implements this method, it should
   /// always explicitly call the implementation here.
   void getAnalysisUsage(AnalysisUsage &Info) const override;
+
+protected:
+  /// Optional passes call this function to check whether the pass should be
+  /// skipped. This is the case when optimization bisect is over the limit.
+  bool skipSCC(CallGraphSCC &SCC) const;
 };
 
 /// CallGraphSCC - This is a single SCC that a CallGraphSCCPass is run on.
 class CallGraphSCC {
+  const CallGraph &CG; // The call graph for this SCC.
   void *Context; // The CGPassManager object that is vending this.
   std::vector<CallGraphNode*> Nodes;
 
 public:
-  CallGraphSCC(void *context) : Context(context) {}
+  CallGraphSCC(CallGraph &cg, void *context) : CG(cg), Context(context) {}
 
   void initialize(CallGraphNode *const *I, CallGraphNode *const *E) {
     Nodes.assign(I, E);
@@ -101,6 +107,8 @@ public:
   typedef std::vector<CallGraphNode *>::const_iterator iterator;
   iterator begin() const { return Nodes.begin(); }
   iterator end() const { return Nodes.end(); }
+
+  const CallGraph &getCallGraph() { return CG; }
 };
 
 } // End llvm namespace

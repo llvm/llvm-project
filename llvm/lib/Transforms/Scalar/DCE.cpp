@@ -41,7 +41,7 @@ namespace {
       initializeDeadInstEliminationPass(*PassRegistry::getPassRegistry());
     }
     bool runOnBasicBlock(BasicBlock &BB) override {
-      if (skipOptnoneFunction(BB))
+      if (skipBasicBlock(BB))
         return false;
       auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
       TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI() : nullptr;
@@ -122,7 +122,7 @@ static bool DCEInstruction(Instruction *I,
 }
 
 bool DCE::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
+  if (skipFunction(F))
     return false;
 
   auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();

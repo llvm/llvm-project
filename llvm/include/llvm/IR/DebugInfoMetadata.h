@@ -1163,6 +1163,12 @@ public:
   /// chain.
   DISubprogram *getSubprogram() const;
 
+  /// Get the first non DILexicalBlockFile scope of this scope.
+  ///
+  /// Return this if it's not a \a DILexicalBlockFIle; otherwise, look up the
+  /// scope chain.
+  DILocalScope *getNonLexicalBlockFileScope() const;
+
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DISubprogramKind ||
            MD->getMetadataID() == DILexicalBlockKind ||

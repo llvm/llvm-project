@@ -41,7 +41,7 @@ define i32 @bar(i64 %cav1.coerce) nounwind {
 
 define void @fct1(%struct.Z* nocapture %x, %struct.A* nocapture %y) nounwind optsize ssp {
 ; CHECK-LABEL: fct1:
-; CHECK: ubfx
+; CHECK: ubfx x{{[0-9]+}}, x{{[0-9]+}}
 ; CHECK-NOT: and
 ; CHECK: ret
 

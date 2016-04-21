@@ -657,7 +657,7 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
 }
 
 bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
-  if (skipOptnoneFunction(*Func.getFunction()))
+  if (skipFunction(*Func.getFunction()))
     return false;
 
   DEBUG(dbgs() << "********** Stack Coloring **********\n"
