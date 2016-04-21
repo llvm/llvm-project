@@ -23,22 +23,13 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE ::llvm::ScoreboardHazardRecognizer::DebugType
+#define DEBUG_TYPE DebugType
 
-#ifndef NDEBUG
-const char *ScoreboardHazardRecognizer::DebugType = "";
-#endif
-
-ScoreboardHazardRecognizer::
-ScoreboardHazardRecognizer(const InstrItineraryData *II,
-                           const ScheduleDAG *SchedDAG,
-                           const char *ParentDebugType) :
-  ScheduleHazardRecognizer(), ItinData(II), DAG(SchedDAG), IssueWidth(0),
-  IssueCount(0) {
-
-#ifndef NDEBUG
-  DebugType = ParentDebugType;
-#endif
+ScoreboardHazardRecognizer::ScoreboardHazardRecognizer(
+    const InstrItineraryData *II, const ScheduleDAG *SchedDAG,
+    const char *ParentDebugType)
+    : ScheduleHazardRecognizer(), DebugType(ParentDebugType), ItinData(II),
+      DAG(SchedDAG), IssueWidth(0), IssueCount(0) {
 
   // Determine the maximum depth of any itinerary. This determines the depth of
   // the scoreboard. We always make the scoreboard at least 1 cycle deep to
