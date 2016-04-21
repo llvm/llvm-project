@@ -42,7 +42,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <deque>
 using namespace llvm;
