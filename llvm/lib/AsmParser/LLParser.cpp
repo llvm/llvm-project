@@ -3744,10 +3744,9 @@ bool LLParser::ParseDICompositeType(MDNode *&Result, bool IsDistinct) {
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  // If this isn't a forward declaration and it has a UUID, check for it in the
-  // type map in the context.
-  if (!(flags.Val & DINode::FlagFwdDecl) && identifier.Val)
-    if (auto *CT = DICompositeType::getODRType(
+  // If this has an identifier try to build an ODR type.
+  if (identifier.Val)
+    if (auto *CT = DICompositeType::buildODRType(
             Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
             scope.Val, baseType.Val, size.Val, align.Val, offset.Val, flags.Val,
             elements.Val, runtimeLang.Val, vtableHolder.Val,
