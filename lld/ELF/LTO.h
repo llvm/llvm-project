@@ -21,6 +21,7 @@
 #ifndef LLD_ELF_LTO_H
 #define LLD_ELF_LTO_H
 
+#include "Config.h"
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSet.h"
@@ -41,6 +42,7 @@ public:
 
   BitcodeCompiler()
       : Combined(new llvm::Module("ld-temp.o", Context)), Mover(*Combined) {
+    Context.setDiscardValueNames(Config->DiscardValueNames);
     Context.enableDebugTypeODRUniquing();
   }
 

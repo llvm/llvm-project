@@ -20,36 +20,7 @@ class Lazy;
 template <class ELFT> class OutputSectionBase;
 struct Symbol;
 
-struct SymName {
-  SymName(StringRef Name) : Name(Name) {
-    Hash = llvm::DenseMapInfo<StringRef>::getHashValue(Name);
-  }
-  SymName(StringRef Name, unsigned Hash) : Name(Name), Hash(Hash) {}
-  StringRef Name;
-  unsigned Hash;
-};
-}
-}
-
-namespace llvm {
-template <> struct DenseMapInfo<lld::elf::SymName> {
-  static lld::elf::SymName getEmptyKey() {
-    StringRef N = DenseMapInfo<StringRef>::getEmptyKey();
-    return {N, 0};
-  }
-  static lld::elf::SymName getTombstoneKey() {
-    StringRef N = DenseMapInfo<StringRef>::getTombstoneKey();
-    return {N, 0};
-  }
-  static unsigned getHashValue(lld::elf::SymName Name) { return Name.Hash; }
-  static bool isEqual(lld::elf::SymName A, lld::elf::SymName B) {
-    return A.Name == B.Name;
-  }
-};
-}
-
-namespace lld {
-namespace elf {
+typedef llvm::CachedHash<StringRef> SymName;
 
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
