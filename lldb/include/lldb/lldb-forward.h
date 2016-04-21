@@ -59,6 +59,7 @@ class   ClangPersistentVariables;
 class   CommandInterpreter;
 class   CommandInterpreterRunOptions;
 class   CommandObject;
+class   CommandObjectMultiword;
 class   CommandReturnObject;
 class   Communication;
 class   CompactUnwindInfo;

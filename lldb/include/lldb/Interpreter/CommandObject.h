@@ -172,6 +172,9 @@ public:
     virtual bool
     IsMultiwordObject () { return false; }
     
+    virtual CommandObjectMultiword*
+    GetAsMultiwordCommand () { return nullptr; }
+
     virtual bool
     IsAlias () { return false; }
     

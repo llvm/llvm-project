@@ -38,6 +38,9 @@ namespace llvm {
   template<typename T>
   class ErrorOr;
 
+  template<typename T>
+  class Expected;
+
   class raw_ostream;
   // TODO: DenseMap, ...
 }
@@ -61,6 +64,7 @@ namespace lld {
   using llvm::SmallVectorImpl;
   using llvm::SaveAndRestore;
   using llvm::ErrorOr;
+  using llvm::Expected;
 
   using llvm::raw_ostream;
 } // end namespace lld.

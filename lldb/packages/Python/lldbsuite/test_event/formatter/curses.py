@@ -1,16 +1,12 @@
-#!/usr/bin/env python
-
 """
                      The LLVM Compiler Infrastructure
 
  This file is distributed under the University of Illinois Open Source
  License. See LICENSE.TXT for details.
-
-Configuration options for lldbtest.py set by dotest.py during initialization
 """
 
-from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import print_function
 
 # System modules
 import curses
@@ -22,12 +18,13 @@ import time
 # Third-party modules
 
 # LLDB modules
-from . import lldbcurses
-from . import result_formatter
-from .result_formatter import EventBuilder
+from lldbsuite.test import lldbcurses
+
+from . import results_formatter
+from ..event_builder import EventBuilder
 
 
-class Curses(result_formatter.ResultsFormatter):
+class Curses(results_formatter.ResultsFormatter):
     """Receives live results from tests that are running and reports them to the terminal in a curses GUI"""
 
     def __init__(self, out_file, options):
@@ -75,6 +72,10 @@ class Curses(result_formatter.ResultsFormatter):
             return 'S'
         elif status == EventBuilder.STATUS_ERROR:
             return 'E'
+        elif status == EventBuilder.STATUS_TIMEOUT:
+            return 'T'
+        elif status == EventBuilder.STATUS_EXPECTED_TIMEOUT:
+            return 't'
         else:
             return status
 

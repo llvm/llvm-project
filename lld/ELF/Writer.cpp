@@ -220,8 +220,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   } else {
     createPhdrs();
     fixHeaders();
-    if (Script->DoLayout) {
-      Script->assignAddresses(OutputSections);
+    if (ScriptConfig->DoLayout) {
+      Script<ELFT>::X->assignAddresses(OutputSections);
     } else {
       fixSectionAlignments();
       assignAddresses();
@@ -282,9 +282,13 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
   if (!(C.getSectionHdr()->sh_flags & SHF_ALLOC))
     return 0;
 
+  if (!Body.isTls())
+    return 0;
+
   typedef typename ELFT::uint uintX_t;
   if (Expr == R_TLSLD_PC || Expr == R_TLSLD) {
-    if (Target->canRelaxTls(Type, nullptr)) {
+    // Local-Dynamic relocs can be relaxed to Local-Exec.
+    if (!Config->Shared) {
       C.Relocations.push_back(
           {R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Body});
       return 2;
@@ -297,18 +301,15 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     return 1;
   }
 
-  if (!Body.isTls())
-    return 0;
-
-  if (Target->isTlsLocalDynamicRel(Type) &&
-      Target->canRelaxTls(Type, nullptr)) {
+  // Local-Dynamic relocs can be relaxed to Local-Exec.
+  if (Target->isTlsLocalDynamicRel(Type) && !Config->Shared) {
     C.Relocations.push_back(
         {R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Body});
     return 1;
   }
 
   if (Target->isTlsGlobalDynamicRel(Type)) {
-    if (!Target->canRelaxTls(Type, &Body)) {
+    if (Config->Shared) {
       if (Out<ELFT>::Got->addDynTlsEntry(Body)) {
         uintX_t Off = Out<ELFT>::Got->getGlobalDynOffset(Body);
         Out<ELFT>::RelaDyn->addReloc(
@@ -321,6 +322,8 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
       return 1;
     }
 
+    // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
+    // depending on the symbol being locally defined or not.
     if (Body.isPreemptible()) {
       Expr =
           Expr == R_TLSGD_PC ? R_RELAX_TLS_GD_TO_IE_PC : R_RELAX_TLS_GD_TO_IE;
@@ -337,7 +340,11 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
         {R_RELAX_TLS_GD_TO_LE, Type, Offset, Addend, &Body});
     return Target->TlsGdToLeSkip;
   }
-  if (Target->isTlsInitialExecRel(Type) && Target->canRelaxTls(Type, &Body)) {
+
+  // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
+  // defined.
+  if (Target->isTlsInitialExecRel(Type) && !Config->Shared &&
+      !Body.isPreemptible()) {
     C.Relocations.push_back(
         {R_RELAX_TLS_IE_TO_LE, Type, Offset, Addend, &Body});
     return 1;
@@ -501,7 +508,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       continue;
     }
 
-    if (Target->needsDynRelative(Type))
+    if (Expr == R_GOT && !Target->isRelRelative(Type) && Config->Shared)
       AddDyn({Target->RelativeRel, C.OutSec, Offset, true, &Body,
               getAddend<ELFT>(RI)});
 
@@ -566,9 +573,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     }
 
     // If a relocation needs GOT, we create a GOT slot for the symbol.
-    if (Expr == R_GOT || Expr == R_GOT_OFF || Expr == R_MIPS_GOT ||
-        Expr == R_MIPS_GOT_LOCAL || Expr == R_GOT_PAGE_PC || Expr == R_GOT_PC ||
-        Expr == R_GOT_FROM_END) {
+    if (refersToGotEntry(Expr)) {
       uint32_t T = Body.isTls() ? Target->getTlsGotRel(Type) : Type;
       if (Config->EMachine == EM_MIPS && Expr == R_GOT_OFF)
         Addend -= MipsGPOffset;
@@ -603,6 +608,23 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       AddDyn({Target->getDynRel(Type), C.OutSec, Offset, false, &Body, Addend});
+      // MIPS ABI turns using of GOT and dynamic relocations inside out.
+      // While regular ABI uses dynamic relocations to fill up GOT entries
+      // MIPS ABI requires dynamic linker to fills up GOT entries using
+      // specially sorted dynamic symbol table. This affects even dynamic
+      // relocations against symbols which do not require GOT entries
+      // creation explicitly, i.e. do not have any GOT-relocations. So if
+      // a preemptible symbol has a dynamic relocation we anyway have
+      // to create a GOT entry for it.
+      // If a non-preemptible symbol has a dynamic relocation against it,
+      // dynamic linker takes it st_value, adds offset and writes down
+      // result of the dynamic relocation. In case of preemptible symbol
+      // dynamic linker performs symbol resolution, writes the symbol value
+      // to the GOT entry and reads the GOT entry when it needs to perform
+      // a dynamic relocation.
+      // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf p.4-19
+      if (Config->EMachine == EM_MIPS && !Body.isInGot())
+        Out<ELFT>::Got->addEntry(Body);
       continue;
     }
 
@@ -623,8 +645,10 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     if (!Config->Pic || Target->isRelRelative(Type) || Expr == R_PC ||
         Expr == R_SIZE || isAbsolute<ELFT>(Body)) {
       if (Config->EMachine == EM_MIPS && Body.isLocal() &&
-          (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32))
-        Expr = R_MIPS_GP0;
+          (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32)) {
+        Expr = R_ABS;
+        Addend += File.getMipsGp0();
+      }
       C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
       continue;
     }
@@ -769,7 +793,7 @@ static bool compareSections(OutputSectionBase<ELFT> *A,
                             OutputSectionBase<ELFT> *B) {
   typedef typename ELFT::uint uintX_t;
 
-  int Comp = Script->compareSections(A->getName(), B->getName());
+  int Comp = Script<ELFT>::X->compareSections(A->getName(), B->getName());
   if (Comp != 0)
     return Comp < 0;
 
@@ -911,7 +935,7 @@ void Writer<ELFT>::addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
 
 template <class ELFT>
 StringRef Writer<ELFT>::getOutputSectionName(InputSectionBase<ELFT> *S) const {
-  StringRef Dest = Script->getOutputSection<ELFT>(S);
+  StringRef Dest = Script<ELFT>::X->getOutputSection(S);
   if (!Dest.empty())
     return Dest;
 
@@ -936,7 +960,7 @@ void reportDiscarded(InputSectionBase<ELFT> *IS,
 template <class ELFT>
 bool Writer<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) const {
   return !S || S == &InputSection<ELFT>::Discarded || !S->Live ||
-         Script->isDiscarded(S);
+         Script<ELFT>::X->isDiscarded(S);
 }
 
 template <class ELFT>
@@ -1538,7 +1562,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // sections. These are special, we do not include them into output sections
 // list, but have them to simplify the code.
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
-  uintX_t BaseVA = Script->DoLayout ? 0 : Target->getVAStart();
+  uintX_t BaseVA = ScriptConfig->DoLayout ? 0 : Target->getVAStart();
   Out<ELFT>::ElfHeader->setVA(BaseVA);
   Out<ELFT>::ElfHeader->setFileOffset(0);
   uintX_t Off = Out<ELFT>::ElfHeader->getSize();

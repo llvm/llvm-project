@@ -260,8 +260,11 @@ void test_derived_from_ref_wrap() {
     DerivedFromRefWrap<int> d(x);
     auto get_fn = &std::reference_wrapper<int>::get;
     auto& ret = std::__invoke(get_fn, r);
+    auto& cret = std::__invoke_constexpr(get_fn, r);
     assert(&ret == &x);
+    assert(&cret == &x);
     auto& ret2 = std::__invoke(get_fn, d);
+    auto& cret2 = std::__invoke_constexpr(get_fn, d);
     assert(&ret2 == &x);
     auto& ret3 = std::__invoke(get_fn, r2);
     assert(&ret3 == &x);

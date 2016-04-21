@@ -30,8 +30,8 @@ public:
   void onEndOfTranslationUnit() override;
 
 private:
-  llvm::DenseMap<const NamedDecl*, const UsingDecl*> FoundDecls;
-  llvm::DenseMap<const NamedDecl*, CharSourceRange> FoundRanges;
+  llvm::DenseMap<const Decl*, const UsingDecl*> FoundDecls;
+  llvm::DenseMap<const Decl*, CharSourceRange> FoundRanges;
 };
 
 } // namespace misc

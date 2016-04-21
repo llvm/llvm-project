@@ -44,6 +44,7 @@ template <class ELFT>
 OutputSectionBase<ELFT>::OutputSectionBase(StringRef Name, uint32_t Type,
                                            uintX_t Flags)
     : Name(Name) {
+  memset(&Header, 0, sizeof(Elf_Shdr));
   Header.sh_type = Type;
   Header.sh_flags = Flags;
 }
@@ -907,7 +908,7 @@ static void fill(uint8_t *Buf, size_t Size, ArrayRef<uint8_t> A) {
 }
 
 template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
-  ArrayRef<uint8_t> Filler = Script->getFiller(this->Name);
+  ArrayRef<uint8_t> Filler = Script<ELFT>::X->getFiller(this->Name);
   if (!Filler.empty())
     fill(Buf, this->getSize(), Filler);
   if (Config->Threads) {

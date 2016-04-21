@@ -61,6 +61,7 @@ class Configuration(object):
         self.libcxx_src_root = None
         self.libcxx_obj_root = None
         self.cxx_library_root = None
+        self.cxx_runtime_root = None
         self.abi_library_root = None
         self.env = {}
         self.use_target = False
@@ -195,6 +196,8 @@ class Configuration(object):
     def configure_cxx_library_root(self):
         self.cxx_library_root = self.get_lit_conf('cxx_library_root',
                                                   self.libcxx_obj_root)
+        self.cxx_runtime_root = self.get_lit_conf('cxx_runtime_root',
+                                                   self.cxx_library_root)
 
     def configure_use_system_cxx_lib(self):
         # This test suite supports testing against either the system library or
@@ -439,9 +442,11 @@ class Configuration(object):
         self.cxx.link_flags += shlex.split(link_flags_str)
 
     def configure_link_flags_cxx_library_path(self):
-        if not self.use_system_cxx_lib and self.cxx_library_root:
-            self.cxx.link_flags += ['-L' + self.cxx_library_root,
-                                    '-Wl,-rpath,' + self.cxx_library_root]
+        if not self.use_system_cxx_lib:
+            if self.cxx_library_root:
+                self.cxx.link_flags += ['-L' + self.cxx_library_root]
+            if self.cxx_runtime_root:
+                self.cxx.link_flags += ['-Wl,-rpath,' + self.cxx_runtime_root]
 
     def configure_link_flags_abi_library_path(self):
         # Configure ABI library paths.

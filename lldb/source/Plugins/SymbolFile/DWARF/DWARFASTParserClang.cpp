@@ -1656,7 +1656,8 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
 
                         DEBUG_PRINTF ("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(), DW_TAG_value_to_name(tag), type_name_cstr);
 
-                        Type *element_type = dwarf->ResolveTypeUID(DIERef(type_die_form));
+                        DIERef type_die_ref(type_die_form);
+                        Type *element_type = dwarf->ResolveTypeUID(type_die_ref);
 
                         if (element_type)
                         {
@@ -1665,6 +1666,32 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                             if (byte_stride == 0 && bit_stride == 0)
                                 byte_stride = element_type->GetByteSize();
                             CompilerType array_element_type = element_type->GetForwardCompilerType ();
+
+                            if (ClangASTContext::IsCXXClassType(array_element_type) && array_element_type.GetCompleteType() == false)
+                            {
+                                ModuleSP module_sp = die.GetModule();
+                                if (module_sp)
+                                {
+                                    if (die.GetCU()->GetProducer() == DWARFCompileUnit::eProducerClang)
+                                        module_sp->ReportError ("DWARF DW_TAG_array_type DIE at 0x%8.8x has a class/union/struct element type DIE 0x%8.8x that is a forward declaration, not a complete definition.\nTry compiling the source file with -fno-limit-debug-info or disable -gmodule",
+                                                                die.GetOffset(),
+                                                                type_die_ref.die_offset);
+                                    else
+                                        module_sp->ReportError ("DWARF DW_TAG_array_type DIE at 0x%8.8x has a class/union/struct element type DIE 0x%8.8x that is a forward declaration, not a complete definition.\nPlease file a bug against the compiler and include the preprocessed output for %s",
+                                                                die.GetOffset(),
+                                                                type_die_ref.die_offset,
+                                                                die.GetLLDBCompileUnit() ? die.GetLLDBCompileUnit()->GetPath().c_str() : "the source file");
+                                }
+
+                                // We have no choice other than to pretend that the element class type
+                                // is complete. If we don't do this, clang will crash when trying
+                                // to layout the class. Since we provide layout assistance, all
+                                // ivars in this class and other classes will be fine, this is
+                                // the best we can do short of crashing.
+                                ClangASTContext::StartTagDeclarationDefinition(array_element_type);
+                                ClangASTContext::CompleteTagDeclarationDefinition(array_element_type);
+                            }
+
                             uint64_t array_element_bit_stride = byte_stride * 8 + bit_stride;
                             if (element_orders.size() > 0)
                             {

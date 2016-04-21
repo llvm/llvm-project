@@ -36,12 +36,14 @@ LinkerDriver *elf::Driver;
 bool elf::link(ArrayRef<const char *> Args, raw_ostream &Error) {
   HasError = false;
   ErrorOS = &Error;
+
   Configuration C;
   LinkerDriver D;
-  LinkerScript LS;
+  ScriptConfiguration SC;
   Config = &C;
   Driver = &D;
-  Script = &LS;
+  ScriptConfig = &SC;
+
   Driver->main(Args);
   return !HasError;
 }
@@ -108,7 +110,7 @@ void LinkerDriver::addFile(StringRef Path) {
 
   switch (identify_magic(MBRef.getBuffer())) {
   case file_magic::unknown:
-    Script->read(MBRef);
+    readLinkerScript(MBRef);
     return;
   case file_magic::archive:
     if (WholeArchive) {
@@ -415,8 +417,11 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
 
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   SymbolTable<ELFT> Symtab;
+
   std::unique_ptr<TargetInfo> TI(createTarget());
   Target = TI.get();
+  LinkerScript<ELFT> LS;
+  Script<ELFT>::X = &LS;
 
   Config->Rela = ELFT::Is64Bits;
 

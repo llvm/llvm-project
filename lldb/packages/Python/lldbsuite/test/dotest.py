@@ -23,7 +23,6 @@ from __future__ import print_function
 
 # System modules
 import atexit
-import importlib
 import os
 import errno
 import platform
@@ -31,7 +30,6 @@ import signal
 import socket
 import subprocess
 import sys
-import inspect
 
 # Third-party modules
 import six
@@ -43,9 +41,9 @@ from . import configuration
 from . import dotest_args
 from . import lldbtest_config
 from . import test_categories
-from . import result_formatter
+from lldbsuite.test_event import formatter
 from . import test_result
-from .result_formatter import EventBuilder
+from lldbsuite.test_event.event_builder import EventBuilder
 from ..support import seven
 
 def is_exe(fpath):
@@ -359,7 +357,7 @@ def parseOptionsAndInitTestdirs():
     # Capture test results-related args.
     if args.curses and not args.inferior:
         # Act as if the following args were set.
-        args.results_formatter = "lldbsuite.test.curses_results.Curses"
+        args.results_formatter = "lldbsuite.test_event.formatter.curses.Curses"
         args.results_file = "stdout"
 
     if args.results_file:
@@ -383,7 +381,7 @@ def parseOptionsAndInitTestdirs():
     # and we're not a test inferior.
     if not args.inferior and configuration.results_formatter_name is None:
         configuration.results_formatter_name = (
-            "lldbsuite.test.result_formatter.ResultsFormatter")
+            "lldbsuite.test_event.formatter.results_formatter.ResultsFormatter")
 
     # rerun-related arguments
     configuration.rerun_all_issues = args.rerun_all_issues
@@ -412,7 +410,7 @@ def parseOptionsAndInitTestdirs():
         # Tell the event builder to create all events with these
         # key/val pairs in them.
         if len(entries) > 0:
-            result_formatter.EventBuilder.add_entries_to_all_events(entries)
+            EventBuilder.add_entries_to_all_events(entries)
 
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
@@ -453,7 +451,7 @@ def createSocketToLocalPort(port):
 def setupTestResults():
     """Sets up test results-related objects based on arg settings."""
     # Setup the results formatter configuration.
-    formatter_config = result_formatter.FormatterConfig()
+    formatter_config = formatter.FormatterConfig()
     formatter_config.filename = configuration.results_filename
     formatter_config.formatter_name = configuration.results_formatter_name
     formatter_config.formatter_options = (
@@ -461,12 +459,12 @@ def setupTestResults():
     formatter_config.port = configuration.results_port
 
     # Create the results formatter.
-    formatter_spec = result_formatter.create_results_formatter(
+    formatter_spec = formatter.create_results_formatter(
         formatter_config)
     if formatter_spec is not None and formatter_spec.formatter is not None:
         configuration.results_formatter_object = formatter_spec.formatter
 
-        # Send an intialize message to the formatter.
+        # Send an initialize message to the formatter.
         initialize_event = EventBuilder.bare_event("initialize")
         if isMultiprocessTestRunner():
             if (configuration.test_runner_name is not None and

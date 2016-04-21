@@ -20,8 +20,9 @@ namespace misc {
 
 void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(usingDecl(isExpansionInMainFile()).bind("using"), this);
-  Finder->addMatcher(recordType(hasDeclaration(namedDecl().bind("used"))),
-                     this);
+  auto DeclMatcher = hasDeclaration(namedDecl().bind("used"));
+  Finder->addMatcher(loc(recordType(DeclMatcher)), this);
+  Finder->addMatcher(loc(templateSpecializationType(DeclMatcher)), this);
 }
 
 void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
@@ -30,10 +31,11 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     // than one shadow.
     if (Using->shadow_size() != 1)
       return;
-    const auto* TargetDecl = Using->shadow_begin()->getTargetDecl();
+    const auto *TargetDecl =
+        Using->shadow_begin()->getTargetDecl()->getCanonicalDecl();
 
     // FIXME: Handle other target types.
-    if (!isa<RecordDecl>(TargetDecl))
+    if (!isa<RecordDecl>(TargetDecl) && !isa<ClassTemplateDecl>(TargetDecl))
       return;
 
     FoundDecls[TargetDecl] = Using;
@@ -52,8 +54,12 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   // FIXME: This currently doesn't look at whether the type reference is
   // actually found with the help of the using declaration.
   if (const auto *Used = Result.Nodes.getNodeAs<NamedDecl>("used")) {
-    if (FoundDecls.find(Used) != FoundDecls.end())
-      FoundDecls[Used] = nullptr;
+    if (const auto *Specialization =
+            dyn_cast<ClassTemplateSpecializationDecl>(Used))
+      Used = Specialization->getSpecializedTemplate();
+    auto I = FoundDecls.find(Used->getCanonicalDecl());
+    if (I != FoundDecls.end())
+      I->second = nullptr;
   }
 }
 

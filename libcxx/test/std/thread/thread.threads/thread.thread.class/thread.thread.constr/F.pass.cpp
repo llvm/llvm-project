@@ -20,23 +20,28 @@
 
 #include <thread>
 #include <new>
+#include <atomic>
 #include <cstdlib>
 #include <cassert>
 
 #include "test_macros.h"
 
-unsigned throw_one = 0xFFFF;
+std::atomic<unsigned> throw_one(0xFFFF);
+std::atomic<unsigned> outstanding_new(0);
+
 
 void* operator new(std::size_t s) throw(std::bad_alloc)
 {
     if (throw_one == 0)
         throw std::bad_alloc();
     --throw_one;
+    ++outstanding_new;
     return std::malloc(s);
 }
 
 void  operator delete(void* p) throw()
 {
+    --outstanding_new;
     std::free(p);
 }
 
@@ -94,27 +99,58 @@ public:
 
 #endif
 
+// Test throwing std::bad_alloc
+//-----------------------------
+// Concerns:
+//  A Each allocation performed during thread construction should be performed
+//    in the parent thread so that std::terminate is not called if
+//    std::bad_alloc is thrown by new.
+//  B std::threads constructor should properly handle exceptions and not leak
+//    memory.
+// Plan:
+//  1 Create a thread and count the number of allocations, 'N', it performs.
+//  2 For each allocation performed run a test where that allocation throws.
+//    2.1 check that the exception can be caught in the parent thread.
+//    2.2 Check that the functor has not been called.
+//    2.3 Check that no memory allocated by the creation of the thread is leaked.
+//  3 Finally check that a thread runs successfully if we throw after 'N+1'
+//    allocations.
+void test_throwing_new_during_thread_creation() {
+    throw_one = 0xFFF;
+    {
+        std::thread t(f);
+        t.join();
+    }
+    const int numAllocs = 0xFFF - throw_one;
+    // i <= numAllocs means the last iteration is expected not to throw.
+    for (int i=0; i <= numAllocs; ++i) {
+        throw_one = i;
+        f_run = false;
+        unsigned old_outstanding = outstanding_new;
+        try {
+            std::thread t(f);
+            assert(i == numAllocs); // Only final iteration will not throw.
+            t.join();
+            assert(f_run);
+        } catch (std::bad_alloc const&) {
+            assert(i < numAllocs);
+            assert(!f_run); // (2.2)
+        }
+        assert(old_outstanding == outstanding_new); // (2.3)
+    }
+    f_run = false;
+    throw_one = 0xFFF;
+}
+
 int main()
 {
+    test_throwing_new_during_thread_creation();
     {
         std::thread t(f);
         t.join();
         assert(f_run == true);
     }
-    f_run = false;
-    {
-        try
-        {
-            throw_one = 0;
-            std::thread t(f);
-            assert(false);
-        }
-        catch (...)
-        {
-            throw_one = 0xFFFF;
-            assert(!f_run);
-        }
-    }
+
     {
         assert(G::n_alive == 0);
         assert(!G::op_run);

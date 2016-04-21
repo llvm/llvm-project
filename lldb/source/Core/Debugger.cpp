@@ -1812,7 +1812,7 @@ Debugger::RunREPL (LanguageType language, const char *repl_options)
         }
         else if (repl_languages.empty())
         {
-            err.SetErrorStringWithFormat("LLDB isn't configured with support support for any REPLs.");
+            err.SetErrorStringWithFormat("LLDB isn't configured with REPL support for any languages.");
             return err;
         }
         else

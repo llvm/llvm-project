@@ -1,10 +1,9 @@
-from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import print_function
 
 # System modules
 from distutils.version import LooseVersion, StrictVersion
 from functools import wraps
-import itertools
 import os
 import re
 import sys
@@ -19,7 +18,7 @@ import use_lldb_suite
 import lldb
 from . import configuration
 from . import test_categories
-from .result_formatter import EventBuilder
+from lldbsuite.test_event.event_builder import EventBuilder
 from lldbsuite.support import funcutils
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbplatformutil
@@ -77,7 +76,6 @@ def expectedFailure(expected_fn, bugnumber=None):
             raise Exception("Decorator can only be used to decorate a test method")
         @wraps(func)
         def wrapper(*args, **kwargs):
-            from unittest2 import case
             self = args[0]
             if funcutils.requires_self(expected_fn):
                 xfail_reason = expected_fn(self)
@@ -110,7 +108,6 @@ def skipTestIfFn(expected_fn, bugnumber=None):
 
         @wraps(func)
         def wrapper(*args, **kwargs):
-            from unittest2 import case
             self = args[0]
             if funcutils.requires_self(expected_fn):
                 reason = expected_fn(self)
@@ -512,7 +509,6 @@ def skipUnlessClangModules():
     """Decorate the item to skip test unless Clang -gmodules flag is supported."""
     def is_compiler_clang_with_gmodules(self):
         compiler_path = self.getCompiler()
-        print(compiler_path)
         compiler = os.path.basename(compiler_path)
         if compiler != "clang":
             return "Test requires clang as compiler"

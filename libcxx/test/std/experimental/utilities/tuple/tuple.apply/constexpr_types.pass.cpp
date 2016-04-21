@@ -9,11 +9,6 @@
 
 // UNSUPPORTED: c++98, c++03, c++11
 
-// TODO(ericwf)
-// constexpr support temporarily reverted due to bug:
-// https://llvm.org/bugs/show_bug.cgi?id=23141
-// XFAIL: *
-
 // <experimental/tuple>
 
 // template <class F, class T> constexpr decltype(auto) apply(F &&, T &&)

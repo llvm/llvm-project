@@ -18,9 +18,8 @@ import inspect
 import unittest2
 
 # LLDB Modules
-import lldbsuite
 from . import configuration
-from .result_formatter import EventBuilder
+from lldbsuite.test_event.event_builder import EventBuilder
 
 
 class LLDBTestResult(unittest2.TextTestResult):

@@ -285,6 +285,9 @@ void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
 
 void ProTypeMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor")) {
+    // Skip declarations delayed by late template parsing without a body.
+    if (!Ctor->getBody())
+      return;
     checkMissingMemberInitializer(*Result.Context, Ctor);
     checkMissingBaseClassInitializer(*Result.Context, Ctor);
   } else if (const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var")) {
@@ -304,11 +307,6 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   if (IsUnion && ClassDecl->hasInClassInitializer())
     return;
 
-  // Skip declarations delayed by late template parsing without a body.
-  const Stmt *Body = Ctor->getBody();
-  if (!Body)
-    return;
-
   SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
   fieldsRequiringInit(ClassDecl->fields(), Context, FieldsToInit);
   if (FieldsToInit.empty())
@@ -323,7 +321,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
       FieldsToInit.erase(Init->getMember());
     }
   }
-  removeFieldsInitializedInBody(*Body, Context, FieldsToInit);
+  removeFieldsInitializedInBody(*Ctor->getBody(), Context, FieldsToInit);
 
   // Collect all fields in order, both direct fields and indirect fields from
   // anonmyous record types.
