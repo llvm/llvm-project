@@ -14,25 +14,25 @@ using namespace llvm;
 
 namespace {
 
-TEST(LLVMContextTest, ensureDITypeMap) {
+TEST(LLVMContextTest, enableDebugTypeODRUniquing) {
   LLVMContext Context;
-  EXPECT_FALSE(Context.hasDITypeMap());
-  Context.ensureDITypeMap();
-  EXPECT_TRUE(Context.hasDITypeMap());
-  Context.destroyDITypeMap();
-  EXPECT_FALSE(Context.hasDITypeMap());
+  EXPECT_FALSE(Context.isODRUniquingDebugTypes());
+  Context.enableDebugTypeODRUniquing();
+  EXPECT_TRUE(Context.isODRUniquingDebugTypes());
+  Context.disableDebugTypeODRUniquing();
+  EXPECT_FALSE(Context.isODRUniquingDebugTypes());
 }
 
-TEST(LLVMContextTest, getOrInsertDITypeMapping) {
+TEST(LLVMContextTest, getOrInsertODRUniquedType) {
   LLVMContext Context;
   const MDString &S = *MDString::get(Context, "string");
 
   // Without a type map, this should return null.
-  EXPECT_FALSE(Context.getOrInsertDITypeMapping(S));
+  EXPECT_FALSE(Context.getOrInsertODRUniquedType(S));
 
   // Get the mapping.
-  Context.ensureDITypeMap();
-  DIType **Mapping = Context.getOrInsertDITypeMapping(S);
+  Context.enableDebugTypeODRUniquing();
+  DIType **Mapping = Context.getOrInsertODRUniquedType(S);
   ASSERT_TRUE(Mapping);
 
   // Create some type and add it to the mapping.
@@ -41,17 +41,17 @@ TEST(LLVMContextTest, getOrInsertDITypeMapping) {
   *Mapping = &BT;
 
   // Check that we get it back.
-  Mapping = Context.getOrInsertDITypeMapping(S);
+  Mapping = Context.getOrInsertODRUniquedType(S);
   ASSERT_TRUE(Mapping);
   EXPECT_EQ(&BT, *Mapping);
 
   // Check that it's discarded with the type map.
-  Context.destroyDITypeMap();
-  EXPECT_FALSE(Context.getOrInsertDITypeMapping(S));
+  Context.disableDebugTypeODRUniquing();
+  EXPECT_FALSE(Context.getOrInsertODRUniquedType(S));
 
   // And it shouldn't magically reappear...
-  Context.ensureDITypeMap();
-  EXPECT_FALSE(*Context.getOrInsertDITypeMapping(S));
+  Context.enableDebugTypeODRUniquing();
+  EXPECT_FALSE(*Context.getOrInsertODRUniquedType(S));
 }
 
 } // end namespace

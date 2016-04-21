@@ -310,19 +310,19 @@ void LLVMContext::deleteGC(const Function &Fn) {
 
 bool LLVMContext::discardValueNames() const { return pImpl->DiscardValueNames; }
 
-bool LLVMContext::hasDITypeMap() const { return !!pImpl->DITypeMap; }
+bool LLVMContext::isODRUniquingDebugTypes() const { return !!pImpl->DITypeMap; }
 
-void LLVMContext::ensureDITypeMap() {
+void LLVMContext::enableDebugTypeODRUniquing() {
   if (pImpl->DITypeMap)
     return;
 
   pImpl->DITypeMap = llvm::make_unique<DenseMap<const MDString *, DIType *>>();
 }
 
-void LLVMContext::destroyDITypeMap() { pImpl->DITypeMap.reset(); }
+void LLVMContext::disableDebugTypeODRUniquing() { pImpl->DITypeMap.reset(); }
 
-DIType **LLVMContext::getOrInsertDITypeMapping(const MDString &S) {
-  if (!hasDITypeMap())
+DIType **LLVMContext::getOrInsertODRUniquedType(const MDString &S) {
+  if (!isODRUniquingDebugTypes())
     return nullptr;
   return &(*pImpl->DITypeMap)[&S];
 }
