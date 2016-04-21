@@ -18,8 +18,8 @@ namespace tidy {
 namespace {
 class MacroParenthesesPPCallbacks : public PPCallbacks {
 public:
-  explicit MacroParenthesesPPCallbacks(Preprocessor *PP,
-                                       MacroParenthesesCheck *Check)
+  MacroParenthesesPPCallbacks(Preprocessor *PP,
+                              MacroParenthesesCheck *Check)
       : PP(PP), Check(Check) {}
 
   void MacroDefined(const Token &MacroNameTok,

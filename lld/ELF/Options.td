@@ -238,7 +238,7 @@ def G : Separate<["-"], "G">;
 def alias_version_script_version_script : Joined<["--"], "version-script=">, Alias<version_script>;
 
 // LTO-related options.
-def lto_discard_value_names : Flag<["-"], "lto-discard-value-names">;
+def lto_no_discard_value_names : Flag<["-"], "lto-no-discard-value-names">;
 def lto_jobs : Joined<["--"], "lto-jobs=">,
   HelpText<"Number of threads to run codegen">;
 def disable_verify : Flag<["-"], "disable-verify">;

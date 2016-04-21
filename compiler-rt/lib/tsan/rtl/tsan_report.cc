@@ -236,7 +236,7 @@ static void PrintThread(const ReportThread *rt) {
     Printf(" '%s'", rt->name);
   char thrbuf[kThreadBufSize];
   Printf(" (tid=%zu, %s) created by %s",
-    rt->pid, rt->running ? "running" : "finished",
+    rt->os_id, rt->running ? "running" : "finished",
     thread_name(thrbuf, rt->parent_tid));
   if (rt->stack)
     Printf(" at:");

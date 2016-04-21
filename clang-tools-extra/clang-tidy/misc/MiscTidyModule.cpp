@@ -33,10 +33,12 @@
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
 #include "StaticAssertCheck.h"
+#include "StringConstructorCheck.h"
 #include "StringIntegerAssignmentCheck.h"
 #include "StringLiteralWithEmbeddedNulCheck.h"
 #include "SuspiciousMissingCommaCheck.h"
 #include "SuspiciousSemicolonCheck.h"
+#include "SuspiciousStringCompareCheck.h"
 #include "SwappedArgumentsCheck.h"
 #include "ThrowByValueCatchByReferenceCheck.h"
 #include "UndelegatedConstructor.h"
@@ -98,6 +100,8 @@ public:
         "misc-sizeof-expression");
     CheckFactories.registerCheck<StaticAssertCheck>(
         "misc-static-assert");
+    CheckFactories.registerCheck<StringConstructorCheck>(
+        "misc-string-constructor");
     CheckFactories.registerCheck<StringIntegerAssignmentCheck>(
         "misc-string-integer-assignment");
     CheckFactories.registerCheck<StringLiteralWithEmbeddedNulCheck>(
@@ -106,6 +110,8 @@ public:
         "misc-suspicious-missing-comma");
     CheckFactories.registerCheck<SuspiciousSemicolonCheck>(
         "misc-suspicious-semicolon");
+    CheckFactories.registerCheck<SuspiciousStringCompareCheck>(
+        "misc-suspicious-string-compare");    
     CheckFactories.registerCheck<SwappedArgumentsCheck>(
         "misc-swapped-arguments");
     CheckFactories.registerCheck<ThrowByValueCatchByReferenceCheck>(

@@ -194,7 +194,7 @@ void ScopedReport::AddThread(const ThreadContext *tctx, bool suppressable) {
   ReportThread *rt = new(mem) ReportThread;
   rep_->threads.PushBack(rt);
   rt->id = tctx->tid;
-  rt->pid = tctx->os_id;
+  rt->os_id = tctx->os_id;
   rt->running = (tctx->status == ThreadStatusRunning);
   rt->name = internal_strdup(tctx->name);
   rt->parent_tid = tctx->parent_tid;
