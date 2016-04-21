@@ -1,7 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -fobjc-arc -Wno-objc-root-class -Wreceiver-is-weak -Warc-repeated-use-of-weak -fobjc-runtime-has-weak -verify %s
-// RUN: %clang_cc1 -x objective-c++ -fsyntax-only -fobjc-arc -Wno-objc-root-class -Wreceiver-is-weak -Warc-repeated-use-of-weak -fobjc-runtime-has-weak -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fobjc-arc -Wno-objc-root-class -Warc-repeated-use-of-weak -fobjc-runtime-has-weak -verify %s
+// RUN: %clang_cc1 -x objective-c++ -fsyntax-only -fobjc-arc -Wno-objc-root-class -Warc-repeated-use-of-weak -fobjc-runtime-has-weak -verify %s
 // rdar://11448209
-// rdar://20259376
 
 #define READONLY readonly
 
