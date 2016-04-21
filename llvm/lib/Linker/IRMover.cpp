@@ -849,9 +849,11 @@ bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
   if (SGV.hasAvailableExternallyLinkage())
     return true;
 
-  if (DoneLinkingBodies)
+  if (SGV.isDeclaration())
     return false;
 
+  if (DoneLinkingBodies)
+    return false;
 
   // Callback to the client to give a chance to lazily add the Global to the
   // list of value to link.
