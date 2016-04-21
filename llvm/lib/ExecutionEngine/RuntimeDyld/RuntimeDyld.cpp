@@ -174,8 +174,8 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       object::SymbolRef::Type SymType = *SymTypeOrErr;
 
       // Get symbol name.
-      ErrorOr<StringRef> NameOrErr = I->getName();
-      Check(NameOrErr.getError());
+      Expected<StringRef> NameOrErr = I->getName();
+      Check(NameOrErr.takeError());
       StringRef Name = *NameOrErr;
   
       // Compute JIT symbol flags.
@@ -496,8 +496,8 @@ void RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
   DEBUG(dbgs() << "Processing common symbols...\n");
 
   for (const auto &Sym : CommonSymbols) {
-    ErrorOr<StringRef> NameOrErr = Sym.getName();
-    Check(NameOrErr.getError());
+    Expected<StringRef> NameOrErr = Sym.getName();
+    Check(NameOrErr.takeError());
     StringRef Name = *NameOrErr;
 
     // Skip common symbols already elsewhere.
@@ -533,8 +533,14 @@ void RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
   for (auto &Sym : SymbolsToAllocate) {
     uint32_t Align = Sym.getAlignment();
     uint64_t Size = Sym.getCommonSize();
-    ErrorOr<StringRef> NameOrErr = Sym.getName();
-    Check(NameOrErr.getError());
+    Expected<StringRef> NameOrErr = Sym.getName();
+    if (!NameOrErr) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(NameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     StringRef Name = *NameOrErr;
     if (Align) {
       // This symbol has an alignment requirement.

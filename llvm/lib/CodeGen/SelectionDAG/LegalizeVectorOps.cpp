@@ -1002,10 +1002,12 @@ SDValue VectorLegalizer::ExpandFNEG(SDValue Op) {
 }
 
 SDValue VectorLegalizer::ExpandCTLZ_CTTZ_ZERO_UNDEF(SDValue Op) {
-  // If the non-ZERO_UNDEF version is supported we can let LegalizeDAG handle.
+  // If the non-ZERO_UNDEF version is supported we can use that instead.
   unsigned Opc = Op.getOpcode() == ISD::CTLZ_ZERO_UNDEF ? ISD::CTLZ : ISD::CTTZ;
-  if (TLI.isOperationLegalOrCustom(Opc, Op.getValueType()))
-    return Op;
+  if (TLI.isOperationLegalOrCustom(Opc, Op.getValueType())) {
+    SDLoc DL(Op);
+    return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(0));
+  }
 
   // Otherwise go ahead and unroll.
   return DAG.UnrollVectorOp(Op.getNode());

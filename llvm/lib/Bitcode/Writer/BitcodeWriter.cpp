@@ -2889,6 +2889,9 @@ static void WritePerModuleGlobalValueSummary(const Module *M,
   if (M->empty())
     return;
 
+  if (Index.begin() == Index.end())
+    return;
+
   Stream.EnterSubblock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID, 3);
 
   // Abbrev for FS_PERMODULE.

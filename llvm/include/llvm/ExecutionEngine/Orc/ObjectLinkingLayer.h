@@ -158,10 +158,12 @@ private:
         for (auto &Symbol : getObject(*Obj).symbols()) {
           if (Symbol.getFlags() & object::SymbolRef::SF_Undefined)
             continue;
-          ErrorOr<StringRef> SymbolName = Symbol.getName();
+          Expected<StringRef> SymbolName = Symbol.getName();
           // FIXME: Raise an error for bad symbols.
-          if (!SymbolName)
+          if (!SymbolName) {
+            consumeError(SymbolName.takeError());
             continue;
+          }
           auto Flags = JITSymbol::flagsFromObjectSymbol(Symbol);
           SymbolTable.insert(
             std::make_pair(*SymbolName, RuntimeDyld::SymbolInfo(0, Flags)));

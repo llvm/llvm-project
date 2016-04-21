@@ -837,9 +837,11 @@ static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
 /// \brief Emit the optimal amount of multi-byte nops on X86.
 static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
                      const MCSubtargetInfo &STI) {
+  unsigned NopsToEmit = NumBytes;
+  (void)NopsToEmit;
   while (NumBytes) {
     NumBytes -= EmitNop(OS, NumBytes, Is64Bit, STI);
-    assert(NumBytes >= 0 && "Emitted more than I asked for!");
+    assert(NopsToEmit >= NumBytes && "Emitted more than I asked for!");
   }
 }
 

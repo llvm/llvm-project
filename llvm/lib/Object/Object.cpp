@@ -178,9 +178,14 @@ void LLVMMoveToNextRelocation(LLVMRelocationIteratorRef SI) {
 
 // SymbolRef accessors
 const char *LLVMGetSymbolName(LLVMSymbolIteratorRef SI) {
-  ErrorOr<StringRef> Ret = (*unwrap(SI))->getName();
-  if (std::error_code EC = Ret.getError())
-    report_fatal_error(EC.message());
+  Expected<StringRef> Ret = (*unwrap(SI))->getName();
+  if (!Ret) {
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    logAllUnhandledErrors(Ret.takeError(), OS, "");
+    OS.flush();
+    report_fatal_error(Buf);
+  }
   return Ret->data();
 }
 

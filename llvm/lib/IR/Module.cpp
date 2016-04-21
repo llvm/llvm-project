@@ -14,6 +14,7 @@
 #include "llvm/IR/Module.h"
 #include "SymbolTableListTraitsImpl.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Constants.h"
@@ -514,4 +515,19 @@ void Module::setProfileSummary(Metadata *M) {
 
 Metadata *Module::getProfileSummary() {
   return getModuleFlag("ProfileSummary");
+}
+
+GlobalVariable *llvm::collectUsedGlobalVariables(
+    const Module &M, SmallPtrSetImpl<GlobalValue *> &Set, bool CompilerUsed) {
+  const char *Name = CompilerUsed ? "llvm.compiler.used" : "llvm.used";
+  GlobalVariable *GV = M.getGlobalVariable(Name);
+  if (!GV || !GV->hasInitializer())
+    return GV;
+
+  const ConstantArray *Init = cast<ConstantArray>(GV->getInitializer());
+  for (Value *Op : Init->operands()) {
+    GlobalValue *G = cast<GlobalValue>(Op->stripPointerCastsNoFollowAliases());
+    Set.insert(G);
+  }
+  return GV;
 }

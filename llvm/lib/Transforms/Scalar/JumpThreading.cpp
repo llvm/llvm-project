@@ -928,10 +928,11 @@ bool JumpThreading::ProcessImpliedCondition(BasicBlock *BB) {
     if (!PBI || !PBI->isConditional() || PBI->getSuccessor(0) != CurrentBB)
       return false;
 
-    bool ImpliedTrue;
-    if (isImpliedCondition(PBI->getCondition(), Cond, ImpliedTrue, DL)) {
-      BI->getSuccessor(ImpliedTrue ? 1 : 0)->removePredecessor(BB);
-      BranchInst::Create(BI->getSuccessor(ImpliedTrue ? 0 : 1), BI);
+    Optional<bool> Implication =
+        isImpliedCondition(PBI->getCondition(), Cond, DL);
+    if (Implication) {
+      BI->getSuccessor(*Implication ? 1 : 0)->removePredecessor(BB);
+      BranchInst::Create(BI->getSuccessor(*Implication ? 0 : 1), BI);
       BI->eraseFromParent();
       return true;
     }

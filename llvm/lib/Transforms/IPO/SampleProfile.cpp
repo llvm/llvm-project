@@ -34,6 +34,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
@@ -452,6 +453,11 @@ SampleProfileLoader::getInstWeight(const Instruction &Inst) const {
   if (!FS)
     return std::error_code();
 
+  // Ignore all dbg_value intrinsics.
+  const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst);
+  if (II && II->getIntrinsicID() == Intrinsic::dbg_value)
+    return std::error_code();
+
   const DILocation *DIL = DLoc;
   unsigned Lineno = DLoc.getLine();
   unsigned HeaderLineno = DIL->getScope()->getSubprogram()->getLine();
@@ -475,6 +481,13 @@ SampleProfileLoader::getInstWeight(const Instruction &Inst) const {
                  << Inst << " (line offset: " << Lineno - HeaderLineno << "."
                  << DIL->getDiscriminator() << " - weight: " << R.get()
                  << ")\n");
+  } else {
+    // If a call instruction is inlined in profile, but not inlined here,
+    // it means that the inlined callsite has no sample, thus the call
+    // instruction should have 0 count.
+    const CallInst *CI = dyn_cast<CallInst>(&Inst);
+    if (CI && findCalleeFunctionSamples(*CI))
+      R = 0;
   }
   return R;
 }

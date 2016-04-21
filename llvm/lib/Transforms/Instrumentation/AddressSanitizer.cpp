@@ -164,6 +164,9 @@ static cl::opt<bool> ClStack("asan-stack", cl::desc("Handle stack memory"),
 static cl::opt<bool> ClUseAfterReturn("asan-use-after-return",
                                       cl::desc("Check return-after-free"),
                                       cl::Hidden, cl::init(true));
+static cl::opt<bool> ClUseAfterScope("asan-use-after-scope",
+                                     cl::desc("Check stack-use-after-scope"),
+                                     cl::Hidden, cl::init(false));
 // This flag may need to be replaced with -f[no]asan-globals.
 static cl::opt<bool> ClGlobals("asan-globals",
                                cl::desc("Handle global objects"), cl::Hidden,
@@ -218,11 +221,6 @@ static cl::opt<bool> ClOptGlobals("asan-opt-globals",
 static cl::opt<bool> ClOptStack(
     "asan-opt-stack", cl::desc("Don't instrument scalar stack variables"),
     cl::Hidden, cl::init(false));
-
-static cl::opt<bool> ClCheckLifetime(
-    "asan-check-lifetime",
-    cl::desc("Use llvm.lifetime intrinsics to insert extra checks"), cl::Hidden,
-    cl::init(false));
 
 static cl::opt<bool> ClDynamicAllocaStack(
     "asan-stack-dynamic-alloca",
@@ -714,7 +712,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     Intrinsic::ID ID = II.getIntrinsicID();
     if (ID == Intrinsic::stackrestore) StackRestoreVec.push_back(&II);
     if (ID == Intrinsic::localescape) LocalEscapeCall = &II;
-    if (!ClCheckLifetime) return;
+    if (!ClUseAfterScope) return;
     if (ID != Intrinsic::lifetime_start && ID != Intrinsic::lifetime_end)
       return;
     // Found lifetime intrinsic, add ASan instrumentation if necessary.

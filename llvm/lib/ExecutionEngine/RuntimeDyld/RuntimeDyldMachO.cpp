@@ -99,9 +99,14 @@ RelocationValueRef RuntimeDyldMachO::getRelocationValueRef(
   bool IsExternal = Obj.getPlainRelocationExternal(RelInfo);
   if (IsExternal) {
     symbol_iterator Symbol = RI->getSymbol();
-    ErrorOr<StringRef> TargetNameOrErr = Symbol->getName();
-    if (std::error_code EC = TargetNameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> TargetNameOrErr = Symbol->getName();
+    if (!TargetNameOrErr) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(TargetNameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     StringRef TargetName = *TargetNameOrErr;
     RTDyldSymbolTable::const_iterator SI =
       GlobalSymbolTable.find(TargetName.data());
@@ -191,9 +196,14 @@ void RuntimeDyldMachO::populateIndirectSymbolPointersSection(
     unsigned SymbolIndex =
       Obj.getIndirectSymbolTableEntry(DySymTabCmd, FirstIndirectSymbol + i);
     symbol_iterator SI = Obj.getSymbolByIndex(SymbolIndex);
-    ErrorOr<StringRef> IndirectSymbolNameOrErr = SI->getName();
-    if (std::error_code EC = IndirectSymbolNameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> IndirectSymbolNameOrErr = SI->getName();
+    if (!IndirectSymbolNameOrErr) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(IndirectSymbolNameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     StringRef IndirectSymbolName = *IndirectSymbolNameOrErr;
     DEBUG(dbgs() << "  " << IndirectSymbolName << ": index " << SymbolIndex
           << ", PT offset: " << PTEntryOffset << "\n");

@@ -882,7 +882,7 @@ bool AArch64InstrInfo::optimizeCompareInstr(
   if (!MRI->use_nodbg_empty(CmpInstr->getOperand(0).getReg()))
     return false;
 
-  return substituteCmpInstr(CmpInstr, SrcReg, MRI);
+  return substituteCmpToZero(CmpInstr, SrcReg, MRI);
 }
 
 /// Get opcode of S version of Instr.
@@ -929,91 +929,173 @@ static bool areCFlagsAliveInSuccessors(MachineBasicBlock *MBB) {
   return false;
 }
 
-/// Substitute CmpInstr with another instruction which produces a needed
-/// condition code.
+struct UsedNZCV {
+  bool N;
+  bool Z;
+  bool C;
+  bool V;
+  UsedNZCV(): N(false), Z(false), C(false), V(false) {}
+  UsedNZCV& operator |=(const UsedNZCV& UsedFlags) {
+    this->N |= UsedFlags.N;
+    this->Z |= UsedFlags.Z;
+    this->C |= UsedFlags.C;
+    this->V |= UsedFlags.V;
+    return *this;
+  }
+};
+
+/// Find a condition code used by the instruction.
+/// Returns AArch64CC::Invalid if either the instruction does not use condition
+/// codes or we don't optimize CmpInstr in the presence of such instructions.
+static AArch64CC::CondCode findCondCodeUsedByInstr(const MachineInstr &Instr) {
+  switch (Instr.getOpcode()) {
+    default:
+      return AArch64CC::Invalid;
+
+    case AArch64::Bcc: {
+      int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV);
+      assert(Idx >= 2);
+      return static_cast<AArch64CC::CondCode>(Instr.getOperand(Idx - 2).getImm());
+    }
+
+    case AArch64::CSINVWr:
+    case AArch64::CSINVXr:
+    case AArch64::CSINCWr:
+    case AArch64::CSINCXr:
+    case AArch64::CSELWr:
+    case AArch64::CSELXr:
+    case AArch64::CSNEGWr:
+    case AArch64::CSNEGXr:
+    case AArch64::FCSELSrrr:
+    case AArch64::FCSELDrrr: {
+      int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV);
+      assert(Idx >= 1);
+      return static_cast<AArch64CC::CondCode>(Instr.getOperand(Idx - 1).getImm());
+    }
+  }
+}
+
+static UsedNZCV getUsedNZCV(AArch64CC::CondCode CC) {
+  assert(CC != AArch64CC::Invalid);
+  UsedNZCV UsedFlags;
+  switch (CC) {
+    default:
+      break;
+
+    case AArch64CC::EQ: // Z set
+    case AArch64CC::NE: // Z clear
+      UsedFlags.Z = true;
+      break;
+
+    case AArch64CC::HI: // Z clear and C set
+    case AArch64CC::LS: // Z set   or  C clear
+      UsedFlags.Z = true;
+    case AArch64CC::HS: // C set
+    case AArch64CC::LO: // C clear
+      UsedFlags.C = true;
+      break;
+
+    case AArch64CC::MI: // N set
+    case AArch64CC::PL: // N clear
+      UsedFlags.N = true;
+      break;
+
+    case AArch64CC::VS: // V set
+    case AArch64CC::VC: // V clear
+      UsedFlags.V = true;
+      break;
+
+    case AArch64CC::GT: // Z clear, N and V the same
+    case AArch64CC::LE: // Z set,   N and V differ
+      UsedFlags.Z = true;
+    case AArch64CC::GE: // N and V the same
+    case AArch64CC::LT: // N and V differ 
+      UsedFlags.N = true;
+      UsedFlags.V = true;
+      break;
+  }
+  return UsedFlags;
+}
+
+static bool isADDSRegImm(unsigned Opcode) {
+  return Opcode == AArch64::ADDSWri || Opcode == AArch64::ADDSXri;
+}
+
+static bool isSUBSRegImm(unsigned Opcode) {
+  return Opcode == AArch64::SUBSWri || Opcode == AArch64::SUBSXri;
+}
+
+/// Check if CmpInstr can be substituted by MI.
+///
+/// CmpInstr can be substituted:
+/// - CmpInstr is either 'ADDS %vreg, 0' or 'SUBS %vreg, 0'
+/// - and, MI and CmpInstr are from the same MachineBB
+/// - and, condition flags are not alive in successors of the CmpInstr parent
+/// - and, if MI opcode is the S form there must be no defs of flags between
+///        MI and CmpInstr
+///        or if MI opcode is not the S form there must be neither defs of flags
+///        nor uses of flags between MI and CmpInstr.
+/// - and  C/V flags are not used after CmpInstr
+static bool canInstrSubstituteCmpInstr(MachineInstr *MI, MachineInstr *CmpInstr,
+    const TargetRegisterInfo *TRI) {
+  assert(MI);
+  assert(sForm(*MI) != AArch64::INSTRUCTION_LIST_END);
+  assert(CmpInstr);
+
+  const unsigned CmpOpcode = CmpInstr->getOpcode();
+  if (!isADDSRegImm(CmpOpcode) && !isSUBSRegImm(CmpOpcode))
+    return false;
+
+  if (MI->getParent() != CmpInstr->getParent())
+    return false;
+
+  if (areCFlagsAliveInSuccessors(CmpInstr->getParent()))
+    return false;
+
+  AccessKind AccessToCheck = AK_Write;
+  if (sForm(*MI) != MI->getOpcode())
+    AccessToCheck = AK_All;
+  if (areCFlagsAccessedBetweenInstrs(MI, CmpInstr, TRI, AccessToCheck))
+    return false;
+
+  UsedNZCV NZCVUsedAfterCmp;
+  for (auto I = std::next(CmpInstr->getIterator()), E = CmpInstr->getParent()->instr_end();
+       I != E; ++I) {
+    const MachineInstr &Instr = *I;
+    if (Instr.readsRegister(AArch64::NZCV, TRI)) {
+      AArch64CC::CondCode CC = findCondCodeUsedByInstr(Instr);
+      if (CC == AArch64CC::Invalid) // Unsupported conditional instruction
+        return false;
+      NZCVUsedAfterCmp |= getUsedNZCV(CC);
+    }
+
+    if (Instr.modifiesRegister(AArch64::NZCV, TRI))
+      break;
+  }
+  
+  return !NZCVUsedAfterCmp.C && !NZCVUsedAfterCmp.V;
+}
+
+/// Substitute an instruction comparing to zero with another instruction
+/// which produces needed condition flags.
+///
 /// Return true on success.
-bool AArch64InstrInfo::substituteCmpInstr(MachineInstr *CmpInstr,
+bool AArch64InstrInfo::substituteCmpToZero(MachineInstr *CmpInstr,
     unsigned SrcReg, const MachineRegisterInfo *MRI) const {
+  assert(CmpInstr);
+  assert(MRI);
   // Get the unique definition of SrcReg.
   MachineInstr *MI = MRI->getUniqueVRegDef(SrcReg);
   if (!MI)
     return false;
 
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  if (areCFlagsAccessedBetweenInstrs(MI, CmpInstr, TRI))
-    return false;
 
   unsigned NewOpc = sForm(*MI);
   if (NewOpc == AArch64::INSTRUCTION_LIST_END)
     return false;
 
-  // Scan forward for the use of NZCV.
-  // When checking against MI: if it's a conditional code requires
-  // checking of V bit, then this is not safe to do.
-  // It is safe to remove CmpInstr if NZCV is redefined or killed.
-  // If we are done with the basic block, we need to check whether NZCV is
-  // live-out.
-  bool IsSafe = false;
-  for (MachineBasicBlock::iterator I = CmpInstr,
-                                   E = CmpInstr->getParent()->end();
-       !IsSafe && ++I != E;) {
-    const MachineInstr &Instr = *I;
-    for (unsigned IO = 0, EO = Instr.getNumOperands(); !IsSafe && IO != EO;
-         ++IO) {
-      const MachineOperand &MO = Instr.getOperand(IO);
-      if (MO.isRegMask() && MO.clobbersPhysReg(AArch64::NZCV)) {
-        IsSafe = true;
-        break;
-      }
-      if (!MO.isReg() || MO.getReg() != AArch64::NZCV)
-        continue;
-      if (MO.isDef()) {
-        IsSafe = true;
-        break;
-      }
-
-      // Decode the condition code.
-      unsigned Opc = Instr.getOpcode();
-      AArch64CC::CondCode CC;
-      switch (Opc) {
-      default:
-        return false;
-      case AArch64::Bcc:
-        CC = (AArch64CC::CondCode)Instr.getOperand(IO - 2).getImm();
-        break;
-      case AArch64::CSINVWr:
-      case AArch64::CSINVXr:
-      case AArch64::CSINCWr:
-      case AArch64::CSINCXr:
-      case AArch64::CSELWr:
-      case AArch64::CSELXr:
-      case AArch64::CSNEGWr:
-      case AArch64::CSNEGXr:
-      case AArch64::FCSELSrrr:
-      case AArch64::FCSELDrrr:
-        CC = (AArch64CC::CondCode)Instr.getOperand(IO - 1).getImm();
-        break;
-      }
-
-      // It is not safe to remove Compare instruction if Overflow(V) is used.
-      switch (CC) {
-      default:
-        // NZCV can be used multiple times, we should continue.
-        break;
-      case AArch64CC::VS:
-      case AArch64CC::VC:
-      case AArch64CC::GE:
-      case AArch64CC::LT:
-      case AArch64CC::GT:
-      case AArch64CC::LE:
-        return false;
-      }
-    }
-  }
-
-  // If NZCV is not killed nor re-defined, we should check whether it is
-  // live-out. If it is live-out, do not optimize.
-  if (!IsSafe && areCFlagsAliveInSuccessors(CmpInstr->getParent()))
+  if (!canInstrSubstituteCmpInstr(MI, CmpInstr, TRI))
     return false;
 
   // Update the instruction to set NZCV.

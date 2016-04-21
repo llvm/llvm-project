@@ -59,6 +59,22 @@ static inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
   return std::string(BufPtr, std::end(Buffer));
 }
 
+/// Convert buffer \p Input to its hexadecimal representation.
+/// The returned string is double the size of \p Input.
+static inline std::string toHex(StringRef Input) {
+  static const char *const LUT = "0123456789ABCDEF";
+  size_t Length = Input.size();
+
+  std::string Output;
+  Output.reserve(2 * Length);
+  for (size_t i = 0; i < Length; ++i) {
+    const unsigned char c = Input[i];
+    Output.push_back(LUT[c >> 4]);
+    Output.push_back(LUT[c & 15]);
+  }
+  return Output;
+}
+
 static inline std::string utostr(uint64_t X, bool isNeg = false) {
   char Buffer[21];
   char *BufPtr = std::end(Buffer);

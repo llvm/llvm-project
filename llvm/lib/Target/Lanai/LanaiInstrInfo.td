@@ -496,6 +496,7 @@ class LoadRR<string OpcString, PatFrag OpNode, ValueType Ty>
   let Q = src{8};
   let BBB = src{7-5};
   let JJJJJ = src{4-0};
+  let mayLoad = 1;
 }
 
 class LoadRI<string OpcString, PatFrag OpNode, ValueType Ty>
@@ -511,6 +512,7 @@ class LoadRI<string OpcString, PatFrag OpNode, ValueType Ty>
   let Q = src{16};
   let imm16 = src{15-0};
   let isReMaterializable = 1;
+  let mayLoad = 1;
 }
 
 let E = 0 in {
@@ -554,19 +556,22 @@ def LDADDR : InstSLS<0x0, (outs GPR:$Rd), (ins MEMi:$src),
   let msb = src{20-16};
   let lsb = src{15-0};
   let isReMaterializable = 1;
+  let mayLoad = 1;
 }
 
 class LoadSPLS<string asmstring, PatFrag opNode>
   : InstSPLS<(outs GPR:$Rd), (ins MEMspls:$src),
              !strconcat(asmstring, "\t$src, $Rd"),
              [(set (i32 GPR:$Rd), (opNode ADDRspls:$src))]>,
-    Sched<[WriteLD]> {
+    Sched<[WriteLDSW]> {
   bits<17> src;
-  let Itinerary = IIC_LD;
+  let Itinerary = IIC_LDSW;
   let Rs1 = src{16-12};
   let P = src{11};
   let Q = src{10};
   let imm10 = src{9-0};
+  let mayLoad = 1;
+  let isReMaterializable = 1;
 }
 
 let Y = 0, S = 0, E = 1 in
@@ -586,10 +591,10 @@ def SLI : InstSLI<(outs GPR:$Rd), (ins i32lo21:$imm),
                   [(set GPR:$Rd, i32lo21:$imm)]> {
   bits<21> imm;
 
-  let Itinerary = IIC_LD;
   let msb = imm{20-16};
   let lsb = imm{15-0};
   let isReMaterializable = 1;
+  let isAsCheapAsAMove = 1;
 }
 
 // -------------------------------------------------- //
@@ -610,6 +615,7 @@ class StoreRR<string OpcString, PatFrag OpNode, ValueType Ty>
   let Q = dst{8};
   let BBB = dst{7-5};
   let JJJJJ = dst{4-0};
+  let mayStore = 1;
 }
 
 class StoreRI<string OpcString, PatFrag OpNode, ValueType Ty>
@@ -624,6 +630,7 @@ class StoreRI<string OpcString, PatFrag OpNode, ValueType Ty>
   let P = dst{17};
   let Q = dst{16};
   let imm16 = dst{15-0};
+  let mayStore = 1;
 }
 
 let YL = 0b01, E = 0 in {
@@ -647,20 +654,22 @@ def STADDR : InstSLS<0x1, (outs), (ins GPR:$Rd, MEMi:$dst),
   let Itinerary = IIC_ST;
   let msb = dst{20-16};
   let lsb = dst{15-0};
+  let mayStore = 1;
 }
 
 class StoreSPLS<string asmstring, PatFrag opNode>
   : InstSPLS<(outs), (ins GPR:$Rd, MEMspls:$dst),
              !strconcat(asmstring, "\t$Rd, $dst"),
              [(opNode (i32 GPR:$Rd), ADDRspls:$dst)]>,
-    Sched<[WriteST]> {
+    Sched<[WriteSTSW]> {
   bits<17> dst;
 
-  let Itinerary = IIC_ST;
+  let Itinerary = IIC_STSW;
   let Rs1 = dst{16-12};
   let P = dst{11};
   let Q = dst{10};
   let imm10 = dst{9-0};
+  let mayStore = 1;
 }
 
 let Y = 0, S = 1, E = 0 in

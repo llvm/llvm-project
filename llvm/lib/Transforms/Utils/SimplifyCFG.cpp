@@ -2722,19 +2722,20 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
 
   // If BI is reached from the true path of PBI and PBI's condition implies
   // BI's condition, we know the direction of the BI branch.
-  bool ImpliedTrue;
   if (PBI->getSuccessor(0) == BI->getParent() &&
-      isImpliedCondition(PBI->getCondition(), BI->getCondition(), ImpliedTrue,
-                         DL) &&
       PBI->getSuccessor(0) != PBI->getSuccessor(1) &&
       BB->getSinglePredecessor()) {
-    // Turn this into a branch on constant.
-    auto *OldCond = BI->getCondition();
-    ConstantInt *CI = ImpliedTrue ? ConstantInt::getTrue(BB->getContext())
-                                  : ConstantInt::getFalse(BB->getContext());
-    BI->setCondition(CI);
-    RecursivelyDeleteTriviallyDeadInstructions(OldCond);
-    return true;  // Nuke the branch on constant.
+    Optional<bool> Implication =
+        isImpliedCondition(PBI->getCondition(), BI->getCondition(), DL);
+    if (Implication) {
+      // Turn this into a branch on constant.
+      auto *OldCond = BI->getCondition();
+      ConstantInt *CI = *Implication ? ConstantInt::getTrue(BB->getContext())
+                                     : ConstantInt::getFalse(BB->getContext());
+      BI->setCondition(CI);
+      RecursivelyDeleteTriviallyDeadInstructions(OldCond);
+      return true; // Nuke the branch on constant.
+    }
   }
 
   // If both branches are conditional and both contain stores to the same

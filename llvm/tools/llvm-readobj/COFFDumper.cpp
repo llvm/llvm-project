@@ -187,9 +187,9 @@ std::error_code COFFDumper::resolveSymbolName(const coff_section *Section,
   SymbolRef Symbol;
   if (std::error_code EC = resolveSymbol(Section, Offset, Symbol))
     return EC;
-  ErrorOr<StringRef> NameOrErr = Symbol.getName();
-  if (std::error_code EC = NameOrErr.getError())
-    return EC;
+  Expected<StringRef> NameOrErr = Symbol.getName();
+  if (!NameOrErr)
+    return errorToErrorCode(NameOrErr.takeError());
   Name = *NameOrErr;
   return std::error_code();
 }
@@ -2605,8 +2605,8 @@ void COFFDumper::printRelocation(const SectionRef &Section,
   Reloc.getTypeName(RelocName);
   symbol_iterator Symbol = Reloc.getSymbol();
   if (Symbol != Obj->symbol_end()) {
-    ErrorOr<StringRef> SymbolNameOrErr = Symbol->getName();
-    error(SymbolNameOrErr.getError());
+    Expected<StringRef> SymbolNameOrErr = Symbol->getName();
+    error(errorToErrorCode(SymbolNameOrErr.takeError()));
     SymbolName = *SymbolNameOrErr;
   }
 

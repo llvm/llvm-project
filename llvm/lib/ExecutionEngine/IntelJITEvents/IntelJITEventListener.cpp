@@ -120,9 +120,12 @@ void IntelJITEventListener::NotifyObjectEmitted(
     if (SymType != SymbolRef::ST_Function)
       continue;
 
-    ErrorOr<StringRef> Name = Sym.getName();
-    if (!Name)
+    Expected<StringRef> Name = Sym.getName();
+    if (!Name) {
+      // TODO: Actually report errors helpfully.
+      consumeError(Name.takeError());
       continue;
+    }
 
     ErrorOr<uint64_t> AddrOrErr = Sym.getAddress();
     if (AddrOrErr.getError())

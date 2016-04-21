@@ -29,7 +29,10 @@ public:
     None = 0,
     OverrideFromSrc = (1 << 0),
     LinkOnlyNeeded = (1 << 1),
-    InternalizeLinkedSymbols = (1 << 2)
+    InternalizeLinkedSymbols = (1 << 2),
+    /// Don't force link referenced linkonce definitions, import declaration.
+    DontForceLinkLinkonceODR = (1 << 3)
+
   };
 
   Linker(Module &M);

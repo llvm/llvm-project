@@ -715,8 +715,7 @@ void ScheduleDAGMI::schedule() {
         CurrentTop = nextIfDebug(++CurrentTop, CurrentBottom);
       else
         moveInstruction(MI, CurrentTop);
-    }
-    else {
+    } else {
       assert(SU->isBottomReady() && "node still has unscheduled dependencies");
       MachineBasicBlock::iterator priorII =
         priorNonDebug(CurrentBottom, CurrentTop);
@@ -1258,8 +1257,7 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
       if (LiveInHeight > LiveOutHeight) {
         if (LiveInHeight - LiveOutHeight < CyclicLatency)
           CyclicLatency = LiveInHeight - LiveOutHeight;
-      }
-      else
+      } else
         CyclicLatency = 0;
 
       DEBUG(dbgs() << "Cyclic Path: SU(" << DefSU->NodeNum << ") -> SU("
@@ -1308,8 +1306,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
 
       updateScheduledPressure(SU, TopRPTracker.getPressure().MaxSetPressure);
     }
-  }
-  else {
+  } else {
     assert(SU->isBottomReady() && "node still has unscheduled dependencies");
     MachineBasicBlock::iterator priorII =
       priorNonDebug(CurrentBottom, CurrentTop);
@@ -1438,8 +1435,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
         DAG->addEdge(SI->getSUnit(), SDep(SUb, SDep::Artificial));
       }
       ++ClusterLength;
-    }
-    else
+    } else
       ClusterLength = 1;
   }
 }
@@ -2003,8 +1999,7 @@ void SchedBoundary::bumpCycle(unsigned NextCycle) {
   if (!HazardRec->isEnabled()) {
     // Bypass HazardRec virtual calls.
     CurrCycle = NextCycle;
-  }
-  else {
+  } else {
     // Bypass getHazardType calls in case of long latency.
     for (; CurrCycle != NextCycle; ++CurrCycle) {
       if (isTop())
@@ -2172,8 +2167,7 @@ void SchedBoundary::bumpNode(SUnit *SU) {
   // If we stall for any reason, bump the cycle.
   if (NextCycle > CurrCycle) {
     bumpCycle(NextCycle);
-  }
-  else {
+  } else {
     // After updating ZoneCritResIdx and ExpectedLatency, check if we're
     // resource limited. If a stall occurred, bumpCycle does this.
     unsigned LFactor = SchedModel->getLatencyFactor();
@@ -2275,8 +2269,7 @@ void SchedBoundary::dumpScheduledState() {
   if (ZoneCritResIdx) {
     ResFactor = SchedModel->getResourceFactor(ZoneCritResIdx);
     ResCount = getResourceCount(ZoneCritResIdx);
-  }
-  else {
+  } else {
     ResFactor = SchedModel->getMicroOpFactor();
     ResCount = RetiredMOps * SchedModel->getMicroOpFactor();
   }
@@ -2316,8 +2309,7 @@ initResourceDelta(const ScheduleDAGMI *DAG,
 
 /// Set the CandPolicy given a scheduling zone given the current resources and
 /// latencies inside and outside the zone.
-void GenericSchedulerBase::setPolicy(CandPolicy &Policy,
-                                     bool IsPostRA,
+void GenericSchedulerBase::setPolicy(CandPolicy &Policy, bool IsPostRA,
                                      SchedBoundary &CurrZone,
                                      SchedBoundary *OtherZone) {
   // Apply preemptive heuristics based on the total latency and resources
@@ -2512,8 +2504,7 @@ static bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
     if (tryGreater(TryCand.SU->getHeight(), Cand.SU->getHeight(),
                    TryCand, Cand, GenericSchedulerBase::TopPathReduce))
       return true;
-  }
-  else {
+  } else {
     if (Cand.SU->getHeight() > Zone.getScheduledLatency()) {
       if (tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(),
                   TryCand, Cand, GenericSchedulerBase::BotHeightReduce))
@@ -2763,8 +2754,7 @@ void GenericScheduler::tryCandidate(SchedCandidate &Cand,
         TryCand.RPDelta,
         DAG->getRegionCriticalPSets(),
         DAG->getRegPressure().MaxSetPressure);
-    }
-    else {
+    } else {
       if (VerifyScheduling) {
         TempTracker.getMaxUpwardPressureDelta(
           TryCand.SU->getInstr(),
@@ -2772,8 +2762,7 @@ void GenericScheduler::tryCandidate(SchedCandidate &Cand,
           TryCand.RPDelta,
           DAG->getRegionCriticalPSets(),
           DAG->getRegPressure().MaxSetPressure);
-      }
-      else {
+      } else {
         RPTracker.getUpwardPressureDelta(
           TryCand.SU->getInstr(),
           DAG->getPressureDiff(TryCand.SU),
@@ -2947,8 +2936,7 @@ SUnit *GenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   // increase pressure for one of the excess PSets, then schedule in that
   // direction first to provide more freedom in the other direction.
   if ((BotCand.Reason == RegExcess && !BotCand.isRepeat(RegExcess))
-      || (BotCand.Reason == RegCritical
-          && !BotCand.isRepeat(RegCritical)))
+      || (BotCand.Reason == RegCritical && !BotCand.isRepeat(RegCritical)))
   {
     IsTopNode = false;
     tracePick(BotCand, IsTopNode);
@@ -2990,8 +2978,7 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
         SU = TopCand.SU;
       }
       IsTopNode = true;
-    }
-    else if (RegionPolicy.OnlyBottomUp) {
+    } else if (RegionPolicy.OnlyBottomUp) {
       SU = Bot.pickOnlyChoice();
       if (!SU) {
         CandPolicy NoPolicy;
@@ -3002,8 +2989,7 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
         SU = BotCand.SU;
       }
       IsTopNode = false;
-    }
-    else {
+    } else {
       SU = pickNodeBidirectional(IsTopNode);
     }
   } while (SU->isScheduled);
@@ -3055,8 +3041,7 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
     Top.bumpNode(SU);
     if (SU->hasPhysRegUses)
       reschedulePhysRegCopies(SU, true);
-  }
-  else {
+  } else {
     SU->BotReadyCycle = std::max(SU->BotReadyCycle, Bot.getCurrCycle());
     Bot.bumpNode(SU);
     if (SU->hasPhysRegDefs)
@@ -3387,8 +3372,7 @@ public:
         TopQ.pop();
       } while (SU->isScheduled);
       IsTopNode = true;
-    }
-    else {
+    } else {
       do {
         if (BottomQ.empty()) return nullptr;
         SU = BottomQ.top();

@@ -48,7 +48,11 @@ public:
       : Index(Index), ModuleLoader(ModuleLoader) {}
 
   /// Import functions in Module \p M based on the supplied import list.
-  bool importFunctions(Module &M, const ImportMapTy &ImportList);
+  /// \p ForceImportReferencedDiscardableSymbols will set the ModuleLinker in
+  /// a mode where referenced discarable symbols in the source modules will be
+  /// imported as well even if they are not present in the ImportList.
+  bool importFunctions(Module &M, const ImportMapTy &ImportList,
+                       bool ForceImportReferencedDiscardableSymbols = false);
 
 private:
   /// The summaries index used to trigger importing.

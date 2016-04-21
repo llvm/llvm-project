@@ -289,6 +289,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Demangle = !Args.hasArg(OPT_no_demangle);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->DiscardAll = Args.hasArg(OPT_discard_all);
+  Config->DiscardValueNames = Args.hasArg(OPT_lto_discard_value_names);
   Config->DiscardLocals = Args.hasArg(OPT_discard_locals);
   Config->DiscardNone = Args.hasArg(OPT_discard_none);
   Config->EhFrameHdr = Args.hasArg(OPT_eh_frame_hdr);
