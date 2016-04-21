@@ -1023,7 +1023,7 @@ public:
 #include "llvm/IR/Metadata.def"
 
   // Optional map for looking up composite types by identifier.
-  std::unique_ptr<DenseMap<const MDString *, DICompositeType *>> DITypeMap;
+  Optional<DenseMap<const MDString *, DICompositeType *>> DITypeMap;
 
   // MDNodes may be uniqued or not uniqued.  When they're not uniqued, they
   // aren't in the MDNodeSet, but they're still shared between objects, so no
