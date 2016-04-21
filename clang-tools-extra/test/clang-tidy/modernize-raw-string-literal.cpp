@@ -91,6 +91,10 @@ char const *const HexPrintable("\x40\\");
 // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: {{.*}} can be written as a raw string literal
 // CHECK-FIXES: {{^}}char const *const HexPrintable(R"(@\)");{{$}}
 
+char const *const prettyFunction(__PRETTY_FUNCTION__);
+char const *const function(__FUNCTION__);
+char const *const func(__func__);
+
 #define TRICK(arg_) #arg_
 char const *const MacroBody = TRICK(foo\\bar);
 

@@ -8,6 +8,7 @@ set(files
   avx512cdintrin.h
   avx512erintrin.h
   avx512fintrin.h
+  avx512pfintrin.h
   avx512vlbwintrin.h
   avx512vlintrin.h
   avx512dqintrin.h

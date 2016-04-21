@@ -185,7 +185,7 @@ bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
 
 template <class ELFT>
 static OutputSectionBase<ELFT> *
-findSection(std::vector<OutputSectionBase<ELFT> *> &V, StringRef Name) {
+findSection(ArrayRef<OutputSectionBase<ELFT> *> V, StringRef Name) {
   for (OutputSectionBase<ELFT> *Sec : V)
     if (Sec->getName() == Name)
       return Sec;
@@ -194,7 +194,7 @@ findSection(std::vector<OutputSectionBase<ELFT> *> &V, StringRef Name) {
 
 template <class ELFT>
 void LinkerScript<ELFT>::assignAddresses(
-    std::vector<OutputSectionBase<ELFT> *> &Sections) {
+    ArrayRef<OutputSectionBase<ELFT> *> Sections) {
   typedef typename ELFT::uint uintX_t;
 
   // Orphan sections are sections present in the input files which
@@ -204,8 +204,7 @@ void LinkerScript<ELFT>::assignAddresses(
   // https://sourceware.org/binutils/docs/ld/Orphan-Sections.html#Orphan-Sections.
   for (OutputSectionBase<ELFT> *Sec : Sections) {
     StringRef Name = Sec->getName();
-    auto I = std::find(Opt.SectionOrder.begin(), Opt.SectionOrder.end(), Name);
-    if (I == Opt.SectionOrder.end())
+    if (getSectionOrder(Name) == (uint32_t)-1)
       Opt.Commands.push_back({SectionKind, {}, Name});
   }
 
@@ -220,7 +219,7 @@ void LinkerScript<ELFT>::assignAddresses(
       continue;
     }
 
-    OutputSectionBase<ELFT> *Sec = findSection(Sections, Cmd.SectionName);
+    OutputSectionBase<ELFT> *Sec = findSection<ELFT>(Sections, Cmd.SectionName);
     if (!Sec)
       continue;
 
@@ -249,15 +248,23 @@ ArrayRef<uint8_t> LinkerScript<ELFT>::getFiller(StringRef Name) {
   return I->second;
 }
 
-// A compartor to sort output sections. Returns -1 or 1 if both
-// A and B are mentioned in linker scripts. Otherwise, returns 0
-// to use the default rule which is implemented in Writer.cpp.
+template <class ELFT>
+uint32_t LinkerScript<ELFT>::getSectionOrder(StringRef Name) {
+  auto Begin = Opt.Commands.begin();
+  auto End = Opt.Commands.end();
+  auto I = std::find_if(Begin, End, [&](SectionsCommand &N) {
+    return N.Kind == SectionKind && N.SectionName == Name;
+  });
+  return I == End ? (uint32_t)-1 : (I - Begin);
+}
+
+// A compartor to sort output sections. Returns -1 or 1 if
+// A or B are mentioned in linker script. Otherwise, returns 0.
 template <class ELFT>
 int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
-  auto E = Opt.SectionOrder.end();
-  auto I = std::find(Opt.SectionOrder.begin(), E, A);
-  auto J = std::find(Opt.SectionOrder.begin(), E, B);
-  if (I == E || J == E)
+  uint32_t I = getSectionOrder(A);
+  uint32_t J = getSectionOrder(B);
+  if (I == (uint32_t)-1 && J == (uint32_t)-1)
     return 0;
   return I < J ? -1 : 1;
 }
@@ -509,7 +516,6 @@ void ScriptParser::readLocationCounterValue() {
 
 void ScriptParser::readOutputSectionDescription() {
   StringRef OutSec = next();
-  Opt.SectionOrder.push_back(OutSec);
   Opt.Commands.push_back({SectionKind, {}, OutSec});
   expect(":");
   expect("{");

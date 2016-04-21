@@ -4,6 +4,12 @@
 // CHECK-V5: #define __HEXAGON_V5__ 1
 // CHECK-V5: #define __hexagon__ 1
 
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv55 %s | FileCheck %s -check-prefix CHECK-V55
+
+// CHECK-V55: #define __HEXAGON_ARCH__ 55
+// CHECK-V55: #define __HEXAGON_V55__ 1
+// CHECK-V55: #define __hexagon__ 1
+
 // RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv60 %s | FileCheck %s -check-prefix CHECK-V60
 
 // CHECK-V60: #define __HEXAGON_ARCH__ 60

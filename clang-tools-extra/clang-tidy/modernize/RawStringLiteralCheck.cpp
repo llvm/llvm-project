@@ -108,7 +108,8 @@ void RawStringLiteralCheck::storeOptions(ClangTidyOptions::OptionMap &Options) {
 }
 
 void RawStringLiteralCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(stringLiteral().bind("lit"), this);
+  Finder->addMatcher(
+      stringLiteral(unless(hasParent(predefinedExpr()))).bind("lit"), this);
 }
 
 void RawStringLiteralCheck::check(const MatchFinder::MatchResult &Result) {

@@ -87,6 +87,8 @@ _mm256_cvtph_ps(__m128i __a)
 
 #include <avx512vbmivlintrin.h>
 
+#include <avx512pfintrin.h>
+
 #include <pkuintrin.h>
 
 static __inline__ int __attribute__((__always_inline__, __nodebug__, __target__("rdrnd")))
