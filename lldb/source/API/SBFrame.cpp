@@ -1440,7 +1440,9 @@ SBFrame::EvaluateExpression (const char *expr, const SBExpressionOptions &option
 {
     Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
 
+#ifndef LLDB_DISABLE_PYTHON
     Log *expr_log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
+#endif
 
     ExpressionResults exe_results = eExpressionSetupError;
     SBValue expr_result;

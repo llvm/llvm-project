@@ -10,6 +10,7 @@
 #include "SizeofExpressionCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "../utils/Matchers.h"
 
 using namespace clang::ast_matchers;
 
@@ -18,10 +19,6 @@ namespace tidy {
 namespace misc {
 
 namespace {
-
-AST_MATCHER(BinaryOperator, isRelationalOperator) {
-  return Node.isRelationalOp();
-}
 
 AST_MATCHER_P(IntegerLiteral, isBiggerThan, unsigned, N) {
   return Node.getValue().getZExtValue() > N;
@@ -139,7 +136,7 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // Detect expression like: sizeof(epxr) <= k for a suspicious constant 'k'.
   if (WarnOnSizeOfCompareToConstant) {
     Finder->addMatcher(
-        binaryOperator(isRelationalOperator(),
+        binaryOperator(matchers::isRelationalOperator(),
                        hasEitherOperand(ignoringParenImpCasts(SizeOfExpr)),
                        hasEitherOperand(ignoringParenImpCasts(
                            anyOf(integerLiteral(equals(0)),

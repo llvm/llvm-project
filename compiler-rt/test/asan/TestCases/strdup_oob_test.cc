@@ -6,6 +6,9 @@
 // When built as C on Linux, strdup is transformed to __strdup.
 // RUN: %clangxx_asan -O3 -xc %s -o %t && not %run %t 2>&1 | FileCheck %s
 
+// Unwind problem on arm: "main" is missing from the allocation stack trace.
+// UNSUPPORTED: armv7l-unknown-linux-gnueabihf
+
 #include <string.h>
 
 char kString[] = "foo";

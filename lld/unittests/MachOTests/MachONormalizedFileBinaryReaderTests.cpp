@@ -9,11 +9,17 @@
 
 #include "gtest/gtest.h"
 #include "../../lib/ReaderWriter/MachO/MachONormalizedFile.h"
+#include "lld/ReaderWriter/MachOLinkingContext.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MachO.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/YAMLTraits.h"
+#include <cstdint>
+#include <memory>
 
 using llvm::StringRef;
 using llvm::MemoryBuffer;
-using llvm::ErrorOr;
 
 using namespace lld::mach_o::normalized;
 using namespace llvm::MachO;

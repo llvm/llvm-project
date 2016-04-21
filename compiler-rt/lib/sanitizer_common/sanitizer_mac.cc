@@ -230,7 +230,10 @@ bool FileExists(const char *filename) {
 }
 
 uptr GetTid() {
-  return reinterpret_cast<uptr>(pthread_self());
+  // FIXME: This can potentially get truncated on 32-bit, where uptr is 4 bytes.
+  uint64_t tid;
+  pthread_threadid_np(nullptr, &tid);
+  return tid;
 }
 
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
