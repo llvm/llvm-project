@@ -141,9 +141,9 @@ std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
         OpdExtractor->isValidOffsetForAddress(OpdOffset32))
       SymbolAddress = OpdExtractor->getAddress(&OpdOffset32);
   }
-  ErrorOr<StringRef> SymbolNameOrErr = Symbol.getName();
-  if (auto EC = SymbolNameOrErr.getError())
-    return EC;
+  Expected<StringRef> SymbolNameOrErr = Symbol.getName();
+  if (!SymbolNameOrErr)
+    return errorToErrorCode(SymbolNameOrErr.takeError());
   StringRef SymbolName = *SymbolNameOrErr;
   // Mach-O symbol table names have leading underscore, skip it.
   if (Module->isMachO() && SymbolName.size() > 0 && SymbolName[0] == '_')

@@ -131,6 +131,9 @@ bool LTOCodeGenerator::addModule(LTOModule *Mod) {
   for (int i = 0, e = undefs.size(); i != e; ++i)
     AsmUndefinedRefs[undefs[i]] = 1;
 
+  // We've just changed the input, so let's make sure we verify it.
+  HasVerifiedInput = false;
+
   return !ret;
 }
 
@@ -146,6 +149,9 @@ void LTOCodeGenerator::setModule(std::unique_ptr<LTOModule> Mod) {
   const std::vector<const char*> &Undefs = Mod->getAsmUndefinedRefs();
   for (int I = 0, E = Undefs.size(); I != E; ++I)
     AsmUndefinedRefs[Undefs[I]] = 1;
+
+  // We've just changed the input, so let's make sure we verify it.
+  HasVerifiedInput = false;
 }
 
 void LTOCodeGenerator::setTargetOptions(TargetOptions Options) {
@@ -186,6 +192,9 @@ void LTOCodeGenerator::setOptLevel(unsigned Level) {
 bool LTOCodeGenerator::writeMergedModules(const char *Path) {
   if (!determineTarget())
     return false;
+
+  // We always run the verifier once on the merged module.
+  verifyMergedModuleOnce();
 
   // mark which symbols can not be internalized
   applyScopeRestrictions();
@@ -413,6 +422,16 @@ void LTOCodeGenerator::restoreLinkageForExternals() {
                 externalize);
 }
 
+void LTOCodeGenerator::verifyMergedModuleOnce() {
+  // Only run on the first call.
+  if (HasVerifiedInput)
+    return;
+  HasVerifiedInput = true;
+
+  if (verifyModule(*MergedModule, &dbgs()))
+    report_fatal_error("Broken module found, compilation aborted!");
+}
+
 /// Optimize merged modules using various IPO passes
 bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
                                 bool DisableGVNLoadPRE,
@@ -422,8 +441,7 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
 
   // We always run the verifier once on the merged module, the `DisableVerify`
   // parameter only applies to subsequent verify.
-  if (verifyModule(*MergedModule, &dbgs()))
-    report_fatal_error("Broken module found, compilation aborted!");
+  verifyMergedModuleOnce();
 
   // Mark which symbols can not be internalized
   this->applyScopeRestrictions();
@@ -460,6 +478,10 @@ bool LTOCodeGenerator::optimize(bool DisableVerify, bool DisableInline,
 bool LTOCodeGenerator::compileOptimized(ArrayRef<raw_pwrite_stream *> Out) {
   if (!this->determineTarget())
     return false;
+
+  // We always run the verifier once on the merged module.  If it has already
+  // been called in optimize(), this call will return early.
+  verifyMergedModuleOnce();
 
   legacy::PassManager preCodeGenPasses;
 

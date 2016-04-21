@@ -120,6 +120,31 @@ ModuleSummaryIndexBuilder::ModuleSummaryIndexBuilder(
     const Module *M,
     std::function<BlockFrequencyInfo *(const Function &F)> Ftor)
     : Index(llvm::make_unique<ModuleSummaryIndex>()), M(M) {
+  // We cannot currently promote or rename anything that is in llvm.used,
+  // since any such value may have a use that won't see the new name.
+  // Specifically, any uses within inline assembly are not visible to the
+  // compiler. Prevent importing of any modules containing these uses by
+  // suppressing generation of the index. This also prevents importing
+  // into this module, which is also necessary to avoid needing to rename
+  // in case of a name clash between a local in this module and an imported
+  // global.
+  // FIXME: If we find we need a finer-grained approach of preventing promotion
+  // and renaming of just the functions using inline assembly we will need to:
+  // - Add flag in the function summaries to identify those with inline asm.
+  // - Prevent importing of any functions with flag set.
+  // - Prevent importing of any global function with the same name as a
+  //   function in current module that has the flag set.
+  // - For any llvm.used value that is exported and promoted, add a private
+  //   alias to the original name in the current module (even if we don't
+  //   export the function using those values in inline asm, another function
+  //   with a reference could be exported).
+  SmallPtrSet<GlobalValue *, 8> Used;
+  collectUsedGlobalVariables(*M, Used, /*CompilerUsed*/ false);
+  for (GlobalValue *V : Used) {
+    if (V->hasLocalLinkage())
+      return;
+  }
+
   // Compute summaries for all functions defined in module, and save in the
   // index.
   for (auto &F : *M) {

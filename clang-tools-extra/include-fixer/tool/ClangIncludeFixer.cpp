@@ -18,9 +18,8 @@ using namespace clang;
 
 static llvm::cl::OptionCategory tool_options("Tool options");
 
-int main(int argc, char **argv) {
-  clang::tooling::CommonOptionsParser options(argc, (const char **)argv,
-                                              tool_options);
+int main(int argc, const char **argv) {
+  clang::tooling::CommonOptionsParser options(argc, argv, tool_options);
   clang::tooling::ClangTool tool(options.getCompilations(),
                                  options.getSourcePathList());
   // Set up the data source.

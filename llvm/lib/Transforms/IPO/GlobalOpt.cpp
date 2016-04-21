@@ -43,7 +43,6 @@
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/Evaluator.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 using namespace llvm;
 

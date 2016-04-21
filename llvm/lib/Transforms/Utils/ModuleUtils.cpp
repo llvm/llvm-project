@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -88,22 +87,6 @@ void llvm::appendToGlobalCtors(Module &M, Function *F, int Priority, Constant *D
 
 void llvm::appendToGlobalDtors(Module &M, Function *F, int Priority, Constant *Data) {
   appendToGlobalArray("llvm.global_dtors", M, F, Priority, Data);
-}
-
-GlobalVariable *
-llvm::collectUsedGlobalVariables(Module &M, SmallPtrSetImpl<GlobalValue *> &Set,
-                                 bool CompilerUsed) {
-  const char *Name = CompilerUsed ? "llvm.compiler.used" : "llvm.used";
-  GlobalVariable *GV = M.getGlobalVariable(Name);
-  if (!GV || !GV->hasInitializer())
-    return GV;
-
-  const ConstantArray *Init = cast<ConstantArray>(GV->getInitializer());
-  for (Value *Op : Init->operands()) {
-    GlobalValue *G = cast<GlobalValue>(Op->stripPointerCastsNoFollowAliases());
-    Set.insert(G);
-  }
-  return GV;
 }
 
 Function *llvm::checkSanitizerInterfaceFunction(Constant *FuncOrBitcast) {

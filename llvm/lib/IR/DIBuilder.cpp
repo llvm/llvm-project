@@ -97,12 +97,18 @@ void DIBuilder::finalize() {
 
   DISubprogramArray SPs = MDTuple::get(VMContext, AllSubprograms);
   auto resolveVariables = [&](DISubprogram *SP) {
-    if (MDTuple *Temp = SP->getVariables().get()) {
-      const auto &PV = PreservedVariables.lookup(SP);
-      SmallVector<Metadata *, 4> Variables(PV.begin(), PV.end());
-      DINodeArray AV = getOrCreateArray(Variables);
-      TempMDTuple(Temp)->replaceAllUsesWith(AV.get());
-    }
+    MDTuple *Temp = SP->getVariables().get();
+    if (!Temp)
+      return;
+
+    SmallVector<Metadata *, 4> Variables;
+
+    auto PV = PreservedVariables.find(SP);
+    if (PV != PreservedVariables.end())
+      Variables.append(PV->second.begin(), PV->second.end());
+
+    DINodeArray AV = getOrCreateArray(Variables);
+    TempMDTuple(Temp)->replaceAllUsesWith(AV.get());
   };
   for (auto *SP : SPs)
     resolveVariables(SP);
@@ -608,7 +614,7 @@ DIGlobalVariable *DIBuilder::createTempGlobalVariableFwdDecl(
 
 static DILocalVariable *createLocalVariable(
     LLVMContext &VMContext,
-    DenseMap<MDNode *, std::vector<TrackingMDNodeRef>> &PreservedVariables,
+    DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> &PreservedVariables,
     DIScope *Scope, StringRef Name, unsigned ArgNo, DIFile *File,
     unsigned LineNo, DIType *Ty, bool AlwaysPreserve, unsigned Flags) {
   // FIXME: Why getNonCompileUnitScope()?

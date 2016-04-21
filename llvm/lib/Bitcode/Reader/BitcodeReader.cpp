@@ -107,7 +107,12 @@ class BitcodeReaderMetadataList {
   bool AnyFwdRefs;
   unsigned MinFwdRef;
   unsigned MaxFwdRef;
-  std::vector<TrackingMDRef> MetadataPtrs;
+
+  /// Array of metadata references.
+  ///
+  /// Don't use std::vector here.  Some versions of libc++ copy (instead of
+  /// move) on resize, and TrackingMDRef is very expensive to copy.
+  SmallVector<TrackingMDRef, 1> MetadataPtrs;
 
   LLVMContext &Context;
 public:

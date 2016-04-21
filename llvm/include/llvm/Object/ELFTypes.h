@@ -257,14 +257,14 @@ struct Elf_Sym_Impl : Elf_Sym_Base<ELFT> {
     return getBinding() != ELF::STB_LOCAL;
   }
 
-  ErrorOr<StringRef> getName(StringRef StrTab) const;
+  Expected<StringRef> getName(StringRef StrTab) const;
 };
 
 template <class ELFT>
-ErrorOr<StringRef> Elf_Sym_Impl<ELFT>::getName(StringRef StrTab) const {
+Expected<StringRef> Elf_Sym_Impl<ELFT>::getName(StringRef StrTab) const {
   uint32_t Offset = this->st_name;
   if (Offset >= StrTab.size())
-    return object_error::parse_failed;
+    return errorCodeToError(object_error::parse_failed);
   return StringRef(StrTab.data() + Offset);
 }
 

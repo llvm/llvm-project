@@ -297,7 +297,7 @@ typedef __char16_t char16_t;
 typedef __char32_t char32_t;
 #endif
 
-#if !(__has_feature(cxx_exceptions))
+#if !(__has_feature(cxx_exceptions)) && !defined(_LIBCPP_NO_EXCEPTIONS)
 #define _LIBCPP_NO_EXCEPTIONS
 #endif
 

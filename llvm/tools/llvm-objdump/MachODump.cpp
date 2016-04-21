@@ -273,9 +273,14 @@ static void getSectionsAndSymbols(MachOObjectFile *MachOObj,
                                   SmallVectorImpl<uint64_t> &FoundFns,
                                   uint64_t &BaseSegmentAddress) {
   for (const SymbolRef &Symbol : MachOObj->symbols()) {
-    ErrorOr<StringRef> SymName = Symbol.getName();
-    if (std::error_code EC = SymName.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> SymName = Symbol.getName();
+    if (!SymName) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(SymName.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     if (!SymName->startswith("ltmp"))
       Symbols.push_back(Symbol);
   }
@@ -353,9 +358,14 @@ static void PrintIndirectSymbolTable(MachOObjectFile *O, bool verbose,
       if (indirect_symbol < Symtab.nsyms) {
         symbol_iterator Sym = O->getSymbolByIndex(indirect_symbol);
         SymbolRef Symbol = *Sym;
-        ErrorOr<StringRef> SymName = Symbol.getName();
-        if (std::error_code EC = SymName.getError())
-          report_fatal_error(EC.message());
+        Expected<StringRef> SymName = Symbol.getName();
+        if (!SymName) {
+          std::string Buf;
+          raw_string_ostream OS(Buf);
+          logAllUnhandledErrors(SymName.takeError(), OS, "");
+          OS.flush();
+          report_fatal_error(Buf);
+        }
         outs() << *SymName;
       } else {
         outs() << "?";
@@ -587,9 +597,14 @@ static void CreateSymbolAddressMap(MachOObjectFile *O,
     if (ST == SymbolRef::ST_Function || ST == SymbolRef::ST_Data ||
         ST == SymbolRef::ST_Other) {
       uint64_t Address = Symbol.getValue();
-      ErrorOr<StringRef> SymNameOrErr = Symbol.getName();
-      if (std::error_code EC = SymNameOrErr.getError())
-        report_fatal_error(EC.message());
+      Expected<StringRef> SymNameOrErr = Symbol.getName();
+      if (!SymNameOrErr) {
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        logAllUnhandledErrors(SymNameOrErr.takeError(), OS, "");
+        OS.flush();
+        report_fatal_error(Buf);
+      }
       StringRef SymName = *SymNameOrErr;
       if (!SymName.startswith(".objc"))
         (*AddrMap)[Address] = SymName;
@@ -823,9 +838,14 @@ static void DumpLiteralPointerSection(MachOObjectFile *O,
         [&](const std::pair<uint64_t, SymbolRef> &P) { return P.first == i; });
     if (Reloc != Relocs.end()) {
       symbol_iterator RelocSym = Reloc->second;
-      ErrorOr<StringRef> SymName = RelocSym->getName();
-      if (std::error_code EC = SymName.getError())
-        report_fatal_error(EC.message());
+      Expected<StringRef> SymName = RelocSym->getName();
+      if (!SymName) {
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        logAllUnhandledErrors(SymName.takeError(), OS, "");
+        OS.flush();
+        report_fatal_error(Buf);
+      }
       outs() << "external relocation entry for symbol:" << *SymName << "\n";
       continue;
     }
@@ -1778,9 +1798,14 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
       }
     }
     if (reloc_found && isExtern) {
-      ErrorOr<StringRef> SymName = Symbol.getName();
-      if (std::error_code EC = SymName.getError())
-        report_fatal_error(EC.message());
+      Expected<StringRef> SymName = Symbol.getName();
+      if (!SymName) {
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        logAllUnhandledErrors(SymName.takeError(), OS, "");
+        OS.flush();
+        report_fatal_error(Buf);
+      }
       const char *name = SymName->data();
       op_info->AddSymbol.Present = 1;
       op_info->AddSymbol.Name = name;
@@ -1848,9 +1873,14 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
       // is the offset from the external symbol.
       if (info->O->getAnyRelocationPCRel(RE))
         op_info->Value -= Pc + Offset + Size;
-      ErrorOr<StringRef> SymName = Symbol.getName();
-      if (std::error_code EC = SymName.getError())
-        report_fatal_error(EC.message());
+      Expected<StringRef> SymName = Symbol.getName();
+      if (!SymName) {
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        logAllUnhandledErrors(SymName.takeError(), OS, "");
+        OS.flush();
+        report_fatal_error(Buf);
+      }
       const char *name = SymName->data();
       unsigned Type = info->O->getAnyRelocationType(RE);
       if (Type == MachO::X86_64_RELOC_SUBTRACTOR) {
@@ -1865,9 +1895,14 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
           op_info->SubtractSymbol.Name = name;
           symbol_iterator RelocSymNext = info->O->getSymbolByIndex(SymbolNum);
           Symbol = *RelocSymNext;
-          ErrorOr<StringRef> SymNameNext = Symbol.getName();
-          if (std::error_code EC = SymNameNext.getError())
-            report_fatal_error(EC.message());
+          Expected<StringRef> SymNameNext = Symbol.getName();
+          if (!SymNameNext) {
+            std::string Buf;
+            raw_string_ostream OS(Buf);
+            logAllUnhandledErrors(SymNameNext.takeError(), OS, "");
+            OS.flush();
+            report_fatal_error(Buf);
+          }
           name = SymNameNext->data();
         }
       }
@@ -1938,9 +1973,14 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     }
 
     if (isExtern) {
-      ErrorOr<StringRef> SymName = Symbol.getName();
-      if (std::error_code EC = SymName.getError())
-        report_fatal_error(EC.message());
+      Expected<StringRef> SymName = Symbol.getName();
+      if (!SymName) {
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        logAllUnhandledErrors(SymName.takeError(), OS, "");
+        OS.flush();
+        report_fatal_error(Buf);
+      }
       const char *name = SymName->data();
       op_info->AddSymbol.Present = 1;
       op_info->AddSymbol.Name = name;
@@ -2058,9 +2098,14 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     // NOTE: Scattered relocations don't exist on arm64.
     if (!info->O->getPlainRelocationExternal(RE))
       return 0;
-    ErrorOr<StringRef> SymName = Reloc->getSymbol()->getName();
-    if (std::error_code EC = SymName.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> SymName = Reloc->getSymbol()->getName();
+    if (!SymName) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(SymName.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     const char *name = SymName->data();
     op_info->AddSymbol.Present = 1;
     op_info->AddSymbol.Name = name;
@@ -2188,9 +2233,14 @@ static const char *GuessIndirectSymbol(uint64_t ReferenceValue,
             if (indirect_symbol < Symtab.nsyms) {
               symbol_iterator Sym = info->O->getSymbolByIndex(indirect_symbol);
               SymbolRef Symbol = *Sym;
-              ErrorOr<StringRef> SymName = Symbol.getName();
-              if (std::error_code EC = SymName.getError())
-                report_fatal_error(EC.message());
+              Expected<StringRef> SymName = Symbol.getName();
+              if (!SymName) {
+                std::string Buf;
+                raw_string_ostream OS(Buf);
+                logAllUnhandledErrors(SymName.takeError(), OS, "");
+                OS.flush();
+                report_fatal_error(Buf);
+              }
               const char *name = SymName->data();
               return name;
             }
@@ -2223,9 +2273,14 @@ static const char *GuessIndirectSymbol(uint64_t ReferenceValue,
             if (indirect_symbol < Symtab.nsyms) {
               symbol_iterator Sym = info->O->getSymbolByIndex(indirect_symbol);
               SymbolRef Symbol = *Sym;
-              ErrorOr<StringRef> SymName = Symbol.getName();
-              if (std::error_code EC = SymName.getError())
-                report_fatal_error(EC.message());
+              Expected<StringRef> SymName = Symbol.getName();
+              if (!SymName) {
+                std::string Buf;
+                raw_string_ostream OS(Buf);
+                logAllUnhandledErrors(SymName.takeError(), OS, "");
+                OS.flush();
+                report_fatal_error(Buf);
+              }
               const char *name = SymName->data();
               return name;
             }
@@ -2452,9 +2507,14 @@ static const char *get_symbol_64(uint32_t sect_offset, SectionRef S,
   const char *SymbolName = nullptr;
   if (reloc_found && isExtern) {
     n_value = Symbol.getValue();
-    ErrorOr<StringRef> NameOrError = Symbol.getName();
-    if (std::error_code EC = NameOrError.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> NameOrError = Symbol.getName();
+    if (!NameOrError) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(NameOrError.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     StringRef Name = *NameOrError;
     if (!Name.empty()) {
       SymbolName = Name.data();
@@ -6100,9 +6160,14 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       if (ST == SymbolRef::ST_Function || ST == SymbolRef::ST_Data ||
           ST == SymbolRef::ST_Other) {
         uint64_t Address = Symbol.getValue();
-        ErrorOr<StringRef> SymNameOrErr = Symbol.getName();
-        if (std::error_code EC = SymNameOrErr.getError())
-          report_fatal_error(EC.message());
+        Expected<StringRef> SymNameOrErr = Symbol.getName();
+        if (!SymNameOrErr) {
+          std::string Buf;
+          raw_string_ostream OS(Buf);
+          logAllUnhandledErrors(SymNameOrErr.takeError(), OS, "");
+          OS.flush();
+          report_fatal_error(Buf);
+        }
         StringRef SymName = *SymNameOrErr;
         AddrMap[Address] = SymName;
         if (!DisSymName.empty() && DisSymName == SymName)
@@ -6142,9 +6207,14 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
     // Disassemble symbol by symbol.
     for (unsigned SymIdx = 0; SymIdx != Symbols.size(); SymIdx++) {
-      ErrorOr<StringRef> SymNameOrErr = Symbols[SymIdx].getName();
-      if (std::error_code EC = SymNameOrErr.getError())
-        report_fatal_error(EC.message());
+      Expected<StringRef> SymNameOrErr = Symbols[SymIdx].getName();
+      if (!SymNameOrErr) {
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        logAllUnhandledErrors(SymNameOrErr.takeError(), OS, "");
+        OS.flush();
+        report_fatal_error(Buf);
+      }
       StringRef SymName = *SymNameOrErr;
 
       ErrorOr<SymbolRef::Type> STOrErr = Symbols[SymIdx].getType();
@@ -6412,9 +6482,14 @@ static void findUnwindRelocNameAddend(const MachOObjectFile *Obj,
                                       const RelocationRef &Reloc, uint64_t Addr,
                                       StringRef &Name, uint64_t &Addend) {
   if (Reloc.getSymbol() != Obj->symbol_end()) {
-    ErrorOr<StringRef> NameOrErr = Reloc.getSymbol()->getName();
-    if (std::error_code EC = NameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> NameOrErr = Reloc.getSymbol()->getName();
+    if (!NameOrErr) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(NameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     Name = *NameOrErr;
     Addend = Addr;
     return;
@@ -6440,9 +6515,14 @@ static void findUnwindRelocNameAddend(const MachOObjectFile *Obj,
   section_iterator SymSection = *Sym->second.getSection();
   if (RelocSection == *SymSection) {
     // There's a valid symbol in the same section before this reference.
-    ErrorOr<StringRef> NameOrErr = Sym->second.getName();
-    if (std::error_code EC = NameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> NameOrErr = Sym->second.getName();
+    if (!NameOrErr) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(NameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     Name = *NameOrErr;
     Addend = Addr - Sym->first;
     return;

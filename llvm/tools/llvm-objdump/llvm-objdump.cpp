@@ -494,9 +494,9 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
       return EC;
     Target = *SecName;
   } else {
-    ErrorOr<StringRef> SymName = symb->getName(StrTab);
+    Expected<StringRef> SymName = symb->getName(StrTab);
     if (!SymName)
-      return SymName.getError();
+      return errorToErrorCode(SymName.takeError());
     Target = *SymName;
   }
   switch (EF.getHeader()->e_machine) {
@@ -586,9 +586,9 @@ static std::error_code getRelocationValueString(const COFFObjectFile *Obj,
                                                 const RelocationRef &Rel,
                                                 SmallVectorImpl<char> &Result) {
   symbol_iterator SymI = Rel.getSymbol();
-  ErrorOr<StringRef> SymNameOrErr = SymI->getName();
-  if (std::error_code EC = SymNameOrErr.getError())
-    return EC;
+  Expected<StringRef> SymNameOrErr = SymI->getName();
+  if (!SymNameOrErr)
+    return errorToErrorCode(SymNameOrErr.takeError());
   StringRef SymName = *SymNameOrErr;
   Result.append(SymName.begin(), SymName.end());
   return std::error_code();
@@ -613,9 +613,14 @@ static void printRelocationTargetName(const MachOObjectFile *O,
         report_fatal_error(ec.message());
       if (*Addr != Val)
         continue;
-      ErrorOr<StringRef> Name = Symbol.getName();
-      if (std::error_code EC = Name.getError())
-        report_fatal_error(EC.message());
+      Expected<StringRef> Name = Symbol.getName();
+      if (!Name) {
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        logAllUnhandledErrors(Name.takeError(), OS, "");
+        OS.flush();
+        report_fatal_error(Buf);
+      }
       fmt << *Name;
       return;
     }
@@ -646,8 +651,8 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   if (isExtern) {
     symbol_iterator SI = O->symbol_begin();
     advance(SI, Val);
-    ErrorOr<StringRef> SOrErr = SI->getName();
-    error(SOrErr.getError());
+    Expected<StringRef> SOrErr = SI->getName();
+    error(errorToErrorCode(SOrErr.takeError()));
     S = *SOrErr;
   } else {
     section_iterator SI = O->section_begin();
@@ -952,8 +957,8 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     error(AddressOrErr.getError());
     uint64_t Address = *AddressOrErr;
 
-    ErrorOr<StringRef> Name = Symbol.getName();
-    error(Name.getError());
+    Expected<StringRef> Name = Symbol.getName();
+    error(errorToErrorCode(Name.takeError()));
     if (Name->empty())
       continue;
 
@@ -1358,8 +1363,9 @@ void llvm::PrintSymbolTable(const ObjectFile *o) {
     if (Type == SymbolRef::ST_Debug && Section != o->section_end()) {
       Section->getName(Name);
     } else {
-      ErrorOr<StringRef> NameOrErr = Symbol.getName();
-      error(NameOrErr.getError());
+      Expected<StringRef> NameOrErr = Symbol.getName();
+      if (!NameOrErr)
+        report_error(o->getFileName(), NameOrErr.takeError());
       Name = *NameOrErr;
     }
 

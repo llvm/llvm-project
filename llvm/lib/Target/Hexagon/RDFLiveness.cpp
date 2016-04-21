@@ -616,8 +616,8 @@ void Liveness::resetKills(MachineBasicBlock *B) {
       if (!TargetRegisterInfo::isPhysicalRegister(R))
         continue;
       bool IsLive = false;
-      for (MCSubRegIterator SR(R, &TRI, true); SR.isValid(); ++SR) {
-        if (!Live[*SR])
+      for (MCRegAliasIterator AR(R, &TRI, true); AR.isValid(); ++AR) {
+        if (!Live[*AR])
           continue;
         IsLive = true;
         break;

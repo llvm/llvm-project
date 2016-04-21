@@ -43,6 +43,15 @@ inline std::error_code Check(std::error_code Err) {
   }
   return Err;
 }
+inline void Check(llvm::Error Err) {
+  if (Err) {
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    logAllUnhandledErrors(std::move(Err), OS, "");
+    OS.flush();
+    report_fatal_error(Buf);
+  }
+}
 
 class Twine;
 

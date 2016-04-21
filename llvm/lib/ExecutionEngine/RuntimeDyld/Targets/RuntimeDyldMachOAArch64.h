@@ -424,9 +424,14 @@ private:
     uint8_t *LocalAddress = Sections[SectionID].getAddressWithOffset(Offset);
     unsigned NumBytes = 1 << Size;
 
-    ErrorOr<StringRef> SubtrahendNameOrErr = RelI->getSymbol()->getName();
-    if (auto EC = SubtrahendNameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> SubtrahendNameOrErr = RelI->getSymbol()->getName();
+    if (!SubtrahendNameOrErr) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(SubtrahendNameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     auto SubtrahendI = GlobalSymbolTable.find(*SubtrahendNameOrErr);
     unsigned SectionBID = SubtrahendI->second.getSectionID();
     uint64_t SectionBOffset = SubtrahendI->second.getOffset();
@@ -434,9 +439,14 @@ private:
       SignExtend64(readBytesUnaligned(LocalAddress, NumBytes), NumBytes * 8);
 
     ++RelI;
-    ErrorOr<StringRef> MinuendNameOrErr = RelI->getSymbol()->getName();
-    if (auto EC = MinuendNameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> MinuendNameOrErr = RelI->getSymbol()->getName();
+    if (!MinuendNameOrErr) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(MinuendNameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     auto MinuendI = GlobalSymbolTable.find(*MinuendNameOrErr);
     unsigned SectionAID = MinuendI->second.getSectionID();
     uint64_t SectionAOffset = MinuendI->second.getOffset();

@@ -16,6 +16,8 @@
 #ifndef LLVM_SUPPORT_SHA1_H
 #define LLVM_SUPPORT_SHA1_H
 
+#include "llvm/ADT/ArrayRef.h"
+
 #include <cstdint>
 
 namespace llvm {
@@ -32,6 +34,11 @@ public:
 
   /// Digest more data.
   void update(ArrayRef<uint8_t> Data);
+
+  /// Digest more data.
+  void update(StringRef Str) {
+    update(ArrayRef<uint8_t>((uint8_t *)Str.data(), Str.size()));
+  }
 
   /// Return a reference to the current raw 160-bits SHA1 for the digested data
   /// since the last call to init(). This call will add data to the internal

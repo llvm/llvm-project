@@ -340,9 +340,12 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
         continue;
       SymbolRef::Type Type = *TypeOrErr;
       if (Type == object::SymbolRef::ST_Function) {
-        ErrorOr<StringRef> Name = Sym.getName();
-        if (!Name)
+        Expected<StringRef> Name = Sym.getName();
+        if (!Name) {
+          // TODO: Actually report errors helpfully.
+          consumeError(Name.takeError());
           continue;
+        }
         ErrorOr<uint64_t> AddrOrErr = Sym.getAddress();
         if (!AddrOrErr)
           continue;

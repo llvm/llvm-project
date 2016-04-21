@@ -314,8 +314,8 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
     ErrorOr<uint64_t> AddressOrErr = Symbol.getAddress();
     FailIfError(AddressOrErr);
 
-    ErrorOr<StringRef> NameOrErr = Symbol.getName();
-    FailIfError(NameOrErr);
+    Expected<StringRef> NameOrErr = Symbol.getName();
+    FailIfError(errorToErrorCode(NameOrErr.takeError()));
     StringRef Name = NameOrErr.get();
 
     if (Name == "__sanitizer_cov" || Name == "__sanitizer_cov_with_check" ||

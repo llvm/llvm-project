@@ -3,7 +3,7 @@
 ; RUN: llvm-lto -thinlto -o %t3 %t1.bc %t2.bc
 ; RUN: llvm-link -import=bar:%t2.bc %t1.bc -summary-index=%t3.thinlto.bc -S | FileCheck %s
 
-; CHECK: define linkonce_odr hidden void @foo() {
+; CHECK: define available_externally hidden void @foo() {
 define available_externally hidden void @foo() {
     ret void
 }

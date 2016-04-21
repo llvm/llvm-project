@@ -199,7 +199,7 @@ public:
   void moveSymbolNext(DataRefImpl &Symb) const override;
 
   uint64_t getNValue(DataRefImpl Sym) const;
-  ErrorOr<StringRef> getSymbolName(DataRefImpl Symb) const override;
+  Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
 
   // MachO specific.
   std::error_code getIndirectName(DataRefImpl Symb, StringRef &Res) const;
@@ -252,6 +252,7 @@ public:
 
   // MachO specific.
   basic_symbol_iterator getSymbolByIndex(unsigned Index) const;
+  uint64_t getSymbolIndex(DataRefImpl Symb) const;
 
   section_iterator section_begin() const override;
   section_iterator section_end() const override;

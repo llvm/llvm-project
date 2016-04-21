@@ -402,9 +402,12 @@ void MachODebugMapParser::loadCurrentObjectFileSymbols(
 
   for (auto Sym : Obj.symbols()) {
     uint64_t Addr = Sym.getValue();
-    ErrorOr<StringRef> Name = Sym.getName();
-    if (!Name)
+    Expected<StringRef> Name = Sym.getName();
+    if (!Name) {
+      // TODO: Actually report errors helpfully.
+      consumeError(Name.takeError());
       continue;
+    }
     // The value of some categories of symbols isn't meaningful. For
     // example common symbols store their size in the value field, not
     // their address. Absolute symbols have a fixed address that can
@@ -457,9 +460,12 @@ void MachODebugMapParser::loadMainBinarySymbols(
     if (Section == MainBinary.section_end() || Section->isText())
       continue;
     uint64_t Addr = Sym.getValue();
-    ErrorOr<StringRef> NameOrErr = Sym.getName();
-    if (!NameOrErr)
+    Expected<StringRef> NameOrErr = Sym.getName();
+    if (!NameOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(NameOrErr.takeError());
       continue;
+    }
     StringRef Name = *NameOrErr;
     if (Name.size() == 0 || Name[0] == '\0')
       continue;

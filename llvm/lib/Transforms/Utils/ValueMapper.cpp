@@ -228,6 +228,18 @@ class MDNodeMapper {
     Metadata &getFwdReference(MDNode &Op);
   };
 
+  /// An entry in the worklist for the post-order traversal.
+  struct POTWorklistEntry {
+    MDNode *N;           ///< Current node.
+    const MDOperand *Op; ///< Current operand of \c N.
+
+    /// Keep a flag of whether operands have changed in the worklist to avoid
+    /// hitting the map in \a UniquedGraph.
+    bool HasChanged = false;
+
+    POTWorklistEntry(MDNode &N) : N(&N), Op(N.op_begin()) {}
+  };
+
   /// Worklist of distinct nodes whose operands need to be remapped.
   SmallVector<MDNode *, 16> DistinctWorklist;
 
@@ -317,6 +329,12 @@ private:
   /// \post \a Data::hasChanged in \c G.Info indicates whether any node needs
   /// to change because of operands outside the graph.
   bool createPOT(UniquedGraph &G, const MDNode &FirstN);
+
+  /// Visit an operand of a node in the POT.
+  ///
+  /// Return \c true iff a new node was pushed onto \c Worklist.
+  bool visitOperand(UniquedGraph &G, Metadata *Op,
+                    SmallVectorImpl<POTWorklistEntry> &Worklist);
 
   /// Map all the nodes in the given uniqued graph.
   ///
@@ -597,46 +615,53 @@ bool MDNodeMapper::createPOT(UniquedGraph &G, const MDNode &FirstN) {
 
   // Construct a post-order traversal of the uniqued subgraph under FirstN.
   bool AnyChanges = false;
-
-  // The flag on the worklist indicates whether this is the first or second
-  // visit of a node.  The first visit looks through the operands; the second
-  // visit adds the node to POT.
-  SmallVector<std::pair<MDNode *, bool>, 16> Worklist;
-  Worklist.push_back(std::make_pair(&const_cast<MDNode &>(FirstN), false));
+  SmallVector<POTWorklistEntry, 16> Worklist;
+  Worklist.push_back(POTWorklistEntry(const_cast<MDNode &>(FirstN)));
   (void)G.Info[&FirstN];
   while (!Worklist.empty()) {
-    MDNode &N = *Worklist.back().first;
-    if (Worklist.back().second) {
-      // We've already visited operands.  Add this to POT.
-      Worklist.pop_back();
-      G.Info[&N].ID = G.POT.size();
-      G.POT.push_back(&N);
-      continue;
-    }
-    Worklist.back().second = true;
-
-    // Look through the operands for changes, pushing unmapped uniqued nodes
-    // onto to the worklist.
+    MDNode &N = *Worklist.back().N;
+    const MDOperand *&Op = Worklist.back().Op; // Careful of lifetime...
     assert(N.isUniqued() && "Expected only uniqued nodes in POT");
-    bool LocalChanges = false;
-    for (Metadata *Op : N.operands()) {
-      assert(Op != &N && "Uniqued nodes cannot have self-references");
-      if (Optional<Metadata *> MappedOp = tryToMapOperand(Op)) {
-        AnyChanges |= LocalChanges |= Op != *MappedOp;
-        continue;
+
+    // Pick up the traversal from Op and continue.  Since this is a DFS, pause
+    // as soon as a new node is pushed onto the worklist.
+    bool DidWorklistSizeChange = false;
+    for (const MDOperand *E = N.op_end(); Op != E;) {
+      assert(*Op != &N && "Uniqued nodes cannot have self-references");
+      if (visitOperand(G, *Op++, Worklist)) {
+        DidWorklistSizeChange = true;
+        break;
       }
-
-      MDNode &OpN = *cast<MDNode>(Op);
-      assert(OpN.isUniqued() &&
-             "Only uniqued operands cannot be mapped immediately");
-      if (G.Info.insert(std::make_pair(&OpN, Data())).second)
-        Worklist.push_back(std::make_pair(&OpN, false));
     }
+    if (DidWorklistSizeChange)
+      continue;
 
-    if (LocalChanges)
-      G.Info[&N].HasChanged = true;
+    // All operands of N have been visited.  Push N into the POT.
+    auto &D = G.Info[&N];
+    AnyChanges |= D.HasChanged = Worklist.pop_back_val().HasChanged;
+    D.ID = G.POT.size();
+    G.POT.push_back(&N);
   }
   return AnyChanges;
+}
+
+bool MDNodeMapper::visitOperand(UniquedGraph &G, Metadata *Op,
+                                SmallVectorImpl<POTWorklistEntry> &Worklist) {
+  // Try to map Op, and check it for changes.
+  if (Optional<Metadata *> MappedOp = tryToMapOperand(Op)) {
+    Worklist.back().HasChanged |= Op != *MappedOp;
+    return false;
+  }
+
+  // Push Op onto the Worklist unless it's already in G.
+  MDNode &OpN = *cast<MDNode>(Op);
+  assert(OpN.isUniqued() &&
+         "Only uniqued operands cannot be mapped immediately");
+  if (!G.Info.insert(std::make_pair(&OpN, Data())).second)
+    return false;
+
+  Worklist.push_back(POTWorklistEntry(OpN));
+  return true;
 }
 
 void MDNodeMapper::UniquedGraph::propagateChanges() {

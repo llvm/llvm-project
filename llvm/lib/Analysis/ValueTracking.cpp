@@ -195,6 +195,14 @@ bool llvm::isKnownPositive(Value *V, const DataLayout &DL, unsigned Depth,
     isKnownNonZero(V, DL, Depth, AC, CxtI, DT);
 }
 
+bool llvm::isKnownNegative(Value *V, const DataLayout &DL, unsigned Depth,
+                           AssumptionCache *AC, const Instruction *CxtI,
+                           const DominatorTree *DT) {
+  bool NonNegative, Negative;
+  ComputeSignBit(V, NonNegative, Negative, DL, Depth, AC, CxtI, DT);
+  return Negative;
+}
+
 static bool isKnownNonEqual(Value *V1, Value *V2, const Query &Q);
 
 bool llvm::isKnownNonEqual(Value *V1, Value *V2, const DataLayout &DL,
@@ -506,34 +514,6 @@ bool llvm::isValidAssumeForContext(const Instruction *I,
                                    const Instruction *CxtI,
                                    const DominatorTree *DT) {
   return ::isValidAssumeForContext(const_cast<Instruction *>(I), CxtI, DT);
-}
-
-template<typename LHS, typename RHS>
-inline match_combine_or<CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>,
-                        CmpClass_match<RHS, LHS, ICmpInst, ICmpInst::Predicate>>
-m_c_ICmp(ICmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
-  return m_CombineOr(m_ICmp(Pred, L, R), m_ICmp(Pred, R, L));
-}
-
-template<typename LHS, typename RHS>
-inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::And>,
-                        BinaryOp_match<RHS, LHS, Instruction::And>>
-m_c_And(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_And(L, R), m_And(R, L));
-}
-
-template<typename LHS, typename RHS>
-inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Or>,
-                        BinaryOp_match<RHS, LHS, Instruction::Or>>
-m_c_Or(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_Or(L, R), m_Or(R, L));
-}
-
-template<typename LHS, typename RHS>
-inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Xor>,
-                        BinaryOp_match<RHS, LHS, Instruction::Xor>>
-m_c_Xor(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_Xor(L, R), m_Xor(R, L));
 }
 
 static void computeKnownBitsFromAssume(Value *V, APInt &KnownZero,
@@ -3909,44 +3889,46 @@ static bool isTruePredicate(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
 }
 
 /// Return true if "icmp Pred BLHS BRHS" is true whenever "icmp Pred
-/// ALHS ARHS" is true.
-static bool isImpliedCondOperands(CmpInst::Predicate Pred, Value *ALHS,
-                                  Value *ARHS, Value *BLHS, Value *BRHS,
-                                  const DataLayout &DL, unsigned Depth,
-                                  AssumptionCache *AC, const Instruction *CxtI,
-                                  const DominatorTree *DT) {
+/// ALHS ARHS" is true.  Otherwise, return None.
+static Optional<bool>
+isImpliedCondOperands(CmpInst::Predicate Pred, Value *ALHS, Value *ARHS,
+                      Value *BLHS, Value *BRHS, const DataLayout &DL,
+                      unsigned Depth, AssumptionCache *AC,
+                      const Instruction *CxtI, const DominatorTree *DT) {
   switch (Pred) {
   default:
-    return false;
+    return None;
 
   case CmpInst::ICMP_SLT:
   case CmpInst::ICMP_SLE:
-    return isTruePredicate(CmpInst::ICMP_SLE, BLHS, ALHS, DL, Depth, AC, CxtI,
-                           DT) &&
-           isTruePredicate(CmpInst::ICMP_SLE, ARHS, BRHS, DL, Depth, AC, CxtI,
-                           DT);
+    if (isTruePredicate(CmpInst::ICMP_SLE, BLHS, ALHS, DL, Depth, AC, CxtI,
+                        DT) &&
+        isTruePredicate(CmpInst::ICMP_SLE, ARHS, BRHS, DL, Depth, AC, CxtI, DT))
+      return true;
+    return None;
 
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_ULE:
-    return isTruePredicate(CmpInst::ICMP_ULE, BLHS, ALHS, DL, Depth, AC, CxtI,
-                           DT) &&
-           isTruePredicate(CmpInst::ICMP_ULE, ARHS, BRHS, DL, Depth, AC, CxtI,
-                           DT);
+    if (isTruePredicate(CmpInst::ICMP_ULE, BLHS, ALHS, DL, Depth, AC, CxtI,
+                        DT) &&
+        isTruePredicate(CmpInst::ICMP_ULE, ARHS, BRHS, DL, Depth, AC, CxtI, DT))
+      return true;
+    return None;
   }
 }
 
-/// Return true if "icmp2 BPred BLHS BRHS" is known to be implied by "icmp1
-/// APred ALHS ARHS".  The implication may be either true or false depending on
-/// the return value of ImpliedTrue.
-static bool isImpliedCondMatchingOperands(CmpInst::Predicate APred, Value *ALHS,
-                                          Value *ARHS, CmpInst::Predicate BPred,
-                                          Value *BLHS, Value *BRHS,
-                                          bool &ImpliedTrue) {
+/// Return true if "icmp1 APred ALHS ARHS" implies "icmp2 BPred BLHS BRHS" is
+/// true.  Return false if "icmp1 APred ALHS ARHS" implies "icmp2 BPred BLHS
+/// BRHS" is false.  Otherwise, return None if we can't infer anything.
+static Optional<bool> isImpliedCondMatchingOperands(CmpInst::Predicate APred,
+                                                    Value *ALHS, Value *ARHS,
+                                                    CmpInst::Predicate BPred,
+                                                    Value *BLHS, Value *BRHS) {
   // The operands of the two compares must match.
   bool IsMatchingOps = (ALHS == BLHS && ARHS == BRHS);
   bool IsSwappedOps = (ALHS == BRHS && ARHS == BLHS);
   if (!IsMatchingOps && !IsSwappedOps)
-    return false;
+    return None;
 
   // Canonicalize the operands so they're matching.
   if (IsSwappedOps) {
@@ -3956,17 +3938,13 @@ static bool isImpliedCondMatchingOperands(CmpInst::Predicate APred, Value *ALHS,
 
   // If the predicates match, then we know the first condition implies the
   // second is true.
-  if (APred == BPred) {
-    ImpliedTrue = true;
+  if (APred == BPred)
     return true;
-  }
 
   // If an inverted APred matches BPred, we can infer the second condition is
   // false.
-  if (CmpInst::getInversePredicate(APred) == BPred) {
-    ImpliedTrue = false;
-    return true;
-  }
+  if (CmpInst::getInversePredicate(APred) == BPred)
+    return false;
 
   // If a swapped APred matches BPred, we can infer the second condition is
   // false in many cases.
@@ -3978,8 +3956,7 @@ static bool isImpliedCondMatchingOperands(CmpInst::Predicate APred, Value *ALHS,
     case CmpInst::ICMP_ULT: // A <u B implies A >u B is false.
     case CmpInst::ICMP_SGT: // A >s B implies A <s B is false.
     case CmpInst::ICMP_SLT: // A <s B implies A >s B is false.
-      ImpliedTrue = false;
-      return true;
+      return false;
     }
   }
 
@@ -3987,17 +3964,16 @@ static bool isImpliedCondMatchingOperands(CmpInst::Predicate APred, Value *ALHS,
   // comparison (which is signless).
   if (ICmpInst::isSigned(APred) != ICmpInst::isSigned(BPred) &&
       !ICmpInst::isEquality(APred) && !ICmpInst::isEquality(BPred))
-    return false;
+    return None;
 
   switch (APred) {
   default:
     break;
   case CmpInst::ICMP_EQ:
     // A == B implies A > B and A < B are false.
-    if (CmpInst::isFalseWhenEqual(BPred)) {
-      ImpliedTrue = false;
-      return true;
-    }
+    if (CmpInst::isFalseWhenEqual(BPred))
+      return false;
+
     break;
   case CmpInst::ICMP_UGT:
   case CmpInst::ICMP_ULT:
@@ -4005,38 +3981,34 @@ static bool isImpliedCondMatchingOperands(CmpInst::Predicate APred, Value *ALHS,
   case CmpInst::ICMP_SLT:
     // A > B implies A == B is false.
     // A < B implies A == B is false.
-    if (BPred == CmpInst::ICMP_EQ) {
-      ImpliedTrue = false;
-      return true;
-    }
+    if (BPred == CmpInst::ICMP_EQ)
+      return false;
+
     // A > B implies A != B is true.
     // A < B implies A != B is true.
-    if (BPred == CmpInst::ICMP_NE) {
-      ImpliedTrue = true;
+    if (BPred == CmpInst::ICMP_NE)
       return true;
-    }
     break;
   }
-  return false;
+  return None;
 }
 
-bool llvm::isImpliedCondition(Value *LHS, Value *RHS, bool &ImpliedTrue,
-                              const DataLayout &DL, unsigned Depth,
-                              AssumptionCache *AC, const Instruction *CxtI,
-                              const DominatorTree *DT) {
+Optional<bool> llvm::isImpliedCondition(Value *LHS, Value *RHS,
+                                        const DataLayout &DL, unsigned Depth,
+                                        AssumptionCache *AC,
+                                        const Instruction *CxtI,
+                                        const DominatorTree *DT) {
   assert(LHS->getType() == RHS->getType() && "mismatched type");
   Type *OpTy = LHS->getType();
   assert(OpTy->getScalarType()->isIntegerTy(1));
 
   // LHS ==> RHS by definition
-  if (LHS == RHS) {
-    ImpliedTrue = true;
+  if (LHS == RHS)
     return true;
-  }
 
   if (OpTy->isVectorTy())
     // TODO: extending the code below to handle vectors
-    return false;
+    return None;
   assert(OpTy->isIntegerTy(1) && "implied by above");
 
   ICmpInst::Predicate APred, BPred;
@@ -4045,17 +4017,16 @@ bool llvm::isImpliedCondition(Value *LHS, Value *RHS, bool &ImpliedTrue,
 
   if (!match(LHS, m_ICmp(APred, m_Value(ALHS), m_Value(ARHS))) ||
       !match(RHS, m_ICmp(BPred, m_Value(BLHS), m_Value(BRHS))))
-    return false;
+    return None;
 
-  if (isImpliedCondMatchingOperands(APred, ALHS, ARHS, BPred, BLHS, BRHS,
-                                    ImpliedTrue))
-    return true;
+  Optional<bool> Implication =
+      isImpliedCondMatchingOperands(APred, ALHS, ARHS, BPred, BLHS, BRHS);
+  if (Implication)
+    return Implication;
 
-  if (APred == BPred) {
-    ImpliedTrue = true;
+  if (APred == BPred)
     return isImpliedCondOperands(APred, ALHS, ARHS, BLHS, BRHS, DL, Depth, AC,
                                  CxtI, DT);
-  }
 
-  return false;
+  return None;
 }

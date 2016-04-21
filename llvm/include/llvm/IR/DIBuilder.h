@@ -51,7 +51,11 @@ namespace llvm {
     bool AllowUnresolvedNodes;
 
     /// Each subprogram's preserved local variables.
-    DenseMap<MDNode *, std::vector<TrackingMDNodeRef>> PreservedVariables;
+    ///
+    /// Do not use a std::vector.  Some versions of libc++ apparently copy
+    /// instead of move on grow operations, and TrackingMDRef is expensive to
+    /// copy.
+    DenseMap<MDNode *, SmallVector<TrackingMDNodeRef, 1>> PreservedVariables;
 
     DIBuilder(const DIBuilder &) = delete;
     void operator=(const DIBuilder &) = delete;

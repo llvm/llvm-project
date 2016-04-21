@@ -276,8 +276,10 @@ static bool importFunctions(const char *argv0, LLVMContext &Context,
     if (renameModuleForThinLTO(*SrcModule, *Index, &GlobalsToImport))
       return true;
 
-    if (L.linkInModule(std::move(SrcModule), Linker::Flags::None,
-                       &GlobalsToImport))
+    // Instruct the linker to not automatically import linkonce defintion.
+    unsigned Flags = Linker::Flags::DontForceLinkLinkonceODR;
+
+    if (L.linkInModule(std::move(SrcModule), Flags, &GlobalsToImport))
       return false;
   }
 

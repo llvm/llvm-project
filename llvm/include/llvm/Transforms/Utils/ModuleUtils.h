@@ -28,7 +28,6 @@ class Constant;
 class StringRef;
 class Value;
 class Type;
-template <class PtrType> class SmallPtrSetImpl;
 
 /// Append F to the list of global ctors of module M with the given Priority.
 /// This wraps the function in the appropriate structure and stores it along
@@ -40,12 +39,6 @@ void appendToGlobalCtors(Module &M, Function *F, int Priority,
 /// Same as appendToGlobalCtors(), but for global dtors.
 void appendToGlobalDtors(Module &M, Function *F, int Priority,
                          Constant *Data = nullptr);
-
-/// \brief Given "llvm.used" or "llvm.compiler.used" as a global name, collect
-/// the initializer elements of that global in Set and return the global itself.
-GlobalVariable *collectUsedGlobalVariables(Module &M,
-                                           SmallPtrSetImpl<GlobalValue *> &Set,
-                                           bool CompilerUsed);
 
 // Validate the result of Module::getOrInsertFunction called for an interface
 // function of given sanitizer. If the instrumented module defines a function

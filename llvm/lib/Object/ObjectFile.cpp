@@ -46,9 +46,9 @@ uint64_t ObjectFile::getSymbolValue(DataRefImpl Ref) const {
 
 std::error_code ObjectFile::printSymbolName(raw_ostream &OS,
                                             DataRefImpl Symb) const {
-  ErrorOr<StringRef> Name = getSymbolName(Symb);
-  if (std::error_code EC = Name.getError())
-    return EC;
+  Expected<StringRef> Name = getSymbolName(Symb);
+  if (!Name)
+    return errorToErrorCode(Name.takeError());
   OS << *Name;
   return std::error_code();
 }

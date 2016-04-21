@@ -215,9 +215,9 @@ static std::error_code resolveSymbolName(const std::vector<RelocationRef> &Rels,
   SymbolRef Sym;
   if (std::error_code EC = resolveSymbol(Rels, Offset, Sym))
     return EC;
-  ErrorOr<StringRef> NameOrErr = Sym.getName();
-  if (std::error_code EC = NameOrErr.getError())
-    return EC;
+  Expected<StringRef> NameOrErr = Sym.getName();
+  if (!NameOrErr)
+    return errorToErrorCode(NameOrErr.takeError());
   Name = *NameOrErr;
   return std::error_code();
 }

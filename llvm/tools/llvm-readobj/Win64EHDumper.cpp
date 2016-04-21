@@ -120,13 +120,17 @@ static std::string formatSymbol(const Dumper::Context &Ctx,
 
   SymbolRef Symbol;
   if (!Ctx.ResolveSymbol(Section, Offset, Symbol, Ctx.UserData)) {
-    if (ErrorOr<StringRef> Name = Symbol.getName()) {
+    Expected<StringRef> Name = Symbol.getName();
+    if (Name) {
       OS << *Name;
       if (Displacement > 0)
         OS << format(" +0x%X (0x%" PRIX64 ")", Displacement, Offset);
       else
         OS << format(" (0x%" PRIX64 ")", Offset);
       return OS.str();
+    } else {
+      // TODO: Actually report errors helpfully.
+      consumeError(Name.takeError());
     }
   }
 

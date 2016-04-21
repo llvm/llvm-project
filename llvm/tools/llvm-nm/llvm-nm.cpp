@@ -724,9 +724,11 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
   }
 
   if (SymI->getELFType() == ELF::STT_SECTION) {
-    ErrorOr<StringRef> Name = SymI->getName();
-    if (error(Name.getError()))
+    Expected<StringRef> Name = SymI->getName();
+    if (!Name) {
+      consumeError(Name.takeError());
       return '?';
+    }
     return StringSwitch<char>(*Name)
         .StartsWith(".debug", 'N')
         .StartsWith(".note", 'n')
@@ -741,9 +743,11 @@ static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {
   // OK, this is COFF.
   symbol_iterator SymI(I);
 
-  ErrorOr<StringRef> Name = SymI->getName();
-  if (error(Name.getError()))
+  Expected<StringRef> Name = SymI->getName();
+  if (!Name) {
+    consumeError(Name.takeError());
     return '?';
+  }
 
   char Ret = StringSwitch<char>(*Name)
                  .StartsWith(".debug", 'N')

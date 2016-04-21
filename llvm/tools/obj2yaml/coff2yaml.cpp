@@ -121,9 +121,14 @@ void COFFDumper::dumpSections(unsigned NumSections) {
       const object::coff_relocation *reloc = Obj.getCOFFRelocation(Reloc);
       COFFYAML::Relocation Rel;
       object::symbol_iterator Sym = Reloc.getSymbol();
-      ErrorOr<StringRef> SymbolNameOrErr = Sym->getName();
-      if (std::error_code EC = SymbolNameOrErr.getError())
-        report_fatal_error(EC.message());
+      Expected<StringRef> SymbolNameOrErr = Sym->getName();
+      if (!SymbolNameOrErr) {
+       std::string Buf;
+       raw_string_ostream OS(Buf);
+       logAllUnhandledErrors(SymbolNameOrErr.takeError(), OS, "");
+       OS.flush();
+       report_fatal_error(Buf);
+      }
       Rel.SymbolName = *SymbolNameOrErr;
       Rel.VirtualAddress = reloc->VirtualAddress;
       Rel.Type = reloc->Type;

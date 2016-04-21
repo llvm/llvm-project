@@ -327,8 +327,7 @@ llvm::writeArchive(StringRef ArcName,
   std::vector<MemoryBufferRef> Members;
   std::vector<sys::fs::file_status> NewMemberStatus;
 
-  for (unsigned I = 0, N = NewMembers.size(); I < N; ++I) {
-    NewArchiveIterator &Member = NewMembers[I];
+  for (NewArchiveIterator &Member : NewMembers) {
     MemoryBufferRef MemberRef;
 
     if (Member.isNewMember()) {

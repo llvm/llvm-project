@@ -355,8 +355,15 @@ PrinterContext<ET>::FunctionAtAddress(unsigned Section,
 
   for (const Elf_Sym &Sym : ELF->symbols(Symtab))
     if (Sym.st_shndx == Section && Sym.st_value == Address &&
-        Sym.getType() == ELF::STT_FUNC)
-      return Sym.getName(StrTable);
+        Sym.getType() == ELF::STT_FUNC) {
+      auto NameOrErr = Sym.getName(StrTable);
+      if (!NameOrErr) {
+        // TODO: Actually report errors helpfully.
+        consumeError(NameOrErr.takeError());
+        return readobj_error::unknown_symbol;
+      }
+      return *NameOrErr;
+    }
   return readobj_error::unknown_symbol;
 }
 

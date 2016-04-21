@@ -1269,6 +1269,8 @@ public:
   void setOperand(unsigned I, MDNode *New);
   StringRef getName() const;
   void print(raw_ostream &ROS, bool IsForDebug = false) const;
+  void print(raw_ostream &ROS, ModuleSlotTracker &MST,
+             bool IsForDebug = false) const;
   void dump() const;
 
   // ---------------------------------------------------------------------------

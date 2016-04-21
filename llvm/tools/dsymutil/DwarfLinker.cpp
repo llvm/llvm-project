@@ -1951,8 +1951,9 @@ findValidRelocsMachO(const object::SectionRef &Section,
 
     auto Sym = Reloc.getSymbol();
     if (Sym != Obj.symbol_end()) {
-      ErrorOr<StringRef> SymbolName = Sym->getName();
+      Expected<StringRef> SymbolName = Sym->getName();
       if (!SymbolName) {
+        consumeError(SymbolName.takeError());
         Linker.reportWarning("error getting relocation symbol name.");
         continue;
       }

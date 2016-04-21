@@ -151,9 +151,14 @@ public:
       break;
     }
 
-    ErrorOr<StringRef> TargetNameOrErr = Symbol->getName();
-    if (std::error_code EC = TargetNameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> TargetNameOrErr = Symbol->getName();
+    if (!TargetNameOrErr) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(TargetNameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     StringRef TargetName = *TargetNameOrErr;
 
     DEBUG(dbgs() << "\t\tIn Section " << SectionID << " Offset " << Offset

@@ -2,6 +2,7 @@
 ; RUN: llvm-as %p/Inputs/type-merge2.ll -o %t2.o
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:    --plugin-opt=emit-llvm \
+; RUN:    --plugin-opt=no-discard-value-names \
 ; RUN:    -shared %t.o %t2.o -o %t3.o
 ; RUN: llvm-dis %t3.o -o - | FileCheck %s
 

@@ -570,9 +570,14 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
     if (!Symbol)
       Symbol = getSymbol(COFF, Address, /*FunctionOnly=*/true);
 
-    ErrorOr<StringRef> Name = Symbol->getName();
-    if (std::error_code EC = Name.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> Name = Symbol->getName();
+    if (!Name) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(Name.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
 
     ListScope EHS(SW, "ExceptionHandler");
     SW.printString("Routine", formatSymbol(*Name, Address));
@@ -604,9 +609,14 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
   StringRef FunctionName;
   uint64_t FunctionAddress;
   if (Function) {
-    ErrorOr<StringRef> FunctionNameOrErr = Function->getName();
-    if (std::error_code EC = FunctionNameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> FunctionNameOrErr = Function->getName();
+    if (!FunctionNameOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     FunctionName = *FunctionNameOrErr;
     ErrorOr<uint64_t> FunctionAddressOrErr = Function->getAddress();
     if (std::error_code EC = FunctionAddressOrErr.getError())
@@ -622,9 +632,14 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
   SW.printString("Function", formatSymbol(FunctionName, FunctionAddress));
 
   if (XDataRecord) {
-    ErrorOr<StringRef> Name = XDataRecord->getName();
-    if (std::error_code EC = Name.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> Name = XDataRecord->getName();
+    if (!Name) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(Name.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
 
     ErrorOr<uint64_t> AddressOrErr = XDataRecord->getAddress();
     if (std::error_code EC = AddressOrErr.getError())
@@ -671,9 +686,14 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
   StringRef FunctionName;
   uint64_t FunctionAddress;
   if (Function) {
-    ErrorOr<StringRef> FunctionNameOrErr = Function->getName();
-    if (std::error_code EC = FunctionNameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> FunctionNameOrErr = Function->getName();
+    if (!FunctionNameOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     FunctionName = *FunctionNameOrErr;
     ErrorOr<uint64_t> FunctionAddressOrErr = Function->getAddress();
     FunctionAddress = *FunctionAddressOrErr;

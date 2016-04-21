@@ -513,7 +513,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
   // If this node has a single predecessor which ends in a conditional branch,
   // we can infer the value of the branch condition given that we took this
-  // path.  We need the single predeccesor to ensure there's not another path
+  // path.  We need the single predecessor to ensure there's not another path
   // which reaches this block where the condition might hold a different
   // value.  Since we're adding this to the scoped hash table (like any other
   // def), it will have been popped if we encounter a future merge block.

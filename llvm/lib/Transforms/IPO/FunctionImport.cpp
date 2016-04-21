@@ -49,6 +49,12 @@ static cl::opt<float>
 static cl::opt<bool> PrintImports("print-imports", cl::init(false), cl::Hidden,
                                   cl::desc("Print imported functions"));
 
+// Temporary allows the function import pass to disable always linking
+// referenced discardable symbols.
+static cl::opt<bool>
+    DontForceImportReferencedDiscardableSymbols("disable-force-link-odr",
+                                                cl::init(false), cl::Hidden);
+
 // Load lazily a module from \p FileName in \p Context.
 static std::unique_ptr<Module> loadFile(const std::string &FileName,
                                         LLVMContext &Context) {
@@ -327,7 +333,8 @@ void llvm::ComputeCrossModuleImportForModule(
 // index.
 //
 bool FunctionImporter::importFunctions(
-    Module &DestModule, const FunctionImporter::ImportMapTy &ImportList) {
+    Module &DestModule, const FunctionImporter::ImportMapTy &ImportList,
+    bool ForceImportReferencedDiscardableSymbols) {
   DEBUG(dbgs() << "Starting import for Module "
                << DestModule.getModuleIdentifier() << "\n");
   unsigned ImportedCount = 0;
@@ -420,8 +427,12 @@ bool FunctionImporter::importFunctions(
                << " from " << SrcModule->getSourceFileName() << "\n";
     }
 
-    if (TheLinker.linkInModule(std::move(SrcModule), Linker::Flags::None,
-                               &GlobalsToImport))
+    // Instruct the linker that the client will take care of linkonce resolution
+    unsigned Flags = Linker::Flags::None;
+    if (!ForceImportReferencedDiscardableSymbols)
+      Flags |= Linker::Flags::DontForceLinkLinkonceODR;
+
+    if (TheLinker.linkInModule(std::move(SrcModule), Flags, &GlobalsToImport))
       report_fatal_error("Function Import: link error");
 
     ImportedCount += GlobalsToImport.size();
@@ -523,7 +534,8 @@ public:
       return loadFile(Identifier, M.getContext());
     };
     FunctionImporter Importer(*Index, ModuleLoader);
-    return Importer.importFunctions(M, ImportList);
+    return Importer.importFunctions(
+        M, ImportList, !DontForceImportReferencedDiscardableSymbols);
   }
 };
 } // anonymous namespace

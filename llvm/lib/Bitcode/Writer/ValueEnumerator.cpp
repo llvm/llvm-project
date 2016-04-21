@@ -568,19 +568,23 @@ void ValueEnumerator::dropFunctionFromMetadata(
 
 void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
   // Start by enumerating MD, and then work through its transitive operands in
-  // post-order.
-  SmallVector<std::pair<const MDNode *, bool>, 32> Worklist;
+  // post-order.  This requires a depth-first search.
+  SmallVector<std::pair<const MDNode *, const MDOperand *>, 32> Worklist;
   enumerateMetadataImpl(F, MD, Worklist);
   while (!Worklist.empty()) {
     const MDNode *N = Worklist.back().first;
-    if (!Worklist.back().second) {
-      // On the first visit, add the operands to the worklist.
-      Worklist.back().second = true;
-      unsigned F = MetadataMap.lookup(N).F;
-      for (const Metadata *Op : N->operands())
-        enumerateMetadataImpl(F, Op, Worklist);
+    const MDOperand *&Op = Worklist.back().second; // Be careful of lifetime...
+
+    // Enumerate operands until the worklist changes.  We need to traverse new
+    // nodes before visiting the rest of N's operands.
+    bool DidWorklistChange = false;
+    for (const MDOperand *E = N->op_end(); Op != E;)
+      if (enumerateMetadataImpl(F, *Op++, Worklist)) {
+        DidWorklistChange = true;
+        break;
+      }
+    if (DidWorklistChange)
       continue;
-    }
 
     // All the operands have been visited.  Now assign an ID.
     Worklist.pop_back();
@@ -590,11 +594,11 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
   }
 }
 
-void ValueEnumerator::enumerateMetadataImpl(
+bool ValueEnumerator::enumerateMetadataImpl(
     unsigned F, const Metadata *MD,
-    SmallVectorImpl<std::pair<const MDNode *, bool>> &Worklist) {
+    SmallVectorImpl<std::pair<const MDNode *, const MDOperand *>> &Worklist) {
   if (!MD)
-    return;
+    return false;
 
   assert(
       (isa<MDNode>(MD) || isa<MDString>(MD) || isa<ConstantAsMetadata>(MD)) &&
@@ -606,13 +610,13 @@ void ValueEnumerator::enumerateMetadataImpl(
     // Already mapped.  If F doesn't match the function tag, drop it.
     if (Entry.hasDifferentFunction(F))
       dropFunctionFromMetadata(*Insertion.first);
-    return;
+    return false;
   }
 
   // MDNodes are handled separately to avoid recursion.
   if (auto *N = dyn_cast<MDNode>(MD)) {
-    Worklist.push_back(std::make_pair(N, false));
-    return;
+    Worklist.push_back(std::make_pair(N, N->op_begin()));
+    return true; // Changed the worklist.
   }
 
   // Save the metadata.
@@ -622,6 +626,8 @@ void ValueEnumerator::enumerateMetadataImpl(
   // Enumerate the constant, if any.
   if (auto *C = dyn_cast<ConstantAsMetadata>(MD))
     EnumerateValue(C->getValue());
+
+  return false;
 }
 
 /// EnumerateFunctionLocalMetadataa - Incorporate function-local metadata

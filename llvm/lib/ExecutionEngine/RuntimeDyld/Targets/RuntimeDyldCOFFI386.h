@@ -43,9 +43,14 @@ public:
     if (Symbol == Obj.symbol_end())
       report_fatal_error("Unknown symbol in relocation");
 
-    ErrorOr<StringRef> TargetNameOrErr = Symbol->getName();
-    if (auto EC = TargetNameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> TargetNameOrErr = Symbol->getName();
+    if (!TargetNameOrErr) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(TargetNameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     StringRef TargetName = *TargetNameOrErr;
 
     auto Section = *Symbol->getSection();

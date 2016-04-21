@@ -662,14 +662,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // (for widening) or expand (for scalarization). Then we will selectively
   // turn on ones that can be effectively codegen'd.
   for (MVT VT : MVT::vector_valuetypes()) {
-    setOperationAction(ISD::ADD , VT, Expand);
-    setOperationAction(ISD::SUB , VT, Expand);
-    setOperationAction(ISD::MUL , VT, Expand);
     setOperationAction(ISD::SDIV, VT, Expand);
     setOperationAction(ISD::UDIV, VT, Expand);
     setOperationAction(ISD::SREM, VT, Expand);
     setOperationAction(ISD::UREM, VT, Expand);
-    setOperationAction(ISD::VECTOR_SHUFFLE, VT, Expand);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT,Expand);
     setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Expand);
     setOperationAction(ISD::EXTRACT_SUBVECTOR, VT,Expand);
@@ -704,7 +700,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SIGN_EXTEND, VT, Expand);
     setOperationAction(ISD::ZERO_EXTEND, VT, Expand);
     setOperationAction(ISD::ANY_EXTEND, VT, Expand);
-    setOperationAction(ISD::VSELECT, VT, Expand);
     setOperationAction(ISD::SELECT_CC, VT, Expand);
     for (MVT InnerVT : MVT::vector_valuetypes()) {
       setTruncStoreAction(InnerVT, VT, Expand);
@@ -733,23 +728,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // No operations on x86mmx supported, everything uses intrinsics.
   }
 
-  // MMX-sized vectors (other than x86mmx) are expected to be expanded
-  // into smaller operations.
-  for (MVT MMXTy : {MVT::v8i8, MVT::v4i16, MVT::v2i32, MVT::v1i64}) {
-    setOperationAction(ISD::LOAD,               MMXTy,      Expand);
-    setOperationAction(ISD::SRL,                MMXTy,      Expand);
-    setOperationAction(ISD::SHL,                MMXTy,      Expand);
-    setOperationAction(ISD::SRA,                MMXTy,      Expand);
-    setOperationAction(ISD::MULHS,              MMXTy,      Expand);
-    setOperationAction(ISD::AND,                MMXTy,      Expand);
-    setOperationAction(ISD::OR,                 MMXTy,      Expand);
-    setOperationAction(ISD::XOR,                MMXTy,      Expand);
-    setOperationAction(ISD::SCALAR_TO_VECTOR,   MMXTy,      Expand);
-    setOperationAction(ISD::SELECT,             MMXTy,      Expand);
-    setOperationAction(ISD::BITCAST,            MMXTy,      Expand);
-  }
-  setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v1i64, Expand);
-
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE1()) {
     addRegisterClass(MVT::v4f32, &X86::VR128RegClass);
 
@@ -773,10 +751,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v4i32, &X86::VR128RegClass);
     addRegisterClass(MVT::v2i64, &X86::VR128RegClass);
 
-    setOperationAction(ISD::ADD,                MVT::v16i8, Legal);
-    setOperationAction(ISD::ADD,                MVT::v8i16, Legal);
-    setOperationAction(ISD::ADD,                MVT::v4i32, Legal);
-    setOperationAction(ISD::ADD,                MVT::v2i64, Legal);
     setOperationAction(ISD::MUL,                MVT::v16i8, Custom);
     setOperationAction(ISD::MUL,                MVT::v4i32, Custom);
     setOperationAction(ISD::MUL,                MVT::v2i64, Custom);
@@ -786,10 +760,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MULHS,              MVT::v16i8, Custom);
     setOperationAction(ISD::MULHU,              MVT::v8i16, Legal);
     setOperationAction(ISD::MULHS,              MVT::v8i16, Legal);
-    setOperationAction(ISD::SUB,                MVT::v16i8, Legal);
-    setOperationAction(ISD::SUB,                MVT::v8i16, Legal);
-    setOperationAction(ISD::SUB,                MVT::v4i32, Legal);
-    setOperationAction(ISD::SUB,                MVT::v2i64, Legal);
     setOperationAction(ISD::MUL,                MVT::v8i16, Legal);
     setOperationAction(ISD::FNEG,               MVT::v2f64, Custom);
     setOperationAction(ISD::FABS,               MVT::v2f64, Custom);
@@ -819,10 +789,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::CTTZ,               MVT::v8i16, Custom);
     setOperationAction(ISD::CTTZ,               MVT::v4i32, Custom);
     // ISD::CTTZ v2i64 - scalarization is faster.
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF,    MVT::v16i8, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF,    MVT::v8i16, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF,    MVT::v4i32, Custom);
-    // ISD::CTTZ_ZERO_UNDEF v2i64 - scalarization is faster.
 
     // Custom lower build_vector, vector_shuffle, and extract_vector_elt.
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
@@ -962,26 +928,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i64, MVT::v2i16, Legal);
     setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i64, MVT::v2i32, Legal);
 
-    // i8 and i16 vectors are custom because the source register and source
-    // source memory operand types are not the same width.  f32 vectors are
-    // custom since the immediate controlling the insert encodes additional
-    // information.
+    // i8 vectors are custom because the source register and source
+    // source memory operand types are not the same width.
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v16i8, Custom);
-    setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v8i16, Custom);
-    setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v4i32, Custom);
-    setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v4f32, Custom);
-
-    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v16i8, Custom);
-    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v8i16, Custom);
-    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4i32, Custom);
-    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4f32, Custom);
-
-    // FIXME: these should be Legal, but that's only for the case where
-    // the index is constant.  For now custom expand to deal with that.
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v2i64, Custom);
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i64, Custom);
-    }
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasXOP()) {
@@ -1063,7 +1012,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
       setOperationAction(ISD::CTPOP,           VT, Custom);
       setOperationAction(ISD::CTTZ,            VT, Custom);
-      setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Custom);
     }
 
     if (Subtarget.hasAnyFMA()) {
@@ -1269,6 +1217,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::TRUNCATE,           MVT::v8i32, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE,     MVT::v8i1,  Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE,     MVT::v16i1, Custom);
+    setOperationAction(ISD::VSELECT,            MVT::v8i1,  Expand);
+    setOperationAction(ISD::VSELECT,            MVT::v16i1, Expand);
     if (Subtarget.hasDQI()) {
       setOperationAction(ISD::SINT_TO_FP,       MVT::v8i64, Legal);
       setOperationAction(ISD::UINT_TO_FP,       MVT::v8i64, Legal);
@@ -1354,11 +1304,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UMIN,               MVT::v16i32, Legal);
     setOperationAction(ISD::UMIN,               MVT::v8i64, Legal);
 
-    setOperationAction(ISD::ADD,                MVT::v8i64, Legal);
-    setOperationAction(ISD::ADD,                MVT::v16i32, Legal);
-
-    setOperationAction(ISD::SUB,                MVT::v8i64, Legal);
-    setOperationAction(ISD::SUB,                MVT::v16i32, Legal);
+    setOperationAction(ISD::ADD,                MVT::v8i1,  Expand);
+    setOperationAction(ISD::ADD,                MVT::v16i1, Expand);
+    setOperationAction(ISD::SUB,                MVT::v8i1,  Expand);
+    setOperationAction(ISD::SUB,                MVT::v16i1, Expand);
+    setOperationAction(ISD::MUL,                MVT::v8i1,  Expand);
+    setOperationAction(ISD::MUL,                MVT::v16i1, Expand);
 
     setOperationAction(ISD::MUL,                MVT::v16i32, Legal);
 
@@ -1369,6 +1320,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::AND, VT, Legal);
       setOperationAction(ISD::OR,  VT, Legal);
       setOperationAction(ISD::XOR, VT, Legal);
+      setOperationAction(ISD::CTPOP, VT, Custom);
+      setOperationAction(ISD::CTTZ, VT, Custom);
     }
 
     if (Subtarget.hasCDI()) {
@@ -1449,12 +1402,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v32i1,  &X86::VK32RegClass);
     addRegisterClass(MVT::v64i1,  &X86::VK64RegClass);
 
+    setOperationAction(ISD::ADD,                MVT::v32i1, Expand);
+    setOperationAction(ISD::ADD,                MVT::v64i1, Expand);
+    setOperationAction(ISD::SUB,                MVT::v32i1, Expand);
+    setOperationAction(ISD::SUB,                MVT::v64i1, Expand);
+    setOperationAction(ISD::MUL,                MVT::v32i1, Expand);
+    setOperationAction(ISD::MUL,                MVT::v64i1, Expand);
+
     setOperationAction(ISD::SETCC,              MVT::v32i1, Custom);
     setOperationAction(ISD::SETCC,              MVT::v64i1, Custom);
-    setOperationAction(ISD::ADD,                MVT::v32i16, Legal);
-    setOperationAction(ISD::ADD,                MVT::v64i8, Legal);
-    setOperationAction(ISD::SUB,                MVT::v32i16, Legal);
-    setOperationAction(ISD::SUB,                MVT::v64i8, Legal);
     setOperationAction(ISD::MUL,                MVT::v32i16, Legal);
     setOperationAction(ISD::MUL,                MVT::v64i8, Custom);
     setOperationAction(ISD::MULHS,              MVT::v32i16, Legal);
@@ -1494,6 +1450,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::VECTOR_SHUFFLE,     MVT::v64i1, Custom);
     setOperationAction(ISD::BUILD_VECTOR,       MVT::v32i1, Custom);
     setOperationAction(ISD::BUILD_VECTOR,       MVT::v64i1, Custom);
+    setOperationAction(ISD::VSELECT,            MVT::v32i1, Expand);
+    setOperationAction(ISD::VSELECT,            MVT::v64i1, Expand);
 
     setOperationAction(ISD::SMAX,               MVT::v64i8, Legal);
     setOperationAction(ISD::SMAX,               MVT::v32i16, Legal);
@@ -1529,6 +1487,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::MLOAD,        VT, Legal);
       setOperationAction(ISD::MSTORE,       VT, Legal);
       setOperationAction(ISD::CTPOP,        VT, Custom);
+      setOperationAction(ISD::CTTZ,         VT, Custom);
 
       setOperationPromotedToType(ISD::AND,  VT, MVT::v8i64);
       setOperationPromotedToType(ISD::OR,   VT, MVT::v8i64);
@@ -1539,6 +1498,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.useSoftFloat() && Subtarget.hasVLX()) {
     addRegisterClass(MVT::v4i1,   &X86::VK4RegClass);
     addRegisterClass(MVT::v2i1,   &X86::VK2RegClass);
+
+    setOperationAction(ISD::ADD,                MVT::v2i1, Expand);
+    setOperationAction(ISD::ADD,                MVT::v4i1, Expand);
+    setOperationAction(ISD::SUB,                MVT::v2i1, Expand);
+    setOperationAction(ISD::SUB,                MVT::v4i1, Expand);
+    setOperationAction(ISD::MUL,                MVT::v2i1, Expand);
+    setOperationAction(ISD::MUL,                MVT::v4i1, Expand);
 
     setOperationAction(ISD::TRUNCATE,           MVT::v2i1, Custom);
     setOperationAction(ISD::TRUNCATE,           MVT::v4i1, Custom);
@@ -1554,6 +1520,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR,       MVT::v2i1, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE,     MVT::v2i1, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE,     MVT::v4i1, Custom);
+    setOperationAction(ISD::VSELECT,            MVT::v2i1, Expand);
+    setOperationAction(ISD::VSELECT,            MVT::v4i1, Expand);
 
     for (auto VT : { MVT::v4i32, MVT::v8i32 }) {
       setOperationAction(ISD::AND, VT, Legal);
@@ -20671,6 +20639,18 @@ static SDValue LowerVectorCTPOP(SDValue Op, const X86Subtarget &Subtarget,
     // Extract each 128-bit vector, compute pop count and concat the result.
     SDValue LHS = extract128BitVector(Op0, 0, DAG, DL);
     SDValue RHS = extract128BitVector(Op0, NumElems / 2, DAG, DL);
+
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
+                       LowerVectorCTPOPInRegLUT(LHS, DL, Subtarget, DAG),
+                       LowerVectorCTPOPInRegLUT(RHS, DL, Subtarget, DAG));
+  }
+
+  if (VT.is512BitVector() && !Subtarget.hasBWI()) {
+    unsigned NumElems = VT.getVectorNumElements();
+
+    // Extract each 256-bit vector, compute pop count and concat the result.
+    SDValue LHS = extract256BitVector(Op0, 0, DAG, DL);
+    SDValue RHS = extract256BitVector(Op0, NumElems / 2, DAG, DL);
 
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
                        LowerVectorCTPOPInRegLUT(LHS, DL, Subtarget, DAG),
