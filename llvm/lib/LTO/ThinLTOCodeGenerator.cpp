@@ -152,10 +152,11 @@ bool IsFirstDefinitionForLinker(const GlobalValueInfoList &GVInfo,
   return true;
 }
 
-static GlobalValue::LinkageTypes ResolveODR(const ModuleSummaryIndex &Index,
-                                            StringRef ModuleIdentifier,
-                                            GlobalValue::GUID GUID,
-                                            const GlobalValueSummary &GV) {
+static GlobalValue::LinkageTypes
+ResolveODR(const ModuleSummaryIndex &Index,
+           const FunctionImporter::ExportSetTy &ExportList,
+           StringRef ModuleIdentifier, GlobalValue::GUID GUID,
+           const GlobalValueSummary &GV) {
   auto HasMultipleCopies =
       [&](const GlobalValueInfoList &GVInfo) { return GVInfo.size() > 1; };
 
@@ -176,13 +177,19 @@ static GlobalValue::LinkageTypes ResolveODR(const ModuleSummaryIndex &Index,
     auto &GVInfo = Index.findGlobalValueInfoList(GUID)->second;
     // We need to emit only one of these, the first module will keep
     // it, but turned into a weak while the others will drop it.
-    if (!HasMultipleCopies(GVInfo))
+    if (!HasMultipleCopies(GVInfo)) {
+      // Exported LinkonceODR needs to be promoted to not be discarded
+      if (GlobalValue::isDiscardableIfUnused(OriginalLinkage) &&
+          ExportList.count(GUID))
+        return GlobalValue::WeakODRLinkage;
       break;
+    }
     if (IsFirstDefinitionForLinker(GVInfo, Index, ModuleIdentifier))
       return GlobalValue::WeakODRLinkage;
-    else
-      return GlobalValue::AvailableExternallyLinkage;
-    break;
+    else if (isa<AliasSummary>(&GV))
+      // Alias can't be turned into available_externally.
+      return OriginalLinkage;
+    return GlobalValue::AvailableExternallyLinkage;
   }
   }
   return OriginalLinkage;
@@ -196,6 +203,7 @@ static GlobalValue::LinkageTypes ResolveODR(const ModuleSummaryIndex &Index,
 /// one copy.
 static void ResolveODR(
     const ModuleSummaryIndex &Index,
+    const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValueSummary *> &DefinedGlobals,
     StringRef ModuleIdentifier,
     DenseMap<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR) {
@@ -215,7 +223,8 @@ static void ResolveODR(
   for (auto &GV : DefinedGlobals) {
     if (GlobalInvolvedWithAlias.count(GV.second))
       continue;
-    auto NewLinkage = ResolveODR(Index, ModuleIdentifier, GV.first, *GV.second);
+    auto NewLinkage =
+        ResolveODR(Index, ExportList, ModuleIdentifier, GV.first, *GV.second);
     if (NewLinkage != GV.second->linkage()) {
       ResolvedODR[GV.first] = NewLinkage;
     }
@@ -236,6 +245,14 @@ void fixupODR(
     GV.setLinkage(NewLinkage->second);
   }
   for (auto &GV : TheModule.globals()) {
+    auto NewLinkage = ResolvedODR.find(GV.getGUID());
+    if (NewLinkage == ResolvedODR.end())
+      continue;
+    DEBUG(dbgs() << "ODR fixing up linkage for `" << GV.getName() << "` from "
+                 << GV.getLinkage() << " to " << NewLinkage->second << "\n");
+    GV.setLinkage(NewLinkage->second);
+  }
+  for (auto &GV : TheModule.aliases()) {
     auto NewLinkage = ResolvedODR.find(GV.getGUID());
     if (NewLinkage == ResolvedODR.end())
       continue;
@@ -483,17 +500,25 @@ std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
  */
 void ThinLTOCodeGenerator::promote(Module &TheModule,
                                    ModuleSummaryIndex &Index) {
+  auto ModuleCount = Index.modulePaths().size();
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
   // Collect for each module the list of function it defines (GUID -> Summary).
   StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
       ModuleToDefinedGVSummaries;
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
+  // Generate import/export list
+  StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  StringMap<FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
+  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
+                           ExportLists);
+  auto &ExportList = ExportLists[ModuleIdentifier];
+
   // Resolve the LinkOnceODR, trying to turn them into "available_externally"
   // where possible.
   // This is a compile-time optimization.
   DenseMap<GlobalValue::GUID, GlobalValue::LinkageTypes> ResolvedODR;
-  ResolveODR(Index, ModuleToDefinedGVSummaries[ModuleIdentifier],
+  ResolveODR(Index, ExportList, ModuleToDefinedGVSummaries[ModuleIdentifier],
              ModuleIdentifier, ResolvedODR);
   fixupODR(TheModule, ResolvedODR);
 
@@ -606,9 +631,11 @@ void ThinLTOCodeGenerator::run() {
         LLVMContext Context;
         Context.setDiscardValueNames(LTODiscardValueNames);
         auto ModuleIdentifier = ModuleBuffer.getBufferIdentifier();
+        auto &ExportList = ExportLists[ModuleIdentifier];
 
         DenseMap<GlobalValue::GUID, GlobalValue::LinkageTypes> ResolvedODR;
-        ResolveODR(*Index, ModuleToDefinedGVSummaries[ModuleIdentifier],
+        ResolveODR(*Index, ExportList,
+                   ModuleToDefinedGVSummaries[ModuleIdentifier],
                    ModuleIdentifier, ResolvedODR);
 
         // Parse module now
