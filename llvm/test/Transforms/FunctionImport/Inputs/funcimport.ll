@@ -99,4 +99,46 @@ entry:
   ret void
 }
 
+define void @referencelargelinkonce() #0 {
+entry:
+  call void @linkonceodr()
+  ret void
+}
+
+; A large enough linkonce_odr function that should never be imported
+define linkonce_odr void @linkonceodr() #0 {
+entry:
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  call void @globalfunc2()
+  ret void
+}
+
 
