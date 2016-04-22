@@ -124,7 +124,7 @@ int __tsan_get_report_mutex(void *report, uptr idx, uptr *mutex_id, void **addr,
 
 // Returns information about threads included in the report.
 SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_get_report_thread(void *report, uptr idx, int *tid, uptr *pid,
+int __tsan_get_report_thread(void *report, uptr idx, int *tid, uptr *os_id,
                              int *running, const char **name, int *parent_tid,
                              void **trace, uptr trace_size);
 
