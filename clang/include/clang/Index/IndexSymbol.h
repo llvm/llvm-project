@@ -59,12 +59,13 @@ enum class SymbolLanguage {
   CXX,
 };
 
-enum class SymbolCXXTemplateKind {
-  NonTemplate,
-  Template,
-  TemplatePartialSpecialization,
-  TemplateSpecialization,
+enum class SymbolSubKind : uint8_t {
+  Generic                       = 1 << 0,
+  TemplatePartialSpecialization = 1 << 1,
+  TemplateSpecialization        = 1 << 2,
 };
+static const unsigned SymbolSubKindBitNum = 3;
+typedef unsigned SymbolSubKindSet;
 
 /// Set of roles that are attributed to symbol occurrences.
 enum class SymbolRole : uint16_t {
@@ -99,7 +100,7 @@ struct SymbolRelation {
 
 struct SymbolInfo {
   SymbolKind Kind;
-  SymbolCXXTemplateKind TemplateKind;
+  SymbolSubKindSet SubKinds;
   SymbolLanguage Lang;
 };
 
@@ -113,8 +114,11 @@ void printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS);
 bool printSymbolName(const Decl *D, const LangOptions &LO, raw_ostream &OS);
 
 StringRef getSymbolKindString(SymbolKind K);
-StringRef getTemplateKindStr(SymbolCXXTemplateKind TK);
 StringRef getSymbolLanguageString(SymbolLanguage K);
+
+void applyForEachSymbolSubKind(SymbolSubKindSet SubKinds,
+                            llvm::function_ref<void(SymbolSubKind)> Fn);
+void printSymbolSubKinds(SymbolSubKindSet SubKinds, raw_ostream &OS);
 
 } // namespace index
 } // namespace clang
