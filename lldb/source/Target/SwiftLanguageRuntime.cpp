@@ -28,6 +28,7 @@
 #include "swift/AST/Types.h"
 #include "swift/Basic/Demangle.h"
 #include "swift/Remote/MemoryReader.h"
+#include "swift/RemoteAST/RemoteAST.h"
 
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Debugger.h"
@@ -92,7 +93,8 @@ SwiftLanguageRuntime::SwiftLanguageRuntime (Process *process) :
     m_negative_cache_mutex(Mutex::eMutexTypeNormal),
     m_loaded_DumpForDebugger(eLazyBoolCalculate),
     m_SwiftNativeNSErrorISA(),
-    m_memory_reader_sp()
+    m_memory_reader_sp(),
+    m_promises_map()
 {
     SetupSwiftObject();
     SetupSwiftError();
@@ -1190,6 +1192,38 @@ SwiftLanguageRuntime::GetMemoryReader ()
     return m_memory_reader_sp;
 }
 
+SwiftASTContext*
+SwiftLanguageRuntime::GetScratchSwiftASTContext ()
+{
+    Error error;
+    return m_process->GetTarget().GetScratchSwiftASTContext(error);
+}
+
+SwiftLanguageRuntime::MetadataPromise::MetadataPromise (swift::ASTContext *ast_ctx,
+                                                        SwiftLanguageRuntime *runtime,
+                                                        lldb::addr_t location) :
+m_swift_ast(ast_ctx),
+m_swift_runtime(runtime),
+m_metadata_location(location)
+{
+    lldbassert(m_swift_ast && "MetadataPromise requires a swift::ASTContext");
+    lldbassert(m_swift_runtime && "MetadataPromise requires a SwiftLanguageRuntime");
+    m_remote_ast.reset(new swift::remoteAST::RemoteASTContext(*ast_ctx, m_swift_runtime->GetMemoryReader()));
+}
+
+CompilerType
+SwiftLanguageRuntime::MetadataPromise::FulfillPromise ()
+{
+    if (m_compiler_type.hasValue())
+        return m_compiler_type.getValue();
+    
+    // FIXME: dropping the error
+    if (swift::remoteAST::Result<swift::Type> result = m_remote_ast->getTypeForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location)))
+        return (m_compiler_type = CompilerType(m_swift_ast, result.getValue().getPointer())).getValue();
+    else
+        return (m_compiler_type = CompilerType()).getValue();
+}
+
 static inline swift::Type
 GetSwiftType (const CompilerType& type)
 {
@@ -1434,6 +1468,41 @@ SwiftLanguageRuntime::GetMetadataForLocation (lldb::addr_t addr)
     if (metadata_sp)
         m_metadata_cache.emplace(addr,metadata_sp);
     return metadata_sp;
+}
+
+size_t
+SwiftLanguageRuntime::MetadataPromiseKeyHasher::operator()(const std::tuple<swift::ASTContext*,lldb::addr_t> &key) const
+{
+    // fairly trivial hash combiner function
+    auto hash1 = std::hash<swift::ASTContext*>()(std::get<0>(key));
+    auto hash2 = std::hash<lldb::addr_t>()(std::get<1>(key));
+    return hash2 + 0x9e3779b9 + (hash1<<6) + (hash1>>2);
+}
+
+SwiftLanguageRuntime::MetadataPromiseSP
+SwiftLanguageRuntime::GetMetadataPromise (lldb::addr_t addr,
+                                          SwiftASTContext* swift_ast_ctx)
+{
+    if (!swift_ast_ctx)
+        swift_ast_ctx = GetScratchSwiftASTContext();
+    
+    if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
+        return nullptr;
+
+    if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
+        return nullptr;
+    
+    MetadataPromiseKey key{swift_ast_ctx->GetASTContext(),addr};
+    
+    auto iter = m_promises_map.find(key), end = m_promises_map.end();
+    if (iter != end)
+        return iter->second;
+    
+    MetadataPromiseSP promise_sp(new MetadataPromise(std::get<0>(key),
+                                                     this,
+                                                     std::get<1>(key)));
+    m_promises_map.emplace(key, promise_sp);
+    return promise_sp;
 }
 
 SwiftLanguageRuntime::MetadataUtils::MetadataUtils (SwiftLanguageRuntime& runtime,

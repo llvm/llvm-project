@@ -15,6 +15,7 @@
 
 // C Includes
 // C++ Includes
+#include <tuple>
 #include <vector>
 // Other libraries and framework includes
 // Project includes
@@ -50,6 +51,9 @@ public:
     
     class NominalTypeDescriptor;
     typedef std::shared_ptr<NominalTypeDescriptor> NominalTypeDescriptorSP;
+    
+    class MetadataPromise;
+    typedef std::shared_ptr<MetadataPromise> MetadataPromiseSP;
     
     //------------------------------------------------------------------
     // Static Functions
@@ -184,6 +188,25 @@ public:
         Type m_type;
         bool m_parsed;
         bool m_parse_error;
+    };
+    
+    class MetadataPromise
+    {
+        friend class SwiftLanguageRuntime;
+        
+        MetadataPromise (swift::ASTContext *,
+                         SwiftLanguageRuntime *,
+                         lldb::addr_t);
+        
+        CompilerType
+        FulfillPromise ();
+        
+    private:
+        swift::ASTContext *m_swift_ast;
+        std::unique_ptr<swift::remoteAST::RemoteASTContext> m_remote_ast;
+        SwiftLanguageRuntime *m_swift_runtime;
+        lldb::addr_t m_metadata_location;
+        llvm::Optional<CompilerType> m_compiler_type;
     };
     
     class MetadataUtils
@@ -1408,6 +1431,10 @@ public:
     virtual MetadataSP
     GetMetadataForLocation (lldb::addr_t addr);
     
+    virtual MetadataPromiseSP
+    GetMetadataPromise (lldb::addr_t addr,
+                        SwiftASTContext* swift_ast_ctx = nullptr);
+    
     virtual MetadataSP
     GetMetadataForType (CompilerType type);
     
@@ -1547,6 +1574,9 @@ protected:
     std::shared_ptr<swift::remote::MemoryReader>
     GetMemoryReader ();
     
+    SwiftASTContext*
+    GetScratchSwiftASTContext ();
+    
     // the Swift runtime assumes that metadata will not go away, so caching
     // by address is a reasonable strategy
     std::map<lldb::addr_t, MetadataSP> m_metadata_cache;
@@ -1564,7 +1594,18 @@ protected:
     LazyBool m_loaded_DumpForDebugger;
     
     llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
+
     std::shared_ptr<swift::remote::MemoryReader> m_memory_reader_sp;
+    
+    typedef std::tuple<swift::ASTContext*,lldb::addr_t> MetadataPromiseKey;
+    
+    struct MetadataPromiseKeyHasher
+    {
+        size_t
+        operator()(const std::tuple<swift::ASTContext*,lldb::addr_t> &key) const;
+    };
+    
+    std::unordered_map<MetadataPromiseKey, MetadataPromiseSP, MetadataPromiseKeyHasher> m_promises_map;
 
 private:
     DISALLOW_COPY_AND_ASSIGN (SwiftLanguageRuntime);
