@@ -143,11 +143,18 @@ static const Target *GetTarget(const MachOObjectFile *MachOObj,
                                const char **McpuDefault,
                                const Target **ThumbTarget) {
   // Figure out the target triple.
+  llvm::Triple TT(TripleName);
   if (TripleName.empty()) {
-    llvm::Triple TT("unknown-unknown-unknown");
-    llvm::Triple ThumbTriple = Triple();
-    TT = MachOObj->getArch(McpuDefault, &ThumbTriple);
+    TT = MachOObj->getArchTriple(McpuDefault);
     TripleName = TT.str();
+  }
+
+  if (TT.getArch() == Triple::arm) {
+    // We've inferred a 32-bit ARM target from the object file. All MachO CPUs
+    // that support ARM are also capable of Thumb mode.
+    llvm::Triple ThumbTriple = TT;
+    std::string ThumbName = (Twine("thumb") + TT.getArchName().substr(3)).str();
+    ThumbTriple.setArchName(ThumbName);
     ThumbTripleName = ThumbTriple.str();
   }
 
@@ -1127,10 +1134,10 @@ static bool checkMachOAndArchFlags(ObjectFile *O, StringRef Filename) {
     Triple T;
     if (MachO->is64Bit()) {
       H_64 = MachO->MachOObjectFile::getHeader64();
-      T = MachOObjectFile::getArch(H_64.cputype, H_64.cpusubtype);
+      T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype);
     } else {
       H = MachO->MachOObjectFile::getHeader();
-      T = MachOObjectFile::getArch(H.cputype, H.cpusubtype);
+      T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype);
     }
     unsigned i;
     for (i = 0; i < ArchFlags.size(); ++i) {
