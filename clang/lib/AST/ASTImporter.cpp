@@ -3052,7 +3052,7 @@ Decl *ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
                                          D->getInClassInitStyle());
   ToField->setAccess(D->getAccess());
   ToField->setLexicalDeclContext(LexicalDC);
-  if (Expr *FromInitializer = ToField->getInClassInitializer()) {
+  if (Expr *FromInitializer = D->getInClassInitializer()) {
     Expr *ToInitializer = Importer.Import(FromInitializer);
     if (ToInitializer)
       ToField->setInClassInitializer(ToInitializer);
