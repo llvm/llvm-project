@@ -122,6 +122,11 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                  /*Replacement=*/StringRef()));
   }
 
+  // swift_private
+  if (Info.SwiftPrivate && !D->hasAttr<SwiftPrivateAttr>()) {
+    D->addAttr(SwiftPrivateAttr::CreateImplicit(S.Context));
+  }
+
   // swift_name
   if (!Info.SwiftName.empty() && !D->hasAttr<SwiftNameAttr>()) {
     D->addAttr(SwiftNameAttr::CreateImplicit(S.Context,
