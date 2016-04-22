@@ -570,10 +570,13 @@ protected:
     const __node_allocator& __node_alloc() const _NOEXCEPT
         {return __size_alloc_.second();}
 
+    _LIBCPP_INLINE_VISIBILITY
     static void __unlink_nodes(__link_pointer __f, __link_pointer __l) _NOEXCEPT;
 
+    _LIBCPP_INLINE_VISIBILITY
     __list_imp()
         _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value);
+    _LIBCPP_INLINE_VISIBILITY
     __list_imp(const allocator_type& __a);
     ~__list_imp();
     void clear() _NOEXCEPT;
@@ -666,7 +669,7 @@ private:
 
 // Unlink nodes [__f, __l]
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 __list_imp<_Tp, _Alloc>::__unlink_nodes(__link_pointer __f, __link_pointer __l)
     _NOEXCEPT
@@ -676,7 +679,7 @@ __list_imp<_Tp, _Alloc>::__unlink_nodes(__link_pointer __f, __link_pointer __l)
 }
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 __list_imp<_Tp, _Alloc>::__list_imp()
         _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value)
     : __size_alloc_(0)
@@ -684,7 +687,7 @@ __list_imp<_Tp, _Alloc>::__list_imp()
 }
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 __list_imp<_Tp, _Alloc>::__list_imp(const allocator_type& __a)
     : __size_alloc_(0, __node_allocator(__a))
 {
@@ -858,15 +861,19 @@ public:
 
     list(const list& __c);
     list(const list& __c, const allocator_type& __a);
+    _LIBCPP_INLINE_VISIBILITY
     list& operator=(const list& __c);
 #ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     list(initializer_list<value_type> __il);
     list(initializer_list<value_type> __il, const allocator_type& __a);
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    _LIBCPP_INLINE_VISIBILITY
     list(list&& __c)
         _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value);
+    _LIBCPP_INLINE_VISIBILITY
     list(list&& __c, const allocator_type& __a);
+    _LIBCPP_INLINE_VISIBILITY
     list& operator=(list&& __c)
         _NOEXCEPT_(
             __node_alloc_traits::propagate_on_container_move_assignment::value &&
@@ -888,6 +895,7 @@ public:
         {assign(__il.begin(), __il.end());}
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
+    _LIBCPP_INLINE_VISIBILITY
     allocator_type get_allocator() const _NOEXCEPT;
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1024,9 +1032,11 @@ public:
 
     void remove(const value_type& __x);
     template <class _Pred> void remove_if(_Pred __pred);
+    _LIBCPP_INLINE_VISIBILITY
     void unique();
     template <class _BinaryPred>
         void unique(_BinaryPred __binary_pred);
+    _LIBCPP_INLINE_VISIBILITY
     void merge(list& __c);
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
@@ -1039,8 +1049,10 @@ public:
     _LIBCPP_INLINE_VISIBILITY
         void merge(list&& __c, _Comp __comp) {merge(__c, __comp);}
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    _LIBCPP_INLINE_VISIBILITY
     void sort();
     template <class _Comp>
+        _LIBCPP_INLINE_VISIBILITY
         void sort(_Comp __comp);
 
     void reverse() _NOEXCEPT;
@@ -1057,8 +1069,11 @@ public:
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
 
 private:
+    _LIBCPP_INLINE_VISIBILITY
     static void __link_nodes  (__link_pointer __p, __link_pointer __f, __link_pointer __l);
+    _LIBCPP_INLINE_VISIBILITY
     void __link_nodes_at_front(__link_pointer __f, __link_pointer __l);
+    _LIBCPP_INLINE_VISIBILITY
     void __link_nodes_at_back (__link_pointer __f, __link_pointer __l);
     iterator __iterator(size_type __n);
     template <class _Comp>
@@ -1071,7 +1086,7 @@ private:
 
 // Link in nodes [__f, __l] just prior to __p
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 list<_Tp, _Alloc>::__link_nodes(__link_pointer __p, __link_pointer __f, __link_pointer __l)
 {
@@ -1083,7 +1098,7 @@ list<_Tp, _Alloc>::__link_nodes(__link_pointer __p, __link_pointer __f, __link_p
 
 // Link in nodes [__f, __l] at the front of the list
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 list<_Tp, _Alloc>::__link_nodes_at_front(__link_pointer __f, __link_pointer __l)
 {
@@ -1095,7 +1110,7 @@ list<_Tp, _Alloc>::__link_nodes_at_front(__link_pointer __f, __link_pointer __l)
 
 // Link in nodes [__f, __l] at the front of the list
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 list<_Tp, _Alloc>::__link_nodes_at_back(__link_pointer __f, __link_pointer __l)
 {
@@ -1107,7 +1122,7 @@ list<_Tp, _Alloc>::__link_nodes_at_back(__link_pointer __f, __link_pointer __l)
 
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename list<_Tp, _Alloc>::iterator
 list<_Tp, _Alloc>::__iterator(size_type __n)
 {
@@ -1243,7 +1258,7 @@ list<_Tp, _Alloc>::list(initializer_list<value_type> __il)
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 list<_Tp, _Alloc>&
 list<_Tp, _Alloc>::operator=(const list& __c)
 {
@@ -1258,7 +1273,7 @@ list<_Tp, _Alloc>::operator=(const list& __c)
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 list<_Tp, _Alloc>::list(list&& __c)
     _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value)
     : base(allocator_type(_VSTD::move(__c.__node_alloc())))
@@ -1270,7 +1285,7 @@ list<_Tp, _Alloc>::list(list&& __c)
 }
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 list<_Tp, _Alloc>::list(list&& __c, const allocator_type& __a)
     : base(__a)
 {
@@ -1287,7 +1302,7 @@ list<_Tp, _Alloc>::list(list&& __c, const allocator_type& __a)
 }
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 list<_Tp, _Alloc>&
 list<_Tp, _Alloc>::operator=(list&& __c)
         _NOEXCEPT_(
@@ -1355,7 +1370,7 @@ list<_Tp, _Alloc>::assign(size_type __n, const value_type& __x)
 }
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 _Alloc
 list<_Tp, _Alloc>::get_allocator() const _NOEXCEPT
 {
@@ -2108,7 +2123,7 @@ list<_Tp, _Alloc>::remove_if(_Pred __pred)
 }
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 list<_Tp, _Alloc>::unique()
 {
@@ -2131,7 +2146,7 @@ list<_Tp, _Alloc>::unique(_BinaryPred __binary_pred)
 }
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 list<_Tp, _Alloc>::merge(list& __c)
 {
@@ -2193,7 +2208,7 @@ list<_Tp, _Alloc>::merge(list& __c, _Comp __comp)
 }
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 list<_Tp, _Alloc>::sort()
 {
@@ -2202,7 +2217,7 @@ list<_Tp, _Alloc>::sort()
 
 template <class _Tp, class _Alloc>
 template <class _Comp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 list<_Tp, _Alloc>::sort(_Comp __comp)
 {

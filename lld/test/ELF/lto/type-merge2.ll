@@ -1,6 +1,6 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-as %p/Inputs/type-merge2.ll -o %t2.o
-; RUN: ld.lld -m elf_x86_64 %t.o %t2.o -o %t.so -shared -save-temps
+; RUN: ld.lld -m elf_x86_64 %t.o %t2.o -o %t.so -shared -save-temps -lto-no-discard-value-names
 ; RUN: llvm-dis %t.so.lto.bc -o - | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"

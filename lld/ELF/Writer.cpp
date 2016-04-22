@@ -431,6 +431,48 @@ template <class ELFT> static bool isAbsolute(const SymbolBody &Body) {
   return false;
 }
 
+namespace {
+enum PltNeed { Plt_No, Plt_Explicit, Plt_Implicit };
+}
+
+static bool needsPlt(RelExpr Expr) {
+  return Expr == R_PLT_PC || Expr == R_PPC_PLT_OPD || Expr == R_PLT;
+}
+
+static PltNeed needsPlt(RelExpr Expr, uint32_t Type, const SymbolBody &S) {
+  if (S.isGnuIFunc())
+    return Plt_Explicit;
+  if (S.isPreemptible() && needsPlt(Expr))
+    return Plt_Explicit;
+
+  // This handles a non PIC program call to function in a shared library.
+  // In an ideal world, we could just report an error saying the relocation
+  // can overflow at runtime.
+  // In the real world with glibc, crt1.o has a R_X86_64_PC32 pointing to
+  // libc.so.
+  //
+  // The general idea on how to handle such cases is to create a PLT entry
+  // and use that as the function value.
+  //
+  // For the static linking part, we just return true and everything else
+  // will use the the PLT entry as the address.
+  //
+  // The remaining problem is making sure pointer equality still works. We
+  // need the help of the dynamic linker for that. We let it know that we have
+  // a direct reference to a so symbol by creating an undefined symbol with a
+  // non zero st_value. Seeing that, the dynamic linker resolves the symbol to
+  // the value of the symbol we created. This is true even for got entries, so
+  // pointer equality is maintained. To avoid an infinite loop, the only entry
+  // that points to the real function is a dedicated got entry used by the
+  // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
+  // R_386_JMP_SLOT, etc).
+  if (S.isShared() && !Config->Pic && S.isFunc())
+    if (!refersToGotEntry(Expr))
+      return Plt_Implicit;
+
+  return Plt_No;
+}
+
 // The reason we have to do this early scan is as follows
 // * To mmap the output file, we need to know the size
 // * For that, we need to know how many dynamic relocs we will have.
@@ -516,7 +558,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     // in a read-only section, we need to create a copy relocation for the
     // symbol.
     if (auto *B = dyn_cast<SharedSymbol<ELFT>>(&Body)) {
-      if (IsAlloc && !IsWrite && Target->needsCopyRel<ELFT>(Type, *B)) {
+      if (IsAlloc && !IsWrite && Target->needsCopyRel(Type, *B)) {
         if (!B->needsCopy())
           addCopyRelSymbol(B);
         C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
@@ -528,16 +570,16 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 
     // If a relocation needs PLT, we create a PLT and a GOT slot
     // for the symbol.
-    TargetInfo::PltNeed NeedPlt = Target->needsPlt(Type, Body);
+    PltNeed NeedPlt = needsPlt(Expr, Type, Body);
     if (NeedPlt) {
-      if (NeedPlt == TargetInfo::Plt_Implicit)
+      if (NeedPlt == Plt_Implicit)
         Body.NeedsCopyOrPltAddr = true;
-      RelExpr E;
+      RelExpr E = Expr;
       if (Expr == R_PPC_OPD)
         E = R_PPC_PLT_OPD;
       else if (Expr == R_PC)
         E = R_PLT_PC;
-      else
+      else if (Expr == R_ABS)
         E = R_PLT;
       C.Relocations.push_back({E, Type, Offset, Addend, &Body});
 
@@ -566,6 +608,15 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       }
       continue;
     }
+
+    // We decided not to use a plt. Optimize a reference to the plt to a
+    // reference to the symbol itself.
+    if (Expr == R_PLT_PC)
+      Expr = R_PC;
+    if (Expr == R_PPC_PLT_OPD)
+      Expr = R_PPC_OPD;
+    if (Expr == R_PLT)
+      Expr = R_ABS;
 
     if (Target->needsThunk(Type, File, Body)) {
       C.Relocations.push_back({R_THUNK, Type, Offset, Addend, &Body});
@@ -1002,15 +1053,6 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
   return true;
 }
 
-static bool includeInDynsym(const SymbolBody &B) {
-  if (B.MustBeInDynSym)
-    return true;
-  uint8_t V = B.getVisibility();
-  if (V != STV_DEFAULT && V != STV_PROTECTED)
-    return false;
-  return Config->ExportDynamic || Config->Shared;
-}
-
 // This class knows how to create an output section for a given
 // input section. Output section type is determined by various
 // factors, including input section's sh_flags, sh_type and
@@ -1134,8 +1176,9 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (!isOutputDynamic())
     Symtab.addIgnored("__tls_get_addr");
 
-  auto Define = [this](StringRef S, typename ElfSym<ELFT>::SymPair &Sym) {
-    Sym.first = Symtab.addIgnored(S, STV_DEFAULT);
+  auto Define = [this](StringRef S, DefinedRegular<ELFT> *&Sym1,
+                       DefinedRegular<ELFT> *&Sym2) {
+    Sym1 = Symtab.addIgnored(S, STV_DEFAULT);
 
     // The name without the underscore is not a reserved name,
     // so it is defined only when there is a reference against it.
@@ -1143,12 +1186,12 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     S = S.substr(1);
     if (SymbolBody *B = Symtab.find(S))
       if (B->isUndefined())
-        Sym.second = Symtab.addAbsolute(S, STV_DEFAULT);
+        Sym2 = Symtab.addAbsolute(S, STV_DEFAULT);
   };
 
-  Define("_end", ElfSym<ELFT>::End);
-  Define("_etext", ElfSym<ELFT>::Etext);
-  Define("_edata", ElfSym<ELFT>::Edata);
+  Define("_end", ElfSym<ELFT>::End, ElfSym<ELFT>::End2);
+  Define("_etext", ElfSym<ELFT>::Etext, ElfSym<ELFT>::Etext2);
+  Define("_edata", ElfSym<ELFT>::Edata, ElfSym<ELFT>::Edata2);
 }
 
 // Sort input sections by section name suffixes for
@@ -1283,7 +1326,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     if (Out<ELFT>::SymTab)
       Out<ELFT>::SymTab->addSymbol(Body);
 
-    if (isOutputDynamic() && includeInDynsym(*Body))
+    if (isOutputDynamic() && Body->includeInDynsym())
       Out<ELFT>::DynSymTab->addSymbol(Body);
   }
 
@@ -1677,18 +1720,18 @@ static uint16_t getELFType() {
   return ET_EXEC;
 }
 
-template <class ELFT, class SymPair, class uintX_t>
-static void assignSymValue(SymPair &Sym, uintX_t Val) {
-  if (Sym.first)
-    Sym.first->Value = Val;
-  if (Sym.second)
-    Sym.second->Value = Val;
-}
-
 // This function is called after we have assigned address and size
 // to each section. This function fixes some predefined absolute
 // symbol values that depend on section address and size.
 template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
+  auto Set = [](DefinedRegular<ELFT> *&S1, DefinedRegular<ELFT> *&S2,
+                uintX_t V) {
+    if (S1)
+      S1->Value = V;
+    if (S2)
+      S2->Value = V;
+  };
+
   // _etext is the first location after the last read-only loadable segment.
   // _edata is the first location after the last read-write loadable segment.
   // _end is the first location after the uninitialized data region.
@@ -1696,13 +1739,13 @@ template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
     Elf_Phdr &H = P.H;
     if (H.p_type != PT_LOAD)
       continue;
-    assignSymValue<ELFT>(ElfSym<ELFT>::End, H.p_vaddr + H.p_memsz);
+    Set(ElfSym<ELFT>::End, ElfSym<ELFT>::End2, H.p_vaddr + H.p_memsz);
 
     uintX_t Val = H.p_vaddr + H.p_filesz;
     if (H.p_flags & PF_W)
-      assignSymValue<ELFT>(ElfSym<ELFT>::Edata, Val);
+      Set(ElfSym<ELFT>::Edata, ElfSym<ELFT>::Edata2, Val);
     else
-      assignSymValue<ELFT>(ElfSym<ELFT>::Etext, Val);
+      Set(ElfSym<ELFT>::Etext, ElfSym<ELFT>::Etext2, Val);
   }
 }
 

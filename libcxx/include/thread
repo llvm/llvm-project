@@ -219,7 +219,7 @@ _LIBCPP_INLINE_VISIBILITY __thread_id get_id() _NOEXCEPT;
 
 }  // this_thread
 
-template<> struct _LIBCPP_TYPE_VIS_ONLY hash<__thread_id>;
+template<> struct hash<__thread_id>;
 
 class _LIBCPP_TYPE_VIS_ONLY __thread_id
 {

@@ -378,7 +378,7 @@ namespace lldb {
     ///
     /// These enumerations use the same language enumerations as the DWARF
     /// specification for ease of use and consistency.
-    /// The enum -> string code is in LanguageRuntime.cpp, don't change this
+    /// The enum -> string code is in Language.cpp, don't change this
     /// table without updating that code as well.
     //----------------------------------------------------------------------
     enum LanguageType

@@ -69,10 +69,12 @@ Clang-Tidy Checks
    misc-sizeof-container
    misc-sizeof-expression
    misc-static-assert
+   misc-string-constructor
    misc-string-integer-assignment
    misc-string-literal-with-embedded-nul
    misc-suspicious-missing-comma
    misc-suspicious-semicolon
+   misc-suspicious-string-compare   
    misc-swapped-arguments
    misc-throw-by-value-catch-by-reference
    misc-undelegated-constructor

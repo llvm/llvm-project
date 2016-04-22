@@ -24,11 +24,6 @@ AST_MATCHER(FloatingLiteral, floatHalf) {
     return literal.convertToDouble() == 0.5;
   return false;
 }
-
-// TODO(hokein): Moving it to ASTMatchers.h
-AST_MATCHER(BuiltinType, isFloatingPoint) {
-  return Node.isFloatingPoint();
-}
 } // namespace ast_matchers
 } // namespace clang
 
@@ -42,7 +37,7 @@ void IncorrectRoundings::registerMatchers(MatchFinder *MatchFinder) {
   auto FloatHalf = floatLiteral(floatHalf());
 
   // Match a floating point expression.
-  auto FloatType = expr(hasType(builtinType(isFloatingPoint())));
+  auto FloatType = expr(hasType(realFloatingPointType()));
 
   // Match a floating literal of 0.5 or a floating literal of 0.5 implicitly.
   // cast to floating type.

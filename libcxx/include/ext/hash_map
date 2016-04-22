@@ -549,6 +549,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator, const value_type& __x) {return insert(__x).first;}
     template <class _InputIterator>
+        _LIBCPP_INLINE_VISIBILITY
         void insert(_InputIterator __first, _InputIterator __last);
 
     _LIBCPP_INLINE_VISIBILITY
@@ -674,7 +675,7 @@ hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node(const key_type& __k)
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::insert(_InputIterator __first,
                                                        _InputIterator __last)
@@ -820,6 +821,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator, const value_type& __x) {return insert(__x);}
     template <class _InputIterator>
+        _LIBCPP_INLINE_VISIBILITY
         void insert(_InputIterator __first, _InputIterator __last);
 
     _LIBCPP_INLINE_VISIBILITY
@@ -927,7 +929,7 @@ hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_multimap(
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::insert(_InputIterator __first,
                                                             _InputIterator __last)

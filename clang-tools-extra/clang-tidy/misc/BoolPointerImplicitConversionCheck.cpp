@@ -17,7 +17,6 @@ namespace {
 AST_MATCHER(CastExpr, isPointerToBoolean) {
   return Node.getCastKind() == CK_PointerToBoolean;
 }
-AST_MATCHER(QualType, isBoolean) { return Node->isBooleanType(); }
 
 } // namespace
 
@@ -31,7 +30,7 @@ void BoolPointerImplicitConversionCheck::registerMatchers(MatchFinder *Finder) {
       ifStmt(hasCondition(findAll(implicitCastExpr(
                  allOf(unless(hasParent(unaryOperator(hasOperatorName("!")))),
                        hasSourceExpression(expr(
-                           hasType(pointerType(pointee(isBoolean()))),
+                           hasType(pointerType(pointee(booleanType()))),
                            ignoringParenImpCasts(declRefExpr().bind("expr")))),
                        isPointerToBoolean())))),
              unless(isInTemplateInstantiation())).bind("if"),

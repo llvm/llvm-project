@@ -118,6 +118,11 @@ identified.  The improvements since the 3.8 release include:
 
   Warns about incorrect uses of ``sizeof`` operator.
 
+- New `misc-string-constructor
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-string-constructor.html>`_ check
+
+  Finds string constructors that are suspicious and probably errors.
+
 - New `misc-string-literal-with-embedded-nul
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-string-literal-with-embedded-nul.html>`_ check
 
@@ -134,6 +139,11 @@ identified.  The improvements since the 3.8 release include:
 
   Finds most instances of stray semicolons that unexpectedly alter the meaning
   of the code.
+
+- New `misc-suspicious-string-compare
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-suspicious-string-compare.html>`_ check
+
+  Find suspicious usage of runtime string comparison functions.
 
 - New `misc-unused-using-decls
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-unused-using-decls.html>`_ check

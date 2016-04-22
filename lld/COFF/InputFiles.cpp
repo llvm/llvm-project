@@ -8,25 +8,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "Chunks.h"
+#include "Config.h"
 #include "Error.h"
 #include "InputFiles.h"
 #include "Symbols.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTOModule.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/COFF.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Target/TargetOptions.h"
+#include "llvm-c/lto.h"
+#include <cstring>
+#include <system_error>
+#include <utility>
 
 using namespace llvm::COFF;
 using namespace llvm::object;
 using namespace llvm::support::endian;
+
 using llvm::Triple;
 using llvm::support::ulittle32_t;
-using llvm::sys::fs::file_magic;
-using llvm::sys::fs::identify_magic;
 
 namespace lld {
 namespace coff {

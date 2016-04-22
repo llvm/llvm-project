@@ -10,6 +10,7 @@
 #include "PointerAndIntegralOperationCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "../utils/Matchers.h"
 
 using namespace clang::ast_matchers;
 
@@ -30,8 +31,7 @@ void PointerAndIntegralOperationCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(hasOperatorName("="), hasLHS(PointerExpr));
 
   const auto CompareToPointerExpr =
-      binaryOperator(anyOf(hasOperatorName("<"), hasOperatorName("<="),
-                           hasOperatorName(">"), hasOperatorName(">=")),
+      binaryOperator(matchers::isRelationalOperator(),
                      hasEitherOperand(PointerExpr));
 
   // Detect expression like: ptr = (x != y);

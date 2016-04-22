@@ -332,7 +332,9 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR complex(float __re = 0.0f, float __im = 0.0f)
         : __re_(__re), __im_(__im) {}
+    _LIBCPP_INLINE_VISIBILITY
     explicit _LIBCPP_CONSTEXPR complex(const complex<double>& __c);
+    _LIBCPP_INLINE_VISIBILITY
     explicit _LIBCPP_CONSTEXPR complex(const complex<long double>& __c);
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR float real() const {return __re_;}
@@ -388,7 +390,9 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR complex(double __re = 0.0, double __im = 0.0)
         : __re_(__re), __im_(__im) {}
+    _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR complex(const complex<float>& __c);
+    _LIBCPP_INLINE_VISIBILITY
     explicit _LIBCPP_CONSTEXPR complex(const complex<long double>& __c);
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR double real() const {return __re_;}
@@ -444,7 +448,9 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR complex(long double __re = 0.0L, long double __im = 0.0L)
         : __re_(__re), __im_(__im) {}
+    _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR complex(const complex<float>& __c);
+    _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR complex(const complex<double>& __c);
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR long double real() const {return __re_;}
@@ -490,32 +496,32 @@ public:
         }
 };
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 _LIBCPP_CONSTEXPR
 complex<float>::complex(const complex<double>& __c)
     : __re_(__c.real()), __im_(__c.imag()) {}
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 _LIBCPP_CONSTEXPR
 complex<float>::complex(const complex<long double>& __c)
     : __re_(__c.real()), __im_(__c.imag()) {}
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 _LIBCPP_CONSTEXPR
 complex<double>::complex(const complex<float>& __c)
     : __re_(__c.real()), __im_(__c.imag()) {}
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 _LIBCPP_CONSTEXPR
 complex<double>::complex(const complex<long double>& __c)
     : __re_(__c.real()), __im_(__c.imag()) {}
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 _LIBCPP_CONSTEXPR
 complex<long double>::complex(const complex<float>& __c)
     : __re_(__c.real()), __im_(__c.imag()) {}
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 _LIBCPP_CONSTEXPR
 complex<long double>::complex(const complex<double>& __c)
     : __re_(__c.real()), __im_(__c.imag()) {}

@@ -53,7 +53,11 @@ public:
 #ifndef _LIBCPP___REFSTRING
 _LIBCPP_BEGIN_NAMESPACE_STD
 class _LIBCPP_HIDDEN __libcpp_refstring {
-    const char *__imp_ _LIBCPP_UNUSED;
+#ifdef __clang__
+    const char *__imp_ __attribute__((__unused__)); // only clang emits a warning
+#else
+    const char *__imp_;
+#endif
 };
 _LIBCPP_END_NAMESPACE_STD
 #endif

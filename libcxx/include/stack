@@ -58,7 +58,7 @@ public:
     template <class... Args> void emplace(Args&&... args);
     void pop();
 
-    void swap(stack& c) noexcept(noexcept(swap(c, q.c)));
+    void swap(stack& c) noexcept(is_nothrow_swappable_v<Container>)
 };
 
 template <class T, class Container>
@@ -275,7 +275,10 @@ operator<=(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 
 template <class _Tp, class _Container>
 inline _LIBCPP_INLINE_VISIBILITY
-void
+typename enable_if<
+    __is_swappable<_Container>::value,
+    void
+>::type
 swap(stack<_Tp, _Container>& __x, stack<_Tp, _Container>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y)))
 {

@@ -630,7 +630,7 @@ template <class BidirectionalIterator, class Compare>
 #include <initializer_list>
 #include <type_traits>
 #include <cstring>
-#include <utility>
+#include <utility> // needed to provide swap_ranges.
 #include <memory>
 #include <iterator>
 #include <cstddef>
