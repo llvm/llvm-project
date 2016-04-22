@@ -1053,15 +1053,6 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
   return true;
 }
 
-static bool includeInDynsym(const SymbolBody &B) {
-  if (B.MustBeInDynSym)
-    return true;
-  uint8_t V = B.getVisibility();
-  if (V != STV_DEFAULT && V != STV_PROTECTED)
-    return false;
-  return Config->ExportDynamic || Config->Shared;
-}
-
 // This class knows how to create an output section for a given
 // input section. Output section type is determined by various
 // factors, including input section's sh_flags, sh_type and
@@ -1185,8 +1176,9 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (!isOutputDynamic())
     Symtab.addIgnored("__tls_get_addr");
 
-  auto Define = [this](StringRef S, typename ElfSym<ELFT>::SymPair &Sym) {
-    Sym.first = Symtab.addIgnored(S, STV_DEFAULT);
+  auto Define = [this](StringRef S, DefinedRegular<ELFT> *&Sym1,
+                       DefinedRegular<ELFT> *&Sym2) {
+    Sym1 = Symtab.addIgnored(S, STV_DEFAULT);
 
     // The name without the underscore is not a reserved name,
     // so it is defined only when there is a reference against it.
@@ -1194,12 +1186,12 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     S = S.substr(1);
     if (SymbolBody *B = Symtab.find(S))
       if (B->isUndefined())
-        Sym.second = Symtab.addAbsolute(S, STV_DEFAULT);
+        Sym2 = Symtab.addAbsolute(S, STV_DEFAULT);
   };
 
-  Define("_end", ElfSym<ELFT>::End);
-  Define("_etext", ElfSym<ELFT>::Etext);
-  Define("_edata", ElfSym<ELFT>::Edata);
+  Define("_end", ElfSym<ELFT>::End, ElfSym<ELFT>::End2);
+  Define("_etext", ElfSym<ELFT>::Etext, ElfSym<ELFT>::Etext2);
+  Define("_edata", ElfSym<ELFT>::Edata, ElfSym<ELFT>::Edata2);
 }
 
 // Sort input sections by section name suffixes for
@@ -1334,7 +1326,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     if (Out<ELFT>::SymTab)
       Out<ELFT>::SymTab->addSymbol(Body);
 
-    if (isOutputDynamic() && includeInDynsym(*Body))
+    if (isOutputDynamic() && Body->includeInDynsym())
       Out<ELFT>::DynSymTab->addSymbol(Body);
   }
 
@@ -1728,18 +1720,18 @@ static uint16_t getELFType() {
   return ET_EXEC;
 }
 
-template <class ELFT, class SymPair, class uintX_t>
-static void assignSymValue(SymPair &Sym, uintX_t Val) {
-  if (Sym.first)
-    Sym.first->Value = Val;
-  if (Sym.second)
-    Sym.second->Value = Val;
-}
-
 // This function is called after we have assigned address and size
 // to each section. This function fixes some predefined absolute
 // symbol values that depend on section address and size.
 template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
+  auto Set = [](DefinedRegular<ELFT> *&S1, DefinedRegular<ELFT> *&S2,
+                uintX_t V) {
+    if (S1)
+      S1->Value = V;
+    if (S2)
+      S2->Value = V;
+  };
+
   // _etext is the first location after the last read-only loadable segment.
   // _edata is the first location after the last read-write loadable segment.
   // _end is the first location after the uninitialized data region.
@@ -1747,13 +1739,13 @@ template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
     Elf_Phdr &H = P.H;
     if (H.p_type != PT_LOAD)
       continue;
-    assignSymValue<ELFT>(ElfSym<ELFT>::End, H.p_vaddr + H.p_memsz);
+    Set(ElfSym<ELFT>::End, ElfSym<ELFT>::End2, H.p_vaddr + H.p_memsz);
 
     uintX_t Val = H.p_vaddr + H.p_filesz;
     if (H.p_flags & PF_W)
-      assignSymValue<ELFT>(ElfSym<ELFT>::Edata, Val);
+      Set(ElfSym<ELFT>::Edata, ElfSym<ELFT>::Edata2, Val);
     else
-      assignSymValue<ELFT>(ElfSym<ELFT>::Etext, Val);
+      Set(ElfSym<ELFT>::Etext, ElfSym<ELFT>::Etext2, Val);
   }
 }
 

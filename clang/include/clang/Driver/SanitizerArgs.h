@@ -58,6 +58,9 @@ class SanitizerArgs {
   bool needsCfiRt() const;
   bool needsCfiDiagRt() const;
   bool needsStatsRt() const { return Stats; }
+  bool needsEsanRt() const {
+    return Sanitizers.hasOneOf(SanitizerKind::Efficiency);
+  }
 
   bool requiresPIE() const;
   bool needsUnwindTables() const;

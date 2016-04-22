@@ -2747,9 +2747,6 @@ def warn_impcast_float_precision : Warning<
 def warn_impcast_double_promotion : Warning<
   "implicit conversion increases floating-point precision: %0 to %1">,
   InGroup<DoublePromotion>, DefaultIgnore;
-def warn_impcast_float_integer : Warning<
-  "implicit conversion turns floating-point number into integer: %0 to %1">,
-  InGroup<FloatConversion>, DefaultIgnore;
 def warn_impcast_integer_sign : Warning<
   "implicit conversion changes signedness: %0 to %1">,
   InGroup<SignConversion>, DefaultIgnore;
@@ -2768,9 +2765,29 @@ def warn_impcast_integer_precision_constant : Warning<
 def warn_impcast_bitfield_precision_constant : Warning<
   "implicit truncation from %2 to bitfield changes value from %0 to %1">,
   InGroup<BitFieldConstantConversion>;
+
 def warn_impcast_literal_float_to_integer : Warning<
   "implicit conversion from %0 to %1 changes value from %2 to %3">,
   InGroup<LiteralConversion>;
+def warn_impcast_float_integer : Warning<
+  "implicit conversion turns floating-point number into integer: %0 to %1">,
+  InGroup<FloatConversion>, DefaultIgnore;
+
+def warn_impcast_float_bool : Warning<
+  "implicit conversion turns floating-point number into boolean: %0 to %1">,
+  InGroup<FloatBoolConversion>, DefaultIgnore;
+def warn_impcast_float_to_bool : Warning<
+  "implicit conversion from %0 to %1 changes value from %2 to %3">,
+  InGroup<FloatBoolConstantConversion>;
+
+def warn_impcast_float_to_integer : Warning<
+  "implicit conversion of out of range value from %0 to %1 changes value "
+  "from %2 to %3">,
+  InGroup<FloatOverflowConversion>, DefaultIgnore;
+def warn_impcast_float_to_integer_zero : Warning<
+  "implicit conversion from %0 to %1 changes non-zero value from %2 to %3">,
+  InGroup<FloatZeroConversion>, DefaultIgnore;
+
 def warn_impcast_string_literal_to_bool : Warning<
   "implicit conversion turns string literal into bool: %0 to %1">,
   InGroup<StringConversion>, DefaultIgnore;

@@ -424,3 +424,10 @@
 // RUN:   | FileCheck --check-prefix=CHECK-AUBSAN-PS4 %s
 // CHECK-AUBSAN-PS4: "{{.*}}ld{{(.gold)?(.exe)?}}"
 // CHECK-AUBSAN-PS4: -lSceDbgAddressSanitizer_stub_weak
+
+// RUN: %clang -fsanitize=efficiency-cache-frag %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-unknown-linux \
+// RUN:   | FileCheck --check-prefix=CHECK-ESAN-LINUX %s
+//
+// CHECK-ESAN-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ESAN-LINUX: libclang_rt.esan-x86_64.a

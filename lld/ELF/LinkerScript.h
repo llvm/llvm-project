@@ -28,20 +28,15 @@ template <class ELFT> class InputSectionBase;
 template <class ELFT> class OutputSectionBase;
 
 // This class represents each rule in SECTIONS command.
-class SectionRule {
-public:
-  SectionRule(StringRef D, StringRef S, bool Keep)
-      : Dest(D), Keep(Keep), SectionPattern(S) {}
+struct SectionRule {
+  SectionRule(StringRef D, StringRef S)
+      : Dest(D), SectionPattern(S) {}
 
   // Returns true if S should be in Dest section.
   template <class ELFT> bool match(InputSectionBase<ELFT> *S);
 
   StringRef Dest;
 
-  // KEEP command saves unused sections even if --gc-sections is specified.
-  bool Keep = false;
-
-private:
   StringRef SectionPattern;
 };
 
@@ -70,6 +65,10 @@ struct ScriptConfiguration {
   bool DoLayout = false;
 
   llvm::BumpPtrAllocator Alloc;
+
+  // List of section patterns specified with KEEP commands. They will
+  // be kept even if they are unused and --gc-sections is specified.
+  std::vector<StringRef> KeptSections;
 };
 
 extern ScriptConfiguration *ScriptConfig;
@@ -85,10 +84,16 @@ public:
   int compareSections(StringRef A, StringRef B);
 
 private:
-  uint32_t getSectionOrder(StringRef Name);
-  SectionRule *find(InputSectionBase<ELFT> *S);
-
+  // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;
+
+  int getSectionIndex(StringRef Name);
+
+  uint64_t evaluate(ArrayRef<StringRef> Tokens);
+  uint64_t parseExpr(ArrayRef<StringRef> &Tokens);
+  uint64_t parsePrimary(ArrayRef<StringRef> &Tokens);
+  uint64_t parseExpr1(ArrayRef<StringRef> &Tokens, uint64_t Lhs, int MinPrec);
+  typename ELFT::uint Dot;
 };
 
 // Variable template is a C++14 feature, so we can't template

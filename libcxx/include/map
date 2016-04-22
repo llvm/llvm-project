@@ -162,7 +162,7 @@ public:
 
     void swap(map& m)
         noexcept(allocator_traits<allocator_type>::is_always_equal::value &&
-            __is_nothrow_swappable<key_compare>::value); // C++17
+            is_nothrow_swappable<key_compare>::value); // C++17
 
     // observers:
     allocator_type get_allocator() const noexcept;
@@ -357,7 +357,7 @@ public:
 
     void swap(multimap& m)
         noexcept(allocator_traits<allocator_type>::is_always_equal::value &&
-            __is_nothrow_swappable<key_compare>::value); // C++17
+            is_nothrow_swappable<key_compare>::value); // C++17
 
     // observers:
     allocator_type get_allocator() const noexcept;

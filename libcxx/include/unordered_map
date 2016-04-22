@@ -819,10 +819,12 @@ public:
                       size_type __n, const hasher& __hf,
                       const key_equal& __eql,
                       const allocator_type& __a);
+    _LIBCPP_INLINE_VISIBILITY
     explicit unordered_map(const allocator_type& __a);
     unordered_map(const unordered_map& __u);
     unordered_map(const unordered_map& __u, const allocator_type& __a);
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    _LIBCPP_INLINE_VISIBILITY
     unordered_map(unordered_map&& __u)
         _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
     unordered_map(unordered_map&& __u, const allocator_type& __a);
@@ -878,10 +880,12 @@ public:
         return *this;
     }
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    _LIBCPP_INLINE_VISIBILITY
     unordered_map& operator=(unordered_map&& __u)
         _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
 #endif
 #ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+    _LIBCPP_INLINE_VISIBILITY
     unordered_map& operator=(initializer_list<value_type> __il);
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
@@ -923,6 +927,7 @@ public:
     }
 
     template <class _InputIterator>
+        _LIBCPP_INLINE_VISIBILITY
         void insert(_InputIterator __first, _InputIterator __last);
 
 #ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
@@ -1189,7 +1194,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
         const allocator_type& __a)
     : __table_(__a)
@@ -1265,7 +1270,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
         unordered_map&& __u)
     _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
@@ -1344,7 +1349,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>&
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(unordered_map&& __u)
     _NOEXCEPT_(is_nothrow_move_assignable<__table>::value)
@@ -1358,7 +1363,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(unordered_map&& __u)
 #ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>&
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(
         initializer_list<value_type> __il)
@@ -1386,7 +1391,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node_with_key(const 
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::insert(_InputIterator __first,
                                                        _InputIterator __last)
@@ -1567,10 +1572,12 @@ public:
                       size_type __n, const hasher& __hf,
                       const key_equal& __eql,
                       const allocator_type& __a);
+    _LIBCPP_INLINE_VISIBILITY
     explicit unordered_multimap(const allocator_type& __a);
     unordered_multimap(const unordered_multimap& __u);
     unordered_multimap(const unordered_multimap& __u, const allocator_type& __a);
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    _LIBCPP_INLINE_VISIBILITY
     unordered_multimap(unordered_multimap&& __u)
         _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
     unordered_multimap(unordered_multimap&& __u, const allocator_type& __a);
@@ -1627,10 +1634,12 @@ public:
         return *this;
     }
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    _LIBCPP_INLINE_VISIBILITY
     unordered_multimap& operator=(unordered_multimap&& __u)
         _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
 #endif
 #ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+    _LIBCPP_INLINE_VISIBILITY
     unordered_multimap& operator=(initializer_list<value_type> __il);
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
@@ -1666,6 +1675,7 @@ public:
         {return __table_.__insert_multi(__p.__i_, __x);}
 
     template <class _InputIterator>
+    _LIBCPP_INLINE_VISIBILITY
     void insert(_InputIterator __first, _InputIterator __last);
 
 #ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
@@ -1858,7 +1868,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
         const allocator_type& __a)
     : __table_(__a)
@@ -1895,7 +1905,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
         unordered_multimap&& __u)
     _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
@@ -1976,7 +1986,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>&
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(unordered_multimap&& __u)
     _NOEXCEPT_(is_nothrow_move_assignable<__table>::value)
@@ -1990,7 +2000,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(unordered_multima
 #ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>&
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(
         initializer_list<value_type> __il)
@@ -2005,7 +2015,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::insert(_InputIterator __first,
                                                             _InputIterator __last)

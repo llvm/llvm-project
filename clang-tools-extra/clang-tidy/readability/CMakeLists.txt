@@ -27,5 +27,6 @@ add_clang_library(clangTidyReadabilityModule
   clangBasic
   clangLex
   clangTidy
+  clangTidyUtils
   clangTooling
   )

@@ -1563,25 +1563,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     PL.clear();
     types::getCompilationPhases(InputType, PL);
 
-    if (YcArg) {
-      // Add a separate precompile phase for the compile phase.
-      if (FinalPhase >= phases::Compile) {
-        llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PCHPL;
-        types::getCompilationPhases(types::TY_CXXHeader, PCHPL);
-        Arg *PchInputArg = MakeInputArg(Args, Opts, YcArg->getValue());
-
-        // Build the pipeline for the pch file.
-        Action *ClangClPch = C.MakeAction<InputAction>(*PchInputArg, InputType);
-        for (phases::ID Phase : PCHPL)
-          ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch);
-        assert(ClangClPch);
-        Actions.push_back(ClangClPch);
-        // The driver currently exits after the first failed command.  This
-        // relies on that behavior, to make sure if the pch generation fails,
-        // the main compilation won't run.
-      }
-    }
-
     // If the first step comes after the final phase we are doing as part of
     // this compilation, warn the user about it.
     phases::ID InitialPhase = PL[0];
@@ -1612,6 +1593,25 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
             << !!FinalPhaseArg
             << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
       continue;
+    }
+
+    if (YcArg) {
+      // Add a separate precompile phase for the compile phase.
+      if (FinalPhase >= phases::Compile) {
+        llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PCHPL;
+        types::getCompilationPhases(types::TY_CXXHeader, PCHPL);
+        Arg *PchInputArg = MakeInputArg(Args, Opts, YcArg->getValue());
+
+        // Build the pipeline for the pch file.
+        Action *ClangClPch = C.MakeAction<InputAction>(*PchInputArg, InputType);
+        for (phases::ID Phase : PCHPL)
+          ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch);
+        assert(ClangClPch);
+        Actions.push_back(ClangClPch);
+        // The driver currently exits after the first failed command.  This
+        // relies on that behavior, to make sure if the pch generation fails,
+        // the main compilation won't run.
+      }
     }
 
     phases::ID CudaInjectionPhase =

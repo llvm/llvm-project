@@ -12,6 +12,7 @@
 #include "InputSection.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Object/IRObjectFile.h"
@@ -498,8 +499,11 @@ BitcodeFile::createSymbolBody(const DenseSet<const Comdat *> &KeptComdats,
     Body = new (Alloc) DefinedBitcode(NameRef, IsWeak, Visibility);
   }
   // FIXME: Expose a thread-local flag for module asm symbols.
-  if (GV && GV->isThreadLocal())
-    Body->Type = STT_TLS;
+  if (GV) {
+    if (GV->isThreadLocal())
+      Body->Type = STT_TLS;
+    Body->CanOmitFromDynSym = canBeOmittedFromSymbolTable(GV);
+  }
   return Body;
 }
 

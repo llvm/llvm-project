@@ -82,8 +82,8 @@ struct pair
                                        is_nothrow_move_assignable<T2>::value);
     template <class U, class V> pair& operator=(pair<U, V>&& p);
 
-    void swap(pair& p) noexcept(noexcept(swap(first, p.first)) &&
-                                noexcept(swap(second, p.second)));
+    void swap(pair& p) noexcept(is_nothrow_swappable_v<T1> &&
+                                is_nothrow_swappable_v<T2>);
 };
 
 template <class T1, class T2> bool operator==(const pair<T1,T2>&, const pair<T1,T2>&); // constexpr in C++14
@@ -225,10 +225,6 @@ operator>=(const _Tp& __x, const _Tp& __y)
 
 // swap_ranges
 
-// forward
-template<class _Tp, size_t _Np>
-inline _LIBCPP_INLINE_VISIBILITY
-void swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value);
 
 template <class _ForwardIterator1, class _ForwardIterator2>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -240,9 +236,12 @@ swap_ranges(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardItera
     return __first2;
 }
 
+// forward declared in <type_traits>
 template<class _Tp, size_t _Np>
 inline _LIBCPP_INLINE_VISIBILITY
-void
+typename enable_if<
+    __is_swappable<_Tp>::value
+>::type
 swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value)
 {
     _VSTD::swap_ranges(__a, __a + _Np, __b);

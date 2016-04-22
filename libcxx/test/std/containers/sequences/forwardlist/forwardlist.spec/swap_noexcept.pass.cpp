@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <forward_list>
 
 // void swap(forward_list& c)
@@ -21,6 +23,7 @@
 #include <forward_list>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 #include "test_allocator.h"
 
@@ -51,7 +54,6 @@ struct some_alloc2
 
 int main()
 {
-#if __has_feature(cxx_noexcept)
     {
         typedef std::forward_list<MoveOnly> C;
         C c1, c2;
@@ -84,7 +86,5 @@ int main()
     //  if the allocators are always equal, then the swap can be noexcept
         static_assert( noexcept(swap(c1, c2)), "");
     }
-#endif
-
 #endif
 }

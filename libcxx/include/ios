@@ -231,7 +231,7 @@ typedef ptrdiff_t streamsize;
 class _LIBCPP_TYPE_VIS ios_base
 {
 public:
-    class _LIBCPP_TYPE_VIS failure;
+    class _LIBCPP_EXCEPTION_ABI failure;
 
     typedef unsigned int fmtflags;
     static const fmtflags boolalpha   = 0x0001;

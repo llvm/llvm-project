@@ -16,11 +16,44 @@
 using namespace clang;
 using namespace clang::index;
 
+/// \returns true if \c D is a subclass of 'XCTestCase'.
+static bool isUnitTestCase(const ObjCInterfaceDecl *D) {
+  if (!D)
+    return false;
+  while (const ObjCInterfaceDecl *SuperD = D->getSuperClass()) {
+    if (SuperD->getName() == "XCTestCase")
+      return true;
+    D = SuperD;
+  }
+  return false;
+}
+
+/// \returns true if \c D is in a subclass of 'XCTestCase', returns void, has
+/// no parameters, and its name starts with 'test'.
+static bool isUnitTest(const ObjCMethodDecl *D) {
+  if (!D->parameters().empty())
+    return false;
+  if (!D->getReturnType()->isVoidType())
+    return false;
+  if (!D->getSelector().getNameForSlot(0).startswith("test"))
+    return false;
+  return isUnitTestCase(D->getClassInterface());
+}
+
+static void checkForIBOutlets(const Decl *D, SymbolSubKindSet &SubKindSet) {
+  if (D->hasAttr<IBOutletAttr>()) {
+    SubKindSet |= (unsigned)SymbolSubKind::IBAnnotated;
+  } else if (D->hasAttr<IBOutletCollectionAttr>()) {
+    SubKindSet |= (unsigned)SymbolSubKind::IBAnnotated;
+    SubKindSet |= (unsigned)SymbolSubKind::IBOutletCollection;
+  }
+}
+
 SymbolInfo index::getSymbolInfo(const Decl *D) {
   assert(D);
   SymbolInfo Info;
   Info.Kind = SymbolKind::Unknown;
-  Info.TemplateKind = SymbolCXXTemplateKind::NonTemplate;
+  Info.SubKinds = SymbolSubKindSet();
   Info.Lang = SymbolLanguage::C;
 
   if (const TagDecl *TD = dyn_cast<TagDecl>(D)) {
@@ -46,9 +79,11 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
         Info.Lang = SymbolLanguage::CXX;
 
     if (isa<ClassTemplatePartialSpecializationDecl>(D)) {
-      Info.TemplateKind = SymbolCXXTemplateKind::TemplatePartialSpecialization;
+      Info.SubKinds |= (unsigned)SymbolSubKind::Generic;
+      Info.SubKinds |= (unsigned)SymbolSubKind::TemplatePartialSpecialization;
     } else if (isa<ClassTemplateSpecializationDecl>(D)) {
-      Info.TemplateKind = SymbolCXXTemplateKind::TemplateSpecialization;
+      Info.SubKinds |= (unsigned)SymbolSubKind::Generic;
+      Info.SubKinds |= (unsigned)SymbolSubKind::TemplateSpecialization;
     }
 
   } else {
@@ -82,10 +117,16 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
     case Decl::EnumConstant:
       Info.Kind = SymbolKind::EnumConstant; break;
     case Decl::ObjCInterface:
-    case Decl::ObjCImplementation:
+    case Decl::ObjCImplementation: {
       Info.Kind = SymbolKind::Class;
       Info.Lang = SymbolLanguage::ObjC;
+      const ObjCInterfaceDecl *ClsD = dyn_cast<ObjCInterfaceDecl>(D);
+      if (!ClsD)
+        ClsD = cast<ObjCImplementationDecl>(D)->getClassInterface();
+      if (isUnitTestCase(ClsD))
+        Info.SubKinds |= (unsigned)SymbolSubKind::UnitTest;
       break;
+    }
     case Decl::ObjCProtocol:
       Info.Kind = SymbolKind::Protocol;
       Info.Lang = SymbolLanguage::ObjC;
@@ -101,14 +142,20 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       else
         Info.Kind = SymbolKind::ClassMethod;
       Info.Lang = SymbolLanguage::ObjC;
+      if (isUnitTest(cast<ObjCMethodDecl>(D)))
+        Info.SubKinds |= (unsigned)SymbolSubKind::UnitTest;
+      if (D->hasAttr<IBActionAttr>())
+        Info.SubKinds |= (unsigned)SymbolSubKind::IBAnnotated;
       break;
     case Decl::ObjCProperty:
       Info.Kind = SymbolKind::InstanceProperty;
       Info.Lang = SymbolLanguage::ObjC;
+      checkForIBOutlets(D, Info.SubKinds);
       break;
     case Decl::ObjCIvar:
       Info.Kind = SymbolKind::Field;
       Info.Lang = SymbolLanguage::ObjC;
+      checkForIBOutlets(D, Info.SubKinds);
       break;
     case Decl::Namespace:
       Info.Kind = SymbolKind::Namespace;
@@ -141,12 +188,12 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
     }
     case Decl::ClassTemplate:
       Info.Kind = SymbolKind::Class;
-      Info.TemplateKind = SymbolCXXTemplateKind::Template;
+      Info.SubKinds |= (unsigned)SymbolSubKind::Generic;
       Info.Lang = SymbolLanguage::CXX;
       break;
     case Decl::FunctionTemplate:
       Info.Kind = SymbolKind::Function;
-      Info.TemplateKind = SymbolCXXTemplateKind::Template;
+      Info.SubKinds |= (unsigned)SymbolSubKind::Generic;
       Info.Lang = SymbolLanguage::CXX;
       if (const CXXMethodDecl *MD = dyn_cast_or_null<CXXMethodDecl>(
                            cast<FunctionTemplateDecl>(D)->getTemplatedDecl())) {
@@ -167,7 +214,7 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
     case Decl::TypeAliasTemplate:
       Info.Kind = SymbolKind::TypeAlias;
       Info.Lang = SymbolLanguage::CXX;
-      Info.TemplateKind = SymbolCXXTemplateKind::Template;
+      Info.SubKinds |= (unsigned)SymbolSubKind::Generic;
       break;
     case Decl::TypeAlias:
       Info.Kind = SymbolKind::TypeAlias;
@@ -183,11 +230,13 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
 
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->getTemplatedKind() ==
-          FunctionDecl::TK_FunctionTemplateSpecialization)
-      Info.TemplateKind = SymbolCXXTemplateKind::TemplateSpecialization;
+          FunctionDecl::TK_FunctionTemplateSpecialization) {
+      Info.SubKinds |= (unsigned)SymbolSubKind::Generic;
+      Info.SubKinds |= (unsigned)SymbolSubKind::TemplateSpecialization;
+    }
   }
 
-  if (Info.TemplateKind != SymbolCXXTemplateKind::NonTemplate)
+  if (Info.SubKinds & (unsigned)SymbolSubKind::Generic)
     Info.Lang = SymbolLanguage::CXX;
 
   return Info;
@@ -292,16 +341,6 @@ StringRef index::getSymbolKindString(SymbolKind K) {
   llvm_unreachable("invalid symbol kind");
 }
 
-StringRef index::getTemplateKindStr(SymbolCXXTemplateKind TK) {
-  switch (TK) {
-  case SymbolCXXTemplateKind::NonTemplate: return "NT";
-  case SymbolCXXTemplateKind::Template : return "T";
-  case SymbolCXXTemplateKind::TemplatePartialSpecialization : return "TPS";
-  case SymbolCXXTemplateKind::TemplateSpecialization: return "TS";
-  }
-  llvm_unreachable("invalid template kind");
-}
-
 StringRef index::getSymbolLanguageString(SymbolLanguage K) {
   switch (K) {
   case SymbolLanguage::C: return "C";
@@ -309,4 +348,38 @@ StringRef index::getSymbolLanguageString(SymbolLanguage K) {
   case SymbolLanguage::CXX: return "C++";
   }
   llvm_unreachable("invalid symbol language kind");
+}
+
+void index::applyForEachSymbolSubKind(SymbolSubKindSet SubKinds,
+                                  llvm::function_ref<void(SymbolSubKind)> Fn) {
+#define APPLY_FOR_SUBKIND(K) \
+  if (SubKinds & (unsigned)SymbolSubKind::K) \
+    Fn(SymbolSubKind::K)
+
+  APPLY_FOR_SUBKIND(Generic);
+  APPLY_FOR_SUBKIND(TemplatePartialSpecialization);
+  APPLY_FOR_SUBKIND(TemplateSpecialization);
+  APPLY_FOR_SUBKIND(UnitTest);
+  APPLY_FOR_SUBKIND(IBAnnotated);
+  APPLY_FOR_SUBKIND(IBOutletCollection);
+
+#undef APPLY_FOR_SUBKIND
+}
+
+void index::printSymbolSubKinds(SymbolSubKindSet SubKinds, raw_ostream &OS) {
+  bool VisitedOnce = false;
+  applyForEachSymbolSubKind(SubKinds, [&](SymbolSubKind SubKind) {
+    if (VisitedOnce)
+      OS << ',';
+    else
+      VisitedOnce = true;
+    switch (SubKind) {
+    case SymbolSubKind::Generic: OS << "Gen"; break;
+    case SymbolSubKind::TemplatePartialSpecialization: OS << "TPS"; break;
+    case SymbolSubKind::TemplateSpecialization: OS << "TS"; break;
+    case SymbolSubKind::UnitTest: OS << "test"; break;
+    case SymbolSubKind::IBAnnotated: OS << "IB"; break;
+    case SymbolSubKind::IBOutletCollection: OS << "IBColl"; break;
+    }
+  });
 }

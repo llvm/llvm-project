@@ -216,16 +216,6 @@ static inline __device__ void __brkpt(int __c) { __brkpt(); }
 #undef __CUDABE__
 #define __CUDACC__
 
-#if defined(__CUDA_ARCH__)
-// We need to emit IR declaration for non-existing __nvvm_reflect() to
-// let backend know that it should be treated as const nothrow
-// function which is what NVVMReflect pass expects to see.
-extern "C" __device__ __attribute__((const)) int __nvvm_reflect(const void *);
-static __device__ __attribute__((used)) int __nvvm_reflect_anchor() {
-  return __nvvm_reflect("NONE");
-}
-#endif
-
 extern "C" {
 // Device-side CUDA system calls.
 // http://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/index.html#system-calls

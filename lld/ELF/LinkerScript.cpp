@@ -35,6 +35,8 @@ using namespace lld::elf;
 
 ScriptConfiguration *elf::ScriptConfig;
 
+static bool matchStr(StringRef S, StringRef T);
+
 static uint64_t getInteger(StringRef S) {
   uint64_t V;
   if (S.getAsInteger(0, V)) {
@@ -78,17 +80,16 @@ static bool expect(ArrayRef<StringRef> &Tokens, StringRef S) {
   return true;
 }
 
-static uint64_t parseExpr(ArrayRef<StringRef> &Tokens, uint64_t Dot);
-
 // This is a part of the operator-precedence parser to evaluate
 // arithmetic expressions in SECTIONS command. This function evaluates an
 // integer literal, a parenthesized expression or the special variable ".".
-static uint64_t parsePrimary(ArrayRef<StringRef> &Tokens, uint64_t Dot) {
+template <class ELFT>
+uint64_t LinkerScript<ELFT>::parsePrimary(ArrayRef<StringRef> &Tokens) {
   StringRef Tok = next(Tokens);
   if (Tok == ".")
     return Dot;
   if (Tok == "(") {
-    uint64_t V = parseExpr(Tokens, Dot);
+    uint64_t V = parseExpr(Tokens);
     if (!expect(Tokens, ")"))
       return 0;
     return V;
@@ -119,15 +120,16 @@ static uint64_t apply(StringRef Op, uint64_t L, uint64_t R) {
 // This is an operator-precedence parser to evaluate
 // arithmetic expressions in SECTIONS command.
 // Tokens should start with an operator.
-static uint64_t parseExpr1(uint64_t Lhs, int MinPrec,
-                           ArrayRef<StringRef> &Tokens, uint64_t Dot) {
+template <class ELFT>
+uint64_t LinkerScript<ELFT>::parseExpr1(ArrayRef<StringRef> &Tokens,
+                                        uint64_t Lhs, int MinPrec) {
   while (!Tokens.empty()) {
     // Read an operator and an expression.
     StringRef Op1 = Tokens.front();
     if (precedence(Op1) < MinPrec)
       return Lhs;
     next(Tokens);
-    uint64_t Rhs = parsePrimary(Tokens, Dot);
+    uint64_t Rhs = parsePrimary(Tokens);
 
     // Evaluate the remaining part of the expression first if the
     // next operator has greater precedence than the previous one.
@@ -137,7 +139,7 @@ static uint64_t parseExpr1(uint64_t Lhs, int MinPrec,
       StringRef Op2 = Tokens.front();
       if (precedence(Op2) <= precedence(Op1))
         break;
-      Rhs = parseExpr1(Rhs, precedence(Op2), Tokens, Dot);
+      Rhs = parseExpr1(Tokens, Rhs, precedence(Op2));
     }
 
     Lhs = apply(Op1, Lhs, Rhs);
@@ -145,31 +147,27 @@ static uint64_t parseExpr1(uint64_t Lhs, int MinPrec,
   return Lhs;
 }
 
-static uint64_t parseExpr(ArrayRef<StringRef> &Tokens, uint64_t Dot) {
-  uint64_t V = parsePrimary(Tokens, Dot);
-  return parseExpr1(V, 0, Tokens, Dot);
+template <class ELFT>
+uint64_t LinkerScript<ELFT>::parseExpr(ArrayRef<StringRef> &Tokens) {
+  uint64_t V = parsePrimary(Tokens);
+  return parseExpr1(Tokens, V, 0);
 }
 
 // Evaluates the expression given by list of tokens.
-static uint64_t evaluate(ArrayRef<StringRef> Tokens, uint64_t Dot) {
-  uint64_t V = parseExpr(Tokens, Dot);
+template <class ELFT>
+uint64_t LinkerScript<ELFT>::evaluate(ArrayRef<StringRef> Tokens) {
+  uint64_t V = parseExpr(Tokens);
   if (!Tokens.empty())
     error("stray token: " + Tokens[0]);
   return V;
 }
 
 template <class ELFT>
-SectionRule *LinkerScript<ELFT>::find(InputSectionBase<ELFT> *S) {
-  for (SectionRule &R : Opt.Sections)
-    if (R.match(S))
-      return &R;
-  return nullptr;
-}
-
-template <class ELFT>
 StringRef LinkerScript<ELFT>::getOutputSection(InputSectionBase<ELFT> *S) {
-  SectionRule *R = find(S);
-  return R ? R->Dest : "";
+  for (SectionRule &R : Opt.Sections)
+    if (matchStr(R.SectionPattern, S->getSectionName()))
+      return R.Dest;
+  return "";
 }
 
 template <class ELFT>
@@ -179,8 +177,10 @@ bool LinkerScript<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) {
 
 template <class ELFT>
 bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
-  SectionRule *R = find(S);
-  return R && R->Keep;
+  for (StringRef Pat : Opt.KeptSections)
+    if (matchStr(Pat, S->getSectionName()))
+      return true;
+  return false;
 }
 
 template <class ELFT>
@@ -204,18 +204,17 @@ void LinkerScript<ELFT>::assignAddresses(
   // https://sourceware.org/binutils/docs/ld/Orphan-Sections.html#Orphan-Sections.
   for (OutputSectionBase<ELFT> *Sec : Sections) {
     StringRef Name = Sec->getName();
-    if (getSectionOrder(Name) == (uint32_t)-1)
+    if (getSectionIndex(Name) == INT_MAX)
       Opt.Commands.push_back({SectionKind, {}, Name});
   }
 
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
+  Dot = Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
   uintX_t ThreadBssOffset = 0;
-  uintX_t VA =
-      Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
 
   for (SectionsCommand &Cmd : Opt.Commands) {
     if (Cmd.Kind == ExprKind) {
-      VA = evaluate(Cmd.Expr, VA);
+      Dot = evaluate(Cmd.Expr);
       continue;
     }
 
@@ -224,17 +223,17 @@ void LinkerScript<ELFT>::assignAddresses(
       continue;
 
     if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
-      uintX_t TVA = VA + ThreadBssOffset;
+      uintX_t TVA = Dot + ThreadBssOffset;
       TVA = alignTo(TVA, Sec->getAlign());
       Sec->setVA(TVA);
-      ThreadBssOffset = TVA - VA + Sec->getSize();
+      ThreadBssOffset = TVA - Dot + Sec->getSize();
       continue;
     }
 
     if (Sec->getFlags() & SHF_ALLOC) {
-      VA = alignTo(VA, Sec->getAlign());
-      Sec->setVA(VA);
-      VA += Sec->getSize();
+      Dot = alignTo(Dot, Sec->getAlign());
+      Sec->setVA(Dot);
+      Dot += Sec->getSize();
       continue;
     }
   }
@@ -248,23 +247,27 @@ ArrayRef<uint8_t> LinkerScript<ELFT>::getFiller(StringRef Name) {
   return I->second;
 }
 
+// Returns the index of the given section name in linker script
+// SECTIONS commands. Sections are laid out as the same order as they
+// were in the script. If a given name did not appear in the script,
+// it returns INT_MAX, so that it will be laid out at end of file.
 template <class ELFT>
-uint32_t LinkerScript<ELFT>::getSectionOrder(StringRef Name) {
+int LinkerScript<ELFT>::getSectionIndex(StringRef Name) {
   auto Begin = Opt.Commands.begin();
   auto End = Opt.Commands.end();
   auto I = std::find_if(Begin, End, [&](SectionsCommand &N) {
     return N.Kind == SectionKind && N.SectionName == Name;
   });
-  return I == End ? (uint32_t)-1 : (I - Begin);
+  return I == End ? INT_MAX : (I - Begin);
 }
 
 // A compartor to sort output sections. Returns -1 or 1 if
 // A or B are mentioned in linker script. Otherwise, returns 0.
 template <class ELFT>
 int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
-  uint32_t I = getSectionOrder(A);
-  uint32_t J = getSectionOrder(B);
-  if (I == (uint32_t)-1 && J == (uint32_t)-1)
+  int I = getSectionIndex(A);
+  int J = getSectionIndex(B);
+  if (I == INT_MAX && J == INT_MAX)
     return 0;
   return I < J ? -1 : 1;
 }
@@ -293,10 +296,6 @@ static bool matchStr(StringRef S, StringRef T) {
   }
 }
 
-template <class ELFT> bool SectionRule::match(InputSectionBase<ELFT> *S) {
-  return matchStr(SectionPattern, S->getSectionName());
-}
-
 class elf::ScriptParser : public ScriptParserBase {
   typedef void (ScriptParser::*Handler)();
 
@@ -322,7 +321,7 @@ private:
 
   void readLocationCounterValue();
   void readOutputSectionDescription();
-  void readSectionPatterns(StringRef OutSec, bool Keep);
+  void readSectionPatterns(StringRef OutSec);
 
   const static StringMap<Handler> Cmd;
   ScriptConfiguration &Opt = *ScriptConfig;
@@ -493,10 +492,10 @@ void ScriptParser::readSections() {
   }
 }
 
-void ScriptParser::readSectionPatterns(StringRef OutSec, bool Keep) {
+void ScriptParser::readSectionPatterns(StringRef OutSec) {
   expect("(");
   while (!Error && !skip(")"))
-    Opt.Sections.emplace_back(OutSec, next(), Keep);
+    Opt.Sections.emplace_back(OutSec, next());
 }
 
 void ScriptParser::readLocationCounterValue() {
@@ -519,19 +518,28 @@ void ScriptParser::readOutputSectionDescription() {
   Opt.Commands.push_back({SectionKind, {}, OutSec});
   expect(":");
   expect("{");
+
   while (!Error && !skip("}")) {
     StringRef Tok = next();
     if (Tok == "*") {
-      readSectionPatterns(OutSec, false);
+      expect("(");
+      while (!Error && !skip(")"))
+        Opt.Sections.emplace_back(OutSec, next());
     } else if (Tok == "KEEP") {
       expect("(");
-      next(); // Skip *
-      readSectionPatterns(OutSec, true);
+      expect("*");
+      expect("(");
+      while (!Error && !skip(")")) {
+        StringRef Sec = next();
+        Opt.Sections.emplace_back(OutSec, Sec);
+        Opt.KeptSections.push_back(Sec);
+      }
       expect(")");
     } else {
       setError("unknown command " + Tok);
     }
   }
+
   StringRef Tok = peek();
   if (Tok.startswith("=")) {
     if (!Tok.startswith("=0x")) {

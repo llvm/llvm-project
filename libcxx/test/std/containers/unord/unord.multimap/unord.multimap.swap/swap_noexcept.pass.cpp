@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <unordered_map>
 
 // void swap(unordered_multimap& c)
@@ -26,6 +28,7 @@
 #include <unordered_map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 #include "test_allocator.h"
 
@@ -115,7 +118,6 @@ struct some_alloc3
 
 int main()
 {
-#if __has_feature(cxx_noexcept)
     typedef std::pair<const MoveOnly, MoveOnly> V;
     {
         typedef std::unordered_multimap<MoveOnly, MoveOnly> C;
@@ -192,7 +194,5 @@ int main()
     C c1, c2;
     static_assert( noexcept(swap(c1, c2)), "");
     }
-#endif
-
 #endif
 }

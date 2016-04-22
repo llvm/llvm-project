@@ -105,6 +105,8 @@ namespace std
     template <class T, class U>       struct is_assignable;
     template <class T>                struct is_copy_assignable;
     template <class T>                struct is_move_assignable;
+    template <class T, class U>       struct is_swappable_with;       // C++17
+    template <class T>                struct is_swappable;            // C++17
     template <class T>                struct is_destructible;
 
     template <class T, class... Args> struct is_trivially_constructible;
@@ -123,6 +125,8 @@ namespace std
     template <class T, class U>       struct is_nothrow_assignable;
     template <class T>                struct is_nothrow_copy_assignable;
     template <class T>                struct is_nothrow_move_assignable;
+    template <class T, class U>       struct is_nothrow_swappable_with; // C++17
+    template <class T>                struct is_nothrow_swappable;      // C++17
     template <class T>                struct is_nothrow_destructible;
 
     template <class T> struct has_virtual_destructor;
@@ -300,6 +304,10 @@ namespace std
         = is_copy_assignable<T>::value;                                  // C++17
       template <class T> constexpr bool is_move_assignable_v
         = is_move_assignable<T>::value;                                  // C++17
+      template <class T, class U> constexpr bool is_swappable_with_v
+        = is_swappable_with<T, U>::value;                                // C++17
+      template <class T> constexpr bool is_swappable_v
+        = is_swappable<T>::value;                                        // C++17
       template <class T> constexpr bool is_destructible_v
         = is_destructible<T>::value;                                     // C++17
       template <class T, class... Args> constexpr bool is_trivially_constructible_v
@@ -332,6 +340,10 @@ namespace std
         = is_nothrow_copy_assignable<T>::value;                          // C++17
       template <class T> constexpr bool is_nothrow_move_assignable_v
         = is_nothrow_move_assignable<T>::value;                          // C++17
+      template <class T, class U> constexpr bool is_nothrow_swappable_with_v
+        = is_nothrow_swappable_with<T, U>::value;                       // C++17
+      template <class T> constexpr bool is_nothrow_swappable_v
+        = is_nothrow_swappable<T>::value;                               // C++17
       template <class T> constexpr bool is_nothrow_destructible_v
         = is_nothrow_destructible<T>::value;                             // C++17
       template <class T> constexpr bool has_virtual_destructor_v
@@ -382,6 +394,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _T1, class _T2> struct _LIBCPP_TYPE_VIS_ONLY pair;
 template <class _Tp> class _LIBCPP_TYPE_VIS_ONLY reference_wrapper;
+template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY hash;
 
 template <class>
 struct __void_t { typedef void type; };
@@ -4420,6 +4433,9 @@ constexpr bool is_nothrow_callable_v = is_nothrow_callable<_Fn, _Ret>::value;
 
 #endif  // !defined(_LIBCPP_CXX03_LANG)
 
+template <class _Tp> struct __is_swappable;
+template <class _Tp> struct __is_nothrow_swappable;
+
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 #ifndef _LIBCPP_HAS_NO_ADVANCED_SFINAE
@@ -4439,6 +4455,13 @@ swap(_Tp& __x, _Tp& __y) _NOEXCEPT_(is_nothrow_move_constructible<_Tp>::value &&
     __y = _VSTD::move(__t);
 }
 
+template<class _Tp, size_t _Np>
+inline _LIBCPP_INLINE_VISIBILITY
+typename enable_if<
+    __is_swappable<_Tp>::value
+>::type
+swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value);
+
 template <class _ForwardIterator1, class _ForwardIterator2>
 inline _LIBCPP_INLINE_VISIBILITY
 void
@@ -4454,55 +4477,103 @@ iter_swap(_ForwardIterator1 __a, _ForwardIterator2 __b)
 
 namespace __detail
 {
-
+// ALL generic swap overloads MUST already have a declaration available at this point.
 using _VSTD::swap;
 __nat swap(__any, __any);
 
-template <class _Tp>
-struct __swappable
+template <class _Tp, class _Up = _Tp,
+          bool _NotVoid = !is_void<_Tp>::value && !is_void<_Up>::value>
+struct __swappable_with
 {
-    typedef decltype(swap(_VSTD::declval<_Tp&>(), _VSTD::declval<_Tp&>())) type;
-    static const bool value = !is_same<type, __nat>::value;
+    typedef decltype(swap(_VSTD::declval<_Tp>(), _VSTD::declval<_Up>())) __swap1;
+    typedef decltype(swap(_VSTD::declval<_Up>(), _VSTD::declval<_Tp>())) __swap2;
+
+    static const bool value = !is_same<__swap1, __nat>::value
+                           && !is_same<__swap2, __nat>::value;
 };
+
+template <class _Tp, class _Up>
+struct __swappable_with<_Tp, _Up,  false> : false_type {};
+
+template <class _Tp, class _Up = _Tp, bool _Swappable = __swappable_with<_Tp, _Up>::value>
+struct __nothrow_swappable_with {
+  static const bool value =
+#ifndef _LIBCPP_HAS_NO_NOEXCEPT
+      noexcept(swap(_VSTD::declval<_Tp>(), _VSTD::declval<_Up>()))
+  &&  noexcept(swap(_VSTD::declval<_Up>(), _VSTD::declval<_Tp>()));
+#else
+      false;
+#endif
+};
+
+template <class _Tp, class _Up>
+struct __nothrow_swappable_with<_Tp, _Up, false> : false_type {};
 
 }  // __detail
 
 template <class _Tp>
 struct __is_swappable
-    : public integral_constant<bool, __detail::__swappable<_Tp>::value>
-{
-};
-
-#if __has_feature(cxx_noexcept) || (_GNUC_VER >= 407 && __cplusplus >= 201103L)
-
-template <bool, class _Tp>
-struct __is_nothrow_swappable_imp
-    : public integral_constant<bool, noexcept(swap(_VSTD::declval<_Tp&>(),
-                                                   _VSTD::declval<_Tp&>()))>
-{
-};
-
-template <class _Tp>
-struct __is_nothrow_swappable_imp<false, _Tp>
-    : public false_type
+    : public integral_constant<bool, __detail::__swappable_with<_Tp&>::value>
 {
 };
 
 template <class _Tp>
 struct __is_nothrow_swappable
-    : public __is_nothrow_swappable_imp<__is_swappable<_Tp>::value, _Tp>
+    : public integral_constant<bool, __detail::__nothrow_swappable_with<_Tp&>::value>
 {
 };
 
-#else  // __has_feature(cxx_noexcept)
+#if _LIBCPP_STD_VER > 14
+
+template <class _Tp, class _Up>
+struct _LIBCPP_TYPE_VIS_ONLY is_swappable_with
+    : public integral_constant<bool, __detail::__swappable_with<_Tp, _Up>::value>
+{
+};
 
 template <class _Tp>
-struct __is_nothrow_swappable
-    : public false_type
+struct _LIBCPP_TYPE_VIS_ONLY is_swappable
+    : public conditional<
+        __is_referenceable<_Tp>::value,
+        is_swappable_with<
+            typename add_lvalue_reference<_Tp>::type,
+            typename add_lvalue_reference<_Tp>::type>,
+        false_type
+    >::type
 {
 };
 
-#endif  // __has_feature(cxx_noexcept)
+template <class _Tp, class _Up>
+struct _LIBCPP_TYPE_VIS_ONLY is_nothrow_swappable_with
+    : public integral_constant<bool, __detail::__nothrow_swappable_with<_Tp, _Up>::value>
+{
+};
+
+template <class _Tp>
+struct _LIBCPP_TYPE_VIS_ONLY is_nothrow_swappable
+    : public conditional<
+        __is_referenceable<_Tp>::value,
+        is_nothrow_swappable_with<
+            typename add_lvalue_reference<_Tp>::type,
+            typename add_lvalue_reference<_Tp>::type>,
+        false_type
+    >::type
+{
+};
+
+template <class _Tp, class _Up>
+constexpr bool is_swappable_with_v = is_swappable_with<_Tp, _Up>::value;
+
+template <class _Tp>
+constexpr bool is_swappable_v = is_swappable<_Tp>::value;
+
+template <class _Tp, class _Up>
+constexpr bool is_nothrow_swappable_with_v = is_nothrow_swappable_with<_Tp, _Up>::value;
+
+template <class _Tp>
+constexpr bool is_nothrow_swappable_v = is_nothrow_swappable<_Tp>::value;
+
+#endif // _LIBCPP_STD_VER > 14
 
 #ifdef _LIBCPP_UNDERLYING_TYPE
 

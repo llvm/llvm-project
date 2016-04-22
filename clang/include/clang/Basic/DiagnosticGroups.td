@@ -46,7 +46,17 @@ def BoolConversion : DiagGroup<"bool-conversion", [PointerBoolConversion,
                                                    UndefinedBoolConversion]>;
 def IntConversion : DiagGroup<"int-conversion">;
 def EnumConversion : DiagGroup<"enum-conversion">;
-def FloatConversion : DiagGroup<"float-conversion">;
+
+def FloatOverflowConversion : DiagGroup<"float-overflow-conversion">;
+def FloatZeroConversion : DiagGroup<"float-zero-conversion">;
+def FloatBoolConstantConversion : DiagGroup<"float-bool-constant-conversion">;
+def FloatBoolConversion :
+  DiagGroup<"float-bool-conversion", [FloatBoolConstantConversion]>;
+def FloatConversion :
+  DiagGroup<"float-conversion", [FloatBoolConversion,
+                                 FloatOverflowConversion,
+                                 FloatZeroConversion]>;
+
 def DoublePromotion : DiagGroup<"double-promotion">;
 def EnumTooLarge : DiagGroup<"enum-too-large">;
 def UnsupportedNan : DiagGroup<"unsupported-nan">;
