@@ -1,10 +1,9 @@
-// RUN: %clangxx_asan -O0 -fsanitize=use-after-scope %s -o %t && \
-// RUN: not %run %t 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck %s
-// XFAIL: *
+// RUN: %clangxx_asan -O1 -mllvm -asan-use-after-scope=1 %s -o %t && \
+// RUN:     not %run %t 2>&1 | FileCheck %s
+
+int *p = 0;
 
 int main() {
-  int *p = 0;
   {
     int x = 0;
     p = &x;

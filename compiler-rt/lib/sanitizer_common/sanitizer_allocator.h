@@ -297,9 +297,10 @@ typedef void (*ForEachChunkCallback)(uptr chunk, void *arg);
 
 // SizeClassAllocator64 -- allocator for 64-bit address space.
 //
-// Space: a portion of address space of kSpaceSize bytes starting at
-// a fixed address (kSpaceBeg). Both constants are powers of two and
-// kSpaceBeg is kSpaceSize-aligned.
+// Space: a portion of address space of kSpaceSize bytes starting at SpaceBeg.
+// If kSpaceBeg is ~0 then SpaceBeg is chosen dynamically my mmap.
+// Otherwise SpaceBeg=kSpaceBeg (fixed address).
+// kSpaceSize is a power of two.
 // At the beginning the entire space is mprotect-ed, then small parts of it
 // are mapped on demand.
 //
@@ -322,9 +323,15 @@ class SizeClassAllocator64 {
   typedef SizeClassAllocatorLocalCache<ThisT> AllocatorCache;
 
   void Init() {
-    CHECK_EQ(kSpaceBeg,
-             reinterpret_cast<uptr>(MmapNoAccess(kSpaceBeg, kSpaceSize)));
-    MapWithCallback(kSpaceEnd, AdditionalSize());
+    if (kUsingConstantSpaceBeg) {
+      CHECK_EQ(kSpaceBeg,
+               reinterpret_cast<uptr>(MmapNoAccess(kSpaceBeg, kSpaceSize)));
+    } else {
+      NonConstSpaceBeg = reinterpret_cast<uptr>(
+          MmapNoAccess(0, kSpaceSize + AdditionalSize()));
+      CHECK_NE(NonConstSpaceBeg, ~(uptr)0);
+    }
+    MapWithCallback(SpaceEnd(), AdditionalSize());
   }
 
   void MapWithCallback(uptr beg, uptr size) {
@@ -360,12 +367,18 @@ class SizeClassAllocator64 {
     region->n_freed += b->count;
   }
 
-  static bool PointerIsMine(const void *p) {
-    return reinterpret_cast<uptr>(p) / kSpaceSize == kSpaceBeg / kSpaceSize;
+  bool PointerIsMine(const void *p) {
+    uptr P = reinterpret_cast<uptr>(p);
+    if (kUsingConstantSpaceBeg && (kSpaceBeg % kSpaceSize) == 0)
+      return P / kSpaceSize == kSpaceBeg / kSpaceSize;
+    return P >= SpaceBeg() && P < SpaceEnd();
   }
 
-  static uptr GetSizeClass(const void *p) {
-    return (reinterpret_cast<uptr>(p) / kRegionSize) % kNumClassesRounded;
+  uptr GetSizeClass(const void *p) {
+    if (kUsingConstantSpaceBeg && (kSpaceBeg % kSpaceSize) == 0)
+      return ((reinterpret_cast<uptr>(p)) / kRegionSize) % kNumClassesRounded;
+    return ((reinterpret_cast<uptr>(p) - SpaceBeg()) / kRegionSize) %
+           kNumClassesRounded;
   }
 
   void *GetBlockBegin(const void *p) {
@@ -383,7 +396,7 @@ class SizeClassAllocator64 {
     return nullptr;
   }
 
-  static uptr GetActuallyAllocatedSize(void *p) {
+  uptr GetActuallyAllocatedSize(void *p) {
     CHECK(PointerIsMine(p));
     return SizeClassMap::Size(GetSizeClass(p));
   }
@@ -394,8 +407,9 @@ class SizeClassAllocator64 {
     uptr class_id = GetSizeClass(p);
     uptr size = SizeClassMap::Size(class_id);
     uptr chunk_idx = GetChunkIdx(reinterpret_cast<uptr>(p), size);
-    return reinterpret_cast<void*>(kSpaceBeg + (kRegionSize * (class_id + 1)) -
-                                   (1 + chunk_idx) * kMetadataSize);
+    return reinterpret_cast<void *>(SpaceBeg() +
+                                    (kRegionSize * (class_id + 1)) -
+                                    (1 + chunk_idx) * kMetadataSize);
   }
 
   uptr TotalMemoryUsed() {
@@ -407,7 +421,7 @@ class SizeClassAllocator64 {
 
   // Test-only.
   void TestOnlyUnmap() {
-    UnmapWithCallback(kSpaceBeg, kSpaceSize + AdditionalSize());
+    UnmapWithCallback(SpaceBeg(), kSpaceSize + AdditionalSize());
   }
 
   void PrintStats() {
@@ -455,7 +469,7 @@ class SizeClassAllocator64 {
     for (uptr class_id = 1; class_id < kNumClasses; class_id++) {
       RegionInfo *region = GetRegionInfo(class_id);
       uptr chunk_size = SizeClassMap::Size(class_id);
-      uptr region_beg = kSpaceBeg + class_id * kRegionSize;
+      uptr region_beg = SpaceBeg() + class_id * kRegionSize;
       for (uptr chunk = region_beg;
            chunk < region_beg + region->allocated_user;
            chunk += chunk_size) {
@@ -476,8 +490,13 @@ class SizeClassAllocator64 {
 
  private:
   static const uptr kRegionSize = kSpaceSize / kNumClassesRounded;
-  static const uptr kSpaceEnd = kSpaceBeg + kSpaceSize;
-  COMPILER_CHECK(kSpaceBeg % kSpaceSize == 0);
+
+  static const bool kUsingConstantSpaceBeg = kSpaceBeg != ~(uptr)0;
+  uptr NonConstSpaceBeg;
+  uptr SpaceBeg() const {
+    return kUsingConstantSpaceBeg ? kSpaceBeg : NonConstSpaceBeg;
+  }
+  uptr SpaceEnd() const { return  SpaceBeg() + kSpaceSize; }
   // kRegionSize must be >= 2^32.
   COMPILER_CHECK((kRegionSize) >= (1ULL << (SANITIZER_WORDSIZE / 2)));
   // Populate the free list with at most this number of bytes at once
@@ -501,7 +520,8 @@ class SizeClassAllocator64 {
 
   RegionInfo *GetRegionInfo(uptr class_id) {
     CHECK_LT(class_id, kNumClasses);
-    RegionInfo *regions = reinterpret_cast<RegionInfo*>(kSpaceBeg + kSpaceSize);
+    RegionInfo *regions =
+        reinterpret_cast<RegionInfo *>(SpaceBeg() + kSpaceSize);
     return &regions[class_id];
   }
 
@@ -524,7 +544,7 @@ class SizeClassAllocator64 {
     uptr count = size < kPopulateSize ? SizeClassMap::MaxCached(class_id) : 1;
     uptr beg_idx = region->allocated_user;
     uptr end_idx = beg_idx + count * size;
-    uptr region_beg = kSpaceBeg + kRegionSize * class_id;
+    uptr region_beg = SpaceBeg() + kRegionSize * class_id;
     if (end_idx + size > region->mapped_user) {
       // Do the mmap for the user memory.
       uptr map_size = kUserMapSize;
