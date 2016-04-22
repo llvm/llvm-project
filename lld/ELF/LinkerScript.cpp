@@ -37,15 +37,6 @@ ScriptConfiguration *elf::ScriptConfig;
 
 static bool matchStr(StringRef S, StringRef T);
 
-static uint64_t getInteger(StringRef S) {
-  uint64_t V;
-  if (S.getAsInteger(0, V)) {
-    error("malformed number: " + S);
-    return 0;
-  }
-  return V;
-}
-
 static int precedence(StringRef Op) {
   return StringSwitch<int>(Op)
       .Case("*", 4)
@@ -82,7 +73,8 @@ static bool expect(ArrayRef<StringRef> &Tokens, StringRef S) {
 
 // This is a part of the operator-precedence parser to evaluate
 // arithmetic expressions in SECTIONS command. This function evaluates an
-// integer literal, a parenthesized expression or the special variable ".".
+// integer literal, a parenthesized expression, the ALIGN function,
+// or the special variable ".".
 template <class ELFT>
 uint64_t LinkerScript<ELFT>::parsePrimary(ArrayRef<StringRef> &Tokens) {
   StringRef Tok = next(Tokens);
@@ -94,7 +86,29 @@ uint64_t LinkerScript<ELFT>::parsePrimary(ArrayRef<StringRef> &Tokens) {
       return 0;
     return V;
   }
-  return getInteger(Tok);
+  if (Tok == "ALIGN") {
+    if (!expect(Tokens, "("))
+      return 0;
+    uint64_t V = parseExpr(Tokens);
+    if (!expect(Tokens, ")"))
+      return 0;
+    return alignTo(Dot, V);
+  }
+  uint64_t V = 0;
+  if (Tok.getAsInteger(0, V))
+    error("malformed number: " + Tok);
+  return V;
+}
+
+template <class ELFT>
+uint64_t LinkerScript<ELFT>::parseTernary(ArrayRef<StringRef> &Tokens,
+                                          uint64_t Cond) {
+  next(Tokens);
+  uint64_t V = parseExpr(Tokens);
+  if (!expect(Tokens, ":"))
+    return 0;
+  uint64_t W = parseExpr(Tokens);
+  return Cond ? V : W;
 }
 
 static uint64_t apply(StringRef Op, uint64_t L, uint64_t R) {
@@ -126,6 +140,9 @@ uint64_t LinkerScript<ELFT>::parseExpr1(ArrayRef<StringRef> &Tokens,
   while (!Tokens.empty()) {
     // Read an operator and an expression.
     StringRef Op1 = Tokens.front();
+    if (Op1 == "?")
+      return parseTernary(Tokens, Lhs);
+
     if (precedence(Op1) < MinPrec)
       return Lhs;
     next(Tokens);
@@ -195,8 +212,6 @@ findSection(ArrayRef<OutputSectionBase<ELFT> *> V, StringRef Name) {
 template <class ELFT>
 void LinkerScript<ELFT>::assignAddresses(
     ArrayRef<OutputSectionBase<ELFT> *> Sections) {
-  typedef typename ELFT::uint uintX_t;
-
   // Orphan sections are sections present in the input files which
   // are not explicitly placed into the output file by the linker script.
   // We place orphan sections at end of file.
@@ -302,7 +317,7 @@ class elf::ScriptParser : public ScriptParserBase {
 public:
   ScriptParser(StringRef S, bool B) : ScriptParserBase(S), IsUnderSysroot(B) {}
 
-  void run() override;
+  void run();
 
 private:
   void addFile(StringRef Path);

@@ -20,9 +20,6 @@ namespace elf {
 class ScriptParserBase {
 public:
   ScriptParserBase(StringRef S) : Input(S), Tokens(tokenize(S)) {}
-  virtual ~ScriptParserBase() = default;
-
-  virtual void run() = 0;
 
 protected:
   void setError(const Twine &Msg);

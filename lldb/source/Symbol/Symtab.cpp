@@ -915,12 +915,15 @@ AddSectionsToRangeMap (SectionList *sectlist, RangeVector<addr_t, addr_t> &secti
             }
             else
             {
-                addr_t base_addr = sect_sp->GetFileAddress();
                 size_t size = sect_sp->GetByteSize();
-                RangeVector<addr_t, addr_t>::Entry entry;
-                entry.SetRangeBase (base_addr);
-                entry.SetByteSize (size);
-                section_ranges.Append (entry);
+                if (size > 0)
+                {
+                    addr_t base_addr = sect_sp->GetFileAddress();
+                    RangeVector<addr_t, addr_t>::Entry entry;
+                    entry.SetRangeBase (base_addr);
+                    entry.SetByteSize (size);
+                    section_ranges.Append (entry);
+                }
             }
         }
     }

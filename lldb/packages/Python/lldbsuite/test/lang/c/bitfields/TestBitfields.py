@@ -96,6 +96,14 @@ class BitfieldsTestCase(TestBase):
         self.expect("expr (more_bits.d)", VARIABLES_DISPLAYED_CORRECTLY,
             substrs = ['uint8_t', '\\0'])
 
+        self.expect("expr (packed.a)", VARIABLES_DISPLAYED_CORRECTLY, 
+            substrs = ['char', "'a'"])
+        self.expect("expr (packed.b)", VARIABLES_DISPLAYED_CORRECTLY, 
+            substrs = ['uint32_t', "10"])
+        self.expect("expr/x (packed.c)", VARIABLES_DISPLAYED_CORRECTLY, 
+            substrs = ['uint32_t', "7112233"])
+
+
     @add_test_categories(['pyapi'])
     @skipIfWindows # BitFields exhibit crashes in record layout on Windows (http://llvm.org/pr21800)
     def test_and_python_api(self):

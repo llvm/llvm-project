@@ -75,6 +75,8 @@ extern ScriptConfiguration *ScriptConfig;
 
 // This is a runner of the linker script.
 template <class ELFT> class LinkerScript {
+  typedef typename ELFT::uint uintX_t;
+
 public:
   StringRef getOutputSection(InputSectionBase<ELFT> *S);
   ArrayRef<uint8_t> getFiller(StringRef Name);
@@ -93,7 +95,8 @@ private:
   uint64_t parseExpr(ArrayRef<StringRef> &Tokens);
   uint64_t parsePrimary(ArrayRef<StringRef> &Tokens);
   uint64_t parseExpr1(ArrayRef<StringRef> &Tokens, uint64_t Lhs, int MinPrec);
-  typename ELFT::uint Dot;
+  uint64_t parseTernary(ArrayRef<StringRef> &Tokens, uint64_t Cond);
+  uintX_t Dot;
 };
 
 // Variable template is a C++14 feature, so we can't template

@@ -9,11 +9,11 @@
 
 #include "Driver.h"
 #include "Config.h"
-#include "DynamicList.h"
 #include "Error.h"
 #include "ICF.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
+#include "SymbolListFile.h"
 #include "SymbolTable.h"
 #include "Target.h"
 #include "Writer.h"
@@ -144,11 +144,6 @@ Optional<MemoryBufferRef> LinkerDriver::readFile(StringRef Path) {
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   OwningMBs.push_back(std::move(MB)); // take MB ownership
   return MBRef;
-}
-
-void LinkerDriver::readDynamicList(StringRef Path) {
-  if (Optional<MemoryBufferRef> Buffer = readFile(Path))
-    parseDynamicList(*Buffer);
 }
 
 // Add a given library by searching it from input search paths.
@@ -289,7 +284,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Demangle = !Args.hasArg(OPT_no_demangle);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->DiscardAll = Args.hasArg(OPT_discard_all);
-  Config->DiscardValueNames = !Args.hasArg(OPT_lto_no_discard_value_names);
   Config->DiscardLocals = Args.hasArg(OPT_discard_locals);
   Config->DiscardNone = Args.hasArg(OPT_discard_none);
   Config->EhFrameHdr = Args.hasArg(OPT_eh_frame_hdr);
@@ -372,7 +366,18 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     Config->Undefined.push_back(Arg->getValue());
 
   if (Args.hasArg(OPT_dynamic_list))
-    readDynamicList(getString(Args, OPT_dynamic_list));
+    if (Optional<MemoryBufferRef> Buffer =
+            readFile(getString(Args, OPT_dynamic_list)))
+      parseDynamicList(*Buffer);
+
+  for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
+    Config->DynamicList.push_back(Arg->getValue());
+
+  Config->VersionScript = Args.hasArg(OPT_version_script);
+  if (Config->VersionScript)
+    if (Optional<MemoryBufferRef> Buffer =
+            readFile(getString(Args, OPT_version_script)))
+      parseVersionScript(*Buffer);
 }
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {
@@ -416,6 +421,8 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     error("no input files.");
 }
 
+// Do actual linking. Note that when this function is called,
+// all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   SymbolTable<ELFT> Symtab;
 
@@ -426,18 +433,20 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   Config->Rela = ELFT::Is64Bits;
 
-  // Add entry symbol.
-  // There is no entry symbol for AMDGPU binaries, so skip adding one to avoid
-  // having and undefined symbol.
+  // Add entry symbol. Note that AMDGPU binaries have no entry points.
   if (Config->Entry.empty() && !Config->Shared && !Config->Relocatable &&
       Config->EMachine != EM_AMDGPU)
-    Config->Entry = Config->EMachine == EM_MIPS ? "__start" : "_start";
+    Config->Entry = (Config->EMachine == EM_MIPS) ? "__start" : "_start";
 
+  // Default output filename is "a.out" by the Unix tradition.
+  if (Config->OutputFile.empty())
+    Config->OutputFile = "a.out";
+
+  // Set either EntryAddr (if S is a number) or EntrySym (otherwise).
   if (!Config->Entry.empty()) {
-    // Set either EntryAddr (if S is a number) or EntrySym (otherwise).
     StringRef S = Config->Entry;
     if (S.getAsInteger(0, Config->EntryAddr))
-      Config->EntrySym = Symtab.addUndefined(S)->getSymbol();
+      Config->EntrySym = Symtab.addUndefined(S)->Backref;
   }
 
   for (std::unique_ptr<InputFile> &F : Files)
@@ -448,12 +457,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (StringRef S : Config->Undefined)
     Symtab.addUndefinedOpt(S);
 
-  // -save-temps creates a file based on the output file name so we want
-  // to set it right before LTO. This code can't be moved to option parsing
-  // because linker scripts can override the output filename using the
-  // OUTPUT() directive.
-  if (Config->OutputFile.empty())
-    Config->OutputFile = "a.out";
+  Symtab.scanShlibUndefined();
+  Symtab.scanDynamicList();
+  Symtab.scanVersionScript();
 
   Symtab.addCombinedLtoObject();
 
@@ -461,8 +467,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     Symtab.wrap(Arg->getValue());
 
   // Write the result to the file.
-  Symtab.scanShlibUndefined();
-  Symtab.scanDynamicList();
   if (Config->GcSections)
     markLive<ELFT>(&Symtab);
   if (Config->ICF)

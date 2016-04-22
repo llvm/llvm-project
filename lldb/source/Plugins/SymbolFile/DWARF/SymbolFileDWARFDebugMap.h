@@ -349,6 +349,7 @@ protected:
     bool
     AddOSOFileRange (CompileUnitInfo *cu_info,
                      lldb::addr_t exe_file_addr,
+                     lldb::addr_t exe_byte_size,
                      lldb::addr_t oso_file_addr,
                      lldb::addr_t oso_byte_size);
     

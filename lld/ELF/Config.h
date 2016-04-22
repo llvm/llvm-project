@@ -51,6 +51,7 @@ struct Configuration {
   std::vector<llvm::StringRef> DynamicList;
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> Undefined;
+  std::vector<llvm::StringRef> VersionScriptGlobals;
   bool AllowMultipleDefinition;
   bool AsNeeded = false;
   bool Bsymbolic;
@@ -58,7 +59,6 @@ struct Configuration {
   bool Demangle = true;
   bool DisableVerify;
   bool DiscardAll;
-  bool DiscardValueNames;
   bool DiscardLocals;
   bool DiscardNone;
   bool EhFrameHdr;
@@ -85,6 +85,7 @@ struct Configuration {
   bool Threads;
   bool Trace;
   bool Verbose;
+  bool VersionScript;
   bool WarnCommon;
   bool ZExecStack;
   bool ZNodelete;

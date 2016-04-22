@@ -77,23 +77,41 @@ InputSectionBase<ELFT>::getOffset(const DefinedRegular<ELFT> &Sym) {
   return getOffset(Sym.Value);
 }
 
-// Returns a section that Rel relocation is pointing to.
 template <class ELFT>
-InputSectionBase<ELFT> *
-InputSectionBase<ELFT>::getRelocTarget(const Elf_Rel &Rel) const {
-  // Global symbol
+static DefinedRegular<ELFT> *getRelocTargetSym(elf::ObjectFile<ELFT> *File,
+                                               const typename ELFT::Rel &Rel) {
   uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
   SymbolBody &B = File->getSymbolBody(SymIndex).repl();
   if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B))
     if (D->Section)
-      return D->Section->Repl;
+      return D;
   return nullptr;
 }
 
+// Returns a section that Rel relocation is pointing to.
 template <class ELFT>
-InputSectionBase<ELFT> *
+std::pair<InputSectionBase<ELFT> *, typename ELFT::uint>
+InputSectionBase<ELFT>::getRelocTarget(const Elf_Rel &Rel) const {
+  auto *D = getRelocTargetSym(File, Rel);
+  if (!D)
+    return std::make_pair(nullptr, 0);
+  if (!D->isSection())
+    return std::make_pair(D->Section->Repl, D->Value);
+  const uint8_t *BufLoc = getSectionData().begin() + Rel.r_offset;
+  uintX_t Addend =
+      Target->getImplicitAddend(BufLoc, Rel.getType(Config->Mips64EL));
+  return std::make_pair(D->Section->Repl, D->Value + Addend);
+}
+
+template <class ELFT>
+std::pair<InputSectionBase<ELFT> *, typename ELFT::uint>
 InputSectionBase<ELFT>::getRelocTarget(const Elf_Rela &Rel) const {
-  return getRelocTarget(reinterpret_cast<const Elf_Rel &>(Rel));
+  auto *D = getRelocTargetSym(File, Rel);
+  if (!D)
+    return std::make_pair(nullptr, 0);
+  if (!D->isSection())
+    return std::make_pair(D->Section->Repl, D->Value);
+  return std::make_pair(D->Section->Repl, D->Value + Rel.r_addend);
 }
 
 template <class ELFT>
@@ -368,10 +386,49 @@ typename ELFT::uint EHInputSection<ELFT>::getOffset(uintX_t Offset) {
   return Base + Addend;
 }
 
+static size_t findNull(StringRef S, size_t EntSize) {
+  // Optimize the common case.
+  if (EntSize == 1)
+    return S.find(0);
+
+  for (unsigned I = 0, N = S.size(); I != N; I += EntSize) {
+    const char *B = S.begin() + I;
+    if (std::all_of(B, B + EntSize, [](char C) { return C == 0; }))
+      return I;
+  }
+  return StringRef::npos;
+}
+
 template <class ELFT>
 MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
                                            const Elf_Shdr *Header)
-    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::Merge) {}
+    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::Merge) {
+  uintX_t EntSize = Header->sh_entsize;
+  ArrayRef<uint8_t> D = this->getSectionData();
+  StringRef Data((const char *)D.data(), D.size());
+  std::vector<std::pair<uintX_t, uintX_t>> &Offsets = this->Offsets;
+
+  uintX_t V = Config->GcSections ? -1 : 0;
+  if (Header->sh_flags & SHF_STRINGS) {
+    uintX_t Offset = 0;
+    while (!Data.empty()) {
+      size_t End = findNull(Data, EntSize);
+      if (End == StringRef::npos)
+        fatal("string is not null terminated");
+      Offsets.push_back(std::make_pair(Offset, V));
+      uintX_t Size = End + EntSize;
+      Data = Data.substr(Size);
+      Offset += Size;
+    }
+    return;
+  }
+
+  // If this is not of type string, every entry has the same size.
+  size_t Size = Data.size();
+  assert((Size % EntSize) == 0);
+  for (unsigned I = 0, N = Size; I != N; I += EntSize)
+    Offsets.push_back(std::make_pair(I, V));
+}
 
 template <class ELFT>
 bool MergeInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
@@ -447,6 +504,11 @@ template class elf::InputSection<ELF32LE>;
 template class elf::InputSection<ELF32BE>;
 template class elf::InputSection<ELF64LE>;
 template class elf::InputSection<ELF64BE>;
+
+template class elf::SplitInputSection<ELF32LE>;
+template class elf::SplitInputSection<ELF32BE>;
+template class elf::SplitInputSection<ELF64LE>;
+template class elf::SplitInputSection<ELF64BE>;
 
 template class elf::EHInputSection<ELF32LE>;
 template class elf::EHInputSection<ELF32BE>;

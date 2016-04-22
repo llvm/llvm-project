@@ -1132,7 +1132,7 @@ void EHOutputSection<ELFT>::addSectionAux(EHInputSection<ELFT> *S,
     } else {
       if (!HasReloc)
         fatal("FDE doesn't reference another section");
-      InputSectionBase<ELFT> *Target = S->getRelocTarget(*RelI);
+      InputSectionBase<ELFT> *Target = S->getRelocTarget(*RelI).first;
       if (Target && Target->Live) {
         uint32_t CieOffset = Offset + 4 - ID;
         auto I = OffsetToIndex.find(CieOffset);
@@ -1227,19 +1227,6 @@ template <class ELFT> void MergeOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
-static size_t findNull(StringRef S, size_t EntSize) {
-  // Optimize the common case.
-  if (EntSize == 1)
-    return S.find(0);
-
-  for (unsigned I = 0, N = S.size(); I != N; I += EntSize) {
-    const char *B = S.begin() + I;
-    if (std::all_of(B, B + EntSize, [](char C) { return C == 0; }))
-      return I;
-  }
-  return StringRef::npos;
-}
-
 template <class ELFT>
 void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *S = cast<MergeInputSection<ELFT>>(C);
@@ -1250,31 +1237,32 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   StringRef Data((const char *)D.data(), D.size());
   uintX_t EntSize = S->getSectionHdr()->sh_entsize;
   this->Header.sh_entsize = EntSize;
+  MutableArrayRef<std::pair<uintX_t, uintX_t>> Offsets = S->Offsets;
 
   // If this is of type string, the contents are null-terminated strings.
   if (this->Header.sh_flags & SHF_STRINGS) {
-    uintX_t Offset = 0;
-    while (!Data.empty()) {
-      size_t End = findNull(Data, EntSize);
-      if (End == StringRef::npos)
-        fatal("string is not null terminated");
-      StringRef Entry = Data.substr(0, End + EntSize);
+    for (unsigned I = 0, N = Offsets.size(); I != N; ++I) {
+      auto &P = Offsets[I];
+      if (P.second == (uintX_t)-1)
+        continue;
+
+      uintX_t Start = P.first;
+      uintX_t End = (I == N - 1) ? Data.size() : Offsets[I + 1].first;
+      StringRef Entry = Data.substr(Start, End - Start);
       uintX_t OutputOffset = Builder.add(Entry);
       if (shouldTailMerge())
         OutputOffset = -1;
-      S->Offsets.push_back(std::make_pair(Offset, OutputOffset));
-      uintX_t Size = End + EntSize;
-      Data = Data.substr(Size);
-      Offset += Size;
+      P.second = OutputOffset;
     }
     return;
   }
 
   // If this is not of type string, every entry has the same size.
-  for (unsigned I = 0, N = Data.size(); I != N; I += EntSize) {
-    StringRef Entry = Data.substr(I, EntSize);
-    size_t OutputOffset = Builder.add(Entry);
-    S->Offsets.push_back(std::make_pair(I, OutputOffset));
+  for (auto &P : Offsets) {
+    if (P.second == (uintX_t)-1)
+      continue;
+    StringRef Entry = Data.substr(P.first, EntSize);
+    P.second = Builder.add(Entry);
   }
 }
 
@@ -1355,7 +1343,7 @@ static bool sortMipsSymbols(const std::pair<SymbolBody *, unsigned> &L,
 }
 
 static uint8_t getSymbolBinding(SymbolBody *Body) {
-  uint8_t Visibility = Body->getVisibility();
+  uint8_t Visibility = Body->Backref->Visibility;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
   if (Config->NoGnuUnique && Body->Binding == STB_GNU_UNIQUE)
@@ -1440,12 +1428,6 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
   }
 }
 
-static uint8_t getSymbolVisibility(SymbolBody *Body) {
-  if (Body->isShared())
-    return STV_DEFAULT;
-  return Body->getVisibility();
-}
-
 template <class ELFT>
 void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
   // Write the internal symbol table contents to the output symbol table
@@ -1461,7 +1443,7 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     ESym->setBindingAndType(getSymbolBinding(Body), Type);
     ESym->st_size = Size;
     ESym->st_name = StrOff;
-    ESym->setVisibility(getSymbolVisibility(Body));
+    ESym->setVisibility(Body->Backref->Visibility);
     ESym->st_value = Body->getVA<ELFT>();
 
     if (const OutputSectionBase<ELFT> *OutSec = getOutputSection(Body))

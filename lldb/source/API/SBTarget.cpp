@@ -2388,7 +2388,9 @@ lldb::SBValue
 SBTarget::EvaluateExpression (const char *expr, const SBExpressionOptions &options)
 {
     Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
+#if !defined(LLDB_DISABLE_PYTHON)
     Log * expr_log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
+#endif
     SBValue expr_result;
     ExpressionResults exe_results = eExpressionSetupError;
     ValueObjectSP expr_value_sp;

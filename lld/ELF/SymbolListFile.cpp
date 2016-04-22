@@ -1,4 +1,4 @@
-//===- LinkerScript.cpp ---------------------------------------------------===//
+//===- SymbolListFile.cpp -------------------------------------------------===//
 //
 //                             The LLVM Linker
 //
@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DynamicList.h"
+#include "SymbolListFile.h"
 #include "Config.h"
 #include "ScriptParser.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -34,7 +34,7 @@ class DynamicListParser final : public ScriptParserBase {
 public:
   DynamicListParser(StringRef S) : ScriptParserBase(S) {}
 
-  void run() override;
+  void run();
 
 private:
   void readGroup();
@@ -61,4 +61,43 @@ void DynamicListParser::run() {
 
 void elf::parseDynamicList(MemoryBufferRef MB) {
   DynamicListParser(MB.getBuffer()).run();
+}
+
+// Parse the --version-script argument. We currently only accept the following
+// version script syntax:
+//
+//  { [ global: symbol1; symbol2; [...]; symbolN; ] local: *; };
+//
+// No wildcards are supported, other than for the local entry. Symbol versioning
+// is also not supported.
+
+class VersionScriptParser final : public ScriptParserBase {
+public:
+  VersionScriptParser(StringRef S) : ScriptParserBase(S) {}
+
+  void run();
+};
+
+void VersionScriptParser::run() {
+  expect("{");
+  if (peek() == "global:") {
+    next();
+    while (!Error) {
+      Config->VersionScriptGlobals.push_back(next());
+      expect(";");
+      if (peek() == "local:")
+        break;
+    }
+  }
+  expect("local:");
+  expect("*");
+  expect(";");
+  expect("}");
+  expect(";");
+  if (!atEOF())
+    setError("expected EOF");
+}
+
+void elf::parseVersionScript(MemoryBufferRef MB) {
+  VersionScriptParser(MB.getBuffer()).run();
 }

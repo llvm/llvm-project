@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 #include <stdint.h>
 #include <stdio.h>
+
 int main (int argc, char const *argv[])
 {
     struct Bits
@@ -61,6 +62,19 @@ int main (int argc, char const *argv[])
     more_bits.b = 0;
     more_bits.c = 1;
     more_bits.d = 0;
+
+#pragma pack(1)
+    struct PackedBits
+    {
+        char a;
+    	uint32_t b : 5,
+                 c : 27;
+    };
+#pragma pack()  
+    struct PackedBits packed;
+    packed.a = 'a';
+    packed.b = 10;
+    packed.c = 0x7112233;
 
     return 0;               //// Set break point at this line.
 

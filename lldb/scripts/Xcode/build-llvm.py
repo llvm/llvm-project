@@ -249,7 +249,7 @@ def find_cmake ():
         return cmake_binary
 
     # We couldn't find cmake.  Tell the user what to do.
-    raise(
+    raise Exception(
         "could not find cmake in PATH ({}) or in any of these locations ({}), "
         "please install cmake or add a link to it in one of those locations".format(
             os.environ["PATH"],

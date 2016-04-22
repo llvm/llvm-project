@@ -62,6 +62,9 @@ def entry : Separate<["--", "-"], "entry">, MetaVarName<"<entry>">,
 def export_dynamic : Flag<["--", "-"], "export-dynamic">,
   HelpText<"Put symbols in the dynamic symbol table">;
 
+def export_dynamic_symbol : Separate<["--", "-"], "export-dynamic-symbol">,
+  HelpText<"Put a symbol in the dynamic symbol table">;
+
 def fini : Separate<["-"], "fini">, MetaVarName<"<symbol>">,
   HelpText<"Specify a finalizer function">;
 
@@ -157,6 +160,9 @@ def verbose : Flag<["--"], "verbose">;
 def version : Flag<["--", "-"], "version">,
   HelpText<"Display the version number">;
 
+def version_script : Separate<["--", "-"], "version-script">,
+  HelpText<"Read a version script">;
+
 def warn_common : Flag<["--", "-"], "warn-common">,
   HelpText<"Warn about duplicate common symbols">;
 
@@ -231,7 +237,6 @@ def no_warn_common : Flag<["--", "-"], "no-warn-common">;
 def no_warn_mismatch : Flag<["--"], "no-warn-mismatch">;
 def rpath_link : Separate<["--", "-"], "rpath-link">;
 def rpath_link_eq : Joined<["--", "-"], "rpath-link=">;
-def version_script : Separate<["--"], "version-script">;
 def warn_execstack : Flag<["--"], "warn-execstack">;
 def warn_shared_textrel : Flag<["--"], "warn-shared-textrel">;
 def G : Separate<["-"], "G">;
@@ -240,7 +245,6 @@ def G : Separate<["-"], "G">;
 def alias_version_script_version_script : Joined<["--"], "version-script=">, Alias<version_script>;
 
 // LTO-related options.
-def lto_no_discard_value_names : Flag<["-"], "lto-no-discard-value-names">;
 def lto_jobs : Joined<["--"], "lto-jobs=">,
   HelpText<"Number of threads to run codegen">;
 def disable_verify : Flag<["-"], "disable-verify">;
