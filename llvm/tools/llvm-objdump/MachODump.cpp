@@ -5964,7 +5964,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     return;
   }
 
-  // Set up thumb disassembler.
+  // Set up separate thumb disassembler if needed.
   std::unique_ptr<const MCRegisterInfo> ThumbMRI;
   std::unique_ptr<const MCAsmInfo> ThumbAsmInfo;
   std::unique_ptr<const MCSubtargetInfo> ThumbSTI;
@@ -6186,8 +6186,11 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       symbolTableWorked = true;
 
       DataRefImpl Symb = Symbols[SymIdx].getRawDataRefImpl();
-      bool isThumb =
-          (MachOOF->getSymbolFlags(Symb) & SymbolRef::SF_Thumb) && ThumbTarget;
+      bool IsThumb = MachOOF->getSymbolFlags(Symb) & SymbolRef::SF_Thumb;
+
+      // We only need the dedicated Thumb target if there's a real choice
+      // (i.e. we're not targeting M-class) and the function is Thumb.
+      bool UseThumbTarget = IsThumb && ThumbTarget;
 
       outs() << SymName << ":\n";
       DILineInfo lastLine;
@@ -6231,7 +6234,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         raw_svector_ostream Annotations(AnnotationsBytes);
 
         bool gotInst;
-        if (isThumb)
+        if (UseThumbTarget)
           gotInst = ThumbDisAsm->getInstruction(Inst, Size, Bytes.slice(Index),
                                                 PC, DebugOut, Annotations);
         else
@@ -6243,7 +6246,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
           }
           formatted_raw_ostream FormattedOS(outs());
           StringRef AnnotationsStr = Annotations.str();
-          if (isThumb)
+          if (UseThumbTarget)
             ThumbIP->printInst(&Inst, FormattedOS, AnnotationsStr, *ThumbSTI);
           else
             IP->printInst(&Inst, FormattedOS, AnnotationsStr, *STI);
@@ -6265,14 +6268,21 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
             outs() << format("\t.byte 0x%02x #bad opcode\n",
                              *(Bytes.data() + Index) & 0xff);
             Size = 1; // skip exactly one illegible byte and move on.
-          } else if (Arch == Triple::aarch64) {
+          } else if (Arch == Triple::aarch64 ||
+                     (Arch == Triple::arm && !IsThumb)) {
             uint32_t opcode = (*(Bytes.data() + Index) & 0xff) |
                               (*(Bytes.data() + Index + 1) & 0xff) << 8 |
                               (*(Bytes.data() + Index + 2) & 0xff) << 16 |
                               (*(Bytes.data() + Index + 3) & 0xff) << 24;
             outs() << format("\t.long\t0x%08x\n", opcode);
             Size = 4;
-          } else {
+          } else if (Arch == Triple::arm) {
+            assert(IsThumb && "ARM mode should have been dealt with above");
+            uint32_t opcode = (*(Bytes.data() + Index) & 0xff) |
+                              (*(Bytes.data() + Index + 1) & 0xff) << 8;
+            outs() << format("\t.short\t0x%04x\n", opcode);
+            Size = 2;
+          } else{
             errs() << "llvm-objdump: warning: invalid instruction encoding\n";
             if (Size == 0)
               Size = 1; // skip illegible bytes

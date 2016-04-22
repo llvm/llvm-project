@@ -6,5 +6,9 @@
 _t:
         @ A nice Cortex-M only instruction to make sure the default CPU is sound.
         msr msp, r0
+        .short 0xf000
+        b _t
 
 @ CHECK: msr msp, r0
+@ CHECK: .short 0xf000
+@ CHECK: b _t
