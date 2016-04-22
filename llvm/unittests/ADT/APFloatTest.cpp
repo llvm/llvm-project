@@ -2890,7 +2890,22 @@ TEST(APFloatTest, scalbn) {
   EXPECT_TRUE(MZero.bitwiseIsEqual(scalbn(MZero, 0, RM)));
   EXPECT_TRUE(QPNaN.bitwiseIsEqual(scalbn(QPNaN, 0, RM)));
   EXPECT_TRUE(QMNaN.bitwiseIsEqual(scalbn(QMNaN, 0, RM)));
-  EXPECT_TRUE(SNaN.bitwiseIsEqual(scalbn(SNaN, 0, RM)));
+  EXPECT_FALSE(scalbn(SNaN, 0, RM).isSignaling());
+
+  APFloat ScalbnSNaN = scalbn(SNaN, 1, RM);
+  EXPECT_TRUE(ScalbnSNaN.isNaN() && !ScalbnSNaN.isSignaling());
+
+  // Make sure highest bit of payload is preserved.
+  const APInt Payload(64, (UINT64_C(1) << 50) |
+                      (UINT64_C(1) << 49) |
+                      (UINT64_C(1234) << 32) |
+                      1);
+
+  APFloat SNaNWithPayload = APFloat::getSNaN(APFloat::IEEEdouble, false,
+                                             &Payload);
+  APFloat QuietPayload = scalbn(SNaNWithPayload, 1, RM);
+  EXPECT_TRUE(QuietPayload.isNaN() && !QuietPayload.isSignaling());
+  EXPECT_EQ(Payload, QuietPayload.bitcastToAPInt().getLoBits(51));
 
   EXPECT_TRUE(PInf.bitwiseIsEqual(
                 scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), 128, RM)));
