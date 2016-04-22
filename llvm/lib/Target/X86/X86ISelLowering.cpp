@@ -2624,6 +2624,14 @@ X86TargetLowering::LowerMemArgument(SDValue Chain,
   } else {
     int FI = MFI->CreateFixedObject(ValVT.getSizeInBits()/8,
                                     VA.getLocMemOffset(), isImmutable);
+
+    // Set SExt or ZExt flag.
+    if (VA.getLocInfo() == CCValAssign::ZExt) {
+      MFI->setObjectZExt(FI, true);
+    } else if (VA.getLocInfo() == CCValAssign::SExt) {
+      MFI->setObjectSExt(FI, true);
+    }
+
     // Adjust SP offset of interrupt parameter.
     if (CallConv == CallingConv::X86_INTR) {
       MFI->setObjectOffset(FI, Offset);
@@ -3658,7 +3666,7 @@ X86TargetLowering::GetAlignedArgumentStackSize(unsigned StackSize,
 static
 bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
                          MachineFrameInfo *MFI, const MachineRegisterInfo *MRI,
-                         const X86InstrInfo *TII) {
+                         const X86InstrInfo *TII, const CCValAssign &VA) {
   unsigned Bytes = Arg.getValueType().getSizeInBits() / 8;
   int FI = INT_MAX;
   if (Arg.getOpcode() == ISD::CopyFromReg) {
@@ -3704,7 +3712,20 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   assert(FI != INT_MAX);
   if (!MFI->isFixedObjectIndex(FI))
     return false;
-  return Offset == MFI->getObjectOffset(FI) && Bytes == MFI->getObjectSize(FI);
+
+  if (Offset != MFI->getObjectOffset(FI))
+    return false;
+
+  if (VA.getLocVT().getSizeInBits() > Arg.getValueType().getSizeInBits()) {
+    // If the argument location is wider than the argument type, check that any
+    // extension flags match.
+    if (Flags.isZExt() != MFI->isObjectZExt(FI) ||
+        Flags.isSExt() != MFI->isObjectSExt(FI)) {
+      return false;
+    }
+  }
+
+  return Bytes == MFI->getObjectSize(FI);
 }
 
 /// Check whether the call is eligible for tail call optimization. Targets
@@ -3842,7 +3863,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
           return false;
         if (!VA.isRegLoc()) {
           if (!MatchingStackOffset(Arg, VA.getLocMemOffset(), Flags,
-                                   MFI, MRI, TII))
+                                   MFI, MRI, TII, VA))
             return false;
         }
       }
