@@ -38,10 +38,11 @@ using namespace object;
 IRObjectFile::IRObjectFile(MemoryBufferRef Object, std::unique_ptr<Module> Mod)
     : SymbolicFile(Binary::ID_IR, Object), M(std::move(Mod)) {
   Mang.reset(new Mangler());
-  CollectAsmUndefinedRefs(*M, [this](StringRef Name,
-                                     BasicSymbolRef::Flags Flags) {
-    AsmSymbols.push_back(std::make_pair<std::string, uint32_t>(Name, std::move(Flags)));
-  });
+  CollectAsmUndefinedRefs(
+      *M, [this](StringRef Name, BasicSymbolRef::Flags Flags) {
+        AsmSymbols.push_back(
+            std::make_pair<std::string, uint32_t>(Name, std::move(Flags)));
+      });
 }
 
 // Parse inline ASM and collect the list of symbols that are not defined in
