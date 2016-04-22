@@ -70,16 +70,20 @@ public:
   /// Whether this entity is marked unavailable in Swift.
   unsigned UnavailableInSwift : 1;
 
+  /// Whether this entity is considered "private" to a Swift overlay.
+  unsigned SwiftPrivate : 1;
+
   /// Swift name of this entity.
   std::string SwiftName;
 
-  CommonEntityInfo() : Unavailable(0), UnavailableInSwift(0) { }
+  CommonEntityInfo() : Unavailable(0), UnavailableInSwift(0), SwiftPrivate(0) { }
 
   friend bool operator==(const CommonEntityInfo &lhs,
                          const CommonEntityInfo &rhs) {
     return lhs.UnavailableMsg == rhs.UnavailableMsg &&
            lhs.Unavailable == rhs.Unavailable &&
            lhs.UnavailableInSwift == rhs.UnavailableInSwift &&
+           lhs.SwiftPrivate == rhs.SwiftPrivate &&
            lhs.SwiftName == rhs.SwiftName;
   }
 
@@ -106,6 +110,9 @@ public:
         lhs.UnavailableMsg = rhs.UnavailableMsg;
       }
     }
+
+    if (rhs.SwiftPrivate)
+      lhs.SwiftPrivate = true;
 
     if (rhs.SwiftName.length() != 0 &&
         lhs.SwiftName.length() == 0)
