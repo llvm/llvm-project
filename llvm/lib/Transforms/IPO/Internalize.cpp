@@ -105,9 +105,6 @@ public:
   }
 
   bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
     CallGraphWrapperPass *CGPass =
         getAnalysisIfAvailable<CallGraphWrapperPass>();
     CallGraph *CG = CGPass ? &CGPass->getCallGraph() : nullptr;

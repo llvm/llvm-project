@@ -67,6 +67,7 @@ void llvm::initializeInstrumentation(PassRegistry &Registry) {
   initializeThreadSanitizerPass(Registry);
   initializeSanitizerCoverageModulePass(Registry);
   initializeDataFlowSanitizerPass(Registry);
+  initializeEfficiencySanitizerPass(Registry);
 }
 
 /// LLVMInitializeInstrumentation - C binding for

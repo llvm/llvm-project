@@ -250,6 +250,7 @@ static bool isIntrinsicSourceOfDivergence(const TargetIntrinsicInfo *TII,
   case Intrinsic::amdgcn_buffer_atomic_or:
   case Intrinsic::amdgcn_buffer_atomic_xor:
   case Intrinsic::amdgcn_buffer_atomic_cmpswap:
+  case Intrinsic::amdgcn_ps_live:
     return true;
   }
 

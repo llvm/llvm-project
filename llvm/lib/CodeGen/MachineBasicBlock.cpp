@@ -711,38 +711,13 @@ bool MachineBasicBlock::canFallThrough() {
   return FBB == nullptr;
 }
 
-MachineBasicBlock *
-MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P) {
-  // Splitting the critical edge to a landing pad block is non-trivial. Don't do
-  // it in this generic function.
-  if (Succ->isEHPad())
+MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
+                                                        Pass &P) {
+  if (!canSplitCriticalEdge(Succ))
     return nullptr;
 
   MachineFunction *MF = getParent();
   DebugLoc DL;  // FIXME: this is nowhere
-
-  // Performance might be harmed on HW that implements branching using exec mask
-  // where both sides of the branches are always executed.
-  if (MF->getTarget().requiresStructuredCFG())
-    return nullptr;
-
-  // We may need to update this's terminator, but we can't do that if
-  // AnalyzeBranch fails. If this uses a jump table, we won't touch it.
-  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
-  SmallVector<MachineOperand, 4> Cond;
-  if (TII->AnalyzeBranch(*this, TBB, FBB, Cond))
-    return nullptr;
-
-  // Avoid bugpoint weirdness: A block may end with a conditional branch but
-  // jumps to the same MBB is either case. We have duplicate CFG edges in that
-  // case that we can't handle. Since this never happens in properly optimized
-  // code, just skip those edges.
-  if (TBB && TBB == FBB) {
-    DEBUG(dbgs() << "Won't split critical edge after degenerate BB#"
-                 << getNumber() << '\n');
-    return nullptr;
-  }
 
   MachineBasicBlock *NMBB = MF->CreateMachineBasicBlock();
   MF->insert(std::next(MachineFunction::iterator(this)), NMBB);
@@ -751,8 +726,8 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P) {
         << " -- BB#" << NMBB->getNumber()
         << " -- BB#" << Succ->getNumber() << '\n');
 
-  LiveIntervals *LIS = P->getAnalysisIfAvailable<LiveIntervals>();
-  SlotIndexes *Indexes = P->getAnalysisIfAvailable<SlotIndexes>();
+  LiveIntervals *LIS = P.getAnalysisIfAvailable<LiveIntervals>();
+  SlotIndexes *Indexes = P.getAnalysisIfAvailable<SlotIndexes>();
   if (LIS)
     LIS->insertMBBInMaps(NMBB);
   else if (Indexes)
@@ -761,7 +736,7 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P) {
   // On some targets like Mips, branches may kill virtual registers. Make sure
   // that LiveVariables is properly updated after updateTerminator replaces the
   // terminators.
-  LiveVariables *LV = P->getAnalysisIfAvailable<LiveVariables>();
+  LiveVariables *LV = P.getAnalysisIfAvailable<LiveVariables>();
 
   // Collect a list of virtual registers killed by the terminators.
   SmallVector<unsigned, 4> KilledRegs;
@@ -832,7 +807,8 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P) {
   // Insert unconditional "jump Succ" instruction in NMBB if necessary.
   NMBB->addSuccessor(Succ);
   if (!NMBB->isLayoutSuccessor(Succ)) {
-    Cond.clear();
+    SmallVector<MachineOperand, 4> Cond;
+    const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
     TII->InsertBranch(*NMBB, Succ, nullptr, Cond, DL);
 
     if (Indexes) {
@@ -940,10 +916,10 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P) {
   }
 
   if (MachineDominatorTree *MDT =
-      P->getAnalysisIfAvailable<MachineDominatorTree>())
+          P.getAnalysisIfAvailable<MachineDominatorTree>())
     MDT->recordSplitCriticalEdge(this, Succ, NMBB);
 
-  if (MachineLoopInfo *MLI = P->getAnalysisIfAvailable<MachineLoopInfo>())
+  if (MachineLoopInfo *MLI = P.getAnalysisIfAvailable<MachineLoopInfo>())
     if (MachineLoop *TIL = MLI->getLoopFor(this)) {
       // If one or the other blocks were not in a loop, the new block is not
       // either, and thus LI doesn't need to be updated.
@@ -971,6 +947,42 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P) {
     }
 
   return NMBB;
+}
+
+bool MachineBasicBlock::canSplitCriticalEdge(
+    const MachineBasicBlock *Succ) const {
+  // Splitting the critical edge to a landing pad block is non-trivial. Don't do
+  // it in this generic function.
+  if (Succ->isEHPad())
+    return false;
+
+  const MachineFunction *MF = getParent();
+
+  // Performance might be harmed on HW that implements branching using exec mask
+  // where both sides of the branches are always executed.
+  if (MF->getTarget().requiresStructuredCFG())
+    return false;
+
+  // We may need to update this's terminator, but we can't do that if
+  // AnalyzeBranch fails. If this uses a jump table, we won't touch it.
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
+  // AnalyzeBanch should modify this, since we did not allow modification.
+  if (TII->AnalyzeBranch(*const_cast<MachineBasicBlock *>(this), TBB, FBB, Cond,
+                         /*AllowModify*/ false))
+    return false;
+
+  // Avoid bugpoint weirdness: A block may end with a conditional branch but
+  // jumps to the same MBB is either case. We have duplicate CFG edges in that
+  // case that we can't handle. Since this never happens in properly optimized
+  // code, just skip those edges.
+  if (TBB && TBB == FBB) {
+    DEBUG(dbgs() << "Won't split critical edge after degenerate BB#"
+                 << getNumber() << '\n');
+    return false;
+  }
+  return true;
 }
 
 /// Prepare MI to be removed from its bundle. This fixes bundle flags on MI's

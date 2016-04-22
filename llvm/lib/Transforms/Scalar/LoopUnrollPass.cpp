@@ -787,7 +787,7 @@ public:
   Optional<bool> ProvidedRuntime;
 
   bool runOnLoop(Loop *L, LPPassManager &) override {
-    if (skipLoop(L))
+    if (skipOptnoneFunction(L))
       return false;
 
     Function &F = *L->getHeader()->getParent();

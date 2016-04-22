@@ -1341,17 +1341,17 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::CTLZ,             MVT::v8i32, Legal);
         setOperationAction(ISD::CTLZ,             MVT::v2i64, Legal);
         setOperationAction(ISD::CTLZ,             MVT::v4i32, Legal);
-
-        setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v4i64, Custom);
-        setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v8i32, Custom);
-        setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v2i64, Custom);
-        setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v4i32, Custom);
       } else {
         setOperationAction(ISD::CTLZ,             MVT::v4i64, Custom);
         setOperationAction(ISD::CTLZ,             MVT::v8i32, Custom);
         setOperationAction(ISD::CTLZ,             MVT::v2i64, Custom);
         setOperationAction(ISD::CTLZ,             MVT::v4i32, Custom);
       }
+
+      setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v4i64, Custom);
+      setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v8i32, Custom);
+      setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v2i64, Custom);
+      setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::v4i32, Custom);
     } // Subtarget.hasCDI()
 
     if (Subtarget.hasDQI()) {
@@ -18783,8 +18783,6 @@ static SDValue LowerCTTZ(SDValue Op, SelectionDAG &DAG) {
   SDLoc dl(Op);
 
   if (VT.isVector()) {
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-
     SDValue N0 = Op.getOperand(0);
     SDValue Zero = DAG.getConstant(0, dl, VT);
 
@@ -18793,8 +18791,7 @@ static SDValue LowerCTTZ(SDValue Op, SelectionDAG &DAG) {
                               DAG.getNode(ISD::SUB, dl, VT, Zero, N0));
 
     // cttz_undef(x) = (width - 1) - ctlz(lsb)
-    if (Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF &&
-        TLI.isOperationLegal(ISD::CTLZ, VT)) {
+    if (Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF) {
       SDValue WidthMinusOne = DAG.getConstant(NumBits - 1, dl, VT);
       return DAG.getNode(ISD::SUB, dl, VT, WidthMinusOne,
                          DAG.getNode(ISD::CTLZ, dl, VT, LSB));

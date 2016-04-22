@@ -65,7 +65,7 @@ Pass *llvm::createLoopInstSimplifyPass() {
 }
 
 bool LoopInstSimplify::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipLoop(L))
+  if (skipOptnoneFunction(L))
     return false;
 
   DominatorTreeWrapperPass *DTWP =

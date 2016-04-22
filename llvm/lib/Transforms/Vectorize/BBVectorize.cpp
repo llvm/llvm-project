@@ -397,7 +397,7 @@ namespace {
                      Instruction *I, Instruction *J);
 
     bool vectorizeBB(BasicBlock &BB) {
-      if (skipBasicBlock(BB))
+      if (skipOptnoneFunction(BB))
         return false;
       if (!DT->isReachableFromEntry(&BB)) {
         DEBUG(dbgs() << "BBV: skipping unreachable " << BB.getName() <<

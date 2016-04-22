@@ -89,16 +89,7 @@ public:
   /// Return new ModuleSummaryIndexObjectFile instance containing parsed module
   /// summary/index.
   static ErrorOr<std::unique_ptr<ModuleSummaryIndexObjectFile>>
-  create(MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler,
-         bool IsLazy = false);
-
-  /// \brief Parse the summary information for global value with the
-  /// given name out of the given buffer. Parsed information is
-  /// stored on the index object saved in this object.
-  std::error_code
-  findGlobalValueSummaryInMemBuffer(MemoryBufferRef Object,
-                                    DiagnosticHandlerFunction DiagnosticHandler,
-                                    StringRef ValueName);
+  create(MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler);
 };
 }
 

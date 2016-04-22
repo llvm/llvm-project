@@ -1604,6 +1604,9 @@ public:
   void addAttribute(unsigned i, StringRef Kind, StringRef Value);
 
   /// removeAttribute - removes the attribute from the list of attributes.
+  void removeAttribute(unsigned i, Attribute::AttrKind attr);
+
+  /// removeAttribute - removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute attr);
 
   /// \brief adds the dereferenceable attribute to the list of attributes.
@@ -3540,6 +3543,9 @@ public:
 
   /// addAttribute - adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute::AttrKind attr);
+
+  /// removeAttribute - removes the attribute from the list of attributes.
+  void removeAttribute(unsigned i, Attribute::AttrKind attr);
 
   /// removeAttribute - removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute attr);

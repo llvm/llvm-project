@@ -251,11 +251,6 @@ public:
   explicit ModulePass(char &pid) : Pass(PT_Module, pid) {}
   // Force out-of-line virtual method.
   ~ModulePass() override;
-
-protected:
-  /// Optional passes call this function to check whether the pass should be
-  /// skipped. This is the case when optimization bisect is over the limit.
-  bool skipModule(Module &M) const;
 };
 
 
@@ -315,10 +310,9 @@ public:
   PassManagerType getPotentialPassManagerType() const override;
 
 protected:
-  /// Optional passes call this function to check whether the pass should be
-  /// skipped. This is the case when Attribute::OptimizeNone is set or when
-  /// optimization bisect is over the limit.
-  bool skipFunction(const Function &F) const;
+  /// skipOptnoneFunction - This function has Attribute::OptimizeNone
+  /// and most transformation passes should skip it.
+  bool skipOptnoneFunction(const Function &F) const;
 };
 
 
@@ -365,10 +359,9 @@ public:
   PassManagerType getPotentialPassManagerType() const override;
 
 protected:
-  /// Optional passes call this function to check whether the pass should be
-  /// skipped. This is the case when Attribute::OptimizeNone is set or when
-  /// optimization bisect is over the limit.
-  bool skipBasicBlock(const BasicBlock &BB) const;
+  /// skipOptnoneFunction - Containing function has Attribute::OptimizeNone
+  /// and most transformation passes should skip it.
+  bool skipOptnoneFunction(const BasicBlock &BB) const;
 };
 
 /// If the user specifies the -time-passes argument on an LLVM tool command line

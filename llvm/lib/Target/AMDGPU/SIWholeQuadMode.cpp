@@ -101,17 +101,20 @@ private:
   DenseMap<const MachineInstr *, InstrInfo> Instructions;
   DenseMap<const MachineBasicBlock *, BlockInfo> Blocks;
   SmallVector<const MachineInstr *, 2> ExecExports;
+  SmallVector<MachineInstr *, 1> LiveMaskQueries;
 
-  char scanInstructions(const MachineFunction &MF, std::vector<WorkItem>& Worklist);
+  char scanInstructions(MachineFunction &MF, std::vector<WorkItem>& Worklist);
   void propagateInstruction(const MachineInstr &MI, std::vector<WorkItem>& Worklist);
   void propagateBlock(const MachineBasicBlock &MBB, std::vector<WorkItem>& Worklist);
-  char analyzeFunction(const MachineFunction &MF);
+  char analyzeFunction(MachineFunction &MF);
 
   void toExact(MachineBasicBlock &MBB, MachineBasicBlock::iterator Before,
                unsigned SaveWQM, unsigned LiveMaskReg);
   void toWQM(MachineBasicBlock &MBB, MachineBasicBlock::iterator Before,
              unsigned SavedWQM);
   void processBlock(MachineBasicBlock &MBB, unsigned LiveMaskReg, bool isEntry);
+
+  void lowerLiveMaskQueries(unsigned LiveMaskReg);
 
 public:
   static char ID;
@@ -148,15 +151,15 @@ FunctionPass *llvm::createSIWholeQuadModePass() {
 
 // Scan instructions to determine which ones require an Exact execmask and
 // which ones seed WQM requirements.
-char SIWholeQuadMode::scanInstructions(const MachineFunction &MF,
+char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
                                        std::vector<WorkItem> &Worklist) {
   char GlobalFlags = 0;
 
   for (auto BI = MF.begin(), BE = MF.end(); BI != BE; ++BI) {
-    const MachineBasicBlock &MBB = *BI;
+    MachineBasicBlock &MBB = *BI;
 
     for (auto II = MBB.begin(), IE = MBB.end(); II != IE; ++II) {
-      const MachineInstr &MI = *II;
+      MachineInstr &MI = *II;
       unsigned Opcode = MI.getOpcode();
       char Flags;
 
@@ -167,8 +170,13 @@ char SIWholeQuadMode::scanInstructions(const MachineFunction &MF,
         Flags = StateExact;
       } else {
         // Handle export instructions with the exec mask valid flag set
-        if (Opcode == AMDGPU::EXP && MI.getOperand(4).getImm() != 0)
-          ExecExports.push_back(&MI);
+        if (Opcode == AMDGPU::EXP) {
+          if (MI.getOperand(4).getImm() != 0)
+            ExecExports.push_back(&MI);
+        } else if (Opcode == AMDGPU::SI_PS_LIVE) {
+          LiveMaskQueries.push_back(&MI);
+        }
+
         continue;
       }
 
@@ -290,7 +298,7 @@ void SIWholeQuadMode::propagateBlock(const MachineBasicBlock &MBB,
   }
 }
 
-char SIWholeQuadMode::analyzeFunction(const MachineFunction &MF) {
+char SIWholeQuadMode::analyzeFunction(MachineFunction &MF) {
   std::vector<WorkItem> Worklist;
   char GlobalFlags = scanInstructions(MF, Worklist);
 
@@ -424,6 +432,16 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, unsigned LiveMaskReg,
   }
 }
 
+void SIWholeQuadMode::lowerLiveMaskQueries(unsigned LiveMaskReg) {
+  for (MachineInstr *MI : LiveMaskQueries) {
+    DebugLoc DL = MI->getDebugLoc();
+    unsigned Dest = MI->getOperand(0).getReg();
+    BuildMI(*MI->getParent(), MI, DL, TII->get(AMDGPU::COPY), Dest)
+        .addReg(LiveMaskReg);
+    MI->eraseFromParent();
+  }
+}
+
 bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getFunction()->getCallingConv() != CallingConv::AMDGPU_PS)
     return false;
@@ -431,30 +449,43 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   Instructions.clear();
   Blocks.clear();
   ExecExports.clear();
+  LiveMaskQueries.clear();
 
   TII = static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = static_cast<const SIRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
   MRI = &MF.getRegInfo();
 
   char GlobalFlags = analyzeFunction(MF);
-  if (!(GlobalFlags & StateWQM))
-    return false;
+  if (!(GlobalFlags & StateWQM)) {
+    lowerLiveMaskQueries(AMDGPU::EXEC);
+    return !LiveMaskQueries.empty();
+  }
 
+  // Store a copy of the original live mask when required
   MachineBasicBlock &Entry = MF.front();
   MachineInstr *EntryMI = Entry.getFirstNonPHI();
+  unsigned LiveMaskReg = 0;
+
+  if (GlobalFlags & StateExact || !LiveMaskQueries.empty()) {
+    LiveMaskReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+    BuildMI(Entry, EntryMI, DebugLoc(), TII->get(AMDGPU::COPY), LiveMaskReg)
+        .addReg(AMDGPU::EXEC);
+  }
 
   if (GlobalFlags == StateWQM) {
     // For a shader that needs only WQM, we can just set it once.
     BuildMI(Entry, EntryMI, DebugLoc(), TII->get(AMDGPU::S_WQM_B64),
             AMDGPU::EXEC).addReg(AMDGPU::EXEC);
+
+    lowerLiveMaskQueries(LiveMaskReg);
+    // EntryMI may become invalid here
     return true;
   }
 
-  // Handle the general case
-  unsigned LiveMaskReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
-  BuildMI(Entry, EntryMI, DebugLoc(), TII->get(AMDGPU::COPY), LiveMaskReg)
-      .addReg(AMDGPU::EXEC);
+  lowerLiveMaskQueries(LiveMaskReg);
+  EntryMI = nullptr;
 
+  // Handle the general case
   for (const auto &BII : Blocks)
     processBlock(const_cast<MachineBasicBlock &>(*BII.first), LiveMaskReg,
                  BII.first == &*MF.begin());

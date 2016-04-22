@@ -260,7 +260,7 @@ static bool LoopIsOuterMostWithPredecessor(MachineLoop *CurLoop) {
 }
 
 bool MachineLICM::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipOptnoneFunction(*MF.getFunction()))
     return false;
 
   Changed = FirstInLoop = false;
@@ -1382,7 +1382,7 @@ MachineBasicBlock *MachineLICM::getCurPreheader() {
         return nullptr;
       }
 
-      CurPreheader = Pred->SplitCriticalEdge(CurLoop->getHeader(), this);
+      CurPreheader = Pred->SplitCriticalEdge(CurLoop->getHeader(), *this);
       if (!CurPreheader) {
         CurPreheader = reinterpret_cast<MachineBasicBlock *>(-1);
         return nullptr;

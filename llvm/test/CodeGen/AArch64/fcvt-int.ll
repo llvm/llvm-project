@@ -149,3 +149,32 @@ define double @test_bitcasti64todouble(i64 %in) {
    ret double %res
 
 }
+
+define double @bitcast_fabs(double %x) {
+; CHECK-LABEL: bitcast_fabs:
+; CHECK:       ; BB#0:
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    and x8, x8, #0x7fffffffffffffff
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ret
+;
+  %bc1 = bitcast double %x to i64
+  %and = and i64 %bc1, 9223372036854775807
+  %bc2 = bitcast i64 %and to double
+  ret double %bc2
+}
+
+define float @bitcast_fneg(float %x) {
+; CHECK-LABEL: bitcast_fneg:
+; CHECK:       ; BB#0:
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    eor w8, w8, #0x80000000
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ret
+;
+  %bc1 = bitcast float %x to i32
+  %xor = xor i32 %bc1, 2147483648
+  %bc2 = bitcast i32 %xor to float
+  ret float %bc2
+}
+

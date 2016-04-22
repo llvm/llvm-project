@@ -296,7 +296,7 @@ void Filler::insertCallDefsUses(MachineBasicBlock::iterator MI,
     RegUses.insert(Reg.getReg());
 
     const MachineOperand &RegOrImm = MI->getOperand(1);
-    if (RegOrImm.isImm())
+    if (RegOrImm.isImm() || RegOrImm.isGlobal())
         break;
     assert(RegOrImm.isReg() && "CALLrr second operand is not a register.");
     assert(RegOrImm.isUse() && "CALLrr second operand is not a use.");

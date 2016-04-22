@@ -917,6 +917,10 @@ public:
     return findRegisterDefOperandIdx(Reg, true, false, TRI) != -1;
   }
 
+  /// Returns true if the MachineInstr has an implicit-use operand of exactly
+  /// the given register (not considering sub/super-registers).
+  bool hasRegisterImplicitUseOperand(unsigned Reg) const;
+
   /// Returns the operand index that is a use of the specific register or -1
   /// if it is not found. It further tightens the search criteria to a use
   /// that kills the register if isKill is true.

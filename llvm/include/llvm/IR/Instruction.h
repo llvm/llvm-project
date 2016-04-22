@@ -223,6 +223,27 @@ public:
   /// Return the debug location for this node as a DebugLoc.
   const DebugLoc &getDebugLoc() const { return DbgLoc; }
 
+  /// Set or clear the nsw flag on this instruction, which must be an operator
+  /// which supports this flag. See LangRef.html for the meaning of this flag.
+  void setHasNoUnsignedWrap(bool b = true);
+
+  /// Set or clear the nsw flag on this instruction, which must be an operator
+  /// which supports this flag. See LangRef.html for the meaning of this flag.
+  void setHasNoSignedWrap(bool b = true);
+
+  /// Set or clear the exact flag on this instruction, which must be an operator
+  /// which supports this flag. See LangRef.html for the meaning of this flag.
+  void setIsExact(bool b = true);
+
+  /// Determine whether the no unsigned wrap flag is set.
+  bool hasNoUnsignedWrap() const;
+
+  /// Determine whether the no signed wrap flag is set.
+  bool hasNoSignedWrap() const;
+
+  /// Determine whether the exact flag is set.
+  bool isExact() const;
+
   /// Set or clear the unsafe-algebra flag on this instruction, which must be an
   /// operator which supports this flag. See LangRef.html for the meaning of
   /// this flag.
@@ -280,6 +301,14 @@ public:
 
   /// Copy I's fast-math flags
   void copyFastMathFlags(const Instruction *I);
+
+  /// Convenience method to copy supported wrapping, exact, and fast-math flags
+  /// from V to this instruction.
+  void copyIRFlags(const Value *V);
+
+  /// Logical 'and' of any supported wrapping, exact, and fast-math flags of
+  /// V and this instruction.
+  void andIRFlags(const Value *V);
 
 private:
   /// Return true if we have an entry in the on-the-side metadata hash.

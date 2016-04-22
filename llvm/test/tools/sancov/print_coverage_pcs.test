@@ -1,20 +1,13 @@
 REQUIRES: x86_64-linux
 RUN: sancov -print-coverage-pcs %p/Inputs/test-linux_x86_64 | FileCheck %s
 
-CHECK: 0x4cced1
-CHECK: 0x4ccf01
-CHECK: 0x4dbe2b
-CHECK: 0x4dbf72
-CHECK: 0x4dbfc2
-CHECK: 0x4dbfec
-CHECK: 0x4dc033
-CHECK: 0x4dc06a
-CHECK: 0x4dc09d
-CHECK: 0x4dc0d0
-CHECK: 0x4dc17f
-CHECK: 0x4dc1c6
-CHECK: 0x4dc20d
-CHECK: 0x4dc237
-CHECK: 0x4dc265
-CHECK: 0x4dc34c
+CHECK: 0x4e132b
+CHECK: 0x4e1472
+CHECK: 0x4e14c2
+CHECK: 0x4e1520
+CHECK: 0x4e1553
+CHECK: 0x4e1586
+CHECK: 0x4e1635
+CHECK: 0x4e1690
+CHECK: 0x4e178c
 

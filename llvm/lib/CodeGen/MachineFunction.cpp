@@ -54,11 +54,13 @@ static cl::opt<unsigned>
 
 void MachineFunctionInitializer::anchor() {}
 
-void MachineFunctionProperties::print(raw_ostream &ROS) const {
+void MachineFunctionProperties::print(raw_ostream &ROS, bool OnlySet) const {
   // Leave this function even in NDEBUG as an out-of-line anchor.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   for (BitVector::size_type i = 0; i < Properties.size(); ++i) {
     bool HasProperty = Properties[i];
+    if (OnlySet && !HasProperty)
+      continue;
     switch(static_cast<Property>(i)) {
       case Property::IsSSA:
         ROS << (HasProperty ? "SSA, " : "Post SSA, ");

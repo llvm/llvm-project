@@ -148,7 +148,9 @@ public:
     return !V.Properties.test(Properties);
   }
 
-  void print(raw_ostream &ROS) const;
+  // Print the MachineFunctionProperties in human-readable form. If OnlySet is
+  // true, only print the properties that are set.
+  void print(raw_ostream &ROS, bool OnlySet=false) const;
 
 private:
   BitVector Properties =

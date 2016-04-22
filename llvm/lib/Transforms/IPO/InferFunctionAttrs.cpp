@@ -14,7 +14,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/OptBisect.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -956,9 +955,6 @@ static bool inferAllPrototypeAttributes(Module &M,
 
 PreservedAnalyses InferFunctionAttrsPass::run(Module &M,
                                               AnalysisManager<Module> &AM) {
-  if (skipPassForModule(name(), M))
-    return PreservedAnalyses::all();
-
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(M);
 
   if (!inferAllPrototypeAttributes(M, TLI))
@@ -983,9 +979,6 @@ struct InferFunctionAttrsLegacyPass : public ModulePass {
   }
 
   bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
     auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
     return inferAllPrototypeAttributes(M, TLI);
   }

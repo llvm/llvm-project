@@ -162,7 +162,7 @@ static cl::opt<int> ClMaxInsnsToInstrumentPerBB(
 static cl::opt<bool> ClStack("asan-stack", cl::desc("Handle stack memory"),
                              cl::Hidden, cl::init(true));
 static cl::opt<bool> ClUseAfterReturn("asan-use-after-return",
-                                      cl::desc("Check return-after-free"),
+                                      cl::desc("Check stack-use-after-return"),
                                       cl::Hidden, cl::init(true));
 static cl::opt<bool> ClUseAfterScope("asan-use-after-scope",
                                      cl::desc("Check stack-use-after-scope"),
@@ -1302,7 +1302,7 @@ bool AddressSanitizerModule::ShouldUseMachOGlobalsSection() const {
   if (TargetTriple.isMacOSX() && !TargetTriple.isMacOSXVersionLT(10, 11))
     return true;
   if (TargetTriple.isiOS() /* or tvOS */ && !TargetTriple.isOSVersionLT(9))
-    return true;  
+    return true;
   if (TargetTriple.isWatchOS() && !TargetTriple.isOSVersionLT(2))
     return true;
 
@@ -1335,7 +1335,7 @@ void AddressSanitizerModule::initializeCallbacks(Module &M) {
       M.getOrInsertFunction(kAsanRegisterImageGlobalsName,
       IRB.getVoidTy(), IntptrTy, nullptr));
   AsanRegisterImageGlobals->setLinkage(Function::ExternalLinkage);
-  
+
   AsanUnregisterImageGlobals = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction(kAsanUnregisterImageGlobalsName,
       IRB.getVoidTy(), IntptrTy, nullptr));

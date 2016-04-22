@@ -560,9 +560,6 @@ bool MergedLoadStoreMotion::mergeStores(BasicBlock *T) {
 /// \brief Run the transformation for each function
 ///
 bool MergedLoadStoreMotion::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
   auto *MDWP = getAnalysisIfAvailable<MemoryDependenceWrapperPass>();
   MD = MDWP ? &MDWP->getMemDep() : nullptr;
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();

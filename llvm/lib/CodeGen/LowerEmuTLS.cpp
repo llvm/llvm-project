@@ -63,9 +63,6 @@ ModulePass *llvm::createLowerEmuTLSPass(const TargetMachine *TM) {
 }
 
 bool LowerEmuTLS::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
   if (!TM || !TM->Options.EmulatedTLS)
     return false;
 

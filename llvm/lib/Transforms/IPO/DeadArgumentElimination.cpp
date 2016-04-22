@@ -1092,9 +1092,6 @@ bool DAE::RemoveDeadStuffFromFunction(Function *F) {
 }
 
 bool DAE::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
   bool Changed = false;
 
   // First pass: Do a simple check to see if any functions can have their "..."

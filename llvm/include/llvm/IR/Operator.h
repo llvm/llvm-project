@@ -79,7 +79,7 @@ public:
   };
 
 private:
-  friend class BinaryOperator;
+  friend class Instruction;
   friend class ConstantExpr;
   void setHasNoUnsignedWrap(bool B) {
     SubclassOptionalData =
@@ -130,7 +130,7 @@ public:
   };
 
 private:
-  friend class BinaryOperator;
+  friend class Instruction;
   friend class ConstantExpr;
   void setIsExact(bool B) {
     SubclassOptionalData = (SubclassOptionalData & ~IsExact) | (B * IsExact);

@@ -279,7 +279,7 @@ define void @truncate_v16i32_to_v16i8(<16 x i32>* %a) {
 ; SSE2: cost of 7 {{.*}} trunc
 ;
 ; SSE41: truncate_v16i32_to_v16i8
-; SSE41: cost of 30 {{.*}} trunc
+; SSE41: cost of 7 {{.*}} trunc
 ;
   %1 = load <16 x i32>, <16 x i32>* %a
   %2 = trunc <16 x i32> %1 to <16 x i8>

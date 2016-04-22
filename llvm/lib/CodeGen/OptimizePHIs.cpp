@@ -63,7 +63,7 @@ INITIALIZE_PASS(OptimizePHIs, "opt-phis",
                 "Optimize machine instruction PHIs", false, false)
 
 bool OptimizePHIs::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(*Fn.getFunction()))
+  if (skipOptnoneFunction(*Fn.getFunction()))
     return false;
 
   MRI = &Fn.getRegInfo();

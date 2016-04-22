@@ -132,9 +132,6 @@ bool ObjCARCAPElim::runOnModule(Module &M) {
   if (!ModuleHasARC(M))
     return false;
 
-  if (skipModule(M))
-    return false;
-
   // Find the llvm.global_ctors variable, as the first step in
   // identifying the global constructors. In theory, unnecessary autorelease
   // pools could occur anywhere, but in practice it's pretty rare. Global

@@ -174,3 +174,9 @@
   tlbwr $3                     # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
   tlbwr 5                      # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
   tlbwr $4, 6                  # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
+  dvp 3                        # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+  dvp $4, 5                    # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+  evp 3                        # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+  evp $4, 5                    # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+  jalrc.hb $31                 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
+  jalrc.hb $31, $31            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different

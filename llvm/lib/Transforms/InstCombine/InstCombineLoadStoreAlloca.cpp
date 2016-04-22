@@ -948,8 +948,8 @@ static bool combineStoreToValueType(InstCombiner &IC, StoreInst &SI) {
     return true;
   }
 
-  // FIXME: We should also canonicalize loads of vectors when their elements are
-  // cast to other types.
+  // FIXME: We should also canonicalize stores of vectors when their elements
+  // are cast to other types.
   return false;
 }
 

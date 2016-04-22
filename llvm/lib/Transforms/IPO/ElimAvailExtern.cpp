@@ -50,9 +50,6 @@ ModulePass *llvm::createEliminateAvailableExternallyPass() {
 }
 
 bool EliminateAvailableExternally::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
   bool Changed = false;
 
   // Drop initializers of available externally global variables.

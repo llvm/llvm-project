@@ -246,9 +246,24 @@ private:
   /// function.
   void incorporateFunctionMetadata(const Function &F);
 
-  bool enumerateMetadataImpl(
-      unsigned F, const Metadata *MD,
-      SmallVectorImpl<std::pair<const MDNode *, const MDOperand *>> &Worklist);
+  /// Enumerate operands with the given function tag.
+  ///
+  /// Enumerate the Metadata operands between \c I and \c E, returning the
+  /// first newly-enumerated MDNode without assigning it an ID.
+  ///
+  /// \post If a node was found, \c I points just past the node.
+  /// \post If no node was found, \c I is equal to \c E.
+  const MDNode *enumerateMetadataOperands(unsigned F, const MDOperand *&I,
+                                          const MDOperand *E);
+
+  /// Enumerate a single instance of metadata with the given function tag.
+  ///
+  /// If \c MD has already been enumerated, check that \c F matches its
+  /// function tag.  If not, call \a dropFunctionFromMetadata().
+  ///
+  /// Otherwise, mark \c MD as visited.  Assign it an ID, or just return it if
+  /// it's an \a MDNode.
+  const MDNode *enumerateMetadataImpl(unsigned F, const Metadata *MD);
 
   unsigned getMetadataFunctionID(const Function *F) const;
   void EnumerateMetadata(const Function *F, const Metadata *MD);

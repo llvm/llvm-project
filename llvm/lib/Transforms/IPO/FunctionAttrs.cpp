@@ -987,9 +987,6 @@ static bool addNoRecurseAttrs(const SCCNodeSet &SCCNodes) {
 
 PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
                                                   CGSCCAnalysisManager &AM) {
-  if (skipPassForSCC(name(), C))
-    return PreservedAnalyses::all();
-
   Module &M = *C.begin()->getFunction().getParent();
   const ModuleAnalysisManager &MAM =
       AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C).getManager();
@@ -1084,9 +1081,6 @@ INITIALIZE_PASS_END(PostOrderFunctionAttrsLegacyPass, "functionattrs",
 Pass *llvm::createPostOrderFunctionAttrsLegacyPass() { return new PostOrderFunctionAttrsLegacyPass(); }
 
 bool PostOrderFunctionAttrsLegacyPass::runOnSCC(CallGraphSCC &SCC) {
-  if (skipSCC(SCC))
-    return false;
-
   TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   bool Changed = false;
 
@@ -1201,9 +1195,6 @@ static bool addNoRecurseAttrsTopDown(Function &F) {
 }
 
 bool ReversePostOrderFunctionAttrs::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
   // We only have a post-order SCC traversal (because SCCs are inherently
   // discovered in post-order), so we accumulate them in a vector and then walk
   // it in reverse. This is simpler than using the RPO iterator infrastructure

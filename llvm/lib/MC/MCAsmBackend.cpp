@@ -12,7 +12,7 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend() : HasDataInCodeSupport(false) {}
+MCAsmBackend::MCAsmBackend() {}
 
 MCAsmBackend::~MCAsmBackend() {}
 

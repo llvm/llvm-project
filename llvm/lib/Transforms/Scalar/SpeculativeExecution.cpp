@@ -141,7 +141,7 @@ void SpeculativeExecution::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool SpeculativeExecution::runOnFunction(Function &F) {
-  if (skipFunction(F))
+  if (skipOptnoneFunction(F))
     return false;
 
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);

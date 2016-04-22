@@ -397,17 +397,24 @@ void RuntimeDyldImpl::computeTotalAllocSize(const ObjectFile &Obj,
 
   // Compute the size of all common symbols
   uint64_t CommonSize = 0;
+  uint32_t CommonAlign = 1;
   for (symbol_iterator I = Obj.symbol_begin(), E = Obj.symbol_end(); I != E;
        ++I) {
     uint32_t Flags = I->getFlags();
     if (Flags & SymbolRef::SF_Common) {
       // Add the common symbols to a list.  We'll allocate them all below.
       uint64_t Size = I->getCommonSize();
-      CommonSize += Size;
+      uint32_t Align = I->getAlignment();
+      // If this is the first common symbol, use its alignment as the alignment
+      // for the common symbols section.
+      if (CommonSize == 0)
+	CommonAlign = Align;
+      CommonSize = alignTo(CommonSize, Align) + Size;
     }
   }
   if (CommonSize != 0) {
     RWSectionSizes.push_back(CommonSize);
+    RWDataAlign = std::max(RWDataAlign, CommonAlign);
   }
 
   // Compute the required allocation space for each different type of sections
@@ -491,6 +498,7 @@ void RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
     return;
 
   uint64_t CommonSize = 0;
+  uint32_t CommonAlign = CommonSymbols.begin()->getAlignment();
   CommonSymbolList SymbolsToAllocate;
 
   DEBUG(dbgs() << "Processing common symbols...\n");
@@ -511,14 +519,16 @@ void RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
     uint32_t Align = Sym.getAlignment();
     uint64_t Size = Sym.getCommonSize();
 
-    CommonSize += Align + Size;
+    CommonSize = alignTo(CommonSize, Align) + Size;
+    
     SymbolsToAllocate.push_back(Sym);
   }
 
   // Allocate memory for the section
   unsigned SectionID = Sections.size();
-  uint8_t *Addr = MemMgr.allocateDataSection(CommonSize, sizeof(void *),
-                                             SectionID, StringRef(), false);
+  uint8_t *Addr = MemMgr.allocateDataSection(CommonSize, CommonAlign,
+                                             SectionID, "<common symbols>",
+					     false);
   if (!Addr)
     report_fatal_error("Unable to allocate memory for common symbols!");
   uint64_t Offset = 0;

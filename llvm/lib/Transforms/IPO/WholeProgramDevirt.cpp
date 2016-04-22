@@ -265,12 +265,7 @@ struct WholeProgramDevirt : public ModulePass {
   WholeProgramDevirt() : ModulePass(ID) {
     initializeWholeProgramDevirtPass(*PassRegistry::getPassRegistry());
   }
-  bool runOnModule(Module &M) {
-    if (skipModule(M))
-      return false;
-
-    return DevirtModule(M).run();
-  }
+  bool runOnModule(Module &M) { return DevirtModule(M).run(); }
 };
 
 } // anonymous namespace

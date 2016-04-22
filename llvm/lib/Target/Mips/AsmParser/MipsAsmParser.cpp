@@ -3669,9 +3669,10 @@ void MipsAsmParser::createCpRestoreMemOp(bool IsLoad, int StackOffset,
 unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   // As described by the Mips32r2 spec, the registers Rd and Rs for
   // jalr.hb must be different.
+  // It also applies for registers Rt and Rs of microMIPSr6 jalrc.hb instruction
   unsigned Opcode = Inst.getOpcode();
 
-  if (Opcode == Mips::JALR_HB &&
+  if ((Opcode == Mips::JALR_HB || Opcode == Mips::JALRC_HB_MMR6) &&
       (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg()))
     return Match_RequiresDifferentSrcAndDst;
 

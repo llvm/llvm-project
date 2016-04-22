@@ -482,7 +482,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1) {
                               {uint64_t(callee3), 3}};
   Record11.addValueData(IPVK_IndirectCallTarget, 4, VD4, 3, nullptr);
 
-  // A differnt record for the same caller.
+  // A different record for the same caller.
   Record12.reserveSites(IPVK_IndirectCallTarget, 5);
   InstrProfValueData VD02[] = {{uint64_t(callee2), 5}, {uint64_t(callee3), 3}};
   Record12.addValueData(IPVK_IndirectCallTarget, 0, VD02, 2, nullptr);

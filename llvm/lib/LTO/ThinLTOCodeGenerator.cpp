@@ -547,7 +547,7 @@ std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
   for (auto &ModuleBuffer : Modules) {
     ErrorOr<std::unique_ptr<object::ModuleSummaryIndexObjectFile>> ObjOrErr =
         object::ModuleSummaryIndexObjectFile::create(ModuleBuffer,
-                                                     diagnosticHandler, false);
+                                                     diagnosticHandler);
     if (std::error_code EC = ObjOrErr.getError()) {
       // FIXME diagnose
       errs() << "error: can't create ModuleSummaryIndexObjectFile for buffer: "

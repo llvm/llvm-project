@@ -23,7 +23,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManagers.h"
-#include "llvm/IR/OptBisect.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Timer.h"
@@ -445,7 +444,7 @@ bool CGPassManager::runOnModule(Module &M) {
   // Walk the callgraph in bottom-up SCC order.
   scc_iterator<CallGraph*> CGI = scc_begin(&CG);
 
-  CallGraphSCC CurSCC(CG, &CGI);
+  CallGraphSCC CurSCC(&CGI);
   while (!CGI.isAtEnd()) {
     // Copy the current SCC and increment past it so that the pass can hack
     // on the SCC if it wants to without invalidating our iterator.
@@ -632,9 +631,3 @@ Pass *CallGraphSCCPass::createPrinterPass(raw_ostream &O,
   return new PrintCallGraphPass(Banner, O);
 }
 
-bool CallGraphSCCPass::skipSCC(CallGraphSCC &SCC) const {
-  return !SCC.getCallGraph().getModule()
-              .getContext()
-              .getOptBisect()
-              .shouldRunPass(this, SCC);
-}

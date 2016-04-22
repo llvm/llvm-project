@@ -5284,8 +5284,8 @@ let usesCustomInserter = 1, Uses = [R4], Defs = [R4, SP] in
 def win__dbzchk : SDNode<"ARMISD::WIN__DBZCHK", SDT_WIN__DBZCHK,
                          [SDNPHasChain, SDNPSideEffect, SDNPOutGlue]>;
 let usesCustomInserter = 1, Defs = [CPSR] in
-  def WIN__DBZCHK : PseudoInst<(outs), (ins GPR:$divisor), NoItinerary,
-                               [(win__dbzchk GPR:$divisor)]>;
+  def WIN__DBZCHK : PseudoInst<(outs), (ins tGPR:$divisor), NoItinerary,
+                               [(win__dbzchk tGPR:$divisor)]>;
 
 //===----------------------------------------------------------------------===//
 // TLS Instructions

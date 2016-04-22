@@ -32,8 +32,8 @@ entry:
 }
 
 ; CHECK-LABEL: sdiv64:
-; CHECK: orr.w r12, r0, r1
-; CHECK-NEXT: cbz r12
+; CHECK: orr.w r4, r0, r1
+; CHECK-NEXT: cbz r4
 ; CHECK: b
 ; CHECK: udf.w #249
 ; CHECK: bl __rt_sdiv64
@@ -45,8 +45,8 @@ entry:
 }
 
 ; CHECK-LABEL: udiv64:
-; CHECK: orr.w r12, r0, r1
-; CHECK-NEXT: cbz r12
+; CHECK: orr.w r4, r0, r1
+; CHECK-NEXT: cbz r4
 ; CHECK: b
 ; CHECK: udf.w #249
 ; CHECK: bl __rt_udiv64

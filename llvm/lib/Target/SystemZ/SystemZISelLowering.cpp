@@ -312,8 +312,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CTPOP, VT, Custom);
       setOperationAction(ISD::CTTZ, VT, Legal);
       setOperationAction(ISD::CTLZ, VT, Legal);
-      setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Custom);
-      setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Custom);
+      setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Expand);
+      setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Expand);
 
       // Convert a GPR scalar to a vector by inserting it into element 0.
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
@@ -4471,12 +4471,6 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerOR(Op, DAG);
   case ISD::CTPOP:
     return lowerCTPOP(Op, DAG);
-  case ISD::CTLZ_ZERO_UNDEF:
-    return DAG.getNode(ISD::CTLZ, SDLoc(Op),
-                       Op.getValueType(), Op.getOperand(0));
-  case ISD::CTTZ_ZERO_UNDEF:
-    return DAG.getNode(ISD::CTTZ, SDLoc(Op),
-                       Op.getValueType(), Op.getOperand(0));
   case ISD::ATOMIC_FENCE:
     return lowerATOMIC_FENCE(Op, DAG);
   case ISD::ATOMIC_SWAP:

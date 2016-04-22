@@ -241,14 +241,16 @@ public:
       : DefaultBlacklist(createDefaultBlacklist()),
         UserBlacklist(createUserBlacklist()) {}
 
-  bool isBlacklisted(const DILineInfo &DI) {
-    if (DefaultBlacklist && DefaultBlacklist->inSection("fun", DI.FunctionName))
+  // AddrInfo contains normalized filename. It is important to check it rather
+  // than DILineInfo.
+  bool isBlacklisted(const AddrInfo &AI) {
+    if (DefaultBlacklist && DefaultBlacklist->inSection("fun", AI.FunctionName))
       return true;
-    if (DefaultBlacklist && DefaultBlacklist->inSection("src", DI.FileName))
+    if (DefaultBlacklist && DefaultBlacklist->inSection("src", AI.FileName))
       return true;
-    if (UserBlacklist && UserBlacklist->inSection("fun", DI.FunctionName))
+    if (UserBlacklist && UserBlacklist->inSection("fun", AI.FunctionName))
       return true;
-    if (UserBlacklist && UserBlacklist->inSection("src", DI.FileName))
+    if (UserBlacklist && UserBlacklist->inSection("src", AI.FileName))
       return true;
     return false;
   }
@@ -286,17 +288,19 @@ static std::vector<AddrInfo> getAddrInfo(std::string ObjectFile,
   for (auto Addr : Addrs) {
     auto LineInfo = Symbolizer->symbolizeCode(ObjectFile, Addr);
     FailIfError(LineInfo);
-    if (B.isBlacklisted(*LineInfo))
+    auto LineAddrInfo = AddrInfo(*LineInfo, Addr);
+    if (B.isBlacklisted(LineAddrInfo))
       continue;
-    Result.push_back(AddrInfo(*LineInfo, Addr));
+    Result.push_back(LineAddrInfo);
     if (InlinedCode) {
       auto InliningInfo = Symbolizer->symbolizeInlinedCode(ObjectFile, Addr);
       FailIfError(InliningInfo);
       for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
         auto FrameInfo = InliningInfo->getFrame(I);
-        if (B.isBlacklisted(FrameInfo))
+        auto FrameAddrInfo = AddrInfo(FrameInfo, Addr);
+        if (B.isBlacklisted(FrameAddrInfo))
           continue;
-        Result.push_back(AddrInfo(FrameInfo, Addr));
+        Result.push_back(FrameAddrInfo);
       }
     }
   }

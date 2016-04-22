@@ -2528,9 +2528,6 @@ bool GlobalOpt::OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
 }
 
 bool GlobalOpt::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
   bool Changed = false;
 
   auto &DL = M.getDataLayout();

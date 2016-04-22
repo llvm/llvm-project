@@ -4767,46 +4767,58 @@ SCEV::NoWrapFlags ScalarEvolution::getNoWrapFlagsFromUB(const Value *V) {
   if (Flags == SCEV::FlagAnyWrap)
     return SCEV::FlagAnyWrap;
 
-  // Here we check that BinOp is in the header of the innermost loop
-  // containing BinOp, since we only deal with instructions in the loop
-  // header. The actual loop we need to check later will come from an add
-  // recurrence, but getting that requires computing the SCEV of the operands,
-  // which can be expensive. This check we can do cheaply to rule out some
-  // cases early.
-  Loop *InnermostContainingLoop = LI.getLoopFor(BinOp->getParent());
+  return isSCEVExprNeverPoison(BinOp) ? Flags : SCEV::FlagAnyWrap;
+}
+
+bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
+  // Here we check that I is in the header of the innermost loop containing I,
+  // since we only deal with instructions in the loop header. The actual loop we
+  // need to check later will come from an add recurrence, but getting that
+  // requires computing the SCEV of the operands, which can be expensive. This
+  // check we can do cheaply to rule out some cases early.
+  Loop *InnermostContainingLoop = LI.getLoopFor(I->getParent());
   if (InnermostContainingLoop == nullptr ||
-      InnermostContainingLoop->getHeader() != BinOp->getParent())
-    return SCEV::FlagAnyWrap;
+      InnermostContainingLoop->getHeader() != I->getParent())
+    return false;
 
-  // Only proceed if we can prove that BinOp does not yield poison.
-  if (!isKnownNotFullPoison(BinOp)) return SCEV::FlagAnyWrap;
+  // Only proceed if we can prove that I does not yield poison.
+  if (!isKnownNotFullPoison(I)) return false;
 
-  // At this point we know that if V is executed, then it does not wrap
-  // according to at least one of NSW or NUW. If V is not executed, then we do
-  // not know if the calculation that V represents would wrap. Multiple
-  // instructions can map to the same SCEV. If we apply NSW or NUW from V to
+  // At this point we know that if I is executed, then it does not wrap
+  // according to at least one of NSW or NUW. If I is not executed, then we do
+  // not know if the calculation that I represents would wrap. Multiple
+  // instructions can map to the same SCEV. If we apply NSW or NUW from I to
   // the SCEV, we must guarantee no wrapping for that SCEV also when it is
   // derived from other instructions that map to the same SCEV. We cannot make
-  // that guarantee for cases where V is not executed. So we need to find the
-  // loop that V is considered in relation to and prove that V is executed for
-  // every iteration of that loop. That implies that the value that V
+  // that guarantee for cases where I is not executed. So we need to find the
+  // loop that I is considered in relation to and prove that I is executed for
+  // every iteration of that loop. That implies that the value that I
   // calculates does not wrap anywhere in the loop, so then we can apply the
   // flags to the SCEV.
   //
-  // We check isLoopInvariant to disambiguate in case we are adding two
-  // recurrences from different loops, so that we know which loop to prove
-  // that V is executed in.
-  for (int OpIndex = 0; OpIndex < 2; ++OpIndex) {
-    const SCEV *Op = getSCEV(BinOp->getOperand(OpIndex));
+  // We check isLoopInvariant to disambiguate in case we are adding recurrences
+  // from different loops, so that we know which loop to prove that I is
+  // executed in.
+  for (unsigned OpIndex = 0; OpIndex < I->getNumOperands(); ++OpIndex) {
+    const SCEV *Op = getSCEV(I->getOperand(OpIndex));
     if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(Op)) {
-      const int OtherOpIndex = 1 - OpIndex;
-      const SCEV *OtherOp = getSCEV(BinOp->getOperand(OtherOpIndex));
-      if (isLoopInvariant(OtherOp, AddRec->getLoop()) &&
-          isGuaranteedToExecuteForEveryIteration(BinOp, AddRec->getLoop()))
-        return Flags;
+      bool AllOtherOpsLoopInvariant = true;
+      for (unsigned OtherOpIndex = 0; OtherOpIndex < I->getNumOperands();
+           ++OtherOpIndex) {
+        if (OtherOpIndex != OpIndex) {
+          const SCEV *OtherOp = getSCEV(I->getOperand(OtherOpIndex));
+          if (!isLoopInvariant(OtherOp, AddRec->getLoop())) {
+            AllOtherOpsLoopInvariant = false;
+            break;
+          }
+        }
+      }
+      if (AllOtherOpsLoopInvariant &&
+          isGuaranteedToExecuteForEveryIteration(I, AddRec->getLoop()))
+        return true;
     }
   }
-  return SCEV::FlagAnyWrap;
+  return false;
 }
 
 /// createSCEV - We know that there is no SCEV for the specified value.  Analyze

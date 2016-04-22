@@ -271,20 +271,20 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       DyldInfoLoadCmd(nullptr), UuidLoadCmd(nullptr),
       HasPageZeroSegment(false) {
   ErrorAsOutParameter ErrAsOutParam(Err);
-  uint64_t big_size;
+  uint64_t BigSize;
   if (is64Bit()) {
     parseHeader(this, Header64, Err);
-    big_size = sizeof(MachO::mach_header_64);
+    BigSize = sizeof(MachO::mach_header_64);
   } else {
     parseHeader(this, Header, Err);
-    big_size = sizeof(MachO::mach_header);
+    BigSize = sizeof(MachO::mach_header);
   }
   if (Err)
     return;
-  big_size += getHeader().sizeofcmds;
-  if (getData().data() + big_size > getData().end()) {
+  BigSize += getHeader().sizeofcmds;
+  if (getData().data() + BigSize > getData().end()) {
     Err = malformedError(getFileName(), "truncated or malformed object "
-                         "(load commands extends past the end of the file)");
+                         "(load commands extend past the end of the file)");
     return;
   }
 
@@ -389,9 +389,9 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
                            "the symbol table)");
       return;
     }
-    uint64_t big_size = Dysymtab.ilocalsym;
-    big_size += Dysymtab.nlocalsym;
-    if (Dysymtab.nlocalsym != 0 && big_size > Symtab.nsyms) {
+    uint64_t BigSize = Dysymtab.ilocalsym;
+    BigSize += Dysymtab.nlocalsym;
+    if (Dysymtab.nlocalsym != 0 && BigSize > Symtab.nsyms) {
       Err = malformedError(*this,
                            "truncated or malformed object (ilocalsym plus "
                            "nlocalsym in LC_DYSYMTAB load command extends past "
@@ -405,9 +405,9 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
                            "the symbol table)");
       return;
     }
-    big_size = Dysymtab.iextdefsym;
-    big_size += Dysymtab.nextdefsym;
-    if (Dysymtab.nextdefsym != 0 && big_size > Symtab.nsyms) {
+    BigSize = Dysymtab.iextdefsym;
+    BigSize += Dysymtab.nextdefsym;
+    if (Dysymtab.nextdefsym != 0 && BigSize > Symtab.nsyms) {
       Err = malformedError(*this,
                            "truncated or malformed object (iextdefsym plus "
                            "nextdefsym in LC_DYSYMTAB load command extends "
@@ -421,9 +421,9 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
                            "the symbol table)");
       return;
     }
-    big_size = Dysymtab.iundefsym;
-    big_size += Dysymtab.nundefsym;
-    if (Dysymtab.nundefsym != 0 && big_size > Symtab.nsyms) {
+    BigSize = Dysymtab.iundefsym;
+    BigSize += Dysymtab.nundefsym;
+    if (Dysymtab.nundefsym != 0 && BigSize > Symtab.nsyms) {
       Err = malformedError(*this,
                            "truncated or malformed object (iundefsym plus "
                            "nundefsym in LC_DYSYMTAB load command extends past "

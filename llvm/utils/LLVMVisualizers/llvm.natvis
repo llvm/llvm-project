@@ -168,4 +168,45 @@ For later versions of Visual Studio, no setup is required.
       <Item Name="[underlying]" Condition="hasVal">*(($T1 *)(unsigned char *)storage.buffer)</Item>
     </Expand>
   </Type>
+
+  <!-- Since we're in MSVC, we can assume that the system is little endian.  Therefore
+       the little and native cases just require a cast.  Handle this easy case first. Use
+       a wildcard for the second template argument (the endianness), but we will use a
+       specific value of 0 later on for the big endian to give it priority for being a
+       better match.  -->
+  <Type Name="llvm::support::detail::packed_endian_specific_integral&lt;*,*,1&gt;">
+    <DisplayString>{{little endian value = {*(($T1*)(unsigned char *)Value.buffer)} }}</DisplayString>
+    <Expand>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==1">(unsigned char *)Value.buffer,1</Item>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==2">(unsigned char *)Value.buffer,2</Item>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==4">(unsigned char *)Value.buffer,4</Item>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==8">(unsigned char *)Value.buffer,8</Item>
+    </Expand>
+  </Type>
+  
+  <!-- Now handle the hard case of big endian.  We need to do the swizzling here, but
+       we need to specialize it based on the size of the value type. -->
+  <Type Name="llvm::support::detail::packed_endian_specific_integral&lt;*,0,1&gt;">
+    <DisplayString Condition="sizeof($T1)==1">{{ big endian value = {*(unsigned char *)Value.buffer} }}</DisplayString>
+    <DisplayString Condition="sizeof($T1)==2">{{ big endian value = {(($T1)(*(unsigned char *)Value.buffer) &lt;&lt; 8) 
+                                                                    | ($T1)(*((unsigned char *)Value.buffer+1))} }}</DisplayString>
+    <DisplayString Condition="sizeof($T1)==4">{{ big endian value = {(($T1)(*(unsigned char *)Value.buffer) &lt;&lt; 24) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+1)) &lt;&lt; 16) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+2)) &lt;&lt; 8) 
+                                                                    |  ($T1)(*((unsigned char *)Value.buffer+3))} }}</DisplayString>
+    <DisplayString Condition="sizeof($T1)==8">{{ big endian value = {(($T1)(*(unsigned char *)Value.buffer) &lt;&lt; 56) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+1)) &lt;&lt; 48) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+2)) &lt;&lt; 40) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+3)) &lt;&lt; 32) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+4)) &lt;&lt; 24) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+5)) &lt;&lt; 16) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+6)) &lt;&lt; 8) 
+                                                                    |  ($T1)(*((unsigned char *)Value.buffer+7))} }}</DisplayString>
+    <Expand>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==1">(unsigned char *)Value.buffer,1</Item>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==2">(unsigned char *)Value.buffer,2</Item>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==4">(unsigned char *)Value.buffer,4</Item>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==8">(unsigned char *)Value.buffer,8</Item>
+    </Expand>
+  </Type>
 </AutoVisualizer>
