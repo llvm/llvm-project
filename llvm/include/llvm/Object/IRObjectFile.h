@@ -20,6 +20,7 @@ namespace llvm {
 class Mangler;
 class Module;
 class GlobalValue;
+class Triple;
 
 namespace object {
 class ObjectFile;
@@ -65,7 +66,7 @@ public:
   /// For each found symbol, call \p AsmUndefinedRefs with the name of the
   /// symbol found and the associated flags.
   static void CollectAsmUndefinedRefs(
-      Module &TheModule,
+      const Triple &TheTriple, StringRef InlineAsm,
       const std::function<void(StringRef, BasicSymbolRef::Flags)> &
           AsmUndefinedRefs);
 
