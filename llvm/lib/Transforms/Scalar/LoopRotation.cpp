@@ -585,7 +585,7 @@ public:
   }
 
   bool runOnLoop(Loop *L, LPPassManager &LPM) override {
-    if (skipLoop(L))
+    if (skipOptnoneFunction(L))
       return false;
     Function &F = *L->getHeader()->getParent();
 

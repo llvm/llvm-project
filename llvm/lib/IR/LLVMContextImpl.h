@@ -1133,10 +1133,6 @@ public:
 
   /// Destroy the ConstantArrays if they are not used.
   void dropTriviallyDeadConstantArrays();
-
-  /// \brief Access the object which manages optimization bisection for failure
-  /// analysis.
-  OptBisect &getOptBisect();
 };
 
 }

@@ -55,8 +55,8 @@ define void @byval_arg_align8(%SmallStruct* %ptr) {
  ; CHECK: i32.const $push[[L1:.+]]=, 16
  ; CHECK-NEXT: i32.sub [[SP:.+]]=, {{.+}}, $pop[[L1]]
  ; Copy the SmallStruct argument to the stack (SP+8, original SP-8)
- ; CHECK: i32.load $push[[L4:.+]]=, 0($0):p2align=3
- ; CHECK-NEXT: i32.store {{.*}}=, 8([[SP]]):p2align=3, $pop[[L4]]
+ ; CHECK: i32.load $push[[L4:.+]]=, 0($0){{$}}
+ ; CHECK-NEXT: i32.store {{.*}}=, 8([[SP]]), $pop[[L4]]{{$}}
  ; Pass a pointer to the stack slot to the function
  ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 8
  ; CHECK-NEXT: i32.add $push[[ARG:.+]]=, [[SP]], $pop[[L5]]

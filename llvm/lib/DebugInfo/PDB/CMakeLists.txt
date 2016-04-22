@@ -24,8 +24,12 @@ if(HAVE_DIA_SDK)
     )
 
     set(LIBPDB_ADDITIONAL_HEADER_DIRS "${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/PDB/DIA")
-
 endif()
+
+add_pdb_impl_folder(Raw
+  Raw/PDBFile.cpp
+  Raw/PDBStream.cpp
+  Raw/RawSession.cpp)
 
 list(APPEND LIBPDB_ADDITIONAL_HEADER_DIRS "${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/PDB")
 

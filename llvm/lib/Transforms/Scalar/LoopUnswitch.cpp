@@ -420,7 +420,7 @@ static Value *FindLIVLoopCondition(Value *Cond, Loop *L, bool &Changed) {
 }
 
 bool LoopUnswitch::runOnLoop(Loop *L, LPPassManager &LPM_Ref) {
-  if (skipLoop(L))
+  if (skipOptnoneFunction(L))
     return false;
 
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(

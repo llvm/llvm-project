@@ -187,7 +187,7 @@ FunctionPass *llvm::createJumpThreadingPass(int Threshold) { return new JumpThre
 /// runOnFunction - Top level algorithm.
 ///
 bool JumpThreading::runOnFunction(Function &F) {
-  if (skipFunction(F))
+  if (skipOptnoneFunction(F))
     return false;
 
   DEBUG(dbgs() << "Jump threading on function '" << F.getName() << "'\n");

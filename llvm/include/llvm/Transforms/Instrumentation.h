@@ -116,6 +116,19 @@ ModulePass *createDataFlowSanitizerPass(
     const std::vector<std::string> &ABIListFiles = std::vector<std::string>(),
     void *(*getArgTLS)() = nullptr, void *(*getRetValTLS)() = nullptr);
 
+// Options for EfficiencySanitizer sub-tools.
+struct EfficiencySanitizerOptions {
+  EfficiencySanitizerOptions() : ToolType(ESAN_None) {}
+  enum Type {
+    ESAN_None = 0,
+    ESAN_CacheFrag,
+  } ToolType;
+};
+
+// Insert EfficiencySanitizer instrumentation.
+FunctionPass *createEfficiencySanitizerPass(
+    const EfficiencySanitizerOptions &Options = EfficiencySanitizerOptions());
+
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {
   SanitizerCoverageOptions()

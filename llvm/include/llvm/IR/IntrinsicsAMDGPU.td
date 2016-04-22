@@ -328,6 +328,13 @@ def int_amdgcn_interp_p2 :
             [IntrNoMem]>;  // See int_amdgcn_v_interp_p1 for why this is
                            // IntrNoMem.
 
+// Pixel shaders only: whether the current pixel is live (i.e. not a helper
+// invocation for derivative computation).
+def int_amdgcn_ps_live : Intrinsic <
+  [llvm_i1_ty],
+  [],
+  [IntrNoMem]>;
+
 def int_amdgcn_mbcnt_lo :
   GCCBuiltin<"__builtin_amdgcn_mbcnt_lo">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;

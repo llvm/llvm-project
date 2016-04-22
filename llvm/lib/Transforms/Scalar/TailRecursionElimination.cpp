@@ -157,7 +157,7 @@ static bool CanTRE(Function &F) {
 }
 
 bool TailCallElim::runOnFunction(Function &F) {
-  if (skipFunction(F))
+  if (skipOptnoneFunction(F))
     return false;
 
   if (F.getFnAttribute("disable-tail-calls").getValueAsString() == "true")

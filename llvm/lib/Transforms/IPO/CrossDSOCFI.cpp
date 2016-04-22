@@ -158,9 +158,6 @@ void CrossDSOCFI::buildCFICheck() {
 }
 
 bool CrossDSOCFI::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
   if (M.getModuleFlag("Cross-DSO CFI") == nullptr)
     return false;
   buildCFICheck();

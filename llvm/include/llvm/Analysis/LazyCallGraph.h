@@ -923,15 +923,6 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-/// Check with the OptBisect object to determine whether the described pass
-/// should be skipped.
-///
-/// This is a helper function which abstracts the details of accessing OptBisect
-/// through an LLVMContext obtained from an SCC.
-bool skipPassForSCC(const StringRef PassName, const LazyCallGraph::SCC &SCC);
-// This function is implemented in OptBisect.cpp but must be declared
-// here to avoid include file dependency problems.
-
 }
 
 #endif

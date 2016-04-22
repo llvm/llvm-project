@@ -399,7 +399,7 @@ Constant *CorrelatedValuePropagation::getConstantAt(Value *V, Instruction *At) {
 }
 
 bool CorrelatedValuePropagation::runOnFunction(Function &F) {
-  if (skipFunction(F))
+  if (skipOptnoneFunction(F))
     return false;
 
   LVI = &getAnalysis<LazyValueInfo>();

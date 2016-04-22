@@ -257,7 +257,7 @@ MachineSinking::AllUsesDominatedByBlock(unsigned Reg,
 }
 
 bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipOptnoneFunction(*MF.getFunction()))
     return false;
 
   DEBUG(dbgs() << "******** Machine Sinking ********\n");
@@ -284,7 +284,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
 
     // If we have anything we marked as toSplit, split it now.
     for (auto &Pair : ToSplit) {
-      auto NewSucc = Pair.first->SplitCriticalEdge(Pair.second, this);
+      auto NewSucc = Pair.first->SplitCriticalEdge(Pair.second, *this);
       if (NewSucc != nullptr) {
         DEBUG(dbgs() << " *** Splitting critical edge:"
               " BB#" << Pair.first->getNumber()

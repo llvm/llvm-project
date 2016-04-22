@@ -343,6 +343,12 @@ void CallInst::addAttribute(unsigned i, StringRef Kind, StringRef Value) {
   setAttributes(PAL);
 }
 
+void CallInst::removeAttribute(unsigned i, Attribute::AttrKind attr) {
+  AttributeSet PAL = getAttributes();
+  PAL = PAL.removeAttribute(getContext(), i, attr);
+  setAttributes(PAL);
+}
+
 void CallInst::removeAttribute(unsigned i, Attribute attr) {
   AttributeSet PAL = getAttributes();
   AttrBuilder B(attr);
@@ -660,6 +666,12 @@ bool InvokeInst::dataOperandHasImpliedAttr(unsigned i,
 void InvokeInst::addAttribute(unsigned i, Attribute::AttrKind attr) {
   AttributeSet PAL = getAttributes();
   PAL = PAL.addAttribute(getContext(), i, attr);
+  setAttributes(PAL);
+}
+
+void InvokeInst::removeAttribute(unsigned i, Attribute::AttrKind attr) {
+  AttributeSet PAL = getAttributes();
+  PAL = PAL.removeAttribute(getContext(), i, attr);
   setAttributes(PAL);
 }
 
@@ -2187,62 +2199,6 @@ bool BinaryOperator::swapOperands() {
     return true; // Can't commute operands
   Op<0>().swap(Op<1>());
   return false;
-}
-
-void BinaryOperator::setHasNoUnsignedWrap(bool b) {
-  cast<OverflowingBinaryOperator>(this)->setHasNoUnsignedWrap(b);
-}
-
-void BinaryOperator::setHasNoSignedWrap(bool b) {
-  cast<OverflowingBinaryOperator>(this)->setHasNoSignedWrap(b);
-}
-
-void BinaryOperator::setIsExact(bool b) {
-  cast<PossiblyExactOperator>(this)->setIsExact(b);
-}
-
-bool BinaryOperator::hasNoUnsignedWrap() const {
-  return cast<OverflowingBinaryOperator>(this)->hasNoUnsignedWrap();
-}
-
-bool BinaryOperator::hasNoSignedWrap() const {
-  return cast<OverflowingBinaryOperator>(this)->hasNoSignedWrap();
-}
-
-bool BinaryOperator::isExact() const {
-  return cast<PossiblyExactOperator>(this)->isExact();
-}
-
-void BinaryOperator::copyIRFlags(const Value *V) {
-  // Copy the wrapping flags.
-  if (auto *OB = dyn_cast<OverflowingBinaryOperator>(V)) {
-    setHasNoSignedWrap(OB->hasNoSignedWrap());
-    setHasNoUnsignedWrap(OB->hasNoUnsignedWrap());
-  }
-
-  // Copy the exact flag.
-  if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
-    setIsExact(PE->isExact());
-  
-  // Copy the fast-math flags.
-  if (auto *FP = dyn_cast<FPMathOperator>(V))
-    copyFastMathFlags(FP->getFastMathFlags());
-}
-
-void BinaryOperator::andIRFlags(const Value *V) {
-  if (auto *OB = dyn_cast<OverflowingBinaryOperator>(V)) {
-    setHasNoSignedWrap(hasNoSignedWrap() & OB->hasNoSignedWrap());
-    setHasNoUnsignedWrap(hasNoUnsignedWrap() & OB->hasNoUnsignedWrap());
-  }
-  
-  if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
-    setIsExact(isExact() & PE->isExact());
-  
-  if (auto *FP = dyn_cast<FPMathOperator>(V)) {
-    FastMathFlags FM = getFastMathFlags();
-    FM &= FP->getFastMathFlags();
-    copyFastMathFlags(FM);
-  }
 }
 
 

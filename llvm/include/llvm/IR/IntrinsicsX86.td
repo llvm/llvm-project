@@ -2999,7 +2999,7 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx512_mask_pbroadcast_q_mem_512 :
           GCCBuiltin<"__builtin_ia32_pbroadcastq512_mem_mask">,
           Intrinsic<[llvm_v8i64_ty],
-					          [llvm_i64_ty, llvm_v8i64_ty, llvm_i8_ty], [IntrNoMem]>;
+                    [llvm_i64_ty, llvm_v8i64_ty, llvm_i8_ty], [IntrNoMem]>;
 }
 
 // Vector permutation

@@ -467,8 +467,8 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
     bool CPChange = false;
     for (unsigned i = 0, e = CPUsers.size(); i != e; ++i)
       // For most inputs, it converges in no more than 5 iterations.
-      // If it doens't end in 10, the input may have huge BB or many CPEs.
-      // In this case, we will try differnt heuristics.
+      // If it doesn't end in 10, the input may have huge BB or many CPEs.
+      // In this case, we will try different heuristics.
       CPChange |= handleConstantPoolUser(i, NoCPIters >= CPMaxIteration / 2);
     if (CPChange && ++NoCPIters > CPMaxIteration)
       report_fatal_error("Constant Island pass failed to converge!");

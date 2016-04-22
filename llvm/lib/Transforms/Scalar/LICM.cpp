@@ -174,7 +174,7 @@ Pass *llvm::createLICMPass() { return new LICM(); }
 /// times on one loop.
 ///
 bool LICM::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipLoop(L))
+  if (skipOptnoneFunction(L))
     return false;
 
   Changed = false;

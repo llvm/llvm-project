@@ -214,8 +214,6 @@ void MCMachOStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
 }
 
 void MCMachOStreamer::EmitDataRegion(DataRegionData::KindTy Kind) {
-  if (!getAssembler().getBackend().hasDataInCodeSupport())
-    return;
   // Create a temporary label to mark the start of the data region.
   MCSymbol *Start = getContext().createTempSymbol();
   EmitLabel(Start);
@@ -226,8 +224,6 @@ void MCMachOStreamer::EmitDataRegion(DataRegionData::KindTy Kind) {
 }
 
 void MCMachOStreamer::EmitDataRegionEnd() {
-  if (!getAssembler().getBackend().hasDataInCodeSupport())
-    return;
   std::vector<DataRegionData> &Regions = getAssembler().getDataRegions();
   assert(!Regions.empty() && "Mismatched .end_data_region!");
   DataRegionData &Data = Regions.back();

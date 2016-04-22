@@ -2003,6 +2003,14 @@ def SI_KILL : InstSI <
 
 } // End mayLoad = 1, mayStore = 1, hasSideEffects = 1
 
+let SALU = 1 in
+def SI_PS_LIVE : InstSI <
+  (outs SReg_64:$dst),
+  (ins),
+  "si_ps_live $dst",
+  [(set i1:$dst, (int_amdgcn_ps_live))]
+>;
+
 // Used as an isel pseudo to directly emit initialization with an
 // s_mov_b32 rather than a copy of another initialized
 // register. MachineCSE skips copies, and we don't want to have to

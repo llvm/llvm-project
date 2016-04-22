@@ -83,8 +83,7 @@ bool ModuleSummaryIndexObjectFile::hasGlobalValueSummaryInMemBuffer(
 // module summary/index.
 ErrorOr<std::unique_ptr<ModuleSummaryIndexObjectFile>>
 ModuleSummaryIndexObjectFile::create(
-    MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler,
-    bool IsLazy) {
+    MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler) {
   std::unique_ptr<ModuleSummaryIndex> Index;
 
   ErrorOr<MemoryBufferRef> BCOrErr = findBitcodeInMemBuffer(Object);
@@ -92,7 +91,7 @@ ModuleSummaryIndexObjectFile::create(
     return BCOrErr.getError();
 
   ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IOrErr =
-      getModuleSummaryIndex(BCOrErr.get(), DiagnosticHandler, IsLazy);
+      getModuleSummaryIndex(BCOrErr.get(), DiagnosticHandler);
 
   if (std::error_code EC = IOrErr.getError())
     return EC;
@@ -101,23 +100,6 @@ ModuleSummaryIndexObjectFile::create(
 
   return llvm::make_unique<ModuleSummaryIndexObjectFile>(Object,
                                                          std::move(Index));
-}
-
-// Parse the summary information for value with the
-// given name out of the given buffer. Parsed information is
-// stored on the index object saved in this object.
-std::error_code ModuleSummaryIndexObjectFile::findGlobalValueSummaryInMemBuffer(
-    MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler,
-    StringRef ValueName) {
-  sys::fs::file_magic Type = sys::fs::identify_magic(Object.getBuffer());
-  switch (Type) {
-  case sys::fs::file_magic::bitcode: {
-    return readGlobalValueSummary(Object, DiagnosticHandler, ValueName,
-                                  std::move(Index));
-  }
-  default:
-    return object_error::invalid_file_type;
-  }
 }
 
 // Parse the module summary index out of an IR file and return the summary

@@ -704,7 +704,7 @@ bool MachineCSE::PerformCSE(MachineDomTreeNode *Node) {
 }
 
 bool MachineCSE::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipOptnoneFunction(*MF.getFunction()))
     return false;
 
   TII = MF.getSubtarget().getInstrInfo();

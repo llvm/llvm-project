@@ -531,7 +531,7 @@ void LoopVersioningLICM::setNoAliasToLoop(Loop *VerLoop) {
 }
 
 bool LoopVersioningLICM::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipLoop(L))
+  if (skipOptnoneFunction(L))
     return false;
   Changed = false;
   // Get Analysis information.

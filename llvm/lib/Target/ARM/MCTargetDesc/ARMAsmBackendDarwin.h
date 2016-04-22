@@ -21,7 +21,6 @@ public:
   ARMAsmBackendDarwin(const Target &T, const Triple &TT,
                       const MCRegisterInfo &MRI, MachO::CPUSubTypeARM st)
       : ARMAsmBackend(T, TT, /* IsLittleEndian */ true), MRI(MRI), Subtype(st) {
-    HasDataInCodeSupport = true;
   }
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {

@@ -142,3 +142,50 @@ attributes #0 = { optsize }
 ; CHECK-CFG: bl __rt_udiv
 ; CHECK-CFG: pop.w {{{.*}}, r11, pc}
 
+; RUN: llc -O0 -mtriple thumbv7--windows-itanium -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-WIN__DBZCHK
+
+; long k(void);
+; int l(void);
+; int j(int i) {
+;   if (l() == -1)
+;     return 0;
+;   return k() % i;
+; }
+
+declare arm_aapcs_vfpcc i32 @k()
+declare arm_aapcs_vfpcc i32 @l()
+
+define arm_aapcs_vfpcc i32 @j(i32 %i) {
+entry:
+  %retval = alloca i32, align 4
+  %i.addr = alloca i32, align 4
+  store i32 %i, i32* %i.addr, align 4
+  %call = call arm_aapcs_vfpcc i32 @l()
+  %cmp = icmp eq i32 %call, -1
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  store i32 0, i32* %retval, align 4
+  br label %return
+
+if.end:
+  %call1 = call arm_aapcs_vfpcc i32 @k()
+  %0 = load i32, i32* %i.addr, align 4
+  %rem = srem i32 %call1, %0
+  store i32 %rem, i32* %retval, align 4
+  br label %return
+
+return:
+  %1 = load i32, i32* %retval, align 4
+  ret i32 %1
+}
+
+; CHECK-WIN__DBZCHK-LABEL: j:
+; CHECK-WIN__DBZCHK: cbz r{{[0-7]}}, .LBB
+; CHECK-WIN__DBZCHK-NOT: cbz r8, .LBB
+; CHECK-WIN__DBZCHK-NOT: cbz r9, .LBB
+; CHECK-WIN__DBZCHK-NOT: cbz r10, .LBB
+; CHECK-WIN__DBZCHK-NOT: cbz r11, .LBB
+; CHECK-WIN__DBZCHK-NOT: cbz ip, .LBB
+; CHECK-WIN__DBZCHK-NOT: cbz lr, .LBB
+

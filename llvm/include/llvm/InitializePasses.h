@@ -131,6 +131,7 @@ void initializeMemorySanitizerPass(PassRegistry&);
 void initializeThreadSanitizerPass(PassRegistry&);
 void initializeSanitizerCoverageModulePass(PassRegistry&);
 void initializeDataFlowSanitizerPass(PassRegistry&);
+void initializeEfficiencySanitizerPass(PassRegistry&);
 void initializeScalarizerPass(PassRegistry&);
 void initializeEarlyCSELegacyPassPass(PassRegistry &);
 void initializeEliminateAvailableExternallyPass(PassRegistry&);

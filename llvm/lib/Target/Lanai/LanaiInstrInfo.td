@@ -823,20 +823,11 @@ def POPC: InstSpecial<0b001, (outs GPR:$Rd), (ins GPR:$Rs1),
 // Count Leading Zeros (LEADZ)
 def LEADZ: InstSpecial<0b010, (outs GPR:$Rd), (ins GPR:$Rs1),
                        "leadz\t$Rs1, $Rd", [(set GPR:$Rd, (ctlz GPR:$Rs1))]>;
-let isCodeGenOnly = 1 in
-  def LEADZUNDEF: InstSpecial<0b010, (outs GPR:$Rd), (ins GPR:$Rs1),
-                              "leadz\t$Rs1, $Rd",
-                              [(set GPR:$Rd, (ctlz_zero_undef GPR:$Rs1))]>;
 
 // Count Trailing Zeros (TRAILZ)
 def TRAILZ : InstSpecial<0b011, (outs GPR:$Rd), (ins GPR:$Rs1),
                          "trailz\t$Rs1, $Rd",
                          [(set GPR:$Rd, (cttz GPR:$Rs1))]>;
-let isCodeGenOnly = 1 in
-  def TRAILZUNDEF : InstSpecial<0b011, (outs GPR:$Rd), (ins GPR:$Rs1),
-                                "trailz\t$Rs1, $Rd",
-                                [(set GPR:$Rd,
-                                    (cttz_zero_undef GPR:$Rs1))]>;
 }
 
 //===----------------------------------------------------------------------===//

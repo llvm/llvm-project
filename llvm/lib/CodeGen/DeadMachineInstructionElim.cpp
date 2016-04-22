@@ -90,7 +90,7 @@ bool DeadMachineInstructionElim::isDead(const MachineInstr *MI) const {
 }
 
 bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipOptnoneFunction(*MF.getFunction()))
     return false;
 
   bool AnyChanges = false;

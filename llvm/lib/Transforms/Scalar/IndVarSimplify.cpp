@@ -2122,7 +2122,7 @@ void IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 //===----------------------------------------------------------------------===//
 
 bool IndVarSimplify::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipLoop(L))
+  if (skipOptnoneFunction(L))
     return false;
 
   // If LoopSimplify form is not available, stay out of trouble. Some notes:

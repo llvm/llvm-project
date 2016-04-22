@@ -68,13 +68,13 @@ RegisterBankInfo::RegisterBankInfo(unsigned NumRegBanks)
 }
 
 bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
-  for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
+  DEBUG(for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
     const RegisterBank &RegBank = getRegBank(Idx);
     assert(Idx == RegBank.getID() &&
            "ID does not match the index in the array");
-    DEBUG(dbgs() << "Verify " << RegBank << '\n');
+    dbgs() << "Verify " << RegBank << '\n';
     assert(RegBank.verify(TRI) && "RegBank is invalid");
-  }
+  });
   return true;
 }
 
@@ -444,12 +444,12 @@ bool RegisterBankInfo::InstructionMapping::verify(
   assert(MI.getParent() && MI.getParent()->getParent() &&
          "MI must be connected to a MachineFunction");
   const MachineFunction &MF = *MI.getParent()->getParent();
-  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  (void)MF;
 
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     const MachineOperand &MO = MI.getOperand(Idx);
     const RegisterBankInfo::ValueMapping &MOMapping = getOperandMapping(Idx);
+    (void)MOMapping;
     if (!MO.isReg()) {
       assert(MOMapping.BreakDown.empty() &&
              "We should not care about non-reg mapping");
@@ -460,8 +460,9 @@ bool RegisterBankInfo::InstructionMapping::verify(
       continue;
     // Register size in bits.
     // This size must match what the mapping expects.
-    unsigned RegSize = getSizeInBits(Reg, MRI, TRI);
-    assert(MOMapping.verify(RegSize) && "Value mapping is invalid");
+    assert(MOMapping.verify(getSizeInBits(
+               Reg, MF.getRegInfo(), *MF.getSubtarget().getRegisterInfo())) &&
+           "Value mapping is invalid");
   }
   return true;
 }

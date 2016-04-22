@@ -5002,7 +5002,7 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
-  if (skipLoop(L))
+  if (skipOptnoneFunction(L))
     return false;
 
   auto &IU = getAnalysis<IVUsers>();

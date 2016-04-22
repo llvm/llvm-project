@@ -119,7 +119,7 @@ bool LoopDeletion::isLoopDead(Loop *L,
 /// NOTE: This entire process relies pretty heavily on LoopSimplify and LCSSA
 /// in order to make various safety checks work.
 bool LoopDeletion::runOnLoop(Loop *L, LPPassManager &) {
-  if (skipLoop(L))
+  if (skipOptnoneFunction(L))
     return false;
 
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();

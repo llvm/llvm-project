@@ -499,9 +499,6 @@ public:
       : ModulePass(ID), Index(Index) {}
 
   bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
     if (SummaryFile.empty() && !Index)
       report_fatal_error("error: -function-import requires -summary-file or "
                          "file from frontend\n");

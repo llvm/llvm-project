@@ -1051,9 +1051,6 @@ bool LowerBitSets::eraseBitSetMetadata() {
 }
 
 bool LowerBitSets::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
   bool Changed = buildBitSets();
   Changed |= eraseBitSetMetadata();
   return Changed;
