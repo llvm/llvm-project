@@ -278,8 +278,7 @@ bb2:
 ; Test that we don't fold the 'and' instruction into the compare.
 define i32 @icmp_eq_and_i32(i32 %a, i1 %c) {
 ; CHECK-LABEL: icmp_eq_and_i32
-; CHECK:       and  [[REG:w[0-9]+]], w0, #0x4
-; CHECK-NEXT:  cbz  [[REG]], {{LBB.+_3}}
+; CHECK-FAST:       tbz  w0, #2, {{LBB.+_3}} 
   %1 = and i32 %a, 4
   br i1 %c, label %bb0, label %bb2
 bb0:
