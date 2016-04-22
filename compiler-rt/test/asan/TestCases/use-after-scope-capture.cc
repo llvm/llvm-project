@@ -1,14 +1,18 @@
-// RUN: %clangxx_asan -O0 -fsanitize=use-after-scope %s -o %t && %run %t
-// XFAIL: *
+// RUN: %clangxx_asan -std=c++11 -O1 -mllvm -asan-use-after-scope=1 %s -o %t && \
+// RUN:     not %run %t 2>&1 | FileCheck %s
+// XFAIL: win32
+
+#include <functional>
 
 int main() {
   std::function<int()> f;
   {
     int x = 0;
     f = [&x]() {
-      return x;
-    }
+      return x;  // BOOM
+      // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
+      // CHECK: #0 0x{{.*}} in {{.*}}::operator()(){{.*}}.cc:[[@LINE-2]]
+    };
   }
   return f();  // BOOM
-  // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
 }
