@@ -64,8 +64,10 @@ enum class SymbolSubKind : uint8_t {
   TemplatePartialSpecialization = 1 << 1,
   TemplateSpecialization        = 1 << 2,
   UnitTest                      = 1 << 3,
+  IBAnnotated                   = 1 << 4,
+  IBOutletCollection            = 1 << 5,
 };
-static const unsigned SymbolSubKindBitNum = 4;
+static const unsigned SymbolSubKindBitNum = 6;
 typedef unsigned SymbolSubKindSet;
 
 /// Set of roles that are attributed to symbol occurrences.
