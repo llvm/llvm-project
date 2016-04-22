@@ -40,7 +40,7 @@ IRObjectFile::IRObjectFile(MemoryBufferRef Object, std::unique_ptr<Module> Mod)
   Mang.reset(new Mangler());
   CollectAsmUndefinedRefs(*M, [this](StringRef Name,
                                      BasicSymbolRef::Flags Flags) {
-    AsmSymbols.push_back(std::make_pair<std::string, uint32_t>(Name, Flags));
+    AsmSymbols.push_back(std::make_pair<std::string, uint32_t>(Name, std::move(Flags)));
   });
 }
 
