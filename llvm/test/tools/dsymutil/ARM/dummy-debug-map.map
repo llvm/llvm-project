@@ -6,7 +6,7 @@
 # you can extend this file with as much object files and symbols as needed.
 
 ---
-triple:          'thumbv7-apple-darwin'
+triple:          'armv7-apple-darwin'
 objects:
   - filename: 1.o
     symbols:
