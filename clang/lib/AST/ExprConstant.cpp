@@ -9027,6 +9027,20 @@ bool Expr::EvaluateAsInt(APSInt &Result, const ASTContext &Ctx,
   return true;
 }
 
+bool Expr::EvaluateAsFloat(APFloat &Result, const ASTContext &Ctx,
+                           SideEffectsKind AllowSideEffects) const {
+  if (!getType()->isRealFloatingType())
+    return false;
+
+  EvalResult ExprResult;
+  if (!EvaluateAsRValue(ExprResult, Ctx) || !ExprResult.Val.isFloat() ||
+      hasUnacceptableSideEffect(ExprResult, AllowSideEffects))
+    return false;
+
+  Result = ExprResult.Val.getFloat();
+  return true;
+}
+
 bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx) const {
   EvalInfo Info(Ctx, Result, EvalInfo::EM_ConstantFold);
 

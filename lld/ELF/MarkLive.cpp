@@ -116,7 +116,7 @@ template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
   if (Config->Shared || Config->ExportDynamic) {
     for (const Symbol *S : Symtab->getSymbols()) {
       SymbolBody *B = S->Body;
-      if (B->getVisibility() == STV_DEFAULT)
+      if (B->includeInDynsym())
         MarkSymbol(B);
     }
   }

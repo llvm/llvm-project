@@ -159,9 +159,13 @@ private:
 
 public:
 
+    _LIBCPP_INLINE_VISIBILITY
     explicit dynarray(size_type __c);
+    _LIBCPP_INLINE_VISIBILITY
     dynarray(size_type __c, const value_type& __v);
+    _LIBCPP_INLINE_VISIBILITY
     dynarray(const dynarray& __d);
+    _LIBCPP_INLINE_VISIBILITY
     dynarray(initializer_list<value_type>);
 
 //  We're not implementing these right now.
@@ -176,6 +180,7 @@ public:
 //       dynarray(allocator_arg_t, const _Alloc& __alloc, initializer_list<value_type>);
 
     dynarray& operator=(const dynarray&) = delete;
+    _LIBCPP_INLINE_VISIBILITY
     ~dynarray();
 
     // iterators:
@@ -219,7 +224,7 @@ public:
 };
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 dynarray<_Tp>::dynarray(size_type __c) : dynarray ()
 {
     __base_ = __allocate (__c);
@@ -229,7 +234,7 @@ dynarray<_Tp>::dynarray(size_type __c) : dynarray ()
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 dynarray<_Tp>::dynarray(size_type __c, const value_type& __v) : dynarray ()
 {
     __base_ = __allocate (__c);
@@ -239,7 +244,7 @@ dynarray<_Tp>::dynarray(size_type __c, const value_type& __v) : dynarray ()
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 dynarray<_Tp>::dynarray(initializer_list<value_type> __il) : dynarray ()
 {
     size_t sz = __il.size();
@@ -251,7 +256,7 @@ dynarray<_Tp>::dynarray(initializer_list<value_type> __il) : dynarray ()
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 dynarray<_Tp>::dynarray(const dynarray& __d) : dynarray ()
 {
     size_t sz = __d.size();
@@ -263,7 +268,7 @@ dynarray<_Tp>::dynarray(const dynarray& __d) : dynarray ()
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 dynarray<_Tp>::~dynarray()
 { 
     value_type *__data = data () + __size_;

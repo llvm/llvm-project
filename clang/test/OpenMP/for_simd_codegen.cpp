@@ -582,9 +582,10 @@ void collapsed(float *a, float *b, float *c, float *d) {
 // i,j,l are updated; k is not updated.
 // CHECK: call void @__kmpc_for_static_fini(%ident_t* {{.+}}, i32 %{{.+}})
 // CHECK: br i1
-// CHECK: store i32 3, i32* [[I:%[^,]+]]
-// CHECK-NEXT: store i32 5, i32* [[I:%[^,]+]]
-// CHECK-NEXT: store i16 9, i16* [[I:%[^,]+]]
+// CHECK: store i32 3, i32*
+// CHECK-NEXT: store i32 5,
+// CHECK-NEXT: store i32 7,
+// CHECK-NEXT: store i16 9, i16*
 // CHECK: call void @__kmpc_barrier(%ident_t* {{.+}}, i32 %{{.+}})
 // CHECK: ret void
 }

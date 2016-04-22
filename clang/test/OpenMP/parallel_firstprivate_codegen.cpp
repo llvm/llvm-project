@@ -22,8 +22,9 @@ struct SS {
   int a;
   int b : 4;
   int &c;
+  int e[4];
   SS(int &d) : a(0), b(0), c(d) {
-#pragma omp parallel firstprivate(a, b, c)
+#pragma omp parallel firstprivate(a, b, c, e)
 #ifdef LAMBDA
     [&]() {
       ++this->a, --b, (this)->c /= 1;
@@ -39,7 +40,7 @@ struct SS {
       ++(this)->a, --b, this->c /= 1;
     }();
 #else
-    ++this->a, --b, c /= 1;
+    ++this->a, --b, c /= 1, e[2] = 1111;
 #endif
   }
 };
@@ -129,10 +130,10 @@ int main() {
     // LAMBDA: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
     // LAMBDA: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 1
     // LAMBDA: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 2
-    // LAMBDA: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*, i32*, i32*, i32*)* [[SS_MICROTASK:@.+]] to void
+    // LAMBDA: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*, i32*, i32*, i32*, [4 x i{{[0-9]+}}]*)* [[SS_MICROTASK:@.+]] to void
     // LAMBDA: ret
 
-    // LAMBDA: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}}, i32* {{.+}}, i32* {{.+}}, i32* {{.+}})
+    // LAMBDA: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}}, i32* {{.+}}, i32* {{.+}}, i32* {{.+}}, [4 x i{{[0-9]+}}]* {{.+}})
     // LAMBDA-NOT: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %
     // LAMBDA: call{{.*}} void
     // LAMBDA: ret void
@@ -247,10 +248,10 @@ int main() {
 // BLOCKS: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
 // BLOCKS: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 1
 // BLOCKS: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 2
-// BLOCKS: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*, i32*, i32*, i32*)* [[SS_MICROTASK:@.+]] to void
+// BLOCKS: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*, i32*, i32*, i32*, [4 x i{{[0-9]+}}]*)* [[SS_MICROTASK:@.+]] to void
 // BLOCKS: ret
 
-// BLOCKS: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}}, i32* {{.+}}, i32* {{.+}}, i32* {{.+}})
+// BLOCKS: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}}, i32* {{.+}}, i32* {{.+}}, i32* {{.+}}, [4 x i{{[0-9]+}}]* {{.+}})
 // BLOCKS-NOT: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %
 // BLOCKS: call{{.*}} void
 // BLOCKS: ret void
@@ -354,18 +355,23 @@ int main() {
 // CHECK: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
 // CHECK: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 1
 // CHECK: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 2
-// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*, i32*, i32*, i32*)* [[SS_MICROTASK:@.+]] to void
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*, i32*, i32*, i32*, [4 x i32]*)* [[SS_MICROTASK:@.+]] to void
 // CHECK: ret
 
-// CHECK: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}}, i32* {{.+}}, i32* {{.+}}, i32* {{.+}})
+// CHECK: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}}, i32* {{.+}}, i32* {{.+}}, i32* {{.+}}, [4 x i{{[0-9]+}}]* {{.+}})
 // CHECK: [[A_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[B_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[C_PRIV:%.+]] = alloca i{{[0-9]+}},
+// CHECK: [[E_PRIV:%.+]] = alloca [4 x i{{[0-9]+}}],
 // CHECK: store i{{[0-9]+}} {{.+}}, i{{[0-9]+}}* [[A_PRIV]]
 // CHECK: store i{{[0-9]+}}* [[A_PRIV]], i{{[0-9]+}}** [[REFA:%.+]],
 // CHECK: store i{{[0-9]+}} {{.+}}, i{{[0-9]+}}* [[B_PRIV]]
 // CHECK: store i{{[0-9]+}} {{.+}}, i{{[0-9]+}}* [[C_PRIV]]
 // CHECK: store i{{[0-9]+}}* [[C_PRIV]], i{{[0-9]+}}** [[REFC:%.+]],
+// CHECK: bitcast [4 x i{{[0-9]+}}]* [[E_PRIV]] to i8*
+// CHECK: bitcast [4 x i{{[0-9]+}}]* %{{.+}} to i8*
+// CHECK: call void @llvm.memcpy
+// CHECK: store [4 x i{{[0-9]+}}]* [[E_PRIV]], [4 x i{{[0-9]+}}]** [[REFE:%.+]],
 // CHECK-NEXT: [[A_PRIV:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[REFA]],
 // CHECK-NEXT: [[A_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[A_PRIV]],
 // CHECK-NEXT: [[INC:%.+]] = add nsw i{{[0-9]+}} [[A_VAL]], 1
@@ -377,6 +383,9 @@ int main() {
 // CHECK-NEXT: [[C_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[C_PRIV]],
 // CHECK-NEXT: [[DIV:%.+]] = sdiv i{{[0-9]+}} [[C_VAL]], 1
 // CHECK-NEXT: store i{{[0-9]+}} [[DIV]], i{{[0-9]+}}* [[C_PRIV]],
+// CHECK-NEXT: [[E_PRIV:%.+]] = load [4 x i{{[0-9]+}}]*, [4 x i{{[0-9]+}}]** [[REFE]],
+// CHECK-NEXT: [[E_PRIV_2:%.+]] = getelementptr inbounds [4 x i{{[0-9]+}}], [4 x i{{[0-9]+}}]* [[E_PRIV]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
+// CHECK-NEXT: store i32 1111, i32* [[E_PRIV_2]],
 // CHECK-NEXT: ret void
 
 // CHECK: define internal {{.*}}void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, i32* dereferenceable(4) %{{.+}}, [2 x [[S_INT_TY]]]* dereferenceable(8) %{{.+}}, [[S_INT_TY]]* dereferenceable(4) %{{.+}})

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <map>
 
 // void swap(map& c)
@@ -22,6 +24,7 @@
 #include <map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 #include "test_allocator.h"
 
@@ -93,7 +96,6 @@ struct some_alloc3
 
 int main()
 {
-#if __has_feature(cxx_noexcept)
     typedef std::pair<const MoveOnly, MoveOnly> V;
     {
         typedef std::map<MoveOnly, MoveOnly> C;
@@ -145,5 +147,4 @@ int main()
     }
 #endif
 
-#endif
 }

@@ -38,8 +38,6 @@ struct _LIBCPP_TYPE_VIS_ONLY binary_function
     typedef _Result result_type;
 };
 
-template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY hash;
-
 template <class _Tp>
 struct __has_result_type
 {

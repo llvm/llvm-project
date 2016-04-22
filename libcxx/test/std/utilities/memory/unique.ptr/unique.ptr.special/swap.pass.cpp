@@ -16,6 +16,7 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../deleter.h"
 
 struct A
@@ -33,6 +34,16 @@ struct A
 };
 
 int A::count = 0;
+
+template <class T>
+struct NonSwappableDeleter {
+  explicit NonSwappableDeleter(int) {}
+  NonSwappableDeleter& operator=(NonSwappableDeleter const&) { return *this; }
+  void operator()(T*) const {}
+private:
+  NonSwappableDeleter(NonSwappableDeleter const&);
+
+};
 
 int main()
 {
@@ -74,4 +85,18 @@ int main()
     assert(A::count == 6);
     }
     assert(A::count == 0);
+#if TEST_STD_VER >= 11
+    {
+        // test that unique_ptr's specialized swap is disabled when the deleter
+        // is non-swappable. Instead we should pick up the generic swap(T, T)
+        // and perform 3 move constructions.
+        typedef NonSwappableDeleter<int> D;
+        D  d(42);
+        int x = 42;
+        int y = 43;
+        std::unique_ptr<int, D&> p(&x, d);
+        std::unique_ptr<int, D&> p2(&y, d);
+        std::swap(p, p2);
+    }
+#endif
 }

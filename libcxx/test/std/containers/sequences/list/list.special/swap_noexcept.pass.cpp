@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <list>
 
 // void swap(list& c)
@@ -21,6 +23,7 @@
 #include <list>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 #include "test_allocator.h"
 
@@ -51,7 +54,6 @@ struct some_alloc2
 
 int main()
 {
-#if __has_feature(cxx_noexcept)
     {
         typedef std::list<MoveOnly> C;
         C c1, c2;
@@ -86,5 +88,4 @@ int main()
     }
 #endif
 
-#endif
 }

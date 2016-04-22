@@ -34,7 +34,7 @@ struct array
 
     // No explicit construct/copy/destroy for aggregate type
     void fill(const T& u);
-    void swap(array& a) noexcept(noexcept(swap(declval<T&>(), declval<T&>())));
+    void swap(array& a) noexcept(is_nothrow_swappable_v<T>);
 
     // iterators:
     iterator begin() noexcept;
@@ -141,8 +141,15 @@ struct _LIBCPP_TYPE_VIS_ONLY array
     _LIBCPP_INLINE_VISIBILITY void fill(const value_type& __u)
         {_VSTD::fill_n(__elems_, _Size, __u);}
     _LIBCPP_INLINE_VISIBILITY
-    void swap(array& __a) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value)
-        {_VSTD::swap_ranges(__elems_, __elems_ + _Size, __a.__elems_);}
+    void swap(array& __a) _NOEXCEPT_(_Size == 0 || __is_nothrow_swappable<_Tp>::value)
+        { __swap_dispatch((std::integral_constant<bool, _Size == 0>()), __a); }
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __swap_dispatch(std::true_type, array&) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __swap_dispatch(std::false_type, array& __a)
+        { _VSTD::swap_ranges(__elems_, __elems_ + _Size, __a.__elems_);}
 
     // iterators:
     _LIBCPP_INLINE_VISIBILITY
@@ -276,11 +283,12 @@ template <class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
+    _Size == 0 ||
     __is_swappable<_Tp>::value,
     void
 >::type
 swap(array<_Tp, _Size>& __x, array<_Tp, _Size>& __y)
-                                  _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value)
+                                  _NOEXCEPT_(noexcept(__x.swap(__y)))
 {
     __x.swap(__y);
 }

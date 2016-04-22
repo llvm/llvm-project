@@ -74,6 +74,17 @@ static void runLTOPasses(Module &M, TargetMachine &TM) {
     saveBCFile(M, ".lto.opt.bc");
 }
 
+static bool shouldInternalize(const SmallPtrSet<GlobalValue *, 8> &Used,
+                              SymbolBody &B, GlobalValue *GV) {
+  if (B.isUsedInRegularObj())
+    return false;
+
+  if (Used.count(GV))
+    return false;
+
+  return !B.includeInDynsym();
+}
+
 void BitcodeCompiler::add(BitcodeFile &F) {
   std::unique_ptr<IRObjectFile> Obj =
       check(IRObjectFile::create(F.MB, Context));
@@ -121,13 +132,8 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // we imported the symbols and satisfied undefined references
     // to it. We can't just change linkage here because otherwise
     // the IRMover will just rename the symbol.
-    // Shared libraries need to be handled slightly differently.
-    // For now, let's be conservative and just never internalize
-    // symbols when creating a shared library.
-    if (!Config->Shared && !Config->ExportDynamic && !B->isUsedInRegularObj() &&
-        !B->MustBeInDynSym)
-      if (!Used.count(GV))
-        InternalizedSyms.insert(GV->getName());
+    if (shouldInternalize(Used, *B, GV))
+      InternalizedSyms.insert(GV->getName());
 
     Keep.push_back(GV);
   }

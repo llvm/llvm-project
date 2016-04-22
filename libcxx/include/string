@@ -961,7 +961,7 @@ char_traits<char32_t>::assign(char_type* __s, size_t __n, char_type __a)
 
 // __str_find
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-_SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 __str_find(const _CharT *__p, _SizeT __sz, 
              _CharT __c, _SizeT __pos) _NOEXCEPT
 {
@@ -974,7 +974,7 @@ __str_find(const _CharT *__p, _SizeT __sz,
 }
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-_SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 __str_find(const _CharT *__p, _SizeT __sz, 
        const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
@@ -995,7 +995,7 @@ __str_find(const _CharT *__p, _SizeT __sz,
 // __str_rfind
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-_SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 __str_rfind(const _CharT *__p, _SizeT __sz, 
               _CharT __c, _SizeT __pos) _NOEXCEPT
 {
@@ -1014,7 +1014,7 @@ __str_rfind(const _CharT *__p, _SizeT __sz,
 }
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-_SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 __str_rfind(const _CharT *__p, _SizeT __sz, 
         const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
@@ -1033,7 +1033,7 @@ __str_rfind(const _CharT *__p, _SizeT __sz,
 
 // __str_find_first_of
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-_SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 __str_find_first_of(const _CharT *__p, _SizeT __sz,
                 const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
@@ -1049,7 +1049,7 @@ __str_find_first_of(const _CharT *__p, _SizeT __sz,
 
 // __str_find_last_of
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-_SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY 
+inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 __str_find_last_of(const _CharT *__p, _SizeT __sz,
                const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
     {
@@ -1072,7 +1072,7 @@ __str_find_last_of(const _CharT *__p, _SizeT __sz,
 
 // __str_find_first_not_of
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-_SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 __str_find_first_not_of(const _CharT *__p, _SizeT __sz,
                     const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
@@ -1088,7 +1088,7 @@ __str_find_first_not_of(const _CharT *__p, _SizeT __sz,
 
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-_SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 __str_find_first_not_of(const _CharT *__p, _SizeT __sz,
                           _CharT __c, _SizeT __pos) _NOEXCEPT
 {
@@ -1105,7 +1105,7 @@ __str_find_first_not_of(const _CharT *__p, _SizeT __sz,
 
 // __str_find_last_not_of
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-_SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 __str_find_last_not_of(const _CharT *__p, _SizeT __sz,
                    const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
@@ -1121,7 +1121,7 @@ __str_find_last_not_of(const _CharT *__p, _SizeT __sz,
 
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
-_SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 __str_find_last_not_of(const _CharT *__p, _SizeT __sz,
                          _CharT __c, _SizeT __pos) _NOEXCEPT
 {

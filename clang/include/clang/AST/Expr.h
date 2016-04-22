@@ -594,6 +594,13 @@ public:
   bool EvaluateAsInt(llvm::APSInt &Result, const ASTContext &Ctx,
                      SideEffectsKind AllowSideEffects = SE_NoSideEffects) const;
 
+  /// EvaluateAsFloat - Return true if this is a constant which we can fold and
+  /// convert to a floating point value, using any crazy technique that we
+  /// want to.
+  bool
+  EvaluateAsFloat(llvm::APFloat &Result, const ASTContext &Ctx,
+                  SideEffectsKind AllowSideEffects = SE_NoSideEffects) const;
+
   /// isEvaluatable - Call EvaluateAsRValue to see if this expression can be
   /// constant folded without side-effects, but discard the result.
   bool isEvaluatable(const ASTContext &Ctx,

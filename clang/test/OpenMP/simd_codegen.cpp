@@ -209,6 +209,7 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT: store i64 [[ADD7_2]], i64* [[OMP_IV7]]{{.*}}!llvm.mem.parallel_loop_access ![[SIMPLE_LOOP7_ID]]
   }
 // CHECK: [[SIMPLE_LOOP7_END]]
+// CHECK-NEXT: store i64 11, i64*
 // CHECK-NEXT: [[A_PRIV_VAL:%.+]] = load i32, i32* [[A_PRIV]],
 // CHECK-NEXT: store i32 [[A_PRIV_VAL]], i32* [[A]],
   int R;
@@ -418,9 +419,10 @@ void collapsed(float *a, float *b, float *c, float *d) {
 // CHECK: [[COLL1_END]]
   }
 // i,j,l are updated; k is not updated.
-// CHECK: store i32 3, i32* [[I:%[^,]+]]
-// CHECK-NEXT: store i32 5, i32* [[I:%[^,]+]]
-// CHECK-NEXT: store i16 9, i16* [[I:%[^,]+]]
+// CHECK: store i32 3, i32*
+// CHECK-NEXT: store i32 5, i32*
+// CHECK-NEXT: store i32 7, i32*
+// CHECK-NEXT: store i16 9, i16*
 // CHECK: ret void
 }
 

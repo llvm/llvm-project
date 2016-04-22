@@ -113,10 +113,12 @@ class any;
 
 template <class _ValueType>
 typename add_pointer<typename add_const<_ValueType>::type>::type
+_LIBCPP_INLINE_VISIBILITY
 any_cast(any const *) _NOEXCEPT;
 
 template <class _ValueType>
 typename add_pointer<_ValueType>::type
+_LIBCPP_INLINE_VISIBILITY
 any_cast(any *) _NOEXCEPT;
 
 namespace __any_imp
@@ -185,6 +187,7 @@ public:
       class _ValueType
     , class = __any_imp::_EnableIfNotAny<_ValueType>
     >
+  _LIBCPP_INLINE_VISIBILITY
   any(_ValueType && __value);
 
   _LIBCPP_INLINE_VISIBILITY
@@ -212,6 +215,7 @@ public:
       class _ValueType
     , class = __any_imp::_EnableIfNotAny<_ValueType>
     >
+  _LIBCPP_INLINE_VISIBILITY
   any & operator=(_ValueType && __rhs);
 
   // 6.3.3 any modifiers
@@ -221,6 +225,7 @@ public:
     if (__h) this->__call(_Action::_Destroy);
   }
 
+  _LIBCPP_INLINE_VISIBILITY
   void swap(any & __rhs) _NOEXCEPT;
 
   // 6.3.4 any observers
@@ -457,7 +462,6 @@ namespace __any_imp
 
 
 template <class _ValueType, class>
-_LIBCPP_INLINE_VISIBILITY
 any::any(_ValueType && __v) : __h(nullptr)
 {
   typedef typename decay<_ValueType>::type _Tp;
@@ -468,7 +472,6 @@ any::any(_ValueType && __v) : __h(nullptr)
 }
 
 template <class _ValueType, class>
-_LIBCPP_INLINE_VISIBILITY
 any & any::operator=(_ValueType && __v)
 {
   typedef typename decay<_ValueType>::type _Tp;
@@ -478,7 +481,7 @@ any & any::operator=(_ValueType && __v)
   return *this;
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void any::swap(any & __rhs) _NOEXCEPT
 {
     if (__h && __rhs.__h) {
@@ -550,7 +553,7 @@ _ValueType any_cast(any && __v)
 }
 
 template <class _ValueType>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename add_pointer<typename add_const<_ValueType>::type>::type
 any_cast(any const * __any) _NOEXCEPT
 {
@@ -560,7 +563,6 @@ any_cast(any const * __any) _NOEXCEPT
 }
 
 template <class _ValueType>
-_LIBCPP_INLINE_VISIBILITY
 typename add_pointer<_ValueType>::type
 any_cast(any * __any) _NOEXCEPT
 {
