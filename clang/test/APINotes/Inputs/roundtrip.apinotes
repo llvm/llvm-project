@@ -7,6 +7,7 @@ Classes:
   - Name:            NSCell
     Availability:    available
     AvailabilityMsg: ''
+    SwiftPrivate:    false
     SwiftName:       ''
     SwiftBridge:     ''
     Methods:         
@@ -15,6 +16,7 @@ Classes:
         NullabilityOfRet: U
         Availability:    available
         AvailabilityMsg: ''
+        SwiftPrivate:    true
         SwiftName:       ''
         DesignatedInit:  true
       - Selector:        'initImageCell:'
@@ -23,6 +25,7 @@ Classes:
         NullabilityOfRet: U
         Availability:    available
         AvailabilityMsg: ''
+        SwiftPrivate:    false
         SwiftName:       ''
         DesignatedInit:  true
       - Selector:        'initTextCell:'
@@ -31,6 +34,7 @@ Classes:
         NullabilityOfRet: U
         Availability:    available
         AvailabilityMsg: ''
+        SwiftPrivate:    false
         SwiftName:       ''
         DesignatedInit:  true
       - Selector:        'initWithCoder:'
@@ -39,6 +43,7 @@ Classes:
         NullabilityOfRet: U
         Availability:    available
         AvailabilityMsg: ''
+        SwiftPrivate:    false
         SwiftName:       ''
         DesignatedInit:  true
         Required:        true
@@ -46,6 +51,7 @@ Classes:
     AuditedForNullability: true
     Availability:    available
     AvailabilityMsg: ''
+    SwiftPrivate:    false
     SwiftName:       ''
     SwiftBridge:     View
     Methods:         
@@ -55,6 +61,7 @@ Classes:
         NullabilityOfRet: N
         Availability:    available
         AvailabilityMsg: ''
+        SwiftPrivate:    false
         SwiftName:       ''
       - Selector:        'addSubview:positioned:relativeTo:'
         MethodKind:      Instance
@@ -62,6 +69,7 @@ Classes:
         NullabilityOfRet: N
         Availability:    available
         AvailabilityMsg: ''
+        SwiftPrivate:    false
         SwiftName:       ''
       - Selector:        'beginDraggingSessionWithItems:event:source:'
         MethodKind:      Instance
@@ -69,44 +77,52 @@ Classes:
         NullabilityOfRet: N
         Availability:    available
         AvailabilityMsg: ''
+        SwiftPrivate:    false
         SwiftName:       'beginDragginSession(_:event:source:)'
     Properties:      
       - Name:            enclosingScrollView
         Nullability:     O
         Availability:    available
         AvailabilityMsg: ''
+        SwiftPrivate:    false
         SwiftName:       enclosing
       - Name:            makeBackingLayer
         Nullability:     N
         Availability:    available
         AvailabilityMsg: ''
+        SwiftPrivate:    false
         SwiftName:       ''
 Functions:       
   - Name:            NSAvailableWindowDepths
     NullabilityOfRet: N
     Availability:    available
     AvailabilityMsg: ''
+    SwiftPrivate:    false
     SwiftName:       'availableWindowDepths()'
 Globals:         
   - Name:            NSCalibratedWhiteColorSpace
     Nullability:     N
     Availability:    available
     AvailabilityMsg: ''
+    SwiftPrivate:    false
     SwiftName:       calibratedWhite
 Enumerators:     
   - Name:            NSColorRed
     Availability:    available
     AvailabilityMsg: ''
+    SwiftPrivate:    false
     SwiftName:       Red
 Tags:            
   - Name:            NSSomeStruct
     Availability:    available
     AvailabilityMsg: ''
+    SwiftPrivate:    false
     SwiftName:       SomeStruct
     SwiftBridge:     ''
 Typedefs:        
   - Name:            NSTypedef
     Availability:    available
     AvailabilityMsg: ''
+    SwiftPrivate:    false
     SwiftName:       Typedef
     SwiftBridge:     ''
