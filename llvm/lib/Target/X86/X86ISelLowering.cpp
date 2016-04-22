@@ -22564,7 +22564,7 @@ X86TargetLowering::EmitLoweredTLSAddr(MachineInstr *MI,
   // Emit CALLSEQ_START right before the instruction.
   unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
   MachineInstrBuilder CallseqStart =
-    BuildMI(MF, DL, TII.get(AdjStackDown)).addImm(0);
+    BuildMI(MF, DL, TII.get(AdjStackDown)).addImm(0).addImm(0);
   BB->insert(MachineBasicBlock::iterator(MI), CallseqStart);
 
   // Emit CALLSEQ_END right after the instruction.
