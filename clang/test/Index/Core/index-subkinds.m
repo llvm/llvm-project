@@ -34,3 +34,15 @@
 // CHECK: [[@LINE+1]]:1 | instance-method(test)/ObjC | testInCat | c:objc(cs)MyTestCase(im)testInCat | -[MyTestCase(cat) testInCat] | Def,Dyn,RelChild | rel: 1
 - (void)testInCat {}
 @end
+
+
+@class NSButton;
+@interface IBCls
+// CHECK: [[@LINE+2]]:34 | instance-method/ObjC | prop | c:objc(cs)IBCls(im)prop | -[IBCls prop] | Decl,Dyn,RelChild | rel: 1
+// CHECK: [[@LINE+1]]:34 | instance-property(IB)/ObjC | prop | c:objc(cs)IBCls(py)prop | <no-cgname> | Decl,RelChild | rel: 1
+@property (readonly) IBOutlet id prop;
+// CHECK: [[@LINE+1]]:54 | instance-property(IB,IBColl)/ObjC | propColl | c:objc(cs)IBCls(py)propColl | <no-cgname> | Decl,RelChild | rel: 1
+@property (readonly) IBOutletCollection(NSButton) id propColl;
+// CHECK: [[@LINE+1]]:1 | instance-method(IB)/ObjC | doIt | c:objc(cs)IBCls(im)doIt | -[IBCls doIt] | Decl,Dyn,RelChild | rel: 1
+-(IBAction)doIt;
+@end
