@@ -642,6 +642,9 @@ Instruction *InstCombiner::FoldSPFofSPF(Instruction *Inner,
                                         Value *A, Value *B,
                                         Instruction &Outer,
                                         SelectPatternFlavor SPF2, Value *C) {
+  if (Outer.getType() != Inner->getType())
+    return nullptr;
+
   if (C == A || C == B) {
     // MAX(MAX(A, B), B) -> MAX(A, B)
     // MIN(MIN(a, b), a) -> MIN(a, b)
