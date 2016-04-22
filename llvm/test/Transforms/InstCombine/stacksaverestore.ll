@@ -1,4 +1,6 @@
-; RUN: opt < %s -instcombine -S | grep "call.*stackrestore" | count 1
+; RUN: opt < %s -instcombine -S | FileCheck %s
+
+@glob = global i32 0
 
 declare i8* @llvm.stacksave()
 declare void @llvm.stackrestore(i8*)
@@ -11,10 +13,18 @@ define i32* @test1(i32 %P) {
 	ret i32* %A
 }
 
+; CHECK-LABEL: define i32* @test1(
+; CHECK-NOT: call void @llvm.stackrestore
+; CHECK: ret i32*
+
 define void @test2(i8* %X) {
 	call void @llvm.stackrestore( i8* %X )  ;; no allocas before return.
 	ret void
 }
+
+; CHECK-LABEL: define void @test2(
+; CHECK-NOT: call void @llvm.stackrestore
+; CHECK: ret void
 
 define void @foo(i32 %size) nounwind  {
 entry:
@@ -52,5 +62,51 @@ return:		; preds = %bb, %entry
 	ret void
 }
 
+; CHECK-LABEL: define void @foo(
+; CHECK: %tmp = call i8* @llvm.stacksave()
+; CHECK: alloca i8
+; CHECK-NOT: stacksave
+; CHECK: call void @bar(
+; CHECK-NEXT: call void @llvm.stackrestore(i8* %tmp)
+; CHECK: ret void
+
 declare void @bar(i32, i8*, i8*, i8*, i8*, i32)
 
+declare void @inalloca_callee(i32* inalloca)
+
+define void @test3(i32 %c) {
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [0, %entry], [%i1, %loop]
+  %save1 = call i8* @llvm.stacksave()
+  %argmem = alloca inalloca i32
+  store i32 0, i32* %argmem
+  call void @inalloca_callee(i32* inalloca %argmem)
+
+  ; This restore cannot be deleted, the restore below does not make it dead.
+  call void @llvm.stackrestore(i8* %save1)
+
+  ; FIXME: We should be able to remove this save/restore pair, but we don't.
+  %save2 = call i8* @llvm.stacksave()
+  store i32 0, i32* @glob
+  call void @llvm.stackrestore(i8* %save2)
+  %i1 = add i32 1, %i
+  %done = icmp eq i32 %i1, %c
+  br i1 %done, label %loop, label %return
+
+return:
+  ret void
+}
+
+; CHECK-LABEL: define void @test3(
+; CHECK: loop:
+; CHECK: %i = phi i32 [ 0, %entry ], [ %i1, %loop ]
+; CHECK: %save1 = call i8* @llvm.stacksave()
+; CHECK: %argmem = alloca inalloca i32
+; CHECK: store i32 0, i32* %argmem
+; CHECK: call void @inalloca_callee(i32* inalloca {{.*}} %argmem)
+; CHECK: call void @llvm.stackrestore(i8* %save1)
+; CHECK: br i1 %done, label %loop, label %return
+; CHECK: ret void
