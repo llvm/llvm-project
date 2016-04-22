@@ -16,6 +16,30 @@
 using namespace clang;
 using namespace clang::index;
 
+/// \returns true if \c D is a subclass of 'XCTestCase'.
+static bool isUnitTestCase(const ObjCInterfaceDecl *D) {
+  if (!D)
+    return false;
+  while (const ObjCInterfaceDecl *SuperD = D->getSuperClass()) {
+    if (SuperD->getName() == "XCTestCase")
+      return true;
+    D = SuperD;
+  }
+  return false;
+}
+
+/// \returns true if \c D is in a subclass of 'XCTestCase', returns void, has
+/// no parameters, and its name starts with 'test'.
+static bool isUnitTest(const ObjCMethodDecl *D) {
+  if (!D->parameters().empty())
+    return false;
+  if (!D->getReturnType()->isVoidType())
+    return false;
+  if (!D->getSelector().getNameForSlot(0).startswith("test"))
+    return false;
+  return isUnitTestCase(D->getClassInterface());
+}
+
 SymbolInfo index::getSymbolInfo(const Decl *D) {
   assert(D);
   SymbolInfo Info;
@@ -84,10 +108,16 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
     case Decl::EnumConstant:
       Info.Kind = SymbolKind::EnumConstant; break;
     case Decl::ObjCInterface:
-    case Decl::ObjCImplementation:
+    case Decl::ObjCImplementation: {
       Info.Kind = SymbolKind::Class;
       Info.Lang = SymbolLanguage::ObjC;
+      const ObjCInterfaceDecl *ClsD = dyn_cast<ObjCInterfaceDecl>(D);
+      if (!ClsD)
+        ClsD = cast<ObjCImplementationDecl>(D)->getClassInterface();
+      if (isUnitTestCase(ClsD))
+        Info.SubKinds |= (unsigned)SymbolSubKind::UnitTest;
       break;
+    }
     case Decl::ObjCProtocol:
       Info.Kind = SymbolKind::Protocol;
       Info.Lang = SymbolLanguage::ObjC;
@@ -103,6 +133,8 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       else
         Info.Kind = SymbolKind::ClassMethod;
       Info.Lang = SymbolLanguage::ObjC;
+      if (isUnitTest(cast<ObjCMethodDecl>(D)))
+        Info.SubKinds |= (unsigned)SymbolSubKind::UnitTest;
       break;
     case Decl::ObjCProperty:
       Info.Kind = SymbolKind::InstanceProperty;
@@ -314,6 +346,7 @@ void index::applyForEachSymbolSubKind(SymbolSubKindSet SubKinds,
   APPLY_FOR_SUBKIND(Generic);
   APPLY_FOR_SUBKIND(TemplatePartialSpecialization);
   APPLY_FOR_SUBKIND(TemplateSpecialization);
+  APPLY_FOR_SUBKIND(UnitTest);
 
 #undef APPLY_FOR_SUBKIND
 }
@@ -329,6 +362,7 @@ void index::printSymbolSubKinds(SymbolSubKindSet SubKinds, raw_ostream &OS) {
     case SymbolSubKind::Generic: OS << "Gen"; break;
     case SymbolSubKind::TemplatePartialSpecialization: OS << "TPS"; break;
     case SymbolSubKind::TemplateSpecialization: OS << "TS"; break;
+    case SymbolSubKind::UnitTest: OS << "test"; break;
     }
   });
 }

@@ -169,8 +169,9 @@ static bool printSourceSymbols(ArrayRef<const char *> Args) {
 static void printSymbolInfo(SymbolInfo SymInfo, raw_ostream &OS) {
   OS << getSymbolKindString(SymInfo.Kind);
   if (SymInfo.SubKinds) {
-    OS << '-';
+    OS << '(';
     printSymbolSubKinds(SymInfo.SubKinds, OS);
+    OS << ')';
   }
   OS << '/' << getSymbolLanguageString(SymInfo.Lang);
 }
