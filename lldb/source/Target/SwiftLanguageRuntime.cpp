@@ -20,13 +20,14 @@
 #include "clang/AST/DeclCXX.h"
 
 #include "swift/ABI/MetadataValues.h"
+#include "swift/ABI/System.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/Mangle.h"
 #include "swift/AST/Module.h"
 #include "swift/AST/Types.h"
 #include "swift/Basic/Demangle.h"
-#include "swift/ABI/System.h"
+#include "swift/Remote/MemoryReader.h"
 
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Debugger.h"
@@ -90,7 +91,8 @@ SwiftLanguageRuntime::SwiftLanguageRuntime (Process *process) :
     m_box_metadata_type(),
     m_negative_cache_mutex(Mutex::eMutexTypeNormal),
     m_loaded_DumpForDebugger(eLazyBoolCalculate),
-    m_SwiftNativeNSErrorISA()
+    m_SwiftNativeNSErrorISA(),
+    m_memory_reader_sp()
 {
     SetupSwiftObject();
     SetupSwiftError();
@@ -1103,6 +1105,89 @@ SwiftLanguageRuntime::GetBoxMetadataType ()
     }
     
     return m_box_metadata_type;
+}
+
+std::shared_ptr<swift::remote::MemoryReader>
+SwiftLanguageRuntime::GetMemoryReader ()
+{
+    class MemoryReader : public swift::remote::MemoryReader
+    {
+    public:
+        MemoryReader (Process* p) :
+        m_process(p)
+        {
+            lldbassert(m_process && "MemoryReader requires a valid Process");
+        }
+        
+        virtual
+        ~MemoryReader () = default;
+        
+        uint8_t
+        getPointerSize() override
+        {
+            return m_process->GetAddressByteSize();
+        }
+        
+        uint8_t
+        getSizeSize() override
+        {
+            return getPointerSize(); // FIXME: sizeof(size_t)
+        }
+        
+        swift::remote::RemoteAddress
+        getSymbolAddress(const std::string &name) override
+        {
+            if (name.empty())
+                return swift::remote::RemoteAddress(nullptr);
+            
+            ConstString name_cs(name.c_str(),name.size());
+            SymbolContextList sc_list;
+            if (m_process->GetTarget().GetImages().FindSymbolsWithNameAndType(name_cs, lldb::eSymbolTypeAny, sc_list))
+            {
+                SymbolContext sym_ctx;
+                if (sc_list.GetSize() == 1 && sc_list.GetContextAtIndex(0, sym_ctx))
+                {
+                    if (sym_ctx.symbol)
+                    {
+                        return swift::remote::RemoteAddress(sym_ctx.symbol->GetLoadAddress(&m_process->GetTarget()));
+                    }
+                }
+            }
+            
+            return swift::remote::RemoteAddress(nullptr);
+        }
+        
+        bool
+        readBytes(swift::remote::RemoteAddress address, uint8_t *dest, uint64_t size) override
+        {
+            Target &target(m_process->GetTarget());
+            Address addr(address.getAddressData());
+            Error error;
+            if (size > target.ReadMemory(addr, true, dest, size, error))
+                return false;
+            if (error.Fail())
+                return false;
+            return true;
+        }
+        
+        bool
+        readString(swift::remote::RemoteAddress address, std::string &dest) override
+        {
+            Target &target(m_process->GetTarget());
+            Address addr(address.getAddressData());
+            Error error;
+            target.ReadCStringFromMemory(addr, dest, error);
+            return error.Success();
+        }
+        
+    private:
+        Process* m_process;
+    };
+    
+    if (!m_memory_reader_sp)
+        m_memory_reader_sp.reset(new MemoryReader(GetProcess()));
+    
+    return m_memory_reader_sp;
 }
 
 static inline swift::Type

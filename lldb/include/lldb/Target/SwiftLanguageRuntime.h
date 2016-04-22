@@ -26,6 +26,15 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/ADT/Optional.h"
 
+namespace swift {
+    namespace remote {
+        class MemoryReader;
+    }
+    namespace remoteAST {
+        class RemoteASTContext;
+    }
+}
+
 namespace lldb_private {
     
 class SwiftLanguageRuntime :
@@ -1535,6 +1544,9 @@ protected:
     const CompilerType&
     GetBoxMetadataType ();
     
+    std::shared_ptr<swift::remote::MemoryReader>
+    GetMemoryReader ();
+    
     // the Swift runtime assumes that metadata will not go away, so caching
     // by address is a reasonable strategy
     std::map<lldb::addr_t, MetadataSP> m_metadata_cache;
@@ -1552,6 +1564,7 @@ protected:
     LazyBool m_loaded_DumpForDebugger;
     
     llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
+    std::shared_ptr<swift::remote::MemoryReader> m_memory_reader_sp;
 
 private:
     DISALLOW_COPY_AND_ASSIGN (SwiftLanguageRuntime);
