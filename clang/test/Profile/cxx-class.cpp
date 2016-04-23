@@ -1,13 +1,13 @@
 // Tests for instrumentation of C++ methods, constructors, and destructors.
 
-// RUN: %clang %s -o - -emit-llvm -S -fprofile-instr-generate -fno-exceptions -target %itanium_abi_triple > %tgen
+// RUN: %clang_cc1 %s -o - -emit-llvm -fprofile-instrument=clang -triple %itanium_abi_triple > %tgen
 // RUN: FileCheck --input-file=%tgen -check-prefix=CTRGEN %s
 // RUN: FileCheck --input-file=%tgen -check-prefix=DTRGEN %s
 // RUN: FileCheck --input-file=%tgen -check-prefix=MTHGEN %s
 // RUN: FileCheck --input-file=%tgen -check-prefix=WRPGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/cxx-class.proftext -o %t.profdata
-// RUN: %clang %s -o - -emit-llvm -S -fprofile-instr-use=%t.profdata -fno-exceptions -target %itanium_abi_triple > %tuse
+// RUN: %clang_cc1 %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -triple %itanium_abi_triple > %tuse
 // RUN: FileCheck --input-file=%tuse -check-prefix=CTRUSE %s
 // RUN: FileCheck --input-file=%tuse -check-prefix=DTRUSE %s
 // RUN: FileCheck --input-file=%tuse -check-prefix=MTHUSE %s

@@ -13,6 +13,15 @@
 // Refer the ELF spec for the single letter varaibles, S, A or P, used
 // in this file.
 //
+// Some functions defined in this file has "relaxTls" as part of their names.
+// They do peephole optimization for TLS variables by rewriting instructions.
+// They are not part of the ABI but optional optimization, so you can skip
+// them if you are not interested in how TLS variables are optimized.
+// See the following paper for the details.
+//
+//   Ulrich Drepper, ELF Handling For Thread-Local Storage
+//   http://www.akkadia.org/drepper/tls.pdf
+//
 //===----------------------------------------------------------------------===//
 
 #include "Target.h"
@@ -430,15 +439,12 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
 
 void X86TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
                                    uint64_t Val) const {
-  // GD can be optimized to LE:
+  // Convert
   //   leal x@tlsgd(, %ebx, 1),
   //   call __tls_get_addr@plt
-  // Can be converted to:
+  // to
   //   movl %gs:0,%eax
-  //   addl $x@ntpoff,%eax
-  // But gold emits subl $foo@tpoff,%eax instead of addl.
-  // These instructions are completely equal in behavior.
-  // This method generates subl to be consistent with gold.
+  //   subl $x@ntpoff,%eax
   const uint8_t Inst[] = {
       0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
       0x81, 0xe8, 0x00, 0x00, 0x00, 0x00  // subl 0(%ebx), %eax
@@ -447,16 +453,14 @@ void X86TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
   relocateOne(Loc + 5, R_386_32, Out<ELF32LE>::TlsPhdr->p_memsz - Val);
 }
 
-// "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.1
-// IA-32 Linker Optimizations, http://www.akkadia.org/drepper/tls.pdf) shows
-// how GD can be optimized to IE:
-//   leal x@tlsgd(, %ebx, 1),
-//   call __tls_get_addr@plt
-// Is converted to:
-//   movl %gs:0, %eax
-//   addl x@gotntpoff(%ebx), %eax
 void X86TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
                                    uint64_t Val) const {
+  // Convert
+  //   leal x@tlsgd(, %ebx, 1),
+  //   call __tls_get_addr@plt
+  // to
+  //   movl %gs:0, %eax
+  //   addl x@gotntpoff(%ebx), %eax
   const uint8_t Inst[] = {
       0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
       0x03, 0x83, 0x00, 0x00, 0x00, 0x00  // addl 0(%ebx), %eax
@@ -468,9 +472,6 @@ void X86TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
 
 // In some conditions, relocations can be optimized to avoid using GOT.
 // This function does that for Initial Exec to Local Exec case.
-// Read "ELF Handling For Thread-Local Storage, 5.1
-// IA-32 Linker Optimizations" (http://www.akkadia.org/drepper/tls.pdf)
-// by Ulrich Drepper for details.
 void X86TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
                                    uint64_t Val) const {
   // Ulrich's document section 6.2 says that @gotntpoff can
@@ -516,10 +517,10 @@ void X86TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
     return;
   }
 
-  // LD can be optimized to LE:
+  // Convert
   //   leal foo(%reg),%eax
   //   call ___tls_get_addr
-  // Is converted to:
+  // to
   //   movl %gs:0,%eax
   //   nop
   //   leal 0(%esi,1),%esi
@@ -660,19 +661,17 @@ bool X86_64TargetInfo::isRelRelative(uint32_t Type) const {
   }
 }
 
-// "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.5
-// x86-x64 linker optimizations, http://www.akkadia.org/drepper/tls.pdf) shows
-// how GD can be optimized to LE:
-//  .byte 0x66
-//  leaq x@tlsgd(%rip), %rdi
-//  .word 0x6666
-//  rex64
-//  call __tls_get_addr@plt
-// Is converted to:
-//  mov %fs:0x0,%rax
-//  lea x@tpoff,%rax
 void X86_64TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
                                       uint64_t Val) const {
+  // Convert
+  //   .byte 0x66
+  //   leaq x@tlsgd(%rip), %rdi
+  //   .word 0x6666
+  //   rex64
+  //   call __tls_get_addr@plt
+  // to
+  //   mov %fs:0x0,%rax
+  //   lea x@tpoff,%rax
   const uint8_t Inst[] = {
       0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:0x0,%rax
       0x48, 0x8d, 0x80, 0x00, 0x00, 0x00, 0x00              // lea x@tpoff,%rax
@@ -682,19 +681,17 @@ void X86_64TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
               Val + 4 - Out<ELF64LE>::TlsPhdr->p_memsz);
 }
 
-// "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.5
-// x86-x64 linker optimizations, http://www.akkadia.org/drepper/tls.pdf) shows
-// how GD can be optimized to IE:
-//  .byte 0x66
-//  leaq x@tlsgd(%rip), %rdi
-//  .word 0x6666
-//  rex64
-//  call __tls_get_addr@plt
-// Is converted to:
-//  mov %fs:0x0,%rax
-//  addq x@tpoff,%rax
 void X86_64TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
                                       uint64_t Val) const {
+  // Convert
+  //   .byte 0x66
+  //   leaq x@tlsgd(%rip), %rdi
+  //   .word 0x6666
+  //   rex64
+  //   call __tls_get_addr@plt
+  // to
+  //   mov %fs:0x0,%rax
+  //   addq x@tpoff,%rax
   const uint8_t Inst[] = {
       0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:0x0,%rax
       0x48, 0x03, 0x05, 0x00, 0x00, 0x00, 0x00              // addq x@tpoff,%rax
@@ -705,9 +702,6 @@ void X86_64TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
 
 // In some conditions, R_X86_64_GOTTPOFF relocation can be optimized to
 // R_X86_64_TPOFF32 so that it does not use GOT.
-// This function does that. Read "ELF Handling For Thread-Local Storage,
-// 5.5 x86-x64 linker optimizations" (http://www.akkadia.org/drepper/tls.pdf)
-// by Ulrich Drepper for details.
 void X86_64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
                                       uint64_t Val) const {
   // Ulrich's document section 6.5 says that @gottpoff(%rip) must be
@@ -722,6 +716,7 @@ void X86_64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
   uint8_t Reg = Loc[-1] >> 3;
   bool IsMov = *Inst == 0x8b;
   bool RspAdd = !IsMov && Reg == 4;
+
   // r12 and rsp registers requires special handling.
   // Problem is that for other registers, for example leaq 0xXXXXXXXX(%r11),%r11
   // result out is 7 bytes: 4d 8d 9b XX XX XX XX,
@@ -738,19 +733,17 @@ void X86_64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
   relocateOne(Loc, R_X86_64_TPOFF32, Val + 4 - Out<ELF64LE>::TlsPhdr->p_memsz);
 }
 
-// "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.5
-// x86-x64 linker optimizations, http://www.akkadia.org/drepper/tls.pdf) shows
-// how LD can be optimized to LE:
-//   leaq bar@tlsld(%rip), %rdi
-//   callq __tls_get_addr@PLT
-//   leaq bar@dtpoff(%rax), %rcx
-// Is converted to:
-//  .word 0x6666
-//  .byte 0x66
-//  mov %fs:0,%rax
-//  leaq bar@tpoff(%rax), %rcx
 void X86_64TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
                                       uint64_t Val) const {
+  // Convert
+  //   leaq bar@tlsld(%rip), %rdi
+  //   callq __tls_get_addr@PLT
+  //   leaq bar@dtpoff(%rax), %rcx
+  // to
+  //   .word 0x6666
+  //   .byte 0x66
+  //   mov %fs:0,%rax
+  //   leaq bar@tpoff(%rax), %rcx
   if (Type == R_X86_64_DTPOFF64) {
     write64le(Loc, Val - Out<ELF64LE>::TlsPhdr->p_memsz);
     return;

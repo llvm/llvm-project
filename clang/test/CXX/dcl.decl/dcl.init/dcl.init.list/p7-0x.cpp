@@ -58,8 +58,8 @@ void float_to_int() {
   Agg<char> ce1 = { Convert<float>(1.0) }; // expected-error {{type 'float' cannot be narrowed to 'char'}} expected-note {{silence}}
   Agg<char> ce2 = { ConvertVar<double>() }; // expected-error {{type 'double' cannot be narrowed to 'char'}} expected-note {{silence}}
 
-  bool b{1.0}; // expected-error {{type 'double' cannot be narrowed to 'bool'}} expected-note {{silence}} expected-warning {{changes value}}
-  Agg<bool> ab = {0.0}; // expected-error {{type 'double' cannot be narrowed to 'bool'}} expected-note {{silence}} expected-warning {{changes value}}
+  bool b{1.0}; // expected-error {{type 'double' cannot be narrowed to 'bool'}} expected-note {{silence}}
+  Agg<bool> ab = {0.0}; // expected-error {{type 'double' cannot be narrowed to 'bool'}} expected-note {{silence}}
 }
 
 // * from long double to double or float, or from double to float, except where

@@ -7403,13 +7403,8 @@ void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
   bool IsConstant =
     E->EvaluateAsFloat(Value, S.Context, Expr::SE_AllowSideEffects);
   if (!IsConstant) {
-    if (IsBool) {
-      return DiagnoseImpCast(S, E, T, CContext, diag::warn_impcast_float_bool,
-                             PruneWarnings);
-    } else {
-      return DiagnoseImpCast(S, E, T, CContext,
-                             diag::warn_impcast_float_integer, PruneWarnings);
-    }
+    return DiagnoseImpCast(S, E, T, CContext,
+                           diag::warn_impcast_float_integer, PruneWarnings);
   }
 
   bool isExact = false;
@@ -7418,17 +7413,14 @@ void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
                             T->hasUnsignedIntegerRepresentation());
   if (Value.convertToInteger(IntegerValue, llvm::APFloat::rmTowardZero,
                              &isExact) == llvm::APFloat::opOK &&
-      isExact && !IsBool) {
+      isExact) {
     if (IsLiteral) return;
     return DiagnoseImpCast(S, E, T, CContext, diag::warn_impcast_float_integer,
                            PruneWarnings);
   }
 
   unsigned DiagID = 0;
-  if (IsBool) {
-    // Warn on all floating point to bool conversions
-    DiagID = diag::warn_impcast_float_to_bool;
-  } else if (IsLiteral) {
+  if (IsLiteral) {
     // Warn on floating point literal to integer.
     DiagID = diag::warn_impcast_literal_float_to_integer;
   } else if (IntegerValue == 0) {
