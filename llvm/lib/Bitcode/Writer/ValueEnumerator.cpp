@@ -630,6 +630,22 @@ void ValueEnumerator::EnumerateFunctionLocalMetadata(
   EnumerateValue(Local->getValue());
 }
 
+static unsigned getMetadataTypeOrder(const Metadata *MD) {
+  // Strings are emitted in bulk and must come first.
+  if (isa<MDString>(MD))
+    return 0;
+
+  // ConstantAsMetadata doesn't reference anything.  We may as well shuffle it
+  // to the front since we can detect it.
+  auto *N = dyn_cast<MDNode>(MD);
+  if (!N)
+    return 1;
+
+  // The reader is fast forward references for distinct node operands, but slow
+  // when uniqued operands are unresolved.
+  return N->isDistinct() ? 2 : 3;
+}
+
 void ValueEnumerator::organizeMetadata() {
   assert(MetadataMap.size() == MDs.size() &&
          "Metadata map and vector out of sync");
@@ -651,13 +667,9 @@ void ValueEnumerator::organizeMetadata() {
   // be unique, the result of std::sort will be deterministic.  There's no need
   // for std::stable_sort.
   std::sort(Order.begin(), Order.end(), [this](MDIndex LHS, MDIndex RHS) {
-    return std::make_tuple(LHS.F, !isa<MDString>(LHS.get(MDs)), LHS.ID) <
-           std::make_tuple(RHS.F, !isa<MDString>(RHS.get(MDs)), RHS.ID);
+    return std::make_tuple(LHS.F, getMetadataTypeOrder(LHS.get(MDs)), LHS.ID) <
+           std::make_tuple(RHS.F, getMetadataTypeOrder(RHS.get(MDs)), RHS.ID);
   });
-
-  // Return early if nothing is moving to functions and there are no strings.
-  if (!Order.back().F && !isa<MDString>(Order.front().get(MDs)))
-    return;
 
   // Rebuild MDs, index the metadata ranges for each function in FunctionMDs,
   // and fix up MetadataMap.
