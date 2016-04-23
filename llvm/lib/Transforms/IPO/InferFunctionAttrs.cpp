@@ -979,6 +979,9 @@ struct InferFunctionAttrsLegacyPass : public ModulePass {
   }
 
   bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+
     auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
     return inferAllPrototypeAttributes(M, TLI);
   }

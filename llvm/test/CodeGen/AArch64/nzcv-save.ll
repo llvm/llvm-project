@@ -1,4 +1,4 @@
-; RUN: llc -march=aarch64 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -march=aarch64 < %s | FileCheck %s
 
 ; CHECK: mrs [[NZCV_SAVE:x[0-9]+]], NZCV
 ; CHECK: msr NZCV, [[NZCV_SAVE]]

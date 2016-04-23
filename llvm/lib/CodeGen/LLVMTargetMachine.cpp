@@ -102,6 +102,8 @@ addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
   if (TM->Options.EmulatedTLS)
     PM.add(createLowerEmuTLSPass(TM));
 
+  PM.add(createPreISelIntrinsicLoweringPass());
+
   // Add internal analysis passes from the target machine.
   PM.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
 

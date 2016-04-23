@@ -32,6 +32,7 @@ class DiagnosticInfo;
 template <typename T> class SmallVectorImpl;
 class Function;
 class DebugLoc;
+class OptBisect;
 
 /// This is an important class for using LLVM in a threaded context.  It
 /// (opaquely) owns and manages the core "global" data of LLVM's core
@@ -226,6 +227,9 @@ public:
     return OptionRegistry::instance().template get<ValT, Base, Mem>();
   }
 
+  /// \brief Access the object which manages optimization bisection for failure
+  /// analysis.
+  OptBisect &getOptBisect();
 private:
   LLVMContext(LLVMContext&) = delete;
   void operator=(LLVMContext&) = delete;

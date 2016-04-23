@@ -23,6 +23,8 @@
 # CHECK-ELF: Relocations [
 # CHECK-ELF:     0x0 R_MICROMIPS_PC26_S1 bar 0x0
 # CHECK-ELF:     0x4 R_MICROMIPS_PC26_S1 bar 0x0
+# CHECK-ELF:     0x8 R_MICROMIPS_PC19_S2 bar 0x0
+# CHECK-ELF:     0xC R_MICROMIPS_PC19_S2 bar 0x0
 # CHECK-ELF: ]
 
   balc  bar

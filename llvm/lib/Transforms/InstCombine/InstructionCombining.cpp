@@ -1862,12 +1862,18 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   return nullptr;
 }
 
-static bool isNeverEqualToUnescapedAlloc(Value *V) {
+static bool isNeverEqualToUnescapedAlloc(Value *V, const TargetLibraryInfo *TLI,
+                                         Instruction *AI) {
   if (isa<ConstantPointerNull>(V))
     return true;
   if (auto *LI = dyn_cast<LoadInst>(V))
     return isa<GlobalVariable>(LI->getPointerOperand());
-  return false;
+  // Two distinct allocations will never be equal.
+  // We rely on LookThroughBitCast in isAllocLikeFn being false, since looking
+  // through bitcasts of V can cause
+  // the result statement below to be true, even when AI and V (ex:
+  // i8* ->i32* ->i8* of AI) are the same allocations.
+  return isAllocLikeFn(V, TLI) && V != AI;
 }
 
 static bool
@@ -1894,12 +1900,12 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<WeakVH> &Users,
       case Instruction::ICmp: {
         ICmpInst *ICI = cast<ICmpInst>(I);
         // We can fold eq/ne comparisons with null to false/true, respectively.
-        // We fold comparisons in some conditions provided the alloc has not
-        // escaped.
+        // We also fold comparisons in some conditions provided the alloc has
+        // not escaped.
         if (!ICI->isEquality())
           return false;
         unsigned OtherIndex = (ICI->getOperand(0) == PI) ? 1 : 0;
-        if (!isNeverEqualToUnescapedAlloc(ICI->getOperand(OtherIndex)))
+        if (!isNeverEqualToUnescapedAlloc(ICI->getOperand(OtherIndex), TLI, AI))
           return false;
         Users.emplace_back(I);
         continue;
@@ -3133,7 +3139,7 @@ void InstructionCombiningPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool InstructionCombiningPass::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
+  if (skipFunction(F))
     return false;
 
   // Required analyses.

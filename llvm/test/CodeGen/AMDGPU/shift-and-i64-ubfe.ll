@@ -299,9 +299,9 @@ define void @v_uextract_bit_31_32_i64_trunc_i32(i32 addrspace(1)* %out, i64 addr
 }
 
 ; GCN-LABEL: {{^}}and_not_mask_i64:
-; GCN: buffer_load_dwordx2 [[VAL:v\[[0-9]+:[0-9]+\]]]
-; GCN: v_lshr_b64 v{{\[}}[[SHRLO:[0-9]+]]:[[SHRHI:[0-9]+]]{{\]}}, [[VAL]], 20
-; GCN-DAG: v_and_b32_e32 v[[SHRLO]], 4, v[[SHRLO]]
+; GCN: buffer_load_dwordx2 v{{\[}}[[VALLO:[0-9]+]]:[[VALHI:[0-9]+]]{{\]}}
+; GCN: v_lshrrev_b32_e32 [[SHR:v[0-9]+]], 20, v[[VALLO]]
+; GCN-DAG: v_and_b32_e32 v[[SHRLO]], 4, [[SHR]]
 ; GCN-DAG: v_mov_b32_e32 v[[SHRHI]], 0{{$}}
 ; GCN-NOT: v[[SHRLO]]
 ; GCN-NOT: v[[SHRHI]]

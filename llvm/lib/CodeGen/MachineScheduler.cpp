@@ -64,6 +64,11 @@ static cl::opt<unsigned> SchedOnlyBlock("misched-only-block", cl::Hidden,
 static bool ViewMISchedDAGs = false;
 #endif // NDEBUG
 
+/// Avoid quadratic complexity in unusually large basic blocks by limiting the
+/// size of the ready lists.
+static cl::opt<unsigned> ReadyListLimit("misched-limit", cl::Hidden,
+  cl::desc("Limit ready list to N instructions"), cl::init(256));
+
 static cl::opt<bool> EnableRegPressure("misched-regpressure", cl::Hidden,
   cl::desc("Enable register pressure scheduling."), cl::init(true));
 
@@ -319,7 +324,7 @@ ScheduleDAGInstrs *PostMachineScheduler::createPostMachineScheduler() {
 /// design would be to split blocks at scheduling boundaries, but LLVM has a
 /// general bias against block splitting purely for implementation simplicity.
 bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
-  if (skipOptnoneFunction(*mf.getFunction()))
+  if (skipFunction(*mf.getFunction()))
     return false;
 
   if (EnableMachineSched.getNumOccurrences()) {
@@ -357,7 +362,7 @@ bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
 }
 
 bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
-  if (skipOptnoneFunction(*mf.getFunction()))
+  if (skipFunction(*mf.getFunction()))
     return false;
 
   if (EnablePostRAMachineSched.getNumOccurrences()) {
@@ -1956,7 +1961,8 @@ void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle) {
   // Check for interlocks first. For the purpose of other heuristics, an
   // instruction that cannot issue appears as if it's not in the ReadyQueue.
   bool IsBuffered = SchedModel->getMicroOpBufferSize() != 0;
-  if ((!IsBuffered && ReadyCycle > CurrCycle) || checkHazard(SU))
+  if ((!IsBuffered && ReadyCycle > CurrCycle) || checkHazard(SU) ||
+      Available.size() >= ReadyListLimit)
     Pending.push(SU);
   else
     Available.push(SU);
@@ -2210,6 +2216,9 @@ void SchedBoundary::releasePending() {
 
     if (checkHazard(SU))
       continue;
+
+    if (Available.size() >= ReadyListLimit)
+      break;
 
     Available.push(SU);
     Pending.remove(Pending.begin()+i);
@@ -2729,6 +2738,42 @@ static int biasPhysRegCopy(const SUnit *SU, bool isTop) {
   return 0;
 }
 
+void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
+                                     bool AtTop,
+                                     const RegPressureTracker &RPTracker,
+                                     RegPressureTracker &TempTracker) {
+  Cand.SU = SU;
+  if (DAG->isTrackingPressure()) {
+    if (AtTop) {
+      TempTracker.getMaxDownwardPressureDelta(
+        Cand.SU->getInstr(),
+        Cand.RPDelta,
+        DAG->getRegionCriticalPSets(),
+        DAG->getRegPressure().MaxSetPressure);
+    } else {
+      if (VerifyScheduling) {
+        TempTracker.getMaxUpwardPressureDelta(
+          Cand.SU->getInstr(),
+          &DAG->getPressureDiff(Cand.SU),
+          Cand.RPDelta,
+          DAG->getRegionCriticalPSets(),
+          DAG->getRegPressure().MaxSetPressure);
+      } else {
+        RPTracker.getUpwardPressureDelta(
+          Cand.SU->getInstr(),
+          DAG->getPressureDiff(Cand.SU),
+          Cand.RPDelta,
+          DAG->getRegionCriticalPSets(),
+          DAG->getRegPressure().MaxSetPressure);
+      }
+    }
+  }
+  DEBUG(if (Cand.RPDelta.Excess.isValid())
+          dbgs() << "  Try  SU(" << Cand.SU->NodeNum << ") "
+                 << TRI->getRegPressureSetName(Cand.RPDelta.Excess.getPSet())
+                 << ":" << Cand.RPDelta.Excess.getUnitInc() << "\n");
+}
+
 /// Apply a set of heursitics to a new candidate. Heuristics are currently
 /// hierarchical. This may be more efficient than a graduated cost model because
 /// we don't need to evaluate all aspects of the model for each node in the
@@ -2738,45 +2783,9 @@ static int biasPhysRegCopy(const SUnit *SU, bool isTop) {
 /// \param Cand provides the policy and current best candidate.
 /// \param TryCand refers to the next SUnit candidate, otherwise uninitialized.
 /// \param Zone describes the scheduled zone that we are extending.
-/// \param RPTracker describes reg pressure within the scheduled zone.
-/// \param TempTracker is a scratch pressure tracker to reuse in queries.
 void GenericScheduler::tryCandidate(SchedCandidate &Cand,
                                     SchedCandidate &TryCand,
-                                    SchedBoundary &Zone,
-                                    const RegPressureTracker &RPTracker,
-                                    RegPressureTracker &TempTracker) {
-
-  if (DAG->isTrackingPressure()) {
-    // Always initialize TryCand's RPDelta.
-    if (Zone.isTop()) {
-      TempTracker.getMaxDownwardPressureDelta(
-        TryCand.SU->getInstr(),
-        TryCand.RPDelta,
-        DAG->getRegionCriticalPSets(),
-        DAG->getRegPressure().MaxSetPressure);
-    } else {
-      if (VerifyScheduling) {
-        TempTracker.getMaxUpwardPressureDelta(
-          TryCand.SU->getInstr(),
-          &DAG->getPressureDiff(TryCand.SU),
-          TryCand.RPDelta,
-          DAG->getRegionCriticalPSets(),
-          DAG->getRegPressure().MaxSetPressure);
-      } else {
-        RPTracker.getUpwardPressureDelta(
-          TryCand.SU->getInstr(),
-          DAG->getPressureDiff(TryCand.SU),
-          TryCand.RPDelta,
-          DAG->getRegionCriticalPSets(),
-          DAG->getRegPressure().MaxSetPressure);
-      }
-    }
-  }
-  DEBUG(if (TryCand.RPDelta.Excess.isValid())
-          dbgs() << "  Try  SU(" << TryCand.SU->NodeNum << ") "
-                 << TRI->getRegPressureSetName(TryCand.RPDelta.Excess.getPSet())
-                 << ":" << TryCand.RPDelta.Excess.getUnitInc() << "\n");
-
+                                    SchedBoundary &Zone) {
   // Initialize the candidate if needed.
   if (!Cand.isValid()) {
     TryCand.Reason = NodeOrder;
@@ -2888,8 +2897,8 @@ void GenericScheduler::pickNodeFromQueue(SchedBoundary &Zone,
   for (ReadyQueue::iterator I = Q.begin(), E = Q.end(); I != E; ++I) {
 
     SchedCandidate TryCand(Cand.Policy);
-    TryCand.SU = *I;
-    tryCandidate(Cand, TryCand, Zone, RPTracker, TempTracker);
+    initCandidate(TryCand, *I, Zone.isTop(), RPTracker, TempTracker);
+    tryCandidate(Cand, TryCand, Zone);
     if (TryCand.Reason != NoCand) {
       // Initialize resource delta if needed in case future heuristics query it.
       if (TryCand.ResDelta == SchedResourceDelta())

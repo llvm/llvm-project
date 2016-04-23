@@ -278,7 +278,6 @@ class MOVEP_FM_MM16 {
 
 class MMArch {
   string Arch = "micromips";
-  list<dag> Pattern = [];
 }
 
 class ADD_FM_MM<bits<6> op, bits<10> funct> : MMArch {

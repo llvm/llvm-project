@@ -2229,6 +2229,11 @@ SDValue AMDGPUTargetLowering::performAndCombine(SDNode *N,
   SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, LoRHS);
   SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, HiRHS);
 
+  // Re-visit the ands. It's possible we eliminated one of them and it could
+  // simplify the vector.
+  DCI.AddToWorklist(Lo.getNode());
+  DCI.AddToWorklist(Hi.getNode());
+
   SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, LoAnd, HiAnd);
   return DAG.getNode(ISD::BITCAST, SL, MVT::i64, Vec);
 }

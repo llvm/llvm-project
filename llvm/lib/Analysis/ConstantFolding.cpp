@@ -231,10 +231,12 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   return ConstantVector::get(Result);
 }
 
+} // end anonymous namespace
+
 /// If this constant is a constant offset from a global, return the global and
 /// the constant. Because of constantexprs, this function is recursive.
-bool IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV, APInt &Offset,
-                                const DataLayout &DL) {
+bool llvm::IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV,
+                                      APInt &Offset, const DataLayout &DL) {
   // Trivial case, constant is the global.
   if ((GV = dyn_cast<GlobalValue>(C))) {
     unsigned BitWidth = DL.getPointerTypeSizeInBits(GV->getType());
@@ -270,6 +272,8 @@ bool IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV, APInt &Offset,
   Offset = TmpOffset;
   return true;
 }
+
+namespace {
 
 /// Recursive helper to read bits out of global. C is the constant being copied
 /// out of. ByteOffset is an offset into C. CurPtr is the pointer to copy

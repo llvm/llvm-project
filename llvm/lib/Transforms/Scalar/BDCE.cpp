@@ -59,7 +59,7 @@ INITIALIZE_PASS_END(BDCE, "bdce", "Bit-Tracking Dead Code Elimination",
                     false, false)
 
 bool BDCE::runOnFunction(Function& F) {
-  if (skipOptnoneFunction(F))
+  if (skipFunction(F))
     return false;
   auto &DB = getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
 

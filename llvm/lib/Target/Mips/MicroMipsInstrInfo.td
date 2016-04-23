@@ -96,14 +96,6 @@ def mem_mm_9 : Operand<i32> {
   let OperandType = "OPERAND_MEMORY";
 }
 
-def mem_mm_11 : Operand<i32> {
-  let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, simm11);
-  let EncoderMethod = "getMemEncodingMMImm11";
-  let ParserMatchClass = MipsMemSimm11AsmOperand;
-  let OperandType = "OPERAND_MEMORY";
-}
-
 def mem_mm_12 : Operand<i32> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops ptr_rc, simm12);
@@ -996,6 +988,8 @@ def : MipsPat<(load addrimm4lsl2:$addr),
 def : MipsPat<(load addr:$addr),
               (LW_MM addr:$addr)>;
 
+defm : SeteqPats<GPR32, SLTiu_MM, XOR_MM, SLTu_MM, ZERO>;
+
 //===----------------------------------------------------------------------===//
 // MicroMips instruction aliases
 //===----------------------------------------------------------------------===//
@@ -1034,4 +1028,6 @@ def : MipsInstAlias<"tne $rs, $rt",
 def : MipsInstAlias<"rotr $rt, $imm",
                     (ROTR_MM GPR32Opnd:$rt, GPR32Opnd:$rt, uimm5:$imm), 0>;
 def : MipsInstAlias<"syscall", (SYSCALL_MM 0), 1>;
+def : MipsInstAlias<"slt $rs, $rt, $imm",
+                    (SLTi_MM GPR32Opnd:$rs, GPR32Opnd:$rt, simm16:$imm), 0>;
 }

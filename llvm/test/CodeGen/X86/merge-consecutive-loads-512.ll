@@ -234,7 +234,7 @@ define <8 x i64> @merge_8i64_i64_1u3u5zu8(i64* %ptr) nounwind uwtable noinline s
 ; X32-AVX512F-LABEL: merge_8i64_i64_1u3u5zu8:
 ; X32-AVX512F:       # BB#0:
 ; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512F-NEXT:    vmovdqu32 8(%eax), %zmm0
+; X32-AVX512F-NEXT:    vmovdqu64 8(%eax), %zmm0
 ; X32-AVX512F-NEXT:    vpxord %zmm1, %zmm1, %zmm1
 ; X32-AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = <0,0,u,u,2,0,u,u,4,0,13,0,u,u,7,0>
 ; X32-AVX512F-NEXT:    vpermt2q %zmm1, %zmm2, %zmm0

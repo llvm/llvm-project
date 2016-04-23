@@ -1361,7 +1361,7 @@ bool MemCpyOpt::iterateOnFunction(Function &F) {
 
 /// This is the main transformation entry point for a function.
 bool MemCpyOpt::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
+  if (skipFunction(F))
     return false;
 
   bool MadeChange = false;

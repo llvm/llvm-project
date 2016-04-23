@@ -126,6 +126,12 @@ bool MetadataTracking::track(void *Ref, Metadata &MD, OwnerTy Owner) {
     R->addRef(Ref, Owner);
     return true;
   }
+  if (auto *PH = dyn_cast<DistinctMDOperandPlaceholder>(&MD)) {
+    assert(!PH->Use && "Placeholders can only be used once");
+    assert(!Owner && "Unexpected callback to owner");
+    PH->Use = static_cast<Metadata **>(Ref);
+    return true;
+  }
   return false;
 }
 
@@ -133,6 +139,8 @@ void MetadataTracking::untrack(void *Ref, Metadata &MD) {
   assert(Ref && "Expected live reference");
   if (auto *R = ReplaceableMetadataImpl::getIfExists(MD))
     R->dropRef(Ref);
+  else if (auto *PH = dyn_cast<DistinctMDOperandPlaceholder>(&MD))
+    PH->Use = nullptr;
 }
 
 bool MetadataTracking::retrack(void *Ref, Metadata &MD, void *New) {
@@ -143,6 +151,8 @@ bool MetadataTracking::retrack(void *Ref, Metadata &MD, void *New) {
     R->moveRef(Ref, New, MD);
     return true;
   }
+  assert(!isa<DistinctMDOperandPlaceholder>(MD) &&
+         "Unexpected move of an MDOperand");
   assert(!isReplaceable(MD) &&
          "Expected un-replaceable metadata, since we didn't move a reference");
   return false;

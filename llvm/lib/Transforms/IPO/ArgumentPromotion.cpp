@@ -114,6 +114,9 @@ Pass *llvm::createArgumentPromotionPass(unsigned maxElements) {
 }
 
 bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
+  if (skipSCC(SCC))
+    return false;
+
   bool Changed = false, LocalChange;
 
   do {  // Iterate until we stop promoting from this SCC.

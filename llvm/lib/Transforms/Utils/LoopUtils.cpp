@@ -823,13 +823,17 @@ void llvm::initializeLoopPassPass(PassRegistry &Registry) {
   INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 }
 
-/// \brief Find string metadata for loop, if it exists return true, else return
-/// false.
-bool llvm::findStringMetadataForLoop(Loop *TheLoop, StringRef Name) {
+/// \brief Find string metadata for loop
+///
+/// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
+/// operand or null otherwise.  If the string metadata is not found return
+/// Optional's not-a-value.
+Optional<const MDOperand *> llvm::findStringMetadataForLoop(Loop *TheLoop,
+                                                            StringRef Name) {
   MDNode *LoopID = TheLoop->getLoopID();
-  // Return false if LoopID is false.
+  // Return none if LoopID is false.
   if (!LoopID)
-    return false;
+    return None;
 
   // First operand should refer to the loop id itself.
   assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
@@ -845,7 +849,14 @@ bool llvm::findStringMetadataForLoop(Loop *TheLoop, StringRef Name) {
       continue;
     // Return true if MDString holds expected MetaData.
     if (Name.equals(S->getString()))
-      return true;
+      switch (MD->getNumOperands()) {
+      case 1:
+        return nullptr;
+      case 2:
+        return &MD->getOperand(1);
+      default:
+        llvm_unreachable("loop metadata has 0 or 1 operand");
+      }
   }
-  return false;
+  return None;
 }

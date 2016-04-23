@@ -1100,6 +1100,13 @@ public:
   CreateTargetPostRAHazardRecognizer(const InstrItineraryData*,
                                      const ScheduleDAG *DAG) const;
 
+  /// Allocate and return a hazard recognizer to use for by non-scheduling
+  /// passes.
+  virtual ScheduleHazardRecognizer*
+  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const {
+    return nullptr;
+  }
+
   /// Provide a global flag for disabling the PreRA hazard recognizer that
   /// targets may choose to honor.
   bool usePreRAHazardRecognizer() const;

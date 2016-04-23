@@ -63,6 +63,9 @@ Pass *llvm::createPruneEHPass() { return new PruneEH(); }
 
 
 bool PruneEH::runOnSCC(CallGraphSCC &SCC) {
+  if (skipSCC(SCC))
+    return false;
+
   SmallPtrSet<CallGraphNode *, 8> SCCNodes;
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
   bool MadeChange = false;

@@ -505,7 +505,7 @@ unsigned MipsSEInstrInfo::getAnalyzableBrOpc(unsigned Opc) const {
           Opc == Mips::BEQC   || Opc == Mips::BNEC   || Opc == Mips::BLTC   ||
           Opc == Mips::BGEC   || Opc == Mips::BLTUC  || Opc == Mips::BGEUC  ||
           Opc == Mips::BGTZC  || Opc == Mips::BLEZC  || Opc == Mips::BGEZC  ||
-          Opc == Mips::BGTZC  || Opc == Mips::BEQZC  || Opc == Mips::BNEZC  ||
+          Opc == Mips::BLTZC  || Opc == Mips::BEQZC  || Opc == Mips::BNEZC  ||
           Opc == Mips::BC) ? Opc : 0;
 }
 

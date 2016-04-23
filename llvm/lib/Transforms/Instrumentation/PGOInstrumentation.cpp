@@ -732,7 +732,7 @@ void PGOUseFunc::annotateIndirectCallSites() {
     return;
 
   // Create the PGOFuncName meta data.
-  createPGOFuncNameMetadata(F);
+  createPGOFuncNameMetadata(F, FuncInfo.FuncName);
 
   unsigned IndirectCallSiteIndex = 0;
   auto IndirectCallSites = findIndirectCallSites(F);
@@ -778,6 +778,9 @@ static void createIRLevelProfileFlagVariable(Module &M) {
 }
 
 bool PGOInstrumentationGen::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
   createIRLevelProfileFlagVariable(M);
   for (auto &F : M) {
     if (F.isDeclaration())
@@ -801,6 +804,9 @@ static void setPGOCountOnFunc(PGOUseFunc &Func,
 }
 
 bool PGOInstrumentationUse::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
   DEBUG(dbgs() << "Read in profile counters: ");
   auto &Ctx = M.getContext();
   // Read the counter array from file.

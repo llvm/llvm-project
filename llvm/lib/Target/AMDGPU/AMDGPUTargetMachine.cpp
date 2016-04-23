@@ -391,11 +391,7 @@ void GCNPassConfig::addPreSched2() {
 void GCNPassConfig::addPreEmitPass() {
   addPass(createSIInsertWaitsPass(), false);
   addPass(createSILowerControlFlowPass(), false);
-
-  const AMDGPUSubtarget &ST = *getAMDGPUTargetMachine().getSubtargetImpl();
-  if (ST.debuggerInsertNops()) {
-    addPass(createSIInsertNopsPass(), false);
-  }
+  addPass(createSIInsertNopsPass(), false);
 }
 
 TargetPassConfig *GCNTargetMachine::createPassConfig(PassManagerBase &PM) {

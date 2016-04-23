@@ -40,3 +40,53 @@ define i32 @compare_and_call_with_deopt() {
   ret i32 %rt 
 ; CHECK: ret i32 %rt
 }
+
+define i1 @compare_distinct_mallocs() {
+  %m = call i8* @malloc(i64 4)
+  %n = call i8* @malloc(i64 4)
+  %cmp = icmp eq i8* %m, %n
+  ret i1 %cmp
+  ; CHECK-LABEL: compare_distinct_mallocs
+  ; CHECK: ret i1 false
+}
+
+; the compare is folded to true since the folding compare looks through bitcasts. 
+; call to malloc and the bitcast instructions are elided after that since there are no uses of the malloc 
+define i1 @compare_samepointer_under_bitcast() {
+  %m = call i8* @malloc(i64 4)
+  %bc = bitcast i8* %m to i32*
+  %bcback = bitcast i32* %bc to i8*
+  %cmp = icmp eq i8* %m, %bcback
+  ret i1 %cmp
+; CHECK-LABEL: compare_samepointer_under_bitcast
+; CHECK: ret i1 true 
+}
+
+; the compare is folded to true since the folding compare looks through bitcasts. 
+; call to malloc and the bitcast instructions are elided after that since there are no uses of the malloc 
+define i1 @compare_samepointer_escaped() {
+  %m = call i8* @malloc(i64 4)
+  %bc = bitcast i8* %m to i32*
+  %bcback = bitcast i32* %bc to i8*
+  %cmp = icmp eq i8* %m, %bcback
+  call void @f() [ "deopt"(i8* %m) ]
+  ret i1 %cmp
+; CHECK-LABEL: compare_samepointer_escaped
+; CHECK-NEXT: %m = call i8* @malloc(i64 4)
+; CHECK-NEXT: call void @f() [ "deopt"(i8* %m) ]
+; CHECK: ret i1 true 
+}
+
+; The malloc call for %m cannot be elided since it is used in the call to function f.
+; However, the cmp can be folded to true as %n doesnt escape and %m, %n are distinct allocations
+define i1 @compare_distinct_pointer_escape() {
+  %m = call i8* @malloc(i64 4)
+  %n = call i8* @malloc(i64 4)
+  tail call void @f() [ "deopt"(i8* %m) ]
+  %cmp = icmp ne i8* %m, %n
+  ret i1 %cmp
+; CHECK-LABEL: compare_distinct_pointer_escape
+; CHECK-NEXT: %m = call i8* @malloc(i64 4)
+; CHECK-NEXT: tail call void @f() [ "deopt"(i8* %m) ]
+; CHECK-NEXT: ret i1 true
+}

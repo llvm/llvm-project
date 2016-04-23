@@ -438,10 +438,10 @@ static bool checkMachOAndArchFlags(ObjectFile *o, StringRef file) {
     Triple T;
     if (MachO->is64Bit()) {
       H_64 = MachO->MachOObjectFile::getHeader64();
-      T = MachOObjectFile::getArch(H_64.cputype, H_64.cpusubtype);
+      T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype);
     } else {
       H = MachO->MachOObjectFile::getHeader();
-      T = MachOObjectFile::getArch(H.cputype, H.cpusubtype);
+      T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype);
     }
     unsigned i;
     for (i = 0; i < ArchFlags.size(); ++i) {

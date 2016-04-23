@@ -111,3 +111,24 @@ def Y2_isync: JRInst <(outs), (ins),
     let Inst{9-0} = 0b0000000010;
   }
 
+//===----------------------------------------------------------------------===//
+//                     System/User instructions.
+//===----------------------------------------------------------------------===//
+// traps and pause
+let hasSideEffects = 0, isSolo = 1 in
+class J2_MISC_TRAP_PAUSE<string mnemonic, bits<2> MajOp>
+  : JRInst
+  <(outs), (ins u8Imm:$u8),
+   #mnemonic#"(#$u8)"> {
+    bits<8> u8;
+
+    let IClass = 0b0101;
+    let Inst{27-24} = 0b0100;
+    let Inst{23-22} = MajOp;
+    let Inst{12-8} = u8{7-3};
+    let Inst{4-2} = u8{2-0};
+  }
+def J2_trap0 : J2_MISC_TRAP_PAUSE<"trap0", 0b00>;
+def J2_trap1 : J2_MISC_TRAP_PAUSE<"trap1", 0b10>;
+def J2_pause : J2_MISC_TRAP_PAUSE<"pause", 0b01>;
+

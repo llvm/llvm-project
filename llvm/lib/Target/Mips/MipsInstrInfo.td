@@ -1648,11 +1648,11 @@ def ADDiu : MMRel, StdMMR6Rel, ArithLogicI<"addiu", simm16_relaxed, GPR32Opnd,
 }
 def ADDi  : MMRel, ArithLogicI<"addi", simm16_relaxed, GPR32Opnd>, ADDI_FM<0x8>,
             ISA_MIPS1_NOT_32R6_64R6;
+let AdditionalPredicates = [NotInMicroMips] in {
 def SLTi  : MMRel, SetCC_I<"slti", setlt, simm16, immSExt16, GPR32Opnd>,
             SLTI_FM<0xa>;
 def SLTiu : MMRel, SetCC_I<"sltiu", setult, simm16, immSExt16, GPR32Opnd>,
             SLTI_FM<0xb>;
-let AdditionalPredicates = [NotInMicroMips] in {
 def ANDi  : MMRel, StdMMR6Rel,
             ArithLogicI<"andi", uimm16, GPR32Opnd, II_ANDI, immZExt16, and>,
             ADDI_FM<0xc>;
@@ -1676,8 +1676,10 @@ def MUL   : MMRel, ArithLogicR<"mul", GPR32Opnd, 1, II_MUL, mul>,
             ADD_FM<0x1c, 2>, ISA_MIPS32_NOT_32R6_64R6;
 def ADD   : MMRel, StdMMR6Rel, ArithLogicR<"add", GPR32Opnd>, ADD_FM<0, 0x20>;
 def SUB   : MMRel, ArithLogicR<"sub", GPR32Opnd>, ADD_FM<0, 0x22>;
+let AdditionalPredicates = [NotInMicroMips] in {
 def SLT   : MMRel, SetCC_R<"slt", setlt, GPR32Opnd>, ADD_FM<0, 0x2a>;
 def SLTu  : MMRel, SetCC_R<"sltu", setult, GPR32Opnd>, ADD_FM<0, 0x2b>;
+}
 let AdditionalPredicates = [NotInMicroMips] in {
 def AND   : MMRel, StdMMR6Rel, ArithLogicR<"and", GPR32Opnd, 1, II_AND, and>,
             ADD_FM<0, 0x24>;
@@ -1751,7 +1753,7 @@ def LWC2 : LW_FT2<"lwc2", COP2Opnd, NoItinerary, load>, LW_FM<0x32>,
            ISA_MIPS1_NOT_32R6_64R6;
 def SWC2 : SW_FT2<"swc2", COP2Opnd, NoItinerary, store>, LW_FM<0x3a>,
            ISA_MIPS1_NOT_32R6_64R6;
-def LDC2 : StdMMR6Rel, LW_FT2<"ldc2", COP2Opnd, NoItinerary, load>, LW_FM<0x36>,
+def LDC2 : LW_FT2<"ldc2", COP2Opnd, NoItinerary, load>, LW_FM<0x36>,
            ISA_MIPS2_NOT_32R6_64R6;
 def SDC2 : SW_FT2<"sdc2", COP2Opnd, NoItinerary, store>, LW_FM<0x3e>,
            ISA_MIPS2_NOT_32R6_64R6;
@@ -2190,9 +2192,11 @@ def : MipsInstAlias<"negu $rt",
                     (SUBu GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 0>;
 def : MipsInstAlias<"negu $rt, $rs",
                     (SUBu GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>;
+let Predicates = [NotInMicroMips] in {
 def : MipsInstAlias<
           "slt $rs, $rt, $imm",
           (SLTi GPR32Opnd:$rs, GPR32Opnd:$rt, simm32_relaxed:$imm), 0>;
+}
 def : MipsInstAlias<
           "sltu $rt, $rs, $imm",
           (SLTiu GPR32Opnd:$rt, GPR32Opnd:$rs, simm32_relaxed:$imm), 0>;
@@ -2572,10 +2576,12 @@ multiclass SetgeImmPats<RegisterClass RC, Instruction SLTiOp,
                 (XORi (SLTiuOp RC:$lhs, immSExt16:$rhs), 1)>;
 }
 
+let AdditionalPredicates = [NotInMicroMips] in {
 defm : SeteqPats<GPR32, SLTiu, XOR, SLTu, ZERO>;
 defm : SetlePats<GPR32, SLT, SLTu>;
 defm : SetgtPats<GPR32, SLT, SLTu>;
 defm : SetgePats<GPR32, SLT, SLTu>;
+}
 defm : SetgeImmPats<GPR32, SLTi, SLTiu>;
 
 // bswap pattern

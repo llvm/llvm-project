@@ -19,9 +19,7 @@ include "llvm/CodeGen/ValueTypes.td"
 
 class IntrinsicProperty;
 
-// Intr*Mem - Memory properties.  An intrinsic is allowed to have at most one of
-// these properties set.  They are listed from the most aggressive (best to use
-// if correct) to the least aggressive.  If no property is set, the worst case
+// Intr*Mem - Memory properties.  If no property is set, the worst case
 // is assumed (it may read and write any memory it can get access to and it may
 // have other side effects).
 
@@ -668,6 +666,9 @@ def int_masked_scatter: Intrinsic<[],
 // Intrinsics to support bit sets.
 def int_bitset_test : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
                                 [IntrNoMem]>;
+
+def int_load_relative: Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_anyint_ty],
+                                 [IntrReadMem, IntrArgMemOnly]>;
 
 //===----------------------------------------------------------------------===//
 // Target-specific intrinsics

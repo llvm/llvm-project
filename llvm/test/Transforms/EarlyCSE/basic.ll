@@ -26,10 +26,9 @@ define void @test1(i8 %V, i32 *%P) {
   ; CHECK-NEXT: store volatile i32 %E
   ; CHECK-NEXT: store volatile i32 %E
 
-  %G = add nuw i32 %C, %C         ;; not a CSE with E
+  %G = add nuw i32 %C, %C
   store volatile i32 %G, i32* %P
-  ; CHECK-NEXT: %G = add nuw i32 %C, %C
-  ; CHECK-NEXT: store volatile i32 %G
+  ; CHECK-NEXT: store volatile i32 %E
   ret void
 }
 

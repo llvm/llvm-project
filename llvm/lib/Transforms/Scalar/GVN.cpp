@@ -2674,7 +2674,7 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    if (skipOptnoneFunction(F))
+    if (skipFunction(F))
       return false;
 
     return Impl.runImpl(

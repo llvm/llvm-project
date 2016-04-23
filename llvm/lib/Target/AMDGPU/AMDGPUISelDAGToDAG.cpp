@@ -531,6 +531,7 @@ SDNode *AMDGPUDAGToDAGISel::Select(SDNode *N) {
   case ISD::AND:
   case ISD::SRL:
   case ISD::SRA:
+  case ISD::SIGN_EXTEND_INREG:
     if (N->getValueType(0) != MVT::i32 ||
         Subtarget->getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS)
       break;
@@ -1478,6 +1479,21 @@ SDNode *AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
     if (N->getOperand(0).getOpcode() == ISD::SHL)
       return SelectS_BFEFromShifts(N);
     break;
+
+  case ISD::SIGN_EXTEND_INREG: {
+    // sext_inreg (srl x, 16), i8 -> bfe_i32 x, 16, 8
+    SDValue Src = N->getOperand(0);
+    if (Src.getOpcode() != ISD::SRL)
+      break;
+
+    const ConstantSDNode *Amt = dyn_cast<ConstantSDNode>(Src.getOperand(1));
+    if (!Amt)
+      break;
+
+    unsigned Width = cast<VTSDNode>(N->getOperand(1))->getVT().getSizeInBits();
+    return getS_BFE(AMDGPU::S_BFE_I32, SDLoc(N), Src.getOperand(0),
+                    Amt->getZExtValue(), Width);
+  }
   }
 
   return SelectCode(N);

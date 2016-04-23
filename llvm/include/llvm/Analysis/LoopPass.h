@@ -88,9 +88,10 @@ public:
   virtual void deleteAnalysisLoop(Loop *L) {}
 
 protected:
-  /// skipOptnoneFunction - Containing function has Attribute::OptimizeNone
-  /// and most transformation passes should skip it.
-  bool skipOptnoneFunction(const Loop *L) const;
+  /// Optional passes call this function to check whether the pass should be
+  /// skipped. This is the case when Attribute::OptimizeNone is set or when
+  /// optimization bisect is over the limit.
+  bool skipLoop(const Loop *L) const;
 };
 
 class LPPassManager : public FunctionPass, public PMDataManager {

@@ -799,19 +799,16 @@ void CachingMemorySSAWalker::invalidateInfo(MemoryAccess *MA) {
     if (!Q.IsCall)
       Q.StartingLoc = MemoryLocation::get(I);
     doCacheRemove(MA, Q, Q.StartingLoc);
-    return;
-  }
-  // If it is not a use, the best we can do right now is destroy the cache.
-  bool IsCall = false;
-
-  if (auto *MUD = dyn_cast<MemoryUseOrDef>(MA)) {
-    Instruction *I = MUD->getMemoryInst();
-    IsCall = bool(ImmutableCallSite(I));
-  }
-  if (IsCall)
+  } else {
+    // If it is not a use, the best we can do right now is destroy the cache.
     CachedUpwardsClobberingCall.clear();
-  else
     CachedUpwardsClobberingAccess.clear();
+  }
+
+#ifdef XDEBUG
+  // Run this only when expensive checks are enabled.
+  verifyRemoved(MA);
+#endif
 }
 
 void CachingMemorySSAWalker::doCacheRemove(const MemoryAccess *M,
@@ -1079,6 +1076,18 @@ CachingMemorySSAWalker::getClobberingMemoryAccess(const Instruction *I) {
   DEBUG(dbgs() << *Result << "\n");
 
   return Result;
+}
+
+// Verify that MA doesn't exist in any of the caches.
+void CachingMemorySSAWalker::verifyRemoved(MemoryAccess *MA) {
+#ifndef NDEBUG
+  for (auto &P : CachedUpwardsClobberingAccess)
+    assert(P.first.first != MA && P.second != MA &&
+           "Found removed MemoryAccess in cache.");
+  for (auto &P : CachedUpwardsClobberingCall)
+    assert(P.first != MA && P.second != MA &&
+           "Found removed MemoryAccess in cache.");
+#endif // !NDEBUG
 }
 
 MemoryAccess *

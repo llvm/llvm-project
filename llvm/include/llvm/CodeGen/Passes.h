@@ -498,6 +498,10 @@ namespace llvm {
   /// register allocation.
   extern char &ExpandPostRAPseudosID;
 
+  /// createPostRAHazardRecognizer - This pass runs the post-ra hazard
+  /// recognizer.
+  extern char &PostRAHazardRecognizerID;
+
   /// createPostRAScheduler - This pass performs post register allocation
   /// scheduling.
   extern char &PostRASchedulerID;
@@ -675,6 +679,11 @@ namespace llvm {
   /// TLS variables for the emulated TLS model.
   ///
   ModulePass *createLowerEmuTLSPass(const TargetMachine *TM);
+
+  /// This pass lowers the @llvm.load.relative intrinsic to instructions.
+  /// This is unsafe to do earlier because a pass may combine the constant
+  /// initializer into the load, which may result in an overflowing evaluation.
+  ModulePass *createPreISelIntrinsicLoweringPass();
 
   /// GlobalMerge - This pass merges internal (by default) globals into structs
   /// to enable reuse of a base pointer by indexed addressing modes.

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnueabi < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnueabi < %s | FileCheck %s
 
 ; CHECK-LABEL: test1
 ; CHECK: tbz {{w[0-9]}}, #3, {{.LBB0_3}}

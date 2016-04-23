@@ -4246,7 +4246,7 @@ public:
     initializeSROALegacyPassPass(*PassRegistry::getPassRegistry());
   }
   bool runOnFunction(Function &F) override {
-    if (skipOptnoneFunction(F))
+    if (skipFunction(F))
       return false;
 
     auto PA = Impl.runImpl(

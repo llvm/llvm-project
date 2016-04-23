@@ -952,38 +952,6 @@ class POOL32A_MFTC2_FM_MMR6<string instr_asm, bits<10> funct>
   let Inst{5-0}   = 0b111100;
 }
 
-class LDWC1_SDWC1_FM_MMR6<string instr_asm, bits<6> funct>
-    : MMR6Arch<instr_asm> {
-  bits<5> ft;
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<16> offset = addr{15-0};
-
-  bits<32> Inst;
-
-  let Inst{31-26} = funct;
-  let Inst{25-21} = ft;
-  let Inst{20-16} = base;
-  let Inst{15-0}  = offset;
-}
-
-class POOL32B_LDWC2_SDWC2_FM_MMR6<string instr_asm, bits<4> funct>
-    : MMR6Arch<instr_asm>, MipsR6Inst {
-  bits<5> rt;
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<11> offset = addr{10-0};
-
-  bits<32> Inst;
-
-  let Inst{31-26} = 0b001000;
-  let Inst{25-21} = rt;
-  let Inst{20-16} = base;
-  let Inst{15-12} = funct;
-  let Inst{11}    = 0;
-  let Inst{10-0}  = offset;
-}
-
 class CMP_BRANCH_2R_OFF16_FM_MMR6<string opstr, bits<6> funct>
     : MipsR6Inst, MMR6Arch<opstr> {
   bits<5> rt;

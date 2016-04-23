@@ -117,7 +117,7 @@ void LTOCodeGenerator::initializeLTOPasses() {
   initializeMergedLoadStoreMotionPass(R);
   initializeGVNLegacyPassPass(R);
   initializeMemCpyOptPass(R);
-  initializeDCEPass(R);
+  initializeDCELegacyPassPass(R);
   initializeCFGSimplifyPassPass(R);
 }
 

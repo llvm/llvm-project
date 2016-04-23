@@ -54,6 +54,9 @@ INITIALIZE_PASS(IPCP, "ipconstprop",
 ModulePass *llvm::createIPConstantPropagationPass() { return new IPCP(); }
 
 bool IPCP::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
   bool Changed = false;
   bool LocalChange = true;
 

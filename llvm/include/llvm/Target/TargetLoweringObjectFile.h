@@ -155,8 +155,8 @@ public:
   virtual const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const;
 
   virtual const MCExpr *
-  getExecutableRelativeSymbol(const ConstantExpr *CE, Mangler &Mang,
-                              const TargetMachine &TM) const {
+  lowerRelativeReference(const GlobalValue *LHS, const GlobalValue *RHS,
+                         Mangler &Mang, const TargetMachine &TM) const {
     return nullptr;
   }
 

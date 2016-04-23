@@ -2,13 +2,17 @@
 
 ; CHECK: debugger_insert_nops.cl:2:3
 ; CHECK-NEXT: s_nop 0
-; CHECK: debugger_insert_nops.cl:3:3
+; CHECK: s_nop 0
+; CHECK-NEXT: debugger_insert_nops.cl:3:3
 ; CHECK-NEXT: s_nop 0
-; CHECK: debugger_insert_nops.cl:4:3
+; CHECK: s_nop 0
+; CHECK-NEXT: debugger_insert_nops.cl:4:3
 ; CHECK-NEXT: s_nop 0
-; CHECK: debugger_insert_nops.cl:5:3
+; CHECK: s_nop 0
+; CHECK-NEXT: debugger_insert_nops.cl:5:3
 ; CHECK-NEXT: s_nop 0
-; CHECK: debugger_insert_nops.cl:6:1
+; CHECK: s_nop 0
+; CHECK-NEXT: debugger_insert_nops.cl:6:1
 ; CHECK-NEXT: s_nop 0
 ; CHECK-NEXT: s_endpgm
 

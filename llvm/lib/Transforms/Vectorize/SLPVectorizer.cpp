@@ -3396,7 +3396,7 @@ struct SLPVectorizer : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
-    if (skipOptnoneFunction(F))
+    if (skipFunction(F))
       return false;
 
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();

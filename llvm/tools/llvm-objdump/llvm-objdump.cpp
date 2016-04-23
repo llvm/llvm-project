@@ -405,6 +405,11 @@ public:
                  raw_ostream &OS,
                  StringRef Annot,
                  MCSubtargetInfo const &STI) override {
+    if (!MI) {
+      OS << " <unknown>";
+      return;
+    }
+
     SmallString<40> InstStr;
     raw_svector_ostream IS(InstStr);
 

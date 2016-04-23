@@ -1188,10 +1188,6 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
 
-  // The code below needs to be audited and adjusted for unordered atomics
-  if (!SI.isSimple())
-    return nullptr;
-
   // If this store is the last instruction in the basic block (possibly
   // excepting debug info instructions), and if the block ends with an
   // unconditional branch, try to move it to the successor block.
@@ -1217,6 +1213,9 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
 /// into a phi node with a store in the successor.
 ///
 bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
+  assert(SI.isUnordered() &&
+         "this code has not been auditted for volatile or ordered store case");
+  
   BasicBlock *StoreBB = SI.getParent();
 
   // Check to see if the successor block has exactly two incoming edges.  If

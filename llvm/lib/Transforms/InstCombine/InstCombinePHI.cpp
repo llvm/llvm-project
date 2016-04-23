@@ -35,15 +35,6 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
   Type *LHSType = LHSVal->getType();
   Type *RHSType = RHSVal->getType();
 
-  bool isNUW = false, isNSW = false, isExact = false;
-  if (OverflowingBinaryOperator *BO =
-        dyn_cast<OverflowingBinaryOperator>(FirstInst)) {
-    isNUW = BO->hasNoUnsignedWrap();
-    isNSW = BO->hasNoSignedWrap();
-  } else if (PossiblyExactOperator *PEO =
-               dyn_cast<PossiblyExactOperator>(FirstInst))
-    isExact = PEO->isExact();
-
   // Scan to see if all operands are the same opcode, and all have one use.
   for (unsigned i = 1; i != PN.getNumIncomingValues(); ++i) {
     Instruction *I = dyn_cast<Instruction>(PN.getIncomingValue(i));
@@ -58,13 +49,6 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
     if (CmpInst *CI = dyn_cast<CmpInst>(I))
       if (CI->getPredicate() != cast<CmpInst>(FirstInst)->getPredicate())
         return nullptr;
-
-    if (isNUW)
-      isNUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
-    if (isNSW)
-      isNSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    if (isExact)
-      isExact = cast<PossiblyExactOperator>(I)->isExact();
 
     // Keep track of which operand needs a phi node.
     if (I->getOperand(0) != LHSVal) LHSVal = nullptr;
@@ -124,9 +108,12 @@ Instruction *InstCombiner::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
   BinaryOperator *BinOp = cast<BinaryOperator>(FirstInst);
   BinaryOperator *NewBinOp =
     BinaryOperator::Create(BinOp->getOpcode(), LHSVal, RHSVal);
-  if (isNUW) NewBinOp->setHasNoUnsignedWrap();
-  if (isNSW) NewBinOp->setHasNoSignedWrap();
-  if (isExact) NewBinOp->setIsExact();
+
+  NewBinOp->copyIRFlags(PN.getIncomingValue(0));
+
+  for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i)
+    NewBinOp->andIRFlags(PN.getIncomingValue(i));
+
   NewBinOp->setDebugLoc(FirstInst->getDebugLoc());
   return NewBinOp;
 }
@@ -497,7 +484,6 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
   // code size and simplifying code.
   Constant *ConstantOp = nullptr;
   Type *CastSrcTy = nullptr;
-  bool isNUW = false, isNSW = false, isExact = false;
 
   if (isa<CastInst>(FirstInst)) {
     CastSrcTy = FirstInst->getOperand(0)->getType();
@@ -514,14 +500,6 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
     ConstantOp = dyn_cast<Constant>(FirstInst->getOperand(1));
     if (!ConstantOp)
       return FoldPHIArgBinOpIntoPHI(PN);
-
-    if (OverflowingBinaryOperator *BO =
-        dyn_cast<OverflowingBinaryOperator>(FirstInst)) {
-      isNUW = BO->hasNoUnsignedWrap();
-      isNSW = BO->hasNoSignedWrap();
-    } else if (PossiblyExactOperator *PEO =
-               dyn_cast<PossiblyExactOperator>(FirstInst))
-      isExact = PEO->isExact();
   } else {
     return nullptr;  // Cannot fold this operation.
   }
@@ -537,13 +515,6 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
     } else if (I->getOperand(1) != ConstantOp) {
       return nullptr;
     }
-
-    if (isNUW)
-      isNUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
-    if (isNSW)
-      isNSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    if (isExact)
-      isExact = cast<PossiblyExactOperator>(I)->isExact();
   }
 
   // Okay, they are all the same operation.  Create a new PHI node of the
@@ -584,9 +555,11 @@ Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
 
   if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(FirstInst)) {
     BinOp = BinaryOperator::Create(BinOp->getOpcode(), PhiVal, ConstantOp);
-    if (isNUW) BinOp->setHasNoUnsignedWrap();
-    if (isNSW) BinOp->setHasNoSignedWrap();
-    if (isExact) BinOp->setIsExact();
+    BinOp->copyIRFlags(PN.getIncomingValue(0));
+
+    for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i)
+      BinOp->andIRFlags(PN.getIncomingValue(i));
+
     BinOp->setDebugLoc(FirstInst->getDebugLoc());
     return BinOp;
   }

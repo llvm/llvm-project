@@ -160,3 +160,53 @@ entry:
   %r = select i1 %s, i64 %x, i64 %y
   ret i64 %r
 }
+
+define i8* @tst_select_word_cst(i8* %a, i8* %b) {
+  ; ALL-LABEL: tst_select_word_cst:
+
+  ; M2:         addiu   $1, $zero, -1
+  ; M2:         xor     $1, $5, $1
+  ; M2:         sltu    $1, $zero, $1
+  ; M2:         bnez    $1, $[[BB0:BB[0-9_]+]]
+  ; M2:         addiu   $2, $zero, 0
+  ; M2:         move    $2, $4
+  ; M2: $[[BB0]]:
+  ; M2:         jr      $ra
+
+  ; M3:         daddiu  $1, $zero, -1
+  ; M3:         xor     $1, $5, $1
+  ; M3:         sltu    $1, $zero, $1
+  ; M3:         bnez    $1, $[[BB0:BB[0-9_]+]]
+  ; M3:         daddiu  $2, $zero, 0
+  ; M3:         move    $2, $4
+  ; M3: $[[BB0]]:
+  ; M3:         jr      $ra
+
+  ; CMOV-32:    addiu   $1, $zero, -1
+  ; CMOV-32:    xor     $1, $5, $1
+  ; CMOV-32:    movn    $4, $zero, $1
+  ; CMOV-32:    jr      $ra
+  ; CMOV-32:    move    $2, $4
+
+  ; SEL-32:     addiu   $1, $zero, -1
+  ; SEL-32:     xor     $1, $5, $1
+  ; SEL-32:     sltu    $1, $zero, $1
+  ; SEL-32:     jr      $ra
+  ; SEL-32:     seleqz  $2, $4, $1
+
+  ; CMOV-64:    daddiu  $1, $zero, -1
+  ; CMOV-64:    xor     $1, $5, $1
+  ; CMOV-64:    movn    $4, $zero, $1
+  ; CMOV-64:    move    $2, $4
+
+  ; SEL-64:     daddiu  $1, $zero, -1
+  ; SEL-64:     xor     $1, $5, $1
+  ; SEL-64:     sltu    $1, $zero, $1
+  ; FIXME: This shift is redundant.
+  ; SEL-64:     sll     $1, $1, 0
+  ; SEL-64:     seleqz  $2, $4, $1
+
+  %cmp = icmp eq i8* %b, inttoptr (i64 -1 to i8*)
+  %r = select i1 %cmp, i8* %a, i8* null
+  ret i8* %r
+}

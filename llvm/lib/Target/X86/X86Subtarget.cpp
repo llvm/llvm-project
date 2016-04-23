@@ -83,8 +83,12 @@ ClassifyGlobalReference(const GlobalValue *GV, const TargetMachine &TM) const {
     } else if (!isTargetWin64()) {
       assert(isTargetELF() && "Unknown rip-relative target");
 
-      // Extra load is needed for all externally visible globals.
-      if (!GV->hasLocalLinkage() && GV->hasDefaultVisibility())
+      // Extra load is needed for all externally visible globals except with
+      // PIE as the definition of the global in an executable is not
+      // overridden.
+
+      if (!GV->hasLocalLinkage() && GV->hasDefaultVisibility() &&
+          !isGlobalDefinedInPIE(GV, TM))
         return X86II::MO_GOTPCREL;
     }
 
@@ -92,8 +96,11 @@ ClassifyGlobalReference(const GlobalValue *GV, const TargetMachine &TM) const {
   }
 
   if (isPICStyleGOT()) {   // 32-bit ELF targets.
-    // Extra load is needed for all externally visible.
-    if (GV->hasLocalLinkage() || GV->hasHiddenVisibility())
+    // Extra load is needed for all externally visible globals except with
+    // PIE as the definition of the global in an executable is not overridden.
+
+    if (GV->hasLocalLinkage() || GV->hasHiddenVisibility() ||
+        isGlobalDefinedInPIE(GV, TM))
       return X86II::MO_GOTOFF;
     return X86II::MO_GOT;
   }

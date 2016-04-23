@@ -1,14 +1,12 @@
 ; RUN: llvm-as %s -o %t.o
 
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
-; RUN:    --plugin-opt=emit-llvm \
-; RUN:    --plugin-opt=no-discard-value-names \
+; RUN:    --plugin-opt=save-temps \
 ; RUN:    -shared %t.o -o %t2.o
-; RUN: llvm-dis %t2.o -o - | FileCheck %s
+; RUN: llvm-dis %t2.o.bc -o - | FileCheck %s
 
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:    --plugin-opt=emit-llvm \
-; RUN:    --plugin-opt=discard-value-names \
 ; RUN:    -shared %t.o -o %t2.o
 ; RUN: llvm-dis %t2.o -o - | FileCheck ---check-prefix=NONAME %s
 

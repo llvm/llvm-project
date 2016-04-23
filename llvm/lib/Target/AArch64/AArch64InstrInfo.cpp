@@ -2138,8 +2138,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (SrcReg == AArch64::NZCV) {
     assert(AArch64::GPR64RegClass.contains(DestReg) && "Invalid NZCV copy");
-    BuildMI(MBB, I, DL, get(AArch64::MRS))
-      .addReg(DestReg)
+    BuildMI(MBB, I, DL, get(AArch64::MRS), DestReg)
       .addImm(AArch64SysReg::NZCV)
       .addReg(AArch64::NZCV, RegState::Implicit | getKillRegState(KillSrc));
     return;
@@ -3354,9 +3353,9 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr *MI) const {
     if (!MRI->hasOneNonDBGUse(VReg))
       return false;
 
+    bool Is64Bit = DefMI->getOpcode() != AArch64::ANDWri;
     uint64_t Mask = AArch64_AM::decodeLogicalImmediate(
-        DefMI->getOperand(2).getImm(),
-        (DefMI->getOpcode() == AArch64::ANDWri) ? 32 : 64);
+        DefMI->getOperand(2).getImm(), Is64Bit ? 64 : 32);
     if (!isPowerOf2_64(Mask))
       return false;
 
@@ -3371,9 +3370,9 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr *MI) const {
     MachineBasicBlock *TBB = MI->getOperand(1).getMBB();
     DebugLoc DL = MI->getDebugLoc();
     unsigned Imm = Log2_64(Mask);
-    unsigned Opc = (Imm < 32)
-                       ? (IsNegativeBranch ? AArch64::TBNZW : AArch64::TBZW)
-                       : (IsNegativeBranch ? AArch64::TBNZX : AArch64::TBZX);
+    unsigned Opc = Is64Bit
+                       ? (IsNegativeBranch ? AArch64::TBNZX : AArch64::TBZX)
+                       : (IsNegativeBranch ? AArch64::TBNZW : AArch64::TBZW);
     BuildMI(RefToMBB, MI, DL, get(Opc)).addReg(NewReg).addImm(Imm).addMBB(TBB);
     MI->eraseFromParent();
     return true;

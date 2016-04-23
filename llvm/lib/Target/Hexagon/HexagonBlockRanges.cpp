@@ -330,7 +330,7 @@ void HexagonBlockRanges::computeInitialLiveRanges(InstrIndexMap &IndexMap,
       if (TargetRegisterInfo::isPhysicalRegister(R.Reg) && Reserved[R.Reg])
         continue;
       for (auto S : expandToSubRegs(R, MRI, TRI)) {
-        if (LastDef[S] != IndexType::None)
+        if (LastDef[S] != IndexType::None || LastUse[S] != IndexType::None)
           closeRange(S);
         LastDef[S] = Index;
       }

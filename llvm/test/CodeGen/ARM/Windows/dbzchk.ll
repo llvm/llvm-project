@@ -78,7 +78,8 @@ return:
 ; CHECK-MOD-DAG: Successors according to CFG: BB#2
 ; CHECK-MOD-DAG: BB#4
 
-; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -filetype asm -o - %s 2>&1 | FileCheck %s -check-prefix CHECK-CFG
+; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -filetype asm -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-CFG
+; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-CFG-ASM
 
 ; unsigned c;
 ; extern unsigned long g(void);
@@ -133,14 +134,14 @@ attributes #0 = { optsize }
 ; CHECK-CFG-DAG: BB#5
 ; CHECK-CFG-DAG: t2UDF 249
 
-; CHECK-CFG-LABEL: h:
-; CHECK-CFG: cbz r{{[0-9]}}, .LBB2_2
-; CHECK-CFG: b .LBB2_4
-; CHECK-CFG-LABEL: .LBB2_2:
-; CHECK-CFG-NEXT: udf.w #249
-; CHECK-CFG-LABEL: .LBB2_4:
-; CHECK-CFG: bl __rt_udiv
-; CHECK-CFG: pop.w {{{.*}}, r11, pc}
+; CHECK-CFG-ASM-LABEL: h:
+; CHECK-CFG-ASM: cbz r{{[0-9]}}, .LBB2_2
+; CHECK-CFG-ASM: b .LBB2_4
+; CHECK-CFG-ASM-LABEL: .LBB2_2:
+; CHECK-CFG-ASM-NEXT: udf.w #249
+; CHECK-CFG-ASM-LABEL: .LBB2_4:
+; CHECK-CFG-ASM: bl __rt_udiv
+; CHECK-CFG-ASM: pop.w {{{.*}}, r11, pc}
 
 ; RUN: llc -O0 -mtriple thumbv7--windows-itanium -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-WIN__DBZCHK
 

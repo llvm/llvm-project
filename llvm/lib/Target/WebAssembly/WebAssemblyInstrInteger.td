@@ -65,12 +65,6 @@ def EQZ_I64 : I<(outs I32:$dst), (ins I64:$src),
 
 } // Defs = [ARGUMENTS]
 
-// Expand the "don't care" operations to supported operations.
-def : Pat<(ctlz_zero_undef I32:$src), (CLZ_I32 I32:$src)>;
-def : Pat<(ctlz_zero_undef I64:$src), (CLZ_I64 I64:$src)>;
-def : Pat<(cttz_zero_undef I32:$src), (CTZ_I32 I32:$src)>;
-def : Pat<(cttz_zero_undef I64:$src), (CTZ_I64 I64:$src)>;
-
 // Optimize away an explicit mask on a rotate count.
 def : Pat<(rotl I32:$lhs, (and I32:$rhs, 31)), (ROTL_I32 I32:$lhs, I32:$rhs)>;
 def : Pat<(rotr I32:$lhs, (and I32:$rhs, 31)), (ROTR_I32 I32:$lhs, I32:$rhs)>;

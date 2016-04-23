@@ -900,6 +900,11 @@ bool CallAnalyzer::visitCallSite(CallSite CS) {
       default:
         return Base::visitCallSite(CS);
 
+      case Intrinsic::load_relative:
+        // This is normally lowered to 4 LLVM instructions.
+        Cost += 3 * InlineConstants::InstrCost;
+        return false;
+
       case Intrinsic::memset:
       case Intrinsic::memcpy:
       case Intrinsic::memmove:

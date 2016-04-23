@@ -1005,10 +1005,10 @@ static bool checkMachOAndArchFlags(SymbolicFile *O, std::string &Filename) {
   Triple T;
   if (MachO->is64Bit()) {
     H_64 = MachO->MachOObjectFile::getHeader64();
-    T = MachOObjectFile::getArch(H_64.cputype, H_64.cpusubtype);
+    T = MachOObjectFile::getArchTriple(H_64.cputype, H_64.cpusubtype);
   } else {
     H = MachO->MachOObjectFile::getHeader();
-    T = MachOObjectFile::getArch(H.cputype, H.cpusubtype);
+    T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype);
   }
   if (std::none_of(
           ArchFlags.begin(), ArchFlags.end(),

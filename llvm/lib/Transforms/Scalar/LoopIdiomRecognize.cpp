@@ -169,7 +169,7 @@ static void deleteDeadInstruction(Instruction *I,
 //===----------------------------------------------------------------------===//
 
 bool LoopIdiomRecognize::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipOptnoneFunction(L))
+  if (skipLoop(L))
     return false;
 
   CurLoop = L;
