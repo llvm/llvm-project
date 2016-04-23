@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -verify -fsyntax-only -triple x86_64-pc-linux-gnu %s -Wno-literal-conversion -Wfloat-conversion -DFLOAT_CONVERSION -DZERO -DBOOL -DCONSTANT_BOOL -DOVERFLOW
 // RUN: %clang_cc1 -verify -fsyntax-only -triple x86_64-pc-linux-gnu %s -Wno-conversion -Wfloat-overflow-conversion -DOVERFLOW
 // RUN: %clang_cc1 -verify -fsyntax-only -triple x86_64-pc-linux-gnu %s -Wno-conversion -Wfloat-zero-conversion -DZERO
-// RUN: %clang_cc1 -verify -fsyntax-only -triple x86_64-pc-linux-gnu %s -Wno-conversion -Wfloat-bool-constant-conversion -DCONSTANT_BOOL
-// RUN: %clang_cc1 -verify -fsyntax-only -triple x86_64-pc-linux-gnu %s -Wno-conversion -Wfloat-bool-conversion -DCONSTANT_BOOL -DBOOL
 
 float ReturnFloat();
 
@@ -67,37 +65,6 @@ void TestConstantFloat() {
   int b4 = five / 2.0;  //expected-warning{{conversion}}
 }
 #endif  // FLOAT_CONVERSION
-
-#ifdef CONSTANT_BOOL
-const float pi = 3.1415;
-
-void TestConstantBool() {
-  bool b1 = 0.99f; // expected-warning {{implicit conversion from 'float' to 'bool' changes value from 0.99 to true}}
-  bool b2 = 0.99; // expected-warning {{implicit conversion from 'double' to 'bool' changes value from 0.99 to true}}
-  bool b3 = 0.0f; // expected-warning {{implicit conversion from 'float' to 'bool' changes value from 0 to false}}
-  bool b4 = 0.0; // expected-warning {{implicit conversion from 'double' to 'bool' changes value from 0 to false}}
-  bool b5 = 1.0f; // expected-warning {{implicit conversion from 'float' to 'bool' changes value from 1 to true}}
-  bool b6 = 1.0; // expected-warning {{implicit conversion from 'double' to 'bool' changes value from 1 to true}}
-  bool b7 = pi; // expected-warning {{implicit conversion from 'const float' to 'bool' changes value from 3.1415 to true}}
-  bool b8 = pi - pi; // expected-warning {{implicit conversion from 'float' to 'bool' changes value from 0 to false}}
-}
-#endif  // CONSTANT_BOOL
-
-#ifdef BOOL
-const float E = 2.718;
-
-float GetFloat();
-double GetDouble();
-
-void TestBool() {
-  bool b1 = GetFloat(); // expected-warning {{implicit conversion turns floating-point number into boolean: 'float' to 'bool'}}
-  bool b2 = GetDouble(); // expected-warning {{implicit conversion turns floating-point number into boolean: 'double' to 'bool'}}
-  bool b3 = 0.0 * GetDouble(); // expected-warning {{implicit conversion turns floating-point number into boolean: 'double' to 'bool'}}
-  bool b4 = GetFloat() + GetDouble(); // expected-warning {{implicit conversion turns floating-point number into boolean: 'double' to 'bool'}}
-  bool b5 = E + GetFloat(); // expected-warning {{implicit conversion turns floating-point number into boolean: 'float' to 'bool'}}
-}
-
-#endif  // BOOL
 
 #ifdef ZERO
 void TestZero() {

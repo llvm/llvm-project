@@ -6,6 +6,52 @@ void foo() {
   int v32 __attribute__((__vector_size__(128)));
   int v64 __attribute__((__vector_size__(256)));
 
+  // The circ/brev intrinsics do not have _HEXAGON_ in the name.
+  __builtin_brev_ldb(0, 0, 0);
+  // CHECK: @llvm.hexagon.brev.ldb
+  __builtin_brev_ldd(0, 0, 0);
+  // CHECK: @llvm.hexagon.brev.ldd
+  __builtin_brev_ldh(0, 0, 0);
+  // CHECK: @llvm.hexagon.brev.ldh
+  __builtin_brev_ldub(0, 0, 0);
+  // CHECK: @llvm.hexagon.brev.ldub
+  __builtin_brev_lduh(0, 0, 0);
+  // CHECK: @llvm.hexagon.brev.lduh
+  __builtin_brev_ldw(0, 0, 0);
+  // CHECK: @llvm.hexagon.brev.ldw
+  __builtin_brev_stb(0, 0, 0);
+  // CHECK: @llvm.hexagon.brev.stb
+  __builtin_brev_std(0, 0LL, 0);
+  // CHECK: @llvm.hexagon.brev.std
+  __builtin_brev_sth(0, 0, 0);
+  // CHECK: @llvm.hexagon.brev.sth
+  __builtin_brev_sthhi(0, 0, 0);
+  // CHECK: @llvm.hexagon.brev.sthhi
+  __builtin_brev_stw(0, 0, 0);
+  // CHECK: @llvm.hexagon.brev.stw
+  __builtin_circ_ldb(0, 0, 0, 0);
+  // CHECK: llvm.hexagon.circ.ldb
+  __builtin_circ_ldd(0, 0, 0, 0);
+  // CHECK: llvm.hexagon.circ.ldd
+  __builtin_circ_ldh(0, 0, 0, 0);
+  // CHECK: llvm.hexagon.circ.ldh
+  __builtin_circ_ldub(0, 0, 0, 0);
+  // CHECK: llvm.hexagon.circ.ldub
+  __builtin_circ_lduh(0, 0, 0, 0);
+  // CHECK: llvm.hexagon.circ.lduh
+  __builtin_circ_ldw(0, 0, 0, 0);
+  // CHECK: llvm.hexagon.circ.ldw
+  __builtin_circ_stb(0, 0, 0, 0);
+  // CHECK: llvm.hexagon.circ.stb
+  __builtin_circ_std(0, 0LL, 0, 0);
+  // CHECK: llvm.hexagon.circ.std
+  __builtin_circ_sth(0, 0, 0, 0);
+  // CHECK: llvm.hexagon.circ.sth
+  __builtin_circ_sthhi(0, 0, 0, 0);
+  // CHECK: llvm.hexagon.circ.sthhi
+  __builtin_circ_stw(0, 0, 0, 0);
+  // CHECK: llvm.hexagon.circ.stw
+
   __builtin_HEXAGON_A2_abs(0);
   // CHECK: @llvm.hexagon.A2.abs
   __builtin_HEXAGON_A2_absp(0);

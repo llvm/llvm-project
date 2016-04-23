@@ -2145,6 +2145,12 @@ TARGET_BUILTIN(__builtin_ia32_getmantpd512_mask, "V8dV8diV8dUcIi","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_getmantps512_mask, "V16fV16fiV16fUsIi","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_getexppd512_mask, "V8dV8dV8dUcIi","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_getexpps512_mask, "V16fV16fV16fUsIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_vfmaddss3_mask,  "V4fV4fV4fV4fUcIi", "", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_vfmaddss3_maskz, "V4fV4fV4fV4fUcIi", "", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_vfmaddss3_mask3, "V4fV4fV4fV4fUcIi", "", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_vfmaddsd3_mask,  "V2dV2dV2dV2dUcIi", "", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_vfmaddsd3_maskz, "V2dV2dV2dV2dUcIi", "", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_vfmaddsd3_mask3, "V2dV2dV2dV2dUcIi", "", "avx512f")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

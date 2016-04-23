@@ -2773,13 +2773,6 @@ def warn_impcast_float_integer : Warning<
   "implicit conversion turns floating-point number into integer: %0 to %1">,
   InGroup<FloatConversion>, DefaultIgnore;
 
-def warn_impcast_float_bool : Warning<
-  "implicit conversion turns floating-point number into boolean: %0 to %1">,
-  InGroup<FloatBoolConversion>, DefaultIgnore;
-def warn_impcast_float_to_bool : Warning<
-  "implicit conversion from %0 to %1 changes value from %2 to %3">,
-  InGroup<FloatBoolConstantConversion>;
-
 def warn_impcast_float_to_integer : Warning<
   "implicit conversion of out of range value from %0 to %1 changes value "
   "from %2 to %3">,

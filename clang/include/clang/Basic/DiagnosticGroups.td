@@ -49,12 +49,8 @@ def EnumConversion : DiagGroup<"enum-conversion">;
 
 def FloatOverflowConversion : DiagGroup<"float-overflow-conversion">;
 def FloatZeroConversion : DiagGroup<"float-zero-conversion">;
-def FloatBoolConstantConversion : DiagGroup<"float-bool-constant-conversion">;
-def FloatBoolConversion :
-  DiagGroup<"float-bool-conversion", [FloatBoolConstantConversion]>;
 def FloatConversion :
-  DiagGroup<"float-conversion", [FloatBoolConversion,
-                                 FloatOverflowConversion,
+  DiagGroup<"float-conversion", [FloatOverflowConversion,
                                  FloatZeroConversion]>;
 
 def DoublePromotion : DiagGroup<"double-promotion">;

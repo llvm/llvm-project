@@ -1,7 +1,7 @@
 // Test that maximum function counts are set correctly.
 
 // RUN: llvm-profdata merge %S/Inputs/max-function-count.proftext -o %t.profdata
-// RUN: %clang %s -o - -mllvm -disable-llvm-optzns -emit-llvm -S -fprofile-instr-use=%t.profdata | FileCheck %s
+// RUN: %clang_cc1 %s -o - -disable-llvm-optzns -emit-llvm -fprofile-instrument-use-path=%t.profdata | FileCheck %s
 //
 int begin(int i) {
   if (i)

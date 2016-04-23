@@ -38,3 +38,14 @@ void test0() {
   int y = (24*60*60) * 0.25;
   int pennies = 123.45 * 100;
 }
+
+// Similarly, test floating point conversion to bool. Only float values of zero
+// are converted to false; everything else is converted to true.
+void test1() {
+  bool b1 = 0.99f; // expected-warning {{implicit conversion from 'float' to 'bool' changes value from 0.99 to true}}
+  bool b2 = 0.99; // expected-warning {{implicit conversion from 'double' to 'bool' changes value from 0.99 to true}}
+  // These do not warn because they can be directly converted to integral
+  // values.
+  bool b3 = 0.0f;
+  bool b4 = 0.0;
+}
