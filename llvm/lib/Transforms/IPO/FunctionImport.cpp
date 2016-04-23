@@ -131,23 +131,54 @@ static const GlobalValueSummary *selectCallee(GlobalValue::GUID GUID,
   return selectCallee(CalleeInfoList->second, Threshold);
 }
 
-/// Return true if the global \p GUID is exported by module \p ExportModulePath.
-static bool isGlobalExported(const ModuleSummaryIndex &Index,
-                             StringRef ExportModulePath,
-                             GlobalValue::GUID GUID) {
-  auto CalleeInfoList = Index.findGlobalValueInfoList(GUID);
-  if (CalleeInfoList == Index.end())
-    // This global does not have a summary, it is not part of the ThinLTO
-    // process
-    return false;
-  auto DefinedInCalleeModule = llvm::find_if(
-      CalleeInfoList->second,
-      [&](const std::unique_ptr<GlobalValueInfo> &GlobInfo) {
-        auto *Summary = GlobInfo->summary();
-        assert(Summary && "Unexpected GlobalValueInfo without summary");
-        return Summary->modulePath() == ExportModulePath;
-      });
-  return (DefinedInCalleeModule != CalleeInfoList->second.end());
+/// Mark the global \p GUID as export by module \p ExportModulePath if found in
+/// this module. If it is a GlobalVariable, we also mark any referenced global
+/// in the current module as exported.
+static void exportGlobalInModule(const ModuleSummaryIndex &Index,
+                                 StringRef ExportModulePath,
+                                 GlobalValue::GUID GUID,
+                                 FunctionImporter::ExportSetTy &ExportList) {
+  auto FindGlobalInfoInModule =
+      [&](GlobalValue::GUID GUID) -> GlobalValueInfo *{
+        auto InfoList = Index.findGlobalValueInfoList(GUID);
+        if (InfoList == Index.end())
+          // This global does not have a summary, it is not part of the ThinLTO
+          // process
+          return nullptr;
+        auto Info = llvm::find_if(
+            InfoList->second,
+            [&](const std::unique_ptr<GlobalValueInfo> &GlobInfo) {
+              auto *Summary = GlobInfo->summary();
+              assert(Summary && "Unexpected GlobalValueInfo without summary");
+              return Summary->modulePath() == ExportModulePath;
+            });
+        if (Info == InfoList->second.end())
+          return nullptr;
+        return Info->get();
+      };
+
+  auto *GVInfo = FindGlobalInfoInModule(GUID);
+  if (!GVInfo)
+    return;
+  // We found it in the current module, mark as exported
+  ExportList.insert(GUID);
+
+  auto *Summary = GVInfo->summary();
+  auto GVS = dyn_cast<GlobalVarSummary>(Summary);
+  if (!GVS)
+    return;
+  // FunctionImportGlobalProcessing::doPromoteLocalToGlobal() will always
+  // trigger importing  the initializer for `constant unnamed addr` globals that
+  // are referenced. We conservatively export all the referenced symbols for
+  // every global to workaround this, so that the ExportList is accurate.
+  // FIXME: with a "isConstant" flag in the summary we could be more targetted.
+  for (auto &Ref : GVS->refs()) {
+    auto GUID = Ref.getGUID();
+    auto *RefInfo = FindGlobalInfoInModule(GUID);
+    if (RefInfo)
+      // Found a ref in the current module, mark it as exported
+      ExportList.insert(GUID);
+  }
 }
 
 using EdgeInfo = std::pair<const FunctionSummary *, unsigned /* Threshold */>;
@@ -211,13 +242,11 @@ static void computeImportForFunction(
       // to the outside if they are defined in the same source module.
       for (auto &Edge : ResolvedCalleeSummary->calls()) {
         auto CalleeGUID = Edge.first.getGUID();
-        if (isGlobalExported(Index, ExportModulePath, CalleeGUID))
-          ExportList.insert(CalleeGUID);
+        exportGlobalInModule(Index, ExportModulePath, CalleeGUID, ExportList);
       }
       for (auto &Ref : ResolvedCalleeSummary->refs()) {
         auto GUID = Ref.getGUID();
-        if (isGlobalExported(Index, ExportModulePath, GUID))
-          ExportList.insert(GUID);
+        exportGlobalInModule(Index, ExportModulePath, GUID, ExportList);
       }
     }
 
