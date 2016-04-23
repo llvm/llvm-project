@@ -550,6 +550,12 @@ void ValueEnumerator::dropFunctionFromMetadata(
 }
 
 void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
+  // It's vital for reader efficiency that uniqued subgraphs are done in
+  // post-order; it's expensive when their operands have forward references.
+  // If a distinct node is referenced from a uniqued node, it'll be delayed
+  // until the uniqued subgraph has been completely traversed.
+  SmallVector<const MDNode *, 32> DelayedDistinctNodes;
+
   // Start by enumerating MD, and then work through its transitive operands in
   // post-order.  This requires a depth-first search.
   SmallVector<std::pair<const MDNode *, MDNode::op_iterator>, 32> Worklist;
@@ -567,7 +573,12 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
     if (I != N->op_end()) {
       auto *Op = cast<MDNode>(*I);
       Worklist.back().second = ++I;
-      Worklist.push_back(std::make_pair(Op, Op->op_begin()));
+
+      // Delay traversing Op if it's a distinct node and N is uniqued.
+      if (Op->isDistinct() && !N->isDistinct())
+        DelayedDistinctNodes.push_back(Op);
+      else
+        Worklist.push_back(std::make_pair(Op, Op->op_begin()));
       continue;
     }
 
@@ -575,6 +586,14 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
     Worklist.pop_back();
     MDs.push_back(N);
     MetadataMap[N].ID = MDs.size();
+
+    // Flush out any delayed distinct nodes; these are all the distinct nodes
+    // that are leaves in last uniqued subgraph.
+    if (Worklist.empty() || Worklist.back().first->isDistinct()) {
+      for (const MDNode *N : DelayedDistinctNodes)
+        Worklist.push_back(std::make_pair(N, N->op_begin()));
+      DelayedDistinctNodes.clear();
+    }
   }
 }
 
