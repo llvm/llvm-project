@@ -1208,15 +1208,12 @@ m_metadata_location(location)
 {
     lldbassert(m_swift_ast && "MetadataPromise requires a swift::ASTContext");
     lldbassert(m_swift_runtime && "MetadataPromise requires a SwiftLanguageRuntime");
-#if defined(__APPLE__)
     m_remote_ast.reset(new swift::remoteAST::RemoteASTContext(*ast_ctx, m_swift_runtime->GetMemoryReader()));
-#endif
 }
 
 CompilerType
 SwiftLanguageRuntime::MetadataPromise::FulfillPromise ()
 {
-#if defined(__APPLE__)
     if (m_compiler_type.hasValue())
         return m_compiler_type.getValue();
     
@@ -1225,9 +1222,6 @@ SwiftLanguageRuntime::MetadataPromise::FulfillPromise ()
         return (m_compiler_type = CompilerType(m_swift_ast, result.getValue().getPointer())).getValue();
     else
         return (m_compiler_type = CompilerType()).getValue();
-#else
-    return CompilerType();
-#endif
 }
 
 static inline swift::Type
