@@ -9,7 +9,8 @@ include_directories(..)
 
 set(ESAN_SOURCES
   esan.cpp
-  esan_interface.cpp)
+  esan_interface.cpp
+  esan_interceptors.cpp)
 
 foreach (arch ${ESAN_SUPPORTED_ARCH})
   add_compiler_rt_runtime(clang_rt.esan

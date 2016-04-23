@@ -145,7 +145,7 @@ struct IntializerInsertion {
       Stream << ", " << joined << "()";
       break;
     }
-    return Code;
+    return Stream.str();
   }
 
   InitializerPlacement Placement;

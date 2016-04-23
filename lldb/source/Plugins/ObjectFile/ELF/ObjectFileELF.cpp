@@ -31,6 +31,7 @@
 
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/MathExtras.h"
 
 #define CASE_AND_STREAM(s, def, width)                  \
@@ -1516,6 +1517,93 @@ ObjectFileELF::RefineModuleDetailsFromNote (lldb_private::DataExtractor &data, l
     return error;
 }
 
+void
+ObjectFileELF::ParseARMAttributes(DataExtractor &data, uint64_t length, ArchSpec &arch_spec)
+{
+    lldb::offset_t Offset = 0;
+
+    uint8_t FormatVersion = data.GetU8(&Offset);
+    if (FormatVersion != llvm::ARMBuildAttrs::Format_Version)
+      return;
+
+    Offset = Offset + sizeof(uint32_t); // Section Length
+    llvm::StringRef VendorName = data.GetCStr(&Offset);
+
+    if (VendorName != "aeabi")
+      return;
+
+    if (arch_spec.GetTriple().getEnvironment() == llvm::Triple::UnknownEnvironment)
+        arch_spec.GetTriple().setEnvironment(llvm::Triple::EABI);
+
+    while (Offset < length)
+    {
+        uint8_t Tag = data.GetU8(&Offset);
+        uint32_t Size = data.GetU32(&Offset);
+
+        if (Tag != llvm::ARMBuildAttrs::File || Size == 0)
+            continue;
+
+        while (Offset < length)
+        {
+            uint64_t Tag = data.GetULEB128(&Offset);
+            switch (Tag)
+            {
+                default:
+                    if (Tag < 32)
+                        data.GetULEB128(&Offset);
+                    else if (Tag % 2 == 0)
+                        data.GetULEB128(&Offset);
+                    else
+                        data.GetCStr(&Offset);
+
+                    break;
+
+                case llvm::ARMBuildAttrs::CPU_raw_name:
+                case llvm::ARMBuildAttrs::CPU_name:
+                    data.GetCStr(&Offset);
+
+                    break;
+
+                case llvm::ARMBuildAttrs::THUMB_ISA_use:
+                {
+                    uint64_t ThumbISA = data.GetULEB128(&Offset);
+
+                    // NOTE: ignore ThumbISA == llvm::ARMBuildAttrs::AllowThumbDerived
+                    // since that derives it based on the architecutre/profile
+                    if (ThumbISA == llvm::ARMBuildAttrs::AllowThumb32)
+                        if (arch_spec.GetTriple().getArch() == llvm::Triple::UnknownArch ||
+                            arch_spec.GetTriple().getArch() == llvm::Triple::arm)
+                            arch_spec.GetTriple().setArch(llvm::Triple::thumb);
+
+                    break;
+                }
+                case llvm::ARMBuildAttrs::ABI_VFP_args:
+                {
+                    uint64_t VFPArgs = data.GetULEB128(&Offset);
+
+                    if (VFPArgs == llvm::ARMBuildAttrs::BaseAAPCS)
+                    {
+                        if (arch_spec.GetTriple().getEnvironment() == llvm::Triple::UnknownEnvironment ||
+                            arch_spec.GetTriple().getEnvironment() == llvm::Triple::EABIHF)
+                            arch_spec.GetTriple().setEnvironment(llvm::Triple::EABI);
+
+                        arch_spec.SetFlags(ArchSpec::eARM_abi_soft_float);
+                    }
+                    else if (VFPArgs == llvm::ARMBuildAttrs::HardFPAAPCS)
+                    {
+                        if (arch_spec.GetTriple().getEnvironment() == llvm::Triple::UnknownEnvironment ||
+                            arch_spec.GetTriple().getEnvironment() == llvm::Triple::EABI)
+                            arch_spec.GetTriple().setEnvironment(llvm::Triple::EABIHF);
+
+                        arch_spec.SetFlags(ArchSpec::eARM_abi_hard_float);
+                    }
+
+                    break;
+                }
+            }
+        }
+    }
+}
 
 //----------------------------------------------------------------------
 // GetSectionHeaderInfo
@@ -1646,6 +1734,18 @@ ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
                          arch_flags |= lldb_private::ArchSpec::eMIPSABI_O32;
                     }
                     arch_spec.SetFlags (arch_flags);
+                }
+
+                if (arch_spec.GetMachine() == llvm::Triple::arm || arch_spec.GetMachine() == llvm::Triple::thumb)
+                {
+                    DataExtractor data;
+
+                    if (sheader.sh_type != SHT_ARM_ATTRIBUTES)
+                        continue;
+                    if (section_size == 0 || set_data(data, sheader.sh_offset, section_size) != section_size)
+                        continue;
+
+                    ParseARMAttributes(data, section_size, arch_spec);
                 }
 
                 if (name == g_sect_name_gnu_debuglink)

@@ -95,6 +95,8 @@ void initializeLibrary(ToolType Tool) {
     Die();
   }
 
+  initializeInterceptors();
+
   EsanIsInitialized = true;
 }
 
