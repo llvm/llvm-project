@@ -255,8 +255,26 @@ private:
   const MDNode *enumerateMetadataImpl(unsigned F, const Metadata *MD);
 
   unsigned getMetadataFunctionID(const Function *F) const;
+
+  /// Enumerate reachable metadata in (almost) post-order.
+  ///
+  /// Enumerate all the metadata reachable from MD.  We want to minimize the
+  /// cost of reading bitcode records, and so the primary consideration is that
+  /// operands of uniqued nodes are resolved before the nodes are read.  This
+  /// avoids re-uniquing them on the context and factors away RAUW support.
+  ///
+  /// This algorithm guarantees that subgraphs of uniqued nodes are in
+  /// post-order.  Distinct subgraphs reachable only from a single uniqued node
+  /// will be in post-order.
+  ///
+  /// \note The relative order of a distinct and uniqued node is irrelevant.
+  /// \a organizeMetadata() will later partition distinct nodes ahead of
+  /// uniqued ones.
+  ///{
   void EnumerateMetadata(const Function *F, const Metadata *MD);
   void EnumerateMetadata(unsigned F, const Metadata *MD);
+  ///}
+
   void EnumerateFunctionLocalMetadata(const Function &F,
                                       const LocalAsMetadata *Local);
   void EnumerateFunctionLocalMetadata(unsigned F, const LocalAsMetadata *Local);
