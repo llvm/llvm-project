@@ -43,8 +43,14 @@ namespace polly {
 class Scop;
 class ScopStmt;
 
-/// Translate a SCEV to an isl_pw_aff.
-struct SCEVAffinator : public llvm::SCEVVisitor<SCEVAffinator, isl_pw_aff *> {
+/// @brief The result type of the SCEVAffinator.
+///
+/// The first element of the pair is the isl representation of the SCEV, the
+/// second is the domain under which it is __invalid__.
+typedef std::pair<isl_pw_aff *, isl_set *> PWACtx;
+
+/// Translate a SCEV to an isl_pw_aff and the domain on which it is invalid.
+struct SCEVAffinator : public llvm::SCEVVisitor<SCEVAffinator, PWACtx> {
 public:
   SCEVAffinator(Scop *S, llvm::LoopInfo &LI);
   ~SCEVAffinator();
@@ -55,16 +61,8 @@ public:
   /// @param BB The block in which @p E is executed.
   ///
   /// @returns The isl representation of the SCEV @p E in @p Domain.
-  __isl_give isl_pw_aff *getPwAff(const llvm::SCEV *E,
-                                  llvm::BasicBlock *BB = nullptr);
-
-  /// @brief Compute the context in which integer wrapping is happending.
-  ///
-  /// This context contains all parameter configurations for which we
-  /// know that the wrapping and non-wrapping expressions are different.
-  ///
-  /// @returns The context in which integer wrapping is happening.
-  __isl_give isl_set *getWrappingContext() const;
+  __isl_give PWACtx getPwAff(const llvm::SCEV *E,
+                             llvm::BasicBlock *BB = nullptr);
 
   /// @brief Check an <nsw> AddRec for the loop @p L is cached.
   bool hasNSWAddRecForLoop(llvm::Loop *L) const;
@@ -74,7 +72,7 @@ private:
   using CacheKey = std::pair<const llvm::SCEV *, llvm::BasicBlock *>;
 
   /// @brief Map to remembered cached expressions.
-  llvm::DenseMap<CacheKey, isl_pw_aff *> CachedExpressions;
+  llvm::DenseMap<CacheKey, PWACtx> CachedExpressions;
 
   Scop *S;
   isl_ctx *Ctx;
@@ -86,6 +84,9 @@ private:
 
   /// @brief Target data for element size computing.
   const llvm::DataLayout &TD;
+
+  /// @brief Return a PWACtx for @p PWA that is always valid.
+  __isl_give PWACtx getPWACtxFromPWA(__isl_take isl_pw_aff *PWA);
 
   /// @brief Compute the non-wrapping version of @p PWA for type @p ExprType.
   ///
@@ -99,26 +100,27 @@ private:
   /// @brief If @p Expr might cause an integer wrap record an assumption.
   ///
   /// @param Expr The SCEV expression that might wrap.
-  /// @param PWA  The isl representation of @p Expr.
-  void checkForWrapping(const llvm::SCEV *Expr,
-                        __isl_keep isl_pw_aff *PWA) const;
+  /// @param PWAC The isl representation of @p Expr with the invalid domain.
+  ///
+  /// @returns The isl representation @p PWAC with a posisbly adjusted domain.
+  __isl_give PWACtx checkForWrapping(const llvm::SCEV *Expr, PWACtx PWAC) const;
 
-  __isl_give isl_pw_aff *visit(const llvm::SCEV *E);
-  __isl_give isl_pw_aff *visitConstant(const llvm::SCEVConstant *E);
-  __isl_give isl_pw_aff *visitTruncateExpr(const llvm::SCEVTruncateExpr *E);
-  __isl_give isl_pw_aff *visitZeroExtendExpr(const llvm::SCEVZeroExtendExpr *E);
-  __isl_give isl_pw_aff *visitSignExtendExpr(const llvm::SCEVSignExtendExpr *E);
-  __isl_give isl_pw_aff *visitAddExpr(const llvm::SCEVAddExpr *E);
-  __isl_give isl_pw_aff *visitMulExpr(const llvm::SCEVMulExpr *E);
-  __isl_give isl_pw_aff *visitUDivExpr(const llvm::SCEVUDivExpr *E);
-  __isl_give isl_pw_aff *visitAddRecExpr(const llvm::SCEVAddRecExpr *E);
-  __isl_give isl_pw_aff *visitSMaxExpr(const llvm::SCEVSMaxExpr *E);
-  __isl_give isl_pw_aff *visitUMaxExpr(const llvm::SCEVUMaxExpr *E);
-  __isl_give isl_pw_aff *visitUnknown(const llvm::SCEVUnknown *E);
-  __isl_give isl_pw_aff *visitSDivInstruction(llvm::Instruction *SDiv);
-  __isl_give isl_pw_aff *visitSRemInstruction(llvm::Instruction *SRem);
+  __isl_give PWACtx visit(const llvm::SCEV *E);
+  __isl_give PWACtx visitConstant(const llvm::SCEVConstant *E);
+  __isl_give PWACtx visitTruncateExpr(const llvm::SCEVTruncateExpr *E);
+  __isl_give PWACtx visitZeroExtendExpr(const llvm::SCEVZeroExtendExpr *E);
+  __isl_give PWACtx visitSignExtendExpr(const llvm::SCEVSignExtendExpr *E);
+  __isl_give PWACtx visitAddExpr(const llvm::SCEVAddExpr *E);
+  __isl_give PWACtx visitMulExpr(const llvm::SCEVMulExpr *E);
+  __isl_give PWACtx visitUDivExpr(const llvm::SCEVUDivExpr *E);
+  __isl_give PWACtx visitAddRecExpr(const llvm::SCEVAddRecExpr *E);
+  __isl_give PWACtx visitSMaxExpr(const llvm::SCEVSMaxExpr *E);
+  __isl_give PWACtx visitUMaxExpr(const llvm::SCEVUMaxExpr *E);
+  __isl_give PWACtx visitUnknown(const llvm::SCEVUnknown *E);
+  __isl_give PWACtx visitSDivInstruction(llvm::Instruction *SDiv);
+  __isl_give PWACtx visitSRemInstruction(llvm::Instruction *SRem);
 
-  friend struct llvm::SCEVVisitor<SCEVAffinator, isl_pw_aff *>;
+  friend struct llvm::SCEVVisitor<SCEVAffinator, PWACtx>;
 };
 }
 

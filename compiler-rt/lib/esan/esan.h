@@ -38,6 +38,7 @@ extern ToolType WhichTool;
 void initializeLibrary(ToolType Tool);
 int finalizeLibrary();
 void processRangeAccess(uptr PC, uptr Addr, int Size, bool IsWrite);
+void initializeInterceptors();
 
 } // namespace __esan
 

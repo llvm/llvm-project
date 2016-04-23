@@ -6,10 +6,10 @@
 ; CHECK-NEXT:            Execution Context: [N, valid_val] -> {  : N > 0 }
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                [N, valid_val] -> { Stmt_S[i0] -> MemRef_ptr_addr[0] };
-; CHECK-NEXT:            Execution Context: [N, valid_val] -> {  : N > 0 and (valid_val < 0 or valid_val > 0) }
+; CHECK-NEXT:            Execution Context: [N, valid_val] -> { : }
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                [N, valid_val] -> { Stmt_S[i0] -> MemRef_tmp2[0] };
-; CHECK-NEXT:            Execution Context: [N, valid_val] -> {  : N > 0 and (valid_val < 0 or valid_val > 0) }
+; CHECK-NEXT:            Execution Context: [N, valid_val] -> { : N > 0 and (valid_val < 0 or valid_val > 0) }
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    Context:
 ; CHECK-NEXT:    [N, valid_val] -> {  : -2147483648 <= N <= 2147483647 and -2147483648 <= valid_val <= 2147483647 }

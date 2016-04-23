@@ -32,6 +32,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/RegionIterator.h"
@@ -224,7 +225,7 @@ bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes) {
     isl_pw_aff_free(Size);
   DimensionSizesPw.clear();
   for (const SCEV *Expr : DimensionSizes) {
-    isl_pw_aff *Size = S.getPwAff(Expr);
+    isl_pw_aff *Size = S.getPwAffOnly(Expr);
     DimensionSizesPw.push_back(Size);
   }
   return true;
@@ -547,6 +548,7 @@ getIndexExpressionsFromGEP(GetElementPtrInst *GEP, ScalarEvolution &SE) {
 
 MemoryAccess::~MemoryAccess() {
   isl_id_free(Id);
+  isl_set_free(InvalidDomain);
   isl_map_free(AccessRelation);
   isl_map_free(NewAccessRelation);
 }
@@ -817,6 +819,10 @@ static bool isDivisible(const SCEV *Expr, unsigned Size, ScalarEvolution &SE) {
 void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
   assert(!AccessRelation && "AccessReltation already built");
 
+  // Initialize the invalid domain which describes all iterations for which the
+  // access relation is not modeled correctly.
+  InvalidDomain = getStatement()->getInvalidDomain();
+
   isl_ctx *Ctx = isl_id_get_ctx(Id);
   isl_id *BaseAddrId = SAI->getBasePtrId();
 
@@ -865,9 +871,9 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
                            ArrayRef<const SCEV *> Sizes, Value *AccessValue,
                            ScopArrayInfo::MemoryKind Kind, StringRef BaseName)
     : Kind(Kind), AccType(AccType), RedType(RT_NONE), Statement(Stmt),
-      BaseAddr(BaseAddress), BaseName(BaseName), ElementType(ElementType),
-      Sizes(Sizes.begin(), Sizes.end()), AccessInstruction(AccessInst),
-      AccessValue(AccessValue), IsAffine(Affine),
+      InvalidDomain(nullptr), BaseAddr(BaseAddress), BaseName(BaseName),
+      ElementType(ElementType), Sizes(Sizes.begin(), Sizes.end()),
+      AccessInstruction(AccessInst), AccessValue(AccessValue), IsAffine(Affine),
       Subscripts(Subscripts.begin(), Subscripts.end()), AccessRelation(nullptr),
       NewAccessRelation(nullptr) {
   static const std::string TypeStrings[] = {"", "_Read", "_Write", "_MayWrite"};
@@ -880,6 +886,8 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
 
 void MemoryAccess::realignParams() {
   isl_space *ParamSpace = Statement->getParent()->getParamSpace();
+  InvalidDomain =
+      isl_set_align_params(InvalidDomain, isl_space_copy(ParamSpace));
   AccessRelation = isl_map_align_params(AccessRelation, ParamSpace);
 }
 
@@ -921,7 +929,9 @@ void MemoryAccess::dump() const { print(errs()); }
 
 __isl_give isl_pw_aff *MemoryAccess::getPwAff(const SCEV *E) {
   auto *Stmt = getStatement();
-  return Stmt->getParent()->getPwAff(E, Stmt->getEntryBlock());
+  PWACtx PWAC = Stmt->getParent()->getPwAff(E, Stmt->getEntryBlock());
+  InvalidDomain = isl_set_union(InvalidDomain, PWAC.second);
+  return PWAC.first;
 }
 
 // Create a map in the size of the provided set domain, that maps from the
@@ -1034,7 +1044,9 @@ __isl_give isl_map *ScopStmt::getSchedule() const {
 }
 
 __isl_give isl_pw_aff *ScopStmt::getPwAff(const SCEV *E) {
-  return getParent()->getPwAff(E, getEntryBlock());
+  PWACtx PWAC = getParent()->getPwAff(E, getEntryBlock());
+  InvalidDomain = isl_set_union(InvalidDomain, PWAC.second);
+  return PWAC.first;
 }
 
 void ScopStmt::restrictDomain(__isl_take isl_set *NewDomain) {
@@ -1096,7 +1108,7 @@ void ScopStmt::realignParams() {
   for (MemoryAccess *MA : *this)
     MA->realignParams();
 
-  InvalidContext = isl_set_align_params(InvalidContext, Parent.getParamSpace());
+  InvalidDomain = isl_set_align_params(InvalidDomain, Parent.getParamSpace());
   Domain = isl_set_align_params(Domain, Parent.getParamSpace());
 }
 
@@ -1445,15 +1457,15 @@ void ScopStmt::collectSurroundingLoops() {
 }
 
 ScopStmt::ScopStmt(Scop &parent, Region &R)
-    : Parent(parent), InvalidContext(isl_set_empty(Parent.getParamSpace())),
-      Domain(nullptr), BB(nullptr), R(&R), Build(nullptr) {
+    : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), BB(nullptr),
+      R(&R), Build(nullptr) {
 
   BaseName = getIslCompatibleName("Stmt_", R.getNameStr(), "");
 }
 
 ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb)
-    : Parent(parent), InvalidContext(isl_set_empty(Parent.getParamSpace())),
-      Domain(nullptr), BB(&bb), R(nullptr), Build(nullptr) {
+    : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), BB(&bb),
+      R(nullptr), Build(nullptr) {
 
   BaseName = getIslCompatibleName("Stmt_", &bb, "");
 }
@@ -1615,9 +1627,9 @@ std::string ScopStmt::getScheduleStr() const {
   return Str;
 }
 
-void ScopStmt::setInvalidContext(__isl_take isl_set *IC) {
-  isl_set_free(InvalidContext);
-  InvalidContext = IC;
+void ScopStmt::setInvalidDomain(__isl_take isl_set *ID) {
+  isl_set_free(InvalidDomain);
+  InvalidDomain = ID;
 }
 
 BasicBlock *ScopStmt::getEntryBlock() const {
@@ -1656,7 +1668,7 @@ __isl_give isl_id *ScopStmt::getDomainId() const {
 
 ScopStmt::~ScopStmt() {
   isl_set_free(Domain);
-  isl_set_free(InvalidContext);
+  isl_set_free(InvalidDomain);
 }
 
 void ScopStmt::print(raw_ostream &OS) const {
@@ -2217,6 +2229,10 @@ bool Scop::buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
     L = L->getParentLoop();
   }
 
+  // Initialize the invalid domain.
+  auto *EntryStmt = getStmtFor(EntryBB);
+  EntryStmt->setInvalidDomain(isl_set_empty(isl_set_get_space(S)));
+
   DomainMap[EntryBB] = S;
 
   if (IsOnlyNonAffineRegion)
@@ -2238,8 +2254,8 @@ bool Scop::buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
   // the domains of error blocks and those only reachable via error blocks
   // with an empty set. Additionally, we will record for each block under which
   // parameter combination it would be reached via an error block in its
-  // InvalidContext. This information is needed during load hoisting.
-  propagateInvalidStmtContexts(R, SD, DT, LI);
+  // InvalidDomain. This information is needed during load hoisting.
+  propagateInvalidStmtDomains(R, SD, DT, LI);
 
   return true;
 }
@@ -2303,8 +2319,9 @@ static __isl_give isl_set *adjustDomainDimensions(Scop &S,
   return Dom;
 }
 
-void Scop::propagateInvalidStmtContexts(Region *R, ScopDetection &SD,
-                                        DominatorTree &DT, LoopInfo &LI) {
+void Scop::propagateInvalidStmtDomains(Region *R, ScopDetection &SD,
+                                       DominatorTree &DT, LoopInfo &LI) {
+  auto &BoxedLoops = *SD.getBoxedLoops(&getRegion());
 
   ReversePostOrderTraversal<Region *> RTraversal(R);
   for (auto *RN : RTraversal) {
@@ -2314,7 +2331,7 @@ void Scop::propagateInvalidStmtContexts(Region *R, ScopDetection &SD,
     if (RN->isSubRegion()) {
       Region *SubRegion = RN->getNodeAs<Region>();
       if (!SD.isNonAffineSubRegion(SubRegion, &getRegion())) {
-        propagateInvalidStmtContexts(SubRegion, SD, DT, LI);
+        propagateInvalidStmtDomains(SubRegion, SD, DT, LI);
         continue;
       }
     }
@@ -2325,27 +2342,25 @@ void Scop::propagateInvalidStmtContexts(Region *R, ScopDetection &SD,
     isl_set *&Domain = DomainMap[BB];
     assert(Domain && "Cannot propagate a nullptr");
 
-    auto *InvalidCtx = Stmt->getInvalidContext();
-    auto *DomainCtx = isl_set_params(isl_set_copy(Domain));
+    auto *InvalidDomain = Stmt->getInvalidDomain();
     bool IsInvalidBlock =
-        ContainsErrorBlock || isl_set_is_subset(DomainCtx, InvalidCtx);
+        ContainsErrorBlock || isl_set_is_subset(Domain, InvalidDomain);
 
-    if (IsInvalidBlock) {
-      InvalidCtx = isl_set_coalesce(isl_set_union(InvalidCtx, DomainCtx));
-      auto *EmptyDom = isl_set_empty(isl_set_get_space(Domain));
-      isl_set_free(Domain);
-      Domain = EmptyDom;
+    if (!IsInvalidBlock) {
+      InvalidDomain = isl_set_intersect(InvalidDomain, isl_set_copy(Domain));
     } else {
-      isl_set_free(DomainCtx);
+      isl_set_free(InvalidDomain);
+      InvalidDomain = Domain;
+      auto *EmptyDom = isl_set_empty(isl_set_get_space(InvalidDomain));
+      Domain = EmptyDom;
     }
 
-    if (isl_set_is_empty(InvalidCtx)) {
-      isl_set_free(InvalidCtx);
+    if (isl_set_is_empty(InvalidDomain)) {
+      Stmt->setInvalidDomain(InvalidDomain);
       continue;
     }
 
-    Stmt->setInvalidContext(InvalidCtx);
-
+    auto *BBLoop = getRegionNodeLoop(RN, LI);
     auto *TI = BB->getTerminator();
     unsigned NumSuccs = RN->isSubRegion() ? 1 : TI->getNumSuccessors();
     for (unsigned u = 0; u < NumSuccs; u++) {
@@ -2356,20 +2371,27 @@ void Scop::propagateInvalidStmtContexts(Region *R, ScopDetection &SD,
       if (!SuccStmt)
         continue;
 
-      auto *SuccInvalidCtx = SuccStmt->getInvalidContext();
-      SuccInvalidCtx = isl_set_union(SuccInvalidCtx, Stmt->getInvalidContext());
-      SuccInvalidCtx = isl_set_coalesce(SuccInvalidCtx);
-      unsigned NumConjucts = isl_set_n_basic_set(SuccInvalidCtx);
-      SuccStmt->setInvalidContext(SuccInvalidCtx);
+      auto *SuccBBLoop = getFirstNonBoxedLoopFor(SuccBB, LI, BoxedLoops);
+      auto *AdjustedInvalidDomain = adjustDomainDimensions(
+          *this, isl_set_copy(InvalidDomain), BBLoop, SuccBBLoop);
+      auto *SuccInvalidDomain = SuccStmt->getInvalidDomain();
+      SuccInvalidDomain =
+          isl_set_union(SuccInvalidDomain, AdjustedInvalidDomain);
+      SuccInvalidDomain = isl_set_coalesce(SuccInvalidDomain);
+      unsigned NumConjucts = isl_set_n_basic_set(SuccInvalidDomain);
+      SuccStmt->setInvalidDomain(SuccInvalidDomain);
 
       // Check if the maximal number of domain conjuncts was reached.
       // In case this happens we will bail.
       if (NumConjucts < MaxConjunctsInDomain)
         continue;
 
+      isl_set_free(InvalidDomain);
       invalidate(COMPLEXITY, TI->getDebugLoc());
       return;
     }
+
+    Stmt->setInvalidDomain(InvalidDomain);
   }
 }
 
@@ -2414,6 +2436,10 @@ void Scop::propagateDomainConstraintsToRegionExit(
   // current domain.
   ExitDomain =
       ExitDomain ? isl_set_union(AdjustedDomain, ExitDomain) : AdjustedDomain;
+
+  // Initialize the invalid domain.
+  auto *ExitStmt = getStmtFor(ExitBB);
+  ExitStmt->setInvalidDomain(isl_set_empty(isl_set_get_space(ExitDomain)));
 
   FinishedExitBlocks.insert(ExitBB);
 }
@@ -2525,10 +2551,13 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
       // successor block.
       isl_set *&SuccDomain = DomainMap[SuccBB];
 
-      if (!SuccDomain)
-        SuccDomain = CondSet;
-      else
+      if (SuccDomain) {
         SuccDomain = isl_set_coalesce(isl_set_union(SuccDomain, CondSet));
+      } else {
+        // Initialize the invalid domain.
+        SuccStmt->setInvalidDomain(isl_set_empty(isl_set_get_space(CondSet)));
+        SuccDomain = CondSet;
+      }
 
       // Check if the maximal number of domain conjuncts was reached.
       // In case this happens we will clean up and bail.
@@ -3171,20 +3200,43 @@ const InvariantEquivClassTy *Scop::lookupInvariantEquivClass(Value *Val) const {
   return nullptr;
 }
 
+/// @brief Check if @p MA can always be hoisted without execution context.
+static bool canAlwaysBeHoisted(MemoryAccess *MA, bool StmtInvalidCtxIsEmpty,
+                               bool MAInvalidCtxIsEmpty) {
+  LoadInst *LInst = cast<LoadInst>(MA->getAccessInstruction());
+  const DataLayout &DL = LInst->getParent()->getModule()->getDataLayout();
+  // TODO: We can provide more information for better but more expensive
+  //       results.
+  if (!isDereferenceableAndAlignedPointer(LInst->getPointerOperand(),
+                                          LInst->getAlignment(), DL))
+    return false;
+
+  // If a dereferencable load is in a statement that is modeled precisely we can
+  // hoist it.
+  if (StmtInvalidCtxIsEmpty && MAInvalidCtxIsEmpty)
+    return true;
+
+  // Even if the statement is not modeled precisely we can hoist the load if it
+  // does not involve any parameters that might have been specilized by the
+  // statement domain.
+  for (unsigned u = 0, e = MA->getNumSubscripts(); u < e; u++)
+    if (!isa<SCEVConstant>(MA->getSubscript(u)))
+      return false;
+  return true;
+}
+
 void Scop::addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs) {
 
   if (InvMAs.empty())
     return;
 
   auto *StmtInvalidCtx = Stmt.getInvalidContext();
+  bool StmtInvalidCtxIsEmpty = isl_set_is_empty(StmtInvalidCtx);
 
   // Get the context under which the statement is executed but remove the error
   // context under which this statement is reached.
   isl_set *DomainCtx = isl_set_params(Stmt.getDomain());
   DomainCtx = isl_set_subtract(DomainCtx, StmtInvalidCtx);
-  DomainCtx = isl_set_remove_redundancies(DomainCtx);
-  DomainCtx = isl_set_detect_equalities(DomainCtx);
-  DomainCtx = isl_set_coalesce(DomainCtx);
 
   if (isl_set_n_basic_set(DomainCtx) >= MaxConjunctsInDomain) {
     auto *AccInst = InvMAs.front()->getAccessInstruction();
@@ -3225,6 +3277,20 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs) {
     Type *Ty = LInst->getType();
     const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
 
+    auto *MAInvalidCtx = MA->getInvalidContext();
+    bool MAInvalidCtxIsEmpty = isl_set_is_empty(MAInvalidCtx);
+
+    isl_set *MACtx;
+    // Check if we know that this pointer can be speculatively accessed.
+    if (canAlwaysBeHoisted(MA, StmtInvalidCtxIsEmpty, MAInvalidCtxIsEmpty)) {
+      MACtx = isl_set_universe(isl_set_get_space(DomainCtx));
+      isl_set_free(MAInvalidCtx);
+    } else {
+      MACtx = isl_set_copy(DomainCtx);
+      MACtx = isl_set_subtract(MACtx, MAInvalidCtx);
+      MACtx = isl_set_gist_params(MACtx, getContext());
+    }
+
     bool Consolidated = false;
     for (auto &IAClass : InvariantEquivClasses) {
       if (PointerSCEV != std::get<0>(IAClass) || Ty != std::get<3>(IAClass))
@@ -3257,10 +3323,10 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs) {
       // Unify the execution context of the class and this statement.
       isl_set *&IAClassDomainCtx = std::get<2>(IAClass);
       if (IAClassDomainCtx)
-        IAClassDomainCtx = isl_set_coalesce(
-            isl_set_union(IAClassDomainCtx, isl_set_copy(DomainCtx)));
+        IAClassDomainCtx =
+            isl_set_coalesce(isl_set_union(IAClassDomainCtx, MACtx));
       else
-        IAClassDomainCtx = isl_set_copy(DomainCtx);
+        IAClassDomainCtx = MACtx;
       break;
     }
 
@@ -3269,8 +3335,8 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs) {
 
     // If we did not consolidate MA, thus did not find an equivalence class
     // for it, we create a new one.
-    InvariantEquivClasses.emplace_back(PointerSCEV, MemoryAccessList{MA},
-                                       isl_set_copy(DomainCtx), Ty);
+    InvariantEquivClasses.emplace_back(PointerSCEV, MemoryAccessList{MA}, MACtx,
+                                       Ty);
   }
 
   isl_set_free(DomainCtx);
@@ -3445,13 +3511,16 @@ __isl_give isl_set *Scop::getAssumedContext() const {
 
 bool Scop::hasFeasibleRuntimeContext() const {
   auto *PositiveContext = getAssumedContext();
-  PositiveContext = addNonEmptyDomainConstraints(PositiveContext);
-  bool IsFeasible = !isl_set_is_empty(PositiveContext);
-  isl_set_free(PositiveContext);
-  if (!IsFeasible)
-    return false;
-
   auto *NegativeContext = getInvalidContext();
+  PositiveContext = addNonEmptyDomainConstraints(PositiveContext);
+  bool IsFeasible = !(isl_set_is_empty(PositiveContext) ||
+                      isl_set_is_subset(PositiveContext, NegativeContext));
+  isl_set_free(PositiveContext);
+  if (!IsFeasible) {
+    isl_set_free(NegativeContext);
+    return false;
+  }
+
   auto *DomainContext = isl_union_set_params(getDomains());
   IsFeasible = !isl_set_is_subset(DomainContext, NegativeContext);
   IsFeasible &= !isl_set_is_subset(Context, NegativeContext);
@@ -3659,15 +3728,15 @@ void Scop::dump() const { print(dbgs()); }
 
 isl_ctx *Scop::getIslCtx() const { return IslCtx.get(); }
 
-__isl_give isl_pw_aff *Scop::getPwAff(const SCEV *E, BasicBlock *BB) {
+__isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB) {
   // First try to use the SCEVAffinator to generate a piecewise defined
   // affine function from @p E in the context of @p BB. If that tasks becomes to
   // complex the affinator might return a nullptr. In such a case we invalidate
   // the SCoP and return a dummy value. This way we do not need to add error
   // handling cdoe to all users of this function.
-  auto *PWA = Affinator.getPwAff(E, BB);
-  if (PWA)
-    return PWA;
+  auto PWAC = Affinator.getPwAff(E, BB);
+  if (PWAC.first)
+    return PWAC;
 
   auto DL = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
   invalidate(COMPLEXITY, DL);
@@ -3681,6 +3750,12 @@ __isl_give isl_union_set *Scop::getDomains() const {
     Domain = isl_union_set_add_set(Domain, Stmt.getDomain());
 
   return Domain;
+}
+
+__isl_give isl_pw_aff *Scop::getPwAffOnly(const SCEV *E, BasicBlock *BB) {
+  PWACtx PWAC = getPwAff(E, BB);
+  isl_set_free(PWAC.second);
+  return PWAC.first;
 }
 
 __isl_give isl_union_map *
