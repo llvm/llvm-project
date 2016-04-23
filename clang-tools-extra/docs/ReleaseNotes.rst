@@ -109,7 +109,7 @@ identified.  The improvements since the 3.8 release include:
   Detect multiple statement macros that are used in unbraced conditionals.
 
 - New `misc-pointer-and-integral-operation
-  <http://clang.llvm.org/extra/clang-tidy/checks/misc-misc-pointer-and-integral-operation.html>`_ check
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-pointer-and-integral-operation.html>`_ check
 
   Warns about suspicious operations involving pointers and integral types.
 

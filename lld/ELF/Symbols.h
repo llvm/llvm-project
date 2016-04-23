@@ -40,8 +40,32 @@ std::string demangle(StringRef Name);
 // A real symbol object, SymbolBody, is usually accessed indirectly
 // through a Symbol. There's always one Symbol for each symbol name.
 // The resolver updates SymbolBody pointers as it resolves symbols.
+// Symbol also holds computed properties of symbol names.
 struct Symbol {
   SymbolBody *Body;
+
+  // Symbol visibility. This is the computed minimum visibility of all
+  // observed non-DSO symbols.
+  unsigned Visibility : 2;
+
+  // True if the symbol was used for linking and thus need to be added to the
+  // output file's symbol table. This is true for all symbols except for
+  // unreferenced DSO symbols and bitcode symbols that are unreferenced except
+  // by other bitcode objects.
+  unsigned IsUsedInRegularObj : 1;
+
+  // If this flag is true and the symbol has protected or default visibility, it
+  // will appear in .dynsym. This flag is set by interposable DSO symbols in
+  // executables, by most symbols in DSOs and executables built with
+  // --export-dynamic, and by dynamic lists.
+  unsigned ExportDynamic : 1;
+
+  // This flag acts as an additional filter on the dynamic symbol list. It is
+  // set if there is no version script, or if the symbol appears in the global
+  // section of the version script.
+  unsigned VersionScriptGlobal : 1;
+
+  bool includeInDynsym() const;
 };
 
 // The base class for real symbol classes.
@@ -76,7 +100,6 @@ public:
   }
   bool isShared() const { return SymbolKind == SharedKind; }
   bool isLocal() const { return Binding == llvm::ELF::STB_LOCAL; }
-  bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
   bool isPreemptible() const;
 
   // Returns the symbol name.
@@ -102,8 +125,6 @@ public:
   bool isInPlt() const { return PltIndex != -1U; }
   bool hasThunk() const { return ThunkIndex != -1U; }
 
-  void setUsedInRegularObj() { IsUsedInRegularObj = true; }
-
   template <class ELFT>
   typename ELFT::uint getVA(typename ELFT::uint Addend = 0) const;
 
@@ -121,16 +142,12 @@ public:
   // pointer P to a SymbolBody and are not sure whether the resolver
   // has chosen the object among other objects having the same name,
   // you can access P->Backref->Body to get the resolver's result.
-  void setBackref(Symbol *P) { Backref = P; }
   SymbolBody &repl() { return Backref ? *Backref->Body : *this; }
-  Symbol *getSymbol() const { return Backref; }
 
   // Decides which symbol should "win" in the symbol table, this or
   // the Other. Returns 1 if this wins, -1 if the Other wins, or 0 if
   // they are duplicate (conflicting) symbols.
   int compare(SymbolBody *Other);
-
-  bool includeInDynsym() const;
 
 protected:
   SymbolBody(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,
@@ -140,21 +157,12 @@ protected:
 
   const unsigned SymbolKind : 8;
 
-  // True if the symbol was used for linking and thus need to be
-  // added to the output file's symbol table. It is usually true,
-  // but if it is a shared symbol that were not referenced by anyone,
-  // it can be false.
-  unsigned IsUsedInRegularObj : 1;
-
 public:
   // True if this symbol can be omitted from the symbol table if nothing else
   // requires it to be there. Right now this is only used for linkonce_odr in
   // LTO, but we could add the feature to ELF. It would be similar to
   // MachO's .weak_def_can_be_hidden.
   unsigned CanOmitFromDynSym : 1;
-
-  // If true, the symbol is added to .dynsym symbol table.
-  unsigned MustBeInDynSym : 1;
 
   // True if the linker has to generate a copy relocation for this shared
   // symbol or if the symbol should point to its plt entry.
@@ -173,7 +181,8 @@ public:
   bool isGnuIFunc() const { return Type == llvm::ELF::STT_GNU_IFUNC; }
   bool isObject() const { return Type == llvm::ELF::STT_OBJECT; }
   bool isFile() const { return Type == llvm::ELF::STT_FILE; }
-  void setVisibility(uint8_t V) { StOther = (StOther & ~0x3) | V; }
+
+  Symbol *Backref = nullptr;
 
 protected:
   struct Str {
@@ -184,7 +193,6 @@ protected:
     Str Name;
     uint32_t NameOffset;
   };
-  Symbol *Backref = nullptr;
 };
 
 // The base class for any defined symbols.

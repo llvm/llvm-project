@@ -226,6 +226,11 @@ private:
   createSymbolBody(const llvm::DenseSet<const llvm::Comdat *> &KeptComdats,
                    const llvm::object::IRObjectFile &Obj,
                    const llvm::object::BasicSymbolRef &Sym);
+  SymbolBody *
+  createBody(const llvm::DenseSet<const llvm::Comdat *> &KeptComdats,
+             const llvm::object::IRObjectFile &Obj,
+             const llvm::object::BasicSymbolRef &Sym,
+             const llvm::GlobalValue *GV);
 };
 
 // .so file.

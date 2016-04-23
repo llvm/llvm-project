@@ -70,8 +70,14 @@
 #if TEST_STD_VER >= 11
 #define TEST_CONSTEXPR constexpr
 #define TEST_NOEXCEPT noexcept
+# if TEST_STD_VER >= 14
+#   define TEST_CONSTEXPR_CXX14 constexpr
+# else
+#   define TEST_CONSTEXPR_CXX14
+# endif
 #else
 #define TEST_CONSTEXPR
+#define TEST_CONSTEXPR_CXX14
 #define TEST_NOEXCEPT
 #endif
 

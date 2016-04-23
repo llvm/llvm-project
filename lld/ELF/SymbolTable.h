@@ -61,6 +61,7 @@ public:
 
   void scanShlibUndefined();
   void scanDynamicList();
+  void scanVersionScript();
   SymbolBody *find(StringRef Name);
   void wrap(StringRef Name);
   InputFile *findFile(SymbolBody *B);

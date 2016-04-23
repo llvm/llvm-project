@@ -200,7 +200,7 @@ void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
   return MmapOrDie(size, mem_type);
 }
 
-void *MmapNoAccess(uptr fixed_addr, uptr size, const char *name) {
+void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name) {
   (void)name; // unsupported
   void *res = VirtualAlloc((LPVOID)fixed_addr, size,
                            MEM_RESERVE | MEM_COMMIT, PAGE_NOACCESS);
@@ -209,6 +209,11 @@ void *MmapNoAccess(uptr fixed_addr, uptr size, const char *name) {
            "mprotect %p (%zd) bytes at %p (error code: %d)\n",
            SanitizerToolName, size, size, fixed_addr, GetLastError());
   return res;
+}
+
+void *MmapNoAccess(uptr size) {
+  // FIXME: unsupported.
+  return nullptr;
 }
 
 bool MprotectNoAccess(uptr addr, uptr size) {

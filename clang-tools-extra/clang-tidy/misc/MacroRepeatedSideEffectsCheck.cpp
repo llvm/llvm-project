@@ -86,6 +86,7 @@ unsigned MacroRepeatedPPCallbacks::countArgumentExpansions(
   int SkipParenCount = 0;
   // Has a __builtin_constant_p been found?
   bool FoundBuiltin = false;
+  bool PrevTokenIsHash = false;
   // Count when "?" is reached. The "Current" will get this value when the ":"
   // is reached.
   std::stack<unsigned, SmallVector<unsigned, 8>> CountAtQuestion;
@@ -97,6 +98,16 @@ unsigned MacroRepeatedPPCallbacks::countArgumentExpansions(
     // happens.
     if (FoundBuiltin && T.isOneOf(tok::question, tok::ampamp, tok::pipepipe))
       return Max;
+
+    // Skip stringified tokens.
+    if (T.is(tok::hash)) {
+      PrevTokenIsHash = true;
+      continue;
+    }
+    if (PrevTokenIsHash) {
+      PrevTokenIsHash = false;
+      continue;
+    }
 
     // Handling of ? and :.
     if (T.is(tok::question)) {

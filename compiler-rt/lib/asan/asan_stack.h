@@ -48,10 +48,7 @@ void GetStackTraceWithPcBpAndContext(BufferedStackTrace *stack, uptr max_depth,
       uptr stack_top = t->stack_top();
       uptr stack_bottom = t->stack_bottom();
       ScopedUnwinding unwind_scope(t);
-      if (IsValidFrame(bp, stack_top, stack_bottom)) {
-        stack->Unwind(max_depth, pc, bp, context, stack_top, stack_bottom,
-                      fast);
-      }
+      stack->Unwind(max_depth, pc, bp, context, stack_top, stack_bottom, fast);
     } else if (!t && !fast) {
       /* If GetCurrentThread() has failed, try to do slow unwind anyways. */
       stack->Unwind(max_depth, pc, bp, context, 0, 0, false);

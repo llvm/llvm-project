@@ -5,7 +5,6 @@ add_public_tablegen_target(ELFOptionsTableGen)
 add_lld_library(lldELF
   Driver.cpp
   DriverUtils.cpp
-  DynamicList.cpp
   Error.cpp
   ICF.cpp
   InputFiles.cpp
@@ -15,6 +14,7 @@ add_lld_library(lldELF
   MarkLive.cpp
   OutputSections.cpp
   ScriptParser.cpp
+  SymbolListFile.cpp
   SymbolTable.cpp
   Symbols.cpp
   Target.cpp

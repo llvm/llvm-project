@@ -76,13 +76,23 @@ static void runLTOPasses(Module &M, TargetMachine &TM) {
 
 static bool shouldInternalize(const SmallPtrSet<GlobalValue *, 8> &Used,
                               SymbolBody &B, GlobalValue *GV) {
-  if (B.isUsedInRegularObj())
+  if (B.Backref->IsUsedInRegularObj)
     return false;
 
   if (Used.count(GV))
     return false;
 
-  return !B.includeInDynsym();
+  return !B.Backref->includeInDynsym();
+}
+
+BitcodeCompiler::BitcodeCompiler()
+    : Combined(new llvm::Module("ld-temp.o", Context)), Mover(*Combined) {
+  // This is a flag to discard all but GlobalValue names.
+  // We want to enable it by default because it saves memory.
+  // Disable it only when a developer option (-save-temps) is given.
+  Context.setDiscardValueNames(!Config->SaveTemps);
+
+  Context.enableDebugTypeODRUniquing();
 }
 
 void BitcodeCompiler::add(BitcodeFile &F) {

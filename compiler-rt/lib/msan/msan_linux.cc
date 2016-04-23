@@ -55,14 +55,14 @@ static bool CheckMemoryRangeAvailability(uptr beg, uptr size) {
 
 static bool ProtectMemoryRange(uptr beg, uptr size, const char *name) {
   if (size > 0) {
-    void *addr = MmapNoAccess(beg, size, name);
+    void *addr = MmapFixedNoAccess(beg, size, name);
     if (beg == 0 && addr) {
       // Depending on the kernel configuration, we may not be able to protect
       // the page at address zero.
       uptr gap = 16 * GetPageSizeCached();
       beg += gap;
       size -= gap;
-      addr = MmapNoAccess(beg, size, name);
+      addr = MmapFixedNoAccess(beg, size, name);
     }
     if ((uptr)addr != beg) {
       uptr end = beg + size - 1;

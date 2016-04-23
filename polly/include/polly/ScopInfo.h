@@ -2113,7 +2113,7 @@ public:
   /// @brief Directly return the shared_ptr of the context.
   const std::shared_ptr<isl_ctx> &getSharedIslCtx() const { return IslCtx; }
 
-  /// @brief Compute the isl representation for the SCEV @p
+  /// @brief Compute the isl representation for the SCEV @p E
   ///
   /// @param BB An (optional) basic block in which the isl_pw_aff is computed.
   ///           SCEVs known to not reference any loops in the SCoP can be

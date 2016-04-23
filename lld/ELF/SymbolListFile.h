@@ -1,4 +1,4 @@
-//===- DynamicList.h --------------------------------------------*- C++ -*-===//
+//===- SymbolListFile.h -----------------------------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_ELF_DYNAMIC_LIST_H
-#define LLD_ELF_DYNAMIC_LIST_H
+#ifndef LLD_ELF_SYMBOL_LIST_FILE_H
+#define LLD_ELF_SYMBOL_LIST_FILE_H
 
 #include "lld/Core/LLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -17,6 +17,7 @@ namespace lld {
 namespace elf {
 
 void parseDynamicList(MemoryBufferRef MB);
+void parseVersionScript(MemoryBufferRef MB);
 
 } // namespace elf
 } // namespace lld

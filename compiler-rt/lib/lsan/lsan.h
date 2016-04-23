@@ -20,14 +20,12 @@
   {                                                                            \
     uptr stack_top = 0, stack_bottom = 0;                                      \
     ThreadContext *t;                                                          \
-    if ((t = CurrentThreadContext())) {                                        \
+    if (fast && (t = CurrentThreadContext())) {                                \
       stack_top = t->stack_end();                                              \
       stack_bottom = t->stack_begin();                                         \
     }                                                                          \
-    if (IsValidFrame(GET_CURRENT_FRAME(), stack_top, stack_bottom)) {          \
-      stack.Unwind(max_size, StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(),  \
-                   /* context */ 0, stack_top, stack_bottom, fast);            \
-    }                                                                          \
+    stack.Unwind(max_size, StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(),    \
+                 /* context */ 0, stack_top, stack_bottom, fast);              \
   }
 
 #define GET_STACK_TRACE_FATAL \

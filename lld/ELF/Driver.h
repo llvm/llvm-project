@@ -32,7 +32,6 @@ private:
   std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB);
   llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
   void readConfigs(llvm::opt::InputArgList &Args);
-  void readDynamicList(StringRef Path);
   void createFiles(llvm::opt::InputArgList &Args);
   template <class ELFT> void link(llvm::opt::InputArgList &Args);
 

@@ -458,16 +458,19 @@ static uint8_t getGvVisibility(const GlobalValue *GV) {
 }
 
 SymbolBody *
-BitcodeFile::createSymbolBody(const DenseSet<const Comdat *> &KeptComdats,
+BitcodeFile::createBody(const DenseSet<const Comdat *> &KeptComdats,
                               const IRObjectFile &Obj,
-                              const BasicSymbolRef &Sym) {
-  const GlobalValue *GV = Obj.getSymbolGV(Sym.getRawDataRefImpl());
-  if (GV)
-    if (const Comdat *C = GV->getComdat())
-      if (!KeptComdats.count(C))
-        return nullptr;
+                              const BasicSymbolRef &Sym,
+                              const GlobalValue *GV) {
+  SmallString<64> Name;
+  raw_svector_ostream OS(Name);
+  Sym.printName(OS);
+  StringRef NameRef = Saver.save(StringRef(Name));
+  SymbolBody *Body;
 
   uint32_t Flags = Sym.getFlags();
+  bool IsWeak = Flags & BasicSymbolRef::SF_Weak;
+
   uint8_t Visibility;
   if (GV)
     Visibility = getGvVisibility(GV);
@@ -476,28 +479,37 @@ BitcodeFile::createSymbolBody(const DenseSet<const Comdat *> &KeptComdats,
     // protected visibility.
     Visibility = STV_DEFAULT;
 
-  SmallString<64> Name;
-  raw_svector_ostream OS(Name);
-  Sym.printName(OS);
-  StringRef NameRef = Saver.save(StringRef(Name));
+  if (GV)
+    if (const Comdat *C = GV->getComdat())
+      if (!KeptComdats.count(C)) {
+        Body = new (Alloc)
+          UndefinedBitcode(NameRef, IsWeak, Visibility);
+        return Body;
+      }
 
   const Module &M = Obj.getModule();
-  SymbolBody *Body;
-  bool IsWeak = Flags & BasicSymbolRef::SF_Weak;
-  if (Flags & BasicSymbolRef::SF_Undefined) {
-    Body = new (Alloc) UndefinedBitcode(NameRef, IsWeak, Visibility);
-  } else if (Flags & BasicSymbolRef::SF_Common) {
+  if (Flags & BasicSymbolRef::SF_Undefined)
+    return new (Alloc) UndefinedBitcode(NameRef, IsWeak, Visibility);
+  if (Flags & BasicSymbolRef::SF_Common) {
     // FIXME: Set SF_Common flag correctly for module asm symbols, and expose
     // size and alignment.
     assert(GV);
     const DataLayout &DL = M.getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
-    Body = new (Alloc)
+    return new (Alloc)
         DefinedCommon(NameRef, Size, GV->getAlignment(),
                       IsWeak ? STB_WEAK : STB_GLOBAL, Visibility, /*Type*/ 0);
-  } else {
-    Body = new (Alloc) DefinedBitcode(NameRef, IsWeak, Visibility);
   }
+  return new (Alloc) DefinedBitcode(NameRef, IsWeak, Visibility);
+}
+
+SymbolBody *
+BitcodeFile::createSymbolBody(const DenseSet<const Comdat *> &KeptComdats,
+                              const IRObjectFile &Obj,
+                              const BasicSymbolRef &Sym) {
+  const GlobalValue *GV = Obj.getSymbolGV(Sym.getRawDataRefImpl());
+  SymbolBody *Body = createBody(KeptComdats, Obj, Sym, GV);
+
   // FIXME: Expose a thread-local flag for module asm symbols.
   if (GV) {
     if (GV->isThreadLocal())

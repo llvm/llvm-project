@@ -2671,7 +2671,7 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
                     AccessType accessibility = eAccessNone;
                     uint32_t member_byte_offset = (parent_die.Tag() == DW_TAG_union_type) ? 0 : UINT32_MAX;
                     size_t byte_size = 0;
-                    size_t bit_offset = 0;
+                    int64_t bit_offset = 0;
                     size_t bit_size = 0;
                     bool is_external = false; // On DW_TAG_members, this means the member is static
                     uint32_t i;
@@ -2688,7 +2688,7 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
                                 case DW_AT_decl_column: decl.SetColumn(form_value.Unsigned()); break;
                                 case DW_AT_name:        name = form_value.AsCString(); break;
                                 case DW_AT_type:        encoding_form = form_value; break;
-                                case DW_AT_bit_offset:  bit_offset = form_value.Unsigned(); break;
+                                case DW_AT_bit_offset:  bit_offset = form_value.Signed(); break;
                                 case DW_AT_bit_size:    bit_size = form_value.Unsigned(); break;
                                 case DW_AT_byte_size:   byte_size = form_value.Unsigned(); break;
                                 case DW_AT_data_member_location:
@@ -2802,7 +2802,7 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
                     // type in an expression when clang becomes unhappy with its
                     // recycled debug info.
 
-                    if (bit_offset > 128)
+                    if (byte_size == 0 && bit_offset < 0)
                     {
                         bit_size = 0;
                         bit_offset = 0;
