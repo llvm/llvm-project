@@ -1397,6 +1397,12 @@ SwiftASTContext::GetPluginVersion()
     return 1;
 }
 
+static std::string &GetDefaultResourceDir()
+{
+    static std::string s_resource_dir;
+    return s_resource_dir;
+}
+
 lldb::TypeSystemSP
 SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Target *target, const char *extra_options)
 {
@@ -1603,6 +1609,16 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
                 {
                     swift_ast_sp->SetResourceDir(resource_dir.c_str());
                 }
+                else if (!GetDefaultResourceDir().empty())
+                {
+                    // Use the first resource dir we found when setting up a target.
+                    swift_ast_sp->SetResourceDir(GetDefaultResourceDir().c_str());
+                }
+                else
+                {
+                    if (log)
+                        log->Printf("No resource dir available for module's SwiftASTContext.");
+                }
 
                 if (!got_serialized_options)
                 {
@@ -1787,6 +1803,13 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
                     {
                         handled_resource_dir = true;
                         swift_ast_sp->SetResourceDir (resource_dir);
+                        if (GetDefaultResourceDir().empty())
+                        {
+                            // Tuck this away as a reasonable default resource dir
+                            // for contexts that don't have one.  The Swift parser
+                            // will assert without one.
+                            GetDefaultResourceDir() = resource_dir;
+                        }
                     }
                 }
 
