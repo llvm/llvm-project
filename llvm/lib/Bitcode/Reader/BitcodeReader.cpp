@@ -2005,17 +2005,21 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
 
   PlaceholderQueue Placeholders;
   bool IsDistinct;
-  auto getMD = [&](unsigned ID, bool AllowPlaceholders = true) -> Metadata * {
-    if (!IsDistinct || !AllowPlaceholders)
+  auto getMD = [&](unsigned ID) -> Metadata * {
+    if (!IsDistinct)
       return MetadataList.getMetadataFwdRef(ID);
     if (auto *MD = MetadataList.getMetadataIfResolved(ID))
       return MD;
     return &Placeholders.getPlaceholderOp(ID);
   };
-  auto getMDOrNull = [&](unsigned ID,
-                         bool AllowPlaceholders = true) -> Metadata * {
+  auto getMDOrNull = [&](unsigned ID) -> Metadata * {
     if (ID)
-      return getMD(ID - 1, AllowPlaceholders);
+      return getMD(ID - 1);
+    return nullptr;
+  };
+  auto getMDOrNullWithoutPlaceholders = [&](unsigned ID) -> Metadata * {
+    if (ID)
+      return MetadataList.getMetadataFwdRef(ID - 1);
     return nullptr;
   };
   auto getMDString = [&](unsigned ID) -> MDString *{
@@ -2354,8 +2358,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       MetadataList.assignValue(CU, NextMetadataNo++);
 
       // Move the Upgrade the list of subprograms.
-      if (Metadata *SPs =
-              getMDOrNull(Record[11], /* AllowPlaceholders = */ false))
+      if (Metadata *SPs = getMDOrNullWithoutPlaceholders(Record[11]))
         CUSubprograms.push_back({CU, SPs});
       break;
     }
