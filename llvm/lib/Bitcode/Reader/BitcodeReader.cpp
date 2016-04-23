@@ -133,7 +133,9 @@ public:
   }
 
   Metadata *lookup(unsigned I) const {
-    return I < MetadataPtrs.size() ? MetadataPtrs[I] : nullptr;
+    if (I < MetadataPtrs.size())
+      return MetadataPtrs[I];
+    return nullptr;
   }
 
   void shrinkTo(unsigned N) {
