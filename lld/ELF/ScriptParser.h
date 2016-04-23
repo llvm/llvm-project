@@ -20,6 +20,7 @@ namespace elf {
 class ScriptParserBase {
 public:
   ScriptParserBase(StringRef S) : Input(S), Tokens(tokenize(S)) {}
+  ScriptParserBase(std::vector<StringRef> Tokens) : Input(""), Tokens(Tokens) {}
 
 protected:
   void setError(const Twine &Msg);

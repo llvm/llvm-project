@@ -45,16 +45,27 @@ static isl_stat addNumBasicSets(isl_set *Domain, isl_aff *Aff, void *User) {
   return isl_stat_ok;
 }
 
-/// @brief Determine if @p PWA is to complex to continue
+/// @brief Helper to free a PWACtx object.
+static void freePWACtx(__isl_take PWACtx &PWAC) {
+  isl_pw_aff_free(PWAC.first);
+  isl_set_free(PWAC.second);
+}
+
+/// @brief Helper to copy a PWACtx object.
+static __isl_give PWACtx copyPWACtx(const __isl_keep PWACtx &PWAC) {
+  return std::make_pair(isl_pw_aff_copy(PWAC.first), isl_set_copy(PWAC.second));
+}
+
+/// @brief Determine if @p PWAC is to complex to continue
 ///
-/// Note that @p PWA will be "free" (deallocated) if this function returns true,
-/// but not if this function returns false.
-static bool isToComplex(isl_pw_aff *PWA) {
+/// Note that @p PWAC will be "free" (deallocated) if this function returns
+/// true, but not if this function returns false.
+static bool isToComplex(PWACtx &PWAC) {
   unsigned NumBasicSets = 0;
-  isl_pw_aff_foreach_piece(PWA, addNumBasicSets, &NumBasicSets);
+  isl_pw_aff_foreach_piece(PWAC.first, addNumBasicSets, &NumBasicSets);
   if (NumBasicSets <= MaxConjunctsInPwAff)
     return false;
-  isl_pw_aff_free(PWA);
+  freePWACtx(PWAC);
   return true;
 }
 
@@ -65,17 +76,27 @@ static SCEV::NoWrapFlags getNoWrapFlags(const SCEV *Expr) {
   return SCEV::NoWrapMask;
 }
 
+static void combine(__isl_keep PWACtx &PWAC0, const __isl_take PWACtx &PWAC1,
+                    isl_pw_aff *(Fn)(isl_pw_aff *, isl_pw_aff *)) {
+  PWAC0.first = Fn(PWAC0.first, PWAC1.first);
+  PWAC0.second = isl_set_union(PWAC0.second, PWAC1.second);
+}
+
 SCEVAffinator::SCEVAffinator(Scop *S, LoopInfo &LI)
     : S(S), Ctx(S->getIslCtx()), R(S->getRegion()), SE(*S->getSE()), LI(LI),
       TD(R.getEntry()->getParent()->getParent()->getDataLayout()) {}
 
 SCEVAffinator::~SCEVAffinator() {
-  for (const auto &CachedPair : CachedExpressions)
-    isl_pw_aff_free(CachedPair.second);
+  for (auto &CachedPair : CachedExpressions)
+    freePWACtx(CachedPair.second);
 }
 
-__isl_give isl_pw_aff *SCEVAffinator::getPwAff(const SCEV *Expr,
-                                               BasicBlock *BB) {
+__isl_give PWACtx SCEVAffinator::getPWACtxFromPWA(__isl_take isl_pw_aff *PWA) {
+  return std::make_pair(
+      PWA, isl_set_empty(isl_space_set_alloc(Ctx, 0, NumIterators)));
+}
+
+__isl_give PWACtx SCEVAffinator::getPwAff(const SCEV *Expr, BasicBlock *BB) {
   this->BB = BB;
 
   if (BB) {
@@ -91,8 +112,8 @@ __isl_give isl_pw_aff *SCEVAffinator::getPwAff(const SCEV *Expr,
   return visit(Expr);
 }
 
-void SCEVAffinator::checkForWrapping(const SCEV *Expr,
-                                     __isl_keep isl_pw_aff *PWA) const {
+__isl_give PWACtx SCEVAffinator::checkForWrapping(const SCEV *Expr,
+                                                  PWACtx PWAC) const {
   // If the SCEV flags do contain NSW (no signed wrap) then PWA already
   // represents Expr in modulo semantic (it is not allowed to overflow), thus we
   // are done. Otherwise, we will compute:
@@ -101,10 +122,12 @@ void SCEVAffinator::checkForWrapping(const SCEV *Expr,
   //   n = bitwidth(ExprType)
 
   if (IgnoreIntegerWrapping || (getNoWrapFlags(Expr) & SCEV::FlagNSW))
-    return;
+    return PWAC;
 
+  auto *PWA = PWAC.first;
   auto *PWAMod = addModuloSemantic(isl_pw_aff_copy(PWA), Expr->getType());
   auto *NotEqualSet = isl_pw_aff_ne_set(isl_pw_aff_copy(PWA), PWAMod);
+  PWAC.second = isl_set_union(PWAC.second, isl_set_copy(NotEqualSet));
 
   const DebugLoc &Loc = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
   NotEqualSet = BB ? NotEqualSet : isl_set_params(NotEqualSet);
@@ -113,6 +136,8 @@ void SCEVAffinator::checkForWrapping(const SCEV *Expr,
     isl_set_free(NotEqualSet);
   else
     S->recordAssumption(WRAPPING, NotEqualSet, Loc, AS_RESTRICTION, BB);
+
+  return PWAC;
 }
 
 __isl_give isl_pw_aff *
@@ -152,12 +177,12 @@ bool SCEVAffinator::hasNSWAddRecForLoop(Loop *L) const {
   return false;
 }
 
-__isl_give isl_pw_aff *SCEVAffinator::visit(const SCEV *Expr) {
+__isl_give PWACtx SCEVAffinator::visit(const SCEV *Expr) {
 
   auto Key = std::make_pair(Expr, BB);
-  isl_pw_aff *PWA = CachedExpressions[Key];
-  if (PWA)
-    return isl_pw_aff_copy(PWA);
+  PWACtx PWAC = CachedExpressions[Key];
+  if (PWAC.first)
+    return copyPWACtx(PWAC);
 
   auto ConstantAndLeftOverPair = extractConstantFactor(Expr, *S->getSE());
   auto *Factor = ConstantAndLeftOverPair.first;
@@ -175,24 +200,24 @@ __isl_give isl_pw_aff *SCEVAffinator::visit(const SCEV *Expr) {
     isl_aff *Affine = isl_aff_zero_on_domain(isl_local_space_from_space(Space));
     Affine = isl_aff_add_coefficient_si(Affine, isl_dim_param, 0, 1);
 
-    PWA = isl_pw_aff_alloc(Domain, Affine);
+    PWAC = getPWACtxFromPWA(isl_pw_aff_alloc(Domain, Affine));
   } else {
-    PWA = SCEVVisitor<SCEVAffinator, isl_pw_aff *>::visit(Expr);
-    checkForWrapping(Expr, PWA);
+    PWAC = SCEVVisitor<SCEVAffinator, PWACtx>::visit(Expr);
+    PWAC = checkForWrapping(Expr, PWAC);
   }
 
-  PWA = isl_pw_aff_mul(visitConstant(Factor), PWA);
+  combine(PWAC, visitConstant(Factor), isl_pw_aff_mul);
 
-  // For compile time reasons we need to simplify the PWA before we cache and
+  // For compile time reasons we need to simplify the PWAC before we cache and
   // return it.
-  PWA = isl_pw_aff_coalesce(PWA);
-  checkForWrapping(Key.first, PWA);
+  PWAC.first = isl_pw_aff_coalesce(PWAC.first);
+  PWAC = checkForWrapping(Key.first, PWAC);
 
-  CachedExpressions[Key] = isl_pw_aff_copy(PWA);
-  return PWA;
+  CachedExpressions[Key] = copyPWACtx(PWAC);
+  return PWAC;
 }
 
-__isl_give isl_pw_aff *SCEVAffinator::visitConstant(const SCEVConstant *Expr) {
+__isl_give PWACtx SCEVAffinator::visitConstant(const SCEVConstant *Expr) {
   ConstantInt *Value = Expr->getValue();
   isl_val *v;
 
@@ -210,58 +235,55 @@ __isl_give isl_pw_aff *SCEVAffinator::visitConstant(const SCEVConstant *Expr) {
 
   isl_space *Space = isl_space_set_alloc(Ctx, 0, NumIterators);
   isl_local_space *ls = isl_local_space_from_space(Space);
-  return isl_pw_aff_from_aff(isl_aff_val_on_domain(ls, v));
+  return getPWACtxFromPWA(isl_pw_aff_from_aff(isl_aff_val_on_domain(ls, v)));
 }
 
-__isl_give isl_pw_aff *
+__isl_give PWACtx
 SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
   llvm_unreachable("SCEVTruncateExpr not yet supported");
 }
 
-__isl_give isl_pw_aff *
+__isl_give PWACtx
 SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
   llvm_unreachable("SCEVZeroExtendExpr not yet supported");
 }
 
-__isl_give isl_pw_aff *
+__isl_give PWACtx
 SCEVAffinator::visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
   // Assuming the value is signed, a sign extension is basically a noop.
   // TODO: Reconsider this as soon as we support unsigned values.
   return visit(Expr->getOperand());
 }
 
-__isl_give isl_pw_aff *SCEVAffinator::visitAddExpr(const SCEVAddExpr *Expr) {
-  isl_pw_aff *Sum = visit(Expr->getOperand(0));
+__isl_give PWACtx SCEVAffinator::visitAddExpr(const SCEVAddExpr *Expr) {
+  PWACtx Sum = visit(Expr->getOperand(0));
 
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
-    isl_pw_aff *NextSummand = visit(Expr->getOperand(i));
-    Sum = isl_pw_aff_add(Sum, NextSummand);
+    combine(Sum, visit(Expr->getOperand(i)), isl_pw_aff_add);
     if (isToComplex(Sum))
-      return nullptr;
+      return std::make_pair(nullptr, nullptr);
   }
 
   return Sum;
 }
 
-__isl_give isl_pw_aff *SCEVAffinator::visitMulExpr(const SCEVMulExpr *Expr) {
-  isl_pw_aff *Prod = visit(Expr->getOperand(0));
+__isl_give PWACtx SCEVAffinator::visitMulExpr(const SCEVMulExpr *Expr) {
+  PWACtx Prod = visit(Expr->getOperand(0));
 
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
-    isl_pw_aff *NextFactor = visit(Expr->getOperand(i));
-    Prod = isl_pw_aff_mul(Prod, NextFactor);
+    combine(Prod, visit(Expr->getOperand(i)), isl_pw_aff_mul);
     if (isToComplex(Prod))
-      return nullptr;
+      return std::make_pair(nullptr, nullptr);
   }
 
   return Prod;
 }
 
-__isl_give isl_pw_aff *SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {
+__isl_give PWACtx SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {
   llvm_unreachable("SCEVUDivExpr not yet supported");
 }
 
-__isl_give isl_pw_aff *
-SCEVAffinator::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
+__isl_give PWACtx SCEVAffinator::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
   assert(Expr->isAffine() && "Only affine AddRecurrences allowed");
 
   auto Flags = Expr->getNoWrapFlags();
@@ -271,7 +293,7 @@ SCEVAffinator::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
     assert(S->getRegion().contains(Expr->getLoop()) &&
            "Scop does not contain the loop referenced in this AddRec");
 
-    isl_pw_aff *Step = visit(Expr->getOperand(1));
+    PWACtx Step = visit(Expr->getOperand(1));
     isl_space *Space = isl_space_set_alloc(Ctx, 0, NumIterators);
     isl_local_space *LocalSpace = isl_local_space_from_space(Space);
 
@@ -281,7 +303,8 @@ SCEVAffinator::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
         isl_aff_zero_on_domain(LocalSpace), isl_dim_in, loopDimension, 1);
     isl_pw_aff *LPwAff = isl_pw_aff_from_aff(LAff);
 
-    return isl_pw_aff_mul(Step, LPwAff);
+    Step.first = isl_pw_aff_mul(Step.first, LPwAff);
+    return Step;
   }
 
   // Translate AddRecExpr from '{start, +, inc}' into 'start + {0, +, inc}'
@@ -294,46 +317,46 @@ SCEVAffinator::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
       SE.getAddRecExpr(SE.getConstant(Expr->getStart()->getType(), 0),
                        Expr->getStepRecurrence(SE), Expr->getLoop(), Flags);
 
-  isl_pw_aff *ZeroStartResult = visit(ZeroStartExpr);
-  isl_pw_aff *Start = visit(Expr->getStart());
-
-  return isl_pw_aff_add(ZeroStartResult, Start);
+  PWACtx Result = visit(ZeroStartExpr);
+  PWACtx Start = visit(Expr->getStart());
+  combine(Result, Start, isl_pw_aff_add);
+  return Result;
 }
 
-__isl_give isl_pw_aff *SCEVAffinator::visitSMaxExpr(const SCEVSMaxExpr *Expr) {
-  isl_pw_aff *Max = visit(Expr->getOperand(0));
+__isl_give PWACtx SCEVAffinator::visitSMaxExpr(const SCEVSMaxExpr *Expr) {
+  PWACtx Max = visit(Expr->getOperand(0));
 
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
-    isl_pw_aff *NextOperand = visit(Expr->getOperand(i));
-    Max = isl_pw_aff_max(Max, NextOperand);
+    combine(Max, visit(Expr->getOperand(i)), isl_pw_aff_max);
     if (isToComplex(Max))
-      return nullptr;
+      return std::make_pair(nullptr, nullptr);
   }
 
   return Max;
 }
 
-__isl_give isl_pw_aff *SCEVAffinator::visitUMaxExpr(const SCEVUMaxExpr *Expr) {
+__isl_give PWACtx SCEVAffinator::visitUMaxExpr(const SCEVUMaxExpr *Expr) {
   llvm_unreachable("SCEVUMaxExpr not yet supported");
 }
 
-__isl_give isl_pw_aff *SCEVAffinator::visitSDivInstruction(Instruction *SDiv) {
+__isl_give PWACtx SCEVAffinator::visitSDivInstruction(Instruction *SDiv) {
   assert(SDiv->getOpcode() == Instruction::SDiv && "Assumed SDiv instruction!");
   auto *SE = S->getSE();
 
   auto *Divisor = SDiv->getOperand(1);
   auto *DivisorSCEV = SE->getSCEV(Divisor);
-  auto *DivisorPWA = visit(DivisorSCEV);
+  auto DivisorPWAC = visit(DivisorSCEV);
   assert(isa<ConstantInt>(Divisor) &&
          "SDiv is no parameter but has a non-constant RHS.");
 
   auto *Dividend = SDiv->getOperand(0);
   auto *DividendSCEV = SE->getSCEV(Dividend);
-  auto *DividendPWA = visit(DividendSCEV);
-  return isl_pw_aff_tdiv_q(DividendPWA, DivisorPWA);
+  auto DividendPWAC = visit(DividendSCEV);
+  combine(DividendPWAC, DivisorPWAC, isl_pw_aff_tdiv_q);
+  return DividendPWAC;
 }
 
-__isl_give isl_pw_aff *SCEVAffinator::visitSRemInstruction(Instruction *SRem) {
+__isl_give PWACtx SCEVAffinator::visitSRemInstruction(Instruction *SRem) {
   assert(SRem->getOpcode() == Instruction::SRem && "Assumed SRem instruction!");
   auto *SE = S->getSE();
 
@@ -344,12 +367,14 @@ __isl_give isl_pw_aff *SCEVAffinator::visitSRemInstruction(Instruction *SRem) {
 
   auto *Dividend = SRem->getOperand(0);
   auto *DividendSCEV = SE->getSCEV(Dividend);
-  auto *DividendPWA = visit(DividendSCEV);
+  auto DividendPWAC = visit(DividendSCEV);
 
-  return isl_pw_aff_mod_val(DividendPWA, isl_val_abs(DivisorVal));
+  DividendPWAC.first =
+      isl_pw_aff_mod_val(DividendPWAC.first, isl_val_abs(DivisorVal));
+  return DividendPWAC;
 }
 
-__isl_give isl_pw_aff *SCEVAffinator::visitUnknown(const SCEVUnknown *Expr) {
+__isl_give PWACtx SCEVAffinator::visitUnknown(const SCEVUnknown *Expr) {
   if (Instruction *I = dyn_cast<Instruction>(Expr->getValue())) {
     switch (I->getOpcode()) {
     case Instruction::SDiv:

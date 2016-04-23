@@ -43,8 +43,12 @@ void ScriptParserBase::printErrorPos() {
 void ScriptParserBase::setError(const Twine &Msg) {
   if (Error)
     return;
-  error("line " + Twine(getPos()) + ": " + Msg);
-  printErrorPos();
+  if (Input.empty()) {
+    error(Msg);
+  } else {
+    error("line " + Twine(getPos()) + ": " + Msg);
+    printErrorPos();
+  }
   Error = true;
 }
 

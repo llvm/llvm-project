@@ -6,10 +6,10 @@
 ; CHECK-NEXT:         Execution Context: [bounds2, bounds1, bounds0] -> {  :  }
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [bounds2, bounds1, bounds0] -> { Stmt_for_cond_1[i0, i1] -> MemRef_bounds[1] };
-; CHECK-NEXT:         Execution Context: [bounds2, bounds1, bounds0] -> {  : bounds2 > 0 }
+; CHECK-NEXT:         Execution Context: [bounds2, bounds1, bounds0] -> {  :  }
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [bounds2, bounds1, bounds0] -> { Stmt_for_cond_4[i0, i1, i2] -> MemRef_bounds[0] };
-; CHECK-NEXT:         Execution Context: [bounds2, bounds1, bounds0] -> {  : bounds2 > 0 and bounds1 > 0 }
+; CHECK-NEXT:         Execution Context: [bounds2, bounds1, bounds0] -> {  :  }
 ; CHECK-NEXT: }
 ;
 ; CHECK:      p0: %bounds2

@@ -99,3 +99,8 @@ void conditionals(int a, int b)
   condB(a, b++);
 }
 
+void log(const char *s, int v);
+#define LOG(val) log(#val, (val))
+void test_log(int a) {
+  LOG(a++);
+}

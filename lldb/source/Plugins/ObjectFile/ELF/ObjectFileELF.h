@@ -298,6 +298,10 @@ private:
     size_t
     ParseSectionHeaders();
 
+    static void
+    ParseARMAttributes(lldb_private::DataExtractor &data, uint64_t length,
+                       lldb_private::ArchSpec &arch_spec);
+
     /// Parses the elf section headers and returns the uuid, debug link name, crc, archspec.
     static size_t
     GetSectionHeaderInfo(SectionHeaderColl &section_headers,

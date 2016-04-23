@@ -157,7 +157,7 @@
 # RUN: }" > %t.script
 # RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=BRACKETERR %s
-# BRACKETERR: ) expected
+# BRACKETERR: unexpected EOF
 
 ## Missing opening bracket.
 # RUN: echo "SECTIONS { \
@@ -189,7 +189,7 @@
 # RUN: }" > %t.script
 # RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=TERNERR %s
-# TERNERR: : expected
+# TERNERR: unexpected EOF
 
 .globl _start;
 _start:

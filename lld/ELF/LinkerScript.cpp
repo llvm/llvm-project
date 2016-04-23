@@ -37,6 +37,29 @@ ScriptConfiguration *elf::ScriptConfig;
 
 static bool matchStr(StringRef S, StringRef T);
 
+// This is an operator-precedence parser to parse and evaluate
+// a linker script expression. For each linker script arithmetic
+// expression (e.g. ". = . + 0x1000"), a new instance of ExprParser
+// is created and ran.
+namespace {
+class ExprParser : public ScriptParserBase {
+public:
+  ExprParser(std::vector<StringRef> &Tokens, uint64_t Dot)
+      : ScriptParserBase(Tokens), Dot(Dot) {}
+
+  uint64_t run();
+
+private:
+  uint64_t parsePrimary();
+  uint64_t parseTernary(uint64_t Cond);
+  uint64_t apply(StringRef Op, uint64_t L, uint64_t R);
+  uint64_t parseExpr1(uint64_t Lhs, int MinPrec);
+  uint64_t parseExpr();
+
+  uint64_t Dot;
+};
+}
+
 static int precedence(StringRef Op) {
   return StringSwitch<int>(Op)
       .Case("*", 4)
@@ -47,71 +70,51 @@ static int precedence(StringRef Op) {
       .Default(-1);
 }
 
-static StringRef next(ArrayRef<StringRef> &Tokens) {
-  if (Tokens.empty()) {
-    error("no next token");
-    return "";
-  }
-  StringRef Tok = Tokens.front();
-  Tokens = Tokens.slice(1);
-  return Tok;
+static uint64_t evalExpr(std::vector<StringRef> &Tokens, uint64_t Dot) {
+  return ExprParser(Tokens, Dot).run();
 }
 
-static bool expect(ArrayRef<StringRef> &Tokens, StringRef S) {
-  if (Tokens.empty()) {
-    error(S + " expected");
-    return false;
-  }
-  StringRef Tok = Tokens.front();
-  if (Tok != S) {
-    error(S + " expected, but got " + Tok);
-    return false;
-  }
-  Tokens = Tokens.slice(1);
-  return true;
+uint64_t ExprParser::run() {
+  uint64_t V = parseExpr();
+  if (!atEOF() && !Error)
+    setError("stray token: " + peek());
+  return V;
 }
 
 // This is a part of the operator-precedence parser to evaluate
 // arithmetic expressions in SECTIONS command. This function evaluates an
 // integer literal, a parenthesized expression, the ALIGN function,
 // or the special variable ".".
-template <class ELFT>
-uint64_t LinkerScript<ELFT>::parsePrimary(ArrayRef<StringRef> &Tokens) {
-  StringRef Tok = next(Tokens);
+uint64_t ExprParser::parsePrimary() {
+  StringRef Tok = next();
   if (Tok == ".")
     return Dot;
   if (Tok == "(") {
-    uint64_t V = parseExpr(Tokens);
-    if (!expect(Tokens, ")"))
-      return 0;
+    uint64_t V = parseExpr();
+    expect(")");
     return V;
   }
   if (Tok == "ALIGN") {
-    if (!expect(Tokens, "("))
-      return 0;
-    uint64_t V = parseExpr(Tokens);
-    if (!expect(Tokens, ")"))
-      return 0;
+    expect("(");
+    uint64_t V = parseExpr();
+    expect(")");
     return alignTo(Dot, V);
   }
   uint64_t V = 0;
   if (Tok.getAsInteger(0, V))
-    error("malformed number: " + Tok);
+    setError("malformed number: " + Tok);
   return V;
 }
 
-template <class ELFT>
-uint64_t LinkerScript<ELFT>::parseTernary(ArrayRef<StringRef> &Tokens,
-                                          uint64_t Cond) {
-  next(Tokens);
-  uint64_t V = parseExpr(Tokens);
-  if (!expect(Tokens, ":"))
-    return 0;
-  uint64_t W = parseExpr(Tokens);
+uint64_t ExprParser::parseTernary(uint64_t Cond) {
+  next();
+  uint64_t V = parseExpr();
+  expect(":");
+  uint64_t W = parseExpr();
   return Cond ? V : W;
 }
 
-static uint64_t apply(StringRef Op, uint64_t L, uint64_t R) {
+uint64_t ExprParser::apply(StringRef Op, uint64_t L, uint64_t R) {
   if (Op == "+")
     return L + R;
   if (Op == "-")
@@ -131,32 +134,29 @@ static uint64_t apply(StringRef Op, uint64_t L, uint64_t R) {
   return 0;
 }
 
-// This is an operator-precedence parser to evaluate
-// arithmetic expressions in SECTIONS command.
-// Tokens should start with an operator.
-template <class ELFT>
-uint64_t LinkerScript<ELFT>::parseExpr1(ArrayRef<StringRef> &Tokens,
-                                        uint64_t Lhs, int MinPrec) {
-  while (!Tokens.empty()) {
+// This is a part of the operator-precedence parser.
+// This function assumes that the remaining token stream starts
+// with an operator.
+uint64_t ExprParser::parseExpr1(uint64_t Lhs, int MinPrec) {
+  while (!atEOF()) {
     // Read an operator and an expression.
-    StringRef Op1 = Tokens.front();
+    StringRef Op1 = peek();
     if (Op1 == "?")
-      return parseTernary(Tokens, Lhs);
-
+      return parseTernary(Lhs);
     if (precedence(Op1) < MinPrec)
       return Lhs;
-    next(Tokens);
-    uint64_t Rhs = parsePrimary(Tokens);
+    next();
+    uint64_t Rhs = parsePrimary();
 
     // Evaluate the remaining part of the expression first if the
     // next operator has greater precedence than the previous one.
     // For example, if we have read "+" and "3", and if the next
     // operator is "*", then we'll evaluate 3 * ... part first.
-    while (!Tokens.empty()) {
-      StringRef Op2 = Tokens.front();
+    while (!atEOF()) {
+      StringRef Op2 = peek();
       if (precedence(Op2) <= precedence(Op1))
         break;
-      Rhs = parseExpr1(Tokens, Rhs, precedence(Op2));
+      Rhs = parseExpr1(Rhs, precedence(Op2));
     }
 
     Lhs = apply(Op1, Lhs, Rhs);
@@ -164,20 +164,8 @@ uint64_t LinkerScript<ELFT>::parseExpr1(ArrayRef<StringRef> &Tokens,
   return Lhs;
 }
 
-template <class ELFT>
-uint64_t LinkerScript<ELFT>::parseExpr(ArrayRef<StringRef> &Tokens) {
-  uint64_t V = parsePrimary(Tokens);
-  return parseExpr1(Tokens, V, 0);
-}
-
-// Evaluates the expression given by list of tokens.
-template <class ELFT>
-uint64_t LinkerScript<ELFT>::evaluate(ArrayRef<StringRef> Tokens) {
-  uint64_t V = parseExpr(Tokens);
-  if (!Tokens.empty())
-    error("stray token: " + Tokens[0]);
-  return V;
-}
+// Reads and evaluates an arithmetic expression.
+uint64_t ExprParser::parseExpr() { return parseExpr1(parsePrimary(), 0); }
 
 template <class ELFT>
 StringRef LinkerScript<ELFT>::getOutputSection(InputSectionBase<ELFT> *S) {
@@ -229,7 +217,7 @@ void LinkerScript<ELFT>::assignAddresses(
 
   for (SectionsCommand &Cmd : Opt.Commands) {
     if (Cmd.Kind == ExprKind) {
-      Dot = evaluate(Cmd.Expr);
+      Dot = evalExpr(Cmd.Expr, Dot);
       continue;
     }
 

@@ -114,6 +114,13 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
     resolve(B);
 }
 
+// This function is where all the optimizations of link-time
+// optimization happens. When LTO is in use, some input files are
+// not in native object file format but in the LLVM bitcode format.
+// This function compiles bitcode files into a few big native files
+// using LLVM functions and replaces bitcode symbols with the results.
+// Because all bitcode files that consist of a program are passed
+// to the compiler at once, it can do whole-program optimization.
 template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
   if (BitcodeFiles.empty())
     return;
@@ -202,6 +209,7 @@ template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
 
 // Returns a file from which symbol B was created.
 // If B does not belong to any file, returns a nullptr.
+// This function is slow, but it's okay as it is used only for error messages.
 template <class ELFT> InputFile *SymbolTable<ELFT>::findFile(SymbolBody *B) {
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : ObjectFiles) {
     ArrayRef<SymbolBody *> Syms = F->getSymbols();
