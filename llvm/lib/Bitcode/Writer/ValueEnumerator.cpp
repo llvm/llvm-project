@@ -558,11 +558,15 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
 
   while (!Worklist.empty()) {
     const MDNode *N = Worklist.back().first;
-    MDNode::op_iterator &I = Worklist.back().second;
 
-    // Enumerate operands until the worklist changes.  We need to traverse new
-    // nodes before visiting the rest of N's operands.
-    if (const MDNode *Op = enumerateMetadataOperands(F, I, N->op_end())) {
+    // Enumerate operands until we hit a new node.  We need to traverse these
+    // nodes' operands before visiting the rest of N's operands.
+    MDNode::op_iterator I = std::find_if(
+        Worklist.back().second, N->op_end(),
+        [&](const Metadata *MD) { return enumerateMetadataImpl(F, MD); });
+    if (I != N->op_end()) {
+      auto *Op = cast<MDNode>(*I);
+      Worklist.back().second = ++I;
       Worklist.push_back(std::make_pair(Op, Op->op_begin()));
       continue;
     }
@@ -572,15 +576,6 @@ void ValueEnumerator::EnumerateMetadata(unsigned F, const Metadata *MD) {
     MDs.push_back(N);
     MetadataMap[N].ID = MDs.size();
   }
-}
-
-const MDNode *
-ValueEnumerator::enumerateMetadataOperands(unsigned F, MDNode::op_iterator &I,
-                                           MDNode::op_iterator E) {
-  while (I != E)
-    if (const MDNode *N = enumerateMetadataImpl(F, *I++)) // Always increment I.
-      return N;
-  return nullptr;
 }
 
 const MDNode *ValueEnumerator::enumerateMetadataImpl(unsigned F, const Metadata *MD) {
