@@ -2064,7 +2064,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
         if (!Ty)
           return error("Invalid record");
         if (Ty->isMetadataTy())
-          Elts.push_back(MetadataList.getMetadataFwdRef(Record[i + 1]));
+          Elts.push_back(getMD(Record[i + 1]));
         else if (!Ty->isVoidTy()) {
           auto *MD =
               ValueAsMetadata::get(ValueList.getValueFwdRef(Record[i + 1], Ty));
@@ -2097,7 +2097,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       SmallVector<Metadata *, 8> Elts;
       Elts.reserve(Record.size());
       for (unsigned ID : Record)
-        Elts.push_back(ID ? MetadataList.getMetadataFwdRef(ID - 1) : nullptr);
+        Elts.push_back(getMDOrNull(ID));
       MetadataList.assignValue(IsDistinct ? MDNode::getDistinct(Context, Elts)
                                           : MDNode::get(Context, Elts),
                                NextMetadataNo++);
@@ -2109,11 +2109,8 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
 
       unsigned Line = Record[1];
       unsigned Column = Record[2];
-      MDNode *Scope = MetadataList.getMDNodeFwdRefOrNull(Record[3]);
-      if (!Scope)
-        return error("Invalid record");
-      Metadata *InlinedAt =
-          Record[4] ? MetadataList.getMetadataFwdRef(Record[4] - 1) : nullptr;
+      Metadata *Scope = getMD(Record[3]);
+      Metadata *InlinedAt = getMDOrNull(Record[4]);
       MetadataList.assignValue(
           GET_OR_DISTINCT(DILocation, Record[0],
                           (Context, Line, Column, Scope, InlinedAt)),
@@ -2150,9 +2147,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       auto *Header = getMDString(Record[3]);
       SmallVector<Metadata *, 8> DwarfOps;
       for (unsigned I = 4, E = Record.size(); I != E; ++I)
-        DwarfOps.push_back(Record[I]
-                               ? MetadataList.getMetadataFwdRef(Record[I] - 1)
-                               : nullptr);
+        DwarfOps.push_back(getMDOrNull(Record[I]));
       MetadataList.assignValue(
           GET_OR_DISTINCT(GenericDINode, Record[0],
                           (Context, Tag, Header, DwarfOps)),
