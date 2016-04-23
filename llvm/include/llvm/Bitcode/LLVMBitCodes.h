@@ -214,6 +214,8 @@ enum GlobalValueSummarySymtabCodes {
   FS_ALIAS = 7,
   // COMBINED_ALIAS: [modid, linkage, offset]
   FS_COMBINED_ALIAS = 8,
+  // COMBINED_ORIGINAL_NAME: [original_name_hash]
+  FS_COMBINED_ORIGINAL_NAME = 9,
 };
 
 enum MetadataCodes {

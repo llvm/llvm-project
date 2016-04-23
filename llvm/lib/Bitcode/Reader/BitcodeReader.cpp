@@ -466,7 +466,10 @@ class ModuleSummaryIndexBitcodeReader {
   // call graph edges read from the function summary from referencing
   // callees by their ValueId to using the GUID instead, which is how
   // they are recorded in the summary index being built.
-  DenseMap<unsigned, GlobalValue::GUID> ValueIdToCallGraphGUIDMap;
+  // We save a second GUID which is the same as the first one, but ignoring the
+  // linkage, i.e. for value other than local linkage they are identical.
+  DenseMap<unsigned, std::pair<GlobalValue::GUID, GlobalValue::GUID>>
+      ValueIdToCallGraphGUIDMap;
 
   /// Map to save the association between summary offset in the VST to the
   /// GlobalValueInfo object created when parsing it. Used to access the
@@ -522,7 +525,8 @@ private:
   std::error_code initStream(std::unique_ptr<DataStreamer> Streamer);
   std::error_code initStreamFromBuffer();
   std::error_code initLazyStream(std::unique_ptr<DataStreamer> Streamer);
-  GlobalValue::GUID getGUIDFromValueId(unsigned ValueId);
+  std::pair<GlobalValue::GUID, GlobalValue::GUID>
+  getGUIDFromValueId(unsigned ValueId);
   GlobalValueInfo *getInfoFromSummaryOffset(uint64_t Offset);
 };
 } // namespace
@@ -5594,7 +5598,7 @@ void ModuleSummaryIndexBitcodeReader::freeState() { Buffer = nullptr; }
 
 void ModuleSummaryIndexBitcodeReader::releaseBuffer() { Buffer.release(); }
 
-GlobalValue::GUID
+std::pair<GlobalValue::GUID, GlobalValue::GUID>
 ModuleSummaryIndexBitcodeReader::getGUIDFromValueId(unsigned ValueId) {
   auto VGI = ValueIdToCallGraphGUIDMap.find(ValueId);
   assert(VGI != ValueIdToCallGraphGUIDMap.end());
@@ -5658,13 +5662,19 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       auto VLI = ValueIdToLinkageMap.find(ValueID);
       assert(VLI != ValueIdToLinkageMap.end() &&
              "No linkage found for VST entry?");
-      std::string GlobalId = GlobalValue::getGlobalIdentifier(
-          ValueName, VLI->second, SourceFileName);
+      auto Linkage = VLI->second;
+      std::string GlobalId =
+          GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName);
       auto ValueGUID = GlobalValue::getGUID(GlobalId);
+      auto OriginalNameID = ValueGUID;
+      if (GlobalValue::isLocalLinkage(Linkage))
+        OriginalNameID = GlobalValue::getGUID(ValueName);
       if (PrintSummaryGUIDs)
-        dbgs() << "GUID " << ValueGUID << " is " << ValueName << "\n";
+        dbgs() << "GUID " << ValueGUID << "(" << OriginalNameID << ") is "
+               << ValueName << "\n";
       TheIndex->addGlobalValueInfo(ValueGUID, std::move(GlobalValInfo));
-      ValueIdToCallGraphGUIDMap[ValueID] = ValueGUID;
+      ValueIdToCallGraphGUIDMap[ValueID] =
+          std::make_pair(ValueGUID, OriginalNameID);
       ValueName.clear();
       break;
     }
@@ -5680,13 +5690,19 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       auto VLI = ValueIdToLinkageMap.find(ValueID);
       assert(VLI != ValueIdToLinkageMap.end() &&
              "No linkage found for VST entry?");
+      auto Linkage = VLI->second;
       std::string FunctionGlobalId = GlobalValue::getGlobalIdentifier(
           ValueName, VLI->second, SourceFileName);
       auto FunctionGUID = GlobalValue::getGUID(FunctionGlobalId);
+      auto OriginalNameID = FunctionGUID;
+      if (GlobalValue::isLocalLinkage(Linkage))
+        OriginalNameID = GlobalValue::getGUID(ValueName);
       if (PrintSummaryGUIDs)
-        dbgs() << "GUID " << FunctionGUID << " is " << ValueName << "\n";
+        dbgs() << "GUID " << FunctionGUID << "(" << OriginalNameID << ") is "
+               << ValueName << "\n";
       TheIndex->addGlobalValueInfo(FunctionGUID, std::move(FuncInfo));
-      ValueIdToCallGraphGUIDMap[ValueID] = FunctionGUID;
+      ValueIdToCallGraphGUIDMap[ValueID] =
+          std::make_pair(FunctionGUID, OriginalNameID);
 
       ValueName.clear();
       break;
@@ -5700,14 +5716,19 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
           llvm::make_unique<GlobalValueInfo>(GlobalValSummaryOffset);
       SummaryOffsetToInfoMap[GlobalValSummaryOffset] = GlobalValInfo.get();
       TheIndex->addGlobalValueInfo(GlobalValGUID, std::move(GlobalValInfo));
-      ValueIdToCallGraphGUIDMap[ValueID] = GlobalValGUID;
+      // The "original name", which is the second value of the pair will be
+      // overriden later by a FS_COMBINED_ORIGINAL_NAME in the combined index.
+      ValueIdToCallGraphGUIDMap[ValueID] =
+          std::make_pair(GlobalValGUID, GlobalValGUID);
       break;
     }
     case bitc::VST_CODE_COMBINED_ENTRY: {
       // VST_CODE_COMBINED_ENTRY: [valueid, refguid]
       unsigned ValueID = Record[0];
       GlobalValue::GUID RefGUID = Record[1];
-      ValueIdToCallGraphGUIDMap[ValueID] = RefGUID;
+      // The "original name", which is the second value of the pair will be
+      // overriden later by a FS_COMBINED_ORIGINAL_NAME in the combined index.
+      ValueIdToCallGraphGUIDMap[ValueID] = std::make_pair(RefGUID, RefGUID);
       break;
     }
     }
@@ -5871,7 +5892,9 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
     return error("Invalid record");
 
   SmallVector<uint64_t, 64> Record;
-
+  // Keep around the last seen summary to be used when we see an optional
+  // "OriginalName" attachement.
+  GlobalValueSummary *LastSeenSummary = nullptr;
   bool Combined = false;
   while (1) {
     BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
@@ -5936,7 +5959,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
              "Record size inconsistent with number of references");
       for (unsigned I = 4, E = CallGraphEdgeStartIndex; I != E; ++I) {
         unsigned RefValueId = Record[I];
-        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId);
+        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
         FS->addRefEdge(RefGUID);
       }
       bool HasProfile = (BitCode == bitc::FS_PERMODULE_PROFILE);
@@ -5945,12 +5968,13 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
         unsigned CalleeValueId = Record[I];
         unsigned CallsiteCount = Record[++I];
         uint64_t ProfileCount = HasProfile ? Record[++I] : 0;
-        GlobalValue::GUID CalleeGUID = getGUIDFromValueId(CalleeValueId);
+        GlobalValue::GUID CalleeGUID = getGUIDFromValueId(CalleeValueId).first;
         FS->addCallGraphEdge(CalleeGUID,
                              CalleeInfo(CallsiteCount, ProfileCount));
       }
-      GlobalValue::GUID GUID = getGUIDFromValueId(ValueID);
-      auto *Info = TheIndex->getGlobalValueInfo(GUID);
+      auto GUID = getGUIDFromValueId(ValueID);
+      FS->setOriginalName(GUID.second);
+      auto *Info = TheIndex->getGlobalValueInfo(GUID.first);
       assert(!Info->summary() && "Expected a single summary per VST entry");
       Info->setSummary(std::move(FS));
       break;
@@ -5972,14 +5996,15 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       AS->setModulePath(
           TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0)->first());
 
-      GlobalValue::GUID AliaseeGUID = getGUIDFromValueId(AliaseeID);
+      GlobalValue::GUID AliaseeGUID = getGUIDFromValueId(AliaseeID).first;
       auto *AliaseeInfo = TheIndex->getGlobalValueInfo(AliaseeGUID);
       if (!AliaseeInfo->summary())
         return error("Alias expects aliasee summary to be parsed");
       AS->setAliasee(AliaseeInfo->summary());
 
-      GlobalValue::GUID GUID = getGUIDFromValueId(ValueID);
-      auto *Info = TheIndex->getGlobalValueInfo(GUID);
+      auto GUID = getGUIDFromValueId(ValueID);
+      AS->setOriginalName(GUID.second);
+      auto *Info = TheIndex->getGlobalValueInfo(GUID.first);
       assert(!Info->summary() && "Expected a single summary per VST entry");
       Info->setSummary(std::move(AS));
       break;
@@ -5994,11 +6019,12 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
           TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0)->first());
       for (unsigned I = 2, E = Record.size(); I != E; ++I) {
         unsigned RefValueId = Record[I];
-        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId);
+        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
         FS->addRefEdge(RefGUID);
       }
-      GlobalValue::GUID GUID = getGUIDFromValueId(ValueID);
-      auto *Info = TheIndex->getGlobalValueInfo(GUID);
+      auto GUID = getGUIDFromValueId(ValueID);
+      FS->setOriginalName(GUID.second);
+      auto *Info = TheIndex->getGlobalValueInfo(GUID.first);
       assert(!Info->summary() && "Expected a single summary per VST entry");
       Info->setSummary(std::move(FS));
       break;
@@ -6016,6 +6042,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       unsigned NumRefs = Record[3];
       std::unique_ptr<FunctionSummary> FS = llvm::make_unique<FunctionSummary>(
           getDecodedLinkage(RawLinkage), InstCount);
+      LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
       static int RefListStartIndex = 4;
       int CallGraphEdgeStartIndex = RefListStartIndex + NumRefs;
@@ -6023,7 +6050,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
              "Record size inconsistent with number of references");
       for (unsigned I = 4, E = CallGraphEdgeStartIndex; I != E; ++I) {
         unsigned RefValueId = Record[I];
-        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId);
+        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
         FS->addRefEdge(RefGUID);
       }
       bool HasProfile = (BitCode == bitc::FS_COMBINED_PROFILE);
@@ -6032,7 +6059,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
         unsigned CalleeValueId = Record[I];
         unsigned CallsiteCount = Record[++I];
         uint64_t ProfileCount = HasProfile ? Record[++I] : 0;
-        GlobalValue::GUID CalleeGUID = getGUIDFromValueId(CalleeValueId);
+        GlobalValue::GUID CalleeGUID = getGUIDFromValueId(CalleeValueId).first;
         FS->addCallGraphEdge(CalleeGUID,
                              CalleeInfo(CallsiteCount, ProfileCount));
       }
@@ -6051,6 +6078,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       uint64_t AliaseeSummaryOffset = Record[2];
       std::unique_ptr<AliasSummary> AS =
           llvm::make_unique<AliasSummary>(getDecodedLinkage(RawLinkage));
+      LastSeenSummary = AS.get();
       AS->setModulePath(ModuleIdMap[ModuleId]);
 
       auto *AliaseeInfo = getInfoFromSummaryOffset(AliaseeSummaryOffset);
@@ -6070,10 +6098,11 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       uint64_t RawLinkage = Record[1];
       std::unique_ptr<GlobalVarSummary> FS =
           llvm::make_unique<GlobalVarSummary>(getDecodedLinkage(RawLinkage));
+      LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
       for (unsigned I = 2, E = Record.size(); I != E; ++I) {
         unsigned RefValueId = Record[I];
-        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId);
+        GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
         FS->addRefEdge(RefGUID);
       }
       auto *Info = getInfoFromSummaryOffset(CurRecordBit);
@@ -6081,6 +6110,15 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       Info->setSummary(std::move(FS));
       Combined = true;
       break;
+    }
+    // FS_COMBINED_ORIGINAL_NAME: [original_name]
+    case bitc::FS_COMBINED_ORIGINAL_NAME: {
+      uint64_t OriginalName = Record[0];
+      if (!LastSeenSummary)
+        return error("Name attachment that does not follow a combined record");
+      LastSeenSummary->setOriginalName(OriginalName);
+      // Reset the LastSeenSummary
+      LastSeenSummary = nullptr;
     }
     }
   }

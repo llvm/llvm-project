@@ -99,6 +99,11 @@ private:
   /// Kind of summary for use in dyn_cast<> et al.
   SummaryKind Kind;
 
+  /// This is the hash of the name of the symbol in the original file. It is
+  /// identical to the GUID for global symbols, but differs for local since the
+  /// GUID includes the module level id in the hash.
+  GlobalValue::GUID OriginalName;
+
   /// \brief Path of module IR containing value's definition, used to locate
   /// module during importing.
   ///
@@ -130,6 +135,13 @@ protected:
 
 public:
   virtual ~GlobalValueSummary() = default;
+
+  /// Returns the hash of the original name, it is identical to the GUID for
+  /// externally visible symbols, but not for local ones.
+  GlobalValue::GUID getOriginalName() { return OriginalName; }
+
+  /// Initialize the original name hash in this summary.
+  void setOriginalName(GlobalValue::GUID Name) { OriginalName = Name; }
 
   /// Which kind of summary subclass this is.
   SummaryKind getSummaryKind() const { return Kind; }
