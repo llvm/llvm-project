@@ -10,9 +10,9 @@
 #ifndef ASAN_TESTING_H
 #define ASAN_TESTING_H
 
-#include <__config>
+#include "test_macros.h"
 
-#ifndef _LIBCPP_HAS_NO_ASAN
+#if TEST_HAS_FEATURE(address_sanitizer)
 extern "C" int __sanitizer_verify_contiguous_container
      ( const void *beg, const void *mid, const void *end );
      
@@ -27,7 +27,7 @@ bool is_contiguous_container_asan_correct ( const std::vector<T, Alloc> &c )
 
 #else
 template <typename T, typename Alloc>
-bool is_contiguous_container_asan_correct ( const std::vector<T, Alloc> &c )
+bool is_contiguous_container_asan_correct ( const std::vector<T, Alloc> &)
 {
     return true;
 }

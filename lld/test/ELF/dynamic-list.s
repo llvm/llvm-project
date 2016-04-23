@@ -21,6 +21,10 @@
 # RUN: ld.lld --dynamic-list %t.list %t %t2.so -o %t.exe
 # RUN: llvm-readobj -dyn-symbols %t.exe | FileCheck %s
 
+## And now using --export-dynamic-symbol.
+# RUN: ld.lld --export-dynamic-symbol foo1 %t %t2.so -o %t.exe
+# RUN: llvm-readobj -dyn-symbols %t.exe | FileCheck %s
+
 # CHECK:      DynamicSymbols [
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: @ (0)

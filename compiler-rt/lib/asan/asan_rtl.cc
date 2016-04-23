@@ -328,7 +328,7 @@ static void InitializeHighMemEnd() {
 static void ProtectGap(uptr addr, uptr size) {
   if (!flags()->protect_shadow_gap)
     return;
-  void *res = MmapNoAccess(addr, size, "shadow gap");
+  void *res = MmapFixedNoAccess(addr, size, "shadow gap");
   if (addr == (uptr)res)
     return;
   // A few pages at the start of the address space can not be protected.
@@ -339,7 +339,7 @@ static void ProtectGap(uptr addr, uptr size) {
     while (size > step && addr < kZeroBaseMaxShadowStart) {
       addr += step;
       size -= step;
-      void *res = MmapNoAccess(addr, size, "shadow gap");
+      void *res = MmapFixedNoAccess(addr, size, "shadow gap");
       if (addr == (uptr)res)
         return;
     }

@@ -19,6 +19,7 @@
 #include <iostream>
 
 #include <random>
+#include <algorithm>
 #include <vector>
 #include <iterator>
 #include <numeric>

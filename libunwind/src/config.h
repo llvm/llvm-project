@@ -40,9 +40,6 @@
   #endif
 
   #define _LIBUNWIND_BUILD_SJLJ_APIS      defined(__arm__)
-  #define _LIBUNWIND_EXPORT               __attribute__((visibility("default")))
-  #define _LIBUNWIND_HIDDEN               __attribute__((visibility("hidden")))
-  #define _LIBUNWIND_LOG(msg, ...) fprintf(stderr, "libuwind: " msg, __VA_ARGS__)
   #define _LIBUNWIND_ABORT(msg) __assert_rtn(__func__, __FILE__, __LINE__, msg)
 
   #if defined(FOR_DYLD)
@@ -54,7 +51,6 @@
     #define _LIBUNWIND_SUPPORT_DWARF_UNWIND   1
     #define _LIBUNWIND_SUPPORT_DWARF_INDEX    0
   #endif
-
 #else
   #include <stdlib.h>
 
@@ -66,9 +62,6 @@
   }
 
   #define _LIBUNWIND_BUILD_SJLJ_APIS      0
-  #define _LIBUNWIND_EXPORT               __attribute__((visibility("default")))
-  #define _LIBUNWIND_HIDDEN               __attribute__((visibility("hidden")))
-  #define _LIBUNWIND_LOG(msg, ...) fprintf(stderr, "libuwind: " msg, __VA_ARGS__)
   #define _LIBUNWIND_ABORT(msg) assert_rtn(__func__, __FILE__, __LINE__, msg)
 
   #if defined(__ARM_DWARF_EH__) || !defined(__arm__)
@@ -81,6 +74,10 @@
     #define _LIBUNWIND_SUPPORT_DWARF_INDEX 0
   #endif
 #endif
+
+// FIXME: these macros are not correct for COFF targets
+#define _LIBUNWIND_EXPORT __attribute__((visibility("default")))
+#define _LIBUNWIND_HIDDEN __attribute__((visibility("hidden")))
 
 #if defined(__i386__) || defined(__x86_64__)
 #define _LIBUNWIND_SUPPORT_FRAME_APIS 1
@@ -96,6 +93,8 @@
 #else
 #define _LIBUNWIND_BUILD_ZERO_COST_APIS 0
 #endif
+
+#define _LIBUNWIND_LOG(msg, ...) fprintf(stderr, "libuwind: " msg, __VA_ARGS__)
 
 // Macros that define away in non-Debug builds
 #ifdef NDEBUG

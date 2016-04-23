@@ -411,7 +411,7 @@ static void dfsan_init(int argc, char **argv, char **envp) {
   // case by disabling memory protection when ASLR is disabled.
   uptr init_addr = (uptr)&dfsan_init;
   if (!(init_addr >= UnusedAddr() && init_addr < AppAddr()))
-    MmapNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
+    MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
 
   InitializeInterceptors();
 

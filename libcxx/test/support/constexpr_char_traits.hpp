@@ -11,9 +11,9 @@
 #ifndef _CONSTEXPR_CHAR_TRAITS
 #define _CONSTEXPR_CHAR_TRAITS
 
-#include <__config>
 #include <string>
 
+#include "test_macros.h"
 
 template <class _CharT>
 struct constexpr_char_traits
@@ -24,41 +24,41 @@ struct constexpr_char_traits
     typedef std::streampos pos_type;
     typedef std::mbstate_t state_type;
 
-    static _LIBCPP_CONSTEXPR_AFTER_CXX11 void assign(char_type& __c1, const char_type& __c2) _NOEXCEPT
+    static TEST_CONSTEXPR_CXX14 void assign(char_type& __c1, const char_type& __c2) TEST_NOEXCEPT
         {__c1 = __c2;}
 
-    static _LIBCPP_CONSTEXPR bool eq(char_type __c1, char_type __c2) _NOEXCEPT
+    static TEST_CONSTEXPR bool eq(char_type __c1, char_type __c2) TEST_NOEXCEPT
         {return __c1 == __c2;}
 
-    static _LIBCPP_CONSTEXPR  bool lt(char_type __c1, char_type __c2) _NOEXCEPT
+    static TEST_CONSTEXPR  bool lt(char_type __c1, char_type __c2) TEST_NOEXCEPT
         {return __c1 < __c2;}
 
-    static _LIBCPP_CONSTEXPR_AFTER_CXX11 int              compare(const char_type* __s1, const char_type* __s2, size_t __n);
-    static _LIBCPP_CONSTEXPR_AFTER_CXX11 size_t           length(const char_type* __s);
-    static _LIBCPP_CONSTEXPR_AFTER_CXX11 const char_type* find(const char_type* __s, size_t __n, const char_type& __a);
-    static _LIBCPP_CONSTEXPR_AFTER_CXX11 char_type*       move(char_type* __s1, const char_type* __s2, size_t __n);
-    static _LIBCPP_CONSTEXPR_AFTER_CXX11 char_type*       copy(char_type* __s1, const char_type* __s2, size_t __n);
-    static _LIBCPP_CONSTEXPR_AFTER_CXX11 char_type*       assign(char_type* __s, size_t __n, char_type __a);
+    static TEST_CONSTEXPR_CXX14 int              compare(const char_type* __s1, const char_type* __s2, size_t __n);
+    static TEST_CONSTEXPR_CXX14 size_t           length(const char_type* __s);
+    static TEST_CONSTEXPR_CXX14 const char_type* find(const char_type* __s, size_t __n, const char_type& __a);
+    static TEST_CONSTEXPR_CXX14 char_type*       move(char_type* __s1, const char_type* __s2, size_t __n);
+    static TEST_CONSTEXPR_CXX14 char_type*       copy(char_type* __s1, const char_type* __s2, size_t __n);
+    static TEST_CONSTEXPR_CXX14 char_type*       assign(char_type* __s, size_t __n, char_type __a);
 
-    static _LIBCPP_CONSTEXPR int_type  not_eof(int_type __c) _NOEXCEPT
+    static TEST_CONSTEXPR int_type  not_eof(int_type __c) TEST_NOEXCEPT
         {return eq_int_type(__c, eof()) ? ~eof() : __c;}
 
-    static _LIBCPP_CONSTEXPR char_type to_char_type(int_type __c) _NOEXCEPT
+    static TEST_CONSTEXPR char_type to_char_type(int_type __c) TEST_NOEXCEPT
         {return char_type(__c);}
 
-    static _LIBCPP_CONSTEXPR int_type  to_int_type(char_type __c) _NOEXCEPT
+    static TEST_CONSTEXPR int_type  to_int_type(char_type __c) TEST_NOEXCEPT
         {return int_type(__c);}
 
-    static _LIBCPP_CONSTEXPR bool      eq_int_type(int_type __c1, int_type __c2) _NOEXCEPT
+    static TEST_CONSTEXPR bool      eq_int_type(int_type __c1, int_type __c2) TEST_NOEXCEPT
         {return __c1 == __c2;}
 
-    static _LIBCPP_CONSTEXPR int_type  eof() _NOEXCEPT
+    static TEST_CONSTEXPR int_type  eof() TEST_NOEXCEPT
         {return int_type(EOF);}
 };
 
 
 template <class _CharT>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 int
+TEST_CONSTEXPR_CXX14 int
 constexpr_char_traits<_CharT>::compare(const char_type* __s1, const char_type* __s2, size_t __n)
 {
     for (; __n; --__n, ++__s1, ++__s2)
@@ -72,7 +72,7 @@ constexpr_char_traits<_CharT>::compare(const char_type* __s1, const char_type* _
 }
 
 template <class _CharT>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 size_t
+TEST_CONSTEXPR_CXX14 size_t
 constexpr_char_traits<_CharT>::length(const char_type* __s)
 {
     size_t __len = 0;
@@ -82,7 +82,7 @@ constexpr_char_traits<_CharT>::length(const char_type* __s)
 }
 
 template <class _CharT>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 const _CharT*
+TEST_CONSTEXPR_CXX14 const _CharT*
 constexpr_char_traits<_CharT>::find(const char_type* __s, size_t __n, const char_type& __a)
 {
     for (; __n; --__n)
@@ -95,7 +95,7 @@ constexpr_char_traits<_CharT>::find(const char_type* __s, size_t __n, const char
 }
 
 template <class _CharT>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 _CharT*
+TEST_CONSTEXPR_CXX14 _CharT*
 constexpr_char_traits<_CharT>::move(char_type* __s1, const char_type* __s2, size_t __n)
 {
     char_type* __r = __s1;
@@ -115,7 +115,7 @@ constexpr_char_traits<_CharT>::move(char_type* __s1, const char_type* __s2, size
 }
 
 template <class _CharT>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 _CharT*
+TEST_CONSTEXPR_CXX14 _CharT*
 constexpr_char_traits<_CharT>::copy(char_type* __s1, const char_type* __s2, size_t __n)
 {
     _LIBCPP_ASSERT(__s2 < __s1 || __s2 >= __s1+__n, "char_traits::copy overlapped range");
@@ -126,7 +126,7 @@ constexpr_char_traits<_CharT>::copy(char_type* __s1, const char_type* __s2, size
 }
 
 template <class _CharT>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 _CharT*
+TEST_CONSTEXPR_CXX14 _CharT*
 constexpr_char_traits<_CharT>::assign(char_type* __s, size_t __n, char_type __a)
 {
     char_type* __r = __s;
