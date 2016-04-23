@@ -2308,4 +2308,79 @@ TEST_F(FunctionAttachmentTest, SubprogramAttachment) {
   EXPECT_EQ(SP, F->getMetadata(LLVMContext::MD_dbg));
 }
 
+typedef MetadataTest DistinctMDOperandPlaceholderTest;
+TEST_F(DistinctMDOperandPlaceholderTest, getID) {
+  EXPECT_EQ(7u, DistinctMDOperandPlaceholder(7).getID());
+}
+
+TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWith) {
+  // Set up some placeholders.
+  DistinctMDOperandPlaceholder PH0(7);
+  DistinctMDOperandPlaceholder PH1(3);
+  DistinctMDOperandPlaceholder PH2(0);
+  Metadata *Ops[] = {&PH0, &PH1, &PH2};
+  auto *D = MDTuple::getDistinct(Context, Ops);
+  ASSERT_EQ(&PH0, D->getOperand(0));
+  ASSERT_EQ(&PH1, D->getOperand(1));
+  ASSERT_EQ(&PH2, D->getOperand(2));
+
+  // Replace them.
+  auto *N0 = MDTuple::get(Context, None);
+  auto *N1 = MDTuple::get(Context, N0);
+  PH0.replaceUseWith(N0);
+  PH1.replaceUseWith(N1);
+  PH2.replaceUseWith(nullptr);
+  EXPECT_EQ(N0, D->getOperand(0));
+  EXPECT_EQ(N1, D->getOperand(1));
+  EXPECT_EQ(nullptr, D->getOperand(2));
+}
+
+TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWithNoUser) {
+  // There is no user, but we can still call replace.
+  DistinctMDOperandPlaceholder(7).replaceUseWith(MDTuple::get(Context, None));
+}
+
+#ifdef GTEST_HAS_DEATH_TEST
+TEST_F(DistinctMDOperandPlaceholderTest, MetadataAsValue) {
+  // This shouldn't crash.
+  DistinctMDOperandPlaceholder PH(7);
+  EXPECT_DEATH(MetadataAsValue::get(Context, &PH),
+               "Unexpected callback to owner");
+}
+
+TEST_F(DistinctMDOperandPlaceholderTest, UniquedMDNode) {
+  // This shouldn't crash.
+  DistinctMDOperandPlaceholder PH(7);
+  EXPECT_DEATH(MDTuple::get(Context, &PH), "Unexpected callback to owner");
+}
+
+TEST_F(DistinctMDOperandPlaceholderTest, SecondDistinctMDNode) {
+  // This shouldn't crash.
+  DistinctMDOperandPlaceholder PH(7);
+  MDTuple::getDistinct(Context, &PH);
+  EXPECT_DEATH(MDTuple::getDistinct(Context, &PH),
+               "Placeholders can only be used once");
+}
+
+TEST_F(DistinctMDOperandPlaceholderTest, TrackingMDRefAndDistinctMDNode) {
+  // TrackingMDRef doesn't install an owner callback, so it can't be detected
+  // as an invalid use.  However, using a placeholder in a TrackingMDRef *and*
+  // a distinct node isn't possible and we should assert.
+  //
+  // (There's no positive test for using TrackingMDRef because it's not a
+  // useful thing to do.)
+  {
+    DistinctMDOperandPlaceholder PH(7);
+    MDTuple::getDistinct(Context, &PH);
+    EXPECT_DEATH(TrackingMDRef Ref(&PH), "Placeholders can only be used once");
+  }
+  {
+    DistinctMDOperandPlaceholder PH(7);
+    TrackingMDRef Ref(&PH);
+    EXPECT_DEATH(MDTuple::getDistinct(Context, &PH),
+                 "Placeholders can only be used once");
+  }
+}
+#endif
+
 } // end namespace

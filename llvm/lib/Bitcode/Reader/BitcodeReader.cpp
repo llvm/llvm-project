@@ -132,13 +132,26 @@ public:
     return MetadataPtrs[i];
   }
 
+  Metadata *lookup(unsigned I) const {
+    return I < MetadataPtrs.size() ? MetadataPtrs[I] : nullptr;
+  }
+
   void shrinkTo(unsigned N) {
     assert(N <= size() && "Invalid shrinkTo request!");
     assert(!AnyFwdRefs && "Unexpected forward refs");
     MetadataPtrs.resize(N);
   }
 
+  /// Return the given metadata, creating a replaceable forward reference if
+  /// necessary.
   Metadata *getMetadataFwdRef(unsigned Idx);
+
+  /// Return the the given metadata only if it is fully resolved.
+  ///
+  /// Gives the same result as \a lookup(), unless \a MDNode::isResolved()
+  /// would give \c false.
+  Metadata *getMetadataIfResolved(unsigned Idx);
+
   MDNode *getMDNodeFwdRefOrNull(unsigned Idx);
   void assignValue(Metadata *MD, unsigned Idx);
   void tryToResolveCycles();
@@ -1100,6 +1113,14 @@ Metadata *BitcodeReaderMetadataList::getMetadataFwdRef(unsigned Idx) {
   return MD;
 }
 
+Metadata *BitcodeReaderMetadataList::getMetadataIfResolved(unsigned Idx) {
+  Metadata *MD = lookup(Idx);
+  if (auto *N = dyn_cast_or_null<MDNode>(MD))
+    if (!N->isResolved())
+      return nullptr;
+  return MD;
+}
+
 MDNode *BitcodeReaderMetadataList::getMDNodeFwdRefOrNull(unsigned Idx) {
   return dyn_cast_or_null<MDNode>(getMetadataFwdRef(Idx));
 }
@@ -1940,6 +1961,31 @@ std::error_code BitcodeReader::parseMetadataStrings(ArrayRef<uint64_t> Record,
   return std::error_code();
 }
 
+namespace {
+class PlaceholderQueue {
+  // Placeholders would thrash around when moved, so store in a std::deque
+  // instead of some sort of vector.
+  std::deque<DistinctMDOperandPlaceholder> PHs;
+
+public:
+  DistinctMDOperandPlaceholder &getPlaceholderOp(unsigned ID);
+  void flush(BitcodeReaderMetadataList &MetadataList);
+};
+} // end namespace
+
+DistinctMDOperandPlaceholder &PlaceholderQueue::getPlaceholderOp(unsigned ID) {
+  PHs.emplace_back(ID);
+  return PHs.back();
+}
+
+void PlaceholderQueue::flush(BitcodeReaderMetadataList &MetadataList) {
+  while (!PHs.empty()) {
+    PHs.front().replaceUseWith(
+        MetadataList.getMetadataFwdRef(PHs.front().getID()));
+    PHs.pop_front();
+  }
+}
+
 /// Parse a METADATA_BLOCK. If ModuleLevel is true then we are parsing
 /// module level metadata.
 std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
@@ -1955,12 +2001,19 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
   std::vector<std::pair<DICompileUnit *, Metadata *>> CUSubprograms;
   SmallVector<uint64_t, 64> Record;
 
-  auto getMD = [&](unsigned ID) -> Metadata * {
-    return MetadataList.getMetadataFwdRef(ID);
+  PlaceholderQueue Placeholders;
+  bool IsDistinct;
+  auto getMD = [&](unsigned ID, bool AllowPlaceholders = true) -> Metadata * {
+    if (!IsDistinct || !AllowPlaceholders)
+      return MetadataList.getMetadataFwdRef(ID);
+    if (auto *MD = MetadataList.getMetadataIfResolved(ID))
+      return MD;
+    return &Placeholders.getPlaceholderOp(ID);
   };
-  auto getMDOrNull = [&](unsigned ID) -> Metadata *{
+  auto getMDOrNull = [&](unsigned ID,
+                         bool AllowPlaceholders = true) -> Metadata * {
     if (ID)
-      return getMD(ID - 1);
+      return getMD(ID - 1, AllowPlaceholders);
     return nullptr;
   };
   auto getMDString = [&](unsigned ID) -> MDString *{
@@ -1989,6 +2042,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
               SP->replaceOperandWith(7, CU_SP.first);
 
       MetadataList.tryToResolveCycles();
+      Placeholders.flush(MetadataList);
       return std::error_code();
     case BitstreamEntry::Record:
       // The interesting case.
@@ -1999,7 +2053,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
     Record.clear();
     StringRef Blob;
     unsigned Code = Stream.readRecord(Entry.ID, Record, &Blob);
-    bool IsDistinct = false;
+    IsDistinct = false;
     switch (Code) {
     default:  // Default behavior: ignore.
       break;
@@ -2298,7 +2352,8 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       MetadataList.assignValue(CU, NextMetadataNo++);
 
       // Move the Upgrade the list of subprograms.
-      if (Metadata *SPs = getMDOrNull(Record[11]))
+      if (Metadata *SPs =
+              getMDOrNull(Record[11], /* AllowPlaceholders = */ false))
         CUSubprograms.push_back({CU, SPs});
       break;
     }
