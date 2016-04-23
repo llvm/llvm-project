@@ -137,8 +137,7 @@ void MachODebugMapParser::switchToNewDebugMapObject(StringRef Filename,
 }
 
 static std::string getArchName(const object::MachOObjectFile &Obj) {
-  Triple ThumbTriple;
-  Triple T = Obj.getArch(nullptr, &ThumbTriple);
+  Triple T = Obj.getArchTriple();
   return T.getArchName();
 }
 
@@ -146,8 +145,7 @@ std::unique_ptr<DebugMap>
 MachODebugMapParser::parseOneBinary(const MachOObjectFile &MainBinary,
                                     StringRef BinaryPath) {
   loadMainBinarySymbols(MainBinary);
-  Result =
-      make_unique<DebugMap>(BinaryHolder::getTriple(MainBinary), BinaryPath);
+  Result = make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath);
   MainBinaryStrings = MainBinary.getStringTableData();
   for (const SymbolRef &Symbol : MainBinary.symbols()) {
     const DataRefImpl &DRI = Symbol.getRawDataRefImpl();
@@ -308,9 +306,8 @@ bool MachODebugMapParser::dumpStab() {
     return false;
   }
 
-  Triple T;
   for (const auto *Binary : *MainBinOrError)
-    if (shouldLinkArch(Archs, Binary->getArch(nullptr, &T).getArchName()))
+    if (shouldLinkArch(Archs, Binary->getArchTriple().getArchName()))
       dumpOneBinaryStab(*Binary, BinaryPath);
 
   return true;
@@ -326,9 +323,8 @@ ErrorOr<std::vector<std::unique_ptr<DebugMap>>> MachODebugMapParser::parse() {
     return Error;
 
   std::vector<std::unique_ptr<DebugMap>> Results;
-  Triple T;
   for (const auto *Binary : *MainBinOrError)
-    if (shouldLinkArch(Archs, Binary->getArch(nullptr, &T).getArchName()))
+    if (shouldLinkArch(Archs, Binary->getArchTriple().getArchName()))
       Results.push_back(parseOneBinary(*Binary, BinaryPath));
 
   return std::move(Results);

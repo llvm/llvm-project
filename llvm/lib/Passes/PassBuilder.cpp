@@ -52,11 +52,13 @@
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/InstrProfiling.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
+#include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/SROA.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Scalar/Sink.h"
 #include <type_traits>
 
 using namespace llvm;

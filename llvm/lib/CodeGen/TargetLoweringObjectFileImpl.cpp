@@ -438,6 +438,27 @@ MCSection *TargetLoweringObjectFileELF::getStaticDtorSection(
                                   KeySym);
 }
 
+const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
+    const GlobalValue *LHS, const GlobalValue *RHS, Mangler &Mang,
+    const TargetMachine &TM) const {
+  // We may only use a PLT-relative relocation to refer to unnamed_addr
+  // functions.
+  if (!LHS->hasUnnamedAddr() || !LHS->getValueType()->isFunctionTy())
+    return nullptr;
+
+  // Basic sanity checks.
+  if (LHS->getType()->getPointerAddressSpace() != 0 ||
+      RHS->getType()->getPointerAddressSpace() != 0 || LHS->isThreadLocal() ||
+      RHS->isThreadLocal())
+    return nullptr;
+
+  return MCBinaryExpr::createSub(
+      MCSymbolRefExpr::create(TM.getSymbol(LHS, Mang), PLTRelativeVariantKind,
+                              getContext()),
+      MCSymbolRefExpr::create(TM.getSymbol(RHS, Mang), getContext()),
+      getContext());
+}
+
 void
 TargetLoweringObjectFileELF::InitializeELF(bool UseInitArray_) {
   UseInitArray = UseInitArray_;

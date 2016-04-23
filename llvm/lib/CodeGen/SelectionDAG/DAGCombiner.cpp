@@ -7366,11 +7366,12 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
       (!LegalOperations || TLI.isOperationLegal(ISD::LOAD, VT)) &&
       TLI.isLoadBitCastBeneficial(N0.getValueType(), VT)) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    unsigned Align = DAG.getDataLayout().getABITypeAlignment(
-        VT.getTypeForEVT(*DAG.getContext()));
     unsigned OrigAlign = LN0->getAlignment();
 
-    if (Align <= OrigAlign) {
+    bool Fast = false;
+    if (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
+                               LN0->getAddressSpace(), OrigAlign, &Fast) &&
+        Fast) {
       SDValue Load = DAG.getLoad(VT, SDLoc(N), LN0->getChain(),
                                  LN0->getBasePtr(), LN0->getPointerInfo(),
                                  LN0->isVolatile(), LN0->isNonTemporal(),
@@ -11969,17 +11970,21 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   // resultant store does not need a higher alignment than the original.
   if (Value.getOpcode() == ISD::BITCAST && !ST->isTruncatingStore() &&
       ST->isUnindexed()) {
-    unsigned OrigAlign = ST->getAlignment();
     EVT SVT = Value.getOperand(0).getValueType();
-    unsigned Align = DAG.getDataLayout().getABITypeAlignment(
-        SVT.getTypeForEVT(*DAG.getContext()));
-    if (Align <= OrigAlign &&
-        ((!LegalOperations && !ST->isVolatile()) ||
-         TLI.isOperationLegalOrCustom(ISD::STORE, SVT)))
-      return DAG.getStore(Chain, SDLoc(N), Value.getOperand(0),
-                          Ptr, ST->getPointerInfo(), ST->isVolatile(),
-                          ST->isNonTemporal(), OrigAlign,
-                          ST->getAAInfo());
+    if (((!LegalOperations && !ST->isVolatile()) ||
+         TLI.isOperationLegalOrCustom(ISD::STORE, SVT)) &&
+        TLI.isStoreBitCastBeneficial(Value.getValueType(), SVT)) {
+      unsigned OrigAlign = ST->getAlignment();
+      bool Fast = false;
+      if (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), SVT,
+                                 ST->getAddressSpace(), OrigAlign, &Fast) &&
+          Fast) {
+        return DAG.getStore(Chain, SDLoc(N), Value.getOperand(0),
+                            Ptr, ST->getPointerInfo(), ST->isVolatile(),
+                            ST->isNonTemporal(), OrigAlign,
+                            ST->getAAInfo());
+      }
+    }
   }
 
   // Turn 'store undef, Ptr' -> nothing.

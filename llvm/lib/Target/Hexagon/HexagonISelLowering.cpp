@@ -1868,10 +1868,14 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ, MVT::i16, Promote);
   setOperationAction(ISD::CTTZ, MVT::i8,  Promote);
   setOperationAction(ISD::CTTZ, MVT::i16, Promote);
-  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i8,  Promote);
-  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i16, Promote);
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i8,  Promote);
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i16, Promote);
+  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i8,  Expand);
+  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i16, Expand);
+  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
+  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Expand);
+  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i8,  Expand);
+  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i16, Expand);
+  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
+  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Expand);
 
   // In V5, popcount can count # of 1s in i64 but returns i32.
   // On V4 it will be expanded (set later).

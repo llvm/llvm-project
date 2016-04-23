@@ -903,11 +903,13 @@ public:
 protected:
   void checkAcyclicLatency();
 
+  void initCandidate(SchedCandidate &Cand, SUnit *SU, bool AtTop,
+                     const RegPressureTracker &RPTracker,
+                     RegPressureTracker &TempTracker);
+
   void tryCandidate(SchedCandidate &Cand,
                     SchedCandidate &TryCand,
-                    SchedBoundary &Zone,
-                    const RegPressureTracker &RPTracker,
-                    RegPressureTracker &TempTracker);
+                    SchedBoundary &Zone);
 
   SUnit *pickNodeBidirectional(bool &IsTopNode);
 

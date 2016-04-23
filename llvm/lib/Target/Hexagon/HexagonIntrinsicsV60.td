@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 let isCodeGenOnly = 1 in {
 def HEXAGON_V6_vd0_pseudo : CVI_VA_Resource<(outs VectorRegs:$dst),
     (ins ),
@@ -22,6 +23,7 @@ def HEXAGON_V6_vd0_pseudo_128B : CVI_VA_Resource<(outs VectorRegs128B:$dst),
     "$dst=#0",
     [(set VectorRegs128B:$dst, (int_hexagon_V6_vd0_128B ))]>;
 }
+
 let isPseudo = 1 in
 def HEXAGON_V6_vassignp : CVI_VA_Resource<(outs VecDblRegs:$dst),
     (ins VecDblRegs:$src1),
@@ -800,7 +802,7 @@ defm : T_VQR_pat <V6_vandqrt_acc, int_hexagon_V6_vandqrt_acc>;
 defm : T_QVR_pat <V6_vandvrt_acc, int_hexagon_V6_vandvrt_acc>;
 defm : T_QR_pat <V6_vandqrt, int_hexagon_V6_vandqrt>;
 defm : T_R_pat <V6_lvsplatw, int_hexagon_V6_lvsplatw>;
-defm  : T_R_pat <V6_pred_scalar2, int_hexagon_V6_pred_scalar2>;
+defm : T_R_pat <V6_pred_scalar2, int_hexagon_V6_pred_scalar2>;
 defm : T_VR_pat <V6_vandvrt, int_hexagon_V6_vandvrt>;
 
 defm : T_VVR_pat <V6_vlutvvb, int_hexagon_V6_vlutvvb>;

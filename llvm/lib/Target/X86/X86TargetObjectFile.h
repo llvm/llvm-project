@@ -40,6 +40,11 @@ namespace llvm {
   /// \brief This implemenatation is used for X86 ELF targets that don't
   /// have a further specialization.
   class X86ELFTargetObjectFile : public TargetLoweringObjectFileELF {
+  public:
+    X86ELFTargetObjectFile() {
+      PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
+    }
+
     /// \brief Describe a TLS variable address within debug info.
     const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
   };
@@ -53,8 +58,9 @@ namespace llvm {
   /// \brief This implementation is used for Windows targets on x86 and x86-64.
   class X86WindowsTargetObjectFile : public TargetLoweringObjectFileCOFF {
     const MCExpr *
-    getExecutableRelativeSymbol(const ConstantExpr *CE, Mangler &Mang,
-                                const TargetMachine &TM) const override;
+    lowerRelativeReference(const GlobalValue *LHS, const GlobalValue *RHS,
+                           Mangler &Mang,
+                           const TargetMachine &TM) const override;
 
     /// \brief Given a mergeable constant with the specified size and relocation
     /// information, return a section that it should be placed in.

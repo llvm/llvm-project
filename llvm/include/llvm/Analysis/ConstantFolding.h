@@ -21,14 +21,21 @@
 #define LLVM_ANALYSIS_CONSTANTFOLDING_H
 
 namespace llvm {
+class APInt;
+template <typename T> class ArrayRef;
 class Constant;
 class ConstantExpr;
-class Instruction;
 class DataLayout;
-class TargetLibraryInfo;
 class Function;
+class GlobalValue;
+class Instruction;
+class TargetLibraryInfo;
 class Type;
-template <typename T> class ArrayRef;
+
+/// If this constant is a constant offset from a global, return the global and
+/// the constant. Because of constantexprs, this function is recursive.
+bool IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV, APInt &Offset,
+                                const DataLayout &DL);
 
 /// ConstantFoldInstruction - Try to constant fold the specified instruction.
 /// If successful, the constant result is returned, if not, null is returned.

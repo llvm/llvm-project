@@ -96,6 +96,8 @@ unsigned ConstantMerge::getAlignment(GlobalVariable *GV) const {
 }
 
 bool ConstantMerge::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
 
   // Find all the globals that are marked "used".  These cannot be merged.
   SmallPtrSet<const GlobalValue*, 8> UsedGlobals;

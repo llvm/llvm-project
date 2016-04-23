@@ -44,7 +44,7 @@ INITIALIZE_PASS(TailDuplicatePass, "tailduplication", "Tail Duplication", false,
                 false)
 
 bool TailDuplicatePass::runOnMachineFunction(MachineFunction &MF) {
-  if (skipOptnoneFunction(*MF.getFunction()))
+  if (skipFunction(*MF.getFunction()))
     return false;
 
   auto MMI = getAnalysisIfAvailable<MachineModuleInfo>();

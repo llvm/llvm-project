@@ -636,7 +636,7 @@ LLVMTypeRef LLVMGetTypeByName(LLVMModuleRef M, const char *Name);
  *
  * @see llvm::Module::getNamedMetadata()
  */
-unsigned LLVMGetNamedMetadataNumOperands(LLVMModuleRef M, const char* name);
+unsigned LLVMGetNamedMetadataNumOperands(LLVMModuleRef M, const char *Name);
 
 /**
  * Obtain the named metadata operands for a module.
@@ -649,7 +649,8 @@ unsigned LLVMGetNamedMetadataNumOperands(LLVMModuleRef M, const char* name);
  * @see llvm::Module::getNamedMetadata()
  * @see llvm::MDNode::getOperand()
  */
-void LLVMGetNamedMetadataOperands(LLVMModuleRef M, const char* name, LLVMValueRef *Dest);
+void LLVMGetNamedMetadataOperands(LLVMModuleRef M, const char *Name,
+                                  LLVMValueRef *Dest);
 
 /**
  * Add an operand to named metadata.
@@ -657,7 +658,7 @@ void LLVMGetNamedMetadataOperands(LLVMModuleRef M, const char* name, LLVMValueRe
  * @see llvm::Module::getNamedMetadata()
  * @see llvm::MDNode::addOperand()
  */
-void LLVMAddNamedMetadataOperand(LLVMModuleRef M, const char* name,
+void LLVMAddNamedMetadataOperand(LLVMModuleRef M, const char *Name,
                                  LLVMValueRef Val);
 
 /**

@@ -1,9 +1,8 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-as %p/Inputs/comdat.ll -o %t2.o
 ; RUN: %gold -shared -o %t3.o -plugin %llvmshlibdir/LLVMgold.so %t.o %t2.o \
-; RUN:  -plugin-opt=no-discard-value-names \
-; RUN:  -plugin-opt=emit-llvm
-; RUN: llvm-dis %t3.o -o - | FileCheck %s
+; RUN:  -plugin-opt=save-temps
+; RUN: llvm-dis %t3.o.bc -o - | FileCheck %s
 
 $c1 = comdat any
 

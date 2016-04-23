@@ -75,6 +75,9 @@ INITIALIZE_PASS(GlobalDCE, "globaldce",
 ModulePass *llvm::createGlobalDCEPass() { return new GlobalDCE(); }
 
 bool GlobalDCE::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
   bool Changed = false;
 
   // Remove empty functions from the global ctors list.

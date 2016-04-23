@@ -39,7 +39,7 @@ entry:
 
 define i32 @f1() {
 ; X32-LABEL: f1:
-; X32:      movl __emutls_v.i@GOT(%ebx), %eax
+; X32:      leal __emutls_v.i@GOTOFF(%ebx), %eax
 ; X32-NEXT: movl %eax, (%esp)
 ; X32-NEXT: calll __emutls_get_address@PLT
 ; X32-NEXT: movl (%eax), %eax
@@ -47,7 +47,7 @@ define i32 @f1() {
 ; X32-NEXT: popl %ebx
 ; X32-NEXT: retl
 ; X64-LABEL: f1:
-; X64:      movq __emutls_v.i@GOTPCREL(%rip), %rdi
+; X64:      leaq __emutls_v.i(%rip), %rdi
 ; X64-NEXT: callq __emutls_get_address@PLT
 ; X64-NEXT: movl (%rax), %eax
 ; X64-NEXT: popq %rcx
@@ -60,11 +60,11 @@ entry:
 
 define i32* @f2() {
 ; X32-LABEL: f2:
-; X32:      movl __emutls_v.i@GOT(%ebx), %eax
+; X32:      leal __emutls_v.i@GOTOFF(%ebx), %eax
 ; X32-NEXT: movl %eax, (%esp)
 ; X32-NEXT: calll __emutls_get_address@PLT
 ; X64-LABEL: f2:
-; X64:      movq __emutls_v.i@GOTPCREL(%rip), %rdi
+; X64:      leaq __emutls_v.i(%rip), %rdi
 ; X64-NEXT: callq __emutls_get_address@PLT
 
 entry:

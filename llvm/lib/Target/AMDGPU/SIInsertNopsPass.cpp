@@ -54,10 +54,14 @@ FunctionPass *llvm::createSIInsertNopsPass() {
 }
 
 bool SIInsertNops::runOnMachineFunction(MachineFunction &MF) {
-  // Skip machine functions without debug info.
-  if (!MF.getMMI().hasDebugInfo()) {
+  // Skip this pass if debugger-insert-nops feature is not enabled.
+  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  if (!ST.debuggerInsertNops())
     return false;
-  }
+
+  // Skip machine functions without debug info.
+  if (!MF.getMMI().hasDebugInfo())
+    return false;
 
   // Target instruction info.
   const SIInstrInfo *TII =
@@ -69,16 +73,16 @@ bool SIInsertNops::runOnMachineFunction(MachineFunction &MF) {
   // Insert nop instruction before first isa instruction of each high level
   // source statement and collect last isa instruction for each high level
   // source statement.
-  for (auto MBB = MF.begin(); MBB != MF.end(); ++MBB) {
-    for (auto MI = MBB->begin(); MI != MBB->end(); ++MI) {
-      if (MI->isDebugValue() || !MI->getDebugLoc()) {
+  for (auto &MBB : MF) {
+    for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
+      if (MI->isDebugValue() || !MI->getDebugLoc())
         continue;
-      }
+
       auto DL = MI->getDebugLoc();
       auto CL = DL.getLine();
       auto LineToInstEntry = LineToInst.find(CL);
       if (LineToInstEntry == LineToInst.end()) {
-        BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_NOP))
+        BuildMI(MBB, *MI, DL, TII->get(AMDGPU::S_NOP))
           .addImm(0);
         LineToInst.insert(std::make_pair(CL, MI));
       } else {
@@ -88,16 +92,13 @@ bool SIInsertNops::runOnMachineFunction(MachineFunction &MF) {
   }
   // Insert nop instruction after last isa instruction of each high level source
   // statement.
-  for (auto LineToInstEntry = LineToInst.begin();
-         LineToInstEntry != LineToInst.end(); ++LineToInstEntry) {
-    auto MBB = LineToInstEntry->second->getParent();
-    auto DL = LineToInstEntry->second->getDebugLoc();
-    MachineBasicBlock::iterator MI = LineToInstEntry->second;
-    ++MI;
-    if (MI != MBB->end()) {
-      BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_NOP))
+  for (auto const &LineToInstEntry : LineToInst) {
+    auto MBB = LineToInstEntry.second->getParent();
+    auto DL = LineToInstEntry.second->getDebugLoc();
+    MachineBasicBlock::iterator MI = LineToInstEntry.second;
+    if (MI->getOpcode() != AMDGPU::S_ENDPGM)
+      BuildMI(*MBB, *(++MI), DL, TII->get(AMDGPU::S_NOP))
         .addImm(0);
-    }
   }
   // Insert nop instruction before prologue.
   MachineBasicBlock &MBB = MF.front();

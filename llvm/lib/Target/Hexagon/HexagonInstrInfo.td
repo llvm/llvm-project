@@ -4137,22 +4137,16 @@ def S2_clbnorm : T_COUNT_LEADING_32<"normamt", 0b000, 0b111>;
 // Count leading zeros.
 def: Pat<(i32 (ctlz I32:$Rs)), (S2_cl0 I32:$Rs)>;
 def: Pat<(i32 (trunc (ctlz I64:$Rss))), (S2_cl0p I64:$Rss)>;
-def: Pat<(i32 (ctlz_zero_undef I32:$Rs)), (S2_cl0 I32:$Rs)>;
-def: Pat<(i32 (trunc (ctlz_zero_undef I64:$Rss))), (S2_cl0p I64:$Rss)>;
 
 // Count trailing zeros: 32-bit.
 def: Pat<(i32 (cttz I32:$Rs)), (S2_ct0 I32:$Rs)>;
-def: Pat<(i32 (cttz_zero_undef I32:$Rs)), (S2_ct0 I32:$Rs)>;
 
 // Count leading ones.
 def: Pat<(i32 (ctlz (not I32:$Rs))), (S2_cl1 I32:$Rs)>;
 def: Pat<(i32 (trunc (ctlz (not I64:$Rss)))), (S2_cl1p I64:$Rss)>;
-def: Pat<(i32 (ctlz_zero_undef (not I32:$Rs))), (S2_cl1 I32:$Rs)>;
-def: Pat<(i32 (trunc (ctlz_zero_undef (not I64:$Rss)))), (S2_cl1p I64:$Rss)>;
 
 // Count trailing ones: 32-bit.
 def: Pat<(i32 (cttz (not I32:$Rs))), (S2_ct1 I32:$Rs)>;
-def: Pat<(i32 (cttz_zero_undef (not I32:$Rs))), (S2_ct1 I32:$Rs)>;
 
 // The 64-bit counts leading/trailing are defined in HexagonInstrInfoV4.td.
 

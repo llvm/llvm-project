@@ -356,6 +356,9 @@ static bool InlineHistoryIncludes(Function *F, int InlineHistoryID,
 }
 
 bool Inliner::runOnSCC(CallGraphSCC &SCC) {
+  if (skipSCC(SCC))
+    return false;
+
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
   ACT = &getAnalysis<AssumptionCacheTracker>();
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();

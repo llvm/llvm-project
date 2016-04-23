@@ -272,8 +272,6 @@ public:
     Passes.emplace_back(new PassModelT(std::move(Pass)));
   }
 
-  static StringRef name() { return "PassManager"; }
-
 private:
   typedef detail::PassConcept<IRUnitT> PassConceptT;
 

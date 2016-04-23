@@ -2576,23 +2576,16 @@ let hasSideEffects = 0 in {
 
 // 32-bit has a direct PTX instruction
 def : Pat<(ctlz Int32Regs:$a), (CLZr32 Int32Regs:$a)>;
-def : Pat<(ctlz_zero_undef Int32Regs:$a), (CLZr32 Int32Regs:$a)>;
 
 // For 64-bit, the result in PTX is actually 32-bit so we zero-extend
 // to 64-bit to match the LLVM semantics
 def : Pat<(ctlz Int64Regs:$a), (CVT_u64_u32 (CLZr64 Int64Regs:$a), CvtNONE)>;
-def : Pat<(ctlz_zero_undef Int64Regs:$a),
-          (CVT_u64_u32 (CLZr64 Int64Regs:$a), CvtNONE)>;
 
 // For 16-bit, we zero-extend to 32-bit, then trunc the result back
 // to 16-bits (ctlz of a 16-bit value is guaranteed to require less
 // than 16 bits to store). We also need to subtract 16 because the
 // high-order 16 zeros were counted.
 def : Pat<(ctlz Int16Regs:$a),
-          (SUBi16ri (CVT_u16_u32 (CLZr32
-            (CVT_u32_u16 Int16Regs:$a, CvtNONE)),
-           CvtNONE), 16)>;
-def : Pat<(ctlz_zero_undef Int16Regs:$a),
           (SUBi16ri (CVT_u16_u32 (CLZr32
             (CVT_u32_u16 Int16Regs:$a, CvtNONE)),
            CvtNONE), 16)>;

@@ -1763,10 +1763,6 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     llvm_unreachable("Unknown constant value to lower!");
   }
 
-  if (const MCExpr *RelocExpr
-      = getObjFileLowering().getExecutableRelativeSymbol(CE, *Mang, TM))
-    return RelocExpr;
-
   switch (CE->getOpcode()) {
   default:
     // If the code isn't optimized, there may be outstanding folding
@@ -1842,10 +1838,34 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     return MCBinaryExpr::createAnd(OpExpr, MaskExpr, Ctx);
   }
 
+  case Instruction::Sub: {
+    GlobalValue *LHSGV;
+    APInt LHSOffset;
+    if (IsConstantOffsetFromGlobal(CE->getOperand(0), LHSGV, LHSOffset,
+                                   getDataLayout())) {
+      GlobalValue *RHSGV;
+      APInt RHSOffset;
+      if (IsConstantOffsetFromGlobal(CE->getOperand(1), RHSGV, RHSOffset,
+                                     getDataLayout())) {
+        const MCExpr *RelocExpr = getObjFileLowering().lowerRelativeReference(
+            LHSGV, RHSGV, *Mang, TM);
+        if (!RelocExpr)
+          RelocExpr = MCBinaryExpr::createSub(
+              MCSymbolRefExpr::create(getSymbol(LHSGV), Ctx),
+              MCSymbolRefExpr::create(getSymbol(RHSGV), Ctx), Ctx);
+        int64_t Addend = (LHSOffset - RHSOffset).getSExtValue();
+        if (Addend != 0)
+          RelocExpr = MCBinaryExpr::createAdd(
+              RelocExpr, MCConstantExpr::create(Addend, Ctx), Ctx);
+        return RelocExpr;
+      }
+    }
+  }
+  // else fallthrough
+
   // The MC library also has a right-shift operator, but it isn't consistently
   // signed or unsigned between different targets.
   case Instruction::Add:
-  case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::SDiv:
   case Instruction::SRem:

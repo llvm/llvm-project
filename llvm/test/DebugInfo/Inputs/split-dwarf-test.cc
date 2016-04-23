@@ -1,13 +1,16 @@
-int foo(int a) {
-  return a + 1;
+void f1() {
 }
 
-int main(int argc, char *argv[]) {
-  return foo(argc);
+inline __attribute__((always_inline)) void f2() {
+  f1();
+}
+
+int main() {
+  f2();
 }
 
 // Build instructions:
-// 1) clang++ -### -O2 -gsplit-dwarf.cc split-dwarf-test.cc -o split-dwarf-test
+// 1) clang++ -### -gsplit-dwarf split-dwarf-test.cc -o split-dwarf-test
 // 2) Replace the value "-fdebug-compilation-dir" flag to "Output"
 //      (this is the temp directory used by lit).
 // 3) Manually run clang-cc1, objcopy and ld invocations.

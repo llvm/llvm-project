@@ -68,6 +68,9 @@ namespace {
       : ModulePass(ID), Named(GVs.begin(), GVs.end()), deleteStuff(deleteS) {}
 
     bool runOnModule(Module &M) override {
+      if (skipModule(M))
+        return false;
+
       // Visit the global inline asm.
       if (!deleteStuff)
         M.setModuleInlineAsm("");

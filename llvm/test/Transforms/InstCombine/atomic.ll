@@ -172,3 +172,37 @@ define i32 @test17(i1 %cnd) {
   %x = load atomic i32, i32* %addr seq_cst, align 4
   ret i32 %x
 }
+
+define i32 @test22(i1 %cnd) {
+; CHECK-LABEL: define i32 @test22(
+; CHECK: [[PHI:%.*]] = phi i32
+; CHECK: store atomic i32 [[PHI]], i32* @a unordered, align 4
+  br i1 %cnd, label %block1, label %block2
+
+block1:
+  store atomic i32 1, i32* @a unordered, align 4
+  br label %merge
+block2:
+  store atomic i32 2, i32* @a unordered, align 4
+  br label %merge
+
+merge:
+  ret i32 0
+}
+
+; TODO: probably also legal here
+define i32 @test23(i1 %cnd) {
+; CHECK-LABEL: define i32 @test23(
+; CHECK: br i1 %cnd, label %block1, label %block2
+  br i1 %cnd, label %block1, label %block2
+
+block1:
+  store atomic i32 1, i32* @a monotonic, align 4
+  br label %merge
+block2:
+  store atomic i32 2, i32* @a monotonic, align 4
+  br label %merge
+
+merge:
+  ret i32 0
+}

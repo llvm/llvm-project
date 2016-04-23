@@ -110,6 +110,7 @@ namespace {
       AU.addRequired<LiveIntervals>();
       AU.addPreserved<LiveIntervals>();
       AU.addPreserved<SlotIndexes>();
+      AU.addPreservedID(MachineDominatorsID);
       MachineFunctionPass::getAnalysisUsage(AU);
     }
     virtual bool runOnMachineFunction(MachineFunction &MF);
@@ -166,7 +167,8 @@ namespace {
     bool canMoveOver(MachineInstr *MI, ReferenceMap &Defs, ReferenceMap &Uses);
     bool canMoveMemTo(MachineInstr *MI, MachineInstr *ToI, bool IsDown);
     void predicateAt(RegisterRef RD, MachineInstr *MI,
-        MachineBasicBlock::iterator Where, unsigned PredR, bool Cond);
+        MachineBasicBlock::iterator Where, unsigned PredR, bool Cond,
+        bool PredUndef);
     void renameInRange(RegisterRef RO, RegisterRef RN, unsigned PredR,
         bool Cond, MachineBasicBlock::iterator First,
         MachineBasicBlock::iterator Last);
@@ -884,7 +886,8 @@ bool HexagonExpandCondsets::canMoveMemTo(MachineInstr *TheI, MachineInstr *ToI,
 /// Generate a predicated version of MI (where the condition is given via
 /// PredR and Cond) at the point indicated by Where.
 void HexagonExpandCondsets::predicateAt(RegisterRef RD, MachineInstr *MI,
-      MachineBasicBlock::iterator Where, unsigned PredR, bool Cond) {
+      MachineBasicBlock::iterator Where, unsigned PredR, bool Cond,
+      bool PredUndef) {
   // The problem with updating live intervals is that we can move one def
   // past another def. In particular, this can happen when moving an A2_tfrt
   // over an A2_tfrf defining the same register. From the point of view of
@@ -912,7 +915,7 @@ void HexagonExpandCondsets::predicateAt(RegisterRef RD, MachineInstr *MI,
   // Add the new def, then the predicate register, then the rest of the
   // operands.
   MB.addReg(RD.Reg, RegState::Define, RD.Sub);
-  MB.addReg(PredR);
+  MB.addReg(PredR, PredUndef ? RegState::Undef : 0);
   while (Ox < NP) {
     MachineOperand &MO = MI->getOperand(Ox);
     if (!MO.isReg() || !MO.isImplicit())
@@ -1070,9 +1073,9 @@ bool HexagonExpandCondsets::predicate(MachineInstr *TfrI, bool Cond) {
                << ", can move down: " << (CanDown ? "yes\n" : "no\n"));
   MachineBasicBlock::iterator PastDefIt = std::next(DefIt);
   if (CanUp)
-    predicateAt(RD, DefI, PastDefIt, PredR, Cond);
+    predicateAt(RD, DefI, PastDefIt, PredR, Cond, MP.isUndef());
   else if (CanDown)
-    predicateAt(RD, DefI, TfrIt, PredR, Cond);
+    predicateAt(RD, DefI, TfrIt, PredR, Cond, MP.isUndef());
   else
     return false;
 
@@ -1308,6 +1311,7 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   LIS = &getAnalysis<LiveIntervals>();
   MRI = &MF.getRegInfo();
+  DEBUG(MF.print(dbgs() << "Before expand-condsets\n", LIS->getSlotIndexes()));
 
   bool Changed = false;
 
@@ -1330,6 +1334,10 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I)
     postprocessUndefImplicitUses(*I);
+
+  if (Changed)
+    DEBUG(MF.print(dbgs() << "After expand-condsets\n", LIS->getSlotIndexes()));
+
   return Changed;
 }
 

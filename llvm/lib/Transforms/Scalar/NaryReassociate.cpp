@@ -208,7 +208,7 @@ FunctionPass *llvm::createNaryReassociatePass() {
 }
 
 bool NaryReassociate::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
+  if (skipFunction(F))
     return false;
 
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);

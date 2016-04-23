@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H
 #define LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H
 
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 
@@ -22,7 +23,6 @@ namespace llvm {
   class MachineModuleInfo;
   class Mangler;
   class MCAsmInfo;
-  class MCExpr;
   class MCSection;
   class MCSectionMachO;
   class MCSymbol;
@@ -34,6 +34,10 @@ namespace llvm {
 class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
   bool UseInitArray;
   mutable unsigned NextUniqueID = 0;
+
+protected:
+  MCSymbolRefExpr::VariantKind PLTRelativeVariantKind =
+      MCSymbolRefExpr::VK_None;
 
 public:
   TargetLoweringObjectFileELF() : UseInitArray(false) {}
@@ -81,6 +85,10 @@ public:
                                   const MCSymbol *KeySym) const override;
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
+
+  const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
+                                       const GlobalValue *RHS, Mangler &Mang,
+                                       const TargetMachine &TM) const override;
 };
 
 

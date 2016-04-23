@@ -69,6 +69,9 @@ public:
         *PassRegistry::getPassRegistry());
   }
   bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+
     return stripDeadPrototypes(M);
   }
 };

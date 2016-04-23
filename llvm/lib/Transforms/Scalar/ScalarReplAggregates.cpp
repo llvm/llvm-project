@@ -1026,7 +1026,7 @@ ConvertScalar_InsertValue(Value *SV, Value *Old,
 
 
 bool SROA::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
+  if (skipFunction(F))
     return false;
 
   bool Changed = performPromotion(F);

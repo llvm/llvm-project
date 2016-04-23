@@ -40,6 +40,7 @@ using namespace llvm::PatternMatch;
 
 STATISTIC(NumSimplify, "Number of instructions simplified or DCE'd");
 STATISTIC(NumCSE,      "Number of instructions CSE'd");
+STATISTIC(NumCSECVP,   "Number of compare instructions CVP'd");
 STATISTIC(NumCSELoad,  "Number of load instructions CSE'd");
 STATISTIC(NumCSECall,  "Number of call instructions CSE'd");
 STATISTIC(NumDSE,      "Number of trivial dead stores removed");
@@ -96,15 +97,6 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
     Value *RHS = BinOp->getOperand(1);
     if (BinOp->isCommutative() && BinOp->getOperand(0) > BinOp->getOperand(1))
       std::swap(LHS, RHS);
-
-    if (isa<OverflowingBinaryOperator>(BinOp)) {
-      // Hash the overflow behavior
-      unsigned Overflow =
-          BinOp->hasNoSignedWrap() * OverflowingBinaryOperator::NoSignedWrap |
-          BinOp->hasNoUnsignedWrap() *
-              OverflowingBinaryOperator::NoUnsignedWrap;
-      return hash_combine(BinOp->getOpcode(), Overflow, LHS, RHS);
-    }
 
     return hash_combine(BinOp->getOpcode(), LHS, RHS);
   }
@@ -491,6 +483,7 @@ private:
 }
 
 bool EarlyCSE::processNode(DomTreeNode *Node) {
+  bool Changed = false;
   BasicBlock *BB = Node->getBlock();
 
   // If this block has a single predecessor, then the predecessor is the parent
@@ -521,9 +514,13 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
             DEBUG(dbgs() << "EarlyCSE CVP: Add conditional value for '"
                   << CondInst->getName() << "' as " << *ConditionalConstant
                   << " in " << BB->getName() << "\n");
-            // Replace all dominated uses with the known value
-            replaceDominatedUsesWith(CondInst, ConditionalConstant, DT,
-                                     BasicBlockEdge(Pred, BB));
+            // Replace all dominated uses with the known value.
+            if (unsigned Count =
+                    replaceDominatedUsesWith(CondInst, ConditionalConstant, DT,
+                                             BasicBlockEdge(Pred, BB))) {
+              Changed = true;
+              NumCSECVP = NumCSECVP + Count;
+            }
           }
 
   /// LastStore - Keep track of the last non-volatile store that we saw... for
@@ -532,7 +529,6 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
   /// stores which can occur in bitfield code among other things.
   Instruction *LastStore = nullptr;
 
-  bool Changed = false;
   const DataLayout &DL = BB->getModule()->getDataLayout();
 
   // See if any instructions in the block can be eliminated.  If so, do it.  If
@@ -846,7 +842,7 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    if (skipOptnoneFunction(F))
+    if (skipFunction(F))
       return false;
 
     auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();

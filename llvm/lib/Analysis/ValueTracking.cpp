@@ -3543,26 +3543,44 @@ bool llvm::isKnownNotFullPoison(const Instruction *PoisonI) {
   // Set of instructions that we have proved will yield poison if PoisonI
   // does.
   SmallSet<const Value *, 16> YieldsPoison;
+  SmallSet<const BasicBlock *, 4> Visited;
   YieldsPoison.insert(PoisonI);
+  Visited.insert(PoisonI->getParent());
 
-  for (BasicBlock::const_iterator I = PoisonI->getIterator(), E = BB->end();
-       I != E; ++I) {
-    if (&*I != PoisonI) {
-      const Value *NotPoison = getGuaranteedNonFullPoisonOp(&*I);
-      if (NotPoison != nullptr && YieldsPoison.count(NotPoison)) return true;
-      if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
-        return false;
-    }
+  BasicBlock::const_iterator Begin = PoisonI->getIterator(), End = BB->end();
 
-    // Mark poison that propagates from I through uses of I.
-    if (YieldsPoison.count(&*I)) {
-      for (const User *User : I->users()) {
-        const Instruction *UserI = cast<Instruction>(User);
-        if (UserI->getParent() == BB && propagatesFullPoison(UserI))
-          YieldsPoison.insert(User);
+  unsigned Iter = 0;
+  while (Iter++ < MaxDepth) {
+    for (auto &I : make_range(Begin, End)) {
+      if (&I != PoisonI) {
+        const Value *NotPoison = getGuaranteedNonFullPoisonOp(&I);
+        if (NotPoison != nullptr && YieldsPoison.count(NotPoison))
+          return true;
+        if (!isGuaranteedToTransferExecutionToSuccessor(&I))
+          return false;
+      }
+
+      // Mark poison that propagates from I through uses of I.
+      if (YieldsPoison.count(&I)) {
+        for (const User *User : I.users()) {
+          const Instruction *UserI = cast<Instruction>(User);
+          if (propagatesFullPoison(UserI))
+            YieldsPoison.insert(User);
+        }
       }
     }
-  }
+
+    if (auto *NextBB = BB->getSingleSuccessor()) {
+      if (Visited.insert(NextBB).second) {
+        BB = NextBB;
+        Begin = BB->getFirstNonPHI()->getIterator();
+        End = BB->end();
+        continue;
+      }
+    }
+
+    break;
+  };
   return false;
 }
 

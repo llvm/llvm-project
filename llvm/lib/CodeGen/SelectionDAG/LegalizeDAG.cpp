@@ -4010,18 +4010,20 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::CTPOP:
     // Zero extend the argument.
     Tmp1 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(0));
+    if (Node->getOpcode() == ISD::CTTZ) {
+      // The count is the same in the promoted type except if the original
+      // value was zero.  This can be handled by setting the bit just off
+      // the top of the original type.
+      auto TopBit = APInt::getOneBitSet(NVT.getSizeInBits(),
+                                        OVT.getSizeInBits());
+      Tmp1 = DAG.getNode(ISD::OR, dl, NVT, Tmp1,
+                         DAG.getConstant(TopBit, dl, NVT));
+    }
     // Perform the larger operation. For CTPOP and CTTZ_ZERO_UNDEF, this is
     // already the correct result.
     Tmp1 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
-    if (Node->getOpcode() == ISD::CTTZ) {
-      // FIXME: This should set a bit in the zero extended value instead.
-      Tmp2 = DAG.getSetCC(dl, getSetCCResultType(NVT),
-                          Tmp1, DAG.getConstant(NVT.getSizeInBits(), dl, NVT),
-                          ISD::SETEQ);
-      Tmp1 = DAG.getSelect(dl, NVT, Tmp2,
-                           DAG.getConstant(OVT.getSizeInBits(), dl, NVT), Tmp1);
-    } else if (Node->getOpcode() == ISD::CTLZ ||
-               Node->getOpcode() == ISD::CTLZ_ZERO_UNDEF) {
+    if (Node->getOpcode() == ISD::CTLZ ||
+        Node->getOpcode() == ISD::CTLZ_ZERO_UNDEF) {
       // Tmp1 = Tmp1 - (sizeinbits(NVT) - sizeinbits(Old VT))
       Tmp1 = DAG.getNode(ISD::SUB, dl, NVT, Tmp1,
                           DAG.getConstant(NVT.getSizeInBits() -

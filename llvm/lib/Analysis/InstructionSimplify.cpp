@@ -3825,6 +3825,62 @@ static bool IsIdempotent(Intrinsic::ID ID) {
   }
 }
 
+static Value *SimplifyRelativeLoad(Constant *Ptr, Constant *Offset,
+                                   const DataLayout &DL) {
+  GlobalValue *PtrSym;
+  APInt PtrOffset;
+  if (!IsConstantOffsetFromGlobal(Ptr, PtrSym, PtrOffset, DL))
+    return nullptr;
+
+  Type *Int8PtrTy = Type::getInt8PtrTy(Ptr->getContext());
+  Type *Int32Ty = Type::getInt32Ty(Ptr->getContext());
+  Type *Int32PtrTy = Int32Ty->getPointerTo();
+  Type *Int64Ty = Type::getInt64Ty(Ptr->getContext());
+
+  auto *OffsetConstInt = dyn_cast<ConstantInt>(Offset);
+  if (!OffsetConstInt || OffsetConstInt->getType()->getBitWidth() > 64)
+    return nullptr;
+
+  uint64_t OffsetInt = OffsetConstInt->getSExtValue();
+  if (OffsetInt % 4 != 0)
+    return nullptr;
+
+  Constant *C = ConstantExpr::getGetElementPtr(
+      Int32Ty, ConstantExpr::getBitCast(Ptr, Int32PtrTy),
+      ConstantInt::get(Int64Ty, OffsetInt / 4));
+  Constant *Loaded = ConstantFoldLoadFromConstPtr(C, Int32Ty, DL);
+  if (!Loaded)
+    return nullptr;
+
+  auto *LoadedCE = dyn_cast<ConstantExpr>(Loaded);
+  if (!LoadedCE)
+    return nullptr;
+
+  if (LoadedCE->getOpcode() == Instruction::Trunc) {
+    LoadedCE = dyn_cast<ConstantExpr>(LoadedCE->getOperand(0));
+    if (!LoadedCE)
+      return nullptr;
+  }
+
+  if (LoadedCE->getOpcode() != Instruction::Sub)
+    return nullptr;
+
+  auto *LoadedLHS = dyn_cast<ConstantExpr>(LoadedCE->getOperand(0));
+  if (!LoadedLHS || LoadedLHS->getOpcode() != Instruction::PtrToInt)
+    return nullptr;
+  auto *LoadedLHSPtr = LoadedLHS->getOperand(0);
+
+  Constant *LoadedRHS = LoadedCE->getOperand(1);
+  GlobalValue *LoadedRHSSym;
+  APInt LoadedRHSOffset;
+  if (!IsConstantOffsetFromGlobal(LoadedRHS, LoadedRHSSym, LoadedRHSOffset,
+                                  DL) ||
+      PtrSym != LoadedRHSSym || PtrOffset != LoadedRHSOffset)
+    return nullptr;
+
+  return ConstantExpr::getBitCast(LoadedLHSPtr, Int8PtrTy);
+}
+
 template <typename IterTy>
 static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
                                 const Query &Q, unsigned MaxRecurse) {
@@ -3865,6 +3921,11 @@ static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
       if (match(RHS, m_Undef()))
         return Constant::getNullValue(ReturnType);
     }
+
+    if (IID == Intrinsic::load_relative && isa<Constant>(LHS) &&
+        isa<Constant>(RHS))
+      return SimplifyRelativeLoad(cast<Constant>(LHS), cast<Constant>(RHS),
+                                  Q.DL);
   }
 
   // Perform idempotent optimizations

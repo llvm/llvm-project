@@ -353,6 +353,7 @@ int main(int argc, char **argv) {
   initializeDwarfEHPreparePass(Registry);
   initializeSafeStackPass(Registry);
   initializeSjLjEHPreparePass(Registry);
+  initializePreISelIntrinsicLoweringPass(Registry);
 
 #ifdef LINK_POLLY_INTO_TOOLS
   polly::initializePollyPasses(Registry);

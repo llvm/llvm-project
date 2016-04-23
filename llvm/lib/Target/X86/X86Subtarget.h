@@ -548,6 +548,14 @@ public:
     }
   }
 
+  /// Determine if this global is defined in a Position Independent
+  /// Executable (PIE) where its definition cannot be interposed.
+  bool isGlobalDefinedInPIE(const GlobalValue *GV,
+                            const TargetMachine &TM) const {
+    return TM.Options.PositionIndependentExecutable &&
+           !GV->isDeclarationForLinker();
+  }
+
   /// ClassifyGlobalReference - Classify a global variable reference for the
   /// current subtarget according to how we should reference it in a non-pcrel
   /// context.

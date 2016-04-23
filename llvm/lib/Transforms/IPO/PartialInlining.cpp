@@ -149,6 +149,9 @@ Function* PartialInliner::unswitchFunction(Function* F) {
 }
 
 bool PartialInliner::runOnModule(Module& M) {
+  if (skipModule(M))
+    return false;
+
   std::vector<Function*> worklist;
   worklist.reserve(M.size());
   for (Module::iterator FI = M.begin(), FE = M.end(); FI != FE; ++FI)

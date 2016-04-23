@@ -212,7 +212,7 @@ struct CFGSimplifyPass : public FunctionPass {
     if (PredicateFtor && !PredicateFtor(F))
       return false;
 
-    if (skipOptnoneFunction(F))
+    if (skipFunction(F))
       return false;
 
     AssumptionCache *AC =

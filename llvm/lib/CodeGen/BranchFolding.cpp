@@ -90,7 +90,7 @@ INITIALIZE_PASS(BranchFolderPass, "branch-folder",
                 "Control Flow Optimizer", false, false)
 
 bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
-  if (skipOptnoneFunction(*MF.getFunction()))
+  if (skipFunction(*MF.getFunction()))
     return false;
 
   TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();

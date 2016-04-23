@@ -538,6 +538,12 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
     }
   }
   OutStreamer->EmitSyntaxDirective();
+
+  // If this is not inline asm and we're in 16-bit
+  // mode prefix assembly with .code16.
+  bool is16 = TT.getEnvironment() == Triple::CODE16;
+  if (M.getModuleInlineAsm().empty() && is16)
+    OutStreamer->EmitAssemblerFlag(MCAF_Code16);
 }
 
 static void

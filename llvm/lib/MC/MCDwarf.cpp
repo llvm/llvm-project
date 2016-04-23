@@ -112,6 +112,12 @@ EmitDwarfLineTable(MCObjectStreamer *MCOS, MCSection *Section,
             ie = LineEntries.end();
        it != ie; ++it) {
 
+    int64_t LineDelta = static_cast<int64_t>(it->getLine()) - LastLine;
+
+    // Discriminator will be cleared if there is line change.
+    if (LineDelta != 0)
+      Discriminator = 0;
+
     if (FileNum != it->getFileNum()) {
       FileNum = it->getFileNum();
       MCOS->EmitIntValue(dwarf::DW_LNS_set_file, 1);
@@ -146,7 +152,6 @@ EmitDwarfLineTable(MCObjectStreamer *MCOS, MCSection *Section,
     if (it->getFlags() & DWARF2_FLAG_EPILOGUE_BEGIN)
       MCOS->EmitIntValue(dwarf::DW_LNS_set_epilogue_begin, 1);
 
-    int64_t LineDelta = static_cast<int64_t>(it->getLine()) - LastLine;
     MCSymbol *Label = it->getLabel();
 
     // At this point we want to emit/create the sequence to encode the delta in

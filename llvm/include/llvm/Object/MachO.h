@@ -261,7 +261,7 @@ public:
 
   StringRef getFileFormatName() const override;
   unsigned getArch() const override;
-  Triple getArch(const char **McpuDefault, Triple *ThumbTriple) const;
+  Triple getArchTriple(const char **McpuDefault = nullptr) const;
 
   relocation_iterator section_rel_begin(unsigned Index) const;
   relocation_iterator section_rel_end(unsigned Index) const;
@@ -407,12 +407,8 @@ public:
                                          StringRef &Suffix);
 
   static Triple::ArchType getArch(uint32_t CPUType);
-  static Triple getArch(uint32_t CPUType, uint32_t CPUSubType,
-                        const char **McpuDefault = nullptr);
-  static Triple getThumbArch(uint32_t CPUType, uint32_t CPUSubType,
-                             const char **McpuDefault = nullptr);
-  static Triple getArch(uint32_t CPUType, uint32_t CPUSubType,
-                        const char **McpuDefault, Triple *ThumbTriple);
+  static Triple getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
+                              const char **McpuDefault = nullptr);
   static bool isValidArch(StringRef ArchFlag);
   static Triple getHostArch();
 

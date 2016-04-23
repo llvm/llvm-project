@@ -81,7 +81,7 @@ INITIALIZE_PASS(SingleLoopExtractor, "loop-extract-single",
 Pass *llvm::createLoopExtractorPass() { return new LoopExtractor(); }
 
 bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &) {
-  if (skipOptnoneFunction(L))
+  if (skipLoop(L))
     return false;
 
   // Only visit top-level loops.
@@ -249,6 +249,9 @@ void BlockExtractorPass::SplitLandingPadPreds(Function *F) {
 }
 
 bool BlockExtractorPass::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
   std::set<BasicBlock*> TranslatedBlocksToNotExtract;
   for (unsigned i = 0, e = BlocksToNotExtract.size(); i != e; ++i) {
     BasicBlock *BB = BlocksToNotExtract[i];

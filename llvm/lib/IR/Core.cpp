@@ -825,16 +825,14 @@ const char *LLVMGetMDString(LLVMValueRef V, unsigned *Length) {
   return nullptr;
 }
 
-unsigned LLVMGetMDNodeNumOperands(LLVMValueRef V)
-{
+unsigned LLVMGetMDNodeNumOperands(LLVMValueRef V) {
   auto *MD = cast<MetadataAsValue>(unwrap(V));
   if (isa<ValueAsMetadata>(MD->getMetadata()))
     return 1;
   return cast<MDNode>(MD->getMetadata())->getNumOperands();
 }
 
-void LLVMGetMDNodeOperands(LLVMValueRef V, LLVMValueRef *Dest)
-{
+void LLVMGetMDNodeOperands(LLVMValueRef V, LLVMValueRef *Dest) {
   auto *MD = cast<MetadataAsValue>(unwrap(V));
   if (auto *MDV = dyn_cast<ValueAsMetadata>(MD->getMetadata())) {
     *Dest = wrap(MDV->getValue());
@@ -847,17 +845,16 @@ void LLVMGetMDNodeOperands(LLVMValueRef V, LLVMValueRef *Dest)
     Dest[i] = getMDNodeOperandImpl(Context, N, i);
 }
 
-unsigned LLVMGetNamedMetadataNumOperands(LLVMModuleRef M, const char* name)
-{
-  if (NamedMDNode *N = unwrap(M)->getNamedMetadata(name)) {
+unsigned LLVMGetNamedMetadataNumOperands(LLVMModuleRef M, const char *Name) {
+  if (NamedMDNode *N = unwrap(M)->getNamedMetadata(Name)) {
     return N->getNumOperands();
   }
   return 0;
 }
 
-void LLVMGetNamedMetadataOperands(LLVMModuleRef M, const char* name, LLVMValueRef *Dest)
-{
-  NamedMDNode *N = unwrap(M)->getNamedMetadata(name);
+void LLVMGetNamedMetadataOperands(LLVMModuleRef M, const char *Name,
+                                  LLVMValueRef *Dest) {
+  NamedMDNode *N = unwrap(M)->getNamedMetadata(Name);
   if (!N)
     return;
   LLVMContext &Context = unwrap(M)->getContext();
@@ -865,10 +862,9 @@ void LLVMGetNamedMetadataOperands(LLVMModuleRef M, const char* name, LLVMValueRe
     Dest[i] = wrap(MetadataAsValue::get(Context, N->getOperand(i)));
 }
 
-void LLVMAddNamedMetadataOperand(LLVMModuleRef M, const char* name,
-                                 LLVMValueRef Val)
-{
-  NamedMDNode *N = unwrap(M)->getOrInsertNamedMetadata(name);
+void LLVMAddNamedMetadataOperand(LLVMModuleRef M, const char *Name,
+                                 LLVMValueRef Val) {
+  NamedMDNode *N = unwrap(M)->getOrInsertNamedMetadata(Name);
   if (!N)
     return;
   if (!Val)

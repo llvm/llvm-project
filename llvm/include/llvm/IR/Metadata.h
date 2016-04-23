@@ -1193,6 +1193,52 @@ public:
   typedef MDTupleTypedArrayWrapper<CLASS> CLASS##Array;
 #include "llvm/IR/Metadata.def"
 
+/// Placeholder metadata for operands of distinct MDNodes.
+///
+/// This is a lightweight placeholder for an operand of a distinct node.  It's
+/// purpose is to help track forward references when creating a distinct node.
+/// This allows distinct nodes involved in a cycle to be constructed before
+/// their operands without requiring a heavyweight temporary node with
+/// full-blown RAUW support.
+///
+/// Each placeholder supports only a single MDNode user.  Clients should pass
+/// an ID, retrieved via \a getID(), to indicate the "real" operand that this
+/// should be replaced with.
+///
+/// While it would be possible to implement move operators, they would be
+/// fairly expensive.  Leave them unimplemented to discourage their use
+/// (clients can use std::deque, std::list, BumpPtrAllocator, etc.).
+class DistinctMDOperandPlaceholder : public Metadata {
+  friend class MetadataTracking;
+
+  Metadata **Use = nullptr;
+
+  DistinctMDOperandPlaceholder() = delete;
+  DistinctMDOperandPlaceholder(DistinctMDOperandPlaceholder &&) = delete;
+  DistinctMDOperandPlaceholder(const DistinctMDOperandPlaceholder &) = delete;
+
+public:
+  explicit DistinctMDOperandPlaceholder(unsigned ID)
+      : Metadata(DistinctMDOperandPlaceholderKind, Distinct) {
+    SubclassData32 = ID;
+  }
+
+  ~DistinctMDOperandPlaceholder() {
+    if (Use)
+      *Use = nullptr;
+  }
+
+  unsigned getID() const { return SubclassData32; }
+
+  /// Replace the use of this with MD.
+  void replaceUseWith(Metadata *MD) {
+    if (!Use)
+      return;
+    *Use = MD;
+    Use = nullptr;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 /// \brief A tuple of MDNodes.
 ///

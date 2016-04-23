@@ -128,8 +128,6 @@ public:
       return Err;
     return cast<ObjectFileType>(*ErrOrObj);
   }
-
-  static Triple getTriple(const object::MachOObjectFile &Obj);
 };
 }
 }

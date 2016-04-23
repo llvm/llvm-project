@@ -73,53 +73,30 @@ X86LinuxNaClTargetObjectFile::Initialize(MCContext &Ctx,
   InitializeELF(TM.Options.UseInitArray);
 }
 
-const MCExpr *X86WindowsTargetObjectFile::getExecutableRelativeSymbol(
-    const ConstantExpr *CE, Mangler &Mang, const TargetMachine &TM) const {
-  // We are looking for the difference of two symbols, need a subtraction
-  // operation.
-  const SubOperator *Sub = dyn_cast<SubOperator>(CE);
-  if (!Sub)
-    return nullptr;
-
-  // Symbols must first be numbers before we can subtract them, we need to see a
-  // ptrtoint on both subtraction operands.
-  const PtrToIntOperator *SubLHS =
-      dyn_cast<PtrToIntOperator>(Sub->getOperand(0));
-  const PtrToIntOperator *SubRHS =
-      dyn_cast<PtrToIntOperator>(Sub->getOperand(1));
-  if (!SubLHS || !SubRHS)
-    return nullptr;
-
+const MCExpr *X86WindowsTargetObjectFile::lowerRelativeReference(
+    const GlobalValue *LHS, const GlobalValue *RHS, Mangler &Mang,
+    const TargetMachine &TM) const {
   // Our symbols should exist in address space zero, cowardly no-op if
   // otherwise.
-  if (SubLHS->getPointerAddressSpace() != 0 ||
-      SubRHS->getPointerAddressSpace() != 0)
+  if (LHS->getType()->getPointerAddressSpace() != 0 ||
+      RHS->getType()->getPointerAddressSpace() != 0)
     return nullptr;
 
   // Both ptrtoint instructions must wrap global objects:
   // - Only global variables are eligible for image relative relocations.
   // - The subtrahend refers to the special symbol __ImageBase, a GlobalVariable.
-  const auto *GOLHS = dyn_cast<GlobalObject>(SubLHS->getPointerOperand());
-  const auto *GVRHS = dyn_cast<GlobalVariable>(SubRHS->getPointerOperand());
-  if (!GOLHS || !GVRHS)
-    return nullptr;
-
   // We expect __ImageBase to be a global variable without a section, externally
   // defined.
   //
   // It should look something like this: @__ImageBase = external constant i8
-  if (GVRHS->isThreadLocal() || GVRHS->getName() != "__ImageBase" ||
-      !GVRHS->hasExternalLinkage() || GVRHS->hasInitializer() ||
-      GVRHS->hasSection())
+  if (!isa<GlobalObject>(LHS) || !isa<GlobalVariable>(RHS) ||
+      LHS->isThreadLocal() || RHS->isThreadLocal() ||
+      RHS->getName() != "__ImageBase" || !RHS->hasExternalLinkage() ||
+      cast<GlobalVariable>(RHS)->hasInitializer() || RHS->hasSection())
     return nullptr;
 
-  // An image-relative, thread-local, symbol makes no sense.
-  if (GOLHS->isThreadLocal())
-    return nullptr;
-
-  return MCSymbolRefExpr::create(TM.getSymbol(GOLHS, Mang),
-                                 MCSymbolRefExpr::VK_COFF_IMGREL32,
-                                 getContext());
+  return MCSymbolRefExpr::create(
+      TM.getSymbol(LHS, Mang), MCSymbolRefExpr::VK_COFF_IMGREL32, getContext());
 }
 
 static std::string APIntToHexString(const APInt &AI) {

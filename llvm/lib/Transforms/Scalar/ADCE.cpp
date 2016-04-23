@@ -159,7 +159,7 @@ struct ADCELegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function& F) override {
-    if (skipOptnoneFunction(F))
+    if (skipFunction(F))
       return false;
     return aggressiveDCE(F);
   }

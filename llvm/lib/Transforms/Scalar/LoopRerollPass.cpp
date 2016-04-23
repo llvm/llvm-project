@@ -1536,7 +1536,7 @@ bool LoopReroll::reroll(Instruction *IV, Loop *L, BasicBlock *Header,
 }
 
 bool LoopReroll::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipOptnoneFunction(L))
+  if (skipLoop(L))
     return false;
 
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();

@@ -93,6 +93,8 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_MICROMIPS_PC26_S1;
     case Mips::fixup_MICROMIPS_PC19_S2:
       return ELF::R_MICROMIPS_PC19_S2;
+    case Mips::fixup_MICROMIPS_PC18_S3:
+      return ELF::R_MICROMIPS_PC18_S3;
     case Mips::fixup_MIPS_PC19_S2:
       return ELF::R_MIPS_PC19_S2;
     case Mips::fixup_MIPS_PC18_S3:

@@ -1,10 +1,9 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-as %p/Inputs/type-merge2.ll -o %t2.o
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
-; RUN:    --plugin-opt=emit-llvm \
-; RUN:    --plugin-opt=no-discard-value-names \
+; RUN:    --plugin-opt=save-temps \
 ; RUN:    -shared %t.o %t2.o -o %t3.o
-; RUN: llvm-dis %t3.o -o - | FileCheck %s
+; RUN: llvm-dis %t3.o.bc -o - | FileCheck %s
 
 %zed = type { i8 }
 define void @foo()  {

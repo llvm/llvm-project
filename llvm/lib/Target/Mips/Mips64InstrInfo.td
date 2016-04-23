@@ -29,7 +29,7 @@ def immSExt10_64 : PatLeaf<(i64 imm),
                            [{ return isInt<10>(N->getSExtValue()); }]>;
 
 def immZExt16_64 : PatLeaf<(i64 imm),
-                           [{ return isInt<16>(N->getZExtValue()); }]>;
+                           [{ return isUInt<16>(N->getZExtValue()); }]>;
 
 def immZExt5_64 : ImmLeaf<i64, [{ return Imm == (Imm & 0x1f); }]>;
 

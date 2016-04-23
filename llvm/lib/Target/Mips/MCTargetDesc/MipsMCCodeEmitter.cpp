@@ -762,19 +762,6 @@ getMemEncodingMMImm9(const MCInst &MI, unsigned OpNo,
 }
 
 unsigned MipsMCCodeEmitter::
-getMemEncodingMMImm11(const MCInst &MI, unsigned OpNo,
-                      SmallVectorImpl<MCFixup> &Fixups,
-                      const MCSubtargetInfo &STI) const {
-  // Base register is encoded in bits 20-16, offset is encoded in bits 10-0.
-  assert(MI.getOperand(OpNo).isReg());
-  unsigned RegBits = getMachineOpValue(MI, MI.getOperand(OpNo), Fixups,
-                                       STI) << 16;
-  unsigned OffBits = getMachineOpValue(MI, MI.getOperand(OpNo+1), Fixups, STI);
-
-  return (OffBits & 0x07FF) | RegBits;
-}
-
-unsigned MipsMCCodeEmitter::
 getMemEncodingMMImm12(const MCInst &MI, unsigned OpNo,
                       SmallVectorImpl<MCFixup> &Fixups,
                       const MCSubtargetInfo &STI) const {
@@ -899,8 +886,9 @@ MipsMCCodeEmitter::getSimm18Lsl3Encoding(const MCInst &MI, unsigned OpNo,
          "getSimm18Lsl2Encoding expects only expressions or an immediate");
 
   const MCExpr *Expr = MO.getExpr();
-  Fixups.push_back(MCFixup::create(0, Expr,
-                                   MCFixupKind(Mips::fixup_MIPS_PC18_S3)));
+  Mips::Fixups FixupKind = isMicroMips(STI) ? Mips::fixup_MICROMIPS_PC18_S3
+                                            : Mips::fixup_MIPS_PC18_S3;
+  Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind(FixupKind)));
   return 0;
 }
 

@@ -732,13 +732,15 @@ MDNode *getPGOFuncNameMetadata(const Function &F) {
   return F.getMetadata(getPGOFuncNameMetadataName());
 }
 
-void createPGOFuncNameMetadata(Function &F) {
-  const std::string &FuncName = getPGOFuncName(F);
-  if (FuncName == F.getName())
+void createPGOFuncNameMetadata(Function &F, const std::string &PGOFuncName) {
+  // Only for internal linkage functions.
+  if (PGOFuncName == F.getName())
+      return;
+  // Don't create duplicated meta-data.
+  if (getPGOFuncNameMetadata(F))
     return;
-
   LLVMContext &C = F.getContext();
-  MDNode *N = MDNode::get(C, MDString::get(C, FuncName.c_str()));
+  MDNode *N = MDNode::get(C, MDString::get(C, PGOFuncName.c_str()));
   F.setMetadata(getPGOFuncNameMetadataName(), N);
 }
 

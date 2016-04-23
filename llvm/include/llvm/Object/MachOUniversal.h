@@ -58,7 +58,8 @@ public:
     uint32_t getSize() const { return Header.size; }
     uint32_t getAlign() const { return Header.align; }
     std::string getArchTypeName() const {
-      Triple T = MachOObjectFile::getArch(Header.cputype, Header.cpusubtype);
+      Triple T =
+          MachOObjectFile::getArchTriple(Header.cputype, Header.cpusubtype);
       return T.getArchName();
     }
 

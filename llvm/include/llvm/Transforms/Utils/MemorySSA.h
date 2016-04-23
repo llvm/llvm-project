@@ -756,6 +756,7 @@ private:
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *, UpwardsMemoryQuery &);
   bool instructionClobbersQuery(const MemoryDef *, UpwardsMemoryQuery &,
                                 const MemoryLocation &Loc) const;
+  void verifyRemoved(MemoryAccess *);
   SmallDenseMap<ConstMemoryAccessPair, MemoryAccess *>
       CachedUpwardsClobberingAccess;
   DenseMap<const MemoryAccess *, MemoryAccess *> CachedUpwardsClobberingCall;
