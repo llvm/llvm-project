@@ -1211,6 +1211,7 @@ m_metadata_location(location)
     m_remote_ast.reset(new swift::remoteAST::RemoteASTContext(*ast_ctx, m_swift_runtime->GetMemoryReader()));
 }
 
+#define METADATAPROMISE_FALLBACK_TO_METADATA
 CompilerType
 SwiftLanguageRuntime::MetadataPromise::FulfillPromise ()
 {
@@ -1221,8 +1222,19 @@ SwiftLanguageRuntime::MetadataPromise::FulfillPromise ()
     if (swift::remoteAST::Result<swift::Type> result = m_remote_ast->getTypeForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location)))
         return (m_compiler_type = CompilerType(m_swift_ast, result.getValue().getPointer())).getValue();
     else
+    {
+#ifdef METADATAPROMISE_FALLBACK_TO_METADATA
+        MetadataSP metadata_sp = m_swift_runtime->GetMetadataForLocation(m_metadata_location);
+        Error error;
+        return (m_compiler_type = m_swift_runtime->GetTypeForMetadata(metadata_sp, SwiftASTContext::GetSwiftASTContext(m_swift_ast), error)).getValue();
+#else
         return (m_compiler_type = CompilerType()).getValue();
+#endif
+    }
 }
+#ifdef METADATAPROMISE_FALLBACK_TO_METADATA
+#undef METADATAPROMISE_FALLBACK_TO_METADATA
+#endif
 
 static inline swift::Type
 GetSwiftType (const CompilerType& type)
