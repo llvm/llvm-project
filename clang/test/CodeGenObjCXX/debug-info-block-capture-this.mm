@@ -10,10 +10,11 @@ int main(int argc, const char * argv[]) {
     return t.block();
 }
 
+// CHECK: ![[TESTCT:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "test"
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "__block_literal_1",
 // CHECK-SAME:             elements: ![[ELEMS:.*]])
 // CHECK: ![[ELEMS]] = !{{{.*}}, ![[THIS:[0-9]+]]}
 // CHECK: ![[THIS]] = !DIDerivedType(tag: DW_TAG_member, name: "this",
-// CHECK-SAME:                       baseType: !"_ZTS4test",
+// CHECK-SAME:                       baseType: ![[TESTCT]],
 
 

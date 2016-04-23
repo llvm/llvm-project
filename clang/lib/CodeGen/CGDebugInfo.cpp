@@ -1474,11 +1474,6 @@ llvm::DIType *CGDebugInfo::getOrCreateStandaloneType(QualType D,
   llvm::DIType *T = getOrCreateType(D, getOrCreateFile(Loc));
   assert(T && "could not create debug info for type");
 
-  // Composite types with UIDs were already retained by DIBuilder
-  // because they are only referenced by name in the IR.
-  if (auto *CTy = dyn_cast<llvm::DICompositeType>(T))
-    if (!CTy->getIdentifier().empty())
-      return T;
   RetainedTypes.push_back(D.getAsOpaquePtr());
   return T;
 }
@@ -3458,6 +3453,9 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD,
     auto *RD = cast<RecordDecl>(VarD->getDeclContext());
     getDeclContextDescriptor(VarD);
     // Ensure that the type is retained even though it's otherwise unreferenced.
+    //
+    // FIXME: This is probably unnecessary, since Ty should reference RD
+    // through its scope.
     RetainedTypes.push_back(
         CGM.getContext().getRecordType(RD).getAsOpaquePtr());
     return;

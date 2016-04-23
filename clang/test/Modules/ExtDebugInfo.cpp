@@ -48,32 +48,31 @@ void foo() {
   anon.i = GlobalStruct.i = GlobalUnion.i = GlobalEnum;
 }
 
-// CHECK: ![[NS:.*]] = !DINamespace(name: "DebugCXX", scope: ![[MOD:[0-9]+]],
-// CHECK: ![[MOD]] = !DIModule(scope: null, name: {{.*}}DebugCXX
-
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Struct",
-// CHECK-SAME:             scope: ![[NS]],
+// CHECK: ![[STRUCT:[0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "Struct",
+// CHECK-SAME:             scope: ![[NS:[0-9]+]],
 // CHECK-SAME:             flags: DIFlagFwdDecl,
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX6StructE")
+
+// CHECK: ![[NS]] = !DINamespace(name: "DebugCXX", scope: ![[MOD:[0-9]+]],
+// CHECK: ![[MOD]] = !DIModule(scope: null, name: {{.*}}DebugCXX
 
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "Enum",
 // CHECK-SAME:             scope: ![[NS]],
 // CHECK-SAME:             flags: DIFlagFwdDecl,
 // CHECK-SAME:             identifier:  "_ZTSN8DebugCXX4EnumE")
 
-// CHECK: !DICompositeType(tag: DW_TAG_class_type,
-
-// CHECK: !DICompositeType(tag: DW_TAG_class_type,
-// CHECK-SAME:             name: "Template<int, DebugCXX::traits<int> >",
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "Template<int, DebugCXX::traits<int> >",
 // CHECK-SAME:             scope: ![[NS]],
 // CHECK-SAME:             flags: DIFlagFwdDecl,
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIiNS_6traitsIiEEEE")
 
-// CHECK: !DICompositeType(tag: DW_TAG_class_type,
-// CHECK-SAME:             name: "Template<float, DebugCXX::traits<float> >",
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "Template<float, DebugCXX::traits<float> >",
 // CHECK-SAME:             scope: ![[NS]],
 // CHECK-SAME:             flags: DIFlagFwdDecl,
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIfNS_6traitsIfEEEE")
+
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "static_member",
+// CHECK-SAME:           scope: ![[STRUCT]]
 
 // CHECK: !DICompositeType(tag: DW_TAG_union_type,
 // CHECK-SAME:             flags: DIFlagFwdDecl, identifier: "_ZTS12TypedefUnion")
@@ -81,9 +80,6 @@ void foo() {
 // CHECK-SAME:             flags: DIFlagFwdDecl, identifier: "_ZTS11TypedefEnum")
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-SAME:             flags: DIFlagFwdDecl, identifier: "_ZTS13TypedefStruct")
-
-// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "static_member",
-// CHECK-SAME:           scope: !"_ZTSN8DebugCXX6StructE"
 
 // CHECK: !DIGlobalVariable(name: "anon_enum", {{.*}}, type: ![[ANON_ENUM:[0-9]+]]
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, scope: ![[NS]],
@@ -104,7 +100,7 @@ void foo() {
 // CHECK-SAME:              name: "InAnonymousNamespace", {{.*}}DIFlagFwdDecl)
 
 
-// CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !0, entity: !"_ZTSN8DebugCXX6StructE", line: 27)
+// CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !0, entity: ![[STRUCT]], line: 27)
 
 // CHECK: !DICompileUnit(
 // CHECK-SAME:           splitDebugFilename:
