@@ -118,7 +118,7 @@ class BitcodeReaderMetadataList {
     SmallDenseMap<MDString *, TempMDTuple, 1> Unknown;
     SmallDenseMap<MDString *, DICompositeType *, 1> Final;
     SmallDenseMap<MDString *, DICompositeType *, 1> FwdDecls;
-    std::vector<std::pair<TrackingMDRef, TempMDTuple>> Arrays;
+    SmallVector<std::pair<TrackingMDRef, TempMDTuple>, 1> Arrays;
   } OldTypeRefs;
 
   LLVMContext &Context;
