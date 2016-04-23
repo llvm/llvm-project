@@ -45,7 +45,6 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
   // Fixup column.
   adjustColumn(Column);
 
-  assert(Scope && "Expected scope");
   if (Storage == Uniqued) {
     if (auto *N =
             getUniqued(Context.pImpl->DILocations,
