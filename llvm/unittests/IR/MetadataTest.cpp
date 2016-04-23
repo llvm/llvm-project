@@ -2308,4 +2308,4 @@ TEST_F(FunctionAttachmentTest, SubprogramAttachment) {
   EXPECT_EQ(SP, F->getMetadata(LLVMContext::MD_dbg));
 }
 
-}
+} // end namespace
