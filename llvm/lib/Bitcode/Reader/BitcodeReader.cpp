@@ -1160,6 +1160,8 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
     // Still forward references... can't resolve cycles.
     return;
 
+  bool DidReplaceTypeRefs = false;
+
   // Give up on finding a full definition for any forward decls that remain.
   for (const auto &Ref : OldTypeRefs.FwdDecls)
     OldTypeRefs.Final.insert(Ref);
@@ -1167,18 +1169,30 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
 
   // Upgrade from old type ref arrays.  In strange cases, this could add to
   // OldTypeRefs.Unknown.
-  for (const auto &Array : OldTypeRefs.Arrays)
+  for (const auto &Array : OldTypeRefs.Arrays) {
+    DidReplaceTypeRefs = true;
     Array.second->replaceAllUsesWith(resolveTypeRefArray(Array.first.get()));
+  }
+  OldTypeRefs.Arrays.clear();
 
   // Replace old string-based type refs with the resolved node, if possible.
   // If we haven't seen the node, leave it to the verifier to complain about
   // the invalid string reference.
-  for (const auto &Ref : OldTypeRefs.Unknown)
+  for (const auto &Ref : OldTypeRefs.Unknown) {
+    DidReplaceTypeRefs = true;
     if (DICompositeType *CT = OldTypeRefs.Final.lookup(Ref.first))
       Ref.second->replaceAllUsesWith(CT);
     else
       Ref.second->replaceAllUsesWith(Ref.first);
+  }
   OldTypeRefs.Unknown.clear();
+
+  // Make sure all the upgraded types are resolved.
+  if (DidReplaceTypeRefs) {
+    AnyFwdRefs = true;
+    MinFwdRef = 0;
+    MaxFwdRef = MetadataPtrs.size() - 1;
+  }
 
   if (!AnyFwdRefs)
     // Nothing to do.
@@ -2361,12 +2375,12 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
 
       IsDistinct = Record[0];
       MetadataList.assignValue(
-          GET_OR_DISTINCT(DIDerivedType,
-                          (Context, Record[1], getMDString(Record[2]),
-                           getMDOrNull(Record[3]), Record[4],
-                           getDITypeRefOrNull(Record[5]),
-                           getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-                           Record[9], Record[10], getMDOrNull(Record[11]))),
+          GET_OR_DISTINCT(
+              DIDerivedType,
+              (Context, Record[1], getMDString(Record[2]),
+               getMDOrNull(Record[3]), Record[4], getDITypeRefOrNull(Record[5]),
+               getDITypeRefOrNull(Record[6]), Record[7], Record[8], Record[9],
+               Record[10], getDITypeRefOrNull(Record[11]))),
           NextMetadataNo++);
       break;
     }
