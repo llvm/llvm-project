@@ -655,7 +655,11 @@ bool TargetInstrInfo::getMachineCombinerPatterns(
 
   return false;
 }
-
+/// Return true when a code sequence can improve loop throughput.
+bool
+TargetInstrInfo::isThroughputPattern(MachineCombinerPattern Pattern) const {
+  return false;
+}
 /// Attempt the reassociation transformation to reduce critical path length.
 /// See the above comments before getMachineCombinerPatterns().
 void TargetInstrInfo::reassociateOps(

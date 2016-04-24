@@ -103,9 +103,14 @@ public:
     /// types based on global summary-based analysis.
     GlobalValue::LinkageTypes Linkage : 4;
 
+    /// Indicate if the global value is located in a specific section.
+    unsigned HasSection : 1;
+
     /// Convenience Constructors
-    explicit GVFlags(GlobalValue::LinkageTypes Linkage) : Linkage(Linkage) {}
-    GVFlags(const GlobalValue &GV) : Linkage(GV.getLinkage()) {}
+    explicit GVFlags(GlobalValue::LinkageTypes Linkage, bool HasSection)
+        : Linkage(Linkage), HasSection(HasSection) {}
+    GVFlags(const GlobalValue &GV)
+        : Linkage(GV.getLinkage()), HasSection(GV.hasSection()) {}
   };
 
 private:
@@ -163,6 +168,9 @@ public:
 
   /// Return linkage type recorded for this global value.
   GlobalValue::LinkageTypes linkage() const { return Flags.Linkage; }
+
+  /// Return true if this global value is located in a specific section.
+  bool hasSection() const { return Flags.HasSection; }
 
   /// Record a reference from this global value to the global value identified
   /// by \p RefGUID.

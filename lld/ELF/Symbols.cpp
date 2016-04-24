@@ -123,14 +123,15 @@ bool SymbolBody::isPreemptible() const {
   if (!Config->Shared)
     return false;
 
-  // -Bsymbolic means that not even default visibility symbols can be preempted.
-  if ((Config->Bsymbolic || (Config->BsymbolicFunctions && isFunc())) &&
-      isDefined())
+  // Only symbols that appear in dynsym can be preempted.
+  if (!Backref->includeInDynsym())
     return false;
 
-  // Only default visibility symbols that appear in the dynamic symbol table can
-  // be preempted.
-  return Backref->Visibility == STV_DEFAULT && Backref->includeInDynsym();
+  // Normally only default visibility symbols can be preempted, but -Bsymbolic
+  // means that not even they can be preempted.
+  if (Config->Bsymbolic || (Config->BsymbolicFunctions && isFunc()))
+    return !isDefined();
+  return Backref->Visibility == STV_DEFAULT;
 }
 
 template <class ELFT>
@@ -320,7 +321,7 @@ bool Symbol::includeInDynsym() const {
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return false;
   return (ExportDynamic && VersionScriptGlobal) || Body->isShared() ||
-         Body->isUndefined();
+         (Body->isUndefined() && Config->Shared);
 }
 
 template uint32_t SymbolBody::template getVA<ELF32LE>(uint32_t) const;

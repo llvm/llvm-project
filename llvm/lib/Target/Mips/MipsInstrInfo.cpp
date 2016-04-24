@@ -107,7 +107,7 @@ MipsInstrInfo::BuildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
     else if (Cond[i].isImm())
       MIB.addImm(Cond[i].getImm());
     else
-       assert(true && "Cannot copy operand");
+       assert(false && "Cannot copy operand");
   }
   MIB.addMBB(TBB);
 }
