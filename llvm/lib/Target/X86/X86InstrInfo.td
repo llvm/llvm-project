@@ -2165,46 +2165,6 @@ let Predicates = [HasLZCNT], Defs = [EFLAGS] in {
                       (implicit EFLAGS)]>, XS;
 }
 
-let Predicates = [HasLZCNT] in {
-  def : Pat<(X86cmov (ctlz GR16:$src), (i16 16), (X86_COND_E),
-              (X86cmp GR16:$src, (i16 0))),
-            (LZCNT16rr GR16:$src)>;
-  def : Pat<(X86cmov (ctlz GR32:$src), (i32 32), (X86_COND_E),
-              (X86cmp GR32:$src, (i32 0))),
-            (LZCNT32rr GR32:$src)>;
-  def : Pat<(X86cmov (ctlz GR64:$src), (i64 64), (X86_COND_E),
-              (X86cmp GR64:$src, (i64 0))),
-            (LZCNT64rr GR64:$src)>;
-  def : Pat<(X86cmov (i16 16), (ctlz GR16:$src), (X86_COND_NE),
-              (X86cmp GR16:$src, (i16 0))),
-            (LZCNT16rr GR16:$src)>;
-  def : Pat<(X86cmov (i32 32), (ctlz GR32:$src), (X86_COND_NE),
-              (X86cmp GR32:$src, (i32 0))),
-            (LZCNT32rr GR32:$src)>;
-  def : Pat<(X86cmov (i64 64), (ctlz GR64:$src), (X86_COND_NE),
-              (X86cmp GR64:$src, (i64 0))),
-            (LZCNT64rr GR64:$src)>;
-
-  def : Pat<(X86cmov (ctlz (loadi16 addr:$src)), (i16 16), (X86_COND_E),
-              (X86cmp (loadi16 addr:$src), (i16 0))),
-            (LZCNT16rm addr:$src)>;
-  def : Pat<(X86cmov (ctlz (loadi32 addr:$src)), (i32 32), (X86_COND_E),
-              (X86cmp (loadi32 addr:$src), (i32 0))),
-            (LZCNT32rm addr:$src)>;
-  def : Pat<(X86cmov (ctlz (loadi64 addr:$src)), (i64 64), (X86_COND_E),
-              (X86cmp (loadi64 addr:$src), (i64 0))),
-            (LZCNT64rm addr:$src)>;
-  def : Pat<(X86cmov (i16 16), (ctlz (loadi16 addr:$src)), (X86_COND_NE),
-              (X86cmp (loadi16 addr:$src), (i16 0))),
-            (LZCNT16rm addr:$src)>;
-  def : Pat<(X86cmov (i32 32), (ctlz (loadi32 addr:$src)), (X86_COND_NE),
-              (X86cmp (loadi32 addr:$src), (i32 0))),
-            (LZCNT32rm addr:$src)>;
-  def : Pat<(X86cmov (i64 64), (ctlz (loadi64 addr:$src)), (X86_COND_NE),
-              (X86cmp (loadi64 addr:$src), (i64 0))),
-            (LZCNT64rm addr:$src)>;
-}
-
 //===----------------------------------------------------------------------===//
 // BMI Instructions
 //
@@ -2279,46 +2239,6 @@ let Predicates = [HasBMI] in {
             (BLSI32rr GR32:$src)>;
   def : Pat<(and GR64:$src, (ineg GR64:$src)),
             (BLSI64rr GR64:$src)>;
-}
-
-let Predicates = [HasBMI] in {
-  def : Pat<(X86cmov (cttz GR16:$src), (i16 16), (X86_COND_E),
-              (X86cmp GR16:$src, (i16 0))),
-            (TZCNT16rr GR16:$src)>;
-  def : Pat<(X86cmov (cttz GR32:$src), (i32 32), (X86_COND_E),
-              (X86cmp GR32:$src, (i32 0))),
-            (TZCNT32rr GR32:$src)>;
-  def : Pat<(X86cmov (cttz GR64:$src), (i64 64), (X86_COND_E),
-              (X86cmp GR64:$src, (i64 0))),
-            (TZCNT64rr GR64:$src)>;
-  def : Pat<(X86cmov (i16 16), (cttz GR16:$src), (X86_COND_NE),
-              (X86cmp GR16:$src, (i16 0))),
-            (TZCNT16rr GR16:$src)>;
-  def : Pat<(X86cmov (i32 32), (cttz GR32:$src), (X86_COND_NE),
-              (X86cmp GR32:$src, (i32 0))),
-            (TZCNT32rr GR32:$src)>;
-  def : Pat<(X86cmov (i64 64), (cttz GR64:$src), (X86_COND_NE),
-              (X86cmp GR64:$src, (i64 0))),
-            (TZCNT64rr GR64:$src)>;
-
-  def : Pat<(X86cmov (cttz (loadi16 addr:$src)), (i16 16), (X86_COND_E),
-              (X86cmp (loadi16 addr:$src), (i16 0))),
-            (TZCNT16rm addr:$src)>;
-  def : Pat<(X86cmov (cttz (loadi32 addr:$src)), (i32 32), (X86_COND_E),
-              (X86cmp (loadi32 addr:$src), (i32 0))),
-            (TZCNT32rm addr:$src)>;
-  def : Pat<(X86cmov (cttz (loadi64 addr:$src)), (i64 64), (X86_COND_E),
-              (X86cmp (loadi64 addr:$src), (i64 0))),
-            (TZCNT64rm addr:$src)>;
-  def : Pat<(X86cmov (i16 16), (cttz (loadi16 addr:$src)), (X86_COND_NE),
-              (X86cmp (loadi16 addr:$src), (i16 0))),
-            (TZCNT16rm addr:$src)>;
-  def : Pat<(X86cmov (i32 32), (cttz (loadi32 addr:$src)), (X86_COND_NE),
-              (X86cmp (loadi32 addr:$src), (i32 0))),
-            (TZCNT32rm addr:$src)>;
-  def : Pat<(X86cmov (i64 64), (cttz (loadi64 addr:$src)), (X86_COND_NE),
-              (X86cmp (loadi64 addr:$src), (i64 0))),
-            (TZCNT64rm addr:$src)>;
 }
 
 
