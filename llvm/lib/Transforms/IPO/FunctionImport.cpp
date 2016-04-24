@@ -86,12 +86,12 @@ namespace {
 /// - One that has PGO data attached.
 /// - [insert you fancy metric here]
 static const GlobalValueSummary *
-selectCallee(const GlobalValueInfoList &CalleeInfoList, unsigned Threshold) {
+selectCallee(const GlobalValueSummaryList &CalleeSummaryList,
+             unsigned Threshold) {
   auto It = llvm::find_if(
-      CalleeInfoList, [&](const std::unique_ptr<GlobalValueInfo> &GlobInfo) {
-        assert(GlobInfo->summary() &&
-               "We should not have a Global Info without summary");
-        auto *GVSummary = GlobInfo->summary();
+      CalleeSummaryList,
+      [&](const std::unique_ptr<GlobalValueSummary> &SummaryPtr) {
+        auto *GVSummary = SummaryPtr.get();
         if (GlobalValue::isWeakAnyLinkage(GVSummary->linkage()))
           // There is no point in importing weak symbols, we can't inline them
           return false;
@@ -113,10 +113,10 @@ selectCallee(const GlobalValueInfoList &CalleeInfoList, unsigned Threshold) {
 
         return true;
       });
-  if (It == CalleeInfoList.end())
+  if (It == CalleeSummaryList.end())
     return nullptr;
 
-  return cast<GlobalValueSummary>((*It)->summary());
+  return cast<GlobalValueSummary>(It->get());
 }
 
 /// Return the summary for the function \p GUID that fits the \p Threshold, or
@@ -124,11 +124,11 @@ selectCallee(const GlobalValueInfoList &CalleeInfoList, unsigned Threshold) {
 static const GlobalValueSummary *selectCallee(GlobalValue::GUID GUID,
                                               unsigned Threshold,
                                               const ModuleSummaryIndex &Index) {
-  auto CalleeInfoList = Index.findGlobalValueInfoList(GUID);
-  if (CalleeInfoList == Index.end()) {
+  auto CalleeSummaryList = Index.findGlobalValueSummaryList(GUID);
+  if (CalleeSummaryList == Index.end()) {
     return nullptr; // This function does not have a summary
   }
-  return selectCallee(CalleeInfoList->second, Threshold);
+  return selectCallee(CalleeSummaryList->second, Threshold);
 }
 
 /// Mark the global \p GUID as export by module \p ExportModulePath if found in
@@ -138,32 +138,29 @@ static void exportGlobalInModule(const ModuleSummaryIndex &Index,
                                  StringRef ExportModulePath,
                                  GlobalValue::GUID GUID,
                                  FunctionImporter::ExportSetTy &ExportList) {
-  auto FindGlobalInfoInModule =
-      [&](GlobalValue::GUID GUID) -> GlobalValueInfo *{
-        auto InfoList = Index.findGlobalValueInfoList(GUID);
-        if (InfoList == Index.end())
+  auto FindGlobalSummaryInModule =
+      [&](GlobalValue::GUID GUID) -> GlobalValueSummary *{
+        auto SummaryList = Index.findGlobalValueSummaryList(GUID);
+        if (SummaryList == Index.end())
           // This global does not have a summary, it is not part of the ThinLTO
           // process
           return nullptr;
-        auto Info = llvm::find_if(
-            InfoList->second,
-            [&](const std::unique_ptr<GlobalValueInfo> &GlobInfo) {
-              auto *Summary = GlobInfo->summary();
-              assert(Summary && "Unexpected GlobalValueInfo without summary");
+        auto SummaryIter = llvm::find_if(
+            SummaryList->second,
+            [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
               return Summary->modulePath() == ExportModulePath;
             });
-        if (Info == InfoList->second.end())
+        if (SummaryIter == SummaryList->second.end())
           return nullptr;
-        return Info->get();
+        return SummaryIter->get();
       };
 
-  auto *GVInfo = FindGlobalInfoInModule(GUID);
-  if (!GVInfo)
+  auto *Summary = FindGlobalSummaryInModule(GUID);
+  if (!Summary)
     return;
   // We found it in the current module, mark as exported
   ExportList.insert(GUID);
 
-  auto *Summary = GVInfo->summary();
   auto GVS = dyn_cast<GlobalVarSummary>(Summary);
   if (!GVS)
     return;
@@ -174,8 +171,8 @@ static void exportGlobalInModule(const ModuleSummaryIndex &Index,
   // FIXME: with a "isConstant" flag in the summary we could be more targetted.
   for (auto &Ref : GVS->refs()) {
     auto GUID = Ref.getGUID();
-    auto *RefInfo = FindGlobalInfoInModule(GUID);
-    if (RefInfo)
+    auto *RefSummary = FindGlobalSummaryInModule(GUID);
+    if (RefSummary)
       // Found a ref in the current module, mark it as exported
       ExportList.insert(GUID);
   }
@@ -269,15 +266,15 @@ static void ComputeImportForModule(
 
   // Populate the worklist with the import for the functions in the current
   // module
-  for (auto &GVInfo : DefinedGVSummaries) {
-    auto *Summary = GVInfo.second;
+  for (auto &GVSummary : DefinedGVSummaries) {
+    auto *Summary = GVSummary.second;
     if (auto *AS = dyn_cast<AliasSummary>(Summary))
       Summary = &AS->getAliasee();
     auto *FuncSummary = dyn_cast<FunctionSummary>(Summary);
     if (!FuncSummary)
       // Skip import for global variables
       continue;
-    DEBUG(dbgs() << "Initalize import for " << GVInfo.first << "\n");
+    DEBUG(dbgs() << "Initalize import for " << GVSummary.first << "\n");
     computeImportForFunction(*FuncSummary, Index, ImportInstrLimit,
                              DefinedGVSummaries, Worklist, ImportsForModule,
                              ExportLists);
@@ -340,12 +337,12 @@ void llvm::ComputeCrossModuleImportForModule(
 
   // Collect the list of functions this module defines.
   // GUID -> Summary
-  std::map<GlobalValue::GUID, GlobalValueSummary *> FunctionInfoMap;
-  Index.collectDefinedFunctionsForModule(ModulePath, FunctionInfoMap);
+  std::map<GlobalValue::GUID, GlobalValueSummary *> FunctionSummaryMap;
+  Index.collectDefinedFunctionsForModule(ModulePath, FunctionSummaryMap);
 
   // Compute the import list for this module.
   DEBUG(dbgs() << "Computing import for Module '" << ModulePath << "'\n");
-  ComputeImportForModule(FunctionInfoMap, Index, ImportList);
+  ComputeImportForModule(FunctionSummaryMap, Index, ImportList);
 
 #ifndef NDEBUG
   DEBUG(dbgs() << "* Module " << ModulePath << " imports from "

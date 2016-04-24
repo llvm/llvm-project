@@ -248,7 +248,7 @@ private:
                 DenseMap<const Function *, uint64_t> &FunctionToBitcodeIndex);
   void writeBlockInfo();
   void writePerModuleFunctionSummaryRecord(SmallVector<uint64_t, 64> &NameVals,
-                                           GlobalValueInfo *Info,
+                                           GlobalValueSummary *Summary,
                                            unsigned ValueID,
                                            unsigned FSCallsAbbrev,
                                            unsigned FSCallsProfileAbbrev,
@@ -271,6 +271,10 @@ class IndexBitcodeWriter : public BitcodeWriter {
 
   /// Tracks the last value id recorded in the GUIDToValueMap.
   unsigned GlobalValueId = 0;
+
+  /// Record the starting offset of each summary entry for use in the VST
+  /// entry, and for any possible alias.
+  DenseMap<const GlobalValueSummary *, uint64_t> SummaryToOffsetMap;
 
 public:
   /// Constructs a IndexBitcodeWriter object for the given combined index,
@@ -2626,15 +2630,17 @@ void IndexBitcodeWriter::writeCombinedValueSymbolTable() {
 
   SmallVector<uint64_t, 64> NameVals;
 
-  for (const auto &FII : Index) {
-    GlobalValue::GUID FuncGUID = FII.first;
-    unsigned ValueId = popValueId(FuncGUID);
+  for (const auto &GSI : Index) {
+    GlobalValue::GUID ValGUID = GSI.first;
+    unsigned ValueId = popValueId(ValGUID);
 
-    for (const auto &FI : FII.second) {
+    for (const auto &SI : GSI.second) {
       // VST_CODE_COMBINED_GVDEFENTRY: [valueid, sumoffset, guid]
       NameVals.push_back(ValueId);
-      NameVals.push_back(FI->bitcodeIndex());
-      NameVals.push_back(FuncGUID);
+      auto Offset = SummaryToOffsetMap[SI.get()];
+      assert(Offset);
+      NameVals.push_back(Offset);
+      NameVals.push_back(ValGUID);
 
       // Emit the finished record.
       Stream.EmitRecord(bitc::VST_CODE_COMBINED_GVDEFENTRY, NameVals,
@@ -3018,12 +3024,12 @@ void IndexBitcodeWriter::writeModStrings() {
 
 // Helper to emit a single function summary record.
 void ModuleBitcodeWriter::writePerModuleFunctionSummaryRecord(
-    SmallVector<uint64_t, 64> &NameVals, GlobalValueInfo *Info,
+    SmallVector<uint64_t, 64> &NameVals, GlobalValueSummary *Summary,
     unsigned ValueID, unsigned FSCallsAbbrev, unsigned FSCallsProfileAbbrev,
     const Function &F) {
   NameVals.push_back(ValueID);
 
-  FunctionSummary *FS = cast<FunctionSummary>(Info->summary());
+  FunctionSummary *FS = cast<FunctionSummary>(Summary);
   NameVals.push_back(getEncodedGVSummaryFlags(FS->flags()));
   NameVals.push_back(FS->instCount());
   NameVals.push_back(FS->refs().size());
@@ -3059,8 +3065,8 @@ void ModuleBitcodeWriter::writeModuleLevelReferences(
     return;
   NameVals.push_back(VE.getValueID(&V));
   NameVals.push_back(getEncodedGVSummaryFlags(V));
-  auto *Info = Index->getGlobalValueInfo(V);
-  GlobalVarSummary *VS = cast<GlobalVarSummary>(Info->summary());
+  auto *Summary = Index->getGlobalValueSummary(V);
+  GlobalVarSummary *VS = cast<GlobalVarSummary>(Summary);
   for (auto Ref : VS->refs())
     NameVals.push_back(VE.getValueID(Ref.getValue()));
   Stream.EmitRecord(bitc::FS_PERMODULE_GLOBALVAR_INIT_REFS, NameVals,
@@ -3138,9 +3144,9 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
     if (!F.hasName())
       report_fatal_error("Unexpected anonymous function when writing summary");
 
-    auto *Info = Index->getGlobalValueInfo(F);
+    auto *Summary = Index->getGlobalValueSummary(F);
     writePerModuleFunctionSummaryRecord(
-        NameVals, Info,
+        NameVals, Summary,
         VE.getValueID(M.getValueSymbolTable().lookup(F.getName())),
         FSCallsAbbrev, FSCallsProfileAbbrev, F);
   }
@@ -3214,10 +3220,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   unsigned FSAliasAbbrev = Stream.EmitAbbrev(Abbv);
 
   // The aliases are emitted as a post-pass, and will point to the summary
-  // offset id of the aliasee. For this purpose we need to be able to get back
-  // from the summary to the offset
-  SmallVector<GlobalValueInfo *, 64> Aliases;
-  DenseMap<const GlobalValueSummary *, uint64_t> SummaryToOffsetMap;
+  // offset id of the aliasee. Save them in a vector for post-processing.
+  SmallVector<AliasSummary *, 64> Aliases;
 
   SmallVector<uint64_t, 64> NameVals;
 
@@ -3231,14 +3235,14 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals.clear();
   };
 
-  for (const auto &FII : Index) {
-    for (auto &FI : FII.second) {
-      GlobalValueSummary *S = FI->summary();
+  for (const auto &GSI : Index) {
+    for (auto &SI : GSI.second) {
+      GlobalValueSummary *S = SI.get();
       assert(S);
-      if (isa<AliasSummary>(S)) {
+      if (auto *AS = dyn_cast<AliasSummary>(S)) {
         // Will process aliases as a post-pass because the reader wants all
         // global to be loaded first.
-        Aliases.push_back(FI.get());
+        Aliases.push_back(AS);
         continue;
       }
 
@@ -3249,13 +3253,11 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
           NameVals.push_back(getValueId(RI.getGUID()));
         }
 
-        // Record the starting offset of this summary entry for use
-        // in the VST entry. Add the current code size since the
-        // reader will invoke readRecord after the abbrev id read.
-        FI->setBitcodeIndex(Stream.GetCurrentBitNo() +
-                            Stream.GetAbbrevIDWidth());
-        // Store temporarily the offset in the map for a possible alias.
-        SummaryToOffsetMap[S] = FI->bitcodeIndex();
+        // Record the starting offset of this summary entry for use in the VST
+        // entry, and for any possible alias. Add the current code size since
+        // the reader will invoke readRecord after the abbrev id read.
+        SummaryToOffsetMap[S] =
+            Stream.GetCurrentBitNo() + Stream.GetAbbrevIDWidth();
 
         // Emit the finished record.
         Stream.EmitRecord(bitc::FS_COMBINED_GLOBALVAR_INIT_REFS, NameVals,
@@ -3294,12 +3296,11 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
           NameVals.push_back(EI.second.ProfileCount);
       }
 
-      // Record the starting offset of this summary entry for use
-      // in the VST entry. Add the current code size since the
-      // reader will invoke readRecord after the abbrev id read.
-      FI->setBitcodeIndex(Stream.GetCurrentBitNo() + Stream.GetAbbrevIDWidth());
-      // Store temporarily the offset in the map for a possible alias.
-      SummaryToOffsetMap[S] = FI->bitcodeIndex();
+      // Record the starting offset of this summary entry for use in the VST
+      // entry, and for any possible alias. Add the current code size since
+      // the reader will invoke readRecord after the abbrev id read.
+      SummaryToOffsetMap[S] =
+          Stream.GetCurrentBitNo() + Stream.GetAbbrevIDWidth();
 
       unsigned FSAbbrev =
           (HasProfileData ? FSCallsProfileAbbrev : FSCallsAbbrev);
@@ -3313,8 +3314,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     }
   }
 
-  for (auto GVI : Aliases) {
-    AliasSummary *AS = cast<AliasSummary>(GVI->summary());
+  for (auto *AS : Aliases) {
     NameVals.push_back(Index.getModuleId(AS->modulePath()));
     NameVals.push_back(getEncodedGVSummaryFlags(AS->flags()));
     auto AliaseeOffset = SummaryToOffsetMap[&AS->getAliasee()];
@@ -3324,7 +3324,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     // Record the starting offset of this summary entry for use
     // in the VST entry. Add the current code size since the
     // reader will invoke readRecord after the abbrev id read.
-    GVI->setBitcodeIndex(Stream.GetCurrentBitNo() + Stream.GetAbbrevIDWidth());
+    SummaryToOffsetMap[AS] =
+        Stream.GetCurrentBitNo() + Stream.GetAbbrevIDWidth();
 
     // Emit the finished record.
     Stream.EmitRecord(bitc::FS_COMBINED_ALIAS, NameVals, FSAliasAbbrev);

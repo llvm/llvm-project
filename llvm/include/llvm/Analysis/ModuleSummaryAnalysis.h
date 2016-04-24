@@ -47,12 +47,12 @@ public:
   std::unique_ptr<ModuleSummaryIndex> takeIndex() { return std::move(Index); }
 
 private:
-  /// Compute info for given function with optional frequency information
-  void computeFunctionInfo(const Function &F,
-                           BlockFrequencyInfo *BFI = nullptr);
+  /// Compute summary for given function with optional frequency information
+  void computeFunctionSummary(const Function &F,
+                              BlockFrequencyInfo *BFI = nullptr);
 
-  /// Compute info for given variable with optional frequency information
-  void computeVariableInfo(const GlobalVariable &V);
+  /// Compute summary for given variable with optional frequency information
+  void computeVariableSummary(const GlobalVariable &V);
 };
 
 /// Legacy wrapper pass to provide the ModuleSummaryIndex object.
