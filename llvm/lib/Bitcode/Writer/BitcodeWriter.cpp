@@ -789,8 +789,14 @@ static unsigned getEncodedLinkage(const GlobalValue &GV) {
 // Decode the flags for GlobalValue in the summary
 static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags) {
   uint64_t RawFlags = 0;
-  // Emit Linkage enum.
-  RawFlags |= Flags.Linkage; // 4 bits
+
+  RawFlags |= Flags.HasSection; // bool
+
+  // Linkage don't need to be remapped at that time for the summary. Any future
+  // change to the getEncodedLinkage() function will need to be taken into
+  // account here as well.
+  RawFlags = (RawFlags << 4) | Flags.Linkage; // 4 bits
+
   return RawFlags;
 }
 

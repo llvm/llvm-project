@@ -724,7 +724,9 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   // like getDecodedLinkage() above. Any future change to the linkage enum and
   // to getDecodedLinkage() will need to be taken into account here as above.
   auto Linkage = GlobalValue::LinkageTypes(RawFlags & 0xF); // 4 bits
-  return GlobalValueSummary::GVFlags(Linkage);
+  RawFlags = RawFlags >> 4;
+  auto HasSection = RawFlags & 0x1; // bool
+  return GlobalValueSummary::GVFlags(Linkage, HasSection);
 }
 
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {
