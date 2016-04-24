@@ -40,6 +40,6 @@ attributes #0 = { nounwind readnone }
 !8 = !{!"clang version 3.8.0 (trunk 256979) (llvm/trunk 257107)"}
 !9 = !DILocalVariable(name: "v1", scope: !10, file: !4, line: 136, type: !5)
 !10 = distinct !DILexicalBlock(scope: !11, file: !4, line: 136, column: 5)
-!11 = distinct !DISubprogram(name: "SetHistorySize", linkageName: "_ZN6__tsan9FastState14SetHistorySizeEi", scope: !"_ZTSN6__tsan9FastStateE", file: !4, line: 135, isLocal: false, isDefinition: true, scopeLine: 135, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!11 = distinct !DISubprogram(name: "SetHistorySize", linkageName: "_ZN6__tsan9FastState14SetHistorySizeEi", scope: !3, file: !4, line: 135, isLocal: false, isDefinition: true, scopeLine: 135, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !12 = !DIExpression()
 !13 = !DILocation(line: 136, column: 5, scope: !10)

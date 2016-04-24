@@ -34,12 +34,12 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !5 = !{!6}
 !6 = !DICompositeType(tag: DW_TAG_structure_type, name: "Class", size: 64, align: 64, elements: !7, identifier: "_ZT5Class")
 !7 = !{!8, !10}
-!8 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !"_ZT5Class", baseType: !9, size: 32, align: 32)
+!8 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !6, baseType: !9, size: 32, align: 32)
 !9 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!10 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !"_ZT5Class", baseType: !9, size: 32, align: 32)
+!10 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !6, baseType: !9, size: 32, align: 32)
 !12 = distinct !DISubprogram(name: "foo", scope: null, file: !3, type: !13, isLocal: false, isDefinition: true, isOptimized: false, unit: !2)
 !13 = !DISubroutineType(types: !14)
 !14 = !{null}
-!15 = !DILocalVariable(name: "v", scope: !12, type: !"_ZT5Class")
+!15 = !DILocalVariable(name: "v", scope: !12, type: !6)
 !16 = !DIExpression(DW_OP_bit_piece, 32, 32)
 !17 = !DILocation(line: 2755, column: 9, scope: !12)

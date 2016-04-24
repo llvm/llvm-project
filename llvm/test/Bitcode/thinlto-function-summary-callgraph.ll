@@ -6,6 +6,7 @@
 ; RUN: llvm-bcanalyzer -dump %t3.thinlto.bc | FileCheck %s --check-prefix=COMBINED
 
 ; CHECK:       <GLOBALVAL_SUMMARY_BLOCK
+; CHECK-NEXT:    <VERSION
 ; See if the call to func is registered, using the expected callsite count
 ; and value id matching the subsequent value symbol table.
 ; CHECK-NEXT:    <PERMODULE {{.*}} op4=[[FUNCID:[0-9]+]] op5=1/>
@@ -17,6 +18,7 @@
 ; CHECK-NEXT:  </VALUE_SYMTAB>
 
 ; COMBINED:       <GLOBALVAL_SUMMARY_BLOCK
+; COMBINED-NEXT:    <VERSION
 ; COMBINED-NEXT:    <COMBINED
 ; See if the call to func is registered, using the expected callsite count
 ; and value id matching the subsequent value symbol table.

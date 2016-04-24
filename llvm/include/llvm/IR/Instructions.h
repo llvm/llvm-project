@@ -2906,6 +2906,10 @@ public:
   /// continues to map correctly to each operand.
   void swapSuccessors();
 
+  /// Retrieve the probabilities of a conditional branch. Returns true on
+  /// success, or returns false if no or invalid metadata was found.
+  bool extractProfMetadata(uint64_t &ProbTrue, uint64_t &ProbFalse);
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return (I->getOpcode() == Instruction::Br);

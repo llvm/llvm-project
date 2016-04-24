@@ -37,30 +37,6 @@ DISubprogram *llvm::getDISubprogram(const MDNode *Scope) {
   return nullptr;
 }
 
-DITypeIdentifierMap
-llvm::generateDITypeIdentifierMap(const Module &M) {
-  DITypeIdentifierMap Map;
-  for (DICompileUnit *CU : M.debug_compile_units()) {
-    DINodeArray Retain = CU->getRetainedTypes();
-    for (unsigned Ti = 0, Te = Retain.size(); Ti != Te; ++Ti) {
-      if (!isa<DICompositeType>(Retain[Ti]))
-        continue;
-      auto *Ty = cast<DICompositeType>(Retain[Ti]);
-      if (MDString *TypeId = Ty->getRawIdentifier()) {
-        // Definition has priority over declaration.
-        // Try to insert (TypeId, Ty) to Map.
-        std::pair<DITypeIdentifierMap::iterator, bool> P =
-            Map.insert(std::make_pair(TypeId, Ty));
-        // If TypeId already exists in Map and this is a definition, replace
-        // whatever we had (declaration or definition) with the definition.
-        if (!P.second && !Ty->isForwardDecl())
-          P.first->second = Ty;
-      }
-    }
-  }
-  return Map;
-}
-
 //===----------------------------------------------------------------------===//
 // DebugInfoFinder implementations.
 //===----------------------------------------------------------------------===//
@@ -72,25 +48,15 @@ void DebugInfoFinder::reset() {
   TYs.clear();
   Scopes.clear();
   NodesSeen.clear();
-  TypeIdentifierMap.clear();
-  TypeMapInitialized = false;
-}
-
-void DebugInfoFinder::InitializeTypeMap(const Module &M) {
-  if (TypeMapInitialized)
-    return;
-  TypeIdentifierMap = generateDITypeIdentifierMap(M);
-  TypeMapInitialized = true;
 }
 
 void DebugInfoFinder::processModule(const Module &M) {
-  InitializeTypeMap(M);
   for (auto *CU : M.debug_compile_units()) {
     addCompileUnit(CU);
     for (auto *DIG : CU->getGlobalVariables()) {
       if (addGlobalVariable(DIG)) {
         processScope(DIG->getScope());
-        processType(DIG->getType().resolve(TypeIdentifierMap));
+        processType(DIG->getType().resolve());
       }
     }
     for (auto *ET : CU->getEnumTypes())
@@ -101,7 +67,7 @@ void DebugInfoFinder::processModule(const Module &M) {
       else
         processSubprogram(cast<DISubprogram>(RT));
     for (auto *Import : CU->getImportedEntities()) {
-      auto *Entity = Import->getEntity().resolve(TypeIdentifierMap);
+      auto *Entity = Import->getEntity().resolve();
       if (auto *T = dyn_cast<DIType>(Entity))
         processType(T);
       else if (auto *SP = dyn_cast<DISubprogram>(Entity))
@@ -120,7 +86,6 @@ void DebugInfoFinder::processModule(const Module &M) {
 void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
   if (!Loc)
     return;
-  InitializeTypeMap(M);
   processScope(Loc->getScope());
   processLocation(M, Loc->getInlinedAt());
 }
@@ -128,14 +93,14 @@ void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
 void DebugInfoFinder::processType(DIType *DT) {
   if (!addType(DT))
     return;
-  processScope(DT->getScope().resolve(TypeIdentifierMap));
+  processScope(DT->getScope().resolve());
   if (auto *ST = dyn_cast<DISubroutineType>(DT)) {
     for (DITypeRef Ref : ST->getTypeArray())
-      processType(Ref.resolve(TypeIdentifierMap));
+      processType(Ref.resolve());
     return;
   }
   if (auto *DCT = dyn_cast<DICompositeType>(DT)) {
-    processType(DCT->getBaseType().resolve(TypeIdentifierMap));
+    processType(DCT->getBaseType().resolve());
     for (Metadata *D : DCT->getElements()) {
       if (auto *T = dyn_cast<DIType>(D))
         processType(T);
@@ -145,7 +110,7 @@ void DebugInfoFinder::processType(DIType *DT) {
     return;
   }
   if (auto *DDT = dyn_cast<DIDerivedType>(DT)) {
-    processType(DDT->getBaseType().resolve(TypeIdentifierMap));
+    processType(DDT->getBaseType().resolve());
   }
 }
 
@@ -178,13 +143,13 @@ void DebugInfoFinder::processScope(DIScope *Scope) {
 void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   if (!addSubprogram(SP))
     return;
-  processScope(SP->getScope().resolve(TypeIdentifierMap));
+  processScope(SP->getScope().resolve());
   processType(SP->getType());
   for (auto *Element : SP->getTemplateParams()) {
     if (auto *TType = dyn_cast<DITemplateTypeParameter>(Element)) {
-      processType(TType->getType().resolve(TypeIdentifierMap));
+      processType(TType->getType().resolve());
     } else if (auto *TVal = dyn_cast<DITemplateValueParameter>(Element)) {
-      processType(TVal->getType().resolve(TypeIdentifierMap));
+      processType(TVal->getType().resolve());
     }
   }
 }
@@ -194,7 +159,6 @@ void DebugInfoFinder::processDeclare(const Module &M,
   auto *N = dyn_cast<MDNode>(DDI->getVariable());
   if (!N)
     return;
-  InitializeTypeMap(M);
 
   auto *DV = dyn_cast<DILocalVariable>(N);
   if (!DV)
@@ -203,14 +167,13 @@ void DebugInfoFinder::processDeclare(const Module &M,
   if (!NodesSeen.insert(DV).second)
     return;
   processScope(DV->getScope());
-  processType(DV->getType().resolve(TypeIdentifierMap));
+  processType(DV->getType().resolve());
 }
 
 void DebugInfoFinder::processValue(const Module &M, const DbgValueInst *DVI) {
   auto *N = dyn_cast<MDNode>(DVI->getVariable());
   if (!N)
     return;
-  InitializeTypeMap(M);
 
   auto *DV = dyn_cast<DILocalVariable>(N);
   if (!DV)
@@ -219,7 +182,7 @@ void DebugInfoFinder::processValue(const Module &M, const DbgValueInst *DVI) {
   if (!NodesSeen.insert(DV).second)
     return;
   processScope(DV->getScope());
-  processType(DV->getType().resolve(TypeIdentifierMap));
+  processType(DV->getType().resolve());
 }
 
 bool DebugInfoFinder::addType(DIType *DT) {

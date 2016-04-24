@@ -211,7 +211,7 @@ void HexagonInstPrinter::printSymbol(MCInst const *MI, unsigned OpNo,
     printOperand(MI, OpNo, O);
   } else {
     printOperand(MI, OpNo, O);
-    assert("Unknown symbol operand");
+    assert(!"Unknown symbol operand");
   }
   O << ')';
 }

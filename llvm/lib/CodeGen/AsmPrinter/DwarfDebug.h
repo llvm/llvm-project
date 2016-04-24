@@ -68,15 +68,14 @@ class DbgVariable {
   unsigned DebugLocListIndex = ~0u;          /// Offset in DebugLocs.
   const MachineInstr *MInsn = nullptr;       /// DBG_VALUE instruction.
   SmallVector<int, 1> FrameIndex;            /// Frame index.
-  DwarfDebug *DD;
 
 public:
   /// Construct a DbgVariable.
   ///
   /// Creates a variable without any DW_AT_location.  Call \a initializeMMI()
   /// for MMI entries, or \a initializeDbgValue() for DBG_VALUE instructions.
-  DbgVariable(const DILocalVariable *V, const DILocation *IA, DwarfDebug *DD)
-      : Var(V), IA(IA), DD(DD) {}
+  DbgVariable(const DILocalVariable *V, const DILocation *IA)
+      : Var(V), IA(IA) {}
 
   /// Initialize from the MMI table.
   void initializeMMI(const DIExpression *E, int FI) {
@@ -177,9 +176,9 @@ public:
   const DIType *getType() const;
 
 private:
-  /// Look in the DwarfDebug map for the MDNode that
-  /// corresponds to the reference.
-  template <typename T> T *resolve(TypedDINodeRef<T> Ref) const;
+  template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
+    return Ref.resolve();
+  }
 };
 
 
@@ -254,9 +253,6 @@ class DwarfDebug : public DebugHandlerBase {
 
   /// Version of dwarf we're emitting.
   unsigned DwarfVersion;
-
-  /// Maps from a type identifier to the actual MDNode.
-  DITypeIdentifierMap TypeIdentifierMap;
 
   /// DWARF5 Experimental Options
   /// @{
@@ -525,12 +521,7 @@ public:
 
   /// Find the MDNode for the given reference.
   template <typename T> T *resolve(TypedDINodeRef<T> Ref) const {
-    return Ref.resolve(TypeIdentifierMap);
-  }
-
-  /// Return the TypeIdentifierMap.
-  const DITypeIdentifierMap &getTypeIdentifierMap() const {
-    return TypeIdentifierMap;
+    return Ref.resolve();
   }
 
   /// Find the DwarfCompileUnit for the given CU Die.

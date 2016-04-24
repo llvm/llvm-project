@@ -786,6 +786,14 @@ static unsigned getEncodedLinkage(const GlobalValue &GV) {
   return getEncodedLinkage(GV.getLinkage());
 }
 
+// Decode the flags for GlobalValue in the summary
+static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags) {
+  uint64_t RawFlags = 0;
+  // Emit Linkage enum.
+  RawFlags |= Flags.Linkage; // 4 bits
+  return RawFlags;
+}
+
 static unsigned getEncodedVisibility(const GlobalValue &GV) {
   switch (GV.getVisibility()) {
   case GlobalValue::DefaultVisibility:   return 0;
@@ -1273,7 +1281,8 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
 void ModuleBitcodeWriter::writeDICompositeType(
     const DICompositeType *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  const unsigned IsNotUsedInOldTypeRef = 0x2;
+  Record.push_back(IsNotUsedInOldTypeRef | N->isDistinct());
   Record.push_back(N->getTag());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
@@ -1297,7 +1306,8 @@ void ModuleBitcodeWriter::writeDICompositeType(
 void ModuleBitcodeWriter::writeDISubroutineType(
     const DISubroutineType *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  const unsigned HasNoOldTypeRefs = 0x2;
+  Record.push_back(HasNoOldTypeRefs | N->isDistinct());
   Record.push_back(N->getFlags());
   Record.push_back(VE.getMetadataOrNullID(N->getTypeArray().get()));
 
@@ -3021,7 +3031,7 @@ void ModuleBitcodeWriter::writePerModuleFunctionSummaryRecord(
   NameVals.push_back(ValueID);
 
   FunctionSummary *FS = cast<FunctionSummary>(Info->summary());
-  NameVals.push_back(getEncodedLinkage(FS->linkage()));
+  NameVals.push_back(getEncodedGVSummaryFlags(FS->flags()));
   NameVals.push_back(FS->instCount());
   NameVals.push_back(FS->refs().size());
 
@@ -3055,7 +3065,7 @@ void ModuleBitcodeWriter::writeModuleLevelReferences(
   if (V.isDeclaration())
     return;
   NameVals.push_back(VE.getValueID(&V));
-  NameVals.push_back(getEncodedLinkage(V.getLinkage()));
+  NameVals.push_back(getEncodedGVSummaryFlags(V));
   auto *Info = Index->getGlobalValueInfo(V);
   GlobalVarSummary *VS = cast<GlobalVarSummary>(Info->summary());
   for (auto Ref : VS->refs())
@@ -3064,6 +3074,11 @@ void ModuleBitcodeWriter::writeModuleLevelReferences(
                     FSModRefsAbbrev);
   NameVals.clear();
 }
+
+// Current version for the summary.
+// This is bumped whenever we introduce changes in the way some record are
+// interpreted, like flags for instance.
+static const uint64_t INDEX_VERSION = 1;
 
 /// Emit the per-module summary section alongside the rest of
 /// the module's bitcode.
@@ -3074,13 +3089,15 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
   if (Index->begin() == Index->end())
     return;
 
-  Stream.EnterSubblock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID, 3);
+  Stream.EnterSubblock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID, 4);
+
+  Stream.EmitRecord(bitc::FS_VERSION, ArrayRef<uint64_t>{INDEX_VERSION});
 
   // Abbrev for FS_PERMODULE.
   BitCodeAbbrev *Abbv = new BitCodeAbbrev();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // valueid
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // linkage
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // flags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
   // numrefs x valueid, n x (valueid, callsitecount)
@@ -3092,7 +3109,7 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
   Abbv = new BitCodeAbbrev();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE_PROFILE));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // valueid
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // linkage
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // flags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
   // numrefs x valueid, n x (valueid, callsitecount, profilecount)
@@ -3104,7 +3121,7 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
   Abbv = new BitCodeAbbrev();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE_GLOBALVAR_INIT_REFS));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // valueid
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // linkage
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // flags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));  // valueids
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned FSModRefsAbbrev = Stream.EmitAbbrev(Abbv);
@@ -3113,7 +3130,7 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
   Abbv = new BitCodeAbbrev();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_ALIAS));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // valueid
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // linkage
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // flags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // valueid
   unsigned FSAliasAbbrev = Stream.EmitAbbrev(Abbv);
 
@@ -3148,7 +3165,7 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
     auto AliasId = VE.getValueID(&A);
     auto AliaseeId = VE.getValueID(Aliasee);
     NameVals.push_back(AliasId);
-    NameVals.push_back(getEncodedLinkage(A.getLinkage()));
+    NameVals.push_back(getEncodedGVSummaryFlags(A));
     NameVals.push_back(AliaseeId);
     Stream.EmitRecord(bitc::FS_ALIAS, NameVals, FSAliasAbbrev);
     NameVals.clear();
@@ -3160,12 +3177,13 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
 /// Emit the combined summary section into the combined index file.
 void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Stream.EnterSubblock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID, 3);
+  Stream.EmitRecord(bitc::FS_VERSION, ArrayRef<uint64_t>{INDEX_VERSION});
 
   // Abbrev for FS_COMBINED.
   BitCodeAbbrev *Abbv = new BitCodeAbbrev();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_COMBINED));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // modid
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // linkage
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // flags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
   // numrefs x valueid, n x (valueid, callsitecount)
@@ -3177,7 +3195,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv = new BitCodeAbbrev();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_COMBINED_PROFILE));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // modid
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // linkage
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // flags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
   // numrefs x valueid, n x (valueid, callsitecount, profilecount)
@@ -3189,7 +3207,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv = new BitCodeAbbrev();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_COMBINED_GLOBALVAR_INIT_REFS));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // modid
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // linkage
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // flags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));    // valueids
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned FSModRefsAbbrev = Stream.EmitAbbrev(Abbv);
@@ -3198,7 +3216,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv = new BitCodeAbbrev();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_COMBINED_ALIAS));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // modid
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // linkage
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // flags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // offset
   unsigned FSAliasAbbrev = Stream.EmitAbbrev(Abbv);
 
@@ -3209,6 +3227,17 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   DenseMap<const GlobalValueSummary *, uint64_t> SummaryToOffsetMap;
 
   SmallVector<uint64_t, 64> NameVals;
+
+  // For local linkage, we also emit the original name separately
+  // immediately after the record.
+  auto MaybeEmitOriginalName = [&](GlobalValueSummary &S) {
+    if (!GlobalValue::isLocalLinkage(S.linkage()))
+      return;
+    NameVals.push_back(S.getOriginalName());
+    Stream.EmitRecord(bitc::FS_COMBINED_ORIGINAL_NAME, NameVals);
+    NameVals.clear();
+  };
+
   for (const auto &FII : Index) {
     for (auto &FI : FII.second) {
       GlobalValueSummary *S = FI->summary();
@@ -3222,7 +3251,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
 
       if (auto *VS = dyn_cast<GlobalVarSummary>(S)) {
         NameVals.push_back(Index.getModuleId(VS->modulePath()));
-        NameVals.push_back(getEncodedLinkage(VS->linkage()));
+        NameVals.push_back(getEncodedGVSummaryFlags(VS->flags()));
         for (auto &RI : VS->refs()) {
           NameVals.push_back(getValueId(RI.getGUID()));
         }
@@ -3239,12 +3268,13 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
         Stream.EmitRecord(bitc::FS_COMBINED_GLOBALVAR_INIT_REFS, NameVals,
                           FSModRefsAbbrev);
         NameVals.clear();
+        MaybeEmitOriginalName(*S);
         continue;
       }
 
       auto *FS = cast<FunctionSummary>(S);
       NameVals.push_back(Index.getModuleId(FS->modulePath()));
-      NameVals.push_back(getEncodedLinkage(FS->linkage()));
+      NameVals.push_back(getEncodedGVSummaryFlags(FS->flags()));
       NameVals.push_back(FS->instCount());
       NameVals.push_back(FS->refs().size());
 
@@ -3286,13 +3316,14 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       // Emit the finished record.
       Stream.EmitRecord(Code, NameVals, FSAbbrev);
       NameVals.clear();
+      MaybeEmitOriginalName(*S);
     }
   }
 
   for (auto GVI : Aliases) {
     AliasSummary *AS = cast<AliasSummary>(GVI->summary());
     NameVals.push_back(Index.getModuleId(AS->modulePath()));
-    NameVals.push_back(getEncodedLinkage(AS->linkage()));
+    NameVals.push_back(getEncodedGVSummaryFlags(AS->flags()));
     auto AliaseeOffset = SummaryToOffsetMap[&AS->getAliasee()];
     assert(AliaseeOffset);
     NameVals.push_back(AliaseeOffset);
@@ -3305,6 +3336,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     // Emit the finished record.
     Stream.EmitRecord(bitc::FS_COMBINED_ALIAS, NameVals, FSAliasAbbrev);
     NameVals.clear();
+    MaybeEmitOriginalName(*AS);
   }
 
   Stream.ExitBlock();

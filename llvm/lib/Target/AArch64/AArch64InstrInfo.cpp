@@ -3353,9 +3353,9 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr *MI) const {
     if (!MRI->hasOneNonDBGUse(VReg))
       return false;
 
-    bool Is64Bit = DefMI->getOpcode() != AArch64::ANDWri;
     uint64_t Mask = AArch64_AM::decodeLogicalImmediate(
-        DefMI->getOperand(2).getImm(), Is64Bit ? 64 : 32);
+        DefMI->getOperand(2).getImm(),
+        (DefMI->getOpcode() == AArch64::ANDWri) ? 32 : 64);
     if (!isPowerOf2_64(Mask))
       return false;
 
@@ -3370,9 +3370,9 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr *MI) const {
     MachineBasicBlock *TBB = MI->getOperand(1).getMBB();
     DebugLoc DL = MI->getDebugLoc();
     unsigned Imm = Log2_64(Mask);
-    unsigned Opc = Is64Bit
-                       ? (IsNegativeBranch ? AArch64::TBNZX : AArch64::TBZX)
-                       : (IsNegativeBranch ? AArch64::TBNZW : AArch64::TBZW);
+    unsigned Opc = (Imm < 32)
+                       ? (IsNegativeBranch ? AArch64::TBNZW : AArch64::TBZW)
+                       : (IsNegativeBranch ? AArch64::TBNZX : AArch64::TBZX);
     BuildMI(RefToMBB, MI, DL, get(Opc)).addReg(NewReg).addImm(Imm).addMBB(TBB);
     MI->eraseFromParent();
     return true;

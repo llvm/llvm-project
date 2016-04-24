@@ -544,7 +544,7 @@ void SIScheduleBlock::addSucc(SIScheduleBlock *Succ) {
 #ifndef NDEBUG
   for (SIScheduleBlock* P : Preds) {
     if (SuccID == P->getID())
-      assert("Loop in the Block Graph!\n");
+      assert(!"Loop in the Block Graph!\n");
   }
 #endif
 }

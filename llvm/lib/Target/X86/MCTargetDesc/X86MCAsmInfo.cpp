@@ -35,6 +35,10 @@ AsmWriterFlavor("x86-asm-syntax", cl::init(ATT),
              clEnumValEnd));
 
 static cl::opt<bool>
+RelaxELFRel("relax-relocations", cl::init(false),
+  cl::desc("Emit R_X86_64_GOTPCRELX instead of R_X86_64_GOTPCREL"));
+
+static cl::opt<bool>
 MarkedJTDataRegions("mark-data-regions", cl::init(false),
   cl::desc("Mark code section jump table data regions."),
   cl::Hidden);
@@ -111,6 +115,8 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
   // Always enable the integrated assembler by default.
   // Clang also enabled it when the OS is Solaris but that is redundant here.
   UseIntegratedAssembler = true;
+
+  RelaxELFRelocations = RelaxELFRel;
 }
 
 const MCExpr *

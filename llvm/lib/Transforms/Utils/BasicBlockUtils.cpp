@@ -31,8 +31,6 @@
 #include <algorithm>
 using namespace llvm;
 
-/// DeleteDeadBlock - Delete the specified block, which must have no
-/// predecessors.
 void llvm::DeleteDeadBlock(BasicBlock *BB) {
   assert((pred_begin(BB) == pred_end(BB) ||
          // Can delete self loop.
@@ -61,10 +59,6 @@ void llvm::DeleteDeadBlock(BasicBlock *BB) {
   BB->eraseFromParent();
 }
 
-/// FoldSingleEntryPHINodes - We know that BB has one predecessor.  If there are
-/// any single-entry PHI nodes in it, fold them away.  This handles the case
-/// when all entries to the PHI nodes in a block are guaranteed equal, such as
-/// when the block has exactly one predecessor.
 void llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
                                    MemoryDependenceResults *MemDep) {
   if (!isa<PHINode>(BB->begin())) return;
@@ -82,11 +76,6 @@ void llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
   }
 }
 
-
-/// DeleteDeadPHIs - Examine each PHI in the given block and delete it if it
-/// is dead. Also recursively delete any operands that become dead as
-/// a result. This includes tracing the def-use list from the PHI to see if
-/// it is ultimately unused or if it reaches an unused cycle.
 bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI) {
   // Recursively deleting a PHI may cause multiple PHIs to be deleted
   // or RAUW'd undef, so use an array of WeakVH for the PHIs to delete.
@@ -103,8 +92,6 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI) {
   return Changed;
 }
 
-/// MergeBlockIntoPredecessor - Attempts to merge a block into its predecessor,
-/// if possible.  The return value indicates success or failure.
 bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT,
                                      LoopInfo *LI,
                                      MemoryDependenceResults *MemDep) {
@@ -183,9 +170,6 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT,
   return true;
 }
 
-/// ReplaceInstWithValue - Replace all uses of an instruction (specified by BI)
-/// with a value, then remove and delete the original instruction.
-///
 void llvm::ReplaceInstWithValue(BasicBlock::InstListType &BIL,
                                 BasicBlock::iterator &BI, Value *V) {
   Instruction &I = *BI;
@@ -200,11 +184,6 @@ void llvm::ReplaceInstWithValue(BasicBlock::InstListType &BIL,
   BI = BIL.erase(BI);
 }
 
-
-/// ReplaceInstWithInst - Replace the instruction specified by BI with the
-/// instruction specified by I.  The original instruction is deleted and BI is
-/// updated to point to the new instruction.
-///
 void llvm::ReplaceInstWithInst(BasicBlock::InstListType &BIL,
                                BasicBlock::iterator &BI, Instruction *I) {
   assert(I->getParent() == nullptr &&
@@ -225,16 +204,11 @@ void llvm::ReplaceInstWithInst(BasicBlock::InstListType &BIL,
   BI = New;
 }
 
-/// ReplaceInstWithInst - Replace the instruction specified by From with the
-/// instruction specified by To.
-///
 void llvm::ReplaceInstWithInst(Instruction *From, Instruction *To) {
   BasicBlock::iterator BI(From);
   ReplaceInstWithInst(From->getParent()->getInstList(), BI, To);
 }
 
-/// SplitEdge -  Split the edge connecting specified block. Pass P must
-/// not be NULL.
 BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
                             LoopInfo *LI) {
   unsigned SuccNum = GetSuccessorNumber(BB, Succ);
@@ -276,11 +250,6 @@ llvm::SplitAllCriticalEdges(Function &F,
   return NumBroken;
 }
 
-/// SplitBlock - Split the specified block at the specified instruction - every
-/// thing before SplitPt stays in Old and everything starting with SplitPt moves
-/// to a new block.  The two blocks are joined by an unconditional branch and
-/// the loop info is updated.
-///
 BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
                              DominatorTree *DT, LoopInfo *LI) {
   BasicBlock::iterator SplitIt = SplitPt->getIterator();
@@ -311,8 +280,7 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
   return New;
 }
 
-/// UpdateAnalysisInformation - Update DominatorTree, LoopInfo, and LCCSA
-/// analysis information.
+/// Update DominatorTree, LoopInfo, and LCCSA analysis information.
 static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
                                       ArrayRef<BasicBlock *> Preds,
                                       DominatorTree *DT, LoopInfo *LI,
@@ -388,8 +356,8 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
   }
 }
 
-/// UpdatePHINodes - Update the PHI nodes in OrigBB to include the values coming
-/// from NewBB. This also updates AliasAnalysis, if available.
+/// Update the PHI nodes in OrigBB to include the values coming from NewBB.
+/// This also updates AliasAnalysis, if available.
 static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
                            ArrayRef<BasicBlock *> Preds, BranchInst *BI,
                            bool HasLoopExit) {
@@ -456,21 +424,6 @@ static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
   }
 }
 
-/// SplitBlockPredecessors - This method introduces at least one new basic block
-/// into the function and moves some of the predecessors of BB to be
-/// predecessors of the new block. The new predecessors are indicated by the
-/// Preds array. The new block is given a suffix of 'Suffix'. Returns new basic
-/// block to which predecessors from Preds are now pointing.
-///
-/// If BB is a landingpad block then additional basicblock might be introduced.
-/// It will have suffix of 'Suffix'+".split_lp".
-/// See SplitLandingPadPredecessors for more details on this case.
-///
-/// This currently updates the LLVM IR, AliasAnalysis, DominatorTree,
-/// LoopInfo, and LCCSA but no other analyses. In particular, it does not
-/// preserve LoopSimplify (because it's complicated to handle the case where one
-/// of the edges being split is an exit of a loop with other exits).
-///
 BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
                                          ArrayRef<BasicBlock *> Preds,
                                          const char *Suffix, DominatorTree *DT,
@@ -529,19 +482,6 @@ BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
   return NewBB;
 }
 
-/// SplitLandingPadPredecessors - This method transforms the landing pad,
-/// OrigBB, by introducing two new basic blocks into the function. One of those
-/// new basic blocks gets the predecessors listed in Preds. The other basic
-/// block gets the remaining predecessors of OrigBB. The landingpad instruction
-/// OrigBB is clone into both of the new basic blocks. The new blocks are given
-/// the suffixes 'Suffix1' and 'Suffix2', and are returned in the NewBBs vector.
-///
-/// This currently updates the LLVM IR, AliasAnalysis, DominatorTree,
-/// DominanceFrontier, LoopInfo, and LCCSA but no other analyses. In particular,
-/// it does not preserve LoopSimplify (because it's complicated to handle the
-/// case where one of the edges being split is an exit of a loop with other
-/// exits).
-///
 void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
                                        ArrayRef<BasicBlock *> Preds,
                                        const char *Suffix1, const char *Suffix2,
@@ -646,11 +586,6 @@ void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
   }
 }
 
-/// FoldReturnIntoUncondBranch - This method duplicates the specified return
-/// instruction into a predecessor which ends in an unconditional branch. If
-/// the return instruction returns a value defined by a PHI, propagate the
-/// right value into the return. It returns the new return instruction in the
-/// predecessor.
 ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
                                              BasicBlock *Pred) {
   Instruction *UncondBranch = Pred->getTerminator();
@@ -688,26 +623,6 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
   UncondBranch->eraseFromParent();
   return cast<ReturnInst>(NewRet);
 }
-
-/// SplitBlockAndInsertIfThen - Split the containing block at the
-/// specified instruction - everything before and including SplitBefore stays
-/// in the old basic block, and everything after SplitBefore is moved to a
-/// new block. The two blocks are connected by a conditional branch
-/// (with value of Cmp being the condition).
-/// Before:
-///   Head
-///   SplitBefore
-///   Tail
-/// After:
-///   Head
-///   if (Cond)
-///     ThenBlock
-///   SplitBefore
-///   Tail
-///
-/// If Unreachable is true, then ThenBlock ends with
-/// UnreachableInst, otherwise it branches to Tail.
-/// Returns the NewBasicBlock's terminator.
 
 TerminatorInst *
 llvm::SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
@@ -751,20 +666,6 @@ llvm::SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
   return CheckTerm;
 }
 
-/// SplitBlockAndInsertIfThenElse is similar to SplitBlockAndInsertIfThen,
-/// but also creates the ElseBlock.
-/// Before:
-///   Head
-///   SplitBefore
-///   Tail
-/// After:
-///   Head
-///   if (Cond)
-///     ThenBlock
-///   else
-///     ElseBlock
-///   SplitBefore
-///   Tail
 void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
                                          TerminatorInst **ThenTerm,
                                          TerminatorInst **ElseTerm,
@@ -786,15 +687,6 @@ void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
 }
 
 
-/// GetIfCondition - Given a basic block (BB) with two predecessors,
-/// check to see if the merge at this block is due
-/// to an "if condition".  If so, return the boolean condition that determines
-/// which entry into BB will be taken.  Also, return by references the block
-/// that will be entered from if the condition is true, and the block that will
-/// be entered if the condition is false.
-///
-/// This does no checking to see if the true/false blocks have large or unsavory
-/// instructions in them.
 Value *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
                              BasicBlock *&IfFalse) {
   PHINode *SomePHI = dyn_cast<PHINode>(BB->begin());

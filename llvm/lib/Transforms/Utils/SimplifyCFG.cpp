@@ -2042,25 +2042,6 @@ static bool SimplifyCondBranchToTwoReturns(BranchInst *BI,
   return true;
 }
 
-/// Given a conditional BranchInstruction, retrieve the probabilities of the
-/// branch taking each edge. Fills in the two APInt parameters and returns true,
-/// or returns false if no or invalid metadata was found.
-static bool ExtractBranchMetadata(BranchInst *BI,
-                                  uint64_t &ProbTrue, uint64_t &ProbFalse) {
-  assert(BI->isConditional() &&
-         "Looking for probabilities on unconditional branch?");
-  MDNode *ProfileData = BI->getMetadata(LLVMContext::MD_prof);
-  if (!ProfileData || ProfileData->getNumOperands() != 3) return false;
-  ConstantInt *CITrue =
-      mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1));
-  ConstantInt *CIFalse =
-      mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(2));
-  if (!CITrue || !CIFalse) return false;
-  ProbTrue = CITrue->getValue().getZExtValue();
-  ProbFalse = CIFalse->getValue().getZExtValue();
-  return true;
-}
-
 /// Return true if the given instruction is available
 /// in its predecessor block. If yes, the instruction will be removed.
 static bool checkCSEInPredecessor(Instruction *Inst, BasicBlock *PB) {
@@ -2267,10 +2248,10 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
       PBI->setCondition(NewCond);
 
       uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
-      bool PredHasWeights = ExtractBranchMetadata(PBI, PredTrueWeight,
-                                                  PredFalseWeight);
-      bool SuccHasWeights = ExtractBranchMetadata(BI, SuccTrueWeight,
-                                                  SuccFalseWeight);
+      bool PredHasWeights =
+          PBI->extractProfMetadata(PredTrueWeight, PredFalseWeight);
+      bool SuccHasWeights =
+          BI->extractProfMetadata(SuccTrueWeight, SuccFalseWeight);
       SmallVector<uint64_t, 8> NewWeights;
 
       if (PBI->getSuccessor(0) == BB) {
@@ -2853,10 +2834,10 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
 
   // Update branch weight for PBI.
   uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
-  bool PredHasWeights = ExtractBranchMetadata(PBI, PredTrueWeight,
-                                              PredFalseWeight);
-  bool SuccHasWeights = ExtractBranchMetadata(BI, SuccTrueWeight,
-                                              SuccFalseWeight);
+  bool PredHasWeights =
+      PBI->extractProfMetadata(PredTrueWeight, PredFalseWeight);
+  bool SuccHasWeights =
+      BI->extractProfMetadata(SuccTrueWeight, SuccFalseWeight);
   if (PredHasWeights && SuccHasWeights) {
     uint64_t PredCommon = PBIOp ? PredFalseWeight : PredTrueWeight;
     uint64_t PredOther = PBIOp ?PredTrueWeight : PredFalseWeight;

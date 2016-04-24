@@ -1,5 +1,5 @@
 REQUIRES: shell
-RUN: cd Output
+RUN: cd %T
 RUN: cp %p/Inputs/split-dwarf-empty.dwo %T
 RUN: echo "%p/Inputs/split-dwarf-empty.o 0xdeadbeef" > %t.input
 

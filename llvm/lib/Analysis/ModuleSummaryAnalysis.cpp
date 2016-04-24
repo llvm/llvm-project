@@ -95,8 +95,9 @@ void ModuleSummaryIndexBuilder::computeFunctionInfo(const Function &F,
       findRefEdges(&*I, RefEdges, Visited);
     }
 
+  GlobalValueSummary::GVFlags Flags(F);
   std::unique_ptr<FunctionSummary> FuncSummary =
-      llvm::make_unique<FunctionSummary>(F.getLinkage(), NumInsts);
+      llvm::make_unique<FunctionSummary>(Flags, NumInsts);
   FuncSummary->addCallGraphEdges(CallGraphEdges);
   FuncSummary->addRefEdges(RefEdges);
   std::unique_ptr<GlobalValueInfo> GVInfo =
@@ -108,8 +109,9 @@ void ModuleSummaryIndexBuilder::computeVariableInfo(const GlobalVariable &V) {
   DenseSet<const Value *> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
   findRefEdges(&V, RefEdges, Visited);
+  GlobalValueSummary::GVFlags Flags(V);
   std::unique_ptr<GlobalVarSummary> GVarSummary =
-      llvm::make_unique<GlobalVarSummary>(V.getLinkage());
+      llvm::make_unique<GlobalVarSummary>(Flags);
   GVarSummary->addRefEdges(RefEdges);
   std::unique_ptr<GlobalValueInfo> GVInfo =
       llvm::make_unique<GlobalValueInfo>(0, std::move(GVarSummary));

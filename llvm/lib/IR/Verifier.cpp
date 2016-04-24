@@ -203,9 +203,6 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Track all DICompileUnits visited.
   SmallPtrSet<const Metadata *, 2> CUVisited;
 
-  /// \brief Track unresolved string-based type references.
-  SmallDenseMap<const MDString *, const MDNode *, 32> UnresolvedTypeRefs;
-
   /// \brief The result type for a landingpad.
   Type *LandingPadResultTy;
 
@@ -323,9 +320,6 @@ public:
 
     verifyCompileUnits();
 
-    // Verify type references last.
-    verifyTypeRefs();
-
     return !Broken;
   }
 
@@ -361,27 +355,6 @@ private:
   void visitDITemplateParameter(const DITemplateParameter &N);
 
   void visitTemplateParams(const MDNode &N, const Metadata &RawParams);
-
-  /// \brief Check for a valid string-based type reference.
-  ///
-  /// Checks if \c MD is a string-based type reference.  If it is, keeps track
-  /// of it (and its user, \c N) for error messages later.
-  bool isValidUUID(const MDNode &N, const Metadata *MD);
-
-  /// \brief Check for a valid type reference.
-  ///
-  /// Checks for subclasses of \a DIType, or \a isValidUUID().
-  bool isTypeRef(const MDNode &N, const Metadata *MD);
-
-  /// \brief Check for a valid scope reference.
-  ///
-  /// Checks for subclasses of \a DIScope, or \a isValidUUID().
-  bool isScopeRef(const MDNode &N, const Metadata *MD);
-
-  /// \brief Check for a valid debug info reference.
-  ///
-  /// Checks for subclasses of \a DINode, or \a isValidUUID().
-  bool isDIRef(const MDNode &N, const Metadata *MD);
 
   // InstVisitor overrides...
   using InstVisitor<Verifier>::visit;
@@ -467,15 +440,10 @@ private:
   void verifyFrameRecoverIndices();
   void verifySiblingFuncletUnwinds();
 
-  /// @{
+  void verifyBitPieceExpression(const DbgInfoIntrinsic &I);
+
   /// Module-level debug info verification...
-  void verifyTypeRefs();
   void verifyCompileUnits();
-  template <class MapTy>
-  void verifyBitPieceExpression(const DbgInfoIntrinsic &I,
-                                const MapTy &TypeRefs);
-  void visitUnresolvedTypeRef(const MDString *S, const MDNode *N);
-  /// @}
 };
 } // End anonymous namespace
 
@@ -774,31 +742,9 @@ void Verifier::visitMetadataAsValue(const MetadataAsValue &MDV, Function *F) {
     visitValueAsMetadata(*V, F);
 }
 
-bool Verifier::isValidUUID(const MDNode &N, const Metadata *MD) {
-  auto *S = dyn_cast<MDString>(MD);
-  if (!S || S->getString().empty())
-    return false;
-
-  // Keep track of names of types referenced via UUID so we can check that they
-  // actually exist.
-  UnresolvedTypeRefs.insert(std::make_pair(S, &N));
-  return true;
-}
-
-/// \brief Check if a value can be a reference to a type.
-bool Verifier::isTypeRef(const MDNode &N, const Metadata *MD) {
-  return !MD || isValidUUID(N, MD) || isa<DIType>(MD);
-}
-
-/// \brief Check if a value can be a ScopeRef.
-bool Verifier::isScopeRef(const MDNode &N, const Metadata *MD) {
-  return !MD || isValidUUID(N, MD) || isa<DIScope>(MD);
-}
-
-/// \brief Check if a value can be a debug info ref.
-bool Verifier::isDIRef(const MDNode &N, const Metadata *MD) {
-  return !MD || isValidUUID(N, MD) || isa<DINode>(MD);
-}
+static bool isType(const Metadata *MD) { return !MD || isa<DIType>(MD); }
+static bool isScope(const Metadata *MD) { return !MD || isa<DIScope>(MD); }
+static bool isDINode(const Metadata *MD) { return !MD || isa<DINode>(MD); }
 
 template <class Ty>
 bool isValidMetadataArrayImpl(const MDTuple &N, bool AllowNull) {
@@ -872,13 +818,13 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
              N.getTag() == dwarf::DW_TAG_friend,
          "invalid tag", &N);
   if (N.getTag() == dwarf::DW_TAG_ptr_to_member_type) {
-    Assert(isTypeRef(N, N.getExtraData()), "invalid pointer to member type", &N,
-           N.getExtraData());
+    Assert(isType(N.getRawExtraData()), "invalid pointer to member type", &N,
+           N.getRawExtraData());
   }
 
-  Assert(isScopeRef(N, N.getScope()), "invalid scope", &N, N.getRawScope());
-  Assert(isTypeRef(N, N.getBaseType()), "invalid base type", &N,
-         N.getBaseType());
+  Assert(isScope(N.getRawScope()), "invalid scope", &N, N.getRawScope());
+  Assert(isType(N.getRawBaseType()), "invalid base type", &N,
+         N.getRawBaseType());
 }
 
 static bool hasConflictingReferenceFlags(unsigned Flags) {
@@ -906,13 +852,13 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
              N.getTag() == dwarf::DW_TAG_class_type,
          "invalid tag", &N);
 
-  Assert(isScopeRef(N, N.getScope()), "invalid scope", &N, N.getRawScope());
-  Assert(isTypeRef(N, N.getBaseType()), "invalid base type", &N,
-         N.getBaseType());
+  Assert(isScope(N.getRawScope()), "invalid scope", &N, N.getRawScope());
+  Assert(isType(N.getRawBaseType()), "invalid base type", &N,
+         N.getRawBaseType());
 
   Assert(!N.getRawElements() || isa<MDTuple>(N.getRawElements()),
          "invalid composite elements", &N, N.getRawElements());
-  Assert(isTypeRef(N, N.getRawVTableHolder()), "invalid vtable holder", &N,
+  Assert(isType(N.getRawVTableHolder()), "invalid vtable holder", &N,
          N.getRawVTableHolder());
   Assert(!hasConflictingReferenceFlags(N.getFlags()), "invalid reference flags",
          &N);
@@ -931,7 +877,7 @@ void Verifier::visitDISubroutineType(const DISubroutineType &N) {
   if (auto *Types = N.getRawTypeArray()) {
     Assert(isa<MDTuple>(Types), "invalid composite elements", &N, Types);
     for (Metadata *Ty : N.getTypeArray()->operands()) {
-      Assert(isTypeRef(N, Ty), "invalid subroutine type ref", &N, Types, Ty);
+      Assert(isType(Ty), "invalid subroutine type ref", &N, Types, Ty);
     }
   }
   Assert(!hasConflictingReferenceFlags(N.getFlags()), "invalid reference flags",
@@ -998,12 +944,12 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
 
 void Verifier::visitDISubprogram(const DISubprogram &N) {
   Assert(N.getTag() == dwarf::DW_TAG_subprogram, "invalid tag", &N);
-  Assert(isScopeRef(N, N.getRawScope()), "invalid scope", &N, N.getRawScope());
+  Assert(isScope(N.getRawScope()), "invalid scope", &N, N.getRawScope());
   if (auto *F = N.getRawFile())
     Assert(isa<DIFile>(F), "invalid file", &N, F);
   if (auto *T = N.getRawType())
     Assert(isa<DISubroutineType>(T), "invalid subroutine type", &N, T);
-  Assert(isTypeRef(N, N.getRawContainingType()), "invalid containing type", &N,
+  Assert(isType(N.getRawContainingType()), "invalid containing type", &N,
          N.getRawContainingType());
   if (auto *Params = N.getRawTemplateParams())
     visitTemplateParams(N, *Params);
@@ -1086,7 +1032,7 @@ void Verifier::visitDIModule(const DIModule &N) {
 }
 
 void Verifier::visitDITemplateParameter(const DITemplateParameter &N) {
-  Assert(isTypeRef(N, N.getType()), "invalid type ref", &N, N.getType());
+  Assert(isType(N.getRawType()), "invalid type ref", &N, N.getRawType());
 }
 
 void Verifier::visitDITemplateTypeParameter(const DITemplateTypeParameter &N) {
@@ -1109,7 +1055,7 @@ void Verifier::visitDITemplateValueParameter(
 void Verifier::visitDIVariable(const DIVariable &N) {
   if (auto *S = N.getRawScope())
     Assert(isa<DIScope>(S), "invalid scope", &N, S);
-  Assert(isTypeRef(N, N.getRawType()), "invalid type ref", &N, N.getRawType());
+  Assert(isType(N.getRawType()), "invalid type ref", &N, N.getRawType());
   if (auto *F = N.getRawFile())
     Assert(isa<DIFile>(F), "invalid file", &N, F);
 }
@@ -1148,7 +1094,7 @@ void Verifier::visitDIExpression(const DIExpression &N) {
 void Verifier::visitDIObjCProperty(const DIObjCProperty &N) {
   Assert(N.getTag() == dwarf::DW_TAG_APPLE_property, "invalid tag", &N);
   if (auto *T = N.getRawType())
-    Assert(isTypeRef(N, T), "invalid type ref", &N, T);
+    Assert(isType(T), "invalid type ref", &N, T);
   if (auto *F = N.getRawFile())
     Assert(isa<DIFile>(F), "invalid file", &N, F);
 }
@@ -1159,8 +1105,8 @@ void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
          "invalid tag", &N);
   if (auto *S = N.getRawScope())
     Assert(isa<DIScope>(S), "invalid scope for imported entity", &N, S);
-  Assert(isDIRef(N, N.getEntity()), "invalid imported entity", &N,
-         N.getEntity());
+  Assert(isDINode(N.getRawEntity()), "invalid imported entity", &N,
+         N.getRawEntity());
 }
 
 void Verifier::visitComdat(const Comdat &C) {
@@ -3725,6 +3671,9 @@ void Verifier::visitInstruction(Instruction &I) {
     visitMDNode(*N);
   }
 
+  if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&I))
+    verifyBitPieceExpression(*DII);
+
   InstsInThisBlock.insert(&I);
 }
 
@@ -4335,8 +4284,7 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgIntrinsicTy &DII) {
          Loc->getScope()->getSubprogram());
 }
 
-template <class MapTy>
-static uint64_t getVariableSize(const DILocalVariable &V, const MapTy &Map) {
+static uint64_t getVariableSize(const DILocalVariable &V) {
   // Be careful of broken types (checked elsewhere).
   const Metadata *RawType = V.getRawType();
   while (RawType) {
@@ -4351,12 +4299,6 @@ static uint64_t getVariableSize(const DILocalVariable &V, const MapTy &Map) {
       continue;
     }
 
-    if (auto *S = dyn_cast<MDString>(RawType)) {
-      // Don't error on missing types (checked elsewhere).
-      RawType = Map.lookup(S);
-      continue;
-    }
-
     // Missing type or size.
     break;
   }
@@ -4365,9 +4307,7 @@ static uint64_t getVariableSize(const DILocalVariable &V, const MapTy &Map) {
   return 0;
 }
 
-template <class MapTy>
-void Verifier::verifyBitPieceExpression(const DbgInfoIntrinsic &I,
-                                        const MapTy &TypeRefs) {
+void Verifier::verifyBitPieceExpression(const DbgInfoIntrinsic &I) {
   DILocalVariable *V;
   DIExpression *E;
   if (auto *DVI = dyn_cast<DbgValueInst>(&I)) {
@@ -4398,7 +4338,7 @@ void Verifier::verifyBitPieceExpression(const DbgInfoIntrinsic &I,
 
   // If there's no size, the type is broken, but that should be checked
   // elsewhere.
-  uint64_t VarSize = getVariableSize(*V, TypeRefs);
+  uint64_t VarSize = getVariableSize(*V);
   if (!VarSize)
     return;
 
@@ -4407,12 +4347,6 @@ void Verifier::verifyBitPieceExpression(const DbgInfoIntrinsic &I,
   Assert(PieceSize + PieceOffset <= VarSize,
          "piece is larger than or outside of variable", &I, V, E);
   Assert(PieceSize != VarSize, "piece covers entire variable", &I, V, E);
-}
-
-void Verifier::visitUnresolvedTypeRef(const MDString *S, const MDNode *N) {
-  // This is in its own function so we get an error for each bad type ref (not
-  // just the first).
-  Assert(false, "unresolved type ref", S, N);
 }
 
 void Verifier::verifyCompileUnits() {
@@ -4425,56 +4359,6 @@ void Verifier::verifyCompileUnits() {
                   [&Listed](const Metadata *CU) { return Listed.count(CU); }),
       "All DICompileUnits must be listed in llvm.dbg.cu");
   CUVisited.clear();
-}
-
-void Verifier::verifyTypeRefs() {
-  auto *CUs = M->getNamedMetadata("llvm.dbg.cu");
-  if (!CUs)
-    return;
-
-  // Visit all the compile units again to map the type references.
-  SmallDenseMap<const MDString *, const DIType *, 32> TypeRefs;
-  for (auto *MD : CUs->operands()) {
-    auto *CU = dyn_cast<DICompileUnit>(MD);
-    if (!CU)
-      continue;
-    auto *Array = CU->getRawRetainedTypes();
-    if (!Array || !isa<MDTuple>(Array))
-      continue;
-    for (DIScope *Op : CU->getRetainedTypes())
-      if (auto *T = dyn_cast_or_null<DICompositeType>(Op))
-        if (auto *S = T->getRawIdentifier()) {
-          UnresolvedTypeRefs.erase(S);
-          TypeRefs.insert(std::make_pair(S, T));
-        }
-  }
-
-  // Verify debug info intrinsic bit piece expressions.  This needs a second
-  // pass through the intructions, since we haven't built TypeRefs yet when
-  // verifying functions, and simply queuing the DbgInfoIntrinsics to evaluate
-  // later/now would queue up some that could be later deleted.
-  for (const Function &F : *M)
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
-        if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&I))
-          verifyBitPieceExpression(*DII, TypeRefs);
-
-  // Return early if all typerefs were resolved.
-  if (UnresolvedTypeRefs.empty())
-    return;
-
-  // Sort the unresolved references by name so the output is deterministic.
-  typedef std::pair<const MDString *, const MDNode *> TypeRef;
-  SmallVector<TypeRef, 32> Unresolved(UnresolvedTypeRefs.begin(),
-                                      UnresolvedTypeRefs.end());
-  std::sort(Unresolved.begin(), Unresolved.end(),
-            [](const TypeRef &LHS, const TypeRef &RHS) {
-    return LHS.first->getString() < RHS.first->getString();
-  });
-
-  // Visit the unresolved refs (printing out the errors).
-  for (const TypeRef &TR : Unresolved)
-    visitUnresolvedTypeRef(TR.first, TR.second);
 }
 
 //===----------------------------------------------------------------------===//
