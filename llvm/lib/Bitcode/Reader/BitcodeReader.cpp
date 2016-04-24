@@ -5890,8 +5890,21 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseModule() {
 std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
   if (Stream.EnterSubBlock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID))
     return error("Invalid record");
-
   SmallVector<uint64_t, 64> Record;
+
+  // Parse version
+  {
+    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    if (Entry.Kind != BitstreamEntry::Record)
+      return error("Invalid Summary Block: record for version expected");
+    if (Stream.readRecord(Entry.ID, Record) != bitc::FS_VERSION)
+      return error("Invalid Summary Block: version expected");
+  }
+  const uint64_t Version = Record[0];
+  if (Version != 1)
+    return error("Invalid summary version " + Twine(Version) + ", 1 expected");
+  Record.clear();
+
   // Keep around the last seen summary to be used when we see an optional
   // "OriginalName" attachement.
   GlobalValueSummary *LastSeenSummary = nullptr;

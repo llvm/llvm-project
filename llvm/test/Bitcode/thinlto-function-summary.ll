@@ -5,6 +5,7 @@
 ; same in the ValueSumbolTable, to ensure the ordering is stable.
 ; Also check the linkage field on the summary entries.
 ; BC: <GLOBALVAL_SUMMARY_BLOCK
+; BC-NEXT: <VERSION
 ; BC-NEXT: <PERMODULE {{.*}} op0=1 op1=0
 ; BC-NEXT: <PERMODULE {{.*}} op0=2 op1=0
 ; BC-NEXT: <PERMODULE {{.*}} op0=3 op1=3
