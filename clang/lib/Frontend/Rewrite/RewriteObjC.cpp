@@ -3748,7 +3748,7 @@ Stmt *RewriteObjC::SynthesizeBlockCall(CallExpr *Exp, const Expr *BlockExp) {
                = dyn_cast<PseudoObjectExpr>(BlockExp)) {
     CPT = POE->getType()->castAs<BlockPointerType>();
   } else {
-    assert(1 && "RewriteBlockClass: Bad type");
+    assert(false && "RewriteBlockClass: Bad type");
   }
   assert(CPT && "RewriteBlockClass: Bad type");
   const FunctionType *FT = CPT->getPointeeType()->getAs<FunctionType>();

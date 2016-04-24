@@ -1,13 +1,16 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple %itanium_abi_triple %s -o - | FileCheck %s
 // Test the various accessibility flags in the debug info.
 struct A {
+  // CHECK: ![[A:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "A",
+
   // CHECK-DAG: !DISubprogram(name: "pub_default",{{.*}} line: [[@LINE+1]],{{.*}} flags: DIFlagPrototyped,
   void pub_default();
   // CHECK-DAG: !DIDerivedType(tag: DW_TAG_member, name: "pub_default_static",{{.*}} line: [[@LINE+1]],{{.*}} flags: DIFlagStaticMember)
   static int pub_default_static;
 };
 
-// CHECK: !DIDerivedType(tag: DW_TAG_inheritance,{{.*}} baseType: !"_ZTS1A",{{.*}} flags: DIFlagPublic)
+
+// CHECK: !DIDerivedType(tag: DW_TAG_inheritance,{{.*}} baseType: ![[A]],{{.*}} flags: DIFlagPublic)
 class B : public A {
 public:
   // CHECK-DAG: !DISubprogram(name: "pub",{{.*}} line: [[@LINE+1]],{{.*}} flags: DIFlagPublic | DIFlagPrototyped,

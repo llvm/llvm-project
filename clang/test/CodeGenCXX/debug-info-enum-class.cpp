@@ -101,11 +101,11 @@ void f2(E) {
 void fz() { Z z; }
 
 namespace test5 {
+// CHECK: [[TEST5:![0-9]+]] = !DINamespace(name: "test5"
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "E"
-// CHECK-SAME:             scope: [[TEST5:![0-9]+]]
+// CHECK-SAME:             scope: [[TEST5]]
 // CHECK-SAME:             flags: DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTSN5test51EE"
-// CHECK: [[TEST5]] = !DINamespace(name: "test5"
 enum E : int;
 void f1(E *) {
 }

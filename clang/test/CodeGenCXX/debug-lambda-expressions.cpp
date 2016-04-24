@@ -17,8 +17,6 @@ int d(int x) { D y[10]; return [x,y] { return y[x].x; }(); }
 // Randomness for file. -- 6
 // CHECK: [[FILE:.*]] = !DIFile(filename: "{{.*}}debug-lambda-expressions.cpp",
 
-// CHECK: ![[INT:[0-9]+]] = !DIBasicType(name: "int"
-
 // CVAR:
 // CHECK: !DIGlobalVariable(name: "cvar"
 // CHECK-SAME:              line: [[CVAR_LINE:[0-9]+]]
@@ -36,6 +34,8 @@ int d(int x) { D y[10]; return [x,y] { return y[x].x; }(); }
 // CHECK-SAME:                          line: [[VAR_LINE]],
 // CHECK-SAME:                          elements: ![[VAR_ARGS:[0-9]+]]
 // CHECK: ![[VAR_ARGS]] = !{!{{[0-9]+}}}
+
+// CHECK: ![[INT:[0-9]+]] = !DIBasicType(name: "int"
 
 // A: 10
 // CHECK: ![[A_FUNC:.*]] = distinct !DISubprogram(name: "a"{{.*}}, line: [[A_LINE:[0-9]+]]{{.*}}, isDefinition: true
