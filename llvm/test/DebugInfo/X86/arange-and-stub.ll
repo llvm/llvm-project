@@ -18,7 +18,7 @@ define void @foo() !dbg !4 {
 
 define void @bar() personality i8* bitcast (void ()* @foo to i8*) !dbg !9 {
   invoke void @foo()
-          to label %invoke.cont unwind label %lpad
+          to label %invoke.cont unwind label %lpad, !dbg !19
 
 invoke.cont:                                      ; preds = %0
   ret void
@@ -50,3 +50,4 @@ lpad:                                             ; preds = %0
 !16 = !DISubrange(count: 1)
 !17 = !{i32 2, !"Dwarf Version", i32 4}
 !18 = !{i32 2, !"Debug Info Version", i32 3}
+!19 = !DILocation(line: 0, scope: !9)
