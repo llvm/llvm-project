@@ -15,7 +15,7 @@ int f1() {
 
 // CHECK: [[GLOBALS]] = !{[[CNST:![0-9]*]]}
 
-// CHECK: [[CNST]] = !DIGlobalVariable(name: "cnst",
-// CHECK-SAME:                         scope: [[NS:![0-9]*]]
+// CHECK: [[CNST]] = distinct !DIGlobalVariable(name: "cnst",
+// CHECK-SAME:                                  scope: [[NS:![0-9]*]]
 // CHECK: [[NS]] = !DINamespace(name: "ns"
 
