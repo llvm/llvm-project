@@ -730,8 +730,13 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &S,
 
 template <class ELFT>
 static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
-  if ((Config->Relocatable || Config->Shared) && !Config->NoUndefined)
-    return;
+  if (!Config->NoUndefined) {
+    if (Config->Relocatable)
+      return;
+    if (Config->Shared)
+      if (Sym->Backref->Visibility == STV_DEFAULT)
+        return;
+  }
 
   std::string Msg = "undefined symbol: " + Sym->getName().str();
   if (InputFile *File = Symtab.findFile(Sym))

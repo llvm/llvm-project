@@ -9,6 +9,7 @@
 
 #include "MCTargetDesc/X86FixupKinds.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
@@ -86,7 +87,8 @@ static void checkIs32(MCContext &Ctx, SMLoc Loc, X86_64RelType Type) {
 
 static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
                                MCSymbolRefExpr::VariantKind Modifier,
-                               X86_64RelType Type, bool IsPCRel) {
+                               X86_64RelType Type, bool IsPCRel,
+                               unsigned Kind) {
   switch (Modifier) {
   default:
     llvm_unreachable("Unimplemented");
@@ -172,7 +174,19 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     return ELF::R_X86_64_PLT32;
   case MCSymbolRefExpr::VK_GOTPCREL:
     checkIs32(Ctx, Loc, Type);
-    return ELF::R_X86_64_GOTPCREL;
+    // Older versions of ld.bfd/ld.gold/lld
+    // do not support GOTPCRELX/REX_GOTPCRELX,
+    // and we want to keep back-compatibility.
+    if (!Ctx.getAsmInfo()->canRelaxRelocations())
+      return ELF::R_X86_64_GOTPCREL;
+    switch (Kind) {
+    default:
+      return ELF::R_X86_64_GOTPCREL;
+    case X86::reloc_riprel_4byte:
+      return ELF::R_X86_64_GOTPCRELX;
+    case X86::reloc_riprel_4byte_movq_load:
+      return ELF::R_X86_64_REX_GOTPCRELX;
+    }
   }
 }
 
@@ -258,7 +272,8 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
   X86_64RelType Type = getType64(Fixup.getKind(), Modifier, IsPCRel);
   if (getEMachine() == ELF::EM_X86_64)
-    return getRelocType64(Ctx, Fixup.getLoc(), Modifier, Type, IsPCRel);
+    return getRelocType64(Ctx, Fixup.getLoc(), Modifier, Type, IsPCRel,
+                          Fixup.getKind());
 
   assert((getEMachine() == ELF::EM_386 || getEMachine() == ELF::EM_IAMCU) &&
          "Unsupported ELF machine type.");

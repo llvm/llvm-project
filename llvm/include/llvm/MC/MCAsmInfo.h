@@ -363,6 +363,10 @@ protected:
   /// expressions as logical rather than arithmetic.
   bool UseLogicalShr;
 
+  // If true, emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL, on
+  // X86_64 ELF.
+  bool RelaxELFRelocations;
+
 public:
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
@@ -568,6 +572,8 @@ public:
   }
 
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
+
+  bool canRelaxRelocations() const { return RelaxELFRelocations; }
 };
 }
 

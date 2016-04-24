@@ -34,6 +34,15 @@ define <16 x i8> @combine_vpperm_identity_bitcast(<16 x i8> %a0, <16 x i8> %a1) 
   ret <16 x i8> %res4
 }
 
+define <16 x i8> @combine_vpperm_as_blend_with_zero(<16 x i8> %a0, <16 x i8> %a1) {
+; CHECK-LABEL: combine_vpperm_as_blend_with_zero:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0,1],zero,zero,xmm0[4,5,6,7],zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    retq
+  %res0 = call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> <i8 0, i8 1, i8 128, i8 129, i8 4, i8 5, i8 6, i8 7, i8 130, i8 131, i8 132, i8 133, i8 134, i8 135, i8 136, i8 137>)
+  ret <16 x i8> %res0
+}
+
 define <16 x i8> @combine_vpperm_as_unary_unpckhwd(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: combine_vpperm_as_unary_unpckhwd:
 ; CHECK:       # BB#0:

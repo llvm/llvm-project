@@ -45,21 +45,23 @@ namespace llvm {
 
 template <typename T> class Optional;
 
-/// \brief Pointer union between a subclass of DINode and MDString.
+/// Holds a subclass of DINode.
 ///
-/// \a DICompositeType can be referenced via an \a MDString unique identifier.
-/// This class allows some type safety in the face of that, requiring either a
-/// node of a particular type or an \a MDString.
+/// FIXME: This class doesn't currently make much sense.  Previously it was a
+/// union beteen MDString (for ODR-uniqued types) and things like DIType.  To
+/// support CodeView work, it wasn't deleted outright when MDString-based type
+/// references were deleted; we'll soon need a similar concept for CodeView
+/// DITypeIndex.
 template <class T> class TypedDINodeRef {
   const Metadata *MD = nullptr;
 
 public:
   TypedDINodeRef() = default;
   TypedDINodeRef(std::nullptr_t) {}
+  TypedDINodeRef(const T *MD) : MD(MD) {}
 
-  /// \brief Construct from a raw pointer.
   explicit TypedDINodeRef(const Metadata *MD) : MD(MD) {
-    assert((!MD || isa<MDString>(MD) || isa<T>(MD)) && "Expected valid ref");
+    assert((!MD || isa<T>(MD)) && "Expected valid type ref");
   }
 
   template <class U>
@@ -71,26 +73,10 @@ public:
 
   operator Metadata *() const { return const_cast<Metadata *>(MD); }
 
+  T *resolve() const { return const_cast<T *>(cast_or_null<T>(MD)); }
+
   bool operator==(const TypedDINodeRef<T> &X) const { return MD == X.MD; }
   bool operator!=(const TypedDINodeRef<T> &X) const { return MD != X.MD; }
-
-  /// \brief Create a reference.
-  ///
-  /// Get a reference to \c N, using an \a MDString reference if available.
-  static TypedDINodeRef get(const T *N);
-
-  template <class MapTy> T *resolve(const MapTy &Map) const {
-    if (!MD)
-      return nullptr;
-
-    if (auto *Typed = dyn_cast<T>(MD))
-      return const_cast<T *>(Typed);
-
-    auto *S = cast<MDString>(MD);
-    auto I = Map.find(S);
-    assert(I != Map.end() && "Missing identifier in type map");
-    return cast<T>(I->second);
-  }
 };
 
 typedef TypedDINodeRef<DINode> DINodeRef;
@@ -200,8 +186,6 @@ public:
   /// any remaining (unrecognized) bits.
   static unsigned splitFlags(unsigned Flags,
                              SmallVectorImpl<unsigned> &SplitFlags);
-
-  DINodeRef getRef() const { return DINodeRef::get(this); }
 
   static bool classof(const Metadata *MD) {
     switch (MD->getMetadataID()) {
@@ -437,8 +421,6 @@ public:
                              : static_cast<Metadata *>(getOperand(0));
   }
 
-  DIScopeRef getRef() const { return DIScopeRef::get(this); }
-
   static bool classof(const Metadata *MD) {
     switch (MD->getMetadataID()) {
     default:
@@ -601,8 +583,6 @@ public:
   bool isLValueReference() const { return getFlags() & FlagLValueReference; }
   bool isRValueReference() const { return getFlags() & FlagRValueReference; }
   bool isExternalTypeRef() const { return getFlags() & FlagExternalTypeRef; }
-
-  DITypeRef getRef() const { return DITypeRef::get(this); }
 
   static bool classof(const Metadata *MD) {
     switch (MD->getMetadataID()) {
@@ -932,14 +912,6 @@ public:
     return MD->getMetadataID() == DICompositeTypeKind;
   }
 };
-
-template <class T> TypedDINodeRef<T> TypedDINodeRef<T>::get(const T *N) {
-  if (N)
-    if (auto *Composite = dyn_cast<DICompositeType>(N))
-      if (auto *S = Composite->getRawIdentifier())
-        return TypedDINodeRef<T>(S);
-  return TypedDINodeRef<T>(N);
-}
 
 /// \brief Type array for a subprogram.
 ///

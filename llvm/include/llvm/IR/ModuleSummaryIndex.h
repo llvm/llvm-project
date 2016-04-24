@@ -92,9 +92,30 @@ public:
   /// \brief Sububclass discriminator (for dyn_cast<> et al.)
   enum SummaryKind { AliasKind, FunctionKind, GlobalVarKind };
 
+  /// Group flags (Linkage, hasSection, isOptSize, etc.) as a bitfield.
+  struct GVFlags {
+    /// \brief The linkage type of the associated global value.
+    ///
+    /// One use is to flag values that have local linkage types and need to
+    /// have module identifier appended before placing into the combined
+    /// index, to disambiguate from other values with the same name.
+    /// In the future this will be used to update and optimize linkage
+    /// types based on global summary-based analysis.
+    GlobalValue::LinkageTypes Linkage : 4;
+
+    /// Convenience Constructors
+    explicit GVFlags(GlobalValue::LinkageTypes Linkage) : Linkage(Linkage) {}
+    GVFlags(const GlobalValue &GV) : Linkage(GV.getLinkage()) {}
+  };
+
 private:
   /// Kind of summary for use in dyn_cast<> et al.
   SummaryKind Kind;
+
+  /// This is the hash of the name of the symbol in the original file. It is
+  /// identical to the GUID for global symbols, but differs for local since the
+  /// GUID includes the module level id in the hash.
+  GlobalValue::GUID OriginalName;
 
   /// \brief Path of module IR containing value's definition, used to locate
   /// module during importing.
@@ -105,14 +126,7 @@ private:
   /// module path string table.
   StringRef ModulePath;
 
-  /// \brief The linkage type of the associated global value.
-  ///
-  /// One use is to flag values that have local linkage types and need to
-  /// have module identifier appended before placing into the combined
-  /// index, to disambiguate from other values with the same name.
-  /// In the future this will be used to update and optimize linkage
-  /// types based on global summary-based analysis.
-  GlobalValue::LinkageTypes Linkage;
+  GVFlags Flags;
 
   /// List of values referenced by this global value's definition
   /// (either by the initializer of a global variable, or referenced
@@ -122,11 +136,17 @@ private:
 
 protected:
   /// GlobalValueSummary constructor.
-  GlobalValueSummary(SummaryKind K, GlobalValue::LinkageTypes Linkage)
-      : Kind(K), Linkage(Linkage) {}
+  GlobalValueSummary(SummaryKind K, GVFlags Flags) : Kind(K), Flags(Flags) {}
 
 public:
   virtual ~GlobalValueSummary() = default;
+
+  /// Returns the hash of the original name, it is identical to the GUID for
+  /// externally visible symbols, but not for local ones.
+  GlobalValue::GUID getOriginalName() { return OriginalName; }
+
+  /// Initialize the original name hash in this summary.
+  void setOriginalName(GlobalValue::GUID Name) { OriginalName = Name; }
 
   /// Which kind of summary subclass this is.
   SummaryKind getSummaryKind() const { return Kind; }
@@ -138,8 +158,11 @@ public:
   /// Get the path to the module containing this function.
   StringRef modulePath() const { return ModulePath; }
 
+  /// Get the flags for this GlobalValue (see \p struct GVFlags).
+  GVFlags flags() { return Flags; }
+
   /// Return linkage type recorded for this global value.
-  GlobalValue::LinkageTypes linkage() const { return Linkage; }
+  GlobalValue::LinkageTypes linkage() const { return Flags.Linkage; }
 
   /// Record a reference from this global value to the global value identified
   /// by \p RefGUID.
@@ -167,8 +190,7 @@ class AliasSummary : public GlobalValueSummary {
 
 public:
   /// Summary constructors.
-  AliasSummary(GlobalValue::LinkageTypes Linkage)
-      : GlobalValueSummary(AliasKind, Linkage) {}
+  AliasSummary(GVFlags Flags) : GlobalValueSummary(AliasKind, Flags) {}
 
   /// Check if this is an alias summary.
   static bool classof(const GlobalValueSummary *GVS) {
@@ -204,8 +226,8 @@ private:
 
 public:
   /// Summary constructors.
-  FunctionSummary(GlobalValue::LinkageTypes Linkage, unsigned NumInsts)
-      : GlobalValueSummary(FunctionKind, Linkage), InstCount(NumInsts) {}
+  FunctionSummary(GVFlags Flags, unsigned NumInsts)
+      : GlobalValueSummary(FunctionKind, Flags), InstCount(NumInsts) {}
 
   /// Check if this is a function summary.
   static bool classof(const GlobalValueSummary *GVS) {
@@ -251,8 +273,7 @@ class GlobalVarSummary : public GlobalValueSummary {
 
 public:
   /// Summary constructors.
-  GlobalVarSummary(GlobalValue::LinkageTypes Linkage)
-      : GlobalValueSummary(GlobalVarKind, Linkage) {}
+  GlobalVarSummary(GVFlags Flags) : GlobalValueSummary(GlobalVarKind, Flags) {}
 
   /// Check if this is a global variable summary.
   static bool classof(const GlobalValueSummary *GVS) {

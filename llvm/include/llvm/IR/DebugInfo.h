@@ -33,14 +33,8 @@ class DbgValueInst;
 template <typename K, typename V, typename KeyInfoT, typename BucketT>
 class DenseMap;
 
-/// \brief Maps from type identifier to the actual MDNode.
-typedef DenseMap<const MDString *, DIType *> DITypeIdentifierMap;
-
 /// \brief Find subprogram that is enclosing this scope.
 DISubprogram *getDISubprogram(const MDNode *Scope);
-
-/// \brief Generate map by visiting all retained types.
-DITypeIdentifierMap generateDITypeIdentifierMap(const Module &M);
 
 /// \brief Strip debug info in the module if it exists.
 ///
@@ -63,8 +57,6 @@ unsigned getDebugMetadataVersionFromModule(const Module &M);
 /// used by the CUs.
 class DebugInfoFinder {
 public:
-  DebugInfoFinder() : TypeMapInitialized(false) {}
-
   /// \brief Process entire module and collect debug info anchors.
   void processModule(const Module &M);
 
@@ -132,10 +124,6 @@ private:
   SmallVector<DIType *, 8> TYs;
   SmallVector<DIScope *, 8> Scopes;
   SmallPtrSet<const MDNode *, 32> NodesSeen;
-  DITypeIdentifierMap TypeIdentifierMap;
-
-  /// \brief Specify if TypeIdentifierMap is initialized.
-  bool TypeMapInitialized;
 };
 
 } // end namespace llvm

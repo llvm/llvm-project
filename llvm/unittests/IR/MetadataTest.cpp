@@ -87,7 +87,6 @@ protected:
                                      nullptr, false, false, 0, nullptr,
                                      0, 0, 0, false, nullptr);
   }
-  DIScopeRef getSubprogramRef() { return getSubprogram()->getRef(); }
   DIFile *getFile() {
     return DIFile::getDistinct(Context, "file.c", "/path/to/dir");
   }
@@ -97,15 +96,13 @@ protected:
                                       getTuple(), getTuple(), getTuple(),
                                       getTuple(), getTuple(), 0);
   }
-  DITypeRef getBasicType(StringRef Name) {
-    return DIBasicType::get(Context, dwarf::DW_TAG_unspecified_type, Name)
-        ->getRef();
+  DIType *getBasicType(StringRef Name) {
+    return DIBasicType::get(Context, dwarf::DW_TAG_unspecified_type, Name);
   }
-  DITypeRef getDerivedType() {
+  DIType *getDerivedType() {
     return DIDerivedType::getDistinct(Context, dwarf::DW_TAG_pointer_type, "",
                                       nullptr, 0, nullptr,
-                                      getBasicType("basictype"), 1, 2, 0, 0)
-        ->getRef();
+                                      getBasicType("basictype"), 1, 2, 0, 0);
   }
   Constant *getConstant() {
     return ConstantInt::get(Type::getInt32Ty(Context), Counter++);
@@ -113,11 +110,10 @@ protected:
   ConstantAsMetadata *getConstantAsMetadata() {
     return ConstantAsMetadata::get(getConstant());
   }
-  DITypeRef getCompositeType() {
+  DIType *getCompositeType() {
     return DICompositeType::getDistinct(
-               Context, dwarf::DW_TAG_structure_type, "", nullptr, 0, nullptr,
-               nullptr, 32, 32, 0, 0, nullptr, 0, nullptr, nullptr, "")
-        ->getRef();
+        Context, dwarf::DW_TAG_structure_type, "", nullptr, 0, nullptr, nullptr,
+        32, 32, 0, 0, nullptr, 0, nullptr, nullptr, "");
   }
   Function *getFunction(StringRef Name) {
     return cast<Function>(M.getOrInsertFunction(
@@ -992,8 +988,8 @@ typedef MetadataTest DIDerivedTypeTest;
 
 TEST_F(DIDerivedTypeTest, get) {
   DIFile *File = getFile();
-  DIScopeRef Scope = getSubprogramRef();
-  DITypeRef BaseType = getBasicType("basic");
+  DIScope *Scope = getSubprogram();
+  DIType *BaseType = getBasicType("basic");
   MDTuple *ExtraData = getTuple();
 
   auto *N = DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "something",
@@ -1026,7 +1022,7 @@ TEST_F(DIDerivedTypeTest, get) {
                                   "something", File, 2, Scope, BaseType, 2, 3,
                                   4, 5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type,
-                                  "something", File, 1, getSubprogramRef(),
+                                  "something", File, 1, getSubprogram(),
                                   BaseType, 2, 3, 4, 5, ExtraData));
   EXPECT_NE(N, DIDerivedType::get(
                    Context, dwarf::DW_TAG_pointer_type, "something", File, 1,
@@ -1053,8 +1049,8 @@ TEST_F(DIDerivedTypeTest, get) {
 
 TEST_F(DIDerivedTypeTest, getWithLargeValues) {
   DIFile *File = getFile();
-  DIScopeRef Scope = getSubprogramRef();
-  DITypeRef BaseType = getBasicType("basic");
+  DIScope *Scope = getSubprogram();
+  DIType *BaseType = getBasicType("basic");
   MDTuple *ExtraData = getTuple();
 
   auto *N = DIDerivedType::get(Context, dwarf::DW_TAG_pointer_type, "something",
@@ -1072,15 +1068,15 @@ TEST_F(DICompositeTypeTest, get) {
   StringRef Name = "some name";
   DIFile *File = getFile();
   unsigned Line = 1;
-  DIScopeRef Scope = getSubprogramRef();
-  DITypeRef BaseType = getCompositeType();
+  DIScope *Scope = getSubprogram();
+  DIType *BaseType = getCompositeType();
   uint64_t SizeInBits = 2;
   uint64_t AlignInBits = 3;
   uint64_t OffsetInBits = 4;
   unsigned Flags = 5;
   MDTuple *Elements = getTuple();
   unsigned RuntimeLang = 6;
-  DITypeRef VTableHolder = getCompositeType();
+  DIType *VTableHolder = getCompositeType();
   MDTuple *TemplateParams = getTuple();
   StringRef Identifier = "some id";
 
@@ -1126,7 +1122,7 @@ TEST_F(DICompositeTypeTest, get) {
                                     OffsetInBits, Flags, Elements, RuntimeLang,
                                     VTableHolder, TemplateParams, Identifier));
   EXPECT_NE(N, DICompositeType::get(
-                   Context, Tag, Name, File, Line, getSubprogramRef(), BaseType,
+                   Context, Tag, Name, File, Line, getSubprogram(), BaseType,
                    SizeInBits, AlignInBits, OffsetInBits, Flags, Elements,
                    RuntimeLang, VTableHolder, TemplateParams, Identifier));
   EXPECT_NE(N, DICompositeType::get(
@@ -1191,15 +1187,15 @@ TEST_F(DICompositeTypeTest, getWithLargeValues) {
   StringRef Name = "some name";
   DIFile *File = getFile();
   unsigned Line = 1;
-  DIScopeRef Scope = getSubprogramRef();
-  DITypeRef BaseType = getCompositeType();
+  DIScope *Scope = getSubprogram();
+  DIType *BaseType = getCompositeType();
   uint64_t SizeInBits = UINT64_MAX;
   uint64_t AlignInBits = UINT64_MAX - 1;
   uint64_t OffsetInBits = UINT64_MAX - 2;
   unsigned Flags = 5;
   MDTuple *Elements = getTuple();
   unsigned RuntimeLang = 6;
-  DITypeRef VTableHolder = getCompositeType();
+  DIType *VTableHolder = getCompositeType();
   MDTuple *TemplateParams = getTuple();
   StringRef Identifier = "some id";
 
@@ -1217,8 +1213,8 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
   StringRef Name = "some name";
   DIFile *File = getFile();
   unsigned Line = 1;
-  DIScopeRef Scope = getSubprogramRef();
-  DITypeRef BaseType = getCompositeType();
+  DIScope *Scope = getSubprogram();
+  DIType *BaseType = getCompositeType();
   uint64_t SizeInBits = 2;
   uint64_t AlignInBits = 3;
   uint64_t OffsetInBits = 4;
@@ -1237,7 +1233,7 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
   N->replaceElements(nullptr);
   EXPECT_EQ(nullptr, N->getElements().get());
 
-  DITypeRef VTableHolder = getCompositeType();
+  DIType *VTableHolder = getCompositeType();
   EXPECT_EQ(nullptr, N->getVTableHolder());
   N->replaceVTableHolder(VTableHolder);
   EXPECT_EQ(VTableHolder, N->getVTableHolder());
@@ -1399,7 +1395,7 @@ TEST_F(DICompileUnitTest, replaceArrays) {
 typedef MetadataTest DISubprogramTest;
 
 TEST_F(DISubprogramTest, get) {
-  DIScopeRef Scope = getCompositeType();
+  DIScope *Scope = getCompositeType();
   StringRef Name = "name";
   StringRef LinkageName = "linkage";
   DIFile *File = getFile();
@@ -1408,7 +1404,7 @@ TEST_F(DISubprogramTest, get) {
   bool IsLocalToUnit = false;
   bool IsDefinition = true;
   unsigned ScopeLine = 3;
-  DITypeRef ContainingType = getCompositeType();
+  DIType *ContainingType = getCompositeType();
   unsigned Virtuality = 2;
   unsigned VirtualIndex = 5;
   unsigned Flags = 6;
@@ -1687,7 +1683,7 @@ typedef MetadataTest DITemplateTypeParameterTest;
 
 TEST_F(DITemplateTypeParameterTest, get) {
   StringRef Name = "template";
-  DITypeRef Type = getBasicType("basic");
+  DIType *Type = getBasicType("basic");
 
   auto *N = DITemplateTypeParameter::get(Context, Name, Type);
 
@@ -1709,7 +1705,7 @@ typedef MetadataTest DITemplateValueParameterTest;
 TEST_F(DITemplateValueParameterTest, get) {
   unsigned Tag = dwarf::DW_TAG_template_value_parameter;
   StringRef Name = "template";
-  DITypeRef Type = getBasicType("basic");
+  DIType *Type = getBasicType("basic");
   Metadata *Value = getConstantAsMetadata();
 
   auto *N = DITemplateValueParameter::get(Context, Tag, Name, Type, Value);
@@ -1741,7 +1737,7 @@ TEST_F(DIGlobalVariableTest, get) {
   StringRef LinkageName = "linkage";
   DIFile *File = getFile();
   unsigned Line = 5;
-  DITypeRef Type = getDerivedType();
+  DIType *Type = getDerivedType();
   bool IsLocalToUnit = false;
   bool IsDefinition = true;
   Constant *Variable = getConstant();
@@ -1814,7 +1810,7 @@ TEST_F(DILocalVariableTest, get) {
   StringRef Name = "name";
   DIFile *File = getFile();
   unsigned Line = 5;
-  DITypeRef Type = getDerivedType();
+  DIType *Type = getDerivedType();
   unsigned Arg = 6;
   unsigned Flags = 7;
   unsigned NotFlags = (~Flags) & ((1 << 16) - 1);
@@ -1934,7 +1930,7 @@ TEST_F(DIObjCPropertyTest, get) {
   StringRef GetterName = "getter";
   StringRef SetterName = "setter";
   unsigned Attributes = 7;
-  DITypeRef Type = getBasicType("basic");
+  DIType *Type = getBasicType("basic");
 
   auto *N = DIObjCProperty::get(Context, Name, File, Line, GetterName,
                                 SetterName, Attributes, Type);
@@ -1975,7 +1971,7 @@ typedef MetadataTest DIImportedEntityTest;
 TEST_F(DIImportedEntityTest, get) {
   unsigned Tag = dwarf::DW_TAG_imported_module;
   DIScope *Scope = getSubprogram();
-  DINodeRef Entity = getCompositeType();
+  DINode *Entity = getCompositeType();
   unsigned Line = 5;
   StringRef Name = "name";
 

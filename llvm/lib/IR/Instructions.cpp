@@ -1120,6 +1120,24 @@ void BranchInst::swapSuccessors() {
               MDNode::get(ProfileData->getContext(), Ops));
 }
 
+bool BranchInst::extractProfMetadata(uint64_t &ProbTrue, uint64_t &ProbFalse) {
+  assert(isConditional() &&
+         "Looking for probabilities on unconditional branch?");
+  auto *ProfileData = getMetadata(LLVMContext::MD_prof);
+  if (!ProfileData || ProfileData->getNumOperands() != 3)
+    return false;
+
+  auto *CITrue = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1));
+  auto *CIFalse = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(2));
+  if (!CITrue || !CIFalse)
+    return false;
+
+  ProbTrue = CITrue->getValue().getZExtValue();
+  ProbFalse = CIFalse->getValue().getZExtValue();
+
+  return true;
+}
+
 BasicBlock *BranchInst::getSuccessorV(unsigned idx) const {
   return getSuccessor(idx);
 }

@@ -380,8 +380,10 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
     // If this is a member inside an ODR type, only hash the type and the name.
     // Otherwise the hash will be stronger than
     // MDNodeSubsetEqualImpl::isODRMember().
-    if (Tag == dwarf::DW_TAG_member && Name && Scope && isa<MDString>(Scope))
-      return hash_combine(Name, Scope);
+    if (Tag == dwarf::DW_TAG_member && Name)
+      if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
+        if (CT->getRawIdentifier())
+          return hash_combine(Name, Scope);
 
     // Intentionally computes the hash on a subset of the operands for
     // performance reason. The subset has to be significant enough to avoid
@@ -406,7 +408,11 @@ template <> struct MDNodeSubsetEqualImpl<DIDerivedType> {
   static bool isODRMember(unsigned Tag, const Metadata *Scope,
                           const MDString *Name, const DIDerivedType *RHS) {
     // Check whether the LHS is eligible.
-    if (Tag != dwarf::DW_TAG_member || !Name || !Scope || !isa<MDString>(Scope))
+    if (Tag != dwarf::DW_TAG_member || !Name)
+      return false;
+
+    auto *CT = dyn_cast_or_null<DICompositeType>(Scope);
+    if (!CT || !CT->getRawIdentifier())
       return false;
 
     // Compare to the RHS.
@@ -571,8 +577,10 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
     // If this is a declaration inside an ODR type, only hash the type and the
     // name.  Otherwise the hash will be stronger than
     // MDNodeSubsetEqualImpl::isDeclarationOfODRMember().
-    if (!IsDefinition && LinkageName && Scope && isa<MDString>(Scope))
-      return hash_combine(LinkageName, Scope);
+    if (!IsDefinition && LinkageName)
+      if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
+        if (CT->getRawIdentifier())
+          return hash_combine(LinkageName, Scope);
 
     // Intentionally computes the hash on a subset of the operands for
     // performance reason. The subset has to be significant enough to avoid
@@ -599,8 +607,11 @@ template <> struct MDNodeSubsetEqualImpl<DISubprogram> {
                                        const MDString *LinkageName,
                                        const DISubprogram *RHS) {
     // Check whether the LHS is eligible.
-    if (IsDefinition || !Scope || !LinkageName || !Scope ||
-        !isa<MDString>(Scope))
+    if (IsDefinition || !Scope || !LinkageName)
+      return false;
+
+    auto *CT = dyn_cast_or_null<DICompositeType>(Scope);
+    if (!CT || !CT->getRawIdentifier())
       return false;
 
     // Compare to the RHS.

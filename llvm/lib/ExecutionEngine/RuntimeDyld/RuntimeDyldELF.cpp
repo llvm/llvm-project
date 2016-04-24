@@ -1708,7 +1708,9 @@ relocation_iterator RuntimeDyldELF::processRelocationRef(
                   Value.Offset);
         addRelocationForSection(RE, Value.SectionID);
       }
-    } else if (RelType == ELF::R_X86_64_GOTPCREL) {
+    } else if (RelType == ELF::R_X86_64_GOTPCREL ||
+               RelType == ELF::R_X86_64_GOTPCRELX ||
+               RelType == ELF::R_X86_64_REX_GOTPCRELX) {
       uint64_t GOTOffset = allocateGOTEntries(SectionID, 1);
       resolveGOTOffsetRelocation(SectionID, Offset, GOTOffset + Addend);
 
@@ -1869,6 +1871,8 @@ bool RuntimeDyldELF::relocationNeedsStub(const RelocationRef &R) const {
 
 
   case ELF::R_X86_64_GOTPCREL:
+  case ELF::R_X86_64_GOTPCRELX:
+  case ELF::R_X86_64_REX_GOTPCRELX:
   case ELF::R_X86_64_PC32:
   case ELF::R_X86_64_PC64:
   case ELF::R_X86_64_64:

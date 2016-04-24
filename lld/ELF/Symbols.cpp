@@ -123,13 +123,9 @@ bool SymbolBody::isPreemptible() const {
   if (!Config->Shared)
     return false;
 
-  // Undefined symbols in DSOs can only be preempted if they are strong.
-  // Weak symbols just resolve to zero.
-  if (isUndefined())
-    return !isWeak();
-
   // -Bsymbolic means that not even default visibility symbols can be preempted.
-  if (Config->Bsymbolic || (Config->BsymbolicFunctions && isFunc()))
+  if ((Config->Bsymbolic || (Config->BsymbolicFunctions && isFunc())) &&
+      isDefined())
     return false;
 
   // Only default visibility symbols that appear in the dynamic symbol table can
@@ -323,7 +319,8 @@ std::string elf::demangle(StringRef Name) {
 bool Symbol::includeInDynsym() const {
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return false;
-  return (ExportDynamic && VersionScriptGlobal) || Body->isShared();
+  return (ExportDynamic && VersionScriptGlobal) || Body->isShared() ||
+         Body->isUndefined();
 }
 
 template uint32_t SymbolBody::template getVA<ELF32LE>(uint32_t) const;

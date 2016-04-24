@@ -1,11 +1,18 @@
-// RUN: ld.lld %p/Inputs/gotpcrelx.o -o %t.so -shared
+// RUN: llvm-mc -filetype=obj -relax-relocations -triple x86_64-pc-linux-gnu \
+// RUN: %s -o %t.o
+// RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=RELS %s
+// RUN: ld.lld %t.o -o %t.so -shared
 // RUN: llvm-readobj -s -r %t.so | FileCheck %s
 
-// The gotpcrelx.o is just this file assembled with gas. We should switch to
-// llvm-mc once it starts producing R_X86_64_GOTPCRELX and
-// R_X86_64_REX_GOTPCRELX.
 movq foo@GOTPCREL(%rip), %rax
 movl bar@GOTPCREL(%rip), %eax
+
+// RELS: Relocations [
+// RELS-NEXT:   Section ({{.*}}) .rela.text {
+// RELS-NEXT:     0x3 R_X86_64_REX_GOTPCRELX foo 0xFFFFFFFFFFFFFFFC
+// RELS-NEXT:     0x9 R_X86_64_GOTPCRELX bar 0xFFFFFFFFFFFFFFFC
+// RELS-NEXT:   }
+// RELS-NEXT: ]
 
 // CHECK:      Name: .got
 // CHECK-NEXT: Type: SHT_PROGBITS

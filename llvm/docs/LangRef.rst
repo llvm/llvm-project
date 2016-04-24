@@ -4019,12 +4019,13 @@ The following ``tag:`` values are valid:
   DW_TAG_volatile_type      = 53
   DW_TAG_restrict_type      = 55
 
+.. _DIDerivedTypeMember:
+
 ``DW_TAG_member`` is used to define a member of a :ref:`composite type
 <DICompositeType>`. The type of the member is the ``baseType:``. The
-``offset:`` is the member's bit offset.  If the composite type has a non-empty
-``identifier:``, then it respects ODR rules.  In that case, the ``scope:``
-reference will be a :ref:`metadata string <metadata-string>`, and the member
-will be uniqued solely based on its ``name:`` and ``scope:``.
+``offset:`` is the member's bit offset.  If the composite type has an ODR
+``identifier:`` and does not set ``flags: DIFwdDecl``, then the member is
+uniqued based only on its ``name:`` and ``scope:``.
 
 ``DW_TAG_inheritance`` and ``DW_TAG_friend`` are used in the ``elements:``
 field of :ref:`composite types <DICompositeType>` to describe parents and
@@ -4047,9 +4048,10 @@ DICompositeType
 structures and unions. ``elements:`` points to a tuple of the composed types.
 
 If the source language supports ODR, the ``identifier:`` field gives the unique
-identifier used for type merging between modules. When specified, other types
-can refer to composite types indirectly via a :ref:`metadata string
-<metadata-string>` that matches their identifier.
+identifier used for type merging between modules.  When specified,
+:ref:`subprogram declarations <DISubprogramDeclaration>` and :ref:`member
+derived types <DIDerivedTypeMember>` that reference the ODR-type in their
+``scope:`` change uniquing rules.
 
 For a given ``identifier:``, there should only be a single composite type that
 does not have  ``flags: DIFlagFwdDecl`` set.  LLVM tools that link modules
@@ -4178,11 +4180,13 @@ metadata. The ``variables:`` field points at :ref:`variables <DILocalVariable>`
 that must be retained, even if their IR counterparts are optimized out of
 the IR. The ``type:`` field must point at an :ref:`DISubroutineType`.
 
+.. _DISubprogramDeclaration:
+
 When ``isDefinition: false``, subprograms describe a declaration in the type
-tree as opposed to a definition of a funciton.  If the scope is a
-:ref:`metadata string <metadata-string>` then the composite type follows ODR
-rules, and the subprogram declaration is uniqued based only on its
-``linkageName:`` and ``scope:``.
+tree as opposed to a definition of a function.  If the scope is a composite
+type with an ODR ``identifier:`` and that does not set ``flags: DIFwdDecl``,
+then the subprogram declaration is uniqued based only on its ``linkageName:``
+and ``scope:``.
 
 .. code-block:: llvm
 
