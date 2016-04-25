@@ -444,14 +444,6 @@ class ModuleSummaryIndexBitcodeReader {
   std::unique_ptr<BitstreamReader> StreamFile;
   BitstreamCursor Stream;
 
-  /// \brief Used to indicate whether we are doing lazy parsing of summary data.
-  ///
-  /// If false, the summary section is fully parsed into the index during
-  /// the initial parse. Otherwise, if true, the caller is expected to
-  /// invoke \a readGlobalValueSummary for each summary needed, and the summary
-  /// section is thus parsed lazily.
-  bool IsLazy = false;
-
   /// Used to indicate whether caller only wants to check for the presence
   /// of the global value summary bitcode section. All blocks are skipped,
   /// but the SeenGlobalValSummary boolean is set.
@@ -497,9 +489,9 @@ public:
 
   ModuleSummaryIndexBitcodeReader(
       MemoryBuffer *Buffer, DiagnosticHandlerFunction DiagnosticHandler,
-      bool IsLazy = false, bool CheckGlobalValSummaryPresenceOnly = false);
+      bool CheckGlobalValSummaryPresenceOnly = false);
   ModuleSummaryIndexBitcodeReader(
-      DiagnosticHandlerFunction DiagnosticHandler, bool IsLazy = false,
+      DiagnosticHandlerFunction DiagnosticHandler,
       bool CheckGlobalValSummaryPresenceOnly = false);
   ~ModuleSummaryIndexBitcodeReader() { freeState(); }
 
@@ -5588,14 +5580,14 @@ std::error_code ModuleSummaryIndexBitcodeReader::error(BitcodeError E) {
 
 ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
     MemoryBuffer *Buffer, DiagnosticHandlerFunction DiagnosticHandler,
-    bool IsLazy, bool CheckGlobalValSummaryPresenceOnly)
-    : DiagnosticHandler(DiagnosticHandler), Buffer(Buffer), IsLazy(IsLazy),
+    bool CheckGlobalValSummaryPresenceOnly)
+    : DiagnosticHandler(DiagnosticHandler), Buffer(Buffer),
       CheckGlobalValSummaryPresenceOnly(CheckGlobalValSummaryPresenceOnly) {}
 
 ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
-    DiagnosticHandlerFunction DiagnosticHandler, bool IsLazy,
+    DiagnosticHandlerFunction DiagnosticHandler,
     bool CheckGlobalValSummaryPresenceOnly)
-    : DiagnosticHandler(DiagnosticHandler), Buffer(nullptr), IsLazy(IsLazy),
+    : DiagnosticHandler(DiagnosticHandler), Buffer(nullptr),
       CheckGlobalValSummaryPresenceOnly(CheckGlobalValSummaryPresenceOnly) {}
 
 void ModuleSummaryIndexBitcodeReader::freeState() { Buffer = nullptr; }
@@ -5682,7 +5674,6 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
         return error("Invalid record");
       unsigned ValueID = Record[0];
       uint64_t FuncOffset = Record[1];
-      assert(!IsLazy && "Lazy summary read only supported for combined index");
       std::unique_ptr<GlobalValueInfo> FuncInfo =
           llvm::make_unique<GlobalValueInfo>(FuncOffset);
       assert(!SourceFileName.empty());
@@ -5726,9 +5717,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
 // Parse just the blocks needed for building the index out of the module.
 // At the end of this routine the module Index is populated with a map
 // from global value name to GlobalValueInfo. The global value info contains
-// either the parsed summary information (when parsing summaries
-// eagerly), or just to the summary record's offset
-// if parsing lazily (IsLazy).
+// the parsed summary information (when parsing summaries eagerly).
 std::error_code ModuleSummaryIndexBitcodeReader::parseModule() {
   if (Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
     return error("Invalid record");
@@ -5786,11 +5775,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseModule() {
           return EC;
         SeenValueSymbolTable = true;
         SeenGlobalValSummary = true;
-        if (IsLazy) {
-          // Lazy parsing of summary info, skip it.
-          if (Stream.SkipBlock())
-            return error("Invalid record");
-        } else if (std::error_code EC = parseEntireSummary())
+        if (std::error_code EC = parseEntireSummary())
           return EC;
         break;
       case bitc::MODULE_STRTAB_BLOCK_ID:
@@ -6423,16 +6408,11 @@ std::string llvm::getBitcodeProducerString(MemoryBufferRef Buffer,
 }
 
 // Parse the specified bitcode buffer, returning the function info index.
-// If IsLazy is false, parse the entire function summary into
-// the index. Otherwise skip the function summary section, and only create
-// an index object with a map from function name to function summary offset.
-// The index is used to perform lazy function summary reading later.
 ErrorOr<std::unique_ptr<ModuleSummaryIndex>>
 llvm::getModuleSummaryIndex(MemoryBufferRef Buffer,
-                            DiagnosticHandlerFunction DiagnosticHandler,
-                            bool IsLazy) {
+                            DiagnosticHandlerFunction DiagnosticHandler) {
   std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Buffer, false);
-  ModuleSummaryIndexBitcodeReader R(Buf.get(), DiagnosticHandler, IsLazy);
+  ModuleSummaryIndexBitcodeReader R(Buf.get(), DiagnosticHandler);
 
   auto Index = llvm::make_unique<ModuleSummaryIndex>();
 
@@ -6452,7 +6432,7 @@ llvm::getModuleSummaryIndex(MemoryBufferRef Buffer,
 bool llvm::hasGlobalValueSummary(MemoryBufferRef Buffer,
                                  DiagnosticHandlerFunction DiagnosticHandler) {
   std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Buffer, false);
-  ModuleSummaryIndexBitcodeReader R(Buf.get(), DiagnosticHandler, false, true);
+  ModuleSummaryIndexBitcodeReader R(Buf.get(), DiagnosticHandler, true);
 
   auto cleanupOnError = [&](std::error_code EC) {
     R.releaseBuffer(); // Never take ownership on error.
@@ -6464,36 +6444,4 @@ bool llvm::hasGlobalValueSummary(MemoryBufferRef Buffer,
 
   Buf.release(); // The ModuleSummaryIndexBitcodeReader owns it now.
   return R.foundGlobalValSummary();
-}
-
-// This method supports lazy reading of summary data from the combined
-// index during ThinLTO function importing. When reading the combined index
-// file, getModuleSummaryIndex is first invoked with IsLazy=true.
-// Then this method is called for each value considered for importing,
-// to parse the summary information for the given value name into
-// the index.
-std::error_code llvm::readGlobalValueSummary(
-    MemoryBufferRef Buffer, DiagnosticHandlerFunction DiagnosticHandler,
-    StringRef ValueName, std::unique_ptr<ModuleSummaryIndex> Index) {
-  std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Buffer, false);
-  ModuleSummaryIndexBitcodeReader R(Buf.get(), DiagnosticHandler);
-
-  auto cleanupOnError = [&](std::error_code EC) {
-    R.releaseBuffer(); // Never take ownership on error.
-    return EC;
-  };
-
-  // Lookup the given value name in the GlobalValueMap, which may
-  // contain a list of global value infos in the case of a COMDAT. Walk through
-  // and parse each summary info at the summary offset
-  // recorded when parsing the value symbol table.
-  for (const auto &FI : Index->getGlobalValueInfoList(ValueName)) {
-    size_t SummaryOffset = FI->bitcodeIndex();
-    if (std::error_code EC =
-            R.parseGlobalValueSummary(nullptr, Index.get(), SummaryOffset))
-      return cleanupOnError(EC);
-  }
-
-  Buf.release(); // The ModuleSummaryIndexBitcodeReader owns it now.
-  return std::error_code();
 }
