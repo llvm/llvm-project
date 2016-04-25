@@ -1,5 +1,9 @@
 @ RUN: llvm-mc -triple thumbv7-apple-ios -filetype=obj -o %t %s
-@ RUN: llvm-objdump -p %t | FileCheck %s
+@ RUN: llvm-objdump -macho -p -indirect-symbols %t | FileCheck %s
+
+@ CHECK: Indirect symbols for (__DATA,__thread_ptr)
+@ CHECK: 0x0000001c     5 _a
+
 
 @ CHECK: sectname __thread_data
 @ CHECK: segname __DATA

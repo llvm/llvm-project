@@ -469,7 +469,8 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
          ie = Asm.indirect_symbol_end(); it != ie; ++it, ++IndirectIndex) {
     const MCSectionMachO &Section = cast<MCSectionMachO>(*it->Section);
 
-    if (Section.getType() != MachO::S_NON_LAZY_SYMBOL_POINTERS)
+    if (Section.getType() != MachO::S_NON_LAZY_SYMBOL_POINTERS &&
+        Section.getType() !=  MachO::S_THREAD_LOCAL_VARIABLE_POINTERS)
       continue;
 
     // Initialize the section indirect symbol base, if necessary.
