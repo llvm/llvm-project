@@ -220,16 +220,14 @@ enum InstrProfValueKind : uint32_t {
 
 struct InstrProfRecord;
 
-/// Extract value profile data for value site \p SiteIdx from \p InstrProfR
+/// Get the value profile data for value site \p SiteIdx from \p InstrProfR
 /// and annotate the instruction \p Inst with the value profile meta data.
 void annotateValueSite(Module &M, Instruction &Inst,
                        const InstrProfRecord &InstrProfR,
                        InstrProfValueKind ValueKind, uint32_t SiteIndx);
-/// Extract the value profile data from the \p Inst which is annotated with
-/// value
-/// profile meta data. Return false if there is no value data annotated,
-/// otherwise
-/// return true.
+/// Extract the value profile data from \p Inst which is annotated with
+/// value profile meta data. Return false if there is no value data annotated,
+/// otherwise  return true.
 bool getValueProfDataFromInst(const Instruction &Inst,
                               InstrProfValueKind ValueKind,
                               uint32_t MaxNumValueData,
