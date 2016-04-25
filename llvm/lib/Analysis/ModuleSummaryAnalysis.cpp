@@ -74,8 +74,8 @@ static uint64_t getBlockProfileCount(uint64_t BlockFreq, uint64_t EntryFreq,
   return ScaledCount.getLimitedValue();
 }
 
-void ModuleSummaryIndexBuilder::computeFunctionInfo(const Function &F,
-                                                    BlockFrequencyInfo *BFI) {
+void ModuleSummaryIndexBuilder::computeFunctionSummary(
+    const Function &F, BlockFrequencyInfo *BFI) {
   // Summary not currently supported for anonymous functions, they must
   // be renamed.
   if (!F.hasName())
@@ -116,12 +116,11 @@ void ModuleSummaryIndexBuilder::computeFunctionInfo(const Function &F,
       llvm::make_unique<FunctionSummary>(Flags, NumInsts);
   FuncSummary->addCallGraphEdges(CallGraphEdges);
   FuncSummary->addRefEdges(RefEdges);
-  std::unique_ptr<GlobalValueInfo> GVInfo =
-      llvm::make_unique<GlobalValueInfo>(0, std::move(FuncSummary));
-  Index->addGlobalValueInfo(F.getName(), std::move(GVInfo));
+  Index->addGlobalValueSummary(F.getName(), std::move(FuncSummary));
 }
 
-void ModuleSummaryIndexBuilder::computeVariableInfo(const GlobalVariable &V) {
+void ModuleSummaryIndexBuilder::computeVariableSummary(
+    const GlobalVariable &V) {
   DenseSet<const Value *> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
   findRefEdges(&V, RefEdges, Visited);
@@ -129,9 +128,7 @@ void ModuleSummaryIndexBuilder::computeVariableInfo(const GlobalVariable &V) {
   std::unique_ptr<GlobalVarSummary> GVarSummary =
       llvm::make_unique<GlobalVarSummary>(Flags);
   GVarSummary->addRefEdges(RefEdges);
-  std::unique_ptr<GlobalValueInfo> GVInfo =
-      llvm::make_unique<GlobalValueInfo>(0, std::move(GVarSummary));
-  Index->addGlobalValueInfo(V.getName(), std::move(GVInfo));
+  Index->addGlobalValueSummary(V.getName(), std::move(GVarSummary));
 }
 
 ModuleSummaryIndexBuilder::ModuleSummaryIndexBuilder(
@@ -180,7 +177,7 @@ ModuleSummaryIndexBuilder::ModuleSummaryIndexBuilder(
       BFI = BFIPtr.get();
     }
 
-    computeFunctionInfo(F, BFI);
+    computeFunctionSummary(F, BFI);
   }
 
   // Compute summaries for all variables defined in module, and save in the
@@ -188,7 +185,7 @@ ModuleSummaryIndexBuilder::ModuleSummaryIndexBuilder(
   for (const GlobalVariable &G : M->globals()) {
     if (G.isDeclaration())
       continue;
-    computeVariableInfo(G);
+    computeVariableSummary(G);
   }
 }
 

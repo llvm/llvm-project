@@ -472,9 +472,9 @@ class ModuleSummaryIndexBitcodeReader {
       ValueIdToCallGraphGUIDMap;
 
   /// Map to save the association between summary offset in the VST to the
-  /// GlobalValueInfo object created when parsing it. Used to access the
-  /// info object when parsing the summary section.
-  DenseMap<uint64_t, GlobalValueInfo *> SummaryOffsetToInfoMap;
+  /// GUID created when parsing it. Used to add newly parsed summaries to
+  /// the index.
+  DenseMap<uint64_t, GlobalValue::GUID> SummaryOffsetToGUIDMap;
 
   /// Map populated during module path string table parsing, from the
   /// module ID to a string reference owned by the index's module
@@ -527,7 +527,7 @@ private:
   std::error_code initLazyStream(std::unique_ptr<DataStreamer> Streamer);
   std::pair<GlobalValue::GUID, GlobalValue::GUID>
   getGUIDFromValueId(unsigned ValueId);
-  GlobalValueInfo *getInfoFromSummaryOffset(uint64_t Offset);
+  GlobalValue::GUID getGUIDFromOffset(uint64_t Offset);
 };
 } // namespace
 
@@ -5617,19 +5617,16 @@ ModuleSummaryIndexBitcodeReader::getGUIDFromValueId(unsigned ValueId) {
   return VGI->second;
 }
 
-GlobalValueInfo *
-ModuleSummaryIndexBitcodeReader::getInfoFromSummaryOffset(uint64_t Offset) {
-  auto I = SummaryOffsetToInfoMap.find(Offset);
-  assert(I != SummaryOffsetToInfoMap.end());
+GlobalValue::GUID
+ModuleSummaryIndexBitcodeReader::getGUIDFromOffset(uint64_t Offset) {
+  auto I = SummaryOffsetToGUIDMap.find(Offset);
+  assert(I != SummaryOffsetToGUIDMap.end());
   return I->second;
 }
 
 // Specialized value symbol table parser used when reading module index
-// blocks where we don't actually create global values.
-// At the end of this routine the module index is populated with a map
-// from global value name to GlobalValueInfo. The global value info contains
-// the function block's bitcode offset (if applicable), or the offset into the
-// summary section for the combined index.
+// blocks where we don't actually create global values. The parsed information
+// is saved in the bitcode reader for use when later parsing summaries.
 std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
     uint64_t Offset,
     DenseMap<unsigned, GlobalValue::LinkageTypes> &ValueIdToLinkageMap) {
@@ -5668,8 +5665,6 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       if (convertToString(Record, 1, ValueName))
         return error("Invalid record");
       unsigned ValueID = Record[0];
-      std::unique_ptr<GlobalValueInfo> GlobalValInfo =
-          llvm::make_unique<GlobalValueInfo>();
       assert(!SourceFileName.empty());
       auto VLI = ValueIdToLinkageMap.find(ValueID);
       assert(VLI != ValueIdToLinkageMap.end() &&
@@ -5684,7 +5679,6 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       if (PrintSummaryGUIDs)
         dbgs() << "GUID " << ValueGUID << "(" << OriginalNameID << ") is "
                << ValueName << "\n";
-      TheIndex->addGlobalValueInfo(ValueGUID, std::move(GlobalValInfo));
       ValueIdToCallGraphGUIDMap[ValueID] =
           std::make_pair(ValueGUID, OriginalNameID);
       ValueName.clear();
@@ -5695,9 +5689,6 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       if (convertToString(Record, 2, ValueName))
         return error("Invalid record");
       unsigned ValueID = Record[0];
-      uint64_t FuncOffset = Record[1];
-      std::unique_ptr<GlobalValueInfo> FuncInfo =
-          llvm::make_unique<GlobalValueInfo>(FuncOffset);
       assert(!SourceFileName.empty());
       auto VLI = ValueIdToLinkageMap.find(ValueID);
       assert(VLI != ValueIdToLinkageMap.end() &&
@@ -5712,7 +5703,6 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       if (PrintSummaryGUIDs)
         dbgs() << "GUID " << FunctionGUID << "(" << OriginalNameID << ") is "
                << ValueName << "\n";
-      TheIndex->addGlobalValueInfo(FunctionGUID, std::move(FuncInfo));
       ValueIdToCallGraphGUIDMap[ValueID] =
           std::make_pair(FunctionGUID, OriginalNameID);
 
@@ -5724,10 +5714,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       unsigned ValueID = Record[0];
       uint64_t GlobalValSummaryOffset = Record[1];
       GlobalValue::GUID GlobalValGUID = Record[2];
-      std::unique_ptr<GlobalValueInfo> GlobalValInfo =
-          llvm::make_unique<GlobalValueInfo>(GlobalValSummaryOffset);
-      SummaryOffsetToInfoMap[GlobalValSummaryOffset] = GlobalValInfo.get();
-      TheIndex->addGlobalValueInfo(GlobalValGUID, std::move(GlobalValInfo));
+      SummaryOffsetToGUIDMap[GlobalValSummaryOffset] = GlobalValGUID;
       // The "original name", which is the second value of the pair will be
       // overriden later by a FS_COMBINED_ORIGINAL_NAME in the combined index.
       ValueIdToCallGraphGUIDMap[ValueID] =
@@ -5749,8 +5736,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
 
 // Parse just the blocks needed for building the index out of the module.
 // At the end of this routine the module Index is populated with a map
-// from global value name to GlobalValueInfo. The global value info contains
-// the parsed summary information (when parsing summaries eagerly).
+// from global value id to GlobalValueSummary objects.
 std::error_code ModuleSummaryIndexBitcodeReader::parseModule() {
   if (Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
     return error("Invalid record");
@@ -5921,6 +5907,11 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
   // "OriginalName" attachement.
   GlobalValueSummary *LastSeenSummary = nullptr;
   bool Combined = false;
+  // For aliases in the combined summary, we need to know which summary
+  // corresponds to the aliasee offset saved in the alias summary. It isn't
+  // sufficient to just map to the aliasee GUID, since in the combined summary
+  // there may be multiple values with the same GUID.
+  DenseMap<uint64_t, GlobalValueSummary *> OffsetToSummaryMap;
   while (1) {
     BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
 
@@ -6000,9 +5991,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       }
       auto GUID = getGUIDFromValueId(ValueID);
       FS->setOriginalName(GUID.second);
-      auto *Info = TheIndex->getGlobalValueInfo(GUID.first);
-      assert(!Info->summary() && "Expected a single summary per VST entry");
-      Info->setSummary(std::move(FS));
+      TheIndex->addGlobalValueSummary(GUID.first, std::move(FS));
       break;
     }
     // FS_ALIAS: [valueid, flags, valueid]
@@ -6023,16 +6012,14 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
           TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0)->first());
 
       GlobalValue::GUID AliaseeGUID = getGUIDFromValueId(AliaseeID).first;
-      auto *AliaseeInfo = TheIndex->getGlobalValueInfo(AliaseeGUID);
-      if (!AliaseeInfo->summary())
+      auto *AliaseeSummary = TheIndex->getGlobalValueSummary(AliaseeGUID);
+      if (!AliaseeSummary)
         return error("Alias expects aliasee summary to be parsed");
-      AS->setAliasee(AliaseeInfo->summary());
+      AS->setAliasee(AliaseeSummary);
 
       auto GUID = getGUIDFromValueId(ValueID);
       AS->setOriginalName(GUID.second);
-      auto *Info = TheIndex->getGlobalValueInfo(GUID.first);
-      assert(!Info->summary() && "Expected a single summary per VST entry");
-      Info->setSummary(std::move(AS));
+      TheIndex->addGlobalValueSummary(GUID.first, std::move(AS));
       break;
     }
     // FS_PERMODULE_GLOBALVAR_INIT_REFS: [valueid, flags, n x valueid]
@@ -6051,9 +6038,7 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       }
       auto GUID = getGUIDFromValueId(ValueID);
       FS->setOriginalName(GUID.second);
-      auto *Info = TheIndex->getGlobalValueInfo(GUID.first);
-      assert(!Info->summary() && "Expected a single summary per VST entry");
-      Info->setSummary(std::move(FS));
+      TheIndex->addGlobalValueSummary(GUID.first, std::move(FS));
       break;
     }
     // FS_COMBINED: [modid, flags, instcount, numrefs, numrefs x valueid,
@@ -6091,9 +6076,9 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
         FS->addCallGraphEdge(CalleeGUID,
                              CalleeInfo(CallsiteCount, ProfileCount));
       }
-      auto *Info = getInfoFromSummaryOffset(CurRecordBit);
-      assert(!Info->summary() && "Expected a single summary per VST entry");
-      Info->setSummary(std::move(FS));
+      GlobalValue::GUID GUID = getGUIDFromOffset(CurRecordBit);
+      OffsetToSummaryMap[CurRecordBit] = FS.get();
+      TheIndex->addGlobalValueSummary(GUID, std::move(FS));
       Combined = true;
       break;
     }
@@ -6109,14 +6094,13 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       LastSeenSummary = AS.get();
       AS->setModulePath(ModuleIdMap[ModuleId]);
 
-      auto *AliaseeInfo = getInfoFromSummaryOffset(AliaseeSummaryOffset);
-      if (!AliaseeInfo->summary())
+      auto *AliaseeSummary = OffsetToSummaryMap[AliaseeSummaryOffset];
+      if (!AliaseeSummary)
         return error("Alias expects aliasee summary to be parsed");
-      AS->setAliasee(AliaseeInfo->summary());
+      AS->setAliasee(AliaseeSummary);
 
-      auto *Info = getInfoFromSummaryOffset(CurRecordBit);
-      assert(!Info->summary() && "Expected a single summary per VST entry");
-      Info->setSummary(std::move(AS));
+      GlobalValue::GUID GUID = getGUIDFromOffset(CurRecordBit);
+      TheIndex->addGlobalValueSummary(GUID, std::move(AS));
       Combined = true;
       break;
     }
@@ -6134,9 +6118,9 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
         GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
         FS->addRefEdge(RefGUID);
       }
-      auto *Info = getInfoFromSummaryOffset(CurRecordBit);
-      assert(!Info->summary() && "Expected a single summary per VST entry");
-      Info->setSummary(std::move(FS));
+      GlobalValue::GUID GUID = getGUIDFromOffset(CurRecordBit);
+      OffsetToSummaryMap[CurRecordBit] = FS.get();
+      TheIndex->addGlobalValueSummary(GUID, std::move(FS));
       Combined = true;
       break;
     }

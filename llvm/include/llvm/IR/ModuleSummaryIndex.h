@@ -87,9 +87,6 @@ struct ValueInfo {
 
 /// \brief Function and variable summary information to aid decisions and
 /// implementation of importing.
-///
-/// This is a separate class from GlobalValueInfo to enable lazy reading of this
-/// summary information from the combined index file during imporing.
 class GlobalValueSummary {
 public:
   /// \brief Sububclass discriminator (for dyn_cast<> et al.)
@@ -292,67 +289,25 @@ public:
   }
 };
 
-/// \brief Class to hold pointer to summary object and information required
-/// for parsing or writing it.
-class GlobalValueInfo {
-private:
-  /// Summary information used to help make ThinLTO importing decisions.
-  std::unique_ptr<GlobalValueSummary> Summary;
-
-  /// \brief The bitcode offset corresponding to either an associated
-  /// function's function body record, or to an associated summary record,
-  /// depending on whether this is a per-module or combined index.
-  ///
-  /// This bitcode offset is written to or read from the associated
-  /// \a ValueSymbolTable entry for a function.
-  /// For the per-module index this holds the bitcode offset of a
-  /// function's body record within bitcode module block in its module,
-  /// although this field is currently only used when writing the VST
-  /// (it is set to 0 and also unused when this is a global variable).
-  /// For the combined index this holds the offset of the corresponding
-  /// summary record, to enable associating the combined index
-  /// VST records with the summary records.
-  uint64_t BitcodeIndex;
-
-public:
-  GlobalValueInfo(uint64_t Offset = 0,
-                  std::unique_ptr<GlobalValueSummary> Summary = nullptr)
-      : Summary(std::move(Summary)), BitcodeIndex(Offset) {}
-
-  /// Record the summary information parsed out of the summary block during
-  /// parsing or combined index creation.
-  void setSummary(std::unique_ptr<GlobalValueSummary> GVSummary) {
-    Summary = std::move(GVSummary);
-  }
-
-  /// Get the summary recorded for this global value.
-  GlobalValueSummary *summary() const { return Summary.get(); }
-
-  /// Get the bitcode index recorded for this value symbol table entry.
-  uint64_t bitcodeIndex() const { return BitcodeIndex; }
-
-  /// Set the bitcode index recorded for this value symbol table entry.
-  void setBitcodeIndex(uint64_t Offset) { BitcodeIndex = Offset; }
-};
-
 /// 160 bits SHA1
 typedef std::array<uint32_t, 5> ModuleHash;
 
-/// List of global value info structures for a particular value held
+/// List of global value summary structures for a particular value held
 /// in the GlobalValueMap. Requires a vector in the case of multiple
 /// COMDAT values of the same name.
-typedef std::vector<std::unique_ptr<GlobalValueInfo>> GlobalValueInfoList;
+typedef std::vector<std::unique_ptr<GlobalValueSummary>> GlobalValueSummaryList;
 
-/// Map from global value GUID to corresponding info structures.
+/// Map from global value GUID to corresponding summary structures.
 /// Use a std::map rather than a DenseMap since it will likely incur
 /// less overhead, as the value type is not very small and the size
 /// of the map is unknown, resulting in inefficiencies due to repeated
 /// insertions and resizing.
-typedef std::map<GlobalValue::GUID, GlobalValueInfoList> GlobalValueInfoMapTy;
+typedef std::map<GlobalValue::GUID, GlobalValueSummaryList>
+    GlobalValueSummaryMapTy;
 
-/// Type used for iterating through the global value info map.
-typedef GlobalValueInfoMapTy::const_iterator const_globalvalueinfo_iterator;
-typedef GlobalValueInfoMapTy::iterator globalvalueinfo_iterator;
+/// Type used for iterating through the global value summary map.
+typedef GlobalValueSummaryMapTy::const_iterator const_gvsummary_iterator;
+typedef GlobalValueSummaryMapTy::iterator gvsummary_iterator;
 
 /// String table to hold/own module path strings, which additionally holds the
 /// module ID assigned to each module during the plugin step, as well as a hash
@@ -363,9 +318,9 @@ typedef StringMap<std::pair<uint64_t, ModuleHash>> ModulePathStringTableTy;
 /// and encapsulate methods for operating on them.
 class ModuleSummaryIndex {
 private:
-  /// Map from value name to list of information instances for values of that
+  /// Map from value name to list of summary instances for values of that
   /// name (may be duplicates in the COMDAT case, e.g.).
-  GlobalValueInfoMapTy GlobalValueMap;
+  GlobalValueSummaryMapTy GlobalValueMap;
 
   /// Holds strings for combined index, mapping to the corresponding module ID.
   ModulePathStringTableTy ModulePathStringTable;
@@ -378,55 +333,55 @@ public:
   ModuleSummaryIndex(const ModuleSummaryIndex &) = delete;
   void operator=(const ModuleSummaryIndex &) = delete;
 
-  globalvalueinfo_iterator begin() { return GlobalValueMap.begin(); }
-  const_globalvalueinfo_iterator begin() const {
-    return GlobalValueMap.begin();
-  }
-  globalvalueinfo_iterator end() { return GlobalValueMap.end(); }
-  const_globalvalueinfo_iterator end() const { return GlobalValueMap.end(); }
+  gvsummary_iterator begin() { return GlobalValueMap.begin(); }
+  const_gvsummary_iterator begin() const { return GlobalValueMap.begin(); }
+  gvsummary_iterator end() { return GlobalValueMap.end(); }
+  const_gvsummary_iterator end() const { return GlobalValueMap.end(); }
 
-  /// Get the list of global value info objects for a given value name.
-  const GlobalValueInfoList &getGlobalValueInfoList(StringRef ValueName) {
+  /// Get the list of global value summary objects for a given value name.
+  const GlobalValueSummaryList &getGlobalValueSummaryList(StringRef ValueName) {
     return GlobalValueMap[GlobalValue::getGUID(ValueName)];
   }
 
-  /// Get the list of global value info objects for a given value name.
-  const const_globalvalueinfo_iterator
-  findGlobalValueInfoList(StringRef ValueName) const {
+  /// Get the list of global value summary objects for a given value name.
+  const const_gvsummary_iterator
+  findGlobalValueSummaryList(StringRef ValueName) const {
     return GlobalValueMap.find(GlobalValue::getGUID(ValueName));
   }
 
-  /// Get the list of global value info objects for a given value GUID.
-  const const_globalvalueinfo_iterator
-  findGlobalValueInfoList(GlobalValue::GUID ValueGUID) const {
+  /// Get the list of global value summary objects for a given value GUID.
+  const const_gvsummary_iterator
+  findGlobalValueSummaryList(GlobalValue::GUID ValueGUID) const {
     return GlobalValueMap.find(ValueGUID);
   }
 
-  /// Add a global value info for a value of the given name.
-  void addGlobalValueInfo(StringRef ValueName,
-                          std::unique_ptr<GlobalValueInfo> Info) {
-    GlobalValueMap[GlobalValue::getGUID(ValueName)].push_back(std::move(Info));
+  /// Add a global value summary for a value of the given name.
+  void addGlobalValueSummary(StringRef ValueName,
+                             std::unique_ptr<GlobalValueSummary> Summary) {
+    GlobalValueMap[GlobalValue::getGUID(ValueName)].push_back(
+        std::move(Summary));
   }
 
-  /// Add a global value info for a value of the given GUID.
-  void addGlobalValueInfo(GlobalValue::GUID ValueGUID,
-                          std::unique_ptr<GlobalValueInfo> Info) {
-    GlobalValueMap[ValueGUID].push_back(std::move(Info));
+  /// Add a global value summary for a value of the given GUID.
+  void addGlobalValueSummary(GlobalValue::GUID ValueGUID,
+                             std::unique_ptr<GlobalValueSummary> Summary) {
+    GlobalValueMap[ValueGUID].push_back(std::move(Summary));
   }
 
-  /// Returns the first GlobalValueInfo for \p GV, asserting that there
+  /// Returns the first GlobalValueSummary for \p GV, asserting that there
   /// is only one if \p PerModuleIndex.
-  GlobalValueInfo *getGlobalValueInfo(const GlobalValue &GV,
-                                      bool PerModuleIndex = true) const {
-    assert(GV.hasName() && "Can't get GlobalValueInfo for GV with no name");
-    return getGlobalValueInfo(GlobalValue::getGUID(GV.getName()),
-                              PerModuleIndex);
+  GlobalValueSummary *getGlobalValueSummary(const GlobalValue &GV,
+                                            bool PerModuleIndex = true) const {
+    assert(GV.hasName() && "Can't get GlobalValueSummary for GV with no name");
+    return getGlobalValueSummary(GlobalValue::getGUID(GV.getName()),
+                                 PerModuleIndex);
   }
 
-  /// Returns the first GlobalValueInfo for \p ValueGUID, asserting that there
+  /// Returns the first GlobalValueSummary for \p ValueGUID, asserting that
+  /// there
   /// is only one if \p PerModuleIndex.
-  GlobalValueInfo *getGlobalValueInfo(GlobalValue::GUID ValueGUID,
-                                      bool PerModuleIndex = true) const;
+  GlobalValueSummary *getGlobalValueSummary(GlobalValue::GUID ValueGUID,
+                                            bool PerModuleIndex = true) const;
 
   /// Table of modules, containing module hash and id.
   const StringMap<std::pair<uint64_t, ModuleHash>> &modulePaths() const {
@@ -494,7 +449,7 @@ public:
   /// (GUID -> Summary).
   void collectDefinedFunctionsForModule(
       StringRef ModulePath,
-      std::map<GlobalValue::GUID, GlobalValueSummary *> &FunctionInfoMap) const;
+      std::map<GlobalValue::GUID, GlobalValueSummary *> &GVSummaryMap) const;
 
   /// Collect for each module the list of Summaries it defines (GUID ->
   /// Summary).
