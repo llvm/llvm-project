@@ -2,8 +2,6 @@
 # library is enabled by setting LLVM_BUILD_LLVM_DYLIB=yes on the CMake
 # commandline. By default the shared library only exports the LLVM C API.
 
-add_definitions( -DLLVM_VERSION_INFO=\"${PACKAGE_VERSION}\" )
-
 set(SOURCES
   libllvm.cpp
   )
