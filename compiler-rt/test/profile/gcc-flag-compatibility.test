@@ -1,3 +1,4 @@
+RUN: rm -rf %t.d
 RUN: mkdir -p %t.d
 RUN: %clang_profgen_gcc=%t.d/d1/d2 -o %t.d/code %S/Inputs/gcc-flag-compatibility.c
 
