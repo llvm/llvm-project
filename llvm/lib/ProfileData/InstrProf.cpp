@@ -614,11 +614,12 @@ void annotateValueSite(Module &M, Instruction &Inst,
   std::unique_ptr<InstrProfValueData[]> VD =
       InstrProfR.getValueForSite(ValueKind, SiteIdx, &Sum);
 
-  annotateValueSite(M, Inst, VD.get(), NV, Sum, ValueKind, MaxMDCount);
+  ArrayRef<InstrProfValueData> VDs(VD.get(), NV);
+  annotateValueSite(M, Inst, VDs, Sum, ValueKind, MaxMDCount);
 }
 
 void annotateValueSite(Module &M, Instruction &Inst,
-                       const InstrProfValueData VD[], uint32_t NV,
+                       ArrayRef<InstrProfValueData> VDs,
                        uint64_t Sum, InstrProfValueKind ValueKind,
                        uint32_t MaxMDCount) {
   LLVMContext &Ctx = M.getContext();
@@ -635,11 +636,11 @@ void annotateValueSite(Module &M, Instruction &Inst,
 
   // Value Profile Data
   uint32_t MDCount = MaxMDCount;
-  for (uint32_t I = 0; I < NV; ++I) {
+  for (auto &VD : VDs) {
     Vals.push_back(MDHelper.createConstant(
-        ConstantInt::get(Type::getInt64Ty(Ctx), VD[I].Value)));
+        ConstantInt::get(Type::getInt64Ty(Ctx), VD.Value)));
     Vals.push_back(MDHelper.createConstant(
-        ConstantInt::get(Type::getInt64Ty(Ctx), VD[I].Count)));
+        ConstantInt::get(Type::getInt64Ty(Ctx), VD.Count)));
     if (--MDCount == 0)
       break;
   }
