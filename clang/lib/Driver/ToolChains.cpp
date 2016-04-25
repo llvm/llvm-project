@@ -319,6 +319,26 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
+StringRef Darwin::getOSLibraryNameSuffix() const {
+  switch (TargetPlatform) {
+  case DarwinPlatformKind::MacOS:
+    return "osx";
+  case DarwinPlatformKind::IPhoneOS:
+    return "ios";
+  case DarwinPlatformKind::IPhoneOSSimulator:
+    return "iossim";
+  case DarwinPlatformKind::TvOS:
+    return "tvos";
+  case DarwinPlatformKind::TvOSSimulator:
+    return "tvossim";
+  case DarwinPlatformKind::WatchOS:
+    return "watchos";
+  case DarwinPlatformKind::WatchOSSimulator:
+    return "watchossim";
+  }
+  llvm_unreachable("Unsupported platform");
+}
+
 void Darwin::addProfileRTLibs(const ArgList &Args,
                               ArgStringList &CmdArgs) const {
   if (!needsProfileRT(Args)) return;
