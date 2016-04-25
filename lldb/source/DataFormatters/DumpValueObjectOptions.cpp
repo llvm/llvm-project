@@ -242,4 +242,10 @@ DumpValueObjectOptions::SetRevealEmptyAggregates (bool reveal)
     m_reveal_empty_aggregates = reveal;
     return *this;
 }
-                                
+
+DumpValueObjectOptions&
+DumpValueObjectOptions::SetElementCount (uint32_t element_count)
+{
+    m_element_count = element_count;
+    return *this;
+}
