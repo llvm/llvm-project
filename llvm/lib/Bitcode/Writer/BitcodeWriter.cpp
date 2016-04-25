@@ -3054,6 +3054,11 @@ void ModuleBitcodeWriter::writeModuleLevelReferences(
   NameVals.clear();
 }
 
+// Current version for the summary.
+// This is bumped whenever we introduce changes in the way some record are
+// interpreted, like flags for instance.
+static const uint64_t INDEX_VERSION = 1;
+
 /// Emit the per-module summary section alongside the rest of
 /// the module's bitcode.
 void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
@@ -3064,6 +3069,8 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
     return;
 
   Stream.EnterSubblock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID, 3);
+
+  Stream.EmitRecord(bitc::FS_VERSION, ArrayRef<uint64_t>{INDEX_VERSION});
 
   // Abbrev for FS_PERMODULE.
   BitCodeAbbrev *Abbv = new BitCodeAbbrev();
@@ -3149,6 +3156,7 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
 /// Emit the combined summary section into the combined index file.
 void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Stream.EnterSubblock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID, 3);
+  Stream.EmitRecord(bitc::FS_VERSION, ArrayRef<uint64_t>{INDEX_VERSION});
 
   // Abbrev for FS_COMBINED.
   BitCodeAbbrev *Abbv = new BitCodeAbbrev();
