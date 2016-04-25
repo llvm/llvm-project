@@ -733,7 +733,7 @@ void PGOUseFunc::annotateIndirectCallSites() {
     return;
 
   // Create the PGOFuncName meta data.
-  createPGOFuncNameMetadata(F);
+  createPGOFuncNameMetadata(F, FuncInfo.FuncName);
 
   unsigned IndirectCallSiteIndex = 0;
   auto IndirectCallSites = findIndirectCallSites(F);
