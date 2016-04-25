@@ -172,6 +172,11 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
                            MachO::S_NON_LAZY_SYMBOL_POINTERS,
                            SectionKind::getMetadata());
 
+  ThreadLocalPointerSection
+    = Ctx->getMachOSection("__DATA", "__thread_ptr",
+                           MachO::S_THREAD_LOCAL_VARIABLE_POINTERS,
+                           SectionKind::getMetadata());
+
   if (RelocM == Reloc::Static) {
     StaticCtorSection = Ctx->getMachOSection("__TEXT", "__constructor", 0,
                                              SectionKind::getData());
