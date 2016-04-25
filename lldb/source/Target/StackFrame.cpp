@@ -544,7 +544,7 @@ StackFrame::GetVariableList (bool get_file_globals)
             frame_block->AppendBlockVariables(can_create,
                                               get_child_variables,
                                               stop_if_child_block_is_inlined_function,
-                                              [this](Variable* v) { return v->IsInScope(this); },
+                                              [this](Variable* v) { return true; },
                                               m_variable_list_sp.get());
         }
     }
