@@ -416,11 +416,12 @@ ValueObjectPrinter::GetValueSummaryError (std::string& value,
                                           std::string& summary,
                                           std::string& error)
 {
-    if (m_options.m_format != eFormatDefault && m_options.m_format != m_valobj->GetFormat())
-    {
-        m_valobj->GetValueAsCString(m_options.m_format,
-                                    value);
-    }
+    lldb::Format format = m_options.m_format;
+    // if I am printing synthetized elements, apply the format to those elements only
+    if (m_options.m_element_count > 0)
+        m_valobj->GetValueAsCString(lldb::eFormatDefault, value);
+    else if (format != eFormatDefault && format != m_valobj->GetFormat())
+        m_valobj->GetValueAsCString(format, value);
     else
     {
         const char* val_cstr = m_valobj->GetValueAsCString();
@@ -514,7 +515,7 @@ ValueObjectPrinter::PrintObjectDescriptionIfNeeded (bool value_printed,
     if (ShouldPrintValueObject())
     {
         // let's avoid the overly verbose no description error for a nil thing
-        if (m_options.m_use_objc && !IsNil() && !IsUninitialized())
+        if (m_options.m_use_objc && !IsNil() && !IsUninitialized() && (m_options.m_element_count == 0))
         {
             if (!m_options.m_hide_value || !m_options.m_hide_name)
                 m_stream->Printf(" ");
@@ -586,6 +587,11 @@ ValueObjectPrinter::ShouldPrintChildren (bool is_failed_description,
     
     if (is_uninit)
         return false;
+    
+    // if the user has specified an element count, always print children
+    // as it is explicit user demand being honored
+    if (m_options.m_element_count > 0)
+        return true;
     
     TypeSummaryImpl* entry = GetSummaryFormatter();
     
@@ -667,18 +673,22 @@ void
 ValueObjectPrinter::PrintChild (ValueObjectSP child_sp,
                                 const DumpValueObjectOptions::PointerDepth& curr_ptr_depth)
 {
+    const uint32_t consumed_depth = (m_options.m_element_count == 0) ? 1 : 0;
+    const bool does_consume_ptr_depth = ((IsPtr() && m_options.m_element_count == 0) || IsRef());
+
     DumpValueObjectOptions child_options(m_options);
     child_options.SetFormat(m_options.m_format).SetSummary().SetRootValueObjectName();
     child_options.SetScopeChecked(true).SetHideName(m_options.m_hide_name).SetHideValue(m_options.m_hide_value)
-    .SetOmitSummaryDepth(child_options.m_omit_summary_depth > 1 ? child_options.m_omit_summary_depth - 1 : 0);
+    .SetOmitSummaryDepth(child_options.m_omit_summary_depth > 1 ? child_options.m_omit_summary_depth - consumed_depth : 0)
+    .SetElementCount(0);
     
     if (child_sp.get())
     {
         ValueObjectPrinter child_printer(child_sp.get(),
                                          m_stream,
                                          child_options,
-                                         (IsPtr() || IsRef()) ? --curr_ptr_depth : curr_ptr_depth,
-                                         m_curr_depth + 1,
+                                         does_consume_ptr_depth ? --curr_ptr_depth : curr_ptr_depth,
+                                         m_curr_depth + consumed_depth,
                                          m_printed_instance_pointers);
         child_printer.PrintValueObject();
     }
@@ -688,6 +698,9 @@ uint32_t
 ValueObjectPrinter::GetMaxNumChildrenToPrint (bool& print_dotdotdot)
 {
     ValueObject* synth_m_valobj = GetValueObjectForChildrenGeneration();
+    
+    if (m_options.m_element_count > 0)
+        return m_options.m_element_count;
     
     size_t num_children = synth_m_valobj->GetNumChildren();
     print_dotdotdot = false;
@@ -743,6 +756,21 @@ ValueObjectPrinter::ShouldPrintEmptyBrackets (bool value_printed,
     return true;
 }
 
+ValueObjectSP
+ValueObjectPrinter::GenerateChild (ValueObject* synth_valobj, size_t idx)
+{
+    if (m_options.m_element_count > 0)
+    {
+        // if generating pointer-as-array children, use GetSyntheticArrayMember
+        return synth_valobj->GetSyntheticArrayMember(idx, true);
+    }
+    else
+    {
+        // otherwise, do the usual thing
+        return synth_valobj->GetChildAtIndex(idx, true);
+    }
+}
+
 void
 ValueObjectPrinter::PrintChildren (bool value_printed,
                                    bool summary_printed,
@@ -758,8 +786,7 @@ ValueObjectPrinter::PrintChildren (bool value_printed,
         
         for (size_t idx=0; idx<num_children; ++idx)
         {
-            ValueObjectSP child_sp(synth_m_valobj->GetChildAtIndex(idx, true));
-            if (child_sp)
+            if (ValueObjectSP child_sp = GenerateChild(synth_m_valobj, idx))
             {
                 if (!any_children_printed)
                 {
@@ -866,6 +893,7 @@ ValueObjectPrinter::PrintChildrenIfNeeded (bool value_printed,
                           m_options.m_show_types ||
                           !m_options.m_allow_oneliner_mode ||
                           m_options.m_flat_output ||
+                          (m_options.m_element_count > 0) ||
                           m_options.m_show_location) ? false : DataVisualization::ShouldPrintAsOneLiner(*m_valobj);
     bool is_instance_ptr = IsInstancePointer();
     uint64_t instance_ptr_value = LLDB_INVALID_ADDRESS;

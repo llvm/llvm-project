@@ -282,6 +282,18 @@ CommandObjectExpression::GetOptions ()
     return &m_option_group;
 }
 
+static lldb_private::Error
+CanBeUsedForElementCountPrinting (ValueObject& valobj)
+{
+    CompilerType type(valobj.GetCompilerType());
+    CompilerType pointee;
+    if (!type.IsPointerType(&pointee))
+        return Error("as it does not refer to a pointer");
+    if (pointee.IsVoidType())
+        return Error("as it refers to a pointer to void");
+    return Error();
+}
+
 bool
 CommandObjectExpression::EvaluateExpression(const char *expr,
                                             Stream *output_stream,
@@ -355,6 +367,17 @@ CommandObjectExpression::EvaluateExpression(const char *expr,
                 {
                     if (format != eFormatDefault)
                         result_valobj_sp->SetFormat (format);
+
+                    if (m_varobj_options.elem_count > 0)
+                    {
+                        Error error(CanBeUsedForElementCountPrinting(*result_valobj_sp));
+                        if (error.Fail())
+                        {
+                            result->AppendErrorWithFormat("expression cannot be used with --element-count %s\n", error.AsCString(""));
+                            result->SetStatus(eReturnStatusFailed);
+                            return false;
+                        }
+                    }
 
                     DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(m_command_options.m_verbosity,format));
                     options.SetVariableFormatDisplayLanguage(result_valobj_sp->GetPreferredDisplayLanguage());

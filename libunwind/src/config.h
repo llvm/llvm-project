@@ -16,6 +16,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 // Define static_assert() unless already defined by compiler.
 #ifndef __has_feature
@@ -29,18 +30,7 @@
 
 // Platform specific configuration defines.
 #ifdef __APPLE__
-  #include <Availability.h>
-  #ifdef __cplusplus
-    extern "C" {
-  #endif
-    void __assert_rtn(const char *, const char *, int, const char *)
-                                                      __attribute__((noreturn));
-  #ifdef __cplusplus
-    }
-  #endif
-
   #define _LIBUNWIND_BUILD_SJLJ_APIS      defined(__arm__)
-  #define _LIBUNWIND_ABORT(msg) __assert_rtn(__func__, __FILE__, __LINE__, msg)
 
   #if defined(FOR_DYLD)
     #define _LIBUNWIND_SUPPORT_COMPACT_UNWIND 1
@@ -52,17 +42,7 @@
     #define _LIBUNWIND_SUPPORT_DWARF_INDEX    0
   #endif
 #else
-  #include <stdlib.h>
-
-  static inline void assert_rtn(const char* func, const char* file, int line, const char* msg)  __attribute__ ((noreturn));
-  static inline void assert_rtn(const char* func, const char* file, int line, const char* msg) {
-    fprintf(stderr, "libunwind: %s %s:%d - %s\n",  func, file, line, msg);
-    assert(false);
-    abort();
-  }
-
   #define _LIBUNWIND_BUILD_SJLJ_APIS      0
-  #define _LIBUNWIND_ABORT(msg) assert_rtn(__func__, __FILE__, __LINE__, msg)
 
   #if defined(__ARM_DWARF_EH__) || !defined(__arm__)
     #define _LIBUNWIND_SUPPORT_COMPACT_UNWIND 0
@@ -94,6 +74,13 @@
 #define _LIBUNWIND_BUILD_ZERO_COST_APIS 0
 #endif
 
+#define _LIBUNWIND_ABORT(msg)                                                  \
+  do {                                                                         \
+    fprintf(stderr, "libunwind: %s %s:%d - %s\n", __func__, __FILE__,          \
+            __LINE__, msg);                                                    \
+    fflush(stderr);                                                            \
+    abort();                                                                   \
+  } while (0)
 #define _LIBUNWIND_LOG(msg, ...) fprintf(stderr, "libuwind: " msg, __VA_ARGS__)
 
 // Macros that define away in non-Debug builds

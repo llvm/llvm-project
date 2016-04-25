@@ -1,22 +1,27 @@
 // RUN: llgoi < %s | FileCheck %s
 
 m := make(map[int]int)
-// CHECK: m map[int]int = map[]
+m
+// CHECK: map[]
 
 m[0]
-// CHECK: #0 int = 0
+// CHECK: 0
 
-_, _ := m[0]
-// CHECK: #0 int = 0
-// CHECK: #1 bool = false
+m0, ok := m[0]
+m0
+// CHECK: 0
+ok
+// CHECK: false
 
 func() {
 	m[0] = 1
 }()
 
 m[0]
-// CHECK: #0 int = 1
+// CHECK: 1
 
-_, _ := m[0]
-// CHECK: #0 int = 1
-// CHECK: #1 bool = true
+m0, ok = m[0]
+m0
+// CHECK: 1
+ok
+// CHECK: true

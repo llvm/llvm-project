@@ -2,18 +2,21 @@
 
 import "errors"
 err := errors.New("foo")
-// CHECK: err error {{.*}} = foo
+err
+// CHECK: foo
 
 err.(interface{Foo()})
 // CHECK: panic: interface conversion
 
-_, _ := err.(interface{Foo()})
-// CHECK: #0 interface{Foo()} (<nil>) = <nil>
-// CHECK: #1 bool = false
+_, ok := err.(interface{Foo()})
+ok
+// CHECK: false
 
 err.(interface{Error() string})
-// CHECK: #0 interface{Error() string} {{.*}} = foo
+// CHECK: foo
 
-_, _ := err.(interface{Error() string})
-// CHECK: #0 interface{Error() string} {{.*}} = foo
-// CHECK: #1 bool = true
+iface, ok := err.(interface{Error() string})
+iface
+// CHECK: foo
+ok
+// CHECK: true

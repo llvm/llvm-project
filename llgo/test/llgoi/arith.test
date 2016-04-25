@@ -1,4 +1,4 @@
 // RUN: llgoi < %s | FileCheck %s
 
 1 + 1
-// CHECK: #0 untyped int = 2
+// CHECK: 2

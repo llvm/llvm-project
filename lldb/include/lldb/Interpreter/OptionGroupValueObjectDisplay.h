@@ -77,6 +77,7 @@ public:
     uint32_t no_summary_depth;
     uint32_t max_depth;
     uint32_t ptr_depth;
+    uint32_t elem_count;
     lldb::DynamicValueType use_dynamic;
 };
 

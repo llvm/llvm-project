@@ -44,11 +44,13 @@ using namespace __esan; // NOLINT
 
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
 
+// We currently do not use ctx.
 #define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)                               \
   do {                                                                         \
     if (UNLIKELY(COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)) {                 \
       return REAL(func)(__VA_ARGS__);                                          \
     }                                                                          \
+    ctx = nullptr;                                                             \
     (void)ctx;                                                                 \
   } while (false)
 

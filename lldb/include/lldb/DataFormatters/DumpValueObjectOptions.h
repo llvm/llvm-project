@@ -152,6 +152,9 @@ public:
 
     DumpValueObjectOptions&
     SetRevealEmptyAggregates (bool reveal = true);
+    
+    DumpValueObjectOptions&
+    SetElementCount (uint32_t element_count = 0);
 
 public:
     uint32_t m_max_depth = UINT32_MAX;
@@ -163,6 +166,7 @@ public:
     lldb::LanguageType m_varformat_language = lldb::eLanguageTypeUnknown;
     PointerDepth m_max_ptr_depth;
     DeclPrintingHelper m_decl_printing_helper;
+    uint32_t m_element_count = 0;
     bool m_use_synthetic : 1;
     bool m_scope_already_checked : 1;
     bool m_flat_output : 1;
