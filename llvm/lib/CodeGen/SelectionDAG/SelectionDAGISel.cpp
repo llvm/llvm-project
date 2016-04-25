@@ -1644,24 +1644,25 @@ SelectionDAGISel::FinishBasicBlock() {
     SDB->SPDescriptor.resetPerBBState();
   }
 
-  for (unsigned i = 0, e = SDB->BitTestCases.size(); i != e; ++i) {
+  // Lower each BitTestBlock.
+  for (auto &BTB : SDB->BitTestCases) {
     // Lower header first, if it wasn't already lowered
-    if (!SDB->BitTestCases[i].Emitted) {
+    if (!BTB.Emitted) {
       // Set the current basic block to the mbb we wish to insert the code into
-      FuncInfo->MBB = SDB->BitTestCases[i].Parent;
+      FuncInfo->MBB = BTB.Parent;
       FuncInfo->InsertPt = FuncInfo->MBB->end();
       // Emit the code
-      SDB->visitBitTestHeader(SDB->BitTestCases[i], FuncInfo->MBB);
+      SDB->visitBitTestHeader(BTB, FuncInfo->MBB);
       CurDAG->setRoot(SDB->getRoot());
       SDB->clear();
       CodeGenAndEmitDAG();
     }
 
-    BranchProbability UnhandledProb = SDB->BitTestCases[i].Prob;
-    for (unsigned j = 0, ej = SDB->BitTestCases[i].Cases.size(); j != ej; ++j) {
-      UnhandledProb -= SDB->BitTestCases[i].Cases[j].ExtraProb;
+    BranchProbability UnhandledProb = BTB.Prob;
+    for (unsigned j = 0, ej = BTB.Cases.size(); j != ej; ++j) {
+      UnhandledProb -= BTB.Cases[j].ExtraProb;
       // Set the current basic block to the mbb we wish to insert the code into
-      FuncInfo->MBB = SDB->BitTestCases[i].Cases[j].ThisBB;
+      FuncInfo->MBB = BTB.Cases[j].ThisBB;
       FuncInfo->InsertPt = FuncInfo->MBB->end();
       // Emit the code
 
@@ -1670,25 +1671,21 @@ SelectionDAGISel::FinishBasicBlock() {
       // range check during bit test header creation has guaranteed that every
       // case here doesn't go outside the range.
       MachineBasicBlock *NextMBB;
-      if (SDB->BitTestCases[i].ContiguousRange && j + 2 == ej)
-        NextMBB = SDB->BitTestCases[i].Cases[j + 1].TargetBB;
+      if (BTB.ContiguousRange && j + 2 == ej)
+        NextMBB = BTB.Cases[j + 1].TargetBB;
       else if (j + 1 != ej)
-        NextMBB = SDB->BitTestCases[i].Cases[j + 1].ThisBB;
+        NextMBB = BTB.Cases[j + 1].ThisBB;
       else
-        NextMBB = SDB->BitTestCases[i].Default;
+        NextMBB = BTB.Default;
 
-      SDB->visitBitTestCase(SDB->BitTestCases[i],
-                            NextMBB,
-                            UnhandledProb,
-                            SDB->BitTestCases[i].Reg,
-                            SDB->BitTestCases[i].Cases[j],
+      SDB->visitBitTestCase(BTB, NextMBB, UnhandledProb, BTB.Reg, BTB.Cases[j],
                             FuncInfo->MBB);
 
       CurDAG->setRoot(SDB->getRoot());
       SDB->clear();
       CodeGenAndEmitDAG();
 
-      if (SDB->BitTestCases[i].ContiguousRange && j + 2 == ej)
+      if (BTB.ContiguousRange && j + 2 == ej)
         break;
     }
 
@@ -1701,15 +1698,15 @@ SelectionDAGISel::FinishBasicBlock() {
              "This is not a machine PHI node that we are updating!");
       // This is "default" BB. We have two jumps to it. From "header" BB and
       // from last "case" BB.
-      if (PHIBB == SDB->BitTestCases[i].Default)
+      if (PHIBB == BTB.Default)
         PHI.addReg(FuncInfo->PHINodesToUpdate[pi].second)
-           .addMBB(SDB->BitTestCases[i].Parent)
+           .addMBB(BTB.Parent)
            .addReg(FuncInfo->PHINodesToUpdate[pi].second)
-           .addMBB(SDB->BitTestCases[i].Cases.back().ThisBB);
+           .addMBB(BTB.Cases.back().ThisBB);
       // One of "cases" BB.
-      for (unsigned j = 0, ej = SDB->BitTestCases[i].Cases.size();
+      for (unsigned j = 0, ej = BTB.Cases.size();
            j != ej; ++j) {
-        MachineBasicBlock* cBB = SDB->BitTestCases[i].Cases[j].ThisBB;
+        MachineBasicBlock* cBB = BTB.Cases[j].ThisBB;
         if (cBB->isSuccessor(PHIBB))
           PHI.addReg(FuncInfo->PHINodesToUpdate[pi].second).addMBB(cBB);
       }
