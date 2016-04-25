@@ -5641,7 +5641,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     // requested vector load.
     if (LdVT.getSizeInBits() != VT.getSizeInBits() / NumElems)
       return SDValue();
-    if (!DAG.isConsecutiveLoad(LD, LDBase, LdVT.getSizeInBits() / 8, i))
+    if (!DAG.areNonVolatileConsecutiveLoads(LD, LDBase,
+                                            LdVT.getSizeInBits() / 8, i))
       return SDValue();
     LastLoadedElt = i;
   }
