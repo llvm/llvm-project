@@ -396,6 +396,8 @@ void PassManagerBuilder::populateModulePassManager(
   // unrolling/vectorization/... now. We'll first run the inliner + CGSCC passes
   // during ThinLTO and perform the rest of the optimizations afterward.
   if (PrepareForThinLTO) {
+    // Reduce the size of the IR as much as possible.
+    MPM.add(createGlobalOptimizerPass());
     // Rename anon function to be able to export them in the summary.
     MPM.add(createNameAnonFunctionPass());
     return;
