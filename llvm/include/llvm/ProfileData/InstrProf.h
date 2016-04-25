@@ -153,8 +153,9 @@ inline StringRef getInstrProfFileOverriderFuncName() {
 inline StringRef getInstrProfNameSeparator() { return "\01"; }
 
 /// Return the modified name for function \c F suitable to be
-/// used the key for profile lookup.
-std::string getPGOFuncName(const Function &F,
+/// used the key for profile lookup. Variable \c InLTO indicates if this
+/// is called in LTO optimization passes.
+std::string getPGOFuncName(const Function &F, bool InLTO = false,
                            uint64_t Version = INSTR_PROF_INDEX_VERSION);
 
 /// Return the modified name for a function suitable to be
@@ -300,13 +301,17 @@ private:
   StringSet<> NameTab;
   // A map from MD5 keys to function name strings.
   std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
+  // A map from MD5 keys to function define. We only populate this map
+  // when build the Symtab from a Module.
+  std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;
   // A map from function runtime address to function name MD5 hash.
   // This map is only populated and used by raw instr profile reader.
   AddrHashMap AddrToMD5Map;
 
 public:
   InstrProfSymtab()
-      : Data(), Address(0), NameTab(), MD5NameMap(), AddrToMD5Map() {}
+      : Data(), Address(0), NameTab(), MD5NameMap(), MD5FuncMap(),
+      AddrToMD5Map() {}
 
   /// Create InstrProfSymtab from an object file section which
   /// contains function PGO names. When section may contain raw
@@ -324,8 +329,9 @@ public:
   inline std::error_code create(StringRef NameStrings);
   /// A wrapper interface to populate the PGO symtab with functions
   /// decls from module \c M. This interface is used by transformation
-  /// passes such as indirect function call promotion.
-  void create(const Module &M);
+  /// passes such as indirect function call promotion. Variable \c InLTO
+  /// indicates if this is called from LTO optimization passes.
+  void create(Module &M, bool InLTO = false);
   /// Create InstrProfSymtab from a set of names iteratable from
   /// \p IterRange. This interface is used by IndexedProfReader.
   template <typename NameIterRange> void create(const NameIterRange &IterRange);
@@ -355,6 +361,8 @@ public:
   /// Return function's PGO name from the name's md5 hash value.
   /// If not found, return an empty string.
   inline StringRef getFuncName(uint64_t FuncMD5Hash);
+  /// Return function from the name's md5 hash. Return nullptr if not found.
+  inline Function *getFunction(uint64_t FuncMD5Hash);
   /// Return the function's original assembly name by stripping off
   /// the prefix attached (to symbols with priviate linkage). For
   /// global functions, it returns the same string as getFuncName.
@@ -385,6 +393,7 @@ void InstrProfSymtab::create(const NameIterRange &IterRange) {
 
 void InstrProfSymtab::finalizeSymtab() {
   std::sort(MD5NameMap.begin(), MD5NameMap.end(), less_first());
+  std::sort(MD5FuncMap.begin(), MD5FuncMap.end(), less_first());
   std::sort(AddrToMD5Map.begin(), AddrToMD5Map.end(), less_first());
   AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),
                      AddrToMD5Map.end());
@@ -398,6 +407,16 @@ StringRef InstrProfSymtab::getFuncName(uint64_t FuncMD5Hash) {
   if (Result != MD5NameMap.end() && Result->first == FuncMD5Hash)
     return Result->second;
   return StringRef();
+}
+
+Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
+  auto Result =
+      std::lower_bound(MD5FuncMap.begin(), MD5FuncMap.end(), FuncMD5Hash,
+                       [](const std::pair<uint64_t, Function*> &LHS,
+                          uint64_t RHS) { return LHS.first < RHS; });
+  if (Result != MD5FuncMap.end() && Result->first == FuncMD5Hash)
+    return Result->second;
+  return nullptr;
 }
 
 // See also getPGOFuncName implementation. These two need to be
