@@ -59,6 +59,16 @@ public:
   /// error code if not found.
   static ErrorOr<MemoryBufferRef> findBitcodeInObject(const ObjectFile &Obj);
 
+  /// Parse inline ASM and collect the symbols that are not defined in
+  /// the current module.
+  ///
+  /// For each found symbol, call \p AsmUndefinedRefs with the name of the
+  /// symbol found and the associated flags.
+  static void CollectAsmUndefinedRefs(
+      Module &TheModule,
+      const std::function<void(StringRef, BasicSymbolRef::Flags)> &
+          AsmUndefinedRefs);
+
   /// \brief Finds and returns bitcode in the given memory buffer (which may
   /// be either a bitcode file or a native object file with embedded bitcode),
   /// or an error code if not found.
