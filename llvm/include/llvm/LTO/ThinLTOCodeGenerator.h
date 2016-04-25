@@ -187,6 +187,11 @@ public:
   void crossModuleImport(Module &Module, ModuleSummaryIndex &Index);
 
   /**
+   * Perform internalization.
+   */
+  void internalize(Module &Module, ModuleSummaryIndex &Index);
+
+  /**
    * Perform post-importing ThinLTO optimizations.
    */
   void optimize(Module &Module);
