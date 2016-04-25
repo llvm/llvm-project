@@ -83,8 +83,9 @@ type interp struct {
 	imports []*types.Package
 	scope   map[string]types.Object
 
-	pkgmap map[string]*types.Package
-	pkgnum int
+	modules map[string]llvm.Module
+	pkgmap  map[string]*types.Package
+	pkgnum  int
 }
 
 func (in *interp) makeCompilerOptions() error {
@@ -119,6 +120,7 @@ func (in *interp) init() error {
 	in.liner = liner.NewLiner()
 	in.scope = make(map[string]types.Object)
 	in.pkgmap = make(map[string]*types.Package)
+	in.modules = make(map[string]llvm.Module)
 
 	err := in.makeCompilerOptions()
 	if err != nil {
@@ -139,23 +141,21 @@ func (in *interp) loadSourcePackageFromCode(pkgcode, pkgpath string, copts irgen
 	if err != nil {
 		return nil, err
 	}
-
 	files := []*ast.File{file}
-
 	return in.loadSourcePackage(fset, files, pkgpath, copts)
 }
 
-func (in *interp) loadSourcePackage(fset *token.FileSet, files []*ast.File, pkgpath string, copts irgen.CompilerOptions) (pkg *types.Package, err error) {
+func (in *interp) loadSourcePackage(fset *token.FileSet, files []*ast.File, pkgpath string, copts irgen.CompilerOptions) (_ *types.Package, resultErr error) {
 	compiler, err := irgen.NewCompiler(copts)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	module, err := compiler.Compile(fset, files, pkgpath)
 	if err != nil {
-		return
+		return nil, err
 	}
-	pkg = module.Package
+	in.modules[pkgpath] = module.Module
 
 	if in.engine.C != nil {
 		in.engine.AddModule(module.Module)
@@ -163,25 +163,33 @@ func (in *interp) loadSourcePackage(fset *token.FileSet, files []*ast.File, pkgp
 		options := llvm.NewMCJITCompilerOptions()
 		in.engine, err = llvm.NewMCJITCompiler(module.Module, options)
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 
-	importname := irgen.ManglePackagePath(pkgpath) + "..import$descriptor"
-	importglobal := module.Module.NamedGlobal(importname)
-
-	var importfunc func()
-	*(*unsafe.Pointer)(unsafe.Pointer(&importfunc)) = in.engine.PointerToGlobal(importglobal)
+	var importFunc func()
+	importAddress := in.getPackageSymbol(pkgpath, ".import$descriptor")
+	*(*unsafe.Pointer)(unsafe.Pointer(&importFunc)) = importAddress
 
 	defer func() {
 		p := recover()
 		if p != nil {
-			err = fmt.Errorf("panic: %v\n%v", p, string(debug.Stack()))
+			resultErr = fmt.Errorf("panic: %v\n%v", p, string(debug.Stack()))
 		}
 	}()
-	importfunc()
-	in.pkgmap[pkgpath] = pkg
-	return
+	importFunc()
+	in.pkgmap[pkgpath] = module.Package
+
+	return module.Package, nil
+}
+
+func (in *interp) getPackageSymbol(pkgpath, name string) unsafe.Pointer {
+	symbolName := irgen.ManglePackagePath(pkgpath) + "." + name
+	global := in.modules[pkgpath].NamedGlobal(symbolName)
+	if global.IsNil() {
+		return nil
+	}
+	return in.engine.PointerToGlobal(global)
 }
 
 func (in *interp) augmentPackageScope(pkg *types.Package) {
@@ -246,19 +254,17 @@ func (l *line) ready() bool {
 	return l.parens <= 0 && l.bracks <= 0 && l.braces <= 0
 }
 
-func (in *interp) readExprLine(str string, assigns []string) error {
+func (in *interp) readExprLine(str string, assigns []string) ([]interface{}, error) {
 	in.pendingLine.append(str, assigns)
-
-	if in.pendingLine.ready() {
-		err := in.interpretLine(in.pendingLine)
-		in.pendingLine = line{}
-		return err
-	} else {
-		return nil
+	if !in.pendingLine.ready() {
+		return nil, nil
 	}
+	results, err := in.interpretLine(in.pendingLine)
+	in.pendingLine = line{}
+	return results, err
 }
 
-func (in *interp) interpretLine(l line) error {
+func (in *interp) interpretLine(l line) ([]interface{}, error) {
 	pkgname := fmt.Sprintf("input%05d", in.pkgnum)
 	in.pkgnum++
 
@@ -277,14 +283,12 @@ func (in *interp) interpretLine(l line) error {
 		var err error
 		tv, err = types.Eval(l.line, pkg, scope)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	var code bytes.Buffer
-	fmt.Fprintf(&code, "package %s", pkgname)
-	code.WriteString("\n\nimport __fmt__ \"fmt\"\n")
-	code.WriteString("import __os__ \"os\"\n")
+	fmt.Fprintf(&code, "package %s\n", pkgname)
 
 	for _, pkg := range in.imports {
 		fmt.Fprintf(&code, "import %q\n", pkg.Path())
@@ -306,7 +310,7 @@ func (in *interp) interpretLine(l line) error {
 			typs = append(typs, types.Typ[types.Bool])
 		}
 		if len(l.assigns) != 0 && len(l.assigns) != len(typs) {
-			return errors.New("return value mismatch")
+			return nil, errors.New("return value mismatch")
 		}
 
 		code.WriteString("var ")
@@ -324,31 +328,34 @@ func (in *interp) interpretLine(l line) error {
 				fmt.Fprintf(&code, "__llgoiV%d", i)
 			}
 		}
-		fmt.Fprintf(&code, " = %s\n\n", l.line)
+		fmt.Fprintf(&code, " = %s\n", l.line)
 
-		code.WriteString("func init() {\n\t")
-		for i, t := range typs {
-			var varname, prefix string
+		code.WriteString("func init() {\n")
+		varnames := make([]string, len(typs))
+		for i := range typs {
+			var varname string
 			if len(l.assigns) != 0 && l.assigns[i] != "" {
 				if _, ok := in.scope[l.assigns[i]]; ok {
 					fmt.Fprintf(&code, "\t%s = __llgoiV%d\n", l.assigns[i], i)
 				}
 				varname = l.assigns[i]
-				prefix = l.assigns[i]
 			} else {
 				varname = fmt.Sprintf("__llgoiV%d", i)
-				prefix = fmt.Sprintf("#%d", i)
 			}
-			if _, ok := t.Underlying().(*types.Interface); ok {
-				fmt.Fprintf(&code, "\t__fmt__.Printf(\"%s %s (%%T) = %%+v\\n\", %s, %s)\n", prefix, t.String(), varname, varname)
-			} else {
-				fmt.Fprintf(&code, "\t__fmt__.Printf(\"%s %s = %%+v\\n\", %s)\n", prefix, t.String(), varname)
-			}
+			varnames[i] = varname
 		}
-		code.WriteString("}")
+		code.WriteString("}\n\n")
+
+		code.WriteString("func __llgoiResults() []interface{} {\n")
+		code.WriteString("\treturn []interface{}{\n")
+		for _, varname := range varnames {
+			fmt.Fprintf(&code, "\t\t%s,\n", varname)
+		}
+		code.WriteString("\t}\n")
+		code.WriteString("}\n")
 	} else {
 		if len(l.assigns) != 0 {
-			return errors.New("return value mismatch")
+			return nil, errors.New("return value mismatch")
 		}
 
 		fmt.Fprintf(&code, "func init() {\n\t%s}", l.line)
@@ -359,10 +366,17 @@ func (in *interp) interpretLine(l line) error {
 	copts.DisableUnusedImportCheck = true
 	pkg, err := in.loadSourcePackageFromCode(code.String(), pkgname, copts)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	in.imports = append(in.imports, pkg)
+
+	var results []interface{}
+	llgoiResultsAddress := in.getPackageSymbol(pkgname, "__llgoiResults$descriptor")
+	if llgoiResultsAddress != nil {
+		var resultsFunc func() []interface{}
+		*(*unsafe.Pointer)(unsafe.Pointer(&resultsFunc)) = llgoiResultsAddress
+		results = resultsFunc()
+	}
 
 	for _, assign := range l.assigns {
 		if assign != "" {
@@ -376,7 +390,7 @@ func (in *interp) interpretLine(l line) error {
 		in.scope[l.declName] = pkg.Scope().Lookup(l.declName)
 	}
 
-	return nil
+	return results, nil
 }
 
 func (in *interp) maybeReadAssignment(line string, s *scanner.Scanner, initial string, base int) (bool, error) {
@@ -404,7 +418,9 @@ func (in *interp) maybeReadAssignment(line string, s *scanner.Scanner, initial s
 		return false, nil
 	}
 
-	return true, in.readExprLine(line[int(pos)-base+2:], assigns)
+	// It's an assignment statement, there are no results.
+	_, err := in.readExprLine(line[int(pos)-base+2:], assigns)
+	return true, err
 }
 
 func (in *interp) loadPackage(pkgpath string) (*types.Package, error) {
@@ -428,8 +444,6 @@ func (in *interp) loadPackage(pkgpath string) (*types.Package, error) {
 		}
 	}
 
-	fmt.Printf("# %s\n", pkgpath)
-
 	inputs := make([]string, len(buildpkg.GoFiles))
 	for i, file := range buildpkg.GoFiles {
 		inputs[i] = filepath.Join(buildpkg.Dir, file)
@@ -446,7 +460,7 @@ func (in *interp) loadPackage(pkgpath string) (*types.Package, error) {
 
 // readLine accumulates lines of input, including trailing newlines,
 // executing statements as they are completed.
-func (in *interp) readLine(line string) error {
+func (in *interp) readLine(line string) ([]interface{}, error) {
 	if !in.pendingLine.ready() {
 		return in.readExprLine(line, nil)
 	}
@@ -459,38 +473,45 @@ func (in *interp) readLine(line string) error {
 	_, tok, lit := s.Scan()
 	switch tok {
 	case token.EOF:
-		return nil
+		return nil, nil
 
 	case token.IMPORT:
 		_, tok, lit = s.Scan()
 		if tok != token.STRING {
-			return errors.New("expected string literal")
+			return nil, errors.New("expected string literal")
 		}
 		pkgpath, err := strconv.Unquote(lit)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		pkg, err := in.loadPackage(pkgpath)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		in.imports = append(in.imports, pkg)
-		return nil
+		return nil, nil
 
 	case token.IDENT:
 		ok, err := in.maybeReadAssignment(line, &s, lit, file.Base())
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if ok {
-			return nil
+			return nil, nil
 		}
-
 		fallthrough
 
 	default:
 		return in.readExprLine(line, nil)
 	}
+}
+
+// printResult prints a value that was the result of an expression evaluated
+// by the interpreter.
+func printResult(w io.Writer, v interface{}) {
+	// TODO the result should be formatted in Go syntax, without
+	// package qualifiers for types defined within the interpreter.
+	fmt.Fprintf(w, "%+v", v)
 }
 
 // formatHistory reformats the provided Go source by collapsing all lines
@@ -560,9 +581,13 @@ func main() {
 			continue
 		}
 		buf.WriteString(line + "\n")
-		err = in.readLine(line + "\n")
+		results, err := in.readLine(line + "\n")
 		if err != nil {
 			fmt.Println(err)
+		}
+		for _, result := range results {
+			printResult(os.Stdout, result)
+			fmt.Println()
 		}
 	}
 

@@ -151,7 +151,8 @@ void LinkerDriver::addLibrary(StringRef Name) {
   std::string Path = searchLibrary(Name);
   if (Path.empty())
     error("unable to find library -l" + Name);
-  addFile(Path);
+  else
+    addFile(Path);
 }
 
 // This function is called on startup. We need this for LTO since

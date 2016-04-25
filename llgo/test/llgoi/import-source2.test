@@ -4,11 +4,9 @@
 import "strconv"
 
 import "foo"
-// CHECK: # bar
-// CHECK: # foo
 
 foo.Answer()
-// CHECK: #0 int = 42
+// CHECK: 42
 
 strconv.FormatBool(true)
-// CHECK: #0 string = true
+// CHECK: true

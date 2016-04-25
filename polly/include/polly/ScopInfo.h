@@ -1888,19 +1888,6 @@ public:
   /// @return The corresponding isl_id or NULL otherwise.
   isl_id *getIdForParam(const SCEV *Parameter);
 
-  /// @name Parameter Iterators
-  ///
-  /// These iterators iterate over all parameters of this Scop.
-  //@{
-  typedef ParamVecType::iterator param_iterator;
-  typedef ParamVecType::const_iterator const_param_iterator;
-
-  param_iterator param_begin() { return Parameters.begin(); }
-  param_iterator param_end() { return Parameters.end(); }
-  const_param_iterator param_begin() const { return Parameters.begin(); }
-  const_param_iterator param_end() const { return Parameters.end(); }
-  //@}
-
   /// @brief Get the maximum region of this static control part.
   ///
   /// @return The maximum region of this static control part.
