@@ -34,6 +34,7 @@ namespace swift {
     namespace remoteAST {
         class RemoteASTContext;
     }
+    enum class MetadataKind : uint32_t;
 }
 
 namespace lldb_private {
@@ -198,15 +199,22 @@ public:
                          SwiftLanguageRuntime *,
                          lldb::addr_t);
         
-        CompilerType
-        FulfillPromise ();
-        
-    private:
         swift::ASTContext *m_swift_ast;
         std::unique_ptr<swift::remoteAST::RemoteASTContext> m_remote_ast;
         SwiftLanguageRuntime *m_swift_runtime;
         lldb::addr_t m_metadata_location;
+        llvm::Optional<swift::MetadataKind> m_metadata_kind;
         llvm::Optional<CompilerType> m_compiler_type;
+        
+    public:
+        CompilerType
+        FulfillTypePromise ();
+        
+        llvm::Optional<swift::MetadataKind>
+        FulfillKindPromise ();
+        
+        bool
+        IsStaticallyDetermined ();
     };
     
     class MetadataUtils

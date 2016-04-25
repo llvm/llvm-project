@@ -1213,7 +1213,7 @@ m_metadata_location(location)
 
 #define METADATAPROMISE_FALLBACK_TO_METADATA
 CompilerType
-SwiftLanguageRuntime::MetadataPromise::FulfillPromise ()
+SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise ()
 {
     if (m_compiler_type.hasValue())
         return m_compiler_type.getValue();
@@ -1232,9 +1232,41 @@ SwiftLanguageRuntime::MetadataPromise::FulfillPromise ()
 #endif
     }
 }
+
+llvm::Optional<swift::MetadataKind>
+SwiftLanguageRuntime::MetadataPromise::FulfillKindPromise ()
+{
+    if (m_metadata_kind.hasValue())
+        return m_metadata_kind;
+    
+    // FIXME: dropping the error
+    if (swift::remoteAST::Result<swift::MetadataKind> result = m_remote_ast->getKindForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location)))
+        return (m_metadata_kind = result.getValue());
+    else
+        return m_metadata_kind;
+}
 #ifdef METADATAPROMISE_FALLBACK_TO_METADATA
 #undef METADATAPROMISE_FALLBACK_TO_METADATA
 #endif
+
+bool
+SwiftLanguageRuntime::MetadataPromise::IsStaticallyDetermined ()
+{
+    if (llvm::Optional<swift::MetadataKind> kind_promise = FulfillKindPromise())
+    {
+        switch (kind_promise.getValue())
+        {
+            case swift::MetadataKind::Class:
+            case swift::MetadataKind::Existential:
+            case swift::MetadataKind::ObjCClassWrapper:
+                return false;
+            default:
+                return true;
+        }
+    }
+    
+    return true;
+}
 
 static inline swift::Type
 GetSwiftType (const CompilerType& type)
@@ -2408,22 +2440,25 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class (ValueObject &in_value,
     lldb::addr_t class_metadata_location = m_process->ReadPointerFromMemory(class_instance_location, error);
     if (error.Fail() || class_metadata_location == 0 || class_metadata_location == LLDB_INVALID_ADDRESS)
         return false;
-    MetadataSP metadata_sp(GetMetadataForLocation(class_metadata_location));
-    ClassMetadata* class_metadata = llvm::dyn_cast_or_null<ClassMetadata>(metadata_sp.get());
-    if (!class_metadata)
+
+    SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(in_value.GetCompilerType().GetTypeSystem());
+    
+    MetadataPromiseSP promise_sp(GetMetadataPromise(class_metadata_location,swift_ast_ctx));
+    if (!promise_sp)
         return false;
     
-    SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(in_value.GetCompilerType().GetTypeSystem());
+    CompilerType class_type(promise_sp->FulfillTypePromise());
+    if (!class_type)
+        return false;
     
     while (base_depth > 0)
     {
-        metadata_sp = class_metadata->GetSuperclassMetadata();
-        class_metadata = llvm::dyn_cast_or_null<ClassMetadata>(metadata_sp.get());
-        assert(class_metadata && "failed to get base class");
+        class_type = class_type.GetDirectBaseClassAtIndex(0, nullptr);
+        assert(class_type && "failed to get base class");
         base_depth--;
     }
     
-    class_type_or_name.SetCompilerType(GetTypeForMetadata(metadata_sp, swift_ast_ctx, error));
+    class_type_or_name.SetCompilerType(class_type);
     
     if (error.Fail())
         return false;
@@ -2567,18 +2602,21 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType (ValueObject &in_value,
     Error error;
     CompilerType var_type(in_value.GetStaticValue()->GetCompilerType());
     size_t ptr_size = m_process->GetAddressByteSize();
-    
+    SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(var_type.GetTypeSystem());
+    if (!swift_ast_ctx)
+        return false;
+
     switch (error_descriptor.m_kind)
     {
         case SwiftErrorDescriptor::Kind::eNotAnError:
             return false;
         case SwiftErrorDescriptor::Kind::eSwiftBridgeableNative:
         {
-            MetadataSP metadata_sp(GetMetadataForLocation(error_descriptor.m_bridgeable_native.metadata_ptr_value));
-            if (!metadata_sp)
+            MetadataPromiseSP promise_sp(GetMetadataPromise(error_descriptor.m_bridgeable_native.metadata_ptr_value,swift_ast_ctx));
+            if (!promise_sp)
                 return false;
             error_descriptor.m_bridgeable_native.metadata_location += 2*ptr_size;
-            if (!metadata_sp->IsStaticallyDetermined())
+            if (!promise_sp->IsStaticallyDetermined())
             {
                 // figure out the actual dynamic type via the metadata at the "isa" pointer
                 error_descriptor.m_bridgeable_native.metadata_location = m_process->ReadPointerFromMemory(error_descriptor.m_bridgeable_native.metadata_location, error);
@@ -2587,8 +2625,8 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType (ValueObject &in_value,
                 error_descriptor.m_bridgeable_native.metadata_ptr_value = m_process->ReadPointerFromMemory(error_descriptor.m_bridgeable_native.metadata_location, error);
                 if (error_descriptor.m_bridgeable_native.metadata_ptr_value == 0 || error_descriptor.m_bridgeable_native.metadata_ptr_value == LLDB_INVALID_ADDRESS || error.Fail())
                     return false;
-                metadata_sp = GetMetadataForLocation(error_descriptor.m_bridgeable_native.metadata_ptr_value);
-                if (!metadata_sp)
+                promise_sp = GetMetadataPromise(error_descriptor.m_bridgeable_native.metadata_ptr_value,swift_ast_ctx);
+                if (!promise_sp || !promise_sp->FulfillTypePromise())
                 {
                     // this could still be a random ObjC object
                     if (auto objc_runtime = GetObjCRuntime())
@@ -2628,12 +2666,10 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType (ValueObject &in_value,
                 }
             }
 
-            SwiftASTContext * swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(var_type.GetTypeSystem());
-            if (!swift_ast_ctx)
+            if (!promise_sp)
                 return false;
-            
             address.SetLoadAddress(error_descriptor.m_bridgeable_native.metadata_location, &m_process->GetTarget());
-            CompilerType metadata_type(GetTypeForMetadata(metadata_sp, swift_ast_ctx, error));
+            CompilerType metadata_type(promise_sp->FulfillTypePromise());
             if (metadata_type.IsValid() && error.Success())
             {
                 class_type_or_name.SetCompilerType(metadata_type);
@@ -2646,15 +2682,12 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType (ValueObject &in_value,
             if (error_descriptor.m_bridged.instance_ptr_value != 0 &&
                 error_descriptor.m_bridged.instance_ptr_value != LLDB_INVALID_ADDRESS)
             {
-                if (SwiftASTContext * swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(var_type.GetTypeSystem()))
+                Error error_type_lookup_error;
+                if (CompilerType error_type = swift_ast_ctx->GetNSErrorType(error_type_lookup_error))
                 {
-                    Error error_type_lookup_error;
-                    if (CompilerType error_type = swift_ast_ctx->GetNSErrorType(error_type_lookup_error))
-                    {
-                        class_type_or_name.SetCompilerType(error_type);
-                        address.SetRawAddress(error_descriptor.m_bridged.instance_ptr_value);
-                        return true;
-                    }
+                    class_type_or_name.SetCompilerType(error_type);
+                    address.SetRawAddress(error_descriptor.m_bridged.instance_ptr_value);
+                    return true;
                 }
             }
         }
@@ -2662,36 +2695,33 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType (ValueObject &in_value,
         case SwiftErrorDescriptor::Kind::eSwiftPureNative:
         {
             Error error;
-            if (SwiftASTContext * swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(var_type.GetTypeSystem()))
+            if (MetadataPromiseSP promise_sp = GetMetadataPromise(error_descriptor.m_pure_native.metadata_location, swift_ast_ctx))
             {
-                if (MetadataSP metadata_sp = GetMetadataForLocation(error_descriptor.m_pure_native.metadata_location))
+                if (promise_sp->IsStaticallyDetermined())
                 {
-                    if (metadata_sp->IsStaticallyDetermined())
+                    if (CompilerType compiler_type = promise_sp->FulfillTypePromise())
                     {
-                        if (CompilerType compiler_type = GetTypeForMetadata(metadata_sp, swift_ast_ctx, error))
+                        class_type_or_name.SetCompilerType(compiler_type);
+                        address.SetRawAddress(error_descriptor.m_pure_native.payload_ptr);
+                        return true;
+                    }
+                }
+                else
+                {
+                    error_descriptor.m_pure_native.metadata_location = m_process->ReadPointerFromMemory(error_descriptor.m_pure_native.payload_ptr, error);
+                    if (error_descriptor.m_pure_native.metadata_location == 0 ||
+                        error_descriptor.m_pure_native.metadata_location == LLDB_INVALID_ADDRESS ||
+                        error.Fail())
+                        return false;
+                    error_descriptor.m_pure_native.payload_ptr = error_descriptor.m_pure_native.metadata_location;
+                    error_descriptor.m_pure_native.metadata_location = m_process->ReadPointerFromMemory(error_descriptor.m_pure_native.payload_ptr, error);
+                    if (MetadataPromiseSP promise_sp = GetMetadataPromise(error_descriptor.m_pure_native.metadata_location, swift_ast_ctx))
+                    {
+                        if (CompilerType compiler_type = promise_sp->FulfillTypePromise())
                         {
                             class_type_or_name.SetCompilerType(compiler_type);
                             address.SetRawAddress(error_descriptor.m_pure_native.payload_ptr);
                             return true;
-                        }
-                    }
-                    else
-                    {
-                        error_descriptor.m_pure_native.metadata_location = m_process->ReadPointerFromMemory(error_descriptor.m_pure_native.payload_ptr, error);
-                        if (error_descriptor.m_pure_native.metadata_location == 0 ||
-                            error_descriptor.m_pure_native.metadata_location == LLDB_INVALID_ADDRESS ||
-                            error.Fail())
-                            return false;
-                        error_descriptor.m_pure_native.payload_ptr = error_descriptor.m_pure_native.metadata_location;
-                        error_descriptor.m_pure_native.metadata_location = m_process->ReadPointerFromMemory(error_descriptor.m_pure_native.payload_ptr, error);
-                        if (MetadataSP metadata_sp = GetMetadataForLocation(error_descriptor.m_pure_native.metadata_location))
-                        {
-                            if (CompilerType compiler_type = GetTypeForMetadata(metadata_sp, swift_ast_ctx, error))
-                            {
-                                class_type_or_name.SetCompilerType(compiler_type);
-                                address.SetRawAddress(error_descriptor.m_pure_native.payload_ptr);
-                                return true;
-                            }
                         }
                     }
                 }
@@ -2721,7 +2751,7 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol (ValueObject &in_value,
                                                   class_type_or_name,
                                                   address);
 
-    MetadataSP metadata_sp;
+    MetadataPromiseSP promise_sp;
     static ConstString g_instance_type_child_name("instance_type");
     ValueObjectSP instance_type_sp(in_value.GetStaticValue()->GetChildMemberWithName(g_instance_type_child_name, true));
     if (!instance_type_sp)
@@ -2733,10 +2763,11 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol (ValueObject &in_value,
     bool is_class = protocol_info.m_is_objc || protocol_info.m_is_class_only || protocol_info.m_is_anyobject;
     if (!is_class)
     {
-        metadata_sp = GetMetadataForLocation(instance_type_sp->GetValueAsUnsigned(0));
-        if (!metadata_sp)
+        promise_sp = GetMetadataPromise(instance_type_sp->GetValueAsUnsigned(0));
+        if (!promise_sp)
             return false;
-        if (llvm::isa<ClassMetadata>(metadata_sp.get()))
+        if (promise_sp->FulfillKindPromise().hasValue() &&
+            promise_sp->FulfillKindPromise().getValue() == swift::MetadataKind::Class)
             is_class = true;
     }
     if (is_class)
@@ -2772,13 +2803,13 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol (ValueObject &in_value,
         return class_type_or_name.GetCompilerType().IsValid();
     }
     
-    if (llvm::isa<StructMetadata>(metadata_sp.get()) ||
-        llvm::isa<EnumMetadata>(metadata_sp.get()) ||
-        llvm::isa<TupleMetadata>(metadata_sp.get()))
+    if (promise_sp->FulfillKindPromise().hasValue() &&
+        (promise_sp->FulfillKindPromise().getValue() == swift::MetadataKind::Struct ||
+         promise_sp->FulfillKindPromise().getValue() == swift::MetadataKind::Enum ||
+         promise_sp->FulfillKindPromise().getValue() == swift::MetadataKind::Tuple))
     {
-        SwiftASTContext * swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(var_type.GetTypeSystem());
         Error error;
-        class_type_or_name.SetCompilerType(GetTypeForMetadata(metadata_sp, swift_ast_ctx, error));
+        class_type_or_name.SetCompilerType(promise_sp->FulfillTypePromise());
         if (error.Fail())
             return false;
         // the choices made here affect dynamic type resolution
