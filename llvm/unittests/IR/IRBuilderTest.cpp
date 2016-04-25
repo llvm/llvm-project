@@ -418,4 +418,19 @@ TEST_F(IRBuilderTest, DebugLoc) {
 
   DIB.finalize();
 }
+
+TEST_F(IRBuilderTest, DIImportedEntity) {
+  IRBuilder<> Builder(BB);
+  DIBuilder DIB(*M);
+  auto File = DIB.createFile("F.CBL", "/");
+  auto CU = DIB.createCompileUnit(dwarf::DW_LANG_Cobol74, "F.CBL", "/",
+    "llvm-cobol74", true, "", 0);
+  auto IE1 = DIB.createImportedDeclaration(CU, nullptr, 1);
+  auto IE2 = DIB.createImportedDeclaration(CU, nullptr, 1);
+  auto IE3 = DIB.createImportedModule(CU, (DIImportedEntity*)nullptr, 2);
+  auto IE4 = DIB.createImportedModule(CU, (DIImportedEntity*)nullptr, 2);
+  DIB.finalize();
+  EXPECT_TRUE(verifyModule(*M));
+  EXPECT_TRUE(CU->getImportedEntities().size() == 2);
+}
 }
