@@ -1817,6 +1817,7 @@ TEST_F(DILocalVariableTest, get) {
   DITypeRef Type = getDerivedType();
   unsigned Arg = 6;
   unsigned Flags = 7;
+  unsigned NotFlags = (~Flags) & ((1 << 16) - 1);
 
   auto *N =
       DILocalVariable::get(Context, Scope, Name, File, Line, Type, Arg, Flags);
@@ -1847,7 +1848,7 @@ TEST_F(DILocalVariableTest, get) {
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, File, Line, Type,
                                     Arg + 1, Flags));
   EXPECT_NE(N, DILocalVariable::get(Context, Scope, Name, File, Line, Type, Arg,
-                                    ~Flags));
+                                    NotFlags));
 
   TempDILocalVariable Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
