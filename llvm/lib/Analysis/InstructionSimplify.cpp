@@ -851,7 +851,7 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
     return X;
 
   // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
-  if (FMF.noSignedZeros() && match(Op0, m_NegZero()) &&
+  if (FMF.noSignedZeros() && match(Op0, m_AnyZero()) &&
       match(Op1, m_FSub(m_AnyZero(), m_Value(X))))
     return X;
 
