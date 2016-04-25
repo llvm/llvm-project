@@ -55,8 +55,8 @@ hex_hash
 # RUN: llvm-profdata show %t.profdata --function _ | FileCheck %s -check-prefix=SOMEFUNCS
 # RUN: llvm-profdata show %t.profdata.dense --function _ | FileCheck %s -check-prefix=SOMEFUNCS_DENSE
 # SOMEFUNCS: Counters:
-# SOMEFUNCS: function_count_only:
-# SOMEFUNCS: large_numbers:
+# SOMEFUNCS-DAG: large_numbers:
+# SOMEFUNCS-DAG: function_count_only:
 # SOMEFUNCS: Functions shown: 2
 # SOMEFUNCS_DENSE: Functions shown: 3
 
