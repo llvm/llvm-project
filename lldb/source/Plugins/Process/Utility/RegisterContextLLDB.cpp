@@ -470,11 +470,13 @@ RegisterContextLLDB::InitializeNonZerothFrame()
         return;
     }
 
-    bool resolve_tail_call_address = true; // m_current_pc can be one past the address range of the function...
-                                           // This will handle the case where the saved pc does not point to 
-                                           // a function/symbol because it is beyond the bounds of the correct
-                                           // function and there's no symbol there.  ResolveSymbolContextForAddress
-                                           // will fail to find a symbol, back up the pc by 1 and re-search.
+    bool resolve_tail_call_address = false; // m_current_pc can be one past the address range of the function...
+                                            // If the saved pc does not point to a function/symbol because it is
+                                            // beyond the bounds of the correct function and there's no symbol there,
+                                            // we do *not* want ResolveSymbolContextForAddress to back up the pc by 1,
+                                            // because then we might not find the correct unwind information later.
+                                            // Instead, let ResolveSymbolContextForAddress fail, and handle the case
+                                            // via decr_pc_and_recompute_addr_range below.
     const uint32_t resolve_scope = eSymbolContextFunction | eSymbolContextSymbol;
     uint32_t resolved_scope = pc_module_sp->ResolveSymbolContextForAddress (m_current_pc,
                                                                             resolve_scope,

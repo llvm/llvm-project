@@ -44,7 +44,8 @@ g_option_table[] =
     { LLDB_OPT_SET_1, false, "no-summary-depth",   'Y', OptionParser::eOptionalArgument, nullptr, nullptr, 0, eArgTypeCount,     "Set the depth at which omitting summary information stops (default is 1)."},
     { LLDB_OPT_SET_1, false, "raw-output",         'R', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,      "Don't use formatting options."},
     { LLDB_OPT_SET_1, false, "show-all-children",  'A', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,      "Ignore the upper bound on the number of children to show."},
-    { LLDB_OPT_SET_1, false, "validate",           'V',  OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,   "Show results of type validators."},
+    { LLDB_OPT_SET_1, false, "validate",           'V',  OptionParser::eRequiredArgument, nullptr, nullptr,0, eArgTypeBoolean,   "Show results of type validators."},
+    { LLDB_OPT_SET_1, false, "element-count",      'Z', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,     "Treat the result of the expression as if its type is an array of this many values."},
     { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
 };
 
@@ -91,6 +92,12 @@ OptionGroupValueObjectDisplay::SetOptionValue (CommandInterpreter &interpreter,
             max_depth = StringConvert::ToUInt32 (option_arg, UINT32_MAX, 0, &success);
             if (!success)
                 error.SetErrorStringWithFormat("invalid max depth '%s'", option_arg);
+            break;
+
+        case 'Z':
+            elem_count = StringConvert::ToUInt32 (option_arg, UINT32_MAX, 0, &success);
+            if (!success)
+                error.SetErrorStringWithFormat("invalid element count '%s'", option_arg);
             break;
             
         case 'P':
@@ -141,6 +148,7 @@ OptionGroupValueObjectDisplay::OptionParsingStarting (CommandInterpreter &interp
     use_objc          = false;
     max_depth         = UINT32_MAX;
     ptr_depth         = 0;
+    elem_count        = 0;
     use_synth         = true;
     be_raw            = false;
     ignore_cap        = false;
@@ -187,6 +195,8 @@ OptionGroupValueObjectDisplay::GetAsDumpOptions (LanguageRuntimeDescriptionDispl
         options.SetRawDisplay();
     
     options.SetRunValidator(run_validator);
+    
+    options.SetElementCount(elem_count);
 
     return options;
 }
