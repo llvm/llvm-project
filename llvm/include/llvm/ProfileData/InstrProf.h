@@ -198,8 +198,8 @@ StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName,
 /// The first field is the legnth of the uncompressed strings, and the
 /// the second field is the length of the zlib-compressed string.
 /// Both fields are encoded in ULEB128.  If \c doCompress is false, the
-///  third field is the uncompressed strings; otherwise it is the 
-/// compressed string. When the string compression is off, the 
+///  third field is the uncompressed strings; otherwise it is the
+/// compressed string. When the string compression is off, the
 /// second field will have value zero.
 int collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
                               bool doCompression, std::string &Result);
@@ -212,6 +212,29 @@ class InstrProfSymtab;
 /// the format described above. The substrings are seperated by 0 or more zero
 /// bytes. This method decodes the string and populates the \c Symtab.
 int readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab);
+
+enum InstrProfValueKind : uint32_t {
+#define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
+#include "llvm/ProfileData/InstrProfData.inc"
+};
+
+struct InstrProfRecord;
+
+/// Extract value profile data for value site \p SiteIdx from \p InstrProfR
+/// and annotate the instruction \p Inst with the value profile meta data.
+void annotateValueSite(Module &M, Instruction &Inst,
+                       const InstrProfRecord &InstrProfR,
+                       InstrProfValueKind ValueKind, uint32_t SiteIndx);
+/// Extract the value profile data from the \p Inst which is annotated with
+/// value
+/// profile meta data. Return false if there is no value data annotated,
+/// otherwise
+/// return true.
+bool getValueProfDataFromInst(const Instruction &Inst,
+                              InstrProfValueKind ValueKind,
+                              uint32_t MaxNumValueData,
+                              InstrProfValueData ValueData[],
+                              uint32_t &ActualNumValueData, uint64_t &TotalC);
 
 const std::error_category &instrprof_category();
 
@@ -246,11 +269,6 @@ inline instrprof_error MergeResult(instrprof_error &Accumulator,
     Accumulator = Result;
   return Accumulator;
 }
-
-enum InstrProfValueKind : uint32_t {
-#define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
-#include "llvm/ProfileData/InstrProfData.inc"
-};
 
 namespace object {
 class SectionRef;

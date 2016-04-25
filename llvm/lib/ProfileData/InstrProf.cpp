@@ -17,6 +17,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -601,6 +602,92 @@ void ValueProfData::swapBytesFromHost(support::endianness Endianness) {
   }
   sys::swapByteOrder<uint32_t>(TotalSize);
   sys::swapByteOrder<uint32_t>(NumValueKinds);
+}
+
+void annotateValueSite(Module &M, Instruction &Inst,
+                       const InstrProfRecord &InstrProfR,
+                       InstrProfValueKind ValueKind, uint32_t SiteIdx) {
+  uint32_t NV = InstrProfR.getNumValueDataForSite(ValueKind, SiteIdx);
+
+  uint64_t Sum = 0;
+  std::unique_ptr<InstrProfValueData[]> VD =
+      InstrProfR.getValueForSite(ValueKind, SiteIdx, &Sum);
+
+  LLVMContext &Ctx = M.getContext();
+  MDBuilder MDHelper(Ctx);
+  SmallVector<Metadata *, 3> Vals;
+  // Tag
+  Vals.push_back(MDHelper.createString("VP"));
+  // Value Kind
+  Vals.push_back(MDHelper.createConstant(
+      ConstantInt::get(Type::getInt32Ty(Ctx), ValueKind)));
+  // Total Count
+  Vals.push_back(
+      MDHelper.createConstant(ConstantInt::get(Type::getInt64Ty(Ctx), Sum)));
+
+  // Value Profile Data
+  uint32_t MDCount = 3;
+  for (uint32_t I = 0; I < NV; ++I) {
+    Vals.push_back(MDHelper.createConstant(
+        ConstantInt::get(Type::getInt64Ty(Ctx), VD[I].Value)));
+    Vals.push_back(MDHelper.createConstant(
+        ConstantInt::get(Type::getInt64Ty(Ctx), VD[I].Count)));
+    if (--MDCount == 0)
+      break;
+  }
+  Inst.setMetadata(LLVMContext::MD_prof, MDNode::get(Ctx, Vals));
+}
+
+bool getValueProfDataFromInst(const Instruction &Inst,
+                              InstrProfValueKind ValueKind,
+                              uint32_t MaxNumValueData,
+                              InstrProfValueData ValueData[],
+                              uint32_t &ActualNumValueData, uint64_t &TotalC) {
+  MDNode *MD = Inst.getMetadata(LLVMContext::MD_prof);
+  if (!MD)
+    return false;
+
+  unsigned NOps = MD->getNumOperands();
+
+  if (NOps < 5)
+    return false;
+
+  // Operand 0 is a string tag "VP":
+  MDString *Tag = cast<MDString>(MD->getOperand(0));
+  if (!Tag)
+    return false;
+
+  if (!Tag->getString().equals("VP"))
+    return false;
+
+  // Now check kind:
+  ConstantInt *KindInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1));
+  if (!KindInt)
+    return false;
+  if (KindInt->getZExtValue() != ValueKind)
+    return false;
+
+  // Get total count
+  ConstantInt *TotalCInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2));
+  if (!TotalCInt)
+    return false;
+  TotalC = TotalCInt->getZExtValue();
+
+  ActualNumValueData = 0;
+
+  for (unsigned I = 3; I < NOps; I += 2) {
+    if (ActualNumValueData >= MaxNumValueData)
+      break;
+    ConstantInt *Value = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
+    ConstantInt *Count =
+        mdconst::dyn_extract<ConstantInt>(MD->getOperand(I + 1));
+    if (!Value || !Count)
+      return false;
+    ValueData[ActualNumValueData].Value = Value->getZExtValue();
+    ValueData[ActualNumValueData].Count = Count->getZExtValue();
+    ActualNumValueData++;
+  }
+  return true;
 }
 
 // The argument to this method is a vector of cutoff percentages and the return
