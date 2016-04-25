@@ -8059,7 +8059,9 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr *MI,
 
   AddDefaultCC(AddDefaultPred(BuildMI(*MBB, MI, DL, TII.get(ARM::t2SUBrr),
                                       ARM::SP)
-                              .addReg(ARM::SP).addReg(ARM::R4)));
+                         .addReg(ARM::SP, RegState::Kill)
+                         .addReg(ARM::R4, RegState::Kill)
+                         .setMIFlags(MachineInstr::FrameSetup)));
 
   MI->eraseFromParent();
   return MBB;

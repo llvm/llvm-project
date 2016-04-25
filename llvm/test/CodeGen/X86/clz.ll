@@ -87,6 +87,41 @@ define i64 @ctlz_i64(i64 %x) {
   ret i64 %tmp
 }
 
+define i8 @ctlz_i8_zero_test(i8 %n) {
+; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
+
+; CHECK-LABEL: ctlz_i8_zero_test:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movb $8, %al
+; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    je .LBB8_2
+; CHECK-NEXT:  # BB#1: # %cond.false
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    bsrl %eax, %eax
+; CHECK-NEXT:    xorl $7, %eax
+; CHECK-NEXT:  .LBB8_2: # %cond.end
+; CHECK-NEXT:    retq
+  %tmp1 = call i8 @llvm.ctlz.i8(i8 %n, i1 false)
+  ret i8 %tmp1
+}
+
+define i16 @ctlz_i16_zero_test(i16 %n) {
+; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
+
+; CHECK-LABEL: ctlz_i16_zero_test:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movw $16, %ax
+; CHECK-NEXT:    testw %di, %di
+; CHECK-NEXT:    je .LBB9_2
+; CHECK-NEXT:  # BB#1: # %cond.false
+; CHECK-NEXT:    bsrw %di, %ax
+; CHECK-NEXT:    xorl $15, %eax
+; CHECK-NEXT:  .LBB9_2: # %cond.end
+; CHECK-NEXT:    retq
+  %tmp1 = call i16 @llvm.ctlz.i16(i16 %n, i1 false)
+  ret i16 %tmp1
+}
+
 define i32 @ctlz_i32_zero_test(i32 %n) {
 ; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
 
@@ -94,14 +129,96 @@ define i32 @ctlz_i32_zero_test(i32 %n) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB8_2
+; CHECK-NEXT:    je .LBB10_2
 ; CHECK-NEXT:  # BB#1: # %cond.false
 ; CHECK-NEXT:    bsrl %edi, %eax
 ; CHECK-NEXT:    xorl $31, %eax
-; CHECK-NEXT:  .LBB8_2: # %cond.end
+; CHECK-NEXT:  .LBB10_2: # %cond.end
 ; CHECK-NEXT:    retq
   %tmp1 = call i32 @llvm.ctlz.i32(i32 %n, i1 false)
   ret i32 %tmp1
+}
+
+define i64 @ctlz_i64_zero_test(i64 %n) {
+; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
+
+; CHECK-LABEL: ctlz_i64_zero_test:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movl $64, %eax
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    je .LBB11_2
+; CHECK-NEXT:  # BB#1: # %cond.false
+; CHECK-NEXT:    bsrq %rdi, %rax
+; CHECK-NEXT:    xorq $63, %rax
+; CHECK-NEXT:  .LBB11_2: # %cond.end
+; CHECK-NEXT:    retq
+  %tmp1 = call i64 @llvm.ctlz.i64(i64 %n, i1 false)
+  ret i64 %tmp1
+}
+
+define i8 @cttz_i8_zero_test(i8 %n) {
+; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
+
+; CHECK-LABEL: cttz_i8_zero_test:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movb $8, %al
+; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    je .LBB12_2
+; CHECK-NEXT:  # BB#1: # %cond.false
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    bsfl %eax, %eax
+; CHECK-NEXT:  .LBB12_2: # %cond.end
+; CHECK-NEXT:    retq
+  %tmp1 = call i8 @llvm.cttz.i8(i8 %n, i1 false)
+  ret i8 %tmp1
+}
+
+define i16 @cttz_i16_zero_test(i16 %n) {
+; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
+
+; CHECK-LABEL: cttz_i16_zero_test:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movw $16, %ax
+; CHECK-NEXT:    testw %di, %di
+; CHECK-NEXT:    je .LBB13_2
+; CHECK-NEXT:  # BB#1: # %cond.false
+; CHECK-NEXT:    bsfw %di, %ax
+; CHECK-NEXT:  .LBB13_2: # %cond.end
+; CHECK-NEXT:    retq
+  %tmp1 = call i16 @llvm.cttz.i16(i16 %n, i1 false)
+  ret i16 %tmp1
+}
+
+define i32 @cttz_i32_zero_test(i32 %n) {
+; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
+
+; CHECK-LABEL: cttz_i32_zero_test:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movl $32, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    je .LBB14_2
+; CHECK-NEXT:  # BB#1: # %cond.false
+; CHECK-NEXT:    bsfl %edi, %eax
+; CHECK-NEXT:  .LBB14_2: # %cond.end
+; CHECK-NEXT:    retq
+  %tmp1 = call i32 @llvm.cttz.i32(i32 %n, i1 false)
+  ret i32 %tmp1
+}
+
+define i64 @cttz_i64_zero_test(i64 %n) {
+; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
+
+; CHECK-LABEL: cttz_i64_zero_test:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movl $64, %eax
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    je .LBB15_2
+; CHECK-NEXT:  # BB#1: # %cond.false
+; CHECK-NEXT:    bsfq %rdi, %rax
+; CHECK-NEXT:  .LBB15_2: # %cond.end
+; CHECK-NEXT:    retq
+  %tmp1 = call i64 @llvm.cttz.i64(i64 %n, i1 false)
+  ret i64 %tmp1
 }
 
 define i32 @ctlz_i32_fold_cmov(i32 %n) {
@@ -115,11 +232,11 @@ define i32 @ctlz_i32_fold_cmov(i32 %n) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    orl $1, %edi
 ; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    je .LBB9_2
+; CHECK-NEXT:    je .LBB16_2
 ; CHECK-NEXT:  # BB#1: # %cond.false
 ; CHECK-NEXT:    bsrl %edi, %eax
 ; CHECK-NEXT:    xorl $31, %eax
-; CHECK-NEXT:  .LBB9_2: # %cond.end
+; CHECK-NEXT:  .LBB16_2: # %cond.end
 ; CHECK-NEXT:    retq
   %or = or i32 %n, 1
   %tmp1 = call i32 @llvm.ctlz.i32(i32 %or, i1 false)
@@ -148,11 +265,11 @@ define i32 @ctlz_bsr_zero_test(i32 %n) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB11_2
+; CHECK-NEXT:    je .LBB18_2
 ; CHECK-NEXT:  # BB#1: # %cond.false
 ; CHECK-NEXT:    bsrl %edi, %eax
 ; CHECK-NEXT:    xorl $31, %eax
-; CHECK-NEXT:  .LBB11_2: # %cond.end
+; CHECK-NEXT:  .LBB18_2: # %cond.end
 ; CHECK-NEXT:    xorl $31, %eax
 ; CHECK-NEXT:    retq
   %ctlz = call i32 @llvm.ctlz.i32(i32 %n, i1 false)

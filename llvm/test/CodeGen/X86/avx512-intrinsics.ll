@@ -7151,9 +7151,9 @@ define <16 x float>@test_int_x86_avx512_mask_permvar_sf_512(<16 x float> %x0, <1
   ret <16 x float> %res4
 }
 
-declare <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32>, <16 x i32>, <16 x i32>, i8)
+declare <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
 
-define <16 x i32>@test_int_x86_avx512_mask_permvar_si_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i8 %x3) {
+define <16 x i32>@test_int_x86_avx512_mask_permvar_si_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_permvar_si_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
@@ -7163,9 +7163,9 @@ define <16 x i32>@test_int_x86_avx512_mask_permvar_si_512(<16 x i32> %x0, <16 x 
 ; CHECK-NEXT:    vpaddd %zmm3, %zmm2, %zmm1
 ; CHECK-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i8 %x3)
-  %res1 = call <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> zeroinitializer, i8 %x3)
-  %res2 = call <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i8 -1)
+  %res = call <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 %x3)
+  %res1 = call <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> zeroinitializer, i16 %x3)
+  %res2 = call <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i16 -1)
   %res3 = add <16 x i32> %res, %res1
   %res4 = add <16 x i32> %res3, %res2
   ret <16 x i32> %res4

@@ -426,6 +426,13 @@ public:
     return SystemZ::R7D;
   }
 
+  /// Override to support customized stack guard loading.
+  bool useLoadStackGuardNode() const override {
+    return true;
+  }
+  void insertSSPDeclarations(Module &M) const override {
+  }
+
   MachineBasicBlock *EmitInstrWithCustomInserter(MachineInstr *MI,
                                                  MachineBasicBlock *BB) const
     override;

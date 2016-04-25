@@ -4678,7 +4678,22 @@ static bool getTargetShuffleMaskIndices(SDValue MaskNode,
   MVT VT = MaskNode.getSimpleValueType();
   assert(VT.isVector() && "Can't produce a non-vector with a build_vector!");
 
+  // Split an APInt element into MaskEltSizeInBits sized pieces and
+  // insert into the shuffle mask.
+  auto SplitElementToMask = [&](APInt Element) {
+    // Note that this is x86 and so always little endian: the low byte is
+    // the first byte of the mask.
+    int Split = VT.getScalarSizeInBits() / MaskEltSizeInBits;
+    for (int i = 0; i < Split; ++i) {
+      APInt RawElt = Element.getLoBits(MaskEltSizeInBits);
+      Element = Element.lshr(MaskEltSizeInBits);
+      RawMask.push_back(RawElt.getZExtValue());
+    }
+  };
+
   if (MaskNode.getOpcode() == X86ISD::VBROADCAST) {
+    // TODO: Handle (MaskEltSizeInBits % VT.getScalarSizeInBits()) == 0
+    // TODO: Handle (VT.getScalarSizeInBits() % MaskEltSizeInBits) == 0
     if (VT.getScalarSizeInBits() != MaskEltSizeInBits)
       return false;
     if (auto *CN = dyn_cast<ConstantSDNode>(MaskNode.getOperand(0))) {
@@ -4693,13 +4708,16 @@ static bool getTargetShuffleMaskIndices(SDValue MaskNode,
 
   if (MaskNode.getOpcode() == X86ISD::VZEXT_MOVL &&
       MaskNode.getOperand(0).getOpcode() == ISD::SCALAR_TO_VECTOR) {
-    if (VT.getScalarSizeInBits() != MaskEltSizeInBits)
+
+    // TODO: Handle (MaskEltSizeInBits % VT.getScalarSizeInBits()) == 0
+    if ((VT.getScalarSizeInBits() % MaskEltSizeInBits) != 0)
       return false;
-    SDValue MaskElement = MaskNode.getOperand(0).getOperand(0);
-    if (auto *CN = dyn_cast<ConstantSDNode>(MaskElement)) {
-      APInt RawElt = CN->getAPIntValue().getLoBits(MaskEltSizeInBits);
-      RawMask.push_back(RawElt.getZExtValue());
-      RawMask.append(VT.getVectorNumElements() - 1, 0);
+    unsigned ElementSplit = VT.getScalarSizeInBits() / MaskEltSizeInBits;
+
+    SDValue MaskOp = MaskNode.getOperand(0).getOperand(0);
+    if (auto *CN = dyn_cast<ConstantSDNode>(MaskOp)) {
+      SplitElementToMask(CN->getAPIntValue());
+      RawMask.append((VT.getVectorNumElements() - 1) * ElementSplit, 0);
       return true;
     }
     return false;
@@ -4711,32 +4729,14 @@ static bool getTargetShuffleMaskIndices(SDValue MaskNode,
   // TODO: Handle (MaskEltSizeInBits % VT.getScalarSizeInBits()) == 0
   if ((VT.getScalarSizeInBits() % MaskEltSizeInBits) != 0)
     return false;
-  unsigned ElementSplit = VT.getScalarSizeInBits() / MaskEltSizeInBits;
 
-  for (int i = 0, e = MaskNode.getNumOperands(); i < e; ++i) {
-    SDValue Op = MaskNode.getOperand(i);
-    if (Op->isUndef()) {
-      RawMask.push_back((uint64_t)SM_SentinelUndef);
-      continue;
-    }
-
-    APInt MaskElement;
+  for (SDValue Op : MaskNode->ops()) {
     if (auto *CN = dyn_cast<ConstantSDNode>(Op.getNode()))
-      MaskElement = CN->getAPIntValue();
+      SplitElementToMask(CN->getAPIntValue());
     else if (auto *CFN = dyn_cast<ConstantFPSDNode>(Op.getNode()))
-      MaskElement = CFN->getValueAPF().bitcastToAPInt();
+      SplitElementToMask(CFN->getValueAPF().bitcastToAPInt());
     else
       return false;
-
-    // We now have to decode the element which could be any integer size and
-    // extract each byte of it.
-    for (unsigned j = 0; j < ElementSplit; ++j) {
-      // Note that this is x86 and so always little endian: the low byte is
-      // the first byte of the mask.
-      APInt RawElt = MaskElement.getLoBits(MaskEltSizeInBits);
-      RawMask.push_back(RawElt.getZExtValue());
-      MaskElement = MaskElement.lshr(MaskEltSizeInBits);
-    }
   }
 
   return true;
@@ -18112,7 +18112,6 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
   }
   // ADC/ADCX/SBB
   case ADX: {
-    SmallVector<SDValue, 2> Results;
     SDVTList CFVTs = DAG.getVTList(Op->getValueType(0), MVT::Other);
     SDVTList VTs = DAG.getVTList(Op.getOperand(3)->getValueType(0), MVT::Other);
     SDValue GenCF = DAG.getNode(X86ISD::ADD, dl, CFVTs, Op.getOperand(2),
@@ -18125,8 +18124,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
                                 DAG.getConstant(X86::COND_B, dl, MVT::i8),
                                 Res.getValue(1));
-    Results.push_back(SetCC);
-    Results.push_back(Store);
+    SDValue Results[] = { SetCC, Store };
     return DAG.getMergeValues(Results, dl);
   }
   case COMPRESS_TO_MEM: {

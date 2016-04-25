@@ -160,6 +160,37 @@ void SystemZInstrInfo::expandZExtPseudo(MachineInstr *MI, unsigned LowOpcode,
   MI->eraseFromParent();
 }
 
+void SystemZInstrInfo::expandLoadStackGuard(MachineInstr *MI) const {
+  MachineBasicBlock *MBB = MI->getParent();
+  MachineFunction &MF = *MBB->getParent();
+  const unsigned Reg = MI->getOperand(0).getReg();
+
+  // Conveniently, all 4 instructions are cloned from LOAD_STACK_GUARD,
+  // so they already have operand 0 set to reg.
+
+  // ear <reg>, %a0
+  MachineInstr *Ear1MI = MF.CloneMachineInstr(MI);
+  MBB->insert(MI, Ear1MI);
+  Ear1MI->setDesc(get(SystemZ::EAR));
+  MachineInstrBuilder(MF, Ear1MI).addImm(0);
+
+  // sllg <reg>, <reg>, 32
+  MachineInstr *SllgMI = MF.CloneMachineInstr(MI);
+  MBB->insert(MI, SllgMI);
+  SllgMI->setDesc(get(SystemZ::SLLG));
+  MachineInstrBuilder(MF, SllgMI).addReg(Reg).addReg(0).addImm(32);
+
+  // ear <reg>, %a1
+  MachineInstr *Ear2MI = MF.CloneMachineInstr(MI);
+  MBB->insert(MI, Ear2MI);
+  Ear2MI->setDesc(get(SystemZ::EAR));
+  MachineInstrBuilder(MF, Ear2MI).addImm(1);
+
+  // lg <reg>, 40(<reg>)
+  MI->setDesc(get(SystemZ::LG));
+  MachineInstrBuilder(MF, MI).addReg(Reg).addImm(40).addReg(0);
+}
+
 // Emit a zero-extending move from 32-bit GPR SrcReg to 32-bit GPR
 // DestReg before MBBI in MBB.  Use LowLowOpcode when both DestReg and SrcReg
 // are low registers, otherwise use RISB[LH]G.  Size is the number of bits
@@ -1098,6 +1129,10 @@ SystemZInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
 
   case SystemZ::ADJDYNALLOC:
     splitAdjDynAlloc(MI);
+    return true;
+
+  case TargetOpcode::LOAD_STACK_GUARD:
+    expandLoadStackGuard(MI);
     return true;
 
   default:

@@ -38,9 +38,32 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ; LV-LABEL: f1
 ; LV-LABEL: for.body.lver.check
-; LV: [[PredCheck0:%[^ ]*]] = icmp ne i128
-; LV: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
-; LV: [[PredCheck1:%[^ ]*]] = icmp ne i128
+
+; LV:      [[BETrunc:%[^ ]*]] = trunc i64 [[BE:%[^ ]*]] to i32
+; LV-NEXT: [[OFMul:%[^ ]*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[BETrunc]])
+; LV-NEXT: [[OFMulResult:%[^ ]*]] = extractvalue { i32, i1 } [[OFMul]], 0
+; LV-NEXT: [[OFMulOverflow:%[^ ]*]] = extractvalue { i32, i1 } [[OFMul]], 1
+; LV-NEXT: [[AddEnd:%[^ ]*]] = add i32 0, [[OFMulResult]]
+; LV-NEXT: [[SubEnd:%[^ ]*]] = sub i32 0, [[OFMulResult]]
+; LV-NEXT: [[CmpNeg:%[^ ]*]] = icmp ugt i32 [[SubEnd]], 0
+; LV-NEXT: [[CmpPos:%[^ ]*]] = icmp ult i32 [[AddEnd]], 0
+; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 false, i1 [[CmpNeg]], i1 [[CmpPos]]
+; LV-NEXT: [[BECheck:%[^ ]*]] = icmp ugt i64 [[BE]], 4294967295
+; LV-NEXT: [[CheckOr0:%[^ ]*]] = or i1 [[Cmp]], [[BECheck]]
+; LV-NEXT: [[PredCheck0:%[^ ]*]] = or i1 [[CheckOr0]], [[OFMulOverflow]]
+
+; LV-NEXT: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
+
+; LV-NEXT: [[OFMul1:%[^ ]*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[BE]])
+; LV-NEXT: [[OFMulResult1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 0
+; LV-NEXT: [[OFMulOverflow1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 1
+; LV-NEXT: [[AddEnd1:%[^ ]*]] = add i64 %a2, [[OFMulResult1]]
+; LV-NEXT: [[SubEnd1:%[^ ]*]] = sub i64 %a2, [[OFMulResult1]]
+; LV-NEXT: [[CmpNeg1:%[^ ]*]] = icmp ugt i64 [[SubEnd1]], %a2
+; LV-NEXT: [[CmpPos1:%[^ ]*]] = icmp ult i64 [[AddEnd1]], %a2
+; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 false, i1 [[CmpNeg1]], i1 [[CmpPos1]]
+; LV-NEXT: [[PredCheck1:%[^ ]*]] = or i1 [[Cmp]], [[OFMulOverflow1]]
+
 ; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
 ; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f1(i16* noalias %a,
@@ -111,9 +134,31 @@ for.end:                                          ; preds = %for.body
 
 ; LV-LABEL: f2
 ; LV-LABEL: for.body.lver.check
-; LV: [[PredCheck0:%[^ ]*]] = icmp ne i128
-; LV: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
-; LV: [[PredCheck1:%[^ ]*]] = icmp ne i128
+
+; LV: [[OFMul:%[^ ]*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[BETrunc:%[^ ]*]])
+; LV-NEXT: [[OFMulResult:%[^ ]*]] = extractvalue { i32, i1 } [[OFMul]], 0
+; LV-NEXT: [[OFMulOverflow:%[^ ]*]] = extractvalue { i32, i1 } [[OFMul]], 1
+; LV-NEXT: [[AddEnd:%[^ ]*]] = add i32 [[Start:%[^ ]*]], [[OFMulResult]]
+; LV-NEXT: [[SubEnd:%[^ ]*]] = sub i32 [[Start]], [[OFMulResult]]
+; LV-NEXT: [[CmpNeg:%[^ ]*]] = icmp ugt i32 [[SubEnd]], [[Start]]
+; LV-NEXT: [[CmpPos:%[^ ]*]] = icmp ult i32 [[AddEnd]], [[Start]]
+; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 true, i1 [[CmpNeg]], i1 [[CmpPos]]
+; LV-NEXT: [[BECheck:%[^ ]*]] = icmp ugt i64 [[BE]], 4294967295
+; LV-NEXT: [[CheckOr0:%[^ ]*]] = or i1 [[Cmp]], [[BECheck]]
+; LV-NEXT: [[PredCheck0:%[^ ]*]] = or i1 [[CheckOr0]], [[OFMulOverflow]]
+
+; LV-NEXT: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
+
+; LV: [[OFMul1:%[^ ]*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[BE]])
+; LV-NEXT: [[OFMulResult1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 0
+; LV-NEXT: [[OFMulOverflow1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 1
+; LV-NEXT: [[AddEnd1:%[^ ]*]] = add i64 [[Start:%[^ ]*]], [[OFMulResult1]]
+; LV-NEXT: [[SubEnd1:%[^ ]*]] = sub i64 [[Start]], [[OFMulResult1]]
+; LV-NEXT: [[CmpNeg1:%[^ ]*]] = icmp ugt i64 [[SubEnd1]], [[Start]]
+; LV-NEXT: [[CmpPos1:%[^ ]*]] = icmp ult i64 [[AddEnd1]], [[Start]]
+; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 true, i1 [[CmpNeg1]], i1 [[CmpPos1]]
+; LV-NEXT: [[PredCheck1:%[^ ]*]] = or i1 [[Cmp]], [[OFMulOverflow1]]
+
 ; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
 ; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f2(i16* noalias %a,
@@ -169,9 +214,31 @@ for.end:                                          ; preds = %for.body
 
 ; LV-LABEL: f3
 ; LV-LABEL: for.body.lver.check
-; LV: [[PredCheck0:%[^ ]*]] = icmp ne i128
-; LV: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
-; LV: [[PredCheck1:%[^ ]*]] = icmp ne i128
+
+; LV: [[OFMul:%[^ ]*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[BETrunc:%[^ ]*]])
+; LV-NEXT: [[OFMulResult:%[^ ]*]] = extractvalue { i32, i1 } [[OFMul]], 0
+; LV-NEXT: [[OFMulOverflow:%[^ ]*]] = extractvalue { i32, i1 } [[OFMul]], 1
+; LV-NEXT: [[AddEnd:%[^ ]*]] = add i32 0, [[OFMulResult]]
+; LV-NEXT: [[SubEnd:%[^ ]*]] = sub i32 0, [[OFMulResult]]
+; LV-NEXT: [[CmpNeg:%[^ ]*]] = icmp sgt i32 [[SubEnd]], 0
+; LV-NEXT: [[CmpPos:%[^ ]*]] = icmp slt i32 [[AddEnd]], 0
+; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 false, i1 [[CmpNeg]], i1 [[CmpPos]]
+; LV-NEXT: [[BECheck:%[^ ]*]] = icmp ugt i64 [[BE]], 4294967295
+; LV-NEXT: [[CheckOr0:%[^ ]*]] = or i1 [[Cmp]], [[BECheck]]
+; LV-NEXT: [[PredCheck0:%[^ ]*]] = or i1 [[CheckOr0]], [[OFMulOverflow]]
+
+; LV-NEXT: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
+
+; LV: [[OFMul1:%[^ ]*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[BE:%[^ ]*]])
+; LV-NEXT: [[OFMulResult1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 0
+; LV-NEXT: [[OFMulOverflow1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 1
+; LV-NEXT: [[AddEnd1:%[^ ]*]] = add i64 %a2, [[OFMulResult1]]
+; LV-NEXT: [[SubEnd1:%[^ ]*]] = sub i64 %a2, [[OFMulResult1]]
+; LV-NEXT: [[CmpNeg1:%[^ ]*]] = icmp ugt i64 [[SubEnd1]], %a2
+; LV-NEXT: [[CmpPos1:%[^ ]*]] = icmp ult i64 [[AddEnd1]], %a2
+; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 false, i1 [[CmpNeg1]], i1 [[CmpPos1]]
+; LV-NEXT: [[PredCheck1:%[^ ]*]] = or i1 [[Cmp]], [[OFMulOverflow1]]
+
 ; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
 ; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f3(i16* noalias %a,
@@ -223,9 +290,31 @@ for.end:                                          ; preds = %for.body
 
 ; LV-LABEL: f4
 ; LV-LABEL: for.body.lver.check
-; LV: [[PredCheck0:%[^ ]*]] = icmp ne i128
-; LV: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
-; LV: [[PredCheck1:%[^ ]*]] = icmp ne i128
+
+; LV: [[OFMul:%[^ ]*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[BETrunc:%[^ ]*]])
+; LV-NEXT: [[OFMulResult:%[^ ]*]] = extractvalue { i32, i1 } [[OFMul]], 0
+; LV-NEXT: [[OFMulOverflow:%[^ ]*]] = extractvalue { i32, i1 } [[OFMul]], 1
+; LV-NEXT: [[AddEnd:%[^ ]*]] = add i32 [[Start:%[^ ]*]], [[OFMulResult]]
+; LV-NEXT: [[SubEnd:%[^ ]*]] = sub i32 [[Start]], [[OFMulResult]]
+; LV-NEXT: [[CmpNeg:%[^ ]*]] = icmp sgt i32 [[SubEnd]], [[Start]]
+; LV-NEXT: [[CmpPos:%[^ ]*]] = icmp slt i32 [[AddEnd]], [[Start]]
+; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 true, i1 [[CmpNeg]], i1 [[CmpPos]]
+; LV-NEXT: [[BECheck:%[^ ]*]] = icmp ugt i64 [[BE]], 4294967295
+; LV-NEXT: [[CheckOr0:%[^ ]*]] = or i1 [[Cmp]], [[BECheck]]
+; LV-NEXT: [[PredCheck0:%[^ ]*]] = or i1 [[CheckOr0]], [[OFMulOverflow]]
+
+; LV-NEXT: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
+
+; LV: [[OFMul1:%[^ ]*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[BE:%[^ ]*]])
+; LV-NEXT: [[OFMulResult1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 0
+; LV-NEXT: [[OFMulOverflow1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 1
+; LV-NEXT: [[AddEnd1:%[^ ]*]] = add i64 [[Start:%[^ ]*]], [[OFMulResult1]]
+; LV-NEXT: [[SubEnd1:%[^ ]*]] = sub i64 [[Start]], [[OFMulResult1]]
+; LV-NEXT: [[CmpNeg1:%[^ ]*]] = icmp ugt i64 [[SubEnd1]], [[Start]]
+; LV-NEXT: [[CmpPos1:%[^ ]*]] = icmp ult i64 [[AddEnd1]], [[Start]]
+; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 true, i1 [[CmpNeg1]], i1 [[CmpPos1]]
+; LV-NEXT: [[PredCheck1:%[^ ]*]] = or i1 [[Cmp]], [[OFMulOverflow1]]
+
 ; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
 ; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f4(i16* noalias %a,
@@ -280,6 +369,32 @@ for.end:                                          ; preds = %for.body
 
 ; LV-LABEL: f5
 ; LV-LABEL: for.body.lver.check
+; LV: [[OFMul:%[^ ]*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[BETrunc:%[^ ]*]])
+; LV-NEXT: [[OFMulResult:%[^ ]*]] = extractvalue { i32, i1 } [[OFMul]], 0
+; LV-NEXT: [[OFMulOverflow:%[^ ]*]] = extractvalue { i32, i1 } [[OFMul]], 1
+; LV-NEXT: [[AddEnd:%[^ ]*]] = add i32 [[Start:%[^ ]*]], [[OFMulResult]]
+; LV-NEXT: [[SubEnd:%[^ ]*]] = sub i32 [[Start]], [[OFMulResult]]
+; LV-NEXT: [[CmpNeg:%[^ ]*]] = icmp sgt i32 [[SubEnd]], [[Start]]
+; LV-NEXT: [[CmpPos:%[^ ]*]] = icmp slt i32 [[AddEnd]], [[Start]]
+; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 true, i1 [[CmpNeg]], i1 [[CmpPos]]
+; LV-NEXT: [[BECheck:%[^ ]*]] = icmp ugt i64 [[BE]], 4294967295
+; LV-NEXT: [[CheckOr0:%[^ ]*]] = or i1 [[Cmp]], [[BECheck]]
+; LV-NEXT: [[PredCheck0:%[^ ]*]] = or i1 [[CheckOr0]], [[OFMulOverflow]]
+
+; LV-NEXT: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
+
+; LV: [[OFMul1:%[^ ]*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[BE:%[^ ]*]])
+; LV-NEXT: [[OFMulResult1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 0
+; LV-NEXT: [[OFMulOverflow1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 1
+; LV-NEXT: [[AddEnd1:%[^ ]*]] = add i64 [[Start:%[^ ]*]], [[OFMulResult1]]
+; LV-NEXT: [[SubEnd1:%[^ ]*]] = sub i64 [[Start]], [[OFMulResult1]]
+; LV-NEXT: [[CmpNeg1:%[^ ]*]] = icmp ugt i64 [[SubEnd1]], [[Start]]
+; LV-NEXT: [[CmpPos1:%[^ ]*]] = icmp ult i64 [[AddEnd1]], [[Start]]
+; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 true, i1 [[CmpNeg1]], i1 [[CmpPos1]]
+; LV-NEXT: [[PredCheck1:%[^ ]*]] = or i1 [[Cmp]], [[OFMulOverflow1]]
+
+; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
+; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f5(i16* noalias %a,
                 i16* noalias %b, i64 %N) {
 entry:

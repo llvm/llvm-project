@@ -4,10 +4,9 @@
 define double @test_vfrcz_sd_0(double %a) {
 ; CHECK-LABEL: @test_vfrcz_sd_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double %a, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double 1.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
-; CHECK-NEXT:    ret double [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
+; CHECK-NEXT:    ret double [[TMP3]]
 ;
   %1 = insertelement <2 x double> undef, double %a, i32 0
   %2 = insertelement <2 x double> %1, double 1.000000e+00, i32 1
@@ -18,11 +17,7 @@ define double @test_vfrcz_sd_0(double %a) {
 
 define double @test_vfrcz_sd_1(double %a) {
 ; CHECK-LABEL: @test_vfrcz_sd_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double %a, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double 1.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call <2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
-; CHECK-NEXT:    ret double [[TMP4]]
+; CHECK-NEXT:    ret double 1.000000e+00
 ;
   %1 = insertelement <2 x double> undef, double %a, i32 0
   %2 = insertelement <2 x double> %1, double 1.000000e+00, i32 1
@@ -34,12 +29,9 @@ define double @test_vfrcz_sd_1(double %a) {
 define float @test_vfrcz_ss_0(float %a) {
 ; CHECK-LABEL: @test_vfrcz_ss_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float %a, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float 1.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float 2.000000e+00, i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float 3.000000e+00, i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call <4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP5]], i32 0
-; CHECK-NEXT:    ret float [[TMP6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %1 = insertelement <4 x float> undef, float %a, i32 0
   %2 = insertelement <4 x float> %1, float 1.000000e+00, i32 1
@@ -52,13 +44,7 @@ define float @test_vfrcz_ss_0(float %a) {
 
 define float @test_vfrcz_ss_3(float %a) {
 ; CHECK-LABEL: @test_vfrcz_ss_3(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float %a, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float 1.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float 2.000000e+00, i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float 3.000000e+00, i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call <4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float> [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP5]], i32 3
-; CHECK-NEXT:    ret float [[TMP6]]
+; CHECK-NEXT:    ret float 3.000000e+00
 ;
   %1 = insertelement <4 x float> undef, float %a, i32 0
   %2 = insertelement <4 x float> %1, float 1.000000e+00, i32 1

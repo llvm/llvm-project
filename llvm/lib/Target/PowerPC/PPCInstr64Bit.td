@@ -486,8 +486,10 @@ defm ADD8  : XOForm_1r<31, 266, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                        "add", "$rT, $rA, $rB", IIC_IntSimple,
                        [(set i64:$rT, (add i64:$rA, i64:$rB))]>;
 // ADD8 has a special form: reg = ADD8(reg, sym@tls) for use by the
-// initial-exec thread-local storage model.
-def ADD8TLS  : XOForm_1<31, 266, 0, (outs g8rc:$rT), (ins g8rc:$rA, tlsreg:$rB),
+// initial-exec thread-local storage model.  We need to forbid r0 here -
+// while it works for add just fine, the linker can relax this to local-exec
+// addi, which won't work for r0.
+def ADD8TLS  : XOForm_1<31, 266, 0, (outs g8rc:$rT), (ins g8rc_nox0:$rA, tlsreg:$rB),
                         "add $rT, $rA, $rB", IIC_IntSimple,
                         [(set i64:$rT, (add i64:$rA, tglobaltlsaddr:$rB))]>;
                      

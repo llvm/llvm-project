@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=thumbv7-windows -mcpu=cortex-a9 %s -o - \
+; RUN: llc -mtriple=thumbv7-windows -mcpu=cortex-a9 -verify-machineinstrs %s -o - \
 ; RUN:  | FileCheck -check-prefix CHECK-DEFAULT-CODE-MODEL %s
 
-; RUN: llc -mtriple=thumbv7-windows -mcpu=cortex-a9 -code-model=large %s -o - \
+; RUN: llc -mtriple=thumbv7-windows -mcpu=cortex-a9 -code-model=large -verify-machineinstrs %s -o - \
 ; RUN:  | FileCheck -check-prefix CHECK-LARGE-CODE-MODEL %s
 
 define arm_aapcs_vfpcc void @check_watermark() {

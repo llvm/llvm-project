@@ -9,6 +9,22 @@
 
 declare <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8>, <16 x i8>)
 
+define <16 x i8> @combine_vpshufb_zero(<16 x i8> %a0) {
+; SSE-LABEL: combine_vpshufb_zero:
+; SSE:       # BB#0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vpshufb_zero:
+; AVX:       # BB#0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %res0 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 128, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>)
+  %res1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %res0, <16 x i8> <i8 0, i8 128, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>)
+  %res2 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %res1, <16 x i8> <i8 0, i8 1, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128>)
+  ret <16 x i8> %res2
+}
+
 define <4 x float> @combine_pshufb_movddup(<4 x float> %a0) {
 ; SSE-LABEL: combine_pshufb_movddup:
 ; SSE:       # BB#0:

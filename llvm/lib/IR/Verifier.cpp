@@ -2579,6 +2579,15 @@ void Verifier::verifyCallSite(CallSite CS) {
     }
   }
 
+  // Verify that each inlinable callsite of a debug-info-bearing function in a
+  // debug-info-bearing function has a debug location attached to it. Failure to
+  // do so causes assertion failures when the inliner sets up inline scope info.
+  if (I->getFunction()->getSubprogram() && CS.getCalledFunction() &&
+      CS.getCalledFunction()->getSubprogram())
+    Assert(I->getDebugLoc(), "inlinable function call in a function with debug "
+                             "info must have a !dbg location",
+           I);
+
   visitInstruction(*I);
 }
 
