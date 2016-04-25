@@ -26,11 +26,11 @@ void __attribute__((ms_abi)) g2(int a, int b, ...) {
   __builtin_ms_va_start(ap, b);
 }
 
-void __attribute__((ms_abi)) g3(float a, ...) {
+void __attribute__((ms_abi)) g3(float a, ...) { // expected-note 2{{parameter of type 'float' is declared here}}
   __builtin_ms_va_list ap;
 
-  __builtin_ms_va_start(ap, a);
-  __builtin_ms_va_start(ap, (a));
+  __builtin_ms_va_start(ap, a); // expected-warning {{passing an object that undergoes default argument promotion to 'va_start' has undefined behavior}}
+  __builtin_ms_va_start(ap, (a)); // expected-warning {{passing an object that undergoes default argument promotion to 'va_start' has undefined behavior}}
 }
 
 void __attribute__((ms_abi)) g5() {

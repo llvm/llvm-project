@@ -6358,3 +6358,106 @@ __m256i test_mm256_mask_i32gather_epi32(__m256i __v1_old, __mmask8 __mask, __m25
   // CHECK: @llvm.x86.avx512.gather3siv8.si
   return _mm256_mmask_i32gather_epi32(__v1_old, __mask, __index, __addr, 2); 
 }
+
+__m256d test_mm256_mask_permutex_pd(__m256d __W, __mmask8 __U, __m256d __X) {
+  // CHECK-LABEL: @test_mm256_mask_permutex_pd
+  // CHECK: @llvm.x86.avx512.mask.perm.df.256
+  return _mm256_mask_permutex_pd(__W, __U, __X, 1); 
+}
+
+__m256d test_mm256_maskz_permutex_pd(__mmask8 __U, __m256d __X) {
+  // CHECK-LABEL: @test_mm256_maskz_permutex_pd
+  // CHECK: @llvm.x86.avx512.mask.perm.df.256
+  return _mm256_maskz_permutex_pd(__U, __X, 1); 
+}
+
+__m256d test_mm256_permutex_pd(__m256d __X) {
+  // CHECK-LABEL: @test_mm256_permutex_pd
+  // CHECK: @llvm.x86.avx512.mask.perm.df.256
+  return _mm256_permutex_pd(__X, 3); 
+}
+
+
+__m256i test_mm256_mask_permutex_epi64(__m256i __W, __mmask8 __M, __m256i __X) {
+  // CHECK-LABEL: @test_mm256_mask_permutex_epi64
+  // CHECK: @llvm.x86.avx512.mask.perm.di.256
+  return _mm256_mask_permutex_epi64(__W, __M, __X, 3); 
+}
+
+__m256i test_mm256_maskz_permutex_epi64(__mmask8 __M, __m256i __X) {
+  // CHECK-LABEL: @test_mm256_maskz_permutex_epi64
+  // CHECK: @llvm.x86.avx512.mask.perm.di.256
+  return _mm256_maskz_permutex_epi64(__M, __X, 3); 
+}
+
+__m256i test_mm256_permutex_epi64( __m256i __X) {
+  // CHECK-LABEL: @test_mm256_permutex_epi64
+  // CHECK: @llvm.x86.avx512.mask.perm.di.256
+  return _mm256_permutex_epi64(__X, 3); 
+}
+
+__m256d test_mm256_permutexvar_pd(__m256i __X, __m256d __Y) {
+  // CHECK-LABEL: @test_mm256_permutexvar_pd
+  // CHECK: @llvm.x86.avx512.mask.permvar.df.256
+  return _mm256_permutexvar_pd(__X, __Y); 
+}
+
+__m256d test_mm256_mask_permutexvar_pd(__m256d __W, __mmask8 __U, __m256i __X, __m256d __Y) {
+  // CHECK-LABEL: @test_mm256_mask_permutexvar_pd
+  // CHECK: @llvm.x86.avx512.mask.permvar.df.256
+  return _mm256_mask_permutexvar_pd(__W, __U, __X, __Y); 
+}
+
+__m256d test_mm256_maskz_permutexvar_pd(__mmask8 __U, __m256i __X, __m256d __Y) {
+  // CHECK-LABEL: @test_mm256_maskz_permutexvar_pd
+  // CHECK: @llvm.x86.avx512.mask.permvar.df.256
+  return _mm256_maskz_permutexvar_pd(__U, __X, __Y); 
+}
+
+__m256i test_mm256_maskz_permutexvar_epi64(__mmask8 __M, __m256i __X, __m256i __Y) {
+  // CHECK-LABEL: @test_mm256_maskz_permutexvar_epi64
+  // CHECK: @llvm.x86.avx512.mask.permvar.di.256
+  return _mm256_maskz_permutexvar_epi64(__M, __X, __Y); 
+}
+
+__m256i test_mm256_mask_permutexvar_epi64(__m256i __W, __mmask8 __M, __m256i __X, __m256i __Y) {
+  // CHECK-LABEL: @test_mm256_mask_permutexvar_epi64
+  // CHECK: @llvm.x86.avx512.mask.permvar.di.256
+  return _mm256_mask_permutexvar_epi64(__W, __M, __X, __Y); 
+}
+
+__m256 test_mm256_mask_permutexvar_ps(__m256 __W, __mmask8 __U, __m256i __X, __m256 __Y) {
+  // CHECK-LABEL: @test_mm256_mask_permutexvar_ps
+  // CHECK: @llvm.x86.avx512.mask.permvar.sf.256
+  return _mm256_mask_permutexvar_ps(__W, __U, __X, __Y); 
+}
+
+__m256 test_mm256_maskz_permutexvar_ps(__mmask8 __U, __m256i __X, __m256 __Y) {
+  // CHECK-LABEL: @test_mm256_maskz_permutexvar_ps
+  // CHECK: @llvm.x86.avx512.mask.permvar.sf.256
+  return _mm256_maskz_permutexvar_ps(__U, __X, __Y); 
+}
+
+__m256 test_mm256_permutexvar_ps(__m256i __X, __m256 __Y) {
+  // CHECK-LABEL: @test_mm256_permutexvar_ps
+  // CHECK: @llvm.x86.avx512.mask.permvar.sf.256
+  return _mm256_permutexvar_ps( __X, __Y); 
+}
+
+__m256i test_mm256_maskz_permutexvar_epi32(__mmask8 __M, __m256i __X, __m256i __Y) {
+  // CHECK-LABEL: @test_mm256_maskz_permutexvar_epi32
+  // CHECK: @llvm.x86.avx512.mask.permvar.si.256
+  return _mm256_maskz_permutexvar_epi32(__M, __X, __Y); 
+}
+
+__m256i test_mm256_permutexvar_epi32(__m256i __X, __m256i __Y) {
+  // CHECK-LABEL: @test_mm256_permutexvar_epi32
+  // CHECK: @llvm.x86.avx512.mask.permvar.si.256
+  return _mm256_permutexvar_epi32(__X, __Y); 
+}
+
+__m256i test_mm256_mask_permutexvar_epi32(__m256i __W, __mmask8 __M, __m256i __X, __m256i __Y) {
+  // CHECK-LABEL: @test_mm256_mask_permutexvar_epi32
+  // CHECK: @llvm.x86.avx512.mask.permvar.si.256
+  return _mm256_mask_permutexvar_epi32(__W, __M, __X, __Y); 
+}

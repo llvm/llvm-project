@@ -2078,6 +2078,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;
+    if (Right.is(tok::star) &&
+        Left.isOneOf(Keywords.kw_function, Keywords.kw_yield))
+      return false;
     if (Left.isOneOf(Keywords.kw_let, Keywords.kw_var, Keywords.kw_in,
                      Keywords.kw_of) &&
         (!Left.Previous || !Left.Previous->is(tok::period)))

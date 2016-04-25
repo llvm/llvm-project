@@ -18,12 +18,11 @@ void f2(int a, int b, ...)
     __builtin_va_start(ap, b);
 }
 
-void f3(float a, ...)
-{
+void f3(float a, ...) { // expected-note 2{{parameter of type 'float' is declared here}}
     __builtin_va_list ap;
 
-    __builtin_va_start(ap, a);
-    __builtin_va_start(ap, (a));
+    __builtin_va_start(ap, a); // expected-warning {{passing an object that undergoes default argument promotion to 'va_start' has undefined behavior}}
+    __builtin_va_start(ap, (a)); // expected-warning {{passing an object that undergoes default argument promotion to 'va_start' has undefined behavior}}
 }
 
 
@@ -81,5 +80,17 @@ void f10(int a, ...) {
   int i;
   __builtin_va_list ap;
   i = __builtin_va_start(ap, a); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+  __builtin_va_end(ap);
+}
+
+void f11(short s, ...) {  // expected-note {{parameter of type 'short' is declared here}}
+  __builtin_va_list ap;
+  __builtin_va_start(ap, s); // expected-warning {{passing an object that undergoes default argument promotion to 'va_start' has undefined behavior}}
+  __builtin_va_end(ap);
+}
+
+void f12(register int i, ...) {  // expected-note {{parameter of type 'int' is declared here}}
+  __builtin_va_list ap;
+  __builtin_va_start(ap, i); // expected-warning {{passing a parameter declared with the 'register' keyword to 'va_start' has undefined behavior}}
   __builtin_va_end(ap);
 }
