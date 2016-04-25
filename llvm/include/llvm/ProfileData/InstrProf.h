@@ -295,6 +295,10 @@ public:
   ///  encoded in the format described in \c collectPGOFuncNameStrings.
   /// This method is a wrapper to \c readPGOFuncNameStrings method.
   inline std::error_code create(StringRef NameStrings);
+  /// A wrapper interface to populate the PGO symtab with functions
+  /// decls from module \c M. This interface is used by transformation
+  /// passes such as indirect function call promotion.
+  void create(const Module &M);
   /// Create InstrProfSymtab from a set of names iteratable from
   /// \p IterRange. This interface is used by IndexedProfReader.
   template <typename NameIterRange> void create(const NameIterRange &IterRange);

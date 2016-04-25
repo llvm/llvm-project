@@ -148,6 +148,13 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName) {
   return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), PGOFuncName);
 }
 
+void InstrProfSymtab::create(const Module &M) {
+  for (const Function &F : M)
+    addFuncName(getPGOFuncName(F));
+
+  finalizeSymtab();
+}
+
 int collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
                               bool doCompression, std::string &Result) {
   assert(NameStrs.size() && "No name data to emit");
