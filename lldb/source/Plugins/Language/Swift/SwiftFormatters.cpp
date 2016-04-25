@@ -531,36 +531,6 @@ lldb_private::formatters::swift::EnumSyntheticFrontEndCreator (CXXSyntheticChild
 }
 
 bool
-lldb_private::formatters::swift::Metadata_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
-{
-    ProcessSP process_sp(valobj.GetProcessSP());
-    if (!process_sp)
-        return false;
-    SwiftLanguageRuntime *runtime(process_sp->GetSwiftLanguageRuntime());
-    if (!runtime)
-        return false;
-    SwiftLanguageRuntime::MetadataSP metadata_sp(runtime->GetMetadataForLocation(valobj.GetValueAsUnsigned(0)));
-    if (!metadata_sp)
-        return false;
-    if (SwiftLanguageRuntime::NominalTypeMetadata *nominal_type_metadata = llvm::dyn_cast<SwiftLanguageRuntime::NominalTypeMetadata>(metadata_sp.get()))
-    {
-        stream.Printf("typename=%s",nominal_type_metadata->GetMangledName().c_str());
-        Mangled mangled( ConstString(nominal_type_metadata->GetMangledName().c_str()) );
-        ConstString demangled = mangled.GetDemangledName(lldb::eLanguageTypeSwift);
-        if (demangled)
-            stream.Printf(" --> %s", demangled.GetCString());
-        return true;
-    }
-    if (SwiftLanguageRuntime::TupleMetadata *tuple_metadata = llvm::dyn_cast<SwiftLanguageRuntime::TupleMetadata>(metadata_sp.get()))
-    {
-        stream.Printf("tuple with %zu items",tuple_metadata->GetNumElements());
-        return true;
-    }
-    // what about other types? not sure
-    return false;
-}
-
-bool
 lldb_private::formatters::swift::ObjC_Selector_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
 {
     static ConstString g_ptr("ptr");

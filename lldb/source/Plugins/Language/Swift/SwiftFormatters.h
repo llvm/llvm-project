@@ -67,9 +67,6 @@ namespace lldb_private {
             DarwinBoolean_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
             
             bool
-            Metadata_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
-            
-            bool
             Range_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
 
             bool

@@ -1545,23 +1545,12 @@ protected:
                                                Address &address);
     
     virtual bool
-    GetDynamicTypeAndAddress_Metadata (ValueObject &in_value,
-                                       MetadataSP metadata_sp,
-                                       lldb::DynamicValueType use_dynamic,
-                                       TypeAndOrName &class_type_or_name,
-                                       Address &address);
-
-    virtual bool
     GetDynamicTypeAndAddress_Promise (ValueObject &in_value,
                                       MetadataPromiseSP promise_sp,
                                       lldb::DynamicValueType use_dynamic,
                                       TypeAndOrName &class_type_or_name,
                                       Address &address);
     
-    virtual MetadataSP
-    GetMetadataForTypeNameAndFrame (const char* type_name,
-                                    StackFrame* frame);
-
     virtual MetadataPromiseSP
     GetPromiseForTypeNameAndFrame (const char* type_name,
                                    StackFrame* frame);
