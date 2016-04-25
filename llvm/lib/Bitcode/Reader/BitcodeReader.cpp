@@ -717,6 +717,16 @@ static GlobalValue::LinkageTypes getDecodedLinkage(unsigned Val) {
   }
 }
 
+// Decode the flags for GlobalValue in the summary
+static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
+                                                            uint64_t Version) {
+  // Summary were not emitted before LLVM 3.9, we don't need to upgrade Linkage
+  // like getDecodedLinkage() above. Any future change to the linkage enum and
+  // to getDecodedLinkage() will need to be taken into account here as above.
+  auto Linkage = GlobalValue::LinkageTypes(RawFlags & 0xF); // 4 bits
+  return GlobalValueSummary::GVFlags(Linkage);
+}
+
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {
   switch (Val) {
   default: // Map unknown visibilities to default.
@@ -5946,19 +5956,20 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
     switch (BitCode) {
     default: // Default behavior: ignore.
       break;
-    // FS_PERMODULE: [valueid, linkage, instcount, numrefs, numrefs x valueid,
+    // FS_PERMODULE: [valueid, flags, instcount, numrefs, numrefs x valueid,
     //                n x (valueid, callsitecount)]
-    // FS_PERMODULE_PROFILE: [valueid, linkage, instcount, numrefs,
+    // FS_PERMODULE_PROFILE: [valueid, flags, instcount, numrefs,
     //                        numrefs x valueid,
     //                        n x (valueid, callsitecount, profilecount)]
     case bitc::FS_PERMODULE:
     case bitc::FS_PERMODULE_PROFILE: {
       unsigned ValueID = Record[0];
-      uint64_t RawLinkage = Record[1];
+      uint64_t RawFlags = Record[1];
       unsigned InstCount = Record[2];
       unsigned NumRefs = Record[3];
-      std::unique_ptr<FunctionSummary> FS = llvm::make_unique<FunctionSummary>(
-          getDecodedLinkage(RawLinkage), InstCount);
+      auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
+      std::unique_ptr<FunctionSummary> FS =
+          llvm::make_unique<FunctionSummary>(Flags, InstCount);
       // The module path string ref set in the summary must be owned by the
       // index's module string table. Since we don't have a module path
       // string table section in the per-module index, we create a single
@@ -5992,15 +6003,15 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       Info->setSummary(std::move(FS));
       break;
     }
-    // FS_ALIAS: [valueid, linkage, valueid]
+    // FS_ALIAS: [valueid, flags, valueid]
     // Aliases must be emitted (and parsed) after all FS_PERMODULE entries, as
     // they expect all aliasee summaries to be available.
     case bitc::FS_ALIAS: {
       unsigned ValueID = Record[0];
-      uint64_t RawLinkage = Record[1];
+      uint64_t RawFlags = Record[1];
       unsigned AliaseeID = Record[2];
-      std::unique_ptr<AliasSummary> AS =
-          llvm::make_unique<AliasSummary>(getDecodedLinkage(RawLinkage));
+      auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
+      std::unique_ptr<AliasSummary> AS = llvm::make_unique<AliasSummary>(Flags);
       // The module path string ref set in the summary must be owned by the
       // index's module string table. Since we don't have a module path
       // string table section in the per-module index, we create a single
@@ -6022,12 +6033,13 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       Info->setSummary(std::move(AS));
       break;
     }
-    // FS_PERMODULE_GLOBALVAR_INIT_REFS: [valueid, linkage, n x valueid]
+    // FS_PERMODULE_GLOBALVAR_INIT_REFS: [valueid, flags, n x valueid]
     case bitc::FS_PERMODULE_GLOBALVAR_INIT_REFS: {
       unsigned ValueID = Record[0];
-      uint64_t RawLinkage = Record[1];
+      uint64_t RawFlags = Record[1];
+      auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
       std::unique_ptr<GlobalVarSummary> FS =
-          llvm::make_unique<GlobalVarSummary>(getDecodedLinkage(RawLinkage));
+          llvm::make_unique<GlobalVarSummary>(Flags);
       FS->setModulePath(
           TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0)->first());
       for (unsigned I = 2, E = Record.size(); I != E; ++I) {
@@ -6042,19 +6054,20 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       Info->setSummary(std::move(FS));
       break;
     }
-    // FS_COMBINED: [modid, linkage, instcount, numrefs, numrefs x valueid,
+    // FS_COMBINED: [modid, flags, instcount, numrefs, numrefs x valueid,
     //               n x (valueid, callsitecount)]
-    // FS_COMBINED_PROFILE: [modid, linkage, instcount, numrefs,
+    // FS_COMBINED_PROFILE: [modid, flags, instcount, numrefs,
     //                       numrefs x valueid,
     //                       n x (valueid, callsitecount, profilecount)]
     case bitc::FS_COMBINED:
     case bitc::FS_COMBINED_PROFILE: {
       uint64_t ModuleId = Record[0];
-      uint64_t RawLinkage = Record[1];
+      uint64_t RawFlags = Record[1];
       unsigned InstCount = Record[2];
       unsigned NumRefs = Record[3];
-      std::unique_ptr<FunctionSummary> FS = llvm::make_unique<FunctionSummary>(
-          getDecodedLinkage(RawLinkage), InstCount);
+      auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
+      std::unique_ptr<FunctionSummary> FS =
+          llvm::make_unique<FunctionSummary>(Flags, InstCount);
       LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
       static int RefListStartIndex = 4;
@@ -6082,15 +6095,15 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       Combined = true;
       break;
     }
-    // FS_COMBINED_ALIAS: [modid, linkage, offset]
+    // FS_COMBINED_ALIAS: [modid, flags, offset]
     // Aliases must be emitted (and parsed) after all FS_COMBINED entries, as
     // they expect all aliasee summaries to be available.
     case bitc::FS_COMBINED_ALIAS: {
       uint64_t ModuleId = Record[0];
-      uint64_t RawLinkage = Record[1];
+      uint64_t RawFlags = Record[1];
       uint64_t AliaseeSummaryOffset = Record[2];
-      std::unique_ptr<AliasSummary> AS =
-          llvm::make_unique<AliasSummary>(getDecodedLinkage(RawLinkage));
+      auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
+      std::unique_ptr<AliasSummary> AS = llvm::make_unique<AliasSummary>(Flags);
       LastSeenSummary = AS.get();
       AS->setModulePath(ModuleIdMap[ModuleId]);
 
@@ -6105,12 +6118,13 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       Combined = true;
       break;
     }
-    // FS_COMBINED_GLOBALVAR_INIT_REFS: [modid, linkage, n x valueid]
+    // FS_COMBINED_GLOBALVAR_INIT_REFS: [modid, flags, n x valueid]
     case bitc::FS_COMBINED_GLOBALVAR_INIT_REFS: {
       uint64_t ModuleId = Record[0];
-      uint64_t RawLinkage = Record[1];
+      uint64_t RawFlags = Record[1];
+      auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
       std::unique_ptr<GlobalVarSummary> FS =
-          llvm::make_unique<GlobalVarSummary>(getDecodedLinkage(RawLinkage));
+          llvm::make_unique<GlobalVarSummary>(Flags);
       LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
       for (unsigned I = 2, E = Record.size(); I != E; ++I) {

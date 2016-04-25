@@ -192,27 +192,27 @@ enum ModulePathSymtabCodes {
 // The summary section uses different codes in the per-module
 // and combined index cases.
 enum GlobalValueSummarySymtabCodes {
-  // PERMODULE: [valueid, linkage, instcount, numrefs, numrefs x valueid,
+  // PERMODULE: [valueid, flags, instcount, numrefs, numrefs x valueid,
   //             n x (valueid, callsitecount)]
   FS_PERMODULE = 1,
-  // PERMODULE_PROFILE: [valueid, linkage, instcount, numrefs,
+  // PERMODULE_PROFILE: [valueid, flags, instcount, numrefs,
   //                     numrefs x valueid,
   //                     n x (valueid, callsitecount, profilecount)]
   FS_PERMODULE_PROFILE = 2,
-  // PERMODULE_GLOBALVAR_INIT_REFS: [valueid, linkage, n x valueid]
+  // PERMODULE_GLOBALVAR_INIT_REFS: [valueid, flags, n x valueid]
   FS_PERMODULE_GLOBALVAR_INIT_REFS = 3,
-  // COMBINED: [modid, linkage, instcount, numrefs, numrefs x valueid,
+  // COMBINED: [modid, flags, instcount, numrefs, numrefs x valueid,
   //            n x (valueid, callsitecount)]
   FS_COMBINED = 4,
-  // COMBINED_PROFILE: [modid, linkage, instcount, numrefs,
+  // COMBINED_PROFILE: [modid, flags, instcount, numrefs,
   //                    numrefs x valueid,
   //                    n x (valueid, callsitecount, profilecount)]
   FS_COMBINED_PROFILE = 5,
-  // COMBINED_GLOBALVAR_INIT_REFS: [modid, linkage, n x valueid]
+  // COMBINED_GLOBALVAR_INIT_REFS: [modid, flags, n x valueid]
   FS_COMBINED_GLOBALVAR_INIT_REFS = 6,
-  // ALIAS: [valueid, linkage, valueid]
+  // ALIAS: [valueid, flags, valueid]
   FS_ALIAS = 7,
-  // COMBINED_ALIAS: [modid, linkage, offset]
+  // COMBINED_ALIAS: [modid, flags, offset]
   FS_COMBINED_ALIAS = 8,
   // COMBINED_ORIGINAL_NAME: [original_name_hash]
   FS_COMBINED_ORIGINAL_NAME = 9,
