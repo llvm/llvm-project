@@ -334,7 +334,7 @@ struct PGOIndirectCallSiteVisitor
 
   void visitCallInst(CallInst &I) {
     CallSite CS(&I);
-    if (CS.getCalledFunction() || !CS.getCalledValue())
+    if (CS.getCalledFunction() || !CS.getCalledValue() || I.isInlineAsm())
       return;
     IndirectCallInsts.push_back(&I);
   }
