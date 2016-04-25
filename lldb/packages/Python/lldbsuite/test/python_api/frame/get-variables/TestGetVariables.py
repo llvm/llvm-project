@@ -38,6 +38,7 @@ class TestGetVariables(TestBase):
                 self.assertTrue(False, "didn't find '%s' in %s" % (name, copy_names))
         self.assertEqual(len(copy_names), 0, "%s: we didn't find variables: %s in value list (%s)" % (description, copy_names, actual_names))
 
+    @skipUnlessDarwin
     def test (self):
         self.build ()
         
