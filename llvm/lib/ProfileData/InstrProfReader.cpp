@@ -109,8 +109,26 @@ bool TextInstrProfReader::hasFormat(const MemoryBuffer &Buffer) {
                      [](char c) { return ::isprint(c) || ::isspace(c); });
 }
 
+// Read the profile variant flag from the header: ":FE" means this is a FE
+// generated profile. ":IR" means this is an IR level profile. Other strings
+// with a leading ':' will be reported an error format.
 std::error_code TextInstrProfReader::readHeader() {
   Symtab.reset(new InstrProfSymtab());
+  bool IsIRInstr = false;
+  if (!Line->startswith(":")) {
+    IsIRLevelProfile = false;
+    return success();
+  }
+  StringRef Str = (Line)->substr(1);
+  if (Str.equals_lower("ir"))
+    IsIRInstr = true;
+  else if (Str.equals_lower("fe"))
+    IsIRInstr = false;
+  else
+    return instrprof_error::bad_header;
+
+  ++Line;
+  IsIRLevelProfile = IsIRInstr;
   return success();
 }
 
@@ -293,7 +311,8 @@ void RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
 template <class IntPtrT>
 std::error_code
 RawInstrProfReader<IntPtrT>::readHeader(const RawInstrProf::Header &Header) {
-  if (swap(Header.Version) != RawInstrProf::Version)
+  Version = swap(Header.Version);
+  if (GET_VERSION(Version) != RawInstrProf::Version)
     return error(instrprof_error::unsupported_version);
 
   CountersDelta = swap(Header.CountersDelta);
@@ -470,10 +489,10 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
       return data_type();
     uint64_t Hash = endian::readNext<uint64_t, little, unaligned>(D);
 
-    // Initialize number of counters for FormatVersion == 1.
+    // Initialize number of counters for GET_VERSION(FormatVersion) == 1.
     uint64_t CountsSize = N / sizeof(uint64_t) - 1;
     // If format version is different then read the number of counters.
-    if (FormatVersion != IndexedInstrProf::ProfVersion::Version1) {
+    if (GET_VERSION(FormatVersion) != IndexedInstrProf::ProfVersion::Version1) {
       if (D + sizeof(uint64_t) > End)
         return data_type();
       CountsSize = endian::readNext<uint64_t, little, unaligned>(D);
@@ -490,7 +509,7 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     DataBuffer.emplace_back(K, Hash, std::move(CounterBuffer));
 
     // Read value profiling data.
-    if (FormatVersion > IndexedInstrProf::ProfVersion::Version2 &&
+    if (GET_VERSION(FormatVersion) > IndexedInstrProf::ProfVersion::Version2 &&
         !readValueProfilingData(D, End)) {
       DataBuffer.clear();
       return data_type();
@@ -603,7 +622,8 @@ std::error_code IndexedInstrProfReader::readHeader() {
 
   // Read the version.
   uint64_t FormatVersion = endian::byte_swap<uint64_t, little>(Header->Version);
-  if (FormatVersion > IndexedInstrProf::ProfVersion::CurrentVersion)
+  if (GET_VERSION(FormatVersion) >
+      IndexedInstrProf::ProfVersion::CurrentVersion)
     return error(instrprof_error::unsupported_version);
 
   Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur);

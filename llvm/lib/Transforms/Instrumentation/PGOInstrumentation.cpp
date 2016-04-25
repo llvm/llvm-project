@@ -49,6 +49,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
@@ -713,7 +714,26 @@ void PGOUseFunc::setBranchWeights() {
 }
 } // end anonymous namespace
 
+// Create a COMDAT variable IR_LEVEL_PROF_VARNAME to make the runtime
+// aware this is an ir_level profile so it can set the version flag.
+static void createIRLevelProfileFlagVariable(Module &M) {
+  Type *IntTy64 = Type::getInt64Ty(M.getContext());
+  uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
+  auto IRLevelVersionVariable =
+      new GlobalVariable(M, IntTy64, true, GlobalVariable::ExternalLinkage,
+                         Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)),
+                         INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR));
+  IRLevelVersionVariable->setVisibility(GlobalValue::DefaultVisibility);
+  Triple TT(M.getTargetTriple());
+  if (TT.isOSBinFormatMachO())
+    IRLevelVersionVariable->setLinkage(GlobalValue::LinkOnceODRLinkage);
+  else
+    IRLevelVersionVariable->setComdat(
+        M.getOrInsertComdat(StringRef(INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR))));
+}
+
 bool PGOInstrumentationGen::runOnModule(Module &M) {
+  createIRLevelProfileFlagVariable(M);
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
@@ -751,6 +771,13 @@ bool PGOInstrumentationUse::runOnModule(Module &M) {
                                           "Cannot get PGOReader"));
     return false;
   }
+  // TODO: might need to change the warning once the clang option is finalized.
+  if (!PGOReader->isIRLevelProfile()) {
+    Ctx.diagnose(DiagnosticInfoPGOProfile(
+        ProfileFileName.data(), "Not an IR level instrumentation profile"));
+    return false;
+  }
+
 
   for (auto &F : M) {
     if (F.isDeclaration())
