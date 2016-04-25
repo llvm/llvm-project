@@ -841,10 +841,14 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     ConsumeToken(); // The annotation token.
     SourceLocation StateLoc = Toks[0].getLocation();
     IdentifierInfo *StateInfo = Toks[0].getIdentifierInfo();
-    if (!StateInfo ||
-        (!StateInfo->isStr("enable") && !StateInfo->isStr("disable") &&
-         ((OptionUnroll && !StateInfo->isStr("full")) ||
-          (!OptionUnroll && !StateInfo->isStr("assume_safety"))))) {
+
+    bool Valid = StateInfo &&
+                 llvm::StringSwitch<bool>(StateInfo->getName())
+                     .Cases("enable", "disable", true)
+                     .Case("full", OptionUnroll)
+                     .Case("assume_safety", !OptionUnroll)
+                     .Default(false);
+    if (!Valid) {
       Diag(Toks[0].getLocation(), diag::err_pragma_invalid_keyword)
           << /*FullKeyword=*/OptionUnroll;
       return false;
