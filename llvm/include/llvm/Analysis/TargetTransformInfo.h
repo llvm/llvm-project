@@ -326,8 +326,7 @@ public:
                              unsigned AddrSpace = 0) const;
 
   /// \brief Return true if the target supports masked load/store
-  /// AVX2 and AVX-512 targets allow masks for consecutive load and store for
-  /// 32 and 64 bit elements.
+  /// AVX2 and AVX-512 targets allow masks for consecutive load and store
   bool isLegalMaskedStore(Type *DataType) const;
   bool isLegalMaskedLoad(Type *DataType) const;
 

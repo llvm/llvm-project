@@ -1,4 +1,4 @@
-; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-DIV
+; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-DIV
 
 ; int f(int n, int d) {
 ;   if (n / d)
@@ -43,7 +43,7 @@ return:
 ; CHECK-DIV-DAG: Successors according to CFG: BB#1({{.*}}) BB#2
 ; CHECK-DIV-DAG: BB#5
 
-; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-MOD
+; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-MOD
 
 ; int r;
 ; int g(int l, int m) {
@@ -78,8 +78,8 @@ return:
 ; CHECK-MOD-DAG: Successors according to CFG: BB#2
 ; CHECK-MOD-DAG: BB#4
 
-; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -filetype asm -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-CFG
-; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-CFG-ASM
+; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -filetype asm -o /dev/null %s 2>&1 | FileCheck %s -check-prefix CHECK-CFG
+; RUN: llc -mtriple thumbv7--windows-itanium -print-machineinstrs=expand-isel-pseudos -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-CFG-ASM
 
 ; unsigned c;
 ; extern unsigned long g(void);
@@ -143,7 +143,7 @@ attributes #0 = { optsize }
 ; CHECK-CFG-ASM: bl __rt_udiv
 ; CHECK-CFG-ASM: pop.w {{{.*}}, r11, pc}
 
-; RUN: llc -O0 -mtriple thumbv7--windows-itanium -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-WIN__DBZCHK
+; RUN: llc -O0 -mtriple thumbv7--windows-itanium -verify-machineinstrs -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-WIN__DBZCHK
 
 ; long k(void);
 ; int l(void);

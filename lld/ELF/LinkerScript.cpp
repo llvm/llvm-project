@@ -63,9 +63,15 @@ private:
 static int precedence(StringRef Op) {
   return StringSwitch<int>(Op)
       .Case("*", 4)
-      .Case("/", 3)
-      .Case("+", 2)
-      .Case("-", 2)
+      .Case("/", 4)
+      .Case("+", 3)
+      .Case("-", 3)
+      .Case("<", 2)
+      .Case(">", 2)
+      .Case(">=", 2)
+      .Case("<=", 2)
+      .Case("==", 2)
+      .Case("!=", 2)
       .Case("&", 1)
       .Default(-1);
 }
@@ -115,10 +121,6 @@ uint64_t ExprParser::parseTernary(uint64_t Cond) {
 }
 
 uint64_t ExprParser::apply(StringRef Op, uint64_t L, uint64_t R) {
-  if (Op == "+")
-    return L + R;
-  if (Op == "-")
-    return L - R;
   if (Op == "*")
     return L * R;
   if (Op == "/") {
@@ -128,6 +130,22 @@ uint64_t ExprParser::apply(StringRef Op, uint64_t L, uint64_t R) {
     }
     return L / R;
   }
+  if (Op == "+")
+    return L + R;
+  if (Op == "-")
+    return L - R;
+  if (Op == "<")
+    return L < R;
+  if (Op == ">")
+    return L > R;
+  if (Op == ">=")
+    return L >= R;
+  if (Op == "<=")
+    return L <= R;
+  if (Op == "==")
+    return L == R;
+  if (Op == "!=")
+    return L != R;
   if (Op == "&")
     return L & R;
   llvm_unreachable("invalid operator");

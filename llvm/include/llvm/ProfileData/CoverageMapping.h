@@ -370,13 +370,6 @@ struct CoverageSegment {
     return std::tie(L.Line, L.Col, L.Count, L.HasCount, L.IsRegionEntry) ==
            std::tie(R.Line, R.Col, R.Count, R.HasCount, R.IsRegionEntry);
   }
-
-  void setCount(uint64_t NewCount) {
-    Count = NewCount;
-    HasCount = true;
-  }
-
-  void addCount(uint64_t NewCount) { setCount(Count + NewCount); }
 };
 
 /// \brief Coverage information to be processed or displayed.

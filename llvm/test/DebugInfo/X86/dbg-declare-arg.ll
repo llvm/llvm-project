@@ -54,7 +54,7 @@ entry:
   store %class.A* %this, %class.A** %this.addr, align 8
   call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !43, metadata !DIExpression()), !dbg !44
   %this1 = load %class.A*, %class.A** %this.addr
-  call void @_ZN1AD2Ev(%class.A* %this1)
+  call void @_ZN1AD2Ev(%class.A* %this1), !dbg !53
   ret void, !dbg !45
 }
 
@@ -124,3 +124,4 @@ entry:
 !49 = distinct !DILexicalBlock(line: 2, column: 52, file: !51, scope: !25)
 !51 = !DIFile(filename: "a.cc", directory: "/private/tmp")
 !52 = !{i32 1, !"Debug Info Version", i32 3}
+!53 = !DILocation(line: 0, scope: !22)

@@ -91,11 +91,6 @@ private:
 
   int getSectionIndex(StringRef Name);
 
-  uint64_t evaluate(ArrayRef<StringRef> Tokens);
-  uint64_t parseExpr(ArrayRef<StringRef> &Tokens);
-  uint64_t parsePrimary(ArrayRef<StringRef> &Tokens);
-  uint64_t parseExpr1(ArrayRef<StringRef> &Tokens, uint64_t Lhs, int MinPrec);
-  uint64_t parseTernary(ArrayRef<StringRef> &Tokens, uint64_t Cond);
   uintX_t Dot;
 };
 

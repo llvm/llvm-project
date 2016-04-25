@@ -109,23 +109,24 @@ static void saveTempBitcode(const Module &TheModule, StringRef TempDir,
   WriteBitcodeToFile(&TheModule, OS, /* ShouldPreserveUseListOrder */ true);
 }
 
-bool IsFirstDefinitionForLinker(const GlobalValueInfoList &GVInfo,
+bool IsFirstDefinitionForLinker(const GlobalValueSummaryList &GVSummaryList,
                                 const ModuleSummaryIndex &Index,
                                 StringRef ModulePath) {
   // Get the first *linker visible* definition for this global in the summary
   // list.
   auto FirstDefForLinker = llvm::find_if(
-      GVInfo, [](const std::unique_ptr<GlobalValueInfo> &FuncInfo) {
-        auto Linkage = FuncInfo->summary()->linkage();
+      GVSummaryList, [](const std::unique_ptr<GlobalValueSummary> &Summary) {
+        auto Linkage = Summary->linkage();
         return !GlobalValue::isAvailableExternallyLinkage(Linkage);
       });
   // If \p GV is not the first definition, give up...
-  if ((*FirstDefForLinker)->summary()->modulePath() != ModulePath)
+  if ((*FirstDefForLinker)->modulePath() != ModulePath)
     return false;
   // If there is any strong definition anywhere, do not bother emitting this.
   if (llvm::any_of(
-          GVInfo, [](const std::unique_ptr<GlobalValueInfo> &FuncInfo) {
-            auto Linkage = FuncInfo->summary()->linkage();
+          GVSummaryList,
+          [](const std::unique_ptr<GlobalValueSummary> &Summary) {
+            auto Linkage = Summary->linkage();
             return !GlobalValue::isAvailableExternallyLinkage(Linkage) &&
                    !GlobalValue::isWeakForLinker(Linkage);
           }))
@@ -138,8 +139,9 @@ ResolveODR(const ModuleSummaryIndex &Index,
            const FunctionImporter::ExportSetTy &ExportList,
            StringRef ModuleIdentifier, GlobalValue::GUID GUID,
            const GlobalValueSummary &GV) {
-  auto HasMultipleCopies =
-      [&](const GlobalValueInfoList &GVInfo) { return GVInfo.size() > 1; };
+  auto HasMultipleCopies = [&](const GlobalValueSummaryList &GVSummaryList) {
+    return GVSummaryList.size() > 1;
+  };
 
   auto OriginalLinkage = GV.linkage();
   switch (OriginalLinkage) {
@@ -155,17 +157,17 @@ ResolveODR(const ModuleSummaryIndex &Index,
     break;
   case GlobalValue::LinkOnceODRLinkage:
   case GlobalValue::WeakODRLinkage: {
-    auto &GVInfo = Index.findGlobalValueInfoList(GUID)->second;
+    auto &GVSummaryList = Index.findGlobalValueSummaryList(GUID)->second;
     // We need to emit only one of these, the first module will keep
     // it, but turned into a weak while the others will drop it.
-    if (!HasMultipleCopies(GVInfo)) {
+    if (!HasMultipleCopies(GVSummaryList)) {
       // Exported LinkonceODR needs to be promoted to not be discarded
       if (GlobalValue::isDiscardableIfUnused(OriginalLinkage) &&
           ExportList.count(GUID))
         return GlobalValue::WeakODRLinkage;
       break;
     }
-    if (IsFirstDefinitionForLinker(GVInfo, Index, ModuleIdentifier))
+    if (IsFirstDefinitionForLinker(GVSummaryList, Index, ModuleIdentifier))
       return GlobalValue::WeakODRLinkage;
     else if (isa<AliasSummary>(&GV))
       // Alias can't be turned into available_externally.

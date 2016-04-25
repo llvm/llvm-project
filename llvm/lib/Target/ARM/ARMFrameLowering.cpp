@@ -485,7 +485,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
 
     AddDefaultCC(AddDefaultPred(BuildMI(MBB, MBBI, dl, TII.get(ARM::t2SUBrr),
                                         ARM::SP)
-                                .addReg(ARM::SP, RegState::Define)
+                                .addReg(ARM::SP, RegState::Kill)
                                 .addReg(ARM::R4, RegState::Kill)
                                 .setMIFlags(MachineInstr::FrameSetup)));
     NumBytes = 0;
