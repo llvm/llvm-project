@@ -402,6 +402,26 @@ TEST_P(MaybeSparseCoverageMappingTest, combine_regions) {
   ASSERT_EQ(CoverageSegment(9, 9, false), Segments[3]);
 }
 
+TEST_P(MaybeSparseCoverageMappingTest,
+       restore_combined_counter_after_nested_region) {
+  InstrProfRecord Record("func", 0x1234, {10, 20, 40});
+  ProfileWriter.addRecord(std::move(Record));
+
+  startFunction("func", 0x1234);
+  addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
+  addCMR(Counter::getCounter(1), "file1", 1, 1, 9, 9);
+  addCMR(Counter::getCounter(2), "file1", 3, 3, 5, 5);
+  loadCoverageMapping();
+
+  CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+  ASSERT_EQ(4U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 1, 30, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(3, 3, 40, true), Segments[1]);
+  EXPECT_EQ(CoverageSegment(5, 5, 30, false), Segments[2]);
+  EXPECT_EQ(CoverageSegment(9, 9, false), Segments[3]);
+}
+
 TEST_P(MaybeSparseCoverageMappingTest, dont_combine_expansions) {
   InstrProfRecord Record1("func", 0x1234, {10, 20});
   InstrProfRecord Record2("func", 0x1234, {0, 0});
