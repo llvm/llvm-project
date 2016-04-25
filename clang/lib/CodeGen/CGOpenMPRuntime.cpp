@@ -1685,8 +1685,11 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
       auto FTy = CGM.getTypes().GetFunctionType(FI);
       auto Fn = CGM.CreateGlobalInitOrDestructFunction(
           FTy, ".__kmpc_global_dtor_.", FI, Loc);
+      auto NL = ApplyDebugLocation::CreateEmpty(DtorCGF);
       DtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, Fn, FI, Args,
                             SourceLocation());
+      // Create a scope with an artificial location for the body of this function.
+      auto AL = ApplyDebugLocation::CreateArtificial(DtorCGF);
       auto ArgVal = DtorCGF.EmitLoadOfScalar(
           DtorCGF.GetAddrOfLocalVar(&Dst),
           /*Volatile=*/false, CGM.getContext().VoidPtrTy, Dst.getLocation());

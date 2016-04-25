@@ -320,6 +320,40 @@ TEST_F(FormatTestJS, FormatsFreestandingFunctions) {
   verifyFormat("function f() {}");
 }
 
+TEST_F(FormatTestJS, GeneratorFunctions) {
+  verifyFormat("function* f() {\n"
+               "  let x = 1;\n"
+               "  yield x;\n"
+               "  yield* something();\n"
+               "}");
+  verifyFormat("function*\n"
+               "    f() {\n"
+               "}",
+               getGoogleJSStyleWithColumns(8));
+  verifyFormat("export function* f() {\n"
+               "  yield 1;\n"
+               "}\n");
+  verifyFormat("class X {\n"
+               "  * generatorMethod() { yield x; }\n"
+               "}");
+}
+
+TEST_F(FormatTestJS, AsyncFunctions) {
+  verifyFormat("async function f() {\n"
+               "  let x = 1;\n"
+               "  return fetch(x);\n"
+               "}");
+  verifyFormat("async function* f() {\n"
+               "  yield fetch(x);\n"
+               "}");
+  verifyFormat("export async function f() {\n"
+               "  return fetch(x);\n"
+               "}");
+  verifyFormat("class X {\n"
+               "  async asyncMethod() { return fetch(1); }\n"
+               "}");
+}
+
 TEST_F(FormatTestJS, ArrayLiterals) {
   verifyFormat("var aaaaa: List<SomeThing> =\n"
                "    [new SomeThingAAAAAAAAAAAA(), new SomeThingBBBBBBBBB()];");

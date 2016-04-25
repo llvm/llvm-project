@@ -535,13 +535,16 @@ struct AdditionalKeywords {
     kw_NS_ENUM = &IdentTable.get("NS_ENUM");
     kw_NS_OPTIONS = &IdentTable.get("NS_OPTIONS");
 
+    kw_async = &IdentTable.get("async");
+    kw_await = &IdentTable.get("await");
     kw_finally = &IdentTable.get("finally");
-    kw_function = &IdentTable.get("function");
     kw_from = &IdentTable.get("from");
+    kw_function = &IdentTable.get("function");
     kw_import = &IdentTable.get("import");
     kw_is = &IdentTable.get("is");
     kw_let = &IdentTable.get("let");
     kw_var = &IdentTable.get("var");
+    kw_yield = &IdentTable.get("yield");
 
     kw_abstract = &IdentTable.get("abstract");
     kw_assert = &IdentTable.get("assert");
@@ -582,13 +585,16 @@ struct AdditionalKeywords {
   IdentifierInfo *kw___except;
 
   // JavaScript keywords.
+  IdentifierInfo *kw_async;
+  IdentifierInfo *kw_await;
   IdentifierInfo *kw_finally;
-  IdentifierInfo *kw_function;
   IdentifierInfo *kw_from;
+  IdentifierInfo *kw_function;
   IdentifierInfo *kw_import;
   IdentifierInfo *kw_is;
   IdentifierInfo *kw_let;
   IdentifierInfo *kw_var;
+  IdentifierInfo *kw_yield;
 
   // Java keywords.
   IdentifierInfo *kw_abstract;
