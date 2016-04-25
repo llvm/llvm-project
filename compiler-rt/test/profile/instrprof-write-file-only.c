@@ -11,7 +11,7 @@ int foo(int);
 int main(int argc, const char *argv[]) {
   // CHECK-LABEL: define {{.*}} @main(
   // CHECK: br i1 %{{.*}}, label %{{.*}}, label %{{.*}}, !prof ![[PD1:[0-9]+]]
-  if (argc > 1)
+  if (argc > 42)
     return 1;
 
   // Since the runtime has been suppressed, initialize the file name, as the
