@@ -739,8 +739,10 @@ TEST_F(InstrProfTest, instr_prof_symtab_module_test) {
     Function *F = M->getFunction(Funcs[I]);
     ASSERT_TRUE(F != NULL);
     std::string PGOName = getPGOFuncName(*F);
+    uint64_t Key = IndexedInstrProf::ComputeHash(PGOName);
     ASSERT_EQ(StringRef(PGOName),
-              ProfSymtab.getFuncName(IndexedInstrProf::ComputeHash(PGOName)));
+              ProfSymtab.getFuncName(Key));
+    ASSERT_EQ(StringRef(Funcs[I]), ProfSymtab.getOrigFuncName(Key));
   }
 }
 
