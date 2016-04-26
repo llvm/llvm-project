@@ -24,7 +24,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -37,6 +36,7 @@
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSelectionDAGInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 using namespace llvm;
@@ -7660,7 +7660,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   if (!HasFMAD && !HasFMA)
     return SDValue();
 
-  const SelectionDAGTargetInfo *STI = DAG.getSubtarget().getSelectionDAGInfo();
+  const TargetSelectionDAGInfo *STI = DAG.getSubtarget().getSelectionDAGInfo();
   ;
   if (AllowFusion && STI && STI->GenerateFMAsInMachineCombiner(OptLevel))
     return SDValue();
@@ -7848,7 +7848,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   if (!HasFMAD && !HasFMA)
     return SDValue();
 
-  const SelectionDAGTargetInfo *STI = DAG.getSubtarget().getSelectionDAGInfo();
+  const TargetSelectionDAGInfo *STI = DAG.getSubtarget().getSelectionDAGInfo();
   if (AllowFusion && STI && STI->GenerateFMAsInMachineCombiner(OptLevel))
     return SDValue();
 
