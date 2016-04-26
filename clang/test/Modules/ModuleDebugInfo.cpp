@@ -130,5 +130,9 @@
 // CHECK-SAME:             flags: DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTS15FwdDeclTemplateIiE")
 
+// Forward-declared member of a template.
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Member",
+// CHECK-SAME:             flags: DIFlagFwdDecl
+// CHECK-SAME:             identifier: "_ZTSN21FwdDeclTemplateMemberIiE6MemberE")
 
 // CHECK-NEG-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "PureForwardDecl"

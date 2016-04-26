@@ -17,6 +17,9 @@ set(CLANG_PLUGIN_SUPPORT OFF CACHE BOOL "")
 set(BUG_REPORT_URL "http://developer.apple.com/bugreporter/" CACHE STRING "")
 set(LLVM_ENABLE_TIMESTAMPS OFF CACHE BOOL "Don't time-stamp shipping builds - this makes builds reproducible")
 
+set(LLVM_BUILD_EXTERNAL_COMPILER_RT ON CACHE BOOL "Build Compiler-RT with just-built clang")
+set(COMPILER_RT_ENABLE_IOS ON CACHE BOOL "Build iOS Compiler-RT libraries")
+
 # Make unit tests (if present) part of the ALL target
 set(LLVM_BUILD_TESTS ON CACHE BOOL "")
 # Don't build or run the compiler-rt tests
