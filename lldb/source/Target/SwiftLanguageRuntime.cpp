@@ -1211,7 +1211,6 @@ m_metadata_location(location)
     m_remote_ast.reset(new swift::remoteAST::RemoteASTContext(*ast_ctx, m_swift_runtime->GetMemoryReader()));
 }
 
-#define METADATAPROMISE_FALLBACK_TO_METADATA
 CompilerType
 SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise ()
 {
@@ -1222,15 +1221,7 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise ()
     if (swift::remoteAST::Result<swift::Type> result = m_remote_ast->getTypeForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location)))
         return (m_compiler_type = CompilerType(m_swift_ast, result.getValue().getPointer())).getValue();
     else
-    {
-#ifdef METADATAPROMISE_FALLBACK_TO_METADATA
-        MetadataSP metadata_sp = m_swift_runtime->GetMetadataForLocation(m_metadata_location);
-        Error error;
-        return (m_compiler_type = m_swift_runtime->GetTypeForMetadata(metadata_sp, SwiftASTContext::GetSwiftASTContext(m_swift_ast), error)).getValue();
-#else
         return (m_compiler_type = CompilerType()).getValue();
-#endif
-    }
 }
 
 llvm::Optional<swift::MetadataKind>
@@ -1245,9 +1236,6 @@ SwiftLanguageRuntime::MetadataPromise::FulfillKindPromise ()
     else
         return m_metadata_kind;
 }
-#ifdef METADATAPROMISE_FALLBACK_TO_METADATA
-#undef METADATAPROMISE_FALLBACK_TO_METADATA
-#endif
 
 bool
 SwiftLanguageRuntime::MetadataPromise::IsStaticallyDetermined ()
@@ -1536,6 +1524,14 @@ SwiftLanguageRuntime::GetMetadataPromise (lldb::addr_t addr,
     if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
         return nullptr;
     
+    if (auto objc_runtime = GetObjCRuntime())
+    {
+        if (objc_runtime->GetRuntimeVersion() == ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2)
+        {
+            addr = ((AppleObjCRuntimeV2*)objc_runtime)->GetPointerISA(addr);
+        }
+    }
+
     MetadataPromiseKey key{swift_ast_ctx->GetASTContext(),addr};
     
     auto iter = m_promises_map.find(key), end = m_promises_map.end();

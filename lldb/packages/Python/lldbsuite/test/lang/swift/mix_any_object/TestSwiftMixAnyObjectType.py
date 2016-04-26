@@ -26,7 +26,6 @@ class TestSwiftMixAnyObjectType(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.expectedFailureAll()
     def test_any_object_type(self):
         """Test the AnyObject type in different combinations"""
         self.build()
