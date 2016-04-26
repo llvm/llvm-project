@@ -1516,26 +1516,25 @@ static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
 
 /// Does a type definition exist in an imported clang module?
 static bool isDefinedInClangModule(const RecordDecl *RD) {
-  if (!RD->isFromASTFile())
-    return false;
-  if (!RD->getDefinition())
+  if (!RD || !RD->isFromASTFile())
     return false;
   if (!RD->isExternallyVisible() && RD->getName().empty())
     return false;
-  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
-    if (!CTSD->isCompleteDefinition())
-      return false;
-    // Make sure the instantiation is actually in a module.
-    if (CTSD->field_begin() != CTSD->field_end())
-      return CTSD->field_begin()->isFromASTFile();
+  if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
+    assert(CXXDecl->isCompleteDefinition() && "incomplete record definition");
+    if (CXXDecl->getTemplateSpecializationKind() != TSK_Undeclared)
+      // Make sure the instantiation is actually in a module.
+      if (CXXDecl->field_begin() != CXXDecl->field_end())
+        return CXXDecl->field_begin()->isFromASTFile();
   }
+
   return true;
 }
 
 static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
                                  bool DebugTypeExtRefs, const RecordDecl *RD,
                                  const LangOptions &LangOpts) {
-  if (DebugTypeExtRefs && isDefinedInClangModule(RD))
+  if (DebugTypeExtRefs && isDefinedInClangModule(RD->getDefinition()))
     return true;
 
   if (DebugKind > codegenoptions::LimitedDebugInfo)

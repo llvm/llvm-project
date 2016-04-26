@@ -146,3 +146,40 @@
 // CHECK-SYNC_CAS_MIPS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
 // CHECK-SYNC_CAS_MIPS32-NOT: __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8
 // CHECK-SYNC_CAS_MIPS64: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x cl \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL10
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=CL1.1 \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL11
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=CL1.2 \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL12
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=CL2.0 \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL20
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-fast-relaxed-math \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-FRM
+// CHECK-CL10: #define CL_VERSION_1_0 100
+// CHECK-CL10: #define CL_VERSION_1_1 110
+// CHECK-CL10: #define CL_VERSION_1_2 120
+// CHECK-CL10: #define CL_VERSION_2_0 200
+// CHECK-CL10: #define __OPENCL_C_VERSION__ 100
+// CHECK-CL10-NOT: #define __FAST_RELAXED_MATH__ 1
+// CHECK-CL11: #define CL_VERSION_1_0 100
+// CHECK-CL11: #define CL_VERSION_1_1 110
+// CHECK-CL11: #define CL_VERSION_1_2 120
+// CHECK-CL11: #define CL_VERSION_2_0 200
+// CHECK-CL11: #define __OPENCL_C_VERSION__ 110
+// CHECK-CL11-NOT: #define __FAST_RELAXED_MATH__ 1
+// CHECK-CL12: #define CL_VERSION_1_0 100
+// CHECK-CL12: #define CL_VERSION_1_1 110
+// CHECK-CL12: #define CL_VERSION_1_2 120
+// CHECK-CL12: #define CL_VERSION_2_0 200
+// CHECK-CL12: #define __OPENCL_C_VERSION__ 120
+// CHECK-CL12-NOT: #define __FAST_RELAXED_MATH__ 1
+// CHECK-CL20: #define CL_VERSION_1_0 100
+// CHECK-CL20: #define CL_VERSION_1_1 110
+// CHECK-CL20: #define CL_VERSION_1_2 120
+// CHECK-CL20: #define CL_VERSION_2_0 200
+// CHECK-CL20: #define __OPENCL_C_VERSION__ 200
+// CHECK-CL20-NOT: #define __FAST_RELAXED_MATH__ 1
+// CHECK-FRM: #define __FAST_RELAXED_MATH__ 1
+

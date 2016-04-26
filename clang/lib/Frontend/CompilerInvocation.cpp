@@ -1502,9 +1502,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
             << A->getAsString(Args) << "C++/ObjC++";
         break;
       case IK_OpenCL:
-        if (!Std.isC99())
-          Diags.Report(diag::err_drv_argument_not_allowed_with)
-            << A->getAsString(Args) << "OpenCL";
+        Diags.Report(diag::err_drv_argument_not_allowed_with)
+          << A->getAsString(Args) << "OpenCL";
         break;
       case IK_CUDA:
       case IK_PreprocessedCuda:

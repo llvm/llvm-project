@@ -28,6 +28,8 @@ using DebugCXX::Struct;
 
 Struct s;
 DebugCXX::Enum e;
+
+// Template instantiations.
 DebugCXX::Template<long> implicitTemplate;
 DebugCXX::Template<int> explicitTemplate;
 DebugCXX::FloatInstantiation typedefTemplate;
@@ -50,6 +52,16 @@ template <class T> class FwdDeclTemplate { T t; };
 TypedefFwdDeclTemplate tdfdt;
 
 InAnonymousNamespace anon;
+
+// Types that are forward-declared in the module and defined here.
+struct PureFwdDecl { int i; };
+PureFwdDecl definedLocally;
+
+struct Specialized<int>::Member { int i; };
+struct Specialized<int>::Member definedLocally2;
+
+template <class T> struct FwdDeclTemplateMember<T>::Member { T t; };
+TypedefFwdDeclTemplateMember tdfdtm;
 
 void foo() {
   anon.i = GlobalStruct.i = GlobalUnion.i = GlobalEnum;
@@ -132,6 +144,22 @@ void foo() {
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "FwdDeclTemplate<int>",
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTS15FwdDeclTemplateIiE")
+
+// This type is defined locally and forward-declared in the module.
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "PureFwdDecl",
+// CHECK-SAME:             elements:
+// CHECK-SAME:             identifier: "_ZTS11PureFwdDecl")
+
+// This type is defined locally and forward-declared in the module.
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Member",
+// CHECK-SAME:             elements:
+// CHECK-SAME:             identifier: "_ZTSN11SpecializedIiE6MemberE")
+
+// This type is defined locally and forward-declared in the module.
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Member",
+// CHECK-SAME:             elements:
+// CHECK-SAME:             identifier: "_ZTSN21FwdDeclTemplateMemberIiE6MemberE")
+
 
 // CHECK: !DIGlobalVariable(name: "anon_enum", {{.*}}, type: ![[ANON_ENUM:[0-9]+]]
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, scope: ![[NS]],

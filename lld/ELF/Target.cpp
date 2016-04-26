@@ -1310,6 +1310,9 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
   switch (Type) {
   default:
     return R_ABS;
+  case R_MIPS_GPREL16:
+  case R_MIPS_GPREL32:
+    return R_GOTREL;
   case R_MIPS_26:
     return R_PLT;
   case R_MIPS_HI16:
@@ -1520,13 +1523,13 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     writeMipsLo16<E>(Loc, Val);
     break;
   case R_MIPS_GPREL16: {
-    int64_t V = Val - getMipsGpAddr<ELFT>();
+    int64_t V = Val - MipsGPOffset;
     checkInt<16>(V, Type);
     writeMipsLo16<E>(Loc, V);
     break;
   }
   case R_MIPS_GPREL32:
-    write32<E>(Loc, Val - getMipsGpAddr<ELFT>());
+    write32<E>(Loc, Val - MipsGPOffset);
     break;
   case R_MIPS_HI16:
     writeMipsHi16<E>(Loc, Val);
