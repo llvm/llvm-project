@@ -330,18 +330,11 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__is_identifier    = RegisterBuiltinMacro(*this, "__is_identifier");
 
   // Modules.
-  if (LangOpts.Modules) {
-    Ident__building_module  = RegisterBuiltinMacro(*this, "__building_module");
-
-    // __MODULE__
-    if (!LangOpts.CurrentModule.empty())
-      Ident__MODULE__ = RegisterBuiltinMacro(*this, "__MODULE__");
-    else
-      Ident__MODULE__ = nullptr;
-  } else {
-    Ident__building_module = nullptr;
+  Ident__building_module  = RegisterBuiltinMacro(*this, "__building_module");
+  if (!LangOpts.CurrentModule.empty())
+    Ident__MODULE__ = RegisterBuiltinMacro(*this, "__MODULE__");
+  else
     Ident__MODULE__ = nullptr;
-  }
 }
 
 /// isTrivialSingleTokenExpansion - Return true if MI, which has a single token
