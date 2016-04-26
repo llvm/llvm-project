@@ -113,6 +113,14 @@ class BitcodeReaderMetadataList {
   /// move) on resize, and TrackingMDRef is very expensive to copy.
   SmallVector<TrackingMDRef, 1> MetadataPtrs;
 
+  /// Structures for resolving old type refs.
+  struct {
+    SmallDenseMap<MDString *, TempMDTuple, 1> Unknown;
+    SmallDenseMap<MDString *, DICompositeType *, 1> Final;
+    SmallDenseMap<MDString *, DICompositeType *, 1> FwdDecls;
+    std::vector<std::pair<TrackingMDRef, TempMDTuple>> Arrays;
+  } OldTypeRefs;
+
   LLVMContext &Context;
 public:
   BitcodeReaderMetadataList(LLVMContext &C)
@@ -158,6 +166,18 @@ public:
   void assignValue(Metadata *MD, unsigned Idx);
   void tryToResolveCycles();
   bool hasFwdRefs() const { return AnyFwdRefs; }
+
+  /// Upgrade a type that had an MDString reference.
+  void addTypeRef(MDString &UUID, DICompositeType &CT);
+
+  /// Upgrade a type that had an MDString reference.
+  Metadata *upgradeTypeRef(Metadata *MaybeUUID);
+
+  /// Upgrade a type ref array that may have MDString references.
+  Metadata *upgradeTypeRefArray(Metadata *MaybeTuple);
+
+private:
+  Metadata *resolveTypeRefArray(Metadata *MaybeTuple);
 };
 
 class BitcodeReader : public GVMaterializer {
@@ -1136,12 +1156,32 @@ MDNode *BitcodeReaderMetadataList::getMDNodeFwdRefOrNull(unsigned Idx) {
 }
 
 void BitcodeReaderMetadataList::tryToResolveCycles() {
-  if (!AnyFwdRefs)
-    // Nothing to do.
-    return;
-
   if (NumFwdRefs)
     // Still forward references... can't resolve cycles.
+    return;
+
+  // Give up on finding a full definition for any forward decls that remain.
+  for (const auto &Ref : OldTypeRefs.FwdDecls)
+    OldTypeRefs.Final.insert(Ref);
+  OldTypeRefs.FwdDecls.clear();
+
+  // Upgrade from old type ref arrays.  In strange cases, this could add to
+  // OldTypeRefs.Unknown.
+  for (const auto &Array : OldTypeRefs.Arrays)
+    Array.second->replaceAllUsesWith(resolveTypeRefArray(Array.first.get()));
+
+  // Replace old string-based type refs with the resolved node, if possible.
+  // If we haven't seen the node, leave it to the verifier to complain about
+  // the invalid string reference.
+  for (const auto &Ref : OldTypeRefs.Unknown)
+    if (DICompositeType *CT = OldTypeRefs.Final.lookup(Ref.first))
+      Ref.second->replaceAllUsesWith(CT);
+    else
+      Ref.second->replaceAllUsesWith(Ref.first);
+  OldTypeRefs.Unknown.clear();
+
+  if (!AnyFwdRefs)
+    // Nothing to do.
     return;
 
   // Resolve any cycles.
@@ -1157,6 +1197,60 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
 
   // Make sure we return early again until there's another forward ref.
   AnyFwdRefs = false;
+}
+
+void BitcodeReaderMetadataList::addTypeRef(MDString &UUID,
+                                           DICompositeType &CT) {
+  assert(CT.getRawIdentifier() == &UUID && "Mismatched UUID");
+  if (CT.isForwardDecl())
+    OldTypeRefs.FwdDecls.insert(std::make_pair(&UUID, &CT));
+  else
+    OldTypeRefs.Final.insert(std::make_pair(&UUID, &CT));
+}
+
+Metadata *BitcodeReaderMetadataList::upgradeTypeRef(Metadata *MaybeUUID) {
+  auto *UUID = dyn_cast_or_null<MDString>(MaybeUUID);
+  if (LLVM_LIKELY(!UUID))
+    return MaybeUUID;
+
+  if (auto *CT = OldTypeRefs.Final.lookup(UUID))
+    return CT;
+
+  auto &Ref = OldTypeRefs.Unknown[UUID];
+  if (!Ref)
+    Ref = MDNode::getTemporary(Context, None);
+  return Ref.get();
+}
+
+Metadata *BitcodeReaderMetadataList::upgradeTypeRefArray(Metadata *MaybeTuple) {
+  auto *Tuple = dyn_cast_or_null<MDTuple>(MaybeTuple);
+  if (!Tuple || Tuple->isDistinct())
+    return MaybeTuple;
+
+  // Look through the array immediately if possible.
+  if (!Tuple->isTemporary())
+    return resolveTypeRefArray(Tuple);
+
+  // Create and return a placeholder to use for now.  Eventually
+  // resolveTypeRefArrays() will be resolve this forward reference.
+  OldTypeRefs.Arrays.emplace_back(
+      std::piecewise_construct, std::make_tuple(Tuple),
+      std::make_tuple(MDTuple::getTemporary(Context, None)));
+  return OldTypeRefs.Arrays.back().second.get();
+}
+
+Metadata *BitcodeReaderMetadataList::resolveTypeRefArray(Metadata *MaybeTuple) {
+  auto *Tuple = dyn_cast_or_null<MDTuple>(MaybeTuple);
+  if (!Tuple || Tuple->isDistinct())
+    return MaybeTuple;
+
+  // Look through the DITypeRefArray, upgrading each DITypeRef.
+  SmallVector<Metadata *, 32> Ops;
+  Ops.reserve(Tuple->getNumOperands());
+  for (Metadata *MD : Tuple->operands())
+    Ops.push_back(upgradeTypeRef(MD));
+
+  return MDTuple::get(Context, Ops);
 }
 
 Type *BitcodeReader::getTypeByID(unsigned ID) {
@@ -2036,6 +2130,11 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
     return cast_or_null<MDString>(getMDOrNull(ID));
   };
 
+  // Support for old type refs.
+  auto getDITypeRefOrNull = [&](unsigned ID) {
+    return MetadataList.upgradeTypeRef(getMDOrNull(ID));
+  };
+
 #define GET_OR_DISTINCT(CLASS, ARGS)                                           \
   (IsDistinct ? CLASS::getDistinct ARGS : CLASS::get ARGS)
 
@@ -2265,9 +2364,9 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
           GET_OR_DISTINCT(DIDerivedType,
                           (Context, Record[1], getMDString(Record[2]),
                            getMDOrNull(Record[3]), Record[4],
-                           getMDOrNull(Record[5]), getMDOrNull(Record[6]),
-                           Record[7], Record[8], Record[9], Record[10],
-                           getMDOrNull(Record[11]))),
+                           getDITypeRefOrNull(Record[5]),
+                           getDITypeRefOrNull(Record[6]), Record[7], Record[8],
+                           Record[9], Record[10], getMDOrNull(Record[11]))),
           NextMetadataNo++);
       break;
     }
@@ -2277,20 +2376,21 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
 
       // If we have a UUID and this is not a forward declaration, lookup the
       // mapping.
-      IsDistinct = Record[0];
+      IsDistinct = Record[0] & 0x1;
+      bool IsNotUsedInTypeRef = Record[0] >= 2;
       unsigned Tag = Record[1];
       MDString *Name = getMDString(Record[2]);
       Metadata *File = getMDOrNull(Record[3]);
       unsigned Line = Record[4];
-      Metadata *Scope = getMDOrNull(Record[5]);
-      Metadata *BaseType = getMDOrNull(Record[6]);
+      Metadata *Scope = getDITypeRefOrNull(Record[5]);
+      Metadata *BaseType = getDITypeRefOrNull(Record[6]);
       uint64_t SizeInBits = Record[7];
       uint64_t AlignInBits = Record[8];
       uint64_t OffsetInBits = Record[9];
       unsigned Flags = Record[10];
       Metadata *Elements = getMDOrNull(Record[11]);
       unsigned RuntimeLang = Record[12];
-      Metadata *VTableHolder = getMDOrNull(Record[13]);
+      Metadata *VTableHolder = getDITypeRefOrNull(Record[13]);
       Metadata *TemplateParams = getMDOrNull(Record[14]);
       auto *Identifier = getMDString(Record[15]);
       DICompositeType *CT = nullptr;
@@ -2307,6 +2407,8 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
                               SizeInBits, AlignInBits, OffsetInBits, Flags,
                               Elements, RuntimeLang, VTableHolder,
                               TemplateParams, Identifier));
+      if (!IsNotUsedInTypeRef && Identifier)
+        MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 
       MetadataList.assignValue(CT, NextMetadataNo++);
       break;
@@ -2315,10 +2417,14 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       if (Record.size() != 3)
         return error("Invalid record");
 
-      IsDistinct = Record[0];
+      IsDistinct = Record[0] & 0x1;
+      bool IsOldTypeRefArray = Record[0] < 2;
+      Metadata *Types = getMDOrNull(Record[2]);
+      if (LLVM_UNLIKELY(IsOldTypeRefArray))
+        Types = MetadataList.upgradeTypeRefArray(Types);
+
       MetadataList.assignValue(
-          GET_OR_DISTINCT(DISubroutineType,
-                          (Context, Record[1], getMDOrNull(Record[2]))),
+          GET_OR_DISTINCT(DISubroutineType, (Context, Record[1], Types)),
           NextMetadataNo++);
       break;
     }
@@ -2385,10 +2491,10 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       bool HasCU = Offset && !HasFn;
       DISubprogram *SP = GET_OR_DISTINCT(
           DISubprogram,
-          (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
+          (Context, getDITypeRefOrNull(Record[1]), getMDString(Record[2]),
            getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
            getMDOrNull(Record[6]), Record[7], Record[8], Record[9],
-           getMDOrNull(Record[10]), Record[11], Record[12], Record[13],
+           getDITypeRefOrNull(Record[10]), Record[11], Record[12], Record[13],
            Record[14], HasCU ? CUorFn : nullptr,
            getMDOrNull(Record[15 + Offset]), getMDOrNull(Record[16 + Offset]),
            getMDOrNull(Record[17 + Offset])));
@@ -2475,7 +2581,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       IsDistinct = Record[0];
       MetadataList.assignValue(GET_OR_DISTINCT(DITemplateTypeParameter,
                                                (Context, getMDString(Record[1]),
-                                                getMDOrNull(Record[2]))),
+                                                getDITypeRefOrNull(Record[2]))),
                                NextMetadataNo++);
       break;
     }
@@ -2487,7 +2593,8 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       MetadataList.assignValue(
           GET_OR_DISTINCT(DITemplateValueParameter,
                           (Context, Record[1], getMDString(Record[2]),
-                           getMDOrNull(Record[3]), getMDOrNull(Record[4]))),
+                           getDITypeRefOrNull(Record[3]),
+                           getMDOrNull(Record[4]))),
           NextMetadataNo++);
       break;
     }
@@ -2501,7 +2608,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
                           (Context, getMDOrNull(Record[1]),
                            getMDString(Record[2]), getMDString(Record[3]),
                            getMDOrNull(Record[4]), Record[5],
-                           getMDOrNull(Record[6]), Record[7], Record[8],
+                           getDITypeRefOrNull(Record[6]), Record[7], Record[8],
                            getMDOrNull(Record[9]), getMDOrNull(Record[10]))),
           NextMetadataNo++);
       break;
@@ -2520,8 +2627,8 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
                           (Context, getMDOrNull(Record[1 + HasTag]),
                            getMDString(Record[2 + HasTag]),
                            getMDOrNull(Record[3 + HasTag]), Record[4 + HasTag],
-                           getMDOrNull(Record[5 + HasTag]), Record[6 + HasTag],
-                           Record[7 + HasTag])),
+                           getDITypeRefOrNull(Record[5 + HasTag]),
+                           Record[6 + HasTag], Record[7 + HasTag])),
           NextMetadataNo++);
       break;
     }
@@ -2546,7 +2653,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
                           (Context, getMDString(Record[1]),
                            getMDOrNull(Record[2]), Record[3],
                            getMDString(Record[4]), getMDString(Record[5]),
-                           Record[6], getMDOrNull(Record[7]))),
+                           Record[6], getDITypeRefOrNull(Record[7]))),
           NextMetadataNo++);
       break;
     }
@@ -2558,7 +2665,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       MetadataList.assignValue(
           GET_OR_DISTINCT(DIImportedEntity,
                           (Context, Record[1], getMDOrNull(Record[2]),
-                           getMDOrNull(Record[3]), Record[4],
+                           getDITypeRefOrNull(Record[3]), Record[4],
                            getMDString(Record[5]))),
           NextMetadataNo++);
       break;
