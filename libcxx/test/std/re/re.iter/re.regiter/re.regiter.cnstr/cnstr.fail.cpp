@@ -17,11 +17,13 @@
 //                      regex_constants::match_flag_type m =
 //                        regex_constants::match_default) = delete;
 
-// XFAIL: C++98, c++03, c++11
-
 #include <regex>
 #include <cassert>
 #include "test_macros.h"
+
+#if TEST_STD_VER < 14
+#error
+#endif
 
 int main()
 {

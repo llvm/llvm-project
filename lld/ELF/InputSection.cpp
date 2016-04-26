@@ -81,7 +81,7 @@ template <class ELFT>
 static DefinedRegular<ELFT> *getRelocTargetSym(elf::ObjectFile<ELFT> *File,
                                                const typename ELFT::Rel &Rel) {
   uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
-  SymbolBody &B = File->getSymbolBody(SymIndex).repl();
+  SymbolBody &B = File->getSymbolBody(SymIndex);
   if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B))
     if (D->Section)
       return D;
@@ -155,7 +155,7 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   for (const RelTy &Rel : Rels) {
     uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
     uint32_t Type = Rel.getType(Config->Mips64EL);
-    SymbolBody &Body = this->File->getSymbolBody(SymIndex).repl();
+    SymbolBody &Body = this->File->getSymbolBody(SymIndex);
 
     RelTy *P = reinterpret_cast<RelTy *>(Buf);
     Buf += sizeof(RelTy);

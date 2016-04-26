@@ -19,23 +19,47 @@ void assertNotZeroPcs(uintptr_t *buf, uintptr_t size) {
 }
 
 int main() {
-  uintptr_t *buf = NULL;
-  uintptr_t sz = __sanitizer_get_coverage_pc_buffer(&buf);
-  assertNotZeroPcs(buf, sz);
-  assert(sz);
+  {
+    uintptr_t *buf = NULL;
+    uintptr_t sz = __sanitizer_get_coverage_pc_buffer(&buf);
+    assertNotZeroPcs(buf, sz);
+    assert(sz);
+  }
 
-  foo();
-  bar();
-  uintptr_t *buf1 = NULL;
-  uintptr_t sz1 = __sanitizer_get_coverage_pc_buffer(&buf1);
-  assertNotZeroPcs(buf1, sz1);
-  assert(buf1 == buf);
-  assert(sz1 > sz);
+  {
+    uintptr_t *buf = NULL;
+    uintptr_t sz = __sanitizer_get_coverage_pc_buffer(&buf);
+    // call functions for the first time.
+    foo();
+    bar();
+    uintptr_t *buf1 = NULL;
+    uintptr_t sz1 = __sanitizer_get_coverage_pc_buffer(&buf1);
+    assertNotZeroPcs(buf1, sz1);
+    assert(buf1 == buf);
+    assert(sz1 > sz);
+  }
 
-  __sanitizer_reset_coverage();
-  uintptr_t *buf3 = NULL;
-  uintptr_t sz3 = __sanitizer_get_coverage_pc_buffer(&buf3);
-  assertNotZeroPcs(buf3, sz3);
-  assert(buf3 == buf);
-  assert(sz3 < sz1);
+  {
+    uintptr_t *buf = NULL;
+    uintptr_t sz = __sanitizer_get_coverage_pc_buffer(&buf);
+    // second call shouldn't increase coverage.
+    bar();
+    uintptr_t *buf1 = NULL;
+    uintptr_t sz1 = __sanitizer_get_coverage_pc_buffer(&buf1);
+    assertNotZeroPcs(buf1, sz1);
+    assert(buf1 == buf);
+    assert(sz1 == sz);
+  }
+
+  {
+    uintptr_t *buf = NULL;
+    uintptr_t sz = __sanitizer_get_coverage_pc_buffer(&buf);
+    // reset coverage to 0.
+    __sanitizer_reset_coverage();
+    uintptr_t *buf1 = NULL;
+    uintptr_t sz1 = __sanitizer_get_coverage_pc_buffer(&buf1);
+    assertNotZeroPcs(buf1, sz1);
+    assert(buf1 == buf);
+    assert(sz1 < sz);
+  }
 }
