@@ -31,6 +31,7 @@
 #include "NoexceptMoveConstructorCheck.h"
 #include "NonCopyableObjects.h"
 #include "PointerAndIntegralOperationCheck.h"
+#include "RedundantExpressionCheck.h"
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
 #include "StaticAssertCheck.h"
@@ -98,6 +99,8 @@ public:
         "misc-non-copyable-objects");
     CheckFactories.registerCheck<PointerAndIntegralOperationCheck>(
         "misc-pointer-and-integral-operation");
+    CheckFactories.registerCheck<RedundantExpressionCheck>(
+        "misc-redundant-expression");
     CheckFactories.registerCheck<SizeofContainerCheck>("misc-sizeof-container");
     CheckFactories.registerCheck<SizeofExpressionCheck>(
         "misc-sizeof-expression");

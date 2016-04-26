@@ -5,7 +5,6 @@
 
 .type foo STT_GNU_IFUNC
 .globl foo
-.type foo, @function
 foo:
  ret
 

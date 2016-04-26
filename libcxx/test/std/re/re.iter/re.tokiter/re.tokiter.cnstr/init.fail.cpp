@@ -17,12 +17,13 @@
 //                      regex_constants::match_flag_type m =
 //                                              regex_constants::match_default);
 
-#if __cplusplus <= 201402L
-#error
-#else
-
 #include <regex>
 #include <cassert>
+#include "test_macros.h"
+
+#if TEST_STD_VER < 14
+#error
+#endif
 
 int main()
 {
@@ -33,4 +34,3 @@ int main()
                                       std::regex("\\d{3}-\\d{4}"), {-1, 0, 1});
     }
 }
-#endif

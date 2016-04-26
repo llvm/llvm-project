@@ -77,7 +77,10 @@ UtilityFunction::MakeFunctionCaller (const CompilerType &return_type, const Valu
     
     ProcessSP process_sp = m_jit_process_wp.lock();
     if (!process_sp)
+    {
+        error.SetErrorString("Can't make a function caller without a process.");
         return nullptr;
+    }
     
     Address impl_code_address;
     impl_code_address.SetOffset(StartAddress());

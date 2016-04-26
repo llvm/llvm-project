@@ -15,6 +15,8 @@ static const unsigned char U[] = "abc";
 static const unsigned char V[] = "xyz";
 static const wchar_t W[] = L"abc";
 
+int strlen(const char *);
+
 int memcmp(const void *, const void *, size);
 int wmemcmp(const wchar_t *, const wchar_t *, size);
 int memicmp(const void *, const void *, size);
@@ -294,6 +296,42 @@ int test_implicit_compare_with_functions() {
     return 0;
   // CHECK-MESSAGES: [[@LINE-2]]:7: warning: function '_mbsnbicmp_l' is called without explicitly comparing result
   // CHECK-FIXES: _mbsnbicmp_l(U, V, 1, locale) != 0)
+
+  return 1;
+}
+
+int strcmp_wrapper1(const char* a, const char* b) {
+  return strcmp(a, b);
+}
+
+int strcmp_wrapper2(const char* a, const char* b) {
+  return (a && b) ? strcmp(a, b) : 0;
+}
+
+#define macro_strncmp(s1, s2, n)                                              \
+  (__extension__ (__builtin_constant_p (n)                                    \
+                  && ((__builtin_constant_p (s1)                              \
+                       && strlen (s1) < ((size) (n)))                         \
+                      || (__builtin_constant_p (s2)                           \
+                          && strlen (s2) < ((size) (n))))                     \
+                  ? strcmp (s1, s2) : strncmp (s1, s2, n)))
+
+int strncmp_macro(const char* a, const char* b) {
+  if (macro_strncmp(a, b, 4))
+    return 0;
+  // CHECK-MESSAGES: [[@LINE-2]]:7: warning: function 'strcmp' is called without explicitly comparing result
+
+  if (macro_strncmp(a, b, 4) == 2)
+    return 0;
+  // CHECK-MESSAGES: [[@LINE-2]]:7: warning: function 'strcmp' is compared to a suspicious constant
+
+  if (macro_strncmp(a, b, 4) <= .0)
+    return 0;
+  // CHECK-MESSAGES: [[@LINE-2]]:7: warning: function 'strcmp' has suspicious implicit cast
+
+  if (macro_strncmp(a, b, 4) + 0)
+    return 0;
+  // CHECK-MESSAGES: [[@LINE-2]]:7: warning: results of function 'strcmp' used by operator '+'
 
   return 1;
 }

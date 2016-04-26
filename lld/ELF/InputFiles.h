@@ -124,7 +124,7 @@ public:
   InputSectionBase<ELFT> *getSection(const Elf_Sym &Sym) const;
 
   SymbolBody &getSymbolBody(uint32_t SymbolIndex) const {
-    return *SymbolBodies[SymbolIndex];
+    return SymbolBodies[SymbolIndex]->repl();
   }
 
   const Elf_Shdr *getSymbolTable() const { return this->Symtab; };

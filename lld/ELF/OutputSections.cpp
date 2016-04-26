@@ -1139,7 +1139,7 @@ void EHOutputSection<ELFT>::addSectionAux(EHInputSection<ELFT> *S,
       SymbolBody *Personality = nullptr;
       if (HasReloc) {
         uint32_t SymIndex = RelI->getSymbol(Config->Mips64EL);
-        Personality = &S->getFile()->getSymbolBody(SymIndex).repl();
+        Personality = &S->getFile()->getSymbolBody(SymIndex);
       }
 
       std::pair<StringRef, SymbolBody *> CieInfo(Entry, Personality);

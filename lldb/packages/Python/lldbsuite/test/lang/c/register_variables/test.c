@@ -5,20 +5,20 @@ struct bar {
   int m2;
 };
 
-void f1(int a, struct bar *b) __attribute__ ((noinline));
+void f1(int a, struct bar *b) __attribute__((noinline)) __attribute__((regparm(2)));
 void f1(int a, struct bar *b)
 {
   b->m2 = b->m1 + a; // set breakpoint here
 }
 
-void f2(struct bar *b) __attribute__ ((noinline));
+void f2(struct bar *b) __attribute__((noinline)) __attribute__((regparm(1)));
 void f2(struct bar *b)
 {
   int c = b->m2;
   printf("%d\n", c); // set breakpoint here
 }
 
-float f3() __attribute__ ((noinline));
+float f3() __attribute__((noinline));
 float f3() {
   return 3.14f;
 }

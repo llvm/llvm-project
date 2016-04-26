@@ -92,6 +92,12 @@ identified.  The improvements since the 3.8 release include:
   Detects dangling references in value handlers like
   ``std::experimental::string_view``.
 
+- New `misc-fold-init-type
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-fold-init-type.html>`_ check
+
+  The check flags type mismatches in `folds` like ``std::accumulate`` that might
+  result in loss of precision.
+
 - New `misc-forward-declaration-namespace
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-forward-declaration-namespace.html>`_ check
 
@@ -112,6 +118,11 @@ identified.  The improvements since the 3.8 release include:
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-pointer-and-integral-operation.html>`_ check
 
   Warns about suspicious operations involving pointers and integral types.
+
+- New `misc-redundant-expression
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-redundant-expression.html>`_ check
+
+  Warns about redundant and equivalent expressions.
 
 - New `misc-sizeof-expression
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-sizeof-expression.html>`_ check
