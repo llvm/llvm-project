@@ -222,7 +222,7 @@ Or you can attach to a process by name with:
 
 (lldb) process attach -n Sketch
 
-the "attach by name"  also supports the "-w" option which waits for the
+The "attach by name"  also supports the "-w" option which waits for the
 next process of that name to show up, and attaches to that.  You can also
 attach by PID:
 

@@ -4,17 +4,15 @@
 Answer := 1
 
 import "foo"
-// CHECK: # bar
-// CHECK: # foo
 
 // Test that importing binary after source works.
 import "strconv"
 
 foo.Answer()
-// CHECK: #0 int = 42
+// CHECK: 42
 
 strconv.FormatBool(true)
-// CHECK: #0 string = true
+// CHECK: true
 
 var v1 strconv.NumError
 var v2 strconv.NumError

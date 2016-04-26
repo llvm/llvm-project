@@ -29,7 +29,6 @@ public:
   virtual bool isTlsGlobalDynamicRel(uint32_t Type) const;
   virtual uint32_t getDynRel(uint32_t Type) const { return Type; }
   virtual uint32_t getTlsGotRel(uint32_t Type) const { return TlsGotRel; }
-  virtual void writeGotHeader(uint8_t *Buf) const {}
   virtual void writeGotPltHeader(uint8_t *Buf) const {}
   virtual void writeGotPlt(uint8_t *Buf, uint64_t Plt) const {};
   virtual uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const;
@@ -62,7 +61,6 @@ public:
 
   virtual RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const = 0;
   virtual void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const = 0;
-  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const;
   virtual ~TargetInfo();
 
   unsigned TlsGdToLeSkip = 1;
@@ -86,7 +84,6 @@ public:
   uint32_t TlsOffsetRel;
   unsigned PltEntrySize = 8;
   unsigned PltZeroSize = 0;
-  unsigned GotHeaderEntriesNum = 0;
   unsigned GotPltHeaderEntriesNum = 3;
   uint32_t ThunkSize = 0;
   bool UseLazyBinding = false;
@@ -95,9 +92,6 @@ public:
   virtual void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
   virtual void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
   virtual void relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
-
-private:
-  virtual bool needsCopyRelImpl(uint32_t Type) const;
 };
 
 uint64_t getPPC64TocBase();

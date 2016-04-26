@@ -1740,12 +1740,9 @@ ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
                 {
                     DataExtractor data;
 
-                    if (sheader.sh_type != SHT_ARM_ATTRIBUTES)
-                        continue;
-                    if (section_size == 0 || set_data(data, sheader.sh_offset, section_size) != section_size)
-                        continue;
-
-                    ParseARMAttributes(data, section_size, arch_spec);
+                    if (sheader.sh_type == SHT_ARM_ATTRIBUTES && section_size != 0 && 
+                        set_data(data, sheader.sh_offset, section_size) == section_size)
+                        ParseARMAttributes(data, section_size, arch_spec);
                 }
 
                 if (name == g_sect_name_gnu_debuglink)
@@ -2610,7 +2607,10 @@ GetPltEntrySizeAndOffset(const ELFSectionHeader* rel_hdr, const ELFSectionHeader
     elf_xword plt_entsize = plt_hdr->sh_addralign ?
         llvm::alignTo (plt_hdr->sh_entsize, plt_hdr->sh_addralign) : plt_hdr->sh_entsize;
 
-    if (plt_entsize == 0)
+    // Some linkers e.g ld for arm, fill plt_hdr->sh_entsize field incorrectly.
+    // PLT entries relocation code in general requires multiple instruction and
+    // should be greater than 4 bytes in most cases. Try to guess correct size just in case.
+    if (plt_entsize <= 4)
     {
         // The linker haven't set the plt_hdr->sh_entsize field. Try to guess the size of the plt
         // entries based on the number of entries and the size of the plt section with the

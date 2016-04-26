@@ -36,6 +36,14 @@ static cl::opt<bool> IgnoreIntegerWrapping(
 // compile time.
 static int const MaxConjunctsInPwAff = 100;
 
+// The maximal number of bits for which a zero-extend is modeled precisely.
+static unsigned const MaxZextSmallBitWidth = 7;
+
+/// @brief Return true if a zero-extend from @p Width bits is precisely modeled.
+static bool isPreciseZeroExtend(unsigned Width) {
+  return Width <= MaxZextSmallBitWidth;
+}
+
 /// @brief Add the number of basic sets in @p Domain to @p User
 static isl_stat addNumBasicSets(isl_set *Domain, isl_aff *Aff, void *User) {
   auto *NumBasicSets = static_cast<unsigned *>(User);
@@ -80,6 +88,26 @@ static void combine(__isl_keep PWACtx &PWAC0, const __isl_take PWACtx &PWAC1,
                     isl_pw_aff *(Fn)(isl_pw_aff *, isl_pw_aff *)) {
   PWAC0.first = Fn(PWAC0.first, PWAC1.first);
   PWAC0.second = isl_set_union(PWAC0.second, PWAC1.second);
+}
+
+/// @brief Set the possible wrapping of @p Expr to @p Flags.
+static const SCEV *setNoWrapFlags(ScalarEvolution &SE, const SCEV *Expr,
+                                  SCEV::NoWrapFlags Flags) {
+  auto *NAry = dyn_cast<SCEVNAryExpr>(Expr);
+  if (!NAry)
+    return Expr;
+
+  SmallVector<const SCEV *, 8> Ops(NAry->op_begin(), NAry->op_end());
+  switch (Expr->getSCEVType()) {
+  case scAddExpr:
+    return SE.getAddExpr(Ops, Flags);
+  case scMulExpr:
+    return SE.getMulExpr(Ops, Flags);
+  case scAddRecExpr:
+    return SE.getAddRecExpr(Ops, cast<SCEVAddRecExpr>(Expr)->getLoop(), Flags);
+  default:
+    return Expr;
+  }
 }
 
 SCEVAffinator::SCEVAffinator(Scop *S, LoopInfo &LI)
@@ -143,7 +171,7 @@ __isl_give PWACtx SCEVAffinator::checkForWrapping(const SCEV *Expr,
 __isl_give isl_pw_aff *
 SCEVAffinator::addModuloSemantic(__isl_take isl_pw_aff *PWA,
                                  Type *ExprType) const {
-  unsigned Width = TD.getTypeStoreSizeInBits(ExprType);
+  unsigned Width = TD.getTypeSizeInBits(ExprType);
   isl_ctx *Ctx = isl_pw_aff_get_ctx(PWA);
 
   isl_val *ModVal = isl_val_int_from_ui(Ctx, Width);
@@ -245,13 +273,97 @@ SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
 
 __isl_give PWACtx
 SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-  llvm_unreachable("SCEVZeroExtendExpr not yet supported");
+  // A zero-extended value can be interpreted as a piecewise defined signed
+  // value. If the value was non-negative it stays the same, otherwise it
+  // is the sum of the original value and 2^n where n is the bit-width of
+  // the original (or operand) type. Examples:
+  //   zext i8 127 to i32 -> { [127] }
+  //   zext i8  -1 to i32 -> { [256 + (-1)] } = { [255] }
+  //   zext i8  %v to i32 -> [v] -> { [v] | v >= 0; [256 + v] | v < 0 }
+  //
+  // However, LLVM/Scalar Evolution uses zero-extend (potentially lead by a
+  // truncate) to represent some forms of modulo computation. The left-hand side
+  // of the condition in the code below would result in the SCEV
+  // "zext i1 <false, +, true>for.body" which is just another description
+  // of the C expression "i & 1 != 0" or, equivalently, "i % 2 != 0".
+  //
+  //   for (i = 0; i < N; i++)
+  //     if (i & 1 != 0 /* == i % 2 */)
+  //       /* do something */
+  //
+  // If we do not make the modulo explicit but only use the mechanism described
+  // above we will get the very restrictive assumption "N < 3", because for all
+  // values of N >= 3 the SCEVAddRecExpr operand of the zero-extend would wrap.
+  // Alternatively, we can make the modulo in the operand explicit in the
+  // resulting piecewise function and thereby avoid the assumption on N. For the
+  // example this would result in the following piecewise affine function:
+  // { [i0] -> [(1)] : 2*floor((-1 + i0)/2) = -1 + i0;
+  //   [i0] -> [(0)] : 2*floor((i0)/2) = i0 }
+  // To this end we can first determine if the (immediate) operand of the
+  // zero-extend can wrap and, in case it might, we will use explicit modulo
+  // semantic to compute the result instead of emitting non-wrapping
+  // assumptions.
+  //
+  // Note that operands with large bit-widths are less likely to be negative
+  // because it would result in a very large access offset or loop bound after
+  // the zero-extend. To this end one can optimistically assume the operand to
+  // be positive and avoid the piecewise definition if the bit-width is bigger
+  // than some threshold (here MaxZextSmallBitWidth).
+  //
+  // We choose to go with a hybrid solution of all modeling techniques described
+  // above. For small bit-widths (up to MaxZextSmallBitWidth) we will model the
+  // wrapping explicitly and use a piecewise defined function. However, if the
+  // bit-width is bigger than MaxZextSmallBitWidth we will employ overflow
+  // assumptions and assume the "former negative" piece will not exist.
+
+  auto *Op = Expr->getOperand();
+  unsigned Width = TD.getTypeSizeInBits(Op->getType());
+
+  bool Precise = isPreciseZeroExtend(Width);
+
+  auto Flags = getNoWrapFlags(Op);
+  auto NoWrapFlags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
+  bool OpCanWrap = Precise && !(Flags & SCEV::FlagNSW);
+  if (OpCanWrap)
+    Op = setNoWrapFlags(SE, Op, NoWrapFlags);
+
+  auto OpPWAC = visit(Op);
+  if (OpCanWrap)
+    OpPWAC.first =
+        addModuloSemantic(OpPWAC.first, Expr->getOperand()->getType());
+
+  // If the width is to big we assume the negative part does not occur.
+  if (!Precise) {
+    auto *NegOpPWA = isl_pw_aff_neg(isl_pw_aff_copy(OpPWAC.first));
+    auto *NegDom = isl_pw_aff_pos_set(NegOpPWA);
+    auto *ExprDomain = BB ? S->getDomainConditions(BB) : nullptr;
+    NegDom = ExprDomain ? isl_set_intersect(NegDom, ExprDomain) : NegDom;
+    auto DL = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
+    OpPWAC.second = isl_set_union(OpPWAC.second, isl_set_copy(NegDom));
+    S->addAssumption(UNSIGNED, isl_set_params(NegDom), DL, AS_RESTRICTION);
+    return OpPWAC;
+  }
+
+  // If the width is small build the piece for the non-negative part and
+  // the one for the negative part and unify them.
+  auto *NonNegDom = isl_pw_aff_nonneg_set(isl_pw_aff_copy(OpPWAC.first));
+  auto *NonNegPWA = isl_pw_aff_intersect_domain(isl_pw_aff_copy(OpPWAC.first),
+                                                isl_set_copy(NonNegDom));
+  auto *WidthVal = isl_val_int_from_ui(isl_pw_aff_get_ctx(OpPWAC.first), Width);
+  auto *ExpVal = isl_val_2exp(WidthVal);
+
+  auto ExpPWAC = getPWACtxFromPWA(
+      isl_pw_aff_val_on_domain(isl_set_complement(NonNegDom), ExpVal));
+  combine(OpPWAC, ExpPWAC, isl_pw_aff_add);
+
+  OpPWAC.first =
+      isl_pw_aff_coalesce(isl_pw_aff_union_add(NonNegPWA, OpPWAC.first));
+  return OpPWAC;
 }
 
 __isl_give PWACtx
 SCEVAffinator::visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
-  // Assuming the value is signed, a sign extension is basically a noop.
-  // TODO: Reconsider this as soon as we support unsigned values.
+  // As all values are represented as signed, a sign extension is a noop.
   return visit(Expr->getOperand());
 }
 

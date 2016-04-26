@@ -160,6 +160,12 @@ public:
                  bool assert_not_being_parsed = true,
                  bool resolve_function_context = false);
 
+    SymbolFileDWARF *
+    GetDWARFForUID (lldb::user_id_t uid);
+
+    DWARFDIE
+    GetDIEFromUID (lldb::user_id_t uid);
+
     lldb_private::CompilerDecl
     GetDeclForUID (lldb::user_id_t uid) override;
 

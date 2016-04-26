@@ -75,7 +75,7 @@ std::vector<StringRef> ScriptParserBase::tokenize(StringRef S) {
     // Unquoted token
     size_t Pos = S.find_first_not_of(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-        "0123456789_.$/\\~=+[]*?-:");
+        "0123456789_.$/\\~=+[]*?-:!<>");
     // A character that cannot start a word (which is usually a
     // punctuation) forms a single character token.
     if (Pos == 0)

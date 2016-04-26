@@ -278,7 +278,7 @@ bool ExpressionSourceCode::GetText (std::string &text, lldb::LanguageType wrappi
         ConstString object_name;
         if (Language::LanguageIsCPlusPlus(frame->GetLanguage()))
         {
-            lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false);
+            lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false, true);
             AddLocalVariableDecls(var_list_sp, lldb_local_var_decls);
         }
     }

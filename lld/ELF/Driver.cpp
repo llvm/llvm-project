@@ -19,6 +19,7 @@
 #include "Writer.h"
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -97,12 +98,29 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
   return V;
 }
 
+static void dumpFile(StringRef SrcPath) {
+  SmallString<128> DirName;
+  sys::path::append(DirName, Config->Reproduce, sys::path::parent_path(SrcPath));
+  if (std::error_code EC = sys::fs::create_directories(DirName)) {
+    error(EC, "--reproduce: can't create directory");
+    return;
+  }
+
+  SmallString<128> DestPathName;
+  sys::path::append(DestPathName, Config->Reproduce, SrcPath);
+  if (std::error_code EC = sys::fs::copy_file(SrcPath, DestPathName))
+    error(EC, "--reproduce: can't copy file");
+}
+
 // Opens and parses a file. Path has to be resolved already.
 // Newly created memory buffers are owned by this driver.
 void LinkerDriver::addFile(StringRef Path) {
   using namespace llvm::sys::fs;
   if (Config->Verbose)
     llvm::outs() << Path << "\n";
+  if (!Config->Reproduce.empty())
+    dumpFile(Path);
+
   Optional<MemoryBufferRef> Buffer = readFile(Path);
   if (!Buffer.hasValue())
     return;
@@ -223,6 +241,25 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
   return false;
 }
 
+static void dumpLinkerInvocation(ArrayRef<const char *> Args) {
+  std::error_code EC = sys::fs::create_directories(Config->Reproduce,
+    false /* IgnoreExisting */);
+  if (EC) {
+    error(EC, "--reproduce: can't create directory");
+    return;
+  }
+
+  SmallString<128> InvocationPath;
+  sys::path::append(InvocationPath, Config->Reproduce, "invocation.txt");
+  raw_fd_ostream OS(InvocationPath, EC, sys::fs::OpenFlags::F_None);
+  check(EC);
+
+  OS << Args[0];
+  for (unsigned I = 1, E = Args.size(); I < E; ++I)
+    OS << " " << Args[I];
+  OS << "\n";
+}
+
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
@@ -237,6 +274,10 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
 
   initLLVM(Args);
   readConfigs(Args);
+
+  if (!Config->Reproduce.empty())
+    dumpLinkerInvocation(ArgsArr);
+
   createFiles(Args);
   checkOptions(Args);
   if (HasError)
@@ -311,6 +352,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Fini = getString(Args, OPT_fini, "_fini");
   Config->Init = getString(Args, OPT_init, "_init");
   Config->OutputFile = getString(Args, OPT_o);
+  if (auto *Arg = Args.getLastArg(OPT_reproduce))
+    Config->Reproduce = Arg->getValue();
   Config->SoName = getString(Args, OPT_soname);
   Config->Sysroot = getString(Args, OPT_sysroot);
 

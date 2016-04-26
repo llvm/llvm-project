@@ -821,7 +821,9 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
 
   // Initialize the invalid domain which describes all iterations for which the
   // access relation is not modeled correctly.
-  InvalidDomain = getStatement()->getInvalidDomain();
+  auto *StmtInvalidDomain = getStatement()->getInvalidDomain();
+  InvalidDomain = isl_set_empty(isl_set_get_space(StmtInvalidDomain));
+  isl_set_free(StmtInvalidDomain);
 
   isl_ctx *Ctx = isl_id_get_ctx(Id);
   isl_id *BaseAddrId = SAI->getBasePtrId();
@@ -1405,8 +1407,7 @@ void ScopStmt::deriveAssumptionsFromGEP(GetElementPtrInst *GEP,
 
     auto *Scope = SD.getLI()->getLoopFor(getEntryBlock());
     InvariantLoadsSetTy AccessILS;
-    if (!isAffineExpr(&Parent.getRegion(), Scope, Expr, SE, nullptr,
-                      &AccessILS))
+    if (!isAffineExpr(&Parent.getRegion(), Scope, Expr, SE, &AccessILS))
       continue;
 
     bool NonAffine = false;
@@ -1442,10 +1443,17 @@ void ScopStmt::deriveAssumptionsFromGEP(GetElementPtrInst *GEP,
   isl_set_free(NotExecuted);
 }
 
-void ScopStmt::deriveAssumptions(BasicBlock *Block, ScopDetection &SD) {
-  for (Instruction &Inst : *Block)
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(&Inst))
+void ScopStmt::deriveAssumptions(ScopDetection &SD) {
+  for (auto *MA : *this) {
+    if (!MA->isArrayKind())
+      continue;
+
+    MemAccInst Acc(MA->getAccessInstruction());
+    auto *GEP = dyn_cast_or_null<GetElementPtrInst>(Acc.getPointerOperand());
+
+    if (GEP)
       deriveAssumptionsFromGEP(GEP, SD);
+  }
 }
 
 void ScopStmt::collectSurroundingLoops() {
@@ -1477,13 +1485,7 @@ void ScopStmt::init(ScopDetection &SD) {
   collectSurroundingLoops();
   buildAccessRelations();
 
-  if (BB) {
-    deriveAssumptions(BB, SD);
-  } else {
-    for (BasicBlock *Block : R->blocks()) {
-      deriveAssumptions(Block, SD);
-    }
-  }
+  deriveAssumptions(SD);
 
   if (DetectReductions)
     checkForReductions();
@@ -1804,35 +1806,11 @@ const SCEV *Scop::getRepresentingInvariantLoadSCEV(const SCEV *S) {
   return SCEVSensitiveParameterRewriter::rewrite(S, *SE, InvEquivClassVMap);
 }
 
-void Scop::addParams(std::vector<const SCEV *> NewParameters) {
-  for (const SCEV *Parameter : NewParameters) {
-    Parameter = extractConstantFactor(Parameter, *SE).second;
+void Scop::createParameterId(const SCEV *Parameter) {
+  assert(Parameters.count(Parameter));
+  assert(!ParameterIds.count(Parameter));
 
-    // Normalize the SCEV to get the representing element for an invariant load.
-    Parameter = getRepresentingInvariantLoadSCEV(Parameter);
-
-    if (ParameterIds.find(Parameter) != ParameterIds.end())
-      continue;
-
-    int dimension = Parameters.size();
-
-    Parameters.push_back(Parameter);
-    ParameterIds[Parameter] = dimension;
-  }
-}
-
-__isl_give isl_id *Scop::getIdForParam(const SCEV *Parameter) {
-  // Normalize the SCEV to get the representing element for an invariant load.
-  Parameter = getRepresentingInvariantLoadSCEV(Parameter);
-
-  ParamIdType::const_iterator IdIter = ParameterIds.find(Parameter);
-
-  if (IdIter == ParameterIds.end())
-    return nullptr;
-
-  std::string ParameterName;
-
-  ParameterName = "p_" + utostr(IdIter->second);
+  std::string ParameterName = "p_" + std::to_string(getNumParams() - 1);
 
   if (const SCEVUnknown *ValueParameter = dyn_cast<SCEVUnknown>(Parameter)) {
     Value *Val = ValueParameter->getValue();
@@ -1852,8 +1830,26 @@ __isl_give isl_id *Scop::getIdForParam(const SCEV *Parameter) {
     }
   }
 
-  return isl_id_alloc(getIslCtx(), ParameterName.c_str(),
-                      const_cast<void *>((const void *)Parameter));
+  auto *Id = isl_id_alloc(getIslCtx(), ParameterName.c_str(),
+                          const_cast<void *>((const void *)Parameter));
+  ParameterIds[Parameter] = Id;
+}
+
+void Scop::addParams(const ParameterSetTy &NewParameters) {
+  for (const SCEV *Parameter : NewParameters) {
+    // Normalize the SCEV to get the representing element for an invariant load.
+    Parameter = extractConstantFactor(Parameter, *SE).second;
+    Parameter = getRepresentingInvariantLoadSCEV(Parameter);
+
+    if (Parameters.insert(Parameter))
+      createParameterId(Parameter);
+  }
+}
+
+__isl_give isl_id *Scop::getIdForParam(const SCEV *Parameter) {
+  // Normalize the SCEV to get the representing element for an invariant load.
+  Parameter = getRepresentingInvariantLoadSCEV(Parameter);
+  return isl_id_copy(ParameterIds.lookup(Parameter));
 }
 
 __isl_give isl_set *Scop::addNonEmptyDomainConstraints(isl_set *C) const {
@@ -1874,15 +1870,23 @@ void Scop::addUserAssumptions(AssumptionCache &AC, DominatorTree &DT,
 
     auto *L = LI.getLoopFor(CI->getParent());
     auto *Val = CI->getArgOperand(0);
-    std::vector<const SCEV *> Params;
-    if (!isAffineParamConstraint(Val, R, L, *SE, Params)) {
+    ParameterSetTy DetectedParams;
+    if (!isAffineParamConstraint(Val, R, L, *SE, DetectedParams)) {
       emitOptimizationRemarkAnalysis(F.getContext(), DEBUG_TYPE, F,
                                      CI->getDebugLoc(),
                                      "Non-affine user assumption ignored.");
       continue;
     }
 
-    addParams(Params);
+    // Collect all newly introduced parameters.
+    ParameterSetTy NewParams;
+    for (auto *Param : DetectedParams) {
+      Param = extractConstantFactor(Param, *SE).second;
+      Param = getRepresentingInvariantLoadSCEV(Param);
+      if (Parameters.count(Param))
+        continue;
+      NewParams.insert(Param);
+    }
 
     SmallVector<isl_set *, 2> ConditionSets;
     buildConditionSets(*Stmts.begin(), Val, nullptr, L, Context, ConditionSets);
@@ -1890,6 +1894,22 @@ void Scop::addUserAssumptions(AssumptionCache &AC, DominatorTree &DT,
     isl_set_free(ConditionSets[1]);
 
     auto *AssumptionCtx = ConditionSets[0];
+
+    // Project out newly introduced parameters as they are not otherwise useful.
+    if (!NewParams.empty()) {
+      for (unsigned u = 0; u < isl_set_n_param(AssumptionCtx); u++) {
+        auto *Id = isl_set_get_dim_id(AssumptionCtx, isl_dim_param, u);
+        auto *Param = static_cast<const SCEV *>(isl_id_get_user(Id));
+        isl_id_free(Id);
+
+        if (!NewParams.count(Param))
+          continue;
+
+        AssumptionCtx =
+            isl_set_project_out(AssumptionCtx, isl_dim_param, u--, 1);
+      }
+    }
+
     emitOptimizationRemarkAnalysis(
         F.getContext(), DEBUG_TYPE, F, CI->getDebugLoc(),
         "Use user assumption: " + stringFromIslObj(AssumptionCtx));
@@ -1973,12 +1993,10 @@ void Scop::buildContext() {
 }
 
 void Scop::addParameterBounds() {
-  for (const auto &ParamID : ParameterIds) {
-    int dim = ParamID.second;
-
-    ConstantRange SRange = SE->getSignedRange(ParamID.first);
-
-    Context = addRangeBoundsToSet(Context, SRange, dim, isl_dim_param);
+  unsigned PDim = 0;
+  for (auto *Parameter : Parameters) {
+    ConstantRange SRange = SE->getSignedRange(Parameter);
+    Context = addRangeBoundsToSet(Context, SRange, PDim++, isl_dim_param);
   }
 }
 
@@ -1986,10 +2004,10 @@ void Scop::realignParams() {
   // Add all parameters into a common model.
   isl_space *Space = isl_space_params_alloc(getIslCtx(), ParameterIds.size());
 
-  for (const auto &ParamID : ParameterIds) {
-    const SCEV *Parameter = ParamID.first;
+  unsigned PDim = 0;
+  for (const auto *Parameter : Parameters) {
     isl_id *id = getIdForParam(Parameter);
-    Space = isl_space_set_dim_id(Space, isl_dim_param, ParamID.second, id);
+    Space = isl_space_set_dim_id(Space, isl_dim_param, PDim++, id);
   }
 
   // Align the parameters of all data structures to the model.
@@ -2369,6 +2387,10 @@ void Scop::propagateInvalidStmtDomains(Region *R, ScopDetection &SD,
 
       // Skip successors outside the SCoP.
       if (!SuccStmt)
+        continue;
+
+      // Skip backedges.
+      if (DT.dominates(SuccBB, BB))
         continue;
 
       auto *SuccBBLoop = getFirstNonBoxedLoopFor(SuccBB, LI, BoxedLoops);
@@ -3083,6 +3105,9 @@ Scop::~Scop() {
   isl_set_free(InvalidContext);
   isl_schedule_free(Schedule);
 
+  for (auto &It : ParameterIds)
+    isl_id_free(It.second);
+
   for (auto It : DomainMap)
     isl_set_free(It.second);
 
@@ -3538,6 +3563,8 @@ static std::string toString(AssumptionKind Kind) {
     return "Inbounds";
   case WRAPPING:
     return "No-overflows";
+  case UNSIGNED:
+    return "Signed-unsigned";
   case COMPLEXITY:
     return "Low complexity";
   case ERRORBLOCK:
@@ -3632,10 +3659,9 @@ void Scop::printContext(raw_ostream &OS) const {
   OS.indent(4) << "Invalid Context:\n";
   OS.indent(4) << InvalidContext << "\n";
 
-  for (const SCEV *Parameter : Parameters) {
-    int Dim = ParameterIds.find(Parameter)->second;
-    OS.indent(4) << "p" << Dim << ": " << *Parameter << "\n";
-  }
+  unsigned Dim = 0;
+  for (const SCEV *Parameter : Parameters)
+    OS.indent(4) << "p" << Dim++ << ": " << *Parameter << "\n";
 }
 
 void Scop::printAliasAssumptions(raw_ostream &OS) const {
@@ -4234,7 +4260,7 @@ bool ScopInfo::buildAccessMultiDimFixed(
 
   for (auto *Subscript : Subscripts) {
     InvariantLoadsSetTy AccessILS;
-    if (!isAffineExpr(R, L, Subscript, *SE, nullptr, &AccessILS))
+    if (!isAffineExpr(R, L, Subscript, *SE, &AccessILS))
       return false;
 
     for (LoadInst *LInst : AccessILS)
@@ -4313,7 +4339,7 @@ bool ScopInfo::buildAccessMemIntrinsic(
 
   // Check if the length val is actually affine or if we overapproximate it
   InvariantLoadsSetTy AccessILS;
-  bool LengthIsAffine = isAffineExpr(R, L, LengthVal, *SE, nullptr, &AccessILS);
+  bool LengthIsAffine = isAffineExpr(R, L, LengthVal, *SE, &AccessILS);
   for (LoadInst *LInst : AccessILS)
     if (!ScopRIL.count(LInst))
       LengthIsAffine = false;
@@ -4439,8 +4465,7 @@ void ScopInfo::buildAccessSingleDim(
 
   InvariantLoadsSetTy AccessILS;
   bool IsAffine = !isVariantInNonAffineLoop &&
-                  isAffineExpr(R, L, AccessFunction, *SE,
-                               BasePointer->getValue(), &AccessILS);
+                  isAffineExpr(R, L, AccessFunction, *SE, &AccessILS);
 
   for (LoadInst *LInst : AccessILS)
     if (!ScopRIL.count(LInst))

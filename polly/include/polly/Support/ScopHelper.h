@@ -41,6 +41,9 @@ using ValueMapT = llvm::DenseMap<llvm::AssertingVH<llvm::Value>,
 /// @brief Type for a set of invariant loads.
 using InvariantLoadsSetTy = llvm::SetVector<llvm::AssertingVH<llvm::LoadInst>>;
 
+/// @brief Set type for parameters.
+using ParameterSetTy = llvm::SetVector<const llvm::SCEV *>;
+
 /// @brief Utility proxy to wrap the common members of LoadInst and StoreInst.
 ///
 /// This works like the LLVM utility class CallSite, ie. it forwards all calls

@@ -77,7 +77,7 @@ __kmp_affinity_print_mask(char *buf, int buf_len, kmp_affin_mask_t *mask)
         // Need to truncate the affinity mask string and add ellipsis.
         // To do this, we first write out the '{' + str(mask)
         buf[0] = '{';
-        hwloc_bitmap_list_snprintf(buf+1, buf_len-7, (hwloc_bitmap_t)mask);
+        hwloc_bitmap_list_snprintf(buf+1, buf_len-1, (hwloc_bitmap_t)mask);
         // then, what we do here is go to the 7th to last character, then go backwards until we are NOT
         // on a digit then write "...}\0".  This way it is a clean ellipsis addition and we don't
         // overwrite part of an affinity number. i.e., we avoid something like { 45, 67, 8...} and get
@@ -3777,36 +3777,6 @@ __kmp_aux_affinity_initialize(void)
             KMP_ASSERT(address2os == NULL);
             return;
         }
-#  if KMP_DEBUG
-        AddrUnsPair *otheraddress2os = NULL;
-        int otherdepth = -1;
-#   if KMP_MIC
-        otherdepth = __kmp_affinity_create_apicid_map(&otheraddress2os, &msg_id);
-#   else
-        otherdepth = __kmp_affinity_create_x2apicid_map(&otheraddress2os, &msg_id);
-#   endif
-        if(otheraddress2os != NULL && address2os != NULL) {
-            int i;
-            unsigned arent_equal_flag = 0;
-            for(i=0;i<__kmp_avail_proc;i++) {
-                if(otheraddress2os[i] != address2os[i]) arent_equal_flag = 1;
-            }
-            if(arent_equal_flag) {
-                KA_TRACE(10, ("__kmp_aux_affinity_initialize: Hwloc affinity places are different from APICID\n"));
-                KA_TRACE(10, ("__kmp_aux_affinity_initialize: APICID Table:\n"));
-                for(i=0;i<__kmp_avail_proc;i++) {
-                    otheraddress2os[i].print(); __kmp_printf("\n");
-                }
-                KA_TRACE(10, ("__kmp_aux_affinity_initialize: Hwloc Table:\n"));
-                for(i=0;i<__kmp_avail_proc;i++) {
-                    address2os[i].print(); __kmp_printf("\n");
-                }
-            }
-            else {
-                KA_TRACE(10, ("__kmp_aux_affinity_initialize: Hwloc affinity places are same as APICID\n"));
-            }
-        }
-#  endif // KMP_DEBUG
     }
 # endif // KMP_USE_HWLOC
 

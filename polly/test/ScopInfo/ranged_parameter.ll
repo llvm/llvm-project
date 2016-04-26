@@ -4,7 +4,7 @@
 ; range metadata (see bottom of the file) are present:
 ;
 ; CHECK: Context:
-; CHECK:   [p_0] -> {  : 0 <= p_0 <= 255 }
+; CHECK:   [tmp] -> {  : 0 <= tmp <= 255 }
 ;
 ;    void jd(int *A, int *p /* in [0,256) */) {
 ;      for (int i = 0; i < 1024; i++)
