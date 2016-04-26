@@ -7442,7 +7442,6 @@ public:
 /// Emit SPIR specific metadata: OpenCL and SPIR version.
 void SPIRTargetCodeGenInfo::emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
                                          CodeGen::CodeGenModule &CGM) const {
-  assert(CGM.getLangOpts().OpenCL && "SPIR is only for OpenCL");
   llvm::LLVMContext &Ctx = CGM.getModule().getContext();
   llvm::Type *Int32Ty = llvm::Type::getInt32Ty(Ctx);
   llvm::Module &M = CGM.getModule();

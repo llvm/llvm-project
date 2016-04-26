@@ -53,6 +53,7 @@ Clang-Tidy Checks
    misc-bool-pointer-implicit-conversion
    misc-dangling-handle
    misc-definitions-in-headers
+   misc-fold-init-type
    misc-forward-declaration-namespace
    misc-inaccurate-erase
    misc-incorrect-roundings
