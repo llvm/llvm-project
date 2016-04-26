@@ -1799,6 +1799,8 @@ SparcTargetLowering::SparcTargetLowering(TargetMachine &TM,
     }
   }
 
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+
   setMinFunctionAlignment(2);
 
   computeRegisterProperties(Subtarget->getRegisterInfo());
@@ -2960,6 +2962,19 @@ static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+SDValue SparcTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  SDLoc dl(Op);
+  switch (IntNo) {
+  default: return SDValue();    // Don't custom lower most intrinsics.
+  case Intrinsic::thread_pointer: {
+    EVT PtrVT = getPointerTy(DAG.getDataLayout());
+    return DAG.getRegister(SP::G7, PtrVT);
+  }
+  }
+}
+
 SDValue SparcTargetLowering::
 LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
@@ -3018,6 +3033,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SMULO:              return LowerUMULO_SMULO(Op, DAG, *this);
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:       return LowerATOMIC_LOAD_STORE(Op, DAG);
+  case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   }
 }
 
@@ -3285,4 +3301,17 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   }
+}
+
+// Override to enable LOAD_STACK_GUARD lowering on Linux.
+bool SparcTargetLowering::useLoadStackGuardNode() const {
+  if (!Subtarget->isTargetLinux())
+    return TargetLowering::useLoadStackGuardNode();
+  return true;
+}
+
+// Override to disable global variable loading on Linux.
+void SparcTargetLowering::insertSSPDeclarations(Module &M) const {
+  if (!Subtarget->isTargetLinux())
+    return TargetLowering::insertSSPDeclarations(M);
 }

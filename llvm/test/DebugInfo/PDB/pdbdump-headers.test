@@ -14,23 +14,6 @@
 ; CHECK-NEXT: Signature: 54e507e2
 ; CHECK-NEXT: Age: 1
 ; CHECK-NEXT: Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
-; CHECK-NEXT: NumberOfBytes: 34
-; CHECK-NEXT: HashSize: 3
-; CHECK-NEXT: MaxNumberOfStrings: 6
-; CHECK-NEXT: NumPresentWords: 1
-; CHECK-NEXT: Word: 26
-; CHECK-NEXT: NumDeletedWords: 0
-; CHECK-NEXT: NameOffset: 17
-; CHECK-NEXT: NameIndex: 9
-; CHECK-NEXT: String: /src/headerblock
-
-; CHECK:      NameOffset: 10
-; CHECK-NEXT: NameIndex: 13
-; CHECK-NEXT: String: /names
-
-; CHECK:      NameOffset: 0
-; CHECK-NEXT: NameIndex: 5
-; CHECK-NEXT: String: /LinkInfo
 
 ; CHECK:      NameStream: 13
 ; CHECK-NEXT: NameStreamSignature: effeeffe

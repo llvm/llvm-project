@@ -282,6 +282,8 @@ void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
     O << "_e64 ";
   else if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::DPP)
     O << "_dpp ";
+  else if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SDWA)
+    O << "_sdwa ";
   else
     O << "_e32 ";
 
@@ -476,6 +478,51 @@ void AMDGPUInstPrinter::printBoundCtrlOperand(const MCInst *MI, unsigned OpNo,
   unsigned Imm = MI->getOperand(OpNo).getImm();
   if (Imm) {
     O << " bound_ctrl:0"; // XXX - this syntax is used in sp3
+  }
+}
+
+void AMDGPUInstPrinter::printSDWASel(const MCInst *MI, unsigned OpNo,
+                                     raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  switch (Imm) {
+  case 0: O << "BYTE_0"; break;
+  case 1: O << "BYTE_1"; break;
+  case 2: O << "BYTE_2"; break;
+  case 3: O << "BYTE_3"; break;
+  case 4: O << "WORD_0"; break;
+  case 5: O << "WORD_1"; break;
+  case 6: O << "DWORD"; break;
+  default: llvm_unreachable("Invalid SDWA data select operand");
+  }
+}
+
+void AMDGPUInstPrinter::printSDWADstSel(const MCInst *MI, unsigned OpNo,
+                                        raw_ostream &O) {
+  O << "dst_sel:";
+  printSDWASel(MI, OpNo, O);
+}
+
+void AMDGPUInstPrinter::printSDWASrc0Sel(const MCInst *MI, unsigned OpNo,
+                                         raw_ostream &O) {
+  O << "src0_sel:";
+  printSDWASel(MI, OpNo, O);
+}
+
+void AMDGPUInstPrinter::printSDWASrc1Sel(const MCInst *MI, unsigned OpNo,
+                                         raw_ostream &O) {
+  O << "src1_sel:";
+  printSDWASel(MI, OpNo, O);
+}
+
+void AMDGPUInstPrinter::printSDWADstUnused(const MCInst *MI, unsigned OpNo,
+                                           raw_ostream &O) {
+  O << "dst_unused:";
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  switch (Imm) {
+  case 0: O << "UNUSED_PAD"; break;
+  case 1: O << "UNUSED_SEXT"; break;
+  case 2: O << "UNUSED_PRESERVE"; break;
+  default: llvm_unreachable("Invalid SDWA dest_unused operand");
   }
 }
 

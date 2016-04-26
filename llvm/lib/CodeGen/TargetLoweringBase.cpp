@@ -28,6 +28,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -41,6 +42,17 @@ using namespace llvm;
 static cl::opt<bool> JumpIsExpensiveOverride(
     "jump-is-expensive", cl::init(false),
     cl::desc("Do not create extra branches to split comparison logic."),
+    cl::Hidden);
+
+// Although this default value is arbitrary, it is not random. It is assumed
+// that a condition that evaluates the same way by a higher percentage than this
+// is best represented as control flow. Therefore, the default value N should be
+// set such that the win from N% correct executions is greater than the loss
+// from (100 - N)% mispredicted executions for the majority of intended targets.
+static cl::opt<int> MinPercentageForPredictableBranch(
+    "min-predictable-branch", cl::init(99),
+    cl::desc("Minimum percentage (0-100) that a condition must be either true "
+             "or false to assume that the condition is predictable"),
     cl::Hidden);
 
 /// InitLibcallNames - Set default libcall names.
@@ -1625,6 +1637,9 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
   return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment, Fast);
 }
 
+BranchProbability TargetLoweringBase::getPredictableBranchThreshold() const {
+  return BranchProbability(MinPercentageForPredictableBranch, 100);
+}
 
 //===----------------------------------------------------------------------===//
 //  TargetTransformInfo Helpers

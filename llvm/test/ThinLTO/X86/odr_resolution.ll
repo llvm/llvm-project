@@ -6,6 +6,8 @@
 ; Verify that only one ODR is selected across modules, but non ODR are not affected.
 ; RUN: llvm-lto -thinlto-action=promote %t.bc -thinlto-index=%t3.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=MOD1
 ; RUN: llvm-lto -thinlto-action=promote %t2.bc -thinlto-index=%t3.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=MOD2
+; When exported, we always preserve a linkonce
+; RUN: llvm-lto -thinlto-action=promote %t.bc -thinlto-index=%t3.bc -o - --exported-symbol=linkonceodrfuncInSingleModule | llvm-dis -o - | FileCheck %s --check-prefix=EXPORTED
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
@@ -48,3 +50,9 @@ entry:
   ret void
 }
 
+; MOD1: define linkonce_odr void @linkonceodrfuncInSingleModule()
+; EXPORTED: define weak_odr void @linkonceodrfuncInSingleModule()
+define linkonce_odr void @linkonceodrfuncInSingleModule() #0 {
+entry:
+  ret void
+}

@@ -1394,13 +1394,13 @@ defm V_FREXP_MANT_F32 : VOP1Inst <vop1<0x40, 0x34>, "v_frexp_mant_f32",
   VOP_F32_F32, int_amdgcn_frexp_mant
 >;
 let vdst = 0, src0 = 0, VOPAsmPrefer32Bit = 1 in {
-defm V_CLREXCP : VOP1Inst <vop1<0x41,0x35>, "v_clrexcp", VOP_NO_DPP<VOP_NONE>>;
+defm V_CLREXCP : VOP1Inst <vop1<0x41,0x35>, "v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 }
 
 let Uses = [M0, EXEC] in {
-defm V_MOVRELD_B32 : VOP1Inst <vop1<0x42, 0x36>, "v_movreld_b32", VOP_NO_DPP<VOP_I32_I32>>;
-defm V_MOVRELS_B32 : VOP1Inst <vop1<0x43, 0x37>, "v_movrels_b32", VOP_NO_DPP<VOP_I32_I32>>;
-defm V_MOVRELSD_B32 : VOP1Inst <vop1<0x44, 0x38>, "v_movrelsd_b32", VOP_NO_DPP<VOP_I32_I32>>;
+defm V_MOVRELD_B32 : VOP1Inst <vop1<0x42, 0x36>, "v_movreld_b32", VOP_NO_EXT<VOP_I32_I32>>;
+defm V_MOVRELS_B32 : VOP1Inst <vop1<0x43, 0x37>, "v_movrels_b32", VOP_NO_EXT<VOP_I32_I32>>;
+defm V_MOVRELSD_B32 : VOP1Inst <vop1<0x44, 0x38>, "v_movrelsd_b32", VOP_NO_EXT<VOP_I32_I32>>;
 } // End Uses = [M0, EXEC]
 
 // These instruction only exist on SI and CI

@@ -1995,9 +1995,10 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI, IRBuilder<> &B) {
     Value *Len = emitStrLen(CI->getArgOperand(2), B, DL, TLI);
     if (!Len)
       return nullptr;
-    Value *IncLen =
-        B.CreateAdd(Len, ConstantInt::get(Len->getType(), 1), "leninc");
-    B.CreateMemCpy(CI->getArgOperand(0), CI->getArgOperand(2), IncLen, 1);
+    B.CreateMemCpy(CI->getArgOperand(0), CI->getArgOperand(2), Len, 1);
+    Value *PtrToNullByte =
+        B.CreateGEP(B.getInt8Ty(), CI->getArgOperand(0), Len, "nul");
+    B.CreateStore(B.getInt8(0), PtrToNullByte);
 
     // The sprintf result is the unincremented number of bytes in the string.
     return B.CreateIntCast(Len, CI->getType(), false);

@@ -1,4 +1,3 @@
-; REQUIRES: asserts
 ; RUN: llc < %s -march=x86 -mtriple=i686-pc-win32 | FileCheck %s
 
 ; PR26575

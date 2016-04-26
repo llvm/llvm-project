@@ -97,6 +97,9 @@ public:
                             const TargetRegisterInfo *TRI) const override;
 
   unsigned getGlobalBaseReg(MachineFunction *MF) const;
+
+  // Lower pseudo instructions after register allocation.
+  bool expandPostRAPseudo(MachineBasicBlock::iterator MI) const override;
 };
 
 }

@@ -30,6 +30,7 @@ namespace llvm {
 class StringRef;
 
 class SparcSubtarget : public SparcGenSubtargetInfo {
+  Triple TargetTriple;
   virtual void anchor();
   bool IsV9;
   bool IsLeon;
@@ -89,6 +90,8 @@ public:
   /// returns adjusted framesize which includes space for register window
   /// spills and arguments.
   int getAdjustedFrameSize(int stackSize) const;
+
+  bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
 };
 
 } // end namespace llvm

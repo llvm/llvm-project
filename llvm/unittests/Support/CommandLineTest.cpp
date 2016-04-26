@@ -165,11 +165,12 @@ void testCommandLineTokenizer(ParserFunction *parse, const char *Input,
 }
 
 TEST(CommandLineTest, TokenizeGNUCommandLine) {
-  const char *Input = "foo\\ bar \"foo bar\" \'foo bar\' 'foo\\\\bar' "
-                      "foo\"bar\"baz C:\\src\\foo.cpp \"C:\\src\\foo.cpp\"";
-  const char *const Output[] = { "foo bar", "foo bar", "foo bar", "foo\\bar",
-                                 "foobarbaz", "C:\\src\\foo.cpp",
-                                 "C:\\src\\foo.cpp" };
+  const char *Input =
+      "foo\\ bar \"foo bar\" \'foo bar\' 'foo\\\\bar' -DFOO=bar\\(\\) "
+      "foo\"bar\"baz C:\\\\src\\\\foo.cpp \"C:\\src\\foo.cpp\"";
+  const char *const Output[] = {
+      "foo bar",     "foo bar",   "foo bar",          "foo\\bar",
+      "-DFOO=bar()", "foobarbaz", "C:\\src\\foo.cpp", "C:srcfoo.cpp"};
   testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input, Output,
                            array_lengthof(Output));
 }

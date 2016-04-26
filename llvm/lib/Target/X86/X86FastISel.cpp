@@ -1121,11 +1121,14 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
     RetRegs.push_back(VA.getLocReg());
   }
 
+  // Swift calling convention does not require we copy the sret argument
+  // into %rax/%eax for the return, and SRetReturnReg is not set for Swift.
+
   // All x86 ABIs require that for returning structs by value we copy
   // the sret argument into %rax/%eax (depending on ABI) for the return.
   // We saved the argument into a virtual register in the entry block,
   // so now we copy the value out and into %rax/%eax.
-  if (F.hasStructRetAttr()) {
+  if (F.hasStructRetAttr() && CC != CallingConv::Swift) {
     unsigned Reg = X86MFInfo->getSRetReturnReg();
     assert(Reg &&
            "SRetReturnReg should have been set in LowerFormalArguments()!");
