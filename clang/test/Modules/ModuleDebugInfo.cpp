@@ -41,22 +41,23 @@
 // CHECK-SAME-NOT:         name:
 // CHECK: !DIEnumerator(name: "e5", value: 5)
 
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Struct"
-// CHECK-SAME:             identifier: "_ZTSN8DebugCXX6StructE")
-
-// CHECK: !DICompositeType(tag: DW_TAG_class_type,
-// CHECK-SAME:             name: "Template<int, DebugCXX::traits<int> >"
-// CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIiNS_6traitsIiEEEE")
+// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "B",
+// no mangled name here yet.
 
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A<void>"
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX1AIJvEEE")
 
-// CHECK: !DICompositeType(tag: DW_TAG_class_type,
-// CHECK-SAME:             name: "Template<float, DebugCXX::traits<float> >"
-// CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIfNS_6traitsIfEEEE")
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Struct"
+// CHECK-SAME:             identifier: "_ZTSN8DebugCXX6StructE")
 
-// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "B",
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "Template<int, DebugCXX::traits<int> >"
+// CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIiNS_6traitsIiEEEE")
+
+// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "FloatInstatiation"
 // no mangled name here yet.
+
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "Template<float, DebugCXX::traits<float> >"
+// CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIfNS_6traitsIfEEEE")
 
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "FwdVirtual"
 // CHECK-SAME:             elements:
@@ -71,16 +72,6 @@
 // CHECK-SAME-NOT:         name:
 // CHECK-SAME:             identifier: "_ZTS13TypedefStruct")
 
-// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "Derived",
-// CHECK-SAME:             identifier: "_ZTS7Derived")
-// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "B", scope: !"_ZTS7Derived",
-// CHECK-SAME:             elements: ![[B_MBRS:.*]], vtableHolder: !"_ZTS1A"
-// CHECK: ![[B_MBRS]] = !{{{.*}}, ![[GET_PARENT:.*]]}
-// CHECK: ![[GET_PARENT]] = !DISubprogram(name: "getParent"
-
-// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "FloatInstatiation"
-// no mangled name here yet.
-
 // CHECK: !DICompositeType(tag: DW_TAG_union_type,
 // CHECK-SAME-NOT:         name:
 
@@ -90,5 +81,13 @@
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-SAME:             name: "InAnonymousNamespace",
 // CHECK-SAME:             elements: !{{[0-9]+}})
+
+// CHECK: ![[A:[0-9]+]] = {{.*}}!DICompositeType(tag: DW_TAG_class_type, name: "A",
+// CHECK: ![[DERIVED:[0-9]+]] = {{.*}}!DICompositeType(tag: DW_TAG_class_type, name: "Derived",
+// CHECK-SAME:                                         identifier: "_ZTS7Derived")
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "B", scope: ![[DERIVED]],
+// CHECK-SAME:             elements: ![[B_MBRS:.*]], vtableHolder: ![[A]]
+// CHECK: ![[B_MBRS]] = !{{{.*}}, ![[GET_PARENT:.*]]}
+// CHECK: ![[GET_PARENT]] = !DISubprogram(name: "getParent"
 
 // CHECK-NEG-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "PureForwardDecl"

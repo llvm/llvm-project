@@ -2,7 +2,7 @@
 
 // Check that this pointer type is TC<int>
 // CHECK: ![[LINE:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_class_type, name: "TC<int>"{{.*}}, identifier: "_ZTS2TCIiE")
-// CHECK: !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !"_ZTS2TCIiE"
+// CHECK: !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[LINE]]
 
 template<typename T>
 class TC {
