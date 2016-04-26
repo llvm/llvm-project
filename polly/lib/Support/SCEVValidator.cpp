@@ -5,7 +5,6 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Support/Debug.h"
-#include <vector>
 
 using namespace llvm;
 using namespace polly;
@@ -41,7 +40,7 @@ class ValidatorResult {
   SCEVType::TYPE Type;
 
   /// @brief The set of Parameters in the expression.
-  std::vector<const SCEV *> Parameters;
+  ParameterSetTy Parameters;
 
 public:
   /// @brief The copy constructor
@@ -57,7 +56,7 @@ public:
 
   /// @brief Construct a result with a certain type and a single parameter.
   ValidatorResult(SCEVType::TYPE Type, const SCEV *Expr) : Type(Type) {
-    Parameters.push_back(Expr);
+    Parameters.insert(Expr);
   }
 
   /// @brief Get the type of the ValidatorResult.
@@ -79,12 +78,11 @@ public:
   bool isPARAM() { return Type == SCEVType::PARAM; }
 
   /// @brief Get the parameters of this validator result.
-  std::vector<const SCEV *> getParameters() { return Parameters; }
+  const ParameterSetTy &getParameters() { return Parameters; }
 
   /// @brief Add the parameters of Source to this result.
   void addParamsFrom(const ValidatorResult &Source) {
-    Parameters.insert(Parameters.end(), Source.Parameters.begin(),
-                      Source.Parameters.end());
+    Parameters.insert(Source.Parameters.begin(), Source.Parameters.end());
   }
 
   /// @brief Merge a result.
@@ -126,13 +124,12 @@ private:
   const Region *R;
   Loop *Scope;
   ScalarEvolution &SE;
-  const Value *BaseAddress;
   InvariantLoadsSetTy *ILS;
 
 public:
   SCEVValidator(const Region *R, Loop *Scope, ScalarEvolution &SE,
-                const Value *BaseAddress, InvariantLoadsSetTy *ILS)
-      : R(R), Scope(Scope), SE(SE), BaseAddress(BaseAddress), ILS(ILS) {}
+                InvariantLoadsSetTy *ILS)
+      : R(R), Scope(Scope), SE(SE), ILS(ILS) {}
 
   class ValidatorResult visitConstant(const SCEVConstant *Constant) {
     return ValidatorResult(SCEVType::INT);
@@ -159,23 +156,7 @@ public:
   }
 
   class ValidatorResult visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-    ValidatorResult Op = visit(Expr->getOperand());
-
-    switch (Op.getType()) {
-    case SCEVType::INT:
-    case SCEVType::PARAM:
-      // We currently do not represent a truncate expression as an affine
-      // expression. If it is constant during Scop execution, we treat it as a
-      // parameter.
-      return ValidatorResult(SCEVType::PARAM, Expr);
-    case SCEVType::IV:
-      DEBUG(dbgs() << "INVALID: ZeroExtend of SCEVType::IV expression");
-      return ValidatorResult(SCEVType::INVALID);
-    case SCEVType::INVALID:
-      return Op;
-    }
-
-    llvm_unreachable("Unknown SCEVType");
+    return visit(Expr->getOperand());
   }
 
   class ValidatorResult visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
@@ -396,11 +377,6 @@ public:
       return ValidatorResult(SCEVType::INVALID);
     }
 
-    if (BaseAddress == V) {
-      DEBUG(dbgs() << "INVALID: UnknownExpr references BaseAddress\n");
-      return ValidatorResult(SCEVType::INVALID);
-    }
-
     if (Instruction *I = dyn_cast<Instruction>(Expr->getValue())) {
       switch (I->getOpcode()) {
       case Instruction::Load:
@@ -530,12 +506,11 @@ bool hasScalarDepsInsideRegion(const SCEV *Expr, const Region *R,
 }
 
 bool isAffineExpr(const Region *R, llvm::Loop *Scope, const SCEV *Expr,
-                  ScalarEvolution &SE, const Value *BaseAddress,
-                  InvariantLoadsSetTy *ILS) {
+                  ScalarEvolution &SE, InvariantLoadsSetTy *ILS) {
   if (isa<SCEVCouldNotCompute>(Expr))
     return false;
 
-  SCEVValidator Validator(R, Scope, SE, BaseAddress, ILS);
+  SCEVValidator Validator(R, Scope, SE, ILS);
   DEBUG({
     dbgs() << "\n";
     dbgs() << "Expr: " << *Expr << "\n";
@@ -555,26 +530,25 @@ bool isAffineExpr(const Region *R, llvm::Loop *Scope, const SCEV *Expr,
 }
 
 static bool isAffineParamExpr(Value *V, const Region *R, Loop *Scope,
-                              ScalarEvolution &SE,
-                              std::vector<const SCEV *> &Params) {
+                              ScalarEvolution &SE, ParameterSetTy &Params) {
   auto *E = SE.getSCEV(V);
   if (isa<SCEVCouldNotCompute>(E))
     return false;
 
-  SCEVValidator Validator(R, Scope, SE, nullptr, nullptr);
+  SCEVValidator Validator(R, Scope, SE, nullptr);
   ValidatorResult Result = Validator.visit(E);
   if (!Result.isConstant())
     return false;
 
   auto ResultParams = Result.getParameters();
-  Params.insert(Params.end(), ResultParams.begin(), ResultParams.end());
+  Params.insert(ResultParams.begin(), ResultParams.end());
 
   return true;
 }
 
 bool isAffineParamConstraint(Value *V, const Region *R, llvm::Loop *Scope,
-                             ScalarEvolution &SE,
-                             std::vector<const SCEV *> &Params, bool OrExpr) {
+                             ScalarEvolution &SE, ParameterSetTy &Params,
+                             bool OrExpr) {
   if (auto *ICmp = dyn_cast<ICmpInst>(V)) {
     return isAffineParamConstraint(ICmp->getOperand(0), R, Scope, SE, Params,
                                    true) &&
@@ -596,15 +570,13 @@ bool isAffineParamConstraint(Value *V, const Region *R, llvm::Loop *Scope,
   return isAffineParamExpr(V, R, Scope, SE, Params);
 }
 
-std::vector<const SCEV *> getParamsInAffineExpr(const Region *R, Loop *Scope,
-                                                const SCEV *Expr,
-                                                ScalarEvolution &SE,
-                                                const Value *BaseAddress) {
+ParameterSetTy getParamsInAffineExpr(const Region *R, Loop *Scope,
+                                     const SCEV *Expr, ScalarEvolution &SE) {
   if (isa<SCEVCouldNotCompute>(Expr))
-    return std::vector<const SCEV *>();
+    return ParameterSetTy();
 
   InvariantLoadsSetTy ILS;
-  SCEVValidator Validator(R, Scope, SE, BaseAddress, &ILS);
+  SCEVValidator Validator(R, Scope, SE, &ILS);
   ValidatorResult Result = Validator.visit(Expr);
   assert(Result.isValid() && "Requested parameters for an invalid SCEV!");
 
@@ -631,6 +603,32 @@ extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
       return std::make_pair(StepPair.first, LeftOverAddRec);
     }
     return std::make_pair(ConstPart, S);
+  }
+
+  if (auto *Add = dyn_cast<SCEVAddExpr>(S)) {
+    SmallVector<const SCEV *, 4> LeftOvers;
+    auto Op0Pair = extractConstantFactor(Add->getOperand(0), SE);
+    auto *Factor = Op0Pair.first;
+    if (SE.isKnownNegative(Factor)) {
+      Factor = cast<SCEVConstant>(SE.getNegativeSCEV(Factor));
+      LeftOvers.push_back(SE.getNegativeSCEV(Op0Pair.second));
+    } else {
+      LeftOvers.push_back(Op0Pair.second);
+    }
+
+    for (unsigned u = 1, e = Add->getNumOperands(); u < e; u++) {
+      auto OpUPair = extractConstantFactor(Add->getOperand(u), SE);
+      // TODO: Use something smarter than equality here, e.g., gcd.
+      if (Factor == OpUPair.first)
+        LeftOvers.push_back(OpUPair.second);
+      else if (Factor == SE.getNegativeSCEV(OpUPair.first))
+        LeftOvers.push_back(SE.getNegativeSCEV(OpUPair.second));
+      else
+        return std::make_pair(ConstPart, S);
+    }
+
+    auto *NewAdd = SE.getAddExpr(LeftOvers, Add->getNoWrapFlags());
+    return std::make_pair(Factor, NewAdd);
   }
 
   auto *Mul = dyn_cast<SCEVMulExpr>(S);

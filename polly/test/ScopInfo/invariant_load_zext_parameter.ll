@@ -8,17 +8,22 @@
 ;      }
 ;    }
 ;
-; Check that even though the invariant load is some subpart of a parameter we
-; will generate valid code and replace it by the preloaded value, e.g., to evaluate
-; the execution context of the invariant access to I1.
+; CHECK:         Assumed Context:
+; CHECK-NEXT:      [loadI0] -> {  :  }
+; CHECK-NEXT:    Invalid Context:
+; CHECK-NEXT:      [loadI0] -> {  : loadI0 < 0 }
 ;
-; CHECK:   p0: (zext i32 %loadI0 to i64)
+; CHECK:   p0: %loadI0
+;
+; CHECK:       Stmt_if_then
+; CHECK-NEXT:    Domain :=
+; CHECK-NEXT:      [loadI0] -> { Stmt_if_then[i0] : loadI0 = 0 and 0 <= i0 <= 999 };
 ;
 ; CODEGEN:      polly.preload.begin:
 ; CODEGEN-NEXT:   %polly.access.I0 = getelementptr i32, i32* %I0, i64 0
 ; CODEGEN-NEXT:   %polly.access.I0.load = load i32, i32* %polly.access.I0
 ; CODEGEN-NEXT:   store i32 %polly.access.I0.load, i32* %loadI0.preload.s2a
-; CODEGEN-NEXT:   %0 = zext i32 %polly.access.I0.load to i64
+; CODEGEN-NEXT:   %0 = sext i32 %polly.access.I0.load to i64
 ; CODEGEN-NEXT:   %1 = icmp eq i64 %0, 0
 ; CODEGEN-NEXT:   br label %polly.preload.cond
 ;

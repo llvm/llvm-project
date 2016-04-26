@@ -1052,63 +1052,6 @@ INTERCEPTOR(void *, mmap64, void *addr, SIZE_T length, int prot, int flags,
 #define MSAN_MAYBE_INTERCEPT_MMAP64
 #endif
 
-struct dlinfo {
-  char *dli_fname;
-  void *dli_fbase;
-  char *dli_sname;
-  void *dli_saddr;
-};
-
-INTERCEPTOR(int, dladdr, void *addr, dlinfo *info) {
-  ENSURE_MSAN_INITED();
-  int res = REAL(dladdr)(addr, info);
-  if (res != 0) {
-    __msan_unpoison(info, sizeof(*info));
-    if (info->dli_fname)
-      __msan_unpoison(info->dli_fname, REAL(strlen)(info->dli_fname) + 1);
-    if (info->dli_sname)
-      __msan_unpoison(info->dli_sname, REAL(strlen)(info->dli_sname) + 1);
-  }
-  return res;
-}
-
-INTERCEPTOR(char *, dlerror, int fake) {
-  ENSURE_MSAN_INITED();
-  char *res = REAL(dlerror)(fake);
-  if (res) __msan_unpoison(res, REAL(strlen)(res) + 1);
-  return res;
-}
-
-typedef int (*dl_iterate_phdr_cb)(__sanitizer_dl_phdr_info *info, SIZE_T size,
-                                  void *data);
-struct dl_iterate_phdr_data {
-  dl_iterate_phdr_cb callback;
-  void *data;
-};
-
-static int msan_dl_iterate_phdr_cb(__sanitizer_dl_phdr_info *info, SIZE_T size,
-                                   void *data) {
-  if (info) {
-    __msan_unpoison(info, size);
-    if (info->dlpi_phdr && info->dlpi_phnum)
-      __msan_unpoison(info->dlpi_phdr, struct_ElfW_Phdr_sz * info->dlpi_phnum);
-    if (info->dlpi_name)
-      __msan_unpoison(info->dlpi_name, REAL(strlen)(info->dlpi_name) + 1);
-  }
-  dl_iterate_phdr_data *cbdata = (dl_iterate_phdr_data *)data;
-  UnpoisonParam(3);
-  return cbdata->callback(info, size, cbdata->data);
-}
-
-INTERCEPTOR(int, dl_iterate_phdr, dl_iterate_phdr_cb callback, void *data) {
-  ENSURE_MSAN_INITED();
-  dl_iterate_phdr_data cbdata;
-  cbdata.callback = callback;
-  cbdata.data = data;
-  int res = REAL(dl_iterate_phdr)(msan_dl_iterate_phdr_cb, (void *)&cbdata);
-  return res;
-}
-
 INTERCEPTOR(int, getrusage, int who, void *usage) {
   ENSURE_MSAN_INITED();
   int res = REAL(getrusage)(who, usage);
@@ -1452,6 +1395,66 @@ int OnExit() {
   } while (false)
 #define COMMON_SYSCALL_POST_WRITE_RANGE(p, s) __msan_unpoison(p, s)
 #include "sanitizer_common/sanitizer_common_syscalls.inc"
+
+struct dlinfo {
+  char *dli_fname;
+  void *dli_fbase;
+  char *dli_sname;
+  void *dli_saddr;
+};
+
+INTERCEPTOR(int, dladdr, void *addr, dlinfo *info) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, dladdr, addr, info);
+  int res = REAL(dladdr)(addr, info);
+  if (res != 0) {
+    __msan_unpoison(info, sizeof(*info));
+    if (info->dli_fname)
+      __msan_unpoison(info->dli_fname, REAL(strlen)(info->dli_fname) + 1);
+    if (info->dli_sname)
+      __msan_unpoison(info->dli_sname, REAL(strlen)(info->dli_sname) + 1);
+  }
+  return res;
+}
+
+INTERCEPTOR(char *, dlerror, int fake) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, dlerror, fake);
+  char *res = REAL(dlerror)(fake);
+  if (res) __msan_unpoison(res, REAL(strlen)(res) + 1);
+  return res;
+}
+
+typedef int (*dl_iterate_phdr_cb)(__sanitizer_dl_phdr_info *info, SIZE_T size,
+                                  void *data);
+struct dl_iterate_phdr_data {
+  dl_iterate_phdr_cb callback;
+  void *data;
+};
+
+static int msan_dl_iterate_phdr_cb(__sanitizer_dl_phdr_info *info, SIZE_T size,
+                                   void *data) {
+  if (info) {
+    __msan_unpoison(info, size);
+    if (info->dlpi_phdr && info->dlpi_phnum)
+      __msan_unpoison(info->dlpi_phdr, struct_ElfW_Phdr_sz * info->dlpi_phnum);
+    if (info->dlpi_name)
+      __msan_unpoison(info->dlpi_name, REAL(strlen)(info->dlpi_name) + 1);
+  }
+  dl_iterate_phdr_data *cbdata = (dl_iterate_phdr_data *)data;
+  UnpoisonParam(3);
+  return cbdata->callback(info, size, cbdata->data);
+}
+
+INTERCEPTOR(int, dl_iterate_phdr, dl_iterate_phdr_cb callback, void *data) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, dl_iterate_phdr, callback, data);
+  dl_iterate_phdr_data cbdata;
+  cbdata.callback = callback;
+  cbdata.data = data;
+  int res = REAL(dl_iterate_phdr)(msan_dl_iterate_phdr_cb, (void *)&cbdata);
+  return res;
+}
 
 // These interface functions reside here so that they can use
 // REAL(memset), etc.
