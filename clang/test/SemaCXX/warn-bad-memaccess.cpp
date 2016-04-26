@@ -141,3 +141,16 @@ namespace N {
     N::memset(&x1, 0, sizeof x1);
   }
 }
+
+namespace recursive_class {
+struct S {
+  S v;
+  // expected-error@-1{{field has incomplete type 'recursive_class::S'}}
+  // expected-note@-3{{definition of 'recursive_class::S' is not complete until the closing '}'}}
+} a;
+
+int main() {
+  __builtin_memset(&a, 0, sizeof a);
+  return 0;
+}
+}
