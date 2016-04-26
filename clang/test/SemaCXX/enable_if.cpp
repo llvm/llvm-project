@@ -253,3 +253,96 @@ namespace FnPtrs {
     a = &noOvlNoCandidate; // expected-error{{cannot take address of function 'noOvlNoCandidate' becuase it has one or more non-tautological enable_if conditions}}
   }
 }
+
+namespace casting {
+using VoidFnTy = void (*)();
+
+void foo(void *c) __attribute__((enable_if(0, "")));
+void foo(int *c) __attribute__((enable_if(c, "")));
+void foo(char *c) __attribute__((enable_if(1, "")));
+
+void testIt() {
+  auto A = reinterpret_cast<VoidFnTy>(foo);
+  auto AAmp = reinterpret_cast<VoidFnTy>(&foo);
+
+  using VoidFooTy = void (*)(void *);
+  auto B = reinterpret_cast<VoidFooTy>(foo);
+  auto BAmp = reinterpret_cast<VoidFooTy>(&foo);
+
+  using IntFooTy = void (*)(int *);
+  auto C = reinterpret_cast<IntFooTy>(foo);
+  auto CAmp = reinterpret_cast<IntFooTy>(&foo);
+
+  using CharFooTy = void (*)(void *);
+  auto D = reinterpret_cast<CharFooTy>(foo);
+  auto DAmp = reinterpret_cast<CharFooTy>(&foo);
+}
+
+void testItCStyle() {
+  auto A = (VoidFnTy)foo;
+  auto AAmp = (VoidFnTy)&foo;
+
+  using VoidFooTy = void (*)(void *);
+  auto B = (VoidFooTy)foo;
+  auto BAmp = (VoidFooTy)&foo;
+
+  using IntFooTy = void (*)(int *);
+  auto C = (IntFooTy)foo;
+  auto CAmp = (IntFooTy)&foo;
+
+  using CharFooTy = void (*)(void *);
+  auto D = (CharFooTy)foo;
+  auto DAmp = (CharFooTy)&foo;
+}
+}
+
+namespace casting_templates {
+template <typename T> void foo(T) {} // expected-note 4 {{candidate function}}
+
+void foo(int *c) __attribute__((enable_if(c, ""))); //expected-note 4 {{candidate function}}
+void foo(char *c) __attribute__((enable_if(c, ""))); //expected-note 4 {{candidate function}}
+
+void testIt() {
+  using IntFooTy = void (*)(int *);
+  auto A = reinterpret_cast<IntFooTy>(foo); // expected-error{{reinterpret_cast cannot resolve overloaded function 'foo' to type}}
+  auto ARef = reinterpret_cast<IntFooTy>(&foo); // expected-error{{reinterpret_cast cannot resolve overloaded function 'foo' to type}}
+  auto AExplicit = reinterpret_cast<IntFooTy>(foo<int*>);
+
+  using CharFooTy = void (*)(char *);
+  auto B = reinterpret_cast<CharFooTy>(foo); // expected-error{{reinterpret_cast cannot resolve overloaded function 'foo' to type}}
+  auto BRef = reinterpret_cast<CharFooTy>(&foo); // expected-error{{reinterpret_cast cannot resolve overloaded function 'foo' to type}}
+  auto BExplicit = reinterpret_cast<CharFooTy>(foo<char*>);
+}
+
+void testItCStyle() {
+  // constexpr is usable here because all of these should become static_casts.
+  using IntFooTy = void (*)(int *);
+  constexpr auto A = (IntFooTy)foo;
+  constexpr auto ARef = (IntFooTy)&foo;
+  constexpr auto AExplicit = (IntFooTy)foo<int*>;
+
+  using CharFooTy = void (*)(char *);
+  constexpr auto B = (CharFooTy)foo;
+  constexpr auto BRef = (CharFooTy)&foo;
+  constexpr auto BExplicit = (CharFooTy)foo<char*>;
+
+  static_assert(A == ARef && ARef == AExplicit, "");
+  static_assert(B == BRef && BRef == BExplicit, "");
+}
+}
+
+namespace multiple_matches {
+using NoMatchTy = void (*)();
+
+void foo(float *c); //expected-note 4 {{candidate function}}
+void foo(int *c) __attribute__((enable_if(1, ""))); //expected-note 4 {{candidate function}}
+void foo(char *c) __attribute__((enable_if(1, ""))); //expected-note 4 {{candidate function}}
+
+void testIt() {
+  auto A = reinterpret_cast<NoMatchTy>(foo); // expected-error{{reinterpret_cast cannot resolve overloaded function 'foo' to type}}
+  auto ARef = reinterpret_cast<NoMatchTy>(&foo); // expected-error{{reinterpret_cast cannot resolve overloaded function 'foo' to type}}
+
+  auto C = (NoMatchTy)foo; // expected-error{{address of overloaded function 'foo' does not match required type 'void ()'}}
+  auto CRef = (NoMatchTy)&foo; // expected-error{{address of overloaded function 'foo' does not match required type 'void ()'}}
+}
+}
