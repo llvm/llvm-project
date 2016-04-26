@@ -2388,8 +2388,8 @@ public:
 
   // Members have to be NamespaceDecl* or TranslationUnitDecl*.
   // TODO: make this is a typesafe union.
-  typedef llvm::SmallPtrSet<DeclContext   *, 16> AssociatedNamespaceSet;
-  typedef llvm::SmallPtrSet<CXXRecordDecl *, 16> AssociatedClassSet;
+  typedef llvm::SmallSetVector<DeclContext   *, 16> AssociatedNamespaceSet;
+  typedef llvm::SmallSetVector<CXXRecordDecl *, 16> AssociatedClassSet;
 
   void AddOverloadCandidate(FunctionDecl *Function,
                             DeclAccessPair FoundDecl,
