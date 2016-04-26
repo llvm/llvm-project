@@ -18,6 +18,7 @@
 
 #include <regex>
 #include <cassert>
+#include "test_macros.h"
 #include "test_iterators.h"
 
 template <class char_type>

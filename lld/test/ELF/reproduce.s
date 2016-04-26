@@ -1,10 +1,10 @@
 # REQUIRES: x86, shell
 
-# RUN: rm -rf %S/repro
+# RUN: rm -rf %t.dir/repro
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: ld.lld %t -o %t2 -shared --as-needed --reproduce %S/repro
-# RUN: llvm-objdump -d %S/repro/%t | FileCheck %s --check-prefix=DUMP
-# RUN: cat %S/repro/invocation.txt | FileCheck %s --check-prefix=INVOCATION
+# RUN: ld.lld %t -o %t2 -shared --as-needed --reproduce %t.dir/repro
+# RUN: llvm-objdump -d %t.dir/repro/%t | FileCheck %s --check-prefix=DUMP
+# RUN: cat %t.dir/repro/invocation.txt | FileCheck %s --check-prefix=INVOCATION
 
 .globl _start;
 _start:
@@ -20,7 +20,7 @@ _start:
 
 # INVOCATION: lld {{.*}}reproduce.s{{.*}} -o {{.*}} -shared --as-needed --reproduce
 
-# RUN: rm -rf %S/repro2
-# RUN: mkdir %S/repro2
-# RUN: not ld.lld %t -o %t2 --reproduce %S/repro2 2>&1 | FileCheck --check-prefix=EDIR %s
+# RUN: rm -rf %t.dir/repro2
+# RUN: mkdir %t.dir/repro2
+# RUN: not ld.lld %t -o %t2 --reproduce %t.dir/repro2 2>&1 | FileCheck --check-prefix=EDIR %s
 # EDIR: --reproduce: can't create directory

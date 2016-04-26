@@ -16,6 +16,7 @@
 
 #include <regex>
 #include <cassert>
+#include "test_macros.h"
 
 #ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 

@@ -20,6 +20,7 @@
 
 #include <regex>
 #include <type_traits>
+#include "test_macros.h"
 
 int main()
 {

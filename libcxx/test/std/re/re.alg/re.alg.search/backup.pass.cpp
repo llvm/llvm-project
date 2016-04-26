@@ -20,6 +20,7 @@
 #include <string>
 #include <list>
 #include <cassert>
+#include "test_macros.h"
 
 int main()
 {

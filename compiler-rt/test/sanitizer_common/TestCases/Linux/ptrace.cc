@@ -92,6 +92,26 @@ int main(void) {
       printf("%x\n", fpregs.fpsr);
 #endif // (__aarch64__)
 
+#if (__s390__)
+    struct iovec regset_io;
+
+    struct _user_regs_struct regs;
+    regset_io.iov_base = &regs;
+    regset_io.iov_len = sizeof(regs);
+    res = ptrace(PTRACE_GETREGSET, pid, (void*)NT_PRSTATUS, (void*)&regset_io);
+    assert(!res);
+    if (regs.psw.addr)
+      printf("%lx\n", regs.psw.addr);
+
+    struct _user_fpregs_struct fpregs;
+    regset_io.iov_base = &fpregs;
+    regset_io.iov_len = sizeof(fpregs);
+    res = ptrace(PTRACE_GETREGSET, pid, (void*)NT_FPREGSET, (void*)&regset_io);
+    assert(!res);
+    if (fpregs.fpc)
+      printf("%x\n", fpregs.fpc);
+#endif // (__s390__)
+
     siginfo_t siginfo;
     res = ptrace(PTRACE_GETSIGINFO, pid, NULL, &siginfo);
     assert(!res);

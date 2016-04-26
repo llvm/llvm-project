@@ -760,7 +760,8 @@ namespace __sanitizer {
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID && \
   (defined(__i386) || defined(__x86_64) || defined(__mips64) || \
-    defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__))
+    defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__) || \
+    defined(__s390__))
   extern unsigned struct_user_regs_struct_sz;
   extern unsigned struct_user_fpregs_struct_sz;
   extern unsigned struct_user_fpxregs_struct_sz;
