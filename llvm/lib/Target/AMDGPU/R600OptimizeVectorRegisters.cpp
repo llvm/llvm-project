@@ -314,6 +314,9 @@ void R600VectorRegMerger::trackRSI(const RegSeqInfo &RSI) {
 }
 
 bool R600VectorRegMerger::runOnMachineFunction(MachineFunction &Fn) {
+  if (skipFunction(*Fn.getFunction()))
+    return false;
+
   TII = static_cast<const R600InstrInfo *>(Fn.getSubtarget().getInstrInfo());
   MRI = &(Fn.getRegInfo());
   for (MachineFunction::iterator MBB = Fn.begin(), MBBe = Fn.end();

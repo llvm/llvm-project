@@ -963,7 +963,8 @@ void DAGCombiner::ReplaceLoadWithPromotedLoad(SDNode *Load, SDNode *ExtLoad) {
 SDValue DAGCombiner::PromoteOperand(SDValue Op, EVT PVT, bool &Replace) {
   Replace = false;
   SDLoc dl(Op);
-  if (LoadSDNode *LD = dyn_cast<LoadSDNode>(Op)) {
+  if (ISD::isUNINDEXEDLoad(Op.getNode())) {
+    LoadSDNode *LD = cast<LoadSDNode>(Op);
     EVT MemVT = LD->getMemoryVT();
     ISD::LoadExtType ExtType = ISD::isNON_EXTLoad(LD)
       ? (TLI.isLoadExtLegal(ISD::ZEXTLOAD, PVT, MemVT) ? ISD::ZEXTLOAD
@@ -1165,6 +1166,9 @@ SDValue DAGCombiner::PromoteExtend(SDValue Op) {
 
 bool DAGCombiner::PromoteLoad(SDValue Op) {
   if (!LegalOperations)
+    return false;
+
+  if (!ISD::isUNINDEXEDLoad(Op.getNode()))
     return false;
 
   EVT VT = Op.getValueType();
@@ -3140,8 +3144,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   // more cases.
   if ((N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
        N0.getValueSizeInBits() == N0.getOperand(0).getScalarValueSizeInBits() &&
-       N0.getOperand(0).getOpcode() == ISD::LOAD) ||
-      N0.getOpcode() == ISD::LOAD) {
+       N0.getOperand(0).getOpcode() == ISD::LOAD &&
+       N0.getOperand(0).getResNo() == 0) ||
+      (N0.getOpcode() == ISD::LOAD && N0.getResNo() == 0)) {
     LoadSDNode *Load = cast<LoadSDNode>( (N0.getOpcode() == ISD::LOAD) ?
                                          N0 : N0.getOperand(0) );
 

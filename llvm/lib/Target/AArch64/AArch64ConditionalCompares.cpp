@@ -889,6 +889,9 @@ bool AArch64ConditionalCompares::tryConvert(MachineBasicBlock *MBB) {
 bool AArch64ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
                << "********** Function: " << MF.getName() << '\n');
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   SchedModel = MF.getSubtarget().getSchedModel();

@@ -760,4 +760,18 @@ void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
   }
 }
 
+void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,
+                                   raw_ostream &O) {
+  unsigned SImm16 = MI->getOperand(OpNo).getImm();
+  const unsigned HwRegCode = SImm16 & 0x3F;
+  const unsigned Offset = (SImm16 >> 6) & 0x1f;
+  const unsigned Width = ((SImm16 >> 11) & 0x1F) + 1;
+
+  if (Width == 32 && Offset == 0) {
+    O << "hwreg(" << HwRegCode << ')';
+  } else {
+    O << "hwreg(" << HwRegCode << ", " << Offset << ", " << Width << ')';
+  }
+}
+
 #include "AMDGPUGenAsmWriter.inc"

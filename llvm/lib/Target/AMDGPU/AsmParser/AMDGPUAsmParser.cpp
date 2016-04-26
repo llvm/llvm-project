@@ -79,6 +79,7 @@ public:
     ImmTyDA,
     ImmTyR128,
     ImmTyLWE,
+    ImmTyHwreg,
   };
 
   struct TokOp {
@@ -406,6 +407,7 @@ public:
   bool isDSOffset() const;
   bool isDSOffset01() const;
   bool isSWaitCnt() const;
+  bool isHwreg() const;
   bool isMubufOffset() const;
   bool isSMRDOffset() const;
   bool isSMRDLiteralOffset() const;
@@ -530,6 +532,8 @@ public:
 
   bool parseCnt(int64_t &IntVal);
   OperandMatchResultTy parseSWaitCntOps(OperandVector &Operands);
+  bool parseHwreg(int64_t &HwRegCode, int64_t &Offset, int64_t &Width);
+  OperandMatchResultTy parseHwregOp(OperandVector &Operands);
   OperandMatchResultTy parseSOppBrTarget(OperandVector &Operands);
 
   OperandMatchResultTy parseFlatOptionalOps(OperandVector &Operands);
@@ -1570,8 +1574,98 @@ AMDGPUAsmParser::parseSWaitCntOps(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
+bool AMDGPUAsmParser::parseHwreg(int64_t &HwRegCode, int64_t &Offset, int64_t &Width) {
+  if (Parser.getTok().getString() != "hwreg")
+    return true;
+  Parser.Lex();
+
+  if (getLexer().isNot(AsmToken::LParen))
+    return true;
+  Parser.Lex();
+
+  if (getLexer().isNot(AsmToken::Integer))
+    return true;
+  if (getParser().parseAbsoluteExpression(HwRegCode))
+    return true;
+
+  if (getLexer().is(AsmToken::RParen)) {
+    Parser.Lex();
+    return false;
+  }
+
+  // optional params
+  if (getLexer().isNot(AsmToken::Comma))
+    return true;
+  Parser.Lex();
+
+  if (getLexer().isNot(AsmToken::Integer))
+    return true;
+  if (getParser().parseAbsoluteExpression(Offset))
+    return true;
+
+  if (getLexer().isNot(AsmToken::Comma))
+    return true;
+  Parser.Lex();
+
+  if (getLexer().isNot(AsmToken::Integer))
+    return true;
+  if (getParser().parseAbsoluteExpression(Width))
+    return true;
+
+  if (getLexer().isNot(AsmToken::RParen))
+    return true;
+  Parser.Lex();
+
+  return false;
+}
+
+AMDGPUAsmParser::OperandMatchResultTy
+AMDGPUAsmParser::parseHwregOp(OperandVector &Operands) {
+  int64_t Imm16Val = 0;
+  SMLoc S = Parser.getTok().getLoc();
+
+  switch(getLexer().getKind()) {
+    default: return MatchOperand_ParseFail;
+    case AsmToken::Integer:
+      // The operand can be an integer value.
+      if (getParser().parseAbsoluteExpression(Imm16Val))
+        return MatchOperand_ParseFail;
+      if (!isInt<16>(Imm16Val) && !isUInt<16>(Imm16Val)) {
+        Error(S, "invalid immediate: only 16-bit values are legal");
+        // Do not return error code, but create an imm operand anyway and proceed
+        // to the next operand, if any. That avoids unneccessary error messages.
+      }
+      break;
+
+    case AsmToken::Identifier: {
+        int64_t HwRegCode = 0;
+        int64_t Offset = 0; // default
+        int64_t Width = 32; // default
+        if (parseHwreg(HwRegCode, Offset, Width))
+          return MatchOperand_ParseFail;
+        // HwRegCode (6) [5:0]
+        // Offset (5) [10:6]
+        // WidthMinusOne (5) [15:11]
+        if (HwRegCode < 0 || HwRegCode > 63)
+          Error(S, "invalid code of hardware register: only 6-bit values are legal");
+        if (Offset < 0 || Offset > 31)
+          Error(S, "invalid bit offset: only 5-bit values are legal");
+        if (Width < 1 || Width > 32)
+          Error(S, "invalid bitfield width: only values from 1 to 32 are legal");
+        Imm16Val = HwRegCode | (Offset << 6) | ((Width-1) << 11);
+      }
+      break;
+  }
+  Operands.push_back(AMDGPUOperand::CreateImm(Imm16Val, S, AMDGPUOperand::ImmTyHwreg));
+  return MatchOperand_Success;
+}
+
 bool AMDGPUOperand::isSWaitCnt() const {
   return isImm();
+}
+
+bool AMDGPUOperand::isHwreg() const {
+  return isImmTy(ImmTyHwreg);
 }
 
 //===----------------------------------------------------------------------===//

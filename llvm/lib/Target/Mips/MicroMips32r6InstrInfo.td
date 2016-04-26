@@ -969,9 +969,7 @@ class LOAD_WORD_EVA_MMR6_DESC_BASE<string instr_asm, RegisterOperand RO> :
 class LLE_MMR6_DESC : LOAD_WORD_EVA_MMR6_DESC_BASE<"lle", GPR32Opnd>;
 class LWE_MMR6_DESC : LOAD_WORD_EVA_MMR6_DESC_BASE<"lwe", GPR32Opnd>;
 class ADDU16_MMR6_DESC : ArithRMM16<"addu16", GPRMM16Opnd, 1, II_ADDU, add>,
-      MMR6Arch<"addu16"> {
-  int AddedComplexity  = 1;
-}
+      MMR6Arch<"addu16">;
 class AND16_MMR6_DESC : LogicRMM16<"and16", GPRMM16Opnd, II_AND, and>,
       MMR6Arch<"and16">;
 class ANDI16_MMR6_DESC : AndImmMM16<"andi16", GPRMM16Opnd, II_AND>,

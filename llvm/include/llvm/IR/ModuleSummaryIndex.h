@@ -313,6 +313,10 @@ typedef GlobalValueSummaryMapTy::iterator gvsummary_iterator;
 /// of the module. The StringMap makes a copy of and owns inserted strings.
 typedef StringMap<std::pair<uint64_t, ModuleHash>> ModulePathStringTableTy;
 
+/// Map of global value GUID to its summary, used to identify values defined in
+/// a particular module, and provide efficient access to their summary.
+typedef std::map<GlobalValue::GUID, GlobalValueSummary *> GVSummaryMapTy;
+
 /// Class to hold module path string table and global value map,
 /// and encapsulate methods for operating on them.
 class ModuleSummaryIndex {
@@ -446,15 +450,13 @@ public:
 
   /// Collect for the given module the list of function it defines
   /// (GUID -> Summary).
-  void collectDefinedFunctionsForModule(
-      StringRef ModulePath,
-      std::map<GlobalValue::GUID, GlobalValueSummary *> &GVSummaryMap) const;
+  void collectDefinedFunctionsForModule(StringRef ModulePath,
+                                        GVSummaryMapTy &GVSummaryMap) const;
 
   /// Collect for each module the list of Summaries it defines (GUID ->
   /// Summary).
   void collectDefinedGVSummariesPerModule(
-      StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>> &
-          ModuleToDefinedGVSummaries) const;
+      StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries) const;
 };
 
 } // End llvm namespace

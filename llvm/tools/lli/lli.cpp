@@ -235,6 +235,8 @@ namespace {
                      clEnumValN(FloatABI::Hard, "hard",
                                 "Hard float ABI (uses FP registers)"),
                      clEnumValEnd));
+
+  ExitOnError ExitOnErr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -372,6 +374,9 @@ int main(int argc, char **argv, char * const *envp) {
   PrettyStackTraceProgram X(argc, argv);
 
   atexit(llvm_shutdown); // Call llvm_shutdown() on exit.
+
+  if (argc > 1)
+    ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   // If we have a native target, initialize it to ensure it is linked in and
   // usable by the JIT.
@@ -648,18 +653,11 @@ int main(int argc, char **argv, char * const *envp) {
 
     // Create a remote target client running over the channel.
     typedef orc::remote::OrcRemoteTargetClient<orc::remote::RPCChannel> MyRemote;
-    ErrorOr<MyRemote> R = MyRemote::Create(*C);
-    if (!R) {
-      errs() << "Could not create remote: " << R.getError().message() << "\n";
-      exit(1);
-    }
+    MyRemote R = ExitOnErr(MyRemote::Create(*C));
 
     // Create a remote memory manager.
     std::unique_ptr<MyRemote::RCMemoryManager> RemoteMM;
-    if (auto EC = R->createRemoteMemoryManager(RemoteMM)) {
-      errs() << "Could not create remote memory manager: " << EC.message() << "\n";
-      exit(1);
-    }
+    ExitOnErr(R.createRemoteMemoryManager(RemoteMM));
 
     // Forward MCJIT's memory manager calls to the remote memory manager.
     static_cast<ForwardingMemoryManager*>(RTDyldMM)->setMemMgr(
@@ -669,13 +667,9 @@ int main(int argc, char **argv, char * const *envp) {
     static_cast<ForwardingMemoryManager*>(RTDyldMM)->setResolver(
       orc::createLambdaResolver(
         [&](const std::string &Name) {
-          if (auto AddrOrErr = R->getSymbolAddress(Name))
-	    return RuntimeDyld::SymbolInfo(*AddrOrErr, JITSymbolFlags::Exported);
-	  else {
-	    errs() << "Failure during symbol lookup: "
-		   << AddrOrErr.getError().message() << "\n";
-	    exit(1);
-	  }
+          if (auto Addr = ExitOnErr(R.getSymbolAddress(Name)))
+	    return RuntimeDyld::SymbolInfo(Addr, JITSymbolFlags::Exported);
+          return RuntimeDyld::SymbolInfo(nullptr);
         },
         [](const std::string &Name) { return nullptr; }
       ));
@@ -687,10 +681,7 @@ int main(int argc, char **argv, char * const *envp) {
     EE->finalizeObject();
     DEBUG(dbgs() << "Executing '" << EntryFn->getName() << "' at 0x"
                  << format("%llx", Entry) << "\n");
-    if (auto ResultOrErr = R->callIntVoid(Entry))
-      Result = *ResultOrErr;
-    else
-      errs() << "ERROR: " << ResultOrErr.getError().message() << "\n";
+    Result = ExitOnErr(R.callIntVoid(Entry));
 
     // Like static constructors, the remote target MCJIT support doesn't handle
     // this yet. It could. FIXME.
@@ -701,7 +692,7 @@ int main(int argc, char **argv, char * const *envp) {
     EE.reset();
 
     // Signal the remote target that we're done JITing.
-    R->terminateSession();
+    ExitOnErr(R.terminateSession());
   }
 
   return Result;

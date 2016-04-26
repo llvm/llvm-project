@@ -595,6 +595,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP, MVT::v4i32, Custom);
     setOperationAction(ISD::UINT_TO_FP, MVT::v4i32, Custom);
 
+    setOperationAction(ISD::CTLZ,       MVT::v1i64, Expand);
+    setOperationAction(ISD::CTLZ,       MVT::v2i64, Expand);
+
     // AArch64 doesn't have MUL.2d:
     setOperationAction(ISD::MUL, MVT::v2i64, Expand);
     // Custom handling for some quad-vector types to detect MULL.

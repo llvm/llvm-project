@@ -136,6 +136,8 @@ private:
   void findShrunkPrologEpilog(MachineFunction &MF, MachineBasicBlock *&PrologB,
       MachineBasicBlock *&EpilogB) const;
 
+  void addCalleeSaveRegistersAsImpOperand(MachineInstr *MI, const CSIVect &CSI,
+      bool IsDef, bool IsKill) const;
   bool shouldInlineCSR(llvm::MachineFunction &MF, const CSIVect &CSI) const;
   bool useSpillFunction(MachineFunction &MF, const CSIVect &CSI) const;
   bool useRestoreFunction(MachineFunction &MF, const CSIVect &CSI) const;

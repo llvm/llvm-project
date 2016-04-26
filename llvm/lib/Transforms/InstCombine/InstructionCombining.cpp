@@ -1901,7 +1901,7 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<WeakVH> &Users,
         ICmpInst *ICI = cast<ICmpInst>(I);
         // We can fold eq/ne comparisons with null to false/true, respectively.
         // We also fold comparisons in some conditions provided the alloc has
-        // not escaped.
+        // not escaped (see isNeverEqualToUnescapedAlloc).
         if (!ICI->isEquality())
           return false;
         unsigned OtherIndex = (ICI->getOperand(0) == PI) ? 1 : 0;

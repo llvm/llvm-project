@@ -204,7 +204,7 @@ bool WebAssemblyFixIrreducibleControlFlow::VisitLoop(MachineFunction &MF,
     if (!Pair.second)
       continue;
 
-    unsigned Index = MIB.getInstr()->getNumOperands() - 1;
+    unsigned Index = MIB.getInstr()->getNumExplicitOperands() - 1;
     DEBUG(dbgs() << "MBB#" << MBB->getNumber() << " has index " << Index
                  << "\n");
 

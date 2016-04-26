@@ -270,6 +270,10 @@ public:
     ScratchWaveOffsetReg = Reg;
   }
 
+  unsigned getQueuePtrUserSGPR() const {
+    return QueuePtrUserSGPR;
+  }
+
   bool hasSpilledSGPRs() const {
     return HasSpilledSGPRs;
   }

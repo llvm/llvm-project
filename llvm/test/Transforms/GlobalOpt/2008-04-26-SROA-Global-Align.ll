@@ -2,9 +2,11 @@
 ; alignments.  Elements 0 and 2 must be 16-byte aligned, and element 
 ; 1 must be at least 8 byte aligned (but could be more). 
 
-; RUN: opt < %s -globalopt -S | grep "@G.0 = internal unnamed_addr global .*align 16"
-; RUN: opt < %s -globalopt -S | grep "@G.1 = internal unnamed_addr global .*align 8"
-; RUN: opt < %s -globalopt -S | grep "@G.2 = internal unnamed_addr global .*align 16"
+; RUN: opt < %s -globalopt -S | FileCheck %s
+; CHECK: @G.0 = internal unnamed_addr global {{.*}}align 16
+; CHECK: @G.1 = internal unnamed_addr global {{.*}}align 8
+; CHECK: @G.2 = internal unnamed_addr global {{.*}}align 16
+
 ; rdar://5891920
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:32:32-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"

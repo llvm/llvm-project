@@ -423,6 +423,9 @@ bool SILoadStoreOptimizer::optimizeBlock(MachineBasicBlock &MBB) {
 }
 
 bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   const TargetSubtargetInfo &STM = MF.getSubtarget();
   TRI = static_cast<const SIRegisterInfo *>(STM.getRegisterInfo());
   TII = static_cast<const SIInstrInfo *>(STM.getInstrInfo());

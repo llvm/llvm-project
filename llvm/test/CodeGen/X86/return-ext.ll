@@ -6,7 +6,10 @@
 ; RUN:   FileCheck -check-prefix=CHECK -check-prefix=BWOFF %s
 ; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -fixup-byte-word-insts=1 | \
 ; RUN:   FileCheck -check-prefix=CHECK -check-prefix=BWON %s
-; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck -check-prefix=DARWIN %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -fixup-byte-word-insts=0 | \
+; RUN:   FileCheck -check-prefix=DARWIN -check-prefix=DARWIN-BWOFF %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -fixup-byte-word-insts=1 | \
+; RUN:   FileCheck -check-prefix=DARWIN -check-prefix=DARWIN-BWON %s
 
 
 @x = common global i32 0, align 4
@@ -84,7 +87,8 @@ entry:
 
 ; Except on Darwin, for legay reasons.
 ; DARWIN-LABEL: unsigned_i16:
-; DARWIN:	    	movw
+; DARWIN-BWOFF: movw
+; DARWIN-BWON:  movzwl
 ; DARWIN-NEXT:  addw
 ; DARWIN-NEXT:  movzwl
 ; DARWIN-NEXT:  ret

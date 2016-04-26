@@ -1,4 +1,5 @@
-; RUN: opt < %s -globalopt -S | not grep %G
+; RUN: opt < %s -globalopt -S | FileCheck %s
+; CHECK-NOT: %G
 
 @G = internal global i32 0              ; <i32*> [#uses=1]
 @H = internal global { i32* } { i32* @G }               ; <{ i32* }*> [#uses=1]
@@ -8,4 +9,3 @@ define i32 @loadg() {
         %GV = load i32, i32* %G              ; <i32> [#uses=1]
         ret i32 %GV
 }
-

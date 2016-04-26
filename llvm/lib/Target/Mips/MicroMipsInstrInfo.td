@@ -988,8 +988,6 @@ def : MipsPat<(load addrimm4lsl2:$addr),
 def : MipsPat<(load addr:$addr),
               (LW_MM addr:$addr)>;
 
-defm : SeteqPats<GPR32, SLTiu_MM, XOR_MM, SLTu_MM, ZERO>;
-
 //===----------------------------------------------------------------------===//
 // MicroMips instruction aliases
 //===----------------------------------------------------------------------===//
@@ -1025,9 +1023,4 @@ def : MipsInstAlias<"tltu $rs, $rt",
                     (TLTU_MM GPR32Opnd:$rs, GPR32Opnd:$rt, 0), 1>;
 def : MipsInstAlias<"tne $rs, $rt",
                     (TNE_MM GPR32Opnd:$rs, GPR32Opnd:$rt, 0), 1>;
-def : MipsInstAlias<"rotr $rt, $imm",
-                    (ROTR_MM GPR32Opnd:$rt, GPR32Opnd:$rt, uimm5:$imm), 0>;
-def : MipsInstAlias<"syscall", (SYSCALL_MM 0), 1>;
-def : MipsInstAlias<"slt $rs, $rt, $imm",
-                    (SLTi_MM GPR32Opnd:$rs, GPR32Opnd:$rt, simm16:$imm), 0>;
 }

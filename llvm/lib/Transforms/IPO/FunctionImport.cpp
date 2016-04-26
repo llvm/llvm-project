@@ -185,8 +185,7 @@ using EdgeInfo = std::pair<const FunctionSummary *, unsigned /* Threshold */>;
 /// exported from their source module.
 static void computeImportForFunction(
     const FunctionSummary &Summary, const ModuleSummaryIndex &Index,
-    unsigned Threshold,
-    const std::map<GlobalValue::GUID, GlobalValueSummary *> &DefinedGVSummaries,
+    unsigned Threshold, const GVSummaryMapTy &DefinedGVSummaries,
     SmallVectorImpl<EdgeInfo> &Worklist,
     FunctionImporter::ImportMapTy &ImportsForModule,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
@@ -256,8 +255,7 @@ static void computeImportForFunction(
 /// as well as the list of "exports", i.e. the list of symbols referenced from
 /// another module (that may require promotion).
 static void ComputeImportForModule(
-    const std::map<GlobalValue::GUID, GlobalValueSummary *> &DefinedGVSummaries,
-    const ModuleSummaryIndex &Index,
+    const GVSummaryMapTy &DefinedGVSummaries, const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportsForModule,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
   // Worklist contains the list of function imported in this module, for which
@@ -299,8 +297,7 @@ static void ComputeImportForModule(
 /// Compute all the import and export for every module using the Index.
 void llvm::ComputeCrossModuleImport(
     const ModuleSummaryIndex &Index,
-    const StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>> &
-        ModuleToDefinedGVSummaries,
+    const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     StringMap<FunctionImporter::ImportMapTy> &ImportLists,
     StringMap<FunctionImporter::ExportSetTy> &ExportLists) {
   // For each module that has function defined, compute the import/export lists.
@@ -337,7 +334,7 @@ void llvm::ComputeCrossModuleImportForModule(
 
   // Collect the list of functions this module defines.
   // GUID -> Summary
-  std::map<GlobalValue::GUID, GlobalValueSummary *> FunctionSummaryMap;
+  GVSummaryMapTy FunctionSummaryMap;
   Index.collectDefinedFunctionsForModule(ModulePath, FunctionSummaryMap);
 
   // Compute the import list for this module.

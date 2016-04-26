@@ -1,5 +1,5 @@
-; RUN: opt < %s -globalopt -S | \
-; RUN:   grep "G1 = internal unnamed_addr constant"
+; RUN: opt < %s -globalopt -S | FileCheck %s
+; CHECK: G1 = internal unnamed_addr constant
 
 @G1 = internal global [58 x i8] c"asdlfkajsdlfkajsd;lfkajds;lfkjasd;flkajsd;lkfja;sdlkfjasd\00"         ; <[58 x i8]*> [#uses=1]
 

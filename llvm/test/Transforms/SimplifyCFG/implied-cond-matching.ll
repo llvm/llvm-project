@@ -1003,3 +1003,27 @@ sle_sle_isfalse:
 untaken:
   ret void
 }
+
+; A >=u 5 implies A <u 5 is false.
+; CHECK-LABEL: @test_uge_ult_const
+; CHECK-NOT: call void @is(i1 true)
+; CHECK: call void @is(i1 false)
+define void @test_uge_ult_const(i32 %a, i32 %b) {
+  %cmp1 = icmp uge i32 %a, 5
+  br i1 %cmp1, label %taken, label %untaken
+
+taken:
+  %cmp2 = icmp ult i32 %a, 5
+  br i1 %cmp2, label %istrue, label %isfalse
+
+istrue:
+  call void @is(i1 true)
+  ret void
+
+isfalse:
+  call void @is(i1 false)
+  ret void
+
+untaken:
+  ret void
+}

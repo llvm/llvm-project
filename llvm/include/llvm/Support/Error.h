@@ -627,7 +627,7 @@ public:
         Checked(false)
 #endif
   {
-    new (getStorage()) storage_type(std::move(Val));
+    new (getStorage()) storage_type(std::forward<OtherT>(Val));
   }
 
   /// Move construct an Expected<T> value.
@@ -886,11 +886,18 @@ public:
   /// Check Err. If it's in a failure state log the error(s) and exit.
   void operator()(Error Err) const { checkError(std::move(Err)); }
 
-  /// Check E. If it's in a success state return the contained value. If it's
-  /// in a failure state log the error(s) and exit.
+  /// Check E. If it's in a success state then return the contained value. If
+  /// it's in a failure state log the error(s) and exit.
   template <typename T> T operator()(Expected<T> &&E) const {
     checkError(E.takeError());
     return std::move(*E);
+  }
+
+  /// Check E. If it's in a success state then return the contained reference. If
+  /// it's in a failure state log the error(s) and exit.
+  template <typename T> T& operator()(Expected<T&> &&E) const {
+    checkError(E.takeError());
+    return *E;
   }
 
 private:

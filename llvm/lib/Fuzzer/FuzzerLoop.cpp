@@ -184,10 +184,10 @@ void Fuzzer::PrintStats(const char *Where, const char *End) {
       csvHeaderPrinted = true;
       Printf("runs,block_cov,bits,cc_cov,corpus,execs_per_sec,tbms,reason\n");
     }
-    Printf("%zd,%zd,%zd,%zd,%zd,%zd,%zd,%s\n", TotalNumberOfRuns,
+    Printf("%zd,%zd,%zd,%zd,%zd,%zd,%s\n", TotalNumberOfRuns,
            LastRecordedBlockCoverage, TotalBits(),
            LastRecordedCallerCalleeCoverage, Corpus.size(), ExecPerSec,
-           TotalNumberOfExecutedTraceBasedMutations, Where);
+           Where);
   }
 
   if (!Options.Verbosity)
@@ -202,8 +202,6 @@ void Fuzzer::PrintStats(const char *Where, const char *End) {
   if (LastRecordedCallerCalleeCoverage)
     Printf(" indir: %zd", LastRecordedCallerCalleeCoverage);
   Printf(" units: %zd exec/s: %zd", Corpus.size(), ExecPerSec);
-  if (TotalNumberOfExecutedTraceBasedMutations)
-    Printf(" tbm: %zd", TotalNumberOfExecutedTraceBasedMutations);
   Printf("%s", End);
 }
 

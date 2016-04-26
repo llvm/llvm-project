@@ -790,8 +790,7 @@ public:
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_ISA_CONVERSION_FUNCTIONS(Value, LLVMValueRef)
 
-/* Specialized opaque value conversions.
- */
+// Specialized opaque value conversions.
 inline Value **unwrap(LLVMValueRef *Vals) {
   return reinterpret_cast<Value**>(Vals);
 }

@@ -10,6 +10,7 @@
 #ifndef LLVM_LIB_EXECUTIONENGINE_ORC_ORCCBINDINGSSTACK_H
 #define LLVM_LIB_EXECUTIONENGINE_ORC_ORCCBINDINGSSTACK_H
 
+#include "llvm-c/OrcBindings.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
@@ -17,7 +18,7 @@
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm-c/OrcBindings.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 
@@ -28,19 +29,18 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
 
 class OrcCBindingsStack {
 public:
-
   typedef orc::JITCompileCallbackManager CompileCallbackMgr;
   typedef orc::ObjectLinkingLayer<> ObjLayerT;
   typedef orc::IRCompileLayer<ObjLayerT> CompileLayerT;
-  typedef orc::CompileOnDemandLayer<CompileLayerT, CompileCallbackMgr> CODLayerT;
+  typedef orc::CompileOnDemandLayer<CompileLayerT, CompileCallbackMgr>
+      CODLayerT;
 
   typedef std::function<std::unique_ptr<CompileCallbackMgr>()>
-    CallbackManagerBuilder;
+      CallbackManagerBuilder;
 
   typedef CODLayerT::IndirectStubsManagerBuilderT IndirectStubsManagerBuilder;
 
 private:
-
   class GenericHandle {
   public:
     virtual ~GenericHandle() {}
@@ -49,20 +49,17 @@ private:
     virtual void removeModule() = 0;
   };
 
-  template <typename LayerT>
-  class GenericHandleImpl : public GenericHandle {
+  template <typename LayerT> class GenericHandleImpl : public GenericHandle {
   public:
     GenericHandleImpl(LayerT &Layer, typename LayerT::ModuleSetHandleT Handle)
-      : Layer(Layer), Handle(std::move(Handle)) {}
+        : Layer(Layer), Handle(std::move(Handle)) {}
 
     orc::JITSymbol findSymbolIn(const std::string &Name,
                                 bool ExportedSymbolsOnly) override {
       return Layer.findSymbolIn(Handle, Name, ExportedSymbolsOnly);
     }
 
-    void removeModule() override {
-      return Layer.removeModuleSet(Handle);
-    }
+    void removeModule() override { return Layer.removeModuleSet(Handle); }
 
   private:
     LayerT &Layer;
@@ -77,7 +74,6 @@ private:
   }
 
 public:
-
   // We need a 'ModuleSetHandleT' to conform to the layer concept.
   typedef unsigned ModuleSetHandleT;
 
@@ -124,55 +120,54 @@ public:
   createLazyCompileCallback(LLVMOrcLazyCompileCallbackFn Callback,
                             void *CallbackCtx) {
     auto CCInfo = CCMgr->getCompileCallback();
-    CCInfo.setCompileAction(
-      [=]() -> orc::TargetAddress {
-        return Callback(wrap(this), CallbackCtx);
-      });
+    CCInfo.setCompileAction([=]() -> orc::TargetAddress {
+      return Callback(wrap(this), CallbackCtx);
+    });
     return CCInfo.getAddress();
   }
 
-  void createIndirectStub(StringRef StubName, orc::TargetAddress Addr) {
-    IndirectStubsMgr->createStub(StubName, Addr, JITSymbolFlags::Exported);
+  LLVMOrcErrorCode createIndirectStub(StringRef StubName,
+                                      orc::TargetAddress Addr) {
+    return mapError(
+        IndirectStubsMgr->createStub(StubName, Addr, JITSymbolFlags::Exported));
   }
 
-  void setIndirectStubPointer(StringRef Name, orc::TargetAddress Addr) {
-    IndirectStubsMgr->updatePointer(Name, Addr);
+  LLVMOrcErrorCode setIndirectStubPointer(StringRef Name,
+                                          orc::TargetAddress Addr) {
+    return mapError(IndirectStubsMgr->updatePointer(Name, Addr));
   }
 
   std::shared_ptr<RuntimeDyld::SymbolResolver>
   createResolver(LLVMOrcSymbolResolverFn ExternalResolver,
                  void *ExternalResolverCtx) {
     auto Resolver = orc::createLambdaResolver(
-      [this, ExternalResolver, ExternalResolverCtx](const std::string &Name) {
-        // Search order:
-        // 1. JIT'd symbols.
-        // 2. Runtime overrides.
-        // 3. External resolver (if present).
+        [this, ExternalResolver, ExternalResolverCtx](const std::string &Name) {
+          // Search order:
+          // 1. JIT'd symbols.
+          // 2. Runtime overrides.
+          // 3. External resolver (if present).
 
-        if (auto Sym = CODLayer.findSymbol(Name, true))
-          return RuntimeDyld::SymbolInfo(Sym.getAddress(),
-                                         Sym.getFlags());
-        if (auto Sym = CXXRuntimeOverrides.searchOverrides(Name))
-          return Sym;
+          if (auto Sym = CODLayer.findSymbol(Name, true))
+            return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+          if (auto Sym = CXXRuntimeOverrides.searchOverrides(Name))
+            return Sym;
 
-        if (ExternalResolver)
-          return RuntimeDyld::SymbolInfo(ExternalResolver(Name.c_str(),
-                                                          ExternalResolverCtx),
-                                         llvm::JITSymbolFlags::Exported);
+          if (ExternalResolver)
+            return RuntimeDyld::SymbolInfo(
+                ExternalResolver(Name.c_str(), ExternalResolverCtx),
+                llvm::JITSymbolFlags::Exported);
 
-        return RuntimeDyld::SymbolInfo(nullptr);
-      },
-      [](const std::string &Name) {
-        return RuntimeDyld::SymbolInfo(nullptr);
-      }
-    );
+          return RuntimeDyld::SymbolInfo(nullptr);
+        },
+        [](const std::string &Name) {
+          return RuntimeDyld::SymbolInfo(nullptr);
+        });
 
     return std::shared_ptr<RuntimeDyld::SymbolResolver>(std::move(Resolver));
   }
 
   template <typename LayerT>
-  ModuleHandleT addIRModule(LayerT &Layer,
-                            Module *M,
+  ModuleHandleT addIRModule(LayerT &Layer, Module *M,
                             std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr,
                             LLVMOrcSymbolResolverFn ExternalResolver,
                             void *ExternalResolverCtx) {
@@ -193,7 +188,7 @@ public:
     auto Resolver = createResolver(ExternalResolver, ExternalResolverCtx);
 
     // Add the module to the JIT.
-    std::vector<Module*> S;
+    std::vector<Module *> S;
     S.push_back(std::move(M));
 
     auto LH = Layer.addModuleSet(std::move(S), std::move(MemMgr),
@@ -210,7 +205,7 @@ public:
     return H;
   }
 
-  ModuleHandleT addIRModuleEager(Module* M,
+  ModuleHandleT addIRModuleEager(Module *M,
                                  LLVMOrcSymbolResolverFn ExternalResolver,
                                  void *ExternalResolverCtx) {
     return addIRModule(CompileLayer, std::move(M),
@@ -218,11 +213,11 @@ public:
                        std::move(ExternalResolver), ExternalResolverCtx);
   }
 
-  ModuleHandleT addIRModuleLazy(Module* M,
+  ModuleHandleT addIRModuleLazy(Module *M,
                                 LLVMOrcSymbolResolverFn ExternalResolver,
                                 void *ExternalResolverCtx) {
     return addIRModule(CODLayer, std::move(M),
-		       llvm::make_unique<SectionMemoryManager>(),
+                       llvm::make_unique<SectionMemoryManager>(),
                        std::move(ExternalResolver), ExternalResolverCtx);
   }
 
@@ -243,8 +238,9 @@ public:
     return GenericHandles[H]->findSymbolIn(Name, ExportedSymbolsOnly);
   }
 
-private:
+  const std::string &getErrorMessage() const { return ErrMsg; }
 
+private:
   template <typename LayerT>
   unsigned createHandle(LayerT &Layer,
                         typename LayerT::ModuleSetHandleT Handle) {
@@ -259,6 +255,18 @@ private:
       GenericHandles.push_back(createGenericHandle(Layer, std::move(Handle)));
     }
     return NewHandle;
+  }
+
+  LLVMOrcErrorCode mapError(Error Err) {
+    LLVMOrcErrorCode Result = LLVMOrcErrSuccess;
+    handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
+      // Handler of last resort.
+      Result = LLVMOrcErrGeneric;
+      ErrMsg = "";
+      raw_string_ostream ErrStream(ErrMsg);
+      EIB.log(ErrStream);
+    });
+    return Result;
   }
 
   DataLayout DL;
@@ -276,6 +284,7 @@ private:
 
   orc::LocalCXXRuntimeOverrides CXXRuntimeOverrides;
   std::vector<orc::CtorDtorRunner<OrcCBindingsStack>> IRStaticDestructorRunners;
+  std::string ErrMsg;
 };
 
 } // end namespace llvm

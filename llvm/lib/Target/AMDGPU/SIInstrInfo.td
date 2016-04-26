@@ -603,6 +603,13 @@ class NamedBitOperand<string BitName> : Operand<i1> {
   let PrintMethod = "print"#BitName;
 }
 
+def HwregMatchClass : AsmOperandClass {
+  let Name = "Hwreg";
+  let PredicateMethod = "isHwreg";
+  let ParserMethod = "parseHwregOp";
+  let RenderMethod = "addImmOperands";
+}
+
 let OperandType = "OPERAND_IMMEDIATE" in {
 
 def offen : Operand<i1> {
@@ -728,6 +735,11 @@ def bank_mask : Operand <i32> {
 def bound_ctrl : Operand <i1> {
   let PrintMethod = "printBoundCtrlOperand";
   let ParserMatchClass = DPPOptionalMatchClass<"BoundCtrl">;
+}
+
+def hwreg : Operand <i16> {
+  let PrintMethod = "printHwreg";
+  let ParserMatchClass = HwregMatchClass;
 }
 
 } // End OperandType = "OPERAND_IMMEDIATE"

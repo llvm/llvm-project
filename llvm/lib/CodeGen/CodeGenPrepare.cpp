@@ -4568,7 +4568,8 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   bool VectorCond = !SI->getCondition()->getType()->isIntegerTy(1);
 
   // Can we convert the 'select' to CF ?
-  if (DisableSelectToBranch || OptSize || !TLI || VectorCond)
+  if (DisableSelectToBranch || OptSize || !TLI || VectorCond ||
+      SI->getMetadata(LLVMContext::MD_unpredictable))
     return false;
 
   TargetLowering::SelectSupportKind SelectKind;

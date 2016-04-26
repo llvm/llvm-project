@@ -925,11 +925,14 @@ bool JumpThreading::ProcessImpliedCondition(BasicBlock *BB) {
 
   while (CurrentPred && Iter++ < ImplicationSearchThreshold) {
     auto *PBI = dyn_cast<BranchInst>(CurrentPred->getTerminator());
-    if (!PBI || !PBI->isConditional() || PBI->getSuccessor(0) != CurrentBB)
+    if (!PBI || !PBI->isConditional())
+      return false;
+    if (PBI->getSuccessor(0) != CurrentBB && PBI->getSuccessor(1) != CurrentBB)
       return false;
 
+    bool FalseDest = PBI->getSuccessor(1) == CurrentBB;
     Optional<bool> Implication =
-        isImpliedCondition(PBI->getCondition(), Cond, DL);
+      isImpliedCondition(PBI->getCondition(), Cond, DL, FalseDest);
     if (Implication) {
       BI->getSuccessor(*Implication ? 1 : 0)->removePredecessor(BB);
       BranchInst::Create(BI->getSuccessor(*Implication ? 0 : 1), BI);

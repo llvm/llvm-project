@@ -398,7 +398,6 @@ private:
   size_t CurrentUnitSize = 0;
 
   size_t TotalNumberOfRuns = 0;
-  size_t TotalNumberOfExecutedTraceBasedMutations = 0;
   size_t NumberOfNewUnitsAdded = 0;
 
   bool HasMoreMallocsThanFrees = false;

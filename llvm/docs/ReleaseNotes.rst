@@ -114,6 +114,7 @@ Changes to the PowerPC Target
 
  Moved some optimizations from O3 to O2 (D18562)
 
+* Enable sibling call optimization on ppc64 ELFv1/ELFv2 abi
 
 Changes to the X86 Target
 -------------------------

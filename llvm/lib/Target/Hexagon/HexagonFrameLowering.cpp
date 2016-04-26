@@ -860,16 +860,6 @@ static const char *getSpillFunctionFor(unsigned MaxReg, SpillKind SpillType,
   return 0;
 }
 
-/// Adds all callee-saved registers up to MaxReg to the instruction.
-static void addCalleeSaveRegistersAsImpOperand(MachineInstr *Inst,
-                                           unsigned MaxReg, bool IsDef) {
-  // Add the callee-saved registers as implicit uses.
-  for (unsigned R = Hexagon::R16; R <= MaxReg; ++R) {
-    MachineOperand ImpUse = MachineOperand::CreateReg(R, IsDef, true);
-    Inst->addOperand(ImpUse);
-  }
-}
-
 
 int HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF,
       int FI, unsigned &FrameReg) const {
@@ -989,7 +979,7 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
         BuildMI(MBB, MI, DL, HII.get(SpillOpc))
           .addExternalSymbol(SpillFun);
     // Add callee-saved registers as use.
-    addCalleeSaveRegistersAsImpOperand(SaveRegsCall, MaxReg, false);
+    addCalleeSaveRegistersAsImpOperand(SaveRegsCall, CSI, false, true);
     // Add live in registers.
     for (unsigned I = 0; I < CSI.size(); ++I)
       MBB.addLiveIn(CSI[I].getReg());
@@ -1050,7 +1040,7 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
       // Transfer the function live-out registers.
       DeallocCall->copyImplicitOps(MF, *It);
     }
-    addCalleeSaveRegistersAsImpOperand(DeallocCall, MaxR, true);
+    addCalleeSaveRegistersAsImpOperand(DeallocCall, CSI, true, false);
     return true;
   }
 
@@ -1130,10 +1120,12 @@ static bool needToReserveScavengingSpillSlots(MachineFunction &MF,
     return false;
   };
 
-  // Check for an unused caller-saved register.
+  // Check for an unused caller-saved register. Callee-saved registers
+  // have become pristine by now.
   for (const MCPhysReg *P = HRI.getCallerSavedRegs(&MF); *P; ++P)
     if (!IsUsed(*P))
       return false;
+
   // All caller-saved registers are used.
   return true;
 }
@@ -1647,39 +1639,39 @@ bool HexagonFrameLowering::expandSpillMacros(MachineFunction &MF,
 
       switch (Opc) {
         case TargetOpcode::COPY:
-          Changed = expandCopy(B, I, MRI, HII, NewRegs);
+          Changed |= expandCopy(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::STriw_pred:
         case Hexagon::STriw_mod:
-          Changed = expandStoreInt(B, I, MRI, HII, NewRegs);
+          Changed |= expandStoreInt(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::LDriw_pred:
         case Hexagon::LDriw_mod:
-          Changed = expandLoadInt(B, I, MRI, HII, NewRegs);
+          Changed |= expandLoadInt(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::STriq_pred_V6:
         case Hexagon::STriq_pred_V6_128B:
-          Changed = expandStoreVecPred(B, I, MRI, HII, NewRegs);
+          Changed |= expandStoreVecPred(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::LDriq_pred_V6:
         case Hexagon::LDriq_pred_V6_128B:
-          Changed = expandLoadVecPred(B, I, MRI, HII, NewRegs);
+          Changed |= expandLoadVecPred(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::LDrivv_pseudo_V6:
         case Hexagon::LDrivv_pseudo_V6_128B:
-          Changed = expandLoadVec2(B, I, MRI, HII, NewRegs);
+          Changed |= expandLoadVec2(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::STrivv_pseudo_V6:
         case Hexagon::STrivv_pseudo_V6_128B:
-          Changed = expandStoreVec2(B, I, MRI, HII, NewRegs);
+          Changed |= expandStoreVec2(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::STriv_pseudo_V6:
         case Hexagon::STriv_pseudo_V6_128B:
-          Changed = expandStoreVec(B, I, MRI, HII, NewRegs);
+          Changed |= expandStoreVec(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::LDriv_pseudo_V6:
         case Hexagon::LDriv_pseudo_V6_128B:
-          Changed = expandLoadVec(B, I, MRI, HII, NewRegs);
+          Changed |= expandLoadVec(B, I, MRI, HII, NewRegs);
           break;
       }
     }
@@ -2168,6 +2160,16 @@ const MachineInstr *HexagonFrameLowering::getAlignaInstr(
       if (I.getOpcode() == Hexagon::ALIGNA)
         return &I;
   return nullptr;
+}
+
+
+/// Adds all callee-saved registers as implicit uses or defs to the
+/// instruction.
+void HexagonFrameLowering::addCalleeSaveRegistersAsImpOperand(MachineInstr *MI,
+      const CSIVect &CSI, bool IsDef, bool IsKill) const {
+  // Add the callee-saved registers as implicit uses.
+  for (auto &R : CSI)
+    MI->addOperand(MachineOperand::CreateReg(R.getReg(), IsDef, true, IsKill));
 }
 
 

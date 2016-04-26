@@ -45,6 +45,9 @@ class SITargetLowering final : public AMDGPUTargetLowering {
   SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue getSegmentAperture(unsigned AS, SelectionDAG &DAG) const;
+  SDValue lowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
+
   void adjustWritemask(MachineSDNode *&N, SelectionDAG &DAG) const;
 
   SDValue performUCharToFloatCombine(SDNode *N,

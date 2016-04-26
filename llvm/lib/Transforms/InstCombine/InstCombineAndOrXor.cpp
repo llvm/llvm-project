@@ -465,11 +465,9 @@ static unsigned getTypeOfMaskedICmp(Value* A, Value* B, Value* C,
   if (CCst && CCst->isZero()) {
     // if C is zero, then both A and B qualify as mask
     result |= (icmp_eq ? (FoldMskICmp_Mask_AllZeroes |
-                          FoldMskICmp_Mask_AllZeroes |
                           FoldMskICmp_AMask_Mixed |
                           FoldMskICmp_BMask_Mixed)
                        : (FoldMskICmp_Mask_NotAllZeroes |
-                          FoldMskICmp_Mask_NotAllZeroes |
                           FoldMskICmp_AMask_NotMixed |
                           FoldMskICmp_BMask_NotMixed));
     if (icmp_abit)

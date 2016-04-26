@@ -3340,7 +3340,10 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
                << " 1 compile unit.\n";
         exitDsymutil(1);
       }
-      if (getDwoId(*CUDie, *CU) != DwoId)
+      // FIXME: Until PR27449 (https://llvm.org/bugs/show_bug.cgi?id=27449) is
+      // fixed in clang, only warn about DWO_id mismatches in verbose mode.
+      // ASTFileSignatures will change randomly when a module is rebuilt.
+      if (Options.Verbose && (getDwoId(*CUDie, *CU) != DwoId))
         reportWarning(
             Twine("hash mismatch: this object file was built against a "
                   "different version of the module ") + Filename);

@@ -1,4 +1,5 @@
-; RUN: opt < %s -globalopt -S | not grep G
+; RUN: opt < %s -globalopt -S | FileCheck %s
+; CHECK-NOT: G
 
 @G = internal global i32 17             ; <i32*> [#uses=3]
 
@@ -16,4 +17,3 @@ define internal void @dead() {
         store i32 123, i32* @G
         ret void
 }
-

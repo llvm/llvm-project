@@ -39,11 +39,7 @@
   pref 32, 255($7)    # CHECK: :[[@LINE]]:8: error: expected 5-bit unsigned immediate
   prefe 0, -513($7)   # CHECK: :[[@LINE]]:12: error: expected memory with 9-bit signed offset
   prefe 0, 512($7)    # CHECK: :[[@LINE]]:12: error: expected memory with 9-bit signed offset
-  rotr $2, -1         # CHECK: :[[@LINE]]:12: error: expected 5-bit unsigned immediate
-  rotr $2, 32         # CHECK: :[[@LINE]]:12: error: expected 5-bit unsigned immediate
-  rotr $2, $3, -1     # CHECK: :[[@LINE]]:16: error: expected 5-bit unsigned immediate
   rotr $2, $3, 32     # CHECK: :[[@LINE]]:16: error: expected 5-bit unsigned immediate
-  rotrv $9, $6, 5     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   sdbbp16 -1          # CHECK: :[[@LINE]]:11: error: expected 4-bit unsigned immediate
   sdbbp16 16          # CHECK: :[[@LINE]]:11: error: expected 4-bit unsigned immediate
   sll $2, $3, -1      # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate

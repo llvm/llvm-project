@@ -391,6 +391,10 @@ TEST(Error, ExitOnError) {
   EXPECT_EQ(ExitOnErr(Expected<int>(7)), 7)
       << "exitOnError returned an invalid value for Expected";
 
+  int A = 7;
+  int &B = ExitOnErr(Expected<int&>(A));
+  EXPECT_EQ(&A, &B) << "ExitOnError failed to propagate reference";
+
   // Exit tests.
   EXPECT_EXIT(ExitOnErr(make_error<CustomError>(7)),
               ::testing::ExitedWithCode(1), "Error in tool:")
@@ -407,6 +411,16 @@ TEST(Error, CheckedExpectedInSuccessMode) {
   EXPECT_TRUE(!!A) << "Expected with non-error value doesn't convert to 'true'";
   // Access is safe in second test, since we checked the error in the first.
   EXPECT_EQ(*A, 7) << "Incorrect Expected non-error value";
+}
+
+// Test Expected with reference type.
+TEST(Error, ExpectedWithReferenceType) {
+  int A = 7;
+  Expected<int&> B = A;
+  // 'Check' B.
+  (void)!!B;
+  int &C = *B;
+  EXPECT_EQ(&A, &C) << "Expected failed to propagate reference";
 }
 
 // Test Unchecked Expected<T> in success mode.
