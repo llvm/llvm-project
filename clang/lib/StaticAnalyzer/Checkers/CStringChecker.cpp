@@ -920,7 +920,7 @@ ProgramStateRef CStringChecker::InvalidateBuffer(CheckerContext &C,
     // Invalidate and escape only indirect regions accessible through the source
     // buffer.
     if (IsSourceBuffer) {
-      ITraits.setTrait(R,
+      ITraits.setTrait(R->getBaseRegion(),
                        RegionAndSymbolInvalidationTraits::TK_PreserveContents);
       ITraits.setTrait(R, RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
       CausesPointerEscape = true;

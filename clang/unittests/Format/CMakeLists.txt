@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_unittest(FormatTests
+  CleanupTest.cpp
   FormatTest.cpp
   FormatTestJava.cpp
   FormatTestJS.cpp

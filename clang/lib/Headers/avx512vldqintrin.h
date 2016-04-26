@@ -1206,6 +1206,50 @@ __builtin_ia32_inserti64x2_256_mask ((__v4di)( __A),\
               (__mmask8) ( __U));\
 })
 
+#define _mm_mask_fpclass_pd_mask( __U, __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclasspd128_mask ((__v2df)( __A),\
+                 ( __imm),( __U));\
+})
+
+#define _mm_fpclass_pd_mask( __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclasspd128_mask ((__v2df)( __A),\
+                  ( __imm),\
+                  (__mmask8) -1);\
+})
+
+#define _mm256_mask_fpclass_pd_mask( __U, __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclasspd256_mask ((__v4df)( __A),\
+                  ( __imm),( __U));\
+})
+
+#define _mm256_fpclass_pd_mask( __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclasspd256_mask ((__v4df)( __A),\
+                  ( __imm),\
+                  (__mmask8) -1);\
+})
+
+#define _mm_mask_fpclass_ps_mask( __U, __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclassps128_mask ((__v4sf)( __A),\
+                  ( __imm),( __U));\
+})
+
+#define _mm_fpclass_ps_mask( __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclassps128_mask ((__v4sf)( __A),\
+                  ( __imm),\
+                  (__mmask8) -1);\
+})
+
+#define _mm256_mask_fpclass_ps_mask( __U, __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclassps256_mask ((__v8sf)( __A),\
+                  ( __imm),( __U));\
+})
+
+#define _mm256_fpclass_ps_mask( __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclassps256_mask ((__v8sf)( __A),\
+                  ( __imm),\
+                  (__mmask8) -1);\
+})
+
 #undef __DEFAULT_FN_ATTRS
 
 #endif

@@ -1813,8 +1813,9 @@ void Driver::BuildJobs(Compilation &C) const {
   // Claim -### here.
   (void)C.getArgs().hasArg(options::OPT__HASH_HASH_HASH);
 
-  // Claim --driver-mode, it was handled earlier.
+  // Claim --driver-mode, --rsp-quoting, it was handled earlier.
   (void)C.getArgs().hasArg(options::OPT_driver_mode);
+  (void)C.getArgs().hasArg(options::OPT_rsp_quoting);
 
   for (Arg *A : C.getArgs()) {
     // FIXME: It would be nice to be able to send the argument to the

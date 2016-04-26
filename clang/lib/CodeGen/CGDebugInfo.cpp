@@ -1514,12 +1514,28 @@ static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
   return false;
 }
 
+/// Does a type definition exist in an imported clang module?
+static bool isDefinedInClangModule(const RecordDecl *RD) {
+  if (!RD->isFromASTFile())
+    return false;
+  if (!RD->getDefinition())
+    return false;
+  if (!RD->isExternallyVisible() && RD->getName().empty())
+    return false;
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+    if (!CTSD->isCompleteDefinition())
+      return false;
+    // Make sure the instantiation is actually in a module.
+    if (CTSD->field_begin() != CTSD->field_end())
+      return CTSD->field_begin()->isFromASTFile();
+  }
+  return true;
+}
+
 static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
                                  bool DebugTypeExtRefs, const RecordDecl *RD,
                                  const LangOptions &LangOpts) {
-  // Does the type exist in an imported clang module?
-  if (DebugTypeExtRefs && RD->isFromASTFile() && RD->getDefinition() &&
-      (RD->isExternallyVisible() || !RD->getName().empty()))
+  if (DebugTypeExtRefs && isDefinedInClangModule(RD))
     return true;
 
   if (DebugKind > codegenoptions::LimitedDebugInfo)

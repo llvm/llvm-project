@@ -1675,11 +1675,37 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     break;
   }
   case OMPD_taskloop: {
+    QualType KmpInt32Ty =
+        Context.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1);
+    QualType KmpUInt64Ty =
+        Context.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/0);
+    QualType KmpInt64Ty =
+        Context.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
+    QualType Args[] = {Context.VoidPtrTy.withConst().withRestrict()};
+    FunctionProtoType::ExtProtoInfo EPI;
+    EPI.Variadic = true;
+    QualType CopyFnType = Context.getFunctionType(Context.VoidTy, Args, EPI);
     Sema::CapturedParamNameType Params[] = {
+        std::make_pair(".global_tid.", KmpInt32Ty),
+        std::make_pair(".part_id.", Context.getPointerType(KmpInt32Ty)),
+        std::make_pair(".privates.",
+                       Context.VoidPtrTy.withConst().withRestrict()),
+        std::make_pair(
+            ".copy_fn.",
+            Context.getPointerType(CopyFnType).withConst().withRestrict()),
+        std::make_pair(".task_t.", Context.VoidPtrTy.withConst()),
+        std::make_pair(".lb.", KmpUInt64Ty),
+        std::make_pair(".ub.", KmpUInt64Ty), std::make_pair(".st.", KmpInt64Ty),
+        std::make_pair(".liter.", KmpInt32Ty),
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
                              Params);
+    // Mark this captured region as inlined, because we don't use outlined
+    // function directly.
+    getCurCapturedRegion()->TheCapturedDecl->addAttr(
+        AlwaysInlineAttr::CreateImplicit(
+            Context, AlwaysInlineAttr::Keyword_forceinline, SourceRange()));
     break;
   }
   case OMPD_taskloop_simd: {
@@ -4614,6 +4640,15 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
            LastIteration32.get()->getType()->hasSignedIntegerRepresentation(),
            LastIteration64.get(), SemaRef)))
     LastIteration = LastIteration32;
+  QualType VType = LastIteration.get()->getType();
+  QualType RealVType = VType;
+  QualType StrideVType = VType;
+  if (isOpenMPTaskLoopDirective(DKind)) {
+    VType =
+        SemaRef.Context.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/0);
+    StrideVType =
+        SemaRef.Context.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
+  }
 
   if (!LastIteration.isUsable())
     return 0;
@@ -4649,7 +4684,6 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
 
   SourceLocation InitLoc = IterSpaces[0].InitSrcRange.getBegin();
 
-  QualType VType = LastIteration.get()->getType();
   // Build variables passed into runtime, nesessary for worksharing directives.
   ExprResult LB, UB, IL, ST, EUB;
   if (isOpenMPWorksharingDirective(DKind) || isOpenMPTaskLoopDirective(DKind) ||
@@ -4678,8 +4712,9 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
         /*DirectInit*/ false, /*TypeMayContainAuto*/ false);
 
     // Stride variable returned by runtime (we initialize it to 1 by default).
-    VarDecl *STDecl = buildVarDecl(SemaRef, InitLoc, VType, ".omp.stride");
-    ST = buildDeclRefExpr(SemaRef, STDecl, VType, InitLoc);
+    VarDecl *STDecl =
+        buildVarDecl(SemaRef, InitLoc, StrideVType, ".omp.stride");
+    ST = buildDeclRefExpr(SemaRef, STDecl, StrideVType, InitLoc);
     SemaRef.AddInitializerToDecl(
         STDecl, SemaRef.ActOnIntegerConstant(InitLoc, 1).get(),
         /*DirectInit*/ false, /*TypeMayContainAuto*/ false);
@@ -4699,8 +4734,8 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   ExprResult IV;
   ExprResult Init;
   {
-    VarDecl *IVDecl = buildVarDecl(SemaRef, InitLoc, VType, ".omp.iv");
-    IV = buildDeclRefExpr(SemaRef, IVDecl, VType, InitLoc);
+    VarDecl *IVDecl = buildVarDecl(SemaRef, InitLoc, RealVType, ".omp.iv");
+    IV = buildDeclRefExpr(SemaRef, IVDecl, RealVType, InitLoc);
     Expr *RHS = (isOpenMPWorksharingDirective(DKind) ||
                  isOpenMPTaskLoopDirective(DKind) ||
                  isOpenMPDistributeDirective(DKind))

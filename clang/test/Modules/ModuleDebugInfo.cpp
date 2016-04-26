@@ -47,19 +47,39 @@
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "B",
 // no mangled name here yet.
 
+// This type is anchored by a function parameter.
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A<void>"
+// CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX1AIJvEEE")
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Struct"
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX6StructE")
 
-// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "Template<int, DebugCXX::traits<int> >"
+// This type is anchored by an explicit template instantiation.
+// CHECK: !DICompositeType(tag: DW_TAG_class_type,
+// CHECK-SAME:             name: "Template<int, DebugCXX::traits<int> >"
+// CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIiNS_6traitsIiEEEE")
 
-// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "FloatInstatiation"
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "traits<int>"
+// CHECK-SAME:             flags: DIFlagFwdDecl
+// CHECK-SAME:             identifier: "_ZTSN8DebugCXX6traitsIiEE")
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "traits<float>"
+// CHECK-SAME:             templateParams:
+// CHECK-SAME:             identifier: "_ZTSN8DebugCXX6traitsIfEE")
+
+// CHECK: !DICompositeType(tag: DW_TAG_class_type,
+// CHECK-SAME:             name: "Template<long, DebugCXX::traits<long> >"
+// CHECK-SAME:             templateParams:
+// CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIlNS_6traitsIlEEEE")
+
+// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "FloatInstantiation"
 // no mangled name here yet.
 
-// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "Template<float, DebugCXX::traits<float> >"
+// CHECK: !DICompositeType(tag: DW_TAG_class_type,
+// CHECK-SAME:             name: "Template<float, DebugCXX::traits<float> >"
+// CHECK-SAME:             flags: DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX8TemplateIfNS_6traitsIfEEEE")
 
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "FwdVirtual"
@@ -87,12 +107,28 @@
 // CHECK-SAME:             name: "InAnonymousNamespace",
 // CHECK-SAME:             elements: !{{[0-9]+}})
 
-// CHECK: ![[A:[0-9]+]] = {{.*}}!DICompositeType(tag: DW_TAG_class_type, name: "A",
-// CHECK: ![[DERIVED:[0-9]+]] = {{.*}}!DICompositeType(tag: DW_TAG_class_type, name: "Derived",
-// CHECK-SAME:                                         identifier: "_ZTS7Derived")
+// CHECK: ![[DERIVED:.*]] = {{.*}}!DICompositeType(tag: DW_TAG_class_type, name: "Derived",
+// CHECK-SAME:                                     identifier: "_ZTS7Derived")
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "B", scope: ![[DERIVED]],
-// CHECK-SAME:             elements: ![[B_MBRS:.*]], vtableHolder: ![[A]]
+// CHECK-SAME:             elements: ![[B_MBRS:.*]], vtableHolder:
 // CHECK: ![[B_MBRS]] = !{{{.*}}, ![[GET_PARENT:.*]]}
 // CHECK: ![[GET_PARENT]] = !DISubprogram(name: "getParent"
+
+// CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefTemplate",
+// CHECK-SAME:           baseType: ![[BASE:.*]])
+// CHECK: ![[BASE]] = !DICompositeType(tag: DW_TAG_class_type,
+// CHECK-SAME:                         name: "Template1<void *>",
+// CHECK-SAME:                         flags: DIFlagFwdDecl,
+// CHECK-SAME:                         identifier: "_ZTS9Template1IPvE")
+
+// Explicit instatiation.
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "Template1<int>",
+// CHECK-SAME:             templateParams:
+// CHECK-SAME:             identifier: "_ZTS9Template1IiE")
+
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "FwdDeclTemplate<int>",
+// CHECK-SAME:             flags: DIFlagFwdDecl
+// CHECK-SAME:             identifier: "_ZTS15FwdDeclTemplateIiE")
+
 
 // CHECK-NEG-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "PureForwardDecl"

@@ -1750,6 +1750,19 @@ void testEscapeThroughSystemCallTakingVoidPointer3(fake_rb_tree_t *rbt) {
   fake_rb_tree_insert_node(rbt, data); // no warning
 }
 
+struct IntAndPtr {
+  int x;
+  int *p;
+};
+
+void constEscape(const void *ptr);
+
+void testConstEscapeThroughAnotherField() {
+  struct IntAndPtr s;
+  s.p = malloc(sizeof(int));
+  constEscape(&(s.x)); // could free s->p!
+} // no-warning
+
 // ----------------------------------------------------------------------------
 // False negatives.
 
@@ -1769,3 +1782,9 @@ void testPassToSystemHeaderFunctionIndirectly() {
   // FIXME: This is a leak: if we think a system function won't free p, it
   // won't free (p-1) either.
 }
+
+void testMallocIntoMalloc() {
+  StructWithPtr *s = malloc(sizeof(StructWithPtr));
+  s->memP = malloc(sizeof(int));
+  free(s);
+} // FIXME: should warn here

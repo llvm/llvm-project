@@ -85,6 +85,7 @@ class BlockByrefHelpers;
 class BlockByrefInfo;
 class BlockFlags;
 class BlockFieldFlags;
+class RegionCodeGenTy;
 class TargetCodeGenInfo;
 
 /// The kind of evaluation to perform on values of a particular
@@ -2340,6 +2341,24 @@ public:
   /// \param D Directive (possibly) with the 'linear' clause.
   void EmitOMPLinearClauseInit(const OMPLoopDirective &D);
 
+  struct OMPPrivateDataTy {
+    bool Tied;
+    unsigned NumberOfParts;
+    SmallVector<const Expr *, 4> PrivateVars;
+    SmallVector<const Expr *, 4> PrivateCopies;
+    SmallVector<const Expr *, 4> FirstprivateVars;
+    SmallVector<const Expr *, 4> FirstprivateCopies;
+    SmallVector<const Expr *, 4> FirstprivateInits;
+    SmallVector<std::pair<OpenMPDependClauseKind, const Expr *>, 4> Dependences;
+  };
+  typedef const llvm::function_ref<void(CodeGenFunction & /*CGF*/,
+                                        llvm::Value * /*OutlinedFn*/,
+                                        const OMPPrivateDataTy & /*Data*/)>
+      TaskGenTy;
+  void EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
+                                 const RegionCodeGenTy &BodyGen,
+                                 const TaskGenTy &TaskGen, bool Tied);
+
   void EmitOMPParallelDirective(const OMPParallelDirective &S);
   void EmitOMPSimdDirective(const OMPSimdDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
@@ -2371,6 +2390,7 @@ public:
   void
   EmitOMPCancellationPointDirective(const OMPCancellationPointDirective &S);
   void EmitOMPCancelDirective(const OMPCancelDirective &S);
+  void EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S);
   void EmitOMPTaskLoopDirective(const OMPTaskLoopDirective &S);
   void EmitOMPTaskLoopSimdDirective(const OMPTaskLoopSimdDirective &S);
   void EmitOMPDistributeDirective(const OMPDistributeDirective &S);

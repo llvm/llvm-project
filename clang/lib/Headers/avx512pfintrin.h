@@ -47,6 +47,45 @@ __builtin_ia32_gatherpfqpd (mask, (__v8di) index, (long long const *) addr, scal
 __builtin_ia32_gatherpfqps (mask, (__v8di) index, (int const *) addr, scale, hint);\
 })
 
+#define _mm512_prefetch_i32scatter_pd(addr,  index,  scale,  hint) __extension__ ({\
+__builtin_ia32_scatterpfdpd ((__mmask8) -1, (__v8si) index, \
+                            (void  *)addr, scale, hint);\
+})
+
+#define _mm512_mask_prefetch_i32scatter_pd(addr,  mask,  index,  scale,  hint) __extension__ ({\
+__builtin_ia32_scatterpfdpd (mask, (__v8si) index, (void  *) addr,\
+                             scale, hint);\
+})
+
+#define _mm512_prefetch_i32scatter_ps(addr, index, scale, hint) __extension__ ({\
+__builtin_ia32_scatterpfdps ((__mmask16) -1, (__v16si) index, (void  *) addr,\
+                             scale, hint);\
+})
+
+#define _mm512_mask_prefetch_i32scatter_ps(addr, mask, index, scale, hint) __extension__ ({\
+__builtin_ia32_scatterpfdps (mask, (__v16si) index, (void  *) addr,\
+                             scale, hint);\
+})
+
+#define _mm512_prefetch_i64scatter_pd(addr, index, scale, hint) __extension__ ({\
+__builtin_ia32_scatterpfqpd ((__mmask8) -1, (__v8di) index, (void  *) addr,\
+                             scale, hint);\
+})
+
+#define _mm512_mask_prefetch_i64scatter_pd(addr, mask, index, scale, hint) __extension__ ({\
+__builtin_ia32_scatterpfqpd (mask, (__v8di) index, (void  *) addr,\
+                             scale, hint);\
+})
+
+#define _mm512_prefetch_i64scatter_ps(addr, index, scale, hint) __extension__ ({\
+__builtin_ia32_scatterpfqps ((__mmask8) -1, (__v8di) index, (void  *) addr,\
+                             scale, hint);\
+})
+
+#define _mm512_mask_prefetch_i64scatter_ps(addr, mask, index, scale, hint) __extension__ ({\
+__builtin_ia32_scatterpfqps (mask, (__v8di) index, (void  *) addr,\
+                             scale, hint);\
+})
 
 #undef __DEFAULT_FN_ATTRS
 
