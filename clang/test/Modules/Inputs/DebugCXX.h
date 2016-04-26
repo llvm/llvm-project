@@ -97,10 +97,11 @@ template <class T> class FwdDeclTemplate;
 typedef FwdDeclTemplate<int> TypedefFwdDeclTemplate;
 
 // Member classes of class template specializations.
-template <typename T> struct Specialized {
+template <typename T> struct Specialized {};
+
+template <> struct Specialized<int> {
+  struct Member;
 };
 
-template <> struct Specialized<int> { 
-struct Member;// { int i; };
-};
-
+template <class T> struct FwdDeclTemplateMember { struct Member; };
+typedef FwdDeclTemplateMember<int>::Member TypedefFwdDeclTemplateMember;
