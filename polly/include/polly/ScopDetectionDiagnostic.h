@@ -68,7 +68,6 @@ enum RejectReasonKind {
   rrkAffFunc,
   rrkUndefCond,
   rrkInvalidCond,
-  rrkUnsignedCond,
   rrkUndefOperand,
   rrkNonAffBranch,
   rrkNoBasePtr,
@@ -342,32 +341,6 @@ public:
   /// @name RejectReason interface
   //@{
   virtual std::string getMessage() const override;
-  //@}
-};
-
-//===----------------------------------------------------------------------===//
-/// @brief Captures an condition on unsigned values
-///
-/// We do not yet allow conditions on unsigend values
-class ReportUnsignedCond : public ReportAffFunc {
-  //===--------------------------------------------------------------------===//
-
-  // The BasicBlock we found the broken condition in.
-  BasicBlock *BB;
-
-public:
-  ReportUnsignedCond(const Instruction *Inst, BasicBlock *BB)
-      : ReportAffFunc(rrkUnsignedCond, Inst), BB(BB) {}
-
-  /// @name LLVM-RTTI interface
-  //@{
-  static bool classof(const RejectReason *RR);
-  //@}
-
-  /// @name RejectReason interface
-  //@{
-  virtual std::string getMessage() const override;
-  virtual std::string getEndUserMessage() const override;
   //@}
 };
 

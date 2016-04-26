@@ -1317,6 +1317,18 @@ buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
     isl_pw_aff *LHS, *RHS;
     LHS = Stmt.getPwAff(SE.getSCEVAtScope(ICond->getOperand(0), L));
     RHS = Stmt.getPwAff(SE.getSCEVAtScope(ICond->getOperand(1), L));
+
+    if (ICond->isUnsigned()) {
+      // For unsigned comparisons we assumed the signed bit of neither operand
+      // to be set. The comparison is equal to a signed comparison under this
+      // assumption.
+      auto *BB = Stmt.getEntryBlock();
+      S.recordAssumption(UNSIGNED, isl_pw_aff_nonneg_set(isl_pw_aff_copy(LHS)),
+                         TI->getDebugLoc(), AS_ASSUMPTION, BB);
+      S.recordAssumption(UNSIGNED, isl_pw_aff_nonneg_set(isl_pw_aff_copy(RHS)),
+                         TI->getDebugLoc(), AS_ASSUMPTION, BB);
+    }
+
     ConsequenceCondSet =
         buildConditionSet(ICond->getPredicate(), LHS, RHS, Domain);
   }

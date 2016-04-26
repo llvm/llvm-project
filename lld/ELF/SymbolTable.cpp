@@ -244,6 +244,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
   SymbolBody *Existing = Sym->Body;
 
   if (auto *L = dyn_cast<Lazy>(Existing)) {
+    Sym->Binding = New->Binding;
     if (New->isUndefined()) {
       addMemberFile(New, L);
       return;
@@ -270,8 +271,11 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
       error(S);
     return;
   }
-  if (Comp < 0)
+  if (Comp < 0) {
     Sym->Body = New;
+    if (!New->isShared())
+      Sym->Binding = New->Binding;
+  }
 }
 
 static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
@@ -300,6 +304,7 @@ template <class ELFT> Symbol *SymbolTable<ELFT>::insert(SymbolBody *New) {
   if (P.second) {
     Sym = new (Alloc) Symbol;
     Sym->Body = New;
+    Sym->Binding = New->isShared() ? STB_GLOBAL : New->Binding;
     Sym->Visibility = STV_DEFAULT;
     Sym->IsUsedInRegularObj = false;
     Sym->ExportDynamic = false;
@@ -353,7 +358,6 @@ void SymbolTable<ELFT>::addMemberFile(SymbolBody *Undef, Lazy *L) {
   // but we also need to preserve its binding and type.
   if (Undef->isWeak()) {
     // FIXME: Consider moving these members to Symbol.
-    L->Binding = Undef->Binding;
     L->Type = Undef->Type;
     return;
   }

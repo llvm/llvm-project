@@ -44,6 +44,13 @@ std::string demangle(StringRef Name);
 struct Symbol {
   SymbolBody *Body;
 
+  // Symbol binding. This is on the Symbol to track changes during resolution.
+  // In particular:
+  // An undefined weak is still weak when it resolves to a shared library.
+  // An undefined weak will not fetch archive members, but we have to remember
+  // it is weak.
+  uint8_t Binding;
+
   // Symbol visibility. This is the computed minimum visibility of all
   // observed non-DSO symbols.
   unsigned Visibility : 2;
@@ -66,6 +73,8 @@ struct Symbol {
   unsigned VersionScriptGlobal : 1;
 
   bool includeInDynsym() const;
+
+  bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
 };
 
 // The base class for real symbol classes.

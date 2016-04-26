@@ -2774,6 +2774,495 @@ public:
   }
 };
 
+/// \brief Struct that defines common infrastructure to handle mappable
+/// expressions used in OpenMP clauses.
+class OMPClauseMappableExprCommon {
+public:
+  // \brief Class that represents a component of a mappable expression. E.g.
+  // for an expression S.a, the first component is a declaration reference
+  // expression associated with 'S' and the second is a member expression
+  // associated with the field declaration 'a'. If the expression is an array
+  // subscript it may not have any associated declaration. In that case the
+  // associated declaration is set to nullptr.
+  class MappableComponent {
+    // \brief Expression associated with the component.
+    Expr *AssociatedExpression = nullptr;
+    // \brief Declaration associated with the declaration. If the component does
+    // not have a declaration (e.g. array subscripts or section), this is set to
+    // nullptr.
+    ValueDecl *AssociatedDeclaration = nullptr;
+
+  public:
+    explicit MappableComponent() {}
+    explicit MappableComponent(Expr *AssociatedExpression,
+                               ValueDecl *AssociatedDeclaration)
+        : AssociatedExpression(AssociatedExpression),
+          AssociatedDeclaration(
+              AssociatedDeclaration
+                  ? cast<ValueDecl>(AssociatedDeclaration->getCanonicalDecl())
+                  : nullptr) {}
+
+    Expr *getAssociatedExpression() const { return AssociatedExpression; }
+    ValueDecl *getAssociatedDeclaration() const {
+      return AssociatedDeclaration;
+    }
+  };
+
+  // \brief List of components of an expression. This first one is the whole
+  // expression and the last one is the base expression.
+  typedef SmallVector<MappableComponent, 8> MappableExprComponentList;
+  typedef ArrayRef<MappableComponent> MappableExprComponentListRef;
+
+  // \brief List of all component lists associated to the same base declaration.
+  // E.g. if both 'S.a' and 'S.b' are a mappable expressions, each will have
+  // their component list but the same base declaration 'S'.
+  typedef SmallVector<MappableExprComponentList, 8> MappableExprComponentLists;
+  typedef ArrayRef<MappableExprComponentList> MappableExprComponentListsRef;
+
+protected:
+  // \brief Return the total number of elements in a list of component lists.
+  static unsigned
+  getComponentsTotalNumber(MappableExprComponentListsRef ComponentLists);
+
+  // \brief Return the total number of elements in a list of declarations. All
+  // declarations are expected to be canonical.
+  static unsigned
+  getUniqueDeclarationsTotalNumber(ArrayRef<ValueDecl *> Declarations);
+};
+
+/// \brief This represents clauses with a list of expressions that are mappable.
+/// Examples of these clauses are 'map' in
+/// '#pragma omp target [enter|exit] [data]...' directives, and  'to' and 'from
+/// in '#pragma omp target update...' directives.
+template <class T>
+class OMPMappableExprListClause : public OMPVarListClause<T>,
+                                  public OMPClauseMappableExprCommon {
+  friend class OMPClauseReader;
+
+  /// \brief Number of unique declarations in this clause.
+  unsigned NumUniqueDeclarations;
+
+  /// \brief Number of component lists in this clause.
+  unsigned NumComponentLists;
+
+  /// \brief Total number of components in this clause.
+  unsigned NumComponents;
+
+protected:
+  /// \brief Get the unique declarations that are in the trailing objects of the
+  /// class.
+  MutableArrayRef<ValueDecl *> getUniqueDeclsRef() {
+    return MutableArrayRef<ValueDecl *>(
+        static_cast<T *>(this)->template getTrailingObjects<ValueDecl *>(),
+        NumUniqueDeclarations);
+  }
+
+  /// \brief Get the unique declarations that are in the trailing objects of the
+  /// class.
+  ArrayRef<ValueDecl *> getUniqueDeclsRef() const {
+    return ArrayRef<ValueDecl *>(
+        static_cast<const T *>(this)
+            ->template getTrailingObjects<ValueDecl *>(),
+        NumUniqueDeclarations);
+  }
+
+  /// \brief Set the unique declarations that are in the trailing objects of the
+  /// class.
+  void setUniqueDecls(ArrayRef<ValueDecl *> UDs) {
+    assert(UDs.size() == NumUniqueDeclarations &&
+           "Unexpected amount of unique declarations.");
+    std::copy(UDs.begin(), UDs.end(), getUniqueDeclsRef().begin());
+  }
+
+  /// \brief Get the number of lists per declaration that are in the trailing
+  /// objects of the class.
+  MutableArrayRef<unsigned> getDeclNumListsRef() {
+    return MutableArrayRef<unsigned>(
+        static_cast<T *>(this)->template getTrailingObjects<unsigned>(),
+        NumUniqueDeclarations);
+  }
+
+  /// \brief Get the number of lists per declaration that are in the trailing
+  /// objects of the class.
+  ArrayRef<unsigned> getDeclNumListsRef() const {
+    return ArrayRef<unsigned>(
+        static_cast<const T *>(this)->template getTrailingObjects<unsigned>(),
+        NumUniqueDeclarations);
+  }
+
+  /// \brief Set the number of lists per declaration that are in the trailing
+  /// objects of the class.
+  void setDeclNumLists(ArrayRef<unsigned> DNLs) {
+    assert(DNLs.size() == NumUniqueDeclarations &&
+           "Unexpected amount of list numbers.");
+    std::copy(DNLs.begin(), DNLs.end(), getDeclNumListsRef().begin());
+  }
+
+  /// \brief Get the cumulative component lists sizes that are in the trailing
+  /// objects of the class. They are appended after the number of lists.
+  MutableArrayRef<unsigned> getComponentListSizesRef() {
+    return MutableArrayRef<unsigned>(
+        static_cast<T *>(this)->template getTrailingObjects<unsigned>() +
+            NumUniqueDeclarations,
+        NumComponentLists);
+  }
+
+  /// \brief Get the cumulative component lists sizes that are in the trailing
+  /// objects of the class. They are appended after the number of lists.
+  ArrayRef<unsigned> getComponentListSizesRef() const {
+    return ArrayRef<unsigned>(
+        static_cast<const T *>(this)->template getTrailingObjects<unsigned>() +
+            NumUniqueDeclarations,
+        NumComponentLists);
+  }
+
+  /// \brief Set the cumulative component lists sizes that are in the trailing
+  /// objects of the class.
+  void setComponentListSizes(ArrayRef<unsigned> CLSs) {
+    assert(CLSs.size() == NumComponentLists &&
+           "Unexpected amount of component lists.");
+    std::copy(CLSs.begin(), CLSs.end(), getComponentListSizesRef().begin());
+  }
+
+  /// \brief Get the components that are in the trailing objects of the class.
+  MutableArrayRef<MappableComponent> getComponentsRef() {
+    return MutableArrayRef<MappableComponent>(
+        static_cast<T *>(this)
+            ->template getTrailingObjects<MappableComponent>(),
+        NumComponents);
+  }
+
+  /// \brief Get the components that are in the trailing objects of the class.
+  ArrayRef<MappableComponent> getComponentsRef() const {
+    return ArrayRef<MappableComponent>(
+        static_cast<const T *>(this)
+            ->template getTrailingObjects<MappableComponent>(),
+        NumComponents);
+  }
+
+  /// \brief Set the components that are in the trailing objects of the class.
+  /// This requires the list sizes so that it can also fill the original
+  /// expressions, which are the first component of each list.
+  void setComponents(ArrayRef<MappableComponent> Components,
+                     ArrayRef<unsigned> CLSs) {
+    assert(Components.size() == NumComponents &&
+           "Unexpected amount of component lists.");
+    assert(CLSs.size() == NumComponentLists &&
+           "Unexpected amount of list sizes.");
+    std::copy(Components.begin(), Components.end(), getComponentsRef().begin());
+  }
+
+  /// \brief Fill the clause information from the list of declarations and
+  /// associated component lists.
+  void setClauseInfo(ArrayRef<ValueDecl *> Declarations,
+                     MappableExprComponentListsRef ComponentLists) {
+    // Perform some checks to make sure the data sizes are consistent with the
+    // information available when the clause was created.
+    assert(getUniqueDeclarationsTotalNumber(Declarations) ==
+               NumUniqueDeclarations &&
+           "Unexpected number of mappable expression info entries!");
+    assert(getComponentsTotalNumber(ComponentLists) == NumComponents &&
+           "Unexpected total number of components!");
+    assert(Declarations.size() == ComponentLists.size() &&
+           "Declaration and component lists size is not consistent!");
+    assert(Declarations.size() == NumComponentLists &&
+           "Unexpected declaration and component lists size!");
+
+    // Organize the components by declaration and retrieve the original
+    // expression. Original expressions are always the first component of the
+    // mappable component list.
+    llvm::DenseMap<ValueDecl *, SmallVector<MappableExprComponentListRef, 8>>
+        ComponentListMap;
+    {
+      auto CI = ComponentLists.begin();
+      for (auto DI = Declarations.begin(), DE = Declarations.end(); DI != DE;
+           ++DI, ++CI) {
+        assert(!CI->empty() && "Invalid component list!");
+        ComponentListMap[*DI].push_back(*CI);
+      }
+    }
+
+    // Iterators of the target storage.
+    auto UniqueDeclarations = getUniqueDeclsRef();
+    auto UDI = UniqueDeclarations.begin();
+
+    auto DeclNumLists = getDeclNumListsRef();
+    auto DNLI = DeclNumLists.begin();
+
+    auto ComponentListSizes = getComponentListSizesRef();
+    auto CLSI = ComponentListSizes.begin();
+
+    auto Components = getComponentsRef();
+    auto CI = Components.begin();
+
+    // Variable to compute the accumulation of the number of components.
+    unsigned PrevSize = 0u;
+
+    // Scan all the declarations and associated component lists.
+    for (auto &M : ComponentListMap) {
+      // The declaration.
+      auto *D = M.first;
+      // The component lists.
+      auto CL = M.second;
+
+      // Initialize the entry.
+      *UDI = D;
+      ++UDI;
+
+      *DNLI = CL.size();
+      ++DNLI;
+
+      // Obtain the cumulative sizes and concatenate all the components in the
+      // reserved storage.
+      for (auto C : CL) {
+        // Accumulate with the previous size.
+        PrevSize += C.size();
+
+        // Save the size.
+        *CLSI = PrevSize;
+        ++CLSI;
+
+        // Append components after the current components iterator.
+        CI = std::copy(C.begin(), C.end(), CI);
+      }
+    }
+  }
+
+  /// \brief Build a clause for \a NumUniqueDeclarations declarations, \a
+  /// NumComponentLists total component lists, and \a NumComponents total
+  /// components.
+  ///
+  /// \param K Kind of the clause.
+  /// \param StartLoc Starting location of the clause (the clause keyword).
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param NumVars Number of expressions listed in the clause.
+  /// \param NumUniqueDeclarations Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponentLists Number of component lists in this clause - one
+  /// list for each expression in the clause.
+  /// \param NumComponents Total number of expression components in the clause.
+  ///
+  OMPMappableExprListClause(OpenMPClauseKind K, SourceLocation StartLoc,
+                            SourceLocation LParenLoc, SourceLocation EndLoc,
+                            unsigned NumVars, unsigned NumUniqueDeclarations,
+                            unsigned NumComponentLists, unsigned NumComponents)
+      : OMPVarListClause<T>(K, StartLoc, LParenLoc, EndLoc, NumVars),
+        NumUniqueDeclarations(NumUniqueDeclarations),
+        NumComponentLists(NumComponentLists), NumComponents(NumComponents) {}
+
+public:
+  /// \brief Return the number of unique base declarations in this clause.
+  unsigned getUniqueDeclarationsNum() const { return NumUniqueDeclarations; }
+  /// \brief Return the number of lists derived from the clause expressions.
+  unsigned getTotalComponentListNum() const { return NumComponentLists; }
+  /// \brief Return the total number of components in all lists derived from the
+  /// clause.
+  unsigned getTotalComponentsNum() const { return NumComponents; }
+
+  /// \brief Iterator that browse the components by lists. It also allows
+  /// browsing components of a single declaration.
+  class const_component_lists_iterator
+      : public llvm::iterator_adaptor_base<
+            const_component_lists_iterator,
+            MappableExprComponentListRef::const_iterator,
+            std::forward_iterator_tag, MappableComponent, ptrdiff_t,
+            MappableComponent, MappableComponent> {
+    // The declaration the iterator currently refers to.
+    ArrayRef<ValueDecl *>::iterator DeclCur;
+
+    // The list number associated with the current declaration.
+    ArrayRef<unsigned>::iterator NumListsCur;
+
+    // Remaining lists for the current declaration.
+    unsigned RemainingLists;
+
+    // The cumulative size of the previous list, or zero if there is no previous
+    // list.
+    unsigned PrevListSize;
+
+    // The cumulative sizes of the current list - it will delimit the remaining
+    // range of interest.
+    ArrayRef<unsigned>::const_iterator ListSizeCur;
+    ArrayRef<unsigned>::const_iterator ListSizeEnd;
+
+    // Iterator to the end of the components storage.
+    MappableExprComponentListRef::const_iterator End;
+
+  public:
+    /// \brief Construct an iterator that scans all lists.
+    explicit const_component_lists_iterator(
+        ArrayRef<ValueDecl *> UniqueDecls, ArrayRef<unsigned> DeclsListNum,
+        ArrayRef<unsigned> CumulativeListSizes,
+        MappableExprComponentListRef Components)
+        : const_component_lists_iterator::iterator_adaptor_base(
+              Components.begin()),
+          DeclCur(UniqueDecls.begin()), NumListsCur(DeclsListNum.begin()),
+          RemainingLists(0u), PrevListSize(0u),
+          ListSizeCur(CumulativeListSizes.begin()),
+          ListSizeEnd(CumulativeListSizes.end()), End(Components.end()) {
+      assert(UniqueDecls.size() == DeclsListNum.size() &&
+             "Inconsistent number of declarations and list sizes!");
+      if (!DeclsListNum.empty())
+        RemainingLists = *NumListsCur;
+    }
+
+    /// \brief Construct an iterator that scan lists for a given declaration \a
+    /// Declaration.
+    explicit const_component_lists_iterator(
+        const ValueDecl *Declaration, ArrayRef<ValueDecl *> UniqueDecls,
+        ArrayRef<unsigned> DeclsListNum, ArrayRef<unsigned> CumulativeListSizes,
+        MappableExprComponentListRef Components)
+        : const_component_lists_iterator(UniqueDecls, DeclsListNum,
+                                         CumulativeListSizes, Components) {
+
+      // Look for the desired declaration. While we are looking for it, we
+      // update the state so that we know the component where a given list
+      // starts.
+      for (; DeclCur != UniqueDecls.end(); ++DeclCur, ++NumListsCur) {
+        if (*DeclCur == Declaration)
+          break;
+
+        assert(*NumListsCur > 0 && "No lists associated with declaration??");
+
+        // Skip the lists associated with the current declaration, but save the
+        // last list size that was skipped.
+        std::advance(ListSizeCur, *NumListsCur - 1);
+        PrevListSize = *ListSizeCur;
+        ++ListSizeCur;
+      }
+
+      // If we didn't find any declaration, advance the iterator to after the
+      // last component and set remaining lists to zero.
+      if (ListSizeCur == CumulativeListSizes.end()) {
+        this->I = End;
+        RemainingLists = 0u;
+        return;
+      }
+
+      // Set the remaining lists with the total number of lists of the current
+      // declaration.
+      RemainingLists = *NumListsCur;
+
+      // Adjust the list size end iterator to the end of the relevant range.
+      ListSizeEnd = ListSizeCur;
+      std::advance(ListSizeEnd, RemainingLists);
+
+      // Given that the list sizes are cumulative, the index of the component
+      // that start the list is the size of the previous list.
+      std::advance(this->I, PrevListSize);
+    }
+
+    // Return the array with the current list. The sizes are cumulative, so the
+    // array size is the difference between the current size and previous one.
+    std::pair<const ValueDecl *, MappableExprComponentListRef>
+    operator*() const {
+      assert(ListSizeCur != ListSizeEnd && "Invalid iterator!");
+      return std::make_pair(
+          *DeclCur,
+          MappableExprComponentListRef(&*this->I, *ListSizeCur - PrevListSize));
+    }
+    std::pair<const ValueDecl *, MappableExprComponentListRef>
+    operator->() const {
+      return **this;
+    }
+
+    // Skip the components of the current list.
+    const_component_lists_iterator &operator++() {
+      assert(ListSizeCur != ListSizeEnd && RemainingLists &&
+             "Invalid iterator!");
+
+      // If we don't have more lists just skip all the components. Otherwise,
+      // advance the iterator by the number of components in the current list.
+      if (std::next(ListSizeCur) == ListSizeEnd) {
+        this->I = End;
+        RemainingLists = 0;
+      } else {
+        std::advance(this->I, *ListSizeCur - PrevListSize);
+        PrevListSize = *ListSizeCur;
+
+        // We are done with a declaration, move to the next one.
+        if (!(--RemainingLists)) {
+          ++DeclCur;
+          ++NumListsCur;
+          RemainingLists = *NumListsCur;
+          assert(RemainingLists && "No lists in the following declaration??");
+        }
+      }
+
+      ++ListSizeCur;
+      return *this;
+    }
+  };
+
+  typedef llvm::iterator_range<const_component_lists_iterator>
+      const_component_lists_range;
+
+  /// \brief Iterators for all component lists.
+  const_component_lists_iterator component_lists_begin() const {
+    return const_component_lists_iterator(
+        getUniqueDeclsRef(), getDeclNumListsRef(), getComponentListSizesRef(),
+        getComponentsRef());
+  }
+  const_component_lists_iterator component_lists_end() const {
+    return const_component_lists_iterator(
+        ArrayRef<ValueDecl *>(), ArrayRef<unsigned>(), ArrayRef<unsigned>(),
+        MappableExprComponentListRef(getComponentsRef().end(),
+                                     getComponentsRef().end()));
+  }
+  const_component_lists_range component_lists() const {
+    return {component_lists_begin(), component_lists_end()};
+  }
+
+  /// \brief Iterators for component lists associated with the provided
+  /// declaration.
+  const_component_lists_iterator
+  decl_component_lists_begin(const ValueDecl *VD) const {
+    return const_component_lists_iterator(
+        VD, getUniqueDeclsRef(), getDeclNumListsRef(),
+        getComponentListSizesRef(), getComponentsRef());
+  }
+  const_component_lists_iterator decl_component_lists_end() const {
+    return component_lists_end();
+  }
+  const_component_lists_range decl_component_lists(const ValueDecl *VD) const {
+    return {decl_component_lists_begin(VD), decl_component_lists_end()};
+  }
+
+  /// Iterators to access all the declarations, number of lists, list sizes, and
+  /// components.
+  typedef ArrayRef<ValueDecl *>::iterator const_all_decls_iterator;
+  typedef llvm::iterator_range<const_all_decls_iterator> const_all_decls_range;
+  const_all_decls_range all_decls() const {
+    auto A = getUniqueDeclsRef();
+    return const_all_decls_range(A.begin(), A.end());
+  }
+
+  typedef ArrayRef<unsigned>::iterator const_all_num_lists_iterator;
+  typedef llvm::iterator_range<const_all_num_lists_iterator>
+      const_all_num_lists_range;
+  const_all_num_lists_range all_num_lists() const {
+    auto A = getDeclNumListsRef();
+    return const_all_num_lists_range(A.begin(), A.end());
+  }
+
+  typedef ArrayRef<unsigned>::iterator const_all_lists_sizes_iterator;
+  typedef llvm::iterator_range<const_all_lists_sizes_iterator>
+      const_all_lists_sizes_range;
+  const_all_lists_sizes_range all_lists_sizes() const {
+    auto A = getComponentListSizesRef();
+    return const_all_lists_sizes_range(A.begin(), A.end());
+  }
+
+  typedef ArrayRef<MappableComponent>::iterator const_all_components_iterator;
+  typedef llvm::iterator_range<const_all_components_iterator>
+      const_all_components_range;
+  const_all_components_range all_components() const {
+    auto A = getComponentsRef();
+    return const_all_components_range(A.begin(), A.end());
+  }
+};
+
 /// \brief This represents clause 'map' in the '#pragma omp ...'
 /// directives.
 ///
@@ -2783,11 +3272,26 @@ public:
 /// In this example directive '#pragma omp target' has clause 'map'
 /// with the variables 'a' and 'b'.
 ///
-class OMPMapClause final : public OMPVarListClause<OMPMapClause>,
-                           private llvm::TrailingObjects<OMPMapClause, Expr *> {
+class OMPMapClause final : public OMPMappableExprListClause<OMPMapClause>,
+                           private llvm::TrailingObjects<
+                               OMPMapClause, Expr *, ValueDecl *, unsigned,
+                               OMPClauseMappableExprCommon::MappableComponent> {
   friend TrailingObjects;
   friend OMPVarListClause;
+  friend OMPMappableExprListClause;
   friend class OMPClauseReader;
+
+  /// Define the sizes of each trailing object array except the last one. This
+  /// is required for TrailingObjects to work properly.
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return varlist_size();
+  }
+  size_t numTrailingObjects(OverloadToken<ValueDecl *>) const {
+    return getUniqueDeclarationsNum();
+  }
+  size_t numTrailingObjects(OverloadToken<unsigned>) const {
+    return getUniqueDeclarationsNum() + getTotalComponentListNum();
+  }
 
   /// \brief Map type modifier for the 'map' clause.
   OpenMPMapClauseKind MapTypeModifier;
@@ -2821,7 +3325,9 @@ class OMPMapClause final : public OMPVarListClause<OMPMapClause>,
   /// \brief Set colon location.
   void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
 
-  /// \brief Build clause with number of variables \a N.
+  /// \brief Build a clause for \a NumVars listed expressions, \a
+  /// NumUniqueDeclarations declarations, \a NumComponentLists total component
+  /// lists, and \a NumComponents total expression components.
   ///
   /// \param MapTypeModifier Map type modifier.
   /// \param MapType Map type.
@@ -2829,25 +3335,37 @@ class OMPMapClause final : public OMPVarListClause<OMPMapClause>,
   /// \param MapLoc Location of the map type.
   /// \param StartLoc Starting location of the clause.
   /// \param EndLoc Ending location of the clause.
-  /// \param N Number of the variables in the clause.
+  /// \param NumVars Number of expressions listed in this clause.
+  /// \param NumUniqueDeclarations Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponentLists Number of component lists in this clause.
+  /// \param NumComponents Total number of expression components in the clause.
   ///
   explicit OMPMapClause(OpenMPMapClauseKind MapTypeModifier,
                         OpenMPMapClauseKind MapType, bool MapTypeIsImplicit,
                         SourceLocation MapLoc, SourceLocation StartLoc,
                         SourceLocation LParenLoc, SourceLocation EndLoc,
-                        unsigned N)
-      : OMPVarListClause<OMPMapClause>(OMPC_map, StartLoc, LParenLoc, EndLoc,
-                                       N),
+                        unsigned NumVars, unsigned NumUniqueDeclarations,
+                        unsigned NumComponentLists, unsigned NumComponents)
+      : OMPMappableExprListClause(OMPC_map, StartLoc, LParenLoc, EndLoc,
+                                  NumVars, NumUniqueDeclarations,
+                                  NumComponentLists, NumComponents),
         MapTypeModifier(MapTypeModifier), MapType(MapType),
         MapTypeIsImplicit(MapTypeIsImplicit), MapLoc(MapLoc) {}
 
   /// \brief Build an empty clause.
   ///
-  /// \param N Number of variables.
+  /// \param NumVars Number of expressions listed in this clause.
+  /// \param NumUniqueDeclarations Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponentLists Number of component lists in this clause.
+  /// \param NumComponents Total number of expression components in the clause.
   ///
-  explicit OMPMapClause(unsigned N)
-      : OMPVarListClause<OMPMapClause>(OMPC_map, SourceLocation(),
-                                       SourceLocation(), SourceLocation(), N),
+  explicit OMPMapClause(unsigned NumVars, unsigned NumUniqueDeclarations,
+                        unsigned NumComponentLists, unsigned NumComponents)
+      : OMPMappableExprListClause(
+            OMPC_map, SourceLocation(), SourceLocation(), SourceLocation(),
+            NumVars, NumUniqueDeclarations, NumComponentLists, NumComponents),
         MapTypeModifier(OMPC_MAP_unknown), MapType(OMPC_MAP_unknown),
         MapTypeIsImplicit(false), MapLoc() {}
 
@@ -2857,7 +3375,9 @@ public:
   /// \param C AST context.
   /// \param StartLoc Starting location of the clause.
   /// \param EndLoc Ending location of the clause.
-  /// \param VL List of references to the variables.
+  /// \param Vars The original expression used in the clause.
+  /// \param Declarations Declarations used in the clause.
+  /// \param ComponentLists Component lists used in the clause.
   /// \param TypeModifier Map type modifier.
   /// \param Type Map type.
   /// \param TypeIsImplicit Map type is inferred implicitly.
@@ -2865,16 +3385,28 @@ public:
   ///
   static OMPMapClause *Create(const ASTContext &C, SourceLocation StartLoc,
                               SourceLocation LParenLoc, SourceLocation EndLoc,
-                              ArrayRef<Expr *> VL,
+                              ArrayRef<Expr *> Vars,
+                              ArrayRef<ValueDecl *> Declarations,
+                              MappableExprComponentListsRef ComponentLists,
                               OpenMPMapClauseKind TypeModifier,
                               OpenMPMapClauseKind Type, bool TypeIsImplicit,
                               SourceLocation TypeLoc);
-  /// \brief Creates an empty clause with the place for \a N variables.
+  /// \brief Creates an empty clause with the place for for \a NumVars original
+  /// expressions, \a NumUniqueDeclarations declarations, \NumComponentLists
+  /// lists, and \a NumComponents expression components.
   ///
   /// \param C AST context.
-  /// \param N The number of variables.
+  /// \param NumVars Number of expressions listed in the clause.
+  /// \param NumUniqueDeclarations Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponentLists Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponents Total number of expression components in the clause.
   ///
-  static OMPMapClause *CreateEmpty(const ASTContext &C, unsigned N);
+  static OMPMapClause *CreateEmpty(const ASTContext &C, unsigned NumVars,
+                                   unsigned NumUniqueDeclarations,
+                                   unsigned NumComponentLists,
+                                   unsigned NumComponents);
 
   /// \brief Fetches mapping kind for the clause.
   OpenMPMapClauseKind getMapType() const LLVM_READONLY { return MapType; }

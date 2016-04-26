@@ -196,22 +196,6 @@ bool ReportInvalidCond::classof(const RejectReason *RR) {
 }
 
 //===----------------------------------------------------------------------===//
-// ReportUnsignedCond.
-
-std::string ReportUnsignedCond::getMessage() const {
-  return ("Condition in BB '" + BB->getName()).str() +
-         "' performs a comparision on (not yet supported) unsigned integers.";
-}
-
-std::string ReportUnsignedCond::getEndUserMessage() const {
-  return "Unsupported comparision on unsigned integers encountered";
-}
-
-bool ReportUnsignedCond::classof(const RejectReason *RR) {
-  return RR->getKind() == rrkUnsignedCond;
-}
-
-//===----------------------------------------------------------------------===//
 // ReportUndefOperand.
 
 std::string ReportUndefOperand::getMessage() const {
