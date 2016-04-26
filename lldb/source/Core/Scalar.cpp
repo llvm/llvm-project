@@ -2338,7 +2338,8 @@ lldb_private::operator/ (const Scalar& lhs, const Scalar& rhs)
         case Scalar::e_uint256:
             if (b->m_integer != 0)
             {
-                result.m_integer = *a->m_integer.getRawData() / *b->m_integer.getRawData();
+                result.m_integer = Scalar::APIntWithTypeAndValue(result.m_type,
+                                                                 *a->m_integer.getRawData() / *b->m_integer.getRawData());
                 return result;
             }
             break;
