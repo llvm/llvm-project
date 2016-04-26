@@ -146,3 +146,17 @@ namespace PR9233 {
   }
 
 }
+
+namespace PR27155 {
+
+struct B {};
+
+template<class T, int i> struct D : T {};
+template<class T> void Foo(D<T, 1>);
+
+int fn() {
+  D<D<B, 1>, 0> f;
+  Foo(f);
+}
+
+}
