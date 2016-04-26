@@ -293,7 +293,7 @@ MachineOperandIteratorBase::PhysRegInfo
 MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
                                            const TargetRegisterInfo *TRI) {
   bool AllDefsDead = true;
-  PhysRegInfo PRI = {false, false, false, false, false, false, false};
+  PhysRegInfo PRI = {false, false, false, false, false, false, false, false};
 
   assert(TargetRegisterInfo::isPhysicalRegister(Reg) &&
          "analyzePhysReg not given a physical register!");
@@ -332,8 +332,12 @@ MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
     }
   }
 
-  if (AllDefsDead && PRI.FullyDefined)
-    PRI.DeadDef = true;
+  if (AllDefsDead) {
+    if (PRI.FullyDefined || PRI.Clobbered)
+      PRI.DeadDef = true;
+    else
+      PRI.PartialDeadDef = true;
+  }
 
   return PRI;
 }

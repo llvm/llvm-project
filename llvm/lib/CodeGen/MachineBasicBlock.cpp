@@ -1208,8 +1208,15 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
       if (Info.DeadDef)
         return LQR_Dead;
       // Register is (at least partially) live after a def.
-      if (Info.Defined)
-        return LQR_Live;
+      if (Info.Defined) {
+        if (!Info.PartialDeadDef)
+          return LQR_Live;
+        // As soon as we saw a partial definition (dead or not),
+        // we cannot tell if the value is partial live without
+        // tracking the lanemasks. We are not going to do this,
+        // so fall back on the remaining of the analysis.
+        break;
+      }
       // Register is dead after a full kill or clobber and no def.
       if (Info.Killed || Info.Clobbered)
         return LQR_Dead;

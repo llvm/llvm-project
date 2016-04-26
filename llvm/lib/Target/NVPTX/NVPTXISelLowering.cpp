@@ -1698,7 +1698,7 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
                                 DAG.getIntPtrConstant(j, dl)));
     }
   }
-  return DAG.getNode(ISD::BUILD_VECTOR, dl, Node->getValueType(0), Ops);
+  return DAG.getBuildVector(Node->getValueType(0), dl, Ops);
 }
 
 /// LowerShiftRightParts - Lower SRL_PARTS, SRA_PARTS, which
@@ -4386,7 +4386,7 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
 
   SDValue LoadChain = NewLD.getValue(NumElts);
 
-  SDValue BuildVec = DAG.getNode(ISD::BUILD_VECTOR, DL, ResVT, ScalarRes);
+  SDValue BuildVec = DAG.getBuildVector(ResVT, DL, ScalarRes);
 
   Results.push_back(BuildVec);
   Results.push_back(LoadChain);
@@ -4499,7 +4499,7 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
       SDValue LoadChain = NewLD.getValue(NumElts);
 
       SDValue BuildVec =
-          DAG.getNode(ISD::BUILD_VECTOR, DL, ResVT, ScalarRes);
+          DAG.getBuildVector(ResVT, DL, ScalarRes);
 
       Results.push_back(BuildVec);
       Results.push_back(LoadChain);

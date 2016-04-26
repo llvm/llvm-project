@@ -56,16 +56,18 @@ public:
                               MachineBasicBlock *MBB);
 
 private:
+  typedef TargetInstrInfo::RegSubRegPair RegSubRegPair;
+
   void addSSAUpdateEntry(unsigned OrigReg, unsigned NewReg,
                          MachineBasicBlock *BB);
   void processPHI(MachineInstr *MI, MachineBasicBlock *TailBB,
                   MachineBasicBlock *PredBB,
-                  DenseMap<unsigned, unsigned> &LocalVRMap,
-                  SmallVectorImpl<std::pair<unsigned, unsigned>> &Copies,
+                  DenseMap<unsigned, RegSubRegPair> &LocalVRMap,
+                  SmallVectorImpl<std::pair<unsigned, RegSubRegPair>> &Copies,
                   const DenseSet<unsigned> &UsedByPhi, bool Remove);
   void duplicateInstruction(MachineInstr *MI, MachineBasicBlock *TailBB,
                             MachineBasicBlock *PredBB, MachineFunction &MF,
-                            DenseMap<unsigned, unsigned> &LocalVRMap,
+                            DenseMap<unsigned, RegSubRegPair> &LocalVRMap,
                             const DenseSet<unsigned> &UsedByPhi);
   void updateSuccessorsPHIs(MachineBasicBlock *FromBB, bool isDead,
                             SmallVectorImpl<MachineBasicBlock *> &TDBBs,
@@ -79,6 +81,9 @@ private:
                      MachineBasicBlock *TailBB,
                      SmallVectorImpl<MachineBasicBlock *> &TDBBs,
                      SmallVectorImpl<MachineInstr *> &Copies);
+  void appendCopies(MachineBasicBlock *MBB,
+                 SmallVectorImpl<std::pair<unsigned,RegSubRegPair>> &CopyInfos,
+                 SmallVectorImpl<MachineInstr *> &Copies);
 
   void removeDeadBlock(MachineBasicBlock *MBB);
 };

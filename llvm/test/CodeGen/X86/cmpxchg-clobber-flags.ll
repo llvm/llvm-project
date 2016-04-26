@@ -63,11 +63,10 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) {
 ; x8664-sahf-NEXT: popq %rax
 ; x8664-sahf-NEXT: movq %rax, %rdi
 ; x8664-sahf-NEXT: callq bar
-; x8664-sahf-NEXT: pushq %rax
+; RAX is dead, no need to push and pop it.
 ; x8664-sahf-NEXT: movq [[FLAGS]], %rax
 ; x8664-sahf-NEXT: addb $127, %al
 ; x8664-sahf-NEXT: sahf
-; x8664-sahf-NEXT: popq %rax
 ; x8664-sahf-NEXT: jne
 
   %cx = cmpxchg i64* %foo, i64 %bar, i64 %baz seq_cst seq_cst
@@ -168,11 +167,10 @@ define i32 @test_feed_cmov(i32* %addr, i32 %desired, i32 %new) {
 
 ; x8664-sahf-LABEL: test_feed_cmov:
 ; x8664-sahf: cmpxchgl
-; x8664-sahf: pushq %rax
+; RAX is dead, do not push or pop it.
 ; x8664-sahf-NEXT: seto %al
 ; x8664-sahf-NEXT: lahf
 ; x8664-sahf-NEXT: movq %rax, [[FLAGS:%.*]]
-; x8664-sahf-NEXT: popq %rax
 ; x8664-sahf-NEXT: callq foo
 ; x8664-sahf-NEXT: pushq %rax
 ; x8664-sahf-NEXT: movq [[FLAGS]], %rax

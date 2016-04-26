@@ -2191,6 +2191,9 @@ bool BitSimplification::processBlock(MachineBasicBlock &B,
 
 
 bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   auto &HRI = *HST.getRegisterInfo();
   auto &HII = *HST.getInstrInfo();
@@ -2733,6 +2736,9 @@ bool HexagonLoopRescheduling::processLoop(LoopCand &C) {
 
 
 bool HexagonLoopRescheduling::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
   HRI = HST.getRegisterInfo();

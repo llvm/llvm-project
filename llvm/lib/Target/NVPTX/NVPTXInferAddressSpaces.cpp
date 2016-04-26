@@ -419,6 +419,9 @@ static unsigned joinAddressSpaces(unsigned AS1, unsigned AS2) {
 }
 
 bool NVPTXInferAddressSpaces::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   // Collects all generic address expressions in postorder.
   std::vector<Value *> Postorder = collectGenericAddressExpressions(F);
 

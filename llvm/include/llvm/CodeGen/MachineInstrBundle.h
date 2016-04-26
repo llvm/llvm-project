@@ -187,6 +187,10 @@ public:
     /// dead.
     bool DeadDef;
 
+    /// Reg is Defined and all defs of reg or an overlapping register are
+    /// dead.
+    bool PartialDeadDef;
+
     /// There is a use operand of reg or a super-register with kill flag set.
     bool Killed;
   };

@@ -267,6 +267,9 @@ bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
 
 
 bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   if (RDFLimit.getPosition()) {
     if (RDFCount >= RDFLimit)
       return false;

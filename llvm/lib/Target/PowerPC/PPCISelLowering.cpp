@@ -7587,8 +7587,7 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                                              MVT::i32));
   }
 
-  SDValue VPermMask = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v16i8,
-                                  ResultMask);
+  SDValue VPermMask = DAG.getBuildVector(MVT::v16i8, dl, ResultMask);
   if (isLittleEndian)
     return DAG.getNode(PPCISD::VPERM, dl, V1.getValueType(),
                        V2, V1, VPermMask);
@@ -7952,8 +7951,7 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
     }
 
     SDValue TF =  DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
-    SDValue Value = DAG.getNode(ISD::BUILD_VECTOR, dl,
-                                Op.getValueType(), Vals);
+    SDValue Value = DAG.getBuildVector(Op.getValueType(), dl, Vals);
 
     if (LN->isIndexed()) {
       SDValue RetOps[] = { Value, Vals[0].getValue(1), TF };
@@ -7986,7 +7984,7 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
   }
 
   LoadChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, VectElmtChains);
-  SDValue Value = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v4i1, VectElmts);
+  SDValue Value = DAG.getBuildVector(MVT::v4i1, dl, VectElmts);
 
   SDValue RVals[] = { Value, LoadChain };
   return DAG.getMergeValues(RVals, dl);

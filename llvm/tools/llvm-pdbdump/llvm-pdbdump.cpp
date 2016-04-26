@@ -35,6 +35,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolThunk.h"
+#include "llvm/DebugInfo/PDB/Raw/PDBDbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBInfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBStream.h"
@@ -234,10 +235,7 @@ static void dumpStructure(RawSession &RS) {
     }
   }
 
-  PDBInfoStream InfoStream(File);
-  if (auto EC = InfoStream.reload())
-    reportError("", EC);
-
+  PDBInfoStream &InfoStream = File.getPDBInfoStream();
   outs() << "Version: " << InfoStream.getVersion() << '\n';
   outs() << "Signature: ";
   outs().write_hex(InfoStream.getSignature()) << '\n';
@@ -264,6 +262,22 @@ static void dumpStructure(RawSession &RS) {
     if (NameStreamSignature != 0xeffeeffe || NameStreamVersion != 1)
       reportError("", std::make_error_code(std::errc::not_supported));
   }
+
+  PDBDbiStream &DbiStream = File.getPDBDbiStream();
+  outs() << "Dbi Version: " << DbiStream.getDbiVersion() << '\n';
+  outs() << "Age: " << DbiStream.getAge() << '\n';
+  outs() << "Incremental Linking: " << DbiStream.isIncrementallyLinked()
+         << '\n';
+  outs() << "Has CTypes: " << DbiStream.hasCTypes() << '\n';
+  outs() << "Is Stripped: " << DbiStream.isStripped() << '\n';
+  outs() << "Machine Type: " << DbiStream.getMachineType() << '\n';
+  outs() << "Number of Symbols: " << DbiStream.getNumberOfSymbols() << '\n';
+
+  uint16_t Major = DbiStream.getBuildMajorVersion();
+  uint16_t Minor = DbiStream.getBuildMinorVersion();
+  outs() << "Toolchain Version: " << Major << "." << Minor << '\n';
+  outs() << "mspdb" << Major << Minor << ".dll version: " << Major << "."
+         << Minor << "." << DbiStream.getPdbDllVersion() << '\n';
 }
 
 static void dumpInput(StringRef Path) {

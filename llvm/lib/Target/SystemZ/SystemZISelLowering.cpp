@@ -820,8 +820,7 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDLoc DL,
     // extend from i64 to full vector size and then bitcast.
     assert(VA.getLocVT() == MVT::i64);
     assert(VA.getValVT().isVector());
-    Value = DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i64,
-                        Value, DAG.getUNDEF(MVT::i64));
+    Value = DAG.getBuildVector(MVT::v2i64, DL, {Value, DAG.getUNDEF(MVT::i64)});
     Value = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Value);
   } else
     assert(VA.getLocInfo() == CCValAssign::Full && "Unsupported getLocInfo");
@@ -3720,7 +3719,7 @@ static SDValue getGeneralPermuteNode(SelectionDAG &DAG, SDLoc DL, SDValue *Ops,
       IndexNodes[I] = DAG.getConstant(Bytes[I], DL, MVT::i32);
     else
       IndexNodes[I] = DAG.getUNDEF(MVT::i32);
-  SDValue Op2 = DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v16i8, IndexNodes);
+  SDValue Op2 = DAG.getBuildVector(MVT::v16i8, DL, IndexNodes);
   return DAG.getNode(SystemZISD::PERMUTE, DL, MVT::v16i8, Ops[0], Ops[1], Op2);
 }
 
@@ -3904,7 +3903,7 @@ static SDValue buildScalarToVector(SelectionDAG &DAG, SDLoc DL, EVT VT,
   if (Value.getOpcode() == ISD::Constant ||
       Value.getOpcode() == ISD::ConstantFP) {
     SmallVector<SDValue, 16> Ops(VT.getVectorNumElements(), Value);
-    return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
+    return DAG.getBuildVector(VT, DL, Ops);
   }
   if (Value.isUndef())
     return DAG.getUNDEF(VT);
@@ -4057,7 +4056,7 @@ static SDValue tryBuildVectorShuffle(SelectionDAG &DAG,
       ResidueOps.push_back(DAG.getUNDEF(ResidueOps[0].getValueType()));
     for (auto &Op : GS.Ops) {
       if (!Op.getNode()) {
-        Op = DAG.getNode(ISD::BUILD_VECTOR, SDLoc(BVN), VT, ResidueOps);
+        Op = DAG.getBuildVector(VT, SDLoc(BVN), ResidueOps);
         break;
       }
     }
@@ -4154,7 +4153,7 @@ static SDValue buildVector(SelectionDAG &DAG, SDLoc DL, EVT VT,
     for (unsigned I = 0; I < NumElements; ++I)
       if (!Constants[I].getNode())
         Constants[I] = DAG.getUNDEF(Elems[I].getValueType());
-    Result = DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Constants);
+    Result = DAG.getBuildVector(VT, DL, Constants);
   } else {
     // Otherwise try to use VLVGP to start the sequence in order to
     // avoid a false dependency on any previous contents of the vector

@@ -281,6 +281,34 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const PDB_UniqueId &Id) {
   return OS;
 }
 
+raw_ostream &llvm::operator<<(raw_ostream &OS, const PDB_Machine &Machine) {
+  switch (Machine) {
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, Am33, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, Amd64, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, Arm, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, ArmNT, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, Ebc, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, x86, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, Ia64, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, M32R, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, Mips16, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, MipsFpu, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, MipsFpu16, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, PowerPC, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, PowerPCFP, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, R4000, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, SH3, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, SH3DSP, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, SH4, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, SH5, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, Thumb, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, WceMipsV2, OS)
+  default:
+    OS << "Unknown";
+  }
+  return OS;
+}
+
 raw_ostream &llvm::operator<<(raw_ostream &OS, const Variant &Value) {
   switch (Value.Type) {
     case PDB_VariantType::Bool:

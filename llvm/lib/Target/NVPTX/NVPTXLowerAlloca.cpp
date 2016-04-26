@@ -62,6 +62,9 @@ INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca",
 // Main function for this pass.
 // =============================================================================
 bool NVPTXLowerAlloca::runOnBasicBlock(BasicBlock &BB) {
+  if (skipBasicBlock(BB))
+    return false;
+
   bool Changed = false;
   for (auto &I : BB) {
     if (auto allocaInst = dyn_cast<AllocaInst>(&I)) {

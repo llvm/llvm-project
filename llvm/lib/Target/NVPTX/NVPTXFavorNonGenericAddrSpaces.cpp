@@ -266,7 +266,7 @@ bool NVPTXFavorNonGenericAddrSpaces::optimizeMemoryInstruction(Instruction *MI,
 }
 
 bool NVPTXFavorNonGenericAddrSpaces::runOnFunction(Function &F) {
-  if (DisableFavorNonGeneric)
+  if (DisableFavorNonGeneric || skipFunction(F))
     return false;
 
   bool Changed = false;

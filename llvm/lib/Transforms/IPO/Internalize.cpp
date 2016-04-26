@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass loops over all of the functions and variables in the input module.
-// If the function or variable is not in the list of external names given to
-// the pass it is marked as internal.
+// If the function or variable does not need to be preserved according to the
+// client supplied callback, it is marked as internal.
 //
 // This transformation would not be legal in a regular compilation, but it gets
 // extra information from the linker about what is safe.
@@ -20,7 +20,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/Internalize.h"
-#include "llvm/Transforms/IPO.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
@@ -30,6 +29,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 #include <fstream>
 #include <set>
@@ -53,7 +53,6 @@ static cl::list<std::string>
             cl::desc("A list of symbol names to preserve"), cl::CommaSeparated);
 
 namespace {
-
 // Helper to load an API list to preserve from file and expose it as a functor
 // for internalization.
 class PreserveAPIList {
@@ -88,91 +87,33 @@ private:
     }
   }
 };
+} // end anonymous namespace
 
-// Internalization exposed as a pass
-class InternalizePass : public ModulePass {
-  // Client supplied callback to control wheter a symbol must be preserved.
-  std::function<bool(const GlobalValue &)> MustPreserveGV;
+bool InternalizePass::shouldPreserveGV(const GlobalValue &GV) {
+  // Function must be defined here
+  if (GV.isDeclaration())
+    return true;
 
-public:
-  static char ID; // Pass identification, replacement for typeid
+  // Available externally is really just a "declaration with a body".
+  if (GV.hasAvailableExternallyLinkage())
+    return true;
 
-  InternalizePass() : ModulePass(ID), MustPreserveGV(PreserveAPIList()) {}
+  // Assume that dllexported symbols are referenced elsewhere
+  if (GV.hasDLLExportStorageClass())
+    return true;
 
-  InternalizePass(std::function<bool(const GlobalValue &)> MustPreserveGV)
-      : ModulePass(ID), MustPreserveGV(std::move(MustPreserveGV)) {
-    initializeInternalizePassPass(*PassRegistry::getPassRegistry());
-  }
+  // Already local, has nothing to do.
+  if (GV.hasLocalLinkage())
+    return false;
 
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
+  // Check some special cases
+  if (AlwaysPreserved.count(GV.getName()))
+    return true;
 
-    CallGraphWrapperPass *CGPass =
-        getAnalysisIfAvailable<CallGraphWrapperPass>();
-    CallGraph *CG = CGPass ? &CGPass->getCallGraph() : nullptr;
-    return internalizeModule(M, MustPreserveGV, CG);
-  }
+  return MustPreserveGV(GV);
+}
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addPreserved<CallGraphWrapperPass>();
-  }
-};
-
-// Helper class to perform internalization.
-class Internalizer {
-  // Client supplied callback to control wheter a symbol must be preserved.
-  const std::function<bool(const GlobalValue &)> &MustPreserveGV;
-
-  // Set of symbols private to the compiler that this pass should not touch.
-  StringSet<> AlwaysPreserved;
-
-  // Return false if we're allowed to internalize this GV.
-  bool ShouldPreserveGV(const GlobalValue &GV) {
-    // Function must be defined here
-    if (GV.isDeclaration())
-      return true;
-
-    // Available externally is really just a "declaration with a body".
-    if (GV.hasAvailableExternallyLinkage())
-      return true;
-
-    // Assume that dllexported symbols are referenced elsewhere
-    if (GV.hasDLLExportStorageClass())
-      return true;
-
-    // Already local, has nothing to do.
-    if (GV.hasLocalLinkage())
-      return false;
-
-    // Check some special cases
-    if (AlwaysPreserved.count(GV.getName()))
-      return true;
-
-    return MustPreserveGV(GV);
-  }
-
-  bool maybeInternalize(GlobalValue &GV,
-                        const std::set<const Comdat *> &ExternalComdats);
-  void checkComdatVisibility(GlobalValue &GV,
-                             std::set<const Comdat *> &ExternalComdats);
-
-public:
-  Internalizer(const std::function<bool(const GlobalValue &)> &MustPreserveGV)
-      : MustPreserveGV(MustPreserveGV) {}
-
-  /// Run the internalizer on \p TheModule, returns true if any changes was
-  /// made.
-  ///
-  /// If the CallGraph \p CG is supplied, it will be updated when
-  /// internalizing a function (by removing any edge from the "external node")
-  bool internalizeModule(Module &TheModule, CallGraph *CG = nullptr);
-};
-
-// Internalize GV if it is possible to do so, i.e. it is not externally visible
-// and is not a member of an externally visible comdat.
-bool Internalizer::maybeInternalize(
+bool InternalizePass::maybeInternalize(
     GlobalValue &GV, const std::set<const Comdat *> &ExternalComdats) {
   if (Comdat *C = GV.getComdat()) {
     if (ExternalComdats.count(C))
@@ -188,7 +129,7 @@ bool Internalizer::maybeInternalize(
     if (GV.hasLocalLinkage())
       return false;
 
-    if (ShouldPreserveGV(GV))
+    if (shouldPreserveGV(GV))
       return false;
   }
 
@@ -199,17 +140,17 @@ bool Internalizer::maybeInternalize(
 
 // If GV is part of a comdat and is externally visible, keep track of its
 // comdat so that we don't internalize any of its members.
-void Internalizer::checkComdatVisibility(
+void InternalizePass::checkComdatVisibility(
     GlobalValue &GV, std::set<const Comdat *> &ExternalComdats) {
   Comdat *C = GV.getComdat();
   if (!C)
     return;
 
-  if (ShouldPreserveGV(GV))
+  if (shouldPreserveGV(GV))
     ExternalComdats.insert(C);
 }
 
-bool Internalizer::internalizeModule(Module &M, CallGraph *CG) {
+bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
   bool Changed = false;
   CallGraphNode *ExternalNode = CG ? CG->getExternalCallingNode() : nullptr;
 
@@ -296,24 +237,58 @@ bool Internalizer::internalizeModule(Module &M, CallGraph *CG) {
   return Changed;
 }
 
-} // end anonymous namespace
+InternalizePass::InternalizePass() : MustPreserveGV(PreserveAPIList()) {}
 
-char InternalizePass::ID = 0;
-INITIALIZE_PASS(InternalizePass, "internalize", "Internalize Global Symbols",
-                false, false)
+PreservedAnalyses InternalizePass::run(Module &M, AnalysisManager<Module> &AM) {
+  if (!internalizeModule(M, AM.getCachedResult<CallGraphAnalysis>(M)))
+    return PreservedAnalyses::all();
 
-/// Public API below
-
-bool llvm::internalizeModule(
-    Module &TheModule,
-    const std::function<bool(const GlobalValue &)> &MustPreserveGV,
-    CallGraph *CG) {
-  return Internalizer(MustPreserveGV).internalizeModule(TheModule, CG);
+  PreservedAnalyses PA;
+  PA.preserve<CallGraphAnalysis>();
+  return PA;
 }
 
-ModulePass *llvm::createInternalizePass() { return new InternalizePass(); }
+namespace {
+class InternalizeLegacyPass : public ModulePass {
+  // Client supplied callback to control wheter a symbol must be preserved.
+  std::function<bool(const GlobalValue &)> MustPreserveGV;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  InternalizeLegacyPass() : ModulePass(ID), MustPreserveGV(PreserveAPIList()) {}
+
+  InternalizeLegacyPass(std::function<bool(const GlobalValue &)> MustPreserveGV)
+      : ModulePass(ID), MustPreserveGV(std::move(MustPreserveGV)) {
+    initializeInternalizeLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+
+    CallGraphWrapperPass *CGPass =
+        getAnalysisIfAvailable<CallGraphWrapperPass>();
+    CallGraph *CG = CGPass ? &CGPass->getCallGraph() : nullptr;
+    return internalizeModule(M, MustPreserveGV, CG);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addPreserved<CallGraphWrapperPass>();
+  }
+};
+}
+
+char InternalizeLegacyPass::ID = 0;
+INITIALIZE_PASS(InternalizeLegacyPass, "internalize",
+                "Internalize Global Symbols", false, false)
+
+ModulePass *llvm::createInternalizePass() {
+  return new InternalizeLegacyPass();
+}
 
 ModulePass *llvm::createInternalizePass(
     std::function<bool(const GlobalValue &)> MustPreserveGV) {
-  return new InternalizePass(std::move(MustPreserveGV));
+  return new InternalizeLegacyPass(std::move(MustPreserveGV));
 }
