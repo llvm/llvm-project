@@ -1138,9 +1138,6 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
     BasicBlock *BBCopy = splitBB(BB);
     BasicBlock *BBCopyIDom = repairDominance(BB, BBCopy);
 
-    // In order to remap PHI nodes we store also basic block mappings.
-    BlockMap[BB] = BBCopy;
-
     // Get the mapping for this block and initialize it with either the scalar
     // loads from the generated entering block (which dominates all blocks of
     // this subregion) or the maps of the immediate dominator, if part of the

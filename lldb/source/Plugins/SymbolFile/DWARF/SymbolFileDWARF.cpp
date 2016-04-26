@@ -1459,10 +1459,45 @@ SymbolFileDWARF::ParseDeclsForContext (CompilerDeclContext decl_ctx)
             ast_parser->GetDeclForUIDFromDWARF(decl);
 }
 
+SymbolFileDWARF *
+SymbolFileDWARF::GetDWARFForUID (lldb::user_id_t uid)
+{
+    // Anytime we get a "lldb::user_id_t" from an lldb_private::SymbolFile API
+    // we must make sure we use the correct DWARF file when resolving things.
+    // On MacOSX, when using SymbolFileDWARFDebugMap, we will use multiple
+    // SymbolFileDWARF classes, one for each .o file. We can often end up
+    // with references to other DWARF objects and we must be ready to receive
+    // a "lldb::user_id_t" that specifies a DIE from another SymbolFileDWARF
+    // instance.
+    SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile();
+    if (debug_map)
+        return debug_map->GetSymbolFileByOSOIndex(debug_map->GetOSOIndexFromUserID(uid));
+    return this;
+}
+
+DWARFDIE
+SymbolFileDWARF::GetDIEFromUID (lldb::user_id_t uid)
+{
+    // Anytime we get a "lldb::user_id_t" from an lldb_private::SymbolFile API
+    // we must make sure we use the correct DWARF file when resolving things.
+    // On MacOSX, when using SymbolFileDWARFDebugMap, we will use multiple
+    // SymbolFileDWARF classes, one for each .o file. We can often end up
+    // with references to other DWARF objects and we must be ready to receive
+    // a "lldb::user_id_t" that specifies a DIE from another SymbolFileDWARF
+    // instance.
+    SymbolFileDWARF *dwarf = GetDWARFForUID(uid);
+    if (dwarf)
+        return dwarf->GetDIE(DIERef(uid, dwarf));
+    return DWARFDIE();
+}
+
 CompilerDecl
 SymbolFileDWARF::GetDeclForUID (lldb::user_id_t type_uid)
 {
-    DWARFDIE die = GetDIE(DIERef(type_uid, this));
+    // Anytime we have a lldb::user_id_t, we must get the DIE by
+    // calling SymbolFileDWARF::GetDIEFromUID(). See comments inside
+    // the SymbolFileDWARF::GetDIEFromUID() for details.
+    DWARFDIE die = GetDIEFromUID(type_uid);
     if (die)
         return die.GetDecl();
     return CompilerDecl();
@@ -1471,7 +1506,10 @@ SymbolFileDWARF::GetDeclForUID (lldb::user_id_t type_uid)
 CompilerDeclContext
 SymbolFileDWARF::GetDeclContextForUID (lldb::user_id_t type_uid)
 {
-    DWARFDIE die = GetDIE(DIERef(type_uid, this));
+    // Anytime we have a lldb::user_id_t, we must get the DIE by
+    // calling SymbolFileDWARF::GetDIEFromUID(). See comments inside
+    // the SymbolFileDWARF::GetDIEFromUID() for details.
+    DWARFDIE die = GetDIEFromUID(type_uid);
     if (die)
         return die.GetDeclContext();
     return CompilerDeclContext();
@@ -1480,7 +1518,10 @@ SymbolFileDWARF::GetDeclContextForUID (lldb::user_id_t type_uid)
 CompilerDeclContext
 SymbolFileDWARF::GetDeclContextContainingUID (lldb::user_id_t type_uid)
 {
-    DWARFDIE die = GetDIE (DIERef(type_uid, this));
+    // Anytime we have a lldb::user_id_t, we must get the DIE by
+    // calling SymbolFileDWARF::GetDIEFromUID(). See comments inside
+    // the SymbolFileDWARF::GetDIEFromUID() for details.
+    DWARFDIE die = GetDIEFromUID(type_uid);
     if (die)
         return die.GetContainingDeclContext();
     return CompilerDeclContext();
@@ -1490,13 +1531,14 @@ SymbolFileDWARF::GetDeclContextContainingUID (lldb::user_id_t type_uid)
 Type*
 SymbolFileDWARF::ResolveTypeUID (lldb::user_id_t type_uid)
 {
-    DWARFDIE type_die = GetDIE (DIERef(type_uid, this));
+    // Anytime we have a lldb::user_id_t, we must get the DIE by
+    // calling SymbolFileDWARF::GetDIEFromUID(). See comments inside
+    // the SymbolFileDWARF::GetDIEFromUID() for details.
+    DWARFDIE type_die = GetDIEFromUID(type_uid);
     if (type_die)
-    {
-        const bool assert_not_being_parsed = true;
-        return ResolveTypeUID (type_die, assert_not_being_parsed);
-    }
-    return NULL;
+        return type_die.ResolveType();
+    else
+        return nullptr;
 }
 
 Type*

@@ -10,12 +10,12 @@
 ;   2) To generate (A[N * M] / 2) [p1] the preloaded value is needed.
 ;
 ; SCOP: p0: (%N * %M)
-; SCOP: p1: (zext i32 (%tmp4 /u 2) to i64)
+; SCOP: p1: (%tmp4 /u 2)
 ;
 ; CHECK: polly.preload.merge:
 ; CHECK:   %polly.preload.tmp4.merge = phi i32 [ %polly.access.A.load, %polly.preload.exec ], [ 0, %polly.preload.cond ]
 ; CHECK:   %3 = lshr i32 %polly.preload.tmp4.merge, 1
-; CHECK:   %4 = zext i32 %3 to i64
+; CHECK:   %4 = sext i32 %0 to i64
 ;
 ;    void f(int *restrict A, int *restrict B, int N, int M) {
 ;

@@ -307,7 +307,7 @@ def parseOptionsAndInitTestdirs():
         configuration.lldbFrameworkPath = args.framework
 
     if args.executable:
-        lldbtest_config.lldbExec = args.executable
+        lldbtest_config.lldbExec = os.path.realpath(args.executable)
 
     if args.p:
         if args.p.startswith('-'):

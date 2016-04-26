@@ -92,7 +92,6 @@ public:
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   bool isRelRelative(uint32_t Type) const override;
-  bool needsCopyRelImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 
   void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -115,7 +114,6 @@ public:
   void writePltZero(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  bool needsCopyRelImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   bool isRelRelative(uint32_t Type) const override;
 
@@ -156,7 +154,6 @@ public:
                 int32_t Index, unsigned RelOff) const override;
   uint32_t getTlsGotRel(uint32_t Type) const override;
   bool isRelRelative(uint32_t Type) const override;
-  bool needsCopyRelImpl(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -182,9 +179,7 @@ public:
   void writePltZero(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  void writeGotHeader(uint8_t *Buf) const override;
   void writeThunk(uint8_t *Buf, uint64_t S) const override;
-  bool needsCopyRelImpl(uint32_t Type) const override;
   bool needsThunk(uint32_t Type, const InputFile &File,
                   const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -228,20 +223,6 @@ uint64_t TargetInfo::getImplicitAddend(const uint8_t *Buf,
 }
 
 uint64_t TargetInfo::getVAStart() const { return Config->Pic ? 0 : VAStart; }
-
-bool TargetInfo::needsCopyRelImpl(uint32_t Type) const { return false; }
-
-static bool mayNeedCopy(const SymbolBody &S) {
-  if (Config->Shared)
-    return false;
-  if (!S.isShared())
-    return false;
-  return S.isObject();
-}
-
-bool TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
-  return mayNeedCopy(S) && needsCopyRelImpl(Type);
-}
 
 bool TargetInfo::isHintRel(uint32_t Type) const { return false; }
 bool TargetInfo::isRelRelative(uint32_t Type) const { return true; }
@@ -412,10 +393,6 @@ void X86TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32le(Buf + 12, -Index * PltEntrySize - PltZeroSize - 16);
 }
 
-bool X86TargetInfo::needsCopyRelImpl(uint32_t Type) const {
-  return Type == R_386_32 || Type == R_386_16 || Type == R_386_8;
-}
-
 uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
                                           uint32_t Type) const {
   switch (Type) {
@@ -563,6 +540,7 @@ RelExpr X86_64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_X86_64_PLT32:
     return R_PLT_PC;
   case R_X86_64_PC32:
+  case R_X86_64_PC64:
     return R_PC;
   case R_X86_64_GOT32:
     return R_GOT_FROM_END;
@@ -609,11 +587,6 @@ void X86_64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32le(Buf + 2, GotEntryAddr - PltEntryAddr - 6);
   write32le(Buf + 7, Index);
   write32le(Buf + 12, -Index * PltEntrySize - PltZeroSize - 16);
-}
-
-bool X86_64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
-  return Type == R_X86_64_32S || Type == R_X86_64_32 || Type == R_X86_64_PC32 ||
-         Type == R_X86_64_64;
 }
 
 uint32_t X86_64TargetInfo::getDynRel(uint32_t Type) const {
@@ -777,6 +750,7 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_X86_64_64:
   case R_X86_64_DTPOFF64:
   case R_X86_64_SIZE64:
+  case R_X86_64_PC64:
     write64le(Loc, Val);
     break;
   case R_X86_64_GOTPCREL:
@@ -1141,25 +1115,6 @@ uint32_t AArch64TargetInfo::getTlsGotRel(uint32_t Type) const {
   return Type;
 }
 
-bool AArch64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
-  switch (Type) {
-  default:
-    return false;
-  case R_AARCH64_ABS16:
-  case R_AARCH64_ABS32:
-  case R_AARCH64_ABS64:
-  case R_AARCH64_ADD_ABS_LO12_NC:
-  case R_AARCH64_ADR_PREL_LO21:
-  case R_AARCH64_ADR_PREL_PG_HI21:
-  case R_AARCH64_LDST8_ABS_LO12_NC:
-  case R_AARCH64_LDST16_ABS_LO12_NC:
-  case R_AARCH64_LDST32_ABS_LO12_NC:
-  case R_AARCH64_LDST64_ABS_LO12_NC:
-  case R_AARCH64_LDST128_ABS_LO12_NC:
-    return true;
-  }
-}
-
 static void updateAArch64Addr(uint8_t *L, uint64_t Imm) {
   uint32_t ImmLo = (Imm & 0x3) << 29;
   uint32_t ImmHi = ((Imm & 0x1FFFFC) >> 2) << 5;
@@ -1192,38 +1147,28 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     // bits in Loc are zero.
     or32le(Loc, (Val & 0xFFF) << 10);
     break;
-  case R_AARCH64_ADR_GOT_PAGE: {
-    uint64_t X = Val;
-    checkInt<33>(X, Type);
-    updateAArch64Addr(Loc, (X >> 12) & 0x1FFFFF); // X[32:12]
+  case R_AARCH64_ADR_GOT_PAGE:
+    checkInt<33>(Val, Type);
+    updateAArch64Addr(Loc, (Val >> 12) & 0x1FFFFF); // X[32:12]
     break;
-  }
-  case R_AARCH64_ADR_PREL_LO21: {
-    uint64_t X = Val;
-    checkInt<21>(X, Type);
-    updateAArch64Addr(Loc, X & 0x1FFFFF);
+  case R_AARCH64_ADR_PREL_LO21:
+    checkInt<21>(Val, Type);
+    updateAArch64Addr(Loc, Val & 0x1FFFFF);
     break;
-  }
   case R_AARCH64_ADR_PREL_PG_HI21:
-  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21: {
-    uint64_t X = Val;
-    checkInt<33>(X, Type);
-    updateAArch64Addr(Loc, (X >> 12) & 0x1FFFFF); // X[32:12]
+  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+    checkInt<33>(Val, Type);
+    updateAArch64Addr(Loc, (Val >> 12) & 0x1FFFFF); // X[32:12]
     break;
-  }
   case R_AARCH64_CALL26:
-  case R_AARCH64_JUMP26: {
-    uint64_t X = Val;
-    checkInt<28>(X, Type);
-    or32le(Loc, (X & 0x0FFFFFFC) >> 2);
+  case R_AARCH64_JUMP26:
+    checkInt<28>(Val, Type);
+    or32le(Loc, (Val & 0x0FFFFFFC) >> 2);
     break;
-  }
-  case R_AARCH64_CONDBR19: {
-    uint64_t X = Val;
-    checkInt<21>(X, Type);
-    or32le(Loc, (X & 0x1FFFFC) << 3);
+  case R_AARCH64_CONDBR19:
+    checkInt<21>(Val, Type);
+    or32le(Loc, (Val & 0x1FFFFC) << 3);
     break;
-  }
   case R_AARCH64_LD64_GOT_LO12_NC:
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     checkAlignment<8>(Val, Type);
@@ -1255,12 +1200,10 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_AARCH64_PREL64:
     write64le(Loc, Val);
     break;
-  case R_AARCH64_TSTBR14: {
-    uint64_t X = Val;
-    checkInt<16>(X, Type);
-    or32le(Loc, (X & 0xFFFC) << 3);
+  case R_AARCH64_TSTBR14:
+    checkInt<16>(Val, Type);
+    or32le(Loc, (Val & 0xFFFC) << 3);
     break;
-  }
   case R_AARCH64_TLSLE_ADD_TPREL_HI12: {
     uint64_t V = llvm::alignTo(TcbSize, Out<ELF64LE>::TlsPhdr->p_align) + Val;
     checkInt<24>(V, Type);
@@ -1350,7 +1293,6 @@ RelExpr AMDGPUTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
 }
 
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
-  GotHeaderEntriesNum = 2;
   GotPltHeaderEntriesNum = 2;
   PageSize = 65536;
   PltEntrySize = 16;
@@ -1406,29 +1348,6 @@ uint32_t MipsTargetInfo<ELFT>::getDynRel(uint32_t Type) const {
                             "recompile with -fPIC.");
   // Keep it going with a dummy value so that we can find more reloc errors.
   return R_MIPS_32;
-}
-
-template <class ELFT>
-void MipsTargetInfo<ELFT>::writeGotHeader(uint8_t *Buf) const {
-  typedef typename ELFT::Off Elf_Off;
-  typedef typename ELFT::uint uintX_t;
-
-  // Set the MSB of the second GOT slot. This is not required by any
-  // MIPS ABI documentation, though.
-  //
-  // There is a comment in glibc saying that "The MSB of got[1] of a
-  // gnu object is set to identify gnu objects," and in GNU gold it
-  // says "the second entry will be used by some runtime loaders".
-  // But how this field is being used is unclear.
-  //
-  // We are not really willing to mimic other linkers behaviors
-  // without understanding why they do that, but because all files
-  // generated by GNU tools have this special GOT value, and because
-  // we've been doing this for years, it is probably a safe bet to
-  // keep doing this for now. We really need to revisit this to see
-  // if we had to do this.
-  auto *P = reinterpret_cast<Elf_Off *>(Buf);
-  P[1] = uintX_t(1) << (ELFT::Is64Bits ? 63 : 31);
 }
 
 template <class ELFT>
@@ -1514,11 +1433,6 @@ void MipsTargetInfo<ELFT>::writeThunk(uint8_t *Buf, uint64_t S) const {
   writeMipsHi16<E>(Buf, S);
   write32<E>(Buf + 4, 0x08000000 | (S >> 2));
   writeMipsLo16<E>(Buf + 8, S);
-}
-
-template <class ELFT>
-bool MipsTargetInfo<ELFT>::needsCopyRelImpl(uint32_t Type) const {
-  return !isRelRelative(Type) || Type == R_MIPS_LO16;
 }
 
 template <class ELFT>

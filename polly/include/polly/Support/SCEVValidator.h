@@ -14,7 +14,6 @@
 
 #include "polly/Support/ScopHelper.h"
 #include "llvm/ADT/SetVector.h"
-#include <vector>
 
 namespace llvm {
 class Region;
@@ -55,19 +54,16 @@ bool hasScalarDepsInsideRegion(const llvm::SCEV *S, const llvm::Region *R,
                                llvm::Loop *Scope, bool AllowLoops);
 bool isAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
                   const llvm::SCEV *Expression, llvm::ScalarEvolution &SE,
-                  const llvm::Value *BaseAddress = 0,
                   InvariantLoadsSetTy *ILS = nullptr);
 
 /// @brief Check if @p V describes an affine parameter constraint in @p R.
 bool isAffineParamConstraint(llvm::Value *V, const llvm::Region *R,
                              llvm::Loop *Scope, llvm::ScalarEvolution &SE,
-                             std::vector<const llvm::SCEV *> &Params,
-                             bool OrExpr = false);
+                             ParameterSetTy &Params, bool OrExpr = false);
 
-std::vector<const llvm::SCEV *>
-getParamsInAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
-                      const llvm::SCEV *Expression, llvm::ScalarEvolution &SE,
-                      const llvm::Value *BaseAddress = 0);
+ParameterSetTy getParamsInAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
+                                     const llvm::SCEV *Expression,
+                                     llvm::ScalarEvolution &SE);
 
 /// @brief Extract the constant factors from the multiplication @p M.
 ///

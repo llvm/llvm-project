@@ -17,21 +17,18 @@ class ExitDuringStepTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfFreeBSD # llvm.org/pr21411: test is hanging
-    @expectedFlakeyAndroid("llvm.org/pr26206")
     def test(self):
         """Test thread exit during step handling."""
         self.build(dictionary=self.getBuildFlags())
         self.exit_during_step_base("thread step-inst -m all-threads", 'stop reason = instruction step')
 
     @skipIfFreeBSD # llvm.org/pr21411: test is hanging
-    @expectedFlakeyAndroid("llvm.org/pr26206")
     def test_step_over(self):
         """Test thread exit during step-over handling."""
         self.build(dictionary=self.getBuildFlags())
         self.exit_during_step_base("thread step-over -m all-threads", 'stop reason = step over')
 
     @skipIfFreeBSD # llvm.org/pr21411: test is hanging
-    @expectedFlakeyAndroid("llvm.org/pr26206")
     def test_step_in(self):
         """Test thread exit during step-in handling."""
         self.build(dictionary=self.getBuildFlags())

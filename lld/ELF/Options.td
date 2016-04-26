@@ -120,6 +120,9 @@ def pie : Flag<["-"], "pie">,
 def print_gc_sections: Flag<["--"], "print-gc-sections">,
   HelpText<"List removed unused sections">;
 
+def reproduce : Separate<["--"], "reproduce">,
+  HelpText<"Dump linker invocation and input files for debugging">;
+
 def rpath : Separate<["-"], "rpath">,
   HelpText<"Add a DT_RUNPATH to the output">;
 

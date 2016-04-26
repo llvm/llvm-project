@@ -4,15 +4,15 @@
 ; domains small and concise.
 ;
 ; CHECK:         Assumed Context:
-; CHECK-NEXT:    [tmp5, tmp, tmp8, tmp11, tmp14, tmp17, tmp20, tmp23, tmp26, p_9, p_10, p_11, p_12] -> {  :  }
+; CHECK-NEXT:    [tmp5, tmp, tmp8, tmp11, tmp14, tmp17, tmp20, tmp23, tmp26] -> {  :  }
 ; CHECK-NEXT:    Invalid Context:
-; CHECK-NEXT:    [tmp5, tmp, tmp8, tmp11, tmp14, tmp17, tmp20, tmp23, tmp26, p_9, p_10, p_11, p_12] -> {  : 1 = 0 }
+; CHECK-NEXT:    [tmp5, tmp, tmp8, tmp11, tmp14, tmp17, tmp20, tmp23, tmp26] -> {  : 1 = 0 }
 ;
 ; CHECK:         Stmt_FINAL
 ; CHECK-NEXT:            Domain :=
-; CHECK-NEXT:                [tmp5, tmp, tmp8, tmp11, tmp14, tmp17, tmp20, tmp23, tmp26, p_9, p_10, p_11, p_12] -> { Stmt_FINAL[] };
+; CHECK-NEXT:                [tmp5, tmp, tmp8, tmp11, tmp14, tmp17, tmp20, tmp23, tmp26] -> { Stmt_FINAL[] };
 ; CHECK-NEXT:            Schedule :=
-; CHECK-NEXT:                [tmp5, tmp, tmp8, tmp11, tmp14, tmp17, tmp20, tmp23, tmp26, p_9, p_10, p_11, p_12] -> { Stmt_FINAL[] -> [22] };
+; CHECK-NEXT:                [tmp5, tmp, tmp8, tmp11, tmp14, tmp17, tmp20, tmp23, tmp26] -> { Stmt_FINAL[] -> [22] };
 ;
 ;
 ;    void f(short *restrict In, int *restrict Out) {
