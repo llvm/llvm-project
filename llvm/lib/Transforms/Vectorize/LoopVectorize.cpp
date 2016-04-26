@@ -4909,24 +4909,20 @@ bool LoopVectorizationLegality::blockCanBePredicated(BasicBlock *BB,
       if (!SI)
         return false;
 
+      // Build a masked store if it is legal for the target.
+      if (isLegalMaskedStore(SI->getValueOperand()->getType(),
+                             SI->getPointerOperand()) ||
+          isLegalMaskedScatter(SI->getValueOperand()->getType())) {
+        MaskedOp.insert(SI);
+        continue;
+      }
+
       bool isSafePtr = (SafePtrs.count(SI->getPointerOperand()) != 0);
       bool isSinglePredecessor = SI->getParent()->getSinglePredecessor();
 
       if (++NumPredStores > NumberOfStoresToPredicate || !isSafePtr ||
-          !isSinglePredecessor) {
-        // Build a masked store if it is legal for the target, otherwise
-        // scalarize the block.
-        bool isLegalMaskedOp =
-          isLegalMaskedStore(SI->getValueOperand()->getType(),
-                             SI->getPointerOperand()) ||
-          isLegalMaskedScatter(SI->getValueOperand()->getType());
-        if (isLegalMaskedOp) {
-          --NumPredStores;
-          MaskedOp.insert(SI);
-          continue;
-        }
+          !isSinglePredecessor)
         return false;
-      }
     }
     if (it->mayThrow())
       return false;

@@ -9,6 +9,8 @@
 
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/PDB/Raw/PDBDbiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/PDBInfoStream.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -235,4 +237,20 @@ llvm::ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() {
       reinterpret_cast<const support::ulittle32_t *>(
           Context->Buffer->getBufferStart() + getBlockMapOffset()),
       getNumDirectoryBlocks());
+}
+
+PDBInfoStream &PDBFile::getPDBInfoStream() {
+  if (!InfoStream) {
+    InfoStream.reset(new PDBInfoStream(*this));
+    InfoStream->reload();
+  }
+  return *InfoStream;
+}
+
+PDBDbiStream &PDBFile::getPDBDbiStream() {
+  if (!DbiStream) {
+    DbiStream.reset(new PDBDbiStream(*this));
+    DbiStream->reload();
+  }
+  return *DbiStream;
 }

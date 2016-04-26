@@ -631,6 +631,38 @@ public:
     return getVectorShuffle(VT, dl, N1, N2, MaskElts.data());
   }
 
+  /// Return an ISD::BUILD_VECTOR node. The number of elements in VT,
+  /// which must be a vector type, must match the number of operands in Ops.
+  /// The operands must have the same type as (or, for integers, a type wider
+  /// than) VT's element type.
+  SDValue getBuildVector(EVT VT, SDLoc DL, ArrayRef<SDValue> Ops) {
+    // VerifySDNode (via InsertNode) checks BUILD_VECTOR later.
+    return getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
+  }
+
+  /// Return a splat ISD::BUILD_VECTOR node, consisting of Op splatted to all
+  /// elements. VT must be a vector type. Op's type must be the same as (or,
+  /// for integers, a type wider than) VT's element type.
+  SDValue getSplatBuildVector(EVT VT, SDLoc DL, SDValue Op) {
+    // VerifySDNode (via InsertNode) checks BUILD_VECTOR later.
+    if (Op.getOpcode() == ISD::UNDEF) {
+      assert((VT.getVectorElementType() == Op.getValueType() ||
+              (VT.isInteger() &&
+               VT.getVectorElementType().bitsLE(Op.getValueType()))) &&
+             "A splatted value must have a width equal or (for integers) "
+             "greater than the vector element type!");
+      return getNode(ISD::UNDEF, SDLoc(), VT);
+    }
+
+    SmallVector<SDValue, 16> Ops(VT.getVectorNumElements(), Op);
+    return getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
+  }
+
+  /// Return a splat ISD::BUILD_VECTOR node, but with Op's SDLoc.
+  SDValue getSplatBuildVector(EVT VT, SDValue Op) {
+    return getSplatBuildVector(VT, SDLoc(Op), Op);
+  }
+
   /// \brief Returns an ISD::VECTOR_SHUFFLE node semantically equivalent to
   /// the shuffle node in input but with swapped operands.
   ///

@@ -594,6 +594,9 @@ bool HexagonStoreWidening::processBasicBlock(MachineBasicBlock &MBB) {
 
 
 bool HexagonStoreWidening::runOnMachineFunction(MachineFunction &MFn) {
+  if (skipFunction(*MFn.getFunction()))
+    return false;
+
   MF = &MFn;
   auto &ST = MFn.getSubtarget<HexagonSubtarget>();
   TII = ST.getInstrInfo();

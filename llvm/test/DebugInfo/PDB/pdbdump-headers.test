@@ -18,3 +18,13 @@
 ; CHECK:      NameStream: 13
 ; CHECK-NEXT: NameStreamSignature: effeeffe
 ; CHECK-NEXT: NameStreamVersion: 1
+
+; CHECK:      Dbi Version: 19990903
+; CHECK-NEXT: Age: 1
+; CHECK-NEXT: Incremental Linking: 1
+; CHECK-NEXT: Has CTypes: 0
+; CHECK-NEXT: Is Stripped: 0
+; CHECK-NEXT: Machine Type: x86
+; CHECK-NEXT: Number of Symbols: 8
+; CHECK-NEXT: Toolchain Version: 12.0
+; CHECK-NEXT: mspdb120.dll version: 12.0.31101

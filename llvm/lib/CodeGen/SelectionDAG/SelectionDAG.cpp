@@ -1195,11 +1195,8 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, SDLoc DL, EVT VT,
   }
 
   SDValue Result(N, 0);
-  if (VT.isVector()) {
-    SmallVector<SDValue, 8> Ops;
-    Ops.assign(VT.getVectorNumElements(), Result);
-    Result = getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
-  }
+  if (VT.isVector())
+    Result = getSplatBuildVector(VT, DL, Result);
   return Result;
 }
 
@@ -1238,11 +1235,8 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP& V, SDLoc DL, EVT VT,
   }
 
   SDValue Result(N, 0);
-  if (VT.isVector()) {
-    SmallVector<SDValue, 8> Ops;
-    Ops.assign(VT.getVectorNumElements(), Result);
-    Result = getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
-  }
+  if (VT.isVector())
+    Result = getSplatBuildVector(VT, DL, Result);
   return Result;
 }
 
@@ -1608,11 +1602,9 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, SDLoc dl, SDValue N1,
 
       // If the shuffle itself creates a splat, build the vector directly.
       if (AllSame && SameNumElts) {
-        const SDValue &Splatted = BV->getOperand(MaskVec[0]);
-        SmallVector<SDValue, 8> Ops(NElts, Splatted);
-
         EVT BuildVT = BV->getValueType(0);
-        SDValue NewBV = getNode(ISD::BUILD_VECTOR, dl, BuildVT, Ops);
+        const SDValue &Splatted = BV->getOperand(MaskVec[0]);
+        SDValue NewBV = getSplatBuildVector(BuildVT, dl, Splatted);
 
         // We may have jumped through bitcasts, so the type of the
         // BUILD_VECTOR may not match the type of the shuffle.
@@ -3348,7 +3340,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, SDLoc DL, EVT VT,
   Outputs.resize(VT.getVectorNumElements(), Outputs.back());
 
   // Build a big vector out of the scalar elements we generated.
-  return getNode(ISD::BUILD_VECTOR, SDLoc(), VT, Outputs);
+  return getBuildVector(VT, SDLoc(), Outputs);
 }
 
 SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode, SDLoc DL,
@@ -3439,9 +3431,7 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode, SDLoc DL,
     ScalarResults.push_back(ScalarResult);
   }
 
-  assert(ScalarResults.size() == NumElts &&
-         "Unexpected number of scalar results for BUILD_VECTOR");
-  return getNode(ISD::BUILD_VECTOR, DL, VT, ScalarResults);
+  return getBuildVector(VT, DL, ScalarResults);
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, EVT VT, SDValue N1,
@@ -3655,7 +3645,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, EVT VT, SDValue N1,
         break;
       }
       if (Ops.size() == VT.getVectorNumElements())
-        return getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
+        return getBuildVector(VT, DL, Ops);
     }
     break;
   }
@@ -4086,13 +4076,9 @@ static SDValue getMemsetValue(SDValue Value, EVT VT, SelectionDAG &DAG,
   }
 
   if (VT != Value.getValueType() && !VT.isInteger())
-    Value = DAG.getNode(ISD::BITCAST, dl, VT.getScalarType(), Value);
-  if (VT != Value.getValueType()) {
-    assert(VT.getVectorElementType() == Value.getValueType() &&
-           "value type should be one vector element here");
-    SmallVector<SDValue, 8> BVOps(VT.getVectorNumElements(), Value);
-    Value = DAG.getNode(ISD::BUILD_VECTOR, dl, VT, BVOps);
-  }
+    Value = DAG.getBitcast(VT.getScalarType(), Value);
+  if (VT != Value.getValueType())
+    Value = DAG.getSplatBuildVector(VT, dl, Value);
 
   return Value;
 }

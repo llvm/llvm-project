@@ -309,6 +309,8 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
 }
 
 bool HexagonGenMux::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
   HII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   HRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   bool Changed = false;

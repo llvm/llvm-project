@@ -1002,24 +1002,52 @@ bool LazyValueInfoCache::solveBlockValueSelect(LVILatticeVal &BBLV,
 
 bool LazyValueInfoCache::solveBlockValueCast(LVILatticeVal &BBLV,
                                              Instruction *BBI,
-                                             BasicBlock *BB) {  
-  // Figure out the range of the LHS.  If that fails, bail.
-  if (!hasBlockValue(BBI->getOperand(0), BB)) {
+                                             BasicBlock *BB) {
+  if (!BBI->getOperand(0)->getType()->isSized()) {
+    // Without knowing how wide the input is, we can't analyze it in any useful
+    // way.
+    BBLV.markOverdefined();
+    return true;
+  }
+
+  // Filter out casts we don't know how to reason about before attempting to
+  // recurse on our operand.  This can cut a long search short if we know we're
+  // not going to be able to get any useful information anways.
+  switch (BBI->getOpcode()) {
+  case Instruction::Trunc:
+  case Instruction::SExt:
+  case Instruction::ZExt:
+  case Instruction::BitCast:
+    break;
+  default:
+    // Unhandled instructions are overdefined.
+    DEBUG(dbgs() << " compute BB '" << BB->getName()
+                 << "' - overdefined (unknown cast).\n");
+    BBLV.markOverdefined();
+    return true;
+  }
+
+  
+  // Figure out the range of the LHS.  If that fails, we still apply the
+  // transfer rule on the full set since we may be able to locally infer
+  // interesting facts.
+  if (!hasBlockValue(BBI->getOperand(0), BB))
     if (pushBlockValue(std::make_pair(BB, BBI->getOperand(0))))
+      // More work to do before applying this transfer rule.
       return false;
-    BBLV.markOverdefined();
-    return true;
+
+  const unsigned OperandBitWidth =
+    DL.getTypeSizeInBits(BBI->getOperand(0)->getType());
+  ConstantRange LHSRange = ConstantRange(OperandBitWidth);
+  if (hasBlockValue(BBI->getOperand(0), BB)) {
+    LVILatticeVal LHSVal = getBlockValue(BBI->getOperand(0), BB);
+    intersectAssumeBlockValueConstantRange(BBI->getOperand(0), LHSVal, BBI);
+    if (LHSVal.isConstantRange())
+      LHSRange = LHSVal.getConstantRange();
   }
 
-  LVILatticeVal LHSVal = getBlockValue(BBI->getOperand(0), BB);
-  intersectAssumeBlockValueConstantRange(BBI->getOperand(0), LHSVal, BBI);
-  if (!LHSVal.isConstantRange()) {
-    BBLV.markOverdefined();
-    return true;
-  }
-  ConstantRange LHSRange = LHSVal.getConstantRange();
-
-  IntegerType *ResultTy = cast<IntegerType>(BBI->getType());
+  const unsigned ResultBitWidth =
+    cast<IntegerType>(BBI->getType())->getBitWidth();
 
   // NOTE: We're currently limited by the set of operations that ConstantRange
   // can evaluate symbolically.  Enhancing that set will allows us to analyze
@@ -1027,22 +1055,20 @@ bool LazyValueInfoCache::solveBlockValueCast(LVILatticeVal &BBLV,
   LVILatticeVal Result;
   switch (BBI->getOpcode()) {
   case Instruction::Trunc:
-    Result.markConstantRange(LHSRange.truncate(ResultTy->getBitWidth()));
+    Result.markConstantRange(LHSRange.truncate(ResultBitWidth));
     break;
   case Instruction::SExt:
-    Result.markConstantRange(LHSRange.signExtend(ResultTy->getBitWidth()));
+    Result.markConstantRange(LHSRange.signExtend(ResultBitWidth));
     break;
   case Instruction::ZExt:
-    Result.markConstantRange(LHSRange.zeroExtend(ResultTy->getBitWidth()));
+    Result.markConstantRange(LHSRange.zeroExtend(ResultBitWidth));
     break;
   case Instruction::BitCast:
     Result.markConstantRange(LHSRange);
     break;
-  // Unhandled instructions are overdefined.
   default:
-    DEBUG(dbgs() << " compute BB '" << BB->getName()
-                 << "' - overdefined (unknown cast).\n");
-    Result.markOverdefined();
+    // Should be dead if the code above is correct
+    llvm_unreachable("inconsistent with above");
     break;
   }
 
@@ -1052,22 +1078,50 @@ bool LazyValueInfoCache::solveBlockValueCast(LVILatticeVal &BBLV,
 
 bool LazyValueInfoCache::solveBlockValueBinaryOp(LVILatticeVal &BBLV,
                                                  Instruction *BBI,
-                                                 BasicBlock *BB) {  
-  // Figure out the range of the LHS.  If that fails, bail.
-  if (!hasBlockValue(BBI->getOperand(0), BB)) {
-    if (pushBlockValue(std::make_pair(BB, BBI->getOperand(0))))
-      return false;
-    BBLV.markOverdefined();
-    return true;
-  }
+                                                 BasicBlock *BB) {
 
-  LVILatticeVal LHSVal = getBlockValue(BBI->getOperand(0), BB);
-  intersectAssumeBlockValueConstantRange(BBI->getOperand(0), LHSVal, BBI);
-  if (!LHSVal.isConstantRange()) {
+  assert(BBI->getOperand(0)->getType()->isSized() &&
+         "all operands to binary operators are sized");
+
+  // Filter out operators we don't know how to reason about before attempting to
+  // recurse on our operand(s).  This can cut a long search short if we know
+  // we're not going to be able to get any useful information anways.
+  switch (BBI->getOpcode()) {
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::UDiv:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::And:
+  case Instruction::Or:
+    // continue into the code below
+    break;
+  default:
+    // Unhandled instructions are overdefined.
+    DEBUG(dbgs() << " compute BB '" << BB->getName()
+                 << "' - overdefined (unknown binary operator).\n");
     BBLV.markOverdefined();
     return true;
+  };
+  
+  // Figure out the range of the LHS.  If that fails, use a conservative range,
+  // but apply the transfer rule anyways.  This lets us pick up facts from
+  // expressions like "and i32 (call i32 @foo()), 32"
+  if (!hasBlockValue(BBI->getOperand(0), BB))
+    if (pushBlockValue(std::make_pair(BB, BBI->getOperand(0))))
+      // More work to do before applying this transfer rule.
+      return false;
+
+  const unsigned OperandBitWidth =
+    DL.getTypeSizeInBits(BBI->getOperand(0)->getType());
+  ConstantRange LHSRange = ConstantRange(OperandBitWidth);
+  if (hasBlockValue(BBI->getOperand(0), BB)) {
+    LVILatticeVal LHSVal = getBlockValue(BBI->getOperand(0), BB);
+    intersectAssumeBlockValueConstantRange(BBI->getOperand(0), LHSVal, BBI);
+    if (LHSVal.isConstantRange())
+      LHSRange = LHSVal.getConstantRange();
   }
-  ConstantRange LHSRange = LHSVal.getConstantRange();
 
   ConstantInt *RHS = cast<ConstantInt>(BBI->getOperand(1));
   ConstantRange RHSRange = ConstantRange(RHS->getValue());
@@ -1101,12 +1155,9 @@ bool LazyValueInfoCache::solveBlockValueBinaryOp(LVILatticeVal &BBLV,
   case Instruction::Or:
     Result.markConstantRange(LHSRange.binaryOr(RHSRange));
     break;
-
-  // Unhandled instructions are overdefined.
   default:
-    DEBUG(dbgs() << " compute BB '" << BB->getName()
-                 << "' - overdefined (unknown binary operator).\n");
-    Result.markOverdefined();
+    // Should be dead if the code above is correct
+    llvm_unreachable("inconsistent with above");
     break;
   }
 
@@ -1152,7 +1203,7 @@ bool getValueFromFromCondition(Value *Val, ICmpInst *ICI,
       return true;
     }
   }
-
+  
   return false;
 }
 

@@ -477,6 +477,9 @@ bool HexagonGenPredicate::eliminatePredCopies(MachineFunction &MF) {
 
 
 bool HexagonGenPredicate::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   TII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   TRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   MRI = &MF.getRegInfo();

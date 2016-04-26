@@ -1307,6 +1307,9 @@ bool HexagonExpandCondsets::coalesceSegments(MachineFunction &MF) {
 
 
 bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   HII = static_cast<const HexagonInstrInfo*>(MF.getSubtarget().getInstrInfo());
   TRI = MF.getSubtarget().getRegisterInfo();
   LIS = &getAnalysis<LiveIntervals>();

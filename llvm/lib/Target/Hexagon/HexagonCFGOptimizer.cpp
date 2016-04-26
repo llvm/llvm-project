@@ -102,6 +102,9 @@ HexagonCFGOptimizer::InvertAndChangeJumpTarget(MachineInstr* MI,
 
 
 bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
+  if (skipFunction(*Fn.getFunction()))
+    return false;
+
   // Loop over all of the basic blocks.
   for (MachineFunction::iterator MBBb = Fn.begin(), MBBe = Fn.end();
        MBBb != MBBe; ++MBBb) {

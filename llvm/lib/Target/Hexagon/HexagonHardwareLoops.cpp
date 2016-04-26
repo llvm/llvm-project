@@ -346,6 +346,8 @@ FunctionPass *llvm::createHexagonHardwareLoops() {
 
 bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "********* Hexagon Hardware Loops *********\n");
+  if (skipFunction(*MF.getFunction()))
+    return false;
 
   bool Changed = false;
 

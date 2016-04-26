@@ -616,7 +616,8 @@ bool OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   // Perform this optimization only if we care about code size.
-  if (DisableX86LEAOpt || !MF.getFunction()->optForSize())
+  if (DisableX86LEAOpt || skipFunction(*MF.getFunction()) ||
+      !MF.getFunction()->optForSize())
     return false;
 
   MRI = &MF.getRegInfo();

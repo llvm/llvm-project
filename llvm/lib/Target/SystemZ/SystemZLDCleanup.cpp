@@ -64,6 +64,9 @@ void SystemZLDCleanup::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool SystemZLDCleanup::runOnMachineFunction(MachineFunction &F) {
+  if (skipFunction(*F.getFunction()))
+    return false;
+
   TII = static_cast<const SystemZInstrInfo *>(F.getSubtarget().getInstrInfo());
   MF = &F;
 

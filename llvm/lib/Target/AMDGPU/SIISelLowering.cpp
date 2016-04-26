@@ -848,7 +848,7 @@ SDValue SITargetLowering::LowerFormalArguments(
       NumElements = Arg.VT.getVectorNumElements() - NumElements;
       Regs.append(NumElements, DAG.getUNDEF(VT));
 
-      InVals.push_back(DAG.getNode(ISD::BUILD_VECTOR, DL, Arg.VT, Regs));
+      InVals.push_back(DAG.getBuildVector(Arg.VT, DL, Regs));
       continue;
     }
 
@@ -1952,7 +1952,7 @@ SDValue SITargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue Hi = DAG.getSelect(DL, MVT::i32, Cond, Hi0, Hi1);
 
-  SDValue Res = DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, Lo, Hi);
+  SDValue Res = DAG.getBuildVector(MVT::v2i32, DL, {Lo, Hi});
   return DAG.getNode(ISD::BITCAST, DL, MVT::i64, Res);
 }
 
@@ -2201,8 +2201,7 @@ SDValue SITargetLowering::LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) co
   MVT SimpleVT = VT.getSimpleVT();
   MVT VecType = MVT::getVectorVT(SimpleVT, 2);
 
-  SDValue NewOld = DAG.getNode(ISD::BUILD_VECTOR, DL, VecType,
-                               New, Old);
+  SDValue NewOld = DAG.getBuildVector(VecType, DL, {New, Old});
   SDValue Ops[] = { ChainIn, Addr, NewOld };
   SDVTList VTList = DAG.getVTList(VT, MVT::Other);
   return DAG.getMemIntrinsicNode(AMDGPUISD::ATOMIC_CMP_SWAP, DL,
@@ -2310,7 +2309,7 @@ SDValue SITargetLowering::performUCharToFloatCombine(SDNode *N,
 
     assert(Ops.size() == NElts);
 
-    return DAG.getNode(ISD::BUILD_VECTOR, DL, FloatVT, Ops);
+    return DAG.getBuildVector(FloatVT, DL, Ops);
   }
 
   return SDValue();

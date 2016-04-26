@@ -69,6 +69,9 @@ bool HexagonOptimizeSZextends::intrinsicAlreadySextended(Intrinsic::ID IntID) {
 }
 
 bool HexagonOptimizeSZextends::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   unsigned Idx = 1;
   // Try to optimize sign extends in formal parameters. It's relying on
   // callee already sign extending the values. I'm not sure if our ABI

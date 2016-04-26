@@ -138,7 +138,7 @@ char FixupBWInstPass::ID = 0;
 FunctionPass *llvm::createX86FixupBWInsts() { return new FixupBWInstPass(); }
 
 bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
-  if (!FixupBWInsts)
+  if (!FixupBWInsts || skipFunction(*MF.getFunction()))
     return false;
 
   this->MF = &MF;

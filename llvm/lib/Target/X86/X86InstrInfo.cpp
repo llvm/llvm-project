@@ -18,6 +18,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -4516,22 +4517,28 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // first frame index.
     // See X86ISelLowering.cpp - X86::hasCopyImplyingStackAdjustment.
 
-
-    bool AXDead = (Reg == AX) ||
-                  (MachineBasicBlock::LQR_Dead ==
-                   MBB.computeRegisterLiveness(&getRegisterInfo(), AX, MI));
-    if (!AXDead) {
-      // FIXME: If computeRegisterLiveness() reported LQR_Unknown then AX may
-      // actually be dead. This is not a problem for correctness as we are just
-      // (unnecessarily) saving+restoring a dead register. However the
-      // MachineVerifier expects operands that read from dead registers
-      // to be marked with the "undef" flag.
-      // An example of this can be found in
-      // test/CodeGen/X86/peephole-na-phys-copy-folding.ll and
-      // test/CodeGen/X86/cmpxchg-clobber-flags.ll when using
-      // -verify-machineinstrs.
-      BuildMI(MBB, MI, DL, get(Push)).addReg(AX, getKillRegState(true));
+    MachineBasicBlock::LivenessQueryResult LQR =
+        MBB.computeRegisterLiveness(&getRegisterInfo(), AX, MI);
+    // We do not want to save and restore AX if we do not have to.
+    // Moreover, if we do so whereas AX is dead, we would need to set
+    // an undef flag on the use of AX, otherwise the verifier will
+    // complain that we read an undef value.
+    // We do not want to change the behavior of the machine verifier
+    // as this is usually wrong to read an undef value.
+    if (MachineBasicBlock::LQR_Unknown == LQR) {
+      LivePhysRegs LPR(&getRegisterInfo());
+      LPR.addLiveOuts(&MBB, /*AddPristinesAndCSRs*/ true);
+      MachineBasicBlock::iterator I = MBB.end();
+      while (I != MI) {
+        --I;
+        LPR.stepBackward(*I);
+      }
+      LQR = LPR.contains(AX) ? MachineBasicBlock::LQR_Live
+                             : MachineBasicBlock::LQR_Dead;
     }
+    bool AXDead = (Reg == AX) || (MachineBasicBlock::LQR_Dead == LQR);
+    if (!AXDead)
+      BuildMI(MBB, MI, DL, get(Push)).addReg(AX, getKillRegState(true));
     if (FromEFLAGS) {
       BuildMI(MBB, MI, DL, get(X86::SETOr), X86::AL);
       BuildMI(MBB, MI, DL, get(X86::LAHF));
@@ -7377,7 +7384,10 @@ namespace {
     LDTLSCleanup() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override {
-      X86MachineFunctionInfo* MFI = MF.getInfo<X86MachineFunctionInfo>();
+      if (skipFunction(*MF.getFunction()))
+        return false;
+
+      X86MachineFunctionInfo *MFI = MF.getInfo<X86MachineFunctionInfo>();
       if (MFI->getNumLocalDynamicTLSAccesses() < 2) {
         // No point folding accesses if there isn't at least two.
         return false;

@@ -1469,6 +1469,9 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
 
 
 bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   bool Timing = OptTiming, TimingDetail = Timing && OptTimingDetail;
   bool Changed = false;
   TimerGroup __G("hexinsert");
