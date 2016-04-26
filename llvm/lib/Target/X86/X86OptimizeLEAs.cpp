@@ -146,6 +146,9 @@ template <> struct DenseMapInfo<MemOpKey> {
     case MachineOperand::MO_MCSymbol:
       Hash = hash_combine(Hash, Val.Disp->getMCSymbol());
       break;
+    case MachineOperand::MO_MachineBasicBlock:
+      Hash = hash_combine(Hash, Val.Disp->getMBB());
+      break;
     default:
       llvm_unreachable("Invalid address displacement operand");
     }
@@ -185,7 +188,7 @@ static inline bool isIdenticalOp(const MachineOperand &MO1,
 #ifndef NDEBUG
 static bool isValidDispOp(const MachineOperand &MO) {
   return MO.isImm() || MO.isCPI() || MO.isJTI() || MO.isSymbol() ||
-         MO.isGlobal() || MO.isBlockAddress() || MO.isMCSymbol();
+         MO.isGlobal() || MO.isBlockAddress() || MO.isMCSymbol() || MO.isMBB();
 }
 #endif
 
@@ -203,7 +206,8 @@ static bool isSimilarDispOp(const MachineOperand &MO1,
          (MO1.isBlockAddress() && MO2.isBlockAddress() &&
           MO1.getBlockAddress() == MO2.getBlockAddress()) ||
          (MO1.isMCSymbol() && MO2.isMCSymbol() &&
-          MO1.getMCSymbol() == MO2.getMCSymbol());
+          MO1.getMCSymbol() == MO2.getMCSymbol()) ||
+         (MO1.isMBB() && MO2.isMBB() && MO1.getMBB() == MO2.getMBB());
 }
 
 static inline bool isLEA(const MachineInstr &MI) {

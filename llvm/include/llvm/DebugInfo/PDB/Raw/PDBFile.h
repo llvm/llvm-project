@@ -20,6 +20,7 @@ namespace llvm {
 class MemoryBuffer;
 
 struct PDBFileContext;
+class PDBStream;
 
 class PDBFile {
 public:
@@ -53,6 +54,8 @@ public:
   static uint64_t blockToOffset(uint64_t BlockNumber, uint64_t BlockSize) {
     return BlockNumber * BlockSize;
   }
+
+  PDBStream *getPDBStream() const;
 
 private:
   std::unique_ptr<PDBFileContext> Context;

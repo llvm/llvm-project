@@ -74,6 +74,8 @@ public:
     ImmTyDppRowMask,
     ImmTyDppBankMask,
     ImmTyDppBoundCtrl,
+    ImmTySdwaSel,
+    ImmTySdwaDstUnused,
     ImmTyDMask,
     ImmTyUNorm,
     ImmTyDA,
@@ -251,6 +253,14 @@ public:
 
   bool isBoundCtrl() const {
     return isImmTy(ImmTyDppBoundCtrl);
+  }
+
+  bool isSDWASel() const {
+    return isImmTy(ImmTySdwaSel);
+  }
+
+  bool isSDWADstUnused() const {
+    return isImmTy(ImmTySdwaDstUnused);
   }
 
   void setModifiers(unsigned Mods) {
@@ -522,6 +532,7 @@ public:
   OperandMatchResultTy parseOptionalOps(
                                    const ArrayRef<OptionalOperand> &OptionalOps,
                                    OperandVector &Operands);
+  OperandMatchResultTy parseStringWithPrefix(const char *Prefix, StringRef &Value);
 
 
   void cvtDSOffset01(MCInst &Inst, const OperandVector &Operands);
@@ -569,6 +580,9 @@ public:
   void cvtDPP_mod(MCInst &Inst, const OperandVector &Operands);
   void cvtDPP_nomod(MCInst &Inst, const OperandVector &Operands);
   void cvtDPP(MCInst &Inst, const OperandVector &Operands, bool HasMods);
+
+  OperandMatchResultTy parseSDWASel(OperandVector &Operands);
+  OperandMatchResultTy parseSDWADstUnused(OperandVector &Operands);
 };
 
 struct OptionalOperand {
@@ -1394,6 +1408,30 @@ AMDGPUAsmParser::parseOptionalOps(const ArrayRef<OptionalOperand> &OptionalOps,
     return MatchOperand_Success;
   }
   return MatchOperand_NoMatch;
+}
+
+AMDGPUAsmParser::OperandMatchResultTy 
+AMDGPUAsmParser::parseStringWithPrefix(const char *Prefix, StringRef &Value) {
+  if (getLexer().isNot(AsmToken::Identifier)) {
+    return MatchOperand_NoMatch;
+  }
+  StringRef Tok = Parser.getTok().getString();
+  if (Tok != Prefix) {
+    return MatchOperand_NoMatch;
+  }
+
+  Parser.Lex();
+  if (getLexer().isNot(AsmToken::Colon)) {
+    return MatchOperand_ParseFail;
+  }
+    
+  Parser.Lex();
+  if (getLexer().isNot(AsmToken::Identifier)) {
+    return MatchOperand_ParseFail;
+  }
+
+  Value = Parser.getTok().getString();
+  return MatchOperand_Success;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2294,6 +2332,80 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands,
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppRowMask, 0xf);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBankMask, 0xf);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBoundCtrl);
+}
+
+//===----------------------------------------------------------------------===//
+// sdwa
+//===----------------------------------------------------------------------===//
+
+AMDGPUAsmParser::OperandMatchResultTy
+AMDGPUAsmParser::parseSDWASel(OperandVector &Operands) {
+  SMLoc S = Parser.getTok().getLoc();
+  StringRef Value;
+  AMDGPUAsmParser::OperandMatchResultTy res;
+  
+  res = parseStringWithPrefix("dst_sel", Value);
+  if (res == MatchOperand_ParseFail) {
+    return MatchOperand_ParseFail;
+  } else if (res == MatchOperand_NoMatch) {
+    res = parseStringWithPrefix("src0_sel", Value);
+    if (res == MatchOperand_ParseFail) {
+      return MatchOperand_ParseFail;
+    } else if (res == MatchOperand_NoMatch) {
+      res = parseStringWithPrefix("src1_sel", Value);
+      if (res != MatchOperand_Success) {
+        return res;
+      }
+    }
+  }
+  
+  int64_t Int;
+  Int = StringSwitch<int64_t>(Value)
+        .Case("BYTE_0", 0)
+        .Case("BYTE_1", 1)
+        .Case("BYTE_2", 2)
+        .Case("BYTE_3", 3)
+        .Case("WORD_0", 4)
+        .Case("WORD_1", 5)
+        .Case("DWORD", 6)
+        .Default(0xffffffff);
+  Parser.Lex(); // eat last token
+
+  if (Int == 0xffffffff) {
+    return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(AMDGPUOperand::CreateImm(Int, S,
+                                              AMDGPUOperand::ImmTySdwaSel));
+  return MatchOperand_Success;
+}
+
+AMDGPUAsmParser::OperandMatchResultTy 
+AMDGPUAsmParser::parseSDWADstUnused(OperandVector &Operands) {
+  SMLoc S = Parser.getTok().getLoc();
+  StringRef Value;
+  AMDGPUAsmParser::OperandMatchResultTy res;
+
+  res = parseStringWithPrefix("dst_unused", Value);
+  if (res != MatchOperand_Success) {
+    return res;
+  }
+
+  int64_t Int;
+  Int = StringSwitch<int64_t>(Value)
+        .Case("UNUSED_PAD", 0)
+        .Case("UNUSED_SEXT", 1)
+        .Case("UNUSED_PRESERVE", 2)
+        .Default(0xffffffff);
+  Parser.Lex(); // eat last token
+
+  if (Int == 0xffffffff) {
+    return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(AMDGPUOperand::CreateImm(Int, S,
+                                              AMDGPUOperand::ImmTySdwaDstUnused));
+  return MatchOperand_Success;
 }
 
 

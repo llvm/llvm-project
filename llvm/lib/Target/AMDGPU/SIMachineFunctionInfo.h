@@ -62,6 +62,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
 
   unsigned MaximumWorkGroupSize;
 
+  // Number of reserved VGPRs for trap handler usage.
+  unsigned DebuggerReserveTrapVGPRCount;
+
 public:
   // FIXME: Make private
   unsigned LDSWaveSpillSize;
@@ -324,6 +327,10 @@ public:
 
   void setIfReturnsVoid(bool Value) {
     ReturnsVoid = Value;
+  }
+
+  unsigned getDebuggerReserveTrapVGPRCount() const {
+    return DebuggerReserveTrapVGPRCount;
   }
 
   unsigned getMaximumWorkGroupSize(const MachineFunction &MF) const;

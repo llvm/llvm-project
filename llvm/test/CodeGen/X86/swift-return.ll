@@ -36,10 +36,9 @@ declare swiftcc { i16, i8 } @gen(i32)
 
 ; If we can't pass every return value in register, we will pass everything
 ; in memroy. The caller provides space for the return value and passes
-; the address in %rdi. The first input argument will be in %rsi.
+; the address in %rax. The first input argument will be in %rdi.
 ; CHECK-LABEL: test2:
-; CHECK: leaq (%rsp), %rdi
-; CHECK: movl %{{.*}}, %esi
+; CHECK: leaq (%rsp), %rax
 ; CHECK: callq gen2
 ; CHECK: movl (%rsp)
 ; CHECK-DAG: addl 4(%rsp)
@@ -47,8 +46,7 @@ declare swiftcc { i16, i8 } @gen(i32)
 ; CHECK-DAG: addl 12(%rsp)
 ; CHECK-DAG: addl 16(%rsp)
 ; CHECK-O0-LABEL: test2:
-; CHECK-O0-DAG: leaq (%rsp), %rdi
-; CHECK-O0-DAG: movl {{.*}}, %esi
+; CHECK-O0-DAG: leaq (%rsp), %rax
 ; CHECK-O0: callq gen2
 ; CHECK-O0-DAG: movl (%rsp)
 ; CHECK-O0-DAG: movl 4(%rsp)
@@ -80,22 +78,20 @@ entry:
   ret i32 %add3
 }
 
-; The address of the return value is passed in %rdi.
-; On return, %rax will contain the adddress that has been passed in by the caller in %rdi.
+; The address of the return value is passed in %rax.
+; On return, we don't keep the address in %rax.
 ; CHECK-LABEL: gen2:
-; CHECK: movl %esi, 16(%rdi)
-; CHECK: movl %esi, 12(%rdi)
-; CHECK: movl %esi, 8(%rdi)
-; CHECK: movl %esi, 4(%rdi)
-; CHECK: movl %esi, (%rdi)
-; CHECK: movq %rdi, %rax
+; CHECK: movl %edi, 16(%rax)
+; CHECK: movl %edi, 12(%rax)
+; CHECK: movl %edi, 8(%rax)
+; CHECK: movl %edi, 4(%rax)
+; CHECK: movl %edi, (%rax)
 ; CHECK-O0-LABEL: gen2:
-; CHECK-O0-DAG: movl %esi, 16(%rdi)
-; CHECK-O0-DAG: movl %esi, 12(%rdi)
-; CHECK-O0-DAG: movl %esi, 8(%rdi)
-; CHECK-O0-DAG: movl %esi, 4(%rdi)
-; CHECK-O0-DAG: movl %esi, (%rdi)
-; CHECK-O0-DAG: movq %rdi, %rax
+; CHECK-O0-DAG: movl %edi, 16(%rax)
+; CHECK-O0-DAG: movl %edi, 12(%rax)
+; CHECK-O0-DAG: movl %edi, 8(%rax)
+; CHECK-O0-DAG: movl %edi, 4(%rax)
+; CHECK-O0-DAG: movl %edi, (%rax)
 define swiftcc { i32, i32, i32, i32, i32 } @gen2(i32 %key) {
   %Y = insertvalue { i32, i32, i32, i32, i32 } undef, i32 %key, 0
   %Z = insertvalue { i32, i32, i32, i32, i32 } %Y, i32 %key, 1
@@ -199,3 +195,12 @@ define void @consume_i1_ret() {
 }
 
 declare swiftcc { i1, i1, i1, i1 } @produce_i1_ret()
+
+; CHECK-LABEL: foo:
+; CHECK: movq %rdi, (%rax)
+; CHECK-O0-LABEL: foo:
+; CHECK-O0: movq %rdi, (%rax)
+define swiftcc void @foo(i64* sret %agg.result, i64 %val) {
+  store i64 %val, i64* %agg.result
+  ret void
+}

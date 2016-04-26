@@ -1,4 +1,4 @@
-//====- llvm/Transforms/IPO/Internalize.h - Internalization API -*- C++ -*-===//
+//====- Internalize.h - Internalization API ---------------------*- C++ -*-===//
 //
 //                      The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_INTERNALIZE_H
-#define LLVM_INTERNALIZE_H
+#ifndef LLVM_TRANSFORMS_IPO_INTERNALIZE_H
+#define LLVM_TRANSFORMS_IPO_INTERNALIZE_H
 
 #include "llvm/IR/GlobalValue.h"
 
@@ -24,4 +24,4 @@ bool internalizeModule(
     CallGraph *CG = nullptr);
 }
 
-#endif // LLVM_INTERNALIZE_H
+#endif // LLVM_TRANSFORMS_IPO_INTERNALIZE_H

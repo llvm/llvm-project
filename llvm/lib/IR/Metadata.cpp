@@ -1251,6 +1251,30 @@ void Instruction::getAllMetadataOtherThanDebugLocImpl(
   Info.getAll(Result);
 }
 
+bool Instruction::extractProfMetadata(uint64_t &TrueVal, uint64_t &FalseVal) {
+  assert((getOpcode() == Instruction::Br ||
+          getOpcode() == Instruction::Select) &&
+         "Looking for branch weights on something besides branch or select");
+
+  auto *ProfileData = getMetadata(LLVMContext::MD_prof);
+  if (!ProfileData || ProfileData->getNumOperands() != 3)
+    return false;
+
+  auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
+  if (!ProfDataName || !ProfDataName->getString().equals("branch_weights"))
+    return false;
+
+  auto *CITrue = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1));
+  auto *CIFalse = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(2));
+  if (!CITrue || !CIFalse)
+    return false;
+
+  TrueVal = CITrue->getValue().getZExtValue();
+  FalseVal = CIFalse->getValue().getZExtValue();
+
+  return true;
+}
+
 void Instruction::clearMetadataHashEntries() {
   assert(hasMetadataHashEntry() && "Caller should check");
   getContext().pImpl->InstructionMetadata.erase(this);

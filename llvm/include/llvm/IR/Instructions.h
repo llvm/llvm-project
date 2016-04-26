@@ -2906,11 +2906,6 @@ public:
   /// continues to map correctly to each operand.
   void swapSuccessors();
 
-  /// Retrieve the raw weight values of a conditional branch.
-  /// Returns true on success with profile weights filled in.
-  /// Returns false if no metadata or invalid metadata was found.
-  bool extractProfMetadata(uint64_t &TrueVal, uint64_t &FalseVal);
-
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return (I->getOpcode() == Instruction::Br);

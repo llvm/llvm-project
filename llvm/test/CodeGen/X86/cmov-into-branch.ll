@@ -79,13 +79,15 @@ define i32 @weighted_select1(i32 %a, i32 %b) {
   ret i32 %sel
 }
 
-; TODO: If a select is obviously predictable, turn it into a branch.
+; If a select is obviously predictable, turn it into a branch.
 define i32 @weighted_select2(i32 %a, i32 %b) {
 ; CHECK-LABEL: weighted_select2:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    cmovnel %edi, %esi
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    jne [[LABEL_BB5:.*]]
+; CHECK:         movl %esi, %edi
+; CHECK-NEXT:  [[LABEL_BB5]]
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
 ;
   %cmp = icmp ne i32 %a, 0
@@ -93,6 +95,27 @@ define i32 @weighted_select2(i32 %a, i32 %b) {
   ret i32 %sel
 }
 
+; Note the reversed profile weights: it doesn't matter if it's
+; obviously true or obviously false.
+; Either one should become a branch rather than conditional move.
+; TODO: But likely true vs. likely false should affect basic block placement?
+define i32 @weighted_select3(i32 %a, i32 %b) {
+; CHECK-LABEL: weighted_select3:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    jne [[LABEL_BB6:.*]]
+; CHECK:         movl %esi, %edi
+; CHECK-NEXT:  [[LABEL_BB6]]
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+;
+  %cmp = icmp ne i32 %a, 0
+  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !2
+  ret i32 %sel
+}
+
+
 !0 = !{!"branch_weights", i32 1, i32 99}
 !1 = !{!"branch_weights", i32 1, i32 100}
+!2 = !{!"branch_weights", i32 100, i32 1}
 

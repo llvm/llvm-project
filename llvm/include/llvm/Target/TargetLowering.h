@@ -41,6 +41,7 @@
 #include <vector>
 
 namespace llvm {
+  class BranchProbability;
   class CallInst;
   class CCState;
   class CCValAssign;
@@ -260,6 +261,10 @@ public:
   bool isPredictableSelectExpensive() const {
     return PredictableSelectIsExpensive;
   }
+
+  /// If a branch or a select condition is skewed in one direction by more than
+  /// this factor, it is very likely to be predicted correctly.
+  virtual BranchProbability getPredictableBranchThreshold() const;
 
   /// isLoadBitCastBeneficial() - Return true if the following transform
   /// is beneficial.

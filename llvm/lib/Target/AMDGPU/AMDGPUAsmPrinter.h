@@ -40,6 +40,8 @@ private:
       NumVGPR(0),
       NumSGPR(0),
       FlatUsed(false),
+      ReservedVGPRFirst(0),
+      ReservedVGPRCount(0),
       VCCUsed(false),
       CodeLen(0) {}
 
@@ -66,6 +68,12 @@ private:
     uint32_t NumSGPR;
     uint32_t LDSSize;
     bool FlatUsed;
+
+    // If ReservedVGPRCount is 0 then must be 0. Otherwise, this is the first
+    // fixed VGPR number reserved.
+    uint16_t ReservedVGPRFirst;
+    // The number of consecutive VGPRs reserved.
+    uint16_t ReservedVGPRCount;
 
     // Bonus information for debugging.
     bool VCCUsed;

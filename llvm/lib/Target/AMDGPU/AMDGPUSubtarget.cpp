@@ -98,7 +98,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
       LDSBankCount(0),
       IsaVersion(ISAVersion0_0_0),
       EnableSIScheduler(false),
-      DebuggerInsertNops(false),
+      DebuggerInsertNops(false), DebuggerReserveTrapVGPRs(false),
       FrameLowering(nullptr),
       GISel(),
       InstrItins(getInstrItineraryForCPU(GPU)), TargetTriple(TT) {

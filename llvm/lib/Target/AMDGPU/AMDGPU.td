@@ -328,6 +328,13 @@ def FeatureDebuggerInsertNops : SubtargetFeature<
   "Insert two nop instructions for each high level source statement"
 >;
 
+def FeatureDebuggerReserveTrapRegs : SubtargetFeature<
+  "amdgpu-debugger-reserve-trap-regs",
+  "DebuggerReserveTrapVGPRs",
+  "true",
+  "Reserve VGPRs for trap handler usage"
+>;
+
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {

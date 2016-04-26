@@ -343,7 +343,7 @@ static void PrintIndirectSymbolTable(MachOObjectFile *O, bool verbose,
     if (cputype & MachO::CPU_ARCH_ABI64)
       outs() << format("0x%016" PRIx64, addr + j * stride) << " ";
     else
-      outs() << format("0x%08" PRIx32, addr + j * stride) << " ";
+      outs() << format("0x%08" PRIx32, (uint32_t)addr + j * stride) << " ";
     MachO::dysymtab_command Dysymtab = O->getDysymtabLoadCommand();
     uint32_t indirect_symbol = O->getIndirectSymbolTableEntry(Dysymtab, n + j);
     if (indirect_symbol == MachO::INDIRECT_SYMBOL_LOCAL) {
