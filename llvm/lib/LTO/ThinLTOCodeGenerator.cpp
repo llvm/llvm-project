@@ -217,8 +217,7 @@ ResolveODR(const ModuleSummaryIndex &Index,
 static void ResolveODR(
     const ModuleSummaryIndex &Index,
     const FunctionImporter::ExportSetTy &ExportList,
-    const std::map<GlobalValue::GUID, GlobalValueSummary *> &DefinedGlobals,
-    StringRef ModuleIdentifier,
+    const GVSummaryMapTy &DefinedGlobals, StringRef ModuleIdentifier,
     std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR) {
   if (Index.modulePaths().size() == 1)
     // Nothing to do if we don't have multiple modules
@@ -453,7 +452,7 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      const std::map<GlobalValue::GUID, GlobalValueSummary *> &DefinedFunctions,
+      const GVSummaryMapTy &DefinedFunctions,
       const DenseSet<GlobalValue::GUID> &PreservedSymbols) {
     if (CachePath.empty())
       return;
@@ -702,8 +701,7 @@ void ThinLTOCodeGenerator::promote(Module &TheModule,
   auto ModuleCount = Index.modulePaths().size();
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
   // Collect for each module the list of function it defines (GUID -> Summary).
-  StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
-      ModuleToDefinedGVSummaries;
+  StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries;
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Generate import/export list
@@ -735,8 +733,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
   auto ModuleCount = Index.modulePaths().size();
 
   // Collect for each module the list of function it defines (GUID -> Summary).
-  StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
-      ModuleToDefinedGVSummaries(ModuleCount);
+  StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Generate import/export list
@@ -763,8 +760,7 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
       computeGUIDPreservedSymbols(PreservedSymbols, TMBuilder.TheTriple);
 
   // Collect for each module the list of function it defines (GUID -> Summary).
-  StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
-      ModuleToDefinedGVSummaries(ModuleCount);
+  StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Generate import/export list
@@ -845,8 +841,7 @@ void ThinLTOCodeGenerator::run() {
   auto ModuleCount = Modules.size();
 
   // Collect for each module the list of function it defines (GUID -> Summary).
-  StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
-      ModuleToDefinedGVSummaries(ModuleCount);
+  StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
   Index->collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Collect the import/export lists for all modules from the call-graph in the
