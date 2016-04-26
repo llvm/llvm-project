@@ -21,8 +21,8 @@ void __attribute__((ms_abi)) g1(int a) {
 void __attribute__((ms_abi)) g2(int a, int b, ...) {
   __builtin_ms_va_list ap;
 
-  __builtin_ms_va_start(ap, 10); // expected-warning {{second parameter of 'va_start' not last named argument}}
-  __builtin_ms_va_start(ap, a); // expected-warning {{second parameter of 'va_start' not last named argument}}
+  __builtin_ms_va_start(ap, 10); // expected-warning {{second argument to 'va_start' is not the last named parameter}}
+  __builtin_ms_va_start(ap, a); // expected-warning {{second argument to 'va_start' is not the last named parameter}}
   __builtin_ms_va_start(ap, b);
 }
 
