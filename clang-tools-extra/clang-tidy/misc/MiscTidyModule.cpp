@@ -16,6 +16,7 @@
 #include "BoolPointerImplicitConversionCheck.h"
 #include "DanglingHandleCheck.h"
 #include "DefinitionsInHeadersCheck.h"
+#include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
 #include "InaccurateEraseCheck.h"
 #include "IncorrectRoundings.h"
@@ -67,6 +68,8 @@ public:
         "misc-dangling-handle");
     CheckFactories.registerCheck<DefinitionsInHeadersCheck>(
         "misc-definitions-in-headers");
+    CheckFactories.registerCheck<FoldInitTypeCheck>(
+        "misc-fold-init-type");
     CheckFactories.registerCheck<ForwardDeclarationNamespaceCheck>(
         "misc-forward-declaration-namespace");
     CheckFactories.registerCheck<InaccurateEraseCheck>(

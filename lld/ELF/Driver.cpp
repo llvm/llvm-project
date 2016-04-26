@@ -352,8 +352,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Fini = getString(Args, OPT_fini, "_fini");
   Config->Init = getString(Args, OPT_init, "_init");
   Config->OutputFile = getString(Args, OPT_o);
-  if (auto *Arg = Args.getLastArg(OPT_reproduce))
-    Config->Reproduce = Arg->getValue();
+  Config->Reproduce = getString(Args, OPT_reproduce);
   Config->SoName = getString(Args, OPT_soname);
   Config->Sysroot = getString(Args, OPT_sysroot);
 

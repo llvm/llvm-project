@@ -30,8 +30,6 @@
 
 // Platform specific configuration defines.
 #ifdef __APPLE__
-  #define _LIBUNWIND_BUILD_SJLJ_APIS      defined(__arm__)
-
   #if defined(FOR_DYLD)
     #define _LIBUNWIND_SUPPORT_COMPACT_UNWIND 1
     #define _LIBUNWIND_SUPPORT_DWARF_UNWIND   0
@@ -42,8 +40,6 @@
     #define _LIBUNWIND_SUPPORT_DWARF_INDEX    0
   #endif
 #else
-  #define _LIBUNWIND_BUILD_SJLJ_APIS      0
-
   #if defined(__ARM_DWARF_EH__) || !defined(__arm__)
     #define _LIBUNWIND_SUPPORT_COMPACT_UNWIND 0
     #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
@@ -58,6 +54,12 @@
 // FIXME: these macros are not correct for COFF targets
 #define _LIBUNWIND_EXPORT __attribute__((visibility("default")))
 #define _LIBUNWIND_HIDDEN __attribute__((visibility("hidden")))
+
+#if (defined(__APPLE__) && defined(__arm__)) || defined(__USING_SJLJ_EXCEPTIONS__)
+#define _LIBUNWIND_BUILD_SJLJ_APIS 1
+#else
+#define _LIBUNWIND_BUILD_SJLJ_APIS 0
+#endif
 
 #if defined(__i386__) || defined(__x86_64__)
 #define _LIBUNWIND_SUPPORT_FRAME_APIS 1

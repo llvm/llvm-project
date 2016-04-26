@@ -1317,6 +1317,18 @@ buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
     isl_pw_aff *LHS, *RHS;
     LHS = Stmt.getPwAff(SE.getSCEVAtScope(ICond->getOperand(0), L));
     RHS = Stmt.getPwAff(SE.getSCEVAtScope(ICond->getOperand(1), L));
+
+    if (ICond->isUnsigned()) {
+      // For unsigned comparisons we assumed the signed bit of neither operand
+      // to be set. The comparison is equal to a signed comparison under this
+      // assumption.
+      auto *BB = Stmt.getEntryBlock();
+      S.recordAssumption(UNSIGNED, isl_pw_aff_nonneg_set(isl_pw_aff_copy(LHS)),
+                         TI->getDebugLoc(), AS_ASSUMPTION, BB);
+      S.recordAssumption(UNSIGNED, isl_pw_aff_nonneg_set(isl_pw_aff_copy(RHS)),
+                         TI->getDebugLoc(), AS_ASSUMPTION, BB);
+    }
+
     ConsequenceCondSet =
         buildConditionSet(ICond->getPredicate(), LHS, RHS, Domain);
   }
@@ -1329,15 +1341,22 @@ buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
   ConsequenceCondSet = isl_set_coalesce(
       isl_set_intersect(ConsequenceCondSet, isl_set_copy(Domain)));
 
-  isl_set *AlternativeCondSet;
-  unsigned NumParams = isl_set_n_param(ConsequenceCondSet);
-  unsigned NumBasicSets = isl_set_n_basic_set(ConsequenceCondSet);
-  if (NumBasicSets + NumParams < MaxConjunctsInDomain) {
+  isl_set *AlternativeCondSet = nullptr;
+  bool ToComplex =
+      isl_set_n_basic_set(ConsequenceCondSet) >= MaxConjunctsInDomain;
+
+  if (!ToComplex) {
     AlternativeCondSet = isl_set_subtract(isl_set_copy(Domain),
                                           isl_set_copy(ConsequenceCondSet));
-  } else {
+    ToComplex = isl_set_n_basic_set(AlternativeCondSet) >= MaxConjunctsInDomain;
+  }
+
+  if (ToComplex) {
     S.invalidate(COMPLEXITY, TI ? TI->getDebugLoc() : DebugLoc());
+    isl_set_free(AlternativeCondSet);
     AlternativeCondSet = isl_set_empty(isl_set_get_space(ConsequenceCondSet));
+    isl_set_free(ConsequenceCondSet);
+    ConsequenceCondSet = isl_set_empty(isl_set_get_space(AlternativeCondSet));
   }
 
   ConditionSets.push_back(ConsequenceCondSet);

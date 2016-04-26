@@ -1564,19 +1564,6 @@ ObjectFileELF::ParseARMAttributes(DataExtractor &data, uint64_t length, ArchSpec
 
                     break;
 
-                case llvm::ARMBuildAttrs::THUMB_ISA_use:
-                {
-                    uint64_t ThumbISA = data.GetULEB128(&Offset);
-
-                    // NOTE: ignore ThumbISA == llvm::ARMBuildAttrs::AllowThumbDerived
-                    // since that derives it based on the architecutre/profile
-                    if (ThumbISA == llvm::ARMBuildAttrs::AllowThumb32)
-                        if (arch_spec.GetTriple().getArch() == llvm::Triple::UnknownArch ||
-                            arch_spec.GetTriple().getArch() == llvm::Triple::arm)
-                            arch_spec.GetTriple().setArch(llvm::Triple::thumb);
-
-                    break;
-                }
                 case llvm::ARMBuildAttrs::ABI_VFP_args:
                 {
                     uint64_t VFPArgs = data.GetULEB128(&Offset);

@@ -7,6 +7,7 @@ add_clang_library(clangTidyMiscModule
   BoolPointerImplicitConversionCheck.cpp
   DanglingHandleCheck.cpp
   DefinitionsInHeadersCheck.cpp
+  FoldInitTypeCheck.cpp
   ForwardDeclarationNamespaceCheck.cpp
   InaccurateEraseCheck.cpp
   IncorrectRoundings.cpp
