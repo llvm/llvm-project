@@ -4873,6 +4873,7 @@ bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB)  {
 
 bool LoopVectorizationLegality::blockCanBePredicated(BasicBlock *BB,
                                            SmallPtrSetImpl<Value *> &SafePtrs) {
+  const bool IsAnnotatedParallel = TheLoop->isAnnotatedParallel();
 
   for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e; ++it) {
     // Check that we don't have a constant expression that can trap as operand.
@@ -4893,6 +4894,9 @@ bool LoopVectorizationLegality::blockCanBePredicated(BasicBlock *BB,
           MaskedOp.insert(LI);
           continue;
         }
+        // !llvm.mem.parallel_loop_access implies if-conversion safety.
+        if (IsAnnotatedParallel)
+          continue;
         return false;
       }
     }

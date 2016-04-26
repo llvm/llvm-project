@@ -24,6 +24,8 @@ namespace {
 
 class AMDGPUAnnotateKernelFeatures : public ModulePass {
 private:
+  static bool hasAddrSpaceCast(const Function &F);
+
   void addAttrToCallers(Function *Intrin, StringRef AttrName);
   bool addAttrsForIntrinsics(Module &M, ArrayRef<StringRef[2]>);
 
@@ -48,12 +50,29 @@ char AMDGPUAnnotateKernelFeatures::ID = 0;
 
 char &llvm::AMDGPUAnnotateKernelFeaturesID = AMDGPUAnnotateKernelFeatures::ID;
 
+INITIALIZE_PASS(AMDGPUAnnotateKernelFeatures, DEBUG_TYPE,
+                "Add AMDGPU function attributes", false, false)
 
-INITIALIZE_PASS_BEGIN(AMDGPUAnnotateKernelFeatures, DEBUG_TYPE,
-                      "Add AMDGPU function attributes", false, false)
-INITIALIZE_PASS_END(AMDGPUAnnotateKernelFeatures, DEBUG_TYPE,
-                    "Add AMDGPU function attributes", false, false)
+static bool castRequiresQueuePtr(const AddrSpaceCastInst *ASC) {
+  unsigned SrcAS = ASC->getSrcAddressSpace();
 
+  // The queue ptr is only needed when casting to flat, not from it.
+  return SrcAS == AMDGPUAS::LOCAL_ADDRESS || SrcAS == AMDGPUAS::PRIVATE_ADDRESS;
+}
+
+// Return true if an addrspacecast is used that requires the queue ptr.
+bool AMDGPUAnnotateKernelFeatures::hasAddrSpaceCast(const Function &F) {
+  for (const BasicBlock &BB : F) {
+    for (const Instruction &I : BB) {
+      if (const AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
+        if (castRequiresQueuePtr(ASC))
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
 
 void AMDGPUAnnotateKernelFeatures::addAttrToCallers(Function *Intrin,
                                                     StringRef AttrName) {
@@ -104,7 +123,8 @@ bool AMDGPUAnnotateKernelFeatures::runOnModule(Module &M) {
   };
 
   static const StringRef HSAIntrinsicToAttr[][2] = {
-    { "llvm.amdgcn.dispatch.ptr", "amdgpu-dispatch-ptr" }
+    { "llvm.amdgcn.dispatch.ptr", "amdgpu-dispatch-ptr" },
+    { "llvm.amdgcn.queue.ptr", "amdgpu-queue-ptr" }
   };
 
   // TODO: We should not add the attributes if the known compile time workgroup
@@ -116,8 +136,17 @@ bool AMDGPUAnnotateKernelFeatures::runOnModule(Module &M) {
   // always initialized.
 
   bool Changed = addAttrsForIntrinsics(M, IntrinsicToAttr);
-  if (TT.getOS() == Triple::AMDHSA)
+  if (TT.getOS() == Triple::AMDHSA) {
     Changed |= addAttrsForIntrinsics(M, HSAIntrinsicToAttr);
+
+    for (Function &F : M) {
+      if (F.hasFnAttribute("amdgpu-queue-ptr"))
+        continue;
+
+      if (hasAddrSpaceCast(F))
+        F.addFnAttr("amdgpu-queue-ptr");
+    }
+  }
 
   return Changed;
 }

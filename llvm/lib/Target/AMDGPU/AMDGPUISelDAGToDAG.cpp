@@ -147,7 +147,6 @@ private:
   bool SelectSMRDBufferImm(SDValue Addr, SDValue &Offset) const;
   bool SelectSMRDBufferImm32(SDValue Addr, SDValue &Offset) const;
   bool SelectSMRDBufferSgpr(SDValue Addr, SDValue &Offset) const;
-  SDNode *SelectAddrSpaceCast(SDNode *N);
   bool SelectVOP3Mods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3NoMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3Mods0(SDValue In, SDValue &Src, SDValue &SrcMods,
@@ -526,8 +525,6 @@ SDNode *AMDGPUDAGToDAGISel::Select(SDNode *N) {
     Lowering.legalizeTargetIndependentNode(N, *CurDAG);
     break;
   }
-  case ISD::ADDRSPACECAST:
-    return SelectAddrSpaceCast(N);
   case ISD::AND:
   case ISD::SRL:
   case ISD::SRA:
@@ -1330,69 +1327,6 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBufferSgpr(SDValue Addr,
   bool Imm;
   return SelectSMRDOffset(Addr, Offset, Imm) && !Imm &&
          !isa<ConstantSDNode>(Offset);
-}
-
-// FIXME: This is incorrect and only enough to be able to compile.
-SDNode *AMDGPUDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
-  AddrSpaceCastSDNode *ASC = cast<AddrSpaceCastSDNode>(N);
-  SDLoc DL(N);
-
-  const MachineFunction &MF = CurDAG->getMachineFunction();
-  DiagnosticInfoUnsupported NotImplemented(
-      *MF.getFunction(), "addrspacecast not implemented", DL.getDebugLoc());
-  CurDAG->getContext()->diagnose(NotImplemented);
-
-  assert(Subtarget->hasFlatAddressSpace() &&
-         "addrspacecast only supported with flat address space!");
-
-  assert((ASC->getSrcAddressSpace() == AMDGPUAS::FLAT_ADDRESS ||
-          ASC->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS) &&
-         "Can only cast to / from flat address space!");
-
-  // The flat instructions read the address as the index of the VGPR holding the
-  // address, so casting should just be reinterpreting the base VGPR, so just
-  // insert trunc / bitcast / zext.
-
-  SDValue Src = ASC->getOperand(0);
-  EVT DestVT = ASC->getValueType(0);
-  EVT SrcVT = Src.getValueType();
-
-  unsigned SrcSize = SrcVT.getSizeInBits();
-  unsigned DestSize = DestVT.getSizeInBits();
-
-  if (SrcSize > DestSize) {
-    assert(SrcSize == 64 && DestSize == 32);
-    return CurDAG->getMachineNode(
-      TargetOpcode::EXTRACT_SUBREG,
-      DL,
-      DestVT,
-      Src,
-      CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32));
-  }
-
-  if (DestSize > SrcSize) {
-    assert(SrcSize == 32 && DestSize == 64);
-
-    // FIXME: This is probably wrong, we should never be defining
-    // a register class with both VGPRs and SGPRs
-    SDValue RC = CurDAG->getTargetConstant(AMDGPU::VS_64RegClassID, DL,
-                                           MVT::i32);
-
-    const SDValue Ops[] = {
-      RC,
-      Src,
-      CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32),
-      SDValue(CurDAG->getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32,
-                                     CurDAG->getConstant(0, DL, MVT::i32)), 0),
-      CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32)
-    };
-
-    return CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE,
-                                  DL, N->getValueType(0), Ops);
-  }
-
-  assert(SrcSize == 64 && DestSize == 64);
-  return CurDAG->getNode(ISD::BITCAST, DL, DestVT, Src).getNode();
 }
 
 SDNode *AMDGPUDAGToDAGISel::getS_BFE(unsigned Opcode, SDLoc DL, SDValue Val,

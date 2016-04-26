@@ -149,6 +149,9 @@ bool AArch64DeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   DEBUG(dbgs() << "***** AArch64DeadRegisterDefinitions *****\n");
 
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   for (auto &MBB : MF)
     if (processMachineBasicBlock(MBB))
       Changed = true;

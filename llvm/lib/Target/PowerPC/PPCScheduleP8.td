@@ -391,7 +391,6 @@ def P8Model : SchedMachineModel {
                        // up to six non-branch instructions.
                        // up to two branches in a dispatch group.
 
-  let MinLatency = 0;  // Out-of-order dispatch.
   let LoadLatency = 3; // Optimistic load latency assuming bypass.
                        // This is overriden by OperandCycles if the
                        // Itineraries are queried instead.

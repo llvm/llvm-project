@@ -88,6 +88,9 @@ bool AMDGPUAnnotateUniformValues::doInitialization(Module &M) {
 }
 
 bool AMDGPUAnnotateUniformValues::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   DA = &getAnalysis<DivergenceAnalysis>();
   visit(F);
 

@@ -1143,7 +1143,8 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
         LLVMContext::MD_fpmath,  LLVMContext::MD_invariant_load,
         LLVMContext::MD_nonnull, LLVMContext::MD_invariant_group,
         LLVMContext::MD_align,   LLVMContext::MD_dereferenceable,
-        LLVMContext::MD_dereferenceable_or_null};
+        LLVMContext::MD_dereferenceable_or_null,
+        LLVMContext::MD_mem_parallel_loop_access};
     combineMetadata(I1, I2, KnownIDs);
     I2->eraseFromParent();
     Changed = true;
@@ -2703,11 +2704,13 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
 
   // If BI is reached from the true path of PBI and PBI's condition implies
   // BI's condition, we know the direction of the BI branch.
-  if (PBI->getSuccessor(0) == BI->getParent() &&
+  if ((PBI->getSuccessor(0) == BI->getParent() ||
+       PBI->getSuccessor(1) == BI->getParent()) &&
       PBI->getSuccessor(0) != PBI->getSuccessor(1) &&
       BB->getSinglePredecessor()) {
-    Optional<bool> Implication =
-        isImpliedCondition(PBI->getCondition(), BI->getCondition(), DL);
+    bool FalseDest = PBI->getSuccessor(1) == BI->getParent();
+    Optional<bool> Implication = isImpliedCondition(
+        PBI->getCondition(), BI->getCondition(), DL, FalseDest);
     if (Implication) {
       // Turn this into a branch on constant.
       auto *OldCond = BI->getCondition();

@@ -21,19 +21,19 @@ public:
   virtual ~RPCChannel() {}
 
   /// Read Size bytes from the stream into *Dst.
-  virtual std::error_code readBytes(char *Dst, unsigned Size) = 0;
+  virtual Error readBytes(char *Dst, unsigned Size) = 0;
 
   /// Read size bytes from *Src and append them to the stream.
-  virtual std::error_code appendBytes(const char *Src, unsigned Size) = 0;
+  virtual Error appendBytes(const char *Src, unsigned Size) = 0;
 
   /// Flush the stream if possible.
-  virtual std::error_code send() = 0;
+  virtual Error send() = 0;
 
   /// Get the lock for stream reading.
-  std::mutex& getReadLock() { return readLock; }
+  std::mutex &getReadLock() { return readLock; }
 
   /// Get the lock for stream writing.
-  std::mutex& getWriteLock() { return writeLock; }
+  std::mutex &getWriteLock() { return writeLock; }
 
 private:
   std::mutex readLock, writeLock;
@@ -41,57 +41,53 @@ private:
 
 /// Notify the channel that we're starting a message send.
 /// Locks the channel for writing.
-inline std::error_code startSendMessage(RPCChannel &C) {
+inline Error startSendMessage(RPCChannel &C) {
   C.getWriteLock().lock();
-  return std::error_code();
+  return Error::success();
 }
 
 /// Notify the channel that we're ending a message send.
 /// Unlocks the channel for writing.
-inline std::error_code endSendMessage(RPCChannel &C) {
+inline Error endSendMessage(RPCChannel &C) {
   C.getWriteLock().unlock();
-  return std::error_code();
+  return Error::success();
 }
 
 /// Notify the channel that we're starting a message receive.
 /// Locks the channel for reading.
-inline std::error_code startReceiveMessage(RPCChannel &C) {
+inline Error startReceiveMessage(RPCChannel &C) {
   C.getReadLock().lock();
-  return std::error_code();
+  return Error::success();
 }
 
 /// Notify the channel that we're ending a message receive.
 /// Unlocks the channel for reading.
-inline std::error_code endReceiveMessage(RPCChannel &C) {
+inline Error endReceiveMessage(RPCChannel &C) {
   C.getReadLock().unlock();
-  return std::error_code();
+  return Error::success();
 }
 
 /// RPC channel serialization for a variadic list of arguments.
 template <typename T, typename... Ts>
-std::error_code serializeSeq(RPCChannel &C, const T &Arg, const Ts &... Args) {
-  if (auto EC = serialize(C, Arg))
-    return EC;
+Error serializeSeq(RPCChannel &C, const T &Arg, const Ts &... Args) {
+  if (auto Err = serialize(C, Arg))
+    return Err;
   return serializeSeq(C, Args...);
 }
 
 /// RPC channel serialization for an (empty) variadic list of arguments.
-inline std::error_code serializeSeq(RPCChannel &C) {
-  return std::error_code();
-}
+inline Error serializeSeq(RPCChannel &C) { return Error::success(); }
 
 /// RPC channel deserialization for a variadic list of arguments.
 template <typename T, typename... Ts>
-std::error_code deserializeSeq(RPCChannel &C, T &Arg, Ts &... Args) {
-  if (auto EC = deserialize(C, Arg))
-    return EC;
+Error deserializeSeq(RPCChannel &C, T &Arg, Ts &... Args) {
+  if (auto Err = deserialize(C, Arg))
+    return Err;
   return deserializeSeq(C, Args...);
 }
 
 /// RPC channel serialization for an (empty) variadic list of arguments.
-inline std::error_code deserializeSeq(RPCChannel &C) {
-  return std::error_code();
-}
+inline Error deserializeSeq(RPCChannel &C) { return Error::success(); }
 
 /// RPC channel serialization for integer primitives.
 template <typename T>
@@ -100,7 +96,7 @@ typename std::enable_if<
         std::is_same<T, uint32_t>::value || std::is_same<T, int32_t>::value ||
         std::is_same<T, uint16_t>::value || std::is_same<T, int16_t>::value ||
         std::is_same<T, uint8_t>::value || std::is_same<T, int8_t>::value,
-    std::error_code>::type
+    Error>::type
 serialize(RPCChannel &C, T V) {
   support::endian::byte_swap<T, support::big>(V);
   return C.appendBytes(reinterpret_cast<const char *>(&V), sizeof(T));
@@ -113,130 +109,125 @@ typename std::enable_if<
         std::is_same<T, uint32_t>::value || std::is_same<T, int32_t>::value ||
         std::is_same<T, uint16_t>::value || std::is_same<T, int16_t>::value ||
         std::is_same<T, uint8_t>::value || std::is_same<T, int8_t>::value,
-    std::error_code>::type
+    Error>::type
 deserialize(RPCChannel &C, T &V) {
-  if (auto EC = C.readBytes(reinterpret_cast<char *>(&V), sizeof(T)))
-    return EC;
+  if (auto Err = C.readBytes(reinterpret_cast<char *>(&V), sizeof(T)))
+    return Err;
   support::endian::byte_swap<T, support::big>(V);
-  return std::error_code();
+  return Error::success();
 }
 
 /// RPC channel serialization for enums.
 template <typename T>
-typename std::enable_if<std::is_enum<T>::value, std::error_code>::type
+typename std::enable_if<std::is_enum<T>::value, Error>::type
 serialize(RPCChannel &C, T V) {
   return serialize(C, static_cast<typename std::underlying_type<T>::type>(V));
 }
 
 /// RPC channel deserialization for enums.
 template <typename T>
-typename std::enable_if<std::is_enum<T>::value, std::error_code>::type
+typename std::enable_if<std::is_enum<T>::value, Error>::type
 deserialize(RPCChannel &C, T &V) {
   typename std::underlying_type<T>::type Tmp;
-  std::error_code EC = deserialize(C, Tmp);
+  Error Err = deserialize(C, Tmp);
   V = static_cast<T>(Tmp);
-  return EC;
+  return Err;
 }
 
 /// RPC channel serialization for bools.
-inline std::error_code serialize(RPCChannel &C, bool V) {
+inline Error serialize(RPCChannel &C, bool V) {
   uint8_t VN = V ? 1 : 0;
   return C.appendBytes(reinterpret_cast<const char *>(&VN), 1);
 }
 
 /// RPC channel deserialization for bools.
-inline std::error_code deserialize(RPCChannel &C, bool &V) {
+inline Error deserialize(RPCChannel &C, bool &V) {
   uint8_t VN = 0;
-  if (auto EC = C.readBytes(reinterpret_cast<char *>(&VN), 1))
-    return EC;
+  if (auto Err = C.readBytes(reinterpret_cast<char *>(&VN), 1))
+    return Err;
 
   V = (VN != 0) ? true : false;
-  return std::error_code();
+  return Error::success();
 }
 
 /// RPC channel serialization for StringRefs.
 /// Note: There is no corresponding deseralization for this, as StringRef
 /// doesn't own its memory and so can't hold the deserialized data.
-inline std::error_code serialize(RPCChannel &C, StringRef S) {
-  if (auto EC = serialize(C, static_cast<uint64_t>(S.size())))
-    return EC;
+inline Error serialize(RPCChannel &C, StringRef S) {
+  if (auto Err = serialize(C, static_cast<uint64_t>(S.size())))
+    return Err;
   return C.appendBytes((const char *)S.bytes_begin(), S.size());
 }
 
 /// RPC channel serialization for std::strings.
-inline std::error_code serialize(RPCChannel &C, const std::string &S) {
+inline Error serialize(RPCChannel &C, const std::string &S) {
   return serialize(C, StringRef(S));
 }
 
 /// RPC channel deserialization for std::strings.
-inline std::error_code deserialize(RPCChannel &C, std::string &S) {
+inline Error deserialize(RPCChannel &C, std::string &S) {
   uint64_t Count;
-  if (auto EC = deserialize(C, Count))
-    return EC;
+  if (auto Err = deserialize(C, Count))
+    return Err;
   S.resize(Count);
   return C.readBytes(&S[0], Count);
 }
 
 // Serialization helper for std::tuple.
 template <typename TupleT, size_t... Is>
-inline std::error_code serializeTupleHelper(RPCChannel &C,
-					    const TupleT &V,
-					    llvm::index_sequence<Is...> _) {
+inline Error serializeTupleHelper(RPCChannel &C, const TupleT &V,
+                                  llvm::index_sequence<Is...> _) {
   return serializeSeq(C, std::get<Is>(V)...);
 }
 
 /// RPC channel serialization for std::tuple.
 template <typename... ArgTs>
-inline std::error_code serialize(RPCChannel &C, const std::tuple<ArgTs...> &V) {
+inline Error serialize(RPCChannel &C, const std::tuple<ArgTs...> &V) {
   return serializeTupleHelper(C, V, llvm::index_sequence_for<ArgTs...>());
 }
 
 // Serialization helper for std::tuple.
 template <typename TupleT, size_t... Is>
-inline std::error_code deserializeTupleHelper(RPCChannel &C,
-					      TupleT &V,
-					      llvm::index_sequence<Is...> _) {
+inline Error deserializeTupleHelper(RPCChannel &C, TupleT &V,
+                                    llvm::index_sequence<Is...> _) {
   return deserializeSeq(C, std::get<Is>(V)...);
 }
 
 /// RPC channel deserialization for std::tuple.
 template <typename... ArgTs>
-inline std::error_code deserialize(RPCChannel &C, std::tuple<ArgTs...> &V) {
+inline Error deserialize(RPCChannel &C, std::tuple<ArgTs...> &V) {
   return deserializeTupleHelper(C, V, llvm::index_sequence_for<ArgTs...>());
 }
 
 /// RPC channel serialization for ArrayRef<T>.
-template <typename T>
-std::error_code serialize(RPCChannel &C, const ArrayRef<T> &A) {
-  if (auto EC = serialize(C, static_cast<uint64_t>(A.size())))
-    return EC;
+template <typename T> Error serialize(RPCChannel &C, const ArrayRef<T> &A) {
+  if (auto Err = serialize(C, static_cast<uint64_t>(A.size())))
+    return Err;
 
   for (const auto &E : A)
-    if (auto EC = serialize(C, E))
-      return EC;
+    if (auto Err = serialize(C, E))
+      return Err;
 
-  return std::error_code();
+  return Error::success();
 }
 
 /// RPC channel serialization for std::array<T>.
-template <typename T>
-std::error_code serialize(RPCChannel &C, const std::vector<T> &V) {
+template <typename T> Error serialize(RPCChannel &C, const std::vector<T> &V) {
   return serialize(C, ArrayRef<T>(V));
 }
 
 /// RPC channel deserialization for std::array<T>.
-template <typename T>
-std::error_code deserialize(RPCChannel &C, std::vector<T> &V) {
+template <typename T> Error deserialize(RPCChannel &C, std::vector<T> &V) {
   uint64_t Count = 0;
-  if (auto EC = deserialize(C, Count))
-    return EC;
+  if (auto Err = deserialize(C, Count))
+    return Err;
 
   V.resize(Count);
   for (auto &E : V)
-    if (auto EC = deserialize(C, E))
-      return EC;
+    if (auto Err = deserialize(C, E))
+      return Err;
 
-  return std::error_code();
+  return Error::success();
 }
 
 } // end namespace remote

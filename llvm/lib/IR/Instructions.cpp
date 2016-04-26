@@ -1120,11 +1120,15 @@ void BranchInst::swapSuccessors() {
               MDNode::get(ProfileData->getContext(), Ops));
 }
 
-bool BranchInst::extractProfMetadata(uint64_t &ProbTrue, uint64_t &ProbFalse) {
+bool BranchInst::extractProfMetadata(uint64_t &TrueVal, uint64_t &FalseVal) {
   assert(isConditional() &&
          "Looking for probabilities on unconditional branch?");
   auto *ProfileData = getMetadata(LLVMContext::MD_prof);
   if (!ProfileData || ProfileData->getNumOperands() != 3)
+    return false;
+
+  auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
+  if (!ProfDataName || !ProfDataName->getString().equals("branch_weights"))
     return false;
 
   auto *CITrue = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1));
@@ -1132,8 +1136,8 @@ bool BranchInst::extractProfMetadata(uint64_t &ProbTrue, uint64_t &ProbFalse) {
   if (!CITrue || !CIFalse)
     return false;
 
-  ProbTrue = CITrue->getValue().getZExtValue();
-  ProbFalse = CIFalse->getValue().getZExtValue();
+  TrueVal = CITrue->getValue().getZExtValue();
+  FalseVal = CIFalse->getValue().getZExtValue();
 
   return true;
 }
@@ -3581,7 +3585,7 @@ bool CmpInst::isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2) {
   default:
     break;
   case ICMP_EQ:
-    // A == B implies A >=u B, A <=u B, A >=u B, and A <=u B are true.
+    // A == B implies A >=u B, A <=u B, A >=s B, and A <=s B are true.
     return Pred2 == ICMP_UGE || Pred2 == ICMP_ULE || Pred2 == ICMP_SGE ||
            Pred2 == ICMP_SLE;
   case ICMP_UGT: // A >u B implies A != B and A >=u B are true.

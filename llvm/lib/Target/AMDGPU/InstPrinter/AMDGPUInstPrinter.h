@@ -91,6 +91,7 @@ private:
   static void printKCache(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   static void printSendMsg(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   static void printWaitFlag(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  static void printHwreg(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 };
 
 } // End namespace llvm

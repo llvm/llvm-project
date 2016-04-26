@@ -347,9 +347,12 @@ MbbIterator LanaiMemAluCombiner::findClosestSuitableAluInstr(
       return First;
     }
 
-    // Usage of the base register of a form not suitable for merging
-    if (First != Last && InstrUsesReg(First, Base)) {
-      break;
+    // Usage of the base or offset register is not a form suitable for merging.
+    if (First != Last) {
+      if (InstrUsesReg(First, Base))
+        break;
+      if (Offset->isReg() && InstrUsesReg(First, Offset))
+        break;
     }
   }
 

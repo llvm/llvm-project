@@ -51,9 +51,10 @@ static ManagedStatic<OrcErrorCategory> OrcErrCat;
 namespace llvm {
 namespace orc {
 
-std::error_code orcError(OrcErrorCode ErrCode) {
+Error orcError(OrcErrorCode ErrCode) {
   typedef std::underlying_type<OrcErrorCode>::type UT;
-  return std::error_code(static_cast<UT>(ErrCode), *OrcErrCat);
+  return errorCodeToError(
+      std::error_code(static_cast<UT>(ErrCode), *OrcErrCat));
 }
 }
 }

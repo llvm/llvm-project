@@ -2649,24 +2649,29 @@ static SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
   return RetAddr;
 }
 
-static SDValue LowerF64Op(SDValue Op, SelectionDAG &DAG, unsigned opcode)
+static SDValue LowerF64Op(SDValue SrcReg64, SDLoc dl, SelectionDAG &DAG, unsigned opcode)
 {
-  SDLoc dl(Op);
-
-  assert(Op.getValueType() == MVT::f64 && "LowerF64Op called on non-double!");
+  assert(SrcReg64.getValueType() == MVT::f64 && "LowerF64Op called on non-double!");
   assert(opcode == ISD::FNEG || opcode == ISD::FABS);
 
   // Lower fneg/fabs on f64 to fneg/fabs on f32.
   // fneg f64 => fneg f32:sub_even, fmov f32:sub_odd.
   // fabs f64 => fabs f32:sub_even, fmov f32:sub_odd.
 
-  SDValue SrcReg64 = Op.getOperand(0);
+  // Note: in little-endian, the floating-point value is stored in the
+  // registers are in the opposite order, so the subreg with the sign
+  // bit is the highest-numbered (odd), rather than the
+  // lowest-numbered (even).
+
   SDValue Hi32 = DAG.getTargetExtractSubreg(SP::sub_even, dl, MVT::f32,
                                             SrcReg64);
   SDValue Lo32 = DAG.getTargetExtractSubreg(SP::sub_odd, dl, MVT::f32,
                                             SrcReg64);
 
-  Hi32 = DAG.getNode(opcode, dl, MVT::f32, Hi32);
+  if (DAG.getDataLayout().isLittleEndian())
+    Lo32 = DAG.getNode(opcode, dl, MVT::f32, Lo32);
+  else
+    Hi32 = DAG.getNode(opcode, dl, MVT::f32, Hi32);
 
   SDValue DstReg64 = SDValue(DAG.getMachineNode(TargetOpcode::IMPLICIT_DEF,
                                                 dl, MVT::f64), 0);
@@ -2810,24 +2815,35 @@ static SDValue LowerFNEGorFABS(SDValue Op, SelectionDAG &DAG, bool isV9) {
   assert((Op.getOpcode() == ISD::FNEG || Op.getOpcode() == ISD::FABS)
          && "invalid opcode");
 
+  SDLoc dl(Op);
+
   if (Op.getValueType() == MVT::f64)
-    return LowerF64Op(Op, DAG, Op.getOpcode());
+    return LowerF64Op(Op.getOperand(0), dl, DAG, Op.getOpcode());
   if (Op.getValueType() != MVT::f128)
     return Op;
 
   // Lower fabs/fneg on f128 to fabs/fneg on f64
   // fabs/fneg f128 => fabs/fneg f64:sub_even64, fmov f64:sub_odd64
+  // (As with LowerF64Op, on little-endian, we need to negate the odd
+  // subreg)
 
-  SDLoc dl(Op);
   SDValue SrcReg128 = Op.getOperand(0);
   SDValue Hi64 = DAG.getTargetExtractSubreg(SP::sub_even64, dl, MVT::f64,
                                             SrcReg128);
   SDValue Lo64 = DAG.getTargetExtractSubreg(SP::sub_odd64, dl, MVT::f64,
                                             SrcReg128);
-  if (isV9)
-    Hi64 = DAG.getNode(Op.getOpcode(), dl, MVT::f64, Hi64);
-  else
-    Hi64 = LowerF64Op(Hi64, DAG, Op.getOpcode());
+
+  if (DAG.getDataLayout().isLittleEndian()) {
+    if (isV9)
+      Lo64 = DAG.getNode(Op.getOpcode(), dl, MVT::f64, Lo64);
+    else
+      Lo64 = LowerF64Op(Lo64, dl, DAG, Op.getOpcode());
+  } else {
+    if (isV9)
+      Hi64 = DAG.getNode(Op.getOpcode(), dl, MVT::f64, Hi64);
+    else
+      Hi64 = LowerF64Op(Hi64, dl, DAG, Op.getOpcode());
+  }
 
   SDValue DstReg128 = SDValue(DAG.getMachineNode(TargetOpcode::IMPLICIT_DEF,
                                                  dl, MVT::f128), 0);

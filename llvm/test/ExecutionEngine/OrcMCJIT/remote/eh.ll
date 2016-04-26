@@ -1,5 +1,7 @@
 ; RUN: %lli -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s
 ; XFAIL: arm, cygwin, win32, mingw
+; UNSUPPORTED: powerpc64-unknown-linux-gnu
+; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 declare i8* @__cxa_allocate_exception(i64)
 declare void @__cxa_throw(i8*, i8*, i8*)
 declare i32 @__gxx_personality_v0(...)

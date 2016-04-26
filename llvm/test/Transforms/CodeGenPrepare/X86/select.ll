@@ -53,7 +53,7 @@ entry:
 ; CHECK:    %div = fdiv float %a, %b
 ; CHECK:    br label %select.end
 ; CHECK:  select.end:
-; CHECK:    %sel = phi float [ 4.000000e+00, %entry ], [ %div, %select.false.sink ] 
+; CHECK:    %sel = phi float [ 4.000000e+00, %entry ], [ %div, %select.false.sink ]
 ; CHECK:    ret float %sel
 }
 
@@ -75,20 +75,39 @@ entry:
 ; CHECK:    %div2 = fdiv float %b, %a
 ; CHECK:    br label %select.end
 ; CHECK:  select.end:
-; CHECK:    %sel = phi float [ %div1, %select.true.sink ], [ %div2, %select.false.sink ] 
+; CHECK:    %sel = phi float [ %div1, %select.true.sink ], [ %div2, %select.false.sink ]
 ; CHECK:    ret float %sel
 }
+
+; But if the select is marked unpredictable, then don't turn it into a branch.
+
+define float @unpredictable_select(float %a, float %b) {
+; CHECK-LABEL: @unpredictable_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv float %a, %b
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float %a, 1.000000e+00
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[DIV]], float 2.000000e+00, !unpredictable !0
+; CHECK-NEXT:    ret float [[SEL]]
+;
+entry:
+  %div = fdiv float %a, %b
+  %cmp = fcmp ogt float %a, 1.0
+  %sel = select i1 %cmp, float %div, float 2.0, !unpredictable !0
+  ret float %sel
+}
+
+!0 = !{}
 
 ; An 'fadd' is not too expensive, so it's ok to speculate.
 
 define float @fadd_no_sink(float %a, float %b) {
   %add = fadd float %a, %b
   %cmp = fcmp ogt float 6.0, %a
-  %sel = select i1 %cmp, float %add, float 7.0 
+  %sel = select i1 %cmp, float %add, float 7.0
   ret float %sel
 
 ; CHECK-LABEL: @fadd_no_sink(
-; CHECK:  %sel = select i1 %cmp, float %add, float 7.0 
+; CHECK:  %sel = select i1 %cmp, float %add, float 7.0
 }
 
 ; Possible enhancement: sinkability is only calculated with the direct
@@ -104,7 +123,7 @@ entry:
   ret float %sel
 
 ; CHECK-LABEL: @fdiv_no_sink(
-; CHECK:  %sel = select i1 %cmp, float %add, float 8.0 
+; CHECK:  %sel = select i1 %cmp, float %add, float 8.0
 }
 
 ; Do not transform the CFG if the select operands may have side effects.

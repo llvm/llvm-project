@@ -125,3 +125,53 @@ if.end:
 if.end3:
   ret void
 }
+
+declare void @is(i1)
+
+; If A >=s B is false then A <=s B is implied true.
+; CHECK-LABEL: @test_sge_sle
+; CHECK: call void @is(i1 true)
+; CHECK-NOT: call void @is(i1 false)
+define void @test_sge_sle(i32 %a, i32 %b) {
+  %cmp1 = icmp sge i32 %a, %b
+  br i1 %cmp1, label %untaken, label %taken
+
+taken:
+  %cmp2 = icmp sle i32 %a, %b
+  br i1 %cmp2, label %istrue, label %isfalse
+
+istrue:
+  call void @is(i1 true)
+  ret void
+
+isfalse:
+  call void @is(i1 false)
+  ret void
+
+untaken:
+  ret void
+}
+
+; If A <=s B is false then A <=s B is implied false.
+; CHECK-LABEL: @test_sle_sle
+; CHECK-NOT: call void @is(i1 true)
+; CHECK: call void @is(i1 false)
+define void @test_sle_sle(i32 %a, i32 %b) {
+  %cmp1 = icmp sle i32 %a, %b
+  br i1 %cmp1, label %untaken, label %taken
+
+taken:
+  %cmp2 = icmp sle i32 %a, %b
+  br i1 %cmp2, label %istrue, label %isfalse
+
+istrue:
+  call void @is(i1 true)
+  ret void
+
+isfalse:
+  call void @is(i1 false)
+  ret void
+
+untaken:
+  ret void
+}

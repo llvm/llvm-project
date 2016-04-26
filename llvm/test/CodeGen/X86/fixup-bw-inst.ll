@@ -11,8 +11,6 @@ target triple = "x86_64-apple-macosx10.8.0"
 ; This has byte loads interspersed with byte stores, in a single
 ; basic-block loop.  The upper portion should be dead, so the movb loads
 ; should have been changed into movzbl instead.
-; TODO: The second movb load doesn't get fixed due to register liveness
-; not being accurate enough.
 ; CHECK-LABEL: foo1
 ; load:
 ; BWON:  movzbl
@@ -20,7 +18,8 @@ target triple = "x86_64-apple-macosx10.8.0"
 ; store:
 ; CHECK: movb
 ; load:
-; CHECK: movb
+; BWON: movzbl
+; BWOFF: movb
 ; store:
 ; CHECK: movb
 ; CHECK: ret
@@ -59,8 +58,6 @@ a4:                                       ; preds = %4, %.lr.ph
 ; This has word loads interspersed with word stores.
 ; The upper portion should be dead, so the movw loads should have
 ; been changed into movzwl instead.
-; TODO: The second movw load doesn't get fixed due to register liveness
-; not being accurate enough.
 ; CHECK-LABEL: foo2
 ; load:
 ; BWON:  movzwl
@@ -68,7 +65,8 @@ a4:                                       ; preds = %4, %.lr.ph
 ; store:
 ; CHECK: movw
 ; load:
-; CHECK: movw
+; BWON:  movzwl
+; BWOFF: movw
 ; store:
 ; CHECK: movw
 ; CHECK: ret

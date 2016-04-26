@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck %s
 
 ; FUNC-LABEL: {{^}}s_getreg_test:
-; CHECK: s_getreg_b32 s{{[0-9]+}}, 0xb206
+; CHECK: s_getreg_b32 s{{[0-9]+}}, hwreg(6, 8, 23)
 define void @s_getreg_test(i32 addrspace(1)* %out) { ; simm16=45574 for lds size.
   %lds_size_64dwords = call i32 @llvm.amdgcn.s.getreg(i32 45574) #0
   %lds_size_bytes = shl i32 %lds_size_64dwords, 8

@@ -109,6 +109,8 @@ public:
   /// global variables with module scope.
   bool runOnModule(Module &M) override {
     DEBUG(dbgs() << getPassName() << '\n');
+    if (skipModule(M))
+      return false;
     bool Changed = false;
     PromotionCacheTy PromotionCache;
     for (auto &MF : M) {

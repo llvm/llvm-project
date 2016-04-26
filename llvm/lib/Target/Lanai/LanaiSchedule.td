@@ -39,10 +39,6 @@ def LanaiSchedModel : SchedMachineModel {
   // Max micro-ops that may be scheduled per cycle. [default = 1]
   let IssueWidth = 1;
 
-  // Determines which instructions are allowed in a group. 1 is an inorder
-  // CPU with variable latencies. [default = -1]
-  let MinLatency = 1;
-
   // Extra cycles for a mispredicted branch. [default = -1]
   let MispredictPenalty = 10;
 

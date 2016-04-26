@@ -3288,43 +3288,43 @@ let isCall = 1, isBarrier = 1, isReturn = 1, isTerminator = 1,
 
 // Restore registers and dealloc frame before a tail call.
 let isCall = 1, Defs = [R29, R30, R31, PC], isAsmParserOnly = 1 in {
-  def RESTORE_DEALLOC_BEFORE_TAILCALL_V4 : T_Call<"">, PredRel;
+  def RESTORE_DEALLOC_BEFORE_TAILCALL_V4 : T_Call<0, "">, PredRel;
 
   let isExtended = 1, opExtendable = 0 in
-  def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT : T_Call<"">, PredRel;
+  def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT : T_Call<0, "">, PredRel;
 
   let Defs = [R14, R15, R28, R29, R30, R31, PC] in {
-    def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC : T_Call<"">, PredRel;
+    def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC : T_Call<0, "">, PredRel;
 
     let isExtended = 1, opExtendable = 0 in
-    def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT_PIC : T_Call<"">, PredRel;
+    def RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT_PIC : T_Call<0, "">, PredRel;
   }
 }
 
 // Save registers function call.
 let isCall = 1, Uses = [R29, R31], isAsmParserOnly = 1 in {
-  def SAVE_REGISTERS_CALL_V4 : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4 : T_Call<0, "">, PredRel;
 
   let isExtended = 1, opExtendable = 0 in
-  def SAVE_REGISTERS_CALL_V4_EXT : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4_EXT : T_Call<0, "">, PredRel;
 
   let Defs = [P0] in
-  def SAVE_REGISTERS_CALL_V4STK : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4STK : T_Call<0, "">, PredRel;
 
   let Defs = [P0], isExtended = 1, opExtendable = 0 in
-  def SAVE_REGISTERS_CALL_V4STK_EXT : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4STK_EXT : T_Call<0, "">, PredRel;
 
   let Defs = [R14, R15, R28] in
-  def SAVE_REGISTERS_CALL_V4_PIC : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4_PIC : T_Call<0, "">, PredRel;
 
   let Defs = [R14, R15, R28], isExtended = 1, opExtendable = 0 in
-  def SAVE_REGISTERS_CALL_V4_EXT_PIC : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4_EXT_PIC : T_Call<0, "">, PredRel;
 
   let Defs = [R14, R15, R28, P0] in
-  def SAVE_REGISTERS_CALL_V4STK_PIC : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4STK_PIC : T_Call<0, "">, PredRel;
 
   let Defs = [R14, R15, R28, P0], isExtended = 1, opExtendable = 0 in
-  def SAVE_REGISTERS_CALL_V4STK_EXT_PIC : T_Call<"">, PredRel;
+  def SAVE_REGISTERS_CALL_V4STK_EXT_PIC : T_Call<0, "">, PredRel;
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-block-placement | FileCheck %s
 
 ; Test irreducible CFG handling.
 
@@ -8,6 +8,9 @@ target triple = "wasm32-unknown-unknown"
 ; A simple loop with two entries.
 
 ; CHECK-LABEL: test0:
+; CHECK: f64.load
+; CHECK: i32.const $[[REG:[^,]+]]=, 0{{$}}
+; CHECK: br_table  $[[REG]],
 define void @test0(double* %arg, i32 %arg1, i32 %arg2, i32 %arg3) {
 bb:
   %tmp = icmp eq i32 %arg2, 0
@@ -46,6 +49,9 @@ bb19:
 ; A simple loop with two entries and an inner natural loop.
 
 ; CHECK-LABEL: test1:
+; CHECK: f64.load
+; CHECK: i32.const $[[REG:[^,]+]]=, 0{{$}}
+; CHECK: br_table  $[[REG]],
 define void @test1(double* %arg, i32 %arg1, i32 %arg2, i32 %arg3) {
 bb:
   %tmp = icmp eq i32 %arg2, 0

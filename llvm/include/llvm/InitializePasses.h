@@ -141,7 +141,7 @@ void initializeGCMachineCodeAnalysisPass(PassRegistry&);
 void initializeGCModuleInfoPass(PassRegistry&);
 void initializeGVNLegacyPassPass(PassRegistry&);
 void initializeGlobalDCEPass(PassRegistry&);
-void initializeGlobalOptPass(PassRegistry&);
+void initializeGlobalOptLegacyPassPass(PassRegistry&);
 void initializeGlobalsAAWrapperPassPass(PassRegistry&);
 void initializeIPCPPass(PassRegistry&);
 void initializeIPSCCPPass(PassRegistry&);

@@ -98,7 +98,7 @@ void LTOCodeGenerator::initializeLTOPasses() {
 
   initializeInternalizePassPass(R);
   initializeIPSCCPPass(R);
-  initializeGlobalOptPass(R);
+  initializeGlobalOptLegacyPassPass(R);
   initializeConstantMergePass(R);
   initializeDAHPass(R);
   initializeInstructionCombiningPassPass(R);

@@ -580,6 +580,19 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTPOP,      MVT::v1i64, Expand);
     setOperationAction(ISD::CTPOP,      MVT::v2i64, Expand);
 
+    setOperationAction(ISD::CTLZ,       MVT::v1i64, Expand);
+    setOperationAction(ISD::CTLZ,       MVT::v2i64, Expand);
+
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v8i8, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v4i16, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v2i32, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v1i64, Expand);
+
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v16i8, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v8i16, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v4i32, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v2i64, Expand);
+
     // NEON does not have single instruction CTTZ for vectors.
     setOperationAction(ISD::CTTZ, MVT::v8i8, Custom);
     setOperationAction(ISD::CTTZ, MVT::v4i16, Custom);
@@ -11496,6 +11509,26 @@ bool ARMTargetLowering::ExpandInlineAsm(CallInst *CI) const {
   }
 
   return false;
+}
+
+const char *ARMTargetLowering::LowerXConstraint(EVT ConstraintVT) const {
+  // At this point, we have to lower this constraint to something else, so we
+  // lower it to an "r" or "w". However, by doing this we will force the result
+  // to be in register, while the X constraint is much more permissive.
+  //
+  // Although we are correct (we are free to emit anything, without
+  // constraints), we might break use cases that would expect us to be more
+  // efficient and emit something else.
+  if (!Subtarget->hasVFP2())
+    return "r";
+  if (ConstraintVT.isFloatingPoint())
+    return "w";
+  if (ConstraintVT.isVector() && Subtarget->hasNEON() &&
+     (ConstraintVT.getSizeInBits() == 64 ||
+      ConstraintVT.getSizeInBits() == 128))
+    return "w";
+
+  return "r";
 }
 
 /// getConstraintType - Given a constraint letter, return the type of

@@ -25,6 +25,3 @@
   tne $8, $9, $2           # CHECK: :[[@LINE]]:15: error: expected 10-bit unsigned immediate
   tne $8, $9, -1           # CHECK: :[[@LINE]]:15: error: expected 10-bit unsigned immediate
   tne $8, $9, 16           # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
-  syscall -1               # CHECK: :[[@LINE]]:11: error: expected 20-bit unsigned immediate
-  syscall $4               # CHECK: :[[@LINE]]:11: error: expected 20-bit unsigned immediate
-  syscall 1024             # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled

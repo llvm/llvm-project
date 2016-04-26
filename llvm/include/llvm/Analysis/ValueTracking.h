@@ -463,11 +463,10 @@ template <typename T> class ArrayRef;
   ///  T | T | F
   ///  F | T | T
   /// (A)
-  Optional<bool> isImpliedCondition(Value *LHS, Value *RHS,
-                                    const DataLayout &DL, unsigned Depth = 0,
-                                    AssumptionCache *AC = nullptr,
-                                    const Instruction *CxtI = nullptr,
-                                    const DominatorTree *DT = nullptr);
+  Optional<bool> isImpliedCondition(
+      Value *LHS, Value *RHS, const DataLayout &DL, bool InvertAPred = false,
+      unsigned Depth = 0, AssumptionCache *AC = nullptr,
+      const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr);
 } // end namespace llvm
 
 #endif

@@ -479,6 +479,9 @@ void AArch64AddressTypePromotion::analyzeSExtension(Instructions &SExtInsts) {
 }
 
 bool AArch64AddressTypePromotion::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   if (!EnableAddressTypePromotion || F.isDeclaration())
     return false;
   Func = &F;

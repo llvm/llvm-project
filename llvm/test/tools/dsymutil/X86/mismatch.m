@@ -14,7 +14,7 @@
       -fdisable-module-hash mismatch.m -o /dev/null
 */
 
-// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/mismatch \
+// RUN: llvm-dsymutil --verbose -f -oso-prepend-path=%p/../Inputs/mismatch \
 // RUN:   -y %p/dummy-debug-map.map -o %t.bin 2>&1 | FileCheck %s
 
 @import mismatch;

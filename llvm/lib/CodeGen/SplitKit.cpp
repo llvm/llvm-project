@@ -57,10 +57,13 @@ void SplitAnalysis::clear() {
 
 SlotIndex SplitAnalysis::computeLastSplitPoint(unsigned Num) {
   const MachineBasicBlock *MBB = MF.getBlockNumbered(Num);
-  // FIXME: Handle multiple EH pad successors.
-  const MachineBasicBlock *LPad = MBB->getLandingPadSuccessor();
   std::pair<SlotIndex, SlotIndex> &LSP = LastSplitPoint[Num];
   SlotIndex MBBEnd = LIS.getMBBEndIdx(MBB);
+
+  SmallVector<const MachineBasicBlock *, 1> EHPadSucessors;
+  for (const MachineBasicBlock *SMBB : MBB->successors())
+    if (SMBB->isEHPad())
+      EHPadSucessors.push_back(SMBB);
 
   // Compute split points on the first call. The pair is independent of the
   // current live interval.
@@ -72,7 +75,7 @@ SlotIndex SplitAnalysis::computeLastSplitPoint(unsigned Num) {
       LSP.first = LIS.getInstructionIndex(*FirstTerm);
 
     // If there is a landing pad successor, also find the call instruction.
-    if (!LPad)
+    if (EHPadSucessors.empty())
       return LSP.first;
     // There may not be a call instruction (?) in which case we ignore LPad.
     LSP.second = LSP.first;
@@ -88,7 +91,12 @@ SlotIndex SplitAnalysis::computeLastSplitPoint(unsigned Num) {
 
   // If CurLI is live into a landing pad successor, move the last split point
   // back to the call that may throw.
-  if (!LPad || !LSP.second || !LIS.isLiveInToMBB(*CurLI, LPad))
+  if (!LSP.second)
+    return LSP.first;
+
+  if (none_of(EHPadSucessors, [&](const MachineBasicBlock *EHPad) {
+        return LIS.isLiveInToMBB(*CurLI, EHPad);
+      }))
     return LSP.first;
 
   // Find the value leaving MBB.

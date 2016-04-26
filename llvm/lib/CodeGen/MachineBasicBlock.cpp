@@ -198,16 +198,6 @@ MachineBasicBlock::iterator MachineBasicBlock::getLastNonDebugInstr() {
   return end();
 }
 
-const MachineBasicBlock *MachineBasicBlock::getLandingPadSuccessor() const {
-  // A block with a landing pad successor only has one other successor.
-  if (succ_size() > 2)
-    return nullptr;
-  for (const_succ_iterator I = succ_begin(), E = succ_end(); I != E; ++I)
-    if ((*I)->isEHPad())
-      return *I;
-  return nullptr;
-}
-
 bool MachineBasicBlock::hasEHPadSuccessor() const {
   for (const_succ_iterator I = succ_begin(), E = succ_end(); I != E; ++I)
     if ((*I)->isEHPad())

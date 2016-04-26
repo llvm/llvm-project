@@ -303,7 +303,7 @@ bool SIInstrInfo::shouldClusterMemOps(MachineInstr *FirstLdSt,
     SecondDst = getNamedOperand(*SecondLdSt, AMDGPU::OpName::vdst);
   }
 
-  if (isSMRD(*FirstLdSt) && isSMRD(*FirstLdSt)) {
+  if (isSMRD(*FirstLdSt) && isSMRD(*SecondLdSt)) {
     FirstDst = getNamedOperand(*FirstLdSt, AMDGPU::OpName::sdst);
     SecondDst = getNamedOperand(*SecondLdSt, AMDGPU::OpName::sdst);
   }

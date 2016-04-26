@@ -3863,9 +3863,9 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr *MI) const {
     if (!MRI->hasOneNonDBGUse(VReg))
       return false;
 
+    bool Is32Bit = (DefMI->getOpcode() == AArch64::ANDWri);
     uint64_t Mask = AArch64_AM::decodeLogicalImmediate(
-        DefMI->getOperand(2).getImm(),
-        (DefMI->getOpcode() == AArch64::ANDWri) ? 32 : 64);
+        DefMI->getOperand(2).getImm(), Is32Bit ? 32 : 64);
     if (!isPowerOf2_64(Mask))
       return false;
 
@@ -3883,7 +3883,18 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr *MI) const {
     unsigned Opc = (Imm < 32)
                        ? (IsNegativeBranch ? AArch64::TBNZW : AArch64::TBZW)
                        : (IsNegativeBranch ? AArch64::TBNZX : AArch64::TBZX);
-    BuildMI(RefToMBB, MI, DL, get(Opc)).addReg(NewReg).addImm(Imm).addMBB(TBB);
+    MachineInstr *NewMI = BuildMI(RefToMBB, MI, DL, get(Opc))
+                              .addReg(NewReg)
+                              .addImm(Imm)
+                              .addMBB(TBB);
+
+    // For immediate smaller than 32, we need to use the 32-bit
+    // variant (W) in all cases. Indeed the 64-bit variant does not
+    // allow to encode them.
+    // Therefore, if the input register is 64-bit, we need to take the
+    // 32-bit sub-part.
+    if (!Is32Bit && Imm < 32)
+      NewMI->getOperand(0).setSubReg(AArch64::sub_32);
     MI->eraseFromParent();
     return true;
   }

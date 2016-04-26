@@ -48,6 +48,7 @@ bool MCAsmInfoDarwin::isSectionAtomizableBySymbols(
   case MachO::S_LITERAL_POINTERS:
   case MachO::S_NON_LAZY_SYMBOL_POINTERS:
   case MachO::S_LAZY_SYMBOL_POINTERS:
+  case MachO::S_THREAD_LOCAL_VARIABLE_POINTERS:
   case MachO::S_MOD_INIT_FUNC_POINTERS:
   case MachO::S_MOD_TERM_FUNC_POINTERS:
   case MachO::S_INTERPOSING:

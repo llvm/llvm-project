@@ -342,10 +342,6 @@ public:
   /// via an exception handler.
   void setIsEHPad(bool V = true) { IsEHPad = V; }
 
-  /// If this block has a successor that is a landing pad, return it. Otherwise
-  /// return NULL.
-  const MachineBasicBlock *getLandingPadSuccessor() const;
-
   bool hasEHPadSuccessor() const;
 
   /// Returns true if this is the entry block of an EH funclet.

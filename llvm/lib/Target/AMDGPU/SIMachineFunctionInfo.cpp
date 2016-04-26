@@ -116,6 +116,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
     if (F->hasFnAttribute("amdgpu-dispatch-ptr"))
       DispatchPtr = true;
+
+    if (F->hasFnAttribute("amdgpu-queue-ptr"))
+      QueuePtr = true;
   }
 
   // We don't need to worry about accessing spills with flat instructions.

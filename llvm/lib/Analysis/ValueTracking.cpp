@@ -3962,8 +3962,8 @@ static Optional<bool> isImpliedCondMatchingOperands(CmpInst::Predicate APred,
 }
 
 Optional<bool> llvm::isImpliedCondition(Value *LHS, Value *RHS,
-                                        const DataLayout &DL, unsigned Depth,
-                                        AssumptionCache *AC,
+                                        const DataLayout &DL, bool InvertAPred,
+                                        unsigned Depth, AssumptionCache *AC,
                                         const Instruction *CxtI,
                                         const DominatorTree *DT) {
   assert(LHS->getType() == RHS->getType() && "mismatched type");
@@ -3971,7 +3971,7 @@ Optional<bool> llvm::isImpliedCondition(Value *LHS, Value *RHS,
   assert(OpTy->getScalarType()->isIntegerTy(1));
 
   // LHS ==> RHS by definition
-  if (LHS == RHS)
+  if (!InvertAPred && LHS == RHS)
     return true;
 
   if (OpTy->isVectorTy())
@@ -3986,6 +3986,9 @@ Optional<bool> llvm::isImpliedCondition(Value *LHS, Value *RHS,
   if (!match(LHS, m_ICmp(APred, m_Value(ALHS), m_Value(ARHS))) ||
       !match(RHS, m_ICmp(BPred, m_Value(BLHS), m_Value(BRHS))))
     return None;
+
+  if (InvertAPred)
+    APred = CmpInst::getInversePredicate(APred);
 
   Optional<bool> Implication =
       isImpliedCondMatchingOperands(APred, ALHS, ARHS, BPred, BLHS, BRHS);

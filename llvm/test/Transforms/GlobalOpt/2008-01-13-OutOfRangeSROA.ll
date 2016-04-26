@@ -1,6 +1,8 @@
-; RUN: opt < %s -globalopt -S | grep "16 x .31 x double.. zeroinitializer"
+; RUN: opt < %s -globalopt -S | FileCheck %s
 
-; The 'X' indices could be larger than 31.  Do not SROA the outer indices of this array.
+; The 'X' indices could be larger than 31.  Do not SROA the outer
+; indices of this array.
+; CHECK: @mm = {{.*}} [16 x [31 x double]] zeroinitializer
 @mm = internal global [16 x [31 x double]] zeroinitializer, align 32
 
 define void @test(i32 %X) {

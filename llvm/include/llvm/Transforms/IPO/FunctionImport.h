@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 
 #include <functional>
 #include <map>
@@ -21,7 +22,6 @@ namespace llvm {
 class LLVMContext;
 class GlobalValueSummary;
 class Module;
-class ModuleSummaryIndex;
 
 /// The function importer is automatically importing function from other modules
 /// based on the provided summary informations.
@@ -76,8 +76,7 @@ private:
 /// is the set of globals that need to be promoted/renamed appropriately.
 void ComputeCrossModuleImport(
     const ModuleSummaryIndex &Index,
-    const StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>> &
-        ModuleToDefinedGVSummaries,
+    const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     StringMap<FunctionImporter::ImportMapTy> &ImportLists,
     StringMap<FunctionImporter::ExportSetTy> &ExportLists);
 
