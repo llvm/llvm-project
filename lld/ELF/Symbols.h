@@ -349,7 +349,11 @@ public:
   SharedSymbol(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym)
       : Defined(SymbolBody::SharedKind, Name, Sym.getBinding(), Sym.st_other,
                 Sym.getType()),
-        File(F), Sym(Sym) {}
+        File(F), Sym(Sym) {
+    // IFuncs defined in DSOs are treated as functions by the static linker.
+    if (isGnuIFunc())
+      Type = llvm::ELF::STT_FUNC;
+  }
 
   SharedFile<ELFT> *File;
   const Elf_Sym &Sym;

@@ -67,6 +67,7 @@ Clang-Tidy Checks
    misc-noexcept-move-constructor
    misc-non-copyable-objects
    misc-pointer-and-integral-operation
+   misc-redundant-expression
    misc-sizeof-container
    misc-sizeof-expression
    misc-static-assert

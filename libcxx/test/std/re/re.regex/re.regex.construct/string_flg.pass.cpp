@@ -17,6 +17,7 @@
 
 #include <regex>
 #include <cassert>
+#include "test_macros.h"
 
 template <class String>
 void

@@ -116,13 +116,11 @@
 .text
 .type foo STT_GNU_IFUNC
 .globl foo
-.type foo, @function
 foo:
  ret
 
 .type bar STT_GNU_IFUNC
 .globl bar
-.type bar, @function
 bar:
  ret
 

@@ -213,6 +213,10 @@ class LLVMSymbolizerProcess : public SymbolizerProcess {
     const char* const kSymbolizerArch = "--default-arch=powerpc64";
 #elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     const char* const kSymbolizerArch = "--default-arch=powerpc64le";
+#elif defined(__s390x__)
+    const char* const kSymbolizerArch = "--default-arch=s390x";
+#elif defined(__s390__)
+    const char* const kSymbolizerArch = "--default-arch=s390";
 #else
     const char* const kSymbolizerArch = "--default-arch=unknown";
 #endif

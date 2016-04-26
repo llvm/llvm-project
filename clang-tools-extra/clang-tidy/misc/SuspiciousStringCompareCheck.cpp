@@ -11,16 +11,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include "../utils/Matchers.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
 namespace misc {
-
-AST_MATCHER(BinaryOperator, isComparisonOperator) {
-  return Node.isComparisonOp();
-}
 
 static const char KnownStringCompareFunctions[] = "__builtin_memcmp;"
                                                   "__builtin_strcasecmp;"
@@ -84,7 +81,7 @@ SuspiciousStringCompareCheck::SuspiciousStringCompareCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       WarnOnImplicitComparison(Options.get("WarnOnImplicitComparison", 1)),
-      WarnOnLogicalNotComparison(Options.get("WarnOnLogicalNotComparison", 1)),
+      WarnOnLogicalNotComparison(Options.get("WarnOnLogicalNotComparison", 0)),
       StringCompareLikeFunctions(
           Options.get("StringCompareLikeFunctions", "")) {}
 
@@ -98,7 +95,8 @@ void SuspiciousStringCompareCheck::storeOptions(
 void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
   // Match relational operators.
   const auto ComparisonUnaryOperator = unaryOperator(hasOperatorName("!"));
-  const auto ComparisonBinaryOperator = binaryOperator(isComparisonOperator());
+  const auto ComparisonBinaryOperator =
+      binaryOperator(matchers::isComparisonOperator());
   const auto ComparisonOperator =
       expr(anyOf(ComparisonUnaryOperator, ComparisonBinaryOperator));
 
@@ -107,47 +105,34 @@ void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
   std::vector<std::string> FunctionNames;
   ParseFunctionNames(KnownStringCompareFunctions, &FunctionNames);
   ParseFunctionNames(StringCompareLikeFunctions, &FunctionNames);
+
+  // Match a call to a string compare functions.
   const auto FunctionCompareDecl =
       functionDecl(hasAnyName(std::vector<StringRef>(FunctionNames.begin(),
                                                      FunctionNames.end())))
           .bind("decl");
-
-  // Match a call to a string compare functions.
-  const auto StringCompareCallExpr =
+  const auto DirectStringCompareCallExpr =
       callExpr(hasDeclaration(FunctionCompareDecl)).bind("call");
+  const auto MacroStringCompareCallExpr =
+      conditionalOperator(
+        anyOf(hasTrueExpression(ignoringParenImpCasts(DirectStringCompareCallExpr)),
+              hasFalseExpression(ignoringParenImpCasts(DirectStringCompareCallExpr))));
+  // The implicit cast is not present in C.
+  const auto StringCompareCallExpr = ignoringParenImpCasts(
+        anyOf(DirectStringCompareCallExpr, MacroStringCompareCallExpr));
 
   if (WarnOnImplicitComparison) {
-    // Detect suspicious calls to string compare (missing comparator) [only C]:
+    // Detect suspicious calls to string compare:
     //     'if (strcmp())'  ->  'if (strcmp() != 0)'
     Finder->addMatcher(
         stmt(anyOf(ifStmt(hasCondition(StringCompareCallExpr)),
                    whileStmt(hasCondition(StringCompareCallExpr)),
                    doStmt(hasCondition(StringCompareCallExpr)),
-                   forStmt(hasCondition(StringCompareCallExpr))))
+                   forStmt(hasCondition(StringCompareCallExpr)),
+                   binaryOperator(
+                       anyOf(hasOperatorName("&&"), hasOperatorName("||")),
+                       hasEitherOperand(StringCompareCallExpr))))
             .bind("missing-comparison"),
-        this);
-
-    Finder->addMatcher(expr(StringCompareCallExpr,
-                            unless(hasParent(ComparisonOperator)),
-                            unless(hasParent(implicitCastExpr())))
-                           .bind("missing-comparison"),
-                       this);
-
-    // Detect suspicious calls to string compare with implicit comparison:
-    //     'if (strcmp())'  ->  'if (strcmp() != 0)'
-    //     'if (!strcmp())' is considered valid (see WarnOnLogicalNotComparison)
-    Finder->addMatcher(
-        implicitCastExpr(hasType(isInteger()),
-                         hasSourceExpression(StringCompareCallExpr),
-                         unless(hasParent(ComparisonOperator)))
-            .bind("missing-comparison"),
-        this);
-
-    // Detect suspicious cast to an inconsistant type.
-    Finder->addMatcher(
-        implicitCastExpr(unless(hasType(isInteger())),
-                         hasSourceExpression(StringCompareCallExpr))
-            .bind("invalid-conversion"),
         this);
   }
 
@@ -161,14 +146,30 @@ void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
                        this);
   }
 
-  // Detect suspicious calls to string compare functions: 'strcmp() == -1'.
+  // Detect suspicious cast to an inconsistant type (i.e. not integer type).
+  Finder->addMatcher(
+      implicitCastExpr(unless(hasType(isInteger())),
+                       hasSourceExpression(StringCompareCallExpr))
+          .bind("invalid-conversion"),
+      this);
+
+  // Detect suspicious operator with string compare function as operand.
+  Finder->addMatcher(
+      binaryOperator(
+          unless(anyOf(matchers::isComparisonOperator(), hasOperatorName("&&"),
+                       hasOperatorName("||"), hasOperatorName("="))),
+          hasEitherOperand(StringCompareCallExpr))
+          .bind("suspicious-operator"),
+      this);
+
+  // Detect comparison to invalid constant: 'strcmp() == -1'.
   const auto InvalidLiteral = ignoringParenImpCasts(
       anyOf(integerLiteral(unless(equals(0))),
             unaryOperator(hasOperatorName("-"),
                           has(integerLiteral(unless(equals(0))))),
             characterLiteral(), cxxBoolLiteral()));
 
-  Finder->addMatcher(binaryOperator(isComparisonOperator(),
+  Finder->addMatcher(binaryOperator(matchers::isComparisonOperator(),
                                     hasEitherOperand(StringCompareCallExpr),
                                     hasEitherOperand(InvalidLiteral))
                          .bind("invalid-comparison"),
@@ -208,6 +209,11 @@ void SuspiciousStringCompareCheck::check(
     diag(Call->getLocStart(),
          "function %0 is compared to a suspicious constant")
         << Decl;
+  }
+
+  if (const auto* BinOp = Result.Nodes.getNodeAs<BinaryOperator>("suspicious-operator")) {
+    diag(Call->getLocStart(), "results of function %0 used by operator '%1'")
+        << Decl << BinOp->getOpcodeStr();
   }
 
   if (Result.Nodes.getNodeAs<Stmt>("invalid-conversion")) {

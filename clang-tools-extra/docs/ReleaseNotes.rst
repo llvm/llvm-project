@@ -113,6 +113,11 @@ identified.  The improvements since the 3.8 release include:
 
   Warns about suspicious operations involving pointers and integral types.
 
+- New `misc-redundant-expression
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-redundant-expression.html>`_ check
+
+  Warns about redundant and equivalent expressions.
+
 - New `misc-sizeof-expression
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-sizeof-expression.html>`_ check
 

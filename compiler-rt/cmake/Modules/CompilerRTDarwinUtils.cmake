@@ -16,6 +16,8 @@ function(find_darwin_sdk_dir var sdk_name)
       OUTPUT_STRIP_TRAILING_WHITESPACE
       ERROR_FILE /dev/null
     )
+  else()
+    set(${var}_INTERNAL ${var_internal} PARENT_SCOPE)
   endif()
   set(${var} ${var_internal} PARENT_SCOPE)
 endfunction()
