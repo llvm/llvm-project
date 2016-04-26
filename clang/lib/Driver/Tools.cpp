@@ -6154,6 +6154,12 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   // FIXME: Stop lying and consume only the appropriate driver flags
   Args.ClaimAllArgs(options::OPT_W_Group);
 
+  // Assemblers that want to know the dwarf version can't assume a value,
+  // since the defaulting logic resides in the driver. Put in something
+  // reasonable now, in case a subsequent "-Wa,-g" changes it.
+  RenderDebugEnablingArgs(Args, CmdArgs, codegenoptions::NoDebugInfo,
+                          getToolChain().GetDefaultDwarfVersion(),
+                          llvm::DebuggerKind::Default);
   CollectArgsForIntegratedAssembler(C, Args, CmdArgs,
                                     getToolChain().getDriver());
 
