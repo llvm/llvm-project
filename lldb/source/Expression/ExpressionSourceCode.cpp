@@ -382,7 +382,7 @@ ExpressionSourceCode::GetText (std::string &text,
         {
             if (target->GetInjectLocalVariables(&exe_ctx))
             {
-                lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false);
+                lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false, true);
                 AddLocalVariableDecls(var_list_sp, lldb_local_var_decls);
             }
         }

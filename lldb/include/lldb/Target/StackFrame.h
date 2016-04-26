@@ -289,7 +289,7 @@ public:
     ///     A pointer to a list of variables.
     //------------------------------------------------------------------
     lldb::VariableListSP
-    GetInScopeVariableList (bool get_file_globals);
+    GetInScopeVariableList (bool get_file_globals, bool must_have_valid_location = false);
 
     //------------------------------------------------------------------
     /// Create a ValueObject for a variable name / pathname, possibly

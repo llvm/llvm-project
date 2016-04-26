@@ -571,7 +571,7 @@ StackFrame::GetVariableList (bool get_file_globals)
 }
 
 VariableListSP
-StackFrame::GetInScopeVariableList (bool get_file_globals)
+StackFrame::GetInScopeVariableList (bool get_file_globals, bool must_have_valid_location)
 {
     Mutex::Locker locker(m_mutex);
     // We can't fetch variable information for a history stack frame.
@@ -589,7 +589,10 @@ StackFrame::GetInScopeVariableList (bool get_file_globals)
         m_sc.block->AppendVariables (can_create, 
                                      get_parent_variables,
                                      stop_if_block_is_inlined_function,
-                                     [this](Variable* v) { return v->IsInScope(this); },
+                                     [this, must_have_valid_location](Variable* v)
+                                     {
+                                         return v->IsInScope(this) && (!must_have_valid_location || v->LocationIsValidForFrame(this));
+                                     },
                                      var_list_sp.get());
     }
                      
