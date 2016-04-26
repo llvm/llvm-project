@@ -25,6 +25,7 @@ public:
                                   SDValue Dst, SDValue Src, SDValue Size,
                                   unsigned Align, bool isVolatile,
                                   MachinePointerInfo DstPtrInfo) const override;
+  bool GenerateFMAsInMachineCombiner(CodeGenOpt::Level OptLevel) const override;
 };
 }
 
