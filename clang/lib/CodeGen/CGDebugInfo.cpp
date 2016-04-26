@@ -1539,9 +1539,7 @@ static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
 
 /// Does a type definition exist in an imported clang module?
 static bool isDefinedInClangModule(const RecordDecl *RD) {
-  if (!RD->isFromASTFile())
-    return false;
-  if (!RD->getDefinition())
+  if (!RD || !RD->isFromASTFile())
     return false;
   if (!RD->isExternallyVisible() && RD->getName().empty())
     return false;
@@ -1558,7 +1556,7 @@ static bool isDefinedInClangModule(const RecordDecl *RD) {
 static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
                                  bool DebugTypeExtRefs, const RecordDecl *RD,
                                  const LangOptions &LangOpts) {
-  if (DebugTypeExtRefs && isDefinedInClangModule(RD))
+  if (DebugTypeExtRefs && isDefinedInClangModule(RD->getDefinition()))
     return true;
 
   if (DebugKind > codegenoptions::LimitedDebugInfo)
