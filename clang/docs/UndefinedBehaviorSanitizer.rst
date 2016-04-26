@@ -92,11 +92,14 @@ Available checks are:
      parameter which is declared to never be null.
   -  ``-fsanitize=null``: Use of a null pointer or creation of a null
      reference.
-  -  ``-fsanitize=object-size``: An attempt to use bytes which the
-     optimizer can determine are not part of the object being
-     accessed. The sizes of objects are determined using
-     ``__builtin_object_size``, and consequently may be able to detect
-     more problems at higher optimization levels.
+  -  ``-fsanitize=object-size``: An attempt to potentially use bytes which
+     the optimizer can determine are not part of the object being accessed.
+     This will also detect some types of undefined behavior that may not
+     directly access memory, but are provably incorrect given the size of
+     the objects involved, such as invalid downcasts and calling methods on
+     invalid pointers. These checks are made in terms of
+     ``__builtin_object_size``, and consequently may be able to detect more
+     problems at higher optimization levels.
   -  ``-fsanitize=return``: In C++, reaching the end of a
      value-returning function without returning a value.
   -  ``-fsanitize=returns-nonnull-attribute``: Returning null pointer

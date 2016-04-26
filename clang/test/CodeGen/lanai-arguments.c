@@ -10,7 +10,7 @@ typedef struct {
   int aa;
   int bb;
 } s1;
-// CHECK: define void @f1(%struct.s1* byval align 4 %i)
+// CHECK: define void @f1(i32 inreg %i.coerce0, i32 inreg %i.coerce1)
 void f1(s1 i) {}
 
 typedef struct {
@@ -61,8 +61,8 @@ union simple_union {
   int a;
   char b;
 };
-// Unions should be passed as byval structs.
-// CHECK: define void @f9(%union.simple_union* byval align 4 %s)
+// Unions should be passed inreg.
+// CHECK: define void @f9(i32 inreg %s.coerce)
 void f9(union simple_union s) {}
 
 typedef struct {
@@ -70,6 +70,6 @@ typedef struct {
   int b3 : 3;
   int b8 : 8;
 } bitfield1;
-// Bitfields should be passed as byval structs.
-// CHECK: define void @f10(%struct.bitfield1* byval align 4 %bf1)
+// Bitfields should be passed inreg.
+// CHECK: define void @f10(i32 inreg %bf1.coerce)
 void f10(bitfield1 bf1) {}

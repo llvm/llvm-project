@@ -1418,86 +1418,74 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
     //     TT<i>
     //     TT<>
     case Type::TemplateSpecialization: {
-      const TemplateSpecializationType *SpecParam
-        = cast<TemplateSpecializationType>(Param);
+      const TemplateSpecializationType *SpecParam =
+          cast<TemplateSpecializationType>(Param);
 
-      // Try to deduce template arguments from the template-id.
-      Sema::TemplateDeductionResult Result
-        = DeduceTemplateArguments(S, TemplateParams, SpecParam, Arg,
-                                  Info, Deduced);
+      // When Arg cannot be a derived class, we can just try to deduce template
+      // arguments from the template-id.
+      const RecordType *RecordT = Arg->getAs<RecordType>();
+      if (!(TDF & TDF_DerivedClass) || !RecordT)
+        return DeduceTemplateArguments(S, TemplateParams, SpecParam, Arg, Info,
+                                       Deduced);
 
-      if (Result && (TDF & TDF_DerivedClass)) {
-        // C++ [temp.deduct.call]p3b3:
-        //   If P is a class, and P has the form template-id, then A can be a
-        //   derived class of the deduced A. Likewise, if P is a pointer to a
-        //   class of the form template-id, A can be a pointer to a derived
-        //   class pointed to by the deduced A.
-        //
-        // More importantly:
-        //   These alternatives are considered only if type deduction would
-        //   otherwise fail.
-        if (const RecordType *RecordT = Arg->getAs<RecordType>()) {
-          // We cannot inspect base classes as part of deduction when the type
-          // is incomplete, so either instantiate any templates necessary to
-          // complete the type, or skip over it if it cannot be completed.
-          if (!S.isCompleteType(Info.getLocation(), Arg))
-            return Result;
+      SmallVector<DeducedTemplateArgument, 8> DeducedOrig(Deduced.begin(),
+                                                          Deduced.end());
 
-          // Use data recursion to crawl through the list of base classes.
-          // Visited contains the set of nodes we have already visited, while
-          // ToVisit is our stack of records that we still need to visit.
-          llvm::SmallPtrSet<const RecordType *, 8> Visited;
-          SmallVector<const RecordType *, 8> ToVisit;
-          ToVisit.push_back(RecordT);
-          bool Successful = false;
-          SmallVector<DeducedTemplateArgument, 8> DeducedOrig(Deduced.begin(),
-                                                              Deduced.end());
-          while (!ToVisit.empty()) {
-            // Retrieve the next class in the inheritance hierarchy.
-            const RecordType *NextT = ToVisit.pop_back_val();
+      Sema::TemplateDeductionResult Result = DeduceTemplateArguments(
+          S, TemplateParams, SpecParam, Arg, Info, Deduced);
 
-            // If we have already seen this type, skip it.
-            if (!Visited.insert(NextT).second)
-              continue;
+      if (Result == Sema::TDK_Success)
+        return Result;
 
-            // If this is a base class, try to perform template argument
-            // deduction from it.
-            if (NextT != RecordT) {
-              TemplateDeductionInfo BaseInfo(Info.getLocation());
-              Sema::TemplateDeductionResult BaseResult
-                = DeduceTemplateArguments(S, TemplateParams, SpecParam,
-                                          QualType(NextT, 0), BaseInfo,
-                                          Deduced);
+      // We cannot inspect base classes as part of deduction when the type
+      // is incomplete, so either instantiate any templates necessary to
+      // complete the type, or skip over it if it cannot be completed.
+      if (!S.isCompleteType(Info.getLocation(), Arg))
+        return Result;
 
-              // If template argument deduction for this base was successful,
-              // note that we had some success. Otherwise, ignore any deductions
-              // from this base class.
-              if (BaseResult == Sema::TDK_Success) {
-                Successful = true;
-                DeducedOrig.clear();
-                DeducedOrig.append(Deduced.begin(), Deduced.end());
-                Info.Param = BaseInfo.Param;
-                Info.FirstArg = BaseInfo.FirstArg;
-                Info.SecondArg = BaseInfo.SecondArg;
-              }
-              else
-                Deduced = DeducedOrig;
-            }
+      // C++14 [temp.deduct.call] p4b3:
+      //   If P is a class and P has the form simple-template-id, then the
+      //   transformed A can be a derived class of the deduced A. Likewise if
+      //   P is a pointer to a class of the form simple-template-id, the
+      //   transformed A can be a pointer to a derived class pointed to by the
+      //   deduced A.
+      //
+      //   These alternatives are considered only if type deduction would
+      //   otherwise fail. If they yield more than one possible deduced A, the
+      //   type deduction fails.
 
-            // Visit base classes
-            CXXRecordDecl *Next = cast<CXXRecordDecl>(NextT->getDecl());
-            for (const auto &Base : Next->bases()) {
-              assert(Base.getType()->isRecordType() &&
-                     "Base class that isn't a record?");
-              ToVisit.push_back(Base.getType()->getAs<RecordType>());
-            }
-          }
+      bool Successful = false;
+      RecordT->getAsCXXRecordDecl()->forallBases([&](
+          const CXXRecordDecl *Base) {
+        // Start with a fresh copy of the old deduced arguments.
+        SmallVector<DeducedTemplateArgument, 8> DeducedBase(DeducedOrig.begin(),
+                                                            DeducedOrig.end());
 
-          if (Successful)
-            return Sema::TDK_Success;
+        TemplateDeductionInfo BaseInfo(Info.getLocation());
+        Sema::TemplateDeductionResult BaseResult =
+            DeduceTemplateArguments(S, TemplateParams, SpecParam,
+                                    S.Context.getRecordType(Base),
+                                    BaseInfo, DeducedBase);
+
+        // If template argument deduction for this base was successful,
+        // note that we had some success. Otherwise, ignore any deductions
+        // from this base class.
+        if (BaseResult == Sema::TDK_Success) {
+          // FIXME: If we've already been successful, deduction should fail
+          // due to ambiguity.
+          Successful = true;
+          Deduced.swap(DeducedBase);
+          Info.Param = BaseInfo.Param;
+          Info.FirstArg = BaseInfo.FirstArg;
+          Info.SecondArg = BaseInfo.SecondArg;
         }
 
-      }
+        // Keep going.
+        return true;
+      });
+
+      if (Successful)
+        return Sema::TDK_Success;
 
       return Result;
     }

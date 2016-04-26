@@ -771,6 +771,12 @@ tooling::Replacements formatReplacements(StringRef Code,
                                          const tooling::Replacements &Replaces,
                                          const FormatStyle &Style);
 
+/// \brief Returns the replacements corresponding to applying \p Replaces and
+/// cleaning up the code after that.
+tooling::Replacements
+cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
+                          const FormatStyle &Style);
+
 /// \brief Reformats the given \p Ranges in the file \p ID.
 ///
 /// Each range is extended on either end to its next bigger logic unit, i.e.
@@ -795,6 +801,22 @@ tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
                                ArrayRef<tooling::Range> Ranges,
                                StringRef FileName = "<stdin>",
                                bool *IncompleteFormat = nullptr);
+
+/// \brief Clean up any erroneous/redundant code in the given \p Ranges in the
+/// file \p ID.
+///
+/// Returns the ``Replacements`` that clean up all \p Ranges in the file \p ID.
+tooling::Replacements cleanup(const FormatStyle &Style,
+                              SourceManager &SourceMgr, FileID ID,
+                              ArrayRef<CharSourceRange> Ranges);
+
+/// \brief Clean up any erroneous/redundant code in the given \p Ranges in \p
+/// Code.
+///
+/// Otherwise identical to the cleanup() function using a file ID.
+tooling::Replacements cleanup(const FormatStyle &Style, StringRef Code,
+                              ArrayRef<tooling::Range> Ranges,
+                              StringRef FileName = "<stdin>");
 
 /// \brief Returns the ``LangOpts`` that the formatter expects you to set.
 ///

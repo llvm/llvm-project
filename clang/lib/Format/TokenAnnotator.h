@@ -86,6 +86,14 @@ public:
     return startsWithInternal(First, Tokens...);
   }
 
+  /// \c true if this line ends with the given tokens in reversed order,
+  /// ignoring comments.
+  /// For example, given tokens [T1, T2, T3, ...], the function returns true if
+  /// this line is like "... T3 T2 T1".
+  template <typename... Ts> bool endsWith(Ts... Tokens) const {
+    return endsWithInternal(Last, Tokens...);
+  }
+
   /// \c true if this line looks like a function definition instead of a
   /// function declaration. Asserts MightBeFunctionDecl.
   bool mightBeFunctionDefinition() const {
@@ -142,6 +150,23 @@ private:
       Tok = Tok->Next;
     return Tok && startsWithInternal(Tok, K1) &&
            startsWithInternal(Tok->Next, Tokens...);
+  }
+
+  template <typename A, typename... Ts>
+  bool endsWithInternal(const FormatToken *Tok, A K1) const {
+    // See the comments above in `startsWithInternal(Tok, K1)`.
+    while (Tok && Tok->is(tok::comment))
+      Tok = Tok->Previous;
+    return Tok && Tok->is(K1);
+  }
+
+  template <typename A, typename... Ts>
+  bool endsWithInternal(const FormatToken *Tok, A K1, Ts... Tokens) const {
+    // See the comments above in `startsWithInternal(Tok, K1, Tokens)`.
+    while (Tok && Tok->is(tok::comment))
+      Tok = Tok->Previous;
+    return Tok && endsWithInternal(Tok, K1) &&
+           endsWithInternal(Tok->Previous, Tokens...);
   }
 };
 

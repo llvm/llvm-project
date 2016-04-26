@@ -1099,6 +1099,45 @@ __builtin_ia32_inserti64x2_512_mask ((__v8di)( __A),\
                 (__mmask8) ( __U));\
 })
 
+#define _mm512_mask_fpclass_ps_mask( __U, __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclassps512_mask ((__v16sf)( __A),\
+                  ( __imm),\
+                  ( __U));\
+})
+
+#define _mm512_fpclass_ps_mask( __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclassps512_mask ((__v16sf)( __A),\
+                   ( __imm),\
+                   (__mmask16) -1);\
+})
+
+#define _mm512_mask_fpclass_pd_mask( __U, __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclasspd512_mask ((__v8df)( __A),\
+                  ( __imm),( __U));\
+})
+
+#define _mm512_fpclass_pd_mask( __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclasspd512_mask ((__v8df)( __A),\
+                  ( __imm),\
+                  (__mmask8) -1);\
+})
+
+#define _mm_fpclass_sd_mask( __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclasssd_mask ((__v2df)( __A), ( __imm), (__mmask8) -1);\
+})
+
+#define _mm_mask_fpclass_sd_mask( __U,__A, __imm) __extension__ ({ \
+__builtin_ia32_fpclasssd_mask ((__v2df)( __A), ( __imm), (__mmask8) __U);\
+})
+
+#define _mm_fpclass_ss_mask( __A, __imm) __extension__ ({ \
+__builtin_ia32_fpclassss_mask ((__v4sf)( __A), ( __imm), (__mmask8) -1);\
+})
+
+#define _mm_mask_fpclass_ss_mask(__U ,__A, __imm) __extension__ ({ \
+__builtin_ia32_fpclassss_mask ((__v4sf)( __A), ( __imm), (__mmask8) __U);\
+})
+
 #undef __DEFAULT_FN_ATTRS
 
 #endif

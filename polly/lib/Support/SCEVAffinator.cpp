@@ -340,7 +340,7 @@ SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
     NegDom = ExprDomain ? isl_set_intersect(NegDom, ExprDomain) : NegDom;
     auto DL = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
     OpPWAC.second = isl_set_union(OpPWAC.second, isl_set_copy(NegDom));
-    S->addAssumption(UNSIGNED, isl_set_params(NegDom), DL, AS_RESTRICTION);
+    S->recordAssumption(UNSIGNED, NegDom, DL, AS_RESTRICTION, BB);
     return OpPWAC;
   }
 
