@@ -86,11 +86,9 @@ struct ucontext_t {
 };
 #endif
 
-#if defined(__x86_64__) || defined(__mips__) \
-  || (defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#if defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1
 #define PTHREAD_ABI_BASE  "GLIBC_2.3.2"
-#elif defined(__aarch64__) || (defined(__powerpc64__) \
-  && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#elif defined(__aarch64__) || SANITIZER_PPC64V2
 #define PTHREAD_ABI_BASE  "GLIBC_2.17"
 #endif
 

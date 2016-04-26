@@ -162,7 +162,7 @@ template <class ELFT>
 SymbolBody &ICF<ELFT>::getSymbol(const InputSection<ELFT> *Sec,
                                  const Elf_Rel *Rel) {
   uint32_t SymIdx = Rel->getSymbol(Config->Mips64EL);
-  return Sec->File->getSymbolBody(SymIdx).repl();
+  return Sec->File->getSymbolBody(SymIdx);
 }
 
 // All sections between Begin and End must have the same group ID before

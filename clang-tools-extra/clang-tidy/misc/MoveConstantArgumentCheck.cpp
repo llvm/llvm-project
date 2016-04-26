@@ -20,16 +20,15 @@ using namespace ast_matchers;
 void MoveConstantArgumentCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
-  Finder->addMatcher(callExpr(unless(isInTemplateInstantiation()),
-                              callee(functionDecl(hasName("::std::move"))))
+  Finder->addMatcher(callExpr(callee(functionDecl(hasName("::std::move"))),
+                              argumentCountIs(1),
+                              unless(isInTemplateInstantiation()))
                          .bind("call-move"),
                      this);
 }
 
 void MoveConstantArgumentCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CallMove = Result.Nodes.getNodeAs<CallExpr>("call-move");
-  if (CallMove->getNumArgs() != 1)
-    return;
   const Expr *Arg = CallMove->getArg(0);
   SourceManager &SM = Result.Context->getSourceManager();
 
@@ -43,12 +42,12 @@ void MoveConstantArgumentCheck::check(const MatchFinder::MatchResult &Result) {
     if (!FileMoveRange.isValid())
       return;
     bool IsVariable = isa<DeclRefExpr>(Arg);
-    auto Diag =
-        diag(FileMoveRange.getBegin(), "std::move of the %select{|const }0"
-                                       "%select{expression|variable}1 "
-                                       "%select{|of trivially-copyable type }2"
-                                       "has no effect; remove std::move()")
-        << IsConstArg << IsVariable << IsTriviallyCopyable;
+    auto Diag = diag(FileMoveRange.getBegin(),
+                     "std::move of the %select{|const }0"
+                     "%select{expression|variable}1 "
+                     "%select{|of a trivially-copyable type }2"
+                     "has no effect; remove std::move()")
+                << IsConstArg << IsVariable << IsTriviallyCopyable;
 
     auto BeforeArgumentsRange = Lexer::makeFileCharRange(
         CharSourceRange::getCharRange(CallMove->getLocStart(),

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-move-const-arg %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s misc-move-const-arg %t
 
 namespace std {
 template <typename> struct remove_reference;
@@ -23,19 +23,19 @@ public:
 
 int f1() {
   return std::move(42);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the expression of trivially-copyable type has no effect; remove std::move() [misc-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the expression of a trivially-copyable type has no effect; remove std::move() [misc-move-const-arg]
   // CHECK-FIXES: return 42;
 }
 
 int f2(int x2) {
   return std::move(x2);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the variable of trivially-copyable type
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the variable of a trivially-copyable type
   // CHECK-FIXES: return x2;
 }
 
 int *f3(int *x3) {
   return std::move(x3);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the variable of trivially-copyable type
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the variable of a trivially-copyable type
   // CHECK-FIXES: return x3;
 }
 

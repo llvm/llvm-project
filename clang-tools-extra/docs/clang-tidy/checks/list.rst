@@ -61,6 +61,7 @@ Clang-Tidy Checks
    misc-macro-parentheses
    misc-macro-repeated-side-effects
    misc-misplaced-widening-cast
+   misc-move-const-arg
    misc-move-constructor-init
    misc-multiple-statement-macro
    misc-new-delete-overloads
@@ -76,7 +77,7 @@ Clang-Tidy Checks
    misc-string-literal-with-embedded-nul
    misc-suspicious-missing-comma
    misc-suspicious-semicolon
-   misc-suspicious-string-compare   
+   misc-suspicious-string-compare
    misc-swapped-arguments
    misc-throw-by-value-catch-by-reference
    misc-undelegated-constructor

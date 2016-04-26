@@ -123,6 +123,39 @@
 # define SANITIZER_S390_64 0
 #endif
 
+#if defined(__powerpc__)
+# define SANITIZER_PPC 1
+# if defined(__powerpc64__)
+#  define SANITIZER_PPC32 0
+#  define SANITIZER_PPC64 1
+// 64-bit PPC has two ABIs (v1 and v2).  The old powerpc64 target is
+// big-endian, and uses v1 ABI (known for its function descriptors),
+// while the new powerpc64le target is little-endian and uses v2.
+// In theory, you could convince gcc to compile for their evil twins
+// (eg. big-endian v2), but you won't find such combinations in the wild
+// (it'd require bootstrapping a whole system, which would be quite painful
+// - there's no target triple for that).  LLVM doesn't support them either.
+#  if _CALL_ELF == 2
+#   define SANITIZER_PPC64V1 0
+#   define SANITIZER_PPC64V2 1
+#  else
+#   define SANITIZER_PPC64V1 1
+#   define SANITIZER_PPC64V2 0
+#  endif
+# else
+#  define SANITIZER_PPC32 1
+#  define SANITIZER_PPC64 0
+#  define SANITIZER_PPC64V1 0
+#  define SANITIZER_PPC64V2 0
+# endif
+#else
+# define SANITIZER_PPC 0
+# define SANITIZER_PPC32 0
+# define SANITIZER_PPC64 0
+# define SANITIZER_PPC64V1 0
+# define SANITIZER_PPC64V2 0
+#endif
+
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
 // But in some cases (e.g. AArch64's 39-bit address space) SizeClassAllocator64
 // does not work well and we need to fallback to SizeClassAllocator32.

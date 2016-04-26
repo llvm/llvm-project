@@ -107,7 +107,7 @@ const MappingDesc kMemoryLayout[] = {
 # define MEM_TO_SHADOW(mem) ((uptr)mem ^ 0x6000000000ULL)
 # define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x1000000000ULL)
 
-#elif SANITIZER_LINUX && defined(__powerpc64__)
+#elif SANITIZER_LINUX && SANITIZER_PPC64
 
 const MappingDesc kMemoryLayout[] = {
     {0x000000000000ULL, 0x000100000000ULL, MappingDesc::APP, "low memory"},

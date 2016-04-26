@@ -27,6 +27,7 @@
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
+using namespace llvm::sys;
 
 using namespace lld;
 using namespace lld::elf;
@@ -98,20 +99,6 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
   return V;
 }
 
-static void dumpFile(StringRef SrcPath) {
-  SmallString<128> DirName;
-  sys::path::append(DirName, Config->Reproduce, sys::path::parent_path(SrcPath));
-  if (std::error_code EC = sys::fs::create_directories(DirName)) {
-    error(EC, "--reproduce: can't create directory");
-    return;
-  }
-
-  SmallString<128> DestPathName;
-  sys::path::append(DestPathName, Config->Reproduce, SrcPath);
-  if (std::error_code EC = sys::fs::copy_file(SrcPath, DestPathName))
-    error(EC, "--reproduce: can't copy file");
-}
-
 // Opens and parses a file. Path has to be resolved already.
 // Newly created memory buffers are owned by this driver.
 void LinkerDriver::addFile(StringRef Path) {
@@ -119,7 +106,7 @@ void LinkerDriver::addFile(StringRef Path) {
   if (Config->Verbose)
     llvm::outs() << Path << "\n";
   if (!Config->Reproduce.empty())
-    dumpFile(Path);
+    copyFile(Path, concat_paths(Config->Reproduce, Path));
 
   Optional<MemoryBufferRef> Buffer = readFile(Path);
   if (!Buffer.hasValue())
@@ -241,21 +228,21 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
   return false;
 }
 
-static void dumpLinkerInvocation(ArrayRef<const char *> Args) {
-  std::error_code EC = sys::fs::create_directories(Config->Reproduce,
-    false /* IgnoreExisting */);
-  if (EC) {
-    error(EC, "--reproduce: can't create directory");
+static void logCommandline(ArrayRef<const char *> Args) {
+  if (std::error_code EC = sys::fs::create_directories(
+        Config->Reproduce, /*IgnoreExisting=*/false)) {
+    error(EC, Config->Reproduce + ": can't create directory");
     return;
   }
 
-  SmallString<128> InvocationPath;
-  sys::path::append(InvocationPath, Config->Reproduce, "invocation.txt");
-  raw_fd_ostream OS(InvocationPath, EC, sys::fs::OpenFlags::F_None);
+  SmallString<128> Path;
+  path::append(Path, Config->Reproduce, "invocation.txt");
+  std::error_code EC;
+  raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::F_None);
   check(EC);
 
   OS << Args[0];
-  for (unsigned I = 1, E = Args.size(); I < E; ++I)
+  for (size_t I = 1, E = Args.size(); I < E; ++I)
     OS << " " << Args[I];
   OS << "\n";
 }
@@ -276,7 +263,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   readConfigs(Args);
 
   if (!Config->Reproduce.empty())
-    dumpLinkerInvocation(ArgsArr);
+    logCommandline(ArgsArr);
 
   createFiles(Args);
   checkOptions(Args);
