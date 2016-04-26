@@ -138,7 +138,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !21 = !DILocalVariable(name: "b", line: 1, arg: 1, scope: !4, file: !5, type: !8)
 !22 = !DILocation(line: 1, scope: !4)
 !23 = !DILocation(line: 2, scope: !4)
-!24 = !DILocalVariable(name: "a", line: 6, arg: 1, scope: !14, file: !15, type: !"_ZTS1A")
+!24 = !DILocalVariable(name: "a", line: 6, arg: 1, scope: !14, file: !15, type: !12)
 !25 = !DILocation(line: 6, scope: !14)
 !26 = !DILocalVariable(name: "z", line: 7, scope: !14, file: !15, type: !8)
 !27 = !DILocation(line: 7, scope: !14)

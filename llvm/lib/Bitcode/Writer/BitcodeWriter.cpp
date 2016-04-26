@@ -1279,7 +1279,8 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
 void ModuleBitcodeWriter::writeDICompositeType(
     const DICompositeType *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  const unsigned IsNotUsedInOldTypeRef = 0x2;
+  Record.push_back(IsNotUsedInOldTypeRef | N->isDistinct());
   Record.push_back(N->getTag());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
@@ -1303,7 +1304,8 @@ void ModuleBitcodeWriter::writeDICompositeType(
 void ModuleBitcodeWriter::writeDISubroutineType(
     const DISubroutineType *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  const unsigned HasNoOldTypeRefs = 0x2;
+  Record.push_back(HasNoOldTypeRefs | N->isDistinct());
   Record.push_back(N->getFlags());
   Record.push_back(VE.getMetadataOrNullID(N->getTypeArray().get()));
 

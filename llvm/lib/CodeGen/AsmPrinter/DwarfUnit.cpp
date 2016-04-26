@@ -722,8 +722,6 @@ DIE *DwarfUnit::getOrCreateTypeDIE(const MDNode *TyNode) {
     return nullptr;
 
   auto *Ty = cast<DIType>(TyNode);
-  assert(Ty == resolve(Ty->getRef()) &&
-         "type was not uniqued, possible ODR violation.");
 
   // DW_TAG_restrict_type is not supported in DWARF2
   if (Ty->getTag() == dwarf::DW_TAG_restrict_type && DD->getDwarfVersion() <= 2)
