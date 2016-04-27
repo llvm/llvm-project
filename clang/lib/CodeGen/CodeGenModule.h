@@ -490,8 +490,6 @@ private:
   /// MDNodes.
   llvm::DenseMap<QualType, llvm::Metadata *> MetadataIdMap;
 
-  SanitizerBlacklist WholeProgramVTablesBlacklist;
-
 public:
   CodeGenModule(ASTContext &C, const HeaderSearchOptions &headersearchopts,
                 const PreprocessorOptions &ppopts,
@@ -1115,12 +1113,10 @@ public:
   void EmitOMPDeclareReduction(const OMPDeclareReductionDecl *D,
                                CodeGenFunction *CGF = nullptr);
 
-  /// Returns whether we need bit sets attached to vtables.
-  bool NeedVTableBitSets();
-
-  /// Returns whether the given record is blacklisted from whole-program
-  /// transformations (i.e. CFI or whole-program vtable optimization).
-  bool IsBitSetBlacklistedRecord(const CXXRecordDecl *RD);
+  /// Returns whether the given record has hidden LTO visibility and therefore
+  /// may participate in (single-module) CFI and whole-program vtable
+  /// optimization.
+  bool HasHiddenLTOVisibility(const CXXRecordDecl *RD);
 
   /// Emit bit set entries for the given vtable using the given layout if
   /// vptr CFI is enabled.

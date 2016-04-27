@@ -8,7 +8,11 @@
 typedef int * int_ptr;
 
 // Parse nullability type specifiers.
-typedef int * _Nonnull nonnull_int_ptr; // expected-note{{'_Nonnull' specified here}}
+// This note requires C11.
+#if __STDC_VERSION__ > 199901L
+// expected-note@+2{{'_Nonnull' specified here}}
+#endif
+typedef int * _Nonnull nonnull_int_ptr;
 typedef int * _Nullable nullable_int_ptr;
 typedef int * _Null_unspecified null_unspecified_int_ptr;
 
@@ -23,9 +27,14 @@ typedef int * _Null_unspecified _Nonnull conflicting_2; // expected-error{{nulla
 typedef nonnull_int_ptr _Nonnull redundant_okay_1;
 
 // Conflicting nullability specifiers via a typedef are not.
+// Some of these errors require C11.
+#if __STDC_VERSION__ > 199901L
 typedef nonnull_int_ptr _Nullable conflicting_2; // expected-error{{nullability specifier '_Nullable' conflicts with existing specifier '_Nonnull'}}
+#endif
 typedef nonnull_int_ptr nonnull_int_ptr_typedef;
+#if __STDC_VERSION__ > 199901L
 typedef nonnull_int_ptr_typedef _Nullable conflicting_2; // expected-error{{nullability specifier '_Nullable' conflicts with existing specifier '_Nonnull'}}
+#endif
 typedef nonnull_int_ptr_typedef nonnull_int_ptr_typedef_typedef;
 typedef nonnull_int_ptr_typedef_typedef _Null_unspecified conflicting_3; // expected-error{{nullability specifier '_Null_unspecified' conflicts with existing specifier '_Nonnull'}}
 
@@ -69,8 +78,11 @@ typedef _Nonnull int * _Nullable *  conflict_int_ptr_ptr_2; // expected-error{{n
 
 // Nullability is not part of the canonical type.
 typedef int * _Nonnull ambiguous_int_ptr;
+// Redefining a typedef is a C11 feature.
+#if __STDC_VERSION__ > 199901L
 typedef int * ambiguous_int_ptr;
 typedef int * _Nullable ambiguous_int_ptr;
+#endif
 
 // Printing of nullability.
 float f;

@@ -88,7 +88,6 @@
 // COMMON:#define __ORDER_LITTLE_ENDIAN__ 1234
 // COMMON:#define __ORDER_PDP_ENDIAN__ 3412
 // COMMON:#define __STDC_HOSTED__ 1
-// COMMON:#define __STDC_VERSION__ 201112L
 // COMMON:#define __STDC__ 1
 // COMMON:#define __VERSION__ {{.*}}
 // COMMON:#define __clang__ 1
@@ -98,7 +97,13 @@
 // COMMON:#define __clang_version__ {{.*}}
 // COMMON:#define __llvm__ 1
 //
+// RUN: %clang_cc1 -E -dM -triple=x86_64-pc-win32 < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
+// RUN: %clang_cc1 -E -dM -triple=x86_64-pc-linux-gnu < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
+// RUN: %clang_cc1 -E -dM -triple=x86_64-apple-darwin < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
+// RUN: %clang_cc1 -E -dM -triple=armv7a-apple-darwin < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
 // 
+// C-DEFAULT:#define __STDC_VERSION__ 201112L
+//
 // RUN: %clang_cc1 -ffreestanding -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix FREESTANDING %s
 // FREESTANDING:#define __STDC_HOSTED__ 0
 //
@@ -8361,6 +8366,7 @@
 // PS4:#define __SSE2__ 1
 // PS4:#define __SSE_MATH__ 1
 // PS4:#define __SSE__ 1
+// PS4:#define __STDC_VERSION__ 199901L
 // PS4:#define __UINTMAX_TYPE__ long unsigned int
 // PS4:#define __USER_LABEL_PREFIX__
 // PS4:#define __WCHAR_MAX__ 65535

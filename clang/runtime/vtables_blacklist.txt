@@ -1,8 +1,0 @@
-# Standard library types.
-type:std::*
-
-# The stdext namespace contains Microsoft standard library extensions.
-type:stdext::*
-
-# Types with a uuid attribute, i.e. COM types.
-type:attr:uuid

@@ -494,6 +494,15 @@ Query for this feature with ``__has_attribute(objc_method_family)``.
   }];
 }
 
+def NoDebugDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``nodebug`` attribute allows you to suppress debugging information for a
+function, or for a variable declared with static storage duration, such as
+globals, class static data members, and static locals.
+  }];
+}
+
 def NoDuplicateDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -2421,5 +2430,12 @@ The symbol name of the resolver function is given in quotes.  A function with th
 The ``ifunc`` attribute may only be used on a function declaration.  A function declaration with an ``ifunc`` attribute is considered to be a definition of the declared entity.  The entity must not have weak linkage; for example, in C++, it cannot be applied to a declaration if a definition at that location would be considered inline.
 
 Not all targets support this attribute.  ELF targets support this attribute when using binutils v2.20.1 or higher and glibc v2.11.1 or higher.  Non-ELF targets currently do not support this attribute.
+  }];
+}
+
+def LTOVisibilityDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+See :doc:`LTOVisibility`.
   }];
 }

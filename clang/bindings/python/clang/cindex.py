@@ -1174,6 +1174,32 @@ class Cursor(Structure):
         """
         return conf.lib.clang_CXXMethod_isConst(self)
 
+    def is_converting_constructor(self):
+        """Returns True if the cursor refers to a C++ converting constructor.
+        """
+        return conf.lib.clang_CXXConstructor_isConvertingConstructor(self)
+
+    def is_copy_constructor(self):
+        """Returns True if the cursor refers to a C++ copy constructor.
+        """
+        return conf.lib.clang_CXXConstructor_isCopyConstructor(self)
+
+    def is_default_constructor(self):
+        """Returns True if the cursor refers to a C++ default constructor.
+        """
+        return conf.lib.clang_CXXConstructor_isDefaultConstructor(self)
+
+    def is_move_constructor(self):
+        """Returns True if the cursor refers to a C++ move constructor.
+        """
+        return conf.lib.clang_CXXConstructor_isMoveConstructor(self)
+
+    def is_default_method(self):
+        """Returns True if the cursor refers to a C++ member function or member
+        function template that is declared '= default'.
+        """
+        return conf.lib.clang_CXXMethod_isDefaulted(self)
+
     def is_mutable_field(self):
         """Returns True if the cursor refers to a C++ field that is declared
         'mutable'.
@@ -2918,11 +2944,31 @@ functionList = [
    [Index, c_char_p],
    c_object_p),
 
+  ("clang_CXXConstructor_isConvertingConstructor",
+   [Cursor],
+   bool),
+
+  ("clang_CXXConstructor_isCopyConstructor",
+   [Cursor],
+   bool),
+
+  ("clang_CXXConstructor_isDefaultConstructor",
+   [Cursor],
+   bool),
+
+  ("clang_CXXConstructor_isMoveConstructor",
+   [Cursor],
+   bool),
+
   ("clang_CXXField_isMutable",
    [Cursor],
    bool),
 
   ("clang_CXXMethod_isConst",
+   [Cursor],
+   bool),
+
+  ("clang_CXXMethod_isDefaulted",
    [Cursor],
    bool),
 

@@ -187,6 +187,10 @@ CODEGENOPT(EmitLLVMUseLists, 1, 0) ///< Control whether to serialize use-lists.
 CODEGENOPT(WholeProgramVTables, 1, 0) ///< Whether to apply whole-program
                                       ///  vtable optimization.
 
+/// Whether to use public LTO visibility for entities in std and stdext
+/// namespaces. This is enabled by clang-cl's /MT and /MTd flags.
+CODEGENOPT(LTOVisibilityPublicStd, 1, 0)
+
 /// The user specified number of registers to be used for integral arguments,
 /// or 0 if unspecified.
 VALUE_CODEGENOPT(NumRegisterParameters, 32, 0)

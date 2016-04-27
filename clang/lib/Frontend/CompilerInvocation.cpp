@@ -482,8 +482,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DebugColumnInfo = Args.hasArg(OPT_dwarf_column_info);
   Opts.EmitCodeView = Args.hasArg(OPT_gcodeview);
   Opts.WholeProgramVTables = Args.hasArg(OPT_fwhole_program_vtables);
-  Opts.WholeProgramVTablesBlacklistFiles =
-      Args.getAllArgValues(OPT_fwhole_program_vtables_blacklist_EQ);
+  Opts.LTOVisibilityPublicStd = Args.hasArg(OPT_flto_visibility_public_std);
   Opts.SplitDwarfFile = Args.getLastArgValue(OPT_split_dwarf_file);
   Opts.DebugTypeExtRefs = Args.hasArg(OPT_dwarf_ext_refs);
   Opts.DebugExplicitImport = Triple.isPS4CPU(); 
@@ -1351,6 +1350,7 @@ static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args) {
 }
 
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
+                                         const llvm::Triple &T,
                                          LangStandard::Kind LangStd) {
   // Set some properties which depend solely on the input kind; it would be nice
   // to move these to the language standard, and have the driver resolve the
@@ -1383,7 +1383,11 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     case IK_PreprocessedC:
     case IK_ObjC:
     case IK_PreprocessedObjC:
-      LangStd = LangStandard::lang_gnu11;
+      // The PS4 uses C99 as the default C standard.
+      if (T.isPS4())
+        LangStd = LangStandard::lang_gnu99;
+      else
+        LangStd = LangStandard::lang_gnu11;
       break;
     case IK_CXX:
     case IK_PreprocessedCXX:
@@ -1536,7 +1540,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       LangStd = OpenCLLangStd;
   }
 
-  CompilerInvocation::setLangDefaults(Opts, IK, LangStd);
+  llvm::Triple T(TargetOpts.Triple);
+  CompilerInvocation::setLangDefaults(Opts, IK, T, LangStd);
 
   // We abuse '-f[no-]gnu-keywords' to force overriding all GNU-extension
   // keywords. This behavior is provided by GCC's poorly named '-fasm' flag,
@@ -1859,7 +1864,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   // Provide diagnostic when a given target is not expected to be an OpenMP
   // device or host.
   if (Opts.OpenMP && !Opts.OpenMPIsDevice) {
-    llvm::Triple T(TargetOpts.Triple);
     switch (T.getArch()) {
     default:
       break;

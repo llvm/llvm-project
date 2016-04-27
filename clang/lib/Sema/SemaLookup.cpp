@@ -4929,6 +4929,16 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, NamedDecl *Decl,
                         Recover);
 }
 
+/// \brief Get a "quoted.h" or <angled.h> include path to use in a diagnostic
+/// suggesting the addition of a #include of the specified file.
+static std::string getIncludeStringForHeader(Preprocessor &PP,
+                                             const FileEntry *E) {
+  bool IsSystem;
+  auto Path =
+      PP.getHeaderSearchInfo().suggestPathToFileForDiagnostics(E, &IsSystem);
+  return (IsSystem ? '<' : '"') + Path + (IsSystem ? '>' : '"');
+}
+
 void Sema::diagnoseMissingImport(SourceLocation UseLoc, NamedDecl *Decl,
                                  SourceLocation DeclLoc,
                                  ArrayRef<Module *> Modules,
@@ -4949,6 +4959,16 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, NamedDecl *Decl,
 
     Diag(UseLoc, diag::err_module_unimported_use_multiple)
       << (int)MIK << Decl << ModuleList;
+  } else if (const FileEntry *E =
+                 PP.getModuleHeaderToIncludeForDiagnostics(UseLoc, DeclLoc)) {
+    // The right way to make the declaration visible is to include a header;
+    // suggest doing so.
+    //
+    // FIXME: Find a smart place to suggest inserting a #include, and add
+    // a FixItHint there.
+    Diag(UseLoc, diag::err_module_unimported_use_header)
+      << (int)MIK << Decl << Modules[0]->getFullModuleName()
+      << getIncludeStringForHeader(PP, E);
   } else {
     Diag(UseLoc, diag::err_module_unimported_use)
       << (int)MIK << Decl << Modules[0]->getFullModuleName();
