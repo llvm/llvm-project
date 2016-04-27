@@ -324,6 +324,7 @@ public:
 
 template <class ELFT> class SharedSymbol : public Defined {
   typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::Verdef Elf_Verdef;
   typedef typename ELFT::uint uintX_t;
 
 public:
@@ -331,10 +332,11 @@ public:
     return S->kind() == SymbolBody::SharedKind;
   }
 
-  SharedSymbol(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym)
+  SharedSymbol(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
+               const Elf_Verdef *Verdef)
       : Defined(SymbolBody::SharedKind, Name, Sym.getBinding(), Sym.st_other,
                 Sym.getType()),
-        File(F), Sym(Sym) {
+        File(F), Sym(Sym), Verdef(Verdef) {
     // IFuncs defined in DSOs are treated as functions by the static linker.
     if (isGnuIFunc())
       Type = llvm::ELF::STT_FUNC;
@@ -342,6 +344,14 @@ public:
 
   SharedFile<ELFT> *File;
   const Elf_Sym &Sym;
+
+  // This field is initially a pointer to the symbol's version definition. As
+  // symbols are added to the version table, this field is replaced with the
+  // version identifier to be stored in .gnu.version in the output file.
+  union {
+    const Elf_Verdef *Verdef;
+    uint16_t VersionId;
+  };
 
   // OffsetInBss is significant only when needsCopy() is true.
   uintX_t OffsetInBss = 0;

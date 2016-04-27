@@ -4,9 +4,6 @@
 // RUN: not %run %t 2 2>&1 | FileCheck %s --check-prefix=CHECK2
 // RUN: not %run %t 3 2>&1 | FileCheck %s --check-prefix=CHECK3
 
-// FIXME: Symbolization problems.
-// XFAIL: win32
-
 #define NOINLINE __attribute__((noinline))
 inline void break_optimization(void *arg) {
   __asm__ __volatile__("" : : "r" (arg) : "memory");

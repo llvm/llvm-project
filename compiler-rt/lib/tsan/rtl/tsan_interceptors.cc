@@ -740,7 +740,7 @@ TSAN_INTERCEPTOR(int, munmap, void *addr, long_t sz) {
   if (sz != 0) {
     // If sz == 0, munmap will return EINVAL and don't unmap any memory.
     DontNeedShadowFor((uptr)addr, sz);
-    ctx->metamap.ResetRange(thr->proc, (uptr)addr, (uptr)sz);
+    ctx->metamap.ResetRange(thr->proc(), (uptr)addr, (uptr)sz);
   }
   int res = REAL(munmap)(addr, sz);
   return res;
@@ -835,7 +835,7 @@ STDCXX_INTERCEPTOR(void, __cxa_guard_abort, atomic_uint32_t *g) {
 namespace __tsan {
 void DestroyThreadState() {
   ThreadState *thr = cur_thread();
-  Processor *proc = thr->proc;
+  Processor *proc = thr->proc();
   ThreadFinish(thr);
   ProcUnwire(proc, thr);
   ProcDestroy(proc);
@@ -2281,6 +2281,8 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #undef SANITIZER_INTERCEPT_TLS_GET_ADDR
 
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
+#define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
+  INTERCEPT_FUNCTION_VER(name, ver)
 
 #define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size)                    \
   MemoryAccessRange(((TsanInterceptorContext *)ctx)->thr,                 \

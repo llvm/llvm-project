@@ -231,4 +231,12 @@
 # define SANITIZER_NON_UNIQUE_TYPEINFO 0
 #endif
 
+// On linux, some architectures had an ABI transition from 64-bit long double
+// (ie. same as double) to 128-bit long double.  On those, glibc symbols
+// involving long doubles come in two versions, and we need to pass the
+// correct one to dlvsym when intercepting them.
+#if SANITIZER_LINUX && (SANITIZER_S390 || SANITIZER_PPC32 || SANITIZER_PPC64V1)
+#define SANITIZER_NLDBL_VERSION "GLIBC_2.4"
+#endif
+
 #endif // SANITIZER_PLATFORM_H

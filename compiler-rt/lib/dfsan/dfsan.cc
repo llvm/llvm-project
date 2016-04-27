@@ -368,6 +368,7 @@ static void InitializeFlags() {
 }
 
 static void InitializePlatformEarly() {
+  AvoidCVE_2016_2143();
 #ifdef DFSAN_RUNTIME_VMA
   __dfsan::vmaSize =
     (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);

@@ -3221,7 +3221,7 @@ void Scop::simplifySCoP(bool RemoveIgnoredStmts, DominatorTree &DT,
   }
 }
 
-const InvariantEquivClassTy *Scop::lookupInvariantEquivClass(Value *Val) const {
+InvariantEquivClassTy *Scop::lookupInvariantEquivClass(Value *Val) {
   LoadInst *LInst = dyn_cast<LoadInst>(Val);
   if (!LInst)
     return nullptr;

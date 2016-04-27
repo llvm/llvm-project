@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <stdio.h>
+#include <stdlib.h>
 
 void __tsan_init(void **thr, void **proc, void (*cb)(long, void*));
 void __tsan_fini();
@@ -27,12 +28,21 @@ void __tsan_write(void *thr, void *addr, void *pc);
 void __tsan_func_enter(void *thr, void *pc);
 void __tsan_func_exit(void *thr);
 void __tsan_malloc(void *thr, void *pc, void *p, unsigned long sz);
-void __tsan_free(void *proc, void *p, unsigned long sz);
+void __tsan_free(void *p, unsigned long sz);
 void __tsan_acquire(void *thr, void *addr);
 void __tsan_release(void *thr, void *addr);
 void __tsan_release_merge(void *thr, void *addr);
 
-void symbolize_cb(long cmd, void *ctx) {}
+void *current_proc;
+
+void symbolize_cb(long cmd, void *ctx) {
+  switch (cmd) {
+  case 0:
+    if (current_proc == 0)
+      abort();
+    *(void**)ctx = current_proc;
+  }
+}
 
 char buf0[100<<10];
 
@@ -43,11 +53,11 @@ int main(void) {
   void *thr0 = 0;
   void *proc0 = 0;
   __tsan_init(&thr0, &proc0, symbolize_cb);
+  current_proc = proc0;
   char *buf = (char*)((unsigned long)buf0 + (64<<10) - 1 & ~((64<<10) - 1));
   __tsan_map_shadow(buf, 4096);
   __tsan_malloc(thr0, (char*)&barfoo + 1, buf, 10);
-  __tsan_free(proc0, buf, 10);
-  __tsan_free(thr0, buf, 10);
+  __tsan_free(buf, 10);
   __tsan_func_enter(thr0, (char*)&main + 1);
   __tsan_malloc(thr0, (char*)&barfoo + 1, buf, 10);
   __tsan_release(thr0, buf);
@@ -57,8 +67,6 @@ int main(void) {
   void *thr2 = 0;
   __tsan_go_start(thr0, &thr2, (char*)&barfoo + 1);
   __tsan_func_exit(thr0);
-  __tsan_proc_unwire(proc0, thr0);
-  __tsan_proc_wire(proc0, thr1);
   __tsan_func_enter(thr1, (char*)&foobar + 1);
   __tsan_func_enter(thr1, (char*)&foobar + 1);
   __tsan_write(thr1, buf, (char*)&barfoo + 1);
@@ -68,14 +76,14 @@ int main(void) {
   __tsan_go_end(thr1);
   void *proc1 = 0;
   __tsan_proc_create(&proc1);
-  __tsan_proc_wire(proc1, thr2);
+  current_proc = proc1;
   __tsan_func_enter(thr2, (char*)&foobar + 1);
   __tsan_read(thr2, buf, (char*)&barfoo + 1);
-  __tsan_free(proc1, buf, 10);
+  __tsan_free(buf, 10);
   __tsan_func_exit(thr2);
   __tsan_go_end(thr2);
-  __tsan_proc_destroy(proc0);
   __tsan_proc_destroy(proc1);
+  current_proc = proc0;
   __tsan_fini();
   return 0;
 }

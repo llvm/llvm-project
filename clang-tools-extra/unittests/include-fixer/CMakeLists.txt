@@ -23,3 +23,5 @@ target_link_libraries(IncludeFixerTests
   clangTooling
   clangToolingCore
   )
+
+add_subdirectory(find-all-symbols)

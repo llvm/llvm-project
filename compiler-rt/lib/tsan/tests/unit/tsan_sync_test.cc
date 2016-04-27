@@ -25,7 +25,7 @@ TEST(MetaMap, Basic) {
   EXPECT_NE(mb, (MBlock*)0);
   EXPECT_EQ(mb->siz, 1 * sizeof(u64));
   EXPECT_EQ(mb->tid, thr->tid);
-  uptr sz = m->FreeBlock(thr->proc, (uptr)&block[0]);
+  uptr sz = m->FreeBlock(thr->proc(), (uptr)&block[0]);
   EXPECT_EQ(sz, 1 * sizeof(u64));
   mb = m->GetBlock((uptr)&block[0]);
   EXPECT_EQ(mb, (MBlock*)0);
@@ -41,7 +41,7 @@ TEST(MetaMap, FreeRange) {
   EXPECT_EQ(mb1->siz, 1 * sizeof(u64));
   MBlock *mb2 = m->GetBlock((uptr)&block[1]);
   EXPECT_EQ(mb2->siz, 3 * sizeof(u64));
-  m->FreeRange(thr->proc, (uptr)&block[0], 4 * sizeof(u64));
+  m->FreeRange(thr->proc(), (uptr)&block[0], 4 * sizeof(u64));
   mb1 = m->GetBlock((uptr)&block[0]);
   EXPECT_EQ(mb1, (MBlock*)0);
   mb2 = m->GetBlock((uptr)&block[1]);
@@ -63,12 +63,12 @@ TEST(MetaMap, Sync) {
   EXPECT_NE(s2, (SyncVar*)0);
   EXPECT_EQ(s2->addr, (uptr)&block[1]);
   s2->mtx.ReadUnlock();
-  m->FreeBlock(thr->proc, (uptr)&block[0]);
+  m->FreeBlock(thr->proc(), (uptr)&block[0]);
   s1 = m->GetIfExistsAndLock((uptr)&block[0]);
   EXPECT_EQ(s1, (SyncVar*)0);
   s2 = m->GetIfExistsAndLock((uptr)&block[1]);
   EXPECT_EQ(s2, (SyncVar*)0);
-  m->OnProcIdle(thr->proc);
+  m->OnProcIdle(thr->proc());
 }
 
 TEST(MetaMap, MoveMemory) {
@@ -105,7 +105,7 @@ TEST(MetaMap, MoveMemory) {
   EXPECT_NE(s2, (SyncVar*)0);
   EXPECT_EQ(s2->addr, (uptr)&block2[1]);
   s2->mtx.Unlock();
-  m->FreeRange(thr->proc, (uptr)&block2[0], 4 * sizeof(u64));
+  m->FreeRange(thr->proc(), (uptr)&block2[0], 4 * sizeof(u64));
 }
 
 TEST(MetaMap, ResetSync) {
@@ -114,9 +114,9 @@ TEST(MetaMap, ResetSync) {
   u64 block[1] = {};  // fake malloc block
   m->AllocBlock(thr, 0, (uptr)&block[0], 1 * sizeof(u64));
   SyncVar *s = m->GetOrCreateAndLock(thr, 0, (uptr)&block[0], true);
-  s->Reset(thr->proc);
+  s->Reset(thr->proc());
   s->mtx.Unlock();
-  uptr sz = m->FreeBlock(thr->proc, (uptr)&block[0]);
+  uptr sz = m->FreeBlock(thr->proc(), (uptr)&block[0]);
   EXPECT_EQ(sz, 1 * sizeof(u64));
 }
 

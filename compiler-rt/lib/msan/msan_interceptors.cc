@@ -1327,7 +1327,16 @@ int OnExit() {
       VReport(1, "MemorySanitizer: failed to intercept '" #name "'\n"); \
   } while (0)
 
+#define MSAN_INTERCEPT_FUNC_VER(name, ver)                                    \
+  do {                                                                        \
+    if ((!INTERCEPT_FUNCTION_VER(name, ver) || !REAL(name)))                  \
+      VReport(                                                                \
+          1, "MemorySanitizer: failed to intercept '" #name "@@" #ver "'\n"); \
+  } while (0)
+
 #define COMMON_INTERCEPT_FUNCTION(name) MSAN_INTERCEPT_FUNC(name)
+#define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
+  MSAN_INTERCEPT_FUNC_VER(name, ver)
 #define COMMON_INTERCEPTOR_UNPOISON_PARAM(count)  \
   UnpoisonParam(count)
 #define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size) \
@@ -1573,8 +1582,13 @@ void InitializeInterceptors() {
   INTERCEPT_STRTO(wcstoul);
   INTERCEPT_STRTO(wcstoll);
   INTERCEPT_STRTO(wcstoull);
+#ifdef SANITIZER_NLDBL_VERSION
+  INTERCEPT_FUNCTION_VER(vswprintf, SANITIZER_NLDBL_VERSION);
+  INTERCEPT_FUNCTION_VER(swprintf, SANITIZER_NLDBL_VERSION);
+#else
   INTERCEPT_FUNCTION(vswprintf);
   INTERCEPT_FUNCTION(swprintf);
+#endif
   INTERCEPT_FUNCTION(strxfrm);
   INTERCEPT_FUNCTION(strxfrm_l);
   INTERCEPT_FUNCTION(strftime);

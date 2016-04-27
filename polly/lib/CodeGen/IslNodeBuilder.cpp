@@ -888,7 +888,7 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
         }
       }
 
-      if (const auto *IAClass = S.lookupInvariantEquivClass(Val)) {
+      if (auto *IAClass = S.lookupInvariantEquivClass(Val)) {
 
         // Check if this invariant access class is empty, hence if we never
         // actually added a loads instruction to it. In that case it has no
@@ -1035,7 +1035,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
 }
 
 bool IslNodeBuilder::preloadInvariantEquivClass(
-    const InvariantEquivClassTy &IAClass) {
+    InvariantEquivClassTy &IAClass) {
   // For an equivalence class of invariant loads we pre-load the representing
   // element with the unified execution context. However, we have to map all
   // elements of the class to the one preloaded load as they are referenced
@@ -1059,18 +1059,26 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   if (!PreloadedPtrs.insert(PtrId).second)
     return false;
 
+  // The exectution context of the IAClass.
+  isl_set *&ExecutionCtx = std::get<2>(IAClass);
+
   // If the base pointer of this class is dependent on another one we have to
   // make sure it was preloaded already.
   auto *SAI = MA->getScopArrayInfo();
-  if (const auto *BaseIAClass = S.lookupInvariantEquivClass(SAI->getBasePtr()))
+  if (auto *BaseIAClass = S.lookupInvariantEquivClass(SAI->getBasePtr())) {
     if (!preloadInvariantEquivClass(*BaseIAClass))
       return false;
+
+    // After we preloaded the BaseIAClass we adjusted the BaseExecutionCtx and
+    // we need to refine the ExecutionCtx.
+    isl_set *BaseExecutionCtx = isl_set_copy(std::get<2>(*BaseIAClass));
+    ExecutionCtx = isl_set_intersect(ExecutionCtx, BaseExecutionCtx);
+  }
 
   Instruction *AccInst = MA->getAccessInstruction();
   Type *AccInstTy = AccInst->getType();
 
-  isl_set *Domain = isl_set_copy(std::get<2>(IAClass));
-  Value *PreloadVal = preloadInvariantLoad(*MA, Domain);
+  Value *PreloadVal = preloadInvariantLoad(*MA, isl_set_copy(ExecutionCtx));
   if (!PreloadVal)
     return false;
 
@@ -1138,7 +1146,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
 
 bool IslNodeBuilder::preloadInvariantLoads() {
 
-  const auto &InvariantEquivClasses = S.getInvariantAccesses();
+  auto &InvariantEquivClasses = S.getInvariantAccesses();
   if (InvariantEquivClasses.empty())
     return true;
 
@@ -1147,7 +1155,7 @@ bool IslNodeBuilder::preloadInvariantLoads() {
   PreLoadBB->setName("polly.preload.begin");
   Builder.SetInsertPoint(&PreLoadBB->front());
 
-  for (const auto &IAClass : InvariantEquivClasses)
+  for (auto &IAClass : InvariantEquivClasses)
     if (!preloadInvariantEquivClass(IAClass))
       return false;
 

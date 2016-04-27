@@ -42,8 +42,9 @@ set(CLANG_TOOLS_TEST_DEPS
 
   # Individual tools we test.
   clang-apply-replacements
-  clang-rename
+  clang-include-fixer
   clang-query
+  clang-rename
   clang-tidy
   modularize
   pp-trace

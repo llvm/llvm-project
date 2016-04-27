@@ -587,7 +587,11 @@ uptr MemToShadowImpl(uptr x) {
   return (((x) & ~(Mapping::kAppMemMsk | (kShadowCell - 1)))
       ^ Mapping::kAppMemXor) * kShadowCnt;
 #else
+# ifndef SANITIZER_WINDOWS
   return ((x & ~(kShadowCell - 1)) * kShadowCnt) | Mapping::kShadowBeg;
+# else
+  return ((x & ~(kShadowCell - 1)) * kShadowCnt) + Mapping::kShadowBeg;
+# endif
 #endif
 }
 
@@ -662,7 +666,6 @@ uptr ShadowToMemImpl(uptr s) {
 # ifndef SANITIZER_WINDOWS
   return (s & ~Mapping::kShadowBeg) / kShadowCnt;
 # else
-  // FIXME(dvyukov): this is most likely wrong as the mapping is not bijection.
   return (s - Mapping::kShadowBeg) / kShadowCnt;
 # endif // SANITIZER_WINDOWS
 #endif

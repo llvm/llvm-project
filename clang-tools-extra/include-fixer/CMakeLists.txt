@@ -18,3 +18,4 @@ add_clang_library(clangIncludeFixer
   )
 
 add_subdirectory(tool)
+add_subdirectory(find-all-symbols)
