@@ -308,6 +308,10 @@ LoadSwiftFormatters (lldb::TypeCategoryImplSP swift_category_sp)
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEndCreator, "Swift.Optional synthetic children", ConstString("()?"), optional_synth_flags, false);
     
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Range_SummaryProvider, "Swift.Range summary provider", ConstString("Swift.Range<.+>$"), summary_flags, true);
+    AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::CountableRange_SummaryProvider, "Swift.CountableRange summary provider", ConstString("Swift.CountableRange<.+>$"), summary_flags, true);
+    AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::ClosedRange_SummaryProvider, "Swift.ClosedRange summary provider", ConstString("Swift.ClosedRange<.+>$"), summary_flags, true);
+    AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::CountableClosedRange_SummaryProvider, "Swift.CountableClosedRange summary provider", ConstString("Swift.CountableClosedRange<.+>$"), summary_flags, true);
+
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::StridedRangeGenerator_SummaryProvider, "Swift.StridedRangeGenerator summary provider", ConstString("Swift.StridedRangeGenerator<.+>$"), summary_flags, true);
     
     TypeSummaryImpl::Flags nil_summary_flags;

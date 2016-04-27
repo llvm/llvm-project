@@ -10,9 +10,11 @@
 //
 // -----------------------------------------------------------------------------
 func main() {
-  var a = 1...100
-  var b = 1..<100
-  
+  var a: ClosedRange = 1...100
+  var b: Range = 1..<100
+  var c = 1...100
+  var d = 1..<100
+
   print("Set breakpoint here")
 }
 
