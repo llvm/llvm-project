@@ -33,6 +33,8 @@ template <class ELFT> class MergeInputSection;
 template <class ELFT> class MipsReginfoInputSection;
 template <class ELFT> class OutputSection;
 template <class ELFT> class ObjectFile;
+template <class ELFT> class SharedFile;
+template <class ELFT> class SharedSymbol;
 template <class ELFT> class DefinedRegular;
 
 template <class ELFT>
@@ -220,6 +222,49 @@ private:
 
   // A vector of symbols and their string table offsets.
   std::vector<std::pair<SymbolBody *, size_t>> Symbols;
+};
+
+// For more information about .gnu.version and .gnu.version_r see:
+// https://www.akkadia.org/drepper/symbol-versioning
+
+// The .gnu.version section specifies the required version of each symbol in the
+// dynamic symbol table. It contains one Elf_Versym for each dynamic symbol
+// table entry. An Elf_Versym is just a 16-bit integer that refers to a version
+// identifier defined in the .gnu.version_r section.
+template <class ELFT>
+class VersionTableSection final : public OutputSectionBase<ELFT> {
+  typedef typename ELFT::Versym Elf_Versym;
+
+public:
+  VersionTableSection();
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+};
+
+// The .gnu.version_r section defines the version identifiers used by
+// .gnu.version. It contains a linked list of Elf_Verneed data structures. Each
+// Elf_Verneed specifies the version requirements for a single DSO, and contains
+// a reference to a linked list of Elf_Vernaux data structures which define the
+// mapping from version identifiers to version names.
+template <class ELFT>
+class VersionNeedSection final : public OutputSectionBase<ELFT> {
+  typedef typename ELFT::Verneed Elf_Verneed;
+  typedef typename ELFT::Vernaux Elf_Vernaux;
+
+  // A vector of shared files that need Elf_Verneed data structures and the
+  // string table offsets of their sonames.
+  std::vector<std::pair<SharedFile<ELFT> *, size_t>> Needed;
+
+  // The next available version identifier. Identifiers start at 2 because 0 and
+  // 1 are reserved.
+  unsigned NextIndex = 2;
+
+public:
+  VersionNeedSection();
+  void addSymbol(SharedSymbol<ELFT> *SS);
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+  size_t getNeedNum() const { return Needed.size(); }
 };
 
 template <class ELFT>
@@ -562,6 +607,8 @@ template <class ELFT> struct Out {
   static StringTableSection<ELFT> *StrTab;
   static SymbolTableSection<ELFT> *DynSymTab;
   static SymbolTableSection<ELFT> *SymTab;
+  static VersionTableSection<ELFT> *VerSym;
+  static VersionNeedSection<ELFT> *VerNeed;
   static Elf_Phdr *TlsPhdr;
   static OutputSectionBase<ELFT> *ElfHeader;
   static OutputSectionBase<ELFT> *ProgramHeaders;
@@ -587,6 +634,8 @@ template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::ShStrTab;
 template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::StrTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::DynSymTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::SymTab;
+template <class ELFT> VersionTableSection<ELFT> *Out<ELFT>::VerSym;
+template <class ELFT> VersionNeedSection<ELFT> *Out<ELFT>::VerNeed;
 template <class ELFT> typename ELFT::Phdr *Out<ELFT>::TlsPhdr;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ElfHeader;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ProgramHeaders;

@@ -415,6 +415,7 @@ static void AsanInitInternal() {
 
   AsanCheckIncompatibleRT();
   AsanCheckDynamicRTPrereqs();
+  AvoidCVE_2016_2143();
 
   SetCanPoisonMemory(flags()->poison_heap);
   SetMallocContextSize(common_flags()->malloc_context_size);

@@ -21,7 +21,6 @@ class ThreadSpecificBreakPlusConditionTestCase(TestBase):
     @skipIfFreeBSD # test frequently times out or hangs
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr18522') # hits break in another thread in testrun
     @add_test_categories(['pyapi'])
-    @expectedFlakeyLinux # this test fails 6/100 dosep runs
     def test_python(self):
         """Test that we obey thread conditioned breakpoints."""
         self.build()

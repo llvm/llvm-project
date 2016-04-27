@@ -247,7 +247,7 @@ protected:
   /// to the required type.
   ///
   /// @returns False, iff a problem occured and the load was not preloaded.
-  bool preloadInvariantEquivClass(const InvariantEquivClassTy &IAClass);
+  bool preloadInvariantEquivClass(InvariantEquivClassTy &IAClass);
 
   void createForVector(__isl_take isl_ast_node *For, int VectorWidth);
   void createForSequential(__isl_take isl_ast_node *For, bool KnownParallel);

@@ -406,7 +406,12 @@ struct ThreadState {
   DDLogicalThread *dd_lt;
 
   // Current wired Processor, or nullptr. Required to handle any events.
-  Processor *proc;
+  Processor *proc1;
+#ifndef SANITIZER_GO
+  Processor *proc() { return proc1; }
+#else
+  Processor *proc();
+#endif
 
   atomic_uintptr_t in_signal_handler;
   ThreadSignalContext *signal_ctx;

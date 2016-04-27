@@ -235,7 +235,7 @@ HostInfoLinux::ComputeSupportExeDirectory(FileSpec &file_spec)
 bool
 HostInfoLinux::ComputeSystemPluginsDirectory(FileSpec &file_spec)
 {
-    FileSpec temp_file("/usr/lib/lldb", true);
+    FileSpec temp_file("/usr/lib/lldb/plugins", true);
     file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
     return true;
 }

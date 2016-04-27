@@ -407,6 +407,12 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
     case SHT_SYMTAB_SHNDX:
       this->SymtabSHNDX = check(Obj.getSHNDXTable(Sec));
       break;
+    case SHT_GNU_versym:
+      this->VersymSec = &Sec;
+      break;
+    case SHT_GNU_verdef:
+      this->VerdefSec = &Sec;
+      break;
     }
   }
 
@@ -430,17 +436,70 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
   }
 }
 
+// Parse the version definitions in the object file if present. Returns a vector
+// whose nth element contains a pointer to the Elf_Verdef for version identifier
+// n. Version identifiers that are not definitions map to nullptr. The array
+// always has at least length 1.
+template <class ELFT>
+std::vector<const typename ELFT::Verdef *>
+SharedFile<ELFT>::parseVerdefs(const Elf_Versym *&Versym) {
+  std::vector<const Elf_Verdef *> Verdefs(1);
+  // We only need to process symbol versions for this DSO if it has both a
+  // versym and a verdef section, which indicates that the DSO contains symbol
+  // version definitions.
+  if (!VersymSec || !VerdefSec)
+    return Verdefs;
+
+  // The location of the first global versym entry.
+  Versym = reinterpret_cast<const Elf_Versym *>(this->ELFObj.base() +
+                                                VersymSec->sh_offset) +
+           this->Symtab->sh_info;
+
+  // We cannot determine the largest verdef identifier without inspecting
+  // every Elf_Verdef, but both bfd and gold assign verdef identifiers
+  // sequentially starting from 1, so we predict that the largest identifier
+  // will be VerdefCount.
+  unsigned VerdefCount = VerdefSec->sh_info;
+  Verdefs.resize(VerdefCount + 1);
+
+  // Build the Verdefs array by following the chain of Elf_Verdef objects
+  // from the start of the .gnu.version_d section.
+  const uint8_t *Verdef = this->ELFObj.base() + VerdefSec->sh_offset;
+  for (unsigned I = 0; I != VerdefCount; ++I) {
+    auto *CurVerdef = reinterpret_cast<const Elf_Verdef *>(Verdef);
+    Verdef += CurVerdef->vd_next;
+    unsigned VerdefIndex = CurVerdef->vd_ndx;
+    if (Verdefs.size() <= VerdefIndex)
+      Verdefs.resize(VerdefIndex + 1);
+    Verdefs[VerdefIndex] = CurVerdef;
+  }
+
+  return Verdefs;
+}
+
 // Fully parse the shared object file. This must be called after parseSoName().
 template <class ELFT> void SharedFile<ELFT>::parseRest() {
+  // Create mapping from version identifiers to Elf_Verdef entries.
+  const Elf_Versym *Versym = nullptr;
+  std::vector<const Elf_Verdef *> Verdefs = parseVerdefs(Versym);
+
   Elf_Sym_Range Syms = this->getElfSymbols(true);
   uint32_t NumSymbols = std::distance(Syms.begin(), Syms.end());
   SymbolBodies.reserve(NumSymbols);
   for (const Elf_Sym &Sym : Syms) {
+    unsigned VersymIndex = 0;
+    if (Versym) {
+      VersymIndex = Versym->vs_index;
+      ++Versym;
+      // Ignore local symbols and non-default versions.
+      if (VersymIndex == 0 || (VersymIndex & VERSYM_HIDDEN))
+        continue;
+    }
     StringRef Name = check(Sym.getName(this->StringTable));
     if (Sym.isUndefined())
       Undefs.push_back(Name);
     else
-      SymbolBodies.emplace_back(this, Name, Sym);
+      SymbolBodies.emplace_back(this, Name, Sym, Verdefs[VersymIndex]);
   }
 }
 

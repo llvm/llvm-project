@@ -43,6 +43,8 @@ using namespace __esan; // NOLINT
 #define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!EsanIsInitialized)
 
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
+#define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
+  INTERCEPT_FUNCTION_VER(name, ver)
 
 // We currently do not use ctx.
 #define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)                               \

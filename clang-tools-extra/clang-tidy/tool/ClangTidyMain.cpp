@@ -333,6 +333,10 @@ static int clangTidyMain(int argc, const char **argv) {
   }
 
   if (ListChecks) {
+    if (EnabledChecks.empty()) {
+      llvm::errs() << "No checks enabled.\n";
+      return 1;
+    }
     llvm::outs() << "Enabled checks:";
     for (auto CheckName : EnabledChecks)
       llvm::outs() << "\n    " << CheckName;

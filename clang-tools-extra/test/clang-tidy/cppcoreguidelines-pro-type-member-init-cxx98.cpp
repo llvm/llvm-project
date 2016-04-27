@@ -70,26 +70,36 @@ struct NegativeAggregateType {
   int Z;
 };
 
-struct NonTrivialType {
+struct TrivialType {
   int X;
   int Y;
 };
 
 struct PositiveUninitializedBaseOrdering : public NegativeAggregateType,
-                                           public NonTrivialType {
-  PositiveUninitializedBaseOrdering() : NegativeAggregateType(), NonTrivialType(), B() {}
+                                           public TrivialType {
+  PositiveUninitializedBaseOrdering() : NegativeAggregateType(), TrivialType(), B() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these fields: A
-  // CHECK-FIXES: PositiveUninitializedBaseOrdering() : NegativeAggregateType(), NonTrivialType(), A(), B() {}
+  // CHECK-FIXES: PositiveUninitializedBaseOrdering() : NegativeAggregateType(), TrivialType(), A(), B() {}
 
   // This is somewhat pathological with the base class initializer at the end...
-  PositiveUninitializedBaseOrdering(int) : B(), NonTrivialType(), A() {}
+  PositiveUninitializedBaseOrdering(int) : B(), TrivialType(), A() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these bases: NegativeAggregateType
-  // CHECK-FIXES: PositiveUninitializedBaseOrdering(int) : B(), NegativeAggregateType(), NonTrivialType(), A() {}
+  // CHECK-FIXES: PositiveUninitializedBaseOrdering(int) : B(), NegativeAggregateType(), TrivialType(), A() {}
 
   PositiveUninitializedBaseOrdering(float) : NegativeAggregateType(), A() {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these bases: NonTrivialType
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these bases: TrivialType
   // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: constructor does not initialize these fields: B
-  // CHECK-FIXES: PositiveUninitializedBaseOrdering(float) : NegativeAggregateType(), NonTrivialType(), A(), B() {}
+  // CHECK-FIXES: PositiveUninitializedBaseOrdering(float) : NegativeAggregateType(), TrivialType(), A(), B() {}
 
   int A, B;
+};
+
+template <class T>
+class PositiveTemplateBase : T {
+public:
+  PositiveTemplateBase() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these fields: X
+  // CHECK-FIXES: PositiveTemplateBase() : X() {}
+
+  int X;
 };

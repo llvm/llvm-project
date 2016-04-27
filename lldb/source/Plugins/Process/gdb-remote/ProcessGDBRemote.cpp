@@ -4863,14 +4863,7 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
         if (!modInfo.get_link_map (link_map))
             link_map = LLDB_INVALID_ADDRESS;
 
-        // hack (cleaner way to get file name only?) (win/unix compat?)
-        size_t marker = mod_name.rfind ('/');
-        if (marker == std::string::npos)
-            marker = 0;
-        else
-            marker += 1;
-
-        FileSpec file (mod_name.c_str()+marker, true);
+        FileSpec file (mod_name.c_str(), true);
         lldb::ModuleSP module_sp = LoadModuleAtAddress (file, link_map, mod_base,
                                                         mod_base_is_offset);
 

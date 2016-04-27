@@ -132,6 +132,8 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   StringTableSection<ELFT> DynStrTab(".dynstr", true);
   StringTableSection<ELFT> ShStrTab(".shstrtab", false);
   SymbolTableSection<ELFT> DynSymTab(*Symtab, DynStrTab);
+  VersionTableSection<ELFT> VerSym;
+  VersionNeedSection<ELFT> VerNeed;
 
   OutputSectionBase<ELFT> ElfHeader("", 0, SHF_ALLOC);
   ElfHeader.setSize(sizeof(Elf_Ehdr));
@@ -195,6 +197,8 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   Out<ELFT>::ShStrTab = &ShStrTab;
   Out<ELFT>::StrTab = StrTab.get();
   Out<ELFT>::SymTab = SymTabSec.get();
+  Out<ELFT>::VerSym = &VerSym;
+  Out<ELFT>::VerNeed = &VerNeed;
   Out<ELFT>::Bss = nullptr;
   Out<ELFT>::MipsRldMap = MipsRldMap.get();
   Out<ELFT>::Opd = nullptr;
@@ -424,8 +428,12 @@ static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
 // the DSO is loaded.
 template <class ELFT> static bool isAbsolute(const SymbolBody &Body) {
   Symbol *Sym = Body.Backref;
-  if (Body.isUndefined() && Sym->isWeak())
-    return true; // always 0
+  if (Body.isUndefined()) {
+    if (!Sym)
+      return false; // undefined local. That is the dummy symbol 0.
+    if (Sym->isWeak())
+      return true; // always 0
+  }
   if (const auto *DR = dyn_cast<DefinedRegular<ELFT>>(&Body))
     return DR->Section == nullptr; // Absolute symbol.
   return false;
@@ -489,6 +497,24 @@ static bool needsCopyRel(RelExpr E, const SymbolBody &S) {
   return true;
 }
 
+template <class ELFT>
+static bool isRelRelative(RelExpr E, uint32_t Type, const SymbolBody &Body) {
+  if (E == R_SIZE)
+    return true;
+
+  bool AbsVal = (isAbsolute<ELFT>(Body) || Body.isTls()) &&
+                !refersToGotEntry(E) && !needsPlt(E);
+
+  bool RelE = E == R_PC || E == R_PLT_PC || E == R_GOT_PC || E == R_GOTREL ||
+              E == R_PAGE_PC;
+  if (AbsVal && !RelE)
+    return true;
+  if (!AbsVal && RelE)
+    return true;
+
+  return Target->isRelRelative(Type);
+}
+
 // The reason we have to do this early scan is as follows
 // * To mmap the output file, we need to know the size
 // * For that, we need to know how many dynamic relocs we will have.
@@ -534,7 +560,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 
     // This relocation does not require got entry, but it is relative to got and
     // needs it to be created. Here we request for that.
-    if (Expr == R_GOTONLY_PC || Expr == R_GOTREL)
+    if (Expr == R_GOTONLY_PC || Expr == R_GOTREL || Expr == R_PPC_TOC)
       HasGotOffRel = true;
 
     uintX_t Addend = getAddend<ELFT>(RI);
@@ -558,7 +584,8 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       continue;
     }
 
-    if (Expr == R_GOT && !Target->isRelRelative(Type) && Config->Shared)
+    if (Expr == R_GOT && !isRelRelative<ELFT>(Expr, Type, Body) &&
+        Config->Shared)
       AddDyn({Target->RelativeRel, C.OutSec, Offset, true, &Body,
               getAddend<ELFT>(RI)});
 
@@ -687,13 +714,6 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       continue;
     }
 
-    if (Config->EMachine == EM_PPC64 && RI.getType(false) == R_PPC64_TOC) {
-      C.Relocations.push_back({R_PPC_TOC, Type, Offset, Addend, &Body});
-      AddDyn({R_PPC64_RELATIVE, C.OutSec, Offset, false, nullptr,
-              (uintX_t)getPPC64TocBase() + Addend});
-      continue;
-    }
-
     // We know that this is the final symbol. If the program being produced
     // is position independent, the final value is still not known.
     // If the relocation depends on the symbol value (not the size or distances
@@ -701,8 +721,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     // We can however do better than just copying the incoming relocation. We
     // can process some of it and and just ask the dynamic linker to add the
     // load address.
-    if (!Config->Pic || Target->isRelRelative(Type) || Expr == R_PC ||
-        Expr == R_SIZE || isAbsolute<ELFT>(Body)) {
+    if (!Config->Pic || isRelRelative<ELFT>(Expr, Type, Body)) {
       if (Config->EMachine == EM_MIPS && Body.isLocal() &&
           (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32))
         Addend += File.getMipsGp0();
@@ -710,8 +729,10 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       continue;
     }
 
+    if (Config->EMachine == EM_PPC64 && Type == R_PPC64_TOC)
+      Addend += getPPC64TocBase();
     AddDyn({Target->RelativeRel, C.OutSec, Offset, true, &Body, Addend});
-    C.Relocations.push_back({R_ABS, Type, Offset, Addend, &Body});
+    C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
   }
 
   // Scan relocations for necessary thunks.
@@ -1350,8 +1371,11 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     if (Out<ELFT>::SymTab)
       Out<ELFT>::SymTab->addSymbol(Body);
 
-    if (isOutputDynamic() && S->includeInDynsym())
+    if (isOutputDynamic() && S->includeInDynsym()) {
       Out<ELFT>::DynSymTab->addSymbol(Body);
+      if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(Body))
+        Out<ELFT>::VerNeed->addSymbol(SS);
+    }
   }
 
   // Do not proceed if there was an undefined symbol.
@@ -1419,6 +1443,10 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   Add(Out<ELFT>::StrTab);
   if (isOutputDynamic()) {
     Add(Out<ELFT>::DynSymTab);
+    if (Out<ELFT>::VerNeed->getNeedNum() != 0) {
+      Add(Out<ELFT>::VerSym);
+      Add(Out<ELFT>::VerNeed);
+    }
     Add(Out<ELFT>::GnuHashTab);
     Add(Out<ELFT>::HashTab);
     Add(Out<ELFT>::Dynamic);

@@ -42,7 +42,7 @@ void ThreadContext::OnDead() {
 void ThreadContext::OnJoined(void *arg) {
   ThreadState *caller_thr = static_cast<ThreadState *>(arg);
   AcquireImpl(caller_thr, 0, &sync);
-  sync.Reset(&caller_thr->proc->clock_cache);
+  sync.Reset(&caller_thr->proc()->clock_cache);
 }
 
 struct OnCreatedArgs {
@@ -74,7 +74,7 @@ void ThreadContext::OnReset() {
 
 void ThreadContext::OnDetached(void *arg) {
   ThreadState *thr1 = static_cast<ThreadState*>(arg);
-  sync.Reset(&thr1->proc->clock_cache);
+  sync.Reset(&thr1->proc()->clock_cache);
 }
 
 struct OnStartedArgs {
@@ -116,7 +116,7 @@ void ThreadContext::OnStarted(void *arg) {
   thr->fast_synch_epoch = epoch0;
   AcquireImpl(thr, 0, &sync);
   StatInc(thr, StatSyncAcquire);
-  sync.Reset(&thr->proc->clock_cache);
+  sync.Reset(&thr->proc()->clock_cache);
   thr->is_inited = true;
   DPrintf("#%d: ThreadStart epoch=%zu stk_addr=%zx stk_size=%zx "
           "tls_addr=%zx tls_size=%zx\n",

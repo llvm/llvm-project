@@ -654,6 +654,12 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (!Config->Entry.empty())
     Add({DT_DEBUG, (uint64_t)0});
 
+  if (size_t NeedNum = Out<ELFT>::VerNeed->getNeedNum()) {
+    Add({DT_VERSYM, Out<ELFT>::VerSym});
+    Add({DT_VERNEED, Out<ELFT>::VerNeed});
+    Add({DT_VERNEEDNUM, NeedNum});
+  }
+
   if (Config->EMachine == EM_MIPS) {
     Add({DT_MIPS_RLD_VERSION, 1});
     Add({DT_MIPS_FLAGS, RHF_NOTPOT});
@@ -1514,6 +1520,102 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
 }
 
 template <class ELFT>
+VersionTableSection<ELFT>::VersionTableSection()
+    : OutputSectionBase<ELFT>(".gnu.version", SHT_GNU_versym, SHF_ALLOC) {}
+
+template <class ELFT> void VersionTableSection<ELFT>::finalize() {
+  this->Header.sh_size =
+      sizeof(Elf_Versym) * (Out<ELFT>::DynSymTab->getSymbols().size() + 1);
+  this->Header.sh_entsize = sizeof(Elf_Versym);
+}
+
+template <class ELFT> void VersionTableSection<ELFT>::writeTo(uint8_t *Buf) {
+  auto *OutVersym = reinterpret_cast<Elf_Versym *>(Buf) + 1;
+  for (const std::pair<SymbolBody *, size_t> &P :
+       Out<ELFT>::DynSymTab->getSymbols()) {
+    if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(P.first))
+      OutVersym->vs_index = SS->VersionId;
+    else
+      // The reserved identifier for a non-versioned global symbol.
+      OutVersym->vs_index = 1;
+    ++OutVersym;
+  }
+}
+
+template <class ELFT>
+VersionNeedSection<ELFT>::VersionNeedSection()
+    : OutputSectionBase<ELFT>(".gnu.version_r", SHT_GNU_verneed, SHF_ALLOC) {}
+
+template <class ELFT>
+void VersionNeedSection<ELFT>::addSymbol(SharedSymbol<ELFT> *SS) {
+  if (!SS->Verdef) {
+    // The reserved identifier for a non-versioned global symbol.
+    SS->VersionId = 1;
+    return;
+  }
+  SharedFile<ELFT> *F = SS->File;
+  // If we don't already know that we need an Elf_Verneed for this DSO, prepare
+  // to create one by adding it to our needed list and creating a dynstr entry
+  // for the soname.
+  if (F->VerdefMap.empty())
+    Needed.push_back({F, Out<ELFT>::DynStrTab->addString(F->getSoName())});
+  typename SharedFile<ELFT>::NeededVer &NV = F->VerdefMap[SS->Verdef];
+  // If we don't already know that we need an Elf_Vernaux for this Elf_Verdef,
+  // prepare to create one by allocating a version identifier and creating a
+  // dynstr entry for the version name.
+  if (NV.Index == 0) {
+    NV.StrTab = Out<ELFT>::DynStrTab->addString(
+        SS->File->getStringTable().data() + SS->Verdef->getAux()->vda_name);
+    NV.Index = NextIndex++;
+  }
+  SS->VersionId = NV.Index;
+}
+
+template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *Buf) {
+  // The Elf_Verneeds need to appear first, followed by the Elf_Vernauxs.
+  auto *Verneed = reinterpret_cast<Elf_Verneed *>(Buf);
+  auto *Vernaux = reinterpret_cast<Elf_Vernaux *>(Verneed + Needed.size());
+
+  for (std::pair<SharedFile<ELFT> *, size_t> &P : Needed) {
+    // Create an Elf_Verneed for this DSO.
+    Verneed->vn_version = 1;
+    Verneed->vn_cnt = P.first->VerdefMap.size();
+    Verneed->vn_file = P.second;
+    Verneed->vn_aux =
+        reinterpret_cast<char *>(Vernaux) - reinterpret_cast<char *>(Verneed);
+    Verneed->vn_next = sizeof(Elf_Verneed);
+    ++Verneed;
+
+    // Create the Elf_Vernauxs for this Elf_Verneed. The loop iterates over
+    // VerdefMap, which will only contain references to needed version
+    // definitions. Each Elf_Vernaux is based on the information contained in
+    // the Elf_Verdef in the source DSO. This loop iterates over a std::map of
+    // pointers, but is deterministic because the pointers refer to Elf_Verdef
+    // data structures within a single input file.
+    for (auto &NV : P.first->VerdefMap) {
+      Vernaux->vna_hash = NV.first->vd_hash;
+      Vernaux->vna_flags = 0;
+      Vernaux->vna_other = NV.second.Index;
+      Vernaux->vna_name = NV.second.StrTab;
+      Vernaux->vna_next = sizeof(Elf_Vernaux);
+      ++Vernaux;
+    }
+
+    Vernaux[-1].vna_next = 0;
+  }
+  Verneed[-1].vn_next = 0;
+}
+
+template <class ELFT> void VersionNeedSection<ELFT>::finalize() {
+  this->Header.sh_link = Out<ELFT>::DynStrTab->SectionIndex;
+  this->Header.sh_info = Needed.size();
+  unsigned Size = Needed.size() * sizeof(Elf_Verneed);
+  for (std::pair<SharedFile<ELFT> *, size_t> &P : Needed)
+    Size += P.first->VerdefMap.size() * sizeof(Elf_Vernaux);
+  this->Header.sh_size = Size;
+}
+
+template <class ELFT>
 BuildIdSection<ELFT>::BuildIdSection(size_t HashSize)
     : OutputSectionBase<ELFT>(".note.gnu.build-id", SHT_NOTE, SHF_ALLOC),
       HashSize(HashSize) {
@@ -1665,6 +1767,16 @@ template class SymbolTableSection<ELF32LE>;
 template class SymbolTableSection<ELF32BE>;
 template class SymbolTableSection<ELF64LE>;
 template class SymbolTableSection<ELF64BE>;
+
+template class VersionTableSection<ELF32LE>;
+template class VersionTableSection<ELF32BE>;
+template class VersionTableSection<ELF64LE>;
+template class VersionTableSection<ELF64BE>;
+
+template class VersionNeedSection<ELF32LE>;
+template class VersionNeedSection<ELF32BE>;
+template class VersionNeedSection<ELF64LE>;
+template class VersionNeedSection<ELF64BE>;
 
 template class BuildIdSection<ELF32LE>;
 template class BuildIdSection<ELF32BE>;

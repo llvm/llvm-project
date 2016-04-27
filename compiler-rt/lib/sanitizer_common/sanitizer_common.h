@@ -809,6 +809,16 @@ RunOnDestruction<Fn> at_scope_exit(Fn fn) {
   return RunOnDestruction<Fn>(fn);
 }
 
+// Linux on 64-bit s390 had a nasty bug that crashes the whole machine
+// if a process uses virtual memory over 4TB (as many sanitizers like
+// to do).  This function will abort the process if running on a kernel
+// that looks vulnerable.
+#if SANITIZER_LINUX && SANITIZER_S390_64
+void AvoidCVE_2016_2143();
+#else
+INLINE void AvoidCVE_2016_2143() {}
+#endif
+
 }  // namespace __sanitizer
 
 inline void *operator new(__sanitizer::operator_new_size_type size,

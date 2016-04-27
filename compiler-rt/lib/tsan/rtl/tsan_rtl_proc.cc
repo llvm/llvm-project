@@ -45,16 +45,16 @@ void ProcDestroy(Processor *proc) {
 }
 
 void ProcWire(Processor *proc, ThreadState *thr) {
-  CHECK_EQ(thr->proc, nullptr);
+  CHECK_EQ(thr->proc1, nullptr);
   CHECK_EQ(proc->thr, nullptr);
-  thr->proc = proc;
+  thr->proc1 = proc;
   proc->thr = thr;
 }
 
 void ProcUnwire(Processor *proc, ThreadState *thr) {
-  CHECK_EQ(thr->proc, proc);
+  CHECK_EQ(thr->proc1, proc);
   CHECK_EQ(proc->thr, thr);
-  thr->proc = nullptr;
+  thr->proc1 = nullptr;
   proc->thr = nullptr;
 }
 

@@ -321,6 +321,7 @@ void Initialize(ThreadState *thr) {
   const char *options = GetEnv(kTsanOptionsEnv);
   CacheBinaryName();
   InitializeFlags(&ctx->flags, options);
+  AvoidCVE_2016_2143();
   InitializePlatformEarly();
 #ifndef SANITIZER_GO
   // Re-exec ourselves if we need to set additional env or command line args.
