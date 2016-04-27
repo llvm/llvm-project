@@ -75,8 +75,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
       return Body.getPltVA<ELFT>();
     return Out<ELFT>::Bss->getVA() + SS.OffsetInBss;
   }
-  case SymbolBody::UndefinedElfKind:
-  case SymbolBody::UndefinedBitcodeKind:
+  case SymbolBody::UndefinedKind:
     return 0;
   case SymbolBody::LazyArchiveKind:
   case SymbolBody::LazyObjectKind:
@@ -104,7 +103,6 @@ SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,
 }
 
 void SymbolBody::init() {
-  CanKeepUndefined = false;
   NeedsCopyOrPltAddr = false;
   CanOmitFromDynSym = false;
 }
@@ -176,7 +174,7 @@ template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
     return DR->Size;
   if (const auto *S = dyn_cast<SharedSymbol<ELFT>>(this))
     return S->Sym.st_size;
-  if (const auto *U = dyn_cast<UndefinedElf<ELFT>>(this))
+  if (const auto *U = dyn_cast<Undefined>(this))
     return U->Size;
   return 0;
 }
@@ -233,30 +231,18 @@ bool DefinedBitcode::classof(const SymbolBody *S) {
   return S->kind() == DefinedBitcodeKind;
 }
 
-UndefinedBitcode::UndefinedBitcode(StringRef N, bool IsWeak, uint8_t StOther)
-    : SymbolBody(SymbolBody::UndefinedBitcodeKind, N,
-                 IsWeak ? STB_WEAK : STB_GLOBAL, StOther, 0 /* Type */) {}
-
-template <typename ELFT>
-UndefinedElf<ELFT>::UndefinedElf(StringRef N, const Elf_Sym &Sym)
-    : SymbolBody(SymbolBody::UndefinedElfKind, N, Sym.getBinding(),
-                 Sym.st_other, Sym.getType()),
-      Size(Sym.st_size) {}
-
-template <typename ELFT>
-UndefinedElf<ELFT>::UndefinedElf(StringRef Name, uint8_t Binding,
-                                 uint8_t StOther, uint8_t Type,
-                                 bool CanKeepUndefined)
-    : SymbolBody(SymbolBody::UndefinedElfKind, Name, Binding, StOther, Type) {
-  this->CanKeepUndefined = CanKeepUndefined;
+Undefined::Undefined(StringRef Name, uint8_t Binding, uint8_t StOther,
+                     uint8_t Type, uint64_t Size, bool IsBitcode)
+    : SymbolBody(SymbolBody::UndefinedKind, Name, Binding, StOther, Type),
+      Size(Size) {
+  this->IsUndefinedBitcode = IsBitcode;
 }
 
-template <typename ELFT>
-UndefinedElf<ELFT>::UndefinedElf(const Elf_Sym &Sym)
-    : SymbolBody(SymbolBody::UndefinedElfKind, Sym.st_name, Sym.st_other,
-                 Sym.getType()),
-      Size(Sym.st_size) {
-  assert(Sym.getBinding() == STB_LOCAL);
+Undefined::Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type,
+                     uint64_t Size)
+    : SymbolBody(SymbolBody::UndefinedKind, NameOffset, StOther, Type),
+      Size(Size) {
+  this->IsUndefinedBitcode = false;
 }
 
 template <typename ELFT>
@@ -363,11 +349,6 @@ template uint32_t SymbolBody::template getThunkVA<ELF32LE>() const;
 template uint32_t SymbolBody::template getThunkVA<ELF32BE>() const;
 template uint64_t SymbolBody::template getThunkVA<ELF64LE>() const;
 template uint64_t SymbolBody::template getThunkVA<ELF64BE>() const;
-
-template class elf::UndefinedElf<ELF32LE>;
-template class elf::UndefinedElf<ELF32BE>;
-template class elf::UndefinedElf<ELF64LE>;
-template class elf::UndefinedElf<ELF64BE>;
 
 template class elf::DefinedSynthetic<ELF32LE>;
 template class elf::DefinedSynthetic<ELF32BE>;

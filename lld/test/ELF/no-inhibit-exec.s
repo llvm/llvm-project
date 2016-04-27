@@ -10,6 +10,6 @@
 
 # next code will not link without noinhibit-exec flag
 # because of undefined symbol _bar
-.globl _start;
+.globl _start
 _start:
   call _bar

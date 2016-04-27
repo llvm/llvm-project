@@ -26,7 +26,7 @@ using namespace CodeGen;
 namespace {
 /// Lexical scope for OpenMP executable constructs, that handles correct codegen
 /// for captured expressions.
-class OMPLexicalScope : public CodeGenFunction::LexicalScope {
+class OMPLexicalScope final : public CodeGenFunction::LexicalScope {
   void emitPreInitStmt(CodeGenFunction &CGF, const OMPExecutableDirective &S) {
     for (const auto *C : S.clauses()) {
       if (auto *CPI = OMPClauseWithPreInit::get(C)) {
@@ -44,11 +44,40 @@ class OMPLexicalScope : public CodeGenFunction::LexicalScope {
       }
     }
   }
+  CodeGenFunction::OMPPrivateScope InlinedShareds;
+
+  static bool isCapturedVar(CodeGenFunction &CGF, const VarDecl *VD) {
+    return CGF.LambdaCaptureFields.lookup(VD) ||
+           (CGF.CapturedStmtInfo && CGF.CapturedStmtInfo->lookup(VD)) ||
+           (CGF.CurCodeDecl && isa<BlockDecl>(CGF.CurCodeDecl));
+  }
 
 public:
-  OMPLexicalScope(CodeGenFunction &CGF, const OMPExecutableDirective &S)
-      : CodeGenFunction::LexicalScope(CGF, S.getSourceRange()) {
+  OMPLexicalScope(CodeGenFunction &CGF, const OMPExecutableDirective &S,
+                  bool AsInlined = false)
+      : CodeGenFunction::LexicalScope(CGF, S.getSourceRange()),
+        InlinedShareds(CGF) {
     emitPreInitStmt(CGF, S);
+    if (AsInlined) {
+      if (S.hasAssociatedStmt()) {
+        auto *CS = cast<CapturedStmt>(S.getAssociatedStmt());
+        for (auto &C : CS->captures()) {
+          if (C.capturesVariable() || C.capturesVariableByCopy()) {
+            auto *VD = C.getCapturedVar();
+            DeclRefExpr DRE(const_cast<VarDecl *>(VD),
+                            isCapturedVar(CGF, VD) ||
+                                (CGF.CapturedStmtInfo &&
+                                 InlinedShareds.isGlobalVarCaptured(VD)),
+                            VD->getType().getNonReferenceType(), VK_LValue,
+                            SourceLocation());
+            InlinedShareds.addPrivate(VD, [&CGF, &DRE]() -> Address {
+              return CGF.EmitLValue(&DRE).getAddress();
+            });
+          }
+        }
+        (void)InlinedShareds.Privatize();
+      }
+    }
   }
 };
 
@@ -1601,7 +1630,7 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
       CGF.EmitBlock(ContBlock, true);
     }
   };
-  OMPLexicalScope Scope(*this, S);
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
   CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_simd, CodeGen);
 }
 
@@ -1995,7 +2024,7 @@ void CodeGenFunction::EmitOMPForDirective(const OMPForDirective &S) {
     HasLastprivates = CGF.EmitOMPWorksharingLoop(S);
   };
   {
-    OMPLexicalScope Scope(*this, S);
+    OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
     CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_for, CodeGen,
                                                 S.hasCancel());
   }
@@ -2013,7 +2042,7 @@ void CodeGenFunction::EmitOMPForSimdDirective(const OMPForSimdDirective &S) {
     HasLastprivates = CGF.EmitOMPWorksharingLoop(S);
   };
   {
-    OMPLexicalScope Scope(*this, S);
+    OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
     CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_simd, CodeGen);
   }
 
@@ -2167,7 +2196,7 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
 
 void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
   {
-    OMPLexicalScope Scope(*this, S);
+    OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
     EmitSections(S);
   }
   // Emit an implicit barrier at the end.
@@ -2181,7 +2210,7 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
     CGF.EmitStmt(cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
   };
-  OMPLexicalScope Scope(*this, S);
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
   CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_section, CodeGen,
                                               S.hasCancel());
 }
@@ -2213,7 +2242,7 @@ void CodeGenFunction::EmitOMPSingleDirective(const OMPSingleDirective &S) {
     CGF.EmitStmt(cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
   };
   {
-    OMPLexicalScope Scope(*this, S);
+    OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
     CGM.getOpenMPRuntime().emitSingleRegion(*this, CodeGen, S.getLocStart(),
                                             CopyprivateVars, DestExprs,
                                             SrcExprs, AssignmentOps);
@@ -2232,7 +2261,7 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
     Action.Enter(CGF);
     CGF.EmitStmt(cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
   };
-  OMPLexicalScope Scope(*this, S);
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
   CGM.getOpenMPRuntime().emitMasterRegion(*this, CodeGen, S.getLocStart());
 }
 
@@ -2244,7 +2273,7 @@ void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
   Expr *Hint = nullptr;
   if (auto *HintClause = S.getSingleClause<OMPHintClause>())
     Hint = HintClause->getHint();
-  OMPLexicalScope Scope(*this, S);
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
   CGM.getOpenMPRuntime().emitCriticalRegion(*this,
                                             S.getDirectiveName().getAsString(),
                                             CodeGen, S.getLocStart(), Hint);
@@ -2438,7 +2467,7 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
     Action.Enter(CGF);
     CGF.EmitStmt(cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
   };
-  OMPLexicalScope Scope(*this, S);
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
   CGM.getOpenMPRuntime().emitTaskgroupRegion(*this, CodeGen, S.getLocStart());
 }
 
@@ -2573,7 +2602,7 @@ void CodeGenFunction::EmitOMPDistributeDirective(
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
     CGF.EmitOMPDistributeLoop(S);
   };
-  OMPLexicalScope Scope(*this, S);
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
   CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_distribute, CodeGen,
                                               false);
 }
@@ -2606,7 +2635,7 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
           cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
     }
   };
-  OMPLexicalScope Scope(*this, S);
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
   CGM.getOpenMPRuntime().emitOrderedRegion(*this, CodeGen, S.getLocStart(), !C);
 }
 
@@ -3064,7 +3093,7 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
                       S.getV(), S.getExpr(), S.getUpdateExpr(),
                       S.isXLHSInRHSPart(), S.getLocStart());
   };
-  OMPLexicalScope Scope(*this, S);
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
   CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_atomic, CodeGen);
 }
 
@@ -3213,7 +3242,7 @@ CodeGenFunction::getOMPCancelDestination(OpenMPDirectiveKind Kind) {
 void CodeGenFunction::EmitOMPTargetDataDirective(
     const OMPTargetDataDirective &S) {
   // emit the code inside the construct for now
-  OMPLexicalScope Scope(*this, S);
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
   CGM.getOpenMPRuntime().emitInlinedDirective(
       *this, OMPD_target_data, [&S](CodeGenFunction &CGF, PrePostActionTy &) {
         CGF.EmitStmt(
@@ -3376,7 +3405,7 @@ void CodeGenFunction::EmitOMPTaskLoopDirective(const OMPTaskLoopDirective &S) {
 void CodeGenFunction::EmitOMPTaskLoopSimdDirective(
     const OMPTaskLoopSimdDirective &S) {
   // emit the code inside the construct for now
-  OMPLexicalScope Scope(*this, S);
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
   CGM.getOpenMPRuntime().emitInlinedDirective(
       *this, OMPD_taskloop_simd, [&S](CodeGenFunction &CGF, PrePostActionTy &) {
         OMPLoopScope PreInitScope(CGF, S);

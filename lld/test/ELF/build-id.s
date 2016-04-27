@@ -10,7 +10,7 @@
 # RUN: ld.lld %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=NONE %s
 
-.globl _start;
+.globl _start
 _start:
   nop
 

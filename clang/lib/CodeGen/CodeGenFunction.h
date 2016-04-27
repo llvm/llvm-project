@@ -641,6 +641,11 @@ public:
         ForceCleanup();
     }
 
+    /// Checks if the global variable is captured in current function. 
+    bool isGlobalVarCaptured(const VarDecl *VD) const {
+      return !VD->isLocalVarDeclOrParm() && CGF.LocalDeclMap.count(VD) > 0;
+    }
+
   private:
     /// Copy all the entries in the source map over the corresponding
     /// entries in the destination, which must exist.

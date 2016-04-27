@@ -32,7 +32,7 @@
 # CHECK-NEXT:  }
 
 .text
-.globl _start;
+.globl _start
 _start:
  nop
 

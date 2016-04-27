@@ -9,7 +9,7 @@
 # RUN: ld.lld %t
 # RUN: llvm-readobj a.out > /dev/null 2>&1
 
-.globl _start;
+.globl _start
 _start:
   mov $60, %rax
   mov $42, %rdi

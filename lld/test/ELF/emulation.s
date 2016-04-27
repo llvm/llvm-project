@@ -204,5 +204,5 @@
 
 # REQUIRES: x86,ppc,mips,aarch64
 
-.globl _start;
+.globl _start
 _start:

@@ -64,6 +64,8 @@ void critical_ref(S &s) {
   // CHECK: [[S_REF:%.+]] = load %struct.S*, %struct.S** [[S_ADDR]],
   // CHECK: [[S_A_REF:%.+]] = getelementptr inbounds %struct.S, %struct.S* [[S_REF]], i32 0, i32 0
   ++s.a;
+  // CHECK: [[S_REF:%.+]] = load %struct.S*, %struct.S** [[S_ADDR]],
+  // CHECK: store %struct.S* [[S_REF]], %struct.S** [[S_ADDR:%.+]],
   // CHECK: call void @__kmpc_critical(
 #pragma omp critical
   // CHECK: [[S_REF:%.+]] = load %struct.S*, %struct.S** [[S_ADDR]],

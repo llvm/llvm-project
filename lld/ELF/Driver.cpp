@@ -483,9 +483,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   if (HasError)
     return; // There were duplicate symbols or incompatible files
 
-  for (StringRef S : Config->Undefined)
-    Symtab.addUndefinedOpt(S);
-
+  Symtab.scanUndefinedFlags();
   Symtab.scanShlibUndefined();
   Symtab.scanDynamicList();
   Symtab.scanVersionScript();
