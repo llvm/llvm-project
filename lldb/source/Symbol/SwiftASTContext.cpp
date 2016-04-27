@@ -4782,8 +4782,6 @@ SwiftASTContext::GetIRGenModule ()
                                                                     llvm::getGlobalContext(),
                                                                     ir_gen_opts,
                                                                     ir_gen_opts.ModuleName,
-                                                                    data_layout,
-                                                                    llvm_triple,
                                                                     target_machine,
                                                                     GetSILModule (),
                                                                     ir_gen_opts.getSingleOutputFilename()));
