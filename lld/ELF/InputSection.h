@@ -123,12 +123,6 @@ public:
 
   ArrayRef<uint8_t> getSectionData() const;
 
-  // Returns a section that Rel is pointing to. Used by the garbage collector.
-  std::pair<InputSectionBase<ELFT> *, uintX_t>
-  getRelocTarget(const Elf_Rel &Rel) const;
-  std::pair<InputSectionBase<ELFT> *, uintX_t>
-  getRelocTarget(const Elf_Rela &Rel) const;
-
   void relocate(uint8_t *Buf, uint8_t *BufEnd);
   std::vector<Relocation> Relocations;
 };

@@ -32,5 +32,5 @@
 // RUN: not ld.lld -o %t/r %r/m.o --sysroot=%t -Llib -l:libls.a
 // RUN: not ld.lld -o %t/r %r/m.o --sysroot=%t -L/lib -l:libls.a
 
-.globl _start,_bar;
+.globl _start,_bar
 _start:

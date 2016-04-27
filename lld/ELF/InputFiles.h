@@ -127,6 +127,11 @@ public:
     return SymbolBodies[SymbolIndex]->repl();
   }
 
+  template <typename RelT> SymbolBody &getRelocTargetSym(const RelT &Rel) const {
+    uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
+    return getSymbolBody(SymIndex);
+  }
+
   const Elf_Shdr *getSymbolTable() const { return this->Symtab; };
 
   // Get MIPS GP0 value defined by this file. This value represents the gp value

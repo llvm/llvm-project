@@ -25,6 +25,7 @@
 #include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "Target.h"
 #include "Writer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELF.h"
@@ -38,31 +39,55 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
+// A resolved relocation. The Sec and Offset fields are set if the relocation
+// was resolved to an offset within a section.
+template <class ELFT>
+struct ResolvedReloc {
+  InputSectionBase<ELFT> *Sec;
+  typename ELFT::uint Offset;
+};
+
+template <class ELFT>
+static typename ELFT::uint getAddend(InputSectionBase<ELFT> *Sec,
+                                     const typename ELFT::Rel &Rel) {
+  return Target->getImplicitAddend(Sec->getSectionData().begin(),
+                                   Rel.getType(Config->Mips64EL));
+}
+
+template <class ELFT>
+static typename ELFT::uint getAddend(InputSectionBase<ELFT> *Sec,
+                                     const typename ELFT::Rela &Rel) {
+  return Rel.r_addend;
+}
+
+template <class ELFT, class RelT>
+static ResolvedReloc<ELFT> resolveReloc(InputSection<ELFT> *Sec, RelT &Rel) {
+  SymbolBody &B = Sec->getFile()->getRelocTargetSym(Rel);
+  auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
+  if (!D || !D->Section)
+    return {nullptr, 0};
+  typename ELFT::uint Offset = D->Value;
+  if (D->isSection())
+    Offset += getAddend(Sec, Rel);
+  return {D->Section->Repl, Offset};
+}
+
 // Calls Fn for each section that Sec refers to via relocations.
 template <class ELFT>
-static void forEachSuccessor(
-    InputSection<ELFT> *Sec,
-    std::function<void(InputSectionBase<ELFT> *, typename ELFT::uint Offset)>
-        Fn) {
+static void forEachSuccessor(InputSection<ELFT> *Sec,
+                             std::function<void(ResolvedReloc<ELFT>)> Fn) {
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
   typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::uint uintX_t;
 
   ELFFile<ELFT> &Obj = Sec->getFile()->getObj();
   for (const Elf_Shdr *RelSec : Sec->RelocSections) {
     if (RelSec->sh_type == SHT_RELA) {
-      for (const Elf_Rela &RI : Obj.relas(RelSec)) {
-        std::pair<InputSectionBase<ELFT> *, uintX_t> P =
-            Sec->getRelocTarget(RI);
-        Fn(P.first, P.second);
-      }
+      for (const Elf_Rela &RI : Obj.relas(RelSec))
+        Fn(resolveReloc(Sec, RI));
     } else {
-      for (const Elf_Rel &RI : Obj.rels(RelSec)) {
-        std::pair<InputSectionBase<ELFT> *, uintX_t> P =
-            Sec->getRelocTarget(RI);
-        Fn(P.first, P.second);
-      }
+      for (const Elf_Rel &RI : Obj.rels(RelSec))
+        Fn(resolveReloc(Sec, RI));
     }
   }
 }
@@ -97,25 +122,25 @@ template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
   typedef typename ELFT::uint uintX_t;
   SmallVector<InputSection<ELFT> *, 256> Q;
 
-  auto Enqueue = [&](InputSectionBase<ELFT> *Sec, uintX_t Offset) {
-    if (!Sec)
+  auto Enqueue = [&](ResolvedReloc<ELFT> R) {
+    if (!R.Sec)
       return;
-    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(Sec)) {
+    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(R.Sec)) {
       std::pair<std::pair<uintX_t, uintX_t> *, uintX_t> T =
-          MS->getRangeAndSize(Offset);
+          MS->getRangeAndSize(R.Offset);
       T.first->second = 0;
     }
-    if (Sec->Live)
+    if (R.Sec->Live)
       return;
-    Sec->Live = true;
-    if (InputSection<ELFT> *S = dyn_cast<InputSection<ELFT>>(Sec))
+    R.Sec->Live = true;
+    if (InputSection<ELFT> *S = dyn_cast<InputSection<ELFT>>(R.Sec))
       Q.push_back(S);
   };
 
   auto MarkSymbol = [&](SymbolBody *Sym) {
     if (Sym)
       if (auto *D = dyn_cast<DefinedRegular<ELFT>>(Sym))
-        Enqueue(D->Section, D->Value);
+        Enqueue({D->Section, D->Value});
   };
 
   // Add GC root symbols.
@@ -138,7 +163,7 @@ template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
     for (InputSectionBase<ELFT> *Sec : F->getSections())
       if (Sec && Sec != &InputSection<ELFT>::Discarded)
         if (isReserved(Sec) || Script<ELFT>::X->shouldKeep(Sec))
-          Enqueue(Sec, 0);
+          Enqueue({Sec, 0});
 
   // Mark all reachable sections.
   while (!Q.empty())

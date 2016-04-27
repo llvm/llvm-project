@@ -1137,10 +1137,8 @@ void EHOutputSection<ELFT>::addSectionAux(EHInputSection<ELFT> *S,
         C.FdeEncoding = getFdeEncoding(D);
 
       SymbolBody *Personality = nullptr;
-      if (HasReloc) {
-        uint32_t SymIndex = RelI->getSymbol(Config->Mips64EL);
-        Personality = &S->getFile()->getSymbolBody(SymIndex);
-      }
+      if (HasReloc)
+        Personality = &S->getFile()->getRelocTargetSym(*RelI);
 
       std::pair<StringRef, SymbolBody *> CieInfo(Entry, Personality);
       auto P = CieMap.insert(std::make_pair(CieInfo, Cies.size()));
@@ -1152,15 +1150,19 @@ void EHOutputSection<ELFT>::addSectionAux(EHInputSection<ELFT> *S,
     } else {
       if (!HasReloc)
         fatal("FDE doesn't reference another section");
-      InputSectionBase<ELFT> *Target = S->getRelocTarget(*RelI).first;
-      if (Target && Target->Live) {
-        uint32_t CieOffset = Offset + 4 - ID;
-        auto I = OffsetToIndex.find(CieOffset);
-        if (I == OffsetToIndex.end())
-          fatal("invalid CIE reference");
-        Cies[I->second].Fdes.push_back(EHRegion<ELFT>(S, Index));
-        Out<ELFT>::EhFrameHdr->reserveFde();
-        this->Header.sh_size += alignTo(Length, sizeof(uintX_t));
+      SymbolBody &B = S->getFile()->getRelocTargetSym(*RelI);
+      auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
+      if (D && D->Section) {
+        InputSectionBase<ELFT> *Target = D->Section->Repl;
+        if (Target && Target->Live) {
+          uint32_t CieOffset = Offset + 4 - ID;
+          auto I = OffsetToIndex.find(CieOffset);
+          if (I == OffsetToIndex.end())
+            fatal("invalid CIE reference");
+          Cies[I->second].Fdes.push_back(EHRegion<ELFT>(S, Index));
+          Out<ELFT>::EhFrameHdr->reserveFde();
+          this->Header.sh_size += alignTo(Length, sizeof(uintX_t));
+        }
       }
     }
 
@@ -1501,8 +1503,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
     if (cast<SharedSymbol<ELFT>>(Sym)->needsCopy())
       return Out<ELFT>::Bss;
     break;
-  case SymbolBody::UndefinedElfKind:
-  case SymbolBody::UndefinedBitcodeKind:
+  case SymbolBody::UndefinedKind:
   case SymbolBody::LazyArchiveKind:
   case SymbolBody::LazyObjectKind:
     break;

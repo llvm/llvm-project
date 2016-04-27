@@ -110,6 +110,8 @@ namespace
                Language::LanguageIsC (language) ||
                Language::LanguageIsCPlusPlus (language) ||
                Language::LanguageIsObjC (language) ||
+               // Use Clang for Rust until there is a proper language plugin for it
+               language == eLanguageTypeRust ||
                language == eLanguageTypeExtRenderScript;
     }
 }

@@ -90,8 +90,7 @@ public:
     DefinedBitcodeKind,
     DefinedSyntheticKind,
     DefinedLast = DefinedSyntheticKind,
-    UndefinedElfKind,
-    UndefinedBitcodeKind,
+    UndefinedKind,
     LazyArchiveKind,
     LazyObjectKind,
   };
@@ -99,9 +98,7 @@ public:
   Kind kind() const { return static_cast<Kind>(SymbolKind); }
 
   bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
-  bool isUndefined() const {
-    return SymbolKind == UndefinedBitcodeKind || SymbolKind == UndefinedElfKind;
-  }
+  bool isUndefined() const { return SymbolKind == UndefinedKind; }
   bool isDefined() const { return SymbolKind <= DefinedLast; }
   bool isCommon() const { return SymbolKind == DefinedCommonKind; }
   bool isLazy() const {
@@ -177,7 +174,10 @@ public:
   // symbol or if the symbol should point to its plt entry.
   unsigned NeedsCopyOrPltAddr : 1;
 
-  unsigned CanKeepUndefined : 1;
+  // True if the symbol is undefined and comes from a bitcode file. We need to
+  // keep track of this because undefined symbols only prevent internalization
+  // of bitcode symbols if they did not come from a bitcode file.
+  unsigned IsUndefinedBitcode : 1;
 
   // The following fields have the same meaning as the ELF symbol attributes.
   uint8_t Type;    // symbol type
@@ -309,31 +309,16 @@ public:
   const OutputSectionBase<ELFT> &Section;
 };
 
-class UndefinedBitcode : public SymbolBody {
+class Undefined : public SymbolBody {
 public:
-  UndefinedBitcode(StringRef N, bool IsWeak, uint8_t StOther);
+  Undefined(StringRef Name, uint8_t Binding, uint8_t StOther, uint8_t Type,
+            uint64_t Size, bool IsBitcode);
+  Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type, uint64_t Size);
+
+  uint64_t Size;
 
   static bool classof(const SymbolBody *S) {
-    return S->kind() == UndefinedBitcodeKind;
-  }
-};
-
-template <class ELFT> class UndefinedElf : public SymbolBody {
-  typedef typename ELFT::uint uintX_t;
-  typedef typename ELFT::Sym Elf_Sym;
-
-public:
-  UndefinedElf(StringRef N, const Elf_Sym &Sym);
-  UndefinedElf(const Elf_Sym &Sym);
-  UndefinedElf(StringRef Name, uint8_t Binding, uint8_t StOther, uint8_t Type,
-               bool CanKeepUndefined);
-
-  bool canKeepUndefined() const { return CanKeepUndefined; }
-
-  uintX_t Size;
-
-  static bool classof(const SymbolBody *S) {
-    return S->kind() == SymbolBody::UndefinedElfKind;
+    return S->kind() == UndefinedKind;
   }
 };
 

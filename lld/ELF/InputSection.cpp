@@ -78,43 +78,6 @@ InputSectionBase<ELFT>::getOffset(const DefinedRegular<ELFT> &Sym) {
 }
 
 template <class ELFT>
-static DefinedRegular<ELFT> *getRelocTargetSym(elf::ObjectFile<ELFT> *File,
-                                               const typename ELFT::Rel &Rel) {
-  uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
-  SymbolBody &B = File->getSymbolBody(SymIndex);
-  if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B))
-    if (D->Section)
-      return D;
-  return nullptr;
-}
-
-// Returns a section that Rel relocation is pointing to.
-template <class ELFT>
-std::pair<InputSectionBase<ELFT> *, typename ELFT::uint>
-InputSectionBase<ELFT>::getRelocTarget(const Elf_Rel &Rel) const {
-  auto *D = getRelocTargetSym(File, Rel);
-  if (!D)
-    return std::make_pair(nullptr, 0);
-  if (!D->isSection())
-    return std::make_pair(D->Section->Repl, D->Value);
-  const uint8_t *BufLoc = getSectionData().begin() + Rel.r_offset;
-  uintX_t Addend =
-      Target->getImplicitAddend(BufLoc, Rel.getType(Config->Mips64EL));
-  return std::make_pair(D->Section->Repl, D->Value + Addend);
-}
-
-template <class ELFT>
-std::pair<InputSectionBase<ELFT> *, typename ELFT::uint>
-InputSectionBase<ELFT>::getRelocTarget(const Elf_Rela &Rel) const {
-  auto *D = getRelocTargetSym(File, Rel);
-  if (!D)
-    return std::make_pair(nullptr, 0);
-  if (!D->isSection())
-    return std::make_pair(D->Section->Repl, D->Value);
-  return std::make_pair(D->Section->Repl, D->Value + Rel.r_addend);
-}
-
-template <class ELFT>
 InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
                                  const Elf_Shdr *Header)
     : InputSectionBase<ELFT>(F, Header, Base::Regular) {}
@@ -153,9 +116,8 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   InputSectionBase<ELFT> *RelocatedSection = getRelocatedSection();
 
   for (const RelTy &Rel : Rels) {
-    uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
     uint32_t Type = Rel.getType(Config->Mips64EL);
-    SymbolBody &Body = this->File->getSymbolBody(SymIndex);
+    SymbolBody &Body = this->File->getRelocTargetSym(Rel);
 
     RelTy *P = reinterpret_cast<RelTy *>(Buf);
     Buf += sizeof(RelTy);

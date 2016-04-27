@@ -103,7 +103,7 @@
 # SEC-MULTI: 6 .shstrtab     0000002c {{[0-9a-f]*}}
 # SEC-MULTI: 7 .strtab       00000008 {{[0-9a-f]*}}
 
-.globl _start;
+.globl _start
 _start:
     mov $60, %rax
     mov $42, %rdi

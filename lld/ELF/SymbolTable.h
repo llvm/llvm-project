@@ -59,6 +59,7 @@ public:
   DefinedRegular<ELFT> *addIgnored(StringRef Name,
                                    uint8_t Visibility = llvm::ELF::STV_HIDDEN);
 
+  void scanUndefinedFlags();
   void scanShlibUndefined();
   void scanDynamicList();
   void scanVersionScript();

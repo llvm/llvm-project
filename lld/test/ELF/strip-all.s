@@ -22,7 +22,7 @@
 #RUN: llvm-objdump -section-headers %t1 | FileCheck %s -check-prefix AFTER
 
 # exits with return code 42 on linux
-.globl _start;
+.globl _start
 _start:
   mov $60, %rax
   mov $42, %rdi

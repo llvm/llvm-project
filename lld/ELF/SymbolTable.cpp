@@ -151,17 +151,8 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
 template <class ELFT>
 SymbolBody *SymbolTable<ELFT>::addUndefined(StringRef Name) {
   auto *Sym = new (Alloc)
-      UndefinedElf<ELFT>(Name, STB_GLOBAL, STV_DEFAULT, /*Type*/ 0, false);
-  resolve(Sym);
-  return Sym;
-}
-
-// Add an undefined symbol. Unlike addUndefined, that symbol
-// doesn't have to be resolved, thus "opt" (optional).
-template <class ELFT>
-SymbolBody *SymbolTable<ELFT>::addUndefinedOpt(StringRef Name) {
-  auto *Sym = new (Alloc)
-      UndefinedElf<ELFT>(Name, STB_GLOBAL, STV_HIDDEN, /*Type*/ 0, true);
+      Undefined(Name, STB_GLOBAL, STV_DEFAULT, /*Type*/ 0, /*Size*/ 0,
+                /*IsBitcode*/ false);
   resolve(Sym);
   return Sym;
 }
@@ -324,7 +315,7 @@ template <class ELFT> Symbol *SymbolTable<ELFT>::insert(SymbolBody *New) {
   if (K == SymbolBody::DefinedRegularKind ||
       K == SymbolBody::DefinedCommonKind ||
       K == SymbolBody::DefinedSyntheticKind ||
-      K == SymbolBody::UndefinedElfKind)
+      (K == SymbolBody::UndefinedKind && !New->IsUndefinedBitcode))
     Sym->IsUsedInRegularObj = true;
   return Sym;
 }
@@ -366,6 +357,16 @@ void SymbolTable<ELFT>::addMemberFile(SymbolBody *Undef, Lazy *L) {
   // getMember returns nullptr if the member was already read from the library.
   if (std::unique_ptr<InputFile> File = L->getFile())
     addFile(std::move(File));
+}
+
+// Process undefined (-u) flags by loading lazy symbols named by those flags.
+template <class ELFT>
+void SymbolTable<ELFT>::scanUndefinedFlags() {
+  for (StringRef S : Config->Undefined)
+    if (SymbolBody *Sym = find(S))
+      if (auto *L = dyn_cast<Lazy>(Sym))
+        if (std::unique_ptr<InputFile> File = L->getFile())
+          addFile(std::move(File));
 }
 
 // This function takes care of the case in which shared libraries depend on

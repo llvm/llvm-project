@@ -293,7 +293,7 @@
 # RUN:  FileCheck --check-prefix=TERNERR %s
 # TERNERR: unexpected EOF
 
-.globl _start;
+.globl _start
 _start:
 nop
 
