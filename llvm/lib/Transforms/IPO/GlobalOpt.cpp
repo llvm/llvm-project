@@ -2391,23 +2391,16 @@ OptimizeGlobalAliases(Module &M,
 }
 
 static Function *FindCXAAtExit(Module &M, TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc::cxa_atexit))
+  LibFunc::Func F = LibFunc::cxa_atexit;
+  if (!TLI->has(F))
     return nullptr;
 
-  Function *Fn = M.getFunction(TLI->getName(LibFunc::cxa_atexit));
-
+  Function *Fn = M.getFunction(TLI->getName(F));
   if (!Fn)
     return nullptr;
 
-  FunctionType *FTy = Fn->getFunctionType();
-
-  // Checking that the function has the right return type, the right number of
-  // parameters and that they all have pointer types should be enough.
-  if (!FTy->getReturnType()->isIntegerTy() ||
-      FTy->getNumParams() != 3 ||
-      !FTy->getParamType(0)->isPointerTy() ||
-      !FTy->getParamType(1)->isPointerTy() ||
-      !FTy->getParamType(2)->isPointerTy())
+  // Make sure that the function has the correct prototype.
+  if (!TLI->getLibFunc(*Fn, F) || F != LibFunc::cxa_atexit)
     return nullptr;
 
   return Fn;

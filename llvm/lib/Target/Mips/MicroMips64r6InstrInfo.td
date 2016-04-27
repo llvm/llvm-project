@@ -41,6 +41,8 @@ class DADD_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dadd", 0b100010000>;
 class DADDIU_MM64R6_ENC : DADDIU_FM_MMR6<"daddiu">;
 class DADDU_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"daddu", 0b101010000>;
 class LDPC_MMR646_ENC : PCREL18_FM_MMR6<0b110>;
+class DSUB_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dsub", 0b110010000>;
+class DSUBU_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dsubu", 0b111010000>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -124,6 +126,24 @@ class DADDIU_MM64R6_DESC : ArithLogicI<"daddiu", simm16_64, GPR64Opnd,
                            IsAsCheapAsAMove;
 class DADDU_MM64R6_DESC : ArithLogicR<"daddu", GPR64Opnd, 1, II_DADDU, add>;
 
+class DSUB_DESC_BASE<string instr_asm, RegisterOperand RO,
+                     InstrItinClass Itin = NoItinerary,
+                     SDPatternOperator OpNode = null_frag>
+                     : MipsR6Inst {
+  dag OutOperandList = (outs RO:$rd);
+  dag InOperandList = (ins RO:$rs, RO:$rt);
+  string AsmString = !strconcat(instr_asm, "\t$rd, $rs, $rt");
+  list<dag> Pattern = [(set RO:$rd, (OpNode RO:$rs, RO:$rt))];
+  InstrItinClass Itinerary = Itin;
+  Format Form = FrmR;
+  string BaseOpcode = instr_asm;
+  let isCommutable = 0;
+  let isReMaterializable = 1;
+  let TwoOperandAliasConstraint = "$rd = $rs";
+}
+class DSUB_MM64R6_DESC : DSUB_DESC_BASE<"dsub", GPR64Opnd, II_DSUB>;
+class DSUBU_MM64R6_DESC : DSUB_DESC_BASE<"dsubu", GPR64Opnd, II_DSUBU, sub>;
+
 class LDPC_MM64R6_DESC : PCREL_MMR6_DESC_BASE<"ldpc", GPR64Opnd, simm18_lsl3>;
 
 //===----------------------------------------------------------------------===//
@@ -178,6 +198,10 @@ let DecoderNamespace = "MicroMipsR6" in {
                     ISA_MICROMIPS64R6;
   def LDPC_MM64R6 :  R6MMR6Rel, LDPC_MMR646_ENC, LDPC_MM64R6_DESC,
                      ISA_MICROMIPS64R6;
+  def DSUB_MM64R6 : StdMMR6Rel, DSUB_MM64R6_DESC, DSUB_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
+  def DSUBU_MM64R6 : StdMMR6Rel, DSUBU_MM64R6_DESC, DSUBU_MM64R6_ENC,
+                     ISA_MICROMIPS64R6;
 }
 
 //===----------------------------------------------------------------------===//
@@ -222,6 +246,10 @@ def : WrapperPat<tblockaddress, DADDIU_MM64R6, GPR64>, ISA_MICROMIPS64R6;
 def : WrapperPat<tjumptable, DADDIU_MM64R6, GPR64>, ISA_MICROMIPS64R6;
 def : WrapperPat<tglobaltlsaddr, DADDIU_MM64R6, GPR64>, ISA_MICROMIPS64R6;
 
+// Carry pattern
+def : MipsPat<(subc GPR64:$lhs, GPR64:$rhs),
+              (DSUBU_MM64R6 GPR64:$lhs, GPR64:$rhs)>, ISA_MICROMIPS64R6;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction aliases
@@ -253,3 +281,15 @@ def : MipsInstAlias<"dsubu $rs, $imm",
                                    GPR64Opnd:$rs,
                                    InvertedImOperand64:$imm),
                     0>, ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dneg $rt, $rs",
+                    (DSUB_MM64R6 GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rs), 1>,
+                    ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dneg $rt",
+                    (DSUB_MM64R6 GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rt), 0>,
+                    ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dnegu $rt, $rs",
+                    (DSUBU_MM64R6 GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rs), 1>,
+                    ISA_MICROMIPS64R6;
+def : MipsInstAlias<"dnegu $rt",
+                    (DSUBU_MM64R6 GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rt), 0>,
+                    ISA_MICROMIPS64R6;

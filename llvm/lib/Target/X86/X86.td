@@ -276,12 +276,28 @@ def : Proc<"pentium3",        [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
                                FeatureSSE1, FeatureFXSR]>;
 def : Proc<"pentium3m",       [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
                                FeatureSSE1, FeatureFXSR, FeatureSlowBTMem]>;
-def : Proc<"pentium-m",       [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
-                               FeatureSSE2, FeatureFXSR, FeatureSlowBTMem]>;
-def : Proc<"pentium4",        [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
-                               FeatureSSE2, FeatureFXSR]>;
-def : Proc<"pentium4m",       [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
-                               FeatureSSE2, FeatureFXSR, FeatureSlowBTMem]>;
+
+// Enable the PostRAScheduler for SSE2 and SSE3 class cpus.
+// The intent is to enable it for pentium4 which is the current default
+// processor in a vanilla 32-bit clang compilation when no specific
+// architecture is specified.  This generally gives a nice performance
+// increase on silvermont, with largely neutral behavior on other
+// contemporary large core processors.
+// pentium-m, pentium4m, prescott and nocona are included as a preventative
+// measure to avoid performance surprises, in case clang's default cpu
+// changes slightly.
+
+def : ProcessorModel<"pentium-m", GenericPostRAModel,
+                     [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
+                      FeatureSSE2, FeatureFXSR, FeatureSlowBTMem]>;
+
+def : ProcessorModel<"pentium4", GenericPostRAModel,
+                     [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
+                      FeatureSSE2, FeatureFXSR]>;
+
+def : ProcessorModel<"pentium4m", GenericPostRAModel,
+                     [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
+                      FeatureSSE2, FeatureFXSR, FeatureSlowBTMem]>;
 
 // Intel Quark.
 def : Proc<"lakemont",        []>;
@@ -292,10 +308,10 @@ def : ProcessorModel<"yonah", SandyBridgeModel,
                       FeatureFXSR, FeatureSlowBTMem]>;
 
 // NetBurst.
-def : Proc<"prescott",
-           [FeatureX87, FeatureSlowUAMem16, FeatureMMX, FeatureSSE3,
-            FeatureFXSR, FeatureSlowBTMem]>;
-def : Proc<"nocona", [
+def : ProcessorModel<"prescott", GenericPostRAModel,
+                     [FeatureX87, FeatureSlowUAMem16, FeatureMMX, FeatureSSE3,
+                      FeatureFXSR, FeatureSlowBTMem]>;
+def : ProcessorModel<"nocona", GenericPostRAModel, [
   FeatureX87,
   FeatureSlowUAMem16,
   FeatureMMX,

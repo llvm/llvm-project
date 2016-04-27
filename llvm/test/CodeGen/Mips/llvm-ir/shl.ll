@@ -37,6 +37,10 @@
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -relocation-model=pic | FileCheck %s \
 ; RUN:    -check-prefix=ALL -check-prefix=GP64 \
 ; RUN:    -check-prefix=64R6 -check-prefix=R2-R6
+; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips -relocation-model=pic | FileCheck %s \
+; RUN:    -check-prefix=ALL -check-prefix=MM -check-prefix=MMR3
+; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic | FileCheck %s \
+; RUN:    -check-prefix=ALL -check-prefix=MM -check-prefix=MMR6
 
 define signext i1 @shl_i1(i1 signext %a, i1 signext %b) {
 entry:
@@ -61,6 +65,10 @@ entry:
   ; R2-R6:      sllv    $[[T1:[0-9]+]], $4, $[[T0]]
   ; R2-R6:      seb     $2, $[[T1]]
 
+  ; MM:         andi16  $[[T0:[0-9]+]], $5, 255
+  ; MM:         sllv    $[[T1:[0-9]+]], $4, $[[T0]]
+  ; MM:         seb     $2, $[[T1]]
+
   %r = shl i8 %a, %b
   ret i8 %r
 }
@@ -77,6 +85,10 @@ entry:
   ; R2-R6:      andi    $[[T0:[0-9]+]], $5, 65535
   ; R2-R6:      sllv    $[[T1:[0-9]+]], $4, $[[T0]]
   ; R2-R6:      seh     $2, $[[T1]]
+
+  ; MM:         andi16  $[[T0:[0-9]+]], $5, 65535
+  ; MM:         sllv    $[[T1:[0-9]+]], $4, $[[T0]]
+  ; MM:         seh     $2, $[[T1]]
 
   %r = shl i16 %a, %b
   ret i16 %r
@@ -139,6 +151,29 @@ entry:
 
   ; GP64:       dsllv     $2, $4, $5
 
+  ; MMR3:       sllv      $[[T0:[0-9]+]], $4, $7
+  ; MMR3:       srl16     $[[T1:[0-9]+]], $5, 1
+  ; MMR3:       not16     $[[T2:[0-9]+]], $7
+  ; MMR3:       srlv      $[[T3:[0-9]+]], $[[T1]], $[[T2]]
+  ; MMR3:       or16      $[[T4:[0-9]+]], $[[T0]]
+  ; MMR3:       sllv      $[[T5:[0-9]+]], $5, $7
+  ; MMR3:       andi16    $[[T6:[0-9]+]], $7, 32
+  ; MMR3:       movn      $[[T7:[0-9]+]], $[[T5]], $[[T6]]
+  ; MMR3:       lui       $[[T8:[0-9]+]], 0
+  ; MMR3:       movn      $3, $[[T8]], $[[T6]]
+
+  ; MMR6:       sllv      $[[T0:[0-9]+]], $4, $7
+  ; MMR6:       not       $[[T1:[0-9]+]], $7
+  ; MMR6:       srl16     $[[T2:[0-9]+]], $5, 1
+  ; MMR6:       srlv      $[[T3:[0-9]+]], $[[T2]], $[[T1]]
+  ; MMR6:       or16      $[[T4:[0-9]+]], $[[T0]]
+  ; MMR6:       andi16    $[[T5:[0-9]+]], $7, 32
+  ; MMR6:       seleqz    $[[T6:[0-9]+]], $[[T4]], $[[T5]]
+  ; MMR6:       sllv      $[[T7:[0-9]+]], $5, $7
+  ; MMR6:       selnez    $[[T8:[0-9]+]], $[[T7]], $[[T5]]
+  ; MMR6:       or        $2, $[[T8]], $[[T6]]
+  ; MMR6:       seleqz    $3, $[[T7]], $[[T5]]
+
   %r = shl i64 %a, %b
   ret i64 %r
 }
@@ -193,6 +228,8 @@ entry:
   ; 64R6:           or        $2, $[[T10]], $[[T8]]
   ; 64R6:           jr        $ra
   ; 64R6:           seleqz    $3, $[[T9]], $[[T7]]
+
+  ; MM:             lw        $25, %call16(__ashlti3)($2)
 
   %r = shl i128 %a, %b
   ret i128 %r

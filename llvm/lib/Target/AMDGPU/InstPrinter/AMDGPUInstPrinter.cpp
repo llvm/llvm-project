@@ -814,11 +814,21 @@ void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,
   const unsigned Offset = (SImm16 >> 6) & 0x1f;
   const unsigned Width = ((SImm16 >> 11) & 0x1F) + 1;
 
-  if (Width == 32 && Offset == 0) {
-    O << "hwreg(" << HwRegCode << ')';
-  } else {
-    O << "hwreg(" << HwRegCode << ", " << Offset << ", " << Width << ')';
+  O << "hwreg(";
+  switch(HwRegCode) {
+    case 1: O << "HW_REG_MODE"      ; break;
+    case 2: O << "HW_REG_STATUS"    ; break;
+    case 3: O << "HW_REG_TRAPSTS"   ; break;
+    case 4: O << "HW_REG_HW_ID"     ; break;
+    case 5: O << "HW_REG_GPR_ALLOC" ; break;
+    case 6: O << "HW_REG_LDS_ALLOC" ; break;
+    case 7: O << "HW_REG_IB_STS"    ; break;
+    default: O << HwRegCode; break;
   }
+  if (! (Width == 32 && Offset == 0)) {
+    O << ", " << Offset << ", " << Width;
+  }
+  O << ')';
 }
 
 #include "AMDGPUGenAsmWriter.inc"

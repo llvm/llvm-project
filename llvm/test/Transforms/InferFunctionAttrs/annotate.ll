@@ -25,7 +25,7 @@ declare i8* @_Znwm(i64)
 
 declare void @memset_pattern16(i8*, i8*, i64)
 ; CHECK: declare void @memset_pattern16(i8*, i8*, i64)
-; CHECK-POSIX: declare void @memset_pattern16(i8*, i8* readonly, i64) [[G2:#[0-9]+]]
+; CHECK-POSIX: declare void @memset_pattern16(i8* nocapture, i8* nocapture readonly, i64) [[G2:#[0-9]+]]
 
 declare i32 @gettimeofday(i8*, i8*)
 ; CHECK-POSIX: declare i32 @gettimeofday(i8* nocapture, i8* nocapture) [[G0:#[0-9]+]]

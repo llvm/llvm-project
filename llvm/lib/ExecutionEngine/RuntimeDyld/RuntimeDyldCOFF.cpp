@@ -57,7 +57,14 @@ llvm::RuntimeDyldCOFF::create(Triple::ArchType Arch,
 
 std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
 RuntimeDyldCOFF::loadObject(const object::ObjectFile &O) {
-  return llvm::make_unique<LoadedCOFFObjectInfo>(*this, loadObjectImpl(O));
+  if (auto ObjSectionToIDOrErr = loadObjectImpl(O))
+    return llvm::make_unique<LoadedCOFFObjectInfo>(*this, *ObjSectionToIDOrErr);
+  else {
+    HasError = true;
+    raw_string_ostream ErrStream(ErrorStr);
+    logAllUnhandledErrors(ObjSectionToIDOrErr.takeError(), ErrStream, "");
+    return nullptr;
+  }
 }
 
 uint64_t RuntimeDyldCOFF::getSymbolOffset(const SymbolRef &Sym) {

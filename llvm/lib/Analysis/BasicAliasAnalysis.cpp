@@ -541,22 +541,6 @@ bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
   return Worklist.empty();
 }
 
-// FIXME: This code is duplicated with MemoryLocation and should be hoisted to
-// some common utility location.
-static bool isMemsetPattern16(const Function *MS,
-                              const TargetLibraryInfo &TLI) {
-  if (TLI.has(LibFunc::memset_pattern16) &&
-      MS->getName() == "memset_pattern16") {
-    FunctionType *MemsetType = MS->getFunctionType();
-    if (!MemsetType->isVarArg() && MemsetType->getNumParams() == 3 &&
-        isa<PointerType>(MemsetType->getParamType(0)) &&
-        isa<PointerType>(MemsetType->getParamType(1)) &&
-        isa<IntegerType>(MemsetType->getParamType(2)))
-      return true;
-  }
-  return false;
-}
-
 /// Returns the behavior when calling the given call site.
 FunctionModRefBehavior BasicAAResult::getModRefBehavior(ImmutableCallSite CS) {
   if (CS.doesNotAccessMemory())
@@ -629,7 +613,9 @@ static bool isWriteOnlyParam(ImmutableCallSite CS, unsigned ArgIdx,
   // LoopIdiomRecognizer likes to turn loops into calls to memset_pattern16
   // whenever possible.  Note that all but the missing writeonly attribute are
   // handled via InferFunctionAttr.
-  if (CS.getCalledFunction() && isMemsetPattern16(CS.getCalledFunction(), TLI))
+  LibFunc::Func F;
+  if (CS.getCalledFunction() && TLI.getLibFunc(*CS.getCalledFunction(), F) &&
+      F == LibFunc::memset_pattern16 && TLI.has(F))
     if (ArgIdx == 0)
       return true;
 

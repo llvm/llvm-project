@@ -168,6 +168,9 @@ class PPCBoolRetToInt : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) {
+    if (skipFunction(F))
+      return false;
+
     PHINodeSet PromotablePHINodes = getPromotablePHINodes(F);
     B2IMap Bool2IntMap;
     bool Changed = false;

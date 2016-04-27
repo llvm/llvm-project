@@ -293,6 +293,11 @@ public:
 
   unsigned getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) { return 1; }
 
+  unsigned getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                    VectorType *VecTy, unsigned Index) {
+    return 1;
+  }
+
   unsigned getCFInstrCost(unsigned Opcode) { return 1; }
 
   unsigned getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy) {

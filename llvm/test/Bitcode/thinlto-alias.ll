@@ -21,16 +21,16 @@
 ; COMBINED-NEXT:    <VERSION
 ; See if the call to analias is registered, using the expected callsite count
 ; and value id matching the subsequent value symbol table.
-; COMBINED-NEXT:    <COMBINED {{.*}} op4=[[ALIASID:[0-9]+]] op5=1/>
+; COMBINED-NEXT:    <COMBINED {{.*}} op5=[[ALIASID:[0-9]+]] op6=1/>
 ; Followed by the alias and aliasee
 ; COMBINED-NEXT:    <COMBINED {{.*}}
-; COMBINED-NEXT:    <COMBINED_ALIAS  {{.*}} op2=[[ALIASEEOFFSET:[0-9]+]]
+; COMBINED-NEXT:    <COMBINED_ALIAS  {{.*}} op3=[[ALIASEEID:[0-9]+]]
 ; COMBINED-NEXT:  </GLOBALVAL_SUMMARY_BLOCK
 ; COMBINED-NEXT:  <VALUE_SYMTAB
 ; Entry for function func should have entry with value id ALIASID
-; COMBINED-NEXT:    <COMBINED_GVDEFENTRY {{.*}} op0=[[ALIASID]] {{.*}} op2=-5751648690987223394/>
-; COMBINED-NEXT:    <COMBINED_GVDEFENTRY
-; COMBINED-NEXT:    <COMBINED_GVDEFENTRY  {{.*}} op1=[[ALIASEEOFFSET]] op2=-1039159065113703048/>
+; COMBINED-NEXT:    <COMBINED_ENTRY {{.*}} op0=[[ALIASID]] op1=-5751648690987223394/>
+; COMBINED-NEXT:    <COMBINED
+; COMBINED-NEXT:    <COMBINED_ENTRY {{.*}} op0=[[ALIASEEID]] op1=-1039159065113703048/>
 ; COMBINED-NEXT:  </VALUE_SYMTAB>
 
 ; ModuleID = 'thinlto-function-summary-callgraph.ll'

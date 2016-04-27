@@ -375,6 +375,24 @@ public:
     GlobalValueMap[ValueGUID].push_back(std::move(Summary));
   }
 
+  /// Find the summary for global \p GUID in module \p ModuleId, or nullptr if
+  /// not found.
+  GlobalValueSummary *findSummaryInModule(GlobalValue::GUID ValueGUID,
+                                          StringRef ModuleId) const {
+    auto CalleeInfoList = findGlobalValueSummaryList(ValueGUID);
+    if (CalleeInfoList == end()) {
+      return nullptr; // This function does not have a summary
+    }
+    auto Summary =
+        llvm::find_if(CalleeInfoList->second,
+                      [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                        return Summary->modulePath() == ModuleId;
+                      });
+    if (Summary == CalleeInfoList->second.end())
+      return nullptr;
+    return Summary->get();
+  }
+
   /// Returns the first GlobalValueSummary for \p GV, asserting that there
   /// is only one if \p PerModuleIndex.
   GlobalValueSummary *getGlobalValueSummary(const GlobalValue &GV,

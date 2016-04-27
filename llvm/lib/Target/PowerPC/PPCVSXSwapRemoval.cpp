@@ -191,6 +191,9 @@ private:
 public:
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(*MF.getFunction()))
+      return false;
+
     // If we don't have VSX on the subtarget, don't do anything.
     const PPCSubtarget &STI = MF.getSubtarget<PPCSubtarget>();
     if (!STI.hasVSX())

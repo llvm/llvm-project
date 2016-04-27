@@ -237,6 +237,11 @@ static inline bool shouldRecordFunctionAddr(Function *F) {
   if (!F->hasLinkOnceLinkage() && !F->hasLocalLinkage() &&
       !F->hasAvailableExternallyLinkage())
     return true;
+  // Prohibit function address recording if the function is both internal and
+  // COMDAT. This avoids the profile data variable referencing internal symbols
+  // in COMDAT.
+  if (F->hasLocalLinkage() && F->hasComdat())
+    return false;
   // Check uses of this function for other than direct calls or invokes to it.
   return F->hasAddressTaken();
 }

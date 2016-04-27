@@ -125,14 +125,16 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
     if (GV.getType()->getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
       continue;
 
-    for (Use &U : GV.uses()) {
+    for (User *U : GV.users()) {
       Instruction *Use = dyn_cast<Instruction>(U);
       if (!Use)
         continue;
 
-      if (Use->getParent()->getParent() == &F)
+      if (Use->getParent()->getParent() == &F) {
         LocalMemAvailable -=
           Mod->getDataLayout().getTypeAllocSize(GV.getValueType());
+        break;
+      }
     }
   }
 

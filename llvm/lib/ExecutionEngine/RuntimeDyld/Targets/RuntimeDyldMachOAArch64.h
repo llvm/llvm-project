@@ -242,7 +242,7 @@ public:
     }
   }
 
-  relocation_iterator
+  Expected<relocation_iterator>
   processRelocationRef(unsigned SectionID, relocation_iterator RelI,
                        const ObjectFile &BaseObjT,
                        ObjSectionToIDMap &ObjSectionToID,
@@ -252,7 +252,9 @@ public:
     MachO::any_relocation_info RelInfo =
         Obj.getRelocation(RelI->getRawDataRefImpl());
 
-    assert(!Obj.isRelocationScattered(RelInfo) && "");
+    if (Obj.isRelocationScattered(RelInfo))
+      return make_error<RuntimeDyldError>("Scattered relocations not supported "
+                                          "for MachO AArch64");
 
     // ARM64 has an ARM64_RELOC_ADDEND relocation type that carries an explicit
     // addend for the following relocation. If found: (1) store the associated
@@ -281,8 +283,11 @@ public:
     if (ExplicitAddend)
       RE.Addend = ExplicitAddend;
 
-    RelocationValueRef Value(
-        getRelocationValueRef(Obj, RelI, RE, ObjSectionToID));
+    RelocationValueRef Value;
+    if (auto ValueOrErr = getRelocationValueRef(Obj, RelI, RE, ObjSectionToID))
+      Value = *ValueOrErr;
+    else
+      return ValueOrErr.takeError();
 
     bool IsExtern = Obj.getPlainRelocationExternal(RelInfo);
     if (!IsExtern && RE.IsPCRel)
@@ -371,8 +376,10 @@ public:
     }
   }
 
-  void finalizeSection(const ObjectFile &Obj, unsigned SectionID,
-                       const SectionRef &Section) {}
+  Error finalizeSection(const ObjectFile &Obj, unsigned SectionID,
+                       const SectionRef &Section) {
+    return Error::success();
+  }
 
 private:
   void processGOTRelocation(const RelocationEntry &RE,

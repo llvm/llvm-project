@@ -60,6 +60,9 @@ FunctionPass *llvm::createPPCQPXLoadSplatPass() {
 }
 
 bool PPCQPXLoadSplat::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   bool MadeChange = false;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 

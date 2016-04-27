@@ -9,7 +9,7 @@
 
 ; CHECK:      Name: foo
 ; CHECK-NEXT: Value:
-; CHECK-NEXT: Size: 1
+; CHECK-NEXT: Size:
 ; CHECK-NEXT: Binding: Global
 ; CHECK-NEXT: Type: Function
 ; CHECK-NEXT: Other [

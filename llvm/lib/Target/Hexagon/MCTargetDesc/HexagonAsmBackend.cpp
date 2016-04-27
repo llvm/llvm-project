@@ -11,7 +11,10 @@
 #include "HexagonFixupKinds.h"
 #include "HexagonMCTargetDesc.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
+#include "MCTargetDesc/HexagonMCChecker.h"
+#include "MCTargetDesc/HexagonMCCodeEmitter.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
+#include "MCTargetDesc/HexagonMCShuffler.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
@@ -41,6 +44,19 @@ class HexagonAsmBackend : public MCAsmBackend {
   std::unique_ptr <MCInstrInfo> MCII;
   std::unique_ptr <MCInst *> RelaxTarget;
   MCInst * Extender;
+
+  void ReplaceInstruction(MCCodeEmitter &E, MCRelaxableFragment &RF,
+                          MCInst &HMB) const {
+    SmallVector<MCFixup, 4> Fixups;
+    SmallString<256> Code;
+    raw_svector_ostream VecOS(Code);
+    E.encodeInstruction(HMB, VecOS, Fixups, RF.getSubtargetInfo());
+
+    // Update the fragment.
+    RF.setInst(HMB);
+    RF.getContents() = Code;
+    RF.getFixups() = Fixups;
+  }
 public:
   HexagonAsmBackend(const Target &T, uint8_t OSABI, StringRef CPU) :
     OSABI(OSABI), MCII (T.createMCInstrInfo()), RelaxTarget(new MCInst *),
@@ -530,23 +546,7 @@ public:
   ///
   /// \param Inst - The instruction to test.
   bool mayNeedRelaxation(MCInst const &Inst) const override {
-    assert(HexagonMCInstrInfo::isBundle(Inst));
-    bool PreviousIsExtender = false;
-    for (auto const &I : HexagonMCInstrInfo::bundleInstructions(Inst)) {
-      auto const &Inst = *I.getInst();
-      if (!PreviousIsExtender) {
-        if (HexagonMCInstrInfo::isDuplex(*MCII, Inst)) {
-          if (isInstRelaxable(*Inst.getOperand(0).getInst()) ||
-              isInstRelaxable(*Inst.getOperand(1).getInst()))
-            return true;
-        } else {
-          if (isInstRelaxable(Inst))
-            return true;
-        }
-      }
-      PreviousIsExtender = HexagonMCInstrInfo::isImmext(Inst);
-    }
-    return false;
+    return true;
   }
 
   /// fixupNeedsRelaxation - Target specific predicate for whether a given
@@ -685,6 +685,58 @@ public:
       OW->write32(Nopcode | ParseBits);
     }
     return true;
+  }
+
+  void finishLayout(MCAssembler const &Asm,
+                    MCAsmLayout &Layout) const override {
+    for (auto I : Layout.getSectionOrder()) {
+      auto &Fragments = I->getFragmentList();
+      for (auto &J : Fragments) {
+        switch (J.getKind()) {
+        default:
+          break;
+        case MCFragment::FT_Align: {
+          auto Size = Asm.computeFragmentSize(Layout, J);
+          for (auto K = J.getIterator();
+               K != Fragments.begin() && Size >= HEXAGON_PACKET_SIZE;) {
+            --K;
+            switch (K->getKind()) {
+            default:
+              break;
+            case MCFragment::FT_Align: {
+              // Don't pad before other alignments
+              Size = 0;
+              break;
+            }
+            case MCFragment::FT_Relaxable: {
+              auto &RF = cast<MCRelaxableFragment>(*K);
+              auto &Inst = const_cast<MCInst &>(RF.getInst());
+              while (Size > 0 && HexagonMCInstrInfo::bundleSize(Inst) < 4) {
+                MCInst *Nop = new (Asm.getContext()) MCInst;
+                Nop->setOpcode(Hexagon::A2_nop);
+                Inst.addOperand(MCOperand::createInst(Nop));
+                Size -= 4;
+                if (!HexagonMCChecker(
+                           *MCII, RF.getSubtargetInfo(), Inst, Inst,
+                           *Asm.getContext().getRegisterInfo()).check()) {
+                  Inst.erase(Inst.end() - 1);
+                  Size = 0;
+                }
+              }
+              bool Error = HexagonMCShuffle(*MCII, RF.getSubtargetInfo(), Inst);
+              //assert(!Error);
+              (void)Error;
+              ReplaceInstruction(Asm.getEmitter(), RF, Inst);
+              Layout.invalidateFragmentsFrom(&RF);
+              Size = 0; // Only look back one instruction
+              break;
+            }
+            }
+          }
+        }
+        }
+      }
+    }
   }
 };
 } // end anonymous namespace

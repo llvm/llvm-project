@@ -525,6 +525,40 @@ Value *Value::stripInBoundsOffsets() {
   return stripPointerCastsAndOffsets<PSK_InBounds>(this);
 }
 
+unsigned Value::getPointerDereferenceableBytes(bool &CanBeNull) const {
+  assert(getType()->isPointerTy() && "must be pointer");
+
+  unsigned DerefBytes = 0;
+  CanBeNull = false;
+  if (const Argument *A = dyn_cast<Argument>(this)) {
+    DerefBytes = A->getDereferenceableBytes();
+    if (DerefBytes == 0) {
+      DerefBytes = A->getDereferenceableOrNullBytes();
+      CanBeNull = true;
+    }
+  } else if (auto CS = ImmutableCallSite(this)) {
+    DerefBytes = CS.getDereferenceableBytes(0);
+    if (DerefBytes == 0) {
+      DerefBytes = CS.getDereferenceableOrNullBytes(0);
+      CanBeNull = true;
+    }
+  } else if (const LoadInst *LI = dyn_cast<LoadInst>(this)) {
+    if (MDNode *MD = LI->getMetadata(LLVMContext::MD_dereferenceable)) {
+      ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
+      DerefBytes = CI->getLimitedValue();
+    }
+    if (DerefBytes == 0) {
+      if (MDNode *MD =
+              LI->getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
+        ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
+        DerefBytes = CI->getLimitedValue();
+      }
+      CanBeNull = true;
+    }
+  }
+  return DerefBytes;
+}
+
 unsigned Value::getPointerAlignment(const DataLayout &DL) const {
   assert(getType()->isPointerTy() && "must be pointer");
 
@@ -554,9 +588,14 @@ unsigned Value::getPointerAlignment(const DataLayout &DL) const {
       if (EltTy->isSized())
         Align = DL.getABITypeAlignment(EltTy);
     }
-  } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(this))
+  } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(this)) {
     Align = AI->getAlignment();
-  else if (auto CS = ImmutableCallSite(this))
+    if (Align == 0) {
+      Type *AllocatedType = AI->getAllocatedType();
+      if (AllocatedType->isSized())
+        Align = DL.getPrefTypeAlignment(AllocatedType);
+    }
+  } else if (auto CS = ImmutableCallSite(this))
     Align = CS.getAttributes().getParamAlignment(AttributeSet::ReturnIndex);
   else if (const LoadInst *LI = dyn_cast<LoadInst>(this))
     if (MDNode *MD = LI->getMetadata(LLVMContext::MD_align)) {

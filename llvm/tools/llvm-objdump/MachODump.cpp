@@ -1001,7 +1001,7 @@ static void DumpRawSectionContents(MachOObjectFile *O, const char *sect,
       if (O->is64Bit())
         outs() << format("%016" PRIx64, addr) << "\t";
       else
-        outs() << format("%08" PRIx64, sect) << "\t";
+        outs() << format("%08" PRIx64, addr) << "\t";
       for (j = 0; j < 4 * sizeof(int32_t) && i + j < size;
            j += sizeof(int32_t)) {
         if (i + j + sizeof(int32_t) < size) {

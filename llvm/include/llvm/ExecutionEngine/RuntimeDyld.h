@@ -31,6 +31,19 @@ namespace object {
   template <typename T> class OwningBinary;
 }
 
+/// Base class for errors originating in RuntimeDyld, e.g. missing relocation
+/// support.
+class RuntimeDyldError : public ErrorInfo<RuntimeDyldError> {
+public:
+  static char ID;
+  RuntimeDyldError(std::string ErrMsg) : ErrMsg(std::move(ErrMsg)) {}
+  void log(raw_ostream &OS) const override;
+  const std::string &getErrorMessage() const { return ErrMsg; }
+  std::error_code convertToErrorCode() const override;
+private:
+  std::string ErrMsg;
+};
+
 class RuntimeDyldImpl;
 class RuntimeDyldCheckerImpl;
 

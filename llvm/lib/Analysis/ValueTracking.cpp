@@ -2242,46 +2242,6 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
   return false;
 }
 
-/// \brief Check call has a unary float signature
-/// It checks following:
-/// a) call should have a single argument
-/// b) argument type should be floating point type
-/// c) call instruction type and argument type should be same
-/// d) call should only reads memory.
-/// If all these condition is met then return ValidIntrinsicID
-/// else return not_intrinsic.
-static Intrinsic::ID checkUnaryFloatSignature(ImmutableCallSite ICS,
-                                              Intrinsic::ID ValidIntrinsicID) {
-  if (ICS.getNumArgOperands() != 1 ||
-      !ICS.getArgOperand(0)->getType()->isFloatingPointTy() ||
-      ICS.getType() != ICS.getArgOperand(0)->getType() ||
-      !ICS.onlyReadsMemory())
-    return Intrinsic::not_intrinsic;
-
-  return ValidIntrinsicID;
-}
-
-/// \brief Check call has a binary float signature
-/// It checks following:
-/// a) call should have 2 arguments.
-/// b) arguments type should be floating point type
-/// c) call instruction type and arguments type should be same
-/// d) call should only reads memory.
-/// If all these condition is met then return ValidIntrinsicID
-/// else return not_intrinsic.
-static Intrinsic::ID checkBinaryFloatSignature(ImmutableCallSite ICS,
-                                               Intrinsic::ID ValidIntrinsicID) {
-  if (ICS.getNumArgOperands() != 2 ||
-      !ICS.getArgOperand(0)->getType()->isFloatingPointTy() ||
-      !ICS.getArgOperand(1)->getType()->isFloatingPointTy() ||
-      ICS.getType() != ICS.getArgOperand(0)->getType() ||
-      ICS.getType() != ICS.getArgOperand(1)->getType() ||
-      !ICS.onlyReadsMemory())
-    return Intrinsic::not_intrinsic;
-
-  return ValidIntrinsicID;
-}
-
 Intrinsic::ID llvm::getIntrinsicForCallSite(ImmutableCallSite ICS,
                                             const TargetLibraryInfo *TLI) {
   const Function *F = ICS.getCalledFunction();
@@ -2298,7 +2258,10 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(ImmutableCallSite ICS,
   // We're going to make assumptions on the semantics of the functions, check
   // that the target knows that it's available in this environment and it does
   // not have local linkage.
-  if (!F || F->hasLocalLinkage() || !TLI->getLibFunc(F->getName(), Func))
+  if (!F || F->hasLocalLinkage() || !TLI->getLibFunc(*F, Func))
+    return Intrinsic::not_intrinsic;
+
+  if (!ICS.onlyReadsMemory())
     return Intrinsic::not_intrinsic;
 
   // Otherwise check if we have a call to a function that can be turned into a
@@ -2309,80 +2272,80 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(ImmutableCallSite ICS,
   case LibFunc::sin:
   case LibFunc::sinf:
   case LibFunc::sinl:
-    return checkUnaryFloatSignature(ICS, Intrinsic::sin);
+    return Intrinsic::sin;
   case LibFunc::cos:
   case LibFunc::cosf:
   case LibFunc::cosl:
-    return checkUnaryFloatSignature(ICS, Intrinsic::cos);
+    return Intrinsic::cos;
   case LibFunc::exp:
   case LibFunc::expf:
   case LibFunc::expl:
-    return checkUnaryFloatSignature(ICS, Intrinsic::exp);
+    return Intrinsic::exp;
   case LibFunc::exp2:
   case LibFunc::exp2f:
   case LibFunc::exp2l:
-    return checkUnaryFloatSignature(ICS, Intrinsic::exp2);
+    return Intrinsic::exp2;
   case LibFunc::log:
   case LibFunc::logf:
   case LibFunc::logl:
-    return checkUnaryFloatSignature(ICS, Intrinsic::log);
+    return Intrinsic::log;
   case LibFunc::log10:
   case LibFunc::log10f:
   case LibFunc::log10l:
-    return checkUnaryFloatSignature(ICS, Intrinsic::log10);
+    return Intrinsic::log10;
   case LibFunc::log2:
   case LibFunc::log2f:
   case LibFunc::log2l:
-    return checkUnaryFloatSignature(ICS, Intrinsic::log2);
+    return Intrinsic::log2;
   case LibFunc::fabs:
   case LibFunc::fabsf:
   case LibFunc::fabsl:
-    return checkUnaryFloatSignature(ICS, Intrinsic::fabs);
+    return Intrinsic::fabs;
   case LibFunc::fmin:
   case LibFunc::fminf:
   case LibFunc::fminl:
-    return checkBinaryFloatSignature(ICS, Intrinsic::minnum);
+    return Intrinsic::minnum;
   case LibFunc::fmax:
   case LibFunc::fmaxf:
   case LibFunc::fmaxl:
-    return checkBinaryFloatSignature(ICS, Intrinsic::maxnum);
+    return Intrinsic::maxnum;
   case LibFunc::copysign:
   case LibFunc::copysignf:
   case LibFunc::copysignl:
-    return checkBinaryFloatSignature(ICS, Intrinsic::copysign);
+    return Intrinsic::copysign;
   case LibFunc::floor:
   case LibFunc::floorf:
   case LibFunc::floorl:
-    return checkUnaryFloatSignature(ICS, Intrinsic::floor);
+    return Intrinsic::floor;
   case LibFunc::ceil:
   case LibFunc::ceilf:
   case LibFunc::ceill:
-    return checkUnaryFloatSignature(ICS, Intrinsic::ceil);
+    return Intrinsic::ceil;
   case LibFunc::trunc:
   case LibFunc::truncf:
   case LibFunc::truncl:
-    return checkUnaryFloatSignature(ICS, Intrinsic::trunc);
+    return Intrinsic::trunc;
   case LibFunc::rint:
   case LibFunc::rintf:
   case LibFunc::rintl:
-    return checkUnaryFloatSignature(ICS, Intrinsic::rint);
+    return Intrinsic::rint;
   case LibFunc::nearbyint:
   case LibFunc::nearbyintf:
   case LibFunc::nearbyintl:
-    return checkUnaryFloatSignature(ICS, Intrinsic::nearbyint);
+    return Intrinsic::nearbyint;
   case LibFunc::round:
   case LibFunc::roundf:
   case LibFunc::roundl:
-    return checkUnaryFloatSignature(ICS, Intrinsic::round);
+    return Intrinsic::round;
   case LibFunc::pow:
   case LibFunc::powf:
   case LibFunc::powl:
-    return checkBinaryFloatSignature(ICS, Intrinsic::pow);
+    return Intrinsic::pow;
   case LibFunc::sqrt:
   case LibFunc::sqrtf:
   case LibFunc::sqrtl:
     if (ICS->hasNoNaNs())
-      return checkUnaryFloatSignature(ICS, Intrinsic::sqrt);
+      return Intrinsic::sqrt;
     return Intrinsic::not_intrinsic;
   }
 

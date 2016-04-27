@@ -43,8 +43,9 @@ def SWaitMatchClass : AsmOperandClass {
   let ParserMethod = "parseSWaitCntOps";
 }
 
-def WAIT_FLAG : InstFlag<"printWaitFlag"> {
+def WAIT_FLAG : Operand <i32> {
   let ParserMatchClass = SWaitMatchClass;
+  let PrintMethod = "printWaitFlag";
 }
 
 let SubtargetPredicate = isGCN in {
@@ -506,6 +507,7 @@ def S_BARRIER : SOPP <0x0000000a, (ins), "s_barrier",
   let isConvergent = 1;
 }
 
+let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in
 def S_WAITCNT : SOPP <0x0000000c, (ins WAIT_FLAG:$simm16), "s_waitcnt $simm16">;
 def S_SETHALT : SOPP <0x0000000d, (ins i16imm:$simm16), "s_sethalt $simm16">;
 
@@ -2451,6 +2453,11 @@ def : Pat <
 //===----------------------------------------------------------------------===//
 // SOPP Patterns
 //===----------------------------------------------------------------------===//
+
+def : Pat <
+  (int_amdgcn_s_waitcnt i32:$simm16),
+  (S_WAITCNT (as_i16imm $simm16))
+>;
 
 // FIXME: These should be removed eventually
 def : Pat <

@@ -758,6 +758,11 @@ static bool SinkCast(CastInst *CI) {
     // Preincrement use iterator so we don't invalidate it.
     ++UI;
 
+    // The first insertion point of a block containing an EH pad is after the
+    // pad.  If the pad is the user, we cannot sink the cast past the pad.
+    if (User->isEHPad())
+      continue;
+
     // If the block selected to receive the cast is an EH pad that does not
     // allow non-PHI instructions before the terminator, we can't sink the
     // cast.

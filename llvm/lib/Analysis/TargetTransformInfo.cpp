@@ -267,6 +267,14 @@ int TargetTransformInfo::getCastInstrCost(unsigned Opcode, Type *Dst,
   return Cost;
 }
 
+int TargetTransformInfo::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                                  VectorType *VecTy,
+                                                  unsigned Index) const {
+  int Cost = TTIImpl->getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 int TargetTransformInfo::getCFInstrCost(unsigned Opcode) const {
   int Cost = TTIImpl->getCFInstrCost(Opcode);
   assert(Cost >= 0 && "TTI should not produce negative costs!");

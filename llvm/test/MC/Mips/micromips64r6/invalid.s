@@ -164,3 +164,19 @@
   evp $4, 5                    # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
   jalrc.hb $31                 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
   jalrc.hb $31, $31            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
+  sll $4, $3, -1               # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+  sll $4, $3, 32               # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+  sra $4, $3, -1               # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+  sra $4, $3, 32               # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+  srl $4, $3, -1               # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+  srl $4, $3, 32               # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
+  sll $3, -1                   # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
+  sll $3, 32                   # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
+  sra $3, -1                   # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
+  sra $3, 32                   # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
+  srl $3, -1                   # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
+  srl $3, 32                   # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
+  dneg $7, 5                   # CHECK: :[[@LINE]]:12: error: invalid operand for instruction
+  dneg 4                       # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+  dnegu $1, 3                  # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
+  dnegu 7                      # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
