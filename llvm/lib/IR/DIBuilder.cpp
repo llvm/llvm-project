@@ -560,10 +560,10 @@ DIGlobalVariable *DIBuilder::createGlobalVariable(
     MDNode *Decl) {
   checkGlobalVariableScope(Context);
 
-  auto *N =
-      DIGlobalVariable::get(VMContext, cast_or_null<DIScope>(Context), Name,
-                            LinkageName, F, LineNumber, Ty, isLocalToUnit, true,
-                            Val, cast_or_null<DIDerivedType>(Decl));
+  auto *N = DIGlobalVariable::getDistinct(
+      VMContext, cast_or_null<DIScope>(Context), Name, LinkageName, F,
+      LineNumber, Ty, isLocalToUnit, true, Val,
+      cast_or_null<DIDerivedType>(Decl));
   AllGVs.push_back(N);
   return N;
 }
