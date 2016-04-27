@@ -1480,7 +1480,8 @@ RuntimeDyldELF::processRelocationRef(
           // In the ELFv1 ABI, a function call may point to the .opd entry,
           // so the final symbol value is calculated based on the relocation
           // values in the .opd section.
-          findOPDEntrySection(Obj, ObjSectionToID, Value);
+          if (auto Err = findOPDEntrySection(Obj, ObjSectionToID, Value))
+            return std::move(Err);
         } else {
           // In the ELFv2 ABI, a function symbol may provide a local entry
           // point, which must be used for direct calls.

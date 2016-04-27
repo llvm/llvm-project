@@ -35,6 +35,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolThunk.h"
+#include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBDbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBInfoStream.h"
@@ -278,6 +279,28 @@ static void dumpStructure(RawSession &RS) {
   outs() << "Toolchain Version: " << Major << "." << Minor << '\n';
   outs() << "mspdb" << Major << Minor << ".dll version: " << Major << "."
          << Minor << "." << DbiStream.getPdbDllVersion() << '\n';
+
+  outs() << "Modules: \n";
+  for (auto Modi : DbiStream.modules()) {
+    outs() << Modi.getModuleName() << '\n';
+    outs().indent(4) << "Debug Stream Index: " << Modi.getModuleStreamIndex()
+                     << '\n';
+    outs().indent(4) << "Object File: " << Modi.getObjFileName() << '\n';
+    outs().indent(4) << "Num Files: " << Modi.getNumberOfFiles() << '\n';
+    outs().indent(4) << "Source File Name Idx: "
+                     << Modi.getSourceFileNameIndex() << '\n';
+    outs().indent(4) << "Pdb File Name Idx: " << Modi.getPdbFilePathNameIndex()
+                     << '\n';
+    outs().indent(4) << "Line Info Byte Size: " << Modi.getLineInfoByteSize()
+                     << '\n';
+    outs().indent(4) << "C13 Line Info Byte Size: "
+                     << Modi.getC13LineInfoByteSize() << '\n';
+    outs().indent(4) << "Symbol Byte Size: "
+                     << Modi.getSymbolDebugInfoByteSize() << '\n';
+    outs().indent(4) << "Type Server Index: " << Modi.getTypeServerIndex()
+                     << '\n';
+    outs().indent(4) << "Has EC Info: " << Modi.hasECInfo() << '\n';
+  }
 }
 
 static void dumpInput(StringRef Path) {

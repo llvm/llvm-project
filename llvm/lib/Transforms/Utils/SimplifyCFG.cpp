@@ -2024,8 +2024,8 @@ static bool SimplifyCondBranchToTwoReturns(BranchInst *BI,
     } else if (isa<UndefValue>(TrueValue)) {
       TrueValue = FalseValue;
     } else {
-      TrueValue = Builder.CreateSelect(BrCond, TrueValue,
-                                       FalseValue, "retval");
+      TrueValue =
+          Builder.CreateSelect(BrCond, TrueValue, FalseValue, "retval", BI);
     }
   }
 

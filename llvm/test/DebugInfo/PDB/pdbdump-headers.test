@@ -28,3 +28,27 @@
 ; CHECK-NEXT: Number of Symbols: 8
 ; CHECK-NEXT: Toolchain Version: 12.0
 ; CHECK-NEXT: mspdb120.dll version: 12.0.31101
+
+; CHECK:      Modules:
+; CHECK-NEXT: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; CHECK-NEXT:     Debug Stream Index: 12
+; CHECK-NEXT:     Object File: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; CHECK-NEXT:     Num Files: 1
+; CHECK-NEXT:     Source File Name Idx: 0
+; CHECK-NEXT:     Pdb File Name Idx: 0
+; CHECK-NEXT:     Line Info Byte Size: 0
+; CHECK-NEXT:     C13 Line Info Byte Size: 88
+; CHECK-NEXT:     Symbol Byte Size: 208
+; CHECK-NEXT:     Type Server Index: 0
+; CHECK-NEXT:     Has EC Info: 0
+; CHECK-NEXT: * Linker *
+; CHECK-NEXT:     Debug Stream Index: 14
+; CHECK-NEXT:     Object File:
+; CHECK-NEXT:     Num Files: 0
+; CHECK-NEXT:     Source File Name Idx: 0
+; CHECK-NEXT:     Pdb File Name Idx: 1
+; CHECK-NEXT:     Line Info Byte Size: 0
+; CHECK-NEXT:     C13 Line Info Byte Size: 0
+; CHECK-NEXT:     Symbol Byte Size: 516
+; CHECK-NEXT:     Type Server Index: 0
+; CHECK-NEXT:     Has EC Info: 0

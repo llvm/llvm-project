@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBDBISTREAM_H
 
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBRawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBStream.h"
 #include "llvm/Support/Endian.h"
@@ -42,9 +43,13 @@ public:
 
   PDB_Machine getMachineType() const;
 
+  llvm::iterator_range<ModInfoIterator> modules() const;
+
 private:
   PDBFile &Pdb;
   PDBStream Stream;
+
+  std::vector<uint8_t> ModInfoSubstream;
   std::unique_ptr<HeaderInfo> Header;
 };
 }
