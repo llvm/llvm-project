@@ -64,6 +64,11 @@ bool FunctionImportGlobalProcessing::doPromoteLocalToGlobal(
   if (GVar && GVar->isConstant() && GVar->hasUnnamedAddr())
     return false;
 
+  if (GVar && GVar->hasSection())
+    // Some sections like "__DATA,__cfstring" are "magic" and promotion is not
+    // allowed. Just disable promotion on any GVar with sections right now.
+    return false;
+
   // Eventually we only need to promote functions in the exporting module that
   // are referenced by a potentially exported function (i.e. one that is in the
   // summary index).
