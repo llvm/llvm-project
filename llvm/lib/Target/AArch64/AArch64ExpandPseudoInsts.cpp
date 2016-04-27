@@ -617,7 +617,6 @@ bool AArch64ExpandPseudo::expandCMP_SWAP(
   //     ldaxr xDest, [xAddr]
   //     cmp xDest, xDesired
   //     b.ne .Ldone
-  MBB.addSuccessor(LoadCmpBB);
   LoadCmpBB->addLiveIn(Addr.getReg());
   LoadCmpBB->addLiveIn(Dest.getReg());
   LoadCmpBB->addLiveIn(Desired.getReg());
@@ -655,6 +654,8 @@ bool AArch64ExpandPseudo::expandCMP_SWAP(
   DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
   DoneBB->transferSuccessors(&MBB);
   addPostLoopLiveIns(DoneBB, LiveRegs);
+
+  MBB.addSuccessor(LoadCmpBB);
 
   NextMBBI = MBB.end();
   MI.eraseFromParent();
@@ -695,7 +696,6 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   //     cmp xDestLo, xDesiredLo
   //     sbcs xDestHi, xDesiredHi
   //     b.ne .Ldone
-  MBB.addSuccessor(LoadCmpBB);
   LoadCmpBB->addLiveIn(Addr.getReg());
   LoadCmpBB->addLiveIn(DestLo.getReg());
   LoadCmpBB->addLiveIn(DestHi.getReg());
@@ -741,6 +741,8 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
   DoneBB->transferSuccessors(&MBB);
   addPostLoopLiveIns(DoneBB, LiveRegs);
+
+  MBB.addSuccessor(LoadCmpBB);
 
   NextMBBI = MBB.end();
   MI.eraseFromParent();
