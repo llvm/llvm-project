@@ -199,6 +199,7 @@ private:
 
   LLVMContext &Context;
   std::unique_ptr<Module> MergedModule;
+  bool MainModuleHasSummary = false;
   std::unique_ptr<Linker> TheLinker;
   std::unique_ptr<TargetMachine> TargetMach;
   bool EmitDwarfDebugInfo = false;
