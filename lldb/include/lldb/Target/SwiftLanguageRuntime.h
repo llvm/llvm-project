@@ -208,10 +208,10 @@ public:
         
     public:
         CompilerType
-        FulfillTypePromise ();
+        FulfillTypePromise (Error *error = nullptr);
         
         llvm::Optional<swift::MetadataKind>
-        FulfillKindPromise ();
+        FulfillKindPromise (Error *error = nullptr);
         
         bool
         IsStaticallyDetermined ();

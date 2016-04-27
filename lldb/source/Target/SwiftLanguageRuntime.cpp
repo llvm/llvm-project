@@ -1228,29 +1228,51 @@ m_metadata_location(location)
 }
 
 CompilerType
-SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise ()
+SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise (Error *error)
 {
+    if (error)
+        error->Clear();
+    
     if (m_compiler_type.hasValue())
         return m_compiler_type.getValue();
     
-    // FIXME: dropping the error
-    if (swift::remoteAST::Result<swift::Type> result = m_remote_ast->getTypeForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location)))
+    swift::remoteAST::Result<swift::Type> result = m_remote_ast->getTypeForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location));
+    
+    if (result)
         return (m_compiler_type = CompilerType(m_swift_ast, result.getValue().getPointer())).getValue();
     else
+    {
+        if (error)
+        {
+            const auto& failure = result.getFailure();
+            error->SetErrorStringWithFormat("error in resolving type: %s", failure.render().c_str());
+        }
         return (m_compiler_type = CompilerType()).getValue();
+    }
 }
 
 llvm::Optional<swift::MetadataKind>
-SwiftLanguageRuntime::MetadataPromise::FulfillKindPromise ()
+SwiftLanguageRuntime::MetadataPromise::FulfillKindPromise (Error *error)
 {
+    if (error)
+        error->Clear();
+
     if (m_metadata_kind.hasValue())
         return m_metadata_kind;
     
-    // FIXME: dropping the error
-    if (swift::remoteAST::Result<swift::MetadataKind> result = m_remote_ast->getKindForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location)))
+    swift::remoteAST::Result<swift::MetadataKind> result = m_remote_ast->getKindForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location));
+    
+    if (result)
         return (m_metadata_kind = result.getValue());
     else
+    {
+        if (error)
+        {
+            const auto& failure = result.getFailure();
+            error->SetErrorStringWithFormat("error in resolving type: %s", failure.render().c_str());
+        }
         return m_metadata_kind;
+    }
 }
 
 bool
