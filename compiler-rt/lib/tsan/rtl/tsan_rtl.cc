@@ -329,6 +329,10 @@ void Initialize(ThreadState *thr) {
   InitializeAllocator();
   ReplaceSystemMalloc();
 #endif
+  if (common_flags()->detect_deadlocks)
+    ctx->dd = DDetector::Create(flags());
+  Processor *proc = ProcCreate();
+  ProcWire(proc, thr);
   InitializeInterceptors();
   CheckShadowMapping();
   InitializePlatform();
@@ -351,8 +355,6 @@ void Initialize(ThreadState *thr) {
   SetSandboxingCallback(StopBackgroundThread);
 #endif
 #endif
-  if (common_flags()->detect_deadlocks)
-    ctx->dd = DDetector::Create(flags());
 
   VPrintf(1, "***** Running under ThreadSanitizer v2 (pid %d) *****\n",
           (int)internal_getpid());

@@ -57,8 +57,7 @@ static void CopyTrace(SymbolizedStack *first_frame, void **trace,
 // Meant to be called by the debugger.
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__tsan_get_current_report() {
-  const ReportDesc *rep = cur_thread()->current_report;
-  return (void *)rep;
+  return const_cast<ReportDesc*>(cur_thread()->current_report);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE

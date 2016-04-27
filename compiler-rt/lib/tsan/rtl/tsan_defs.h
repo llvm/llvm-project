@@ -149,6 +149,7 @@ struct MD5Hash {
 
 MD5Hash md5_hash(const void *data, uptr size);
 
+struct Processor;
 struct ThreadState;
 class ThreadContext;
 struct Context;
