@@ -357,8 +357,7 @@ int32x2_t test_vmla_s32(int32x2_t v1, int32x2_t v2, int32x2_t v3) {
 float32x2_t test_vmla_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
   // CHECK-LABEL: test_vmla_f32
   return vmla_f32(v1, v2, v3);
-  // CHECK: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
-  // CHECK: fadd {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
+  // CHECK: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
 }
 
 uint8x8_t test_vmla_u8(uint8x8_t v1, uint8x8_t v2, uint8x8_t v3) {
@@ -400,8 +399,7 @@ int32x4_t test_vmlaq_s32(int32x4_t v1, int32x4_t v2, int32x4_t v3) {
 float32x4_t test_vmlaq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
   // CHECK-LABEL: test_vmlaq_f32
   return vmlaq_f32(v1, v2, v3);
-  // CHECK: fmul {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.4s
-  // CHECK: fadd {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.4s
+  // CHECK: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.4s
 }
 
 uint8x16_t test_vmlaq_u8(uint8x16_t v1, uint8x16_t v2, uint8x16_t v3) {
@@ -425,8 +423,7 @@ uint32x4_t test_vmlaq_u32(uint32x4_t v1, uint32x4_t v2, uint32x4_t v3) {
 float64x2_t test_vmlaq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
   // CHECK-LABEL: test_vmlaq_f64
   return vmlaq_f64(v1, v2, v3);
-  // CHECK: fmul {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
-  // CHECK: fadd {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
+  // CHECK: fmla {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
 }
 
 int8x8_t test_vmls_s8(int8x8_t v1, int8x8_t v2, int8x8_t v3) {
@@ -450,8 +447,7 @@ int32x2_t test_vmls_s32(int32x2_t v1, int32x2_t v2, int32x2_t v3) {
 float32x2_t test_vmls_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
   // CHECK-LABEL: test_vmls_f32
   return vmls_f32(v1, v2, v3);
-  // CHECK: fmul {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
-  // CHECK: fsub {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
+  // CHECK: fmls {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
 }
 
 uint8x8_t test_vmls_u8(uint8x8_t v1, uint8x8_t v2, uint8x8_t v3) {
@@ -492,8 +488,7 @@ int32x4_t test_vmlsq_s32(int32x4_t v1, int32x4_t v2, int32x4_t v3) {
 float32x4_t test_vmlsq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
   // CHECK-LABEL: test_vmlsq_f32
   return vmlsq_f32(v1, v2, v3);
-  // CHECK: fmul {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.4s
-  // CHECK: fsub {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.4s
+  // CHECK: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.4s
 }
 uint8x16_t test_vmlsq_u8(uint8x16_t v1, uint8x16_t v2, uint8x16_t v3) {
   // CHECK-LABEL: test_vmlsq_u8
@@ -516,8 +511,7 @@ uint32x4_t test_vmlsq_u32(uint32x4_t v1, uint32x4_t v2, uint32x4_t v3) {
 float64x2_t test_vmlsq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
   // CHECK-LABEL: test_vmlsq_f64
   return vmlsq_f64(v1, v2, v3);
-  // CHECK: fmul {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
-  // CHECK: fsub {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
+  // CHECK: fmls {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
 }
 float32x2_t test_vfma_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
   // CHECK-LABEL: test_vfma_f32
@@ -11463,15 +11457,13 @@ float64x1_t test_vdiv_f64(float64x1_t a, float64x1_t b) {
 float64x1_t test_vmla_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
   // CHECK-LABEL: test_vmla_f64
   return vmla_f64(a, b, c);
-  // CHECK: fmul d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
-  // CHECK: fadd d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  // CHECK: fmadd d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
 }
 
 float64x1_t test_vmls_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
   // CHECK-LABEL: test_vmls_f64
   return vmls_f64(a, b, c);
-  // CHECK: fmul d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
-  // CHECK: fsub d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
+  // CHECK: fmsub d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
 }
 
 float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
