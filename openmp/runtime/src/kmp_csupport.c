@@ -654,8 +654,10 @@ __kmpc_flush(ident_t *loc)
             if ( ! __kmp_cpuinfo.sse2 ) {
                 // CPU cannot execute SSE2 instructions.
             } else {
-                #if KMP_COMPILER_ICC || KMP_COMPILER_MSVC
+                #if KMP_COMPILER_ICC 
                 _mm_mfence();
+                #elif KMP_COMPILER_MSVC
+                MemoryBarrier();
                 #else
                 __sync_synchronize();
                 #endif // KMP_COMPILER_ICC

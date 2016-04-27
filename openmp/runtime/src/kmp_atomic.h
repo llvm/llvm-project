@@ -35,6 +35,13 @@
 #if defined( __cplusplus ) && ( KMP_OS_WINDOWS )
     // create shortcuts for c99 complex types
 
+    // Visual Studio cannot have function parameters that have the
+    // align __declspec attribute, so we must remove it. (Compiler Error C2719)
+    #if KMP_COMPILER_MSVC
+    # undef KMP_DO_ALIGN
+    # define KMP_DO_ALIGN(alignment) /* Nothing */
+    #endif
+
     #if (_MSC_VER < 1600) && defined(_DEBUG)
         // Workaround for the problem of _DebugHeapTag unresolved external.
         // This problem prevented to use our static debug library for C tests
