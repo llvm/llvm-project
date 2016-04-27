@@ -4778,9 +4778,10 @@ SwiftASTContext::GetIRGenModule ()
             swift::SILModule *sil_module = GetSILModule();
             if (sil_module != nullptr)
             {
-                m_ir_gen_module_ap.reset (new swift::irgen::IRGenModule(GetIRGenerator(ir_gen_opts, *sil_module),
+                swift::irgen::IRGenerator &ir_generator = GetIRGenerator(ir_gen_opts, *sil_module);
+                m_ir_gen_module_ap.reset (new swift::irgen::IRGenModule(ir_generator,
+                                                                        ir_generator.createTargetMachine(),
                                                                         nullptr,
-                                                                        *GetASTContext(),
                                                                         llvm::getGlobalContext(),
                                                                         ir_gen_opts.ModuleName,
                                                                         ir_gen_opts.getSingleOutputFilename()));
