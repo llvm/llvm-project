@@ -91,7 +91,6 @@ public:
   void writePltZero(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  bool isRelRelative(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 
   void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -115,7 +114,6 @@ public:
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  bool isRelRelative(uint32_t Type) const override;
 
   void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -127,7 +125,6 @@ class PPCTargetInfo final : public TargetInfo {
 public:
   PPCTargetInfo();
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  bool isRelRelative(uint32_t Type) const override;
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
 };
 
@@ -138,7 +135,6 @@ public:
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  bool isRelRelative(uint32_t Type) const override;
 };
 
 class AArch64TargetInfo final : public TargetInfo {
@@ -225,7 +221,7 @@ uint64_t TargetInfo::getImplicitAddend(const uint8_t *Buf,
 uint64_t TargetInfo::getVAStart() const { return Config->Pic ? 0 : VAStart; }
 
 bool TargetInfo::isHintRel(uint32_t Type) const { return false; }
-bool TargetInfo::isRelRelative(uint32_t Type) const { return true; }
+bool TargetInfo::isRelRelative(uint32_t Type) const { return false; }
 
 bool TargetInfo::needsThunk(uint32_t Type, const InputFile &File,
                             const SymbolBody &S) const {
@@ -300,17 +296,6 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     return R_TLS;
   case R_386_TLS_LE_32:
     return R_NEG_TLS;
-  }
-}
-
-bool X86TargetInfo::isRelRelative(uint32_t Type) const {
-  switch (Type) {
-  default:
-    return false;
-  case R_386_PC32:
-  case R_386_PLT32:
-  case R_386_TLS_LDO_32:
-    return true;
   }
 }
 
@@ -617,23 +602,6 @@ bool X86_64TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const {
          Type == R_X86_64_TLSLD;
 }
 
-bool X86_64TargetInfo::isRelRelative(uint32_t Type) const {
-  switch (Type) {
-  default:
-    return false;
-  case R_X86_64_DTPOFF32:
-  case R_X86_64_DTPOFF64:
-  case R_X86_64_GOTTPOFF:
-  case R_X86_64_PC8:
-  case R_X86_64_PC16:
-  case R_X86_64_PC32:
-  case R_X86_64_PC64:
-  case R_X86_64_PLT32:
-  case R_X86_64_TPOFF32:
-    return true;
-  }
-}
-
 void X86_64TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
                                       uint64_t Val) const {
   // Convert
@@ -782,7 +750,6 @@ static uint16_t applyPPCHighest(uint64_t V) { return V >> 48; }
 static uint16_t applyPPCHighesta(uint64_t V) { return (V + 0x8000) >> 48; }
 
 PPCTargetInfo::PPCTargetInfo() {}
-bool PPCTargetInfo::isRelRelative(uint32_t Type) const { return false; }
 
 void PPCTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                 uint64_t Val) const {
@@ -822,27 +789,35 @@ PPC64TargetInfo::PPC64TargetInfo() {
   VAStart = 0x10000000;
 }
 
-uint64_t getPPC64TocBase() {
-  // The TOC consists of sections .got, .toc, .tocbss, .plt in that
-  // order. The TOC starts where the first of these sections starts.
+static uint64_t PPC64TocOffset = 0x8000;
 
-  // FIXME: This obviously does not do the right thing when there is no .got
-  // section, but there is a .toc or .tocbss section.
+uint64_t getPPC64TocBase() {
+  // The TOC consists of sections .got, .toc, .tocbss, .plt in that order. The
+  // TOC starts where the first of these sections starts. We always create a
+  // .got when we see a relocation that uses it, so for us the start is always
+  // the .got.
   uint64_t TocVA = Out<ELF64BE>::Got->getVA();
-  if (!TocVA)
-    TocVA = Out<ELF64BE>::Plt->getVA();
 
   // Per the ppc64-elf-linux ABI, The TOC base is TOC value plus 0x8000
   // thus permitting a full 64 Kbytes segment. Note that the glibc startup
   // code (crt1.o) assumes that you can get from the TOC base to the
   // start of the .toc section with only a single (signed) 16-bit relocation.
-  return TocVA + 0x8000;
+  return TocVA + PPC64TocOffset;
 }
 
 RelExpr PPC64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   switch (Type) {
   default:
     return R_ABS;
+  case R_PPC64_TOC16:
+  case R_PPC64_TOC16_DS:
+  case R_PPC64_TOC16_HA:
+  case R_PPC64_TOC16_HI:
+  case R_PPC64_TOC16_LO:
+  case R_PPC64_TOC16_LO_DS:
+    return R_GOTREL;
+  case R_PPC64_TOC:
+    return R_PPC_TOC;
   case R_PPC64_REL24:
     return R_PPC_PLT_OPD;
   }
@@ -869,29 +844,19 @@ void PPC64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32be(Buf + 28, 0x4e800420);                   // bctr
 }
 
-bool PPC64TargetInfo::isRelRelative(uint32_t Type) const {
-  switch (Type) {
-  default:
-    return true;
-  case R_PPC64_ADDR64:
-  case R_PPC64_TOC:
-    return false;
-  }
-}
-
 void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                   uint64_t Val) const {
-  uint64_t TB = getPPC64TocBase();
+  uint64_t TO = PPC64TocOffset;
 
-  // For a TOC-relative relocation, adjust the addend and proceed in terms of
-  // the corresponding ADDR16 relocation type.
+  // For a TOC-relative relocation,  proceed in terms of the corresponding
+  // ADDR16 relocation type.
   switch (Type) {
-  case R_PPC64_TOC16:       Type = R_PPC64_ADDR16;       Val -= TB; break;
-  case R_PPC64_TOC16_DS:    Type = R_PPC64_ADDR16_DS;    Val -= TB; break;
-  case R_PPC64_TOC16_HA:    Type = R_PPC64_ADDR16_HA;    Val -= TB; break;
-  case R_PPC64_TOC16_HI:    Type = R_PPC64_ADDR16_HI;    Val -= TB; break;
-  case R_PPC64_TOC16_LO:    Type = R_PPC64_ADDR16_LO;    Val -= TB; break;
-  case R_PPC64_TOC16_LO_DS: Type = R_PPC64_ADDR16_LO_DS; Val -= TB; break;
+  case R_PPC64_TOC16:       Type = R_PPC64_ADDR16;       Val -= TO; break;
+  case R_PPC64_TOC16_DS:    Type = R_PPC64_ADDR16_DS;    Val -= TO; break;
+  case R_PPC64_TOC16_HA:    Type = R_PPC64_ADDR16_HA;    Val -= TO; break;
+  case R_PPC64_TOC16_HI:    Type = R_PPC64_ADDR16_HI;    Val -= TO; break;
+  case R_PPC64_TOC16_LO:    Type = R_PPC64_ADDR16_LO;    Val -= TO; break;
+  case R_PPC64_TOC16_LO_DS: Type = R_PPC64_ADDR16_LO_DS; Val -= TO; break;
   default: break;
   }
 
@@ -1018,24 +983,11 @@ bool AArch64TargetInfo::isRelRelative(uint32_t Type) const {
   default:
     return false;
   case R_AARCH64_ADD_ABS_LO12_NC:
-  case R_AARCH64_ADR_GOT_PAGE:
-  case R_AARCH64_ADR_PREL_LO21:
-  case R_AARCH64_ADR_PREL_PG_HI21:
-  case R_AARCH64_CALL26:
-  case R_AARCH64_CONDBR19:
-  case R_AARCH64_JUMP26:
   case R_AARCH64_LDST8_ABS_LO12_NC:
   case R_AARCH64_LDST16_ABS_LO12_NC:
   case R_AARCH64_LDST32_ABS_LO12_NC:
   case R_AARCH64_LDST64_ABS_LO12_NC:
   case R_AARCH64_LDST128_ABS_LO12_NC:
-  case R_AARCH64_PREL32:
-  case R_AARCH64_PREL64:
-  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
-  case R_AARCH64_TLSLE_ADD_TPREL_HI12:
-  case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-  case R_AARCH64_TSTBR14:
   case R_AARCH64_LD64_GOT_LO12_NC:
     return true;
   }
@@ -1585,27 +1537,7 @@ bool MipsTargetInfo<ELFT>::isHintRel(uint32_t Type) const {
 
 template <class ELFT>
 bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
-  switch (Type) {
-  default:
-    return true;
-  case R_MIPS_26:
-  case R_MIPS_32:
-  case R_MIPS_64:
-  case R_MIPS_HI16:
-    return false;
-  }
+  return Type == R_MIPS_LO16;
 }
-
-// _gp is a MIPS-specific ABI-defined symbol which points to
-// a location that is relative to GOT. This function returns
-// the value for the symbol.
-template <class ELFT> typename ELFT::uint getMipsGpAddr() {
-  return Out<ELFT>::Got->getVA() + MipsGPOffset;
-}
-
-template uint32_t getMipsGpAddr<ELF32LE>();
-template uint32_t getMipsGpAddr<ELF32BE>();
-template uint64_t getMipsGpAddr<ELF64LE>();
-template uint64_t getMipsGpAddr<ELF64BE>();
 }
 }

@@ -24,6 +24,8 @@
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/StringSaver.h"
 
+#include <map>
+
 namespace lld {
 namespace elf {
 
@@ -245,10 +247,14 @@ template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::Word Elf_Word;
   typedef typename ELFT::SymRange Elf_Sym_Range;
+  typedef typename ELFT::Versym Elf_Versym;
+  typedef typename ELFT::Verdef Elf_Verdef;
 
   std::vector<SharedSymbol<ELFT>> SymbolBodies;
   std::vector<StringRef> Undefs;
   StringRef SoName;
+  const Elf_Shdr *VersymSec = nullptr;
+  const Elf_Shdr *VerdefSec = nullptr;
 
 public:
   StringRef getSoName() const { return SoName; }
@@ -266,6 +272,19 @@ public:
 
   void parseSoName();
   void parseRest();
+  std::vector<const Elf_Verdef *> parseVerdefs(const Elf_Versym *&Versym);
+
+  struct NeededVer {
+    // The string table offset of the version name in the output file.
+    size_t StrTab;
+
+    // The version identifier for this version name.
+    uint16_t Index;
+  };
+
+  // Mapping from Elf_Verdef data structures to information about Elf_Vernaux
+  // data structures in the output file.
+  std::map<const Elf_Verdef *, NeededVer> VerdefMap;
 
   // Used for --as-needed
   bool AsNeeded = false;

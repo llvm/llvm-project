@@ -400,13 +400,13 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestSimpleClassTypes))
     SymbolContext sc;
     llvm::DenseSet<SymbolFile *> searched_files;
     TypeMap results;
-    EXPECT_EQ(1, symfile->FindTypes(sc, ConstString("Class"), nullptr, false, 0, searched_files, results));
-    EXPECT_EQ(1, results.GetSize());
+    EXPECT_EQ(1u, symfile->FindTypes(sc, ConstString("Class"), nullptr, false, 0, searched_files, results));
+    EXPECT_EQ(1u, results.GetSize());
     lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
     EXPECT_EQ(ConstString("Class"), udt_type->GetName());
     CompilerType compiler_type = udt_type->GetForwardCompilerType();
     EXPECT_TRUE(ClangASTContext::IsClassType(compiler_type.GetOpaqueQualType()));
-    EXPECT_EQ(GetGlobalConstantInteger(session, "sizeof_Class"), udt_type->GetByteSize());
+    EXPECT_EQ(uint64_t(GetGlobalConstantInteger(session, "sizeof_Class")), udt_type->GetByteSize());
 }
 
 TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestNestedClassTypes))
@@ -421,8 +421,8 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestNestedClassTypes))
     SymbolContext sc;
     llvm::DenseSet<SymbolFile *> searched_files;
     TypeMap results;
-    EXPECT_EQ(1, symfile->FindTypes(sc, ConstString("Class::NestedClass"), nullptr, false, 0, searched_files, results));
-    EXPECT_EQ(1, results.GetSize());
+    EXPECT_EQ(1u, symfile->FindTypes(sc, ConstString("Class::NestedClass"), nullptr, false, 0, searched_files, results));
+    EXPECT_EQ(1u, results.GetSize());
     lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
     EXPECT_EQ(ConstString("Class::NestedClass"), udt_type->GetName());
     CompilerType compiler_type = udt_type->GetForwardCompilerType();
@@ -442,8 +442,8 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestClassInNamespace))
     SymbolContext sc;
     llvm::DenseSet<SymbolFile *> searched_files;
     TypeMap results;
-    EXPECT_EQ(1, symfile->FindTypes(sc, ConstString("NS::NSClass"), nullptr, false, 0, searched_files, results));
-    EXPECT_EQ(1, results.GetSize());
+    EXPECT_EQ(1u, symfile->FindTypes(sc, ConstString("NS::NSClass"), nullptr, false, 0, searched_files, results));
+    EXPECT_EQ(1u, results.GetSize());
     lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
     EXPECT_EQ(ConstString("NS::NSClass"), udt_type->GetName());
     CompilerType compiler_type = udt_type->GetForwardCompilerType();
@@ -466,8 +466,8 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestEnumTypes))
     for (auto Enum : EnumsToCheck)
     {
         TypeMap results;
-        EXPECT_EQ(1, symfile->FindTypes(sc, ConstString(Enum), nullptr, false, 0, searched_files, results));
-        EXPECT_EQ(1, results.GetSize());
+        EXPECT_EQ(1u, symfile->FindTypes(sc, ConstString(Enum), nullptr, false, 0, searched_files, results));
+        EXPECT_EQ(1u, results.GetSize());
         lldb::TypeSP enum_type = results.GetTypeAtIndex(0);
         EXPECT_EQ(ConstString(Enum), enum_type->GetName());
         CompilerType compiler_type = enum_type->GetFullCompilerType();
@@ -511,8 +511,8 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestTypedefs))
     for (auto Typedef : TypedefsToCheck)
     {
         TypeMap results;
-        EXPECT_EQ(1, symfile->FindTypes(sc, ConstString(Typedef), nullptr, false, 0, searched_files, results));
-        EXPECT_EQ(1, results.GetSize());
+        EXPECT_EQ(1u, symfile->FindTypes(sc, ConstString(Typedef), nullptr, false, 0, searched_files, results));
+        EXPECT_EQ(1u, results.GetSize());
         lldb::TypeSP typedef_type = results.GetTypeAtIndex(0);
         EXPECT_EQ(ConstString(Typedef), typedef_type->GetName());
         CompilerType compiler_type = typedef_type->GetFullCompilerType();
@@ -536,8 +536,8 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestRegexNameMatch))
     SymbolContext sc;
     llvm::DenseSet<SymbolFile *> searched_files;
     TypeMap results;
-    int num_results = symfile->FindTypes(sc, ConstString(".*"), nullptr, false, 0, searched_files, results);
-    EXPECT_GT(num_results, 1);
+    uint32_t num_results = symfile->FindTypes(sc, ConstString(".*"), nullptr, false, 0, searched_files, results);
+    EXPECT_GT(num_results, 1u);
     EXPECT_EQ(num_results, results.GetSize());
 }
 
@@ -552,14 +552,14 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestMaxMatches))
     SymbolContext sc;
     llvm::DenseSet<SymbolFile *> searched_files;
     TypeMap results;
-    int num_results = symfile->FindTypes(sc, ConstString(".*"), nullptr, false, 0, searched_files, results);
+    uint32_t num_results = symfile->FindTypes(sc, ConstString(".*"), nullptr, false, 0, searched_files, results);
     // Try to limit ourselves from 1 to 10 results, otherwise we could be doing this thousands of times.
     // The idea is just to make sure that for a variety of values, the number of limited results always
     // comes out to the number we are expecting.
-    int iterations = std::min(num_results, 10);
-    for (int i = 1; i <= iterations; ++i)
+    uint32_t iterations = std::min(num_results, 10u);
+    for (uint32_t i = 1; i <= iterations; ++i)
     {
-        int num_limited_results = symfile->FindTypes(sc, ConstString(".*"), nullptr, false, i, searched_files, results);
+        uint32_t num_limited_results = symfile->FindTypes(sc, ConstString(".*"), nullptr, false, i, searched_files, results);
         EXPECT_EQ(i, num_limited_results);
         EXPECT_EQ(num_limited_results, results.GetSize());
     }
@@ -576,7 +576,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestNullName))
     SymbolContext sc;
     llvm::DenseSet<SymbolFile *> searched_files;
     TypeMap results;
-    int num_results = symfile->FindTypes(sc, ConstString(), nullptr, false, 0, searched_files, results);
-    EXPECT_EQ(0, num_results);
-    EXPECT_EQ(0, results.GetSize());
+    uint32_t num_results = symfile->FindTypes(sc, ConstString(), nullptr, false, 0, searched_files, results);
+    EXPECT_EQ(0u, num_results);
+    EXPECT_EQ(0u, results.GetSize());
 }

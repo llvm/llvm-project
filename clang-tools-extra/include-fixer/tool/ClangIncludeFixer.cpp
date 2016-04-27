@@ -15,35 +15,70 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 using namespace clang;
+using namespace llvm;
 
-static llvm::cl::OptionCategory tool_options("Tool options");
+namespace {
+cl::OptionCategory IncludeFixerCategory("Tool options");
+
+enum DatabaseFormatTy {
+  fixed, ///< Hard-coded mapping.
+};
+
+cl::opt<DatabaseFormatTy> DatabaseFormat(
+    "db", cl::desc("Specify input format"),
+    cl::values(clEnumVal(fixed, "Hard-coded mapping"), clEnumValEnd),
+    cl::init(fixed), cl::cat(IncludeFixerCategory));
+
+cl::opt<std::string> Input("input",
+                           cl::desc("String to initialize the database"),
+                           cl::cat(IncludeFixerCategory));
+} // namespace
 
 int main(int argc, const char **argv) {
-  clang::tooling::CommonOptionsParser options(argc, argv, tool_options);
-  clang::tooling::ClangTool tool(options.getCompilations(),
-                                 options.getSourcePathList());
+  tooling::CommonOptionsParser options(argc, argv, IncludeFixerCategory);
+  tooling::ClangTool tool(options.getCompilations(),
+                          options.getSourcePathList());
+
   // Set up the data source.
-  std::map<std::string, std::vector<std::string>> XrefsMap = {
-      {"std::string", {"<string>"}}};
-  auto XrefsDB =
-      llvm::make_unique<include_fixer::InMemoryXrefsDB>(std::move(XrefsMap));
+  std::unique_ptr<include_fixer::XrefsDB> XrefsDB;
+  switch (DatabaseFormat) {
+  case fixed: {
+    // Parse input and fill the database with it.
+    // <symbol>=<header><, header...>
+    // Multiple symbols can be given, separated by semicolons.
+    std::map<std::string, std::vector<std::string>> XrefsMap;
+    SmallVector<StringRef, 4> SemicolonSplits;
+    StringRef(Input).split(SemicolonSplits, ";");
+    for (StringRef Pair : SemicolonSplits) {
+      auto Split = Pair.split('=');
+      std::vector<std::string> Headers;
+      SmallVector<StringRef, 4> CommaSplits;
+      Split.second.split(CommaSplits, ",");
+      for (StringRef Header : CommaSplits)
+        Headers.push_back(Header.trim());
+      XrefsMap[Split.first.trim()] = std::move(Headers);
+    }
+    XrefsDB =
+        llvm::make_unique<include_fixer::InMemoryXrefsDB>(std::move(XrefsMap));
+    break;
+  }
+  }
 
   // Now run our tool.
-  std::vector<clang::tooling::Replacement> Replacements;
+  std::vector<tooling::Replacement> Replacements;
   include_fixer::IncludeFixerActionFactory Factory(*XrefsDB, Replacements);
 
   tool.run(&Factory); // Always succeeds.
 
   // Set up a new source manager for applying the resulting replacements.
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts(
-      new clang::DiagnosticOptions);
-  clang::DiagnosticsEngine Diagnostics(new clang::DiagnosticIDs, &*DiagOpts);
-  clang::TextDiagnosticPrinter DiagnosticPrinter(llvm::outs(), &*DiagOpts);
-  clang::SourceManager source_manager(Diagnostics, tool.getFiles());
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
+  DiagnosticsEngine Diagnostics(new DiagnosticIDs, &*DiagOpts);
+  TextDiagnosticPrinter DiagnosticPrinter(outs(), &*DiagOpts);
+  SourceManager SM(Diagnostics, tool.getFiles());
   Diagnostics.setClient(&DiagnosticPrinter, false);
 
   // Write replacements to disk.
-  clang::Rewriter Rewrites(source_manager, clang::LangOptions());
-  clang::tooling::applyAllReplacements(Replacements, Rewrites);
+  Rewriter Rewrites(SM, LangOptions());
+  tooling::applyAllReplacements(Replacements, Rewrites);
   return Rewrites.overwriteChangedFiles();
 }

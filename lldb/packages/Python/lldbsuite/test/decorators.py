@@ -7,6 +7,7 @@ from functools import wraps
 import os
 import re
 import sys
+import tempfile
 
 # Third-party modules
 import six
@@ -504,6 +505,23 @@ def skipUnlessCompilerRt(func):
         compilerRtPath = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "llvm","projects","compiler-rt")
         return "compiler-rt not found" if not os.path.exists(compilerRtPath) else None
     return skipTestIfFn(is_compiler_rt_missing)(func)
+
+def skipUnlessThreadSanitizer(func):
+    """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
+    def is_compiler_clang_with_thread_sanitizer(self):
+        compiler_path = self.getCompiler()
+        compiler = os.path.basename(compiler_path)
+        if not compiler.startswith("clang"):
+            return "Test requires clang as compiler"
+        f = tempfile.NamedTemporaryFile()
+        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
+        if os.popen(cmd).close() != None:
+            return None  # The compiler cannot compile at all, let's *not* skip the test
+        cmd = "echo 'int main() {}' | %s -fsanitize=thread -x c -o %s -" % (compiler_path, f.name)
+        if os.popen(cmd).close() != None:
+            return "Compiler cannot compile with -fsanitize=thread"
+        return None
+    return skipTestIfFn(is_compiler_clang_with_thread_sanitizer)(func)
 
 def skipUnlessClangModules():
     """Decorate the item to skip test unless Clang -gmodules flag is supported."""

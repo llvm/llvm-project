@@ -1895,10 +1895,10 @@ public:
   inline unsigned getMaxLoopDepth() const { return MaxLoopDepth; }
 
   /// @brief Return the invariant equivalence class for @p Val if any.
-  const InvariantEquivClassTy *lookupInvariantEquivClass(Value *Val) const;
+  InvariantEquivClassTy *lookupInvariantEquivClass(Value *Val);
 
   /// @brief Return the set of invariant accesses.
-  const InvariantEquivClassesTy &getInvariantAccesses() const {
+  InvariantEquivClassesTy &getInvariantAccesses() {
     return InvariantEquivClasses;
   }
 
