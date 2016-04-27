@@ -241,8 +241,6 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   if (PrepareForThinLTO) {
     MPM.add(createAggressiveDCEPass());        // Delete dead instructions
     addInstructionCombiningPass(MPM);          // Combine silly seq's
-    // Rename anon function to export them
-    MPM.add(createNameAnonFunctionPass());
     return;
   }
   // Rotate Loop - disable header duplication at -Oz
@@ -397,8 +395,11 @@ void PassManagerBuilder::populateModulePassManager(
   // If we are planning to perform ThinLTO later, let's not bloat the code with
   // unrolling/vectorization/... now. We'll first run the inliner + CGSCC passes
   // during ThinLTO and perform the rest of the optimizations afterward.
-  if (PrepareForThinLTO)
+  if (PrepareForThinLTO) {
+    // Rename anon function to be able to export them in the summary.
+    MPM.add(createNameAnonFunctionPass());
     return;
+  }
 
   // FIXME: This is a HACK! The inliner pass above implicitly creates a CGSCC
   // pass manager that we are specifically trying to avoid. To prevent this
