@@ -571,92 +571,15 @@ private:
   AccessesType Accesses;
 };
 
-/// \brief The pass class.
-class LoopDistribute : public FunctionPass {
+/// \brief The actual class performing the per-loop work.
+class LoopDistributeForLoop {
 public:
-  LoopDistribute() : FunctionPass(ID) {
-    initializeLoopDistributePass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    LAA = &getAnalysis<LoopAccessAnalysis>();
-    DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-
-    // Build up a worklist of inner-loops to vectorize. This is necessary as the
-    // act of distributing a loop creates new loops and can invalidate iterators
-    // across the loops.
-    SmallVector<Loop *, 8> Worklist;
-
-    for (Loop *TopLevelLoop : *LI)
-      for (Loop *L : depth_first(TopLevelLoop))
-        // We only handle inner-most loops.
-        if (L->empty())
-          Worklist.push_back(L);
-
-    // Now walk the identified inner loops.
-    bool Changed = false;
-    for (Loop *L : Worklist)
-      Changed |= processLoop(L);
-
-    // Process each loop nest in the function.
-    return Changed;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addRequired<LoopAccessAnalysis>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-
-  static char ID;
-
-private:
-  /// \brief Filter out checks between pointers from the same partition.
-  ///
-  /// \p PtrToPartition contains the partition number for pointers.  Partition
-  /// number -1 means that the pointer is used in multiple partitions.  In this
-  /// case we can't safely omit the check.
-  SmallVector<RuntimePointerChecking::PointerCheck, 4>
-  includeOnlyCrossPartitionChecks(
-      const SmallVectorImpl<RuntimePointerChecking::PointerCheck> &AllChecks,
-      const SmallVectorImpl<int> &PtrToPartition,
-      const RuntimePointerChecking *RtPtrChecking) {
-    SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks;
-
-    std::copy_if(AllChecks.begin(), AllChecks.end(), std::back_inserter(Checks),
-                 [&](const RuntimePointerChecking::PointerCheck &Check) {
-                   for (unsigned PtrIdx1 : Check.first->Members)
-                     for (unsigned PtrIdx2 : Check.second->Members)
-                       // Only include this check if there is a pair of pointers
-                       // that require checking and the pointers fall into
-                       // separate partitions.
-                       //
-                       // (Note that we already know at this point that the two
-                       // pointer groups need checking but it doesn't follow
-                       // that each pair of pointers within the two groups need
-                       // checking as well.
-                       //
-                       // In other words we don't want to include a check just
-                       // because there is a pair of pointers between the two
-                       // pointer groups that require checks and a different
-                       // pair whose pointers fall into different partitions.)
-                       if (RtPtrChecking->needsChecking(PtrIdx1, PtrIdx2) &&
-                           !RuntimePointerChecking::arePointersInSamePartition(
-                               PtrToPartition, PtrIdx1, PtrIdx2))
-                         return true;
-                   return false;
-                 });
-
-    return Checks;
-  }
+  LoopDistributeForLoop(Loop *L, LoopInfo *LI, const LoopAccessInfo &LAI,
+                        DominatorTree *DT, ScalarEvolution *SE)
+      : L(L), LI(LI), LAI(LAI), DT(DT), SE(SE) {}
 
   /// \brief Try to distribute an inner-most loop.
-  bool processLoop(Loop *L) {
+  bool processLoop() {
     assert(L->empty() && "Only process inner loops.");
 
     DEBUG(dbgs() << "\nLDist: In \"" << L->getHeader()->getParent()->getName()
@@ -672,8 +595,6 @@ private:
       return false;
     }
     // LAA will check that we only have a single exiting block.
-
-    const LoopAccessInfo &LAI = LAA->getInfo(L, ValueToValueMap());
 
     // Currently, we only distribute to isolate the part of the loop with
     // dependence cycles to enable partial vectorization.
@@ -814,11 +735,100 @@ private:
     return true;
   }
 
+private:
+  /// \brief Filter out checks between pointers from the same partition.
+  ///
+  /// \p PtrToPartition contains the partition number for pointers.  Partition
+  /// number -1 means that the pointer is used in multiple partitions.  In this
+  /// case we can't safely omit the check.
+  SmallVector<RuntimePointerChecking::PointerCheck, 4>
+  includeOnlyCrossPartitionChecks(
+      const SmallVectorImpl<RuntimePointerChecking::PointerCheck> &AllChecks,
+      const SmallVectorImpl<int> &PtrToPartition,
+      const RuntimePointerChecking *RtPtrChecking) {
+    SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks;
+
+    std::copy_if(AllChecks.begin(), AllChecks.end(), std::back_inserter(Checks),
+                 [&](const RuntimePointerChecking::PointerCheck &Check) {
+                   for (unsigned PtrIdx1 : Check.first->Members)
+                     for (unsigned PtrIdx2 : Check.second->Members)
+                       // Only include this check if there is a pair of pointers
+                       // that require checking and the pointers fall into
+                       // separate partitions.
+                       //
+                       // (Note that we already know at this point that the two
+                       // pointer groups need checking but it doesn't follow
+                       // that each pair of pointers within the two groups need
+                       // checking as well.
+                       //
+                       // In other words we don't want to include a check just
+                       // because there is a pair of pointers between the two
+                       // pointer groups that require checks and a different
+                       // pair whose pointers fall into different partitions.)
+                       if (RtPtrChecking->needsChecking(PtrIdx1, PtrIdx2) &&
+                           !RuntimePointerChecking::arePointersInSamePartition(
+                               PtrToPartition, PtrIdx1, PtrIdx2))
+                         return true;
+                   return false;
+                 });
+
+    return Checks;
+  }
+
   // Analyses used.
+  Loop *L;
   LoopInfo *LI;
-  LoopAccessAnalysis *LAA;
+  const LoopAccessInfo &LAI;
   DominatorTree *DT;
   ScalarEvolution *SE;
+};
+
+/// \brief The pass class.
+class LoopDistribute : public FunctionPass {
+public:
+  LoopDistribute() : FunctionPass(ID) {
+    initializeLoopDistributePass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override {
+    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto *LAA = &getAnalysis<LoopAccessAnalysis>();
+    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+
+    // Build up a worklist of inner-loops to vectorize. This is necessary as the
+    // act of distributing a loop creates new loops and can invalidate iterators
+    // across the loops.
+    SmallVector<Loop *, 8> Worklist;
+
+    for (Loop *TopLevelLoop : *LI)
+      for (Loop *L : depth_first(TopLevelLoop))
+        // We only handle inner-most loops.
+        if (L->empty())
+          Worklist.push_back(L);
+
+    // Now walk the identified inner loops.
+    bool Changed = false;
+    for (Loop *L : Worklist) {
+      const LoopAccessInfo &LAI = LAA->getInfo(L, ValueToValueMap());
+      LoopDistributeForLoop LDL(L, LI, LAI, DT, SE);
+      Changed |= LDL.processLoop();
+    }
+
+    // Process each loop nest in the function.
+    return Changed;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<ScalarEvolutionWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addRequired<LoopAccessAnalysis>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+  }
+
+  static char ID;
 };
 } // anonymous namespace
 
