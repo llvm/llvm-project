@@ -7604,8 +7604,9 @@ ASTReader::getSourceDescriptor(unsigned ID) {
   if (ModuleMgr.size() == 1) {
     ModuleFile &MF = ModuleMgr.getPrimaryModule();
     StringRef ModuleName = llvm::sys::path::filename(MF.OriginalSourceFileName);
-    return ASTReader::ASTSourceDescriptor(ModuleName, MF.OriginalDir,
-                                          MF.FileName, MF.Signature);
+    StringRef FileName = llvm::sys::path::filename(MF.FileName);
+    return ASTReader::ASTSourceDescriptor(ModuleName, MF.OriginalDir, FileName,
+                                          MF.Signature);
   }
   return None;
 }
