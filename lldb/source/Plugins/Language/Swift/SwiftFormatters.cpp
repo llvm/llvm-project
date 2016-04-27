@@ -378,31 +378,55 @@ lldb_private::formatters::swift::DarwinBoolean_SummaryProvider (ValueObject& val
     }
 }
 
-bool
-lldb_private::formatters::swift::Range_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
+static bool
+RangeFamily_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options, bool isHalfOpen)
 {
-    static ConstString g_startIndex("startIndex");
-    static ConstString g_endIndex("endIndex");
+    static ConstString g_lowerBound("lowerBound");
+    static ConstString g_upperBound("upperBound");
     
-    ValueObjectSP startIndex_sp(valobj.GetChildMemberWithName(g_startIndex, true));
-    ValueObjectSP endIndex_sp(valobj.GetChildMemberWithName(g_endIndex, true));
+    ValueObjectSP lowerBound_sp(valobj.GetChildMemberWithName(g_lowerBound, true));
+    ValueObjectSP upperBound_sp(valobj.GetChildMemberWithName(g_upperBound, true));
     
-    if (!startIndex_sp || !endIndex_sp)
+    if (!lowerBound_sp || !upperBound_sp)
         return false;
     
-    startIndex_sp = startIndex_sp->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget, true);
-    endIndex_sp = endIndex_sp->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget, true);
+    lowerBound_sp = lowerBound_sp->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget, true);
+    upperBound_sp = upperBound_sp->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget, true);
     
-    auto start_summary = startIndex_sp->GetValueAsCString();
-    auto end_summary = endIndex_sp->GetValueAsCString();
+    auto start_summary = lowerBound_sp->GetValueAsCString();
+    auto end_summary = upperBound_sp->GetValueAsCString();
     
     // the Range should not have a summary unless both start and end indices have one - or it will look awkward
     if (!start_summary || !start_summary[0] || !end_summary || !end_summary[0])
         return false;
     
-    stream.Printf("%s..<%s",start_summary, end_summary);
+    stream.Printf("%s%s%s", start_summary, isHalfOpen ? "..<" : "...", end_summary);
     
     return true;
+}
+
+bool
+lldb_private::formatters::swift::Range_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
+{
+    return RangeFamily_SummaryProvider(valobj, stream, options, true);
+}
+
+bool
+lldb_private::formatters::swift::CountableRange_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
+{
+    return RangeFamily_SummaryProvider(valobj, stream, options, true);
+}
+
+bool
+lldb_private::formatters::swift::ClosedRange_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
+{
+    return RangeFamily_SummaryProvider(valobj, stream, options, false);
+}
+
+bool
+lldb_private::formatters::swift::CountableClosedRange_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
+{
+    return RangeFamily_SummaryProvider(valobj, stream, options, false);
 }
 
 bool

@@ -70,6 +70,15 @@ namespace lldb_private {
             Range_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
 
             bool
+            CountableRange_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
+
+            bool
+            ClosedRange_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
+
+            bool
+            CountableClosedRange_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
+
+            bool
             StridedRangeGenerator_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
             
             // TODO: this is a transient workaround for the fact that
