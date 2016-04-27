@@ -169,6 +169,10 @@ public:
   /// Return linkage type recorded for this global value.
   GlobalValue::LinkageTypes linkage() const { return Flags.Linkage; }
 
+  /// Return true if this summary is for a GlobalValue that needs promotion
+  /// to be referenced from another module.
+  bool needsRenaming() const { return GlobalValue::isLocalLinkage(linkage()); }
+
   /// Return true if this global value is located in a specific section.
   bool hasSection() const { return Flags.HasSection; }
 
