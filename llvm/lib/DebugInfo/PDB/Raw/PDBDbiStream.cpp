@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Raw/PDBDbiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBInfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBRawConstants.h"
@@ -84,8 +85,10 @@ std::error_code PDBDbiStream::reload() {
   if (Header->VersionSignature != -1)
     return std::make_error_code(std::errc::illegal_byte_sequence);
 
-  // Prior to VC50 an old style header was used.  We don't support this.
-  if (Header->VersionHeader < PdbDbiV50)
+  // Require at least version 7, which should be present in all PDBs
+  // produced in the last decade and allows us to avoid having to
+  // special case all kinds of complicated arcane formats.
+  if (Header->VersionHeader < PdbDbiV70)
     return std::make_error_code(std::errc::not_supported);
 
   if (Header->Age != Pdb.getPDBInfoStream().getAge())
@@ -97,6 +100,14 @@ std::error_code PDBDbiStream::reload() {
           Header->FileInfoSize + Header->TypeServerSize +
           Header->OptionalDbgHdrSize + Header->ECSubstreamSize)
     return std::make_error_code(std::errc::illegal_byte_sequence);
+
+  if (Header->ModiSubstreamSize % sizeof(uint32_t) != 0)
+    return std::make_error_code(std::errc::illegal_byte_sequence);
+
+  ModInfoSubstream.resize(Header->ModiSubstreamSize);
+  if (auto EC =
+          Stream.readBytes(&ModInfoSubstream[0], Header->ModiSubstreamSize))
+    return EC;
 
   return std::error_code();
 }
@@ -137,4 +148,9 @@ uint32_t PDBDbiStream::getNumberOfSymbols() const { return Header->SymRecords; }
 PDB_Machine PDBDbiStream::getMachineType() const {
   uint16_t Machine = Header->MachineType;
   return static_cast<PDB_Machine>(Machine);
+}
+
+llvm::iterator_range<ModInfoIterator> PDBDbiStream::modules() const {
+  return llvm::make_range(ModInfoIterator(&ModInfoSubstream.front()),
+                          ModInfoIterator(&ModInfoSubstream.back() + 1));
 }

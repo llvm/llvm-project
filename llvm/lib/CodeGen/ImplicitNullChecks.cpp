@@ -397,7 +397,16 @@ void ImplicitNullChecks::rewriteNullChecks(
     // check earlier ensures that this bit of code motion is legal.  We do not
     // touch the successors list for any basic block since we haven't changed
     // control flow, we've just made it implicit.
-    insertFaultingLoad(NC.MemOperation, NC.CheckBlock, HandlerLabel);
+    MachineInstr *FaultingLoad =
+        insertFaultingLoad(NC.MemOperation, NC.CheckBlock, HandlerLabel);
+    // Now the value of the MemOperation, if any, is live-in of block
+    // of MemOperation.
+    unsigned Reg = FaultingLoad->getOperand(0).getReg();
+    if (Reg) {
+      MachineBasicBlock *MBB = NC.MemOperation->getParent();
+      if (!MBB->isLiveIn(Reg))
+        MBB->addLiveIn(Reg);
+    }
     NC.MemOperation->eraseFromParent();
     NC.CheckOperation->eraseFromParent();
 

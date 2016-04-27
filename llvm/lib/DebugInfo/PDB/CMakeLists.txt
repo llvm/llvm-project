@@ -27,6 +27,7 @@ if(HAVE_DIA_SDK)
 endif()
 
 add_pdb_impl_folder(Raw
+  Raw/ModInfo.cpp
   Raw/PDBFile.cpp
   Raw/PDBDbiStream.cpp
   Raw/PDBInfoStream.cpp

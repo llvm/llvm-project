@@ -371,10 +371,13 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createCFGSimplificationPass()); // Clean up after IPCP & DAE
   }
 
-  if (!PerformThinLTO)
+  if (!PerformThinLTO) {
     /// PGO instrumentation is added during the compile phase for ThinLTO, do
     /// not run it a second time
     addPGOInstrPasses(MPM);
+    // Indirect call promotion that promotes intra-module targets only.
+    MPM.add(createPGOIndirectCallPromotionPass());
+  }
 
   if (EnableNonLTOGlobalsModRef)
     // We add a module alias analysis pass here. In part due to bugs in the
@@ -584,6 +587,12 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
 
   // Infer attributes about declarations if possible.
   PM.add(createInferFunctionAttrsLegacyPass());
+
+  // Indirect call promotion. This should promote all the targets that are left
+  // by the earlier promotion pass that promotes intra-module targets.
+  // This two-step promotion is to save the compile time. For LTO, it should
+  // produce the same result as if we only do promotion here.
+  PM.add(createPGOIndirectCallPromotionPass(true));
 
   // Propagate constants at call sites into the functions they call.  This
   // opens opportunities for globalopt (and inlining) by substituting function

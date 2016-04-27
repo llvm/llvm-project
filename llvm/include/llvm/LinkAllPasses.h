@@ -91,6 +91,7 @@ namespace {
       (void) llvm::createGCOVProfilerPass();
       (void) llvm::createPGOInstrumentationGenPass();
       (void) llvm::createPGOInstrumentationUsePass();
+      (void) llvm::createPGOIndirectCallPromotionPass();
       (void) llvm::createInstrProfilingLegacyPass();
       (void) llvm::createFunctionImportPass();
       (void) llvm::createFunctionInliningPass();

@@ -1004,7 +1004,7 @@ static void DumpRawSectionContents(MachOObjectFile *O, const char *sect,
         outs() << format("%08" PRIx64, addr) << "\t";
       for (j = 0; j < 4 * sizeof(int32_t) && i + j < size;
            j += sizeof(int32_t)) {
-        if (i + j + sizeof(int32_t) < size) {
+        if (i + j + sizeof(int32_t) <= size) {
           uint32_t long_word;
           memcpy(&long_word, sect + i + j, sizeof(int32_t));
           if (O->isLittleEndian() != sys::IsLittleEndianHost)
@@ -1012,7 +1012,7 @@ static void DumpRawSectionContents(MachOObjectFile *O, const char *sect,
           outs() << format("%08" PRIx32, long_word) << " ";
         } else {
           for (uint32_t k = 0; i + j + k < size; k++) {
-            uint8_t byte_word = *(sect + i + j);
+            uint8_t byte_word = *(sect + i + j + k);
             outs() << format("%02" PRIx32, (uint32_t)byte_word) << " ";
           }
         }
