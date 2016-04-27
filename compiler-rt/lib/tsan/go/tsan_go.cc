@@ -121,11 +121,13 @@ static ThreadState *AllocGoroutine() {
   return thr;
 }
 
-void __tsan_init(ThreadState **thrp, void (*cb)(uptr cmd, void *cb)) {
+void __tsan_init(ThreadState **thrp, Processor **procp,
+                 void (*cb)(uptr cmd, void *cb)) {
   go_runtime_cb = cb;
   ThreadState *thr = AllocGoroutine();
   main_thr = *thrp = thr;
   Initialize(thr);
+  *procp = thr->proc;
   inited = true;
 }
 
@@ -187,21 +189,44 @@ void __tsan_malloc(ThreadState *thr, uptr pc, uptr p, uptr sz) {
   MemoryResetRange(0, 0, (uptr)p, sz);
 }
 
-void __tsan_free(ThreadState *thr, uptr p, uptr sz) {
-  if (thr)
-    ctx->metamap.FreeRange(thr, 0, p, sz);
+void __tsan_free(Processor *proc, uptr p, uptr sz) {
+  ctx->metamap.FreeRange(proc, p, sz);
 }
 
 void __tsan_go_start(ThreadState *parent, ThreadState **pthr, void *pc) {
   ThreadState *thr = AllocGoroutine();
   *pthr = thr;
   int goid = ThreadCreate(parent, (uptr)pc, 0, true);
+  Processor *proc = parent->proc;
+  // Temporary borrow proc to handle goroutine start.
+  ProcUnwire(proc, parent);
+  ProcWire(proc, thr);
   ThreadStart(thr, goid, 0);
+  ProcUnwire(proc, thr);
+  ProcWire(proc, parent);
 }
 
 void __tsan_go_end(ThreadState *thr) {
+  Processor *proc = thr->proc;
   ThreadFinish(thr);
+  ProcUnwire(proc, thr);
   internal_free(thr);
+}
+
+void __tsan_proc_create(Processor **pproc) {
+  *pproc = ProcCreate();
+}
+
+void __tsan_proc_destroy(Processor *proc) {
+  ProcDestroy(proc);
+}
+
+void __tsan_proc_wire(Processor *proc, ThreadState *thr) {
+  ProcWire(proc, thr);
+}
+
+void __tsan_proc_unwire(Processor *proc, ThreadState *thr) {
+  ProcUnwire(proc, thr);
 }
 
 void __tsan_acquire(ThreadState *thr, void *addr) {

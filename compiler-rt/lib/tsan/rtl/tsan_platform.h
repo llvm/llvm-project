@@ -297,7 +297,7 @@ struct Mapping {
   static const uptr kShadowEnd     = 0x050000000000ull;
   static const uptr kAppMemBeg     = 0x000000001000ull;
   static const uptr kAppMemEnd     = 0x00e000000000ull;
-}
+};
 
 #else
 # error "Unknown platform"

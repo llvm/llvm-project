@@ -397,6 +397,7 @@ void Abort() {
   internal__exit(3);
 }
 
+#ifndef SANITIZER_GO
 // Read the file to extract the ImageBase field from the PE header. If ASLR is
 // disabled and this virtual address is available, the loader will typically
 // load the image at this address. Therefore, we call it the preferred base. Any
@@ -449,7 +450,6 @@ static uptr GetPreferredBase(const char *modname) {
   return (uptr)pe_header->ImageBase;
 }
 
-#ifndef SANITIZER_GO
 void ListOfModules::init() {
   clear();
   HANDLE cur_process = GetCurrentProcess();
