@@ -335,7 +335,7 @@ MachineOperandIteratorBase::analyzePhysReg(unsigned Reg,
   if (AllDefsDead) {
     if (PRI.FullyDefined || PRI.Clobbered)
       PRI.DeadDef = true;
-    else
+    else if (PRI.Defined)
       PRI.PartialDeadDef = true;
   }
 

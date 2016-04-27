@@ -672,6 +672,8 @@ Loop *llvm::cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                                    const Twine &NameSuffix, LoopInfo *LI,
                                    DominatorTree *DT,
                                    SmallVectorImpl<BasicBlock *> &Blocks) {
+  assert(OrigLoop->getSubLoops().empty() && 
+         "Loop to be cloned cannot have inner loop");
   Function *F = OrigLoop->getHeader()->getParent();
   Loop *ParentLoop = OrigLoop->getParentLoop();
 

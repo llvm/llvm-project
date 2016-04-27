@@ -290,107 +290,111 @@ StringRef sys::getHostCPUName() {
       }
     case 6:
       switch (Model) {
-      case  1: // Pentium Pro processor
+      case 0x01: // Pentium Pro processor
         return "pentiumpro";
 
-      case  3: // Intel Pentium II OverDrive processor, Pentium II processor,
-               // model 03
-      case  5: // Pentium II processor, model 05, Pentium II Xeon processor,
-               // model 05, and Intel Celeron processor, model 05
-      case  6: // Celeron processor, model 06
+      case 0x03: // Intel Pentium II OverDrive processor, Pentium II processor,
+                 // model 03
+      case 0x05: // Pentium II processor, model 05, Pentium II Xeon processor,
+                 // model 05, and Intel Celeron processor, model 05
+      case 0x06: // Celeron processor, model 06
         return "pentium2";
 
-      case  7: // Pentium III processor, model 07, and Pentium III Xeon
-               // processor, model 07
-      case  8: // Pentium III processor, model 08, Pentium III Xeon processor,
-               // model 08, and Celeron processor, model 08
-      case 10: // Pentium III Xeon processor, model 0Ah
-      case 11: // Pentium III processor, model 0Bh
+      case 0x07: // Pentium III processor, model 07, and Pentium III Xeon
+                 // processor, model 07
+      case 0x08: // Pentium III processor, model 08, Pentium III Xeon processor,
+                 // model 08, and Celeron processor, model 08
+      case 0x0a: // Pentium III Xeon processor, model 0Ah
+      case 0x0b: // Pentium III processor, model 0Bh
         return "pentium3";
 
-      case  9: // Intel Pentium M processor, Intel Celeron M processor model 09.
-      case 13: // Intel Pentium M processor, Intel Celeron M processor, model
-               // 0Dh. All processors are manufactured using the 90 nm process.
-      case 21: // Intel EP80579 Integrated Processor and Intel EP80579
-               // Integrated Processor with Intel QuickAssist Technology
+      case 0x09: // Intel Pentium M processor, Intel Celeron M processor model 09.
+      case 0x0d: // Intel Pentium M processor, Intel Celeron M processor, model
+                 // 0Dh. All processors are manufactured using the 90 nm process.
+      case 0x15: // Intel EP80579 Integrated Processor and Intel EP80579
+                 // Integrated Processor with Intel QuickAssist Technology
         return "pentium-m";
 
-      case 14: // Intel Core Duo processor, Intel Core Solo processor, model
-               // 0Eh. All processors are manufactured using the 65 nm process.
+      case 0x0e: // Intel Core Duo processor, Intel Core Solo processor, model
+                 // 0Eh. All processors are manufactured using the 65 nm process.
         return "yonah";
 
-      case 15: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
-               // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
-               // mobile processor, Intel Core 2 Extreme processor, Intel
-               // Pentium Dual-Core processor, Intel Xeon processor, model
-               // 0Fh. All processors are manufactured using the 65 nm process.
-      case 22: // Intel Celeron processor model 16h. All processors are
-               // manufactured using the 65 nm process
+      case 0x0f: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
+                 // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
+                 // mobile processor, Intel Core 2 Extreme processor, Intel
+                 // Pentium Dual-Core processor, Intel Xeon processor, model
+                 // 0Fh. All processors are manufactured using the 65 nm process.
+      case 0x16: // Intel Celeron processor model 16h. All processors are
+                 // manufactured using the 65 nm process
         return "core2";
 
-      case 23: // Intel Core 2 Extreme processor, Intel Xeon processor, model
-               // 17h. All processors are manufactured using the 45 nm process.
-               //
-               // 45nm: Penryn , Wolfdale, Yorkfield (XE)
-      case 29: // Intel Xeon processor MP. All processors are manufactured using
-               // the 45 nm process.
+      case 0x17: // Intel Core 2 Extreme processor, Intel Xeon processor, model
+                 // 17h. All processors are manufactured using the 45 nm process.
+                 //
+                 // 45nm: Penryn , Wolfdale, Yorkfield (XE)
+      case 0x1d: // Intel Xeon processor MP. All processors are manufactured using
+                 // the 45 nm process.
         return "penryn";
 
-      case 26: // Intel Core i7 processor and Intel Xeon processor. All
-               // processors are manufactured using the 45 nm process.
-      case 30: // Intel(R) Core(TM) i7 CPU         870  @ 2.93GHz.
-               // As found in a Summer 2010 model iMac.
-      case 46: // Nehalem EX
+      case 0x1a: // Intel Core i7 processor and Intel Xeon processor. All
+                 // processors are manufactured using the 45 nm process.
+      case 0x1e: // Intel(R) Core(TM) i7 CPU         870  @ 2.93GHz.
+                 // As found in a Summer 2010 model iMac.
+      case 0x2e: // Nehalem EX
         return "nehalem";
-      case 37: // Intel Core i7, laptop version.
-      case 44: // Intel Core i7 processor and Intel Xeon processor. All
-               // processors are manufactured using the 32 nm process.
-      case 47: // Westmere EX
+      case 0x25: // Intel Core i7, laptop version.
+      case 0x2c: // Intel Core i7 processor and Intel Xeon processor. All
+                 // processors are manufactured using the 32 nm process.
+      case 0x2f: // Westmere EX
         return "westmere";
 
-      // SandyBridge:
-      case 42: // Intel Core i7 processor. All processors are manufactured
-               // using the 32 nm process.
-      case 45:
+      case 0x2a: // Intel Core i7 processor. All processors are manufactured
+                 // using the 32 nm process.
+      case 0x2d:
         return "sandybridge";
 
-      // Ivy Bridge:
-      case 58:
-      case 62: // Ivy Bridge EP
+      case 0x3a:
+      case 0x3e: // Ivy Bridge EP
         return "ivybridge";
 
       // Haswell:
-      case 60:
-      case 63:
-      case 69:
-      case 70:
+      case 0x3c:
+      case 0x3f:
+      case 0x45:
+      case 0x46:
         return "haswell";
 
       // Broadwell:
-      case 61:
-      case 71:
+      case 0x3d:
+      case 0x47:
+      case 0x4f:
+      case 0x56:
         return "broadwell";
 
       // Skylake:
-      case 78:
+      case 0x4e:
         return "skylake-avx512";
-      case 94:
+      case 0x5e:
         return "skylake";
 
-      case 28: // Most 45 nm Intel Atom processors
-      case 38: // 45 nm Atom Lincroft
-      case 39: // 32 nm Atom Medfield
-      case 53: // 32 nm Atom Midview
-      case 54: // 32 nm Atom Midview
+      case 0x1c: // Most 45 nm Intel Atom processors
+      case 0x26: // 45 nm Atom Lincroft
+      case 0x27: // 32 nm Atom Medfield
+      case 0x35: // 32 nm Atom Midview
+      case 0x36: // 32 nm Atom Midview
         return "bonnell";
 
       // Atom Silvermont codes from the Intel software optimization guide.
-      case 55:
-      case 74:
-      case 77:
-      case 90:
-      case 93:
+      case 0x37:
+      case 0x4a:
+      case 0x4d:
+      case 0x5a:
+      case 0x5d:
+      case 0x4c: // really airmont
         return "silvermont";
+
+      case 0x57:
+        return "knl";
 
       default: // Unknown family 6 CPU, try to guess.
         if (HasAVX512)

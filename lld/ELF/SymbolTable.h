@@ -51,7 +51,6 @@ public:
   }
 
   SymbolBody *addUndefined(StringRef Name);
-  SymbolBody *addUndefinedOpt(StringRef Name);
   DefinedRegular<ELFT> *addAbsolute(StringRef Name,
                                     uint8_t Visibility = llvm::ELF::STV_HIDDEN);
   SymbolBody *addSynthetic(StringRef Name, OutputSectionBase<ELFT> &Section,

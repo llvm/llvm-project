@@ -1662,6 +1662,24 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
   }
 }
 
+// Adjusts the file alignment for a given output section and returns
+// its new file offset. The file offset must be the same with its
+// virtual address (modulo the page size) so that the loader can load
+// executables without any address adjustment.
+template <class ELFT, class uintX_t>
+static uintX_t getFileAlignment(uintX_t Off, OutputSectionBase<ELFT> *Sec) {
+  uintX_t Align = Sec->getAlign();
+  if (Sec->PageAlign)
+    Align = std::max<uintX_t>(Align, Target->PageSize);
+  Off = alignTo(Off, Align);
+
+  // Relocatable output does not have program headers
+  // and does not need any other offset adjusting.
+  if (Config->Relocatable || !(Sec->getFlags() & SHF_ALLOC))
+    return Off;
+  return alignTo(Off, Target->PageSize, Sec->getVA());
+}
+
 // Assign file offsets to output sections.
 template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   uintX_t Off =
@@ -1672,10 +1690,8 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
       Sec->setFileOffset(Off);
       continue;
     }
-    uintX_t Align = Sec->getAlign();
-    if (Sec->PageAlign)
-      Align = std::max<uintX_t>(Align, Target->PageSize);
-    Off = alignTo(Off, Align);
+
+    Off = getFileAlignment<ELFT>(Off, Sec);
     Sec->setFileOffset(Off);
     Off += Sec->getSize();
   }

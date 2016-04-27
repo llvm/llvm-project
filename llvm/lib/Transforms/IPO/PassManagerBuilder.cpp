@@ -95,10 +95,6 @@ static cl::opt<bool> EnableLoopInterchange(
     "enable-loopinterchange", cl::init(false), cl::Hidden,
     cl::desc("Enable the new, experimental LoopInterchange Pass"));
 
-static cl::opt<bool> EnableLoopDistribute(
-    "enable-loop-distribute", cl::init(false), cl::Hidden,
-    cl::desc("Enable the new, experimental LoopDistribution Pass"));
-
 static cl::opt<bool> EnableNonLTOGlobalsModRef(
     "enable-non-lto-gmr", cl::init(true), cl::Hidden,
     cl::desc(
@@ -480,9 +476,10 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
-  // into separate loop that would otherwise inhibit vectorization.
-  if (EnableLoopDistribute)
-    MPM.add(createLoopDistributePass());
+  // into separate loop that would otherwise inhibit vectorization.  This is
+  // currently only performed for loops marked with the metadata
+  // llvm.loop.distribute=true or when -enable-loop-distribute is specified.
+  MPM.add(createLoopDistributePass(/*ProcessAllLoopsByDefault=*/false));
 
   MPM.add(createLoopVectorizePass(DisableUnrollLoops, LoopVectorize));
 
