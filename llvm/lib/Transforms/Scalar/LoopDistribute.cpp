@@ -60,6 +60,19 @@ static cl::opt<unsigned> DistributeSCEVCheckThreshold(
     cl::desc("The maximum number of SCEV checks allowed for Loop "
              "Distribution"));
 
+static cl::opt<unsigned> PragmaDistributeSCEVCheckThreshold(
+    "loop-distribute-scev-check-threshold-with-pragma", cl::init(128),
+    cl::Hidden,
+    cl::desc(
+        "The maximum number of SCEV checks allowed for Loop "
+        "Distribution for loop marked with #pragma loop distribute(enable)"));
+
+// Note that the initial value for this depends on whether the pass is invoked
+// directly or from the optimization pipeline.
+static cl::opt<bool> EnableLoopDistribute(
+    "enable-loop-distribute", cl::Hidden,
+    cl::desc("Enable the new, experimental LoopDistribution Pass"));
+
 STATISTIC(NumLoopsDistributed, "Number of loops distributed");
 
 namespace {
@@ -576,7 +589,9 @@ class LoopDistributeForLoop {
 public:
   LoopDistributeForLoop(Loop *L, LoopInfo *LI, const LoopAccessInfo &LAI,
                         DominatorTree *DT, ScalarEvolution *SE)
-      : L(L), LI(LI), LAI(LAI), DT(DT), SE(SE) {}
+      : L(L), LI(LI), LAI(LAI), DT(DT), SE(SE) {
+    setForced();
+  }
 
   /// \brief Try to distribute an inner-most loop.
   bool processLoop() {
@@ -683,7 +698,9 @@ public:
 
     // Don't distribute the loop if we need too many SCEV run-time checks.
     const SCEVUnionPredicate &Pred = LAI.PSE.getUnionPredicate();
-    if (Pred.getComplexity() > DistributeSCEVCheckThreshold) {
+    if (Pred.getComplexity() > (IsForced.getValueOr(false)
+                                    ? PragmaDistributeSCEVCheckThreshold
+                                    : DistributeSCEVCheckThreshold)) {
       DEBUG(dbgs() << "Too many SCEV run-time checks needed.\n");
       return false;
     }
@@ -735,6 +752,13 @@ public:
     return true;
   }
 
+  /// \brief Return if distribution forced to be enabled/disabled for the loop.
+  ///
+  /// If the optional has a value, it indicates whether distribution was forced
+  /// to be enabled (true) or disabled (false).  If the optional has no value
+  /// distribution was not forced either way.
+  const Optional<bool> &isForced() const { return IsForced; }
+
 private:
   /// \brief Filter out checks between pointers from the same partition.
   ///
@@ -775,18 +799,47 @@ private:
     return Checks;
   }
 
+  /// \brief Check whether the loop metadata is forcing distribution to be
+  /// enabled/disabled.
+  void setForced() {
+    Optional<const MDOperand *> Value =
+        findStringMetadataForLoop(L, "llvm.loop.distribute.enable");
+    if (!Value)
+      return;
+
+    const MDOperand *Op = *Value;
+    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
+    IsForced = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
+  }
+
   // Analyses used.
   Loop *L;
   LoopInfo *LI;
   const LoopAccessInfo &LAI;
   DominatorTree *DT;
   ScalarEvolution *SE;
+
+  /// \brief Indicates whether distribution is forced to be enabled/disabled for
+  /// the loop.
+  ///
+  /// If the optional has a value, it indicates whether distribution was forced
+  /// to be enabled (true) or disabled (false).  If the optional has no value
+  /// distribution was not forced either way.
+  Optional<bool> IsForced;
 };
 
 /// \brief The pass class.
 class LoopDistribute : public FunctionPass {
 public:
-  LoopDistribute() : FunctionPass(ID) {
+  /// \p ProcessAllLoopsByDefault specifies whether loop distribution should be
+  /// performed by default.  Pass -enable-loop-distribute={0,1} overrides this
+  /// default.  We use this to keep LoopDistribution off by default when invoked
+  /// from the optimization pipeline but on when invoked explicitly from opt.
+  LoopDistribute(bool ProcessAllLoopsByDefault = true)
+      : FunctionPass(ID), ProcessAllLoops(ProcessAllLoopsByDefault) {
+    // The default is set by the caller.
+    if (EnableLoopDistribute.getNumOccurrences() > 0)
+      ProcessAllLoops = EnableLoopDistribute;
     initializeLoopDistributePass(*PassRegistry::getPassRegistry());
   }
 
@@ -812,7 +865,11 @@ public:
     for (Loop *L : Worklist) {
       const LoopAccessInfo &LAI = LAA->getInfo(L, ValueToValueMap());
       LoopDistributeForLoop LDL(L, LI, LAI, DT, SE);
-      Changed |= LDL.processLoop();
+
+      // If distribution was forced for the specific loop to be
+      // enabled/disabled, follow that.  Otherwise use the global flag.
+      if (LDL.isForced().getValueOr(ProcessAllLoops))
+        Changed |= LDL.processLoop();
     }
 
     // Process each loop nest in the function.
@@ -829,6 +886,11 @@ public:
   }
 
   static char ID;
+
+private:
+  /// \brief Whether distribution should be on in this function.  The per-loop
+  /// pragma can override this.
+  bool ProcessAllLoops;
 };
 } // anonymous namespace
 
@@ -843,5 +905,7 @@ INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_END(LoopDistribute, LDIST_NAME, ldist_name, false, false)
 
 namespace llvm {
-FunctionPass *createLoopDistributePass() { return new LoopDistribute(); }
+FunctionPass *createLoopDistributePass(bool ProcessAllLoopsByDefault) {
+  return new LoopDistribute(ProcessAllLoopsByDefault);
+}
 }
