@@ -282,6 +282,9 @@ def fprofile_instrument_path_EQ : Joined<["-"], "fprofile-instrument-path=">,
 def fprofile_instrument_use_path_EQ :
     Joined<["-"], "fprofile-instrument-use-path=">,
     HelpText<"Specify the profile path in PGO use compilation">;
+def flto_visibility_public_std:
+    Flag<["-"], "flto-visibility-public-std">,
+    HelpText<"Use public LTO visibility for classes in std and stdext namespaces">;
 
 //===----------------------------------------------------------------------===//
 // Dependency Output Options

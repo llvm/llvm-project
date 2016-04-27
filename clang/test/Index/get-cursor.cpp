@@ -208,7 +208,7 @@ void test(TestColl coll) {
 // CHECK-TEMPLSPEC: 66:23 ClassDecl=TC:66:23 (Definition) [Specialization of TC:59:7] Extent=[66:1 - 66:31] Spelling=TC ([66:23 - 66:25])
 
 // RUN: c-index-test -cursor-at=%s:69:3 -cursor-at=%s:70:11 -cursor-at=%s:73:6 -cursor-at=%s:74:6 -cursor-at=%s:77:8 -cursor-at=%s:78:8 -cursor-at=%s:79:8 -cursor-at=%s:80:8 -cursor-at=%s:81:8 -cursor-at=%s:82:8 -cursor-at=%s:85:6 -cursor-at=%s:86:6 -cursor-at=%s:87:6 -cursor-at=%s:88:6 -cursor-at=%s:91:5 -cursor-at=%s:92:5 -cursor-at=%s:93:5 -cursor-at=%s:94:5 -cursor-at=%s:95:5 -cursor-at=%s:96:5 -cursor-at=%s:97:5 -cursor-at=%s:98:5 -cursor-at=%s:100:5 -cursor-at=%s:101:5 -cursor-at=%s:104:6 -cursor-at=%s:105:6 -cursor-at=%s:106:6 -cursor-at=%s:107:6 -cursor-at=%s:108:6 -cursor-at=%s:109:6 -cursor-at=%s:110:6 -cursor-at=%s:111:6 -cursor-at=%s:113:6 -cursor-at=%s:114:6 -cursor-at=%s:117:8 -cursor-at=%s:118:8 -cursor-at=%s:120:8 -cursor-at=%s:121:8 -cursor-at=%s:122:8 -cursor-at=%s:123:8 -cursor-at=%s:124:8 -cursor-at=%s:125:8 -cursor-at=%s:128:6 -cursor-at=%s:129:6 -cursor-at=%s:130:6 -cursor-at=%s:132:3 -std=c++11 %s | FileCheck -check-prefix=CHECK-SPELLING %s
-// CHECK-SPELLING: 69:3 CXXConstructor=A:69:3 Extent=[69:3 - 69:6] Spelling=A ([69:3 - 69:4])
+// CHECK-SPELLING: 69:3 CXXConstructor=A:69:3 (default constructor) Extent=[69:3 - 69:6] Spelling=A ([69:3 - 69:4])
 // CHECK-SPELLING: 70:11 CXXDestructor=~A:70:11 (virtual) Extent=[70:3 - 70:15] Spelling=~A ([70:11 - 70:13])
 // CHECK-SPELLING: 73:6 CXXMethod=operator=:73:6 Extent=[73:3 - 73:25] Spelling=operator= ([73:6 - 73:15])
 // CHECK-SPELLING: 74:6 CXXMethod=operator=:74:6 Extent=[74:3 - 74:29] Spelling=operator= ([74:6 - 74:15])

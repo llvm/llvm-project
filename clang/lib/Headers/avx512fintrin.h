@@ -185,6 +185,55 @@ _mm512_undefined_epi32()
 {
   return (__m512i)__builtin_ia32_undef512();
 }
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_broadcastd_epi32 (__m128i __A)
+{
+  return (__m512i) __builtin_ia32_pbroadcastd512 ((__v4si) __A,
+              (__v16si)
+              _mm512_undefined_epi32 (),
+              (__mmask16) -1);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_mask_broadcastd_epi32 (__m512i __O, __mmask16 __M, __m128i __A)
+{
+  return (__m512i) __builtin_ia32_pbroadcastd512 ((__v4si) __A,
+              (__v16si) __O, __M);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_maskz_broadcastd_epi32 (__mmask16 __M, __m128i __A)
+{
+  return (__m512i) __builtin_ia32_pbroadcastd512 ((__v4si) __A,
+              (__v16si)
+              _mm512_setzero_si512 (),
+              __M);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_broadcastq_epi64 (__m128i __A)
+{
+  return (__m512i) __builtin_ia32_pbroadcastq512 ((__v2di) __A,
+              (__v8di)
+              _mm512_undefined_pd (),
+              (__mmask8) -1);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_mask_broadcastq_epi64 (__m512i __O, __mmask8 __M, __m128i __A)
+{
+  return (__m512i) __builtin_ia32_pbroadcastq512 ((__v2di) __A,
+              (__v8di) __O, __M);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_maskz_broadcastq_epi64 (__mmask8 __M, __m128i __A)
+{
+  return (__m512i) __builtin_ia32_pbroadcastq512 ((__v2di) __A,
+              (__v8di)
+              _mm512_setzero_si512 (),
+              __M);
+}
 
 static __inline __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_set1_epi32(__mmask16 __M, int __A)
@@ -5834,6 +5883,142 @@ __builtin_ia32_sqrtss_round_mask ((__v4sf)( __B),\
                  __R);\
 })
 
+static __inline__ __m512 __DEFAULT_FN_ATTRS
+_mm512_broadcast_f32x4 (__m128 __A)
+{
+  return (__m512) __builtin_ia32_broadcastf32x4_512 ((__v4sf) __A,
+                 (__v16sf)
+                 _mm512_undefined_ps (),
+                 (__mmask16) -1);
+}
+
+static __inline__ __m512 __DEFAULT_FN_ATTRS
+_mm512_mask_broadcast_f32x4 (__m512 __O, __mmask16 __M, __m128 __A)
+{
+  return (__m512) __builtin_ia32_broadcastf32x4_512 ((__v4sf) __A,
+                 (__v16sf) __O,
+                 __M);
+}
+
+static __inline__ __m512 __DEFAULT_FN_ATTRS
+_mm512_maskz_broadcast_f32x4 (__mmask16 __M, __m128 __A)
+{
+  return (__m512) __builtin_ia32_broadcastf32x4_512 ((__v4sf) __A,
+                 (__v16sf)
+                 _mm512_setzero_ps (),
+                 __M);
+}
+
+static __inline__ __m512d __DEFAULT_FN_ATTRS
+_mm512_broadcast_f64x4 (__m256d __A)
+{
+  return (__m512d) __builtin_ia32_broadcastf64x4_512 ((__v4df) __A,
+                  (__v8df)
+                  _mm512_undefined_pd (),
+                  (__mmask8) -1);
+}
+
+static __inline__ __m512d __DEFAULT_FN_ATTRS
+_mm512_mask_broadcast_f64x4 (__m512d __O, __mmask8 __M, __m256d __A)
+{
+  return (__m512d) __builtin_ia32_broadcastf64x4_512 ((__v4df) __A,
+                  (__v8df) __O,
+                  __M);
+}
+
+static __inline__ __m512d __DEFAULT_FN_ATTRS
+_mm512_maskz_broadcast_f64x4 (__mmask8 __M, __m256d __A)
+{
+  return (__m512d) __builtin_ia32_broadcastf64x4_512 ((__v4df) __A,
+                  (__v8df)
+                  _mm512_setzero_pd (),
+                  __M);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_broadcast_i32x4 (__m128i __A)
+{
+  return (__m512i) __builtin_ia32_broadcasti32x4_512 ((__v4si) __A,
+                  (__v16si)
+                  _mm512_undefined_epi32 (),
+                  (__mmask16) -1);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_mask_broadcast_i32x4 (__m512i __O, __mmask16 __M, __m128i __A)
+{
+  return (__m512i) __builtin_ia32_broadcasti32x4_512 ((__v4si) __A,
+                  (__v16si) __O,
+                  __M);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_maskz_broadcast_i32x4 (__mmask16 __M, __m128i __A)
+{
+  return (__m512i) __builtin_ia32_broadcasti32x4_512 ((__v4si) __A,
+                  (__v16si)
+                  _mm512_setzero_si512 (),
+                  __M);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_broadcast_i64x4 (__m256i __A)
+{
+  return (__m512i) __builtin_ia32_broadcasti64x4_512 ((__v4di) __A,
+                  (__v8di)
+                  _mm512_undefined_epi32 (),
+                  (__mmask8) -1);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_mask_broadcast_i64x4 (__m512i __O, __mmask8 __M, __m256i __A)
+{
+  return (__m512i) __builtin_ia32_broadcasti64x4_512 ((__v4di) __A,
+                  (__v8di) __O,
+                  __M);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_maskz_broadcast_i64x4 (__mmask8 __M, __m256i __A)
+{
+  return (__m512i) __builtin_ia32_broadcasti64x4_512 ((__v4di) __A,
+                  (__v8di)
+                  _mm512_setzero_si512 (),
+                  __M);
+}
+
+static __inline__ __m512d __DEFAULT_FN_ATTRS
+_mm512_mask_broadcastsd_pd (__m512d __O, __mmask8 __M, __m128d __A)
+{
+  return (__m512d) __builtin_ia32_broadcastsd512 ((__v2df) __A,
+              (__v8df) __O, __M);
+}
+
+static __inline__ __m512d __DEFAULT_FN_ATTRS
+_mm512_maskz_broadcastsd_pd (__mmask8 __M, __m128d __A)
+{
+  return (__m512d) __builtin_ia32_broadcastsd512 ((__v2df) __A,
+              (__v8df)
+              _mm512_setzero_pd (),
+              __M);
+}
+
+static __inline__ __m512 __DEFAULT_FN_ATTRS
+_mm512_mask_broadcastss_ps (__m512 __O, __mmask16 __M, __m128 __A)
+{
+  return (__m512) __builtin_ia32_broadcastss512 ((__v4sf) __A,
+             (__v16sf) __O, __M);
+}
+
+static __inline__ __m512 __DEFAULT_FN_ATTRS
+_mm512_maskz_broadcastss_ps (__mmask16 __M, __m128 __A)
+{
+  return (__m512) __builtin_ia32_broadcastss512 ((__v4sf) __A,
+             (__v16sf)
+             _mm512_setzero_ps (),
+             __M);
+}
+
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm512_cvtsepi32_epi8 (__m512i __A)
 {
@@ -7322,6 +7507,30 @@ static __inline__ __mmask16 __DEFAULT_FN_ATTRS
 _mm512_kxor (__mmask16 __A, __mmask16 __B)
 {
   return (__mmask16) __builtin_ia32_kxorhi ((__mmask16) __A, (__mmask16) __B);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm512_stream_si512 (__m512i * __P, __m512i __A)
+{
+  __builtin_ia32_movntdq512 ((__v8di *) __P, (__v8di) __A);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_stream_load_si512 (void *__P)
+{
+  return __builtin_ia32_movntdqa512 ((__v8di *)__P);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm512_stream_pd (double *__P, __m512d __A)
+{
+  __builtin_ia32_movntpd512 (__P, (__v8df) __A);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm512_stream_ps (float *__P, __m512 __A)
+{
+  __builtin_ia32_movntps512 (__P, (__v16sf) __A);
 }
 
 #undef __DEFAULT_FN_ATTRS

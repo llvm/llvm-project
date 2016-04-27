@@ -209,29 +209,25 @@ ModuleMap::findHeaderInUmbrellaDirs(const FileEntry *File,
 
 static bool violatesPrivateInclude(Module *RequestingModule,
                                    const FileEntry *IncFileEnt,
-                                   ModuleMap::ModuleHeaderRole Role,
-                                   Module *RequestedModule) {
-  bool IsPrivateRole = Role & ModuleMap::PrivateHeader;
+                                   ModuleMap::KnownHeader Header) {
 #ifndef NDEBUG
-  if (IsPrivateRole) {
+  if (Header.getRole() & ModuleMap::PrivateHeader) {
     // Check for consistency between the module header role
     // as obtained from the lookup and as obtained from the module.
     // This check is not cheap, so enable it only for debugging.
     bool IsPrivate = false;
     SmallVectorImpl<Module::Header> *HeaderList[] = {
-        &RequestedModule->Headers[Module::HK_Private],
-        &RequestedModule->Headers[Module::HK_PrivateTextual]};
+        &Header.getModule()->Headers[Module::HK_Private],
+        &Header.getModule()->Headers[Module::HK_PrivateTextual]};
     for (auto *Hs : HeaderList)
       IsPrivate |=
           std::find_if(Hs->begin(), Hs->end(), [&](const Module::Header &H) {
             return H.Entry == IncFileEnt;
           }) != Hs->end();
-    assert((!IsPrivateRole || IsPrivate) && "inconsistent headers and roles");
+    assert(IsPrivate && "inconsistent headers and roles");
   }
 #endif
-  return IsPrivateRole && (!RequestingModule ||
-                           RequestedModule->getTopLevelModule() !=
-                               RequestingModule->getTopLevelModule());
+  return !Header.isAccessibleFrom(RequestingModule);
 }
 
 static Module *getTopLevelOrNull(Module *M) {
@@ -259,8 +255,7 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
   if (Known != Headers.end()) {
     for (const KnownHeader &Header : Known->second) {
       // Remember private headers for later printing of a diagnostic.
-      if (violatesPrivateInclude(RequestingModule, File, Header.getRole(),
-                                 Header.getModule())) {
+      if (violatesPrivateInclude(RequestingModule, File, Header)) {
         Private = Header.getModule();
         continue;
       }

@@ -597,6 +597,62 @@ Module *Preprocessor::getModuleContainingLocation(SourceLocation Loc) {
       FullSourceLoc(Loc, SourceMgr));
 }
 
+const FileEntry *
+Preprocessor::getModuleHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
+                                                     SourceLocation Loc) {
+  // If we have a module import syntax, we shouldn't include a header to
+  // make a particular module visible.
+  if (getLangOpts().ObjC2)
+    return nullptr;
+
+  // Figure out which module we'd want to import.
+  Module *M = getModuleContainingLocation(Loc);
+  if (!M)
+    return nullptr;
+
+  Module *TopM = M->getTopLevelModule();
+  Module *IncM = getModuleForLocation(IncLoc);
+
+  // Walk up through the include stack, looking through textual headers of M
+  // until we hit a non-textual header that we can #include. (We assume textual
+  // headers of a module with non-textual headers aren't meant to be used to
+  // import entities from the module.)
+  auto &SM = getSourceManager();
+  while (!Loc.isInvalid() && !SM.isInMainFile(Loc)) {
+    auto ID = SM.getFileID(SM.getExpansionLoc(Loc));
+    auto *FE = SM.getFileEntryForID(ID);
+
+    bool InTextualHeader = false;
+    for (auto Header : HeaderInfo.getModuleMap().findAllModulesForHeader(FE)) {
+      if (!Header.getModule()->isSubModuleOf(TopM))
+        continue;
+
+      if (!(Header.getRole() & ModuleMap::TextualHeader)) {
+        // If this is an accessible, non-textual header of M's top-level module
+        // that transitively includes the given location and makes the
+        // corresponding module visible, this is the thing to #include.
+        if (Header.isAccessibleFrom(IncM))
+          return FE;
+
+        // It's in a private header; we can't #include it.
+        // FIXME: If there's a public header in some module that re-exports it,
+        // then we could suggest including that, but it's not clear that's the
+        // expected way to make this entity visible.
+        continue;
+      }
+
+      InTextualHeader = true;
+    }
+
+    if (!InTextualHeader)
+      break;
+
+    Loc = SM.getIncludeLoc(ID);
+  }
+
+  return nullptr;
+}
+
 const FileEntry *Preprocessor::LookupFile(
     SourceLocation FilenameLoc,
     StringRef Filename,

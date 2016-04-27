@@ -481,7 +481,7 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
   // Emit copy.
   {
     CodeGenFunction::RunCleanupsScope InitScope(CGF);
-    if (DRD) {
+    if (DRD && (DRD->getInitializer() || !Init)) {
       emitInitWithReductionInitializer(CGF, DRD, Init, DestElementCurrent,
                                        SrcElementCurrent, ElementTy);
     } else
@@ -993,7 +993,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
               // Emit private VarDecl with reduction init.
               AutoVarEmission Emission = EmitAutoVarAlloca(*PrivateVD);
               auto Addr = Emission.getAllocatedAddress();
-              if (DRD) {
+              if (DRD && (DRD->getInitializer() || !PrivateVD->hasInit())) {
                 emitInitWithReductionInitializer(*this, DRD, *IRed, Addr,
                                                  ASELValue.getAddress(),
                                                  ASELValue.getType());
@@ -1075,7 +1075,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
                 // Emit private VarDecl with reduction init.
                 AutoVarEmission Emission = EmitAutoVarAlloca(*PrivateVD);
                 auto Addr = Emission.getAllocatedAddress();
-                if (DRD) {
+                if (DRD && (DRD->getInitializer() || !PrivateVD->hasInit())) {
                   emitInitWithReductionInitializer(*this, DRD, *IRed, Addr,
                                                    OriginalAddr,
                                                    PrivateVD->getType());

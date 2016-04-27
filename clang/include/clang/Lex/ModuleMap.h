@@ -130,6 +130,12 @@ public:
       return getModule()->isAvailable();
     }
 
+    /// \brief Whether this header is accessible from the specified module.
+    bool isAccessibleFrom(Module *M) const {
+      return !(getRole() & PrivateHeader) ||
+             (M && M->getTopLevelModule() == getModule()->getTopLevelModule());
+    }
+
     // \brief Whether this known header is valid (i.e., it has an
     // associated module).
     explicit operator bool() const {

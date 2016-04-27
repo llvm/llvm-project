@@ -4074,9 +4074,34 @@ CXFile clang_Module_getTopLevelHeader(CXTranslationUnit,
  */
 
 /**
+ * \brief Determine if a C++ constructor is a converting constructor.
+ */
+CINDEX_LINKAGE unsigned clang_CXXConstructor_isConvertingConstructor(CXCursor C);
+
+/**
+ * \brief Determine if a C++ constructor is a copy constructor.
+ */
+CINDEX_LINKAGE unsigned clang_CXXConstructor_isCopyConstructor(CXCursor C);
+
+/**
+ * \brief Determine if a C++ constructor is the default constructor.
+ */
+CINDEX_LINKAGE unsigned clang_CXXConstructor_isDefaultConstructor(CXCursor C);
+
+/**
+ * \brief Determine if a C++ constructor is a move constructor.
+ */
+CINDEX_LINKAGE unsigned clang_CXXConstructor_isMoveConstructor(CXCursor C);
+
+/**
  * \brief Determine if a C++ field is declared 'mutable'.
  */
 CINDEX_LINKAGE unsigned clang_CXXField_isMutable(CXCursor C);
+
+/**
+ * \brief Determine if a C++ method is declared '= default'.
+ */
+CINDEX_LINKAGE unsigned clang_CXXMethod_isDefaulted(CXCursor C);
 
 /**
  * \brief Determine if a C++ member function or member function template is

@@ -56,8 +56,7 @@ HeaderSearch::HeaderSearch(IntrusiveRefCntPtr<HeaderSearchOptions> HSOpts,
                            const LangOptions &LangOpts,
                            const TargetInfo *Target)
     : HSOpts(HSOpts), Diags(Diags), FileMgr(SourceMgr.getFileManager()),
-      FrameworkMap(64), ModMap(SourceMgr, Diags, LangOpts, Target, *this),
-      LangOpts(LangOpts) {
+      FrameworkMap(64), ModMap(SourceMgr, Diags, LangOpts, Target, *this) {
   AngledDirIdx = 0;
   SystemDirIdx = 0;
   NoCurDirSearch = false;
@@ -1418,4 +1417,55 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
   }
 
   SearchDir.setSearchedAllModuleMaps(true);
+}
+
+std::string HeaderSearch::suggestPathToFileForDiagnostics(const FileEntry *File,
+                                                          bool *IsSystem) {
+  // FIXME: We assume that the path name currently cached in the FileEntry is
+  // the most appropriate one for this analysis (and that it's spelled the same
+  // way as the corresponding header search path).
+  const char *Name = File->getName();
+
+  unsigned BestPrefixLength = 0;
+  unsigned BestSearchDir;
+
+  for (unsigned I = 0; I != SearchDirs.size(); ++I) {
+    // FIXME: Support this search within frameworks and header maps.
+    if (!SearchDirs[I].isNormalDir())
+      continue;
+
+    const char *Dir = SearchDirs[I].getDir()->getName();
+    for (auto NI = llvm::sys::path::begin(Name),
+              NE = llvm::sys::path::end(Name),
+              DI = llvm::sys::path::begin(Dir),
+              DE = llvm::sys::path::end(Dir);
+         /*termination condition in loop*/; ++NI, ++DI) {
+      // '.' components in Name are ignored.
+      while (NI != NE && *NI == ".")
+        ++NI;
+      if (NI == NE)
+        break;
+
+      // '.' components in Dir are ignored.
+      while (DI != DE && *DI == ".")
+        ++DI;
+      if (DI == DE) {
+        // Dir is a prefix of Name, up to '.' components and choice of path
+        // separators.
+        unsigned PrefixLength = NI - llvm::sys::path::begin(Name);
+        if (PrefixLength > BestPrefixLength) {
+          BestPrefixLength = PrefixLength;
+          BestSearchDir = I;
+        }
+        break;
+      }
+
+      if (*NI != *DI)
+        break;
+    }
+  }
+
+  if (IsSystem)
+    *IsSystem = BestPrefixLength ? BestSearchDir >= SystemDirIdx : false;
+  return Name + BestPrefixLength;
 }

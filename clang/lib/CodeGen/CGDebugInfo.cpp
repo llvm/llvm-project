@@ -1014,6 +1014,8 @@ void CGDebugInfo::CollectRecordFields(
     // the corresponding declarations in the source program.
     for (const auto *I : record->decls())
       if (const auto *V = dyn_cast<VarDecl>(I)) {
+        if (V->hasAttr<NoDebugAttr>())
+          continue;
         // Reuse the existing static member declaration if one exists
         auto MI = StaticDataMemberCache.find(V->getCanonicalDecl());
         if (MI != StaticDataMemberCache.end()) {
@@ -3390,6 +3392,8 @@ llvm::DIGlobalVariable *CGDebugInfo::CollectAnonRecordDecls(
 void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
                                      const VarDecl *D) {
   assert(DebugKind >= codegenoptions::LimitedDebugInfo);
+  if (D->hasAttr<NoDebugAttr>())
+    return;
   // Create global variable debug descriptor.
   llvm::DIFile *Unit = nullptr;
   llvm::DIScope *DContext = nullptr;
@@ -3422,6 +3426,8 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
 void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD,
                                      llvm::Constant *Init) {
   assert(DebugKind >= codegenoptions::LimitedDebugInfo);
+  if (VD->hasAttr<NoDebugAttr>())
+    return;
   // Create the descriptor for the variable.
   llvm::DIFile *Unit = getOrCreateFile(VD->getLocation());
   StringRef Name = VD->getName();

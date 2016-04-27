@@ -8298,6 +8298,10 @@ def err_module_private_local_class : Error<
 def err_module_unimported_use : Error<
   "%select{declaration|definition|default argument}0 of %1 must be imported "
   "from module '%2' before it is required">;
+def err_module_unimported_use_header : Error<
+  "missing '#include %3'; "
+  "%select{declaration|definition|default argument}0 of %1 must be imported "
+  "from module '%2' before it is required">;
 def err_module_unimported_use_multiple : Error<
   "%select{declaration|definition|default argument}0 of %1 must be imported "
   "from one of the following modules before it is required:%2">;

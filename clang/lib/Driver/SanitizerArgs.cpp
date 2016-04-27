@@ -39,6 +39,7 @@ enum : SanitizerMask {
   TrappingSupported =
       (Undefined & ~Vptr) | UnsignedIntegerOverflow | LocalBounds | CFI,
   TrappingDefault = CFI,
+  CFIClasses = CFIVCall | CFINVCall | CFIDerivedCast | CFIUnrelatedCast,
 };
 
 enum CoverageFeature {
@@ -559,6 +560,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   // Parse -link-cxx-sanitizer flag.
   LinkCXXRuntimes =
       Args.hasArg(options::OPT_fsanitize_link_cxx_runtime) || D.CCCIsCXX();
+
+  // Require -fvisibility= flag on non-Windows if vptr CFI is enabled.
+  if ((Kinds & CFIClasses) && !TC.getTriple().isOSWindows() &&
+      !Args.hasArg(options::OPT_fvisibility_EQ)) {
+    D.Diag(clang::diag::err_drv_argument_only_allowed_with)
+        << lastArgumentForMask(D, Args, Kinds & CFIClasses)
+        << "-fvisibility=";
+  }
 
   // Finally, initialize the set of available and recoverable sanitizers.
   Sanitizers.Mask |= Kinds;

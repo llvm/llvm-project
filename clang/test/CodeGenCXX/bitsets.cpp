@@ -1,12 +1,12 @@
 // Tests for the cfi-vcall feature:
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=ITANIUM --check-prefix=ITANIUM-NDIAG --check-prefix=NDIAG %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=ITANIUM --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-ABORT %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -fsanitize-recover=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=ITANIUM --check-prefix=DIAG --check-prefix=DIAG-RECOVER %s
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=MS --check-prefix=NDIAG %s
+// RUN: %clang_cc1 -flto -triple x86_64-unknown-linux -fvisibility hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=ITANIUM --check-prefix=ITANIUM-NDIAG --check-prefix=NDIAG %s
+// RUN: %clang_cc1 -flto -triple x86_64-unknown-linux -fvisibility hidden -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=ITANIUM --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-ABORT %s
+// RUN: %clang_cc1 -flto -triple x86_64-unknown-linux -fvisibility hidden -fsanitize=cfi-vcall -fsanitize-recover=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=ITANIUM --check-prefix=DIAG --check-prefix=DIAG-RECOVER %s
+// RUN: %clang_cc1 -flto -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=MS --check-prefix=NDIAG %s
 
 // Tests for the whole-program-vtables feature:
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM %s
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=MS %s
+// RUN: %clang_cc1 -flto -triple x86_64-unknown-linux -fvisibility hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM %s
+// RUN: %clang_cc1 -flto -triple x86_64-pc-windows-msvc -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=MS %s
 
 // MS: @[[VTA:[0-9]*]] {{.*}} comdat($"\01??_7A@@6B@")
 // MS: @[[VTB:[0-9]*]] {{.*}} comdat($"\01??_7B@@6B0@@")
@@ -62,7 +62,7 @@ void D::h() {
 // DIAG: @[[TYPE:.*]] = private unnamed_addr constant { i16, i16, [4 x i8] } { i16 -1, i16 0, [4 x i8] c"'A'\00" }
 // DIAG: @[[BADTYPESTATIC:.*]] = private unnamed_addr global { i8, { [{{.*}} x i8]*, i32, i32 }, { i16, i16, [4 x i8] }* } { i8 0, { [{{.*}} x i8]*, i32, i32 } { [{{.*}} x i8]* @[[SRC]], i32 [[@LINE+24]], i32 3 }, { i16, i16, [4 x i8] }* @[[TYPE]] }
 
-// ITANIUM: define void @_Z2afP1A
+// ITANIUM: define hidden void @_Z2afP1A
 // MS: define void @"\01?af@@YAXPEAUA@@@Z"
 void af(A *a) {
   // ITANIUM: [[P:%[^ ]*]] = call i1 @llvm.bitset.test(i8* [[VT:%[^ ]*]], metadata !"_ZTS1A")
@@ -155,7 +155,7 @@ struct D : C {
   void m_fn1();
 };
 
-// ITANIUM: define void @_ZN5test21fEPNS_1DE
+// ITANIUM: define hidden void @_ZN5test21fEPNS_1DE
 // MS: define void @"\01?f@test2@@YAXPEAUD@1@@Z"
 void f(D *d) {
   // ITANIUM: {{%[^ ]*}} = call i1 @llvm.bitset.test(i8* {{%[^ ]*}}, metadata !"_ZTSN5test21DE")
