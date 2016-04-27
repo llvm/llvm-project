@@ -8,8 +8,6 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
 
-; CHECK: _main
-; CHECK: movl $132
 define i32 @_Z3fooi(i32 %a) {
 entry:
   %a.addr = alloca i32, align 4
