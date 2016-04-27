@@ -215,6 +215,12 @@ lldb::REPLSP
 Target::GetREPL (Error &err, lldb::LanguageType language, const char *repl_options, bool can_create)
 {
     err.Clear();
+ 
+    if (!GetProcessSP())
+    {
+        err.SetErrorStringWithFormat("Can't run the REPL without a live process.");
+        return REPLSP();
+    }
     
     if (language == eLanguageTypeUnknown)
     {
