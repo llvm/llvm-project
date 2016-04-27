@@ -1543,11 +1543,13 @@ static bool isDefinedInClangModule(const RecordDecl *RD) {
     return false;
   if (!RD->isExternallyVisible() && RD->getName().empty())
     return false;
-  if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD))
+  if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
+    assert(CXXDecl->isCompleteDefinition() && "incomplete record definition");
     if (CXXDecl->getTemplateSpecializationKind() != TSK_Undeclared)
       // Make sure the instantiation is actually in a module.
       if (CXXDecl->field_begin() != CXXDecl->field_end())
         return CXXDecl->field_begin()->isFromASTFile();
+  }
 
   return true;
 }
