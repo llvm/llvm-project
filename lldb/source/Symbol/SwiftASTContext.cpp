@@ -4732,15 +4732,15 @@ SwiftASTContext::GetSILModule ()
     return m_sil_module_ap.get();
 }
 
-swift::irgen::IRGenModuleDispatcher &
-SwiftASTContext::GetIRGenModuleDispatcher ()
+swift::irgen::IRGenerator &
+SwiftASTContext::GetIRGenerator (swift::IRGenOptions &opts, swift::SILModule &module)
 {
-    if (m_ir_gen_module_dispatcher_ap.get() == nullptr)
+    if (m_ir_generator_ap.get() == nullptr)
     {
-        m_ir_gen_module_dispatcher_ap.reset(new swift::irgen::IRGenModuleDispatcher());
+        m_ir_generator_ap.reset(new swift::irgen::IRGenerator(opts, module));
     }
     
-    return *m_ir_gen_module_dispatcher_ap.get();
+    return *m_ir_generator_ap.get();
 }
 
 swift::irgen::IRGenModule &
@@ -4775,20 +4775,19 @@ SwiftASTContext::GetIRGenModule ()
             const llvm::DataLayout data_layout = target_machine->createDataLayout();
 
             llvm::Triple llvm_triple(triple);
-            
-            m_ir_gen_module_ap.reset (new swift::irgen::IRGenModule(GetIRGenModuleDispatcher(),
-                                                                    nullptr,
-                                                                    *GetASTContext(),
-                                                                    llvm::getGlobalContext(),
-                                                                    ir_gen_opts,
-                                                                    ir_gen_opts.ModuleName,
-                                                                    target_machine,
-                                                                    GetSILModule (),
-                                                                    ir_gen_opts.getSingleOutputFilename()));
-            llvm::Module *llvm_module = m_ir_gen_module_ap->getModule();
-            llvm_module->setDataLayout(data_layout.getStringRepresentation());
-            llvm_module->setTargetTriple(triple);
-
+            swift::SILModule *sil_module = GetSILModule();
+            if (sil_module != nullptr)
+            {
+                m_ir_gen_module_ap.reset (new swift::irgen::IRGenModule(GetIRGenerator(ir_gen_opts, *sil_module),
+                                                                        nullptr,
+                                                                        *GetASTContext(),
+                                                                        llvm::getGlobalContext(),
+                                                                        ir_gen_opts.ModuleName,
+                                                                        ir_gen_opts.getSingleOutputFilename()));
+                llvm::Module *llvm_module = m_ir_gen_module_ap->getModule();
+                llvm_module->setDataLayout(data_layout.getStringRepresentation());
+                llvm_module->setTargetTriple(triple);
+            }
         }
     }
     return *m_ir_gen_module_ap;
