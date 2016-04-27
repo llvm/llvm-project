@@ -48,6 +48,7 @@ if(DTRACE)
 
   add_lit_testsuite(generate-dtrace-logs "Generating clang dtrace data"
     ${CMAKE_CURRENT_BINARY_DIR}/order-files/
+    ARGS -j 1
     DEPENDS clang clear-dtrace-logs
     )
 
