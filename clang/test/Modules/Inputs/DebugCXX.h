@@ -95,3 +95,12 @@ extern template class Template1<int>;
 
 template <class T> class FwdDeclTemplate;
 typedef FwdDeclTemplate<int> TypedefFwdDeclTemplate;
+
+// Member classes of class template specializations.
+template <typename T> struct Specialized {
+};
+
+template <> struct Specialized<int> { 
+struct Member;// { int i; };
+};
+

@@ -55,6 +55,9 @@ InAnonymousNamespace anon;
 struct PureFwdDecl { int i; };
 PureFwdDecl definedLocally;
 
+struct Specialized<int>::Member { int i; };
+struct Specialized<int>::Member definedLocally2;
+
 void foo() {
   anon.i = GlobalStruct.i = GlobalUnion.i = GlobalEnum;
 }
@@ -137,10 +140,15 @@ void foo() {
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTS15FwdDeclTemplateIiE")
 
-// This type is defined locally and forward-declare in the module.
+// This type is defined locally and forward-declared in the module.
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "PureFwdDecl",
 // CHECK-SAME:             elements:
 // CHECK-SAME:             identifier: "_ZTS11PureFwdDecl")
+
+// This type is defined locally and forward-declared in the module.
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Member",
+// CHECK-SAME:             elements:
+// CHECK-SAME:             identifier: "_ZTSN11SpecializedIiE6MemberE")
 
 // CHECK: !DIGlobalVariable(name: "anon_enum", {{.*}}, type: ![[ANON_ENUM:[0-9]+]]
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, scope: ![[NS]],
