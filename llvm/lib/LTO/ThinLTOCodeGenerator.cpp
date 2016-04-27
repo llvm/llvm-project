@@ -487,9 +487,9 @@ public:
 
     // Include the hash for the resolved ODR.
     for (auto &Entry : ResolvedODR) {
-      Hasher.update(ArrayRef<uint8_t>((uint8_t *)&Entry.first,
+      Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&Entry.first,
                                       sizeof(GlobalValue::GUID)));
-      Hasher.update(ArrayRef<uint8_t>((uint8_t *)&Entry.second,
+      Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&Entry.second,
                                       sizeof(GlobalValue::LinkageTypes)));
     }
 
@@ -497,7 +497,7 @@ public:
     for (auto &Entry : PreservedSymbols) {
       if (DefinedFunctions.count(Entry))
         Hasher.update(
-            ArrayRef<uint8_t>((uint8_t *)&Entry, sizeof(GlobalValue::GUID)));
+            ArrayRef<uint8_t>((const uint8_t *)&Entry, sizeof(GlobalValue::GUID)));
     }
 
     sys::path::append(EntryPath, CachePath, toHex(Hasher.result()));
