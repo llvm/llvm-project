@@ -1115,10 +1115,12 @@ SwiftLanguageRuntime::GetMemoryReader ()
     class MemoryReader : public swift::remote::MemoryReader
     {
     public:
-        MemoryReader (Process* p) :
+        MemoryReader (Process* p,
+                      size_t max_read_amount = 50*1024) :
         m_process(p)
         {
             lldbassert(m_process && "MemoryReader requires a valid Process");
+            m_max_read_amount = max_read_amount;
         }
         
         virtual
@@ -1162,6 +1164,9 @@ SwiftLanguageRuntime::GetMemoryReader ()
         bool
         readBytes(swift::remote::RemoteAddress address, uint8_t *dest, uint64_t size) override
         {
+            if (size > m_max_read_amount)
+                return false;
+
             Target &target(m_process->GetTarget());
             Address addr(address.getAddressData());
             Error error;
@@ -1175,15 +1180,26 @@ SwiftLanguageRuntime::GetMemoryReader ()
         bool
         readString(swift::remote::RemoteAddress address, std::string &dest) override
         {
+            std::vector<char> storage(m_max_read_amount, 0);
             Target &target(m_process->GetTarget());
             Address addr(address.getAddressData());
             Error error;
-            target.ReadCStringFromMemory(addr, dest, error);
-            return error.Success();
+            target.ReadCStringFromMemory(addr,
+                                         &storage[0],
+                                         storage.size(),
+                                         error);
+            if (error.Success())
+            {
+                dest.assign(&storage[0]);
+                return true;
+            }
+            else
+                return false;
         }
         
     private:
         Process* m_process;
+        size_t m_max_read_amount;
     };
     
     if (!m_memory_reader_sp)
