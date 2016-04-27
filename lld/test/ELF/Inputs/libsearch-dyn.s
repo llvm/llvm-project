@@ -1,3 +1,3 @@
-.globl _bar,_dynamic;
+.globl _bar,_dynamic
 _bar:
 _dynamic:

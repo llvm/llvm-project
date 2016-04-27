@@ -4,7 +4,7 @@
 # REQUIRES: x86
 
 # exits with return code 42 on linux
-.globl _start;
+.globl _start
 _start:
   mov $1, %eax
   mov $42, %ebx

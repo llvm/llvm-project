@@ -316,7 +316,8 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   InputSectionBase<ELFT> *Sec = getSection(*Sym);
   if (Binding == STB_LOCAL) {
     if (Sym->st_shndx == SHN_UNDEF)
-      return new (Alloc) UndefinedElf<ELFT>(*Sym);
+      return new (Alloc)
+          Undefined(Sym->st_name, Sym->st_other, Sym->getType(), Sym->st_size);
     return new (Alloc) DefinedRegular<ELFT>(*Sym, Sec);
   }
 
@@ -324,7 +325,9 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
-    return new (Alloc) UndefinedElf<ELFT>(Name, *Sym);
+    return new (Alloc)
+        Undefined(Name, Binding, Sym->st_other, Sym->getType(), Sym->st_size,
+                  /*IsBitcode*/ false);
   case SHN_COMMON:
     return new (Alloc) DefinedCommon(Name, Sym->st_size, Sym->st_value, Binding,
                                      Sym->st_other, Sym->getType());
@@ -337,7 +340,9 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case STB_WEAK:
   case STB_GNU_UNIQUE:
     if (Sec == &InputSection<ELFT>::Discarded)
-      return new (Alloc) UndefinedElf<ELFT>(Name, *Sym);
+      return new (Alloc)
+          Undefined(Name, Binding, Sym->st_other, Sym->getType(), Sym->st_size,
+                    /*IsBitcode*/ false);
     return new (Alloc) DefinedRegular<ELFT>(Name, *Sym, Sec);
   }
 }
@@ -470,6 +475,7 @@ BitcodeFile::createBody(const DenseSet<const Comdat *> &KeptComdats,
 
   uint32_t Flags = Sym.getFlags();
   bool IsWeak = Flags & BasicSymbolRef::SF_Weak;
+  uint32_t Binding = IsWeak ? STB_WEAK : STB_GLOBAL;
 
   uint8_t Visibility;
   if (GV)
@@ -482,23 +488,23 @@ BitcodeFile::createBody(const DenseSet<const Comdat *> &KeptComdats,
   if (GV)
     if (const Comdat *C = GV->getComdat())
       if (!KeptComdats.count(C)) {
-        Body = new (Alloc)
-          UndefinedBitcode(NameRef, IsWeak, Visibility);
+        Body = new (Alloc) Undefined(NameRef, Binding, Visibility, /*Type*/ 0,
+                                     /*Size*/ 0, /*IsBitcode*/ true);
         return Body;
       }
 
   const Module &M = Obj.getModule();
   if (Flags & BasicSymbolRef::SF_Undefined)
-    return new (Alloc) UndefinedBitcode(NameRef, IsWeak, Visibility);
+    return new (Alloc) Undefined(NameRef, Binding, Visibility, /*Type*/ 0,
+                                 /*Size*/ 0, /*IsBitcode*/ true);
   if (Flags & BasicSymbolRef::SF_Common) {
     // FIXME: Set SF_Common flag correctly for module asm symbols, and expose
     // size and alignment.
     assert(GV);
     const DataLayout &DL = M.getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
-    return new (Alloc)
-        DefinedCommon(NameRef, Size, GV->getAlignment(),
-                      IsWeak ? STB_WEAK : STB_GLOBAL, Visibility, /*Type*/ 0);
+    return new (Alloc) DefinedCommon(NameRef, Size, GV->getAlignment(), Binding,
+                                     Visibility, /*Type*/ 0);
   }
   return new (Alloc) DefinedBitcode(NameRef, IsWeak, Visibility);
 }

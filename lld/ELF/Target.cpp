@@ -1595,17 +1595,5 @@ bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
     return false;
   }
 }
-
-// _gp is a MIPS-specific ABI-defined symbol which points to
-// a location that is relative to GOT. This function returns
-// the value for the symbol.
-template <class ELFT> typename ELFT::uint getMipsGpAddr() {
-  return Out<ELFT>::Got->getVA() + MipsGPOffset;
-}
-
-template uint32_t getMipsGpAddr<ELF32LE>();
-template uint32_t getMipsGpAddr<ELF32BE>();
-template uint64_t getMipsGpAddr<ELF64LE>();
-template uint64_t getMipsGpAddr<ELF64BE>();
 }
 }

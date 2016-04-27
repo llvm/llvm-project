@@ -384,6 +384,8 @@ private:
 /// \brief RAII for emitting code of OpenMP constructs.
 class InlinedOpenMPRegionRAII {
   CodeGenFunction &CGF;
+  llvm::DenseMap<const VarDecl *, FieldDecl *> LambdaCaptureFields;
+  FieldDecl *LambdaThisCaptureField = nullptr;
 
 public:
   /// \brief Constructs region for combined constructs.
@@ -396,6 +398,9 @@ public:
     // Start emission for the construct.
     CGF.CapturedStmtInfo = new CGOpenMPInlinedRegionInfo(
         CGF.CapturedStmtInfo, CodeGen, Kind, HasCancel);
+    std::swap(CGF.LambdaCaptureFields, LambdaCaptureFields);
+    LambdaThisCaptureField = CGF.LambdaThisCaptureField;
+    CGF.LambdaThisCaptureField = nullptr;
   }
 
   ~InlinedOpenMPRegionRAII() {
@@ -404,6 +409,8 @@ public:
         cast<CGOpenMPInlinedRegionInfo>(CGF.CapturedStmtInfo)->getOldCSI();
     delete CGF.CapturedStmtInfo;
     CGF.CapturedStmtInfo = OldCSI;
+    std::swap(CGF.LambdaCaptureFields, LambdaCaptureFields);
+    CGF.LambdaThisCaptureField = LambdaThisCaptureField;
   }
 };
 

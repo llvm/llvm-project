@@ -112,7 +112,7 @@
 
 # ERR1: unknown directive: FOO
 
-.globl _start, _label;
+.globl _start, _label
 _start:
   mov $60, %rax
   mov $42, %rdi

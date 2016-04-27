@@ -7,7 +7,7 @@
  nop
 
 .text
-.globl _start;
+.globl _start
 _start:
 
 // There is no .eh_frame section,

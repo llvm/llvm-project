@@ -361,8 +361,7 @@ void Writer<ELFT>::scanRelocsForThunks(const elf::ObjectFile<ELFT> &File,
                                        ArrayRef<RelTy> Rels) {
   for (const RelTy &RI : Rels) {
     uint32_t Type = RI.getType(Config->Mips64EL);
-    uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
-    SymbolBody &Body = File.getSymbolBody(SymIndex);
+    SymbolBody &Body = File.getRelocTargetSym(RI);
     if (Body.hasThunk() || !Target->needsThunk(Type, File, Body))
       continue;
     auto *D = cast<DefinedRegular<ELFT>>(&Body);
@@ -520,8 +519,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
   const uint8_t *Buf = SectionData.begin();
   for (auto I = Rels.begin(), E = Rels.end(); I != E; ++I) {
     const RelTy &RI = *I;
-    uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
-    SymbolBody &Body = File.getSymbolBody(SymIndex);
+    SymbolBody &Body = File.getRelocTargetSym(RI);
     uint32_t Type = RI.getType(Config->Mips64EL);
 
     // Ignore "hint" relocation because it is for optional code optimization.
@@ -844,7 +842,7 @@ static int getPPC64SectionRank(StringRef SectionName) {
 template <class ELFT> static bool isRelroSection(OutputSectionBase<ELFT> *Sec) {
   if (!Config->ZRelro)
     return false;
-  typename OutputSectionBase<ELFT>::uintX_t Flags = Sec->getFlags();
+  typename ELFT::uint Flags = Sec->getFlags();
   if (!(Flags & SHF_ALLOC) || !(Flags & SHF_WRITE))
     return false;
   if (Flags & SHF_TLS)
@@ -1341,11 +1339,8 @@ template <class ELFT> void Writer<ELFT>::createSections() {
       if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(Body))
         SS->File->IsUsed = true;
 
-    if (Body->isUndefined() && !S->isWeak()) {
-      auto *U = dyn_cast<UndefinedElf<ELFT>>(Body);
-      if (!U || !U->canKeepUndefined())
-        reportUndefined<ELFT>(Symtab, Body);
-    }
+    if (Body->isUndefined() && !S->isWeak())
+      reportUndefined<ELFT>(Symtab, Body);
 
     if (auto *C = dyn_cast<DefinedCommon>(Body))
       CommonSymbols.push_back(C);

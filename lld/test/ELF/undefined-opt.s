@@ -51,5 +51,16 @@
 # UNK-UNDEFINED-SO-NOT:     Name: unknown
 # UNK-UNDEFINED-SO: ]
 
-.globl _start;
+# Added undefined symbols should appear in the dynamic table if necessary.
+# RUN: ld.lld -shared -o %t5 %t.o -u export
+# RUN: llvm-readobj --dyn-symbols %t5 | \
+# RUN:     FileCheck --check-prefix=EXPORT-SO %s
+# EXPORT-SO: DynamicSymbols [
+# EXPORT-SO:   Name: export
+# EXPORT-SO: ]
+
+.globl _start
 _start:
+
+.globl export
+export:

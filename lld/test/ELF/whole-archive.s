@@ -36,5 +36,5 @@
 // RUN: ld.lld -o %t3 %t.o --whole-archive %tthin.a
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=ADDED %s
 
-.globl _start;
+.globl _start
 _start:

@@ -494,8 +494,10 @@ void linear(float *a) {
 
   #pragma omp simd linear(k : 3)
 // CHECK: store i64* [[VAL_ADDR]], i64** [[K_ADDR]],
+// CHECK: [[VAL_REF:%.+]] = load i64*, i64** [[K_ADDR]],
+// CHECK: store i64* [[VAL_REF]], i64** [[K_ADDR_REF:%.+]],
 // CHECK: store i32 0, i32* [[OMP_IV:%[^,]+]]
-// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR]],
+// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR_REF]],
 // CHECK: [[K0LOAD:%.+]] = load i64, i64* [[K_REF]]
 // CHECK-NEXT: store i64 [[K0LOAD]], i64* [[LIN0:%[^,]+]]
 
@@ -528,7 +530,7 @@ void linear(float *a) {
 // CHECK: [[SIMPLE_LOOP_END]]
 //
 // Update linear vars after loop, as the loop was operating on a private version.
-// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR]],
+// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR_REF]],
 // CHECK: store i64* [[K_REF]], i64** [[K_PRIV_REF:%.+]],
 // CHECK: [[LIN0_2:%.+]] = load i64, i64* [[LIN0]]
 // CHECK-NEXT: [[LIN_ADD2:%.+]] = add nsw i64 [[LIN0_2]], 27
@@ -537,8 +539,10 @@ void linear(float *a) {
 //
 
   #pragma omp simd linear(val(k) : 3)
+// CHECK: [[VAL_REF:%.+]] = load i64*, i64** [[K_ADDR]],
+// CHECK: store i64* [[VAL_REF]], i64** [[K_ADDR_REF:%.+]],
 // CHECK: store i32 0, i32* [[OMP_IV:%[^,]+]]
-// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR]],
+// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR_REF]],
 // CHECK: [[K0LOAD:%.+]] = load i64, i64* [[K_REF]]
 // CHECK-NEXT: store i64 [[K0LOAD]], i64* [[LIN0:%[^,]+]]
 
@@ -571,7 +575,7 @@ void linear(float *a) {
 // CHECK: [[SIMPLE_LOOP_END]]
 //
 // Update linear vars after loop, as the loop was operating on a private version.
-// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR]],
+// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR_REF]],
 // CHECK: store i64* [[K_REF]], i64** [[K_PRIV_REF:%.+]],
 // CHECK: [[LIN0_2:%.+]] = load i64, i64* [[LIN0]]
 // CHECK-NEXT: [[LIN_ADD2:%.+]] = add nsw i64 [[LIN0_2]], 27

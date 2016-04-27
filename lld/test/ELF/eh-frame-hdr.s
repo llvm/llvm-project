@@ -22,7 +22,7 @@
 .cfi_endproc
 
 .text
-.globl _start;
+.globl _start
 _start:
 
 // NOHDR:       Sections [

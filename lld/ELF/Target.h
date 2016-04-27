@@ -97,7 +97,6 @@ public:
 uint64_t getPPC64TocBase();
 
 const unsigned MipsGPOffset = 0x7ff0;
-template <class ELFT> typename ELFT::uint getMipsGpAddr();
 
 extern TargetInfo *Target;
 TargetInfo *createTarget();

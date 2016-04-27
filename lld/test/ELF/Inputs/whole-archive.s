@@ -1,2 +1,2 @@
-.globl _bar;
+.globl _bar
 _bar:

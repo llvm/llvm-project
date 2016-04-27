@@ -93,8 +93,6 @@ private:
   static uint64_t getHash(InputSection<ELFT> *S);
   static bool isEligible(InputSectionBase<ELFT> *Sec);
   static std::vector<InputSection<ELFT> *> getSections(SymbolTable<ELFT> *S);
-  static SymbolBody &getSymbol(const InputSection<ELFT> *Sec,
-                               const Elf_Rel *Rel);
 
   void segregate(InputSection<ELFT> **Begin, InputSection<ELFT> **End,
                  Comparator Eq);
@@ -156,13 +154,6 @@ ICF<ELFT>::getSections(SymbolTable<ELFT> *Symtab) {
       if (isEligible(S))
         V.push_back(cast<InputSection<ELFT>>(S));
   return V;
-}
-
-template <class ELFT>
-SymbolBody &ICF<ELFT>::getSymbol(const InputSection<ELFT> *Sec,
-                                 const Elf_Rel *Rel) {
-  uint32_t SymIdx = Rel->getSymbol(Config->Mips64EL);
-  return Sec->File->getSymbolBody(SymIdx);
 }
 
 // All sections between Begin and End must have the same group ID before
@@ -255,8 +246,8 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A,
   const RelTy *EA = RelsA.end();
   const RelTy *IB = RelsB.begin();
   for (; IA != EA; ++IA, ++IB) {
-    SymbolBody &SA = getSymbol(A, (const Elf_Rel *)IA);
-    SymbolBody &SB = getSymbol(B, (const Elf_Rel *)IB);
+    SymbolBody &SA = A->File->getRelocTargetSym(*IA);
+    SymbolBody &SB = B->File->getRelocTargetSym(*IB);
     if (&SA == &SB)
       continue;
 
