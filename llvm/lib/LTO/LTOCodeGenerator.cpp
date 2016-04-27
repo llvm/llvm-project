@@ -18,7 +18,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/Passes.h"
-#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/ReaderWriter.h"
@@ -146,7 +145,6 @@ void LTOCodeGenerator::setModule(std::unique_ptr<LTOModule> Mod) {
 
   MergedModule = Mod->takeModule();
   TheLinker = make_unique<Linker>(*MergedModule);
-  MainModuleHasSummary = Mod->isThinLTO();
 
   const std::vector<const char*> &Undefs = Mod->getAsmUndefinedRefs();
   for (int I = 0, E = Undefs.size(); I != E; ++I)
@@ -211,13 +209,8 @@ bool LTOCodeGenerator::writeMergedModules(const char *Path) {
     return false;
   }
 
-  std::unique_ptr<ModuleSummaryIndex> Index;
-  if (MainModuleHasSummary)
-    Index = ModuleSummaryIndexBuilder(MergedModule.get()).takeIndex();
-
   // write bitcode to it
-  WriteBitcodeToFile(MergedModule.get(), Out.os(), ShouldEmbedUselists,
-                     Index.get());
+  WriteBitcodeToFile(MergedModule.get(), Out.os(), ShouldEmbedUselists);
   Out.os().close();
 
   if (Out.os().has_error()) {
