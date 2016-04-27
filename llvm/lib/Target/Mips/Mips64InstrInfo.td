@@ -120,11 +120,11 @@ let AdditionalPredicates = [NotInMicroMips] in {
                ADD_FM<0, 0x2c>, ISA_MIPS3;
   def DADDu  : StdMMR6Rel, ArithLogicR<"daddu", GPR64Opnd, 1, II_DADDU, add>,
                ADD_FM<0, 0x2d>, ISA_MIPS3;
+  def DSUBu  : StdMMR6Rel, ArithLogicR<"dsubu", GPR64Opnd, 0, II_DSUBU, sub>, ADD_FM<0, 0x2f>,
+               ISA_MIPS3;
+  def DSUB   : StdMMR6Rel, ArithLogicR<"dsub", GPR64Opnd, 0, II_DSUB>, ADD_FM<0, 0x2e>,
+               ISA_MIPS3;
 }
-def DSUBu  : ArithLogicR<"dsubu", GPR64Opnd, 0, II_DSUBU, sub>, ADD_FM<0, 0x2f>,
-             ISA_MIPS3;
-def DSUB   : ArithLogicR<"dsub", GPR64Opnd, 0, II_DSUB>, ADD_FM<0, 0x2e>,
-             ISA_MIPS3;
 
 let isCodeGenOnly = 1 in {
 def SLT64  : SetCC_R<"slt", setlt, GPR64Opnd>, ADD_FM<0, 0x2a>;
@@ -554,9 +554,9 @@ def : MipsPat<(i64 (sext_inreg GPR64:$src, i32)),
 def : MipsPat<(bswap GPR64:$rt), (DSHD (DSBH GPR64:$rt))>;
 
 // Carry pattern
-def : MipsPat<(subc GPR64:$lhs, GPR64:$rhs),
-              (DSUBu GPR64:$lhs, GPR64:$rhs)>;
 let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(subc GPR64:$lhs, GPR64:$rhs),
+                (DSUBu GPR64:$lhs, GPR64:$rhs)>;
   def : MipsPat<(addc GPR64:$lhs, GPR64:$rhs),
                 (DADDu GPR64:$lhs, GPR64:$rhs)>, ASE_NOT_DSP;
   def : MipsPat<(addc GPR64:$lhs, immSExt16:$imm),
@@ -611,15 +611,17 @@ let AdditionalPredicates = [NotInMicroMips] in {
 def : MipsInstAlias<"dsll $rd, $rt, $rs",
                     (DSLLV GPR64Opnd:$rd, GPR64Opnd:$rt, GPR32Opnd:$rs), 0>,
                     ISA_MIPS3;
-def : MipsInstAlias<"dneg $rt, $rs",
-                    (DSUB GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rs), 1>,
-                    ISA_MIPS3;
-def : MipsInstAlias<"dneg $rt",
-                    (DSUB GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rt), 0>,
-                    ISA_MIPS3;
-def : MipsInstAlias<"dnegu $rt, $rs",
-                    (DSUBu GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rs), 1>,
-                    ISA_MIPS3;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsInstAlias<"dneg $rt, $rs",
+                      (DSUB GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rs), 1>,
+                      ISA_MIPS3;
+  def : MipsInstAlias<"dneg $rt",
+                      (DSUB GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rt), 0>,
+                      ISA_MIPS3;
+  def : MipsInstAlias<"dnegu $rt, $rs",
+                      (DSUBu GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rs), 1>,
+                      ISA_MIPS3;
+}
 def : MipsInstAlias<"dsubi $rs, $rt, $imm",
                     (DADDi GPR64Opnd:$rs, GPR64Opnd:$rt,
                            InvertedImOperand64:$imm),

@@ -22,6 +22,13 @@ namespace llvm {
   class DataLayout;
   class TargetLibraryInfo;
 
+  /// Analyze the name and prototype of the given function and set any
+  /// applicable attributes.
+  /// If the library function is unavailable, this doesn't modify it.
+  ///
+  /// Returns true if any attributes were set and false otherwise.
+  bool inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI);
+
   /// Return V if it is an i8*, otherwise cast it to i8*.
   Value *castToCStr(Value *V, IRBuilder<> &B);
 

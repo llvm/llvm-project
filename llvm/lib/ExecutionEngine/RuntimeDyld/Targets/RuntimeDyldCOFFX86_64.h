@@ -106,11 +106,12 @@ public:
     }
   }
 
-  relocation_iterator processRelocationRef(unsigned SectionID,
-                                           relocation_iterator RelI,
-                                           const ObjectFile &Obj,
-                                           ObjSectionToIDMap &ObjSectionToID,
-                                           StubMap &Stubs) override {
+  Expected<relocation_iterator>
+  processRelocationRef(unsigned SectionID,
+                       relocation_iterator RelI,
+                       const ObjectFile &Obj,
+                       ObjSectionToIDMap &ObjSectionToID,
+                       StubMap &Stubs) override {
     // If possible, find the symbol referred to in the relocation,
     // and the section that contains it.
     symbol_iterator Symbol = RelI->getSymbol();
@@ -170,8 +171,12 @@ public:
       addRelocationForSymbol(RE, TargetName);
     } else {
       bool IsCode = SecI->isText();
-      unsigned TargetSectionID =
-          findOrEmitSection(Obj, *SecI, IsCode, ObjSectionToID);
+      unsigned TargetSectionID;
+      if (auto TargetSectionIDOrErr =
+          findOrEmitSection(Obj, *SecI, IsCode, ObjSectionToID))
+        TargetSectionID = *TargetSectionIDOrErr;
+      else
+        return TargetSectionIDOrErr.takeError();
       uint64_t TargetOffset = getSymbolOffset(*Symbol);
       RelocationEntry RE(SectionID, Offset, RelType, TargetOffset + Addend);
       addRelocationForSection(RE, TargetSectionID);
@@ -194,19 +199,21 @@ public:
   void deregisterEHFrames() override {
     // Stub
   }
-  void finalizeLoad(const ObjectFile &Obj,
-                    ObjSectionToIDMap &SectionMap) override {
+  Error finalizeLoad(const ObjectFile &Obj,
+                     ObjSectionToIDMap &SectionMap) override {
     // Look for and record the EH frame section IDs.
     for (const auto &SectionPair : SectionMap) {
       const SectionRef &Section = SectionPair.first;
       StringRef Name;
-      Check(Section.getName(Name));
+      if (auto EC = Section.getName(Name))
+        return errorCodeToError(EC);
       // Note unwind info is split across .pdata and .xdata, so this
       // may not be sufficiently general for all users.
       if (Name == ".xdata") {
         UnregisteredEHFrameSections.push_back(SectionPair.second);
       }
     }
+    return Error::success();
   }
 };
 

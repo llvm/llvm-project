@@ -382,9 +382,11 @@ void PPCPassConfig::addMachineSSAOptimization() {
 }
 
 void PPCPassConfig::addPreRegAlloc() {
-  initializePPCVSXFMAMutatePass(*PassRegistry::getPassRegistry());
-  insertPass(VSXFMAMutateEarly ? &RegisterCoalescerID : &MachineSchedulerID,
-             &PPCVSXFMAMutateID);
+  if (getOptLevel() != CodeGenOpt::None) {
+    initializePPCVSXFMAMutatePass(*PassRegistry::getPassRegistry());
+    insertPass(VSXFMAMutateEarly ? &RegisterCoalescerID : &MachineSchedulerID,
+               &PPCVSXFMAMutateID);
+  }
   if (getPPCTargetMachine().getRelocationModel() == Reloc::PIC_)
     addPass(createPPCTLSDynamicCallPass());
   if (EnableExtraTOCRegDeps)

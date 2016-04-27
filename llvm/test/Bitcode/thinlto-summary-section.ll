@@ -5,7 +5,7 @@
 ; RUN: llvm-bcanalyzer -dump %t2.thinlto.bc | FileCheck %s --check-prefix=COMBINED
 
 ; CHECK: <PERMODULE {{.*}} op1=16
-; COMBINED-DAG: <COMBINED {{.*}} op1=16
+; COMBINED-DAG: <COMBINED {{.*}} op2=16
 define void @functionWithSection() section "some_section" {
     ret void
 }

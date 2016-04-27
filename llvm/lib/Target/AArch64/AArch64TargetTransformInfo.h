@@ -99,6 +99,9 @@ public:
 
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src);
 
+  int getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
+                               unsigned Index);
+
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
 
   int getArithmeticInstrCost(

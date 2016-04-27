@@ -284,18 +284,24 @@ for.body:                                         ; preds = %for.body, %entry
 }
 
 ; Check vectorization on an interleaved load group of factor 2 with 1 gap
-; (missing the load of odd elements).
+; (missing the load of odd elements). Because the vectorized loop would
+; speculatively access memory out-of-bounds, we must execute at least one
+; iteration of the scalar loop.
 
-; void even_load(int *A, int *B) {
+; void even_load_static_tc(int *A, int *B) {
 ;  for (unsigned i = 0; i < 1024; i+=2)
 ;     B[i/2] = A[i] * 2;
 ; }
 
-; CHECK-LABEL: @even_load(
-; CHECK-NOT: %wide.vec = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
-; CHECK-NOT: %strided.vec = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-LABEL: @even_load_static_tc(
+; CHECK: vector.body:
+; CHECK:   %wide.vec = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
+; CHECK:   %strided.vec = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK:   icmp eq i64 %index.next, 508
+; CHECK: middle.block:
+; CHECK:   br i1 false, label %for.cond.cleanup, label %scalar.ph
 
-define void @even_load(i32* noalias nocapture readonly %A, i32* noalias nocapture %B) {
+define void @even_load_static_tc(i32* noalias nocapture readonly %A, i32* noalias nocapture %B) {
 entry:
   br label %for.body
 
@@ -313,6 +319,93 @@ for.body:                                         ; preds = %for.body, %entry
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 2
   %cmp = icmp ult i64 %indvars.iv.next, 1024
   br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
+; Check vectorization on an interleaved load group of factor 2 with 1 gap
+; (missing the load of odd elements). Because the vectorized loop would
+; speculatively access memory out-of-bounds, we must execute at least one
+; iteration of the scalar loop.
+
+; void even_load_dynamic_tc(int *A, int *B, unsigned N) {
+;  for (unsigned i = 0; i < N; i+=2)
+;     B[i/2] = A[i] * 2;
+; }
+
+; CHECK-LABEL: @even_load_dynamic_tc(
+; CHECK: min.iters.checked:
+; CHECK:   %n.mod.vf = and i64 %[[N:[a-zA-Z0-9]+]], 3
+; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
+; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
+; CHECK:   %n.vec = sub i64 %[[N]], %[[R]]
+; CHECK: vector.body:
+; CHECK:   %wide.vec = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
+; CHECK:   %strided.vec = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK:   icmp eq i64 %index.next, %n.vec
+; CHECK: middle.block:
+; CHECK:   br i1 false, label %for.cond.cleanup, label %scalar.ph
+
+define void @even_load_dynamic_tc(i32* noalias nocapture readonly %A, i32* noalias nocapture %B, i64 %N) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
+  %tmp = load i32, i32* %arrayidx, align 4
+  %mul = shl nsw i32 %tmp, 1
+  %tmp1 = lshr exact i64 %indvars.iv, 1
+  %arrayidx2 = getelementptr inbounds i32, i32* %B, i64 %tmp1
+  store i32 %mul, i32* %arrayidx2, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 2
+  %cmp = icmp ult i64 %indvars.iv.next, %N
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
+; Check vectorization on a reverse interleaved load group of factor 2 with 1
+; gap and a reverse interleaved store group of factor 2. The interleaved load
+; group should be removed since it has a gap and is reverse.
+
+; struct pair {
+;  int x;
+;  int y;
+; };
+;
+; void load_gap_reverse(struct pair *P1, struct pair *P2, int X) {
+;   for (int i = 1023; i >= 0; i--) {
+;     int a = X + i;
+;     int b = A[i].y - i;
+;     B[i].x = a;
+;     B[i].y = b;
+;   }
+; }
+
+; CHECK-LABEL: @load_gap_reverse(
+; CHECK-NOT: %wide.vec = load <8 x i64>, <8 x i64>* %{{.*}}, align 8
+; CHECK-NOT: %strided.vec = shufflevector <8 x i64> %wide.vec, <8 x i64> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+
+%pair = type { i64, i64 }
+define void @load_gap_reverse(%pair* noalias nocapture readonly %P1, %pair* noalias nocapture readonly %P2, i64 %X) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 1023, %entry ], [ %i.next, %for.body ]
+  %0 = add nsw i64 %X, %i
+  %1 = getelementptr inbounds %pair, %pair* %P1, i64 %i, i32 0
+  %2 = getelementptr inbounds %pair, %pair* %P2, i64 %i, i32 1
+  %3 = load i64, i64* %2, align 8
+  %4 = sub nsw i64 %3, %i
+  store i64 %0, i64* %1, align 8
+  store i64 %4, i64* %2, align 8
+  %i.next = add nsw i64 %i, -1
+  %cond = icmp sgt i64 %i, 0
+  br i1 %cond, label %for.body, label %for.exit
+
+for.exit:
+  ret void
 }
 
 ; Check vectorization on interleaved access groups identified from mixed

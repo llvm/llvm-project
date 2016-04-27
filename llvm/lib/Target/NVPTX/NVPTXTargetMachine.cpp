@@ -167,6 +167,10 @@ TargetPassConfig *NVPTXTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new NVPTXPassConfig(this, PM);
 }
 
+void NVPTXTargetMachine::addEarlyAsPossiblePasses(PassManagerBase &PM) {
+  PM.add(createNVVMReflectPass());
+}
+
 TargetIRAnalysis NVPTXTargetMachine::getTargetIRAnalysis() {
   return TargetIRAnalysis([this](const Function &F) {
     return TargetTransformInfo(NVPTXTTIImpl(this, F));
@@ -228,7 +232,12 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&FuncletLayoutID);
   disablePass(&PatchableFunctionID);
 
+  // NVVMReflectPass is added in addEarlyAsPossiblePasses, so hopefully running
+  // it here does nothing.  But since we need it for correctness when lowering
+  // to NVPTX, run it here too, in case whoever built our pass pipeline didn't
+  // call addEarlyAsPossiblePasses.
   addPass(createNVVMReflectPass());
+
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createNVPTXImageOptimizerPass());
   addPass(createNVPTXAssignValidGlobalNamesPass());

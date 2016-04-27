@@ -1,5 +1,5 @@
-; RUN: opt -S -slp-vectorizer -dce -instcombine < %s | FileCheck %s --check-prefix=PROFITABLE
-; RUN: opt -S -slp-vectorizer -slp-threshold=-12 -dce -instcombine < %s | FileCheck %s --check-prefix=UNPROFITABLE
+; RUN: opt -S -slp-vectorizer -dce -instcombine < %s | FileCheck %s --check-prefix=GENERIC
+; RUN: opt -S -mcpu=kryo -slp-vectorizer -dce -instcombine < %s | FileCheck %s --check-prefix=KRYO
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -19,13 +19,13 @@ target triple = "aarch64--linux-gnu"
 ;   return sum;
 ; }
 
-; PROFITABLE-LABEL: @gather_reduce_8x16_i32
+; GENERIC-LABEL: @gather_reduce_8x16_i32
 ;
-; PROFITABLE: [[L:%[a-zA-Z0-9.]+]] = load <8 x i16>
-; PROFITABLE: zext <8 x i16> [[L]] to <8 x i32>
-; PROFITABLE: [[S:%[a-zA-Z0-9.]+]] = sub nsw <8 x i32>
-; PROFITABLE: [[X:%[a-zA-Z0-9.]+]] = extractelement <8 x i32> [[S]]
-; PROFITABLE: sext i32 [[X]] to i64
+; GENERIC: [[L:%[a-zA-Z0-9.]+]] = load <8 x i16>
+; GENERIC: zext <8 x i16> [[L]] to <8 x i32>
+; GENERIC: [[S:%[a-zA-Z0-9.]+]] = sub nsw <8 x i32>
+; GENERIC: [[X:%[a-zA-Z0-9.]+]] = extractelement <8 x i32> [[S]]
+; GENERIC: sext i32 [[X]] to i64
 ;
 define i32 @gather_reduce_8x16_i32(i16* nocapture readonly %a, i16* nocapture readonly %b, i16* nocapture readonly %g, i32 %n) {
 entry:
@@ -138,18 +138,13 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-; UNPROFITABLE-LABEL: @gather_reduce_8x16_i64
+; KRYO-LABEL: @gather_reduce_8x16_i64
 ;
-; UNPROFITABLE: [[L:%[a-zA-Z0-9.]+]] = load <8 x i16>
-; UNPROFITABLE: zext <8 x i16> [[L]] to <8 x i32>
-; UNPROFITABLE: [[S:%[a-zA-Z0-9.]+]] = sub nsw <8 x i32>
-; UNPROFITABLE: [[X:%[a-zA-Z0-9.]+]] = extractelement <8 x i32> [[S]]
-; UNPROFITABLE: sext i32 [[X]] to i64
-;
-; TODO: Although we can now vectorize this case while converting the i64
-;       subtractions to i32, the cost model currently finds vectorization to be
-;       unprofitable. The cost model is penalizing the sign and zero
-;       extensions in the vectorized version, but they are actually free.
+; KRYO: [[L:%[a-zA-Z0-9.]+]] = load <8 x i16>
+; KRYO: zext <8 x i16> [[L]] to <8 x i32>
+; KRYO: [[S:%[a-zA-Z0-9.]+]] = sub nsw <8 x i32>
+; KRYO: [[X:%[a-zA-Z0-9.]+]] = extractelement <8 x i32> [[S]]
+; KRYO: sext i32 [[X]] to i64
 ;
 define i32 @gather_reduce_8x16_i64(i16* nocapture readonly %a, i16* nocapture readonly %b, i16* nocapture readonly %g, i32 %n) {
 entry:

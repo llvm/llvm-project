@@ -981,18 +981,20 @@ class SLL16_MMR6_DESC : ShiftIMM16<"sll16", uimm3_shift, GPRMM16Opnd, II_SLL>,
       MMR6Arch<"sll16">;
 class SRL16_MMR6_DESC : ShiftIMM16<"srl16", uimm3_shift, GPRMM16Opnd, II_SRL>,
       MMR6Arch<"srl16">;
-class BREAK16_MMR6_DESC : BrkSdbbp16MM<"break16">, MMR6Arch<"srl16">,
+class BREAK16_MMR6_DESC : BrkSdbbp16MM<"break16">, MMR6Arch<"break16">,
       MicroMipsR6Inst16;
 class LI16_MMR6_DESC : LoadImmMM16<"li16", li16_imm, GPRMM16Opnd>,
-      MMR6Arch<"srl16">, MicroMipsR6Inst16, IsAsCheapAsAMove;
-class MOVE16_MMR6_DESC : MoveMM16<"move16", GPR32Opnd>, MMR6Arch<"srl16">,
+      MMR6Arch<"li16">, MicroMipsR6Inst16, IsAsCheapAsAMove;
+class MOVE16_MMR6_DESC : MoveMM16<"move16", GPR32Opnd>, MMR6Arch<"move16">,
       MicroMipsR6Inst16;
 class SDBBP16_MMR6_DESC : BrkSdbbp16MM<"sdbbp16">, MMR6Arch<"sdbbp16">,
       MicroMipsR6Inst16;
 class SUBU16_MMR6_DESC : ArithRMM16<"subu16", GPRMM16Opnd, 0, II_SUBU, sub>,
-      MMR6Arch<"sdbbp16">, MicroMipsR6Inst16;
+      MMR6Arch<"subu16">, MicroMipsR6Inst16 {
+  int AddedComplexity = 1;
+}
 class XOR16_MMR6_DESC : LogicRMM16<"xor16", GPRMM16Opnd, II_XOR, xor>,
-      MMR6Arch<"sdbbp16">;
+      MMR6Arch<"xor16">;
 
 class LW_MMR6_DESC : MMR6Arch<"lw">, MipsR6Inst {
   dag OutOperandList = (outs GPR32Opnd:$rt);
@@ -1478,3 +1480,5 @@ def : MipsInstAlias<"evp", (EVP_MMR6 ZERO), 0>, ISA_MICROMIPS32R6;
 
 def : MipsPat<(store GPRMM16:$src, addrimm4lsl2:$addr),
               (SW16_MMR6 GPRMM16:$src, addrimm4lsl2:$addr)>, ISA_MICROMIPS32R6;
+def : MipsPat<(subc GPR32:$lhs, GPR32:$rhs),
+              (SUBU_MMR6 GPR32:$lhs, GPR32:$rhs)>, ISA_MICROMIPS32R6;

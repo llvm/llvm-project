@@ -19,7 +19,8 @@ define void @test_load_store(half* %in, half* %out) {
 
 define i16 @test_bitcast_from_half(half* %addr) {
 ; CHECK-LABEL: test_bitcast_from_half:
-; CHECK: movzwl (%rdi), %eax
+; BWON:  movzwl (%rdi), %eax
+; BWOFF: movw (%rdi), %ax
   %val = load half, half* %addr
   %val_int = bitcast half %val to i16
   ret i16 %val_int

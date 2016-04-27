@@ -490,10 +490,13 @@ def TLSCall_32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
                 [(X86TLSCall addr:$sym)]>,
                 Requires<[Not64BitMode]>;
 
-// For x86_64, the address of the thunk is passed in %rdi, on return
-// the address of the variable is in %rax.  All other registers are preserved.
+// For x86_64, the address of the thunk is passed in %rdi, but the
+// pseudo directly use the symbol, so do not add an implicit use of
+// %rdi. The lowering will do the right thing with RDI.
+// On return the address of the variable is in %rax.  All other
+// registers are preserved.
 let Defs = [RAX, EFLAGS],
-    Uses = [RSP, RDI],
+    Uses = [RSP],
     usesCustomInserter = 1 in
 def TLSCall_64 : I<0, Pseudo, (outs), (ins i64mem:$sym),
                   "# TLSCall_64",

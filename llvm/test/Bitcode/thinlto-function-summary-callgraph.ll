@@ -22,12 +22,12 @@
 ; COMBINED-NEXT:    <COMBINED
 ; See if the call to func is registered, using the expected callsite count
 ; and value id matching the subsequent value symbol table.
-; COMBINED-NEXT:    <COMBINED {{.*}} op4=[[FUNCID:[0-9]+]] op5=1/>
+; COMBINED-NEXT:    <COMBINED {{.*}} op5=[[FUNCID:[0-9]+]] op6=1/>
 ; COMBINED-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 ; COMBINED-NEXT:  <VALUE_SYMTAB
 ; Entry for function func should have entry with value id FUNCID
-; COMBINED-NEXT:    <COMBINED_GVDEFENTRY {{.*}} op0=[[FUNCID]] {{.*}} op2=7289175272376759421/>
-; COMBINED-NEXT:    <COMBINED_GVDEFENTRY
+; COMBINED-NEXT:    <COMBINED_ENTRY {{.*}} op0=[[FUNCID]] op1=7289175272376759421/>
+; COMBINED-NEXT:    <COMBINED
 ; COMBINED-NEXT:  </VALUE_SYMTAB>
 
 ; ModuleID = 'thinlto-function-summary-callgraph.ll'

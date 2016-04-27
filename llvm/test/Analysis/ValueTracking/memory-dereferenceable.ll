@@ -3,7 +3,7 @@
 ; Uses the print-deref (+ analyze to print) pass to run
 ; isDereferenceablePointer() on many load instruction operands
 
-target datalayout = "e"
+target datalayout = "e-i32:32:64"
 
 %TypeOpaque = type opaque
 
@@ -132,6 +132,12 @@ entry:
     %d4_aligned_load = load i32*, i32** @globali32ptr, !dereferenceable !0, !align !{i64 16}
     %load26 = load i32, i32* %d4_unaligned_load, align 16
     %load27 = load i32, i32* %d4_aligned_load, align 16
+
+   ; Alloca with no explicit alignment is aligned to preferred alignment of
+   ; the type (specified by datalayout string).
+; CHECK: %alloca.noalign{{.*}}(aligned)
+    %alloca.noalign = alloca i32
+    %load28 = load i32, i32* %alloca.noalign, align 8
 
     ret void
 }

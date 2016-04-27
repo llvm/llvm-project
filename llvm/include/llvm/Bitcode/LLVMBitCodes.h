@@ -180,8 +180,6 @@ enum ValueSymtabCodes {
   VST_CODE_ENTRY = 1,   // VST_ENTRY: [valueid, namechar x N]
   VST_CODE_BBENTRY = 2, // VST_BBENTRY: [bbid, namechar x N]
   VST_CODE_FNENTRY = 3, // VST_FNENTRY: [valueid, offset, namechar x N]
-  // VST_COMBINED_GVDEFENTRY: [valueid, sumoffset, guid]
-  VST_CODE_COMBINED_GVDEFENTRY = 4,
   // VST_COMBINED_ENTRY: [valueid, refguid]
   VST_CODE_COMBINED_ENTRY = 5
 };
@@ -204,18 +202,18 @@ enum GlobalValueSummarySymtabCodes {
   FS_PERMODULE_PROFILE = 2,
   // PERMODULE_GLOBALVAR_INIT_REFS: [valueid, flags, n x valueid]
   FS_PERMODULE_GLOBALVAR_INIT_REFS = 3,
-  // COMBINED: [modid, flags, instcount, numrefs, numrefs x valueid,
+  // COMBINED: [valueid, modid, flags, instcount, numrefs, numrefs x valueid,
   //            n x (valueid, callsitecount)]
   FS_COMBINED = 4,
-  // COMBINED_PROFILE: [modid, flags, instcount, numrefs,
+  // COMBINED_PROFILE: [valueid, modid, flags, instcount, numrefs,
   //                    numrefs x valueid,
   //                    n x (valueid, callsitecount, profilecount)]
   FS_COMBINED_PROFILE = 5,
-  // COMBINED_GLOBALVAR_INIT_REFS: [modid, flags, n x valueid]
+  // COMBINED_GLOBALVAR_INIT_REFS: [valueid, modid, flags, n x valueid]
   FS_COMBINED_GLOBALVAR_INIT_REFS = 6,
   // ALIAS: [valueid, flags, valueid]
   FS_ALIAS = 7,
-  // COMBINED_ALIAS: [modid, flags, offset]
+  // COMBINED_ALIAS: [valueid, modid, flags, valueid]
   FS_COMBINED_ALIAS = 8,
   // COMBINED_ORIGINAL_NAME: [original_name_hash]
   FS_COMBINED_ORIGINAL_NAME = 9,

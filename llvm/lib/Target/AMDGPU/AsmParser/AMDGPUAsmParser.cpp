@@ -543,7 +543,7 @@ public:
 
   bool parseCnt(int64_t &IntVal);
   OperandMatchResultTy parseSWaitCntOps(OperandVector &Operands);
-  bool parseHwreg(int64_t &HwRegCode, int64_t &Offset, int64_t &Width);
+  bool parseHwreg(int64_t &HwRegCode, int64_t &Offset, int64_t &Width, bool &IsIdentifier);
   OperandMatchResultTy parseHwregOp(OperandVector &Operands);
   OperandMatchResultTy parseSOppBrTarget(OperandVector &Operands);
 
@@ -1612,7 +1612,7 @@ AMDGPUAsmParser::parseSWaitCntOps(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-bool AMDGPUAsmParser::parseHwreg(int64_t &HwRegCode, int64_t &Offset, int64_t &Width) {
+bool AMDGPUAsmParser::parseHwreg(int64_t &HwRegCode, int64_t &Offset, int64_t &Width, bool &IsIdentifier) {
   if (Parser.getTok().getString() != "hwreg")
     return true;
   Parser.Lex();
@@ -1621,10 +1621,25 @@ bool AMDGPUAsmParser::parseHwreg(int64_t &HwRegCode, int64_t &Offset, int64_t &W
     return true;
   Parser.Lex();
 
-  if (getLexer().isNot(AsmToken::Integer))
-    return true;
-  if (getParser().parseAbsoluteExpression(HwRegCode))
-    return true;
+  if (getLexer().is(AsmToken::Identifier)) {
+    IsIdentifier = true;
+    HwRegCode = StringSwitch<unsigned>(Parser.getTok().getString())
+      .Case("HW_REG_MODE"     , 1)
+      .Case("HW_REG_STATUS"   , 2)
+      .Case("HW_REG_TRAPSTS"  , 3)
+      .Case("HW_REG_HW_ID"    , 4)
+      .Case("HW_REG_GPR_ALLOC", 5)
+      .Case("HW_REG_LDS_ALLOC", 6)
+      .Case("HW_REG_IB_STS"   , 7)
+      .Default(-1);
+    Parser.Lex();
+  } else {
+    IsIdentifier = false;
+    if (getLexer().isNot(AsmToken::Integer))
+      return true;
+    if (getParser().parseAbsoluteExpression(HwRegCode))
+      return true;
+  }
 
   if (getLexer().is(AsmToken::RParen)) {
     Parser.Lex();
@@ -1676,16 +1691,21 @@ AMDGPUAsmParser::parseHwregOp(OperandVector &Operands) {
       break;
 
     case AsmToken::Identifier: {
-        int64_t HwRegCode = 0;
+        bool IsIdentifier = false;
+        int64_t HwRegCode = -1;
         int64_t Offset = 0; // default
         int64_t Width = 32; // default
-        if (parseHwreg(HwRegCode, Offset, Width))
+        if (parseHwreg(HwRegCode, Offset, Width, IsIdentifier))
           return MatchOperand_ParseFail;
         // HwRegCode (6) [5:0]
         // Offset (5) [10:6]
         // WidthMinusOne (5) [15:11]
-        if (HwRegCode < 0 || HwRegCode > 63)
-          Error(S, "invalid code of hardware register: only 6-bit values are legal");
+        if (HwRegCode < 0 || HwRegCode > 63) {
+          if (IsIdentifier)
+            Error(S, "invalid symbolic name of hardware register");
+          else
+            Error(S, "invalid code of hardware register: only 6-bit values are legal");
+        }
         if (Offset < 0 || Offset > 31)
           Error(S, "invalid bit offset: only 5-bit values are legal");
         if (Width < 1 || Width > 32)

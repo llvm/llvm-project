@@ -1136,6 +1136,8 @@ public:
 /// We can do this to a select if its only uses are loads and if the operand to
 /// the select can be loaded unconditionally.
 static bool isSafeSelectToSpeculate(SelectInst *SI) {
+  const DataLayout &DL = SI->getModule()->getDataLayout();
+
   for (User *U : SI->users()) {
     LoadInst *LI = dyn_cast<LoadInst>(U);
     if (!LI || !LI->isSimple()) return false;
@@ -1143,10 +1145,10 @@ static bool isSafeSelectToSpeculate(SelectInst *SI) {
     // Both operands to the select need to be dereferencable, either absolutely
     // (e.g. allocas) or at this point because we can see other accesses to it.
     if (!isSafeToLoadUnconditionally(SI->getTrueValue(), LI->getAlignment(),
-                                     LI))
+                                     DL, LI))
       return false;
     if (!isSafeToLoadUnconditionally(SI->getFalseValue(), LI->getAlignment(),
-                                     LI))
+                                     DL, LI))
       return false;
   }
 
@@ -1193,6 +1195,8 @@ static bool isSafePHIToSpeculate(PHINode *PN) {
     MaxAlign = std::max(MaxAlign, LI->getAlignment());
   }
 
+  const DataLayout &DL = PN->getModule()->getDataLayout();
+
   // Okay, we know that we have one or more loads in the same block as the PHI.
   // We can transform this if it is safe to push the loads into the predecessor
   // blocks.  The only thing to watch out for is that we can't put a possibly
@@ -1217,7 +1221,7 @@ static bool isSafePHIToSpeculate(PHINode *PN) {
 
     // If this pointer is always safe to load, or if we can prove that there is
     // already a load in the block, then we can move the load to the pred block.
-    if (isSafeToLoadUnconditionally(InVal, MaxAlign, Pred->getTerminator()))
+    if (isSafeToLoadUnconditionally(InVal, MaxAlign, DL, Pred->getTerminator()))
       continue;
 
     return false;

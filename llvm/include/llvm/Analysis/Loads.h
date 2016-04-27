@@ -45,13 +45,15 @@ bool isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
 /// isSafeToLoadUnconditionally - Return true if we know that executing a load
 /// from this value cannot trap.
 ///
-/// If DT is specified this method performs context-sensitive analysis.
+/// If DT and ScanFrom are specified this method performs context-sensitive
+/// analysis and returns true if it is safe to load immediately before ScanFrom.
 ///
 /// If it is not obviously safe to load from the specified pointer, we do a
 /// quick local scan of the basic block containing ScanFrom, to determine if
 /// the address is already accessed.
 bool isSafeToLoadUnconditionally(Value *V, unsigned Align,
-                                 Instruction *ScanFrom,
+                                 const DataLayout &DL,
+                                 Instruction *ScanFrom = nullptr,
                                  const DominatorTree *DT = nullptr,
                                  const TargetLibraryInfo *TLI = nullptr);
 

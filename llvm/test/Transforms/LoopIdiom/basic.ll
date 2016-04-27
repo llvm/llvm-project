@@ -564,3 +564,7 @@ for.end6:                                         ; preds = %for.inc4
 ; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* %X, i8 0, i64 10000, i32 1, i1 false)
 ; CHECK: ret void
 }
+
+; Validate that "memset_pattern" has the proper attributes.
+; CHECK: declare void @memset_pattern16(i8* nocapture, i8* nocapture readonly, i64) [[ATTRS:#[0-9]+]]
+; CHECK: [[ATTRS]] = { argmemonly }

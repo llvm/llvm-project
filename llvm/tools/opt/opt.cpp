@@ -230,7 +230,8 @@ static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
 /// OptLevel - Optimization Level
 static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
                                   legacy::FunctionPassManager &FPM,
-                                  unsigned OptLevel, unsigned SizeLevel) {
+                                  TargetMachine *TM, unsigned OptLevel,
+                                  unsigned SizeLevel) {
   if (!NoVerify || VerifyEach)
     FPM.add(createVerifierPass()); // Verify that input is correct
 
@@ -259,6 +260,14 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
   // When #pragma vectorize is on for SLP, do the same as above
   Builder.SLPVectorize =
       DisableSLPVectorization ? false : OptLevel > 1 && SizeLevel < 2;
+
+  // Add target-specific passes that need to run as early as possible.
+  if (TM)
+    Builder.addExtension(
+        PassManagerBuilder::EP_EarlyAsPossible,
+        [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+          TM->addEarlyAsPossiblePasses(PM);
+        });
 
   Builder.populateFunctionPassManager(FPM);
   Builder.populateModulePassManager(MPM);
@@ -519,27 +528,27 @@ int main(int argc, char **argv) {
     }
 
     if (OptLevelO1 && OptLevelO1.getPosition() < PassList.getPosition(i)) {
-      AddOptimizationPasses(Passes, *FPasses, 1, 0);
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 1, 0);
       OptLevelO1 = false;
     }
 
     if (OptLevelO2 && OptLevelO2.getPosition() < PassList.getPosition(i)) {
-      AddOptimizationPasses(Passes, *FPasses, 2, 0);
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 0);
       OptLevelO2 = false;
     }
 
     if (OptLevelOs && OptLevelOs.getPosition() < PassList.getPosition(i)) {
-      AddOptimizationPasses(Passes, *FPasses, 2, 1);
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 1);
       OptLevelOs = false;
     }
 
     if (OptLevelOz && OptLevelOz.getPosition() < PassList.getPosition(i)) {
-      AddOptimizationPasses(Passes, *FPasses, 2, 2);
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 2);
       OptLevelOz = false;
     }
 
     if (OptLevelO3 && OptLevelO3.getPosition() < PassList.getPosition(i)) {
-      AddOptimizationPasses(Passes, *FPasses, 3, 0);
+      AddOptimizationPasses(Passes, *FPasses, TM.get(), 3, 0);
       OptLevelO3 = false;
     }
 
@@ -591,19 +600,19 @@ int main(int argc, char **argv) {
   }
 
   if (OptLevelO1)
-    AddOptimizationPasses(Passes, *FPasses, 1, 0);
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 1, 0);
 
   if (OptLevelO2)
-    AddOptimizationPasses(Passes, *FPasses, 2, 0);
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 0);
 
   if (OptLevelOs)
-    AddOptimizationPasses(Passes, *FPasses, 2, 1);
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 1);
 
   if (OptLevelOz)
-    AddOptimizationPasses(Passes, *FPasses, 2, 2);
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 2, 2);
 
   if (OptLevelO3)
-    AddOptimizationPasses(Passes, *FPasses, 3, 0);
+    AddOptimizationPasses(Passes, *FPasses, TM.get(), 3, 0);
 
   if (OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz || OptLevelO3) {
     FPasses->doInitialization();

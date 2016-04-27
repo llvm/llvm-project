@@ -342,6 +342,9 @@ protected:
 
 public:
     bool runOnMachineFunction(MachineFunction &MF) override {
+      if (skipFunction(*MF.getFunction()))
+        return false;
+
       // If we don't have VSX then go ahead and return without doing
       // anything.
       const PPCSubtarget &STI = MF.getSubtarget<PPCSubtarget>();

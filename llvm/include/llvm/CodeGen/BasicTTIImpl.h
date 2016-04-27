@@ -435,6 +435,14 @@ public:
     llvm_unreachable("Unhandled cast");
   }
 
+  unsigned getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                    VectorType *VecTy, unsigned Index) {
+    return static_cast<T *>(this)->getVectorInstrCost(
+               Instruction::ExtractElement, VecTy, Index) +
+           static_cast<T *>(this)->getCastInstrCost(Opcode, Dst,
+                                                    VecTy->getElementType());
+  }
+
   unsigned getCFInstrCost(unsigned Opcode) {
     // Branches are assumed to be predicted.
     return 0;

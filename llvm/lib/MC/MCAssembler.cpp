@@ -914,4 +914,5 @@ void MCAssembler::finishLayout(MCAsmLayout &Layout) {
   for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
     Layout.getFragmentOffset(&*Layout.getSectionOrder()[i]->rbegin());
   }
+  getBackend().finishLayout(*this, Layout);
 }

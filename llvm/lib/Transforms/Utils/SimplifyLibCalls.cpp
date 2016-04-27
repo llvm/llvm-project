@@ -103,84 +103,11 @@ static bool hasUnaryFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
   }
 }
 
-/// \brief Returns whether \p F matches the signature expected for the
-/// string/memory copying library function \p Func.
-/// Acceptable functions are st[rp][n]?cpy, memove, memcpy, and memset.
-/// Their fortified (_chk) counterparts are also accepted.
-static bool checkStringCopyLibFuncSignature(Function *F, LibFunc::Func Func) {
-  const DataLayout &DL = F->getParent()->getDataLayout();
-  FunctionType *FT = F->getFunctionType();
-  LLVMContext &Context = F->getContext();
-  Type *PCharTy = Type::getInt8PtrTy(Context);
-  Type *SizeTTy = DL.getIntPtrType(Context);
-  unsigned NumParams = FT->getNumParams();
-
-  // All string libfuncs return the same type as the first parameter.
-  if (FT->getReturnType() != FT->getParamType(0))
-    return false;
-
-  switch (Func) {
-  default:
-    llvm_unreachable("Can't check signature for non-string-copy libfunc.");
-  case LibFunc::stpncpy_chk:
-  case LibFunc::strncpy_chk:
-    --NumParams; // fallthrough
-  case LibFunc::stpncpy:
-  case LibFunc::strncpy: {
-    if (NumParams != 3 || FT->getParamType(0) != FT->getParamType(1) ||
-        FT->getParamType(0) != PCharTy || !FT->getParamType(2)->isIntegerTy())
-      return false;
-    break;
-  }
-  case LibFunc::strcpy_chk:
-  case LibFunc::stpcpy_chk:
-    --NumParams; // fallthrough
-  case LibFunc::stpcpy:
-  case LibFunc::strcpy: {
-    if (NumParams != 2 || FT->getParamType(0) != FT->getParamType(1) ||
-        FT->getParamType(0) != PCharTy)
-      return false;
-    break;
-  }
-  case LibFunc::memmove_chk:
-  case LibFunc::memcpy_chk:
-    --NumParams; // fallthrough
-  case LibFunc::memmove:
-  case LibFunc::memcpy: {
-    if (NumParams != 3 || !FT->getParamType(0)->isPointerTy() ||
-        !FT->getParamType(1)->isPointerTy() || FT->getParamType(2) != SizeTTy)
-      return false;
-    break;
-  }
-  case LibFunc::memset_chk:
-    --NumParams; // fallthrough
-  case LibFunc::memset: {
-    if (NumParams != 3 || !FT->getParamType(0)->isPointerTy() ||
-        !FT->getParamType(1)->isIntegerTy() || FT->getParamType(2) != SizeTTy)
-      return false;
-    break;
-  }
-  }
-  // If this is a fortified libcall, the last parameter is a size_t.
-  if (NumParams == FT->getNumParams() - 1)
-    return FT->getParamType(FT->getNumParams() - 1) == SizeTTy;
-  return true;
-}
-
 //===----------------------------------------------------------------------===//
 // String and Memory Library Call Optimizations
 //===----------------------------------------------------------------------===//
 
 Value *LibCallSimplifier::optimizeStrCat(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  // Verify the "strcat" function prototype.
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 2||
-      FT->getReturnType() != B.getInt8PtrTy() ||
-      FT->getParamType(0) != FT->getReturnType() ||
-      FT->getParamType(1) != FT->getReturnType())
-    return nullptr;
-
   // Extract some information from the instruction
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
@@ -220,15 +147,6 @@ Value *LibCallSimplifier::emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
 }
 
 Value *LibCallSimplifier::optimizeStrNCat(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  // Verify the "strncat" function prototype.
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 3 || FT->getReturnType() != B.getInt8PtrTy() ||
-      FT->getParamType(0) != FT->getReturnType() ||
-      FT->getParamType(1) != FT->getReturnType() ||
-      !FT->getParamType(2)->isIntegerTy())
-    return nullptr;
-
   // Extract some information from the instruction.
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
@@ -263,13 +181,7 @@ Value *LibCallSimplifier::optimizeStrNCat(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  // Verify the "strchr" function prototype.
   FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 2 || FT->getReturnType() != B.getInt8PtrTy() ||
-      FT->getParamType(0) != FT->getReturnType() ||
-      !FT->getParamType(1)->isIntegerTy(32))
-    return nullptr;
-
   Value *SrcStr = CI->getArgOperand(0);
 
   // If the second operand is non-constant, see if we can compute the length
@@ -308,14 +220,6 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrRChr(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  // Verify the "strrchr" function prototype.
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 2 || FT->getReturnType() != B.getInt8PtrTy() ||
-      FT->getParamType(0) != FT->getReturnType() ||
-      !FT->getParamType(1)->isIntegerTy(32))
-    return nullptr;
-
   Value *SrcStr = CI->getArgOperand(0);
   ConstantInt *CharC = dyn_cast<ConstantInt>(CI->getArgOperand(1));
 
@@ -343,14 +247,6 @@ Value *LibCallSimplifier::optimizeStrRChr(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  // Verify the "strcmp" function prototype.
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 2 || !FT->getReturnType()->isIntegerTy(32) ||
-      FT->getParamType(0) != FT->getParamType(1) ||
-      FT->getParamType(0) != B.getInt8PtrTy())
-    return nullptr;
-
   Value *Str1P = CI->getArgOperand(0), *Str2P = CI->getArgOperand(1);
   if (Str1P == Str2P) // strcmp(x,x)  -> 0
     return ConstantInt::get(CI->getType(), 0);
@@ -384,15 +280,6 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  // Verify the "strncmp" function prototype.
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 3 || !FT->getReturnType()->isIntegerTy(32) ||
-      FT->getParamType(0) != FT->getParamType(1) ||
-      FT->getParamType(0) != B.getInt8PtrTy() ||
-      !FT->getParamType(2)->isIntegerTy())
-    return nullptr;
-
   Value *Str1P = CI->getArgOperand(0), *Str2P = CI->getArgOperand(1);
   if (Str1P == Str2P) // strncmp(x,x,n)  -> 0
     return ConstantInt::get(CI->getType(), 0);
@@ -432,11 +319,6 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-
-  if (!checkStringCopyLibFuncSignature(Callee, LibFunc::strcpy))
-    return nullptr;
-
   Value *Dst = CI->getArgOperand(0), *Src = CI->getArgOperand(1);
   if (Dst == Src) // strcpy(x,x)  -> x
     return Src;
@@ -455,9 +337,6 @@ Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  if (!checkStringCopyLibFuncSignature(Callee, LibFunc::stpcpy))
-    return nullptr;
-
   Value *Dst = CI->getArgOperand(0), *Src = CI->getArgOperand(1);
   if (Dst == Src) { // stpcpy(x,x)  -> x+strlen(x)
     Value *StrLen = emitStrLen(Src, B, DL, TLI);
@@ -482,9 +361,6 @@ Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  if (!checkStringCopyLibFuncSignature(Callee, LibFunc::strncpy))
-    return nullptr;
-
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
   Value *LenOp = CI->getArgOperand(2);
@@ -522,12 +398,6 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 1 || FT->getParamType(0) != B.getInt8PtrTy() ||
-      !FT->getReturnType()->isIntegerTy())
-    return nullptr;
-
   Value *Src = CI->getArgOperand(0);
 
   // Constant folding: strlen("xyz") -> 3
@@ -609,13 +479,6 @@ Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrPBrk(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 2 || FT->getParamType(0) != B.getInt8PtrTy() ||
-      FT->getParamType(1) != FT->getParamType(0) ||
-      FT->getReturnType() != FT->getParamType(0))
-    return nullptr;
-
   StringRef S1, S2;
   bool HasS1 = getConstantStringInfo(CI->getArgOperand(0), S1);
   bool HasS2 = getConstantStringInfo(CI->getArgOperand(1), S2);
@@ -643,13 +506,6 @@ Value *LibCallSimplifier::optimizeStrPBrk(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrTo(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  if ((FT->getNumParams() != 2 && FT->getNumParams() != 3) ||
-      !FT->getParamType(0)->isPointerTy() ||
-      !FT->getParamType(1)->isPointerTy())
-    return nullptr;
-
   Value *EndPtr = CI->getArgOperand(1);
   if (isa<ConstantPointerNull>(EndPtr)) {
     // With a null EndPtr, this function won't capture the main argument.
@@ -661,13 +517,6 @@ Value *LibCallSimplifier::optimizeStrTo(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrSpn(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 2 || FT->getParamType(0) != B.getInt8PtrTy() ||
-      FT->getParamType(1) != FT->getParamType(0) ||
-      !FT->getReturnType()->isIntegerTy())
-    return nullptr;
-
   StringRef S1, S2;
   bool HasS1 = getConstantStringInfo(CI->getArgOperand(0), S1);
   bool HasS2 = getConstantStringInfo(CI->getArgOperand(1), S2);
@@ -689,13 +538,6 @@ Value *LibCallSimplifier::optimizeStrSpn(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrCSpn(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 2 || FT->getParamType(0) != B.getInt8PtrTy() ||
-      FT->getParamType(1) != FT->getParamType(0) ||
-      !FT->getReturnType()->isIntegerTy())
-    return nullptr;
-
   StringRef S1, S2;
   bool HasS1 = getConstantStringInfo(CI->getArgOperand(0), S1);
   bool HasS2 = getConstantStringInfo(CI->getArgOperand(1), S2);
@@ -720,13 +562,6 @@ Value *LibCallSimplifier::optimizeStrCSpn(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 2 || !FT->getParamType(0)->isPointerTy() ||
-      !FT->getParamType(1)->isPointerTy() ||
-      !FT->getReturnType()->isPointerTy())
-    return nullptr;
-
   // fold strstr(x, x) -> x.
   if (CI->getArgOperand(0) == CI->getArgOperand(1))
     return B.CreateBitCast(CI->getArgOperand(0), CI->getType());
@@ -781,14 +616,6 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 3 || !FT->getParamType(0)->isPointerTy() ||
-      !FT->getParamType(1)->isIntegerTy(32) ||
-      !FT->getParamType(2)->isIntegerTy() ||
-      !FT->getReturnType()->isPointerTy())
-    return nullptr;
-
   Value *SrcStr = CI->getArgOperand(0);
   ConstantInt *CharC = dyn_cast<ConstantInt>(CI->getArgOperand(1));
   ConstantInt *LenC = dyn_cast<ConstantInt>(CI->getArgOperand(2));
@@ -867,13 +694,6 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 3 || !FT->getParamType(0)->isPointerTy() ||
-      !FT->getParamType(1)->isPointerTy() ||
-      !FT->getReturnType()->isIntegerTy(32))
-    return nullptr;
-
   Value *LHS = CI->getArgOperand(0), *RHS = CI->getArgOperand(1);
 
   if (LHS == RHS) // memcmp(s,s,x) -> 0
@@ -942,11 +762,6 @@ Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeMemCpy(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-
-  if (!checkStringCopyLibFuncSignature(Callee, LibFunc::memcpy))
-    return nullptr;
-
   // memcpy(x, y, n) -> llvm.memcpy(x, y, n, 1)
   B.CreateMemCpy(CI->getArgOperand(0), CI->getArgOperand(1),
                  CI->getArgOperand(2), 1);
@@ -954,11 +769,6 @@ Value *LibCallSimplifier::optimizeMemCpy(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeMemMove(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-
-  if (!checkStringCopyLibFuncSignature(Callee, LibFunc::memmove))
-    return nullptr;
-
   // memmove(x, y, n) -> llvm.memmove(x, y, n, 1)
   B.CreateMemMove(CI->getArgOperand(0), CI->getArgOperand(1),
                   CI->getArgOperand(2), 1);
@@ -1005,18 +815,8 @@ static Value *foldMallocMemset(CallInst *Memset, IRBuilder<> &B,
   // Is the inner call really malloc()?
   Function *InnerCallee = Malloc->getCalledFunction();
   LibFunc::Func Func;
-  if (!TLI.getLibFunc(InnerCallee->getName(), Func) || !TLI.has(Func) ||
+  if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
       Func != LibFunc::malloc)
-    return nullptr;
-
-  // Matching the name is not good enough. Make sure the parameter and return
-  // type match the standard library signature.
-  FunctionType *FT = InnerCallee->getFunctionType();
-  if (FT->getNumParams() != 1 || !FT->getParamType(0)->isIntegerTy())
-    return nullptr;
-
-  auto *RetType = dyn_cast<PointerType>(FT->getReturnType());
-  if (!RetType || !RetType->getPointerElementType()->isIntegerTy(8))
     return nullptr;
 
   // The memset must cover the same number of bytes that are malloc'd.
@@ -1041,11 +841,6 @@ static Value *foldMallocMemset(CallInst *Memset, IRBuilder<> &B,
 }
 
 Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-
-  if (!checkStringCopyLibFuncSignature(Callee, LibFunc::memset))
-    return nullptr;
-
   if (auto *Calloc = foldMallocMemset(CI, B, *TLI))
     return Calloc;
 
@@ -1081,34 +876,12 @@ static Value *valueHasFloatPrecision(Value *Val) {
   return nullptr;
 }
 
-/// Any floating-point library function that we're trying to simplify will have
-/// a signature of the form: fptype foo(fptype param1, fptype param2, ...).
-/// CheckDoubleTy indicates that 'fptype' must be 'double'.
-static bool matchesFPLibFunctionSignature(const Function *F, unsigned NumParams,
-                                          bool CheckDoubleTy) {
-  FunctionType *FT = F->getFunctionType();
-  if (FT->getNumParams() != NumParams)
-    return false;
-
-  // The return type must match what we're looking for.
-  Type *RetTy = FT->getReturnType();
-  if (CheckDoubleTy ? !RetTy->isDoubleTy() : !RetTy->isFloatingPointTy())
-    return false;
-
-  // Each parameter must match the return type, and therefore, match every other
-  // parameter too.
-  for (const Type *ParamTy : FT->params())
-    if (ParamTy != RetTy)
-      return false;
-
-  return true;
-}
-
 /// Shrink double -> float for unary functions like 'floor'.
 static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
                                     bool CheckRetType) {
   Function *Callee = CI->getCalledFunction();
-  if (!matchesFPLibFunctionSignature(Callee, 1, true))
+  // We know this libcall has a valid prototype, but we don't know which.
+  if (!CI->getType()->isDoubleTy())
     return nullptr;
 
   if (CheckRetType) {
@@ -1146,7 +919,8 @@ static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
 /// Shrink double -> float for binary functions like 'fmin/fmax'.
 static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  if (!matchesFPLibFunctionSignature(Callee, 2, true))
+  // We know this libcall has a valid prototype, but we don't know which.
+  if (!CI->getType()->isDoubleTy())
     return nullptr;
 
   // If this is something like 'fmin((double)floatval1, (double)floatval2)',
@@ -1172,9 +946,6 @@ static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeCos(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  if (!matchesFPLibFunctionSignature(Callee, 1, false))
-    return nullptr;
-
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (UnsafeFPShrink && Name == "cos" && hasFloatVersion(Name))
@@ -1216,9 +987,6 @@ static Value *getPow(Value *InnerChain[33], unsigned Exp, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  if (!matchesFPLibFunctionSignature(Callee, 2, false))
-    return nullptr;
-
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (UnsafeFPShrink && Name == "pow" && hasFloatVersion(Name))
@@ -1337,9 +1105,6 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  if (!matchesFPLibFunctionSignature(Callee, 1, false))
-    return nullptr;
-
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (UnsafeFPShrink && Name == "exp2" && hasFloatVersion(Name))
@@ -1385,9 +1150,6 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeFabs(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  if (!matchesFPLibFunctionSignature(Callee, 1, false))
-    return nullptr;
-
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (Name == "fabs" && hasFloatVersion(Name))
@@ -1405,9 +1167,6 @@ Value *LibCallSimplifier::optimizeFabs(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  if (!matchesFPLibFunctionSignature(Callee, 2, false))
-    return nullptr;
-
   // If we can shrink the call to a float function rather than a double
   // function, do that first.
   StringRef Name = Callee->getName();
@@ -1445,9 +1204,6 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  if (!matchesFPLibFunctionSignature(Callee, 1, false))
-    return nullptr;
-
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (UnsafeFPShrink && hasFloatVersion(Name))
@@ -1493,9 +1249,6 @@ Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  if (!matchesFPLibFunctionSignature(Callee, 1, false))
-    return nullptr;
-
   Value *Ret = nullptr;
   if (TLI->has(LibFunc::sqrtf) && (Callee->getName() == "sqrt" ||
                                    Callee->getIntrinsicID() == Intrinsic::sqrt))
@@ -1563,9 +1316,6 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
 // TODO: Generalize to handle any trig function and its inverse.
 Value *LibCallSimplifier::optimizeTan(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  if (!matchesFPLibFunctionSignature(Callee, 1, false))
-    return nullptr;
-
   Value *Ret = nullptr;
   StringRef Name = Callee->getName();
   if (UnsafeFPShrink && Name == "tan" && hasFloatVersion(Name))
@@ -1594,19 +1344,11 @@ Value *LibCallSimplifier::optimizeTan(CallInst *CI, IRBuilder<> &B) {
 }
 
 static bool isTrigLibCall(CallInst *CI) {
-  Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-
   // We can only hope to do anything useful if we can ignore things like errno
   // and floating-point exceptions.
-  bool AttributesSafe =
-  CI->hasFnAttr(Attribute::NoUnwind) && CI->hasFnAttr(Attribute::ReadNone);
-
-  // Other than that we need float(float) or double(double)
-  return AttributesSafe && FT->getNumParams() == 1 &&
-  FT->getReturnType() == FT->getParamType(0) &&
-  (FT->getParamType(0)->isFloatTy() ||
-   FT->getParamType(0)->isDoubleTy());
+  // We already checked the prototype.
+  return CI->hasFnAttr(Attribute::NoUnwind) &&
+         CI->hasFnAttr(Attribute::ReadNone);
 }
 
 static void insertSinCosCall(IRBuilder<> &B, Function *OrigCallee, Value *Arg,
@@ -1709,7 +1451,7 @@ void LibCallSimplifier::classifyArgUse(
 
   Function *Callee = CI->getCalledFunction();
   LibFunc::Func Func;
-  if (!Callee || !TLI->getLibFunc(Callee->getName(), Func) || !TLI->has(Func) ||
+  if (!Callee || !TLI->getLibFunc(*Callee, Func) || !TLI->has(Func) ||
       !isTrigLibCall(CI))
     return;
 
@@ -1740,16 +1482,8 @@ void LibCallSimplifier::replaceTrigInsts(SmallVectorImpl<CallInst *> &Calls,
 // Integer Library Call Optimizations
 //===----------------------------------------------------------------------===//
 
-static bool checkIntUnaryReturnAndParam(Function *Callee) {
-  FunctionType *FT = Callee->getFunctionType();
-  return FT->getNumParams() == 1 && FT->getReturnType()->isIntegerTy(32) &&
-    FT->getParamType(0)->isIntegerTy();
-}
-
 Value *LibCallSimplifier::optimizeFFS(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  if (!checkIntUnaryReturnAndParam(Callee))
-    return nullptr;
   Value *Op = CI->getArgOperand(0);
 
   // Constant fold.
@@ -1773,13 +1507,6 @@ Value *LibCallSimplifier::optimizeFFS(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeAbs(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  // We require integer(integer) where the types agree.
-  if (FT->getNumParams() != 1 || !FT->getReturnType()->isIntegerTy() ||
-      FT->getParamType(0) != FT->getReturnType())
-    return nullptr;
-
   // abs(x) -> x >s -1 ? x : -x
   Value *Op = CI->getArgOperand(0);
   Value *Pos =
@@ -1789,9 +1516,6 @@ Value *LibCallSimplifier::optimizeAbs(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeIsDigit(CallInst *CI, IRBuilder<> &B) {
-  if (!checkIntUnaryReturnAndParam(CI->getCalledFunction()))
-    return nullptr;
-
   // isdigit(c) -> (c-'0') <u 10
   Value *Op = CI->getArgOperand(0);
   Op = B.CreateSub(Op, B.getInt32('0'), "isdigittmp");
@@ -1800,9 +1524,6 @@ Value *LibCallSimplifier::optimizeIsDigit(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeIsAscii(CallInst *CI, IRBuilder<> &B) {
-  if (!checkIntUnaryReturnAndParam(CI->getCalledFunction()))
-    return nullptr;
-
   // isascii(c) -> c <u 128
   Value *Op = CI->getArgOperand(0);
   Op = B.CreateICmpULT(Op, B.getInt32(128), "isascii");
@@ -1810,9 +1531,6 @@ Value *LibCallSimplifier::optimizeIsAscii(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeToAscii(CallInst *CI, IRBuilder<> &B) {
-  if (!checkIntUnaryReturnAndParam(CI->getCalledFunction()))
-    return nullptr;
-
   // toascii(c) -> c & 0x7f
   return B.CreateAnd(CI->getArgOperand(0),
                      ConstantInt::get(CI->getType(), 0x7F));
@@ -1826,6 +1544,7 @@ static bool isReportingError(Function *Callee, CallInst *CI, int StreamArg);
 
 Value *LibCallSimplifier::optimizeErrorReporting(CallInst *CI, IRBuilder<> &B,
                                                  int StreamArg) {
+  Function *Callee = CI->getCalledFunction();
   // Error reporting calls should be cold, mark them as such.
   // This applies even to non-builtin calls: it is only a hint and applies to
   // functions that the frontend might not understand as builtins.
@@ -1834,8 +1553,6 @@ Value *LibCallSimplifier::optimizeErrorReporting(CallInst *CI, IRBuilder<> &B,
   // Improving Static Branch Prediction in a Compiler
   // Brian L. Deitrich, Ben-Chung Cheng, Wen-mei W. Hwu
   // Proceedings of PACT'98, Oct. 1998, IEEE
-  Function *Callee = CI->getCalledFunction();
-
   if (!CI->hasFnAttr(Attribute::Cold) &&
       isReportingError(Callee, CI, StreamArg)) {
     CI->addAttribute(AttributeSet::FunctionIndex, Attribute::Cold);
@@ -1921,12 +1638,7 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilder<> &B) {
 Value *LibCallSimplifier::optimizePrintF(CallInst *CI, IRBuilder<> &B) {
 
   Function *Callee = CI->getCalledFunction();
-  // Require one fixed pointer argument and an integer/void result.
   FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() < 1 || !FT->getParamType(0)->isPointerTy() ||
-      !(FT->getReturnType()->isIntegerTy() || FT->getReturnType()->isVoidTy()))
-    return nullptr;
-
   if (Value *V = optimizePrintFString(CI, B)) {
     return V;
   }
@@ -2007,13 +1719,7 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeSPrintF(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  // Require two fixed pointer arguments and an integer result.
   FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 2 || !FT->getParamType(0)->isPointerTy() ||
-      !FT->getParamType(1)->isPointerTy() ||
-      !FT->getReturnType()->isIntegerTy())
-    return nullptr;
-
   if (Value *V = optimizeSPrintFString(CI, B)) {
     return V;
   }
@@ -2083,13 +1789,7 @@ Value *LibCallSimplifier::optimizeFPrintFString(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeFPrintF(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  // Require two fixed paramters as pointers and integer result.
   FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 2 || !FT->getParamType(0)->isPointerTy() ||
-      !FT->getParamType(1)->isPointerTy() ||
-      !FT->getReturnType()->isIntegerTy())
-    return nullptr;
-
   if (Value *V = optimizeFPrintFString(CI, B)) {
     return V;
   }
@@ -2110,16 +1810,6 @@ Value *LibCallSimplifier::optimizeFPrintF(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeFWrite(CallInst *CI, IRBuilder<> &B) {
   optimizeErrorReporting(CI, B, 3);
-
-  Function *Callee = CI->getCalledFunction();
-  // Require a pointer, an integer, an integer, a pointer, returning integer.
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 4 || !FT->getParamType(0)->isPointerTy() ||
-      !FT->getParamType(1)->isIntegerTy() ||
-      !FT->getParamType(2)->isIntegerTy() ||
-      !FT->getParamType(3)->isPointerTy() ||
-      !FT->getReturnType()->isIntegerTy())
-    return nullptr;
 
   // Get the element size and count.
   ConstantInt *SizeC = dyn_cast<ConstantInt>(CI->getArgOperand(1));
@@ -2146,12 +1836,8 @@ Value *LibCallSimplifier::optimizeFWrite(CallInst *CI, IRBuilder<> &B) {
 Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilder<> &B) {
   optimizeErrorReporting(CI, B, 1);
 
-  Function *Callee = CI->getCalledFunction();
-
-  // Require two pointers.  Also, we can't optimize if return value is used.
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 2 || !FT->getParamType(0)->isPointerTy() ||
-      !FT->getParamType(1)->isPointerTy() || !CI->use_empty())
+  // We can't optimize if return value is used.
+  if (!CI->use_empty())
     return nullptr;
 
   // fputs(s,F) --> fwrite(s,1,strlen(s),F)
@@ -2167,13 +1853,6 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizePuts(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-  // Require one fixed pointer argument and an integer/void result.
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() < 1 || !FT->getParamType(0)->isPointerTy() ||
-      !(FT->getReturnType()->isIntegerTy() || FT->getReturnType()->isVoidTy()))
-    return nullptr;
-
   // Check for a constant string.
   StringRef Str;
   if (!getConstantStringInfo(CI->getArgOperand(0), Str))
@@ -2203,10 +1882,8 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
                                                       IRBuilder<> &Builder) {
   LibFunc::Func Func;
   Function *Callee = CI->getCalledFunction();
-  StringRef FuncName = Callee->getName();
-
   // Check for string/memory library functions.
-  if (TLI->getLibFunc(FuncName, Func) && TLI->has(Func)) {
+  if (TLI->getLibFunc(*Callee, Func) && TLI->has(Func)) {
     // Make sure we never change the calling convention.
     assert((ignoreCallingConv(Func) ||
             CI->getCallingConv() == llvm::CallingConv::C) &&
@@ -2324,7 +2001,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
   }
 
   // Then check for known library functions.
-  if (TLI->getLibFunc(FuncName, Func) && TLI->has(Func)) {
+  if (TLI->getLibFunc(*Callee, Func) && TLI->has(Func)) {
     // We never change the calling convention.
     if (!ignoreCallingConv(Func) && !isCallingConvC)
       return nullptr;
@@ -2528,11 +2205,6 @@ bool FortifiedLibCallSimplifier::isFortifiedCallFoldable(CallInst *CI,
 
 Value *FortifiedLibCallSimplifier::optimizeMemCpyChk(CallInst *CI,
                                                      IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-
-  if (!checkStringCopyLibFuncSignature(Callee, LibFunc::memcpy_chk))
-    return nullptr;
-
   if (isFortifiedCallFoldable(CI, 3, 2, false)) {
     B.CreateMemCpy(CI->getArgOperand(0), CI->getArgOperand(1),
                    CI->getArgOperand(2), 1);
@@ -2543,11 +2215,6 @@ Value *FortifiedLibCallSimplifier::optimizeMemCpyChk(CallInst *CI,
 
 Value *FortifiedLibCallSimplifier::optimizeMemMoveChk(CallInst *CI,
                                                       IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-
-  if (!checkStringCopyLibFuncSignature(Callee, LibFunc::memmove_chk))
-    return nullptr;
-
   if (isFortifiedCallFoldable(CI, 3, 2, false)) {
     B.CreateMemMove(CI->getArgOperand(0), CI->getArgOperand(1),
                     CI->getArgOperand(2), 1);
@@ -2558,11 +2225,6 @@ Value *FortifiedLibCallSimplifier::optimizeMemMoveChk(CallInst *CI,
 
 Value *FortifiedLibCallSimplifier::optimizeMemSetChk(CallInst *CI,
                                                      IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
-
-  if (!checkStringCopyLibFuncSignature(Callee, LibFunc::memset_chk))
-    return nullptr;
-
   // TODO: Try foldMallocMemset() here.
 
   if (isFortifiedCallFoldable(CI, 3, 2, false)) {
@@ -2579,10 +2241,6 @@ Value *FortifiedLibCallSimplifier::optimizeStrpCpyChk(CallInst *CI,
   Function *Callee = CI->getCalledFunction();
   StringRef Name = Callee->getName();
   const DataLayout &DL = CI->getModule()->getDataLayout();
-
-  if (!checkStringCopyLibFuncSignature(Callee, Func))
-    return nullptr;
-
   Value *Dst = CI->getArgOperand(0), *Src = CI->getArgOperand(1),
         *ObjSize = CI->getArgOperand(2);
 
@@ -2623,9 +2281,6 @@ Value *FortifiedLibCallSimplifier::optimizeStrpNCpyChk(CallInst *CI,
                                                        LibFunc::Func Func) {
   Function *Callee = CI->getCalledFunction();
   StringRef Name = Callee->getName();
-
-  if (!checkStringCopyLibFuncSignature(Callee, Func))
-    return nullptr;
   if (isFortifiedCallFoldable(CI, 3, 2, false)) {
     Value *Ret = emitStrNCpy(CI->getArgOperand(0), CI->getArgOperand(1),
                              CI->getArgOperand(2), B, TLI, Name.substr(2, 7));
@@ -2650,15 +2305,15 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI) {
 
   LibFunc::Func Func;
   Function *Callee = CI->getCalledFunction();
-  StringRef FuncName = Callee->getName();
 
   SmallVector<OperandBundleDef, 2> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
   IRBuilder<> Builder(CI, /*FPMathTag=*/nullptr, OpBundles);
   bool isCallingConvC = CI->getCallingConv() == llvm::CallingConv::C;
 
-  // First, check that this is a known library functions.
-  if (!TLI->getLibFunc(FuncName, Func))
+  // First, check that this is a known library functions and that the prototype
+  // is correct.
+  if (!TLI->getLibFunc(*Callee, Func))
     return nullptr;
 
   // We never change the calling convention.

@@ -454,9 +454,10 @@ bool TailCallElim::CanMoveAboveCall(Instruction *I, CallInst *CI) {
       // does not write to memory and the load provably won't trap.
       // FIXME: Writes to memory only matter if they may alias the pointer
       // being loaded from.
+      const DataLayout &DL = L->getModule()->getDataLayout();
       if (CI->mayWriteToMemory() ||
           !isSafeToLoadUnconditionally(L->getPointerOperand(),
-                                       L->getAlignment(), L))
+                                       L->getAlignment(), DL, L))
         return false;
     }
   }

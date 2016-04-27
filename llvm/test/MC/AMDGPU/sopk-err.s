@@ -8,6 +8,9 @@ s_setreg_b32  0x1f803, s2
 s_setreg_b32  hwreg(0x40), s2
 // GCN: error: invalid code of hardware register: only 6-bit values are legal
 
+s_setreg_b32  hwreg(HW_REG_WRONG), s2
+// GCN: error: invalid symbolic name of hardware register
+
 s_setreg_b32  hwreg(3,32,32), s2
 // GCN: error: invalid bit offset: only 5-bit values are legal
 

@@ -19,6 +19,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Pass.h"
@@ -119,10 +120,10 @@ ModuleSummaryIndexBuilder::ModuleSummaryIndexBuilder(
     const Module *M,
     std::function<BlockFrequencyInfo *(const Function &F)> Ftor)
     : Index(llvm::make_unique<ModuleSummaryIndex>()), M(M) {
-  // We cannot currently promote or rename anything that is in llvm.used,
-  // since any such value may have a use that won't see the new name.
-  // Specifically, any uses within inline assembly are not visible to the
-  // compiler. Prevent importing of any modules containing these uses by
+  // We cannot currently promote or rename anything used in inline assembly,
+  // which are not visible to the compiler. Detect a possible case by looking
+  // for a llvm.used local value, in conjunction with an inline assembly call
+  // in the module. Prevent importing of any modules containing these uses by
   // suppressing generation of the index. This also prevents importing
   // into this module, which is also necessary to avoid needing to rename
   // in case of a name clash between a local in this module and an imported
@@ -139,10 +140,17 @@ ModuleSummaryIndexBuilder::ModuleSummaryIndexBuilder(
   //   with a reference could be exported).
   SmallPtrSet<GlobalValue *, 8> Used;
   collectUsedGlobalVariables(*M, Used, /*CompilerUsed*/ false);
+  bool LocalIsUsed = false;
   for (GlobalValue *V : Used) {
-    if (V->hasLocalLinkage())
-      return;
+    if ((LocalIsUsed |= V->hasLocalLinkage()))
+      break;
   }
+  if (LocalIsUsed)
+    for (auto &F : *M)
+      for (auto &I : instructions(F))
+        if (const CallInst *CallI = dyn_cast<CallInst>(&I))
+          if (CallI->isInlineAsm())
+            return;
 
   // Compute summaries for all functions defined in module, and save in the
   // index.

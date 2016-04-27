@@ -373,6 +373,18 @@ public:
         SE(Se), TTI(Tti), TLI(TLi), AA(Aa), LI(Li), DT(Dt), AC(AC), DB(DB),
         DL(DL), Builder(Se->getContext()) {
     CodeMetrics::collectEphemeralValues(F, AC, EphValues);
+    // Use the vector register size specified by the target unless overridden
+    // by a command-line option.
+    // TODO: It would be better to limit the vectorization factor based on
+    //       data type rather than just register size. For example, x86 AVX has
+    //       256-bit registers, but it does not support integer operations
+    //       at that width (that requires AVX2).
+    if (MaxVectorRegSizeOption.getNumOccurrences())
+      MaxVecRegSize = MaxVectorRegSizeOption;
+    else
+      MaxVecRegSize = TTI->getRegisterBitWidth(true);
+
+    MinVecRegSize = MinVectorRegSizeOption;
   }
 
   /// \brief Vectorize the tree that starts with the elements in \p VL.
@@ -425,6 +437,16 @@ public:
   /// Compute the minimum type sizes required to represent the entries in a
   /// vectorizable tree.
   void computeMinimumValueSizes();
+
+  // \returns maximum vector register size as set by TTI or overridden by cl::opt.
+  unsigned getMaxVecRegSize() const {
+    return MaxVecRegSize;
+  }
+
+  // \returns minimum vector register size as set by cl::opt.
+  unsigned getMinVecRegSize() const {
+    return MinVecRegSize;
+  }
 
 private:
   struct TreeEntry;
@@ -926,6 +948,8 @@ private:
   AssumptionCache *AC;
   DemandedBits *DB;
   const DataLayout *DL;
+  unsigned MaxVecRegSize; // This is set by TTI or overridden by cl::opt.
+  unsigned MinVecRegSize; // Set by cl::opt (default: 128).
   /// Instruction builder to construct the vectorized tree.
   IRBuilder<> Builder;
 
@@ -1830,11 +1854,12 @@ int BoUpSLP::getTreeCost() {
     if (MinBWs.count(ScalarRoot)) {
       auto *MinTy = IntegerType::get(F->getContext(), MinBWs[ScalarRoot]);
       VecTy = VectorType::get(MinTy, BundleWidth);
+      ExtractCost += TTI->getExtractWithExtendCost(
+          Instruction::SExt, EU.Scalar->getType(), VecTy, EU.Lane);
+    } else {
       ExtractCost +=
-          TTI->getCastInstrCost(Instruction::SExt, EU.Scalar->getType(), MinTy);
+          TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, EU.Lane);
     }
-    ExtractCost +=
-        TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, EU.Lane);
   }
 
   int SpillCost = getSpillCost();
@@ -3418,19 +3443,6 @@ struct SLPVectorizer : public FunctionPass {
     if (!TTI->getNumberOfRegisters(true))
       return false;
 
-    // Use the vector register size specified by the target unless overridden
-    // by a command-line option.
-    // TODO: It would be better to limit the vectorization factor based on
-    //       data type rather than just register size. For example, x86 AVX has
-    //       256-bit registers, but it does not support integer operations
-    //       at that width (that requires AVX2).
-    if (MaxVectorRegSizeOption.getNumOccurrences())
-      MaxVecRegSize = MaxVectorRegSizeOption;
-    else
-      MaxVecRegSize = TTI->getRegisterBitWidth(true);
-
-    MinVecRegSize = MinVectorRegSizeOption;
-
     // Don't vectorize when the attribute NoImplicitFloat is used.
     if (F.hasFnAttribute(Attribute::NoImplicitFloat))
       return false;
@@ -3538,9 +3550,6 @@ private:
 
   /// The getelementptr instructions in a basic block organized by base pointer.
   WeakVHListMap GEPs;
-
-  unsigned MaxVecRegSize; // This is set by TTI or overridden by cl::opt.
-  unsigned MinVecRegSize; // Set by cl::opt (default: 128).
 };
 
 /// \brief Check that the Values in the slice in VL array are still existent in
@@ -3658,7 +3667,7 @@ bool SLPVectorizer::vectorizeStores(ArrayRef<StoreInst *> Stores,
 
     // FIXME: Is division-by-2 the correct step? Should we assert that the
     // register size is a power-of-2?
-    for (unsigned Size = MaxVecRegSize; Size >= MinVecRegSize; Size /= 2) {
+    for (unsigned Size = R.getMaxVecRegSize(); Size >= R.getMinVecRegSize(); Size /= 2) {
       if (vectorizeStoreChain(Operands, costThreshold, R, Size)) {
         // Mark the vectorized stores so that we don't vectorize them again.
         VectorizedStores.insert(Operands.begin(), Operands.end());
@@ -3731,7 +3740,7 @@ bool SLPVectorizer::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   // FIXME: Register size should be a parameter to this function, so we can
   // try different vectorization factors.
   unsigned Sz = R.getVectorElementSize(I0);
-  unsigned VF = MinVecRegSize / Sz;
+  unsigned VF = R.getMinVecRegSize() / Sz;
 
   for (Value *V : VL) {
     Type *Ty = V->getType();
@@ -4357,7 +4366,7 @@ bool SLPVectorizer::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         continue;
 
       // Try to match and vectorize a horizontal reduction.
-      if (canMatchHorizontalReduction(P, BI, R, TTI, MinVecRegSize)) {
+      if (canMatchHorizontalReduction(P, BI, R, TTI, R.getMinVecRegSize())) {
         Changed = true;
         it = BB->begin();
         e = BB->end();
@@ -4385,7 +4394,7 @@ bool SLPVectorizer::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         if (BinaryOperator *BinOp =
                 dyn_cast<BinaryOperator>(SI->getValueOperand())) {
           if (canMatchHorizontalReduction(nullptr, BinOp, R, TTI,
-                                          MinVecRegSize) ||
+                                          R.getMinVecRegSize()) ||
               tryToVectorize(BinOp, R)) {
             Changed = true;
             it = BB->begin();

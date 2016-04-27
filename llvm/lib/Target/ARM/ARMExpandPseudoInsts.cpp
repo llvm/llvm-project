@@ -775,7 +775,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
   MachineOperand &New = MI.getOperand(4);
 
   LivePhysRegs LiveRegs(&TII->getRegisterInfo());
-  LiveRegs.addLiveOuts(&MBB);
+  LiveRegs.addLiveOuts(&MBB, /*AddPristinesAndCSRs=*/true);
   for (auto I = std::prev(MBB.end()); I != MBBI; --I)
     LiveRegs.stepBackward(*I);
 
@@ -801,7 +801,6 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
   //     ldrex rDest, [rAddr]
   //     cmp rDest, rDesired
   //     bne .Ldone
-  MBB.addSuccessor(LoadCmpBB);
   LoadCmpBB->addLiveIn(Addr.getReg());
   LoadCmpBB->addLiveIn(Dest.getReg());
   LoadCmpBB->addLiveIn(Desired.getReg());
@@ -857,6 +856,8 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
   DoneBB->transferSuccessors(&MBB);
   addPostLoopLiveIns(DoneBB, LiveRegs);
 
+  MBB.addSuccessor(LoadCmpBB);
+
   NextMBBI = MBB.end();
   MI.eraseFromParent();
   return true;
@@ -896,7 +897,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   unsigned DesiredHi = TRI->getSubReg(Desired.getReg(), ARM::gsub_1);
 
   LivePhysRegs LiveRegs(&TII->getRegisterInfo());
-  LiveRegs.addLiveOuts(&MBB);
+  LiveRegs.addLiveOuts(&MBB, /*AddPristinesAndCSRs=*/true);
   for (auto I = std::prev(MBB.end()); I != MBBI; --I)
     LiveRegs.stepBackward(*I);
 
@@ -914,7 +915,6 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   //     cmp rDestLo, rDesiredLo
   //     sbcs rStatus<dead>, rDestHi, rDesiredHi
   //     bne .Ldone
-  MBB.addSuccessor(LoadCmpBB);
   LoadCmpBB->addLiveIn(Addr.getReg());
   LoadCmpBB->addLiveIn(Dest.getReg());
   LoadCmpBB->addLiveIn(Desired.getReg());
@@ -976,6 +976,8 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
   DoneBB->transferSuccessors(&MBB);
   addPostLoopLiveIns(DoneBB, LiveRegs);
+
+  MBB.addSuccessor(LoadCmpBB);
 
   NextMBBI = MBB.end();
   MI.eraseFromParent();

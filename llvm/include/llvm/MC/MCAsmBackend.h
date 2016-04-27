@@ -126,6 +126,10 @@ public:
   /// \return - True on success.
   virtual bool writeNopData(uint64_t Count, MCObjectWriter *OW) const = 0;
 
+  /// Give backend an opportunity to finish layout after relaxation
+  virtual void finishLayout(MCAssembler const &Asm,
+                            MCAsmLayout &Layout) const {}
+
   /// Handle any target-specific assembler flags. By default, do nothing.
   virtual void handleAssemblerFlag(MCAssemblerFlag Flag) {}
 

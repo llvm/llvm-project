@@ -401,6 +401,7 @@ private:
   size_t NumberOfNewUnitsAdded = 0;
 
   bool HasMoreMallocsThanFrees = false;
+  size_t NumberOfLeakDetectionAttempts = 0;
 
   std::vector<Unit> Corpus;
   std::unordered_set<std::string> UnitHashesAddedToCorpus;
