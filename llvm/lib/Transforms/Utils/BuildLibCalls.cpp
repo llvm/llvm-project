@@ -690,6 +690,8 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   //case LibFunc::memset_pattern8:
   case LibFunc::memset_pattern16:
     Changed |= setOnlyAccessesArgMemory(F);
+    Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     return Changed;
 
