@@ -1039,6 +1039,30 @@ public:
   /// \param ThreadLimit An integer expression of threads.
   virtual void emitNumTeamsClause(CodeGenFunction &CGF, const Expr *NumTeams,
                                   const Expr *ThreadLimit, SourceLocation Loc);
+
+  /// \brief Emit the target data mapping code associated with \a D.
+  /// \param D Directive to emit.
+  /// \param IfCond Expression evaluated in if clause associated with the target
+  /// directive, or null if no if clause is used.
+  /// \param Device Expression evaluated in device clause associated with the
+  /// target directive, or null if no device clause is used.
+  /// \param CodeGen, Function that emits the enclosed region.
+  virtual void emitTargetDataCalls(CodeGenFunction &CGF,
+                                   const OMPExecutableDirective &D,
+                                   const Expr *IfCond, const Expr *Device,
+                                   const RegionCodeGenTy &CodeGen);
+
+  /// \brief Emit the target enter or exit data mapping code associated with
+  /// directive \a D.
+  /// \param D Directive to emit.
+  /// \param IfCond Expression evaluated in if clause associated with the target
+  /// directive, or null if no if clause is used.
+  /// \param Device Expression evaluated in device clause associated with the
+  /// target directive, or null if no device clause is used.
+  virtual void emitTargetEnterOrExitDataCall(CodeGenFunction &CGF,
+                                             const OMPExecutableDirective &D,
+                                             const Expr *IfCond,
+                                             const Expr *Device);
 };
 
 } // namespace CodeGen

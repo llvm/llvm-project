@@ -638,6 +638,12 @@ enum OpenMPRTLFunction {
   OMPRTL__tgt_register_lib,
   // Call to void __tgt_unregister_lib(__tgt_bin_desc *desc);
   OMPRTL__tgt_unregister_lib,
+  // Call to void __tgt_target_data_begin(int32_t device_id, int32_t arg_num,
+  // void** args_base, void **args, size_t *arg_sizes, int32_t *arg_types);
+  OMPRTL__tgt_target_data_begin,
+  // Call to void __tgt_target_data_end(int32_t device_id, int32_t arg_num,
+  // void** args_base, void **args, size_t *arg_sizes, int32_t *arg_types);
+  OMPRTL__tgt_target_data_end,
 };
 
 /// A basic class for pre|post-action for advanced codegen sequence for OpenMP
@@ -1517,6 +1523,34 @@ CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     llvm::FunctionType *FnTy =
         llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_unregister_lib");
+    break;
+  }
+  case OMPRTL__tgt_target_data_begin: {
+    // Build void __tgt_target_data_begin(int32_t device_id, int32_t arg_num,
+    // void** args_base, void **args, size_t *arg_sizes, int32_t *arg_types);
+    llvm::Type *TypeParams[] = {CGM.Int32Ty,
+                                CGM.Int32Ty,
+                                CGM.VoidPtrPtrTy,
+                                CGM.VoidPtrPtrTy,
+                                CGM.SizeTy->getPointerTo(),
+                                CGM.Int32Ty->getPointerTo()};
+    llvm::FunctionType *FnTy =
+        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_target_data_begin");
+    break;
+  }
+  case OMPRTL__tgt_target_data_end: {
+    // Build void __tgt_target_data_end(int32_t device_id, int32_t arg_num,
+    // void** args_base, void **args, size_t *arg_sizes, int32_t *arg_types);
+    llvm::Type *TypeParams[] = {CGM.Int32Ty,
+                                CGM.Int32Ty,
+                                CGM.VoidPtrPtrTy,
+                                CGM.VoidPtrPtrTy,
+                                CGM.SizeTy->getPointerTo(),
+                                CGM.Int32Ty->getPointerTo()};
+    llvm::FunctionType *FnTy =
+        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_target_data_end");
     break;
   }
   }
@@ -5110,6 +5144,160 @@ public:
     return;
   }
 };
+
+enum OpenMPOffloadingReservedDeviceIDs {
+  /// \brief Device ID if the device was not defined, runtime should get it
+  /// from environment variables in the spec.
+  OMP_DEVICEID_UNDEF = -1,
+};
+} // anonymous namespace
+
+/// \brief Emit the arrays used to pass the captures and map information to the
+/// offloading runtime library. If there is no map or capture information,
+/// return nullptr by reference.
+static void
+emitOffloadingArrays(CodeGenFunction &CGF, llvm::Value *&BasePointersArray,
+                     llvm::Value *&PointersArray, llvm::Value *&SizesArray,
+                     llvm::Value *&MapTypesArray,
+                     MappableExprsHandler::MapValuesArrayTy &BasePointers,
+                     MappableExprsHandler::MapValuesArrayTy &Pointers,
+                     MappableExprsHandler::MapValuesArrayTy &Sizes,
+                     MappableExprsHandler::MapFlagsArrayTy &MapTypes) {
+  auto &CGM = CGF.CGM;
+  auto &Ctx = CGF.getContext();
+
+  BasePointersArray = PointersArray = SizesArray = MapTypesArray = nullptr;
+
+  if (unsigned PointerNumVal = BasePointers.size()) {
+    // Detect if we have any capture size requiring runtime evaluation of the
+    // size so that a constant array could be eventually used.
+    bool hasRuntimeEvaluationCaptureSize = false;
+    for (auto *S : Sizes)
+      if (!isa<llvm::Constant>(S)) {
+        hasRuntimeEvaluationCaptureSize = true;
+        break;
+      }
+
+    llvm::APInt PointerNumAP(32, PointerNumVal, /*isSigned=*/true);
+    QualType PointerArrayType =
+        Ctx.getConstantArrayType(Ctx.VoidPtrTy, PointerNumAP, ArrayType::Normal,
+                                 /*IndexTypeQuals=*/0);
+
+    BasePointersArray =
+        CGF.CreateMemTemp(PointerArrayType, ".offload_baseptrs").getPointer();
+    PointersArray =
+        CGF.CreateMemTemp(PointerArrayType, ".offload_ptrs").getPointer();
+
+    // If we don't have any VLA types or other types that require runtime
+    // evaluation, we can use a constant array for the map sizes, otherwise we
+    // need to fill up the arrays as we do for the pointers.
+    if (hasRuntimeEvaluationCaptureSize) {
+      QualType SizeArrayType = Ctx.getConstantArrayType(
+          Ctx.getSizeType(), PointerNumAP, ArrayType::Normal,
+          /*IndexTypeQuals=*/0);
+      SizesArray =
+          CGF.CreateMemTemp(SizeArrayType, ".offload_sizes").getPointer();
+    } else {
+      // We expect all the sizes to be constant, so we collect them to create
+      // a constant array.
+      SmallVector<llvm::Constant *, 16> ConstSizes;
+      for (auto S : Sizes)
+        ConstSizes.push_back(cast<llvm::Constant>(S));
+
+      auto *SizesArrayInit = llvm::ConstantArray::get(
+          llvm::ArrayType::get(CGM.SizeTy, ConstSizes.size()), ConstSizes);
+      auto *SizesArrayGbl = new llvm::GlobalVariable(
+          CGM.getModule(), SizesArrayInit->getType(),
+          /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
+          SizesArrayInit, ".offload_sizes");
+      SizesArrayGbl->setUnnamedAddr(true);
+      SizesArray = SizesArrayGbl;
+    }
+
+    // The map types are always constant so we don't need to generate code to
+    // fill arrays. Instead, we create an array constant.
+    llvm::Constant *MapTypesArrayInit =
+        llvm::ConstantDataArray::get(CGF.Builder.getContext(), MapTypes);
+    auto *MapTypesArrayGbl = new llvm::GlobalVariable(
+        CGM.getModule(), MapTypesArrayInit->getType(),
+        /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
+        MapTypesArrayInit, ".offload_maptypes");
+    MapTypesArrayGbl->setUnnamedAddr(true);
+    MapTypesArray = MapTypesArrayGbl;
+
+    for (unsigned i = 0; i < PointerNumVal; ++i) {
+      llvm::Value *BPVal = BasePointers[i];
+      if (BPVal->getType()->isPointerTy())
+        BPVal = CGF.Builder.CreateBitCast(BPVal, CGM.VoidPtrTy);
+      else {
+        assert(BPVal->getType()->isIntegerTy() &&
+               "If not a pointer, the value type must be an integer.");
+        BPVal = CGF.Builder.CreateIntToPtr(BPVal, CGM.VoidPtrTy);
+      }
+      llvm::Value *BP = CGF.Builder.CreateConstInBoundsGEP2_32(
+          llvm::ArrayType::get(CGM.VoidPtrTy, PointerNumVal), BasePointersArray,
+          0, i);
+      Address BPAddr(BP, Ctx.getTypeAlignInChars(Ctx.VoidPtrTy));
+      CGF.Builder.CreateStore(BPVal, BPAddr);
+
+      llvm::Value *PVal = Pointers[i];
+      if (PVal->getType()->isPointerTy())
+        PVal = CGF.Builder.CreateBitCast(PVal, CGM.VoidPtrTy);
+      else {
+        assert(PVal->getType()->isIntegerTy() &&
+               "If not a pointer, the value type must be an integer.");
+        PVal = CGF.Builder.CreateIntToPtr(PVal, CGM.VoidPtrTy);
+      }
+      llvm::Value *P = CGF.Builder.CreateConstInBoundsGEP2_32(
+          llvm::ArrayType::get(CGM.VoidPtrTy, PointerNumVal), PointersArray, 0,
+          i);
+      Address PAddr(P, Ctx.getTypeAlignInChars(Ctx.VoidPtrTy));
+      CGF.Builder.CreateStore(PVal, PAddr);
+
+      if (hasRuntimeEvaluationCaptureSize) {
+        llvm::Value *S = CGF.Builder.CreateConstInBoundsGEP2_32(
+            llvm::ArrayType::get(CGM.SizeTy, PointerNumVal), SizesArray,
+            /*Idx0=*/0,
+            /*Idx1=*/i);
+        Address SAddr(S, Ctx.getTypeAlignInChars(Ctx.getSizeType()));
+        CGF.Builder.CreateStore(
+            CGF.Builder.CreateIntCast(Sizes[i], CGM.SizeTy, /*isSigned=*/true),
+            SAddr);
+      }
+    }
+  }
+}
+/// \brief Emit the arguments to be passed to the runtime library based on the
+/// arrays of pointers, sizes and map types.
+static void emitOffloadingArraysArgument(
+    CodeGenFunction &CGF, llvm::Value *&BasePointersArrayArg,
+    llvm::Value *&PointersArrayArg, llvm::Value *&SizesArrayArg,
+    llvm::Value *&MapTypesArrayArg, llvm::Value *BasePointersArray,
+    llvm::Value *PointersArray, llvm::Value *SizesArray,
+    llvm::Value *MapTypesArray, unsigned NumElems) {
+  auto &CGM = CGF.CGM;
+  if (NumElems) {
+    BasePointersArrayArg = CGF.Builder.CreateConstInBoundsGEP2_32(
+        llvm::ArrayType::get(CGM.VoidPtrTy, NumElems), BasePointersArray,
+        /*Idx0=*/0, /*Idx1=*/0);
+    PointersArrayArg = CGF.Builder.CreateConstInBoundsGEP2_32(
+        llvm::ArrayType::get(CGM.VoidPtrTy, NumElems), PointersArray,
+        /*Idx0=*/0,
+        /*Idx1=*/0);
+    SizesArrayArg = CGF.Builder.CreateConstInBoundsGEP2_32(
+        llvm::ArrayType::get(CGM.SizeTy, NumElems), SizesArray,
+        /*Idx0=*/0, /*Idx1=*/0);
+    MapTypesArrayArg = CGF.Builder.CreateConstInBoundsGEP2_32(
+        llvm::ArrayType::get(CGM.Int32Ty, NumElems), MapTypesArray,
+        /*Idx0=*/0,
+        /*Idx1=*/0);
+  } else {
+    BasePointersArrayArg = llvm::ConstantPointerNull::get(CGM.VoidPtrPtrTy);
+    PointersArrayArg = llvm::ConstantPointerNull::get(CGM.VoidPtrPtrTy);
+    SizesArrayArg = llvm::ConstantPointerNull::get(CGM.SizeTy->getPointerTo());
+    MapTypesArrayArg =
+        llvm::ConstantPointerNull::get(CGM.Int32Ty->getPointerTo());
+  }
 }
 
 void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
@@ -5120,12 +5308,6 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
                                      ArrayRef<llvm::Value *> CapturedVars) {
   if (!CGF.HaveInsertPoint())
     return;
-
-  enum OpenMPOffloadingReservedDeviceIDs {
-    /// \brief Device ID if the device was not defined, runtime should get it
-    /// from environment variables in the spec.
-    OMP_DEVICEID_UNDEF = -1,
-  };
 
   assert(OutlinedFn && "Invalid outlined function!");
 
@@ -5251,15 +5433,6 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
     MapTypes.append(CurMapTypes.begin(), CurMapTypes.end());
   }
 
-  // Detect if we have any capture size requiring runtime evaluation of the size
-  // so that a constant array could be eventually used.
-  bool hasRuntimeEvaluationCaptureSize = false;
-  for (auto *S : Sizes)
-    if (!isa<llvm::Constant>(S)) {
-      hasRuntimeEvaluationCaptureSize = true;
-      break;
-    }
-
   // Keep track on whether the host function has to be executed.
   auto OffloadErrorQType =
       Ctx.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/true);
@@ -5270,130 +5443,22 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
                         OffloadError);
 
   // Fill up the pointer arrays and transfer execution to the device.
-  auto &&ThenGen = [&Ctx, &BasePointers, &Pointers, &Sizes, &MapTypes,
-                    hasRuntimeEvaluationCaptureSize, Device, OutlinedFnID,
-                    OffloadError, OffloadErrorQType,
+  auto &&ThenGen = [&Ctx, &BasePointers, &Pointers, &Sizes, &MapTypes, Device,
+                    OutlinedFnID, OffloadError, OffloadErrorQType,
                     &D](CodeGenFunction &CGF, PrePostActionTy &) {
     auto &RT = CGF.CGM.getOpenMPRuntime();
-    unsigned PointerNumVal = BasePointers.size();
-    llvm::Value *PointerNum = CGF.Builder.getInt32(PointerNumVal);
+    // Emit the offloading arrays.
     llvm::Value *BasePointersArray;
     llvm::Value *PointersArray;
     llvm::Value *SizesArray;
     llvm::Value *MapTypesArray;
-
-    if (PointerNumVal) {
-      llvm::APInt PointerNumAP(32, PointerNumVal, /*isSigned=*/true);
-      QualType PointerArrayType = Ctx.getConstantArrayType(
-          Ctx.VoidPtrTy, PointerNumAP, ArrayType::Normal,
-          /*IndexTypeQuals=*/0);
-
-      BasePointersArray =
-          CGF.CreateMemTemp(PointerArrayType, ".offload_baseptrs").getPointer();
-      PointersArray =
-          CGF.CreateMemTemp(PointerArrayType, ".offload_ptrs").getPointer();
-
-      // If we don't have any VLA types, we can use a constant array for the map
-      // sizes, otherwise we need to fill up the arrays as we do for the
-      // pointers.
-      if (hasRuntimeEvaluationCaptureSize) {
-        QualType SizeArrayType = Ctx.getConstantArrayType(
-            Ctx.getSizeType(), PointerNumAP, ArrayType::Normal,
-            /*IndexTypeQuals=*/0);
-        SizesArray =
-            CGF.CreateMemTemp(SizeArrayType, ".offload_sizes").getPointer();
-      } else {
-        // We expect all the sizes to be constant, so we collect them to create
-        // a constant array.
-        SmallVector<llvm::Constant *, 16> ConstSizes;
-        for (auto S : Sizes)
-          ConstSizes.push_back(cast<llvm::Constant>(S));
-
-        auto *SizesArrayInit = llvm::ConstantArray::get(
-            llvm::ArrayType::get(CGF.CGM.SizeTy, ConstSizes.size()),
-            ConstSizes);
-        auto *SizesArrayGbl = new llvm::GlobalVariable(
-            CGF.CGM.getModule(), SizesArrayInit->getType(),
-            /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
-            SizesArrayInit, ".offload_sizes");
-        SizesArrayGbl->setUnnamedAddr(true);
-        SizesArray = SizesArrayGbl;
-      }
-
-      // The map types are always constant so we don't need to generate code to
-      // fill arrays. Instead, we create an array constant.
-      llvm::Constant *MapTypesArrayInit =
-          llvm::ConstantDataArray::get(CGF.Builder.getContext(), MapTypes);
-      auto *MapTypesArrayGbl = new llvm::GlobalVariable(
-          CGF.CGM.getModule(), MapTypesArrayInit->getType(),
-          /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
-          MapTypesArrayInit, ".offload_maptypes");
-      MapTypesArrayGbl->setUnnamedAddr(true);
-      MapTypesArray = MapTypesArrayGbl;
-
-      for (unsigned i = 0; i < PointerNumVal; ++i) {
-        llvm::Value *BPVal = BasePointers[i];
-        if (BPVal->getType()->isPointerTy())
-          BPVal = CGF.Builder.CreateBitCast(BPVal, CGF.VoidPtrTy);
-        else {
-          assert(BPVal->getType()->isIntegerTy() &&
-                 "If not a pointer, the value type must be an integer.");
-          BPVal = CGF.Builder.CreateIntToPtr(BPVal, CGF.VoidPtrTy);
-        }
-        llvm::Value *BP = CGF.Builder.CreateConstInBoundsGEP2_32(
-            llvm::ArrayType::get(CGF.VoidPtrTy, PointerNumVal),
-            BasePointersArray, 0, i);
-        Address BPAddr(BP, Ctx.getTypeAlignInChars(Ctx.VoidPtrTy));
-        CGF.Builder.CreateStore(BPVal, BPAddr);
-
-        llvm::Value *PVal = Pointers[i];
-        if (PVal->getType()->isPointerTy())
-          PVal = CGF.Builder.CreateBitCast(PVal, CGF.VoidPtrTy);
-        else {
-          assert(PVal->getType()->isIntegerTy() &&
-                 "If not a pointer, the value type must be an integer.");
-          PVal = CGF.Builder.CreateIntToPtr(PVal, CGF.VoidPtrTy);
-        }
-        llvm::Value *P = CGF.Builder.CreateConstInBoundsGEP2_32(
-            llvm::ArrayType::get(CGF.VoidPtrTy, PointerNumVal), PointersArray,
-            0, i);
-        Address PAddr(P, Ctx.getTypeAlignInChars(Ctx.VoidPtrTy));
-        CGF.Builder.CreateStore(PVal, PAddr);
-
-        if (hasRuntimeEvaluationCaptureSize) {
-          llvm::Value *S = CGF.Builder.CreateConstInBoundsGEP2_32(
-              llvm::ArrayType::get(CGF.SizeTy, PointerNumVal), SizesArray,
-              /*Idx0=*/0,
-              /*Idx1=*/i);
-          Address SAddr(S, Ctx.getTypeAlignInChars(Ctx.getSizeType()));
-          CGF.Builder.CreateStore(CGF.Builder.CreateIntCast(
-                                      Sizes[i], CGF.SizeTy, /*isSigned=*/true),
-                                  SAddr);
-        }
-      }
-
-      BasePointersArray = CGF.Builder.CreateConstInBoundsGEP2_32(
-          llvm::ArrayType::get(CGF.VoidPtrTy, PointerNumVal), BasePointersArray,
-          /*Idx0=*/0, /*Idx1=*/0);
-      PointersArray = CGF.Builder.CreateConstInBoundsGEP2_32(
-          llvm::ArrayType::get(CGF.VoidPtrTy, PointerNumVal), PointersArray,
-          /*Idx0=*/0,
-          /*Idx1=*/0);
-      SizesArray = CGF.Builder.CreateConstInBoundsGEP2_32(
-          llvm::ArrayType::get(CGF.SizeTy, PointerNumVal), SizesArray,
-          /*Idx0=*/0, /*Idx1=*/0);
-      MapTypesArray = CGF.Builder.CreateConstInBoundsGEP2_32(
-          llvm::ArrayType::get(CGF.Int32Ty, PointerNumVal), MapTypesArray,
-          /*Idx0=*/0,
-          /*Idx1=*/0);
-
-    } else {
-      BasePointersArray = llvm::ConstantPointerNull::get(CGF.VoidPtrPtrTy);
-      PointersArray = llvm::ConstantPointerNull::get(CGF.VoidPtrPtrTy);
-      SizesArray = llvm::ConstantPointerNull::get(CGF.SizeTy->getPointerTo());
-      MapTypesArray =
-          llvm::ConstantPointerNull::get(CGF.Int32Ty->getPointerTo());
-    }
+    emitOffloadingArrays(CGF, BasePointersArray, PointersArray, SizesArray,
+                         MapTypesArray, BasePointers, Pointers, Sizes,
+                         MapTypes);
+    emitOffloadingArraysArgument(CGF, BasePointersArray, PointersArray,
+                                 SizesArray, MapTypesArray, BasePointersArray,
+                                 PointersArray, SizesArray, MapTypesArray,
+                                 BasePointers.size());
 
     // On top of the arrays that were filled up, the target offloading call
     // takes as arguments the device id as well as the host pointer. The host
@@ -5414,6 +5479,9 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
                                            CGF.Int32Ty, /*isSigned=*/true);
     else
       DeviceID = CGF.Builder.getInt32(OMP_DEVICEID_UNDEF);
+
+    // Emit the number of elements in the offloading arrays.
+    llvm::Value *PointerNum = CGF.Builder.getInt32(BasePointers.size());
 
     // Return value of the runtime offloading call.
     llvm::Value *Return;
@@ -5649,4 +5717,195 @@ void CGOpenMPRuntime::emitNumTeamsClause(CodeGenFunction &CGF,
                                      ThreadLimitVal};
   CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_push_num_teams),
                       PushNumTeamsArgs);
+}
+
+void CGOpenMPRuntime::emitTargetDataCalls(CodeGenFunction &CGF,
+                                          const OMPExecutableDirective &D,
+                                          const Expr *IfCond,
+                                          const Expr *Device,
+                                          const RegionCodeGenTy &CodeGen) {
+
+  if (!CGF.HaveInsertPoint())
+    return;
+
+  llvm::Value *BasePointersArray = nullptr;
+  llvm::Value *PointersArray = nullptr;
+  llvm::Value *SizesArray = nullptr;
+  llvm::Value *MapTypesArray = nullptr;
+  unsigned NumOfPtrs = 0;
+
+  // Generate the code for the opening of the data environment. Capture all the
+  // arguments of the runtime call by reference because they are used in the
+  // closing of the region.
+  auto &&BeginThenGen = [&D, &CGF, &BasePointersArray, &PointersArray,
+                         &SizesArray, &MapTypesArray, Device,
+                         &NumOfPtrs](CodeGenFunction &CGF, PrePostActionTy &) {
+    // Fill up the arrays with all the mapped variables.
+    MappableExprsHandler::MapValuesArrayTy BasePointers;
+    MappableExprsHandler::MapValuesArrayTy Pointers;
+    MappableExprsHandler::MapValuesArrayTy Sizes;
+    MappableExprsHandler::MapFlagsArrayTy MapTypes;
+
+    // Get map clause information.
+    MappableExprsHandler MCHandler(D, CGF);
+    MCHandler.generateAllInfo(BasePointers, Pointers, Sizes, MapTypes);
+    NumOfPtrs = BasePointers.size();
+
+    // Fill up the arrays and create the arguments.
+    emitOffloadingArrays(CGF, BasePointersArray, PointersArray, SizesArray,
+                         MapTypesArray, BasePointers, Pointers, Sizes,
+                         MapTypes);
+
+    llvm::Value *BasePointersArrayArg = nullptr;
+    llvm::Value *PointersArrayArg = nullptr;
+    llvm::Value *SizesArrayArg = nullptr;
+    llvm::Value *MapTypesArrayArg = nullptr;
+    emitOffloadingArraysArgument(CGF, BasePointersArrayArg, PointersArrayArg,
+                                 SizesArrayArg, MapTypesArrayArg,
+                                 BasePointersArray, PointersArray, SizesArray,
+                                 MapTypesArray, NumOfPtrs);
+
+    // Emit device ID if any.
+    llvm::Value *DeviceID = nullptr;
+    if (Device)
+      DeviceID = CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(Device),
+                                           CGF.Int32Ty, /*isSigned=*/true);
+    else
+      DeviceID = CGF.Builder.getInt32(OMP_DEVICEID_UNDEF);
+
+    // Emit the number of elements in the offloading arrays.
+    auto *PointerNum = CGF.Builder.getInt32(NumOfPtrs);
+
+    llvm::Value *OffloadingArgs[] = {
+        DeviceID,         PointerNum,    BasePointersArrayArg,
+        PointersArrayArg, SizesArrayArg, MapTypesArrayArg};
+    auto &RT = CGF.CGM.getOpenMPRuntime();
+    CGF.EmitRuntimeCall(RT.createRuntimeFunction(OMPRTL__tgt_target_data_begin),
+                        OffloadingArgs);
+  };
+
+  // Generate code for the closing of the data region.
+  auto &&EndThenGen = [&CGF, &BasePointersArray, &PointersArray, &SizesArray,
+                       &MapTypesArray, Device,
+                       &NumOfPtrs](CodeGenFunction &CGF, PrePostActionTy &) {
+    assert(BasePointersArray && PointersArray && SizesArray && MapTypesArray &&
+           NumOfPtrs && "Invalid data environment closing arguments.");
+
+    llvm::Value *BasePointersArrayArg = nullptr;
+    llvm::Value *PointersArrayArg = nullptr;
+    llvm::Value *SizesArrayArg = nullptr;
+    llvm::Value *MapTypesArrayArg = nullptr;
+    emitOffloadingArraysArgument(CGF, BasePointersArrayArg, PointersArrayArg,
+                                 SizesArrayArg, MapTypesArrayArg,
+                                 BasePointersArray, PointersArray, SizesArray,
+                                 MapTypesArray, NumOfPtrs);
+
+    // Emit device ID if any.
+    llvm::Value *DeviceID = nullptr;
+    if (Device)
+      DeviceID = CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(Device),
+                                           CGF.Int32Ty, /*isSigned=*/true);
+    else
+      DeviceID = CGF.Builder.getInt32(OMP_DEVICEID_UNDEF);
+
+    // Emit the number of elements in the offloading arrays.
+    auto *PointerNum = CGF.Builder.getInt32(NumOfPtrs);
+
+    llvm::Value *OffloadingArgs[] = {
+        DeviceID,         PointerNum,    BasePointersArrayArg,
+        PointersArrayArg, SizesArrayArg, MapTypesArrayArg};
+    auto &RT = CGF.CGM.getOpenMPRuntime();
+    CGF.EmitRuntimeCall(RT.createRuntimeFunction(OMPRTL__tgt_target_data_end),
+                        OffloadingArgs);
+  };
+
+  // In the event we get an if clause, we don't have to take any action on the
+  // else side.
+  auto &&ElseGen = [](CodeGenFunction &CGF, PrePostActionTy &) {};
+
+  if (IfCond) {
+    emitOMPIfClause(CGF, IfCond, BeginThenGen, ElseGen);
+  } else {
+    RegionCodeGenTy BeginThenRCG(BeginThenGen);
+    BeginThenRCG(CGF);
+  }
+
+  CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_target_data, CodeGen);
+
+  if (IfCond) {
+    emitOMPIfClause(CGF, IfCond, EndThenGen, ElseGen);
+  } else {
+    RegionCodeGenTy EndThenRCG(EndThenGen);
+    EndThenRCG(CGF);
+  }
+}
+
+void CGOpenMPRuntime::emitTargetEnterOrExitDataCall(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D, const Expr *IfCond,
+    const Expr *Device) {
+  if (!CGF.HaveInsertPoint())
+    return;
+
+  assert((isa<OMPTargetEnterDataDirective>(D) ||
+          isa<OMPTargetExitDataDirective>(D)) &&
+         "Expecting either target enter or exit data directives.");
+
+  // Generate the code for the opening of the data environment.
+  auto &&ThenGen = [&D, &CGF, Device](CodeGenFunction &CGF, PrePostActionTy &) {
+    // Fill up the arrays with all the mapped variables.
+    MappableExprsHandler::MapValuesArrayTy BasePointers;
+    MappableExprsHandler::MapValuesArrayTy Pointers;
+    MappableExprsHandler::MapValuesArrayTy Sizes;
+    MappableExprsHandler::MapFlagsArrayTy MapTypes;
+
+    // Get map clause information.
+    MappableExprsHandler MCHandler(D, CGF);
+    MCHandler.generateAllInfo(BasePointers, Pointers, Sizes, MapTypes);
+
+    llvm::Value *BasePointersArrayArg = nullptr;
+    llvm::Value *PointersArrayArg = nullptr;
+    llvm::Value *SizesArrayArg = nullptr;
+    llvm::Value *MapTypesArrayArg = nullptr;
+
+    // Fill up the arrays and create the arguments.
+    emitOffloadingArrays(CGF, BasePointersArrayArg, PointersArrayArg,
+                         SizesArrayArg, MapTypesArrayArg, BasePointers,
+                         Pointers, Sizes, MapTypes);
+    emitOffloadingArraysArgument(
+        CGF, BasePointersArrayArg, PointersArrayArg, SizesArrayArg,
+        MapTypesArrayArg, BasePointersArrayArg, PointersArrayArg, SizesArrayArg,
+        MapTypesArrayArg, BasePointers.size());
+
+    // Emit device ID if any.
+    llvm::Value *DeviceID = nullptr;
+    if (Device)
+      DeviceID = CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(Device),
+                                           CGF.Int32Ty, /*isSigned=*/true);
+    else
+      DeviceID = CGF.Builder.getInt32(OMP_DEVICEID_UNDEF);
+
+    // Emit the number of elements in the offloading arrays.
+    auto *PointerNum = CGF.Builder.getInt32(BasePointers.size());
+
+    llvm::Value *OffloadingArgs[] = {
+        DeviceID,         PointerNum,    BasePointersArrayArg,
+        PointersArrayArg, SizesArrayArg, MapTypesArrayArg};
+    auto &RT = CGF.CGM.getOpenMPRuntime();
+    CGF.EmitRuntimeCall(
+        RT.createRuntimeFunction(isa<OMPTargetEnterDataDirective>(D)
+                                     ? OMPRTL__tgt_target_data_begin
+                                     : OMPRTL__tgt_target_data_end),
+        OffloadingArgs);
+  };
+
+  // In the event we get an if clause, we don't have to take any action on the
+  // else side.
+  auto &&ElseGen = [](CodeGenFunction &CGF, PrePostActionTy &) {};
+
+  if (IfCond) {
+    emitOMPIfClause(CGF, IfCond, ThenGen, ElseGen);
+  } else {
+    RegionCodeGenTy ThenGenRCG(ThenGen);
+    ThenGenRCG(CGF);
+  }
 }
