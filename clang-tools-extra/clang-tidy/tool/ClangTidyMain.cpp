@@ -128,6 +128,12 @@ List all enabled checks and exit. Use with
 )"),
                                 cl::init(false), cl::cat(ClangTidyCategory));
 
+static cl::opt<bool> ExplainConfig("explain-config", cl::desc(R"(
+for each enabled check explains, where it is enabled, i.e. in clang-tidy binary,
+command line or a specific configuration file.
+)"),
+                                   cl::init(false), cl::cat(ClangTidyCategory));
+
 static cl::opt<std::string> Config("config", cl::desc(R"(
 Specifies a configuration in YAML/JSON format:
   -config="{Checks: '*',
@@ -280,11 +286,10 @@ static std::unique_ptr<ClangTidyOptionsProvider> createOptionsProvider() {
   if (!Config.empty()) {
     if (llvm::ErrorOr<ClangTidyOptions> ParsedConfig =
             parseConfiguration(Config)) {
-      return llvm::make_unique<DefaultOptionsProvider>(
-          GlobalOptions, ClangTidyOptions::getDefaults()
-                             .mergeWith(DefaultOptions)
-                             .mergeWith(*ParsedConfig)
-                             .mergeWith(OverrideOptions));
+      return llvm::make_unique<ConfigOptionsProvider>(
+          GlobalOptions,
+          ClangTidyOptions::getDefaults().mergeWith(DefaultOptions),
+          *ParsedConfig, OverrideOptions);
     } else {
       llvm::errs() << "Error: invalid configuration specified.\n"
                    << ParsedConfig.getError().message() << "\n";
@@ -310,6 +315,22 @@ static int clangTidyMain(int argc, const char **argv) {
   }
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FileName);
   std::vector<std::string> EnabledChecks = getCheckNames(EffectiveOptions);
+
+  if (ExplainConfig) {
+    //FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
+    std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>
+        RawOptions = OptionsProvider->getRawOptions(FileName);
+    for (const std::string &Check : EnabledChecks) {
+      for (auto It = RawOptions.rbegin(); It != RawOptions.rend(); ++It) {
+        if (It->first.Checks && GlobList(*It->first.Checks).contains(Check)) {
+          llvm::outs() << "'" << Check << "' is enabled in the " << It->second
+                       << ".\n";
+          break;
+        }
+      }
+    }
+    return 0;
+  }
 
   if (ListChecks) {
     llvm::outs() << "Enabled checks:";

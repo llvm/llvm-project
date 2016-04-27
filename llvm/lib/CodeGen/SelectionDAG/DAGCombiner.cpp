@@ -13747,26 +13747,30 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
 
 SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);
+
+  if (N0.getValueType() != N1.getValueType())
+    return SDValue();
 
   // If the input vector is a concatenation, and the insert replaces
   // one of the halves, we can optimize into a single concat_vectors.
-  if (N0.getOpcode() == ISD::CONCAT_VECTORS &&
-      N0->getNumOperands() == 2 && N2.getOpcode() == ISD::Constant) {
+  if (N0.getOpcode() == ISD::CONCAT_VECTORS && N0->getNumOperands() == 2 &&
+      N2.getOpcode() == ISD::Constant) {
     APInt InsIdx = cast<ConstantSDNode>(N2)->getAPIntValue();
     EVT VT = N->getValueType(0);
 
     // Lower half: fold (insert_subvector (concat_vectors X, Y), Z) ->
     // (concat_vectors Z, Y)
     if (InsIdx == 0)
-      return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT,
-                         N->getOperand(1), N0.getOperand(1));
+      return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, N1,
+                         N0.getOperand(1));
 
     // Upper half: fold (insert_subvector (concat_vectors X, Y), Z) ->
     // (concat_vectors X, Z)
-    if (InsIdx == VT.getVectorNumElements()/2)
-      return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT,
-                         N0.getOperand(0), N->getOperand(1));
+    if (InsIdx == VT.getVectorNumElements() / 2)
+      return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, N0.getOperand(0),
+                         N1);
   }
 
   return SDValue();

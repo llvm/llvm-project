@@ -337,7 +337,7 @@ private:
   // Contains all the needed information to create a stack for doing a depth
   // first tranversal of the tree. This includes scopes for values, loads, and
   // calls as well as the generation. There is a child iterator so that the
-  // children do not need to be store spearately.
+  // children do not need to be store separately.
   class StackNode {
   public:
     StackNode(ScopedHTType &AvailableValues, LoadHTType &AvailableLoads,

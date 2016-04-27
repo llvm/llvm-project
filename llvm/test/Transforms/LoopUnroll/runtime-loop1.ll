@@ -5,7 +5,7 @@
 
 
 ; EPILOG: for.body.preheader:
-; EPILOG:   br i1 %lcmp.mod, label %for.body.preheader.new, label %for.end.loopexit.unr-lcssa, !dbg [[PH_LOC:![0-9]+]]
+; EPILOG:   br i1 %1, label %for.end.loopexit.unr-lcssa, label %for.body.preheader.new, !dbg [[PH_LOC:![0-9]+]]
 ; EPILOG: for.body:
 ; EPILOG:   br i1 %niter.ncmp.1, label %for.end.loopexit.unr-lcssa.loopexit, label %for.body, !dbg [[BODY_LOC:![0-9]+]]
 ; EPILOG-NOT: br i1 %niter.ncmp.2, label %for.end.loopexit{{.*}}, label %for.body

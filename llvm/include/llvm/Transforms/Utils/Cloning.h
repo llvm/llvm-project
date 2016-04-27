@@ -221,6 +221,7 @@ bool InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 ///
 /// Updates LoopInfo and DominatorTree assuming the loop is dominated by block
 /// \p LoopDomBB.  Insert the new blocks before block specified in \p Before.
+/// Note: Only innermost loops are supported.
 Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                              Loop *OrigLoop, ValueToValueMapTy &VMap,
                              const Twine &NameSuffix, LoopInfo *LI,

@@ -348,14 +348,58 @@ std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
                                  RelocModel, CodeModel::Default, CGOptLevel));
 }
 
+// If a linkonce global is present in the MustPreserveSymbols, we need to make
+// sure we honor this. To force the compiler to not drop it, we turn its linkage
+// to the weak equivalent.
+static void
+preserveDiscardableGVs(Module &TheModule,
+                       function_ref<bool(const GlobalValue &)> mustPreserveGV) {
+  auto mayPreserveGlobal = [&](GlobalValue &GV) {
+    if (!GV.isDiscardableIfUnused() || GV.isDeclaration())
+      return;
+    if (!mustPreserveGV(GV))
+      return;
+    if (GV.hasAvailableExternallyLinkage() || GV.hasLocalLinkage())
+      report_fatal_error("The linker asked LTO to preserve a symbol with an"
+                         "unexpected linkage");
+    GV.setLinkage(GlobalValue::getWeakLinkage(GV.hasLinkOnceODRLinkage()));
+  };
+
+  for (auto &GV : TheModule)
+    mayPreserveGlobal(GV);
+  for (auto &GV : TheModule.globals())
+    mayPreserveGlobal(GV);
+  for (auto &GV : TheModule.aliases())
+    mayPreserveGlobal(GV);
+}
+
 void LTOCodeGenerator::applyScopeRestrictions() {
-  if (ScopeRestrictionsDone || !ShouldInternalize)
+  if (ScopeRestrictionsDone)
+    return;
+
+  // Declare a callback for the internalize pass that will ask for every
+  // candidate GlobalValue if it can be internalized or not.
+  SmallString<64> MangledName;
+  auto mustPreserveGV = [&](const GlobalValue &GV) -> bool {
+    // Need to mangle the GV as the "MustPreserveSymbols" StringSet is filled
+    // with the linker supplied name, which on Darwin includes a leading
+    // underscore.
+    MangledName.clear();
+    MangledName.reserve(GV.getName().size() + 1);
+    Mangler::getNameWithPrefix(MangledName, GV.getName(),
+                               MergedModule->getDataLayout());
+    return MustPreserveSymbols.count(MangledName);
+  };
+
+  // Preserve linkonce value on linker request
+  preserveDiscardableGVs(*MergedModule, mustPreserveGV);
+
+  if (!ShouldInternalize)
     return;
 
   if (ShouldRestoreGlobalsLinkage) {
     // Record the linkage type of non-local symbols so they can be restored
-    // prior
-    // to module splitting.
+    // prior to module splitting.
     auto RecordLinkage = [&](const GlobalValue &GV) {
       if (!GV.hasAvailableExternallyLinkage() && !GV.hasLocalLinkage() &&
           GV.hasName())
@@ -373,22 +417,7 @@ void LTOCodeGenerator::applyScopeRestrictions() {
   // symbols referenced from asm
   UpdateCompilerUsed(*MergedModule, *TargetMach, AsmUndefinedRefs);
 
-  // Declare a callback for the internalize pass that will ask for every
-  // candidate GlobalValue if it can be internalized or not.
-  Mangler Mangler;
-  SmallString<64> MangledName;
-  auto MustPreserveGV = [&](const GlobalValue &GV) -> bool {
-    // Need to mangle the GV as the "MustPreserveSymbols" StringSet is filled
-    // with the linker supplied name, which on Darwin includes a leading
-    // underscore.
-    MangledName.clear();
-    MangledName.reserve(GV.getName().size() + 1);
-    Mangler::getNameWithPrefix(MangledName, GV.getName(),
-                               MergedModule->getDataLayout());
-    return MustPreserveSymbols.count(MangledName);
-  };
-
-  internalizeModule(*MergedModule, MustPreserveGV);
+  internalizeModule(*MergedModule, mustPreserveGV);
 
   ScopeRestrictionsDone = true;
 }

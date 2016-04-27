@@ -479,7 +479,10 @@ FunctionPass *createNaryReassociatePass();
 //
 // LoopDistribute - Distribute loops.
 //
-FunctionPass *createLoopDistributePass();
+// ProcessAllLoopsByDefault instructs the pass to look for distribution
+// opportunities in all loops unless -enable-loop-distribute or the
+// llvm.loop.distribute.enable metadata data override this default.
+FunctionPass *createLoopDistributePass(bool ProcessAllLoopsByDefault);
 
 //===----------------------------------------------------------------------===//
 //

@@ -23,6 +23,7 @@
 
 using clang::tidy::ClangTidyOptions;
 using clang::tidy::FileFilter;
+using OptionsSource = clang::tidy::ClangTidyOptionsProvider::OptionsSource;
 
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(FileFilter)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(FileFilter::LineRange)
@@ -151,6 +152,48 @@ ClangTidyOptions::mergeWith(const ClangTidyOptions &Other) const {
   return Result;
 }
 
+const char ClangTidyOptionsProvider::OptionsSourceTypeDefaultBinary[] =
+    "clang-tidy binary";
+const char ClangTidyOptionsProvider::OptionsSourceTypeCheckCommandLineOption[] =
+    "command-line option '-checks'";
+const char
+    ClangTidyOptionsProvider::OptionsSourceTypeConfigCommandLineOption[] =
+        "command-line option '-config'";
+
+ClangTidyOptions
+ClangTidyOptionsProvider::getOptions(llvm::StringRef FileName) {
+  ClangTidyOptions Result;
+  for (const auto &Source : getRawOptions(FileName))
+    Result = Result.mergeWith(Source.first);
+  return Result;
+}
+
+std::vector<OptionsSource>
+DefaultOptionsProvider::getRawOptions(llvm::StringRef FileName) {
+  std::vector<OptionsSource> Result;
+  Result.emplace_back(DefaultOptions, OptionsSourceTypeDefaultBinary);
+  return Result;
+}
+
+ConfigOptionsProvider::ConfigOptionsProvider(
+    const ClangTidyGlobalOptions &GlobalOptions,
+    const ClangTidyOptions &DefaultOptions,
+    const ClangTidyOptions &ConfigOptions,
+    const ClangTidyOptions &OverrideOptions)
+    : DefaultOptionsProvider(GlobalOptions, DefaultOptions),
+      ConfigOptions(ConfigOptions), OverrideOptions(OverrideOptions) {}
+
+std::vector<OptionsSource>
+ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
+  std::vector<OptionsSource> RawOptions =
+      DefaultOptionsProvider::getRawOptions(FileName);
+  RawOptions.emplace_back(ConfigOptions,
+                          OptionsSourceTypeConfigCommandLineOption);
+  RawOptions.emplace_back(OverrideOptions,
+                          OptionsSourceTypeCheckCommandLineOption);
+  return RawOptions;
+}
+
 FileOptionsProvider::FileOptionsProvider(
     const ClangTidyGlobalOptions &GlobalOptions,
     const ClangTidyOptions &DefaultOptions,
@@ -158,7 +201,6 @@ FileOptionsProvider::FileOptionsProvider(
     : DefaultOptionsProvider(GlobalOptions, DefaultOptions),
       OverrideOptions(OverrideOptions) {
   ConfigHandlers.emplace_back(".clang-tidy", parseConfiguration);
-  CachedOptions[""] = DefaultOptions.mergeWith(OverrideOptions);
 }
 
 FileOptionsProvider::FileOptionsProvider(
@@ -168,13 +210,13 @@ FileOptionsProvider::FileOptionsProvider(
     const FileOptionsProvider::ConfigFileHandlers &ConfigHandlers)
     : DefaultOptionsProvider(GlobalOptions, DefaultOptions),
       OverrideOptions(OverrideOptions), ConfigHandlers(ConfigHandlers) {
-  CachedOptions[""] = DefaultOptions.mergeWith(OverrideOptions);
 }
 
 // FIXME: This method has some common logic with clang::format::getStyle().
 // Consider pulling out common bits to a findParentFileWithName function or
 // similar.
-ClangTidyOptions FileOptionsProvider::getOptions(StringRef FileName) {
+std::vector<OptionsSource>
+FileOptionsProvider::getRawOptions(StringRef FileName) {
   DEBUG(llvm::dbgs() << "Getting options for file " << FileName << "...\n");
   SmallString<256> FilePath(FileName);
 
@@ -186,19 +228,23 @@ ClangTidyOptions FileOptionsProvider::getOptions(StringRef FileName) {
     FileName = FilePath;
   }
 
+  std::vector<OptionsSource> RawOptions =
+      DefaultOptionsProvider::getRawOptions(FileName);
+  OptionsSource CommandLineOptions(OverrideOptions,
+                                   OptionsSourceTypeCheckCommandLineOption);
   // Look for a suitable configuration file in all parent directories of the
   // file. Start with the immediate parent directory and move up.
   StringRef Path = llvm::sys::path::parent_path(FileName);
-  for (StringRef CurrentPath = Path;;
+  for (StringRef CurrentPath = Path; !CurrentPath.empty();
        CurrentPath = llvm::sys::path::parent_path(CurrentPath)) {
-    llvm::Optional<ClangTidyOptions> Result;
+    llvm::Optional<OptionsSource> Result;
 
     auto Iter = CachedOptions.find(CurrentPath);
     if (Iter != CachedOptions.end())
       Result = Iter->second;
 
     if (!Result)
-      Result = TryReadConfigFile(CurrentPath);
+      Result = tryReadConfigFile(CurrentPath);
 
     if (Result) {
       // Store cached value for all intermediate directories.
@@ -208,13 +254,18 @@ ClangTidyOptions FileOptionsProvider::getOptions(StringRef FileName) {
         CachedOptions[Path] = *Result;
         Path = llvm::sys::path::parent_path(Path);
       }
-      return CachedOptions[Path] = *Result;
+      CachedOptions[Path] = *Result;
+
+      RawOptions.push_back(*Result);
+      break;
     }
   }
+  RawOptions.push_back(CommandLineOptions);
+  return RawOptions;
 }
 
-llvm::Optional<ClangTidyOptions>
-FileOptionsProvider::TryReadConfigFile(StringRef Directory) {
+llvm::Optional<OptionsSource>
+FileOptionsProvider::tryReadConfigFile(StringRef Directory) {
   assert(!Directory.empty());
 
   if (!llvm::sys::fs::is_directory(Directory)) {
@@ -255,10 +306,7 @@ FileOptionsProvider::TryReadConfigFile(StringRef Directory) {
                      << ParsedOptions.getError().message() << "\n";
       continue;
     }
-
-    return DefaultOptionsProvider::getOptions(Directory)
-        .mergeWith(*ParsedOptions)
-        .mergeWith(OverrideOptions);
+    return OptionsSource(*ParsedOptions, ConfigFile.c_str());
   }
   return llvm::None;
 }

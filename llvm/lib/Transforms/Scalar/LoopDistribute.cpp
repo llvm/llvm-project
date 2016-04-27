@@ -60,6 +60,19 @@ static cl::opt<unsigned> DistributeSCEVCheckThreshold(
     cl::desc("The maximum number of SCEV checks allowed for Loop "
              "Distribution"));
 
+static cl::opt<unsigned> PragmaDistributeSCEVCheckThreshold(
+    "loop-distribute-scev-check-threshold-with-pragma", cl::init(128),
+    cl::Hidden,
+    cl::desc(
+        "The maximum number of SCEV checks allowed for Loop "
+        "Distribution for loop marked with #pragma loop distribute(enable)"));
+
+// Note that the initial value for this depends on whether the pass is invoked
+// directly or from the optimization pipeline.
+static cl::opt<bool> EnableLoopDistribute(
+    "enable-loop-distribute", cl::Hidden,
+    cl::desc("Enable the new, experimental LoopDistribution Pass"));
+
 STATISTIC(NumLoopsDistributed, "Number of loops distributed");
 
 namespace {
@@ -571,92 +584,17 @@ private:
   AccessesType Accesses;
 };
 
-/// \brief The pass class.
-class LoopDistribute : public FunctionPass {
+/// \brief The actual class performing the per-loop work.
+class LoopDistributeForLoop {
 public:
-  LoopDistribute() : FunctionPass(ID) {
-    initializeLoopDistributePass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    LAA = &getAnalysis<LoopAccessAnalysis>();
-    DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-
-    // Build up a worklist of inner-loops to vectorize. This is necessary as the
-    // act of distributing a loop creates new loops and can invalidate iterators
-    // across the loops.
-    SmallVector<Loop *, 8> Worklist;
-
-    for (Loop *TopLevelLoop : *LI)
-      for (Loop *L : depth_first(TopLevelLoop))
-        // We only handle inner-most loops.
-        if (L->empty())
-          Worklist.push_back(L);
-
-    // Now walk the identified inner loops.
-    bool Changed = false;
-    for (Loop *L : Worklist)
-      Changed |= processLoop(L);
-
-    // Process each loop nest in the function.
-    return Changed;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addRequired<LoopAccessAnalysis>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-
-  static char ID;
-
-private:
-  /// \brief Filter out checks between pointers from the same partition.
-  ///
-  /// \p PtrToPartition contains the partition number for pointers.  Partition
-  /// number -1 means that the pointer is used in multiple partitions.  In this
-  /// case we can't safely omit the check.
-  SmallVector<RuntimePointerChecking::PointerCheck, 4>
-  includeOnlyCrossPartitionChecks(
-      const SmallVectorImpl<RuntimePointerChecking::PointerCheck> &AllChecks,
-      const SmallVectorImpl<int> &PtrToPartition,
-      const RuntimePointerChecking *RtPtrChecking) {
-    SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks;
-
-    std::copy_if(AllChecks.begin(), AllChecks.end(), std::back_inserter(Checks),
-                 [&](const RuntimePointerChecking::PointerCheck &Check) {
-                   for (unsigned PtrIdx1 : Check.first->Members)
-                     for (unsigned PtrIdx2 : Check.second->Members)
-                       // Only include this check if there is a pair of pointers
-                       // that require checking and the pointers fall into
-                       // separate partitions.
-                       //
-                       // (Note that we already know at this point that the two
-                       // pointer groups need checking but it doesn't follow
-                       // that each pair of pointers within the two groups need
-                       // checking as well.
-                       //
-                       // In other words we don't want to include a check just
-                       // because there is a pair of pointers between the two
-                       // pointer groups that require checks and a different
-                       // pair whose pointers fall into different partitions.)
-                       if (RtPtrChecking->needsChecking(PtrIdx1, PtrIdx2) &&
-                           !RuntimePointerChecking::arePointersInSamePartition(
-                               PtrToPartition, PtrIdx1, PtrIdx2))
-                         return true;
-                   return false;
-                 });
-
-    return Checks;
+  LoopDistributeForLoop(Loop *L, LoopInfo *LI, const LoopAccessInfo &LAI,
+                        DominatorTree *DT, ScalarEvolution *SE)
+      : L(L), LI(LI), LAI(LAI), DT(DT), SE(SE) {
+    setForced();
   }
 
   /// \brief Try to distribute an inner-most loop.
-  bool processLoop(Loop *L) {
+  bool processLoop() {
     assert(L->empty() && "Only process inner loops.");
 
     DEBUG(dbgs() << "\nLDist: In \"" << L->getHeader()->getParent()->getName()
@@ -672,8 +610,6 @@ private:
       return false;
     }
     // LAA will check that we only have a single exiting block.
-
-    const LoopAccessInfo &LAI = LAA->getInfo(L, ValueToValueMap());
 
     // Currently, we only distribute to isolate the part of the loop with
     // dependence cycles to enable partial vectorization.
@@ -762,7 +698,9 @@ private:
 
     // Don't distribute the loop if we need too many SCEV run-time checks.
     const SCEVUnionPredicate &Pred = LAI.PSE.getUnionPredicate();
-    if (Pred.getComplexity() > DistributeSCEVCheckThreshold) {
+    if (Pred.getComplexity() > (IsForced.getValueOr(false)
+                                    ? PragmaDistributeSCEVCheckThreshold
+                                    : DistributeSCEVCheckThreshold)) {
       DEBUG(dbgs() << "Too many SCEV run-time checks needed.\n");
       return false;
     }
@@ -814,11 +752,145 @@ private:
     return true;
   }
 
+  /// \brief Return if distribution forced to be enabled/disabled for the loop.
+  ///
+  /// If the optional has a value, it indicates whether distribution was forced
+  /// to be enabled (true) or disabled (false).  If the optional has no value
+  /// distribution was not forced either way.
+  const Optional<bool> &isForced() const { return IsForced; }
+
+private:
+  /// \brief Filter out checks between pointers from the same partition.
+  ///
+  /// \p PtrToPartition contains the partition number for pointers.  Partition
+  /// number -1 means that the pointer is used in multiple partitions.  In this
+  /// case we can't safely omit the check.
+  SmallVector<RuntimePointerChecking::PointerCheck, 4>
+  includeOnlyCrossPartitionChecks(
+      const SmallVectorImpl<RuntimePointerChecking::PointerCheck> &AllChecks,
+      const SmallVectorImpl<int> &PtrToPartition,
+      const RuntimePointerChecking *RtPtrChecking) {
+    SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks;
+
+    std::copy_if(AllChecks.begin(), AllChecks.end(), std::back_inserter(Checks),
+                 [&](const RuntimePointerChecking::PointerCheck &Check) {
+                   for (unsigned PtrIdx1 : Check.first->Members)
+                     for (unsigned PtrIdx2 : Check.second->Members)
+                       // Only include this check if there is a pair of pointers
+                       // that require checking and the pointers fall into
+                       // separate partitions.
+                       //
+                       // (Note that we already know at this point that the two
+                       // pointer groups need checking but it doesn't follow
+                       // that each pair of pointers within the two groups need
+                       // checking as well.
+                       //
+                       // In other words we don't want to include a check just
+                       // because there is a pair of pointers between the two
+                       // pointer groups that require checks and a different
+                       // pair whose pointers fall into different partitions.)
+                       if (RtPtrChecking->needsChecking(PtrIdx1, PtrIdx2) &&
+                           !RuntimePointerChecking::arePointersInSamePartition(
+                               PtrToPartition, PtrIdx1, PtrIdx2))
+                         return true;
+                   return false;
+                 });
+
+    return Checks;
+  }
+
+  /// \brief Check whether the loop metadata is forcing distribution to be
+  /// enabled/disabled.
+  void setForced() {
+    Optional<const MDOperand *> Value =
+        findStringMetadataForLoop(L, "llvm.loop.distribute.enable");
+    if (!Value)
+      return;
+
+    const MDOperand *Op = *Value;
+    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
+    IsForced = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
+  }
+
   // Analyses used.
+  Loop *L;
   LoopInfo *LI;
-  LoopAccessAnalysis *LAA;
+  const LoopAccessInfo &LAI;
   DominatorTree *DT;
   ScalarEvolution *SE;
+
+  /// \brief Indicates whether distribution is forced to be enabled/disabled for
+  /// the loop.
+  ///
+  /// If the optional has a value, it indicates whether distribution was forced
+  /// to be enabled (true) or disabled (false).  If the optional has no value
+  /// distribution was not forced either way.
+  Optional<bool> IsForced;
+};
+
+/// \brief The pass class.
+class LoopDistribute : public FunctionPass {
+public:
+  /// \p ProcessAllLoopsByDefault specifies whether loop distribution should be
+  /// performed by default.  Pass -enable-loop-distribute={0,1} overrides this
+  /// default.  We use this to keep LoopDistribution off by default when invoked
+  /// from the optimization pipeline but on when invoked explicitly from opt.
+  LoopDistribute(bool ProcessAllLoopsByDefault = true)
+      : FunctionPass(ID), ProcessAllLoops(ProcessAllLoopsByDefault) {
+    // The default is set by the caller.
+    if (EnableLoopDistribute.getNumOccurrences() > 0)
+      ProcessAllLoops = EnableLoopDistribute;
+    initializeLoopDistributePass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override {
+    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto *LAA = &getAnalysis<LoopAccessAnalysis>();
+    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+
+    // Build up a worklist of inner-loops to vectorize. This is necessary as the
+    // act of distributing a loop creates new loops and can invalidate iterators
+    // across the loops.
+    SmallVector<Loop *, 8> Worklist;
+
+    for (Loop *TopLevelLoop : *LI)
+      for (Loop *L : depth_first(TopLevelLoop))
+        // We only handle inner-most loops.
+        if (L->empty())
+          Worklist.push_back(L);
+
+    // Now walk the identified inner loops.
+    bool Changed = false;
+    for (Loop *L : Worklist) {
+      const LoopAccessInfo &LAI = LAA->getInfo(L, ValueToValueMap());
+      LoopDistributeForLoop LDL(L, LI, LAI, DT, SE);
+
+      // If distribution was forced for the specific loop to be
+      // enabled/disabled, follow that.  Otherwise use the global flag.
+      if (LDL.isForced().getValueOr(ProcessAllLoops))
+        Changed |= LDL.processLoop();
+    }
+
+    // Process each loop nest in the function.
+    return Changed;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<ScalarEvolutionWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addRequired<LoopAccessAnalysis>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+  }
+
+  static char ID;
+
+private:
+  /// \brief Whether distribution should be on in this function.  The per-loop
+  /// pragma can override this.
+  bool ProcessAllLoops;
 };
 } // anonymous namespace
 
@@ -833,5 +905,7 @@ INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_END(LoopDistribute, LDIST_NAME, ldist_name, false, false)
 
 namespace llvm {
-FunctionPass *createLoopDistributePass() { return new LoopDistribute(); }
+FunctionPass *createLoopDistributePass(bool ProcessAllLoopsByDefault) {
+  return new LoopDistribute(ProcessAllLoopsByDefault);
+}
 }

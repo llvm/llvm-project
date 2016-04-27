@@ -1,6 +1,6 @@
 ; RUN: llc -O0 -disable-fp-elim -mtriple=powerpc-unknown-linux-gnu -mcpu=g5 < %s | FileCheck %s -check-prefix=PPC32
 ; RUN: llc -O0 -mtriple=powerpc64-unknown-linux-gnu -mcpu=g5 < %s | FileCheck %s -check-prefix=PPC64
-; RUN: llc -O0 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s -check-prefix=PPC64-ELFv2
+; RUN: llc -O0 -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s -check-prefix=PPC64-ELFv2
 
 declare void @foo()
 

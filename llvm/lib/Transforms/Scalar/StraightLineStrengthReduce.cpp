@@ -74,6 +74,8 @@ using namespace PatternMatch;
 
 namespace {
 
+static const unsigned UnknownAddressSpace = ~0u;
+
 class StraightLineStrengthReduce : public FunctionPass {
 public:
   // SLSR candidate. Such a candidate must be in one of the forms described in
@@ -276,7 +278,7 @@ static bool isGEPFoldable(GetElementPtrInst *GEP,
 static bool isAddFoldable(const SCEV *Base, ConstantInt *Index, Value *Stride,
                           TargetTransformInfo *TTI) {
   return TTI->isLegalAddressingMode(Base->getType(), nullptr, 0, true,
-                                    Index->getSExtValue());
+                                    Index->getSExtValue(), UnknownAddressSpace);
 }
 
 bool StraightLineStrengthReduce::isFoldable(const Candidate &C,

@@ -6,8 +6,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; Tests for unrolling loops with run-time trip counts
 
 ; EPILOG: %xtraiter = and i32 %n
-; EPILOG:  %lcmp.mod = icmp ne i32 %xtraiter, %n
-; EPILOG:  br i1 %lcmp.mod, label %for.body.preheader.new, label %for.end.loopexit.unr-lcssa
+; EPILOG:  %lcmp.mod = icmp ne i32 %xtraiter, 0
+; EPILOG:  br i1 %lcmp.mod, label %for.body.epil.preheader, label %for.end.loopexit
 
 ; PROLOG: %xtraiter = and i32 %n
 ; PROLOG:  %lcmp.mod = icmp ne i32 %xtraiter, 0

@@ -183,8 +183,10 @@ public:
     /// Reg or a super-register is read. The full register is read.
     bool FullyRead;
 
-    /// Reg is FullyDefined and all defs of reg or an overlapping register are
-    /// dead.
+    /// Either:
+    /// - Reg is FullyDefined and all defs of reg or an overlapping
+    ///   register are dead, or
+    /// - Reg is completely dead because "defined" by a clobber.
     bool DeadDef;
 
     /// Reg is Defined and all defs of reg or an overlapping register are

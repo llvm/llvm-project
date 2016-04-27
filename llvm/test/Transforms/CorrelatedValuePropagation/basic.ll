@@ -200,6 +200,28 @@ next:
   ret void
 }
 
+define i1 @arg_attribute(i8* nonnull %a) {
+; CHECK-LABEL: @arg_attribute(
+; CHECK: ret i1 false
+  %cmp = icmp eq i8* %a, null
+  br label %exit
+
+exit:
+  ret i1 %cmp
+}
+
+declare nonnull i8* @return_nonnull()
+define i1 @call_attribute() {
+; CHECK-LABEL: @call_attribute(
+; CHECK: ret i1 false
+  %a = call i8* @return_nonnull()
+  %cmp = icmp eq i8* %a, null
+  br label %exit
+
+exit:
+  ret i1 %cmp
+}
+
 define i1 @umin(i32 %a, i32 %b) {
 ; CHECK-LABEL: @umin(
 entry:
