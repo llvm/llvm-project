@@ -4665,7 +4665,7 @@ bool X86InstrInfo::getMemOpBaseRegImmOfs(MachineInstr *MemOp, unsigned &BaseReg,
                                          int64_t &Offset,
                                          const TargetRegisterInfo *TRI) const {
   const MCInstrDesc &Desc = MemOp->getDesc();
-  int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags, MemOp->getOpcode());
+  int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
   if (MemRefBegin < 0)
     return false;
 

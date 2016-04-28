@@ -330,7 +330,7 @@ TEST_F(FindAllSymbolsTest, DecayedTypeTest) {
 
 TEST_F(FindAllSymbolsTest, CTypedefTest) {
   static const char Code[] = R"(
-      typedef unsigned size_t;
+      typedef unsigned size_t_;
       typedef struct { int x; } X;
       using XX = X;
       )";
@@ -338,7 +338,7 @@ TEST_F(FindAllSymbolsTest, CTypedefTest) {
 
   {
     SymbolInfo Symbol =
-        CreateSymbolInfo("size_t", SymbolInfo::TypedefName, HeaderName, 2, {});
+        CreateSymbolInfo("size_t_", SymbolInfo::TypedefName, HeaderName, 2, {});
     EXPECT_TRUE(hasSymbol(Symbol));
     getSymbolExtraInfo(Symbol);
     EXPECT_EQ("unsigned int",

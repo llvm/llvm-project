@@ -78,9 +78,11 @@
 
 #include <cstdarg>
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-zero-length"
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 int main()
 {

@@ -97,7 +97,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
          {ISD::BSWAP, ISD::SMUL_LOHI, ISD::UMUL_LOHI,
           ISD::MULHS, ISD::MULHU, ISD::SDIVREM, ISD::UDIVREM, ISD::SHL_PARTS,
           ISD::SRA_PARTS, ISD::SRL_PARTS, ISD::ADDC, ISD::ADDE, ISD::SUBC,
-          ISD::SUBE, ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}) {
+          ISD::SUBE}) {
       setOperationAction(Op, T, Expand);
     }
   }

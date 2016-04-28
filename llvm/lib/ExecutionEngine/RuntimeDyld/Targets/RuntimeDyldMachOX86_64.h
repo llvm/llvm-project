@@ -64,9 +64,9 @@ public:
     UNIMPLEMENTED_RELOC(MachO::X86_64_RELOC_TLV);
     default:
       if (RelType > MachO::X86_64_RELOC_TLV)
-        return make_error<RuntimeDyldError>("MachO X86_64 relocation type " +
-                                            std::to_string(RelType) +
-                                            " is out of range");
+        return make_error<RuntimeDyldError>(("MachO X86_64 relocation type " +
+                                             Twine(RelType) +
+                                             " is out of range").str());
       break;
     }
 

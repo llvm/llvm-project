@@ -310,6 +310,7 @@ namespace llvm {
     unsigned LaneMask;
     /// True if there are at least 2 subregisters which do not interfere.
     bool HasDisjunctSubRegs;
+    bool CoveredBySubRegs;
 
     // Return the Record that defined this class, or NULL if the class was
     // created by TableGen.

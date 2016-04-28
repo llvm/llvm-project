@@ -25,7 +25,7 @@ struct test
     test() {}
 
 protected:
-    std::streamsize xsgetn(char_type* s, std::streamsize n)
+    std::streamsize xsgetn(char_type*, std::streamsize)
     {
         ++xsgetn_called;
         return 10;

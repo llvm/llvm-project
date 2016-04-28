@@ -47,10 +47,10 @@ void f2()
     std::this_thread::sleep_for(ms(200));
 }
 
-std::unique_ptr<int> f3(int i)
+std::unique_ptr<int> f3(int j)
 {
     std::this_thread::sleep_for(ms(200));
-    return std::unique_ptr<int>(new int(i));
+    return std::unique_ptr<int>(new int(j));
 }
 
 std::unique_ptr<int> f4(std::unique_ptr<int>&& p)
@@ -59,10 +59,10 @@ std::unique_ptr<int> f4(std::unique_ptr<int>&& p)
     return std::move(p);
 }
 
-void f5(int i)
+void f5(int j)
 {
     std::this_thread::sleep_for(ms(200));
-    throw i;
+    throw j;
 }
 
 int main()

@@ -32,7 +32,7 @@ struct test
     }
 
 protected:
-    int_type pbackfail(int_type c = traits_type::eof())
+    int_type pbackfail(int_type = traits_type::eof())
     {
         ++pbackfail_called;
         return 'a';

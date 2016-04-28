@@ -1121,9 +1121,8 @@ private:
         // reordering, there is always a successor to OldIdxOut in the same BB
         // We don't need INext->valno anymore and will reuse for the new segment
         // we create later.
-        DefVNI = INext->valno;
+        DefVNI = OldIdxVNI;
         INext->start = OldIdxOut->end;
-        INext->valno = OldIdxVNI;
         INext->valno->def = INext->start;
       }
       // If NewIdx is behind the last segment, extend that and append a new one.

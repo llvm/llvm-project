@@ -312,10 +312,8 @@ public:
 class Undefined : public SymbolBody {
 public:
   Undefined(StringRef Name, uint8_t Binding, uint8_t StOther, uint8_t Type,
-            uint64_t Size, bool IsBitcode);
-  Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type, uint64_t Size);
-
-  uint64_t Size;
+            bool IsBitcode);
+  Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == UndefinedKind;

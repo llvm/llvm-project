@@ -117,12 +117,8 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::CTTZ,             MVT::i8,    Expand);
   setOperationAction(ISD::CTTZ,             MVT::i16,   Expand);
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::i8,    Expand);
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF,  MVT::i16,   Expand);
   setOperationAction(ISD::CTLZ,             MVT::i8,    Expand);
   setOperationAction(ISD::CTLZ,             MVT::i16,   Expand);
-  setOperationAction(ISD::CTLZ_ZERO_UNDEF,  MVT::i8,    Expand);
-  setOperationAction(ISD::CTLZ_ZERO_UNDEF,  MVT::i16,   Expand);
   setOperationAction(ISD::CTPOP,            MVT::i8,    Expand);
   setOperationAction(ISD::CTPOP,            MVT::i16,   Expand);
 

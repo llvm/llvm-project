@@ -99,8 +99,10 @@
 
 #include <cstdarg>
 
+#if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations" // for tmpnam
+#endif
 
 int main()
 {

@@ -284,13 +284,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(TargetMachine &TM,
 
   if (Subtarget->hasFFBH())
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Custom);
-  else
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
 
-  if (!Subtarget->hasFFBL())
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
-
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Expand);
+  if (Subtarget->hasFFBL())
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Legal);
 
   setOperationAction(ISD::CTLZ, MVT::i64, Custom);
   setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Custom);
@@ -345,9 +341,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(TargetMachine &TM,
     setOperationAction(ISD::BSWAP, VT, Expand);
     setOperationAction(ISD::CTPOP, VT, Expand);
     setOperationAction(ISD::CTTZ, VT, Expand);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Expand);
     setOperationAction(ISD::CTLZ, VT, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Expand);
     setOperationAction(ISD::VECTOR_SHUFFLE, VT, Expand);
   }
 

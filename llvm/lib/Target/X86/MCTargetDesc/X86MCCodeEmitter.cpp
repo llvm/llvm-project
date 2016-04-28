@@ -1120,7 +1120,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   unsigned I8RegNum = 0;
 
   // Determine where the memory operand starts, if present.
-  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags, Opcode);
+  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
   if (MemoryOperand != -1) MemoryOperand += CurOp;
 
   // Emit segment override opcode prefix as needed.

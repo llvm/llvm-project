@@ -70,7 +70,7 @@ int main()
         std::multiset<int>::const_iterator k = i;
         assert(i == k);
         for (int j = 1; j <= 8; ++j)
-            for (int k = 0; k < 3; ++k, ++i)
+            for (int n = 0; n < 3; ++n, ++i)
                 assert(*i == j);
     }
     {
@@ -151,7 +151,7 @@ int main()
         std::multiset<int, std::less<int>, min_allocator<int>>::const_iterator k = i;
         assert(i == k);
         for (int j = 1; j <= 8; ++j)
-            for (int k = 0; k < 3; ++k, ++i)
+            for (int n = 0; n < 3; ++n, ++i)
                 assert(*i == j);
     }
     {

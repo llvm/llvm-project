@@ -728,15 +728,11 @@ RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
     SubReg2SequenceIndexMap.push_back(Found);
   }
 
-  OS << "unsigned " << ClName
-     << "::composeSubRegIndexLaneMaskImpl(unsigned IdxA, unsigned LaneMask)"
-        " const {\n";
-
   OS << "  struct MaskRolOp {\n"
         "    unsigned Mask;\n"
         "    uint8_t  RotateLeft;\n"
         "  };\n"
-        "  static const MaskRolOp Seqs[] = {\n";
+        "  static const MaskRolOp LaneMaskComposeSequences[] = {\n";
   unsigned Idx = 0;
   for (size_t s = 0, se = Sequences.size(); s != se; ++s) {
     OS << "    ";
@@ -756,24 +752,43 @@ RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
   for (size_t i = 0, e = SubRegIndices.size(); i != e; ++i) {
     OS << "    ";
     unsigned Idx = SubReg2SequenceIndexMap[i];
-    OS << format("&Seqs[%u]", Idx);
+    OS << format("&LaneMaskComposeSequences[%u]", Idx);
     if (i+1 != e)
       OS << ",";
     OS << " // to " << SubRegIndices[i].getName() << "\n";
   }
   OS << "  };\n\n";
 
-  OS << "  --IdxA; assert(IdxA < " << SubRegIndices.size()
+  OS << "LaneBitmask " << ClName
+     << "::composeSubRegIndexLaneMaskImpl(unsigned IdxA, LaneBitmask LaneMask)"
+        " const {\n"
+        "  --IdxA; assert(IdxA < " << SubRegIndices.size()
      << " && \"Subregister index out of bounds\");\n"
-        "  unsigned Result = 0;\n"
+        "  LaneBitmask Result = 0;\n"
         "  for (const MaskRolOp *Ops = CompositeSequences[IdxA]; Ops->Mask != 0; ++Ops)"
         " {\n"
-        "    unsigned Masked = LaneMask & Ops->Mask;\n"
+        "    LaneBitmask Masked = LaneMask & Ops->Mask;\n"
         "    Result |= (Masked << Ops->RotateLeft) & 0xFFFFFFFF;\n"
         "    Result |= (Masked >> ((32 - Ops->RotateLeft) & 0x1F));\n"
         "  }\n"
         "  return Result;\n"
-        "}\n";
+        "}\n\n";
+
+  OS << "LaneBitmask " << ClName
+     << "::reverseComposeSubRegIndexLaneMaskImpl(unsigned IdxA, "
+        " LaneBitmask LaneMask) const {\n"
+        "  LaneMask &= getSubRegIndexLaneMask(IdxA);\n"
+        "  --IdxA; assert(IdxA < " << SubRegIndices.size()
+     << " && \"Subregister index out of bounds\");\n"
+        "  LaneBitmask Result = 0;\n"
+        "  for (const MaskRolOp *Ops = CompositeSequences[IdxA]; Ops->Mask != 0; ++Ops)"
+        " {\n"
+        "    LaneBitmask Rotated = (LaneMask >> Ops->RotateLeft) |\n"
+        "                          ((LaneMask << ((32 - Ops->RotateLeft) & 0x1F)) & 0xFFFFFFFF);\n"
+        "    Result |= Rotated & Ops->Mask;\n"
+        "  }\n"
+        "  return Result;\n"
+        "}\n\n";
 }
 
 //
@@ -1078,8 +1093,10 @@ RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, CodeGenTarget &Target,
   if (!RegBank.getSubRegIndices().empty()) {
     OS << "  unsigned composeSubRegIndicesImpl"
        << "(unsigned, unsigned) const override;\n"
-       << "  unsigned composeSubRegIndexLaneMaskImpl"
-       << "(unsigned, unsigned) const override;\n"
+       << "  LaneBitmask composeSubRegIndexLaneMaskImpl"
+       << "(unsigned, LaneBitmask) const override;\n"
+       << "  LaneBitmask reverseComposeSubRegIndexLaneMaskImpl"
+       << "(unsigned, LaneBitmask) const override;\n"
        << "  const TargetRegisterClass *getSubClassWithSubReg"
        << "(const TargetRegisterClass*, unsigned) const override;\n";
   }
@@ -1294,7 +1311,9 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
          << format("0x%08x,\n    ", RC.LaneMask)
          << (unsigned)RC.AllocationPriority << ",\n    "
          << (RC.HasDisjunctSubRegs?"true":"false")
-         << ", /* HasDisjunctSubRegs */\n    ";
+         << ", /* HasDisjunctSubRegs */\n    "
+         << (RC.CoveredBySubRegs?"true":"false")
+         << ", /* CoveredBySubRegs */\n    ";
       if (RC.getSuperClasses().empty())
         OS << "NullRegClasses,\n    ";
       else

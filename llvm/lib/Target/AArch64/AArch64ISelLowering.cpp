@@ -235,13 +235,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
 
 
-  // Expand the undefined-at-zero variants to cttz/ctlz to their defined-at-zero
-  // counterparts, which AArch64 supports directly.
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
-  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Expand);
-  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Expand);
-
   setOperationAction(ISD::CTPOP, MVT::i32, Custom);
   setOperationAction(ISD::CTPOP, MVT::i64, Custom);
 
@@ -597,6 +590,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::CTLZ,       MVT::v1i64, Expand);
     setOperationAction(ISD::CTLZ,       MVT::v2i64, Expand);
+
+    setOperationAction(ISD::CTTZ,       MVT::v2i8,  Expand);
+    setOperationAction(ISD::CTTZ,       MVT::v4i16, Expand);
+    setOperationAction(ISD::CTTZ,       MVT::v2i32, Expand);
+    setOperationAction(ISD::CTTZ,       MVT::v1i64, Expand);
+    setOperationAction(ISD::CTTZ,       MVT::v16i8, Expand);
+    setOperationAction(ISD::CTTZ,       MVT::v8i16, Expand);
+    setOperationAction(ISD::CTTZ,       MVT::v4i32, Expand);
+    setOperationAction(ISD::CTTZ,       MVT::v2i64, Expand);
 
     // AArch64 doesn't have MUL.2d:
     setOperationAction(ISD::MUL, MVT::v2i64, Expand);
