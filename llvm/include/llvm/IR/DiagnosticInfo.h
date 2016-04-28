@@ -15,11 +15,13 @@
 #ifndef LLVM_IR_DIAGNOSTICINFO_H
 #define LLVM_IR_DIAGNOSTICINFO_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/Support/CBindingWrapping.h"
+#include "llvm-c/Types.h"
 #include <functional>
+#include <string>
 
 namespace llvm {
 
@@ -27,9 +29,8 @@ namespace llvm {
 class DiagnosticPrinter;
 class Function;
 class Instruction;
-class LLVMContextImpl;
-class Value;
-class DebugLoc;
+class LLVMContext;
+class Module;
 class SMDiagnostic;
 
 /// \brief Defines the different supported severity of a diagnostic.
@@ -617,7 +618,7 @@ public:
 
   const Twine &getMessage() const { return Msg; }
 
-  void print(DiagnosticPrinter &DP) const;
+  void print(DiagnosticPrinter &DP) const override;
 };
 
 /// Emit a warning when loop vectorization is specified but fails. \p Fn is the
@@ -632,6 +633,6 @@ void emitLoopVectorizeWarning(LLVMContext &Ctx, const Function &Fn,
 void emitLoopInterleaveWarning(LLVMContext &Ctx, const Function &Fn,
                                const DebugLoc &DLoc, const Twine &Msg);
 
-} // End namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_DIAGNOSTICINFO_H

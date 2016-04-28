@@ -48,16 +48,16 @@ struct PDBDbiStream::HeaderInfo {
   little32_t VersionSignature;
   ulittle32_t VersionHeader;
   ulittle32_t Age; // Should match PDBInfoStream.
-  ulittle16_t GSSyms;
-  ulittle16_t BuildNumber; // See DbiBuildNo structure.
-  ulittle16_t PSSyms;
+  ulittle16_t GSSyms;               // Number of global symbols
+  ulittle16_t BuildNumber;          // See DbiBuildNo structure.
+  ulittle16_t PSSyms;               // Number of public symbols
   ulittle16_t PdbDllVersion;        // version of mspdbNNN.dll
   ulittle16_t SymRecords;           // Number of symbols
   ulittle16_t PdbDllRbld;           // rbld number of mspdbNNN.dll
   little32_t ModiSubstreamSize;     // Size of module info stream
   little32_t SecContrSubstreamSize; // Size of sec. contribution stream
-  little32_t SectionMapSize;
-  little32_t FileInfoSize;
+  little32_t SectionMapSize;        // Size of sec. map substream
+  little32_t FileInfoSize;          // Size of file info substream
   little32_t TypeServerSize;      // Size of type server map
   ulittle32_t MFCTypeServerIndex; // Index of MFC Type Server
   little32_t OptionalDbgHdrSize;  // Size of DbgHeader info
@@ -101,12 +101,42 @@ std::error_code PDBDbiStream::reload() {
           Header->OptionalDbgHdrSize + Header->ECSubstreamSize)
     return std::make_error_code(std::errc::illegal_byte_sequence);
 
+  // Only certain substreams are guaranteed to be aligned.  Validate
+  // them here.
   if (Header->ModiSubstreamSize % sizeof(uint32_t) != 0)
     return std::make_error_code(std::errc::illegal_byte_sequence);
+  if (Header->SecContrSubstreamSize % sizeof(uint32_t) != 0)
+    return std::make_error_code(std::errc::illegal_byte_sequence);
+  if (Header->SectionMapSize % sizeof(uint32_t) != 0)
+    return std::make_error_code(std::errc::illegal_byte_sequence);
+  if (Header->FileInfoSize % sizeof(uint32_t) != 0)
+    return std::make_error_code(std::errc::illegal_byte_sequence);
+  if (Header->TypeServerSize % sizeof(uint32_t) != 0)
+    return std::make_error_code(std::errc::illegal_byte_sequence);
 
-  ModInfoSubstream.resize(Header->ModiSubstreamSize);
-  if (auto EC =
-          Stream.readBytes(&ModInfoSubstream[0], Header->ModiSubstreamSize))
+  std::error_code EC;
+  if (EC = readSubstream(ModInfoSubstream, Header->ModiSubstreamSize))
+    return EC;
+
+  // Since each ModInfo in the stream is a variable length, we have to iterate
+  // them to know how many there actually are.
+  auto Range = llvm::make_range(ModInfoIterator(&ModInfoSubstream.front()),
+                                ModInfoIterator(&ModInfoSubstream.back() + 1));
+  for (auto Info : Range)
+    ModuleInfos.push_back(ModuleInfoEx(Info));
+
+  if (EC = readSubstream(SecContrSubstream, Header->SecContrSubstreamSize))
+    return EC;
+  if (EC = readSubstream(SecMapSubstream, Header->SectionMapSize))
+    return EC;
+  if (EC = readSubstream(FileInfoSubstream, Header->FileInfoSize))
+    return EC;
+  if (EC = readSubstream(TypeServerMapSubstream, Header->TypeServerSize))
+    return EC;
+  if (EC = readSubstream(ECSubstream, Header->ECSubstreamSize))
+    return EC;
+
+  if (EC = initializeFileInfo())
     return EC;
 
   return std::error_code();
@@ -150,7 +180,90 @@ PDB_Machine PDBDbiStream::getMachineType() const {
   return static_cast<PDB_Machine>(Machine);
 }
 
-llvm::iterator_range<ModInfoIterator> PDBDbiStream::modules() const {
-  return llvm::make_range(ModInfoIterator(&ModInfoSubstream.front()),
-                          ModInfoIterator(&ModInfoSubstream.back() + 1));
+ArrayRef<ModuleInfoEx> PDBDbiStream::modules() const { return ModuleInfos; }
+
+std::error_code PDBDbiStream::readSubstream(std::vector<uint8_t> &Bytes, uint32_t Size) {
+  Bytes.clear();
+  if (Size == 0)
+    return std::error_code();
+
+  Bytes.resize(Size);
+  return Stream.readBytes(&Bytes[0], Size);
+}
+
+std::error_code PDBDbiStream::initializeFileInfo() {
+  struct FileInfoSubstreamHeader {
+    ulittle16_t NumModules;     // Total # of modules, should match number of
+                                // records in the ModuleInfo substream.
+    ulittle16_t NumSourceFiles; // Total # of source files.  This value is not
+                                // accurate because PDB actually supports more
+                                // than 64k source files, so we ignore it and
+                                // compute the value from other stream fields.
+  };
+
+  // The layout of the FileInfoSubstream is like this:
+  // struct {
+  //   ulittle16_t NumModules;
+  //   ulittle16_t NumSourceFiles;
+  //   ulittle16_t ModIndices[NumModules];
+  //   ulittle16_t ModFileCounts[NumModules];
+  //   ulittle32_t FileNameOffsets[NumSourceFiles];
+  //   char Names[][NumSourceFiles];
+  // };
+  // with the caveat that `NumSourceFiles` cannot be trusted, so
+  // it is computed by summing `ModFileCounts`.
+  //
+  const uint8_t *Buf = &FileInfoSubstream[0];
+  auto FI = reinterpret_cast<const FileInfoSubstreamHeader *>(Buf);
+  Buf += sizeof(FileInfoSubstreamHeader);
+  // The number of modules in the stream should be the same as reported by
+  // the FileInfoSubstreamHeader.
+  if (FI->NumModules != ModuleInfos.size())
+    return std::make_error_code(std::errc::illegal_byte_sequence);
+
+  // First is an array of `NumModules` module indices.  This is not used for the
+  // same reason that `NumSourceFiles` is not used.  It's an array of uint16's,
+  // but it's possible there are more than 64k source files, which would imply
+  // more than 64k modules (e.g. object files) as well.  So we ignore this
+  // field.
+  llvm::ArrayRef<ulittle16_t> ModIndexArray(
+      reinterpret_cast<const ulittle16_t *>(Buf), ModuleInfos.size());
+
+  llvm::ArrayRef<ulittle16_t> ModFileCountArray(ModIndexArray.end(),
+                                                ModuleInfos.size());
+
+  // Compute the real number of source files.
+  uint32_t NumSourceFiles = 0;
+  for (auto Count : ModFileCountArray)
+    NumSourceFiles += Count;
+
+  // This is the array that in the reference implementation corresponds to
+  // `ModInfo::FileLayout::FileNameOffs`, which is commented there as being a
+  // pointer. Due to the mentioned problems of pointers causing difficulty
+  // when reading from the file on 64-bit systems, we continue to ignore that
+  // field in `ModInfo`, and instead build a vector of StringRefs and stores
+  // them in `ModuleInfoEx`.  The value written to and read from the file is
+  // not used anyway, it is only there as a way to store the offsets for the
+  // purposes of later accessing the names at runtime.
+  llvm::ArrayRef<little32_t> FileNameOffsets(
+      reinterpret_cast<const little32_t *>(ModFileCountArray.end()),
+      NumSourceFiles);
+
+  const char *Names = reinterpret_cast<const char *>(FileNameOffsets.end());
+
+  // We go through each ModuleInfo, determine the number N of source files for
+  // that module, and then get the next N offsets from the Offsets array, using
+  // them to get the corresponding N names from the Names buffer and associating
+  // each one with the corresponding module.
+  uint32_t NextFileIndex = 0;
+  for (size_t I = 0; I < ModuleInfos.size(); ++I) {
+    uint32_t NumFiles = ModFileCountArray[I];
+    ModuleInfos[I].SourceFiles.resize(NumFiles);
+    for (size_t J = 0; J < NumFiles; ++J, ++NextFileIndex) {
+      uint32_t FileIndex = FileNameOffsets[NextFileIndex];
+      ModuleInfos[I].SourceFiles[J] = StringRef(Names + FileIndex);
+    }
+  }
+
+  return std::error_code();
 }

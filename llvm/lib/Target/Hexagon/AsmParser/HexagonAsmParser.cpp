@@ -1658,6 +1658,19 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     break;
   }
 
+  // Translate a "$Vdd = $Vss" to "$Vdd = vcombine($Vs, $Vt)"
+  case Hexagon::HEXAGON_V6_vassignpair: {
+    MCOperand &MO = Inst.getOperand(1);
+    unsigned int RegPairNum = RI->getEncodingValue(MO.getReg());
+    std::string R1 = v + llvm::utostr(RegPairNum + 1);
+    MO.setReg(MatchRegisterName(R1));
+    // Add a new operand for the second register in the pair.
+    std::string R2 = v + llvm::utostr(RegPairNum);
+    Inst.addOperand(MCOperand::createReg(MatchRegisterName(R2)));
+    Inst.setOpcode(Hexagon::V6_vcombine);
+    break;
+  }
+
   // Translate a "$Rx =  CONST32(#imm)" to "$Rx = memw(gp+#LABEL) "
   case Hexagon::CONST32:
   case Hexagon::CONST32_Float_Real:

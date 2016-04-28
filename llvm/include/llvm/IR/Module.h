@@ -732,6 +732,17 @@ public:
   void setPICLevel(PICLevel::Level PL);
 /// @}
 
+/// @}
+/// @name Utility functions for querying and setting PIE level
+/// @{
+
+  /// \brief Returns the PIE level (small or large model)
+  PIELevel::Level getPIELevel() const;
+
+  /// \brief Set the PIE level (small or large model)
+  void setPIELevel(PIELevel::Level PL);
+/// @}
+
   /// @name Utility functions for querying and setting PGO summary
   /// @{
 

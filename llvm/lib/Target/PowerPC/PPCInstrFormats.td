@@ -376,23 +376,6 @@ class DQ_RD6_RS5_DQ12<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
   let Inst{29-31} = xo;
 }
 
-// DX-Form: [PO RT d1 d0 XO d2]
-class DX_RD5_IM16<bits<6> opcode, bits<5> xo, dag OOL, dag IOL, string asmstr,
-                  InstrItinClass itin, list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin> {
-  bits<5>  RD;
-  bits<16> IMM;
-
-  let Pattern = pattern;
-
-  let Inst{6-10}  = RD;
-  // IMM = d0 || d1 || d2
-  let Inst{11-15} = IMM{5-1};   // d1
-  let Inst{16-25} = IMM{15-6};  // d0
-  let Inst{26-30} = xo;
-  let Inst{31}    = IMM{0};     // d2
-}
-
 // 1.7.6 X-Form
 class XForm_base_r3xo<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr, 
                       InstrItinClass itin, list<dag> pattern>
@@ -780,11 +763,6 @@ class XForm_htm3<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
 }
 
 // [PO RT RA RB XO /]
-class X_RT5_RA5_RB5<bits<10> xo, string opc, RegisterOperand type,
-                    InstrItinClass itin, list<dag> pattern>
-  : XForm_base_r3xo<31, xo, (outs type:$rD), (ins type:$rA, type:$rB),
-                    !strconcat(opc, " $rD, $rA, $rB"), itin, pattern>;
-
 class X_BF3_L1_RS5_RS5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                        string asmstr, InstrItinClass itin, list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, itin> {
@@ -827,57 +805,6 @@ class X_RD5_XO5_RS5<bits<6> opcode, bits<5> xo2, bits<10> xo, dag OOL, dag IOL,
                     string asmstr, InstrItinClass itin, list<dag> pattern>
   : XForm_base_r3xo<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
   let A = xo2;
-}
-
-// [PO RT /// L /// XO /]
-class X_RD5_L2<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
-               InstrItinClass itin, list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin> {
-  bits<5> RD;
-  bits<2> L;
-
-  let Pattern = pattern;
-
-  let Inst{6-10}  = RD;
-  let Inst{11-13} = 0;
-  let Inst{14-15} = L;
-  let Inst{16-20} = 0;
-  let Inst{21-30} = xo;
-  let Inst{31}    = 0;
-}
-
-// [PO RT BFA // /// XO /]
-class X_RD5_BFA3<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
-                 InstrItinClass itin, list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin> {
-  bits<5> RD;
-  bits<3> BFA;
-
-  let Pattern = pattern;
-
-  let Inst{6-10}  = RD;
-  let Inst{11-13} = BFA;
-  let Inst{14-20} = 0;
-  let Inst{21-30} = xo;
-  let Inst{31}    = 0;
-}
-
-// [PO BF / UIM FRB XO /] or [PO BF / UIM FRBp XO /]
-class X_BF3_IM6_RS5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
-                    string asmstr, InstrItinClass itin, list<dag> pattern>
-  : I<opcode, OOL, IOL, asmstr, itin> {
-  bits<3> BF;
-  bits<6> UIM;
-  bits<5> FRB;
-
-  let Pattern = pattern;
-
-  let Inst{6-8}   = BF;
-  let Inst{9}     = 0;
-  let Inst{10-15} = UIM;
-  let Inst{16-20} = FRB;
-  let Inst{21-30} = xo;
-  let Inst{31}    = 0;
 }
 
 class X_BF3_DCMX7_RS5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,

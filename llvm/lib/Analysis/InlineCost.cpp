@@ -122,7 +122,7 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   DenseMap<Value *, int> SROAArgCosts;
 
   // Keep track of values which map to a pointer base and constant offset.
-  DenseMap<Value *, std::pair<Value *, APInt> > ConstantOffsetPtrs;
+  DenseMap<Value *, std::pair<Value *, APInt>> ConstantOffsetPtrs;
 
   // Custom simplification helper routines.
   bool isAllocaDerivedArg(Value *V);
@@ -143,7 +143,7 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   /// attributes since these can be more precise than the ones on the callee
   /// itself.
   bool paramHasAttr(Argument *A, Attribute::AttrKind Attr);
-  
+
   /// Return true if the given value is known non null within the callee if
   /// inlined through this particular callsite.
   bool isKnownNonNullInCallee(Value *V);
@@ -162,9 +162,12 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
 
   // Disable several entry points to the visitor so we don't accidentally use
   // them by declaring but not defining them here.
-  void visit(Module *);     void visit(Module &);
-  void visit(Function *);   void visit(Function &);
-  void visit(BasicBlock *); void visit(BasicBlock &);
+  void visit(Module *);
+  void visit(Module &);
+  void visit(Function *);
+  void visit(Function &);
+  void visit(BasicBlock *);
+  void visit(BasicBlock &);
 
   // Provide base case for our instruction visit.
   bool visitInstruction(Instruction &I);
@@ -198,7 +201,7 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
 public:
   CallAnalyzer(const TargetTransformInfo &TTI, AssumptionCacheTracker *ACT,
                Function &Callee, int Threshold, CallSite CSArg)
-    : TTI(TTI), ACT(ACT), F(Callee), CandidateCS(CSArg), Threshold(Threshold),
+      : TTI(TTI), ACT(ACT), F(Callee), CandidateCS(CSArg), Threshold(Threshold),
         Cost(0), IsCallerRecursive(false), IsRecursiveCall(false),
         ExposesReturnsTwice(false), HasDynamicAlloca(false),
         ContainsNoDuplicateCall(false), HasReturn(false), HasIndirectBr(false),
@@ -307,7 +310,8 @@ bool CallAnalyzer::accumulateGEPOffset(GEPOperator &GEP, APInt &Offset) {
         OpC = dyn_cast<ConstantInt>(SimpleOp);
     if (!OpC)
       return false;
-    if (OpC->isZero()) continue;
+    if (OpC->isZero())
+      continue;
 
     // Handle a struct index, which adds its field offset to the pointer.
     if (StructType *STy = dyn_cast<StructType>(*GTI)) {
@@ -371,8 +375,8 @@ bool CallAnalyzer::visitPHI(PHINode &I) {
 bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
   Value *SROAArg;
   DenseMap<Value *, int>::iterator CostIt;
-  bool SROACandidate = lookupSROAArgAndCost(I.getPointerOperand(),
-                                            SROAArg, CostIt);
+  bool SROACandidate =
+      lookupSROAArgAndCost(I.getPointerOperand(), SROAArg, CostIt);
 
   // Try to fold GEPs of constant-offset call site argument pointers. This
   // requires target data and inbounds GEPs.
@@ -428,8 +432,8 @@ bool CallAnalyzer::visitBitCast(BitCastInst &I) {
     }
 
   // Track base/offsets through casts
-  std::pair<Value *, APInt> BaseAndOffset
-    = ConstantOffsetPtrs.lookup(I.getOperand(0));
+  std::pair<Value *, APInt> BaseAndOffset =
+      ConstantOffsetPtrs.lookup(I.getOperand(0));
   // Casts don't change the offset, just wrap it up.
   if (BaseAndOffset.first)
     ConstantOffsetPtrs[&I] = BaseAndOffset;
@@ -460,8 +464,8 @@ bool CallAnalyzer::visitPtrToInt(PtrToIntInst &I) {
   unsigned IntegerSize = I.getType()->getScalarSizeInBits();
   const DataLayout &DL = F.getParent()->getDataLayout();
   if (IntegerSize >= DL.getPointerSizeInBits()) {
-    std::pair<Value *, APInt> BaseAndOffset
-      = ConstantOffsetPtrs.lookup(I.getOperand(0));
+    std::pair<Value *, APInt> BaseAndOffset =
+        ConstantOffsetPtrs.lookup(I.getOperand(0));
     if (BaseAndOffset.first)
       ConstantOffsetPtrs[&I] = BaseAndOffset;
   }
@@ -550,7 +554,7 @@ bool CallAnalyzer::visitUnaryInstruction(UnaryInstruction &I) {
 
 bool CallAnalyzer::paramHasAttr(Argument *A, Attribute::AttrKind Attr) {
   unsigned ArgNo = A->getArgNo();
-  return CandidateCS.paramHasAttr(ArgNo+1, Attr);
+  return CandidateCS.paramHasAttr(ArgNo + 1, Attr);
 }
 
 bool CallAnalyzer::isKnownNonNullInCallee(Value *V) {
@@ -562,7 +566,7 @@ bool CallAnalyzer::isKnownNonNullInCallee(Value *V) {
   if (Argument *A = dyn_cast<Argument>(V))
     if (paramHasAttr(A, Attribute::NonNull))
       return true;
-  
+
   // Is this an alloca in the caller?  This is distinct from the attribute case
   // above because attributes aren't updated within the inliner itself and we
   // always want to catch the alloca derived case.
@@ -571,7 +575,7 @@ bool CallAnalyzer::isKnownNonNullInCallee(Value *V) {
     // alloca-derived value and null. Note that this fires regardless of
     // SROA firing.
     return true;
-  
+
   return false;
 }
 
@@ -672,7 +676,8 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
       RHS = SimpleRHS;
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
     if (Constant *CRHS = dyn_cast<Constant>(RHS))
-      if (Constant *C = ConstantExpr::getCompare(I.getPredicate(), CLHS, CRHS)) {
+      if (Constant *C =
+              ConstantExpr::getCompare(I.getPredicate(), CLHS, CRHS)) {
         SimplifiedValues[&I] = C;
         return true;
       }
@@ -833,8 +838,8 @@ bool CallAnalyzer::visitInsertValue(InsertValueInst &I) {
   if (!InsertedC)
     InsertedC = SimplifiedValues.lookup(I.getInsertedValueOperand());
   if (AggC && InsertedC) {
-    SimplifiedValues[&I] = ConstantExpr::getInsertValue(AggC, InsertedC,
-                                                        I.getIndices());
+    SimplifiedValues[&I] =
+        ConstantExpr::getInsertValue(AggC, InsertedC, I.getIndices());
     return true;
   }
 
@@ -859,8 +864,8 @@ bool CallAnalyzer::simplifyCallSite(Function *F, CallSite CS) {
   // Try to re-map the arguments to constants.
   SmallVector<Constant *, 4> ConstantArgs;
   ConstantArgs.reserve(CS.arg_size());
-  for (CallSite::arg_iterator I = CS.arg_begin(), E = CS.arg_end();
-       I != E; ++I) {
+  for (CallSite::arg_iterator I = CS.arg_begin(), E = CS.arg_end(); I != E;
+       ++I) {
     Constant *C = dyn_cast<Constant>(*I);
     if (!C)
       C = dyn_cast_or_null<Constant>(SimplifiedValues.lookup(*I));
@@ -884,8 +889,7 @@ bool CallAnalyzer::visitCallSite(CallSite CS) {
     ExposesReturnsTwice = true;
     return false;
   }
-  if (CS.isCall() &&
-      cast<CallInst>(CS.getInstruction())->cannotDuplicate())
+  if (CS.isCall() && cast<CallInst>(CS.getInstruction())->cannotDuplicate())
     ContainsNoDuplicateCall = true;
 
   if (Function *F = CS.getCalledFunction()) {
@@ -1062,7 +1066,6 @@ bool CallAnalyzer::visitInstruction(Instruction &I) {
 
   return false;
 }
-
 
 /// \brief Analyze a basic block for its contribution to the inline cost.
 ///
@@ -1253,8 +1256,8 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
 
   // If there is only one call of the function, and it has internal linkage,
   // the cost of inlining it drops dramatically.
-  bool OnlyOneCallAndLocalLinkage = F.hasLocalLinkage() && F.hasOneUse() &&
-    &F == CS.getCalledFunction();
+  bool OnlyOneCallAndLocalLinkage =
+      F.hasLocalLinkage() && F.hasOneUse() && &F == CS.getCalledFunction();
   if (OnlyOneCallAndLocalLinkage)
     Cost += InlineConstants::LastCallToStaticBonus;
 
@@ -1311,7 +1314,8 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   // the ephemeral values multiple times (and they're completely determined by
   // the callee, so this is purely duplicate work).
   SmallPtrSet<const Value *, 32> EphValues;
-  CodeMetrics::collectEphemeralValues(&F, &ACT->getAssumptionCache(F), EphValues);
+  CodeMetrics::collectEphemeralValues(&F, &ACT->getAssumptionCache(F),
+                                      EphValues);
 
   // The worklist of live basic blocks in the callee *after* inlining. We avoid
   // adding basic blocks of the callee which can be proven to be dead for this
@@ -1321,7 +1325,8 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
   // accomplish this, prioritizing for small iterations because we exit after
   // crossing our threshold, we use a small-size optimized SetVector.
   typedef SetVector<BasicBlock *, SmallVector<BasicBlock *, 16>,
-                                  SmallPtrSet<BasicBlock *, 16> > BBSetVector;
+                    SmallPtrSet<BasicBlock *, 16>>
+      BBSetVector;
   BBSetVector BBWorklist;
   BBWorklist.insert(&F.getEntryBlock());
   // Note that we *must not* cache the size, this loop grows the worklist.
@@ -1356,16 +1361,16 @@ bool CallAnalyzer::analyzeCall(CallSite CS) {
     if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
       if (BI->isConditional()) {
         Value *Cond = BI->getCondition();
-        if (ConstantInt *SimpleCond
-              = dyn_cast_or_null<ConstantInt>(SimplifiedValues.lookup(Cond))) {
+        if (ConstantInt *SimpleCond =
+                dyn_cast_or_null<ConstantInt>(SimplifiedValues.lookup(Cond))) {
           BBWorklist.insert(BI->getSuccessor(SimpleCond->isZero() ? 1 : 0));
           continue;
         }
       }
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
       Value *Cond = SI->getCondition();
-      if (ConstantInt *SimpleCond
-            = dyn_cast_or_null<ConstantInt>(SimplifiedValues.lookup(Cond))) {
+      if (ConstantInt *SimpleCond =
+              dyn_cast_or_null<ConstantInt>(SimplifiedValues.lookup(Cond))) {
         BBWorklist.insert(SI->findCaseValue(SimpleCond).getCaseSuccessor());
         continue;
       }
@@ -1427,7 +1432,7 @@ LLVM_DUMP_METHOD void CallAnalyzer::dump() {
 
 /// \brief Test that two functions either have or have not the given attribute
 ///        at the same time.
-template<typename AttrKind>
+template <typename AttrKind>
 static bool attributeMatches(Function *F1, Function *F2, AttrKind Attr) {
   return F1->getFnAttribute(Attr) == F2->getFnAttribute(Attr);
 }
@@ -1491,12 +1496,12 @@ InlineCost llvm::getInlineCost(CallSite CS, Function *Callee,
   // functions marked noinline or call sites marked noinline.
   // Note: inlining non-exact non-interposable fucntions is fine, since we know
   // we have *a* correct implementation of the source level function.
-  if (Callee->isInterposable() ||
-      Callee->hasFnAttribute(Attribute::NoInline) || CS.isNoInline())
+  if (Callee->isInterposable() || Callee->hasFnAttribute(Attribute::NoInline) ||
+      CS.isNoInline())
     return llvm::InlineCost::getNever();
 
   DEBUG(llvm::dbgs() << "      Analyzing call of " << Callee->getName()
-        << "...\n");
+                     << "...\n");
 
   CallAnalyzer CA(CalleeTTI, ACT, *Callee, DefaultThreshold, CS);
   bool ShouldInline = CA.analyzeCall(CS);

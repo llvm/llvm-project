@@ -5,14 +5,12 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ;
 ; DemandedBits - MOVMSK zeros the upper bits of the result.
-; TODO - we can get the and for free
 ;
 
 define i32 @test_upper_x86_sse_movmsk_ps(<4 x float> %a0) {
 ; CHECK-LABEL: @test_upper_x86_sse_movmsk_ps(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %a0)
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 15
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %a0)
   %2 = and i32 %1, 15
@@ -22,8 +20,7 @@ define i32 @test_upper_x86_sse_movmsk_ps(<4 x float> %a0) {
 define i32 @test_upper_x86_sse2_movmsk_pd(<2 x double> %a0) {
 ; CHECK-LABEL: @test_upper_x86_sse2_movmsk_pd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse2.movmsk.pd(<2 x double> %a0)
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 3
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.x86.sse2.movmsk.pd(<2 x double> %a0)
   %2 = and i32 %1, 3
@@ -33,8 +30,7 @@ define i32 @test_upper_x86_sse2_movmsk_pd(<2 x double> %a0) {
 define i32 @test_upper_x86_sse2_pmovmskb_128(<16 x i8> %a0) {
 ; CHECK-LABEL: @test_upper_x86_sse2_pmovmskb_128(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %a0)
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 65535
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %a0)
   %2 = and i32 %1, 65535
@@ -44,8 +40,7 @@ define i32 @test_upper_x86_sse2_pmovmskb_128(<16 x i8> %a0) {
 define i32 @test_upper_x86_avx_movmsk_ps_256(<8 x float> %a0) {
 ; CHECK-LABEL: @test_upper_x86_avx_movmsk_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %a0)
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 255
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %a0)
   %2 = and i32 %1, 255
@@ -55,8 +50,7 @@ define i32 @test_upper_x86_avx_movmsk_ps_256(<8 x float> %a0) {
 define i32 @test_upper_x86_avx_movmsk_pd_256(<4 x double> %a0) {
 ; CHECK-LABEL: @test_upper_x86_avx_movmsk_pd_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %a0)
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 15
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %a0)
   %2 = and i32 %1, 15
@@ -67,14 +61,11 @@ define i32 @test_upper_x86_avx_movmsk_pd_256(<4 x double> %a0) {
 
 ;
 ; DemandedBits - If we don't use the lower bits then we just return zero.
-; TODO - just return zero
 ;
 
 define i32 @test_lower_x86_sse_movmsk_ps(<4 x float> %a0) {
 ; CHECK-LABEL: @test_lower_x86_sse_movmsk_ps(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %a0)
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -16
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %a0)
   %2 = and i32 %1, -16
@@ -83,9 +74,7 @@ define i32 @test_lower_x86_sse_movmsk_ps(<4 x float> %a0) {
 
 define i32 @test_lower_x86_sse2_movmsk_pd(<2 x double> %a0) {
 ; CHECK-LABEL: @test_lower_x86_sse2_movmsk_pd(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse2.movmsk.pd(<2 x double> %a0)
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -4
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = call i32 @llvm.x86.sse2.movmsk.pd(<2 x double> %a0)
   %2 = and i32 %1, -4
@@ -94,9 +83,7 @@ define i32 @test_lower_x86_sse2_movmsk_pd(<2 x double> %a0) {
 
 define i32 @test_lower_x86_sse2_pmovmskb_128(<16 x i8> %a0) {
 ; CHECK-LABEL: @test_lower_x86_sse2_pmovmskb_128(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %a0)
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -65536
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %a0)
   %2 = and i32 %1, -65536
@@ -105,9 +92,7 @@ define i32 @test_lower_x86_sse2_pmovmskb_128(<16 x i8> %a0) {
 
 define i32 @test_lower_x86_avx_movmsk_ps_256(<8 x float> %a0) {
 ; CHECK-LABEL: @test_lower_x86_avx_movmsk_ps_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %a0)
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -256
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %a0)
   %2 = and i32 %1, -256
@@ -116,9 +101,7 @@ define i32 @test_lower_x86_avx_movmsk_ps_256(<8 x float> %a0) {
 
 define i32 @test_lower_x86_avx_movmsk_pd_256(<4 x double> %a0) {
 ; CHECK-LABEL: @test_lower_x86_avx_movmsk_pd_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %a0)
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], -16
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %a0)
   %2 = and i32 %1, -16

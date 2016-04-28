@@ -68,6 +68,7 @@
 // definitions, which would require multiple phis, and multiple memoryaccesses
 // per instruction.
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_TRANSFORMS_UTILS_MEMORYSSA_H
 #define LLVM_TRANSFORMS_UTILS_MEMORYSSA_H
 
@@ -75,24 +76,41 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/PHITransAddr.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/PassAnalysisSupport.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <iterator>
+#include <memory>
+#include <utility>
 
 namespace llvm {
-class BasicBlock;
+
 class DominatorTree;
 class Function;
+class Instruction;
 class MemoryAccess;
+class LLVMContext;
+class raw_ostream;
+
 template <class T> class memoryaccess_def_iterator_base;
 using memoryaccess_def_iterator = memoryaccess_def_iterator_base<MemoryAccess>;
 using const_memoryaccess_def_iterator =
@@ -113,7 +131,8 @@ public:
     return ID == MemoryUseVal || ID == MemoryPhiVal || ID == MemoryDefVal;
   }
 
-  virtual ~MemoryAccess();
+  ~MemoryAccess() override;
+
   BasicBlock *getBlock() const { return Block; }
 
   virtual void print(raw_ostream &OS) const = 0;
@@ -214,6 +233,7 @@ protected:
 private:
   Instruction *MemoryInst;
 };
+
 template <>
 struct OperandTraits<MemoryUseOrDef>
     : public FixedNumOperandTraits<MemoryUseOrDef, 1> {};
@@ -250,6 +270,7 @@ protected:
     llvm_unreachable("MemoryUses do not have IDs");
   }
 };
+
 template <>
 struct OperandTraits<MemoryUse> : public FixedNumOperandTraits<MemoryUse, 1> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryUse, MemoryAccess)
@@ -293,6 +314,7 @@ protected:
 private:
   const unsigned ID;
 };
+
 template <>
 struct OperandTraits<MemoryDef> : public FixedNumOperandTraits<MemoryDef, 1> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryDef, MemoryAccess)
@@ -447,7 +469,7 @@ protected:
 
   /// For debugging only. This gets used to give memory accesses pretty numbers
   /// when printing them out
-  virtual unsigned getID() const final { return ID; }
+  unsigned getID() const final { return ID; }
 
 private:
   // For debugging only
@@ -463,8 +485,8 @@ private:
     growHungoffUses(ReservedSpace, /* IsPhi */ true);
   }
 };
-template <> struct OperandTraits<MemoryPhi> : public HungoffOperandTraits<2> {};
 
+template <> struct OperandTraits<MemoryPhi> : public HungoffOperandTraits<2> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryPhi, MemoryAccess)
 
 class MemorySSAWalker;
@@ -674,6 +696,7 @@ public:
   /// starting from the use side of  the memory def.
   virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                                   MemoryLocation &) = 0;
+
   /// \brief Given a memory access, invalidate anything this walker knows about
   /// that access.
   /// This API is used by walkers that store information to perform basic cache
@@ -733,7 +756,8 @@ using ConstMemoryAccessPair = std::pair<const MemoryAccess *, MemoryLocation>;
 class CachingMemorySSAWalker final : public MemorySSAWalker {
 public:
   CachingMemorySSAWalker(MemorySSA *, AliasAnalysis *, DominatorTree *);
-  virtual ~CachingMemorySSAWalker();
+  ~CachingMemorySSAWalker() override;
+
   MemoryAccess *getClobberingMemoryAccess(const Instruction *) override;
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                           MemoryLocation &) override;
@@ -821,6 +845,7 @@ private:
 inline memoryaccess_def_iterator MemoryAccess::defs_begin() {
   return memoryaccess_def_iterator(this);
 }
+
 inline const_memoryaccess_def_iterator MemoryAccess::defs_begin() const {
   return const_memoryaccess_def_iterator(this);
 }
@@ -940,7 +965,9 @@ private:
 inline upward_defs_iterator upward_defs_begin(const MemoryAccessPair &Pair) {
   return upward_defs_iterator(Pair);
 }
-inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }
-}
 
-#endif
+inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }
+
+} // end namespace llvm
+
+#endif // LLVM_TRANSFORMS_UTILS_MEMORYSSA_H

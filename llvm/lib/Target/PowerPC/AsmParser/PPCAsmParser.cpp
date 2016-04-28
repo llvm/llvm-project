@@ -528,10 +528,6 @@ public:
                                  (Kind == Immediate && isInt<16>(getImm()) &&
                                   (getImm() & 3) == 0); }
   bool isRegNumber() const { return Kind == Immediate && isUInt<5>(getImm()); }
-  bool isD8RCRegNumber() const { return Kind == Immediate &&
-                                        isUInt<5>(getImm()) &&
-                                        // required even register id
-                                        !(getImm() & 0x1); }
   bool isVSRegNumber() const { return Kind == Immediate && isUInt<6>(getImm()); }
   bool isCCRegNumber() const { return (Kind == Expression
                                        && isUInt<3>(getExprCRVal())) ||
@@ -590,11 +586,6 @@ public:
   }
 
   void addRegF8RCOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createReg(FRegs[getReg()]));
-  }
-
-  void addRegD8RCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(FRegs[getReg()]));
   }
@@ -1226,19 +1217,6 @@ void PPCAsmParser::ProcessInstruction(MCInst &Inst,
     TmpInst.addOperand(Inst.getOperand(1));
     TmpInst.addOperand(MCOperand::createImm(Opcode == PPC::CP_PASTEx ? 0 : 1));
 
-    Inst = TmpInst;
-    break;
-  }
-  // ISA3.0 Instructions:
-  case PPC::SUBPCIS:
-  case PPC::LNIA: {
-    MCInst TmpInst;
-    TmpInst.setOpcode(PPC::ADDPCIS);
-    TmpInst.addOperand(Inst.getOperand(0));
-    if (Opcode == PPC::SUBPCIS)
-      addNegOperand(TmpInst, Inst.getOperand(1), getContext());
-    else
-      TmpInst.addOperand(MCOperand::createImm(0));
     Inst = TmpInst;
     break;
   }

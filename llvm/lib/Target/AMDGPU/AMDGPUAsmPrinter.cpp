@@ -504,6 +504,11 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     Ctx.emitError("too many user SGPRs used");
   }
 
+  if (MFI->LDSSize > static_cast<unsigned>(STM.getLocalMemorySize())) {
+    LLVMContext &Ctx = MF.getFunction()->getContext();
+    Ctx.emitError("LDS size exceeds device maximum");
+  }
+
   ProgInfo.VGPRBlocks = (ProgInfo.NumVGPR - 1) / 4;
   ProgInfo.SGPRBlocks = (ProgInfo.NumSGPR - 1) / 8;
   // Set the value to initialize FP_ROUND and FP_DENORM parts of the mode

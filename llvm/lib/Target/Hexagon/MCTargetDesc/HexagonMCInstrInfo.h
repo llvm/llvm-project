@@ -290,6 +290,8 @@ void setOuterLoop(MCInst &MCI);
 
 // Would duplexing this instruction create a requirement to extend
 bool subInstWouldBeExtended(MCInst const &potentialDuplex);
+unsigned SubregisterBit(unsigned Consumer, unsigned Producer,
+                        unsigned Producer2);
 
 // Attempt to find and replace compound pairs
 void tryCompound(MCInstrInfo const &MCII, MCContext &Context, MCInst &MCI);

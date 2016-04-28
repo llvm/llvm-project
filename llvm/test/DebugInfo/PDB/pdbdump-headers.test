@@ -41,6 +41,8 @@
 ; CHECK-NEXT:     Symbol Byte Size: 208
 ; CHECK-NEXT:     Type Server Index: 0
 ; CHECK-NEXT:     Has EC Info: 0
+; CHECK-NEXT:     1 Contributing Source Files:
+; CHECK-NEXT:         d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
 ; CHECK-NEXT: * Linker *
 ; CHECK-NEXT:     Debug Stream Index: 14
 ; CHECK-NEXT:     Object File:
@@ -52,3 +54,4 @@
 ; CHECK-NEXT:     Symbol Byte Size: 516
 ; CHECK-NEXT:     Type Server Index: 0
 ; CHECK-NEXT:     Has EC Info: 0
+; CHECK-NEXT:     0 Contributing Source Files:

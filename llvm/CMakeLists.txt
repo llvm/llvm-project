@@ -56,6 +56,21 @@ project(LLVM
   ${cmake_3_0_LANGUAGES}
   C CXX ASM)
 
+if(APPLE)
+  if(NOT CMAKE_LIBTOOL)
+    find_program(CMAKE_LIBTOOL NAMES libtool)
+  endif()
+  if(CMAKE_LIBTOOL)
+    set(CMAKE_LIBTOOL ${CMAKE_LIBTOOL} CACHE PATH "libtool executable")
+    message(STATUS "Found libtool - ${CMAKE_LIBTOOL}")
+    get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+    foreach(lang ${languages})
+      set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
+        "${CMAKE_LIBTOOL} -static -o <TARGET> <LINK_FLAGS> <OBJECTS> ")
+    endforeach()
+  endif()
+endif()
+
 # The following only works with the Ninja generator in CMake >= 3.0.
 set(LLVM_PARALLEL_COMPILE_JOBS "" CACHE STRING
   "Define the maximum number of concurrent compilation jobs.")

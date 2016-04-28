@@ -70,6 +70,7 @@ public:
   unsigned GetZeroReg() const;
   unsigned GetPtrAdduOp() const;
   unsigned GetPtrAddiuOp() const;
+  unsigned GetPtrAndOp() const;
   unsigned GetGPRMoveOp() const;
   inline bool ArePtrs64bit() const { return IsN64(); }
   inline bool AreGprs64bit() const { return IsN32() || IsN64(); }

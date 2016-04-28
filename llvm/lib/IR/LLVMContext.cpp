@@ -13,16 +13,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "LLVMContextImpl.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/SourceMgr.h"
-#include <cctype>
+#include "llvm/IR/Module.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdlib>
+#include <string>
+#include <utility>
+
 using namespace llvm;
 
 LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
@@ -142,6 +149,7 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
          "gc-transition operand bundle id drifted!");
   (void)GCTransitionEntry;
 }
+
 LLVMContext::~LLVMContext() { delete pImpl; }
 
 void LLVMContext::addModule(Module *M) {
@@ -300,9 +308,11 @@ void LLVMContext::setGC(const Function &Fn, std::string GCName) {
   }
   It->second = std::move(GCName);
 }
+
 const std::string &LLVMContext::getGC(const Function &Fn) {
   return pImpl->GCNames[&Fn];
 }
+
 void LLVMContext::deleteGC(const Function &Fn) {
   pImpl->GCNames.erase(&Fn);
 }

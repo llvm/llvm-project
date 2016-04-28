@@ -1279,63 +1279,6 @@ def : Pat<(atomic_store_64 xaddr:$ptr,  i64:$val), (STDX g8rc:$val, memrr:$ptr)>
 
 let Predicates = [IsISA3_0] in {
 
-// [PO RT RA RB RC XO]
-class VA_RT5_RA5_RB5_RC5<bits<6> xo, string opc, InstrItinClass itin,
-                         list<dag> pattern>
-  : VAForm_1a<xo, (outs g8rc:$rD), (ins g8rc:$rA, g8rc:$rB, g8rc:$rC),
-              !strconcat(opc, " $rD, $rA, $rB, $rC"), itin, pattern>;
-
-// 64-bit Fixed-Point Multiply-Add High-DWord/High-DWord-Unsigned/Low-DWord
-def MADDHD  : VA_RT5_RA5_RB5_RC5<48, "maddhd" , IIC_IntGeneral, []>;
-def MADDHDU : VA_RT5_RA5_RB5_RC5<49, "maddhdu", IIC_IntGeneral, []>;
-def MADDLD  : VA_RT5_RA5_RB5_RC5<51, "maddld ", IIC_IntGeneral, []>;
-
-let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
-// Add PC Immediate Shifted
-def ADDPCIS8 : DX_RD5_IM16<19, 2, (outs g8rc:$rD), (ins s16imm:$IMM),
-                           "addpcis $rD, $IMM", IIC_IntSimple, []>;
-
-// Modulo {Signed/Unsigned}-Word
-def MODSW8 : X_RT5_RA5_RB5<779, "modsw", g8rc, IIC_IntDivW, []>;
-def MODUW8 : X_RT5_RA5_RB5<267, "moduw", g8rc, IIC_IntDivW, []>;
-}
-
-// Modulo {Signed/Unsigned}-DWord
-def MODSD  : X_RT5_RA5_RB5<777, "modsd", g8rc, IIC_IntDivW, []>;
-def MODUD  : X_RT5_RA5_RB5<265, "modud", g8rc, IIC_IntDivW, []>;
-
-// [PO RS RA sh XO sh Rc]
-multiclass XS_RS5_RA5_SH5r<bits<6> opcode, bits<9> xo, string opc,
-                           InstrItinClass itin, list<dag> pattern> {
-  let BaseName = opc in {
-    def NAME : XSForm_1<opcode, xo, (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH),
-                        !strconcat(opc, " $rA, $rS, $SH"), itin, pattern>;
-    let Defs = [CR0] in
-    def o    : XSForm_1<opcode, xo, (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH),
-                        !strconcat(opc, ". $rA, $rS, $SH"), itin, pattern>,
-               isDOT;
-  }
-}
-
-// Deliver A Random Number
-def DARN : X_RD5_L2<31, 755, (outs g8rc:$rD), (ins u2imm:$L), "darn $rD, $L",
-                    IIC_IntGeneral, []>;
-
-// Extend-Sign Word and Shift Left Immediate
-defm EXTSWSLI  : XS_RS5_RA5_SH5r<31, 445, "extswsli" , IIC_IntShift, []>;
-
-// Set Boolean
-def SETB : X_RD5_BFA3<31, 128, (outs g8rc:$rD), (ins u3imm:$BFA),
-                      "setb $rD, $BFA", IIC_IntGeneral, []>;
-
-// DFP Test Significance Immediate [Quad]
-def DTSTSFI  : X_BF3_IM6_RS5<59, 675,
-                             (outs crbitrc:$BF), (ins u6imm:$UIM, f8rc:$FRB),
-                             "dtstsfi $BF, $UIM, $FRB", IIC_FPGeneral, []>;
-def DTSTSFIQ : X_BF3_IM6_RS5<63,  675,
-                             (outs crbitrc:$BF), (ins u6imm:$UIM, d8rc:$FRBp),
-                             "dtstsfiq $BF, $UIM, $FRBp", IIC_FPGeneral, []>;
-
 class X_L1_RA5_RB5<bits<6> opcode, bits<10> xo, string opc, RegisterOperand ty,
                    InstrItinClass itin, list<dag> pattern>
   : X_L1_RS5_RS5<opcode, xo, (outs), (ins ty:$rA, ty:$rB, u1imm:$L),

@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 
 #include <stdint.h>
+#include <vector>
 
 namespace llvm {
 class PDBFile;
@@ -40,6 +41,13 @@ public:
 
 private:
   const FileLayout *Layout;
+};
+
+struct ModuleInfoEx {
+  ModuleInfoEx(ModInfo Module) : Info(Module) {}
+
+  ModInfo Info;
+  std::vector<StringRef> SourceFiles;
 };
 
 class ModInfoIterator {

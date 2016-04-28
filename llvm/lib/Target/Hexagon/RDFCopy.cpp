@@ -218,7 +218,12 @@ bool CopyPropagation::run() {
         Op.setReg(SR.Reg);
         Op.setSubReg(SR.Sub);
         DFG.unlinkUse(UA, false);
-        UA.Addr->linkToDef(UA.Id, DFG.addr<DefNode*>(RDefSR_SA));
+        if (RDefSR_SA != 0) {
+          UA.Addr->linkToDef(UA.Id, DFG.addr<DefNode*>(RDefSR_SA));
+        } else {
+          UA.Addr->setReachingDef(0);
+          UA.Addr->setSibling(0);
+        }
 
         Changed = true;
   #ifndef NDEBUG

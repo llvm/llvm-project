@@ -281,25 +281,30 @@ static void dumpStructure(RawSession &RS) {
          << Minor << "." << DbiStream.getPdbDllVersion() << '\n';
 
   outs() << "Modules: \n";
-  for (auto Modi : DbiStream.modules()) {
-    outs() << Modi.getModuleName() << '\n';
-    outs().indent(4) << "Debug Stream Index: " << Modi.getModuleStreamIndex()
-                     << '\n';
-    outs().indent(4) << "Object File: " << Modi.getObjFileName() << '\n';
-    outs().indent(4) << "Num Files: " << Modi.getNumberOfFiles() << '\n';
+  for (auto &Modi : DbiStream.modules()) {
+    outs() << Modi.Info.getModuleName() << '\n';
+    outs().indent(4) << "Debug Stream Index: "
+                     << Modi.Info.getModuleStreamIndex() << '\n';
+    outs().indent(4) << "Object File: " << Modi.Info.getObjFileName() << '\n';
+    outs().indent(4) << "Num Files: " << Modi.Info.getNumberOfFiles() << '\n';
     outs().indent(4) << "Source File Name Idx: "
-                     << Modi.getSourceFileNameIndex() << '\n';
-    outs().indent(4) << "Pdb File Name Idx: " << Modi.getPdbFilePathNameIndex()
-                     << '\n';
-    outs().indent(4) << "Line Info Byte Size: " << Modi.getLineInfoByteSize()
-                     << '\n';
+                     << Modi.Info.getSourceFileNameIndex() << '\n';
+    outs().indent(4) << "Pdb File Name Idx: "
+                     << Modi.Info.getPdbFilePathNameIndex() << '\n';
+    outs().indent(4) << "Line Info Byte Size: "
+                     << Modi.Info.getLineInfoByteSize() << '\n';
     outs().indent(4) << "C13 Line Info Byte Size: "
-                     << Modi.getC13LineInfoByteSize() << '\n';
+                     << Modi.Info.getC13LineInfoByteSize() << '\n';
     outs().indent(4) << "Symbol Byte Size: "
-                     << Modi.getSymbolDebugInfoByteSize() << '\n';
-    outs().indent(4) << "Type Server Index: " << Modi.getTypeServerIndex()
+                     << Modi.Info.getSymbolDebugInfoByteSize() << '\n';
+    outs().indent(4) << "Type Server Index: " << Modi.Info.getTypeServerIndex()
                      << '\n';
-    outs().indent(4) << "Has EC Info: " << Modi.hasECInfo() << '\n';
+    outs().indent(4) << "Has EC Info: " << Modi.Info.hasECInfo() << '\n';
+    outs().indent(4) << Modi.SourceFiles.size()
+                     << " Contributing Source Files: \n";
+    for (auto File : Modi.SourceFiles) {
+      outs().indent(8) << File << '\n';
+    }
   }
 }
 

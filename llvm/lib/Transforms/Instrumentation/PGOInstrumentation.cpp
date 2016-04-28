@@ -103,12 +103,11 @@ static cl::opt<bool> DisableValueProfiling("disable-vp", cl::init(false),
                                            cl::desc("Disable Value Profiling"));
 
 // Command line option to set the maximum number of VP annotations to write to
-// the metada for a single indirect call callsite.
-static cl::opt<unsigned>
-    MaxNumAnnotations("icp-max-annotations", cl::init(3), cl::Hidden,
-                     cl::ZeroOrMore,
-                     cl::desc("Max number of annotations for a single indirect "
-                              "call callsite"));
+// the metadata for a single indirect call callsite.
+static cl::opt<unsigned> MaxNumAnnotations(
+    "icp-max-annotations", cl::init(3), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("Max number of annotations for a single indirect "
+             "call callsite"));
 
 namespace {
 class PGOInstrumentationGen : public ModulePass {
@@ -463,10 +462,8 @@ public:
   // The hotness of the function from the profile count.
   enum FuncFreqAttr { FFA_Normal, FFA_Cold, FFA_Hot };
 
-  // Return the funtion hotness from the profile.
-  FuncFreqAttr getFuncFreqAttr() const {
-    return FreqAttr;
-  }
+  // Return the function hotness from the profile.
+  FuncFreqAttr getFuncFreqAttr() const { return FreqAttr; }
 
 private:
   Function &F;

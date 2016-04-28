@@ -88,6 +88,19 @@ void HexagonMCCodeEmitter::encodeInstruction(MCInst const &MI, raw_ostream &OS,
   return;
 }
 
+static bool RegisterMatches(unsigned Consumer, unsigned Producer,
+                            unsigned Producer2) {
+  if (Consumer == Producer)
+    return true;
+  if (Consumer == Producer2)
+    return true;
+  // Calculate if we're a single vector consumer referencing a double producer
+  if (Producer >= Hexagon::W0 && Producer <= Hexagon::W15)
+    if (Consumer >= Hexagon::V0 && Consumer <= Hexagon::V31)
+      return ((Consumer - Hexagon::V0) >> 1) == (Producer - Hexagon::W0);
+  return false;
+}
+
 /// EncodeSingleInstruction - Emit a single
 void HexagonMCCodeEmitter::EncodeSingleInstruction(
     const MCInst &MI, raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
@@ -125,8 +138,10 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
     MCOperand &MCO =
         HMB.getOperand(HexagonMCInstrInfo::getNewValueOp(MCII, HMB));
     unsigned SOffset = 0;
+    unsigned VOffset = 0;
     unsigned Register = MCO.getReg();
     unsigned Register1;
+    unsigned Register2;
     auto Instructions = HexagonMCInstrInfo::bundleInstructions(**CurrentBundle);
     auto i = Instructions.begin() + Index - 1;
     for (;; --i) {
@@ -135,11 +150,18 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
       if (HexagonMCInstrInfo::isImmext(Inst))
         continue;
       ++SOffset;
+      if (HexagonMCInstrInfo::isVector(MCII, Inst))
+        // Vector instructions don't count scalars
+        ++VOffset;
       Register1 =
           HexagonMCInstrInfo::hasNewValue(MCII, Inst)
               ? HexagonMCInstrInfo::getNewValueOperand(MCII, Inst).getReg()
               : static_cast<unsigned>(Hexagon::NoRegister);
-      if (Register != Register1)
+      Register2 =
+          HexagonMCInstrInfo::hasNewValue2(MCII, Inst)
+              ? HexagonMCInstrInfo::getNewValueOperand2(MCII, Inst).getReg()
+              : static_cast<unsigned>(Hexagon::NoRegister);
+      if (!RegisterMatches(Register, Register1, Register2))
         // This isn't the register we're looking for
         continue;
       if (!HexagonMCInstrInfo::isPredicated(MCII, Inst))
@@ -153,8 +175,11 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
         break;
     }
     // Hexagon PRM 10.11 Construct Nt from distance
-    unsigned Offset = SOffset;
+    unsigned Offset =
+        HexagonMCInstrInfo::isVector(MCII, HMB) ? VOffset : SOffset;
     Offset <<= 1;
+    Offset |=
+        HexagonMCInstrInfo::SubregisterBit(Register, Register1, Register2);
     MCO.setReg(Offset + Hexagon::R0);
   }
 
@@ -165,7 +190,6 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
       ((HMB.getOpcode() != DuplexIClass0) && (HMB.getOpcode() != A4_ext) &&
        (HMB.getOpcode() != A4_ext_b) && (HMB.getOpcode() != A4_ext_c) &&
        (HMB.getOpcode() != A4_ext_g))) {
-    // Use a A2_nop for unimplemented instructions.
     DEBUG(dbgs() << "Unimplemented inst: "
                     " `" << HexagonMCInstrInfo::getName(MCII, HMB) << "'"
                                                                       "\n");

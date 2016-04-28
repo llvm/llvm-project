@@ -76,12 +76,11 @@ private:
 
     uint32_t nextValueNumber;
 
-    Expression create_expression(Instruction *I);
-    Expression create_cmp_expression(unsigned Opcode,
-                                     CmpInst::Predicate Predicate, Value *LHS,
-                                     Value *RHS);
-    Expression create_extractvalue_expression(ExtractValueInst *EI);
-    uint32_t lookup_or_add_call(CallInst *C);
+    Expression createExpr(Instruction *I);
+    Expression createCmpExpr(unsigned Opcode, CmpInst::Predicate Predicate,
+                             Value *LHS, Value *RHS);
+    Expression createExtractvalueExpr(ExtractValueInst *EI);
+    uint32_t lookupOrAddCall(CallInst *C);
 
   public:
     ValueTable();
@@ -89,10 +88,10 @@ private:
     ValueTable(ValueTable &&Arg);
     ~ValueTable();
 
-    uint32_t lookup_or_add(Value *V);
+    uint32_t lookupOrAdd(Value *V);
     uint32_t lookup(Value *V) const;
-    uint32_t lookup_or_add_cmp(unsigned Opcode, CmpInst::Predicate Pred,
-                               Value *LHS, Value *RHS);
+    uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
+                            Value *LHS, Value *RHS);
     bool exists(Value *V) const;
     void add(Value *V, uint32_t num);
     void clear();

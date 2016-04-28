@@ -118,6 +118,10 @@ unsigned MipsABIInfo::GetPtrAddiuOp() const {
   return ArePtrs64bit() ? Mips::DADDiu : Mips::ADDiu;
 }
 
+unsigned MipsABIInfo::GetPtrAndOp() const {
+  return ArePtrs64bit() ? Mips::AND64 : Mips::AND;
+}
+
 unsigned MipsABIInfo::GetGPRMoveOp() const {
   return ArePtrs64bit() ? Mips::OR64 : Mips::OR;
 }

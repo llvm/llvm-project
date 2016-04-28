@@ -788,4 +788,17 @@ void HexagonMCInstrInfo::setOuterLoop(MCInst &MCI) {
   MCOperand &Operand = MCI.getOperand(0);
   Operand.setImm(Operand.getImm() | outerLoopMask);
 }
+
+unsigned HexagonMCInstrInfo::SubregisterBit(unsigned Consumer,
+                                            unsigned Producer,
+                                            unsigned Producer2) {
+  // If we're a single vector consumer of a double producer, set subreg bit
+  // based on if we're accessing the lower or upper register component
+  if (Producer >= Hexagon::W0 && Producer <= Hexagon::W15)
+    if (Consumer >= Hexagon::V0 && Consumer <= Hexagon::V31)
+      return (Consumer - Hexagon::V0) & 0x1;
+  if (Consumer == Producer2)
+    return 0x1;
+  return 0;
+}
 }
