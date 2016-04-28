@@ -401,6 +401,7 @@ bool CodeGenFunction::ShouldInstrumentFunction() {
 /// instrumentation function with the current function and the call site, if
 /// function instrumentation is enabled.
 void CodeGenFunction::EmitFunctionInstrumentation(const char *Fn) {
+  auto NL = ApplyDebugLocation::CreateArtificial(*this);
   // void __cyg_profile_func_{enter,exit} (void *this_fn, void *call_site);
   llvm::PointerType *PointerTy = Int8PtrTy;
   llvm::Type *ProfileFuncArgs[] = { PointerTy, PointerTy };
