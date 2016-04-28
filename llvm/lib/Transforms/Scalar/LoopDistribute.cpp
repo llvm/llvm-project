@@ -602,19 +602,19 @@ public:
 
     BasicBlock *PH = L->getLoopPreheader();
     if (!PH)
-      return fail("Skipping; no preheader");
+      return fail("no preheader");
     if (!L->getExitBlock())
-      return fail("Skipping; multiple exit blocks");
+      return fail("multiple exit blocks");
     // LAA will check that we only have a single exiting block.
 
     // Currently, we only distribute to isolate the part of the loop with
     // dependence cycles to enable partial vectorization.
     if (LAI.canVectorizeMemory())
-      return fail("Skipping; memory operations are safe for vectorization");
+      return fail("memory operations are safe for vectorization");
 
     auto *Dependences = LAI.getDepChecker().getDependences();
     if (!Dependences || Dependences->empty())
-      return fail("Skipping; No unsafe dependences to isolate");
+      return fail("no unsafe dependences to isolate");
 
     InstPartitionContainer Partitions(L, LI, DT);
 
@@ -694,7 +694,7 @@ public:
     if (Pred.getComplexity() > (IsForced.getValueOr(false)
                                     ? PragmaDistributeSCEVCheckThreshold
                                     : DistributeSCEVCheckThreshold))
-      return fail("Too many SCEV run-time checks needed.\n");
+      return fail("too many SCEV run-time checks needed.\n");
 
     DEBUG(dbgs() << "\nDistributing loop: " << *L << "\n");
     // We're done forming the partitions set up the reverse mapping from
@@ -745,7 +745,7 @@ public:
 
   /// \brief Provide diagnostics then \return with false.
   bool fail(llvm::StringRef Message) {
-    DEBUG(dbgs() << Message << "\n");
+    DEBUG(dbgs() << "Skipping; " << Message << "\n");
     return false;
   }
 
