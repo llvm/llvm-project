@@ -12,9 +12,11 @@
 
 // C Includes
 // C++ Includes
+#include <set>
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/BreakpointResolver.h"
+#include "lldb/Core/ConstString.h"
 
 namespace lldb_private {
 
@@ -30,6 +32,7 @@ class BreakpointResolverFileRegex :
 public:
     BreakpointResolverFileRegex (Breakpoint *bkpt,
                                  RegularExpression &regex,
+                                 const std::unordered_set<std::string> &func_name_set,
                                  bool exact_match);
 
     ~BreakpointResolverFileRegex() override;
@@ -48,6 +51,9 @@ public:
 
     void
     Dump (Stream *s) const override;
+    
+    void
+    AddFunctionName(const char *func_name);
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
     static inline bool classof(const BreakpointResolverFileRegex *) { return true; }
@@ -61,7 +67,8 @@ public:
 protected:
     friend class Breakpoint;
     RegularExpression m_regex; // This is the line expression that we are looking for.
-    bool m_exact_match;
+    bool m_exact_match;        // If true, then if the source we match is in a comment, we won't set a location there.
+    std::unordered_set<std::string> m_function_names; // Limit the search to functions in the comp_unit passed in.
 
 private:
     DISALLOW_COPY_AND_ASSIGN(BreakpointResolverFileRegex);

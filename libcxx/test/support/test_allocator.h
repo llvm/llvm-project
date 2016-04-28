@@ -76,7 +76,7 @@ public:
             ++alloc_count;
             return (pointer)::operator new(n * sizeof(T));
         }
-    void deallocate(pointer p, size_type n)
+    void deallocate(pointer p, size_type)
         {assert(data_ >= 0); --alloc_count; ::operator delete((void*)p);}
     size_type max_size() const throw()
         {return UINT_MAX / sizeof(T);}
@@ -136,7 +136,7 @@ public:
             ++alloc_count;
             return (pointer)::operator new (n * sizeof(T));
         }
-    void deallocate(pointer p, size_type n)
+    void deallocate(pointer p, size_type)
         {assert(data_ >= 0); --alloc_count; ::operator delete((void*)p); }
     size_type max_size() const throw()
         {return UINT_MAX / sizeof(T);}
@@ -201,7 +201,7 @@ public:
         : data_(a.data_) {}
     T* allocate(std::size_t n)
         {return (T*)::operator new(n * sizeof(T));}
-    void deallocate(T* p, std::size_t n)
+    void deallocate(T* p, std::size_t)
         {::operator delete((void*)p);}
 
     other_allocator select_on_container_copy_construction() const

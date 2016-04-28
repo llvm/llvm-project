@@ -58,7 +58,7 @@ static const StringRef StaticAnalyzerChecks[] = {
 #define GET_CHECKERS
 #define CHECKER(FULLNAME, CLASS, DESCFILE, HELPTEXT, GROUPINDEX, HIDDEN)       \
   FULLNAME,
-#include "../../../lib/StaticAnalyzer/Checkers/Checkers.inc"
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER
 #undef GET_CHECKERS
 };

@@ -446,9 +446,10 @@ namespace llvm {
     /// empty substring will be returned.
     ///
     /// \param End The index following the last character to include in the
-    /// substring. If this is npos, or less than \p Start, or exceeds the
-    /// number of characters remaining in the string, the string suffix
-    /// (starting with \p Start) will be returned.
+    /// substring. If this is npos or exceeds the number of characters
+    /// remaining in the string, the string suffix (starting with \p Start)
+    /// will be returned. If this is less than \p Start, an empty string will
+    /// be returned.
     LLVM_ATTRIBUTE_ALWAYS_INLINE
     StringRef slice(size_t Start, size_t End) const {
       Start = std::min(Start, Length);

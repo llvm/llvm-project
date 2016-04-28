@@ -23,7 +23,7 @@
 struct DummyUnaryFunction
 {
     template <typename S>
-    int operator()(S const & s) const { return 0; }
+    int operator()(S const &) const { return 0; }
 };
 
 struct BadUnaryFunction
@@ -39,7 +39,7 @@ struct BadUnaryFunction
     }
 };
 
-int main(int argc, char* argv[])
+int main()
 {
     // Check that BadUnaryFunction::operator()(S const &) is not
     // instantiated when checking if BadUnaryFunction is a nested bind

@@ -49,8 +49,8 @@ public:
                                          ObjSectionToID);
       else if (RelType == MachO::GENERIC_RELOC_VANILLA)
         return processScatteredVANILLA(SectionID, RelI, Obj, ObjSectionToID);
-      return make_error<RuntimeDyldError>("Unhandled I386 scattered relocation "
-                                          "type: " + std::to_string(RelType));
+      return make_error<RuntimeDyldError>(("Unhandled I386 scattered relocation "
+                                           "type: " + Twine(RelType)).str());
     }
 
     switch (RelType) {
@@ -59,9 +59,9 @@ public:
     UNIMPLEMENTED_RELOC(MachO::GENERIC_RELOC_TLV);
     default:
       if (RelType > MachO::GENERIC_RELOC_TLV)
-        return make_error<RuntimeDyldError>("MachO I386 relocation type " +
-                                            std::to_string(RelType) +
-                                            " is out of range");
+        return make_error<RuntimeDyldError>(("MachO I386 relocation type " +
+                                             Twine(RelType) +
+                                             " is out of range").str());
       break;
     }
 

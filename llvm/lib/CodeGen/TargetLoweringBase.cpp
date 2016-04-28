@@ -881,6 +881,10 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SMULO, VT, Expand);
     setOperationAction(ISD::UMULO, VT, Expand);
 
+    // These default to Expand so they will be expanded to CTLZ/CTTZ by default.
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Expand);
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Expand);
+
     setOperationAction(ISD::BITREVERSE, VT, Expand);
     
     // These library functions default to expand.

@@ -470,6 +470,9 @@ namespace llvm {
   /// DeadMachineInstructionElim - This pass removes dead machine instructions.
   extern char &DeadMachineInstructionElimID;
 
+  /// This pass adds dead/undef flags after analyzing subregister lanes.
+  extern char &DetectDeadLanesID;
+
   /// FastRegisterAllocation Pass - This pass register allocates as fast as
   /// possible. It is best suited for debug code where live ranges are short.
   ///

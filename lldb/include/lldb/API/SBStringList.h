@@ -45,6 +45,9 @@ public:
     const char *
     GetStringAtIndex (size_t idx);
 
+    const char *
+    GetStringAtIndex (size_t idx) const;
+
     void
     Clear ();
 

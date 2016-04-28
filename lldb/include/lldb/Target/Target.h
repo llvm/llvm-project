@@ -797,9 +797,11 @@ public:
                       LazyBool move_to_nearest_code);
 
     // Use this to create breakpoint that matches regex against the source lines in files given in source_file_list:
+    // If function_names is non-empty, also filter by function after the matches are made.
     lldb::BreakpointSP
     CreateSourceRegexBreakpoint (const FileSpecList *containingModules,
                                  const FileSpecList *source_file_list,
+                                 const std::unordered_set<std::string> &function_names,
                                  RegularExpression &source_regex,
                                  bool internal,
                                  bool request_hardware,

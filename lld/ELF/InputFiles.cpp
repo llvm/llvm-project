@@ -316,8 +316,7 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   InputSectionBase<ELFT> *Sec = getSection(*Sym);
   if (Binding == STB_LOCAL) {
     if (Sym->st_shndx == SHN_UNDEF)
-      return new (Alloc)
-          Undefined(Sym->st_name, Sym->st_other, Sym->getType(), Sym->st_size);
+      return new (Alloc) Undefined(Sym->st_name, Sym->st_other, Sym->getType());
     return new (Alloc) DefinedRegular<ELFT>(*Sym, Sec);
   }
 
@@ -325,9 +324,8 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
-    return new (Alloc)
-        Undefined(Name, Binding, Sym->st_other, Sym->getType(), Sym->st_size,
-                  /*IsBitcode*/ false);
+    return new (Alloc) Undefined(Name, Binding, Sym->st_other, Sym->getType(),
+                                 /*IsBitcode*/ false);
   case SHN_COMMON:
     return new (Alloc) DefinedCommon(Name, Sym->st_size, Sym->st_value, Binding,
                                      Sym->st_other, Sym->getType());
@@ -340,9 +338,8 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case STB_WEAK:
   case STB_GNU_UNIQUE:
     if (Sec == &InputSection<ELFT>::Discarded)
-      return new (Alloc)
-          Undefined(Name, Binding, Sym->st_other, Sym->getType(), Sym->st_size,
-                    /*IsBitcode*/ false);
+      return new (Alloc) Undefined(Name, Binding, Sym->st_other, Sym->getType(),
+                                   /*IsBitcode*/ false);
     return new (Alloc) DefinedRegular<ELFT>(Name, *Sym, Sec);
   }
 }
@@ -548,14 +545,14 @@ BitcodeFile::createBody(const DenseSet<const Comdat *> &KeptComdats,
     if (const Comdat *C = GV->getComdat())
       if (!KeptComdats.count(C)) {
         Body = new (Alloc) Undefined(NameRef, Binding, Visibility, /*Type*/ 0,
-                                     /*Size*/ 0, /*IsBitcode*/ true);
+                                     /*IsBitcode*/ true);
         return Body;
       }
 
   const Module &M = Obj.getModule();
   if (Flags & BasicSymbolRef::SF_Undefined)
     return new (Alloc) Undefined(NameRef, Binding, Visibility, /*Type*/ 0,
-                                 /*Size*/ 0, /*IsBitcode*/ true);
+                                 /*IsBitcode*/ true);
   if (Flags & BasicSymbolRef::SF_Common) {
     // FIXME: Set SF_Common flag correctly for module asm symbols, and expose
     // size and alignment.

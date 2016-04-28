@@ -34,10 +34,14 @@ int main()
 //    a complete object type other than an array type that can hold the conversion 
 //    state information necessary to convert between sequences of multibyte 
 //    characters and wide characters
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-braces"
+#endif
     mbstate_t mb = {0};
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
 
     size_t s = 0;
     tm *tm = 0;

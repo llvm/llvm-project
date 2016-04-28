@@ -174,8 +174,6 @@ template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
     return DR->Size;
   if (const auto *S = dyn_cast<SharedSymbol<ELFT>>(this))
     return S->Sym.st_size;
-  if (const auto *U = dyn_cast<Undefined>(this))
-    return U->Size;
   return 0;
 }
 
@@ -232,16 +230,13 @@ bool DefinedBitcode::classof(const SymbolBody *S) {
 }
 
 Undefined::Undefined(StringRef Name, uint8_t Binding, uint8_t StOther,
-                     uint8_t Type, uint64_t Size, bool IsBitcode)
-    : SymbolBody(SymbolBody::UndefinedKind, Name, Binding, StOther, Type),
-      Size(Size) {
+                     uint8_t Type, bool IsBitcode)
+    : SymbolBody(SymbolBody::UndefinedKind, Name, Binding, StOther, Type) {
   this->IsUndefinedBitcode = IsBitcode;
 }
 
-Undefined::Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type,
-                     uint64_t Size)
-    : SymbolBody(SymbolBody::UndefinedKind, NameOffset, StOther, Type),
-      Size(Size) {
+Undefined::Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type)
+    : SymbolBody(SymbolBody::UndefinedKind, NameOffset, StOther, Type) {
   this->IsUndefinedBitcode = false;
 }
 

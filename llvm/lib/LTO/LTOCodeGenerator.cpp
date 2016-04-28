@@ -381,6 +381,10 @@ void LTOCodeGenerator::applyScopeRestrictions() {
   // candidate GlobalValue if it can be internalized or not.
   SmallString<64> MangledName;
   auto mustPreserveGV = [&](const GlobalValue &GV) -> bool {
+    // Unnamed globals can't be mangled, but they can't be preserved either.
+    if (!GV.hasName())
+      return false;
+
     // Need to mangle the GV as the "MustPreserveSymbols" StringSet is filled
     // with the linker supplied name, which on Darwin includes a leading
     // underscore.

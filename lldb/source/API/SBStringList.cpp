@@ -126,6 +126,16 @@ SBStringList::GetStringAtIndex (size_t idx)
     return NULL;
 }
 
+const char *
+SBStringList::GetStringAtIndex (size_t idx) const
+{
+    if (IsValid())
+    {
+        return m_opaque_ap->GetStringAtIndex (idx);
+    }
+    return NULL;
+}
+
 void
 SBStringList::Clear ()
 {

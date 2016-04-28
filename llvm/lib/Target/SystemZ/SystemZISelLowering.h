@@ -459,6 +459,10 @@ public:
                                       SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
+  bool supportSwiftError() const override {
+    return true;
+  }
+
 private:
   const SystemZSubtarget &Subtarget;
 

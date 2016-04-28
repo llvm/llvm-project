@@ -86,7 +86,7 @@ struct Configuration {
   bool Threads;
   bool Trace;
   bool Verbose;
-  bool VersionScript;
+  bool VersionScript = false;
   bool WarnCommon;
   bool ZExecStack;
   bool ZNodelete;

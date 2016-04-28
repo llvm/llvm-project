@@ -13,7 +13,9 @@
 #include <cassert>
 #include <algorithm> // for 'min' and 'max'
 
+#if defined(__clang__)
 #pragma clang diagnostic ignored "-Wtautological-compare"
+#endif
 
 template <std::size_t N>
 void test_val_ctor()

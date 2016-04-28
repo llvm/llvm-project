@@ -37,7 +37,7 @@ test(Iterator first, Iterator last, const A& a)
 template <class T>
 struct implicit_conv_allocator : min_allocator<T>
 {
-    implicit_conv_allocator(void* p) {}
+    implicit_conv_allocator(void*) {}
     implicit_conv_allocator(const implicit_conv_allocator&) = default;
 };
 

@@ -342,6 +342,10 @@ public:
                        error.SetErrorStringWithFormat ("invalid thread index string '%s'", option_arg);
                     break;
 
+                case 'X':
+                    m_source_regex_func_names.insert(option_arg);
+                    break;
+                    
                 default:
                     error.SetErrorStringWithFormat ("unrecognized option '%c'", short_option);
                     break;
@@ -381,6 +385,7 @@ public:
             m_all_files = false;
             m_exception_extra_args.Clear();
             m_move_to_nearest_code = eLazyBoolCalculate;
+            m_source_regex_func_names.clear();
         }
     
         const OptionDefinition*
@@ -423,6 +428,7 @@ public:
         bool m_all_files;
         Args m_exception_extra_args;
         LazyBool m_move_to_nearest_code;
+        std::unordered_set<std::string> m_source_regex_func_names;
     };
 
 protected:
@@ -608,6 +614,7 @@ protected:
                     }
                     bp = target->CreateSourceRegexBreakpoint (&(m_options.m_modules),
                                                               &(m_options.m_filenames),
+                                                              m_options.m_source_regex_func_names,
                                                               regexp,
                                                               internal,
                                                               m_options.m_hardware,
@@ -805,6 +812,9 @@ CommandObjectBreakpointSet::CommandOptions::g_option_table[] =
     { LLDB_OPT_SET_3, true, "name", 'n', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,
         "Set the breakpoint by function name.  Can be repeated multiple times to make one breakpoint for multiple names" },
 
+    { LLDB_OPT_SET_9, false, "source-regexp-function", 'X', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,
+        "When used with '-p' limits the source regex to source contained in the named functions.  Can be repeated multiple times." },
+
     { LLDB_OPT_SET_4, true, "fullname", 'F', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion, eArgTypeFullName,
         "Set the breakpoint by fully qualified function names. For C++ this means namespaces and all arguments, and "
         "for Objective C this means a full function prototype with class and selector.  "
@@ -855,7 +865,7 @@ CommandObjectBreakpointSet::CommandOptions::g_option_table[] =
         "Sets Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
 
     { LLDB_OPT_SET_ALL, false, "breakpoint-name", 'N', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointName,
-        "Adds this to the list of names for this breakopint."},
+        "Adds this to the list of names for this breakpoint."},
 
     { LLDB_OPT_OFFSET_APPLIES, false, "address-slide", 'R', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddress,
         "Add the specified offset to whatever address(es) the breakpoint resolves to.  "

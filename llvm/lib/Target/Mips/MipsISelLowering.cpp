@@ -341,10 +341,6 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   }
   setOperationAction(ISD::CTTZ,              MVT::i32,   Expand);
   setOperationAction(ISD::CTTZ,              MVT::i64,   Expand);
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF,   MVT::i32,   Expand);
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF,   MVT::i64,   Expand);
-  setOperationAction(ISD::CTLZ_ZERO_UNDEF,   MVT::i32,   Expand);
-  setOperationAction(ISD::CTLZ_ZERO_UNDEF,   MVT::i64,   Expand);
   setOperationAction(ISD::ROTL,              MVT::i32,   Expand);
   setOperationAction(ISD::ROTL,              MVT::i64,   Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32,  Expand);

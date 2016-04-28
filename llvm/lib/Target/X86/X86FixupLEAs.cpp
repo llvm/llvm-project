@@ -300,9 +300,8 @@ void FixupLEAPass::processInstruction(MachineBasicBlock::iterator &I,
                                       MachineFunction::iterator MFI) {
   // Process a load, store, or LEA instruction.
   MachineInstr *MI = I;
-  int opcode = MI->getOpcode();
   const MCInstrDesc &Desc = MI->getDesc();
-  int AddrOffset = X86II::getMemoryOperandNo(Desc.TSFlags, opcode);
+  int AddrOffset = X86II::getMemoryOperandNo(Desc.TSFlags);
   if (AddrOffset >= 0) {
     AddrOffset += X86II::getOperandBias(Desc);
     MachineOperand &p = MI->getOperand(AddrOffset + X86::AddrBaseReg);

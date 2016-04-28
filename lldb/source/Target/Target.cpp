@@ -326,6 +326,7 @@ Target::GetBreakpointByID (break_id_t break_id)
 BreakpointSP
 Target::CreateSourceRegexBreakpoint (const FileSpecList *containingModules,
                                      const FileSpecList *source_file_spec_list,
+                                     const std::unordered_set<std::string> &function_names,
                                      RegularExpression &source_regex,
                                      bool internal,
                                      bool hardware,
@@ -334,7 +335,11 @@ Target::CreateSourceRegexBreakpoint (const FileSpecList *containingModules,
     SearchFilterSP filter_sp(GetSearchFilterForModuleAndCUList (containingModules, source_file_spec_list));
     if (move_to_nearest_code == eLazyBoolCalculate)
         move_to_nearest_code = GetMoveToNearestCode() ? eLazyBoolYes : eLazyBoolNo;
-    BreakpointResolverSP resolver_sp(new BreakpointResolverFileRegex(nullptr, source_regex, !static_cast<bool>(move_to_nearest_code)));
+    BreakpointResolverSP resolver_sp(new BreakpointResolverFileRegex(nullptr,
+                                                                     source_regex,
+                                                                     function_names,
+                                                                     !static_cast<bool>(move_to_nearest_code)));
+    
     return CreateBreakpoint (filter_sp, resolver_sp, internal, hardware, true);
 }
 

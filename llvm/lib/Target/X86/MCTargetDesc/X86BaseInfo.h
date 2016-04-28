@@ -667,7 +667,7 @@ namespace X86II {
   /// is duplicated in the MCInst (e.g. "EAX = addl EAX, [mem]") it is only
   /// counted as one operand.
   ///
-  inline int getMemoryOperandNo(uint64_t TSFlags, unsigned Opcode) {
+  inline int getMemoryOperandNo(uint64_t TSFlags) {
     bool HasVEX_4V = TSFlags & X86II::VEX_4V;
     bool HasMemOp4 = TSFlags & X86II::MemOp4;
     bool HasEVEX_K = TSFlags & X86II::EVEX_K;

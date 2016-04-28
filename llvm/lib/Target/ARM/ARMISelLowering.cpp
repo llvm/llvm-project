@@ -583,16 +583,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTLZ,       MVT::v1i64, Expand);
     setOperationAction(ISD::CTLZ,       MVT::v2i64, Expand);
 
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v8i8, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v4i16, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v2i32, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v1i64, Expand);
-
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v16i8, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v8i16, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v4i32, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::v2i64, Expand);
-
     // NEON does not have single instruction CTTZ for vectors.
     setOperationAction(ISD::CTTZ, MVT::v8i8, Custom);
     setOperationAction(ISD::CTTZ, MVT::v4i16, Custom);
@@ -768,10 +758,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
   if (!Subtarget->hasV5TOps() || Subtarget->isThumb1Only())
     setOperationAction(ISD::CTLZ, MVT::i32, Expand);
-
-  // These just redirect to CTTZ and CTLZ on ARM.
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF  , MVT::i32  , Expand);
-  setOperationAction(ISD::CTLZ_ZERO_UNDEF  , MVT::i32  , Expand);
 
   // @llvm.readcyclecounter requires the Performance Monitors extension.
   // Default to the 0 expansion on unsupported platforms.

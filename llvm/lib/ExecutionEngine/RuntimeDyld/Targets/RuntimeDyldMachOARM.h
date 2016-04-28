@@ -82,9 +82,9 @@ public:
     UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_HALF);
     default:
       if (RelType > MachO::ARM_RELOC_HALF_SECTDIFF)
-        return make_error<RuntimeDyldError>("MachO ARM relocation type " +
-                                            std::to_string(RelType) +
-                                            " is out of range");
+        return make_error<RuntimeDyldError>(("MachO ARM relocation type " +
+                                             Twine(RelType) +
+                                             " is out of range").str());
       break;
     }
 

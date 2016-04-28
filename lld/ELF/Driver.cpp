@@ -394,19 +394,18 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_undefined))
     Config->Undefined.push_back(Arg->getValue());
 
-  if (Args.hasArg(OPT_dynamic_list))
-    if (Optional<MemoryBufferRef> Buffer =
-            readFile(getString(Args, OPT_dynamic_list)))
+  if (auto *Arg = Args.getLastArg(OPT_dynamic_list))
+    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
       parseDynamicList(*Buffer);
 
   for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
     Config->DynamicList.push_back(Arg->getValue());
 
-  Config->VersionScript = Args.hasArg(OPT_version_script);
-  if (Config->VersionScript)
-    if (Optional<MemoryBufferRef> Buffer =
-            readFile(getString(Args, OPT_version_script)))
+  if (auto *Arg = Args.getLastArg(OPT_version_script)) {
+    Config->VersionScript = true;
+    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
       parseVersionScript(*Buffer);
+  }
 }
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {

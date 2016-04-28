@@ -21,7 +21,7 @@
 
 #include "counting_predicates.hpp"
 
-bool all_equal(int a, int b) { return false; } // everything is equal
+bool all_equal(int, int) { return false; } // everything is equal
 
 #ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 void test_all_equal(std::initializer_list<int> il)

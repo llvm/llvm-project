@@ -326,16 +326,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // encoding.
   setOperationPromotedToType(ISD::CTTZ           , MVT::i8   , MVT::i32);
   setOperationPromotedToType(ISD::CTTZ_ZERO_UNDEF, MVT::i8   , MVT::i32);
-  if (Subtarget.hasBMI()) {
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i16  , Expand);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32  , Expand);
-    if (Subtarget.is64Bit())
-      setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Expand);
-  } else {
+  if (!Subtarget.hasBMI()) {
     setOperationAction(ISD::CTTZ           , MVT::i16  , Custom);
     setOperationAction(ISD::CTTZ           , MVT::i32  , Custom);
-    if (Subtarget.is64Bit())
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i16  , Legal);
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32  , Legal);
+    if (Subtarget.is64Bit()) {
       setOperationAction(ISD::CTTZ         , MVT::i64  , Custom);
+      setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Legal);
+    }
   }
 
   if (Subtarget.hasLZCNT()) {
@@ -343,10 +342,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // encoding.
     setOperationPromotedToType(ISD::CTLZ           , MVT::i8   , MVT::i32);
     setOperationPromotedToType(ISD::CTLZ_ZERO_UNDEF, MVT::i8   , MVT::i32);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i16  , Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32  , Expand);
-    if (Subtarget.is64Bit())
-      setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Expand);
   } else {
     setOperationAction(ISD::CTLZ           , MVT::i8   , Custom);
     setOperationAction(ISD::CTLZ           , MVT::i16  , Custom);
@@ -684,9 +679,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UDIVREM, VT, Expand);
     setOperationAction(ISD::CTPOP, VT, Expand);
     setOperationAction(ISD::CTTZ, VT, Expand);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Expand);
     setOperationAction(ISD::CTLZ, VT, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Expand);
     setOperationAction(ISD::ROTL, VT, Expand);
     setOperationAction(ISD::ROTR, VT, Expand);
     setOperationAction(ISD::BSWAP, VT, Expand);
