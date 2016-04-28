@@ -1415,30 +1415,16 @@ void DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
       if (DD->getDwarfVersion() >= 4)
         addUInt(MemberDie, dwarf::DW_AT_data_bit_offset, None, Offset);
       else {
-        //
-        // The DWARF 2 DW_AT_bit_offset is counting the bits between the most
-        // significant bit of the aligned storage unit containing the bit field
-        // to
-        // the most significan bit of the bit field.
-        //
-        // Struct      Align       Align       Align
-        // v           v           v           v
-        // +-----------+-----*-----+-----*-----+--
-        // | ...             |b1|b2|b3|b4|
-        // +-----------+-----*-----+-----*-----+--
-        // |           |     |<-- Size ->|     |
-        // |<---- Offset --->|           |<--->|
-        // |           |     |              \_ DW_AT_bit_offset (little endian)
-        // |           |<--->|
-        // |<--------->|  \_ StartBitOffset = DW_AT_bit_offset (big endian)
-        //     \                            = DW_AT_data_bit_offset (biendian)
-        //      \_ OffsetInBytes
-        // The endian-dependent DWARF 2 offset.
-        uint64_t DwarfBitOffset = Asm->getDataLayout().isLittleEndian()
-                                      ? OffsetToAlignment(Offset + Size, Align)
-                                      : StartBitOffset;
+        uint64_t HiMark = (Offset + FieldSize) & AlignMask;
+        uint64_t FieldOffset = (HiMark - FieldSize);
+        Offset -= FieldOffset;
 
-        addUInt(MemberDie, dwarf::DW_AT_bit_offset, None, DwarfBitOffset);
+        // Maybe we need to work from the other end.
+        if (Asm->getDataLayout().isLittleEndian())
+          Offset = FieldSize - (Offset + Size);
+
+        addUInt(MemberDie, dwarf::DW_AT_bit_offset, None, Offset);
+        OffsetInBytes = FieldOffset >> 3;
       }
     } else
       // This is not a bitfield.
