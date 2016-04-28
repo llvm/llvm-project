@@ -872,7 +872,7 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context)
                                  current_id);
     }
 
-    if (!context.m_found.variable)
+    if (!context.m_found.variable && !context.m_found.local_vars_nsp)
         ClangASTSource::FindExternalVisibleDecls(context);
 }
 
@@ -1205,6 +1205,7 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
                         context.AddNamedDecl(namespace_decl);
                         clang::DeclContext *clang_decl_ctx = clang::Decl::castToDeclContext(namespace_decl);
                         clang_decl_ctx->setHasExternalVisibleStorage(true);
+                        context.m_found.local_vars_nsp = true;
                     }
                 }
             }
