@@ -175,17 +175,14 @@ static void PositiveComplexNonTrivialType() {
   ComplexNonTrivialType T;
 }
 
-struct PositiveStaticMember {
+struct NegativeStaticMember {
   static NonTrivialType X;
   static NonTrivialType Y;
   static constexpr NonTrivialType Z{};
 };
 
-NonTrivialType PositiveStaticMember::X;
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: uninitialized record type: 'X'
-// CHECK-FIXES: NonTrivialType PositiveStaticMember::X{};
-
-NonTrivialType PositiveStaticMember::Y{};
+NonTrivialType NegativeStaticMember::X;
+NonTrivialType NegativeStaticMember::Y{};
 
 struct PositiveMultipleConstructors {
   PositiveMultipleConstructors() {}
@@ -242,9 +239,7 @@ struct InheritedAggregate : public NegativeAggregateType {
   int F;
 };
 
-static InheritedAggregate PositiveGlobal;
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: uninitialized record type: 'PositiveGlobal'
-// CHECK-FIXES: InheritedAggregate PositiveGlobal{};
+static InheritedAggregate NegativeGlobal;
 
 enum TestEnum {
   A,
@@ -278,6 +273,11 @@ static void PositiveCStructVariable() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: uninitialized record type: 'X'
   // CHECK-FIXES: NegativeCStruct X{};
 }
+}
+
+static void NegativeStaticVariable() {
+  static NegativeCStruct S;
+  (void)S;
 }
 
 union NegativeUnionInClass {
