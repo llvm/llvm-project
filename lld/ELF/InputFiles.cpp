@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "Driver.h"
 #include "Error.h"
 #include "InputSection.h"
 #include "Symbols.h"
@@ -15,7 +16,6 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -591,8 +591,7 @@ bool BitcodeFile::shouldSkip(const BasicSymbolRef &Sym) {
 }
 
 void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
-  LLVMContext Context;
-  std::unique_ptr<IRObjectFile> Obj = check(IRObjectFile::create(MB, Context));
+  Obj = check(IRObjectFile::create(MB, Driver->Context));
   const Module &M = Obj->getModule();
 
   DenseSet<const Comdat *> KeptComdats;

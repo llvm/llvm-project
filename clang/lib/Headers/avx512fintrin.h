@@ -2550,12 +2550,40 @@ _mm512_permutex2var_ps(__m512 __A, __m512i __I, __m512 __B)
                                          (I), (__v8di)_mm512_setzero_si512(), \
                                          (__mmask8)-1); })
 
+#define _mm512_mask_alignr_epi64( __W,  __U,  __A, __B, __imm) __extension__({\
+  (__m512i)__builtin_ia32_alignq512_mask ((__v8di) __A,\
+                                         (__v8di) __B, __imm,\
+                                         (__v8di) __W,\
+                                         (__mmask8) __U);\
+})
+
+#define _mm512_maskz_alignr_epi64( __U,  __A,  __B, __imm) __extension__({\
+  (__m512i)__builtin_ia32_alignq512_mask ((__v8di) __A,\
+                                         (__v8di) __B, __imm,\
+                                         (__v8di) _mm512_setzero_si512 (),\
+                                         (__mmask8) __U);\
+})
+
 #define _mm512_alignr_epi32(A, B, I) __extension__ ({ \
-  (__m512i)__builtin_ia32_alignd512_mask((__v16si)(__m512i)(A), \
+    (__m512i)__builtin_ia32_alignd512_mask((__v16si)(__m512i)(A), \
                                          (__v16si)(__m512i)(B), \
                                          (I), (__v16si)_mm512_setzero_si512(), \
-                                         (__mmask16)-1); })
+                                         (__mmask16)-1);\
+})
+                                         
+#define _mm512_mask_alignr_epi32( __W, __U, __A, __B,  __imm) __extension__ ({\
+    (__m512i) __builtin_ia32_alignd512_mask((__v16si) __A,\
+                                         (__v16si) __B, __imm,\
+                                         (__v16si) __W,\
+                                         (__mmask16) __U);\
+})
 
+#define _mm512_maskz_alignr_epi32( __U, __A, __B, __imm) __extension__({\
+    (__m512i) __builtin_ia32_alignd512_mask ((__v16si) __A,\
+                                         (__v16si) __B, __imm,\
+                                         (__v16si) _mm512_setzero_si512 (),\
+                                         (__mmask16) __U);\
+})
 /* Vector Extract */
 
 #define _mm512_extractf64x4_pd(A, I) __extension__ ({                    \

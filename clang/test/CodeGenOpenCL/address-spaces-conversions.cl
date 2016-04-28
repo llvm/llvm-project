@@ -63,7 +63,16 @@ void test_ternary(void) {
   // CHECK: %{{.+}} = addrspacecast i32 addrspace(1)* %{{.+}} to i32 addrspace(4)*
   // CHECK: phi
   // CHECK: store
-  
+
+  typedef int int_t;
+  global int_t *var_glob_typedef;
+  var_gen = var_gen ? var_gen : var_glob_typedef; // operands of overlapping addr spaces and equivalent types
+  // CHECK: icmp
+  // CHECK-NOT: bitcast
+  // CHECK: %{{.+}} = addrspacecast i32 addrspace(1)* %{{.+}} to i32 addrspace(4)*
+  // CHECK: phi
+  // CHECK: store
+ 
   var_gen_v = var_gen ? var_gen : var_gen_f; // operands of the same addr space and different types
   // CHECK: icmp
   // CHECK: %{{.+}} = bitcast i32 addrspace(4)* %{{.+}} to i8 addrspace(4)*

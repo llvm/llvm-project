@@ -27,6 +27,7 @@ public:
   void main(ArrayRef<const char *> Args);
   void addFile(StringRef Path);
   void addLibrary(StringRef Name);
+  llvm::LLVMContext Context;
 
 private:
   std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB);

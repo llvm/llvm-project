@@ -167,7 +167,8 @@ void DiagnosticRenderer::emitIncludeStack(SourceLocation Loc,
                                           PresumedLoc PLoc,
                                           DiagnosticsEngine::Level Level,
                                           const SourceManager &SM) {
-  SourceLocation IncludeLoc = PLoc.getIncludeLoc();
+  SourceLocation IncludeLoc =
+      PLoc.isInvalid() ? SourceLocation() : PLoc.getIncludeLoc();
 
   // Skip redundant include stacks altogether.
   if (LastIncludeLoc == IncludeLoc)

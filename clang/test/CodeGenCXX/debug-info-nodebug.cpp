@@ -27,12 +27,18 @@ NODEBUG S1 global_struct = { 2, 3 };
 // NOINFO-NOT:  !DIGlobalVariable(name: "global_struct"
 
 // Static data members. Const member needs a use.
+// Also the class as a whole needs a use, so that we produce debug info for
+// the entire class (iterating over the members, demonstrably skipping those
+// with 'nodebug').
 struct S2 {
   NODEBUG static int static_member;
   NODEBUG static const int static_const_member = 4;
 };
 int S2::static_member = 5;
-void func3() { func1(S2::static_const_member); }
+void func3() {
+  S2 junk;
+  func1(S2::static_const_member);
+}
 // YESINFO-DAG: !DIGlobalVariable(name: "static_member"
 // NOINFO-NOT:  !DIGlobalVariable(name: "static_member"
 // YESINFO-DAG: !DIDerivedType({{.*}} name: "static_const_member"

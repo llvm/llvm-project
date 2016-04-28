@@ -1541,16 +1541,6 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
 }
 
 const Decl *ASTWriter::getFirstLocalDecl(const Decl *D) {
-  /// \brief Is this a local declaration (that is, one that will be written to
-  /// our AST file)? This is the case for declarations that are neither imported
-  /// from another AST file nor predefined.
-  auto IsLocalDecl = [&](const Decl *D) -> bool {
-    if (D->isFromASTFile())
-      return false;
-    auto I = DeclIDs.find(D);
-    return (I == DeclIDs.end() || I->second >= NUM_PREDEF_DECL_IDS);
-  };
-
   assert(IsLocalDecl(D) && "expected a local declaration");
 
   const Decl *Canon = D->getCanonicalDecl();

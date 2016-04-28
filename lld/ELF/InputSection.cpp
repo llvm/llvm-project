@@ -226,8 +226,50 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
   llvm_unreachable("Invalid expression");
 }
 
+// This function applies relocations to sections without SHF_ALLOC bit.
+// Such sections are never mapped to memory at runtime. Debug sections are
+// an example. Relocations in non-alloc sections are much easier to
+// handle than in allocated sections because it will never need complex
+// treatement such as GOT or PLT (because at runtime no one refers them).
+// So, we handle relocations for non-alloc sections directly in this
+// function as a performance optimization.
+template <class ELFT>
+template <class RelTy>
+void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
+  const unsigned Bits = sizeof(uintX_t) * 8;
+  for (const RelTy &Rel : Rels) {
+    uint8_t *BufLoc = Buf + Rel.r_offset;
+    uintX_t AddrLoc = this->OutSec->getVA() + Rel.r_offset;
+    uint32_t Type = Rel.getType(Config->Mips64EL);
+    SymbolBody &Sym = this->File->getRelocTargetSym(Rel);
+
+    if (Target->getRelExpr(Type, Sym) != R_ABS) {
+      error(this->getSectionName() + " has non-ABS reloc");
+      return;
+    }
+
+    uint64_t SymVA = SignExtend64<Bits>(getSymVA<ELFT>(
+        Type, getAddend<ELFT>(Rel), AddrLoc, Sym, BufLoc, *this->File, R_ABS));
+    Target->relocateOne(BufLoc, Type, SymVA);
+  }
+}
+
 template <class ELFT>
 void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
+  // scanReloc function in Writer.cpp constructs Relocations
+  // vector only for SHF_ALLOC'ed sections. For other sections,
+  // we handle relocations directly here.
+  auto *IS = dyn_cast<InputSection<ELFT>>(this);
+  if (IS && !(IS->Header->sh_flags & SHF_ALLOC)) {
+    for (const Elf_Shdr *RelSec : IS->RelocSections) {
+      if (RelSec->sh_type == SHT_RELA)
+        IS->relocateNonAlloc(Buf, IS->File->getObj().relas(RelSec));
+      else
+        IS->relocateNonAlloc(Buf, IS->File->getObj().rels(RelSec));
+    }
+    return;
+  }
+
   const unsigned Bits = sizeof(uintX_t) * 8;
   for (const Relocation &Rel : Relocations) {
     uintX_t Offset = Rel.Offset;
