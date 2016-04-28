@@ -59,6 +59,7 @@ LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
       m_in_objectivec_method(false),
       m_in_static_method(false),
       m_needs_object_ptr(false),
+      m_const_object(false),
       m_target(NULL),
       m_can_interpret(false),
       m_materialized_address(LLDB_INVALID_ADDRESS)

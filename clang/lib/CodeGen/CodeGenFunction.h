@@ -87,6 +87,7 @@ class BlockFlags;
 class BlockFieldFlags;
 class RegionCodeGenTy;
 class TargetCodeGenInfo;
+struct OMPTaskDataTy;
 
 /// The kind of evaluation to perform on values of a particular
 /// type.  Basically, is the code in CGExprScalar, CGExprComplex, or
@@ -2346,23 +2347,13 @@ public:
   /// \param D Directive (possibly) with the 'linear' clause.
   void EmitOMPLinearClauseInit(const OMPLoopDirective &D);
 
-  struct OMPPrivateDataTy {
-    bool Tied;
-    unsigned NumberOfParts;
-    SmallVector<const Expr *, 4> PrivateVars;
-    SmallVector<const Expr *, 4> PrivateCopies;
-    SmallVector<const Expr *, 4> FirstprivateVars;
-    SmallVector<const Expr *, 4> FirstprivateCopies;
-    SmallVector<const Expr *, 4> FirstprivateInits;
-    SmallVector<std::pair<OpenMPDependClauseKind, const Expr *>, 4> Dependences;
-  };
   typedef const llvm::function_ref<void(CodeGenFunction & /*CGF*/,
                                         llvm::Value * /*OutlinedFn*/,
-                                        const OMPPrivateDataTy & /*Data*/)>
+                                        const OMPTaskDataTy & /*Data*/)>
       TaskGenTy;
   void EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
                                  const RegionCodeGenTy &BodyGen,
-                                 const TaskGenTy &TaskGen, bool Tied);
+                                 const TaskGenTy &TaskGen, OMPTaskDataTy &Data);
 
   void EmitOMPParallelDirective(const OMPParallelDirective &S);
   void EmitOMPSimdDirective(const OMPSimdDirective &S);

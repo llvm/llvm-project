@@ -25,7 +25,7 @@ class AnnotatedLine;
 
 class AffectedRangeManager {
 public:
-  AffectedRangeManager(SourceManager &SourceMgr,
+  AffectedRangeManager(const SourceManager &SourceMgr,
                        const ArrayRef<CharSourceRange> Ranges)
       : SourceMgr(SourceMgr), Ranges(Ranges.begin(), Ranges.end()) {}
 
@@ -56,11 +56,12 @@ private:
   // Returns \c true if line or one if its children is affected.
   bool nonPPLineAffected(AnnotatedLine *Line,
                          const AnnotatedLine *PreviousLine);
-  SourceManager &SourceMgr;
+
+  const SourceManager &SourceMgr;
   const SmallVector<CharSourceRange, 8> Ranges;
 };
 
 } // namespace format
 } // namespace clang
 
-#endif // LLVM_CLANG_LIB_FORMAT_WHITESPACEMANAGER_H
+#endif // LLVM_CLANG_LIB_FORMAT_AFFECTEDRANGEMANAGER_H

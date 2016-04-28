@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fvisibility hidden -fms-extensions -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NOBL %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fvisibility hidden -fms-extensions -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NOBL %s
 // RUN: echo "type:std::*" > %t.txt
-// RUN: %clang_cc1 -fvisibility hidden -fms-extensions -fsanitize=cfi-vcall -fsanitize-blacklist=%t.txt -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NOSTD %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fvisibility hidden -fms-extensions -fsanitize=cfi-vcall -fsanitize-blacklist=%t.txt -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NOSTD %s
 
 struct S1 {
   virtual void f();
