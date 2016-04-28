@@ -10,6 +10,7 @@
 #include "IncludeFixer.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/ParseAST.h"
 #include "clang/Rewrite/Core/Rewriter.h"
@@ -59,7 +60,8 @@ private:
 class Action : public clang::ASTFrontendAction,
                public clang::ExternalSemaSource {
 public:
-  explicit Action(XrefsDB &Xrefs) : Xrefs(Xrefs) {}
+  explicit Action(XrefsDB &Xrefs, bool MinimizeIncludePaths)
+      : Xrefs(Xrefs), MinimizeIncludePaths(MinimizeIncludePaths) {}
 
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler,
@@ -147,13 +149,40 @@ public:
       FirstIncludeOffset = Offset;
   }
 
+  /// Get the minimal include for a given path.
+  std::string minimizeInclude(StringRef Include,
+                              clang::SourceManager &SourceManager,
+                              clang::HeaderSearch &HeaderSearch) {
+    if (!MinimizeIncludePaths)
+      return Include;
+
+    // Get the FileEntry for the include.
+    StringRef StrippedInclude = Include.trim("\"<>");
+    const FileEntry *Entry =
+        SourceManager.getFileManager().getFile(StrippedInclude);
+
+    // If the file doesn't exist return the path from the database.
+    // FIXME: This should never happen.
+    if (!Entry)
+      return Include;
+
+    bool IsSystem;
+    std::string Suggestion =
+        HeaderSearch.suggestPathToFileForDiagnostics(Entry, &IsSystem);
+
+    return IsSystem ? '<' + Suggestion + '>' : '"' + Suggestion + '"';
+  }
+
   /// Generate replacements for the suggested includes.
   /// \return true if changes will be made, false otherwise.
   bool Rewrite(clang::SourceManager &SourceManager,
+               clang::HeaderSearch &HeaderSearch,
                std::vector<clang::tooling::Replacement> &replacements) {
     for (const auto &ToTry : Untried) {
-      DEBUG(llvm::dbgs() << "Adding include " << ToTry << "\n");
-      std::string ToAdd = "#include " + ToTry + "\n";
+      std::string ToAdd = "#include " +
+                          minimizeInclude(ToTry, SourceManager, HeaderSearch) +
+                          "\n";
+      DEBUG(llvm::dbgs() << "Adding " << ToAdd << "\n");
 
       if (FirstIncludeOffset == -1U)
         FirstIncludeOffset = 0;
@@ -228,6 +257,9 @@ private:
 
   /// Includes we have left to try.
   std::set<std::string> Untried;
+
+  /// Whether we should use the smallest possible include path.
+  bool MinimizeIncludePaths = true;
 };
 
 void PreprocessorHooks::FileChanged(clang::SourceLocation Loc,
@@ -271,8 +303,10 @@ void PreprocessorHooks::InclusionDirective(
 } // namespace
 
 IncludeFixerActionFactory::IncludeFixerActionFactory(
-    XrefsDB &Xrefs, std::vector<clang::tooling::Replacement> &Replacements)
-    : Xrefs(Xrefs), Replacements(Replacements) {}
+    XrefsDB &Xrefs, std::vector<clang::tooling::Replacement> &Replacements,
+    bool MinimizeIncludePaths)
+    : Xrefs(Xrefs), Replacements(Replacements),
+      MinimizeIncludePaths(MinimizeIncludePaths) {}
 
 IncludeFixerActionFactory::~IncludeFixerActionFactory() = default;
 
@@ -294,11 +328,14 @@ bool IncludeFixerActionFactory::runInvocation(
   Compiler.createSourceManager(*Files);
 
   // Run the parser, gather missing includes.
-  auto ScopedToolAction = llvm::make_unique<Action>(Xrefs);
+  auto ScopedToolAction =
+      llvm::make_unique<Action>(Xrefs, MinimizeIncludePaths);
   Compiler.ExecuteAction(*ScopedToolAction);
 
   // Generate replacements.
-  ScopedToolAction->Rewrite(Compiler.getSourceManager(), Replacements);
+  ScopedToolAction->Rewrite(Compiler.getSourceManager(),
+                            Compiler.getPreprocessor().getHeaderSearchInfo(),
+                            Replacements);
 
   // Technically this should only return true if we're sure that we have a
   // parseable file. We don't know that though.

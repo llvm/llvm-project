@@ -32,6 +32,11 @@ cl::opt<DatabaseFormatTy> DatabaseFormat(
 cl::opt<std::string> Input("input",
                            cl::desc("String to initialize the database"),
                            cl::cat(IncludeFixerCategory));
+
+cl::opt<bool>
+    MinimizeIncludePaths("minimize-paths",
+                         cl::desc("Whether to minimize added include paths"),
+                         cl::init(true), cl::cat(IncludeFixerCategory));
 } // namespace
 
 int main(int argc, const char **argv) {
@@ -66,7 +71,8 @@ int main(int argc, const char **argv) {
 
   // Now run our tool.
   std::vector<tooling::Replacement> Replacements;
-  include_fixer::IncludeFixerActionFactory Factory(*XrefsDB, Replacements);
+  include_fixer::IncludeFixerActionFactory Factory(*XrefsDB, Replacements,
+                                                   MinimizeIncludePaths);
 
   tool.run(&Factory); // Always succeeds.
 

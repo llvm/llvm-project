@@ -1,3 +1,6 @@
+include(CMakePushCheckState)
+include(CheckSymbolExists)
+
 # Because compiler-rt spends a lot of time setting up custom compile flags,
 # define a handy helper function for it. The compile flags setting in CMake
 # has serious issues that make its syntax challenging at best.
