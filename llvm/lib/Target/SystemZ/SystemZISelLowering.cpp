@@ -989,9 +989,11 @@ LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
 }
 
 static bool canUseSiblingCall(const CCState &ArgCCInfo,
-                              SmallVectorImpl<CCValAssign> &ArgLocs) {
+                              SmallVectorImpl<CCValAssign> &ArgLocs,
+                              SmallVectorImpl<ISD::OutputArg> &Outs) {
   // Punt if there are any indirect or stack arguments, or if the call
-  // needs the call-saved argument register R6.
+  // needs the callee-saved argument register R6, or if the call uses
+  // the callee-saved register arguments SwiftSelf and SwiftError.
   for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
     CCValAssign &VA = ArgLocs[I];
     if (VA.getLocInfo() == CCValAssign::Indirect)
@@ -1000,6 +1002,8 @@ static bool canUseSiblingCall(const CCState &ArgCCInfo,
       return false;
     unsigned Reg = VA.getLocReg();
     if (Reg == SystemZ::R6H || Reg == SystemZ::R6L || Reg == SystemZ::R6D)
+      return false;
+    if (Outs[I].Flags.isSwiftSelf() || Outs[I].Flags.isSwiftError())
       return false;
   }
   return true;
@@ -1034,7 +1038,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // We don't support GuaranteedTailCallOpt, only automatically-detected
   // sibling calls.
-  if (IsTailCall && !canUseSiblingCall(ArgCCInfo, ArgLocs))
+  if (IsTailCall && !canUseSiblingCall(ArgCCInfo, ArgLocs, Outs))
     IsTailCall = false;
 
   // Get a count of how many bytes are to be pushed on the stack.
