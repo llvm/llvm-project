@@ -796,7 +796,6 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
   //     ldrex rDest, [rAddr]
   //     cmp rDest, rDesired
   //     bne .Ldone
-  MBB.addSuccessor(LoadCmpBB);
   LoadCmpBB->addLiveIn(Addr.getReg());
   LoadCmpBB->addLiveIn(Dest.getReg());
   LoadCmpBB->addLiveIn(Desired.getReg());
@@ -851,6 +850,8 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
   DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
   DoneBB->transferSuccessors(&MBB);
   addPostLoopLiveIns(DoneBB, LiveRegs);
+
+  MBB.addSuccessor(LoadCmpBB);
 
   NextMBBI = MBB.end();
   MI.eraseFromParent();
@@ -909,7 +910,6 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   //     cmp rDestLo, rDesiredLo
   //     sbcs rStatus<dead>, rDestHi, rDesiredHi
   //     bne .Ldone
-  MBB.addSuccessor(LoadCmpBB);
   LoadCmpBB->addLiveIn(Addr.getReg());
   LoadCmpBB->addLiveIn(Dest.getReg());
   LoadCmpBB->addLiveIn(Desired.getReg());
@@ -971,6 +971,8 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
   DoneBB->transferSuccessors(&MBB);
   addPostLoopLiveIns(DoneBB, LiveRegs);
+
+  MBB.addSuccessor(LoadCmpBB);
 
   NextMBBI = MBB.end();
   MI.eraseFromParent();
