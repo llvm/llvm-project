@@ -195,16 +195,9 @@ LiveInterval* LiveIntervals::createInterval(unsigned reg) {
 void LiveIntervals::computeVirtRegInterval(LiveInterval &LI) {
   assert(LRCalc && "LRCalc not initialized.");
   assert(LI.empty() && "Should only compute empty intervals.");
-  bool ShouldTrackSubRegLiveness = MRI->shouldTrackSubRegLiveness(LI.reg);
   LRCalc->reset(MF, getSlotIndexes(), DomTree, &getVNInfoAllocator());
-  LRCalc->calculate(LI, ShouldTrackSubRegLiveness);
-  bool SeparatedComponents = computeDeadValues(LI, nullptr);
-  if (SeparatedComponents) {
-    assert(ShouldTrackSubRegLiveness
-           && "Separated components should only occur for unused subreg defs");
-    SmallVector<LiveInterval*, 8> SplitLIs;
-    splitSeparateComponents(LI, SplitLIs);
-  }
+  LRCalc->calculate(LI, MRI->shouldTrackSubRegLiveness(LI.reg));
+  computeDeadValues(LI, nullptr);
 }
 
 void LiveIntervals::computeVirtRegs() {
@@ -487,13 +480,11 @@ bool LiveIntervals::computeDeadValues(LiveInterval &LI,
 
     // Is the register live before? Otherwise we may have to add a read-undef
     // flag for subregister defs.
-    bool DeadBeforeDef = false;
     unsigned VReg = LI.reg;
     if (MRI->shouldTrackSubRegLiveness(VReg)) {
       if ((I == LI.begin() || std::prev(I)->end < Def) && !VNI->isPHIDef()) {
         MachineInstr *MI = getInstructionFromIndex(Def);
         MI->setRegisterDefReadUndef(VReg);
-        DeadBeforeDef = true;
       }
     }
 
@@ -509,15 +500,7 @@ bool LiveIntervals::computeDeadValues(LiveInterval &LI,
       // This is a dead def. Make sure the instruction knows.
       MachineInstr *MI = getInstructionFromIndex(Def);
       assert(MI && "No instruction defining live value");
-      MI->addRegisterDead(VReg, TRI);
-
-      // If we have a dead def that is completely separate from the rest of
-      // the liverange then we rewrite it to use a different VReg to not violate
-      // the rule that the liveness of a virtual register forms a connected
-      // component. This should only happen if subregister liveness is tracked.
-      if (DeadBeforeDef)
-        MayHaveSplitComponents = true;
-
+      MI->addRegisterDead(LI.reg, TRI);
       if (dead && MI->allDefsAreDead()) {
         DEBUG(dbgs() << "All defs dead: " << Def << '\t' << *MI);
         dead->push_back(MI);

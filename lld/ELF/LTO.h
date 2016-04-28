@@ -46,7 +46,6 @@ private:
   std::unique_ptr<llvm::Module> Combined;
   llvm::IRMover Mover;
   std::vector<SmallString<0>> OwningData;
-  std::unique_ptr<MemoryBuffer> MB;
   llvm::StringSet<> InternalizedSyms;
   std::string TheTriple;
 };

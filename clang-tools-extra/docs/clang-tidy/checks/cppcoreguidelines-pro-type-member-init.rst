@@ -19,10 +19,10 @@ The check takes assignment of fields in the constructor body into
 account but generates false positives for fields initialized in
 methods invoked in the constructor body.
 
-The check also flags variables of record types without a user-provided
-constructor that are not initialized. The suggested fix is to zero
-initialize the variable via {} for C++11 and beyond or = {} for older
-versions.
+The check also flags variables with automatic storage duration that have record
+types without a user-provided constructor and are not initialized. The suggested
+fix is to zero initialize the variable via ``{}`` for C++11 and beyond or ``=
+{}`` for older language versions.
 
 IgnoreArrays option
 -------------------

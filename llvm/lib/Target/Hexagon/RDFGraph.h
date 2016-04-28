@@ -287,6 +287,13 @@ namespace rdf {
     }
   };
 
+  struct BuildOptions {
+    enum : unsigned {
+      None          = 0x00,
+      KeepDeadPhis  = 0x01,   // Do not remove dead phis during build.
+    };
+  };
+
   template <typename T> struct NodeAddr {
     NodeAddr() : Addr(nullptr), Id(0) {}
     NodeAddr(T A, NodeId I) : Addr(A), Id(I) {}
@@ -677,7 +684,7 @@ namespace rdf {
 
     typedef std::map<RegisterRef,DefStack> DefStackMap;
 
-    void build();
+    void build(unsigned Options = BuildOptions::None);
     void pushDefs(NodeAddr<InstrNode*> IA, DefStackMap &DM);
     void markBlock(NodeId B, DefStackMap &DefM);
     void releaseBlock(NodeId B, DefStackMap &DefM);

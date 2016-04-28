@@ -281,6 +281,7 @@ void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
                            isDefaultConstructor(), unless(isUserProvided())))));
   Finder->addMatcher(
       varDecl(isDefinition(), HasDefaultConstructor,
+              hasAutomaticStorageDuration(),
               hasType(recordDecl(has(fieldDecl()),
                                  isTriviallyDefaultConstructible())))
           .bind("var"),
