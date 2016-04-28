@@ -20,7 +20,7 @@
 
 template <class Tuple>
 void
-test0(const Tuple& t)
+test0(const Tuple&)
 {
     static_assert(std::tuple_size<Tuple>::value == 0, "");
 }
@@ -57,7 +57,7 @@ test2a(const Tuple& t)
 #if _LIBCPP_STD_VER > 11
 template <class Tuple>
 constexpr int 
-test3(const Tuple& t)
+test3(const Tuple&)
 {
     return std::tuple_size<Tuple>::value;
 }

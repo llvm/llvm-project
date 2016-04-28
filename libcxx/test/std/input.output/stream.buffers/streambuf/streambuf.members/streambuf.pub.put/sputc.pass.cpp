@@ -36,7 +36,7 @@ struct test
     }
 
 protected:
-    int_type overflow(int_type c = traits_type::eof())
+    int_type overflow(int_type = traits_type::eof())
     {
         ++overflow_called;
         return 'a';

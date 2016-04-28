@@ -46,10 +46,10 @@ int main()
     {
     typedef std::unique_ptr<int, D2> P;
     static_assert(std::is_same<P::pointer, int*>::value, "");
-
+    }
     {
     typedef std::unique_ptr<int, D3> P;
     static_assert(std::is_same<P::pointer, int*>::value, "");
-    }}
+    }
 #endif
 }

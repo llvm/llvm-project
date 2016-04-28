@@ -62,6 +62,7 @@ test_larger_sorts(unsigned N)
 
 int main()
 {
+    {
     int i = 0;
     std::partial_sort(&i, &i, &i);
     assert(i == 0);
@@ -73,6 +74,7 @@ int main()
     test_larger_sorts(997);
     test_larger_sorts(1000);
     test_larger_sorts(1009);
+    }
 
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {

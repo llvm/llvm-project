@@ -101,7 +101,7 @@ public:
     A2& operator=(const A2& a) TEST_NOEXCEPT { id_ = a.id(); copy_called = true; return *this;}
     A2& operator=(A2&& a)      TEST_NOEXCEPT { id_ = a.id(); move_called = true; return *this;}
 
-    T* allocate(std::size_t n, const void* hint)
+    T* allocate(std::size_t, const void* hint)
     {
         allocate_called = true;
         return (T*)hint;

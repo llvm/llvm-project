@@ -694,6 +694,12 @@ public:
                                    const SBFileSpecList &source_file);
     
     lldb::SBBreakpoint
+    BreakpointCreateBySourceRegex (const char *source_regex,
+                                   const SBFileSpecList &module_list,
+                                   const SBFileSpecList &source_file,
+                                   const SBStringList  &func_names);
+    
+    lldb::SBBreakpoint
     BreakpointCreateForException  (lldb::LanguageType language,
                                    bool catch_bp,
                                    bool throw_bp);

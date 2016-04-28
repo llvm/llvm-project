@@ -23,7 +23,7 @@
 struct Fun
 {
   template<typename T, typename U>
-  void operator()(T && t, U && u) const
+  void operator()(T &&, U &&) const
   {
     static_assert(std::is_same<U, int &>::value, "");
   }

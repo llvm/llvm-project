@@ -108,7 +108,7 @@ int main(int argc, const char **argv) {
     exit(1);
 
   if (PrintName)
-    errs() << "clang-rename: found name: " << PrevName;
+    errs() << "clang-rename: found name: " << PrevName << "\n";
 
   // Perform the renaming.
   rename::RenamingAction RenameAction(NewName, PrevName, USRs,

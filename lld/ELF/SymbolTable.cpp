@@ -150,9 +150,8 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
 // Add an undefined symbol.
 template <class ELFT>
 SymbolBody *SymbolTable<ELFT>::addUndefined(StringRef Name) {
-  auto *Sym = new (Alloc)
-      Undefined(Name, STB_GLOBAL, STV_DEFAULT, /*Type*/ 0, /*Size*/ 0,
-                /*IsBitcode*/ false);
+  auto *Sym = new (Alloc) Undefined(Name, STB_GLOBAL, STV_DEFAULT, /*Type*/ 0,
+                                    /*IsBitcode*/ false);
   resolve(Sym);
   return Sym;
 }
@@ -188,10 +187,11 @@ DefinedRegular<ELFT> *SymbolTable<ELFT>::addIgnored(StringRef Name,
 // Rename SYM as __wrap_SYM. The original symbol is preserved as __real_SYM.
 // Used to implement --wrap.
 template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
-  if (Symtab.count(Name) == 0)
+  SymbolBody *B = find(Name);
+  if (!B)
     return;
   StringSaver Saver(Alloc);
-  Symbol *Sym = addUndefined(Name)->Backref;
+  Symbol *Sym = B->Backref;
   Symbol *Real = addUndefined(Saver.save("__real_" + Name))->Backref;
   Symbol *Wrap = addUndefined(Saver.save("__wrap_" + Name))->Backref;
   Real->Body = Sym->Body;

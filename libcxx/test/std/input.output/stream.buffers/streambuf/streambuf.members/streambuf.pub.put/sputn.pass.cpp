@@ -25,7 +25,7 @@ struct test
     test() {}
 
 protected:
-    std::streamsize xsputn(const char_type* s, std::streamsize n)
+    std::streamsize xsputn(const char_type*, std::streamsize)
     {
         ++xsputn_called;
         return 5;
