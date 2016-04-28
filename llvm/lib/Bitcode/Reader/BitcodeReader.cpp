@@ -491,11 +491,6 @@ class ModuleSummaryIndexBitcodeReader {
   DenseMap<unsigned, std::pair<GlobalValue::GUID, GlobalValue::GUID>>
       ValueIdToCallGraphGUIDMap;
 
-  /// Map to save the association between summary offset in the VST to the
-  /// GUID created when parsing it. Used to add newly parsed summaries to
-  /// the index.
-  DenseMap<uint64_t, GlobalValue::GUID> SummaryOffsetToGUIDMap;
-
   /// Map populated during module path string table parsing, from the
   /// module ID to a string reference owned by the index's module
   /// path string table, used to correlate with combined index
@@ -547,7 +542,6 @@ private:
   std::error_code initLazyStream(std::unique_ptr<DataStreamer> Streamer);
   std::pair<GlobalValue::GUID, GlobalValue::GUID>
   getGUIDFromValueId(unsigned ValueId);
-  GlobalValue::GUID getGUIDFromOffset(uint64_t Offset);
 };
 } // namespace
 
@@ -5738,13 +5732,6 @@ ModuleSummaryIndexBitcodeReader::getGUIDFromValueId(unsigned ValueId) {
   return VGI->second;
 }
 
-GlobalValue::GUID
-ModuleSummaryIndexBitcodeReader::getGUIDFromOffset(uint64_t Offset) {
-  auto I = SummaryOffsetToGUIDMap.find(Offset);
-  assert(I != SummaryOffsetToGUIDMap.end());
-  return I->second;
-}
-
 // Specialized value symbol table parser used when reading module index
 // blocks where we don't actually create global values. The parsed information
 // is saved in the bitcode reader for use when later parsing summaries.
@@ -5828,18 +5815,6 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
           std::make_pair(FunctionGUID, OriginalNameID);
 
       ValueName.clear();
-      break;
-    }
-    case bitc::VST_CODE_COMBINED_GVDEFENTRY: {
-      // VST_CODE_COMBINED_GVDEFENTRY: [valueid, offset, guid]
-      unsigned ValueID = Record[0];
-      uint64_t GlobalValSummaryOffset = Record[1];
-      GlobalValue::GUID GlobalValGUID = Record[2];
-      SummaryOffsetToGUIDMap[GlobalValSummaryOffset] = GlobalValGUID;
-      // The "original name", which is the second value of the pair will be
-      // overriden later by a FS_COMBINED_ORIGINAL_NAME in the combined index.
-      ValueIdToCallGraphGUIDMap[ValueID] =
-          std::make_pair(GlobalValGUID, GlobalValGUID);
       break;
     }
     case bitc::VST_CODE_COMBINED_ENTRY: {
@@ -6028,11 +6003,6 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
   // "OriginalName" attachement.
   GlobalValueSummary *LastSeenSummary = nullptr;
   bool Combined = false;
-  // For aliases in the combined summary, we need to know which summary
-  // corresponds to the aliasee offset saved in the alias summary. It isn't
-  // sufficient to just map to the aliasee GUID, since in the combined summary
-  // there may be multiple values with the same GUID.
-  DenseMap<uint64_t, GlobalValueSummary *> OffsetToSummaryMap;
   while (1) {
     BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
 
@@ -6065,7 +6035,6 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
     // in the combined index VST entries). The records also contain
     // information used for ThinLTO renaming and importing.
     Record.clear();
-    uint64_t CurRecordBit = Stream.GetCurrentBitNo();
     auto BitCode = Stream.readRecord(Entry.ID, Record);
     switch (BitCode) {
     default: // Default behavior: ignore.
@@ -6162,27 +6131,29 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
       TheIndex->addGlobalValueSummary(GUID.first, std::move(FS));
       break;
     }
-    // FS_COMBINED: [modid, flags, instcount, numrefs, numrefs x valueid,
-    //               n x (valueid, callsitecount)]
-    // FS_COMBINED_PROFILE: [modid, flags, instcount, numrefs,
+    // FS_COMBINED: [valueid, modid, flags, instcount, numrefs,
+    //               numrefs x valueid, n x (valueid, callsitecount)]
+    // FS_COMBINED_PROFILE: [valueid, modid, flags, instcount, numrefs,
     //                       numrefs x valueid,
     //                       n x (valueid, callsitecount, profilecount)]
     case bitc::FS_COMBINED:
     case bitc::FS_COMBINED_PROFILE: {
-      uint64_t ModuleId = Record[0];
-      uint64_t RawFlags = Record[1];
-      unsigned InstCount = Record[2];
-      unsigned NumRefs = Record[3];
+      unsigned ValueID = Record[0];
+      uint64_t ModuleId = Record[1];
+      uint64_t RawFlags = Record[2];
+      unsigned InstCount = Record[3];
+      unsigned NumRefs = Record[4];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
       std::unique_ptr<FunctionSummary> FS =
           llvm::make_unique<FunctionSummary>(Flags, InstCount);
       LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
-      static int RefListStartIndex = 4;
+      static int RefListStartIndex = 5;
       int CallGraphEdgeStartIndex = RefListStartIndex + NumRefs;
       assert(Record.size() >= RefListStartIndex + NumRefs &&
              "Record size inconsistent with number of references");
-      for (unsigned I = 4, E = CallGraphEdgeStartIndex; I != E; ++I) {
+      for (unsigned I = RefListStartIndex, E = CallGraphEdgeStartIndex; I != E;
+           ++I) {
         unsigned RefValueId = Record[I];
         GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
         FS->addRefEdge(RefGUID);
@@ -6197,50 +6168,52 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
         FS->addCallGraphEdge(CalleeGUID,
                              CalleeInfo(CallsiteCount, ProfileCount));
       }
-      GlobalValue::GUID GUID = getGUIDFromOffset(CurRecordBit);
-      OffsetToSummaryMap[CurRecordBit] = FS.get();
+      GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
       TheIndex->addGlobalValueSummary(GUID, std::move(FS));
       Combined = true;
       break;
     }
-    // FS_COMBINED_ALIAS: [modid, flags, offset]
+    // FS_COMBINED_ALIAS: [valueid, modid, flags, valueid]
     // Aliases must be emitted (and parsed) after all FS_COMBINED entries, as
     // they expect all aliasee summaries to be available.
     case bitc::FS_COMBINED_ALIAS: {
-      uint64_t ModuleId = Record[0];
-      uint64_t RawFlags = Record[1];
-      uint64_t AliaseeSummaryOffset = Record[2];
+      unsigned ValueID = Record[0];
+      uint64_t ModuleId = Record[1];
+      uint64_t RawFlags = Record[2];
+      unsigned AliaseeValueId = Record[3];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
       std::unique_ptr<AliasSummary> AS = llvm::make_unique<AliasSummary>(Flags);
       LastSeenSummary = AS.get();
       AS->setModulePath(ModuleIdMap[ModuleId]);
 
-      auto *AliaseeSummary = OffsetToSummaryMap[AliaseeSummaryOffset];
-      if (!AliaseeSummary)
+      auto AliaseeGUID = getGUIDFromValueId(AliaseeValueId).first;
+      auto AliaseeInModule =
+          TheIndex->findSummaryInModule(AliaseeGUID, AS->modulePath());
+      if (!AliaseeInModule)
         return error("Alias expects aliasee summary to be parsed");
-      AS->setAliasee(AliaseeSummary);
+      AS->setAliasee(AliaseeInModule);
 
-      GlobalValue::GUID GUID = getGUIDFromOffset(CurRecordBit);
+      GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
       TheIndex->addGlobalValueSummary(GUID, std::move(AS));
       Combined = true;
       break;
     }
-    // FS_COMBINED_GLOBALVAR_INIT_REFS: [modid, flags, n x valueid]
+    // FS_COMBINED_GLOBALVAR_INIT_REFS: [valueid, modid, flags, n x valueid]
     case bitc::FS_COMBINED_GLOBALVAR_INIT_REFS: {
-      uint64_t ModuleId = Record[0];
-      uint64_t RawFlags = Record[1];
+      unsigned ValueID = Record[0];
+      uint64_t ModuleId = Record[1];
+      uint64_t RawFlags = Record[2];
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
       std::unique_ptr<GlobalVarSummary> FS =
           llvm::make_unique<GlobalVarSummary>(Flags);
       LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
-      for (unsigned I = 2, E = Record.size(); I != E; ++I) {
+      for (unsigned I = 3, E = Record.size(); I != E; ++I) {
         unsigned RefValueId = Record[I];
         GlobalValue::GUID RefGUID = getGUIDFromValueId(RefValueId).first;
         FS->addRefEdge(RefGUID);
       }
-      GlobalValue::GUID GUID = getGUIDFromOffset(CurRecordBit);
-      OffsetToSummaryMap[CurRecordBit] = FS.get();
+      GlobalValue::GUID GUID = getGUIDFromValueId(ValueID).first;
       TheIndex->addGlobalValueSummary(GUID, std::move(FS));
       Combined = true;
       break;

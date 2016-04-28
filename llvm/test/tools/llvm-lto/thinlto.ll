@@ -17,8 +17,8 @@
 ; COMBINED-NEXT: <VALUE_SYMTAB
 ; Check that the format is: op0=valueid, op1=offset, op2=funcguid,
 ; where funcguid is the lower 64 bits of the function name MD5.
-; COMBINED-NEXT: <COMBINED_GVDEFENTRY abbrevid={{[0-9]+}} op0={{1|2}} op1={{[0-9]+}} op2={{-3706093650706652785|-5300342847281564238}}
-; COMBINED-NEXT: <COMBINED_GVDEFENTRY abbrevid={{[0-9]+}} op0={{1|2}} op1={{[0-9]+}} op2={{-3706093650706652785|-5300342847281564238}}
+; COMBINED-NEXT: <COMBINED_ENTRY abbrevid={{[0-9]+}} op0={{1|2}} op1={{-3706093650706652785|-5300342847281564238}}
+; COMBINED-NEXT: <COMBINED_ENTRY abbrevid={{[0-9]+}} op0={{1|2}} op1={{-3706093650706652785|-5300342847281564238}}
 ; COMBINED-NEXT: </VALUE_SYMTAB
 
 define void @f() {
