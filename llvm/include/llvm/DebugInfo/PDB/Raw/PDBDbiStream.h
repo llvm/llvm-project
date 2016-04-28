@@ -43,13 +43,23 @@ public:
 
   PDB_Machine getMachineType() const;
 
-  llvm::iterator_range<ModInfoIterator> modules() const;
+  ArrayRef<ModuleInfoEx> modules() const;
 
 private:
+  std::error_code readSubstream(std::vector<uint8_t> &Bytes, uint32_t Size);
+  std::error_code initializeFileInfo();
+
   PDBFile &Pdb;
   PDBStream Stream;
 
+  std::vector<ModuleInfoEx> ModuleInfos;
+
   std::vector<uint8_t> ModInfoSubstream;
+  std::vector<uint8_t> SecContrSubstream;
+  std::vector<uint8_t> SecMapSubstream;
+  std::vector<uint8_t> FileInfoSubstream;
+  std::vector<uint8_t> TypeServerMapSubstream;
+  std::vector<uint8_t> ECSubstream;
   std::unique_ptr<HeaderInfo> Header;
 };
 }

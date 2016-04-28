@@ -768,6 +768,28 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         // TODO: Could compute known zero/one bits based on the input.
         break;
       }
+      case Intrinsic::x86_sse_movmsk_ps:
+      case Intrinsic::x86_sse2_movmsk_pd:
+      case Intrinsic::x86_sse2_pmovmskb_128:
+      case Intrinsic::x86_avx_movmsk_ps_256:
+      case Intrinsic::x86_avx_movmsk_pd_256:
+      case Intrinsic::x86_avx2_pmovmskb: {
+        // MOVMSK copies the vector elements' sign bits to the low bits
+        // and zeros the high bits.
+        auto Arg = II->getArgOperand(0);
+        auto ArgType = cast<VectorType>(Arg->getType());
+        unsigned ArgWidth = ArgType->getNumElements();
+
+        // If we don't need any of low bits then return zero,
+        // we know that DemandedMask is non-zero already.
+        APInt DemandedElts = DemandedMask.zextOrTrunc(ArgWidth);
+        if (DemandedElts == 0)
+          return ConstantInt::getNullValue(VTy);
+
+        // We know that the upper bits are set to zero.
+        KnownZero = APInt::getHighBitsSet(BitWidth, BitWidth - ArgWidth);
+        return nullptr;
+      }
       case Intrinsic::x86_sse42_crc32_64_64:
         KnownZero = APInt::getHighBitsSet(64, 32);
         return nullptr;

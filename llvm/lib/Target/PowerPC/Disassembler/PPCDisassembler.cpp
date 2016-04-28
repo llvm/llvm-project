@@ -242,12 +242,6 @@ static DecodeStatus DecodeF8RCRegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeRegisterClass(Inst, RegNo, FRegs);
 }
 
-static DecodeStatus DecodeD8RCRegisterClass(MCInst &Inst, uint64_t RegNo,
-                                            uint64_t Address,
-                                            const void *Decoder) {
-  return decodeRegisterClass(Inst, RegNo, FRegs);
-}
-
 static DecodeStatus DecodeVRRCRegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {

@@ -483,7 +483,9 @@ static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
 }
 
 void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
-  if (!I.isStaticAlloca())
+  // Array allocations are probably not worth handling, since an allocation of
+  // the array type is the canonical form.
+  if (!I.isStaticAlloca() || I.isArrayAllocation())
     return;
 
   IRBuilder<> Builder(&I);

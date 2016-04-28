@@ -278,36 +278,17 @@ static Type* getSameType(ArrayRef<Value *> VL) {
   return Ty;
 }
 
-/// \returns True if the ExtractElement instructions in VL can be vectorized
-/// to use the original vector.
-static bool CanReuseExtract(ArrayRef<Value *> VL) {
-  assert(Instruction::ExtractElement == getSameOpcode(VL) && "Invalid opcode");
-  // Check if all of the extracts come from the same vector and from the
-  // correct offset.
-  Value *VL0 = VL[0];
-  ExtractElementInst *E0 = cast<ExtractElementInst>(VL0);
-  Value *Vec = E0->getOperand(0);
-
-  // We have to extract from the same vector type.
-  unsigned NElts = Vec->getType()->getVectorNumElements();
-
-  if (NElts != VL.size())
-    return false;
-
-  // Check that all of the indices extract from the correct offset.
-  ConstantInt *CI = dyn_cast<ConstantInt>(E0->getOperand(1));
-  if (!CI || CI->getZExtValue())
-    return false;
-
-  for (unsigned i = 1, e = VL.size(); i < e; ++i) {
-    ExtractElementInst *E = cast<ExtractElementInst>(VL[i]);
+/// \returns True if Extract{Value,Element} instruction extracts element Idx.
+static bool matchExtractIndex(Instruction *E, unsigned Idx, unsigned Opcode) {
+  assert(Opcode == Instruction::ExtractElement ||
+         Opcode == Instruction::ExtractValue);
+  if (Opcode == Instruction::ExtractElement) {
     ConstantInt *CI = dyn_cast<ConstantInt>(E->getOperand(1));
-
-    if (!CI || CI->getZExtValue() != i || E->getOperand(0) != Vec)
-      return false;
+    return CI && CI->getZExtValue() == Idx;
+  } else {
+    ExtractValueInst *EI = cast<ExtractValueInst>(E);
+    return EI->getNumIndices() == 1 && *EI->idx_begin() == Idx;
   }
-
-  return true;
 }
 
 /// \returns True if in-tree use also needs extract. This refers to
@@ -448,6 +429,11 @@ public:
     return MinVecRegSize;
   }
 
+  /// \brief Check if ArrayType or StructType is isomorphic to some VectorType.
+  ///
+  /// \returns number of elements in vector if isomorphism exists, 0 otherwise.
+  unsigned canMapToVector(Type *T, const DataLayout &DL) const;
+
 private:
   struct TreeEntry;
 
@@ -456,6 +442,10 @@ private:
 
   /// This is the recursive part of buildTree.
   void buildTree_rec(ArrayRef<Value *> Roots, unsigned Depth);
+
+  /// \returns True if the ExtractElement/ExtractValue instructions in VL can
+  /// be vectorized to use the original vector (or aggregate "bitcast" to a vector).
+  bool canReuseExtract(ArrayRef<Value *> VL, unsigned Opcode) const;
 
   /// Vectorize a single entry in the tree.
   Value *vectorizeTree(TreeEntry *E);
@@ -1183,8 +1173,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
       }
       return;
     }
+    case Instruction::ExtractValue:
     case Instruction::ExtractElement: {
-      bool Reuse = CanReuseExtract(VL);
+      bool Reuse = canReuseExtract(VL, Opcode);
       if (Reuse) {
         DEBUG(dbgs() << "SLP: Reusing extract sequence.\n");
       } else {
@@ -1501,6 +1492,74 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
   }
 }
 
+unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
+  unsigned N;
+  Type *EltTy;
+  auto *ST = dyn_cast<StructType>(T);
+  if (ST) {
+    N = ST->getNumElements();
+    EltTy = *ST->element_begin();
+  } else {
+    N = cast<ArrayType>(T)->getNumElements();
+    EltTy = cast<ArrayType>(T)->getElementType();
+  }
+  if (!isValidElementType(EltTy))
+    return 0;
+  uint64_t VTSize = DL.getTypeStoreSizeInBits(VectorType::get(EltTy, N));
+  if (VTSize < MinVecRegSize || VTSize > MaxVecRegSize || VTSize != DL.getTypeStoreSizeInBits(T))
+    return 0;
+  if (ST) {
+    // Check that struct is homogeneous.
+    for (const auto *Ty : ST->elements())
+      if (Ty != EltTy)
+        return 0;
+  }
+  return N;
+}
+
+bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, unsigned Opcode) const {
+  assert(Opcode == Instruction::ExtractElement ||
+         Opcode == Instruction::ExtractValue);
+  assert(Opcode == getSameOpcode(VL) && "Invalid opcode");
+  // Check if all of the extracts come from the same vector and from the
+  // correct offset.
+  Value *VL0 = VL[0];
+  Instruction *E0 = cast<Instruction>(VL0);
+  Value *Vec = E0->getOperand(0);
+
+  // We have to extract from a vector/aggregate with the same number of elements.
+  unsigned NElts;
+  if (Opcode == Instruction::ExtractValue) {
+    const DataLayout &DL = E0->getModule()->getDataLayout();
+    NElts = canMapToVector(Vec->getType(), DL);
+    if (!NElts)
+      return false;
+    // Check if load can be rewritten as load of vector.
+    LoadInst *LI = dyn_cast<LoadInst>(Vec);
+    if (!LI || !LI->isSimple() || !LI->hasNUses(VL.size()))
+      return false;
+  } else {
+    NElts = Vec->getType()->getVectorNumElements();
+  }
+
+  if (NElts != VL.size())
+    return false;
+
+  // Check that all of the indices extract from the correct offset.
+  if (!matchExtractIndex(E0, 0, Opcode))
+    return false;
+
+  for (unsigned i = 1, e = VL.size(); i < e; ++i) {
+    Instruction *E = cast<Instruction>(VL[i]);
+    if (!matchExtractIndex(E, i, Opcode))
+      return false;
+    if (E->getOperand(0) != Vec)
+      return false;
+  }
+
+  return true;
+}
+
 int BoUpSLP::getEntryCost(TreeEntry *E) {
   ArrayRef<Value*> VL = E->Scalars;
 
@@ -1530,11 +1589,12 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     case Instruction::PHI: {
       return 0;
     }
+    case Instruction::ExtractValue:
     case Instruction::ExtractElement: {
-      if (CanReuseExtract(VL)) {
+      if (canReuseExtract(VL, Opcode)) {
         int DeadCost = 0;
         for (unsigned i = 0, e = VL.size(); i < e; ++i) {
-          ExtractElementInst *E = cast<ExtractElementInst>(VL[i]);
+          Instruction *E = cast<Instruction>(VL[i]);
           if (E->hasOneUse())
             // Take credit for instruction that will become dead.
             DeadCost +=
@@ -2223,10 +2283,22 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
 
     case Instruction::ExtractElement: {
-      if (CanReuseExtract(E->Scalars)) {
+      if (canReuseExtract(E->Scalars, Instruction::ExtractElement)) {
         Value *V = VL0->getOperand(0);
         E->VectorizedValue = V;
         return V;
+      }
+      return Gather(E->Scalars, VecTy);
+    }
+    case Instruction::ExtractValue: {
+      if (canReuseExtract(E->Scalars, Instruction::ExtractValue)) {
+        LoadInst *LI = cast<LoadInst>(VL0->getOperand(0));
+        Builder.SetInsertPoint(LI);
+        PointerType *PtrTy = PointerType::get(VecTy, LI->getPointerAddressSpace());
+        Value *Ptr = Builder.CreateBitCast(LI->getOperand(0), PtrTy);
+        LoadInst *V = Builder.CreateAlignedLoad(Ptr, LI->getAlignment());
+        E->VectorizedValue = V;
+        return propagateMetadata(V, E->Scalars);
       }
       return Gather(E->Scalars, VecTy);
     }
@@ -3807,13 +3879,14 @@ bool SLPVectorizer::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         for (auto &V : BuildVectorSlice) {
           IRBuilder<NoFolder> Builder(InsertAfter->getParent(),
                                       ++BasicBlock::iterator(InsertAfter));
-          InsertElementInst *IE = cast<InsertElementInst>(V);
+          Instruction *I = cast<Instruction>(V);
+          assert(isa<InsertElementInst>(I) || isa<InsertValueInst>(I));
           Instruction *Extract = cast<Instruction>(Builder.CreateExtractElement(
               VectorizedRoot, Builder.getInt32(VecIdx++)));
-          IE->setOperand(1, Extract);
-          IE->removeFromParent();
-          IE->insertAfter(Extract);
-          InsertAfter = IE;
+          I->setOperand(1, Extract);
+          I->removeFromParent();
+          I->insertAfter(Extract);
+          InsertAfter = I;
         }
       }
       // Move to the next bundle.
@@ -4210,6 +4283,25 @@ static bool findBuildVector(InsertElementInst *FirstInsertElem,
   return false;
 }
 
+/// \brief Like findBuildVector, but looks backwards for construction of aggregate.
+///
+/// \return true if it matches.
+static bool findBuildAggregate(InsertValueInst *IV,
+                               SmallVectorImpl<Value *> &BuildVector,
+                               SmallVectorImpl<Value *> &BuildVectorOpds) {
+  if (!IV->hasOneUse())
+    return false;
+  Value *V = IV->getAggregateOperand();
+  if (!isa<UndefValue>(V)) {
+    InsertValueInst *I = dyn_cast<InsertValueInst>(V);
+    if (!I || !findBuildAggregate(I, BuildVector, BuildVectorOpds))
+      return false;
+  }
+  BuildVector.push_back(IV);
+  BuildVectorOpds.push_back(IV->getInsertedValueOperand());
+  return true;
+}
+
 static bool PhiTypeSorterFunc(Value *V, Value *V2) {
   return V->getType() < V2->getType();
 }
@@ -4461,6 +4553,28 @@ bool SLPVectorizer::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       }
 
       continue;
+    }
+
+    // Try to vectorize trees that start at insertvalue instructions feeding into
+    // a store.
+    if (StoreInst *SI = dyn_cast<StoreInst>(it)) {
+      if (InsertValueInst *LastInsertValue = dyn_cast<InsertValueInst>(SI->getValueOperand())) {
+        const DataLayout &DL = BB->getModule()->getDataLayout();
+        if (R.canMapToVector(SI->getValueOperand()->getType(), DL)) {
+          SmallVector<Value *, 16> BuildVector;
+          SmallVector<Value *, 16> BuildVectorOpds;
+          if (!findBuildAggregate(LastInsertValue, BuildVector, BuildVectorOpds))
+            continue;
+
+          DEBUG(dbgs() << "SLP: store of array mappable to vector: " << *SI << "\n");
+          if (tryToVectorizeList(BuildVectorOpds, R, BuildVector, false)) {
+            Changed = true;
+            it = BB->begin();
+            e = BB->end();
+          }
+          continue;
+        }
+      }
     }
   }
 

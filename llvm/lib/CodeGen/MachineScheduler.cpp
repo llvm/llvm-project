@@ -1113,11 +1113,6 @@ void ScheduleDAGMILive::schedule() {
   // Initialize ready queues now that the DAG and priority data are finalized.
   initQueues(TopRoots, BotRoots);
 
-  if (ShouldTrackPressure) {
-    assert(TopRPTracker.getPos() == RegionBegin && "bad initial Top tracker");
-    TopRPTracker.setPos(CurrentTop);
-  }
-
   bool IsTopNode = false;
   while (true) {
     DEBUG(dbgs() << "** ScheduleDAGMILive::schedule picking next node\n");
@@ -1273,6 +1268,17 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
   }
   DEBUG(dbgs() << "Cyclic Critical Path: " << MaxCyclicLatency << "c\n");
   return MaxCyclicLatency;
+}
+
+/// Release ExitSU predecessors and setup scheduler queues. Re-position
+/// the Top RP tracker in case the region beginning has changed.
+void ScheduleDAGMILive::initQueues(ArrayRef<SUnit*> TopRoots,
+                                   ArrayRef<SUnit*> BotRoots) {
+  ScheduleDAGMI::initQueues(TopRoots, BotRoots);
+  if (ShouldTrackPressure) {
+    assert(TopRPTracker.getPos() == RegionBegin && "bad initial Top tracker");
+    TopRPTracker.setPos(CurrentTop);
+  }
 }
 
 /// Move an instruction and update register pressure.

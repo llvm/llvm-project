@@ -18,8 +18,6 @@ def sub_un : SubRegIndex<1, 3>;
 def sub_32 : SubRegIndex<32>;
 def sub_64 : SubRegIndex<64>;
 def sub_128 : SubRegIndex<128>;
-def subreg_l64 : SubRegIndex<64, 0>;
-def subreg_h64 : SubRegIndex<64, 64>;
 }
 
 
@@ -49,14 +47,6 @@ class SPR<bits<10> num, string n> : PPCReg<n> {
 // FPR - One of the 32 64-bit floating-point registers
 class FPR<bits<5> num, string n> : PPCReg<n> {
   let HWEncoding{4-0} = num;
-}
-
-// DPR - One of the 16 128 bit floating-point registers
-// It is composed of FPR_even and FPR_odd
-class DPR<FPR even, FPR odd, string n> : PPCReg<n> {
-  let HWEncoding = even.HWEncoding;
-  let SubRegs = [even, odd];
-  let SubRegIndices = [subreg_l64, subreg_h64];
 }
 
 // QFPR - One of the 32 256-bit floating-point vector registers (used for QPX)
@@ -124,13 +114,6 @@ foreach Index = 0-31 in {
 foreach Index = 0-31 in {
   def F#Index : FPR<Index, "f"#Index>,
                 DwarfRegNum<[!add(Index, 32), !add(Index, 32)]>;
-}
-
-// 128-bit Paired Floating-point registers
-foreach Index = 0-15 in {
-  def D#Index :
-    DPR<!cast<FPR>("F"#!shl(Index, 1)),
-        !cast<FPR>("F"#!add(!shl(Index, 1), 1)), "f"#!shl(Index, 1)>;
 }
 
 // Floating-point vector subregisters (for VSX)
@@ -304,9 +287,6 @@ def G8RC_NOX0 : RegisterClass<"PPC", [i64], 64, (add (sub G8RC, X0), ZERO8)> {
 def F8RC : RegisterClass<"PPC", [f64], 64, (add (sequence "F%u", 0, 13),
                                                 (sequence "F%u", 31, 14))>;
 def F4RC : RegisterClass<"PPC", [f32], 32, (add F8RC)>;
-
-def D8RC : RegisterClass<"PPC", [f128], 128, (add (sequence "D%u",  0, 6),
-                                                  (sequence "D%u", 15, 7))>;
 
 def VRRC : RegisterClass<"PPC", [v16i8,v8i16,v4i32,v2i64,v1i128,v4f32], 128,
                          (add V2, V3, V4, V5, V0, V1, V6, V7, V8, V9, V10, V11,

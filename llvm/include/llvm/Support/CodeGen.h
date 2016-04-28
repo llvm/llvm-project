@@ -32,6 +32,10 @@ namespace llvm {
     enum Level { Default=0, Small=1, Large=2 };
   }
 
+  namespace PIELevel {
+    enum Level { Default=0, Small=1, Large=2 };
+  }
+
   // TLS models.
   namespace TLSModel {
     enum Model {
