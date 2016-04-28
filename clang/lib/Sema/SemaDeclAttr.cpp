@@ -4875,6 +4875,45 @@ static void handleSwiftBridgeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
                              Attr.getAttributeSpellingListIndex()));
 }
 
+static void handleSwiftNewtypeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  // Make sure that there is an identifier as the annotation's single
+  // argument.
+  if (Attr.getNumArgs() != 1) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
+      << Attr.getName() << 1;
+    Attr.setInvalid();
+    return;
+  }
+  if (!Attr.isArgIdent(0)) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
+      << Attr.getName() << AANT_ArgumentIdentifier;
+    Attr.setInvalid();
+    return;
+  }
+
+  IdentifierInfo *II = Attr.getArgAsIdent(0)->Ident;
+  SwiftNewtypeAttr::NewtypeKind Kind;
+  if (II->isStr("struct"))
+    Kind = SwiftNewtypeAttr::NK_Struct;
+  else if (II->isStr("enum"))
+    Kind = SwiftNewtypeAttr::NK_Enum;
+  else {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_type_not_supported)
+      << Attr.getName() << II;
+    Attr.setInvalid();
+    return;
+  }
+
+  if (!isa<TypedefNameDecl>(D)) {
+    S.Diag(Attr.getLoc(), diag::warn_swift_newtype_attribute_non_typedef);
+    return;
+  }
+
+  D->addAttr(::new (S.Context)
+             SwiftNewtypeAttr(Attr.getRange(), S.Context, Kind,
+                              Attr.getAttributeSpellingListIndex()));
+}
+
 //===----------------------------------------------------------------------===//
 // Microsoft specific attribute handlers.
 //===----------------------------------------------------------------------===//
@@ -6105,6 +6144,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_SwiftBridge:
     handleSwiftBridgeAttr(S, D, Attr);
+    break;
+  case AttributeList::AT_SwiftNewtype:
+    handleSwiftNewtypeAttr(S, D, Attr);
     break;
   }
 }
