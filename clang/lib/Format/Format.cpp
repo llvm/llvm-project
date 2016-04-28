@@ -784,7 +784,7 @@ namespace {
 
 class FormatTokenLexer {
 public:
-  FormatTokenLexer(SourceManager &SourceMgr, FileID ID,
+  FormatTokenLexer(const SourceManager &SourceMgr, FileID ID,
                    const FormatStyle &Style, encoding::Encoding Encoding)
       : FormatTok(nullptr), IsFirstToken(true), GreaterStashed(false),
         LessStashed(false), Column(0), TrailingWhitespace(0),
@@ -1373,7 +1373,7 @@ private:
   unsigned Column;
   unsigned TrailingWhitespace;
   std::unique_ptr<Lexer> Lex;
-  SourceManager &SourceMgr;
+  const SourceManager &SourceMgr;
   FileID ID;
   const FormatStyle &Style;
   IdentifierTable IdentTable;
@@ -1451,25 +1451,21 @@ static StringRef getLanguageName(FormatStyle::LanguageKind Language) {
 
 class Environment {
 public:
-  Environment(const FormatStyle &Style, SourceManager &SM, FileID ID,
-              ArrayRef<CharSourceRange> Ranges)
-      : Style(Style), ID(ID), CharRanges(Ranges.begin(), Ranges.end()), SM(SM) {
-  }
+  Environment(SourceManager &SM, FileID ID, ArrayRef<CharSourceRange> Ranges)
+      : ID(ID), CharRanges(Ranges.begin(), Ranges.end()), SM(SM) {}
 
-  Environment(const FormatStyle &Style, FileID ID,
-              std::unique_ptr<FileManager> FileMgr,
+  Environment(FileID ID, std::unique_ptr<FileManager> FileMgr,
               std::unique_ptr<SourceManager> VirtualSM,
               std::unique_ptr<DiagnosticsEngine> Diagnostics,
-              std::vector<CharSourceRange> CharRanges)
-      : Style(Style), ID(ID), CharRanges(CharRanges.begin(), CharRanges.end()),
+              const std::vector<CharSourceRange> &CharRanges)
+      : ID(ID), CharRanges(CharRanges.begin(), CharRanges.end()),
         SM(*VirtualSM), FileMgr(std::move(FileMgr)),
         VirtualSM(std::move(VirtualSM)), Diagnostics(std::move(Diagnostics)) {}
 
   // This sets up an virtual file system with file \p FileName containing \p
   // Code.
   static std::unique_ptr<Environment>
-  CreateVirtualEnvironment(const FormatStyle &Style, StringRef Code,
-                           StringRef FileName,
+  CreateVirtualEnvironment(StringRef Code, StringRef FileName,
                            ArrayRef<tooling::Range> Ranges) {
     // This is referenced by `FileMgr` and will be released by `FileMgr` when it
     // is deleted.
@@ -1501,14 +1497,10 @@ public:
       SourceLocation End = Start.getLocWithOffset(Range.getLength());
       CharRanges.push_back(CharSourceRange::getCharRange(Start, End));
     }
-    return llvm::make_unique<Environment>(Style, ID, std::move(FileMgr),
+    return llvm::make_unique<Environment>(ID, std::move(FileMgr),
                                           std::move(VirtualSM),
                                           std::move(Diagnostics), CharRanges);
   }
-
-  FormatStyle &getFormatStyle() { return Style; }
-
-  const FormatStyle &getFormatStyle() const { return Style; }
 
   FileID getFileID() const { return ID; }
 
@@ -1516,10 +1508,9 @@ public:
 
   ArrayRef<CharSourceRange> getCharRanges() const { return CharRanges; }
 
-  SourceManager &getSourceManager() { return SM; }
+  const SourceManager &getSourceManager() const { return SM; }
 
 private:
-  FormatStyle Style;
   FileID ID;
   StringRef FileName;
   SmallVector<CharSourceRange, 8> CharRanges;
@@ -1535,8 +1526,9 @@ private:
 
 class TokenAnalyzer : public UnwrappedLineConsumer {
 public:
-  TokenAnalyzer(Environment &Env)
-      : Env(Env), AffectedRangeMgr(Env.getSourceManager(), Env.getCharRanges()),
+  TokenAnalyzer(const Environment &Env, const FormatStyle &Style)
+      : Style(Style), Env(Env),
+        AffectedRangeMgr(Env.getSourceManager(), Env.getCharRanges()),
         UnwrappedLines(1),
         Encoding(encoding::detectEncoding(
             Env.getSourceManager().getBufferData(Env.getFileID()))) {
@@ -1544,18 +1536,17 @@ public:
                        << (Encoding == encoding::Encoding_UTF8 ? "UTF8"
                                                                : "unknown")
                        << "\n");
-    DEBUG(llvm::dbgs() << "Language: "
-                       << getLanguageName(Env.getFormatStyle().Language)
+    DEBUG(llvm::dbgs() << "Language: " << getLanguageName(Style.Language)
                        << "\n");
   }
 
   tooling::Replacements process() {
     tooling::Replacements Result;
-    FormatTokenLexer Tokens(Env.getSourceManager(), Env.getFileID(),
-                            Env.getFormatStyle(), Encoding);
+    FormatTokenLexer Tokens(Env.getSourceManager(), Env.getFileID(), Style,
+                            Encoding);
 
-    UnwrappedLineParser Parser(Env.getFormatStyle(), Tokens.getKeywords(),
-                               Tokens.lex(), *this);
+    UnwrappedLineParser Parser(Style, Tokens.getKeywords(), Tokens.lex(),
+                               *this);
     Parser.parse();
     assert(UnwrappedLines.rbegin()->empty());
     for (unsigned Run = 0, RunE = UnwrappedLines.size(); Run + 1 != RunE;
@@ -1563,7 +1554,7 @@ public:
       DEBUG(llvm::dbgs() << "Run " << Run << "...\n");
       SmallVector<AnnotatedLine *, 16> AnnotatedLines;
 
-      TokenAnnotator Annotator(Env.getFormatStyle(), Tokens.getKeywords());
+      TokenAnnotator Annotator(Style, Tokens.getKeywords());
       for (unsigned i = 0, e = UnwrappedLines[Run].size(); i != e; ++i) {
         AnnotatedLines.push_back(new AnnotatedLine(UnwrappedLines[Run][i]));
         Annotator.annotate(*AnnotatedLines.back());
@@ -1603,8 +1594,9 @@ protected:
     UnwrappedLines.push_back(SmallVector<UnwrappedLine, 16>());
   }
 
+  FormatStyle Style;
   // Stores Style, FileID and SourceManager etc.
-  Environment &Env;
+  const Environment &Env;
   // AffectedRangeMgr stores ranges to be fixed.
   AffectedRangeManager AffectedRangeMgr;
   SmallVector<SmallVector<UnwrappedLine, 16>, 2> UnwrappedLines;
@@ -1613,8 +1605,9 @@ protected:
 
 class Formatter : public TokenAnalyzer {
 public:
-  Formatter(Environment &Env, bool *IncompleteFormat)
-      : TokenAnalyzer(Env), IncompleteFormat(IncompleteFormat) {}
+  Formatter(const Environment &Env, const FormatStyle &Style,
+            bool *IncompleteFormat)
+      : TokenAnalyzer(Env, Style), IncompleteFormat(IncompleteFormat) {}
 
   tooling::Replacements
   analyze(TokenAnnotator &Annotator,
@@ -1624,8 +1617,8 @@ public:
     AffectedRangeMgr.computeAffectedLines(AnnotatedLines.begin(),
                                           AnnotatedLines.end());
 
-    if (Env.getFormatStyle().Language == FormatStyle::LK_JavaScript &&
-        Env.getFormatStyle().JavaScriptQuotes != FormatStyle::JSQS_Leave)
+    if (Style.Language == FormatStyle::LK_JavaScript &&
+        Style.JavaScriptQuotes != FormatStyle::JSQS_Leave)
       requoteJSStringLiteral(AnnotatedLines, Result);
 
     for (unsigned i = 0, e = AnnotatedLines.size(); i != e; ++i) {
@@ -1635,13 +1628,13 @@ public:
     Annotator.setCommentLineLevels(AnnotatedLines);
 
     WhitespaceManager Whitespaces(
-        Env.getSourceManager(), Env.getFormatStyle(),
+        Env.getSourceManager(), Style,
         inputUsesCRLF(Env.getSourceManager().getBufferData(Env.getFileID())));
-    ContinuationIndenter Indenter(Env.getFormatStyle(), Tokens.getKeywords(),
+    ContinuationIndenter Indenter(Style, Tokens.getKeywords(),
                                   Env.getSourceManager(), Whitespaces, Encoding,
                                   BinPackInconclusiveFunctions);
-    UnwrappedLineFormatter(&Indenter, &Whitespaces, Env.getFormatStyle(),
-                           Tokens.getKeywords(), IncompleteFormat)
+    UnwrappedLineFormatter(&Indenter, &Whitespaces, Style, Tokens.getKeywords(),
+                           IncompleteFormat)
         .format(AnnotatedLines);
     return Whitespaces.generateReplacements();
   }
@@ -1663,17 +1656,14 @@ private:
             // NB: testing for not starting with a double quote to avoid
             // breaking
             // `template strings`.
-            (Env.getFormatStyle().JavaScriptQuotes ==
-                 FormatStyle::JSQS_Single &&
+            (Style.JavaScriptQuotes == FormatStyle::JSQS_Single &&
              !Input.startswith("\"")) ||
-            (Env.getFormatStyle().JavaScriptQuotes ==
-                 FormatStyle::JSQS_Double &&
+            (Style.JavaScriptQuotes == FormatStyle::JSQS_Double &&
              !Input.startswith("\'")))
           continue;
 
         // Change start and end quote.
-        bool IsSingle =
-            Env.getFormatStyle().JavaScriptQuotes == FormatStyle::JSQS_Single;
+        bool IsSingle = Style.JavaScriptQuotes == FormatStyle::JSQS_Single;
         SourceLocation Start = FormatTok->Tok.getLocation();
         auto Replace = [&](SourceLocation Start, unsigned Length,
                            StringRef ReplacementText) {
@@ -1785,14 +1775,14 @@ private:
         Tok = Tok->Next;
       }
     }
-    if (Env.getFormatStyle().DerivePointerAlignment)
-      Env.getFormatStyle().PointerAlignment =
-          countVariableAlignments(AnnotatedLines) <= 0 ? FormatStyle::PAS_Left
-                                                       : FormatStyle::PAS_Right;
-    if (Env.getFormatStyle().Standard == FormatStyle::LS_Auto)
-      Env.getFormatStyle().Standard = hasCpp03IncompatibleFormat(AnnotatedLines)
-                                          ? FormatStyle::LS_Cpp11
-                                          : FormatStyle::LS_Cpp03;
+    if (Style.DerivePointerAlignment)
+      Style.PointerAlignment = countVariableAlignments(AnnotatedLines) <= 0
+                                   ? FormatStyle::PAS_Left
+                                   : FormatStyle::PAS_Right;
+    if (Style.Standard == FormatStyle::LS_Auto)
+      Style.Standard = hasCpp03IncompatibleFormat(AnnotatedLines)
+                           ? FormatStyle::LS_Cpp11
+                           : FormatStyle::LS_Cpp03;
     BinPackInconclusiveFunctions =
         HasBinPackedFunction || !HasOnePerLineFunction;
   }
@@ -1805,8 +1795,8 @@ private:
 // file.
 class Cleaner : public TokenAnalyzer {
 public:
-  Cleaner(Environment &Env)
-      : TokenAnalyzer(Env),
+  Cleaner(const Environment &Env, const FormatStyle &Style)
+      : TokenAnalyzer(Env, Style),
         DeletedTokens(FormatTokenLess(Env.getSourceManager())) {}
 
   // FIXME: eliminate unused parameters.
@@ -1864,7 +1854,7 @@ private:
   bool checkEmptyNamespace(SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
                            unsigned CurrentLine, unsigned &NewLine) {
     unsigned InitLine = CurrentLine, End = AnnotatedLines.size();
-    if (Env.getFormatStyle().BraceWrapping.AfterNamespace) {
+    if (Style.BraceWrapping.AfterNamespace) {
       // If the left brace is in a new line, we should consume it first so that
       // it does not make the namespace non-empty.
       // FIXME: error handling if there is no left brace.
@@ -1949,13 +1939,13 @@ private:
   // We store tokens in the order they appear in the translation unit so that
   // we do not need to sort them in `generateFixes()`.
   struct FormatTokenLess {
-    FormatTokenLess(SourceManager &SM) : SM(SM) {}
+    FormatTokenLess(const SourceManager &SM) : SM(SM) {}
 
     bool operator()(const FormatToken *LHS, const FormatToken *RHS) {
       return SM.isBeforeInTranslationUnit(LHS->Tok.getLocation(),
                                           RHS->Tok.getLocation());
     }
-    SourceManager &SM;
+    const SourceManager &SM;
   };
 
   // Tokens to be deleted.
@@ -2182,8 +2172,8 @@ tooling::Replacements reformat(const FormatStyle &Style, SourceManager &SM,
   if (Expanded.DisableFormat)
     return tooling::Replacements();
 
-  Environment Env(Expanded, SM, ID, Ranges);
-  Formatter Format(Env, IncompleteFormat);
+  Environment Env(SM, ID, Ranges);
+  Formatter Format(Env, Expanded, IncompleteFormat);
   return Format.process();
 }
 
@@ -2195,15 +2185,15 @@ tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
     return tooling::Replacements();
 
   std::unique_ptr<Environment> Env =
-      Environment::CreateVirtualEnvironment(Expanded, Code, FileName, Ranges);
-  Formatter Format(*Env, IncompleteFormat);
+      Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
+  Formatter Format(*Env, Expanded, IncompleteFormat);
   return Format.process();
 }
 
 tooling::Replacements cleanup(const FormatStyle &Style, SourceManager &SM,
                               FileID ID, ArrayRef<CharSourceRange> Ranges) {
-  Environment Env(Style, SM, ID, Ranges);
-  Cleaner Clean(Env);
+  Environment Env(SM, ID, Ranges);
+  Cleaner Clean(Env, Style);
   return Clean.process();
 }
 
@@ -2211,8 +2201,8 @@ tooling::Replacements cleanup(const FormatStyle &Style, StringRef Code,
                               ArrayRef<tooling::Range> Ranges,
                               StringRef FileName) {
   std::unique_ptr<Environment> Env =
-      Environment::CreateVirtualEnvironment(Style, Code, FileName, Ranges);
-  Cleaner Clean(*Env);
+      Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
+  Cleaner Clean(*Env, Style);
   return Clean.process();
 }
 

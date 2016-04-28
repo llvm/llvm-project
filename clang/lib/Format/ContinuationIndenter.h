@@ -38,7 +38,8 @@ public:
   /// column \p FirstIndent.
   ContinuationIndenter(const FormatStyle &Style,
                        const AdditionalKeywords &Keywords,
-                       SourceManager &SourceMgr, WhitespaceManager &Whitespaces,
+                       const SourceManager &SourceMgr,
+                       WhitespaceManager &Whitespaces,
                        encoding::Encoding Encoding,
                        bool BinPackInconclusiveFunctions);
 
@@ -137,7 +138,7 @@ private:
 
   FormatStyle Style;
   const AdditionalKeywords &Keywords;
-  SourceManager &SourceMgr;
+  const SourceManager &SourceMgr;
   WhitespaceManager &Whitespaces;
   encoding::Encoding Encoding;
   bool BinPackInconclusiveFunctions;

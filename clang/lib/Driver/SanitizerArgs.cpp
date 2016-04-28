@@ -561,14 +561,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   LinkCXXRuntimes =
       Args.hasArg(options::OPT_fsanitize_link_cxx_runtime) || D.CCCIsCXX();
 
-  // Require -fvisibility= flag on non-Windows if vptr CFI is enabled.
-  if ((Kinds & CFIClasses) && !TC.getTriple().isOSWindows() &&
-      !Args.hasArg(options::OPT_fvisibility_EQ)) {
-    D.Diag(clang::diag::err_drv_argument_only_allowed_with)
-        << lastArgumentForMask(D, Args, Kinds & CFIClasses)
-        << "-fvisibility=";
-  }
-
   // Finally, initialize the set of available and recoverable sanitizers.
   Sanitizers.Mask |= Kinds;
   RecoverableSanitizers.Mask |= RecoverableKinds;
@@ -689,6 +681,16 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString("--dependent-lib=" +
                                          TC.getCompilerRT(Args, "stats")));
     addIncludeLinkerOption(TC, Args, CmdArgs, "__sanitizer_stats_register");
+  }
+
+  // Require -fvisibility= flag on non-Windows when compiling if vptr CFI is
+  // enabled.
+  if (Sanitizers.hasOneOf(CFIClasses) && !TC.getTriple().isOSWindows() &&
+      !Args.hasArg(options::OPT_fvisibility_EQ)) {
+    TC.getDriver().Diag(clang::diag::err_drv_argument_only_allowed_with)
+        << lastArgumentForMask(TC.getDriver(), Args,
+                               Sanitizers.Mask & CFIClasses)
+        << "-fvisibility=";
   }
 }
 

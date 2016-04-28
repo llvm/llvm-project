@@ -64,7 +64,7 @@ static bool startsNextParameter(const FormatToken &Current,
 
 ContinuationIndenter::ContinuationIndenter(const FormatStyle &Style,
                                            const AdditionalKeywords &Keywords,
-                                           SourceManager &SourceMgr,
+                                           const SourceManager &SourceMgr,
                                            WhitespaceManager &Whitespaces,
                                            encoding::Encoding Encoding,
                                            bool BinPackInconclusiveFunctions)
