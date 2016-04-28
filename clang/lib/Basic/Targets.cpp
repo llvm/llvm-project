@@ -4827,10 +4827,11 @@ public:
       if (!getTriple().isOSDarwin() && !getTriple().isOSWindows())
         Builder.defineMacro("__ARM_EABI__");
       Builder.defineMacro("__ARM_PCS", "1");
-
-      if ((!SoftFloat && !SoftFloatABI) || ABI == "aapcs-vfp")
-        Builder.defineMacro("__ARM_PCS_VFP", "1");
     }
+
+    if ((!SoftFloat && !SoftFloatABI) || ABI == "aapcs-vfp" ||
+        ABI == "aapcs16")
+      Builder.defineMacro("__ARM_PCS_VFP", "1");
 
     if (SoftFloat)
       Builder.defineMacro("__SOFTFP__");
