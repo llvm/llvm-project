@@ -51,6 +51,11 @@ namespace clang {
 
     bool HasPendingBody;
 
+    ///\brief A flag to carry the information for a decl from the entity is
+    /// used. We use it to delay the marking of the canonical decl as used until
+    /// the entire declaration is deserialized and merged.
+    bool IsDeclMarkedUsed;
+
     uint64_t GetCurrentCursorOffset();
 
     uint64_t ReadLocalOffset(const RecordData &R, unsigned &I) {
@@ -217,7 +222,8 @@ namespace clang {
         : Reader(Reader), F(*Loc.F), Offset(Loc.Offset), ThisDeclID(thisDeclID),
           ThisDeclLoc(ThisDeclLoc), Record(Record), Idx(Idx),
           TypeIDForTypeDecl(0), NamedDeclForTagDecl(0),
-          TypedefNameForLinkage(nullptr), HasPendingBody(false) {}
+          TypedefNameForLinkage(nullptr), HasPendingBody(false),
+          IsDeclMarkedUsed(false) {}
 
     template <typename DeclT>
     static Decl *getMostRecentDeclImpl(Redeclarable<DeclT> *D);
@@ -444,6 +450,11 @@ uint64_t ASTDeclReader::GetCurrentCursorOffset() {
 void ASTDeclReader::Visit(Decl *D) {
   DeclVisitor<ASTDeclReader, void>::Visit(D);
 
+  // At this point we have deserialized and merged the decl and it is safe to
+  // update its canonical decl to signal that the entire entity is used.
+  D->getCanonicalDecl()->Used |= IsDeclMarkedUsed;
+  IsDeclMarkedUsed = false;
+
   if (DeclaratorDecl *DD = dyn_cast<DeclaratorDecl>(D)) {
     if (DD->DeclInfo) {
       DeclaratorDecl::ExtInfo *Info =
@@ -524,6 +535,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
   }
   D->setImplicit(Record[Idx++]);
   D->Used = Record[Idx++];
+  IsDeclMarkedUsed |= D->Used;
   D->setReferenced(Record[Idx++]);
   D->setTopLevelDeclInObjCContainer(Record[Idx++]);
   D->setAccess((AccessSpecifier)Record[Idx++]);
@@ -548,7 +560,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
       if (Owner->NameVisibility != Module::AllVisible) {
         // The owning module is not visible. Mark this declaration as hidden.
         D->Hidden = true;
-        
+
         // Note that this declaration was hidden because its owning module is 
         // not yet visible.
         Reader.HiddenNamesMap[Owner].push_back(D);
@@ -2355,6 +2367,8 @@ void ASTDeclReader::mergeRedeclarable(Redeclarable<T> *DBase, T *Existing,
     // appropriate canonical declaration.
     D->RedeclLink = Redeclarable<T>::PreviousDeclLink(ExistingCanon);
     D->First = ExistingCanon;
+    ExistingCanon->Used |= D->Used;
+    D->Used = false;
 
     // When we merge a namespace, update its pointer to the first namespace.
     // We cannot have loaded any redeclarations of this declaration yet, so
@@ -3112,11 +3126,6 @@ void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
       Previous->IdentifierNamespace &
       (Decl::IDNS_Ordinary | Decl::IDNS_Tag | Decl::IDNS_Type);
 
-  // If the previous declaration is marked as used, then this declaration should
-  // be too.
-  if (Previous->Used)
-    D->Used = true;
-
   // If the declaration declares a template, it may inherit default arguments
   // from the previous declaration.
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
@@ -3865,7 +3874,7 @@ void ASTDeclReader::UpdateDecl(Decl *D, ModuleFile &ModuleFile,
       // ASTMutationListeners other than an ASTWriter.
 
       // Maintain AST consistency: any later redeclarations are used too.
-      forAllLaterRedecls(D, [](Decl *D) { D->Used = true; });
+      D->setIsUsed();
       break;
     }
 

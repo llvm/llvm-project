@@ -1344,11 +1344,10 @@ TryStaticDowncast(Sema &Self, CanQualType SrcType, CanQualType DestType,
   }
 
   if (!CStyle) {
-    unsigned Diag = Self.getLangOpts().MSVCCompat
-                        ? diag::ext_ms_downcast_from_inaccessible_base
-                        : diag::err_downcast_from_inaccessible_base;
-    switch (Self.CheckBaseClassAccess(OpRange.getBegin(), SrcType, DestType,
-                                      Paths.front(), Diag)) {
+    switch (Self.CheckBaseClassAccess(OpRange.getBegin(),
+                                      SrcType, DestType,
+                                      Paths.front(),
+                                diag::err_downcast_from_inaccessible_base)) {
     case Sema::AR_accessible:
     case Sema::AR_delayed:     // be optimistic
     case Sema::AR_dependent:   // be optimistic

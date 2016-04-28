@@ -340,25 +340,29 @@ unsigned Decl::getMaxAlignment() const {
   return Align;
 }
 
-bool Decl::isUsed(bool CheckUsedAttr) const { 
-  if (Used)
-    return true;
-  
-  // Check for used attribute.
-  if (CheckUsedAttr && hasAttr<UsedAttr>())
+bool Decl::isUsed(bool CheckUsedAttr) const {
+  const Decl *CanonD = getCanonicalDecl();
+  if (CanonD->Used)
     return true;
 
-  return false; 
+  // Check for used attribute.
+  // Ask the most recent decl, since attributes accumulate in the redecl chain.
+  if (CheckUsedAttr && getMostRecentDecl()->hasAttr<UsedAttr>())
+    return true;
+
+  // The information may have not been deserialized yet. Force deserialization
+  // to complete the needed information.
+  return getMostRecentDecl()->getCanonicalDecl()->Used;
 }
 
 void Decl::markUsed(ASTContext &C) {
-  if (Used)
+  if (isUsed(false))
     return;
 
   if (C.getASTMutationListener())
     C.getASTMutationListener()->DeclarationMarkedUsed(this);
 
-  Used = true;
+  setIsUsed();
 }
 
 bool Decl::isReferenced() const { 

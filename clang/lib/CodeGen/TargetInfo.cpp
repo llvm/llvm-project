@@ -5713,12 +5713,12 @@ void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::Function *F, StringRef Name,
 
 namespace {
 
-class SystemZABIInfo : public ABIInfo {
+class SystemZABIInfo : public SwiftABIInfo {
   bool HasVector;
 
 public:
   SystemZABIInfo(CodeGenTypes &CGT, bool HV)
-    : ABIInfo(CGT), HasVector(HV) {}
+    : SwiftABIInfo(CGT), HasVector(HV) {}
 
   bool isPromotableIntegerType(QualType Ty) const;
   bool isCompoundType(QualType Ty) const;
@@ -5738,6 +5738,12 @@ public:
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
+
+  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
+                                    ArrayRef<llvm::Type*> scalars,
+                                    bool asReturnValue) const override {
+    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
+  }
 };
 
 class SystemZTargetCodeGenInfo : public TargetCodeGenInfo {

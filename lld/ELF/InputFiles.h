@@ -224,6 +224,7 @@ public:
   void parse(llvm::DenseSet<StringRef> &ComdatGroups);
   ArrayRef<SymbolBody *> getSymbols() { return SymbolBodies; }
   static bool shouldSkip(const llvm::object::BasicSymbolRef &Sym);
+  std::unique_ptr<llvm::object::IRObjectFile> Obj;
 
 private:
   std::vector<SymbolBody *> SymbolBodies;

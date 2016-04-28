@@ -24,7 +24,6 @@
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/IRMover.h"
 
@@ -44,7 +43,6 @@ private:
   std::vector<std::unique_ptr<InputFile>> runSplitCodegen(
       const std::function<std::unique_ptr<llvm::TargetMachine>()> &TMFactory);
 
-  llvm::LLVMContext Context;
   std::unique_ptr<llvm::Module> Combined;
   llvm::IRMover Mover;
   std::vector<SmallString<0>> OwningData;

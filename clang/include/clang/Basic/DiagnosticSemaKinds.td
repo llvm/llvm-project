@@ -5792,9 +5792,6 @@ def err_static_downcast_via_virtual : Error<
   "cannot cast %0 to %1 via virtual base %2">;
 def err_downcast_from_inaccessible_base : Error<
   "cannot cast %select{private|protected}2 base class %1 to %0">;
-def ext_ms_downcast_from_inaccessible_base : ExtWarn<
-  "casting from %select{private|protected}2 base class %1 to derived class %0 is a Microsoft extension">,
-  InGroup<MicrosoftCast>;
 def err_upcast_to_inaccessible_base : Error<
   "cannot cast %0 to its %select{private|protected}2 base class %1">;
 def err_bad_dynamic_cast_not_ref_or_ptr : Error<

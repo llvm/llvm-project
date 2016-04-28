@@ -4931,7 +4931,7 @@ public:
     Builder.defineMacro("__ARM_FP16_ARGS", "1");
 
     // ACLE 6.5.3 Fused multiply-accumulate (FMA)
-    if (ArchVersion >= 7 && (CPUProfile != "M" || CPUAttr == "7EM"))
+    if (ArchVersion >= 7 && (FPU & VFP4FPU))
       Builder.defineMacro("__ARM_FEATURE_FMA", "1");
 
     // Subtarget options.
@@ -4948,10 +4948,11 @@ public:
       if (!getTriple().isOSDarwin() && !getTriple().isOSWindows())
         Builder.defineMacro("__ARM_EABI__");
       Builder.defineMacro("__ARM_PCS", "1");
-
-      if ((!SoftFloat && !SoftFloatABI) || ABI == "aapcs-vfp")
-        Builder.defineMacro("__ARM_PCS_VFP", "1");
     }
+
+    if ((!SoftFloat && !SoftFloatABI) || ABI == "aapcs-vfp" ||
+        ABI == "aapcs16")
+      Builder.defineMacro("__ARM_PCS_VFP", "1");
 
     if (SoftFloat)
       Builder.defineMacro("__SOFTFP__");
@@ -6546,6 +6547,16 @@ public:
         .Case("htm", HasTransactionalExecution)
         .Case("vx", HasVector)
         .Default(false);
+  }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    case CC_C:
+    case CC_Swift:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
   }
 
   StringRef getABI() const override {

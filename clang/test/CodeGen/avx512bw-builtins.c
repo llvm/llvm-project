@@ -1487,3 +1487,23 @@ __m512i test_mm512_mask_permutexvar_epi16(__m512i __W, __mmask32 __M, __m512i __
   // CHECK: @llvm.x86.avx512.mask.permvar.hi.512
   return _mm512_mask_permutexvar_epi16(__W, __M, __A, __B); 
 }
+__m512i test_mm512_alignr_epi8(__m512i __A,__m512i __B){
+    // CHECK-LABEL: @test_mm512_alignr_epi8
+    // CHECK: @llvm.x86.avx512.mask.palignr.512
+    return _mm512_alignr_epi8(__A, __B, 2); 
+}
+
+__m512i test_mm512_mask_alignr_epi8(__m512i __W, __mmask64 __U, __m512i __A,__m512i __B){
+    // CHECK-LABEL: @test_mm512_mask_alignr_epi8
+    // CHECK: @llvm.x86.avx512.mask.palignr.512
+    return _mm512_mask_alignr_epi8(__W, __U, __A, __B, 2); 
+}
+
+__m512i test_mm512_maskz_alignr_epi8(__mmask64 __U, __m512i __A,__m512i __B){
+    // CHECK-LABEL: @test_mm512_maskz_alignr_epi8
+    // CHECK: @llvm.x86.avx512.mask.palignr.512
+   return _mm512_maskz_alignr_epi8(__U, __A, __B, 2); 
+}
+
+
+

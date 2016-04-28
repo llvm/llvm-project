@@ -532,12 +532,10 @@ template <class ELFT>
 template <class RelTy>
 void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
   uintX_t Flags = C.getSectionHdr()->sh_flags;
-  bool IsAlloc = Flags & SHF_ALLOC;
   bool IsWrite = Flags & SHF_WRITE;
 
   auto AddDyn = [=](const DynamicReloc<ELFT> &Reloc) {
-    if (IsAlloc)
-      Out<ELFT>::RelaDyn->addReloc(Reloc);
+    Out<ELFT>::RelaDyn->addReloc(Reloc);
   };
 
   const elf::ObjectFile<ELFT> &File = *C.getFile();
@@ -593,7 +591,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     // in a read-only section, we need to create a copy relocation for the
     // symbol.
     if (auto *B = dyn_cast<SharedSymbol<ELFT>>(&Body)) {
-      if (IsAlloc && !IsWrite && needsCopyRel(Expr, *B)) {
+      if (!IsWrite && needsCopyRel(Expr, *B)) {
         if (!B->needsCopy())
           addCopyRelSymbol(B);
         C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
@@ -630,10 +628,9 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 
       if (Target->UseLazyBinding) {
         Out<ELFT>::GotPlt->addEntry(Body);
-        if (IsAlloc)
-          Out<ELFT>::RelaPlt->addReloc({Rel, Out<ELFT>::GotPlt,
-                                        Body.getGotPltOffset<ELFT>(),
-                                        !Preemptible, &Body, 0});
+        Out<ELFT>::RelaPlt->addReloc({Rel, Out<ELFT>::GotPlt,
+                                      Body.getGotPltOffset<ELFT>(),
+                                      !Preemptible, &Body, 0});
       } else {
         if (Body.isInGot())
           continue;
@@ -744,17 +741,11 @@ template <class ELFT> void Writer<ELFT>::scanRelocs(InputSection<ELFT> &C) {
   // Scan all relocations. Each relocation goes through a series
   // of tests to determine if it needs special treatment, such as
   // creating GOT, PLT, copy relocations, etc.
-  //
-  // The current code is a bit wasteful because it scans relocations
-  // in non-SHF_ALLOC sections. Such sections are never mapped to
-  // memory at runtime. Debug section is an example. Relocations in
-  // non-alloc sections are much easier to handle because it will
-  // never need complex treatement such as GOT or PLT (because at
-  // runtime no one refers them). We probably should skip non-alloc
-  // sections here and directly handle non-alloc relocations in
-  // writeTo function.
-  for (const Elf_Shdr *RelSec : C.RelocSections)
-    scanRelocs(C, *RelSec);
+  // Note that relocations for non-alloc sections are directly
+  // processed by InputSection::relocateNative.
+  if (C.getSectionHdr()->sh_flags & SHF_ALLOC)
+    for (const Elf_Shdr *RelSec : C.RelocSections)
+      scanRelocs(C, *RelSec);
 }
 
 template <class ELFT>

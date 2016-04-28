@@ -111,6 +111,30 @@ NonLocalizedStringChecker::NonLocalizedStringChecker() {
                        "Localizability Issue (Apple)"));
 }
 
+namespace {
+class NonLocalizedStringBRVisitor final
+    : public BugReporterVisitorImpl<NonLocalizedStringBRVisitor> {
+
+  const MemRegion *NonLocalizedString;
+  bool Satisfied;
+
+public:
+  NonLocalizedStringBRVisitor(const MemRegion *NonLocalizedString)
+      : NonLocalizedString(NonLocalizedString), Satisfied(false) {
+        assert(NonLocalizedString);
+  }
+
+  PathDiagnosticPiece *VisitNode(const ExplodedNode *Succ,
+                                 const ExplodedNode *Pred,
+                                 BugReporterContext &BRC,
+                                 BugReport &BR) override;
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    ID.Add(NonLocalizedString);
+  }
+};
+} // End anonymous namespace.
+
 #define NEW_RECEIVER(receiver)                                                 \
   llvm::DenseMap<Selector, uint8_t> &receiver##M =                             \
       UIMethods.insert({&Ctx.Idents.get(#receiver),                            \
@@ -676,6 +700,11 @@ void NonLocalizedStringChecker::reportLocalizationError(
     R->addRange(M.getSourceRange());
   }
   R->markInteresting(S);
+
+  const MemRegion *StringRegion = S.getAsRegion();
+  if (StringRegion)
+    R->addVisitor(llvm::make_unique<NonLocalizedStringBRVisitor>(StringRegion));
+
   C.emitReport(std::move(R));
 }
 
@@ -864,6 +893,41 @@ void NonLocalizedStringChecker::checkPostStmt(const ObjCStringLiteral *SL,
                                               CheckerContext &C) const {
   SVal sv = C.getSVal(SL);
   setNonLocalizedState(sv, C);
+}
+
+PathDiagnosticPiece *
+NonLocalizedStringBRVisitor::VisitNode(const ExplodedNode *Succ,
+                                       const ExplodedNode *Pred,
+                                       BugReporterContext &BRC, BugReport &BR) {
+  if (Satisfied)
+    return nullptr;
+
+  Optional<StmtPoint> Point = Succ->getLocation().getAs<StmtPoint>();
+  if (!Point.hasValue())
+    return nullptr;
+
+  auto *LiteralExpr = dyn_cast<ObjCStringLiteral>(Point->getStmt());
+  if (!LiteralExpr)
+    return nullptr;
+
+  ProgramStateRef State = Succ->getState();
+  SVal LiteralSVal = State->getSVal(LiteralExpr, Succ->getLocationContext());
+  if (LiteralSVal.getAsRegion() != NonLocalizedString)
+    return nullptr;
+
+  Satisfied = true;
+
+  PathDiagnosticLocation L =
+      PathDiagnosticLocation::create(*Point, BRC.getSourceManager());
+
+  if (!L.isValid() || !L.asLocation().isValid())
+    return nullptr;
+
+  auto *Piece = new PathDiagnosticEventPiece(L,
+      "Non-localized string literal here");
+  Piece->addRange(LiteralExpr->getSourceRange());
+
+  return Piece;
 }
 
 namespace {

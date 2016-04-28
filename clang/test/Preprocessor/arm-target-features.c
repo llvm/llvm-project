@@ -212,6 +212,16 @@
 // A7:#define __ARM_FEATURE_DSP 1
 // A7:#define __ARM_FP 0xE
 
+// Test whether predefines are as expected when targeting cortex-a7.
+// RUN: %clang -target x86_64-apple-darwin -arch armv7k -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV7K %s
+// ARMV7K:#define __ARM_ARCH 7
+// ARMV7K:#define __ARM_ARCH_EXT_IDIV__ 1
+// ARMV7K:#define __ARM_ARCH_PROFILE 'A'
+// ARMV7K:#define __ARM_FEATURE_DSP 1
+// ARMV7K:#define __ARM_FP 0xE
+// ARMV7K:#define __ARM_PCS_VFP 1
+
+
 // Test whether predefines are as expected when targeting cortex-a8.
 // RUN: %clang -target armv7 -mcpu=cortex-a8 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=A8 %s
 // RUN: %clang -target armv7 -mthumb -mcpu=cortex-a8 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=A8 %s

@@ -5785,8 +5785,13 @@ void ASTWriter::AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,
 
 void ASTWriter::DeclarationMarkedUsed(const Decl *D) {
   assert(!WritingAST && "Already writing the AST!");
-  if (!D->isFromASTFile())
-    return;
+
+  // If there is *any* declaration of the entity that's not from an AST file,
+  // we can skip writing the update record. We make sure that isUsed() triggers
+  // completion of the redeclaration chain of the entity.
+  for (auto Prev = D->getMostRecentDecl(); Prev; Prev = Prev->getPreviousDecl())
+    if (IsLocalDecl(Prev))
+      return;
 
   DeclUpdates[D].push_back(DeclUpdate(UPD_DECL_MARKED_USED));
 }

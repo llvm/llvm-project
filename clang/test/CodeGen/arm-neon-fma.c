@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple thumbv7-none-linux-gnueabihf \
 // RUN:   -target-abi aapcs \
-// RUN:   -target-cpu cortex-a8 \
+// RUN:   -target-cpu cortex-a7 \
 // RUN:   -mfloat-abi hard \
 // RUN:   -ffreestanding \
 // RUN:   -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
