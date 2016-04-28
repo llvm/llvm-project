@@ -770,7 +770,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
   MachineOperand &New = MI.getOperand(4);
 
   LivePhysRegs LiveRegs(&TII->getRegisterInfo());
-  LiveRegs.addLiveOuts(&MBB);
+  LiveRegs.addLiveOuts(&MBB, /*AddPristinesAndCSRs=*/true);
   for (auto I = std::prev(MBB.end()); I != MBBI; --I)
     LiveRegs.stepBackward(*I);
 
@@ -892,7 +892,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   unsigned DesiredHi = TRI->getSubReg(Desired.getReg(), ARM::gsub_1);
 
   LivePhysRegs LiveRegs(&TII->getRegisterInfo());
-  LiveRegs.addLiveOuts(&MBB);
+  LiveRegs.addLiveOuts(&MBB, /*AddPristinesAndCSRs=*/true);
   for (auto I = std::prev(MBB.end()); I != MBBI; --I)
     LiveRegs.stepBackward(*I);
 
