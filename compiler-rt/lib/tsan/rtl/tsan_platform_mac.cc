@@ -135,10 +135,12 @@ static void my_pthread_introspection_hook(unsigned int event, pthread_t thread,
   if (event == PTHREAD_INTROSPECTION_THREAD_CREATE) {
     if (thread == pthread_self()) {
       // The current thread is a newly created GCD worker thread.
+      ThreadState *thr = cur_thread();
+      Processor *proc = ProcCreate();
+      ProcWire(proc, thr);
       ThreadState *parent_thread_state = nullptr;  // No parent.
       int tid = ThreadCreate(parent_thread_state, 0, (uptr)thread, true);
       CHECK_NE(tid, 0);
-      ThreadState *thr = cur_thread();
       ThreadStart(thr, tid, GetTid());
     }
   } else if (event == PTHREAD_INTROSPECTION_THREAD_TERMINATE) {
