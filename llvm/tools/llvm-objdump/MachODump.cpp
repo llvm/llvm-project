@@ -8361,7 +8361,7 @@ static void PrintDylibCommand(MachO::dylib_command dl, const char *Ptr) {
 static void PrintLinkEditDataCommand(MachO::linkedit_data_command ld,
                                      uint32_t object_size) {
   if (ld.cmd == MachO::LC_CODE_SIGNATURE)
-    outs() << "      cmd LC_FUNCTION_STARTS\n";
+    outs() << "      cmd LC_CODE_SIGNATURE\n";
   else if (ld.cmd == MachO::LC_SEGMENT_SPLIT_INFO)
     outs() << "      cmd LC_SEGMENT_SPLIT_INFO\n";
   else if (ld.cmd == MachO::LC_FUNCTION_STARTS)
