@@ -218,6 +218,9 @@ public:
   // Size of chunk with thunks code.
   uint64_t getThunksSize() const;
 
+  template <class RelTy>
+  void relocateNonAlloc(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);
+
 private:
   template <class RelTy>
   void copyRelocations(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);

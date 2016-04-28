@@ -9,6 +9,7 @@
 
 #include "LTO.h"
 #include "Config.h"
+#include "Driver.h"
 #include "Error.h"
 #include "InputFiles.h"
 #include "Symbols.h"
@@ -86,18 +87,11 @@ static bool shouldInternalize(const SmallPtrSet<GlobalValue *, 8> &Used,
 }
 
 BitcodeCompiler::BitcodeCompiler()
-    : Combined(new llvm::Module("ld-temp.o", Context)), Mover(*Combined) {
-  // This is a flag to discard all but GlobalValue names.
-  // We want to enable it by default because it saves memory.
-  // Disable it only when a developer option (-save-temps) is given.
-  Context.setDiscardValueNames(!Config->SaveTemps);
-
-  Context.enableDebugTypeODRUniquing();
-}
+    : Combined(new llvm::Module("ld-temp.o", Driver->Context)),
+      Mover(*Combined) {}
 
 void BitcodeCompiler::add(BitcodeFile &F) {
-  std::unique_ptr<IRObjectFile> Obj =
-      check(IRObjectFile::create(F.MB, Context));
+  std::unique_ptr<IRObjectFile> Obj = std::move(F.Obj);
   std::vector<GlobalValue *> Keep;
   unsigned BodyIndex = 0;
   ArrayRef<SymbolBody *> Bodies = F.getSymbols();

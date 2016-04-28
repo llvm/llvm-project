@@ -22,8 +22,10 @@ class IncludeFixerActionFactory : public clang::tooling::ToolAction {
 public:
   /// \param Xrefs A source for matching symbols to header files.
   /// \param Replacements Storage for the output of the fixer.
+  /// \param MinimizeIncludePaths whether inserted include paths are optimized.
   IncludeFixerActionFactory(
-      XrefsDB &Xrefs, std::vector<clang::tooling::Replacement> &Replacements);
+      XrefsDB &Xrefs, std::vector<clang::tooling::Replacement> &Replacements,
+      bool MinimizeIncludePaths = true);
   ~IncludeFixerActionFactory();
 
   bool
@@ -38,6 +40,9 @@ private:
 
   /// Replacements are written here.
   std::vector<clang::tooling::Replacement> &Replacements;
+
+  /// Whether inserted include paths should be optimized.
+  bool MinimizeIncludePaths;
 };
 
 } // namespace include_fixer
