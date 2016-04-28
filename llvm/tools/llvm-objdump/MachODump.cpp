@@ -6137,6 +6137,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     ThumbSymbolizerInfo.adrp_addr = 0;
     ThumbSymbolizerInfo.adrp_inst = 0;
 
+    unsigned int Arch = MachOOF->getArch();
+
     // Disassemble symbol by symbol.
     for (unsigned SymIdx = 0; SymIdx != Symbols.size(); SymIdx++) {
       ErrorOr<StringRef> SymNameOrErr = Symbols[SymIdx].getName();
@@ -6208,7 +6210,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
             outs() << format("%8" PRIx64 ":", PC);
           }
         }
-        if (!NoShowRawInsn)
+        if (!NoShowRawInsn || Arch == Triple::arm)
           outs() << "\t";
 
         // Check the data in code table here to see if this is data not an
@@ -6241,7 +6243,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
           gotInst = DisAsm->getInstruction(Inst, Size, Bytes.slice(Index), PC,
                                            DebugOut, Annotations);
         if (gotInst) {
-          if (!NoShowRawInsn) {
+          if (!NoShowRawInsn || Arch == Triple::arm) {
             dumpBytes(makeArrayRef(Bytes.data() + Index, Size), outs());
           }
           formatted_raw_ostream FormattedOS(outs());
@@ -6311,7 +6313,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
               outs() << format("%8" PRIx64 ":", PC);
             }
           }
-          if (!NoShowRawInsn) {
+          if (!NoShowRawInsn || Arch == Triple::arm) {
             outs() << "\t";
             dumpBytes(makeArrayRef(Bytes.data() + Index, InstSize), outs());
           }
