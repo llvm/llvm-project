@@ -3651,12 +3651,28 @@ void Scop::addRecordedAssumptions() {
   while (!RecordedAssumptions.empty()) {
     const Assumption &AS = RecordedAssumptions.pop_back_val();
 
-    isl_set *S = AS.Set;
-    // If a basic block was given use its domain to simplify the assumption.
-    if (AS.BB)
-      S = isl_set_params(isl_set_intersect(S, getDomainConditions(AS.BB)));
+    if (!AS.BB) {
+      addAssumption(AS.Kind, AS.Set, AS.Loc, AS.Sign);
+      continue;
+    }
 
-    addAssumption(AS.Kind, S, AS.Loc, AS.Sign);
+    // If a basic block was given use its domain to simplify the assumption.
+    // In case of restrictions we know they only have to hold on the domain,
+    // thus we can intersect them with the domain of the block. However, for
+    // assumptions the domain has to imply them, thus:
+    //                     _              _____
+    //   Dom => S   <==>   A v B   <==>   A - B
+    //
+    // To avoid the complement we will register A - B as a restricton not an
+    // assumption.
+    isl_set *S = AS.Set;
+    isl_set *Dom = getDomainConditions(AS.BB);
+    if (AS.Sign == AS_RESTRICTION)
+      S = isl_set_params(isl_set_intersect(S, Dom));
+    else /* (AS.Sign == AS_ASSUMPTION) */
+      S = isl_set_params(isl_set_subtract(Dom, S));
+
+    addAssumption(AS.Kind, S, AS.Loc, AS_RESTRICTION);
   }
 }
 

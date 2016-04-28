@@ -47,12 +47,12 @@ public:
   // ones and lead to dynamic relocation creation etc.
   virtual bool isHintRel(uint32_t Type) const;
 
-  // Returns true if a relocation is relative to the place being relocated,
-  // such as relocations used for PC-relative instructions. Such relocations
-  // need not be fixed up if an image is loaded to a different address than
-  // the link-time address. So we don't have to emit a relocation for the
-  // dynamic linker if isRelRelative returns true.
-  virtual bool isRelRelative(uint32_t Type) const;
+  // Returns true if a relocation only uses the low bits of a value such that
+  // all those bits are in in the same page. For example, if the relocation
+  // only uses the low 12 bits in a system with 4k pages. If this is true, the
+  // bits will always have the same value at runtime and we don't have to emit
+  // a dynamic relocation.
+  virtual bool usesOnlyLowPageBits(uint32_t Type) const;
 
   virtual bool needsThunk(uint32_t Type, const InputFile &File,
                           const SymbolBody &S) const;

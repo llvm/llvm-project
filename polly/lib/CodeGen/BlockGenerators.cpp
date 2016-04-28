@@ -975,7 +975,6 @@ void VectorBlockGenerator::generateScalarVectorLoads(
     Value *VectorVal = Builder.CreateShuffleVector(
         Val, Val, SplatVector, Address->getName() + "_p_splat");
     VectorBlockMap[MA->getBaseAddr()] = VectorVal;
-    VectorVal->dump();
   }
 }
 

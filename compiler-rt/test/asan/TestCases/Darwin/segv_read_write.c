@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
   // shadow mapping works). This is kinda hard to fix. Test a random address in
   // the application part of the address space.
   void *volatile p =
-      mmap(nullptr, 4096, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+      mmap(nullptr, 4096, PROT_READ, MAP_PRIVATE | MAP_ANON, 0, 0);
   munmap(p, 4096);
   if (argc == 1)
     Read((int *)p);

@@ -149,7 +149,7 @@ public:
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   uint32_t getTlsGotRel(uint32_t Type) const override;
-  bool isRelRelative(uint32_t Type) const override;
+  bool usesOnlyLowPageBits(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -180,7 +180,7 @@ public:
                   const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   bool isHintRel(uint32_t Type) const override;
-  bool isRelRelative(uint32_t Type) const override;
+  bool usesOnlyLowPageBits(uint32_t Type) const override;
 };
 } // anonymous namespace
 
@@ -221,7 +221,7 @@ uint64_t TargetInfo::getImplicitAddend(const uint8_t *Buf,
 uint64_t TargetInfo::getVAStart() const { return Config->Pic ? 0 : VAStart; }
 
 bool TargetInfo::isHintRel(uint32_t Type) const { return false; }
-bool TargetInfo::isRelRelative(uint32_t Type) const { return false; }
+bool TargetInfo::usesOnlyLowPageBits(uint32_t Type) const { return false; }
 
 bool TargetInfo::needsThunk(uint32_t Type, const InputFile &File,
                             const SymbolBody &S) const {
@@ -978,7 +978,7 @@ RelExpr AArch64TargetInfo::getRelExpr(uint32_t Type,
   }
 }
 
-bool AArch64TargetInfo::isRelRelative(uint32_t Type) const {
+bool AArch64TargetInfo::usesOnlyLowPageBits(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -1536,7 +1536,7 @@ bool MipsTargetInfo<ELFT>::isHintRel(uint32_t Type) const {
 }
 
 template <class ELFT>
-bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
+bool MipsTargetInfo<ELFT>::usesOnlyLowPageBits(uint32_t Type) const {
   return Type == R_MIPS_LO16;
 }
 }

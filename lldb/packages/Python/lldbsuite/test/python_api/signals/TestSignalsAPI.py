@@ -17,7 +17,6 @@ class SignalsAPITestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @add_test_categories(['pyapi'])
-    @expectedFlakeyLinux # this test fails 1/100 dosep runs
     @skipIfWindows # Windows doesn't have signals
     def test_ignore_signal(self):
         """Test Python SBUnixSignals.Suppress/Stop/Notify() API."""
