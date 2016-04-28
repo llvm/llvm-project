@@ -9,6 +9,7 @@ This project requires reasonably recent LLVM/Clang build (April 2016 trunk). Tes
 Use out-of-source CMake build and create separate directory to run CMake.
 
 The following build steps are performed:
+
     mkdir -p build
     cd build
     export LLVM_BUILD=... (path to LLVM build)
