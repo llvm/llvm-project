@@ -24,7 +24,6 @@
 #define LLVM_ANALYSIS_OBJCARCALIASANALYSIS_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -42,8 +41,7 @@ class ObjCARCAAResult : public AAResultBase<ObjCARCAAResult> {
   const DataLayout &DL;
 
 public:
-  explicit ObjCARCAAResult(const DataLayout &DL, const TargetLibraryInfo &TLI)
-      : AAResultBase(TLI), DL(DL) {}
+  explicit ObjCARCAAResult(const DataLayout &DL) : AAResultBase(), DL(DL) {}
   ObjCARCAAResult(ObjCARCAAResult &&Arg)
       : AAResultBase(std::move(Arg)), DL(Arg.DL) {}
 

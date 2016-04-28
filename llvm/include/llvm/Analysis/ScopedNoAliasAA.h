@@ -27,8 +27,7 @@ class ScopedNoAliasAAResult : public AAResultBase<ScopedNoAliasAAResult> {
   friend AAResultBase<ScopedNoAliasAAResult>;
 
 public:
-  explicit ScopedNoAliasAAResult(const TargetLibraryInfo &TLI)
-      : AAResultBase(TLI) {}
+  explicit ScopedNoAliasAAResult() : AAResultBase() {}
   ScopedNoAliasAAResult(ScopedNoAliasAAResult &&Arg)
       : AAResultBase(std::move(Arg)) {}
 
