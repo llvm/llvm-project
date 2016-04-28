@@ -28,6 +28,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -745,7 +746,31 @@ public:
 
   /// \brief Provide diagnostics then \return with false.
   bool fail(llvm::StringRef Message) {
+    Function *F = L->getHeader()->getParent();
+    LLVMContext &Ctx = F->getContext();
+    bool Forced = isForced().getValueOr(false);
+
     DEBUG(dbgs() << "Skipping; " << Message << "\n");
+
+    // With Rpass-missed report that distribution failed.
+    emitOptimizationRemarkMissed(
+        Ctx, LDIST_NAME, *F, L->getStartLoc(),
+        "loop not distributed: use -Rpass-analysis=loop-distribute for more "
+        "info");
+
+    // With Rpass-analysis report why.  This is on by default if distribution
+    // was requested explicitly.
+    emitOptimizationRemarkAnalysis(
+        Ctx, Forced ? DiagnosticInfo::AlwaysPrint : LDIST_NAME, *F,
+        L->getStartLoc(), Twine("loop not distributed: ") + Message);
+
+    // Also issue a warning if distribution was requested explicitly but it
+    // failed.
+    if (Forced)
+      Ctx.diagnose(DiagnosticInfoOptimizationFailure(
+          *F, L->getStartLoc(), "loop not disributed: failed "
+                                "explicitly specified loop distribution"));
+
     return false;
   }
 
