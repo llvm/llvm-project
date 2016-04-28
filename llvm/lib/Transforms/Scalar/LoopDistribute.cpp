@@ -601,27 +601,20 @@ public:
                  << "\" checking " << *L << "\n");
 
     BasicBlock *PH = L->getLoopPreheader();
-    if (!PH) {
-      DEBUG(dbgs() << "Skipping; no preheader");
-      return false;
-    }
-    if (!L->getExitBlock()) {
-      DEBUG(dbgs() << "Skipping; multiple exit blocks");
-      return false;
-    }
+    if (!PH)
+      return fail("Skipping; no preheader");
+    if (!L->getExitBlock())
+      return fail("Skipping; multiple exit blocks");
     // LAA will check that we only have a single exiting block.
 
     // Currently, we only distribute to isolate the part of the loop with
     // dependence cycles to enable partial vectorization.
-    if (LAI.canVectorizeMemory()) {
-      DEBUG(dbgs() << "Skipping; memory operations are safe for vectorization");
-      return false;
-    }
+    if (LAI.canVectorizeMemory())
+      return fail("Skipping; memory operations are safe for vectorization");
+
     auto *Dependences = LAI.getDepChecker().getDependences();
-    if (!Dependences || Dependences->empty()) {
-      DEBUG(dbgs() << "Skipping; No unsafe dependences to isolate");
-      return false;
-    }
+    if (!Dependences || Dependences->empty())
+      return fail("Skipping; No unsafe dependences to isolate");
 
     InstPartitionContainer Partitions(L, LI, DT);
 
@@ -674,14 +667,14 @@ public:
 
     DEBUG(dbgs() << "Seeded partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
-      return false;
+      return fail("cannot isolate unsafe dependencies");
 
     // Run the merge heuristics: Merge non-cyclic adjacent partitions since we
     // should be able to vectorize these together.
     Partitions.mergeBeforePopulating();
     DEBUG(dbgs() << "\nMerged partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
-      return false;
+      return fail("cannot isolate unsafe dependencies");
 
     // Now, populate the partitions with non-memory operations.
     Partitions.populateUsedSet();
@@ -693,17 +686,15 @@ public:
       DEBUG(dbgs() << "\nPartitions merged to ensure unique loads:\n"
                    << Partitions);
       if (Partitions.getSize() < 2)
-        return false;
+        return fail("cannot isolate unsafe dependencies");
     }
 
     // Don't distribute the loop if we need too many SCEV run-time checks.
     const SCEVUnionPredicate &Pred = LAI.PSE.getUnionPredicate();
     if (Pred.getComplexity() > (IsForced.getValueOr(false)
                                     ? PragmaDistributeSCEVCheckThreshold
-                                    : DistributeSCEVCheckThreshold)) {
-      DEBUG(dbgs() << "Too many SCEV run-time checks needed.\n");
-      return false;
-    }
+                                    : DistributeSCEVCheckThreshold))
+      return fail("Too many SCEV run-time checks needed.\n");
 
     DEBUG(dbgs() << "\nDistributing loop: " << *L << "\n");
     // We're done forming the partitions set up the reverse mapping from
@@ -750,6 +741,12 @@ public:
 
     ++NumLoopsDistributed;
     return true;
+  }
+
+  /// \brief Provide diagnostics then \return with false.
+  bool fail(llvm::StringRef Message) {
+    DEBUG(dbgs() << Message << "\n");
+    return false;
   }
 
   /// \brief Return if distribution forced to be enabled/disabled for the loop.
