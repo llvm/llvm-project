@@ -872,20 +872,18 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
     FuncNames2.push_back(OS.str());
   }
 
-  for (int Padding = 0; Padding < 10; Padding++) {
-    for (int DoCompression = 0; DoCompression < 2; DoCompression++) {
-      // Compressing:
-      std::string FuncNameStrings1;
-      collectPGOFuncNameStrings(FuncNames1,
-                                (DoCompression != 0 && zlib::isAvailable()),
-                                FuncNameStrings1);
+  for (bool DoCompression : {false, true}) {
+    // Compressing:
+    std::string FuncNameStrings1;
+    collectPGOFuncNameStrings(
+        FuncNames1, (DoCompression && zlib::isAvailable()), FuncNameStrings1);
 
-      // Compressing:
-      std::string FuncNameStrings2;
-      collectPGOFuncNameStrings(FuncNames2,
-                                (DoCompression != 0 && zlib::isAvailable()),
-                                FuncNameStrings2);
+    // Compressing:
+    std::string FuncNameStrings2;
+    collectPGOFuncNameStrings(
+        FuncNames2, (DoCompression && zlib::isAvailable()), FuncNameStrings2);
 
+    for (int Padding = 0; Padding < 3; Padding++) {
       // Join with paddings:
       std::string FuncNameStrings = FuncNameStrings1;
       for (int P = 0; P < Padding; P++) {
