@@ -68,7 +68,7 @@ class TestSwiftTypeLookup(TestBase):
 
         # check that basic cases work
         self.expect("type lookup String", substrs=['struct String {', 'extension String : '])
-        self.expect("type lookup Cla1", substrs=['class Cla1 {', 'func bat(x: Swift.Int, y: a.Str1) -> Swift.Int'])
+        self.expect("type lookup Cla1", substrs=['class Cla1 {', 'func bat(_ x: Swift.Int, y: a.Str1) -> Swift.Int'])
         self.expect("type lookup Str1", substrs=['struct Str1 {','func bar()','var b'])
 
         # check that specifiers are honored
