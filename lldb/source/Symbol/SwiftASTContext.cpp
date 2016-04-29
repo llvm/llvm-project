@@ -276,6 +276,15 @@ GetEnumInfoCache (const swift::ASTContext *a)
     return pos->second.get();
 }
 
+llvm::LLVMContext&
+SwiftASTContext::GetGlobalLLVMContext()
+{
+    // TODO check with Sean.  Do we really want this to be static across
+    // an LLDB managing multiple Swift processes?
+    static llvm::LLVMContext s_global_context;
+    return s_global_context;
+}
+
 CachedMemberInfo *
 SwiftASTContext::GetCachedMemberInfo (void* type)
 {
@@ -4756,7 +4765,7 @@ SwiftASTContext::GetIRGenModule ()
             m_ir_gen_module_ap.reset (new swift::irgen::IRGenModule(GetIRGenModuleDispatcher(),
                                                                     nullptr,
                                                                     *GetASTContext(),
-                                                                    llvm::getGlobalContext(),
+                                                                    GetGlobalLLVMContext(),
                                                                     ir_gen_opts,
                                                                     ir_gen_opts.ModuleName,
                                                                     data_layout,

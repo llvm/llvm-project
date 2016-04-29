@@ -1763,7 +1763,7 @@ SwiftExpressionParser::Parse (DiagnosticManager &diagnostic_manager,
                                               module,
                                               sil_module.get(),
                                               "lldb_module",
-                                              llvm::getGlobalContext());
+                                              SwiftASTContext::GetGlobalLLVMContext());
     }
     
     if (m_swift_ast_context->HasErrors())
