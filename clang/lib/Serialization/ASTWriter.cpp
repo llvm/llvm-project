@@ -4359,6 +4359,19 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     }
   }
 
+  // For method pool in the module, if it contains an entry for a selector,
+  // the entry should be complete, containing everything introduced by that
+  // module and all modules it imports. It's possible that the entry is out of
+  // date, so we need to pull in the new content here.
+
+  // It's possible that updateOutOfDateSelector can update SelectorIDs. To be
+  // safe, we copy all selectors out.
+  llvm::SmallVector<Selector, 256> AllSelectors;
+  for (auto &SelectorAndID : SelectorIDs)
+    AllSelectors.push_back(SelectorAndID.first);
+  for (auto &Selector : AllSelectors)
+    SemaRef.updateOutOfDateSelector(Selector);
+
   // Form the record of special types.
   RecordData SpecialTypes;
   AddTypeRef(Context.getRawCFConstantStringType(), SpecialTypes);

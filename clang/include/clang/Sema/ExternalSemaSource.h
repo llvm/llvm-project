@@ -70,6 +70,10 @@ public:
   /// selector.
   virtual void ReadMethodPool(Selector Sel);
 
+  /// Load the contents of the global method pool for a given
+  /// selector if necessary.
+  virtual void updateOutOfDateSelector(Selector Sel);
+
   /// \brief Load the set of namespaces that are known to the external source,
   /// which will be used during typo correction.
   virtual void ReadKnownNamespaces(
