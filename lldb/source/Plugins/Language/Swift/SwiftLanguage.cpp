@@ -39,6 +39,7 @@
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
 
+#include "Plugins/Language/ObjC/Cocoa.h"
 #include "Plugins/Language/ObjC/NSDictionary.h"
 #include "Plugins/Language/ObjC/NSSet.h"
 #include "Plugins/Language/ObjC/NSString.h"
@@ -64,6 +65,7 @@ SwiftLanguage::Initialize()
     static ConstString g_NSStringClass1("_NSContiguousString");
     static ConstString g_NSStringClass2("_TtCSs19_NSContiguousString");
     static ConstString g_NSStringClass3("_TtCs19_NSContiguousString");
+    static ConstString g_NSArrayClass1("_TtCs21_SwiftDeferredNSArray");
 
     PluginManager::RegisterPlugin (GetPluginNameStatic(),
                                    "Swift Language",
@@ -82,6 +84,9 @@ SwiftLanguage::Initialize()
     lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries().emplace(g_NSStringClass1, lldb_private::formatters::swift::NSContiguousString_SummaryProvider);
     lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries().emplace(g_NSStringClass2, lldb_private::formatters::swift::NSContiguousString_SummaryProvider);
     lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries().emplace(g_NSStringClass3, lldb_private::formatters::swift::NSContiguousString_SummaryProvider);
+    
+    lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries().emplace(g_NSArrayClass1, lldb_private::formatters::swift::Array_SummaryProvider);
+    lldb_private::formatters::NSArray_Additionals::GetAdditionalSynthetics().emplace(g_NSArrayClass1, lldb_private::formatters::swift::ArraySyntheticFrontEndCreator);
 }
 
 void
@@ -94,6 +99,7 @@ SwiftLanguage::Terminate()
     static ConstString g_NSStringClass1("_NSContiguousString");
     static ConstString g_NSStringClass2("_TtCSs19_NSContiguousString");
     static ConstString g_NSStringClass3("_TtCs19_NSContiguousString");
+    static ConstString g_NSArrayClass1("_TtCs21_SwiftDeferredNSArray");
 
     lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSummaries().erase(g_NSDictionaryClass1);
     lldb_private::formatters::NSDictionary_Additionals::GetAdditionalSynthetics().erase(g_NSDictionaryClass1);
@@ -108,6 +114,9 @@ SwiftLanguage::Terminate()
     lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries().erase(g_NSStringClass1);
     lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries().erase(g_NSStringClass2);
     lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries().erase(g_NSStringClass3);
+    
+    lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries().erase(g_NSArrayClass1);
+    lldb_private::formatters::NSArray_Additionals::GetAdditionalSynthetics().erase(g_NSArrayClass1);
 
     PluginManager::UnregisterPlugin (CreateInstance);
 }
@@ -217,6 +226,7 @@ LoadSwiftFormatters (lldb::TypeCategoryImplSP swift_category_sp)
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Array_SummaryProvider, "Swift.ArraySlice summary provider",ConstString("^Swift.ArraySlice<.+>$"),summary_flags,true);
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Array_SummaryProvider, "Swift.Array summary provider",ConstString("^_TtCs23_ContiguousArrayStorage[A-Fa-f0-9]+$"),summary_flags,true);
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Array_SummaryProvider, "Swift.Array summary provider",ConstString("^Swift._ContiguousArrayStorage"),summary_flags,true);
+    AddCXXSummary(swift_category_sp, lldb_private::formatters::NSArraySummaryProvider, "Swift.Array summary provider",ConstString("_TtCs21_SwiftDeferredNSArray"),summary_flags,false);
     
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Dictionary_SummaryProvider, "Swift.Dictionary summary provider",ConstString("^Swift.Dictionary<.+,.+>$"),summary_flags,true);
     AddCXXSummary(swift_category_sp, lldb_private::formatters::NSDictionarySummaryProvider<false>, "Swift.Dictionary synthetic children", ConstString("^_TtCs29_NativeDictionaryStorageOwner[A-Fa-f0-9]+$"), summary_flags, true);
@@ -232,6 +242,8 @@ LoadSwiftFormatters (lldb::TypeCategoryImplSP swift_category_sp)
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::ArraySyntheticFrontEndCreator, "Swift.Array synthetic children", ConstString("^Swift.ArraySlice<.+>$"), synth_flags, true);
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::ArraySyntheticFrontEndCreator, "Swift.Array synthetic children", ConstString("^_TtCs23_ContiguousArrayStorage[A-Fa-f0-9]+$"), synth_flags, true);
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::ArraySyntheticFrontEndCreator, "Swift.Array synthetic children", ConstString("^Swift._ContiguousArrayStorage"), synth_flags, true);
+    AddCXXSynthetic(swift_category_sp, lldb_private::formatters::NSArraySyntheticFrontEndCreator, "Swift.Array synthetic children", ConstString("_TtCs21_SwiftDeferredNSArray"), synth_flags, false);
+
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator, "Swift.Dictionary synthetic children", ConstString("^Swift.Dictionary<.+,.+>$"), synth_flags, true);
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::NSDictionarySyntheticFrontEndCreator, "Swift.Dictionary synthetic children", ConstString("^_TtCs29_NativeDictionaryStorageOwner[A-Fa-f0-9]+$"), synth_flags, true);
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::NSDictionarySyntheticFrontEndCreator, "Swift.Dictionary synthetic children", ConstString("^_TtGCs29_NativeDictionaryStorageOwner.*_$"), synth_flags, true);

@@ -43,6 +43,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -504,6 +505,52 @@ AppleObjCRuntimeV2::CreateInstance (Process *process, LanguageType language)
 class CommandObjectObjC_ClassTable_Dump : public CommandObjectParsed
 {
 public:
+    class CommandOptions : public Options
+    {
+    public:
+        CommandOptions (CommandInterpreter &interpreter) :
+        Options(interpreter),
+        m_verbose(false,false)
+        {}
+        
+        ~CommandOptions() override = default;
+
+        Error
+        SetOptionValue(uint32_t option_idx, const char *option_arg) override
+        {
+            Error error;
+            const int short_option = m_getopt_table[option_idx].val;
+            switch (short_option)
+            {
+                case 'v':
+                    m_verbose.SetCurrentValue(true);
+                    m_verbose.SetOptionWasSet();
+                    break;
+                    
+                default:
+                    error.SetErrorStringWithFormat("unrecognized short option '%c'", short_option);
+                    break;
+            }
+            
+            return error;
+        }
+        
+        void
+        OptionParsingStarting() override
+        {
+            m_verbose.Clear();
+        }
+        
+        const OptionDefinition*
+        GetDefinitions() override
+        {
+            return g_option_table;
+        }
+
+        OptionValueBoolean m_verbose;
+        static OptionDefinition g_option_table[];
+    };
+
     CommandObjectObjC_ClassTable_Dump (CommandInterpreter &interpreter) :
     CommandObjectParsed (interpreter,
                          "dump",
@@ -511,39 +558,116 @@ public:
                          "language objc class-table dump",
                          eCommandRequiresProcess       |
                          eCommandProcessMustBeLaunched |
-                         eCommandProcessMustBePaused   )
+                         eCommandProcessMustBePaused   ),
+    m_options(interpreter)
     {
+        CommandArgumentEntry arg;
+        CommandArgumentData index_arg;
+        
+        // Define the first (and only) variant of this arg.
+        index_arg.arg_type = eArgTypeRegularExpression;
+        index_arg.arg_repetition = eArgRepeatOptional;
+        
+        // There is only one variant this argument could be; put it into the argument entry.
+        arg.push_back (index_arg);
+        
+        // Push the data for the first argument into the m_arguments vector.
+        m_arguments.push_back (arg);
     }
 
     ~CommandObjectObjC_ClassTable_Dump() override = default;
 
+    Options *
+    GetOptions() override
+    {
+        return &m_options;
+    }
+    
 protected:
     bool
     DoExecute(Args& command, CommandReturnObject &result) override
     {
+        std::unique_ptr<RegularExpression> regex_up;
+        switch(command.GetArgumentCount())
+        {
+            case 0:
+                break;
+            case 1:
+            {
+                regex_up.reset(new RegularExpression());
+                if (!regex_up->Compile(command.GetArgumentAtIndex(0)))
+                {
+                    result.AppendError("invalid argument - please provide a valid regular expression");
+                    result.SetStatus(lldb::eReturnStatusFailed);
+                    return false;
+                }
+                break;
+            }
+            default:
+            {
+                result.AppendError("please provide 0 or 1 arguments");
+                result.SetStatus(lldb::eReturnStatusFailed);
+                return false;
+            }
+        }
+        
         Process *process = m_exe_ctx.GetProcessPtr();
         ObjCLanguageRuntime *objc_runtime = process->GetObjCLanguageRuntime();
         if (objc_runtime)
         {
             auto iterators_pair = objc_runtime->GetDescriptorIteratorPair();
             auto iterator = iterators_pair.first;
+            auto &out = result.GetOutputStream();
             for(; iterator != iterators_pair.second; iterator++)
             {
-                result.GetOutputStream().Printf("isa = 0x%" PRIx64, iterator->first);
                 if (iterator->second)
                 {
-                    result.GetOutputStream().Printf(" name = %s", iterator->second->GetClassName().AsCString("<unknown>"));
-                    result.GetOutputStream().Printf(" instance size = %" PRIu64, iterator->second->GetInstanceSize());
-                    result.GetOutputStream().Printf(" num ivars = %" PRIuPTR, (uintptr_t)iterator->second->GetNumIVars());
+                    const char* class_name = iterator->second->GetClassName().AsCString("<unknown>");
+                    if (regex_up && class_name && !regex_up->Execute(class_name))
+                        continue;
+                    out.Printf("isa = 0x%" PRIx64, iterator->first);
+                    out.Printf(" name = %s", class_name);
+                    out.Printf(" instance size = %" PRIu64, iterator->second->GetInstanceSize());
+                    out.Printf(" num ivars = %" PRIuPTR, (uintptr_t)iterator->second->GetNumIVars());
                     if (auto superclass = iterator->second->GetSuperclass())
                     {
-                        result.GetOutputStream().Printf(" superclass = %s", superclass->GetClassName().AsCString("<unknown>"));
+                        out.Printf(" superclass = %s", superclass->GetClassName().AsCString("<unknown>"));
                     }
-                    result.GetOutputStream().Printf("\n");
+                    out.Printf("\n");
+                    if (m_options.m_verbose)
+                    {
+                        for(size_t i = 0;
+                            i < iterator->second->GetNumIVars();
+                            i++)
+                        {
+                            auto ivar = iterator->second->GetIVarAtIndex(i);
+                            out.Printf("  ivar name = %s type = %s size = %" PRIu64 " offset = %" PRId32 "\n",
+                                                            ivar.m_name.AsCString("<unknown>"),
+                                                            ivar.m_type.GetDisplayTypeName().AsCString("<unknown>"),
+                                                            ivar.m_size,
+                                                            ivar.m_offset);
+                        }
+                        iterator->second->Describe(nullptr,
+                                                   [objc_runtime, &out] (const char* name, const char* type) -> bool {
+                                                       out.Printf("  instance method name = %s type = %s\n",
+                                                                  name,
+                                                                  type);
+                                                       return false;
+                                                   },
+                                                   [objc_runtime, &out] (const char* name, const char* type) -> bool {
+                                                       out.Printf("  class method name = %s type = %s\n",
+                                                                  name,
+                                                                  type);
+                                                       return false;
+                                                   },
+                                                   nullptr);
+                    }
                 }
                 else
                 {
-                    result.GetOutputStream().Printf(" has no associated class.\n");
+                    if (regex_up && !regex_up->Execute(""))
+                        continue;
+                    out.Printf("isa = 0x%" PRIx64 " has no associated class.\n", iterator->first);
                 }
             }
             result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
@@ -556,6 +680,15 @@ protected:
             return false;
         }
     }
+    
+    CommandOptions m_options;
+};
+
+OptionDefinition
+CommandObjectObjC_ClassTable_Dump::CommandOptions::g_option_table[] =
+{
+    { LLDB_OPT_SET_ALL, false, "verbose"        , 'v', OptionParser::eNoArgument        , nullptr, nullptr, 0, eArgTypeNone,        "Print ivar and method information in detail"},
+    { 0               , false, nullptr           ,   0, 0                  , nullptr, nullptr, 0, eArgTypeNone,        nullptr }
 };
 
 class CommandObjectMultiwordObjC_TaggedPointer_Info : public CommandObjectParsed
@@ -2101,6 +2234,74 @@ AppleObjCRuntimeV2::TaggedPointerVendorV2::CreateInstance (AppleObjCRuntimeV2& r
     if (error.Fail())
         return new TaggedPointerVendorLegacy(runtime);
 
+    // try to detect the "extended tagged pointer" variables - if any are missing, use the non-extended vendor
+    do
+    {
+        auto objc_debug_taggedpointer_ext_mask = ExtractRuntimeGlobalSymbol(process,
+                                                                            ConstString("objc_debug_taggedpointer_ext_mask"),
+                                                                            objc_module_sp,
+                                                                            error);
+        if (error.Fail())
+            break;
+        
+        auto objc_debug_taggedpointer_ext_slot_shift = ExtractRuntimeGlobalSymbol(process,
+                                                                                  ConstString("objc_debug_taggedpointer_ext_slot_shift"),
+                                                                                  objc_module_sp,
+                                                                                  error,
+                                                                                  true,
+                                                                                  4);
+        if (error.Fail())
+            break;
+        
+        auto objc_debug_taggedpointer_ext_slot_mask = ExtractRuntimeGlobalSymbol(process,
+                                                                                 ConstString("objc_debug_taggedpointer_ext_slot_mask"),
+                                                                                 objc_module_sp,
+                                                                                 error,
+                                                                                 true,
+                                                                                 4);
+        if (error.Fail())
+            break;
+        
+        auto objc_debug_taggedpointer_ext_classes = ExtractRuntimeGlobalSymbol(process,
+                                                                               ConstString("objc_debug_taggedpointer_ext_classes"),
+                                                                               objc_module_sp,
+                                                                               error,
+                                                                               false);
+        if (error.Fail())
+            break;
+        
+        auto objc_debug_taggedpointer_ext_payload_lshift = ExtractRuntimeGlobalSymbol(process,
+                                                                                      ConstString("objc_debug_taggedpointer_ext_payload_lshift"),
+                                                                                      objc_module_sp,
+                                                                                      error,
+                                                                                      true,
+                                                                                      4);
+        if (error.Fail())
+            break;
+        
+        auto objc_debug_taggedpointer_ext_payload_rshift = ExtractRuntimeGlobalSymbol(process,
+                                                                                      ConstString("objc_debug_taggedpointer_ext_payload_rshift"),
+                                                                                      objc_module_sp,
+                                                                                      error,
+                                                                                      true,
+                                                                                      4);
+        if (error.Fail())
+            break;
+        
+        return new TaggedPointerVendorExtended(runtime,
+                                               objc_debug_taggedpointer_mask,
+                                               objc_debug_taggedpointer_ext_mask,
+                                               objc_debug_taggedpointer_slot_shift,
+                                               objc_debug_taggedpointer_ext_slot_shift,
+                                               objc_debug_taggedpointer_slot_mask,
+                                               objc_debug_taggedpointer_ext_slot_mask,
+                                               objc_debug_taggedpointer_payload_lshift,
+                                               objc_debug_taggedpointer_payload_rshift,
+                                               objc_debug_taggedpointer_ext_payload_lshift,
+                                               objc_debug_taggedpointer_ext_payload_rshift,
+                                               objc_debug_taggedpointer_classes,
+                                               objc_debug_taggedpointer_ext_classes);
+    } while(false);
     
     // we might want to have some rules to outlaw these values (e.g if the table's address is zero)
     
@@ -2236,6 +2437,87 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor (lldb
     }
     
     data_payload = (((uint64_t)ptr << m_objc_debug_taggedpointer_payload_lshift) >> m_objc_debug_taggedpointer_payload_rshift);
+    
+    return ClassDescriptorSP(new ClassDescriptorV2Tagged(actual_class_descriptor_sp,data_payload));
+}
+
+AppleObjCRuntimeV2::TaggedPointerVendorExtended::TaggedPointerVendorExtended (AppleObjCRuntimeV2& runtime,
+                                                                              uint64_t objc_debug_taggedpointer_mask,
+                                                                              uint64_t objc_debug_taggedpointer_ext_mask,
+                                                                              uint32_t objc_debug_taggedpointer_slot_shift,
+                                                                              uint32_t objc_debug_taggedpointer_ext_slot_shift,
+                                                                              uint32_t objc_debug_taggedpointer_slot_mask,
+                                                                              uint32_t objc_debug_taggedpointer_ext_slot_mask,
+                                                                              uint32_t objc_debug_taggedpointer_payload_lshift,
+                                                                              uint32_t objc_debug_taggedpointer_payload_rshift,
+                                                                              uint32_t objc_debug_taggedpointer_ext_payload_lshift,
+                                                                              uint32_t objc_debug_taggedpointer_ext_payload_rshift,
+                                                                              lldb::addr_t objc_debug_taggedpointer_classes,
+                                                                              lldb::addr_t objc_debug_taggedpointer_ext_classes) :
+TaggedPointerVendorRuntimeAssisted(runtime,
+                                   objc_debug_taggedpointer_mask,
+                                   objc_debug_taggedpointer_slot_shift,
+                                   objc_debug_taggedpointer_slot_mask,
+                                   objc_debug_taggedpointer_payload_lshift,
+                                   objc_debug_taggedpointer_payload_rshift,
+                                   objc_debug_taggedpointer_classes),
+m_ext_cache(),
+m_objc_debug_taggedpointer_ext_mask(objc_debug_taggedpointer_ext_mask),
+m_objc_debug_taggedpointer_ext_slot_shift(objc_debug_taggedpointer_ext_slot_shift),
+m_objc_debug_taggedpointer_ext_slot_mask(objc_debug_taggedpointer_ext_slot_mask),
+m_objc_debug_taggedpointer_ext_payload_lshift(objc_debug_taggedpointer_ext_payload_lshift),
+m_objc_debug_taggedpointer_ext_payload_rshift(objc_debug_taggedpointer_ext_payload_rshift),
+m_objc_debug_taggedpointer_ext_classes(objc_debug_taggedpointer_ext_classes)
+{
+}
+
+bool
+AppleObjCRuntimeV2::TaggedPointerVendorExtended::IsPossibleExtendedTaggedPointer (lldb::addr_t ptr)
+{
+    if (!IsPossibleTaggedPointer(ptr))
+        return false;
+    
+    if (m_objc_debug_taggedpointer_ext_mask == 0)
+        return false;
+    
+    return ((ptr & m_objc_debug_taggedpointer_ext_mask) == m_objc_debug_taggedpointer_ext_mask);
+}
+
+ObjCLanguageRuntime::ClassDescriptorSP
+AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor (lldb::addr_t ptr)
+{
+    ClassDescriptorSP actual_class_descriptor_sp;
+    uint64_t data_payload;
+    
+    if (!IsPossibleTaggedPointer(ptr))
+        return ObjCLanguageRuntime::ClassDescriptorSP();
+    
+    if (!IsPossibleExtendedTaggedPointer(ptr))
+        return this->TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(ptr);
+    
+    uintptr_t slot = (ptr >> m_objc_debug_taggedpointer_ext_slot_shift) & m_objc_debug_taggedpointer_ext_slot_mask;
+    
+    CacheIterator iterator = m_ext_cache.find(slot),
+    end = m_ext_cache.end();
+    if (iterator != end)
+    {
+        actual_class_descriptor_sp = iterator->second;
+    }
+    else
+    {
+        Process* process(m_runtime.GetProcess());
+        uintptr_t slot_ptr = slot*process->GetAddressByteSize()+m_objc_debug_taggedpointer_ext_classes;
+        Error error;
+        uintptr_t slot_data = process->ReadPointerFromMemory(slot_ptr, error);
+        if (error.Fail() || slot_data == 0 || slot_data == uintptr_t(LLDB_INVALID_ADDRESS))
+            return nullptr;
+        actual_class_descriptor_sp = m_runtime.GetClassDescriptorFromISA((ObjCISA)slot_data);
+        if (!actual_class_descriptor_sp)
+            return ObjCLanguageRuntime::ClassDescriptorSP();
+        m_ext_cache[slot] = actual_class_descriptor_sp;
+    }
+    
+    data_payload = (((uint64_t)ptr << m_objc_debug_taggedpointer_ext_payload_lshift) >> m_objc_debug_taggedpointer_ext_payload_rshift);
     
     return ClassDescriptorSP(new ClassDescriptorV2Tagged(actual_class_descriptor_sp,data_payload));
 }

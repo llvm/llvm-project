@@ -52,6 +52,7 @@ from six.moves import queue
 import lldbsuite
 import lldbsuite.support.seven as seven
 
+from lldbsuite.support import optional_with
 from . import configuration
 from . import dotest_channels
 from . import dotest_args
@@ -59,12 +60,7 @@ from . import result_formatter
 
 from .result_formatter import EventBuilder
 
-
-# Todo: Convert this folder layout to be relative-import friendly and
-# don't hack up sys.path like this
-sys.path.append(os.path.join(os.path.dirname(__file__), "test_runner", "lib"))
-import lldb_utils
-import process_control
+from .test_runner import process_control
 
 # Status codes for running command with timeout.
 eTimedOut, ePassed, eFailed = 124, 0, 1
@@ -109,13 +105,17 @@ def setup_global_variables(
         global GET_WORKER_INDEX
         GET_WORKER_INDEX = get_worker_index_use_pid
 
-def report_test_failure(name, command, output):
+def report_test_failure(name, command, output, timeout):
     global output_lock
     with output_lock:
         if not (RESULTS_FORMATTER and RESULTS_FORMATTER.is_using_terminal()):
             print(file=sys.stderr)
             print(output, file=sys.stderr)
-            print("[%s FAILED]" % name, file=sys.stderr)
+            if timeout:
+                timeout_str = " (TIMEOUT)"
+            else:
+                timeout_str = ""
+            print("[%s FAILED]%s" % (name, timeout_str), file=sys.stderr)
             print("Command invoked: %s" % ' '.join(command), file=sys.stderr)
         update_progress(name)
 
@@ -173,7 +173,7 @@ class DoTestProcessDriver(process_control.ProcessDriver):
         super(DoTestProcessDriver, self).__init__(
             soft_terminate_timeout=soft_terminate_timeout)
         self.output_file = output_file
-        self.output_lock = lldb_utils.OptionalWith(output_file_lock)
+        self.output_lock = optional_with.optional_with(output_file_lock)
         self.pid_events = pid_events
         self.results = None
         self.file_name = file_name
@@ -211,7 +211,7 @@ class DoTestProcessDriver(process_control.ProcessDriver):
             # only stderr does.
             report_test_pass(self.file_name, output[1])
         else:
-            report_test_failure(self.file_name, command, output[1])
+            report_test_failure(self.file_name, command, output[1], was_timeout)
 
         # Save off the results for the caller.
         self.results = (
@@ -310,6 +310,10 @@ def send_events_to_collector(events, command):
     # Send the events: the port-based event just pickles the content
     # and sends over to the server side of the socket.
     for event in events:
+        # print("sending event ({}:{}) to formatter (type={})".format(
+        #     event.get("event", "{unknown}"),
+        #     event.get("status", "{unknown}"),
+        #     type(formatter_spec.formatter)), file=sys.stderr)
         formatter_spec.formatter.handle_event(event)
 
     # Cleanup
@@ -346,6 +350,7 @@ def send_inferior_post_run_events(
 
     # Handle signal/exceptional exits.
     if process_driver.is_exceptional_exit():
+        # print("\n** post-process events: sending exceptional exit test_event", file=sys.stderr)
         (code, desc) = process_driver.exceptional_exit_details()
         post_events.append(
             EventBuilder.event_for_job_exceptional_exit(
@@ -358,6 +363,7 @@ def send_inferior_post_run_events(
 
     # Handle timeouts.
     if process_driver.is_timeout():
+        # print("\n** post-process events: sending timeout test_event", file=sys.stderr)
         post_events.append(EventBuilder.event_for_job_timeout(
             process_driver.pid,
             worker_index,
@@ -365,6 +371,7 @@ def send_inferior_post_run_events(
             command))
 
     if len(post_events) > 0:
+        # print("\n** post-process events: sending queued events", file=sys.stderr)
         send_events_to_collector(post_events, command)
 
 
@@ -1166,6 +1173,11 @@ def getExpectedTimeouts(platform_name):
 def getDefaultTimeout(platform_name):
     if os.getenv("LLDB_TEST_TIMEOUT"):
         return os.getenv("LLDB_TEST_TIMEOUT")
+
+    # https://bugs.swift.org/browse/SR-1220
+    # Temporary work-around for timeout rerun issues.
+    # Remove this as soon as SR-1220 is resolved.
+    return "10m"
 
     if platform_name is None:
         platform_name = sys.platform

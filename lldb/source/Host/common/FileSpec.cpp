@@ -185,8 +185,22 @@ FileSpec::ResolveUsername (llvm::SmallVectorImpl<char> &path)
     {
         // A path of ~/ resolves to the current user's home dir
         llvm::SmallString<64> home_dir;
+        // llvm::sys::path::home_directory() only checks if "HOME" is set in the
+        // environment and does nothing else to locate the user home directory
         if (!llvm::sys::path::home_directory(home_dir))
-            return;
+        {
+            struct passwd *pw = getpwuid(getuid());
+            if (pw && pw->pw_dir && pw->pw_dir[0])
+            {
+                // Update our environemnt so llvm::sys::path::home_directory() works next time
+                setenv("HOME", pw->pw_dir, 0);
+                home_dir.assign(llvm::StringRef(pw->pw_dir));
+            }
+            else
+            {
+                return;
+            }
+        }
         
         // Overwrite the ~ with the first character of the homedir, and insert
         // the rest.  This way we only trigger one move, whereas an insert

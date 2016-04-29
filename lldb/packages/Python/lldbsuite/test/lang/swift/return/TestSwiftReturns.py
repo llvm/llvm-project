@@ -83,6 +83,13 @@ class TestSwiftReturns(TestBase):
                 print '    variable: %s' % (variable)
             self.assertTrue(False, err)
 
+    def verify_invisibility(self, variables):
+        frame = self.thread.frame[0]
+        for var_name in variables:
+            variable = frame.FindVariable(var_name, lldb.eDynamicCanRunTarget)
+            self.assertTrue(variable)
+            self.assertTrue(variable.value == None)
+
     def do_test(self):
         """Tests that we can break and display simple types"""
         exe_name = "a.out"
@@ -107,75 +114,33 @@ class TestSwiftReturns(TestBase):
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
 
-        # Get "Swift.UInt64" return struct value
         line_before_fin = self.thread.frame[1].line_entry.line
         self.step_out_until_no_breakpoint(breakpoint, False)
-        return_value = self.thread.GetStopReturnValue ()
-        if line_before_fin == self.thread.frame[0].line_entry.line:
-          self.thread.StepOver()
-        self.verify_return_value_against_local_variable(return_value, "u")
 
-        # Get "Swift.Int64" return struct value
-        line_before_fin = self.thread.frame[0].line_entry.line
-        self.step_out_until_no_breakpoint(breakpoint, True)
-        return_value = self.thread.GetStopReturnValue ()
-        if line_before_fin == self.thread.frame[0].line_entry.line:
-          self.thread.StepOver()
-        self.verify_return_value_against_local_variable(return_value, "i")
-
-        # Get "main.Foo" return class value
-        line_before_fin = self.thread.frame[0].line_entry.line
-        self.step_out_until_no_breakpoint(breakpoint, True)
-        return_value = self.thread.GetStopReturnValue ()
-        if line_before_fin == self.thread.frame[0].line_entry.line:
-          self.thread.StepOver()
-        self.verify_return_value_against_local_variable(return_value, "c")
-
-        # Get "Swift.String" return class value
-        line_before_fin = self.thread.frame[0].line_entry.line
-        self.step_out_until_no_breakpoint(breakpoint, True)
-        return_value = self.thread.GetStopReturnValue ()
-        if line_before_fin == self.thread.frame[0].line_entry.line:
-          self.thread.StepOver()
-        self.verify_return_value_against_local_variable(return_value, "s")
-
-        # Get "Swift.Dictionary<Swift.Int, Swift.String>" return class value
-        line_before_fin = self.thread.frame[0].line_entry.line
-        self.step_out_until_no_breakpoint(breakpoint, True)
-        return_value = self.thread.GetStopReturnValue ()
-        if line_before_fin == self.thread.frame[0].line_entry.line:
-          self.thread.StepOver()
-        self.verify_return_value_against_local_variable(return_value, "dict")
-
-        # Get "Swift.String?" return class value
-        line_before_fin = self.thread.frame[0].line_entry.line
-        self.step_out_until_no_breakpoint(breakpoint, True)
-        return_value = self.thread.GetStopReturnValue ()
-        if line_before_fin == self.thread.frame[0].line_entry.line:
-          self.thread.StepOver()
-        self.verify_return_value_against_local_variable(return_value, "opt_str")
-
-        # Get "Swift.Float" return class value
-        line_before_fin = self.thread.frame[0].line_entry.line
-        self.step_out_until_no_breakpoint(breakpoint, True)
-        return_value = self.thread.GetStopReturnValue ()
-        if line_before_fin == self.thread.frame[0].line_entry.line:
-          self.thread.StepOver()
-        self.verify_return_value_against_local_variable(return_value, "f")
-
-        # Get "Swift.Double" return class value
-        line_before_fin = self.thread.frame[0].line_entry.line
-        self.step_out_until_no_breakpoint(breakpoint, True)
-        return_value = self.thread.GetStopReturnValue ()
-        if line_before_fin == self.thread.frame[0].line_entry.line:
-          self.thread.StepOver()
-        self.verify_return_value_against_local_variable(return_value, "d")
+        # Get a "Swift.Int64" return struct value
+        # Get a "main.Foo" return class value
+        # Get a "Swift.String" return class value
+        # Get a "Swift.Dictionary<Swift.Int, Swift.String>" return class value
+        # Get a "Swift.String?" return class value
+        # Get a "Swift.Float" return class value
+        # Get a "Swift.Double" return class value
+        # Test that the local variable equals return value.
+        # Test that none of the later let-bound values are available.
+        variables = ["u", "i", "c", "s", "dict", "opt_str", "f", "d"]
+        # FIXME: Enable opt_str below:
+        invisibles =     ["i", "c", "s", "dict",      "f", "f", "d"]
+        for var in variables:
+            return_value = self.thread.GetStopReturnValue ()
+            if line_before_fin == self.thread.frame[0].line_entry.line:
+                self.thread.StepOver()
+            self.verify_return_value_against_local_variable(return_value, var)
+            self.verify_invisibility(invisibles)
+            if len(invisibles): invisibles.pop(0)
+            line_before_fin = self.thread.frame[0].line_entry.line
+            self.step_out_until_no_breakpoint(breakpoint, True)
 
         # Call a function that could throw but doesn't and see that it actually gets the result:
-        line_before_fin = self.thread.frame[0].line_entry.line
-        self.step_out_until_no_breakpoint (breakpoint, True)
         return_value = self.thread.GetStopReturnValue ()
-
         if line_before_fin == self.thread.frame[0].line_entry.line:
           self.thread.StepOver()
         self.verify_return_value_against_local_variable(return_value, "not_err")

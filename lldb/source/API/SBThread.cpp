@@ -34,7 +34,6 @@
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
-#include "Plugins/Process/Utility/HistoryThread.h"
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"
@@ -329,33 +328,6 @@ SBThread::GetStopReasonExtendedInfoAsJSON (lldb::SBStream &stream)
     return true;
 }
 
-static void
-AddThreadsForPath(std::string path, ThreadCollectionSP threads, ProcessSP process_sp, StructuredData::ObjectSP info)
-{
-    info->GetObjectForDotSeparatedPath(path)->GetAsArray()->ForEach([process_sp, threads] (StructuredData::Object *o) -> bool {
-        std::vector<lldb::addr_t> pcs;
-        o->GetObjectForDotSeparatedPath("trace")->GetAsArray()->ForEach([&pcs] (StructuredData::Object *pc) -> bool {
-            pcs.push_back(pc->GetAsInteger()->GetValue());
-            return true;
-        });
-
-        if (pcs.size() == 0)
-            return true;
-        
-        StructuredData::ObjectSP thread_id_obj = o->GetObjectForDotSeparatedPath("thread_id");
-        tid_t tid = thread_id_obj ? thread_id_obj->GetIntegerValue() : 0;
-        uint32_t stop_id = 0;
-        bool stop_id_is_valid = false;
-        HistoryThread *history_thread = new HistoryThread(*process_sp, tid, pcs, stop_id, stop_id_is_valid);
-        ThreadSP new_thread_sp(history_thread);
-        // Save this in the Process' ExtendedThreadList so a strong pointer retains the object
-        process_sp->GetExtendedThreadList().AddThread(new_thread_sp);
-        threads->AddThread(new_thread_sp);
-        
-        return true;
-    });
-}
-
 SBThreadCollection
 SBThread::GetStopReasonExtendedBacktraces (InstrumentationRuntimeType type)
 {
@@ -365,10 +337,10 @@ SBThread::GetStopReasonExtendedBacktraces (InstrumentationRuntimeType type)
     // We currently only support ThreadSanitizer.
     if (type != eInstrumentationRuntimeTypeThreadSanitizer)
         return threads;
-
+    
     ExecutionContext exe_ctx (m_opaque_sp.get());
     if (! exe_ctx.HasThreadScope())
-        return SBThreadCollection(threads);
+        return threads;
     
     ProcessSP process_sp = exe_ctx.GetProcessSP();
     
@@ -377,16 +349,7 @@ SBThread::GetStopReasonExtendedBacktraces (InstrumentationRuntimeType type)
     if (! info)
         return threads;
     
-    if (info->GetObjectForDotSeparatedPath("instrumentation_class")->GetStringValue() != "ThreadSanitizer")
-        return threads;
-    
-    AddThreadsForPath("stacks", threads, process_sp, info);
-    AddThreadsForPath("mops", threads, process_sp, info);
-    AddThreadsForPath("locs", threads, process_sp, info);
-    AddThreadsForPath("mutexes", threads, process_sp, info);
-    AddThreadsForPath("threads", threads, process_sp, info);
-    
-    return threads;
+    return process_sp->GetInstrumentationRuntime(type)->GetBacktracesFromExtendedStopInfo(info);
 }
 
 size_t

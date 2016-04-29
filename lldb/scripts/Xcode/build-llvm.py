@@ -134,6 +134,8 @@ def should_build_llvm ():
 
 def do_symlink (source_path, link_path):
     print "Symlinking " + source_path + " to " + link_path
+    if os.path.islink(link_path):
+        os.remove(link_path)
     if not os.path.exists(link_path):
         os.symlink(source_path, link_path)
 
@@ -165,7 +167,7 @@ def build_script_environment():
     return join_dicts(os.environ, BUILD_SCRIPT_ENVIRONMENT())
 
 def build_llvm ():
-    subprocess.call(["python", build_script_path()] + build_script_flags(), cwd=lldb_source_path(), env=build_script_environment())
+    subprocess.check_call(["python", build_script_path()] + build_script_flags(), cwd=lldb_source_path(), env=build_script_environment())
 
 def build_llvm_if_needed ():
     if should_build_llvm():

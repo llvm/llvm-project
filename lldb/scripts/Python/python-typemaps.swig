@@ -534,7 +534,7 @@
 
 %typemap(out) FILE * {
    char mode[4] = {0};
-#ifdef __APPLE__
+%#ifdef __APPLE__
    int i = 0;
    if ($1)
    {
@@ -547,7 +547,7 @@
        else // if (flags & __SRW)
           mode[i++] = 'a';
     }
-#endif
+%#endif
    using namespace lldb_private;
    File file($1, false);
    PythonFile py_file(file, mode);

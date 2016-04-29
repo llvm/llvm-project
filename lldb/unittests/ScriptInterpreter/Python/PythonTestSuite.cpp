@@ -24,6 +24,7 @@ PythonTestSuite::SetUp()
     // ScriptInterpreterPython::Initialize() depends on HostInfo being
     // initializedso it can compute the python directory etc.
     ScriptInterpreterPython::Initialize();
+    ScriptInterpreterPython::InitializePrivate();
 
     // Although we don't care about concurrency for the purposes of running
     // this test suite, Python requires the GIL to be locked even for

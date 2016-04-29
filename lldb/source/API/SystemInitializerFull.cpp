@@ -340,7 +340,8 @@ SystemInitializerFull::Initialize()
 
     SymbolVendorELF::Initialize();
     SymbolFileDWARF::Initialize();
-    SymbolFilePDB::Initialize();
+    // TODO re-add when swift-llvm/stable and swift-clang/stable catch up to llvm::IPDBSession API required by SymbolFilePDB.
+    // SymbolFilePDB::Initialize();
     SymbolFileSymtab::Initialize();
     UnwindAssemblyInstEmulation::Initialize();
     UnwindAssembly_x86::Initialize();
@@ -470,7 +471,8 @@ SystemInitializerFull::Terminate()
     ThreadSanitizerRuntime::Terminate();
     SymbolVendorELF::Terminate();
     SymbolFileDWARF::Terminate();
-    SymbolFilePDB::Terminate();
+    // TODO re-add when swift-llvm/stable and swift-clang/stable catch up to llvm::IPDBSession API required by SymbolFilePDB.
+    // SymbolFilePDB::Terminate();
     SymbolFileSymtab::Terminate();
     UnwindAssembly_x86::Terminate();
     UnwindAssemblyInstEmulation::Terminate();

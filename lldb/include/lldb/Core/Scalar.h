@@ -337,6 +337,9 @@ public:
         const int64_t min = ~(max);
         return min <= sval64 && sval64 <= max;
     }
+    
+    static llvm::APInt
+    APIntWithTypeAndValue(Scalar::Type type, uint64_t raw_value);
 
 protected:
     typedef char                schar_t;

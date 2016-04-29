@@ -842,6 +842,10 @@ lldb_private::formatters::NSDataSummaryProvider (ValueObject& valobj, Stream& st
         if (error.Fail())
             return false;
     }
+    else if (!strcmp(class_name, "_NSZeroData"))
+    {
+        value = 0;
+    }
     else
         return false;
     
@@ -951,18 +955,6 @@ lldb_private::formatters::GetOSXEpoch ()
 #endif
     }
     return epoch;
-}
-
-bool
-lldb_private::formatters::RuntimeSpecificDescriptionSummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
-{
-    if (const char* description = valobj.GetObjectDescription())
-    {
-        stream.Printf("%s", description);
-        return true;
-    }
-    else
-        return false;
 }
 
 template bool

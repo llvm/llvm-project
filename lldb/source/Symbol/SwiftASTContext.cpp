@@ -5741,6 +5741,8 @@ SwiftASTContext::IsPossibleDynamicType (void* type,
                                         bool check_objc,
                                         bool check_swift)
 {
+    VALID_OR_RETURN(false);
+
     if (type && check_swift)
     {
         // FIXME: use the dynamic_pointee_type
