@@ -283,7 +283,6 @@ ExpressionSourceCode::SaveExpressionTextToTempFile (const char *text, const Eval
 bool
 ExpressionSourceCode::GetText (std::string &text,
                                lldb::LanguageType wrapping_language,
-                               bool const_object,
                                bool swift_instance_method,
                                bool static_method,
                                bool is_swift_class,
@@ -460,13 +459,12 @@ ExpressionSourceCode::GetText (std::string &text,
             break;
         case lldb::eLanguageTypeC_plus_plus:
             wrap_stream.Printf("void                                   \n"
-                               "$__lldb_class::%s(void *$__lldb_arg) %s\n"
+                               "$__lldb_class::%s(void *$__lldb_arg)   \n"
                                "{                                      \n"
                                "    %s;                                \n"
                                "%s"
                                "}                                      \n",
                                m_name.c_str(),
-                               (const_object ? "const" : ""),
                                lldb_local_var_decls.GetData(),
                                tagged_body.c_str());
             break;

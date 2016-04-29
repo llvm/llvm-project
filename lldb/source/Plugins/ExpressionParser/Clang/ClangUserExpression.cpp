@@ -432,7 +432,6 @@ ClangUserExpression::Parse (DiagnosticManager &diagnostic_manager,
         
         if (!source_code->GetText(m_transformed_text,
                                   lang_type,
-                                  m_const_object,
                                   m_needs_object_ptr,
                                   m_in_static_method,
                                   m_is_swift_class,
