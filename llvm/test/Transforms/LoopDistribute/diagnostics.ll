@@ -4,6 +4,8 @@
 ; RUN:     | FileCheck %s --check-prefix=ALWAYS --check-prefix=MISSED_REMARKS
 ; RUN: opt -loop-distribute -S -pass-remarks-analysis=loop-distribute < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=ALWAYS --check-prefix=ANALYSIS_REMARKS
+; RUN: opt -loop-distribute -S -pass-remarks=loop-distribute < %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=ALWAYS --check-prefix=REMARKS
 
 ; This is the input program:
 ;
