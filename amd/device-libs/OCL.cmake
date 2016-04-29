@@ -41,6 +41,7 @@
 ################################################################################
 
 set (LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
+set (LLVM_OBJDUMP "${LLVM_TOOLS_BINARY_DIR}/llvm-objdump")
 set (CMAKE_OCL_OUTPUT_EXTENTION .bc)
 set (CMAKE_OCL_OUTPUT_EXTENTION_REPLACE 1)
 set (CMAKE_OCL_COMPILER ${CMAKE_C_COMPILER})
@@ -91,7 +92,11 @@ macro(clang_opencl_test name)
   clang_opencl_code(${name})
   if(AMDHSACOD)
     add_test(
-      NAME ${name}
+      NAME ${name}:llvm-objdump
+      COMMAND ${LLVM_OBJDUMP} -disassemble-all $<TARGET_FILE:${name}_code>
+    )
+    add_test(
+      NAME ${name}:amdhsacod
       COMMAND ${AMDHSACOD} -test -code $<TARGET_FILE:${name}_code>
     )
   endif()
