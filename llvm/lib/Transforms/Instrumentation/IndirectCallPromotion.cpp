@@ -327,11 +327,12 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
       StringRef TargetFuncName = Symtab->getFuncName(Target);
       const char *Reason = StatusToString(Status);
       DEBUG(dbgs() << " Not promote: " << Reason << "\n");
-      emitOptimizationRemarkMissed(
-          F.getContext(), "PGOIndirectCallPromotion", F, Inst->getDebugLoc(),
+      Twine Msg =
           Twine("Cannot promote indirect call to ") +
-              (TargetFuncName.empty() ? Twine(Target) : Twine(TargetFuncName)) +
-              Twine(" with count of ") + Twine(Count) + ": " + Reason);
+          (TargetFuncName.empty() ? Twine(Target) : Twine(TargetFuncName)) +
+          Twine(" with count of ") + Twine(Count) + ": " + Reason;
+      emitOptimizationRemarkMissed(F.getContext(), "PGOIndirectCallPromotion",
+                                   F, Inst->getDebugLoc(), Msg);
       break;
     }
     Ret.push_back(PromotionCandidate(TargetFunction, Count));
@@ -602,10 +603,10 @@ void ICallPromotionFunc::promote(Instruction *Inst, Function *DirectCallee,
   DEBUG(dbgs() << "\n== Basic Blocks After ==\n");
   DEBUG(dbgs() << *BB << *DirectCallBB << *IndirectCallBB << *MergeBB << "\n");
 
-  emitOptimizationRemark(
-      F.getContext(), "PGOIndirectCallPromotion", F, Inst->getDebugLoc(),
-      Twine("Promote indirect call to ") + DirectCallee->getName() +
-          " with count " + Twine(Count) + " out of " + Twine(TotalCount));
+  Twine Msg = Twine("Promote indirect call to ") + DirectCallee->getName() +
+              " with count " + Twine(Count) + " out of " + Twine(TotalCount);
+  emitOptimizationRemark(F.getContext(), "PGOIndirectCallPromotion", F,
+                         Inst->getDebugLoc(), Msg);
 }
 
 // Promote indirect-call to conditional direct-call for one callsite.
