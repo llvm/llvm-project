@@ -23,7 +23,7 @@ void
 test(S s, It first, It last, S expected)
 {
     s.append(first, last);
-    assert(s.__invariants());
+    LIBCPP_ASSERT(s.__invariants());
     assert(s == expected);
 }
 
@@ -38,7 +38,7 @@ test_exceptions(S s, It first, It last)
     	assert(false);
     	}
     catch (...) {}
-    assert(s.__invariants());
+    LIBCPP_ASSERT(s.__invariants());
     assert(s == aCopy);
 }
 #endif

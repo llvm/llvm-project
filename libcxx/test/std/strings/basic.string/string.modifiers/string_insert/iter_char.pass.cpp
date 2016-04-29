@@ -11,14 +11,11 @@
 
 // iterator insert(const_iterator p, charT c);
 
-#if _LIBCPP_DEBUG >= 1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-#endif
-
 #include <string>
 #include <stdexcept>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 template <class S>
@@ -28,7 +25,7 @@ test(S& s, typename S::const_iterator p, typename S::value_type c, S expected)
     bool sufficient_cap = s.size() < s.capacity();
     typename S::difference_type pos = p - s.begin();
     typename S::iterator i = s.insert(p, c);
-    assert(s.__invariants());
+    LIBCPP_ASSERT(s.__invariants());
     assert(s == expected);
     assert(i - s.begin() == pos);
     assert(*i == c);
@@ -74,15 +71,6 @@ int main()
     test(s, s.begin()+4, 'A', S("a567A1432dcb"));
     test(s, s.begin()+5, 'B', S("a567AB1432dcb"));
     test(s, s.begin()+6, 'C', S("a567ABC1432dcb"));
-    }
-#endif
-#if _LIBCPP_DEBUG >= 1
-    {
-        typedef std::string S;
-        S s;
-        S s2;
-        s.insert(s2.begin(), '1');
-        assert(false);
     }
 #endif
 }

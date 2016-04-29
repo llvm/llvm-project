@@ -29,7 +29,7 @@ test(S s, typename S::size_type pos1, typename S::size_type n1, const typename S
     typename S::const_iterator last = s.begin() + pos1 + n1;
     typename S::size_type xlen = last - first;
     s.replace(first, last, str);
-    assert(s.__invariants());
+    LIBCPP_ASSERT(s.__invariants());
     assert(s == expected);
     typename S::size_type rlen = S::traits_type::length(str);
     assert(s.size() == old_size - xlen + rlen);

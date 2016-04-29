@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 template <class S>
@@ -104,7 +105,7 @@ int main()
     test(S("abcdefghijklmnopqrst"), s, 20, 1);
     test(S("abcdefghijklmnopqrst"), s, 21, 0);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     char s[50];

@@ -16,6 +16,7 @@
 #include <stdexcept>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 template <class S>
@@ -23,7 +24,7 @@ void
 test(S s, const typename S::value_type* str, typename S::size_type n, S expected)
 {
     s.assign(str, n);
-    assert(s.__invariants());
+    LIBCPP_ASSERT(s.__invariants());
     assert(s == expected);
 }
 

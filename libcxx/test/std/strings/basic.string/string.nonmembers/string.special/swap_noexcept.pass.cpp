@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <string>
 
 // void swap(basic_string& c)
@@ -22,6 +24,7 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 
 template <class T>
@@ -51,7 +54,6 @@ struct some_alloc2
 
 int main()
 {
-#if __has_feature(cxx_noexcept)
     {
         typedef std::string C;
         C c1, c2;
@@ -79,7 +81,5 @@ int main()
     //  if the allocators are always equal, then the swap can be noexcept
         static_assert( noexcept(swap(c1, c2)), "");
     }
-#endif
-
 #endif
 }

@@ -7,28 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
-
 // <string>
 
-// basic_string& operator=(initializer_list<charT> il);
+// void pop_back();
+
+#if _LIBCPP_DEBUG >= 1
+#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
+#endif
 
 #include <string>
 #include <cassert>
 
-#include "min_allocator.h"
+#include "test_macros.h"
 
 int main()
 {
+#if _LIBCPP_DEBUG >= 1
     {
         std::string s;
-        s = {'a', 'b', 'c'};
-        assert(s == "abc");
+        s.pop_back();
+        assert(false);
     }
-    {
-        typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-        S s;
-        s = {'a', 'b', 'c'};
-        assert(s == "abc");
-    }
+#endif
 }

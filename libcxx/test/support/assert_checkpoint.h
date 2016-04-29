@@ -33,7 +33,13 @@ inline void clearCheckpoint() {
     globalCheckpoint() = Checkpoint{0};
 }
 
-#define CHECKPOINT(msg) globalCheckpoint() = Checkpoint{__FILE__, __PRETTY_FUNCTION__, __LINE__, msg}
+#if defined(__GNUC__)
+#define CHECKPOINT_FUNCTION_NAME __PRETTY_FUNCTION__
+#else
+#define CHECKPOINT_FUNCTION_NAME __func__
+#endif
+
+#define CHECKPOINT(msg) globalCheckpoint() = Checkpoint{__FILE__, CHECKPOINT_FUNCTION_NAME, __LINE__, msg}
 
 inline void checkpointSignalHandler(int signal) {
     if (signal == SIGABRT) {

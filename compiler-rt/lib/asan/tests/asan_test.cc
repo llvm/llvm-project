@@ -595,9 +595,8 @@ NOINLINE void SigLongJmpFunc1(sigjmp_buf buf) {
 }
 
 #if !defined(__ANDROID__) && !defined(__arm__) && \
-    !defined(__powerpc64__) && !defined(__powerpc__) && \
     !defined(__aarch64__) && !defined(__mips__) && \
-    !defined(__mips64)
+    !defined(__mips64) && !defined(__s390__)
 NOINLINE void BuiltinLongJmpFunc1(jmp_buf buf) {
   // create three red zones for these two stack objects.
   int a;
@@ -609,7 +608,7 @@ NOINLINE void BuiltinLongJmpFunc1(jmp_buf buf) {
   __builtin_longjmp((void**)buf, 1);
 }
 
-// Does not work on Power and ARM:
+// Does not work on ARM:
 // https://github.com/google/sanitizers/issues/185
 TEST(AddressSanitizer, BuiltinLongJmpTest) {
   static jmp_buf buf;
@@ -619,9 +618,9 @@ TEST(AddressSanitizer, BuiltinLongJmpTest) {
     TouchStackFunc();
   }
 }
-#endif  // !defined(__ANDROID__) && !defined(__powerpc64__) &&
-        // !defined(__powerpc__) && !defined(__arm__) &&
-        // !defined(__mips__) && !defined(__mips64)
+#endif  // !defined(__ANDROID__) && !defined(__arm__) &&
+        // !defined(__aarch64__) && !defined(__mips__)
+        // !defined(__mips64) && !defined(__s390__)
 
 TEST(AddressSanitizer, UnderscopeLongJmpTest) {
   static jmp_buf buf;

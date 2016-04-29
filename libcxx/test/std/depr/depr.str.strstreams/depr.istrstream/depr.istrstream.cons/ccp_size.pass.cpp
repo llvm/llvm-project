@@ -15,6 +15,7 @@
 
 #include <strstream>
 #include <cassert>
+#include <string>
 
 int main()
 {
