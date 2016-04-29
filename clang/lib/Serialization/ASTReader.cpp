@@ -3606,6 +3606,9 @@ ASTReader::ASTReadResult ASTReader::ReadAST(const std::string &FileName,
          Id != IdEnd; ++Id)
       Id->second->setOutOfDate(true);
   }
+  // Mark selectors as out of date.
+  for (auto Sel : SelectorGeneration)
+    SelectorOutOfDate[Sel.first] = true;
   
   // Resolve any unresolved module exports.
   for (unsigned I = 0, N = UnresolvedModuleRefs.size(); I != N; ++I) {
@@ -7178,6 +7181,7 @@ void ASTReader::ReadMethodPool(Selector Sel) {
   unsigned &Generation = SelectorGeneration[Sel];
   unsigned PriorGeneration = Generation;
   Generation = getGeneration();
+  SelectorOutOfDate[Sel] = false;
   
   // Search for methods defined with this selector.
   ++NumMethodPoolLookups;
@@ -7207,6 +7211,11 @@ void ASTReader::ReadMethodPool(Selector Sel) {
   // update hasMoreThanOneDecl as we add the methods.
   addMethodsToPool(S, Visitor.getInstanceMethods(), Pos->second.first);
   addMethodsToPool(S, Visitor.getFactoryMethods(), Pos->second.second);
+}
+
+void ASTReader::updateOutOfDateSelector(Selector Sel) {
+  if (SelectorOutOfDate[Sel])
+    ReadMethodPool(Sel);
 }
 
 void ASTReader::ReadKnownNamespaces(
