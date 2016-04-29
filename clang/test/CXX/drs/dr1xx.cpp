@@ -902,7 +902,11 @@ namespace dr183 { // dr183: sup 382
     typedef int X;
   };
   template<> struct A<int> {
+#if __cplusplus <= 199711
+    typename B<int>::X x; // expected-error {{'typename' occurs outside of a template}}
+#else
     typename B<int>::X x;
+#endif
   };
 }
 
