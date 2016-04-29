@@ -9,11 +9,13 @@
 
 #include "InMemoryXrefsDB.h"
 #include "IncludeFixer.h"
+#include "YamlXrefsDB.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
+
 using namespace clang;
 using namespace llvm;
 
@@ -22,11 +24,14 @@ cl::OptionCategory IncludeFixerCategory("Tool options");
 
 enum DatabaseFormatTy {
   fixed, ///< Hard-coded mapping.
+  yaml,  ///< Yaml database created by find-all-symbols.
 };
 
 cl::opt<DatabaseFormatTy> DatabaseFormat(
     "db", cl::desc("Specify input format"),
-    cl::values(clEnumVal(fixed, "Hard-coded mapping"), clEnumValEnd),
+    cl::values(clEnumVal(fixed, "Hard-coded mapping"),
+               clEnumVal(yaml, "Yaml database created by find-all-symbols"),
+               clEnumValEnd),
     cl::init(fixed), cl::cat(IncludeFixerCategory));
 
 cl::opt<std::string> Input("input",
@@ -65,6 +70,10 @@ int main(int argc, const char **argv) {
     }
     XrefsDB =
         llvm::make_unique<include_fixer::InMemoryXrefsDB>(std::move(XrefsMap));
+    break;
+  }
+  case yaml: {
+    XrefsDB = llvm::make_unique<include_fixer::YamlXrefsDB>(Input);
     break;
   }
   }

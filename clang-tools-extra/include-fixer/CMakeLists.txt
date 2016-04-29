@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangIncludeFixer
   IncludeFixer.cpp
   InMemoryXrefsDB.cpp
+  YamlXrefsDB.cpp
 
   LINK_LIBS
   clangAST
@@ -15,6 +16,7 @@ add_clang_library(clangIncludeFixer
   clangSema
   clangTooling
   clangToolingCore
+  findAllSymbols
   )
 
 add_subdirectory(tool)

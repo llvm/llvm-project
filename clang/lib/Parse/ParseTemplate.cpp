@@ -147,6 +147,9 @@ Parser::ParseTemplateDeclarationOrSpecialization(unsigned Context,
     }
   } while (Tok.isOneOf(tok::kw_export, tok::kw_template));
 
+  unsigned NewFlags = getCurScope()->getFlags() & ~Scope::TemplateParamScope;
+  ParseScopeFlags TemplateScopeFlags(this, NewFlags, isSpecialization);
+
   // Parse the actual template declaration.
   return ParseSingleDeclarationAfterTemplate(Context,
                                              ParsedTemplateInfo(&ParamLists,

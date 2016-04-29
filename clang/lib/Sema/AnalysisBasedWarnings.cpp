@@ -889,7 +889,7 @@ static bool DiagnoseUninitializedUse(Sema &S, const VarDecl *VD,
   // the initializer of that declaration & we didn't already suggest
   // an initialization fixit.
   if (!SuggestInitializationFixit(S, VD))
-    S.Diag(VD->getLocStart(), diag::note_uninit_var_def)
+    S.Diag(VD->getLocStart(), diag::note_var_declared_here)
       << VD->getDeclName();
 
   return true;

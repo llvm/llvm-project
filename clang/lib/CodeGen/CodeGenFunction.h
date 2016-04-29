@@ -1879,7 +1879,7 @@ public:
                                       const CXXConstructExpr *E);
 
   void EmitCXXAggrConstructorCall(const CXXConstructorDecl *D,
-                                  const ConstantArrayType *ArrayTy,
+                                  const ArrayType *ArrayTy,
                                   Address ArrayPtr,
                                   const CXXConstructExpr *E,
                                   bool ZeroInitialization = false);
