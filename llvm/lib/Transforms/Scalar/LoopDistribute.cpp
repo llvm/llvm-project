@@ -588,9 +588,10 @@ private:
 /// \brief The actual class performing the per-loop work.
 class LoopDistributeForLoop {
 public:
-  LoopDistributeForLoop(Loop *L, LoopInfo *LI, const LoopAccessInfo &LAI,
-                        DominatorTree *DT, ScalarEvolution *SE)
-      : L(L), LI(LI), LAI(LAI), DT(DT), SE(SE) {
+  LoopDistributeForLoop(Loop *L, Function *F, LoopInfo *LI,
+                        const LoopAccessInfo &LAI, DominatorTree *DT,
+                        ScalarEvolution *SE)
+      : L(L), F(F), LI(LI), LAI(LAI), DT(DT), SE(SE) {
     setForced();
   }
 
@@ -746,7 +747,6 @@ public:
 
   /// \brief Provide diagnostics then \return with false.
   bool fail(llvm::StringRef Message) {
-    Function *F = L->getHeader()->getParent();
     LLVMContext &Ctx = F->getContext();
     bool Forced = isForced().getValueOr(false);
 
@@ -834,8 +834,10 @@ private:
     IsForced = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
   }
 
-  // Analyses used.
   Loop *L;
+  Function *F;
+
+  // Analyses used.
   LoopInfo *LI;
   const LoopAccessInfo &LAI;
   DominatorTree *DT;
@@ -886,7 +888,7 @@ public:
     bool Changed = false;
     for (Loop *L : Worklist) {
       const LoopAccessInfo &LAI = LAA->getInfo(L, ValueToValueMap());
-      LoopDistributeForLoop LDL(L, LI, LAI, DT, SE);
+      LoopDistributeForLoop LDL(L, &F, LI, LAI, DT, SE);
 
       // If distribution was forced for the specific loop to be
       // enabled/disabled, follow that.  Otherwise use the global flag.
