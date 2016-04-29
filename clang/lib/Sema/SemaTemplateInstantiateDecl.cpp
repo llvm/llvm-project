@@ -3907,9 +3907,14 @@ void Sema::InstantiateVariableInitializer(
       PushExpressionEvaluationContext(Sema::PotentiallyEvaluated, OldVar);
 
     // Instantiate the initializer.
-    ExprResult Init =
-        SubstInitializer(OldVar->getInit(), TemplateArgs,
-                         OldVar->getInitStyle() == VarDecl::CallInit);
+    ExprResult Init;
+
+    {
+      ContextRAII SwitchContext(*this, Var->getDeclContext());
+      Init = SubstInitializer(OldVar->getInit(), TemplateArgs,
+                              OldVar->getInitStyle() == VarDecl::CallInit);
+    }
+
     if (!Init.isInvalid()) {
       bool TypeMayContainAuto = true;
       Expr *InitExpr = Init.get();

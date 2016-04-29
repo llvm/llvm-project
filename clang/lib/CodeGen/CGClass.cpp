@@ -1915,7 +1915,7 @@ void CodeGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
 /// \param zeroInitialize true if each element should be
 ///   zero-initialized before it is constructed
 void CodeGenFunction::EmitCXXAggrConstructorCall(
-    const CXXConstructorDecl *ctor, const ConstantArrayType *arrayType,
+    const CXXConstructorDecl *ctor, const ArrayType *arrayType,
     Address arrayBegin, const CXXConstructExpr *E, bool zeroInitialize) {
   QualType elementType;
   llvm::Value *numElements =

@@ -814,9 +814,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   // The lambda-expression's closure type might be dependent even if its
   // semantic context isn't, if it appears within a default argument of a
   // function template.
-  if (Scope *TmplScope = CurScope->getTemplateParamParent())
-    if (!TmplScope->decl_empty())
-      KnownDependent = true;
+  if (CurScope->getTemplateParamParent())
+    KnownDependent = true;
 
   // Determine the signature of the call operator.
   TypeSourceInfo *MethodTyInfo;

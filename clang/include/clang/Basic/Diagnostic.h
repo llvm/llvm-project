@@ -1072,10 +1072,10 @@ inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
 // so that we only match those arguments that are (statically) DeclContexts;
 // other arguments that derive from DeclContext (e.g., RecordDecls) will not
 // match.
-template<typename T>
-inline
-typename std::enable_if<std::is_same<T, DeclContext>::value,
-                        const DiagnosticBuilder &>::type
+template <typename T>
+inline typename std::enable_if<
+    std::is_same<typename std::remove_const<T>::type, DeclContext>::value,
+    const DiagnosticBuilder &>::type
 operator<<(const DiagnosticBuilder &DB, T *DC) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(DC),
                   DiagnosticsEngine::ak_declcontext);

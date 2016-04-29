@@ -352,6 +352,14 @@ def warn_decl_shadow :
           "static data member of %2|"
           "field of %2}1">,
   InGroup<Shadow>, DefaultIgnore;
+def warn_ctor_parm_shadows_field:
+  Warning<"constructor parameter %0 shadows the field %1 of %2">,
+  InGroup<ShadowFieldInConstructor>, DefaultIgnore;
+def warn_modifying_shadowing_decl :
+  Warning<"modifying constructor parameter %0 that shadows a "
+          "field of %1">,
+  InGroup<ShadowFieldInConstructorModified>, DefaultIgnore;
+
 
 // C++ using declarations
 def err_using_requires_qualname : Error<
@@ -1669,7 +1677,7 @@ def warn_maybe_uninit_var : Warning<
   "variable %0 may be uninitialized when "
   "%select{used here|captured by block}1">,
   InGroup<UninitializedMaybe>, DefaultIgnore;
-def note_uninit_var_def : Note<"variable %0 is declared here">;
+def note_var_declared_here : Note<"variable %0 is declared here">;
 def note_uninit_var_use : Note<
   "%select{uninitialized use occurs|variable is captured by block}0 here">;
 def warn_uninit_byref_blockvar_captured_by_block : Warning<

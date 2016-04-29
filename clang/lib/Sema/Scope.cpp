@@ -18,7 +18,7 @@
 
 using namespace clang;
 
-void Scope::Init(Scope *parent, unsigned flags) {
+void Scope::setFlags(Scope *parent, unsigned flags) {
   AnyParent = parent;
   Flags = flags;
 
@@ -83,6 +83,10 @@ void Scope::Init(Scope *parent, unsigned flags) {
     else
       incrementMSManglingNumber();
   }
+}
+
+void Scope::Init(Scope *parent, unsigned flags) {
+  setFlags(parent, flags);
 
   DeclsInScope.clear();
   UsingDirectives.clear();

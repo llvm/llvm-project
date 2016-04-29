@@ -4556,6 +4556,14 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
       DeviceID, FileID, ParentName, Line, OutlinedFn, OutlinedFnID);
 }
 
+/// discard all CompoundStmts intervening between two constructs
+static const Stmt *ignoreCompoundStmts(const Stmt *Body) {
+  while (auto *CS = dyn_cast_or_null<CompoundStmt>(Body))
+    Body = CS->body_front();
+
+  return Body;
+}
+
 /// \brief Emit the num_teams clause of an enclosed teams directive at the
 /// target region scope. If there is no teams directive associated with the
 /// target directive, or if there is no num_teams clause associated with the
@@ -4586,7 +4594,8 @@ emitNumTeamsClauseForTargetDirective(CGOpenMPRuntime &OMPRuntime,
 
   // FIXME: Accommodate other combined directives with teams when they become
   // available.
-  if (auto *TeamsDir = dyn_cast<OMPTeamsDirective>(CS.getCapturedStmt())) {
+  if (auto *TeamsDir = dyn_cast_or_null<OMPTeamsDirective>(
+          ignoreCompoundStmts(CS.getCapturedStmt()))) {
     if (auto *NTE = TeamsDir->getSingleClause<OMPNumTeamsClause>()) {
       CGOpenMPInnerExprInfo CGInfo(CGF, CS);
       CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
@@ -4634,7 +4643,8 @@ emitThreadLimitClauseForTargetDirective(CGOpenMPRuntime &OMPRuntime,
 
   // FIXME: Accommodate other combined directives with teams when they become
   // available.
-  if (auto *TeamsDir = dyn_cast<OMPTeamsDirective>(CS.getCapturedStmt())) {
+  if (auto *TeamsDir = dyn_cast_or_null<OMPTeamsDirective>(
+          ignoreCompoundStmts(CS.getCapturedStmt()))) {
     if (auto *TLE = TeamsDir->getSingleClause<OMPThreadLimitClause>()) {
       CGOpenMPInnerExprInfo CGInfo(CGF, CS);
       CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);

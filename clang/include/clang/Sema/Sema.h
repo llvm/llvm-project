@@ -1655,6 +1655,17 @@ public:
   void DiagnoseFunctionSpecifiers(const DeclSpec &DS);
   void CheckShadow(Scope *S, VarDecl *D, const LookupResult& R);
   void CheckShadow(Scope *S, VarDecl *D);
+
+  /// Warn if 'E', which is an expression that is about to be modified, refers
+  /// to a shadowing declaration.
+  void CheckShadowingDeclModification(Expr *E, SourceLocation Loc);
+
+private:
+  /// Map of current shadowing declarations to shadowed declarations. Warn if
+  /// it looks like the user is trying to modify the shadowing declaration.
+  llvm::DenseMap<const NamedDecl *, const NamedDecl *> ShadowingDecls;
+
+public:
   void CheckCastAlign(Expr *Op, QualType T, SourceRange TRange);
   void handleTagNumbering(const TagDecl *Tag, Scope *TagScope);
   void setTagNameForLinkagePurposes(TagDecl *TagFromDeclSpec,

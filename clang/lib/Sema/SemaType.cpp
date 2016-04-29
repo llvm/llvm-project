@@ -2234,15 +2234,8 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
   // If this is not C99, extwarn about VLA's and C99 array size modifiers.
   if (!getLangOpts().C99) {
     if (T->isVariableArrayType()) {
-      // Prohibit the use of non-POD types in VLAs.
-      QualType BaseT = Context.getBaseElementType(T);
-      if (!T->isDependentType() && isCompleteType(Loc, BaseT) &&
-          !BaseT.isPODType(Context) && !BaseT->isObjCLifetimeType()) {
-        Diag(Loc, diag::err_vla_non_pod) << BaseT;
-        return QualType();
-      }
       // Prohibit the use of VLAs during template argument deduction.
-      else if (isSFINAEContext()) {
+      if (isSFINAEContext()) {
         Diag(Loc, diag::err_vla_in_sfinae);
         return QualType();
       }

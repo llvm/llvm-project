@@ -197,6 +197,8 @@ private:
   /// this scope, or over-defined. The bit is true when over-defined.
   llvm::PointerIntPair<VarDecl *, 1, bool> NRVO;
 
+  void setFlags(Scope *Parent, unsigned F);
+
 public:
   Scope(Scope *Parent, unsigned ScopeFlags, DiagnosticsEngine &Diag)
     : ErrorTrap(Diag) {
@@ -206,7 +208,7 @@ public:
   /// getFlags - Return the flags for this scope.
   ///
   unsigned getFlags() const { return Flags; }
-  void setFlags(unsigned F) { Flags = F; }
+  void setFlags(unsigned F) { setFlags(getParent(), F); }
 
   /// isBlockScope - Return true if this scope correspond to a closure.
   bool isBlockScope() const { return Flags & BlockScope; }
