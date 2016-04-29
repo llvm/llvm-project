@@ -2646,6 +2646,10 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
     if (!parent_die)
         return 0;
 
+    // Get the parent byte size so we can verify any members will fit
+    const uint64_t parent_byte_size = parent_die.GetAttributeValueAsUnsigned(DW_AT_byte_size, UINT64_MAX) * 8;
+    const uint64_t parent_bit_size = parent_byte_size == UINT64_MAX ? UINT64_MAX : parent_byte_size * 8;
+
     uint32_t member_idx = 0;
     BitfieldInfo last_field_info;
 
@@ -2891,10 +2895,23 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
                                     if (byte_size == 0)
                                         byte_size = member_type->GetByteSize();
 
-                                    if (die.GetDWARF()->GetObjectFile()->GetByteOrder() == eByteOrderLittle)
+                                    ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
+                                    if (objfile->GetByteOrder() == eByteOrderLittle)
                                     {
                                         this_field_info.bit_offset += byte_size * 8;
                                         this_field_info.bit_offset -= (bit_offset + bit_size);
+
+                                        if (this_field_info.bit_offset >= parent_bit_size)
+                                        {
+                                            objfile->GetModule()->ReportWarning("0x%8.8" PRIx64 ": %s bitfield named \"%s\" has invalid bit offset (0x%8.8" PRIx64 ") member will be ignored. Please file a bug against the compiler and include the preprocessed output for %s\n",
+                                                                                die.GetID(),
+                                                                                DW_TAG_value_to_name(tag),
+                                                                                name,
+                                                                                this_field_info.bit_offset,
+                                                                                sc.comp_unit ? sc.comp_unit->GetPath().c_str() : "the source file");
+                                            this_field_info.Clear();
+                                            continue;
+                                        }
                                     }
                                     else
                                     {
