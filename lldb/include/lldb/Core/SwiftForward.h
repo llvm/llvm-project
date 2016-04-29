@@ -73,7 +73,7 @@ namespace swift
     {
         class FixedTypeInfo;
         class IRGenModule;
-        class IRGenModuleDispatcher;
+        class IRGenerator;
         class TypeInfo;
     }
 }

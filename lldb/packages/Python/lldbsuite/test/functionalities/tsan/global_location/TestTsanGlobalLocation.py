@@ -1,5 +1,5 @@
 """
-Tests that TSan and LLDB have correct thread numbers.
+Tests that TSan correctly reports the filename and line number of a racy global variable.
 """
 
 import os, time
@@ -9,7 +9,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import json
 
-class TsanThreadNumbersTestCase(TestBase):
+class TsanGlobalLocationTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
@@ -41,10 +41,6 @@ class TsanThreadNumbersTestCase(TestBase):
         self.expect("thread list", "A data race should be detected",
             substrs = ['stopped', 'stop reason = Data race detected'])
 
-        self.assertEqual(self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(), lldb.eStopReasonInstrumentation)
-
-        report_thread_id = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetIndexID()
-
         self.expect("thread info -s", "The extended stop info should contain the TSan provided fields",
             substrs = ["instrumentation_class", "description", "mops"])
 
@@ -53,16 +49,6 @@ class TsanThreadNumbersTestCase(TestBase):
         data = json.loads(json_line)
         self.assertEqual(data["instrumentation_class"], "ThreadSanitizer")
         self.assertEqual(data["issue_type"], "data-race")
-        self.assertEqual(len(data["mops"]), 2)
-
-        self.assertEqual(data["mops"][0]["thread_id"], report_thread_id)
-
-        other_thread_id = data["mops"][1]["thread_id"]
-        self.assertTrue(other_thread_id != report_thread_id)
-        other_thread = self.dbg.GetSelectedTarget().process.GetThreadByIndexID(other_thread_id)
-        self.assertTrue(other_thread.IsValid())
-
-        self.runCmd("thread select %d" % other_thread_id)
-
-        self.expect("thread backtrace", "The other thread should be stopped in f1 or f2",
-            substrs = ["a.out", "main.c"])
+        
+        self.assertTrue(data["location_filename"].endswith("/main.c"))
+        self.assertEqual(data["location_line"], line_number('main.c', '// global variable'))

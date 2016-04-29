@@ -23,6 +23,8 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Variable.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/InstrumentationRuntimeStopInfo.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StopInfo.h"
@@ -508,6 +510,32 @@ GetSymbolNameFromAddress(ProcessSP process_sp, addr_t addr)
     return sym_name;
 }
 
+static void
+GetSymbolDeclarationFromAddress(ProcessSP process_sp, addr_t addr, Declaration &decl)
+{
+    lldb_private::Address so_addr;
+    if (! process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(addr, so_addr))
+        return;
+    
+    lldb_private::Symbol *symbol = so_addr.CalculateSymbolContextSymbol();
+    if (! symbol)
+        return;
+    
+    ConstString sym_name = symbol->GetName();
+    
+    ModuleSP module = symbol->CalculateSymbolContextModule();
+    if (! module)
+        return;
+    
+    VariableList var_list;
+    module->FindGlobalVariables(sym_name, nullptr, true, 1U, var_list);
+    if (var_list.GetSize() < 1)
+        return;
+    
+    VariableSP var = var_list.GetVariableAtIndex(0);
+    decl = var->GetDeclaration();
+}
+
 addr_t
 ThreadSanitizerRuntime::GetFirstNonInternalFramePc(StructuredData::ObjectSP trace)
 {
@@ -582,7 +610,7 @@ ThreadSanitizerRuntime::GetMainRacyAddress(StructuredData::ObjectSP report)
 }
 
 std::string
-ThreadSanitizerRuntime::GetLocationDescription(StructuredData::ObjectSP report)
+ThreadSanitizerRuntime::GetLocationDescription(StructuredData::ObjectSP report, std::string &filename, uint32_t &line)
 {
     std::string result = "";
     
@@ -595,6 +623,13 @@ ThreadSanitizerRuntime::GetLocationDescription(StructuredData::ObjectSP report)
             addr_t addr = loc->GetAsDictionary()->GetValueForKey("address")->GetAsInteger()->GetValue();
             std::string global_name = GetSymbolNameFromAddress(process_sp, addr);
             result = Sprintf("Location is a global '%s'", global_name.c_str());
+            
+            Declaration decl;
+            GetSymbolDeclarationFromAddress(process_sp, addr, decl);
+            if (decl.GetFile()) {
+                filename = decl.GetFile().GetPath();
+                line = decl.GetLine();
+            }
         } else if (type == "heap") {
             addr_t addr = loc->GetAsDictionary()->GetValueForKey("start")->GetAsInteger()->GetValue();
             long size = loc->GetAsDictionary()->GetValueForKey("size")->GetAsInteger()->GetValue();
@@ -634,8 +669,15 @@ ThreadSanitizerRuntime::NotifyBreakpointHit(void *baton, StoppointCallbackContex
         report->GetAsDictionary()->AddStringItem("summary", summary);
         addr_t main_address = instance->GetMainRacyAddress(report);
         report->GetAsDictionary()->AddIntegerItem("memory_address", main_address);
-        std::string location_description = instance->GetLocationDescription(report);
+        
+        std::string location_filename = "";
+        uint32_t location_line = 0;
+        std::string location_description = instance->GetLocationDescription(report, location_filename, location_line);
         report->GetAsDictionary()->AddStringItem("location_description", location_description);
+        if (location_filename != "") {
+            report->GetAsDictionary()->AddStringItem("location_filename", location_filename);
+            report->GetAsDictionary()->AddIntegerItem("location_line", location_line);
+        }
     }
     
     ProcessSP process_sp = instance->GetProcessSP();

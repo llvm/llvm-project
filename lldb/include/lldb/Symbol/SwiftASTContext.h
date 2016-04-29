@@ -34,7 +34,9 @@
 namespace swift {
     enum class IRGenDebugInfoKind : unsigned;
     class CanType;
+    class IRGenOptions;
     class PrintOptions;
+    class SILModule;
     namespace irgen {
         class FixedTypeInfo;
         class TypeInfo;
@@ -354,8 +356,8 @@ public:
     static SwiftASTContext *
     GetSwiftASTContext (swift::ASTContext *ast);
     
-    swift::irgen::IRGenModuleDispatcher &
-    GetIRGenModuleDispatcher ();
+    swift::irgen::IRGenerator &
+    GetIRGenerator (swift::IRGenOptions &opts, swift::SILModule &module);
 
     swift::irgen::IRGenModule &
     GetIRGenModule ();
@@ -1050,7 +1052,7 @@ protected:
     std::unique_ptr<swift::DiagnosticEngine> m_diagnostic_engine_ap;
     std::unique_ptr<swift::ASTContext> m_ast_context_ap;
     std::unique_ptr<llvm::TargetOptions> m_target_options_ap;
-    std::unique_ptr<swift::irgen::IRGenModuleDispatcher> m_ir_gen_module_dispatcher_ap;
+    std::unique_ptr<swift::irgen::IRGenerator> m_ir_generator_ap;
     std::unique_ptr<swift::irgen::IRGenModule> m_ir_gen_module_ap;
     std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
     std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_ap;

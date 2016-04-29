@@ -1115,10 +1115,12 @@ SwiftLanguageRuntime::GetMemoryReader ()
     class MemoryReader : public swift::remote::MemoryReader
     {
     public:
-        MemoryReader (Process* p) :
+        MemoryReader (Process* p,
+                      size_t max_read_amount = 50*1024) :
         m_process(p)
         {
             lldbassert(m_process && "MemoryReader requires a valid Process");
+            m_max_read_amount = max_read_amount;
         }
         
         virtual
@@ -1162,6 +1164,9 @@ SwiftLanguageRuntime::GetMemoryReader ()
         bool
         readBytes(swift::remote::RemoteAddress address, uint8_t *dest, uint64_t size) override
         {
+            if (size > m_max_read_amount)
+                return false;
+
             Target &target(m_process->GetTarget());
             Address addr(address.getAddressData());
             Error error;
@@ -1175,15 +1180,26 @@ SwiftLanguageRuntime::GetMemoryReader ()
         bool
         readString(swift::remote::RemoteAddress address, std::string &dest) override
         {
+            std::vector<char> storage(m_max_read_amount, 0);
             Target &target(m_process->GetTarget());
             Address addr(address.getAddressData());
             Error error;
-            target.ReadCStringFromMemory(addr, dest, error);
-            return error.Success();
+            target.ReadCStringFromMemory(addr,
+                                         &storage[0],
+                                         storage.size(),
+                                         error);
+            if (error.Success())
+            {
+                dest.assign(&storage[0]);
+                return true;
+            }
+            else
+                return false;
         }
         
     private:
         Process* m_process;
+        size_t m_max_read_amount;
     };
     
     if (!m_memory_reader_sp)
@@ -1211,43 +1227,53 @@ m_metadata_location(location)
     m_remote_ast.reset(new swift::remoteAST::RemoteASTContext(*ast_ctx, m_swift_runtime->GetMemoryReader()));
 }
 
-#define METADATAPROMISE_FALLBACK_TO_METADATA
 CompilerType
-SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise ()
+SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise (Error *error)
 {
+    if (error)
+        error->Clear();
+    
     if (m_compiler_type.hasValue())
         return m_compiler_type.getValue();
     
-    // FIXME: dropping the error
-    if (swift::remoteAST::Result<swift::Type> result = m_remote_ast->getTypeForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location)))
+    swift::remoteAST::Result<swift::Type> result = m_remote_ast->getTypeForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location));
+    
+    if (result)
         return (m_compiler_type = CompilerType(m_swift_ast, result.getValue().getPointer())).getValue();
     else
     {
-#ifdef METADATAPROMISE_FALLBACK_TO_METADATA
-        MetadataSP metadata_sp = m_swift_runtime->GetMetadataForLocation(m_metadata_location);
-        Error error;
-        return (m_compiler_type = m_swift_runtime->GetTypeForMetadata(metadata_sp, SwiftASTContext::GetSwiftASTContext(m_swift_ast), error)).getValue();
-#else
+        if (error)
+        {
+            const auto& failure = result.getFailure();
+            error->SetErrorStringWithFormat("error in resolving type: %s", failure.render().c_str());
+        }
         return (m_compiler_type = CompilerType()).getValue();
-#endif
     }
 }
 
 llvm::Optional<swift::MetadataKind>
-SwiftLanguageRuntime::MetadataPromise::FulfillKindPromise ()
+SwiftLanguageRuntime::MetadataPromise::FulfillKindPromise (Error *error)
 {
+    if (error)
+        error->Clear();
+
     if (m_metadata_kind.hasValue())
         return m_metadata_kind;
     
-    // FIXME: dropping the error
-    if (swift::remoteAST::Result<swift::MetadataKind> result = m_remote_ast->getKindForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location)))
+    swift::remoteAST::Result<swift::MetadataKind> result = m_remote_ast->getKindForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location));
+    
+    if (result)
         return (m_metadata_kind = result.getValue());
     else
+    {
+        if (error)
+        {
+            const auto& failure = result.getFailure();
+            error->SetErrorStringWithFormat("error in resolving type: %s", failure.render().c_str());
+        }
         return m_metadata_kind;
+    }
 }
-#ifdef METADATAPROMISE_FALLBACK_TO_METADATA
-#undef METADATAPROMISE_FALLBACK_TO_METADATA
-#endif
 
 bool
 SwiftLanguageRuntime::MetadataPromise::IsStaticallyDetermined ()
@@ -1536,6 +1562,14 @@ SwiftLanguageRuntime::GetMetadataPromise (lldb::addr_t addr,
     if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
         return nullptr;
     
+    if (auto objc_runtime = GetObjCRuntime())
+    {
+        if (objc_runtime->GetRuntimeVersion() == ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2)
+        {
+            addr = ((AppleObjCRuntimeV2*)objc_runtime)->GetPointerISA(addr);
+        }
+    }
+
     MetadataPromiseKey key{swift_ast_ctx->GetASTContext(),addr};
     
     auto iter = m_promises_map.find(key), end = m_promises_map.end();
