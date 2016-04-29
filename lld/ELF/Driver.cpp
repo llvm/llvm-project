@@ -57,6 +57,10 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
     return {ELF32BEKind, EM_MIPS};
   if (S == "elf32ltsmip")
     return {ELF32LEKind, EM_MIPS};
+  if (S == "elf64btsmip")
+    return {ELF64BEKind, EM_MIPS};
+  if (S == "elf64ltsmip")
+    return {ELF64LEKind, EM_MIPS};
   if (S == "elf32ppc")
     return {ELF32BEKind, EM_PPC};
   if (S == "elf64ppc")
@@ -312,6 +316,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     Config->Emulation = S;
   }
 
+  if (Config->EMachine == EM_MIPS && Config->EKind == ELF64LEKind)
+    Config->Mips64EL = true;
+
   Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
@@ -349,7 +356,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SoName = getString(Args, OPT_soname);
   Config->Sysroot = getString(Args, OPT_sysroot);
 
-  Config->Optimize = getInteger(Args, OPT_O, 0);
+  Config->Optimize = getInteger(Args, OPT_O, 1);
   Config->LtoO = getInteger(Args, OPT_lto_O, 2);
   if (Config->LtoO > 3)
     error("invalid optimization level for LTO: " + getString(Args, OPT_lto_O));

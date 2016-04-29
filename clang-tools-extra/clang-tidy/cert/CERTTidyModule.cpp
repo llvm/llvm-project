@@ -20,6 +20,7 @@
 #include "FloatLoopCounter.h"
 #include "SetLongJmpCheck.h"
 #include "StaticObjectExceptionCheck.h"
+#include "StrToNumCheck.h"
 #include "ThrownExceptionTypeCheck.h"
 #include "VariadicFunctionDefCheck.h"
 
@@ -64,6 +65,9 @@ public:
     // FIO
     CheckFactories.registerCheck<NonCopyableObjectsCheck>(
         "cert-fio38-c");
+    // ERR
+    CheckFactories.registerCheck<StrToNumCheck>(
+        "cert-err34-c");
   }
 };
 

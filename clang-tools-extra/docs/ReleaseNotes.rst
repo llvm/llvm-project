@@ -217,6 +217,13 @@ identified.  The improvements since the 3.8 release include:
 
   Finds static function and variable definitions in anonymous namespace.
 
+  - New Boost module containing checks for issues with Boost library
+
+- New `boost-use-to-string 
+  <http://clang.llvm.org/extra/clang-tidy/checks/boost-use-to-string.html>`_ check
+  
+  Finds usages of boost::lexical_cast<std::string> and changes it to std::to_string.
+
 Fixed bugs:
 
 - Crash when running on compile database with relative source files paths.

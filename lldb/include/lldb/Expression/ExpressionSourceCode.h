@@ -54,7 +54,6 @@ public:
     
     bool GetText (std::string &text, 
                   lldb::LanguageType wrapping_language, 
-                  bool const_object,
                   bool static_method,
                   ExecutionContext &exe_ctx) const;
     

@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <set>
 #include <string>
 #include <vector>
@@ -87,9 +88,9 @@ struct SymbolInfo {
   bool operator<(const SymbolInfo &Symbol) const;
 };
 
-/// \brief Write SymbolInfos to a single file (YAML format).
-bool WriteSymboInfosToFile(llvm::StringRef FilePath,
-                           const std::set<SymbolInfo> &Symbols);
+/// \brief Write SymbolInfos to a stream (YAML format).
+bool WriteSymbolInfosToStream(llvm::raw_ostream &OS,
+                              const std::set<SymbolInfo> &Symbols);
 
 /// \brief Read SymbolInfos from a YAML document.
 std::vector<SymbolInfo> ReadSymbolInfosFromYAML(llvm::StringRef Yaml);

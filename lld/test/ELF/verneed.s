@@ -15,7 +15,7 @@
 # CHECK-NEXT:   Size: 8
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
-# CHECK-NEXT:   AddressAlignment: 0
+# CHECK-NEXT:   AddressAlignment: 2
 # CHECK-NEXT:   EntrySize: 2
 # CHECK-NEXT: }
 # CHECK-NEXT: Section {
@@ -30,7 +30,7 @@
 # CHECK-NEXT:   Size: 80
 # CHECK-NEXT:   Link: 5
 # CHECK-NEXT:   Info: 2
-# CHECK-NEXT:   AddressAlignment: 0
+# CHECK-NEXT:   AddressAlignment: 4
 # CHECK-NEXT:   EntrySize: 0
 # CHECK-NEXT: }
 

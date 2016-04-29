@@ -128,33 +128,33 @@ void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
   // provide any benefit to other languages, despite being benign.
-  if (getLangOpts().CPlusPlus) {
-    Finder->addMatcher(
-        cxxConstructorDecl(
-            forEachConstructorInitializer(
-                cxxCtorInitializer(
-                    // Clang builds a CXXConstructExpr only whin it knows which
-                    // constructor will be called. In dependent contexts a
-                    // ParenListExpr is generated instead of a CXXConstructExpr,
-                    // filtering out templates automatically for us.
-                    withInitializer(cxxConstructExpr(
-                        has(declRefExpr(to(
-                            parmVarDecl(
-                                hasType(qualType(
-                                    // Match only const-ref or a non-const value
-                                    // parameters. Rvalues and const-values
-                                    // shouldn't be modified.
-                                    anyOf(constRefType(),
-                                          nonConstValueType()))))
-                                .bind("Param")))),
-                        hasDeclaration(cxxConstructorDecl(
-                            isCopyConstructor(), unless(isDeleted()),
-                            hasDeclContext(
-                                cxxRecordDecl(isMoveConstructible())))))))
-                    .bind("Initializer")))
-            .bind("Ctor"),
-        this);
-  }
+  if (!getLangOpts().CPlusPlus)
+    return;
+
+  Finder->addMatcher(
+      cxxConstructorDecl(
+          forEachConstructorInitializer(
+              cxxCtorInitializer(
+                  // Clang builds a CXXConstructExpr only whin it knows which
+                  // constructor will be called. In dependent contexts a
+                  // ParenListExpr is generated instead of a CXXConstructExpr,
+                  // filtering out templates automatically for us.
+                  withInitializer(cxxConstructExpr(
+                      has(declRefExpr(to(
+                          parmVarDecl(
+                              hasType(qualType(
+                                  // Match only const-ref or a non-const value
+                                  // parameters. Rvalues and const-values
+                                  // shouldn't be modified.
+                                  anyOf(constRefType(), nonConstValueType()))))
+                              .bind("Param")))),
+                      hasDeclaration(cxxConstructorDecl(
+                          isCopyConstructor(), unless(isDeleted()),
+                          hasDeclContext(
+                              cxxRecordDecl(isMoveConstructible())))))))
+                  .bind("Initializer")))
+          .bind("Ctor"),
+      this);
 }
 
 void PassByValueCheck::registerPPCallbacks(CompilerInstance &Compiler) {

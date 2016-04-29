@@ -15,14 +15,23 @@
 #ifndef LLD_CORE_SIMPLE_H
 #define LLD_CORE_SIMPLE_H
 
+#include "lld/Core/AbsoluteAtom.h"
+#include "lld/Core/Atom.h"
 #include "lld/Core/DefinedAtom.h"
 #include "lld/Core/File.h"
-#include "lld/Core/LinkingContext.h"
 #include "lld/Core/Reference.h"
+#include "lld/Core/SharedLibraryAtom.h"
 #include "lld/Core/UndefinedAtom.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist.h"
-#include "llvm/ADT/ilist_node.h"
-#include <atomic>
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <functional>
 
 namespace lld {
 
@@ -142,12 +151,13 @@ private:
   SimpleReference *_prev;
 };
 
-}
+} // end namespace lld
 
 // ilist will lazily create a sentinal (so end() can return a node past the
 // end of the list). We need this trait so that the sentinal is allocated
 // via the BumpPtrAllocator.
 namespace llvm {
+
 template<>
 struct ilist_sentinel_traits<lld::SimpleReference> {
 
@@ -183,7 +193,8 @@ struct ilist_sentinel_traits<lld::SimpleReference> {
 private:
   mutable llvm::BumpPtrAllocator *_allocator;
 };
-}
+
+} // end namespace llvm
 
 namespace lld {
 
@@ -194,7 +205,7 @@ public:
     _references.setAllocator(&f.allocator());
   }
 
-  ~SimpleDefinedAtom() {
+  ~SimpleDefinedAtom() override {
     _references.clearAndLeakNodesUnsafely();
   }
 
@@ -278,6 +289,7 @@ public:
       _references.push_back(node);
     }
   }
+
   void setOrdinal(uint64_t ord) { _ordinal = ord; }
 
 private:
@@ -312,4 +324,4 @@ private:
 
 } // end namespace lld
 
-#endif
+#endif // LLD_CORE_SIMPLE_H

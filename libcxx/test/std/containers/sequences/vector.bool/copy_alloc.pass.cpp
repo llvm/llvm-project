@@ -13,6 +13,8 @@
 
 #include <vector>
 #include <cassert>
+
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 
@@ -22,7 +24,7 @@ test(const C& x, const typename C::allocator_type& a)
 {
     unsigned s = x.size();
     C c(x, a);
-    assert(c.__invariants());
+    LIBCPP_ASSERT(c.__invariants());
     assert(c.size() == s);
     assert(c == x);
 }
@@ -46,7 +48,7 @@ int main()
         assert(l2 == l);
         assert(l2.get_allocator() == other_allocator<bool>(3));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
         int* an = a + sizeof(a)/sizeof(a[0]);

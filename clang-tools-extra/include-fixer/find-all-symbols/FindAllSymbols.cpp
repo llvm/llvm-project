@@ -16,6 +16,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang::ast_matchers;
 
@@ -47,19 +48,37 @@ bool SetCommonInfo(const MatchFinder::MatchResult &Result,
   SetContext(ND, Symbol);
 
   Symbol->Name = ND->getNameAsString();
-  SourceLocation Loc = Result.SourceManager->getExpansionLoc(ND->getLocation());
+
+  const SourceManager *SM = Result.SourceManager;
+  SourceLocation Loc = SM->getExpansionLoc(ND->getLocation());
   if (!Loc.isValid()) {
     llvm::errs() << "Declaration " << ND->getNameAsString() << "("
                  << ND->getDeclKindName()
                  << ") has invalid declaration location.";
     return false;
   }
-  std::string FilePath = Result.SourceManager->getFilename(Loc).str();
+
+  Symbol->LineNumber = SM->getExpansionLineNumber(Loc);
+
+  llvm::StringRef FilePath = SM->getFilename(Loc);
   if (FilePath.empty())
     return false;
 
-  Symbol->FilePath = FilePath;
-  Symbol->LineNumber = Result.SourceManager->getExpansionLineNumber(Loc);
+  llvm::SmallString<128> AbsolutePath;
+  if (llvm::sys::path::is_absolute(FilePath)) {
+    AbsolutePath = FilePath;
+  } else {
+    auto WorkingDir = SM->getFileManager()
+                          .getVirtualFileSystem()
+                          ->getCurrentWorkingDirectory();
+    if (!WorkingDir)
+      return false;
+    AbsolutePath = *WorkingDir;
+    llvm::sys::path::append(AbsolutePath, FilePath);
+  }
+
+  llvm::sys::path::remove_dots(AbsolutePath, true);
+  Symbol->FilePath = AbsolutePath.str();
   return true;
 }
 } // namespace

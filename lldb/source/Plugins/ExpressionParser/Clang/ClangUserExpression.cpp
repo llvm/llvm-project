@@ -417,7 +417,7 @@ ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager, ExecutionConte
         else
             lang_type = lldb::eLanguageTypeC;
 
-        if (!source_code->GetText(m_transformed_text, lang_type, m_const_object, m_in_static_method, exe_ctx))
+        if (!source_code->GetText(m_transformed_text, lang_type, m_in_static_method, exe_ctx))
         {
             diagnostic_manager.PutCString(eDiagnosticSeverityError, "couldn't construct expression body");
             return false;

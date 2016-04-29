@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 template <class S>
@@ -28,7 +29,7 @@ test(S s, typename S::size_type pos, typename S::size_type n, S expected)
     try
     {
         s.erase(pos, n);
-        assert(s.__invariants());
+        LIBCPP_ASSERT(s.__invariants());
         assert(pos <= old_size);
         assert(s == expected);
     }
@@ -48,7 +49,7 @@ test(S s, typename S::size_type pos, S expected)
     try
     {
         s.erase(pos);
-        assert(s.__invariants());
+        LIBCPP_ASSERT(s.__invariants());
         assert(pos <= old_size);
         assert(s == expected);
     }
@@ -64,7 +65,7 @@ void
 test(S s, S expected)
 {
     s.erase();
-    assert(s.__invariants());
+    LIBCPP_ASSERT(s.__invariants());
     assert(s == expected);
 }
 
@@ -173,7 +174,7 @@ int main()
     test(S("abcdefghij"), S(""));
     test(S("abcdefghijklmnopqrst"), S(""));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test(S(""), 0, 0, S(""));

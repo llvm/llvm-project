@@ -1,21 +1,14 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s --check-prefix=SCOP
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
 ;
-; This caused the code generation to emit a broken module as there are two
-; dependences that need to be considered, thus code has to be emitted in a
-; certain order:
-;   1) To preload A[N * M] the expression N * M [p0] is needed (both for the
-;      condition under which A[N * M] is executed as well as to compute the
-;      index).
-;   2) To generate (A[N * M] / 2) [p1] the preloaded value is needed.
+; SCOP:         Assumed Context:
+; SCOP-NEXT:    [p_0, tmp4] -> {  :  }
+; SCOP-NEXT:    Invalid Context:
+; SCOP-NEXT:    [p_0, tmp4] -> {  : p_0 > 0 and tmp4 < 0 }
+; SCOP-NEXT:    p0: (%N * %M)
+; SCOP-NEXT:    p1: %tmp4
 ;
-; SCOP: p0: (%N * %M)
-; SCOP: p1: (%tmp4 /u 2)
-;
-; CHECK: polly.preload.merge:
-; CHECK:   %polly.preload.tmp4.merge = phi i32 [ %polly.access.A.load, %polly.preload.exec ], [ 0, %polly.preload.cond ]
-; CHECK:   %3 = lshr i32 %polly.preload.tmp4.merge, 1
-; CHECK:   %4 = sext i32 %0 to i64
+; CHECK:      polly.preload.merge:
 ;
 ;    void f(int *restrict A, int *restrict B, int N, int M) {
 ;

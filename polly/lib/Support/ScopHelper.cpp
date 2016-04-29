@@ -246,6 +246,15 @@ private:
   const Region &R;
   ValueMapT *VMap;
 
+  /// @brief Return the Value for @p E if it is not zero or else the value 1.
+  Value *selectOneIfZero(const SCEV *E, Instruction *IP) {
+    auto *Ty = E->getType();
+    auto *RHS = Expander.expandCodeFor(E, Ty, IP);
+    auto *Zero = ConstantInt::get(Ty, 0);
+    auto *Cond = new ICmpInst(IP, ICmpInst::ICMP_NE, RHS, Zero);
+    return SelectInst::Create(Cond, RHS, ConstantInt::get(Ty, 1), "", IP);
+  }
+
   const SCEV *visitUnknown(const SCEVUnknown *E) {
 
     // If a value mapping was given try if the underlying value is remapped.
@@ -273,7 +282,11 @@ private:
     const SCEV *RHSScev = visit(SE.getSCEV(Inst->getOperand(1)));
 
     Value *LHS = Expander.expandCodeFor(LHSScev, E->getType(), StartIP);
-    Value *RHS = Expander.expandCodeFor(RHSScev, E->getType(), StartIP);
+    Value *RHS = nullptr;
+    if (SE.isKnownNonZero(RHSScev))
+      RHS = Expander.expandCodeFor(RHSScev, E->getType(), StartIP);
+    else
+      RHS = selectOneIfZero(RHSScev, StartIP);
 
     Inst = BinaryOperator::Create((Instruction::BinaryOps)Inst->getOpcode(),
                                   LHS, RHS, Inst->getName() + Name, StartIP);
@@ -295,7 +308,12 @@ private:
     return SE.getSignExtendExpr(visit(E->getOperand()), E->getType());
   }
   const SCEV *visitUDivExpr(const SCEVUDivExpr *E) {
-    return SE.getUDivExpr(visit(E->getLHS()), visit(E->getRHS()));
+    if (SE.isKnownNonZero(E->getRHS()))
+      return SE.getUDivExpr(visit(E->getLHS()), visit(E->getRHS()));
+    auto *RHSScev = visit(E->getRHS());
+    auto *IP = R.getEnteringBlock()->getTerminator();
+    auto *RHS = selectOneIfZero(RHSScev, IP);
+    return SE.getUDivExpr(visit(E->getLHS()), SE.getSCEV(RHS));
   }
   const SCEV *visitAddExpr(const SCEVAddExpr *E) {
     SmallVector<const SCEV *, 4> NewOps;

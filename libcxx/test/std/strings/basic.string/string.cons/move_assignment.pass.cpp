@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <string>
 
 // basic_string<charT,traits,Allocator>&
@@ -15,8 +17,7 @@
 #include <string>
 #include <cassert>
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 
@@ -26,17 +27,14 @@ test(S s1, S s2)
 {
     S s0 = s2;
     s1 = std::move(s2);
-    assert(s1.__invariants());
-    assert(s2.__invariants());
+    LIBCPP_ASSERT(s1.__invariants());
+    LIBCPP_ASSERT(s2.__invariants());
     assert(s1 == s0);
     assert(s1.capacity() >= s1.size());
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
     typedef std::string S;
     test(S(), S());
@@ -55,7 +53,6 @@ int main()
            "1234567890123456789012345678901234567890123456789012345678901234567890"),
          S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
     }
-#if __cplusplus >= 201103L
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test(S(), S());
@@ -74,6 +71,4 @@ int main()
            "1234567890123456789012345678901234567890123456789012345678901234567890"),
          S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

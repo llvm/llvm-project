@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <string>
 
 // basic_string(basic_string&&)
@@ -29,7 +31,6 @@ struct some_alloc
 
 int main()
 {
-#if __has_feature(cxx_noexcept)
     {
         typedef std::string C;
         static_assert(std::is_nothrow_move_constructible<C>::value, "");
@@ -46,5 +47,4 @@ int main()
         static_assert( std::is_nothrow_move_constructible<C>::value, "");
 #endif
     }
-#endif
 }
