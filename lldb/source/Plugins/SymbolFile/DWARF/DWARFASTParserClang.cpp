@@ -1012,9 +1012,18 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                             }
 
                             if (!enumerator_clang_type)
-                                enumerator_clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize (NULL,
-                                                                                                        DW_ATE_signed,
-                                                                                                        byte_size * 8);
+                            {
+                                if (byte_size > 0)
+                                {
+                                    enumerator_clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(NULL,
+                                                                                                           DW_ATE_signed,
+                                                                                                           byte_size * 8);
+                                }
+                                else
+                                {
+                                    enumerator_clang_type = m_ast.GetBasicType(eBasicTypeInt);
+                                }
+                            }
 
                             clang_type = m_ast.CreateEnumerationType (type_name_cstr,
                                                                       GetClangDeclContextContainingDIE (die, nullptr),

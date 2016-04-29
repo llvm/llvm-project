@@ -63,7 +63,14 @@ class EnumTypesTestCase(TestBase):
                         'Sunday',
                         'kNumDays',
                         '5'];
-
+                                                                                                                             
+        # Make sure a pointer to an anonymous enum type does crash LLDB and displays correctly using
+        # frame variable and expression commands
+        self.expect('frame variable f.op', DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ['ops *', 'f.op', '0x0000000000000000'])
+        self.expect('frame variable *f.op', DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ['ops', '*f.op', '<parent is NULL>'])
+        self.expect('expr f.op', DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ['ops *', '$', '0x0000000000000000'])
+        self.expect('expr *f.op', DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ['error:'], error = True)
+        
         bkpt = self.target().FindBreakpointByID(bkpt_id)
         for enum_value in enum_values:
             self.expect("frame variable day", 'check for valid enumeration value',
