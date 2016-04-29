@@ -1035,6 +1035,7 @@ struct ReversePostOrderFunctionAttrs : public ModulePass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<CallGraphWrapperPass>();
+    AU.addPreserved<CallGraphWrapperPass>();
   }
 };
 }
