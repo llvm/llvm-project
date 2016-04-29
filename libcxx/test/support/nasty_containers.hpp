@@ -287,7 +287,7 @@ public:
      nasty_mutex() _NOEXCEPT {}
      ~nasty_mutex() {}
 
-	nasty_mutex *operator& ()   { assert(false); }
+	nasty_mutex *operator& ()   { assert(false); return nullptr; }
 	template <typename T>
 	void operator, (const T &) { assert(false); }
 

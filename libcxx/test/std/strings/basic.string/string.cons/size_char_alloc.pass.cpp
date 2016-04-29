@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 
@@ -27,7 +28,7 @@ test(unsigned n, charT c)
     typedef typename S::traits_type T;
     typedef typename S::allocator_type A;
     S s2(n, c);
-    assert(s2.__invariants());
+    LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == n);
     for (unsigned i = 0; i < n; ++i)
         assert(s2[i] == c);
@@ -42,7 +43,7 @@ test(unsigned n, charT c, const A& a)
     typedef std::basic_string<charT, std::char_traits<charT>, A> S;
     typedef typename S::traits_type T;
     S s2(n, c, a);
-    assert(s2.__invariants());
+    LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == n);
     for (unsigned i = 0; i < n; ++i)
         assert(s2[i] == c);
@@ -59,7 +60,7 @@ test(Tp n, Tp c)
     typedef typename S::traits_type T;
     typedef typename S::allocator_type A;
     S s2(n, c);
-    assert(s2.__invariants());
+    LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == n);
     for (unsigned i = 0; i < n; ++i)
         assert(s2[i] == c);
@@ -75,7 +76,7 @@ test(Tp n, Tp c, const A& a)
     typedef std::basic_string<charT, std::char_traits<charT>, A> S;
     typedef typename S::traits_type T;
     S s2(n, c, a);
-    assert(s2.__invariants());
+    LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == n);
     for (unsigned i = 0; i < n; ++i)
         assert(s2[i] == c);
@@ -104,7 +105,7 @@ int main()
     test(100, 65);
     test(100, 65, A(3));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef min_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;

@@ -29,12 +29,12 @@ test0()
 	static_assert((noexcept(C()) == noexcept(typename C::allocator_type())), "" );
 #endif
     C c;
-    assert(c.__invariants());
+    LIBCPP_ASSERT(c.__invariants());
     assert(c.empty());
     assert(c.get_allocator() == typename C::allocator_type());
 #if TEST_STD_VER >= 11
     C c1 = {};
-    assert(c1.__invariants());
+    LIBCPP_ASSERT(c1.__invariants());
     assert(c1.empty());
     assert(c1.get_allocator() == typename C::allocator_type());
 #endif
@@ -50,7 +50,7 @@ test1(const typename C::allocator_type& a)
 	static_assert((noexcept(C(typename C::allocator_type())) == std::is_nothrow_copy_constructible<typename C::allocator_type>::value), "" );
 #endif
     C c(a);
-    assert(c.__invariants());
+    LIBCPP_ASSERT(c.__invariants());
     assert(c.empty());
     assert(c.get_allocator() == a);
 }

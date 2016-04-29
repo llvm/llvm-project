@@ -29,7 +29,7 @@ int main()
     // Use a builtin type so we don't get ADL lookup.
     typedef double T[42][50];
     {
-        static_assert(std::__is_swappable<T>::value, "");
+        LIBCPP_STATIC_ASSERT(std::__is_swappable<T>::value, "");
 #if TEST_STD_VER > 14
         static_assert(std::is_swappable_v<T>);
 #endif

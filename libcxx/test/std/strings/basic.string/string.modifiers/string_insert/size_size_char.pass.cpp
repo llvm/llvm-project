@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 template <class S>
@@ -29,7 +30,7 @@ test(S s, typename S::size_type pos, typename S::size_type n,
     try
     {
         s.insert(pos, n, str);
-        assert(s.__invariants());
+        LIBCPP_ASSERT(s.__invariants());
         assert(pos <= old_size);
         assert(s == expected);
     }

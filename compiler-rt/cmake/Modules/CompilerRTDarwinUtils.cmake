@@ -1,3 +1,5 @@
+include(CMakeParseArguments)
+
 # On OS X SDKs can be installed anywhere on the base system and xcode-select can
 # set the default Xcode to use. This function finds the SDKs that are present in
 # the current Xcode.
