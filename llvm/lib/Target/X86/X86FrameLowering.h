@@ -127,6 +127,16 @@ public:
   /// Check that LEA can be used on SP in an epilogue sequence for \p MF.
   bool canUseLEAForSPInEpilogue(const MachineFunction &MF) const;
 
+  /// Check whether or not the given \p MBB can be used as a prologue
+  /// for the target.
+  /// The prologue will be inserted first in this basic block.
+  /// This method is used by the shrink-wrapping pass to decide if
+  /// \p MBB will be correctly handled by the target.
+  /// As soon as the target enable shrink-wrapping without overriding
+  /// this method, we assume that each basic block is a valid
+  /// prologue.
+  bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
+
   /// Check whether or not the given \p MBB can be used as a epilogue
   /// for the target.
   /// The epilogue will be inserted before the first terminator of that block.
