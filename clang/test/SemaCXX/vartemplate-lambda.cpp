@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
+template <class> auto fn0 = [] {};
+template <typename> void foo0() { fn0<char>(); }
+
 template<typename T> auto fn1 = [](auto a) { return a + T(1); };
 
 template <typename X>
