@@ -742,6 +742,9 @@ public:
     }
 
     ++NumLoopsDistributed;
+    // Report the success.
+    emitOptimizationRemark(F->getContext(), LDIST_NAME, *F, L->getStartLoc(),
+                           "distributed loop");
     return true;
   }
 

@@ -19,6 +19,13 @@
 ;    10	    A[i] = B[i] * C[i];
 ;    11	  }
 ;    12	}
+;    13
+;    14 void success (char *A, char *B, char *C, char *D, char *E, int N) {
+;    15   for(int i = 0; i < N; i++) {
+;    16     A[i + 1] = A[i] + B[i];
+;    17     C[i] = D[i] * E[i];
+;    18   }
+;    19 }
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
@@ -84,6 +91,41 @@ for.cond.cleanup:
   ret void, !dbg !25
 }
 
+; REMARKS: remark: /tmp/t.c:15:3: distributed loop
+
+define void @success(i8* %A, i8* %B, i8* %C, i8* %D, i8* %E, i32 %N) !dbg !31 {
+entry:
+  %cmp28 = icmp sgt i32 %N, 0, !dbg !32
+  br i1 %cmp28, label %ph, label %for.cond.cleanup, !dbg !33
+
+ph:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
+  %arrayidx = getelementptr inbounds i8, i8* %A, i64 %indvars.iv, !dbg !35
+  %0 = load i8, i8* %arrayidx, align 1, !dbg !35, !tbaa !13
+  %arrayidx2 = getelementptr inbounds i8, i8* %B, i64 %indvars.iv, !dbg !36
+  %1 = load i8, i8* %arrayidx2, align 1, !dbg !36, !tbaa !13
+  %add = add i8 %1, %0, !dbg !37
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !33
+  %arrayidx7 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv.next, !dbg !38
+  store i8 %add, i8* %arrayidx7, align 1, !dbg !39, !tbaa !13
+  %arrayidx9 = getelementptr inbounds i8, i8* %D, i64 %indvars.iv, !dbg !40
+  %2 = load i8, i8* %arrayidx9, align 1, !dbg !40, !tbaa !13
+  %arrayidx12 = getelementptr inbounds i8, i8* %E, i64 %indvars.iv, !dbg !41
+  %3 = load i8, i8* %arrayidx12, align 1, !dbg !41, !tbaa !13
+  %mul = mul i8 %3, %2, !dbg !42
+  %arrayidx16 = getelementptr inbounds i8, i8* %C, i64 %indvars.iv, !dbg !43
+  store i8 %mul, i8* %arrayidx16, align 1, !dbg !44, !tbaa !13
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !33
+  %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !33
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !33
+
+for.cond.cleanup:
+  ret void, !dbg !34
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 
@@ -116,3 +158,17 @@ for.cond.cleanup:
 !28 = !DILocation(line: 10, column: 17, scope: !22)
 !29 = !DILocation(line: 10, column: 5, scope: !22)
 !30 = !DILocation(line: 10, column: 10, scope: !22)
+!31 = distinct !DISubprogram(name: "success", scope: !1, file: !1, line: 14, type: !8, isLocal: false, isDefinition: true, scopeLine: 14, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
+!32 = !DILocation(line: 15, column: 20, scope: !31)
+!33 = !DILocation(line: 15, column: 3, scope: !31)
+!34 = !DILocation(line: 19, column: 1, scope: !31)
+!35 = !DILocation(line: 16, column: 16, scope: !31)
+!36 = !DILocation(line: 16, column: 23, scope: !31)
+!37 = !DILocation(line: 16, column: 21, scope: !31)
+!38 = !DILocation(line: 16, column: 5, scope: !31)
+!39 = !DILocation(line: 16, column: 14, scope: !31)
+!40 = !DILocation(line: 17, column: 12, scope: !31)
+!41 = !DILocation(line: 17, column: 19, scope: !31)
+!42 = !DILocation(line: 17, column: 17, scope: !31)
+!43 = !DILocation(line: 17, column: 5, scope: !31)
+!44 = !DILocation(line: 17, column: 10, scope: !31)
