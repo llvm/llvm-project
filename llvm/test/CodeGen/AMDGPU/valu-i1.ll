@@ -137,7 +137,7 @@ exit:
 
 ; SI: BB#4:
 ; SI: buffer_store_dword
-; SI: v_cmp_ge_i64_e64 [[CMP:s\[[0-9]+:[0-9]+\]]]
+; SI: v_cmp_ge_i64_e32 [[CMP:s\[[0-9]+:[0-9]+\]|vcc]]
 ; SI: s_or_b64 [[TMP:s\[[0-9]+:[0-9]+\]]], [[CMP]], [[COND_STATE]]
 
 ; SI: BB3_5:

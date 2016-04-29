@@ -67,16 +67,17 @@ extern "C" {
 
 #ifndef __CloudABI__
 inline
-std::string
-get_temp_file_name()
+std::string get_temp_file_name()
 {
-#if defined(_WIN32) || defined(__MINGW32__)
+#if defined(__MINGW32__)
+    char Path[MAX_PATH + 1];
+    char FN[MAX_PATH + 1];
+    do { } while (0 == GetTempPath(MAX_PATH+1, Path));
+    do { } while (0 == GetTempFileName(Path, "libcxx", 0, FN));
+    return FN;
+#elif defined(_WIN32)
     char Name[] = "libcxx.XXXXXX";
-
-    if (_mktemp_s(Name, sizeof(Name)) != 0) {
-        abort();
-    }
-
+    if (_mktemp_s(Name, sizeof(Name)) != 0) abort();
     return Name;
 #else
     std::string Name;

@@ -10,6 +10,7 @@
 // <cwchar>
 
 #include <cwchar>
+#include <cstdarg>
 #include <type_traits>
 
 #ifndef NULL
@@ -35,11 +36,8 @@ int main()
     std::tm *tm = 0;
     std::wint_t w = 0;
     ::FILE* fp = 0;
-#ifdef __APPLE__
-    __darwin_va_list va;
-#else
-    __builtin_va_list va;
-#endif
+    std::va_list va;
+
     char* ns = 0;
     wchar_t* ws = 0;
     static_assert((std::is_same<decltype(std::fwprintf(fp, L"")), int>::value), "");

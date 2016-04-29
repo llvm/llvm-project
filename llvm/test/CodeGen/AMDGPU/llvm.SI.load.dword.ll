@@ -7,7 +7,7 @@
 ; FIXME: Out of bounds immediate offset crashes
 
 ; CHECK-LABEL: {{^}}main:
-; CHECK: buffer_load_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 glc slc
+; CHECK: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 glc slc
 ; CHECK: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen glc slc
 ; CHECK: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 idxen glc slc
 ; CHECK: buffer_load_dword {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 idxen offen glc slc

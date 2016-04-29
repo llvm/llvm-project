@@ -2,9 +2,9 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ;CHECK-LABEL: {{^}}buffer_load:
-;CHECK: buffer_load_dwordx4 v[0:3], s[0:3], 0
-;CHECK: buffer_load_dwordx4 v[4:7], s[0:3], 0 glc
-;CHECK: buffer_load_dwordx4 v[8:11], s[0:3], 0 slc
+;CHECK: buffer_load_dwordx4 v[0:3], off, s[0:3], 0
+;CHECK: buffer_load_dwordx4 v[4:7], off, s[0:3], 0 glc
+;CHECK: buffer_load_dwordx4 v[8:11], off, s[0:3], 0 slc
 ;CHECK: s_waitcnt
 define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load(<4 x i32> inreg) {
 main_body:
@@ -18,7 +18,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_immoffs:
-;CHECK: buffer_load_dwordx4 v[0:3], s[0:3], 0 offset:42
+;CHECK: buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:42
 ;CHECK: s_waitcnt
 define amdgpu_ps <4 x float> @buffer_load_immoffs(<4 x i32> inreg) {
 main_body:
@@ -28,7 +28,7 @@ main_body:
 
 ;CHECK-LABEL: {{^}}buffer_load_immoffs_large:
 ;CHECK: s_movk_i32 [[OFFSET:s[0-9]+]], 0x1fff
-;CHECK: buffer_load_dwordx4 v[0:3], s[0:3], [[OFFSET]] offset:1
+;CHECK: buffer_load_dwordx4 v[0:3], off, s[0:3], [[OFFSET]] offset:1
 ;CHECK: s_waitcnt
 define amdgpu_ps <4 x float> @buffer_load_immoffs_large(<4 x i32> inreg) {
 main_body:

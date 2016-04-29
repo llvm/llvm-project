@@ -2,9 +2,9 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ;CHECK-LABEL: {{^}}buffer_store:
-;CHECK: buffer_store_format_xyzw v[0:3], s[0:3], 0
-;CHECK: buffer_store_format_xyzw v[4:7], s[0:3], 0 glc
-;CHECK: buffer_store_format_xyzw v[8:11], s[0:3], 0 slc
+;CHECK: buffer_store_format_xyzw v[0:3], off, s[0:3], 0
+;CHECK: buffer_store_format_xyzw v[4:7], off, s[0:3], 0 glc
+;CHECK: buffer_store_format_xyzw v[8:11], off, s[0:3], 0 slc
 define amdgpu_ps void @buffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <4 x float>) {
 main_body:
   call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> %1, <4 x i32> %0, i32 0, i32 0, i1 0, i1 0)
@@ -14,7 +14,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_store_immoffs:
-;CHECK: buffer_store_format_xyzw v[0:3], s[0:3], 0 offset:42
+;CHECK: buffer_store_format_xyzw v[0:3], off, s[0:3], 0 offset:42
 define amdgpu_ps void @buffer_store_immoffs(<4 x i32> inreg, <4 x float>) {
 main_body:
   call void @llvm.amdgcn.buffer.store.format.v4f32(<4 x float> %1, <4 x i32> %0, i32 0, i32 42, i1 0, i1 0)

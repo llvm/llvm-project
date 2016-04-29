@@ -27,7 +27,7 @@
 ; VIMESA-NEXT: s_mov_b32 s15, 0x980000
 
 
-; GCN: buffer_store_dword {{v[0-9]+}}, s[12:15], s16 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; GCN: buffer_store_dword {{v[0-9]+}}, off, s[12:15], s16 offset:{{[0-9]+}} ; 4-byte Folded Spill
 
 ; GCN: buffer_store_dwordx4 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[12:15], s16 offen offset:{{[0-9]+}}
 ; GCN: buffer_load_dwordx4 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[12:15], s16 offen offset:{{[0-9]+}}

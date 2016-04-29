@@ -1397,7 +1397,10 @@ let hasSideEffects = 1, isBarrier = 1, usesCustomInserter = 1 in {
                           Requires<[In32BitMode]>;
 }
 
-let isBranch = 1, isTerminator = 1 in {
+// This pseudo is never removed from the function, as it serves as
+// a terminator.  Size is set to 0 to prevent the builtin assembler
+// from emitting it.
+let isBranch = 1, isTerminator = 1, Size = 0 in {
   def EH_SjLj_Setup : Pseudo<(outs), (ins directbrtarget:$dst),
                         "#EH_SjLj_Setup\t$dst", []>;
 }

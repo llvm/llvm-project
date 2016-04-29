@@ -42,7 +42,7 @@ done:
 ; OPT: br label
 
 ; GCN-LABEL: {{^}}test_sink_noop_addrspacecast_flat_to_global_i32:
-; CI: buffer_load_dword {{v[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:28
+; CI: buffer_load_dword {{v[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:28
 define void @test_sink_noop_addrspacecast_flat_to_global_i32(i32 addrspace(4)* %out, i32 addrspace(4)* %in, i32 %cond) {
 entry:
   %out.gep = getelementptr i32, i32 addrspace(4)* %out, i64 999999

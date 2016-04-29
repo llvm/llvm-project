@@ -1072,10 +1072,6 @@ public:
            isShiftedInt<Bits, ShiftAmount>(getConstantMemOff()) &&
            getMemBase()->isGPRAsmReg();
   }
-  template <unsigned Bits> bool isMemWithSimmOffsetGPR() const {
-    return isMem() && isConstantMemOff() && isInt<Bits>(getConstantMemOff()) &&
-           getMemBase()->isGPRAsmReg();
-  }
   bool isMemWithGRPMM16Base() const {
     return isMem() && getMemBase()->isMM16AsmReg();
   }
@@ -3815,9 +3811,6 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_MemSImm9:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected memory with 9-bit signed offset");
-  case Match_MemGPSImm9:
-    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
-                 "expected memory with $gp and 9-bit signed offset");
   case Match_MemSImm10:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected memory with 10-bit signed offset");

@@ -2,9 +2,9 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ;CHECK-LABEL: {{^}}buffer_load:
-;CHECK: buffer_load_format_xyzw v[0:3], s[0:3], 0
-;CHECK: buffer_load_format_xyzw v[4:7], s[0:3], 0 glc
-;CHECK: buffer_load_format_xyzw v[8:11], s[0:3], 0 slc
+;CHECK: buffer_load_format_xyzw v[0:3], off, s[0:3], 0
+;CHECK: buffer_load_format_xyzw v[4:7], off, s[0:3], 0 glc
+;CHECK: buffer_load_format_xyzw v[8:11], off, s[0:3], 0 slc
 ;CHECK: s_waitcnt
 define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load(<4 x i32> inreg) {
 main_body:
@@ -18,7 +18,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_immoffs:
-;CHECK: buffer_load_format_xyzw v[0:3], s[0:3], 0 offset:42
+;CHECK: buffer_load_format_xyzw v[0:3], off, s[0:3], 0 offset:42
 ;CHECK: s_waitcnt
 define amdgpu_ps <4 x float> @buffer_load_immoffs(<4 x i32> inreg) {
 main_body:
@@ -27,11 +27,11 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_immoffs_large:
-;CHECK-DAG: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 61 offset:4095
+;CHECK-DAG: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], 61 offset:4095
 ;CHECK-DAG: s_movk_i32 [[OFS1:s[0-9]+]], 0x7fff
-;CHECK: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, s[0:3], [[OFS1]] offset:4093
+;CHECK: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS1]] offset:4093
 ;CHECK: s_mov_b32 [[OFS2:s[0-9]+]], 0x8fff
-;CHECK: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, s[0:3], [[OFS2]] offset:1
+;CHECK: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS2]] offset:1
 ;CHECK: s_waitcnt
 define amdgpu_ps <4 x float> @buffer_load_immoffs_large(<4 x i32> inreg) {
 main_body:
@@ -45,9 +45,9 @@ main_body:
 
 ;CHECK-LABEL: {{^}}buffer_load_immoffs_reuse:
 ;CHECK: s_movk_i32 [[OFS:s[0-9]+]], 0xfff
-;CHECK: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, s[0:3], [[OFS]] offset:65
+;CHECK: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS]] offset:65
 ;CHECK-NOT: s_mov
-;CHECK: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, s[0:3], [[OFS]] offset:81
+;CHECK: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS]] offset:81
 ;CHECK: s_waitcnt
 define amdgpu_ps <4 x float> @buffer_load_immoffs_reuse(<4 x i32> inreg) {
 main_body:
@@ -105,7 +105,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_x:
-;CHECK: buffer_load_format_x v0, s[0:3], 0
+;CHECK: buffer_load_format_x v0, off, s[0:3], 0
 ;CHECK: s_waitcnt
 define amdgpu_ps float @buffer_load_x(<4 x i32> inreg %rsrc) {
 main_body:
@@ -114,7 +114,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_xy:
-;CHECK: buffer_load_format_xy v[0:1], s[0:3], 0
+;CHECK: buffer_load_format_xy v[0:1], off, s[0:3], 0
 ;CHECK: s_waitcnt
 define amdgpu_ps <2 x float> @buffer_load_xy(<4 x i32> inreg %rsrc) {
 main_body:

@@ -25,7 +25,7 @@ define void @reduce_i64_align_4_bitcast_v2i32_elt0(i32 addrspace(1)* %out, i64 a
 }
 
 ; GCN-LABEL: {{^}}reduce_i64_align_4_bitcast_v2i32_elt1:
-; GCN: buffer_load_dword [[VAL:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0 offset:4
+; GCN: buffer_load_dword [[VAL:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:4
 ; GCN: buffer_store_dword [[VAL]]
 define void @reduce_i64_align_4_bitcast_v2i32_elt1(i32 addrspace(1)* %out, i64 addrspace(1)* %in) #0 {
   %a = load i64, i64 addrspace(1)* %in, align 4

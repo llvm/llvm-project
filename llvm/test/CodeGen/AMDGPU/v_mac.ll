@@ -2,9 +2,9 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}mac_vvv:
-; GCN: buffer_load_dword [[A:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0{{$}}
-; GCN: buffer_load_dword [[B:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0 offset:4
-; GCN: buffer_load_dword [[C:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0 offset:8
+; GCN: buffer_load_dword [[A:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0{{$}}
+; GCN: buffer_load_dword [[B:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:4
+; GCN: buffer_load_dword [[C:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:8
 ; GCN: v_mac_f32_e32 [[C]], [[B]], [[A]]
 ; GCN: buffer_store_dword [[C]]
 define void @mac_vvv(float addrspace(1)* %out, float addrspace(1)* %in) {

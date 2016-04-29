@@ -454,7 +454,6 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 
   case AMDGPUAS::PRIVATE_ADDRESS:
-  case AMDGPUAS::UNKNOWN_ADDRESS_SPACE:
     return isLegalMUBUFAddressingMode(AM);
 
   case AMDGPUAS::LOCAL_ADDRESS:
@@ -475,6 +474,12 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     return false;
   }
   case AMDGPUAS::FLAT_ADDRESS:
+  case AMDGPUAS::UNKNOWN_ADDRESS_SPACE:
+    // For an unknown address space, this usually means that this is for some
+    // reason being used for pure arithmetic, and not based on some addressing
+    // computation. We don't have instructions that compute pointers with any
+    // addressing modes, so treat them as having no offset like flat
+    // instructions.
     return isLegalFlatAddressingMode(AM);
 
   default:

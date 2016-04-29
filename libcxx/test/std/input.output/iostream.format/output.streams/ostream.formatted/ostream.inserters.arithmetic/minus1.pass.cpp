@@ -21,8 +21,10 @@
 
 //  Testing to make sure that the max length values are correctly inserted
 
-#include <iostream>
 #include <sstream>
+#include <ios>
+#include <cctype>
+#include <cstdint>
 #include <cassert>
 
 template <typename T>
@@ -30,7 +32,6 @@ void test_octal(const char *expected)
 {
     std::stringstream ss;
     ss << std::oct << static_cast<T>(-1);
-    
     assert(ss.str() == expected);
 }
 
@@ -39,8 +40,6 @@ void test_dec(const char *expected)
 {
     std::stringstream ss;
     ss << std::dec << static_cast<T>(-1);
-    
-//  std::cout << ss.str() << " " << expected << std::endl;
     assert(ss.str() == expected);
 }
 
@@ -49,22 +48,32 @@ void test_hex(const char *expected)
 {
     std::stringstream ss;
     ss << std::hex << static_cast<T>(-1);
-    
+
     std::string str = ss.str();
     for (size_t i = 0; i < str.size(); ++i )
         str[i] = std::toupper(str[i]);
-    
+
     assert(str == expected);
 }
 
 int main(int argc, char* argv[])
 {
+
     test_octal<uint16_t>(                "177777");
     test_octal< int16_t>(                "177777");
     test_octal<uint32_t>(           "37777777777");
     test_octal< int32_t>(           "37777777777");
     test_octal<uint64_t>("1777777777777777777777");
     test_octal< int64_t>("1777777777777777777777");
+    test_octal<uint64_t>("1777777777777777777777");
+    if (sizeof(long) == sizeof(int64_t)) {
+        test_octal< unsigned long>("1777777777777777777777");
+        test_octal<          long>("1777777777777777777777");
+    }
+    if (sizeof(long long) == sizeof(int64_t)) {
+        test_octal< unsigned long long>("1777777777777777777777");
+        test_octal<          long long>("1777777777777777777777");
+    }
 
     test_dec<uint16_t>(               "65535");
     test_dec< int16_t>(                  "-1");
@@ -72,6 +81,14 @@ int main(int argc, char* argv[])
     test_dec< int32_t>(                  "-1");
     test_dec<uint64_t>("18446744073709551615");
     test_dec< int64_t>(                  "-1");
+    if (sizeof(long) == sizeof(int64_t)) {
+        test_dec<unsigned long>("18446744073709551615");
+        test_dec<         long>(                  "-1");
+    }
+    if (sizeof(long long) == sizeof(int64_t)) {
+        test_dec<unsigned long long>("18446744073709551615");
+        test_dec<         long long>(                  "-1");
+    }
 
     test_hex<uint16_t>(            "FFFF");
     test_hex< int16_t>(            "FFFF");
@@ -79,6 +96,12 @@ int main(int argc, char* argv[])
     test_hex< int32_t>(        "FFFFFFFF");
     test_hex<uint64_t>("FFFFFFFFFFFFFFFF");
     test_hex< int64_t>("FFFFFFFFFFFFFFFF");
-
-    return 0;
+    if (sizeof(long) == sizeof(int64_t)) {
+        test_hex<unsigned long>("FFFFFFFFFFFFFFFF");
+        test_hex<         long>("FFFFFFFFFFFFFFFF");
+    }
+    if (sizeof(long long) == sizeof(int64_t)) {
+        test_hex<unsigned long long>("FFFFFFFFFFFFFFFF");
+        test_hex<         long long>("FFFFFFFFFFFFFFFF");
+    }
 }

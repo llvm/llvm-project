@@ -49,7 +49,7 @@ define void @lds_atomic_dec_noret_i32_offset(i32 addrspace(3)* %ptr) nounwind {
 
 ; GCN-LABEL: {{^}}global_atomic_dec_ret_i32:
 ; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 42
-; GCN: buffer_atomic_dec [[K]], s{{\[[0-9]+:[0-9]+\]}}, 0 glc{{$}}
+; GCN: buffer_atomic_dec [[K]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 glc{{$}}
 define void @global_atomic_dec_ret_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %ptr) #0 {
   %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* %ptr, i32 42)
   store i32 %result, i32 addrspace(1)* %out
@@ -58,7 +58,7 @@ define void @global_atomic_dec_ret_i32(i32 addrspace(1)* %out, i32 addrspace(1)*
 
 ; GCN-LABEL: {{^}}global_atomic_dec_ret_i32_offset:
 ; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 42
-; GCN: buffer_atomic_dec [[K]], s{{\[[0-9]+:[0-9]+\]}}, 0 offset:16 glc{{$}}
+; GCN: buffer_atomic_dec [[K]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:16 glc{{$}}
 define void @global_atomic_dec_ret_i32_offset(i32 addrspace(1)* %out, i32 addrspace(1)* %ptr) #0 {
   %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 4
   %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* %gep, i32 42)
@@ -67,7 +67,7 @@ define void @global_atomic_dec_ret_i32_offset(i32 addrspace(1)* %out, i32 addrsp
 }
 
 ; FUNC-LABEL: {{^}}global_atomic_dec_noret_i32:
-; GCN: buffer_atomic_dec [[K]], s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN: buffer_atomic_dec [[K]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
 define void @global_atomic_dec_noret_i32(i32 addrspace(1)* %ptr) nounwind {
   %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* %ptr, i32 42)
   ret void
@@ -75,7 +75,7 @@ define void @global_atomic_dec_noret_i32(i32 addrspace(1)* %ptr) nounwind {
 
 ; FUNC-LABEL: {{^}}global_atomic_dec_noret_i32_offset:
 ; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 42
-; GCN: buffer_atomic_dec [[K]], s{{\[[0-9]+:[0-9]+\]}}, 0 offset:16{{$}}
+; GCN: buffer_atomic_dec [[K]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:16{{$}}
 define void @global_atomic_dec_noret_i32_offset(i32 addrspace(1)* %ptr) nounwind {
   %gep = getelementptr i32, i32 addrspace(1)* %ptr, i32 4
   %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* %gep, i32 42)
@@ -166,7 +166,7 @@ define void @lds_atomic_dec_noret_i64_offset(i64 addrspace(3)* %ptr) nounwind {
 ; GCN-LABEL: {{^}}global_atomic_dec_ret_i64:
 ; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
 ; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
-; GCN: buffer_atomic_dec_x2 v{{\[}}[[KLO]]:[[KHI]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 glc{{$}}
+; GCN: buffer_atomic_dec_x2 v{{\[}}[[KLO]]:[[KHI]]{{\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 glc{{$}}
 define void @global_atomic_dec_ret_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %ptr) #0 {
   %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* %ptr, i64 42)
   store i64 %result, i64 addrspace(1)* %out
@@ -176,7 +176,7 @@ define void @global_atomic_dec_ret_i64(i64 addrspace(1)* %out, i64 addrspace(1)*
 ; GCN-LABEL: {{^}}global_atomic_dec_ret_i64_offset:
 ; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
 ; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
-; GCN: buffer_atomic_dec_x2 v{{\[}}[[KLO]]:[[KHI]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:32 glc{{$}}
+; GCN: buffer_atomic_dec_x2 v{{\[}}[[KLO]]:[[KHI]]{{\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:32 glc{{$}}
 define void @global_atomic_dec_ret_i64_offset(i64 addrspace(1)* %out, i64 addrspace(1)* %ptr) #0 {
   %gep = getelementptr i64, i64 addrspace(1)* %ptr, i32 4
   %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* %gep, i64 42)
@@ -187,7 +187,7 @@ define void @global_atomic_dec_ret_i64_offset(i64 addrspace(1)* %out, i64 addrsp
 ; FUNC-LABEL: {{^}}global_atomic_dec_noret_i64:
 ; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
 ; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
-; GCN: buffer_atomic_dec_x2 v{{\[}}[[KLO]]:[[KHI]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN: buffer_atomic_dec_x2 v{{\[}}[[KLO]]:[[KHI]]{{\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
 define void @global_atomic_dec_noret_i64(i64 addrspace(1)* %ptr) nounwind {
   %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* %ptr, i64 42)
   ret void
@@ -196,7 +196,7 @@ define void @global_atomic_dec_noret_i64(i64 addrspace(1)* %ptr) nounwind {
 ; FUNC-LABEL: {{^}}global_atomic_dec_noret_i64_offset:
 ; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
 ; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
-; GCN: buffer_atomic_dec_x2 v{{\[}}[[KLO]]:[[KHI]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:32{{$}}
+; GCN: buffer_atomic_dec_x2 v{{\[}}[[KLO]]:[[KHI]]{{\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:32{{$}}
 define void @global_atomic_dec_noret_i64_offset(i64 addrspace(1)* %ptr) nounwind {
   %gep = getelementptr i64, i64 addrspace(1)* %ptr, i32 4
   %result = call i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* %gep, i64 42)

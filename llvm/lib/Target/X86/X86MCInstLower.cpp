@@ -640,50 +640,81 @@ ReSimplify:
   // MOV64ao8, MOV64o8a
   // XCHG16ar, XCHG32ar, XCHG64ar
   case X86::MOV8mr_NOREX:
-  case X86::MOV8mr:     SimplifyShortMoveForm(AsmPrinter, OutMI, X86::MOV8o32a); break;
+  case X86::MOV8mr:
   case X86::MOV8rm_NOREX:
-  case X86::MOV8rm:     SimplifyShortMoveForm(AsmPrinter, OutMI, X86::MOV8ao32); break;
-  case X86::MOV16mr:    SimplifyShortMoveForm(AsmPrinter, OutMI, X86::MOV16o32a); break;
-  case X86::MOV16rm:    SimplifyShortMoveForm(AsmPrinter, OutMI, X86::MOV16ao32); break;
-  case X86::MOV32mr:    SimplifyShortMoveForm(AsmPrinter, OutMI, X86::MOV32o32a); break;
-  case X86::MOV32rm:    SimplifyShortMoveForm(AsmPrinter, OutMI, X86::MOV32ao32); break;
+  case X86::MOV8rm:
+  case X86::MOV16mr:
+  case X86::MOV16rm:
+  case X86::MOV32mr:
+  case X86::MOV32rm: {
+    unsigned NewOpc;
+    switch (OutMI.getOpcode()) {
+    default: llvm_unreachable("Invalid opcode");
+    case X86::MOV8mr_NOREX:
+    case X86::MOV8mr:     NewOpc = X86::MOV8o32a; break;
+    case X86::MOV8rm_NOREX:
+    case X86::MOV8rm:     NewOpc = X86::MOV8ao32; break;
+    case X86::MOV16mr:    NewOpc = X86::MOV16o32a; break;
+    case X86::MOV16rm:    NewOpc = X86::MOV16ao32; break;
+    case X86::MOV32mr:    NewOpc = X86::MOV32o32a; break;
+    case X86::MOV32rm:    NewOpc = X86::MOV32ao32; break;
+    }
+    SimplifyShortMoveForm(AsmPrinter, OutMI, NewOpc);
+    break;
+  }
 
-  case X86::ADC8ri:     SimplifyShortImmForm(OutMI, X86::ADC8i8);    break;
-  case X86::ADC16ri:    SimplifyShortImmForm(OutMI, X86::ADC16i16);  break;
-  case X86::ADC32ri:    SimplifyShortImmForm(OutMI, X86::ADC32i32);  break;
-  case X86::ADC64ri32:  SimplifyShortImmForm(OutMI, X86::ADC64i32);  break;
-  case X86::ADD8ri:     SimplifyShortImmForm(OutMI, X86::ADD8i8);    break;
-  case X86::ADD16ri:    SimplifyShortImmForm(OutMI, X86::ADD16i16);  break;
-  case X86::ADD32ri:    SimplifyShortImmForm(OutMI, X86::ADD32i32);  break;
-  case X86::ADD64ri32:  SimplifyShortImmForm(OutMI, X86::ADD64i32);  break;
-  case X86::AND8ri:     SimplifyShortImmForm(OutMI, X86::AND8i8);    break;
-  case X86::AND16ri:    SimplifyShortImmForm(OutMI, X86::AND16i16);  break;
-  case X86::AND32ri:    SimplifyShortImmForm(OutMI, X86::AND32i32);  break;
-  case X86::AND64ri32:  SimplifyShortImmForm(OutMI, X86::AND64i32);  break;
-  case X86::CMP8ri:     SimplifyShortImmForm(OutMI, X86::CMP8i8);    break;
-  case X86::CMP16ri:    SimplifyShortImmForm(OutMI, X86::CMP16i16);  break;
-  case X86::CMP32ri:    SimplifyShortImmForm(OutMI, X86::CMP32i32);  break;
-  case X86::CMP64ri32:  SimplifyShortImmForm(OutMI, X86::CMP64i32);  break;
-  case X86::OR8ri:      SimplifyShortImmForm(OutMI, X86::OR8i8);     break;
-  case X86::OR16ri:     SimplifyShortImmForm(OutMI, X86::OR16i16);   break;
-  case X86::OR32ri:     SimplifyShortImmForm(OutMI, X86::OR32i32);   break;
-  case X86::OR64ri32:   SimplifyShortImmForm(OutMI, X86::OR64i32);   break;
-  case X86::SBB8ri:     SimplifyShortImmForm(OutMI, X86::SBB8i8);    break;
-  case X86::SBB16ri:    SimplifyShortImmForm(OutMI, X86::SBB16i16);  break;
-  case X86::SBB32ri:    SimplifyShortImmForm(OutMI, X86::SBB32i32);  break;
-  case X86::SBB64ri32:  SimplifyShortImmForm(OutMI, X86::SBB64i32);  break;
-  case X86::SUB8ri:     SimplifyShortImmForm(OutMI, X86::SUB8i8);    break;
-  case X86::SUB16ri:    SimplifyShortImmForm(OutMI, X86::SUB16i16);  break;
-  case X86::SUB32ri:    SimplifyShortImmForm(OutMI, X86::SUB32i32);  break;
-  case X86::SUB64ri32:  SimplifyShortImmForm(OutMI, X86::SUB64i32);  break;
-  case X86::TEST8ri:    SimplifyShortImmForm(OutMI, X86::TEST8i8);   break;
-  case X86::TEST16ri:   SimplifyShortImmForm(OutMI, X86::TEST16i16); break;
-  case X86::TEST32ri:   SimplifyShortImmForm(OutMI, X86::TEST32i32); break;
-  case X86::TEST64ri32: SimplifyShortImmForm(OutMI, X86::TEST64i32); break;
-  case X86::XOR8ri:     SimplifyShortImmForm(OutMI, X86::XOR8i8);    break;
-  case X86::XOR16ri:    SimplifyShortImmForm(OutMI, X86::XOR16i16);  break;
-  case X86::XOR32ri:    SimplifyShortImmForm(OutMI, X86::XOR32i32);  break;
-  case X86::XOR64ri32:  SimplifyShortImmForm(OutMI, X86::XOR64i32);  break;
+  case X86::ADC8ri: case X86::ADC16ri: case X86::ADC32ri: case X86::ADC64ri32:
+  case X86::ADD8ri: case X86::ADD16ri: case X86::ADD32ri: case X86::ADD64ri32:
+  case X86::AND8ri: case X86::AND16ri: case X86::AND32ri: case X86::AND64ri32:
+  case X86::CMP8ri: case X86::CMP16ri: case X86::CMP32ri: case X86::CMP64ri32:
+  case X86::OR8ri:  case X86::OR16ri:  case X86::OR32ri:  case X86::OR64ri32:
+  case X86::SBB8ri: case X86::SBB16ri: case X86::SBB32ri: case X86::SBB64ri32:
+  case X86::SUB8ri: case X86::SUB16ri: case X86::SUB32ri: case X86::SUB64ri32:
+  case X86::TEST8ri:case X86::TEST16ri:case X86::TEST32ri:case X86::TEST64ri32:
+  case X86::XOR8ri: case X86::XOR16ri: case X86::XOR32ri: case X86::XOR64ri32: {
+    unsigned NewOpc;
+    switch (OutMI.getOpcode()) {
+    default: llvm_unreachable("Invalid opcode");
+    case X86::ADC8ri:     NewOpc = X86::ADC8i8;    break;
+    case X86::ADC16ri:    NewOpc = X86::ADC16i16;  break;
+    case X86::ADC32ri:    NewOpc = X86::ADC32i32;  break;
+    case X86::ADC64ri32:  NewOpc = X86::ADC64i32;  break;
+    case X86::ADD8ri:     NewOpc = X86::ADD8i8;    break;
+    case X86::ADD16ri:    NewOpc = X86::ADD16i16;  break;
+    case X86::ADD32ri:    NewOpc = X86::ADD32i32;  break;
+    case X86::ADD64ri32:  NewOpc = X86::ADD64i32;  break;
+    case X86::AND8ri:     NewOpc = X86::AND8i8;    break;
+    case X86::AND16ri:    NewOpc = X86::AND16i16;  break;
+    case X86::AND32ri:    NewOpc = X86::AND32i32;  break;
+    case X86::AND64ri32:  NewOpc = X86::AND64i32;  break;
+    case X86::CMP8ri:     NewOpc = X86::CMP8i8;    break;
+    case X86::CMP16ri:    NewOpc = X86::CMP16i16;  break;
+    case X86::CMP32ri:    NewOpc = X86::CMP32i32;  break;
+    case X86::CMP64ri32:  NewOpc = X86::CMP64i32;  break;
+    case X86::OR8ri:      NewOpc = X86::OR8i8;     break;
+    case X86::OR16ri:     NewOpc = X86::OR16i16;   break;
+    case X86::OR32ri:     NewOpc = X86::OR32i32;   break;
+    case X86::OR64ri32:   NewOpc = X86::OR64i32;   break;
+    case X86::SBB8ri:     NewOpc = X86::SBB8i8;    break;
+    case X86::SBB16ri:    NewOpc = X86::SBB16i16;  break;
+    case X86::SBB32ri:    NewOpc = X86::SBB32i32;  break;
+    case X86::SBB64ri32:  NewOpc = X86::SBB64i32;  break;
+    case X86::SUB8ri:     NewOpc = X86::SUB8i8;    break;
+    case X86::SUB16ri:    NewOpc = X86::SUB16i16;  break;
+    case X86::SUB32ri:    NewOpc = X86::SUB32i32;  break;
+    case X86::SUB64ri32:  NewOpc = X86::SUB64i32;  break;
+    case X86::TEST8ri:    NewOpc = X86::TEST8i8;   break;
+    case X86::TEST16ri:   NewOpc = X86::TEST16i16; break;
+    case X86::TEST32ri:   NewOpc = X86::TEST32i32; break;
+    case X86::TEST64ri32: NewOpc = X86::TEST64i32; break;
+    case X86::XOR8ri:     NewOpc = X86::XOR8i8;    break;
+    case X86::XOR16ri:    NewOpc = X86::XOR16i16;  break;
+    case X86::XOR32ri:    NewOpc = X86::XOR32i32;  break;
+    case X86::XOR64ri32:  NewOpc = X86::XOR64i32;  break;
+    }
+    SimplifyShortImmForm(OutMI, NewOpc);
+    break;
+  }
 
   // Try to shrink some forms of movsx.
   case X86::MOVSX16rr8:

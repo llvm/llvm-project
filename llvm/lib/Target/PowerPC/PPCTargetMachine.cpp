@@ -15,6 +15,7 @@
 #include "PPC.h"
 #include "PPCTargetObjectFile.h"
 #include "PPCTargetTransformInfo.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -387,8 +388,14 @@ void PPCPassConfig::addPreRegAlloc() {
     insertPass(VSXFMAMutateEarly ? &RegisterCoalescerID : &MachineSchedulerID,
                &PPCVSXFMAMutateID);
   }
-  if (getPPCTargetMachine().getRelocationModel() == Reloc::PIC_)
+  if (getPPCTargetMachine().getRelocationModel() == Reloc::PIC_) {
+    // FIXME: LiveVariables should not be necessary here!
+    // PPCTLSDYnamicCallPass uses LiveIntervals which previously dependet on
+    // LiveVariables. This (unnecessary) dependency has been removed now,
+    // however a stage-2 clang build fails without LiveVariables computed here.
+    addPass(&LiveVariablesID, false);
     addPass(createPPCTLSDynamicCallPass());
+  }
   if (EnableExtraTOCRegDeps)
     addPass(createPPCTOCRegDepsPass());
 }

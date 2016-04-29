@@ -1563,8 +1563,7 @@ public:
 
   /// \return Returns information about the register usages of the loop for the
   /// given vectorization factors.
-  SmallVector<RegisterUsage, 8>
-  calculateRegisterUsage(const SmallVector<unsigned, 8> &VFs);
+  SmallVector<RegisterUsage, 8> calculateRegisterUsage(ArrayRef<unsigned> VFs);
 
 private:
   /// The vectorization cost is a combination of the cost itself and a boolean
@@ -2057,7 +2056,6 @@ struct LoopVectorize : public FunctionPass {
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<BasicAAWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 
@@ -3200,6 +3198,11 @@ void InnerLoopVectorizer::createEmptyLoop() {
   LoopVectorBody.push_back(VecBody);
   LoopScalarBody = OldBasicBlock;
 
+  // Keep all loop hints from the original loop on the vector loop (we'll
+  // replace the vectorizer-specific hints below).
+  if (MDNode *LID = OrigLoop->getLoopID())
+    Lp->setLoopID(LID);
+
   LoopVectorizeHints Hints(Lp, true);
   Hints.setAlreadyVectorized();
 }
@@ -4337,7 +4340,9 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
         }
         assert(VectorF && "Can't create vector function.");
 
-        CallInst *V = Builder.CreateCall(VectorF, Args);
+        SmallVector<OperandBundleDef, 1> OpBundles;
+        CI->getOperandBundlesAsDefs(OpBundles);
+        CallInst *V = Builder.CreateCall(VectorF, Args, OpBundles);
 
         if (isa<FPMathOperator>(V))
           V->copyFastMathFlags(CI);
@@ -5505,8 +5510,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(bool OptForSize,
 }
 
 SmallVector<LoopVectorizationCostModel::RegisterUsage, 8>
-LoopVectorizationCostModel::calculateRegisterUsage(
-    const SmallVector<unsigned, 8> &VFs) {
+LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
   // This function calculates the register usage by measuring the highest number
   // of values that are alive at a single location. Obviously, this is a very
   // rough estimation. We scan the loop in a topological order in order and
@@ -5598,6 +5602,8 @@ LoopVectorizationCostModel::calculateRegisterUsage(
 
   // A lambda that gets the register usage for the given type and VF.
   auto GetRegUsage = [&DL, WidestRegister](Type *Ty, unsigned VF) {
+    if (Ty->isTokenTy())
+      return 0U;
     unsigned TypeSize = DL.getTypeSizeInBits(Ty->getScalarType());
     return std::max<unsigned>(1, VF * TypeSize / WidestRegister);
   };

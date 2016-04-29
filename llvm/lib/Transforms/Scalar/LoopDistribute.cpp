@@ -28,6 +28,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -587,9 +588,10 @@ private:
 /// \brief The actual class performing the per-loop work.
 class LoopDistributeForLoop {
 public:
-  LoopDistributeForLoop(Loop *L, LoopInfo *LI, const LoopAccessInfo &LAI,
-                        DominatorTree *DT, ScalarEvolution *SE)
-      : L(L), LI(LI), LAI(LAI), DT(DT), SE(SE) {
+  LoopDistributeForLoop(Loop *L, Function *F, LoopInfo *LI,
+                        const LoopAccessInfo &LAI, DominatorTree *DT,
+                        ScalarEvolution *SE)
+      : L(L), F(F), LI(LI), LAI(LAI), DT(DT), SE(SE) {
     setForced();
   }
 
@@ -601,27 +603,20 @@ public:
                  << "\" checking " << *L << "\n");
 
     BasicBlock *PH = L->getLoopPreheader();
-    if (!PH) {
-      DEBUG(dbgs() << "Skipping; no preheader");
-      return false;
-    }
-    if (!L->getExitBlock()) {
-      DEBUG(dbgs() << "Skipping; multiple exit blocks");
-      return false;
-    }
+    if (!PH)
+      return fail("no preheader");
+    if (!L->getExitBlock())
+      return fail("multiple exit blocks");
     // LAA will check that we only have a single exiting block.
 
     // Currently, we only distribute to isolate the part of the loop with
     // dependence cycles to enable partial vectorization.
-    if (LAI.canVectorizeMemory()) {
-      DEBUG(dbgs() << "Skipping; memory operations are safe for vectorization");
-      return false;
-    }
+    if (LAI.canVectorizeMemory())
+      return fail("memory operations are safe for vectorization");
+
     auto *Dependences = LAI.getDepChecker().getDependences();
-    if (!Dependences || Dependences->empty()) {
-      DEBUG(dbgs() << "Skipping; No unsafe dependences to isolate");
-      return false;
-    }
+    if (!Dependences || Dependences->empty())
+      return fail("no unsafe dependences to isolate");
 
     InstPartitionContainer Partitions(L, LI, DT);
 
@@ -674,14 +669,14 @@ public:
 
     DEBUG(dbgs() << "Seeded partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
-      return false;
+      return fail("cannot isolate unsafe dependencies");
 
     // Run the merge heuristics: Merge non-cyclic adjacent partitions since we
     // should be able to vectorize these together.
     Partitions.mergeBeforePopulating();
     DEBUG(dbgs() << "\nMerged partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
-      return false;
+      return fail("cannot isolate unsafe dependencies");
 
     // Now, populate the partitions with non-memory operations.
     Partitions.populateUsedSet();
@@ -693,17 +688,15 @@ public:
       DEBUG(dbgs() << "\nPartitions merged to ensure unique loads:\n"
                    << Partitions);
       if (Partitions.getSize() < 2)
-        return false;
+        return fail("cannot isolate unsafe dependencies");
     }
 
     // Don't distribute the loop if we need too many SCEV run-time checks.
     const SCEVUnionPredicate &Pred = LAI.PSE.getUnionPredicate();
     if (Pred.getComplexity() > (IsForced.getValueOr(false)
                                     ? PragmaDistributeSCEVCheckThreshold
-                                    : DistributeSCEVCheckThreshold)) {
-      DEBUG(dbgs() << "Too many SCEV run-time checks needed.\n");
-      return false;
-    }
+                                    : DistributeSCEVCheckThreshold))
+      return fail("too many SCEV run-time checks needed.\n");
 
     DEBUG(dbgs() << "\nDistributing loop: " << *L << "\n");
     // We're done forming the partitions set up the reverse mapping from
@@ -749,7 +742,39 @@ public:
     }
 
     ++NumLoopsDistributed;
+    // Report the success.
+    emitOptimizationRemark(F->getContext(), LDIST_NAME, *F, L->getStartLoc(),
+                           "distributed loop");
     return true;
+  }
+
+  /// \brief Provide diagnostics then \return with false.
+  bool fail(llvm::StringRef Message) {
+    LLVMContext &Ctx = F->getContext();
+    bool Forced = isForced().getValueOr(false);
+
+    DEBUG(dbgs() << "Skipping; " << Message << "\n");
+
+    // With Rpass-missed report that distribution failed.
+    emitOptimizationRemarkMissed(
+        Ctx, LDIST_NAME, *F, L->getStartLoc(),
+        "loop not distributed: use -Rpass-analysis=loop-distribute for more "
+        "info");
+
+    // With Rpass-analysis report why.  This is on by default if distribution
+    // was requested explicitly.
+    emitOptimizationRemarkAnalysis(
+        Ctx, Forced ? DiagnosticInfo::AlwaysPrint : LDIST_NAME, *F,
+        L->getStartLoc(), Twine("loop not distributed: ") + Message);
+
+    // Also issue a warning if distribution was requested explicitly but it
+    // failed.
+    if (Forced)
+      Ctx.diagnose(DiagnosticInfoOptimizationFailure(
+          *F, L->getStartLoc(), "loop not disributed: failed "
+                                "explicitly specified loop distribution"));
+
+    return false;
   }
 
   /// \brief Return if distribution forced to be enabled/disabled for the loop.
@@ -812,8 +837,10 @@ private:
     IsForced = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
   }
 
-  // Analyses used.
   Loop *L;
+  Function *F;
+
+  // Analyses used.
   LoopInfo *LI;
   const LoopAccessInfo &LAI;
   DominatorTree *DT;
@@ -864,7 +891,7 @@ public:
     bool Changed = false;
     for (Loop *L : Worklist) {
       const LoopAccessInfo &LAI = LAA->getInfo(L, ValueToValueMap());
-      LoopDistributeForLoop LDL(L, LI, LAI, DT, SE);
+      LoopDistributeForLoop LDL(L, &F, LI, LAI, DT, SE);
 
       // If distribution was forced for the specific loop to be
       // enabled/disabled, follow that.  Otherwise use the global flag.

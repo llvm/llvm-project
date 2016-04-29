@@ -1419,7 +1419,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
       for (unsigned i = 1, e = VL.size(); i != e; ++i) {
         CallInst *CI2 = dyn_cast<CallInst>(VL[i]);
         if (!CI2 || CI2->getCalledFunction() != Int ||
-            getVectorIntrinsicIDForCall(CI2, TLI) != ID) {
+            getVectorIntrinsicIDForCall(CI2, TLI) != ID ||
+            !CI->hasIdenticalOperandBundleSchema(*CI2)) {
           BS.cancelScheduling(VL);
           newTreeEntry(VL, false);
           DEBUG(dbgs() << "SLP: mismatched calls:" << *CI << "!=" << *VL[i]
@@ -1438,6 +1439,17 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
                          << "\n");
             return;
           }
+        }
+        // Verify that the bundle operands are identical between the two calls.
+        if (CI->hasOperandBundles() &&
+            !std::equal(CI->op_begin() + CI->getBundleOperandsStartIndex(),
+                        CI->op_begin() + CI->getBundleOperandsEndIndex(),
+                        CI2->op_begin() + CI2->getBundleOperandsStartIndex())) {
+          BS.cancelScheduling(VL);
+          newTreeEntry(VL, false);
+          DEBUG(dbgs() << "SLP: mismatched bundle operands in calls:" << *CI << "!="
+                       << *VL[i] << '\n');
+          return;
         }
       }
 
@@ -2554,7 +2566,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
       Type *Tys[] = { VectorType::get(CI->getType(), E->Scalars.size()) };
       Function *CF = Intrinsic::getDeclaration(M, ID, Tys);
-      Value *V = Builder.CreateCall(CF, OpVecs);
+      SmallVector<OperandBundleDef, 1> OpBundles;
+      CI->getOperandBundlesAsDefs(OpBundles);
+      Value *V = Builder.CreateCall(CF, OpVecs, OpBundles);
 
       // The scalar argument uses an in-tree scalar so we add the new vectorized
       // call to ExternalUses list to make sure that an extract will be

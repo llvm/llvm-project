@@ -122,12 +122,17 @@ std::error_code PDBFile::parseFileHeaders() {
   Context->SB =
       reinterpret_cast<const SuperBlock *>(BufferRef.getBufferStart());
   const SuperBlock *SB = Context->SB;
+
+  // Make sure the file is sufficiently large to hold a super block.
+  if (BufferRef.getBufferSize() < sizeof(SuperBlock))
+    return std::make_error_code(std::errc::illegal_byte_sequence);
+
   // Check the magic bytes.
   if (memcmp(SB->MagicBytes, Magic, sizeof(Magic)) != 0)
     return std::make_error_code(std::errc::illegal_byte_sequence);
 
   // We don't support blocksizes which aren't a multiple of four bytes.
-  if (SB->BlockSize % sizeof(support::ulittle32_t) != 0)
+  if (SB->BlockSize == 0 || SB->BlockSize % sizeof(support::ulittle32_t) != 0)
     return std::make_error_code(std::errc::not_supported);
 
   // We don't support directories whose sizes aren't a multiple of four bytes.

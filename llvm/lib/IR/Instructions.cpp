@@ -408,9 +408,10 @@ static bool IsConstantOne(Value *val) {
 
 static Instruction *createMalloc(Instruction *InsertBefore,
                                  BasicBlock *InsertAtEnd, Type *IntPtrTy,
-                                 Type *AllocTy, Value *AllocSize, 
-                                 Value *ArraySize, Function *MallocF,
-                                 const Twine &Name) {
+                                 Type *AllocTy, Value *AllocSize,
+                                 Value *ArraySize,
+                                 ArrayRef<OperandBundleDef> OpB,
+                                 Function *MallocF, const Twine &Name) {
   assert(((!InsertBefore && InsertAtEnd) || (InsertBefore && !InsertAtEnd)) &&
          "createMalloc needs either InsertBefore or InsertAtEnd");
 
@@ -461,13 +462,14 @@ static Instruction *createMalloc(Instruction *InsertBefore,
   CallInst *MCall = nullptr;
   Instruction *Result = nullptr;
   if (InsertBefore) {
-    MCall = CallInst::Create(MallocFunc, AllocSize, "malloccall", InsertBefore);
+    MCall = CallInst::Create(MallocFunc, AllocSize, OpB, "malloccall",
+                             InsertBefore);
     Result = MCall;
     if (Result->getType() != AllocPtrType)
       // Create a cast instruction to convert to the right type...
       Result = new BitCastInst(MCall, AllocPtrType, Name, InsertBefore);
   } else {
-    MCall = CallInst::Create(MallocFunc, AllocSize, "malloccall");
+    MCall = CallInst::Create(MallocFunc, AllocSize, OpB, "malloccall");
     Result = MCall;
     if (Result->getType() != AllocPtrType) {
       InsertAtEnd->getInstList().push_back(MCall);
@@ -497,8 +499,18 @@ Instruction *CallInst::CreateMalloc(Instruction *InsertBefore,
                                     Function *MallocF,
                                     const Twine &Name) {
   return createMalloc(InsertBefore, nullptr, IntPtrTy, AllocTy, AllocSize,
-                      ArraySize, MallocF, Name);
+                      ArraySize, None, MallocF, Name);
 }
+Instruction *CallInst::CreateMalloc(Instruction *InsertBefore,
+                                    Type *IntPtrTy, Type *AllocTy,
+                                    Value *AllocSize, Value *ArraySize,
+                                    ArrayRef<OperandBundleDef> OpB,
+                                    Function *MallocF,
+                                    const Twine &Name) {
+  return createMalloc(InsertBefore, nullptr, IntPtrTy, AllocTy, AllocSize,
+                      ArraySize, OpB, MallocF, Name);
+}
+
 
 /// CreateMalloc - Generate the IR for a call to malloc:
 /// 1. Compute the malloc call's argument as the specified type's size,
@@ -513,10 +525,20 @@ Instruction *CallInst::CreateMalloc(BasicBlock *InsertAtEnd,
                                     Value *AllocSize, Value *ArraySize, 
                                     Function *MallocF, const Twine &Name) {
   return createMalloc(nullptr, InsertAtEnd, IntPtrTy, AllocTy, AllocSize,
-                      ArraySize, MallocF, Name);
+                      ArraySize, None, MallocF, Name);
+}
+Instruction *CallInst::CreateMalloc(BasicBlock *InsertAtEnd,
+                                    Type *IntPtrTy, Type *AllocTy,
+                                    Value *AllocSize, Value *ArraySize,
+                                    ArrayRef<OperandBundleDef> OpB,
+                                    Function *MallocF, const Twine &Name) {
+  return createMalloc(nullptr, InsertAtEnd, IntPtrTy, AllocTy, AllocSize,
+                      ArraySize, OpB, MallocF, Name);
 }
 
-static Instruction *createFree(Value *Source, Instruction *InsertBefore,
+static Instruction *createFree(Value *Source,
+                               ArrayRef<OperandBundleDef> Bundles,
+                               Instruction *InsertBefore,
                                BasicBlock *InsertAtEnd) {
   assert(((!InsertBefore && InsertAtEnd) || (InsertBefore && !InsertAtEnd)) &&
          "createFree needs either InsertBefore or InsertAtEnd");
@@ -535,11 +557,11 @@ static Instruction *createFree(Value *Source, Instruction *InsertBefore,
   if (InsertBefore) {
     if (Source->getType() != IntPtrTy)
       PtrCast = new BitCastInst(Source, IntPtrTy, "", InsertBefore);
-    Result = CallInst::Create(FreeFunc, PtrCast, "", InsertBefore);
+    Result = CallInst::Create(FreeFunc, PtrCast, Bundles, "", InsertBefore);
   } else {
     if (Source->getType() != IntPtrTy)
       PtrCast = new BitCastInst(Source, IntPtrTy, "", InsertAtEnd);
-    Result = CallInst::Create(FreeFunc, PtrCast, "");
+    Result = CallInst::Create(FreeFunc, PtrCast, Bundles, "");
   }
   Result->setTailCall();
   if (Function *F = dyn_cast<Function>(FreeFunc))
@@ -550,14 +572,26 @@ static Instruction *createFree(Value *Source, Instruction *InsertBefore,
 
 /// CreateFree - Generate the IR for a call to the builtin free function.
 Instruction *CallInst::CreateFree(Value *Source, Instruction *InsertBefore) {
-  return createFree(Source, InsertBefore, nullptr);
+  return createFree(Source, None, InsertBefore, nullptr);
+}
+Instruction *CallInst::CreateFree(Value *Source,
+                                  ArrayRef<OperandBundleDef> Bundles,
+                                  Instruction *InsertBefore) {
+  return createFree(Source, Bundles, InsertBefore, nullptr);
 }
 
 /// CreateFree - Generate the IR for a call to the builtin free function.
 /// Note: This function does not add the call to the basic block, that is the
 /// responsibility of the caller.
 Instruction *CallInst::CreateFree(Value *Source, BasicBlock *InsertAtEnd) {
-  Instruction *FreeCall = createFree(Source, nullptr, InsertAtEnd);
+  Instruction *FreeCall = createFree(Source, None, nullptr, InsertAtEnd);
+  assert(FreeCall && "CreateFree did not create a CallInst");
+  return FreeCall;
+}
+Instruction *CallInst::CreateFree(Value *Source,
+                                  ArrayRef<OperandBundleDef> Bundles,
+                                  BasicBlock *InsertAtEnd) {
+  Instruction *FreeCall = createFree(Source, Bundles, nullptr, InsertAtEnd);
   assert(FreeCall && "CreateFree did not create a CallInst");
   return FreeCall;
 }

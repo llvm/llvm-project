@@ -2793,15 +2793,18 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
       const AttributeSet &NewPAL =
           AttributeSet::get(FTy->getContext(), NewAttrs);
 
+      SmallVector<OperandBundleDef, 1> OpBundles;
+      CS.getOperandBundlesAsDefs(OpBundles);
+
       Instruction *NewCaller;
       if (InvokeInst *II = dyn_cast<InvokeInst>(Caller)) {
         NewCaller = InvokeInst::Create(NewCallee,
                                        II->getNormalDest(), II->getUnwindDest(),
-                                       NewArgs);
+                                       NewArgs, OpBundles);
         cast<InvokeInst>(NewCaller)->setCallingConv(II->getCallingConv());
         cast<InvokeInst>(NewCaller)->setAttributes(NewPAL);
       } else {
-        NewCaller = CallInst::Create(NewCallee, NewArgs);
+        NewCaller = CallInst::Create(NewCallee, NewArgs, OpBundles);
         if (cast<CallInst>(Caller)->isTailCall())
           cast<CallInst>(NewCaller)->setTailCall();
         cast<CallInst>(NewCaller)->
