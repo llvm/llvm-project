@@ -30,11 +30,13 @@
 namespace swift {
     namespace remote {
         class MemoryReader;
+        class RemoteAddress;
     }
     namespace remoteAST {
         class RemoteASTContext;
     }
     enum class MetadataKind : uint32_t;
+    class TypeBase;
 }
 
 namespace lldb_private {
@@ -55,6 +57,9 @@ public:
     
     class MetadataPromise;
     typedef std::shared_ptr<MetadataPromise> MetadataPromiseSP;
+    
+    class MemberVariableOffsetResolver;
+    typedef std::shared_ptr<MemberVariableOffsetResolver> MemberVariableOffsetResolverSP;
     
     //------------------------------------------------------------------
     // Static Functions
@@ -215,6 +220,27 @@ public:
         
         bool
         IsStaticallyDetermined ();
+    };
+    
+    class MemberVariableOffsetResolver
+    {
+        friend class SwiftLanguageRuntime;
+        
+        MemberVariableOffsetResolver(swift::ASTContext *,
+                                     SwiftLanguageRuntime *,
+                                     swift::TypeBase *);
+        
+        swift::ASTContext *m_swift_ast;
+        std::unique_ptr<swift::remoteAST::RemoteASTContext> m_remote_ast;
+        SwiftLanguageRuntime *m_swift_runtime;
+        swift::TypeBase *m_swift_type;
+        std::unordered_map<const char*, uint64_t> m_offsets;
+        
+    public:
+        llvm::Optional<uint64_t>
+        ResolveOffset (ValueObject *valobj,
+                       ConstString ivar_name,
+                       Error* = nullptr);
     };
     
     class MetadataUtils
@@ -1442,6 +1468,9 @@ public:
     virtual MetadataPromiseSP
     GetMetadataPromise (lldb::addr_t addr,
                         SwiftASTContext* swift_ast_ctx = nullptr);
+
+    virtual MemberVariableOffsetResolverSP
+    GetMemberVariableOffsetResolver (CompilerType compiler_type);
     
     virtual MetadataSP
     GetMetadataForType (CompilerType type);
@@ -1584,7 +1613,7 @@ protected:
     
     SwiftASTContext*
     GetScratchSwiftASTContext ();
-    
+        
     // the Swift runtime assumes that metadata will not go away, so caching
     // by address is a reasonable strategy
     std::map<lldb::addr_t, MetadataSP> m_metadata_cache;
@@ -1605,15 +1634,25 @@ protected:
 
     std::shared_ptr<swift::remote::MemoryReader> m_memory_reader_sp;
     
-    typedef std::tuple<swift::ASTContext*,lldb::addr_t> MetadataPromiseKey;
-    
-    struct MetadataPromiseKeyHasher
+    template <typename Key1, typename Key2, typename Value1>
+    struct KeyHasher
     {
+        using KeyType = std::tuple<Key1,Key2>;
+        using HasherType = KeyHasher<Key1,Key2,Value1>;
+        using MapType = std::unordered_map<KeyType, Value1, HasherType>;
+
         size_t
-        operator()(const std::tuple<swift::ASTContext*,lldb::addr_t> &key) const;
+        operator()(const std::tuple<Key1,Key2> &key) const
+        {
+            // fairly trivial hash combiner function
+            auto hash1 = std::hash<Key1>()(std::get<0>(key));
+            auto hash2 = std::hash<Key2>()(std::get<1>(key));
+            return hash2 + 0x9e3779b9 + (hash1<<6) + (hash1>>2);
+        }
     };
-    
-    std::unordered_map<MetadataPromiseKey, MetadataPromiseSP, MetadataPromiseKeyHasher> m_promises_map;
+
+    typename KeyHasher<swift::ASTContext*, lldb::addr_t, MetadataPromiseSP>::MapType m_promises_map;
+    typename KeyHasher<swift::ASTContext*, swift::TypeBase*, MemberVariableOffsetResolverSP>::MapType m_resolvers_map;
 
 private:
     DISALLOW_COPY_AND_ASSIGN (SwiftLanguageRuntime);
