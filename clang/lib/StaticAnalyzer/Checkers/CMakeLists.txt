@@ -1,8 +1,3 @@
-clang_tablegen(Checkers.inc -gen-clang-sa-checkers
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
-  SOURCE Checkers.td
-  TARGET ClangSACheckers)
-
 set(LLVM_LINK_COMPONENTS
   Support
   )
