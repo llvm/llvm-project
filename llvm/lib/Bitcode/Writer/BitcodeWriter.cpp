@@ -3326,7 +3326,7 @@ void ModuleBitcodeWriter::writeModuleHash(size_t BlockStartPos) {
   // Emit the module's hash.
   // MODULE_CODE_HASH: [5*i32]
   SHA1 Hasher;
-  Hasher.update(ArrayRef<uint8_t>((uint8_t *)&(Buffer)[BlockStartPos],
+  Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&(Buffer)[BlockStartPos],
                                   Buffer.size() - BlockStartPos));
   auto Hash = Hasher.result();
   SmallVector<uint64_t, 20> Vals;
