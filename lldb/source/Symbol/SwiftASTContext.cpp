@@ -7721,7 +7721,8 @@ GetInstanceVariableOffset_Symbol (ExecutionContext *exe_ctx,
 }
 
 static int64_t
-GetInstanceVariableOffset_Metadata (ExecutionContext *exe_ctx,
+GetInstanceVariableOffset_Metadata (ValueObject *valobj,
+                                    ExecutionContext *exe_ctx,
                                     const CompilerType &type,
                                     ConstString ivar_name,
                                     const CompilerType &ivar_type)
@@ -7736,29 +7737,16 @@ GetInstanceVariableOffset_Metadata (ExecutionContext *exe_ctx,
         SwiftLanguageRuntime *runtime = process->GetSwiftLanguageRuntime();
         if (runtime)
         {
-            auto metadata_sp = runtime->GetMetadataForType(type);
-            SwiftLanguageRuntime::FieldContainerTypeMetadata *fields_metadata =
-            llvm::dyn_cast_or_null<SwiftLanguageRuntime::FieldContainerTypeMetadata>(metadata_sp.get());
-            if (fields_metadata)
+            if (auto resolver_sp = runtime->GetMemberVariableOffsetResolver(type))
             {
-                if(log)
-                    log->Printf("[GetInstanceVariableOffset_Metadata] fields_metadata = %p - name = %s", fields_metadata, fields_metadata->GetMangledName().c_str());
-
-                for (size_t idx = 0;
-                     idx < fields_metadata->GetNumFields();
-                     idx++)
-                {
-                    auto field = fields_metadata->GetFieldAtIndex(idx);
-                    ConstString field_name = field.GetName();
-                    if (log)
-                        log->Printf("[GetInstanceVariableOffset_Metadata] field_name = %s - field_offset = 0x%" PRIx64, field_name.GetCString(), field.GetOffset());
-
-                    if (field_name && field_name == ivar_name)
-                        return field.GetOffset();
-                }
+                Error error;
+                if (auto result = resolver_sp->ResolveOffset(valobj, ivar_name, &error))
+                    return result.getValue();
+                else if (log)
+                    log->Printf("[GetInstanceVariableOffset_Metadata] resolver failure: %s", error.AsCString());
             }
             else if (log)
-                log->Printf("[GetInstanceVariableOffset_Metadata] no fields_metadata");
+                log->Printf("[GetInstanceVariableOffset_Metadata] no offset resolver");
         }
         else if (log)
             log->Printf("[GetInstanceVariableOffset_Metadata] no runtime");
@@ -7769,7 +7757,8 @@ GetInstanceVariableOffset_Metadata (ExecutionContext *exe_ctx,
 }
 
 static int64_t
-GetInstanceVariableOffset (ExecutionContext *exe_ctx,
+GetInstanceVariableOffset (ValueObject *valobj,
+                           ExecutionContext *exe_ctx,
                            const CompilerType &class_type,
                            const char *ivar_name,
                            const CompilerType &ivar_type)
@@ -7808,7 +7797,7 @@ GetInstanceVariableOffset (ExecutionContext *exe_ctx,
                 {
                     offset = GetInstanceVariableOffset_Symbol(exe_ctx, class_type, ivar_name, ivar_type);
                     if (offset == LLDB_INVALID_IVAR_OFFSET)
-                        offset = GetInstanceVariableOffset_Metadata(exe_ctx, class_type, ConstString(ivar_name), ivar_type);
+                        offset = GetInstanceVariableOffset_Metadata(valobj, exe_ctx, class_type, ConstString(ivar_name), ivar_type);
                 }
             }
         }
@@ -8006,7 +7995,7 @@ SwiftASTContext::GetChildCompilerTypeAtIndex (void* type,
                     if (cached_member_info->member_infos[idx].is_fragile && cached_member_info->member_infos[idx].byte_offset == 0)
                     {
                         CompilerType compiler_type(GetASTContext(), GetSwiftType(type));
-                        const int64_t fragile_ivar_offset = GetInstanceVariableOffset (exe_ctx, compiler_type, child_name.c_str(), cached_member_info->member_infos[idx].clang_type);
+                        const int64_t fragile_ivar_offset = GetInstanceVariableOffset (valobj, exe_ctx, compiler_type, child_name.c_str(), cached_member_info->member_infos[idx].clang_type);
                         if (fragile_ivar_offset != LLDB_INVALID_IVAR_OFFSET)
                             cached_member_info->member_infos[idx].byte_offset = fragile_ivar_offset;
                     }

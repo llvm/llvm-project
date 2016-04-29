@@ -94,7 +94,8 @@ SwiftLanguageRuntime::SwiftLanguageRuntime (Process *process) :
     m_loaded_DumpForDebugger(eLazyBoolCalculate),
     m_SwiftNativeNSErrorISA(),
     m_memory_reader_sp(),
-    m_promises_map()
+    m_promises_map(),
+    m_resolvers_map()
 {
     SetupSwiftObject();
     SetupSwiftError();
@@ -1215,6 +1216,83 @@ SwiftLanguageRuntime::GetScratchSwiftASTContext ()
     return m_process->GetTarget().GetScratchSwiftASTContext(error);
 }
 
+SwiftLanguageRuntime::MemberVariableOffsetResolver::MemberVariableOffsetResolver(swift::ASTContext *ast_ctx,
+                                                                                 SwiftLanguageRuntime *runtime,
+                                                                                 swift::TypeBase *type) :
+m_swift_ast(ast_ctx),
+m_swift_runtime(runtime),
+m_offsets()
+{
+    lldbassert(m_swift_ast && "MemberVariableOffsetResolver requires a swift::ASTContext");
+    lldbassert(m_swift_runtime && "MemberVariableOffsetResolver requires a SwiftLanguageRuntime");
+    lldbassert(type && "MemberVariableOffsetResolver requires a swift::Type");
+    m_swift_type = type;
+    m_remote_ast.reset(new swift::remoteAST::RemoteASTContext(*ast_ctx, m_swift_runtime->GetMemoryReader()));
+}
+
+llvm::Optional<uint64_t>
+SwiftLanguageRuntime::MemberVariableOffsetResolver::ResolveOffset (ValueObject *valobj,
+                                                                   ConstString ivar_name,
+                                                                   Error* error)
+{
+    if (error)
+        error->Clear();
+    
+    auto iter = m_offsets.find(ivar_name.AsCString()), end = m_offsets.end();
+    if (iter != end)
+        return iter->second;
+    
+    auto optmeta = swift::remote::RemoteAddress(nullptr);
+
+    const swift::TypeKind type_kind = m_swift_type->getKind();
+    switch (type_kind)
+    {
+        case swift::TypeKind::Class:
+        case swift::TypeKind::BoundGenericClass:
+        {
+            // retrieve the metadata for class types as this is where we get the maximum benefit
+            if (valobj)
+            {
+                lldb::addr_t value = valobj->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+                if (value == 0 || value == LLDB_INVALID_ADDRESS)
+                    break;
+                Error error;
+                lldb::addr_t meta_ptr = m_swift_runtime->GetProcess()->ReadPointerFromMemory(value, error);
+                if (error.Fail() || meta_ptr == 0 || meta_ptr == LLDB_INVALID_ADDRESS)
+                    break;
+                if (auto objc_runtime = m_swift_runtime->GetObjCRuntime())
+                {
+                    if (objc_runtime->GetRuntimeVersion() == ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2)
+                    {
+                        meta_ptr = ((AppleObjCRuntimeV2*)objc_runtime)->GetPointerISA(meta_ptr);
+                    }
+                }
+                optmeta = swift::remote::RemoteAddress(meta_ptr);
+            }
+        }
+            break;
+        default:
+            break;
+    }
+    
+    
+    swift::remoteAST::Result<uint64_t> result = m_remote_ast->getOffsetOfMember(m_swift_type, optmeta, ivar_name.GetStringRef());
+    if (result)
+    {
+        m_offsets.emplace(ivar_name.AsCString(), result.getValue());
+        return result.getValue();
+    }
+    else
+    {
+        if (error)
+        {
+            const auto& failure = result.getFailure();
+            error->SetErrorStringWithFormat("error in resolving type offset: %s", failure.render().c_str());
+        }
+        return llvm::Optional<uint64_t>();
+    }
+}
+
 SwiftLanguageRuntime::MetadataPromise::MetadataPromise (swift::ASTContext *ast_ctx,
                                                         SwiftLanguageRuntime *runtime,
                                                         lldb::addr_t location) :
@@ -1540,15 +1618,6 @@ SwiftLanguageRuntime::GetMetadataForLocation (lldb::addr_t addr)
     return metadata_sp;
 }
 
-size_t
-SwiftLanguageRuntime::MetadataPromiseKeyHasher::operator()(const std::tuple<swift::ASTContext*,lldb::addr_t> &key) const
-{
-    // fairly trivial hash combiner function
-    auto hash1 = std::hash<swift::ASTContext*>()(std::get<0>(key));
-    auto hash2 = std::hash<lldb::addr_t>()(std::get<1>(key));
-    return hash2 + 0x9e3779b9 + (hash1<<6) + (hash1>>2);
-}
-
 SwiftLanguageRuntime::MetadataPromiseSP
 SwiftLanguageRuntime::GetMetadataPromise (lldb::addr_t addr,
                                           SwiftASTContext* swift_ast_ctx)
@@ -1570,7 +1639,7 @@ SwiftLanguageRuntime::GetMetadataPromise (lldb::addr_t addr,
         }
     }
 
-    MetadataPromiseKey key{swift_ast_ctx->GetASTContext(),addr};
+    typename decltype(m_promises_map)::key_type key{swift_ast_ctx->GetASTContext(),addr};
     
     auto iter = m_promises_map.find(key), end = m_promises_map.end();
     if (iter != end)
@@ -1581,6 +1650,31 @@ SwiftLanguageRuntime::GetMetadataPromise (lldb::addr_t addr,
                                                      std::get<1>(key)));
     m_promises_map.emplace(key, promise_sp);
     return promise_sp;
+}
+
+SwiftLanguageRuntime::MemberVariableOffsetResolverSP
+SwiftLanguageRuntime::GetMemberVariableOffsetResolver (CompilerType compiler_type)
+{
+    if (!compiler_type.IsValid())
+        return nullptr;
+    
+    SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem());
+    if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
+        return nullptr;
+    
+    swift::TypeBase *swift_type = reinterpret_cast<swift::TypeBase*>(compiler_type.GetCanonicalType().GetOpaqueQualType());
+
+    typename decltype(m_resolvers_map)::key_type key{swift_ast_ctx->GetASTContext(),swift_type};
+    
+    auto iter = m_resolvers_map.find(key), end = m_resolvers_map.end();
+    if (iter != end)
+        return iter->second;
+    
+    MemberVariableOffsetResolverSP resolver_sp(new MemberVariableOffsetResolver(std::get<0>(key),
+                                                                                this,
+                                                                                std::get<1>(key)));
+    m_resolvers_map.emplace(key, resolver_sp);
+    return resolver_sp;
 }
 
 SwiftLanguageRuntime::MetadataUtils::MetadataUtils (SwiftLanguageRuntime& runtime,
