@@ -4,7 +4,6 @@ add_llvm_library(LLVMInstrumentation
   DataFlowSanitizer.cpp
   GCOVProfiling.cpp
   MemorySanitizer.cpp
-  IndirectCallPromotion.cpp
   Instrumentation.cpp
   InstrProfiling.cpp
   PGOInstrumentation.cpp

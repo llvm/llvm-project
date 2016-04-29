@@ -121,7 +121,6 @@ void initializeGCOVProfilerPass(PassRegistry&);
 void initializePGOInstrumentationGenPass(PassRegistry&);
 void initializePGOInstrumentationUsePass(PassRegistry&);
 void initializeInstrProfilingPass(PassRegistry&);
-void initializePGOIndirectCallPromotionPass(PassRegistry&);
 void initializeAddressSanitizerPass(PassRegistry&);
 void initializeAddressSanitizerModulePass(PassRegistry&);
 void initializeMemorySanitizerPass(PassRegistry&);
