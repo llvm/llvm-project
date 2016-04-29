@@ -1244,6 +1244,9 @@ static GlobalVariable *PerformHeapAllocSRoA(GlobalVariable *GV, CallInst *CI,
   std::vector<Value*> FieldGlobals;
   std::vector<Value*> FieldMallocs;
 
+  SmallVector<OperandBundleDef, 1> OpBundles;
+  CI->getOperandBundlesAsDefs(OpBundles);
+
   unsigned AS = GV->getType()->getPointerAddressSpace();
   for (unsigned FieldNo = 0, e = STy->getNumElements(); FieldNo != e;++FieldNo){
     Type *FieldTy = STy->getElementType(FieldNo);
@@ -1262,7 +1265,7 @@ static GlobalVariable *PerformHeapAllocSRoA(GlobalVariable *GV, CallInst *CI,
     Type *IntPtrTy = DL.getIntPtrType(CI->getType());
     Value *NMI = CallInst::CreateMalloc(CI, IntPtrTy, FieldTy,
                                         ConstantInt::get(IntPtrTy, TypeSize),
-                                        NElems, nullptr,
+                                        NElems, OpBundles, nullptr,
                                         CI->getName() + ".f" + Twine(FieldNo));
     FieldMallocs.push_back(NMI);
     new StoreInst(NMI, NGV, CI);
@@ -1321,7 +1324,7 @@ static GlobalVariable *PerformHeapAllocSRoA(GlobalVariable *GV, CallInst *CI,
                                          Cmp, NullPtrBlock);
 
     // Fill in FreeBlock.
-    CallInst::CreateFree(GVVal, BI);
+    CallInst::CreateFree(GVVal, OpBundles, BI);
     new StoreInst(Constant::getNullValue(GVVal->getType()), FieldGlobals[i],
                   FreeBlock);
     BranchInst::Create(NextBlock, FreeBlock);
@@ -1487,9 +1490,11 @@ static bool tryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
       unsigned TypeSize = DL.getStructLayout(AllocSTy)->getSizeInBytes();
       Value *AllocSize = ConstantInt::get(IntPtrTy, TypeSize);
       Value *NumElements = ConstantInt::get(IntPtrTy, AT->getNumElements());
-      Instruction *Malloc = CallInst::CreateMalloc(CI, IntPtrTy, AllocSTy,
-                                                   AllocSize, NumElements,
-                                                   nullptr, CI->getName());
+      SmallVector<OperandBundleDef, 1> OpBundles;
+      CI->getOperandBundlesAsDefs(OpBundles);
+      Instruction *Malloc =
+          CallInst::CreateMalloc(CI, IntPtrTy, AllocSTy, AllocSize, NumElements,
+                                 OpBundles, nullptr, CI->getName());
       Instruction *Cast = new BitCastInst(Malloc, CI->getType(), "tmp", CI);
       CI->replaceAllUsesWith(Cast);
       CI->eraseFromParent();

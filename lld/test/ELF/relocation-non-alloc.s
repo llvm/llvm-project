@@ -27,13 +27,14 @@
 // CHECK-NEXT: ]
 // CHECK-NEXT: Address: 0x0
 // CHECK-NEXT: Offset:
-// CHECK-NEXT: Size: 16
+// CHECK-NEXT: Size: 32
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
 // CHECK-NEXT: AddressAlignment: 1
 // CHECK-NEXT: EntrySize: 0
 // CHECK-NEXT: SectionData (
 // CHECK-NEXT:   0000: 00100000 00000000 00100000 00000000
+// CHECK-NEXT:   0010: 00100000 00000000 00100000 00000000
 // CHECK-NEXT: )
 
 // CHECK:      Relocations [
@@ -46,6 +47,10 @@
         .global zed
 zed:
 bar:
+        .quad bar
+        .quad zed
+
+        .section foo
         .quad bar
         .quad zed
 

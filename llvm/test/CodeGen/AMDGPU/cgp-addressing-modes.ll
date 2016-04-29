@@ -40,7 +40,7 @@ done:
 
 ; GCN-LABEL: {{^}}test_sink_global_small_max_i32_ds_offset:
 ; GCN: s_and_saveexec_b64
-; GCN: buffer_load_sbyte {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, s{{[0-9]+$}}
+; GCN: buffer_load_sbyte {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, s{{[0-9]+$}}
 ; GCN: {{^}}BB1_2:
 ; GCN: s_or_b64 exec
 define void @test_sink_global_small_max_i32_ds_offset(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
@@ -67,7 +67,7 @@ done:
 
 ; GCN-LABEL: {{^}}test_sink_global_small_max_mubuf_offset:
 ; GCN: s_and_saveexec_b64
-; GCN: buffer_load_sbyte {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4095{{$}}
+; GCN: buffer_load_sbyte {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4095{{$}}
 ; GCN: {{^}}BB2_2:
 ; GCN: s_or_b64 exec
 define void @test_sink_global_small_max_mubuf_offset(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
@@ -94,7 +94,7 @@ done:
 
 ; GCN-LABEL: {{^}}test_sink_global_small_max_plus_1_mubuf_offset:
 ; GCN: s_and_saveexec_b64
-; GCN: buffer_load_sbyte {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, s{{[0-9]+$}}
+; GCN: buffer_load_sbyte {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, s{{[0-9]+$}}
 ; GCN: {{^}}BB3_2:
 ; GCN: s_or_b64 exec
 define void @test_sink_global_small_max_plus_1_mubuf_offset(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {

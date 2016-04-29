@@ -138,6 +138,11 @@ void DivergencePropagator::exploreSyncDependency(TerminatorInst *TI) {
   //   a2 = 2;
   // a = phi(a1, a2); // sync dependent on (tid < 5)
   BasicBlock *ThisBB = TI->getParent();
+
+  // Unreachable blocks may not be in the dominator tree.
+  if (!DT.isReachableFromEntry(ThisBB))
+    return;
+
   BasicBlock *IPostDom = PDT.getNode(ThisBB)->getIDom()->getBlock();
   if (IPostDom == nullptr)
     return;

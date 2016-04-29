@@ -1401,8 +1401,11 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
         Function *Overload = Intrinsic::getDeclaration(
             CI.getModule(), II->getIntrinsicID(), IntrinsicType);
 
+        SmallVector<OperandBundleDef, 1> OpBundles;
+        II->getOperandBundlesAsDefs(OpBundles);
+
         Value *Args[] = { InnerTrunc };
-        return CallInst::Create(Overload, Args, II->getName());
+        return CallInst::Create(Overload, Args, OpBundles, II->getName());
       }
     }
   }

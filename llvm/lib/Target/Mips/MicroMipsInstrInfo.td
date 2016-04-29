@@ -251,7 +251,7 @@ class LLBaseMM<string opstr, RegisterOperand RO> :
 }
 
 class LLEBaseMM<string opstr, RegisterOperand RO> :
-  InstSE<(outs RO:$rt), (ins mem_mm_12:$addr),
+  InstSE<(outs RO:$rt), (ins mem_simm9:$addr),
          !strconcat(opstr, "\t$rt, $addr"), [], NoItinerary, FrmI> {
   let DecoderMethod = "DecodeMemMMImm9";
   let mayLoad = 1;
@@ -266,7 +266,7 @@ class SCBaseMM<string opstr, RegisterOperand RO> :
 }
 
 class SCEBaseMM<string opstr, RegisterOperand RO> :
-  InstSE<(outs RO:$dst), (ins RO:$rt, mem_mm_12:$addr),
+  InstSE<(outs RO:$dst), (ins RO:$rt, mem_simm9:$addr),
          !strconcat(opstr, "\t$rt, $addr"), [], NoItinerary, FrmI> {
   let DecoderMethod = "DecodeMemMMImm9";
   let mayStore = 1;
@@ -738,10 +738,13 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
     def LBuE_MM : Load<"lbue", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0x6, 0x0>;
     def LHE_MM  : Load<"lhe", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0x6, 0x5>;
     def LHuE_MM : Load<"lhue", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0x6, 0x1>;
-    def LWE_MM  : Load<"lwe", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0x6, 0x7>;
-    def SBE_MM  : Store<"sbe", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0xa, 0x4>;
-    def SHE_MM  : Store<"she", GPR32Opnd>, POOL32C_LHUE_FM_MM<0x18, 0xa, 0x5>;
-    def SWE_MM  : StoreMemory<"swe", GPR32Opnd, mem_simm9gpr>,
+    def LWE_MM  : LoadMemory<"lwe", GPR32Opnd, mem_simm9>,
+                  POOL32C_LHUE_FM_MM<0x18, 0x6, 0x7>;
+    def SBE_MM  : StoreMemory<"sbe", GPR32Opnd, mem_simm9>,
+                  POOL32C_LHUE_FM_MM<0x18, 0xa, 0x4>;
+    def SHE_MM  : StoreMemory<"she", GPR32Opnd, mem_simm9>,
+                  POOL32C_LHUE_FM_MM<0x18, 0xa, 0x5>;
+    def SWE_MM  : StoreMemory<"swe", GPR32Opnd, mem_simm9>,
                   POOL32C_LHUE_FM_MM<0x18, 0xa, 0x7>;
   }
 

@@ -4,8 +4,8 @@
 
 
 ; COMMON-LABEL: {{^}}fdiv_f64:
-; COMMON-DAG: buffer_load_dwordx2 [[NUM:v\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0
-; COMMON-DAG: buffer_load_dwordx2 [[DEN:v\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0 offset:8
+; COMMON-DAG: buffer_load_dwordx2 [[NUM:v\[[0-9]+:[0-9]+\]]], off, {{s\[[0-9]+:[0-9]+\]}}, 0
+; COMMON-DAG: buffer_load_dwordx2 [[DEN:v\[[0-9]+:[0-9]+\]]], off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:8
 ; CI-DAG: v_div_scale_f64 [[SCALE0:v\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, [[DEN]], [[DEN]], [[NUM]]
 ; CI-DAG: v_div_scale_f64 [[SCALE1:v\[[0-9]+:[0-9]+\]]], vcc, [[NUM]], [[DEN]], [[NUM]]
 

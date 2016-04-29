@@ -113,6 +113,8 @@ public:
     // Output the constant in big/little endian byte order.
     unsigned Size = Desc.getSize();
     switch (Size) {
+    case 0:
+      break;
     case 4:
       if (IsLittleEndian) {
         support::endian::Writer<support::little>(OS).write<uint32_t>(Bits);

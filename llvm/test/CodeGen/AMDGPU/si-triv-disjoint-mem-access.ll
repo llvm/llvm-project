@@ -184,12 +184,12 @@ define void @reorder_local_offsets(i32 addrspace(1)* nocapture %out, i32 addrspa
 }
 
 ; FUNC-LABEL: @reorder_global_offsets
-; CI: buffer_load_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:400
-; CI: buffer_load_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:404
-; CI: buffer_store_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:12
-; CI: buffer_load_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:12
-; CI: buffer_store_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:400
-; CI: buffer_store_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:404
+; CI: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:400
+; CI: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:404
+; CI: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:12
+; CI: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:12
+; CI: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:400
+; CI: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:404
 ; CI: buffer_store_dword
 ; CI: s_endpgm
 define void @reorder_global_offsets(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* noalias nocapture readnone %gptr, i32 addrspace(1)* noalias nocapture %ptr0) #0 {

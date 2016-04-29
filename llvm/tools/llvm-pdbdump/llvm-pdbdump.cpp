@@ -308,20 +308,7 @@ static void dumpStructure(RawSession &RS) {
   }
 }
 
-static void dumpInput(StringRef Path) {
-  std::unique_ptr<IPDBSession> Session;
-  if (opts::DumpHeaders || !opts::DumpStreamData.empty()) {
-    PDB_ErrorCode Error = loadDataForPDB(PDB_ReaderType::Raw, Path, Session);
-    if (Error == PDB_ErrorCode::Success) {
-      RawSession *RS = static_cast<RawSession *>(Session.get());
-      dumpStructure(*RS);
-    }
-
-    outs().flush();
-    return;
-  }
-
-  PDB_ErrorCode Error = loadDataForPDB(PDB_ReaderType::DIA, Path, Session);
+static void reportError(StringRef Path, PDB_ErrorCode Error) {
   switch (Error) {
   case PDB_ErrorCode::Success:
     break;
@@ -347,6 +334,28 @@ static void dumpInput(StringRef Path) {
            << "'.  An unknown error occured.\n";
     return;
   }
+}
+
+static void dumpInput(StringRef Path) {
+  std::unique_ptr<IPDBSession> Session;
+  if (opts::DumpHeaders || !opts::DumpStreamData.empty()) {
+    PDB_ErrorCode Error = loadDataForPDB(PDB_ReaderType::Raw, Path, Session);
+    if (Error == PDB_ErrorCode::Success) {
+      RawSession *RS = static_cast<RawSession *>(Session.get());
+      dumpStructure(*RS);
+    }
+
+    reportError(Path, Error);
+    outs().flush();
+    return;
+  }
+
+  PDB_ErrorCode Error = loadDataForPDB(PDB_ReaderType::DIA, Path, Session);
+  if (Error != PDB_ErrorCode::Success) {
+    reportError(Path, Error);
+    return;
+  }
+
   if (opts::LoadAddress)
     Session->setLoadAddress(opts::LoadAddress);
 

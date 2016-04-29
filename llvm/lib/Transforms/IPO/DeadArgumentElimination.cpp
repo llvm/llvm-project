@@ -255,14 +255,17 @@ bool DAE::DeleteDeadVarargs(Function &Fn) {
       PAL = AttributeSet::get(Fn.getContext(), AttributesVec);
     }
 
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    CS.getOperandBundlesAsDefs(OpBundles);
+
     Instruction *New;
     if (InvokeInst *II = dyn_cast<InvokeInst>(Call)) {
       New = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
-                               Args, "", Call);
+                               Args, OpBundles, "", Call);
       cast<InvokeInst>(New)->setCallingConv(CS.getCallingConv());
       cast<InvokeInst>(New)->setAttributes(PAL);
     } else {
-      New = CallInst::Create(NF, Args, "", Call);
+      New = CallInst::Create(NF, Args, OpBundles, "", Call);
       cast<CallInst>(New)->setCallingConv(CS.getCallingConv());
       cast<CallInst>(New)->setAttributes(PAL);
       if (cast<CallInst>(Call)->isTailCall())
@@ -948,14 +951,17 @@ bool DAE::RemoveDeadStuffFromFunction(Function *F) {
     // Reconstruct the AttributesList based on the vector we constructed.
     AttributeSet NewCallPAL = AttributeSet::get(F->getContext(), AttributesVec);
 
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    CS.getOperandBundlesAsDefs(OpBundles);
+
     Instruction *New;
     if (InvokeInst *II = dyn_cast<InvokeInst>(Call)) {
       New = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
-                               Args, "", Call->getParent());
+                               Args, OpBundles, "", Call->getParent());
       cast<InvokeInst>(New)->setCallingConv(CS.getCallingConv());
       cast<InvokeInst>(New)->setAttributes(NewCallPAL);
     } else {
-      New = CallInst::Create(NF, Args, "", Call);
+      New = CallInst::Create(NF, Args, OpBundles, "", Call);
       cast<CallInst>(New)->setCallingConv(CS.getCallingConv());
       cast<CallInst>(New)->setAttributes(NewCallPAL);
       if (cast<CallInst>(Call)->isTailCall())

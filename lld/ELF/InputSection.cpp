@@ -238,18 +238,22 @@ template <class RelTy>
 void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   const unsigned Bits = sizeof(uintX_t) * 8;
   for (const RelTy &Rel : Rels) {
-    uint8_t *BufLoc = Buf + Rel.r_offset;
-    uintX_t AddrLoc = this->OutSec->getVA() + Rel.r_offset;
     uint32_t Type = Rel.getType(Config->Mips64EL);
-    SymbolBody &Sym = this->File->getRelocTargetSym(Rel);
+    uintX_t Addend = getAddend<ELFT>(Rel);
+    if (!RelTy::IsRela)
+      Addend += Target->getImplicitAddend(Buf + Rel.r_offset, Type);
 
+    SymbolBody &Sym = this->File->getRelocTargetSym(Rel);
     if (Target->getRelExpr(Type, Sym) != R_ABS) {
       error(this->getSectionName() + " has non-ABS reloc");
       return;
     }
 
+    uintX_t Offset = this->getOffset(Rel.r_offset);
+    uint8_t *BufLoc = Buf + Offset;
+    uintX_t AddrLoc = this->OutSec->getVA() + Offset;
     uint64_t SymVA = SignExtend64<Bits>(getSymVA<ELFT>(
-        Type, getAddend<ELFT>(Rel), AddrLoc, Sym, BufLoc, *this->File, R_ABS));
+        Type, Addend, AddrLoc, Sym, BufLoc, *this->File, R_ABS));
     Target->relocateOne(BufLoc, Type, SymVA);
   }
 }

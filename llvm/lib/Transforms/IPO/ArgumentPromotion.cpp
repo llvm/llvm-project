@@ -857,15 +857,18 @@ CallGraphNode *ArgPromotion::DoPromotion(Function *F,
       AttributesVec.push_back(AttributeSet::get(Call->getContext(),
                                                 CallPAL.getFnAttributes()));
 
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    CS.getOperandBundlesAsDefs(OpBundles);
+
     Instruction *New;
     if (InvokeInst *II = dyn_cast<InvokeInst>(Call)) {
       New = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
-                               Args, "", Call);
+                               Args, OpBundles, "", Call);
       cast<InvokeInst>(New)->setCallingConv(CS.getCallingConv());
       cast<InvokeInst>(New)->setAttributes(AttributeSet::get(II->getContext(),
                                                             AttributesVec));
     } else {
-      New = CallInst::Create(NF, Args, "", Call);
+      New = CallInst::Create(NF, Args, OpBundles, "", Call);
       cast<CallInst>(New)->setCallingConv(CS.getCallingConv());
       cast<CallInst>(New)->setAttributes(AttributeSet::get(New->getContext(),
                                                           AttributesVec));

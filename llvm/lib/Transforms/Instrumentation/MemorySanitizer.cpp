@@ -2134,6 +2134,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return CreateShadowCast(IRB, S2, T, /* Signed */ true);
   }
 
+  // Given a vector, extract its first element, and return all
+  // zeroes if it is zero, and all ones otherwise.
+  Value *LowerElementShadowExtend(IRBuilder<> &IRB, Value *S, Type *T) {
+    Value *S1 = IRB.CreateExtractElement(S, (uint64_t)0);
+    Value *S2 = IRB.CreateICmpNE(S1, getCleanShadow(S1));
+    return CreateShadowCast(IRB, S2, T, /* Signed */ true);
+  }
+
   Value *VariableShadowExtend(IRBuilder<> &IRB, Value *S) {
     Type *T = S->getType();
     assert(T->isVectorTy());
@@ -2281,6 +2289,30 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // \brief Instrument compare-packed intrinsic.
+  // Basically, an or followed by sext(icmp ne 0) to end up with all-zeros or
+  // all-ones shadow.
+  void handleVectorComparePackedIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Type *ResTy = getShadowTy(&I);
+    Value *S0 = IRB.CreateOr(getShadow(&I, 0), getShadow(&I, 1));
+    Value *S = IRB.CreateSExt(
+        IRB.CreateICmpNE(S0, Constant::getNullValue(ResTy)), ResTy);
+    setShadow(&I, S);
+    setOriginForNaryOp(I);
+  }
+
+  // \brief Instrument compare-scalar intrinsic.
+  // This handles both cmp* intrinsics which return the result in the first
+  // element of a vector, and comi* which return the result as i32.
+  void handleVectorCompareScalarIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *S0 = IRB.CreateOr(getShadow(&I, 0), getShadow(&I, 1));
+    Value *S = LowerElementShadowExtend(IRB, S0, getShadowTy(&I));
+    setShadow(&I, S);
+    setOriginForNaryOp(I);
+  }
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
     case llvm::Intrinsic::bswap:
@@ -2422,6 +2454,43 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     case llvm::Intrinsic::x86_mmx_pmadd_wd:
       handleVectorPmaddIntrinsic(I, 16);
+      break;
+
+    case llvm::Intrinsic::x86_sse_cmp_ss:
+    case llvm::Intrinsic::x86_sse2_cmp_sd:
+    case llvm::Intrinsic::x86_sse_comieq_ss:
+    case llvm::Intrinsic::x86_sse_comilt_ss:
+    case llvm::Intrinsic::x86_sse_comile_ss:
+    case llvm::Intrinsic::x86_sse_comigt_ss:
+    case llvm::Intrinsic::x86_sse_comige_ss:
+    case llvm::Intrinsic::x86_sse_comineq_ss:
+    case llvm::Intrinsic::x86_sse_ucomieq_ss:
+    case llvm::Intrinsic::x86_sse_ucomilt_ss:
+    case llvm::Intrinsic::x86_sse_ucomile_ss:
+    case llvm::Intrinsic::x86_sse_ucomigt_ss:
+    case llvm::Intrinsic::x86_sse_ucomige_ss:
+    case llvm::Intrinsic::x86_sse_ucomineq_ss:
+    case llvm::Intrinsic::x86_sse2_comieq_sd:
+    case llvm::Intrinsic::x86_sse2_comilt_sd:
+    case llvm::Intrinsic::x86_sse2_comile_sd:
+    case llvm::Intrinsic::x86_sse2_comigt_sd:
+    case llvm::Intrinsic::x86_sse2_comige_sd:
+    case llvm::Intrinsic::x86_sse2_comineq_sd:
+    case llvm::Intrinsic::x86_sse2_ucomieq_sd:
+    case llvm::Intrinsic::x86_sse2_ucomilt_sd:
+    case llvm::Intrinsic::x86_sse2_ucomile_sd:
+    case llvm::Intrinsic::x86_sse2_ucomigt_sd:
+    case llvm::Intrinsic::x86_sse2_ucomige_sd:
+    case llvm::Intrinsic::x86_sse2_ucomineq_sd:
+      handleVectorCompareScalarIntrinsic(I);
+      break;
+
+    case llvm::Intrinsic::x86_sse_cmp_ps:
+    case llvm::Intrinsic::x86_sse2_cmp_pd:
+      // FIXME: For x86_avx_cmp_pd_256 and x86_avx_cmp_ps_256 this function
+      // generates reasonably looking IR that fails in the backend with "Do not
+      // know how to split the result of this operator!".
+      handleVectorComparePackedIntrinsic(I);
       break;
 
     default:

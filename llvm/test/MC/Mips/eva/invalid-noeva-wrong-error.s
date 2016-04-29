@@ -58,9 +58,9 @@
         she       $14,255($15)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
         she       $14,-256($15)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
         she       $9,235($11)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        swe       $ra,255($sp)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with $gp and 9-bit signed offset
-        swe       $ra,-256($sp)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with $gp and 9-bit signed offset
-        swe       $ra,-53($sp)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with $gp and 9-bit signed offset
+        swe       $ra,255($sp)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
+        swe       $ra,-256($sp)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
+        swe       $ra,-53($sp)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
         swle      $9,255($s1)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
         swle      $10,-256($s3)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
         swle      $8,131($s5)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset

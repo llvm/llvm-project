@@ -253,14 +253,6 @@ This pass decodes the debug info metadata in a module and prints in a
 For example, run this pass from ``opt`` along with the ``-analyze`` option, and
 it'll print to standard output.
 
-``-no-aa``: No Alias Analysis (always returns 'may' alias)
-----------------------------------------------------------
-
-This is the default implementation of the Alias Analysis interface.  It always
-returns "I don't know" for alias queries.  NoAA is unlike other alias analysis
-implementations, in that it does not chain to a previous analysis.  As such it
-doesn't follow many of the rules that other alias analyses must.
-
 ``-postdomfrontier``: Post-Dominance Frontier Construction
 ----------------------------------------------------------
 

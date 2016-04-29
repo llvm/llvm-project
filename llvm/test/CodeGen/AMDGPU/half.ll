@@ -13,10 +13,10 @@ define void @load_f16_arg(half addrspace(1)* %out, half %arg) #0 {
 }
 
 ; GCN-LABEL: {{^}}load_v2f16_arg:
-; GCN-DAG: buffer_load_ushort [[V0:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0 offset:44
-; GCN-DAG: buffer_load_ushort [[V1:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0 offset:46
-; GCN-DAG: buffer_store_short [[V0]], s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
-; GCN-DAG: buffer_store_short [[V1]], s{{\[[0-9]+:[0-9]+\]}}, 0 offset:2{{$}}
+; GCN-DAG: buffer_load_ushort [[V0:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:44
+; GCN-DAG: buffer_load_ushort [[V1:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:46
+; GCN-DAG: buffer_store_short [[V0]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-DAG: buffer_store_short [[V1]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:2{{$}}
 ; GCN: s_endpgm
 define void @load_v2f16_arg(<2 x half> addrspace(1)* %out, <2 x half> %arg) #0 {
   store <2 x half> %arg, <2 x half> addrspace(1)* %out
@@ -280,8 +280,8 @@ define void @global_extload_f16_to_f32(float addrspace(1)* %out, half addrspace(
 }
 
 ; GCN-LABEL: {{^}}global_extload_v2f16_to_v2f32:
-; GCN-DAG: buffer_load_ushort [[LOAD0:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
-; GCN-DAG: buffer_load_ushort [[LOAD1:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0 offset:2{{$}}
+; GCN-DAG: buffer_load_ushort [[LOAD0:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-DAG: buffer_load_ushort [[LOAD1:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:2{{$}}
 ; GCN-DAG: v_cvt_f32_f16_e32 v[[CVT0:[0-9]+]], [[LOAD0]]
 ; GCN-DAG: v_cvt_f32_f16_e32 v[[CVT1:[0-9]+]], [[LOAD1]]
 ; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[CVT0]]:[[CVT1]]{{\]}}
@@ -378,8 +378,8 @@ define void @global_extload_f16_to_f64(double addrspace(1)* %out, half addrspace
 }
 
 ; GCN-LABEL: {{^}}global_extload_v2f16_to_v2f64:
-; GCN-DAG: buffer_load_ushort [[LOAD0:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
-; GCN-DAG: buffer_load_ushort [[LOAD1:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0 offset:2{{$}}
+; GCN-DAG: buffer_load_ushort [[LOAD0:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-DAG: buffer_load_ushort [[LOAD1:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:2{{$}}
 ; GCN-DAG: v_cvt_f32_f16_e32 v[[CVT0:[0-9]+]], [[LOAD0]]
 ; GCN-DAG: v_cvt_f32_f16_e32 v[[CVT1:[0-9]+]], [[LOAD1]]
 ; GCN-DAG: v_cvt_f64_f32_e32 v{{\[}}[[CVT2_LO:[0-9]+]]:[[CVT2_HI:[0-9]+]]{{\]}}, v[[CVT0]]
@@ -407,8 +407,8 @@ define void @global_extload_v2f16_to_v2f64(<2 x double> addrspace(1)* %out, <2 x
 ; GCN: v_cvt_f64_f32_e32
 ; GCN-NOT: v_cvt_f64_f32_e32
 
-; GCN-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
-; GCN-DAG: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:16
+; GCN-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-DAG: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:16
 ; GCN: s_endpgm
 define void @global_extload_v3f16_to_v3f64(<3 x double> addrspace(1)* %out, <3 x half> addrspace(1)* %in) #0 {
   %val = load <3 x half>, <3 x half> addrspace(1)* %in

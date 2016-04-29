@@ -18,7 +18,7 @@ target triple="amdgcn--"
 ; CHECK: s_or_b64 exec, exec, s[2:3]
 ; CHECK-NEXT: s_mov_b32 s7, 0xf000
 ; CHECK-NEXT: s_mov_b32 s6, -1
-; CHECK-NEXT: buffer_store_dword v1, s[4:7], 0
+; CHECK-NEXT: buffer_store_dword v1, off, s[4:7], 0
 ; CHECK-NEXT: s_endpgm
 define void @foobar(float %a0, float %a1, float addrspace(1)* %out) nounwind {
 entry:

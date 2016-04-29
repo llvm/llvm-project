@@ -877,15 +877,6 @@ foreach I = {1, 2, 3} in
     let DiagnosticType = "MemSImm10Lsl" # I;
   }
 
-def MipsMemSimm9GPRAsmOperand : AsmOperandClass {
-  let Name = "MemOffsetSimm9GPR";
-  let SuperClasses = [MipsMemAsmOperand];
-  let RenderMethod = "addMemOperands";
-  let ParserMethod = "parseMemOperand";
-  let PredicateMethod = "isMemWithSimmOffsetGPR<9>";
-  let DiagnosticType = "MemGPSImm9";
-}
-
 def MipsMemSimm11AsmOperand : AsmOperandClass {
   let Name = "MemOffsetSimm11";
   let SuperClasses = [MipsMemAsmOperand];
@@ -954,12 +945,6 @@ foreach I = {1, 2, 3} in
     let ParserMatchClass =
             !cast<AsmOperandClass>("MipsMemSimm10Lsl" # I # "AsmOperand");
   }
-
-def mem_simm9gpr : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm9);
-  let EncoderMethod = "getMemEncoding";
-  let ParserMatchClass = MipsMemSimm9GPRAsmOperand;
-}
 
 def mem_simm11 : mem_generic {
   let MIOperandInfo = (ops ptr_rc, simm11);
@@ -1147,14 +1132,20 @@ class LoadUpper<string opstr, RegisterOperand RO, Operand Imm>:
 }
 
 // Memory Load/Store
-class Load<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
-           InstrItinClass Itin = NoItinerary, ComplexPattern Addr = addr> :
-  InstSE<(outs RO:$rt), (ins mem:$addr), !strconcat(opstr, "\t$rt, $addr"),
+class LoadMemory<string opstr, DAGOperand RO, DAGOperand MO,
+                 SDPatternOperator OpNode = null_frag,
+                 InstrItinClass Itin = NoItinerary,
+                 ComplexPattern Addr = addr> :
+  InstSE<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
          [(set RO:$rt, (OpNode Addr:$addr))], Itin, FrmI, opstr> {
   let DecoderMethod = "DecodeMem";
   let canFoldAsLoad = 1;
   let mayLoad = 1;
 }
+
+class Load<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
+           InstrItinClass Itin = NoItinerary, ComplexPattern Addr = addr> :
+  LoadMemory<opstr, RO, mem, OpNode, Itin, Addr>;
 
 class StoreMemory<string opstr, DAGOperand RO, DAGOperand MO,
             SDPatternOperator OpNode = null_frag,

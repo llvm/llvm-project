@@ -22,7 +22,6 @@
 // template <class M>
 //  iterator insert_or_assign(const_iterator hint, key_type&& k, M&& obj);        // C++17
 
-#include <__config>
 #include <map>
 #include <cassert>
 #include <tuple>
@@ -60,9 +59,6 @@ public:
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
     { // pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj);
         typedef std::map<int, Moveable> M;
         typedef std::pair<M::iterator, bool> R;
@@ -186,7 +182,4 @@ int main()
         assert(r->first.get()  == 3);  // key
         assert(r->second.get() == 5);  // value
     }
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

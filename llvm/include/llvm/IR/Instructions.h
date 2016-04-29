@@ -1481,9 +1481,29 @@ public:
                                    Value *AllocSize, Value *ArraySize = nullptr,
                                    Function* MallocF = nullptr,
                                    const Twine &Name = "");
+  static Instruction *CreateMalloc(Instruction *InsertBefore,
+                                   Type *IntPtrTy, Type *AllocTy,
+                                   Value *AllocSize, Value *ArraySize = nullptr,
+                                   ArrayRef<OperandBundleDef> Bundles = None,
+                                   Function* MallocF = nullptr,
+                                   const Twine &Name = "");
+  static Instruction *CreateMalloc(BasicBlock *InsertAtEnd,
+                                   Type *IntPtrTy, Type *AllocTy,
+                                   Value *AllocSize, Value *ArraySize = nullptr,
+                                   ArrayRef<OperandBundleDef> Bundles = None,
+                                   Function* MallocF = nullptr,
+                                   const Twine &Name = "");
   /// CreateFree - Generate the IR for a call to the builtin free function.
-  static Instruction* CreateFree(Value* Source, Instruction *InsertBefore);
-  static Instruction* CreateFree(Value* Source, BasicBlock *InsertAtEnd);
+  static Instruction *CreateFree(Value *Source,
+                                 Instruction *InsertBefore);
+  static Instruction *CreateFree(Value *Source,
+                                 BasicBlock *InsertAtEnd);
+  static Instruction *CreateFree(Value *Source,
+                                 ArrayRef<OperandBundleDef> Bundles,
+                                 Instruction *InsertBefore);
+  static Instruction *CreateFree(Value *Source,
+                                 ArrayRef<OperandBundleDef> Bundles,
+                                 BasicBlock *InsertAtEnd);
 
   ~CallInst() override;
 

@@ -50,10 +50,32 @@
   srl $2, $3, 32      # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   sync -1             # CHECK: :[[@LINE]]:8: error: expected 5-bit unsigned immediate
   sync 32             # CHECK: :[[@LINE]]:8: error: expected 5-bit unsigned immediate
-  swe $2, -513($gp)   # CHECK: :[[@LINE]]:11: error: expected memory with $gp and 9-bit signed offset
-  swe $2, 512($gp)    # CHECK: :[[@LINE]]:11: error: expected memory with $gp and 9-bit signed offset
+  swe $2, -513($gp)   # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  swe $2, 512($gp)    # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  swe $33, 8($gp)     # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+  swe $2, 8($33)      # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
   sll $3, -1          # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
   sll $3, 32          # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
   sra $3, -1          # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
   sra $3, 32          # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
   srl $3, -1          # CHECK: :[[@LINE]]:11: error: expected 5-bit unsigned immediate
+  lle $33, 8($5)      # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+  lle $4, 8($33)      # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  lle $4, 512($5)     # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  lle $4, -513($5)    # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  lwe $33, 8($5)      # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+  lwe $4, 8($33)      # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  lwe $4, 512($5)     # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  lwe $4, -513($5)    # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  sbe $33, 8($5)      # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+  sbe $4, 8($33)      # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  sbe $4, 512($5)     # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  sbe $4, -513($5)    # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  sce $33, 8($5)      # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+  sce $4, 8($33)      # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  sce $4, 512($5)     # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  sce $4, -513($5)    # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  she $33, 8($5)      # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+  she $4, 8($33)      # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  she $4, 512($5)     # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  she $4, -513($5)    # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset

@@ -9,10 +9,11 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 ; CHECK: bb11:
 ; CHECK: %lsr.iv1 = phi i32 [ %lsr.iv.next2, %bb ], [ -2, %entry ]
 ; CHECK: %lsr.iv = phi i32 [ %lsr.iv.next, %bb ], [ undef, %entry ]
-
-; CHECK: bb:
 ; CHECK: %lsr.iv.next = add i32 %lsr.iv, -1
 ; CHECK: %lsr.iv.next2 = add i32 %lsr.iv1, 2
+; CHECK: br i1
+
+; CHECK: bb:
 ; CHECK: %scevgep = getelementptr i8, i8 addrspace(3)* %t, i32 %lsr.iv.next2
 ; CHECK: %c1 = icmp ult i8 addrspace(3)* %scevgep, undef
 define void @local_cmp_user() nounwind {
@@ -37,8 +38,13 @@ bb13:
 }
 
 ; CHECK-LABEL: @global_cmp_user(
+; CHECK: %lsr.iv1 = phi i64
+; CHECK: %lsr.iv = phi i64
 ; CHECK: %lsr.iv.next = add i64 %lsr.iv, -1
 ; CHECK: %lsr.iv.next2 = add i64 %lsr.iv1, 2
+; CHECK: br i1
+
+; CHECK: bb:
 ; CHECK: %scevgep = getelementptr i8, i8 addrspace(1)* %t, i64 %lsr.iv.next2
 define void @global_cmp_user() nounwind {
 entry:
@@ -62,9 +68,14 @@ bb13:
 }
 
 ; CHECK-LABEL: @global_gep_user(
-; CHECK: %p = getelementptr i8, i8 addrspace(1)* %t, i32 %lsr.iv1
+; CHECK: %lsr.iv1 = phi i32 [ %lsr.iv.next2, %bb ], [ 0, %entry ]
+; CHECK: %lsr.iv = phi i32 [ %lsr.iv.next, %bb ], [ undef, %entry ]
 ; CHECK: %lsr.iv.next = add i32 %lsr.iv, -1
 ; CHECK: %lsr.iv.next2 = add i32 %lsr.iv1, 2
+; CHECK: br i1
+
+; CHECK: bb:
+; CHECK: %p = getelementptr i8, i8 addrspace(1)* %t, i32 %lsr.iv1
 define void @global_gep_user() nounwind {
 entry:
   br label %bb11
@@ -87,9 +98,14 @@ bb13:
 }
 
 ; CHECK-LABEL: @global_sext_scale_user(
-; CHECK: %p = getelementptr i8, i8 addrspace(1)* %t, i64 %ii.ext
+; CHECK: %lsr.iv1 = phi i32 [ %lsr.iv.next2, %bb ], [ 0, %entry ]
+; CHECK: %lsr.iv = phi i32 [ %lsr.iv.next, %bb ], [ undef, %entry ]
 ; CHECK: %lsr.iv.next = add i32 %lsr.iv, -1
 ; CHECK: %lsr.iv.next2 = add i32 %lsr.iv1, 2
+; CHECK: br i1
+
+; CHECK: bb
+; CHECK: %p = getelementptr i8, i8 addrspace(1)* %t, i64 %ii.ext
 define void @global_sext_scale_user() nounwind {
 entry:
   br label %bb11

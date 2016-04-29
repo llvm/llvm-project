@@ -949,7 +949,7 @@ class SB_MMR6_DESC : STORE_MMR6_DESC_BASE<"sb", GPR32Opnd>;
 class STORE_EVA_MMR6_DESC_BASE<string instr_asm, RegisterOperand RO>
     : MMR6Arch<instr_asm>, MipsR6Inst {
   dag OutOperandList = (outs);
-  dag InOperandList = (ins RO:$rt, mem_mm_9:$addr);
+  dag InOperandList = (ins RO:$rt, mem_simm9:$addr);
   string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
   string DecoderMethod = "DecodeStoreEvaOpMM";
   bit mayStore = 1;
@@ -961,7 +961,7 @@ class SHE_MMR6_DESC : STORE_EVA_MMR6_DESC_BASE<"she", GPR32Opnd>;
 class LOAD_WORD_EVA_MMR6_DESC_BASE<string instr_asm, RegisterOperand RO> :
             MMR6Arch<instr_asm>, MipsR6Inst {
   dag OutOperandList = (outs RO:$rt);
-  dag InOperandList = (ins mem_mm_12:$addr);
+  dag InOperandList = (ins mem_simm9:$addr);
   string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
   string DecoderMethod = "DecodeMemMMImm9";
   bit mayLoad = 1;
