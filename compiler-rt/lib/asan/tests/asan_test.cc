@@ -937,6 +937,8 @@ TEST(AddressSanitizer, ShadowGapTest) {
 #else
 # if defined(__powerpc64__)
   char *addr = (char*)0x024000800000;
+# elif defined(__s390x__)
+  char *addr = (char*)0x11000000000000;
 # else
   char *addr = (char*)0x0000100000080000;
 # endif
