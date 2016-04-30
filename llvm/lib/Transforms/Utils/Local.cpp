@@ -321,8 +321,12 @@ bool llvm::isInstructionTriviallyDead(Instruction *I,
         II->getIntrinsicID() == Intrinsic::lifetime_end)
       return isa<UndefValue>(II->getArgOperand(1));
 
-    // Assumptions are dead if their condition is trivially true.
-    if (II->getIntrinsicID() == Intrinsic::assume) {
+    // Assumptions are dead if their condition is trivially true.  Guards on
+    // true are operationally no-ops.  In the future we can consider more
+    // sophisticated tradeoffs for guards considering potential for check
+    // widening, but for now we keep things simple.
+    if (II->getIntrinsicID() == Intrinsic::assume ||
+        II->getIntrinsicID() == Intrinsic::experimental_guard) {
       if (ConstantInt *Cond = dyn_cast<ConstantInt>(II->getArgOperand(0)))
         return !Cond->isZero();
 

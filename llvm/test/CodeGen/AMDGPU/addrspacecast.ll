@@ -155,8 +155,8 @@ define void @cast_0_flat_to_group_addrspacecast() #0 {
 }
 
 ; HSA-LABEL: {{^}}cast_neg1_group_to_flat_addrspacecast:
-; HSA: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
 ; HSA: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; HSA: v_mov_b32_e32 v[[K:[0-9]+]], 7{{$}}
 ; HSA: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 ; HSA: flat_store_dword v{{\[}}[[LO]]:[[HI]]{{\]}}, v[[K]]
 define void @cast_neg1_group_to_flat_addrspacecast() #0 {
@@ -226,8 +226,8 @@ end:
 
 ; Check for prologue initializing special SGPRs pointing to scratch.
 ; HSA-LABEL: {{^}}store_flat_scratch:
-; HSA: s_mov_b32 flat_scratch_lo, s9
-; HSA: s_add_u32 [[ADD:s[0-9]+]], s8, s11
+; HSA-DAG: s_mov_b32 flat_scratch_lo, s9
+; HSA-DAG: s_add_u32 [[ADD:s[0-9]+]], s8, s11
 ; HSA: s_lshr_b32 flat_scratch_hi, [[ADD]], 8
 ; HSA: flat_store_dword
 ; HSA: s_barrier

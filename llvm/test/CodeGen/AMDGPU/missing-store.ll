@@ -10,7 +10,8 @@
 ; SI: buffer_store_dword
 ; SI: v_readfirstlane_b32 s[[PTR_LO:[0-9]+]], v{{[0-9]+}}
 ; SI: v_readfirstlane_b32 s[[PTR_HI:[0-9]+]], v{{[0-9]+}}
-; SI-NEXT: s_nop
+; SI: s_load_dword
+; SI: s_nop 2
 ; SI: s_load_dword s{{[0-9]+}}, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}
 ; SI: buffer_store_dword
 ; SI: s_endpgm

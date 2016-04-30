@@ -7294,9 +7294,9 @@ void llvm::checkForCycles(const llvm::SDNode *N,
                           bool force) {
 #ifndef NDEBUG
   bool check = force;
-#ifdef XDEBUG
+#ifdef EXPENSIVE_CHECKS
   check = true;
-#endif  // XDEBUG
+#endif  // EXPENSIVE_CHECKS
   if (check) {
     assert(N && "Checking nonexistent SDNode");
     SmallPtrSet<const SDNode*, 32> visited;

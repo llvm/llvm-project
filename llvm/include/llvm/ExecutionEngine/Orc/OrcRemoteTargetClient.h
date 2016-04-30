@@ -693,8 +693,9 @@ private:
       std::tie(RemoteTargetTriple, RemotePointerSize, RemotePageSize,
                RemoteTrampolineSize, RemoteIndirectStubSize) = *RIOrErr;
       Err = Error::success();
-    } else
-      Err = RIOrErr.takeError();
+    } else {
+      Err = joinErrors(RIOrErr.takeError(), std::move(ExistingError));
+    }
   }
 
   Error deregisterEHFrames(TargetAddress Addr, uint32_t Size) {

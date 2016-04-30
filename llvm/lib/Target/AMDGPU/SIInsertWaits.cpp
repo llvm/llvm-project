@@ -634,12 +634,6 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
         insertDPPWaitStates(I);
       }
 
-      // Insert required wait states for SMRD reading an SGPR written by a VALU
-      // instruction.
-      if (ST.getGeneration() <= AMDGPUSubtarget::SOUTHERN_ISLANDS &&
-          I->getOpcode() == AMDGPU::V_READFIRSTLANE_B32)
-        TII->insertWaitStates(MBB, std::next(I), 4);
-
       // Record pre-existing, explicitly requested waits
       if (I->getOpcode() == AMDGPU::S_WAITCNT) {
         handleExistingWait(*I);

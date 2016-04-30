@@ -56,6 +56,9 @@ static void MakeGuardControlFlowExplicit(Function *DeoptIntrinsic,
   CheckBI->getSuccessor(0)->setName("guarded");
   CheckBI->getSuccessor(1)->setName("deopt");
 
+  if (auto *MD = CI->getMetadata(LLVMContext::MD_make_implicit))
+    CheckBI->setMetadata(LLVMContext::MD_make_implicit, MD);
+
   IRBuilder<> B(DeoptBlockTerm);
   auto *DeoptCall = B.CreateCall(DeoptIntrinsic, Args, {DeoptOB}, "");
 
@@ -66,6 +69,7 @@ static void MakeGuardControlFlowExplicit(Function *DeoptIntrinsic,
     B.CreateRet(DeoptCall);
   }
 
+  DeoptCall->setCallingConv(CI->getCallingConv());
   DeoptBlockTerm->eraseFromParent();
 }
 
@@ -89,6 +93,7 @@ bool LowerGuardIntrinsic::runOnFunction(Function &F) {
 
   auto *DeoptIntrinsic = Intrinsic::getDeclaration(
       F.getParent(), Intrinsic::experimental_deoptimize, {F.getReturnType()});
+  DeoptIntrinsic->setCallingConv(GuardDecl->getCallingConv());
 
   for (auto *CI : ToLower) {
     MakeGuardControlFlowExplicit(DeoptIntrinsic, CI);

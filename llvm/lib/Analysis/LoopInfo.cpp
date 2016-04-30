@@ -38,7 +38,7 @@ template class llvm::LoopBase<BasicBlock, Loop>;
 template class llvm::LoopInfoBase<BasicBlock, Loop>;
 
 // Always verify loopinfo if expensive checking is enabled.
-#ifdef XDEBUG
+#ifdef EXPENSIVE_CHECKS
 static bool VerifyLoopInfo = true;
 #else
 static bool VerifyLoopInfo = false;

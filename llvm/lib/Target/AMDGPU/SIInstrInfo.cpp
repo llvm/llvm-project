@@ -15,11 +15,13 @@
 
 #include "SIInstrInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "GCNHazardRecognizer.h"
 #include "SIDefines.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/IR/Function.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -224,10 +226,6 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr *LdSt, unsigned &BaseReg,
     // will use this for some partially aligned loads.
     const MachineOperand *Offset0Imm = getNamedOperand(*LdSt,
                                                        AMDGPU::OpName::offset0);
-    // DS_PERMUTE does not have Offset0Imm (and Offset1Imm).
-    if (!Offset0Imm)
-      return false;
-
     const MachineOperand *Offset1Imm = getNamedOperand(*LdSt,
                                                        AMDGPU::OpName::offset1);
 
@@ -820,6 +818,20 @@ void SIInstrInfo::insertWaitStates(MachineBasicBlock &MBB,
   }
 }
 
+void SIInstrInfo::insertNoop(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator MI) const {
+  insertWaitStates(MBB, MI, 1);
+}
+
+unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default: return 1; // FIXME: Do wait states equal cycles?
+
+  case AMDGPU::S_NOP:
+    return MI.getOperand(0).getImm() + 1;
+  }
+}
+
 bool SIInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MBB.findDebugLoc(MI);
@@ -1192,8 +1204,11 @@ bool SIInstrInfo::checkInstOffsetsDoNotOverlap(MachineInstr *MIa,
 
   if (getMemOpBaseRegImmOfs(MIa, BaseReg0, Offset0, &RI) &&
       getMemOpBaseRegImmOfs(MIb, BaseReg1, Offset1, &RI)) {
-    assert(MIa->hasOneMemOperand() && MIb->hasOneMemOperand() &&
-           "read2 / write2 not expected here yet");
+
+    if (!MIa->hasOneMemOperand() || !MIb->hasOneMemOperand()) {
+      // FIXME: Handle ds_read2 / ds_write2.
+      return false;
+    }
     unsigned Width0 = (*MIa->memoperands_begin())->getSize();
     unsigned Width1 = (*MIb->memoperands_begin())->getSize();
     if (BaseReg0 == BaseReg1 &&
@@ -2967,4 +2982,19 @@ SIInstrInfo::getSerializableTargetIndices() const {
       {AMDGPU::TI_SCRATCH_RSRC_DWORD2, "amdgpu-scratch-rsrc-dword2"},
       {AMDGPU::TI_SCRATCH_RSRC_DWORD3, "amdgpu-scratch-rsrc-dword3"}};
   return makeArrayRef(TargetIndices);
+}
+
+/// This is used by the post-RA scheduler (SchedulePostRAList.cpp).  The
+/// post-RA version of misched uses CreateTargetMIHazardRecognizer.
+ScheduleHazardRecognizer *
+SIInstrInfo::CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
+                                            const ScheduleDAG *DAG) const {
+  return new GCNHazardRecognizer(DAG->MF);
+}
+
+/// This is the hazard recognizer used at -O0 by the PostRAHazardRecognizer
+/// pass.
+ScheduleHazardRecognizer *
+SIInstrInfo::CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const {
+  return new GCNHazardRecognizer(MF);
 }

@@ -205,7 +205,6 @@ public:
   void addFastRegAlloc(FunctionPass *RegAllocPass) override;
   void addOptimizedRegAlloc(FunctionPass *RegAllocPass) override;
   void addPreRegAlloc() override;
-  void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
 };
@@ -381,15 +380,23 @@ void GCNPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
   TargetPassConfig::addOptimizedRegAlloc(RegAllocPass);
 }
 
-void GCNPassConfig::addPostRegAlloc() {
-  addPass(createSIShrinkInstructionsPass(), false);
-}
-
 void GCNPassConfig::addPreSched2() {
 }
 
 void GCNPassConfig::addPreEmitPass() {
+
+  // The hazard recognizer that runs as part of the post-ra scheduler does not
+  // gaurantee to be able handle all hazards correctly.  This is because
+  // if there are multiple scheduling regions in a basic block, the regions
+  // are scheduled bottom up, so when we begin to schedule a region we don't
+  // know what instructions were emitted directly before it.
+  //
+  // Here we add a stand-alone hazard recognizer pass which can handle all cases.
+  // hazard recognizer pass.
+  addPass(&PostRAHazardRecognizerID);
+
   addPass(createSIInsertWaitsPass(), false);
+  addPass(createSIShrinkInstructionsPass());
   addPass(createSILowerControlFlowPass(), false);
   addPass(createSIInsertNopsPass(), false);
 }

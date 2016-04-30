@@ -250,8 +250,11 @@ void AMDGPUInstPrinter::printRegOperand(unsigned reg, raw_ostream &O,
   } else if (MRI.getRegClass(AMDGPU::VReg_128RegClassID).contains(reg)) {
     Type = "v";
     NumRegs = 4;
-  } else  if (MRI.getRegClass(AMDGPU::SReg_128RegClassID).contains(reg)) {
+  } else  if (MRI.getRegClass(AMDGPU::SGPR_128RegClassID).contains(reg)) {
     Type = "s";
+    NumRegs = 4;
+  } else  if (MRI.getRegClass(AMDGPU::TTMP_128RegClassID).contains(reg)) {
+    Type = "ttmp";
     NumRegs = 4;
   } else if (MRI.getRegClass(AMDGPU::VReg_96RegClassID).contains(reg)) {
     Type = "v";

@@ -13,12 +13,12 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L:%.*]] = load i32, i32* @g_37, align 4
 ; CHECK-NEXT:    [[CMPA:%.*]] = icmp ne i32 [[L]], 0
-; CHECK-NEXT:    br i1 [[CMPA]], label %func_1.exit, label %mooseblock, !prof !0
+; CHECK-NEXT:    br i1 [[CMPA]], label %func_1.exit, label %mooseblock
 ; CHECK:       mooseblock:
 ; CHECK-NEXT:    [[CMPB:%.*]] = icmp eq i1 [[CMPA]], false
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[CMPB]], [[CMPA]]
 ; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[CMPB]], i32 0, i32 2
-; CHECK-NEXT:    br i1 [[BRMERGE]], label %func_1.exit, label %infloop, !prof !1
+; CHECK-NEXT:    br i1 [[BRMERGE]], label %func_1.exit, label %infloop
 ; CHECK:       func_1.exit:
 ; CHECK-NEXT:    [[OUTVAL:%.*]] = phi i32 [ 1, %entry ], [ [[DOTMUX]], %mooseblock ]
 ; CHECK-NEXT:    [[POUT:%.*]] = tail call i32 (i8*, ...) @printf
@@ -29,17 +29,17 @@ define i32 @main() nounwind  {
 entry:
   %l = load i32, i32* @g_37, align 4		; <i32> [#uses=1]
   %cmpa = icmp ne i32 %l, 0		; <i1> [#uses=3]
-  br i1 %cmpa, label %func_1.exit, label %mooseblock, !prof !0
+  br i1 %cmpa, label %func_1.exit, label %mooseblock
 
 mooseblock:		; preds = %entry
   %cmpb = icmp eq i1 %cmpa, false		; <i1> [#uses=2]
-  br i1 %cmpb, label %monkeyblock, label %beeblock, !prof !1
+  br i1 %cmpb, label %monkeyblock, label %beeblock
 
 monkeyblock:		; preds = %monkeyblock, %mooseblock
-  br i1 %cmpb, label %cowblock, label %monkeyblock, !prof !2
+  br i1 %cmpb, label %cowblock, label %monkeyblock
 
 beeblock:		; preds = %beeblock, %mooseblock
-  br i1 %cmpa, label %cowblock, label %beeblock, !prof !3
+  br i1 %cmpa, label %cowblock, label %beeblock
 
 cowblock:		; preds = %beeblock, %monkeyblock
   %cowval = phi i32 [ 2, %beeblock ], [ 0, %monkeyblock ]		; <i32> [#uses=1]
@@ -52,12 +52,4 @@ func_1.exit:		; preds = %cowblock, %entry
 }
 
 declare i32 @printf(i8*, ...) nounwind
-
-!0 = !{!"branch_weights", i32 1, i32 2}
-!1 = !{!"branch_weights", i32 3, i32 4}
-!2 = !{!"branch_weights", i32 5, i32 6}
-!3 = !{!"branch_weights", i32 7, i32 8}
-
-; CHECK: !0 = !{!"branch_weights", i32 1, i32 2}
-; CHECK: !1 = !{!"branch_weights", i32 73, i32 32}
 

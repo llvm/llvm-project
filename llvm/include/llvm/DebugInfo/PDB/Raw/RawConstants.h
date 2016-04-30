@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 namespace llvm {
-
+namespace pdb {
 enum PdbRaw_ImplVer : uint32_t {
   PdbImplVC2 = 19941610,
   PdbImplVC4 = 19950623,
@@ -34,6 +34,7 @@ enum PdbRaw_DbiVer : uint32_t {
   PdbDbiV70 = 19990903,
   PdbDbiV110 = 20091201
 };
+}
 }
 
 #endif

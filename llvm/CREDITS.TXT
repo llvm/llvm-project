@@ -347,6 +347,10 @@ N: Richard Osborne
 E: richard@xmos.com
 D: XCore backend
 
+N: Piotr Padlewski
+E: piotr.padlewski@gmail.com
+D: !invariant.group metadata and othe intransics for clang devirtualization
+
 N: Devang Patel
 E: dpatel@apple.com
 D: LTO tool, PassManager rewrite, Loop Pass Manager, Loop Rotate

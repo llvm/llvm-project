@@ -7151,6 +7151,25 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     }
   }
 
+  // trunc (shl x, K) -> shl (trunc x), K => K < vt.size / 2
+  if (N0.getOpcode() == ISD::SHL && N0.hasOneUse() &&
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::SHL, VT)) &&
+      TLI.isTypeDesirableForOp(ISD::SHL, VT)) {
+    if (const ConstantSDNode *CAmt = isConstOrConstSplat(N0.getOperand(1))) {
+      uint64_t Amt = CAmt->getZExtValue();
+      unsigned Size = VT.getSizeInBits();
+
+      if (Amt < Size / 2) {
+        SDLoc SL(N);
+        EVT AmtVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
+
+        SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(0));
+        return DAG.getNode(ISD::SHL, SL, VT, Trunc,
+                           DAG.getConstant(Amt, SL, AmtVT));
+      }
+    }
+  }
+
   // Fold a series of buildvector, bitcast, and truncate if possible.
   // For example fold
   //   (2xi32 trunc (bitcast ((4xi32)buildvector x, x, y, y) 2xi64)) to

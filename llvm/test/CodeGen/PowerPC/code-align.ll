@@ -105,6 +105,48 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+; Function Attrs: nounwind
+define void @test_minsize(i32 signext %x, i32* nocapture %a) #2 {
+entry:
+  br label %vector.body
+
+; GENERIC-LABEL: @test_minsize
+; BASIC-LABEL: @test_minsize
+; PWR-LABEL: @test_minsize
+; GENERIC: mtctr
+; BASIC: mtctr
+; PWR: mtctr
+; GENERIC-NOT: .p2align
+; BASIC-NOT: .p2align
+; PWR-NOT: .p2align
+; GENERIC: lwzu
+; BASIC: lwzu
+; PWR: lwzu
+; GENERIC: bdnz
+; BASIC: bdnz
+; PWR: bdnz
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %induction45 = or i64 %index, 1
+  %0 = getelementptr inbounds i32, i32* %a, i64 %index
+  %1 = getelementptr inbounds i32, i32* %a, i64 %induction45
+  %2 = load i32, i32* %0, align 4
+  %3 = load i32, i32* %1, align 4
+  %4 = add nsw i32 %2, 4
+  %5 = add nsw i32 %3, 4
+  %6 = mul nsw i32 %4, 3
+  %7 = mul nsw i32 %5, 3
+  store i32 %6, i32* %0, align 4
+  store i32 %7, i32* %1, align 4
+  %index.next = add i64 %index, 2
+  %8 = icmp eq i64 %index.next, 2048
+  br i1 %8, label %for.end, label %vector.body
+
+for.end:                                          ; preds = %vector.body
+  ret void
+}
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
+attributes #2 = { nounwind minsize}
 

@@ -11940,10 +11940,8 @@ PPCTargetLowering::shouldExpandBuildVectorWithShuffles(
   if (VT == MVT::v2i64)
     return Subtarget.hasDirectMove(); // Don't need stack ops with direct moves
 
-  if (Subtarget.hasQPX()) {
-    if (VT == MVT::v4f32 || VT == MVT::v4f64 || VT == MVT::v4i1)
-      return true;
-  }
+  if (Subtarget.hasVSX() || Subtarget.hasQPX())
+    return true;
 
   return TargetLowering::shouldExpandBuildVectorWithShuffles(VT, DefinedValues);
 }

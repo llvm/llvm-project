@@ -4,8 +4,8 @@
 ; GCN-LABEL: {{^}}v_uextract_bit_31_i128:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 
-; GCN: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[ZERO1:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[ZERO2:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_lshrrev_b32_e32 v[[SHIFT:[0-9]+]], 31, [[VAL]]
 
@@ -27,9 +27,9 @@ define void @v_uextract_bit_31_i128(i128 addrspace(1)* %out, i128 addrspace(1)* 
 ; GCN-LABEL: {{^}}v_uextract_bit_63_i128:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 
-; GCN: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[ZERO1:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[ZERO2:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_lshrrev_b32_e32 v[[SHIFT:[0-9]+]], 31, [[VAL]]
 
 ; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[ZERO1]]:[[ZERO2]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
@@ -50,9 +50,9 @@ define void @v_uextract_bit_63_i128(i128 addrspace(1)* %out, i128 addrspace(1)* 
 ; GCN-LABEL: {{^}}v_uextract_bit_95_i128:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 
-; GCN: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[ZERO1:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[ZERO2:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_lshrrev_b32_e32 v[[SHIFT:[0-9]+]], 31, [[VAL]]
 
 ; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[ZERO1]]:[[ZERO2]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
@@ -73,9 +73,9 @@ define void @v_uextract_bit_95_i128(i128 addrspace(1)* %out, i128 addrspace(1)* 
 ; GCN-LABEL: {{^}}v_uextract_bit_127_i128:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:12{{$}}
 
-; GCN: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[ZERO1:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[ZERO2:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_lshrrev_b32_e32 v[[SHIFT:[0-9]+]], 31, [[VAL]]
 
 ; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[ZERO1]]:[[ZERO2]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}

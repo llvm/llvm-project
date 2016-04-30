@@ -198,11 +198,6 @@ TrapFuncName("trap-func", cl::Hidden,
         cl::init(""));
 
 cl::opt<bool>
-EnablePIE("enable-pie",
-          cl::desc("Assume the creation of a position independent executable."),
-          cl::init(false));
-
-cl::opt<bool>
 UseCtors("use-ctors",
              cl::desc("Use .ctors instead of .init_array."),
              cl::init(false));
@@ -290,7 +285,6 @@ static inline TargetOptions InitTargetOptionsFromCodeGenFlags() {
   Options.GuaranteedTailCallOpt = EnableGuaranteedTailCallOpt;
   Options.StackAlignmentOverride = OverrideStackAlignment;
   Options.StackSymbolOrdering = StackSymbolOrdering;
-  Options.PositionIndependentExecutable = EnablePIE;
   Options.UseInitArray = !UseCtors;
   Options.DataSections = DataSections;
   Options.FunctionSections = FunctionSections;

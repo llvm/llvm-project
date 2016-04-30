@@ -62,6 +62,10 @@ s_lshr_b32    ttmp8, ttmp8, 12
 // SICI: s_lshr_b32 ttmp8, ttmp8, 12     ; encoding: [0x78,0x8c,0x78,0x90]
 // VI:   s_lshr_b32 ttmp8, ttmp8, 12     ; encoding: [0x78,0x8c,0x78,0x8f]
 
+v_mov_b32     v1, ttmp8
+// SICI: v_mov_b32_e32 v1, ttmp8         ; encoding: [0x78,0x02,0x02,0x7e]
+// VI:   v_mov_b32_e32 v1, ttmp8         ; encoding: [0x78,0x02,0x02,0x7e]
+
 s_mov_b32     m0, ttmp8
 // SICI: s_mov_b32 m0, ttmp8             ; encoding: [0x78,0x03,0xfc,0xbe]
 // VI:   s_mov_b32 m0, ttmp8             ; encoding: [0x78,0x00,0xfc,0xbe]
@@ -98,6 +102,14 @@ s_mov_b64     ttmp[4:5], exec
 // SICI: s_mov_b64 ttmp[4:5], exec       ; encoding: [0x7e,0x04,0xf4,0xbe]
 // VI:   s_mov_b64 ttmp[4:5], exec       ; encoding: [0x7e,0x01,0xf4,0xbe]
 
+s_mov_b64     [ttmp4,ttmp5], exec
+// SICI: s_mov_b64 ttmp[4:5], exec       ; encoding: [0x7e,0x04,0xf4,0xbe]
+// VI:   s_mov_b64 ttmp[4:5], exec       ; encoding: [0x7e,0x01,0xf4,0xbe]
+
+s_mov_b64     exec, [ttmp4,ttmp5]
+// SICI: s_mov_b64 exec, ttmp[4:5]       ; encoding: [0x74,0x04,0xfe,0xbe]
+// VI:   s_mov_b64 exec, ttmp[4:5]       ; encoding: [0x74,0x01,0xfe,0xbe]
+
 s_mov_b64     tba, ttmp[4:5]
 // SICI: s_mov_b64 tba, ttmp[4:5]        ; encoding: [0x74,0x04,0xec,0xbe]
 // VI:   s_mov_b64 tba, ttmp[4:5]        ; encoding: [0x74,0x01,0xec,0xbe]
@@ -113,3 +125,16 @@ s_mov_b64     tma, ttmp[4:5]
 s_mov_b64     ttmp[4:5], tma
 // SICI: s_mov_b64 ttmp[4:5], tma        ; encoding: [0x6e,0x04,0xf4,0xbe]
 // VI:   s_mov_b64 ttmp[4:5], tma        ; encoding: [0x6e,0x01,0xf4,0xbe]
+
+
+//===----------------------------------------------------------------------===//
+// Trap Handler related - Some specific instructions
+//===----------------------------------------------------------------------===//
+
+s_setpc_b64   [ttmp2,ttmp3]
+// SICI: s_setpc_b64 ttmp[2:3]           ; encoding: [0x72,0x20,0x80,0xbe]
+// VI:   s_setpc_b64 ttmp[2:3]           ; encoding: [0x72,0x1d,0x80,0xbe]
+
+v_readfirstlane_b32  ttmp8, v1
+// SICI: v_readfirstlane_b32 ttmp8, v1   ; encoding: [0x01,0x05,0xf0,0x7e]
+// VI:   v_readfirstlane_b32 ttmp8, v1   ; encoding: [0x01,0x05,0xf0,0x7e]

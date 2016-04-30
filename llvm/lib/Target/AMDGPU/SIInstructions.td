@@ -60,17 +60,17 @@ defm EXP : EXP_m;
 // SMRD Instructions
 //===----------------------------------------------------------------------===//
 
-// We are using the SGPR_32 and not the SReg_32 register class for 32-bit
-// SMRD instructions, because the SGPR_32 register class does not include M0
+// We are using the SReg_32_XM0 and not the SReg_32 register class for 32-bit
+// SMRD instructions, because the SReg_32_XM0 register class does not include M0
 // and writing to M0 from an SMRD instruction will hang the GPU.
-defm S_LOAD_DWORD : SMRD_Helper <smrd<0x00>, "s_load_dword", SReg_64, SGPR_32>;
+defm S_LOAD_DWORD : SMRD_Helper <smrd<0x00>, "s_load_dword", SReg_64, SReg_32_XM0>;
 defm S_LOAD_DWORDX2 : SMRD_Helper <smrd<0x01>, "s_load_dwordx2", SReg_64, SReg_64>;
 defm S_LOAD_DWORDX4 : SMRD_Helper <smrd<0x02>, "s_load_dwordx4", SReg_64, SReg_128>;
 defm S_LOAD_DWORDX8 : SMRD_Helper <smrd<0x03>, "s_load_dwordx8", SReg_64, SReg_256>;
 defm S_LOAD_DWORDX16 : SMRD_Helper <smrd<0x04>, "s_load_dwordx16", SReg_64, SReg_512>;
 
 defm S_BUFFER_LOAD_DWORD : SMRD_Helper <
-  smrd<0x08>, "s_buffer_load_dword", SReg_128, SGPR_32
+  smrd<0x08>, "s_buffer_load_dword", SReg_128, SReg_32_XM0
 >;
 
 defm S_BUFFER_LOAD_DWORDX2 : SMRD_Helper <
@@ -2087,9 +2087,9 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
 }
 
 // It's unclear whether you can use M0 as the output of v_readlane_b32
-// instructions, so use SGPR_32 register class for spills to prevent
+// instructions, so use SReg_32_XM0 register class for spills to prevent
 // this from happening.
-defm SI_SPILL_S32  : SI_SPILL_SGPR <SGPR_32>;
+defm SI_SPILL_S32  : SI_SPILL_SGPR <SReg_32_XM0>;
 defm SI_SPILL_S64  : SI_SPILL_SGPR <SReg_64>;
 defm SI_SPILL_S128 : SI_SPILL_SGPR <SReg_128>;
 defm SI_SPILL_S256 : SI_SPILL_SGPR <SReg_256>;
@@ -3431,7 +3431,7 @@ def : ZExt_i64_i1_Pat<anyext>;
 def : Pat <
   (i64 (sext i32:$src)),
     (REG_SEQUENCE SReg_64, $src, sub0,
-    (i32 (COPY_TO_REGCLASS (S_ASHR_I32 $src, 31), SGPR_32)), sub1)
+    (i32 (COPY_TO_REGCLASS (S_ASHR_I32 $src, 31), SReg_32_XM0)), sub1)
 >;
 
 def : Pat <

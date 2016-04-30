@@ -1559,6 +1559,11 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_64RegClass,
                                 TRI->getPreloadedValue(MF, Reg), VT);
   }
+  case Intrinsic::amdgcn_kernarg_segment_ptr: {
+    unsigned Reg
+      = TRI->getPreloadedValue(MF, SIRegisterInfo::KERNARG_SEGMENT_PTR);
+    return CreateLiveInRegister(DAG, &AMDGPU::SReg_64RegClass, Reg, VT);
+  }
   case Intrinsic::amdgcn_rcp:
     return DAG.getNode(AMDGPUISD::RCP, DL, VT, Op.getOperand(1));
   case Intrinsic::amdgcn_rsq:

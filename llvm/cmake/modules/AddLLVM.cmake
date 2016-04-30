@@ -767,8 +767,8 @@ function(canonicalize_tool_name name output)
 endfunction(canonicalize_tool_name)
 
 # Custom add_subdirectory wrapper
-# Takes in a project name (i.e. LLVM), the the subdirectory name, and an
-# and an optional path if it differs from the name.
+# Takes in a project name (i.e. LLVM), the subdirectory name, and an optional
+# path if it differs from the name.
 macro(add_llvm_subdirectory project type name)
   set(add_llvm_external_dir "${ARGN}")
   if("${add_llvm_external_dir}" STREQUAL "")

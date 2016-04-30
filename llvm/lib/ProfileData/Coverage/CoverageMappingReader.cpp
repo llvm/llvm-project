@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ProfileData/CoverageMappingReader.h"
+#include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"

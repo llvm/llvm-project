@@ -132,7 +132,7 @@ def SGPR_64Regs : RegisterTuples<[sub0, sub1],
                               (add (decimate (shl SGPR_32, 1), 2))]>;
 
 // SGPR 128-bit registers
-def SGPR_128 : RegisterTuples<[sub0, sub1, sub2, sub3],
+def SGPR_128Regs : RegisterTuples<[sub0, sub1, sub2, sub3],
                               [(add (decimate SGPR_32, 4)),
                                (add (decimate (shl SGPR_32, 1), 4)),
                                (add (decimate (shl SGPR_32, 2), 4)),
@@ -255,6 +255,13 @@ def SReg_32 : RegisterClass<"AMDGPU", [i32, f32], 32,
    TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI)
 >;
 
+// Subset of SReg_32 without M0 for SMRD instructions and alike.
+// See comments in SIInstructions.td for more info.
+def SReg_32_XM0 : RegisterClass<"AMDGPU", [i32, f32], 32,
+  (add SGPR_32, VCC_LO, VCC_HI, EXEC_LO, EXEC_HI, FLAT_SCR_LO, FLAT_SCR_HI,
+   TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI)
+>;
+
 def SGPR_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 32, (add SGPR_64Regs)>;
 
 def TTMP_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 32, (add TTMP_64Regs)> {
@@ -265,10 +272,18 @@ def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1], 32,
   (add SGPR_64, VCC, EXEC, FLAT_SCR, TTMP_64, TBA, TMA)
 >;
 
-def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add SGPR_128)> {
-  // Requires 2 s_mov_b64 to copy
-  let CopyCost = 2;
+// Requires 2 s_mov_b64 to copy
+let CopyCost = 2 in {
+
+def SGPR_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add SGPR_128Regs)>;
+
+def TTMP_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add TTMP_128Regs)> {
+  let isAllocatable = 0;
 }
+
+def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add SGPR_128, TTMP_128)>;
+
+} // End CopyCost = 2
 
 def SReg_256 : RegisterClass<"AMDGPU", [v8i32, v8f32], 32, (add SGPR_256)> {
   // Requires 4 s_mov_b64 to copy

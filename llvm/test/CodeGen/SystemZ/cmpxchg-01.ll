@@ -12,23 +12,23 @@
 ;   which shift %r3 left so that %b is at the high end of the word).
 define i8 @f1(i8 %dummy, i8 *%src, i8 %cmp, i8 %swap) {
 ; CHECK-MAIN-LABEL: f1:
-; CHECK-MAIN: sllg [[SHIFT:%r[1-9]+]], %r3, 3
-; CHECK-MAIN: nill %r3, 65532
-; CHECK-MAIN: l [[OLD:%r[0-9]+]], 0(%r3)
+; CHECK-MAIN: risbg [[RISBG:%r[1-9]+]], %r3, 0, 189, 0{{$}}
+; CHECK-MAIN: sll %r3, 3
+; CHECK-MAIN: l [[OLD:%r[0-9]+]], 0([[RISBG]])
 ; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
-; CHECK-MAIN: rll %r2, [[OLD]], 8([[SHIFT]])
+; CHECK-MAIN: rll %r2, [[OLD]], 8(%r3)
 ; CHECK-MAIN: risbg %r4, %r2, 32, 55, 0
 ; CHECK-MAIN: crjlh %r2, %r4, [[EXIT:\.[^ ]*]]
 ; CHECK-MAIN: risbg %r5, %r2, 32, 55, 0
 ; CHECK-MAIN: rll [[NEW:%r[0-9]+]], %r5, -8({{%r[1-9]+}})
-; CHECK-MAIN: cs [[OLD]], [[NEW]], 0(%r3)
+; CHECK-MAIN: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK-MAIN: jl [[LOOP]]
 ; CHECK-MAIN: [[EXIT]]:
 ; CHECK-MAIN-NOT: %r2
 ; CHECK-MAIN: br %r14
 ;
 ; CHECK-SHIFT-LABEL: f1:
-; CHECK-SHIFT: sllg [[SHIFT:%r[1-9]+]], %r3, 3
+; CHECK-SHIFT: sll [[SHIFT:%r[1-9]+]], 3
 ; CHECK-SHIFT: lcr [[NEGSHIFT:%r[1-9]+]], [[SHIFT]]
 ; CHECK-SHIFT: rll
 ; CHECK-SHIFT: rll {{%r[0-9]+}}, %r5, -8([[NEGSHIFT]])

@@ -28,7 +28,7 @@
 using namespace llvm;
 
 // Always verify dominfo if expensive checking is enabled.
-#ifdef XDEBUG
+#ifdef EXPENSIVE_CHECKS
 static bool VerifyDomInfo = true;
 #else
 static bool VerifyDomInfo = false;

@@ -3183,12 +3183,12 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
 
       if (Imm->getOpcode() == ISD::Constant) {
         const ConstantInt *Val=cast<ConstantSDNode>(Imm)->getConstantIntValue();
-        Imm = CurDAG->getConstant(*Val, SDLoc(NodeToMatch), Imm.getValueType(),
-                                  true);
+        Imm = CurDAG->getTargetConstant(*Val, SDLoc(NodeToMatch),
+                                        Imm.getValueType());
       } else if (Imm->getOpcode() == ISD::ConstantFP) {
         const ConstantFP *Val=cast<ConstantFPSDNode>(Imm)->getConstantFPValue();
-        Imm = CurDAG->getConstantFP(*Val, SDLoc(NodeToMatch),
-                                    Imm.getValueType(), true);
+        Imm = CurDAG->getTargetConstantFP(*Val, SDLoc(NodeToMatch),
+                                          Imm.getValueType());
       }
 
       RecordedNodes.push_back(std::make_pair(Imm, RecordedNodes[RecNo].second));

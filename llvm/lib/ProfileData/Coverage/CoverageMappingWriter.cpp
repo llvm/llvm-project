@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ProfileData/CoverageMappingWriter.h"
+#include "llvm/ProfileData/Coverage/CoverageMappingWriter.h"
 #include "llvm/Support/LEB128.h"
 
 using namespace llvm;

@@ -147,7 +147,8 @@ will be added to the corpus directory.
 By default, the fuzzing process will continue indefinitely – at least until
 a bug is found.  Any crashes or sanitizer failures will be reported as usual,
 stopping the fuzzing process, and the particular input that triggered the bug
-will be written to disk (typically as ``crash-<sha1>`` or ``timeout-<sha1>``).
+will be written to disk (typically as ``crash-<sha1>``, ``leak-<sha1>``,
+or ``timeout-<sha1>``).
 
 
 Parallel Fuzzing
@@ -242,6 +243,9 @@ The most important command line options are:
   the same path for several parallel processes.
 ``-print_final_stats``
   If 1, print statistics at exit.  Defaults to 0.
+``-detect-leaks``
+  If 1 (default) and if LeakSanitizer is enabled
+  try to detect memory leaks during fuzzing (i.e. not only at shut down).
 ``-close_fd_mask``
   Indicate output streams to close at startup. Be careful, this will also
   remove diagnostic output from the tools in use; for example the messages
@@ -631,16 +635,22 @@ the program arguments that you can read and modify:
 Leaks
 -----
 
-Code that has been built with AddressSanitizer_ will report memory leaks,
-but only when the process exits.  If you suspect memory leaks in the code
-under test, you will therefore need to use the ``-runs=N`` or
-``-max_total_time=N`` command line options to ensure that the fuzzing
-process completes and gives AddressSanitizer_ a chance to report leaks.
-Because the leak is only reported at the end of the process, this also means
-that it is not clear which input triggered the leak.  To narrow this down,
-re-run each input file in the corpus separately through the target function.
+Binaries built with AddressSanitizer_ or LeakSanitizer_ will try to detect
+memory leaks at the process shutdown.
+For in-process fuzzing this is inconvenient
+since the fuzzer needs to report a leak with a reproducer as soon as the leaky
+mutation is found. However, running full leak detection after every mutation
+is expensive.
 
-If your target has massive leaks you will eventually run out of RAM.
+By default (``-detect_leaks=1``) libFuzzer will count the number of
+``malloc`` and ``free`` calls when executing every mutation.
+If the numbers don't match (which by itself doesn't mean there is a leak)
+libFuzzer will invoke the more expensive LeakSanitizer_
+pass and if the actual leak is found, it will be reported with the reproducer
+and the process will exit.
+
+If your target has massive leaks and the leak detection is disabled
+you will eventually run out of RAM.
 To protect your machine from OOM death you may use
 e.g. ``ASAN_OPTIONS=hard_rss_limit_mb=2000`` (with AddressSanitizer_).
 
@@ -806,6 +816,7 @@ Trophies
 .. _SanitizerCoverageTraceDataFlow: http://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow
 .. _DataFlowSanitizer: http://clang.llvm.org/docs/DataFlowSanitizer.html
 .. _AddressSanitizer: http://clang.llvm.org/docs/AddressSanitizer.html
+.. _LeakSanitizer: http://clang.llvm.org/docs/LeakSanitizer.html
 .. _Heartbleed: http://en.wikipedia.org/wiki/Heartbleed
 .. _FuzzerInterface.h: https://github.com/llvm-mirror/llvm/blob/master/lib/Fuzzer/FuzzerInterface.h
 .. _3.7.0: http://llvm.org/releases/3.7.0/docs/LibFuzzer.html

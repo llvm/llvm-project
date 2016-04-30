@@ -7,10 +7,10 @@
 
 ; GCN-LABEL: {{^}}clobber_vgpr_pair_pointer_add:
 ; GCN: s_load_dwordx2 s{{\[}}[[ARG1LO:[0-9]+]]:[[ARG1HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x0{{$}}
-; GCN: buffer_load_dwordx2 v{{\[}}[[LDPTRLO:[0-9]+]]:[[LDPTRHI:[0-9]+]]{{\]}}
+; GCN-DAG: v_mov_b32_e32 v[[VARG1HI:[0-9]+]], s[[ARG1HI]]
+; GCN-DAG: buffer_load_dwordx2 v{{\[}}[[LDPTRLO:[0-9]+]]:[[LDPTRHI:[0-9]+]]{{\]}}
 
 ; GCN-NOT: v_mov_b32
-; GCN: v_mov_b32_e32 v[[VARG1HI:[0-9]+]], s[[ARG1HI]]
 ; GCN-NEXT: v_mov_b32_e32 v[[VARG1LO:[0-9]+]], s[[ARG1LO]]
 ; GCN-NOT: v_mov_b32
 

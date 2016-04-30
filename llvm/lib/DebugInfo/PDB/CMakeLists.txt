@@ -27,13 +27,15 @@ if(HAVE_DIA_SDK)
 endif()
 
 add_pdb_impl_folder(Raw
+  Raw/ByteStream.cpp
+  Raw/MappedBlockStream.cpp
   Raw/ModInfo.cpp
   Raw/PDBFile.cpp
-  Raw/PDBDbiStream.cpp
-  Raw/PDBInfoStream.cpp
-  Raw/PDBNameMap.cpp
-  Raw/PDBStream.cpp
-  Raw/RawSession.cpp)
+  Raw/DbiStream.cpp
+  Raw/InfoStream.cpp
+  Raw/NameMap.cpp
+  Raw/RawSession.cpp
+  Raw/StreamReader.cpp)
 
 list(APPEND LIBPDB_ADDITIONAL_HEADER_DIRS "${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/PDB")
 

@@ -9,12 +9,13 @@
 
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBDbiStream.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBInfoStream.h"
+#include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 namespace {
 static const char Magic[] = {'M',  'i',  'c',    'r', 'o', 's',  'o',  'f',
@@ -45,7 +46,7 @@ struct SuperBlock {
 };
 }
 
-struct llvm::PDBFileContext {
+struct llvm::pdb::PDBFileContext {
   std::unique_ptr<MemoryBuffer> Buffer;
   const SuperBlock *SB;
   std::vector<uint32_t> StreamSizes;
@@ -122,6 +123,13 @@ std::error_code PDBFile::parseFileHeaders() {
   Context->SB =
       reinterpret_cast<const SuperBlock *>(BufferRef.getBufferStart());
   const SuperBlock *SB = Context->SB;
+  switch (SB->BlockSize) {
+  case 512: case 1024: case 2048: case 4096:
+    break;
+  default:
+    // An invalid block size suggests a corrupt PDB file.
+    return std::make_error_code(std::errc::illegal_byte_sequence);
+  }
 
   // Make sure the file is sufficiently large to hold a super block.
   if (BufferRef.getBufferSize() < sizeof(SuperBlock))
@@ -244,18 +252,18 @@ llvm::ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() {
       getNumDirectoryBlocks());
 }
 
-PDBInfoStream &PDBFile::getPDBInfoStream() {
-  if (!InfoStream) {
-    InfoStream.reset(new PDBInfoStream(*this));
-    InfoStream->reload();
+InfoStream &PDBFile::getPDBInfoStream() {
+  if (!Info) {
+    Info.reset(new InfoStream(*this));
+    Info->reload();
   }
-  return *InfoStream;
+  return *Info;
 }
 
-PDBDbiStream &PDBFile::getPDBDbiStream() {
-  if (!DbiStream) {
-    DbiStream.reset(new PDBDbiStream(*this));
-    DbiStream->reload();
+DbiStream &PDBFile::getPDBDbiStream() {
+  if (!Dbi) {
+    Dbi.reset(new DbiStream(*this));
+    Dbi->reload();
   }
-  return *DbiStream;
+  return *Dbi;
 }

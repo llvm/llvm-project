@@ -343,11 +343,15 @@ public:
   bool predOpcodeHasNot(ArrayRef<MachineOperand> Cond) const;
 
 
+  short getAbsoluteForm(const MachineInstr *MI) const;
   unsigned getAddrMode(const MachineInstr* MI) const;
   unsigned getBaseAndOffset(const MachineInstr *MI, int &Offset,
                             unsigned &AccessSize) const;
   bool getBaseAndOffsetPosition(const MachineInstr *MI, unsigned &BasePos,
                                 unsigned &OffsetPos) const;
+  short getBaseWithLongOffset(short Opcode) const;
+  short getBaseWithLongOffset(const MachineInstr *MI) const;
+  short getBaseWithRegOffset(const MachineInstr *MI) const;
   SmallVector<MachineInstr*,2> getBranchingInstrs(MachineBasicBlock& MBB) const;
   unsigned getCExtOpNum(const MachineInstr *MI) const;
   HexagonII::CompoundGroup
@@ -397,6 +401,7 @@ public:
   bool reversePredSense(MachineInstr* MI) const;
   unsigned reversePrediction(unsigned Opcode) const;
   bool validateBranchCond(const ArrayRef<MachineOperand> &Cond) const;
+  short xformRegToImmOffset(const MachineInstr *MI) const;
 };
 
 }

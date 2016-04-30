@@ -1213,5 +1213,23 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     }
   }
 
+  // See if we can determine the result of this select based on a dominating
+  // condition.
+  BasicBlock *Parent = SI.getParent();
+  if (BasicBlock *Dom = Parent->getSinglePredecessor()) {
+    auto *PBI = dyn_cast_or_null<BranchInst>(Dom->getTerminator());
+    if (PBI && PBI->isConditional() &&
+        PBI->getSuccessor(0) != PBI->getSuccessor(1) &&
+        (PBI->getSuccessor(0) == Parent || PBI->getSuccessor(1) == Parent)) {
+      bool CondIsFalse = PBI->getSuccessor(1) == Parent;
+      Optional<bool> Implication = isImpliedCondition(
+        PBI->getCondition(), SI.getCondition(), DL, CondIsFalse);
+      if (Implication) {
+        Value *V = *Implication ? TrueVal : FalseVal;
+        return replaceInstUsesWith(SI, V);
+      }
+    }
+  }
+
   return nullptr;
 }

@@ -125,29 +125,44 @@ FunctionPass *llvm::createSILowerControlFlowPass() {
   return new SILowerControlFlow();
 }
 
+static bool opcodeEmitsNoInsts(unsigned Opc) {
+  switch (Opc) {
+  case TargetOpcode::IMPLICIT_DEF:
+  case TargetOpcode::KILL:
+  case TargetOpcode::BUNDLE:
+  case TargetOpcode::CFI_INSTRUCTION:
+  case TargetOpcode::EH_LABEL:
+  case TargetOpcode::GC_LABEL:
+  case TargetOpcode::DBG_VALUE:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SILowerControlFlow::shouldSkip(MachineBasicBlock *From,
                                     MachineBasicBlock *To) {
 
   unsigned NumInstr = 0;
+  MachineFunction *MF = From->getParent();
 
-  for (MachineFunction::iterator MBBI = MachineFunction::iterator(From),
-                                 ToI = MachineFunction::iterator(To); MBBI != ToI; ++MBBI) {
-
+  for (MachineFunction::iterator MBBI(From), ToI(To), End = MF->end();
+       MBBI != End && MBBI != ToI; ++MBBI) {
     MachineBasicBlock &MBB = *MBBI;
 
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
          NumInstr < SkipThreshold && I != E; ++I) {
+      if (opcodeEmitsNoInsts(I->getOpcode()))
+        continue;
 
-      if (I->isBundle() || !I->isBundled()) {
-        // When a uniform loop is inside non-uniform control flow, the branch
-        // leaving the loop might be an S_CBRANCH_VCCNZ, which is never taken
-        // when EXEC = 0. We should skip the loop lest it becomes infinite.
-        if (I->getOpcode() == AMDGPU::S_CBRANCH_VCCNZ)
-          return true;
+      // When a uniform loop is inside non-uniform control flow, the branch
+      // leaving the loop might be an S_CBRANCH_VCCNZ, which is never taken
+      // when EXEC = 0. We should skip the loop lest it becomes infinite.
+      if (I->getOpcode() == AMDGPU::S_CBRANCH_VCCNZ)
+        return true;
 
-        if (++NumInstr >= SkipThreshold)
-          return true;
-      }
+      if (++NumInstr >= SkipThreshold)
+        return true;
     }
   }
 

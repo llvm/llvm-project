@@ -12,6 +12,7 @@
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 using namespace llvm::support;
 
 namespace {

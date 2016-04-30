@@ -898,7 +898,7 @@ Value *InstCombiner::SimplifyShrShlDemandedBits(Instruction *Shr,
 Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                                 APInt &UndefElts,
                                                 unsigned Depth) {
-  unsigned VWidth = cast<VectorType>(V->getType())->getNumElements();
+  unsigned VWidth = V->getType()->getVectorNumElements();
   APInt EltMask(APInt::getAllOnesValue(VWidth));
   assert((DemandedElts & ~EltMask) == 0 && "Invalid DemandedElts!");
 

@@ -17,7 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ProfileData/CoverageMapping.h"
+#include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {

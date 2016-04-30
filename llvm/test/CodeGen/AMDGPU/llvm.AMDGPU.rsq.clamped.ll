@@ -10,10 +10,10 @@ declare float @llvm.AMDGPU.rsq.clamped.f32(float) nounwind readnone
 ; FUNC-LABEL: {{^}}rsq_clamped_f32:
 ; SI: v_rsq_clamp_f32_e32
 
-; VI: v_rsq_f32_e32 [[RSQ:v[0-9]+]], {{s[0-9]+}}
-; VI: v_min_f32_e32 [[MIN:v[0-9]+]], 0x7f7fffff, [[RSQ]]
+; VI-DAG: v_rsq_f32_e32 [[RSQ:v[0-9]+]], {{s[0-9]+}}
+; VI-DAG: v_min_f32_e32 [[MIN:v[0-9]+]], 0x7f7fffff, [[RSQ]]
 ; TODO: this constant should be folded:
-; VI: v_mov_b32_e32 [[MINFLT:v[0-9]+]], 0xff7fffff
+; VI-DAG: v_mov_b32_e32 [[MINFLT:v[0-9]+]], 0xff7fffff
 ; VI: v_max_f32_e32 {{v[0-9]+}}, [[MIN]], [[MINFLT]]
 
 ; EG: RECIPSQRT_CLAMPED

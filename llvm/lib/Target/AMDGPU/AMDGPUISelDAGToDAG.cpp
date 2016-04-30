@@ -822,6 +822,7 @@ bool AMDGPUDAGToDAGISel::isDSOffsetLegal(const SDValue &Base, unsigned Offset,
 
 bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
                                               SDValue &Offset) const {
+  SDLoc DL(Addr);
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
     SDValue N0 = Addr.getOperand(0);
     SDValue N1 = Addr.getOperand(1);
@@ -829,7 +830,7 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
     if (isDSOffsetLegal(N0, C1->getSExtValue(), 16)) {
       // (add n0, c0)
       Base = N0;
-      Offset = N1;
+      Offset = CurDAG->getTargetConstant(C1->getZExtValue(), DL, MVT::i16);
       return true;
     }
   } else if (Addr.getOpcode() == ISD::SUB) {
@@ -837,7 +838,6 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
     if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Addr.getOperand(0))) {
       int64_t ByteOffset = C->getSExtValue();
       if (isUInt<16>(ByteOffset)) {
-        SDLoc DL(Addr);
         SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i32);
 
         // XXX - This is kind of hacky. Create a dummy sub node so we can check

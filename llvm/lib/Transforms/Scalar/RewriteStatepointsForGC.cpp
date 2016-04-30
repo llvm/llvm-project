@@ -62,7 +62,7 @@ static cl::opt<unsigned>
 RematerializationThreshold("spp-rematerialization-threshold", cl::Hidden,
                            cl::init(6));
 
-#ifdef XDEBUG
+#ifdef EXPENSIVE_CHECKS
 static bool ClobberNonLive = true;
 #else
 static bool ClobberNonLive = false;

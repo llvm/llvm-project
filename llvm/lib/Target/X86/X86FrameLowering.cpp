@@ -2279,7 +2279,7 @@ void X86FrameLowering::adjustForSegmentedStacks(
   checkMBB->addSuccessor(allocMBB);
   checkMBB->addSuccessor(&PrologueMBB);
 
-#ifdef XDEBUG
+#ifdef EXPENSIVE_CHECKS
   MF.verify();
 #endif
 }
@@ -2423,7 +2423,7 @@ void X86FrameLowering::adjustForHiPEPrologue(
     incStackMBB->addSuccessor(&PrologueMBB, {99, 100});
     incStackMBB->addSuccessor(incStackMBB, {1, 100});
   }
-#ifdef XDEBUG
+#ifdef EXPENSIVE_CHECKS
   MF.verify();
 #endif
 }

@@ -47,7 +47,6 @@ def IEEERndNearV5T     : Predicate<"HST->modeIEEERndNear()">;
 def UseHVXDbl          : Predicate<"HST->useHVXDblOps()">,
                          AssemblerPredicate<"ExtensionHVXDbl">;
 def UseHVXSgl          : Predicate<"HST->useHVXSglOps()">;
-
 def UseHVX             : Predicate<"HST->useHVXSglOps() ||HST->useHVXDblOps()">,
                          AssemblerPredicate<"ExtensionHVX">;
 
@@ -171,12 +170,37 @@ def getBaseWithImmOffset : InstrMapping {
   let ValueCols = [["BaseImmOffset"]];
 }
 
+def getAbsoluteForm : InstrMapping {
+  let FilterClass = "AddrModeRel";
+  let RowFields = ["CextOpcode", "PredSense", "PNewValue", "isNVStore",
+                   "isFloat"];
+  let ColFields = ["addrMode"];
+  let KeyCol = ["BaseImmOffset"];
+  let ValueCols = [["Absolute"]];
+}
+
 def getBaseWithRegOffset : InstrMapping {
   let FilterClass = "AddrModeRel";
   let RowFields = ["CextOpcode", "PredSense", "PNewValue", "isNVStore"];
   let ColFields = ["addrMode"];
   let KeyCol = ["BaseImmOffset"];
   let ValueCols = [["BaseRegOffset"]];
+}
+
+def xformRegToImmOffset : InstrMapping {
+  let FilterClass = "AddrModeRel";
+  let RowFields = ["CextOpcode", "PredSense", "PNewValue", "isNVStore"];
+  let ColFields = ["addrMode"];
+  let KeyCol = ["BaseRegOffset"];
+  let ValueCols = [["BaseImmOffset"]];
+}
+
+def getBaseWithLongOffset : InstrMapping {
+  let FilterClass = "ImmRegShl";
+  let RowFields = ["CextOpcode", "PredSense", "PNewValue", "isNVStore"];
+  let ColFields = ["addrMode"];
+  let KeyCol = ["BaseRegOffset"];
+  let ValueCols = [["BaseLongOffset"]];
 }
 
 def getRegForm : InstrMapping {

@@ -1,4 +1,4 @@
-//===- PDBNameMap.cpp - PDB Name Map ----------------------------*- C++ -*-===//
+//===- NameMap.cpp - PDB Name Map -------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,15 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/PDBNameMap.h"
+#include "llvm/DebugInfo/PDB/Raw/NameMap.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBStream.h"
+#include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
-PDBNameMap::PDBNameMap() {}
+NameMap::NameMap() {}
 
-std::error_code PDBNameMap::load(PDBStream &Stream) {
+std::error_code NameMap::load(StreamReader &Stream) {
+
   // This is some sort of weird string-set/hash table encoded in the stream.
   // It starts with the number of bytes in the table.
   uint32_t NumberOfBytes;
@@ -99,7 +101,7 @@ std::error_code PDBNameMap::load(PDBStream &Stream) {
   return std::error_code();
 }
 
-bool PDBNameMap::tryGetValue(StringRef Name, uint32_t &Value) const {
+bool NameMap::tryGetValue(StringRef Name, uint32_t &Value) const {
   auto Iter = Mapping.find(Name);
   if (Iter == Mapping.end())
     return false;

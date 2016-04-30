@@ -1,4 +1,4 @@
-//===- PDBStream.cpp - Low level interface to a PDB stream ------*- C++ -*-===//
+//===- MappedBlockStream.cpp - Reads stream data from a PDBFile -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,48 +7,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/PDBStream.h"
+#include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
-PDBStream::PDBStream(uint32_t StreamIdx, const PDBFile &File) : Pdb(File) {
+MappedBlockStream::MappedBlockStream(uint32_t StreamIdx, const PDBFile &File) : Pdb(File) {
   StreamLength = Pdb.getStreamByteSize(StreamIdx);
   BlockList = Pdb.getStreamBlockList(StreamIdx);
-  Offset = 0;
 }
 
-std::error_code PDBStream::readInteger(uint32_t &Dest) {
-  support::ulittle32_t P;
-  if (std::error_code EC = readObject(&P))
-    return EC;
-  Dest = P;
-  return std::error_code();
-}
-
-std::error_code PDBStream::readZeroString(std::string &Dest) {
-  char C;
-  do {
-    readObject(&C);
-    if (C != '\0')
-      Dest.push_back(C);
-  } while (C != '\0');
-  return std::error_code();
-}
-
-std::error_code PDBStream::readBytes(void *Dest, uint32_t Length) {
+std::error_code
+MappedBlockStream::readBytes(uint32_t Offset,
+                             MutableArrayRef<uint8_t> Buffer) const {
   uint32_t BlockNum = Offset / Pdb.getBlockSize();
   uint32_t OffsetInBlock = Offset % Pdb.getBlockSize();
 
   // Make sure we aren't trying to read beyond the end of the stream.
-  if (Length > StreamLength)
+  if (Buffer.size() > StreamLength)
     return std::make_error_code(std::errc::bad_address);
-  if (Offset > StreamLength - Length)
+  if (Offset > StreamLength - Buffer.size())
     return std::make_error_code(std::errc::bad_address);
 
-  uint32_t BytesLeft = Length;
+  uint32_t BytesLeft = Buffer.size();
   uint32_t BytesWritten = 0;
-  char *WriteBuffer = static_cast<char *>(Dest);
+  uint8_t *WriteBuffer = Buffer.data();
   while (BytesLeft > 0) {
     uint32_t StreamBlockAddr = BlockList[BlockNum];
 
@@ -65,14 +49,5 @@ std::error_code PDBStream::readBytes(void *Dest, uint32_t Length) {
     OffsetInBlock = 0;
   }
 
-  // Modify the offset to point to the data after the object.
-  Offset += Length;
-
   return std::error_code();
 }
-
-void PDBStream::setOffset(uint32_t O) { Offset = O; }
-
-uint32_t PDBStream::getOffset() const { return Offset; }
-
-uint32_t PDBStream::getLength() const { return StreamLength; }

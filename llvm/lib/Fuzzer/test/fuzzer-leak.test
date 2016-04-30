@@ -11,7 +11,7 @@ LEAK_IN_CORPUS: ERROR: libFuzzer: initial corpus triggers memory leaks.
 
 
 RUN: not LLVMFuzzer-LeakTest -runs=100000 -detect_leaks=0 2>&1 | FileCheck %s --check-prefix=LEAK_AFTER
-RUN: not LLVMFuzzer-LeakTest -runs=100000                 2>&1 | FileCheck %s --check-prefix=LEAK_AFTER
+RUN: not LLVMFuzzer-LeakTest -runs=100000                 2>&1 | FileCheck %s --check-prefix=LEAK_DURING
 LEAK_AFTER: Done 100000 runs in
 LEAK_AFTER: ERROR: LeakSanitizer: detected memory leaks
 LEAK_AFTER-NOT: DEATH:

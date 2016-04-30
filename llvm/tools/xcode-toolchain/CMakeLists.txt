@@ -70,3 +70,23 @@ add_custom_target(install-xcode-toolchain
                           -DCMAKE_INSTALL_PREFIX=${LLVMToolchainDir}/usr/
                           -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
                   ${cmake_3_2_USES_TERMINAL})
+
+if(LLVM_DISTRIBUTION_COMPONENTS)
+  if(CMAKE_CONFIGURATION_TYPES)
+    message(FATAL_ERROR "LLVM_DISTRIBUTION_COMPONENTS cannot be specified with multi-configuration generators (i.e. Xcode or Visual Studio)")
+  endif()
+
+  add_custom_target(install-distribution-toolchain
+                  DEPENDS ${LLVMToolchainDir}/ToolchainInfo.plist distribution)
+
+  foreach(target ${LLVM_DISTRIBUTION_COMPONENTS})
+    add_custom_target(install-distribution-${target}
+                DEPENDS ${target}
+                COMMAND "${CMAKE_COMMAND}"
+                        -DCMAKE_INSTALL_COMPONENT=${target}
+                        -DCMAKE_INSTALL_PREFIX=${LLVMToolchainDir}/usr/
+                        -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+                ${cmake_3_2_USES_TERMINAL})
+    add_dependencies(install-distribution-toolchain install-distribution-${target})
+  endforeach()
+endif()

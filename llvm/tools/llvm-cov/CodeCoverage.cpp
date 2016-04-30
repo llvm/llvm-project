@@ -13,15 +13,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RenderingSupport.h"
 #include "CoverageFilters.h"
 #include "CoverageReport.h"
 #include "CoverageViewOptions.h"
+#include "RenderingSupport.h"
 #include "SourceCoverageView.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/ProfileData/CoverageMapping.h"
+#include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"

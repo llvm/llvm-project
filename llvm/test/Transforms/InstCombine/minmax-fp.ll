@@ -154,3 +154,29 @@ define i8 @t15(float %a) {
   %3 = select i1 %1, i8 %2, i8 0
   ret i8 %3
 }
+
+; CHECK-LABEL: @t16
+; CHECK:  %[[cmp:.*]] = icmp sgt i32 %x, 0
+; CHECK:  %[[cst:.*]] = sitofp i32 %x to double
+; CHECK:  %[[sel:.*]] = select i1 %[[cmp]], double %[[cst]], double 5.000000e-01
+; CHECK:  ret double %[[sel]]
+define double @t16(i32 %x) {
+entry:
+  %cmp = icmp sgt i32 %x, 0
+  %cst = sitofp i32 %x to double
+  %sel = select i1 %cmp, double %cst, double 5.000000e-01
+  ret double %sel
+}
+
+; CHECK-LABEL: @t17
+; CHECK:  %[[cmp:.*]] = icmp sgt i32 %x, 2
+; CHECK:  %[[sel:.*]] = select i1 %[[cmp]], i32 %x, i32 2
+; CHECK:  %[[cst:.*]] = sitofp i32 %[[sel]] to double
+; CHECK:  ret double %[[cst]]
+define double @t17(i32 %x) {
+entry:
+  %cmp = icmp sgt i32 %x, 2
+  %cst = sitofp i32 %x to double
+  %sel = select i1 %cmp, double %cst, double 2.0
+  ret double %sel
+}

@@ -596,22 +596,6 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         }
       }
 
-      // TODO: only do this when it is needed
-      switch (MF->getSubtarget<AMDGPUSubtarget>().getGeneration()) {
-      case AMDGPUSubtarget::SOUTHERN_ISLANDS:
-        // "VALU writes SGPR" -> "SMRD reads that SGPR" needs 4 wait states
-        // ("S_NOP 3") on SI
-        TII->insertWaitStates(*MBB, MI, 4);
-        break;
-      case AMDGPUSubtarget::SEA_ISLANDS:
-        break;
-      default: // VOLCANIC_ISLANDS and later
-        // "VALU writes SGPR -> VMEM reads that SGPR" needs 5 wait states
-        // ("S_NOP 4") on VI and later. This also applies to VALUs which write
-        // VCC, but we're unlikely to see VMEM use VCC.
-        TII->insertWaitStates(*MBB, MI, 5);
-      }
-
       MI->eraseFromParent();
       break;
     }
@@ -990,4 +974,15 @@ unsigned SIRegisterInfo::getNumSGPRsAllowed(AMDGPUSubtarget::Generation gen,
       default: return 103;
     }
   }
+}
+
+bool SIRegisterInfo::isVGPR(const MachineRegisterInfo &MRI,
+                            unsigned Reg) const {
+  const TargetRegisterClass *RC;
+  if (TargetRegisterInfo::isVirtualRegister(Reg))
+    RC = MRI.getRegClass(Reg);
+  else
+    RC = getPhysRegClass(Reg);
+
+  return hasVGPRs(RC);
 }

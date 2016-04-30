@@ -491,8 +491,8 @@ define void @aggressive_combine_to_mad_fsub_1_f32(float addrspace(1)* noalias %o
 ; SI-DENORM: v_fma_f32 [[TMP:v[0-9]+]], [[D]], [[E]], -[[C]]
 ; SI-DENORM: v_fma_f32 [[RESULT:v[0-9]+]], [[A]], [[B]], [[TMP]]
 
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP1:v[0-9]+]], [[B]], [[A]]
+; SI-DENORM-SLOWFMAF-DAG: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
+; SI-DENORM-SLOWFMAF-DAG: v_mul_f32_e32 [[TMP1:v[0-9]+]], [[B]], [[A]]
 ; SI-DENORM-SLOWFMAF: v_add_f32_e32 [[TMP2:v[0-9]+]], [[TMP0]], [[TMP1]]
 ; SI-DENORM-SLOWFMAF: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP2]]
 
@@ -538,8 +538,8 @@ define void @aggressive_combine_to_mad_fsub_2_f32(float addrspace(1)* noalias %o
 ; SI-DENORM: v_fma_f32 [[TMP:v[0-9]+]], -[[D]], [[E]], [[A]]
 ; SI-DENORM: v_fma_f32 [[RESULT:v[0-9]+]], -[[B]], [[C]], [[TMP]]
 
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP1:v[0-9]+]], [[C]], [[B]]
+; SI-DENORM-SLOWFMAF-DAG: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
+; SI-DENORM-SLOWFMAF-DAG: v_mul_f32_e32 [[TMP1:v[0-9]+]], [[C]], [[B]]
 ; SI-DENORM-SLOWFMAF: v_add_f32_e32 [[TMP2:v[0-9]+]], [[TMP0]], [[TMP1]]
 ; SI-DENORM-SLOWFMAF: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[TMP2]], [[A]]
 
