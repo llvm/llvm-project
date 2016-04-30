@@ -360,6 +360,23 @@ class Diagnostic(object):
         return FixItIterator(self)
 
     @property
+    def children(self):
+        class ChildDiagnosticsIterator:
+            def __init__(self, diag):
+                self.diag_set = conf.lib.clang_getChildDiagnostics(diag)
+
+            def __len__(self):
+                return int(conf.lib.clang_getNumDiagnosticsInSet(self.diag_set))
+
+            def __getitem__(self, key):
+                diag = conf.lib.clang_getDiagnosticInSet(self.diag_set, key)
+                if not diag:
+                    raise IndexError
+                return Diagnostic(diag)
+
+        return ChildDiagnosticsIterator(self)
+
+    @property
     def category_number(self):
         """The category number for this diagnostic or 0 if unavailable."""
         return conf.lib.clang_getDiagnosticCategory(self)
@@ -1119,6 +1136,9 @@ CursorKind.INCLUSION_DIRECTIVE = CursorKind(503)
 CursorKind.MODULE_IMPORT_DECL = CursorKind(600)
 # A type alias template declaration
 CursorKind.TYPE_ALIAS_TEMPLATE_DECL = CursorKind(601)
+
+# A code completion overload candidate.
+CursorKind.OVERLOAD_CANDIDATE = CursorKind(700)
 
 ### Template Argument Kinds ###
 class TemplateArgumentKind(BaseEnumeration):
@@ -3053,6 +3073,10 @@ functionList = [
    Type,
    Type.from_result),
 
+  ("clang_getChildDiagnostics",
+   [Diagnostic],
+   c_object_p),
+
   ("clang_getCompletionAvailability",
    [c_void_p],
    c_int),
@@ -3173,6 +3197,10 @@ functionList = [
    _CXString,
    _CXString.from_result),
 
+  ("clang_getDiagnosticInSet",
+   [c_object_p, c_uint],
+   c_object_p),
+
   ("clang_getDiagnosticLocation",
    [Diagnostic],
    SourceLocation),
@@ -3271,6 +3299,10 @@ functionList = [
    c_int),
 
   ("clang_getNumDiagnostics",
+   [c_object_p],
+   c_uint),
+
+  ("clang_getNumDiagnosticsInSet",
    [c_object_p],
    c_uint),
 
