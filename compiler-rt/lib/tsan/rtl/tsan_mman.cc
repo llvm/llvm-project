@@ -164,7 +164,11 @@ uptr user_alloc_usable_size(const void *p) {
   if (p == 0)
     return 0;
   MBlock *b = ctx->metamap.GetBlock((uptr)p);
-  return b ? b->siz : 0;
+  if (!b)
+    return 0;  // Not a valid pointer.
+  if (b->siz == 0)
+    return 1;  // Zero-sized allocations are actually 1 byte.
+  return b->siz;
 }
 
 void invoke_malloc_hook(void *ptr, uptr size) {
