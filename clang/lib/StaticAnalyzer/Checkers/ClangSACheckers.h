@@ -26,7 +26,7 @@ class CheckerRegistry;
 #define GET_CHECKERS
 #define CHECKER(FULLNAME,CLASS,CXXFILE,HELPTEXT,GROUPINDEX,HIDDEN)    \
   void register##CLASS(CheckerManager &mgr);
-#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#include "Checkers.inc"
 #undef CHECKER
 #undef GET_CHECKERS
 
