@@ -1,3 +1,6 @@
+// REQUIRES: x86-registered-target
+// REQUIRES: aarch64-registered-target
+
 // RUN: %clang -target x86_64-apple-darwin -Wincompatible-sysroot -isysroot SDKs/MacOSX10.9.sdk -mios-version-min=9.0 -S -o - %s 2>&1 | FileCheck -check-prefix CHECK-OSX-IOS %s
 // RUN: %clang -target arm64-apple-darwin -Wincompatible-sysroot -isysroot SDKs/iPhoneOS9.2.sdk -mwatchos-version-min=2.0 -S -o - %s 2>&1 | FileCheck -check-prefix CHECK-IOS-WATCHOS %s
 // RUN: %clang -target arm64-apple-darwin -Wincompatible-sysroot -isysroot SDKs/iPhoneOS9.2.sdk -mtvos-version-min=9.0 -S -o - %s 2>&1 | FileCheck -check-prefix CHECK-IOS-TVOS %s
