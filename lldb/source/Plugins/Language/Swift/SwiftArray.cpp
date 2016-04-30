@@ -356,30 +356,13 @@ SwiftArrayBufferHandler::CreateBufferHandler (ValueObject& valobj)
         CompilerType argument_type;
         
         SwiftASTContext *swift_ast_ctx(llvm::dyn_cast_or_null<SwiftASTContext>(valobj.GetCompilerType().GetTypeSystem()));
-        if (!swift_ast_ctx)
+        SwiftLanguageRuntime::MetadataPromiseSP promise_sp(swift_runtime->GetMetadataPromise(argmetadata_ptr,swift_ast_ctx));
+        if (promise_sp)
         {
-            swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(process_sp->GetTarget().GetScratchTypeSystemForLanguage(nullptr, lldb::eLanguageTypeSwift));
-        }
-        if (!swift_ast_ctx)
-            return nullptr;
-        
-        SwiftLanguageRuntime::MetadataSP metadata_sp(swift_runtime->GetMetadataForLocation(argmetadata_ptr));
-        if (metadata_sp)
-        {
-            if (SwiftLanguageRuntime::ClassMetadata* class_metadata = llvm::dyn_cast_or_null<SwiftLanguageRuntime::ClassMetadata>(metadata_sp.get()))
+            if (CompilerType type = promise_sp->FulfillTypePromise())
             {
-                if (auto gpv = class_metadata->GetGenericParameterVector())
-                {
-                    if (gpv->GetNumParameters() == 1)
-                    {
-                        if (auto param = gpv->GetParameterAtIndex(0).GetMetadata())
-                        {
-                            argument_type = swift_runtime->GetTypeForMetadata(param,
-                                                                              swift_ast_ctx,
-                                                                              error);
-                        }
-                    }
-                }
+                lldb::TemplateArgumentKind kind;
+                argument_type = type.GetTemplateArgument(0, kind);
             }
         }
 

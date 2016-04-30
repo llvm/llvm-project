@@ -45,16 +45,6 @@ class SwiftLanguageRuntime :
     public LanguageRuntime
 {
 public:
-
-    class Metadata;
-    typedef std::shared_ptr<Metadata> MetadataSP;
-    
-    class GenericPattern;
-    typedef std::shared_ptr<GenericPattern> GenericPatternSP;
-    
-    class NominalTypeDescriptor;
-    typedef std::shared_ptr<NominalTypeDescriptor> NominalTypeDescriptorSP;
-    
     class MetadataPromise;
     typedef std::shared_ptr<MetadataPromise> MetadataPromiseSP;
     
@@ -242,1059 +232,6 @@ public:
                        ConstString ivar_name,
                        Error* = nullptr);
     };
-    
-    class MetadataUtils
-    {
-        friend class SwiftLanguageRuntime;
-    public:
-        MetadataUtils (SwiftLanguageRuntime& runtime,
-                       lldb::addr_t base_addr);
-        
-        virtual ~MetadataUtils () = default;
-        
-        // this is an helper function that can be used to just read an integer
-        // at some offset from the metadata pointer
-        uint64_t
-        ReadIntegerAtOffset (size_t size, int32_t offset);
-        
-        // this is an helper function that can be used to just read an integer
-        // at some offset from the metadata pointer
-        uint64_t
-        ReadIntegerAtOffset (size_t size, lldb::addr_t base, int32_t offset);
-        
-        // this is an helper function that can be used to just read a pointer
-        // at some offset from the metadata pointer
-        // since most fields in Swift metadata are pointer sized and at some well-known
-        // or easily computable number of pointer sized words from the base pointer,
-        // offset is measured in pointer sized words instead of bytes
-        lldb::addr_t
-        ReadPointerAtOffset (int32_t offset);
-        
-        // this has the same rationale, but is useful to read at arbitrary locations
-        // instead of basing off the metadata pointer - mostly useful if some metadata entry
-        // ends up being a pointer-to interesting stuff worth reading
-        lldb::addr_t
-        ReadPointerAtOffset (lldb::addr_t base, int32_t offset);
-        
-        // this is an helper function to read a string whose pointer is at some offset
-        bool
-        ReadStringPointedAtOffset (int32_t offset, std::string& out_str);
-        
-        // this is an helper function to read a set of consecutive strings terminated by a double NULL
-        // this is a fairly frequent metadata construct in Swift, so let's make it easy to parse it
-        std::vector<std::string>
-        ReadDoublyTerminatedStringList (lldb::addr_t location);
-        
-    protected:
-        lldb::addr_t m_base_address;
-        SwiftLanguageRuntime& m_runtime;
-    };
-    
-    class NominalTypeDescriptor : protected MetadataUtils
-    {
-    friend class SwiftLanguageRuntime;
-    public:
-        NominalTypeDescriptor (SwiftLanguageRuntime& runtime,
-                               lldb::addr_t base_addr);
-        
-        virtual ~NominalTypeDescriptor () = default;
-        
-        enum class Kind : uint64_t {
-            Class = 0,
-            Struct = 1,
-            Enum = 2,
-            Unknown = 0xFF
-        };
-        
-        Kind
-        GetKind () const
-        {
-            return m_kind;
-        }
-        
-        std::string
-        GetMangledName () const
-        {
-            return m_mangled_name;
-            
-        }
-        
-        lldb::addr_t
-        GetGenericParameterVectorOffset () const
-        {
-            return m_gpv_offset;
-        }
-        
-        size_t
-        GetNumTypeParameters () const
-        {
-            return m_num_type_params;
-        }
-        
-        lldb::addr_t
-        GetNumWitnessesAtIndex (size_t idx) const
-        {
-            if (idx >= m_num_type_params)
-                return LLDB_INVALID_ADDRESS;
-            return m_num_witnesses[idx];
-        }
-        
-        lldb::addr_t
-        GetBaseAddress () const
-        {
-            return m_base_address;
-        }
-        
-        static bool classof(const NominalTypeDescriptor *S)
-        {
-            return S->GetKind() == Kind::Unknown;
-        }
-        
-    protected:
-        Kind m_kind;
-        std::string m_mangled_name;
-        lldb::addr_t m_gpv_offset;
-        size_t m_num_type_params;
-        std::vector<size_t> m_num_witnesses;
-        
-    private:
-        DISALLOW_COPY_AND_ASSIGN (NominalTypeDescriptor);
-        
-        virtual bool
-        IsValid ()
-        {
-            return true;
-        }
-    };
-    
-    class AggregateNominalTypeDescriptor : public NominalTypeDescriptor
-    {
-    public:
-        AggregateNominalTypeDescriptor (SwiftLanguageRuntime& runtime,
-                                        lldb::addr_t base_addr);
-        
-        virtual ~AggregateNominalTypeDescriptor () = default;
-
-        static bool classof(const NominalTypeDescriptor *S)
-        {
-            return S->GetKind() == Kind::Class ||
-            S->GetKind() == Kind::Struct;
-        }
-        
-        size_t
-        GetNumFields () const
-        {
-            return m_num_fields;
-        }
-        
-        lldb::addr_t
-        GetFieldOffsetVectorOffset () const
-        {
-            return m_field_off_vec_offset;
-        }
-        
-        std::string
-        GetFieldNameAtIndex (size_t idx) const
-        {
-            if (idx >= m_num_fields)
-                return "";
-            return m_field_names[idx];
-        }
-
-    protected:
-        size_t m_num_fields;
-        lldb::addr_t m_field_off_vec_offset;
-        std::vector<std::string> m_field_names;
-        lldb::addr_t m_field_metadata_generator;
-    private:
-        DISALLOW_COPY_AND_ASSIGN(AggregateNominalTypeDescriptor);
-        
-        virtual bool
-        IsValid ()
-        {
-            return m_num_fields == m_field_names.size();
-        }
-    };
-    
-    class EnumNominalTypeDescriptor : public NominalTypeDescriptor
-    {
-    public:
-        EnumNominalTypeDescriptor (SwiftLanguageRuntime& runtime,
-                                   lldb::addr_t base_addr);
-        
-        virtual ~EnumNominalTypeDescriptor () = default;
-
-        static bool classof(const NominalTypeDescriptor *S)
-        {
-            return S->GetKind() == Kind::Enum;
-        }
-        
-        size_t
-        GetNumCases (bool nonempty = true, bool empty = true) const
-        {
-            return (empty ? m_num_empty_cases : 0) + (nonempty ? m_num_nonempty_cases : 0);
-        }
-        
-        std::string
-        GetCaseNameAtIndex (size_t idx) const
-        {
-            if (idx >= m_num_nonempty_cases + m_num_empty_cases)
-                return "";
-            return m_case_names[idx];
-        }
-
-    protected:
-        size_t m_num_nonempty_cases;
-        size_t m_num_empty_cases;
-        std::vector<std::string> m_case_names;
-        lldb::addr_t m_case_metadata_generator;
-
-    private:
-        DISALLOW_COPY_AND_ASSIGN(EnumNominalTypeDescriptor);
-        
-        virtual bool
-        IsValid ()
-        {
-            return m_case_names.size() == GetNumCases(true,true);
-        }
-    };
-    
-    // named GenericMetadata in swiftlang
-    class GenericPattern : protected MetadataUtils
-    {
-    friend class SwiftLanguageRuntime;
-    public:
-        GenericPattern (SwiftLanguageRuntime& runtime,
-                        lldb::addr_t base_addr);
-        
-        virtual ~GenericPattern () = default;
-        
-        MetadataSP
-        FindGenericMetadata(CompilerType type);
-        
-        lldb::addr_t
-        GetFillFunctionAddress ()
-        {
-            return m_fill_function_addr;
-        }
-        
-        uint32_t
-        GetSize ()
-        {
-            return m_size;
-        }
-        
-        uint16_t
-        GetNumKeyArguments ()
-        {
-            return m_num_key_args;
-        }
-        
-        lldb::addr_t
-        GetCacheAddress ();
-        
-    protected:
-        MetadataSP
-        FindGenericMetadata(std::vector<CompilerType> args);
-
-        class CacheAddressStore
-        {
-        public:
-            CacheAddressStore();
-            
-            lldb::addr_t
-            GetCacheAddress(const Process& p, std::function<lldb::addr_t(void)> f);
-            
-        private:
-            lldb::addr_t m_cache_addr;
-            uint32_t m_last_cache_update_stop_id;
-        };
-        
-        lldb::addr_t m_fill_function_addr;
-        uint32_t m_size;
-        uint16_t m_num_key_args;
-        CacheAddressStore m_cache_addr_store;
-    };
-
-    class Metadata : protected MetadataUtils
-    {
-    friend class SwiftLanguageRuntime;
-    public:
-        enum class Kind {
-            Unknown = 0,
-            Struct = 1,
-            Enum = 2,
-            Opaque = 8,
-            Tuple = 9,
-            Function = 10,
-            Protocol = 12,
-            Metatype = 13,
-            ObjCWrapper = 14,
-            Class = 4095
-        };
-        
-        static bool classof(const Metadata *S)
-        {
-            return S->GetKind() == Kind::Unknown;
-        }
-        
-        Kind
-        GetKind () const
-        {
-            return m_kind;
-        }
-        
-        lldb::addr_t
-        GetBaseAddress () const
-        {
-            return m_base_address;
-        }
-        
-        // TODO: if we eventually care about the VWT, return a struct
-        // that defines it instead of just the pointer-to
-        lldb::addr_t
-        GetValueWitnessTableAddress () const
-        {
-            return m_value_witness_table;
-        }
-        
-        // does this thing support being "sub-typed"?
-        virtual bool
-        IsStaticallyDetermined ()
-        {
-            return true;
-        }
-        
-    protected:
-        
-        Metadata (SwiftLanguageRuntime& runtime,
-                  lldb::addr_t base_addr);
-        
-    private:
-        // TODO: do we want to read a value_witness?
-        lldb::addr_t m_value_witness_table;
-        Kind m_kind;
-        
-        DISALLOW_COPY_AND_ASSIGN(Metadata);
-    };
-    
-    class GenericParameterVector : protected MetadataUtils
-    {
-    friend class SwiftLanguageRuntime;
-    public:
-        class GenericParameter
-        {
-        private:
-            MetadataSP m_metadata_sp;
-            
-        public:
-            GenericParameter (MetadataSP metadata) :
-            m_metadata_sp(metadata)
-            { }
-            
-            GenericParameter () :
-            m_metadata_sp ()
-            { }
-            
-            bool
-            IsValid ();
-            
-            MetadataSP
-            GetMetadata ()
-            {
-                return m_metadata_sp;
-            }
-        };
-        
-        size_t
-        GetNumParameters ()
-        {
-            return m_num_primary_params;
-        }
-        
-        GenericParameter
-        GetParameterAtIndex (size_t);
-        
-    protected:
-        GenericParameterVector (SwiftLanguageRuntime& runtime,
-                                lldb::addr_t nom_type_desc_addr,
-                                lldb::addr_t base_addr);
-    private:
-        size_t m_num_primary_params;
-        std::vector<GenericParameter> m_params;
-        
-        DISALLOW_COPY_AND_ASSIGN(GenericParameterVector);
-    };
-    
-    class NominalTypeMetadata : public Metadata
-    {
-    friend class SwiftLanguageRuntime;
-    public:
-        static bool classof(const Metadata *S)
-        {
-            auto kind = S->GetKind();
-            switch (kind)
-            {
-                case Kind::Struct:
-                case Kind::Class:
-                case Kind::Enum:
-                case Kind::ObjCWrapper:
-                    return true;
-                default:
-                    return false;
-            }
-        }
-        
-        virtual std::string
-        GetMangledName () = 0;
-        
-        virtual GenericParameterVector*
-        GetGenericParameterVector () = 0;
-
-    protected:
-        NominalTypeMetadata (SwiftLanguageRuntime& runtime,
-                             lldb::addr_t base_addr) :
-        Metadata (runtime,base_addr) {}
-
-    private:
-        
-        DISALLOW_COPY_AND_ASSIGN(NominalTypeMetadata);
-    };
-    
-    class FieldContainerTypeMetadata : public NominalTypeMetadata
-    {
-    friend class SwiftLanguageRuntime;
-    public:
-        static bool classof(const Metadata *S)
-        {
-            auto kind = S->GetKind();
-            switch (kind)
-            {
-                case Kind::Struct:
-                case Kind::Class:
-                    return true;
-                default:
-                    return false;
-            }
-        }
-        
-        class Field
-        {
-        private:
-            ConstString m_name;
-            lldb::addr_t m_offset;
-            
-        public:
-            Field (std::string name, lldb::addr_t offset) :
-            m_name(name.c_str()),
-            m_offset(offset)
-            { }
-            
-            Field () :
-            m_name(),
-            m_offset (LLDB_INVALID_ADDRESS)
-            { }
-            
-            bool
-            IsValid ();
-            
-            ConstString
-            GetName ()
-            {
-                return m_name;
-            }
-            
-            lldb::addr_t
-            GetOffset ()
-            {
-                return m_offset;
-            }
-        };
-        
-        virtual size_t
-        GetNumFields () = 0;
-        
-        virtual Field
-        GetFieldAtIndex (size_t) = 0;
-
-    protected:
-        FieldContainerTypeMetadata (SwiftLanguageRuntime& runtime,
-                                    lldb::addr_t base_addr) :
-        NominalTypeMetadata (runtime,base_addr) {}
-        
-    private:
-        DISALLOW_COPY_AND_ASSIGN(FieldContainerTypeMetadata);
-    };
-    
-    class StructMetadata : public FieldContainerTypeMetadata
-    {
-    friend class SwiftLanguageRuntime;
-    public:
-        static bool classof(const Metadata *S)
-        {
-            return S->GetKind() == Kind::Struct;
-        }
-        
-        virtual std::string
-        GetMangledName ()
-        {
-            return m_mangled_name;
-        }
-        
-        size_t
-        GetNumFields ()
-        {
-            return m_num_fields;
-        }
-        
-        Field
-        GetFieldAtIndex (size_t);
-        
-        virtual GenericParameterVector*
-        GetGenericParameterVector ()
-        {
-            return m_gpv_ap.get();
-        }
-        
-    protected:
-        StructMetadata (SwiftLanguageRuntime& runtime,
-                        lldb::addr_t base_addr);
-
-    private:
-        std::string m_mangled_name;
-        size_t m_num_fields;
-        std::vector<Field> m_fields;
-        std::unique_ptr<GenericParameterVector> m_gpv_ap;
-
-        DISALLOW_COPY_AND_ASSIGN(StructMetadata);
-    };
-    
-    class EnumMetadata : public NominalTypeMetadata
-    {
-    friend class SwiftLanguageRuntime;
-    public:
-        static bool classof(const Metadata *S)
-        {
-            return S->GetKind() == Kind::Enum;
-        }
-        
-        virtual std::string
-        GetMangledName ()
-        {
-            return m_mangled_name;
-        }
-        
-        size_t
-        GetNumCases ()
-        {
-            return m_num_nonempty_cases+m_num_empty_cases;
-        }
-        
-        size_t
-        GetNumNonEmptyCases ()
-        {
-            return m_num_nonempty_cases;
-        }
-        
-        size_t
-        GetNumEmptyCases ()
-        {
-            return m_num_empty_cases;
-        }
-        
-        class Case
-        {
-        private:
-            std::string m_name;
-            bool m_empty;
-            
-        public:
-            Case (std::string name, bool empty) :
-            m_name(name),
-            m_empty(empty)
-            { }
-            
-            Case () :
-            m_name(),
-            m_empty()
-            { }
-            
-            bool
-            IsValid ();
-            
-            std::string
-            GetName ()
-            {
-                return m_name;
-            }
-            
-            bool
-            IsEmpty ()
-            {
-                return m_empty;
-            }
-        };
-        
-        Case
-        GetCaseAtIndex (size_t);
-        
-        virtual GenericParameterVector*
-        GetGenericParameterVector ()
-        {
-            return m_gpv_ap.get();
-        }
-        
-    protected:
-        EnumMetadata (SwiftLanguageRuntime& runtime,
-                      lldb::addr_t base_addr);
-        
-    private:
-        std::string m_mangled_name;
-        size_t m_num_nonempty_cases;
-        size_t m_num_empty_cases;
-        std::vector<Case> m_cases;
-        std::unique_ptr<GenericParameterVector> m_gpv_ap;
-        
-        DISALLOW_COPY_AND_ASSIGN(EnumMetadata);
-    };
-
-    class OpaqueMetadata : public Metadata
-    {
-        friend class SwiftLanguageRuntime;
-    public:
-        static bool classof(const Metadata *S)
-        {
-            return S->GetKind() == Kind::Opaque;
-        }
-        
-    protected:
-        OpaqueMetadata (SwiftLanguageRuntime& runtime,
-                       lldb::addr_t base_addr);
-        
-    private:
-        DISALLOW_COPY_AND_ASSIGN(OpaqueMetadata);
-    };
-    
-    class TupleMetadata : public Metadata
-    {
-        friend class SwiftLanguageRuntime;
-    public:
-        class Element
-        {
-        private:
-            MetadataSP m_metadata_sp;
-            std::string m_name;
-            lldb::addr_t m_offset;
-            
-        public:
-            Element (MetadataSP metadata,
-                     std::string name,
-                     lldb::addr_t offset) :
-            m_metadata_sp (metadata),
-            m_name(name),
-            m_offset (offset)
-            { }
-            
-            Element () :
-            m_metadata_sp (),
-            m_name(),
-            m_offset (LLDB_INVALID_ADDRESS)
-            { }
-            
-            bool
-            IsValid ();
-            
-            MetadataSP
-            GetMetadata () const
-            {
-                return m_metadata_sp;
-            }
-            
-            const char*
-            GetName () const
-            {
-                return m_name.c_str();
-            }
-            
-            lldb::addr_t
-            GetOffset () const
-            {
-                return m_offset;
-            }
-        };
-        
-        static bool classof(const Metadata *S)
-        {
-            return S->GetKind() == Kind::Tuple;
-        }
-        
-        size_t
-        GetNumElements ()
-        {
-            return m_num_elements;
-        }
-        
-        Element
-        GetElementAtIndex (size_t i);
-        
-    protected:
-        
-        TupleMetadata (SwiftLanguageRuntime& runtime,
-                       lldb::addr_t base_addr);
-        
-    private:
-        size_t m_num_elements;
-        std::vector<Element> m_elements;
-        
-        DISALLOW_COPY_AND_ASSIGN(TupleMetadata);
-    };
-    
-    class FunctionMetadata : public Metadata
-    {
-    friend class SwiftLanguageRuntime;
-    public:
-        static bool classof(const Metadata *S)
-        {
-            return S->GetKind() == Kind::Function;
-        }
-        
-        MetadataSP
-        GetArgumentMetadata ();
-        
-        MetadataSP
-        GetReturnMetadata ();
-        
-        bool
-        IsThrowsFunction ();
-        
-    protected:
-        
-        FunctionMetadata (SwiftLanguageRuntime& runtime,
-                          lldb::addr_t base_addr);
-        
-    private:
-        union {
-            struct {
-                uint32_t m_argc: 31;
-                bool m_throws : 1;
-            };
-            uint32_t m_argc_and_throws;
-        } m_argc_and_throws;
-        MetadataSP m_arg_metadata_sp;
-        MetadataSP m_ret_metadata_sp;
-        
-        DISALLOW_COPY_AND_ASSIGN(FunctionMetadata);
-    };
-    
-    class ProtocolMetadata : public Metadata
-    {
-    friend class SwiftLanguageRuntime;
-    public:
-        static bool classof(const Metadata *S)
-        {
-            return S->GetKind() == Kind::Protocol;
-        }
-        
-        // this is-not a metadata, but we like to have
-        // the Read* utils - FIXME better design here?
-        // like a MetadataUtils?
-        class Descriptor : protected MetadataUtils
-        {
-        private:
-            lldb::addr_t m_isa_placeholder;
-            std::string m_mangled_name;
-            std::vector<Descriptor> m_parents;
-            lldb::addr_t m_required_instance_methods_addr;
-            lldb::addr_t m_required_class_methods_addr;
-            lldb::addr_t m_optional_instance_methods_addr;
-            lldb::addr_t m_optional_class_methods_addr;
-            lldb::addr_t m_instance_properties_addr;
-            uint32_t m_size;
-            bool m_is_swift;
-            bool m_class_only;
-            bool m_uses_witness_table;
-            bool m_is_error_type;
-            
-        protected:
-            // these come from ProtocolDescriptorFlags in MetadataValues.h
-            static const uint32_t SpecialProtocolMask = 0x7F000000U;
-            static const uint32_t SpecialProtocolShift = 24;
-            
-        public:
-            Descriptor (SwiftLanguageRuntime& runtime)
-            : MetadataUtils (runtime, LLDB_INVALID_ADDRESS)
-            { }
-            
-            Descriptor (SwiftLanguageRuntime& runtime,
-                        lldb::addr_t base_descriptor_address);
-            
-            bool
-            IsValid ()
-            {
-                return m_mangled_name.empty() == false;
-            }
-            
-            lldb::addr_t
-            GetISAPlaceholder ()
-            {
-                return m_isa_placeholder;
-            }
-            
-            std::string
-            GetMangledName ()
-            {
-                return m_mangled_name;
-            }
-            
-            size_t
-            GetNumParents ()
-            {
-                return m_parents.size();
-            }
-            
-            Descriptor
-            GetParentAtIndex (size_t idx)
-            {
-                if (idx >= m_parents.size())
-                    return Descriptor(m_runtime);
-                return m_parents[idx];
-            }
-            
-            // TODO: do we need accessors for all the ObjC compatibility tables?
-            
-            bool
-            IsSwift ()
-            {
-                return m_is_swift;
-            }
-            
-            bool
-            IsClassOnly ()
-            {
-                return m_class_only;
-            }
-            
-            bool
-            UsesWitnessTable ()
-            {
-                return m_uses_witness_table;
-            }
-            
-            bool
-            IsErrorType ()
-            {
-                return m_is_error_type;
-            }
-        };
-        
-        bool
-        IsClassOnly ()
-        {
-            return m_class_only;
-        }
-        
-        // from the ABI docs: For the "any" types ``protocol<>`` or ``protocol<class>``, this is zero
-        bool
-        IsAny ()
-        {
-            return (GetNumProtocols() > 0);
-        }
-        
-        bool
-        IsErrorType ();
-        
-        uint32_t
-        GetNumWitnessTables ()
-        {
-            return m_num_witness_tables;
-        }
-        
-        size_t
-        GetNumProtocols ()
-        {
-            return m_num_protocols;
-        }
-        
-        bool
-        IsStaticallyDetermined () override
-        {
-            return false;
-        }
-        
-        Descriptor
-        GetProtocolAtIndex (size_t i);
-        
-    protected:
-        ProtocolMetadata (SwiftLanguageRuntime& runtime,
-                          lldb::addr_t base_addr);
-        
-    private:
-        uint32_t m_num_witness_tables;
-        bool m_class_only;
-        size_t m_num_protocols;
-        std::vector <Descriptor> m_protocols;
-
-        DISALLOW_COPY_AND_ASSIGN(ProtocolMetadata);
-    };
-    
-    class MetatypeMetadata : public Metadata
-    {
-    friend class SwiftLanguageRuntime;
-    public:
-        static bool classof(const Metadata *S)
-        {
-            return S->GetKind() == Kind::Metatype;
-        }
-        
-        MetadataSP
-        GetInstanceMetadata ();
-        
-    protected:
-        
-        MetatypeMetadata (SwiftLanguageRuntime& runtime,
-                          lldb::addr_t base_addr);
-        
-    private:
-        MetadataSP m_instance_metadata_sp;
-        
-        DISALLOW_COPY_AND_ASSIGN(MetatypeMetadata);
-    };
-    
-    class ObjCWrapperMetadata : public NominalTypeMetadata
-    {
-        friend class SwiftLanguageRuntime;
-    public:
-        static bool classof(const Metadata *S)
-        {
-            return S->GetKind() == Kind::ObjCWrapper;
-        }
-        
-        // this won't really be a mangled name
-        std::string
-        GetMangledName () override;
-        
-        GenericParameterVector*
-        GetGenericParameterVector () override { return nullptr; }
-        
-        virtual ObjCLanguageRuntime::ClassDescriptorSP
-        GetObjectiveCClassDescriptor () 
-        {
-            return m_objc_class_sp;
-        }
-        
-        bool
-        IsStaticallyDetermined () override
-        {
-            return false;
-        }
-        
-    protected:
-        ObjCWrapperMetadata (SwiftLanguageRuntime& runtime,
-                             lldb::addr_t base_addr);
-        
-    private:
-        ObjCLanguageRuntime::ClassDescriptorSP m_objc_class_sp;
-        
-        DISALLOW_COPY_AND_ASSIGN(ObjCWrapperMetadata);
-    };
-    
-    class ClassMetadata : public FieldContainerTypeMetadata
-    {
-    friend class SwiftLanguageRuntime;
-    public:
-        static bool classof(const Metadata *S)
-        {
-            return S->GetKind() == Kind::Class;
-        }
-        
-        std::string
-        GetMangledName () override
-        {
-            return m_mangled_name;
-        }
-        
-        size_t
-        GetNumFields () override
-        {
-            return m_num_fields;
-        }
-        
-        bool
-        IsSwiftClass ()
-        {
-            return ((m_rodata_ptr & 1) == 1);
-        }
-        
-        ObjCLanguageRuntime::ClassDescriptorSP
-        GetObjectiveCClassDescriptor ()
-        {
-            return m_objc_class_desc_sp;
-        }
-        
-        MetadataSP
-        GetSuperclassMetadata ()
-        {
-            return m_superclass_metadata_sp;
-        }
-        
-        size_t
-        GetInstanceSize ()
-        {
-            return m_instance_size;
-        }
-        
-        size_t
-        GetInstanceAlignment ()
-        {
-            return m_instance_align_mask;
-        }
-        
-        Field
-        GetFieldAtIndex (size_t) override;
-        
-        GenericParameterVector*
-        GetGenericParameterVector () override
-        {
-            return m_gpv_ap.get();
-        }
-        
-        bool
-        IsObjectiveC ()
-        {
-            return m_is_objc;
-        }
-        
-        bool
-        IsStaticallyDetermined () override
-        {
-            return false;
-        }
-        
-    protected:
-        ClassMetadata (SwiftLanguageRuntime& runtime,
-                       lldb::addr_t base_addr);
-        
-    private:
-        bool m_is_objc;
-        std::string m_mangled_name;
-        lldb::addr_t m_destructor_ptr;
-        ObjCLanguageRuntime::ClassDescriptorSP m_objc_class_desc_sp;
-        MetadataSP m_superclass_metadata_sp;
-        lldb::addr_t m_reserved1; // reserved for ObjC
-        lldb::addr_t m_reserved2; // reserved for ObjC
-        lldb::addr_t m_rodata_ptr; // we don't read the rodata, but can use the low bit as a tag
-        uint32_t m_class_flags;
-        uint32_t m_instance_addr_point;
-        uint32_t m_instance_size;
-        uint16_t m_instance_align_mask;
-        uint16_t m_reserved3; // reserved for the runtime
-        uint32_t m_class_obj_size;
-        size_t m_num_fields;
-        std::vector<Field> m_fields;
-        std::unique_ptr<GenericParameterVector> m_gpv_ap;
-
-        DISALLOW_COPY_AND_ASSIGN(ClassMetadata);
-    };
 
     class SwiftExceptionPrecondition : public Breakpoint::BreakpointPrecondition
     {
@@ -1461,10 +398,6 @@ public:
     virtual bool
     CouldHaveDynamicValue (ValueObject &in_value) override;
     
-    // TODO: one should have a better entry point for metadata retrieval than an address
-    virtual MetadataSP
-    GetMetadataForLocation (lldb::addr_t addr);
-    
     virtual MetadataPromiseSP
     GetMetadataPromise (lldb::addr_t addr,
                         SwiftASTContext* swift_ast_ctx = nullptr);
@@ -1472,23 +405,6 @@ public:
     virtual MemberVariableOffsetResolverSP
     GetMemberVariableOffsetResolver (CompilerType compiler_type);
     
-    virtual MetadataSP
-    GetMetadataForType (CompilerType type);
-    
-    virtual CompilerType
-    GetTypeForMetadata (MetadataSP metadata_sp,
-                        SwiftASTContext * swift_ast_ctx,
-                        Error& error);
-    
-    virtual GenericPatternSP
-    GetGenericPatternForType (CompilerType type);
-
-    virtual NominalTypeDescriptorSP
-    GetNominalTypeDescriptorForType (CompilerType type);
-    
-    virtual NominalTypeDescriptorSP
-    GetNominalTypeDescriptorForLocation (lldb::addr_t addr);
-
     void
     AddToLibraryNegativeCache (const char *library_name);
     
@@ -1613,6 +529,1088 @@ protected:
     
     SwiftASTContext*
     GetScratchSwiftASTContext ();
+    
+    class Metadata;
+    typedef std::shared_ptr<Metadata> MetadataSP;
+    
+    class GenericPattern;
+    typedef std::shared_ptr<GenericPattern> GenericPatternSP;
+    
+    class NominalTypeDescriptor;
+    typedef std::shared_ptr<NominalTypeDescriptor> NominalTypeDescriptorSP;
+    
+    class MetadataUtils
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        MetadataUtils (SwiftLanguageRuntime& runtime,
+                       lldb::addr_t base_addr);
+        
+        virtual ~MetadataUtils () = default;
+        
+        // this is an helper function that can be used to just read an integer
+        // at some offset from the metadata pointer
+        uint64_t
+        ReadIntegerAtOffset (size_t size, int32_t offset);
+        
+        // this is an helper function that can be used to just read an integer
+        // at some offset from the metadata pointer
+        uint64_t
+        ReadIntegerAtOffset (size_t size, lldb::addr_t base, int32_t offset);
+        
+        // this is an helper function that can be used to just read a pointer
+        // at some offset from the metadata pointer
+        // since most fields in Swift metadata are pointer sized and at some well-known
+        // or easily computable number of pointer sized words from the base pointer,
+        // offset is measured in pointer sized words instead of bytes
+        lldb::addr_t
+        ReadPointerAtOffset (int32_t offset);
+        
+        // this has the same rationale, but is useful to read at arbitrary locations
+        // instead of basing off the metadata pointer - mostly useful if some metadata entry
+        // ends up being a pointer-to interesting stuff worth reading
+        lldb::addr_t
+        ReadPointerAtOffset (lldb::addr_t base, int32_t offset);
+        
+        // this is an helper function to read a string whose pointer is at some offset
+        bool
+        ReadStringPointedAtOffset (int32_t offset, std::string& out_str);
+        
+        // this is an helper function to read a set of consecutive strings terminated by a double NULL
+        // this is a fairly frequent metadata construct in Swift, so let's make it easy to parse it
+        std::vector<std::string>
+        ReadDoublyTerminatedStringList (lldb::addr_t location);
+        
+    protected:
+        lldb::addr_t m_base_address;
+        SwiftLanguageRuntime& m_runtime;
+    };
+    
+    class NominalTypeDescriptor : protected MetadataUtils
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        NominalTypeDescriptor (SwiftLanguageRuntime& runtime,
+                               lldb::addr_t base_addr);
+        
+        virtual ~NominalTypeDescriptor () = default;
+        
+        enum class Kind : uint64_t {
+            Class = 0,
+            Struct = 1,
+            Enum = 2,
+            Unknown = 0xFF
+        };
+        
+        Kind
+        GetKind () const
+        {
+            return m_kind;
+        }
+        
+        std::string
+        GetMangledName () const
+        {
+            return m_mangled_name;
+            
+        }
+        
+        lldb::addr_t
+        GetGenericParameterVectorOffset () const
+        {
+            return m_gpv_offset;
+        }
+        
+        size_t
+        GetNumTypeParameters () const
+        {
+            return m_num_type_params;
+        }
+        
+        lldb::addr_t
+        GetNumWitnessesAtIndex (size_t idx) const
+        {
+            if (idx >= m_num_type_params)
+                return LLDB_INVALID_ADDRESS;
+            return m_num_witnesses[idx];
+        }
+        
+        lldb::addr_t
+        GetBaseAddress () const
+        {
+            return m_base_address;
+        }
+        
+        static bool classof(const NominalTypeDescriptor *S)
+        {
+            return S->GetKind() == Kind::Unknown;
+        }
+        
+    protected:
+        Kind m_kind;
+        std::string m_mangled_name;
+        lldb::addr_t m_gpv_offset;
+        size_t m_num_type_params;
+        std::vector<size_t> m_num_witnesses;
+        
+    private:
+        DISALLOW_COPY_AND_ASSIGN (NominalTypeDescriptor);
+        
+        virtual bool
+        IsValid ()
+        {
+            return true;
+        }
+    };
+    
+    class AggregateNominalTypeDescriptor : public NominalTypeDescriptor
+    {
+    public:
+        AggregateNominalTypeDescriptor (SwiftLanguageRuntime& runtime,
+                                        lldb::addr_t base_addr);
+        
+        virtual ~AggregateNominalTypeDescriptor () = default;
+        
+        static bool classof(const NominalTypeDescriptor *S)
+        {
+            return S->GetKind() == Kind::Class ||
+            S->GetKind() == Kind::Struct;
+        }
+        
+        size_t
+        GetNumFields () const
+        {
+            return m_num_fields;
+        }
+        
+        lldb::addr_t
+        GetFieldOffsetVectorOffset () const
+        {
+            return m_field_off_vec_offset;
+        }
+        
+        std::string
+        GetFieldNameAtIndex (size_t idx) const
+        {
+            if (idx >= m_num_fields)
+                return "";
+            return m_field_names[idx];
+        }
+        
+    protected:
+        size_t m_num_fields;
+        lldb::addr_t m_field_off_vec_offset;
+        std::vector<std::string> m_field_names;
+        lldb::addr_t m_field_metadata_generator;
+    private:
+        DISALLOW_COPY_AND_ASSIGN(AggregateNominalTypeDescriptor);
+        
+        virtual bool
+        IsValid ()
+        {
+            return m_num_fields == m_field_names.size();
+        }
+    };
+    
+    class EnumNominalTypeDescriptor : public NominalTypeDescriptor
+    {
+    public:
+        EnumNominalTypeDescriptor (SwiftLanguageRuntime& runtime,
+                                   lldb::addr_t base_addr);
+        
+        virtual ~EnumNominalTypeDescriptor () = default;
+        
+        static bool classof(const NominalTypeDescriptor *S)
+        {
+            return S->GetKind() == Kind::Enum;
+        }
+        
+        size_t
+        GetNumCases (bool nonempty = true, bool empty = true) const
+        {
+            return (empty ? m_num_empty_cases : 0) + (nonempty ? m_num_nonempty_cases : 0);
+        }
+        
+        std::string
+        GetCaseNameAtIndex (size_t idx) const
+        {
+            if (idx >= m_num_nonempty_cases + m_num_empty_cases)
+                return "";
+            return m_case_names[idx];
+        }
+        
+    protected:
+        size_t m_num_nonempty_cases;
+        size_t m_num_empty_cases;
+        std::vector<std::string> m_case_names;
+        lldb::addr_t m_case_metadata_generator;
+        
+    private:
+        DISALLOW_COPY_AND_ASSIGN(EnumNominalTypeDescriptor);
+        
+        virtual bool
+        IsValid ()
+        {
+            return m_case_names.size() == GetNumCases(true,true);
+        }
+    };
+    
+    // named GenericMetadata in swiftlang
+    class GenericPattern : protected MetadataUtils
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        GenericPattern (SwiftLanguageRuntime& runtime,
+                        lldb::addr_t base_addr);
+        
+        virtual ~GenericPattern () = default;
+        
+        MetadataSP
+        FindGenericMetadata(CompilerType type);
+        
+        lldb::addr_t
+        GetFillFunctionAddress ()
+        {
+            return m_fill_function_addr;
+        }
+        
+        uint32_t
+        GetSize ()
+        {
+            return m_size;
+        }
+        
+        uint16_t
+        GetNumKeyArguments ()
+        {
+            return m_num_key_args;
+        }
+        
+        lldb::addr_t
+        GetCacheAddress ();
+        
+    protected:
+        MetadataSP
+        FindGenericMetadata(std::vector<CompilerType> args);
+        
+        class CacheAddressStore
+        {
+        public:
+            CacheAddressStore();
+            
+            lldb::addr_t
+            GetCacheAddress(const Process& p, std::function<lldb::addr_t(void)> f);
+            
+        private:
+            lldb::addr_t m_cache_addr;
+            uint32_t m_last_cache_update_stop_id;
+        };
+        
+        lldb::addr_t m_fill_function_addr;
+        uint32_t m_size;
+        uint16_t m_num_key_args;
+        CacheAddressStore m_cache_addr_store;
+    };
+    
+    class Metadata : protected MetadataUtils
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        enum class Kind {
+            Unknown = 0,
+            Struct = 1,
+            Enum = 2,
+            Opaque = 8,
+            Tuple = 9,
+            Function = 10,
+            Protocol = 12,
+            Metatype = 13,
+            ObjCWrapper = 14,
+            Class = 4095
+        };
+        
+        static bool classof(const Metadata *S)
+        {
+            return S->GetKind() == Kind::Unknown;
+        }
+        
+        Kind
+        GetKind () const
+        {
+            return m_kind;
+        }
+        
+        lldb::addr_t
+        GetBaseAddress () const
+        {
+            return m_base_address;
+        }
+        
+        // TODO: if we eventually care about the VWT, return a struct
+        // that defines it instead of just the pointer-to
+        lldb::addr_t
+        GetValueWitnessTableAddress () const
+        {
+            return m_value_witness_table;
+        }
+        
+        // does this thing support being "sub-typed"?
+        virtual bool
+        IsStaticallyDetermined ()
+        {
+            return true;
+        }
+        
+    protected:
+        
+        Metadata (SwiftLanguageRuntime& runtime,
+                  lldb::addr_t base_addr);
+        
+    private:
+        // TODO: do we want to read a value_witness?
+        lldb::addr_t m_value_witness_table;
+        Kind m_kind;
+        
+        DISALLOW_COPY_AND_ASSIGN(Metadata);
+    };
+    
+    class GenericParameterVector : protected MetadataUtils
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        class GenericParameter
+        {
+        private:
+            MetadataSP m_metadata_sp;
+            
+        public:
+            GenericParameter (MetadataSP metadata) :
+            m_metadata_sp(metadata)
+            { }
+            
+            GenericParameter () :
+            m_metadata_sp ()
+            { }
+            
+            bool
+            IsValid ();
+            
+            MetadataSP
+            GetMetadata ()
+            {
+                return m_metadata_sp;
+            }
+        };
+        
+        size_t
+        GetNumParameters ()
+        {
+            return m_num_primary_params;
+        }
+        
+        GenericParameter
+        GetParameterAtIndex (size_t);
+        
+    protected:
+        GenericParameterVector (SwiftLanguageRuntime& runtime,
+                                lldb::addr_t nom_type_desc_addr,
+                                lldb::addr_t base_addr);
+    private:
+        size_t m_num_primary_params;
+        std::vector<GenericParameter> m_params;
+        
+        DISALLOW_COPY_AND_ASSIGN(GenericParameterVector);
+    };
+    
+    class NominalTypeMetadata : public Metadata
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        static bool classof(const Metadata *S)
+        {
+            auto kind = S->GetKind();
+            switch (kind)
+            {
+                case Kind::Struct:
+                case Kind::Class:
+                case Kind::Enum:
+                case Kind::ObjCWrapper:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        
+        virtual std::string
+        GetMangledName () = 0;
+        
+        virtual GenericParameterVector*
+        GetGenericParameterVector () = 0;
+        
+    protected:
+        NominalTypeMetadata (SwiftLanguageRuntime& runtime,
+                             lldb::addr_t base_addr) :
+        Metadata (runtime,base_addr) {}
+        
+    private:
+        
+        DISALLOW_COPY_AND_ASSIGN(NominalTypeMetadata);
+    };
+    
+    class FieldContainerTypeMetadata : public NominalTypeMetadata
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        static bool classof(const Metadata *S)
+        {
+            auto kind = S->GetKind();
+            switch (kind)
+            {
+                case Kind::Struct:
+                case Kind::Class:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        
+        class Field
+        {
+        private:
+            ConstString m_name;
+            lldb::addr_t m_offset;
+            
+        public:
+            Field (std::string name, lldb::addr_t offset) :
+            m_name(name.c_str()),
+            m_offset(offset)
+            { }
+            
+            Field () :
+            m_name(),
+            m_offset (LLDB_INVALID_ADDRESS)
+            { }
+            
+            bool
+            IsValid ();
+            
+            ConstString
+            GetName ()
+            {
+                return m_name;
+            }
+            
+            lldb::addr_t
+            GetOffset ()
+            {
+                return m_offset;
+            }
+        };
+        
+        virtual size_t
+        GetNumFields () = 0;
+        
+        virtual Field
+        GetFieldAtIndex (size_t) = 0;
+        
+    protected:
+        FieldContainerTypeMetadata (SwiftLanguageRuntime& runtime,
+                                    lldb::addr_t base_addr) :
+        NominalTypeMetadata (runtime,base_addr) {}
+        
+    private:
+        DISALLOW_COPY_AND_ASSIGN(FieldContainerTypeMetadata);
+    };
+    
+    class StructMetadata : public FieldContainerTypeMetadata
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        static bool classof(const Metadata *S)
+        {
+            return S->GetKind() == Kind::Struct;
+        }
+        
+        virtual std::string
+        GetMangledName ()
+        {
+            return m_mangled_name;
+        }
+        
+        size_t
+        GetNumFields ()
+        {
+            return m_num_fields;
+        }
+        
+        Field
+        GetFieldAtIndex (size_t);
+        
+        virtual GenericParameterVector*
+        GetGenericParameterVector ()
+        {
+            return m_gpv_ap.get();
+        }
+        
+    protected:
+        StructMetadata (SwiftLanguageRuntime& runtime,
+                        lldb::addr_t base_addr);
+        
+    private:
+        std::string m_mangled_name;
+        size_t m_num_fields;
+        std::vector<Field> m_fields;
+        std::unique_ptr<GenericParameterVector> m_gpv_ap;
+        
+        DISALLOW_COPY_AND_ASSIGN(StructMetadata);
+    };
+    
+    class EnumMetadata : public NominalTypeMetadata
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        static bool classof(const Metadata *S)
+        {
+            return S->GetKind() == Kind::Enum;
+        }
+        
+        virtual std::string
+        GetMangledName ()
+        {
+            return m_mangled_name;
+        }
+        
+        size_t
+        GetNumCases ()
+        {
+            return m_num_nonempty_cases+m_num_empty_cases;
+        }
+        
+        size_t
+        GetNumNonEmptyCases ()
+        {
+            return m_num_nonempty_cases;
+        }
+        
+        size_t
+        GetNumEmptyCases ()
+        {
+            return m_num_empty_cases;
+        }
+        
+        class Case
+        {
+        private:
+            std::string m_name;
+            bool m_empty;
+            
+        public:
+            Case (std::string name, bool empty) :
+            m_name(name),
+            m_empty(empty)
+            { }
+            
+            Case () :
+            m_name(),
+            m_empty()
+            { }
+            
+            bool
+            IsValid ();
+            
+            std::string
+            GetName ()
+            {
+                return m_name;
+            }
+            
+            bool
+            IsEmpty ()
+            {
+                return m_empty;
+            }
+        };
+        
+        Case
+        GetCaseAtIndex (size_t);
+        
+        virtual GenericParameterVector*
+        GetGenericParameterVector ()
+        {
+            return m_gpv_ap.get();
+        }
+        
+    protected:
+        EnumMetadata (SwiftLanguageRuntime& runtime,
+                      lldb::addr_t base_addr);
+        
+    private:
+        std::string m_mangled_name;
+        size_t m_num_nonempty_cases;
+        size_t m_num_empty_cases;
+        std::vector<Case> m_cases;
+        std::unique_ptr<GenericParameterVector> m_gpv_ap;
+        
+        DISALLOW_COPY_AND_ASSIGN(EnumMetadata);
+    };
+    
+    class OpaqueMetadata : public Metadata
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        static bool classof(const Metadata *S)
+        {
+            return S->GetKind() == Kind::Opaque;
+        }
+        
+    protected:
+        OpaqueMetadata (SwiftLanguageRuntime& runtime,
+                        lldb::addr_t base_addr);
+        
+    private:
+        DISALLOW_COPY_AND_ASSIGN(OpaqueMetadata);
+    };
+    
+    class TupleMetadata : public Metadata
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        class Element
+        {
+        private:
+            MetadataSP m_metadata_sp;
+            std::string m_name;
+            lldb::addr_t m_offset;
+            
+        public:
+            Element (MetadataSP metadata,
+                     std::string name,
+                     lldb::addr_t offset) :
+            m_metadata_sp (metadata),
+            m_name(name),
+            m_offset (offset)
+            { }
+            
+            Element () :
+            m_metadata_sp (),
+            m_name(),
+            m_offset (LLDB_INVALID_ADDRESS)
+            { }
+            
+            bool
+            IsValid ();
+            
+            MetadataSP
+            GetMetadata () const
+            {
+                return m_metadata_sp;
+            }
+            
+            const char*
+            GetName () const
+            {
+                return m_name.c_str();
+            }
+            
+            lldb::addr_t
+            GetOffset () const
+            {
+                return m_offset;
+            }
+        };
+        
+        static bool classof(const Metadata *S)
+        {
+            return S->GetKind() == Kind::Tuple;
+        }
+        
+        size_t
+        GetNumElements ()
+        {
+            return m_num_elements;
+        }
+        
+        Element
+        GetElementAtIndex (size_t i);
+        
+    protected:
+        
+        TupleMetadata (SwiftLanguageRuntime& runtime,
+                       lldb::addr_t base_addr);
+        
+    private:
+        size_t m_num_elements;
+        std::vector<Element> m_elements;
+        
+        DISALLOW_COPY_AND_ASSIGN(TupleMetadata);
+    };
+    
+    class FunctionMetadata : public Metadata
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        static bool classof(const Metadata *S)
+        {
+            return S->GetKind() == Kind::Function;
+        }
+        
+        MetadataSP
+        GetArgumentMetadata ();
+        
+        MetadataSP
+        GetReturnMetadata ();
+        
+        bool
+        IsThrowsFunction ();
+        
+    protected:
+        
+        FunctionMetadata (SwiftLanguageRuntime& runtime,
+                          lldb::addr_t base_addr);
+        
+    private:
+        union {
+            struct {
+                uint32_t m_argc: 31;
+                bool m_throws : 1;
+            };
+            uint32_t m_argc_and_throws;
+        } m_argc_and_throws;
+        MetadataSP m_arg_metadata_sp;
+        MetadataSP m_ret_metadata_sp;
+        
+        DISALLOW_COPY_AND_ASSIGN(FunctionMetadata);
+    };
+    
+    class ProtocolMetadata : public Metadata
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        static bool classof(const Metadata *S)
+        {
+            return S->GetKind() == Kind::Protocol;
+        }
+        
+        // this is-not a metadata, but we like to have
+        // the Read* utils - FIXME better design here?
+        // like a MetadataUtils?
+        class Descriptor : protected MetadataUtils
+        {
+        private:
+            lldb::addr_t m_isa_placeholder;
+            std::string m_mangled_name;
+            std::vector<Descriptor> m_parents;
+            lldb::addr_t m_required_instance_methods_addr;
+            lldb::addr_t m_required_class_methods_addr;
+            lldb::addr_t m_optional_instance_methods_addr;
+            lldb::addr_t m_optional_class_methods_addr;
+            lldb::addr_t m_instance_properties_addr;
+            uint32_t m_size;
+            bool m_is_swift;
+            bool m_class_only;
+            bool m_uses_witness_table;
+            bool m_is_error_type;
+            
+        protected:
+            // these come from ProtocolDescriptorFlags in MetadataValues.h
+            static const uint32_t SpecialProtocolMask = 0x7F000000U;
+            static const uint32_t SpecialProtocolShift = 24;
+            
+        public:
+            Descriptor (SwiftLanguageRuntime& runtime)
+            : MetadataUtils (runtime, LLDB_INVALID_ADDRESS)
+            { }
+            
+            Descriptor (SwiftLanguageRuntime& runtime,
+                        lldb::addr_t base_descriptor_address);
+            
+            bool
+            IsValid ()
+            {
+                return m_mangled_name.empty() == false;
+            }
+            
+            lldb::addr_t
+            GetISAPlaceholder ()
+            {
+                return m_isa_placeholder;
+            }
+            
+            std::string
+            GetMangledName ()
+            {
+                return m_mangled_name;
+            }
+            
+            size_t
+            GetNumParents ()
+            {
+                return m_parents.size();
+            }
+            
+            Descriptor
+            GetParentAtIndex (size_t idx)
+            {
+                if (idx >= m_parents.size())
+                    return Descriptor(m_runtime);
+                return m_parents[idx];
+            }
+            
+            // TODO: do we need accessors for all the ObjC compatibility tables?
+            
+            bool
+            IsSwift ()
+            {
+                return m_is_swift;
+            }
+            
+            bool
+            IsClassOnly ()
+            {
+                return m_class_only;
+            }
+            
+            bool
+            UsesWitnessTable ()
+            {
+                return m_uses_witness_table;
+            }
+            
+            bool
+            IsErrorType ()
+            {
+                return m_is_error_type;
+            }
+        };
+        
+        bool
+        IsClassOnly ()
+        {
+            return m_class_only;
+        }
+        
+        // from the ABI docs: For the "any" types ``protocol<>`` or ``protocol<class>``, this is zero
+        bool
+        IsAny ()
+        {
+            return (GetNumProtocols() > 0);
+        }
+        
+        bool
+        IsErrorType ();
+        
+        uint32_t
+        GetNumWitnessTables ()
+        {
+            return m_num_witness_tables;
+        }
+        
+        size_t
+        GetNumProtocols ()
+        {
+            return m_num_protocols;
+        }
+        
+        bool
+        IsStaticallyDetermined () override
+        {
+            return false;
+        }
+        
+        Descriptor
+        GetProtocolAtIndex (size_t i);
+        
+    protected:
+        ProtocolMetadata (SwiftLanguageRuntime& runtime,
+                          lldb::addr_t base_addr);
+        
+    private:
+        uint32_t m_num_witness_tables;
+        bool m_class_only;
+        size_t m_num_protocols;
+        std::vector <Descriptor> m_protocols;
+        
+        DISALLOW_COPY_AND_ASSIGN(ProtocolMetadata);
+    };
+    
+    class MetatypeMetadata : public Metadata
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        static bool classof(const Metadata *S)
+        {
+            return S->GetKind() == Kind::Metatype;
+        }
+        
+        MetadataSP
+        GetInstanceMetadata ();
+        
+    protected:
+        
+        MetatypeMetadata (SwiftLanguageRuntime& runtime,
+                          lldb::addr_t base_addr);
+        
+    private:
+        MetadataSP m_instance_metadata_sp;
+        
+        DISALLOW_COPY_AND_ASSIGN(MetatypeMetadata);
+    };
+    
+    class ObjCWrapperMetadata : public NominalTypeMetadata
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        static bool classof(const Metadata *S)
+        {
+            return S->GetKind() == Kind::ObjCWrapper;
+        }
+        
+        // this won't really be a mangled name
+        std::string
+        GetMangledName () override;
+        
+        GenericParameterVector*
+        GetGenericParameterVector () override { return nullptr; }
+        
+        virtual ObjCLanguageRuntime::ClassDescriptorSP
+        GetObjectiveCClassDescriptor ()
+        {
+            return m_objc_class_sp;
+        }
+        
+        bool
+        IsStaticallyDetermined () override
+        {
+            return false;
+        }
+        
+    protected:
+        ObjCWrapperMetadata (SwiftLanguageRuntime& runtime,
+                             lldb::addr_t base_addr);
+        
+    private:
+        ObjCLanguageRuntime::ClassDescriptorSP m_objc_class_sp;
+        
+        DISALLOW_COPY_AND_ASSIGN(ObjCWrapperMetadata);
+    };
+    
+    class ClassMetadata : public FieldContainerTypeMetadata
+    {
+        friend class SwiftLanguageRuntime;
+    public:
+        static bool classof(const Metadata *S)
+        {
+            return S->GetKind() == Kind::Class;
+        }
+        
+        std::string
+        GetMangledName () override
+        {
+            return m_mangled_name;
+        }
+        
+        size_t
+        GetNumFields () override
+        {
+            return m_num_fields;
+        }
+        
+        bool
+        IsSwiftClass ()
+        {
+            return ((m_rodata_ptr & 1) == 1);
+        }
+        
+        ObjCLanguageRuntime::ClassDescriptorSP
+        GetObjectiveCClassDescriptor ()
+        {
+            return m_objc_class_desc_sp;
+        }
+        
+        MetadataSP
+        GetSuperclassMetadata ()
+        {
+            return m_superclass_metadata_sp;
+        }
+        
+        size_t
+        GetInstanceSize ()
+        {
+            return m_instance_size;
+        }
+        
+        size_t
+        GetInstanceAlignment ()
+        {
+            return m_instance_align_mask;
+        }
+        
+        Field
+        GetFieldAtIndex (size_t) override;
+        
+        GenericParameterVector*
+        GetGenericParameterVector () override
+        {
+            return m_gpv_ap.get();
+        }
+        
+        bool
+        IsObjectiveC ()
+        {
+            return m_is_objc;
+        }
+        
+        bool
+        IsStaticallyDetermined () override
+        {
+            return false;
+        }
+        
+    protected:
+        ClassMetadata (SwiftLanguageRuntime& runtime,
+                       lldb::addr_t base_addr);
+        
+    private:
+        bool m_is_objc;
+        std::string m_mangled_name;
+        lldb::addr_t m_destructor_ptr;
+        ObjCLanguageRuntime::ClassDescriptorSP m_objc_class_desc_sp;
+        MetadataSP m_superclass_metadata_sp;
+        lldb::addr_t m_reserved1; // reserved for ObjC
+        lldb::addr_t m_reserved2; // reserved for ObjC
+        lldb::addr_t m_rodata_ptr; // we don't read the rodata, but can use the low bit as a tag
+        uint32_t m_class_flags;
+        uint32_t m_instance_addr_point;
+        uint32_t m_instance_size;
+        uint16_t m_instance_align_mask;
+        uint16_t m_reserved3; // reserved for the runtime
+        uint32_t m_class_obj_size;
+        size_t m_num_fields;
+        std::vector<Field> m_fields;
+        std::unique_ptr<GenericParameterVector> m_gpv_ap;
+        
+        DISALLOW_COPY_AND_ASSIGN(ClassMetadata);
+    };
+    
+    virtual MetadataSP
+    GetMetadataForLocation (lldb::addr_t addr);
+    
+    virtual MetadataSP
+    GetMetadataForType (CompilerType type);
+    
+    virtual CompilerType
+    GetTypeForMetadata (MetadataSP metadata_sp,
+                        SwiftASTContext * swift_ast_ctx,
+                        Error& error);
+    
+    virtual GenericPatternSP
+    GetGenericPatternForType (CompilerType type);
+    
+    virtual NominalTypeDescriptorSP
+    GetNominalTypeDescriptorForType (CompilerType type);
+    
+    virtual NominalTypeDescriptorSP
+    GetNominalTypeDescriptorForLocation (lldb::addr_t addr);
         
     // the Swift runtime assumes that metadata will not go away, so caching
     // by address is a reasonable strategy
