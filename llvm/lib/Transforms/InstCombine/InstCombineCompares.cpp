@@ -3070,6 +3070,41 @@ bool InstCombiner::replacedSelectWithOperand(SelectInst *SI,
   return false;
 }
 
+/// If we have an icmp le or icmp ge instruction with a constant operand, turn
+/// it into the appropriate icmp lt or icmp gt instruction. This transform
+/// allows them to be folded in visitICmpInst.
+static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I,
+                                             InstCombiner::BuilderTy &Builder) {
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+
+  if (auto *Op1C = dyn_cast<ConstantInt>(Op1)) {
+    // For scalars, SimplifyICmpInst has already handled the edge cases for us,
+    // so we just assert on them.
+    APInt Op1Val = Op1C->getValue();
+    switch (I.getPredicate()) {
+    case ICmpInst::ICMP_ULE:
+      assert(!Op1C->isMaxValue(false)); // A <=u MAX -> TRUE
+      return new ICmpInst(ICmpInst::ICMP_ULT, Op0, Builder.getInt(Op1Val + 1));
+    case ICmpInst::ICMP_SLE:
+      assert(!Op1C->isMaxValue(true));  // A <=s MAX -> TRUE
+      return new ICmpInst(ICmpInst::ICMP_SLT, Op0, Builder.getInt(Op1Val + 1));
+    case ICmpInst::ICMP_UGE:
+      assert(!Op1C->isMinValue(false)); // A >=u MIN -> TRUE
+      return new ICmpInst(ICmpInst::ICMP_UGT, Op0, Builder.getInt(Op1Val - 1));
+    case ICmpInst::ICMP_SGE:
+      assert(!Op1C->isMinValue(true));  // A >=s MIN -> TRUE
+      return new ICmpInst(ICmpInst::ICMP_SGT, Op0, Builder.getInt(Op1Val - 1));
+    default:
+      break;
+    }
+  }
+
+  // TODO: Handle vectors.
+
+  return nullptr;
+}
+
 Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   bool Changed = false;
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
@@ -3153,6 +3188,9 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     }
   }
 
+  if (ICmpInst *NewICmp = canonicalizeCmpWithConstant(I, *Builder))
+    return NewICmp;
+
   unsigned BitWidth = 0;
   if (Ty->isIntOrIntVectorTy())
     BitWidth = Ty->getScalarSizeInBits();
@@ -3225,30 +3263,6 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
       if (I.getPredicate() == ICmpInst::ICMP_SLT && CI->isOne() &&
           match(Op0, m_NSWSub(m_Value(A), m_Value(B))))
         return new ICmpInst(ICmpInst::ICMP_SLE, A, B);
-    }
-
-    // If we have an icmp le or icmp ge instruction, turn it into the
-    // appropriate icmp lt or icmp gt instruction.  This allows us to rely on
-    // them being folded in the code below.  The SimplifyICmpInst code has
-    // already handled the edge cases for us, so we just assert on them.
-    switch (I.getPredicate()) {
-    default: break;
-    case ICmpInst::ICMP_ULE:
-      assert(!CI->isMaxValue(false));                 // A <=u MAX -> TRUE
-      return new ICmpInst(ICmpInst::ICMP_ULT, Op0,
-                          Builder->getInt(CI->getValue()+1));
-    case ICmpInst::ICMP_SLE:
-      assert(!CI->isMaxValue(true));                  // A <=s MAX -> TRUE
-      return new ICmpInst(ICmpInst::ICMP_SLT, Op0,
-                          Builder->getInt(CI->getValue()+1));
-    case ICmpInst::ICMP_UGE:
-      assert(!CI->isMinValue(false));                 // A >=u MIN -> TRUE
-      return new ICmpInst(ICmpInst::ICMP_UGT, Op0,
-                          Builder->getInt(CI->getValue()-1));
-    case ICmpInst::ICMP_SGE:
-      assert(!CI->isMinValue(true));                  // A >=s MIN -> TRUE
-      return new ICmpInst(ICmpInst::ICMP_SGT, Op0,
-                          Builder->getInt(CI->getValue()-1));
     }
 
     if (I.isEquality()) {

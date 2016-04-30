@@ -204,7 +204,7 @@ bool DAGTypeLegalizer::run() {
 
   // Now that we have a set of nodes to process, handle them all.
   while (!Worklist.empty()) {
-#ifndef XDEBUG
+#ifndef EXPENSIVE_CHECKS
     if (EnableExpensiveChecks)
 #endif
       PerformExpensiveChecks();
@@ -394,7 +394,7 @@ NodeDone:
     }
   }
 
-#ifndef XDEBUG
+#ifndef EXPENSIVE_CHECKS
   if (EnableExpensiveChecks)
 #endif
     PerformExpensiveChecks();

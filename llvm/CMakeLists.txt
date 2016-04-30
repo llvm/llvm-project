@@ -304,6 +304,8 @@ else()
   option(LLVM_ENABLE_ASSERTIONS "Enable assertions" ON)
 endif()
 
+option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
+
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
   "Enable abi-breaking checks.  Can be WITH_ASSERTS, FORCE_ON or FORCE_OFF.")
 
@@ -342,7 +344,7 @@ option(LLVM_USE_SPLIT_DWARF
   "Use -gsplit-dwarf when compiling llvm." OFF)
 
 option(WITH_POLLY "Build LLVM with Polly" ON)
-option(LINK_POLLY_INTO_TOOLS "Static link Polly into tools" OFF)
+option(LINK_POLLY_INTO_TOOLS "Static link Polly into tools" ON)
 
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.
@@ -392,6 +394,16 @@ option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 
 option (LLVM_BUILD_EXTERNAL_COMPILER_RT
   "Build compiler-rt as an external project." OFF)
+
+if(WITH_POLLY)
+  if(NOT EXISTS ${LLVM_MAIN_SRC_DIR}/tools/polly/CMakeLists.txt)
+    set(WITH_POLLY OFF)
+  endif()
+endif(WITH_POLLY)
+
+if (NOT WITH_POLLY)
+ set(LINK_POLLY_INTO_TOOLS OFF)
+endif (NOT WITH_POLLY)
 
 # You can configure which libraries from LLVM you want to include in the
 # shared library by setting LLVM_DYLIB_COMPONENTS to a semi-colon delimited
@@ -701,12 +713,6 @@ foreach( binding ${LLVM_BINDINGS_LIST} )
 endforeach()
 
 add_subdirectory(projects)
-
-if(WITH_POLLY)
-  if(NOT EXISTS ${LLVM_MAIN_SRC_DIR}/tools/polly/CMakeLists.txt)
-    set(WITH_POLLY OFF)
-  endif()
-endif(WITH_POLLY)
 
 if( LLVM_INCLUDE_TOOLS )
   add_subdirectory(tools)

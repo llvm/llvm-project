@@ -35,12 +35,13 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolThunk.h"
+#include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBDbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBInfoStream.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
+#include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
@@ -60,6 +61,7 @@
 #endif
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 namespace opts {
 
@@ -236,27 +238,29 @@ static void dumpStructure(RawSession &RS) {
     }
   }
 
-  PDBInfoStream &InfoStream = File.getPDBInfoStream();
-  outs() << "Version: " << InfoStream.getVersion() << '\n';
+  InfoStream &IS = File.getPDBInfoStream();
+  outs() << "Version: " << IS.getVersion() << '\n';
   outs() << "Signature: ";
-  outs().write_hex(InfoStream.getSignature()) << '\n';
-  outs() << "Age: " << InfoStream.getAge() << '\n';
-  outs() << "Guid: " << InfoStream.getGuid() << '\n';
+  outs().write_hex(IS.getSignature()) << '\n';
+  outs() << "Age: " << IS.getAge() << '\n';
+  outs() << "Guid: " << IS.getGuid() << '\n';
 
   // Let's try to dump out the named stream "/names".
-  uint32_t NameStreamIndex = InfoStream.getNamedStreamIndex("/names");
+  uint32_t NameStreamIndex = IS.getNamedStreamIndex("/names");
   if (NameStreamIndex != 0) {
-    PDBStream NameStream(NameStreamIndex, File);
+    MappedBlockStream NameStream(NameStreamIndex, File);
+    StreamReader Reader(NameStream);
+
     outs() << "NameStream: " << NameStreamIndex << '\n';
 
     // The name stream appears to start with a signature and version.
     uint32_t NameStreamSignature;
-    NameStream.readInteger(NameStreamSignature);
+    Reader.readInteger(NameStreamSignature);
     outs() << "NameStreamSignature: ";
     outs().write_hex(NameStreamSignature) << '\n';
 
     uint32_t NameStreamVersion;
-    NameStream.readInteger(NameStreamVersion);
+    Reader.readInteger(NameStreamVersion);
     outs() << "NameStreamVersion: " << NameStreamVersion << '\n';
 
     // We only support this particular version of the name stream.
@@ -264,24 +268,23 @@ static void dumpStructure(RawSession &RS) {
       reportError("", std::make_error_code(std::errc::not_supported));
   }
 
-  PDBDbiStream &DbiStream = File.getPDBDbiStream();
-  outs() << "Dbi Version: " << DbiStream.getDbiVersion() << '\n';
-  outs() << "Age: " << DbiStream.getAge() << '\n';
-  outs() << "Incremental Linking: " << DbiStream.isIncrementallyLinked()
-         << '\n';
-  outs() << "Has CTypes: " << DbiStream.hasCTypes() << '\n';
-  outs() << "Is Stripped: " << DbiStream.isStripped() << '\n';
-  outs() << "Machine Type: " << DbiStream.getMachineType() << '\n';
-  outs() << "Number of Symbols: " << DbiStream.getNumberOfSymbols() << '\n';
+  DbiStream &DS = File.getPDBDbiStream();
+  outs() << "Dbi Version: " << DS.getDbiVersion() << '\n';
+  outs() << "Age: " << DS.getAge() << '\n';
+  outs() << "Incremental Linking: " << DS.isIncrementallyLinked() << '\n';
+  outs() << "Has CTypes: " << DS.hasCTypes() << '\n';
+  outs() << "Is Stripped: " << DS.isStripped() << '\n';
+  outs() << "Machine Type: " << DS.getMachineType() << '\n';
+  outs() << "Number of Symbols: " << DS.getNumberOfSymbols() << '\n';
 
-  uint16_t Major = DbiStream.getBuildMajorVersion();
-  uint16_t Minor = DbiStream.getBuildMinorVersion();
+  uint16_t Major = DS.getBuildMajorVersion();
+  uint16_t Minor = DS.getBuildMinorVersion();
   outs() << "Toolchain Version: " << Major << "." << Minor << '\n';
   outs() << "mspdb" << Major << Minor << ".dll version: " << Major << "."
-         << Minor << "." << DbiStream.getPdbDllVersion() << '\n';
+         << Minor << "." << DS.getPdbDllVersion() << '\n';
 
   outs() << "Modules: \n";
-  for (auto &Modi : DbiStream.modules()) {
+  for (auto &Modi : DS.modules()) {
     outs() << Modi.Info.getModuleName() << '\n';
     outs().indent(4) << "Debug Stream Index: "
                      << Modi.Info.getModuleStreamIndex() << '\n';

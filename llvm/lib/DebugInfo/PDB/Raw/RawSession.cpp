@@ -18,6 +18,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 RawSession::RawSession(std::unique_ptr<PDBFile> PdbFile)
     : Pdb(std::move(PdbFile)) {}

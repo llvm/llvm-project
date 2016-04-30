@@ -1,4 +1,4 @@
-//===- PDBDbiStream.h - PDB Dbi Stream (Stream 3) Access --------*- C++ -*-===//
+//===- DbiStream.h - PDB Dbi Stream (Stream 3) Access -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,20 +11,22 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBDBISTREAM_H
 
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
+#include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBRawConstants.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBStream.h"
+#include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm {
+namespace pdb {
 class PDBFile;
 
-class PDBDbiStream {
+class DbiStream {
   struct HeaderInfo;
 
 public:
-  PDBDbiStream(PDBFile &File);
-  ~PDBDbiStream();
+  DbiStream(PDBFile &File);
+  ~DbiStream();
   std::error_code reload();
 
   PdbRaw_DbiVer getDbiVersion() const;
@@ -46,22 +48,24 @@ public:
   ArrayRef<ModuleInfoEx> modules() const;
 
 private:
-  std::error_code readSubstream(std::vector<uint8_t> &Bytes, uint32_t Size);
   std::error_code initializeFileInfo();
 
   PDBFile &Pdb;
-  PDBStream Stream;
+  MappedBlockStream Stream;
 
   std::vector<ModuleInfoEx> ModuleInfos;
 
-  std::vector<uint8_t> ModInfoSubstream;
-  std::vector<uint8_t> SecContrSubstream;
-  std::vector<uint8_t> SecMapSubstream;
-  std::vector<uint8_t> FileInfoSubstream;
-  std::vector<uint8_t> TypeServerMapSubstream;
-  std::vector<uint8_t> ECSubstream;
+  ByteStream ModInfoSubstream;
+  ByteStream SecContrSubstream;
+  ByteStream SecMapSubstream;
+  ByteStream FileInfoSubstream;
+  ByteStream TypeServerMapSubstream;
+  ByteStream ECSubstream;
+  ByteStream DbgHeader;
+
   std::unique_ptr<HeaderInfo> Header;
 };
+}
 }
 
 #endif

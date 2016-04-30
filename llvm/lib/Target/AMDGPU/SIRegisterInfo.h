@@ -188,6 +188,8 @@ public:
   unsigned getSGPR32PressureSet() const { return SGPR32SetID; };
   unsigned getVGPR32PressureSet() const { return VGPR32SetID; };
 
+  bool isVGPR(const MachineRegisterInfo &MRI, unsigned Reg) const;
+
 private:
   void buildScratchLoadStore(MachineBasicBlock::iterator MI,
                              unsigned LoadStoreOp, unsigned Value,

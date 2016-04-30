@@ -200,6 +200,34 @@ block102:
   br label %loop
 }
 
+; CHECK-LABEL: check_minsize:
+;      CHECK:   jmp   .LBB4_1
+; CHECK-NOT:   align
+; CHECK-NEXT: .LBB4_2:
+; CHECK-NEXT:   callq loop_latch
+; CHECK-NEXT: .LBB4_1:
+; CHECK-NEXT:   callq loop_header
+
+
+define void @check_minsize() minsize nounwind {
+entry:
+  br label %loop
+
+loop:
+  call void @loop_header()
+  %t0 = tail call i32 @get()
+  %t1 = icmp slt i32 %t0, 0
+  br i1 %t1, label %done, label %bb
+
+bb:
+  call void @loop_latch()
+  br label %loop
+
+done:
+  call void @exit()
+  ret void
+}
+
 declare void @bar99() nounwind
 declare void @bar100() nounwind
 declare void @bar101() nounwind

@@ -588,17 +588,12 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   if (!DIL) {
     return Samples;
   }
-  StringRef CalleeName;
-  for (const DILocation *DIL = Inst.getDebugLoc(); DIL;
-       DIL = DIL->getInlinedAt()) {
+  for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
     DISubprogram *SP = DIL->getScope()->getSubprogram();
     if (!SP)
       return nullptr;
-    if (!CalleeName.empty()) {
-      S.push_back(LineLocation(getOffset(DIL->getLine(), SP->getLine()),
-                               DIL->getDiscriminator()));
-    }
-    CalleeName = SP->getLinkageName();
+    S.push_back(LineLocation(getOffset(DIL->getLine(), SP->getLine()),
+                             DIL->getDiscriminator()));
   }
   if (S.size() == 0)
     return Samples;

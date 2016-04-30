@@ -3022,6 +3022,11 @@ bool HexagonInstrInfo::predOpcodeHasNot(ArrayRef<MachineOperand> Cond) const {
 }
 
 
+short HexagonInstrInfo::getAbsoluteForm(const MachineInstr *MI) const {
+  return Hexagon::getAbsoluteForm(MI->getOpcode());
+}
+
+
 unsigned HexagonInstrInfo::getAddrMode(const MachineInstr* MI) const {
   const uint64_t F = MI->getDesc().TSFlags;
   return (F >> HexagonII::AddrModePos) & HexagonII::AddrModeMask;
@@ -3158,6 +3163,23 @@ SmallVector<MachineInstr*, 2> HexagonInstrInfo::getBranchingInstrs(
     --I;
   } while (true);
   return Jumpers;
+}
+
+
+short HexagonInstrInfo::getBaseWithLongOffset(short Opcode) const {
+  if (Opcode < 0)
+    return -1;
+  return Hexagon::getBaseWithLongOffset(Opcode);
+}
+
+
+short HexagonInstrInfo::getBaseWithLongOffset(const MachineInstr *MI) const {
+  return Hexagon::getBaseWithLongOffset(MI->getOpcode());
+}
+
+
+short HexagonInstrInfo::getBaseWithRegOffset(const MachineInstr *MI) const {
+  return Hexagon::getBaseWithRegOffset(MI->getOpcode());
 }
 
 
@@ -4161,3 +4183,7 @@ bool HexagonInstrInfo::validateBranchCond(const ArrayRef<MachineOperand> &Cond)
   return Cond.empty() || (Cond[0].isImm() && (Cond.size() != 1));
 }
 
+
+short HexagonInstrInfo::xformRegToImmOffset(const MachineInstr *MI) const {
+  return Hexagon::xformRegToImmOffset(MI->getOpcode());
+}

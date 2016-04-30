@@ -12375,7 +12375,7 @@ equivalent to:
 
 	define void @llvm.experimental.guard(i1 %pred, <args...>) {
 	  %realPred = and i1 %pred, undef
-	  br i1 %realPred, label %continue, label %leave
+	  br i1 %realPred, label %continue, label %leave [, !make.implicit !{}]
 
 	leave:
 	  call void @llvm.experimental.deoptimize(<args...>) [ "deopt"() ]
@@ -12384,6 +12384,11 @@ equivalent to:
 	continue:
 	  ret void
 	}
+
+
+with the optional ``[, !make.implicit !{}]`` present if and only if it
+is present on the call site.  For more details on ``!make.implicit``,
+see :doc:`FaultMaps`.
 
 In words, ``@llvm.experimental.guard`` executes the attached
 ``"deopt"`` continuation if (but **not** only if) its first argument

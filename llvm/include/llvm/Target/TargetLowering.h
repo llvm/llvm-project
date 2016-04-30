@@ -296,7 +296,7 @@ public:
   ///
   /// (store (y (conv x)), y*)) -> (store x, (x*))
   virtual bool isStoreBitCastBeneficial(EVT StoreVT, EVT BitcastVT) const {
-    // Default to the same logic as stores.
+    // Default to the same logic as loads.
     return isLoadBitCastBeneficial(StoreVT, BitcastVT);
   }
 

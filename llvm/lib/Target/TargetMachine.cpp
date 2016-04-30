@@ -109,7 +109,7 @@ TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
   bool isLocal = GV->hasLocalLinkage();
   bool isDeclaration = GV->isDeclaration();
   bool isPIC = getRelocationModel() == Reloc::PIC_;
-  bool isPIE = Options.PositionIndependentExecutable;
+  bool isPIE = GV->getParent()->getPIELevel() != PIELevel::Default;
   // FIXME: what should we do for protected and internal visibility?
   // For variables, is internal different from hidden?
   bool isHidden = GV->hasHiddenVisibility();

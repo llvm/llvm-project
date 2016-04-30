@@ -12,8 +12,8 @@ declare double @llvm.AMDGPU.rsq.clamped.f64(double) nounwind readnone
 ; VI-DAG: s_mov_b32 s[[HIGH1:[0-9+]]], 0x7fefffff
 ; VI-DAG: s_mov_b32 s[[HIGH2:[0-9+]]], 0xffefffff
 ; VI-DAG: s_mov_b32 s[[LOW1:[0-9+]]], s[[ALLBITS]]
-; VI: v_min_f64 v[0:1], [[RSQ]], s{{\[}}[[LOW1]]:[[HIGH1]]]
 ; VI: s_mov_b32 s[[LOW2:[0-9+]]], s[[ALLBITS]]
+; VI: v_min_f64 v[0:1], [[RSQ]], s{{\[}}[[LOW1]]:[[HIGH1]]]
 ; VI: v_max_f64 v[0:1], v[0:1], s{{\[}}[[LOW2]]:[[HIGH2]]]
 
 define void @rsq_clamped_f64(double addrspace(1)* %out, double %src) nounwind {

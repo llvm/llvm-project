@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=x86-64 -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic -enable-pie \
+; RUN: llc < %s -march=x86-64 -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X64 %s
-; RUN: llc < %s -emulated-tls -march=x86 -mcpu=generic -mtriple=i386-linux-gnu -relocation-model=pic -enable-pie \
+; RUN: llc < %s -emulated-tls -march=x86 -mcpu=generic -mtriple=i386-linux-gnu -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X32 %s
 
 ; External Linkage
@@ -117,3 +117,7 @@ entry:
   %call = call i32 @access_fp(i32 ()* @bar)
   ret i32 %call
 }
+
+!llvm.module.flags = !{!0, !1}
+!0 = !{i32 1, !"PIC Level", i32 1}
+!1 = !{i32 1, !"PIE Level", i32 1}

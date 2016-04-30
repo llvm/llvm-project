@@ -78,7 +78,8 @@ public:
 
   // PIC support
   virtual void emitDirectiveCpLoad(unsigned RegNo);
-  virtual void emitDirectiveCpRestore(int Offset);
+  virtual void emitDirectiveCpRestore(int Offset, unsigned ATReg, SMLoc IDLoc,
+                                      const MCSubtargetInfo *STI);
   virtual void emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
                                     const MCSymbol &Sym, bool IsReg);
   virtual void emitDirectiveCpreturn(unsigned SaveLocation,
@@ -92,6 +93,45 @@ public:
   virtual void emitDirectiveSetFp(MipsABIFlagsSection::FpABIKind Value);
   virtual void emitDirectiveSetOddSPReg();
   virtual void emitDirectiveSetNoOddSPReg();
+
+  void emitR(unsigned Opcode, unsigned Reg0, SMLoc IDLoc,
+             const MCSubtargetInfo *STI);
+  void emitII(unsigned Opcode, int16_t Imm1, int16_t Imm2, SMLoc IDLoc,
+              const MCSubtargetInfo *STI);
+  void emitRX(unsigned Opcode, unsigned Reg0, MCOperand Op1, SMLoc IDLoc,
+              const MCSubtargetInfo *STI);
+  void emitRI(unsigned Opcode, unsigned Reg0, int32_t Imm, SMLoc IDLoc,
+              const MCSubtargetInfo *STI);
+  void emitRR(unsigned Opcode, unsigned Reg0, unsigned Reg1, SMLoc IDLoc,
+              const MCSubtargetInfo *STI);
+  void emitRRX(unsigned Opcode, unsigned Reg0, unsigned Reg1, MCOperand Op2,
+               SMLoc IDLoc, const MCSubtargetInfo *STI);
+  void emitRRR(unsigned Opcode, unsigned Reg0, unsigned Reg1, unsigned Reg2,
+               SMLoc IDLoc, const MCSubtargetInfo *STI);
+  void emitRRI(unsigned Opcode, unsigned Reg0, unsigned Reg1, int16_t Imm,
+               SMLoc IDLoc, const MCSubtargetInfo *STI);
+  void emitAddu(unsigned DstReg, unsigned SrcReg, unsigned TrgReg, bool Is64Bit,
+                const MCSubtargetInfo *STI);
+  void emitDSLL(unsigned DstReg, unsigned SrcReg, int16_t ShiftAmount,
+                SMLoc IDLoc, const MCSubtargetInfo *STI);
+  void emitEmptyDelaySlot(bool hasShortDelaySlot, SMLoc IDLoc,
+                          const MCSubtargetInfo *STI);
+  void emitNop(SMLoc IDLoc, const MCSubtargetInfo *STI);
+  void emitStoreWithImmOffset(unsigned Opcode, unsigned SrcReg,
+                              unsigned BaseReg, int64_t Offset, unsigned ATReg,
+                              SMLoc IDLoc, const MCSubtargetInfo *STI);
+  void emitStoreWithSymOffset(unsigned Opcode, unsigned SrcReg,
+                              unsigned BaseReg, MCOperand &HiOperand,
+                              MCOperand &LoOperand, unsigned ATReg, SMLoc IDLoc,
+                              const MCSubtargetInfo *STI);
+  void emitLoadWithImmOffset(unsigned Opcode, unsigned DstReg, unsigned BaseReg,
+                             int64_t Offset, unsigned TmpReg, SMLoc IDLoc,
+                             const MCSubtargetInfo *STI);
+  void emitLoadWithSymOffset(unsigned Opcode, unsigned DstReg, unsigned BaseReg,
+                             MCOperand &HiOperand, MCOperand &LoOperand,
+                             unsigned ATReg, SMLoc IDLoc,
+                             const MCSubtargetInfo *STI);
+  void emitGPRestore(int Offset, SMLoc IDLoc, const MCSubtargetInfo *STI);
 
   void forbidModuleDirective() { ModuleDirectiveAllowed = false; }
   void reallowModuleDirective() { ModuleDirectiveAllowed = true; }
@@ -192,7 +232,8 @@ public:
 
   // PIC support
   void emitDirectiveCpLoad(unsigned RegNo) override;
-  void emitDirectiveCpRestore(int Offset) override;
+  void emitDirectiveCpRestore(int Offset, unsigned ATReg, SMLoc IDLoc,
+                              const MCSubtargetInfo *STI) override;
   void emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
                             const MCSymbol &Sym, bool IsReg) override;
   void emitDirectiveCpreturn(unsigned SaveLocation,
@@ -244,7 +285,8 @@ public:
 
   // PIC support
   void emitDirectiveCpLoad(unsigned RegNo) override;
-  void emitDirectiveCpRestore(int Offset) override;
+  void emitDirectiveCpRestore(int Offset, unsigned ATReg, SMLoc IDLoc,
+                              const MCSubtargetInfo *STI) override;
   void emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
                             const MCSymbol &Sym, bool IsReg) override;
   void emitDirectiveCpreturn(unsigned SaveLocation,

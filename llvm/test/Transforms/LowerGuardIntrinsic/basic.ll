@@ -60,3 +60,15 @@ define i32 @f_zero_args(i1* %c_ptr) {
 ; CHECK: guarded:
 ; CHECK-NEXT:  ret i32 500
 }
+
+define i8 @f_with_make_implicit_md(i32* %ptr) {
+; CHECK-LABEL: @f_with_make_implicit_md(
+; CHECK:  br i1 %notNull, label %guarded, label %deopt, !make.implicit !0
+; CHECK: deopt:
+; CHECK-NEXT:  %deoptcall = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ "deopt"(i32 1) ]
+; CHECK-NEXT:  ret i8 %deoptcall
+
+  %notNull = icmp ne i32* %ptr, null
+  call void(i1, ...) @llvm.experimental.guard(i1 %notNull, i32 1) [ "deopt"(i32 1) ], !make.implicit !{}
+  ret i8 5
+}

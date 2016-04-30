@@ -304,7 +304,7 @@ public:
     bool OutputCSV = false;
     bool PrintNewCovPcs = false;
     bool PrintFinalStats = false;
-    bool DetectLeaks = false;
+    bool DetectLeaks = true;
   };
   Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options);
   void AddToCorpus(const Unit &U) {

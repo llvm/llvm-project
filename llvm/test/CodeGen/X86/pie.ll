@@ -1,7 +1,7 @@
-; RUN: llc < %s -O0 -mcpu=generic -mtriple=i686-linux-gnu -relocation-model=pic -enable-pie | FileCheck %s 
-; RUN: llc < %s -O0 -mcpu=generic -mtriple=i686-linux-gnu -fast-isel -relocation-model=pic -enable-pie | FileCheck %s 
-; RUN: llc < %s -O0 -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic -enable-pie | FileCheck %s 
-; RUN: llc < %s -O0 -mcpu=generic -mtriple=x86_64-linux-gnu -fast-isel -relocation-model=pic -enable-pie | FileCheck %s 
+; RUN: llc < %s -O0 -mcpu=generic -mtriple=i686-linux-gnu -relocation-model=pic | FileCheck %s 
+; RUN: llc < %s -O0 -mcpu=generic -mtriple=i686-linux-gnu -fast-isel -relocation-model=pic | FileCheck %s 
+; RUN: llc < %s -O0 -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic | FileCheck %s 
+; RUN: llc < %s -O0 -mcpu=generic -mtriple=x86_64-linux-gnu -fast-isel -relocation-model=pic | FileCheck %s 
 
 ; CHECK-LABEL:  bar:
 ; CHECK:  call{{l|q}}  foo{{$}}
@@ -39,3 +39,7 @@ entry:
 }
 
 ; -fpie for local global data tests should be added here
+
+!llvm.module.flags = !{!0, !1}
+!0 = !{i32 1, !"PIC Level", i32 1}
+!1 = !{i32 1, !"PIE Level", i32 1}

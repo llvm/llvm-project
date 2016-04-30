@@ -575,6 +575,12 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
   if (F->doesNotAccessMemory())
     return FMRB_DoesNotAccessMemory;
 
+  // While the assume intrinsic is marked as arbitrarily writing so that
+  // proper control dependencies will be maintained, it never aliases any
+  // particular memory location.
+  if (F->getIntrinsicID() == Intrinsic::assume)
+    return FMRB_DoesNotAccessMemory;
+
   FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
 
   // If the function declares it only reads memory, go with that.

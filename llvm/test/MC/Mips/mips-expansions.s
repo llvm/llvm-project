@@ -47,7 +47,7 @@
   sw $10, 123456($9)
 # CHECK-LE: lui     $1, 2                   # encoding: [0x02,0x00,0x01,0x3c]
 # CHECK-LE: addu    $1, $1, $9              # encoding: [0x21,0x08,0x29,0x00]
-# CHECK-LE: sw      $10, 57920($1)          # encoding: [0x40,0xe2,0x2a,0xac]
+# CHECK-LE: sw      $10, -7616($1)          # encoding: [0x40,0xe2,0x2a,0xac]
 
   lw $8, symbol
 # CHECK-LE:     lui     $8, %hi(symbol)     # encoding: [A,A,0x08,0x3c]

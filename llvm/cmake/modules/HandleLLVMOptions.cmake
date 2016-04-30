@@ -44,6 +44,11 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
 endif()
 
+if(LLVM_ENABLE_EXPENSIVE_CHECKS)
+  add_definitions(-DEXPENSIVE_CHECKS)
+  add_definitions(-D_GLIBCXX_DEBUG)
+endif()
+
 string(TOUPPER "${LLVM_ABI_BREAKING_CHECKS}" uppercase_LLVM_ABI_BREAKING_CHECKS)
 
 if( uppercase_LLVM_ABI_BREAKING_CHECKS STREQUAL "WITH_ASSERTS" )

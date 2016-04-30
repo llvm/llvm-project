@@ -15,7 +15,7 @@
 #ifndef LLVM_COV_COVERAGESUMMARYINFO_H
 #define LLVM_COV_COVERAGESUMMARYINFO_H
 
-#include "llvm/ProfileData/CoverageMapping.h"
+#include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {

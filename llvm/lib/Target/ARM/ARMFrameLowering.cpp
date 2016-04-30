@@ -2155,7 +2155,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   PrevStackMBB->addSuccessor(McrMBB);
 
-#ifdef XDEBUG
+#ifdef EXPENSIVE_CHECKS
   MF.verify();
 #endif
 }

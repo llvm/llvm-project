@@ -62,8 +62,8 @@ namespace llvm {
     MCOperand decodeOperand_VReg_96(unsigned Val) const;
     MCOperand decodeOperand_VReg_128(unsigned Val) const;
 
-    MCOperand decodeOperand_SGPR_32(unsigned Val) const;
     MCOperand decodeOperand_SReg_32(unsigned Val) const;
+    MCOperand decodeOperand_SReg_32_XM0(unsigned Val) const;
     MCOperand decodeOperand_SReg_64(unsigned Val) const;
     MCOperand decodeOperand_SReg_128(unsigned Val) const;
     MCOperand decodeOperand_SReg_256(unsigned Val) const;

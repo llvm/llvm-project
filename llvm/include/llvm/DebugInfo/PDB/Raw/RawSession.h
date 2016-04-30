@@ -10,11 +10,12 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_RAWSESSION_H
 #define LLVM_DEBUGINFO_PDB_RAW_RAWSESSION_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 
 namespace llvm {
+namespace pdb {
 class PDBFile;
-class StringRef;
 
 class RawSession : public IPDBSession {
 public:
@@ -67,6 +68,7 @@ public:
 private:
   std::unique_ptr<PDBFile> Pdb;
 };
+}
 }
 
 #endif

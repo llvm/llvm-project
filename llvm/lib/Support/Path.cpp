@@ -353,6 +353,10 @@ bool reverse_iterator::operator==(const reverse_iterator &RHS) const {
          Position == RHS.Position;
 }
 
+ptrdiff_t reverse_iterator::operator-(const reverse_iterator &RHS) const {
+  return Position - RHS.Position;
+}
+
 StringRef root_path(StringRef path) {
   const_iterator b = begin(path),
                  pos = b,

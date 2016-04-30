@@ -227,6 +227,76 @@ static void emitAnalysis(CallSite CS, const Twine &Msg) {
   emitOptimizationRemarkAnalysis(Ctx, DEBUG_TYPE, *Caller, DLoc, Msg);
 }
 
+bool Inliner::shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
+                               int &TotalSecondaryCost) {
+
+  // For now we only handle local or inline functions.
+  if (!Caller->hasLocalLinkage() && !Caller->hasLinkOnceODRLinkage())
+    return false;
+  // Try to detect the case where the current inlining candidate caller (call
+  // it B) is a static or linkonce-ODR function and is an inlining candidate
+  // elsewhere, and the current candidate callee (call it C) is large enough
+  // that inlining it into B would make B too big to inline later. In these
+  // circumstances it may be best not to inline C into B, but to inline B into
+  // its callers.
+  //
+  // This only applies to static and linkonce-ODR functions because those are
+  // expected to be available for inlining in the translation units where they
+  // are used. Thus we will always have the opportunity to make local inlining
+  // decisions. Importantly the linkonce-ODR linkage covers inline functions
+  // and templates in C++.
+  //
+  // FIXME: All of this logic should be sunk into getInlineCost. It relies on
+  // the internal implementation of the inline cost metrics rather than
+  // treating them as truly abstract units etc.
+  TotalSecondaryCost = 0;
+  // The candidate cost to be imposed upon the current function.
+  int CandidateCost = IC.getCost() - (InlineConstants::CallPenalty + 1);
+  // This bool tracks what happens if we do NOT inline C into B.
+  bool callerWillBeRemoved = Caller->hasLocalLinkage();
+  // This bool tracks what happens if we DO inline C into B.
+  bool inliningPreventsSomeOuterInline = false;
+  for (User *U : Caller->users()) {
+    CallSite CS2(U);
+
+    // If this isn't a call to Caller (it could be some other sort
+    // of reference) skip it.  Such references will prevent the caller
+    // from being removed.
+    if (!CS2 || CS2.getCalledFunction() != Caller) {
+      callerWillBeRemoved = false;
+      continue;
+    }
+
+    InlineCost IC2 = getInlineCost(CS2);
+    ++NumCallerCallersAnalyzed;
+    if (!IC2) {
+      callerWillBeRemoved = false;
+      continue;
+    }
+    if (IC2.isAlways())
+      continue;
+
+    // See if inlining or original callsite would erase the cost delta of
+    // this callsite. We subtract off the penalty for the call instruction,
+    // which we would be deleting.
+    if (IC2.getCostDelta() <= CandidateCost) {
+      inliningPreventsSomeOuterInline = true;
+      TotalSecondaryCost += IC2.getCost();
+    }
+  }
+  // If all outer calls to Caller would get inlined, the cost for the last
+  // one is set very low by getInlineCost, in anticipation that Caller will
+  // be removed entirely.  We did not account for this above unless there
+  // is only one caller of Caller.
+  if (callerWillBeRemoved && !Caller->use_empty())
+    TotalSecondaryCost += InlineConstants::LastCallToStaticBonus;
+
+  if (inliningPreventsSomeOuterInline && TotalSecondaryCost < IC.getCost())
+    return true;
+
+  return false;
+}
+
 /// Return true if the inliner should attempt to inline at the given CallSite.
 bool Inliner::shouldInline(CallSite CS) {
   InlineCost IC = getInlineCost(CS);
@@ -258,77 +328,17 @@ bool Inliner::shouldInline(CallSite CS) {
                          Twine(IC.getCostDelta() + IC.getCost()) + ")");
     return false;
   }
-  
-  // Try to detect the case where the current inlining candidate caller (call
-  // it B) is a static or linkonce-ODR function and is an inlining candidate
-  // elsewhere, and the current candidate callee (call it C) is large enough
-  // that inlining it into B would make B too big to inline later. In these
-  // circumstances it may be best not to inline C into B, but to inline B into
-  // its callers.
-  //
-  // This only applies to static and linkonce-ODR functions because those are
-  // expected to be available for inlining in the translation units where they
-  // are used. Thus we will always have the opportunity to make local inlining
-  // decisions. Importantly the linkonce-ODR linkage covers inline functions
-  // and templates in C++.
-  //
-  // FIXME: All of this logic should be sunk into getInlineCost. It relies on
-  // the internal implementation of the inline cost metrics rather than
-  // treating them as truly abstract units etc.
-  if (Caller->hasLocalLinkage() || Caller->hasLinkOnceODRLinkage()) {
-    int TotalSecondaryCost = 0;
-    // The candidate cost to be imposed upon the current function.
-    int CandidateCost = IC.getCost() - (InlineConstants::CallPenalty + 1);
-    // This bool tracks what happens if we do NOT inline C into B.
-    bool callerWillBeRemoved = Caller->hasLocalLinkage();
-    // This bool tracks what happens if we DO inline C into B.
-    bool inliningPreventsSomeOuterInline = false;
-    for (User *U : Caller->users()) {
-      CallSite CS2(U);
 
-      // If this isn't a call to Caller (it could be some other sort
-      // of reference) skip it.  Such references will prevent the caller
-      // from being removed.
-      if (!CS2 || CS2.getCalledFunction() != Caller) {
-        callerWillBeRemoved = false;
-        continue;
-      }
-
-      InlineCost IC2 = getInlineCost(CS2);
-      ++NumCallerCallersAnalyzed;
-      if (!IC2) {
-        callerWillBeRemoved = false;
-        continue;
-      }
-      if (IC2.isAlways())
-        continue;
-
-      // See if inlining or original callsite would erase the cost delta of
-      // this callsite. We subtract off the penalty for the call instruction,
-      // which we would be deleting.
-      if (IC2.getCostDelta() <= CandidateCost) {
-        inliningPreventsSomeOuterInline = true;
-        TotalSecondaryCost += IC2.getCost();
-      }
-    }
-    // If all outer calls to Caller would get inlined, the cost for the last
-    // one is set very low by getInlineCost, in anticipation that Caller will
-    // be removed entirely.  We did not account for this above unless there
-    // is only one caller of Caller.
-    if (callerWillBeRemoved && !Caller->use_empty())
-      TotalSecondaryCost += InlineConstants::LastCallToStaticBonus;
-
-    if (inliningPreventsSomeOuterInline && TotalSecondaryCost < IC.getCost()) {
-      DEBUG(dbgs() << "    NOT Inlining: " << *CS.getInstruction() <<
-           " Cost = " << IC.getCost() <<
-           ", outer Cost = " << TotalSecondaryCost << '\n');
-      emitAnalysis(
-          CS, Twine("Not inlining. Cost of inlining " +
-                    CS.getCalledFunction()->getName() +
-                    " increases the cost of inlining " +
-                    CS.getCaller()->getName() + " in other contexts"));
-      return false;
-    }
+  int TotalSecondaryCost = 0;
+  if (shouldBeDeferred(Caller, CS, IC, TotalSecondaryCost)) {
+    DEBUG(dbgs() << "    NOT Inlining: " << *CS.getInstruction()
+          << " Cost = " << IC.getCost()
+          << ", outer Cost = " << TotalSecondaryCost << '\n');
+    emitAnalysis(CS, Twine("Not inlining. Cost of inlining " +
+                           CS.getCalledFunction()->getName() +
+                           " increases the cost of inlining " +
+                           CS.getCaller()->getName() + " in other contexts"));
+    return false;
   }
 
   DEBUG(dbgs() << "    Inlining: cost=" << IC.getCost()

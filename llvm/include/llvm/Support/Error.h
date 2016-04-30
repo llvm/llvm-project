@@ -87,7 +87,7 @@ private:
 /// without testing the return value will raise a runtime error, even if foo
 /// returns success.
 ///
-/// For Error instances representing failure, you must use the either the
+/// For Error instances representing failure, you must use either the
 /// handleErrors or handleAllErrors function with a typed handler. E.g.:
 ///
 ///   class MyErrorInfo : public ErrorInfo<MyErrorInfo> {

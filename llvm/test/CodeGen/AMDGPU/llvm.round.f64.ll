@@ -13,7 +13,7 @@ define void @round_f64(double addrspace(1)* %out, double %x) #0 {
 
 ; FUNC-LABEL: {{^}}v_round_f64:
 ; SI: buffer_load_dwordx2
-; SI: v_bfe_u32 [[EXP:v[0-9]+]], v{{[0-9]+}}, 20, 11
+; SI-DAG: v_bfe_u32 [[EXP:v[0-9]+]], v{{[0-9]+}}, 20, 11
 
 ; SI-DAG: v_not_b32_e32
 ; SI-DAG: v_not_b32_e32

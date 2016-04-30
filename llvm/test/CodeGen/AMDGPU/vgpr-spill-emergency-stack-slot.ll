@@ -11,12 +11,11 @@
 
 ; GCN-LABEL: {{^}}main:
 
-; GCN: s_mov_b32 s11, s12
-; GCN: s_mov_b32 s12, SCRATCH_RSRC_DWORD0
-; GCN-NEXT: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; GCN-NEXT: s_mov_b32 s14, -1
-; SI-NEXT: s_mov_b32 s15, 0x98f000
-; VI-NEXT: s_mov_b32 s15, 0x980000
+; GCN-DAG: s_mov_b32 s12, SCRATCH_RSRC_DWORD0
+; GCN-DAG: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
+; GCN-DAG: s_mov_b32 s14, -1
+; SI-DAG: s_mov_b32 s15, 0x98f000
+; VI-DAG: s_mov_b32 s15, 0x980000
 
 ; s12 is offset user SGPR
 ; GCN: buffer_store_dword {{v[0-9]+}}, off, s[12:15], s11 offset:{{[0-9]+}} ; 16-byte Folded Spill

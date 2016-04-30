@@ -300,6 +300,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
   void rotateLoopWithProfile(BlockChain &LoopChain, MachineLoop &L,
                              const BlockFilterSet &LoopBlockSet);
   void buildCFGChains(MachineFunction &F);
+  void alignBlocks(MachineFunction &F);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -1357,15 +1358,17 @@ void MachineBlockPlacement::buildCFGChains(MachineFunction &F) {
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For AnalyzeBranch.
   if (!TII->AnalyzeBranch(F.back(), TBB, FBB, Cond))
     F.back().updateTerminator();
+}
 
+void MachineBlockPlacement::alignBlocks(MachineFunction &F) {
   // Walk through the backedges of the function now that we have fully laid out
   // the basic blocks and align the destination of each backedge. We don't rely
   // exclusively on the loop info here so that we can align backedges in
   // unnatural CFGs and backedges that were introduced purely because of the
   // loop rotations done during this layout pass.
-  // FIXME: Use Function::optForSize().
-  if (F.getFunction()->hasFnAttribute(Attribute::OptimizeForSize))
+  if (F.getFunction()->optForSize())
     return;
+  BlockChain &FunctionChain = *BlockToChain[&F.front()];
   if (FunctionChain.begin() == FunctionChain.end())
     return; // Empty chain.
 
@@ -1442,6 +1445,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &F) {
   assert(BlockToChain.empty());
 
   buildCFGChains(F);
+  alignBlocks(F);
 
   BlockToChain.clear();
   ChainAllocator.DestroyAll();

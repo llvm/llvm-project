@@ -208,10 +208,10 @@ endif:
 ; SI-DAG: s_lshl_b32 [[SCALEDIDX:s[0-9]+]], [[IDX]], 1{{$}}
 ; SI-DAG: v_mov_b32_e32 [[ELT0:v[0-9]+]], 0{{$}}
 
-; SI: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; SI: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; SI: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; SI: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 
 ; SI: s_mov_b32 m0, [[SCALEDIDX]]
 ; SI: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT0]]

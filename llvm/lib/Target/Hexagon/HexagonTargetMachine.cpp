@@ -33,6 +33,10 @@ static cl::opt<bool> EnableRDFOpt("rdf-opt", cl::Hidden, cl::ZeroOrMore,
 static cl::opt<bool> DisableHardwareLoops("disable-hexagon-hwloops",
   cl::Hidden, cl::desc("Disable Hardware Loops for Hexagon target"));
 
+static cl::opt<bool> DisableAModeOpt("disable-hexagon-amodeopt",
+  cl::Hidden, cl::ZeroOrMore, cl::init(false),
+  cl::desc("Disable Hexagon Addressing Mode Optimization"));
+
 static cl::opt<bool> DisableHexagonCFGOpt("disable-hexagon-cfgopt",
   cl::Hidden, cl::ZeroOrMore, cl::init(false),
   cl::desc("Disable Hexagon CFG Optimization"));
@@ -113,6 +117,7 @@ namespace llvm {
   FunctionPass *createHexagonLoopRescheduling();
   FunctionPass *createHexagonNewValueJump();
   FunctionPass *createHexagonOptimizeSZextends();
+  FunctionPass *createHexagonOptAddrMode();
   FunctionPass *createHexagonPacketizer();
   FunctionPass *createHexagonPeephole();
   FunctionPass *createHexagonRDFOpt();
@@ -272,6 +277,8 @@ void HexagonPassConfig::addPostRegAlloc() {
       addPass(createHexagonRDFOpt());
     if (!DisableHexagonCFGOpt)
       addPass(createHexagonCFGOptimizer(), false);
+    if (!DisableAModeOpt)
+      addPass(createHexagonOptAddrMode(), false);
   }
 }
 

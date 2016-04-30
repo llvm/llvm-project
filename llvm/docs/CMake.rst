@@ -22,6 +22,10 @@ and then go back to the `Quick start`_ section once you know what you are doing.
 `Options and variables`_ section is a reference for customizing your build. If
 you already have experience with CMake, this is the recommended starting point.
 
+This page is geared towards users of the LLVM CMake build. If you're looking for
+information about modifying the LLVM CMake build system you may want to see the
+:doc:`CMakePrimer` page. It has a basic overview of the CMake language.
+
 .. _Quick start:
 
 Quick start

@@ -552,7 +552,7 @@ public:
   /// Executable (PIE) where its definition cannot be interposed.
   bool isGlobalDefinedInPIE(const GlobalValue *GV,
                             const TargetMachine &TM) const {
-    return TM.Options.PositionIndependentExecutable &&
+    return GV->getParent()->getPIELevel() != PIELevel::Default &&
            !GV->isDeclarationForLinker();
   }
 

@@ -2494,16 +2494,16 @@ multiclass DS_1A1D_RET <bits<8> op, string opName, RegisterClass rc,
 multiclass DS_1A1D_PERMUTE <bits<8> op, string opName, RegisterClass rc,
                             SDPatternOperator node = null_frag,
   dag outs = (outs rc:$vdst),
-  dag ins = (ins VGPR_32:$addr, rc:$data0),
-  string asm = opName#" $vdst, $addr, $data0"> {
+  dag ins = (ins VGPR_32:$addr, rc:$data0, offset:$offset),
+  string asm = opName#" $vdst, $addr, $data0"#"$offset"> {
 
   let mayLoad = 0, mayStore = 0, isConvergent = 1 in {
     def "" : DS_Pseudo <opName, outs, ins,
-     [(set (i32 rc:$vdst),
-         (node (i32 VGPR_32:$addr), (i32 rc:$data0)))]>;
+     [(set i32:$vdst,
+         (node (DS1Addr1Offset i32:$addr, i16:$offset), i32:$data0))]>;
 
-    let data1 = 0, offset0 = 0, offset1 = 0, gds = 0  in {
-      def "_vi" : DS_Real_vi <op, opName, outs, ins, asm>;
+    let data1 = 0, gds = 0  in {
+      def "_vi" : DS_Off16_Real_vi <op, opName, outs, ins, asm>;
     }
   }
 }

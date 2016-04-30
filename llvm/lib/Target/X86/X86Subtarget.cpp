@@ -159,8 +159,7 @@ unsigned char X86Subtarget::classifyGlobalFunctionReference(
   // we don't need to use the PLT - we can directly call it.
   // In PIE mode, calls to global functions don't need to go through PLT
   if (isTargetELF() && TM.getRelocationModel() == Reloc::PIC_ &&
-      (!TM.Options.PositionIndependentExecutable ||
-       GV->isDeclarationForLinker()) &&
+      !isGlobalDefinedInPIE(GV, TM) &&
       GV->hasDefaultVisibility() && !GV->hasLocalLinkage()) {
     return X86II::MO_PLT;
   } else if (isPICStyleStubAny() && !GV->isStrongDefinitionForLinker() &&

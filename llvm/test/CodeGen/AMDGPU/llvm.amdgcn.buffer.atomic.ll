@@ -3,6 +3,7 @@
 
 ;CHECK-LABEL: {{^}}test1:
 ;CHECK: buffer_atomic_swap v0, off, s[0:3], 0 glc
+;CHECK: s_movk_i32 [[SOFS:s[0-9]+]], 0x1fff
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_swap v0, v1, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
@@ -12,7 +13,6 @@
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_swap v0, v2, s[0:3], 0 offen offset:42 glc
 ;CHECK-DAG: s_waitcnt vmcnt(0)
-;CHECK-DAG: s_movk_i32 [[SOFS:s[0-9]+]], 0x1fff
 ;CHECK: buffer_atomic_swap v0, off, s[0:3], [[SOFS]] offset:1 glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_swap v0, off, s[0:3], 0{{$}}
@@ -70,6 +70,7 @@ main_body:
 ;CHECK-LABEL: {{^}}test3:
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], 0 glc
 ;CHECK: s_waitcnt vmcnt(0)
+;CHECK: s_movk_i32 [[SOFS:s[0-9]+]], 0x1fff
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, v2, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, v3, s[0:3], 0 offen glc
@@ -78,7 +79,6 @@ main_body:
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, v3, s[0:3], 0 offen offset:42 glc
 ;CHECK-DAG: s_waitcnt vmcnt(0)
-;CHECK-DAG: s_movk_i32 [[SOFS:s[0-9]+]], 0x1fff
 ;CHECK: buffer_atomic_cmpswap {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[SOFS]] offset:1 glc
 define amdgpu_ps float @test3(<4 x i32> inreg %rsrc, i32 %data, i32 %cmp, i32 %vindex, i32 %voffset) {
 main_body:

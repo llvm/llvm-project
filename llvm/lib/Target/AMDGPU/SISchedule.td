@@ -42,6 +42,7 @@ def Write64Bit : SchedWrite;
 class SISchedMachineModel : SchedMachineModel {
   let CompleteModel = 0;
   let IssueWidth = 1;
+  let PostRAScheduler = 1;
 }
 
 def SIFullSpeedModel : SISchedMachineModel;
