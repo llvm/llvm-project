@@ -665,6 +665,9 @@ static AsanAllocator &get_allocator() {
 bool AsanChunkView::IsValid() {
   return chunk_ && chunk_->chunk_state != CHUNK_AVAILABLE;
 }
+bool AsanChunkView::IsAllocated() {
+  return chunk_ && chunk_->chunk_state == CHUNK_ALLOCATED;
+}
 uptr AsanChunkView::Beg() { return chunk_->Beg(); }
 uptr AsanChunkView::End() { return Beg() + UsedSize(); }
 uptr AsanChunkView::UsedSize() { return chunk_->UsedSize(); }
