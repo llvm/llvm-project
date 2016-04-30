@@ -142,6 +142,9 @@ static bool FixedCVE_2016_2143() {
     // 3.2.79+ is OK.
     if (minor == 2 && patch >= 79)
       return true;
+    // 3.12.58+ is OK.
+    if (minor == 12 && patch >= 58)
+      return true;
     // Otherwise, bad.
     return false;
   } else if (major == 4) {
