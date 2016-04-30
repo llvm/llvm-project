@@ -80,3 +80,15 @@ def test_diagnostic_option():
 
     assert d.option == '-Wunused-parameter'
     assert d.disable_option == '-Wno-unused-parameter'
+
+def test_diagnostic_children():
+    tu = get_tu('void f(int x) {} void g() { f(); }')
+    assert len(tu.diagnostics) == 1
+    d = tu.diagnostics[0]
+
+    children = d.children
+    assert len(children) == 1
+    assert children[0].severity == Diagnostic.Note
+    assert children[0].spelling.endswith('declared here')
+    assert children[0].location.line == 1
+    assert children[0].location.column == 1
