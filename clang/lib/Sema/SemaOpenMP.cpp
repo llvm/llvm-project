@@ -1416,6 +1416,9 @@ class DSAAttrChecker : public StmtVisitor<DSAAttrChecker, void> {
 
 public:
   void VisitDeclRefExpr(DeclRefExpr *E) {
+    if (E->isTypeDependent() || E->isValueDependent() ||
+        E->containsUnexpandedParameterPack() || E->isInstantiationDependent())
+      return;
     if (auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
       // Skip internally declared variables.
       if (VD->isLocalVarDecl() && !CS->capturesVariable(VD))
@@ -1464,6 +1467,9 @@ public:
     }
   }
   void VisitMemberExpr(MemberExpr *E) {
+    if (E->isTypeDependent() || E->isValueDependent() ||
+        E->containsUnexpandedParameterPack() || E->isInstantiationDependent())
+      return;
     if (isa<CXXThisExpr>(E->getBase()->IgnoreParens())) {
       if (auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl())) {
         auto DVar = Stack->getTopDSA(FD, false);

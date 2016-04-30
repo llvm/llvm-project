@@ -7629,6 +7629,58 @@ _mm512_maskz_compress_epi32 (__mmask16 __U, __m512i __A)
                   (__mmask16) __U);
 }
 
+#define _mm_cmp_round_ss_mask( __X, __Y, __P, __R) __extension__ ({ \
+__builtin_ia32_cmpss_mask ((__v4sf)( __X),\
+                 (__v4sf)( __Y), __P,\
+                 (__mmask8) -1, __R);\
+})
+
+#define _mm_mask_cmp_round_ss_mask( __M, __X, __Y, __P, __R) __extension__ ({ \
+__builtin_ia32_cmpss_mask ((__v4sf)( __X),\
+                 (__v4sf)( __Y), __P,\
+                 (__mmask8)( __M), __R);\
+})
+
+#define _mm_cmp_ss_mask( __X, __Y, __P) __extension__ ({ \
+__builtin_ia32_cmpss_mask ((__v4sf)( __X),\
+                 (__v4sf)( __Y),( __P),\
+                 (__mmask8) -1,\
+                 _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm_mask_cmp_ss_mask( __M, __X, __Y, __P) __extension__ ({ \
+__builtin_ia32_cmpss_mask ((__v4sf)( __X),\
+                 (__v4sf)( __Y),( __P),\
+                 (__mmask8)( __M),\
+                 _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm_cmp_round_sd_mask( __X, __Y, __P,__R) __extension__ ({ \
+__builtin_ia32_cmpsd_mask ((__v2df)( __X),\
+                 (__v2df)( __Y), __P,\
+                 (__mmask8) -1, __R);\
+})
+
+#define _mm_mask_cmp_round_sd_mask( __M, __X, __Y, __P, __R) __extension__ ({ \
+__builtin_ia32_cmpsd_mask ((__v2df)( __X),\
+                 (__v2df)( __Y), __P,\
+                 (__mmask8)( __M), __R);\
+})
+
+#define _mm_cmp_sd_mask( __X, __Y, __P) __extension__ ({ \
+__builtin_ia32_cmpsd_mask ((__v2df)( __X),\
+                 (__v2df)( __Y),( __P),\
+                 (__mmask8) -1,\
+                 _MM_FROUND_CUR_DIRECTION);\
+})
+
+#define _mm_mask_cmp_sd_mask( __M, __X, __Y, __P) __extension__ ({ \
+__builtin_ia32_cmpsd_mask ((__v2df)( __X),\
+                 (__v2df)( __Y),( __P),\
+                 (__mmask8)( __M),\
+                 _MM_FROUND_CUR_DIRECTION);\
+})
+
 #undef __DEFAULT_FN_ATTRS
 
 #endif // __AVX512FINTRIN_H

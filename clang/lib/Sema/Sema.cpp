@@ -80,12 +80,13 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
     APINotes(SourceMgr, LangOpts), CollectStats(false),
     CodeCompleter(CodeCompleter),
     CurContext(nullptr), OriginalLexicalContext(nullptr),
-    PackContext(nullptr), MSStructPragmaOn(false),
+    MSStructPragmaOn(false),
     MSPointerToMemberRepresentationMethod(
         LangOpts.getMSPointerToMemberRepresentationMethod()),
-    VtorDispModeStack(1, MSVtorDispAttr::Mode(LangOpts.VtorDispMode)),
-    DataSegStack(nullptr), BSSSegStack(nullptr), ConstSegStack(nullptr),
-    CodeSegStack(nullptr), CurInitSeg(nullptr), VisContext(nullptr),
+    VtorDispStack(MSVtorDispAttr::Mode(LangOpts.VtorDispMode)),
+    PackStack(0), DataSegStack(nullptr), BSSSegStack(nullptr),
+    ConstSegStack(nullptr), CodeSegStack(nullptr), CurInitSeg(nullptr),
+    VisContext(nullptr),
     IsBuildingRecoveryCallExpr(false),
     ExprNeedsCleanups(false), LateTemplateParser(nullptr),
     LateTemplateParserCleanup(nullptr),
@@ -253,7 +254,6 @@ void Sema::Initialize() {
 
 Sema::~Sema() {
   llvm::DeleteContainerSeconds(LateParsedTemplateMap);
-  if (PackContext) FreePackedContext();
   if (VisContext) FreeVisContext();
   // Kill all the active scopes.
   for (unsigned I = 1, E = FunctionScopes.size(); I != E; ++I)
@@ -1238,6 +1238,7 @@ void Sema::ActOnComment(SourceRange Comment) {
 ExternalSemaSource::~ExternalSemaSource() {}
 
 void ExternalSemaSource::ReadMethodPool(Selector Sel) { }
+void ExternalSemaSource::updateOutOfDateSelector(Selector Sel) { }
 
 void ExternalSemaSource::ReadKnownNamespaces(
                            SmallVectorImpl<NamespaceDecl *> &Namespaces) {

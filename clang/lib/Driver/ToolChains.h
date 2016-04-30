@@ -496,6 +496,8 @@ protected:
     return TargetVersion < VersionTuple(V0, V1, V2);
   }
 
+  StringRef getPlatformFamily() const;
+  static StringRef getSDKName(StringRef isysroot);
   StringRef getOSLibraryNameSuffix() const;
 
 public:

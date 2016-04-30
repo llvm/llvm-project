@@ -3,12 +3,15 @@
 Clang-Tidy Checks
 =========================
 
-.. toctree::   
+.. toctree::
+
+   boost-use-to-string
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>
    cert-dcl50-cpp
    cert-dcl54-cpp (redirects to misc-new-delete-overloads) <cert-dcl54-cpp>
    cert-dcl59-cpp (redirects to google-build-namespaces) <cert-dcl59-cpp>
    cert-env33-c
+   cert-err34-c
    cert-err52-cpp
    cert-err58-cpp
    cert-err60-cpp

@@ -1521,7 +1521,9 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
 
 template <class ELFT>
 VersionTableSection<ELFT>::VersionTableSection()
-    : OutputSectionBase<ELFT>(".gnu.version", SHT_GNU_versym, SHF_ALLOC) {}
+    : OutputSectionBase<ELFT>(".gnu.version", SHT_GNU_versym, SHF_ALLOC) {
+  this->Header.sh_addralign = sizeof(uint16_t);
+}
 
 template <class ELFT> void VersionTableSection<ELFT>::finalize() {
   this->Header.sh_size =
@@ -1544,7 +1546,9 @@ template <class ELFT> void VersionTableSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 VersionNeedSection<ELFT>::VersionNeedSection()
-    : OutputSectionBase<ELFT>(".gnu.version_r", SHT_GNU_verneed, SHF_ALLOC) {}
+    : OutputSectionBase<ELFT>(".gnu.version_r", SHT_GNU_verneed, SHF_ALLOC) {
+  this->Header.sh_addralign = sizeof(uint32_t);
+}
 
 template <class ELFT>
 void VersionNeedSection<ELFT>::addSymbol(SharedSymbol<ELFT> *SS) {

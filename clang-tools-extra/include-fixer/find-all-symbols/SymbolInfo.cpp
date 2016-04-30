@@ -97,16 +97,11 @@ bool SymbolInfo::operator<(const SymbolInfo &Symbol) const {
          std::tie(Symbol.Name, Symbol.FilePath, Symbol.LineNumber);
 }
 
-bool WriteSymboInfosToFile(llvm::StringRef FilePath,
-                           const std::set<SymbolInfo> &Symbols) {
-  int FD = 0;
-  if (llvm::sys::fs::openFileForWrite(FilePath, FD, llvm::sys::fs::F_None))
-    return false;
-  llvm::raw_fd_ostream OS(FD, true);
+bool WriteSymbolInfosToStream(llvm::raw_ostream &OS,
+                              const std::set<SymbolInfo> &Symbols) {
   llvm::yaml::Output yout(OS);
   for (auto Symbol : Symbols)
     yout << Symbol;
-  OS.close();
   return true;
 }
 

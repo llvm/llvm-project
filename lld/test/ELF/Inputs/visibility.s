@@ -1,3 +1,4 @@
+.data
 .quad default
 
 .protected protected

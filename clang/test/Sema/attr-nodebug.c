@@ -3,7 +3,7 @@
 int a __attribute__((nodebug));
 
 void b() {
-  int b __attribute__((nodebug)); // expected-warning {{'nodebug' only applies to variables with static storage duration and functions}}
+  int b __attribute__((nodebug)); // expected-warning {{'nodebug' attribute only applies to functions and global variables}}
 }
 
 void t1() __attribute__((nodebug));

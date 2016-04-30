@@ -122,20 +122,15 @@ Parser::ParseTemplateDeclarationOrSpecialization(unsigned Context,
       return nullptr;
     }
 
-    ParamLists.push_back(
-      Actions.ActOnTemplateParameterList(CurTemplateDepthTracker.getDepth(), 
-                                         ExportLoc,
-                                         TemplateLoc, LAngleLoc,
-                                         TemplateParams, RAngleLoc));
-
+    ExprResult OptionalRequiresClauseConstraintER;
     if (!TemplateParams.empty()) {
       isSpecialization = false;
       ++CurTemplateDepthTracker;
 
       if (TryConsumeToken(tok::kw_requires)) {
-        ExprResult ER =
+        OptionalRequiresClauseConstraintER =
             Actions.CorrectDelayedTyposInExpr(ParseConstraintExpression());
-        if (!ER.isUsable()) {
+        if (!OptionalRequiresClauseConstraintER.isUsable()) {
           // Skip until the semi-colon or a '}'.
           SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
           TryConsumeToken(tok::semi);
@@ -145,6 +140,10 @@ Parser::ParseTemplateDeclarationOrSpecialization(unsigned Context,
     } else {
       LastParamListWasEmpty = true;
     }
+
+    ParamLists.push_back(Actions.ActOnTemplateParameterList(
+        CurTemplateDepthTracker.getDepth(), ExportLoc, TemplateLoc, LAngleLoc,
+        TemplateParams, RAngleLoc, OptionalRequiresClauseConstraintER.get()));
   } while (Tok.isOneOf(tok::kw_export, tok::kw_template));
 
   unsigned NewFlags = getCurScope()->getFlags() & ~Scope::TemplateParamScope;
@@ -287,7 +286,7 @@ Parser::ParseSingleDeclarationAfterTemplate(
         TemplateParameterLists FakedParamLists;
         FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
             0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, None,
-            LAngleLoc));
+            LAngleLoc, nullptr));
 
         return ParseFunctionDefinition(
             DeclaratorInfo, ParsedTemplateInfo(&FakedParamLists,
@@ -638,7 +637,7 @@ Parser::ParseTemplateTemplateParameter(unsigned Depth, unsigned Position) {
     Actions.ActOnTemplateParameterList(Depth, SourceLocation(),
                                        TemplateLoc, LAngleLoc,
                                        TemplateParams,
-                                       RAngleLoc);
+                                       RAngleLoc, nullptr);
 
   // Grab a default argument (if available).
   // Per C++0x [basic.scope.pdecl]p9, we parse the default argument before

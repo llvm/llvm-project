@@ -855,8 +855,9 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
 
   // Create TargetInfo for the other side of CUDA compilation.
   if (getLangOpts().CUDA && !getFrontendOpts().AuxTriple.empty()) {
-    std::shared_ptr<TargetOptions> TO(new TargetOptions);
+    auto TO = std::make_shared<TargetOptions>();
     TO->Triple = getFrontendOpts().AuxTriple;
+    TO->HostTriple = getTarget().getTriple().str();
     setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), TO));
   }
 

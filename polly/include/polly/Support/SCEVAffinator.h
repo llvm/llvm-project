@@ -64,6 +64,9 @@ public:
   __isl_give PWACtx getPwAff(const llvm::SCEV *E,
                              llvm::BasicBlock *BB = nullptr);
 
+  /// @brief Take the asumption that @p PWAC is non-negative.
+  void takeNonNegativeAssumption(PWACtx &PWAC);
+
   /// @brief Check an <nsw> AddRec for the loop @p L is cached.
   bool hasNSWAddRecForLoop(llvm::Loop *L) const;
 

@@ -7257,7 +7257,7 @@ class BuiltinOperatorOverloadBuilder {
     // (we could precompute SLL x UI for all known platforms, but it's
     // better not to make any assumptions).
     // We assume that int128 has a higher rank than long long on all platforms.
-    enum PromotedType {
+    enum PromotedType : int8_t {
             Dep=-1,
             Flt,  Dbl, LDbl,   SI,   SL,  SLL, S128,   UI,   UL,  ULL, U128
     };

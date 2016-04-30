@@ -198,6 +198,10 @@ TargetInfo *createTarget() {
       return new MipsTargetInfo<ELF32LE>();
     case ELF32BEKind:
       return new MipsTargetInfo<ELF32BE>();
+    case ELF64LEKind:
+      return new MipsTargetInfo<ELF64LE>();
+    case ELF64BEKind:
+      return new MipsTargetInfo<ELF64BE>();
     default:
       fatal("unsupported MIPS target");
     }

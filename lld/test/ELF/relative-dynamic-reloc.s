@@ -12,7 +12,7 @@
 // CHECK-NEXT:     0x1010 R_X86_64_RELATIVE - 0x1009
 // CHECK-NEXT:     0x{{.*}} R_X86_64_RELATIVE - 0x[[ZED_ADDR:.*]]
 // CHECK-NEXT:     0x{{.*}} R_X86_64_RELATIVE - 0x[[FOO_ADDR]]
-// CHECK-NEXT:     0x1D0 R_X86_64_64 external 0x0
+// CHECK-NEXT:     0x3008 R_X86_64_64 external 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
@@ -59,7 +59,7 @@ bar:
         .comm zed,1
         .quad zed
 
-        .section abc,"a"
+        .section abc,"aw"
         .quad foo
 
         .quad external

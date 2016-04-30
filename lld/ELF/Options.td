@@ -230,6 +230,7 @@ def plugin_opt : Separate<["--", "-"], "plugin-opt">;
 def plugin_opt_eq : Joined<["--", "-"], "plugin-opt=">;
 
 // Options listed below are silently ignored for now for compatibility.
+def define_common : Flag<["-", "--"], "define-common">;
 def detect_odr_violations : Flag<["--"], "detect-odr-violations">;
 def fatal_warnings : Flag<["--"], "fatal-warnings">;
 def no_add_needed : Flag<["--"], "no-add-needed">;
@@ -246,6 +247,9 @@ def warn_shared_textrel : Flag<["--"], "warn-shared-textrel">;
 def G : Separate<["-"], "G">;
 
 // Aliases for ignored options
+def alias_define_common_d : Flag<["-"], "d">, Alias<define_common>;
+def alias_define_common_dc : Flag<["-"], "dc">, Alias<define_common>;
+def alias_define_common_dp : Flag<["-"], "dp">, Alias<define_common>;
 def alias_version_script_version_script : Joined<["--"], "version-script=">, Alias<version_script>;
 
 // LTO-related options.
