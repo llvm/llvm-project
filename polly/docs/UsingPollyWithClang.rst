@@ -14,28 +14,8 @@ optimize C/C++ code during compilation.
 Make Polly available from Clang
 ===============================
 
-By default Polly is configured as a shared library plugin that is loaded in
-tools like clang, opt, and bugpoint when they start their execution. By loading
-Polly into clang (or opt) the Polly options become automatically available. You
-can load Polly either by adding the relevant commands to the CPPFLAGS or by
-creating an alias.
-
-.. code-block:: console
-
-  $ export CPPFLAGS="-Xclang -load -Xclang ${POLLY_BUILD_DIR}/lib/LLVMPolly.so"
-
-or
-
-.. code-block:: console
-
-  $ alias pollycc clang -Xclang -load -Xclang ${POLLY_BUILD_DIR}/lib/LLVMPolly.so
-
-To avoid having to load Polly in the tools, Polly can optionally be configured
-with cmake to be statically linked in the tools:
-
-.. code-block:: console
-
-  $ cmake -D LINK_POLLY_INTO_TOOLS:Bool=ON
+Polly is available through clang, opt, and bugpoint, if Polly was checked out
+into tools/polly before compilation. No further configuration is needed.
 
 Optimizing with Polly
 =====================
@@ -45,7 +25,7 @@ flags (Polly is only available at -O3).
 
 .. code-block:: console
 
-  pollycc -O3 -mllvm -polly file.c
+  clang -O3 -mllvm -polly file.c
 
 Automatic OpenMP code generation
 ================================
@@ -55,7 +35,7 @@ also need to add -mllvm -polly-parallel -lgomp to your CFLAGS.
 
 .. code-block:: console
 
-  pollycc -O3 -mllvm -polly -mllvm -polly-parallel -lgomp file.c
+  clang -O3 -mllvm -polly -mllvm -polly-parallel -lgomp file.c
 
 Automatic Vector code generation
 ================================
@@ -65,7 +45,7 @@ Automatic vector code generation can be enabled by adding -mllvm
 
 .. code-block:: console
 
-  pollycc -O3 -mllvm -polly -mllvm -polly-vectorizer=stripmine file.c
+  clang -O3 -mllvm -polly -mllvm -polly-vectorizer=stripmine file.c
 
 Extract a preoptimized LLVM-IR file
 ===================================
@@ -78,7 +58,7 @@ preparing transformations have been applied run Polly with '-O0'.
 
 .. code-block:: console
 
-  pollycc -O0 -mllvm -polly -S -emit-llvm file.c
+  clang -O0 -mllvm -polly -S -emit-llvm file.c
 
 Further options
 ===============

@@ -67,6 +67,8 @@ There are currently the following groups of checks:
 
 * Clang static analyzer checks are named starting with ``clang-analyzer-``.
 
+* Checks related to Boost library starts with ``boost-``. 
+  
 Clang diagnostics are treated in a similar way as check diagnostics. Clang
 diagnostics are displayed by clang-tidy and can be filtered out using
 ``-checks=`` option. However, the ``-checks=`` option does not affect

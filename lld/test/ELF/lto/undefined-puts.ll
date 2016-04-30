@@ -20,7 +20,7 @@ declare i32 @printf(i8*, ...)
 ; Check that puts symbol is present in the dynamic symbol table and
 ; there's a relocation for it.
 ; CHECK: Dynamic Relocations {
-; CHECK-NEXT:  0x11007 R_X86_64_PC32 puts 0xFFFFFFFFFFFFFFFC
+; CHECK-NEXT:  0x13018 R_X86_64_JUMP_SLOT puts 0x0
 ; CHECK-NEXT: }
 
 ; CHECK: DynamicSymbols [

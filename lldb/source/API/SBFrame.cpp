@@ -10,6 +10,7 @@
 // C Includes
 // C++ Includes
 #include <algorithm>
+#include <set>
 #include <string>
 
 // Other libraries and framework includes
@@ -1142,7 +1143,8 @@ SBFrame::GetVariables (const lldb::SBVariablesOptions& options)
                      arguments, locals,
                      statics, in_scope_only,
                      include_runtime_support_values, use_dynamic);
-    
+
+    std::set<VariableSP> variable_set;
     Process *process = exe_ctx.GetProcessPtr();
     if (target && process)
     {
@@ -1186,6 +1188,12 @@ SBFrame::GetVariables (const lldb::SBVariablesOptions& options)
                                 }
                                 if (add_variable)
                                 {
+                                    // Only add variables once so we don't end up with duplicates
+                                    if (variable_set.find(variable_sp) == variable_set.end())
+                                        variable_set.insert(variable_sp);
+                                    else
+                                        continue;
+
                                     if (in_scope_only && !variable_sp->IsInScope(frame))
                                         continue;
 

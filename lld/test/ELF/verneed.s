@@ -15,7 +15,7 @@
 # CHECK-NEXT:   Size: 8
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
-# CHECK-NEXT:   AddressAlignment: 0
+# CHECK-NEXT:   AddressAlignment: 2
 # CHECK-NEXT:   EntrySize: 2
 # CHECK-NEXT: }
 # CHECK-NEXT: Section {
@@ -30,7 +30,7 @@
 # CHECK-NEXT:   Size: 80
 # CHECK-NEXT:   Link: 5
 # CHECK-NEXT:   Info: 2
-# CHECK-NEXT:   AddressAlignment: 0
+# CHECK-NEXT:   AddressAlignment: 4
 # CHECK-NEXT:   EntrySize: 0
 # CHECK-NEXT: }
 
@@ -99,6 +99,6 @@
 
 .globl _start
 _start:
-call f1
-call f2
-call g1
+call f1@plt
+call f2@plt
+call g1@plt

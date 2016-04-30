@@ -195,7 +195,7 @@ AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp, StreamString &str
     }
 }
 
-bool ExpressionSourceCode::GetText (std::string &text, lldb::LanguageType wrapping_language, bool const_object, bool static_method, ExecutionContext &exe_ctx) const
+bool ExpressionSourceCode::GetText (std::string &text, lldb::LanguageType wrapping_language, bool static_method, ExecutionContext &exe_ctx) const
 {
     const char *target_specific_defines = "typedef signed char BOOL;\n";
     std::string module_macros;
@@ -337,13 +337,12 @@ bool ExpressionSourceCode::GetText (std::string &text, lldb::LanguageType wrappi
             break;
         case lldb::eLanguageTypeC_plus_plus:
             wrap_stream.Printf("void                                   \n"
-                               "$__lldb_class::%s(void *$__lldb_arg) %s\n"
+                               "$__lldb_class::%s(void *$__lldb_arg)   \n"
                                "{                                      \n"
                                "    %s;                                \n"
                                "%s"
                                "}                                      \n",
                                m_name.c_str(),
-                               (const_object ? "const" : ""),
                                lldb_local_var_decls.GetData(),
                                tagged_body.c_str());
             break;

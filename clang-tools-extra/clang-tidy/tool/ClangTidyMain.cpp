@@ -418,6 +418,11 @@ extern volatile int CERTModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED CERTModuleAnchorDestination =
     CERTModuleAnchorSource;
 
+// This anchor is used to force the linker to link the BoostModule.
+extern volatile int BoostModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED BoostModuleAnchorDestination =
+    BoostModuleAnchorSource;
+
 // This anchor is used to force the linker to link the LLVMModule.
 extern volatile int LLVMModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED LLVMModuleAnchorDestination =

@@ -216,6 +216,10 @@ public:
     kind == FreeBSDrArg || kind == FreeBSDyArg; }
   bool isUIntArg() const { return kind >= UIntArgBeg && kind <= UIntArgEnd; }
   bool isAnyIntArg() const { return kind >= IntArgBeg && kind <= UIntArgEnd; }
+  bool isDoubleArg() const {
+    return kind >= DoubleArgBeg && kind <= DoubleArgEnd;
+  }
+
   const char *toString() const;
 
   bool isPrintfKind() const { return IsPrintf; }

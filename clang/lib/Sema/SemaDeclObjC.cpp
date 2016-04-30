@@ -3311,6 +3311,12 @@ void Sema::ReadMethodPool(Selector Sel) {
   ExternalSource->ReadMethodPool(Sel);
 }
 
+void Sema::updateOutOfDateSelector(Selector Sel) {
+  if (!ExternalSource)
+    return;
+  ExternalSource->updateOutOfDateSelector(Sel);
+}
+
 void Sema::AddMethodToGlobalPool(ObjCMethodDecl *Method, bool impl,
                                  bool instance) {
   // Ignore methods of invalid containers.

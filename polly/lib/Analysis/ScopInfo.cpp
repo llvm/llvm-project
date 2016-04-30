@@ -105,6 +105,11 @@ static cl::opt<bool> DetectReductions("polly-detect-reductions",
                                       cl::Hidden, cl::ZeroOrMore,
                                       cl::init(true), cl::cat(PollyCategory));
 
+static cl::opt<bool>
+    IslOnErrorAbort("polly-on-isl-error-abort",
+                    cl::desc("Abort if an isl error is encountered"),
+                    cl::init(true), cl::cat(PollyCategory));
+
 //===----------------------------------------------------------------------===//
 
 // Create a sequence of two schedules. Either argument may be null and is
@@ -1045,8 +1050,8 @@ __isl_give isl_map *ScopStmt::getSchedule() const {
   return M;
 }
 
-__isl_give isl_pw_aff *ScopStmt::getPwAff(const SCEV *E) {
-  PWACtx PWAC = getParent()->getPwAff(E, getEntryBlock());
+__isl_give isl_pw_aff *ScopStmt::getPwAff(const SCEV *E, bool NonNegative) {
+  PWACtx PWAC = getParent()->getPwAff(E, getEntryBlock(), NonNegative);
   InvalidDomain = isl_set_union(InvalidDomain, PWAC.second);
   return PWAC.first;
 }
@@ -1315,20 +1320,12 @@ buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
 
     ScalarEvolution &SE = *S.getSE();
     isl_pw_aff *LHS, *RHS;
-    LHS = Stmt.getPwAff(SE.getSCEVAtScope(ICond->getOperand(0), L));
-    RHS = Stmt.getPwAff(SE.getSCEVAtScope(ICond->getOperand(1), L));
-
-    if (ICond->isUnsigned()) {
-      // For unsigned comparisons we assumed the signed bit of neither operand
-      // to be set. The comparison is equal to a signed comparison under this
-      // assumption.
-      auto *BB = Stmt.getEntryBlock();
-      S.recordAssumption(UNSIGNED, isl_pw_aff_nonneg_set(isl_pw_aff_copy(LHS)),
-                         TI->getDebugLoc(), AS_ASSUMPTION, BB);
-      S.recordAssumption(UNSIGNED, isl_pw_aff_nonneg_set(isl_pw_aff_copy(RHS)),
-                         TI->getDebugLoc(), AS_ASSUMPTION, BB);
-    }
-
+    // For unsigned comparisons we assumed the signed bit of neither operand
+    // to be set. The comparison is equal to a signed comparison under this
+    // assumption.
+    bool NonNeg = ICond->isUnsigned();
+    LHS = Stmt.getPwAff(SE.getSCEVAtScope(ICond->getOperand(0), L), NonNeg);
+    RHS = Stmt.getPwAff(SE.getSCEVAtScope(ICond->getOperand(1), L), NonNeg);
     ConsequenceCondSet =
         buildConditionSet(ICond->getPredicate(), LHS, RHS, Domain);
   }
@@ -3072,7 +3069,8 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
       MaxLoopDepth(MaxLoopDepth), IslCtx(isl_ctx_alloc(), isl_ctx_free),
       Context(nullptr), Affinator(this, LI), AssumedContext(nullptr),
       InvalidContext(nullptr), Schedule(nullptr) {
-  isl_options_set_on_error(getIslCtx(), ISL_ON_ERROR_ABORT);
+  if (IslOnErrorAbort)
+    isl_options_set_on_error(getIslCtx(), ISL_ON_ERROR_ABORT);
   buildContext();
 }
 
@@ -3789,15 +3787,19 @@ void Scop::dump() const { print(dbgs()); }
 
 isl_ctx *Scop::getIslCtx() const { return IslCtx.get(); }
 
-__isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB) {
+__isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
+                                 bool NonNegative) {
   // First try to use the SCEVAffinator to generate a piecewise defined
   // affine function from @p E in the context of @p BB. If that tasks becomes to
   // complex the affinator might return a nullptr. In such a case we invalidate
   // the SCoP and return a dummy value. This way we do not need to add error
   // handling cdoe to all users of this function.
   auto PWAC = Affinator.getPwAff(E, BB);
-  if (PWAC.first)
+  if (PWAC.first) {
+    if (NonNegative)
+      Affinator.takeNonNegativeAssumption(PWAC);
     return PWAC;
+  }
 
   auto DL = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
   invalidate(COMPLEXITY, DL);

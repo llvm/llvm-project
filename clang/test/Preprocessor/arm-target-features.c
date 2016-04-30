@@ -217,6 +217,7 @@
 // ARMV7K:#define __ARM_ARCH 7
 // ARMV7K:#define __ARM_ARCH_EXT_IDIV__ 1
 // ARMV7K:#define __ARM_ARCH_PROFILE 'A'
+// ARMV7K:#define __ARM_DWARF_EH__ 1
 // ARMV7K:#define __ARM_FEATURE_DSP 1
 // ARMV7K:#define __ARM_FP 0xE
 // ARMV7K:#define __ARM_PCS_VFP 1

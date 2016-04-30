@@ -178,6 +178,60 @@
 # MIPSEL-NEXT:     EF_MIPS_CPIC
 # MIPSEL-NEXT:   ]
 
+# RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %tmips64
+# RUN: ld.lld -m elf64btsmip -e _start %tmips64 -o %t2mips64
+# RUN: llvm-readobj -file-headers %t2mips64 | FileCheck --check-prefix=MIPS64 %s
+# RUN: ld.lld %tmips64 -e _start -o %t3mips64
+# RUN: llvm-readobj -file-headers %t3mips64 | FileCheck --check-prefix=MIPS64 %s
+# MIPS64:      ElfHeader {
+# MIPS64-NEXT:   Ident {
+# MIPS64-NEXT:     Magic: (7F 45 4C 46)
+# MIPS64-NEXT:     Class: 64-bit (0x2)
+# MIPS64-NEXT:     DataEncoding: BigEndian (0x2)
+# MIPS64-NEXT:     FileVersion: 1
+# MIPS64-NEXT:     OS/ABI: SystemV (0x0)
+# MIPS64-NEXT:     ABIVersion: 0
+# MIPS64-NEXT:     Unused: (00 00 00 00 00 00 00)
+# MIPS64-NEXT:   }
+# MIPS64-NEXT:   Type: Executable (0x2)
+# MIPS64-NEXT:   Machine: EM_MIPS (0x8)
+# MIPS64-NEXT:   Version: 1
+# MIPS64-NEXT:   Entry:
+# MIPS64-NEXT:   ProgramHeaderOffset: 0x40
+# MIPS64-NEXT:   SectionHeaderOffset:
+# MIPS64-NEXT:   Flags [
+# MIPS64-NEXT:     EF_MIPS_ARCH_64R2
+# MIPS64-NEXT:     EF_MIPS_CPIC
+# MIPS64-NEXT:     EF_MIPS_PIC
+# MIPS64-NEXT:   ]
+
+# RUN: llvm-mc -filetype=obj -triple=mips64el-unknown-linux %s -o %tmips64el
+# RUN: ld.lld -m elf64ltsmip -e _start %tmips64el -o %t2mips64el
+# RUN: llvm-readobj -file-headers %t2mips64el | FileCheck --check-prefix=MIPS64EL %s
+# RUN: ld.lld %tmips64el -e _start -o %t3mips64el
+# RUN: llvm-readobj -file-headers %t3mips64el | FileCheck --check-prefix=MIPS64EL %s
+# MIPS64EL:      ElfHeader {
+# MIPS64EL-NEXT:   Ident {
+# MIPS64EL-NEXT:     Magic: (7F 45 4C 46)
+# MIPS64EL-NEXT:     Class: 64-bit (0x2)
+# MIPS64EL-NEXT:     DataEncoding: LittleEndian (0x1)
+# MIPS64EL-NEXT:     FileVersion: 1
+# MIPS64EL-NEXT:     OS/ABI: SystemV (0x0)
+# MIPS64EL-NEXT:     ABIVersion: 0
+# MIPS64EL-NEXT:     Unused: (00 00 00 00 00 00 00)
+# MIPS64EL-NEXT:   }
+# MIPS64EL-NEXT:   Type: Executable (0x2)
+# MIPS64EL-NEXT:   Machine: EM_MIPS (0x8)
+# MIPS64EL-NEXT:   Version: 1
+# MIPS64EL-NEXT:   Entry:
+# MIPS64EL-NEXT:   ProgramHeaderOffset: 0x40
+# MIPS64EL-NEXT:   SectionHeaderOffset:
+# MIPS64EL-NEXT:   Flags [
+# MIPS64EL-NEXT:     EF_MIPS_ARCH_64R2
+# MIPS64EL-NEXT:     EF_MIPS_CPIC
+# MIPS64EL-NEXT:     EF_MIPS_PIC
+# MIPS64EL-NEXT:   ]
+
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux %s -o %taarch64
 # RUN: ld.lld -m aarch64linux %taarch64 -o %t2aarch64
 # RUN: llvm-readobj -file-headers %t2aarch64 | FileCheck --check-prefix=AARCH64 %s

@@ -132,7 +132,7 @@ int main()
         test<void>(checkVoid, DPID,  f2);
         test<void>(checkVoid, false, std::launch::async, f2);
         test<void>(checkVoid, true,  std::launch::deferred, f2);
-        test<void>(checkVoid, DPID,  std::launch::any, f2);
+        test<void>(checkVoid, DPID,  AnyPolicy, f2);
     }
     {
         using Ret = std::unique_ptr<int>;
@@ -143,11 +143,11 @@ int main()
     {
         std::future<void> f = std::async(f5, 3);
         std::this_thread::sleep_for(ms(300));
-        try { f.get(); assert (false); } catch ( int ex ) {}
+        try { f.get(); assert (false); } catch ( int ) {}
     }
     {
         std::future<void> f = std::async(std::launch::deferred, f5, 3);
         std::this_thread::sleep_for(ms(300));
-        try { f.get(); assert (false); } catch ( int ex ) {}
+        try { f.get(); assert (false); } catch ( int ) {}
     }
 }

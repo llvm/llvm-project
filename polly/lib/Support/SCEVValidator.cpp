@@ -219,20 +219,6 @@ public:
     return Return;
   }
 
-  class ValidatorResult visitUDivExpr(const SCEVUDivExpr *Expr) {
-    ValidatorResult LHS = visit(Expr->getLHS());
-    ValidatorResult RHS = visit(Expr->getRHS());
-
-    // We currently do not represent an unsigned division as an affine
-    // expression. If the division is constant during Scop execution we treat it
-    // as a parameter, otherwise we bail out.
-    if (LHS.isConstant() && RHS.isConstant())
-      return ValidatorResult(SCEVType::PARAM, Expr);
-
-    DEBUG(dbgs() << "INVALID: unsigned division of non-constant expressions");
-    return ValidatorResult(SCEVType::INVALID);
-  }
-
   class ValidatorResult visitAddRecExpr(const SCEVAddRecExpr *Expr) {
     if (!Expr->isAffine()) {
       DEBUG(dbgs() << "INVALID: AddRec is not affine");
@@ -336,18 +322,43 @@ public:
     return visitGenericInst(I, S);
   }
 
-  ValidatorResult visitSDivInstruction(Instruction *SDiv, const SCEV *S) {
+  ValidatorResult visitDivision(const SCEV *Dividend, const SCEV *Divisor,
+                                const SCEV *DivExpr,
+                                Instruction *SDiv = nullptr) {
+
+    // First check if we might be able to model the division, thus if the
+    // divisor is constant. If so, check the dividend, otherwise check if
+    // the whole division can be seen as a parameter.
+    if (isa<SCEVConstant>(Divisor))
+      return visit(Dividend);
+
+    // For signed divisions use the SDiv instruction to check for a parameter
+    // division, for unsigned divisions check the operands.
+    if (SDiv)
+      return visitGenericInst(SDiv, DivExpr);
+
+    ValidatorResult LHS = visit(Dividend);
+    ValidatorResult RHS = visit(Divisor);
+    if (LHS.isConstant() && RHS.isConstant())
+      return ValidatorResult(SCEVType::PARAM, DivExpr);
+
+    DEBUG(dbgs() << "INVALID: unsigned division of non-constant expressions");
+    return ValidatorResult(SCEVType::INVALID);
+  }
+
+  ValidatorResult visitUDivExpr(const SCEVUDivExpr *Expr) {
+    auto *Dividend = Expr->getLHS();
+    auto *Divisor = Expr->getRHS();
+    return visitDivision(Dividend, Divisor, Expr);
+  }
+
+  ValidatorResult visitSDivInstruction(Instruction *SDiv, const SCEV *Expr) {
     assert(SDiv->getOpcode() == Instruction::SDiv &&
            "Assumed SDiv instruction!");
 
-    auto *Divisor = SDiv->getOperand(1);
-    auto *CI = dyn_cast<ConstantInt>(Divisor);
-    if (!CI)
-      return visitGenericInst(SDiv, S);
-
-    auto *Dividend = SDiv->getOperand(0);
-    auto *DividendSCEV = SE.getSCEV(Dividend);
-    return visit(DividendSCEV);
+    auto *Dividend = SE.getSCEV(SDiv->getOperand(0));
+    auto *Divisor = SE.getSCEV(SDiv->getOperand(1));
+    return visitDivision(Dividend, Divisor, Expr, SDiv);
   }
 
   ValidatorResult visitSRemInstruction(Instruction *SRem, const SCEV *S) {

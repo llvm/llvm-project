@@ -1267,8 +1267,11 @@ public:
 
   /// @brief Compute the isl representation for the SCEV @p E in this stmt.
   ///
+  /// @param E           The SCEV that should be translated.
+  /// @param NonNegative Flag to indicate the @p E has to be non-negative.
+  ///
   /// Note that this function will also adjust the invalid context accordingly.
-  __isl_give isl_pw_aff *getPwAff(const SCEV *E);
+  __isl_give isl_pw_aff *getPwAff(const SCEV *E, bool NonNegative = false);
 
   /// @brief Get the loop for a dimension.
   ///
@@ -2125,15 +2128,18 @@ public:
 
   /// @brief Compute the isl representation for the SCEV @p E
   ///
+  /// @param E  The SCEV that should be translated.
   /// @param BB An (optional) basic block in which the isl_pw_aff is computed.
   ///           SCEVs known to not reference any loops in the SCoP can be
   ///           passed without a @p BB.
+  /// @param NonNegative Flag to indicate the @p E has to be non-negative.
   ///
   /// Note that this function will always return a valid isl_pw_aff. However, if
   /// the translation of @p E was deemed to complex the SCoP is invalidated and
   /// a dummy value of appropriate dimension is returned. This allows to bail
   /// for complex cases without "error handling code" needed on the users side.
-  __isl_give PWACtx getPwAff(const SCEV *E, BasicBlock *BB = nullptr);
+  __isl_give PWACtx getPwAff(const SCEV *E, BasicBlock *BB = nullptr,
+                             bool NonNegative = false);
 
   /// @brief Compute the isl representation for the SCEV @p E
   ///

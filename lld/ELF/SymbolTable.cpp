@@ -295,7 +295,7 @@ template <class ELFT> Symbol *SymbolTable<ELFT>::insert(SymbolBody *New) {
   if (P.second) {
     Sym = new (Alloc) Symbol;
     Sym->Body = New;
-    Sym->Binding = New->isShared() ? STB_GLOBAL : New->Binding;
+    Sym->Binding = New->isShared() ? (uint8_t)STB_GLOBAL : New->Binding;
     Sym->Visibility = STV_DEFAULT;
     Sym->IsUsedInRegularObj = false;
     Sym->ExportDynamic = false;

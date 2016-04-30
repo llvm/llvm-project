@@ -110,6 +110,14 @@ static const SCEV *setNoWrapFlags(ScalarEvolution &SE, const SCEV *Expr,
   }
 }
 
+static __isl_give isl_pw_aff *getWidthExpValOnDomain(unsigned Width,
+                                                     __isl_take isl_set *Dom) {
+  auto *Ctx = isl_set_get_ctx(Dom);
+  auto *WidthVal = isl_val_int_from_ui(Ctx, Width);
+  auto *ExpVal = isl_val_2exp(WidthVal);
+  return isl_pw_aff_val_on_domain(Dom, ExpVal);
+}
+
 SCEVAffinator::SCEVAffinator(Scop *S, LoopInfo &LI)
     : S(S), Ctx(S->getIslCtx()), R(S->getRegion()), SE(*S->getSE()), LI(LI),
       TD(R.getEntry()->getParent()->getParent()->getDataLayout()) {}
@@ -117,6 +125,15 @@ SCEVAffinator::SCEVAffinator(Scop *S, LoopInfo &LI)
 SCEVAffinator::~SCEVAffinator() {
   for (auto &CachedPair : CachedExpressions)
     freePWACtx(CachedPair.second);
+}
+
+void SCEVAffinator::takeNonNegativeAssumption(PWACtx &PWAC) {
+  auto *NegPWA = isl_pw_aff_neg(isl_pw_aff_copy(PWAC.first));
+  auto *NegDom = isl_pw_aff_pos_set(NegPWA);
+  PWAC.second = isl_set_union(PWAC.second, isl_set_copy(NegDom));
+  auto *Restriction = BB ? NegDom : isl_set_params(NegDom);
+  auto DL = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
+  S->recordAssumption(UNSIGNED, Restriction, DL, AS_RESTRICTION, BB);
 }
 
 __isl_give PWACtx SCEVAffinator::getPWACtxFromPWA(__isl_take isl_pw_aff *PWA) {
@@ -177,12 +194,8 @@ SCEVAffinator::addModuloSemantic(__isl_take isl_pw_aff *PWA,
   isl_val *ModVal = isl_val_int_from_ui(Ctx, Width);
   ModVal = isl_val_2exp(ModVal);
 
-  isl_val *AddVal = isl_val_int_from_ui(Ctx, Width - 1);
-  AddVal = isl_val_2exp(AddVal);
-
   isl_set *Domain = isl_pw_aff_domain(isl_pw_aff_copy(PWA));
-
-  isl_pw_aff *AddPW = isl_pw_aff_val_on_domain(Domain, AddVal);
+  isl_pw_aff *AddPW = getWidthExpValOnDomain(Width - 1, Domain);
 
   PWA = isl_pw_aff_add(PWA, isl_pw_aff_copy(AddPW));
   PWA = isl_pw_aff_mod_val(PWA, ModVal);
@@ -334,14 +347,7 @@ SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
 
   // If the width is to big we assume the negative part does not occur.
   if (!Precise) {
-    auto *NegOpPWA = isl_pw_aff_neg(isl_pw_aff_copy(OpPWAC.first));
-    auto *NegDom = isl_pw_aff_pos_set(NegOpPWA);
-    auto *ExprDomain = BB ? S->getDomainConditions(BB) : nullptr;
-    NegDom = ExprDomain ? isl_set_intersect(NegDom, ExprDomain) : NegDom;
-    OpPWAC.second = isl_set_union(OpPWAC.second, isl_set_copy(NegDom));
-    NegDom = BB ? NegDom : isl_set_params(NegDom);
-    auto DL = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
-    S->recordAssumption(UNSIGNED, NegDom, DL, AS_RESTRICTION, BB);
+    takeNonNegativeAssumption(OpPWAC);
     return OpPWAC;
   }
 
@@ -350,15 +356,9 @@ SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
   auto *NonNegDom = isl_pw_aff_nonneg_set(isl_pw_aff_copy(OpPWAC.first));
   auto *NonNegPWA = isl_pw_aff_intersect_domain(isl_pw_aff_copy(OpPWAC.first),
                                                 isl_set_copy(NonNegDom));
-  auto *WidthVal = isl_val_int_from_ui(isl_pw_aff_get_ctx(OpPWAC.first), Width);
-  auto *ExpVal = isl_val_2exp(WidthVal);
-
-  auto ExpPWAC = getPWACtxFromPWA(
-      isl_pw_aff_val_on_domain(isl_set_complement(NonNegDom), ExpVal));
-  combine(OpPWAC, ExpPWAC, isl_pw_aff_add);
-
-  OpPWAC.first =
-      isl_pw_aff_coalesce(isl_pw_aff_union_add(NonNegPWA, OpPWAC.first));
+  auto *ExpPWA = getWidthExpValOnDomain(Width, isl_set_complement(NonNegDom));
+  OpPWAC.first = isl_pw_aff_add(OpPWAC.first, ExpPWA);
+  OpPWAC.first = isl_pw_aff_union_add(NonNegPWA, OpPWAC.first);
   return OpPWAC;
 }
 
@@ -390,10 +390,6 @@ __isl_give PWACtx SCEVAffinator::visitMulExpr(const SCEVMulExpr *Expr) {
   }
 
   return Prod;
-}
-
-__isl_give PWACtx SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {
-  llvm_unreachable("SCEVUDivExpr not yet supported");
 }
 
 __isl_give PWACtx SCEVAffinator::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
@@ -450,6 +446,44 @@ __isl_give PWACtx SCEVAffinator::visitSMaxExpr(const SCEVSMaxExpr *Expr) {
 
 __isl_give PWACtx SCEVAffinator::visitUMaxExpr(const SCEVUMaxExpr *Expr) {
   llvm_unreachable("SCEVUMaxExpr not yet supported");
+}
+
+__isl_give PWACtx SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {
+  // The handling of unsigned division is basically the same as for signed
+  // division, except the interpretation of the operands. As the divisor
+  // has to be constant in both cases we can simply interpret it as an
+  // unsigned value without additional complexity in the representation.
+  // For the dividend we could choose from the different representation
+  // schemes introduced for zero-extend operations but for now we will
+  // simply use an assumption.
+  auto *Dividend = Expr->getLHS();
+  auto *Divisor = Expr->getRHS();
+  assert(isa<SCEVConstant>(Divisor) &&
+         "UDiv is no parameter but has a non-constant RHS.");
+
+  auto DividendPWAC = visit(Dividend);
+  auto DivisorPWAC = visit(Divisor);
+
+  if (SE.isKnownNegative(Divisor)) {
+    // Interpret negative divisors unsigned. This is a special case of the
+    // piece-wise defined value described for zero-extends as we already know
+    // the actual value of the constant divisor.
+    unsigned Width = TD.getTypeSizeInBits(Expr->getType());
+    auto *DivisorDom = isl_pw_aff_domain(isl_pw_aff_copy(DivisorPWAC.first));
+    auto *WidthExpPWA = getWidthExpValOnDomain(Width, DivisorDom);
+    DivisorPWAC.first = isl_pw_aff_add(DivisorPWAC.first, WidthExpPWA);
+  }
+
+  // TODO: One can represent the dividend as piece-wise function to be more
+  //       precise but therefor a heuristic is needed.
+
+  // Assume a non-negative dividend.
+  takeNonNegativeAssumption(DividendPWAC);
+
+  combine(DividendPWAC, DivisorPWAC, isl_pw_aff_div);
+  DividendPWAC.first = isl_pw_aff_floor(DividendPWAC.first);
+
+  return DividendPWAC;
 }
 
 __isl_give PWACtx SCEVAffinator::visitSDivInstruction(Instruction *SDiv) {

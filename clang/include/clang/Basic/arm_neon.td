@@ -704,8 +704,10 @@ def VGET_LOW  : NoTestOpInst<"vget_low", "dk", "csilhfUcUsUiUlPcPs", OP_LO>;
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.22 Converting vectors
 
-def VCVT_F16_F32 : SInst<"vcvt_f16_f32", "md", "Hf">;
-def VCVT_F32_F16 : SInst<"vcvt_f32_f16", "wd", "h">;
+let ArchGuard = "(__ARM_FP & 2)" in {
+  def VCVT_F16_F32 : SInst<"vcvt_f16_f32", "md", "Hf">;
+  def VCVT_F32_F16 : SInst<"vcvt_f32_f16", "wd", "h">;
+}
 
 def VCVT_S32     : SInst<"vcvt_s32", "xd",  "fQf">;
 def VCVT_U32     : SInst<"vcvt_u32", "ud",  "fQf">;

@@ -329,6 +329,36 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
+StringRef Darwin::getPlatformFamily() const {
+  switch (TargetPlatform) {
+    case DarwinPlatformKind::MacOS:
+      return "MacOSX";
+    case DarwinPlatformKind::IPhoneOS:
+    case DarwinPlatformKind::IPhoneOSSimulator:
+      return "iPhone";
+    case DarwinPlatformKind::TvOS:
+    case DarwinPlatformKind::TvOSSimulator:
+      return "AppleTV";
+    case DarwinPlatformKind::WatchOS:
+    case DarwinPlatformKind::WatchOSSimulator:
+      return "Watch";
+  }
+  llvm_unreachable("Unsupported platform");
+}
+
+StringRef Darwin::getSDKName(StringRef isysroot) {
+  // Assume SDK has path: SOME_PATH/SDKs/PlatformXX.YY.sdk
+  llvm::sys::path::const_iterator SDKDir;
+  auto BeginSDK = llvm::sys::path::begin(isysroot);
+  auto EndSDK = llvm::sys::path::end(isysroot);
+  for (auto IT = BeginSDK; IT != EndSDK; ++IT) {
+    StringRef SDK = *IT;
+    if (SDK.endswith(".sdk"))
+      return SDK.slice(0, SDK.size() - 4);
+  }
+  return "";
+}
+
 StringRef Darwin::getOSLibraryNameSuffix() const {
   switch(TargetPlatform) {
   case DarwinPlatformKind::MacOS:
@@ -540,11 +570,8 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
         TvOSTarget.empty() && Args.hasArg(options::OPT_isysroot)) {
       if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
         StringRef isysroot = A->getValue();
-        // Assume SDK has path: SOME_PATH/SDKs/PlatformXX.YY.sdk
-        size_t BeginSDK = isysroot.rfind("SDKs/");
-        size_t EndSDK = isysroot.rfind(".sdk");
-        if (BeginSDK != StringRef::npos && EndSDK != StringRef::npos) {
-          StringRef SDK = isysroot.slice(BeginSDK + 5, EndSDK);
+        StringRef SDK = getSDKName(isysroot);
+        if (SDK.size() > 0) {
           // Slice the version number out.
           // Version number is between the first and the last number.
           size_t StartVer = SDK.find_first_of("0123456789");
@@ -697,6 +724,17 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     Platform = WatchOSSimulator;
 
   setTarget(Platform, Major, Minor, Micro);
+
+  if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+    StringRef SDK = getSDKName(A->getValue());
+    if (SDK.size() > 0) {
+      size_t StartVer = SDK.find_first_of("0123456789");
+      StringRef SDKName = SDK.slice(0, StartVer);
+      if (!SDKName.startswith(getPlatformFamily()))
+        getDriver().Diag(diag::warn_incompatible_sysroot)
+            << SDKName << getPlatformFamily();
+    }
+  }
 }
 
 void DarwinClang::AddCXXStdlibLibArgs(const ArgList &Args,

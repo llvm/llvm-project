@@ -4,6 +4,8 @@
 // RUN: llvm-readobj -s -section-data -t %t.so | FileCheck %s
 // RUN: ld.lld -O1 %t.o -o %t.so -shared
 // RUN: llvm-readobj -s -section-data -t %t.so | FileCheck --check-prefix=NOTAIL %s
+// RUN: ld.lld -O0 %t.o -o %t.so -shared
+// RUN: llvm-readobj -s -section-data -t %t.so | FileCheck --check-prefix=NOMERGE %s
 
         .section	.rodata.str1.1,"aMS",@progbits,1
 	.asciz	"abc"
@@ -54,6 +56,24 @@ zed:
 // NOTAIL-NEXT: SectionData (
 // NOTAIL-NEXT:   0000: 61626300 626300                     |abc.bc.|
 // NOTAIL-NEXT: )
+
+// NOMERGE:      Name:    .rodata
+// NOMERGE-NEXT: Type:    SHT_PROGBITS
+// NOMERGE-NEXT: Flags [
+// NOMERGE-NEXT:   SHF_ALLOC
+// NOMERGE-NEXT:   SHF_MERGE
+// NOMERGE-NEXT:   SHF_STRINGS
+// NOMERGE-NEXT: ]
+// NOMERGE-NEXT: Address:         0x1C8
+// NOMERGE-NEXT: Offset:  0x1C8
+// NOMERGE-NEXT: Size:    16
+// NOMERGE-NEXT: Link: 0
+// NOMERGE-NEXT: Info: 0
+// NOMERGE-NEXT: AddressAlignment: 2
+// NOMERGE-NEXT: EntrySize: 0
+// NOMERGE-NEXT: SectionData (
+// NOMERGE-NEXT:   0000: 61626300 61626300 62630000 14000000  |abc.abc.bc......|
+// NOMERGE-NEXT: )
 
 // CHECK:      Name: .rodata
 // CHECK-NEXT: Type: SHT_PROGBITS

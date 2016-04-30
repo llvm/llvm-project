@@ -22,7 +22,6 @@ class BitfieldsTestCase(TestBase):
 
     @skipIfWindows # BitFields exhibit crashes in record layout on Windows (http://llvm.org/pr21800)
     @skipIf("llvm.org/pr27510", oslist=["linux"], compiler="clang", compiler_version=[">=", "3.9"]) # expectedFailure, skip to avoid crash
-    @skipIf("llvm.org/pr27515", oslist=["macosx"]) # Assertion failed: (Offset >= Size), function insertPadding CGRecordLayoutBuilder.cpp
     def test_and_run_command(self):
         """Test 'frame variable ...' on a variable with bitfields."""
         self.build()

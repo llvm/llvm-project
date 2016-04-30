@@ -7,10 +7,12 @@
 
         .global  _start
 _start:
-        .quad foo
 
         .global bar
 bar:
+
+        .data
+        .quad foo
 
 // CHECK:      Name: bar
 // CHECK-NEXT: Value:

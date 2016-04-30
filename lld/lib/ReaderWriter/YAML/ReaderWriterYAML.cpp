@@ -7,31 +7,41 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lld/Core/AbsoluteAtom.h"
 #include "lld/Core/ArchiveLibraryFile.h"
+#include "lld/Core/Atom.h"
 #include "lld/Core/DefinedAtom.h"
 #include "lld/Core/Error.h"
 #include "lld/Core/File.h"
-#include "lld/Core/LLVM.h"
+#include "lld/Core/LinkingContext.h"
 #include "lld/Core/Reader.h"
 #include "lld/Core/Reference.h"
+#include "lld/Core/SharedLibraryAtom.h"
 #include "lld/Core/Simple.h"
+#include "lld/Core/UndefinedAtom.h"
 #include "lld/Core/Writer.h"
 #include "lld/ReaderWriter/YamlContext.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <system_error>
+#include <vector>
 
 using llvm::yaml::MappingTraits;
 using llvm::yaml::ScalarEnumerationTraits;
@@ -233,7 +243,7 @@ struct RefKind {
   Reference::KindValue      value;
 };
 
-} // anonymous namespace
+} // end anonymous namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(ArchMember)
 LLVM_YAML_IS_SEQUENCE_VECTOR(const lld::Reference *)
@@ -838,7 +848,9 @@ template <> struct MappingTraits<const lld::DefinedAtom *> {
                                    << ", " << _name.size() << ")\n");
       return this;
     }
+
     void bind(const RefNameResolver &);
+
     // Extract current File object from YAML I/O parsing context
     const lld::File &fileFromContext(IO &io) {
       YamlContext *info = reinterpret_cast<YamlContext *>(io.getContext());
@@ -1044,7 +1056,6 @@ template <> struct MappingTraits<lld::UndefinedAtom *> {
 
 // YAML conversion for const lld::SharedLibraryAtom*
 template <> struct MappingTraits<const lld::SharedLibraryAtom *> {
-
   class NormalizedAtom : public lld::SharedLibraryAtom {
   public:
     NormalizedAtom(IO &io)
@@ -1199,8 +1210,8 @@ template <> struct MappingTraits<lld::AbsoluteAtom *> {
   }
 };
 
-} // namespace llvm
-} // namespace yaml
+} // end namespace llvm
+} // end namespace yaml
 
 RefNameResolver::RefNameResolver(const lld::File *file, IO &io) : _io(io) {
   typedef MappingTraits<const lld::DefinedAtom *>::NormalizedAtom
@@ -1371,7 +1382,7 @@ private:
   const Registry &_registry;
 };
 
-} // anonymous namespace
+} // end anonymous namespace
 
 void Registry::addSupportYamlFiles() {
   add(std::unique_ptr<Reader>(new YAMLReader(*this)));

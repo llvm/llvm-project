@@ -3600,18 +3600,6 @@ void Sema::AddModeAttr(SourceRange AttrRange, Decl *D, IdentifierInfo *Name,
 }
 
 static void handleNoDebugAttr(Sema &S, Decl *D, const AttributeList &Attr) {
-  if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
-    if (!VD->hasGlobalStorage())
-      S.Diag(Attr.getLoc(),
-             diag::warn_attribute_requires_functions_or_static_globals)
-        << Attr.getName();
-  } else if (!isFunctionOrMethod(D)) {
-    S.Diag(Attr.getLoc(),
-           diag::warn_attribute_requires_functions_or_static_globals)
-      << Attr.getName();
-    return;
-  }
-
   D->addAttr(::new (S.Context)
              NoDebugAttr(Attr.getRange(), S.Context,
                          Attr.getAttributeSpellingListIndex()));
