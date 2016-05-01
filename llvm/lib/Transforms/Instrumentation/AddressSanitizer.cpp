@@ -71,6 +71,7 @@ static const uint64_t kIOSSimShadowOffset64 = kDefaultShadowOffset64;
 static const uint64_t kSmallX86_64ShadowOffset = 0x7FFF8000;  // < 2G.
 static const uint64_t kLinuxKasan_ShadowOffset64 = 0xdffffc0000000000;
 static const uint64_t kPPC64_ShadowOffset64 = 1ULL << 41;
+static const uint64_t kSystemZ_ShadowOffset64 = 1ULL << 52;
 static const uint64_t kMIPS32_ShadowOffset32 = 0x0aaa0000;
 static const uint64_t kMIPS64_ShadowOffset64 = 1ULL << 37;
 static const uint64_t kAArch64_ShadowOffset64 = 1ULL << 36;
@@ -351,6 +352,7 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
   bool IsLinux = TargetTriple.isOSLinux();
   bool IsPPC64 = TargetTriple.getArch() == llvm::Triple::ppc64 ||
                  TargetTriple.getArch() == llvm::Triple::ppc64le;
+  bool IsSystemZ = TargetTriple.getArch() == llvm::Triple::systemz;
   bool IsX86 = TargetTriple.getArch() == llvm::Triple::x86;
   bool IsX86_64 = TargetTriple.getArch() == llvm::Triple::x86_64;
   bool IsMIPS32 = TargetTriple.getArch() == llvm::Triple::mips ||
@@ -381,6 +383,8 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
   } else {  // LongSize == 64
     if (IsPPC64)
       Mapping.Offset = kPPC64_ShadowOffset64;
+    else if (IsSystemZ)
+      Mapping.Offset = kSystemZ_ShadowOffset64;
     else if (IsFreeBSD)
       Mapping.Offset = kFreeBSD_ShadowOffset64;
     else if (IsLinux && IsX86_64) {
@@ -406,8 +410,10 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
 
   // OR-ing shadow offset if more efficient (at least on x86) if the offset
   // is a power of two, but on ppc64 we have to use add since the shadow
-  // offset is not necessary 1/8-th of the address space.
-  Mapping.OrShadowOffset = !IsAArch64 && !IsPPC64
+  // offset is not necessary 1/8-th of the address space.  On SystemZ,
+  // we could OR the constant in a single instruction, but it's more
+  // efficient to load it once and use indexed addressing.
+  Mapping.OrShadowOffset = !IsAArch64 && !IsPPC64 && !IsSystemZ
                            && !(Mapping.Offset & (Mapping.Offset - 1));
 
   return Mapping;

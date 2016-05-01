@@ -79,7 +79,7 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
     return 0;
   case SymbolBody::LazyArchiveKind:
   case SymbolBody::LazyObjectKind:
-    assert(Body.Backref->IsUsedInRegularObj && "lazy symbol reached writer");
+    assert(Body.symbol()->IsUsedInRegularObj && "lazy symbol reached writer");
     return 0;
   case SymbolBody::DefinedBitcodeKind:
     llvm_unreachable("should have been replaced");
@@ -89,22 +89,19 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
 
 SymbolBody::SymbolBody(Kind K, uint32_t NameOffset, uint8_t StOther,
                        uint8_t Type)
-    : SymbolKind(K), Type(Type), Binding(STB_LOCAL), StOther(StOther),
+    : SymbolKind(K), IsLocal(true), Type(Type), StOther(StOther),
       NameOffset(NameOffset) {
   init();
 }
 
-SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,
-                       uint8_t Type)
-    : SymbolKind(K), Type(Type), Binding(Binding), StOther(StOther),
+SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
+    : SymbolKind(K), IsLocal(false), Type(Type), StOther(StOther),
       Name({Name.data(), Name.size()}) {
-  assert(!isLocal());
   init();
 }
 
 void SymbolBody::init() {
   NeedsCopyOrPltAddr = false;
-  CanOmitFromDynSym = false;
 }
 
 // Returns true if a symbol can be replaced at load-time by a symbol
@@ -122,14 +119,14 @@ bool SymbolBody::isPreemptible() const {
     return false;
 
   // Only symbols that appear in dynsym can be preempted.
-  if (!Backref->includeInDynsym())
+  if (!symbol()->includeInDynsym())
     return false;
 
   // Normally only default visibility symbols can be preempted, but -Bsymbolic
   // means that not even they can be preempted.
   if (Config->Bsymbolic || (Config->BsymbolicFunctions && isFunc()))
     return !isDefined();
-  return Backref->Visibility == STV_DEFAULT;
+  return symbol()->Visibility == STV_DEFAULT;
 }
 
 template <class ELFT>
@@ -177,79 +174,35 @@ template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
   return 0;
 }
 
-// Returns 1, 0 or -1 if this symbol should take precedence
-// over the Other, tie or lose, respectively.
-int SymbolBody::compare(SymbolBody *Other) {
-  assert(!isLazy() && !Other->isLazy());
-  std::tuple<bool, bool, bool> L(isDefined(), !isShared(), !isWeak());
-  std::tuple<bool, bool, bool> R(Other->isDefined(), !Other->isShared(),
-                                 !Other->isWeak());
-
-  // Compare the two by symbol type.
-  if (L > R)
-    return -Other->compare(this);
-  if (L != R)
-    return -1;
-  if (!isDefined() || isShared() || isWeak())
-    return 1;
-
-  // If both are equal in terms of symbol type, then at least
-  // one of them must be a common symbol. Otherwise, they conflict.
-  auto *A = dyn_cast<DefinedCommon>(this);
-  auto *B = dyn_cast<DefinedCommon>(Other);
-  if (!A && !B)
-    return 0;
-
-  // If both are common, the larger one is chosen.
-  if (A && B) {
-    if (Config->WarnCommon)
-      warning("multiple common of " + A->getName());
-    A->Alignment = B->Alignment = std::max(A->Alignment, B->Alignment);
-    return A->Size < B->Size ? -1 : 1;
-  }
-
-  // Non-common symbols takes precedence over common symbols.
-  if (Config->WarnCommon)
-    warning("common " + this->getName() + " is overridden");
-  return A ? -1 : 1;
-}
-
-Defined::Defined(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,
-                 uint8_t Type)
-    : SymbolBody(K, Name, Binding, StOther, Type) {}
+Defined::Defined(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
+    : SymbolBody(K, Name, StOther, Type) {}
 
 Defined::Defined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type)
     : SymbolBody(K, NameOffset, StOther, Type) {}
 
-DefinedBitcode::DefinedBitcode(StringRef Name, bool IsWeak, uint8_t StOther)
-    : Defined(DefinedBitcodeKind, Name, IsWeak ? STB_WEAK : STB_GLOBAL,
-              StOther, 0 /* Type */) {}
+DefinedBitcode::DefinedBitcode(StringRef Name, uint8_t StOther, uint8_t Type,
+                               BitcodeFile *F)
+    : Defined(DefinedBitcodeKind, Name, StOther, Type), File(F) {}
 
 bool DefinedBitcode::classof(const SymbolBody *S) {
   return S->kind() == DefinedBitcodeKind;
 }
 
-Undefined::Undefined(StringRef Name, uint8_t Binding, uint8_t StOther,
-                     uint8_t Type, bool IsBitcode)
-    : SymbolBody(SymbolBody::UndefinedKind, Name, Binding, StOther, Type) {
-  this->IsUndefinedBitcode = IsBitcode;
-}
+Undefined::Undefined(StringRef Name, uint8_t StOther, uint8_t Type)
+    : SymbolBody(SymbolBody::UndefinedKind, Name, StOther, Type) {}
 
 Undefined::Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type)
-    : SymbolBody(SymbolBody::UndefinedKind, NameOffset, StOther, Type) {
-  this->IsUndefinedBitcode = false;
-}
+    : SymbolBody(SymbolBody::UndefinedKind, NameOffset, StOther, Type) {}
 
 template <typename ELFT>
 DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
                                          OutputSectionBase<ELFT> &Section)
-    : Defined(SymbolBody::DefinedSyntheticKind, N, STB_GLOBAL, STV_HIDDEN,
-              0 /* Type */),
+    : Defined(SymbolBody::DefinedSyntheticKind, N, STV_HIDDEN, 0 /* Type */),
       Value(Value), Section(Section) {}
 
 DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
-                             uint8_t Binding, uint8_t StOther, uint8_t Type)
-    : Defined(SymbolBody::DefinedCommonKind, N, Binding, StOther, Type),
+                             uint8_t StOther, uint8_t Type)
+    : Defined(SymbolBody::DefinedCommonKind, N, StOther, Type),
       Alignment(Alignment), Size(Size) {}
 
 std::unique_ptr<InputFile> Lazy::getFile() {
@@ -301,8 +254,8 @@ std::string elf::demangle(StringRef Name) {
 bool Symbol::includeInDynsym() const {
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return false;
-  return (ExportDynamic && VersionScriptGlobal) || Body->isShared() ||
-         (Body->isUndefined() && Config->Shared);
+  return (ExportDynamic && VersionScriptGlobal) || body()->isShared() ||
+         (body()->isUndefined() && Config->Shared);
 }
 
 template uint32_t SymbolBody::template getVA<ELF32LE>(uint32_t) const;

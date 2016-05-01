@@ -89,13 +89,14 @@ public:
 
   uint32_t getSectionIndex(const Elf_Sym &Sym) const;
 
+  Elf_Sym_Range getElfSymbols(bool OnlyGlobals);
+
 protected:
   llvm::object::ELFFile<ELFT> ELFObj;
   const Elf_Shdr *Symtab = nullptr;
   ArrayRef<Elf_Word> SymtabSHNDX;
   StringRef StringTable;
   void initStringTable();
-  Elf_Sym_Range getElfSymbols(bool OnlyGlobals);
 };
 
 // .o file.
@@ -126,7 +127,7 @@ public:
   InputSectionBase<ELFT> *getSection(const Elf_Sym &Sym) const;
 
   SymbolBody &getSymbolBody(uint32_t SymbolIndex) const {
-    return SymbolBodies[SymbolIndex]->repl();
+    return *SymbolBodies[SymbolIndex];
   }
 
   template <typename RelT> SymbolBody &getRelocTargetSym(const RelT &Rel) const {
@@ -183,9 +184,7 @@ public:
     return F->kind() == LazyObjectKind;
   }
 
-  void parse();
-
-  llvm::MutableArrayRef<LazyObject> getLazySymbols() { return LazySymbols; }
+  template <class ELFT> void parse();
 
 private:
   std::vector<StringRef> getSymbols();
@@ -194,7 +193,6 @@ private:
 
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver{Alloc};
-  std::vector<LazyObject> LazySymbols;
 };
 
 // An ArchiveFile object represents a .a file.
@@ -202,43 +200,36 @@ class ArchiveFile : public InputFile {
 public:
   explicit ArchiveFile(MemoryBufferRef M) : InputFile(ArchiveKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
-  void parse();
+  template <class ELFT> void parse();
 
   // Returns a memory buffer for a given symbol. An empty memory buffer
   // is returned if we have already returned the same memory buffer.
   // (So that we don't instantiate same members more than once.)
   MemoryBufferRef getMember(const Archive::Symbol *Sym);
 
-  llvm::MutableArrayRef<LazyArchive> getLazySymbols() { return LazySymbols; }
-
 private:
   std::unique_ptr<Archive> File;
-  std::vector<LazyArchive> LazySymbols;
   llvm::DenseSet<uint64_t> Seen;
 };
 
 class BitcodeFile : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef M);
-  static bool classof(const InputFile *F);
+  static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
+  template <class ELFT>
   void parse(llvm::DenseSet<StringRef> &ComdatGroups);
-  ArrayRef<SymbolBody *> getSymbols() { return SymbolBodies; }
-  static bool shouldSkip(const llvm::object::BasicSymbolRef &Sym);
+  ArrayRef<Symbol *> getSymbols() { return Symbols; }
+  static bool shouldSkip(uint32_t Flags);
   std::unique_ptr<llvm::object::IRObjectFile> Obj;
 
 private:
-  std::vector<SymbolBody *> SymbolBodies;
+  std::vector<Symbol *> Symbols;
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver{Alloc};
-  SymbolBody *
-  createSymbolBody(const llvm::DenseSet<const llvm::Comdat *> &KeptComdats,
-                   const llvm::object::IRObjectFile &Obj,
-                   const llvm::object::BasicSymbolRef &Sym);
-  SymbolBody *
-  createBody(const llvm::DenseSet<const llvm::Comdat *> &KeptComdats,
-             const llvm::object::IRObjectFile &Obj,
-             const llvm::object::BasicSymbolRef &Sym,
-             const llvm::GlobalValue *GV);
+  template <class ELFT>
+  Symbol *createSymbol(const llvm::DenseSet<const llvm::Comdat *> &KeptComdats,
+                       const llvm::object::IRObjectFile &Obj,
+                       const llvm::object::BasicSymbolRef &Sym);
 };
 
 // .so file.
@@ -251,7 +242,6 @@ template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
   typedef typename ELFT::Versym Elf_Versym;
   typedef typename ELFT::Verdef Elf_Verdef;
 
-  std::vector<SharedSymbol<ELFT>> SymbolBodies;
   std::vector<StringRef> Undefs;
   StringRef SoName;
   const Elf_Shdr *VersymSec = nullptr;
@@ -259,9 +249,6 @@ template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
 
 public:
   StringRef getSoName() const { return SoName; }
-  llvm::MutableArrayRef<SharedSymbol<ELFT>> getSharedSymbols() {
-    return SymbolBodies;
-  }
   const Elf_Shdr *getSection(const Elf_Sym &Sym) const;
   llvm::ArrayRef<StringRef> getUndefinedSymbols() { return Undefs; }
 

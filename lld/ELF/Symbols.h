@@ -20,11 +20,13 @@
 #include "lld/Core/LLVM.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Support/AlignOf.h"
 
 namespace lld {
 namespace elf {
 
 class ArchiveFile;
+class BitcodeFile;
 class InputFile;
 class SymbolBody;
 template <class ELFT> class ObjectFile;
@@ -37,45 +39,7 @@ template <class ELFT> class SharedFile;
 // it returns the unmodified string.
 std::string demangle(StringRef Name);
 
-// A real symbol object, SymbolBody, is usually accessed indirectly
-// through a Symbol. There's always one Symbol for each symbol name.
-// The resolver updates SymbolBody pointers as it resolves symbols.
-// Symbol also holds computed properties of symbol names.
-struct Symbol {
-  SymbolBody *Body;
-
-  // Symbol binding. This is on the Symbol to track changes during resolution.
-  // In particular:
-  // An undefined weak is still weak when it resolves to a shared library.
-  // An undefined weak will not fetch archive members, but we have to remember
-  // it is weak.
-  uint8_t Binding;
-
-  // Symbol visibility. This is the computed minimum visibility of all
-  // observed non-DSO symbols.
-  unsigned Visibility : 2;
-
-  // True if the symbol was used for linking and thus need to be added to the
-  // output file's symbol table. This is true for all symbols except for
-  // unreferenced DSO symbols and bitcode symbols that are unreferenced except
-  // by other bitcode objects.
-  unsigned IsUsedInRegularObj : 1;
-
-  // If this flag is true and the symbol has protected or default visibility, it
-  // will appear in .dynsym. This flag is set by interposable DSO symbols in
-  // executables, by most symbols in DSOs and executables built with
-  // --export-dynamic, and by dynamic lists.
-  unsigned ExportDynamic : 1;
-
-  // This flag acts as an additional filter on the dynamic symbol list. It is
-  // set if there is no version script, or if the symbol appears in the global
-  // section of the version script.
-  unsigned VersionScriptGlobal : 1;
-
-  bool includeInDynsym() const;
-
-  bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
-};
+struct Symbol;
 
 // The base class for real symbol classes.
 class SymbolBody {
@@ -95,9 +59,13 @@ public:
     LazyObjectKind,
   };
 
+  Symbol *symbol();
+  const Symbol *symbol() const {
+    return const_cast<SymbolBody *>(this)->symbol();
+  }
+
   Kind kind() const { return static_cast<Kind>(SymbolKind); }
 
-  bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
   bool isUndefined() const { return SymbolKind == UndefinedKind; }
   bool isDefined() const { return SymbolKind <= DefinedLast; }
   bool isCommon() const { return SymbolKind == DefinedCommonKind; }
@@ -105,7 +73,7 @@ public:
     return SymbolKind == LazyArchiveKind || SymbolKind == LazyObjectKind;
   }
   bool isShared() const { return SymbolKind == SharedKind; }
-  bool isLocal() const { return Binding == llvm::ELF::STB_LOCAL; }
+  bool isLocal() const { return IsLocal; }
   bool isPreemptible() const;
 
   // Returns the symbol name.
@@ -121,12 +89,10 @@ public:
   uint8_t getVisibility() const { return StOther & 0x3; }
 
   unsigned DynsymIndex = 0;
-  uint32_t GlobalDynIndex = -1;
   uint32_t GotIndex = -1;
   uint32_t GotPltIndex = -1;
   uint32_t PltIndex = -1;
   uint32_t ThunkIndex = -1;
-  bool hasGlobalDynIndex() { return GlobalDynIndex != uint32_t(-1); }
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
   bool hasThunk() const { return ThunkIndex != -1U; }
@@ -142,46 +108,23 @@ public:
   template <class ELFT> typename ELFT::uint getThunkVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
 
-  // A SymbolBody has a backreference to a Symbol. Originally they are
-  // doubly-linked. A backreference will never change. But the pointer
-  // in the Symbol may be mutated by the resolver. If you have a
-  // pointer P to a SymbolBody and are not sure whether the resolver
-  // has chosen the object among other objects having the same name,
-  // you can access P->Backref->Body to get the resolver's result.
-  SymbolBody &repl() { return Backref ? *Backref->Body : *this; }
-
-  // Decides which symbol should "win" in the symbol table, this or
-  // the Other. Returns 1 if this wins, -1 if the Other wins, or 0 if
-  // they are duplicate (conflicting) symbols.
-  int compare(SymbolBody *Other);
-
 protected:
-  SymbolBody(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,
-             uint8_t Type);
+  SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type);
 
   SymbolBody(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type);
 
   const unsigned SymbolKind : 8;
 
 public:
-  // True if this symbol can be omitted from the symbol table if nothing else
-  // requires it to be there. Right now this is only used for linkonce_odr in
-  // LTO, but we could add the feature to ELF. It would be similar to
-  // MachO's .weak_def_can_be_hidden.
-  unsigned CanOmitFromDynSym : 1;
-
   // True if the linker has to generate a copy relocation for this shared
   // symbol or if the symbol should point to its plt entry.
   unsigned NeedsCopyOrPltAddr : 1;
 
-  // True if the symbol is undefined and comes from a bitcode file. We need to
-  // keep track of this because undefined symbols only prevent internalization
-  // of bitcode symbols if they did not come from a bitcode file.
-  unsigned IsUndefinedBitcode : 1;
+  // True if this is a local symbol.
+  unsigned IsLocal : 1;
 
   // The following fields have the same meaning as the ELF symbol attributes.
   uint8_t Type;    // symbol type
-  uint8_t Binding; // symbol binding
   uint8_t StOther; // st_other field value
 
   bool isSection() const { return Type == llvm::ELF::STT_SECTION; }
@@ -190,8 +133,6 @@ public:
   bool isGnuIFunc() const { return Type == llvm::ELF::STT_GNU_IFUNC; }
   bool isObject() const { return Type == llvm::ELF::STT_OBJECT; }
   bool isFile() const { return Type == llvm::ELF::STT_FILE; }
-
-  Symbol *Backref = nullptr;
 
 protected:
   struct Str {
@@ -207,8 +148,7 @@ protected:
 // The base class for any defined symbols.
 class Defined : public SymbolBody {
 public:
-  Defined(Kind K, StringRef Name, uint8_t Binding, uint8_t StOther,
-          uint8_t Type);
+  Defined(Kind K, StringRef Name, uint8_t StOther, uint8_t Type);
   Defined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type);
   static bool classof(const SymbolBody *S) { return S->isDefined(); }
 };
@@ -216,14 +156,16 @@ public:
 // The defined symbol in LLVM bitcode files.
 class DefinedBitcode : public Defined {
 public:
-  DefinedBitcode(StringRef Name, bool IsWeak, uint8_t StOther);
+  DefinedBitcode(StringRef Name, uint8_t StOther, uint8_t Type, BitcodeFile *F);
   static bool classof(const SymbolBody *S);
+
+  BitcodeFile *File;
 };
 
 class DefinedCommon : public Defined {
 public:
-  DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment, uint8_t Binding,
-                uint8_t StOther, uint8_t Type);
+  DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment, uint8_t StOther,
+                uint8_t Type);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedCommonKind;
@@ -247,8 +189,8 @@ template <class ELFT> class DefinedRegular : public Defined {
 public:
   DefinedRegular(StringRef Name, const Elf_Sym &Sym,
                  InputSectionBase<ELFT> *Section)
-      : Defined(SymbolBody::DefinedRegularKind, Name, Sym.getBinding(),
-                Sym.st_other, Sym.getType()),
+      : Defined(SymbolBody::DefinedRegularKind, Name, Sym.st_other,
+                Sym.getType()),
         Value(Sym.st_value), Size(Sym.st_size),
         Section(Section ? Section->Repl : NullInputSection) {}
 
@@ -260,8 +202,8 @@ public:
     assert(isLocal());
   }
 
-  DefinedRegular(StringRef Name, uint8_t Binding, uint8_t StOther)
-      : Defined(SymbolBody::DefinedRegularKind, Name, Binding, StOther,
+  DefinedRegular(StringRef Name, uint8_t StOther)
+      : Defined(SymbolBody::DefinedRegularKind, Name, StOther,
                 llvm::ELF::STT_NOTYPE),
         Value(0), Size(0), Section(NullInputSection) {}
 
@@ -311,8 +253,7 @@ public:
 
 class Undefined : public SymbolBody {
 public:
-  Undefined(StringRef Name, uint8_t Binding, uint8_t StOther, uint8_t Type,
-            bool IsBitcode);
+  Undefined(StringRef Name, uint8_t StOther, uint8_t Type);
   Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type);
 
   static bool classof(const SymbolBody *S) {
@@ -332,8 +273,7 @@ public:
 
   SharedSymbol(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
                const Elf_Verdef *Verdef)
-      : Defined(SymbolBody::SharedKind, Name, Sym.getBinding(), Sym.st_other,
-                Sym.getType()),
+      : Defined(SymbolBody::SharedKind, Name, Sym.st_other, Sym.getType()),
         File(F), Sym(Sym), Verdef(Verdef) {
     // IFuncs defined in DSOs are treated as functions by the static linker.
     if (isGnuIFunc())
@@ -364,9 +304,8 @@ public:
 // the same name, it will ask the Lazy to load a file.
 class Lazy : public SymbolBody {
 public:
-  Lazy(SymbolBody::Kind K, StringRef Name)
-      : SymbolBody(K, Name, llvm::ELF::STB_GLOBAL, llvm::ELF::STV_DEFAULT,
-                   /* Type */ 0) {}
+  Lazy(SymbolBody::Kind K, StringRef Name, uint8_t Type)
+      : SymbolBody(K, Name, llvm::ELF::STV_DEFAULT, Type) {}
 
   static bool classof(const SymbolBody *S) { return S->isLazy(); }
 
@@ -378,8 +317,9 @@ public:
 // LazyArchive symbols represents symbols in archive files.
 class LazyArchive : public Lazy {
 public:
-  LazyArchive(ArchiveFile *F, const llvm::object::Archive::Symbol S)
-      : Lazy(LazyArchiveKind, S.getName()), File(F), Sym(S) {}
+  LazyArchive(ArchiveFile *F, const llvm::object::Archive::Symbol S,
+              uint8_t Type)
+      : Lazy(LazyArchiveKind, S.getName(), Type), File(F), Sym(S) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == LazyArchiveKind;
@@ -396,8 +336,8 @@ private:
 // --start-lib and --end-lib options.
 class LazyObject : public Lazy {
 public:
-  LazyObject(StringRef Name, MemoryBufferRef M)
-      : Lazy(LazyObjectKind, Name), MBRef(M) {}
+  LazyObject(StringRef Name, MemoryBufferRef M, uint8_t Type)
+      : Lazy(LazyObjectKind, Name, Type), MBRef(M) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == LazyObjectKind;
@@ -424,16 +364,8 @@ template <class ELFT> struct ElfSym {
   static DefinedRegular<ELFT> *End;
   static DefinedRegular<ELFT> *End2;
 
-  // The content for _gp symbol for MIPS target.
-  static SymbolBody *MipsGp;
-
-  static SymbolBody *MipsLocalGp;
+  // The content for _gp_disp symbol for MIPS target.
   static SymbolBody *MipsGpDisp;
-
-  // __rel_iplt_start/__rel_iplt_end for signaling
-  // where R_[*]_IRELATIVE relocations do live.
-  static SymbolBody *RelaIpltStart;
-  static SymbolBody *RelaIpltEnd;
 };
 
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Etext;
@@ -442,11 +374,77 @@ template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Edata;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::Edata2;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::End;
 template <class ELFT> DefinedRegular<ELFT> *ElfSym<ELFT>::End2;
-template <class ELFT> SymbolBody *ElfSym<ELFT>::MipsGp;
-template <class ELFT> SymbolBody *ElfSym<ELFT>::MipsLocalGp;
 template <class ELFT> SymbolBody *ElfSym<ELFT>::MipsGpDisp;
-template <class ELFT> SymbolBody *ElfSym<ELFT>::RelaIpltStart;
-template <class ELFT> SymbolBody *ElfSym<ELFT>::RelaIpltEnd;
+
+// A real symbol object, SymbolBody, is usually stored within a Symbol. There's
+// always one Symbol for each symbol name. The resolver updates the SymbolBody
+// stored in the Body field of this object as it resolves symbols. Symbol also
+// holds computed properties of symbol names.
+struct Symbol {
+  uint32_t GlobalDynIndex = -1;
+
+  // Symbol binding. This is on the Symbol to track changes during resolution.
+  // In particular:
+  // An undefined weak is still weak when it resolves to a shared library.
+  // An undefined weak will not fetch archive members, but we have to remember
+  // it is weak.
+  uint8_t Binding;
+
+  // Symbol visibility. This is the computed minimum visibility of all
+  // observed non-DSO symbols.
+  unsigned Visibility : 2;
+
+  // True if the symbol was used for linking and thus need to be added to the
+  // output file's symbol table. This is true for all symbols except for
+  // unreferenced DSO symbols and bitcode symbols that are unreferenced except
+  // by other bitcode objects.
+  unsigned IsUsedInRegularObj : 1;
+
+  // If this flag is true and the symbol has protected or default visibility, it
+  // will appear in .dynsym. This flag is set by interposable DSO symbols in
+  // executables, by most symbols in DSOs and executables built with
+  // --export-dynamic, and by dynamic lists.
+  unsigned ExportDynamic : 1;
+
+  // This flag acts as an additional filter on the dynamic symbol list. It is
+  // set if there is no version script, or if the symbol appears in the global
+  // section of the version script.
+  unsigned VersionScriptGlobal : 1;
+
+  bool includeInDynsym() const;
+  bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
+
+  // This field is used to store the Symbol's SymbolBody. This instantiation of
+  // AlignedCharArrayUnion gives us a struct with a char array field that is
+  // large and aligned enough to store any derived class of SymbolBody. We
+  // assume that the size and alignment of ELF64LE symbols is sufficient for any
+  // ELFT, and we verify this with the static_asserts in replaceBody.
+  llvm::AlignedCharArrayUnion<
+      DefinedBitcode, DefinedCommon, DefinedRegular<llvm::object::ELF64LE>,
+      DefinedSynthetic<llvm::object::ELF64LE>, Undefined,
+      SharedSymbol<llvm::object::ELF64LE>, LazyArchive, LazyObject>
+      Body;
+
+  SymbolBody *body() { return reinterpret_cast<SymbolBody *>(Body.buffer); }
+  const SymbolBody *body() const { return const_cast<Symbol *>(this)->body(); }
+};
+
+template <typename T, typename... ArgT>
+void replaceBody(Symbol *S, ArgT &&... Arg) {
+  static_assert(sizeof(T) <= sizeof(S->Body), "Body too small");
+  static_assert(llvm::AlignOf<T>::Alignment <=
+                    llvm::AlignOf<decltype(S->Body)>::Alignment,
+                "Body not aligned enough");
+  assert(static_cast<SymbolBody *>(static_cast<T *>(nullptr)) == nullptr &&
+         "Not a SymbolBody");
+  new (S->Body.buffer) T(std::forward<ArgT>(Arg)...);
+}
+
+inline Symbol *SymbolBody::symbol() {
+  assert(!isLocal());
+  return reinterpret_cast<Symbol *>(reinterpret_cast<char *>(this) -
+                                    offsetof(Symbol, Body));
+}
 
 } // namespace elf
 } // namespace lld

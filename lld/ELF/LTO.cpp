@@ -76,14 +76,14 @@ static void runLTOPasses(Module &M, TargetMachine &TM) {
 }
 
 static bool shouldInternalize(const SmallPtrSet<GlobalValue *, 8> &Used,
-                              SymbolBody &B, GlobalValue *GV) {
-  if (B.Backref->IsUsedInRegularObj)
+                              Symbol *S, GlobalValue *GV) {
+  if (S->IsUsedInRegularObj)
     return false;
 
   if (Used.count(GV))
     return false;
 
-  return !B.Backref->includeInDynsym();
+  return !S->includeInDynsym();
 }
 
 BitcodeCompiler::BitcodeCompiler()
@@ -94,7 +94,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   std::unique_ptr<IRObjectFile> Obj = std::move(F.Obj);
   std::vector<GlobalValue *> Keep;
   unsigned BodyIndex = 0;
-  ArrayRef<SymbolBody *> Bodies = F.getSymbols();
+  ArrayRef<Symbol *> Syms = F.getSymbols();
 
   Module &M = Obj->getModule();
   if (M.getDataLayoutStr().empty())
@@ -106,19 +106,30 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   SmallPtrSet<GlobalValue *, 8> Used;
   collectUsedGlobalVariables(M, Used, /* CompilerUsed */ false);
 
+  // This function is called if we know that the combined LTO object will
+  // provide a definition of a symbol. It undefines the symbol so that the
+  // definition in the combined LTO object will replace it when parsed.
+  auto Undefine = [](Symbol *S) {
+    replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, 0);
+  };
+
   for (const BasicSymbolRef &Sym : Obj->symbols()) {
+    uint32_t Flags = Sym.getFlags();
     GlobalValue *GV = Obj->getSymbolGV(Sym.getRawDataRefImpl());
-    // Ignore module asm symbols.
-    if (!GV)
-      continue;
-    if (GV->hasAppendingLinkage()) {
+    if (GV && GV->hasAppendingLinkage())
       Keep.push_back(GV);
+    if (BitcodeFile::shouldSkip(Flags))
+      continue;
+    Symbol *S = Syms[BodyIndex++];
+    if (Flags & BasicSymbolRef::SF_Undefined)
+      continue;
+    if (!GV) {
+      // Module asm symbol.
+      Undefine(S);
       continue;
     }
-    if (BitcodeFile::shouldSkip(Sym))
-      continue;
-    SymbolBody *B = Bodies[BodyIndex++];
-    if (!B || &B->repl() != B || !isa<DefinedBitcode>(B))
+    auto *B = dyn_cast<DefinedBitcode>(S->body());
+    if (!B || B->File != &F)
       continue;
     switch (GV->getLinkage()) {
     default:
@@ -136,8 +147,10 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // we imported the symbols and satisfied undefined references
     // to it. We can't just change linkage here because otherwise
     // the IRMover will just rename the symbol.
-    if (shouldInternalize(Used, *B, GV))
+    if (shouldInternalize(Used, S, GV))
       InternalizedSyms.insert(GV->getName());
+    else
+      Undefine(S);
 
     Keep.push_back(GV);
   }

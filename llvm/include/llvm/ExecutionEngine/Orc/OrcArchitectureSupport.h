@@ -111,7 +111,7 @@ class OrcAArch64 {
 public:
   static const unsigned PointerSize = 8;
   static const unsigned TrampolineSize = 12;
-  static const unsigned ResolverCodeSize = 0xA0;
+  static const unsigned ResolverCodeSize = 0x120;
 
   typedef GenericIndirectStubsInfo<8> IndirectStubsInfo;
 

@@ -137,15 +137,14 @@ template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
       Q.push_back(S);
   };
 
-  auto MarkSymbol = [&](SymbolBody *Sym) {
-    if (Sym)
-      if (auto *D = dyn_cast<DefinedRegular<ELFT>>(Sym))
-        Enqueue({D->Section, D->Value});
+  auto MarkSymbol = [&](const SymbolBody *Sym) {
+    if (auto *D = dyn_cast_or_null<DefinedRegular<ELFT>>(Sym))
+      Enqueue({D->Section, D->Value});
   };
 
   // Add GC root symbols.
   if (Config->EntrySym)
-    MarkSymbol(Config->EntrySym->Body);
+    MarkSymbol(Config->EntrySym->body());
   MarkSymbol(Symtab->find(Config->Init));
   MarkSymbol(Symtab->find(Config->Fini));
   for (StringRef S : Config->Undefined)
@@ -155,7 +154,7 @@ template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
   // file can interrupt other ELF file's symbols at runtime.
   for (const Symbol *S : Symtab->getSymbols())
     if (S->includeInDynsym())
-      MarkSymbol(S->Body);
+      MarkSymbol(S->body());
 
   // Preserve special sections and those which are specified in linker
   // script KEEP command.

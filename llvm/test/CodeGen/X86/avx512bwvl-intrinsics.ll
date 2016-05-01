@@ -2055,7 +2055,7 @@ declare <16 x i16> @llvm.x86.avx512.mask.pmull.w.256(<16 x i16>, <16 x i16>, <16
 
 define <8 x i16> @test_mask_packs_epi32_rr_128(<4 x i32> %a, <4 x i32> %b) {
   ;CHECK-LABEL: test_mask_packs_epi32_rr_128
-  ;CHECK: vpackssdw       %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x6b,0xc1]
+  ;CHECK: vpackssdw       %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0x6b,0xc1]
   %res = call <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 -1)
   ret <8 x i16> %res
 }
@@ -2076,7 +2076,7 @@ define <8 x i16> @test_mask_packs_epi32_rrkz_128(<4 x i32> %a, <4 x i32> %b, i8 
 
 define <8 x i16> @test_mask_packs_epi32_rm_128(<4 x i32> %a, <4 x i32>* %ptr_b) {
   ;CHECK-LABEL: test_mask_packs_epi32_rm_128
-  ;CHECK: vpackssdw       (%rdi), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x6b,0x07]
+  ;CHECK: vpackssdw       (%rdi), %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0x6b,0x07]
   %b = load <4 x i32>, <4 x i32>* %ptr_b
   %res = call <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32> %a, <4 x i32> %b, <8 x i16> zeroinitializer, i8 -1)
   ret <8 x i16> %res
@@ -2132,7 +2132,7 @@ declare <8 x i16> @llvm.x86.avx512.mask.packssdw.128(<4 x i32>, <4 x i32>, <8 x 
 
 define <16 x i16> @test_mask_packs_epi32_rr_256(<8 x i32> %a, <8 x i32> %b) {
   ;CHECK-LABEL: test_mask_packs_epi32_rr_256
-  ;CHECK: vpackssdw       %ymm1, %ymm0, %ymm0 ## encoding: [0xc5,0xfd,0x6b,0xc1]
+  ;CHECK: vpackssdw       %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x6b,0xc1]
   %res = call <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 -1)
   ret <16 x i16> %res
 }
@@ -2153,7 +2153,7 @@ define <16 x i16> @test_mask_packs_epi32_rrkz_256(<8 x i32> %a, <8 x i32> %b, i1
 
 define <16 x i16> @test_mask_packs_epi32_rm_256(<8 x i32> %a, <8 x i32>* %ptr_b) {
   ;CHECK-LABEL: test_mask_packs_epi32_rm_256
-  ;CHECK: vpackssdw       (%rdi), %ymm0, %ymm0 ## encoding: [0xc5,0xfd,0x6b,0x07]
+  ;CHECK: vpackssdw       (%rdi), %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x6b,0x07]
   %b = load <8 x i32>, <8 x i32>* %ptr_b
   %res = call <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32> %a, <8 x i32> %b, <16 x i16> zeroinitializer, i16 -1)
   ret <16 x i16> %res
@@ -2209,7 +2209,7 @@ declare <16 x i16> @llvm.x86.avx512.mask.packssdw.256(<8 x i32>, <8 x i32>, <16 
 
 define <16 x i8> @test_mask_packs_epi16_rr_128(<8 x i16> %a, <8 x i16> %b) {
   ;CHECK-LABEL: test_mask_packs_epi16_rr_128
-  ;CHECK: vpacksswb       %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x63,0xc1]
+  ;CHECK: vpacksswb       %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0x63,0xc1]
   %res = call <16 x i8> @llvm.x86.avx512.mask.packsswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> zeroinitializer, i16 -1)
   ret <16 x i8> %res
 }
@@ -2230,7 +2230,7 @@ define <16 x i8> @test_mask_packs_epi16_rrkz_128(<8 x i16> %a, <8 x i16> %b, i16
 
 define <16 x i8> @test_mask_packs_epi16_rm_128(<8 x i16> %a, <8 x i16>* %ptr_b) {
   ;CHECK-LABEL: test_mask_packs_epi16_rm_128
-  ;CHECK: vpacksswb       (%rdi), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x63,0x07]
+  ;CHECK: vpacksswb       (%rdi), %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0x63,0x07]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
   %res = call <16 x i8> @llvm.x86.avx512.mask.packsswb.128(<8 x i16> %a, <8 x i16> %b, <16 x i8> zeroinitializer, i16 -1)
   ret <16 x i8> %res
@@ -2256,7 +2256,7 @@ declare <16 x i8> @llvm.x86.avx512.mask.packsswb.128(<8 x i16>, <8 x i16>, <16 x
 
 define <32 x i8> @test_mask_packs_epi16_rr_256(<16 x i16> %a, <16 x i16> %b) {
   ;CHECK-LABEL: test_mask_packs_epi16_rr_256
-  ;CHECK: vpacksswb       %ymm1, %ymm0, %ymm0 ## encoding: [0xc5,0xfd,0x63,0xc1]
+  ;CHECK: vpacksswb       %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0x63,0xc1]
   %res = call <32 x i8> @llvm.x86.avx512.mask.packsswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> zeroinitializer, i32 -1)
   ret <32 x i8> %res
 }
@@ -2277,7 +2277,7 @@ define <32 x i8> @test_mask_packs_epi16_rrkz_256(<16 x i16> %a, <16 x i16> %b, i
 
 define <32 x i8> @test_mask_packs_epi16_rm_256(<16 x i16> %a, <16 x i16>* %ptr_b) {
   ;CHECK-LABEL: test_mask_packs_epi16_rm_256
-  ;CHECK: vpacksswb       (%rdi), %ymm0, %ymm0 ## encoding: [0xc5,0xfd,0x63,0x07]
+  ;CHECK: vpacksswb       (%rdi), %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0x63,0x07]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
   %res = call <32 x i8> @llvm.x86.avx512.mask.packsswb.256(<16 x i16> %a, <16 x i16> %b, <32 x i8> zeroinitializer, i32 -1)
   ret <32 x i8> %res

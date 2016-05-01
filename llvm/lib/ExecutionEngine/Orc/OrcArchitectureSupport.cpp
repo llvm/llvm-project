@@ -19,50 +19,82 @@ void OrcAArch64::writeResolverCode(uint8_t *ResolverMem, JITReentryFn ReentryFn,
 
   const uint32_t ResolverCode[] = {
     // resolver_entry:
-    0xa9bf47fd, // 0x00: stp  x29, x17, [sp, #-16]!
-    0x910003fd, // 0x04: mov  x29, sp
-    0xa9bf73fb, // 0x08: stp  x27, x28, [sp, #-16]!
-    0xa9bf6bf9, // 0x0C: stp  x25, x26, [sp, #-16]!
-    0xa9bf63f7, // 0x10: stp  x23, x24, [sp, #-16]!
-    0xa9bf5bf5, // 0x14: stp  x21, x22, [sp, #-16]!
-    0xa9bf53f3, // 0x18: stp  x19, x20, [sp, #-16]!
-    0xa9bf3fee, // 0x1C: stp  x14, x15, [sp, #-16]!
-    0xa9bf37ec, // 0x20: stp  x12, x13, [sp, #-16]!
-    0xa9bf2fea, // 0x24: stp  x10, x11, [sp, #-16]!
-    0xa9bf27e8, // 0x28: stp   x8,  x9, [sp, #-16]!
-    0xa9bf1fe6, // 0x2C: stp   x6,  x7, [sp, #-16]!
-    0xa9bf17e4, // 0x30: stp   x4,  x5, [sp, #-16]!
-    0xa9bf0fe2, // 0x34: stp   x2,  x3, [sp, #-16]!
-    0xa9bf07e0, // 0x38: stp   x0,  x1, [sp, #-16]!
-    0x580002e0, // 0x3C: ldr   x0, Lcallback_mgr
-    0xaa1e03e1, // 0x40: mov   x1, x30
-    0xd1003021, // 0x44: sub   x1, x1, #12
-    0x58000242, // 0x48: ldr   x2, Lreentry_fn
-    0xd63f0040, // 0x4C: blr   x2
-    0xaa0003f1, // 0x50: mov   x17, x0
-    0xa8c107e0, // 0x54: ldp   x0,  x1, [sp], #16
-    0xa8c10fe2, // 0x58: ldp   x2,  x3, [sp], #16
-    0xa8c117e4, // 0x5C: ldp   x4,  x5, [sp], #16
-    0xa8c11fe6, // 0x60: ldp   x6,  x7, [sp], #16
-    0xa8c127e8, // 0x64: ldp   x8,  x9, [sp], #16
-    0xa8c12fea, // 0x68: ldp  x10, x11, [sp], #16
-    0xa8c137ec, // 0x6C: ldp  x12, x13, [sp], #16
-    0xa8c13fee, // 0x70: ldp  x14, x15, [sp], #16
-    0xa8c153f3, // 0x74: ldp  x19, x20, [sp], #16
-    0xa8c15bf5, // 0x78: ldp  x21, x22, [sp], #16
-    0xa8c163f7, // 0x7C: ldp  x23, x24, [sp], #16
-    0xa8c16bf9, // 0x80: ldp  x25, x26, [sp], #16
-    0xa8c173fb, // 0x84: ldp  x27, x28, [sp], #16
-    0xa8c17bfd, // 0x88: ldp  x29, x30, [sp], #16
-    0xd65f0220, // 0x8C: ret  x17
-    0x00000000, // 0x90: Lresolver_fn:
-    0x00000000, //         .quad resolver_fn
-    0x00000000, // 0x98: Lcallback_mgr:
-    0x00000000, //         .quad callback_mgr
+    0xa9bf47fd,        // 0x000:  stp  x29, x17, [sp, #-16]!
+    0x910003fd,        // 0x004:  mov  x29, sp
+    0xa9bf73fb,        // 0x008:  stp  x27, x28, [sp, #-16]!
+    0xa9bf6bf9,        // 0x00c:  stp  x25, x26, [sp, #-16]!
+    0xa9bf63f7,        // 0x010:  stp  x23, x24, [sp, #-16]!
+    0xa9bf5bf5,        // 0x014:  stp  x21, x22, [sp, #-16]!
+    0xa9bf53f3,        // 0x018:  stp  x19, x20, [sp, #-16]!
+    0xa9bf3fee,        // 0x01c:  stp  x14, x15, [sp, #-16]!
+    0xa9bf37ec,        // 0x020:  stp  x12, x13, [sp, #-16]!
+    0xa9bf2fea,        // 0x024:  stp  x10, x11, [sp, #-16]!
+    0xa9bf27e8,        // 0x028:  stp   x8,  x9, [sp, #-16]!
+    0xa9bf1fe6,        // 0x02c:  stp   x6,  x7, [sp, #-16]!
+    0xa9bf17e4,        // 0x030:  stp   x4,  x5, [sp, #-16]!
+    0xa9bf0fe2,        // 0x034:  stp   x2,  x3, [sp, #-16]!
+    0xa9bf07e0,        // 0x038:  stp   x0,  x1, [sp, #-16]!
+    0xadbf7ffe,        // 0x03c:  stp  q30, q31, [sp, #-32]!
+    0xadbf77fc,        // 0x040:  stp  q28, q29, [sp, #-32]!
+    0xadbf6ffa,        // 0x044:  stp  q26, q27, [sp, #-32]!
+    0xadbf67f8,        // 0x048:  stp  q24, q25, [sp, #-32]!
+    0xadbf5ff6,        // 0x04c:  stp  q22, q23, [sp, #-32]!
+    0xadbf57f4,        // 0x050:  stp  q20, q21, [sp, #-32]!
+    0xadbf4ff2,        // 0x054:  stp  q18, q19, [sp, #-32]!
+    0xadbf47f0,        // 0x058:  stp  q16, q17, [sp, #-32]!
+    0xadbf3fee,        // 0x05c:  stp  q14, q15, [sp, #-32]!
+    0xadbf37ec,        // 0x060:  stp  q12, q13, [sp, #-32]!
+    0xadbf2fea,        // 0x064:  stp  q10, q11, [sp, #-32]!
+    0xadbf27e8,        // 0x068:  stp   q8,  q9, [sp, #-32]!
+    0xadbf1fe6,        // 0x06c:  stp   q6,  q7, [sp, #-32]!
+    0xadbf17e4,        // 0x070:  stp   q4,  q5, [sp, #-32]!
+    0xadbf0fe2,        // 0x074:  stp   q2,  q3, [sp, #-32]!
+    0xadbf07e0,        // 0x078:  stp   q0,  q1, [sp, #-32]!
+    0x580004e0,        // 0x07c:  ldr   x0, Lcallbackmgr
+    0xaa1e03e1,        // 0x080:  mov   x1, x30
+    0xd1003021,        // 0x084:  sub   x1,  x1, #12
+    0x58000442,        // 0x088:  ldr   x2, Lreentry_fn_ptr
+    0xd63f0040,        // 0x08c:  blr   x2
+    0xaa0003f1,        // 0x090:  mov   x17, x0
+    0xacc107e0,        // 0x094:  ldp   q0,  q1, [sp], #32
+    0xacc10fe2,        // 0x098:  ldp   q2,  q3, [sp], #32
+    0xacc117e4,        // 0x09c:  ldp   q4,  q5, [sp], #32
+    0xacc11fe6,        // 0x0a0:  ldp   q6,  q7, [sp], #32
+    0xacc127e8,        // 0x0a4:  ldp   q8,  q9, [sp], #32
+    0xacc12fea,        // 0x0a8:  ldp  q10, q11, [sp], #32
+    0xacc137ec,        // 0x0ac:  ldp  q12, q13, [sp], #32
+    0xacc13fee,        // 0x0b0:  ldp  q14, q15, [sp], #32
+    0xacc147f0,        // 0x0b4:  ldp  q16, q17, [sp], #32
+    0xacc14ff2,        // 0x0b8:  ldp  q18, q19, [sp], #32
+    0xacc157f4,        // 0x0bc:  ldp  q20, q21, [sp], #32
+    0xacc15ff6,        // 0x0c0:  ldp  q22, q23, [sp], #32
+    0xacc167f8,        // 0x0c4:  ldp  q24, q25, [sp], #32
+    0xacc16ffa,        // 0x0c8:  ldp  q26, q27, [sp], #32
+    0xacc177fc,        // 0x0cc:  ldp  q28, q29, [sp], #32
+    0xacc17ffe,        // 0x0d0:  ldp  q30, q31, [sp], #32
+    0xa8c107e0,        // 0x0d4:  ldp   x0,  x1, [sp], #16
+    0xa8c10fe2,        // 0x0d8:  ldp   x2,  x3, [sp], #16
+    0xa8c117e4,        // 0x0dc:  ldp   x4,  x5, [sp], #16
+    0xa8c11fe6,        // 0x0e0:  ldp   x6,  x7, [sp], #16
+    0xa8c127e8,        // 0x0e4:  ldp   x8,  x9, [sp], #16
+    0xa8c12fea,        // 0x0e8:  ldp  x10, x11, [sp], #16
+    0xa8c137ec,        // 0x0ec:  ldp  x12, x13, [sp], #16
+    0xa8c13fee,        // 0x0f0:  ldp  x14, x15, [sp], #16
+    0xa8c153f3,        // 0x0f4:  ldp  x19, x20, [sp], #16
+    0xa8c15bf5,        // 0x0f8:  ldp  x21, x22, [sp], #16
+    0xa8c163f7,        // 0x0fc:  ldp  x23, x24, [sp], #16
+    0xa8c16bf9,        // 0x100:  ldp  x25, x26, [sp], #16
+    0xa8c173fb,        // 0x104:  ldp  x27, x28, [sp], #16
+    0xa8c17bfd,        // 0x108:  ldp  x29, x30, [sp], #16
+    0xd65f0220,        // 0x10c:  ret  x17
+    0x01234567,        // 0x110:  Lreentry_fn_ptr:
+    0xdeadbeef,        // 0x114:      .quad 0
+    0x98765432,        // 0x118:  Lcallbackmgr:
+    0xcafef00d         // 0x11c:      .quad 0
   };
 
-  const unsigned ReentryFnAddrOffset = 0x90;
-  const unsigned CallbackMgrAddrOffset = 0x98;
+  const unsigned ReentryFnAddrOffset = 0x110;
+  const unsigned CallbackMgrAddrOffset = 0x118;
 
   memcpy(ResolverMem, ResolverCode, sizeof(ResolverCode));
   memcpy(ResolverMem + ReentryFnAddrOffset, &ReentryFn, sizeof(ReentryFn));

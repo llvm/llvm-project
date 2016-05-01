@@ -18,7 +18,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SHARED-NEXT:   Value: 0x2000
 ; SHARED-NEXT:   Size: 1
 ; SHARED-NEXT:   Binding: Global
-; SHARED-NEXT:   Type: None
+; SHARED-NEXT:   Type: Object
 ; SHARED-NEXT:   Other: 0
 ; SHARED-NEXT:   Section: .bss
 ; SHARED-NEXT: }

@@ -144,9 +144,9 @@ template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody &Sym) {
 }
 
 template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
-  if (Sym.hasGlobalDynIndex())
+  if (Sym.symbol()->GlobalDynIndex != -1U)
     return false;
-  Sym.GlobalDynIndex = Entries.size();
+  Sym.symbol()->GlobalDynIndex = Entries.size();
   // Global Dynamic TLS entries take two GOT slots.
   Entries.push_back(&Sym);
   Entries.push_back(nullptr);
@@ -186,13 +186,13 @@ GotSection<ELFT>::getMipsLocalEntryOffset(uintX_t EntryValue) {
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getGlobalDynAddr(const SymbolBody &B) const {
-  return this->getVA() + B.GlobalDynIndex * sizeof(uintX_t);
+  return this->getVA() + B.symbol()->GlobalDynIndex * sizeof(uintX_t);
 }
 
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getGlobalDynOffset(const SymbolBody &B) const {
-  return B.GlobalDynIndex * sizeof(uintX_t);
+  return B.symbol()->GlobalDynIndex * sizeof(uintX_t);
 }
 
 template <class ELFT>
@@ -1371,7 +1371,7 @@ static bool sortMipsSymbols(const std::pair<SymbolBody *, unsigned> &L,
 }
 
 static uint8_t getSymbolBinding(SymbolBody *Body) {
-  Symbol *S = Body->Backref;
+  Symbol *S = Body->symbol();
   uint8_t Visibility = S->Visibility;
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return STB_LOCAL;
@@ -1472,7 +1472,7 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     ESym->setBindingAndType(getSymbolBinding(Body), Type);
     ESym->st_size = Size;
     ESym->st_name = StrOff;
-    ESym->setVisibility(Body->Backref->Visibility);
+    ESym->setVisibility(Body->symbol()->Visibility);
     ESym->st_value = Body->getVA<ELFT>();
 
     if (const OutputSectionBase<ELFT> *OutSec = getOutputSection(Body))
