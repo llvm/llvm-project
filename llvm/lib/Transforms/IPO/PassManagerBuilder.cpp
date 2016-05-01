@@ -402,7 +402,7 @@ void PassManagerBuilder::populateModulePassManager(
     return;
   }
 
-  if (!DisableUnitAtATime && OptLevel > 1)
+  if (!DisableUnitAtATime && OptLevel > 1 && !PrepareForLTO)
     // Remove avail extern fns and globals definitions if we aren't
     // compiling an object file for later LTO. For LTO we want to preserve
     // these so they are eligible for inlining at link-time. Note if they
