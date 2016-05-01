@@ -490,10 +490,7 @@ emitModuleFlags(MCStreamer &Streamer,
   MDNode *LinkerOptions = nullptr;
   StringRef SectionVal;
 
-  for (ArrayRef<Module::ModuleFlagEntry>::iterator
-         i = ModuleFlags.begin(), e = ModuleFlags.end(); i != e; ++i) {
-    const Module::ModuleFlagEntry &MFE = *i;
-
+  for (const auto &MFE : ModuleFlags) {
     // Ignore flags with 'Require' behavior.
     if (MFE.Behavior == Module::Require)
       continue;
@@ -518,16 +515,10 @@ emitModuleFlags(MCStreamer &Streamer,
 
   // Emit the linker options if present.
   if (LinkerOptions) {
-    for (unsigned i = 0, e = LinkerOptions->getNumOperands(); i != e; ++i) {
-      MDNode *MDOptions = cast<MDNode>(LinkerOptions->getOperand(i));
+    for (const auto &Option : LinkerOptions->operands()) {
       SmallVector<std::string, 4> StrOptions;
-
-      // Convert to strings.
-      for (unsigned ii = 0, ie = MDOptions->getNumOperands(); ii != ie; ++ii) {
-        MDString *MDOption = cast<MDString>(MDOptions->getOperand(ii));
-        StrOptions.push_back(MDOption->getString());
-      }
-
+      for (const auto &Piece : cast<MDNode>(Option)->operands())
+        StrOptions.push_back(cast<MDString>(Piece)->getString());
       Streamer.EmitLinkerOptions(StrOptions);
     }
   }
@@ -1051,32 +1042,25 @@ emitModuleFlags(MCStreamer &Streamer,
                 Mangler &Mang, const TargetMachine &TM) const {
   MDNode *LinkerOptions = nullptr;
 
-  // Look for the "Linker Options" flag, since it's the only one we support.
-  for (ArrayRef<Module::ModuleFlagEntry>::iterator
-       i = ModuleFlags.begin(), e = ModuleFlags.end(); i != e; ++i) {
-    const Module::ModuleFlagEntry &MFE = *i;
+  for (const auto &MFE : ModuleFlags) {
     StringRef Key = MFE.Key->getString();
-    Metadata *Val = MFE.Val;
-    if (Key == "Linker Options") {
-      LinkerOptions = cast<MDNode>(Val);
-      break;
-    }
+    if (Key == "Linker Options")
+      LinkerOptions = cast<MDNode>(MFE.Val);
   }
-  if (!LinkerOptions)
-    return;
 
-  // Emit the linker options to the linker .drectve section.  According to the
-  // spec, this section is a space-separated string containing flags for linker.
-  MCSection *Sec = getDrectveSection();
-  Streamer.SwitchSection(Sec);
-  for (unsigned i = 0, e = LinkerOptions->getNumOperands(); i != e; ++i) {
-    MDNode *MDOptions = cast<MDNode>(LinkerOptions->getOperand(i));
-    for (unsigned ii = 0, ie = MDOptions->getNumOperands(); ii != ie; ++ii) {
-      MDString *MDOption = cast<MDString>(MDOptions->getOperand(ii));
-      // Lead with a space for consistency with our dllexport implementation.
-      std::string Directive(" ");
-      Directive.append(MDOption->getString());
-      Streamer.EmitBytes(Directive);
+  if (LinkerOptions) {
+    // Emit the linker options to the linker .drectve section.  According to the
+    // spec, this section is a space-separated string containing flags for
+    // linker.
+    MCSection *Sec = getDrectveSection();
+    Streamer.SwitchSection(Sec);
+    for (const auto &Option : LinkerOptions->operands()) {
+      for (const auto &Piece : cast<MDNode>(Option)->operands()) {
+        // Lead with a space for consistency with our dllexport implementation.
+        std::string Directive(" ");
+        Directive.append(cast<MDString>(Piece)->getString());
+        Streamer.EmitBytes(Directive);
+      }
     }
   }
 }

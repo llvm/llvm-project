@@ -448,7 +448,8 @@ public:
   void insertWaitStates(MachineBasicBlock &MBB,MachineBasicBlock::iterator MI,
                         int Count) const;
 
-  void insertNoop(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI) const;
+  void insertNoop(MachineBasicBlock &MBB,
+                  MachineBasicBlock::iterator MI) const override;
 
   /// \brief Return the number of wait states that result from executing this
   /// instruction.

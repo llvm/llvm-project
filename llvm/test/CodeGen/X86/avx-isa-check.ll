@@ -663,3 +663,20 @@ define <32 x i8> @test_cmpgtb(<32 x i8> %A) {
   ret <32 x i8> %B
 }
 
+define   <4 x float> @_inreg4xfloat(float %a) {
+  %b = insertelement <4 x float> undef, float %a, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  ret <4 x float> %c
+}
+
+define   <8 x float> @_inreg8xfloat(float %a) {
+  %b = insertelement <8 x float> undef, float %a, i32 0
+  %c = shufflevector <8 x float> %b, <8 x float> undef, <8 x i32> zeroinitializer
+  ret <8 x float> %c
+}
+
+define   <4 x double> @_inreg4xdouble(double %a) {
+  %b = insertelement <4 x double> undef, double %a, i32 0
+  %c = shufflevector <4 x double> %b, <4 x double> undef, <4 x i32> zeroinitializer
+  ret <4 x double> %c
+}

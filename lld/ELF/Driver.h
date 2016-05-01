@@ -68,8 +68,8 @@ enum {
 void printHelp(const char *Argv0);
 void printVersion();
 
-std::string concat_paths(StringRef S, StringRef T);
-void copyFile(StringRef Src, StringRef Dest);
+void createResponseFile(const llvm::opt::InputArgList &Args);
+void copyInputFile(StringRef Path);
 
 std::string findFromSearchPaths(StringRef Path);
 std::string searchLibrary(StringRef Path);

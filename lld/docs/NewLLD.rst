@@ -186,23 +186,24 @@ Once you understand their functions, the code of the linker should look obvious 
 
 * Symbol
 
-  Symbol is a pointer to a SymbolBody. There's only one Symbol for
-  each unique symbol name (this uniqueness is guaranteed by the symbol table).
-  Because SymbolBodies are created for each file independently,
-  there can be many SymbolBodies for the same name.
-  Thus, the relationship between Symbols and SymbolBodies is 1:N.
-  You can think of Symbols as handles for SymbolBodies.
+  A Symbol is a container for a SymbolBody. There's only one Symbol for each
+  unique symbol name (this uniqueness is guaranteed by the symbol table).
+  Each global symbol has only one SymbolBody at any one time, which is
+  the SymbolBody stored within a memory region of the Symbol large enough
+  to store any SymbolBody.
 
-  The resolver keeps the Symbol's pointer to always point to the "best" SymbolBody.
-  Pointer mutation is the resolve operation of this linker.
+  As the resolver reads symbols from input files, it replaces the Symbol's
+  SymbolBody with the "best" SymbolBody for its symbol name by constructing
+  the new SymbolBody in place on top of the existing SymbolBody. For example,
+  if the resolver is given a defined symbol, and the SymbolBody with its name
+  is undefined, it will construct a Defined SymbolBody over the Undefined
+  SymbolBody.
 
-  SymbolBodies have pointers to their Symbols.
-  That means you can always find the best SymbolBody from
-  any SymbolBody by following pointers twice.
-  This structure makes it very easy and cheap to find replacements for symbols.
-  For example, if you have an Undefined SymbolBody, you can find a Defined
-  SymbolBody for that symbol just by going to its Symbol and then to SymbolBody,
-  assuming the resolver have successfully resolved all undefined symbols.
+  This means that each SymbolBody pointer always points to the best SymbolBody,
+  and it is possible to get from a SymbolBody to a Symbol, or vice versa,
+  by adding or subtracting a fixed offset. This memory layout helps reduce
+  the cache miss rate through high locality and a small number of required
+  pointer indirections.
 
 * SymbolTable
 

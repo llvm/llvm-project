@@ -2215,8 +2215,8 @@ LLVMBool LLVMIsInBounds(LLVMValueRef GEP) {
   return unwrap<GetElementPtrInst>(GEP)->isInBounds();
 }
 
-void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool b) {
-  return unwrap<GetElementPtrInst>(GEP)->setIsInBounds(b);
+void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds) {
+  return unwrap<GetElementPtrInst>(GEP)->setIsInBounds(InBounds);
 }
 
 /*--.. Operations on phi nodes .............................................--*/

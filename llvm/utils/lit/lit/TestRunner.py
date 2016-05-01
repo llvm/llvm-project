@@ -568,6 +568,24 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
             ('%/t', tmpBase.replace('\\', '/') + '.tmp'),
             ('%/T', tmpDir.replace('\\', '/')),
             ])
+
+    # "%:[STpst]" are paths without colons.
+    if kIsWindows:
+        substitutions.extend([
+                ('%:s', re.sub(r'^(.):', r'\1', sourcepath)),
+                ('%:S', re.sub(r'^(.):', r'\1', sourcedir)),
+                ('%:p', re.sub(r'^(.):', r'\1', sourcedir)),
+                ('%:t', re.sub(r'^(.):', r'\1', tmpBase) + '.tmp'),
+                ('%:T', re.sub(r'^(.):', r'\1', tmpDir)),
+                ])
+    else:
+        substitutions.extend([
+                ('%:s', sourcepath),
+                ('%:S', sourcedir),
+                ('%:p', sourcedir),
+                ('%:t', tmpBase + '.tmp'),
+                ('%:T', tmpDir),
+                ])
     return substitutions
 
 def applySubstitutions(script, substitutions):

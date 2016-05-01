@@ -805,50 +805,54 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::TZMSK64rr,       X86::TZMSK64rm,           0 },
 
     // AVX-512 foldable instructions
-    { X86::VMOV64toPQIZrr,  X86::VMOVQI2PQIZrm,       0 },
-    { X86::VMOVDI2SSZrr,    X86::VMOVDI2SSZrm,        0 },
-    { X86::VMOVAPDZrr,      X86::VMOVAPDZrm,          TB_ALIGN_64 },
-    { X86::VMOVAPSZrr,      X86::VMOVAPSZrm,          TB_ALIGN_64 },
-    { X86::VMOVDQA32Zrr,    X86::VMOVDQA32Zrm,        TB_ALIGN_64 },
-    { X86::VMOVDQA64Zrr,    X86::VMOVDQA64Zrm,        TB_ALIGN_64 },
-    { X86::VMOVDQU8Zrr,     X86::VMOVDQU8Zrm,         0 },
-    { X86::VMOVDQU16Zrr,    X86::VMOVDQU16Zrm,        0 },
-    { X86::VMOVDQU32Zrr,    X86::VMOVDQU32Zrm,        0 },
-    { X86::VMOVDQU64Zrr,    X86::VMOVDQU64Zrm,        0 },
-    { X86::VMOVUPDZrr,      X86::VMOVUPDZrm,          0 },
-    { X86::VMOVUPSZrr,      X86::VMOVUPSZrm,          0 },
-    { X86::VPABSDZrr,       X86::VPABSDZrm,           0 },
-    { X86::VPABSQZrr,       X86::VPABSQZrm,           0 },
-    { X86::VBROADCASTSSZr,  X86::VBROADCASTSSZm,      TB_NO_REVERSE },
-    { X86::VBROADCASTSDZr,  X86::VBROADCASTSDZm,      TB_NO_REVERSE },
+    { X86::VMOV64toPQIZrr,   X86::VMOVQI2PQIZrm,      0 },
+    { X86::VMOVDI2SSZrr,     X86::VMOVDI2SSZrm,       0 },
+    { X86::VMOVAPDZrr,       X86::VMOVAPDZrm,         TB_ALIGN_64 },
+    { X86::VMOVAPSZrr,       X86::VMOVAPSZrm,         TB_ALIGN_64 },
+    { X86::VMOVDQA32Zrr,     X86::VMOVDQA32Zrm,       TB_ALIGN_64 },
+    { X86::VMOVDQA64Zrr,     X86::VMOVDQA64Zrm,       TB_ALIGN_64 },
+    { X86::VMOVDQU8Zrr,      X86::VMOVDQU8Zrm,        0 },
+    { X86::VMOVDQU16Zrr,     X86::VMOVDQU16Zrm,       0 },
+    { X86::VMOVDQU32Zrr,     X86::VMOVDQU32Zrm,       0 },
+    { X86::VMOVDQU64Zrr,     X86::VMOVDQU64Zrm,       0 },
+    { X86::VMOVUPDZrr,       X86::VMOVUPDZrm,         0 },
+    { X86::VMOVUPSZrr,       X86::VMOVUPSZrm,         0 },
+    { X86::VPABSDZrr,        X86::VPABSDZrm,          0 },
+    { X86::VPABSQZrr,        X86::VPABSQZrm,          0 },
+    { X86::VBROADCASTSSZr,   X86::VBROADCASTSSZm,     TB_NO_REVERSE },
+    { X86::VBROADCASTSSZr_s, X86::VBROADCASTSSZm,     TB_NO_REVERSE },
+    { X86::VBROADCASTSDZr,   X86::VBROADCASTSDZm,     TB_NO_REVERSE },
+    { X86::VBROADCASTSDZr_s, X86::VBROADCASTSDZm,     TB_NO_REVERSE },
 
     // AVX-512 foldable instructions (256-bit versions)
-    { X86::VMOVAPDZ256rr,      X86::VMOVAPDZ256rm,          TB_ALIGN_32 },
-    { X86::VMOVAPSZ256rr,      X86::VMOVAPSZ256rm,          TB_ALIGN_32 },
-    { X86::VMOVDQA32Z256rr,    X86::VMOVDQA32Z256rm,        TB_ALIGN_32 },
-    { X86::VMOVDQA64Z256rr,    X86::VMOVDQA64Z256rm,        TB_ALIGN_32 },
-    { X86::VMOVDQU8Z256rr,     X86::VMOVDQU8Z256rm,         0 },
-    { X86::VMOVDQU16Z256rr,    X86::VMOVDQU16Z256rm,        0 },
-    { X86::VMOVDQU32Z256rr,    X86::VMOVDQU32Z256rm,        0 },
-    { X86::VMOVDQU64Z256rr,    X86::VMOVDQU64Z256rm,        0 },
-    { X86::VMOVUPDZ256rr,      X86::VMOVUPDZ256rm,          0 },
-    { X86::VMOVUPSZ256rr,      X86::VMOVUPSZ256rm,          0 },
-    { X86::VBROADCASTSSZ256r,  X86::VBROADCASTSSZ256m,      TB_NO_REVERSE },
-    { X86::VBROADCASTSDZ256r,  X86::VBROADCASTSDZ256m,      TB_NO_REVERSE },
+    { X86::VMOVAPDZ256rr,        X86::VMOVAPDZ256rm,        TB_ALIGN_32 },
+    { X86::VMOVAPSZ256rr,        X86::VMOVAPSZ256rm,        TB_ALIGN_32 },
+    { X86::VMOVDQA32Z256rr,      X86::VMOVDQA32Z256rm,      TB_ALIGN_32 },
+    { X86::VMOVDQA64Z256rr,      X86::VMOVDQA64Z256rm,      TB_ALIGN_32 },
+    { X86::VMOVDQU8Z256rr,       X86::VMOVDQU8Z256rm,       0 },
+    { X86::VMOVDQU16Z256rr,      X86::VMOVDQU16Z256rm,      0 },
+    { X86::VMOVDQU32Z256rr,      X86::VMOVDQU32Z256rm,      0 },
+    { X86::VMOVDQU64Z256rr,      X86::VMOVDQU64Z256rm,      0 },
+    { X86::VMOVUPDZ256rr,        X86::VMOVUPDZ256rm,        0 },
+    { X86::VMOVUPSZ256rr,        X86::VMOVUPSZ256rm,        0 },
+    { X86::VBROADCASTSSZ256r,    X86::VBROADCASTSSZ256m,    TB_NO_REVERSE },
+    { X86::VBROADCASTSSZ256r_s,  X86::VBROADCASTSSZ256m,    TB_NO_REVERSE },
+    { X86::VBROADCASTSDZ256r,    X86::VBROADCASTSDZ256m,    TB_NO_REVERSE },
+    { X86::VBROADCASTSDZ256r_s,  X86::VBROADCASTSDZ256m,    TB_NO_REVERSE },
 
-    // AVX-512 foldable instructions (256-bit versions)
-    { X86::VMOVAPDZ128rr,      X86::VMOVAPDZ128rm,          TB_ALIGN_16 },
-    { X86::VMOVAPSZ128rr,      X86::VMOVAPSZ128rm,          TB_ALIGN_16 },
-    { X86::VMOVDQA32Z128rr,    X86::VMOVDQA32Z128rm,        TB_ALIGN_16 },
-    { X86::VMOVDQA64Z128rr,    X86::VMOVDQA64Z128rm,        TB_ALIGN_16 },
-    { X86::VMOVDQU8Z128rr,     X86::VMOVDQU8Z128rm,         0 },
-    { X86::VMOVDQU16Z128rr,    X86::VMOVDQU16Z128rm,        0 },
-    { X86::VMOVDQU32Z128rr,    X86::VMOVDQU32Z128rm,        0 },
-    { X86::VMOVDQU64Z128rr,    X86::VMOVDQU64Z128rm,        0 },
-    { X86::VMOVUPDZ128rr,      X86::VMOVUPDZ128rm,          0 },
-    { X86::VMOVUPSZ128rr,      X86::VMOVUPSZ128rm,          0 },
-    { X86::VBROADCASTSSZ128r,  X86::VBROADCASTSSZ128m,      TB_NO_REVERSE },
-
+    // AVX-512 foldable instructions (128-bit versions)
+    { X86::VMOVAPDZ128rr,        X86::VMOVAPDZ128rm,        TB_ALIGN_16 },
+    { X86::VMOVAPSZ128rr,        X86::VMOVAPSZ128rm,        TB_ALIGN_16 },
+    { X86::VMOVDQA32Z128rr,      X86::VMOVDQA32Z128rm,      TB_ALIGN_16 },
+    { X86::VMOVDQA64Z128rr,      X86::VMOVDQA64Z128rm,      TB_ALIGN_16 },
+    { X86::VMOVDQU8Z128rr,       X86::VMOVDQU8Z128rm,       0 },
+    { X86::VMOVDQU16Z128rr,      X86::VMOVDQU16Z128rm,      0 },
+    { X86::VMOVDQU32Z128rr,      X86::VMOVDQU32Z128rm,      0 },
+    { X86::VMOVDQU64Z128rr,      X86::VMOVDQU64Z128rm,      0 },
+    { X86::VMOVUPDZ128rr,        X86::VMOVUPDZ128rm,        0 },
+    { X86::VMOVUPSZ128rr,        X86::VMOVUPSZ128rm,        0 },
+    { X86::VBROADCASTSSZ128r,    X86::VBROADCASTSSZ128m,    TB_NO_REVERSE },
+    { X86::VBROADCASTSSZ128r_s,  X86::VBROADCASTSSZ128m,    TB_NO_REVERSE },
     // F16C foldable instructions
     { X86::VCVTPH2PSrr,        X86::VCVTPH2PSrm,            0 },
     { X86::VCVTPH2PSYrr,       X86::VCVTPH2PSYrm,           0 },
@@ -2028,7 +2032,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
 void
 X86InstrInfo::AddTableEntry(RegOp2MemOpTableType &R2MTable,
                             MemOp2RegOpTableType &M2RTable,
-                            unsigned RegOp, unsigned MemOp, unsigned Flags) {
+                            uint16_t RegOp, uint16_t MemOp, uint16_t Flags) {
     if ((Flags & TB_NO_FORWARD) == 0) {
       assert(!R2MTable.count(RegOp) && "Duplicate entry!");
       R2MTable[RegOp] = std::make_pair(MemOp, Flags);
@@ -5682,7 +5686,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
     unsigned Size, unsigned Align, bool AllowCommute) const {
   const DenseMap<unsigned,
-                 std::pair<unsigned,unsigned> > *OpcodeTablePtr = nullptr;
+                 std::pair<uint16_t, uint16_t> > *OpcodeTablePtr = nullptr;
   bool isCallRegIndirect = Subtarget.callRegIndirect();
   bool isTwoAddrFold = false;
 
@@ -5742,8 +5746,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // If table selected...
   if (OpcodeTablePtr) {
     // Find the Opcode to fuse
-    DenseMap<unsigned, std::pair<unsigned,unsigned> >::const_iterator I =
-      OpcodeTablePtr->find(MI->getOpcode());
+    auto I = OpcodeTablePtr->find(MI->getOpcode());
     if (I != OpcodeTablePtr->end()) {
       unsigned Opcode = I->second.first;
       unsigned MinAlign = (I->second.second & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT;
@@ -6299,8 +6302,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 bool X86InstrInfo::unfoldMemoryOperand(MachineFunction &MF, MachineInstr *MI,
                                 unsigned Reg, bool UnfoldLoad, bool UnfoldStore,
                                 SmallVectorImpl<MachineInstr*> &NewMIs) const {
-  DenseMap<unsigned, std::pair<unsigned,unsigned> >::const_iterator I =
-    MemOp2RegOpTable.find(MI->getOpcode());
+  auto I = MemOp2RegOpTable.find(MI->getOpcode());
   if (I == MemOp2RegOpTable.end())
     return false;
   unsigned Opc = I->second.first;
@@ -6427,8 +6429,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
   if (!N->isMachineOpcode())
     return false;
 
-  DenseMap<unsigned, std::pair<unsigned,unsigned> >::const_iterator I =
-    MemOp2RegOpTable.find(N->getMachineOpcode());
+  auto I = MemOp2RegOpTable.find(N->getMachineOpcode());
   if (I == MemOp2RegOpTable.end())
     return false;
   unsigned Opc = I->second.first;
@@ -6534,8 +6535,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
 unsigned X86InstrInfo::getOpcodeAfterMemoryUnfold(unsigned Opc,
                                       bool UnfoldLoad, bool UnfoldStore,
                                       unsigned *LoadRegIndex) const {
-  DenseMap<unsigned, std::pair<unsigned,unsigned> >::const_iterator I =
-    MemOp2RegOpTable.find(Opc);
+  auto I = MemOp2RegOpTable.find(Opc);
   if (I == MemOp2RegOpTable.end())
     return 0;
   bool FoldedLoad = I->second.second & TB_FOLDED_LOAD;

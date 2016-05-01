@@ -2082,7 +2082,7 @@ LLVMAttribute LLVMGetAttribute(LLVMValueRef Arg);
  * @see llvm::Argument::addAttr()
  * @see llvm::AttrBuilder::addAlignmentAttr()
  */
-void LLVMSetParamAlignment(LLVMValueRef Arg, unsigned align);
+void LLVMSetParamAlignment(LLVMValueRef Arg, unsigned Align);
 
 /**
  * @}
@@ -2529,7 +2529,7 @@ void LLVMAddInstrAttribute(LLVMValueRef Instr, unsigned index, LLVMAttribute);
 void LLVMRemoveInstrAttribute(LLVMValueRef Instr, unsigned index,
                               LLVMAttribute);
 void LLVMSetInstrParamAlignment(LLVMValueRef Instr, unsigned index,
-                                unsigned align);
+                                unsigned Align);
 
 /**
  * Obtain the pointer to the function invoked by this instruction.
@@ -2705,7 +2705,7 @@ LLVMBool LLVMIsInBounds(LLVMValueRef GEP);
 /**
  * Set the given GEP instruction to be inbounds or not.
  */
-void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool b);
+void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds);
 
 /**
  * @}

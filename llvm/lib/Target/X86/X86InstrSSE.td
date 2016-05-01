@@ -657,9 +657,6 @@ let Predicates = [UseAVX] in {
   def : Pat<(store (f32 (extractelt (v4f32 VR128:$src), (iPTR 0))),
                    addr:$dst),
             (VMOVSSmr addr:$dst, (COPY_TO_REGCLASS (v4f32 VR128:$src), FR32))>;
-  def : Pat<(store (f64 (extractelt (v2f64 VR128:$src), (iPTR 0))),
-                   addr:$dst),
-            (VMOVSDmr addr:$dst, (COPY_TO_REGCLASS (v2f64 VR128:$src), FR64))>;
 
   // Shuffle with VMOVSS
   def : Pat<(v4i32 (X86Movss VR128:$src1, VR128:$src2)),
@@ -772,11 +769,6 @@ let Predicates = [UseSSE2] in {
   def : Pat<(v2f64 (X86vzload addr:$src)),
             (COPY_TO_REGCLASS (MOVSDrm addr:$src), VR128)>;
   }
-
-  // Extract and store.
-  def : Pat<(store (f64 (extractelt (v2f64 VR128:$src), (iPTR 0))),
-                   addr:$dst),
-            (MOVSDmr addr:$dst, (COPY_TO_REGCLASS VR128:$src, FR64))>;
 
   // Shuffle with MOVSD
   def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
@@ -4459,7 +4451,7 @@ multiclass sse4_pack_y<bits<8> opc, string OpcodeStr, ValueType OutVT,
                   Sched<[WriteShuffleLd, ReadAfterLd]>;
 }
 
-let Predicates = [HasAVX] in {
+let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
   defm VPACKSSWB : sse2_pack<0x63, "vpacksswb", v16i8, v8i16, X86Packss,
                              bc_v8i16, loadv2i64, 0>, VEX_4V;
   defm VPACKSSDW : sse2_pack<0x6B, "vpackssdw", v8i16, v4i32, X86Packss,
@@ -4471,7 +4463,7 @@ let Predicates = [HasAVX] in {
                              bc_v4i32, loadv2i64, 0>, VEX_4V;
 }
 
-let Predicates = [HasAVX2] in {
+let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
   defm VPACKSSWB : sse2_pack_y<0x63, "vpacksswb", v32i8, v16i16, X86Packss,
                                bc_v16i16>, VEX_4V, VEX_L;
   defm VPACKSSDW : sse2_pack_y<0x6B, "vpackssdw", v16i16, v8i32, X86Packss,
@@ -4492,7 +4484,7 @@ let Constraints = "$src1 = $dst" in {
   defm PACKUSWB : sse2_pack<0x67, "packuswb", v16i8, v8i16, X86Packus,
                             bc_v8i16, memopv2i64>;
 
-  let Predicates = [HasSSE41] in
+  let Predicates = [UseSSE41] in
   defm PACKUSDW : sse4_pack<0x2B, "packusdw", v8i16, v4i32, X86Packus,
                             bc_v4i32, memopv2i64>;
 }
@@ -7251,14 +7243,12 @@ let Predicates = [UseAVX] in {
 // on targets where they have equal performance. These were changed to use
 // blends because blends have better throughput on SandyBridge and Haswell, but
 // movs[s/d] are 1-2 byte shorter instructions.
-let Predicates = [UseSSE41] in {
+let Predicates = [UseSSE41], AddedComplexity = 15 in {
   // With SSE41 we can use blends for these patterns.
   def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
             (BLENDPSrri (v4f32 (V_SET0)), VR128:$src, (i8 1))>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
             (PBLENDWrri (v4i32 (V_SET0)), VR128:$src, (i8 3))>;
-  def : Pat<(v2f64 (X86vzmovl (v2f64 VR128:$src))),
-            (BLENDPDrri (v2f64 (V_SET0)), VR128:$src, (i8 1))>;
 }
 
 
@@ -8406,17 +8396,19 @@ let Predicates = [HasAVX2] in {
   def : Pat<(v4f64 (X86VBroadcast (v4f64 VR256:$src))),
             (VBROADCASTSDYrr (v2f64 (EXTRACT_SUBREG (v4f64 VR256:$src),
                                                     sub_xmm)))>;
+}
 
-// Provide fallback in case the load node that is used in the patterns above
-// is used by additional users, which prevents the pattern selection.
-  let AddedComplexity = 20 in {
-  def : Pat<(v4f32 (X86VBroadcast FR32:$src)),
-            (VBROADCASTSSrr (COPY_TO_REGCLASS FR32:$src, VR128))>;
-  def : Pat<(v8f32 (X86VBroadcast FR32:$src)),
-            (VBROADCASTSSYrr (COPY_TO_REGCLASS FR32:$src, VR128))>;
-  def : Pat<(v4f64 (X86VBroadcast FR64:$src)),
-            (VBROADCASTSDYrr (COPY_TO_REGCLASS FR64:$src, VR128))>;
-  }
+let Predicates = [HasAVX2, NoVLX] in {
+  // Provide fallback in case the load node that is used in the patterns above
+  // is used by additional users, which prevents the pattern selection.
+    let AddedComplexity = 20 in {
+    def : Pat<(v4f32 (X86VBroadcast FR32:$src)),
+              (VBROADCASTSSrr (COPY_TO_REGCLASS FR32:$src, VR128))>;
+    def : Pat<(v8f32 (X86VBroadcast FR32:$src)),
+              (VBROADCASTSSYrr (COPY_TO_REGCLASS FR32:$src, VR128))>;
+    def : Pat<(v4f64 (X86VBroadcast FR64:$src)),
+              (VBROADCASTSDYrr (COPY_TO_REGCLASS FR64:$src, VR128))>;
+    }  
 }
 
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI], AddedComplexity = 20 in {
@@ -8468,6 +8460,11 @@ def : Pat<(v4i32 (X86VBroadcast (loadi32 addr:$src))),
   // is used by additional users, which prevents the pattern selection.
 let Predicates = [HasAVX], AddedComplexity = 20 in {
   // 128bit broadcasts:
+  def : Pat<(v2f64 (X86VBroadcast f64:$src)),
+            (VMOVDDUPrr (COPY_TO_REGCLASS FR64:$src, VR128))>;
+}
+
+let Predicates = [HasAVX, NoVLX], AddedComplexity = 20 in {
   def : Pat<(v4f32 (X86VBroadcast FR32:$src)),
             (VPSHUFDri (COPY_TO_REGCLASS FR32:$src, VR128), 0)>;
   def : Pat<(v8f32 (X86VBroadcast FR32:$src)),
@@ -8479,11 +8476,6 @@ let Predicates = [HasAVX], AddedComplexity = 20 in {
               (VPSHUFDri (COPY_TO_REGCLASS FR64:$src, VR128), 0x44), sub_xmm),
               (VPSHUFDri (COPY_TO_REGCLASS FR64:$src, VR128), 0x44), 1)>;
 
-  def : Pat<(v2f64 (X86VBroadcast f64:$src)),
-            (VMOVDDUPrr (COPY_TO_REGCLASS FR64:$src, VR128))>;
-}
-
-let Predicates = [HasAVX, NoVLX], AddedComplexity = 20 in {
   def : Pat<(v4i32 (X86VBroadcast GR32:$src)),
             (VPSHUFDri (COPY_TO_REGCLASS GR32:$src, VR128), 0)>;
   def : Pat<(v8i32 (X86VBroadcast GR32:$src)),

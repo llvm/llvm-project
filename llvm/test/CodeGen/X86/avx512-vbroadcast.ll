@@ -398,3 +398,42 @@ define <8 x i64> @_invec4xi64(<4 x i64>%a)  {
   ret <8 x i64>%res
 }
 
+declare void @func_f32(float)
+define <16 x float> @broadcast_ss_spill(float %x) {
+; ALL-LABEL: broadcast_ss_spill:
+; ALL:       # BB#0:
+; ALL-NEXT:    pushq %rax
+; ALL-NEXT:  .Ltmp0:
+; ALL-NEXT:    .cfi_def_cfa_offset 16
+; ALL-NEXT:    vaddss %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vmovss %xmm0, {{[0-9]+}}(%rsp) # 4-byte Folded Spill
+; ALL-NEXT:    callq func_f32
+; ALL-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %zmm0 # 4-byte Folded Reload
+; ALL-NEXT:    popq %rax
+; ALL-NEXT:    retq
+  %a  = fadd float %x, %x
+  call void @func_f32(float %a)
+  %b = insertelement <16 x float> undef, float %a, i32 0
+  %c = shufflevector <16 x float> %b, <16 x float> undef, <16 x i32> zeroinitializer
+  ret <16 x float> %c
+}
+
+declare void @func_f64(double)
+define <8 x double> @broadcast_sd_spill(double %x) {
+; ALL-LABEL: broadcast_sd_spill:
+; ALL:       # BB#0:
+; ALL-NEXT:    pushq %rax
+; ALL-NEXT:  .Ltmp1:
+; ALL-NEXT:    .cfi_def_cfa_offset 16
+; ALL-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Folded Spill
+; ALL-NEXT:    callq func_f64
+; ALL-NEXT:    vbroadcastsd (%rsp), %zmm0 # 8-byte Folded Reload
+; ALL-NEXT:    popq %rax
+; ALL-NEXT:    retq
+  %a  = fadd double %x, %x
+  call void @func_f64(double %a)
+  %b = insertelement <8 x double> undef, double %a, i32 0
+  %c = shufflevector <8 x double> %b, <8 x double> undef, <8 x i32> zeroinitializer
+  ret <8 x double> %c
+}

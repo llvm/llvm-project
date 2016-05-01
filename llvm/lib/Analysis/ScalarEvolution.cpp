@@ -9565,6 +9565,17 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   OS << "\n";
 }
 
+static StringRef loopDispositionToStr(ScalarEvolution::LoopDisposition LD) {
+  switch (LD) {
+  case ScalarEvolution::LoopVariant:
+    return "Variant";
+  case ScalarEvolution::LoopInvariant:
+    return "Invariant";
+  case ScalarEvolution::LoopComputable:
+    return "Computable";
+  }
+}
+
 void ScalarEvolution::print(raw_ostream &OS) const {
   // ScalarEvolution's implementation of the print method is to print
   // out SCEV values of all instructions that are interesting. Doing
@@ -9612,6 +9623,20 @@ void ScalarEvolution::print(raw_ostream &OS) const {
         } else {
           OS << *ExitValue;
         }
+
+        bool First = true;
+        for (auto *Iter = L; Iter; Iter = Iter->getParentLoop()) {
+          if (First) {
+            OS << "\t\t" "LoopDispositions: [ ";
+            First = false;
+          } else {
+            OS << ", ";
+          }
+
+          OS << loopDispositionToStr(SE.getLoopDisposition(SV, Iter));
+        }
+
+        OS << " ]";
       }
 
       OS << "\n";
