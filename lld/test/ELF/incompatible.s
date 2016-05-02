@@ -53,6 +53,7 @@
 // ARCHIVE: a.o is incompatible with {{.*}}b.o
 .global _start
 _start:
+.data
         .long foo
 
 // REQUIRES: x86,aarch64

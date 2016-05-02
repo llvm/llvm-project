@@ -5,3 +5,6 @@ foo:
         .global bar
         .protected bar
 bar:
+
+        .global zed
+zed:

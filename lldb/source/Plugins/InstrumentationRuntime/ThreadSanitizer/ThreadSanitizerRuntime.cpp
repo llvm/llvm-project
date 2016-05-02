@@ -636,10 +636,10 @@ ThreadSanitizerRuntime::GetLocationDescription(StructuredData::ObjectSP report, 
             result = Sprintf("Location is a %ld-byte heap object at 0x%llx", size, addr);
         } else if (type == "stack") {
             int tid = loc->GetAsDictionary()->GetValueForKey("thread_id")->GetAsInteger()->GetValue();
-            result = Sprintf("Location is stack of thread %d", tid);
+            result = Sprintf("Location is stack of Thread %d", tid);
         } else if (type == "tls") {
             int tid = loc->GetAsDictionary()->GetValueForKey("thread_id")->GetAsInteger()->GetValue();
-            result = Sprintf("Location is TLS of thread %d", tid);
+            result = Sprintf("Location is TLS of Thread %d", tid);
         } else if (type == "fd") {
             int fd = loc->GetAsDictionary()->GetValueForKey("file_descriptor")->GetAsInteger()->GetValue();
             result = Sprintf("Location is file descriptor %d", fd);
@@ -766,12 +766,12 @@ GenerateThreadName(std::string path, StructuredData::Object *o) {
         bool is_atomic = o->GetObjectForDotSeparatedPath("is_atomic")->GetBooleanValue();
         addr_t addr = o->GetObjectForDotSeparatedPath("address")->GetIntegerValue();
         
-        result = Sprintf("%s%s of size %d at 0x%llx by thread %d", is_atomic ? "atomic " : "", is_write ? "write" : "read", size, addr, thread_id);
+        result = Sprintf("%s%s of size %d at 0x%llx by Thread %d", is_atomic ? "atomic " : "", is_write ? "write" : "read", size, addr, thread_id);
     }
     
     if (path == "threads") {
         int thread_id = o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
-        result = Sprintf("thread %d created at", thread_id);
+        result = Sprintf("Thread %d created", thread_id);
     }
     
     if (path == "locs") {
@@ -779,16 +779,16 @@ GenerateThreadName(std::string path, StructuredData::Object *o) {
         int thread_id = o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
         int fd = o->GetObjectForDotSeparatedPath("file_descriptor")->GetIntegerValue();
         if (type == "heap") {
-            result = Sprintf("Heap block allocated by thread %d at", thread_id);
+            result = Sprintf("Heap block allocated by Thread %d", thread_id);
         } else if (type == "fd") {
-            result = Sprintf("File descriptor %d created by thread %t at", fd, thread_id);
+            result = Sprintf("File descriptor %d created by Thread %t", fd, thread_id);
         }
     }
     
     if (path == "mutexes") {
         int mutex_id = o->GetObjectForDotSeparatedPath("mutex_id")->GetIntegerValue();
         
-        result = Sprintf("mutex M%d created at", mutex_id);
+        result = Sprintf("Mutex M%d created", mutex_id);
     }
     
     if (path == "stacks") {

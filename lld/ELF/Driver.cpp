@@ -110,7 +110,7 @@ void LinkerDriver::addFile(StringRef Path) {
   if (Config->Verbose)
     llvm::outs() << Path << "\n";
   if (!Config->Reproduce.empty())
-    copyFile(Path, concat_paths(Config->Reproduce, Path));
+    copyInputFile(Path);
 
   Optional<MemoryBufferRef> Buffer = readFile(Path);
   if (!Buffer.hasValue())
@@ -238,25 +238,6 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
   return false;
 }
 
-static void logCommandline(ArrayRef<const char *> Args) {
-  if (std::error_code EC = sys::fs::create_directories(
-        Config->Reproduce, /*IgnoreExisting=*/false)) {
-    error(EC, Config->Reproduce + ": can't create directory");
-    return;
-  }
-
-  SmallString<128> Path;
-  path::append(Path, Config->Reproduce, "invocation.txt");
-  std::error_code EC;
-  raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::F_None);
-  check(EC);
-
-  OS << Args[0];
-  for (size_t I = 1, E = Args.size(); I < E; ++I)
-    OS << " " << Args[I];
-  OS << "\n";
-}
-
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
@@ -273,7 +254,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   initLLVM(Args);
 
   if (!Config->Reproduce.empty())
-    logCommandline(ArgsArr);
+    createResponseFile(Args);
 
   createFiles(Args);
   checkOptions(Args);
@@ -466,6 +447,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   SymbolTable<ELFT> Symtab;
+  elf::Symtab<ELFT>::X = &Symtab;
 
   std::unique_ptr<TargetInfo> TI(createTarget());
   Target = TI.get();
@@ -487,7 +469,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   if (!Config->Entry.empty()) {
     StringRef S = Config->Entry;
     if (S.getAsInteger(0, Config->EntryAddr))
-      Config->EntrySym = Symtab.addUndefined(S)->Backref;
+      Config->EntrySym = Symtab.addUndefined(S);
   }
 
   for (std::unique_ptr<InputFile> &F : Files)

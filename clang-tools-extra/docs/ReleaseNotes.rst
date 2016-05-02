@@ -63,11 +63,25 @@ Improvements to clang-tidy
 explain them more clearly, and provide more accurate fix-its for the issues
 identified.  The improvements since the 3.8 release include:
 
+- New Boost module containing checks for issues with Boost library.
+
+- New `boost-use-to-string 
+  <http://clang.llvm.org/extra/clang-tidy/checks/boost-use-to-string.html>`_ check
+
+  Finds usages of ``boost::lexical_cast<std::string>`` and changes it to
+  ``std::to_string``.
+
 - New `cert-env33-c
   <http://clang.llvm.org/extra/clang-tidy/checks/cert-env33-c.html>`_ check
 
   Flags calls to ``system()``, ``popen()``, and ``_popen()``, which execute a
   command processor.
+
+- New `cert-err34-c
+  <http://clang.llvm.org/extra/clang-tidy/checks/cert-err34-c.html>`_ check
+
+  Flags calls to string-to-number conversion functions that do not verify the
+  validity of the conversion.
 
 - New `cert-flp30-c
   <http://clang.llvm.org/extra/clang-tidy/checks/cert-flp30-c.html>`_ check
@@ -216,13 +230,6 @@ identified.  The improvements since the 3.8 release include:
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-definition-in-anonymous-namespace.html>`_ check
 
   Finds static function and variable definitions in anonymous namespace.
-
-  - New Boost module containing checks for issues with Boost library
-
-- New `boost-use-to-string 
-  <http://clang.llvm.org/extra/clang-tidy/checks/boost-use-to-string.html>`_ check
-  
-  Finds usages of boost::lexical_cast<std::string> and changes it to std::to_string.
 
 Fixed bugs:
 

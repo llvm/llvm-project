@@ -15,7 +15,6 @@
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section (4) .rel.dyn {
 # CHECK-NEXT:     0x{{[0-9A-F]+}} R_386_COPY foo
-# CHECK-NEXT:     0x{{[0-9A-F]+}} R_386_GLOB_DAT foo
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

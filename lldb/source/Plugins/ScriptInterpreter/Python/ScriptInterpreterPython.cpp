@@ -2349,6 +2349,72 @@ ScriptInterpreterPython::GetSyntheticValue(const StructuredData::ObjectSP &imple
     return ret_val;
 }
 
+ConstString
+ScriptInterpreterPython::GetSyntheticTypeName (const StructuredData::ObjectSP &implementor_sp)
+{
+    Locker py_lock(this, Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+
+    static char callee_name[] = "get_type_name";
+
+    ConstString ret_val;
+    bool got_string = false;
+    std::string buffer;
+
+    if (!implementor_sp)
+        return ret_val;
+    
+    StructuredData::Generic *generic = implementor_sp->GetAsGeneric();
+    if (!generic)
+        return ret_val;
+    PythonObject implementor(PyRefType::Borrowed, (PyObject *)generic->GetValue());
+    if (!implementor.IsAllocated())
+        return ret_val;
+    
+    PythonObject pmeth(PyRefType::Owned, PyObject_GetAttrString(implementor.get(), callee_name));
+    
+    if (PyErr_Occurred())
+        PyErr_Clear();
+    
+    if (!pmeth.IsAllocated())
+        return ret_val;
+    
+    if (PyCallable_Check(pmeth.get()) == 0)
+    {
+        if (PyErr_Occurred())
+            PyErr_Clear();
+        return ret_val;
+    }
+    
+    if (PyErr_Occurred())
+        PyErr_Clear();
+    
+    // right now we know this function exists and is callable..
+    PythonObject py_return(PyRefType::Owned, PyObject_CallMethod(implementor.get(), callee_name, nullptr));
+    
+    // if it fails, print the error but otherwise go on
+    if (PyErr_Occurred())
+    {
+        PyErr_Print();
+        PyErr_Clear();
+    }
+    
+    if (py_return.IsAllocated() && PythonString::Check(py_return.get()))
+    {
+        PythonString py_string(PyRefType::Borrowed, py_return.get());
+        llvm::StringRef return_data(py_string.GetString());
+        if (!return_data.empty())
+        {
+            buffer.assign(return_data.data(), return_data.size());
+            got_string = true;
+        }
+    }
+    
+    if (got_string)
+        ret_val.SetCStringWithLength(buffer.c_str(), buffer.size());
+    
+    return ret_val;
+}
+
 bool
 ScriptInterpreterPython::RunScriptFormatKeyword (const char* impl_function,
                                                  Process* process,

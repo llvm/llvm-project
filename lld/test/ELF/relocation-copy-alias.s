@@ -53,7 +53,7 @@ movl $5, b2
 // CHECK:      Name: a2
 // CHECK-NEXT: Value: [[A]]
 // CHECK-NEXT: Size: 1
-// CHECK-NEXT: Binding: Global
+// CHECK-NEXT: Binding: Weak
 // CHECK-NEXT: Type: Object (0x1)
 // CHECK-NEXT: Other: 0
 // CHECK-NEXT: Section: .bss
@@ -61,7 +61,7 @@ movl $5, b2
 // CHECK:      Name: b3
 // CHECK-NEXT: Value: [[B]]
 // CHECK-NEXT: Size: 1
-// CHECK-NEXT: Binding: Global (0x1)
+// CHECK-NEXT: Binding: Weak
 // CHECK-NEXT: Type: Object (0x1)
 // CHECK-NEXT: Other: 0
 // CHECK-NEXT: Section: .bss

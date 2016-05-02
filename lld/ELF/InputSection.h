@@ -62,7 +62,8 @@ enum RelExpr {
 inline bool refersToGotEntry(RelExpr Expr) {
   return Expr == R_GOT || Expr == R_GOT_OFF || Expr == R_MIPS_GOT ||
          Expr == R_MIPS_GOT_LOCAL || Expr == R_GOT_PAGE_PC ||
-         Expr == R_GOT_PC || Expr == R_GOT_FROM_END;
+         Expr == R_GOT_PC || Expr == R_GOT_FROM_END || Expr == R_TLSGD ||
+         Expr == R_TLSGD_PC;
 }
 
 struct Relocation {

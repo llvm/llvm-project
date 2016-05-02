@@ -38,6 +38,7 @@
 
 .global _start
 _start:
+.data
 .long bar
 .long zed
 .weak baz

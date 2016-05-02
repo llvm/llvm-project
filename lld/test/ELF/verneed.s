@@ -99,6 +99,6 @@
 
 .globl _start
 _start:
-call f1
-call f2
-call g1
+call f1@plt
+call f2@plt
+call g1@plt
