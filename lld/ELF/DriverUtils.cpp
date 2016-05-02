@@ -120,8 +120,7 @@ static std::string getDestPath(StringRef Path) {
 // Copies file Src to {Config->Reproduce}/Src.
 void elf::copyInputFile(StringRef Src) {
   std::string Dest = getDestPath(Src);
-  SmallString<128> Dir(Dest);
-  path::remove_filename(Dir);
+  StringRef Dir = path::parent_path(Dest);
   if (std::error_code EC = fs::create_directories(Dir)) {
     error(EC, Dir + ": can't create directory");
     return;

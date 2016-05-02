@@ -10,7 +10,7 @@ int main() {
     f = [&x]() {
       return x;  // BOOM
       // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
-      // CHECK: #0 0x{{.*}} in {{.*}}::operator(){{.*}}.cc:[[@LINE-2]]
+      // CHECK: #0 0x{{.*}} in {{.*}}use-after-scope-capture.cc:[[@LINE-2]]
     };
   }
   return f();  // BOOM
