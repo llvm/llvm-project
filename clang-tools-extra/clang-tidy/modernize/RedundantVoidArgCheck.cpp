@@ -14,6 +14,8 @@
 using namespace clang::ast_matchers;
 
 namespace clang {
+namespace tidy {
+namespace modernize {
 
 namespace {
 
@@ -41,9 +43,6 @@ const char ExplicitCastId[] = "explicit-cast";
 const char LambdaId[] = "lambda";
 
 } // namespace
-
-namespace tidy {
-namespace modernize {
 
 void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(functionDecl(parameterCountIs(0), unless(isImplicit()),

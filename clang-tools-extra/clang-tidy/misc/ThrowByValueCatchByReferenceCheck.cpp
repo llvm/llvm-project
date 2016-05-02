@@ -16,6 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace misc {  
 
 ThrowByValueCatchByReferenceCheck::ThrowByValueCatchByReferenceCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -155,5 +156,6 @@ void ThrowByValueCatchByReferenceCheck::diagnoseCatchLocations(
   }
 }
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang

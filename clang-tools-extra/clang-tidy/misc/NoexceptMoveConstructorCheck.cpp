@@ -15,6 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace misc {
 
 void NoexceptMoveConstructorCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++11; the functionality currently does not
@@ -67,6 +68,7 @@ void NoexceptMoveConstructorCheck::check(
   }
 }
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang
 

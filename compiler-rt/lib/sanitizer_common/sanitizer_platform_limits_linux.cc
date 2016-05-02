@@ -28,7 +28,7 @@
 // With old kernels (and even new kernels on powerpc) asm/stat.h uses types that
 // are not defined anywhere in userspace headers. Fake them. This seems to work
 // fine with newer headers, too.
-#include <asm/posix_types.h>
+#include <linux/posix_types.h>
 #if defined(__x86_64__) ||  defined(__mips__)
 #include <sys/stat.h>
 #else

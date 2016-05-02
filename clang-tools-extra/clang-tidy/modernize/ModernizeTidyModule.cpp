@@ -12,6 +12,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "DeprecatedHeadersCheck.h"
 #include "LoopConvertCheck.h"
+#include "MakeSharedCheck.h"
 #include "MakeUniqueCheck.h"
 #include "PassByValueCheck.h"
 #include "RawStringLiteralCheck.h"
@@ -35,6 +36,7 @@ public:
     CheckFactories.registerCheck<DeprecatedHeadersCheck>(
         "modernize-deprecated-headers");
     CheckFactories.registerCheck<LoopConvertCheck>("modernize-loop-convert");
+    CheckFactories.registerCheck<MakeSharedCheck>("modernize-make-shared");
     CheckFactories.registerCheck<MakeUniqueCheck>("modernize-make-unique");
     CheckFactories.registerCheck<PassByValueCheck>("modernize-pass-by-value");
     CheckFactories.registerCheck<RawStringLiteralCheck>(

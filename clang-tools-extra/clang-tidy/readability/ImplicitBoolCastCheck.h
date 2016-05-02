@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace readability {
 
 /// \brief Checks for use of implicit bool casts in expressions.
 ///
@@ -41,6 +42,7 @@ private:
   bool AllowConditionalPointerCasts;
 };
 
+} // namespace readability
 } // namespace tidy
 } // namespace clang
 

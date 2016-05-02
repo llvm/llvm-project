@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace misc {	
 
 /// Finds instances where an integer is assigned to a string.
 ///
@@ -27,6 +28,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang
 
