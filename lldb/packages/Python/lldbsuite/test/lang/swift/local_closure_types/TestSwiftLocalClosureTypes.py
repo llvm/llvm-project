@@ -10,5 +10,6 @@
 #
 # ------------------------------------------------------------------------------
 import lldbsuite.test.lldbinline as lldbinline
+from lldbsuite.test import decorators
 
-lldbinline.MakeInlineTest(__file__, globals())
+lldbinline.MakeInlineTest(__file__, globals(), decorators=decorators.skipIf(oslist=["macosx"], bugnumber="rdar://26051759"))
