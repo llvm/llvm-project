@@ -77,6 +77,8 @@ RadixShort(cl::desc("Print size in radix:"),
 static cl::list<std::string>
 InputFilenames(cl::Positional, cl::desc("<input files>"), cl::ZeroOrMore);
 
+bool HadError = false;
+
 static std::string ToolName;
 
 ///  @brief If ec is not success, print the error and return true.
@@ -84,6 +86,7 @@ static bool error(std::error_code ec) {
   if (!ec)
     return false;
 
+  HadError = true;
   outs() << ToolName << ": error reading file: " << ec.message() << ".\n";
   outs().flush();
   return true;
@@ -420,7 +423,7 @@ static void PrintFileSectionSizes(StringRef file) {
   // Attempt to open the binary.
   ErrorOr<OwningBinary<Binary>> BinaryOrErr = createBinary(file);
   if (std::error_code EC = BinaryOrErr.getError()) {
-    errs() << ToolName << ": " << file << ": " << EC.message() << ".\n";
+    error(EC);
     return;
   }
   Binary &Bin = *BinaryOrErr.get().getBinary();
@@ -737,5 +740,6 @@ int main(int argc, char **argv) {
   std::for_each(InputFilenames.begin(), InputFilenames.end(),
                 PrintFileSectionSizes);
 
-  return 0;
+  if (HadError)
+    return 1;
 }
