@@ -61,7 +61,8 @@ static typename ELFT::uint getAddend(InputSectionBase<ELFT> *Sec,
 }
 
 template <class ELFT, class RelT>
-static ResolvedReloc<ELFT> resolveReloc(InputSection<ELFT> *Sec, RelT &Rel) {
+static ResolvedReloc<ELFT> resolveReloc(InputSectionBase<ELFT> *Sec,
+                                        RelT &Rel) {
   SymbolBody &B = Sec->getFile()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
   if (!D || !D->Section)
@@ -72,24 +73,38 @@ static ResolvedReloc<ELFT> resolveReloc(InputSection<ELFT> *Sec, RelT &Rel) {
   return {D->Section->Repl, Offset};
 }
 
+template <class ELFT, class Elf_Shdr>
+static void run(ELFFile<ELFT> &Obj, InputSectionBase<ELFT> *Sec,
+                Elf_Shdr *RelSec, std::function<void(ResolvedReloc<ELFT>)> Fn) {
+  if (RelSec->sh_type == SHT_RELA) {
+    for (const typename ELFT::Rela &RI : Obj.relas(RelSec))
+      Fn(resolveReloc(Sec, RI));
+  } else {
+    for (const typename ELFT::Rel &RI : Obj.rels(RelSec))
+      Fn(resolveReloc(Sec, RI));
+  }
+}
+
 // Calls Fn for each section that Sec refers to via relocations.
 template <class ELFT>
 static void forEachSuccessor(InputSection<ELFT> *Sec,
                              std::function<void(ResolvedReloc<ELFT>)> Fn) {
-  typedef typename ELFT::Rel Elf_Rel;
-  typedef typename ELFT::Rela Elf_Rela;
-  typedef typename ELFT::Shdr Elf_Shdr;
-
   ELFFile<ELFT> &Obj = Sec->getFile()->getObj();
-  for (const Elf_Shdr *RelSec : Sec->RelocSections) {
-    if (RelSec->sh_type == SHT_RELA) {
-      for (const Elf_Rela &RI : Obj.relas(RelSec))
-        Fn(resolveReloc(Sec, RI));
-    } else {
-      for (const Elf_Rel &RI : Obj.rels(RelSec))
-        Fn(resolveReloc(Sec, RI));
-    }
-  }
+  for (const typename ELFT::Shdr *RelSec : Sec->RelocSections)
+    run(Obj, Sec, RelSec, Fn);
+}
+
+template <class ELFT> static void scanEhFrameSection(EHInputSection<ELFT> &EH) {
+  if (!EH.RelocSection)
+    return;
+  ELFFile<ELFT> &EObj = EH.getFile()->getObj();
+  run<ELFT>(EObj, &EH, EH.RelocSection, [&](ResolvedReloc<ELFT> R) {
+    if (!R.Sec || R.Sec == &InputSection<ELFT>::Discarded)
+      return;
+    if (R.Sec->getSectionHdr()->sh_flags & SHF_EXECINSTR)
+      return;
+    R.Sec->Live = true;
+  });
 }
 
 // Sections listed below are special because they are used by the loader
@@ -160,9 +175,15 @@ template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
   // script KEEP command.
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab->getObjectFiles())
     for (InputSectionBase<ELFT> *Sec : F->getSections())
-      if (Sec && Sec != &InputSection<ELFT>::Discarded)
+      if (Sec && Sec != &InputSection<ELFT>::Discarded) {
+        // .eh_frame is always marked as live now, but also it can reference to
+        // sections that contain personality. We preserve all non-text sections
+        // referred by .eh_frame here.
+        if (auto *EH = dyn_cast_or_null<EHInputSection<ELFT>>(Sec))
+          scanEhFrameSection<ELFT>(*EH);
         if (isReserved(Sec) || Script<ELFT>::X->shouldKeep(Sec))
           Enqueue({Sec, 0});
+      }
 
   // Mark all reachable sections.
   while (!Q.empty())

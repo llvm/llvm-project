@@ -139,7 +139,7 @@ static std::string quote(StringRef S) {
 
 static std::string rewritePath(StringRef S) {
   if (fs::exists(S))
-    return getDestPath(S);
+    return relativeToRoot(S);
   return S;
 }
 
@@ -181,7 +181,7 @@ void elf::createResponseFile(const llvm::opt::InputArgList &Args) {
          << quote(rewritePath(Arg->getValue())) << "\n";
       break;
     default:
-      OS << quote(Arg->getAsString(Args)) << "\n";
+      OS << Arg->getAsString(Args) << "\n";
     }
   }
 }

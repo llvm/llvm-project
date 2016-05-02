@@ -34,7 +34,7 @@ static cl::opt<bool> IgnoreIntegerWrapping(
 // The maximal number of basic sets we allow during the construction of a
 // piecewise affine function. More complex ones will result in very high
 // compile time.
-static int const MaxConjunctsInPwAff = 100;
+static int const MaxDisjunctionsInPwAff = 100;
 
 // The maximal number of bits for which a zero-extend is modeled precisely.
 static unsigned const MaxZextSmallBitWidth = 7;
@@ -64,14 +64,14 @@ static __isl_give PWACtx copyPWACtx(const __isl_keep PWACtx &PWAC) {
   return std::make_pair(isl_pw_aff_copy(PWAC.first), isl_set_copy(PWAC.second));
 }
 
-/// @brief Determine if @p PWAC is to complex to continue
+/// @brief Determine if @p PWAC is too complex to continue.
 ///
 /// Note that @p PWAC will be "free" (deallocated) if this function returns
 /// true, but not if this function returns false.
-static bool isToComplex(PWACtx &PWAC) {
+static bool isTooComplex(PWACtx &PWAC) {
   unsigned NumBasicSets = 0;
   isl_pw_aff_foreach_piece(PWAC.first, addNumBasicSets, &NumBasicSets);
-  if (NumBasicSets <= MaxConjunctsInPwAff)
+  if (NumBasicSets <= MaxDisjunctionsInPwAff)
     return false;
   freePWACtx(PWAC);
   return true;
@@ -373,7 +373,7 @@ __isl_give PWACtx SCEVAffinator::visitAddExpr(const SCEVAddExpr *Expr) {
 
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
     combine(Sum, visit(Expr->getOperand(i)), isl_pw_aff_add);
-    if (isToComplex(Sum))
+    if (isTooComplex(Sum))
       return std::make_pair(nullptr, nullptr);
   }
 
@@ -385,7 +385,7 @@ __isl_give PWACtx SCEVAffinator::visitMulExpr(const SCEVMulExpr *Expr) {
 
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
     combine(Prod, visit(Expr->getOperand(i)), isl_pw_aff_mul);
-    if (isToComplex(Prod))
+    if (isTooComplex(Prod))
       return std::make_pair(nullptr, nullptr);
   }
 
@@ -437,7 +437,7 @@ __isl_give PWACtx SCEVAffinator::visitSMaxExpr(const SCEVSMaxExpr *Expr) {
 
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
     combine(Max, visit(Expr->getOperand(i)), isl_pw_aff_max);
-    if (isToComplex(Max))
+    if (isTooComplex(Max))
       return std::make_pair(nullptr, nullptr);
   }
 
