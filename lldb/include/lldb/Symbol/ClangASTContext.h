@@ -310,6 +310,11 @@ public:
     }
     
     CompilerType
+    CreateStructForIdentifier (const ConstString &type_name,
+                               const std::initializer_list< std::pair < const char *, CompilerType > >& type_fields,
+                               bool packed = false);
+
+    CompilerType
     GetOrCreateStructForIdentifier (const ConstString &type_name,
                                     const std::initializer_list< std::pair < const char *, CompilerType > >& type_fields,
                                     bool packed = false);
@@ -488,6 +493,9 @@ public:
     SetFunctionParameters (clang::FunctionDecl *function_decl,
                            clang::ParmVarDecl **params,
                            unsigned num_params);
+    
+    CompilerType
+    CreateBlockPointerType (const CompilerType &function_type);
 
     //------------------------------------------------------------------
     // Array Types
@@ -691,6 +699,9 @@ public:
     
     bool
     IsFunctionPointerType (lldb::opaque_compiler_type_t type) override;
+    
+    bool
+    IsBlockPointerType (lldb::opaque_compiler_type_t type, CompilerType *function_pointer_type_ptr) override;
     
     bool
     IsIntegerType (lldb::opaque_compiler_type_t type, bool &is_signed) override;
