@@ -368,6 +368,44 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
 
                     if (!clang_type && (encoding_data_type == Type::eEncodingIsPointerUID || encoding_data_type == Type::eEncodingIsTypedefUID) && sc.comp_unit != NULL)
                     {
+                        if (tag == DW_TAG_pointer_type)
+                        {
+                            DWARFDIE target_die = die.GetReferencedDIE(DW_AT_type);
+                            
+                            if (target_die.GetAttributeValueAsUnsigned(DW_AT_APPLE_block, 0))
+                            {
+                                // Blocks have a __FuncPtr inside them which is a pointer to a function of the proper type.
+                                
+                                for (DWARFDIE child_die = target_die.GetFirstChild();
+                                     child_die.IsValid();
+                                     child_die = child_die.GetSibling())
+                                {
+                                    if (!strcmp(child_die.GetAttributeValueAsString(DW_AT_name, ""), "__FuncPtr"))
+                                    {
+                                        DWARFDIE function_pointer_type = child_die.GetReferencedDIE(DW_AT_type);
+                                        
+                                        if (function_pointer_type)
+                                        {
+                                            DWARFDIE function_type = function_pointer_type.GetReferencedDIE(DW_AT_type);
+                                            
+                                            bool function_type_is_new_pointer;
+                                            TypeSP lldb_function_type_sp = ParseTypeFromDWARF(sc, function_type, log, &function_type_is_new_pointer);
+                                            
+                                            if (lldb_function_type_sp)
+                                            {
+                                                clang_type = m_ast.CreateBlockPointerType(lldb_function_type_sp->GetForwardCompilerType());
+                                                encoding_data_type = Type::eEncodingIsUID;
+                                                encoding_uid.Clear();
+                                                resolve_state = Type::eResolveStateFull;
+                                            }
+                                        }
+                                        
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
                         bool translation_unit_is_objc = (sc.comp_unit->GetLanguage() == eLanguageTypeObjC || sc.comp_unit->GetLanguage() == eLanguageTypeObjC_plus_plus);
 
                         if (translation_unit_is_objc)

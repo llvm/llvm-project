@@ -25,7 +25,7 @@ int main()
     clock_t c = 0; ((void)c);
     size_t s = 0;
     time_t t = 0;
-    tm tmv = {0};
+    tm tmv = {};
     static_assert((std::is_same<decltype(clock()), clock_t>::value), "");
     static_assert((std::is_same<decltype(difftime(t,t)), double>::value), "");
     static_assert((std::is_same<decltype(mktime(&tmv)), time_t>::value), "");

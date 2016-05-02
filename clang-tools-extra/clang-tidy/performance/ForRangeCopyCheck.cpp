@@ -12,11 +12,11 @@
 #include "../utils/FixItHintUtils.h"
 #include "../utils/TypeTraits.h"
 
+using namespace clang::ast_matchers;
+
 namespace clang {
 namespace tidy {
 namespace performance {
-
-using namespace ::clang::ast_matchers;
 
 ForRangeCopyCheck::ForRangeCopyCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),

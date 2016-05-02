@@ -693,6 +693,8 @@
 		49DA65031485C92A005FF180 /* AppleObjCDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DA65021485C92A005FF180 /* AppleObjCDeclVendor.cpp */; };
 		49DCF6FE170E6B4A0092F75E /* IRMemoryMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF6FD170E6B4A0092F75E /* IRMemoryMap.cpp */; };
 		49DCF702170E70120092F75E /* Materializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF700170E70120092F75E /* Materializer.cpp */; };
+		49DEF1221CD7BD90006A7C7D /* BlockPointer.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 49DEF1201CD7BD90006A7C7D /* BlockPointer.h */; };
+		49DEF1251CD7C6DF006A7C7D /* BlockPointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */; };
 		49E4F66B1C9CAD16008487EA /* DiagnosticManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49E4F6681C9CAD12008487EA /* DiagnosticManager.cpp */; };
 		4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */; };
 		4C2479BD1BA39295009C9A7B /* FunctionCaller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083321B9A5DE200D5CF24 /* FunctionCaller.cpp */; };
@@ -1119,6 +1121,7 @@
 			dstPath = "$(DEVELOPER_DIR)/usr/share/man/man1/";
 			dstSubfolderSpec = 0;
 			files = (
+				49DEF1221CD7BD90006A7C7D /* BlockPointer.h in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
@@ -2346,6 +2349,8 @@
 		49DCF6FD170E6B4A0092F75E /* IRMemoryMap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = IRMemoryMap.cpp; path = source/Expression/IRMemoryMap.cpp; sourceTree = "<group>"; };
 		49DCF6FF170E6FD90092F75E /* Materializer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Materializer.h; path = include/lldb/Expression/Materializer.h; sourceTree = "<group>"; };
 		49DCF700170E70120092F75E /* Materializer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Materializer.cpp; path = source/Expression/Materializer.cpp; sourceTree = "<group>"; };
+		49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BlockPointer.cpp; path = Language/CPlusPlus/BlockPointer.cpp; sourceTree = "<group>"; };
+		49DEF1201CD7BD90006A7C7D /* BlockPointer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BlockPointer.h; path = Language/CPlusPlus/BlockPointer.h; sourceTree = "<group>"; };
 		49E45FA911F660DC008F7B28 /* CompilerType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CompilerType.h; path = include/lldb/Symbol/CompilerType.h; sourceTree = "<group>"; };
 		49E45FAD11F660FE008F7B28 /* CompilerType.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CompilerType.cpp; path = source/Symbol/CompilerType.cpp; sourceTree = "<group>"; };
 		49E4F6681C9CAD12008487EA /* DiagnosticManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DiagnosticManager.cpp; path = source/Expression/DiagnosticManager.cpp; sourceTree = "<group>"; };
@@ -5586,6 +5591,8 @@
 		945261B01B9A11BE00BF138D /* Formatters */ = {
 			isa = PBXGroup;
 			children = (
+				49DEF1201CD7BD90006A7C7D /* BlockPointer.h */,
+				49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */,
 				945261B41B9A11E800BF138D /* CxxStringTypes.h */,
 				945261B31B9A11E800BF138D /* CxxStringTypes.cpp */,
 				945261B61B9A11E800BF138D /* LibCxx.h */,
@@ -7047,6 +7054,7 @@
 				26E152261419CAD4007967D0 /* ObjectFilePECOFF.cpp in Sources */,
 				B2462247141AD37D00F3D409 /* OptionGroupWatchpoint.cpp in Sources */,
 				94B638631B8FB7F1004FE1E4 /* ObjCPlusPlusLanguage.cpp in Sources */,
+				49DEF1251CD7C6DF006A7C7D /* BlockPointer.cpp in Sources */,
 				49A71FE7141FFA5C00D59478 /* IRInterpreter.cpp in Sources */,
 				49A71FE8141FFACF00D59478 /* DataEncoder.cpp in Sources */,
 				23DDF226196C3EE600BB8417 /* CommandOptionValidators.cpp in Sources */,

@@ -12,6 +12,9 @@
 using namespace clang::ast_matchers;
 
 namespace clang {
+namespace tidy {
+namespace misc {
+
 namespace {
 
 AST_MATCHER(CastExpr, isPointerToBoolean) {
@@ -19,9 +22,6 @@ AST_MATCHER(CastExpr, isPointerToBoolean) {
 }
 
 } // namespace
-
-namespace tidy {
-namespace misc {
 
 void BoolPointerImplicitConversionCheck::registerMatchers(MatchFinder *Finder) {
   // Look for ifs that have an implicit bool* to bool conversion in the

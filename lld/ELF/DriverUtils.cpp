@@ -57,7 +57,7 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   // Expand response files. '@<filename>' is replaced by the file's contents.
   SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
   StringSaver Saver(Alloc);
-  llvm::cl::ExpandResponseFiles(Saver, llvm::cl::TokenizeGNUCommandLine, Vec);
+  cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Vec);
 
   // Parse options and then do error checking.
   opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
@@ -100,7 +100,7 @@ static std::string relativeToRoot(StringRef Path) {
   // (e.g. "c:") or a UNC name (//net). We want to keep it as part
   // of the result.
   SmallString<128> Res;
-  StringRef Root = path::root_name(Path);
+  StringRef Root = path::root_name(Abs);
   if (Root.endswith(":"))
     Res = Root.drop_back();
   else if (Root.startswith("//"))
@@ -122,11 +122,11 @@ void elf::copyInputFile(StringRef Src) {
   std::string Dest = getDestPath(Src);
   SmallString<128> Dir(Dest);
   path::remove_filename(Dir);
-  if (std::error_code EC = sys::fs::create_directories(Dir)) {
+  if (std::error_code EC = fs::create_directories(Dir)) {
     error(EC, Dir + ": can't create directory");
     return;
   }
-  if (std::error_code EC = sys::fs::copy_file(Src, Dest))
+  if (std::error_code EC = fs::copy_file(Src, Dest))
     error(EC, "failed to copy file: " + Dest);
 }
 
@@ -139,7 +139,7 @@ static std::string quote(StringRef S) {
 
 static std::string rewritePath(StringRef S) {
   if (fs::exists(S))
-    return getDestPath(S);
+    return relativeToRoot(S);
   return S;
 }
 
@@ -148,10 +148,10 @@ static std::string rewritePath(StringRef S) {
 // the same command with the same inputs just by executing
 // "ld.lld @response.txt". Used by --reproduce. This feature is
 // supposed to be used by users to report an issue to LLD developers.
-void elf::createResponseFile(const llvm::opt::InputArgList &Args) {
+void elf::createResponseFile(const opt::InputArgList &Args) {
   // Create the output directory.
-  if (std::error_code EC = sys::fs::create_directories(
-        Config->Reproduce, /*IgnoreExisting=*/false)) {
+  if (std::error_code EC =
+          fs::create_directories(Config->Reproduce, /*IgnoreExisting=*/false)) {
     error(EC, Config->Reproduce + ": can't create directory");
     return;
   }
@@ -160,7 +160,7 @@ void elf::createResponseFile(const llvm::opt::InputArgList &Args) {
   SmallString<128> Path;
   path::append(Path, Config->Reproduce, "response.txt");
   std::error_code EC;
-  raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::F_None);
+  raw_fd_ostream OS(Path, EC, fs::OpenFlags::F_None);
   check(EC);
 
   // Copy the command line to response.txt while rewriting paths.
@@ -173,7 +173,6 @@ void elf::createResponseFile(const llvm::opt::InputArgList &Args) {
       break;
     case OPT_L:
     case OPT_dynamic_list:
-    case OPT_export_dynamic_symbol:
     case OPT_rpath:
     case OPT_script:
     case OPT_version_script:
@@ -181,7 +180,10 @@ void elf::createResponseFile(const llvm::opt::InputArgList &Args) {
          << quote(rewritePath(Arg->getValue())) << "\n";
       break;
     default:
-      OS << quote(Arg->getAsString(Args)) << "\n";
+      OS << Arg->getSpelling();
+      if (Arg->getNumValues() > 0)
+        OS << " " << quote(Arg->getValue());
+      OS << "\n";
     }
   }
 }
@@ -189,7 +191,7 @@ void elf::createResponseFile(const llvm::opt::InputArgList &Args) {
 std::string elf::findFromSearchPaths(StringRef Path) {
   for (StringRef Dir : Config->SearchPaths) {
     std::string FullPath = buildSysrootedPath(Dir, Path);
-    if (sys::fs::exists(FullPath))
+    if (fs::exists(FullPath))
       return FullPath;
   }
   return "";
@@ -214,8 +216,8 @@ std::string elf::searchLibrary(StringRef Path) {
 std::string elf::buildSysrootedPath(StringRef Dir, StringRef File) {
   SmallString<128> Path;
   if (Dir.startswith("="))
-    sys::path::append(Path, Config->Sysroot, Dir.substr(1), File);
+    path::append(Path, Config->Sysroot, Dir.substr(1), File);
   else
-    sys::path::append(Path, Dir, File);
+    path::append(Path, Dir, File);
   return Path.str();
 }

@@ -538,6 +538,12 @@ GoASTContext::IsFunctionPointerType(lldb::opaque_compiler_type_t type)
 }
 
 bool
+GoASTContext::IsBlockPointerType (lldb::opaque_compiler_type_t type, CompilerType *function_pointer_type_ptr)
+{
+    return false;
+}
+
+bool
 GoASTContext::IsIntegerType(lldb::opaque_compiler_type_t type, bool &is_signed)
 {
     is_signed = false;

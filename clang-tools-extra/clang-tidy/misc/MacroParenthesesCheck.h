@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace misc {
 
 /// Finds macros that can have unexpected behaviour due to missing parentheses.
 ///
@@ -35,6 +36,7 @@ public:
   void registerPPCallbacks(CompilerInstance &Compiler) override;
 };
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang
 

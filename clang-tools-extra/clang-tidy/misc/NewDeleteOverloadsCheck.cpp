@@ -14,7 +14,11 @@
 using namespace clang::ast_matchers;
 
 namespace clang {
+namespace tidy {
+namespace misc {
+
 namespace {
+
 AST_MATCHER(FunctionDecl, isPlacementOverload) {
   bool New;
   switch (Node.getOverloadedOperator()) {
@@ -57,12 +61,7 @@ AST_MATCHER(FunctionDecl, isPlacementOverload) {
 
   return true;
 }
-} // namespace
 
-namespace tidy {
-namespace misc {
-
-namespace {
 OverloadedOperatorKind getCorrespondingOverload(const FunctionDecl *FD) {
   switch (FD->getOverloadedOperator()) {
   default: break;
@@ -125,6 +124,7 @@ bool hasCorrespondingOverloadInBaseClass(const CXXMethodDecl *MD,
 
   return false;
 }
+
 } // anonymous namespace
 
 void NewDeleteOverloadsCheck::registerMatchers(MatchFinder *Finder) {

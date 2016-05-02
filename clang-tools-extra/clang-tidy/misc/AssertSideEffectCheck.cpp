@@ -21,6 +21,9 @@
 using namespace clang::ast_matchers;
 
 namespace clang {
+namespace tidy {
+namespace misc {
+
 namespace {
 
 AST_MATCHER_P(Expr, hasSideEffect, bool, CheckFunctionCalls) {
@@ -65,8 +68,6 @@ AST_MATCHER_P(Expr, hasSideEffect, bool, CheckFunctionCalls) {
 }
 
 } // namespace
-
-namespace tidy {
 
 AssertSideEffectCheck::AssertSideEffectCheck(StringRef Name,
                                              ClangTidyContext *Context)
@@ -121,5 +122,6 @@ void AssertSideEffectCheck::check(const MatchFinder::MatchResult &Result) {
   diag(Loc, "found %0() with side effect") << AssertMacroName;
 }
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang

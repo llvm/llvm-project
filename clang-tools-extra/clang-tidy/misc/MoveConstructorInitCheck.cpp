@@ -19,6 +19,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace misc {
 
 namespace {
 
@@ -175,5 +176,6 @@ void MoveConstructorInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeSorter::toString(IncludeStyle));
 }
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang

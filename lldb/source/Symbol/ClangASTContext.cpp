@@ -89,6 +89,7 @@
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/SymbolFile/PDB/PDBASTParser.h"
@@ -2044,6 +2045,13 @@ ClangASTContext::SetFunctionParameters (FunctionDecl *function_decl, ParmVarDecl
         function_decl->setParams (ArrayRef<ParmVarDecl*>(params, num_params));
 }
 
+CompilerType
+ClangASTContext::CreateBlockPointerType (const CompilerType &function_type)
+{
+    QualType block_type = m_ast_ap->getBlockPointerType(clang::QualType::getFromOpaquePtr(function_type.GetOpaqueQualType()));
+    
+    return CompilerType (this, block_type.getAsOpaquePtr());
+}
 
 #pragma mark Array Types
 
@@ -2081,13 +2089,17 @@ ClangASTContext::CreateArrayType (const CompilerType &element_type,
 }
 
 CompilerType
-ClangASTContext::GetOrCreateStructForIdentifier (const ConstString &type_name,
-                                                 const std::initializer_list< std::pair < const char *, CompilerType > >& type_fields,
-                                                 bool packed)
+ClangASTContext::CreateStructForIdentifier (const ConstString &type_name,
+                                            const std::initializer_list< std::pair < const char *, CompilerType > >& type_fields,
+                                            bool packed)
 {
     CompilerType type;
-    if ((type = GetTypeForIdentifier<clang::CXXRecordDecl>(type_name)).IsValid())
+    if (!type_name.IsEmpty() && (type = GetTypeForIdentifier<clang::CXXRecordDecl>(type_name)).IsValid())
+    {
+        lldbassert("Trying to create a type for an existing name");
         return type;
+    }
+    
     type = CreateRecordType(nullptr, lldb::eAccessPublic, type_name.GetCString(), clang::TTK_Struct, lldb::eLanguageTypeC);
     StartTagDeclarationDefinition(type);
     for (const auto& field : type_fields)
@@ -2096,6 +2108,20 @@ ClangASTContext::GetOrCreateStructForIdentifier (const ConstString &type_name,
         SetIsPacked(type);
     CompleteTagDeclarationDefinition(type);
     return type;
+}
+
+CompilerType
+ClangASTContext::GetOrCreateStructForIdentifier (const ConstString &type_name,
+                                                 const std::initializer_list< std::pair < const char *, CompilerType > >& type_fields,
+                                                 bool packed)
+{
+    CompilerType type;
+    if ((type = GetTypeForIdentifier<clang::CXXRecordDecl>(type_name)).IsValid())
+        return type;
+
+    return CreateStructForIdentifier (type_name,
+                                      type_fields,
+                                      packed);
 }
 
 #pragma mark Enumeration Types
@@ -3174,6 +3200,52 @@ ClangASTContext::IsFunctionPointerType (lldb::opaque_compiler_type_t type)
     }
     return false;
     
+}
+
+bool
+ClangASTContext::IsBlockPointerType (lldb::opaque_compiler_type_t type, CompilerType *function_pointer_type_ptr)
+{
+    if (type)
+    {
+        clang::QualType qual_type (GetCanonicalQualType(type));
+        
+        if (qual_type->isBlockPointerType())
+        {
+            if (function_pointer_type_ptr)
+            {
+                const clang::BlockPointerType *block_pointer_type = qual_type->getAs<clang::BlockPointerType>();
+                QualType pointee_type = block_pointer_type->getPointeeType();
+                QualType function_pointer_type = m_ast_ap->getPointerType(pointee_type);
+                *function_pointer_type_ptr = CompilerType (getASTContext(), function_pointer_type);
+            }
+            return true;
+        }
+        
+        const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+        switch (type_class)
+        {
+            default:
+                break;
+            case clang::Type::Typedef:
+                return IsBlockPointerType (llvm::cast<clang::TypedefType>(qual_type)->getDecl()->getUnderlyingType().getAsOpaquePtr(), function_pointer_type_ptr);
+            case clang::Type::Auto:
+                return IsBlockPointerType (llvm::cast<clang::AutoType>(qual_type)->getDeducedType().getAsOpaquePtr(), function_pointer_type_ptr);
+            case clang::Type::Elaborated:
+                return IsBlockPointerType (llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType().getAsOpaquePtr(), function_pointer_type_ptr);
+            case clang::Type::Paren:
+                return IsBlockPointerType (llvm::cast<clang::ParenType>(qual_type)->desugar().getAsOpaquePtr(), function_pointer_type_ptr);
+                
+            case clang::Type::LValueReference:
+            case clang::Type::RValueReference:
+            {
+                const clang::ReferenceType *reference_type = llvm::cast<clang::ReferenceType>(qual_type.getTypePtr());
+                if (reference_type)
+                    return IsBlockPointerType(reference_type->getPointeeType().getAsOpaquePtr(), function_pointer_type_ptr);
+            }
+                break;
+        }
+    }
+    return false;
 }
 
 bool

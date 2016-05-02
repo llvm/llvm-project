@@ -11,11 +11,18 @@
 #define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_INCLUDEFIXER_H
 
 #include "XrefsDB.h"
-#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Tooling.h"
+#include <memory>
+#include <vector>
 
 namespace clang {
+
+class CompilerInvocation;
+class DiagnosticConsumer;
+class FileManager;
+class PCHContainerOperations;
+
 namespace include_fixer {
 
 class IncludeFixerActionFactory : public clang::tooling::ToolAction {
@@ -26,7 +33,7 @@ public:
   IncludeFixerActionFactory(
       XrefsDB &Xrefs, std::vector<clang::tooling::Replacement> &Replacements,
       bool MinimizeIncludePaths = true);
-  ~IncludeFixerActionFactory();
+  ~IncludeFixerActionFactory() override;
 
   bool
   runInvocation(clang::CompilerInvocation *Invocation,

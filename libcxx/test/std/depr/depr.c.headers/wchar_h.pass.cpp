@@ -10,6 +10,7 @@
 // <wchar.h>
 
 #include <wchar.h>
+#include <stdarg.h>
 #include <type_traits>
 
 #ifndef NULL
@@ -31,27 +32,15 @@
 int main()
 {
 // mbstate_t comes from the underlying C library; it is defined (in C99) as:
-//    a complete object type other than an array type that can hold the conversion 
-//    state information necessary to convert between sequences of multibyte 
+//    a complete object type other than an array type that can hold the conversion
+//    state information necessary to convert between sequences of multibyte
 //    characters and wide characters
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-braces"
-#endif
-    mbstate_t mb = {0};
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
-
+    mbstate_t mb = {};
     size_t s = 0;
     tm *tm = 0;
     wint_t w = 0;
     ::FILE* fp = 0;
-#ifdef __APPLE__
-    __darwin_va_list va;
-#else
-    __builtin_va_list va;
-#endif
+    ::va_list va;
     char* ns = 0;
     wchar_t* ws = 0;
     static_assert((std::is_same<decltype(fwprintf(fp, L"")), int>::value), "");

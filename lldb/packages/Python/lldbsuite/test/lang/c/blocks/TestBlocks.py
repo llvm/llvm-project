@@ -36,7 +36,6 @@ class BlocksTestCase(TestBase):
 
         self.wait_for_breakpoint()
     
-    @unittest2.expectedFailure("rdar://problem/10413887 - Call blocks in expressions")
     @skipUnlessDarwin
     def test_expr(self):
         self.launch_common()

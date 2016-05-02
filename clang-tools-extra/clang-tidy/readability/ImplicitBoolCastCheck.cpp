@@ -16,6 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace readability {
 
 namespace {
 
@@ -415,5 +416,6 @@ void ImplicitBoolCastCheck::handleCastFromBool(
   }
 }
 
+} // namespace readability
 } // namespace tidy
 } // namespace clang

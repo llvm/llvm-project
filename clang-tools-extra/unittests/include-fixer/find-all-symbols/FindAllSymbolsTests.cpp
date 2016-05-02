@@ -8,9 +8,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "FindAllSymbols.h"
+#include "SymbolInfo.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/FileSystemOptions.h"
+#include "clang/Basic/VirtualFileSystem.h"
+#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Support/YAMLTraits.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace clang {
 namespace find_all_symbols {
@@ -20,7 +31,7 @@ static const char HeaderName[] = "symbols.h";
 class MockReporter
     : public clang::find_all_symbols::FindAllSymbols::ResultReporter {
 public:
-  ~MockReporter() {}
+  ~MockReporter() override {}
 
   void reportResult(llvm::StringRef FileName,
                     const SymbolInfo &Symbol) override {

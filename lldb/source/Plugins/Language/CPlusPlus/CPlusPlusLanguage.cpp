@@ -29,6 +29,7 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/VectorType.h"
 
+#include "BlockPointer.h"
 #include "CxxStringTypes.h"
 #include "LibCxx.h"
 #include "LibCxxAtomic.h"
@@ -769,6 +770,25 @@ CPlusPlusLanguage::GetHardcodedSummaries ()
                                             }
                                             return nullptr;
                                         });
+        g_formatters.push_back(
+                               [](lldb_private::ValueObject& valobj,
+                                  lldb::DynamicValueType,
+                                  FormatManager& fmt_mgr) -> TypeSummaryImpl::SharedPointer {
+                                   static CXXFunctionSummaryFormat::SharedPointer formatter_sp(new CXXFunctionSummaryFormat(TypeSummaryImpl::Flags()
+                                                                                                                            .SetCascades(true)
+                                                                                                                            .SetDontShowChildren(true)
+                                                                                                                            .SetHideItemNames(true)
+                                                                                                                            .SetShowMembersOneLiner(true)
+                                                                                                                            .SetSkipPointers(true)
+                                                                                                                            .SetSkipReferences(false),
+                                                                                                                            lldb_private::formatters::BlockPointerSummaryProvider,
+                                                                                                                            "block pointer summary provider"));
+                                   if (valobj.GetCompilerType().IsBlockPointerType(nullptr))
+                                   {
+                                       return formatter_sp;
+                                   }
+                                   return nullptr;
+                               });
     });
     
     return g_formatters;
@@ -796,6 +816,20 @@ CPlusPlusLanguage::GetHardcodedSynthetics ()
                                              }
                                              return nullptr;
                                          });
+        g_formatters.push_back(
+                                         [](lldb_private::ValueObject& valobj,
+                                            lldb::DynamicValueType,
+                                            FormatManager& fmt_mgr) -> SyntheticChildren::SharedPointer {
+                                             static CXXSyntheticChildren::SharedPointer formatter_sp(new CXXSyntheticChildren(SyntheticChildren::Flags().SetCascades(true).SetSkipPointers(true).SetSkipReferences(true).SetNonCacheable(true),
+                                                                                                                              "block pointer synthetic children",
+                                                                                                                              lldb_private::formatters::BlockPointerSyntheticFrontEndCreator));
+                                             if (valobj.GetCompilerType().IsBlockPointerType(nullptr))
+                                             {
+                                                 return formatter_sp;
+                                             }
+                                             return nullptr;
+                                         });
+
     });
     
     return g_formatters;

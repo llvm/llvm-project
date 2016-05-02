@@ -16,6 +16,8 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace misc {
+
 namespace {
 bool isOverrideMethod(const FunctionDecl *Function) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(Function))
@@ -120,5 +122,6 @@ void UnusedParametersCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang

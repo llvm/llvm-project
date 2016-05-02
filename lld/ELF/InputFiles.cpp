@@ -372,6 +372,9 @@ MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
   if (!Seen.insert(C.getChildOffset()).second)
     return MemoryBufferRef();
 
+  if (!Config->Reproduce.empty() && C.getParent()->isThin())
+    copyInputFile(check(C.getFullName()));
+
   return check(C.getMemoryBufferRef(),
                "could not get the buffer for the member defining symbol " +
                    Sym->getName());
