@@ -92,6 +92,7 @@ Clang-Tidy Checks
    misc-virtual-near-miss
    modernize-deprecated-headers
    modernize-loop-convert
+   modernize-make-shared
    modernize-make-unique
    modernize-pass-by-value
    modernize-raw-string-literal

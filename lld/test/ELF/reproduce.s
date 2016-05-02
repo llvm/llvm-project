@@ -9,8 +9,8 @@
 
 # RUN: FileCheck %s --check-prefix=RSP < repro/response.txt
 # RSP: {{^}}--hash-style gnu{{$}}
-# RSP-NOT: repro/
-# RSP-NEXT: /foo.o
+# RSP-NOT: repro{{[/\\]}}
+# RSP-NEXT: {{[/\\]}}foo.o
 # RSP-NEXT: -o bar
 # RSP-NEXT: -shared
 # RSP-NEXT: --as-needed
@@ -22,12 +22,18 @@
 # RUN: diff %t.dir/build2/foo.o repro/%:t.dir/build2/foo.o
 
 # RUN: touch file
-# RUN: not ld.lld --reproduce repro2 'foo bar' -L"foo bar" -Lfile -version-script file
+# RUN: not ld.lld --reproduce repro2 'foo bar' -L"foo bar" -Lfile \
+# RUN:   --dynamic-list file -rpath file --script file --version-script file \
+# RUN:   --dynamic-linker "some unusual/path"
 # RUN: FileCheck %s --check-prefix=RSP2 < repro2/response.txt
 # RSP2:      "foo bar"
 # RSP2-NEXT: -L "foo bar"
 # RSP2-NEXT: -L {{.+}}file
-# RSP2-NEXT: -version-script {{.+}}file
+# RSP2-NEXT: --dynamic-list {{.+}}file
+# RSP2-NEXT: -rpath {{.+}}file
+# RSP2-NEXT: --script {{.+}}file
+# RSP2-NEXT: --version-script {{.+}}file
+# RSP2-NEXT: --dynamic-linker "some unusual/path"
 
 # RUN: not ld.lld build1/foo.o -o bar -shared --as-needed --reproduce . 2>&1 \
 # RUN:   | FileCheck --check-prefix=ERROR %s

@@ -4,6 +4,8 @@ add_clang_library(clangTidyModernizeModule
   DeprecatedHeadersCheck.cpp
   LoopConvertCheck.cpp
   LoopConvertUtils.cpp
+  MakeSmartPtrCheck.cpp
+  MakeSharedCheck.cpp
   MakeUniqueCheck.cpp
   ModernizeTidyModule.cpp
   PassByValueCheck.cpp

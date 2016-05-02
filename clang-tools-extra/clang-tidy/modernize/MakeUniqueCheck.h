@@ -10,7 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_MAKE_UNIQUE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_MAKE_UNIQUE_H
 
-#include "../ClangTidy.h"
+#include "MakeSmartPtrCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -25,12 +25,12 @@ namespace modernize {
 /// \code
 ///   std::make_unique<type>(args...)
 /// \endcode
-class MakeUniqueCheck : public ClangTidyCheck {
+class MakeUniqueCheck : public MakeSmartPtrCheck {
 public:
-  MakeUniqueCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
-  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
-  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  MakeUniqueCheck(StringRef Name, ClangTidyContext *Context);
+
+protected:
+  SmartPtrTypeMatcher getSmartPointerTypeMatcher() const override;
 };
 
 } // namespace modernize

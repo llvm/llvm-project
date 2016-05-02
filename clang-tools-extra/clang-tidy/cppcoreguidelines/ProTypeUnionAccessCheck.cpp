@@ -15,6 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace cppcoreguidelines {
 
 void ProTypeUnionAccessCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
@@ -28,6 +29,7 @@ void ProTypeUnionAccessCheck::check(const MatchFinder::MatchResult &Result) {
   diag(Matched->getMemberLoc(), "do not access members of unions; use (boost::)variant instead");
 }
 
+} // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang
 

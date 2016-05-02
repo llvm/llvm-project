@@ -15,6 +15,7 @@
 
 namespace clang {
 namespace tidy {
+namespace cppcoreguidelines {
 
 /// This checks that all array subscriptions on static arrays and std::arrays
 /// have a constant index and are within bounds
@@ -34,6 +35,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
+} // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang
 

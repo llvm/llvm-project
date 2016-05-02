@@ -15,6 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace cppcoreguidelines {
 
 void ProTypeReinterpretCastCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
@@ -30,5 +31,6 @@ void ProTypeReinterpretCastCheck::check(
   diag(MatchedCast->getOperatorLoc(), "do not use reinterpret_cast");
 }
 
+} // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang

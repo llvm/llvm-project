@@ -9,13 +9,13 @@
 
 #include "MoveConstantArgumentCheck.h"
 
-#include <clang/Lex/Lexer.h>
+#include "clang/Lex/Lexer.h"
+
+using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
 namespace misc {
-
-using namespace ast_matchers;
 
 void MoveConstantArgumentCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)

@@ -180,6 +180,11 @@ identified.  The improvements since the 3.8 release include:
 
   Replaces C standard library headers with their C++ alternatives.
 
+- New `modernize-make-shared
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-shared.html>`_ check
+
+  Replaces creation of ``std::shared_ptr`` from new expression with call to ``std::make_shared``.
+
 - New `modernize-raw-string-literal
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-raw-string-literal.html>`_ check
 

@@ -769,6 +769,9 @@ class SizeClassAllocator32 {
   }
 
   bool PointerIsMine(const void *p) {
+    uptr mem = reinterpret_cast<uptr>(p);
+    if (mem < kSpaceBeg || mem >= kSpaceBeg + kSpaceSize)
+      return false;
     return GetSizeClass(p) != 0;
   }
 

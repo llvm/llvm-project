@@ -15,7 +15,8 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-
+namespace cppcoreguidelines {
+	
 void ProTypeConstCastCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
@@ -28,5 +29,6 @@ void ProTypeConstCastCheck::check(const MatchFinder::MatchResult &Result) {
   diag(MatchedCast->getOperatorLoc(), "do not use const_cast");
 }
 
+} // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang
