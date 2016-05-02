@@ -91,6 +91,11 @@ namespace lldb_private {
         virtual lldb::ValueObjectSP
         GetSyntheticValue () { return nullptr; }
         
+        // if this function returns a non-empty ConstString, then clients are expected to use the return
+        // as the name of the type of this ValueObject for display purposes
+        virtual ConstString
+        GetSyntheticTypeName () { return ConstString(); }
+        
         typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
         typedef std::unique_ptr<SyntheticChildrenFrontEnd> AutoPointer;
         
@@ -607,6 +612,9 @@ namespace lldb_private {
             lldb::ValueObjectSP
             GetSyntheticValue() override;
             
+            ConstString
+            GetSyntheticTypeName () override;
+
             typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
             
         private:
