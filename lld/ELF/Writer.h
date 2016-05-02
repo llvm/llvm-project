@@ -17,7 +17,7 @@ template <class ELFT> class SymbolTable;
 
 template <class ELFT> void writeResult(SymbolTable<ELFT> *Symtab);
 
-template <class ELFT> void markLive(SymbolTable<ELFT> *Symtab);
+template <class ELFT> void markLive();
 }
 }
 

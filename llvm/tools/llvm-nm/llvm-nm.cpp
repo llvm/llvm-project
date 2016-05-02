@@ -373,9 +373,10 @@ static void darwinPrintSymbol(SymbolicFile &Obj, SymbolListT::iterator I,
         outs() << "(?,?) ";
       break;
     }
-    ErrorOr<section_iterator> SecOrErr =
+    Expected<section_iterator> SecOrErr =
       MachO->getSymbolSection(I->Sym.getRawDataRefImpl());
-    if (SecOrErr.getError()) {
+    if (!SecOrErr) {
+      consumeError(SecOrErr.takeError());
       outs() << "(?,?) ";
       break;
     }
@@ -697,9 +698,11 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
   // OK, this is ELF
   elf_symbol_iterator SymI(I);
 
-  ErrorOr<elf_section_iterator> SecIOrErr = SymI->getSection();
-  if (error(SecIOrErr.getError()))
+  Expected<elf_section_iterator> SecIOrErr = SymI->getSection();
+  if (!SecIOrErr) {
+    consumeError(SecIOrErr.takeError());
     return '?';
+  }
 
   elf_section_iterator SecI = *SecIOrErr;
   if (SecI != Obj.section_end()) {
@@ -759,9 +762,11 @@ static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {
 
   uint32_t Characteristics = 0;
   if (!COFF::isReservedSectionNumber(Symb.getSectionNumber())) {
-    ErrorOr<section_iterator> SecIOrErr = SymI->getSection();
-    if (error(SecIOrErr.getError()))
+    Expected<section_iterator> SecIOrErr = SymI->getSection();
+    if (!SecIOrErr) {
+      consumeError(SecIOrErr.takeError());
       return '?';
+    }
     section_iterator SecI = *SecIOrErr;
     const coff_section *Section = Obj.getCOFFSection(*SecI);
     Characteristics = Section->Characteristics;
@@ -802,9 +807,11 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
   case MachO::N_INDR:
     return 'i';
   case MachO::N_SECT: {
-    ErrorOr<section_iterator> SecOrErr = Obj.getSymbolSection(Symb);
-    if (SecOrErr.getError())
+    Expected<section_iterator> SecOrErr = Obj.getSymbolSection(Symb);
+    if (!SecOrErr) {
+      consumeError(SecOrErr.takeError());
       return 's';
+    }
     section_iterator Sec = *SecOrErr;
     DataRefImpl Ref = Sec->getRawDataRefImpl();
     StringRef SectionName;

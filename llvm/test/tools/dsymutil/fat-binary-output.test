@@ -24,9 +24,7 @@ CHECK:   DW_AT_name{{.*}} "x86_64h_var"
 
 CHECK: Running lipo
 CHECK-NEXT: lipo -create
-CHECK-SAME: [[INPUTS_PATH]]fat-test.dylib.tmp{{......}}.dwarf
-CHECK-SAME: [[INPUTS_PATH]]fat-test.dylib.tmp{{......}}.dwarf
-CHECK-SAME: [[INPUTS_PATH]]fat-test.dylib.tmp{{......}}.dwarf
+CHECK-SAME  [[TMP_PATH:.*?]]fat-test.dylib.tmp{{......}}.dwarf [[TMP_PATH]]fat-test.dylib.tmp{{......}}.dwarf [[TMP_PATH]]fat-test.dylib.tmp{{......}}.dwarf
 CHECK-SAME: -segalign x86_64 20 -segalign i386 20 -segalign x86_64h 20
 CHECK-SAME: -output [[INPUTS_PATH]]fat-test.dylib.dwarf
 

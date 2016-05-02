@@ -774,21 +774,31 @@ static void createIRLevelProfileFlagVariable(Module &M) {
         StringRef(INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR))));
 }
 
-bool PGOInstrumentationGen::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
+static bool InstrumentAllFunctions(
+    Module &M, function_ref<BranchProbabilityInfo &(Function &)> LookupBPI,
+    function_ref<BlockFrequencyInfo &(Function &)> LookupBFI) {
   createIRLevelProfileFlagVariable(M);
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    BranchProbabilityInfo *BPI =
-        &(getAnalysis<BranchProbabilityInfoWrapperPass>(F).getBPI());
-    BlockFrequencyInfo *BFI =
-        &(getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI());
-    instrumentOneFunc(F, &M, BPI, BFI);
+    auto &BPI = LookupBPI(F);
+    auto &BFI = LookupBFI(F);
+    instrumentOneFunc(F, &M, &BPI, &BFI);
   }
   return true;
+}
+
+bool PGOInstrumentationGen::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
+  auto LookupBPI = [this](Function &F) -> BranchProbabilityInfo & {
+    return this->getAnalysis<BranchProbabilityInfoWrapperPass>(F).getBPI();
+  };
+  auto LookupBFI = [this](Function &F) -> BlockFrequencyInfo & {
+    return this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
+  };
+  return InstrumentAllFunctions(M, LookupBPI, LookupBFI);
 }
 
 static void setPGOCountOnFunc(PGOUseFunc &Func,

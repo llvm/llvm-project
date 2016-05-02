@@ -399,6 +399,14 @@ void PassManagerBuilder::populateModulePassManager(
 
   addFunctionSimplificationPasses(MPM);
 
+  // FIXME: This is a HACK! The inliner pass above implicitly creates a CGSCC
+  // pass manager that we are specifically trying to avoid. To prevent this
+  // we must insert a no-op module pass to reset the pass manager.
+  MPM.add(createBarrierNoopPass());
+
+  if (!DisableUnitAtATime)
+    MPM.add(createReversePostOrderFunctionAttrsPass());
+
   // If we are planning to perform ThinLTO later, let's not bloat the code with
   // unrolling/vectorization/... now. We'll first run the inliner + CGSCC passes
   // during ThinLTO and perform the rest of the optimizations afterward.
@@ -410,11 +418,6 @@ void PassManagerBuilder::populateModulePassManager(
     return;
   }
 
-  // FIXME: This is a HACK! The inliner pass above implicitly creates a CGSCC
-  // pass manager that we are specifically trying to avoid. To prevent this
-  // we must insert a no-op module pass to reset the pass manager.
-  MPM.add(createBarrierNoopPass());
-
   // Scheduling LoopVersioningLICM when inlining is over, because after that
   // we may see more accurate aliasing. Reason to run this late is that too
   // early versioning may prevent further inlining due to increase of code
@@ -424,9 +427,6 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createLoopVersioningLICMPass());    // Do LoopVersioningLICM
     MPM.add(createLICMPass());                  // Hoist loop invariants
   }
-
-  if (!DisableUnitAtATime)
-    MPM.add(createReversePostOrderFunctionAttrsPass());
 
   if (!DisableUnitAtATime && OptLevel > 1 && !PrepareForLTO)
     // Remove avail extern fns and globals definitions if we aren't

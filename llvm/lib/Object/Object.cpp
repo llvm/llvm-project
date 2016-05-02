@@ -101,9 +101,14 @@ void LLVMMoveToNextSection(LLVMSectionIteratorRef SI) {
 
 void LLVMMoveToContainingSection(LLVMSectionIteratorRef Sect,
                                  LLVMSymbolIteratorRef Sym) {
-  ErrorOr<section_iterator> SecOrErr = (*unwrap(Sym))->getSection();
-  if (std::error_code ec = SecOrErr.getError())
-    report_fatal_error(ec.message());
+  Expected<section_iterator> SecOrErr = (*unwrap(Sym))->getSection();
+  if (!SecOrErr) {
+   std::string Buf;
+   raw_string_ostream OS(Buf);
+   logAllUnhandledErrors(SecOrErr.takeError(), OS, "");
+   OS.flush();
+   report_fatal_error(Buf);
+  }
   *unwrap(Sect) = *SecOrErr;
 }
 

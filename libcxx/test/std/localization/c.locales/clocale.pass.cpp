@@ -47,6 +47,7 @@
 int main()
 {
     std::lconv lc;
+    ((void)lc); // Prevent unused warning
 #ifndef _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
     static_assert((std::is_same<decltype(std::setlocale(0, "")), char*>::value), "");
 #endif

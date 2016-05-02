@@ -177,7 +177,14 @@ CompilerType::IsFunctionPointerType () const
     if (IsValid())
         return m_type_system->IsFunctionPointerType(m_type);
     return false;
+}
 
+bool
+CompilerType::IsBlockPointerType (CompilerType *function_pointer_type_ptr) const
+{
+    if (IsValid())
+        return m_type_system->IsBlockPointerType(m_type, function_pointer_type_ptr);
+    return 0;
 }
 
 bool

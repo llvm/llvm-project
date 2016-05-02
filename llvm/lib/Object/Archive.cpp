@@ -135,6 +135,21 @@ bool Archive::Child::isThinMember() const {
   return Parent->IsThin && Name != "/" && Name != "//";
 }
 
+ErrorOr<std::string> Archive::Child::getFullName() const {
+  assert(isThinMember());
+  ErrorOr<StringRef> NameOrErr = getName();
+  if (std::error_code EC = NameOrErr.getError())
+    return EC;
+  StringRef Name = *NameOrErr;
+  if (sys::path::is_absolute(Name))
+    return Name;
+
+  SmallString<128> FullName = sys::path::parent_path(
+      Parent->getMemoryBufferRef().getBufferIdentifier());
+  sys::path::append(FullName, Name);
+  return StringRef(FullName);
+}
+
 ErrorOr<StringRef> Archive::Child::getBuffer() const {
   if (!isThinMember()) {
     ErrorOr<uint32_t> Size = getSize();
@@ -142,17 +157,10 @@ ErrorOr<StringRef> Archive::Child::getBuffer() const {
       return EC;
     return StringRef(Data.data() + StartOfFile, Size.get());
   }
-  ErrorOr<StringRef> Name = getName();
-  if (std::error_code EC = Name.getError())
+  ErrorOr<std::string> FullNameOrEr = getFullName();
+  if (std::error_code EC = FullNameOrEr.getError())
     return EC;
-  SmallString<128> FullName;
-  if (sys::path::is_absolute(*Name))
-    FullName = *Name;
-  else {
-    FullName = sys::path::parent_path(
-        Parent->getMemoryBufferRef().getBufferIdentifier());
-    sys::path::append(FullName, *Name);
-  }
+  const std::string &FullName = *FullNameOrEr;
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(FullName);
   if (std::error_code EC = Buf.getError())
     return EC;

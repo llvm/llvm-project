@@ -34,6 +34,11 @@ public:
     return readBytes(Buffer);
   }
 
+  template <typename T> std::error_code readArray(MutableArrayRef<T> Array) {
+    MutableArrayRef<uint8_t> Casted(reinterpret_cast<uint8_t*>(Array.data()), Array.size() * sizeof(T));
+    return readBytes(Casted);
+  }
+
   void setOffset(uint32_t Off) { Offset = Off; }
   uint32_t getOffset() const { return Offset; }
   uint32_t getLength() const { return Stream.getLength(); }

@@ -153,7 +153,9 @@ static std::error_code resolveRelocation(const Dumper::Context &Ctx,
     return EC;
   ResolvedAddress = *ResolvedAddressOrErr;
 
-  ErrorOr<section_iterator> SI = Symbol.getSection();
+  Expected<section_iterator> SI = Symbol.getSection();
+  if (!SI)
+    return errorToErrorCode(SI.takeError());
   ResolvedSection = Ctx.COFF.getCOFFSection(**SI);
   return std::error_code();
 }

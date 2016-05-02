@@ -20,10 +20,9 @@
 // e = getelementptr ..., i64 a
 //
 // This is legal to do if the computations are marked with either nsw or nuw
-// markers.
-// Moreover, the current heuristic is simple: it does not create new sext
-// operations, i.e., it gives up when a sext would have forked (e.g., if
-// a = add i32 b, c, two sexts are required to promote the computation).
+// markers. Moreover, the current heuristic is simple: it does not create new
+// sext operations, i.e., it gives up when a sext would have forked (e.g., if a
+// = add i32 b, c, two sexts are required to promote the computation).
 //
 // FIXME: This pass may be useful for other targets too.
 // ===---------------------------------------------------------------------===//

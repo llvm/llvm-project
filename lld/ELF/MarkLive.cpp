@@ -133,7 +133,7 @@ template <class ELFT> static bool isReserved(InputSectionBase<ELFT> *Sec) {
 // This is the main function of the garbage collector.
 // Starting from GC-root sections, this function visits all reachable
 // sections to set their "Live" bits.
-template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
+template <class ELFT> void elf::markLive() {
   typedef typename ELFT::uint uintX_t;
   SmallVector<InputSection<ELFT> *, 256> Q;
 
@@ -160,20 +160,21 @@ template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
   // Add GC root symbols.
   if (Config->EntrySym)
     MarkSymbol(Config->EntrySym->body());
-  MarkSymbol(Symtab->find(Config->Init));
-  MarkSymbol(Symtab->find(Config->Fini));
+  MarkSymbol(Symtab<ELFT>::X->find(Config->Init));
+  MarkSymbol(Symtab<ELFT>::X->find(Config->Fini));
   for (StringRef S : Config->Undefined)
-    MarkSymbol(Symtab->find(S));
+    MarkSymbol(Symtab<ELFT>::X->find(S));
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  for (const Symbol *S : Symtab->getSymbols())
+  for (const Symbol *S : Symtab<ELFT>::X->getSymbols())
     if (S->includeInDynsym())
       MarkSymbol(S->body());
 
   // Preserve special sections and those which are specified in linker
   // script KEEP command.
-  for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab->getObjectFiles())
+  for (const std::unique_ptr<ObjectFile<ELFT>> &F :
+       Symtab<ELFT>::X->getObjectFiles())
     for (InputSectionBase<ELFT> *Sec : F->getSections())
       if (Sec && Sec != &InputSection<ELFT>::Discarded) {
         // .eh_frame is always marked as live now, but also it can reference to
@@ -190,7 +191,7 @@ template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
     forEachSuccessor<ELFT>(Q.pop_back_val(), Enqueue);
 }
 
-template void elf::markLive<ELF32LE>(SymbolTable<ELF32LE> *);
-template void elf::markLive<ELF32BE>(SymbolTable<ELF32BE> *);
-template void elf::markLive<ELF64LE>(SymbolTable<ELF64LE> *);
-template void elf::markLive<ELF64BE>(SymbolTable<ELF64BE> *);
+template void elf::markLive<ELF32LE>();
+template void elf::markLive<ELF32BE>();
+template void elf::markLive<ELF64LE>();
+template void elf::markLive<ELF64BE>();

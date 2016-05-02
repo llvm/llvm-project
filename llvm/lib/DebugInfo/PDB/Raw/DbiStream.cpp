@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
+#include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
@@ -70,7 +71,7 @@ struct DbiStream::HeaderInfo {
   ulittle32_t Reserved; // Pad to 64 bytes
 };
 
-DbiStream::DbiStream(PDBFile &File) : Pdb(File), Stream(3, File) {
+DbiStream::DbiStream(PDBFile &File) : Pdb(File), Stream(StreamDBI, File) {
   static_assert(sizeof(HeaderInfo) == 64, "Invalid HeaderInfo size!");
 }
 
@@ -147,6 +148,9 @@ std::error_code DbiStream::reload() {
 
   if (Reader.bytesRemaining() > 0)
     return std::make_error_code(std::errc::illegal_byte_sequence);
+
+  StreamReader ECReader(ECSubstream);
+  ECNames.load(ECReader);
 
   return std::error_code();
 }

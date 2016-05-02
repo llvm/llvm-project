@@ -436,9 +436,12 @@ void MachODebugMapParser::loadMainBinarySymbols(
   section_iterator Section = MainBinary.section_end();
   MainBinarySymbolAddresses.clear();
   for (const auto &Sym : MainBinary.symbols()) {
-    ErrorOr<SymbolRef::Type> TypeOrErr = Sym.getType();
-    if (!TypeOrErr)
+    Expected<SymbolRef::Type> TypeOrErr = Sym.getType();
+    if (!TypeOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(TypeOrErr.takeError());
       continue;
+    }
     SymbolRef::Type Type = *TypeOrErr;
     // Skip undefined and STAB entries.
     if ((Type & SymbolRef::ST_Debug) || (Type & SymbolRef::ST_Unknown))
@@ -449,9 +452,12 @@ void MachODebugMapParser::loadMainBinarySymbols(
     // addresses should be fetched for the debug map.
     if (!(Sym.getFlags() & SymbolRef::SF_Global))
       continue;
-    ErrorOr<section_iterator> SectionOrErr = Sym.getSection();
-    if (!SectionOrErr)
+    Expected<section_iterator> SectionOrErr = Sym.getSection();
+    if (!SectionOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(SectionOrErr.takeError());
       continue;
+    }
     Section = *SectionOrErr;
     if (Section == MainBinary.section_end() || Section->isText())
       continue;

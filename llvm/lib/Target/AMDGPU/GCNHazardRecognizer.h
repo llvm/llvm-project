@@ -38,8 +38,10 @@ class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
                             std::function<bool(MachineInstr*)> IsHazardDef =
                             [](MachineInstr*) {return true;});
 
+  int checkSMEMSoftClauseHazards(MachineInstr *SMEM);
   int checkSMRDHazards(MachineInstr *SMRD);
   int checkVMEMHazards(MachineInstr* VMEM);
+  int checkDPPHazards(MachineInstr *DPP);
 public:
   GCNHazardRecognizer(const MachineFunction &MF);
   // We can only issue one instruction per cycle.

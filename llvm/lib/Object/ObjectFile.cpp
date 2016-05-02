@@ -29,9 +29,12 @@ ObjectFile::ObjectFile(unsigned int Type, MemoryBufferRef Source)
     : SymbolicFile(Type, Source) {}
 
 bool SectionRef::containsSymbol(SymbolRef S) const {
-  ErrorOr<section_iterator> SymSec = S.getSection();
-  if (!SymSec)
+  Expected<section_iterator> SymSec = S.getSection();
+  if (!SymSec) {
+    // TODO: Actually report errors helpfully.
+    consumeError(SymSec.takeError());
     return false;
+  }
   return *this == **SymSec;
 }
 

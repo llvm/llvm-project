@@ -20,6 +20,11 @@
 ; EMPTY:      NameStream: 13
 ; EMPTY-NEXT: NameStreamSignature: effeeffe
 ; EMPTY-NEXT: NameStreamVersion: 1
+; EMPTY-NEXT: Name Count: 4
+; EMPTY-NEXT: Name: d:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)
+; EMPTY-NEXT: Name:
+; EMPTY-NEXT: Name: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; EMPTY-NEXT: Name:
 
 ; EMPTY:      Dbi Version: 19990903
 ; EMPTY-NEXT: Age: 1
@@ -76,6 +81,16 @@ BIG-NEXT: Guid: {880ECC89-DF81-0B4F-839C-58CBD052E937}
 BIG:      NameStream: 13
 BIG-NEXT: NameStreamSignature: effeeffe
 BIG-NEXT: NameStreamVersion: 1
+BIG-NEXT: Name Count: 92
+BIG-NEXT: Name: f:\dd\vctools\crt\vcruntime\inc\vcruntime_startup.h
+BIG-NEXT: Name: f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
+BIG-NEXT: Name: f:\dd\vctools\langapi\include\isa_availability.h
+BIG-NEXT: Name:
+BIG-NEXT: Name: $T0 $ebp = $T2 $esp = $T1 .raSearchStart = $eip $T1 ^ = $ebp $T0 = $esp $T1 4 + =
+BIG-NEXT: Name:
+BIG-NEXT: Name: f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
+BIG-NEXT: Name: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 40 - ^ =  $23 $T0 44 - ^ =  $24 $T0 48 - ^ =
+BIG-NEXT: Name: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 16 - ^ =  $24 $T0 20 - ^ =
 
 BIG:      Dbi Version: 19990903
 BIG-NEXT: Age: 1

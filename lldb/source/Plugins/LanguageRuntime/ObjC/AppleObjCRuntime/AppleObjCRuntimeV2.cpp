@@ -228,7 +228,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
     uint32_t idx = 0;
     DEBUG_PRINTF ("objc_opt_ro_ptr = %p\n", objc_opt_ro_ptr);
     DEBUG_PRINTF ("class_infos_ptr = %p\n", class_infos_ptr);
-    DEBUG_PRINTF ("class_infos_byte_size = %u (%" PRIu64 " class infos)\n", class_infos_byte_size, (size_t)(class_infos_byte_size/sizeof(ClassInfo)));
+    DEBUG_PRINTF ("class_infos_byte_size = %u (%llu class infos)\n", class_infos_byte_size, (uint64_t)(class_infos_byte_size/sizeof(ClassInfo)));
     if (objc_opt_ro_ptr)
     {
         const objc_opt_t *objc_opt = (objc_opt_t *)objc_opt_ro_ptr;
@@ -257,6 +257,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
             else
                 clsopt = (const objc_clsopt_t*)((uint8_t *)objc_opt + objc_opt->clsopt_offset);
             const size_t max_class_infos = class_infos_byte_size/sizeof(ClassInfo);
+            DEBUG_PRINTF("max_class_infos = %llu\n", (uint64_t)max_class_infos);
             ClassInfo *class_infos = (ClassInfo *)class_infos_ptr;
             int32_t invalidEntryOffset = 0;
             // this is safe to do because the version field order is invariant
@@ -268,13 +269,21 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
             DEBUG_PRINTF ("clsopt->capacity = %u\n", clsopt->capacity);
             DEBUG_PRINTF ("clsopt->mask = 0x%8.8x\n", clsopt->mask);
             DEBUG_PRINTF ("classOffsets = %p\n", classOffsets);
+            DEBUG_PRINTF("invalidEntryOffset = %d\n", invalidEntryOffset);
             for (uint32_t i=0; i<clsopt->capacity; ++i)
             {
                 const int32_t clsOffset = classOffsets[i].clsOffset;
+                DEBUG_PRINTF("clsOffset[%u] = %u\n", i, clsOffset);
                 if (clsOffset & 1)
+                {
+                    DEBUG_PRINTF("clsOffset & 1\n");
                     continue; // duplicate
+                }
                 else if (clsOffset == invalidEntryOffset)
+                {
+                    DEBUG_PRINTF("clsOffset == invalidEntryOffset\n");
                     continue; // invalid offset
+                }
                 
                 if (class_infos && idx < max_class_infos)
                 {
@@ -287,6 +296,10 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
                     for (unsigned char c = *s; c; c = *++s)
                         h = ((h << 5) + h) + c;
                     class_infos[idx].hash = h;
+                }
+                else
+                {
+                    DEBUG_PRINTF("not(class_infos && idx < max_class_infos)\n");
                 }
                 ++idx;
             }

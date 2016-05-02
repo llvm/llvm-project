@@ -59,3 +59,8 @@ std::error_code ByteStream::readBytes(uint32_t Offset,
 }
 
 uint32_t ByteStream::getLength() const { return Data.size(); }
+
+StringRef ByteStream::str() const {
+  const char *CharData = reinterpret_cast<const char *>(Data.data());
+  return StringRef(CharData, Data.size());
+}

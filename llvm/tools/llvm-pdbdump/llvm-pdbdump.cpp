@@ -39,6 +39,7 @@
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
+#include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
 #include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
@@ -147,19 +148,6 @@ cl::opt<bool> NoEnumDefs("no-enum-definitions",
                          cl::cat(FilterCategory));
 }
 
-
-static void reportError(StringRef Input, StringRef Message) {
-  if (Input == "-")
-    Input = "<stdin>";
-  errs() << Input << ": " << Message << "\n";
-  errs().flush();
-  exit(1);
-}
-
-static void reportError(StringRef Input, std::error_code EC) {
-  reportError(Input, EC.message());
-}
-
 static void dumpStructure(RawSession &RS) {
   PDBFile &File = RS.getPDBFile();
 
@@ -253,19 +241,15 @@ static void dumpStructure(RawSession &RS) {
 
     outs() << "NameStream: " << NameStreamIndex << '\n';
 
-    // The name stream appears to start with a signature and version.
-    uint32_t NameStreamSignature;
-    Reader.readInteger(NameStreamSignature);
+    NameHashTable NameTable;
+    NameTable.load(Reader);
     outs() << "NameStreamSignature: ";
-    outs().write_hex(NameStreamSignature) << '\n';
-
-    uint32_t NameStreamVersion;
-    Reader.readInteger(NameStreamVersion);
-    outs() << "NameStreamVersion: " << NameStreamVersion << '\n';
-
-    // We only support this particular version of the name stream.
-    if (NameStreamSignature != 0xeffeeffe || NameStreamVersion != 1)
-      reportError("", std::make_error_code(std::errc::not_supported));
+    outs().write_hex(NameTable.getSignature()) << '\n';
+    outs() << "NameStreamVersion: " << NameTable.getHashVersion() << '\n';
+    outs() << "Name Count: " << NameTable.getNameCount() << '\n';
+    for (uint32_t ID : NameTable.name_ids()) {
+      outs() << "Name: " << NameTable.getStringForID(ID) << '\n';
+    }
   }
 
   DbiStream &DS = File.getPDBDbiStream();

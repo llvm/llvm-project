@@ -1,6 +1,6 @@
-//=----------------------- InterleavedAccessPass.cpp -----------------------==//
+//===--------------------- InterleavedAccessPass.cpp ----------------------===//
 //
-// The LLVM Compiler Infrastructure
+//                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
@@ -8,16 +8,18 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the Interleaved Access pass, which identifies
-// interleaved memory accesses and transforms into target specific intrinsics.
+// interleaved memory accesses and transforms them into target specific
+// intrinsics.
 //
 // An interleaved load reads data from memory into several vectors, with
 // DE-interleaving the data on a factor. An interleaved store writes several
 // vectors to memory with RE-interleaving the data on a factor.
 //
-// As interleaved accesses are hard to be identified in CodeGen (mainly because
-// the VECTOR_SHUFFLE DAG node is quite different from the shufflevector IR),
-// we identify and transform them to intrinsics in this pass. So the intrinsics
-// can be easily matched into target specific instructions later in CodeGen.
+// As interleaved accesses are difficult to identified in CodeGen (mainly
+// because the VECTOR_SHUFFLE DAG node is quite different from the shufflevector
+// IR), we identify and transform them to intrinsics in this pass so the
+// intrinsics can be easily matched into target specific instructions later in
+// CodeGen.
 //
 // E.g. An interleaved load (Factor = 2):
 //        %wide.vec = load <8 x i32>, <8 x i32>* %ptr

@@ -23,8 +23,8 @@ define void @lds_atomic_cmpxchg_ret_i32_offset(i32 addrspace(1)* %out, i32 addrs
 ; FUNC-LABEL: {{^}}lds_atomic_cmpxchg_ret_i64_offset:
 ; SICI: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
 ; SICI: s_load_dwordx2 s{{\[}}[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0xd
-; VI: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
-; VI: s_load_dwordx2 s{{\[}}[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x34
+; VI-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
+; VI-DAG: s_load_dwordx2 s{{\[}}[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x34
 ; GCN-DAG: v_mov_b32_e32 v[[LOVCMP:[0-9]+]], 7
 ; GCN-DAG: v_mov_b32_e32 v[[HIVCMP:[0-9]+]], 0
 ; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
@@ -75,8 +75,8 @@ define void @lds_atomic_cmpxchg_noret_i32_offset(i32 addrspace(3)* %ptr, i32 %sw
 ; FUNC-LABEL: {{^}}lds_atomic_cmpxchg_noret_i64_offset:
 ; SICI: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x9
 ; SICI: s_load_dwordx2 s{{\[}}[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0xb
-; VI: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x24
-; VI: s_load_dwordx2 s{{\[}}[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x2c
+; VI-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x24
+; VI-DAG: s_load_dwordx2 s{{\[}}[[LOSWAP:[0-9]+]]:[[HISWAP:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x2c
 ; GCN-DAG: v_mov_b32_e32 v[[LOVCMP:[0-9]+]], 7
 ; GCN-DAG: v_mov_b32_e32 v[[HIVCMP:[0-9]+]], 0
 ; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]

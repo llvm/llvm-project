@@ -2774,38 +2774,12 @@ let Predicates = [HasAVX] in {
                                          SSEPackedSingle>, PS, VEX, VEX_L;
   defm VMOVMSKPDY : sse12_extr_sign_mask<VR256, v4f64, "movmskpd",
                                          SSEPackedDouble>, PD, VEX, VEX_L;
-
-  def : Pat<(i32 (X86fgetsign FR32:$src)),
-            (VMOVMSKPSrr (COPY_TO_REGCLASS FR32:$src, VR128))>;
-  def : Pat<(i64 (X86fgetsign FR32:$src)),
-            (SUBREG_TO_REG (i64 0),
-             (VMOVMSKPSrr (COPY_TO_REGCLASS FR32:$src, VR128)), sub_32bit)>;
-  def : Pat<(i32 (X86fgetsign FR64:$src)),
-            (VMOVMSKPDrr (COPY_TO_REGCLASS FR64:$src, VR128))>;
-  def : Pat<(i64 (X86fgetsign FR64:$src)),
-            (SUBREG_TO_REG (i64 0),
-             (VMOVMSKPDrr (COPY_TO_REGCLASS FR64:$src, VR128)), sub_32bit)>;
 }
 
 defm MOVMSKPS : sse12_extr_sign_mask<VR128, v4f32, "movmskps",
                                      SSEPackedSingle>, PS;
 defm MOVMSKPD : sse12_extr_sign_mask<VR128, v2f64, "movmskpd",
                                      SSEPackedDouble>, PD;
-
-def : Pat<(i32 (X86fgetsign FR32:$src)),
-          (MOVMSKPSrr (COPY_TO_REGCLASS FR32:$src, VR128))>,
-      Requires<[UseSSE1]>;
-def : Pat<(i64 (X86fgetsign FR32:$src)),
-          (SUBREG_TO_REG (i64 0),
-           (MOVMSKPSrr (COPY_TO_REGCLASS FR32:$src, VR128)), sub_32bit)>,
-      Requires<[UseSSE1]>;
-def : Pat<(i32 (X86fgetsign FR64:$src)),
-          (MOVMSKPDrr (COPY_TO_REGCLASS FR64:$src, VR128))>,
-      Requires<[UseSSE2]>;
-def : Pat<(i64 (X86fgetsign FR64:$src)),
-          (SUBREG_TO_REG (i64 0),
-           (MOVMSKPDrr (COPY_TO_REGCLASS FR64:$src, VR128)), sub_32bit)>,
-      Requires<[UseSSE2]>;
 
 //===---------------------------------------------------------------------===//
 // SSE2 - Packed Integer Logical Instructions

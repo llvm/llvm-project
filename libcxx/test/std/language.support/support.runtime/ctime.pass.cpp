@@ -23,10 +23,13 @@
 int main()
 {
     std::clock_t c = 0;
-    ((void)c);
     std::size_t s = 0;
     std::time_t t = 0;
     std::tm tm = {0};
+    ((void)c); // Prevent unused warning
+    ((void)s); // Prevent unused warning
+    ((void)t); // Prevent unused warning
+    ((void)tm); // Prevent unused warning
     static_assert((std::is_same<decltype(std::clock()), std::clock_t>::value), "");
     static_assert((std::is_same<decltype(std::difftime(t,t)), double>::value), "");
     static_assert((std::is_same<decltype(std::mktime(&tm)), std::time_t>::value), "");
@@ -39,5 +42,7 @@ int main()
 #endif
     char* c1 = 0;
     const char* c2 = 0;
+    ((void)c1); // Prevent unused warning
+    ((void)c2); // Prevent unused warning
     static_assert((std::is_same<decltype(std::strftime(c1,s,c2,&tm)), std::size_t>::value), "");
 }

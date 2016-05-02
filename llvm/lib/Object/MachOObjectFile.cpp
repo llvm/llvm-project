@@ -508,7 +508,7 @@ uint64_t MachOObjectFile::getCommonSymbolSizeImpl(DataRefImpl DRI) const {
   return getNValue(DRI);
 }
 
-ErrorOr<SymbolRef::Type>
+Expected<SymbolRef::Type>
 MachOObjectFile::getSymbolType(DataRefImpl Symb) const {
   MachO::nlist_base Entry = getSymbolTableEntryBase(this, Symb);
   uint8_t n_type = Entry.n_type;
@@ -521,9 +521,9 @@ MachOObjectFile::getSymbolType(DataRefImpl Symb) const {
     case MachO::N_UNDF :
       return SymbolRef::ST_Unknown;
     case MachO::N_SECT :
-      ErrorOr<section_iterator> SecOrError = getSymbolSection(Symb);
+      Expected<section_iterator> SecOrError = getSymbolSection(Symb);
       if (!SecOrError)
-        return SecOrError.getError();
+        return SecOrError.takeError();
       section_iterator Sec = *SecOrError;
       if (Sec->isData() || Sec->isBSS())
         return SymbolRef::ST_Data;
@@ -571,7 +571,7 @@ uint32_t MachOObjectFile::getSymbolFlags(DataRefImpl DRI) const {
   return Result;
 }
 
-ErrorOr<section_iterator>
+Expected<section_iterator>
 MachOObjectFile::getSymbolSection(DataRefImpl Symb) const {
   MachO::nlist_base Entry = getSymbolTableEntryBase(this, Symb);
   uint8_t index = Entry.n_sect;
@@ -581,9 +581,10 @@ MachOObjectFile::getSymbolSection(DataRefImpl Symb) const {
   DataRefImpl DRI;
   DRI.d.a = index - 1;
   if (DRI.d.a >= Sections.size()){
-    // Diagnostic("bad section index (" + index + ") for symbol at index " +
-    //  SymbolIndex);
-    return object_error::parse_failed;
+    return malformedError(*this, Twine("truncated or malformed object (bad "
+                          "section index: ") + Twine((int)index) + Twine(" for "
+                          "symbol at index ") + Twine(getSymbolIndex(Symb)) +
+                          Twine(")"));
   }
   return section_iterator(SectionRef(DRI, this));
 }

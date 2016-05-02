@@ -33,6 +33,7 @@ add_pdb_impl_folder(Raw
   Raw/PDBFile.cpp
   Raw/DbiStream.cpp
   Raw/InfoStream.cpp
+  Raw/NameHashTable.cpp
   Raw/NameMap.cpp
   Raw/RawSession.cpp
   Raw/StreamReader.cpp)

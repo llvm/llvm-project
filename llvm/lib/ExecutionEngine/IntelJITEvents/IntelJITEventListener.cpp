@@ -113,9 +113,12 @@ void IntelJITEventListener::NotifyObjectEmitted(
     std::vector<LineNumberInfo> LineInfo;
     std::string SourceFileName;
 
-    ErrorOr<SymbolRef::Type> SymTypeOrErr = Sym.getType();
-    if (!SymTypeOrErr)
+    Expected<SymbolRef::Type> SymTypeOrErr = Sym.getType();
+    if (!SymTypeOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(SymTypeOrErr.takeError());
       continue;
+    }
     SymbolRef::Type SymType = *SymTypeOrErr;
     if (SymType != SymbolRef::ST_Function)
       continue;

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs< %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s | FileCheck -check-prefix=SI %s
 
 ; SI-LABEL: {{^}}unaligned_load_store_i16_local:
@@ -56,6 +56,29 @@ define void @unaligned_load_store_i32_global(i32 addrspace(1)* %p, i32 addrspace
   ret void
 }
 
+; SI-LABEL: {{^}}align2_load_store_i32_global:
+; SI: buffer_load_ushort
+; SI: buffer_load_ushort
+; SI: buffer_store_short
+; SI: buffer_store_short
+define void @align2_load_store_i32_global(i32 addrspace(1)* %p, i32 addrspace(1)* %r) nounwind {
+  %v = load i32, i32 addrspace(1)* %p, align 2
+  store i32 %v, i32 addrspace(1)* %r, align 2
+  ret void
+}
+
+; SI-LABEL: {{^}}align2_load_store_i32_local:
+; SI: ds_read_u16
+; SI: ds_read_u16
+; SI: ds_write_b16
+; SI: ds_write_b16
+define void @align2_load_store_i32_local(i32 addrspace(3)* %p, i32 addrspace(3)* %r) nounwind {
+  %v = load i32, i32 addrspace(3)* %p, align 2
+  store i32 %v, i32 addrspace(3)* %r, align 2
+  ret void
+}
+
+; FIXME: Unnecessary packing and unpacking of bytes.
 ; SI-LABEL: {{^}}unaligned_load_store_i64_local:
 ; SI: ds_read_u8
 ; SI: ds_read_u8
@@ -65,18 +88,88 @@ define void @unaligned_load_store_i32_global(i32 addrspace(1)* %p, i32 addrspace
 ; SI: ds_read_u8
 ; SI: ds_read_u8
 ; SI: ds_read_u8
+
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
 ; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+
 ; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+
 ; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+
 ; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+
 ; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+
 ; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+
 ; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
 ; SI: ds_write_b8
 ; SI: s_endpgm
 define void @unaligned_load_store_i64_local(i64 addrspace(3)* %p, i64 addrspace(3)* %r) {
   %v = load i64, i64 addrspace(3)* %p, align 1
   store i64 %v, i64 addrspace(3)* %r, align 1
+  ret void
+}
+
+; SI-LABEL: {{^}}unaligned_load_store_v2i32_local:
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+; SI: ds_read_u8
+
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+
+; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+
+; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+
+; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+
+; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+
+; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+
+; SI: ds_write_b8
+; XSI-NOT: v_or_b32
+; XSI-NOT: v_lshl
+; SI: ds_write_b8
+; SI: s_endpgm
+define void @unaligned_load_store_v2i32_local(<2 x i32> addrspace(3)* %p, <2 x i32> addrspace(3)* %r) {
+  %v = load <2 x i32>, <2 x i32> addrspace(3)* %p, align 1
+  store <2 x i32> %v, <2 x i32> addrspace(3)* %r, align 1
   ret void
 }
 
@@ -89,6 +182,10 @@ define void @unaligned_load_store_i64_local(i64 addrspace(3)* %p, i64 addrspace(
 ; SI: buffer_load_ubyte
 ; SI: buffer_load_ubyte
 ; SI: buffer_load_ubyte
+
+; XSI-NOT: v_or_
+; XSI-NOT: v_lshl
+
 ; SI: buffer_store_byte
 ; SI: buffer_store_byte
 ; SI: buffer_store_byte

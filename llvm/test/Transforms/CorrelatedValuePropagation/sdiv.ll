@@ -11,7 +11,7 @@ for.cond:                                         ; preds = %for.body, %entry
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-; CHECK: %div1 = udiv i32 %j.0, 2 
+; CHECK: %div1 = udiv i32 %j.0, 2
   %div = sdiv i32 %j.0, 2
   br label %for.cond
 
@@ -30,7 +30,7 @@ for.cond:                                         ; preds = %for.body, %entry
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-; CHECK: %div = sdiv i32 %j.0, 2 
+; CHECK: %div = sdiv i32 %j.0, 2
   %div = sdiv i32 %j.0, 2
   br label %for.cond
 
@@ -44,11 +44,11 @@ entry:
   %cmp = icmp sgt i32 %n, 1
   br i1 %cmp, label %bb, label %exit
 
-bb:                                         
+bb:
 ; CHECK: %div1 = udiv i32 %n, 2 
   %div = sdiv i32 %n, 2
   br label %exit
 
-exit:                                         
+exit:
   ret void
 }

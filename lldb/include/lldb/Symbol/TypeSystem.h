@@ -210,6 +210,9 @@ public:
     IsFunctionPointerType (lldb::opaque_compiler_type_t type) = 0;
     
     virtual bool
+    IsBlockPointerType (lldb::opaque_compiler_type_t type, CompilerType *function_pointer_type_ptr) = 0;
+    
+    virtual bool
     IsIntegerType (lldb::opaque_compiler_type_t type, bool &is_signed) = 0;
     
     virtual bool

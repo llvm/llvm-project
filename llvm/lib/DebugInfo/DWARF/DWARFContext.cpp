@@ -763,7 +763,17 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
           }
           SymAddr = *SymAddrOrErr;
           // Also remember what section this symbol is in for later
-          RSec = *Sym->getSection();
+          auto SectOrErr = Sym->getSection();
+          if (!SectOrErr) {
+            std::string Buf;
+            raw_string_ostream OS(Buf);
+            logAllUnhandledErrors(SectOrErr.takeError(), OS, "");
+            OS.flush();
+            errs() << "error: failed to get symbol section: "
+                   << Buf << '\n';
+            continue;
+          }
+          RSec = *SectOrErr;
         } else if (auto *MObj = dyn_cast<MachOObjectFile>(&Obj)) {
           // MachO also has relocations that point to sections and
           // scattered relocations.

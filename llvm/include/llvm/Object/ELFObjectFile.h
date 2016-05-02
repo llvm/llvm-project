@@ -200,10 +200,10 @@ protected:
   uint32_t getSymbolFlags(DataRefImpl Symb) const override;
   uint8_t getSymbolOther(DataRefImpl Symb) const override;
   uint8_t getSymbolELFType(DataRefImpl Symb) const override;
-  ErrorOr<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
-  ErrorOr<section_iterator> getSymbolSection(const Elf_Sym *Symb,
-                                             const Elf_Shdr *SymTab) const;
-  ErrorOr<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
+  Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
+  Expected<section_iterator> getSymbolSection(const Elf_Sym *Symb,
+                                              const Elf_Shdr *SymTab) const;
+  Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
 
   void moveSectionNext(DataRefImpl &Sec) const override;
   std::error_code getSectionName(DataRefImpl Sec,
@@ -440,7 +440,7 @@ uint8_t ELFObjectFile<ELFT>::getSymbolELFType(DataRefImpl Symb) const {
 }
 
 template <class ELFT>
-ErrorOr<SymbolRef::Type>
+Expected<SymbolRef::Type>
 ELFObjectFile<ELFT>::getSymbolType(DataRefImpl Symb) const {
   const Elf_Sym *ESym = getSymbol(Symb);
 
@@ -512,12 +512,12 @@ uint32_t ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
 }
 
 template <class ELFT>
-ErrorOr<section_iterator>
+Expected<section_iterator>
 ELFObjectFile<ELFT>::getSymbolSection(const Elf_Sym *ESym,
                                       const Elf_Shdr *SymTab) const {
   ErrorOr<const Elf_Shdr *> ESecOrErr = EF.getSection(ESym, SymTab, ShndxTable);
   if (std::error_code EC = ESecOrErr.getError())
-    return EC;
+    return errorCodeToError(EC);
 
   const Elf_Shdr *ESec = *ESecOrErr;
   if (!ESec)
@@ -529,7 +529,7 @@ ELFObjectFile<ELFT>::getSymbolSection(const Elf_Sym *ESym,
 }
 
 template <class ELFT>
-ErrorOr<section_iterator>
+Expected<section_iterator>
 ELFObjectFile<ELFT>::getSymbolSection(DataRefImpl Symb) const {
   const Elf_Sym *Sym = getSymbol(Symb);
   const Elf_Shdr *SymTab = *EF.getSection(Symb.d.a);

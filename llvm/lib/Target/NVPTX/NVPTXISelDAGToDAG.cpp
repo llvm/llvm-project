@@ -2062,61 +2062,33 @@ SDNode *NVPTXDAGToDAGISel::SelectLDGLDU(SDNode *N) {
   //
   //   i32,ch = load<LD1[%data1(addrspace=1)], zext from i8> t0, t7, undef:i64
   //
-  // Since we load an i8 value, the matching logic above will have selected an
-  // LDG instruction that reads i8 and stores it in an i16 register (NVPTX does
-  // not expose 8-bit registers):
-  //
-  //   i16,ch = INT_PTX_LDG_GLOBAL_i8areg64 t7, t0
-  //
-  // To get the correct type in this case, truncate back to i8 and then extend
-  // to the original load type.
+  // In this case, the matching logic above will select a load for the original
+  // memory type (in this case, i8) and our types will not match (the node needs
+  // to return an i32 in this case). Our LDG/LDU nodes do not support the
+  // concept of sign-/zero-extension, so emulate it here by adding an explicit
+  // CVT instruction. Ptxas should clean up any redundancies here.
+
   EVT OrigType = N->getValueType(0);
-  LoadSDNode *LDSD = dyn_cast<LoadSDNode>(N);
-  if (LDSD && EltVT == MVT::i8 && OrigType.getScalarSizeInBits() >= 32) {
-    unsigned CvtOpc = 0;
+  LoadSDNode *LdNode = dyn_cast<LoadSDNode>(N);
 
-    switch (LDSD->getExtensionType()) {
-    default:
-      llvm_unreachable("An extension is required for i8 loads");
-      break;
-    case ISD::SEXTLOAD:
-      switch (OrigType.getSimpleVT().SimpleTy) {
-      default:
-        llvm_unreachable("Unhandled integer load type");
-        break;
-      case MVT::i32:
-        CvtOpc = NVPTX::CVT_s32_s8;
-        break;
-      case MVT::i64:
-        CvtOpc = NVPTX::CVT_s64_s8;
-        break;
-      }
-      break;
-    case ISD::EXTLOAD:
-    case ISD::ZEXTLOAD:
-      switch (OrigType.getSimpleVT().SimpleTy) {
-      default:
-        llvm_unreachable("Unhandled integer load type");
-        break;
-      case MVT::i32:
-        CvtOpc = NVPTX::CVT_u32_u8;
-        break;
-      case MVT::i64:
-        CvtOpc = NVPTX::CVT_u64_u8;
-        break;
-      }
-      break;
-    }
+  if (OrigType != EltVT && LdNode) {
+    // We have an extending-load. The instruction we selected operates on the
+    // smaller type, but the SDNode we are replacing has the larger type. We
+    // need to emit a CVT to make the types match.
+    bool IsSigned = LdNode->getExtensionType() == ISD::SEXTLOAD;
+    unsigned CvtOpc = GetConvertOpcode(OrigType.getSimpleVT(),
+                                       EltVT.getSimpleVT(), IsSigned);
 
-    // For each output value, truncate to i8 (since the upper 8 bits are
-    // undefined) and then extend to the desired type.
+    // For each output value, apply the manual sign/zero-extension and make sure
+    // all users of the load go through that CVT.
     for (unsigned i = 0; i != NumElts; ++i) {
       SDValue Res(LD, i);
       SDValue OrigVal(N, i);
 
       SDNode *CvtNode =
         CurDAG->getMachineNode(CvtOpc, DL, OrigType, Res,
-                               CurDAG->getTargetConstant(NVPTX::PTXCvtMode::NONE, DL, MVT::i32));
+                               CurDAG->getTargetConstant(NVPTX::PTXCvtMode::NONE,
+                                                         DL, MVT::i32));
       ReplaceUses(OrigVal, SDValue(CvtNode, 0));
     }
   }
@@ -5198,4 +5170,58 @@ bool NVPTXDAGToDAGISel::SelectInlineAsmMemoryOperand(
     break;
   }
   return true;
+}
+
+/// GetConvertOpcode - Returns the CVT_ instruction opcode that implements a
+/// conversion from \p SrcTy to \p DestTy.
+unsigned NVPTXDAGToDAGISel::GetConvertOpcode(MVT DestTy, MVT SrcTy,
+                                             bool IsSigned) {
+  switch (SrcTy.SimpleTy) {
+  default:
+    llvm_unreachable("Unhandled source type");
+  case MVT::i8:
+    switch (DestTy.SimpleTy) {
+    default:
+      llvm_unreachable("Unhandled dest type");
+    case MVT::i16:
+      return IsSigned ? NVPTX::CVT_s16_s8 : NVPTX::CVT_u16_u8;
+    case MVT::i32:
+      return IsSigned ? NVPTX::CVT_s32_s8 : NVPTX::CVT_u32_u8;
+    case MVT::i64:
+      return IsSigned ? NVPTX::CVT_s64_s8 : NVPTX::CVT_u64_u8;
+    }
+  case MVT::i16:
+    switch (DestTy.SimpleTy) {
+    default:
+      llvm_unreachable("Unhandled dest type");
+    case MVT::i8:
+      return IsSigned ? NVPTX::CVT_s8_s16 : NVPTX::CVT_u8_u16;
+    case MVT::i32:
+      return IsSigned ? NVPTX::CVT_s32_s16 : NVPTX::CVT_u32_u16;
+    case MVT::i64:
+      return IsSigned ? NVPTX::CVT_s64_s16 : NVPTX::CVT_u64_u16;
+    }
+  case MVT::i32:
+    switch (DestTy.SimpleTy) {
+    default:
+      llvm_unreachable("Unhandled dest type");
+    case MVT::i8:
+      return IsSigned ? NVPTX::CVT_s8_s32 : NVPTX::CVT_u8_u32;
+    case MVT::i16:
+      return IsSigned ? NVPTX::CVT_s16_s32 : NVPTX::CVT_u16_u32;
+    case MVT::i64:
+      return IsSigned ? NVPTX::CVT_s64_s32 : NVPTX::CVT_u64_u32;
+    }
+  case MVT::i64:
+    switch (DestTy.SimpleTy) {
+    default:
+      llvm_unreachable("Unhandled dest type");
+    case MVT::i8:
+      return IsSigned ? NVPTX::CVT_s8_s64 : NVPTX::CVT_u8_u64;
+    case MVT::i16:
+      return IsSigned ? NVPTX::CVT_s16_s64 : NVPTX::CVT_u16_u64;
+    case MVT::i32:
+      return IsSigned ? NVPTX::CVT_s32_s64 : NVPTX::CVT_u32_u64;
+    }
+  }
 }

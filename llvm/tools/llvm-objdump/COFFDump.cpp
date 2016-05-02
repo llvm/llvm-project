@@ -165,9 +165,9 @@ resolveSectionAndAddress(const COFFObjectFile *Obj, const SymbolRef &Sym,
   if (std::error_code EC = ResolvedAddrOrErr.getError())
     return EC;
   ResolvedAddr = *ResolvedAddrOrErr;
-  ErrorOr<section_iterator> Iter = Sym.getSection();
-  if (std::error_code EC = Iter.getError())
-    return EC;
+  Expected<section_iterator> Iter = Sym.getSection();
+  if (!Iter)
+    return errorToErrorCode(Iter.takeError());
   ResolvedSection = Obj->getCOFFSection(**Iter);
   return std::error_code();
 }

@@ -585,7 +585,7 @@ performWriteOperation(ArchiveOperation Operation, object::Archive *OldArchive,
   switch (FormatOpt) {
   case Default: {
     Triple T(sys::getProcessTriple());
-    if (T.isOSDarwin())
+    if (T.isOSDarwin() && !Thin)
       Kind = object::Archive::K_BSD;
     else
       Kind = object::Archive::K_GNU;
@@ -595,6 +595,8 @@ performWriteOperation(ArchiveOperation Operation, object::Archive *OldArchive,
     Kind = object::Archive::K_GNU;
     break;
   case BSD:
+    if (Thin)
+      fail("Only the gnu format has a thin mode");
     Kind = object::Archive::K_BSD;
     break;
   }

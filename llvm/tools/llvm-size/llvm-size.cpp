@@ -84,6 +84,8 @@ RadixShort(cl::desc("Print size in radix:"),
 static cl::list<std::string>
 InputFilenames(cl::Positional, cl::desc("<input files>"), cl::ZeroOrMore);
 
+bool HadError = false;
+
 static std::string ToolName;
 
 /// If ec is not success, print the error and return true.
@@ -91,6 +93,7 @@ static bool error(std::error_code ec) {
   if (!ec)
     return false;
 
+  HadError = true;
   errs() << ToolName << ": error reading file: " << ec.message() << ".\n";
   errs().flush();
   return true;
@@ -757,5 +760,6 @@ int main(int argc, char **argv) {
   std::for_each(InputFilenames.begin(), InputFilenames.end(),
                 printFileSectionSizes);
 
-  return 0;
+  if (HadError)
+    return 1;
 }

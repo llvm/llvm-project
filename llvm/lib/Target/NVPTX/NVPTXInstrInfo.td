@@ -377,6 +377,8 @@ let hasSideEffects = 0 in {
   }
 
   // Generate cvts from all types to all types.
+  defm CVT_s8  : CVT_FROM_ALL<"s8",  Int16Regs>;
+  defm CVT_u8  : CVT_FROM_ALL<"u8",  Int16Regs>;
   defm CVT_s16 : CVT_FROM_ALL<"s16", Int16Regs>;
   defm CVT_u16 : CVT_FROM_ALL<"u16", Int16Regs>;
   defm CVT_f16 : CVT_FROM_ALL<"f16", Int16Regs>;

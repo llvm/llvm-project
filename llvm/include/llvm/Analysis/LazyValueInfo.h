@@ -20,6 +20,7 @@
 namespace llvm {
   class AssumptionCache;
   class Constant;
+  class ConstantRange;
   class DataLayout;
   class DominatorTree;
   class Instruction;
@@ -64,6 +65,11 @@ public:
   /// Determine whether the specified value is known to be a
   /// constant at the end of the specified block.  Return null if not.
   Constant *getConstant(Value *V, BasicBlock *BB, Instruction *CxtI = nullptr);
+
+  /// Return the ConstantRange constraint that is known to hold for the
+  /// specified value at the end of the specified block. This may only be called
+  /// on integer-typed Values.
+  ConstantRange getConstantRange(Value *V, BasicBlock *BB, Instruction *CxtI = nullptr);
 
   /// Determine whether the specified value is known to be a
   /// constant on the specified edge.  Return null if not.

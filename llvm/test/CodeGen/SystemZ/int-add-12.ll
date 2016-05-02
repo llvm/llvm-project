@@ -130,7 +130,7 @@ define void @f10(i64 %base, i64 %index) {
 ; Check that adding 127 to a spilled value can use AGSI.
 define void @f11(i64 *%ptr, i32 %sel) {
 ; CHECK-LABEL: f11:
-; CHECK: agsi {{[0-9]+}}(%r15), 127
+; _CHECK: agsi {{[0-9]+}}(%r15), 127
 ; CHECK: br %r14
 entry:
   %val0 = load volatile i64 , i64 *%ptr

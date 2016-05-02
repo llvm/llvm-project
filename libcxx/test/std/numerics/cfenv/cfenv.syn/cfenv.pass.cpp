@@ -62,6 +62,8 @@ int main()
 {
     std::fenv_t fenv;
     std::fexcept_t fex;
+    ((void)fenv); // Prevent unused warning
+    ((void)fex); // Prevent unused warning
     static_assert((std::is_same<decltype(std::feclearexcept(0)), int>::value), "");
     static_assert((std::is_same<decltype(std::fegetexceptflag(&fex, 0)), int>::value), "");
     static_assert((std::is_same<decltype(std::feraiseexcept(0)), int>::value), "");

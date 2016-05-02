@@ -2802,7 +2802,7 @@ CommandInterpreter::FindCommandsForApropos (const char *search_word,
                                            search_syntax,
                                            search_options))
         {
-            commands_found.AppendString (command_name);
+            commands_found.AppendString (cmd_obj->GetCommandName());
             commands_help.AppendString (cmd_obj->GetHelp());
         }
         
